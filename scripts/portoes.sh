@@ -77,6 +77,11 @@ rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
 rapido|glifos|py|scripts/validar-glifos.py --all
 rapido|pecas-do-dualsense|py|scripts/check_pecas_do_dualsense.py
+# 27/08/2026: o irmão acima confere que o NOME da peça bate com o LUGAR dela;
+# este confere que a COR bate com o dado. Antes dele, nenhuma régua sabia dizer
+# se o hex do desenho estava certo, porque não havia com o que comparar — o
+# Cosmic Red era #b11f54 e a amostragem devolveu #A51C48. 3,5 s.
+rapido|cores-do-dualsense|py|scripts/check_cores_do_dualsense.py
 rapido|ruff|bin|ruff check src/ tests/
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all

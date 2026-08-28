@@ -24,32 +24,50 @@
 #          tem 7 de caixa e 5 de face; o glifo tem de caber na FACE)
 # grau   : ALTA quando medido nesta casa ou lido no driver; PROPOSTO quando é desenho a conferir.
 #
-id,nome,apelidos,tipo,regiao,glifo,no_svg,x1,y1,x2,y2,grau,nota,angulo,face
-triangle,Triângulo,△,botao,face,triangle,triangle,95.5,36.46,102.5,43.47,ALTA,,0,5.0
-circle,Círculo,○,botao,face,circle,circle,103.5,44.46,110.5,51.46,ALTA,,0,5.0
-square,Quadrado,□,botao,face,square,square,87.5,44.46,94.5,51.46,ALTA,,0,5.0
-cross,Cruz,X|cruz|equis,botao,face,cross,cross,95.5,52.46,102.5,59.46,ALTA,,0,5.0
-dpad_up,D-pad Cima,↑,botao,direcional,dpad_up,dpad_up,25.5,38.46,32.5,47,ALTA,,0,-
-dpad_right,D-pad Direita,→,botao,direcional,dpad_right,dpad_right,30.96,45.46,39.5,52.46,ALTA,,0,-
-dpad_down,D-pad Baixo,↓,botao,direcional,dpad_down,dpad_down,25.5,50.92,32.5,59.46,ALTA,,0,-
-dpad_left,D-pad Esquerda,←,botao,direcional,dpad_left,dpad_left,18.5,45.46,27.04,52.46,ALTA,,0,-
-l1,L1,-,botao,ombros,l1,l1,26.31,25.64,37.02,32,ALTA,"Ombro, o de CIMA, e ele ENCOSTA no casco — ela, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.",0,-
-r1,R1,-,botao,ombros,r1,r1,91.07,25.62,101.78,32,ALTA,"Ombro, o de CIMA, encostado no casco.",0,-
-l2,L2,gatilho adaptativo esquerdo,gatilho,gatilhos,l2,l2,19.43,28.13,28.02,33.62,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-
-r2,R2,gatilho adaptativo direito,gatilho,gatilhos,r2,r2,100.07,28.11,108.66,33.61,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-
-stick_l,Analógico Esquerdo,L3,eixo,analogicos,stick_l,stick_l,39.62,55.68,55.62,71.68,ALTA,"UMA volta, não três: 'os analógicos tem várias voltas ao invés de uma'. Clique e direção são duas entradas na mesma peça.",0,-
-stick_r,Analógico Direito,R3,eixo,analogicos,stick_r,stick_r,72.62,55.67,88.62,71.69,ALTA,"UMA volta, não três. Clique e direção são duas entradas na mesma peça.",0,-
-share,Share,Create|Select,botao,centro,share,share,37.48,33.86,39.89,37.8,ALTA,"CORRIGIDO 27/08: era o id `l2` no SVG. Fica à esquerda do touchpad, colado nele.",-14.04,-
-options,Options,Start|Menu,botao,centro,options,options,87.86,33.86,90.27,37.8,ALTA,"CORRIGIDO 27/08: era o id `r2` no SVG. Fica à direita do touchpad, colado nele.",14.04,-
-touchpad,Touchpad,-,superficie,centro,touchpad,touchpad,40.66,26.94,87.1,53.08,ALTA,"1920x1080, DOIS pontos de toque, cada um com id e flag de contato. Clique esquerdo, direito e central.",0,-
-ps,PS,botão home,botao,centro,ps,ps,60.54,59.56,67.59,66.3,ALTA,"O glifo É o botão: sem anel em volta, decisão dela em 27/08.",0,-
-mic,Microfone,-,entrada,audio,mic,mic,62.15,68.03,66.7,68.78,ALTA,"O botão de MUDO, e ele é pequeno: a barra de 7x1 que estava aqui virava um risco atravessado no corpo, e ela viu — 'essa linha não existe no controle da vida real'.",0,-
-alto-falante,Alto-falante,-,saida,audio,alto-falante,alto-falante,60.1,55.38,68.74,58.22,ALTA,Duas linhas de furos: 5 em cima e 4 embaixo.,0,-
-lightbar,Lightbar,barra de luz,luz,luzes,lightbar,lightbar,41.13,30.93,87.07,50.31,ALTA,"Duas tiras que LADEIAM o touchpad e acompanham a borda dele. Uma feature, duas peças: o firmware não as endereça em separado.",0,-
-led-jogador,Indicador de jogador,cinco lâmpadas,luz,luzes,led-jogador,led-jogador,56.71,52.23,72.13,52.9,ALTA,"As cinco lâmpadas montam sobre a BASE do touchpad, como o lightbar monta sobre as laterais — ela, 27/08. É o PADRÃO que diz o número: 1 | vão | 3 | vão | 1.",0,-
-feat-giroscopio,Giroscópio,gyro,sensor,sensores,giroscopio,feat-giroscopio,7.5,29.46,120.5,101.51,ALTA,"Mede a rotação do CONTROLE INTEIRO — por isso a peça dele é o corpo, e não uma caixa no meio da placa; ela contornou a região na tela, 27/08. 1024 LSB/(graus/s), mais ou menos 2048 graus/s. 250,0 Hz exatos no cabo, medido nesta casa.",0,-
-feat-acelerometro,Acelerômetro,accel,sensor,sensores,acelerometro,feat-acelerometro,7.5,29.46,120.5,101.51,ALTA,"Mede a aceleração do CONTROLE INTEIRO, como o giroscópio. 8192 LSB/g, mais ou menos 4 g.",0,-
-feat-bateria,Bateria,-,sensor,energia,bateria,feat-bateria,40.86,31.04,87.28,50.4,ALTA,"As DUAS TIRAS DO LIGHTBAR são o medidor, e é o que o aparelho faz: cheias em 100%, apagadas em 0%, piscando vermelho quando está acabando. Decisão dela, 27/08.",0,-
-corpo,Corpo,casco|chassi,superficie,chassi,-,corpo,7.5,29.46,120.5,101.51,ALTA,"O casco. As DUAS empunhaduras são paths próprios dentro dele, e são elas que os motores destacam.",0,-
-feat-rumble-esquerdo,Motor de vibração esquerdo,motor forte,saida,vibracao,rumble_esquerdo,feat-rumble-esquerdo,7.44,29.46,44.08,101.17,ALTA,Contrapeso maior — soa grosso. No código do produto é `strong`.,0,-
-feat-rumble-direito,Motor de vibração direito,motor leve,saida,vibracao,rumble_direito,feat-rumble-direito,83.99,29.46,120.5,101.24,ALTA,Contrapeso menor — soa fino. No código do produto é `weak`.,0,-
+# zona   : a zona de PLÁSTICO da peça — o cruzamento com `cores-do-dualsense.csv`,
+#          que é o dono das CORES. Sete zonas com superfície no desenho:
+#            casca | painel | touch | botoes_face | dpad | analogicos | gatilhos
+#          mais `luz` (lightbar e indicador de jogador: são LUZ, não plástico, e
+#          não recebem a cor do casco) e `-` (os cinco `feat-*`, que são
+#          marcadores de região e não têm superfície).
+#
+#          POR QUE `casca` E NÃO `casca_esq`/`casca_dir`: a peça é UMA — o
+#          desenho tem um `#corpo` só. As duas metades existem porque em
+#          Spider-Man 2 e God of War 20th elas são cores DIFERENTES; quando
+#          diferem, `scripts/gerar_cores_do_dualsense.py` pinta o corpo com um
+#          gradiente de corte duro no meio, e não parte o path dela.
+#
+#          E `simbolos` NÃO É COLUNA: a impressão dos quatro botões da face não é
+#          peça, é o glifo em cima deles. O gerador deriva — o glifo de uma peça
+#          `botoes_face` pinta com a zona `simbolos`. `detalhe` (arte, decalque)
+#          não tem superfície no desenho e está declarado no gerador.
+#
+id,nome,apelidos,tipo,regiao,glifo,no_svg,x1,y1,x2,y2,grau,nota,angulo,face,zona
+triangle,Triângulo,△,botao,face,triangle,triangle,95.5,36.46,102.5,43.47,ALTA,,0,5.0,botoes_face
+circle,Círculo,○,botao,face,circle,circle,103.5,44.46,110.5,51.46,ALTA,,0,5.0,botoes_face
+square,Quadrado,□,botao,face,square,square,87.5,44.46,94.5,51.46,ALTA,,0,5.0,botoes_face
+cross,Cruz,X|cruz|equis,botao,face,cross,cross,95.5,52.46,102.5,59.46,ALTA,,0,5.0,botoes_face
+dpad_up,D-pad Cima,↑,botao,direcional,dpad_up,dpad_up,25.5,38.46,32.5,47,ALTA,,0,-,dpad
+dpad_right,D-pad Direita,→,botao,direcional,dpad_right,dpad_right,30.96,45.46,39.5,52.46,ALTA,,0,-,dpad
+dpad_down,D-pad Baixo,↓,botao,direcional,dpad_down,dpad_down,25.5,50.92,32.5,59.46,ALTA,,0,-,dpad
+dpad_left,D-pad Esquerda,←,botao,direcional,dpad_left,dpad_left,18.5,45.46,27.04,52.46,ALTA,,0,-,dpad
+l1,L1,-,botao,ombros,l1,l1,26.31,25.64,37.02,32,ALTA,"Ombro, o de CIMA, e ele ENCOSTA no casco — ela, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.",0,-,gatilhos
+r1,R1,-,botao,ombros,r1,r1,91.07,25.62,101.78,32,ALTA,"Ombro, o de CIMA, encostado no casco.",0,-,gatilhos
+l2,L2,gatilho adaptativo esquerdo,gatilho,gatilhos,l2,l2,19.43,28.13,28.02,33.62,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-,gatilhos
+r2,R2,gatilho adaptativo direito,gatilho,gatilhos,r2,r2,100.07,28.11,108.66,33.61,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-,gatilhos
+stick_l,Analógico Esquerdo,L3,eixo,analogicos,stick_l,stick_l,39.62,55.68,55.62,71.68,ALTA,"UMA volta, não três: 'os analógicos tem várias voltas ao invés de uma'. Clique e direção são duas entradas na mesma peça.",0,-,analogicos
+stick_r,Analógico Direito,R3,eixo,analogicos,stick_r,stick_r,72.62,55.67,88.62,71.69,ALTA,"UMA volta, não três. Clique e direção são duas entradas na mesma peça.",0,-,analogicos
+share,Share,Create|Select,botao,centro,share,share,37.48,33.86,39.89,37.8,ALTA,"CORRIGIDO 27/08: era o id `l2` no SVG. Fica à esquerda do touchpad, colado nele.",-14.04,-,painel
+options,Options,Start|Menu,botao,centro,options,options,87.86,33.86,90.27,37.8,ALTA,"CORRIGIDO 27/08: era o id `r2` no SVG. Fica à direita do touchpad, colado nele.",14.04,-,painel
+touchpad,Touchpad,-,superficie,centro,touchpad,touchpad,40.66,26.94,87.1,53.08,ALTA,"1920x1080, DOIS pontos de toque, cada um com id e flag de contato. Clique esquerdo, direito e central.",0,-,touch
+ps,PS,botão home,botao,centro,ps,ps,60.54,59.56,67.59,66.3,ALTA,"O glifo É o botão: sem anel em volta, decisão dela em 27/08.",0,-,painel
+mic,Microfone,-,entrada,audio,mic,mic,62.15,68.03,66.7,68.78,ALTA,"O botão de MUDO, e ele é pequeno: a barra de 7x1 que estava aqui virava um risco atravessado no corpo, e ela viu — 'essa linha não existe no controle da vida real'.",0,-,painel
+alto-falante,Alto-falante,-,saida,audio,alto-falante,alto-falante,60.1,55.38,68.74,58.22,ALTA,Duas linhas de furos: 5 em cima e 4 embaixo.,0,-,painel
+lightbar,Lightbar,barra de luz,luz,luzes,lightbar,lightbar,41.13,30.93,87.07,50.31,ALTA,"Duas tiras que LADEIAM o touchpad e acompanham a borda dele. Uma feature, duas peças: o firmware não as endereça em separado.",0,-,luz
+led-jogador,Indicador de jogador,cinco lâmpadas,luz,luzes,led-jogador,led-jogador,56.71,52.23,72.13,52.9,ALTA,"As cinco lâmpadas montam sobre a BASE do touchpad, como o lightbar monta sobre as laterais — ela, 27/08. É o PADRÃO que diz o número: 1 | vão | 3 | vão | 1.",0,-,luz
+feat-giroscopio,Giroscópio,gyro,sensor,sensores,giroscopio,feat-giroscopio,7.5,29.46,120.5,101.51,ALTA,"Mede a rotação do CONTROLE INTEIRO — por isso a peça dele é o corpo, e não uma caixa no meio da placa; ela contornou a região na tela, 27/08. 1024 LSB/(graus/s), mais ou menos 2048 graus/s. 250,0 Hz exatos no cabo, medido nesta casa.",0,-,-
+feat-acelerometro,Acelerômetro,accel,sensor,sensores,acelerometro,feat-acelerometro,7.5,29.46,120.5,101.51,ALTA,"Mede a aceleração do CONTROLE INTEIRO, como o giroscópio. 8192 LSB/g, mais ou menos 4 g.",0,-,-
+feat-bateria,Bateria,-,sensor,energia,bateria,feat-bateria,40.86,31.04,87.28,50.4,ALTA,"As DUAS TIRAS DO LIGHTBAR são o medidor, e é o que o aparelho faz: cheias em 100%, apagadas em 0%, piscando vermelho quando está acabando. Decisão dela, 27/08.",0,-,-
+corpo,Corpo,casco|chassi,superficie,chassi,-,corpo,7.5,29.46,120.5,101.51,ALTA,"O casco. As DUAS empunhaduras são paths próprios dentro dele, e são elas que os motores destacam.",0,-,casca
+feat-rumble-esquerdo,Motor de vibração esquerdo,motor forte,saida,vibracao,rumble_esquerdo,feat-rumble-esquerdo,7.44,29.46,44.08,101.17,ALTA,Contrapeso maior — soa grosso. No código do produto é `strong`.,0,-,-
+feat-rumble-direito,Motor de vibração direito,motor leve,saida,vibracao,rumble_direito,feat-rumble-direito,83.99,29.46,120.5,101.24,ALTA,Contrapeso menor — soa fino. No código do produto é `weak`.,0,-,-

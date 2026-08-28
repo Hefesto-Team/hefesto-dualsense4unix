@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- led-jogador.svg — as cinco lampadas, com o vao real (1 | vao | 3 | vao | 1) -->
+  <rect x="3"  y="13" width="3" height="6" rx="1.5" fill="none" stroke="#f8f8f2" stroke-width="2"/>
+  <rect x="11" y="13" width="3" height="6" rx="1.5" fill="none" stroke="#f8f8f2" stroke-width="2"/>
+  <rect x="15" y="13" width="3" height="6" rx="1.5" fill="none" stroke="#f8f8f2" stroke-width="2"/>
+  <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="#f8f8f2" stroke-width="2"/>
+  <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="#f8f8f2" stroke-width="2"/>
+</svg>

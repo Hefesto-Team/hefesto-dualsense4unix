@@ -82,6 +82,18 @@ with sync_playwright() as pw:
     # NENHUMA LINHA PODE CAIR FORA DA CAIXA. A linha "Corpo" ficou invisível e
     # inalcançável por semanas — a lista transbordava para uma coluna recortada,
     # e recorte também mata o hit-test. Contar itens não pegava: eram 28 no DOM.
+    #
+    # RÉGUA CEGA, CURADA em 27/08/2026 (à noite). A medição acontecia DEPOIS do laço de
+    # hover acima — e `pg.hover()` do Playwright chama `scrollIntoViewIfNeeded`
+    # antes de apontar. A rolagem que ele provoca traz a coluna transbordada para
+    # dentro da vista, e o `getBoundingClientRect` passa a devolver a posição
+    # ROLADA. Resultado medido: a linha "Corpo" estava em x=1861 numa caixa que
+    # termina em 1860, e este portão dava **verde**. Quem abre a página não rola
+    # nada: vê o estado inicial. Agora a página é RECARREGADA e a medição é a
+    # primeira coisa a acontecer — sem hover, sem rolagem, sem scroll herdado.
+    pg.reload()
+    pg.wait_for_load_state("networkidle")
+    pg.wait_for_timeout(300)
     fora = pg.evaluate("""() => {const cx=document.querySelector('.cx').getBoundingClientRect();
       return [...document.querySelectorAll('.item')].filter(e=>{const b=e.getBoundingClientRect();
         return b.right>cx.right+1 || b.left<cx.left-1 || b.width===0;})

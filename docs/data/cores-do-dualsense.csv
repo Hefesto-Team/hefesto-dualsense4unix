@@ -1,0 +1,303 @@
+# FONTE DA VERDADE DAS CORES DO DUALSENSE — 27/08/2026
+#
+# Irmão do `pecas-do-dualsense.csv`: aquele é o dono das PEÇAS, este é o dono
+# das CORES. A mesma regra vale — mudou aqui, muda em todos.
+#
+# O QUE ELE RESOLVE. Até 27/08 as cores do desenho eram CSS DIGITADO À MÃO, em
+# UMA zona só (`.corpo`), e em DOIS lugares: `novo-layout/_ferramentas/topo.html`
+# (:295-326, quatro colorways) e `novo-layout/_ferramentas/mapa.py`, com um
+# quinto — `--midnight-black:#292a2d` — em `novo-layout/04-iluminacao.html`.
+# Duas consequências: (1) nenhuma régua sabia dizer se o hex ali estava certo,
+# porque não havia com o que comparar — o Cosmic Red do desenho era `#b11f54` e
+# a amostragem devolveu `#A51C48`, distância 17; (2) o desenho pintava o
+# controle inteiro de uma cor, e o DualSense NÃO é de uma cor só — no Cosmic
+# Red a casca é carmim, o painel central é preto e os analógicos são pretos.
+#
+# FATO ERRADO, SUBSTITUÍDO (27/08/2026, à noite). Estas linhas diziam que as
+# cinco cores viviam "dentro do `<style>` do `assets/control-svg/dualsense.svg`".
+# O SVG nunca teve `<style>`: ele é o desenho que ela fez no editor, e a única
+# cor que carrega é `fill="#3a3f4b"` como atributo. Quem fosse consertar o hex
+# procuraria no arquivo errado. O `<style>` que existe ali AGORA é gerado por
+# `scripts/gerar_cores_do_dualsense.py` — e é a cura, não o defeito.
+#
+# COMO A COR CHEGA AO DESENHO, a partir daqui: este CSV manda, e
+# `scripts/gerar_cores_do_dualsense.py` escreve. Ele põe `class="z-<zona>"` em
+# cada peça (a zona vem da coluna `zona` do `pecas-do-dualsense.csv`) e um
+# `<style>` com os 28 modelos dentro do próprio SVG. O portão que reprova a
+# divergência é `scripts/check_cores_do_dualsense.py`, com duas réguas
+# independentes: a leitura dos CSV, e a PINTURA medida no Chrome.
+#
+# COMO A COR CHEGA. O serial de fábrica de 17 caracteres carrega o código nos
+# caracteres 5 e 6 (`serial[4:6]`). Ele sai por `SET_FEATURE 0x80` com payload
+# `[0x01, 0x13]`, e a resposta vem no `GET_FEATURE 0x81`. Medido nesta bancada
+# em 27/08/2026 nos DOIS transportes — ver `scripts/ensaios/cor_do_plastico.py`
+# e a canônica, seção "O caminho da cor do plástico".
+#
+# NO RÁDIO, A SEMENTE DO CRC É `0x53`, não `0xA3`. As sementes são o byte de
+# cabeçalho da transação HIDP: `0xA3` é `DATA|FEATURE` (o feature que CHEGA),
+# `0x53` é `SET_REPORT|FEATURE` (o que SAI). Assinar com a errada devolve
+# errno 5, e foi o que fez esta casa concluir por quatro dias que o firmware
+# recusava por rádio.
+#
+# AS ZONAS. Dez, e elas são o que um SVG universal precisa (a linha dizia
+#            "oito" e listava dez):
+#   casca_esq   punho e ombro esquerdos   | casca_dir  punho e ombro direitos
+#   painel      a ilha central            | touch      o retângulo do touchpad
+#   botoes_face o plástico de △○X□        | simbolos   a impressão neles
+#   dpad        o direcional              | analogicos as duas cabeças
+#   gatilhos    L1 R1 L2 R2               | detalhe    friso, decalque, arte
+# Nos modelos "split" (Spider-Man 2, God of War 20th) `casca_esq` e `casca_dir`
+# são cores DIFERENTES — é por isso que não existe uma coluna `casca` só.
+#
+# grau : MEDIDO   = o serial saiu de um aparelho DESTA bancada (código), ou o
+#                   hex foi amostrado de peça física sob luz controlada
+#        ALTA     = o código está no `colorMap` do dualshock-tools (engenharia
+#                   reversa consolidada, com dumps de serial reais)
+#        FOTO     = o hex foi amostrado de foto oficial da Sony — iluminação de
+#                   estúdio distorce; trocar por medição quando houver a peça
+#        SEM-HEX  = o acabamento não cabe num hexadecimal (iridescente,
+#                   metálico, camuflado, arte impressa). Ver a coluna
+#                   `acabamento` e NÃO invente um fill.
+#        AUSENTE  = o código não é conhecido publicamente. Ausência declarada.
+#
+# acabamento : fosco | metalico | iridescente | camuflado | arte | degrade
+#
+# ATENÇÃO A QUEM FOR MEDIR: os hex marcados FOTO vieram de pesquisa externa
+# (27/08) e DIVERGEM dos cinco que o SVG usava. Os quatro controles desta casa
+# são White, Cosmic Red, Starlight Blue e Galactic Purple — esses quatro podem
+# virar MEDIDO com uma foto sob luz constante, e é o primeiro trabalho a fazer.
+#
+codigo_da_cor,id,nome,zona,hex,grau,acabamento,fonte,nota
+00,white,White,casca_esq,#E4E0D8,FOTO,fosco,pesquisa-externa-27-08,off-white quente; não é #FFFFFF
+00,white,White,casca_dir,#E4E0D8,FOTO,fosco,pesquisa-externa-27-08,
+00,white,White,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+00,white,White,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+00,white,White,botoes_face,#E4E0D8,FOTO,fosco,pesquisa-externa-27-08,
+00,white,White,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+00,white,White,dpad,#E4E0D8,FOTO,fosco,pesquisa-externa-27-08,
+00,white,White,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+00,white,White,gatilhos,#E4E0D8,FOTO,fosco,pesquisa-externa-27-08,
+01,midnight-black,Midnight Black,casca_esq,#1C1C1E,FOTO,fosco,pesquisa-externa-27-08,a Sony descreve "dois pretos"; o contraste com o painel é de 8-10 valores
+01,midnight-black,Midnight Black,casca_dir,#1C1C1E,FOTO,fosco,pesquisa-externa-27-08,
+01,midnight-black,Midnight Black,painel,#121214,FOTO,fosco,pesquisa-externa-27-08,um tom abaixo da casca
+01,midnight-black,Midnight Black,touch,#121214,FOTO,fosco,pesquisa-externa-27-08,
+01,midnight-black,Midnight Black,botoes_face,#1C1C1E,FOTO,fosco,pesquisa-externa-27-08,
+01,midnight-black,Midnight Black,simbolos,#C8C8C4,FOTO,fosco,pesquisa-externa-27-08,cinza-claro; não é branco puro
+01,midnight-black,Midnight Black,dpad,#1C1C1E,FOTO,fosco,pesquisa-externa-27-08,
+01,midnight-black,Midnight Black,analogicos,#121214,FOTO,fosco,pesquisa-externa-27-08,
+01,midnight-black,Midnight Black,gatilhos,#1C1C1E,FOTO,fosco,pesquisa-externa-27-08,
+02,cosmic-red,Cosmic Red,casca_esq,#A51C48,FOTO,fosco,pesquisa-externa-27-08,carmim-magenta; o SVG usava #B11F54 — distância 17
+02,cosmic-red,Cosmic Red,casca_dir,#A51C48,FOTO,fosco,pesquisa-externa-27-08,
+02,cosmic-red,Cosmic Red,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,o centro é PRETO — foi o que o SVG de uma zona só errava
+02,cosmic-red,Cosmic Red,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+02,cosmic-red,Cosmic Red,botoes_face,#A51C48,FOTO,fosco,pesquisa-externa-27-08,
+02,cosmic-red,Cosmic Red,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+02,cosmic-red,Cosmic Red,dpad,#A51C48,FOTO,fosco,pesquisa-externa-27-08,
+02,cosmic-red,Cosmic Red,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+02,cosmic-red,Cosmic Red,gatilhos,#A51C48,FOTO,fosco,pesquisa-externa-27-08,
+03,nova-pink,Nova Pink,casca_esq,#E35B8C,FOTO,fosco,pesquisa-externa-27-08,o SVG usava #EC429D — distância 32
+03,nova-pink,Nova Pink,casca_dir,#E35B8C,FOTO,fosco,pesquisa-externa-27-08,
+03,nova-pink,Nova Pink,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+03,nova-pink,Nova Pink,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+03,nova-pink,Nova Pink,botoes_face,#E35B8C,FOTO,fosco,pesquisa-externa-27-08,
+03,nova-pink,Nova Pink,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+03,nova-pink,Nova Pink,dpad,#E35B8C,FOTO,fosco,pesquisa-externa-27-08,
+03,nova-pink,Nova Pink,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+03,nova-pink,Nova Pink,gatilhos,#E35B8C,FOTO,fosco,pesquisa-externa-27-08,
+04,galactic-purple,Galactic Purple,casca_esq,#5B3A7A,FOTO,fosco,pesquisa-externa-27-08,o SVG usava #4C319D — distância 39
+04,galactic-purple,Galactic Purple,casca_dir,#5B3A7A,FOTO,fosco,pesquisa-externa-27-08,
+04,galactic-purple,Galactic Purple,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+04,galactic-purple,Galactic Purple,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+04,galactic-purple,Galactic Purple,botoes_face,#5B3A7A,FOTO,fosco,pesquisa-externa-27-08,
+04,galactic-purple,Galactic Purple,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+04,galactic-purple,Galactic Purple,dpad,#5B3A7A,FOTO,fosco,pesquisa-externa-27-08,
+04,galactic-purple,Galactic Purple,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+04,galactic-purple,Galactic Purple,gatilhos,#5B3A7A,FOTO,fosco,pesquisa-externa-27-08,
+05,starlight-blue,Starlight Blue,casca_esq,#7EB8D4,FOTO,fosco,pesquisa-externa-27-08,azul-gelo; o SVG usava #55BDF8 — distância 55, a MAIOR das cinco
+05,starlight-blue,Starlight Blue,casca_dir,#7EB8D4,FOTO,fosco,pesquisa-externa-27-08,
+05,starlight-blue,Starlight Blue,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+05,starlight-blue,Starlight Blue,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+05,starlight-blue,Starlight Blue,botoes_face,#7EB8D4,FOTO,fosco,pesquisa-externa-27-08,
+05,starlight-blue,Starlight Blue,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+05,starlight-blue,Starlight Blue,dpad,#7EB8D4,FOTO,fosco,pesquisa-externa-27-08,
+05,starlight-blue,Starlight Blue,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+05,starlight-blue,Starlight Blue,gatilhos,#7EB8D4,FOTO,fosco,pesquisa-externa-27-08,
+06,grey-camouflage,Grey Camouflage,casca_esq,,SEM-HEX,camuflado,pesquisa-externa-27-08,padrão digital; tile de #4A4D52 #6B6E72 #8A8D91 #2E3033 em manchas angulares
+06,grey-camouflage,Grey Camouflage,casca_dir,,SEM-HEX,camuflado,pesquisa-externa-27-08,
+06,grey-camouflage,Grey Camouflage,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,só a ilha dos sticks é preta lisa
+06,grey-camouflage,Grey Camouflage,touch,,SEM-HEX,camuflado,pesquisa-externa-27-08,o padrão cobre o touchpad também
+06,grey-camouflage,Grey Camouflage,botoes_face,#6B6E72,FOTO,fosco,pesquisa-externa-27-08,cinza médio liso; sem o padrão
+06,grey-camouflage,Grey Camouflage,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+06,grey-camouflage,Grey Camouflage,dpad,#6B6E72,FOTO,fosco,pesquisa-externa-27-08,
+06,grey-camouflage,Grey Camouflage,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+06,grey-camouflage,Grey Camouflage,gatilhos,,SEM-HEX,camuflado,pesquisa-externa-27-08,
+07,volcanic-red,Volcanic Red,casca_esq,#8B1A1A,FOTO,metalico,pesquisa-externa-27-08,linha Deep Earth; o flake metálico não cabe no hex
+07,volcanic-red,Volcanic Red,casca_dir,#8B1A1A,FOTO,metalico,pesquisa-externa-27-08,
+07,volcanic-red,Volcanic Red,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+07,volcanic-red,Volcanic Red,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+07,volcanic-red,Volcanic Red,botoes_face,#8B1A1A,FOTO,metalico,pesquisa-externa-27-08,
+07,volcanic-red,Volcanic Red,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+07,volcanic-red,Volcanic Red,dpad,#8B1A1A,FOTO,metalico,pesquisa-externa-27-08,
+07,volcanic-red,Volcanic Red,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+07,volcanic-red,Volcanic Red,gatilhos,#8B1A1A,FOTO,metalico,pesquisa-externa-27-08,
+08,sterling-silver,Sterling Silver,casca_esq,#C5C8CC,FOTO,metalico,pesquisa-externa-27-08,linha Deep Earth
+08,sterling-silver,Sterling Silver,casca_dir,#C5C8CC,FOTO,metalico,pesquisa-externa-27-08,
+08,sterling-silver,Sterling Silver,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+08,sterling-silver,Sterling Silver,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+08,sterling-silver,Sterling Silver,botoes_face,#C5C8CC,FOTO,metalico,pesquisa-externa-27-08,
+08,sterling-silver,Sterling Silver,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+08,sterling-silver,Sterling Silver,dpad,#C5C8CC,FOTO,metalico,pesquisa-externa-27-08,
+08,sterling-silver,Sterling Silver,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+08,sterling-silver,Sterling Silver,gatilhos,#C5C8CC,FOTO,metalico,pesquisa-externa-27-08,
+09,cobalt-blue,Cobalt Blue,casca_esq,#1E4B8C,FOTO,metalico,pesquisa-externa-27-08,linha Deep Earth; só não colide com Icon Blue porque este tem touch e analógicos PRETOS
+09,cobalt-blue,Cobalt Blue,casca_dir,#1E4B8C,FOTO,metalico,pesquisa-externa-27-08,
+09,cobalt-blue,Cobalt Blue,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+09,cobalt-blue,Cobalt Blue,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+09,cobalt-blue,Cobalt Blue,botoes_face,#1E4B8C,FOTO,metalico,pesquisa-externa-27-08,
+09,cobalt-blue,Cobalt Blue,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+09,cobalt-blue,Cobalt Blue,dpad,#1E4B8C,FOTO,metalico,pesquisa-externa-27-08,
+09,cobalt-blue,Cobalt Blue,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+09,cobalt-blue,Cobalt Blue,gatilhos,#1E4B8C,FOTO,metalico,pesquisa-externa-27-08,
+10,chroma-teal,Chroma Teal,casca_esq,,SEM-HEX,iridescente,pesquisa-externa-27-08,verde↔azul-petróleo conforme o ângulo; gradiente #2A9B8F → #3ECF9A → #1A6B7A
+10,chroma-teal,Chroma Teal,casca_dir,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+10,chroma-teal,Chroma Teal,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,o centro continua preto
+10,chroma-teal,Chroma Teal,touch,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+10,chroma-teal,Chroma Teal,botoes_face,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+10,chroma-teal,Chroma Teal,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+10,chroma-teal,Chroma Teal,dpad,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+10,chroma-teal,Chroma Teal,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+10,chroma-teal,Chroma Teal,gatilhos,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+11,chroma-indigo,Chroma Indigo,casca_esq,,SEM-HEX,iridescente,pesquisa-externa-27-08,azul↔roxo; gradiente #2A2A7A → #5B3AA8 → #1A3A8C
+11,chroma-indigo,Chroma Indigo,casca_dir,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+11,chroma-indigo,Chroma Indigo,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+11,chroma-indigo,Chroma Indigo,touch,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+11,chroma-indigo,Chroma Indigo,botoes_face,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+11,chroma-indigo,Chroma Indigo,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+11,chroma-indigo,Chroma Indigo,dpad,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+11,chroma-indigo,Chroma Indigo,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+11,chroma-indigo,Chroma Indigo,gatilhos,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+12,chroma-pearl,Chroma Pearl,casca_esq,,SEM-HEX,iridescente,pesquisa-externa-27-08,rosa-pálido↔creme; gradiente #F2E4DC → #E8C4C8 → #F7F0EA
+12,chroma-pearl,Chroma Pearl,casca_dir,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+12,chroma-pearl,Chroma Pearl,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+12,chroma-pearl,Chroma Pearl,touch,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+12,chroma-pearl,Chroma Pearl,botoes_face,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+12,chroma-pearl,Chroma Pearl,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+12,chroma-pearl,Chroma Pearl,dpad,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+12,chroma-pearl,Chroma Pearl,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+12,chroma-pearl,Chroma Pearl,gatilhos,,SEM-HEX,iridescente,pesquisa-externa-27-08,
+13,hyperpop-techno-red,HyperPop Techno Red,casca_esq,#E11D2E,FOTO,degrade,pesquisa-externa-27-08,sem o ombro preto colide com Cosmic Red
+13,hyperpop-techno-red,HyperPop Techno Red,casca_dir,#E11D2E,FOTO,degrade,pesquisa-externa-27-08,
+13,hyperpop-techno-red,HyperPop Techno Red,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+13,hyperpop-techno-red,HyperPop Techno Red,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+13,hyperpop-techno-red,HyperPop Techno Red,botoes_face,#E11D2E,FOTO,fosco,pesquisa-externa-27-08,
+13,hyperpop-techno-red,HyperPop Techno Red,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+13,hyperpop-techno-red,HyperPop Techno Red,dpad,#E11D2E,FOTO,fosco,pesquisa-externa-27-08,
+13,hyperpop-techno-red,HyperPop Techno Red,analogicos,#E11D2E,FOTO,fosco,pesquisa-externa-27-08,sticks na cor da barriga; não são pretos
+13,hyperpop-techno-red,HyperPop Techno Red,gatilhos,#1A1A1C,FOTO,degrade,pesquisa-externa-27-08,ombros em degradê para preto
+14,hyperpop-remix-green,HyperPop Remix Green,casca_esq,#8FBF3A,FOTO,degrade,pesquisa-externa-27-08,verde-limão
+14,hyperpop-remix-green,HyperPop Remix Green,casca_dir,#8FBF3A,FOTO,degrade,pesquisa-externa-27-08,
+14,hyperpop-remix-green,HyperPop Remix Green,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+14,hyperpop-remix-green,HyperPop Remix Green,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+14,hyperpop-remix-green,HyperPop Remix Green,botoes_face,#8FBF3A,FOTO,fosco,pesquisa-externa-27-08,
+14,hyperpop-remix-green,HyperPop Remix Green,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+14,hyperpop-remix-green,HyperPop Remix Green,dpad,#8FBF3A,FOTO,fosco,pesquisa-externa-27-08,
+14,hyperpop-remix-green,HyperPop Remix Green,analogicos,#8FBF3A,FOTO,fosco,pesquisa-externa-27-08,
+14,hyperpop-remix-green,HyperPop Remix Green,gatilhos,#1A1A1C,FOTO,degrade,pesquisa-externa-27-08,
+15,hyperpop-rhythm-blue,HyperPop Rhythm Blue,casca_esq,#3AA0E8,FOTO,degrade,pesquisa-externa-27-08,sem o ombro preto colide com Starlight Blue
+15,hyperpop-rhythm-blue,HyperPop Rhythm Blue,casca_dir,#3AA0E8,FOTO,degrade,pesquisa-externa-27-08,
+15,hyperpop-rhythm-blue,HyperPop Rhythm Blue,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+15,hyperpop-rhythm-blue,HyperPop Rhythm Blue,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+15,hyperpop-rhythm-blue,HyperPop Rhythm Blue,botoes_face,#3AA0E8,FOTO,fosco,pesquisa-externa-27-08,
+15,hyperpop-rhythm-blue,HyperPop Rhythm Blue,simbolos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
+15,hyperpop-rhythm-blue,HyperPop Rhythm Blue,dpad,#3AA0E8,FOTO,fosco,pesquisa-externa-27-08,
+15,hyperpop-rhythm-blue,HyperPop Rhythm Blue,analogicos,#3AA0E8,FOTO,fosco,pesquisa-externa-27-08,
+15,hyperpop-rhythm-blue,HyperPop Rhythm Blue,gatilhos,#1A1A1C,FOTO,degrade,pesquisa-externa-27-08,
+30,30th-anniversary,30th Anniversary,casca_esq,#A8A8B0,FOTO,fosco,pesquisa-externa-27-08,cinza PS1; sem os símbolos coloridos e o touch cinza colide com White
+30,30th-anniversary,30th Anniversary,casca_dir,#A8A8B0,FOTO,fosco,pesquisa-externa-27-08,
+30,30th-anniversary,30th Anniversary,painel,#A8A8B0,FOTO,fosco,pesquisa-externa-27-08,a ilha também é cinza
+30,30th-anniversary,30th Anniversary,touch,#A8A8B0,FOTO,fosco,pesquisa-externa-27-08,o touch é da COR DA CASCA; não é preto
+30,30th-anniversary,30th Anniversary,botoes_face,#3A3A40,FOTO,fosco,pesquisa-externa-27-08,
+30,30th-anniversary,30th Anniversary,simbolos,,SEM-HEX,arte,pesquisa-externa-27-08,cores PS1: △ #00A651 ○ #EF3E42 X #1E5BB8 □ #E86BA8
+30,30th-anniversary,30th Anniversary,dpad,#3A3A40,FOTO,fosco,pesquisa-externa-27-08,
+30,30th-anniversary,30th Anniversary,analogicos,#2A2A2E,FOTO,fosco,pesquisa-externa-27-08,
+30,30th-anniversary,30th Anniversary,gatilhos,#A8A8B0,FOTO,fosco,pesquisa-externa-27-08,
+30,30th-anniversary,30th Anniversary,detalhe,,SEM-HEX,arte,pesquisa-externa-27-08,logo PS colorido no centro
+Z1,god-of-war-ragnarok,God of War Ragnarök,casca_esq,#2C3A6E,FOTO,arte,pesquisa-externa-27-08,invertido: punhos escuros e miolo claro
+Z1,god-of-war-ragnarok,God of War Ragnarök,casca_dir,#2C3A6E,FOTO,arte,pesquisa-externa-27-08,
+Z1,god-of-war-ragnarok,God of War Ragnarök,painel,#E8E4DC,FOTO,arte,pesquisa-externa-27-08,miolo CLARO
+Z1,god-of-war-ragnarok,God of War Ragnarök,touch,#E8E4DC,FOTO,arte,pesquisa-externa-27-08,silhueta dos dois lobos
+Z1,god-of-war-ragnarok,God of War Ragnarök,botoes_face,#2C3A6E,FOTO,arte,pesquisa-externa-27-08,
+Z1,god-of-war-ragnarok,God of War Ragnarök,simbolos,#E8E4DC,FOTO,arte,pesquisa-externa-27-08,
+Z1,god-of-war-ragnarok,God of War Ragnarök,dpad,#2C3A6E,FOTO,arte,pesquisa-externa-27-08,
+Z1,god-of-war-ragnarok,God of War Ragnarök,analogicos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z1,god-of-war-ragnarok,God of War Ragnarök,gatilhos,#2C3A6E,FOTO,arte,pesquisa-externa-27-08,
+Z1,god-of-war-ragnarok,God of War Ragnarök,detalhe,#1A2A55,FOTO,arte,pesquisa-externa-27-08,sem os lobos é "mais um azul"
+Z2,spider-man-2,Marvel's Spider-Man 2,casca_esq,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,SPLIT: metade Venom preta à esquerda
+Z2,spider-man-2,Marvel's Spider-Man 2,casca_dir,#8B1018,FOTO,arte,pesquisa-externa-27-08,SPLIT: metade Peter vermelha à direita
+Z2,spider-man-2,Marvel's Spider-Man 2,painel,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z2,spider-man-2,Marvel's Spider-Man 2,touch,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,aranha branca impressa
+Z2,spider-man-2,Marvel's Spider-Man 2,botoes_face,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z2,spider-man-2,Marvel's Spider-Man 2,simbolos,#D0D0D0,FOTO,arte,pesquisa-externa-27-08,
+Z2,spider-man-2,Marvel's Spider-Man 2,dpad,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z2,spider-man-2,Marvel's Spider-Man 2,analogicos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z2,spider-man-2,Marvel's Spider-Man 2,gatilhos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z2,spider-man-2,Marvel's Spider-Man 2,detalhe,#0A0A0C,FOTO,arte,pesquisa-externa-27-08,teia impressa
+Z3,astro-bot,Astro Bot,casca_esq,#E8E4DC,FOTO,arte,pesquisa-externa-27-08,sem os olhos no touch é o White
+Z3,astro-bot,Astro Bot,casca_dir,#E8E4DC,FOTO,arte,pesquisa-externa-27-08,
+Z3,astro-bot,Astro Bot,painel,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z3,astro-bot,Astro Bot,touch,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z3,astro-bot,Astro Bot,botoes_face,#E8E4DC,FOTO,arte,pesquisa-externa-27-08,
+Z3,astro-bot,Astro Bot,simbolos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z3,astro-bot,Astro Bot,dpad,#E8E4DC,FOTO,arte,pesquisa-externa-27-08,
+Z3,astro-bot,Astro Bot,analogicos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z3,astro-bot,Astro Bot,gatilhos,#E8E4DC,FOTO,arte,pesquisa-externa-27-08,
+Z3,astro-bot,Astro Bot,detalhe,,SEM-HEX,arte,pesquisa-externa-27-08,os olhos do robô impressos no touchpad
+Z4,fortnite,Fortnite,casca_esq,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,a cor é a estampa; o plástico é preto
+Z4,fortnite,Fortnite,casca_dir,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z4,fortnite,Fortnite,painel,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z4,fortnite,Fortnite,touch,,SEM-HEX,arte,pesquisa-externa-27-08,gráfico colorido
+Z4,fortnite,Fortnite,botoes_face,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z4,fortnite,Fortnite,simbolos,#F2C200,FOTO,arte,pesquisa-externa-27-08,amarelo Fortnite; aproximado
+Z4,fortnite,Fortnite,dpad,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z4,fortnite,Fortnite,analogicos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z4,fortnite,Fortnite,gatilhos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z6,the-last-of-us,The Last of Us,casca_esq,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,invertido: punhos pretos e miolo branco; sem isso some no Midnight Black
+Z6,the-last-of-us,The Last of Us,casca_dir,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z6,the-last-of-us,The Last of Us,painel,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,miolo BRANCO
+Z6,the-last-of-us,The Last of Us,touch,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,vaga-lume dourado
+Z6,the-last-of-us,The Last of Us,botoes_face,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z6,the-last-of-us,The Last of Us,simbolos,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,
+Z6,the-last-of-us,The Last of Us,dpad,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+Z6,the-last-of-us,The Last of Us,analogicos,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,sticks BRANCOS
+Z6,the-last-of-us,The Last of Us,gatilhos,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,
+Z6,the-last-of-us,The Last of Us,detalhe,#C4A36A,FOTO,arte,pesquisa-externa-27-08,firefly no touch e ícones nos punhos
+ZA,god-of-war-20th,God of War 20th Anniversary,casca_esq,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,SPLIT: branco à esquerda
+ZA,god-of-war-20th,God of War 20th Anniversary,casca_dir,#C41E3A,FOTO,arte,pesquisa-externa-27-08,SPLIT: faixa vermelha à direita até o R1; sem ela é o White
+ZA,god-of-war-20th,God of War 20th Anniversary,painel,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,
+ZA,god-of-war-20th,God of War 20th Anniversary,touch,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,
+ZA,god-of-war-20th,God of War 20th Anniversary,botoes_face,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,
+ZA,god-of-war-20th,God of War 20th Anniversary,simbolos,#C41E3A,FOTO,arte,pesquisa-externa-27-08,
+ZA,god-of-war-20th,God of War 20th Anniversary,dpad,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,setas vermelhas
+ZA,god-of-war-20th,God of War 20th Anniversary,analogicos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+ZA,god-of-war-20th,God of War 20th Anniversary,gatilhos,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,R1 vermelho e L1 branco
+ZB,icon-blue,Icon Blue Special Edition,casca_esq,#1E4A8C,FOTO,arte,pesquisa-externa-27-08,azul em camadas
+ZB,icon-blue,Icon Blue Special Edition,casca_dir,#1E4A8C,FOTO,arte,pesquisa-externa-27-08,
+ZB,icon-blue,Icon Blue Special Edition,painel,#1E4A8C,FOTO,arte,pesquisa-externa-27-08,a ilha também é azul
+ZB,icon-blue,Icon Blue Special Edition,touch,#163A72,FOTO,arte,pesquisa-externa-27-08,grid de △○X□ glossy
+ZB,icon-blue,Icon Blue Special Edition,botoes_face,#1E4A8C,FOTO,arte,pesquisa-externa-27-08,
+ZB,icon-blue,Icon Blue Special Edition,simbolos,#9EC0E8,FOTO,arte,pesquisa-externa-27-08,
+ZB,icon-blue,Icon Blue Special Edition,dpad,#1E4A8C,FOTO,arte,pesquisa-externa-27-08,
+ZB,icon-blue,Icon Blue Special Edition,analogicos,#1E4A8C,FOTO,arte,pesquisa-externa-27-08,sticks AZUIS; é o que separa do Cobalt Blue
+ZB,icon-blue,Icon Blue Special Edition,gatilhos,#163A72,FOTO,arte,pesquisa-externa-27-08,
+ZC,ghost-of-yotei,Ghost of Yōtei Limited Edition,casca_esq,,SEM-HEX,arte,pesquisa-externa-27-08,existem Gold e Black; o mapa público traz UM código só e não diz qual
+ZC,ghost-of-yotei,Ghost of Yōtei Limited Edition,painel,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+ZC,ghost-of-yotei,Ghost of Yōtei Limited Edition,analogicos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+ZC,ghost-of-yotei,Ghost of Yōtei Limited Edition,detalhe,,SEM-HEX,arte,pesquisa-externa-27-08,brasão japonês no touchpad
+ZD,marathon,Marathon Limited Edition,casca_esq,,SEM-HEX,arte,pesquisa-externa-27-08,sem amostragem estável nesta pesquisa
+ZD,marathon,Marathon Limited Edition,painel,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+ZD,marathon,Marathon Limited Edition,analogicos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+ZE,genshin-impact,Genshin Impact Limited Edition,casca_esq,,SEM-HEX,arte,pesquisa-externa-27-08,sem amostragem estável nesta pesquisa
+ZE,genshin-impact,Genshin Impact Limited Edition,painel,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+ZE,genshin-impact,Genshin Impact Limited Edition,analogicos,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,
+ZF,007-first-light,007 First Light Limited Edition,casca_esq,,SEM-HEX,arte,pesquisa-externa-27-08,código no mapa; sem foto oficial amostrada
+ZF,007-first-light,007 First Light Limited Edition,painel,#1A1A1C,FOTO,arte,pesquisa-externa-27-08,INFERIDO do padrão da linha
