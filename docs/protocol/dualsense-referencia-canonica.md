@@ -1571,12 +1571,12 @@ Daí as duas regras, e nenhuma delas é opcional:
    não confere parseia o report errado com o layout certo e escreve o número
    errado na documentação — com convicção, porque o tamanho bate.
 
-### O caminho da cor do plástico — CAMINHO IDENTIFICADO, NÃO MEDIDO por nós
+### O caminho da cor do plástico — MEDIDO NOS DOIS TRANSPORTES
 
-**GRAU: nem MEDIDO AQUI, nem ALTA. É `identificado-em-fonte-externa`**, e a
-distinção é o ponto desta subseção. Registrado em 15/08/2026; achado original
-desta casa em **10/08/2026**, que ficou enterrado num transcrito de subagente e
-nunca virou página — este parágrafo existe para que isso não se repita.
+**GRAU: ALTA, MEDIDO NESTA BANCADA em 27/08/2026**, no cabo e no rádio, com o
+serial saindo dos dois. Foi `identificado-em-fonte-externa` de 15/08 até 27/08;
+o achado original desta casa é de **10/08/2026**, e ficou enterrado num
+transcrito de subagente — este parágrafo existe para que isso não se repita.
 
 O colorway de fábrica está no **serial impresso na traseira**, de 17 caracteres,
 nos **caracteres 5 e 6** (índices 4 e 5). O serial não é campo de leitura livre:
@@ -1608,23 +1608,59 @@ confirmando na issue #210; e **duas implementações independentes que concordam
 (`nsfm/dualsense-ts` e `TechAntohere/Senshi`). Três fontes que fecham entre si é
 mais do que esta página costuma exigir para MÉDIA.
 
-**E por que, ainda assim, não é MEDIDO:**
+**As duas medições desta bancada, 27/08/2026** (`scripts/ensaios/cor_do_plastico.py`):
 
-1. **Ninguém aqui rodou isto em aparelho nenhum.** A leitura exige uma
-   **ESCRITA** (`SET_FEATURE 0x80`), e escrita em controle dela é decisão dela,
-   não do agente.
+| alvo | transporte | serial | código | cor | escrita |
+|---|---|---|---|---|---|
+| `hidraw7` | cabo | `M65A05…` | `05` | Starlight Blue | aceita |
+| `hidraw8` | **rádio** | `F55602…` | `02` | Cosmic Red | **aceita** |
+
+Os dois continuaram sãos: `0x20` igual byte a byte antes e depois, e três
+reports de entrada depois da escrita.
+
+**A ressalva que sobra:**
+
+1. **A leitura exige uma ESCRITA** (`SET_FEATURE 0x80`), e escrita em controle
+   dela é decisão dela, não do agente. As seis travas do instrumento existem
+   por isso, e a de última milha **mordeu de verdade** em 27/08.
 2. **A escrita é da família de comandos de FÁBRICA.** É a mesma família em que
    `[1, 1]` **reseta o controle** e `[12, 1, ...]` **grava calibração na NVS**.
    O par `[1, 19]` é leitura pura — mas **byte errado no payload escreve onde
    não devia**, e não há desfazer.
-3. **Funciona POR CABO, e o APARELHO recusa por rádio.** Medido em 23/08/2026,
-   nos dois DualSense desta bancada, com CRC de semente `0xA3` e com a cauda
-   zerada: o `SET_REPORT` sai inteiro (`btmon`: TX 65 bytes no canal de
-   controle L2CAP) e o controle responde `HANDSHAKE 0x04`
-   (`ERR_INVALID_PARAMETER`) em ~5 ms. Não é o BlueZ, não é o uhid, não é o
-   kernel — é o firmware. O `GET_FEATURE 0x20` no mesmo canal e no mesmo
-   instante responde em ~6 ms, o que descarta o fio. O `dualshock-tools`
-   **recusa Bluetooth de saída**, e agora se sabe por quê.
+3. **FUNCIONA POR RÁDIO — e a semente do CRC é que estava errada.**
+
+   **FATO ERRADO, SUBSTITUÍDO (27/08/2026).** Esta linha dizia *"funciona por
+   cabo, e o APARELHO recusa por rádio (…) não é o BlueZ, não é o uhid, não é o
+   kernel — é o firmware"*. **Não era o firmware: era o nosso CRC.**
+
+   As sementes deste CRC são o **byte de cabeçalho da transação HIDP**, e há
+   uma por sentido. O ensaio de 23/08 assinou um `SET_REPORT` com a semente de
+   `DATA|FEATURE`:
+
+   | semente | transação HIDP | quando |
+   |---|---|---|
+   | `0xA1` | `DATA` \| `INPUT` | report que o físico emite |
+   | `0xA2` | `DATA` \| `OUTPUT` | report de saída (`0x31`) |
+   | `0xA3` | `DATA` \| `FEATURE` | feature que **chega** — a resposta do `0x81` |
+   | **`0x53`** | **`SET_REPORT` \| `FEATURE`** | **feature que SAI — é esta** |
+
+   Medido em 27/08/2026, no mesmo controle, no mesmo comando, mudando só a
+   semente:
+
+   | semente | resultado |
+   |---|---|
+   | `0xA3` (a de 23/08) | `errno 5` — a falha de 23/08, reproduzida |
+   | `0xA2` (um dos candidatos que o ensaio listou) | `errno 5` |
+   | **`0x53`** | **aceito; serial `F55602…`, Cosmic Red** |
+
+   O ensaio de 23/08 já tinha escrito que o galho continuava aberto — *"as duas
+   caudas tentadas são ambas inválidas para um firmware que valide CRC no
+   sentido de ESCRITA"* — e listou `0xA2`, `0xA1` e buffer curto como o que
+   faltava tentar. **Nenhum dos três era o certo.** O `0x53` veio de uma
+   pesquisa externa (27/08) e esta bancada o mediu.
+
+   Consequência de produto: **a cor do plástico se lê nos DOIS transportes.**
+   O card não precisa mais perguntar a cor a quem só usa o controle no rádio.
 
 **O que já foi DESCARTADO como fonte de cor, com o que descartou** (15/08/2026,
 quatro unidades de quatro cores diferentes):
