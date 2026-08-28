@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- rumble_direito.svg — a empunhadura DIREITA tremendo (contrapeso menor, onda curta) -->
+  <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
+        fill="none" stroke="#bd93f9" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M7,10 q-3,6 0,12" fill="none" stroke="#bd93f9" stroke-width="2" stroke-linecap="round"/>
+  <path d="M3,7 q-4,9 0,18" fill="none" stroke="#bd93f9" stroke-width="2" stroke-linecap="round"/>
+</svg>

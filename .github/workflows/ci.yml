@@ -37,6 +37,11 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash scripts/check_anonymity.sh
       - run: python3 scripts/check_pecas_do_dualsense.py
+      # O irmão do de cima, para a COR: os 28 modelos do
+      # docs/data/cores-do-dualsense.csv contra o que o navegador pinta, zona a
+      # zona. Duas réguas independentes — a leitura dos CSV e a pintura no
+      # Chrome —, porque a primeira é cega para style inline, que vence folha.
+      - run: python3 scripts/check_cores_do_dualsense.py
       # PORTAO-DE-ENDERECO-01 (25/08/2026): o irmão acima procura nomes de
       # fornecedor e frases de autoria; ele NUNCA olhou um endereço de rádio,
       # embora o CLAUDE.md prometesse um portão para isso desde sempre. Medido
