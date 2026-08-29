@@ -56,6 +56,31 @@ REGRA 1 -- ARQUIVO (nasceu na PORTÃO-VIVO-01, vale para `docs/` inteiro)
   contra a pasta do próprio documento. Se a resolução SAIR da árvore, é achado:
   não há link legítimo, dentro do repositório, para acima da raiz dele.
 
+  O `cria:` DO PRÓPRIO DOCUMENTO -- decisão dela, 29/08/2026.
+
+  Sprint é proposta: ela nomeia os testes e os módulos que vai escrever QUANDO
+  FOR EXECUTADA, e até lá esses arquivos não existem. Medido em 29/08, este
+  portão era o único vermelho dos 28: das 125 linhas que acusava, 116 eram
+  arquivos que a própria sprint declara criar no `cria:` do frontmatter. O
+  portão estava cobrando do futuro o presente -- o mesmo erro que
+  `PREFIXOS_IGNORADOS` já corrige para o passado.
+
+  A cura: o `cria:` do frontmatter entra como índice, expandido em sufixos
+  igual ao índice do disco, e passa pelas MESMAS duas conferências (resolução
+  posicional e leniência de sufixo). Nada de caminho novo, nada de leniência
+  nova -- só uma segunda fonte para o mesmo conjunto.
+
+  E ela vale SÓ para o documento que está sendo varrido. Ler o `cria:` de
+  qualquer sprint viraria licença geral: bastaria uma sprint em qualquer canto
+  declarar um nome para autorizar esse nome na árvore inteira, e a regra 1
+  morreria. Por isso citar arquivo que NINGUÉM declarou criar continua
+  reprovando, e citar arquivo que OUTRA sprint declara também -- é o que
+  restou dos 125, e está descrito no relatório da frente.
+
+  Pasta declarada (`docs/data/`) NÃO cobre o que está dentro dela: candidato
+  precisa de extensão para chegar até aqui, então uma pasta nunca casa, e
+  inventar cobertura por pasta seria leniência que ninguém mediu precisar.
+
 REGRA 2 -- VARIÁVEL DE AMBIENTE (sprint DOC-VERDADE-02, entrega E10)
 
   Token entre crases no formato `HEFESTO_[A-Z0-9_]+` conferido contra os
@@ -304,6 +329,18 @@ _NOTA_DE_VERIFICACAO = re.compile(r"^#{1,6}\s*Nota de verifica", re.IGNORECASE)
 #: continuam descartadas.
 _SUBIDA = re.compile(r"^(?:\.\./)+")
 
+#: Frontmatter de sprint: a linha que abre e fecha o bloco, a chave de topo, o
+#: item de lista e o comentário colado no fim da linha (` # dona: A`). Só o
+#: `cria:` interessa aqui -- este portão não valida frontmatter, quem faz isso
+#: é `scripts/check_colisao_de_sprints.py`. A leitura é própria, e de
+#: propósito: um portão que importa o parser de outro portão herda as falhas
+#: dele, e este precisa rodar num runner pelado.
+_ABERTURA_DE_FRONTMATTER = "---"
+_CHAVE_DO_CRIA = "cria"
+_CHAVE_DE_TOPO = re.compile(r"^([a-z_]+):\s*(.*)$")
+_ITEM_DE_LISTA = re.compile(r"^\s+-\s+(.+)$")
+_COMENTARIO_INLINE = re.compile(r"\s+#.*$")
+
 #: Rótulo humano de cada regra, para o relatório dizer O QUE está morto.
 REGRA_ARQUIVO = "arquivo"
 REGRA_ENV = "variável de ambiente"
@@ -425,6 +462,92 @@ def indexar_metodos_ipc(raiz: Path) -> set[str]:
                 if isinstance(chave, ast.Constant) and isinstance(chave.value, str):
                     metodos.add(chave.value)
     return metodos
+
+
+def _sufixos_de(caminho: str) -> set[str]:
+    """Todo sufixo de um caminho: `a/b/c.py` -> `a/b/c.py`, `b/c.py`, `c.py`.
+
+    A mesma expansão que `indexar` faz com o disco, para que o `cria:` case
+    com a citação encurtada -- a sprint declara `tests/unit/test_x.py` e o
+    corpo dela cita `test_x.py`, que é como esta casa escreve.
+    """
+    partes = caminho.split("/")
+    return {
+        "/".join(partes[corte:]) for corte in range(len(partes)) if partes[corte]
+    }
+
+
+def _caminhos_do_valor(valor: str) -> list[str]:
+    """Os caminhos de um valor de frontmatter: lista inline ou escalar.
+
+    Aceita `[a.py, b.py]` e o escalar solto. De cada pedaço fica só o PRIMEIRO
+    trecho sem espaço, porque a casa comenta na própria linha
+    (`docs/data/ensaios.csv (três linhas, uma por perfil)`): o caminho é o
+    primeiro trecho, o resto é prosa. Prosa que não vira caminho é inofensiva
+    -- candidato só chega à conferência com extensão, e `nada` não tem.
+    """
+    texto = valor.strip()
+    if not texto:
+        return []
+    inline = texto.startswith("[")
+    pedacos = texto[1:].split("]", 1)[0].split(",") if inline else [texto]
+
+    caminhos: list[str] = []
+    for pedaco in pedacos:
+        limpo = pedaco.strip().strip("'\"")
+        if not limpo:
+            continue
+        primeiro = limpo.split()[0].strip("'\"")
+        if _TOKEN_LIMPO.fullmatch(primeiro):
+            caminhos.append(primeiro)
+    return caminhos
+
+
+def declarados_no_cria(conteudo: str) -> set[str]:
+    """Os arquivos que o frontmatter DESTE documento declara que vai criar.
+
+    Já expandidos em sufixos, prontos para as mesmas duas conferências que o
+    índice do disco atravessa. Documento sem frontmatter, sem `cria:`, ou com
+    frontmatter que nunca fecha, devolve conjunto vazio -- e aí a regra 1
+    continua exatamente como era antes de 29/08/2026.
+
+    Lê SÓ o `cria:`, e SÓ deste documento: é essa fronteira que impede a cura
+    de virar licença geral (ver o cabeçalho, REGRA 1).
+    """
+    linhas = conteudo.splitlines()
+    if not linhas or linhas[0].strip() != _ABERTURA_DE_FRONTMATTER:
+        return set()
+    try:
+        fim = next(
+            indice
+            for indice in range(1, len(linhas))
+            if linhas[indice].strip() == _ABERTURA_DE_FRONTMATTER
+        )
+    except StopIteration:
+        return set()
+
+    declarados: set[str] = set()
+    dentro_do_cria = False
+    for linha in linhas[1:fim]:
+        sem_comentario = _COMENTARIO_INLINE.sub("", linha)
+        if not sem_comentario.strip() or sem_comentario.lstrip().startswith("#"):
+            continue
+        if not sem_comentario[0].isspace():
+            chave = _CHAVE_DE_TOPO.match(sem_comentario)
+            dentro_do_cria = chave is not None and chave.group(1) == _CHAVE_DO_CRIA
+            if dentro_do_cria and chave is not None:
+                for caminho in _caminhos_do_valor(chave.group(2)):
+                    declarados |= _sufixos_de(caminho)
+            continue
+        # Dentro de outra chave (o `posse:`, que aninha por agente) não se
+        # lê nada: só a lista do `cria:` conta.
+        if not dentro_do_cria:
+            continue
+        item = _ITEM_DE_LISTA.match(sem_comentario)
+        if item:
+            for caminho in _caminhos_do_valor(item.group(1)):
+                declarados |= _sufixos_de(caminho)
+    return declarados
 
 
 def tokens_isentos_por_nota(conteudo: str) -> set[str]:
@@ -572,6 +695,9 @@ def varrer_documento(
     isentos_por_nota = (
         tokens_isentos_por_nota(conteudo) if (cobra_env or cobra_ipc) else set()
     )
+    # O que ESTE documento declara que vai criar. Vazio para todo documento
+    # sem frontmatter, que é a maioria -- e aí a regra 1 não muda em nada.
+    declarados_aqui = declarados_no_cria(conteudo)
 
     achados: list[Achado] = []
     dentro_de_cerca = False
@@ -624,10 +750,18 @@ def varrer_documento(
                 relativo = vizinho.relative_to(raiz).as_posix()
             except ValueError:
                 relativo = None
-            if relativo is not None and relativo in sufixos:
+            #
+            # O `cria:` deste documento entra nas DUAS conferências abaixo,
+            # como segunda fonte do mesmo índice (29/08/2026, decisão dela --
+            # ver o cabeçalho). Ele não abre caminho novo: um arquivo que a
+            # sprint não declarou, e que outra sprint declarou, continua
+            # achado.
+            if relativo is not None and (
+                relativo in sufixos or relativo in declarados_aqui
+            ):
                 continue
             leniente = "/" in referencia or veio_de_crase or referencia in raiz_nomes
-            if leniente and referencia in sufixos:
+            if leniente and (referencia in sufixos or referencia in declarados_aqui):
                 continue
             achados.append(Achado(relativo_doc, numero, referencia, REGRA_ARQUIVO))
 
