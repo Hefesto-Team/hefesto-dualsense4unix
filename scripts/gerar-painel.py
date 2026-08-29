@@ -475,8 +475,28 @@ def _bloco_das_decisoes(decisoes: list[dict]) -> str:
     if not decisoes:
         return ""
 
-    abertas = [d for d in decisoes if (d.get("estado") or "").strip() != "decidida"]
-    feitas = [d for d in decisoes if (d.get("estado") or "").strip() == "decidida"]
+    # `caduca` NÃO É `aberta` — medido em 29/08/2026. A régua dizia
+    # `estado != "decidida"`, e por isso uma decisão CADUCADA (já respondida, e
+    # depois substituída por outra fala dela) entrava na lista das que esperam a
+    # palavra dela — e o portão do painel cobrava dela o "preço do outro lado" de
+    # uma pergunta que ela já respondeu duas vezes. Foi o que aconteceu com a
+    # `D-AS-SPRINTS-VELHAS-SAO-DESATIVADAS-NAO-APAGADAS`, marcada `caduca` quando
+    # se descobriu que ela contradizia a ordem "Apagar" que ela dera em 27/08.
+    #
+    # Os três estados que EXISTEM no CSV e o que cada um quer dizer:
+    #   `decidida` — ela respondeu, e a resposta vale;
+    #   `caduca`   — ela respondeu, e outra fala dela depois substituiu esta;
+    #   qualquer outro — ainda espera a palavra dela. SÓ ESTE é "aberta".
+    # A CADUCADA ENTRA EM `feitas`, e não some. Tirá-la das abertas sem lhe dar
+    # outro lugar fazia a linha sumir do painel — e o portão
+    # `test_toda_decisao_do_csv_chega_a_pagina` reprova exatamente isso, com
+    # razão: uma decisão que existe no CSV e não aparece na tela é o registro
+    # virando invisível, que é o oposto do que este painel existe para fazer.
+    # (Melhoria possível, não feita aqui: marca visual própria para a caducada,
+    # em vez de sair igual às decididas. Hoje as duas saem esmaecidas.)
+    _FECHADAS = {"decidida", "caduca"}
+    abertas = [d for d in decisoes if (d.get("estado") or "").strip() not in _FECHADAS]
+    feitas = [d for d in decisoes if (d.get("estado") or "").strip() in _FECHADAS]
 
     def _fotos(d: dict) -> str:
         pecas = []

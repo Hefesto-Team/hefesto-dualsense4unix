@@ -69,9 +69,16 @@ def test_toda_decisao_aberta_traz_o_preco_do_outro_lado() -> None:
 
     MORDE: esvaziar o `preco_do_outro_lado` de qualquer linha aberta.
     """
+    # `caduca` NÃO É `aberta`, e este teste não sabia disso até 29/08/2026.
+    # Uma decisão caducada foi RESPONDIDA por ela e depois substituída por outra
+    # fala dela — cobrar o "preço do outro lado" de uma pergunta que ela já
+    # respondeu duas vezes é o portão castigando quem fez a correção certa.
+    # A MORDIDA CONTINUA INTEIRA: esvaziar o `preco_do_outro_lado` de uma linha
+    # que ainda ESPERA a palavra dela reprova igual.
+    ja_respondidas = {"decidida", "caduca"}
     with CSV_.open(newline="", encoding="utf-8") as f:
         for d in csv.DictReader(f):
-            if (d.get("estado") or "").strip() == "decidida":
+            if (d.get("estado") or "").strip() in ja_respondidas:
                 continue
             assert (d.get("preco_do_outro_lado") or "").strip(), (
                 f"a decisão {d.get('id')} não diz o preço de decidir para o "
