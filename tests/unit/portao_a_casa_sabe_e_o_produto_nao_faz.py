@@ -1561,8 +1561,11 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "cita, e o docstring do módulo (:34) confessa o estado: *não existe "
         "nenhuma curva própria no repositório*. Até 21/08 a régua plana o "
         "perdoava pelo gerador de documentação de `scripts/`. "
-        "O QUE FECHA: a CR-04, que põe a mão dela no gatilho e produz a primeira "
-        "curva; enquanto não houver curva, não há de onde carregar o catálogo."
+        "O QUE FECHA: a ONDA-GATILHOS-05, que dá tela ao catálogo e põe a mão "
+        "dela no gatilho para produzir a primeira curva. SUBSTITUÍDO em "
+        "29/08/2026: esta linha dizia `a CR-04`, e a CR-04 saiu do disco com a "
+        "corrente do clean-room, por decisão dela — não há mais sprint futura "
+        "esperando pela primeira curva."
     ),
     "profiles/curva_propria.py::CatalogoCurvasProprias": (
         "MEDIDO em 22/08/2026. Irmã da anterior (ver `::CurvaPropria`): é o "

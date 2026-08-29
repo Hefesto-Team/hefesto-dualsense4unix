@@ -5,13 +5,21 @@ pelo Hefesto**. Ele existe por causa do processo de sala limpa
 ([CLEAN-ROOM.md](../process/CLEAN-ROOM.md), regra R3): o dado e a origem nunca
 se separam.
 
-> **Ainda vazio, e isso é proposital.** A tabela abaixo será preenchida a partir
-> da sprint [CR-04](../process/sprints/2026-07-25-CR-04-os-efeitos-da-casa.md),
-> e será **gerada dos perfis**, não escrita à mão (CR-02). Um registro mantido
-> manualmente desatualiza, e um registro desatualizado não defende ninguém.
+> **Vazio, e agora vazio de vez — nota datada de 29/08/2026, grau: DECISÃO DELA.**
+> Esta tabela seria preenchida pela corrente `CR-03 → CR-04 → CR-06`, e a corrente
+> **saiu do disco** (`docs/data/decisoes-dela.csv`, `D-A-CORRENTE-DO-CLEAN-ROOM-SAI`):
+> sem a bancada de medir não há efeitos da casa, e sem eles não há o que devolver ao
+> ecossistema. O Hefesto vive com o catálogo de efeitos que já tem. Para onde foram
+> as três, veja
+> [o manifesto do corte](../process/sprints/2026-08-29-O-CORTE-DO-CLEAN-ROOM-o-que-saiu-e-por-que.md).
 >
-> Este arquivo nascer antes dos dados é parte do ponto: a estrutura de
-> proveniência precede o primeiro valor.
+> **O arquivo fica, e não é por respeito ao passado.** Ele é a entrega da regra **R3**
+> do [processo de sala limpa](../process/CLEAN-ROOM.md) — *o dado e a origem nunca se
+> separam* —, e essa regra segue normativa: a posição jurídica e o formato que recusa
+> foram entregues, e `profiles/curva_propria.py` continua reprovando efeito sem
+> `medido_por`, `controle` ou `nota`. No dia em que alguém medir uma curva própria —
+> por bancada, por script ou à mão —, o registro dela é aqui, e o portão que mantém a
+> tabela honesta já está de pé.
 
 **Atualização de 2026-07-31 — o formato já existe, e ele recusa.** A
 [CR-02](../process/sprints/2026-07-25-CR-02-formato-e-proveniencia.md) foi
@@ -20,14 +28,11 @@ entregue: `profiles/curva_propria.py` define `CurvaPropria`, e um efeito com
 aviso. A tabela da seção "Efeitos" sai da função `gerar_tabela_markdown`, a
 partir do catálogo, e não da mão de ninguém.
 
-Quem vai **preencher** esta tabela é a bancada de medição
-([CR-03](../process/sprints/2026-07-25-CR-03-bancada-de-medicao.md)), com a
-mantenedora sentindo o gatilho e nomeando o efeito
-([CR-04](../process/sprints/2026-07-25-CR-04-os-efeitos-da-casa.md)). Não há
-atalho por aqui, e a ausência de atalho é o produto: a regra R3 proíbe valor sem
-quem sentiu, e um número que não tem mão nem sensação entraria com os campos
-`Medido por`, `Controle` e `Nota` preenchidos com ficção — contaminando a defesa
-da tabela inteira, pela regra que o próprio processo escreveu.
+Quem **preenche**, agora que a bancada não vem: ninguém, por enquanto — e a ausência
+de atalho continua sendo o produto. A R3 proíbe valor sem quem sentiu; um número sem
+mão e sem sensação entraria com `Medido por`, `Controle` e `Nota` preenchidos com
+ficção, contaminando a defesa da tabela inteira. Quem medir a primeira curva escreve
+no catálogo (`docs/data/curvas-proprias.json`) e roda o gerador: a tabela sai sozinha.
 
 ## Como ler esta tabela
 
@@ -58,10 +63,9 @@ _(nenhum ainda — ver CR-04)_
 
 **CC0-1.0** — domínio público, sem exigência de crédito.
 
-**Grau: DECISÃO DELA**, 07/08/2026. A pergunta estava aberta desde 25/07 na
-[CR-06](../process/sprints/2026-07-25-CR-06-devolver-ao-ecossistema.md), e a
-resposta separa as duas coisas de propósito: o **código** é MIT, os **dados
-medidos** são CC0.
+**Grau: DECISÃO DELA**, 07/08/2026. A pergunta estava aberta desde 25/07 na CR-06 —
+a sprint de publicação, cortada em 29/08 —, e a resposta separa as duas coisas de
+propósito: o **código** é MIT, os **dados medidos** são CC0.
 
 O motivo é o objetivo declarado da própria CR-06 — que a curva seja **adotada**.
 Exigir crédito num número medido cria uma dúvida ("dado factual tem autoria?")
