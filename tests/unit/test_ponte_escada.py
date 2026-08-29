@@ -16,6 +16,7 @@ Os testes que MORDEM, um por decisão que a leva tomou:
 
 from __future__ import annotations
 
+import ast
 import csv
 from pathlib import Path
 
@@ -25,6 +26,37 @@ from hefesto_dualsense4unix.integrations import ponte_escada as pe
 
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
+PRODUTO = RAIZ / "src" / "hefesto_dualsense4unix"
+
+
+def _chamadas_a(nome: str) -> dict[str, list[ast.Call]]:
+    """Todo `…nome(…)` do produto, agrupado por arquivo (caminho da raiz).
+
+    LÊ a árvore sintática, e é isso que separa esta régua das onze que esta
+    casa já reprovou por *digitarem o que deviam ler*: `def nome(...)`, a
+    palavra num comentário e a menção numa docstring NÃO contam — só a
+    chamada conta.
+    """
+    achados: dict[str, list[ast.Call]] = {}
+    for arquivo in sorted(PRODUTO.rglob("*.py")):
+        arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+        for no in ast.walk(arvore):
+            if isinstance(no, ast.Call) and _nome_curto(no.func) == nome:
+                achados.setdefault(str(arquivo.relative_to(RAIZ)), []).append(no)
+    return achados
+
+
+def _nome_curto(no: ast.expr | None) -> str | None:
+    """O último nome de uma expressão: `a.b.c` -> `"c"`, `c` -> `"c"`.
+
+    Serve para `confirmar_ponte` e `ProfileManager(...).confirmar_ponte`
+    contarem como a MESMA chamada, sem depender do estilo do import.
+    """
+    if isinstance(no, ast.Attribute):
+        return no.attr
+    if isinstance(no, ast.Name):
+        return no.id
+    return None
 
 
 def _linhas_uhid_do_dualsense() -> list[str]:
@@ -241,6 +273,60 @@ class TestUmaGavetaSO:
 
     def test_sem_carimbo_nao_ha_ponte(self) -> None:
         assert pe.ponte_do_carimbo(None) is None
+
+
+class TestNinguemRecarimbaOPerfil:
+    """A cadeia que escreve o carimbo é um FIO SÓ — e é por isso que um carimbo
+    prematuro fica errado para sempre.
+
+    Medido em 29/08/2026, contra a afirmação que morava na nota do
+    `SILENCIO_CONFIRMA_SEC`: *"a confirmação prematura é desfeita pelo próximo
+    gesto, que recarimba o perfil"*. Não recarimba. O preço apareceu no journal
+    dela: o Mullet Mad Jack carimbado `dualsense` por silêncio às 03:23:13 com
+    `gestos=0`, quatro `PS + R3` entre 03:27:59 e 03:29:02 terminando em
+    `xbox`, e o carimbo errado no lugar — com a aba Perfis contando que aquela
+    ponte funcionou e ninguém precisou mexer.
+
+    As duas outras pernas do fato já têm dono e não são repetidas aqui: a
+    recusa quando já há carimbo é
+    `test_o_silencio_nao_recarimba_o_que_ja_foi_confirmado`, acima; e o salvar
+    que não apaga carimbo é `app/actions/profile_writer.carimbo_que_o_save_leva`.
+
+    **Se um dia o recarimbo for implementado — é decisão DELA, não veto deste
+    teste — esta classe reprova, e o que ela está pedindo é que a nota do
+    `SILENCIO_CONFIRMA_SEC` seja reescrita no mesmo commit.**
+    """
+
+    def test_um_so_escritor_monta_o_carimbo(self) -> None:
+        """`PonteConfirmada` e `carimbar_ponte` só são chamados de um arquivo."""
+        assert set(_chamadas_a("PonteConfirmada")) == {
+            "src/hefesto_dualsense4unix/profiles/manager.py"
+        }
+        assert set(_chamadas_a("carimbar_ponte")) == {
+            "src/hefesto_dualsense4unix/profiles/manager.py"
+        }
+
+    def test_um_so_chamador_grava_o_carimbo(self) -> None:
+        """O tique do silêncio é o único; nenhum caminho de gesto escreve."""
+        assert set(_chamadas_a("confirmar_ponte")) == {
+            "src/hefesto_dualsense4unix/daemon/launch_env.py"
+        }
+
+    def test_todo_carimbo_do_produto_nasce_do_silencio(self) -> None:
+        """`POR_GESTO` e `POR_ESCOLHA_DELA` existem no esquema e ninguém grava.
+
+        A leitura é do argumento `por=` de cada chamada, não da palavra no
+        arquivo: um carimbo novo com outra origem cai aqui.
+        """
+        origens: set[str | None] = set()
+        for chamadas in _chamadas_a("confirmar_ponte").values():
+            for chamada in chamadas:
+                por = next(
+                    (kw.value for kw in chamada.keywords if kw.arg == "por"), None
+                )
+                assert por is not None, "carimbo gravado sem `por=` explícito"
+                origens.add(_nome_curto(por))
+        assert origens == {"POR_SILENCIO"}
 
 
 class TestAPonteSaiDoPerfilSemVocabularioNovo:

@@ -39,7 +39,10 @@ from typing import Any
 
 from hefesto_dualsense4unix.app import gui_dialogs, ipc_bridge
 from hefesto_dualsense4unix.app.actions.carona_do_wrapper import GESTO_APLICAR
-from hefesto_dualsense4unix.app.actions.profile_writer import ProfileWriterMixin
+from hefesto_dualsense4unix.app.actions.profile_writer import (
+    ProfileWriterMixin,
+    carimbo_que_o_save_leva,
+)
 from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
 from hefesto_dualsense4unix.profiles.loader import (
     _seed_source_file,
@@ -1017,30 +1020,17 @@ class FooterActionsMixin(ProfileWriterMixin):
     ) -> PonteConfirmada | None:
         """Carimbo de ponte que o perfil leva ao disco. Irmão de ``_regra_do_save``.
 
-        PONTE-CONFIRMADA-01 (19/08/2026). O carimbo diz qual ponte já FUNCIONOU
-        naquele jogo — é o que faz a escada de ``integrations/ponte_escada.py``
-        parar em vez de recomeçar do primeiro degrau a cada lançamento, e
-        recomeçar significa recriar o vpad com o jogo aberto (R-04, 23/07).
+        A escada inteira — e o porquê de cada degrau — mora em
+        ``profile_writer.carimbo_que_o_save_leva``, que é o dono único desta
+        resposta desde a PONTE-SOBREVIVE-A-CORRIDA-01 (28/08/2026): a aba Perfis
+        pergunta o MESMO a partir de lá.
 
-        Degrau 1 — ``existente.ponte``, o DISCO, pelo argumento medido da
-        REGRA-NAO-SE-PERDE-01: quem já existe tem carimbo, e carimbo não se
-        perde por um gesto que a tela nem sabe nomear. Cobre o caso que o
-        passthrough do rascunho NÃO cobre — salvar por cima de um perfil
-        DIFERENTE daquele de onde o rascunho veio, onde o gate ``mesmo_perfil``
-        de ``to_profile`` responde ``False`` e o perfil do disco perderia o
-        carimbo para um save que só queria guardar uma cor.
-
-        Degrau 2 — o que ``to_profile`` já reemitiu (``draft.source_ponte``
-        gateado pelo R-11), que é o caso comum: salvar por cima de si mesmo.
-
-        Não há degrau 3, e a ausência é a entrega: nome novo sem nada em disco
-        nasce SEM carimbo. A janela nunca inventa uma confirmação — quem
-        carimba é ``profiles.manager.confirmar_ponte``, depois de a ponte ter
-        sido confirmada de verdade.
+        Aqui o degrau 1 chega FRESCO: ``existente`` vem do
+        ``load_all_profiles()`` que ``on_save_profile`` roda no worker no
+        instante do save, nunca de cache. É por isso que o rodapé nunca teve a
+        corrida que a aba Perfis tinha.
         """
-        if existente is not None and existente.ponte is not None:
-            return existente.ponte
-        return do_rascunho
+        return carimbo_que_o_save_leva(existente, do_rascunho)
 
     def _persist_profile_async(
         self, nome: str, existente: Profile | None = None

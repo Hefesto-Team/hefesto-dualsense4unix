@@ -45,15 +45,30 @@ camadas independentes, está em
 Alguns jogos não falam com o controle direto — eles pedem os recursos do
 DualSense à **API da Steam** (`SetDualSenseTriggerEffect`, da Steamworks). Esses
 títulos têm suporte a DualSense de verdade, mas ele só funciona com o **Steam
-Input daquele jogo LIGADO**, e o jogo precisa enxergar o **controle físico**.
+Input daquele jogo LIGADO**.
 
-Como o Hefesto normalmente esconde o hidraw do físico (para o jogo não ver o
-controle duplicado), esses jogos precisam de uma **exceção por jogo** — o botão
-**"Este jogo não funciona"**, na aba **Sistema**.
+**Você não precisa marcar nada para isso.** O botão **"Este jogo não funciona"**
+(aba **Sistema**) e a caixinha **"Esconder os controles físicos neste jogo"**
+(aba **Perfis**) continuam existindo, e escrevem no mesmo arquivo — mas o que
+elas garantiam já vale em **todo** jogo desde **09/08/2026**: o Hefesto esconde
+o controle físico sozinho, e o jogo enxerga um dispositivo por jogador. O que a
+marca ainda faz, e só isso, é impedir o guarda
+(`scripts/disable_steam_input.sh`) de **desligar** o Steam Input daquele jogo.
 
-**O co-op continua funcionando nesses jogos.** A exceção troca *qual* controle o
-jogo enxerga, e não derruba ninguém da partida: o gamepad virtual continua de pé
-e o jogador 2 permanece.
+**O co-op continua funcionando nesses jogos**, marcados ou não: o gamepad
+virtual continua de pé e o jogador 2 permanece.
+
+> **FATO ERRADO, SUBSTITUÍDO — 28/08/2026.** Esta seção dizia *"esses jogos
+> precisam de uma exceção por jogo"* e *"o jogo precisa enxergar o controle
+> físico"*. As duas descrevem o mecanismo de **antes** de 09/08, e a segunda é
+> hoje o **inverso** do que o produto faz. Medido em 28/08 com o parser do
+> próprio produto: a allowlist da máquina dela tem **zero** appids — e o
+> Mullet Mad Jack, o Sackboy e o Pragmata funcionam assim mesmo.
+>
+> **Fica uma pergunta aberta, e é dela:** se um jogo tira o DualSense da API
+> Steamworks e o Hefesto esconde o físico de todo mundo, esse jogo ainda
+> alcança o aparelho? Ninguém mediu depois de 09/08. Enquanto não se mede, esta
+> página não afirma nem um lado nem o outro.
 
 **E a máscara do perfil atravessa a exceção — desde 22/08/2026.** Até esse dia
 não atravessava, e o efeito era o oposto do que a exceção promete: marcar o jogo
@@ -69,8 +84,9 @@ um Xbox 360. Hoje a exceção pula só a disputa pelo controle; o que o jogo
 > com o Mullet Mad Jack aberto: durante a exceção o Hefesto **continua
 > escrevendo no seu controle** — a cor que você escolheu **fica**, e a
 > resistência de gatilho que você aplicou **segura**. A exceção **não** cala o
-> Hefesto: ela troca **qual dispositivo o jogo enxerga**, e só isso. **Isto
-> continua valendo.**
+> Hefesto. **Isto continua valendo.** (O resto da frase — *"ela troca qual
+> dispositivo o jogo enxerga"* — caducou em 09/08 junto com o mecanismo, e saiu
+> em 28/08: hoje ela reafirma o estado que já vale em todo jogo.)
 >
 > **O que mudou:** naquele dia a exceção soltava o físico e **tirava o virtual
 > de cena** — e era isso que derrubava o jogador 2, com o
@@ -85,11 +101,10 @@ um Xbox 360. Hoje a exceção pula só a disputa pelo controle; o que o jogo
 > 11/08 e é a razão de o índice daquele dia se chamar
 > [duas verdades no mesmo repositório](../process/sprints/2026-08-11-INDICE-duas-verdades-no-mesmo-repositorio.md).
 >
-> **O critério de quando marcar também mudou de nome.** Esta lista de exceções
-> **não** é "os jogos com DualSense nativo" — é **"os jogos cujo DualSense passa
-> pela Steam"**, como o próprio título desta seção diz. Um jogo com suporte
-> nativo de verdade **não precisa** dela: o Sackboy foi medido no mesmo dia, fora
-> da lista, e funcionou completo. Registro em
+> **E um jogo com suporte nativo de verdade nunca precisou da lista:** o
+> Sackboy foi medido no mesmo dia, fora dela, e funcionou completo. (Havia aqui
+> um *"critério de quando marcar"* — quais jogos marcar. Saiu em 28/08: desde
+> 09/08 não há jogo que precise ser marcado para curar o dobrado.) Registro em
 > [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
 
 Para desfazer, a caixinha está na aba **Perfis** desde 07/08/2026: abra o perfil
@@ -106,8 +121,9 @@ tira a marca.
 
 **Caso medido: Mullet Mad Jack** (appid `2111190`). Ele **funciona nas três
 opções** — `Xbox 360`, `DualSense (PS)` e Modo Nativo. O suporte a DualSense
-dele vem pela Steam, por isso está na allowlist de exceção
-(`steam_input_apps.txt`).
+dele vem pela Steam, e ele **não está** na allowlist de exceção
+(`steam_input_apps.txt`) — medido em 28/08/2026, o arquivo tem zero appids.
+Funciona sem marca nenhuma.
 
 >  Até 25/07/2026 a interface trazia o Mullet Mad Jack como **exemplo de jogo
 > Xbox-only**, o que é **falso**. O texto foi corrigido; o registro fica aqui

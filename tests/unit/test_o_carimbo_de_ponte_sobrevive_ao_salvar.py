@@ -22,9 +22,16 @@ pararia em TODO jogo e o produto passaria a jurar que sabe o que não sabe. Quem
 carimba é ``profiles.manager.confirmar_ponte``, depois de uma confirmação de
 verdade (gesto no controle, silêncio de quem jogou, ou escolha direta dela).
 
-São SEIS peças, e cada uma foi arrancada, medida e devolvida em 22/08/2026
-(``sha256`` conferido nos três arquivos). A contagem está escrita porque
-portão em série engana (19/08): duas curas podem responder pelo mesmo vermelho.
+O SEGUNDO DEFEITO, medido em 28/08/2026 (PONTE-SOBREVIVE-A-CORRIDA-01): o
+passthrough acima é uma FOTOGRAFIA, e quem carimba é outro processo. Carimbo
+nascido depois de a janela abrir morria no Salvar seguinte da aba Perfis — duas
+vezes no histórico dela. A razão inteira está em
+``TestOCarimboQueChegouDepoisDaFotografia``.
+
+São SETE peças, e cada uma foi arrancada, medida e devolvida — as seis primeiras
+em 22/08/2026 (``sha256`` conferido nos três arquivos), a sétima em 28/08. A
+contagem está escrita porque portão em série engana (19/08): duas curas podem
+responder pelo mesmo vermelho.
 
 1. ``source_ponte=profile.ponte`` em ``from_profile``. Arrancada: **2 reprovam**
    — ``test_o_rascunho_leva_o_carimbo_de_volta_ao_perfil`` (no PRIMEIRO assert,
@@ -46,13 +53,28 @@ portão em série engana (19/08): duas curas podem responder pelo mesmo vermelho
    e ``test_o_segundo_save_do_nome_novo_tambem_nasce_sem_carimbo``: o rascunho
    seguiria com o carimbo do perfil ANTERIOR e o segundo save, já com
    ``mesmo_perfil`` verdadeiro, o gravaria no perfil novo;
-6. a guarda ``estreia`` de ``_build_profile_from_editor``. Arrancada: **1
-   reprova** — a cópia do "Duplicar" nasce carimbada.
+6. a guarda ``estreia`` de ``_build_profile_from_editor``, hoje reduzida ao
+   corte do degrau 2 (ver a peça 7). Arrancada — passando ``source.ponte``
+   também na estreia: **2 reprovam**, a cópia do "Duplicar" nascendo carimbada
+   nos dois casos que a medem;
+7. o degrau de DISCO da aba Perfis (``perfil_em_disco(name)`` alimentando
+   ``carimbo_que_o_save_leva``), PONTE-SOBREVIVE-A-CORRIDA-01, 28/08/2026.
+   Arrancado — a consulta de volta para dentro de ``if estreia:``: **3
+   reprovam**, os três casos de ``TestOCarimboQueChegouDepoisDaFotografia``.
+   Trocado pelo CACHE (``_perfil_que_o_salvar_sobrescreve``, que era a cura
+   óbvia): **os mesmos 3 reprovam** — é a medição que prova que só o arquivo
+   responde, porque o cache é a outra fotografia da janela.
 
 E as peças 2 e 4 estão em SÉRIE no caminho do rodapé: arrancadas JUNTAS, **4
 reprovam** — entre elas ``test_salvar_por_cima_do_mesmo_perfil_preserva_o_carimbo``,
 que é o custo diário reproduzido. Nenhuma das duas sozinha o derruba, e é por
 isso que o passthrough tem testemunha SEM disco.
+
+A ORDEM dos degraus também é peça, e ganhou testemunha própria em 28/08:
+invertida (rascunho antes do disco), **1 reprova** —
+``test_o_disco_vence_a_fotografia_quando_os_dois_tem_carimbo``. Os casos de
+disco das classes acima não a alcançam, porque neles o rascunho está vazio e os
+dois degraus concordam.
 
 Os dois casos de ``TestOTransporteNaoEEscrita`` também foram mordidos, um a um:
 um ``model_copy(update={"source_ponte": ...})`` plantado em
@@ -540,10 +562,38 @@ class _Editor:
         self._assinatura_da_regra_ao_abrir = None
         self._prioridade_ao_abrir = None
 
+        self._toasted: list[str] = []
+
     def _get(self, widget_id: str) -> Any:
         return self._widgets[widget_id]
 
     def _selected_profile_name(self, selection: Any = None) -> str | None:
+        return None
+
+    # --- o que `on_profile_save` chama DEPOIS de gravar -------------------
+    # Todos aqui pelo mesmo motivo: falam com o daemon, com a Steam ou com o
+    # `Gtk.ListStore`, e nada disso pertence a uma medição sobre o carimbo.
+    # O `save_profile` NÃO está entre eles — é ele que a medição lê.
+
+    def _toast_profile(self, msg: str) -> None:
+        self._toasted.append(msg)
+
+    def _reload_profiles_store(
+        self, select_name: str | None = None, on_done: Any | None = None
+    ) -> None:
+        self._profiles_cache = list(load_all_profiles())
+        if on_done is not None:
+            on_done()
+
+    def _reaplicar_e_dizer(
+        self, nome: str, renomeando_de: str | None, reaplicar: bool
+    ) -> None:
+        return None
+
+    def _notify_launch_env_refresh(self) -> None:
+        return None
+
+    def pegar_carona_no_gesto(self, gesto: str = "") -> None:
         return None
 
 
@@ -592,6 +642,206 @@ class TestAAbaPerfisNaoApagaOCarimbo:
         este caso reprova — a cópia nasce carimbada.
         """
         fonte = _perfil_do_jogo()
+        aba = _montar_editor(
+            nome="DontScream copia",
+            draft=DraftConfig.from_profile(fonte),
+            ativo="DontScream",
+            cache=[fonte],
+            duplicando=fonte,
+        )
+
+        copia = aba._build_profile_from_editor()
+
+        assert copia.name == "DontScream copia", "pré-condição: é a cópia"
+        assert copia.ponte is None
+
+
+# ---------------------------------------------------------------------------
+# A CORRIDA — o carimbo que chegou DEPOIS da fotografia
+# ---------------------------------------------------------------------------
+
+
+def _salvar_pela_aba(janela: Any) -> None:
+    """O gesto dela: aba Perfis, botão "Salvar este perfil".
+
+    `active_profile_name` fala com o daemon por socket; num teste ela só
+    atrasaria o caso (o `on_profile_save` já a tem dentro de um `try`).
+    """
+    with patch(
+        "hefesto_dualsense4unix.app.actions.profiles_actions.active_profile_name",
+        lambda: None,
+    ):
+        janela.on_profile_save(None)
+
+
+class TestOCarimboQueChegouDepoisDaFotografia:
+    """PONTE-SOBREVIVE-A-CORRIDA-01 (28/08/2026) — o buraco que a aba Perfis tinha.
+
+    As DUAS memórias que a janela tem do perfil são fotografias, e as duas
+    envelhecem pelo mesmo motivo: quem carimba a ponte é OUTRO processo, o
+    daemon (``profiles.manager.confirmar_ponte``), e ele escreve direto no
+    arquivo.
+
+    - ``draft.source_ponte`` é tirada no ``from_profile`` do boot da janela;
+    - ``_profiles_cache`` é recarregado no boot e depois de gravar/apagar —
+      nunca por tique, nunca quando o disco muda por fora.
+
+    Então, se ela deixa a janela aberta e o daemon carimba nesse meio-tempo, o
+    "Salvar este perfil" seguinte grava ``ponte: null`` por cima do carimbo. Não
+    é hipótese: aconteceu DUAS vezes no histórico dela, e o histórico de versões
+    do próprio produto guarda as duas.
+
+    - **Sackboy, 26/08/2026** — carimbo nasceu às 03:49:47 (``gamepad``, por
+      silêncio) e morreu às 03:54:01. Quatro minutos e catorze segundos: os dois
+      snapshots consecutivos são 1238 B **com** ``ponte`` e 1053 B **sem**.
+    - **DON'T SCREAM, 19/08/2026** — o mesmo padrão, e esse carimbo era
+      ``confirmada_por: escolha_dela``. A escolha DELA, apagada por um clique em
+      Salvar.
+
+    O rodapé nunca teve este buraco, e a assimetria é a prova de onde estava o
+    defeito: lá o ``existente`` vem de um ``load_all_profiles()`` FRESCO,
+    rodado no worker no instante do save (``footer_actions.on_save_profile``),
+    e alimenta o degrau 1 de ``carimbo_que_o_save_leva``. A aba Perfis só
+    perguntava ao disco quando ``estreia`` — e ``estreia`` é falso justamente no
+    gesto mais comum, salvar por cima de si mesmo.
+
+    A régua velha (as classes acima) não alcança nada disso: todas as
+    fotografias dela nascem do MESMO perfil que está em disco, então cache,
+    rascunho e arquivo concordam e a corrida nunca acontece.
+    """
+
+    def test_a_aba_perfis_nao_apaga_o_carimbo_que_o_daemon_pos_depois(
+        self, disco: Path
+    ) -> None:
+        """A corrida encenada nos três tempos, medida onde a decisão é tomada.
+
+        MORDIDA: com a guarda ``if estreia:`` de volta em
+        ``profiles_actions._build_profile_from_editor`` (ou seja, sem o degrau
+        de disco no caminho comum), este caso reprova com ``None`` — o carimbo
+        que o daemon acabou de pôr some do perfil que vai ao disco.
+        """
+        # Tempo 1 — a janela abriu com o perfil SEM carimbo. As duas memórias
+        # dela (a fotografia do rascunho e o cache da lista) nascem daqui.
+        sem_carimbo = _perfil_do_jogo(carimbo=False)
+        save_profile(sem_carimbo)
+        aba = _montar_editor(
+            nome="DontScream",
+            draft=DraftConfig.from_profile(sem_carimbo),
+            ativo="DontScream",
+            cache=[sem_carimbo],
+        )
+        assert aba.draft.source_ponte is None, (
+            "pré-condição da corrida: a fotografia do rascunho não tem carimbo"
+        )
+        alvo = aba._perfil_que_o_salvar_sobrescreve("DontScream")
+        assert alvo is not None and alvo.ponte is None, (
+            "pré-condição da corrida: o cache em memória também não tem — é o "
+            "que impede curar isto lendo o cache"
+        )
+
+        # Tempo 2 — o daemon carimba NO DISCO, depois das duas fotografias.
+        save_profile(_perfil_do_jogo(carimbo=True))
+        assert "ponte" in _arquivo(disco, "dontscream"), (
+            "pré-condição da corrida: o disco tem o carimbo"
+        )
+
+        # Tempo 3 — ela clica em "Salvar este perfil".
+        gravado = aba._build_profile_from_editor()
+
+        assert gravado.ponte is not None, (
+            "o Salvar da aba Perfis apagou o carimbo que o daemon pôs no disco "
+            "enquanto a janela estava aberta — é a perda do Sackboy de 26/08, "
+            "que viveu 4 min 14 s"
+        )
+        assert gravado.ponte == _carimbo()
+
+    def test_o_gesto_inteiro_da_aba_deixa_o_carimbo_no_arquivo(
+        self, disco: Path
+    ) -> None:
+        """A mesma corrida, do clique até o byte no disco.
+
+        O caso acima mede a DECISÃO (o ``Profile`` montado); este mede o
+        ESTRAGO, que é o que ela viu: o arquivo voltando sem a chave ``ponte``.
+        Vale a dupla porque entre os dois há um ``save_profile`` que poderia
+        (não pode, e por isso está medido) reintroduzir o defeito.
+
+        MORDIDA: idem — com a guarda ``estreia`` de volta, reprova com
+        ``'ponte' not in arquivo``.
+        """
+        sem_carimbo = _perfil_do_jogo(carimbo=False)
+        save_profile(sem_carimbo)
+        aba = _montar_editor(
+            nome="DontScream",
+            draft=DraftConfig.from_profile(sem_carimbo),
+            ativo="DontScream",
+            cache=[sem_carimbo],
+        )
+        save_profile(_perfil_do_jogo(carimbo=True))
+
+        _salvar_pela_aba(aba)
+
+        arquivo = _arquivo(disco, "dontscream")
+        assert "ponte" in arquivo, (
+            "o gesto inteiro apagou o carimbo do arquivo — o jogo caiu do "
+            "`pontes_confirmadas()` e a escada vai recomeçar do primeiro degrau"
+        )
+        assert arquivo["ponte"]["confirmada_por"] == "silencio"
+
+    def test_o_disco_vence_a_fotografia_quando_os_dois_tem_carimbo(
+        self, disco: Path
+    ) -> None:
+        """Degrau 1 é o DISCO, e não "o que estiver mais cheio".
+
+        O caso que separa a cura certa da cura preguiçosa (*"se o rascunho não
+        tem, olha o disco"*): aqui os DOIS têm carimbo, e são diferentes. Quem
+        vale é o do arquivo — é o único que registra uma confirmação de
+        verdade, e a fotografia do rascunho pode ser de horas atrás.
+
+        MORDIDA: um degrau invertido (rascunho antes do disco) reprova aqui com
+        ``confirmada_por == 'gesto'``.
+        """
+        antigo = _perfil_do_jogo().model_copy(
+            update={
+                "ponte": PonteConfirmada(
+                    kind="gamepad",
+                    gamepad_flavor="dualsense",
+                    confirmada_em="2026-08-01T10:00:00-03:00",
+                    confirmada_por="gesto",
+                )
+            }
+        )
+        save_profile(antigo)
+        aba = _montar_editor(
+            nome="DontScream",
+            draft=DraftConfig.from_profile(antigo),
+            ativo="DontScream",
+            cache=[antigo],
+        )
+        save_profile(_perfil_do_jogo(carimbo=True))  # o daemon recarimbou
+
+        gravado = aba._build_profile_from_editor()
+
+        assert gravado.ponte == _carimbo(), (
+            "a fotografia do rascunho venceu o disco — o carimbo mais NOVO, "
+            "que o daemon acabou de escrever, foi rebaixado por um valor de "
+            "quando a janela abriu"
+        )
+
+    def test_duplicar_continua_sem_levar_o_carimbo_com_o_disco_carimbado(
+        self, disco: Path
+    ) -> None:
+        """O degrau de disco NÃO pode ressuscitar a herança que a estreia mata.
+
+        A cópia do "Duplicar" nasce sem carimbo (caso acima, com a razão por
+        extenso). Se o degrau de disco valesse para ela olhando o perfil-FONTE,
+        a herança voltaria pela porta dos fundos. O disco que importa é o do
+        SLUG que este Salvar vai sobrescrever — e o da cópia não existe.
+
+        MORDIDA: consultar o disco pelo nome do perfil ATIVO (em vez do nome
+        digitado) reprova aqui — a cópia sai carimbada com a ponte da fonte.
+        """
+        fonte = _perfil_do_jogo()
+        save_profile(fonte)
         aba = _montar_editor(
             nome="DontScream copia",
             draft=DraftConfig.from_profile(fonte),

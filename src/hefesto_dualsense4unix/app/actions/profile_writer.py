@@ -47,11 +47,50 @@ from hefesto_dualsense4unix.app.actions.carona_do_wrapper import (
     CaronaDoWrapperMixin,
 )
 from hefesto_dualsense4unix.profiles.loader import save_profile
-from hefesto_dualsense4unix.profiles.schema import Profile
+from hefesto_dualsense4unix.profiles.schema import PonteConfirmada, Profile
 from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+
+def carimbo_que_o_save_leva(
+    existente: Profile | None, do_rascunho: PonteConfirmada | None
+) -> PonteConfirmada | None:
+    """Carimbo de ponte que um perfil leva ao disco. UM dono, os dois botões.
+
+    PONTE-CONFIRMADA-01 (19/08/2026). O carimbo diz qual ponte já FUNCIONOU
+    naquele jogo — é o que faz a escada de ``integrations/ponte_escada.py``
+    parar em vez de recomeçar do primeiro degrau a cada lançamento, e recomeçar
+    significa recriar o vpad com o jogo aberto (R-04, 23/07).
+
+    Degrau 1 — ``existente.ponte``, o DISCO, pelo argumento medido da
+    REGRA-NAO-SE-PERDE-01: quem já existe tem carimbo, e carimbo não se perde
+    por um gesto que a tela nem sabe nomear. Cobre os dois casos que o
+    passthrough do rascunho NÃO cobre: salvar por cima de um perfil DIFERENTE
+    daquele de onde o rascunho veio (o gate ``mesmo_perfil`` de ``to_profile``
+    responde ``False``), e o carimbo que o daemon escreveu DEPOIS de a janela
+    fotografar o perfil.
+
+    Degrau 2 — o que ``to_profile`` já reemitiu (``draft.source_ponte`` gateado
+    pelo R-11), que é o caso comum: salvar por cima de si mesmo.
+
+    Não há degrau 3, e a ausência é a entrega: nome novo sem nada em disco nasce
+    SEM carimbo. A janela nunca inventa uma confirmação — quem carimba é
+    ``profiles.manager.confirmar_ponte``, depois de a ponte ter sido confirmada
+    de verdade.
+
+    PONTE-SOBREVIVE-A-CORRIDA-01 (28/08/2026) — por que esta escada saiu do
+    ``footer_actions`` e virou função de módulo: ela vivia como método privado
+    de um mixin que a aba Perfis NÃO herda (``ProfilesActionsMixin`` não
+    descende de ``ProfileWriterMixin``), então os dois botões que gravam perfil
+    respondiam à mesma pergunta por caminhos diferentes — e o da aba estava
+    errado. Aqui ela é importável pelos dois, e a divergência não tem onde
+    nascer de novo.
+    """
+    if existente is not None and existente.ponte is not None:
+        return existente.ponte
+    return do_rascunho
 
 
 class ProfileWriterMixin(CaronaDoWrapperMixin):

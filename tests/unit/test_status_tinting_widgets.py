@@ -204,7 +204,39 @@ def test_glyphs_reais_shipados_tem_o_literal_stock() -> None:
     """Todos os *_active.svg do GLYPHS_DIR real carregam o literal tintável."""
     real = glyph_mod._resolver_dir_glyphs()
     ativos = sorted(real.glob("*_active.svg"))
-    assert len(ativos) == 19
+
+    # A GUARDA DE CONTAGEM SAI DA FONTE, E NÃO É MAIS DIGITADA (29/08/2026).
+    # Ela existe para o teste não passar vazio — se o `glob` não achar nada, os
+    # dois `assert` de baixo passariam sem olhar um único arquivo. Mas o número
+    # estava CRAVADO em 19, e havia 27 no disco: o teste reprovava há semanas
+    # por caducidade, não por defeito, e um vermelho permanente é um vermelho
+    # que ninguém lê.
+    #
+    # Agora o número vem de `docs/data/pecas-do-dualsense.csv`, que é a fonte da
+    # verdade das peças e o mesmo mapa que nomeia os glifos. Assim a guarda
+    # acompanha a peça que entrar ou sair, em vez de caducar na primeira.
+    #
+    # O MESMO 19 estava no gerador do mockup e foi corrigido lá em 28/08 —
+    # e aqui não, porque `tests/` não era arquivo daquele agente. É a correção
+    # pela metade que a regra desta casa existe para matar.
+    import csv as _csv
+
+    _csv_pecas = Path(__file__).resolve().parents[2] / "docs/data/pecas-do-dualsense.csv"
+    _com_glifo = {
+        linha["glifo"].strip()
+        for linha in _csv.DictReader(
+            x for x in _csv_pecas.read_text(encoding="utf-8").splitlines()
+            if not x.startswith("#")
+        )
+        if linha.get("glifo", "").strip() not in ("", "-")
+    }
+    _no_disco = {p.name.replace("_active.svg", "") for p in ativos}
+    assert len(ativos) == len(_com_glifo), (
+        f"o disco tem {len(ativos)} glifos ativos e o mapa das peças declara "
+        f"{len(_com_glifo)}.\n"
+        f"  só no disco: {sorted(_no_disco - _com_glifo)}\n"
+        f"  só no mapa:  {sorted(_com_glifo - _no_disco)}"
+    )
     sem_literal = [
         p.name
         for p in ativos

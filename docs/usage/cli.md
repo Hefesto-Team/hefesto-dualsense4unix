@@ -262,8 +262,15 @@ hefesto-dualsense4unix gamepad status
 
 ### `gamepad steam-input` — a exceção do Steam Input
 
-Os jogos em que a Steam entrega o controle, e por isso o jogador vê os controles
-**dobrados**. Um jogo marcado tem os controles físicos escondidos dele.
+Os jogos em que o Hefesto não deixa o guarda desligar o Steam Input. Um jogo
+marcado tem os controles físicos escondidos dele — o que **todo** jogo já tem
+desde 09/08/2026, marcado ou não. Cor, gatilhos, vibração e jogadores continuam
+valendo nos dois casos.
+
+> **FATO ERRADO, SUBSTITUÍDO — 28/08/2026.** Esta linha dizia *"os jogos em que
+> a Steam entrega o controle, e por isso o jogador vê os controles dobrados"* —
+> o mecanismo de antes de 09/08, e o inverso da frase seguinte, que já dizia o
+> certo. As duas versões conviveram no mesmo parágrafo.
 
 **São duas ações, não três: `list` e `remove`.** Não existe
 `steam-input add` — **marcar é na janela**, pelo botão *"Este jogo não
