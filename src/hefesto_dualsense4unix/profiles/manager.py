@@ -33,6 +33,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchCriteria,
     PonteConfirmada,
     Profile,
+    ProfileModeConfig,
     normalizar_gamepad_flavor,
 )
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
@@ -1236,6 +1237,7 @@ class ProfileManager:
         steam_input: bool = False,
         por: str = CONFIRMADA_POR_GESTO,
         quando: str | None = None,
+        alinhar_o_modo: bool = False,
     ) -> Profile | None:
         """Carimba a ponte no perfil do jogo e GRAVA. None = não há perfil.
 
@@ -1243,34 +1245,109 @@ class ProfileManager:
         aba de perfil entram pela MESMA porta, com `por=` dizendo qual foi —
         ver `CONFIRMADA_POR_GESTO`/`CONFIRMADA_POR_ESCOLHA`.
 
+        `alinhar_o_modo` acrescenta o `mode` à mesma gravação — ver
+        `alinhar_o_modo_com_a_ponte`, e por que carimbar sozinho não muda o
+        próximo lançamento de um perfil que já opina. Uma gravação só, porque a
+        pergunta é uma só: *"a ponte que ela deixou de pé"*.
+
         Devolve `None`, sem escrever nada, quando o jogo não tem perfil
         próprio: inventar um perfil aqui seria criar arquivo nas costas dela, e
         o produto já tem um caminho para isso (o editor). O chamador que
         quiser criar, cria e chama de novo.
         """
-        profile = perfil_do_appid(appid)
-        if profile is None:
-            logger.info("ponte_confirmada_sem_perfil", appid=str(appid))
-            return None
-        carimbado = carimbar_ponte(
-            profile,
-            kind=kind,
-            gamepad_flavor=gamepad_flavor,
-            steam_input=steam_input,
-            por=por,
-            quando=quando,
+
+        def _carimbar(profile: Profile) -> Profile:
+            carimbado = carimbar_ponte(
+                profile,
+                kind=kind,
+                gamepad_flavor=gamepad_flavor,
+                steam_input=steam_input,
+                por=por,
+                quando=quando,
+            )
+            if not alinhar_o_modo:
+                return carimbado
+            return alinhar_o_modo_com_a_ponte(
+                carimbado, kind=kind, gamepad_flavor=gamepad_flavor
+            )
+
+        salvo = self._gravar_no_perfil_do_appid(
+            appid, _carimbar, origem="ponte_confirmada", evento="ponte_confirmada_sem_perfil"
         )
-        save_profile(carimbado, origem="ponte_confirmada")
+        if salvo is None:
+            return None
         logger.info(
             "ponte_confirmada",
             appid=str(appid),
-            profile=carimbado.name,
+            profile=salvo.name,
             kind=kind,
-            gamepad_flavor=carimbado.ponte.gamepad_flavor if carimbado.ponte else None,
+            gamepad_flavor=salvo.ponte.gamepad_flavor if salvo.ponte else None,
             steam_input=steam_input,
             por=por,
+            modo_alinhado=alinhar_o_modo,
         )
-        return carimbado
+        return salvo
+
+    def alinhar_o_modo_do_appid(
+        self, appid: object, *, kind: str, gamepad_flavor: object = None
+    ) -> Profile | None:
+        """Grava no `mode` do perfil a ponte de pé, SEM carimbar. None = sem perfil.
+
+        DOIS APERTOS NÃO PODEM CUSTAR A PARTIDA (29/08/2026). É a metade que
+        falta quando a escada para no degrau caro: ela subiu até `xbox` com dois
+        gestos, o próximo degrau (`native`) não alcança um processo já rodando,
+        e a tentativa é encerrada. Sem esta gravação o `xbox` **evapora** — o
+        próximo lançamento arma o `mode` de antes e ela paga os mesmos gestos.
+
+        **E de propósito NÃO carimba.** Carimbar aqui mataria o caminho para o
+        Nativo: `proximo_degrau` recusa rodar havendo carimbo, e o degrau que
+        ela ainda pode querer nunca mais seria oferecido. Alinhando só o `mode`,
+        o próximo lançamento entrega `xbox`, a escada pergunta o degrau
+        seguinte, e com o jogo ainda fora `como_subir` responde `SUBIR_AGORA` —
+        o Nativo é ARMADO no lançamento, que é exatamente o que a escada já
+        sabia fazer e ninguém chamava.
+        """
+        salvo = self._gravar_no_perfil_do_appid(
+            appid,
+            lambda profile: alinhar_o_modo_com_a_ponte(
+                profile, kind=kind, gamepad_flavor=gamepad_flavor
+            ),
+            origem="ponte_de_pe",
+            evento="ponte_de_pe_sem_perfil",
+        )
+        if salvo is None:
+            return None
+        logger.info(
+            "ponte_de_pe_alinhada_no_perfil",
+            appid=str(appid),
+            profile=salvo.name,
+            kind=kind,
+            gamepad_flavor=salvo.mode.gamepad_flavor if salvo.mode else None,
+        )
+        return salvo
+
+    @staticmethod
+    def _gravar_no_perfil_do_appid(
+        appid: object,
+        transformar: Callable[[Profile], Profile],
+        *,
+        origem: str,
+        evento: str,
+    ) -> Profile | None:
+        """O ÚNICO `save_profile` do caminho por appid. None = não há perfil.
+
+        Os dois escritores desta seção — o carimbo e o alinhamento do `mode` —
+        respondem à mesma pergunta e por isso saem pela mesma porta: duas portas
+        para o mesmo fato é como esta casa fabrica duas verdades (o achado do
+        `.vdf` de 16/08, e a corrida do carimbo de 28/08).
+        """
+        profile = perfil_do_appid(appid)
+        if profile is None:
+            logger.info(evento, appid=str(appid))
+            return None
+        novo = transformar(profile)
+        save_profile(novo, origem=origem)
+        return novo
 
     @staticmethod
     def pontes_confirmadas() -> dict[str, dict[str, object]]:
@@ -1437,6 +1514,44 @@ def carimbar_ponte(
     if quando is not None:
         dados["confirmada_em"] = quando
     return profile.model_copy(update={"ponte": PonteConfirmada(**dados)})  # type: ignore[arg-type]
+
+
+def alinhar_o_modo_com_a_ponte(
+    profile: Profile, *, kind: str, gamepad_flavor: object = None
+) -> Profile:
+    """Devolve uma CÓPIA do perfil com o `mode` igual à ponte de pé. Não grava.
+
+    A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026). O carimbo só preenche
+    o SILÊNCIO do perfil — `launch_env.arm_launch_profile` o lê apenas quando
+    `mode is None`, e está escrito ali com todas as letras: *"o perfil manda"*.
+    Logo, num perfil que TEM `mode`, carimbar sozinho não muda o próximo
+    lançamento: ele arma o `mode` de novo, a divergência é gritada no journal, e
+    ela aperta `PS + R3` outra vez.
+
+    O preço, medido no journal dela em 7 dias: os 23 perfis de jogo dela pedem
+    `dualsense`, ela joga em `xbox`, e o gesto foi apertado **24 vezes**. O
+    carimbo não alcançava isso porque não é ele que arma.
+
+    **Só o gesto DELA chama esta função** (`ponte_tentativa`, pelos dois
+    caminhos do `tique_da_escada`), e é isso que a separa de *"trocar o modo de
+    um jogo dela sem ela pedir"*: ela pediu, com o controle na mão.
+
+    Os campos que já estavam no `mode` são PRESERVADOS (hoje, o `coop`): a
+    troca de máscara não tem por que devolver o resto da seção ao default.
+    Perfil SEM `mode` ganha um — é o que impede a ponte que ela acabou de subir
+    de evaporar no fechamento do jogo, e o `kind`/`flavor` vêm da ponte de pé,
+    não de um palpite.
+
+    O `ProfileModeConfig` é RECONSTRUÍDO, e não `model_copy`ado: `model_copy`
+    do pydantic v2 não revalida, e um `kind` fora da faixa viraria um arquivo
+    que o próximo load recusa — o perfil dela deixando de abrir por causa de
+    uma máscara. Aqui ele morre na borda, como no `carimbar_ponte` acima.
+    """
+    flavor = normalizar_gamepad_flavor(gamepad_flavor) if kind == "gamepad" else None
+    atual = profile.mode
+    campos: dict[str, object] = {} if atual is None else atual.model_dump()
+    campos.update({"kind": kind, "gamepad_flavor": flavor})
+    return profile.model_copy(update={"mode": ProfileModeConfig(**campos)})  # type: ignore[arg-type]
 
 
 def _estado_da_secao(valor: object) -> str:

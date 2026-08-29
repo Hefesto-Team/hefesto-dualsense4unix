@@ -47,8 +47,8 @@ próximo lançamento recomeça do degrau que o PERFIL entrega — que, no jogo s
 barato: a alternativa é um arquivo dizendo "já tentei estas", que envelhece
 sozinho e que ninguém sabe quando apagar.
 
-O DEGRAU QUE NÃO SE ALCANÇA AO VIVO: **avisa e para**
------------------------------------------------------
+O DEGRAU QUE NÃO SE ALCANÇA AO VIVO: **avisa, GUARDA, e para**
+--------------------------------------------------------------
 Os dois últimos degraus da `ESCADA` não alcançam um processo já rodando —
 `native` porque a env congelou no `exec` (o resultado ao vivo é ZERO
 controles, `launch_env._nativos_fora_da_antecipacao`), `steam_input` porque o
@@ -62,13 +62,36 @@ neles com o jogo aberto, este laço **avisa e para**; não pula, e não finge.
   `steam_input` deixaria de fora a classe *"só aceita Steam Input"* (DON'T
   SCREAM, medido em 18→19/08). Pular é perder de vez os dois jogos que
   motivaram a escada existir; parar é só adiar.
-- **Para** — e a tentativa é ENCERRADA. Ela acabou de dizer, pelo gesto, que
-  o degrau de pé não serve; deixar a tentativa aberta faria o silêncio dos
-  três minutos seguintes carimbar justamente o degrau que ela recusou.
+- **Para** — e a tentativa é ENCERRADA.
 
-E o GESTO não para junto: quando o laço não tem degrau ao vivo para oferecer,
-o gesto volta a fazer o que sempre fez (o `CICLO_DE_PONTES` do `hotkey`). A
-regra que nenhum dos dois quebra: **o gesto sempre troca alguma coisa.**
+DOIS APERTOS NÃO PODEM CUSTAR A PARTIDA (29/08/2026)
+----------------------------------------------------
+O parar acima custava DUAS coisas, e as duas foram medidas três vezes no
+journal dela (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17, Touhou 29/08
+03:19:14), sempre na mesma sequência de quatro linhas:
+
+    ponte_escada_parou_no_degrau_caro  de=gamepad/xbox proximo=native/- ...
+    ponte_escada_encerrada             degrau=gamepad/xbox gestos=2 ...
+    ponte_troca_pedida_por_gesto       de=xbox escada=parou para=mouse_teclado
+
+1. **o degrau em que ela estava EVAPORAVA.** `encerrar` não grava nada, e o
+   `xbox` a que ela chegou com dois gestos sumia com a tentativa: o próximo
+   lançamento armava o `mode` de antes e ela pagava os mesmos gestos. Agora o
+   laço GUARDA a ponte de pé (`ponte_a_registrar`), e o tique a grava no `mode`
+   do perfil — **sem carimbar**. Carimbar ali mataria o caminho para o Nativo
+   (`proximo_degrau` recusa rodar havendo carimbo); alinhando só o `mode`, o
+   próximo lançamento entrega `xbox`, a escada pergunta o degrau seguinte e,
+   com o jogo ainda fora, `como_subir` responde `SUBIR_AGORA` — o Nativo é
+   ARMADO no lançamento. É o que a escada já sabia fazer e ninguém chamava;
+2. **o MESMO aperto caía no ciclo fixo** e levava a `mouse_teclado`: o gamepad
+   sumia no meio da partida. O `Passo` de `PASSO_PAROU` agora diz ao `hotkey`
+   que este gesto não cai no ciclo. O aperto SEGUINTE cai — a tentativa já foi
+   encerrada —, então a porta de volta pelo controle continua a um aperto de
+   distância, e não a zero.
+
+E o GESTO não para junto: fora do `PASSO_PAROU`, quando o laço não tem degrau
+ao vivo para oferecer, o gesto volta a fazer o que sempre fez (o
+`CICLO_DE_PONTES` do `hotkey`).
 
 O LAÇO NÃO ANDA SOZINHO COM O JOGO ABERTO
 ------------------------------------------
@@ -89,10 +112,27 @@ O QUE ESTE MÓDULO NÃO FAZ
 `profiles/manager.confirmar_ponte`, chamado de `launch_env`. Uma só gaveta, um
 só escritor.
 
-**Não confirma por gesto.** `POR_GESTO` existe no esquema para a porta em que
-ela AFIRMA que uma ponte pegou (a aba de perfil). O `PS + R3` é o contrário
-disso: é o sinal de que a ponte de pé NÃO pegou. Ler o mesmo gesto como
-confirmação seria inventar uma promessa que o produto não faz.
+**Não confirma NO gesto.** Um `PS + R3` isolado continua sendo o contrário de
+uma confirmação: é o sinal de que a ponte de pé NÃO pegou. O que confirma é o
+gesto SEGUIDO DE SILÊNCIO com o jogo vivo — ela mexeu, parou de mexer, e
+continuou jogando. Nesse caso o carimbo sai `POR_GESTO` (e não `POR_SILENCIO`),
+porque foi a mão dela que pôs aquela ponte de pé; a distinção é a do esquema,
+e `ponte_escada.por_que_confirmou` é a dona dela.
+
+A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026)
+---------------------------------------------------
+O gesto tem um SEGUNDO registro vivo além da tentativa, e ele existe porque a
+tentativa não cobre o caso que mais custa a ela: **o jogo com carimbo**. Ali a
+escada não roda (e não deve rodar), `avancar_por_gesto` devolve `None`, e o
+gesto dela trocava a ponte viva sem que nada no disco aprendesse. Medido no
+journal: 24 apertos em 7 dias, porque os 23 perfis de jogo dela pedem
+`dualsense` e ela joga em `xbox`.
+
+`ponte_do_gesto` (a `GestoDela`) é esse registro: a ponte que o gesto deixou de
+pé, o appid do jogo, e o relógio do silêncio. Ele vive no daemon como a
+tentativa, morre com o jogo como ela, e o tique de 1 Hz é quem o colhe. Não é
+uma segunda escada: é a mesma pergunta (*"que ponte ficou de pé, e ela parou de
+reclamar?"*) para o caminho em que a escada, corretamente, não corre.
 """
 from __future__ import annotations
 
@@ -110,6 +150,12 @@ logger = get_logger(__name__)
 #: os vizinhos (`_launch_armed_for`, `_modo_anunciado`): é estado interno do
 #: daemon, e o contrato público é este módulo.
 ATRIBUTO_DA_TENTATIVA = "_ponte_tentativa"
+
+#: O atributo do daemon VIVO onde mora a ponte que o GESTO dela deixou de pé.
+#: Vizinho do de cima, e pelo mesmo motivo: estado do daemon, contrato público
+#: neste módulo. Separado da tentativa porque ele existe justamente quando ela
+#: NÃO existe — no jogo com carimbo, onde a escada não roda.
+ATRIBUTO_DO_GESTO = "_ponte_do_gesto"
 
 #: Por que a escada NÃO começou. Vocabulário de string, como os desfechos de
 #: emulação em `daemon/subsystems/gamepad.py`.
@@ -194,13 +240,40 @@ class Passo:
     motivo: str
 
 
+@dataclass
+class GestoDela:
+    """A ponte que o GESTO dela deixou de pé, esperando o silêncio.
+
+    VIVA, como a `Tentativa`: morre com o jogo, com o daemon, ou gravada. O que
+    ela guarda a mais é o `appid`, porque este caminho não nasce do lançamento
+    — nasce do gesto, e o gesto sozinho não sabe em que jogo está (quem sabe é
+    `launch_env.launch_session_appid`, o mesmo sinal do resto da casa).
+    """
+
+    appid: int
+    ponte: ponte_escada.Ponte
+    #: Relógio do silêncio, reiniciado a cada gesto dela.
+    ultimo_gesto: float
+    gestos: int = 1
+    #: Há um `mode` a alinhar AGORA, sem esperar silêncio nenhum. É o degrau
+    #: caro: a tentativa foi encerrada e a ponte de pé evaporaria com ela.
+    a_registrar: bool = False
+
+
 @dataclass(frozen=True)
 class Tique:
     """O que o relógio de 1 Hz encontrou."""
 
     #: A ponte a CARIMBAR, ou None. Quem grava é `profiles/manager`.
     carimbar: ponte_escada.Ponte | None = None
+    #: A ponte a gravar no `mode` do perfil SEM carimbar, ou None. Ver
+    #: `manager.alinhar_o_modo_do_appid` para por que as duas não são a mesma
+    #: coisa: carimbar aqui mataria o caminho para o degrau seguinte.
+    alinhar: ponte_escada.Ponte | None = None
     appid: int | None = None
+    #: `POR_GESTO` ou `POR_SILENCIO`, quando há o que carimbar
+    #: (`ponte_escada.por_que_confirmou`).
+    por: str | None = None
     #: Por que a tentativa terminou, ou None quando ela segue em pé.
     fim: str | None = None
 
@@ -222,6 +295,106 @@ def em_curso(daemon: Any) -> Tentativa | None:
     """A tentativa aberta neste daemon, ou None."""
     valor = getattr(daemon, ATRIBUTO_DA_TENTATIVA, None)
     return valor if isinstance(valor, Tentativa) else None
+
+
+def gesto_em_curso(daemon: Any) -> GestoDela | None:
+    """A ponte que o gesto dela deixou de pé neste daemon, ou None."""
+    valor = getattr(daemon, ATRIBUTO_DO_GESTO, None)
+    return valor if isinstance(valor, GestoDela) else None
+
+
+def _guardar_o_gesto(daemon: Any, gesto: GestoDela | None) -> None:
+    """Grava (ou apaga) a ponte do gesto. Best-effort, como a tentativa."""
+    with contextlib.suppress(Exception):
+        setattr(daemon, ATRIBUTO_DO_GESTO, gesto)
+
+
+def esquecer_o_gesto(daemon: Any) -> GestoDela | None:
+    """Apaga o registro do gesto. Devolve o que estava lá."""
+    gesto = gesto_em_curso(daemon)
+    _guardar_o_gesto(daemon, None)
+    return gesto
+
+
+def _anotar_o_gesto(
+    daemon: Any,
+    *,
+    appid: int,
+    ponte: ponte_escada.Ponte,
+    momento: float,
+    gestos: int | None = None,
+    a_registrar: bool = False,
+) -> GestoDela:
+    """Abre ou refresca o registro do gesto. Um por jogo, e o relógio reinicia.
+
+    Jogo diferente do anotado: o registro velho morre sem gravar nada. Dois
+    registros ao mesmo tempo seriam duas respostas para *"que ponte ficou de
+    pé"*, que é o defeito que este módulo inteiro existe para não ter.
+    """
+    anterior = gesto_em_curso(daemon)
+    if anterior is not None and anterior.appid == appid:
+        anterior.ponte = ponte
+        anterior.ultimo_gesto = momento
+        anterior.gestos = anterior.gestos + 1 if gestos is None else gestos
+        anterior.a_registrar = anterior.a_registrar or a_registrar
+        return anterior
+    novo = GestoDela(
+        appid=appid,
+        ponte=ponte,
+        ultimo_gesto=momento,
+        gestos=1 if gestos is None else gestos,
+        a_registrar=a_registrar,
+    )
+    _guardar_o_gesto(daemon, novo)
+    return novo
+
+
+def gesto_deixou_de_pe(
+    daemon: Any,
+    *,
+    appid: int | None,
+    mascara: str | None,
+    jogo_vivo: bool,
+    agora: float | None = None,
+) -> GestoDela | None:
+    """Momento 2b: a ponte que o gesto dela deixou de pé. None = nada anotado.
+
+    Chamado pelo `hotkey` DEPOIS de conferir a máscara viva — a disciplina da
+    MASCARA-01: o retorno do applier vale `True` para três desfechos, e anotar
+    pelo retorno anotaria uma ponte que não subiu.
+
+    Quatro recusas, e cada uma tem um porquê que não é conveniência:
+
+    - **sem jogo vivo**: fora de uma partida o gesto é ela mexendo na mesa, e o
+      perfil de jogo nenhum tem o que aprender com isso;
+    - **sem appid**: o jogo não veio pelo wrapper, então não há perfil de jogo
+      para receber a máscara. Escrever no perfil errado é pior que não escrever;
+    - **máscara fora das duas** (`mouse_teclado`, e o que mais o ciclo ganhar):
+      não é degrau da `ESCADA` e não é ponte de gamepad. Gravar
+      `mode.kind="desktop"` no perfil de um jogo porque ela passou por ali
+      seria uma decisão de produto que ninguém pediu;
+    - **há tentativa em curso**: aquele caminho já tem dono
+      (`avancar_por_gesto` + `tique`), e dois donos para a mesma pergunta é
+      como esta casa fabrica duas verdades.
+    """
+    if not jogo_vivo or appid is None or mascara not in MASCARAS_AO_VIVO:
+        return None
+    if em_curso(daemon) is not None:
+        return None
+    gesto = _anotar_o_gesto(
+        daemon,
+        appid=appid,
+        ponte=ponte_escada.Ponte(ponte_escada.KIND_GAMEPAD, mascara),
+        momento=_agora(agora),
+    )
+    logger.info(
+        "ponte_do_gesto_anotada",
+        appid=gesto.appid,
+        ponte=gesto.ponte.chave,
+        gestos=gesto.gestos,
+        segundos=ponte_escada.SILENCIO_CONFIRMA_SEC,
+    )
+    return gesto
 
 
 def _guardar(daemon: Any, tentativa: Tentativa | None) -> None:
@@ -421,8 +594,11 @@ def avancar_por_gesto(
         and mascara in MASCARAS_AO_VIVO
     )
     if not alcancavel:
-        # AVISA E PARA. O journal diz o que falta acontecer, porque é ela quem
-        # pode fazê-lo: reabrir o jogo, ou fechar a Steam e reabrir os dois.
+        # AVISA, GUARDA E PARA. O journal diz o que falta acontecer, porque é
+        # ela quem pode fazê-lo: reabrir o jogo, ou fechar a Steam e reabrir os
+        # dois. E o degrau em que ela ESTÁ é guardado antes de a tentativa
+        # morrer — sem isso ele evapora, e o próximo lançamento recomeça do
+        # `mode` de antes (medido três vezes; ver o cabeçalho).
         logger.warning(
             "ponte_escada_parou_no_degrau_caro",
             appid=tentativa.appid,
@@ -430,6 +606,14 @@ def avancar_por_gesto(
             proximo=degrau.ponte.chave,
             preco=preco,
             porque=degrau.porque,
+        )
+        _anotar_o_gesto(
+            daemon,
+            appid=tentativa.appid,
+            ponte=tentativa.ponte,
+            momento=momento,
+            gestos=tentativa.gestos,
+            a_registrar=True,
         )
         encerrar(daemon, motivo=FIM_DEGRAU_CARO)
         return Passo(degrau=degrau, mascara=None, preco=preco, motivo=PASSO_PAROU)
@@ -526,6 +710,9 @@ def silencio_confirma(
         jogo_vivo=jogo_vivo,
         # A tentativa só existe sem carimbo (`comecar` recusa abrir com um).
         confirmada=None,
+        # E `gestos` decide o `por=` do carimbo, não SE ele sai: aqui não há
+        # carimbo para recusar. Ver `ponte_escada.por_que_confirmou`.
+        gestos=tentativa.gestos,
     )
 
 
@@ -539,28 +726,138 @@ def tique(daemon: Any, *, jogo_vivo: bool, agora: float | None = None) -> Tique:
     quando o jogo fecha — antes que o silêncio de um jogo fechado seja lido
     como aprovação.
     """
+    momento = _agora(agora)
     tentativa = em_curso(daemon)
     if tentativa is None:
-        return Tique()
-    fim = ver_o_jogo(daemon, jogo_vivo=jogo_vivo, agora=agora)
+        # Sem escada correndo, sobra o caminho que a escada não cobre: a ponte
+        # que o GESTO dela deixou de pé num jogo que o produto já "sabia".
+        return _tique_do_gesto(daemon, jogo_vivo=jogo_vivo, momento=momento)
+    fim = ver_o_jogo(daemon, jogo_vivo=jogo_vivo, agora=momento)
     if fim is not None:
         return Tique(appid=tentativa.appid, fim=fim)
-    ponte = silencio_confirma(daemon, jogo_vivo=jogo_vivo, agora=agora)
+    ponte = silencio_confirma(daemon, jogo_vivo=jogo_vivo, agora=momento)
     if ponte is None:
         return Tique()
     encerrar(daemon, motivo=FIM_CONFIRMADA)
+    # A mesma pergunta, respondida: um registro de gesto deste jogo não pode
+    # sobreviver ao carimbo e mandar gravar de novo no tique seguinte.
+    esquecer_o_gesto(daemon)
+    por = ponte_escada.por_que_confirmou(tentativa.gestos)
     logger.info(
         "ponte_escada_confirmada_por_silencio",
         appid=tentativa.appid,
         ponte=ponte.chave,
         gestos=tentativa.gestos,
+        por=por,
         segundos=ponte_escada.SILENCIO_CONFIRMA_SEC,
     )
-    return Tique(carimbar=ponte, appid=tentativa.appid, fim=FIM_CONFIRMADA)
+    return Tique(
+        carimbar=ponte,
+        # Carimbo por GESTO alinha o `mode` junto: num perfil que opina, o
+        # carimbo sozinho não muda o próximo lançamento — `arm_launch_profile`
+        # só lê o carimbo quando `mode is None`, porque *"o perfil manda"*. Por
+        # SILÊNCIO não alinha: ninguém pediu troca nenhuma, e o carimbo já
+        # preenche o silêncio de um perfil sem `mode`.
+        alinhar=ponte if por == ponte_escada.POR_GESTO else None,
+        appid=tentativa.appid,
+        por=por,
+        fim=FIM_CONFIRMADA,
+    )
+
+
+def _tique_do_gesto(daemon: Any, *, jogo_vivo: bool, momento: float) -> Tique:
+    """O tique do registro de GESTO — o caminho sem tentativa aberta.
+
+    Três desfechos, nesta ordem, e a ordem é a entrega:
+
+    1. **há `mode` a registrar AGORA** (o degrau caro): sai antes de qualquer
+       pergunta sobre o jogo estar vivo, de propósito. Alinhar o `mode` NÃO é
+       confirmar — é anotar onde ela estava —, e é justamente o jogo fechando
+       que fazia esse dado evaporar;
+    2. **o jogo sumiu**: o registro morre sem carimbar nada, pela mesma regra da
+       tentativa. Silêncio com o jogo fechado é ela tendo ido embora;
+    3. **passou o silêncio**: carimba `POR_GESTO` e alinha o `mode` na mesma
+       gravação — o carimbo sozinho não muda o próximo lançamento de um perfil
+       que opina (ver `manager.alinhar_o_modo_com_a_ponte`).
+    """
+    gesto = gesto_em_curso(daemon)
+    if gesto is None:
+        return Tique()
+    if gesto.a_registrar:
+        # O GESTO É ESQUECIDO AQUI, E NÃO SÓ MARCADO COMO REGISTRADO.
+        #
+        # MEDIDO em 29/08/2026, e era regressão: pôr `a_registrar = False` e
+        # deixar o `GestoDela` VIVO fazia os 180 s seguintes caírem em
+        # `confirmacao_por_silencio(confirmada=None, gestos=N)` — que carimba
+        # `POR_GESTO` **o degrau que ela acabou de recusar**. No lançamento
+        # seguinte a escada via `produto_ja_sabe`, `proximo_degrau` devolvia
+        # `None`, e **o caminho para o Modo Nativo morria**.
+        #
+        # A régua que cobria este ramo rodava o tique UMA VEZ e parava. A vida
+        # não para: t+181 s carimbava. Os 67 testes daquela leva passavam com
+        # esta linha aqui — prova de que a régua nunca alcançou o caso.
+        #
+        # ALINHAR NÃO É CONFIRMAR, e é essa a distinção que o esquecimento
+        # protege: o `mode` do perfil recebe a máscara que o gesto dela pôs de
+        # pé (para o próximo lançamento não armar o errado), e o CARIMBO não
+        # nasce — a escada continua aberta e o degrau caro continua alcançável
+        # no lançamento seguinte, que é onde ele cabe.
+        esquecer_o_gesto(daemon)
+        logger.info(
+            "ponte_de_pe_a_registrar",
+            appid=gesto.appid,
+            ponte=gesto.ponte.chave,
+            gestos=gesto.gestos,
+        )
+        return Tique(alinhar=gesto.ponte, appid=gesto.appid)
+    if not jogo_vivo:
+        esquecer_o_gesto(daemon)
+        logger.info(
+            "ponte_do_gesto_esquecida",
+            appid=gesto.appid,
+            ponte=gesto.ponte.chave,
+            motivo=FIM_JOGO_FECHOU,
+        )
+        return Tique(appid=gesto.appid, fim=FIM_JOGO_FECHOU)
+    ponte = ponte_escada.confirmacao_por_silencio(
+        ponte_atual=gesto.ponte,
+        ultimo_gesto=gesto.ultimo_gesto,
+        agora=momento,
+        jogo_vivo=jogo_vivo,
+        # Sem carimbo a comparar: este módulo não lê disco, e o registro só
+        # existe porque a mão DELA moveu a ponte viva. Quem confere o que já
+        # está gravado é o escritor, que já tem o perfil aberto.
+        confirmada=None,
+        gestos=gesto.gestos,
+    )
+    if ponte is None:
+        return Tique()
+    esquecer_o_gesto(daemon)
+    # `por_que_confirmou` também aqui, e não um `POR_GESTO` digitado: a escolha
+    # entre os dois nomes tem UM dono, e é `ponte_escada`. (Este registro só
+    # nasce de um gesto, então ele responde sempre `POR_GESTO` — o ponto é não
+    # haver um segundo lugar onde alguém possa responder outra coisa.)
+    por = ponte_escada.por_que_confirmou(gesto.gestos)
+    logger.info(
+        "ponte_do_gesto_confirmada",
+        appid=gesto.appid,
+        ponte=ponte.chave,
+        gestos=gesto.gestos,
+        por=por,
+        segundos=ponte_escada.SILENCIO_CONFIRMA_SEC,
+    )
+    return Tique(
+        carimbar=ponte,
+        alinhar=ponte,
+        appid=gesto.appid,
+        por=por,
+        fim=FIM_CONFIRMADA,
+    )
 
 
 __all__ = [
     "ATRIBUTO_DA_TENTATIVA",
+    "ATRIBUTO_DO_GESTO",
     "COMECO_DEGRAU_CARO",
     "COMECO_ESCADA_ACABOU",
     "COMECO_FORA_DA_ESCADA",
@@ -578,6 +875,7 @@ __all__ = [
     "PASSO_PAROU",
     "PASSO_SUBIU",
     "Comeco",
+    "GestoDela",
     "Passo",
     "Tentativa",
     "Tique",
@@ -586,6 +884,9 @@ __all__ = [
     "degrau_subiu",
     "em_curso",
     "encerrar",
+    "esquecer_o_gesto",
+    "gesto_deixou_de_pe",
+    "gesto_em_curso",
     "silencio_confirma",
     "tique",
     "ver_o_jogo",

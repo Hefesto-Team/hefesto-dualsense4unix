@@ -329,14 +329,29 @@ class TestOGesto:
         assert tentativa.degrau == pe.ESCADA[0], "avançou sobre uma ponte caída"
 
     @pytest.mark.asyncio
-    async def test_degrau_caro_avisa_e_para_e_o_gesto_ainda_troca(self) -> None:
+    async def test_degrau_caro_avisa_guarda_e_nao_cai_no_ciclo_no_mesmo_gesto(
+        self,
+    ) -> None:
         """O terceiro degrau (`native`) não alcança um processo já rodando.
 
         Subir ali ao vivo é o degrau que MENTE: a env congelou no `exec`, o
-        vpad some e o físico continua escondido — ZERO controles. O laço para
-        e encerra a tentativa; o GESTO continua obedecendo, pelo ciclo de
-        sempre. MORDE o ramo `alcancavel` de `avancar_por_gesto`: sem ele o
-        gesto entraria em Modo Nativo e mataria a própria porta de volta.
+        vpad some e o físico continua escondido — ZERO controles. O laço para e
+        encerra a tentativa; o gesto NÃO entra em Modo Nativo.
+
+        FATO CORRIGIDO (29/08/2026). Este teste exigia, na linha do
+        `d.pedidos`, que o MESMO gesto caísse no `CICLO_DE_PONTES` — e o ciclo,
+        depois de `xbox`, é `mouse_teclado`. Ou seja: a régua cobrava o defeito.
+        Medido três vezes no journal dela (Sackboy 26/08 03:40:45, Mullet 29/08
+        00:26:17, Touhou 29/08 03:19:14), sempre a mesma sequência:
+        `parou_no_degrau_caro` → `encerrada` → `troca_pedida_por_gesto
+        para=mouse_teclado`. **O gamepad sumia no meio da partida, e o `xbox`
+        em que ela estava evaporava com a tentativa.**
+
+        MORDE três curas de uma vez: o ramo `alcancavel` de
+        `avancar_por_gesto` (sem ele o gesto entra em Modo Nativo e mata a
+        porta de volta); o ramo `PASSO_PAROU` de `_ciclar_ponte` (sem ele volta
+        o `mouse_teclado`); e o `_anotar_o_gesto` antes do `encerrar` (sem ele a
+        ponte de pé não tem onde ser guardada e some com a tentativa).
         """
         d = _DaemonDoGesto(flavor="xbox")
         _abrir_tentativa(d, pe.ESCADA[1])
@@ -344,8 +359,33 @@ class TestOGesto:
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
         assert pe.ESCADA[2].exige_reabrir_jogo is True, "premissa do teste"
-        assert d.pedidos == [(False, None, "manual")], "voltou ao ciclo de sempre"
+        assert hotkey_sub.proxima_ponte("xbox") == hotkey_sub.PONTE_MOUSE_TECLADO, (
+            "premissa: é o ciclo fixo que levava a mouse+teclado"
+        )
+        assert d.pedidos == [], "o mesmo gesto trocou a máscara"
         assert pt.em_curso(d) is None, "a tentativa tinha de ser encerrada"
+        guardado = pt.gesto_em_curso(d)
+        assert guardado is not None, "o degrau de pé evaporou com a tentativa"
+        assert guardado.ponte == pe.ESCADA[1].ponte
+        assert guardado.a_registrar is True, "não vai chegar ao perfil"
+
+    @pytest.mark.asyncio
+    async def test_o_aperto_seguinte_ao_degrau_caro_volta_ao_ciclo(self) -> None:
+        """A porta de volta pelo controle custa UM aperto, não o caminho.
+
+        O aperto que para a escada não troca máscara; o seguinte troca, porque
+        a tentativa já foi encerrada e o gesto volta a ser o de sempre. MORDE
+        um `PASSO_PAROU` que fosse aplicado sem encerrar a tentativa: ela
+        ficaria presa no degrau caro, e nenhum aperto sairia de lá.
+        """
+        d = _DaemonDoGesto(flavor="xbox")
+        _abrir_tentativa(d, pe.ESCADA[1])
+        gesto = hotkey_sub.build_next_bridge_callback(d)
+
+        await gesto()  # type: ignore[operator]
+        await gesto()  # type: ignore[operator]
+
+        assert d.pedidos == [(False, None, "manual")], "ficou presa no degrau caro"
 
     @pytest.mark.asyncio
     async def test_no_ultimo_degrau_a_escada_acaba_e_o_gesto_segue(self) -> None:
