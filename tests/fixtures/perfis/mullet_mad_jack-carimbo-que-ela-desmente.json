@@ -1,0 +1,57 @@
+{
+  "name": "Mullet Mad Jack",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "steam_app_2111190"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 80,
+  "triggers": {
+    "left": {
+      "mode": "Off",
+      "params": []
+    },
+    "right": {
+      "mode": "Off",
+      "params": []
+    }
+  },
+  "leds": {
+    "lightbar": [
+      0,
+      0,
+      0
+    ],
+    "player_leds": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "lightbar_brightness": 1.0,
+    "auto_player_colors": true
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": null,
+    "custom_mult": null
+  },
+  "mode": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "coop": true
+  },
+  "suppress_desktop_emulation": false,
+  "ponte": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "steam_input": false,
+    "confirmada_em": "2026-08-29T03:23:13-03:00",
+    "confirmada_por": "silencio"
+  }
+}

@@ -203,45 +203,50 @@ SUBIR_FECHANDO_A_STEAM = "fechando_a_steam"
 #: casa uma medição de quanto tempo ela leva para perceber que o controle não
 #: pegou. Três minutos é a estimativa.
 #:
-#: **NÃO HÁ RECARIMBO — e quem lê este módulo precisa saber disso** (medido em
-#: 29/08/2026). Esta nota afirmava que errar para MENOS "custa um gesto: a
-#: confirmação prematura é desfeita pelo próximo gesto, que recarimba o
-#: perfil". **Nada recarimba.** A cadeia de escrita é um fio só, e cada elo tem
-#: um chamador:
+#: **O GESTO DELA RECARIMBA — e é o gesto, não o próximo silêncio sozinho.**
+#: (implementado em 29/08/2026; até essa data esta nota registrava, com razão,
+#: que NADA recarimbava). O que mudou, e onde:
 #:
-#:   - `carimbar_ponte` (`profiles/manager.py`) é o ÚNICO lugar do produto que
-#:     monta um `PonteConfirmada` dentro de um perfil, e quem o chama é
-#:     `ProfileManager.confirmar_ponte`, no mesmo arquivo;
-#:   - `confirmar_ponte` tem UM chamador: `daemon/launch_env.tique_da_escada`,
-#:     o tique do silêncio, sempre com `POR_SILENCIO`. `POR_GESTO` e
-#:     `POR_ESCOLHA_DELA` existem no esquema e nenhum caminho os escreve ainda;
-#:   - e esse caminho único RECUSA quando já há carimbo — o
-#:     `confirmada is not None` de `confirmacao_por_silencio`, adiante neste
-#:     arquivo, e antes dele o `COMECO_PRODUTO_JA_SABE` de
-#:     `ponte_tentativa.comecar`, que nem chega a abrir tentativa;
-#:   - e salvar o perfil não LIMPA nada: `carimbo_que_o_save_leva`
+#:   - `carimbar_ponte` (`profiles/manager.py`) continua sendo o ÚNICO lugar do
+#:     produto que monta um `PonteConfirmada` dentro de um perfil, e quem o
+#:     chama continua sendo `ProfileManager.confirmar_ponte`, no mesmo arquivo;
+#:   - `confirmar_ponte` continua com UM chamador,
+#:     `daemon/launch_env.tique_da_escada`. O que ele passa em `por=` deixou de
+#:     ser sempre `POR_SILENCIO`: quando a ponte de pé foi posta ali por gesto
+#:     DELA (`gestos > 0`), o carimbo sai `POR_GESTO` — que é o nome que o
+#:     esquema já tinha e ninguém escrevia;
+#:   - e a recusa "já há carimbo" ficou mais estreita, de propósito:
+#:     `confirmacao_por_silencio` recusa recarimbar o que ninguém contestou, e
+#:     ACEITA quando a ponte de pé DIVERGE do carimbo e foi o gesto dela que a
+#:     pôs ali. Carimbo antigo intacto até ela discordar; corrigido quando ela
+#:     discorda;
+#:   - salvar o perfil continua sem LIMPAR nada: `carimbo_que_o_save_leva`
 #:     (`app/actions/profile_writer.py`), dono único da resposta para os dois
-#:     botões que gravam, nunca devolve `None` havendo carimbo. A janela não
-#:     apaga uma confirmação, como não inventa.
+#:     botões que gravam, nunca devolve `None` havendo carimbo.
 #:
-#: Sem tentativa aberta, o `PS + R3` volta ao `CICLO_DE_PONTES` do `hotkey`:
-#: troca a ponte VIVA e não escreve no perfil. **Logo um carimbo prematuro fica
-#: errado para sempre**, e o gesto dela não o alcança.
+#: **E o carimbo sozinho não bastava**, o que é o defeito de fundo: o carimbo
+#: só preenche o SILÊNCIO do perfil (`launch_env.arm_launch_profile` o lê apenas
+#: quando `mode is None` — *"o perfil manda"*). Num perfil que opina, carimbar
+#: `xbox` e deixar `mode.gamepad_flavor="dualsense"` faz o lançamento seguinte
+#: armar `dualsense` de novo, gritar a divergência no journal, e ela apertar
+#: outra vez. Por isso a confirmação por gesto grava as DUAS coisas, na mesma
+#: gravação (`manager.alinhar_o_modo_com_a_ponte`).
 #:
-#: O preço, no journal dela de 29/08/2026: o Mullet Mad Jack foi carimbado
-#: `dualsense` às 03:23:13, por silêncio, com `gestos=0`. Entre 03:27:59 e
-#: 03:29:02 ela apertou `PS + R3` quatro vezes e parou no `xbox`. O carimbo
-#: `dualsense` continuou lá, e a aba Perfis passou a contar que aquela ponte
-#: funcionou e ninguém precisou mexer — que é o contrário do que aconteceu.
+#: O preço que pagou por isto, no journal dela de 29/08/2026: o Mullet Mad Jack
+#: foi carimbado `dualsense` às 03:23:13, por silêncio, com `gestos=0`. Entre
+#: 03:27:59 e 03:29:02 ela apertou `PS + R3` quatro vezes e parou no `xbox`. O
+#: carimbo `dualsense` continuou lá, e a aba Perfis passou a contar que aquela
+#: ponte funcionou e ninguém precisou mexer — o contrário do que aconteceu. Em
+#: 7 dias, 24 apertos: os 23 perfis de jogo dela pedem `dualsense` e ela joga em
+#: `xbox`.
 #:
-#: **Logo o critério "errar para o lado barato" não se sustenta como estava
-#: escrito:** errar para MAIS deixa ela apertando um botão que não faz nada, e
-#: errar para MENOS grava um dado errado no perfil dela, sem volta pelo
-#: controle. Os dois lados custam.
+#: **Os dois lados de errar continuam custando**, e o número não mudou por
+#: isso: errar para MAIS deixa ela apertando um botão que não faz nada; errar
+#: para MENOS grava um dado errado — agora reversível pelo gesto, mas ainda
+#: errado enquanto ela não aperta.
 #:
-#: O número continua 180.0 de propósito: **isto é conserto do FATO, não do
-#: mecanismo.** Mudar QUANDO o produto carimba muda o comportamento do produto
-#: dela, e é decisão dela.
+#: O número continua 180.0 de propósito: mudar QUANDO o produto carimba muda o
+#: comportamento do produto dela, e é decisão dela.
 SILENCIO_CONFIRMA_SEC = 180.0
 
 
@@ -462,6 +467,7 @@ def confirmacao_por_silencio(
     agora: float,
     jogo_vivo: bool,
     confirmada: Ponte | None = None,
+    gestos: int = 0,
 ) -> Ponte | None:
     """A ponte que o SILÊNCIO dela confirma, ou None quando nada é confirmado.
 
@@ -469,8 +475,10 @@ def confirmacao_por_silencio(
     condições, e são elas que separam isto de inventar confirmação:
 
     1. **há ponte de pé** para confirmar;
-    2. **ninguém já confirmou** — recarimbar a cada volta do laço apagaria a
-       data, que é a única informação que o carimbo antigo carrega;
+    2. **há algo NOVO a dizer.** Sem carimbo, qualquer confirmação é nova.
+       Havendo carimbo, só o gesto DELA reabre a pergunta — e só quando a ponte
+       de pé DIVERGE do que está carimbado. Recarimbar o que ninguém contestou
+       apagaria a data, que é a única informação que o carimbo antigo carrega;
     3. **o jogo tem de estar VIVO.** Silêncio com o jogo fechado não é ela
        aprovando a ponte — é ela tendo ido embora. Se ela fechou o jogo no meio
        da escada, nada é confirmado: a ponte de pé continua sendo a última
@@ -478,16 +486,36 @@ def confirmacao_por_silencio(
     4. **o relógio conta do último GESTO**, nunca do lançamento — ver
        `SILENCIO_CONFIRMA_SEC`.
 
+    `gestos` é quantos `PS + R3` dela puseram esta ponte de pé. Ele existe para
+    a condição 2 e para `por_que_confirmou`, e o default `0` deixa o chamador
+    que não conta gestos com o comportamento de sempre: com carimbo, nada é
+    confirmado.
+
     Devolve a `Ponte` a carimbar; quem grava é
-    `profiles/manager.confirmar_ponte`, com `por=POR_SILENCIO`.
+    `profiles/manager.confirmar_ponte`, com `por=por_que_confirmou(gestos)`.
     """
-    if ponte_atual is None or confirmada is not None:
+    if ponte_atual is None:
+        return None
+    if confirmada is not None and not (gestos > 0 and ponte_atual != confirmada):
         return None
     if not jogo_vivo:
         return None
     if (agora - ultimo_gesto) < SILENCIO_CONFIRMA_SEC:
         return None
     return ponte_atual
+
+
+def por_que_confirmou(gestos: int) -> str:
+    """`POR_GESTO` quando a mão dela pôs a ponte de pé; `POR_SILENCIO` quando não.
+
+    A distinção é a do esquema, palavra por palavra (`CONFIRMADA_POR_*`):
+    `gesto` é *"ela confirma UMA vez, com um gesto no controle, qual pegou"*;
+    `silencio` é *"ela jogou e não reclamou"*. Guardar QUAL deles é o que
+    separa *"o produto adivinhou e ela não desmentiu"* de *"ela mandou"* no dia
+    em que a escada errar — e até 29/08/2026 o produto só sabia escrever um dos
+    dois, porque só o tique sem gesto tinha escritor.
+    """
+    return POR_GESTO if gestos > 0 else POR_SILENCIO
 
 
 __all__ = [
@@ -513,5 +541,6 @@ __all__ = [
     "indice_do_degrau",
     "ponte_do_carimbo",
     "ponte_do_perfil",
+    "por_que_confirmou",
     "proximo_degrau",
 ]

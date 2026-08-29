@@ -983,35 +983,61 @@ def tique_da_escada(
     como esta casa fabrica duas verdades. O custo por tique sem tentativa
     aberta é um `getattr`.
 
-    **É o ÚNICO ponto que carimba por silêncio**, e ele carimba uma vez só: a
-    tentativa é encerrada junto, então a volta seguinte não reencontra nada
-    para reconfirmar. Recarimbar a cada volta apagaria a data, que é a única
-    informação que o carimbo antigo carrega.
+    **É o ÚNICO ponto que escreve a ponte no perfil**, e ele escreve uma vez
+    só por evento: a tentativa (ou o registro do gesto) é encerrada junto, então
+    a volta seguinte não reencontra nada para reconfirmar. Recarimbar a cada
+    volta apagaria a data, que é a única informação que o carimbo antigo
+    carrega.
+
+    **Ele escreve DUAS coisas diferentes, e a diferença é a entrega**
+    (29/08/2026):
+
+    - **carimbo** (`Tique.carimbar`) — alguém confirmou. Sai com
+      `por=POR_SILENCIO` quando ninguém apertou nada, e `por=POR_GESTO` quando
+      a mão dela pôs aquela ponte de pé;
+    - **alinhamento do `mode`** (`Tique.alinhar`) — a ponte de pé volta para o
+      perfil. Vai junto do carimbo por gesto (sem isso o carimbo não muda o
+      próximo lançamento de um perfil que opina: *"o perfil manda"*) e vai
+      SOZINHO, sem carimbo, quando a escada para no degrau caro — porque ali
+      ninguém confirmou nada e carimbar mataria o caminho para o degrau
+      seguinte.
 
     **Jogo fechado no meio da escada não carimba nada.** `ponte_tentativa.tique`
     encerra a tentativa pela borda do jogo, e nenhum caminho de encerramento
-    escreve no disco — só este, e só com a `Ponte` que
+    carimba — só este, e só com a `Ponte` que
     `ponte_escada.confirmacao_por_silencio` devolveu.
     """
     resultado = ponte_tentativa.tique(
         daemon, jogo_vivo=_jogo_na_autoridade(daemon), agora=agora
     )
-    if resultado.carimbar is None:
+    ponte = resultado.carimbar if resultado.carimbar is not None else resultado.alinhar
+    if ponte is None:
         return resultado.fim
-    ponte = resultado.carimbar
     try:
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
-        # `POR_SILENCIO` é byte a byte o `CONFIRMADA_POR_SILENCIO` do esquema
-        # — a igualdade é PORTÃO em `tests/unit/test_ponte_escada.py`, não
-        # coincidência, e é o que deixa a escada falar sem importar o esquema.
-        salvo = ProfileManager(controller=daemon.controller).confirmar_ponte(
-            resultado.appid,
-            kind=ponte.kind,
-            gamepad_flavor=ponte.mascara,
-            steam_input=ponte.steam_input,
-            por=ponte_escada.POR_SILENCIO,
-        )
+        gerente = ProfileManager(controller=daemon.controller)
+        if resultado.carimbar is None:
+            # SÓ o `mode`, sem carimbo — a escada parou no degrau caro e o
+            # degrau de pé ia evaporar com a tentativa. Carimbar aqui mataria o
+            # caminho para o degrau seguinte; ver `alinhar_o_modo_do_appid`.
+            salvo = gerente.alinhar_o_modo_do_appid(
+                resultado.appid, kind=ponte.kind, gamepad_flavor=ponte.mascara
+            )
+        else:
+            # `POR_SILENCIO`/`POR_GESTO` são byte a byte os `CONFIRMADA_POR_*`
+            # do esquema — a igualdade é PORTÃO em
+            # `tests/unit/test_ponte_escada.py`, não coincidência, e é o que
+            # deixa a escada falar sem importar o esquema. Quem escolhe entre
+            # os dois é `ponte_escada.por_que_confirmou`, no tique.
+            salvo = gerente.confirmar_ponte(
+                resultado.appid,
+                kind=ponte.kind,
+                gamepad_flavor=ponte.mascara,
+                steam_input=ponte.steam_input,
+                por=resultado.por or ponte_escada.POR_SILENCIO,
+                alinhar_o_modo=resultado.alinhar is not None,
+            )
     except Exception as exc:
         logger.warning(
             "ponte_escada_carimbo_falhou",
@@ -1021,19 +1047,25 @@ def tique_da_escada(
         )
         return resultado.fim
     if salvo is None:
-        # O jogo não tem perfil próprio, e `confirmar_ponte` NÃO inventa um —
-        # criar arquivo nas costas dela tem uma porta só, que é o editor. Sem
-        # perfil não há gaveta, e o produto diz isso em vez de fingir que
-        # gravou.
+        # O jogo não tem perfil próprio, e nem `confirmar_ponte` nem
+        # `alinhar_o_modo_do_appid` INVENTAM um — criar arquivo nas costas dela
+        # tem uma porta só, que é o editor. Sem perfil não há gaveta, e o
+        # produto diz isso em vez de fingir que gravou.
         logger.info("ponte_escada_sem_perfil_para_carimbar", appid=resultado.appid)
         return resultado.fim
-    logger.info(
-        "ponte_escada_carimbada",
-        appid=resultado.appid,
-        ponte=ponte.chave,
-        perfil=getattr(salvo, "name", None),
-        por=ponte_escada.POR_SILENCIO,
-    )
+    if resultado.carimbar is not None:
+        # Só o carimbo tem linha própria aqui. O alinhamento sozinho já é dito
+        # por `ponte_de_pe_alinhada_no_perfil`, do escritor — e uma linha
+        # `ponte_escada_carimbada por=None` seria o journal dizendo que
+        # carimbou o que não carimbou.
+        logger.info(
+            "ponte_escada_carimbada",
+            appid=resultado.appid,
+            ponte=ponte.chave,
+            perfil=getattr(salvo, "name", None),
+            por=resultado.por,
+            modo_alinhado=resultado.alinhar is not None,
+        )
     return resultado.fim
 
 

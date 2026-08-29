@@ -275,26 +275,26 @@ class TestUmaGavetaSO:
         assert pe.ponte_do_carimbo(None) is None
 
 
-class TestNinguemRecarimbaOPerfil:
-    """A cadeia que escreve o carimbo é um FIO SÓ — e é por isso que um carimbo
-    prematuro fica errado para sempre.
+class TestQuemRecarimbaOPerfil:
+    """A cadeia que escreve o carimbo continua sendo um FIO SÓ — e agora o
+    gesto dela alcança o carimbo errado.
 
-    Medido em 29/08/2026, contra a afirmação que morava na nota do
-    `SILENCIO_CONFIRMA_SEC`: *"a confirmação prematura é desfeita pelo próximo
-    gesto, que recarimba o perfil"*. Não recarimba. O preço apareceu no journal
-    dela: o Mullet Mad Jack carimbado `dualsense` por silêncio às 03:23:13 com
-    `gestos=0`, quatro `PS + R3` entre 03:27:59 e 03:29:02 terminando em
-    `xbox`, e o carimbo errado no lugar — com a aba Perfis contando que aquela
-    ponte funcionou e ninguém precisou mexer.
+    Até 29/08/2026 esta classe se chamava `TestNinguemRecarimbaOPerfil` e
+    travava o contrário: *nada recarimba*, medido contra a afirmação que morava
+    na nota do `SILENCIO_CONFIRMA_SEC`. Ela mesma dizia, por escrito, o que
+    fazer no dia em que o recarimbo fosse implementado — reprovar, e exigir que
+    a nota fosse reescrita no mesmo commit. Foi o que aconteceu; a nota está
+    reescrita, e o que esta classe trava agora é o desenho novo.
 
-    As duas outras pernas do fato já têm dono e não são repetidas aqui: a
-    recusa quando já há carimbo é
-    `test_o_silencio_nao_recarimba_o_que_ja_foi_confirmado`, acima; e o salvar
-    que não apaga carimbo é `app/actions/profile_writer.carimbo_que_o_save_leva`.
+    O preço que a mudança paga, no journal dela: o Mullet Mad Jack carimbado
+    `dualsense` por silêncio às 03:23:13 com `gestos=0`, quatro `PS + R3` entre
+    03:27:59 e 03:29:02 terminando em `xbox`, e o carimbo errado no lugar — com
+    a aba Perfis contando que aquela ponte funcionou e ninguém precisou mexer.
+    Em 7 dias, 24 apertos: 23 perfis de jogo dela pedem `dualsense` e ela joga
+    em `xbox`.
 
-    **Se um dia o recarimbo for implementado — é decisão DELA, não veto deste
-    teste — esta classe reprova, e o que ela está pedindo é que a nota do
-    `SILENCIO_CONFIRMA_SEC` seja reescrita no mesmo commit.**
+    O que NÃO mudou, e é o que estas três réguas seguram: **uma gaveta, um
+    escritor, e nenhum carimbo sem `por=` explícito.**
     """
 
     def test_um_so_escritor_monta_o_carimbo(self) -> None:
@@ -307,26 +307,43 @@ class TestNinguemRecarimbaOPerfil:
         }
 
     def test_um_so_chamador_grava_o_carimbo(self) -> None:
-        """O tique do silêncio é o único; nenhum caminho de gesto escreve."""
+        """O tique de 1 Hz é o único, e vale para as DUAS gravações.
+
+        `alinhar_o_modo_com_a_ponte` entrou junto do carimbo em 29/08 e é a
+        outra metade da mesma pergunta — por isso ela sai pela mesma porta e
+        tem o mesmo chamador. Duas portas para o mesmo fato é como esta casa
+        fabrica duas verdades.
+        """
         assert set(_chamadas_a("confirmar_ponte")) == {
             "src/hefesto_dualsense4unix/daemon/launch_env.py"
         }
+        assert set(_chamadas_a("alinhar_o_modo_do_appid")) == {
+            "src/hefesto_dualsense4unix/daemon/launch_env.py"
+        }
+        assert set(_chamadas_a("alinhar_o_modo_com_a_ponte")) == {
+            "src/hefesto_dualsense4unix/profiles/manager.py"
+        }
 
-    def test_todo_carimbo_do_produto_nasce_do_silencio(self) -> None:
-        """`POR_GESTO` e `POR_ESCOLHA_DELA` existem no esquema e ninguém grava.
+    def test_todo_carimbo_do_produto_diz_de_onde_veio(self) -> None:
+        """Nenhum carimbo sai sem `por=`, e o valor é do vocabulário da escada.
 
         A leitura é do argumento `por=` de cada chamada, não da palavra no
-        arquivo: um carimbo novo com outra origem cai aqui.
+        arquivo: um carimbo novo cai aqui. O valor deixou de ser a constante
+        `POR_SILENCIO` digitada no callsite e passou a ser o que o tique
+        decidiu (`por_que_confirmou`), porque agora há DOIS desfechos — e é o
+        `ponte_escada` que escolhe entre eles, não o `launch_env`.
         """
-        origens: set[str | None] = set()
         for chamadas in _chamadas_a("confirmar_ponte").values():
             for chamada in chamadas:
                 por = next(
                     (kw.value for kw in chamada.keywords if kw.arg == "por"), None
                 )
                 assert por is not None, "carimbo gravado sem `por=` explícito"
-                origens.add(_nome_curto(por))
-        assert origens == {"POR_SILENCIO"}
+
+        # E os dois desfechos possíveis são os do esquema, sem um sexto nome.
+        assert pe.por_que_confirmou(0) == pe.POR_SILENCIO
+        assert pe.por_que_confirmou(1) == pe.POR_GESTO
+        assert {pe.por_que_confirmou(0), pe.por_que_confirmou(3)} <= pe.CONFIRMACOES
 
 
 class TestAPonteSaiDoPerfilSemVocabularioNovo:

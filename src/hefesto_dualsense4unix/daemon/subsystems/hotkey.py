@@ -411,6 +411,25 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
     return True
 
 
+def _appid_do_jogo_do_wrapper() -> int | None:
+    """O appid do jogo que o wrapper lançou e que ainda roda, ou None.
+
+    Fachada de UMA linha sobre `launch_env.launch_session_appid`, e ela existe
+    para que o gesto não ganhe uma terceira definição de *"que jogo é este"*:
+    é o mesmo sinal que sustenta o `game_signal`, a exceção do R-06 e o desvio
+    da allowlist. Import local porque `launch_env` é do pacote de cima e este
+    módulo é carregado pelo poll loop — a mesma disciplina dos vizinhos que
+    importam `profiles` dentro da função.
+
+    `None` quando não há jogo do wrapper rodando, e isso é uma RECUSA, não uma
+    falta: sem appid não há perfil de jogo para receber a máscara, e escrever
+    no perfil errado é pior que não escrever.
+    """
+    from hefesto_dualsense4unix.daemon.launch_env import launch_session_appid
+
+    return launch_session_appid()
+
+
 def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
     """Cria o callback do gesto PS + R3: PRÓXIMA PONTE.
 
@@ -429,13 +448,20 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
       `ESCADA` em vez do próximo item do `CICLO_DE_PONTES`. A diferença é o
       dado por trás: a ordem da escada é justificada linha a linha contra o
       `mapa-controles.csv`; a do ciclo era um arranjo;
-    - sem tentativa — jogo com ponte CONFIRMADA, ou nenhum jogo — nada muda.
-      **E o gesto continua trocando mesmo num jogo confirmado**: recusar seria
-      o produto discutindo com a dona. Quem não roda em jogo confirmado é a
-      ESCADA, que é o caminho automático.
+    - sem tentativa — jogo com ponte CONFIRMADA, ou nenhum jogo — o alvo volta
+      a ser o do ciclo. **E o gesto continua trocando mesmo num jogo
+      confirmado**: recusar seria o produto discutindo com a dona. Quem não
+      roda em jogo confirmado é a ESCADA, que é o caminho automático.
 
-    O gesto NÃO confirma nada. Ele é o contrário de uma confirmação, e quem
-    carimba é o silêncio dela (`launch_env.tique_da_escada`).
+    A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026). O gesto sozinho
+    continua não confirmando nada — ele é o contrário de uma confirmação. O que
+    mudou é que ele deixa RASTRO: a máscara que ficou de pé é anotada
+    (`ponte_tentativa.gesto_deixou_de_pe`), e se ela parar de apertar e
+    continuar jogando, o tique de 1 Hz grava essa máscara no perfil do jogo —
+    carimbo `POR_GESTO` **e** `mode.gamepad_flavor`, porque num perfil que opina
+    o carimbo sozinho não muda o próximo lançamento. Sem isso, o gesto era um
+    trabalho que ela refazia a cada abertura: 24 apertos em 7 dias, medidos no
+    journal, com 23 perfis pedindo `dualsense` e ela jogando em `xbox`.
 
     O QUE O GESTO PROMETE:
       - troca a ponte na hora, com `origin="manual"` — a única origem que
@@ -443,7 +469,10 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
       - avisa pela lightbar qual ponte ficou de pé, e avisa ANTES quando a
         troca corre risco de derrubar o controle dentro do jogo;
       - é sempre reversível pelo próprio gesto: nenhuma ponte do ciclo mata o
-        caminho de volta pelo controle.
+        caminho de volta pelo controle. **Uma exceção medida, e ela custa um
+        aperto, não o caminho:** o aperto em que a escada para no degrau caro
+        não troca máscara nenhuma (ele avisa e guarda o degrau de pé); o aperto
+        seguinte volta ao ciclo de sempre. Ver `PASSO_PAROU` no corpo.
 
     O QUE O GESTO NÃO PROMETE (medido, não suposto):
       - NÃO garante que o jogo sobreviva à troca. A troca de máscara destrói e
@@ -500,10 +529,43 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
         if passo is not None and passo.mascara is not None:
             alvo = passo.mascara
             degrau_da_escada = passo.degrau
+        elif passo is not None and passo.motivo == ponte_tentativa.PASSO_PAROU:
+            # DOIS APERTOS NÃO PODEM CUSTAR A PARTIDA (29/08/2026), e é o
+            # segundo defeito da mesma linha do journal: até esta data o MESMO
+            # aperto que parava a escada no degrau caro caía no ciclo fixo e
+            # levava a `mouse_teclado` — o gamepad sumia no meio da partida.
+            # Medido três vezes (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17,
+            # Touhou 29/08 03:19:14).
+            #
+            # A resposta ao gesto não é trocar a máscara: é dizer, pelo único
+            # canal que ela enxerga sem sair do jogo, que a ponte de pé ficou e
+            # que o próximo degrau custa reabrir o jogo (ou fechar a Steam). O
+            # `ponte_tentativa` já guardou essa ponte para o tique gravar no
+            # perfil — sem isso, ela evapora.
+            #
+            # A porta de volta pelo controle NÃO fecha: a tentativa acabou de
+            # ser encerrada, então o aperto SEGUINTE já cai no ciclo de sempre.
+            # O que muda é que ela custa um aperto, e não zero.
+            logger.info(
+                "ponte_gesto_parou_no_degrau_caro",
+                de=atual,
+                proximo=passo.degrau.ponte.chave if passo.degrau else None,
+                preco=passo.preco,
+                jogo_com_autoridade=jogo_no_controle,
+            )
+            cor = CORES_DO_MODO.get(atual)
+            if cor is not None:
+                await _sinalizar_lightbar(
+                    daemon,
+                    [(cor, PULSO_SEG), ((0, 0, 0), PULSO_SEG), (cor, PULSO_SEG * 3)],
+                )
+            if store is not None:
+                with contextlib.suppress(Exception):
+                    store.bump("hotkey.ponte.cycled")
+            return
         else:
-            # Inclui os dois casos em que a escada AVISA E PARA (o próximo
-            # degrau exige reabrir o jogo ou fechar a Steam) e o caso em que
-            # ela acabou. O gesto não pode ficar sem resposta: ela apertou, e
+            # Inclui o degrau caro SEM tentativa aberta e o caso em que a
+            # escada acabou. O gesto não pode ficar sem resposta: ela apertou, e
             # alguma coisa tem de mudar. Volta ao ciclo de sempre.
             alvo = proxima_ponte(atual)
 
@@ -538,6 +600,26 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
             # seguinte pular o degrau que nunca chegou a ser tentado.
             with contextlib.suppress(Exception):
                 ponte_tentativa.degrau_subiu(daemon, degrau_da_escada)
+        if efetiva == alvo:
+            # A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026). Aqui, e só
+            # aqui, porque a prova é o APARELHO: a comparação acima é a mesma
+            # disciplina da MASCARA-01, e anotar pelo retorno do applier
+            # anotaria uma ponte que não subiu.
+            #
+            # `gesto_deixou_de_pe` recusa sozinho o que não é dele — sem jogo
+            # vivo, sem appid, máscara fora das duas, ou tentativa de escada em
+            # curso (esse caminho já tem dono). O que sobra é o caso que mais
+            # custa a ela: o jogo que o produto JÁ "sabia", em que a escada não
+            # roda e o gesto dela não deixava rastro nenhum. Medido: 24 apertos
+            # em 7 dias, porque os 23 perfis de jogo dela pedem `dualsense` e
+            # ela joga em `xbox`.
+            with contextlib.suppress(Exception):
+                ponte_tentativa.gesto_deixou_de_pe(
+                    daemon,
+                    appid=_appid_do_jogo_do_wrapper(),
+                    mascara=efetiva,
+                    jogo_vivo=jogo_no_controle,
+                )
         logger.info(
             "ponte_trocada_por_gesto",
             de=atual,
