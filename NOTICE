@@ -283,9 +283,17 @@ A LICENÇA DAS CURVAS PRÓPRIAS — decidida antes de a primeira existir
 DELA (resposta 2 em
 docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md).
 
-O código próprio do Hefesto continua MIT, e é o que o LICENSE diz. As curvas de
-gatilho medidas na bancada — as que a CR-04 vai criar e a CR-06 vai publicar —
-saem sob **CC0-1.0**, separadas da licença do código.
+O código próprio do Hefesto continua MIT, e é o que o LICENSE diz. Qualquer curva
+de gatilho que o Hefesto venha a medir sai sob **CC0-1.0**, separada da licença
+do código.
+
+  NOTA DATADA — 29/08/2026. Este parágrafo dizia "as que a CR-04 vai criar e a
+  CR-06 vai publicar". As duas sprints SAÍRAM DO DISCO por decisão dela
+  (D-A-CORRENTE-DO-CLEAN-ROOM-SAI), junto com a CR-03; o manifesto está em
+  docs/process/sprints/2026-08-29-O-CORTE-DO-CLEAN-ROOM-o-que-saiu-e-por-que.md.
+  A DECISÃO DE LICENÇA CONTINUA VALENDO E NÃO MUDOU — o que caiu foi o plano de
+  produzir as curvas, não a regra sobre elas. Hoje não há caminho previsto para
+  medi-las, e por isso o parágrafo deixou de prometer quem as criaria.
 
 O motivo é o problema que abriu esta série inteira: as tabelas de curva com nome
 que existem hoje moram num repositório sem licença, e quem quer implementar
@@ -301,9 +309,11 @@ Onde as curvas vivem, e onde isso está escrito:
     construção;
   - o catálogo em disco, no formato de src/hefesto_dualsense4unix/profiles/
     curva_propria.py, que recusa efeito sem proveniência completa;
-  - o artefato publicado da CR-06 — arquivo de dados independente do nosso
-    esquema de perfil, com a licença CC0-1.0 declarada DENTRO dele. Quando esse
-    artefato existir, o texto da CC0-1.0 entra em LICENSES/CC0-1.0.txt.
+  - o artefato publicado, SE algum dia houver — arquivo de dados independente do
+    nosso esquema de perfil, com a licença CC0-1.0 declarada DENTRO dele. Quando
+    esse artefato existir, o texto da CC0-1.0 entra em LICENSES/CC0-1.0.txt.
+    (Esta linha dizia "o artefato publicado da CR-06"; a sprint saiu do disco em
+    29/08/2026 — ver a nota acima. A regra sobrevive à sprint.)
 
 Enquanto não houver curva medida, não há o que licenciar: a decisão está tomada,
 o artefato é que ainda não existe.
