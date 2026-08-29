@@ -22,7 +22,14 @@ peça está inteiramente coberta e ninguém consegue apontá-la.
 import sys, csv, pathlib
 from playwright.sync_api import sync_playwright
 
-R = pathlib.Path("/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix")
+# A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
+# arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
+# rodar uma CÓPIA do gerador REESCREVIA o mockup dela. Aconteceu numa prova:
+# o `05-vibracao.html` dela ficou com `--r-motor:56px` porque um agente rodou
+# uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
+# ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
+# segunda árvore de trabalhar sem tocar na primeira.
+R = pathlib.Path(__file__).resolve().parents[1]
 ROSA = "rgb(255, 121, 198)"
 PINTAVEL = ":is(.peca, rect, circle, path, ellipse)"
 
