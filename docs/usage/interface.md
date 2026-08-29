@@ -484,8 +484,8 @@ específico, um de cada vez, sem nunca ver quais estavam marcados.
 O nome do jogo vem do `appmanifest` da Steam. Quando ele não está no disco, a
 linha mostra o número e diz *"nome não encontrado"* — nunca um nome inventado.
 
-E a marca entrega a **entrada**: a sua cor, os seus gatilhos, a sua vibração e
-os seus jogadores continuam valendo. **A máscara do perfil também** — desde
+E a marca **não tira nada de você**: a sua cor, os seus gatilhos, a sua vibração
+e os seus jogadores continuam valendo. **A máscara do perfil também** — desde
 22/08/2026, marcar o jogo deixou de deixar o gamepad virtual na máscara em que
 estivesse; o que o jogo enxerga continua sendo o que você escolheu. O porquê,
 com a medição, em [jogos e máscaras](jogos-e-mascaras.md).

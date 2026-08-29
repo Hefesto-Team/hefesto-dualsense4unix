@@ -864,20 +864,28 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
     """Toast do botão "Este jogo não funciona" — pura, testável.
 
     Deliberadamente SEM os termos "Steam Input" e "opção de inicialização": a
-    usuária só declara que o jogo falhou, e o app troca de estratégia (o jogo
-    passa a receber a ENTRADA pela Steam, e some o controle dobrado).
+    usuária só declara que o jogo falhou, e o app troca de estratégia (naquele
+    jogo o controle FÍSICO fica escondido, e some o controle dobrado).
 
     NOTA DATADA — 07/08/2026. Este toast dizia *"o Hefesto sai da frente
-    dele"*, e a frase está **refutada pela metade** pela medição dela de
-    06/08 (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, grau MEDIDO): com o
-    jogo marcado o Hefesto entrega a **entrada** (solta o grab e derruba o
-    gamepad virtual, o que acaba com o dobrado) e **mantém a saída inteira** —
-    os gatilhos dela seguraram duros e o vermelho dela ficou na lightbar, com
-    o Mullet Mad Jack aberto. Quem lia "sai da frente" esperava perder cor e
-    gatilho, que é o contrário do que acontece; e o que de fato se perde ali
-    é o co-op (os secundários caem junto com os vpads), que o toast não
-    escondia e continua não escondendo — ver o badge da aba Status
-    (`app/actions/status_actions.tooltip_do_coop_derrubado`).
+    dele"*, e a frase está **refutada** pela medição dela de 06/08
+    (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, grau MEDIDO): com o jogo
+    marcado o Hefesto **mantém a saída inteira** — os gatilhos dela seguraram
+    duros e o vermelho dela ficou na lightbar, com o Mullet Mad Jack aberto.
+    Quem lia "sai da frente" esperava perder cor e gatilho, que é o contrário
+    do que acontece.
+
+    FATO ERRADO, SUBSTITUÍDO (28/08/2026, S4). Até hoje esta docstring e as
+    três frases de tela abaixo diziam que a marca *entrega a ENTRADA pela
+    Steam*, faz *o jogo enxergar o DualSense físico direto* e **custa o
+    co-op**. Os três morreram em **09/08/2026**
+    (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela, commit `d8022ea5`): a marca
+    inverteu de lado e passou a **esconder o controle físico**, com os
+    virtuais de pé — um por jogador, co-op incluído. O mecanismo vivo está em
+    `daemon/subsystems/gamepad.sync_steam_input_exception`, que chama
+    `esconder_o_fisico_para_o_jogo`. O ponteiro para o badge do co-op
+    derrubado também saiu: `status_actions.tooltip_do_coop_derrubado` não
+    existe mais na árvore, porque o estrago que ele anunciava acabou.
     """
     if status == "sem_jogo":
         return (
@@ -908,21 +916,27 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
     # não passa por nenhum desses portões: os oito chamadores de
     # `steam_input_excecao_ativa` estão todos em `gamepad.py`, nenhum em
     # `core/` (MEDIDO por grep, 06/08).
+    #
+    # S4 (28/08/2026): as três frases abaixo diziam que o jogo "passa a
+    # enxergar o controle físico direto" e "recebe o controle direto pela
+    # Steam". Era o mecanismo de ANTES de 09/08 — hoje é o INVERSO, e a
+    # razão está na NOTA DATADA da docstring.
     resto = (
-        " Feche e abra o jogo de novo: ele passa a enxergar o controle "
-        "físico direto e você não precisa configurar nada na Steam — a marca "
-        "é do Hefesto e sobrevive a reiniciar a máquina. Se ainda assim o "
-        "jogo não responder, o guia é docs/usage/jogos-e-mascaras.md."
+        " Feche e abra o jogo de novo: nele os controles físicos ficam "
+        "escondidos e o jogo passa a ver só os do Hefesto — você não precisa "
+        "configurar nada na Steam, e a marca sobrevive a reiniciar a "
+        "máquina. Se ainda assim o jogo não responder, o guia é "
+        "docs/usage/jogos-e-mascaras.md."
     )
     if status == "ja_estava":
         return (
-            f"O jogo {appid} já estava marcado — ele já recebe o controle "
-            f"direto pela Steam, sem o controle dobrado.{resto}"
+            f"O jogo {appid} já estava marcado — nele o controle físico já "
+            f"fica escondido, sem o controle dobrado.{resto}"
         )
     return (
-        f"Anotei: o jogo {appid} passa a receber o controle direto pela "
-        f"Steam, sem o controle dobrado — e a sua cor e os seus gatilhos "
-        f"continuam valendo.{resto}"
+        f"Anotei: no jogo {appid} o controle físico fica escondido e o jogo "
+        f"vê só os do Hefesto, sem o controle dobrado — e a sua cor, os seus "
+        f"jogadores e os seus gatilhos continuam valendo.{resto}"
     )
 
 

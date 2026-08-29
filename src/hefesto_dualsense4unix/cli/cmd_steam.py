@@ -21,12 +21,17 @@ motivo diferente, e ficam porque decisão medida não se apaga.
   do editor do perfil, logo abaixo do jogo escolhido. Este módulo deixou de ser
   a única porta de saída — continua sendo a porta da linha de comando, e o
   motivo de existir não muda.
-- **"ele deixa de ter cor, gatilhos e co-op"** está **refutado pela metade**
-  pela medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*,
-  grau MEDIDO): com o jogo marcado, **cor e gatilhos continuam valendo** (os
-  gatilhos dela seguraram duros e o vermelho dela ficou, com o Mullet Mad Jack
-  aberto). O **co-op**, esse sim, cai — os gamepads virtuais dos secundários
-  são recolhidos. O preço de marcar por engano existe, mas é menor e é outro.
+- **"ele deixa de ter cor, gatilhos e co-op"** está **refutado inteiro**, em
+  duas etapas. A medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`, seção *A
+  INVERSÃO*, grau MEDIDO) derrubou a primeira metade: com o jogo marcado,
+  **cor e gatilhos continuam valendo** (os gatilhos dela seguraram duros e o
+  vermelho dela ficou, com o Mullet Mad Jack aberto). E a decisão dela de
+  09/08 (`ESCONDER-EM-VEZ-DE-SAIR-01`) derrubou a outra: a marca inverteu de
+  lado — passou a **esconder o controle físico** em vez de entregar a entrada
+  à Steam —, e os gamepads virtuais **ficam de pé, um por jogador**. O co-op
+  não cai mais. (FATO ERRADO, SUBSTITUÍDO em 28/08/2026, S4: esta linha ainda
+  dizia *"o co-op, esse sim, cai"*, dezenove dias depois de deixar de ser
+  verdade.)
 
 Este módulo é a porta de saída da linha de comando:
 
@@ -45,8 +50,9 @@ com sete linhas de cabeçalho) e adivinhar nome ali erraria com facilidade.
 **Onde este comando mora, e por quê.** O lugar natural seria um `steam` de
 primeiro nível, mas registrar sub-app novo exige mexer em `cli/app.py`, que
 nesta leva tem outro dono. Fica pendurado em `gamepad` — que é exatamente o
-domínio da allowlist: ela decide *quem entrega o controle ao jogo*, o gamepad
-virtual do Hefesto ou o Steam Input.
+domínio da allowlist: ela diz em que jogos o guarda
+(`scripts/disable_steam_input.sh`) **não** desliga o Steam Input, e reafirma
+ali o esconderijo do controle físico que o produto já mantém em todo jogo.
 """
 from __future__ import annotations
 
@@ -65,7 +71,7 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import nome_do_app
 
 app = typer.Typer(
     name="steam-input",
-    help="Exceção do Steam Input — os jogos em que a Steam entrega o controle.",
+    help="Exceção do Steam Input — os jogos em que o Steam Input fica ligado.",
     no_args_is_help=True,
 )
 console = Console()
@@ -155,11 +161,15 @@ def cmd_list() -> None:
         )
         return
 
-    console.print("Jogos em que a Steam entrega o controle (a entrada vem dela):")
+    # S4 (28/08/2026): estas duas linhas diziam "a Steam entrega o controle (a
+    # entrada vem dela)" e "entrada pela Steam, sem co-op" — o mecanismo de
+    # ANTES de 09/08, invertido pela ESCONDER-EM-VEZ-DE-SAIR-01. Ver a NOTA
+    # DATADA do topo do módulo.
+    console.print("Jogos em que o Hefesto não deixa o Steam Input ser desligado:")
     for appid, nome in entradas:
         console.print(
-            f"  {_rotulo(appid, nome)} — entrada pela Steam, sem co-op; "
-            "cor e gatilhos continuam do Hefesto"
+            f"  {_rotulo(appid, nome)} — nele o controle físico fica "
+            "escondido; cor, gatilhos e jogadores continuam do Hefesto"
         )
     console.print(f"\n[dim]arquivo: {caminho}[/dim]")
     console.print(
@@ -176,7 +186,7 @@ def cmd_remove(
         help="AppID (2111190) ou parte do nome do jogo ('mullet').",
     ),
 ) -> None:
-    """Tira um jogo da exceção — o Hefesto volta a entregar o controle nele."""
+    """Tira um jogo da exceção — o guarda volta a desligar o Steam Input nele."""
     from hefesto_dualsense4unix.integrations.steam_launch_options import (
         remove_appid_from_steam_input_allowlist,
     )
@@ -192,8 +202,9 @@ def cmd_remove(
     if status == "removido":
         console.print(f"[green]desfeito:[/green] {rotulo} saiu da exceção.")
         console.print(
-            "[dim]o Hefesto volta a entregar o gamepad virtual nesse jogo "
-            "(cor, gatilhos e co-op).[/dim]"
+            "[dim]o guarda volta a desligar o Steam Input nesse jogo. Cor, "
+            "gatilhos, vibração e jogadores não mudam — eles já valiam com a "
+            "marca.[/dim]"
         )
         _avisar_daemon()
         return

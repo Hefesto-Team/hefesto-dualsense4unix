@@ -28,6 +28,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     texto_do_custo_da_mascara,
     texto_do_radio_fragil,
 )
+from hefesto_dualsense4unix.app.actions.profile_writer import carimbo_que_o_save_leva
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
 from hefesto_dualsense4unix.app.ipc_bridge import (
     PROFILE_SWITCH_TIMEOUT_S,
@@ -47,6 +48,7 @@ from hefesto_dualsense4unix.profiles import schema as _schema
 from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
     load_all_profiles,
+    perfil_em_disco,
     save_profile,
 )
 from hefesto_dualsense4unix.profiles.schema import (
@@ -4415,12 +4417,44 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         # está lá não apaga o que ele sabia. O jogo não perde nada com a cópia
         # sem carimbo — `manager.perfil_do_appid` desempata por
         # `(ponte is not None, priority, name)` e continua achando o original.
+        #
+        # PONTE-SOBREVIVE-A-CORRIDA-01 (28/08/2026) — esta consulta ao disco era
+        # `if estreia:`, e a guarda era o defeito. `estreia` é FALSO no gesto
+        # mais comum que existe (salvar por cima de si mesmo), e ali o carimbo
+        # vinha só do passthrough: uma FOTOGRAFIA que a janela tirou quando
+        # abriu. Quem carimba é o daemon, escrevendo direto no arquivo — então
+        # todo carimbo nascido DEPOIS da abertura da janela era apagado pelo
+        # Salvar seguinte. MEDIDO no histórico dela, duas vezes: o Sackboy de
+        # 26/08 (carimbado 03:49:47, apagado 03:54:01 — 4 min 14 s de vida, os
+        # snapshots consecutivos são 1238 B com `ponte` e 1053 B sem) e o DON'T
+        # SCREAM de 19/08, cujo carimbo era `confirmada_por: escolha_dela`.
+        #
+        # Agora a escada é a mesma dos dois botões que gravam
+        # (`profile_writer.carimbo_que_o_save_leva`, o dono único): DISCO, depois
+        # a fotografia. `estreia` continua valendo, e é só o que ela sempre foi
+        # — o corte do degrau 2, para a cópia do "Duplicar" não herdar o carimbo
+        # da fonte. Ela nunca precisou governar o degrau 1.
+        #
+        # E a pergunta vai ao ARQUIVO, não ao `_perfil_que_o_salvar_sobrescreve`:
+        # o cache em memória é a OUTRA fotografia da janela (recarregado no boot
+        # e depois de gravar/apagar, nunca quando o disco muda por fora), então
+        # curar pelo cache deixaria a corrida de pé. `perfil_em_disco` lê UM
+        # arquivo, sem semear e sem varrer, que é o que cabe na thread do GTK
+        # (PERF-GUI-PROFILE-LOAD-NONBLOCKING-01) — e `on_profile_save` já grava
+        # nela, logo abaixo.
+        #
+        # O degrau 2 sai de `source.ponte`, e não de `base["ponte"]`: `base` é
+        # um `model_dump`, onde a seção já virou `dict` — e o degrau tem de
+        # entregar o objeto validado que `carimbo_que_o_save_leva` promete.
+        # `source` é o `Profile` de onde `base` saiu em TODOS os ramos acima
+        # (inclusive o do rascunho, que o reaponta para `do_draft`).
         estreia = bool(getattr(self, "_new_profile", False)) or (
             getattr(self, "_duplicate_source", None) is not None
         )
-        if estreia:
-            no_disco = self._perfil_que_o_salvar_sobrescreve(name)
-            base["ponte"] = no_disco.ponte if no_disco is not None else None
+        base["ponte"] = carimbo_que_o_save_leva(
+            perfil_em_disco(name),
+            None if estreia or source is None else source.ponte,
+        )
 
         # FEAT-LED-BRIGHTNESS-03: brightness pendente do slider só é aplicado
         # quando o perfil-base NÃO tem brilho próprio. BUG-PROFILE-BRIGHTNESS-OVERWRITE-01:

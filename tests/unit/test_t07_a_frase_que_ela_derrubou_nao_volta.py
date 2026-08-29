@@ -24,8 +24,6 @@ sobreviveu.
 from __future__ import annotations
 
 import ast
-import io
-import tokenize
 from pathlib import Path
 
 import pytest
@@ -43,6 +41,33 @@ FRASES_DERRUBADAS: dict[str, tuple[str, str]] = {
         "controle à Steam. Diga o que a caixinha da aba Perfis diz: "
         "'o controle físico fica escondido'.",
     ),
+    # S4 (28/08/2026). A frase de 09/08 tinha UMA redação nesta lista, e a
+    # MESMA afirmação sobrevivia em outras quatro — o `cmd_steam.py` dizia "a
+    # Steam entrega o controle" e "entrada pela Steam"; o toast de "Este jogo
+    # não funciona" dizia "recebe o controle direto pela Steam" e "passa a
+    # enxergar o controle físico direto". Régua que pega uma redação só não
+    # pega o fato; é o mesmo defeito que ela existe para matar.
+    "a Steam entrega o controle": (
+        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
+        "Quem entrega o controle ao jogo continua sendo o Hefesto, marcado "
+        "ou não. A allowlist só impede o guarda de desligar o Steam Input "
+        "daquele jogo.",
+    ),
+    "entrada pela Steam": (
+        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
+        "A entrada continua vindo do gamepad virtual do Hefesto — e por isso "
+        "o co-op não cai mais. Não diga que a entrada vem da Steam.",
+    ),
+    "controle direto pela Steam": (
+        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
+        "Diga o que acontece de verdade: 'o controle físico fica escondido e "
+        "o jogo passa a ver só os do Hefesto'.",
+    ),
+    "enxergar o controle físico direto": (
+        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
+        "É o INVERSO do que o produto faz: a marca ESCONDE o físico. Quem "
+        "escreve isto está descrevendo a borda que morreu em 09/08.",
+    ),
 }
 
 #: Onde a frase morta PODE aparecer, e por quê. Só documento histórico —
@@ -51,6 +76,11 @@ ARQUIVOS_ISENTOS = {
     # A nota datada do glade é o REGISTRO da morte da frase: ela cita a frase
     # para dizer que ela morreu. Apagá-la faria a próxima pessoa reescrever o
     # enquadramento antigo sem saber que ele já foi derrubado uma vez.
+    #
+    # CINTO, não caminho: `_arquivos_python` varre `*.py`, então o glade já
+    # está fora do alcance hoje. A linha fica para o dia em que alguém alargar
+    # o glob — o que este portão precisaria, porque o `main.glade` PINTA texto
+    # e nenhuma régua desta lista o alcança. Está no relato da S4.
     SRC / "gui" / "main.glade",
 }
 
@@ -59,36 +89,27 @@ def _arquivos_python() -> list[Path]:
     return sorted(p for p in SRC.rglob("*.py") if p not in ARQUIVOS_ISENTOS)
 
 
-def _linhas_que_apenas_explicam(texto: str) -> set[int]:
-    """Linhas de comentário e de docstring — as que EXPLICAM, não pintam.
+def _strings_de_tela(texto: str) -> list[tuple[int, str]]:
+    """[(linha, texto)] de toda string que PINTA — docstring excluída.
 
-    A distinção não é de estilo, é a regra inteira deste portão. Uma frase
-    derrubada CITADA num comentário é a nota datada da casa: ela impede a
-    próxima pessoa de reescrever o enquadramento antigo achando que é
-    novidade. A mesma frase dentro de uma string que chega à tela é o defeito.
+    Por AST, e não por linha, e a diferença é a mordida deste portão: o
+    interpretador já junta literais adjacentes (`"a" "b"` vira UM
+    `ast.Constant`, e o mesmo vale para os pedaços de uma f-string
+    concatenada), então uma frase quebrada em duas linhas chega aqui inteira.
 
-    Comentário sai do `tokenize`; docstring sai da árvore sintática. Nenhum
-    dos dois se descobre por indentação — e foi tentando descobrir por
-    indentação que a primeira versão deste arquivo se reprovou sozinha.
+    FATO ERRADO, SUBSTITUÍDO (28/08/2026, S4): até hoje esta varredura era
+    `frase in linha`, e por isso era CEGA a exatamente esse caso — o toast de
+    "Este jogo não funciona" pintava *"ele passa a enxergar o controle "* /
+    *"físico direto"* em duas linhas, e nenhuma delas continha a frase. A
+    correção fecha o buraco em vez de contorná-lo com uma segunda redação na
+    lista.
 
-    **Comentário de FIM DE LINHA não conta**, e isso não é detalhe: a mordida
-    deste portão foi arrancada com um `# CURA ARRANCADA` no fim da linha de
-    código, e a primeira versão da regra perdoou a linha inteira por causa
-    dele. Um `#` no fim não transforma o que vem antes em explicação — e
-    perdoar por isso seria dar a qualquer pessoa um jeito de pintar a frase
-    morta na tela e manter o portão verde.
+    Comentário não existe na AST, então continua isento de graça — que é o
+    ponto: uma frase derrubada CITADA num comentário é a nota datada da casa.
     """
-    linhas: set[int] = set()
-
-    corpo_da_linha = texto.splitlines()
-    for token in tokenize.generate_tokens(io.StringIO(texto).readline):
-        if token.type != tokenize.COMMENT:
-            continue
-        numero = token.start[0]
-        if corpo_da_linha[numero - 1].lstrip().startswith("#"):
-            linhas.add(numero)
-
-    for no in ast.walk(ast.parse(texto)):
+    arvore = ast.parse(texto)
+    docstrings: set[int] = set()
+    for no in ast.walk(arvore):
         if not isinstance(
             no, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
         ):
@@ -100,10 +121,17 @@ def _linhas_que_apenas_explicam(texto: str) -> set[int]:
             and isinstance(corpo[0].value, ast.Constant)
             and isinstance(corpo[0].value.value, str)
         ):
-            alvo = corpo[0]
-            linhas.update(range(alvo.lineno, (alvo.end_lineno or alvo.lineno) + 1))
+            docstrings.add(id(corpo[0].value))
 
-    return linhas
+    saida: list[tuple[int, str]] = []
+    for no in ast.walk(arvore):
+        if (
+            isinstance(no, ast.Constant)
+            and isinstance(no.value, str)
+            and id(no) not in docstrings
+        ):
+            saida.append((no.lineno, no.value))
+    return saida
 
 
 @pytest.mark.parametrize("frase", sorted(FRASES_DERRUBADAS))
@@ -118,14 +146,9 @@ def test_frase_derrubada_nao_e_pintada_na_tela(frase: str) -> None:
     achados: list[str] = []
     for arquivo in _arquivos_python():
         texto = arquivo.read_text(encoding="utf-8")
-        if frase.lower() not in texto.lower():
-            continue
-        explicam = _linhas_que_apenas_explicam(texto)
-        for numero, linha in enumerate(texto.splitlines(), start=1):
-            if frase.lower() in linha.lower() and numero not in explicam:
-                achados.append(
-                    f"{arquivo.relative_to(RAIZ)}:{numero}: {linha.strip()}"
-                )
+        for numero, valor in _strings_de_tela(texto):
+            if frase.lower() in valor.lower():
+                achados.append(f"{arquivo.relative_to(RAIZ)}:{numero}: {valor!r}")
 
     assert not achados, (
         f"a frase {frase!r} foi derrubada em {quando} e voltou a ser PINTADA:\n  "
@@ -134,31 +157,36 @@ def test_frase_derrubada_nao_e_pintada_na_tela(frase: str) -> None:
     )
 
 
-def test_o_portao_sabe_recusar_uma_frase_pintada(tmp_path: Path) -> None:
+def test_o_portao_sabe_recusar_uma_frase_pintada() -> None:
     """Régua que só sabe passar não é régua.
 
-    Exercita o caminho de erro com um arquivo plantado: a MESMA frase, uma vez
-    em comentário (permitida) e uma vez numa string de código (proibida). Se o
-    portão não distinguir os dois, ele é inútil nas duas direções.
+    Exercita o caminho de erro com um arquivo plantado: a MESMA frase em
+    comentário (permitida), em docstring (permitida), numa string de código
+    (proibida), com `#` no fim da linha (proibida — um `#` no fim não
+    transforma o que vem antes em explicação) e **quebrada em duas linhas**
+    (proibida — foi assim que ela sobreviveu ao portão até 28/08/2026).
     """
-    alvo = tmp_path / "falso.py"
-    alvo.write_text(
+    plantado = (
         "# jogos cujo DualSense é entregue pela Steam — nota datada\n"
         "def f() -> str:\n"
         '    """Docstring citando entregue pela Steam."""\n'
         '    return "o controle é entregue pela Steam"\n'
-        '    x = "entregue pela Steam"  # comentário de fim de linha\n',
-        encoding="utf-8",
+        "def g() -> str:\n"
+        '    x = "entregue pela Steam"  # comentário de fim de linha\n'
+        '    return ("o controle é entregue "\n'
+        '            "pela Steam, e a frase atravessa duas linhas")\n'
     )
-    texto = alvo.read_text(encoding="utf-8")
-    explicam = _linhas_que_apenas_explicam(texto)
+    pintadas = [v for _, v in _strings_de_tela(plantado)]
 
-    assert 1 in explicam, "comentário tem de ser reconhecido como explicação"
-    assert 3 in explicam, "docstring tem de ser reconhecida como explicação"
-    assert 4 not in explicam, "string de código NÃO é explicação — é tela"
-    assert 5 not in explicam, (
-        "um `#` no FIM da linha não transforma o código que vem antes em "
-        "explicação — foi assim que a mordida quase passou despercebida"
+    assert sum("entregue pela Steam" in v for v in pintadas) == 3, (
+        "o portão tem de ver as TRÊS strings de código (inclusive a de fim de "
+        f"linha e a quebrada em duas) e NENHUMA das explicações: {pintadas!r}"
+    )
+    assert not any("Docstring citando" in v for v in pintadas), (
+        "docstring tem de ser reconhecida como explicação"
+    )
+    assert not any("nota datada" in v for v in pintadas), (
+        "comentário nem chega à AST — a isenção é estrutural"
     )
 
 

@@ -353,30 +353,80 @@ def test_a_frase_manda_para_a_aba_onde_o_controle_realmente_mora(wid: str) -> No
     assert not erros, "ponteiro errado na aba Emulação:\n" + "\n".join(erros)
 
 
-def test_a_frase_cita_um_controle_que_existe_para_a_excecao_por_jogo() -> None:
-    """O parágrafo da exceção por jogo tem de nomear um controle DE VERDADE.
+def test_a_frase_que_nomeia_uma_aba_nomeia_o_controle_que_mora_nela() -> None:
+    """Anti-"vá procurar": citar a aba sem citar o controle não vale.
 
     Sem este caso, R3 se satisfaz apagando o nome do controle: sem rótulo
     citado não há par a conferir, e a instrução volta a ser "vá procurar".
+
+    NOTA DATADA — 28/08/2026 (S4). Este caso nasceu ancorado na frase
+    *"…vem PELA Steam …, marque «Esconder os controles físicos neste jogo»"*
+    e exigia que ela EXISTISSE (`assert frases, "o parágrafo da exceção por
+    jogo sumiu"`). Só que essa instrução é FALSA desde 09/08/2026 — ver
+    `test_a_dica_nao_manda_marcar_a_excecao_por_jogo`, logo abaixo —, e assim
+    a régua reprovava quem a tirasse: exatamente o defeito de *reprovar a
+    melhora em vez do defeito*, que esta casa já mediu onze vezes num dia. A
+    garantia que o caso realmente dava não dependia daquela frase; agora ela
+    é dita sem âncora nenhuma, sobre toda frase que nomeie uma aba.
     """
     textos = _textos_da_aba()["emulation_gamepad_hint_label"]
     por_rotulo = _controles_por_rotulo()
-    frases = [
-        frase
-        for texto in textos
-        for frase in re.split(r"(?<=[.!?])\s+", texto)
-        if "PELA Steam" in frase
-    ]
-    assert frases, "o parágrafo da exceção por jogo sumiu da dica da máscara"
-    for frase in frases:
-        citados = [c for c in _ROTULO_CITADO.findall(frase) if c in por_rotulo]
-        assert citados, (
-            "a frase da exceção por jogo não cita nenhum controle que exista na "
-            f"janela: {frase!r}. Rótulos citados que não existem: "
-            f"{_ROTULO_CITADO.findall(frase)}"
-        )
-        abas = _ABA_CITADA.findall(frase)
-        assert abas, f"a frase não diz em que aba o controle mora: {frase!r}"
+    for texto in textos:
+        for frase in re.split(r"(?<=[.!?])\s+", texto):
+            if not _ABA_CITADA.search(frase):
+                continue
+            citados = [c for c in _ROTULO_CITADO.findall(frase) if c in por_rotulo]
+            assert citados, (
+                "a frase nomeia uma aba e nenhum controle que exista na "
+                f"janela — vira 'vá procurar': {frase!r}. Rótulos citados que "
+                f"não existem: {_ROTULO_CITADO.findall(frase)}"
+            )
+
+
+#: A instrução que a tela dava até 28/08/2026 e que o produto tinha curado em
+#: 09/08: mandar marcar a exceção por jogo para acabar com o controle dobrado.
+#: São as formas de ORDEM ("marque", "marcar", "marcando"), não o substantivo
+#: "a marca" — trocar o verbo não pode desligar a régua, e falar da caixinha
+#: sem mandar usá-la continua permitido (a aba Perfis precisa disso).
+_MANDA_MARCAR = re.compile(r"\bmarqu(?:e|em)\b|\bmarcar\b|\bmarcando\b", re.IGNORECASE)
+_A_MARCA_POR_JOGO = "Esconder os controles físicos"
+
+
+def test_a_dica_nao_manda_marcar_a_excecao_por_jogo() -> None:
+    """S4 (28/08/2026) — a tela mandava pôr de volta a trava que o produto curou.
+
+    A dica dizia, em texto sempre visível: *"Quando o suporte a DualSense do
+    jogo vem PELA Steam (é o caso do Mullet Mad Jack), marque «Esconder os
+    controles físicos neste jogo» no editor de perfil, na aba Perfis."*
+
+    **Isso é falso desde 09/08/2026** (ESCONDER-EM-VEZ-DE-SAIR-01, decisão
+    dela, commit `d8022ea5`). A marca deixou de ter ramo no arquivo de saída
+    do wrapper: `daemon/launch_env.py` diz, no cabeçalho, que *"o jogo marcado
+    recebe exatamente a mesma env de qualquer outro jogo"* — o dedup
+    (`SDL_GAMECONTROLLER_IGNORE_DEVICES`) chega a TODO jogo, marcado ou não.
+    Medido em 28/08 com o parser do próprio produto
+    (`parse_steam_input_allowlist` sobre `steam_input_allowlist_path()`): a
+    allowlist da máquina dela tem **zero** appids, e mesmo assim o dobrado não
+    voltou nos três jogos da queixa.
+
+    A caixinha CONTINUA existindo na aba Perfis — quem sai é a instrução que
+    mandava usá-la. Tirar a caixinha é decisão dela, e está aberta em
+    `docs/process/SPRINT_ORDER.md`.
+
+    **A mordida:** devolva a frase antiga ao `emulation_gamepad_hint_label` e
+    este caso reprova nomeando a frase.
+    """
+    erros: list[str] = []
+    for wid, textos in _textos_da_aba().items():
+        for texto in textos:
+            for frase in re.split(r"(?<=[.!?])\s+", texto):
+                if _A_MARCA_POR_JOGO in frase and _MANDA_MARCAR.search(frase):
+                    erros.append(f"  {wid}: {frase!r}")
+    assert not erros, (
+        "a aba Emulação voltou a mandar marcar a exceção por jogo — o produto "
+        "esconde o controle físico em TODO jogo desde 09/08/2026, e a marca "
+        "não é mais necessária para curar o dobrado:\n" + "\n".join(erros)
+    )
 
 
 # ---------------------------------------------------------------------------

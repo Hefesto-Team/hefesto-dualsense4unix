@@ -201,11 +201,47 @@ SUBIR_FECHANDO_A_STEAM = "fechando_a_steam"
 #:
 #: **O valor em si NÃO é medido, e a honestidade é dizer isso.** Não existe nesta
 #: casa uma medição de quanto tempo ela leva para perceber que o controle não
-#: pegou. Três minutos é a estimativa, e o que a sustenta é o desenho, não o
-#: cronômetro: um erro para MENOS custa um gesto (a confirmação prematura é
-#: desfeita pelo próximo gesto, que recarimba o perfil), enquanto um erro para
-#: MAIS deixa ela apertando um botão que não faz nada. Errar para o lado barato
-#: é o critério.
+#: pegou. Três minutos é a estimativa.
+#:
+#: **NÃO HÁ RECARIMBO — e quem lê este módulo precisa saber disso** (medido em
+#: 29/08/2026). Esta nota afirmava que errar para MENOS "custa um gesto: a
+#: confirmação prematura é desfeita pelo próximo gesto, que recarimba o
+#: perfil". **Nada recarimba.** A cadeia de escrita é um fio só, e cada elo tem
+#: um chamador:
+#:
+#:   - `carimbar_ponte` (`profiles/manager.py`) é o ÚNICO lugar do produto que
+#:     monta um `PonteConfirmada` dentro de um perfil, e quem o chama é
+#:     `ProfileManager.confirmar_ponte`, no mesmo arquivo;
+#:   - `confirmar_ponte` tem UM chamador: `daemon/launch_env.tique_da_escada`,
+#:     o tique do silêncio, sempre com `POR_SILENCIO`. `POR_GESTO` e
+#:     `POR_ESCOLHA_DELA` existem no esquema e nenhum caminho os escreve ainda;
+#:   - e esse caminho único RECUSA quando já há carimbo — o
+#:     `confirmada is not None` de `confirmacao_por_silencio`, adiante neste
+#:     arquivo, e antes dele o `COMECO_PRODUTO_JA_SABE` de
+#:     `ponte_tentativa.comecar`, que nem chega a abrir tentativa;
+#:   - e salvar o perfil não LIMPA nada: `carimbo_que_o_save_leva`
+#:     (`app/actions/profile_writer.py`), dono único da resposta para os dois
+#:     botões que gravam, nunca devolve `None` havendo carimbo. A janela não
+#:     apaga uma confirmação, como não inventa.
+#:
+#: Sem tentativa aberta, o `PS + R3` volta ao `CICLO_DE_PONTES` do `hotkey`:
+#: troca a ponte VIVA e não escreve no perfil. **Logo um carimbo prematuro fica
+#: errado para sempre**, e o gesto dela não o alcança.
+#:
+#: O preço, no journal dela de 29/08/2026: o Mullet Mad Jack foi carimbado
+#: `dualsense` às 03:23:13, por silêncio, com `gestos=0`. Entre 03:27:59 e
+#: 03:29:02 ela apertou `PS + R3` quatro vezes e parou no `xbox`. O carimbo
+#: `dualsense` continuou lá, e a aba Perfis passou a contar que aquela ponte
+#: funcionou e ninguém precisou mexer — que é o contrário do que aconteceu.
+#:
+#: **Logo o critério "errar para o lado barato" não se sustenta como estava
+#: escrito:** errar para MAIS deixa ela apertando um botão que não faz nada, e
+#: errar para MENOS grava um dado errado no perfil dela, sem volta pelo
+#: controle. Os dois lados custam.
+#:
+#: O número continua 180.0 de propósito: **isto é conserto do FATO, não do
+#: mecanismo.** Mudar QUANDO o produto carimba muda o comportamento do produto
+#: dela, e é decisão dela.
 SILENCIO_CONFIRMA_SEC = 180.0
 
 

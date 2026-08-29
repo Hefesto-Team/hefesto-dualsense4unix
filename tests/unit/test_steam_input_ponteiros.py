@@ -269,21 +269,38 @@ def test_guia_das_mascaras_aponta_o_botao_e_a_aba_que_existem() -> None:
     O texto antigo era *"o opt-in em 'Steam Input' na aba Emulação"*: na aba
     Emulação existem só "Verificar" e "Desligar Steam Input" — nenhum opt-in
     por jogo. O opt-in é o botão "Este jogo não funciona".
+
+    NOTA DATADA — 28/08/2026 (S4). Este caso pegava *o primeiro* parágrafo que
+    contivesse "exceção por jogo" e exigia dele o par botão+aba. Isso amarrou a
+    régua à ORDEM do texto: quando a S4 acrescentou, acima do parágrafo do
+    gesto, a nota que CITA a instrução derrubada para dizer que ela morreu, o
+    `next()` passou a cair na nota — que não cita botão nenhum, porque não
+    manda fazer nada — e o caso reprovou a correção em vez do defeito.
+    Agora a regra é a de verdade, e é mais forte: **todo** parágrafo que cite
+    um botão existente tem de nomear a aba certa dele, e **algum** parágrafo
+    tem de falar da exceção por jogo apontando um botão que exista.
     """
     texto = _GUIA_MASCARAS.read_text(encoding="utf-8")
-    trecho = next(
-        (p for p in texto.split("\n\n") if "exceção por jogo" in p),
-        None,
+    paragrafos = texto.split("\n\n")
+
+    com_ponteiro: list[str] = []
+    for trecho in paragrafos:
+        citados = re.findall(r'"([^"]{3,40})"', trecho)
+        botao = next((c for c in citados if c in _rotulos_de_botao()), None)
+        if botao is None:
+            continue
+        com_ponteiro.append(trecho)
+        abas = _ABA_CITADA.findall(trecho)
+        assert abas, f"o guia cita {botao!r} e não diz em que aba ele mora: {trecho!r}"
+        assert _aba_do_botao(botao) == abas[0], (
+            f"o guia manda procurar {botao!r} na aba {abas[0]!r}, que não é "
+            f"onde ele mora ({_aba_do_botao(botao)!r}): {trecho!r}"
+        )
+
+    assert any("exceção por jogo" in t or "marcar" in t for t in com_ponteiro), (
+        "nenhum parágrafo do guia liga a exceção por jogo a um botão que "
+        f"exista na janela — os que citam botão são {com_ponteiro!r}"
     )
-    assert trecho is not None, "o parágrafo da exceção por jogo sumiu do guia"
-    citados = [r for r in re.findall(r'"([^"]{3,40})"', trecho)]
-    botao = next((c for c in citados if c in _rotulos_de_botao()), None)
-    assert botao is not None, (
-        f"o guia não cita nenhum botão que exista na janela: {citados}"
-    )
-    abas = _ABA_CITADA.findall(trecho)
-    assert abas, f"o guia não diz em que aba o botão mora: {trecho!r}"
-    assert _aba_do_botao(botao) == abas[0]
 
 
 def test_ponteiro_da_cura_do_usb_nao_manda_clicar_em_quem_nao_a_instala(

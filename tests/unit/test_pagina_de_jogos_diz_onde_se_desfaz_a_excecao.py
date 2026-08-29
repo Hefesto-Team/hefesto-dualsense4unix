@@ -119,25 +119,33 @@ def test_a_pagina_nao_nega_o_desfazer() -> None:
 
 
 def test_a_pagina_aponta_a_caixinha_que_existe_na_janela() -> None:
-    """E diz onde: a aba, e o rótulo exato que a janela mostra hoje."""
+    """E diz onde: a aba, e o rótulo exato que a janela mostra hoje.
+
+    NOTA DATADA — 28/08/2026 (S4). Este caso pegava *o primeiro* parágrafo fora
+    de citação que trouxesse o rótulo, e cobrava dele "Perfis" e "Jogo da
+    Steam". Amarrar a régua à ORDEM do texto a fez reprovar a S4, que
+    acrescentou ACIMA do parágrafo do desfazer outro que cita a mesma caixinha
+    — para dizer que não é mais preciso marcar. Reprovar quem escreve um
+    parágrafo novo não é medir a página. A pergunta certa é se a página ENSINA
+    o desfazer em ALGUM lugar, e é essa que ela faz agora.
+    """
     texto = _texto()
     rotulo = _rotulo_da_caixinha()
     assert rotulo in texto, (
         f"a página não cita o rótulo vivo da caixinha do desfazer ({rotulo!r}). "
         "Quem lê precisa achá-la na tela pelo nome que está escrito nela"
     )
-    trecho = next(
-        (p for p in texto.split("\n\n") if rotulo in p and not p.startswith(">")),
-        None,
+    candidatos = [
+        p for p in texto.split("\n\n") if rotulo in p and not p.startswith(">")
+    ]
+    assert candidatos, "o parágrafo do desfazer virou bloco de citação"
+    assert any("Perfis" in p for p in candidatos), (
+        f"a página não diz em que aba a caixinha mora: {candidatos!r}"
     )
-    assert trecho is not None, "o parágrafo do desfazer virou bloco de citação"
-    assert "Perfis" in trecho, (
-        f"a página não diz em que aba a caixinha mora: {trecho!r}"
-    )
-    assert "Jogo da Steam" in trecho, (
+    assert any("Perfis" in p and "Jogo da Steam" in p for p in candidatos), (
         "a página não diz que a caixinha só aparece com 'Jogo da Steam' escolhido "
         "— sem isso, quem abrir o editor num perfil comum não a acha e conclui "
-        "que ela não existe"
+        f"que ela não existe. Parágrafos que citam a caixinha: {candidatos!r}"
     )
 
 

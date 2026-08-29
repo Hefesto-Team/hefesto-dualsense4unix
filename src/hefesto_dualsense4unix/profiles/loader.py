@@ -1109,6 +1109,51 @@ def load_profile(identifier: str) -> Profile:
     raise FileNotFoundError(f"perfil não encontrado: {identifier}")
 
 
+def perfil_em_disco(identifier: str) -> Profile | None:
+    """O perfil que está NO ARQUIVO agora — sem semear, sem varrer, sem levantar.
+
+    PONTE-SOBREVIVE-A-CORRIDA-01 (28/08/2026). Existe porque as duas memórias
+    que a janela tem de um perfil são FOTOGRAFIAS — o ``draft.source_*`` do boot
+    e o ``_profiles_cache`` da lista — e há campo que outro processo escreve
+    direto no arquivo enquanto ela está aberta (o carimbo de ponte, por
+    ``profiles.manager.confirmar_ponte``). Para esses, perguntar ao ARQUIVO é a
+    única resposta que não envelhece.
+
+    Por que não é ``load_profile``: ele dispara ``_maybe_seed_presets`` e
+    ``_talvez_semear_jogos`` — a segunda VARRE a biblioteca da Steam — e, quando
+    não acha de primeira, lê o diretório inteiro. É o carregador do boot. Esta
+    aqui é chamada da thread do GTK, no clique de Salvar, onde cabe UM arquivo e
+    não uma varredura (PERF-GUI-PROFILE-LOAD-NONBLOCKING-01).
+
+    O alvo é ``<slugify(identifier)>.json``, que é EXATAMENTE o arquivo que
+    ``save_profile`` vai escrever: a pergunta é *"o que este Salvar vai
+    sobrescrever?"*, e quem responde é o nome do arquivo (R-10). Não há
+    varredura de fallback de propósito — um arquivo cujo nome não acompanha o
+    slug do ``name`` não é o que este save vai tocar.
+
+    Devolve ``None`` para ausente, ilegível ou inválido: quem chama está
+    CONSULTANDO, não carregando, e um perfil corrompido não pode virar exceção
+    num caminho de interface. O traversal está fechado pelo contrato do
+    ``slugify``, cuja saída é ``[a-z0-9_]`` não-vazia.
+    """
+    try:
+        alvo = profiles_dir(ensure=True) / f"{slugify(identifier)}.json"
+    except ValueError:
+        return None
+    if not alvo.exists():
+        return None
+    try:
+        return _read_profile(alvo)
+    except _PROFILE_DECODE_ERRORS as exc:
+        logger.warning(
+            "profile_invalid",
+            path=str(alvo),
+            err=str(exc),
+            err_type=type(exc).__name__,
+        )
+        return None
+
+
 def load_all_profiles() -> list[Profile]:
     """Lê todos os perfis JSON do diretório, pulando os inválidos com warning.
 
