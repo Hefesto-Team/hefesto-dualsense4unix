@@ -473,6 +473,19 @@ _pkg_nome() {
             _apt="gir1.2-ayatanaappindicator3-0.1"
             _dnf="libayatana-appindicator-gtk3"
             _pacman="libayatana-appindicator" ;;
+        # O motor web da ROTA-WEBKIT: o mockup HTML dentro de um `Gtk.Window`
+        # do produto. A série **4.1 é a de GTK 3** — a 6.0 é GTK 4 e não entra
+        # no processo, que é GTK 3.0. Nomes MEDIDOS um a um em 29/08/2026, e
+        # nenhum inferido: `gir1.2-webkit2-4.1` 2.52.3 nesta bancada; no Fedora
+        # 43 o `webkit2gtk4.1` 2.52.5 TRAZ o typelib (o Fedora não separa o
+        # gir, como já acontece com o `gtk3`); no Arch o `webkit2gtk-4.1`
+        # 2.52.6 idem — os dois conferidos na LISTA DE ARQUIVOS do pacote. E
+        # existem nas imagens do CI: o Debian 12 (o gate duro do
+        # `install-multi-distro`) tem o `gir1.2-webkit2-4.1`, e o Fedora 40, o
+        # `webkit2gtk4.1-2.44.0-2.fc40`.
+        webkit2gtk)
+            _apt="gir1.2-webkit2-4.1"; _dnf="webkit2gtk4.1"
+            _pacman="webkit2gtk-4.1" ;;
         gi-dev)
             _apt="libgirepository1.0-dev libcairo2-dev"
             _dnf="gobject-introspection-devel cairo-devel"
@@ -619,6 +632,14 @@ _DEPS_DE_SISTEMA=(
     "svg-loader|obrigatoria|svg|o ícone da bandeja some e todo glifo SVG da interface cai junto"
     "toolchain-c|importante|toolchain|as extensões sem wheel (python-uinput, evdev) não compilam e o passo 2 pode abortar"
     "appindicator|importante|appindicator|a bandeja não nasce: a janela abre, o ícone ao lado do relógio não"
+    # ROTA-WEBKIT. `importante` VIRA `obrigatoria` — a troca é desta palavra,
+    # nesta linha — no dia em que ela adotar a rota: aí o mockup É a interface
+    # e sem o binding não há tela nenhuma. Enquanto a decisão não é dela,
+    # ninguém paga o peso obrigatório de uma rota que pode não ser escolhida:
+    # medido em 29/08/2026, são 25,2 MB baixados e ~93 MB em disco no apt (o
+    # gir mais a `libwebkit2gtk-4.1-0`, sem contar as transitivas), e 140 MB em
+    # disco no Arch.
+    "webkit2gtk|importante|webkit|a rota WebKit (o mockup HTML dentro de um Gtk.Window) não abre nesta máquina; a interface GTK 3.0 de hoje continua inteira, e é só por isso que esta linha ainda não é obrigatória"
     "desktop-utils|importante|cmd:desktop-file-validate,update-desktop-database,gtk-update-icon-cache|o atalho e o ícone podem não aparecer no menu do sistema"
     "imagemagick|importante|cmd:convert|o ícone fica só no 256x256, sem as resoluções menores"
     # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026): a régua pedia SÓ o
@@ -715,6 +736,35 @@ _dep_presente() {
             # a checagem aceita os dois, como o produto.
             "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('AyatanaAppIndicator3','0.1')" >/dev/null 2>&1 ||
             "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('AppIndicator3','0.1')" >/dev/null 2>&1
+            ;;
+        webkit)
+            # TOCA UM SÍMBOLO, e é por isso que a linha termina numa chamada.
+            #
+            # CORREÇÃO DE FATO, 29/08/2026: esta checagem dizia que o `import`
+            # bastava, porque "o typelib sem a biblioteca passaria pela versão".
+            # MEDIDO, remendando um typelib real com um SONAME inexistente:
+            #
+            #   require_version('WebKit2','4.1')   -> PASSA
+            #   from gi.repository import WebKit2  -> PASSA TAMBÉM (só um WARNING
+            #                                         no stderr, que o 2>&1 come)
+            #   WebKit2.get_major_version()        -> GError: Could not locate
+            #                                         webkit_get_major_version
+            #
+            # O import NÃO compra nada sobre o `require_version` para o caso que
+            # a justificativa dizia pegar. Quem responde "o motor CARREGA?" é
+            # tocar um símbolo. Custo medido: 21 ms (versão) / 67 (+import) /
+            # 78 (+chamada) — 11 ms compram a garantia.
+            #
+            # RISCO REAL, honesto: o `gir1.2-webkit2-4.1` tem
+            # `Depends: libwebkit2gtk-4.1-0 (= mesma versão)`, e Fedora e Arch
+            # entregam os dois no mesmo pacote — gerenciador de pacotes não
+            # produz esse estado. O fato errado estava na JUSTIFICATIVA, não na
+            # máquina de ninguém. Mas régua que promete o que não faz é o padrão
+            # que esta casa já nomeou: *a régua confunde a PALAVRA com o ATO*.
+            #
+            # A série é 4.1 porque é a de GTK 3. A 6.0 é GTK 4 e não entra no
+            # processo do produto.
+            "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('WebKit2','4.1');from gi.repository import WebKit2;WebKit2.get_major_version()" >/dev/null 2>&1
             ;;
         toolchain)
             command -v cc >/dev/null 2>&1 || return 1
