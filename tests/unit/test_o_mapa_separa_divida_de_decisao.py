@@ -4,7 +4,11 @@ O DEFEITO QUE ESTE ARQUIVO EXISTE PARA NÃO DEIXAR VOLTAR
 --------------------------------------------------------
 Medido em 22/08/2026, rodando o contador deste arquivo contra
 `docs/data/mapa-controles.csv`: **41 células dizem que a casa MEDIU e o produto
-NÃO ACIONA** — 20 no cabo, 21 no rádio, 13 linhas com as duas assim. O
+NÃO ACIONA** — 20 no cabo, 21 no rádio, 13 linhas com as duas assim. (**São 39
+desde 29/08/2026**, e as duas que saíram saíram PELO MOTIVO CERTO: o
+acelerômetro do DualSense passou a ser lido nos dois transportes —
+ONDA-CONTROLES-04. O número desce quando a dívida é paga; é para isso que ele
+está aqui.) O
 `scripts/gerar-mapa.py` já as pintava de laranja (`--color-lacuna`, "a casa sabe
 e o produto não faz") e já as contava no cartão de cada controle (`placar`,
 chave `lacuna`).
@@ -27,12 +31,9 @@ A COLUNA, E POR QUE ELA É UM PAR
 --------------------------------
 `cabo_por_que_nao_aciona` / `radio_por_que_nao_aciona`, ao lado de
 `cabo_aciona`/`radio_aciona`. É par por transporte porque a resposta MUDA de
-lado — e a MESMA linha já ocupou os dois papéis.
-`identidade.cor_do_aparelho@dualsense` é `aciona=sim` no cabo (o produto lê,
-desde que passou a pedir o fd ao broker em 29/08/2026) e `divida` no rádio —
-onde a causa dizia `o-aparelho-recusa` até 29/08 e a recusa que parecia do
-firmware era a semente do nosso CRC. Nenhuma das duas correções mudou o
-aparelho: o aparelho sempre entregou a cor nos dois transportes.
+lado: `identidade.cor_do_aparelho@dualsense` é decisão nenhuma no cabo (lá o
+produto lê a cor do plástico, e a aba Configurações a mostra desde 22/08) e é
+dívida no rádio (lá não chega).
 
 O domínio, e ele responde *"não aciona — e daí?"*:
 
@@ -54,6 +55,12 @@ Daí `decisao-tomada`, e daí `so-ela-decide`.
 
 O retrato de 22/08/2026, com as 41 preenchidas: **4 dívidas**, 15 decisões,
 20 `nada-a-acionar`, 2 `so-ela-decide`.
+
+Em 29/08/2026 as duas `so-ela-decide` saíram — eram o acelerômetro do DualSense
+no cabo e no rádio, e a pergunta foi respondida por ela com *"não era pra ele
+sair. era pra ele FUNCIONAR"*. A palavra continua no domínio, sem uso e com a
+razão escrita, em `RESERVADOS`: o estado que ela nomeia não morreu com a linha
+que a usava.
 
 POR QUE O PORTÃO MORA NUM TESTE, E NÃO NO `check_paridade_transporte.py`
 ------------------------------------------------------------------------
@@ -123,9 +130,9 @@ DIVIDA = "divida"
 DECISAO = "decisao-tomada"
 NADA_A_ACIONAR = "nada-a-acionar"
 SO_ELA_DECIDE = "so-ela-decide"
-#: O quinto valor (Z6-05, 24/08/2026): causa FORA do nosso código — nunca
-#: `decisao-tomada`, que diria que a escolha foi nossa. (O exemplo que estava
-#: aqui, a cor por rádio, saiu em 29/08/2026: a medição de 27/08 o derrubou.)
+#: O quinto valor (Z6-05, 24/08/2026): causa FORA do nosso código, como o
+#: `HANDSHAKE 0x04` da cor por rádio — nunca `decisao-tomada`, que diria que a
+#: escolha foi nossa.
 O_APARELHO_RECUSA = "o-aparelho-recusa"
 
 #: O domínio. Valor fora daqui reprova, de propósito: acrescentar resposta nova
@@ -136,40 +143,10 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: ─────────────────────────────────────────────────────────────────────────
 #: O TETO DA DÍVIDA — retrato de 24/08/2026 (baixado de 22/08), e ele só desce.
 #: ─────────────────────────────────────────────────────────────────────────
-#: DESPAGA em 29/08/2026, e a confissão é esta: `identidade.cor_do_aparelho@dualsense`
-#: VOLTOU para esta lista, pelos DOIS lados, e o teto subiu de 3 para 5.
-#:
-#: Em 24/08/2026 (Z6-05) ela saiu daqui porque a medição de 23/08 (`HANDSHAKE
-#: 0x04`, `btmon`) tinha nomeado a causa como `o-aparelho-recusa` — e causa do
-#: APARELHO não é "ninguém escreveu o código". **Aquela leitura caiu em
-#: 27/08/2026**: a recusa era a semente do nosso CRC (`0xA3` no lugar de
-#: `0x53`), e com a semente certa o aparelho devolve o serial POR RÁDIO. O que
-#: parecia limite do aparelho era código que ninguém escreveu, que é a
-#: definição de `divida`.
-#:
-#: E o lado do CABO entrou junto, medido em 29/08/2026 na máquina dela: o
-#: produto abre o nó com `os.open` direto e o BROKER-01 o deixa `0600
-#: root:root`, então `ler_pelo_cabo` devolve `None` — a célula dizia `sim`
-#: desde 22/08 porque o ENSAIO lê, pela porta do broker.
-#:
-#: SUBIR O TETO É CONFISSÃO. O dia 29/08/2026 subiu de 3 para 5 e fechou em 4,
-#: e as duas metades do movimento estão escritas porque só juntas fazem sentido:
-#:
-#:   SUBIU +2. A cor do plástico voltou para esta lista pelos DOIS lados. Pelo
-#:   RÁDIO porque a causa `o-aparelho-recusa` caiu (era a semente do nosso CRC).
-#:   Pelo CABO porque se mediu, naquela manhã, que `_perguntar_ao_hidraw` abria
-#:   o nó com `os.open` direto e morria em EACCES — o BROKER-01 deixa o nó
-#:   `0600 root:root`, e a célula dizia `sim` desde 22/08 porque o ENSAIO lê.
-#:
-#:   DESCEU -1. A do CABO foi PAGA no mesmo dia
-#:   (`A-COR-PELA-PORTA-DO-BROKER-01`): o produto passou a pedir o fd ao broker
-#:   por SCM_RIGHTS. Pagar é baixar o teto no mesmo commit, e é o que se fez.
-#:
-#: Ficam as quatro:
-#:
-#:   identidade.cor_do_aparelho@dualsense    rádio — a semente do CRC já foi
-#:                                           corrigida no ensaio; faltam os três
-#:                                           portões nossos (ONDA-CONEXOES-11);
+#: PAGA em 24/08/2026 (Z6-05): `identidade.cor_do_aparelho@dualsense` (rádio)
+#: saiu desta lista. Não é mais dívida — a medição de 23/08/2026 (`HANDSHAKE
+#: 0x04`, `btmon`) nomeou a causa como `o-aparelho-recusa`, e causa do
+#: APARELHO não é "ninguém escreveu o código". Ficam as três:
 #:
 #:   audio.saida_dedicada@dualsense          rádio — som no controle sem fio;
 #:                                           o canal existe e responde, o
@@ -183,7 +160,7 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: SUBIR ESTE NÚMERO É CONFISSÃO, não conserto: quem o subir está dizendo que a
 #: casa passou a dever mais do que devia. Pagar uma dívida é BAIXÁ-LO no mesmo
 #: commit — senão o teto vira folga e o portão para de morder.
-TETO_DA_DIVIDA = 4
+TETO_DA_DIVIDA = 3
 
 
 def _linhas(caminho: Path | str) -> list[dict[str, str]]:
@@ -349,20 +326,8 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
-    # RECONFERIDO em 29/08/2026, e o número FECHOU O DIA ONDE COMEÇOU: 41.
-    # Ele passou por 42 no meio do caminho, e o vaivém é o registro honesto de
-    # um defeito achado e curado no mesmo dia:
-    #   +1  `identidade.cor_do_aparelho@dualsense` pelo CABO entrou, quando se
-    #       mediu que `_perguntar_ao_hidraw` abria o nó com `os.open` direto e
-    #       morria em EACCES (o BROKER-01 o deixa `0600 root:root`);
-    #   -1  e saiu, quando a cura entrou no mesmo dia — o produto passou a pedir
-    #       o fd ao broker por SCM_RIGHTS (`A-COR-PELA-PORTA-DO-BROKER-01`).
-    # O lado do RÁDIO já estava na população e continua: o que mudou lá foi só a
-    # CAUSA (`o-aparelho-recusa` -> `divida`), e causa não move este número, de
-    # propósito — a população se lê de `de_onde_sei` e `aciona`, nunca da coluna
-    # conferida.
-    assert len(antes) == 41, (
-        f"o recorte de 29/08/2026 tinha 41 células medidas e não acionadas, e "
+    assert len(antes) == 39, (
+        f"o recorte de 29/08/2026 tinha 39 células medidas e não acionadas, e "
         f"agora tem {len(antes)}. Não é reprovação de defeito: é aviso de que o "
         "retrato deste arquivo envelheceu e o texto precisa ser recontado"
     )
@@ -378,16 +343,63 @@ def test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv() -> None:
         assert len(conta_dividas(pior)) == TETO_DA_DIVIDA + 1
 
 
+#: O "ou EXPLICADO" do nome deste teste, que até 29/08/2026 não existia no
+#: código: valor do domínio que ninguém usa HOJE e que fica assim mesmo, com a
+#: razão datada. Sem esta porta, a única saída para um valor que deixou de ser
+#: usado era apagá-lo — e apagar palavra porque o último caso dela foi
+#: CONSERTADO é o avesso do que este arquivo quer.
+#:
+#: A porta é estreita de propósito: entrar aqui exige escrever por que a
+#: palavra sobrevive à ausência de uso, e a lista é lida na reprovação.
+RESERVADOS: dict[str, str] = {
+    SO_ELA_DECIDE: (
+        "29/08/2026, ONDA-CONTROLES-04. O último uso era "
+        "`movimento.acelerometro@dualsense`, nos dois lados, e ele saiu porque "
+        "a causa FOI RESOLVIDA: ela decidiu (*\"não era pra ele sair. era pra "
+        "ele FUNCIONAR\"*), o produto passou a ler `ABS_X/Y/Z` e a célula virou "
+        "`aciona=sim`, sem causa a declarar. A palavra fica porque o ESTADO que "
+        "ela nomeia — o produto pode, e a escolha é dela — não deixou de "
+        "existir com esta linha: a ONDA-CONTROLES-07 (o interruptor do sensor) "
+        "e a 08 (a calibração) nascem exatamente nele. Tirá-la do domínio "
+        "obrigaria a próxima pessoa a escrever `divida` para uma escolha que "
+        "não é dívida nossa, que é a palavra errada que este arquivo existe "
+        "para impedir."
+    ),
+}
+
+
 @pytest.mark.parametrize("valor", [DIVIDA, DECISAO, NADA_A_ACIONAR, SO_ELA_DECIDE])
 def test_cada_valor_do_dominio_e_usado_ou_explicado(valor: str) -> None:
     """Valor de domínio que ninguém usa é vocabulário morto — ou é dívida de fila.
 
-    Os quatro estão em uso em 22/08/2026. Se um deixar de estar, a reprovação
-    aqui é o convite para tirá-lo do domínio em vez de deixá-lo apodrecendo.
+    Os quatro estavam em uso em 22/08/2026. Se um deixar de estar, há DUAS
+    saídas, e a escolha é de quem causou a saída: tirá-lo do domínio no mesmo
+    gesto, ou declará-lo em `RESERVADOS` com a razão datada de por que a
+    palavra sobrevive sem uso. O que o teste recusa é a terceira, que é deixar
+    o vocabulário apodrecendo calado.
     """
     usados = set(respostas(MAPA).values())
+    if valor in RESERVADOS:
+        assert valor not in usados, (
+            f"{valor!r} voltou a ser usado no mapa e continua em RESERVADOS. "
+            "Tire-o de lá: a reserva é para o que NÃO tem uso, e mantê-la "
+            "sobre um valor vivo esconde o dia em que ele morrer de novo"
+        )
+        return
     assert valor in usados, (
         f"nenhuma célula do mapa usa {valor!r}. Se a resposta deixou de existir, "
-        "tire-a de DOMINIO no mesmo gesto — domínio maior que o uso é convite a "
-        "escrever a palavra errada"
+        "tire-a de DOMINIO no mesmo gesto, ou declare-a em RESERVADOS com a "
+        "razão — domínio maior que o uso é convite a escrever a palavra errada"
+    )
+
+
+def test_reservado_que_ninguem_explica_nao_entra() -> None:
+    """A reserva sem razão escrita seria o silêncio com outro nome."""
+    assert all(len(razao) > 80 for razao in RESERVADOS.values()), (
+        "todo valor reservado tem de trazer a razão datada de por que a "
+        "palavra fica sem uso — uma linha curta não é razão, é desculpa"
+    )
+    assert set(RESERVADOS) <= set(DOMINIO), (
+        "só se reserva o que está no domínio: reservar palavra de fora seria "
+        "inventar vocabulário pela porta dos fundos"
     )

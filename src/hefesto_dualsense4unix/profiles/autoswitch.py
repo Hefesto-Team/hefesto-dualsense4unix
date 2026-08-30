@@ -48,6 +48,7 @@ from hefesto_dualsense4unix.profiles.steam_app import (
     e_janela_do_cliente_steam,
     steam_appid_from_wm_class,
 )
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -82,12 +83,20 @@ DEFAULT_DEBOUNCE_SAIDA_SEC = 12.0
 #: Tradeoff aceito: "Main.py" é genérico (outro app GTK rodando um Main.py
 #: também seria retido) — é o valor que a nossa GUI de fato reporta sob
 #: XWayland, então precisa estar coberto.
+#:
+#: AS DUAS CASAS, 29/08/2026: com o app de desenvolvimento instalado ao lado,
+#: a janela DELE também é "nossa" — alt-tab dev↔jogo não é "ela saiu do jogo".
+#: A lista deriva de `utils.identidade.AS_DUAS` em vez de repetir literais:
+#: uma variante nova entra aqui sozinha, e não silenciosamente de fora.
 OWN_GUI_WM_CLASSES: frozenset[str] = frozenset(
     {
         "main.py",
-        "hefesto-dualsense4unix",
-        "hefesto-dualsense4unix-gui",
         "com.vitoriamaria.hefestodualsense4unix",
+    }
+    | {
+        nome.casefold()
+        for casa in identidade.AS_DUAS
+        for nome in (casa.wm_instance, casa.wm_class, casa.entrypoint_gui)
     }
 )
 
