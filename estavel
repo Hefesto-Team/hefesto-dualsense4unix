@@ -4,124 +4,50 @@
 # Pedido dela, 29/08/2026: *"eu quero desativar rápido o app antigo, clicar em
 # ativar no app antigo e faz ele voltar a funcionar."*
 #
-# POR QUE ISTO EXISTE, e não é o botão de pausa que já havia: o `daemon.pause`
-# do produto **não solta o aparelho**. A docstring dele diz, com todas as letras:
-# *"O daemon segue vivo: lê estado/bateria, publica STATE_UPDATE e atende o
-# IPC"*. Medido em 29/08 na máquina dela, com o daemon pausado ou não, ele
-# segurava 1 hidraw, 2 nós uhid/uinput e 4 de evdev. Duas versões do Hefesto
-# rodando disputariam o mesmo controle.
+# ESTE ARQUIVO É UMA CASCA FINA, E É DE PROPÓSITO. Toda a lógica vive em
+# `hefesto-chave` (instalado em ~/.local/bin pelo install-dev.sh, fonte em
+# `scripts/hefesto-chave.sh`), que conhece os DOIS lados — estável e dev — e
+# sabe separar o que é do app do que é da MÁQUINA.
 #
-# O HEFESTO NÃO É UMA UNIT, SÃO TRÊS — e a segunda é a que mais importa:
-#   hefesto-dualsense4unix.service      o daemon (é ele que segura os aparelhos)
-#   hefesto-steam-input-guard.path      VIGIA os .vdf da Steam e reaplica
-#                                       Steam Input OFF sozinho. Se ficar vivo,
-#                                       muda a Steam por baixo da versão de dev
-#                                       e ninguém entende por quê.
-#   hefesto-dualsense4unix-storm-watch  registra o storm USB (-71) num log
+# POR QUE A CASCA, e a razão foi medida em 29/08: a primeira versão deste script
+# tinha lista PRÓPRIA, com TRÊS units. A chave lista SEIS — e as três que
+# faltavam incluíam `hefesto-steam-input-guard.timer`, que ficou `enabled
+# active` depois de um "desligar" que se dizia completo. O vigia da Steam
+# continuava podendo reaplicar Steam Input OFF por baixo da versão de dev, que é
+# exatamente o que ela não quer.
 #
-# Decisão dela, 29/08: **desliga as três**. O preço aceito é ficar sem o registro
-# do storm enquanto estiver desligado.
+# Pior que o buraco: as duas ferramentas passaram a discordar sobre o mesmo
+# estado. A chave dizia "ligado (sem chave posta)" enquanto as units estavam
+# `disabled inactive`, porque quem as desligou foi este script, que ela não
+# conhece. Dois donos do mesmo valor é o defeito que esta casa combate desde a
+# ABAS-01 — e o `portoes.sh` nasceu do mesmo problema em 25/08.
 #
-# ATRAVESSA O REBOOT (`disable --now`), porque ela quer uma temporada inteira na
-# versão de dev sem repetir o gesto. O risco disso — sentar para jogar daqui a
-# uma semana e não entender por que o controle não responde — é coberto pelo
-# outro lado do pedido dela: **o app ANTIGO avisa que está desligado e tem o
-# botão de religar**.
-#
-#   ./estavel          # diz o estado e pergunta
-#   ./estavel off      # desliga as três
-#   ./estavel on       # religa as três
+#   ./estavel          # diz o estado dos DOIS e pergunta
+#   ./estavel off      # desliga o estável
+#   ./estavel on       # religa o estável
 #   ./estavel status   # só o estado, sem perguntar
 set -uo pipefail
 
-UNITS=(
-    hefesto-dualsense4unix.service
-    hefesto-steam-input-guard.path
-    hefesto-dualsense4unix-storm-watch.service
-)
-
-# Quem NÃO é do Hefesto não se toca. A lista acima é fechada de propósito: um
-# `systemctl --user stop 'hefesto-*'` pegaria qualquer unit futura, inclusive a
-# da própria versão de dev.
-
-cor()  { printf '\033[%sm%s\033[0m' "$1" "$2"; }
-vivo() { systemctl --user is-active --quiet "$1" 2>/dev/null; }
-
-estado() {
-    local n=0
-    for u in "${UNITS[@]}"; do vivo "$u" && n=$((n + 1)); done
-    echo "$n"
-}
-
-mostrar() {
-    echo "Hefesto ESTÁVEL"
-    for u in "${UNITS[@]}"; do
-        if vivo "$u"; then
-            printf '  %s  %s\n' "$(cor '1;32' '● ligada  ')" "$u"
-        else
-            printf '  %s  %s\n' "$(cor '1;30' '○ parada  ')" "$u"
-        fi
-    done
-    # O que o daemon segura AGORA — o número que importa quando as duas versões
-    # convivem, porque é o que uma tira da outra.
-    local pid
-    pid=$(systemctl --user show -p MainPID --value hefesto-dualsense4unix.service 2>/dev/null)
-    if [ -n "$pid" ] && [ "$pid" != "0" ] && [ -d "/proc/$pid/fd" ]; then
-        local h u e
-        h=$(ls -l "/proc/$pid/fd" 2>/dev/null | grep -c hidraw)
-        u=$(ls -l "/proc/$pid/fd" 2>/dev/null | grep -cE 'uinput|uhid')
-        e=$(ls -l "/proc/$pid/fd" 2>/dev/null | grep -c 'input/event')
-        echo
-        echo "  segurando agora: ${h} hidraw · ${u} uhid/uinput · ${e} evdev"
-    fi
-}
-
-desligar() {
-    echo "Desligando o Hefesto estável (as três units)…"
-    for u in "${UNITS[@]}"; do
-        systemctl --user disable --now "$u" 2>&1 | sed 's/^/    /'
-    done
-    echo
-    # A PROVA, e ela é o ponto do script: não basta a unit dizer "inactive" — o
-    # que decide é o aparelho estar SOLTO. Sem isto, o script diria "desligado"
-    # e a versão de dev ainda brigaria pelo hidraw.
-    local pid
-    pid=$(systemctl --user show -p MainPID --value hefesto-dualsense4unix.service 2>/dev/null)
-    if [ -z "$pid" ] || [ "$pid" = "0" ]; then
-        echo "  $(cor '1;32' 'OK') o daemon saiu — os aparelhos estão soltos."
-    else
-        echo "  $(cor '1;31' '!') o processo $pid ainda está vivo. Confira com:"
-        echo "      ls -l /proc/$pid/fd | grep -E 'hidraw|uhid|uinput'"
-    fi
-    echo
-    echo "  Fica desligado mesmo depois de reiniciar o PC."
-    echo "  Para voltar: abra o Hefesto antigo e clique em Ativar — ou rode ./estavel on"
-}
-
-ligar() {
-    echo "Religando o Hefesto estável…"
-    for u in "${UNITS[@]}"; do
-        systemctl --user enable --now "$u" 2>&1 | sed 's/^/    /'
-    done
-    echo
-    mostrar
-}
+CHAVE="${HOME}/.local/bin/hefesto-chave"
+if [ ! -x "$CHAVE" ]; then
+    # A chave nasce com o install-dev.sh. Sem ela, a fonte no repositório serve.
+    AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    CHAVE="${AQUI}/scripts/hefesto-chave.sh"
+fi
+if [ ! -x "$CHAVE" ]; then
+    echo "não achei o hefesto-chave — rode ./install-dev.sh primeiro" >&2
+    exit 1
+fi
 
 case "${1:-}" in
-    off|desligar|0)  desligar ;;
-    on|ligar|1)      ligar ;;
-    status|estado)   mostrar ;;
+    off|desligar|0)  exec "$CHAVE" estavel off ;;
+    on|ligar|1)      exec "$CHAVE" estavel on ;;
+    status|estado)   exec "$CHAVE" status ;;
     "")
-        mostrar
+        "$CHAVE" status
         echo
-        n=$(estado)
-        if [ "$n" -gt 0 ]; then
-            read -rp "Desligar as três? [s/N] " r
-            [[ "$r" =~ ^[sSyY]$ ]] && { echo; desligar; }
-        else
-            read -rp "Religar as três? [s/N] " r
-            [[ "$r" =~ ^[sSyY]$ ]] && { echo; ligar; }
-        fi
+        read -rp "Desligar o Hefesto estável? [s/N] " r
+        [[ "$r" =~ ^[sSyY]$ ]] && { echo; exec "$CHAVE" estavel off; }
         ;;
     *)
         echo "uso: ./estavel [on|off|status]" >&2
