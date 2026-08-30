@@ -1693,7 +1693,43 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     # soltar o grab aqui devolveria o controle físico ao jogo no meio da troca.
     stop_gamepad_emulation(daemon, persist=False, release_grab=False)
     # ORIGEM-QUE-MENTE-01: promoção de backend é manutenção interna.
-    return start_gamepad_emulation(daemon, flavor="dualsense", origin="profile")
+    #
+    # `flavor=None`, e NÃO `"dualsense"` (MÁSCARA-POR-JOGADOR-01, 29/08/2026).
+    # A linha acima diz *"a preferência não mudou, só o backend"* — e um flavor
+    # cravado na chamada dizia o contrário: `start_gamepad_emulation_desfecho`
+    # grava o que recebe em `config.gamepad_flavor`. Até a máscara por aparelho
+    # existir isso era inofensivo (só se chegava aqui com `device.flavor ==
+    # "dualsense"`, o que implicava a sessão já em dualsense, e a atribuição era
+    # no-op). Com ela, o P1 pode estar em `dualsense` POR ESCOLHA DELE numa
+    # sessão `xbox` — e a promoção de backend viraria a máscara da SESSÃO para
+    # dualsense, contaminando a GUI, o disco e todo secundário que herda o valor
+    # global no `_flavor()` do co-op. `None` faz a chamada ler
+    # `config.gamepad_flavor` (a da sessão, intacta) enquanto `mascara_efetiva`
+    # devolve a escolha do aparelho para o vpad — que é o uhid que esta função
+    # veio buscar. O gate lá em cima já garantiu que a efetiva é dualsense.
+    return start_gamepad_emulation(daemon, origin="profile")
+
+
+def primary_identity(daemon: DaemonProtocol) -> str | None:
+    """MAC canônico do controle PRIMÁRIO, ou None (MÁSCARA-POR-JOGADOR-01).
+
+    A identidade que o `external_mask` usa como chave é a MESMA que o resto da
+    casa já usa para o P1: `backend.primary_uniq` — o uniq do evdev, o mesmo
+    que `core.evdev_reader.discover_dualsense_evdevs` devolve para os
+    secundários e que o `sysfs_leds` lê como HID_UNIQ. Reconstruí-la aqui seria
+    a segunda implementação que `ExternalMaskRegistry._key` existe para evitar.
+
+    **None não é falha, é a resposta honesta** *"não sei de quem é este vpad"*,
+    e é o que o `make_virtual_pad` interpreta como "use a máscara do jogo".
+    Cai aqui em três casos reais e todos já existiam: backend sem a
+    propriedade (`FakeController` do `run.sh --fake`), daemon offline no boot
+    (o vpad sobe ANTES do `controller.connect()` — invariante VPAD-03/BT-01), e
+    a key de fallback por path, que o `primary_uniq` já devolve como None desde
+    a auditoria M3 (`backend_pydualsense.py:1648-1663`), justamente porque um
+    pseudo-MAC furava o guard anti-input-dobrado do co-op.
+    """
+    uniq = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
+    return uniq if isinstance(uniq, str) and uniq else None
 
 
 def read_primary_calibration(daemon: DaemonProtocol) -> bytes | None:
@@ -1959,12 +1995,23 @@ def start_gamepad_emulation_desfecho(
     do contrário a suspensão herdada sobreviveria até ela lembrar de clicar no
     botão. Por isso a origem foi para dentro do log.
     """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
     from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
     from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
 
     key = normalize_flavor(
         flavor if flavor is not None else getattr(daemon.config, "gamepad_flavor", None)
     )
+    # MÁSCARA-POR-JOGADOR-01 (29/08/2026) — SÃO DUAS MÁSCARAS, e confundi-las
+    # destrói dado dela. `key` é a máscara do JOGO/da SESSÃO: é ela que vai para
+    # `config.gamepad_flavor` e para o `save_gamepad_emulation` lá embaixo.
+    # `mascara_do_p1` é o que o vpad do P1 VESTE — a escolha do aparelho quando
+    # existe, herdando `key` quando não. Carimbar a escolha de um aparelho como
+    # se fosse a máscara da sessão apagaria a escolha dela do disco e ainda
+    # contaminaria todo secundário (o co-op herda `config.gamepad_flavor` em
+    # `_flavor()`), que é o defeito de 22/08 do Sackboy pelo avesso.
+    identity = primary_identity(daemon)
+    mascara_do_p1 = mascara_efetiva(identity, key)
 
     if steam_input_vpad_suspenso(daemon):
         # Alguém pediu o vpad sobre uma suspensão herdada: ele volta AGORA e a
@@ -1998,8 +2045,14 @@ def start_gamepad_emulation_desfecho(
 
     existing = daemon._gamepad_device
     if existing is not None:
-        if getattr(existing, "flavor", None) == key and not _deve_promover_backend(
-            daemon, existing, key, origin
+        # A comparação é contra `mascara_do_p1`, NUNCA contra `key`: o vpad
+        # nasceu vestindo a máscara efetiva, e comparar com a do jogo faria um
+        # P1 com máscara própria divergir a cada apply — teardown+respawn em
+        # TODO Aplicar, que é exatamente a recriação que a R-04 mediu como
+        # "abri o jogo e o controle morreu no meio da partida". Sem esta linha
+        # a corrente ligada vira churn de vpad; é o coração do risco.
+        if getattr(existing, "flavor", None) == mascara_do_p1 and (
+            not _deve_promover_backend(daemon, existing, mascara_do_p1, origin)
         ):
             return EMU_JA_ESTAVA
         # R-04: daqui para baixo o vpad VIVO seria destruído e recriado. Com o
@@ -2011,7 +2064,9 @@ def start_gamepad_emulation_desfecho(
         if vpad_vivo(existing) and _recriacao_bloqueada_por_jogo(
             daemon,
             origin=origin,
-            motivo=f"troca_de_mascara:{getattr(existing, 'flavor', None)}->{key}",
+            motivo=(
+                f"troca_de_mascara:{getattr(existing, 'flavor', None)}->{mascara_do_p1}"
+            ),
         ):
             # A emulação SEGUE ativa (com a máscara ANTERIOR) — por isso o bool
             # da fachada continua True: ele diz "ativo ao final", não "aplicou
@@ -2047,6 +2102,10 @@ def start_gamepad_emulation_desfecho(
     # (None → canônico; ver `read_primary_calibration`).
     device: VirtualPad | None = make_virtual_pad(
         key,
+        # MÁSCARA-POR-JOGADOR-01: o MAC do P1. A factory resolve
+        # `mascara_efetiva(identity, key)` — o mesmo valor de `mascara_do_p1`
+        # acima, e por isso a idempotência fecha.
+        identity=identity,
         rumble_sink=make_primary_rumble_sink(daemon),
         player=1,
         allow_uhid=controller_allows_uhid(daemon),
@@ -2068,7 +2127,11 @@ def start_gamepad_emulation_desfecho(
         return EMU_FALHOU
 
     daemon._gamepad_device = device
-    if key == "dualsense" and getattr(device, "backend", None) == "uinput":
+    # `mascara_do_p1`, não `key`: a degradação é "máscara DualSense em uinput",
+    # e a máscara que o vpad VESTE é a efetiva. Perguntar pela do jogo acusaria
+    # degradação num P1 marcado como xbox numa sessão dualsense (uinput por
+    # design, não degradação) e calaria o aviso no caso inverso.
+    if mascara_do_p1 == "dualsense" and getattr(device, "backend", None) == "uinput":
         # VPAD-05 — fallback NUNCA silencioso: além do motivo que a factory já
         # logou, o degrau vira contador no store (doctor) e o `state_full` expõe
         # `gamepad_emulation.degraded`/`degraded_motivo` para a GUI. getattr
@@ -2116,7 +2179,16 @@ def start_gamepad_emulation_desfecho(
     # DEDUP-04: gatilho "transição de backend/máscara" da materialização — o
     # wrapper hefesto-launch decide as envs pelo que fica gravado aqui.
     _materialize_launch_env(daemon)
-    logger.info("gamepad_emulation_started", flavor=key)
+    # As DUAS máscaras no journal: `flavor` é a da sessão (a que ficou gravada)
+    # e `mascara_do_p1` é a que o vpad vestiu. Quando divergem, o motivo é a
+    # escolha deste aparelho — e quem lê o log depois precisa ver as duas para
+    # não caçar um defeito que é a decisão dela funcionando.
+    logger.info(
+        "gamepad_emulation_started",
+        flavor=key,
+        mascara_do_p1=mascara_do_p1,
+        identity=identity,
+    )
     return EMU_APLICADO
 
 

@@ -893,10 +893,40 @@ class ControllerOverrides(BaseModel):
       carrega uniq**, então o laço do mic não tem como saber de qual peça veio
       o toque. Somado a isso, o alvo do gesto é o microfone PADRÃO DO SISTEMA,
       que é um só.
+
+    FORA POR AUSÊNCIA, NÃO POR DECISÃO — acrescentado em 29/08/2026, e é o
+    contrário de tudo que está acima. As duas listas anteriores são de coisas
+    que alguém pesou e recusou; **estas três nunca foram pesadas, e a lista sem
+    elas se lia como exaustiva**:
+
+    - ``giroscopio`` e ``acelerometro`` — a interface já os mostra por controle
+      (``daemon/sensor_hub.py`` publica ``gyro``; o acelerômetro sai do MESMO
+      nó evdev e é descartado). Dona: ``ONDA-CONTROLES-07``, que traz a
+      ``ProfileSensorsConfig`` também para cá;
+    - ``touchpad`` — não existe em campo nenhum do perfil (``grep touch`` neste
+      arquivo devolve UMA linha, e é comentário), e nenhuma tela aprovada
+      oferece interruptor para ele: na aba Controles ele é leitura viva. **É
+      pergunta aberta para ela, não dívida com dono** — inventá-lo aqui seria
+      feature nova;
+    - ``microfone`` — tem resposta por unidade e ela JÁ FOI DADA, só que fora
+      daqui: mora em ``ControleDeclarado.microfone`` (``utils/maquina.py``),
+      por decisão dela de 22/08/2026 (*"por controle"*), com a razão escrita no
+      cabeçalho de ``daemon/subsystems/bt_mic.py`` — um microfone que liga ao
+      trocar de jogo é exatamente a surpresa que aquele módulo recusa. Trazê-lo
+      para o perfil é a ``ONDA-CONTROLES-06``, e é decisão dela, não daqui.
+
+    E O CONTRATO DO TOPO ESTÁ SOB REVISÃO DELA. ``Campo None = sem opinião``
+    vale para os quatro campos que existem, e ela derrubou o princípio geral em
+    18/08/2026 (*"o perfil tem de guardar tudo"*); a ``D-AUDIO-E-GIRO-NASCEM-LIGADOS``
+    de 25/08 o contradiz de frente, mandando áudio e giro nascerem LIGADOS em
+    todo jogo. A contradição está aberta e é dela — está registrada, não
+    resolvida, e ninguém deve fechá-la escrevendo código.
     """
 
     model_config = ConfigDict(extra="forbid")
 
+    # SÃO QUATRO, e a tela oferece nove. O que falta e por quê está na última
+    # seção do docstring acima — três por ausência, não por decisão.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None

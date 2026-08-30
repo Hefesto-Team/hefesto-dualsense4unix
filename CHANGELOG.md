@@ -245,7 +245,12 @@ aberta: ver
 [CONFIGURAÇÕES-FECHA-01](docs/process/sprints/2026-08-24-CONFIGURACOES-FECHA-01-o-aplicar-que-nao-responde-e-o-campo-que-apaga-o-arquivo.md).
 
 **A cor do plástico por rádio NÃO funciona, e a causa é o firmware do
-controle.** Medido em 23/08/2026 com captura `btmon` nos dois DualSense desta
+controle.** *(NOTA DATADA — 29/08/2026: esta conclusão foi REFUTADA em
+27/08/2026. Não era o firmware: era a semente do nosso CRC — `0xA3` no lugar de
+`0x53`. Com a semente certa o controle respondeu por rádio e devolveu a cor. A
+captura `btmon` descrita abaixo continua real; a leitura que se fez dela é que
+estava errada. O registro fica porque é o log do que esta casa acreditou em
+23/08.)* Medido em 23/08/2026 com captura `btmon` nos dois DualSense desta
 bancada, com e sem CRC: o `SET_REPORT` sai **inteiro** no canal de controle
 L2CAP (TX 65 bytes) e o **controle** responde `HANDSHAKE 0x04`
 (`ERR_INVALID_PARAMETER`) em ~5 ms. Não é o BlueZ, não é o uhid, não é o kernel.
@@ -282,7 +287,8 @@ tela respondia:
 - **"Os controles"** — um card por aparelho, com a borda na cor do plástico. A
   leitura da cor saiu de `scripts/ensaios/` e entrou no produto: o código vem no
   serial de fábrica, lido **pelo cabo, e só por ele** — por rádio o próprio
-  controle recusa o pedido (medido em 23/08/2026, na leva acima). O modo de um não-Sony
+  controle recusa o pedido (medido em 23/08/2026, na leva acima; *refutado em
+  27/08/2026 — era o nosso CRC, ver a nota datada acima*). O modo de um não-Sony
   (D-input, X-input, Switch, Apple) é **deduzido e mostrado**, nunca declarado.
 - **"A mesa"** — os adaptadores com a posição lida do barramento (porta, painel
   do gabinete, hub), os rádios que dividem os 2,4 GHz, e as duas únicas perguntas

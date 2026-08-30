@@ -15,9 +15,18 @@ NÃO pode quebrar:
    *porque a jogadora escolheu* NÃO é derrubado; um vpad com máscara velha
    *porque ficou para trás* AINDA é (senão volta o `P2+ preso no flavor antigo,
    rumble morto`);
-4. enquanto o último degrau não chega (a identidade não é passada na criação do
-   vpad), o comportamento é **idêntico ao de antes** — meia cura não pode mudar
-   comportamento.
+4. ``identity=None`` continua significando **"o chamador não sabe de quem é o
+   vpad"**, e aí a máscara é a do jogo, como sempre foi.
+
+**FATO SUBSTITUÍDO — 29/08/2026.** Este item 4 dizia *"enquanto o último degrau
+não chega (a identidade não é passada na criação do vpad), o comportamento é
+idêntico ao de antes"*. O degrau CHEGOU, sob a decisão dela
+``D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR``: ``make_virtual_pad`` aceita
+``identity`` e os dois chamadores a passam. O que sobrevive daquele item — e é o
+que o teste da seção 4 mede — não é "nada muda", é o **contrato do ``None``**,
+que não pode mudar nunca: um chamador sem identidade recebe a máscara do jogo.
+A mordida do comportamento novo mora em
+``test_mascara_por_controle_manda_no_vpad.py``.
 
 Bancada espelhada de ``test_external_mask.py``: faixa forjada ``aa:bb:cc:00:00:*``
 (regra da casa — nada de MAC real em arquivo versionado), ``config_dir`` em
@@ -261,16 +270,22 @@ def test_o_uhid_aceita_o_jogador_que_escolheu_dualsense_numa_sessao_xbox() -> No
 
 
 # ===========================================================================
-# 4 — enquanto o último degrau não chega, NADA muda
+# 4 — o contrato do `None`, que não muda nunca
 # ===========================================================================
 
 
 def test_sem_identidade_o_vpad_se_comporta_exatamente_como_antes() -> None:
-    """A prova de que esta leva não muda comportamento nenhum hoje.
+    """`identity=None` = "não sei de quem é este vpad" = a máscara do JOGO.
 
     Com máscaras gravadas para a mesa inteira, um chamador que não passa
     identidade continua recebendo a máscara do JOGO — nos dois backends, e
     inclusive na regra do `None` do uhid (*"sem preferência" = dualsense*).
+
+    Em 15/08 este teste provava que a leva não mudava comportamento nenhum.
+    Desde 29/08 ele prova outra coisa, mais durável: que ligar a corrente NÃO
+    mexeu no caminho de quem não tem identidade — o `run.sh --fake`, o vpad que
+    sobe no boot antes do `controller.connect()`, e todo chamador que só sabe a
+    máscara da sessão.
     """
     registro_de_mascaras().set_mask(MAC_P1, "dualsense")
     registro_de_mascaras().set_mask(MAC_P2, "dualsense")
@@ -329,20 +344,28 @@ def _chama_make_virtual_pad_com_identidade(modulo: Path) -> bool:
     return False
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "MEDIDO em 15/08/2026: o último degrau da máscara por jogador NÃO "
-        "chegou. `coop.py` e `gamepad.py` chamam `make_virtual_pad` sem "
-        "`identity=`, e `make_virtual_pad` nem aceita o parâmetro — os três "
-        "arquivos estavam fora do território desta leva (`coop.py` sob edição "
-        "de outra frente no mesmo dia). Quando o degrau chegar, este teste "
-        "PASSA e o `strict=True` o reprova: APAGUE o marcador. Ver a lápide de "
-        "`::vpad_ficou_para_tras` no portão `a casa sabe e o produto não faz`."
-    ),
-)
 def test_o_ultimo_degrau_da_mascara_por_jogador_chegou() -> None:
-    """Lápide viva: falha hoje de propósito, e reprova no dia em que curar."""
+    """O degrau CHEGOU em 29/08/2026 — e daqui para frente não pode sair.
+
+    NOTA DATADA. Este teste nasceu em 15/08/2026 como *lápide viva*: um
+    `xfail(strict=True)` que falhava de propósito, com a razão escrita
+    ("`coop.py` e `gamepad.py` chamam `make_virtual_pad` sem `identity=`, e
+    `make_virtual_pad` nem aceita o parâmetro") e a instrução para quem o
+    curasse — *"quando o degrau chegar, este teste PASSA e o `strict=True` o
+    reprova: APAGUE o marcador"*. Foi o que aconteceu: em 29/08, sob a decisão
+    dela `D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`, o parâmetro entrou
+    (`integrations/virtual_pad.py::make_virtual_pad`) e os dois chamadores
+    passaram a identidade — o P1 por `gamepad.primary_identity`, o secundário
+    pelo MAC que já estava na linha de baixo, no `rumble_sink`. O `xfail`
+    reprovou por XPASS, e o marcador saiu.
+
+    O teste segue valendo ao contrário: agora ele é a guarda de que ninguém
+    arranca `identity=` de volta. É a régua da MORDIDA que
+    `test_mascara_por_controle_manda_no_vpad.py` mede pelo comportamento — esta
+    aqui mede pela FORMA, e as duas são precisas de propósito: a de forma pega
+    o parâmetro sumindo da chamada mesmo num dia em que a de comportamento
+    esteja pulada por falta de `/dev/uinput`.
+    """
     assert _chama_make_virtual_pad_com_identidade(
         _SRC / "daemon" / "subsystems" / "coop.py"
     ), "coop.py não passa a identidade do jogador ao criar o vpad"

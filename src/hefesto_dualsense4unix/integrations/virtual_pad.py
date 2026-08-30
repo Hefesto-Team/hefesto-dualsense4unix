@@ -150,6 +150,7 @@ class VirtualPad(Protocol):
 def make_virtual_pad(
     flavor: str | None,
     *,
+    identity: str | None = None,
     rumble_sink: Callable[[int, int], None] | None = None,
     trigger_sink: Callable[[str, bytes], None] | None = None,
     lightbar_sink: Callable[[int, int, int], None] | None = None,
@@ -183,13 +184,33 @@ def make_virtual_pad(
     carimba no blueprint no lugar do canônico, para o motion espelhado ser
     calibrado com a unidade certa. None/inválido = canônico (fallback fail-safe;
     o vpad nasce do mesmo jeito). Exclusivo do backend uhid, como os sinks.
-    """
-    from hefesto_dualsense4unix.integrations.uinput_gamepad import (
-        UinputGamepad,
-        normalize_flavor,
-    )
 
-    key = normalize_flavor(flavor)
+    MÁSCARA-POR-JOGADOR-01 (o degrau que faltava desde 15/08, ligado em
+    29/08/2026): `identity` é o MAC canônico do controle FÍSICO deste jogador —
+    o mesmo que `core.evdev_reader.discover_dualsense_evdevs` devolve e que
+    `backend.primary_uniq` dá para o P1. Quando ele vem, `flavor` deixa de ser a
+    resposta e passa a ser o **padrão herdado**: a máscara que ESTE aparelho
+    escolheu vence (`external_mask.mascara_efetiva`), e sem escolha registrada
+    nada muda. `None` = o chamador não sabe de quem é o vpad, e aí a máscara é a
+    do jogo, como sempre foi — o contrato histórico, intacto.
+
+    A RESOLUÇÃO É AQUI, E ANTES DO BACKEND — a armadilha que
+    `external_mask.py:59-68` descreveu para quem escrevesse este degrau: o gate
+    do `_try_uhid` (*"não é dualsense, logo não é meu"*) decide pela máscara que
+    RECEBE. Se ele continuasse recebendo a do JOGO, um jogador que escolheu
+    `dualsense` numa sessão `xbox` teria o uhid vetado e cairia no uinput com
+    máscara DualSense — o par degradado em que a vibração do jogo morre
+    (VPAD-05/SPRINT-GAME-RUMBLE-01). Por isso `key` já é a máscara EFETIVA daqui
+    para baixo, e os backends recebem só ela: uma leitura do registro por vpad,
+    e nenhuma janela entre a decisão da factory e a do backend em que o registro
+    possa mudar e os dois discordarem sobre quem é este controle
+    (`mascara_efetiva` é idempotente — de uma máscara já efetiva devolve ela
+    mesma —, então não passar `identity` adiante não perde nada).
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
+
+    key = mascara_efetiva(identity, flavor)
     motivo: str | None = None
     if allow_uhid:
         uhid, motivo = _try_uhid(

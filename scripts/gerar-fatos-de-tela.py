@@ -88,6 +88,10 @@ COLUNAS_PROSA: frozenset[str] = frozenset(
         "mordida_provada_em",
         "provado_em",
         "provado_por",
+        # 29/08/2026, pedido dela: "se tal informação veio do git, qual repo
+        # e se eu e vc validamos na mesa". A fonte externa é PROSA DE
+        # BANCADA — ela diz de onde veio a pista, não o que a tela fala.
+        "fonte_externa",
         "validade_dias",
         "assimetria_declarada",
         "id_v1",

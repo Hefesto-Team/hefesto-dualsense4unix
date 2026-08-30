@@ -164,19 +164,38 @@ class TestAtribuirNumero:
         assert set(resultado["changed"]) == {UNIQ_A, UNIQ_B}
 
     @pytest.mark.asyncio
-    async def test_empurrar_para_o_fim_desliza_os_do_meio(
+    async def test_empurrar_para_o_fim_troca_com_quem_esta_la(
         self, config_isolado: Path
     ) -> None:
-        """A→3 com três na mesa: B e C sobem um, ninguém fica sem número."""
+        """A→3 com três na mesa: A e C trocam, **B não se mexe**.
+
+        NOTA DATADA — 29/08/2026, TROCA-DE-PLAYER-01. Este teste chamava-se
+        ``test_empurrar_para_o_fim_desliza_os_do_meio`` e exigia
+        ``B=1, C=2, A=3``: um RODÍZIO. O que caducou é a FORMA do gesto, não a
+        medição — o rodízio de fato preservava 1..N e não rebaixava ausente, e
+        continua sendo o que o ``identity.renumber`` faz.
+
+        O que o derrubou: a especificação visual aprovada por ela promete
+        TROCA em dezessete lugares (os 16 tooltips de botão de número e a
+        legenda *"Os dois trocam, os outros não se mexem"*,
+        ``novo-layout/_ferramentas/aba04.py``), e a palavra dela de 28/08 é
+        *"Trocar é TROCA, não fila"*. Rodízio e troca dão o MESMO resultado
+        quando o salto é de um número (vizinhos) — que é o único caso
+        desenhado no mockup e o único que esta classe exercitava —, e resultados
+        diferentes de dois em diante. É por isso que a divergência atravessou
+        um mês com a suíte verde.
+        """
         ds = ControllerIdentityRegistry()
         ds.sync_connected([UNIQ_A, UNIQ_B, UNIQ_C])
 
         server = _servidor(config_isolado, ds, None)
         await server._handle_identity_number_set({"uniq": UNIQ_A, "number": 3})
 
-        assert ds.slot_for(UNIQ_B, assign=False) == 1
-        assert ds.slot_for(UNIQ_C, assign=False) == 2
         assert ds.slot_for(UNIQ_A, assign=False) == 3
+        assert ds.slot_for(UNIQ_C, assign=False) == 1
+        # O DO MEIO NÃO SE MEXE — é isto que separa troca de rodízio, e é a
+        # única linha deste arquivo que reprova com o `pop`+`insert` de volta.
+        assert ds.slot_for(UNIQ_B, assign=False) == 2
         # O critério que resume a NUM-01: nunca um jogador 2 sem jogador 1.
         exibidos = sorted(
             ds.slot_for(u, assign=False) for u in (UNIQ_A, UNIQ_B, UNIQ_C)

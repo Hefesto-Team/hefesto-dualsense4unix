@@ -676,8 +676,9 @@ Três regras valem nas cinco seções:
   afundado).
 - **Onde a medição existe, ela pré-preenche**, e a declaração só corrige. Hub e
   painel do gabinete são lidos do barramento USB; a cor do plástico é lida do
-  próprio controle **pelo cabo** — por rádio não há leitura possível, e ali a
-  lista é a resposta (ver "Os controles", abaixo).
+  próprio controle **pelo cabo**. **Pelo rádio o Hefesto ainda não pergunta** —
+  e isso é limitação nossa, não do aparelho —, e ali a lista é a resposta (ver
+  "Os controles", abaixo).
 - **A escolha só vale no "Aplicar" do rodapé.** Clicar num seletor aqui **marca**
   o rascunho e não muda nada; o Aplicar grava tudo de uma vez em
   `~/.config/hefesto-dualsense4unix/maquina.json`. Recusa ou Hefesto desligado
@@ -767,7 +768,7 @@ meu?"; o anel roxo por dentro marca o que está selecionado no cabeçalho.
 
 | linha do card | quem responde |
 |---|---|
-| **Cor:** | lida **do aparelho**, do serial de fábrica, quando o controle está **no cabo**. Quando não dá para ler, o card oferece a lista — **Branco**, **Preto**, **Vermelho**, **Rosa**, **Roxo**, **Azul**, **Outra** e **Não sei** —, com o nome oficial de fábrica na dica de cada uma |
+| **Cor:** | lida **do aparelho**, do serial de fábrica, quando o controle está **no cabo**. **Pelo rádio ainda não** — o aparelho responde, o Hefesto é que não pergunta (ver o quadro abaixo). Quando não dá para ler, o card oferece a lista — **Branco**, **Preto**, **Vermelho**, **Rosa**, **Roxo**, **Azul**, **Outra** e **Não sei** —, com o nome oficial de fábrica na dica de cada uma |
 | **Modo:** (só nos não-Sony) | **deduzido e mostrado, nunca declarado**: D-input, X-input, Switch e Apple. O seletor é de leitura, com a mesma dica da ficha do controle — *"a troca não é por software: é um combo de botões no próprio controle ao ligar"* |
 | **Botões:** (só nos não-Sony) | **Xbox**, **Nintendo** ou **Não sei**. Muda só o desenho que aparece na tela; nada é remapeado no controle |
 | **Jogador:** | fixa este controle num número, de 1 a 5. **Sem nenhum marcado, vale a ordem de chegada**, que é como o Hefesto trabalha por padrão |
@@ -802,13 +803,22 @@ o produto não toma. Cancelar não reconecta nada.
 > limpa agora, reconectar faria a conexão nova nascer travada igual — e é isso
 > que fazia a cura parecer que funciona às vezes.
 
-> **Pelo rádio a cor não tem como ser lida, e isso é medido.** O pedido sai
-> inteiro do computador e é o **próprio controle** que o recusa —
-> `HANDSHAKE 0x04` (`ERR_INVALID_PARAMETER`) em ~5 ms, nos dois DualSense desta
-> bancada, com e sem CRC (`btmon`, 23/08/2026). Não é o Linux, não é o Bluetooth
-> desta máquina, e não é defeito a consertar depois: pelo rádio **a lista é a
-> resposta** — e a sua declaração fica gravada, valendo também quando o controle
-> voltar ao rádio. Detalhe em
+> **Pelo rádio a cor ainda não é lida — e a culpa NÃO é do seu controle.** Este
+> quadro dizia, até 28/08/2026, que *"pelo rádio a cor não tem como ser lida"* e
+> que era o **próprio controle** que recusava. **Estava errado, e o erro era
+> nosso.** O `HANDSHAKE 0x04` de 23/08/2026 vinha de o pedido ir assinado com a
+> semente de CRC errada; com a semente certa (27/08/2026) o controle respondeu
+> pelo rádio e devolveu a cor. Não havia nada de errado com o seu aparelho.
+>
+> Pelo rádio, portanto, **a lista continua sendo a resposta por enquanto** — não
+> porque o aparelho recuse, mas porque o Hefesto ainda não faz o pedido. Sua
+> declaração fica gravada e vale também quando o controle voltar ao cabo.
+>
+> **Pelo cabo a leitura funciona** — e passou a funcionar de verdade em
+> 29/08/2026: até esse dia o Hefesto tentava abrir o controle por uma porta que
+> ele mesmo havia fechado (o Hefesto esconde esse arquivo do sistema para curar
+> o problema do "controle duplicado"), e a cor vinha como "Não sei" sem dizer
+> por quê. Detalhe em
 > [`../protocol/dualsense-referencia-canonica.md`](../protocol/dualsense-referencia-canonica.md).
 
 > **A aba não troca o modo de um 8BitDo, e não tem como.** O modo é uma chave

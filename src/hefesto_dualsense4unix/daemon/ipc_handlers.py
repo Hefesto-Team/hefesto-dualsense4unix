@@ -1742,8 +1742,16 @@ class IpcHandlersMixin:
     ) -> dict[str, int]:
         """Corpo BLOQUEANTE do ``identity.number.set`` — só via ``to_thread``.
 
-        A regra, em uma frase: **permutar os lugares que os PRESENTES já
-        ocupam**, pondo o alvo na posição pedida.
+        A regra, em uma frase: **trocar de lugar o alvo e quem tem o número
+        pedido** — os dois, e mais ninguém.
+
+        **CORREÇÃO DE FATO, 29/08/2026 (TROCA-DE-PLAYER-01).** Este parágrafo
+        dizia "pondo o alvo na posição pedida", e o corpo fazia
+        ``pop``+``insert`` — um RODÍZIO, que empurra todos entre a origem e o
+        destino. A tela prometia outra coisa em dezessete lugares do mockup
+        aprovado (os 16 tooltips de botão e a legenda: *"Os dois trocam, os
+        outros não se mexem"*), e a palavra dela de 28/08 é *"Trocar é TROCA,
+        não fila"*. Quem estava errado era o daemon.
 
         Por que permutar em vez de reescrever 1..N (que é o que o
         ``identity.renumber`` faz): o conjunto de lugares dos presentes é
@@ -1759,12 +1767,21 @@ class IpcHandlersMixin:
 
         1. junta os PRESENTES dos dois registros como ``(lugar, key,
            registro)`` e ordena por lugar — esta é, por definição de
-           ``slot_for``, a ordem em que eles exibem 1..N;
-        2. tira o alvo dessa lista e o reinsere no índice ``numero - 1``;
+           ``slot_for``, a ordem em que eles exibem 1..N; **as duas recusas
+           saem daqui, antes de qualquer escrita**, porque pertinência e
+           contagem não dependem da ordem;
+        1a. manda o registro dos DualSense ALINHAR o gravado com a tela
+           (``alinhar_gravado_com_a_tela``) — sem isso o plano é calculado
+           sobre uma mesa que não é a que ela está vendo — e relê a mesa se
+           algo mudou de lugar;
+        2. TROCA as posições ``indice_atual`` e ``numero - 1`` dessa lista;
         3. redistribui os MESMOS lugares, na ordem crescente, para a lista
            reordenada;
-        4. entrega a cada registro só a fatia de keys que é dele
-           (``compact``, que persiste sob o ``CONTROLLERS_FILE_LOCK``).
+        4. entrega a cada registro só a fatia de keys que é dele — do lado
+           DualSense por ``escolha_da_mao``, que faz a fila do momento
+           concordar com a escolha (senão o congelamento a apaga em 4,0 s);
+           do lado dos externos por ``compact``, que é onde eles moram.
+           Os dois persistem sob o ``CONTROLLERS_FILE_LOCK``.
 
         Empate de lugar entre os dois lados (só possível por corrupção do
         arquivo) desempata a favor do DualSense — a MESMA regra do
@@ -1786,32 +1803,85 @@ class IpcHandlersMixin:
             if callable(authority_check) and authority_check() == "game":
                 raise _RenumberAuthorityChangedError()
 
-            presentes: list[tuple[int, int, str, Any]] = []
-            for ordem_kind, registry in enumerate(
-                (identity_registry, external_registry)
-            ):
-                if registry is None:
-                    continue
-                conectados = IpcHandlersMixin._connected_keys(registry)
-                presentes.extend(
-                    (lugar, ordem_kind, key, registry)
-                    for key, lugar in registry.snapshot().items()
-                    if key in conectados
-                )
-            presentes.sort(key=lambda e: (e[0], e[1], e[2]))
+            def _mesa_presente() -> list[tuple[int, int, str, Any]]:
+                """Os PRESENTES dos dois registros, ordenados por lugar."""
+                mesa: list[tuple[int, int, str, Any]] = []
+                for ordem_kind, registry in enumerate(
+                    (identity_registry, external_registry)
+                ):
+                    if registry is None:
+                        continue
+                    conectados = IpcHandlersMixin._connected_keys(registry)
+                    mesa.extend(
+                        (lugar, ordem_kind, key, registry)
+                        for key, lugar in registry.snapshot().items()
+                        if key in conectados
+                    )
+                mesa.sort(key=lambda e: (e[0], e[1], e[2]))
+                return mesa
 
-            indice_atual = next(
-                (pos for pos, e in enumerate(presentes) if e[2] == alvo), None
-            )
-            if indice_atual is None:
+            presentes = _mesa_presente()
+
+            # AS DUAS RECUSAS VÊM ANTES DE QUALQUER ESCRITA, e é de propósito:
+            # nenhuma delas depende da ORDEM. "O alvo está na mesa?" é
+            # pertinência e "o número cabe?" é contagem — e o alinhamento
+            # abaixo é uma permutação ENTRE OS PRESENTES, que não muda nem o
+            # conjunto nem o tamanho. Validar aqui é o que mantém a promessa
+            # da docstring: comando recusado não toca o `controllers.json`.
+            #
+            # MEDIDO em 29/08/2026, e foi assim que este defeito nasceu: com o
+            # alinhamento vindo primeiro, pedir um número fora da mesa devolvia
+            # `numero_fora_da_mesa` E gravava o arquivo do zero — o arquivo
+            # saía de INEXISTENTE para `{Blue: 1, Cosmic: 2}` numa chamada que
+            # a casa acabara de recusar.
+            if not any(e[2] == alvo for e in presentes):
                 raise _NumeroAlvoAusenteError()
             if numero > len(presentes):
                 raise _NumeroForaDaMesaError(len(presentes))
 
+            # TROCA-DE-PLAYER-01: o plano é calculado sobre O QUE ELA VÊ. O
+            # lugar GRAVADO e a FILA DO MOMENTO podem discordar (D-30 — quem
+            # chegou primeiro manda, o gravado só desempata), e enquanto
+            # discordam o `indice_atual` abaixo aponta para a mesa errada.
+            # Medido em 29/08: gravado `A=1, B=2`, ela liga o B primeiro (tela
+            # `B=1, A=2`), pede o 1 para o A -> `changed={}`, nada se move,
+            # `ok:true` sobre coisa nenhuma. Alinhar antes é adiantar para o
+            # instante do clique o MESMO congelamento que a mesa estável faz
+            # sozinha 4,0 s depois; a regra automática não muda.
+            alinhar = getattr(identity_registry, "alinhar_gravado_com_a_tela", None)
+            if callable(alinhar) and alinhar():
+                # O alinhamento mexeu nos lugares: a mesa tem de ser relida,
+                # senão o plano sai sobre a foto velha — que é exatamente o
+                # defeito que ele existe para fechar.
+                presentes = _mesa_presente()
+
+            indice_atual = next(
+                pos for pos, e in enumerate(presentes) if e[2] == alvo
+            )
+
+            # TROCA, não rodízio — decisão dela, 28/08/2026: *"Trocar é TROCA,
+            # não fila: pôr o azul no 1 faz quem era 1 virar 2. Ninguém repete
+            # número, ninguém fica sem."* (`novo-layout/_ferramentas/aba04.py`)
+            #
+            # ISTO SUBSTITUI UM `pop`+`insert`, e a diferença é medida: o
+            # rodízio empurra TODOS entre a origem e o destino. Com quatro na
+            # mesa, dar o 1 ao último renumerava três controles; a troca mexe
+            # em dois. As duas coincidem exatamente quando o salto é de UM
+            # (vizinhos), que é o único caso desenhado no mockup e o único que
+            # a suíte de 25/07 exercitava — por isso a divergência atravessou um
+            # mês. Medido em 55 casos (mesas de 1 a 5): coincidem em 35,
+            # divergem em 20, e as 20 são todas de salto >= 2.
+            #
+            # O que NÃO muda: o conjunto de lugares dos presentes é o mesmo
+            # (só troca de dono), então o ausente continua intocado — a
+            # promessa que separa este gesto do "Renumerar agora".
             lugares = [e[0] for e in presentes]
             nova_ordem = list(presentes)
-            movido = nova_ordem.pop(indice_atual)
-            nova_ordem.insert(numero - 1, movido)
+            indice_alvo = numero - 1
+            nova_ordem[indice_atual], nova_ordem[indice_alvo] = (
+                nova_ordem[indice_alvo],
+                nova_ordem[indice_atual],
+            )
 
             mudou: dict[str, int] = {}
             por_registro: dict[int, dict[str, int]] = {}
@@ -1825,7 +1895,16 @@ class IpcHandlersMixin:
                 del registry  # a fatia é escolhida pelo índice, não pelo objeto
 
             if identity_registry is not None and por_registro.get(0):
-                identity_registry.compact(por_registro[0])
+                # `escolha_da_mao`, não `compact`: o `compact` escreve só o
+                # lugar GRAVADO, e a própria docstring dele diz que a fila do
+                # momento "NÃO é tocada aqui de propósito". Com os controles
+                # chegando em ondas diferentes, escrever só o gravado deixa a
+                # escolha invisível — e o congelamento a APAGA 4,0 s depois,
+                # da memória e do disco. Medido em 29/08.
+                aplicar = getattr(identity_registry, "escolha_da_mao", None)
+                if not callable(aplicar):
+                    aplicar = identity_registry.compact
+                aplicar(por_registro[0])
             if external_registry is not None and por_registro.get(1):
                 external_registry.compact(por_registro[1])
 

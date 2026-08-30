@@ -409,7 +409,12 @@ def no_do_controle(
       ``DATA|FEATURE`` (``0xA3``), quando a que sai é ``SET_REPORT|FEATURE``
       (``0x53``). Medido em 27/08/2026 no mesmo controle e no mesmo comando,
       mudando só a semente: ``0xA3`` e ``0xA2`` devolvem ``errno 5``; ``0x53``
-      é aceito, e os quatro DualSense desta bancada responderam pelo rádio.
+      é aceito. **O TAMANHO DA AMOSTRA POR RÁDIO É UMA UNIDADE** — esta
+      linha já disse "os quatro DualSense desta bancada responderam pelo
+      rádio", e a tabela da canônica não sustenta o número: das duas
+      medições de 27/08, uma foi por CABO (``hidraw7``) e só ``hidraw8``
+      respondeu pelo rádio. Uma unidade prova que o APARELHO faz; não prova
+      universalidade, que é o que a régua desta casa cobra.
       Ver ``docs/protocol/dualsense-referencia-canonica.md``, seção "O caminho
       da cor do plástico". **O filtro continua aqui porque ninguém o tirou
       ainda** — tirá-lo é a ``ONDA-CONEXOES-11``, junto com os outros dois
@@ -456,8 +461,41 @@ def _ler_texto(caminho: str) -> str:
         return ""
 
 
-def _perguntar_ao_hidraw(caminho: str, pedido: bytes) -> bytes | None:
-    """Manda o pedido e devolve a resposta ``0x81``, ou ``None``.
+def _perguntar_ao_hidraw(
+    caminho: str,
+    pedido: bytes,
+    *,
+    abrir: Any = None,
+    ioctl: Any = None,
+) -> bytes | None:
+    """Manda o pedido pela PORTA DA CASA e devolve a resposta ``0x81``, ou ``None``.
+
+    **A porta é o broker, e a queda para ``open()`` vem depois.** Esta função
+    fazia ``os.open(caminho, O_RDWR)`` e nada mais, e por isso a cor não chegava
+    à tela dela. Medido em 29/08/2026, com o daemon rodando e sem parar nada: os
+    dois DualSense no cabo estão ``0600 root:root``, ``os.open`` direto colhe
+    ``errno 13`` nos dois, ``ler_pelo_cabo`` devolve ``None`` nos dois — e
+    ``None`` é o "Não sei" que ela viu nos dois cards.
+
+    Os nós estão fechados porque **o Hefesto os esconde do JOGO**: é o BROKER-01
+    funcionando (``broker/hidraw_broker.py``, ``setfacl -b`` + ``chmod 0600``).
+    Não é udev, não é firmware, não é o rádio — é o produto batendo na porta que
+    o próprio produto fechou. O broker é root e serve um fd ``O_RDWR`` do nó
+    ESCONDIDO por ``SCM_RIGHTS``, e o ENSAIO já entra por ali
+    (``scripts/ensaios/cor_do_plastico.py`` → ``comum.py`` → ``abrir_hidraw``).
+    Era mais uma da classe "a casa sabe e o produto não faz".
+
+    ``abrir_hidraw`` cai sozinho para ``open()`` onde não há broker (CI,
+    checkout, install antigo) e DIZ por qual porta entrou — a queda não fica
+    muda. ``PortaFechadaError`` É um ``OSError``, então o ``except`` de sempre
+    já o cobre, e a mensagem dele carrega o que as DUAS portas responderam, que
+    é o diagnóstico que faltava no log.
+
+    ``abrir`` e ``ioctl`` são costura de teste, com o default do sistema real —
+    o mesmo par que ``estado_do_grab`` (``hidraw_broker_client.py``) já tem.
+
+    ``conferir_pedido`` CONTINUA SENDO A PRIMEIRA LINHA, antes de qualquer porta
+    se abrir: o par que RESETA o controle não chega nem a pedir fd.
 
     O ``ioctl`` de feature é síncrono e não disputa o fio com o daemon — o que
     disputa é o report de OUTPUT, que este módulo não sabe montar. A validação do
@@ -468,24 +506,33 @@ def _perguntar_ao_hidraw(caminho: str, pedido: bytes) -> bytes | None:
     import array
     import fcntl
 
-    conferir_pedido(pedido)
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import abrir_hidraw
+
+    conferir_pedido(pedido)  # A TRAVA, ANTES DE QUALQUER PORTA SE ABRIR.
     tamanho = len(pedido)
+    porta = abrir if abrir is not None else abrir_hidraw
+    disparar = ioctl if ioctl is not None else fcntl.ioctl
     try:
-        descritor = os.open(caminho, os.O_RDWR | os.O_NONBLOCK)
+        no = porta(caminho, escrita=True)
     except OSError as erro:
         logger.debug("cor_do_plastico_sem_acesso", caminho=caminho, erro=str(erro))
         return None
     try:
         saida = array.array("B", pedido)
-        fcntl.ioctl(descritor, _hidiocsfeature(tamanho), saida, True)
+        disparar(no.fd, _hidiocsfeature(tamanho), saida, True)
         entrada = array.array("B", [0] * tamanho)
         entrada[0] = FEATURE_RESPOSTA
-        lidos = fcntl.ioctl(descritor, _hidiocgfeature(tamanho), entrada, True)
+        lidos = disparar(no.fd, _hidiocgfeature(tamanho), entrada, True)
     except OSError as erro:
-        logger.debug("cor_do_plastico_ioctl_falhou", caminho=caminho, erro=str(erro))
+        logger.debug(
+            "cor_do_plastico_ioctl_falhou",
+            caminho=caminho,
+            porta=no.porta,
+            erro=str(erro),
+        )
         return None
     finally:
-        os.close(descritor)
+        no.fechar()
     if lidos <= 0:
         return None
     resposta = bytes(entrada[:lidos])
