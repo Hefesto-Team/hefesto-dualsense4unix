@@ -2159,6 +2159,19 @@ class DaemonActionsMixin(WidgetAccessMixin):
             except (FileNotFoundError, subprocess.SubprocessError) as exc:
                 logger.info("systemctl_indisponivel_usando_popen", erro=str(exc))
 
+        # A CHAVE (29/08/2026): este fallback é o furo que `systemctl mask`
+        # NÃO tapa — ele sobe o daemon sem passar por systemd, então uma unit
+        # mascarada não o alcança. Medido em 29/08, contra o esperado. Com a
+        # chave posta, o botão para AQUI e diz por quê, em vez de subir um
+        # daemon que a própria máquina já vai recusar dois passos adiante
+        # (`daemon/main.py:run_daemon`). Ver `utils/chave.py`.
+        from hefesto_dualsense4unix.utils import chave as _chave
+
+        _motivo = _chave.motivo_do_desligamento()
+        if _motivo is not None:
+            logger.warning("daemon_nao_subiu_chave_posta", motivo=_motivo)
+            return -1
+
         # Fallback: spawn do daemon como child via Popen.
         # Slot self._daemon_popen é cleanado em _shutdown_backend.
         try:

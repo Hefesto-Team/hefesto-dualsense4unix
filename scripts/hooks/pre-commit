@@ -214,4 +214,40 @@ if [ -f scripts/check_fotos_da_tela.py ]; then
   fi
 fi
 
+# 7. A RÉGUA da tela. Pedido dela, 29/08/2026: *"temos que ter no nosso hook do
+#    novo dev algo que induza a construção de validações via interface pra ver
+#    se tal problema foi resolvido ou se tal coisa traz regressão"*.
+#
+#    O item 6 pergunta pela FOTO — se alguém OLHOU a tela. Este pergunta pela
+#    RÉGUA — se alguém a MEDE amanhã sozinho. São perguntas diferentes: a foto
+#    de 28/08 mostrava os dois botões novos, bonitos e mortos, e o
+#    `--prova-gesto` dava verde sobre eles porque nunca os clicava.
+#
+#    NÃO BLOQUEIA, e é decisão, não descuido: o verbo dela é INDUZIR. A razão
+#    está escrita no portão de colisão de sprints — *"um portão que reprova as
+#    vinte e três de uma vez é um portão que alguém desliga na segunda-feira, e
+#    a primeira reação seria `--no-verify`"*. A escada até reprovar, e o
+#    gatilho MEDIDO de cada degrau, estão no cabeçalho do script; o degrau de
+#    hoje é a constante `GRAU`, e o número que autoriza subir sai de
+#    `python3 scripts/check_regua_de_tela.py --censo`.
+#
+#    SÓ O CÓDIGO 2 SEGURA O COMMIT, e a distinção é a trava contra o pior
+#    desfecho deste arquivo: um gancho quebrado impede ELA de commitar na
+#    árvore que usa todo dia. `2` é VEREDITO (o grau 3 reprovou); `1` é o que o
+#    Python devolve para traceback, `python3` ausente ou import quebrado —
+#    acidente do INSTRUMENTO, que nunca pode custar um commit dela.
+#
+#    MEDIDO em 29/08/2026, na bancada: com `|| true` sozinho o grau 3 nascia
+#    INERTE — o script reprovava e o gancho passava. Com `|| falhou=1` sozinho,
+#    um traceback do instrumento travaria a árvore dela. Só dois códigos
+#    distintos atendem às duas exigências.
+if [ -f scripts/check_regua_de_tela.py ]; then
+  _rc_regua=0
+  python3 scripts/check_regua_de_tela.py || _rc_regua=$?
+  if [ "$_rc_regua" = "2" ]; then
+    falhou=1
+  fi
+  unset _rc_regua
+fi
+
 exit "$falhou"

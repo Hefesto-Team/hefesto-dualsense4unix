@@ -36,12 +36,16 @@ from hefesto_dualsense4unix.integrations.desktop_notifications import (
     statusnotifierwatcher_available,
 )
 from hefesto_dualsense4unix.integrations.tray import probe_gi_availability
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-TRAY_APP_ID = "hefesto-dualsense4unix"
+#: AS DUAS CASAS (29/08/2026): o id do item de bandeja também é por
+#: variante — dois apps com o mesmo `app_id` de bandeja disputam o
+#: mesmo item no StatusNotifierWatcher.
+TRAY_APP_ID = identidade.atual().app_id
 
 #: Nome pedido ao tema de ícones. **Tem de terminar em `-symbolic`**, e isso é
 #: contrato, não estética — APPLET-MONOCROMÁTICO-01, pedido dela de 07/08/2026:
@@ -56,13 +60,13 @@ TRAY_APP_ID = "hefesto-dualsense4unix"
 #: fundo do painel). Sem o sufixo, o painel desenha o arquivo como ele é: o PNG
 #: (ou, no caso dela, a cópia colorida da logo que o tema ativo serve sob o
 #: mesmo nome) — e o ícone fica o único cromático da barra.
-TRAY_ICON_NAME = "hefesto-dualsense4unix-symbolic"
+TRAY_ICON_NAME = f"{identidade.atual().icone}-symbolic"
 
 #: Nome antigo (a logo colorida, sem sufixo). Continua sendo pedido como
 #: PRIMEIRO degrau de queda: numa instalação anterior a 07/08 o simbólico não
 #: existe no tema, e cair direto no joystick genérico seria trocar um ícone
 #: certo por um errado. Ver `_preferred_icon`.
-TRAY_ICON_NAME_LEGADO = "hefesto-dualsense4unix"
+TRAY_ICON_NAME_LEGADO = identidade.atual().icone
 
 TRAY_ICON_FALLBACK = "input-gaming"
 PROFILE_REFRESH_SEC = 3

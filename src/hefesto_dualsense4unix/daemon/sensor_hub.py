@@ -1,4 +1,4 @@
-"""sensor_hub.py — giroscópio e touchpad POR CONTROLE, sob demanda (S2).
+"""sensor_hub.py — giroscópio, acelerômetro e touchpad POR CONTROLE (S2).
 
 Quem consome: o enriquecimento do `state_full` (`ipc_handlers`), que roda no
 event loop do daemon a 10 Hz enquanto a GUI está aberta. Quem produz: um
@@ -101,9 +101,13 @@ class SensorHub:
         """Sensores conhecidos de `uniq` agora; `{}` enquanto não houver.
 
         Registra a demanda (é o que mantém os readers vivos) e devolve só o
-        que EXISTE: sem reader de motion não há chave `gyro`, sem reader de
-        touchpad não há chave `touchpad`. Nunca levanta — o `state_full` não
-        pode cair por causa de um sensor.
+        que EXISTE: sem reader de motion não há chave `gyro` nem `accel`, sem
+        reader de touchpad não há chave `touchpad`. Nunca levanta — o
+        `state_full` não pode cair por causa de um sensor.
+
+        `gyro` e `accel` saem do MESMO reader e do MESMO node evdev (os seis
+        eixos do "Motion Sensors"), mas são chaves independentes: um reader que
+        não saiba entregar o acelerômetro continua publicando o giro.
         """
         agora = self._relogio()
         with self._lock:
@@ -120,6 +124,30 @@ class SensorHub:
                     "x": round(float(gyro.x), 2),
                     "y": round(float(gyro.y), 2),
                     "z": round(float(gyro.z), 2),
+                }
+            # DOIS `suppress` e não um, e o motivo é o que a MORDIDA mediu, não
+            # o que parecia (29/08/2026). A primeira redação desta linha dizia
+            # que um bloco só faria o `AttributeError` do acelerômetro "apagar o
+            # `out["gyro"]`" — e é FALSO: a atribuição do giro já aconteceu
+            # quando a exceção sobe, e o dicionário fica com ela. Arrancada a
+            # separação, o teste passou igual, que é como o erro apareceu.
+            #
+            # O que a separação protege de verdade é o SENTIDO CONTRÁRIO: com um
+            # bloco só, um `snapshot()` que levanta (node sumindo no meio da
+            # leitura) aborta o bloco ANTES de chegar ao acelerômetro, e o
+            # acelerômetro some da tela por causa de um defeito do giroscópio.
+            # Separados, cada sensor cai sozinho.
+            #
+            # Três casas e não duas (o giro usa duas): a escala é g, e 1 g é o
+            # repouso. Com duas casas a inclinação de um controle na mão anda em
+            # degraus de 0,01 g — visível como serrilha nas barras. Três casas
+            # custam ~6 bytes por controle por tique.
+            with contextlib.suppress(Exception):
+                accel = motion.accel_snapshot()
+                out["accel"] = {
+                    "x": round(float(accel.x), 3),
+                    "y": round(float(accel.y), 3),
+                    "z": round(float(accel.z), 3),
                 }
         if touch is not None:
             with contextlib.suppress(Exception):

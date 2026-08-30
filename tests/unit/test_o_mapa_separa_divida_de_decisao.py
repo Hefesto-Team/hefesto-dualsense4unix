@@ -4,7 +4,11 @@ O DEFEITO QUE ESTE ARQUIVO EXISTE PARA NÃO DEIXAR VOLTAR
 --------------------------------------------------------
 Medido em 22/08/2026, rodando o contador deste arquivo contra
 `docs/data/mapa-controles.csv`: **41 células dizem que a casa MEDIU e o produto
-NÃO ACIONA** — 20 no cabo, 21 no rádio, 13 linhas com as duas assim. O
+NÃO ACIONA** — 20 no cabo, 21 no rádio, 13 linhas com as duas assim. (**São 39
+desde 29/08/2026**, e as duas que saíram saíram PELO MOTIVO CERTO: o
+acelerômetro do DualSense passou a ser lido nos dois transportes —
+ONDA-CONTROLES-04. O número desce quando a dívida é paga; é para isso que ele
+está aqui.) O
 `scripts/gerar-mapa.py` já as pintava de laranja (`--color-lacuna`, "a casa sabe
 e o produto não faz") e já as contava no cartão de cada controle (`placar`,
 chave `lacuna`).
@@ -51,6 +55,12 @@ Daí `decisao-tomada`, e daí `so-ela-decide`.
 
 O retrato de 22/08/2026, com as 41 preenchidas: **4 dívidas**, 15 decisões,
 20 `nada-a-acionar`, 2 `so-ela-decide`.
+
+Em 29/08/2026 as duas `so-ela-decide` saíram — eram o acelerômetro do DualSense
+no cabo e no rádio, e a pergunta foi respondida por ela com *"não era pra ele
+sair. era pra ele FUNCIONAR"*. A palavra continua no domínio, sem uso e com a
+razão escrita, em `RESERVADOS`: o estado que ela nomeia não morreu com a linha
+que a usava.
 
 POR QUE O PORTÃO MORA NUM TESTE, E NÃO NO `check_paridade_transporte.py`
 ------------------------------------------------------------------------
@@ -316,8 +326,8 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
-    assert len(antes) == 41, (
-        f"o recorte de 22/08/2026 tinha 41 células medidas e não acionadas, e "
+    assert len(antes) == 39, (
+        f"o recorte de 29/08/2026 tinha 39 células medidas e não acionadas, e "
         f"agora tem {len(antes)}. Não é reprovação de defeito: é aviso de que o "
         "retrato deste arquivo envelheceu e o texto precisa ser recontado"
     )
@@ -333,16 +343,63 @@ def test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv() -> None:
         assert len(conta_dividas(pior)) == TETO_DA_DIVIDA + 1
 
 
+#: O "ou EXPLICADO" do nome deste teste, que até 29/08/2026 não existia no
+#: código: valor do domínio que ninguém usa HOJE e que fica assim mesmo, com a
+#: razão datada. Sem esta porta, a única saída para um valor que deixou de ser
+#: usado era apagá-lo — e apagar palavra porque o último caso dela foi
+#: CONSERTADO é o avesso do que este arquivo quer.
+#:
+#: A porta é estreita de propósito: entrar aqui exige escrever por que a
+#: palavra sobrevive à ausência de uso, e a lista é lida na reprovação.
+RESERVADOS: dict[str, str] = {
+    SO_ELA_DECIDE: (
+        "29/08/2026, ONDA-CONTROLES-04. O último uso era "
+        "`movimento.acelerometro@dualsense`, nos dois lados, e ele saiu porque "
+        "a causa FOI RESOLVIDA: ela decidiu (*\"não era pra ele sair. era pra "
+        "ele FUNCIONAR\"*), o produto passou a ler `ABS_X/Y/Z` e a célula virou "
+        "`aciona=sim`, sem causa a declarar. A palavra fica porque o ESTADO que "
+        "ela nomeia — o produto pode, e a escolha é dela — não deixou de "
+        "existir com esta linha: a ONDA-CONTROLES-07 (o interruptor do sensor) "
+        "e a 08 (a calibração) nascem exatamente nele. Tirá-la do domínio "
+        "obrigaria a próxima pessoa a escrever `divida` para uma escolha que "
+        "não é dívida nossa, que é a palavra errada que este arquivo existe "
+        "para impedir."
+    ),
+}
+
+
 @pytest.mark.parametrize("valor", [DIVIDA, DECISAO, NADA_A_ACIONAR, SO_ELA_DECIDE])
 def test_cada_valor_do_dominio_e_usado_ou_explicado(valor: str) -> None:
     """Valor de domínio que ninguém usa é vocabulário morto — ou é dívida de fila.
 
-    Os quatro estão em uso em 22/08/2026. Se um deixar de estar, a reprovação
-    aqui é o convite para tirá-lo do domínio em vez de deixá-lo apodrecendo.
+    Os quatro estavam em uso em 22/08/2026. Se um deixar de estar, há DUAS
+    saídas, e a escolha é de quem causou a saída: tirá-lo do domínio no mesmo
+    gesto, ou declará-lo em `RESERVADOS` com a razão datada de por que a
+    palavra sobrevive sem uso. O que o teste recusa é a terceira, que é deixar
+    o vocabulário apodrecendo calado.
     """
     usados = set(respostas(MAPA).values())
+    if valor in RESERVADOS:
+        assert valor not in usados, (
+            f"{valor!r} voltou a ser usado no mapa e continua em RESERVADOS. "
+            "Tire-o de lá: a reserva é para o que NÃO tem uso, e mantê-la "
+            "sobre um valor vivo esconde o dia em que ele morrer de novo"
+        )
+        return
     assert valor in usados, (
         f"nenhuma célula do mapa usa {valor!r}. Se a resposta deixou de existir, "
-        "tire-a de DOMINIO no mesmo gesto — domínio maior que o uso é convite a "
-        "escrever a palavra errada"
+        "tire-a de DOMINIO no mesmo gesto, ou declare-a em RESERVADOS com a "
+        "razão — domínio maior que o uso é convite a escrever a palavra errada"
+    )
+
+
+def test_reservado_que_ninguem_explica_nao_entra() -> None:
+    """A reserva sem razão escrita seria o silêncio com outro nome."""
+    assert all(len(razao) > 80 for razao in RESERVADOS.values()), (
+        "todo valor reservado tem de trazer a razão datada de por que a "
+        "palavra fica sem uso — uma linha curta não é razão, é desculpa"
+    )
+    assert set(RESERVADOS) <= set(DOMINIO), (
+        "só se reserva o que está no domínio: reservar palavra de fora seria "
+        "inventar vocabulário pela porta dos fundos"
     )

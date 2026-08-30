@@ -33,6 +33,13 @@ DUALSENSE_PIDS = {0x0CE6, 0x0DF2}  # DualSense + DualSense Edge
 #: node aberto — ver `MotionSensorReader._on_device_opened`.
 DUALSENSE_GYRO_RES_PER_DEG_S = 1024
 
+#: Unidades evdev por **g** do acelerômetro (`DS_ACC_RES_PER_G` do
+#: `hid-playstation.c:226`, com `input_abs_set_res(sensors, ABS_X…, accel_res)`
+#: em `:1053-1055`). Como o do gyro, é só o FALLBACK: a escala real vem do
+#: `absinfo` do node aberto. Medido nesta bancada em 29/08/2026 com dois
+#: DualSense no cabo — `EVIOCGABS` devolveu `res=8192` nos três eixos dos dois.
+DUALSENSE_ACC_RES_PER_G = 8192
+
 
 #: Teto da faixa canônica do domínio Hefesto para eixos e gatilhos (0..255) —
 #: é o que o DualSense já entrega CRU, e é a escala em que todo o resto do
@@ -2079,8 +2086,44 @@ def graus_por_segundo(valor: int, resolucao: int) -> float:
     return valor / escala
 
 
+@dataclass(frozen=True)
+class AccelSnapshot:
+    """Aceleração própria dos três eixos do acelerômetro, em **g**.
+
+    Gêmeo do `GyroSnapshot`, e do MESMO node: o "Motion Sensors" traz os SEIS
+    eixos, `ABS_X/Y/Z` (acelerômetro) ao lado de `ABS_RX/RY/RZ` (giroscópio) —
+    `hid-playstation.c:1051-1064`. Duas classes e não uma porque as UNIDADES
+    são diferentes (g contra graus/s) e misturá-las num só snapshot faria a
+    tela ter de adivinhar qual é qual.
+
+    Com o controle parado numa mesa, o módulo `√(x²+y²+z²)` fica em ~1 g — é a
+    gravidade, e é a régua absoluta que dispensa aparelho de referência.
+    """
+
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+
+
+def g_por_unidade(valor: int, resolucao: int) -> float:
+    """Converte o valor CRU de um eixo de acelerômetro evdev em **g**.
+
+    Mesma disciplina de `graus_por_segundo`, e pelo mesmo motivo: a escala
+    está no `absinfo.resolution` do próprio node (`DS_ACC_RES_PER_G`, 8192 no
+    kernel atual) e dividir pelo que o node DECLARA é o único jeito que
+    sobrevive a uma mudança de escala do kernel.
+
+    Resolução ausente/zero/negativa cai no default do kernel em vez de
+    devolver o valor cru. Isso é seguro AQUI por construção: este leitor só
+    abre node achado por `discover_dualsense_motion_evdevs`, ou seja, sempre
+    um DualSense. Devolver o cru faria a interface ler "8192 g" onde há 1 g.
+    """
+    escala = resolucao if resolucao > 0 else DUALSENSE_ACC_RES_PER_G
+    return valor / escala
+
+
 class MotionSensorReader(_EvdevReconnectLoop):
-    """Lê o giroscópio de UM DualSense pelo node evdev "… Motion Sensors".
+    """Lê o giroscópio E o acelerômetro de UM DualSense pelo node "… Motion Sensors".
 
     Por que este caminho e não o `PhysicalReportReader` (GYRO-01): aquele
     fatia a janela de motion do report CRU e a repassa OPACA ao vpad — os
@@ -2089,9 +2132,17 @@ class MotionSensorReader(_EvdevReconnectLoop):
     entrega graus/s direto. São consumidores diferentes do mesmo sensor: um
     alimenta o jogo, o outro alimenta a interface.
 
-    O eixo é mapeado por `ABS_RX/RY/RZ` (gyro) — `ABS_X/Y/Z` no mesmo node
-    são o ACELERÔMETRO e não entram aqui. A escala vem do `absinfo` lido no
-    open (ver `_on_device_opened`), não de constante.
+    **Os dois sensores vêm do MESMO node**, separados só pelo código do eixo:
+    `ABS_RX/RY/RZ` é o giroscópio (graus/s, `snapshot()`) e `ABS_X/Y/Z` é o
+    acelerômetro (g, `accel_snapshot()`) — `hid-playstation.c:1051-1064`. A
+    escala de cada um vem do `absinfo` lido no open (ver `_on_device_opened`),
+    não de constante.
+
+    ONDA-CONTROLES-04 (29/08/2026): o acelerômetro passou a ser LIDO. Esta
+    docstring dizia que `ABS_X/Y/Z` "não entram aqui", e era descrição do que
+    faltava, não do aparelho — o node já os entregava. Medido nesta bancada,
+    dois DualSense no cabo, `EVIOCGABS` fora deste código: `res=8192` nos três
+    eixos, e o módulo do vetor em repouso deu 0,996 g e 0,992 g.
     """
 
     _THREAD_NAME: ClassVar[str] = "hefesto-motion-sensors"
@@ -2106,14 +2157,31 @@ class MotionSensorReader(_EvdevReconnectLoop):
         self._thread: threading.Thread | None = None
         self._stop_flag = threading.Event()
         self._eixos: dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
+        self._accel: dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
         #: Nome do eixo -> resolução declarada pelo node (preenchido no open).
         self._resolucoes: dict[str, int] = {}
+        #: O mesmo, para os eixos do acelerômetro. Dicionário SEPARADO porque
+        #: as duas escalas são independentes (1024 contra 8192) e a chave é a
+        #: mesma letra: um dicionário só faria o giro dividir por 8192.
+        self._resolucoes_accel: dict[str, int] = {}
 
     def snapshot(self) -> GyroSnapshot:
         """Última velocidade angular conhecida (cópia sob lock)."""
         with self._lock:
             return GyroSnapshot(
                 x=self._eixos["x"], y=self._eixos["y"], z=self._eixos["z"]
+            )
+
+    def accel_snapshot(self) -> AccelSnapshot:
+        """Última aceleração conhecida, em g (cópia sob lock).
+
+        Método SEPARADO de `snapshot()` de propósito: quem já consome o giro
+        (o `sensor_hub`, os testes de status) continua chamando o de sempre e
+        recebendo o de sempre. Nada do que existia mudou de forma.
+        """
+        with self._lock:
+            return AccelSnapshot(
+                x=self._accel["x"], y=self._accel["y"], z=self._accel["z"]
             )
 
     # Hooks do loop base ------------------------------------------------
@@ -2139,29 +2207,47 @@ class MotionSensorReader(_EvdevReconnectLoop):
         vez de sumir (degradação silenciosa, como o tema sem CSS).
         """
         resolucoes: dict[str, int] = {}
+        resolucoes_accel: dict[str, int] = {}
         try:
             from evdev import ecodes
         except ImportError:  # pragma: no cover - sem evdev não há loop
             return
-        for eixo, nome in (("x", "ABS_RX"), ("y", "ABS_RY"), ("z", "ABS_RZ")):
-            code = getattr(ecodes, nome, None)
-            if code is None:
-                continue
-            with contextlib.suppress(Exception):
-                info = dev.absinfo(code)
-                resolucoes[eixo] = int(getattr(info, "resolution", 0) or 0)
+        for destino, eixos in (
+            (resolucoes, (("x", "ABS_RX"), ("y", "ABS_RY"), ("z", "ABS_RZ"))),
+            (resolucoes_accel, (("x", "ABS_X"), ("y", "ABS_Y"), ("z", "ABS_Z"))),
+        ):
+            for eixo, nome in eixos:
+                code = getattr(ecodes, nome, None)
+                if code is None:
+                    continue
+                with contextlib.suppress(Exception):
+                    info = dev.absinfo(code)
+                    destino[eixo] = int(getattr(info, "resolution", 0) or 0)
         with self._lock:
             self._resolucoes = resolucoes
+            self._resolucoes_accel = resolucoes_accel
 
     def _reset_on_disconnect(self) -> None:
-        """Controle sumiu: zera os eixos — gyro congelado mentiria movimento."""
+        """Controle sumiu: zera os SEIS eixos — valor congelado mente movimento.
+
+        O acelerômetro entra aqui pelo mesmo motivo do giro, e com uma agravante:
+        parado ele NÃO marca zero, marca ~1 g da gravidade. Deixar o último
+        valor congelado depois da desconexão desenharia um controle de pé, para
+        sempre, num controle que não está mais na mesa.
+        """
         with self._lock:
             self._eixos = {"x": 0.0, "y": 0.0, "z": 0.0}
+            self._accel = {"x": 0.0, "y": 0.0, "z": 0.0}
             self._resolucoes = {}
+            self._resolucoes_accel = {}
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
         if event.type != ecodes.EV_ABS:
             return
+        # O GIRO É PROCURADO PRIMEIRO, e a ordem é deliberada: ele é o que já
+        # tinha consumidor, e assim o custo por evento de giro fica EXATAMENTE
+        # o de antes (no máximo três comparações e `return`). Quem paga as três
+        # a mais é o acelerômetro, que é quem está chegando.
         for eixo, nome in (("x", "ABS_RX"), ("y", "ABS_RY"), ("z", "ABS_RZ")):
             code = getattr(ecodes, nome, None)
             if code is not None and code == event.code:
@@ -2170,15 +2256,25 @@ class MotionSensorReader(_EvdevReconnectLoop):
                         int(event.value), self._resolucoes.get(eixo, 0)
                     )
                 return
+        for eixo, nome in (("x", "ABS_X"), ("y", "ABS_Y"), ("z", "ABS_Z")):
+            code = getattr(ecodes, nome, None)
+            if code is not None and code == event.code:
+                with self._lock:
+                    self._accel[eixo] = g_por_unidade(
+                        int(event.value), self._resolucoes_accel.get(eixo, 0)
+                    )
+                return
 
 
 __all__ = [
+    "DUALSENSE_ACC_RES_PER_G",
     "DUALSENSE_GYRO_RES_PER_DEG_S",
     "DUALSENSE_PIDS",
     "DUALSENSE_VENDOR",
     "EIXO_MAX_HEFESTO",
     "ESPECIE_DUALSENSE",
     "ESPECIE_EXTERNAL",
+    "AccelSnapshot",
     "EixoAbsoluto",
     "EvdevReader",
     "EvdevSnapshot",
@@ -2195,6 +2291,7 @@ __all__ = [
     "find_all_dualsense_evdevs",
     "find_dualsense_evdev",
     "find_dualsense_touchpad_evdev",
+    "g_por_unidade",
     "graus_por_segundo",
     "localizar_node_por_identidade",
     "normalizar_eixo",

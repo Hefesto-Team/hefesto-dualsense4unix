@@ -15,6 +15,7 @@ Drácula, sem exceção (o `test_paleta_unica` reprova qualquer hex novo).
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from typing import Any, Final
 
 RGB = tuple[float, float, float]
@@ -93,6 +94,27 @@ def texto_eixo(graus_por_s: float) -> str:
     cruzar dígitos faz o painel inteiro "respirar".
     """
     return f"{graus_por_s:>+7.1f}"
+
+
+#: Fundo de escala das barras do acelerômetro, em **g**. Mesma disciplina do
+#: `ESCALA_GYRO_GRAUS_S`, e o mesmo raciocínio: o sensor vai a ±4 g
+#: (`DS_ACC_RANGE`, `hid-playstation.c:227`), mas o repouso já marca 1 g de
+#: gravidade e um chacoalhão de mão raramente passa de 2 g. Com o fundo em 4 g
+#: o controle parado moveria um quarto da barra e nada mais se veria; com 2 g a
+#: gravidade ocupa metade, que é o desenho do mockup. Acima de 2 g satura, sem
+#: nunca vazar do desenho.
+ESCALA_ACCEL_G: Final[float] = 2.0
+
+
+def texto_eixo_g(g: float) -> str:
+    """Rótulo numérico de um eixo de acelerômetro, em largura FIXA.
+
+    Sete caracteres como o do giro (`"  +0.98"`), pelo MESMO motivo — campo
+    fixo não faz o painel respirar a 10 Hz — e com duas casas em vez de uma
+    porque a faixa inteira cabe entre -2 e +2: com uma casa só, a inclinação
+    de um controle na mão andaria em degraus de 0,1 g, visíveis como salto.
+    """
+    return f"{g:>+7.2f}"
 
 
 def selo_mic(muted: bool | None) -> tuple[str, str, str] | None:
@@ -331,14 +353,32 @@ if _GTK_DISPONIVEL:
     class GyroBars(Gtk.DrawingArea):  # type: ignore[misc]
         """Três barras horizontais bidirecionais (X/Y/Z) com origem no centro.
 
-        ``set_valores(x, y, z)`` em graus/s; ``limpar()`` volta ao repouso.
-        Redesenha só quando algum eixo muda de verdade — a 10 Hz, repintar
-        três barras iguais seria trabalho puro de GPU.
+        ``set_valores(x, y, z)``; ``limpar()`` volta ao repouso. Redesenha só
+        quando algum eixo muda de verdade — a 10 Hz, repintar três barras
+        iguais seria trabalho puro de GPU.
+
+        **Serve os DOIS sensores do node de motion** (ONDA-CONTROLES-04): sem
+        argumento é o giroscópio de sempre, em graus/s; com
+        ``escala=ESCALA_ACCEL_G, texto=texto_eixo_g`` é o acelerômetro, em g.
+        O desenho é o mesmo porque o DADO é o mesmo — três eixos com sinal,
+        origem no centro —, e o que muda entre eles é só o fundo de escala e o
+        formato do número. Um segundo widget copiado seria a mesma pintura
+        mantida em dois lugares.
+
+        Os defaults deixam ``GyroBars()`` idêntico ao que era: nenhum dos
+        chamadores do giro precisou mudar de linha.
         """
 
-        def __init__(self) -> None:
+        def __init__(
+            self,
+            *,
+            escala: float = ESCALA_GYRO_GRAUS_S,
+            texto: Callable[[float], str] = texto_eixo,
+        ) -> None:
             super().__init__()
             self._valores: tuple[float, float, float] = (0.0, 0.0, 0.0)
+            self._escala = escala
+            self._texto = texto
             delta = escala_fonte()
             self._fonte_px = _FONTE_GYRO_PX + delta
             self._linha_px = _LINHA_GYRO_PX + delta
@@ -403,7 +443,7 @@ if _GTK_DISPONIVEL:
                 ctx.line_to(meio + 0.5, topo + 10)
                 ctx.stroke()
 
-                fracao = fracao_do_eixo(self._valores[indice])
+                fracao = fracao_do_eixo(self._valores[indice], self._escala)
                 comprimento = metade * fracao
                 if abs(comprimento) >= 1.0:
                     ctx.set_source_rgb(*hex_para_rgb(cor_hex))
@@ -417,7 +457,7 @@ if _GTK_DISPONIVEL:
 
                 ctx.set_source_rgb(*fraco)
                 ctx.move_to(inicio_valor, centro_y + 3)
-                ctx.show_text(texto_eixo(self._valores[indice]))
+                ctx.show_text(self._texto(self._valores[indice]))
             return False
 
     class MicMeter(DesenhoElastico):
@@ -653,10 +693,22 @@ else:
             return self._largura_natural
 
     class GyroBars:  # type: ignore[no-redef]
-        """Stub sem GTK: guarda os valores para as asserções de contrato."""
+        """Stub sem GTK: guarda os valores para as asserções de contrato.
 
-        def __init__(self) -> None:
+        Guarda TAMBÉM a escala e o formatador, e não por simetria: é como um
+        teste sem GTK distingue o desenho do giro do desenho do acelerômetro
+        dentro do card — os dois são a mesma classe.
+        """
+
+        def __init__(
+            self,
+            *,
+            escala: float = ESCALA_GYRO_GRAUS_S,
+            texto: Callable[[float], str] = texto_eixo,
+        ) -> None:
             self._valores: tuple[float, float, float] = (0.0, 0.0, 0.0)
+            self._escala = escala
+            self._texto = texto
 
         def set_valores(self, x: float, y: float, z: float) -> None:
             self._valores = (float(x), float(y), float(z))
@@ -769,6 +821,7 @@ __all__ = [
     "COR_MIC_SILENCIO",
     "COR_RADIO_AUDIO",
     "COR_RADIO_ENTRADA",
+    "ESCALA_ACCEL_G",
     "ESCALA_GYRO_GRAUS_S",
     "MIC_AMOSTRAS",
     "DesenhoElastico",
@@ -788,6 +841,7 @@ __all__ = [
     "posicao_normalizada",
     "selo_mic",
     "texto_eixo",
+    "texto_eixo_g",
     "texto_toques",
     "texto_volume",
     "volume_do_percentual",

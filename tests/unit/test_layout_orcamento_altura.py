@@ -107,6 +107,10 @@ _INPUTS_COMPLETOS = {
     "r2_raw": 40,
     "buttons": ["cross"],
     "gyro": {"x": 143.2, "y": -412.0, "z": 22.8},
+    # ONDA-CONTROLES-04: o acelerômetro ENTRA no card mais alto, e por isso
+    # entra aqui. Sem esta chave o bloco novo ficaria escondido e o orçamento
+    # mediria um card que ninguém com DualSense vai ver — um verde falso.
+    "accel": {"x": -0.005, "y": 0.981, "z": 0.172},
     "touchpad": {
         "touching": True,
         "x": 1440,

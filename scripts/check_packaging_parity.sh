@@ -160,6 +160,18 @@ ICON_INSTALLERS=(
 while IFS= read -r desk; do
     # Applet COSMIC tem contrato próprio (ícone versionado ao lado) — já cobrado.
     grep -q '^X-CosmicApplet=true' "${desk}" 2>/dev/null && continue
+    # AS DUAS CASAS (29/08/2026): o app de DESENVOLVIMENTO não entra em
+    # .deb/.rpm/Arch/Nix — ele é instalado só por `install-dev.sh`, na máquina
+    # de quem desenvolve. Cobrar o PNG dele desses quatro formatos seria o gate
+    # exigindo um arquivo que NÃO se deve empacotar. A dispensa mora no próprio
+    # `.desktop` (a chave `X-HefestoNaoEmpacotado`), do mesmo jeito que a do
+    # applet acima: quem criar um `.desktop` novo sem a chave é cobrado, e quem
+    # a puser tem de escrevê-la à mão, de propósito. E o gate DIZ que pulou —
+    # dispensa calada é como uma lápide envelhece sem ninguém ver.
+    if grep -q '^X-HefestoNaoEmpacotado=true' "${desk}" 2>/dev/null; then
+        echo "[ -- ] ${desk}: fora dos empacotamentos por declaração própria"
+        continue
+    fi
     icon="$(sed -n 's/^Icon=//p' "${desk}" | head -1)"
     if [[ -z "${icon}" ]]; then
         echo "[WARN] ${desk}: sem linha Icon="
@@ -193,20 +205,57 @@ done < <(find packaging -name '*.desktop' \
 # quebrava era justamente o que ela vê rodando. Então os DOIS nomes são contrato,
 # e o gate cobra os dois.
 echo "== Icon pedido pelo CÓDIGO (janela + bandeja) × nome instalado =="
-CODE_ICON_SOURCES=(
-    src/hefesto_dualsense4unix/app/main.py
-    src/hefesto_dualsense4unix/app/tray.py
-)
+#
+# ONDE O NOME MORA, e por que esta régua mudou de lugar em 29/08/2026.
+# --------------------------------------------------------------------
+# Ela procurava o literal dentro de `app/main.py` e `app/tray.py`:
+#     set_default_icon_name("hefesto-dualsense4unix")
+#     TRAY_ICON_NAME = "hefesto-dualsense4unix-symbolic"
+# Com AS DUAS CASAS (o app dela e o de desenvolvimento), esses dois pontos
+# passaram a DERIVAR o nome de `utils/identidade.py`, e os literais saíram de
+# lá. A régua não achou mais nada e desligou sozinha, com um `[WARN]` —
+# exatamente o defeito que esta casa já pagou onze vezes: *a régua reprova a
+# melhora em vez do defeito, porque digitava o que devia LER*.
+#
+# Agora ela lê o literal de onde ele passou a viver, e continua sendo texto
+# puro (sem depender do venv, que este script não tem). Só o bloco ESTAVEL
+# conta: o app de desenvolvimento não é empacotado em .deb/.rpm/Arch/Nix, e
+# cobrar o ícone dele desses formatos seria exigir arquivo que não deve existir.
+echo "       (o nome vem de utils/identidade.py:ESTAVEL — ver o comentário aqui)"
+IDENTIDADE_PY=src/hefesto_dualsense4unix/utils/identidade.py
 code_icons=()
-for src in "${CODE_ICON_SOURCES[@]}"; do
-    [[ -f "${src}" ]] || continue
-    while IFS= read -r nome; do
-        [[ -n "${nome}" ]] && code_icons+=("${nome}")
-    done < <(grep -hoE '(set_default_icon_name\(|TRAY_ICON_NAME[[:space:]]*=[[:space:]]*)"[^"]+"' "${src}" 2>/dev/null \
-        | grep -oE '"[^"]+"' | tr -d '"')
-done
+if [[ -f "${IDENTIDADE_PY}" ]]; then
+    icone_estavel="$(awk '/^ESTAVEL = Identidade\(/,/^\)/' "${IDENTIDADE_PY}" \
+        | sed -n 's/^[[:space:]]*icone="\([^"]*\)".*/\1/p' | head -1)"
+    if [[ -n "${icone_estavel}" ]]; then
+        code_icons+=("${icone_estavel}")
+        # A BANDEJA pede o mesmo nome com `-symbolic` (app/tray.py:
+        # TRAY_ICON_NAME). O sufixo é contrato — APPLET-MONOCROMÁTICO-01 —,
+        # então a régua só o deriva se o código ainda o construir assim.
+        if grep -q 'TRAY_ICON_NAME[[:space:]]*=.*-symbolic' \
+            src/hefesto_dualsense4unix/app/tray.py 2>/dev/null; then
+            code_icons+=("${icone_estavel}-symbolic")
+        else
+            echo "[FAIL] app/tray.py não constrói mais um nome terminado em -symbolic"
+            echo "       APPLET-MONOCROMÁTICO-01: sem o sufixo, o painel não recolore"
+            echo "       e o ícone dela volta a ser o único cromático da barra."
+            rc=1
+        fi
+    fi
+fi
+# A janela tem de pedir o ícone pelo nome da identidade, não por um literal solto.
+if ! grep -q 'set_default_icon_name(.*\.icone)' \
+    src/hefesto_dualsense4unix/app/main.py 2>/dev/null; then
+    echo "[FAIL] app/main.py não pede mais o ícone por identidade.icone"
+    echo "       o nome do ícone voltou a estar cravado, e esta régua deixa de"
+    echo "       enxergar as duas casas."
+    rc=1
+fi
 if [[ "${#code_icons[@]}" -eq 0 ]]; then
-    echo "[WARN] não achei nome de ícone pedido pelo código — o padrão de busca envelheceu?"
+    echo "[FAIL] não achei nome de ícone em ${IDENTIDADE_PY} (bloco ESTAVEL)"
+    echo "       sem isso a JANELA e a BANDEJA caem no ícone genérico e"
+    echo "       ninguém é avisado — por isso é FAIL, e não mais WARN."
+    rc=1
 else
     # Ordena e deduplica sem depender de associative array (bash 4.0+ basta).
     #

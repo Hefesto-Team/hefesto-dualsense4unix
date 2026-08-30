@@ -1,4 +1,4 @@
-"""Os três sensores da aba Status (S2): giroscópio, touchpad e o hub que os serve.
+"""Os sensores da aba Status (S2): movimento, touchpad e o hub que os serve.
 
 Sem DualSense conectado não dá para exercitar nada ao vivo — então tudo aqui
 é feito com dublês: eventos evdev sintéticos para os readers, e fábricas/
@@ -96,11 +96,22 @@ def test_motion_reader_mapeia_abs_r_para_os_tres_eixos() -> None:
     assert (snap.x, snap.y, snap.z) == pytest.approx((2.0, -1.0, 0.5))
 
 
-def test_motion_reader_ignora_o_acelerometro_do_mesmo_node() -> None:
+def test_motion_reader_nao_deixa_o_acelerometro_entrar_no_giroscopio() -> None:
     """ABS_X/Y/Z no node de motion são ACELERÔMETRO, não giroscópio.
 
     Os dois sensores dividem o mesmo `eventN`; ler os dois como um só faria
     as barras de giroscópio pularem com a gravidade, sem ninguém girar nada.
+
+    **Este teste NÃO foi apagado, e a razão é uma medição** (ONDA-CONTROLES-04,
+    29/08/2026). O plano da sprint o dava como régua velha, que sairia junto com
+    a cura — porque o acelerômetro deixou de ser ignorado: agora ele é LIDO, no
+    mesmo laço, para um snapshot separado. Mas o que este teste afere nunca foi
+    a ausência: é a SEPARAÇÃO. Arrancada a separação (o laço do acelerômetro
+    escrevendo em `self._eixos`), ele reprova — foi conferido. Uma régua que
+    morde não sai; o que estava errado era o nome, e é só o nome que mudou.
+
+    O gêmeo dele, do lado do acelerômetro, está em
+    `test_controles_o_acelerometro_chega.py`.
     """
     reader = _reader_motion()
     reader._handle_event(_evento(_Ecodes.EV_ABS, _Ecodes.ABS_X, 8192), _Ecodes)
