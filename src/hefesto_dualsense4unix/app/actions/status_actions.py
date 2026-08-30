@@ -1949,9 +1949,16 @@ class StatusActionsMixin(WidgetAccessMixin):
             if grupo is None:
                 grupo = btn
             btn.set_mode(False)  # toggle (visual de segmented control)
+            # FATO ERRADO, SUBSTITUÍDO (29/08/2026, TROCA-DE-PLAYER-01): esta
+            # dica dizia "Os outros deslizam para abrir lugar", que é um
+            # RODÍZIO. O daemon passou a fazer TROCA — palavra dela de 28/08,
+            # e o que o mockup aprovado promete em dezessete lugares. Com três
+            # ou mais na mesa as duas dão resultados diferentes, então a dica
+            # velha descrevia o produto ao contrário.
             btn.set_tooltip_text(
                 f"Faz deste o controle número {numero}. "
-                "Os outros deslizam para abrir lugar."
+                "Quem tem esse número hoje fica com o deste — "
+                "os dois trocam, e mais ninguém se mexe."
             )
             btn.connect("toggled", self._on_numero_button_toggled, numero)
             btn.show()

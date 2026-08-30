@@ -216,8 +216,11 @@ problema não aparece.
 A2DP/HFP — manda o áudio como agente dentro dos relatórios HID, e o Hefesto tem a
 ponte que decodifica e publica no PipeWire. A ponte é opt-in: ligá-la custa
 ~35% dos relatórios de input (260,4 Hz caem para 170,5 Hz) e acrescenta 106,2 Hz
-de áudio na mesma fila — o áudio não abre canal novo. O fone por Bluetooth está
-fora de escopo. Por USB, mic e fone funcionam normalmente.
+de áudio na mesma fila — o áudio não abre canal novo. **O som SAINDO pelo
+alto-falante do controle, por rádio, ainda não anda** — e "ainda não anda" é
+diferente de "não dá": o canal por HID existe e responde (o firmware executou os
+degraus de report de saída, medido em 15/08/2026), o que falta é descobrir o
+conteúdo do pacote. Por USB, mic e fone funcionam normalmente.
 
 **A troca automática de perfil não vê janelas Wayland nativas.** No COSMIC o
 portal ainda não expõe a janela ativa, então o reconhecimento cobre o que roda
@@ -260,6 +263,9 @@ escopo — ver [ADR-009](docs/adr/009-systemd-logind-scope.md).
   [referência canônica](docs/protocol/dualsense-referencia-canonica.md) — o mapa
   dos 47 bytes do report de saída, os modos de gatilho contra a enum oficial da
   Sony, a rota do áudio e os sensores.
+- **Vai mexer no código, ou é um assistente chegando agora?** Comece por
+  [O QUE É VERDADE HOJE](docs/process/2026-08-29-O-QUE-E-VERDADE-HOJE.md) — cinco minutos, o estado medido do projeto e as
+  armadilhas de leitura que mais custam.
 - **Decisões arquiteturais:** [docs/adr/](docs/adr/)
 - **Histórico de versões:** [CHANGELOG.md](CHANGELOG.md)
 

@@ -78,14 +78,84 @@ def sem_efeitos(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 class TestPromocao:
     def test_promove_o_vpad_degradado(self, sem_efeitos: dict[str, Any]) -> None:
-        """Vpad uinput + máscara DualSense + uhid disponível = recria em uhid."""
+        """Vpad uinput + máscara DualSense + uhid disponível = recria em uhid.
+
+        NOTA DATADA — 29/08/2026 (MÁSCARA-POR-JOGADOR-01). Esta linha exigia
+        `start == ["dualsense"]`: a promoção CRAVAVA a máscara na chamada. Isso
+        contradizia o comentário ao lado dela em `gamepad.py`
+        (*"`persist=False`: a preferência não mudou, só o backend"*), e era
+        inofensivo só enquanto a máscara era única — chegar aqui exigia
+        `device.flavor == "dualsense"`, o que implicava a sessão já em
+        dualsense, e a atribuição `config.gamepad_flavor = key` era no-op.
+
+        Com a máscara por APARELHO ligada isso deixou de valer: o P1 pode estar
+        em `dualsense` por escolha DELE numa sessão `xbox`, e a promoção de
+        backend passaria a virar a máscara da SESSÃO — contaminando a GUI, o
+        disco e todo secundário que herda o valor global no `_flavor()` do
+        co-op. Agora a promoção não opina sobre máscara nenhuma (`flavor=None`
+        = "a da sessão"), e quem decide o que o vpad veste é o
+        `mascara_efetiva` lá dentro.
+
+        A régua passou a medir o que IMPORTA: que a promoção não CARIMBA
+        máscara. Medir o literal `"dualsense"` era medir a implementação.
+        """
         daemon = _FakeDaemon(_FakeUinputPad())
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
-        assert sem_efeitos["start"] == ["dualsense"]
+        assert sem_efeitos["start"] == [None], (
+            "a promoção de BACKEND não pode carimbar máscara: o que ela recebe "
+            "vai parar em `config.gamepad_flavor`"
+        )
         # Não persiste (a preferência não mudou) nem solta o grab (o controle
         # físico voltaria para o jogo no meio da troca).
         assert sem_efeitos["stop_kwargs"] == {"persist": False, "release_grab": False}
+
+    def test_a_promocao_de_backend_nao_muda_a_mascara_da_sessao(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A régua do DESFECHO, não do argumento — MÁSCARA-POR-JOGADOR-01.
+
+        A promoção de um vpad degradado numa sessão `xbox` (o P1 está em
+        dualsense porque ESCOLHEU) tem de deixar `config.gamepad_flavor` como
+        estava. É a mesma verdade do teste acima, medida onde o dano seria
+        permanente: este campo é o que a GUI mostra, o que o co-op herda no
+        `_flavor()` e o que vai ao disco no gesto manual.
+
+        **NÃO usa a fixture `sem_efeitos`, e isso é o teste.** Escrito primeiro
+        com ela, este teste era um INSTRUMENTO FALSO: aquela fixture dubla o
+        `start_gamepad_emulation`, e um dublê nunca escreve em
+        `config.gamepad_flavor` — a asserção passava com a cura arrancada
+        (medido em 29/08/2026: devolvi o `flavor="dualsense"` ao produto e o
+        teste seguiu VERDE). Aqui o `start` é o de verdade; o que vira dublê é
+        só a criação do vpad, que é o único ponto que tocaria o kernel.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems import external_mask
+
+        monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
+            lambda flavor, **_kw: _FakeUinputPad(),
+        )
+        monkeypatch.setattr(gp, "_materialize_launch_env", lambda _d: None)
+        monkeypatch.setattr(gp, "_set_controller_grab", lambda _d, _g: None)
+
+        daemon = _FakeDaemon(_FakeUinputPad())
+        daemon.config.gamepad_flavor = "xbox"
+        daemon._mouse_device = None
+        # HARM-16: o `stop` real zera os motores na troca. `(0, 0)` = ninguém
+        # fixou rumble pela aba — o caminho quieto, fora do assunto daqui.
+        daemon.config.rumble_active = (0, 0)
+        # O P1 escolheu dualsense — é por isso que o vpad dele está em
+        # dualsense numa sessão xbox, e é o caso que não existia antes de hoje.
+        monkeypatch.setattr(
+            external_mask, "mascara_efetiva", lambda identity, jogo: "dualsense"
+        )
+
+        assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
+        assert daemon.config.gamepad_flavor == "xbox", (
+            "a promoção de backend vazou a escolha do APARELHO para a máscara "
+            "da SESSÃO"
+        )
 
     def test_uhid_indisponivel_nao_derruba_o_vpad_que_funciona(
         self, monkeypatch: pytest.MonkeyPatch, sem_efeitos: dict[str, Any]

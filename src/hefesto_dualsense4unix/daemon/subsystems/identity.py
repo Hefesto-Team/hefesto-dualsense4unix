@@ -98,12 +98,39 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   O que continua valendo de R-15/R-23, sem asterisco: nada expira, o lugar
   do ausente não é dropado, e o "Renumerar agora" (``compact``) segue sendo
   o gesto explícito dela;
+.. note::
+
+   **"D9" AQUI NÃO É O "D9" DO DESENHO.** Neste módulo ``D9`` é a decisão do
+   *slot volátil* (abaixo). Em
+   ``docs/process/2026-08-26-O-QUE-ELA-DESENHOU-o-todo-por-aba.md`` ``D9`` é
+   outra coisa — a decisão dos três botões de sensor na aba Controles. Os dois
+   documentos estão entre os primeiros que um agente novo abre, e a colisão já
+   custa uma busca errada por leitura; registrada em 29/08/2026 para não custar
+   duas.
+
 - o vpad (MAC forjado ``02:fe:...``) NUNCA ganha slot (D9) — o filtro
   existe aqui além do filtro de enumeração do backend, porque outros
   chamadores (describe/co-op) também consultam;
 - key sem MAC 12-hex (fallback ``path:...`` de firmware sem serial) ganha
   slot VOLÁTIL: vale na sessão, nunca é persistido (D9 — path muda entre
-  boots);
+  boots).
+
+  **O QUE ISSO CUSTA A UM USUÁRIO, escrito em 29/08/2026 porque a mesa desta
+  casa NÃO TEM COMO REVELAR:** para quem tem um controle sem serial de 12 hex,
+  a memória por identidade **não funciona nunca** — nem os LEDs, nem os
+  gatilhos, nem a vibração, nem o alto-falante voltam como ele deixou, em jogo
+  nenhum, em sessão nenhuma. Não é degradação: é o recurso inteiro ausente, em
+  silêncio, sem uma linha na tela dizendo por quê. Os cinco controles desta
+  bancada têm MAC de 12 hex, então **toda prova feita aqui passa** — é a
+  amostra mais favorável possível, e é exatamente o que a
+  ``D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA`` (decisão dela, 29/08/2026) condena:
+  *"o app vai ser GPL3 e gratuito e pensado em acessibilidade pra outros users
+  com autismo ou não"*. Dono: ``O-CONTROLE-SEM-MAC-01``.
+
+  A decisão de não persistir continua CERTA — um path que muda entre boots
+  persistido é pior que nada, porque devolve a configuração de um aparelho a
+  outro. O que falta não é gravar o path: é uma chave estável para quem não tem
+  MAC, e é isso que a sprint procura;
 - DualSense-only (D10) é garantido pelo CHAMADOR por construção: os uniqs
   que chegam aqui vêm dos handles físicos do backend (a enumeração filtra
   por VID/PID da Sony e descarta hidraw virtual). O registro não conhece
@@ -1195,6 +1222,122 @@ class ControllerIdentityRegistry:
                 self._dirty = True
                 self._save_locked()
                 self._dirty = False
+
+    # ------------------------------------------------------------------
+    # A ESCOLHA À MÃO (TROCA-DE-PLAYER-01, 29/08/2026)
+    # ------------------------------------------------------------------
+
+    def alinhar_gravado_com_a_tela(self) -> bool:
+        """Grava a fila do momento AGORA, sem esperar a janela de estabilidade.
+
+        Existe para UM chamador — ``identity.number.set``, a escolha à mão —
+        e a razão é que o clique dela é sobre **o que ela está vendo**. Quem
+        planeja a troca lê os lugares GRAVADOS (``snapshot``); quem pinta a
+        tela lê a FILA DO MOMENTO (``_ordem_do_momento_locked``). Enquanto os
+        dois discordam, o plano é calculado sobre uma mesa que não é a da
+        tela — e foi assim que o comando devolvia ``{"ok": true, "changed":
+        {}}`` sem mover nada.
+
+        MEDIDO em 29/08/2026, dois DualSense, o gravado dizendo ``A=1, B=2``
+        e ela ligando o **B** primeiro (a tela mostra ``B=1, A=2``): pedir o
+        1 para o A devolvia ``changed={}`` e a tela não se mexia. Com o
+        alinhamento antes do plano, o mesmo gesto move os dois.
+
+        Não é gesto novo nem regra nova: é o MESMO
+        :meth:`_congelar_locked` que a mesa estável dispara sozinha 4,0 s
+        depois (D-30) — só que adiantado para o instante do clique. A regra
+        automática de quem vira jogador 1 quando os controles chegam fica
+        INTACTA; o que muda é só o momento em que ela é gravada.
+
+        Devolve ``True`` quando algo mudou de lugar.
+        """
+        with self._lock:
+            antes = dict(self._ordem)
+            self._congelar_locked()
+            if self._ordem == antes:
+                return False
+            self._save_locked()
+            self._dirty = False
+            return True
+
+    def escolha_da_mao(self, ranks: dict[str, int]) -> None:
+        """Aplica a escolha DELA — e a fila do momento passa a concordar.
+
+        A forma é a que ela já fixou para o microfone
+        (``D-O-MICROFONE-A-MAQUINA-DA-O-PADRAO-O-PERFIL-SOBREPOE``): **a
+        máquina dá o padrão, a escolha sobrepõe.** Aqui o padrão é a ordem de
+        chegada (D-30), que continua decidindo quem nasce jogador 1; o que
+        esta função faz é deixar a escolha à mão VALER por cima dela.
+
+        Por que ``compact`` não serve, e a própria docstring dele já dizia:
+        *"a fila do momento NÃO é tocada aqui de propósito"*. Escrever só o
+        ``rank`` mexe no DESEMPATE de quem chegou junto — e nada mais. Com os
+        controles chegando em ondas diferentes (ligar um por um, o caso
+        normal dela), a exibição é decidida pela ONDA, o ``rank`` nem é
+        consultado, e a escolha ficava invisível. Pior: 4,0 s depois o
+        :meth:`_congelar_locked` reescrevia os ``rank`` a partir das ondas e
+        **apagava a escolha da memória e do disco**.
+
+        MEDIDO em 29/08/2026, três DualSense ligados um a um, pedindo o 1
+        para o último::
+
+            rank gravado depois do comando : {A: 2, B: 3, C: 1}
+            NA TELA                        : {A: 1, B: 2, C: 3}   <- não mexeu
+            rank depois do congelamento    : {A: 1, B: 2, C: 3}   <- apagou
+
+        **A cura, e ela é uma permutação:** as ONDAS que os presentes já
+        detêm são redistribuídas ENTRE ELES, na ordem dos lugares novos —
+        exatamente o que :meth:`_congelar_locked` faz com os ``postos``, no
+        sentido inverso. O conjunto de ondas não muda, então nenhuma onda é
+        inventada e quem conectar DEPOIS continua caindo no fim da fila (a
+        onda dele é maior que todas).
+
+        **Por que isso basta, e a prova é de ordenação, não de teste:** o
+        chamador entrega ``ranks`` estritamente crescentes na ordem desejada
+        (ele redistribui os MESMOS lugares, ordenados). Redistribuir as ondas
+        ordenadas na mesma sequência deixa a onda NÃO-DECRESCENTE nessa
+        ordem. Logo a chave ``(onda, rank)`` de
+        :meth:`_ordem_do_momento_locked` é estritamente crescente na ordem
+        desejada — e ordenar por ela devolve exatamente essa ordem. O
+        congelamento seguinte encontra ``_ordem`` já igual à fila do momento
+        e não escreve nada: **a escolha sobrevive ao tempo**, que é o que os
+        testes verdes de antes não viam (nenhum deles injetava relógio).
+
+        Ausente não é tocado (só os presentes entram na redistribuição), e o
+        replug devolve a onda que a escolha deu — ``mark_disconnected``
+        preserva a marca de chegada de propósito (D2/R-15).
+        """
+        with self._lock:
+            changed = False
+            for key, novo_rank in ranks.items():
+                if key in self._ordem and self._ordem[key] != novo_rank:
+                    self._ordem[key] = novo_rank
+                    changed = True
+            presentes = [
+                k
+                for k in self._connected
+                if k in self._ordem and k in self._chegada
+            ]
+            if len(presentes) >= 2:
+                ondas = sorted(self._chegada[k] for k in presentes)
+                for key, onda in zip(
+                    sorted(presentes, key=lambda k: self._ordem[k]),
+                    ondas,
+                    strict=True,
+                ):
+                    if self._chegada[key] != onda:
+                        self._chegada[key] = onda
+                        changed = True
+            if not changed:
+                return
+            logger.info(
+                "identity_escolha_da_mao",
+                ordem={k: self._ordem[k] for k in presentes},
+                chegada={k: self._chegada[k] for k in presentes},
+            )
+            self._dirty = True
+            self._save_locked()
+            self._dirty = False
 
     # ------------------------------------------------------------------
     # Persistência (restart do daemon com controles presentes)

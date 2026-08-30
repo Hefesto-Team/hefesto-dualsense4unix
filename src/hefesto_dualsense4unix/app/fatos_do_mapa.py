@@ -2138,12 +2138,12 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'por_que_nao_aciona': '',
         },
         'radio': {
-            'aceita': 'desconhecido',
+            'aceita': 'sim',
             'aciona': 'não',
             'ate_onde_foi': 'SAIU NO FIO',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': 'o-aparelho-recusa',
+            'por_que_nao_aciona': 'divida',
         },
     },
     'identidade.cracha_nos_dois_transportes@dualsense': {

@@ -46,7 +46,11 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # Tempos medidos nesta árvore em 25/08/2026, `dev` em f475b2a, e é por eles que
 # a camada rápida existe: `validar-acentuacao.py --all` sozinho custa 38 s e o
 # `shellcheck` sobre o `install.sh` de 219 KB custa 11,4 s -- os dois juntos são
-# oito vezes a camada rápida inteira, que fecha em 5,3 s com quinze portões.
+# oito vezes a camada rápida inteira, que fechava em 5,3 s com QUINZE portões.
+# CONTAGEM CORRIGIDA em 29/08/2026 — o tempo é de 25/08 e fica com a data dele;
+# a contagem envelheceu e virava número errado: hoje a tabela tem 21 `rapido` e
+# 7 `completo` (28 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
+# aqui conta de novo: `grep -cE '^rapido\|' scripts/portoes.sh`.
 # ---------------------------------------------------------------------------
 _LISTA() {
   cat <<'TABELA'

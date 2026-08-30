@@ -160,9 +160,8 @@ FALHA (as duas mais novas)
                           22/08/2026 sem NENHUMA regra que as lesse — a mesma
                           família "a casa sabe e o produto não faz", com dois
                           dias de idade. O domínio ganhou o quinto valor,
-                          `o-aparelho-recusa` (causa FORA do nosso código, como
-                          o `HANDSHAKE 0x04` da cor por rádio, medido em
-                          23/08/2026) — ver `DOMINIO_POR_SUFIXO["por_que_nao_aciona"]`
+                          `o-aparelho-recusa` (causa FORA do nosso código) —
+                          ver `DOMINIO_POR_SUFIXO["por_que_nao_aciona"]`
                           e `CAUSA_DE_FORA` em
                           `src/hefesto_dualsense4unix/app/fala_do_mapa.py`.
 
@@ -650,7 +649,16 @@ DOMINIO_POR_SUFIXO = {
     #: 22/08/2026 sem domínio (Z6-05, 24/08/2026 — a família "a casa sabe e o
     #: produto não faz" com dois dias de idade). `o-aparelho-recusa` é o quinto
     #: valor, e o único, com `nada-a-acionar`, que nomeia causa FORA do nosso
-    #: código — ver `CAUSA_DE_FORA` em
+    #: código.
+    #:
+    #: EXEMPLO REMOVIDO EM 29/08/2026, e a remoção é a lição. Estas duas
+    #: notas citavam a cor do plástico por rádio (`HANDSHAKE 0x04`, 23/08) como
+    #: O caso canônico de `o-aparelho-recusa`. Em 27/08/2026 a medição derrubou
+    #: aquela leitura: não era o aparelho, era a semente do nosso CRC — e a
+    #: célula virou `divida`. Um exemplo que a medição desmente ensina o valor
+    #: errado a quem lê o portão, então ele sai e nenhum outro entra no lugar:
+    #: o vocabulário se define pelo que a palavra diz, não por um caso que pode
+    #: caducar de novo. Ver `CAUSA_DE_FORA` em
     #: `src/hefesto_dualsense4unix/app/fala_do_mapa.py`. `divida`,
     #: `decisao-tomada` e `so-ela-decide` são causa NOSSA: um portão que aceita
     #: `AFIRMA_NAO_ACIONA` para qualquer uma delas licencia a tela a culpar o

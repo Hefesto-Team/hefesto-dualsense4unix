@@ -1602,6 +1602,15 @@ GET_FEATURE 0x81 -> 64 bytes
 
 Mais os códigos `Z1` a `ZB`, que são edições especiais.
 
+**ESTA TABELA ESTÁ INCOMPLETA, e a contagem é de 29/08/2026:** ela cobre 21
+códigos, e a fonte da verdade das cores desta casa — `docs/data/cores-do-dualsense.csv`
+— conhece **28**. Faltam aqui `13` HyperPop Techno Red, `14` HyperPop Remix
+Green, `15` HyperPop Rhythm Blue, `ZC` Ghost of Yōtei, `ZD` Marathon, `ZE`
+Genshin Impact e `ZF` 007 First Light — os sete mais novos. O produto tem a
+mesma lacuna (`integrations/cor_do_plastico.NOMES_DE_FABRICA`, 21 nomes), e
+fechá-la é a `ONDA-CONEXOES-12`, que faz as duas listas saírem do CSV. **Não
+copie esta tabela para lugar nenhum:** o dono do dado é o CSV.
+
 **As fontes, e por que o grau não é BAIXA:** `dualshock-tools.github.io`,
 `js/controllers/ds5-controller.js:196-226` e `:404-414`, com o mantenedor
 confirmando na issue #210; e **duas implementações independentes que concordam**
@@ -1674,9 +1683,18 @@ quatro unidades de quatro cores diferentes):
 | prefixo de MAC | fornecedor de rádio / lote; **nenhuma fonte liga isso à cor** | — |
 | `0x22`, offsets 45-51 | muda por `sw_series`, não por cor | o censo, acima |
 
-Escrever *"a cor não existe no aparelho"* seria falso. O que se pode escrever,
-com data e tamanho de amostra, é: **o caminho existe, está identificado, e não
-foi percorrido aqui.**
+Escrever *"a cor não existe no aparelho"* seria falso. **E a frase que estava
+aqui — *"o caminho existe, está identificado, e não foi percorrido aqui"* —
+caducou em 27/08/2026 e foi SUBSTITUÍDA em 29/08/2026:** ela é sobra de 15/08,
+quando nada tinha sido enviado, e contradizia a tabela de resultados 60 linhas
+acima **nesta mesma seção**. O caminho FOI percorrido, nos dois transportes.
+
+Com data e tamanho de amostra, o que se escreve hoje é: **o caminho está
+percorrido — quatro unidades pelo cabo (15/08/2026) e uma pelo rádio
+(27/08/2026) —, e quem ainda não o percorre é o PRODUTO**, por três portões
+nossos no rádio e por permissão de nó no cabo (o BROKER-01 deixa o hidraw
+`0600 root:root` e o leitor não usa a porta do broker; medido em 29/08/2026).
+Ver `docs/data/mapa-controles.csv`, linha `identidade.cor_do_aparelho@dualsense`.
 
 ### O `hardware_version` do sysfs distingue as unidades, e NÃO é a cor
 

@@ -257,10 +257,17 @@ Ordenado por (impacto ÷ custo):
 
 ## Documentos que contradizem esta tabela (dívida aberta)
 
-- **`docs/usage/bluetooth.md`** afirma que o áudio por BT *"(fone e microfone)
-  continua fora de escopo"* — **falso desde 25/07**, e contradiz o `README.md`
-  e o `docs/usage/cli.md` no mesmo repositório. **Foi a fonte do erro de 03/08
-  registrado no topo deste documento**;
+- ~~**`docs/usage/bluetooth.md`** afirma que o áudio por BT *"(fone e microfone)
+  continua fora de escopo"*~~ — **PAGA, e conferida linha a linha em
+  29/08/2026.** O arquivo foi reescrito: a seção *"Áudio do controle sem fio —
+  o que anda e o que não anda"* separa as duas perguntas, diz que **o microfone
+  por rádio anda e vem desligado**, registra A2DP e HFP como **descartados por
+  medição** (Class of Device `0x002508`, sem o bit de áudio) e a escada de
+  OUTPUT por HID como canal que responde. Nada ali diz mais "fora de escopo".
+  Esta linha ficou cinco dias mandando alguém consertar o que já estava
+  consertado — que é o custo de leitura que esta casa combateu em 21/08. **Foi
+  a fonte do erro de 03/08 registrado no topo deste documento**, e é só isso
+  que continua verdade sobre ela;
 - **`README.md`** publicava um número para o mic por BT medido sob uma condição
   que deixou de existir quatro minutos depois — **caducou em 07/08/2026** e
   saiu do README (Z6-09, 24/08/2026, no commit que criou

@@ -511,6 +511,29 @@ def test_a_regua_da_copia_sabe_recusar() -> None:
         "HZ_INPUT_SEM_MIC", "SLOTS_POR_RELATORIO"}
 
 
+#: **O MOCKUP DO ARRANJO EXISTE EM DOIS LUGARES, e esta régua via UM.**
+#:
+#: Medido em 29/08/2026: este teste passava verde enquanto
+#: ``novo-layout/mapa-das-portas.html`` carregava
+#: ``var CUSTO_SEM_MIC = 260, CUSTO_COM_MIC = 277`` e ``>277</b>/s`` — que é
+#: exatamente o literal que a última linha daqui proíbe. O ponto cego é
+#: estrutural e não é de cálculo: a régua nomeava **um caminho**, e a cópia que
+#: ela abre com duplo clique é a outra (``novo-layout/`` é onde os mockups
+#: moram). Uma correção pela metade deixa as duas versões vivas — que é o
+#: defeito que esta régua existe para matar.
+#:
+#: A cópia do ``novo-layout`` também citava a fonte errada da medição
+#: (``daemon/subsystems/bt_mic.py``, onde o A/B está em
+#: ``integrations/dualsense_bt_audio.py:77``).
+#:
+#: As duas passam a ser medidas, e a igualdade entre elas também: enquanto o
+#: arquivo for o mesmo em dois lugares, nenhum dos dois pode andar sozinho.
+_CAMINHOS_DO_MOCKUP_DO_ARRANJO = (
+    "docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html",
+    "novo-layout/mapa-das-portas.html",
+)
+
+
 def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
     """Corrigir nos DOIS foi a palavra dela, e esta linha é o que a mantém viva.
 
@@ -518,13 +541,29 @@ def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
     divergência de CÁLCULO. Esta pega a divergência de TEXTO: o mockup é o
     artefato que ela abre com duplo clique, e um número arredondado na legenda
     seria a segunda verdade voltando pela porta da tela.
+
+    E ela mede **as duas cópias** — ver o comentário acima.
     """
-    mockup = _FONTE_DO_MOTOR.parents[3] / (
-        "docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html")
-    if not mockup.exists():  # pragma: no cover - árvore de agente sem os docs
+    raiz = _FONTE_DO_MOTOR.parents[3]
+    textos = {}
+    for caminho in _CAMINHOS_DO_MOCKUP_DO_ARRANJO:
+        mockup = raiz / caminho
+        if not mockup.exists():  # pragma: no cover - árvore de agente sem os docs
+            continue
+        texto = mockup.read_text(encoding="utf-8")
+        textos[caminho] = texto
+        assert (
+            "var CUSTO_SEM_MIC = 260.4, CUSTO_COM_MIC = 276.7, SLOTS = 1600;" in texto
+        ), f"{caminho}: as constantes do motor não são as medidas"
+        assert ">276,7</b>/s" in texto, f"{caminho}: a legenda não diz 276,7"
+        assert ">260,4</b>/s" in texto, f"{caminho}: a legenda não diz 260,4"
+        assert ">277<" not in texto, f"{caminho}: o número arredondado voltou"
+        assert "dualsense_bt_audio.py" in texto, (
+            f"{caminho}: a legenda tem de citar onde o A/B foi medido")
+    if not textos:  # pragma: no cover - árvore de agente sem os docs
         pytest.skip("o mockup não está nesta árvore")
-    texto = mockup.read_text(encoding="utf-8")
-    assert "var CUSTO_SEM_MIC = 260.4, CUSTO_COM_MIC = 276.7, SLOTS = 1600;" in texto
-    assert ">276,7</b>/s" in texto
-    assert ">260,4</b>/s" in texto
-    assert ">277<" not in texto
+    if len(textos) == len(_CAMINHOS_DO_MOCKUP_DO_ARRANJO):
+        a, b = textos.values()
+        assert a == b, (
+            "as duas cópias de mapa-das-portas.html divergiram — "
+            "corrigir numa e não na outra é o defeito que esta régua mata")

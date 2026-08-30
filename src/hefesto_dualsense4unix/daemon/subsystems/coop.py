@@ -659,6 +659,10 @@ class CoopManager:
             return
 
         from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            mascara_efetiva,
+            vpad_ficou_para_tras,
+        )
 
         primary = self._primary_identity()
         # BUG-COOP-BOOT-PRIMARY-DUP-01: o conjunto `want` é keyed por MAC; se o
@@ -707,15 +711,23 @@ class CoopManager:
                 # de spawn deste MESMO ciclo recria o jogador do zero.
                 logger.warning("coop_player_vpad_morto_respawn", identity=mac)
                 self._teardown_player(mac)
-            elif (
-                player.vpad is not None
-                and getattr(player.vpad, "flavor", None) != desired_flavor
+            elif player.vpad is not None and vpad_ficou_para_tras(
+                getattr(player.vpad, "flavor", None), mac, desired_flavor
             ):
+                # MÁSCARA-POR-JOGADOR-01 (29/08/2026): `desired_flavor` deixou
+                # de ser um VALOR e passou a ser FUNÇÃO do aparelho. Sem esta
+                # troca, um jogador com máscara própria diverge do
+                # `config.gamepad_flavor` em TODO tique e o vpad dele seria
+                # derrubado e recriado a cada ~1s, para sempre — a cura da
+                # SPRINT-GAME-RUMBLE-01 virada contra a decisão dela. Com ela,
+                # a DIVERGÊNCIA ESCOLHIDA sobrevive e só o FLAVOR QUE FICOU
+                # PARA TRÁS (a máscara deste aparelho mudou, ou mudou a do jogo
+                # que ele herda) recria — que é o que a cura sempre fez.
                 logger.info(
                     "coop_player_flavor_changed",
                     identity=mac,
                     old=getattr(player.vpad, "flavor", None),
-                    new=desired_flavor,
+                    new=mascara_efetiva(mac, desired_flavor),
                 )
                 self._teardown_player(mac)
 
@@ -971,6 +983,11 @@ class CoopManager:
         # fake veta o uhid (VPAD-08).
         vpad = make_virtual_pad(
             self._flavor(),
+            # MÁSCARA-POR-JOGADOR-01 (29/08/2026): o MAC deste jogador. Com ele
+            # a máscara que ESTE aparelho escolheu vence; sem escolha, a do jogo
+            # (`_flavor()`) segue valendo — o dado já estava aqui do lado, no
+            # `rumble_sink` da linha de baixo.
+            identity=player.identity,
             rumble_sink=self._make_player_rumble_sink(player.identity),
             player=player.player_index,
             allow_uhid=controller_allows_uhid(self._daemon),

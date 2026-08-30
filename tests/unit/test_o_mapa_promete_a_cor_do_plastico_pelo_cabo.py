@@ -44,6 +44,7 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.integrations import cor_do_plastico
 from hefesto_dualsense4unix.integrations.cor_do_plastico import (
     FEATURE_RESPOSTA,
     TAMANHO_DO_FEATURE,
@@ -192,12 +193,94 @@ class TestOProdutoLeACorPeloCabo:
         assert ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=explode, **bancada) is None
 
 
+def _abre_o_no_pela_porta_do_broker() -> bool:
+    """`_perguntar_ao_hidraw` pede o fd ao broker, ou abre o nó na unha?
+
+    Lido por AST do fonte, nunca por chamada: chamar a função de verdade
+    encostaria no `/dev/hidraw` dela. `os.open` direto morre com EACCES enquanto
+    o BROKER-01 estiver instalado — e ele é DEFAULT em todo formato.
+    """
+    import ast
+
+    #: RÉGUA FALSA, CORRIGIDA EM 29/08/2026 — e ela mentiu no primeiro uso.
+    #: A primeira versão desta função olhava só o ALVO das chamadas
+    #: (`ast.unparse(filho.func)`) procurando "abrir_hidraw". Quando a cura
+    #: entrou, ela entrou pela forma que esta casa usa em todo lugar — o
+    #: transporte injetável: `porta = abrir if abrir is not None else
+    #: abrir_hidraw`, e depois `porta(caminho, escrita=True)`. O alvo da chamada
+    #: passou a ser `porta`, e a régua devolveu "não curado" com a cura no
+    #: disco, deixando a célula do mapa em `não` com o produto lendo.
+    #: Instrumento que confunde o NOME DA VARIÁVEL com o ATO — a mesma família
+    #: das réguas que esta casa já pegou. Agora ela varre TODO identificador do
+    #: corpo, não só o alvo da chamada.
+    fonte = Path(cor_do_plastico.__file__).read_text(encoding="utf-8")
+    for no in ast.walk(ast.parse(fonte)):
+        if not (isinstance(no, ast.FunctionDef) and no.name == "_perguntar_ao_hidraw"):
+            continue
+        nomes: set[str] = set()
+        for filho in ast.walk(no):
+            if isinstance(filho, ast.Name):
+                nomes.add(filho.id)
+            elif isinstance(filho, ast.Attribute):
+                nomes.add(ast.unparse(filho))
+            elif isinstance(filho, ast.alias):
+                nomes.add(filho.name)
+        pela_porta = any("abrir_hidraw" in nome for nome in nomes)
+        na_unha = "os.open" in nomes
+        assert pela_porta != na_unha, (
+            "`_perguntar_ao_hidraw` tem de usar UMA das duas portas, e esta "
+            f"régua vê {sorted(n for n in nomes if 'open' in n or 'abrir' in n)}. "
+            "As duas juntas (ou nenhuma) deixam a régua sem sinal, que é como "
+            "ela mentiu em 29/08/2026."
+        )
+        return pela_porta
+    raise AssertionError("`_perguntar_ao_hidraw` sumiu do módulo da cor")
+
+
 class TestOMapaEOProdutoNaoDivergem:
-    def test_a_celula_do_cabo_afirma_o_que_o_produto_faz(
+    """A célula do cabo tem de seguir o CÓDIGO, e nos dois sentidos.
+
+    SUBSTITUÍDO em 29/08/2026. Esta classe exigia `cabo_aciona == "sim"` desde
+    22/08, quando a leitura entrou no produto. A afirmação era verdadeira sobre
+    o ENSAIO e falsa sobre o PRODUTO: `_perguntar_ao_hidraw` abre o nó com
+    `os.open` DIRETO, e o BROKER-01 — que é DEFAULT no `install.sh` — deixa os
+    nós dos DualSense `0600 root:root` para escondê-los do jogo. Medido em
+    29/08/2026 na máquina dela, com o broker no ar: `PermissionError 13 EACCES`
+    nos dois controles, e `ler_pelo_cabo` devolvendo `None` — que é "Não sei" na
+    tela.
+
+    Uma régua que só travasse o `não` novo repetiria o defeito ao contrário: no
+    dia em que alguém trocar o `os.open` pela porta do broker
+    (`A-COR-PELA-PORTA-DO-BROKER-01`), a cura passaria com a célula mentindo
+    `não`. Por isso a asserção é BICONDICIONAL — ela lê o código e exige que a
+    célula diga a mesma coisa, em qualquer das duas direções.
+    """
+
+    def test_a_celula_do_cabo_segue_a_porta_que_o_produto_usa(
         self, linha_do_mapa: dict[str, str]
     ) -> None:
-        assert linha_do_mapa["cabo_aciona"] == "sim"
+        pela_porta_certa = _abre_o_no_pela_porta_do_broker()
+        esperado = "sim" if pela_porta_certa else "não"
+        assert linha_do_mapa["cabo_aciona"] == esperado, (
+            f"`_perguntar_ao_hidraw` "
+            f"{'pede o fd ao broker' if pela_porta_certa else 'abre o nó com os.open direto'}"
+            f", logo `cabo_aciona` tem de ser {esperado!r} — está "
+            f"{linha_do_mapa['cabo_aciona']!r}. Com o BROKER-01 no ar (DEFAULT), "
+            "`os.open` no nó de um DualSense devolve EACCES e a cor vira 'Não sei'."
+        )
         assert linha_do_mapa["cabo_de_onde_sei"] == "medido"
+
+    def test_a_divida_do_cabo_tem_causa_declarada(
+        self, linha_do_mapa: dict[str, str]
+    ) -> None:
+        """`aciona=não` + `medido` sem causa é a regra 16 do portão de paridade."""
+        if _abre_o_no_pela_porta_do_broker():
+            pytest.skip("a cura entrou: não há dívida a declarar no cabo")
+        assert linha_do_mapa["cabo_por_que_nao_aciona"] == "divida", (
+            "a causa é NOSSA — o nosso broker esconde o nó e o nosso leitor não "
+            "usa a porta dele. Culpar o aparelho aqui seria a mentira que a "
+            "correção de 29/08/2026 desfez do lado do rádio"
+        )
 
     def test_a_referencia_de_codigo_do_cabo_aponta_para_o_produto(
         self, linha_do_mapa: dict[str, str]
@@ -208,10 +291,23 @@ class TestOMapaEOProdutoNaoDivergem:
         assert "config/secao_controles.py" in referencia
         assert "zero linhas no produto" not in referencia
 
-    def test_o_radio_continua_dizendo_nao(self, linha_do_mapa: dict[str, str]) -> None:
-        """O EIO do E7 não foi refutado, e a assimetria fica DECLARADA."""
+    def test_o_radio_nao_acusa_mais_o_aparelho(
+        self, linha_do_mapa: dict[str, str]
+    ) -> None:
+        """O `o-aparelho-recusa` de 23/08 foi REFUTADO em 27/08: era o nosso CRC.
+
+        O produto continua sem ler por rádio — três portões nossos recusam antes
+        de o byte sair —, mas a causa é dívida, não recusa do firmware. Esta
+        asserção existe para a lápide não voltar: enquanto a `ONDA-CONEXOES-11`
+        não fechar, alguém relendo a captura de 23/08 pode reescrevê-la.
+        """
         assert linha_do_mapa["radio_aciona"] == "não"
+        assert linha_do_mapa["radio_por_que_nao_aciona"] == "divida", (
+            "a semente do CRC no sentido de ESCRITA é `0x53`, não `0xA3` — "
+            "medido em 27/08/2026, com o aparelho devolvendo o serial por rádio. "
+            "`o-aparelho-recusa` aqui é acusar o controle dela pelo nosso bug"
+        )
         assert linha_do_mapa["assimetria_declarada"].strip(), (
-            "cabo `sim` e rádio `não` sem assimetria declarada é a forma exata "
-            "da regressão que este mapa existe para pegar"
+            "a assimetria entre o que o ENSAIO lê e o que o PRODUTO lê tem de "
+            "ficar declarada — é a forma exata da regressão que o mapa pega"
         )

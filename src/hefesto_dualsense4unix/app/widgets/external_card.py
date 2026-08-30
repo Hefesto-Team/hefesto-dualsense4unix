@@ -53,7 +53,7 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     nome_oficial_da_cor,
     sinonimos_da_busca,
 )
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_ACIONA, Fala, frase_de_exibicao
+from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NADA, Fala, frase_de_exibicao
 from hefesto_dualsense4unix.utils.i18n import _
 
 #: Quantos números de jogador o card oferece. Cinco, e não quatro: a mesa desta
@@ -85,21 +85,43 @@ DICA_DA_COR_NO_CABO = (
     "Lida do próprio controle: o código da cor está no firmware, nos "
     "caracteres 5 e 6 do serial de fábrica."
 )
-#: Z6-06 (24/08/2026) — a frase antiga ("Lida do próprio controle, por cabo ou
-#: por rádio.", 22/08/2026) prometia por rádio exatamente o que o firmware
-#: recusa: medido em 23/08/2026 (`HANDSHAKE 0x04`, `ERR_INVALID_PARAMETER`,
-#: `btmon` no canal de controle L2CAP — ver
-#: `docs/data/mapa-controles.csv:111`, `identidade.cor_do_aparelho@dualsense`).
-#: Declarada como `Fala` para o portão (`scripts/validar-fala-de-tela.py`)
-#: reprovar se este texto voltar a prometer o que o mapa mede como recusado.
-#: CLASSE DE TELA: ESTRUTURAL — muda o que se lê ao abrir; o aceite pede foto
-#: antes/depois vista por ela antes de ir ao ar (PROVA-DE-TELA-01).
+#: FATO ERRADO, SUBSTITUÍDO (29/08/2026) — e o que saiu foi uma ACUSAÇÃO AO
+#: APARELHO DELA. Esta frase dizia *"No rádio o controle recusa o pedido da
+#: cor"*, com `afirma=AFIRMA_NAO_ACIONA`, apoiada na leitura de 23/08/2026 do
+#: `HANDSHAKE 0x04`. **Não era o controle: era a semente do nosso CRC.** O
+#: ensaio de 23/08 assinou um `SET_REPORT` com a semente de `DATA|FEATURE`
+#: (`0xA3`) quando a que SAI é `SET_REPORT|FEATURE` (`0x53`); medido em
+#: 27/08/2026, no mesmo controle e no mesmo comando, o `0x53` foi ACEITO e o
+#: aparelho devolveu o serial POR RÁDIO. Ver
+#: `docs/data/mapa-controles.csv:111` (`identidade.cor_do_aparelho@dualsense`),
+#: cuja `radio_por_que_nao_aciona` passou de `o-aparelho-recusa` para `divida`.
+#:
+#: A FRASE NOVA NÃO PROMETE NADA A MAIS: o gesto pedido a ela continua sendo o
+#: mesmo — escolher na lista. O que mudou é de quem é a culpa, e ela é nossa.
+#: São TRÊS portões nossos que recusam antes de qualquer byte sair, e tirá-los
+#: é a `ONDA-CONEXOES-11`.
+#:
+#: `AFIRMA_NADA` + `porque=` é o único par legal aqui, e isso é o portão
+#: funcionando, não um obstáculo a contornar: `CAUSA_DE_FORA` (`fala_do_mapa`)
+#: só admite `nada-a-acionar` e `o-aparelho-recusa`, justamente para a tela não
+#: poder culpar o aparelho pelo que é nosso.
+#:
+#: CLASSE DE TELA: esta dica é TOOLTIP (`_bloco` -> `set_tooltip_text`), não
+#: texto que se lê ao abrir — o card não muda de tamanho nem de posição. A
+#: correção anterior classificou-a como ESTRUTURAL; medido em 29/08/2026, a
+#: pegada visual é zero. Ainda assim é PALAVRA NOVA na tela, e o olho dela
+#: continua sendo a palavra final (PROVA-DE-TELA-01).
 DICA_DA_COR_NO_RADIO = Fala(
     chave="identidade.cor_do_aparelho@dualsense",
     lado="radio",
     aba="Configurações",
-    texto="No rádio o controle recusa o pedido da cor. Escolha na lista.",
-    afirma=AFIRMA_NAO_ACIONA,
+    texto="O Hefesto ainda não lê a cor por rádio. Escolha na lista.",
+    afirma=AFIRMA_NADA,
+    porque=(
+        "o aparelho responde por rádio — medido em 27/08/2026 com a semente "
+        "0x53 —, e quem ainda não pede somos nós: três portões do próprio "
+        "Hefesto recusam antes de o byte sair (ONDA-CONEXOES-11)"
+    ),
 )
 DICA_DA_COR_NAO_LIDA = (
     "O Hefesto não conseguiu ler a cor deste controle. Escolha na lista e a "
@@ -324,12 +346,26 @@ if _GTK_DISPONIVEL:
             grid da seção iguala as fileiras (`row_homogeneous`), um card com
             grade encarecia a fileira inteira.
 
-            **Por que o cabo responde e o rádio não**, que é o que justifica os
-            dois desenhos: `docs/data/mapa-controles.csv:111`
-            (`identidade.cor_do_aparelho@dualsense`) mede `cabo_aciona=sim`,
-            `radio_aciona=não` — o `SET_FEATURE 0x80` devolve `EIO` imediato por
-            rádio. No cabo a busca só existe para corrigir; no rádio ela é o
-            único caminho, e a dica que diz isso já existia.
+            **Por que os dois desenhos continuam diferentes** — e a razão
+            MUDOU em 29/08/2026, embora o desenho não. Até aqui esta nota dizia
+            que o cabo respondia e o rádio não, porque o `SET_FEATURE 0x80`
+            devolvia `EIO`. Medido: o APARELHO responde nos dois transportes
+            (cabo, 4 de 4 unidades em 15/08/2026; rádio, uma unidade em
+            27/08/2026, depois de a semente do CRC ser corrigida para `0x53`).
+            Quem não pergunta é o PRODUTO, e só do lado do rádio: três portões
+            nossos recusam antes de o byte sair.
+            `docs/data/mapa-controles.csv:111`
+            (`identidade.cor_do_aparelho@dualsense`) diz hoje `cabo_aciona=sim`
+            e `radio_aciona=não`, com `divida` no rádio.
+
+            **E o cabo esteve quebrado sem esta nota saber, de 22/08 a
+            29/08/2026:** a célula dizia `sim` porque o ENSAIO lia, e o produto
+            abria o nó com `os.open` direto num nó que o BROKER-01 deixa
+            `0600 root:root` — EACCES, e "Não sei" na tela. A cura (pedir o fd
+            ao broker) entrou em 29/08.
+
+            O desenho fica como está: no rádio a busca é o único caminho, e é
+            ela que está na tela.
             """
             declarada = bool(dados.cor_id)
             if not declarada and dados.cor_lida:

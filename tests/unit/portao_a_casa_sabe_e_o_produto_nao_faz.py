@@ -802,13 +802,14 @@ _NAO_E_PROMESSA: dict[str, str] = {
     # jeito — `curva_propria.py` é corrente fechada e nenhum ponto de entrada o
     # alcança. Não é dívida nova: é a mesma linha que já valia para `tests/`,
     # aplicada à bancada. A nota de `_PONTOS_DE_ENTRADA` traz a medição.
-    "integrations/hidraw_broker_client.py::abrir_hidraw": (
-        "MEDIDO em 22/08/2026. API de BANCADA: o único chamador é "
-        "`scripts/ensaios/comum.py`:87+421, o cliente único que os instrumentos "
-        "de ensaio compartilham. O produto abre hidraw por `make_broker_opener` "
-        "(:486) e por `HidrawBrokerClient` (:79), e os dois seguem alcançados. "
-        "Instrumento é da mesma espécie que `tests/`, e `tests/` nunca contou."
-    ),
+    # `abrir_hidraw` SAIU DAQUI em 29/08/2026, e este portão foi quem mandou.
+    # A lápide dizia "API de BANCADA: o único chamador é `scripts/ensaios/
+    # comum.py`" — verdade em 22/08 e falsa hoje: `integrations/
+    # cor_do_plastico._perguntar_ao_hidraw` passou a entrar por ela, que era o
+    # conserto do "Não sei" nos dois cards dela. A lápide sobreviveu à própria
+    # cura, o portão viu, e a entrada foi apagada em vez de atualizada — é a
+    # regra desta casa: fato que a medição derrubou sai, não fica ao lado do
+    # certo.
     "integrations/hidraw_broker_client.py::porta_provavel": (
         "MEDIDO em 22/08/2026. Instrumento: `scripts/record_hid_capture.py`"
         ":66+420 e `scripts/ensaios/comum.py`:92+481 a usam para imprimir por "
@@ -1346,27 +1347,23 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # IDENTIDADE do jogador — e ele tem lápide própria, logo abaixo, em
     # `::vpad_ficou_para_tras`. Não se guarda a entrada velha ao lado da nova:
     # ela mandaria a próxima pessoa procurar um chamador que já existe.
-    "daemon/subsystems/external_mask.py::vpad_ficou_para_tras": (
-        "MEDIDO em 15/08/2026, no dia em que nasceu: é a função que separa a "
-        "DIVERGÊNCIA ESCOLHIDA (o jogador pediu outra máscara e o vpad dele "
-        "sobrevive destoando) do FLAVOR QUE FICOU PARA TRÁS (a máscara mudou e "
-        "o vpad nasceu na antiga, logo é recriado) — a cura da "
-        "SPRINT-GAME-RUMBLE-01 contra `P2+ presos no flavor antigo, rumble "
-        "morto`. O chamador dela é UM só e mora em "
-        "`daemon/subsystems/coop.py`:417-424, no laço que hoje compara "
-        "`player.vpad.flavor` com um `desired_flavor` GLOBAL "
-        "(`coop.py`:394 → `_flavor()`:481-485, que lê um único "
-        "`config.gamepad_flavor`). "
-        "O QUE A FECHA: `desired_flavor` deixar de ser um valor e passar a ser "
-        "função do MAC — `vpad_ficou_para_tras(getattr(p.vpad, 'flavor', None), "
-        "mac, self._flavor())` no lugar da comparação. São as mesmas duas "
-        "linhas que fazem `_promote_player` passar `identity=mac` ao "
-        "`make_virtual_pad`. Não foi feito nesta leva porque `coop.py` estava "
-        "sob edição de outra frente no mesmo dia, e derrubar aquela cura por "
-        "descuido reintroduz um defeito MEDIDO. O caso inteiro está em "
-        "`docs/process/sprints/2026-08-15-MASCARA-POR-JOGADOR-01-a-decisao-de-"
-        "14-08-esbarra-na-de-10-08.md`."
-    ),
+    # `daemon/subsystems/external_mask.py::vpad_ficou_para_tras` MOROU AQUI e
+    # foi APAGADA em 29/08/2026, pelo motivo que a própria entrada mandava: A
+    # CORRENTE FECHOU. A entrada dizia, palavra por palavra, o que a fecharia —
+    # "`desired_flavor` deixar de ser um valor e passar a ser função do MAC" e
+    # "as mesmas duas linhas que fazem `_promote_player` passar `identity=mac`
+    # ao `make_virtual_pad`" — e foi exatamente isso, sob a decisão dela
+    # `D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`:
+    #   - `integrations/virtual_pad.py::make_virtual_pad` ganhou `identity` e
+    #     resolve `mascara_efetiva` ANTES de escolher o backend (a armadilha que
+    #     `external_mask.py:59-68` descreveu para quem escrevesse este degrau);
+    #   - `daemon/subsystems/gamepad.py` passa `primary_identity(daemon)`;
+    #   - `daemon/subsystems/coop.py::_promote_player` passa `identity=mac`, e o
+    #     laço do `_sync_full` chama `vpad_ficou_para_tras` — que é este símbolo,
+    #     agora com chamador em produção.
+    # A razão de não ter sido feito então ("`coop.py` sob edição de outra frente
+    # no mesmo dia") caducou. Não se guarda a lápide ao lado da cura: ela
+    # mandaria a próxima pessoa procurar um chamador que já existe.
     # --- as duas metades das notificações ----------------------------------
     "integrations/desktop_notifications.py::notify_battery_low": (
         "MEDIDO em 12/08/2026: só `tests/` a chama; em `src/` só existe a "

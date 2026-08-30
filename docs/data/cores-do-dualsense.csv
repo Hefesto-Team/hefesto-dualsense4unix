@@ -113,7 +113,7 @@ codigo_da_cor,id,nome,zona,hex,grau,acabamento,fonte,nota
 04,galactic-purple,Galactic Purple,dpad,#5B3A7A,FOTO,fosco,pesquisa-externa-27-08,
 04,galactic-purple,Galactic Purple,analogicos,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
 04,galactic-purple,Galactic Purple,gatilhos,#5B3A7A,FOTO,fosco,pesquisa-externa-27-08,
-05,starlight-blue,Starlight Blue,casca_esq,#7EB8D4,FOTO,fosco,pesquisa-externa-27-08,azul-gelo; o SVG usava #55BDF8 — distância 55, a MAIOR das cinco
+05,starlight-blue,Starlight Blue,casca_esq,#7EB8D4,FOTO,fosco,pesquisa-externa-27-08,"azul-gelo; o SVG usava #55BDF8 — distância 55, a MAIOR das cinco"
 05,starlight-blue,Starlight Blue,casca_dir,#7EB8D4,FOTO,fosco,pesquisa-externa-27-08,
 05,starlight-blue,Starlight Blue,painel,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,
 05,starlight-blue,Starlight Blue,touch,#1A1A1C,FOTO,fosco,pesquisa-externa-27-08,

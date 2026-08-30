@@ -27,9 +27,12 @@ A COLUNA, E POR QUE ELA É UM PAR
 --------------------------------
 `cabo_por_que_nao_aciona` / `radio_por_que_nao_aciona`, ao lado de
 `cabo_aciona`/`radio_aciona`. É par por transporte porque a resposta MUDA de
-lado: `identidade.cor_do_aparelho@dualsense` é decisão nenhuma no cabo (lá o
-produto lê a cor do plástico, e a aba Configurações a mostra desde 22/08) e é
-dívida no rádio (lá não chega).
+lado — e a MESMA linha já ocupou os dois papéis.
+`identidade.cor_do_aparelho@dualsense` é `aciona=sim` no cabo (o produto lê,
+desde que passou a pedir o fd ao broker em 29/08/2026) e `divida` no rádio —
+onde a causa dizia `o-aparelho-recusa` até 29/08 e a recusa que parecia do
+firmware era a semente do nosso CRC. Nenhuma das duas correções mudou o
+aparelho: o aparelho sempre entregou a cor nos dois transportes.
 
 O domínio, e ele responde *"não aciona — e daí?"*:
 
@@ -120,9 +123,9 @@ DIVIDA = "divida"
 DECISAO = "decisao-tomada"
 NADA_A_ACIONAR = "nada-a-acionar"
 SO_ELA_DECIDE = "so-ela-decide"
-#: O quinto valor (Z6-05, 24/08/2026): causa FORA do nosso código, como o
-#: `HANDSHAKE 0x04` da cor por rádio — nunca `decisao-tomada`, que diria que a
-#: escolha foi nossa.
+#: O quinto valor (Z6-05, 24/08/2026): causa FORA do nosso código — nunca
+#: `decisao-tomada`, que diria que a escolha foi nossa. (O exemplo que estava
+#: aqui, a cor por rádio, saiu em 29/08/2026: a medição de 27/08 o derrubou.)
 O_APARELHO_RECUSA = "o-aparelho-recusa"
 
 #: O domínio. Valor fora daqui reprova, de propósito: acrescentar resposta nova
@@ -133,10 +136,40 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: ─────────────────────────────────────────────────────────────────────────
 #: O TETO DA DÍVIDA — retrato de 24/08/2026 (baixado de 22/08), e ele só desce.
 #: ─────────────────────────────────────────────────────────────────────────
-#: PAGA em 24/08/2026 (Z6-05): `identidade.cor_do_aparelho@dualsense` (rádio)
-#: saiu desta lista. Não é mais dívida — a medição de 23/08/2026 (`HANDSHAKE
-#: 0x04`, `btmon`) nomeou a causa como `o-aparelho-recusa`, e causa do
-#: APARELHO não é "ninguém escreveu o código". Ficam as três:
+#: DESPAGA em 29/08/2026, e a confissão é esta: `identidade.cor_do_aparelho@dualsense`
+#: VOLTOU para esta lista, pelos DOIS lados, e o teto subiu de 3 para 5.
+#:
+#: Em 24/08/2026 (Z6-05) ela saiu daqui porque a medição de 23/08 (`HANDSHAKE
+#: 0x04`, `btmon`) tinha nomeado a causa como `o-aparelho-recusa` — e causa do
+#: APARELHO não é "ninguém escreveu o código". **Aquela leitura caiu em
+#: 27/08/2026**: a recusa era a semente do nosso CRC (`0xA3` no lugar de
+#: `0x53`), e com a semente certa o aparelho devolve o serial POR RÁDIO. O que
+#: parecia limite do aparelho era código que ninguém escreveu, que é a
+#: definição de `divida`.
+#:
+#: E o lado do CABO entrou junto, medido em 29/08/2026 na máquina dela: o
+#: produto abre o nó com `os.open` direto e o BROKER-01 o deixa `0600
+#: root:root`, então `ler_pelo_cabo` devolve `None` — a célula dizia `sim`
+#: desde 22/08 porque o ENSAIO lê, pela porta do broker.
+#:
+#: SUBIR O TETO É CONFISSÃO. O dia 29/08/2026 subiu de 3 para 5 e fechou em 4,
+#: e as duas metades do movimento estão escritas porque só juntas fazem sentido:
+#:
+#:   SUBIU +2. A cor do plástico voltou para esta lista pelos DOIS lados. Pelo
+#:   RÁDIO porque a causa `o-aparelho-recusa` caiu (era a semente do nosso CRC).
+#:   Pelo CABO porque se mediu, naquela manhã, que `_perguntar_ao_hidraw` abria
+#:   o nó com `os.open` direto e morria em EACCES — o BROKER-01 deixa o nó
+#:   `0600 root:root`, e a célula dizia `sim` desde 22/08 porque o ENSAIO lê.
+#:
+#:   DESCEU -1. A do CABO foi PAGA no mesmo dia
+#:   (`A-COR-PELA-PORTA-DO-BROKER-01`): o produto passou a pedir o fd ao broker
+#:   por SCM_RIGHTS. Pagar é baixar o teto no mesmo commit, e é o que se fez.
+#:
+#: Ficam as quatro:
+#:
+#:   identidade.cor_do_aparelho@dualsense    rádio — a semente do CRC já foi
+#:                                           corrigida no ensaio; faltam os três
+#:                                           portões nossos (ONDA-CONEXOES-11);
 #:
 #:   audio.saida_dedicada@dualsense          rádio — som no controle sem fio;
 #:                                           o canal existe e responde, o
@@ -150,7 +183,7 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: SUBIR ESTE NÚMERO É CONFISSÃO, não conserto: quem o subir está dizendo que a
 #: casa passou a dever mais do que devia. Pagar uma dívida é BAIXÁ-LO no mesmo
 #: commit — senão o teto vira folga e o portão para de morder.
-TETO_DA_DIVIDA = 3
+TETO_DA_DIVIDA = 4
 
 
 def _linhas(caminho: Path | str) -> list[dict[str, str]]:
@@ -316,8 +349,20 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
+    # RECONFERIDO em 29/08/2026, e o número FECHOU O DIA ONDE COMEÇOU: 41.
+    # Ele passou por 42 no meio do caminho, e o vaivém é o registro honesto de
+    # um defeito achado e curado no mesmo dia:
+    #   +1  `identidade.cor_do_aparelho@dualsense` pelo CABO entrou, quando se
+    #       mediu que `_perguntar_ao_hidraw` abria o nó com `os.open` direto e
+    #       morria em EACCES (o BROKER-01 o deixa `0600 root:root`);
+    #   -1  e saiu, quando a cura entrou no mesmo dia — o produto passou a pedir
+    #       o fd ao broker por SCM_RIGHTS (`A-COR-PELA-PORTA-DO-BROKER-01`).
+    # O lado do RÁDIO já estava na população e continua: o que mudou lá foi só a
+    # CAUSA (`o-aparelho-recusa` -> `divida`), e causa não move este número, de
+    # propósito — a população se lê de `de_onde_sei` e `aciona`, nunca da coluna
+    # conferida.
     assert len(antes) == 41, (
-        f"o recorte de 22/08/2026 tinha 41 células medidas e não acionadas, e "
+        f"o recorte de 29/08/2026 tinha 41 células medidas e não acionadas, e "
         f"agora tem {len(antes)}. Não é reprovação de defeito: é aviso de que o "
         "retrato deste arquivo envelheceu e o texto precisa ser recontado"
     )
