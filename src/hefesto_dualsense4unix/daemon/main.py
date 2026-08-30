@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 
 from hefesto_dualsense4unix.core.controller import IController
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
@@ -60,6 +61,30 @@ def single_instance_name() -> str:
 def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     configure_logging()
     logger = get_logger(__name__)
+
+    # A CHAVE (29/08/2026) — pedido dela: *"garantir que eu possa DESLIGAR o
+    # impacto do outro Hefesto por completo"*. Ver `utils/chave.py`.
+    #
+    # A ORDEM AQUI É O QUE IMPORTA: esta checagem vem ANTES do
+    # `acquire_or_takeover` logo abaixo. Se viesse depois, um daemon que está
+    # prestes a RECUSAR já teria mandado SIGTERM (e depois SIGKILL) no daemon
+    # que estava no ar — desligar um Hefesto derrubaria o outro, que é o
+    # oposto exato do que a chave existe para garantir.
+    #
+    # E ela é necessária porque `systemctl mask` NÃO fecha o caminho todo: o
+    # botão "Ligar daemon" da GUI cai num `subprocess.Popen` quando o
+    # `systemctl start` falha (`app/actions/daemon_actions.py:2162-2176`), e
+    # esse caminho não passa por systemd nenhum. Medido em 29/08.
+    from hefesto_dualsense4unix.utils import chave
+
+    motivo = chave.motivo_do_desligamento()
+    if motivo is not None:
+        logger.warning("daemon_recusado_pela_chave", motivo=motivo)
+        print(chave.recado_da_recusa(motivo), file=sys.stderr)
+        # 0, e não 1: SIGTERM limpo e saída zero não disparam o
+        # `Restart=on-failure` da unit (assets/hefesto-dualsense4unix.service:23).
+        # Recusar é uma decisão, não uma falha — respawnar seria brigar com ela.
+        return 0
 
     # CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: traz perfis/sessão/prefs do
     # layout curto legado (~/.config/hefesto) para o atual, se necessário.

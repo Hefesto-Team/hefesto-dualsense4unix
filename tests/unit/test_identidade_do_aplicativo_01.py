@@ -43,6 +43,14 @@ PONTOS_DE_TRANSICAO: dict[str, str] = {
     "scripts/purge.sh": "descontamina os DOIS ids",
     "src/hefesto_dualsense4unix/utils/migrate_legacy_paths.py": "lê a config do sandbox antigo",
     "src/hefesto_dualsense4unix/app/main.py": "mata a instância anterior sob qualquer dos dois ids",
+    # 29/08/2026 (AS DUAS CASAS): os padrões de matança saíram do corpo do
+    # `app/main.py` e passaram a derivar de `utils/identidade.py`, porque o app
+    # de desenvolvimento precisa dos DELE e não dos do estável. Os dois ids de
+    # Flatpak vieram junto, e é aqui que eles moram agora — `app/main.py`
+    # continua na lista porque a docstring dele ainda explica o porquê.
+    "src/hefesto_dualsense4unix/utils/identidade.py": (
+        "os dois app-ids do Flatpak entram nos padrões de matança do ESTÁVEL"
+    ),
     "src/hefesto_dualsense4unix/app/app.py": "idem, no pkill de saída",
     f"flatpak/{APP_ID}.yml": "a permissão :ro que deixa a migração LER a casa antiga",
     f"flatpak/{APP_ID}.metainfo.xml": "<replaces> — a loja entende que um SUBSTITUI o outro",

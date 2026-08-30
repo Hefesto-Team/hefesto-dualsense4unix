@@ -1,0 +1,41 @@
+[Desktop Entry]
+# O .desktop do Hefesto de DESENVOLVIMENTO — o "outro app" que ela pediu em
+# 29/08/2026: *"Ele é instalado como OUTRO APP com a logo alterada em dev"*.
+#
+# @RAIZ@ é substituído pelo caminho da árvore de dev por quem instala
+# (`scripts/instalar_atalho_da_interface.sh` ou `install-dev.sh`). O arquivo
+# versionado NÃO carrega caminho de máquina.
+#
+# StartupWMClass É O ELO, e ele tem de casar LETRA POR LETRA o segundo campo do
+# WM_CLASS que a janela publica. Sob XWayland o cosmic-comp publica esse campo
+# como `app_id` (cosmic-comp/src/shell/element/surface.rs:237 →
+# smithay/src/xwayland/xwm/surface.rs:1083), e é por ele que a dock acha o
+# .desktop. Quem publica o valor do lado do código é
+# `utils/identidade.py:DEV.wm_class`, aplicado por `Gdk.set_program_class` em
+# `app/main.py` e em `scripts/abrir_interface.py`.
+# `tests/unit/test_identidade_das_duas_casas.py` compara os dois e reprova
+# divergência — foi por não existir régua assim que duas janelas do produto
+# ficaram com `app_id` errado desde que nasceram.
+Type=Application
+Name=Hefesto (dev)
+GenericName=DualSense Controller — desenvolvimento
+Comment=A interface nova do Hefesto, em desenvolvimento. Não é o app estável.
+Exec=@RAIZ@/interface
+Icon=hefesto-dev-dualsense4unix
+Categories=Settings;HardwareSettings;
+Terminal=false
+StartupNotify=true
+StartupWMClass=Hefesto-Dev-Dualsense4Unix
+# Este app NÃO entra em .deb/.rpm/Arch/Nix: ele é instalado só por
+# `install-dev.sh`, na máquina de quem desenvolve. A chave abaixo é a
+# declaração que dispensa o `check_packaging_parity.sh` de cobrar o PNG dele
+# nos quatro empacotadores — sem ela, o portão cobra, e está certo em cobrar.
+X-HefestoNaoEmpacotado=true
+Actions=app-completo;
+
+[Desktop Action app-completo]
+# A GUI GTK inteira do produto, na variante de dev — casa própria de config,
+# socket e unit (ver `utils/identidade.py`). Só funciona depois do
+# `install-dev.sh`; antes disso o botão existe e o `run.sh` avisa o que falta.
+Name=Abrir o app completo (dev)
+Exec=env HEFESTO_VARIANTE=dev GDK_BACKEND=x11 @RAIZ@/run.sh

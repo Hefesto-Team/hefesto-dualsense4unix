@@ -120,6 +120,7 @@ from hefesto_dualsense4unix.app.draft_config import (
     registrar_microfone_no_rascunho,
 )
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+    ESCALA_ACCEL_G,
     GyroBars,
     LightbarBar,
     MicMeter,
@@ -129,6 +130,7 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     percentual_do_volume,
     posicao_normalizada,
     selo_mic,
+    texto_eixo_g,
     texto_toques,
     texto_volume,
     volume_do_percentual,
@@ -379,6 +381,16 @@ LARGURA_CARD_ELASTICA: Final[int] = 1400
 #: que impede a linha de cima de virar quem manda no mínimo do card.
 LARGURA_BARRA_GATILHO_UNICO: Final[int] = 400
 LARGURA_GYRO_UNICO: Final[int] = 420
+#: O que a moldura de UM bloco de sensor cobra ALÉM do desenho, em px — a
+#: borda do `Gtk.Frame` mais as margens do miolo (`_bloco`). Medido nesta
+#: bancada em 29/08/2026, com o tema do produto e `Gtk.OffscreenWindow`: 13px
+#: no card compacto e 14px no de um controle.
+#:
+#: Existe porque a coluna de movimento passou a ter DUAS molduras lado a lado
+#: (ONDA-CONTROLES-04) e o mínimo da coluna entra inteiro no mínimo da janela:
+#: sem descontar a moldura a mais, a aba Status com dois controles pedia
+#: 1198px contra os 1180 do projeto.
+CROMO_DA_MOLDURA_DE_SENSOR: Final[int] = 14
 LARGURA_BARRA_GATILHO_COMPACTO: Final[int] = 200
 LARGURA_GYRO_COMPACTO: Final[int] = 220
 
@@ -1871,6 +1883,33 @@ def gyro_do_inputs(inputs: Any) -> tuple[float, float, float] | None:
         return None
 
 
+def accel_do_inputs(inputs: Any) -> tuple[float, float, float] | None:
+    """``(x, y, z)`` em **g** do bloco ``inputs.accel``; None = sem sensor.
+
+    Gêmeo de `gyro_do_inputs`, com a mesma regra e pelo mesmo motivo: o campo
+    é OPCIONAL, e daemon antigo (ou controle sem node de "Motion Sensors")
+    simplesmente não o manda. ``None`` faz o módulo sumir do card.
+
+    Aqui devolver ``(0, 0, 0)`` seria pior ainda que no giro: o acelerômetro
+    parado NÃO marca zero — marca ~1 g no eixo que aponta para o chão. Três
+    barras no centro não diriam nem "em repouso" nem "eu não sei": diriam
+    "este controle está em queda livre".
+    """
+    if not isinstance(inputs, dict):
+        return None
+    bloco = inputs.get("accel")
+    if not isinstance(bloco, dict):
+        return None
+    try:
+        return (
+            float(bloco["x"]),
+            float(bloco["y"]),
+            float(bloco["z"]),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def touchpad_do_inputs(inputs: Any) -> tuple[bool, float, float] | None:
     """``(tocando, fx, fy)`` do bloco ``inputs.touchpad``; None = sem sensor.
 
@@ -2358,6 +2397,7 @@ if _GTK_DISPONIVEL:
             self._glyphs: dict[str, ButtonGlyph] = {}
             # S2 — caches de diff dos módulos de sensor.
             self._last_gyro: Any = _SENTINELA
+            self._last_accel: Any = _SENTINELA
             self._last_touch: Any = _SENTINELA
             self._last_mic: Any = _SENTINELA
             self._last_speaker: Any = _SENTINELA
@@ -2474,6 +2514,7 @@ if _GTK_DISPONIVEL:
             self._update_verdade(entry, state_global)
             self._update_inputs(entry.get("inputs"))
             self._update_gyro(entry.get("inputs"))
+            self._update_accel(entry.get("inputs"))
             self._update_touchpad(entry.get("inputs"))
             self._update_mic(mic, str(entry.get("transport") or ""))
             self._update_mic_botao(entry)
@@ -2930,8 +2971,29 @@ if _GTK_DISPONIVEL:
             # existir em vez de um box.
             gatilhos = self._montar_gatilhos()
             grid.attach(gatilhos, 0, 0, 1, 1)
-            slot = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            slot.pack_start(self._montar_gyro(), False, False, 0)
+            slot = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL, spacing=self._espaco
+            )
+            slot.pack_start(self._montar_gyro(), True, True, 0)
+            # O ACELERÔMETRO ENTRA AO LADO DO GIRO, E NÃO EMBAIXO — e a razão é
+            # medida, não de gosto (ONDA-CONTROLES-04, 29/08/2026):
+            #
+            #   empilhado  → +76px no card de um controle, +68 no compacto.
+            #                O card passa a pedir 540px para uma faixa de 472,
+            #                e a aba Status volta a rolar na janela padrão —
+            #                exatamente o defeito que `test_layout_orcamento_
+            #                altura` existe para segurar.
+            #   lado a lado → +0px. A linha já tem a altura da moldura do giro
+            #                (76px contra 50px da coluna dos gatilhos), e a
+            #                segunda moldura cabe na mesma linha sem crescer.
+            #
+            # O alinhamento que ela pediu em ALINHA-DUAS-LINHAS-01 continua
+            # valendo: a COLUNA segue indo do microfone ao último glifo, porque
+            # quem responde por ela é o `SizeGroup` do slot, não a moldura de
+            # dentro. O que encolhe é o traço de cada barra — e encolher aqui
+            # anda a favor do pedido dela, não contra: a queixa de
+            # STATUS-SIMETRIA-02 era o número LONGE da letra do eixo.
+            slot.pack_start(self._montar_accel(), True, True, 0)
             self._gyro_slot = slot
             grid.attach(slot, 1, 0, 1, 1)
 
@@ -2956,10 +3018,38 @@ if _GTK_DISPONIVEL:
             return LARGURA_BARRA_GATILHO_UNICO
 
         def largura_do_giroscopio(self) -> int:
-            """Teto do desenho do giroscópio neste card, em px."""
+            """Teto da COLUNA de sensores de movimento neste card, em px."""
             if self._compact:
                 return LARGURA_GYRO_COMPACTO
             return LARGURA_GYRO_UNICO
+
+        def largura_do_meio_sensor(self) -> int:
+            """Metade dela — o piso de CADA um dos dois desenhos, em px.
+
+            ONDA-CONTROLES-04: a coluna passou a ter DOIS desenhos lado a lado
+            (giroscópio e acelerômetro), e o piso do `set_size_request` entra
+            INTEIRO no mínimo do card — é o que `test_status_faixa_blocos`
+            cobra em tantas palavras. Dar o piso cheio aos dois dobraria a
+            coluna: medido, a aba Status com dois controles saltou de 1180 para
+            1544px de mínimo, e a janela nasceria maior que o projeto.
+
+            A conta desconta o que a moldura a mais e o vão entre as duas
+            cobram — não é `teto // 2`. Com a metade crua o mínimo da coluna
+            fica 21px (compacto) e 44px (único) ACIMA do teto, e é exatamente
+            esse excesso que empurra a aba Status para 1198px.
+
+            O que se vê na tela não encolhe junto: os dois desenhos são
+            `hexpand` em `FILL`, então na janela dela eles repartem a largura
+            REAL da coluna, que é bem maior que o piso.
+            """
+            sobra = (
+                self.largura_do_giroscopio()
+                - self._espaco
+                - 2 * CROMO_DA_MOLDURA_DE_SENSOR
+            )
+            # Piso do piso: um tema de cromo absurdo não pode pedir largura
+            # negativa. 60px ainda mostram a letra do eixo e o número.
+            return max(60, sobra // 2)
 
         def _montar_gatilhos(self) -> Any:
             """As duas barras de gatilho, com TETO de largura.
@@ -3003,14 +3093,28 @@ if _GTK_DISPONIVEL:
             return grid
 
         @staticmethod
-        def _rotulo_secao(texto: str) -> Any:
-            """Rótulo pequeno de seção (mesmo peso visual do `dim-label`)."""
+        def _rotulo_secao(texto: str, *, elidir: bool = False) -> Any:
+            """Rótulo pequeno de seção (mesmo peso visual do `dim-label`).
+
+            `elidir=True` tira o rótulo da conta do MÍNIMO do card: com
+            `ELLIPSIZE_END` o Gtk deixa de exigir a largura do texto inteiro e
+            passa a exigir quase nada, mostrando o título completo sempre que
+            houver espaço — que é o caso em qualquer janela real.
+
+            Serve aos dois blocos de movimento e só a eles (ONDA-CONTROLES-04):
+            são os únicos que dividem UMA coluna, e por isso os únicos cujos
+            títulos competem pela mesma largura. Medido: sem elidir, a aba
+            Status com dois controles pedia 1198px contra os 1180 do projeto —
+            e o que estourava não era desenho nenhum, eram as duas palavras.
+            """
             label = Gtk.Label(label=texto)
             label.set_xalign(0.0)
             label.get_style_context().add_class("dim-label")
+            if elidir:
+                label.set_ellipsize(Pango.EllipsizeMode.END)
             return label
 
-        def _bloco(self, titulo: str) -> tuple[Any, Any]:
+        def _bloco(self, titulo: str, *, elidir: bool = False) -> tuple[Any, Any]:
             """``(bloco, miolo)`` de UM assunto da faixa de leitura.
 
             STATUS-SIMETRIA-02, defeito 2 — *"o touchpad não tem um espaço
@@ -3036,10 +3140,12 @@ if _GTK_DISPONIVEL:
             """
             if self._compact:
                 caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-                caixa.pack_start(self._rotulo_secao(titulo), False, False, 0)
+                caixa.pack_start(
+                    self._rotulo_secao(titulo, elidir=elidir), False, False, 0
+                )
                 return caixa, caixa
             moldura = Gtk.Frame()
-            moldura.set_label_widget(self._rotulo_secao(titulo))
+            moldura.set_label_widget(self._rotulo_secao(titulo, elidir=elidir))
             moldura.set_valign(Gtk.Align.START)
             miolo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             miolo.set_margin_top(4)
@@ -3064,7 +3170,7 @@ if _GTK_DISPONIVEL:
             widget.hide()
 
         def _montar_gyro(self) -> Any:
-            caixa, miolo = self._bloco("Giroscópio (graus/s)")
+            caixa, miolo = self._bloco("Giroscópio (graus/s)", elidir=True)
             barras = GyroBars()
             # Teto de largura: o número do eixo é desenhado colado na borda
             # DIREITA do widget (`fim_barra + 4`, em sensor_widgets), então a
@@ -3074,7 +3180,7 @@ if _GTK_DISPONIVEL:
             # PRÓPRIO widget é preservada: ela deriva da escala de fonte, e
             # trocá-la por -1 faria as três linhas do desenho se sobreporem.
             _largura, altura = barras.get_size_request()
-            barras.set_size_request(self.largura_do_giroscopio(), altura)
+            barras.set_size_request(self.largura_do_meio_sensor(), altura)
             # ALINHA-DUAS-LINHAS-01: o desenho e a moldura ESTICAM até a coluna
             # que o `SizeGroup` mediu — do microfone ao último glifo, que é
             # onde ela pediu que esta seção começasse e terminasse.
@@ -3091,6 +3197,42 @@ if _GTK_DISPONIVEL:
             miolo.pack_start(barras, True, True, 0)
             self._gyro_bars = barras
             self._gyro_box = caixa
+            self._esconder_modulo(caixa)
+            return caixa
+
+        def _montar_accel(self) -> Any:
+            """O acelerômetro, no MOLDE do giroscópio e AO LADO dele.
+
+            Mesma classe de desenho (`GyroBars`), mesma regra de esconder-se
+            sozinho — o que muda é o fundo de escala (g em vez de graus/s) e o
+            formato do número, os dois passados por argumento. Ver
+            `sensor_widgets.GyroBars`.
+
+            **Ao lado e não embaixo, e a escolha é medida.** O mockup aprovado
+            desenha os dois EMPILHADOS (`novo-layout/_ferramentas/aba02.py`,
+            `acel_html` logo depois de `giro_html`, na mesma moldura), e foi
+            assim que esta função nasceu. Empilhado o card cresce 76px (68 no
+            compacto) e passa a pedir 540px para uma faixa de 472: a aba Status
+            volta a rolar na janela padrão, que é o defeito que
+            `test_layout_orcamento_altura` existe para segurar. Lado a lado
+            custa 0px, porque a linha já tem a altura da moldura do giro (76px
+            contra 50 da coluna dos gatilhos).
+
+            **Isto é desenho, e desenho é palavra dela** (PROVA-DE-TELA-01). O
+            que está aqui é a leitura FUNCIONANDO com o orçamento intacto; se
+            ela preferir empilhado como no mockup, o preço são os 76px — e a
+            escolha de onde tirá-los é dela. Ver `largura_do_meio_sensor`.
+            """
+            caixa, miolo = self._bloco("Acelerômetro (g)", elidir=True)
+            barras = GyroBars(escala=ESCALA_ACCEL_G, texto=texto_eixo_g)
+            _largura, altura = barras.get_size_request()
+            barras.set_size_request(self.largura_do_meio_sensor(), altura)
+            barras.set_halign(Gtk.Align.FILL)
+            barras.set_hexpand(True)
+            caixa.set_halign(Gtk.Align.FILL)
+            miolo.pack_start(barras, True, True, 0)
+            self._accel_bars = barras
+            self._accel_box = caixa
             self._esconder_modulo(caixa)
             return caixa
 
@@ -4904,6 +5046,25 @@ if _GTK_DISPONIVEL:
             self._gyro_bars.set_valores(*valores)
             self._gyro_box.show()
 
+        def _update_accel(self, inputs: Any) -> None:
+            """Idem ao do giro, e com o mesmo cache de diff.
+
+            O `!=` contra o último valor não é gosto: a 10 Hz, com quatro
+            controles, redesenhar três barras que não mudaram é trabalho de
+            GPU por nada — e o acelerômetro em repouso passa MINUTOS no mesmo
+            valor, que é justamente quando o cache paga.
+            """
+            valores = accel_do_inputs(inputs)
+            if valores == self._last_accel:
+                return
+            self._last_accel = valores
+            if valores is None:
+                self._accel_bars.limpar()
+                self._accel_box.hide()
+                return
+            self._accel_bars.set_valores(*valores)
+            self._accel_box.show()
+
         def _update_touchpad(self, inputs: Any) -> None:
             dados = touchpad_do_inputs(inputs)
             if dados == self._last_touch:
@@ -5365,6 +5526,8 @@ if _GTK_DISPONIVEL:
             # medidor do mic parado, silêncio inventado.
             self._gyro_bars.limpar()
             self._gyro_box.hide()
+            self._accel_bars.limpar()
+            self._accel_box.hide()
             self._touch_view.set_toque(None)
             self._touch_box.hide()
             # Microfone e alto-falante voltam ao estado apagado — e NÃO se
@@ -5384,6 +5547,7 @@ if _GTK_DISPONIVEL:
                 acao_speaker_mudo(None), acao_speaker_devolucao(None)
             )
             self._last_gyro = _SENTINELA
+            self._last_accel = _SENTINELA
             self._last_touch = _SENTINELA
             self._last_mic = _SENTINELA
             self._last_speaker = _SENTINELA
@@ -5609,6 +5773,7 @@ else:
             self.sem_leitor: bool = False
             # S2 — None em qualquer um deles = o módulo não apareceria.
             self.gyro: tuple[float, float, float] | None = None
+            self.accel: tuple[float, float, float] | None = None
             self.touchpad: tuple[bool, float, float] | None = None
             self.mic_selo: tuple[str, str, str] | None = None
             self.mic_nivel: float | None = None
@@ -5661,6 +5826,7 @@ else:
             self.verdade = resumo_do_que_chega_ao_jogo(entry, state_global)
             self.sem_leitor = not isinstance(entry.get("inputs"), dict)
             self.gyro = gyro_do_inputs(entry.get("inputs"))
+            self.accel = accel_do_inputs(entry.get("inputs"))
             self.touchpad = touchpad_do_inputs(entry.get("inputs"))
             self.mic_nivel = getattr(mic, "nivel", None) if mic is not None else None
             self.mic_selo = selo_mic(
@@ -5698,6 +5864,7 @@ else:
 
 __all__ = [
     "ALL_BUTTONS",
+    "CROMO_DA_MOLDURA_DE_SENSOR",
     "DICA_AUDIO_SEM_ENDERECO",
     "DICA_BLOCO_SPEAKER",
     "DICA_CANAL_ACORDADO",
@@ -5762,6 +5929,7 @@ __all__ = [
     "acao_mic",
     "acao_speaker_devolucao",
     "acao_speaker_mudo",
+    "accel_do_inputs",
     "accent_do_card",
     "audio_sem_endereco",
     "cor_do_swatch",

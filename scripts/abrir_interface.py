@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Abre a interface nova COM identidade — a logo na dock, o nome na barra.
+
+Pedido dela, 29/08/2026: *"o nosso lançador.sh precisa ter a logo do app na
+dock"*.
+
+POR QUE ESTE ARQUIVO EXISTE, EM VEZ DE DUAS LINHAS NO PILOTO
+------------------------------------------------------------
+O piloto (``novo-layout/_ferramentas/controles_vivos.py``) está sendo editado
+por outra leva agora, e mora em ``novo-layout/``, que é ``.gitignore`` e não
+viaja em worktree. Este envoltório resolve os dois problemas de uma vez: a
+identidade é versionada aqui, e o piloto é carregado sem uma linha de mudança.
+
+O QUE FALTAVA, MEDIDO
+---------------------
+``controles_vivos.py:554`` cria ``Gtk.Window(title="Hefesto — Controles")`` sem
+``prgname``, sem ``program_class`` e sem ícone. Medido em Xvfb lendo do
+servidor X com ``xprop``, a janela publicava::
+
+    WM_CLASS = ("controles_vivos.py", "Controles_vivos.py")
+
+O cosmic-comp publica o SEGUNDO campo como ``app_id``
+(``cosmic-comp/src/shell/element/surface.rs:237`` →
+``smithay/src/xwayland/xwm/surface.rs:1083``). ``Controles_vivos.py`` não casa
+``.desktop`` nenhum: dock com ícone genérico e nome de script.
+
+AS TRÊS LINHAS QUE CURAM, e por que são de PROCESSO e não de janela
+-------------------------------------------------------------------
+``Gdk.set_program_class`` conserta TODA janela do processo, inclusive as que o
+piloto ainda não abriu — enquanto ``Gtk.Window.set_wmclass`` é por janela, é
+depreciado, e obrigaria a editar o piloto a cada janela nova. Medido em 29/08,
+Xvfb + ``xprop``: sem ela a janela filha sai ``"Medir.py"``; com ela sai
+``"Hefesto-Dev-Dualsense4Unix"``, igual à principal.
+
+O ÍCONE TEM DOIS CAMINHOS, e o segundo é o que funciona SEM INSTALAR
+---------------------------------------------------------------------
+``set_default_icon_name`` só resolve se o ícone estiver no tema ``hicolor`` —
+isto é, depois do ``install-dev.sh``. Antes disso o nome não resolve e a janela
+fica sem ícone nenhum. Por isso aqui se PERGUNTA ao tema
+(``Gtk.IconTheme.has_icon``) e, se ele não tiver, carrega o PNG do disco, que
+vira ``_NET_WM_ICON`` na janela e não depende de instalação alguma. Ela pode
+clicar o ``interface`` num repositório recém-clonado e já ver a logo.
+
+ESTE ENVOLTÓRIO NÃO LIGA ``HEFESTO_VARIANTE``, E ISSO É DE PROPÓSITO
+---------------------------------------------------------------------
+A interface nova é um VISOR: ela lê ``daemon.state_full`` do daemon que estiver
+no ar — o DELA — para mostrar a mesa real. Ligar a variante de dev mudaria o
+socket IPC (``utils/xdg_paths.ipc_socket_path``) para um caminho onde não há
+daemon nenhum, e a tela nasceria vazia. O que a variante de dev empresta aqui é
+só a IDENTIDADE DA JANELA: logo própria e ``app_id`` próprio, para a dock não
+fundir esta janela com a do Hefesto estável dela.
+"""
+from __future__ import annotations
+
+import runpy
+import sys
+from pathlib import Path
+
+AQUI = Path(__file__).resolve().parent
+RAIZ = AQUI.parent
+
+# O piloto e o mockup moram em `novo-layout/`, que é .gitignore e NÃO viaja em
+# worktree — por isso a árvore de origem entra como segunda tentativa.
+ORIGEM = Path("/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix")
+CANDIDATOS_DO_PILOTO = (
+    RAIZ / "novo-layout" / "_ferramentas" / "controles_vivos.py",
+    ORIGEM / "novo-layout" / "_ferramentas" / "controles_vivos.py",
+)
+#: O PNG que vira `_NET_WM_ICON` quando o tema ainda não conhece o nome.
+CANDIDATOS_DO_ICONE = (
+    RAIZ / "assets" / "appimage" / "Hefesto-Dev-Dualsense4Unix.png",
+    ORIGEM / "assets" / "appimage" / "Hefesto-Dev-Dualsense4Unix.png",
+)
+
+
+def achar_o_piloto() -> Path | None:
+    """O primeiro `controles_vivos.py` que existir, ou `None`."""
+    return next((c for c in CANDIDATOS_DO_PILOTO if c.is_file()), None)
+
+
+def achar_o_icone() -> Path | None:
+    """O primeiro PNG de logo de dev que existir, ou `None`."""
+    return next((c for c in CANDIDATOS_DO_ICONE if c.is_file()), None)
+
+
+def vestir_a_identidade(casa: object) -> list[str]:
+    """Põe nome, classe e ícone no PROCESSO, antes da primeira janela.
+
+    Devolve a lista do que conseguiu fazer, para o lançador imprimir — sem
+    isso, um ícone que não sobe some sem uma linha de aviso, que é justamente
+    o defeito desta casa ("ausência de notícia é lida como sucesso").
+    """
+    import gi
+
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk, GLib, Gtk
+
+    feito: list[str] = []
+    GLib.set_prgname(casa.wm_instance)  # type: ignore[attr-defined]
+    GLib.set_application_name(casa.nome_longo)  # type: ignore[attr-defined]
+    Gdk.set_program_class(casa.wm_class)  # type: ignore[attr-defined]
+    feito.append(f"WM_CLASS = {casa.wm_instance!r}, {casa.wm_class!r}")  # type: ignore[attr-defined]
+
+    tema = Gtk.IconTheme.get_default()
+    nome_do_icone = casa.icone  # type: ignore[attr-defined]
+    if tema is not None and tema.has_icon(nome_do_icone):
+        Gtk.Window.set_default_icon_name(nome_do_icone)
+        feito.append(f"ícone pelo tema ({nome_do_icone})")
+    else:
+        arquivo = achar_o_icone()
+        if arquivo is not None:
+            Gtk.Window.set_default_icon_from_file(str(arquivo))
+            feito.append(f"ícone pelo arquivo ({arquivo.name}) — sem install")
+        else:
+            feito.append(
+                f"SEM ÍCONE: o tema não tem {nome_do_icone!r} e o PNG não está"
+                " no disco (rode scripts/gerar_icones.sh)"
+            )
+    return feito
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+
+    piloto = achar_o_piloto()
+    if piloto is None:
+        print("não achei o piloto (novo-layout/_ferramentas/controles_vivos.py)",
+              file=sys.stderr)
+        for c in CANDIDATOS_DO_PILOTO:
+            print(f"  procurei em: {c}", file=sys.stderr)
+        return 1
+
+    # O produto tem de estar importável para a identidade sair de um dono só.
+    # Numa árvore sem `pip install -e`, `src/` entra no path à mão.
+    src = RAIZ / "src"
+    if src.is_dir() and str(src) not in sys.path:
+        sys.path.insert(0, str(src))
+    from hefesto_dualsense4unix.utils import identidade
+
+    for linha in vestir_a_identidade(identidade.DEV):
+        print(f"  {linha}")
+    print()
+
+    # `run_name="__main__"` para o piloto executar o próprio bloco de entrada.
+    # `sys.argv[0]` passa a ser o piloto: é o que ele espera ver.
+    sys.argv = [str(piloto), *args]
+    runpy.run_path(str(piloto), run_name="__main__")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

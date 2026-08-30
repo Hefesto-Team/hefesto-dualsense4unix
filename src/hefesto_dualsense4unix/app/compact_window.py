@@ -47,6 +47,7 @@ from gi.repository import Gdk, GLib, Gtk
 
 from hefesto_dualsense4unix.app import mesa as _mesa
 from hefesto_dualsense4unix.app.constants import ICON_PATH
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -147,12 +148,13 @@ class CompactWindow:
 
     def _build_window(self) -> None:
         win = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
-        win.set_title("Hefesto - Dualsense4Unix")
+        _casa = identidade.atual()
+        win.set_title(_casa.nome_longo)
         # BUG-COMPACT-WINDOW-WMCLASS-ICON-01: identidade da janela para a
         # dock/taskbar (XWayland no COSMIC). Sem WM_CLASS casando o
         # StartupWMClass do .desktop, a janela aparecia como "py" e sem logo.
         # Espelha exatamente o que app.py faz na janela principal.
-        win.set_wmclass("hefesto-dualsense4unix", "Hefesto-Dualsense4Unix")
+        win.set_wmclass(_casa.wm_instance, _casa.wm_class)
         if ICON_PATH.exists():
             import contextlib as _ctx
             with _ctx.suppress(Exception):

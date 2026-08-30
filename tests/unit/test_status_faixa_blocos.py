@@ -73,6 +73,11 @@ _INPUTS: dict[str, Any] = {
     "r2_raw": 40,
     "buttons": ["cross"],
     "gyro": {"x": 143.2, "y": -412.0, "z": 22.8},
+    # ONDA-CONTROLES-04: os números são MEDIDOS, não inventados — um DualSense
+    # desta bancada largado na mesa, 29/08/2026 (|v| = 0,996 g, a gravidade).
+    # Este `_ENTRY` também alimenta o `retratar_abas.py`, então é ele que decide
+    # se a foto da documentação mostra o bloco novo ou uma tela sem ele.
+    "accel": {"x": -0.005, "y": 0.981, "z": 0.172},
     "touchpad": {
         "touching": True,
         "x": 1440,

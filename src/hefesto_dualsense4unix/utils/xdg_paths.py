@@ -10,7 +10,25 @@ from pathlib import Path
 
 from platformdirs import PlatformDirs
 
-_DIRS = PlatformDirs("hefesto-dualsense4unix")
+from hefesto_dualsense4unix.utils import identidade
+
+# A LINHA QUE SEPARA AS DUAS CASAS (29/08/2026). Config, data, cache, runtime,
+# state, perfis e o socket IPC saem TODOS deste slug — trocá-lo isola sete
+# recursos de uma vez. Sem isso, o app de desenvolvimento escreveria em
+# `~/.config/hefesto-dualsense4unix/profiles/`, que é a bancada dela.
+#
+# Sem `HEFESTO_VARIANTE` no ambiente o valor é literalmente o de sempre
+# ("hefesto-dualsense4unix"); `test_identidade_das_duas_casas.py` trava isso.
+_DIRS = PlatformDirs(identidade.atual().slug)
+
+# O NOME do socket NÃO muda por variante, e isso é decisão medida: quem
+# separa as duas casas é o DIRETÓRIO (`runtime_dir()` sai do `_DIRS` acima,
+# logo `$XDG_RUNTIME_DIR/hefesto-dev-dualsense4unix/`), então dois arquivos
+# com o mesmo nome-base em pastas diferentes já não colidem. Trocar também
+# o nome custaria mais do que rende: estas duas constantes são LIDAS COMO
+# LITERAL por `tests/unit/test_doc_verdade_02_contagens_derivadas.py`, que
+# confere se a documentação do protocolo cita o socket certo — uma f-string
+# aqui cega essa régua (medido em 29/08, ela reprovou).
 
 IPC_SOCKET_DEFAULT_NAME = "hefesto-dualsense4unix.sock"
 IPC_SOCKET_ENV_VAR = "HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME"
