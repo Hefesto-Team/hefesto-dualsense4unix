@@ -20,7 +20,7 @@ foram achados nesta casa em 29/08/2026, e cada um está preso a uma medição:
     -43,5 px e +52,5 px — 7 px vazando para fora de um lado e 9 px sobrando do
     outro. Com a cura os dois lados dão ±48 px.
 
-(c) Os três botões de som. O " + chr(0x1F399) + ", o " + chr(0x266A) + " e o "Liberar" tinham ``cursor:pointer``,
+(c) Os três botões de som. O 🎙, o ♪ e o "Liberar" tinham ``cursor:pointer``,
     eram pintados, e **não tinham ouvinte**: dois cliques sintéticos produziram
     ZERO gestos enquanto os botões de rota, ao lado, ecoavam. A régua de então
     dava VERDE sobre dois botões mortos porque nunca os tocava. E o "Liberar"
@@ -253,7 +253,7 @@ class CabecaDeMentira(controles_vivos.Janela):
         """Entrega à cabeça o que a tela mandou — e o eco volta para a tela.
 
         É o outro sentido da ponte, e sem ele a prova pararia na metade: o
-        "Liberar" só destrava porque o " + chr(0x1F399) + " assumiu a posse **no Python** e o eco
+        "Liberar" só destrava porque o 🎙 assumiu a posse **no Python** e o eco
         voltou. Quem faz a conta é o `_da_tela` do piloto, sem cópia.
         """
         for recado in recados:
@@ -493,7 +493,7 @@ def test_o_microfone_da_posse_e_o_liberar_destrava(mesa):
 
     cabeca.ouvir(tela.clicar_e_ouvir(f'{_cartao()} [data-mudo="microfone"]'))
     assert not tela.travado(liberar), (
-        "o " + chr(0x1F399) + " assumiu a posse do mudo e o Liberar continuou travado — o eco não "
+        "o 🎙 assumiu a posse do mudo e o Liberar continuou travado — o eco não "
         "voltou do Python para a tela."
     )
 
