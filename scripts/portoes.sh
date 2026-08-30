@@ -86,6 +86,7 @@ rapido|pecas-do-dualsense|py|scripts/check_pecas_do_dualsense.py
 # se o hex do desenho estava certo, porque não havia com o que comparar — o
 # Cosmic Red era #b11f54 e a amostragem devolveu #A51C48. 3,5 s.
 rapido|cores-do-dualsense|py|scripts/check_cores_do_dualsense.py
+rapido|regua-de-tela|py|scripts/check_regua_de_tela.py
 rapido|ruff|bin|ruff check src/ tests/
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all

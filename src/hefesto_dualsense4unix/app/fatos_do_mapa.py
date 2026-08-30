@@ -3408,7 +3408,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': 'MONTOU',
             'canal': 'evdev',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': '',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': 'sim',
@@ -3416,7 +3416,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': 'MONTOU',
             'canal': 'evdev',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': '',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'movimento.acelerometro@pro': {

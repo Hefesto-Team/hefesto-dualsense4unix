@@ -42,6 +42,7 @@ jobs:
       # zona. Duas réguas independentes — a leitura dos CSV e a pintura no
       # Chrome —, porque a primeira é cega para style inline, que vence folha.
       - run: python3 scripts/check_cores_do_dualsense.py
+      - run: python3 scripts/check_regua_de_tela.py
       # PORTAO-DE-ENDERECO-01 (25/08/2026): o irmão acima procura nomes de
       # fornecedor e frases de autoria; ele NUNCA olhou um endereço de rádio,
       # embora o CLAUDE.md prometesse um portão para isso desde sempre. Medido
