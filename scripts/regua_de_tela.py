@@ -62,7 +62,7 @@ A REGRA QUE MANDA AQUI
 ----------------------
 **Responder sem mentir.** Toda pergunta devolve quantos elementos o seletor
 casou, e ``0`` é ERRO, nunca silêncio — foi o silêncio que deixou o
-``--prova-gesto`` dar verde sobre dois botões mortos (o " + chr(0x1F399) + " e o " + chr(0x266A) + " não tinham
+``--prova-gesto`` dar verde sobre dois botões mortos (o 🎙 e o ♪ não tinham
 ouvinte, e a régua nem os tocava). Por isso :meth:`Tela.clicar_e_ouvir` existe:
 clicar não é prova, **ser ouvido** é.
 
@@ -756,7 +756,7 @@ class Tela:
     ) -> list[Recado]:
         """Clica e EXIGE que a página responda — o teste do botão morto.
 
-        É o método que este arquivo existe para ter. Medido em 29/08: o " + chr(0x1F399) + " e o " + chr(0x266A) + "
+        É o método que este arquivo existe para ter. Medido em 29/08: o 🎙 e o ♪
         da aba Controles tinham `cursor:pointer`, eram pintados, e **não tinham
         ouvinte** — dois cliques produziram ZERO gestos enquanto os botões de
         rota, ao lado, ecoavam. A régua de então dava verde porque nem os
