@@ -335,23 +335,34 @@ class TestOGesto:
         """O terceiro degrau (`native`) não alcança um processo já rodando.
 
         Subir ali ao vivo é o degrau que MENTE: a env congelou no `exec`, o
-        vpad some e o físico continua escondido — ZERO controles. O laço para e
-        encerra a tentativa; o gesto NÃO entra em Modo Nativo.
+        vpad some e o físico continua escondido — ZERO controles. O laço
+        **avisa, guarda e PULA**; o gesto NÃO entra em Modo Nativo, e o aperto
+        dela não é comido.
 
-        FATO CORRIGIDO (29/08/2026). Este teste exigia, na linha do
-        `d.pedidos`, que o MESMO gesto caísse no `CICLO_DE_PONTES` — e o ciclo,
-        depois de `xbox`, é `mouse_teclado`. Ou seja: a régua cobrava o defeito.
-        Medido três vezes no journal dela (Sackboy 26/08 03:40:45, Mullet 29/08
-        00:26:17, Touhou 29/08 03:19:14), sempre a mesma sequência:
-        `parou_no_degrau_caro` → `encerrada` → `troca_pedida_por_gesto
-        para=mouse_teclado`. **O gamepad sumia no meio da partida, e o `xbox`
-        em que ela estava evaporava com a tentativa.**
+        FATO CORRIGIDO DUAS VEZES, e as duas datas importam:
 
-        MORDE três curas de uma vez: o ramo `alcancavel` de
+        - **29/08/2026** — o teste exigia que o MESMO gesto caísse no
+          `CICLO_DE_PONTES` (depois de `xbox`, `mouse_teclado`) enquanto a
+          tentativa evaporava sem gravar nada. A régua cobrava o defeito: o
+          `xbox` a que ela chegou com dois gestos sumia. A cura guardou a ponte
+          de pé, e o teste passou a exigir `d.pedidos == []`;
+        - **30/08/2026** (`D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`)
+          — `d.pedidos == []` era o aperto COMIDO, e era ele que fazia o gesto
+          se comportar diferente num jogo sem carimbo. Medido com os quatro
+          jogos dela: 3 trocas em 4 apertos no Sackboy contra 4 em 4 nos três
+          carimbados. Agora o aperto troca, e o que não acontece mais é a
+          escada oferecer ao vivo um degrau que só o lançamento alcança.
+
+        **A metade de 29/08 que continua de pé é a que importa:** a ponte é
+        GUARDADA antes de a tentativa morrer. É ela que este teste protege nas
+        três últimas linhas.
+
+        MORDE três curas: o ramo `alcancavel` da caminhada de
         `avancar_por_gesto` (sem ele o gesto entra em Modo Nativo e mata a
-        porta de volta); o ramo `PASSO_PAROU` de `_ciclar_ponte` (sem ele volta
-        o `mouse_teclado`); e o `_anotar_o_gesto` antes do `encerrar` (sem ele a
-        ponte de pé não tem onde ser guardada e some com a tentativa).
+        porta de volta pelo controle); a caminhada em si (com um `break` no
+        lugar do `continue`, o aperto volta a ser comido); e o
+        `_anotar_o_gesto` antes do `encerrar` (sem ele a ponte de pé some com a
+        tentativa).
         """
         d = _DaemonDoGesto(flavor="xbox")
         _abrir_tentativa(d, pe.ESCADA[1])
@@ -360,9 +371,12 @@ class TestOGesto:
 
         assert pe.ESCADA[2].exige_reabrir_jogo is True, "premissa do teste"
         assert hotkey_sub.proxima_ponte("xbox") == hotkey_sub.PONTE_MOUSE_TECLADO, (
-            "premissa: é o ciclo fixo que levava a mouse+teclado"
+            "premissa: depois de `xbox`, o ciclo livre é `mouse_teclado`"
         )
-        assert d.pedidos == [], "o mesmo gesto trocou a máscara"
+        # O degrau caro foi PULADO, não subido: nenhuma linha pede `native`.
+        assert d.pedidos == [(False, None, "manual")], (
+            "o aperto dela foi comido, ou o gesto entrou em Modo Nativo"
+        )
         assert pt.em_curso(d) is None, "a tentativa tinha de ser encerrada"
         guardado = pt.gesto_em_curso(d)
         assert guardado is not None, "o degrau de pé evaporou com a tentativa"
@@ -370,13 +384,18 @@ class TestOGesto:
         assert guardado.a_registrar is True, "não vai chegar ao perfil"
 
     @pytest.mark.asyncio
-    async def test_o_aperto_seguinte_ao_degrau_caro_volta_ao_ciclo(self) -> None:
-        """A porta de volta pelo controle custa UM aperto, não o caminho.
+    async def test_a_porta_de_volta_pelo_controle_nao_custa_aperto_nenhum(
+        self,
+    ) -> None:
+        """Do degrau caro em diante, cada aperto anda uma casa do ciclo livre.
 
-        O aperto que para a escada não troca máscara; o seguinte troca, porque
-        a tentativa já foi encerrada e o gesto volta a ser o de sempre. MORDE
-        um `PASSO_PAROU` que fosse aplicado sem encerrar a tentativa: ela
-        ficaria presa no degrau caro, e nenhum aperto sairia de lá.
+        FATO CORRIGIDO (30/08/2026): este teste chamava-se *"o aperto seguinte
+        ao degrau caro volta ao ciclo"* e media a porta de volta custando UM
+        aperto. Ela custa ZERO — que é o mesmo que ela custa num jogo com
+        carimbo, e essa igualdade é a decisão dela.
+
+        MORDE uma caminhada que não encerrasse a tentativa: ela ficaria presa
+        no degrau caro e nenhum aperto sairia de lá.
         """
         d = _DaemonDoGesto(flavor="xbox")
         _abrir_tentativa(d, pe.ESCADA[1])
@@ -385,7 +404,10 @@ class TestOGesto:
         await gesto()  # type: ignore[operator]
         await gesto()  # type: ignore[operator]
 
-        assert d.pedidos == [(False, None, "manual")], "ficou presa no degrau caro"
+        assert d.pedidos == [
+            (False, None, "manual"),  # xbox -> mouse_teclado, no MESMO aperto
+            (True, "dualsense", "manual"),  # mouse_teclado -> dualsense
+        ], "ficou presa no degrau caro, ou comeu um aperto"
 
     @pytest.mark.asyncio
     async def test_no_ultimo_degrau_a_escada_acaba_e_o_gesto_segue(self) -> None:
@@ -409,16 +431,24 @@ class TestOGesto:
         """Ele exige fechar a Steam, reabrir a Steam e reabrir o jogo — e
         `_aplicar_ponte` não sabe fazer nada disso. Prometer aqui seria o
         gesto dizendo que ligou o Steam Input, que NENHUMA linha deste
-        repositório liga."""
+        repositório liga.
+
+        O invariante não mudou em 30/08; mudou o nome do desfecho. Antes o
+        laço PARAVA nele (`PASSO_PAROU`); agora o PULA e a escada acaba —
+        `mascara is None` nos dois casos, que é o que garante que o gesto
+        nunca aplica Steam Input.
+        """
         d = _DaemonDoGesto(flavor="dualsense")
         _abrir_tentativa(d, pe.ESCADA[2])  # o degrau anterior ao Steam Input
 
         passo = pt.avancar_por_gesto(d, jogo_vivo=True, agora=1.0)
 
         assert passo is not None
-        assert passo.motivo == pt.PASSO_PAROU
-        assert passo.mascara is None
-        assert passo.preco == pe.SUBIR_FECHANDO_A_STEAM
+        assert passo.mascara is None, "o gesto ia aplicar o Steam Input"
+        assert passo.motivo == pt.PASSO_ESCADA_ACABOU
+        assert [d.ponte.chave for d in passo.pulados] == [
+            "gamepad/dualsense+steam_input"
+        ], "o degrau do Steam Input não foi anunciado como pulado"
 
     def test_o_gesto_nunca_carimba(self) -> None:
         """O gesto é o CONTRÁRIO de uma confirmação: é o sinal de que o degrau

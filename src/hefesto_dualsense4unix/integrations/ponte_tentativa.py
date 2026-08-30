@@ -47,22 +47,58 @@ próximo lançamento recomeça do degrau que o PERFIL entrega — que, no jogo s
 barato: a alternativa é um arquivo dizendo "já tentei estas", que envelhece
 sozinho e que ninguém sabe quando apagar.
 
-O DEGRAU QUE NÃO SE ALCANÇA AO VIVO: **avisa, GUARDA, e para**
---------------------------------------------------------------
+O DEGRAU CARO NÃO PERTENCE AO GESTO — **avisa, GUARDA, e PULA**
+----------------------------------------------------------------
 Os dois últimos degraus da `ESCADA` não alcançam um processo já rodando —
 `native` porque a env congelou no `exec` (o resultado ao vivo é ZERO
 controles, `launch_env._nativos_fora_da_antecipacao`), `steam_input` porque o
 `localconfig.vdf` só sobrevive com a Steam fechada. Quando a escada chega
-neles com o jogo aberto, este laço **avisa e para**; não pula, e não finge.
+neles com o jogo aberto, este laço **avisa, guarda e pula**; não finge, e não
+come o aperto dela.
 
 - **Não finge** porque subir ali ao vivo é o degrau que MENTE — é o que o
   cabeçalho de `ponte_escada` já dizia com todas as letras.
-- **Não pula** porque pular o `native` deixaria de fora a classe de jogos que
-  escreve no hidraw direto (Sackboy, medido em 06/08), e pular o
-  `steam_input` deixaria de fora a classe *"só aceita Steam Input"* (DON'T
-  SCREAM, medido em 18→19/08). Pular é perder de vez os dois jogos que
-  motivaram a escada existir; parar é só adiar.
-- **Para** — e a tentativa é ENCERRADA.
+- **Avisa** no journal (`ponte_escada_pulou_o_degrau_caro`) e na lightbar, que
+  é o único canal que ela enxerga sem sair do jogo: o `hotkey` pisca a cor do
+  modo pulado (`CORES_DO_MODO`) antes de aplicar a troca. Um degrau que some
+  em silêncio é o defeito com outro nome.
+- **Pula** porque o gesto serve para uma coisa só, e ela disse qual:
+  *"o PS+R3 altera a bridge, e isso permite que dentro do jogo eu possa testar
+  a bridge sem fechar o jogo"*. Um degrau que exige REABRIR o jogo não testa
+  nada dentro do jogo — ele pertence ao lançamento.
+
+**FATO CORRIGIDO (29→30/08/2026).** Esta seção dizia *"não pula, porque pular
+o `native` deixaria de fora a classe de jogos que escreve no hidraw direto
+(Sackboy), e pular o `steam_input` deixaria de fora a classe 'só aceita Steam
+Input' (DON'T SCREAM). Pular é perder de vez os dois jogos que motivaram a
+escada existir; parar é só adiar."*
+
+**A premissa era falsa, e a medição é curta:** o degrau caro já não era
+alcançado por caminho nenhum, nem ao vivo nem no lançamento. `comecar` só arma
+quando o perfil NÃO tem `mode`, e aí arma o PRIMEIRO degrau; com `mode` posto,
+o ramo *"o perfil manda"* arma `None` — e depois do primeiro alinhamento todo
+perfil tem `mode`.
+
+    perfil SEM mode  -> motivo=primeiro_degrau  armar=gamepad/dualsense
+    perfil mode=xbox -> motivo=perfil_manda     armar=None
+    perfil mode=native -> motivo=perfil_manda   armar=None
+
+Ou seja: **"parar" não adiava o degrau, só cobrava um aperto por ele.** É o
+mesmo achado que `2b6bc5f9` registrou sem consertar — *"a escada nunca ARMA o
+Nativo nem o Steam Input... fechá-lo mexe no ramo 'o perfil manda', que é
+decisão dela"* — e ele continua aberto, e continua sendo dela.
+
+O que o pulo GARANTE, e é o que `2b6bc5f9` acrescentou: a ponte de pé é
+guardada (`_anotar_o_gesto(a_registrar=True)`) e o tique a grava no `mode` do
+perfil sem carimbar, então o próximo lançamento abre a tentativa PARADA nela.
+Ela não repaga os gestos que já gastou.
+
+E o que "parar" custava foi MEDIDO, com os quatro jogos dela e quatro apertos
+cada (`D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`): o jogo SEM
+carimbo perdia o 2º aperto (`xbox -> xbox`, nada), 3 trocas em 4 apertos,
+enquanto os três carimbados faziam 4 em 4. **O gesto se comportava diferente
+conforme o jogo tivesse ou não carimbo** — e o usuário novo, que não tem
+carimbo em jogo nenhum, tinha o comportamento pior em TODOS eles.
 
 DOIS APERTOS NÃO PODEM CUSTAR A PARTIDA (29/08/2026)
 ----------------------------------------------------
@@ -84,14 +120,15 @@ journal dela (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17, Touhou 29/08
    com o jogo ainda fora, `como_subir` responde `SUBIR_AGORA` — o Nativo é
    ARMADO no lançamento. É o que a escada já sabia fazer e ninguém chamava;
 2. **o MESMO aperto caía no ciclo fixo** e levava a `mouse_teclado`: o gamepad
-   sumia no meio da partida. O `Passo` de `PASSO_PAROU` agora diz ao `hotkey`
-   que este gesto não cai no ciclo. O aperto SEGUINTE cai — a tentativa já foi
-   encerrada —, então a porta de volta pelo controle continua a um aperto de
-   distância, e não a zero.
+   sumia no meio da partida.
 
-E o GESTO não para junto: fora do `PASSO_PAROU`, quando o laço não tem degrau
-ao vivo para oferecer, o gesto volta a fazer o que sempre fez (o
-`CICLO_DE_PONTES` do `hotkey`).
+**O ponto 1 continua de pé, e é ele que sustenta tudo o que veio depois.** O
+ponto 2 foi curado DUAS vezes no mesmo dia, e a segunda desfez a primeira de
+propósito: a cura das 16:40 fez o aperto não trocar nada (`PASSO_PAROU`), e
+isso comprou o silêncio ao preço de o gesto passar a se comportar diferente
+conforme o jogo tivesse carimbo — ver § *O DEGRAU CARO NÃO PERTENCE AO GESTO*.
+Hoje o aperto TROCA sempre; o que não acontece mais é a escada oferecer, ao
+vivo, um degrau que só o lançamento alcança.
 
 O LAÇO NÃO ANDA SOZINHO COM O JOGO ABERTO
 ------------------------------------------
@@ -170,7 +207,12 @@ COMECO_PERFIL_MANDA = "perfil_manda"
 
 #: O que o gesto conseguiu fazer pela escada.
 PASSO_SUBIU = "subiu"
-PASSO_PAROU = "parou"
+#: O gesto PULOU um ou mais degraus que não se alcançam ao vivo e achou um que
+#: se alcança. SUBSTITUI o `PASSO_PAROU` de 29/08/2026 (ver
+#: `D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`, o mesmo dia): o
+#: `parou` existia para o gesto que não trocava nada, e é ele que não existe
+#: mais.
+PASSO_PULOU = "pulou"
 PASSO_ESCADA_ACABOU = "escada_acabou"
 
 #: Por que a tentativa terminou. NENHUM deles carimba, exceto `FIM_CONFIRMADA`.
@@ -238,6 +280,10 @@ class Passo:
     #: O preço do próximo degrau, de `ponte_escada.como_subir`.
     preco: str | None
     motivo: str
+    #: Os degraus que este gesto PULOU por não se alcançarem ao vivo, na ordem
+    #: da `ESCADA`. Existe para o `hotkey` avisar pela lightbar: um degrau
+    #: pulado em silêncio é o defeito de 29/08 com outro nome.
+    pulados: tuple[ponte_escada.Degrau, ...] = ()
 
 
 @dataclass
@@ -555,13 +601,15 @@ def avancar_por_gesto(
     - **alcançável ao vivo** (uma das duas máscaras): devolvido para o gesto
       aplicar. Quem CONFIRMA que ele subiu é `degrau_subiu`, depois de olhar o
       aparelho — o retorno do applier não prova nada (MASCARA-01);
-    - **caro** (exige reabrir o jogo ou fechar a Steam): o laço AVISA e PARA,
-      e a tentativa é encerrada. Ver o cabeçalho: parar adia, pular perde;
-    - **inexistente** (a escada acabou): encerrada também. Nada mais a tentar
-      e nada a confirmar — ela acabou de recusar o último degrau.
+    - **caro** (exige reabrir o jogo ou fechar a Steam): AVISA, GUARDA e
+      **PULA** — a caminhada segue para o degrau seguinte. Ver o cabeçalho,
+      § *O DEGRAU CARO NÃO PERTENCE AO GESTO*;
+    - **inexistente** (a escada acabou, ou só sobraram caros): a tentativa é
+      encerrada e o gesto volta ao `CICLO_DE_PONTES`.
 
-    Nos três casos em que `mascara` é `None`, o gesto volta ao `CICLO_DE_PONTES`
-    de sempre. Ele nunca fica sem resposta.
+    Quando `mascara` é `None`, o gesto volta ao `CICLO_DE_PONTES` de sempre.
+    Ele nunca fica sem resposta — e desde 29/08/2026 ele nunca fica sem
+    TROCA, que é o que o fazia divergir entre um jogo carimbado e um sem.
     """
     tentativa = em_curso(daemon)
     if tentativa is None:
@@ -570,63 +618,107 @@ def avancar_por_gesto(
     tentativa.ultimo_gesto = momento
     tentativa.gestos += 1
 
-    degrau = ponte_escada.proximo_degrau(
-        ponte_atual=tentativa.ponte,
-        # A tentativa só existe onde NÃO há carimbo — `comecar` não abre
-        # nenhuma com `confirmada`. Passar `None` aqui é dizer isso, não
-        # afrouxar a regra: quem tem carimbo nem chega neste caminho.
-        confirmada=None,
-    )
-    if degrau is None:
-        encerrar(daemon, motivo=FIM_ESCADA_ACABOU)
-        logger.info(
-            "ponte_escada_esgotada", appid=tentativa.appid, de=tentativa.ponte.chave
+    # A CAMINHADA. Cada volta pergunta o degrau seguinte e olha se ele se
+    # alcança COM O JOGO ABERTO. O que não se alcança é PULADO — anotado em
+    # `pulados` para o aviso, e deixado para o lançamento, onde ele é de graça.
+    # `de_onde` anda junto porque `proximo_degrau` não guarda posição: quem diz
+    # onde a escada está é a ponte que se passa a ela.
+    de_onde = tentativa.ponte
+    pulados: list[ponte_escada.Degrau] = []
+    while True:
+        degrau = ponte_escada.proximo_degrau(
+            ponte_atual=de_onde,
+            # A tentativa só existe onde NÃO há carimbo — `comecar` não abre
+            # nenhuma com `confirmada`. Passar `None` aqui é dizer isso, não
+            # afrouxar a regra: quem tem carimbo nem chega neste caminho.
+            confirmada=None,
         )
-        return Passo(
-            degrau=None, mascara=None, preco=None, motivo=PASSO_ESCADA_ACABOU
+        if degrau is None:
+            break
+        preco = ponte_escada.como_subir(degrau, jogo_vivo=jogo_vivo)
+        mascara = degrau.ponte.mascara
+        alcancavel = (
+            degrau.ao_vivo
+            and degrau.ponte.kind == ponte_escada.KIND_GAMEPAD
+            and mascara in MASCARAS_AO_VIVO
         )
-
-    preco = ponte_escada.como_subir(degrau, jogo_vivo=jogo_vivo)
-    mascara = degrau.ponte.mascara
-    alcancavel = (
-        degrau.ao_vivo
-        and degrau.ponte.kind == ponte_escada.KIND_GAMEPAD
-        and mascara in MASCARAS_AO_VIVO
-    )
-    if not alcancavel:
-        # AVISA, GUARDA E PARA. O journal diz o que falta acontecer, porque é
-        # ela quem pode fazê-lo: reabrir o jogo, ou fechar a Steam e reabrir os
-        # dois. E o degrau em que ela ESTÁ é guardado antes de a tentativa
-        # morrer — sem isso ele evapora, e o próximo lançamento recomeça do
-        # `mode` de antes (medido três vezes; ver o cabeçalho).
+        if alcancavel:
+            logger.info(
+                "ponte_escada_degrau_pedido",
+                appid=tentativa.appid,
+                de=tentativa.ponte.chave,
+                para=degrau.ponte.chave,
+                preco=preco,
+                pulados=[d.ponte.chave for d in pulados],
+                gestos=tentativa.gestos,
+            )
+            return Passo(
+                degrau=degrau,
+                mascara=mascara,
+                preco=preco,
+                motivo=PASSO_PULOU if pulados else PASSO_SUBIU,
+                pulados=tuple(pulados),
+            )
+        # PULA, e NÃO EM SILÊNCIO. O journal diz qual degrau ficou de fora e o
+        # que ele custaria, porque é ela quem pode pagá-lo: reabrir o jogo, ou
+        # fechar a Steam e reabrir os dois. O `hotkey` pisca a cor DESTE modo
+        # antes de aplicar a troca.
         logger.warning(
-            "ponte_escada_parou_no_degrau_caro",
+            "ponte_escada_pulou_o_degrau_caro",
             appid=tentativa.appid,
             de=tentativa.ponte.chave,
-            proximo=degrau.ponte.chave,
+            pulado=degrau.ponte.chave,
             preco=preco,
             porque=degrau.porque,
+            fica_para_o_lancamento=True,
         )
-        _anotar_o_gesto(
-            daemon,
-            appid=tentativa.appid,
-            ponte=tentativa.ponte,
-            momento=momento,
-            gestos=tentativa.gestos,
-            a_registrar=True,
-        )
-        encerrar(daemon, motivo=FIM_DEGRAU_CARO)
-        return Passo(degrau=degrau, mascara=None, preco=preco, motivo=PASSO_PAROU)
+        pulados.append(degrau)
+        de_onde = degrau.ponte
 
+    # A escada acabou — ou porque não havia degrau seguinte, ou porque todos os
+    # que sobravam eram caros. Nos DOIS casos a tentativa morre aqui, e o gesto
+    # volta ao `CICLO_DE_PONTES` do `hotkey`: ele nunca fica sem resposta.
+    #
+    # E o degrau em que ela ESTÁ é guardado ANTES de a tentativa morrer — esta
+    # é a metade de `2b6bc5f9` (29/08/2026) que continua de pé: o tique grava a
+    # ponte no `mode` do perfil SEM carimbar, e o próximo lançamento abre a
+    # tentativa PARADA nela em vez de recomeçar do `mode` de antes. Ela ganha
+    # os gestos que já gastou.
+    #
+    # NÃO SE AFIRMA AQUI QUE O NATIVO SERÁ ARMADO NO LANÇAMENTO — foi MEDIDO
+    # em 30/08/2026 que ele não é, por caminho nenhum:
+    #
+    #     perfil SEM mode  -> motivo=primeiro_degrau  armar=gamepad/dualsense
+    #     perfil mode=xbox -> motivo=perfil_manda     armar=None
+    #
+    # O ramo `perfil manda` de `comecar` arma `None` por decisão, e depois do
+    # primeiro alinhamento TODO perfil tem `mode`. É o mesmo achado que
+    # `2b6bc5f9` registrou sem consertar (*"a escada nunca ARMA o Nativo nem o
+    # Steam Input... fechá-lo mexe no ramo 'o perfil manda', que é decisão
+    # dela"*), e continua aberto e dela. O pulo não o perde porque não havia o
+    # que perder: o degrau já não era alcançado por lugar nenhum.
+    _anotar_o_gesto(
+        daemon,
+        appid=tentativa.appid,
+        ponte=tentativa.ponte,
+        momento=momento,
+        gestos=tentativa.gestos,
+        a_registrar=bool(pulados),
+    )
+    encerrar(daemon, motivo=FIM_DEGRAU_CARO if pulados else FIM_ESCADA_ACABOU)
     logger.info(
-        "ponte_escada_degrau_pedido",
+        "ponte_escada_esgotada",
         appid=tentativa.appid,
         de=tentativa.ponte.chave,
-        para=degrau.ponte.chave,
-        preco=preco,
-        gestos=tentativa.gestos,
+        pulados=[d.ponte.chave for d in pulados],
     )
-    return Passo(degrau=degrau, mascara=mascara, preco=preco, motivo=PASSO_SUBIU)
+    return Passo(
+        degrau=pulados[-1] if pulados else None,
+        mascara=None,
+        preco=None,
+        motivo=PASSO_ESCADA_ACABOU,
+        pulados=tuple(pulados),
+    )
 
 
 def degrau_subiu(daemon: Any, degrau: ponte_escada.Degrau) -> bool:
@@ -872,7 +964,7 @@ __all__ = [
     "FIM_OUTRA_TENTATIVA",
     "MASCARAS_AO_VIVO",
     "PASSO_ESCADA_ACABOU",
-    "PASSO_PAROU",
+    "PASSO_PULOU",
     "PASSO_SUBIU",
     "Comeco",
     "GestoDela",

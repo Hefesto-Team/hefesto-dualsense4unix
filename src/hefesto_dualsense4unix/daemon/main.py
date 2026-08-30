@@ -86,6 +86,32 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
         # Recusar é uma decisão, não uma falha — respawnar seria brigar com ela.
         return 0
 
+    # A TRAVA MÚTUA (29/08/2026) — a frase dela: *"temos que evitar estar
+    # rodando os daemon ao mesmo tempo que a versão dev"*. Ver
+    # `utils/trava_do_aparelho.py`, que documenta por que nem o
+    # `single_instance` (escopado por casa, porque o pid file sai do slug da
+    # variante), nem o hidraw (aberto sem `O_EXCL`), nem o broker (desenhado
+    # para tolerar dois) alcançam isto.
+    #
+    # MESMA RAZÃO DE ORDEM DA CHAVE, e aqui ela é ainda mais literal: quem vai
+    # recusar não pode ter matado o predecessor da PRÓPRIA casa antes. Por isso
+    # a conferência é read-only e vem aqui; quem toma a trava de fato é o
+    # `tomar()` logo depois do takeover, com o predecessor já fora.
+    from hefesto_dualsense4unix.utils import trava_do_aparelho
+
+    try:
+        trava_do_aparelho.conferir_antes_do_takeover()
+    except trava_do_aparelho.OutraCasaComOAparelhoError as recusa:
+        logger.warning(
+            "daemon_recusado_pela_trava",
+            casa_dona=recusa.dono.casa,
+            pid_dono=recusa.dono.pid,
+        )
+        print(recusa.recado, file=sys.stderr)
+        # 0 pela mesma razão da chave: o outro Hefesto está no ar de propósito,
+        # e um ciclo de restart em cima disso só encheria o journal.
+        return 0
+
     # CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: traz perfis/sessão/prefs do
     # layout curto legado (~/.config/hefesto) para o atual, se necessário.
     # Idempotente e não-destrutivo; roda antes de qualquer leitura de config.
@@ -99,6 +125,12 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     from hefesto_dualsense4unix.utils.single_instance import acquire_or_takeover
 
     acquire_or_takeover(single_instance_name())
+
+    # Agora sim: o predecessor da própria casa já saiu (o `acquire_or_takeover`
+    # só volta com o flock dele na mão), então o flock global está livre e é
+    # nosso. Falha aberta de propósito — `tomar()` devolve False e o daemon
+    # sobe igual, exatamente como subia antes desta trava existir.
+    trava_do_aparelho.tomar()
 
     # PERF-MULTI-CONTROLLER-01: o daemon nunca deve disputar CPU de igual com o
     # JOGO (SCHED_OTHER). Com 2+ controles as threads de evdev/report somam

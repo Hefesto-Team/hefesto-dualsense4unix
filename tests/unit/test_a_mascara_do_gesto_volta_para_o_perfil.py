@@ -383,9 +383,22 @@ class TestODegrauCaroNaoCustaAPartida:
         sem nada gravado: o `xbox` a que ela chegou com dois gestos evaporava
         com a tentativa.
 
-        MORDE as duas curas: o ramo `PASSO_PAROU` de `_ciclar_ponte` (sem ele
-        volta o `mouse_teclado` no mesmo aperto) e o `_anotar_o_gesto` antes do
-        `encerrar` (sem ele o `xbox` não chega ao perfil).
+        FATO CORRIGIDO (30/08/2026,
+        `D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`): das duas metades
+        do defeito, só UMA era defeito. O `mouse_teclado` no mesmo aperto é o
+        ciclo livre fazendo o que já fazia em TODO jogo carimbado dela — medido
+        nos quatro jogos, é a sequência que os três carimbados seguiam desde
+        sempre. O que era defeito, e continua curado aqui, é o `xbox` **não
+        chegar ao perfil**: era isso que a fazia repagar os mesmos gestos a cada
+        abertura (24 apertos em 7 dias).
+
+        Por isso este teste deixou de exigir `d.pedidos == []` — essa linha
+        cobrava o aperto COMIDO, que era o que fazia o gesto se comportar
+        diferente conforme o jogo tivesse carimbo — e passou a exigir o que
+        sempre foi o ponto: o `xbox` gravado.
+
+        MORDE o `_anotar_o_gesto` antes do `encerrar` na caminhada de
+        `avancar_por_gesto`: sem ele o `xbox` não chega ao perfil.
         """
         save_profile(_perfil_antes_do_gesto(), origem="teste")
         d = _Daemon(flavor="xbox")
@@ -400,8 +413,8 @@ class TestODegrauCaroNaoCustaAPartida:
 
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
-        assert d.pedidos == [], "o gamepad sumiu no meio da partida"
-        assert d.config.gamepad_flavor == "xbox", "a máscara dela mudou"
+        # O aperto TROCA — é o ciclo livre, o mesmo de qualquer jogo carimbado.
+        assert d.pedidos == [(False, None, "manual")], "o aperto dela foi comido"
         assert pt.em_curso(d) is None, "a tentativa tinha de ser encerrada"
 
         le.tique_da_escada(d)
