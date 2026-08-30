@@ -149,6 +149,7 @@ _XWAYLAND_FORCED = _force_xwayland_on_cosmic()
 _PIXBUF_SANEADO = _sanear_loaders_do_gdk_pixbuf()
 
 from hefesto_dualsense4unix.app.app import HefestoApp
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.i18n import init_locale
 from hefesto_dualsense4unix.utils.logging_config import configure_logging, get_logger
 
@@ -189,26 +190,29 @@ def _kill_previous_instances(logger: structlog.stdlib.BoundLogger) -> None:
         managed por systemd. Daemons via systemctl ficam intactos para o
         Restart=on-failure não bater em StartLimitBurst.
       - Flatpak runtime do app — os DOIS app-ids
-        (io.github.hefesto_team.hefesto_dualsense4unix e o anterior)
+        (io.github.hefesto_team.hefesto_dualsense4unix e br.andrefarias.Hefesto)
 
     Pula próprio PID + PPID. Defesa anti-loop: daemons systemd-managed são
     detectados via /proc/<pid>/status PPid e preservados.
+
+    AS DUAS CASAS (29/08/2026): a LISTA em si mudou de dono e agora vive em
+    `utils/identidade.py`, porque o app de desenvolvimento precisa de padrões
+    que alcancem só os processos DELE. Sem `HEFESTO_VARIANTE` no ambiente os
+    padrões são exatamente os de antes.
     """
     own_pid = os.getpid()
     own_ppid = os.getppid()
 
-    patterns = [
-        r"hefesto_dualsense4unix\.app\.main",
-        r"hefesto-dualsense4unix-gui",
-        # IDENTIDADE-01 (25/08/2026): OS DOIS app-ids. O Flatpak não migra id,
-        # então durante a transição a máquina pode ter os dois instalados — e
-        # uma janela do id antigo ainda de pé é exatamente a instância anterior
-        # que esta função existe para tirar do caminho.
-        r"io\.github\.hefesto_team\.hefesto_dualsense4unix",
-        r"br\.andrefarias\.Hefesto",
-    ]
+    # AS DUAS CASAS (29/08/2026): os padrões saem de `utils.identidade`, que só
+    # devolve os DESTA variante. Sem `HEFESTO_VARIANTE` a lista é literalmente a
+    # de sempre — `test_identidade_das_duas_casas.py` trava isso. Com o app de
+    # dev instalado ao lado, nenhum dos dois alcança o outro: `pgrep -f` casa por
+    # SUBSTRING, e "hefesto-dev-dualsense4unix-gui" não contém
+    # "hefesto-dualsense4unix-gui" (por isso o `dev` fica no MEIO do nome).
+    casa = identidade.atual()
+    patterns = list(casa.padroes_de_matanca)
     # Daemon: pattern separado para checar systemd-managed antes de matar.
-    daemon_pattern = r"hefesto-dualsense4unix daemon start"
+    daemon_pattern = casa.padrao_do_daemon
 
     def _kill(pid: int, sig: int) -> None:
         if pid in (own_pid, own_ppid):
@@ -286,12 +290,37 @@ def main(argv: list[str] | None = None) -> int:
     # Também seta application_name (usado em window title bar fallback).
     import gi
     gi.require_version("Gtk", "3.0")
-    from gi.repository import GLib, Gtk
-    GLib.set_prgname("hefesto-dualsense4unix")
-    GLib.set_application_name("Hefesto - Dualsense4Unix")
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk, GLib, Gtk
+    casa_desta_gui = identidade.atual()
+    GLib.set_prgname(casa_desta_gui.wm_instance)
+    GLib.set_application_name(casa_desta_gui.nome_longo)
+
+    # A CURA DE UM COMANDO SÓ (29/08/2026) — queixa dela: *"as janelas
+    # adicionais que abrirem (...) devem ficar na MESMA INSTÂNCIA da janela da
+    # dock (sem abrir o mesmo app ao lado como se fosse outro programa)"*.
+    #
+    # O que a dock lê sob XWayland é o WM_CLASS, e o cosmic-comp publica o
+    # SEGUNDO campo dele como `app_id` (`cosmic-comp/src/shell/element/
+    # surface.rs:237` → `smithay/src/xwayland/xwm/surface.rs:1083`). Esse campo
+    # NÃO vem do prgname: vem do `program_class` do GDK, que por padrão é o
+    # argv[0] capitalizado. Medido em Xvfb, lendo do servidor X com `xprop`:
+    # sem esta linha, só as duas janelas que chamam `set_wmclass` à mão saem
+    # certas; a de Mapear Entradas, a de Mapear Entrada a Entrada, o seletor de
+    # arquivo e os 17 diálogos saíam como "Hefesto-dualsense4unix-gui" —
+    # `app_id` que não casa `.desktop` nenhum, que é literalmente "outro
+    # programa" para a dock.
+    #
+    # `set_program_class` é de PROCESSO: conserta as 23 janelas de uma vez,
+    # inclusive as que ainda não foram escritas — enquanto `set_wmclass` é por
+    # janela, é depreciado, e depende de alguém lembrar na próxima. Tem de vir
+    # antes da primeira janela, e a primeira nasce no `HefestoApp()` abaixo.
+    with contextlib.suppress(Exception):
+        Gdk.set_program_class(casa_desta_gui.wm_class)
+
     # Default icon do app — janelas filhas (diálogos, etc.) herdam.
     with contextlib.suppress(Exception):
-        Gtk.Window.set_default_icon_name("hefesto-dualsense4unix")
+        Gtk.Window.set_default_icon_name(casa_desta_gui.icone)
 
     # Garantia de instância única absoluta — mata qualquer processo antigo do
     # Hefesto - Dualsense4Unix antes de subir. Evita estado inconsistente, socket

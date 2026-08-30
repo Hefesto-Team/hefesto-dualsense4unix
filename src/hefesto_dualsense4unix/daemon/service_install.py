@@ -15,11 +15,16 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-SERVICE_NORMAL = "hefesto-dualsense4unix.service"
+#: A unit do daemon DESTA variante (29/08/2026). Sem `HEFESTO_VARIANTE` no
+#: ambiente é literalmente "hefesto-dualsense4unix.service", como sempre foi.
+#: Com a variante de dev, os botões "Ligar/Parar/Reiniciar daemon" da GUI de
+#: dev falam com a unit de dev — e não com a dela.
+SERVICE_NORMAL = identidade.atual().unit_daemon
 
 # Diretórios system-wide onde .deb e empacotamentos Debian-likes instalam
 # units de user systemd. detect_installed_unit() checa esses paths além

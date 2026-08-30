@@ -445,6 +445,16 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
 #: querer. Cada um precisa de UMA porta que o ligue — ou de uma lacuna
 #: declarada em ``_SEM_MAO_HOJE``.
 _PROMESSA_DE_AMBIENTE: dict[str, str] = {
+    "HEFESTO_VARIANTE": (
+        "Escolhe QUAL Hefesto este processo é — o estável dela ou o de "
+        "desenvolvimento (utils/identidade.py:atual). Dela sai a casa inteira: "
+        "config, perfis, socket, unit, WM_CLASS e ícone. É promessa dela, "
+        "pedida em 29/08/2026 (*'Ele é instalado como OUTRO APP com a logo "
+        "alterada em dev'*). MEDIDO em 29/08/2026: LIGADA, por `Environment=` "
+        "na unit e por `export` no lançador, os dois escritos por "
+        "`install-dev.sh`. Ausente = o app dela, com todos os literais de "
+        "antes — `test_identidade_das_duas_casas.py` trava isso."
+    ),
     "HEFESTO_BROKER_ALLOWED_UID": (
         "Qual UID pode falar com o broker de hidraw (broker/hidraw_broker.py:76). "
         "É promessa de sistema: sem ela o broker não serve a sessão dela. "

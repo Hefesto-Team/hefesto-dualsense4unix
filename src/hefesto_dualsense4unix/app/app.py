@@ -68,6 +68,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
 from hefesto_dualsense4unix.integrations.desktop_notifications import (
     statusnotifierwatcher_available,
 )
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -294,15 +295,20 @@ class HefestoApp(
         # sob tiling do COSMIC (que ignora a largura/altura mínima da janela).
         self._wrap_notebook_pages_in_scroll()
 
-        self.window.set_title("Hefesto - Dualsense4Unix")
+        self.window.set_title(identidade.atual().nome_longo)
         # BUG-DOCK-ICON-WMCLASS-MISMATCH-01 (v3.4.3): WM_CLASS instance
         # tem que casar com basename do .desktop (`hefesto-dualsense4unix.
         # desktop`) para a dock COSMIC / GNOME associar o ícone do app.
         # Antes era `("hefesto", "Hefesto-Dualsense4Unix")` — instance
         # não casava e a dock mostrava ícone genérico.
-        self.window.set_wmclass(
-            "hefesto-dualsense4unix", "Hefesto-Dualsense4Unix"
-        )
+        # AS DUAS CASAS (29/08/2026): os literais saíram daqui e vieram de
+        # `utils.identidade` — sem `HEFESTO_VARIANTE` os valores são exatamente
+        # os de antes. A cura de verdade é `Gdk.set_program_class` em
+        # `app/main.py`, que alcança as 23 janelas do processo; esta linha fica
+        # como cinta para quem construir a `HefestoApp` sem passar pelo `main`
+        # (testes, applet), onde o program_class ainda seria o do argv[0].
+        _casa = identidade.atual()
+        self.window.set_wmclass(_casa.wm_instance, _casa.wm_class)
         if ICON_PATH.exists():
             self.window.set_icon_from_file(str(ICON_PATH))
 

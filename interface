@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# interface — a interface nova do Hefesto, para ela abrir e testar.
+#
+# Pedido dela, 29/08/2026: *"cria um arquivo .sh chamado interface na raiz do
+# outro dev pra eu clicar e lá abrir a visão final das páginas desenvolvidas pra
+# eu ir testando sempre"*.
+#
+# O QUE ELE ABRE: a aba **Controles** viva — o mockup aprovado rodando num
+# WebKit2.WebView dentro de uma janela GTK3, pintado pelo daemon 10x por segundo,
+# com a mesa REAL (os controles que estiverem ligados agora, não os quatro do
+# desenho). A tira de cima navega: clicando nas outras nove abas ela vê o desenho
+# aprovado, ainda estático — é a "visão final das páginas desenvolvidas" pedida.
+#
+# ELE NÃO ESCREVE NADA. O único método de IPC que o piloto pronuncia é
+# `daemon.state_full`, que é leitura. Nenhum perfil dela é tocado, nenhum byte vai
+# ao aparelho.
+#
+# A LOGO NA DOCK (29/08/2026, o outro pedido dela). O `.sh` NÃO decide ícone
+# nenhum: quem decide é a JANELA, pelo `WM_CLASS` que ela publica e pelo
+# `_NET_WM_ICON` que ela carrega. Por isso este lançador não chama o piloto
+# direto — chama `scripts/abrir_interface.py`, que veste a identidade no
+# PROCESSO (prgname, program_class e ícone) antes da primeira janela nascer, e
+# só então carrega o piloto sem tocar numa linha dele. O porquê de cada passo,
+# com o que foi medido, está no cabeçalho daquele arquivo.
+#
+# COMO ABRIR: clique duas vezes (o gerenciador de arquivos pergunta "Executar"),
+# ou no terminal: ./interface
+set -euo pipefail
+
+AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# O piloto e o mockup moram em `novo-layout/`, que é .gitignore e NÃO viaja em
+# worktree — por isso a árvore de origem é a fonte quando esta cópia não os tem.
+ORIGEM="/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix"
+for RAIZ in "$AQUI" "$ORIGEM"; do
+    PILOTO="$RAIZ/novo-layout/_ferramentas/controles_vivos.py"
+    [ -f "$PILOTO" ] && break
+done
+
+if [ ! -f "$PILOTO" ]; then
+    echo "não achei o piloto (novo-layout/_ferramentas/controles_vivos.py)" >&2
+    echo "procurei em: $AQUI e $ORIGEM" >&2
+    read -rp "Enter para fechar" _ || true
+    exit 1
+fi
+
+# O envoltório de identidade é versionado e viaja junto desta árvore.
+ABRIDOR="$AQUI/scripts/abrir_interface.py"
+if [ ! -f "$ABRIDOR" ]; then
+    echo "não achei $ABRIDOR — a árvore está incompleta" >&2
+    read -rp "Enter para fechar" _ || true
+    exit 1
+fi
+
+# O .venv da árvore onde o piloto está — ele importa o próprio produto.
+PY="$(dirname "$PILOTO")/../../.venv/bin/python"
+[ -x "$PY" ] || PY="$ORIGEM/.venv/bin/python"
+[ -x "$PY" ] || PY="python3"
+
+echo "Hefesto — a interface nova"
+echo "  piloto : $PILOTO"
+echo "  python : $PY"
+echo
+echo "A aba Controles está VIVA (dado do daemon). As outras nove são o desenho."
+echo "Feche a janela para sair."
+echo
+echo "identidade da janela:"
+
+exec "$PY" "$ABRIDOR" "$@"
