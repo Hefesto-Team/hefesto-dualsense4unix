@@ -1627,6 +1627,44 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "de tela. O QUE FECHA: a Onda 11 · Sistema, ou quem publicar a chave "
         "primeiro (§10 da sprint)."
     ),
+    # --- 29/08/2026: `gui/ponte_da_tela.py` nasceu HOJE, e o produto ainda
+    # entra pelo `Gtk.Notebook` do `gui/main.glade`. As três lápides abaixo são
+    # a MESMA dívida, e ela tem data marcada.
+    "gui/ponte_da_tela.py::PonteDaTela": (
+        "NASCEU em 29/08/2026, extraído do piloto da aba Controles "
+        "(`novo-layout/_ferramentas/controles_vivos.py`), que era ao mesmo "
+        "tempo a janela, a ponte, a pintura e a aba. São as duas pontes que "
+        "decidiram a tecnologia da interface: `evaluate_javascript` (Python → "
+        "página) e `register_script_message_handler` (página → Python). ONDE O "
+        "CAMINHO SE PERDE: quem as chama hoje é o PILOTO, e ele mora em "
+        "`novo-layout/`, que é .gitignore:108 — logo não é produção por "
+        "definição deste portão, e está certo que não seja. O QUE FECHA: a "
+        "sprint `MIGRA-CONTROLES-01`, que enxerta o WebView no `Gtk.Notebook` "
+        "de `gui/main.glade` por um `gui/webview_de_aba.py`; a partir dela o "
+        "produto passa por aqui dez vezes por segundo. A régua que já a mede "
+        "sem produção é `tests/unit/test_ponte_da_tela_a_biblioteca_das_dez_abas.py`."
+    ),
+    "gui/ponte_da_tela.py::JanelaDaAba": (
+        "NASCEU em 29/08/2026, no mesmo movimento da `PonteDaTela` acima — é a "
+        "janela GTK3 que hospeda uma aba do mockup, com a `Gtk.HeaderBar` (sem "
+        "ela os botões saem do lado errado no COSMIC), as duas folhas de "
+        "usuário e a guarda de carga que NÃO mata a janela quando ela clica na "
+        "tira. ONDE O CAMINHO SE PERDE: o produto de hoje abre a janela pelo "
+        "`app/app.py` sobre o `gui/main.glade`; esta é a janela da interface "
+        "NOVA, e por enquanto só o piloto (em `novo-layout/`, .gitignore:108) a "
+        "levanta. O QUE FECHA: `MIGRA-CONTROLES-01` — ou, antes dela, o "
+        "lançador da interface nova, o que vier primeiro."
+    ),
+    "gui/ponte_da_tela.py::literal_js": (
+        "NASCEU em 29/08/2026. É a regra de que o valor atravessa a fronteira "
+        "como DADO e nunca como texto: um nome de plástico com apóstrofo — e o "
+        "`docs/data/cores-do-dualsense.csv` tem 28 modelos — quebraria o script "
+        "inteiro, calado. ONDE O CAMINHO SE PERDE: ela é chamada por "
+        "`PonteDaTela.dizer`, que é a lápide acima; enquanto a ponte não tiver "
+        "chamador de produção, esta também não tem. O QUE FECHA: a mesma "
+        "`MIGRA-CONTROLES-01`. A mordida que prova que ela segura alguma coisa "
+        "está em `test_a_mordida_do_literal_a_interpolacao_crua_quebra_a_pintura`."
+    ),
     "integrations/proton_pin.py::steam_root_ou_recusa": (
         "ENTREGUE em 24/08/2026 (T-09, ONDA0-Z7). `default_steam_root` "
         "continua excluindo Flatpak/Snap por decisão medida; esta função "
