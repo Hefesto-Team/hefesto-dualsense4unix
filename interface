@@ -57,6 +57,16 @@ PY="$(dirname "$PILOTO")/../../.venv/bin/python"
 [ -x "$PY" ] || PY="$ORIGEM/.venv/bin/python"
 [ -x "$PY" ] || PY="python3"
 
+# A VARIANTE, e sem ela nada funciona — medido em 30/08/2026.
+#
+# O produto escolhe a casa pelo `HEFESTO_VARIANTE` (utils/identidade.py). Sem a
+# variável, este lançador procurava o socket do Hefesto ESTÁVEL — que ela
+# desliga justamente para testar esta versão. O sintoma na tela era
+# "[Errno 111] Conexão recusada" com o daemon de dev vivo e vendo o controle.
+#
+# Medido: sem a variável, `daemon_state_full()` devolve None; com ela, 1 controle.
+export HEFESTO_VARIANTE="${HEFESTO_VARIANTE:-dev}"
+
 echo "Hefesto — a interface nova"
 echo "  piloto : $PILOTO"
 echo "  python : $PY"

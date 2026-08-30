@@ -9,7 +9,7 @@ DOIS comportamentos em três horas:
     00:25:02  Mullet SEM carimbo  -> `ponte_escada_aberta motivo=perfil_manda`
     00:26:17  2º aperto -> `ponte_escada_parou_no_degrau_caro`
     03:23:13  `confirmada_por_silencio gestos=0` -> o carimbo NASCE SOZINHO
-    03:27–03:29  quatro apertos, todos `escada=None`, todos `ok=True`
+    03:27-03:29  quatro apertos, todos `escada=None`, todos `ok=True`
 
 A MECÂNICA: o carimbo DESLIGA a escada (`ponte_escada.proximo_degrau`, a
 primeira linha do corpo), e sem escada o gesto cai no `CICLO_DE_PONTES`, cujos
@@ -266,10 +266,11 @@ class TestOPuloSeAnuncia:
             "native/-",
             "gamepad/dualsense+steam_input",
         ], f"o journal não anunciou os dois degraus pulados: {avisos}"
-        assert [kw["preco"] for kw in pulados] == [
+        # `preco` é o nome do kwarg no journal, não prosa.  # noqa: acentuacao
+        assert [kw["preco"] for kw in pulados] == [  # noqa: acentuacao
             pe.SUBIR_REABRINDO_O_JOGO,
             pe.SUBIR_FECHANDO_A_STEAM,
-        ], "não disse o que cada degrau custa"
+        ], "não disse quanto cada degrau custa"
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +310,7 @@ class TestONativoNaoSePerdeEleMudaDeLugar:
             agora=0.0,
         ).armar == pe.ESCADA[0], "o lançamento parou de armar o primeiro degrau"
 
-    def test_ACHADO_o_nativo_nao_e_armado_por_caminho_nenhum(self) -> None:
+    def test_achado_o_nativo_nao_e_armado_por_caminho_nenhum(self) -> None:
         """MEDIDO em 30/08/2026, e NÃO consertado: o registro do buraco.
 
         É o mesmo achado que `2b6bc5f9` deixou escrito sem fechar — *"a escada
@@ -381,7 +382,7 @@ class TestONativoNaoSePerdeEleMudaDeLugar:
 # ---------------------------------------------------------------------------
 class TestARéguaViveNoTempo:
     @pytest.mark.asyncio
-    async def test_o_pulo_alinha_o_modo_e_NAO_carimba_nem_depois_dos_181s(
+    async def test_o_pulo_alinha_o_modo_e_nao_carimba_nem_depois_dos_181s(
         self,
     ) -> None:
         """O tique roda até t+181 s, e o carimbo NÃO pode nascer.
