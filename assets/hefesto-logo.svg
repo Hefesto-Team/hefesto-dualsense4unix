@@ -38,7 +38,7 @@
   <circle cx="101.72" cy="99.838" r="94" fill="#282a36">
     <title>Fundo</title>
   </circle>
-  <path d="M 100 193.999 C 172.361 193.743 217.308 115.249 180.906 52.711 C 144.503 -9.826 54.052 -9.506 18.094 53.289 C -5.416 94.346 5.252 146.478 43 174.999" fill="none" stroke="url(#ring)" stroke-width="6" stroke-linecap="round" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(-1, 0, 0, -1, -0.000001, -0.000015)">
+  <path d="M 100 193.999 C 172.361 193.743 217.308 115.249 180.906 52.711 C 144.503 -9.826 54.052 -9.506 18.094 53.289 C -5.416 94.346 5.252 146.478 43 174.999" fill="none" stroke="url(#ring)" stroke-width="6" stroke-linecap="round" transform="matrix(-1.0, 0.0, 0.0, -1.0, 211.891999, 184.172985)">
     <title>Borda</title>
   </path>
   <circle cx="152.739" cy="22.298" r="5" fill="#ff79c6">
@@ -62,7 +62,7 @@
     <path d="M 72.98 156.035 L 119.044 156.035 L 110.984 170.38 L 81.043 170.38 L 72.98 156.035 Z" fill="#bd93f9" style=""/>
     <path d="M 73.242 165.913 L 116.795 165.913 L 124.054 179.913 L 65.983 179.913 L 73.242 165.913 Z" fill="#6272a4" style=""/>
   </g>
-  <g transform="matrix(0.514677, -1.055068, 0.985237, 0.428599, -20.237259, -19.007107)" style="transform-origin: 100px 88px;">
+  <g transform="matrix(0.514677, -1.055068, 0.985237, 0.428599, -58.405815, 136.782981)">
     <title>Martelo</title>
     <rect x="95" y="44" width="10" height="78" rx="5" fill="#ffb86c"/>
     <rect x="70" y="108" width="60" height="24" rx="6" style="fill: rgb(144, 144, 144); paint-order: stroke markers; filter: url(&quot;#outline-filter-0&quot;);"/>

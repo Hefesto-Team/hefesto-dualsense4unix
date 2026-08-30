@@ -54,6 +54,7 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.gui import ponte_da_tela
 from tests.conftest import exigir_gi_real
 
 exigir_gi_real("RÉGUA-DE-TELA-01 — a aba Controles dirigida por dentro")
@@ -174,14 +175,29 @@ def _estado(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-class _ValorDeMentira:
-    """O que `Janela._da_tela` espera receber: algo com `to_string()`."""
+class _PonteNaRegua(ponte_da_tela.PonteDaTela):
+    """A ponte DE PRODUÇÃO com o transporte trocado.
 
-    def __init__(self, bruto: str) -> None:
-        self._bruto = bruto
+    Desde 29/08/2026 a janela, as duas pontes e a guarda de carga saíram do
+    piloto para `gui/ponte_da_tela.py`, e o `_remontar`/`_pintar` do piloto
+    falam por ela. Esta subclasse troca SÓ o `rodar` — o WebView próprio pelo
+    `executar` da régua — e herda tudo o mais: a serialização em JSON, uma
+    chamada por pacote e a recusa do gesto malformado. **Reescrever `dizer`
+    aqui criaria a segunda verdade** sobre o que a tela recebe, que é o defeito
+    que a extração existe para não cometer.
+    """
 
-    def to_string(self) -> str:
-        return self._bruto
+    def __init__(self, tela: Any, ao_receber: Any) -> None:
+        self.canal = ponte_da_tela.CANAL_PADRAO
+        self._ao_receber = ao_receber
+        self._ao_recusar = None
+        self.recusas = []
+        self.chamadas = 0
+        self.tela = tela
+
+    def rodar(self, script: str) -> None:
+        self.chamadas += 1
+        self.tela.executar(script)
 
 
 class CabecaDeMentira(controles_vivos.Janela):
@@ -190,13 +206,14 @@ class CabecaDeMentira(controles_vivos.Janela):
     Herda de :class:`controles_vivos.Janela` de propósito e **não** chama o
     ``__init__`` — aquele abre uma janela GTK própria e fala com o daemon dela.
     O que se herda é o que interessa: ``_remontar``, ``_pintar``,
-    ``_pacote_do_card`` e ``_da_tela``, verbatim. Assim a régua mede o MESMO
+    ``_pacote_do_card`` e ``_gesto``, verbatim. Assim a régua mede o MESMO
     código que a interface roda, e quem quebrar qualquer um dos quatro é pego
     aqui em vez de na tela dela.
     """
 
     def __init__(self, tela: Any) -> None:
         self.tela = tela
+        self.ponte = _PonteNaRegua(tela, ao_receber=self._gesto)
         self.ondas = {}
         self.eco_sensor = {}
         self.eco_rota = {}
@@ -207,9 +224,6 @@ class CabecaDeMentira(controles_vivos.Janela):
         self.alvo = None
         self.lento = {}
         self.mic = None
-
-    def _js(self, script: str) -> None:
-        self.tela.executar(script)
 
     # -- o que a régua acrescenta -----------------------------------------
     def pintar(self, state: dict[str, Any], *, remontar: bool = True) -> int:
@@ -257,7 +271,7 @@ class CabecaDeMentira(controles_vivos.Janela):
         voltou. Quem faz a conta é o `_da_tela` do piloto, sem cópia.
         """
         for recado in recados:
-            self._da_tela(None, _ValorDeMentira(recado.bruto))
+            self.ponte.receber_texto(recado.bruto)
         self.tela.avancar(0.2)
 
 
