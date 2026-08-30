@@ -4,7 +4,7 @@
 
 O DEFEITO QUE ELE MATA (27/08/2026). As cinco cores que o produto conhecia eram
 CSS escrito à mão, numa zona só (`.corpo` / `[id$="-touchpad"] .peca`), repetido
-em `novo-layout/_ferramentas/topo.html:295-326` e em `mapa.py`. Duas
+em `layout/_ferramentas/topo.html:295-326` e em `mapa.py`. Duas
 consequências, e as duas já custaram:
 
   1. **nenhuma régua sabia dizer se o hex ali estava certo**, porque não havia
@@ -64,7 +64,7 @@ CSV_PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
 #: Gerar num só deixaria o mapa e o produto com desenhos diferentes.
 ALVOS = (
     RAIZ / "assets/control-svg/dualsense.svg",
-    RAIZ / "novo-layout/_ferramentas/ds_limpo.svg",
+    RAIZ / "layout/_ferramentas/ds_limpo.svg",
 )
 
 #: As zonas do `cores-do-dualsense.csv` que têm SUPERFÍCIE no desenho, na ordem

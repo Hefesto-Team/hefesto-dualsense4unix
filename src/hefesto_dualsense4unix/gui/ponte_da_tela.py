@@ -23,13 +23,13 @@ quem chama.
 
 POR QUE ELE MORA EM ``src/`` E NÃO EM ``novo-layout/_ferramentas/`` NEM EM ``scripts/``
 --------------------------------------------------------------------------------------
-``novo-layout/`` é ``.gitignore:108``: nada que mora lá é versionado, e
-``git worktree add`` não copia arquivo ignorado — logo não viaja para a árvore de
-agente nenhum. É a mesma cicatriz estrutural do ``CLAUDE.md`` (``.gitignore:90``)
-que obrigou o ``scripts/portoes.sh`` a existir, e foi ela que mandou o
-``scripts/regua_de_tela.py`` sair de lá.
+``novo-layout/`` **saiu do ``.gitignore`` em 30/08/2026**, a pedido dela
+(*"pode tirar do gitignore então"*): a pasta guarda os desenhos que ela faz, uma
+leva sobrescreveu um SVG recém-desenhado e não havia backup. Isso derruba metade
+do argumento original desta seção — a de que nada de lá viaja para a árvore de um
+agente —, mas **não muda o destino**, e por duas razões que sobreviveram:
 
-``scripts/`` resolveria o viajar, e é onde a RÉGUA ficou — mas a régua é
+``scripts/`` também resolveria o viajar, e é onde a RÉGUA ficou — mas a régua é
 instrumento e isto é **produto**: as nove abas restantes vão rodar em cima deste
 arquivo. E ``scripts/`` não é medido por portão nenhum de código
 (``ruff check src/ tests/`` e ``mypy src/hefesto_dualsense4unix`` são os comandos

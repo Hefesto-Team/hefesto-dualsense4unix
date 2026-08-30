@@ -33,13 +33,13 @@ O pedido dela diz "o hook do **novo dev**", e a leitura natural seria: fale na
 worktree `hefesto-dualsense4unix-dev` e cale na árvore dela. MEDIDO em
 29/08/2026, essa leitura erra o alvo:
 
-* o `novo-layout/_ferramentas/controles_vivos.py` — o piloto que PROVA a ponte
+* o `layout/_ferramentas/controles_vivos.py` — o piloto que PROVA a ponte
   JS, o exemplo que o próprio pedido invoca — mora na árvore **dela**, não na
   `-dev`, e nem sequer está sob o git (`git ls-files --error-unmatch` recusa).
   Um gancho preso ao diretório `-dev` seria mudo justamente sobre o arquivo que
   motivou o pedido;
 * e a árvore de uma leva é temporária por regra desta casa (`git worktree add`
-  para integrar), enquanto `novo-layout/` é permanente.
+  para integrar), enquanto `layout/` é permanente.
 
 Então o discriminador é **o que o commit TOCA**, não em que árvore ele nasce. A
 árvore só decide o TOM (ver `--diagnostico`), nunca o silêncio.
@@ -99,7 +99,7 @@ calam:
 1. **Commit que não toca a tela** — a maioria. Cala inteiro.
 2. **Commit que traz régua** — cala, e o `--verboso` diz a quem creditou (um
    crédito errado tem de ser visível, não silencioso).
-3. **Commit só de prosa** — `.md` dentro de `novo-layout/` não é desenho.
+3. **Commit só de prosa** — `.md` dentro de `layout/` não é desenho.
 4. **Dívida repetida** — se o `HEAD` já levou o mesmo aviso pelas mesmas abas,
    sai UMA linha em vez do bloco. O bloco ensina; a repetição do bloco ensina a
    pular o bloco.
@@ -113,7 +113,7 @@ O QUE ELE **NÃO** MEDE — e a lista importa tanto quanto o que ele mede
   Playwright dentro do `pre-commit` — que é como se ensina alguém a desligar
   gancho.
 * **Não prova que a régua MORDE.** Régua desta casa já nasceu falsa duas vezes
-  (as duas cicatrizes do `novo-layout/_ferramentas/LEIA-ME.md`), e o remédio
+  (as duas cicatrizes do `layout/_ferramentas/LEIA-ME.md`), e o remédio
   contra isso é a mordida da própria régua (`regua_popup.py --morde`), não este
   arquivo.
 * **Não sabe se a régua cobre a MUDANÇA.** Ele vê que uma régua foi tocada, não
@@ -142,7 +142,7 @@ GRAU = 1
 #: `check_fotos_da_tela.py`, que é a interface GTK de hoje. As duas convivem
 #: enquanto a migração corre, e as duas precisam de régua.
 TELA = (
-    "novo-layout",
+    "layout",
     "src/hefesto_dualsense4unix/app",
     "src/hefesto_dualsense4unix/gui",
     "scripts/gui-captura",
@@ -150,12 +150,12 @@ TELA = (
 
 #: Dentro de `novo-layout`, o que NÃO é desenho: saída de ferramenta, não fonte.
 NAO_E_DESENHO = (
-    "novo-layout/screenshots",
-    "novo-layout/uploads",
+    "layout/screenshots",
+    "layout/uploads",
 )
 
 #: Como se reconhece uma RÉGUA DE TELA pelo nome. São PREFIXOS, e prefixo é
-#: convenção — a desta pasta, escrita no `novo-layout/_ferramentas/LEIA-ME.md`
+#: convenção — a desta pasta, escrita no `layout/_ferramentas/LEIA-ME.md`
 #: ("conferidos por `regua.py`"). Não é inventário de arquivos, que apodreceria
 #: no dia em que nascesse a próxima régua.
 #:
@@ -168,7 +168,7 @@ PREFIXOS_DE_REGUA = ("regua", "conferir", "olhar", "medir")
 #:
 #: `scripts/` entrou aqui em 29/08/2026 e não por simetria: o
 #: `scripts/regua_de_tela.py` — a régua que dirige o `WebView` por dentro —
-#: nasceu ali de propósito, porque `novo-layout/` é `.gitignore:108` e um
+#: nasceu ali de propósito, porque `layout/` é `.gitignore:108` e um
 #: instrumento permanente tem de ser versionado para viajar em worktree.
 #:
 #: **Sem esta linha o portão nasceria falso**, e do pior jeito possível: ele
@@ -177,20 +177,20 @@ PREFIXOS_DE_REGUA = ("regua", "conferir", "olhar", "medir")
 #:
 #: O próprio `check_regua_de_tela.py` NÃO é régua, e o prefixo `check` diz
 #: isso: ele PERGUNTA pela medição, não mede.
-PASTAS_DE_REGUA = ("novo-layout/_ferramentas", "scripts")
+PASTAS_DE_REGUA = ("layout/_ferramentas", "scripts")
 
 #: A ponte JS — o piloto que dirige o `WebView` por dentro (`--prova-gesto`).
 #: Nomeado à parte porque não segue a convenção de prefixo, e é a régua mais
 #: importante da interface nova: é a única que exercita o MOTOR que ela vai
 #: usar, com o daemon vivo.
-A_PONTE_JS = "novo-layout/_ferramentas/controles_vivos.py"
+A_PONTE_JS = "layout/_ferramentas/controles_vivos.py"
 
 #: A pasta das ferramentas do mockup.
-FERRAMENTAS = "novo-layout/_ferramentas"
+FERRAMENTAS = "layout/_ferramentas"
 
 #: O INSTRUMENTO versionado: a biblioteca com que se escreve régua nova sobre a
 #: interface que roda num `WebView`. Nomeado à parte da lista porque ele não é
-#: um par das outras — as de `novo-layout/_ferramentas/` são scripts que se
+#: um par das outras — as de `layout/_ferramentas/` são scripts que se
 #: rodam à mão sobre o mockup no Chrome; esta se IMPORTA de dentro de um
 #: `tests/unit/test_*.py` e dirige o motor do produto.
 O_INSTRUMENTO = "scripts/regua_de_tela.py"
@@ -245,7 +245,7 @@ def e_regua(caminho: str) -> bool:
 
     Três formas, e as três são convenção desta casa — nenhuma é inventário:
 
-    * um arquivo de `novo-layout/_ferramentas/` cujo nome começa por um dos
+    * um arquivo de `layout/_ferramentas/` cujo nome começa por um dos
       `PREFIXOS_DE_REGUA`;
     * a ponte JS, nomeada à parte porque não segue a convenção;
     * um `tests/unit/test_*.py` — construir validação aqui muitas vezes é
@@ -265,7 +265,7 @@ def e_regua(caminho: str) -> bool:
 def e_tela(caminho: str) -> bool:
     """Este caminho é DESENHO — o que, mudando, pede régua?
 
-    Prosa não é: um `.md` dentro de `novo-layout/` documenta a tela, não a
+    Prosa não é: um `.md` dentro de `layout/` documenta a tela, não a
     muda. Saída de ferramenta também não (`screenshots/`, `uploads/`).
     """
     if caminho.endswith(".md"):
@@ -282,12 +282,12 @@ def _sob(caminho: str, prefixo: str) -> bool:
 def aba_de(caminho: str) -> str | None:
     """O número da aba que este caminho mexe, ou `None`.
 
-    Sai do PRÓPRIO nome do arquivo — `novo-layout/06-navegacao.html` e
-    `novo-layout/_ferramentas/aba06.py` são os dois a aba `06`. Não há tabela
+    Sai do PRÓPRIO nome do arquivo — `layout/06-navegacao.html` e
+    `layout/_ferramentas/aba06.py` são os dois a aba `06`. Não há tabela
     de abas aqui, e é de propósito: tabela apodrece, nome de arquivo não.
     """
     p = PurePosixPath(caminho)
-    if p.parent == PurePosixPath("novo-layout") and p.suffix == ".html":
+    if p.parent == PurePosixPath("layout") and p.suffix == ".html":
         cabeca = p.name[:2]
         return cabeca if cabeca.isdigit() else None
     if str(p.parent) == FERRAMENTAS and p.name.startswith("aba"):
@@ -443,11 +443,11 @@ def _bloco(raiz: Path, desenho: list[str], abas: list[str]) -> str:
         linhas.append("  layout e `:hover`. Não alcançam o WebView do produto:")
         linhas += [f"    {r}" for r in do_mockup]
     if not disco:
-        linhas.append("  Não achei régua nenhuma em `novo-layout/_ferramentas/`.")
+        linhas.append("  Não achei régua nenhuma em `layout/_ferramentas/`.")
     linhas += [
         "",
         "  E ela precisa MORDER: régua desta casa já nasceu falsa duas vezes (as",
-        "  cicatrizes do `novo-layout/_ferramentas/LEIA-ME.md`), e em 29/08 o",
+        "  cicatrizes do `layout/_ferramentas/LEIA-ME.md`), e em 29/08 o",
         "  `--prova-gesto` deu VERDE sobre dois botões que nunca clicava. Arranque",
         "  a cura, veja a régua reprovar, devolva.",
         "",
@@ -461,7 +461,7 @@ def _bloco(raiz: Path, desenho: list[str], abas: list[str]) -> str:
 def _o_ponto_cego(raiz: Path) -> None:
     """O que gancho NENHUM pode ver — e por que calar sobre isso seria mentir.
 
-    MEDIDO em 29/08/2026: `novo-layout/` é `.gitignore:108`. O `git` conhece
+    MEDIDO em 29/08/2026: `layout/` é `.gitignore:108`. O `git` conhece
     ZERO arquivo lá dentro e ZERO commit de toda a história tocou a pasta. Logo
     o mockup, os dez geradores `abaNN.py`, as réguas do Playwright e o piloto
     da ponte JS **nunca aparecem num índice** — e um portão de `pre-commit`
@@ -474,11 +474,11 @@ def _o_ponto_cego(raiz: Path) -> None:
 
     O que sobra coberto, e é real: o lado versionado — `src/…/app`, `src/…/gui`,
     `scripts/gui-captura` e a régua `scripts/regua_de_tela.py`. Foi por essa
-    razão que ela nasceu em `scripts/` e não em `novo-layout/`.
+    razão que ela nasceu em `scripts/` e não em `layout/`.
     """
     ignorada = (
         subprocess.run(
-            ["git", "check-ignore", "-q", "novo-layout"],
+            ["git", "check-ignore", "-q", "layout"],
             cwd=str(raiz),
             capture_output=True,
         ).returncode
@@ -486,11 +486,11 @@ def _o_ponto_cego(raiz: Path) -> None:
     )
     if not ignorada:
         return
-    conhecidos = len([x for x in _git(raiz, "ls-files", "novo-layout").splitlines() if x])
+    conhecidos = len([x for x in _git(raiz, "ls-files", "layout").splitlines() if x])
     if conhecidos:
         return
     print("PONTO CEGO, e ele é maior que este portão:")
-    print("  `novo-layout/` é `.gitignore:108` — o git conhece 0 arquivo lá e")
+    print("  `layout/` é `.gitignore:108` — o git conhece 0 arquivo lá e")
     print("  0 commit da história tocou a pasta. O mockup, os geradores `abaNN.py`,")
     print("  as réguas do Playwright e o piloto da ponte JS NUNCA entram num")
     print("  índice, e um `pre-commit` só julga o índice.")
@@ -501,7 +501,7 @@ def _o_ponto_cego(raiz: Path) -> None:
     print("  gancho pode deixar de ser.")
     print()
     print("  A saída, se ela quiser cobertura ali, é DELA e é de versionamento,")
-    print("  não de gancho: tirar `novo-layout/` do `.gitignore`, ou mover para")
+    print("  não de gancho: tirar `layout/` do `.gitignore`, ou mover para")
     print("  `scripts/` o que for instrumento permanente — que foi exatamente o")
     print("  argumento com que `scripts/regua_de_tela.py` nasceu fora da pasta.")
     print()

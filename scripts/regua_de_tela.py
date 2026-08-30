@@ -9,7 +9,7 @@ A interface nova é o mockup aprovado rodando num ``WebKit2.WebView`` dentro de
 uma janela GTK3. Isso a torna **dirigível**: ``evaluate_javascript`` clica, lê e
 mede; ``register_script_message_handler`` traz a resposta de volta ao Python.
 Este arquivo é essa capacidade tirada de dentro do piloto da aba Controles
-(``novo-layout/_ferramentas/controles_vivos.py --prova-gesto``) e posta onde
+(``layout/_ferramentas/controles_vivos.py --prova-gesto``) e posta onde
 qualquer aba alcança.
 
     from regua_de_tela import Tela
@@ -19,9 +19,9 @@ qualquer aba alcança.
         t.clicar_e_ouvir('.ctl [data-mudo="microfone"]')   # botão MORTO reprova
         print(t.medir('.stick[data-stick="l"] .p'))
 
-POR QUE ELE MORA EM ``scripts/`` E NÃO EM ``novo-layout/_ferramentas/``
+POR QUE ELE MORA EM ``scripts/`` E NÃO EM ``layout/_ferramentas/``
 ----------------------------------------------------------------------
-``novo-layout/`` é ``.gitignore:108``. Logo tudo que mora lá **não é versionado
+``layout/`` é ``.gitignore:108``. Logo tudo que mora lá **não é versionado
 e não viaja em worktree** — ``git worktree add`` não copia arquivo ignorado. É a
 mesma cicatriz estrutural do ``CLAUDE.md`` (``.gitignore:90``) que fez o
 ``scripts/portoes.sh`` existir, e ela já cobrou aqui: o lançador ``interface``
@@ -29,13 +29,13 @@ carrega um caminho absoluto da máquina dela justamente para achar o piloto de
 volta. Um instrumento permanente — que o hook cita e que toda árvore de agente
 precisa ter — tem de ser versionado. Este é.
 
-O que continua morando em ``novo-layout/`` é o **alvo** (o mockup), não a régua;
+O que continua morando em ``layout/`` é o **alvo** (o mockup), não a régua;
 :func:`achar_a_aba` o procura sem caminho chumbado, varrendo os worktrees que o
 ``git`` declara.
 
 O QUE ESTE INSTRUMENTO NÃO É
 ----------------------------
-Ele **não substitui** o ``novo-layout/_ferramentas/olhar.py``. Aquele dirige o
+Ele **não substitui** o ``layout/_ferramentas/olhar.py``. Aquele dirige o
 mockup num Chrome headless pelo Playwright e serve para medir layout, ``:hover``
 e fotografar o DESENHO. O Playwright controla Chromium, Firefox e o WebKit dele
 próprio — **não** um ``WebView`` embutido numa janela GTK. Esta régua alcança o
@@ -113,7 +113,7 @@ O_QUE_ELE_NAO_FAZ = (
     "de título e qualquer diálogo GTK ficam fora do alcance",
     "não roda sem servidor gráfico: `Gtk.OffscreenWindow` ainda precisa de um "
     "GDK display. No CI sem Xvfb a régua PULA, e um pulo não é um verde",
-    "não traz o mockup consigo: `novo-layout/` é .gitignore, então numa árvore "
+    "não traz o mockup consigo: `layout/` é .gitignore, então numa árvore "
     "sem ele a régua PULA nomeando onde procurou",
     "não conhece aba nenhuma: o vocabulário é de DOM. Quem sabe o que uma aba "
     "promete é a régua daquela aba, não este arquivo",
@@ -201,7 +201,7 @@ class Caixa(NamedTuple):
 def _worktrees_do_git(daqui: pathlib.Path) -> list[pathlib.Path]:
     """Toda árvore que o `git` declara — a principal e as de agente.
 
-    O mockup mora em `novo-layout/`, que é ignorado e por isso existe em UMA
+    O mockup mora em `layout/`, que é ignorado e por isso existe em UMA
     árvore só (a principal, quase sempre). Perguntar ao `git` é o que evita o
     caminho absoluto da máquina dela chumbado num arquivo versionado — que é o
     que o lançador `interface` teve de fazer, e que não sobrevive a outra
@@ -228,7 +228,7 @@ def _worktrees_do_git(daqui: pathlib.Path) -> list[pathlib.Path]:
 
 
 def raizes_candidatas() -> list[pathlib.Path]:
-    """As raízes onde o `novo-layout/` pode estar, em ordem de preferência.
+    """As raízes onde o `layout/` pode estar, em ordem de preferência.
 
     `HEFESTO_NOVO_LAYOUT` **fixa**: quando ela está posta, é a ÚNICA raiz, e
     nenhuma outra entra na lista. Defeito medido em 29/08/2026, e quem o achou
@@ -250,9 +250,9 @@ def raizes_candidatas() -> list[pathlib.Path]:
 
     variavel = os.environ.get("HEFESTO_NOVO_LAYOUT")
     if variavel:
-        # A variável aponta para o `novo-layout/` OU para a raiz que o contém.
+        # A variável aponta para o `layout/` OU para a raiz que o contém.
         alvo = pathlib.Path(variavel)
-        por(alvo.parent if alvo.name == "novo-layout" else alvo)
+        por(alvo.parent if alvo.name == "layout" else alvo)
         return fora
     aqui = pathlib.Path(__file__).resolve().parent.parent
     por(aqui)
@@ -265,7 +265,7 @@ def abas_conhecidas() -> list[pathlib.Path]:
     """Uma linha por aba — a cópia mais nova de cada uma, venha de onde vier."""
     nomes: set[str] = set()
     for raiz in raizes_candidatas():
-        for pagina in (raiz / "novo-layout").glob("[0-9][0-9]-*.html"):
+        for pagina in (raiz / "layout").glob("[0-9][0-9]-*.html"):
             nomes.add(pagina.stem)
     return [achar_a_aba(nome, avisar=False) for nome in sorted(nomes)]
 
@@ -275,7 +275,7 @@ def candidatas_da_aba(nome: str) -> list[pathlib.Path]:
     pedido = nome.removesuffix(".html").strip().lower()
     achadas: list[pathlib.Path] = []
     for raiz in raizes_candidatas():
-        pasta = raiz / "novo-layout"
+        pasta = raiz / "layout"
         if not pasta.is_dir():
             continue
         for pagina in sorted(pasta.glob("[0-9][0-9]-*.html")):
@@ -289,14 +289,14 @@ def achar_a_aba(nome: str, *, avisar: bool = True) -> pathlib.Path:
     """`"02"`, `"controles"` ou `"02-controles.html"` → o arquivo.
 
     **A MAIS NOVA VENCE, e a divergência sai impressa.** Medido em 29/08/2026:
-    `novo-layout/` é ignorado, logo cada worktree tem a SUA cópia, e as duas
+    `layout/` é ignorado, logo cada worktree tem a SUA cópia, e as duas
     desta bancada divergiam — a da árvore `interface/nova` era de 28/08 03:09,
     sem um único `data-mudo`, enquanto a da árvore principal era de 29/08 20:32,
     com os doze. Uma régua que pegasse a cópia "mais perto de mim" mediria o
     mockup de ontem e daria verde sobre a cura de hoje.
 
     Ordenar por mtime é legítimo AQUI porque a página é um artefato GERADO
-    (`novo-layout/_ferramentas/monta.py`): cópia velha em worktree é sobra, não
+    (`layout/_ferramentas/monta.py`): cópia velha em worktree é sobra, não
     variante. `HEFESTO_NOVO_LAYOUT` vence sempre, para quem quiser fixar.
 
     E quando há mais de uma, o aviso vai para o `stderr` nomeando as duas — o
@@ -308,9 +308,9 @@ def achar_a_aba(nome: str, *, avisar: bool = True) -> pathlib.Path:
     achadas = candidatas_da_aba(nome)
     if not achadas:
         raise MockupAusente(
-            f"não achei a aba {nome!r}. `novo-layout/` é .gitignore:108 e não "
+            f"não achei a aba {nome!r}. `layout/` é .gitignore:108 e não "
             "viaja em worktree — aponte com HEFESTO_NOVO_LAYOUT. Procurei em: "
-            + " · ".join(str(r / "novo-layout") for r in raizes_candidatas())
+            + " · ".join(str(r / "layout") for r in raizes_candidatas())
         )
     if avisar and len(achadas) > 1:
         print(
@@ -835,7 +835,7 @@ def main(argv: list[str] | None = None) -> int:
         paginas = abas_conhecidas()
         if not paginas:
             print("nenhuma aba: procurei em " + " · ".join(
-                str(r / "novo-layout") for r in raizes_candidatas()), file=sys.stderr)
+                str(r / "layout") for r in raizes_candidatas()), file=sys.stderr)
             return 1
         for pagina in paginas:
             print(pagina)

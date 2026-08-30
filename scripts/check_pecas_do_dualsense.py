@@ -7,7 +7,7 @@ atravessou dois meses porque nenhuma régua comparava o NOME da peça com o LUGA
 dela — e quem viu foi ela, passando o mouse por cima, em 27/08/2026.
 
 Fonte da verdade: docs/data/pecas-do-dualsense.csv
-Mapa que ele mede:  novo-layout/mapa-do-controle.html (gerado por _ferramentas/mapa.py)
+Mapa que ele mede:  layout/mapa-do-controle.html (gerado por _ferramentas/mapa.py)
 
 A régua do mapa — o cruzamento tem de valer nos DOIS sentidos, peça a peça.
 
@@ -41,7 +41,7 @@ falhas = []
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
     pg = b.new_page(viewport={"width": 1920, "height": 1080})
-    pg.goto(f"file://{R}/novo-layout/mapa-do-controle.html")
+    pg.goto(f"file://{R}/layout/mapa-do-controle.html")
     pg.wait_for_load_state("networkidle"); pg.wait_for_timeout(400)
     print(f"=== o mapa · {len(pecas)} peças, cruzamento nos dois sentidos ===")
     for p in pecas:

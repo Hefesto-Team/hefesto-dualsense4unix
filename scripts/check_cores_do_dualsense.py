@@ -53,7 +53,7 @@ from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
 )
 
 SVG = RAIZ / "assets/control-svg/dualsense.svg"
-MAPA = RAIZ / "novo-layout/mapa-do-controle.html"
+MAPA = RAIZ / "layout/mapa-do-controle.html"
 CSV_CORES = RAIZ / "docs/data/cores-do-dualsense.csv"
 CSV_PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
 
@@ -163,10 +163,10 @@ def so_o_codigo(texto: str) -> str:
 
 
 sujos = []
-for arq in (RAIZ / "novo-layout/_ferramentas/mapa.py",
-            RAIZ / "novo-layout/_ferramentas/monta.py",
-            RAIZ / "novo-layout/_ferramentas/exportar.py",
-            RAIZ / "novo-layout/_ferramentas/topo.html"):
+for arq in (RAIZ / "layout/_ferramentas/mapa.py",
+            RAIZ / "layout/_ferramentas/monta.py",
+            RAIZ / "layout/_ferramentas/exportar.py",
+            RAIZ / "layout/_ferramentas/topo.html"):
     txt = so_o_codigo(arq.read_text())
     for h in DIGITADOS:
         if h in txt:
@@ -177,12 +177,12 @@ diz(not sujos, f"nenhum hex de plástico digitado nos geradores do mockup — {s
 #     geradas por `monta.py` a cada `abaNN.py`, mas a `01-jogar.html` é escrita à
 #     mão e NÃO passa por ele — sem esta régua, ela mostra a cor velha para
 #     sempre, e a 01 é o esqueleto do qual as outras nove nascem.
-sys.path.insert(0, str(RAIZ / "novo-layout/_ferramentas"))
+sys.path.insert(0, str(RAIZ / "layout/_ferramentas"))
 import monta  # noqa: E402
 
 velhas = []
-for arq in (RAIZ / "novo-layout/_ferramentas/topo.html",
-            RAIZ / "novo-layout/01-jogar.html"):
+for arq in (RAIZ / "layout/_ferramentas/topo.html",
+            RAIZ / "layout/01-jogar.html"):
     txt = arq.read_text()
     for nome, colorway in monta.PLASTICOS_DO_ESQUELETO.items():
         m = re.search(rf"--{nome}:(#[0-9a-fA-F]{{6}})", txt)
@@ -199,7 +199,7 @@ diz(not velhas, f"as cores do esqueleto batem com o desenho — velhas: {velhas}
 #     `topo.html`. É o mesmo caminho por onde o Cosmic Red virou `#b11f54` e
 #     ninguém tinha como ver. Achado pela conferência das dez abas, 27/08.
 da_mesa = {monta.cor_da_zona(c["cor"]).lower() for c in monta.MESA}
-jogar = (RAIZ / "novo-layout/01-jogar.html").read_text()
+jogar = (RAIZ / "layout/01-jogar.html").read_text()
 forasteiras = sorted({h.lower() for h in re.findall(r"--plastico:\s*(#[0-9a-fA-F]{6})", jogar)}
                      - da_mesa)
 diz(not forasteiras,
