@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<meta name="design_doc_mode" content="canvas">
+<style>
+  body { margin:0; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#21222c; padding:56px 48px 80px; font-family:'Space Grotesk',sans-serif; display:flex; flex-direction:column; gap:14px; box-sizing:border-box;">
+
+  <div style="max-width:1180px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.28em; color:#6272a4; text-transform:uppercase; margin-bottom:10px;">hefesto · dualsense4unix — marca circular</div>
+    <div style="font-size:15px; line-height:1.6; color:#8b8fa8; font-family:'JetBrains Mono',monospace; max-width:760px;">Conceito da forja (Hefesto) + gatilho adaptativo, paleta Drácula. Três direções lado a lado — me diga o número (ex.: <span style="color:#bd93f9;">1a</span>) pra refinar ou exportar.</div>
+  </div>
+
+  <section style="display:flex; flex-wrap:wrap; gap:32px; margin-top:22px;">
+
+    <!-- ============ OPTION 2a — SÍNTESE (os 3 juntos) ============ -->
+    <div id="2a" style="display:flex; flex-direction:column; gap:18px; width:400px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-weight:800; font-size:13px; background:#50fa7b; color:#282a36; padding:3px 10px; border-radius:6px;">2a</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#f8f8f2; letter-spacing:0.04em;">Síntese — bigorna + chama + martelo</span>
+      </div>
+
+      <div style="background:radial-gradient(circle at 50% 40%, #2f2740 0%, #17181f 100%); border:1px solid #343746; border-radius:20px; padding:44px; display:flex; align-items:center; justify-content:center;">
+        <svg width="290" height="290" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo Hefesto sintese">
+          <defs>
+            <linearGradient id="ring2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#8be9fd"/>
+              <stop offset="0.5" stop-color="#bd93f9"/>
+              <stop offset="1" stop-color="#ff79c6"/>
+            </linearGradient>
+            <linearGradient id="flameOut2" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#bd93f9"/>
+              <stop offset="1" stop-color="#ff79c6"/>
+            </linearGradient>
+            <linearGradient id="flameIn2" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#ffb86c"/>
+              <stop offset="1" stop-color="#f1fa8c"/>
+            </linearGradient>
+            <radialGradient id="glow2" cx="0.5" cy="0.56" r="0.52">
+              <stop offset="0" stop-color="#ffb86c" stop-opacity="0.42"/>
+              <stop offset="0.55" stop-color="#ff79c6" stop-opacity="0.18"/>
+              <stop offset="1" stop-color="#ff79c6" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <circle cx="100" cy="100" r="94" fill="#282a36"/>
+
+          <!-- forge fire in the background: soft glow + translucent flame -->
+          <circle cx="100" cy="104" r="78" fill="url(#glow2)"/>
+          <g opacity="0.4">
+            <path d="M100 34 C126 62 138 82 138 108 C138 138 122 158 100 158 C78 158 62 138 62 108 C62 92 70 76 84 68 C82 90 92 98 100 98 C108 90 100 62 100 34 Z" fill="url(#flameOut2)"/>
+            <path d="M100 74 C116 92 122 104 122 118 C122 136 112 148 100 148 C88 148 78 136 78 118 C78 108 83 100 90 95 C90 108 96 112 100 112 C104 104 100 90 100 74 Z" fill="url(#flameIn2)"/>
+          </g>
+
+          <!-- adaptive-trigger notch ring -->
+          <path d="M100 6 A94 94 0 1 1 43 25" fill="none" stroke="url(#ring2)" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="100" cy="6" r="5" fill="#8be9fd"/>
+          <circle cx="43" cy="25" r="5" fill="#ff79c6"/>
+
+          <!-- anvil -->
+          <path d="M56 132 L128 132 L148 142 L128 152 L119 152 L119 156 L73 156 L73 142 L56 142 Z" fill="#f8f8f2"/>
+          <path d="M80 156 L120 156 L113 172 L87 172 Z" fill="#bd93f9"/>
+          <path d="M70 172 L130 172 L140 186 L60 186 Z" fill="#6272a4"/>
+
+          <!-- hammer striking straight down onto the anvil top -->
+          <g transform="rotate(-9 100 120)">
+            <rect x="95" y="44" width="10" height="78" rx="5" fill="#ffb86c"/>
+            <rect x="95" y="44" width="10" height="12" rx="5" fill="#e0975a"/>
+            <rect x="70" y="108" width="60" height="24" rx="6" fill="#f8f8f2"/>
+            <rect x="66" y="112" width="10" height="16" rx="3" fill="#c9cbd6"/>
+            <rect x="124" y="112" width="12" height="16" rx="3" fill="#c9cbd6"/>
+          </g>
+        </svg>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.6; color:#6272a4;">Martelo batendo na bigorna; o fogo da forja fica como brilho ao fundo, dentro do anel-gatilho adaptativo.</div>
+    </div>
+
+
+    <!-- ============ OPTION 1a — MARTELO NA FORJA ============ -->
+    <div id="1a" style="display:flex; flex-direction:column; gap:18px; width:340px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-weight:800; font-size:13px; background:#bd93f9; color:#282a36; padding:3px 10px; border-radius:6px;">1a</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#f8f8f2; letter-spacing:0.04em;">Martelo &amp; Faísca</span>
+      </div>
+
+      <div style="background:radial-gradient(circle at 50% 42%, #2b2d3a 0%, #1a1b23 100%); border:1px solid #343746; border-radius:20px; padding:40px; display:flex; align-items:center; justify-content:center;">
+        <svg width="220" height="220" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo Hefesto martelo">
+          <defs>
+            <linearGradient id="ringA" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#bd93f9"/>
+              <stop offset="0.55" stop-color="#ff79c6"/>
+              <stop offset="1" stop-color="#ffb86c"/>
+            </linearGradient>
+            <radialGradient id="coreA" cx="0.5" cy="0.42" r="0.62">
+              <stop offset="0" stop-color="#3a2f4d"/>
+              <stop offset="1" stop-color="#282a36"/>
+            </radialGradient>
+          </defs>
+          <circle cx="100" cy="100" r="94" fill="url(#coreA)"/>
+          <circle cx="100" cy="100" r="94" fill="none" stroke="url(#ringA)" stroke-width="5"/>
+          <circle cx="100" cy="100" r="82" fill="none" stroke="#44475a" stroke-width="1.5" stroke-dasharray="2 7" stroke-linecap="round"/>
+          <!-- anvil base -->
+          <path d="M56 150 L144 150 L134 138 L100 138 L66 138 Z" fill="#44475a"/>
+          <path d="M70 138 L130 138 L128 122 L138 122 L138 114 L62 114 L62 122 L72 122 Z" fill="#6272a4"/>
+          <!-- hammer -->
+          <g transform="rotate(-32 100 96)">
+            <rect x="96" y="70" width="9" height="72" rx="4.5" fill="#ffb86c"/>
+            <rect x="96" y="128" width="9" height="14" rx="3" fill="#e0975a"/>
+            <rect x="70" y="52" width="61" height="26" rx="6" fill="#f8f8f2"/>
+            <rect x="66" y="56" width="10" height="18" rx="3" fill="#c9cbd6"/>
+            <rect x="125" y="58" width="12" height="14" rx="3" fill="#c9cbd6"/>
+          </g>
+          <!-- sparks -->
+          <g fill="none" stroke-linecap="round">
+            <path d="M132 60 L142 50" stroke="#ffb86c" stroke-width="3.5"/>
+            <path d="M138 72 L150 68" stroke="#ff79c6" stroke-width="3"/>
+            <path d="M126 48 L131 38" stroke="#f1fa8c" stroke-width="3"/>
+          </g>
+          <circle cx="150" cy="58" r="2.6" fill="#ffb86c"/>
+          <circle cx="134" cy="42" r="2.2" fill="#f1fa8c"/>
+        </svg>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.6; color:#6272a4;">Martelo do ferreiro batendo na bigorna, faíscas em laranja/rosa/amarelo. Anel em degradê Drácula.</div>
+    </div>
+
+    <!-- ============ OPTION 1b — CHAMA / MONOGRAMA H ============ -->
+    <div id="1b" style="display:flex; flex-direction:column; gap:18px; width:340px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-weight:800; font-size:13px; background:#ff79c6; color:#282a36; padding:3px 10px; border-radius:6px;">1b</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#f8f8f2; letter-spacing:0.04em;">Chama da Forja</span>
+      </div>
+
+      <div style="background:radial-gradient(circle at 50% 42%, #2b2d3a 0%, #1a1b23 100%); border:1px solid #343746; border-radius:20px; padding:40px; display:flex; align-items:center; justify-content:center;">
+        <svg width="220" height="220" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo Hefesto chama">
+          <defs>
+            <linearGradient id="flameOuter" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#bd93f9"/>
+              <stop offset="1" stop-color="#ff79c6"/>
+            </linearGradient>
+            <linearGradient id="flameInner" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#ffb86c"/>
+              <stop offset="1" stop-color="#f1fa8c"/>
+            </linearGradient>
+          </defs>
+          <circle cx="100" cy="100" r="94" fill="#282a36"/>
+          <circle cx="100" cy="100" r="94" fill="none" stroke="#bd93f9" stroke-width="5"/>
+          <circle cx="100" cy="100" r="83" fill="none" stroke="#6272a4" stroke-width="1.5"/>
+          <!-- outer flame -->
+          <path d="M100 40
+                   C126 66 138 84 138 108
+                   C138 138 120 158 100 158
+                   C80 158 62 138 62 108
+                   C62 92 70 78 84 70
+                   C82 88 92 96 100 96
+                   C108 88 100 66 100 40 Z" fill="url(#flameOuter)"/>
+          <!-- inner flame -->
+          <path d="M100 82
+                   C114 98 120 110 120 124
+                   C120 140 111 150 100 150
+                   C89 150 80 140 80 124
+                   C80 114 85 106 92 101
+                   C92 112 96 116 100 116
+                   C104 110 100 96 100 82 Z" fill="url(#flameInner)"/>
+          <!-- anvil bar at base -->
+          <rect x="72" y="150" width="56" height="7" rx="3.5" fill="#f8f8f2"/>
+          <circle cx="100" cy="134" r="6" fill="#282a36" opacity="0.55"/>
+        </svg>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.6; color:#6272a4;">Chama de duas camadas sobre a bigorna. Roxo→rosa por fora, laranja→amarelo no núcleo.</div>
+    </div>
+
+    <!-- ============ OPTION 1c — GATILHO + BIGORNA ============ -->
+    <div id="1c" style="display:flex; flex-direction:column; gap:18px; width:340px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-weight:800; font-size:13px; background:#8be9fd; color:#282a36; padding:3px 10px; border-radius:6px;">1c</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#f8f8f2; letter-spacing:0.04em;">Gatilho &amp; Bigorna</span>
+      </div>
+
+      <div style="background:radial-gradient(circle at 50% 42%, #2b2d3a 0%, #1a1b23 100%); border:1px solid #343746; border-radius:20px; padding:40px; display:flex; align-items:center; justify-content:center;">
+        <svg width="220" height="220" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo Hefesto gatilho bigorna">
+          <defs>
+            <linearGradient id="ringC" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#8be9fd"/>
+              <stop offset="1" stop-color="#bd93f9"/>
+            </linearGradient>
+          </defs>
+          <circle cx="100" cy="100" r="94" fill="#282a36"/>
+          <!-- trigger-notch ring: near-full arc with a gap = adaptive trigger travel -->
+          <path d="M100 6 A94 94 0 1 1 44 24" fill="none" stroke="url(#ringC)" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="44" cy="24" r="5" fill="#ff79c6"/>
+          <circle cx="100" cy="6" r="5" fill="#8be9fd"/>
+          <!-- anvil silhouette -->
+          <g>
+            <!-- top face with horn -->
+            <path d="M50 78 L128 78 L150 90 L128 96 L120 96 L120 100 L60 100 L60 90 L50 90 Z" fill="#f8f8f2"/>
+            <!-- waist -->
+            <path d="M74 100 L126 100 L118 122 L82 122 Z" fill="#bd93f9"/>
+            <!-- base -->
+            <path d="M64 122 L136 122 L148 146 L52 146 Z" fill="#6272a4"/>
+          </g>
+          <!-- spark on top face -->
+          <path d="M92 60 L96 72 L108 76 L96 80 L92 92 L88 80 L76 76 L88 72 Z" fill="#ffb86c"/>
+        </svg>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.6; color:#6272a4;">Bigorna sólida sob faísca; o anel tem a fenda do curso do gatilho adaptativo (ciano→roxo).</div>
+    </div>
+
+  </section>
+
+  <!-- usage strip: dark + light + favicon sizes for the winning direction -->
+  <div style="max-width:1180px; margin-top:34px; border-top:1px solid #343746; padding-top:26px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.24em; color:#6272a4; text-transform:uppercase; margin-bottom:18px;">Como fica em uso — direção 1a</div>
+    <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:center;">
+      <div style="display:flex; align-items:center; gap:14px; background:#282a36; border:1px solid #44475a; border-radius:14px; padding:16px 22px;">
+        <svg width="46" height="46" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="100" cy="100" r="94" fill="#282a36" stroke="url(#ringA)" stroke-width="6"/>
+          <g transform="rotate(-32 100 96)">
+            <rect x="96" y="70" width="9" height="72" rx="4.5" fill="#ffb86c"/>
+            <rect x="70" y="52" width="61" height="26" rx="6" fill="#f8f8f2"/>
+          </g>
+          <circle cx="150" cy="58" r="4" fill="#ffb86c"/>
+        </svg>
+        <div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:17px; color:#f8f8f2;">Hefesto</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6272a4;">dualsense4unix</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px; background:#f8f8f2; border:1px solid #d5d6e0; border-radius:14px; padding:16px 22px;">
+        <svg width="46" height="46" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="100" cy="100" r="94" fill="#282a36"/>
+          <circle cx="100" cy="100" r="94" fill="none" stroke="#bd93f9" stroke-width="6"/>
+          <g transform="rotate(-32 100 96)">
+            <rect x="96" y="70" width="9" height="72" rx="4.5" fill="#ffb86c"/>
+            <rect x="70" y="52" width="61" height="26" rx="6" fill="#f8f8f2"/>
+          </g>
+          <circle cx="150" cy="58" r="4" fill="#ffb86c"/>
+        </svg>
+        <div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:17px; color:#282a36;">Hefesto</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6272a4;">dualsense4unix</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:flex-end; gap:14px;">
+        <svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><use href="#n/a"/><circle cx="100" cy="100" r="94" fill="#282a36" stroke="url(#ringA)" stroke-width="6"/><g transform="rotate(-32 100 96)"><rect x="96" y="70" width="9" height="72" rx="4.5" fill="#ffb86c"/><rect x="70" y="52" width="61" height="26" rx="6" fill="#f8f8f2"/></g><circle cx="150" cy="58" r="4" fill="#ffb86c"/></svg>
+        <svg width="32" height="32" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="94" fill="#282a36" stroke="url(#ringA)" stroke-width="8"/><g transform="rotate(-32 100 96)"><rect x="96" y="70" width="9" height="72" rx="4.5" fill="#ffb86c"/><rect x="70" y="52" width="61" height="26" rx="6" fill="#f8f8f2"/></g></svg>
+        <svg width="20" height="20" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="94" fill="#282a36" stroke="#bd93f9" stroke-width="10"/><g transform="rotate(-32 100 96)"><rect x="94" y="66" width="12" height="80" rx="5" fill="#ffb86c"/><rect x="66" y="48" width="68" height="30" rx="7" fill="#f8f8f2"/></g></svg>
+      </div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6272a4; margin-top:16px;">Escala bem em favicon (20–32 px) mantendo o martelo legível.</div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

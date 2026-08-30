@@ -63,6 +63,31 @@ AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$AQUI"
 
 SVG="assets/hefesto-logo.svg"
+
+# O SVG QUE VAI PARA O RASTERIZADOR NÃO É O ARQUIVO DELA — é uma cópia com os
+# transforms ASSADOS. Decisão dela, 30/08/2026:
+#   *"então o nosso install sempre deve corrigir ele pra ter o mesmo SVG em
+#    qualquer versão, PNG ou afins."*
+#
+# O editor dela escreve rotação e espelho com `transform-box`/`transform-origin`,
+# que o navegador honra e o `librsvg` IGNORA. Sem assar, o anel e o martelo saem
+# da arte e o ícone da dock não é o desenho dela — aconteceu três vezes em 29 e
+# 30/08. A cura não é pedir que ela mude o desenho: é o gerador resolver.
+#
+# O arquivo dela NÃO é tocado: o assado vive num temporário que morre no fim.
+_ASSADOR="$(dirname "$0")/assar_transforms_svg.py"
+if [ -f "$_ASSADOR" ] && grep -q 'transform-box\|transform-origin' "$SVG" 2>/dev/null; then
+    _PY="$(dirname "$0")/../.venv/bin/python"
+    [ -x "$_PY" ] || _PY=python3
+    _SVG_ASSADO="$(mktemp -t hefesto-logo-assada-XXXXXX.svg)"
+    trap 'rm -f "$_SVG_ASSADO"' EXIT
+    if "$_PY" "$_ASSADOR" "$SVG" "$_SVG_ASSADO" >/dev/null 2>&1; then
+        echo "  transforms assados (o librsvg os ignora; o navegador não)"
+        SVG="$_SVG_ASSADO"
+    else
+        echo "  AVISO: não consegui assar os transforms — o ícone pode sair torto" >&2
+    fi
+fi
 CHECK=0
 [[ "${1:-}" == "--check" ]] && CHECK=1
 

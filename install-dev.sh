@@ -138,11 +138,15 @@ conferir() {
     if [[ ! -f "${RAIZ}/assets/hefesto-dev-logo.svg" ]]; then
         vermelho "  RECUSO: assets/hefesto-dev-logo.svg ausente."
         problemas=1
-    elif grep -q 'transform-origin\|transform-box' "${RAIZ}/assets/hefesto-dev-logo.svg"; then
-        vermelho "  RECUSO: a logo de dev ainda tem transform-origin/transform-box."
-        vermelho "          O librsvg os IGNORA e o ícone sai mutilado na dock."
-        vermelho "          Asse os transforms na matriz antes (ver o cabeçalho"
-        vermelho "          de assets/hefesto-dev-logo.svg)."
+    elif grep -q 'transform-origin\|transform-box' "${RAIZ}/assets/hefesto-dev-logo.svg" \
+         && [[ ! -f "${RAIZ}/scripts/assar_transforms_svg.py" ]]; then
+        # A RECUSA VIROU CONDICIONAL em 30/08/2026. Ela dizia "asse os
+        # transforms antes" — e ela mesma decidiu o contrário: *"o nosso install
+        # sempre deve corrigir ele"*. Com o assador presente, não há o que
+        # recusar; sem ele, a recusa continua valendo, porque o ícone sairia
+        # mutilado e ninguém saberia por quê.
+        vermelho "  RECUSO: a logo tem transform-origin/transform-box e o assador"
+        vermelho "          (scripts/assar_transforms_svg.py) não está aqui."
         problemas=1
     fi
 
@@ -229,10 +233,33 @@ if [[ $SIM -eq 0 ]]; then
 fi
 
 # --- 1. ícones ---------------------------------------------------------------
-passo "1/5  ícones (logo de dev, âmbar)"
+    # O SVG QUE VAI PARA O RASTERIZADOR NÃO É O ARQUIVO DELA — é uma cópia com
+    # os transforms ASSADOS. Decisão dela, 30/08/2026: *"então o nosso install
+    # sempre deve corrigir ele pra ter o mesmo SVG em qualquer versão, PNG ou
+    # afins."*
+    #
+    # O editor dela escreve rotação e espelho com `transform-box` e
+    # `transform-origin`, que o navegador honra e o `librsvg` IGNORA. Sem assar,
+    # o anel e o martelo saem da arte e o ícone da dock não é o desenho dela —
+    # aconteceu TRÊS vezes em 29 e 30/08, e ela apontou as três.
+    #
+    # O arquivo dela não é tocado: o assado vive num temporário.
+    LOGO_DEV="${RAIZ}/assets/hefesto-dev-logo.svg"
+    if grep -q 'transform-box\|transform-origin' "$LOGO_DEV" 2>/dev/null; then
+        _PY="${RAIZ}/.venv/bin/python"; [ -x "$_PY" ] || _PY=python3
+        _ASSADA="$(mktemp -t hefesto-dev-logo-assada-XXXXXX.svg)"
+        if "$_PY" "${RAIZ}/scripts/assar_transforms_svg.py" "$LOGO_DEV" "$_ASSADA" >/dev/null 2>&1; then
+            verde "  transforms assados (o librsvg os ignora; o navegador não)"
+            LOGO_DEV="$_ASSADA"
+        else
+            vermelho "  AVISO: não consegui assar — o ícone pode sair torto"
+        fi
+    fi
+
+passo "1/5  ícones (a logo de dev que ela desenhou)"
 for t in ${TAMANHOS}; do
     mkdir -p "${HICOLOR}/${t}x${t}/apps"
-    rsvg-convert -w "$t" -h "$t" "${RAIZ}/assets/hefesto-dev-logo.svg" \
+    rsvg-convert -w "$t" -h "$t" "$LOGO_DEV" \
         -o "${HICOLOR}/${t}x${t}/apps/${APP_ID}.png"
 done
 mkdir -p "${HOME}/.local/share/pixmaps"

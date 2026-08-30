@@ -1,0 +1,22 @@
+{
+ "circle|0": 1,
+ "corpo|0": 0,
+ "cross|0": 1,
+ "dpad_down|0": 1,
+ "dpad_left|0": 1,
+ "dpad_right|0": 1,
+ "dpad_up|0": 1,
+ "feat-acelerometro|0": 0,
+ "feat-giroscopio|0": 0,
+ "feat-rumble-direito|0": 0,
+ "feat-rumble-esquerdo|0": 0,
+ "l1|0": 0,
+ "l2|0": 0,
+ "r1|0": 0,
+ "r2|0": 0,
+ "square|0": 1,
+ "stick_l|0": 0,
+ "stick_r|0": 0,
+ "touchpad|0": 0,
+ "triangle|0": 1
+}

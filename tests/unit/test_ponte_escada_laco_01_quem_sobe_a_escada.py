@@ -390,7 +390,7 @@ class TestOGesto:
         """Do degrau caro em diante, cada aperto anda uma casa do ciclo livre.
 
         FATO CORRIGIDO (30/08/2026): este teste chamava-se *"o aperto seguinte
-        ao degrau caro volta ao ciclo"* e media a porta de volta custando UM
+        ao degrau caro volta ao ciclo"*, e cobrava a porta de volta ao preço de UM
         aperto. Ela custa ZERO — que é o mesmo que ela custa num jogo com
         carimbo, e essa igualdade é a decisão dela.
 

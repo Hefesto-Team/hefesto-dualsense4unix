@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; }
+  *, *::before, *::after { box-sizing:border-box; }
+  ::selection { background:#44475a; color:#f8f8f2; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#21222c; color:#f8f8f2; font-family:'Space Grotesk',sans-serif; padding:0 0 72px;">
+
+  <!-- ===================== HEADER / BRAND ===================== -->
+  <div style="background:linear-gradient(180deg,#282a36 0%,#21222c 100%); border-bottom:1px solid #343746; padding:40px 56px 34px;">
+    <div style="display:flex; align-items:center; gap:22px; max-width:1240px;">
+      <svg width="76" height="76" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-label="Hefesto">
+        <defs>
+          <linearGradient id="hr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8be9fd"/><stop offset="0.5" stop-color="#bd93f9"/><stop offset="1" stop-color="#ff79c6"/></linearGradient>
+          <linearGradient id="hfo" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#bd93f9"/><stop offset="1" stop-color="#ff79c6"/></linearGradient>
+          <linearGradient id="hfi" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb86c"/><stop offset="1" stop-color="#f1fa8c"/></linearGradient>
+        </defs>
+        <circle cx="96.72" cy="99.838" r="94" fill="#282a36"/>
+        <g transform="matrix(1.379977,0,0,1.333431,-34.042732,-34.915073)" opacity="0.15">
+          <path d="M100 34 C126 62 138 82 138 108 C138 138 122 158 100 158 C78 158 62 138 62 108 C62 92 70 76 84 68 C82 90 92 98 100 98 C108 90 100 62 100 34 Z" fill="url(#hfo)"/>
+          <path d="M100 74 C116 92 122 104 122 118 C122 136 112 148 100 148 C88 148 78 136 78 118 C78 108 83 100 90 95 C90 108 96 112 100 112 C104 104 100 90 100 74 Z" fill="url(#hfi)"/>
+        </g>
+        <path d="M100 6 A94 94 0 1 1 43 25" fill="none" stroke="url(#hr)" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="100" cy="6" r="5" fill="#8be9fd"/>
+        <circle cx="43" cy="25" r="5" fill="#ff79c6"/>
+        <g transform="matrix(1,0,0,1,2.090252,-2.225192)">
+          <path d="M 56 132 L 128 132 L 148 142 L 128 152 L 119 152 L 119 156 L 73 156 L 73 142 L 56 142 L 56 132 Z" fill="#f8f8f2"/>
+          <path d="M 72.98 156.035 L 119.044 156.035 L 110.984 170.38 L 81.043 170.38 L 72.98 156.035 Z" fill="#bd93f9"/>
+          <path d="M 73.242 165.913 L 116.795 165.913 L 124.054 179.913 L 65.983 179.913 L 73.242 165.913 Z" fill="#6272a4"/>
+        </g>
+        <g transform="matrix(0.156434,-0.987688,-0.987688,-0.156434,32.739819,13.716796)" style="transform-origin:101px 88px;">
+          <rect x="95" y="44" width="10" height="78" rx="5" fill="#ffb86c"/>
+          <rect x="70" y="108" width="60" height="24" rx="6" fill="#909090"/>
+        </g>
+      </svg>
+      <div>
+        <div style="font-size:30px; font-weight:700; letter-spacing:-0.01em; line-height:1.1;"><span style="color:#ff79c6;">Hefesto</span> <span style="color:#6272a4; font-weight:500;">—</span> <span style="color:#f8f8f2;">DualSense</span><span style="color:#50fa7b;">4</span><span style="color:#f8f8f2;">Unix</span></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#6272a4; margin-top:6px;">Gerenciador DualSense para Linux</div>
+      </div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.24em; text-transform:uppercase; color:#bd93f9; margin-top:26px;">Sistema de cores · Dracula</div>
+  </div>
+
+  <div style="max-width:1240px; margin:0 auto; padding:0 56px;">
+
+    <!-- ===================== BASE PALETTE ===================== -->
+    <div style="margin-top:44px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#6272a4; margin-bottom:4px;">01 — Paleta base</div>
+      <div style="font-size:15px; color:#8b8fa8; margin-bottom:22px;">As 11 cores canônicas do tema Drácula. Toda a interface se constrói a partir daqui.</div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(176px,1fr)); gap:14px;">
+        <sc-for list="{{ base }}" as="c" hint-placeholder-count="11">
+          <div style="border:1px solid #343746; border-radius:12px; overflow:hidden; background:#282a36;">
+            <div style="height:82px; background:{{ c.bg }};"></div>
+            <div style="padding:12px 14px;">
+              <div style="font-weight:600; font-size:14px; color:#f8f8f2;">{{ c.name }}</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8be9fd; margin-top:3px;">{{ c.hex }}</div>
+              <div style="font-size:12px; color:#6272a4; margin-top:6px; line-height:1.4;">{{ c.role }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- ===================== SURFACES ===================== -->
+    <div style="margin-top:52px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#6272a4; margin-bottom:4px;">02 — Superfícies &amp; traços</div>
+      <div style="font-size:15px; color:#8b8fa8; margin-bottom:22px;">Níveis de profundidade em tons neutros — do fundo da janela às bordas dos cards.</div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px;">
+        <sc-for list="{{ surfaces }}" as="s" hint-placeholder-count="5">
+          <div style="border:1px solid #343746; border-radius:12px; padding:16px; background:{{ s.bg }};">
+            <div style="height:44px; border-radius:8px; border:1px solid #44475a; background:{{ s.inner }}; margin-bottom:12px;"></div>
+            <div style="font-weight:600; font-size:14px;">{{ s.name }}</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8be9fd; margin-top:3px;">{{ s.hex }}</div>
+            <div style="font-size:12px; color:#6272a4; margin-top:6px; line-height:1.4;">{{ s.role }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- ===================== SEMANTIC TOKENS ===================== -->
+    <div style="margin-top:52px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#6272a4; margin-bottom:4px;">03 — Papéis semânticos</div>
+      <div style="font-size:15px; color:#8b8fa8; margin-bottom:22px;">Cada cor tem UM trabalho na interface. Consistência &gt; decoração.</div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px;">
+        <sc-for list="{{ tokens }}" as="t" hint-placeholder-count="6">
+          <div style="display:flex; align-items:center; gap:14px; border:1px solid #343746; border-radius:12px; padding:14px 16px; background:#282a36;">
+            <div style="width:42px; height:42px; border-radius:9px; flex-shrink:0; background:{{ t.bg }}; border:1px solid rgba(248,248,242,0.08);"></div>
+            <div style="min-width:0;">
+              <div style="font-weight:600; font-size:14px;">{{ t.name }}</div>
+              <div style="font-size:12px; color:#8b8fa8; margin-top:2px; line-height:1.4;">{{ t.use }}</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6272a4; margin-top:4px;">{{ t.hex }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- ===================== COMPONENTS IN CONTEXT ===================== -->
+    <div style="margin-top:52px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#6272a4; margin-bottom:4px;">04 — Componentes em contexto</div>
+      <div style="font-size:15px; color:#8b8fa8; margin-bottom:22px;">Como a paleta se resolve nos elementos reais do Hefesto.</div>
+
+      <div style="border:1px solid #343746; border-radius:16px; overflow:hidden; background:#282a36;">
+
+        <!-- tab bar -->
+        <div style="display:flex; gap:26px; padding:16px 24px 0; border-bottom:1px solid #343746;">
+          <div style="padding-bottom:12px; font-size:14px; font-weight:600; color:#f8f8f2; border-bottom:2px solid #ff79c6;">Início</div>
+          <div style="padding-bottom:12px; font-size:14px; color:#8b8fa8;">Status</div>
+          <div style="padding-bottom:12px; font-size:14px; color:#8b8fa8;">Gatilhos</div>
+          <div style="padding-bottom:12px; font-size:14px; color:#8b8fa8;">Perfis</div>
+          <div style="padding-bottom:12px; font-size:14px; color:#8b8fa8;">Navegação DSX</div>
+        </div>
+
+        <div style="padding:24px; display:flex; flex-direction:column; gap:26px;">
+
+          <!-- selectable cards -->
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#6272a4; margin-bottom:12px;">Cards selecionáveis</div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+              <div style="text-align:center; padding:20px; border-radius:10px; border:1px solid #44475a; background:#21222c; color:#8b8fa8; font-size:14px;">Não selecionado</div>
+              <div style="text-align:center; padding:20px; border-radius:10px; border:1px solid #bd93f9; background:rgba(189,147,249,0.16); color:#f8f8f2; font-size:14px; font-weight:600; box-shadow:0 0 0 1px #bd93f9 inset;">Selecionado</div>
+              <div style="text-align:center; padding:20px; border-radius:10px; border:1px solid #44475a; background:#21222c; color:#8b8fa8; font-size:14px;">Não selecionado</div>
+            </div>
+          </div>
+
+          <!-- buttons -->
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#6272a4; margin-bottom:12px;">Ações</div>
+            <div style="display:flex; flex-wrap:wrap; gap:12px;">
+              <div style="padding:11px 22px; border-radius:9px; font-size:14px; font-weight:600; background:#50fa7b; color:#21222c;">Aplicar</div>
+              <div style="padding:11px 22px; border-radius:9px; font-size:14px; font-weight:600; background:transparent; border:1px solid #bd93f9; color:#bd93f9;">Salvar Perfil</div>
+              <div style="padding:11px 22px; border-radius:9px; font-size:14px; font-weight:600; background:transparent; border:1px solid #ffb86c; color:#ffb86c;">Importar</div>
+              <div style="padding:11px 22px; border-radius:9px; font-size:14px; font-weight:600; background:transparent; border:1px solid #6272a4; color:#8b8fa8;">Restaurar Default</div>
+            </div>
+          </div>
+
+          <!-- status rows + toggle -->
+          <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:22px;">
+            <div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#6272a4; margin-bottom:12px;">Saúde do sistema</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:13px; line-height:2; background:#21222c; border:1px solid #343746; border-radius:10px; padding:12px 16px;">
+                <div><span style="color:#50fa7b;">[ OK ]</span> <span style="color:#c8ccda;">cura do travamento do USB ativa</span></div>
+                <div><span style="color:#8be9fd;">[INFO]</span> <span style="color:#c8ccda;">áudio do controle ausente</span></div>
+                <div><span style="color:#50fa7b;">[ OK ]</span> <span style="color:#c8ccda;">Steam Input desligado</span></div>
+                <div><span style="color:#ff5555;">[FAIL]</span> <span style="color:#c8ccda;">WirePlumber não configurado</span></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#6272a4; margin-bottom:12px;">Controles &amp; conexão</div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; background:#21222c; border:1px solid #343746; border-radius:10px; padding:12px 14px;">
+                  <span style="font-size:14px;">Ligar com o computador</span>
+                  <div style="width:42px; height:24px; border-radius:12px; background:#50fa7b; position:relative;"><div style="position:absolute; top:3px; right:3px; width:18px; height:18px; border-radius:50%; background:#21222c;"></div></div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; background:#21222c; border:1px solid #343746; border-radius:10px; padding:12px 14px; font-size:13px;">
+                  <span style="width:9px; height:9px; border-radius:50%; background:#50fa7b; box-shadow:0 0 8px #50fa7b;"></span>
+                  <span style="color:#c8ccda;">2 controles conectados:</span>
+                  <span style="color:#ff79c6; font-weight:600;">BT + BT</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== TITLE TREATMENT ===================== -->
+    <div style="margin-top:52px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#6272a4; margin-bottom:4px;">05 — Tratamento do título</div>
+      <div style="font-size:15px; color:#8b8fa8; margin-bottom:22px;">"Hefesto" em rosa (a chama/marca), o "4" em verde (a ação/positivo) — ecoando a logo.</div>
+      <div style="border:1px solid #343746; border-radius:16px; background:#282a36; padding:40px; display:flex; align-items:center; gap:20px;">
+        <svg width="52" height="52" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="96.72" cy="99.838" r="94" fill="#21222c"/>
+          <path d="M100 6 A94 94 0 1 1 43 25" fill="none" stroke="url(#hr)" stroke-width="7" stroke-linecap="round"/>
+          <g transform="matrix(1,0,0,1,2.090252,-2.225192)">
+            <path d="M 56 132 L 128 132 L 148 142 L 128 152 L 119 152 L 119 156 L 73 156 L 73 142 L 56 142 L 56 132 Z" fill="#f8f8f2"/>
+            <path d="M 72.98 156.035 L 119.044 156.035 L 110.984 170.38 L 81.043 170.38 L 72.98 156.035 Z" fill="#bd93f9"/>
+          </g>
+        </svg>
+        <div style="font-size:26px; font-weight:700;"><span style="color:#ff79c6;">Hefesto</span> <span style="color:#6272a4; font-weight:500;">—</span> <span style="color:#f8f8f2;">DualSense</span><span style="color:#50fa7b;">4</span><span style="color:#f8f8f2;">Unix</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      base: [
+        { name: "Background", hex: "#282a36", bg: "#282a36", role: "Fundo dos painéis" },
+        { name: "Current Line", hex: "#44475a", bg: "#44475a", role: "Seleção, hover, traços" },
+        { name: "Foreground", hex: "#f8f8f2", bg: "#f8f8f2", role: "Texto principal" },
+        { name: "Comment", hex: "#6272a4", bg: "#6272a4", role: "Texto secundário, dicas" },
+        { name: "Cyan", hex: "#8be9fd", bg: "#8be9fd", role: "Info, valores, links" },
+        { name: "Green", hex: "#50fa7b", bg: "#50fa7b", role: "Sucesso, aplicar, ativo" },
+        { name: "Orange", hex: "#ffb86c", bg: "#ffb86c", role: "Atenção, importar" },
+        { name: "Pink", hex: "#ff79c6", bg: "#ff79c6", role: "Marca, destaque, aba ativa" },
+        { name: "Purple", hex: "#bd93f9", bg: "#bd93f9", role: "Acento primário, seleção" },
+        { name: "Red", hex: "#ff5555", bg: "#ff5555", role: "Erro, perigo, falha" },
+        { name: "Yellow", hex: "#f1fa8c", bg: "#f1fa8c", role: "Alerta suave, faísca" },
+      ],
+      surfaces: [
+        { name: "App BG", hex: "#21222c", bg: "#21222c", inner: "#282a36", role: "Fundo da janela" },
+        { name: "Panel", hex: "#282a36", bg: "#282a36", inner: "#21222c", role: "Cards e seções" },
+        { name: "Elevated", hex: "#2b2d3a", bg: "#2b2d3a", inner: "#21222c", role: "Menus, popovers" },
+        { name: "Border", hex: "#343746", bg: "#343746", inner: "#282a36", role: "Divisórias sutis" },
+        { name: "Border forte", hex: "#44475a", bg: "#44475a", inner: "#282a36", role: "Contorno de campos" },
+      ],
+      tokens: [
+        { name: "Acento primário", use: "Estado selecionado, foco, links de ação", hex: "Purple #bd93f9", bg: "#bd93f9" },
+        { name: "Marca / destaque", use: "Nome Hefesto, sublinhado da aba ativa", hex: "Pink #ff79c6", bg: "#ff79c6" },
+        { name: "Confirmar / OK", use: "Aplicar, toggle ligado, status saudável", hex: "Green #50fa7b", bg: "#50fa7b" },
+        { name: "Atenção", use: "Importar, avisos não-críticos", hex: "Orange #ffb86c", bg: "#ffb86c" },
+        { name: "Informação", use: "Rótulos [INFO], valores numéricos", hex: "Cyan #8be9fd", bg: "#8be9fd" },
+        { name: "Perigo", use: "Falhas [FAIL], desconectar, resetar", hex: "Red #ff5555", bg: "#ff5555" },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; }
+  *, *::before, *::after { box-sizing:border-box; }
+  ::selection { background:#44475a; color:#f8f8f2; }
+  .scroll::-webkit-scrollbar { width:8px; }
+  .scroll::-webkit-scrollbar-thumb { background:#44475a; border-radius:4px; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#15151c; display:flex; align-items:center; justify-content:center; padding:32px; font-family:'Space Grotesk',sans-serif;">
+
+  <div style="width:1440px; height:880px; background:#21222c; border:1px solid #343746; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 30px 80px rgba(0,0,0,0.55); color:#f8f8f2;">
+
+    <!-- ============ TITLE BAR ============ -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 26px; border-bottom:1px solid #343746; background:linear-gradient(180deg,#282a36,#242630);">
+      <div style="display:flex; align-items:center; gap:16px;">
+        <svg width="48" height="48" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="hr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8be9fd"/><stop offset="0.5" stop-color="#bd93f9"/><stop offset="1" stop-color="#ff79c6"/></linearGradient>
+            <linearGradient id="hfo" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#bd93f9"/><stop offset="1" stop-color="#ff79c6"/></linearGradient>
+            <linearGradient id="hfi" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb86c"/><stop offset="1" stop-color="#f1fa8c"/></linearGradient>
+          </defs>
+          <circle cx="96.72" cy="99.838" r="94" fill="#21222c"/>
+          <g transform="matrix(1.379977,0,0,1.333431,-34.042732,-34.915073)" opacity="0.16">
+            <path d="M100 34 C126 62 138 82 138 108 C138 138 122 158 100 158 C78 158 62 138 62 108 C62 92 70 76 84 68 C82 90 92 98 100 98 C108 90 100 62 100 34 Z" fill="url(#hfo)"/>
+            <path d="M100 74 C116 92 122 104 122 118 C122 136 112 148 100 148 C88 148 78 136 78 118 C78 108 83 100 90 95 C90 108 96 112 100 112 C104 104 100 90 100 74 Z" fill="url(#hfi)"/>
+          </g>
+          <path d="M100 6 A94 94 0 1 1 43 25" fill="none" stroke="url(#hr)" stroke-width="7" stroke-linecap="round"/>
+          <circle cx="100" cy="6" r="5" fill="#8be9fd"/>
+          <circle cx="43" cy="25" r="5" fill="#ff79c6"/>
+          <g transform="matrix(1,0,0,1,2.090252,-2.225192)">
+            <path d="M 56 132 L 128 132 L 148 142 L 128 152 L 119 152 L 119 156 L 73 156 L 73 142 L 56 142 L 56 132 Z" fill="#f8f8f2"/>
+            <path d="M 72.98 156.035 L 119.044 156.035 L 110.984 170.38 L 81.043 170.38 L 72.98 156.035 Z" fill="#bd93f9"/>
+            <path d="M 73.242 165.913 L 116.795 165.913 L 124.054 179.913 L 65.983 179.913 L 73.242 165.913 Z" fill="#6272a4"/>
+          </g>
+          <g transform="matrix(0.156434,-0.987688,-0.987688,-0.156434,32.739819,13.716796)" style="transform-origin:101px 88px;">
+            <rect x="95" y="44" width="10" height="78" rx="5" fill="#ffb86c"/>
+            <rect x="70" y="108" width="60" height="24" rx="6" fill="#909090"/>
+          </g>
+        </svg>
+        <div>
+          <div style="font-size:21px; font-weight:700; line-height:1.05;"><span style="color:#ff79c6;">Hefesto</span> <span style="color:#6272a4; font-weight:500;">—</span> <span style="color:#f8f8f2;">DualSense</span><span style="color:#50fa7b;">4</span><span style="color:#f8f8f2;">Unix</span></div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6272a4; margin-top:4px;">Gerenciador DualSense para Linux</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div style="display:flex; gap:7px;">
+          <div style="padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; border:1px solid #bd93f9; background:rgba(189,147,249,0.16); color:#f8f8f2;">Todos</div>
+          <div style="padding:6px 12px; border-radius:8px; font-size:12px; border:1px solid #44475a; color:#8b8fa8;">Sony 2 · BT</div>
+          <div style="padding:6px 12px; border-radius:8px; font-size:12px; border:1px solid #44475a; color:#8b8fa8;">Sony 4 · BT</div>
+          <div style="padding:6px 12px; border-radius:8px; font-size:12px; border:1px solid #44475a; color:#8b8fa8;">8BitDo 3 · cabo</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:13px;">
+          <span style="width:9px; height:9px; border-radius:50%; background:#50fa7b; box-shadow:0 0 8px #50fa7b;"></span>
+          <span style="color:#8b8fa8;">2 controles:</span> <span style="color:#ff79c6; font-weight:600;">BT + BT</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TAB BAR ============ -->
+    <div style="display:flex; gap:4px; padding:0 22px; border-bottom:1px solid #343746; background:#242630;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="9">
+        <div onClick="{{ t.onClick }}" style="padding:13px 14px 11px; font-size:13px; cursor:pointer; color:{{ t.color }}; font-weight:{{ t.weight }}; border-bottom:2px solid {{ t.underline }};">{{ t.name }}</div>
+      </sc-for>
+    </div>
+
+    <!-- ============ CONTENT ============ -->
+    <div style="flex:1; overflow:hidden; position:relative;">
+
+      <!-- ---------- STATUS ---------- -->
+      <sc-if value="{{ isStatus }}" hint-placeholder-val="{{ true }}">
+        <div style="height:100%; overflow:hidden; padding:10px 24px; display:flex; flex-direction:column; gap:9px;">
+          <!-- Estado summary -->
+          <div style="border:1px solid #343746; border-radius:10px; background:#282a36; padding:9px 16px; display:flex; gap:36px; flex-wrap:wrap;">
+            <sc-for list="{{ estado }}" as="e" hint-placeholder-count="4">
+              <div style="display:flex; flex-direction:column; gap:3px;">
+                <span style="font-size:11px; color:#6272a4; text-transform:uppercase; letter-spacing:0.08em;">{{ e.k }}</span>
+                <span style="font-size:14px; font-weight:600; color:{{ e.color }};">{{ e.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- controllers -->
+          <div style="flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <sc-for list="{{ statusCtrls }}" as="c" hint-placeholder-count="2">
+              <div style="border:1px solid #343746; border-radius:12px; background:#282a36; padding:12px 14px; display:flex; flex-direction:column; gap:9px;">
+                <!-- header -->
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span style="width:12px; height:12px; border-radius:3px; background:{{ c.accent }};"></span>
+                  <div style="font-size:15px; font-weight:700;">{{ c.name }}</div>
+                </div>
+
+                <!-- battery + triggers bars -->
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <sc-for list="{{ c.bars }}" as="b" hint-placeholder-count="3">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <span style="font-size:11px; color:#8b8fa8; width:52px;">{{ b.label }}</span>
+                      <div style="flex:1; height:7px; border-radius:4px; background:#2b2d3a; overflow:hidden;"><div style="height:100%; width:{{ b.pct }}; background:{{ b.color }}; border-radius:4px;"></div></div>
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8be9fd; width:34px; text-align:right;">{{ b.val }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <!-- sticks + button panel -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                  <sc-for list="{{ c.sticks }}" as="s" hint-placeholder-count="2">
+                    <div style="border:1px solid #343746; border-radius:10px; background:#21222c; padding:7px; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                      <span style="font-size:10px; color:#8b8fa8;">{{ s.label }}</span>
+                      <div style="position:relative; width:54px; height:54px; border:2px solid {{ c.accent }}; border-radius:50%; opacity:0.9;">
+                        <div style="position:absolute; top:50%; left:0; right:0; height:1px; background:#44475a;"></div>
+                        <div style="position:absolute; left:50%; top:0; bottom:0; width:1px; background:#44475a;"></div>
+                        <div style="position:absolute; width:12px; height:12px; border-radius:50%; background:{{ c.accent }}; top:{{ s.top }}; left:{{ s.left }}; transform:translate(-50%,-50%); box-shadow:0 0 8px {{ c.accent }};"></div>
+                      </div>
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6272a4;">{{ s.xy }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <!-- button state panel -->
+                <div style="border:1px solid #343746; border-radius:10px; background:#21222c; padding:8px 11px; display:flex; flex-direction:column; gap:5px;">
+                  <sc-for list="{{ c.btnRows }}" as="row" hint-placeholder-count="3">
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                      <sc-for list="{{ row.chips }}" as="chip" hint-placeholder-count="4">
+                        <span style="min-width:26px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:11px; padding:3px 7px; border-radius:6px; border:1px solid {{ chip.border }}; background:{{ chip.bg }}; color:{{ chip.color }};">{{ chip.label }}</span>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <!-- gyroscope (novo) -->
+                <div style="border:1px solid #343746; border-radius:10px; background:#21222c; padding:8px 12px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                    <span style="font-size:12px; font-weight:600; color:#c8ccda;">Giroscópio</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#50fa7b;">novo · graus/s</span>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:5px;">
+                    <sc-for list="{{ c.gyro }}" as="g" hint-placeholder-count="3">
+                      <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:{{ g.color }}; width:14px; font-weight:600;">{{ g.axis }}</span>
+                        <div style="flex:1; height:7px; border-radius:4px; background:#2b2d3a; position:relative;">
+                          <div style="position:absolute; top:0; bottom:0; left:50%; width:1px; background:#44475a;"></div>
+                          <div style="position:absolute; top:0; bottom:0; border-radius:4px; background:{{ g.color }}; left:{{ g.left }}; width:{{ g.width }};"></div>
+                        </div>
+                        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#c8ccda; width:48px; text-align:right;">{{ g.val }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <!-- mic + touchpad (novo) -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                  <div style="border:1px solid #343746; border-radius:10px; background:#21222c; padding:8px 12px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                      <span style="font-size:12px; font-weight:600; color:#c8ccda;">Microfone</span>
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; padding:2px 7px; border-radius:5px; background:{{ c.micBg }}; color:{{ c.micColor }};">{{ c.micLabel }}</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-end; gap:3px; height:22px;">
+                      <sc-for list="{{ c.micBars }}" as="mb" hint-placeholder-count="14">
+                        <div style="flex:1; border-radius:2px; background:{{ mb.color }}; height:{{ mb.h }};"></div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="border:1px solid #343746; border-radius:10px; background:#21222c; padding:8px 12px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                      <span style="font-size:12px; font-weight:600; color:#c8ccda;">Touchpad</span>
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#6272a4;">{{ c.touchLabel }}</span>
+                    </div>
+                    <div style="position:relative; height:22px; border:1px solid #44475a; border-radius:6px; background:#282a36;">
+                      <sc-for list="{{ c.touches }}" as="p" hint-placeholder-count="1">
+                        <div style="position:absolute; width:12px; height:12px; border-radius:50%; background:#8be9fd; box-shadow:0 0 8px #8be9fd; top:{{ p.top }}; left:{{ p.left }}; transform:translate(-50%,-50%);"></div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---------- GATILHOS ---------- -->
+      <sc-if value="{{ isGatilhos }}" hint-placeholder-val="{{ true }}">
+        <div style="height:100%; padding:14px 26px; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:#6272a4;">Gatilhos adaptativos</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6272a4;">Política exibida = estado atual do daemon</div>
+          </div>
+          <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:18px; min-height:0;">
+            <sc-for list="{{ triggers }}" as="tr" hint-placeholder-count="2">
+              <div style="border:1px solid #343746; border-radius:14px; background:#282a36; padding:14px 16px; display:flex; flex-direction:column; gap:11px; min-height:0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="font-size:15px; font-weight:700; color:#f8f8f2;">{{ tr.name }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8be9fd;">{{ tr.selName }}</div>
+                </div>
+                <!-- compact mode grid -->
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:5px;">
+                  <sc-for list="{{ tr.modes }}" as="m" hint-placeholder-count="18">
+                    <div onClick="{{ m.onClick }}" style="text-align:center; padding:6px 4px; border-radius:6px; font-size:11px; cursor:pointer; border:1px solid {{ m.border }}; background:{{ m.bg }}; color:{{ m.color }}; font-weight:{{ m.weight }};">{{ m.label }}</div>
+                  </sc-for>
+                </div>
+                <div style="font-size:12px; color:#8b8fa8; font-style:italic;">{{ tr.desc }}</div>
+                <!-- config sliders -->
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  <sc-for list="{{ tr.sliders }}" as="s" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <span style="font-size:11.5px; color:#c8ccda; width:150px; white-space:nowrap; flex-shrink:0;">{{ s.name }}</span>
+                      <div style="flex:1; height:5px; border-radius:3px; background:#2b2d3a; position:relative;"><div style="position:absolute; left:0; top:0; bottom:0; background:#bd93f9; border-radius:3px; width:{{ s.pct }};"></div><div style="position:absolute; top:50%; width:12px; height:12px; border-radius:50%; background:#f8f8f2; transform:translate(-50%,-50%); left:{{ s.pct }};"></div></div>
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8be9fd; width:18px; text-align:right;">{{ s.val }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <!-- per-trigger buttons -->
+                <div style="margin-top:auto; display:flex; gap:10px;">
+                  <div style="flex:1; text-align:center; padding:10px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid #50fa7b; color:#50fa7b; cursor:pointer;">{{ tr.applyLabel }}</div>
+                  <div style="flex:1; text-align:center; padding:10px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid #6272a4; color:#8b8fa8; cursor:pointer;">Desligar</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---------- NAVEGAÇÃO DSX ---------- -->
+      <sc-if value="{{ isNav }}" hint-placeholder-val="{{ true }}">
+        <div style="height:100%; padding:16px 26px; display:flex; flex-direction:column; gap:12px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:#6272a4;">Navegação DSX — controle como mouse &amp; teclado</div>
+          <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:18px; min-height:0;">
+
+            <!-- MOUSE column -->
+            <div style="border:1px solid #343746; border-radius:14px; background:#282a36; padding:14px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden;">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:10px;"><span style="width:8px; height:8px; border-radius:50%; background:#bd93f9;"></span><div style="font-size:15px; font-weight:700;">Emular mouse+teclado</div></div>
+                <div style="width:42px; height:23px; border-radius:12px; background:#44475a; position:relative;"><div style="position:absolute; top:3px; left:3px; width:17px; height:17px; border-radius:50%; background:#8b8fa8;"></div></div>
+              </div>
+              <div style="font-size:12px; color:#8b8fa8; line-height:1.5;">Só dá para ligar o mouse em "Controlar o PC" (aba Início): jogando, o controle é do jogo.</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#50fa7b;">uinput disponível</div>
+              <div style="display:flex; flex-direction:column; gap:11px;">
+                <sc-for list="{{ mouseSliders }}" as="s" hint-placeholder-count="2">
+                  <div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-size:13px; color:#c8ccda;">{{ s.name }}</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8be9fd;">{{ s.val }}</span></div>
+                    <div style="height:5px; border-radius:3px; background:#2b2d3a; position:relative;"><div style="position:absolute; left:0; top:0; bottom:0; background:#bd93f9; border-radius:3px; width:{{ s.pct }};"></div><div style="position:absolute; top:50%; width:12px; height:12px; border-radius:50%; background:#f8f8f2; transform:translate(-50%,-50%); left:{{ s.pct }};"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="border:1px solid #343746; border-radius:10px; background:#21222c; padding:12px 14px;">
+                <div style="font-size:12px; font-weight:600; color:#c8ccda; margin-bottom:9px;">Mapeamento</div>
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <sc-for list="{{ mouseMap }}" as="m" hint-placeholder-count="8">
+                    <div style="display:flex; align-items:center; gap:8px; font-size:11.5px;">
+                      <span style="color:#c8ccda; flex:1;">{{ m.from }}</span>
+                      <span style="color:#6272a4;">→</span>
+                      <span style="color:#8be9fd; flex:1;">{{ m.to }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="font-size:11px; color:#6272a4; font-style:italic; line-height:1.5;">Útil para navegar o desktop e jogos que só aceitam mouse/teclado. Requer módulo uinput e regra udev (aba Emulação).</div>
+            </div>
+
+            <!-- KEYBOARD column -->
+            <div style="border:1px solid #343746; border-radius:14px; background:#282a36; padding:14px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden;">
+              <div style="display:flex; align-items:center; gap:10px;"><span style="width:8px; height:8px; border-radius:50%; background:#ff79c6;"></span><div style="font-size:15px; font-weight:700;">Atalhos de teclado do perfil ativo</div></div>
+              <div style="font-size:11.5px; color:#8b8fa8; line-height:1.6;"><b style="color:#c8ccda;">Como funciona:</b> cada botão digita uma tecla. <b style="color:#c8ccda;">Combinações:</b> junte com "+". <b style="color:#c8ccda;">Teclado na tela:</b> "Abrir/Fechar teclado na tela".</div>
+              <div style="border:1px solid #343746; border-radius:10px; overflow:hidden;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; background:#2b2d3a; padding:8px 12px;"><span style="font-size:11px; font-weight:600; color:#bd93f9;">Botão do controle</span><span style="font-size:11px; font-weight:600; color:#bd93f9;">Tecla do teclado</span></div>
+                <sc-for list="{{ keymap }}" as="k" hint-placeholder-count="9">
+                  <div style="display:grid; grid-template-columns:1fr 1fr; padding:5px 12px; border-top:1px solid #343746; background:#21222c;">
+                    <span style="font-size:12px; color:#c8ccda;">{{ k.btn }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#f8f8f2;">{{ k.key }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <div style="flex:1; text-align:center; padding:9px; border-radius:8px; font-size:12px; font-weight:600; border:1px solid #50fa7b; color:#50fa7b; cursor:pointer;">Adicionar</div>
+                <div style="flex:1; text-align:center; padding:9px; border-radius:8px; font-size:12px; font-weight:600; border:1px solid #ff5555; color:#ff5555; cursor:pointer;">Remover</div>
+                <div style="flex:1; text-align:center; padding:9px; border-radius:8px; font-size:12px; font-weight:600; border:1px solid #6272a4; color:#8b8fa8; cursor:pointer;">Restaurar defaults</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---------- PERFIS ---------- -->
+      <sc-if value="{{ isPerfis }}" hint-placeholder-val="{{ true }}">
+        <div style="height:100%; overflow:hidden; padding:14px 24px; display:flex; flex-direction:column; gap:11px;">
+          <div style="flex:1; min-height:0; display:grid; grid-template-columns:0.85fr 1.15fr; gap:18px;">
+
+            <!-- saved profiles -->
+            <div style="display:flex; flex-direction:column; gap:9px; min-height:0;">
+              <div style="font-size:14px; font-weight:700;">Perfis salvos</div>
+              <div style="border:1px solid #343746; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; min-height:0;">
+                <div style="display:grid; grid-template-columns:1.2fr 0.7fr 1fr; background:#2b2d3a; padding:8px 12px;"><span style="font-size:11px; font-weight:600; color:#bd93f9;">Nome</span><span style="font-size:11px; font-weight:600; color:#bd93f9;">Prioridade</span><span style="font-size:11px; font-weight:600; color:#bd93f9;">Quando usar</span></div>
+                <div style="overflow:hidden;">
+                  <sc-for list="{{ profiles }}" as="p" hint-placeholder-count="13">
+                    <div onClick="{{ p.onClick }}" style="display:grid; grid-template-columns:1.2fr 0.7fr 1fr; padding:5px 12px; border-top:1px solid #343746; cursor:pointer; background:{{ p.bg }};">
+                      <span style="font-size:12px; color:{{ p.nameColor }}; font-weight:{{ p.weight }};">{{ p.name }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8be9fd;">{{ p.prio }}</span>
+                      <span style="font-size:12px; color:#8b8fa8;">{{ p.when }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <!-- profile editor -->
+            <div style="display:flex; flex-direction:column; gap:10px; min-height:0; overflow:hidden;">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:14px; font-weight:700;">Editor do perfil</div>
+                <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:12px; color:#8b8fa8;">Modo avançado</span><div style="width:40px; height:22px; border-radius:11px; background:#bd93f9; position:relative;"><div style="position:absolute; top:3px; right:3px; width:16px; height:16px; border-radius:50%; background:#21222c;"></div></div></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px;"><span style="font-size:12px; color:#c8ccda; width:96px; text-align:right;">Nome</span><div style="flex:1; border:1px solid #44475a; border-radius:8px; background:#21222c; padding:8px 12px; font-size:13px;">{{ selProfile }}</div></div>
+              <div style="display:flex; align-items:center; gap:12px;"><span style="font-size:12px; color:#c8ccda; width:96px; text-align:right;">Prioridade</span><div style="flex:1; height:5px; border-radius:3px; background:#2b2d3a; position:relative;"><div style="position:absolute; left:0; top:0; bottom:0; background:#bd93f9; border-radius:3px; width:{{ selPrioPct }};"></div><div style="position:absolute; top:50%; width:12px; height:12px; border-radius:50%; background:#f8f8f2; transform:translate(-50%,-50%); left:{{ selPrioPct }};"></div></div><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8be9fd; width:24px; text-align:right;">{{ selPrio }}</span></div>
+              <div style="display:flex; align-items:center; gap:12px;"><span style="font-size:12px; color:#c8ccda; width:96px; text-align:right;">window_class</span><div style="flex:1; border:1px solid #44475a; border-radius:8px; background:#21222c; padding:8px 12px; font-size:12px; color:#6272a4;">CSV: Steam,firefox</div></div>
+              <div style="display:flex; align-items:center; gap:12px;"><span style="font-size:12px; color:#c8ccda; width:96px; text-align:right;">title_regex</span><div style="flex:1; border:1px solid #44475a; border-radius:8px; background:#21222c; padding:8px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#f8f8f2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">.*(Devil May Cry|Bayonetta|Hi-Fi Rush|NieR|Astral Chain|Metal Gear|Ghostrunner|Sifu).*</div></div>
+              <div style="display:flex; align-items:center; gap:12px;"><span style="font-size:12px; color:#c8ccda; width:96px; text-align:right;">process_name</span><div style="flex:1; border:1px solid #44475a; border-radius:8px; background:#21222c; padding:8px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#f8f8f2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">DevilMayCry5.exe,bayonetta3.exe,HiFiRush.exe,NieR.exe,ghostrunner.exe,Sifu.exe</div></div>
+              <div style="font-size:11px; color:#6272a4; font-style:italic;">AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são ignorados.</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#6272a4; margin-top:2px;">Modo (o que este perfil liga ao ativar)</div>
+              <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+                <sc-for list="{{ perfModes }}" as="pm" hint-placeholder-count="4">
+                  <div onClick="{{ pm.onClick }}" style="text-align:center; padding:11px 6px; border-radius:8px; font-size:12px; cursor:pointer; border:1px solid {{ pm.border }}; background:{{ pm.bg }}; color:{{ pm.color }}; font-weight:{{ pm.weight }};">{{ pm.label }}</div>
+                </sc-for>
+              </div>
+              <div style="font-size:11px; color:#6272a4; font-style:italic;">"Não mexer no modo" = ativar este perfil deixa o sistema exatamente como está.</div>
+            </div>
+          </div>
+
+          <!-- profile actions -->
+          <div style="display:flex; gap:9px;">
+            <sc-for list="{{ perfActions }}" as="a" hint-placeholder-count="6">
+              <div style="flex:1; text-align:center; padding:9px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid {{ a.color }}; color:{{ a.color }}; cursor:pointer;">{{ a.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---------- OTHER TABS PLACEHOLDER ---------- -->
+      <sc-if value="{{ isOther }}" hint-placeholder-val="{{ false }}">
+        <div style="height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; color:#6272a4;">
+          <div style="font-size:16px; font-weight:600; color:#8b8fa8;">{{ activeTab }}</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px;">Aba mantida como está — mockup focado em Status, Gatilhos e Navegação DSX.</div>
+        </div>
+      </sc-if>
+
+    </div>
+
+    <!-- ============ FOOTER ============ -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 26px; border-top:1px solid #343746; background:#242630;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#6272a4;">Política exibida = estado atual do daemon.</div>
+      <div style="display:flex; gap:10px;">
+        <div style="padding:9px 20px; border-radius:8px; font-size:13px; font-weight:600; background:#50fa7b; color:#21222c; cursor:pointer;">Aplicar</div>
+        <div style="padding:9px 20px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid #bd93f9; color:#bd93f9; cursor:pointer;">Salvar Perfil</div>
+        <div style="padding:9px 20px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid #ffb86c; color:#ffb86c; cursor:pointer;">Importar</div>
+        <div style="padding:9px 20px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid #6272a4; color:#8b8fa8; cursor:pointer;">Restaurar Default</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: "Status", l2: "Rígido (Rigid)", r2: "Feedback em rampa", profile: "Ação", perfMode: "Não mexer no modo" };
+
+  renderVals() {
+    const tab = this.state.tab;
+    const setTab = (n) => this.setState({ tab: n });
+    const tabNames = ["Início","Status","Gatilhos","Lightbar","Rumble","Perfis","Sistema","Emulação","Navegação DSX"];
+    const tabs = tabNames.map((n) => ({
+      name: n, onClick: () => setTab(n),
+      color: n === tab ? "#f8f8f2" : "#8b8fa8",
+      weight: n === tab ? "600" : "400",
+      underline: n === tab ? "#ff79c6" : "transparent",
+    }));
+
+    // ---- STATUS ----
+    const estado = [
+      { k:"Conexão", v:"Conectado (2 controles)", color:"#50fa7b" },
+      { k:"Transporte", v:"BT + BT", color:"#ff79c6" },
+      { k:"Perfil ativo", v:"Nenhum", color:"#8b8fa8" },
+      { k:"Hefesto", v:"Ligado", color:"#50fa7b" },
+    ];
+    const gyro = (x,y,z) => [
+      { axis:"X", val:x+"°/s", color:"#ff5555", left: x<0?(50+x/6)+"%":"50%", width: Math.abs(x)/6+"%" },
+      { axis:"Y", val:y+"°/s", color:"#50fa7b", left: y<0?(50+y/6)+"%":"50%", width: Math.abs(y)/6+"%" },
+      { axis:"Z", val:z+"°/s", color:"#8be9fd", left: z<0?(50+z/6)+"%":"50%", width: Math.abs(z)/6+"%" },
+    ];
+    const micBars = (hs) => hs.map((h)=>({ h:h+"%", color: h>60?"#50fa7b":(h>30?"#8be9fd":"#44475a") }));
+    const chip = (label, pressed, accent) => ({
+      label,
+      border: pressed ? accent : "#44475a",
+      bg: pressed ? accent : "transparent",
+      color: pressed ? "#21222c" : "#8b8fa8",
+    });
+    const btnRows = (accent, pressed) => [
+      { chips: ["✕","○","□","△"].map((l)=>chip(l, pressed.includes(l), accent)) },
+      { chips: ["↑","↓","←","→"].map((l)=>chip(l, pressed.includes(l), accent)) },
+      { chips: ["L1","R1","L2","R2"].map((l)=>chip(l, pressed.includes(l), accent)) },
+      { chips: ["Create","Options","Touchpad","Mic"].map((l)=>chip(l, pressed.includes(l), accent)) },
+    ];
+    const stickPos = (x,y) => ({ left: (x/255*100)+"%", top: (y/255*100)+"%" });
+    const statusCtrls = [
+      { name:"Controle 2 — BT · Jogador 1", accent:"#ff5555",
+        bars:[ {label:"Bateria", pct:"100%", val:"100%", color:"#50fa7b"}, {label:"L2", pct:"0%", val:"0", color:"#bd93f9"}, {label:"R2", pct:"0%", val:"0", color:"#bd93f9"} ],
+        sticks:[ {label:"Analógico Esq. (L3)", ...stickPos(129,128), xy:"X:129 Y:128"}, {label:"Analógico Dir. (R3)", ...stickPos(128,128), xy:"X:128 Y:128"} ],
+        btnRows: btnRows("#ff5555", ["✕","↑"]),
+        gyro: gyro(-42,18,6),
+        micLabel:"ATIVO", micColor:"#21222c", micBg:"#50fa7b",
+        micBars: micBars([20,35,55,72,90,64,48,30,52,78,44,26,38,22]),
+        touchLabel:"1 toque", touches:[{ top:"52%", left:"38%" }] },
+      { name:"Controle 4 — BT · Jogador 2", accent:"#ff79c6",
+        bars:[ {label:"Bateria", pct:"78%", val:"78%", color:"#50fa7b"}, {label:"L2", pct:"0%", val:"0", color:"#bd93f9"}, {label:"R2", pct:"0%", val:"0", color:"#bd93f9"} ],
+        sticks:[ {label:"Analógico Esq. (L3)", ...stickPos(128,128), xy:"X:128 Y:128"}, {label:"Analógico Dir. (R3)", ...stickPos(129,130), xy:"X:129 Y:130"} ],
+        btnRows: btnRows("#ff79c6", []),
+        gyro: gyro(12,-60,30),
+        micLabel:"MUDO", micColor:"#6272a4", micBg:"#2b2d3a",
+        micBars: micBars([10,8,14,6,12,9,7,11,6,13,8,10,7,9]),
+        touchLabel:"sem toque", touches:[] },
+    ];
+
+    // ---- GATILHOS ----
+    const modeNames = ["Desligado","Rígido (Rigid)","Rígido simples","Pulso","Pulso A","Pulso B","Resistência","Arco (Bow)","Galope (Galloping)","Arma semi-auto","Arma automática","Metralhadora","Feedback","Arma (Weapon)","Vibração","Feedback em rampa","Feedback por posição","Vibração por posição"];
+    const descs = { "Rígido (Rigid)":"Resistência constante em todo o curso.", "Feedback em rampa":"Feedback com intensidade variando em rampa.", "Desligado":"Sem resistência." };
+    const makeModes = (sel, setter) => modeNames.map((label) => {
+      const active = label === sel;
+      return { label, onClick: () => setter(label),
+        border: active ? "#bd93f9" : "#44475a",
+        bg: active ? "rgba(189,147,249,0.16)" : "#21222c",
+        color: active ? "#f8f8f2" : "#8b8fa8",
+        weight: active ? "600" : "400" };
+    });
+    const sliders = [
+      { name:"Início", val:"1", pct:"1%" },
+      { name:"Fim", val:"8", pct:"82%" },
+      { name:"Intensidade início (1-8)", val:"2", pct:"18%" },
+      { name:"Intensidade fim (1-8)", val:"7", pct:"70%" },
+    ];
+    const triggers = [
+      { name:"Gatilho L2", selName:this.state.l2, applyLabel:"Aplicar em L2", modes:makeModes(this.state.l2,(m)=>this.setState({l2:m})), desc:descs[this.state.l2]||"Modo adaptativo aplicado ao L2.", sliders },
+      { name:"Gatilho R2", selName:this.state.r2, applyLabel:"Aplicar em R2", modes:makeModes(this.state.r2,(m)=>this.setState({r2:m})), desc:descs[this.state.r2]||"Modo adaptativo aplicado ao R2.", sliders },
+    ];
+
+    // ---- NAVEGAÇÃO DSX ----
+    const mouseSliders = [
+      { name:"Velocidade do cursor", val:"6", pct:"50%" },
+      { name:"Velocidade da rolagem", val:"1", pct:"8%" },
+    ];
+    const mouseMap = [
+      { from:"Cruz (✕) ou L2", to:"Botão esquerdo" },
+      { from:"Triângulo (△) ou R2", to:"Botão direito" },
+      { from:"R3 (analógico direito)", to:"Botão do meio" },
+      { from:"Círculo (○)", to:"Enter" },
+      { from:"Quadrado (□)", to:"Esc" },
+      { from:"D-pad (↑↓←→)", to:"Setas do teclado" },
+      { from:"Analógico esquerdo", to:"Movimento do cursor" },
+      { from:"Analógico direito", to:"Rolagem vert. e horiz." },
+    ];
+    const keymap = [
+      { btn:"L1", key:"Alt + Shift + Tab" },
+      { btn:"R1", key:"Alt + Tab" },
+      { btn:"L3 (clicar analóg. esq.)", key:"Abrir teclado na tela" },
+      { btn:"R3 (clicar analóg. dir.)", key:"Fechar teclado na tela" },
+      { btn:"Options", key:"Super (tecla Windows)" },
+      { btn:"Share / Create", key:"PrintScreen" },
+      { btn:"Touchpad — lado esquerdo", key:"Backspace" },
+      { btn:"Touchpad — meio", key:"Enter" },
+      { btn:"Touchpad — lado direito", key:"Delete" },
+    ];
+
+    // ---- PERFIS ----
+    const profileData = [
+      { name:"Ação", prio:65, when:"Só neste programa" },
+      { name:"Aventura", prio:70, when:"Só neste programa" },
+      { name:"bow", prio:10, when:"Só neste programa" },
+      { name:"coop_local", prio:45, when:"Só neste programa" },
+      { name:"Corrida", prio:55, when:"Só neste programa" },
+      { name:"Esportes", prio:55, when:"Só neste programa" },
+      { name:"fallback", prio:0, when:"Sempre" },
+      { name:"FPS", prio:60, when:"Só neste programa" },
+      { name:"meu_perfil", prio:0, when:"Sempre" },
+      { name:"Navegação", prio:50, when:"Só neste programa" },
+      { name:"point_and_click", prio:60, when:"Só neste programa" },
+      { name:"sackboy_nativo", prio:80, when:"Só neste programa" },
+      { name:"vitoria", prio:5, when:"Sempre" },
+    ];
+    const selName = this.state.profile;
+    const selData = profileData.find((p)=>p.name===selName) || profileData[0];
+    const profiles = profileData.map((p)=>{
+      const active = p.name === selName;
+      return { name:p.name, prio:p.prio, when:p.when, onClick:()=>this.setState({profile:p.name}),
+        bg: active ? "rgba(189,147,249,0.16)" : "transparent",
+        nameColor: active ? "#f8f8f2" : "#c8ccda",
+        weight: active ? "600" : "400" };
+    });
+    const perfModeNames = ["Não mexer no modo","Controlar o PC","Jogar pelo Hefesto","Jogar direto (Sony)"];
+    const perfModes = perfModeNames.map((label)=>{
+      const active = label === this.state.perfMode;
+      return { label, onClick:()=>this.setState({perfMode:label}),
+        border: active ? "#bd93f9" : "#44475a",
+        bg: active ? "rgba(189,147,249,0.16)" : "#21222c",
+        color: active ? "#f8f8f2" : "#8b8fa8",
+        weight: active ? "600" : "400" };
+    });
+    const perfActions = [
+      { label:"Novo", color:"#6272a4" }, { label:"Duplicar", color:"#6272a4" },
+      { label:"Remover", color:"#ff5555" }, { label:"Ativar", color:"#50fa7b" },
+      { label:"Recarregar", color:"#6272a4" }, { label:"Salvar", color:"#bd93f9" },
+    ];
+
+    const detailed = ["Status","Gatilhos","Perfis","Navegação DSX"];
+    return {
+      tabs, activeTab: tab,
+      isStatus: tab === "Status", isGatilhos: tab === "Gatilhos", isNav: tab === "Navegação DSX", isPerfis: tab === "Perfis",
+      isOther: !detailed.includes(tab),
+      estado, statusCtrls, triggers, mouseSliders, mouseMap, keymap,
+      profiles, perfModes, perfActions,
+      selProfile: selName, selPrio: selData.prio, selPrioPct: selData.prio + "%",
+    };
+  }
+}
+</script>
+</body>
+</html>
