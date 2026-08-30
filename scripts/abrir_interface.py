@@ -6,8 +6,8 @@ dock"*.
 
 POR QUE ESTE ARQUIVO EXISTE, EM VEZ DE DUAS LINHAS NO PILOTO
 ------------------------------------------------------------
-O piloto (``novo-layout/_ferramentas/controles_vivos.py``) está sendo editado
-por outra leva agora, e mora em ``novo-layout/``, que é ``.gitignore`` e não
+O piloto (``layout/_ferramentas/controles_vivos.py``) está sendo editado
+por outra leva agora, e mora em ``layout/``, que é ``.gitignore`` e não
 viaja em worktree. Este envoltório resolve os dois problemas de uma vez: a
 identidade é versionada aqui, e o piloto é carregado sem uma linha de mudança.
 
@@ -59,12 +59,12 @@ from pathlib import Path
 AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 
-# O piloto e o mockup moram em `novo-layout/`, que é .gitignore e NÃO viaja em
+# O piloto e o mockup moram em `layout/`, que é .gitignore e NÃO viaja em
 # worktree — por isso a árvore de origem entra como segunda tentativa.
 ORIGEM = Path("/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix")
 CANDIDATOS_DO_PILOTO = (
-    RAIZ / "novo-layout" / "_ferramentas" / "controles_vivos.py",
-    ORIGEM / "novo-layout" / "_ferramentas" / "controles_vivos.py",
+    RAIZ / "layout" / "_ferramentas" / "controles_vivos.py",
+    ORIGEM / "layout" / "_ferramentas" / "controles_vivos.py",
 )
 #: O PNG que vira `_NET_WM_ICON` quando o tema ainda não conhece o nome.
 CANDIDATOS_DO_ICONE = (
@@ -125,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
 
     piloto = achar_o_piloto()
     if piloto is None:
-        print("não achei o piloto (novo-layout/_ferramentas/controles_vivos.py)",
+        print("não achei o piloto (layout/_ferramentas/controles_vivos.py)",
               file=sys.stderr)
         for c in CANDIDATOS_DO_PILOTO:
             print(f"  procurei em: {c}", file=sys.stderr)

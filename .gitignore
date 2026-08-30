@@ -105,10 +105,10 @@ STATE.md
 
 # Material de trabalho do redesign: mockups, referências e capturas de tela
 # soltas. A logo final vive em assets/hefesto-logo.svg; o resto não vai pro repo.
-# novo-layout/ SAIU DAQUI em 30/08/2026, a pedido dela: *"pode tirar do
-# gitignore então"*. O motivo é medido e custou trabalho dela DUAS vezes:
-# a pasta guarda o mockup e os desenhos que ela faz, e sem histórico não há
-# `git checkout` que desfaça. Uma leva de agentes sobrescreveu um SVG que ela
-# tinha acabado de desenhar, e não havia backup em lugar nenhum — ela teve
-# de refazer. Agora o git guarda.
-#   (era: novo-layout/)
+
+# novo-layout/ — A REFERÊNCIA DO DESENHO. NÃO é o produto, e nenhum agente
+# escreve aqui. Palavra dela, 30/08/2026: *"não tava trackeado por um motivo
+# ÓBVIO: é só pra referência do desenvolvimento. Se fosse pra usar, ao menos
+# copiasse todos os html e criasse uma pasta chamada layout."*
+# O produto lê de `layout/`, que é versionado.
+novo-layout/
