@@ -174,6 +174,30 @@ def ponte_atual(daemon: DaemonProtocol) -> str:
     return normalize_flavor(getattr(device, "flavor", None))
 
 
+def _cor_do_degrau(degrau: Any) -> tuple[int, int, int] | None:
+    """A cor de `CORES_DO_MODO` que anuncia um degrau da `ESCADA`.
+
+    Serve ao aviso do degrau PULADO, e por isso ela é a cor do MODO, não a da
+    máscara: o que ela precisa distinguir é *"o Nativo ficou para o
+    lançamento"* de *"o Steam Input ficou para o lançamento"*. Steam Input
+    primeiro de propósito — o degrau `gamepad/dualsense+steam_input` é as duas
+    coisas, e quem manda nele é a Steam, não a máscara que viaja por baixo.
+
+    `None` para o que não tem cor, e o chamador simplesmente não pisca: um
+    degrau sem cor não pode derrubar a troca que ela pediu.
+    """
+    ponte = getattr(degrau, "ponte", None)
+    if ponte is None:
+        return None
+    if getattr(ponte, "steam_input", False):
+        return CORES_DO_MODO.get(MODO_STEAM_INPUT)
+    from hefesto_dualsense4unix.integrations import ponte_escada
+
+    if getattr(ponte, "kind", None) == ponte_escada.KIND_NATIVE:
+        return CORES_DO_MODO.get(MODO_NATIVO)
+    return CORES_DO_MODO.get(getattr(ponte, "mascara", None) or "")
+
+
 def proxima_ponte(atual: str) -> str:
     """A ponte seguinte no ciclo, com wrap-around. Desconhecida → a primeira."""
     if atual not in CICLO_DE_PONTES:
@@ -469,10 +493,28 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
       - avisa pela lightbar qual ponte ficou de pé, e avisa ANTES quando a
         troca corre risco de derrubar o controle dentro do jogo;
       - é sempre reversível pelo próprio gesto: nenhuma ponte do ciclo mata o
-        caminho de volta pelo controle. **Uma exceção medida, e ela custa um
-        aperto, não o caminho:** o aperto em que a escada para no degrau caro
-        não troca máscara nenhuma (ele avisa e guarda o degrau de pé); o aperto
-        seguinte volta ao ciclo de sempre. Ver `PASSO_PAROU` no corpo.
+        caminho de volta pelo controle, e **não há exceção que custe um
+        aperto**. Um degrau que só o lançamento alcança é PULADO, com aviso na
+        lightbar e no journal — ver `pulados` no corpo.
+
+    E O GESTO SE COMPORTA IGUAL EM TODO JOGO (30/08/2026,
+    `D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`). Decisão dela:
+    *"pera, pq isso tá sob a identidade de um jogo específico? Isso deveria ser
+    universal — não é produto, é gambiarra!"*
+
+    Até esta data o gesto dependia de o jogo ter carimbo. Com carimbo a escada
+    não roda e todo aperto anda o `CICLO_DE_PONTES`; sem carimbo, o 2º aperto
+    pedia o degrau `native`, que exige REABRIR o jogo, e morria ali. Medido com
+    os quatro jogos dela, quatro apertos cada: **3 trocas em 4 apertos no
+    Sackboy (sem carimbo) contra 4 em 4 nos três carimbados** — e o usuário
+    novo, que não tem carimbo em jogo nenhum, tinha o pior comportamento em
+    todos.
+
+    A cura é no GESTO e em nada mais: o degrau que não se alcança ao vivo é
+    pulado (`ponte_tentativa.avancar_por_gesto`), e a `ESCADA`, o `como_subir`
+    e o `comecar` do lançamento ficaram intactos. O que ela usa o gesto para
+    fazer é *"testar a bridge sem fechar o jogo"* — e um degrau que exige
+    fechar o jogo não pertence a ele.
 
     O QUE O GESTO NÃO PROMETE (medido, não suposto):
       - NÃO garante que o jogo sobreviva à troca. A troca de máscara destrói e
@@ -529,44 +571,11 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
         if passo is not None and passo.mascara is not None:
             alvo = passo.mascara
             degrau_da_escada = passo.degrau
-        elif passo is not None and passo.motivo == ponte_tentativa.PASSO_PAROU:
-            # DOIS APERTOS NÃO PODEM CUSTAR A PARTIDA (29/08/2026), e é o
-            # segundo defeito da mesma linha do journal: até esta data o MESMO
-            # aperto que parava a escada no degrau caro caía no ciclo fixo e
-            # levava a `mouse_teclado` — o gamepad sumia no meio da partida.
-            # Medido três vezes (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17,
-            # Touhou 29/08 03:19:14).
-            #
-            # A resposta ao gesto não é trocar a máscara: é dizer, pelo único
-            # canal que ela enxerga sem sair do jogo, que a ponte de pé ficou e
-            # que o próximo degrau custa reabrir o jogo (ou fechar a Steam). O
-            # `ponte_tentativa` já guardou essa ponte para o tique gravar no
-            # perfil — sem isso, ela evapora.
-            #
-            # A porta de volta pelo controle NÃO fecha: a tentativa acabou de
-            # ser encerrada, então o aperto SEGUINTE já cai no ciclo de sempre.
-            # O que muda é que ela custa um aperto, e não zero.
-            logger.info(
-                "ponte_gesto_parou_no_degrau_caro",
-                de=atual,
-                proximo=passo.degrau.ponte.chave if passo.degrau else None,
-                preco=passo.preco,
-                jogo_com_autoridade=jogo_no_controle,
-            )
-            cor = CORES_DO_MODO.get(atual)
-            if cor is not None:
-                await _sinalizar_lightbar(
-                    daemon,
-                    [(cor, PULSO_SEG), ((0, 0, 0), PULSO_SEG), (cor, PULSO_SEG * 3)],
-                )
-            if store is not None:
-                with contextlib.suppress(Exception):
-                    store.bump("hotkey.ponte.cycled")
-            return
         else:
-            # Inclui o degrau caro SEM tentativa aberta e o caso em que a
-            # escada acabou. O gesto não pode ficar sem resposta: ela apertou, e
-            # alguma coisa tem de mudar. Volta ao ciclo de sempre.
+            # Inclui o degrau caro, o caso em que a escada acabou, e o jogo sem
+            # tentativa nenhuma (carimbado, ou fora do wrapper). O gesto não
+            # pode ficar sem resposta: ela apertou, e alguma coisa tem de
+            # mudar. Volta ao ciclo de sempre.
             alvo = proxima_ponte(atual)
 
         logger.info(
@@ -575,7 +584,33 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
             para=alvo,
             jogo_com_autoridade=jogo_no_controle,
             escada=passo.motivo if passo is not None else None,
+            pulados=[d.ponte.chave for d in passo.pulados] if passo else [],
         )
+
+        # O DEGRAU CARO NÃO SOME EM SILÊNCIO (29/08/2026,
+        # `D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`). A escada
+        # acabou de pular um degrau que só o LANÇAMENTO alcança, e ela tem de
+        # saber disso sem sair do jogo — senão a única diferença visível entre
+        # "pulei o Nativo" e "o ciclo de sempre" é nenhuma.
+        #
+        # A cor é a do MODO pulado, e ela não é nova: são as três que ela mesma
+        # nomeou em 19/08 — *"modo steam input azul clarinho, modo xbox verde
+        # claro, modo sony nativo branco"*. Até hoje `MODO_NATIVO` e
+        # `MODO_STEAM_INPUT` estavam em `CORES_DO_MODO` sem ninguém que as
+        # pintasse; este é o caminho que faltava.
+        for degrau_pulado in passo.pulados if passo is not None else ():
+            cor_pulada = _cor_do_degrau(degrau_pulado)
+            if cor_pulada is None:
+                continue
+            await _sinalizar_lightbar(
+                daemon,
+                [
+                    (cor_pulada, PULSO_SEG * 2),
+                    ((0, 0, 0), PULSO_SEG),
+                    (cor_pulada, PULSO_SEG * 2),
+                    ((0, 0, 0), PULSO_SEG),
+                ],
+            )
 
         if jogo_no_controle:
             # Aviso ANTES de aplicar: dois pulsos vermelhos = "o jogo pode
