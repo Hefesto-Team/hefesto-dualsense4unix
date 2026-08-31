@@ -69,7 +69,7 @@ def teto_da_barra() -> int:
     """
     from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 
-    return int(round(RUMBLE_POLICY_MULT["max"] * 100))
+    return round(RUMBLE_POLICY_MULT["max"] * 100)
 
 
 def degraus_da_forca() -> tuple[str, ...]:
@@ -211,7 +211,7 @@ def pacote_da_coluna(
     """
     politica = str(state.get("rumble_policy") or "")
     aplicado = state.get("rumble_mult_applied")
-    pct = None if not isinstance(aplicado, (int, float)) else int(round(float(aplicado) * 100))
+    pct = None if not isinstance(aplicado, (int, float)) else round(float(aplicado) * 100)
     motores = motores_do_controle(entrada, state)
     return {
         # A identidade é a MESMA gramática das dez abas (26/08): P# • plástico •
@@ -275,7 +275,7 @@ def estado_da_coluna(entrada: dict[str, Any], state: dict[str, Any]) -> dict[str
     """
     politica = str(state.get("rumble_policy") or "")
     aplicado = state.get("rumble_mult_applied")
-    pct = 0 if not isinstance(aplicado, (int, float)) else int(round(float(aplicado) * 100))
+    pct = 0 if not isinstance(aplicado, (int, float)) else round(float(aplicado) * 100)
     motores = motores_do_controle(entrada, state)
     return {
         "forca": politica,
@@ -293,8 +293,5 @@ def gesto_do_clique(gesto: dict[str, Any]) -> tuple[str, str]:
     é, é a frase que impede alguém de achar que já é.
     """
     nome = str(gesto.get("gesto") or "")
-    if nome == "barra":
-        chave = f'barra:{gesto.get("papel") or "?"}'
-    else:
-        chave = nome
+    chave = f'barra:{gesto.get("papel") or "?"}' if nome == "barra" else nome
     return chave, DONOS_DOS_GESTOS.get(chave, SEM_DONO)

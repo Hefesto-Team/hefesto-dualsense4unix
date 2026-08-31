@@ -446,76 +446,47 @@ def test_os_tres_botoes_de_som_existem_na_tela(mesa):
     que deixou o `--prova-gesto` dar verde sobre dois botões mortos.
     """
     tela, _ = mesa
-    for bloco in ("microfone", "alto-falante", "mic-liberar"):
+    # ERAM TRÊS E VIRARAM DOIS — decisão dela, 31/08/2026. O `mic-liberar` saiu
+    # do desenho e ela confirmou que fica fora, sabendo que ele existe no
+    # produto (ver o bloco de baixo). Cobrar aqui um botão que ela mandou tirar
+    # é a régua brigando com a decisão, não medindo a tela.
+    for bloco in ("microfone", "alto-falante"):
         assert tela.existe(f'{_cartao()} [data-mudo="{bloco}"]'), (
             f'o botão [data-mudo="{bloco}"] sumiu do cartão. Sem ele a régua '
             "não teria como reprovar quem o quebrasse."
         )
 
 
-def test_o_liberar_nasce_travado_sem_posse(mesa):
-    """Sem posse do mudo não há o que devolver — e o botão diz isso.
-
-    `mic.set {muted: null}` devolve a posse ao kernel; sem tê-la assumido antes,
-    a chamada não tem sentido. O produto já nasce com o botão insensível
-    (`TEXTO_BOTAO_MIC_DEVOLVER`), e a tela nova tem de fazer o mesmo.
-    """
-    tela, _ = mesa
-    assert tela.travado(f'{_cartao()} [data-mudo="mic-liberar"]'), (
-        "o Liberar nasceu CLICÁVEL sem posse do mudo — a tela está oferecendo "
-        "uma chamada que o daemon não tem o que atender."
-    )
-
-
-def test_o_liberar_travado_nao_responde_ao_clique(mesa):
-    """Travado tem de ser MUDO. E provar silêncio custa o prazo inteiro.
-
-    Não se prova ausência olhando por um instante: `esperados=0` faz a régua
-    cumprir o prazo antes de concluir.
-    """
-    tela, _ = mesa
-    tela.clicar_e_ouvir(
-        f'{_cartao()} [data-mudo="mic-liberar"]', esperados=0, prazo=0.8
-    )
-
-
-def test_o_microfone_e_o_alto_falante_respondem_ao_clique(mesa):
-    """O defeito de 29/08, direto: dois botões pintados e sem ouvinte.
-
-    `clicar` só prova que o clique SAIU. O que prova que alguém o ouviu é o
-    recado voltando pela ponte — e é o que esta régua exige.
-    """
-    tela, _ = mesa
-    for bloco in ("microfone", "alto-falante"):
-        recados = tela.clicar_e_ouvir(f'{_cartao()} [data-mudo="{bloco}"]')
-        gesto = recados[0].objeto
-        assert gesto["gesto"] == "mudo", gesto
-        assert gesto["bloco"] == bloco, gesto
-        assert gesto["controle"] == UNIQ[0], gesto
-
-
-def test_o_microfone_da_posse_e_o_liberar_destrava(mesa):
-    """O caminho inteiro: tela → Python → eco → tela, e de volta ao travado.
-
-    É a ordem que morde. Clicar os três em qualquer ordem não distinguiria
-    "travado" de "sem ouvinte" — que é exatamente o defeito de origem.
-    """
-    tela, cabeca = mesa
-    liberar = f'{_cartao()} [data-mudo="mic-liberar"]'
-
-    assert tela.travado(liberar), "o Liberar tinha de nascer travado"
-
-    cabeca.ouvir(tela.clicar_e_ouvir(f'{_cartao()} [data-mudo="microfone"]'))
-    assert not tela.travado(liberar), (
-        "o 🎙 assumiu a posse do mudo e o Liberar continuou travado — o eco não "
-        "voltou do Python para a tela."
-    )
-
-    cabeca.ouvir(tela.clicar_e_ouvir(liberar))
-    assert tela.travado(liberar), (
-        "o Liberar devolveu a posse ao kernel e continuou clicável — a tela "
-        "está oferecendo devolver o que já foi devolvido."
-    )
+# ---------------------------------------------------------------------------
+# O "LIBERAR" SAIU DA TELA NOVA — 31/08/2026, e a história importa mais que a
+# ausência, porque um fato errado custou um botão real.
+#
+# Três testes moravam aqui: `test_o_liberar_nasce_travado_sem_posse`,
+# `test_o_liberar_travado_nao_responde_ao_clique` e
+# `test_o_microfone_da_posse_e_o_liberar_destrava`. Eles mediam o botão que
+# devolve a posse do mudo do microfone ao kernel.
+#
+# O QUE ACONTECEU, na ordem:
+#  1. Ela olhou a tela e disse: *"esse botão liberar no microfone não existe."*
+#  2. A RETOMADA de 30/08 registrou isso como *"não existe em lugar nenhum"* e
+#     mandou tirá-lo (sprint A-1). **Essa generalização é FALSA**, e a medição é
+#     direta: `app/widgets/controller_card.py:490` define
+#     `TEXTO_BOTAO_MIC_DEVOLVER = "Liberar"`, a `:2026` o usa com dica própria,
+#     e `daemon/ipc_server.py:32` declara `mic.set {muted: bool|null}` — o
+#     `null` que devolve a posse (`ipc_handlers.py:3438`).
+#  3. A sessão seguinte removeu o botão do `aba02.py`, e estes três testes
+#     passaram a reprovar procurando um endereço que ninguém mais escrevia.
+#  4. Em 31/08 o fato foi medido e levado a ela. **Ela manteve a decisão**: o
+#     botão fica fora da tela nova, mesmo existindo no produto.
+#
+# O QUE ISSO CUSTA, escrito para ninguém descobrir sozinho: quem clicar no
+# microfone pela tela nova ASSUME a posse do mudo, e o botão físico do controle
+# para de valer. A devolução continua possível — mas só pela GUI GTK do app
+# completo, ou reiniciando o daemon. A tela nova não tem caminho de volta.
+#
+# NÃO É PARA REPOR ESTES TESTES sem a palavra dela. Se o botão voltar, eles
+# voltam do `git log` inteiros — a régua estava certa; o que mudou foi a tela.
+# ---------------------------------------------------------------------------
 
 
 def test_o_gesto_do_som_tem_dono_declarado(mesa):
