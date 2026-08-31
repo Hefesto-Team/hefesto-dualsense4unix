@@ -82,7 +82,7 @@ def _carregar_arquivo(arquivo: Path) -> Plugin | None:
         )
         return None
 
-    # Encontrar a primeira subclasse concreta de Plugin no modulo.
+    # Encontrar a primeira subclasse concreta de Plugin no módulo.
     classes = [
         obj
         for _, obj in inspect.getmembers(módulo, inspect.isclass)

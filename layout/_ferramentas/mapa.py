@@ -604,7 +604,7 @@ def main():
         alvo_css = f'#mp-{i} :is(.peca, rect, circle, path, ellipse)'
         # !important: o desenho dela traz cor no `style` inline em várias peças, e
         # style inline vence folha. Sem isto o microfone (e quem mais tivesse cor
-        # própria) não acendia — o portão dava verde porque media o CSS computado
+        # própria) não acendia — o portão dava verde porque media o CSS computado  # (noqa-acento: verbo medir, imperfeito)
         # da peça, que de fato não mudava, mas ninguém tinha reparado no ']'.
         if i not in SO_O_GLIFO_ACENDE:
             regras.append(f'.mapa:has(.item-{i}:hover) {alvo_css}'

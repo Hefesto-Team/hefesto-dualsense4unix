@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Valida que tests/ não contem dados pessoais reais.
 # Permitido: test_user, player_1, test@example.com, /tmp/hefesto_test_*, VID/PID reais.
-# Proibido: nomes proprios hardcoded, emails pessoais, MAC addresses de usuario.
+# Proibido: nomes proprios hardcoded, emails pessoais, MAC addresses de usuário.
 set -euo pipefail
 
 # Nomes ou padrões proibidos especificos ao ambiente do autor.

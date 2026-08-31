@@ -13,7 +13,7 @@ API disponivel:
   - ctx.log         → structlog logger prefixado com "plugin.<name>"
 
 Nota: não exponha o IController completo, DaemonConfig, StateStore
-bruto ou EventBus bruto. Use somente os proxies deste modulo.
+bruto ou EventBus bruto. Use somente os proxies deste módulo.
 """
 from __future__ import annotations
 
@@ -141,7 +141,7 @@ class PluginContext:
     """Container de dependências injetado em Plugin.on_load().
 
     Atributos:
-        controller: proxy sobre IController com subset de metodos.
+        controller: proxy sobre IController com subset de métodos.
         bus:        proxy sobre EventBus; use bus.subscribe(topic).
         store:      proxy sobre StateStore; use store.counter(key).
         log:        logger structlog prefixado "plugin.<plugin_name>".

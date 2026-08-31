@@ -26,7 +26,7 @@ Carregar plugins Python de `~/.config/hefesto-dualsense4unix/plugins/*.py` (cada
 arquivo = 1 plugin). A API minima exposta e:
 
 - `Plugin` ABC: hooks `on_load`, `on_tick`, `on_button_down`, `on_battery_change`,
-  `on_profile_change`, `on_unload`. Todos com implementação no-op por padrao.
+  `on_profile_change`, `on_unload`. Todos com implementação no-op por padrão.
 - `PluginContext`: container de dependências injetado em `on_load`. Expoe somente
   proxies sobre `IController` (subset de output + estado read-only), `EventBus.subscribe`,
   `StateStore.counter` e um logger prefixado.
@@ -98,7 +98,7 @@ Sandbox forte (bubblewrap, seccomp, Lua via `lupa`) e escopo de V3.
 ### Não versionar a API
 
 A API `Plugin` / `PluginContext` e considerada instavel ate o primeiro release publico
-de plugins. Mudancas breaking exigirao bump de versão da API e nota de migracao.
+de plugins. Mudancas breaking exigirao bump de versão da API e nota de migração.
 
 ### Performance
 

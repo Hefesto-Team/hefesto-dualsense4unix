@@ -448,7 +448,7 @@ check_udev() {
             warn "${r}: regra descontinuada presente (amplificava o storm -71) — remova: sudo bash scripts/install_udev.sh"
         fi
     done
-    # REGRA-COLA SEM O ALVO (22/08/2026) — a metade B que nenhum portão media.
+    # REGRA-COLA SEM O ALVO (22/08/2026) — a metade B que nenhum portão media.  # (noqa-acento: verbo medir, imperfeito)
     #
     # O estudo de 07/08 (cobertura do install, item 9) mediu isto: o portão de
     # paridade e este doctor davam `[OK]` para as regras 82 e 83 olhando só se o

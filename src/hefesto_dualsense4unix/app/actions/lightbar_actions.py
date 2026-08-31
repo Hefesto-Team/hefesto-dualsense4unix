@@ -1416,7 +1416,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
 
         Aplica `_player_leds_batch_guard` enquanto atualiza os 5 checkboxes para
         evitar que `on_player_led_toggled` dispare IPCs redundantes -- so envia
-        o bitmask final ao fim, em uma chamada unica.
+        o bitmask final ao fim, em uma chamada única.
         """
         self._player_leds_batch_guard = True
         try:

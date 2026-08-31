@@ -625,7 +625,7 @@ SCRIPT = """
       if (x < y) return desc ? -1 : 1;
       if (x > y) return desc ? 1 : -1;
       // Dentro do bloco a ordem dos controles e sempre a mesma, para cada um
-      // deles cair na mesma posicao em todo bloco da pagina.
+      // deles cair na mesma posicao em todo bloco da página.
       return D.ordem_ctrl.indexOf(a.controle) - D.ordem_ctrl.indexOf(b.controle);
     });
     conta.textContent = ls.length + ' de ' + D.linhas.length + ' linhas';

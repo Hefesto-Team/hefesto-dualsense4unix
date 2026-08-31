@@ -159,7 +159,7 @@ def como_abre(caminho: str) -> tuple[str, str]:
     """`(porta, motivo)` de um nó ESPECÍFICO — abrindo e fechando de verdade.
 
     Existe porque a pergunta "este nó abre?" mudou de resposta em 15/08/2026.
-    Antes, `os.access()` bastava: quem não podia `open()` não media. Agora o
+    Antes, `os.access()` bastava: quem não podia `open()` não media. Agora o  # (noqa-acento: verbo medir, imperfeito)
     broker abre o que a permissão do fs nega, e um instrumento que decidisse
     por `os.access` desistiria de medir um aparelho perfeitamente legível —
     imprimindo "0 de 4 controles legíveis" com os quatro ao alcance da mão.

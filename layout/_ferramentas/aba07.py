@@ -72,7 +72,7 @@ CSS = """
   /* O BOTÃO DENTRO DO CARTÃO NÃO ENCOLHE. Aqui morava
      `.lanc .btn{font-size:11px;padding:0 11px}`, e era a ÚNICA quebra de "mesma
      família, mesma largura" das dez abas: `Procurar de novo` — o MESMO texto, a
-     MESMA classe `btn` — media **130,5px** na fileira do quadro e **114,2px**
+     MESMA classe `btn` — media **130,5px** na fileira do quadro e **114,2px**  (noqa-acento: verbo medir, imperfeito)
      dentro do cartão do `Dolphin · mGBA`, porque a regra trocava a fonte (12,5
      → 11px) e o vão lateral (13 → 11px) só de um lado. Dois botões iguais em
      tamanhos diferentes na mesma tela é o que faz a janela parecer montada por

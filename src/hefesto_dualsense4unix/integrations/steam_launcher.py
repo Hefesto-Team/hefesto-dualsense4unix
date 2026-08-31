@@ -36,7 +36,7 @@ _steam_missing_lock = threading.Lock()
 
 
 def _reset_missing_warning_for_tests() -> None:
-    """Reinicia o flag de warning unica. Uso: testes unitarios."""
+    """Reinicia o flag de warning única. Uso: testes unitarios."""
     global _steam_missing_warned
     with _steam_missing_lock:
         _steam_missing_warned = False

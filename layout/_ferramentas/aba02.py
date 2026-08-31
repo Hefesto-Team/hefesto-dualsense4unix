@@ -500,7 +500,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      escolha exclusiva, um aceso), altura de RÓTULO em vez de altura de
      escolha, porque ele divide a linha com o nome do bloco. */
   /* O VÃO E O RECUO SÃO OS MENORES QUE AINDA SEPARAM — 2px entre os três botões
-     e 5px de cada lado do texto. Com os 3 e 7 que eles tinham, a fileira media
+     e 5px de cada lado do texto. Com os 3 e 7 que eles tinham, a fileira media  (noqa-acento: verbo medir, imperfeito)
      164px e a linha do rótulo pedia 292 numa moldura de 242: os 50px de
      diferença eram o "Nativo" e metade do "Desativado" pintados fora da caixa,
      por cima do bloco dos sensores. Aqui a fileira mede 150 e cabe com folga. */

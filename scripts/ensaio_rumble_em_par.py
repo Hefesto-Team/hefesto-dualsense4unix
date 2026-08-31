@@ -16,7 +16,7 @@ usam: o jogo escreve o efeito no no de input, o `hid_playstation` traduz para o
 report de saida e o envia no transporte certo (0x02 no cabo, 0x31 com CRC-32 no
 radio). Ele NAO passa pelo daemon do Hefesto e NAO disputa o hidraw, entao roda
 com o daemon vivo sem contaminar a medicao — ao contrario do ensaio por report
-cru, que exige parar o servico.
+cru, que exige parar o serviço.
 
 Isso responde a linha `vibracao.rumble.ff` do mapa, que ate hoje so tinha
 `inferido-do-codigo` nos dois transportes.

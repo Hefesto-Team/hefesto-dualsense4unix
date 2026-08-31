@@ -22,8 +22,8 @@ Ciclo de vida:
     - Chama on_unload() em cada plugin ativo.
 
 Configuração:
-  - plugins_enabled (DaemonConfig): False por padrao. Opt-in explícito.
-  - HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR: env var sobrescreve o diretório padrao.
+  - plugins_enabled (DaemonConfig): False por padrão. Opt-in explícito.
+  - HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR: env var sobrescreve o diretório padrão.
   - HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED: "1" forca ativação (util em smoke/dev).
 
 Aviso de seguranca:

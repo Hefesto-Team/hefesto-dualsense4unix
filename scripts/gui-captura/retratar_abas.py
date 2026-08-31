@@ -255,7 +255,7 @@ CONTROLES_DA_MESA_CHEIA = 4
 #: bancadas de layout desta casa medem, e a mesma do `retrato_offscreen.py`.
 LARGURA, ALTURA = 1920, 1080
 
-#: Os nomes que a documentação referencia. A ORDEM é a das abas no notebook.
+#: Os nomes que a documentação referencia. A ORDEM é a das abas no notebook.  (noqa-acento: verbo referenciar, 3.ª pessoa — a documentação REFERENCIA os nomes; o substantivo "referência" falsificaria a frase)
 #: O `interface.md` cita os nomes; mudar um nome aqui quebra a documentação, então
 #: o script confere no fim e avisa.
 NOMES = (
