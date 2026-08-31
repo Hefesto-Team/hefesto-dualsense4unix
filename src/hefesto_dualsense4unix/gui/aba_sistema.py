@@ -219,7 +219,10 @@ def _campos_de_janela(state: object) -> dict[str, Any] | None:
 #: desenho que ela aprovou diz "Ligado", numa coluna de respostas curtas. As
 #: duas viram uma no dia em que a aba velha morrer.
 _ESTADO_DO_HEFESTO: dict[str, Linha] = {
-    "online_systemd": Linha("Ligado", OK, GLIFO_OK, "O Hefesto está rodando. Se travar, ele volta sozinho."),
+    "online_systemd": Linha(
+        "Ligado", OK, GLIFO_OK,
+        "O Hefesto está rodando. Se travar, ele volta sozinho.",
+    ),
     "online_avulso": Linha(
         "Ligado, em modo improvisado",
         AVISO,
@@ -228,7 +231,10 @@ _ESTADO_DO_HEFESTO: dict[str, Linha] = {
         "computador nem volta sozinho se travar.",
     ),
     "iniciando": Linha(
-        "Ligando…", AVISO, GLIFO_AVISO, "Está terminando de ligar. Aguarde alguns segundos e clique em Atualizar."
+        "Ligando…",
+        AVISO,
+        GLIFO_AVISO,
+        "Está terminando de ligar. Aguarde alguns segundos e clique em Atualizar.",
     ),
     "offline": Linha(
         "Desligado",
@@ -243,7 +249,10 @@ _ESTADO_DO_HEFESTO: dict[str, Linha] = {
 def linha_do_hefesto(status: str | None) -> Linha:
     """"Ligado" / "Desligado" / "Ligando…" — e o traço quando não deu para ler."""
     if status is None:
-        return Linha(NAO_DEU, INFO, GLIFO_INFO, "Não consegui perguntar ao systemd em que estado o Hefesto está.")
+        return Linha(
+            NAO_DEU, INFO, GLIFO_INFO,
+            "Não consegui perguntar ao systemd em que estado o Hefesto está.",
+        )
     linha = _ESTADO_DO_HEFESTO.get(status)
     if linha is None:
         # Estado novo, vindo de um produto mais novo que esta tela: dizer o
@@ -264,7 +273,10 @@ def linha_da_pausa(state: object) -> Linha:
     momento, e a pessoa desliga o computador esperando que passe.
     """
     if not isinstance(state, dict) or "paused" not in state:
-        return Linha(NAO_DEU, INFO, GLIFO_INFO, "O Hefesto não respondeu — não dá para saber se está pausado.")
+        return Linha(
+            NAO_DEU, INFO, GLIFO_INFO,
+            "O Hefesto não respondeu — não dá para saber se está pausado.",
+        )
     if state.get("paused"):
         return Linha(
             "Sim, e volta pausado",
@@ -299,7 +311,10 @@ def linha_do_ambiente(frase: str | None) -> Linha:
     predicado dela, depois dos dois-pontos — o rótulo da linha já diz o sujeito.
     """
     if not frase:
-        return Linha(NAO_DEU, INFO, GLIFO_INFO, "Ninguém respondeu por qual caminho o Hefesto enxerga a janela.")
+        return Linha(
+            NAO_DEU, INFO, GLIFO_INFO,
+            "Ninguém respondeu por qual caminho o Hefesto enxerga a janela.",
+        )
     limpa = sem_markup(frase)
     valor = limpa.split(":", 1)[1].strip() if ":" in limpa else limpa
     valor = valor.rstrip(".")
@@ -336,11 +351,20 @@ def linha_do_vale_para(state: object) -> Linha:
     """
     quantos = quantos_controles(state)
     if quantos is None:
-        return Linha(NAO_DEU, INFO, GLIFO_INFO, "O Hefesto não respondeu quantos controles estão na mesa.")
+        return Linha(
+            NAO_DEU, INFO, GLIFO_INFO,
+            "O Hefesto não respondeu quantos controles estão na mesa.",
+        )
     if quantos == 0:
-        return Linha("Nenhum controle na mesa", INFO, GLIFO_INFO, "O teto continua valendo para quem chegar.")
+        return Linha(
+            "Nenhum controle na mesa", INFO, GLIFO_INFO,
+            "O teto continua valendo para quem chegar.",
+        )
     if quantos == 1:
-        return Linha("O controle da mesa", INFO, GLIFO_INFO, "É o teto da MESA; o controle pode sobrepô-lo na linha dele.")
+        return Linha(
+            "O controle da mesa", INFO, GLIFO_INFO,
+            "É o teto da MESA; o controle pode sobrepô-lo na linha dele.",
+        )
     return Linha(
         f"Os {quantos} controles",
         INFO,
@@ -370,7 +394,10 @@ def forca_do_perfil(perfil: str | None) -> str | None:
 def linha_do_impoe(perfil: str | None) -> Linha:
     """O que o perfil escolhido impõe, hoje, na mesa inteira."""
     if perfil is None:
-        return Linha(NAO_DEU, INFO, GLIFO_INFO, "Ninguém escolheu um perfil de bateria para a mesa.")
+        return Linha(
+            NAO_DEU, INFO, GLIFO_INFO,
+            "Ninguém escolheu um perfil de bateria para a mesa.",
+        )
     forca = forca_do_perfil(perfil)
     valor = f"Vibração em {forca}" if forca else "Nada é limitado"
     return Linha(
