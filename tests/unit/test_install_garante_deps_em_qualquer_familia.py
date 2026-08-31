@@ -42,10 +42,18 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.fonte_do_instalador import texto_do_instalador
+
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 INSTALL_PATH = RAIZ / "install.sh"
-INSTALL = INSTALL_PATH.read_text(encoding="utf-8")
+#: O `install.sh` MAIS `scripts/lib/camada_de_maquina.sh`. Sem a lib esta
+#: régua PERDIA COBERTURA EM SILÊNCIO — e é o pior jeito de perder: o
+#: `install_bt_agent_host` mudou de casa em 31/08/2026 levando junto o
+#: `run_pkg bt-agent` e o `comando_manual_pkg bt-agent`, e a derivação de
+#: `_canonicos_usados()` deixava de enxergar `bt-agent`. O teste continuava
+#: VERDE, medindo um canônico a menos. Ver `tests/unit/fonte_do_instalador.py`.
+INSTALL = texto_do_instalador()
 
 #: As três famílias que a tabela trata — e são três, não quatro, desde
 #: 19/08/2026: o ``zypper`` foi retirado porque **todos** os seus nomes de

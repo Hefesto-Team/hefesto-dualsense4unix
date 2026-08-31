@@ -31,6 +31,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from tests.unit.fonte_do_instalador import existe_o_instalador, texto_do_instalador
+
 BASH = shutil.which("bash") or "/bin/bash"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INSTALL_PATH = REPO_ROOT / "install.sh"
@@ -39,7 +41,12 @@ DKMS_CONF_PATH = REPO_ROOT / "assets" / "dkms" / "rtw88-usb" / "dkms.conf"
 PARITY_PATH = REPO_ROOT / "scripts" / "check_packaging_parity.sh"
 HOST_UDEV_PATH = REPO_ROOT / "scripts" / "install-host-udev.sh"
 
-INSTALL = INSTALL_PATH.read_text(encoding="utf-8") if INSTALL_PATH.exists() else ""
+#: O `install.sh` MAIS `scripts/lib/camada_de_maquina.sh`. As curas de HOST
+#: — esta função de DKMS inclusive — mudaram de casa em 31/08/2026, byte por
+#: byte, e os dois instaladores sourceiam a lib. As perguntas deste arquivo
+#: (flags, `--help`, passos, cerca) continuam sendo do `install.sh`; o CORPO
+#: da função vem da lib. Ver `tests/unit/fonte_do_instalador.py`.
+INSTALL = texto_do_instalador() if existe_o_instalador() else ""
 UNINSTALL = UNINSTALL_PATH.read_text(encoding="utf-8") if UNINSTALL_PATH.exists() else ""
 DKMS_CONF = DKMS_CONF_PATH.read_text(encoding="utf-8") if DKMS_CONF_PATH.exists() else ""
 PARITY = PARITY_PATH.read_text(encoding="utf-8") if PARITY_PATH.exists() else ""
@@ -78,7 +85,10 @@ FN = (
 def _roda_funcao(
     tmp_path: Path, prologo: str, path_extra: str | None = None
 ) -> subprocess.CompletedProcess[str]:
-    assert FN, "install_dkms_rtw88_usb_host ausente do install.sh"
+    assert FN, (
+        "install_dkms_rtw88_usb_host ausente do instalador "
+        "(procurei no install.sh e em scripts/lib/camada_de_maquina.sh)"
+    )
     stubs = tmp_path / "bin"
     stubs.mkdir(exist_ok=True)
     script = (

@@ -27,6 +27,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.fonte_do_instalador import existe_o_instalador, texto_do_instalador
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INSTALL_PATH = REPO_ROOT / "install.sh"
 UNINSTALL_PATH = REPO_ROOT / "uninstall.sh"
@@ -37,7 +39,12 @@ PRERM_PATH = REPO_ROOT / "packaging" / "debian" / "prerm"
 POSTRM_PATH = REPO_ROOT / "packaging" / "debian" / "postrm"
 POSTINST_PATH = REPO_ROOT / "packaging" / "debian" / "postinst"
 
-INSTALL = INSTALL_PATH.read_text(encoding="utf-8") if INSTALL_PATH.exists() else ""
+#: O `install.sh` MAIS `scripts/lib/camada_de_maquina.sh` — as curas de HOST
+#: mudaram de casa em 31/08/2026, e `_render_broker_units` e
+#: `install_broker_host` foram junto. A pergunta deste arquivo continua a
+#: mesma ("o instalador faz X?"); só o lugar onde ela é respondida cresceu.
+#: Ver `tests/unit/fonte_do_instalador.py`.
+INSTALL = texto_do_instalador() if existe_o_instalador() else ""
 UNINSTALL = UNINSTALL_PATH.read_text(encoding="utf-8") if UNINSTALL_PATH.exists() else ""
 DOCTOR = DOCTOR_PATH.read_text(encoding="utf-8") if DOCTOR_PATH.exists() else ""
 PRERM = PRERM_PATH.read_text(encoding="utf-8") if PRERM_PATH.exists() else ""
@@ -63,7 +70,7 @@ def _extract_bash_function(source: str, name: str) -> str:
 @pytest.fixture(scope="module")
 def render_fn_src() -> str:
     if not INSTALL:
-        pytest.skip("install.sh não encontrado no repo")
+        pytest.skip("install.sh / camada_de_maquina.sh não encontrados no repo")
     return _extract_bash_function(INSTALL, "_render_broker_units")
 
 

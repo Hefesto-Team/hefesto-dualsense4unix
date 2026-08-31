@@ -47,6 +47,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.fonte_do_instalador import texto_do_instalador
+
 RAIZ = Path(__file__).resolve().parents[2]
 PONTE = RAIZ / "scripts" / "bt_ponte_privilegiada.sh"
 INSTALL = RAIZ / "install.sh"
@@ -85,7 +87,7 @@ def _corpo_expandido() -> str:
     literal na linha do `install -Dm440` não acharia nada e passaria verde por
     vacuidade. Aqui a expansão é feita antes de medir.
     """
-    corpo = _corpo_da_funcao(INSTALL.read_text(encoding="utf-8"), FUNCAO)
+    corpo = _corpo_da_funcao(texto_do_instalador(), FUNCAO)
     for nome, valor in re.findall(r'^\s*local (\w+)=([^\s"]+)$', corpo, re.M):
         corpo = corpo.replace("${" + nome + "}", valor)
     return corpo
@@ -262,7 +264,7 @@ def test_o_install_confere_no_proprio_sudo_e_nao_so_no_disco() -> None:
     leitura: há três jeitos de o arquivo existir e a regra não valer. Quem sabe
     responder é o sudo.
     """
-    corpo = _corpo_da_funcao(INSTALL.read_text(encoding="utf-8"), FUNCAO)
+    corpo = _corpo_da_funcao(texto_do_instalador(), FUNCAO)
     assert re.search(r"sudo -n -l -U", corpo), "o install não pergunta ao sudo se a regra pegou"
 
 
@@ -277,7 +279,7 @@ def test_o_install_grava_o_sudoers_com_o_modo_que_o_sudo_exige() -> None:
 
 def test_o_install_nao_abre_a_ponte_para_root() -> None:
     """Sem saber para QUEM, não se grava regra nenhuma."""
-    corpo = _corpo_da_funcao(INSTALL.read_text(encoding="utf-8"), FUNCAO)
+    corpo = _corpo_da_funcao(texto_do_instalador(), FUNCAO)
     assert 'SUDO_USER:-$(id -un)' in corpo
     assert '== "root"' in corpo
 

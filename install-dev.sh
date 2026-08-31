@@ -30,21 +30,39 @@
 #   ~/.local/bin/hefesto-chave                    (a chave liga/desliga)
 #   ~/.config/systemd/user/hefesto-dev-dualsense4unix.service
 #
-# O QUE ELE NÃO INSTALA, E ISSO É DECISÃO, NÃO ESQUECIMENTO
-# ----------------------------------------------------------
-# Regras udev, o broker hidraw, `hefesto-bt-agent`, `bt-health-watchdog`, nada
-# em `/usr/local/lib`. Essa camada é da MÁQUINA, não do app: um segundo
-# instalador escrevendo por cima de `/etc/udev/rules.d/70-ps5-controller.rules`
-# faria o app dela passar a rodar sob regra de dev sem uma linha dizendo isso,
-# e o `--desfazer` de um levaria a regra do outro junto. Pior: as regras 82 e 83
-# executam script de `/usr/local/lib/hefesto-dualsense4unix/` como root na borda
-# do hotplug (`assets/82-nintendo-pro-nosniff.rules:96`).
+# A CAMADA DE MÁQUINA — `--camada-de-maquina`, e ela NÃO vem de graça
+# --------------------------------------------------------------------
+# Regras udev, o grupo `hefesto`, o broker hidraw, a resiliência do bluetoothd,
+# a ponte privilegiada, os módulos DKMS e o que mora em `/usr/local/lib`. Essa
+# camada é da MÁQUINA, não do app — e por isso ela só entra quando PEDIDA:
 #
-# O app de dev DEPENDE do Hefesto estável para essa camada — e o broker foi
-# desenhado para isso: `broker/hidraw_broker.py:507-518` diz, literal, que
-# "dois daemons em takeover convivem", cada um com sua lease. Um broker, dois
-# daemons. Se o estável não estiver instalado, este script AVISA e continua:
-# a interface nova (`./interface`) só LÊ o daemon e funciona mesmo assim.
+#     ./install-dev.sh --camada-de-maquina
+#
+# A instalação normal (sem a flag) continua não tocando em nada disso, pela
+# razão de sempre: dois instaladores escrevendo por cima de
+# `/etc/udev/rules.d/70-ps5-controller.rules` fariam o app de um rodar sob a
+# regra do outro sem uma linha dizendo isso, e o `--desfazer` de um levaria a
+# regra do outro junto. Pior: as regras 82 e 83 executam script de
+# `/usr/local/lib/hefesto-dualsense4unix/` como root na borda do hotplug
+# (`assets/82-nintendo-pro-nosniff.rules:96`).
+#
+# O QUE MUDOU EM 31/08/2026, e por que a flag nasceu: *"eu desinstalei a versão
+# antiga e vamos deixar só a dev"*. Até esse dia este arquivo dizia, aqui, que
+# "o app de dev DEPENDE do Hefesto estável para essa camada" — e dependia
+# mesmo. Sem o estável, ninguém instalava a camada, e o app de dev parou de
+# funcionar sem UM erro sequer: `/dev/uhid` nascia `crw------- root root`, o
+# daemon caía para uinput calado (`vpad_degradado motivo=uhid_indisponivel`) e
+# o teclado virtual não abria (`uinput_keyboard_create_failed [Errno 13]`).
+# O sintoma foi o de sempre nesta casa — a AUSÊNCIA de dado.
+#
+# A FONTE É UMA SÓ: `scripts/lib/camada_de_maquina.sh`, sourceada por este
+# arquivo e pelo `install.sh`. Este script NUNCA executa o `install.sh` —
+# fazê-lo reescreveria o `.desktop`, o symlink e as units do app ESTÁVEL
+# apontando para código de desenvolvimento, que é o sequestro descrito acima.
+#
+# Convivência, quando os dois apps existem: o broker foi desenhado para ela —
+# `broker/hidraw_broker.py:507-518` diz, literal, que "dois daemons em takeover
+# convivem", cada um com sua lease. Um broker, dois daemons.
 #
 # ELE SE RECUSA A RODAR SE FOR COLIDIR, e diz o que colide. Ver `conferir()`.
 set -euo pipefail
@@ -71,11 +89,13 @@ ESTAVEL_UNIT="${UNITS}/hefesto-dualsense4unix.service"
 SIM=0
 SO_CONFERIR=0
 DESFAZER=0
+CAMADA=0
 for arg in "$@"; do
     case "$arg" in
         --yes|-y)     SIM=1 ;;
         --conferir)   SO_CONFERIR=1 ;;
         --desfazer)   DESFAZER=1 ;;
+        --camada-de-maquina) CAMADA=1 ;;
         -h|--help)
             sed -n '2,50p' "$0" | sed 's/^# \{0,1\}//'
             exit 0 ;;
@@ -176,12 +196,18 @@ print(identidade.DEV.wm_class)' 2>/dev/null || echo "")"
     fi
 
     # 6. Avisos — não impedem, mas ela tem de saber ANTES.
-    if [[ ! -f "$ESTAVEL_DESKTOP" ]]; then
-        printf '  aviso: o Hefesto estável não parece instalado.\n'
-        printf '         O app de dev NÃO instala udev nem o broker (é da\n'
-        printf '         máquina, não do app) — sem o estável, o daemon de dev\n'
-        printf '         pode não enxergar o aparelho. A interface (./interface)\n'
-        printf '         funciona mesmo assim: ela só LÊ.\n'
+    # 31/08/2026: este aviso mandava esperar pelo estável, e a espera virou
+    # beco quando ela o desinstalou. Agora ele aponta a saída — e só aparece
+    # se a camada de fato NÃO estiver na máquina. A régua é o grupo `hefesto`,
+    # que só existe se `scripts/install_udev.sh` já correu: é o dono de
+    # /dev/uhid e /dev/uinput, e sem ele o daemon cai para uinput em silêncio.
+    if ! getent group hefesto >/dev/null 2>&1; then
+        printf '  aviso: a CAMADA DE MÁQUINA não está instalada (não há grupo `hefesto`).\n'
+        printf '         Sem ela o daemon não abre /dev/uhid nem /dev/uinput e\n'
+        printf '         degrada CALADO — vira aviso no log, não erro na tela.\n'
+        printf '         Instale depois deste install:\n'
+        printf '             ./install-dev.sh --camada-de-maquina\n'
+        printf '         A interface (./interface) funciona mesmo assim: ela só LÊ.\n'
     fi
     if systemctl --user is-active --quiet hefesto-dualsense4unix.service 2>/dev/null; then
         printf '  aviso: o daemon ESTÁVEL está no ar agora.\n'
@@ -219,6 +245,65 @@ if [[ $DESFAZER -eq 1 ]]; then
     verde "pronto. O Hefesto estável não foi tocado."
     printf 'A config de dev (~/.config/%s) NÃO foi apagada — é dado, e apagar\n' "$APP_ID"
     printf 'dado não é trabalho de desinstalador. Tire à mão se quiser.\n'
+    exit 0
+fi
+
+# ============================================================================
+# A CAMADA DE MÁQUINA — `--camada-de-maquina` (31/08/2026)
+# ============================================================================
+# Ela desinstalou o Hefesto estável e ficou só com o de desenvolvimento:
+# *"eu desinstalei a versão antiga e vamos deixar só a dev"*. Com isso caiu a
+# premissa em que este arquivo nasceu — a de que o estável provia a camada de
+# máquina —, e o app de dev parou de funcionar sem dar um erro sequer: o
+# sintoma foi a AUSÊNCIA de dado. `/dev/uhid` nascia `crw------- root root`,
+# ninguém o abria, e o daemon caía para uinput em silêncio
+# (`vpad_degradado motivo=uhid_indisponivel`); `/dev/uinput` sem o grupo
+# `hefesto` derrubava o teclado virtual (`uinput_keyboard_create_failed
+# [Errno 13]`). Nada disso era erro — era aviso, no meio do log.
+#
+# ESTE MODO NÃO INSTALA APP NENHUM. Não escreve `.desktop`, symlink, unit de
+# usuário nem ícone: só a camada da MÁQUINA, a mesma que o `install.sh`
+# instala, lida da MESMA fonte (`scripts/lib/camada_de_maquina.sh`). Por isso
+# ele roda ANTES do `conferir()` — não há alvo de app para colidir.
+#
+# E ele NÃO executa o `install.sh`. Sourcear a lib é o que permite isso, e a
+# regra do `CLAUDE.md` ("nunca rode `install.sh` na árvore de dev") continua
+# valendo, literal: rodá-lo aqui reescreveria o `.desktop`, o symlink e as
+# units do app ESTÁVEL apontando para código de desenvolvimento.
+if [[ $CAMADA -eq 1 ]]; then
+    passo "instalando a CAMADA DE MÁQUINA a partir de ${RAIZ}"
+    printf 'Isto muda o SISTEMA, não o app: regras udev em /etc/udev/rules.d,\n'
+    printf 'o grupo `hefesto`, scripts em /usr/local/lib, units de sistema e\n'
+    printf 'os módulos DKMS. Nenhum .desktop, symlink ou unit de usuário é\n'
+    printf 'tocado — nem os do app estável, nem os do de dev.\n'
+
+    if [[ $SIM -eq 0 ]]; then
+        printf '\nSeguir? [s/N] '
+        read -r resposta
+        [[ "$resposta" =~ ^[sS] ]] || { echo "nada feito."; exit 0; }
+    fi
+
+    # A credencial UMA vez. Sem isto cada função pediria a senha por conta
+    # própria e as que testam `sudo -n true` desistiriam caladas — o mesmo
+    # defeito que o `acquire_sudo` do `install.sh` existe para matar
+    # (BUG-INSTALL-SUDO-NONINTERACTIVE-01).
+    if ! sudo -v; then
+        vermelho "RECUSO: sem sudo não há camada de máquina — ela mora em /etc e /usr/local."
+        exit 1
+    fi
+
+    # A lib espera `ROOT_DIR` (o léxico do `install.sh`); aqui a raiz chama `RAIZ`.
+    ROOT_DIR="$RAIZ"
+    export ROOT_DIR
+    # shellcheck source=scripts/lib/camada_de_maquina.sh
+    source "${RAIZ}/scripts/lib/camada_de_maquina.sh"
+    instalar_camada_de_maquina
+
+    passo "pronto."
+    printf 'O grupo `hefesto` só vale a partir do PRÓXIMO LOGIN — até lá quem\n'
+    printf 'dá acesso a /dev/uhid e /dev/uinput é a ACL do uaccess, que o\n'
+    printf 'trigger do udev já reaplicou. Reinicie o daemon para ele pegar:\n'
+    printf '    systemctl --user restart %s.service\n' "$APP_ID"
     exit 0
 fi
 
