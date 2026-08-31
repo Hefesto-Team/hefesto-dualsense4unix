@@ -1,0 +1,1323 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Hefesto — o mapa do controle</title>
+<style>
+  :root{
+    --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
+    --border-sutil:#343746; --border-forte:#44475a;
+    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
+    --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
+    --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
+    /* A COR DO PLÁSTICO NÃO MORA MAIS AQUI. Ela vem do <style> gerado dentro do
+       próprio SVG (scripts/gerar_cores_do_dualsense.py), zona por zona, dos 28
+       modelos do docs/data/cores-do-dualsense.csv. O `--cosmic-red:#b11f54` que
+       ficava nesta linha era um hex digitado à mão que a amostragem de 27/08
+       derrubou — o Cosmic Red é #A51C48, distância 17. Fato errado, substituído.
+       Quem precisa de UMA cor do casco lê `var(--z-casca-solida)`. */
+    --luz-apagada:#3f4350; --led-apagado:#4a4f5c; --led-aceso:#e8ecf5;
+    /* Pilha do sistema: nada de fonte web, para o arquivo abrir sem rede.
+       É a regra de scripts/paleta_da_casa.py, e vale aqui igual. */
+    --f:ui-sans-serif,system-ui,"Cantarell","Segoe UI",Roboto,sans-serif;
+    --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#11121a;color:var(--fg);font-family:var(--f);padding:22px;
+        display:flex;flex-direction:column;align-items:center;gap:16px}
+  .mono{font-family:var(--m)}
+  .cx{width:1800px;max-width:100%;background:var(--app-bg);border-radius:11px;
+       border:1px solid var(--border-sutil);overflow:hidden}
+  .topo{padding:15px 20px;border-bottom:1px solid var(--border-sutil)}
+  h1{font-size:18px;font-weight:700}
+  h1 .p{color:var(--pink)}
+  .sub{font-family:var(--m);font-size:11.5px;color:var(--comment);margin-top:3px}
+
+  .mapa{display:grid;grid-template-columns:minmax(0,1fr) 720px;gap:0;align-items:stretch}
+  .lado-ds{padding:20px 24px;display:flex;align-items:center;justify-content:center}
+  .lado-lista{border-left:1px solid var(--border-sutil);padding:14px 18px;
+               max-height:80vh;overflow-y:auto;
+               column-width:330px;column-gap:20px;column-fill:balance}
+  .grupo{break-inside:avoid;-webkit-column-break-inside:avoid}
+  .ds{width:100%;height:auto;max-height:74vh}
+  /* TUDO PREENCHIDO — decisão dela, 27/08: os paths deste SVG são FAIXAS e
+     ANÉIS. Traçá-los fazia cada aresta virar dois fios a 0,99 de distância:
+     era a linha dupla do casco, as várias voltas dos botões, os furos do
+     alto-falante em rosquinha e as lâmpadas ocas — tudo a mesma causa. */
+  .ds .peca,.ds .corpo{stroke:none}
+  /* TODA PEÇA PINTA COMO PEÇA, mesmo sem a classe. O desenho dela nem sempre
+     carrega `class="peca"` — o Options, por exemplo, ficou sem `fill` nenhum e
+     herdou o preto padrão do SVG. Aqui a folha alcança qualquer forma que viva
+     dentro de um grupo de peça e não seja glifo. */
+  .ds g[id^="mp-"]:not([id^="mp-glifo"]):not(.sobre):not(.alvo)
+    > :is(rect,path,circle,ellipse,polygon){fill:var(--z-casca-solida)}
+  /* O LIGHTBAR E O INDICADOR DE JOGADOR SÃO LUZ, e não plástico. Na cor do casco
+     eles caíam sobre a borda do touchpad e sumiam — ela: "faltou só os dois
+     lighbar e os led de player". Cor de luz, e aparecem. */
+  .ds #mp-lightbar *{fill:var(--luz, var(--luz-apagada))}
+  .ds #mp-led-jogador rect{fill:var(--led-apagado)}
+  .ds #mp-led-jogador rect.led-on{fill:var(--led-aceso)}
+  /* o PS não tem anel: a peça existe só para dar caixa e alvo, e quem se vê — e
+     quem acende — é o glifo. Decisão dela, 27/08: "Remove o circulo e Deixa só o
+     Glifo do PS pra ser o Botão". */
+  .ds .sem-tinta{fill:none !important;stroke:none !important}
+  /* A PONTA DO PUNHO fechava em BICO: a borda externa e a interna do punho
+     convergem num vértice agudo, e preenchidas isso vira uma farpa. O traço
+     da mesma cor com junta redonda arredonda o vértice sem mudar o path. */
+  .ds #mp-corpo .peca,.ds #mp-corpo .corpo{stroke:var(--z-casca-solida);stroke-width:.42;
+                      stroke-linejoin:round;stroke-linecap:round}
+  /* no MAPA as features aparecem — é o mapa das peças todas, não de uma aba */
+  /* AS FEATURES SÓ APARECEM NO HOVER. Em repouso, as caixas tracejadas do
+     giroscópio, do acelerômetro e da bateria empilhavam-se no meio do corpo e
+     escondiam o alto-falante, o indicador de jogador e o microfone. */
+  .ds .oculta{opacity:0 !important}
+  /* e ACENDEM no hover — a regra de acender tem de vencer o !important que as
+     esconde, senão o sensor e os motores não respondem a nada. */
+  .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio,
+  .mapa:has(.a-feat-giroscopio:hover) #mp-feat-giroscopio,
+  .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro,
+  .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro,
+  .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria,
+  .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria,
+  .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo,
+  .mapa:has(.a-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo,
+  .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito,
+  .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito{opacity:1 !important}
+
+  /* O CORPO INTEGRA O TOUCHPAD. Ela, 27/08: "delimitação do corpo precisa ser
+     corrigida integra o touchpad também" — o touchpad é parte do corpo, e acender
+     um sem o outro desenha um buraco no meio da peça. */
+  .mapa:has(.item-corpo:hover) #mp-touchpad :is(.peca,rect,circle,path,ellipse),
+  .mapa:has(.a-corpo:hover) #mp-touchpad :is(.peca,rect,circle,path,ellipse)
+    {fill:var(--pink) !important;stroke:var(--pink) !important}
+  /* O MARCADOR DE SENSOR É PREENCHIDO, como todo o resto do desenho.
+     FATO SUBSTITUÍDO: aqui ele era vazado e tracejado, "senão vira uma laje opaca
+     que apaga o PS, o microfone e a grade do alto-falante" — e era verdade
+     enquanto o giroscópio e o acelerômetro USAVAM O PATH DO CORPO INTEIRO. Agora
+     que cada um tem a forma da própria região, não há laje: os dois são anéis, e
+     anel é vazado por construção. O tracejado, esse, serrilhava a borda de tudo —
+     era o que ela via nos sensores e nos dois motores. */
+  .ds .oculta .peca{stroke-width:.32;stroke-linejoin:round}
+  /* E ACENDEM NA COR DA CASA. A `feat-bateria` veio do editor com `fill="#3a3f4b"`
+     como ATRIBUTO — cinza sobre fundo escuro: ela ficava visível e invisível ao
+     mesmo tempo, que foi o "não tá funcionando" que ela viu. */
+  .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio .peca,
+  .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro .peca,
+  .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria .peca,
+  .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo .peca,
+  .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito .peca
+    {fill:var(--pink) !important;stroke:var(--pink) !important}
+  /* A BATERIA É O LIGHTBAR. Decisão dela, 27/08: "bateria pode ser usando as
+     barras da lightbar com 100% e a barra cheia e 0% ela apagada". Apontá-la sem
+     acender as duas tiras é apontar um medidor que não está ali. */
+  .mapa:has(.item-feat-bateria:hover) #mp-lightbar :is(.peca,rect,path,circle,ellipse)
+    {fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo,
+  .mapa:has(.a-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo,
+  .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito,
+  .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito,
+  .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio,
+  .mapa:has(.a-feat-giroscopio:hover) #mp-feat-giroscopio,
+  .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro,
+  .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro,
+  .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria,
+  .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria{opacity:1}
+  .ds #mp-corpo .peca{stroke:var(--z-casca-solida)}
+  /* os glifos POR CIMA do desenho — a mesma peça, vista de dois jeitos */
+  .sobre{color:var(--texto-suave);opacity:.8;pointer-events:none}
+  /* OS GLIFOS DELA TRAZEM COR NO `style` INLINE, e style inline vence folha: no
+     hover eles continuavam cinza-claro sobre a peça acesa e sumiam. `currentColor`
+     com !important devolve a palavra à folha, sem tocar no desenho dela. */
+  /* TODO descendente que não peça `none` pinta com a cor do grupo — inclusive o
+     que não declara `fill` nenhum. As setas do d-pad dela são exatamente assim:
+     sem atributo e sem style de cor, herdavam o preto padrão do SVG, e no hover
+     não tinham como acender. Selecionar por atributo não as alcançava. */
+  .sobre *:not([fill="none"]):not(title){fill:currentColor !important}
+  .sobre [stroke]:not([stroke="none"]){stroke:currentColor !important}
+  .sobre text,.sobre tspan{fill:currentColor !important}
+  /* O ALVO É A PEÇA: transparente, sem traço, e com a FORMA dela. */
+  /* O ALVO É A PEÇA — transparente, com a FORMA dela, e engordado pelo TRAÇO.
+     A forma exata sozinha deixava as peças finas (o lightbar, os furos do
+     alto-falante, as lâmpadas do indicador, a cápsula do Share) pequenas demais
+     para apontar: 6 das 29 não respondiam. O traço transparente de 1,8 acrescenta
+     0,9 de cada lado sem deslocar nem deformar nada. */
+  .alvo,.alvo *{fill:transparent;stroke:transparent;stroke-width:1.8;
+                stroke-linejoin:round;stroke-linecap:round;
+                pointer-events:all;cursor:pointer}
+                pointer-events:all;cursor:pointer}
+  .sobre svg{overflow:visible}
+  /* a pena do glifo, em unidades da PEÇA e não do glifo: sem isto ela variava
+     com o tamanho e saía até 38% mais grossa que o traço do desenho. */
+  .sobre{--pena:.35}
+  .sobre [stroke-width]{stroke-width:calc(var(--pena) * 32 / var(--lado))}
+
+  /* A LISTA CABE EM DUAS COLUNAS, E A PÁGINA NÃO ROLA. Medido em 27/08/2026,
+     depois de a barra de provas nascer: a lista transbordava para uma TERCEIRA
+     coluna, e a linha "Corpo" — a última — caía fora da caixa, invisível e
+     inalcançável. É a mesma cicatriz que o portão das peças já nomeia, e ela
+     voltou porque a barra roubou altura.
+     A cura é na ALTURA, encolhendo o mais alto — regra dela, 27/08 —, e não em
+     `space-between`: o item passa de 38 para 36 px, que é o `--h-escolha` da
+     escala desta casa, e o vão entre grupos de 13/11 para 11/9. Com isso o
+     conteúdo cai de 864 para 832 px, cabe nas duas colunas, e a página fecha
+     com ZERO de rolagem (era 12 px). */
+  .grupo + .grupo{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-sutil)}
+  .grupo-rot{font-size:10.5px;color:var(--comment);
+              letter-spacing:.6px;margin-bottom:6px}
+  .item{display:flex;align-items:center;gap:11px;padding:4px 9px;border-radius:7px;
+         border:1px solid transparent;color:var(--texto-suave);cursor:default}
+  .item:hover{border-color:var(--border-forte);background:rgba(255,121,198,.06);cursor:pointer}
+  .item .gl{flex:0 0 26px;height:26px;display:flex;align-items:center;justify-content:center}
+  .item .sem{color:var(--border-forte);font-size:15px}
+  .item .txt{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0}
+  .item .txt b{font-size:12px;font-weight:600}
+  .item .ap{font-size:11px;color:var(--texto-mudo)}
+  .item .id{margin-left:auto;font-size:10.5px;color:var(--texto-mudo)}
+  .item .prop{font-size:9.5px;color:var(--orange);border:1px solid var(--orange);
+               border-radius:4px;padding:0 4px;}
+  .nota-peca{flex:0 0 15px;width:15px;height:15px;border-radius:50%;font-size:10px;
+              line-height:13px;text-align:center;border:1px solid var(--border-forte);
+              color:var(--texto-mudo);cursor:help;font-family:var(--m)}
+  .nota-peca:hover{border-color:var(--cyan);color:var(--cyan)}
+
+  /* A BARRA DE PROVAS. A gramática é a da lista da direita — mesmo rótulo em
+     versalete, mesma família de caixa —, para a barra não parecer colada de
+     outra tela. Três blocos, e a BARRA VERTICAL entre eles: é o separador que
+     ela pediu em 27/08 ("uma barra vertical entre os blocos"). */
+  .provas{display:flex;align-items:stretch;border-bottom:1px solid var(--border-sutil)}
+  .prova{padding:11px 18px;display:flex;flex-direction:column;gap:7px;justify-content:space-between}
+  .prova + .prova{border-left:1px solid var(--border-sutil)}
+  /* O RÓTULO DOS TRÊS BLOCOS COMEÇA NO MESMO x, e os três terminam no mesmo y.
+     O vão se cura na ALTURA — os controles têm todos 28px —, nunca com
+     `space-between` entre eles: ela reprovou isso com todas as letras. */
+  .prova-rot{font-size:10.5px;color:var(--comment);
+              letter-spacing:.6px;line-height:1}
+  .prova .linha{display:flex;gap:6px;align-items:center}
+  .ct{height:28px;background:var(--elevated);color:var(--fg);
+       border:1px solid var(--border-forte);border-radius:6px;
+       padding:0 8px;font-family:var(--f);font-size:12px}
+  .ct-cor{width:44px;padding:2px;cursor:pointer}
+  /* OS QUATRO NÚMEROS SÃO UMA FAMÍLIA, e família tem a mesma largura. O
+     "nenhum" e o "apagar" são outro papel — palavra, não número — e por isso
+     medem o que a palavra pede. */
+  .bt{height:28px;min-width:30px;padding:0 9px;background:var(--elevated);
+       color:var(--texto-suave);border:1px solid var(--border-forte);
+       border-radius:6px;font-family:var(--f);font-size:12px;cursor:pointer}
+  .bt:hover{border-color:var(--pink);color:var(--fg)}
+  .bt.on{border-color:var(--pink);background:rgba(255,121,198,.14);color:var(--fg)}
+  .prova-nota{margin-left:auto;align-self:center;padding:0 18px;max-width:460px;
+               font-size:11px;line-height:1.45;color:var(--texto-mudo)}
+
+  .rodape{padding:12px 20px;border-top:1px solid var(--border-sutil);
+           font-size:11.5px;color:var(--texto-mudo);display:flex;gap:22px;flex-wrap:wrap}
+  .rodape b{color:var(--texto-suave)}
+  /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: *"ok temos um botão pra vir
+     pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
+     devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
+     mockup abre como ARQUIVO, onde nem sempre há um.
+     O destino não é chute: `grep -l mapa-do-controle.html layout/*.html`
+     devolve UMA aba, a Navegação. Cada mapa tem uma origem só. */
+  .voltar{position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
+           padding:5px 11px;border-radius:7px;text-decoration:none;
+           border:1px solid var(--border-forte);background:var(--panel);
+           color:var(--texto-suave);font-size:12px}
+  .voltar:hover{border-color:var(--purple);color:var(--fg)}
+  .topo{position:relative;padding-left:132px}
+
+
+  .mapa:has(.item-triangle:hover) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-triangle:hover) .s-triangle{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-triangle:hover) .item-triangle{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-triangle:hover) .s-triangle{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-triangle:hover) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-circle:hover) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-circle:hover) .s-circle{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-circle:hover) .item-circle{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-circle:hover) .s-circle{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-circle:hover) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-square:hover) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-square:hover) .s-square{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-square:hover) .item-square{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-square:hover) .s-square{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-square:hover) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-cross:hover) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-cross:hover) .s-cross{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-cross:hover) .item-cross{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-cross:hover) .s-cross{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-cross:hover) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-dpad_up:hover) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-dpad_up:hover) .s-dpad_up{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-dpad_up:hover) .item-dpad_up{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-dpad_up:hover) .s-dpad_up{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-dpad_up:hover) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-dpad_right:hover) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-dpad_right:hover) .s-dpad_right{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-dpad_right:hover) .item-dpad_right{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-dpad_right:hover) .s-dpad_right{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-dpad_right:hover) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-dpad_down:hover) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-dpad_down:hover) .s-dpad_down{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-dpad_down:hover) .item-dpad_down{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-dpad_down:hover) .s-dpad_down{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-dpad_down:hover) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-dpad_left:hover) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-dpad_left:hover) .s-dpad_left{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-dpad_left:hover) .item-dpad_left{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-dpad_left:hover) .s-dpad_left{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-dpad_left:hover) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-l1:hover) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-l1:hover) .s-l1{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-l1:hover) .item-l1{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-l1:hover) .s-l1{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-l1:hover) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-r1:hover) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-r1:hover) .s-r1{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-r1:hover) .item-r1{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-r1:hover) .s-r1{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-r1:hover) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-l2:hover) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-l2:hover) .s-l2{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-l2:hover) .item-l2{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-l2:hover) .s-l2{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-l2:hover) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-r2:hover) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-r2:hover) .s-r2{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-r2:hover) .item-r2{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-r2:hover) .s-r2{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-r2:hover) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-stick_l:hover) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-stick_l:hover) .s-stick_l{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-stick_l:hover) .item-stick_l{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-stick_l:hover) .s-stick_l{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-stick_l:hover) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-stick_r:hover) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-stick_r:hover) .s-stick_r{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-stick_r:hover) .item-stick_r{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-stick_r:hover) .s-stick_r{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-stick_r:hover) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-share:hover) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-share:hover) .s-share{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-share:hover) .item-share{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-share:hover) .s-share{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-share:hover) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-options:hover) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-options:hover) .s-options{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-options:hover) .item-options{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-options:hover) .s-options{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-options:hover) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-touchpad:hover) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-touchpad:hover) .s-touchpad{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-touchpad:hover) .item-touchpad{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-touchpad:hover) .s-touchpad{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-touchpad:hover) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-ps:hover) .s-ps{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-ps:hover) .item-ps{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-ps:hover) .s-ps{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-mic:hover) #mp-mic :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-mic:hover) .s-mic{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-mic:hover) .item-mic{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-mic:hover) .s-mic{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-mic:hover) #mp-mic :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-alto-falante:hover) #mp-alto-falante :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-alto-falante:hover) .s-alto-falante{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-alto-falante:hover) .item-alto-falante{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-alto-falante:hover) .s-alto-falante{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-alto-falante:hover) #mp-alto-falante :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-lightbar:hover) #mp-lightbar :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-lightbar:hover) .s-lightbar{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-lightbar:hover) .item-lightbar{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-lightbar:hover) .s-lightbar{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-lightbar:hover) #mp-lightbar :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-led-jogador:hover) #mp-led-jogador :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-led-jogador:hover) .s-led-jogador{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-led-jogador:hover) .item-led-jogador{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-led-jogador:hover) .s-led-jogador{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-led-jogador:hover) #mp-led-jogador :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-giroscopio:hover) #mp-feat-giroscopio :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-giroscopio:hover) .s-feat-giroscopio{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-giroscopio:hover) .item-feat-giroscopio{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-feat-giroscopio:hover) .s-feat-giroscopio{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-giroscopio:hover) #mp-feat-giroscopio :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-acelerometro:hover) #mp-feat-acelerometro :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-acelerometro:hover) .s-feat-acelerometro{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-acelerometro:hover) .item-feat-acelerometro{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-feat-acelerometro:hover) .s-feat-acelerometro{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-bateria:hover) .s-feat-bateria{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-bateria:hover) .item-feat-bateria{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-feat-bateria:hover) .s-feat-bateria{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-corpo:hover) #mp-corpo :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-corpo:hover) .s-corpo{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-corpo:hover) .item-corpo{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-corpo:hover) .s-corpo{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-corpo:hover) #mp-corpo :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-rumble-esquerdo:hover) .s-feat-rumble-esquerdo{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-rumble-esquerdo:hover) .item-feat-rumble-esquerdo{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-feat-rumble-esquerdo:hover) .s-feat-rumble-esquerdo{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-rumble-esquerdo:hover) #mp-feat-rumble-esquerdo :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-rumble-direito:hover) #mp-feat-rumble-direito :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mapa:has(.item-feat-rumble-direito:hover) .s-feat-rumble-direito{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-rumble-direito:hover) .item-feat-rumble-direito{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .mapa:has(.a-feat-rumble-direito:hover) .s-feat-rumble-direito{color:var(--fg) !important;opacity:1}
+  .mapa:has(.a-feat-rumble-direito:hover) #mp-feat-rumble-direito :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+</style>
+</head>
+<body>
+
+<div class="cx">
+  <div class="topo">
+    <a class="voltar" href="06-navegacao.html" title="Volta para a aba Navegação, que é de onde este mapa se abre.">← Voltar</a>
+    <h1><span class="p">O mapa do controle</span> — a fonte da verdade das peças</h1>
+    <div class="sub">passe o mouse num glifo e a peça acende no desenho · passe na peça e o glifo acende</div>
+  </div>
+
+  <div class="provas">
+    <div class="prova">
+      <div class="prova-rot">Cor do plástico</div>
+      <select id="cw" class="ct">
+        <optgroup label="De fábrica"><option value="white">White · 00</option><option value="midnight-black">Midnight Black · 01</option><option value="cosmic-red" selected>Cosmic Red · 02</option><option value="nova-pink">Nova Pink · 03</option><option value="galactic-purple">Galactic Purple · 04</option><option value="starlight-blue">Starlight Blue · 05</option><option value="grey-camouflage" data-parcial="1">Grey Camouflage · 06 · camuflado em 4</option><option value="volcanic-red">Volcanic Red · 07</option><option value="sterling-silver">Sterling Silver · 08</option><option value="cobalt-blue">Cobalt Blue · 09</option><option value="chroma-teal" data-parcial="1">Chroma Teal · 10 · iridescente em 6</option><option value="chroma-indigo" data-parcial="1">Chroma Indigo · 11 · iridescente em 6</option><option value="chroma-pearl" data-parcial="1">Chroma Pearl · 12 · iridescente em 6</option><option value="hyperpop-techno-red">HyperPop Techno Red · 13</option><option value="hyperpop-remix-green">HyperPop Remix Green · 14</option><option value="hyperpop-rhythm-blue">HyperPop Rhythm Blue · 15</option><option value="30th-anniversary" data-parcial="1">30th Anniversary · 30 · fosco em 2</option></optgroup>
+        <optgroup label="Edições especiais"><option value="god-of-war-ragnarok">God of War Ragnarök · Z1</option><option value="spider-man-2">Marvel's Spider-Man 2 · Z2</option><option value="astro-bot" data-parcial="1">Astro Bot · Z3 · arte em 1</option><option value="fortnite" data-parcial="1">Fortnite · Z4 · arte em 1</option><option value="the-last-of-us">The Last of Us · Z6</option><option value="god-of-war-20th">God of War 20th Anniversary · ZA</option><option value="icon-blue">Icon Blue Special Edition · ZB</option><option value="ghost-of-yotei" data-parcial="1">Ghost of Yōtei Limited Edition · ZC · sem amostragem em 6</option><option value="marathon" data-parcial="1">Marathon Limited Edition · ZD · sem amostragem em 6</option><option value="genshin-impact" data-parcial="1">Genshin Impact Limited Edition · ZE · sem amostragem em 6</option><option value="007-first-light" data-parcial="1">007 First Light Limited Edition · ZF · sem amostragem em 7</option></optgroup>
+      </select>
+    </div>
+    <div class="prova">
+      <div class="prova-rot">Jogador</div>
+      <div class="linha"><button class="bt" data-jogador="1" title="padrão 3">1</button><button class="bt" data-jogador="2" title="padrão 24">2</button><button class="bt" data-jogador="3" title="padrão 135">3</button><button class="bt" data-jogador="4" title="padrão 1245">4</button><button class="bt" data-jogador="0">nenhum</button></div>
+    </div>
+    <div class="prova">
+      <div class="prova-rot">Barra de luz</div>
+      <div class="linha">
+        <input type="color" id="luz" class="ct ct-cor" value="#0000ff">
+        <button class="bt" id="luz-off">apagar</button>
+      </div>
+    </div>
+    <div class="prova-nota" id="nota">&nbsp;</div>
+  </div>
+
+  <div class="mapa">
+    <div class="lado-ds">
+<?xml version="1.0" encoding="utf-8"?>
+<svg data-colorway="cosmic-red" class="ds" data-colorway="cosmic-red" xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <filter id="mp-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
+      <feFlood flood-color="#fff6" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="mp-outline-filter-1" bx:preset="outline 1 0.3 #b11f54" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.3"/>
+      <feFlood flood-color="#b11f54" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="mp-outline-filter-2" bx:preset="outline 1 0.1 #cdc5da11" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.1"/>
+      <feFlood flood-color="#cdc5da11" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <bx:export>
+      <bx:file format="png" path="DualSense — mapa de peças, para editar.png"/>
+    </bx:export>
+  </defs>
+  <defs id="mp-cores-do-dualsense">
+    <!-- GERADO por scripts/gerar_cores_do_dualsense.py — não editar à mão. -->
+    <pattern id="mp-hachura-sem-hex" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="4" height="4" fill="#5A5A64"/>
+      <rect width="2" height="4" fill="#8A8A96"/>
+    </pattern>
+    <linearGradient id="mp-casca-god-of-war-20th" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="50%" stop-color="#e4e0d8"/>
+      <stop offset="50%" stop-color="#c41e3a"/>
+    </linearGradient>
+    <linearGradient id="mp-casca-spider-man-2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="50%" stop-color="#5f5f60"/>
+      <stop offset="50%" stop-color="#a24046"/>
+    </linearGradient>
+  <style id="mp-cores-do-dualsense-folha">
+    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
+       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
+
+       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
+       do indicador de jogador ficam de fora, e é por isso que eles não
+       somem sobre a borda do touchpad. */
+
+    /* White · código 00 */
+    svg[data-colorway="white"]{--z-casca-crua:#E4E0D8;--z-casca:#e4e0d8;--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="white"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="white"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="white"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="white"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="white"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="white"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="white"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="white"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Midnight Black · código 01 */
+    svg[data-colorway="midnight-black"]{--z-casca-crua:#1C1C1E;--z-casca:#606062;--z-casca-solida-crua:#1C1C1E;--z-casca-solida:#606062;--z-painel-crua:#121214;--z-painel:#656566;--z-touch-crua:#121214;--z-touch:#656566;--z-gatilhos-crua:#1C1C1E;--z-gatilhos:#606062;--z-dpad-crua:#1C1C1E;--z-dpad:#606062;--z-analogicos-crua:#121214;--z-analogicos:#656566;--z-botoes_face-crua:#1C1C1E;--z-botoes_face:#606062;--z-simbolos-crua:#C8C8C4;--z-simbolos:#c8c8c4}
+    svg[data-colorway="midnight-black"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="midnight-black"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="midnight-black"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="midnight-black"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="midnight-black"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="midnight-black"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="midnight-black"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="midnight-black"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Cosmic Red · código 02 */
+    svg[data-colorway="cosmic-red"]{--z-casca-crua:#A51C48;--z-casca:#ae335a;--z-casca-solida-crua:#A51C48;--z-casca-solida:#ae335a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#A51C48;--z-gatilhos:#ae335a;--z-dpad-crua:#A51C48;--z-dpad:#ae335a;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#A51C48;--z-botoes_face:#ae335a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="cosmic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="cosmic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="cosmic-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="cosmic-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="cosmic-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="cosmic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="cosmic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="cosmic-red"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Nova Pink · código 03 */
+    svg[data-colorway="nova-pink"]{--z-casca-crua:#E35B8C;--z-casca:#e35b8c;--z-casca-solida-crua:#E35B8C;--z-casca-solida:#e35b8c;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E35B8C;--z-gatilhos:#e35b8c;--z-dpad-crua:#E35B8C;--z-dpad:#e35b8c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E35B8C;--z-botoes_face:#e35b8c;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="nova-pink"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="nova-pink"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="nova-pink"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="nova-pink"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="nova-pink"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="nova-pink"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="nova-pink"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="nova-pink"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Galactic Purple · código 04 */
+    svg[data-colorway="galactic-purple"]{--z-casca-crua:#5B3A7A;--z-casca:#74588e;--z-casca-solida-crua:#5B3A7A;--z-casca-solida:#74588e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#5B3A7A;--z-gatilhos:#74588e;--z-dpad-crua:#5B3A7A;--z-dpad:#74588e;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#5B3A7A;--z-botoes_face:#74588e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="galactic-purple"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="galactic-purple"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="galactic-purple"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="galactic-purple"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="galactic-purple"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="galactic-purple"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="galactic-purple"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="galactic-purple"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Starlight Blue · código 05 */
+    svg[data-colorway="starlight-blue"]{--z-casca-crua:#7EB8D4;--z-casca:#7eb8d4;--z-casca-solida-crua:#7EB8D4;--z-casca-solida:#7eb8d4;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#7EB8D4;--z-gatilhos:#7eb8d4;--z-dpad-crua:#7EB8D4;--z-dpad:#7eb8d4;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#7EB8D4;--z-botoes_face:#7eb8d4;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="starlight-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="starlight-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="starlight-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="starlight-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="starlight-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="starlight-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="starlight-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="starlight-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Grey Camouflage · código 06 */
+    svg[data-colorway="grey-camouflage"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:url(#mp-hachura-sem-hex);--z-gatilhos:url(#mp-hachura-sem-hex);--z-dpad-crua:#6B6E72;--z-dpad:#6b6e72;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#6B6E72;--z-botoes_face:#6b6e72;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="grey-camouflage"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="grey-camouflage"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="grey-camouflage"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="grey-camouflage"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="grey-camouflage"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="grey-camouflage"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="grey-camouflage"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="grey-camouflage"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Volcanic Red · código 07 */
+    svg[data-colorway="volcanic-red"]{--z-casca-crua:#8B1A1A;--z-casca:#a24848;--z-casca-solida-crua:#8B1A1A;--z-casca-solida:#a24848;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#8B1A1A;--z-gatilhos:#a24848;--z-dpad-crua:#8B1A1A;--z-dpad:#a24848;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#8B1A1A;--z-botoes_face:#a24848;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="volcanic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="volcanic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="volcanic-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="volcanic-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="volcanic-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="volcanic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="volcanic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="volcanic-red"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Sterling Silver · código 08 */
+    svg[data-colorway="sterling-silver"]{--z-casca-crua:#C5C8CC;--z-casca:#c5c8cc;--z-casca-solida-crua:#C5C8CC;--z-casca-solida:#c5c8cc;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#C5C8CC;--z-gatilhos:#c5c8cc;--z-dpad-crua:#C5C8CC;--z-dpad:#c5c8cc;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#C5C8CC;--z-botoes_face:#c5c8cc;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="sterling-silver"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="sterling-silver"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="sterling-silver"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="sterling-silver"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="sterling-silver"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="sterling-silver"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="sterling-silver"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="sterling-silver"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Cobalt Blue · código 09 */
+    svg[data-colorway="cobalt-blue"]{--z-casca-crua:#1E4B8C;--z-casca:#40669d;--z-casca-solida-crua:#1E4B8C;--z-casca-solida:#40669d;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1E4B8C;--z-gatilhos:#40669d;--z-dpad-crua:#1E4B8C;--z-dpad:#40669d;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1E4B8C;--z-botoes_face:#40669d;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="cobalt-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="cobalt-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="cobalt-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="cobalt-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="cobalt-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="cobalt-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="cobalt-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="cobalt-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Chroma Teal · código 10 */
+    svg[data-colorway="chroma-teal"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:url(#mp-hachura-sem-hex);--z-gatilhos:url(#mp-hachura-sem-hex);--z-dpad-crua:url(#mp-hachura-sem-hex);--z-dpad:url(#mp-hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#mp-hachura-sem-hex);--z-botoes_face:url(#mp-hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="chroma-teal"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="chroma-teal"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="chroma-teal"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="chroma-teal"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="chroma-teal"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="chroma-teal"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="chroma-teal"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="chroma-teal"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Chroma Indigo · código 11 */
+    svg[data-colorway="chroma-indigo"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:url(#mp-hachura-sem-hex);--z-gatilhos:url(#mp-hachura-sem-hex);--z-dpad-crua:url(#mp-hachura-sem-hex);--z-dpad:url(#mp-hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#mp-hachura-sem-hex);--z-botoes_face:url(#mp-hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="chroma-indigo"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="chroma-indigo"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="chroma-indigo"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="chroma-indigo"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="chroma-indigo"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="chroma-indigo"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="chroma-indigo"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="chroma-indigo"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Chroma Pearl · código 12 */
+    svg[data-colorway="chroma-pearl"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:url(#mp-hachura-sem-hex);--z-gatilhos:url(#mp-hachura-sem-hex);--z-dpad-crua:url(#mp-hachura-sem-hex);--z-dpad:url(#mp-hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#mp-hachura-sem-hex);--z-botoes_face:url(#mp-hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="chroma-pearl"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="chroma-pearl"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="chroma-pearl"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="chroma-pearl"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="chroma-pearl"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="chroma-pearl"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="chroma-pearl"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="chroma-pearl"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* HyperPop Techno Red · código 13 */
+    svg[data-colorway="hyperpop-techno-red"]{--z-casca-crua:#E11D2E;--z-casca:#e11d2e;--z-casca-solida-crua:#E11D2E;--z-casca-solida:#e11d2e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#E11D2E;--z-dpad:#e11d2e;--z-analogicos-crua:#E11D2E;--z-analogicos:#e11d2e;--z-botoes_face-crua:#E11D2E;--z-botoes_face:#e11d2e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="hyperpop-techno-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* HyperPop Remix Green · código 14 */
+    svg[data-colorway="hyperpop-remix-green"]{--z-casca-crua:#8FBF3A;--z-casca:#8fbf3a;--z-casca-solida-crua:#8FBF3A;--z-casca-solida:#8fbf3a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#8FBF3A;--z-dpad:#8fbf3a;--z-analogicos-crua:#8FBF3A;--z-analogicos:#8fbf3a;--z-botoes_face-crua:#8FBF3A;--z-botoes_face:#8fbf3a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="hyperpop-remix-green"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* HyperPop Rhythm Blue · código 15 */
+    svg[data-colorway="hyperpop-rhythm-blue"]{--z-casca-crua:#3AA0E8;--z-casca:#3aa0e8;--z-casca-solida-crua:#3AA0E8;--z-casca-solida:#3aa0e8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#3AA0E8;--z-dpad:#3aa0e8;--z-analogicos-crua:#3AA0E8;--z-analogicos:#3aa0e8;--z-botoes_face-crua:#3AA0E8;--z-botoes_face:#3aa0e8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* 30th Anniversary · código 30 */
+    svg[data-colorway="30th-anniversary"]{--z-casca-crua:#A8A8B0;--z-casca:#a8a8b0;--z-casca-solida-crua:#A8A8B0;--z-casca-solida:#a8a8b0;--z-painel-crua:#A8A8B0;--z-painel:#a8a8b0;--z-touch-crua:#A8A8B0;--z-touch:#a8a8b0;--z-gatilhos-crua:#A8A8B0;--z-gatilhos:#a8a8b0;--z-dpad-crua:#3A3A40;--z-dpad:#616166;--z-analogicos-crua:#2A2A2E;--z-analogicos:#5f5f62;--z-botoes_face-crua:#3A3A40;--z-botoes_face:#616166;--z-simbolos-crua:url(#mp-hachura-sem-hex);--z-simbolos:url(#mp-hachura-sem-hex)}
+    svg[data-colorway="30th-anniversary"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="30th-anniversary"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="30th-anniversary"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="30th-anniversary"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="30th-anniversary"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="30th-anniversary"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="30th-anniversary"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="30th-anniversary"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* God of War Ragnarök · código Z1 */
+    svg[data-colorway="god-of-war-ragnarok"]{--z-casca-crua:#2C3A6E;--z-casca:#56618b;--z-casca-solida-crua:#2C3A6E;--z-casca-solida:#56618b;--z-painel-crua:#E8E4DC;--z-painel:#e8e4dc;--z-touch-crua:#E8E4DC;--z-touch:#e8e4dc;--z-gatilhos-crua:#2C3A6E;--z-gatilhos:#56618b;--z-dpad-crua:#2C3A6E;--z-dpad:#56618b;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#2C3A6E;--z-botoes_face:#56618b;--z-simbolos-crua:#E8E4DC;--z-simbolos:#e8e4dc}
+    svg[data-colorway="god-of-war-ragnarok"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Marvel's Spider-Man 2 · código Z2 */
+    svg[data-colorway="spider-man-2"]{--z-casca-crua:url(#mp-casca-spider-man-2);--z-casca:url(#mp-casca-spider-man-2);--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#D0D0D0;--z-simbolos:#d0d0d0}
+    svg[data-colorway="spider-man-2"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="spider-man-2"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="spider-man-2"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="spider-man-2"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="spider-man-2"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="spider-man-2"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="spider-man-2"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="spider-man-2"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Astro Bot · código Z3 */
+    svg[data-colorway="astro-bot"]{--z-casca-crua:#E8E4DC;--z-casca:#e8e4dc;--z-casca-solida-crua:#E8E4DC;--z-casca-solida:#e8e4dc;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E8E4DC;--z-gatilhos:#e8e4dc;--z-dpad-crua:#E8E4DC;--z-dpad:#e8e4dc;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E8E4DC;--z-botoes_face:#e8e4dc;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="astro-bot"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="astro-bot"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="astro-bot"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="astro-bot"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="astro-bot"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="astro-bot"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="astro-bot"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="astro-bot"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Fortnite · código Z4 */
+    svg[data-colorway="fortnite"]{--z-casca-crua:#1A1A1C;--z-casca:#5f5f60;--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#F2C200;--z-simbolos:#f2c200}
+    svg[data-colorway="fortnite"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="fortnite"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="fortnite"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="fortnite"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="fortnite"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="fortnite"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="fortnite"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="fortnite"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* The Last of Us · código Z6 */
+    svg[data-colorway="the-last-of-us"]{--z-casca-crua:#1A1A1C;--z-casca:#5f5f60;--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#E4E0D8;--z-painel:#e4e0d8;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#E4E0D8;--z-analogicos:#e4e0d8;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#E4E0D8;--z-simbolos:#e4e0d8}
+    svg[data-colorway="the-last-of-us"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="the-last-of-us"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="the-last-of-us"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="the-last-of-us"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="the-last-of-us"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="the-last-of-us"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="the-last-of-us"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="the-last-of-us"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* God of War 20th Anniversary · código ZA */
+    svg[data-colorway="god-of-war-20th"]{--z-casca-crua:url(#mp-casca-god-of-war-20th);--z-casca:url(#mp-casca-god-of-war-20th);--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#E4E0D8;--z-painel:#e4e0d8;--z-touch-crua:#E4E0D8;--z-touch:#e4e0d8;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#C41E3A;--z-simbolos:#c41e3a}
+    svg[data-colorway="god-of-war-20th"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="god-of-war-20th"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="god-of-war-20th"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="god-of-war-20th"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="god-of-war-20th"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="god-of-war-20th"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="god-of-war-20th"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="god-of-war-20th"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Icon Blue Special Edition · código ZB */
+    svg[data-colorway="icon-blue"]{--z-casca-crua:#1E4A8C;--z-casca:#40659d;--z-casca-solida-crua:#1E4A8C;--z-casca-solida:#40659d;--z-painel-crua:#1E4A8C;--z-painel:#40659d;--z-touch-crua:#163A72;--z-touch:#45618e;--z-gatilhos-crua:#163A72;--z-gatilhos:#45618e;--z-dpad-crua:#1E4A8C;--z-dpad:#40659d;--z-analogicos-crua:#1E4A8C;--z-analogicos:#40659d;--z-botoes_face-crua:#1E4A8C;--z-botoes_face:#40659d;--z-simbolos-crua:#9EC0E8;--z-simbolos:#9ec0e8}
+    svg[data-colorway="icon-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="icon-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="icon-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="icon-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="icon-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="icon-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="icon-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="icon-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
+    svg[data-colorway="ghost-of-yotei"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="ghost-of-yotei"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
+    svg[data-colorway="marathon"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="marathon"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="marathon"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="marathon"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="marathon"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="marathon"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="marathon"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="marathon"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="marathon"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
+    svg[data-colorway="genshin-impact"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="genshin-impact"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="genshin-impact"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="genshin-impact"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="genshin-impact"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="genshin-impact"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="genshin-impact"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="genshin-impact"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="genshin-impact"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
+    svg[data-colorway="007-first-light"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#4A4A52;--z-analogicos:#65656c;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="007-first-light"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="007-first-light"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="007-first-light"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="007-first-light"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="007-first-light"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="007-first-light"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="007-first-light"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="007-first-light"] .z-simbolos{color:var(--z-simbolos) !important}
+  </style>
+  </defs>
+  <title>DualSense — mapa de peças, para editar</title>
+  <g id="mp-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
+  <g id="mp-grupo-chassi">
+    <title>CHASSI</title>
+
+  </g>
+  <g id="mp-grupo-face">
+    <title>BOTÕES DA FACE</title>
+    <g id="mp-triangle" class="z-botoes_face" data-entrada="triangle">
+      <title>Triângulo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 37.463 C 97.075 37.463 95.873 39.546 96.835 41.213 C 97.282 41.987 98.107 42.463 99 42.463 C 100.925 42.463 102.127 40.38 101.165 38.713 C 100.718 37.939 99.893 37.463 99 37.463 M 95.5 39.963 C 95.5 37.269 98.417 35.585 100.75 36.932 C 101.833 37.557 102.5 38.713 102.5 39.963 C 102.5 42.657 99.583 44.341 97.25 42.994 C 96.167 42.369 95.5 41.213 95.5 39.963"/>
+    </g>
+    <g id="mp-circle" class="z-botoes_face" data-entrada="circle">
+      <title>Círculo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 107 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+    </g>
+    <g id="mp-square" class="z-botoes_face" data-entrada="square">
+      <title>Quadrado</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 91 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+    </g>
+    <g id="mp-cross" class="z-botoes_face" data-entrada="cross">
+      <title>Cruz</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 53.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+    </g>
+  </g>
+  <g id="mp-grupo-direcional">
+    <title>DIRECIONAL</title>
+    <g id="mp-dpad_up" class="z-dpad" data-entrada="dpad_up">
+      <title>D-pad Cima</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 28.635 45.843 C 28.833 46.054 29.167 46.054 29.365 45.843 L 31.365 43.71 C 31.452 43.617 31.5 43.495 31.5 43.368 L 31.5 39.963 C 31.5 39.687 31.276 39.463 31 39.463 L 27 39.463 C 26.724 39.463 26.5 39.687 26.5 39.963 L 26.5 43.368 C 26.5 43.495 26.548 43.617 26.635 43.71 L 28.635 45.843 Z M 30.095 46.527 C 29.502 47.16 28.498 47.16 27.905 46.527 L 25.905 44.394 C 25.645 44.116 25.5 43.749 25.5 43.368 L 25.5 39.963 C 25.5 39.135 26.172 38.463 27 38.463 L 31 38.463 C 31.828 38.463 32.5 39.135 32.5 39.963 L 32.5 43.368 C 32.5 43.749 32.355 44.116 32.094 44.394 L 30.095 46.527 Z"/>
+    </g>
+    <g id="mp-dpad_right" class="z-dpad" data-entrada="dpad_right">
+      <title>D-pad Direita</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 32.12 48.598 a 0.5 0.5 0 0 0 0 0.73 l 2.134 2 a 0.5 0.5 0 0 0 0.342 0.135 H 38 a 0.5 0.5 0 0 0 0.5 -0.5 v -4 a 0.5 0.5 0 0 0 -0.5 -0.5 h -3.404 a 0.5 0.5 0 0 0 -0.342 0.135 Z M 31.436 50.058 a 1.5 1.5 0 0 1 0 -2.19 l 2.133 -2 a 1.5 1.5 0 0 1 1.026 -0.405 H 38 a 1.5 1.5 0 0 1 1.5 1.5 v 4 a 1.5 1.5 0 0 1 -1.5 1.5 h -3.404 a 1.5 1.5 0 0 1 -1.026 -0.406 Z"/>
+    </g>
+    <g id="mp-dpad_down" class="z-dpad" data-entrada="dpad_down">
+      <title>D-pad Baixo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 29.365 52.083 a 0.5 0.5 0 0 0 -0.73 0 l -2 2.134 a 0.5 0.5 0 0 0 -0.135 0.342 v 3.404 a 0.5 0.5 0 0 0 0.5 0.5 h 4 a 0.5 0.5 0 0 0 0.5 -0.5 V 54.56 a 0.5 0.5 0 0 0 -0.135 -0.342 Z M 27.905 51.399 a 1.5 1.5 0 0 1 2.19 0 l 2 2.134 a 1.5 1.5 0 0 1 0.405 1.026 v 3.404 a 1.5 1.5 0 0 1 -1.5 1.5 h -4 a 1.5 1.5 0 0 1 -1.5 -1.5 V 54.56 a 1.5 1.5 0 0 1 0.406 -1.026 Z"/>
+    </g>
+    <g id="mp-dpad_left" class="z-dpad" data-entrada="dpad_left">
+      <title>D-pad Esquerda</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 25.88 49.328 C 26.091 49.13 26.091 48.796 25.88 48.598 L 23.747 46.598 C 23.654 46.511 23.531 46.463 23.404 46.463 L 20 46.463 C 19.724 46.463 19.5 46.687 19.5 46.963 L 19.5 50.963 C 19.5 51.239 19.724 51.463 20 51.463 L 23.404 51.463 C 23.531 51.463 23.654 51.415 23.747 51.328 L 25.88 49.328 Z M 26.564 47.868 C 27.197 48.461 27.197 49.465 26.564 50.058 L 24.43 52.058 C 24.152 52.318 23.785 52.463 23.404 52.463 L 20 52.463 C 19.172 52.463 18.5 51.791 18.5 50.963 L 18.5 46.963 C 18.5 46.135 19.172 45.463 20 45.463 L 23.404 45.463 C 23.785 45.463 24.152 45.608 24.43 45.869 L 26.564 47.868 Z"/>
+    </g>
+  </g>
+  <g id="mp-grupo-ombros">
+    <title>OMBROS E GATILHOS</title>
+    <g id="mp-r1" class="z-gatilhos" data-entrada="r1" transform="translate(0 25.6200) scale(1 0.96813) translate(0 -25.6200)">
+      <title>R1</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+    </g>
+    <g id="mp-r2" class="z-gatilhos" data-entrada="r2" data-feature="gatilho-adaptativo-direito">
+      <title>R2 — gatilho adaptativo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+    </g>
+    <g id="mp-l1" class="z-gatilhos" transform="translate(0 25.6400) scale(1 0.96657) translate(0 -25.6400) matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l1">
+      <title>L1</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+    </g>
+    <g id="mp-l2" class="z-gatilhos" transform="matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l2" data-feature="gatilho-adaptativo-esquerdo">
+      <title>L2 — gatilho adaptativo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+    </g>
+  <g id="mp-corpo" class="z-casca" data-feature="chassi">
+      <title>Corpo</title>
+      <path class="corpo" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+  </g>
+  <g id="mp-grupo-analogicos" transform="matrix(1, 0, 0, 1, 2.116542, -0.779778)">
+    <title>ANALÓGICOS</title>
+    <g id="mp-stick_l" class="z-analogicos" data-entrada="stick_l" data-clique="l3">
+      <title>Analógico Esquerdo (L3)</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
+    <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
+    <g id="mp-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
+
+
+  </g>
+  <g id="mp-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
+    <title>CENTRO</title>
+    <g id="mp-touchpad" class="z-touch" data-entrada="touchpad" data-feature="touchpad" style="filter: url(&quot;#mp-outline-filter-1&quot;);" transform="matrix(1.001104, 0, 0, 1, -0.095276, 0)">
+      <title>Touchpad</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 46.88 28.593 C 51.286 27.585 60.03 27.088 64.869 27.088 C 69.922 27.088 76.626 27.388 81.892 28.593 C 84.132 29.105 85.332 29.955 85.883 31.041 C 86.42 32.1 86.264 33.255 86.142 34.131 C 85.658 37.616 84.982 41.794 84.21 46.56 L 84.208 46.574 C 83.804 49.063 82.786 50.798 81.445 51.908 C 80.109 53.014 78.493 53.463 76.951 53.463 L 50.855 53.463 C 48.838 53.463 47.274 52.944 46.141 52.053 C 45.007 51.16 44.347 49.927 44.085 48.58 C 43.58 45.984 42.85 41.844 42.029 37.195 L 41.667 35.145 C 41.253 32.806 41.617 31.292 42.687 30.292 C 43.201 29.812 43.843 29.484 44.549 29.23 C 45.252 28.975 46.048 28.783 46.88 28.593 M 64.869 28.103 C 60.045 28.103 51.391 28.6 47.098 29.583 C 46.263 29.773 45.521 29.954 44.88 30.185 C 44.241 30.416 43.736 30.687 43.358 31.039 C 42.647 31.705 42.262 32.792 42.646 34.965 L 43.008 37.015 C 43.829 41.666 44.558 45.796 45.061 48.382 C 45.282 49.521 45.83 50.525 46.749 51.25 C 47.67 51.974 49.006 52.449 50.855 52.449 L 59.826 52.449 L 76.951 52.449 C 78.308 52.449 79.69 52.053 80.818 51.12 C 81.942 50.19 82.856 48.693 83.225 46.409 L 83.227 46.405 C 84 41.631 84.675 37.462 85.157 33.988 C 85.284 33.072 85.371 32.238 85 31.508 C 84.643 30.804 83.784 30.064 81.675 29.583 C 76.52 28.404 69.905 28.103 64.869 28.103" style="stroke-width: 1.97183px;"/>
+    </g>
+    <g id="mp-ps" class="z-painel" data-entrada="ps" transform="matrix(1, 0, 0, 1, 0, -1)">
+      <title>PS</title>
+      <circle class="peca sem-tinta" fill="none" stroke="none" cx="64.03" cy="64.4" r="3.4"/>
+    </g>
+    <g id="mp-mic" class="z-painel" data-entrada="mic" data-feature="microfone-mudo" transform="matrix(0.839587, 0, 0, 0.839587, 10.326056, 10.035711)" style="opacity: 0.63;">
+      <title>Microfone (mudo)</title>
+      <rect x="61.763" y="69.697" width="5.228" height="0.896" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px;" rx="0.235" ry="0.235"/>
+    </g>
+  </g>
+  <g id="mp-grupo-audio" transform="matrix(1, 0, 0, 1, 0.420661, 0)">
+    <title>ÁUDIO</title>
+    <g id="mp-alto-falante" class="z-painel" data-feature="alto-falante">
+      <title>Alto-falante</title>
+      <circle class="peca" fill="#3a3f4b" cx="60.20" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 1 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="62.10" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 2 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="64.00" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 3 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="65.90" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 4 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="67.80" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 5 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="61.15" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 1 da linha de baixo</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="63.05" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 2 da linha de baixo</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="64.95" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 3 da linha de baixo</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="66.85" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 4 da linha de baixo</title>
+      </circle>
+    </g>
+  </g>
+  <g id="mp-grupo-invisiveis">
+    <title>SENSORES E MOTORES (não aparecem no mapa)</title>
+    <g id="mp-feat-giroscopio" class="oculta" data-feature="giroscopio">
+      <title>Giroscópio — mede a rotação do controle INTEIRO</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+    <g id="mp-feat-acelerometro" class="oculta" data-feature="acelerometro">
+      <title>Acelerômetro — mede a aceleração do controle INTEIRO</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+    <g id="mp-feat-bateria" class="oculta" data-feature="bateria" style="" transform="matrix(1, 0, 0, 0.961503, 0, 1.189472)">
+      <title>Bateria — as duas tiras do lightbar são o medidor: cheias em 100%, apagadas em 0%, piscando vermelho quando acaba</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 41.445 31.184 L 41.021 32.184 L 40.873 33.184 L 40.861 34.184 L 40.922 35.184 L 41.072 36.184 L 41.253 37.184 L 41.423 38.184 L 41.604 39.184 L 41.784 40.184 L 41.954 41.184 L 42.136 42.184 L 42.318 43.184 L 42.49 44.184 L 42.675 45.184 L 42.86 46.184 L 43.037 47.184 L 43.228 48.184 L 43.423 49.184 L 43.784 50.145 L 44.255 51.184 L 45.371 51.184 L 44.888 50.184 L 44.602 49.184 L 44.407 48.184 L 44.216 47.184 L 44.039 46.184 L 43.853 45.184 L 43.669 44.184 L 43.497 43.184 L 43.315 42.184 L 43.133 41.184 L 42.963 40.184 L 42.783 39.184 L 42.602 38.184 L 42.432 37.184 L 42.251 36.184 L 42.101 35.184 L 42.04 34.184 L 42.052 33.184 L 42.2 32.184 L 42.623 31.184 L 41.445 31.184 Z" style="">
+        <title>Bateria — peça 1</title>
+      </path>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 86.873 31.041 L 87.209 32.038 L 87.276 33.037 L 87.245 34.034 L 87.12 35.033 L 86.971 36.03 L 86.826 37.029 L 86.669 38.026 L 86.509 39.024 L 86.356 40.022 L 86.192 41.02 L 86.036 42.018 L 85.869 43.016 L 85.701 44.014 L 85.542 45.012 L 85.373 46.01 L 85.214 47.008 L 85.003 48.005 L 84.696 49.004 L 84.253 50.001 L 83.644 51 L 82.444 51 L 83.053 50.001 L 83.496 49.004 L 83.803 48.005 L 84.014 47.008 L 84.173 46.01 L 84.342 45.012 L 84.501 44.014 L 84.669 43.016 L 84.836 42.018 L 84.992 41.02 L 85.156 40.022 L 85.309 39.024 L 85.469 38.026 L 85.626 37.029 L 85.771 36.03 L 85.92 35.033 L 86.045 34.034 L 86.076 33.037 L 86.009 32.038 L 85.673 31.041 L 86.873 31.041 Z" style="">
+        <title>Bateria — peça 2</title>
+      </path>
+    </g>
+    <g id="mp-feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
+      <title>Motor de vibração esquerdo (contrapeso maior — soa grosso)</title>
+      <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975 M 20.164 33.834 C 17.509 38.843 11.748 52.364 9.406 67.515 C 7.927 77.083 8.055 84.531 9.154 89.873 C 10.257 95.241 12.313 98.371 14.579 99.498 C 16.229 100.319 17.028 100.234 17.44 100.013 C 17.844 99.799 18.043 99.397 18.281 98.916 L 18.361 98.756 C 18.602 98.154 18.953 97.261 19.39 96.146 C 20.749 92.688 22.948 87.087 25.365 81.341 C 28.562 73.742 32.172 65.801 34.748 62.214 C 37.247 58.732 39.04 56.947 40.742 55.255 C 41.79 54.211 43.84 50.792 43.074 45.839 C 42.489 42.044 41.828 38.262 41.092 34.494 C 41.005 33.8 40.976 32.729 41.186 31.761 C 41.281 31.326 41.433 30.869 41.679 30.475 C 39.209 30.457 35.761 30.576 32.161 30.98 C 27.886 31.459 23.442 32.335 20.164 33.834" style=""/>
+    </g>
+    <g id="mp-feat-rumble-direito" class="oculta" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
+      <title>Motor de vibração direito (contrapeso menor — soa fino)</title>
+      <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895 M 107.64 33.763 C 110.298 38.786 116.063 52.343 118.407 67.535 C 119.888 77.129 119.759 84.596 118.659 89.952 C 117.554 95.334 115.498 98.473 113.229 99.603 C 111.577 100.426 110.778 100.34 110.365 100.119 C 109.961 99.905 109.762 99.502 109.524 99.02 L 109.446 98.858 C 109.203 98.255 108.852 97.36 108.414 96.242 C 107.054 92.775 104.853 87.159 102.433 81.397 C 99.234 73.778 95.62 65.817 93.043 62.22 C 90.541 58.729 88.746 56.939 87.043 55.242 C 85.994 54.195 83.941 50.766 84.708 45.801 C 85.294 41.996 85.956 38.203 86.692 34.426 C 86.78 33.729 86.808 32.656 86.598 31.685 C 86.503 31.249 86.351 30.791 86.105 30.396 C 88.577 30.377 92.028 30.497 95.631 30.902 C 99.91 31.382 104.358 32.261 107.64 33.763" style=""/>
+    </g>
+  </g>
+  <g id="mp-grupo-glifos">
+    <title>GLIFOS (o símbolo de cada peça)</title>
+    <g id="mp-glifo-triangle" class="z-simbolos sobre s-triangle" style="--lado: 4.200" transform="matrix(0.188008, 0, 0, 0.153608, 95.97036, 36.720016)">
+      <title>Glifo — Triângulo</title>
+      <polygon points="16 8.516 24.917 27.556 7.084 27.556" fill="none" stroke="currentColor" stroke-linejoin="round" style="stroke-width: 3px"/>
+    </g>
+    <g id="mp-glifo-circle" class="z-simbolos sobre s-circle" style="--lado:4.200" transform="translate(107.000 47.960) scale(0.13125) translate(-16.000 -16.000)">
+      <title>Glifo — Círculo</title>
+      <circle cx="15.94" cy="15.675" r="11.765" fill="none" stroke="currentColor" style="stroke-width: 3.80952px"/>
+    </g>
+    <g id="mp-glifo-square" class="z-simbolos sobre s-square" style="--lado:4.200" transform="translate(91.000 47.960) scale(0.13125) translate(-16.000 -16.000)">
+      <title>Glifo — Quadrado</title>
+      <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    </g>
+    <g id="mp-glifo-cross" class="z-simbolos sobre s-cross" style="--lado:4.200" transform="translate(99.000 55.960) scale(0.13125) translate(-16.000 -16.000)">
+      <title>Glifo — Cruz</title>
+      <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g id="mp-glifo-dpad_up" class="sobre s-dpad_up" style="--lado: 4.400; transform-origin: 67.4445px 60.9015px" transform="matrix(0, 0.1375, -0.1375, 0, -38.275467, -21.807503)">
+      <title>Glifo — D-pad Cima</title>
+      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%" transform="matrix(0, -1, 1, 0, -69.842484, -293.381805)"/>
+    </g>
+    <g id="mp-glifo-dpad_right" class="sobre s-dpad_right" style="--lado: 4.400; transform-origin: -52.4882px 19.437px" transform="matrix(0, -0.1375, 0.1375, 0, 90.97998, 30.745468)">
+      <title>Glifo — D-pad Direita</title>
+      <path d="M 41.312 -12.224 L 48.417 -3.046 L 34.206 -3.046 L 41.312 -12.224 Z" bx:shape="triangle 34.206 -12.224 14.211 9.178 0.5 0 1@a0fe0643" style="stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%" transform="matrix(-1, 0, 0, -1, -82.623001, 15.27)"/>
+    </g>
+    <g id="mp-glifo-dpad_down" class="sobre s-dpad_down" style="--lado: 4.400; transform-origin: 46.109px -25.7827px;" transform="matrix(0, -0.1375, 0.1375, 0, -17.013714, 82.614662)">
+      <title>Glifo — D-pad Baixo</title>
+      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%" transform="matrix(0, -1, 1, 0, -105.723465, -381.295654)"/>
+    </g>
+    <g id="mp-glifo-dpad_left" class="sobre s-dpad_left" style="--lado:4.400" transform="matrix(0.1375, 0, 0, 0.1375, 21.094742, 46.772293)">
+      <title>Glifo — D-pad Esquerda</title>
+      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%" transform="matrix(0, -1, 1, 0, -151.568924, -340.16214)"/>
+    </g>
+    <g id="mp-glifo-l1" class="sobre s-l1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.195302, -0.027448, 0.027448, 0.195302, 15.730036, 12.819365)">
+      <title>Glifo — L1</title>
+      <text style="dominant-baseline: central; font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre; transform-box: fill-box; transform-origin: 50% 50%" x="16" y="16" transform="matrix(0.999391, 0.034899, -0.034899, 0.999391, 0.000011, -0.000007)" dy="-0.2em">L1</text>
+    </g>
+    <g id="mp-glifo-r1" class="sobre s-r1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.194224, 0.034247, -0.034247, 0.194224, 80.452019, 12.810075)">
+      <title>Glifo — R1</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16" dy="-0.2em">R1</text>
+    </g>
+    <g id="mp-glifo-l2" class="sobre s-l2" style="--lado: 5.318; transform-origin: 16px 16px;" transform="matrix(0.160508, -0.043008, 0.043008, 0.160508, 7.661914, 14.483895)">
+      <title>Glifo — L2</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 9.80923px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16" dy="-0.2em">L2</text>
+    </g>
+    <g id="mp-glifo-r2" class="sobre s-r2" style="--lado: 5.318; transform-origin: 16px 16px;" transform="matrix(0.160508, 0.043008, -0.043008, 0.160508, 88.303864, 14.558837)">
+      <title>Glifo — R2</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 9.80923px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16" dy="-0.2em">R2</text>
+    </g>
+    <g id="mp-glifo-stick_l" class="sobre s-stick_l" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 40.616543, 56.234634)">
+      <title>Glifo — Analógico Esquerdo</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">L</text>
+    </g>
+    <text style="dominant-baseline: central; font-family: Zrnic; font-size: 4.8px; font-weight: 700; text-anchor: middle; white-space: pre; stroke-width: 0.438; --lado: 14.000" x="80.617" y="63.683">R</text>
+    <g id="mp-glifo-share" class="sobre s-share" style="--lado:3.400" transform="matrix(0.103076, -0.025776, 0.025776, 0.103076, 35.989918, 31.661192)">
+      <title>Glifo — Share</title>
+      <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+      <line x1="8" y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+      <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    </g>
+    <g id="mp-glifo-options" class="sobre s-options" style="--lado:3.400" transform="matrix(0.103076, 0.025776, -0.025776, 0.103076, 88.451256, 30.707508)">
+      <title>Glifo — Options</title>
+      <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g id="mp-glifo-ps" class="sobre s-ps" style="--lado: 8.600;" transform="matrix(0.351567, 0, 0, 0.351567, 59.971592, 56.378807)">
+      <title>Glifo — PS</title>
+      <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+        <path fill="currentColor" d="M 2.265 23.706 C 1.447 24.279 1.598 25.266 3.466 25.884 C 5.333 26.501 7.504 26.629 9.414 26.286 C 9.359 26.286 9.523 26.286 9.414 26.286 L 9.414 24.336 L 7.558 24.967 C 6.849 25.195 6.139 25.253 5.43 25.082 C 4.884 24.909 4.993 24.565 5.648 24.279 L 9.414 22.902 L 9.414 20.782 L 4.175 22.674 C 3.52 22.902 2.864 23.247 2.265 23.706 Z M 14.925 15.107 L 14.925 20.668 C 17.162 21.814 18.909 20.668 18.909 17.686 C 18.909 14.648 17.872 13.272 14.871 12.184 C 13.288 11.61 11.651 11.094 10.014 10.75 L 10.014 27.317 L 13.834 28.521 L 13.834 14.591 C 13.834 13.961 13.834 13.502 14.271 13.673 C 14.871 13.846 14.925 14.477 14.925 15.107 Z M 22.019 22.387 C 20.437 21.814 18.746 21.584 17.108 21.756 C 16.199 21.816 15.346 22.087 14.489 22.387 L 14.489 24.623 L 18.036 23.247 C 18.746 23.017 19.455 22.96 20.164 23.132 C 20.71 23.305 20.601 23.648 19.946 23.935 L 14.489 26.056 L 14.489 28.234 L 22.019 25.31 C 22.566 25.082 23.056 24.794 23.493 24.336 C 23.875 23.763 23.711 22.96 22.019 22.387 Z"/>
+      </g>
+    </g>
+    <g id="mp-glifo-mic" class="sobre s-mic" style="--lado: 3.000" transform="matrix(0.0682, 0, 0, 0.0682, 62.941559, 69.658447)">
+      <title>Glifo — Microfone</title>
+      <rect x="16.67" y="5.588" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M 12.688 17 C 12.688 22.333 15.688 25 21.688 25 C 27.688 25 30.688 22.333 30.688 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="21.67" y1="26.588" x2="21.67" y2="29.367" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="16.688" y1="30" x2="26.688" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+  </g>
+  <g id="mp-grupo-luzes" style="filter: none" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
+    <title>LUZES</title>
+    <g id="mp-lightbar" data-feature="lightbar" data-posicao="ladeia-o-touchpad" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+      <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
+      <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#3a3f4b">
+        <title>Lightbar — tira esquerda</title>
+      </path>
+      <path class="peca" fill-rule="evenodd" d="M 86.239 29.327 L 86.562 30.327 L 86.627 31.327 L 86.597 32.327 L 86.477 33.327 L 86.333 34.327 L 86.193 35.327 L 86.042 36.327 L 85.888 37.327 L 85.741 38.327 L 85.583 39.327 L 85.432 40.327 L 85.271 41.327 L 85.11 42.327 L 84.956 43.327 L 84.794 44.327 L 84.64 45.327 L 84.437 46.327 L 84.141 47.327 L 83.715 48.327 L 83.128 49.327 L 81.972 49.327 L 82.559 48.327 L 82.985 47.327 L 83.281 46.327 L 83.484 45.327 L 83.638 44.327 L 83.8 43.327 L 83.954 42.327 L 84.115 41.327 L 84.276 40.327 L 84.427 39.327 L 84.585 38.327 L 84.732 37.327 L 84.886 36.327 L 85.037 35.327 L 85.177 34.327 L 85.321 33.327 L 85.441 32.327 L 85.471 31.327 L 85.406 30.327 L 85.083 29.327 L 86.239 29.327 Z" style="stroke-width: 2.03409px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#3a3f4b">
+        <title>Lightbar — tira direita</title>
+      </path>
+    </g>
+    <g id="mp-led-jogador" data-feature="led-jogador" style="filter: url(&quot;#mp-outline-filter-0&quot;)" transform="matrix(1, 0, 0, 0.625399, 0, 19.636679)">
+      <title>Indicador de jogador (cinco lâmpadas: 1, vão, 3, vão, 1)</title>
+      <rect class="peca" id="mp-led-jogador-1" x="56.3" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
+        <title>Indicador de jogador — lâmpada 1 (sozinha, à esquerda)</title>
+      </rect>
+      <rect class="peca" id="mp-led-jogador-2" x="60.6" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
+        <title>Indicador de jogador — lâmpada 2</title>
+      </rect>
+      <rect class="peca" id="mp-led-jogador-3" x="63.0" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
+        <title>Indicador de jogador — lâmpada 3 (a do meio)</title>
+      </rect>
+      <rect class="peca" id="mp-led-jogador-4" x="65.4" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
+        <title>Indicador de jogador — lâmpada 4</title>
+      </rect>
+      <rect class="peca" id="mp-led-jogador-5" x="69.7" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
+        <title>Indicador de jogador — lâmpada 5 (sozinha, à direita)</title>
+      </rect>
+    </g>
+  </g>
+  <g id="mp-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
+  <g id="mp-glifo-stick_r" class="sobre s-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
+      <title>Glifo — Analógico Direito</title>
+      <text style="dominant-baseline: central; font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre" x="15.971" y="17.025">R</text>
+    </g>
+  <g class="alvo a-corpo"><path d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015"/></g>
+  <g class="alvo a-feat-rumble-esquerdo"><g transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)"><path d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975"/></g></g>
+  <g class="alvo a-feat-rumble-direito"><g transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)"><path d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895"/></g></g>
+  <g class="alvo a-touchpad"><g transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071) matrix(1.001104, 0, 0, 1, -0.095276, 0)"><path d="M 46.88 28.593 C 51.286 27.585 60.03 27.088 64.869 27.088 C 69.922 27.088 76.626 27.388 81.892 28.593 C 84.132 29.105 85.332 29.955 85.883 31.041 C 86.42 32.1 86.264 33.255 86.142 34.131 C 85.658 37.616 84.982 41.794 84.21 46.56 L 84.208 46.574 C 83.804 49.063 82.786 50.798 81.445 51.908 C 80.109 53.014 78.493 53.463 76.951 53.463 L 50.855 53.463 C 48.838 53.463 47.274 52.944 46.141 52.053 C 45.007 51.16 44.347 49.927 44.085 48.58 C 43.58 45.984 42.85 41.844 42.029 37.195 L 41.667 35.145 C 41.253 32.806 41.617 31.292 42.687 30.292 C 43.201 29.812 43.843 29.484 44.549 29.23 C 45.252 28.975 46.048 28.783 46.88 28.593"/></g></g>
+  <g class="alvo a-lightbar"><g transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825) matrix(1, 0, 0, 1.035127, 0, -1.02738)"><path d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z"/><path d="M 86.239 29.327 L 86.562 30.327 L 86.627 31.327 L 86.597 32.327 L 86.477 33.327 L 86.333 34.327 L 86.193 35.327 L 86.042 36.327 L 85.888 37.327 L 85.741 38.327 L 85.583 39.327 L 85.432 40.327 L 85.271 41.327 L 85.11 42.327 L 84.956 43.327 L 84.794 44.327 L 84.64 45.327 L 84.437 46.327 L 84.141 47.327 L 83.715 48.327 L 83.128 49.327 L 81.972 49.327 L 82.559 48.327 L 82.985 47.327 L 83.281 46.327 L 83.484 45.327 L 83.638 44.327 L 83.8 43.327 L 83.954 42.327 L 84.115 41.327 L 84.276 40.327 L 84.427 39.327 L 84.585 38.327 L 84.732 37.327 L 84.886 36.327 L 85.037 35.327 L 85.177 34.327 L 85.321 33.327 L 85.441 32.327 L 85.471 31.327 L 85.406 30.327 L 85.083 29.327 L 86.239 29.327 Z"/></g></g>
+  <g class="alvo a-stick_r"><g transform="matrix(1, 0, 0, 1, 2.116542, -0.779778)"><path d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z"/><ellipse cx="78.5" cy="64.463" rx="4.645" ry="4.645"/></g></g>
+  <g class="alvo a-stick_l"><g transform="matrix(1, 0, 0, 1, 2.116542, -0.779778)"><path d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z"/><ellipse cx="45.5" cy="64.463" rx="4.645" ry="4.645"/></g></g>
+  <g class="alvo a-r1"><g transform="translate(0 25.6200) scale(1 0.96813) translate(0 -25.6200)"><path d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g></g>
+  <g class="alvo a-l1"><g transform="translate(0 25.6400) scale(1 0.96657) translate(0 -25.6400) matrix(-1, 0, 0, 1, 128.089752, 0.014236)"><path d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g></g>
+  <g class="alvo a-dpad_up"><path d="M 30.095 46.527 C 29.502 47.16 28.498 47.16 27.905 46.527 L 25.905 44.394 C 25.645 44.116 25.5 43.749 25.5 43.368 L 25.5 39.963 C 25.5 39.135 26.172 38.463 27 38.463 L 31 38.463 C 31.828 38.463 32.5 39.135 32.5 39.963 L 32.5 43.368 C 32.5 43.749 32.355 44.116 32.094 44.394 L 30.095 46.527 Z"/></g>
+  <g class="alvo a-dpad_right"><path d="M 31.436 50.058 a 1.5 1.5 0 0 1 0 -2.19 l 2.133 -2 a 1.5 1.5 0 0 1 1.026 -0.405 H 38 a 1.5 1.5 0 0 1 1.5 1.5 v 4 a 1.5 1.5 0 0 1 -1.5 1.5 h -3.404 a 1.5 1.5 0 0 1 -1.026 -0.406 Z"/></g>
+  <g class="alvo a-dpad_down"><path d="M 27.905 51.399 a 1.5 1.5 0 0 1 2.19 0 l 2 2.134 a 1.5 1.5 0 0 1 0.405 1.026 v 3.404 a 1.5 1.5 0 0 1 -1.5 1.5 h -4 a 1.5 1.5 0 0 1 -1.5 -1.5 V 54.56 a 1.5 1.5 0 0 1 0.406 -1.026 Z"/></g>
+  <g class="alvo a-dpad_left"><path d="M 26.564 47.868 C 27.197 48.461 27.197 49.465 26.564 50.058 L 24.43 52.058 C 24.152 52.318 23.785 52.463 23.404 52.463 L 20 52.463 C 19.172 52.463 18.5 51.791 18.5 50.963 L 18.5 46.963 C 18.5 46.135 19.172 45.463 20 45.463 L 23.404 45.463 C 23.785 45.463 24.152 45.608 24.43 45.869 L 26.564 47.868 Z"/></g>
+  <g class="alvo a-triangle"><path d="M 95.5 39.963 C 95.5 37.269 98.417 35.585 100.75 36.932 C 101.833 37.557 102.5 38.713 102.5 39.963 C 102.5 42.657 99.583 44.341 97.25 42.994 C 96.167 42.369 95.5 41.213 95.5 39.963"/></g>
+  <g class="alvo a-circle"><path d="M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
+  <g class="alvo a-square"><path d="M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
+  <g class="alvo a-cross"><path d="M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
+  <g class="alvo a-ps"><g transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071) matrix(1, 0, 0, 1, 0, -1)"><circle cx="64.03" cy="64.4" r="3.4"/></g></g>
+  <g class="alvo a-r2"><path d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g>
+  <g class="alvo a-l2"><g transform="matrix(-1, 0, 0, 1, 128.089752, 0.014236)"><path d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g></g>
+  <g class="alvo a-alto-falante"><g transform="matrix(1, 0, 0, 1, 0.420661, 0)"><circle cx="60.20" cy="55.9" r="0.52"/><circle cx="62.10" cy="55.9" r="0.52"/><circle cx="64.00" cy="55.9" r="0.52"/><circle cx="65.90" cy="55.9" r="0.52"/><circle cx="67.80" cy="55.9" r="0.52"/><circle cx="61.15" cy="57.7" r="0.52"/><circle cx="63.05" cy="57.7" r="0.52"/><circle cx="64.95" cy="57.7" r="0.52"/><circle cx="66.85" cy="57.7" r="0.52"/></g></g>
+  <g class="alvo a-led-jogador"><g transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825) matrix(1, 0, 0, 0.625399, 0, 19.636679)"><rect x="56.3" y="51.9" width="2.0" height="1.15" rx="0.57"/><rect x="60.6" y="51.9" width="2.0" height="1.15" rx="0.57"/><rect x="63.0" y="51.9" width="2.0" height="1.15" rx="0.57"/><rect x="65.4" y="51.9" width="2.0" height="1.15" rx="0.57"/><rect x="69.7" y="51.9" width="2.0" height="1.15" rx="0.57"/></g></g>
+  <g class="alvo a-share"><rect x="37.043" y="26.122" width="1.796" height="3.685" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g>
+  <g class="alvo a-options"><rect x="-37.043" y="-26.122" width="1.796" height="3.685" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)" style="transform-origin: -36.145px -24.279px"/></g>
+  <g class="alvo a-mic"><g transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071) matrix(0.839587, 0, 0, 0.839587, 10.326056, 10.035711)"><rect x="61.763" y="69.697" width="5.228" height="0.896" rx="0.235" ry="0.235"/></g></g>
+</svg>
+    </div>
+    <div class="lado-lista">
+    <div class="grupo">
+      <div class="grupo-rot">Botões da face</div>
+      <div class="item item-triangle"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span><span class="txt"><b>Triângulo</b><span class="ap">△</span><span class="id mono">triangle</span></span></div>
+      <div class="item item-circle"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg></span><span class="txt"><b>Círculo</b><span class="ap">○</span><span class="id mono">circle</span></span></div>
+      <div class="item item-square"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+</svg></span><span class="txt"><b>Quadrado</b><span class="ap">□</span><span class="id mono">square</span></span></div>
+      <div class="item item-cross"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>Cruz</b><span class="ap">X|cruz|equis</span><span class="id mono">cross</span></span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Direcional</div>
+      <div class="item item-dpad_up"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
+</svg></span><span class="txt"><b>D-pad Cima</b><span class="ap">↑</span><span class="id mono">dpad_up</span></span></div>
+      <div class="item item-dpad_right"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
+</svg></span><span class="txt"><b>D-pad Direita</b><span class="ap">→</span><span class="id mono">dpad_right</span></span></div>
+      <div class="item item-dpad_down"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
+</svg></span><span class="txt"><b>D-pad Baixo</b><span class="ap">↓</span><span class="id mono">dpad_down</span></span></div>
+      <div class="item item-dpad_left"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
+</svg></span><span class="txt"><b>D-pad Esquerda</b><span class="ap">←</span><span class="id mono">dpad_left</span></span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Ombros</div>
+      <div class="item item-l1"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
+</svg></span><span class="txt"><b>L1</b><span class="id mono">l1</span></span><span class="nota-peca" title="Ombro, o de CIMA, e ele ENCOSTA no casco — ela, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.">i</span></div>
+      <div class="item item-r1"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
+</svg></span><span class="txt"><b>R1</b><span class="id mono">r1</span></span><span class="nota-peca" title="Ombro, o de CIMA, encostado no casco.">i</span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Gatilhos</div>
+      <div class="item item-l2"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>L2</b><span class="ap">gatilho adaptativo esquerdo</span><span class="id mono">l2</span></span><span class="nota-peca" title="Gatilho adaptativo, e é o de BAIXO.">i</span></div>
+      <div class="item item-r2"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>R2</b><span class="ap">gatilho adaptativo direito</span><span class="id mono">r2</span></span><span class="nota-peca" title="Gatilho adaptativo, e é o de BAIXO.">i</span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Analógicos</div>
+      <div class="item item-stick_l"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
+</svg></span><span class="txt"><b>Analógico Esquerdo</b><span class="ap">L3</span><span class="id mono">stick_l</span></span><span class="nota-peca" title="UMA volta, não três: 'os analógicos tem várias voltas ao invés de uma'. Clique e direção são duas entradas na mesma peça.">i</span></div>
+      <div class="item item-stick_r"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
+</svg></span><span class="txt"><b>Analógico Direito</b><span class="ap">R3</span><span class="id mono">stick_r</span></span><span class="nota-peca" title="UMA volta, não três. Clique e direção são duas entradas na mesma peça.">i</span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Centro</div>
+      <div class="item item-share"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>Share</b><span class="ap">Create|Select</span><span class="id mono">share</span></span><span class="nota-peca" title="CORRIGIDO 27/08: era o id `l2` no SVG. Fica à esquerda do touchpad, colado nele.">i</span></div>
+      <div class="item item-options"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>Options</b><span class="ap">Start|Menu</span><span class="id mono">options</span></span><span class="nota-peca" title="CORRIGIDO 27/08: era o id `r2` no SVG. Fica à direita do touchpad, colado nele.">i</span></div>
+      <div class="item item-touchpad"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg></span><span class="txt"><b>Touchpad</b><span class="id mono">touchpad</span></span><span class="nota-peca" title="1920x1080, DOIS pontos de toque, cada um com id e flag de contato. Clique esquerdo, direito e central.">i</span></div>
+      <div class="item item-ps"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g>
+</svg></span><span class="txt"><b>PS</b><span class="ap">botão home</span><span class="id mono">ps</span></span><span class="nota-peca" title="O glifo É o botão: sem anel em volta, decisão dela em 27/08.">i</span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Sensores</div>
+      <div class="item item-feat-giroscopio"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <ellipse cx="16" cy="16" rx="5" ry="12" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg></span><span class="txt"><b>Giroscópio</b><span class="ap">gyro</span><span class="id mono">feat-giroscopio</span></span><span class="nota-peca" title="Mede a rotação do CONTROLE INTEIRO — por isso a peça dele é o corpo, e não uma caixa no meio da placa; ela contornou a região na tela, 27/08. 1024 LSB/(graus/s), mais ou menos 2048 graus/s. 250,0 Hz exatos no cabo, medido nesta casa.">i</span></div>
+      <div class="item item-feat-acelerometro"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="6" y="12" width="10" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg></span><span class="txt"><b>Acelerômetro</b><span class="ap">accel</span><span class="id mono">feat-acelerometro</span></span><span class="nota-peca" title="Mede a aceleração do CONTROLE INTEIRO, como o giroscópio. 8192 LSB/g, mais ou menos 4 g.">i</span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Luzes</div>
+      <div class="item item-lightbar"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="6"  y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+  <rect x="22" y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+  <line x1="13" y1="10" x2="13" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="19" y1="10" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>Lightbar</b><span class="ap">barra de luz</span><span class="id mono">lightbar</span></span><span class="nota-peca" title="Duas tiras que LADEIAM o touchpad e acompanham a borda dele. Uma feature, duas peças: o firmware não as endereça em separado.">i</span></div>
+      <div class="item item-led-jogador"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="3"  y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <rect x="11" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <rect x="15" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg></span><span class="txt"><b>Indicador de jogador</b><span class="ap">cinco lâmpadas</span><span class="id mono">led-jogador</span></span><span class="nota-peca" title="As cinco lâmpadas montam sobre a BASE do touchpad, como o lightbar monta sobre as laterais — ela, 27/08. É o PADRÃO que diz o número: 1 | vão | 3 | vão | 1.">i</span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Áudio</div>
+      <div class="item item-mic"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>Microfone</b><span class="id mono">mic</span></span><span class="nota-peca" title="O botão de MUDO, e ele é pequeno: a barra de 7x1 que estava aqui virava um risco atravessado no corpo, e ela viu — 'essa linha não existe no controle da vida real'.">i</span></div>
+      <div class="item item-alto-falante"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <path d="M6,12 h5 l7,-6 v20 l-7,-6 H6 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M22,11 Q26,16 22,21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M26,7 Q32,16 26,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>Alto-falante</b><span class="id mono">alto-falante</span></span><span class="nota-peca" title="Duas linhas de furos: 5 em cima e 4 embaixo.">i</span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Energia</div>
+      <div class="item item-feat-bateria"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+  <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="17" y1="14" x2="17" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>Bateria</b><span class="id mono">feat-bateria</span></span><span class="nota-peca" title="As DUAS TIRAS DO LIGHTBAR são o medidor, e é o que o aparelho faz: cheias em 100%, apagadas em 0%, piscando vermelho quando está acabando. Decisão dela, 27/08.">i</span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Vibração</div>
+      <div class="item item-feat-rumble-esquerdo"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>Motor de vibração esquerdo</b><span class="ap">motor forte</span><span class="id mono">feat-rumble-esquerdo</span></span><span class="nota-peca" title="Contrapeso maior — soa grosso. No código do produto é `strong`.">i</span></div>
+      <div class="item item-feat-rumble-direito"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></span><span class="txt"><b>Motor de vibração direito</b><span class="ap">motor leve</span><span class="id mono">feat-rumble-direito</span></span><span class="nota-peca" title="Contrapeso menor — soa fino. No código do produto é `weak`.">i</span></div>
+    </div>
+    <div class="grupo">
+      <div class="grupo-rot">Chassi</div>
+      <div class="item item-corpo"><span class="gl"><span class="sem">—</span></span><span class="txt"><b>Corpo</b><span class="ap">casco|chassi</span><span class="id mono">corpo</span></span><span class="nota-peca" title="O casco. As DUAS empunhaduras são paths próprios dentro dele, e são elas que os motores destacam.">i</span></div>
+    </div>
+    </div>
+  </div>
+
+  <div class="rodape">
+    <span><b>28</b> peças</span>
+    <span><b>27</b> com glifo · <b>1</b> sem</span>
+    <span><b>0</b> propostas, a conferir</span>
+    <span><b>28</b> modelos de cor · <b>9</b> zonas</span>
+    <span>fontes: <b class="mono">docs/data/pecas-do-dualsense.csv</b>
+      · <b class="mono">docs/data/cores-do-dualsense.csv</b></span>
+  </div>
+</div>
+
+  <script>
+  // O PADRÃO E A COR SÃO DO PRODUTO — `core/led_control.py`. Copiar a tabela
+  // para cá seria criar a segunda verdade que este mapa existe para matar.
+  const PADRAO = {"1": [3], "2": [2, 4], "3": [1, 3, 5], "4": [1, 2, 4, 5]};
+  const LUZ_DO_JOGADOR = {"1": "#0000ff", "2": "#ff0000", "3": "#00ff00", "4": "#ff0080"};
+  const PARCIAL = "hachurado = o acabamento não cabe num hexadecimal (iridescente, "
+                + "metálico, camuflado, arte); cinza chapado = zona sem amostragem.";
+  const ds = document.querySelector("svg.ds");
+  const barra = document.querySelector("#mp-lightbar");
+  const nota = document.querySelector("#nota");
+
+  document.querySelector("#cw").addEventListener("change", e => {
+    const op = e.target.selectedOptions[0];
+    ds.dataset.colorway = e.target.value;
+    nota.textContent = op.dataset.parcial ? PARCIAL : " ";
+  });
+
+  function acende(n) {
+    for (let i = 1; i <= 5; i++)
+      document.querySelector("#mp-led-jogador-" + i)
+              .classList.toggle("led-on", (PADRAO[n] || []).includes(i));
+    if (n && LUZ_DO_JOGADOR[n]) {
+      barra.style.setProperty("--luz", LUZ_DO_JOGADOR[n]);
+      document.querySelector("#luz").value = LUZ_DO_JOGADOR[n];
+    } else {
+      barra.style.removeProperty("--luz");
+    }
+    document.querySelectorAll("[data-jogador]").forEach(b =>
+      b.classList.toggle("on", +b.dataset.jogador === n));
+  }
+  document.querySelectorAll("[data-jogador]").forEach(b =>
+    b.addEventListener("click", () => acende(+b.dataset.jogador)));
+
+  // A BARRA DE LUZ E O JOGADOR ANDAM JUNTOS, e é assim no aparelho: o PS5 acende
+  // as duas coisas ao numerar um controle. Mexer na cor à mão desfaz o vínculo —
+  // a barra passa a ser a escolhida, e as lâmpadas continuam onde estavam.
+  document.querySelector("#luz").addEventListener("input", e => {
+    barra.style.setProperty("--luz", e.target.value);
+  });
+  document.querySelector("#luz-off").addEventListener("click", () => {
+    barra.style.removeProperty("--luz");
+  });
+
+  // O MAPA NASCE COM LUZ. Sem jogador escolhido, o lightbar e as cinco lâmpadas
+  // ficam na cor de apagado — que é o estado honesto de um controle sem luz, e
+  // some sobre o fundo escuro. Ela reparou na ausência antes, com estas mesmas
+  // duas peças: "faltou só os dois lightbar e os led de player". O apagado
+  // continua a um clique, no botão "nenhum".
+  acende(1);
+  </script>
+
+</body>
+</html>

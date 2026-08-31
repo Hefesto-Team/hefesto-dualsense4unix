@@ -81,6 +81,7 @@ completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 # rodado por esta lista — só pela camada `suite`, que é de quem coordena e
 # roda no fim. Achado pela conferência da frente C2, e a ironia é o ponto.
 completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chamador.py
+rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 rapido|colisao-de-sprints|py|scripts/check_colisao_de_sprints.py
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
