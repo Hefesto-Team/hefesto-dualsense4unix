@@ -261,7 +261,8 @@ def test_o_hertz_se_cala_quando_o_giroscopio_nao_flui() -> None:
 
 #: As frases que afirmavam, dentro do código, que a linha da VERDADE dizia o
 #: giroscópio no card único. Elas deixaram de ser verdade em 17/08/2026 e
-#: sobreviveram oito dias porque nada as media. Estão aqui em pedaços curtos
+#: sobreviveram oito dias porque nada as media.  (noqa-acento: verbo medir, imperfeito)
+#: Estão aqui em pedaços curtos
 #: de propósito: é a AFIRMAÇÃO que fica proibida, não a redação dela.
 _PROMESSAS_CADUCAS: tuple[str, ...] = (
     "o giroscópio é dito pela linha da verdade",

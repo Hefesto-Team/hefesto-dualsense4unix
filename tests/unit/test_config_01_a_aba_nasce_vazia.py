@@ -339,7 +339,7 @@ def test_a_fita_ausente_nao_derruba_nada() -> None:
 
 
 def test_inativar_sem_motivo_levanta() -> None:
-    """Z2-5: esmaecer sem dizer por quê é a mesma omissão que o P3 media.
+    """Z2-5: esmaecer sem dizer por quê é a mesma omissão que o P3 mediu.
 
     Mordida: tirar o `if inativo and not motivo: raise ...` do corpo.
     """

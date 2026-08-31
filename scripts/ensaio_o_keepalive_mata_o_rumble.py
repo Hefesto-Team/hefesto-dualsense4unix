@@ -22,7 +22,7 @@ Este ensaio decide isso, e a decisão muda o desenho da cura:
          carrega o último valor conhecido em vez de zero.
   o motor CONTINUA
       -> o report neutro e inocente, a premissa se sustenta, e a causa do
-         cancelamento e OUTRA escrita — e este ensaio a inocenta por eliminacao.
+         cancelamento e OUTRA escrita — e este ensaio a inocenta por eliminação.
 
 E ha a metade inversa, que fecha o cerco: com os bits desligados e os bytes
 ALTOS, o motor gira? Se girar, o firmware ignora os bits nos dois sentidos.

@@ -511,6 +511,18 @@ def _esta_em_identificador_snake(line: str, start: int, end: int) -> bool:
     # que tem uma consulta de mídia, e o CSS não tem como escrever de outro
     # jeito: é palavra-chave da linguagem, não português.
     sep = {"_", ".", "-", "$", "{", "=", "/", "@"}
+    # PONTO FINAL DE FRASE NÃO É `foo.bar` (31/08/2026). O `.` entrou nesta lista
+    # para não acusar `minha.funcao_util`, mas ele também termina frase — e a
+    # regra, como estava, apagava do portão TODA palavra-risco no fim de um
+    # período. Medido nesta árvore: 27 erros de acentuação REAIS, em
+    # `.github/workflows/`, `docs/adr/`, `docs/data/*.csv`, `scripts/`,
+    # `src/plugin_api/`, `tests/` e `uninstall.sh`, invisíveis por isso.
+    #
+    # O `.` só separa identificador quando encosta em identificador do OUTRO
+    # lado. `foo.acao` continua pulado; `uma acao.` volta a ser cobrada.
+    depois2 = line[end + 1] if end + 1 < len(line) else ""
+    if depois == "." and not _IDENT_CHAR.match(depois2 or " "):
+        depois = ""
     if antes in sep or depois in sep:
         return True
     # VALOR DE ATRIBUTO HTML/CSS — `data-voto="nao"`, `type="acao"`. O valor é

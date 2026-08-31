@@ -1442,7 +1442,7 @@ else
     log "  (use --purge-config para apagar, com backup automático)"
     # paused.flag (FEAT-DAEMON-PAUSE-RESUME-01) fica em ~/.config/hefesto-dualsense4unix/
     # e e propositalmente preservado junto com a config, para o usuário retomar
-    # do mesmo estado se reinstalar. Use --purge-config para apaga-lo tambem.
+    # do mesmo estado se reinstalar. Use --purge-config para apagá-lo também.
 fi
 
 # BUG-UNINSTALL-LOCALE-NOT-REMOVED-01 (fix): catalogos .mo do install.sh

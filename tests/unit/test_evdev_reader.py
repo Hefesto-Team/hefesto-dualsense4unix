@@ -379,7 +379,7 @@ def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) 
     """HOTFIX-3: se a leitura levanta OSError, reader tenta reabrir.
 
     1a tentativa levanta OSError (device sumiu); 2a entrega eventos.
-    Após tempo suficiente, snapshot reflete evento da segunda conexao.
+    Após tempo suficiente, snapshot reflete evento da segunda conexão.
     """
     import time
 

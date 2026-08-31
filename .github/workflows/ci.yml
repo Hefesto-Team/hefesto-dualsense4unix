@@ -897,7 +897,7 @@ jobs:
   # CI-SMOKE-DOCKER-MATRIX-01 (v3.4.0): valida que o wheel instala +
   # roda em containers Fedora/Arch/Debian sem regressao. Antes,
   # ubuntu-latest era a única distro coberta — bugs em libcs / paths /
-  # python ABI das outras so apareciam em report de usuario.
+  # python ABI das outras so apareciam em report de usuário.
   build-wheel:
     name: Build wheel (para smoke multi-distro)
     runs-on: ubuntu-latest

@@ -1,12 +1,12 @@
 name: anonymity-check
 
-# Status check obrigatorio. Reprova qualquer push cujos commits tragam
+# Status check obrigatório. Reprova qualquer push cujos commits tragam
 # trailers de coautoria de IA, mensagens com mencao a ferramentas IA no
 # subject, ou identidades de autor com email de provedor IA.
 #
 # Quando marcado como required check em branch protection, falha do job
 # bloqueia merge no main mesmo que o commit tenha sido criado com
-# `--no-verify` localmente. Defesa server-side ultima.
+# `--no-verify` localmente. Defesa server-side última.
 
 on:
   push:

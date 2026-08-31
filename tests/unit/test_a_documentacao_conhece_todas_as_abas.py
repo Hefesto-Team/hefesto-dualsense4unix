@@ -4,7 +4,8 @@ O defeito que este arquivo existe para não deixar voltar é banal e caro: uma a
 nasce, entra na tira, é fotografada — e a documentação continua descrevendo as
 outras. Em 22/08/2026, com a leva da aba Configurações inteira commitada, o
 `docs/usage/interface.md` ainda abria com *"a janela principal tem dez abas"* e
-o `README.md` ainda mostrava dez imagens. Nada reclamou, porque nada media.
+o `README.md` ainda mostrava dez imagens. Nada reclamou, porque nada
+media.  (noqa-acento: verbo medir, imperfeito)
 
 **A LISTA DE ABAS É DERIVADA DO PRÓPRIO GLADE**, e essa é a decisão que faz o
 portão valer alguma coisa. Uma lista escrita à mão aqui envelheceria junto com a

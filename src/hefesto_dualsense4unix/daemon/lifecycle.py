@@ -288,7 +288,7 @@ class DaemonConfig:
     # FEAT-METRICS-01
     metrics_enabled: bool = False
     metrics_port: int = 9090
-    # FEAT-PLUGIN-01 — opt-in: código de usuário arbitrario, desativado por padrao.
+    # FEAT-PLUGIN-01 — opt-in: código de usuário arbitrário, desativado por padrão.
     plugins_enabled: bool = False
 
 

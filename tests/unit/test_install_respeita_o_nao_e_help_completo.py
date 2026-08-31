@@ -157,7 +157,7 @@ class TestPasso7aObedece:
 
 
 class TestPasso7aContratoDeTexto:
-    """(A) — o gate precisa existir no texto, antes de qualquer acao."""
+    """(A) — o gate precisa existir no texto, antes de qualquer ação."""
 
     def test_enable_daemon_nasce_fora_do_if_do_passo_6(self) -> None:
         # Sob `set -u`, se `enable_daemon` so existisse dentro do ramo `else` do

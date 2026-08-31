@@ -243,7 +243,7 @@ def test_toda_checagem_do_portao_e_chamada_pelo_main() -> None:
     assert not soltas, (
         f"estas checagens de {PORTAO_REAL.name} não são chamadas por `main()`: "
         f"{soltas}. Ligue-as ou apague-as: uma checagem que ninguém roda deixa o "
-        "portão verde sobre exatamente o que ela media."
+        "portão verde sobre exatamente o que ela media."  # (noqa-acento: verbo medir, imperfeito)
     )
 
 
