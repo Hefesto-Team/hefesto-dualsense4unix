@@ -30,13 +30,13 @@ ROT = 92   # o token --rot, em px — a coluna de rótulo de toda aba
 # ---------------------------------------------------------------------------
 DISPENSAS = {
     "03-gatilhos.html": [
-        ("conteudo das colunas",
+        ("conteúdo das colunas",
          "27/08, ela: 'Nenhuma. Talvez a régua tenha que ser ajustada por aba.' "
          "L2 e R2 mostram as barras do MODO escolhido, e modos diferentes têm "
          "números de barra diferentes. Igualar a altura seria inventar espaço."),
     ],
     "04-iluminacao.html": [
-        ("conteudo das colunas",
+        ("conteúdo das colunas",
          "27/08, ela: 'Nenhuma.' O desenho do controle ocupa as DUAS linhas do "
          "grid — a régua o compara com a fileira de cima e acusa um vão que é "
          "só a segunda linha. Falso positivo estrutural.\n"
@@ -57,18 +57,18 @@ SONDA = r"""
   const mio = document.querySelector('.miolo');
   const cs  = getComputedStyle(mio);
   const _b  = mio.getBoundingClientRect();
-  // a CONTENT BOX do miolo — comparar com a border box acusava o proprio padding.
-  // `clientWidth` e nao `getBoundingClientRect().width`: a border box INCLUI a
+  // a CONTENT BOX do miolo — comparar com a border box acusava o próprio padding.
+  // `clientWidth` e não `getBoundingClientRect().width`: a border box INCLUI a
   // barra de rolagem (e o gutter que o `scrollbar-gutter:stable` reserva), e a
   // largura tirada dela dava 15px a mais do que o filho pode ocupar. Em 27/08,
   // com o gutter ligado, isso reprovou as DEZ abas de uma vez — o defeito era da
-  // regua, nao do desenho.
+  // regua, não do desenho.
   const mr  = {x:_b.x+parseFloat(cs.paddingLeft), width:mio.clientWidth
                -parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)};
   const o = {erros:[], m:{}};
 
   o.m.janela_larg = R(j.width);
-  // A ALTURA entra na régua em 27/08: ela media de 530 a 1032 nas dez abas e o
+  // A ALTURA entra na régua em 27/08: ela media de 530 a 1032 nas dez abas e o  (noqa-acento: "media" aqui é o imperfeito de MEDIR, não "média" de cálculo)
   // rodapé pulava meia tela a cada clique na tira. "Sair clicando entre as abas
   // causa muito desconforto, pq muda tudo."
   o.m.janela_alt  = R(j.height);
@@ -123,7 +123,7 @@ SONDA = r"""
     if (Math.abs(r.x - mr.x) > .6)
       o.erros.push('filho do miolo fora do x: ' + (e.className||e.tagName) + ' dx=' + R(r.x-mr.x));
     if (Math.abs(r.width - mr.width) > .6)
-      o.erros.push('filho do miolo com largura propria: ' + (e.className||e.tagName) + ' dw=' + R(r.width-mr.width));
+      o.erros.push('filho do miolo com largura própria: ' + (e.className||e.tagName) + ' dw=' + R(r.width-mr.width));
   });
 
   // CADA QUADRO: titulo alinhado com o corpo, e o corpo com padding igual
@@ -156,7 +156,7 @@ SONDA = r"""
   Object.entries(alt).forEach(([k,v])=>{ o.m.alturas[k]=[...v].sort((a,b)=>a-b);
     if(v.size>1) o.erros.push('altura divergente em '+k+': '+[...v].join(' / ')); });
 
-  // LARGURA — a Jogar e o padrao: fileira de escolha DIVIDE IGUAL, e toda
+  // LARGURA — a Jogar e o padrão: fileira de escolha DIVIDE IGUAL, e toda
   // coluna de rotulo tem a mesma largura na janela inteira.
   o.m.larguras = {};
   document.querySelectorAll('.seg, .escada, .acoes, .lados, .rota, .modos, .players').forEach(f=>{
@@ -165,9 +165,9 @@ SONDA = r"""
     const ws = fs.map(e=>R(e.getBoundingClientRect().width));
     const cls = f.className.split(' ')[0];
     (o.m.larguras[cls] = o.m.larguras[cls] || []).push(ws);
-    // .acoes e .modos nao dividem igual por desenho; as outras sim
+    // .acoes e .modos não dividem igual por desenho; as outras sim
     if (['seg','escada','lados','rota'].includes(cls) && new Set(ws).size > 1)
-      o.erros.push('fileira ".'+cls+'" nao divide igual: '+[...new Set(ws)].join(' / '));
+      o.erros.push('fileira ".'+cls+'" não divide igual: '+[...new Set(ws)].join(' / '));
   });
   const rots = [...document.querySelectorAll('.campo .nome, .barra .nome, .viva .nome')]
                .map(e=>R(e.getBoundingClientRect().width));
@@ -206,8 +206,8 @@ SONDA = r"""
     const ts=[...c.querySelectorAll('.sec-rot, .col-rot')];
     if(ts.length<2) return;
     const porCol={};
-    // ONDE O TEXTO COMECA, nao onde a caixa comeca: `padding-left` empurra o
-    // conteudo sem mover a caixa, e foi assim que uma mordida de 11px passou
+    // ONDE O TEXTO COMECA, não onde a caixa comeca: `padding-left` empurra o
+    // conteúdo sem mover a caixa, e foi assim que uma mordida de 11px passou
     // inteira por esta regua. Ela ve o TEXTO; a regua tem de ver o mesmo.
     ts.forEach(e=>{ const x=R(e.getBoundingClientRect().x
                               + parseFloat(getComputedStyle(e).paddingLeft));
@@ -220,7 +220,7 @@ SONDA = r"""
         + g.map(o=>o.t+'@'+o.x).join(' / ')); });
   });
   // 2) colunas irmas terminam no MESMO y — e o que conta e onde o CONTEUDO acaba,
-  //    nao a caixa: com `align-items:stretch` as caixas tem sempre a mesma altura,
+  //    não a caixa: com `align-items:stretch` as caixas tem sempre a mesma altura,
   //    e uma mordida de 60px de vao passou inteira por esta regua por causa disso.
   const fimDoConteudo = el => {
     let f = -Infinity;
@@ -249,7 +249,7 @@ SONDA = r"""
     const cols=[...g.children].filter(e=>e.getBoundingClientRect().height>1);
     if(cols.length<2) return;
     // SO COMPARA QUEM ESTA NA MESMA FILEIRA. Num grid de duas linhas (a Iluminacao),
-    // comparar todos os filhos acusava um vao de 148px que nao existe: eram
+    // comparar todos os filhos acusava um vao de 148px que não existe: eram
     // simplesmente a linha de cima e a de baixo.
     const fileiras={};
     cols.forEach(e=>{ const y=R(e.getBoundingClientRect().top);
@@ -259,7 +259,7 @@ SONDA = r"""
       if(fil.length<2) return;
       const fs=fil.map(fimDoConteudo);
       const d=Math.max(...fs)-Math.min(...fs);
-      if(d>8) o.erros.push('o conteudo das colunas de ".'+g.className.split(' ')[0]
+      if(d>8) o.erros.push('o conteúdo das colunas de ".'+g.className.split(' ')[0]
         +'" acaba em y diferentes: '+fs.join(' / ')+' (vao de '+R(d)+'px)');
     });
   });
@@ -283,7 +283,7 @@ def medir(arq):
                             "--virtual-time-budget=3000","--window-size=1260,2600","--dump-dom",
                             f"file://{tmp}"], capture_output=True, text=True, timeout=90)
         m = re.search(r"<title>REGUA(.*?)</title>", p.stdout, re.S)
-        if not m: return {"erros":["a sonda nao rodou"],"m":{}}
+        if not m: return {"erros":["a sonda não rodou"],"m":{}}
         s = m.group(1)
         for a,b in [("&quot;",'"'),("&amp;","&"),("&lt;","<"),("&gt;",">"),("&#39;","'")]:
             s = s.replace(a,b)

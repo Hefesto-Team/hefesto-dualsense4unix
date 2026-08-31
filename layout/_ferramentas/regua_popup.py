@@ -2,7 +2,7 @@
 """Régua das POP-UPS: abre cada `.tela-nova` pelo fragmento e mede a caixa.
 
 POR QUE ELA EXISTE, e o buraco que ela fecha (29/08/2026). Nenhuma régua desta
-casa media pop-up, e as duas medições que já existiam são cegas a ela por
+casa media pop-up, e as duas medições que já existiam são cegas a ela por  (noqa-acento: verbo medir)
 motivos DIFERENTES — o que é pior do que uma cegueira só, porque cada uma
 parecia cobrir o que a outra não cobria:
 
@@ -101,7 +101,7 @@ SONDA = r"""
     const dv = e.scrollHeight - e.clientHeight, dh = e.scrollWidth - e.clientWidth;
     const quem = (e.className || e.tagName).toString().split(' ')[0];
     if (rolavel && (dv > 2 || dh > 2))
-      rolam.push({quem, vao: R(e.clientHeight), conteudo: R(e.scrollHeight),
+      rolam.push({quem, vao: R(e.clientHeight), conteudo: R(e.scrollHeight),  // (noqa-acento): chave do JSON que o Python lê em r['conteudo']
                   esconde: R(dv), lado: R(dh)});
     // ROLAGEM DE LADO é sempre defeito: numa tabela ela esconde a segunda
     // coluna atrás de uma barra que quase ninguém procura.
@@ -271,7 +271,7 @@ def relata(arq, ident, o):
           f"· rodapé fecha em y={o['rod_no_produto']} da janela de {o['janela']['h']}")
     for r in o["rolam"]:
         print(f"      rola por dentro: \"{r['quem']}\" mostra {r['vao']} de "
-              f"{r['conteudo']}px (esconde {r['esconde']})")
+              f"{r['conteudo']}px (esconde {r['esconde']})")  # (noqa-acento): chave do JSON da sonda
     if not o["rolam"]:
         print("      não rola nada por dentro — cabe inteira")
     for e in o["erros"]:

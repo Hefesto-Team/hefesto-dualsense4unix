@@ -394,7 +394,7 @@ def _html_de_uma_linha(c: Controle, mascara: str, posicao: int) -> str:
 #: o módulo do exame responde por máquina, não por vocabulário.
 SELO_DO_ESTADO = {
     "certo": ("ok", "CERTO"),
-    "atencao": ("warn", "AJUSTAR"),
+    "atencao": ("warn", "AJUSTAR"),  # (noqa-acento): chave de máquina, ASCII por contrato
     "problema": ("warn", "AJUSTAR"),
     "nao_sei": ("info", "NOTA"),
 }
@@ -425,15 +425,21 @@ def html_da_ordem(ordem: Any | None) -> str:
     ``None`` é uma resposta e tem texto próprio: "nenhuma ordem pendente" é o que
     a pessoa precisa ler, e um quadro vazio a deixaria sem saber se o exame não
     achou nada ou se ele não correu.
+
+    A chave dos dois ``data-v`` é ENDEREÇO DE DADO, não texto de tela: ela vai
+    crua para o atributo e o JS a compara byte a byte. Acentuá-la trocaria o
+    endereço — daí o ``noqa-acento`` nas duas linhas.
     """
     if ordem is None:
         return (
-            f'<div class="ordem"><div class="faca" data-v="{v("ordem", "acao")}">'
+            f'<div class="ordem">'
+            f'<div class="faca" data-v="{v("ordem", "acao")}">'  # (noqa-acento): endereço
             f"Nenhuma mudança recomendada agora.</div></div>"
         )
     return (
         f'<div class="ordem">'
-        f'<div class="faca" data-v="{v("ordem", "acao")}">{_e(ordem.acao)}</div>'
+        f'<div class="faca" data-v="{v("ordem", "acao")}">'  # (noqa-acento): endereço
+        f"{_e(ordem.acao)}</div>"
         f'<div class="receita">'
         f'<span class="caixa" data-v="{v("ordem", "de")}">{_e(ordem.alvo.onde or TRACO)}</span>'
         f'<span class="seta">→</span>'
