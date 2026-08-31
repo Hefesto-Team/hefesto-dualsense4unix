@@ -17,7 +17,16 @@ arq = sys.argv[1]
 LARG, ALT = 1920, 1080
 
 with sync_playwright() as pw:
-    b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
+    # `ignore_default_args=["--hide-scrollbars"]` — 30/08/2026, e não é detalhe.
+    # O Playwright headless passa `--hide-scrollbars` por default, e com ele o
+    # Chrome NÃO PINTA barra de rolagem nenhuma: `offsetWidth == clientWidth`
+    # mesmo num contêiner que rola 300px. Medido no mesmo dia, numa varredura das
+    # dez abas: nove agentes concluíram "não há barra" e um deles ia relatar como
+    # DEFEITO GRAVE um comentário do gerador que estava certo. A régua não media
+    # a tela — media o próprio flag.
+    b = pw.chromium.launch(executable_path="/usr/bin/google-chrome",
+                           args=["--no-sandbox"],
+                           ignore_default_args=["--hide-scrollbars"])
     pg = b.new_page(viewport={"width": LARG, "height": ALT}, device_scale_factor=1)
     pg.goto(f"file://{D/arq}")
     pg.wait_for_load_state("networkidle")

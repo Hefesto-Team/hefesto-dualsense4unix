@@ -117,10 +117,70 @@ CSS = """
      é isso que faz o rótulo "Motor esquerdo" ficar na mesma linha dos quatro
      interruptores, e as cinco colunas acabarem no MESMO y — que é a régua dela.
      (A cura do vão é na ALTURA, nunca `space-between`.) */
+  /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026, pedido dela: *"as linhas
+     horizontais (…) precisam melhorar ali"*.
+
+     Elas já atravessavam as cinco colunas, no mesmo y — mas o `gap:16px` do grid
+     abria um buraco entre cada duas, e o olho lia CINCO TRACINHOS em vez de uma
+     linha. Ampliado a 2x fica evidente.
+
+     A cura é trocar o vão HORIZONTAL por respiro DENTRO da célula: `column-gap:0`
+     e o padding que já existia no `.ctrl` cresce para os dois lados. A distância
+     entre o conteúdo de duas colunas continua a mesma; o que muda é que agora ela
+     é padding — e padding não interrompe borda. O vão VERTICAL (`row-gap`) fica:
+     é ele que separa uma linha da outra. */
+  /* O RESPIRO VERTICAL É UMA ESCALA, E A DIVISÓRIA MORA NO MEIO DELE —
+     31/08/2026, pedido dela: *"em vibração tem que ver a distribuição vertical
+     dos elementos da tabela. tão todos colados nas linhas"*.
+
+     O CENSO QUE MEDIU O DEFEITO (DOM, coluna do P1, antes da cura). A folga é da
+     divisória até o conteúdo, acima e abaixo:
+
+       faixa           altura  conteúdo   ↑acima  ↓abaixo
+       Controle           124       112        —       16
+       Modelo              17        13        2       12
+       Força da vibração   79        79        0       10
+       Personalizado       26        16        5       15
+       Motor esquerdo      36        36        0       10
+       Motor direito       36        36        0       10
+       Testar agora        74        74        0        —
+
+     QUATRO DAS SETE FAIXAS COM ZERO ACIMA — o conteúdo encostado na linha —
+     e dez abaixo. Não é padding esquecido: é a soma de duas decisões que,
+     sozinhas, estavam certas.
+
+     1. As alturas de faixa foram calculadas para serem EXATAMENTE a altura do
+        conteúdo: `--r-forca` 79 = 36 (`--h-escolha`) + 7 (vão do `.seg`) + 36;
+        `--r-motor` 36 = o `.lado`, que é `--h-escolha`; `--r-acoes` 74 = 34
+        (`--h-acao`) + 6 + 34. Sem uma sobra, o filho preenche a célula e o topo
+        dele cai em cima da borda.
+     2. A divisória era `::before` com `top:0` da própria célula — ou seja, na
+        BORDA DE BAIXO do vão, e não no meio dele. Todo o respiro que existe
+        (`--r-passo`) ficava de um lado só.
+
+     A CURA É A ESCALA, e ela inverte quem deriva de quem: o dono passa a ser o
+     RESPIRO (`--r-ar`), e o passo entre faixas é o dobro dele, por construção.
+     A linha desce meio passo (`top:-var(--r-ar)`) e cai no MEIO do vão. Efeito:
+     todo conteúdo centrado na sua célula fica centrado na sua FAIXA — porque a
+     faixa passa a ser [meio-vão de cima, meio-vão de baixo], que tem o mesmo
+     centro da célula. Nenhuma faixa pode voltar a ficar torta sem que alguém
+     mude as duas coisas de uma vez, e agora elas são uma só.
+
+     POR QUE 5px, E NÃO MAIS — o orçamento de altura, medido no mesmo dia:
+     o miolo desta aba tem 544px visíveis e o quadro ocupa 540 (16+506+18).
+     **Sobram 4px.** Cada pixel a mais de `--r-ar` custa 12 (6 divisórias × 2
+     lados), então `--r-ar:6px` custaria 12 e a aba passaria a rolar — que é o
+     que ela não pode fazer. Com 5, o passo continua 10 e a altura da tabela não
+     muda um pixel: o que muda é de que lado da linha o vão está.
+     Se um dia ela quiser mais ar, o preço sai de `--r-des` (o desenho é a única
+     faixa com conteúdo elástico): −12px ali pagam `--r-ar:6px`, e o controle
+     encolhe 11%. */
   .vib{
-    display:grid;grid-template-columns:132px repeat(4,1fr);gap:16px;
+    display:grid;grid-template-columns:132px repeat(4,1fr);
+    gap:16px;
     --r-des:124px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
-    --r-acoes:74px;--r-passo:10px;
+    --r-acoes:74px;
+    --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
   .vib > div{
     display:grid;row-gap:var(--r-passo);
@@ -128,7 +188,49 @@ CSS = """
                        var(--r-motor) var(--r-motor) var(--r-acoes);
   }
   /* a barra vertical entre blocos irmãos — pedido dela */
-  .vib .ctrl{border-left:1px solid var(--border-sutil);padding:0 10px 0 14px}
+  /* O PADDING SAIU DA COLUNA E FOI PARA AS CÉLULAS — 30/08/2026.
+     A borda separadora mora na CÉLULA (`> div > *`), e padding na coluna
+     recua a célula junto: a linha parava 21px antes da divisa e voltava a
+     ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
+     coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
+  .vib .ctrl{border-left:1px solid var(--linha);padding:0 10px 0 14px}
+  /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
+     recua os filhos e a borda deles para 16px antes da divisa, e a linha
+     volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
+
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
+     *"as linhas horizontais deveriam separar os campos em linhas"*. É a mesma
+     cura da Iluminação, e o motivo de estar na CÉLULA (e não na grade) é o
+     mesmo: as sete linhas não são de `.vib`, são de cada coluna, com as mesmas
+     alturas nas cinco — as bordas nascem no mesmo y e leem como uma linha só.
+     A última não leva: separador depois do último campo vira moldura. */
+  /* A LINHA É UM PSEUDO-ELEMENTO, e não a borda da célula — 30/08/2026.
+     Como BORDA ela parava no padding da coluna e quebrava em cinco tracinhos;
+     movendo o padding para as células a linha ficou inteira mas o desenho do
+     controle perdeu 9px (a moldura tem `overflow:hidden` e o SVG cresce com a
+     largura). O `::after` com margem negativa resolve os dois: ele sai do
+     padding pelos dois lados e atravessa a coluna inteira, sem tocar em
+     geometria nenhuma. As cinco colunas têm as mesmas alturas de linha, então
+     os cinco segmentos nascem no mesmo y e leem como uma linha só. */
+  .vib > div > *{position:relative}
+  /* A LINHA É `::before` DA CÉLULA DE BAIXO, e não `::after` da de cima.
+     Como `::after` ela era filha da moldura — e a moldura do DESENHO tem
+     `overflow:hidden` para conter o SVG, então ela cortava a própria linha
+     26px antes da divisa. A célula de baixo não recorta nada, e o traço
+     cai no mesmo lugar: entre uma linha e a outra. */
+  /* `top` NEGATIVO DE MEIO PASSO — é o que põe a linha no MEIO do vão em vez de
+     na borda de baixo dele (ver a escala `--r-ar`, no `.vib`). Nenhuma célula
+     recorta: a única com `overflow` era a moldura do desenho, e a primeira
+     célula não desenha divisória nenhuma. */
+  .vib > div > *::before{content:'';position:absolute;top:calc(var(--r-ar) * -1);height:0;
+    left:-14px;right:-10px;border-top:1px solid var(--rot-linha)}
+  /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
+     `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
+     10 de padding + 16 de gap = 26; a ÚLTIMA coluna não tem vão depois
+     dela, então volta a 10. A coluna de rótulos não tem padding: 0 e 16. */
+  .vib > div:not(:last-child) > *::before{right:-26px}
+  .vib > .rotulos > *::before{left:0;right:-16px}
+  .vib > div > *:first-child::before{display:none}
   /* NÃO HÁ COLUNA DESTACADA, e é decisão dela de 28/08: os quatro ficam lado a
      lado, sempre visíveis, e a fita do topo fica ESMAECIDA (`fita_viva=False`).
      Aqui havia um `.ctrl.escolhido` — fundo `--sel-bg` e rótulo em negrito na
@@ -140,21 +242,44 @@ CSS = """
   /* a coluna dos rótulos: todo título começa no mesmo x, e cada um ocupa a
      ALTURA INTEIRA da sua linha — é assim que a coluna acaba junto das outras */
   .vib .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
+  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido dela: *"no nome das
+     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
+     perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
+     toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
+     lista solta e passar a ler como cabeçalho de linha. */
+  .vib .rotulos > *{align-items:flex-end;text-align:right}
+  .vib .rotulos .sec-rot{justify-content:flex-end}
   /* O RÓTULO OCUPA A ALTURA INTEIRA DA LINHA, e o texto fica centrado dentro
      dele. Não é enfeite: sem isto o rótulo da última linha acaba 29px acima dos
      botões que ele nomeia, e a régua lê — com razão — um vão entre as colunas.
      A cura é na ALTURA, que é a regra dela. */
   .vib .rotulos > :not(.cel-des) > .sec-rot{flex:1}
-  .sec-rot{font-size:11px;color:var(--comment);text-transform:uppercase;
-           letter-spacing:.5px;display:flex;align-items:center;gap:6px}
-  .vib .rotulos .legenda{font-size:10.5px;line-height:1.45;color:var(--comment);
-                         text-transform:none;letter-spacing:0}
+  /* O VERDE DESTA ABA VIROU O PADRÃO DAS DEZ em 30/08 (`--rot-campo`, em
+     `topo.html`), e a exceção escopada em `.vib` que vivia aqui virou redundância. */
+  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
+     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
+     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
+     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     é a forma mais difícil de ler que existe.
+     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
+     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
+     player"), então nada precisou ser reescrito. */
+  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
+           display:flex;align-items:center;gap:6px}
+  /* a regra `.legenda` saiu: depois que a prosa virou dica, zero elementos a usavam. */
   /* A DICA NÃO É TÍTULO: sem isto ela herda o `text-transform:uppercase` do
      rótulo e o parágrafo inteiro sai em CAIXA ALTA — visto no navegador. E ela
      abre PARA CIMA: nas linhas de baixo da tabela, aberta para baixo, a janela
      (que tem `overflow:hidden`) cortava o fim do texto. */
   .vib .rotulos .dica{text-transform:none;letter-spacing:0;top:auto;bottom:-4px}
-  .vib .rotulos .cel-des{justify-content:flex-start;gap:8px}
+  /* O RÓTULO DA PRIMEIRA LINHA VOLTOU A CENTRAR — 30/08/2026.
+     Ele estava preso no topo (`flex-start`) porque a legenda de sete linhas vinha
+     logo abaixo dele e as duas juntas enchiam a célula. A legenda virou dica no
+     mesmo dia, e o `flex-start` sobrou: o rótulo ficava sozinho no alto de uma
+     célula de 124 px, com o vazio inteiro embaixo. Centrado, ele fica na altura
+     do desenho que nomeia — a cura do vão é na ALTURA, regra dela. */
+  .vib .rotulos .cel-des{gap:8px}
 
   /* O DESENHO: a borda tem a cor do plástico, sempre — é como ela sabe de quem é
      a vibração que está vendo (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). A borda mora
@@ -204,7 +329,7 @@ CSS = """
   /* o interruptor de cada lado: o GLIFO do mapa, aceso quando o lado está ligado */
   .lado{
     height:var(--h-escolha);width:36px;border-radius:7px;font-family:inherit;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;
   }
   .lado.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
@@ -336,7 +461,12 @@ def _coluna(c, e=None):
             {linhas[0]}
             {linhas[1]}
             <div class="acoes-col">
-              <button class="btn" data-papel="testar">Testar por 500 ms</button>
+              <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
+                   *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
+                   O par Testar/Parar já diz a duração pelo próprio par: quem começa
+                   escolhe quando termina. O meio segundo continua sendo o que o
+                   gesto manda ao daemon; o que sai é a PROMESSA na tela. -->
+              <button class="btn" data-papel="testar">Testar</button>
               <button class="btn vermelho" data-papel="parar">Parar</button>
             </div>
           </div>'''
@@ -346,48 +476,67 @@ MIOLO = f'''
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">Vibração</span>
+        <!-- A DICA DO QUADRO ENCOLHEU DE 1000 PARA ~200 CARACTERES — 30/08/2026,
+             regra dela: *"ao invés de estar tudo em [um só] deveria estar em cada
+             seção"*, e vale *"em todas as abas"*.
+             Ela tinha QUATRO parágrafos, e três deles nomeavam um campo que está
+             na tela, a poucos pixels: a Força, os dois motores e o Testar. Cada um
+             foi para o `?` do seu próprio rótulo. Aqui fica só o que nenhum campo
+             diz — o que a aba É, e por que a fita do topo não vale nela. -->
         <span class="ajuda">?<span class="dica">
-          O jogo pede uma vibração; a <b>Força</b> diz quanto dela chega ao controle.
-          <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu · <b>Máximo</b> 150%,
-          mais forte do que ele pediu · <b>Auto</b>, o Hefesto escolhe pela bateria (100/70/30%)
-          e nunca amplifica.<br><br>
-          <b>Cada controle tem a sua força e os seus dois motores</b> — a coluna é a peça, e o
-          que você mexe numa coluna vale só para aquele controle. Os quatro estão sempre à
-          vista, lado a lado, então a fita do topo <b>não escolhe nada aqui</b>: ela fica
-          esmaecida de propósito. O endereço do ajuste é a coluna, não a fita.<br><br>
-          <b>Dentro do controle há dois motores, um em cada punho, e cada um recebe UM valor.</b>
-          Não existe "leve" e "forte" para cada um: o da esquerda tem <b>contrapeso maior</b> e
-          por isso soa grosso, o da direita tem contrapeso menor e soa fino. Medido nesta casa —
-          <b>common[3]</b> é o esquerdo e <b>common[2]</b> o direito, dois bytes independentes.<br><br>
-          <b>Testar por 500 ms</b> faz aquele controle tremer meio segundo com os valores das
-          barras daquela coluna; <b>Parar</b> corta a vibração dele agora e devolve a mão ao jogo.
+          O jogo pede uma vibração, e esta aba decide quanto dela chega a cada controle.<br><br>
+          <b>O endereço do ajuste é a coluna, não a fita</b> — os quatro estão sempre à vista,
+          então a fita do topo fica esmaecida de propósito.
         </span></span>
       </div>
       <div class="quadro-corpo">
         <div class="vib">
 
           <div class="rotulos">
+            <!-- A LEGENDA VIROU DICA — 30/08/2026, pedido dela: *"'O lado que treme
+                 acende em laranja; …' isso é tool tip"*. Mesma cura da Iluminação,
+                 no mesmo dia, e pelo mesmo motivo: prosa cinza na coluna de rótulos
+                 compete com os rótulos. O texto não muda uma palavra — ele explica
+                 uma decisão medida (`D-O-SVG-VIBRA-POR-LADO`) e some seria perder. -->
             <div class="cel-des">
-              <span class="sec-rot">Controle</span>
-              <span class="legenda">O lado que treme acende em laranja; o contorno na cor
-                do plástico diz de quem é o controle. Apagado é lado desligado.</span>
+              <span class="sec-rot">Controle
+                <span class="ajuda">?<span class="dica">
+                  O lado que treme acende em <b>laranja</b>; o contorno na cor do
+                  <b>plástico</b> diz de quem é o controle. Apagado é lado desligado.
+                </span></span></span>
             </div>
-            <div></div>
-            <div><span class="sec-rot">Força da vibração</span></div>
+            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido dela:
+                 *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
+                 coluna serve como nome da linha"*. Esta célula existia vazia só para
+                 ocupar a linha `--r-nome` da grade, e uma coluna cujo trabalho é
+                 nomear linhas tinha uma linha sem nome. -->
+            <div><span class="sec-rot">Modelo</span></div>
+            <div><span class="sec-rot">Força da vibração
+              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
+                Quanto da vibração que o jogo pede chega ao controle.<br><br>
+                <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
+                <b>Máximo</b> 150%, mais forte do que ele pediu · <b>Auto</b>, o Hefesto
+                escolhe pela bateria (100/70/30%) e nunca amplifica.
+              </span></span></span></div>
             <div><span class="sec-rot">Personalizado</span></div>
             <div><span class="sec-rot">{ESQ["rot"]}
               <span class="ajuda">?<span class="dica">
-                <b>{ESQ["nome"]}</b> ({ESQ["apelido"]}). {ESQ["nota"]}<br><br>
+                <b>{ESQ["nome"]}</b> ({ESQ["apelido"]}). {ESQ["nota"]}<br><br>Cada punho tem UM motor e cada um recebe UM valor — não existe "leve" e "forte" para cada. O da esquerda tem <b>contrapeso maior</b> e soa grosso; o da direita, contrapeso menor, soa fino.<br><br>
                 Desligue um lado e o jogo deixa de fazer aquele punho tremer — o outro
                 continua. Serve para quem sente enjoo com o motor pesado, e para bancada.<br><br>
                 A barra ao lado diz com que força esse motor entra no
-                <b>Testar por 500 ms</b>, de 0 a 255.
+                <b>Testar</b>, de 0 a 255.
               </span></span></span></div>
             <div><span class="sec-rot">{DIR["rot"]}
               <span class="ajuda">?<span class="dica">
                 <b>{DIR["nome"]}</b> ({DIR["apelido"]}). {DIR["nota"]}
               </span></span></span></div>
-            <div><span class="sec-rot">Testar agora</span></div>
+            <div><span class="sec-rot">Testar agora
+              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
+                <b>Testar</b> faz aquele controle tremer meio segundo com os valores das
+                barras daquela coluna; <b>Parar</b> corta a vibração dele agora e devolve
+                a mão ao jogo.
+              </span></span></span></div>
           </div>
 {"".join(_coluna(c) for c in MESA)}
 

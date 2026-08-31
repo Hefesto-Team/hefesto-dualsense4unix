@@ -270,7 +270,16 @@
 <body>
 <div class="pagina">
 
-  <header class="topo">
+  <header class="topo" style="position:relative;padding-left:132px">
+    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: "ok temos um botão pra vir
+         pra cá. Mas e o botão pra voltar?". Não havia nenhum href de saída nesta
+         página. O destino não é chute: `grep -l mapa-das-portas.html layout/*.html`
+         devolve UMA aba, a Conexões. -->
+    <a href="08-conexoes.html" title="Volta para a aba Conexões, que é de onde este mapa se abre."
+       style="position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
+              padding:5px 11px;border-radius:7px;text-decoration:none;
+              border:1px solid var(--border-forte);background:var(--panel);
+              color:var(--texto-suave);font-size:12px">← Voltar</a>
     <h1><em>Conexões</em> — o mapa da sua mesa</h1>
     <p class="nota">mockup · 24/08/2026 · medido na MeowSystem</p>
   </header>

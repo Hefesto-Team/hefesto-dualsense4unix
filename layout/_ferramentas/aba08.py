@@ -477,7 +477,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
                padding:2px 0;border-radius:4px;font-family:'JetBrains Mono',monospace}
   .selo.ok{background:var(--green);color:var(--app-bg)}
   .selo.warn{background:var(--orange);color:var(--app-bg)}
-  .selo.info{background:var(--comment);color:var(--fg)}
+  .selo.info{background:var(--comment);color:var(--app-bg)}
   .exame .txt{flex:1;min-width:0}
 
   /* ---- a ordem de serviço: imperativo, receita e ganho ---- */
@@ -614,7 +614,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      irmãos — a mesma gramática das colunas dos outros dois quadros */
   .gc-bloco{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .gc-bloco.barra{padding-left:12px;margin-left:2px;border-left:1px solid var(--border-sutil)}
-  .gc-bloco .rot{font-size:11.5px;color:var(--texto-suave);white-space:nowrap;
+  .gc-bloco .rot{font-size:11.5px;font-weight:600;color:var(--rot-campo);white-space:nowrap;
                  display:flex;align-items:center;gap:6px}
   /* `.le` (a leitura "Vale Sem teto, do global, abaixo" ao lado do campo) SAIU
      em 28/08 — `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`. A regra sai junto: CSS de
@@ -642,8 +642,8 @@ CSS = CSS_GLIFO + CSS_POPUP + """
 
   /* ---- o inventário da mesa: DUAS tabelas, ambas com cabeçalho roxo ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px}
-  .tab th{text-align:left;font-weight:600;font-size:10px;color:var(--purple);
-          text-transform:uppercase;letter-spacing:.6px;padding:0 8px 6px 0;
+  .tab th{color:var(--rot-campo);font-weight:600;text-align:left;font-weight:600;font-size:10px;
+          padding:0 8px 6px 0;
           border-bottom:1px solid var(--border-forte)}
   .tab td{padding:6px 8px 6px 0;color:var(--texto-suave);border-bottom:1px solid var(--border-sutil)}
   .tab tr:last-child td{border-bottom:none}
@@ -671,7 +671,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      VAGAS tracejadas são os controles da MESA que hoje estão no cabo.
      ------------------------------------------------------------------ */
   .capa{display:flex;align-items:center;gap:12px;height:var(--h-escolha)}
-  .capa .rot{font-size:12px;color:var(--texto-suave)}
+  .capa .rot{font-size:12px;font-weight:600;color:var(--rot-campo)}
   /* `.teto` (a leitura "Teto da vibração • Sem teto") e `.capa select.pronto` (o
      dropdown dos três perfis) SAÍRAM em 28/08 — a leitura por
      `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`, o dropdown porque o teto global mudou-se
@@ -735,7 +735,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      não pintar por cima da última coluna de quadrados. */
   .tn-cx .moldura{padding-right:6px}
   .mm-rot{font-size:10px;font-weight:600;color:var(--purple);
-          text-transform:uppercase;letter-spacing:.06em}
+          }
   .mm-rot-linha{display:flex;align-items:center;gap:8px;height:19px}
 
   /* ---- a lista de aparelhos.
@@ -1046,11 +1046,15 @@ def viz_bloco(nome, escolha, pergunta=False):
 #: que **nós ainda não perguntamos**. Só o "ainda" sai quando a onda fechar.
 BORDA_LIDA = ("A borda é a cor do plástico que o Hefesto <b>leu do aparelho</b>: este controle "
               "está no cabo, e pelo cabo ele pergunta e o aparelho responde.")
-BORDA_NEUTRA = ("A borda é <b>neutra</b> porque ninguém leu a cor deste controle: ele está no "
-                "rádio, e o Hefesto <b>ainda não pergunta a cor pelo rádio</b> "
-                "(<code>ONDA-CONEXOES-11</code>). O aparelho responde nos DOIS transportes "
-                "(medido em 27/08/2026); o que faltava era a semente do nosso CRC. Uma borda "
-                "colorida aqui seria uma cor que ninguém leu.")
+#: A DICA NÃO CONFESSA ROADMAP — 30/08/2026, regra dela: *"informar na dica que
+#: o produto não presta e não tá pronto é o fim dos tempos"*. Ela estava certa: a
+#: pessoa que passa o mouse quer saber POR QUE a borda está cinza, não em que
+#: onda do nosso plano a cor vai chegar. O código da sprint sai da tela e fica
+#: aqui, onde é útil a quem programa. A frase passa a dizer o que É: a cor não
+#: foi lida, e por isso a borda não a inventa.
+BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não foi lida</b>. "
+                "Uma borda colorida aqui seria uma cor que ninguém leu — e o desenho "
+                "continua na cor que o resto do Hefesto já conhece.")
 
 LUZ_NO_CABO = ("Só funciona com o controle no rádio: a cura é derrubar a conexão Bluetooth "
                "para você apertar PS. Este controle está no cabo, onde a barra de luz não "
@@ -1870,44 +1874,23 @@ TELA_EM_PE = cerimonia(
 
 
 MIOLO = f'''
-    <!-- ======== 1. GESTÃO CONTROLES — acordeão, um por controle ligado ======== -->
+    <!-- ======== 1. CHECK-UP — juízo à esquerda, conserto à direita ========
+         SUBIU PARA PRIMEIRO E MUDOU DE NOME — 30/08/2026, pedido dela:
+         *"a parte 'Está tudo certo' aparece como primeiro bloco na página e
+         mudamos o nome pra Check-up"*. Faz sentido de leitura: quem abre a
+         Conexões quer primeiro saber se há algo errado, e só depois a lista
+         de quem está na mesa. E "Check-up" é substantivo — nomeia a seção;
+         "Está tudo certo?" era pergunta, e título que pergunta faz a pessoa
+         procurar a resposta em vez de ler o que está embaixo. ======== -->
     <div class="quadro">
+      <!-- SÓ O CHECK-UP NASCE ABERTO — 30/08/2026, pedido dela: *"inicia as
+           demais abas de gestão e rádio minimizadas"*. Faz sentido de uso: quem
+           abre a Conexões quer primeiro saber se há algo errado; a lista da mesa
+           e o inventário de rádios são consulta, não alerta. E resolve, de
+           quebra, os 208px que o quadro de baixo perdia por não caber. -->
+      <input class="abre" type="checkbox" id="cx8-2" checked>
       <div class="quadro-topo">
-        <span class="quadro-titulo">Gestão Controles</span>
-        <span class="ajuda">?<span class="dica">
-          Uma linha por controle <b>ligado</b>, e só eles. O que a <b>fita do topo</b> aponta vem
-          aberto; clicar em outro abre ele e fecha os demais, e a fita acompanha. Clicar no que
-          já está aberto volta para <b>Todos</b>, com os {len(MESA)} abertos.<br><br>
-          <b>A linha fechada</b> diz quem é o controle e resume o que importa: o que o jogo
-          <b>vê como</b> (a máscara, que se escolhe na aba <b>Jogar</b>), o <b>microfone</b> e a
-          <b>bateria</b>. Máscara e bateria são leitura aqui — quem as governa é outra aba.<br><br>
-          <b>A borda</b> é a cor do plástico que o Hefesto <b>leu do aparelho</b>. Pelo cabo ele
-          pergunta; pelo rádio ele <b>ainda não pergunta</b>, e aí a borda fica <b>neutra</b> —
-          porque uma borda colorida seria uma cor que ninguém leu. O <b>desenho</b> continua na
-          cor que o resto do Hefesto já conhece: quem responde pela leitura é a borda, e é só
-          ela que fica cinza. <b>A barra de luz</b> não é a cor do plástico: é a cor canônica do
-          <i>jogador</i> (<code>core/led_control.player_slot_color</code>).<br><br>
-          <b>O microfone segue o transporte</b>, e isso não é escolha: pelo cabo ele vem pela
-          placa de áudio do próprio aparelho; pelo rádio, pela ponte do Hefesto. As
-          {num(CUSTO_DO_MIC)} turnos que ele custa no rádio são <b>consequência</b>, e aparecem
-          na régua de Desempenho.
-        </span></span>
-        <span class="conta">{len(MESA)} na mesa <span class="pt">•</span> {len(NO_CABO)} no cabo <span class="pt">•</span> {len(NO_RADIO)} no rádio</span>
-      </div>
-      <div class="quadro-corpo">
-        <input type="radio" name="gc" id="gc-todos" class="gc-r">
-{chr(10).join(f"""        <input type="radio" name="gc" id="gc-{c["pref"]}" class="gc-r"{" checked" if c["alvo"] else ""}>"""
-              for c in MESA)}
-        <div class="gc">
-{chr(10).join(linha_do_controle(c) for c in MESA)}
-        </div>
-      </div>
-    </div>
-
-    <!-- ======== 2. ESTÁ TUDO CERTO? — juízo à esquerda, conserto à direita ======== -->
-    <div class="quadro">
-      <div class="quadro-topo">
-        <span class="quadro-titulo">Está tudo certo?</span>
+        <label class="quadro-titulo" for="cx8-2">Check-up</label>
         <span class="ajuda">?<span class="dica">
           Um exame da <b>sala</b>: em que entradas os aparelhos estão, quanta energia elas
           dão, e quem mais está falando no rádio perto do seu adaptador.<br><br>
@@ -1992,11 +1975,47 @@ MIOLO = f'''
       </div>
     </div>
 
+    <!-- ======== 2. GESTÃO CONTROLES — acordeão, um por controle ligado ======== -->
+    <div class="quadro">
+      <input class="abre" type="checkbox" id="cx8-1">
+      <div class="quadro-topo">
+        <label class="quadro-titulo" for="cx8-1">Gestão Controles</label>
+        <span class="ajuda">?<span class="dica">
+          Uma linha por controle <b>ligado</b>, e só eles. O que a <b>fita do topo</b> aponta vem
+          aberto; clicar em outro abre ele e fecha os demais, e a fita acompanha. Clicar no que
+          já está aberto volta para <b>Todos</b>, com os {len(MESA)} abertos.<br><br>
+          <b>A linha fechada</b> diz quem é o controle e resume o que importa: o que o jogo
+          <b>vê como</b> (a máscara, que se escolhe na aba <b>Jogar</b>), o <b>microfone</b> e a
+          <b>bateria</b>. Máscara e bateria são leitura aqui — quem as governa é outra aba.<br><br>
+          <b>A borda</b> é a cor do plástico que o Hefesto <b>leu do aparelho</b>. Quando a
+          leitura não aconteceu, a borda fica <b>neutra</b> — porque uma borda colorida seria
+          uma cor que ninguém leu. O <b>desenho</b> continua na
+          cor que o resto do Hefesto já conhece: quem responde pela leitura é a borda, e é só
+          ela que fica cinza. <b>A barra de luz</b> não é a cor do plástico: é a cor canônica do
+          <i>jogador</i> (<code>core/led_control.player_slot_color</code>).<br><br>
+          <b>O microfone segue o transporte</b>, e isso não é escolha: pelo cabo ele vem pela
+          placa de áudio do próprio aparelho; pelo rádio, pela ponte do Hefesto. As
+          {num(CUSTO_DO_MIC)} turnos que ele custa no rádio são <b>consequência</b>, e aparecem
+          na régua de Desempenho.
+        </span></span>
+        <span class="conta">{len(MESA)} na mesa <span class="pt">•</span> {len(NO_CABO)} no cabo <span class="pt">•</span> {len(NO_RADIO)} no rádio</span>
+      </div>
+      <div class="quadro-corpo">
+        <input type="radio" name="gc" id="gc-todos" class="gc-r">
+{chr(10).join(f"""        <input type="radio" name="gc" id="gc-{c["pref"]}" class="gc-r"{" checked" if c["alvo"] else ""}>"""
+              for c in MESA)}
+        <div class="gc">
+{chr(10).join(linha_do_controle(c) for c in MESA)}
+        </div>
+      </div>
+    </div>
+
     <!-- ======== 3. RÁDIO E ADAPTADORES — o inventário e, embaixo e separado,
          o Desempenho. ======== -->
     <div class="quadro">
+      <input class="abre" type="checkbox" id="cx8-3">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Rádio e adaptadores</span>
+        <label class="quadro-titulo" for="cx8-3">Rádio e adaptadores</label>
         <span class="ajuda">?<span class="dica">
           <b>{MAPEAR_ENTRADAS}</b> abre o desenho do seu gabinete e numera as entradas —
           depois disso o Hefesto para de dizer "porta 3-2.1" e passa a dizer "Entrada 9". É lá

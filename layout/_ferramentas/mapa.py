@@ -352,7 +352,22 @@ def controle(pecas):
     # ids únicos, para o desenho conviver com os glifos da lista à direita
     for i in sorted(set(re.findall(r'id="([^"]+)"', x)), key=len, reverse=True):
         x = (x.replace(f'id="{i}"', f'id="mp-{i}"')
-              .replace(f"url(#{i})", f"url(#mp-{i})").replace(f"#{i} ", f"#mp-{i} "))
+              .replace(f"url(#{i})", f"url(#mp-{i})").replace(f"#{i} ", f"#mp-{i} ")
+              # AS TRÊS FORMAS COM ASPAS, e é por elas que o touchpad sumia.
+              # Medido em 30/08/2026: ela perguntou *"pq a área do touchpad
+              # sumiu?"* e a resposta estava aqui. O editor dela escreve o
+              # filtro de contorno como `style="filter: url(&quot;#outline-
+              # filter-1&quot;)"` — com aspas ESCAPADAS dentro do atributo. O
+              # `url(#id)` acima não casa essa forma, então o `id` ganhava o
+              # prefixo `mp-` e a REFERÊNCIA não: ela ficava pendurada, o filtro
+              # nunca se aplicava, e o `g#mp-touchpad` (410x231px, `fill:#000`,
+              # `stroke:none`) caía no preenchimento preto cru sobre fundo
+              # escuro. A peça estava lá o tempo todo — invisível.
+              # Nas dez abas o defeito não aparece porque lá o id NÃO é
+              # prefixado, e a referência crua resolve.
+              .replace(f"url(&quot;#{i}&quot;)", f"url(&quot;#mp-{i}&quot;)")
+              .replace(f'url("#{i}")', f'url("#mp-{i}")')
+              .replace(f"url('#{i}')", f"url('#mp-{i}')"))
     # O `data-colorway` JÁ VEM do arquivo (scripts/gerar_cores_do_dualsense.py o
     # escreve, para o SVG abrir colorido sozinho). Escrever um segundo aqui daria
     # dois atributos iguais na mesma tag, e o navegador ignora o segundo em
@@ -790,7 +805,7 @@ def main():
      conteúdo cai de 864 para 832 px, cabe nas duas colunas, e a página fecha
      com ZERO de rolagem (era 12 px). */
   .grupo + .grupo{{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-sutil)}}
-  .grupo-rot{{font-size:10.5px;color:var(--comment);text-transform:uppercase;
+  .grupo-rot{{font-size:10.5px;color:var(--comment);
               letter-spacing:.6px;margin-bottom:6px}}
   .item{{display:flex;align-items:center;gap:11px;padding:4px 9px;border-radius:7px;
          border:1px solid transparent;color:var(--texto-suave);cursor:default}}
@@ -802,7 +817,7 @@ def main():
   .item .ap{{font-size:11px;color:var(--texto-mudo)}}
   .item .id{{margin-left:auto;font-size:10.5px;color:var(--texto-mudo)}}
   .item .prop{{font-size:9.5px;color:var(--orange);border:1px solid var(--orange);
-               border-radius:4px;padding:0 4px;text-transform:uppercase;letter-spacing:.4px}}
+               border-radius:4px;padding:0 4px;}}
   .nota-peca{{flex:0 0 15px;width:15px;height:15px;border-radius:50%;font-size:10px;
               line-height:13px;text-align:center;border:1px solid var(--border-forte);
               color:var(--texto-mudo);cursor:help;font-family:var(--m)}}
@@ -818,7 +833,7 @@ def main():
   /* O RÓTULO DOS TRÊS BLOCOS COMEÇA NO MESMO x, e os três terminam no mesmo y.
      O vão se cura na ALTURA — os controles têm todos 28px —, nunca com
      `space-between` entre eles: ela reprovou isso com todas as letras. */
-  .prova-rot{{font-size:10.5px;color:var(--comment);text-transform:uppercase;
+  .prova-rot{{font-size:10.5px;color:var(--comment);
               letter-spacing:.6px;line-height:1}}
   .prova .linha{{display:flex;gap:6px;align-items:center}}
   .ct{{height:28px;background:var(--elevated);color:var(--fg);
@@ -839,6 +854,19 @@ def main():
   .rodape{{padding:12px 20px;border-top:1px solid var(--border-sutil);
            font-size:11.5px;color:var(--texto-mudo);display:flex;gap:22px;flex-wrap:wrap}}
   .rodape b{{color:var(--texto-suave)}}
+  /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: *"ok temos um botão pra vir
+     pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
+     devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
+     mockup abre como ARQUIVO, onde nem sempre há um.
+     O destino não é chute: `grep -l mapa-do-controle.html layout/*.html`
+     devolve UMA aba, a Navegação. Cada mapa tem uma origem só. */
+  .voltar{{position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
+           padding:5px 11px;border-radius:7px;text-decoration:none;
+           border:1px solid var(--border-forte);background:var(--panel);
+           color:var(--texto-suave);font-size:12px}}
+  .voltar:hover{{border-color:var(--purple);color:var(--fg)}}
+  .topo{{position:relative;padding-left:132px}}
+
 
 {chr(10).join("  " + r for r in regras)}
 </style>
@@ -847,6 +875,7 @@ def main():
 
 <div class="cx">
   <div class="topo">
+    <a class="voltar" href="06-navegacao.html" title="Volta para a aba Navegação, que é de onde este mapa se abre.">← Voltar</a>
     <h1><span class="p">O mapa do controle</span> — a fonte da verdade das peças</h1>
     <div class="sub">passe o mouse num glifo e a peça acende no desenho · passe na peça e o glifo acende</div>
   </div>

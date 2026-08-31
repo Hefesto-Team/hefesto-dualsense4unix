@@ -38,14 +38,25 @@ CSS = """
   .lanc{border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:11px 13px}
   .lanc.chega{border-color:rgba(80,250,123,.28)}
   .lanc.impede{border-color:var(--orange)}
-  .lanc.ausente{opacity:.5}
+  /* O CARTÃO "não achei" DEIXOU DE USAR `opacity` — 30/08/2026, mesma cura da
+     `.fita.inerte` (topo.html) e pelo mesmo motivo medido: com `opacity:.5` o
+     corpo caía a 2,55:1, o selo NÃO ACHEI a 1,95:1 e os dois botões a 3,37 e
+     3,55:1 — e nenhuma régua que leia `color` enxergava, porque a opacidade
+     estava no PAI. Este cartão não é controle desabilitado: ele é informação
+     viva ("instale e clique em Procurar de novo"), e informação se lê. */
+  .lanc.ausente{background:transparent}
+  .lanc.ausente .lanc-nome{color:var(--texto-suave)}
+  .lanc.ausente .lanc-diz,
+  .lanc.ausente .lanc-jogos{color:var(--comment)}
   .lanc-topo{display:flex;align-items:center;gap:9px;margin-bottom:7px}
   .lanc-nome{font-size:12.5px;font-weight:600;color:var(--fg)}
   .lanc-selo{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;
              font-family:'JetBrains Mono',monospace}
   .lanc-selo.ok{background:var(--green);color:var(--app-bg)}
   .lanc-selo.warn{background:var(--orange);color:var(--app-bg)}
-  .lanc-selo.off{background:var(--border-forte);color:var(--texto-mudo)}
+  /* o selo apagado ficava a 3,47:1 sobre o próprio fundo — o texto claro
+     dá 9,3:1 e o selo continua lendo como "desligado" pelo fundo cinza. */
+  .lanc-selo.off{background:var(--border-forte);color:var(--texto-suave)}
   .lanc-jogos{margin-left:auto;font-size:11px;color:var(--texto-mudo);
               font-family:'JetBrains Mono',monospace}
   /* DUAS LINHAS CRAVADAS, e é `height` — não `min-height`.

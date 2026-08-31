@@ -88,13 +88,15 @@ TIQUE_MS = 100
 #: é dano. O que o clique faz hoje é chegar aqui, ser registrado e ecoar.
 DONOS_DOS_GESTOS = {
     "modo": "app/actions/mode_transition.apply_mode — o gesto de modo tem dono "
-    "e funciona na janela de hoje. O que NÃO tem dono é o quarto botão, "
-    "'Desligado': `mode_of_state` devolve três valores e nunca um quarto "
-    "(painel.MODOS_DA_TELA declara o porquê). MIGRA-JOGAR-06, pergunta dela.",
+    "e funciona na janela de hoje, nos TRÊS: `gamepad` (a posição Ligado do "
+    "interruptor), `native` (a posição Desligado) e `desktop` (o chip "
+    "Navegação). Desde 31/08 a fileira desta tela e o `mode_transition.MODES` "
+    "são o mesmo conjunto — não sobra botão sem dono nem modo sem lugar.",
     "degrau": "integrations/ponte_escada + ponte_tentativa — a escada existe e "
     "SOBE sozinha, mas ninguém a fixa pela tela: não há método de IPC que diga "
-    "'use este degrau'. E dois dos cinco chips não são degrau nenhum "
-    "(painel.chips_sem_degrau). MIGRA-JOGAR-07, pergunta dela.",
+    "'use este degrau'. Dos cinco chips, um não tem dono NENHUM (Point And "
+    "Click, `painel.chips_sem_dono`) e a Navegação tem escritor sem ser degrau "
+    "(`painel.chips_sem_degrau`). MIGRA-JOGAR-07, pergunta dela.",
     "mascara": "gamepad.emulation.set (daemon/ipc_handlers.py) pela ponte "
     "app/ipc_bridge — MAS ele NÃO aceita `uniq`: a máscara viva é uma só para a "
     "mesa toda, e esta tela mostra três chips POR CONTROLE. E 'Nintendo Pro' "
@@ -223,6 +225,48 @@ window.HEF = (function(){
   }
   function cartao(uniq){ return q('.cartao[data-controle="'+uniq+'"]'); }
 
+  // A POSIÇÃO DO INTERRUPTOR — E ELA SEGUE O DAEMON, NÃO O CLIQUE (31/08/2026).
+  //
+  // O mockup deixou de usar `<button>` na fileira de modos: agora são dois
+  // `radio` escondidos com `<label>` por cima, que é como as dez abas abrem
+  // seção sem uma linha de JavaScript. O `ev.preventDefault()` do `ligarGestos`
+  // era inofensivo num `<button>`; num `<label>` ele IMPEDE o rádio de mudar.
+  //
+  // A CURA NÃO É TIRAR O `preventDefault`, e nesta aba menos ainda: ela não
+  // aplica NADA (o cabeçalho o diz — o único método pronunciado é
+  // `daemon.state_full`). Se o clique abrisse a seção sozinho, a tela mostraria
+  // "Modo Nativo" com o daemon em `gamepad` — o F7 desta casa. Quem move o
+  // rádio é a pintura, e a pintura fala pelo daemon.
+  //
+  // O ID DO RÁDIO NÃO É DIGITADO AQUI: sai do `for` do próprio rótulo
+  // (`htmlFor`), que é o que o gerador escreve — nem em comentário ele entra, e
+  // há régua na suíte conferindo. E a REGRA de quais modos são "Ligado" também
+  // não mora aqui: chega pronta em `p.hefesto_ligado`, de
+  // `painel.hefesto_ligado`, porque o Hefesto ligado é `gamepad` OU `desktop`.
+  function radioDoLado(qual){
+    const rot = q('.hef-pos.' + qual);
+    return rot ? document.getElementById(rot.htmlFor) : null;
+  }
+  function lado(p){
+    // `null` = o daemon não respondeu. Empurrar o rádio para "desligado" aí
+    // seria a tela responder "Desligado" sem ter perguntado a ninguém.
+    if(p.hefesto_ligado !== true && p.hefesto_ligado !== false) return 0;
+    const rd = radioDoLado(p.hefesto_ligado ? 'ligado' : 'desligado');
+    if(!rd || rd.checked) return 0;
+    rd.checked = true;
+    return 1;
+  }
+  // O QUE A TELA FICOU MOSTRANDO — lido do DOM DEPOIS de escrever, e não o que
+  // se PEDIU. Relatar a intenção é como uma régua dá verde sobre uma pintura que
+  // não pintou: a mordida (arrancar o `lado`) só aparece na leitura de volta,
+  // como o rádio parado onde o mockup nasceu.
+  function ladoNaTela(){
+    const l = radioDoLado('ligado'), d = radioDoLado('desligado');
+    if(l && l.checked) return 'Ligado';
+    if(d && d.checked) return 'Desligado';
+    return 'SEM INTERRUPTOR';
+  }
+
   function pintaCartao(uniq, d){
     const c = cartao(uniq); if(!c) return 0; let n=0;
     n += txt(q('[data-campo="jogador"]', c), d.jogador);
@@ -256,6 +300,7 @@ window.HEF = (function(){
       n += cls(b,'on', b.dataset.modo===p.modo);
       n += trava(b, !!p.modos_travados[b.dataset.modo], p.modos_travados[b.dataset.modo]);
     }
+    n += lado(p);
     for(const s of qa('[data-degrau]')){
       n += cls(s,'on', s.dataset.degrau===p.degrau);
       n += inerte(s, !!p.degraus_travados[s.dataset.degrau], p.degraus_travados[s.dataset.degrau]);
@@ -271,8 +316,14 @@ window.HEF = (function(){
     // QUANTOS VALORES A PINTURA ESCREVEU, de volta ao Python. Sem isto uma
     // pintura que não acha NADA passaria calada — que é como a fita viva morreu
     // em 27/08.
-    if(n !== window.__hefN){ window.__hefN = n;
-      manda({gesto:'pintou', valores:n, ms: Math.round((performance.now()-t0)*100)/100}); }
+    // A CHAVE CARREGA O LADO DO INTERRUPTOR, e não só a contagem: o rádio só é
+    // escrito quando MUDA, então `n` volta ao valor de antes no tique seguinte —
+    // e com `n` sozinho a virada do interruptor passaria calada, que é como a
+    // fita viva morreu em 27/08.
+    const marca = n + ':' + p.hefesto_ligado;
+    if(marca !== window.__hefN){ window.__hefN = marca;
+      manda({gesto:'pintou', valores:n, lado:ladoNaTela(),
+             ms: Math.round((performance.now()-t0)*100)/100}); }
     return n;
   }
 
@@ -323,6 +374,14 @@ window.HEF = (function(){
         manda({gesto:'modo', modo:b.dataset.modo});
       });
     }
+    // A NAVEGAÇÃO TEM OS DOIS ENDEREÇOS — `data-degrau="navegacao"` E
+    // `data-modo="desktop"` —, e é o `data-ligado` acima que decide qual ouvinte
+    // ela ganha: o laço dos modos passa primeiro e a marca, e este `continue` a
+    // deixa de fora. MEDIDO em 31/08: clicar nela produz UM gesto, `modo:
+    // desktop`, que é o dono real dela (`apply_mode('desktop')`) — e não um
+    // segundo gesto `degrau` que ninguém atende (não há IPC que fixe degrau).
+    // O desfecho está certo; a razão é frágil. Se alguém trocar a marca por uma
+    // por laço, a Navegação passa a mandar dois gestos, e o segundo é órfão.
     for(const s of qa('[data-degrau]')){
       if(s.dataset.ligado) continue; s.dataset.ligado='1';
       s.addEventListener('click', ev=>{
@@ -397,16 +456,31 @@ window.HEF = (function(){
 'HEF-PRONTO'
 """
 
-#: A folha que dá cara ao "não dá" dos chips da escada. Ela NÃO está no mockup
-#: de propósito: o desenho aprovado não tem o estado "este chip não tem dono" —
-#: ele é a consequência de a escada ter quatro degraus e a tela cinco, e é
-#: TELA NOVA, logo palavra dela (PROVA-DE-TELA-01). Enquanto ela não a vê, o
-#: sinal é o mais discreto que diz a verdade: metade da tinta e o cursor de
-#: "não clique". A frase do porquê está no `title`.
-FOLHA_DO_SEM_DONO = (
-    ".degrau.sem-dono{opacity:.45;cursor:not-allowed}"
-    ".seg button:disabled{opacity:.45;cursor:not-allowed}"
-)
+# ---------------------------------------------------------------------------
+# LÁPIDE — a FOLHA_DO_SEM_DONO, injetada de 29/08 a 31/08/2026
+# ---------------------------------------------------------------------------
+# ELA EXISTIA PORQUE O MOCKUP NÃO TINHA O ESTADO "este chip não tem dono": era
+# consequência de a escada ter quatro degraus e a tela cinco, e desenhá-lo é
+# palavra dela (PROVA-DE-TELA-01). Enquanto ela não via, esta aba injetava
+#
+#     .degrau.sem-dono{opacity:.45;cursor:not-allowed}
+#     .seg button:disabled{opacity:.45;cursor:not-allowed}
+#
+# 31/08/2026 ELA VIU, E DESENHOU — e o desenho é melhor que a injeção, de um
+# jeito MEDIDO: `.degrau.sem-dono` agora é borda tracejada e cor explícita, e
+# `.seg button:disabled` (no `topo.html`, das dez abas) é borda e cor, os dois
+# **sem `opacity`**. É a lição da `.fita.inerte`: a opacidade mora no ANCESTRAL,
+# o texto cai para perto de 2:1, e toda régua de contraste que lê `color` fica
+# cega a isso.
+#
+# CONTINUAR INJETANDO SERIA DESFAZER A CURA: a regra desta folha chega DEPOIS
+# das do documento e vence no desempate, então o `opacity:.45` voltaria por cima
+# do desenho — e a régua de contraste voltaria a dar verde sobre texto ilegível.
+# Fora que `.seg` não tem uma única marcação na aba Jogar (`grep -c 'class="seg"'
+# layout/01-jogar.html` → 0): a segunda linha já não pintava nada.
+#
+# NÃO REINTRODUZA ESTA FOLHA. Se um estado de tela faltar, ele se DESENHA no
+# gerador, que é onde ela o vê.
 
 
 def _leitor_duble(codigos: str | None) -> Any:
@@ -448,6 +522,10 @@ class Janela:
         self.remontagens = 0
         self.gestos: list[dict] = []
         self.valores: list[int] = []
+        #: Os lados que a TELA mostrou, na ordem, lidos do DOM. É a régua da
+        #: cura de 31/08: com o `hefesto_ligado` arrancado esta lista trava num
+        #: lado só, porque o rádio fica onde o mockup nasceu.
+        self.lados_do_interruptor: list[str] = []
         #: O ECO, e ele mora SÓ AQUI — na memória desta janela, nunca no perfil
         #: dela. É o que faz o clique continuar valendo no tique seguinte em vez
         #: de o desenho voltar sozinho meio décimo depois.
@@ -497,11 +575,6 @@ class Janela:
                 Gtk.main_quit()
                 return
             self.pronto = True
-            self.ponte.rodar(
-                "(function(){var s=document.createElement('style');"
-                f"s.textContent={json.dumps(FOLHA_DO_SEM_DONO)};"
-                "document.head.appendChild(s);})()"
-            )
             self._tique()
             GLib.timeout_add(TIQUE_MS, self._tique)
             if self.args.prova_gesto:
@@ -537,21 +610,40 @@ class Janela:
         `el.click()` percorre o MESMO caminho de eventos do clique do rato —
         clicar por coordenada é a armadilha que esta casa já pagou duas vezes.
 
-        A ORDEM É A MORDIDA. O chip "Teclado + Mouse" é clicado PRIMEIRO, e ele
-        tem de produzir ZERO gestos: é o degrau que a `ESCADA` não tem, e a
-        pintura o marcou inerte. Uma régua que só clicasse os cinco em qualquer
-        ordem não distinguiria "sem dono" de "sem ouvinte".
+        A ORDEM É A MORDIDA. O **Point And Click** é clicado PRIMEIRO, e ele tem
+        de produzir ZERO gestos: é o único chip que não tem dono nenhum
+        (`painel.chips_sem_dono`), e a pintura o marcou inerte. Uma régua que só
+        clicasse os cinco em qualquer ordem não distinguiria "sem dono" de "sem
+        ouvinte" — que é o defeito que deu verde sobre dois botões mortos em
+        29/08.
+
+        OS DOIS ENDEREÇOS QUE ESTE ROTEIRO PERDEU, e por quê: `[data-degrau=
+        "desktop"]` e `[data-modo="desligado"]` deixaram de existir no desenho
+        de 31/08 — o primeiro virou `navegacao`, o segundo virou a posição
+        Desligado do interruptor (`native`). Clicar num `null` levanta
+        `TypeError` dentro do WebKit e a régua morre calada; há régua na suíte
+        conferindo cada endereço daqui contra o `layout/01-jogar.html`.
         """
         roteiro = [
-            (1200, "document.querySelector('[data-degrau=\"desktop\"]').click()"),
-            (1500, "document.querySelector('[data-modo=\"desligado\"]').click()"),
-            (1800, "document.querySelector('[data-modo=\"native\"]').click()"),
-            (2100, "document.querySelector('[data-degrau=\"steam\"]').click()"),
-            (2400, "document.querySelectorAll('.cartao[data-controle]')[1].click()"),
-            (2700, "document.querySelectorAll('.cartao[data-controle]')[1]"
-                   ".querySelector('[data-mascara=\"Xbox 360\"]').click()"),
-            (3000, "document.querySelector('[data-gesto=\"reconectar\"]').click()"),
-            (3300, "document.querySelector('.r-aplicar').click()"),
+            (1200, "document.querySelector('[data-degrau=\"pointclick\"]').click()"),
+            (1500, "document.querySelector('[data-modo=\"native\"]').click()"),
+            (1800, "document.querySelector('[data-degrau=\"steam\"]').click()"),
+            # O ÚLTIMO CARTÃO, E NÃO O `[1]`. O mockup tem quatro cartões, mas a
+            # remonta os troca pela MESA DELA: com um controle só na mesa o
+            # `[1]` é `undefined`, e `.click()` nele levanta `TypeError` — a
+            # régua morre calada no meio do roteiro, e o que vem depois nunca é
+            # clicado. `length-1` é o último, que existe sempre que há mesa.
+            (2100, "(function(c){c[c.length-1].click()})"
+                   "(document.querySelectorAll('.cartao[data-controle]'))"),
+            (2400, "(function(c){c[c.length-1]"
+                   ".querySelector('[data-mascara=\"Xbox 360\"]').click()})"
+                   "(document.querySelectorAll('.cartao[data-controle]'))"),
+            (2700, "document.querySelector('[data-gesto=\"reconectar\"]').click()"),
+            (3000, "document.querySelector('.r-aplicar').click()"),
+            # E O INTERRUPTOR VOLTA. Sem este passo a prova mostraria o clique
+            # de ida e nada do retorno — e "vai e não volta" é indistinguível de
+            # "travou lá".
+            (3300, "document.querySelector('[data-modo=\"gamepad\"]').click()"),
         ]
         for ms, script in roteiro:
             GLib.timeout_add(ms, lambda s=script: (self.ponte.rodar(s), False)[1])
@@ -727,14 +819,27 @@ class Janela:
             # desktop, o chip destrava sozinho.
             "modos_travados": {m.chave: m.porque_nao for m in painel.MODOS_DA_TELA
                                if not m.tem_leitor},
+            # O SEM DONO NÃO É O SEM DEGRAU, e pintar um pelo outro mente na
+            # tela. `chips_sem_degrau()` devolve a **Navegação**, que TEM
+            # escritor (`apply_mode('desktop')`) e funciona hoje — marcá-la
+            # inerte seria a tela dizendo "não dá" sobre um botão que dá. Quem
+            # responde pela marca é `chips_sem_dono()`: sem degrau na ESCADA E
+            # sem modo no produto. Hoje devolve um só, o Point And Click.
             "degraus_travados": {
                 c.chave: (
-                    "Este degrau não existe na escada do produto "
-                    "(integrations/ponte_escada.ESCADA tem quatro). "
-                    "MIGRA-JOGAR-07 — a pergunta é dela."
+                    f"“{c.rotulo}” ainda não tem quem o atenda no Hefesto: não é "
+                    "degrau da escada (integrations/ponte_escada.ESCADA) nem modo "
+                    "do produto (mode_transition.MODES). Está na tela por decisão "
+                    "dela, de 31/08, e marcado por isto."
                 )
-                for c in painel.chips_sem_degrau()
+                for c in painel.chips_sem_dono()
             },
+            # A POSIÇÃO DO INTERRUPTOR, DERIVADA — nunca a comparação de um botão
+            # só. O Hefesto ligado é `gamepad` OU `desktop` (a Navegação); um a
+            # um, com o modo vivo em `desktop` as duas posições ficam apagadas e
+            # a tela fica MUDA, que parece defeito. Vem do `state` e não do eco:
+            # esta aba não aplica nada, e a seção que abre é a do daemon.
+            "hefesto_ligado": painel.hefesto_ligado(state),
             "degrau": self.eco_degrau or painel.degrau_vivo(state, None) or "",
             "atencao_conta": painel.texto_da_conta(len(avisos)),
             "pendente": self.pendente,
@@ -754,7 +859,19 @@ class Janela:
         gesto = str(o.get("gesto") or "")
         if gesto == "pintou":
             self.valores.append(int(o.get("valores") or 0))
-            print(f'[pintura] {o.get("valores")} valores escritos · {o.get("ms")} ms na página')
+            # O LADO É LIDO DO DOM, e é a régua da cura de 31/08: sem
+            # `painel.hefesto_ligado` o rádio fica onde o mockup nasceu e a tela
+            # abre a seção errada — "Modo Nativo" com o daemon em `gamepad`, ou o
+            # contrário. Sem esta leitura de volta a mordida não teria como
+            # aparecer no relato.
+            lado = str(o.get("lado") or "?")
+            # A LISTA GUARDA AS VIRADAS, não os valores distintos: com um `set`
+            # de dois elementos "foi e voltou" e "foi e ficou" contam igual, e é
+            # a volta que prova que a tela SEGUE o daemon em vez de travar.
+            if not self.lados_do_interruptor or lado != self.lados_do_interruptor[-1]:
+                self.lados_do_interruptor.append(lado)
+            print(f'[pintura] {o.get("valores")} valores escritos · '
+                  f'{o.get("ms")} ms na página · o interruptor mostra: {lado}')
             return
         print(f"[gesto] {gesto} {json.dumps({k: v for k, v in o.items() if k != 'gesto'})}")
         print(f"         dono real: {DONOS_DOS_GESTOS.get(gesto, SEM_DONO)}")
@@ -806,6 +923,8 @@ class Janela:
             f"voltas: {self.voltas} · remontagens: {self.remontagens} · "
             f"gestos: {len([g for g in self.gestos if g.get('gesto') != 'pintou'])}",
             f"valores escritos por pintura: {sorted(set(self.valores)) or 'NENHUM'}",
+            "o interruptor, LIDO DA TELA, na ordem: "
+            + (" → ".join(self.lados_do_interruptor) or "NUNCA PINTADO"),
             resumo("IPC ", self.custos_ipc),
             resumo("tela", self.custos_tela),
             resumo("volta", self.custos),

@@ -13,10 +13,99 @@
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
-    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
+    /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
+       Ela apontou o sintoma três vezes, em três abas: *"os campos de importância
+       tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
+       de campos e essa fonte tem um contraste horrível"*, *"em todas as abas isso
+       tem que ser visto infelizmente"*.
+       MEDIDO nas dez abas, contraste WCAG de todo texto contra o fundo real:
+       390 elementos abaixo do limiar, e DUAS cores respondem por 93% deles —
+       `--comment` 217 vezes a 3,03:1 e `--texto-mudo` 146 vezes a 4,47:1.
+       O limiar para texto pequeno é 4,5:1; as duas ficavam abaixo, uma delas
+       por muito. Não era defeito de aba nenhuma: era a paleta.
+       O QUE MUDOU É SÓ A LUMINÂNCIA. O matiz e a saturação de cada uma
+       continuam os mesmos — a cara da interface não muda, o texto aparece:
+         --comment    #6272a4 -> #8896c4   3,03:1 -> 4,89:1
+         --texto-mudo #8b8fa8 -> #9a9eb8   4,47:1 -> 5,40:1
+       Os hex de origem eram do GUIA_IMPLEMENTACAO.md, e o `--comment` de lá é a
+       cor de COMENTÁRIO do Dracula — feita para código, onde apagar é o efeito
+       desejado. Usá-la em texto de interface é que era o engano. */
+    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     --sel-bg:rgba(189,147,249,0.16);
+    /* O RÓTULO DE CAMPO TEM COR DE RÓTULO, NÃO DE COMENTÁRIO.
+       `.sec-rot` nascia `var(--comment)` (#6272a4) nas SEIS abas que a usam, e
+       ela leu o resultado pelo que ele é: *"os campos de importância tipo cor,
+       brilho, selecione player tão invisíveis"*. #6272a4 sobre o `--panel`
+       (#282a36) dá contraste 2,6:1 — abaixo do 4,5:1 que texto pequeno pede.
+       O roxo é a cor de destaque DA CASA, medida: as dez abas pintam o
+       `.quadro-titulo` de #bd93f9, sem exceção.
+       Um TOKEN e não um hex por aba: assim a Vibração troca o dela numa linha
+       (ela pediu verde lá) sem ninguém digitar cor em seis arquivos — que é
+       exatamente como esta regra virou seis cópias divergentes.
+
+       VERDE, E NÃO ROXO — decisão dela, 30/08: *"deixa verde os nomes"*
+       (Iluminação) e *"os nomes das seções tem que ser verde"* (Gatilhos). Ela
+       já pedira verde na Vibração horas antes; agora vale para as dez, e a
+       exceção escopada em `.vib` some por ser redundante.
+       O roxo continua sendo a cor do TÍTULO do quadro (`.quadro-titulo`, as dez
+       pintam #bd93f9). São dois papéis: o título nomeia a ABA, o rótulo nomeia a
+       LINHA. Cores diferentes é o que os separa. */
+    --rot-campo:var(--green);
+    /* ---------------------------------------------------------------
+       A ESCALA DA BORDA ESTRUTURAL — UMA SÓ, 31/08/2026.
+
+       PEDIDO DELA, vendo Gatilhos, Iluminação e Vibração: *"é preciso remover as
+       bordas sobrando de tudo e deixar as bordas menos perceptíveis mas
+       presentes e modernas de forma que não roube a atenção de forma
+       negativa"*; e sobre a Perfis: *"nessa aba aqui as bordas tão horríveis"*.
+
+       O DEFEITO NÃO ERA UMA BORDA — ERA A FAIXA INTEIRA. Censo do DOM das
+       quatro abas, contraste de cada borda contra o fundo REAL atrás dela: a
+       borda ESTRUTURAL ia de **1,21:1** (`--border-sutil`, que sumia) a
+       **4,89:1** (`.btn`, que usava `--comment`) na MESMA tela — quatro vezes
+       de diferença. É isso que fazia a Gatilhos ler como GRADE: a divisória
+       horizontal gritava a 3,37:1 enquanto a vertical, encostada nela, sumia a
+       1,21:1. Não havia peso demais nem de menos; havia peso NENHUM em comum.
+
+       O VALOR, E DE ONDE ELE SAI. Um só, e ele é o MEIO EM LUMINÂNCIA entre os
+       dois extremos que ela mesma julgou: #343746 tem L 23,9% e ela o chamou de
+       invisível em 30/08; #767a92 tem L 51,8% e é o que ela chamou de excessivo
+       hoje. L 38% é o meio exato, e o matiz e a saturação continuam os da
+       família (H 231, S 13%) — muda só a luminância, como em 30/08.
+
+         --linha  #53576f   2,01:1 sobre --panel · 2,23:1 sobre --app-bg
+
+       São **40% menos** que a linha de 30/08 (3,37:1) e **66% mais** que a
+       borda que sumia (1,21:1). O rótulo verde ao lado dela está a 10,4:1 e o
+       texto mudo a 5,40:1: a linha recua diante dos dois, que é o que "presente
+       e não rouba a atenção" quer dizer em número.
+
+       QUEM NÃO LÊ DAQUI, e é o ponto: a borda que carrega INFORMAÇÃO. A cor do
+       plástico (D-A-BORDA-E-A-IDENTIDADE-DA-PECA), o estado (`.on`,
+       `.aba.ativa`, `:hover`) e o foco continuam com a cor deles — esmaecer
+       essas é apagar o dado, não o enfeite.
+       --------------------------------------------------------------- */
+    --linha:#53576f;
+    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido dela: *"linha abaixo de cada
+       campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
+       e, quando a viu: *"as linhas divisórias em todas as páginas tão
+       invisíveis (…) a primeira coluna serve como nome da linha e a divisória
+       entre eles tem que estar clara"*.
+
+       ELA ESTAVA CERTA, E O NÚMERO ERA BRUTAL. `--border-sutil` (#343746) sobre
+       o painel (#282a36) dá **1,21:1** — a linha existia no DOM e não na tela.
+       `--border-forte` também não servia: 1,56:1.
+
+       O QUE CADUCOU EM 31/08, e é a metade seguinte da mesma medição: o #767a92
+       escolhido em 30/08 mirava a WCAG 1.4.11 (3:1 para componente gráfico) e
+       chegava a **3,37:1**. Só que 1.4.11 é o piso do que IDENTIFICA um
+       controle — um traço que só separa duas células não precisa dele, e a esse
+       peso ele passou a competir com o que separa. Ela viu o resultado em três
+       abas e pediu o contrário. O nome fica (seis abas o escrevem); quem manda
+       agora é a escala acima, e ela vale para as dez de uma vez. */
+    --rot-linha:var(--linha);
     /* cores de plástico — a borda diz QUAL peça é (D-A-BORDA-E-A-IDENTIDADE-DA-PECA) */
     /* OS CINCO PLÁSTICOS SÃO GERADOS — `monta.py` os reescreve a cada geração,
        lendo o `<style>` que `scripts/gerar_cores_do_dualsense.py` pôs no SVG. Os
@@ -57,7 +146,7 @@
   .janela{
     width:1180px; height:var(--alt-janela); max-width:100%; background:var(--app-bg);
     display:flex; flex-direction:column;
-    border:1px solid var(--border-sutil); border-radius:10px; overflow:hidden;
+    border:1px solid var(--linha); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
   }
 
@@ -66,7 +155,7 @@
   .logo{
     width:46px;height:46px;border-radius:50%;flex:0 0 46px;
     background:radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%);
-    border:1px solid var(--border-forte);
+    border:1px solid var(--linha);
     display:flex;align-items:center;justify-content:center;font-size:20px;
   }
   h1{font-size:19px;font-weight:700;letter-spacing:.2px}
@@ -86,14 +175,41 @@
   .perfil-ativo{
     margin-left:auto;display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--border-forte);background:var(--panel);
+    border:1px solid var(--linha);background:var(--panel);
   }
-  .pa-rot{font-size:10.5px;color:var(--comment);text-transform:uppercase;letter-spacing:.5px}
+  .pa-rot{font-size:10.5px;color:var(--comment);}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
-  .fita.inerte{opacity:.42}
+  /* A FITA INERTE DEIXOU DE USAR `opacity` — 30/08/2026, e a troca é de
+     MECANISMO, não de valor.
+
+     ELA ERA `opacity:.42`, e isso escondia o texto de duas maneiras ao mesmo
+     tempo. A primeira: medido, "Ajustes vão para:" e os quatro chips ficavam a
+     **2,18:1** contra o fundo, e os `•` a 2,07:1 — menos da metade do 4,5:1 que
+     texto pequeno pede. A segunda é pior e explica por que ninguém via: a
+     opacidade mora no ANCESTRAL, então `getComputedStyle(filho).color` continua
+     devolvendo a cor cheia. **Toda régua de contraste que lê `color` é cega a
+     isto** — a desta casa era, e deu as sete abas por limpas.
+
+     SUBIR A OPACIDADE NÃO SERVIA. Medido: `.42 -> 2,18` · `.55 -> 2,80` ·
+     `.65 -> 3,36` · `.75 -> 4,00` · `.85 -> 4,73`. Só volta a AA em .85 — e a
+     .85 o esmaecido deixa de comunicar o que ela desenhou para comunicar
+     (decisão dela, 28/08: em Gatilhos, Iluminação e Vibração a fita fica
+     ESMAECIDA porque nada ali se ajusta por controle).
+
+     A CURA É COR EXPLÍCITA. O sinal de "inerte" continua — a fita fica mais
+     apagada que a viva, o chip perde a cor do plástico (que é o que diz a
+     IDENTIDADE, e identidade sem função é promessa falsa) e perde o fundo. Mas
+     cada texto tem cor própria, legível, e a régua passa a ENXERGAR. */
+  .fita.inerte{color:var(--comment)}
+  .fita.inerte .chip{border-color:var(--border-sutil);background:transparent;
+                     color:var(--comment)}
+  /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
+  .fita.inerte .chip.plastico{border-color:var(--border-sutil);border-width:1px}
+  .fita.inerte .chip.on{border-color:var(--comment);background:transparent;
+                        color:var(--texto-suave);font-weight:600}
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -115,7 +231,7 @@
   select option:checked{background:var(--sel-bg);color:var(--fg)}
 
   /* ---------- a tira de abas ---------- */
-  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--border-sutil)}
+  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
     padding:11px 13px;font-size:13px;color:var(--texto-mudo);
     border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
@@ -149,7 +265,7 @@
                           display:flex;flex-direction:column}
   .miolo > .quadro.estica > .quadro-corpo{flex:1;min-height:0;display:flex;flex-direction:column}
 
-  .quadro{border:1px solid var(--border-sutil);border-radius:9px;background:var(--panel)}
+  .quadro{border:1px solid var(--linha);border-radius:9px;background:var(--panel)}
   .quadro-topo{
     display:flex;align-items:center;gap:8px;padding:11px 14px 0;
   }
@@ -157,31 +273,66 @@
   /* o ícone "?" — onde TODO texto longo passa a morar (D4 + D-TUDO-QUE-EXPLICA-VIRA-DICA) */
   .ajuda{
     width:17px;height:17px;border-radius:50%;flex:0 0 17px;
-    border:1px solid var(--border-forte);color:var(--texto-mudo);
+    border:1px solid var(--linha);color:var(--texto-mudo);
     font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative;
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
-    background:var(--elevated);border:1px solid var(--border-forte);border-radius:7px;
+    background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
     padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
     text-align:left;font-weight:400;box-shadow:0 8px 24px rgba(0,0,0,.5);
   }
   .dica b{color:var(--fg)}
   .quadro-corpo{padding:10px 14px 14px}
 
-  .linha-rot{font-size:12px;color:var(--texto-suave);margin-bottom:7px}
+  /* ---------- SEÇÃO QUE ABRE E FECHA ----------
+     Pedido dela, 30/08/2026, sobre a Conexões: *"deixa todas essas seções
+     expansíveis igual fizemos em controles"*.
+
+     MESMO MECANISMO DA CONTROLES, e de propósito: `input` escondido +
+     `:has(:checked)` + `<label>`. Sem uma linha de JavaScript — o mockup abre
+     como arquivo, sem servidor, e é regra desta casa que ele continue assim.
+     A diferença é o TIPO: a Controles usa `radio` (um card aberto por vez, e a
+     fita aponta qual); aqui é `checkbox`, porque as seções são independentes e
+     ela pode querer duas abertas.
+
+     A seta é `::before` no rótulo, não um segundo elemento: um `<span>` a mais
+     no cabeçalho desalinharia o título dos outros nove quadros da casa, que já
+     nascem no mesmo x. */
+  .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+  label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
+  .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
+  .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
+  /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
+  .miolo > .quadro.estica:has(> input.abre:not(:checked)){flex:0 0 auto}
+
+  /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
+     Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
+     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e ela
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
+     `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
+  .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
 
   /* seletor segmentado */
   .seg{display:flex;gap:7px;flex-wrap:wrap}
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
-    font-family:inherit;border:1px solid var(--border-forte);
+    font-family:inherit;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
+  /* O TRAVADO TINHA CARA DE CLICÁVEL — achado de 31/08. O botão nasce
+     `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
+     dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
+     opacidade mora no ancestral e cega toda régua que lê `color`. */
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
 
   /* a linha de estado: o que VALE agora */
   .estado{
@@ -192,25 +343,34 @@
   .estado .verde{color:var(--green)}
   .estado .laranja{color:var(--orange)}
 
-  /* a escada de pontes — os 5 degraus que o PS+R3 gira */
+  /* a fileira de modos do Hefesto LIGADO — cinco chips na tela.
+     O NÚMERO DA TELA NÃO É O NÚMERO DO PRODUTO, e a diferença é decisão dela
+     de 31/08: `ponte_escada.ESCADA` tem QUATRO pontes, e uma delas (Nativo)
+     saiu da fileira para virar a posição DESLIGADO do interruptor. Dos cinco
+     chips, três são degrau (DualSense, Xbox, Steam Input) e dois não são
+     (Point And Click, Navegação) — por isso o algarismo do círculo é derivado
+     de `indice_do_degrau`, e não digitado. */
   .escada{display:flex;align-items:stretch;gap:7px}
   .degrau{
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
     padding:9px 10px;border-radius:7px;
-    font-size:12.5px;border:1px solid var(--border-forte);
+    font-size:12.5px;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
   }
   .degrau i{
     font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
     width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
-    border:1px solid var(--border-forte);color:var(--comment);
+    border:1px solid var(--linha);color:var(--comment);
   }
   .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   .degrau.on{
     border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600;
   }
   .degrau.on i{border-color:var(--purple);color:var(--purple)}
-  .seta{color:var(--border-forte);font-size:13px}
+  /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
+     #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
+     `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
+  .seta{color:var(--texto-mudo);font-size:13px}
 
   /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
@@ -221,7 +381,7 @@
 
   /* ---------- a área de avisos, com espaço reservado (P8) ---------- */
   .avisos{
-    min-height:38px;border:1px solid var(--border-sutil);border-radius:9px;
+    min-height:38px;border:1px solid var(--linha);border-radius:9px;
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
     font-size:12px;
   }
@@ -242,7 +402,7 @@
   /* a peça: SVG pequeno na cor do plástico + número */
   .cartao{
     display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;
-    border:2px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
+    border:2px solid var(--linha);border-radius:7px;background:var(--app-bg);
     font-size:11.5px;color:var(--texto-suave);
   }
   /* CSS MORTO, REMOVIDO em 27/08: `.cartao.c-red` e `.cartao.c-blue` eram uma
@@ -254,34 +414,52 @@
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+  /* A COR DO BOTÃO SECUNDÁRIO MUDOU DE LUGAR — 31/08/2026: do CONTORNO para a
+     PALAVRA. O `.btn` desenhava a borda com `--comment` (4,89:1) e as três
+     variantes com o acento cheio — verde 11,5:1, vermelho 4,53:1, roxo 5,90:1.
+     Numa coluna de Iluminação são dois botões empilhados, e na Vibração outros
+     dois: quatro retângulos gritando em volta de palavras que já dizem tudo.
+     Ela: *"botão com borda ao lado de botão com borda ao lado de célula com
+     borda"*.
+     NADA DE INFORMAÇÃO SAIU: o texto de cada variante continua verde, vermelho
+     ou roxo — é ele que diz "isto liga", "isto desliga", "isto guarda". O que
+     saiu foi o contorno repetindo em 300px de perímetro o que a palavra diz em
+     sete letras. E o acento VOLTA no `:hover`, que é onde ele informa de fato:
+     o botão sob o ponteiro se acende na cor da própria ação. */
   .btn{
     padding:8px 13px;border-radius:7px;font-size:12.5px;font-family:inherit;cursor:pointer;
-    border:1px solid var(--comment);background:transparent;color:var(--texto-suave);
+    border:1px solid var(--linha);background:transparent;color:var(--texto-suave);
   }
   .btn:hover{border-color:var(--texto-suave);color:var(--fg)}
-  .btn.verde{border-color:var(--green);color:var(--green)}
-  .btn.vermelho{border-color:var(--red);color:var(--red)}
-  .btn.roxo{border-color:var(--purple);color:var(--purple)}
+  .btn.verde{color:var(--green)}
+  .btn.vermelho{color:var(--red)}
+  .btn.roxo{color:var(--purple)}
+  .btn.verde:hover{border-color:var(--green);color:var(--green)}
+  .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
+  .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
   .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
-  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--border-sutil)}
-  .sep{color:var(--border-forte);margin:0 3px}
-  .degrau.auto i{border-color:var(--cyan);color:var(--cyan)}
+  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
+  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
-  .col-atencao{border-left:1px solid var(--border-sutil);padding-left:16px}
+  .col-atencao{border-left:1px solid var(--linha);padding-left:16px}
 
 
   /* ---------- rodapé ---------- */
   .rodape{
     display:flex;align-items:center;gap:10px;padding:12px 18px;
-    border-top:1px solid var(--border-sutil);background:var(--app-bg);
+    border-top:1px solid var(--linha);background:var(--app-bg);
   }
-  .rodape .recibo{font-size:11.5px;color:var(--comment);flex:1}
+  /* O EMPURRÃO TROCOU DE DONO. Era o `.recibo{flex:1}` que jogava os quatro
+     botões para a direita; ele saiu da barra em 30/08 (virou dica de cada botão,
+     ver `fim.html`) e sem substituto os botões cairiam para a esquerda. A margem
+     automática no primeiro faz o mesmo serviço sem um elemento vazio no DOM. */
+  .rodape .r-aplicar{margin-left:auto}
   .rodape button{
     padding:8px 15px;border-radius:7px;font-size:12.5px;font-family:inherit;
     font-weight:600;cursor:pointer;border:1px solid transparent;
@@ -304,7 +482,7 @@
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
-     Logo: novo-layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
+     Logo: layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
      na âncora que fica no cabeçalho, lá embaixo — nenhuma cópia mora aqui.
      (E a âncora NÃO se escreve aqui: a primeira versão deste comentário a citou
      literal, o `str.replace(…, 1)` casou com a CITAÇÃO em vez do cabeçalho, e o
@@ -605,7 +783,16 @@
   /* `.duas-colunas` e `.col-nav` SAÍRAM daqui em 28/08: elas existiam só para a
      tela única que punha as duas tabelas lado a lado, e essa tela virou duas
      (uma tabela em cada). Ficaram sem um só elemento no HTML gerado. */
-  .sec-rot{font-size:11px;color:var(--comment);text-transform:uppercase;letter-spacing:.5px;
+  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
+     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
+     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
+     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     é a forma mais difícil de ler que existe.
+     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
+     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
+     player"), então nada precisou ser reescrito. */
+  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
            margin-bottom:5px;display:flex;align-items:center;gap:8px;height:17px}
   .sec-rot .ajuda{text-transform:none;letter-spacing:0}
   /* O RESPIRO DO TÍTULO: `sec-alta` estava escrita no HTML desde 27/08 e não
@@ -630,6 +817,30 @@
      quatro alturas de botão outra vez, e o vão de 5px é o que pagava os 10px
      que faltavam para as linhas caberem no token (veja `.at-linha`). */
   .at-col{display:flex;flex-direction:column;gap:0}
+
+  /* O SEGUNDO QUADRO PAGA O PRÓPRIO CABEÇALHO — 30/08/2026.
+     "As opções de ativação" era um `.sec-rot` de 17px dentro do quadro da
+     Navegação; virando quadro próprio (pedido dela) ela ganhou `.quadro-topo`
+     (28px), duas bordas e o padding de corpo — 26px a mais do que o miolo tem.
+     Medido: o miolo pedia 570 num espaço de 544.
+     O respiro sai de onde ele é folga e não leitura: o topo do segundo quadro e
+     as duas pontas do corpo dele. Nenhuma linha de escolha encolhe — elas
+     continuam nos 36px de `--h-escolha`, que é o alvo de clique. */
+  .miolo > .quadro + .quadro > .quadro-topo{padding:6px 14px 0}
+  .miolo > .quadro + .quadro > .quadro-corpo{padding:4px 14px 6px}
+  .miolo > .quadro:first-child > .quadro-corpo{padding-bottom:6px}
+
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
+     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
+     nome da linha e a divisória entre eles tem que estar clara. pra todas as
+     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
+     A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
+     moldura do quadro já existe. */
+  .at-col > .at-linha{border-bottom:1px solid var(--rot-linha)}
+  .at-col > .at-linha:last-child{border-bottom:0}
+  /* a `.tab` do quadro de cima, na MESMA janela, já separa as linhas dela
+     assim desde sempre — as duas listas passam a ter a mesma cadência. */
+
   .at-col:first-child{padding-right:21px}
   .at-col:last-child{border-left:1px solid var(--border-sutil);padding-left:20px}
   /* ---------------------------------------------------------------------
@@ -645,6 +856,8 @@
      linha de 32px transborda, e um campo de 32px ao lado de uma lista de 36
      recria a divergência do outro lado da mesma linha.
      --------------------------------------------------------------------- */
+  /* o rótulo da opção é verde e alinha à direita, como nas outras nove */
+  .at-linha > span:first-child{color:var(--rot-campo);font-weight:600;text-align:right}
   .at-linha{display:grid;grid-template-columns:190px 1fr;align-items:center;gap:12px;height:var(--h-escolha)}
   /* a linha que hospeda um botão de AÇÃO cresce para os 34px do token */
   .at-linha:has(.btn){height:var(--h-acao)}
@@ -670,7 +883,7 @@
   .campo-num .par{display:flex;align-items:center;gap:9px;flex:0 1 auto}
   .campo-num .par:last-child{flex:1 1 auto}
   .campo-num .par:last-child .bignum{margin-left:auto}
-  .campo-num .sub{font-size:10.5px;color:var(--comment);text-transform:uppercase;
+  .campo-num .sub{font-size:10.5px;color:var(--comment);
                   letter-spacing:.4px;white-space:nowrap}
   .campo-num .risco{width:1px;height:18px;background:var(--border-forte);margin:0 4px 0 5px}
   .bignum{display:inline-flex;align-items:center}
@@ -684,8 +897,8 @@
   /* ---- as TRÊS tabelas: mesma largura de bloco, mesma coluna de valor,
           cabeçalho em roxo (fala [90]) — inclusive a dos gestos ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
-  .tab th{text-align:left;font-weight:600;font-size:10px;color:var(--purple);
-          text-transform:uppercase;letter-spacing:.6px;padding:0 8px 4px 0;
+  .tab th{color:var(--rot-campo);font-weight:600;text-align:left;font-weight:600;font-size:10px;
+          padding:0 8px 4px 0;
           border-bottom:1px solid var(--border-forte)}
   /* a linha da tabela é o token + o fio de 1px que separa duas linhas, e mais
      nada. O `padding:1px 0` que havia aqui somava 2px por linha em cima de uma
@@ -790,7 +1003,7 @@
   <div class="cabecalho">
     <!-- A LOGO NÃO MORA MAIS AQUI — 30/08/2026, e a razão está medida.
          Eram 55 linhas de SVG coladas neste arquivo, e por isso eram a versão
-         VELHA: ela redesenhou o logotipo em `novo-layout/assets/hefesto-logo.svg`
+         VELHA: ela redesenhou o logotipo em `layout/assets/hefesto-logo.svg`
          (6.039 bytes, com `transform-box`/`transform-origin` no anel, a chama
          nova e a bigorna com sombra) e as dez páginas continuaram mostrando o
          desenho de antes. Pior: havia TRÊS desenhos vivos ao mesmo tempo — o
@@ -1092,7 +1305,7 @@
   <g id="p1-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="p1-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="p1-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1162,8 +1375,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="p1-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="p1-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -1334,7 +1547,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="p1-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="p1-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -1472,7 +1685,7 @@
   <g id="p2-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="p2-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="p2-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1542,8 +1755,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="p2-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="p2-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -1714,7 +1927,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="p2-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="p2-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -1852,7 +2065,7 @@
   <g id="p3-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="p3-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="p3-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1922,8 +2135,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="p3-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="p3-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -2094,7 +2307,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="p3-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="p3-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -2232,7 +2445,7 @@
   <g id="p4-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="p4-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="p4-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -2302,8 +2515,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="p4-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="p4-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -2474,7 +2687,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="p4-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="p4-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -2491,47 +2704,47 @@
             <table class="tab">
               <tr><th>Combinação no controle</th><th>O que faz</th></tr>
                 <tr class="g g1"><td class="b"><span class="gls"><span class="mk-n">1</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-  
+
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
 </svg> <span class="mais">+</span> <svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
-  
+
   <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg><span class="nm">Options</span></span></td><td><select class="campo-linha"><optgroup label="Navegação Interna"><option selected>Suspender mouse e teclado</option><option>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo de conexão"><option>Sobe um degrau no Modo de conexão</option></optgroup><optgroup label="Modo Steam"><option>Abre e foca a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g2"><td class="b"><span class="gls"><span class="mk-n">2</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-  
+
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
 </svg> <span class="mais">+</span> <svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
-  
+
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option selected>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo de conexão"><option>Sobe um degrau no Modo de conexão</option></optgroup><optgroup label="Modo Steam"><option>Abre e foca a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g3"><td class="b"><span class="gls"><span class="mk-n">3</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-  
+
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
 </svg> <span class="mais">+</span> <svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
-  
+
   <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option>Próximo perfil</option><option selected>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo de conexão"><option>Sobe um degrau no Modo de conexão</option></optgroup><optgroup label="Modo Steam"><option>Abre e foca a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g4"><td class="b"><span class="gls"><span class="mk-n">4</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-  
+
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
 </svg> <span class="mais">+</span> <svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Direito</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
 </svg><span class="nm">R3</span></span></td><td><select class="campo-linha"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo de conexão"><option selected>Sobe um degrau no Modo de conexão</option></optgroup><optgroup label="Modo Steam"><option>Abre e foca a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g5"><td class="b"><span class="gls"><span class="mk-n">5</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-  
+
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
@@ -2541,8 +2754,25 @@
         </div>
         </div>
 
-        <!-- ---------- AS OPÇÕES DE ATIVAÇÃO (fala [56] + fala [11]) ---------- -->
-        <div class="sec-rot sec-alta">As opções de ativação</div>
+      </div>
+    </div>
+
+    <!-- ---------- AS OPÇÕES DE ATIVAÇÃO VIRARAM QUADRO PRÓPRIO ----------
+         Pedido dela, 30/08: *"a parte 'As opções de ativação' coloca na mesma cor
+         que o Navegação e divide em dois blocos, o superior e as opções de
+         ativação"*.
+
+         Ela era um `.sec-rot` — rótulo de CAMPO, verde, do mesmo peso que
+         "Controle" ou "Brilho" — dentro do quadro da Navegação. Mas ela não nomeia
+         um campo: nomeia um ASSUNTO, com sete linhas de escolha embaixo. Virando
+         `.quadro-titulo` ela ganha o roxo e o tamanho que a Navegação tem, e a
+         divisão em dois quadros diz na estrutura o que a leitura já dizia: em cima
+         quem navega e com quê, embaixo como ligar e com que velocidade. -->
+    <div class="quadro">
+      <div class="quadro-topo">
+        <span class="quadro-titulo">As opções de ativação</span>
+      </div>
+      <div class="quadro-corpo">
         <div class="moldura">
           <div class="ativacao">
             <div class="at-col">
@@ -2587,13 +2817,39 @@
 
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O recibo ENCURTA e não sai: `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e o
-         porquê está no `monta.py`, onde este arquivo é lido. -->
-    <div class="recibo"><b style="color:var(--texto-suave)">Aplicar</b> vale agora <span class="pt">•</span> <b style="color:var(--texto-suave)">Salvar Perfil</b> grava no <b style="color:var(--texto-suave)">Mortal Kombat</b></div>
-    <button class="r-aplicar">Aplicar</button>
-    <button class="r-salvar">Salvar Perfil</button>
-    <button class="r-importar">Importar</button>
-    <button class="r-exportar">Exportar</button>
+    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido dela:
+         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
+         perfil, importar e exportar. em todas as abas."*
+
+         ISTO DERRUBA A `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e de propósito. Ela
+         já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então
+         foi ENCURTAR (96 caracteres viraram 57), porque perguntada se saía do
+         mockup ou do produto ela respondeu "deixa ela encurtada tanto lá quanto no
+         mockup" — resposta sobre ONDE, lida como resposta sobre SE. Agora ela disse
+         o destino com todas as letras, e o destino não é a barra.
+
+         O QUE A DECISÃO PROTEGIA CONTINUA PROTEGIDO, e é o teste que se aplica:
+         a diferença entre APLICAR (vale agora) e SALVAR (grava no perfil), e o NOME
+         do perfil — "a informação que faltava e lhe custou semanas". As duas coisas
+         estão nas dicas abaixo, palavra por palavra. Nada se perdeu; mudou de lugar.
+
+         E O PRODUTO JÁ FAZIA ASSIM: `gui/main.glade` dá `tooltip-text` aos quatro
+         botões do rodapé (`btn_footer_apply`, `btn_footer_save_profile`,
+         `btn_footer_import`, `btn_footer_restore_default`), e
+         `tests/unit/test_o_rodape_diz_o_que_grava.py` morde exigindo isso. Era o
+         MOCKUP que duplicava a informação como texto fixo na barra. O texto de
+         Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
+
+         `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
+         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
+         num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
+         `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
+         (`aba09.py`). -->
+    <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
+    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
+    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>
@@ -2606,121 +2862,123 @@
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="tn-frase">Valem para o controle que navega o PC — hoje o
-        <b style="color:var(--texto-suave)">P1 • Cosmic Red •
-        USB</b>. Os outros 3 continuam gamepad.</div>
+      <!-- TEXTO NA TELA É ZERO — regra dela, 30/08/2026: *"texto na interface é
+           zero, só deixamos se for algo extremamente importante, e se for de
+           média importância vira tooltip"*. Esta frase era prosa fixa a poucos
+           pixels de um `?` que explicava o mesmo assunto. Ela não sumiu: subiu
+           para a dica do cabeçalho, onde só aparece a quem pergunta. -->
       <div class="moldura">
         <table class="tab">
           <tr><th>Botão do controle</th><th>O que ele faz</th></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
-  
+
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option selected>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
-  
+
   <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option selected>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
-  
+
   <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option selected>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
-  
+
   <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option selected>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
-  
+
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
 </svg><span class="nm">L1</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option selected>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
-  
+
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
 </svg><span class="nm">R1</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option selected>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
-  
+
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg><span class="nm">L2</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option selected>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
-  
+
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg><span class="nm">R2</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option selected>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Esquerdo</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg><span class="nm">L3</span><span class="rot-gl">Clique</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option selected>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Esquerdo</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg><span class="nm">L3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option selected>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Direito</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
 </svg><span class="nm">R3</span><span class="rot-gl">Clique</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option selected>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Direito</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
 </svg><span class="nm">R3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option selected>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
-  
+
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
 </svg><span class="rot-gl">Cima</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option selected>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
-  
+
   <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
 </svg><span class="rot-gl">Baixo</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option selected>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Esquerda</title>
-  
+
   <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
 </svg><span class="rot-gl">Esquerda</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option selected>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Direita</title>
-  
+
   <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
 </svg><span class="rot-gl">Direita</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option selected>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
-  
+
   <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg><span class="nm">Options</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option selected>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
-  
+
   <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
 </svg><span class="nm">Share</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option selected>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-  
+
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
 </svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option selected>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-  
+
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
 </svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option selected>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-  
+
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
@@ -2749,121 +3007,123 @@
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="tn-frase">Valem para o controle que navega o PC — hoje o
-        <b style="color:var(--texto-suave)">P1 • Cosmic Red •
-        USB</b>. Os outros 3 continuam gamepad.</div>
+      <!-- TEXTO NA TELA É ZERO — regra dela, 30/08/2026: *"texto na interface é
+           zero, só deixamos se for algo extremamente importante, e se for de
+           média importância vira tooltip"*. Esta frase era prosa fixa a poucos
+           pixels de um `?` que explicava o mesmo assunto. Ela não sumiu: subiu
+           para a dica do cabeçalho, onde só aparece a quem pergunta. -->
       <div class="moldura">
         <table class="tab">
           <tr><th>Botão do controle</th><th>Passa a valer como</th></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
-  
+
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
-  
+
   <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
-  
+
   <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
-  
+
   <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
-  
+
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
 </svg><span class="nm">L1</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
-  
+
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
 </svg><span class="nm">R1</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
-  
+
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg><span class="nm">L2</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
-  
+
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg><span class="nm">R2</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Esquerdo</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg><span class="nm">L3</span><span class="rot-gl">Clique</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Esquerdo</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg><span class="nm">L3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Direito</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
 </svg><span class="nm">R3</span><span class="rot-gl">Clique</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Direito</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
 </svg><span class="nm">R3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
-  
+
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
 </svg><span class="rot-gl">Cima</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
-  
+
   <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
 </svg><span class="rot-gl">Baixo</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Esquerda</title>
-  
+
   <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
 </svg><span class="rot-gl">Esquerda</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Direita</title>
-  
+
   <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
 </svg><span class="rot-gl">Direita</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
-  
+
   <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg><span class="nm">Options</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
-  
+
   <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
 </svg><span class="nm">Share</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-  
+
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
 </svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-  
+
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
 </svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-  
+
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
@@ -2888,54 +3148,56 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Estilo Point-and-click</span>
-      <span class="ajuda">?<span class="dica">Um <b>Estilo de Jogo</b>, como o FPS e o Corrida. O perfil escolhe usá-lo; o que ele faz é escrito <b>aqui</b>.<br><br>Enquanto ele estiver valendo, estas linhas mandam — as da aba voltam quando o estilo sai.</span></span>
+      <span class="ajuda">?<span class="dica">Um <b>Estilo de Jogo</b>, como o FPS e o Corrida. O perfil escolhe usá-lo; o que ele faz é escrito <b>aqui</b>.<br><br>Enquanto ele estiver valendo, estas linhas mandam — as da aba voltam quando o estilo sai.<br><br>Serve para jogo de <b>apontar e clicar</b>, que espera mouse e não entende controle: <b>o touchpad vira o ponteiro</b>, e o toque vira o clique.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="tn-frase">Serve para jogo de apontar e clicar, que espera mouse e não
-        entende controle. <b style="color:var(--texto-suave)">O touchpad vira o ponteiro</b>,
-        e o toque vira o clique.</div>
+      <!-- TEXTO NA TELA É ZERO — regra dela, 30/08/2026: *"texto na interface é
+           zero, só deixamos se for algo extremamente importante, e se for de
+           média importância vira tooltip"*. Esta frase era prosa fixa a poucos
+           pixels de um `?` que explicava o mesmo assunto. Ela não sumiu: subiu
+           para a dica do cabeçalho, onde só aparece a quem pergunta. -->
       <div class="moldura">
         <table class="tab">
           <tr><th>Botão do controle</th><th>O que ele faz neste estilo</th></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-  
+
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
 </svg><span class="nm">Touchpad</span><span class="rot-gl">Deslizar</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option selected>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-  
+
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
 </svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option selected>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-  
+
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
 </svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option selected>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
-  
+
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option selected>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
-  
+
   <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option selected>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Esquerdo</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg><span class="nm">L3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option selected>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Direito</title>
-  
+
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>

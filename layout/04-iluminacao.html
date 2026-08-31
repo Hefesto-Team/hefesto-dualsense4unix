@@ -13,10 +13,99 @@
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
-    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
+    /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
+       Ela apontou o sintoma três vezes, em três abas: *"os campos de importância
+       tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
+       de campos e essa fonte tem um contraste horrível"*, *"em todas as abas isso
+       tem que ser visto infelizmente"*.
+       MEDIDO nas dez abas, contraste WCAG de todo texto contra o fundo real:
+       390 elementos abaixo do limiar, e DUAS cores respondem por 93% deles —
+       `--comment` 217 vezes a 3,03:1 e `--texto-mudo` 146 vezes a 4,47:1.
+       O limiar para texto pequeno é 4,5:1; as duas ficavam abaixo, uma delas
+       por muito. Não era defeito de aba nenhuma: era a paleta.
+       O QUE MUDOU É SÓ A LUMINÂNCIA. O matiz e a saturação de cada uma
+       continuam os mesmos — a cara da interface não muda, o texto aparece:
+         --comment    #6272a4 -> #8896c4   3,03:1 -> 4,89:1
+         --texto-mudo #8b8fa8 -> #9a9eb8   4,47:1 -> 5,40:1
+       Os hex de origem eram do GUIA_IMPLEMENTACAO.md, e o `--comment` de lá é a
+       cor de COMENTÁRIO do Dracula — feita para código, onde apagar é o efeito
+       desejado. Usá-la em texto de interface é que era o engano. */
+    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     --sel-bg:rgba(189,147,249,0.16);
+    /* O RÓTULO DE CAMPO TEM COR DE RÓTULO, NÃO DE COMENTÁRIO.
+       `.sec-rot` nascia `var(--comment)` (#6272a4) nas SEIS abas que a usam, e
+       ela leu o resultado pelo que ele é: *"os campos de importância tipo cor,
+       brilho, selecione player tão invisíveis"*. #6272a4 sobre o `--panel`
+       (#282a36) dá contraste 2,6:1 — abaixo do 4,5:1 que texto pequeno pede.
+       O roxo é a cor de destaque DA CASA, medida: as dez abas pintam o
+       `.quadro-titulo` de #bd93f9, sem exceção.
+       Um TOKEN e não um hex por aba: assim a Vibração troca o dela numa linha
+       (ela pediu verde lá) sem ninguém digitar cor em seis arquivos — que é
+       exatamente como esta regra virou seis cópias divergentes.
+
+       VERDE, E NÃO ROXO — decisão dela, 30/08: *"deixa verde os nomes"*
+       (Iluminação) e *"os nomes das seções tem que ser verde"* (Gatilhos). Ela
+       já pedira verde na Vibração horas antes; agora vale para as dez, e a
+       exceção escopada em `.vib` some por ser redundante.
+       O roxo continua sendo a cor do TÍTULO do quadro (`.quadro-titulo`, as dez
+       pintam #bd93f9). São dois papéis: o título nomeia a ABA, o rótulo nomeia a
+       LINHA. Cores diferentes é o que os separa. */
+    --rot-campo:var(--green);
+    /* ---------------------------------------------------------------
+       A ESCALA DA BORDA ESTRUTURAL — UMA SÓ, 31/08/2026.
+
+       PEDIDO DELA, vendo Gatilhos, Iluminação e Vibração: *"é preciso remover as
+       bordas sobrando de tudo e deixar as bordas menos perceptíveis mas
+       presentes e modernas de forma que não roube a atenção de forma
+       negativa"*; e sobre a Perfis: *"nessa aba aqui as bordas tão horríveis"*.
+
+       O DEFEITO NÃO ERA UMA BORDA — ERA A FAIXA INTEIRA. Censo do DOM das
+       quatro abas, contraste de cada borda contra o fundo REAL atrás dela: a
+       borda ESTRUTURAL ia de **1,21:1** (`--border-sutil`, que sumia) a
+       **4,89:1** (`.btn`, que usava `--comment`) na MESMA tela — quatro vezes
+       de diferença. É isso que fazia a Gatilhos ler como GRADE: a divisória
+       horizontal gritava a 3,37:1 enquanto a vertical, encostada nela, sumia a
+       1,21:1. Não havia peso demais nem de menos; havia peso NENHUM em comum.
+
+       O VALOR, E DE ONDE ELE SAI. Um só, e ele é o MEIO EM LUMINÂNCIA entre os
+       dois extremos que ela mesma julgou: #343746 tem L 23,9% e ela o chamou de
+       invisível em 30/08; #767a92 tem L 51,8% e é o que ela chamou de excessivo
+       hoje. L 38% é o meio exato, e o matiz e a saturação continuam os da
+       família (H 231, S 13%) — muda só a luminância, como em 30/08.
+
+         --linha  #53576f   2,01:1 sobre --panel · 2,23:1 sobre --app-bg
+
+       São **40% menos** que a linha de 30/08 (3,37:1) e **66% mais** que a
+       borda que sumia (1,21:1). O rótulo verde ao lado dela está a 10,4:1 e o
+       texto mudo a 5,40:1: a linha recua diante dos dois, que é o que "presente
+       e não rouba a atenção" quer dizer em número.
+
+       QUEM NÃO LÊ DAQUI, e é o ponto: a borda que carrega INFORMAÇÃO. A cor do
+       plástico (D-A-BORDA-E-A-IDENTIDADE-DA-PECA), o estado (`.on`,
+       `.aba.ativa`, `:hover`) e o foco continuam com a cor deles — esmaecer
+       essas é apagar o dado, não o enfeite.
+       --------------------------------------------------------------- */
+    --linha:#53576f;
+    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido dela: *"linha abaixo de cada
+       campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
+       e, quando a viu: *"as linhas divisórias em todas as páginas tão
+       invisíveis (…) a primeira coluna serve como nome da linha e a divisória
+       entre eles tem que estar clara"*.
+
+       ELA ESTAVA CERTA, E O NÚMERO ERA BRUTAL. `--border-sutil` (#343746) sobre
+       o painel (#282a36) dá **1,21:1** — a linha existia no DOM e não na tela.
+       `--border-forte` também não servia: 1,56:1.
+
+       O QUE CADUCOU EM 31/08, e é a metade seguinte da mesma medição: o #767a92
+       escolhido em 30/08 mirava a WCAG 1.4.11 (3:1 para componente gráfico) e
+       chegava a **3,37:1**. Só que 1.4.11 é o piso do que IDENTIFICA um
+       controle — um traço que só separa duas células não precisa dele, e a esse
+       peso ele passou a competir com o que separa. Ela viu o resultado em três
+       abas e pediu o contrário. O nome fica (seis abas o escrevem); quem manda
+       agora é a escala acima, e ela vale para as dez de uma vez. */
+    --rot-linha:var(--linha);
     /* cores de plástico — a borda diz QUAL peça é (D-A-BORDA-E-A-IDENTIDADE-DA-PECA) */
     /* OS CINCO PLÁSTICOS SÃO GERADOS — `monta.py` os reescreve a cada geração,
        lendo o `<style>` que `scripts/gerar_cores_do_dualsense.py` pôs no SVG. Os
@@ -57,7 +146,7 @@
   .janela{
     width:1180px; height:var(--alt-janela); max-width:100%; background:var(--app-bg);
     display:flex; flex-direction:column;
-    border:1px solid var(--border-sutil); border-radius:10px; overflow:hidden;
+    border:1px solid var(--linha); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
   }
 
@@ -66,7 +155,7 @@
   .logo{
     width:46px;height:46px;border-radius:50%;flex:0 0 46px;
     background:radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%);
-    border:1px solid var(--border-forte);
+    border:1px solid var(--linha);
     display:flex;align-items:center;justify-content:center;font-size:20px;
   }
   h1{font-size:19px;font-weight:700;letter-spacing:.2px}
@@ -86,14 +175,41 @@
   .perfil-ativo{
     margin-left:auto;display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--border-forte);background:var(--panel);
+    border:1px solid var(--linha);background:var(--panel);
   }
-  .pa-rot{font-size:10.5px;color:var(--comment);text-transform:uppercase;letter-spacing:.5px}
+  .pa-rot{font-size:10.5px;color:var(--comment);}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
-  .fita.inerte{opacity:.42}
+  /* A FITA INERTE DEIXOU DE USAR `opacity` — 30/08/2026, e a troca é de
+     MECANISMO, não de valor.
+
+     ELA ERA `opacity:.42`, e isso escondia o texto de duas maneiras ao mesmo
+     tempo. A primeira: medido, "Ajustes vão para:" e os quatro chips ficavam a
+     **2,18:1** contra o fundo, e os `•` a 2,07:1 — menos da metade do 4,5:1 que
+     texto pequeno pede. A segunda é pior e explica por que ninguém via: a
+     opacidade mora no ANCESTRAL, então `getComputedStyle(filho).color` continua
+     devolvendo a cor cheia. **Toda régua de contraste que lê `color` é cega a
+     isto** — a desta casa era, e deu as sete abas por limpas.
+
+     SUBIR A OPACIDADE NÃO SERVIA. Medido: `.42 -> 2,18` · `.55 -> 2,80` ·
+     `.65 -> 3,36` · `.75 -> 4,00` · `.85 -> 4,73`. Só volta a AA em .85 — e a
+     .85 o esmaecido deixa de comunicar o que ela desenhou para comunicar
+     (decisão dela, 28/08: em Gatilhos, Iluminação e Vibração a fita fica
+     ESMAECIDA porque nada ali se ajusta por controle).
+
+     A CURA É COR EXPLÍCITA. O sinal de "inerte" continua — a fita fica mais
+     apagada que a viva, o chip perde a cor do plástico (que é o que diz a
+     IDENTIDADE, e identidade sem função é promessa falsa) e perde o fundo. Mas
+     cada texto tem cor própria, legível, e a régua passa a ENXERGAR. */
+  .fita.inerte{color:var(--comment)}
+  .fita.inerte .chip{border-color:var(--border-sutil);background:transparent;
+                     color:var(--comment)}
+  /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
+  .fita.inerte .chip.plastico{border-color:var(--border-sutil);border-width:1px}
+  .fita.inerte .chip.on{border-color:var(--comment);background:transparent;
+                        color:var(--texto-suave);font-weight:600}
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -115,7 +231,7 @@
   select option:checked{background:var(--sel-bg);color:var(--fg)}
 
   /* ---------- a tira de abas ---------- */
-  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--border-sutil)}
+  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
     padding:11px 13px;font-size:13px;color:var(--texto-mudo);
     border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
@@ -149,7 +265,7 @@
                           display:flex;flex-direction:column}
   .miolo > .quadro.estica > .quadro-corpo{flex:1;min-height:0;display:flex;flex-direction:column}
 
-  .quadro{border:1px solid var(--border-sutil);border-radius:9px;background:var(--panel)}
+  .quadro{border:1px solid var(--linha);border-radius:9px;background:var(--panel)}
   .quadro-topo{
     display:flex;align-items:center;gap:8px;padding:11px 14px 0;
   }
@@ -157,31 +273,66 @@
   /* o ícone "?" — onde TODO texto longo passa a morar (D4 + D-TUDO-QUE-EXPLICA-VIRA-DICA) */
   .ajuda{
     width:17px;height:17px;border-radius:50%;flex:0 0 17px;
-    border:1px solid var(--border-forte);color:var(--texto-mudo);
+    border:1px solid var(--linha);color:var(--texto-mudo);
     font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative;
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
-    background:var(--elevated);border:1px solid var(--border-forte);border-radius:7px;
+    background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
     padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
     text-align:left;font-weight:400;box-shadow:0 8px 24px rgba(0,0,0,.5);
   }
   .dica b{color:var(--fg)}
   .quadro-corpo{padding:10px 14px 14px}
 
-  .linha-rot{font-size:12px;color:var(--texto-suave);margin-bottom:7px}
+  /* ---------- SEÇÃO QUE ABRE E FECHA ----------
+     Pedido dela, 30/08/2026, sobre a Conexões: *"deixa todas essas seções
+     expansíveis igual fizemos em controles"*.
+
+     MESMO MECANISMO DA CONTROLES, e de propósito: `input` escondido +
+     `:has(:checked)` + `<label>`. Sem uma linha de JavaScript — o mockup abre
+     como arquivo, sem servidor, e é regra desta casa que ele continue assim.
+     A diferença é o TIPO: a Controles usa `radio` (um card aberto por vez, e a
+     fita aponta qual); aqui é `checkbox`, porque as seções são independentes e
+     ela pode querer duas abertas.
+
+     A seta é `::before` no rótulo, não um segundo elemento: um `<span>` a mais
+     no cabeçalho desalinharia o título dos outros nove quadros da casa, que já
+     nascem no mesmo x. */
+  .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+  label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
+  .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
+  .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
+  /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
+  .miolo > .quadro.estica:has(> input.abre:not(:checked)){flex:0 0 auto}
+
+  /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
+     Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
+     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e ela
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
+     `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
+  .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
 
   /* seletor segmentado */
   .seg{display:flex;gap:7px;flex-wrap:wrap}
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
-    font-family:inherit;border:1px solid var(--border-forte);
+    font-family:inherit;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
+  /* O TRAVADO TINHA CARA DE CLICÁVEL — achado de 31/08. O botão nasce
+     `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
+     dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
+     opacidade mora no ancestral e cega toda régua que lê `color`. */
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
 
   /* a linha de estado: o que VALE agora */
   .estado{
@@ -192,25 +343,34 @@
   .estado .verde{color:var(--green)}
   .estado .laranja{color:var(--orange)}
 
-  /* a escada de pontes — os 5 degraus que o PS+R3 gira */
+  /* a fileira de modos do Hefesto LIGADO — cinco chips na tela.
+     O NÚMERO DA TELA NÃO É O NÚMERO DO PRODUTO, e a diferença é decisão dela
+     de 31/08: `ponte_escada.ESCADA` tem QUATRO pontes, e uma delas (Nativo)
+     saiu da fileira para virar a posição DESLIGADO do interruptor. Dos cinco
+     chips, três são degrau (DualSense, Xbox, Steam Input) e dois não são
+     (Point And Click, Navegação) — por isso o algarismo do círculo é derivado
+     de `indice_do_degrau`, e não digitado. */
   .escada{display:flex;align-items:stretch;gap:7px}
   .degrau{
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
     padding:9px 10px;border-radius:7px;
-    font-size:12.5px;border:1px solid var(--border-forte);
+    font-size:12.5px;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
   }
   .degrau i{
     font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
     width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
-    border:1px solid var(--border-forte);color:var(--comment);
+    border:1px solid var(--linha);color:var(--comment);
   }
   .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   .degrau.on{
     border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600;
   }
   .degrau.on i{border-color:var(--purple);color:var(--purple)}
-  .seta{color:var(--border-forte);font-size:13px}
+  /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
+     #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
+     `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
+  .seta{color:var(--texto-mudo);font-size:13px}
 
   /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
@@ -221,7 +381,7 @@
 
   /* ---------- a área de avisos, com espaço reservado (P8) ---------- */
   .avisos{
-    min-height:38px;border:1px solid var(--border-sutil);border-radius:9px;
+    min-height:38px;border:1px solid var(--linha);border-radius:9px;
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
     font-size:12px;
   }
@@ -242,7 +402,7 @@
   /* a peça: SVG pequeno na cor do plástico + número */
   .cartao{
     display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;
-    border:2px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
+    border:2px solid var(--linha);border-radius:7px;background:var(--app-bg);
     font-size:11.5px;color:var(--texto-suave);
   }
   /* CSS MORTO, REMOVIDO em 27/08: `.cartao.c-red` e `.cartao.c-blue` eram uma
@@ -254,34 +414,52 @@
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+  /* A COR DO BOTÃO SECUNDÁRIO MUDOU DE LUGAR — 31/08/2026: do CONTORNO para a
+     PALAVRA. O `.btn` desenhava a borda com `--comment` (4,89:1) e as três
+     variantes com o acento cheio — verde 11,5:1, vermelho 4,53:1, roxo 5,90:1.
+     Numa coluna de Iluminação são dois botões empilhados, e na Vibração outros
+     dois: quatro retângulos gritando em volta de palavras que já dizem tudo.
+     Ela: *"botão com borda ao lado de botão com borda ao lado de célula com
+     borda"*.
+     NADA DE INFORMAÇÃO SAIU: o texto de cada variante continua verde, vermelho
+     ou roxo — é ele que diz "isto liga", "isto desliga", "isto guarda". O que
+     saiu foi o contorno repetindo em 300px de perímetro o que a palavra diz em
+     sete letras. E o acento VOLTA no `:hover`, que é onde ele informa de fato:
+     o botão sob o ponteiro se acende na cor da própria ação. */
   .btn{
     padding:8px 13px;border-radius:7px;font-size:12.5px;font-family:inherit;cursor:pointer;
-    border:1px solid var(--comment);background:transparent;color:var(--texto-suave);
+    border:1px solid var(--linha);background:transparent;color:var(--texto-suave);
   }
   .btn:hover{border-color:var(--texto-suave);color:var(--fg)}
-  .btn.verde{border-color:var(--green);color:var(--green)}
-  .btn.vermelho{border-color:var(--red);color:var(--red)}
-  .btn.roxo{border-color:var(--purple);color:var(--purple)}
+  .btn.verde{color:var(--green)}
+  .btn.vermelho{color:var(--red)}
+  .btn.roxo{color:var(--purple)}
+  .btn.verde:hover{border-color:var(--green);color:var(--green)}
+  .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
+  .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
   .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
-  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--border-sutil)}
-  .sep{color:var(--border-forte);margin:0 3px}
-  .degrau.auto i{border-color:var(--cyan);color:var(--cyan)}
+  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
+  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
-  .col-atencao{border-left:1px solid var(--border-sutil);padding-left:16px}
+  .col-atencao{border-left:1px solid var(--linha);padding-left:16px}
 
 
   /* ---------- rodapé ---------- */
   .rodape{
     display:flex;align-items:center;gap:10px;padding:12px 18px;
-    border-top:1px solid var(--border-sutil);background:var(--app-bg);
+    border-top:1px solid var(--linha);background:var(--app-bg);
   }
-  .rodape .recibo{font-size:11.5px;color:var(--comment);flex:1}
+  /* O EMPURRÃO TROCOU DE DONO. Era o `.recibo{flex:1}` que jogava os quatro
+     botões para a direita; ele saiu da barra em 30/08 (virou dica de cada botão,
+     ver `fim.html`) e sem substituto os botões cairiam para a esquerda. A margem
+     automática no primeiro faz o mesmo serviço sem um elemento vazio no DOM. */
+  .rodape .r-aplicar{margin-left:auto}
   .rodape button{
     padding:8px 15px;border-radius:7px;font-size:12.5px;font-family:inherit;
     font-weight:600;cursor:pointer;border:1px solid transparent;
@@ -304,7 +482,7 @@
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
-     Logo: novo-layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
+     Logo: layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
      na âncora que fica no cabeçalho, lá embaixo — nenhuma cópia mora aqui.
      (E a âncora NÃO se escreve aqui: a primeira versão deste comentário a citou
      literal, o `str.replace(…, 1)` casou com a CITAÇÃO em vez do cabeçalho, e o
@@ -423,8 +601,21 @@
      = 400, mais seis passos de 8 = 448, e o miolo dá 452. Mexer numa linha sem
      tirar de outra faz a aba rolar por dentro — e quadro que rola por dentro é
      conteúdo que ninguém sabe que existe. */
+  /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026, pedido dela: *"as linhas
+     horizontais (…) precisam melhorar ali"*.
+
+     Elas já atravessavam as cinco colunas, no mesmo y — mas o `gap:16px` do grid
+     abria um buraco entre cada duas, e o olho lia CINCO TRACINHOS em vez de uma
+     linha. Ampliado a 2x fica evidente.
+
+     A cura é trocar o vão HORIZONTAL por respiro DENTRO da célula: `column-gap:0`
+     e o padding que já existia no `.ctrl` cresce para os dois lados. A distância
+     entre o conteúdo de duas colunas continua a mesma; o que muda é que agora ela
+     é padding — e padding não interrompe borda. O vão VERTICAL (`row-gap`) fica:
+     é ele que separa uma linha da outra. */
   .luz-grade{
-    display:grid;grid-template-columns:132px repeat(4,1fr);gap:16px;
+    display:grid;grid-template-columns:132px repeat(4,1fr);
+    gap:16px;
     --r-des:146px;--r-nome:16px;--r-cor:44px;--r-brilho:26px;
     --r-player:62px;--r-leds:34px;--r-acoes:72px;--r-passo:8px;
   }
@@ -434,15 +625,80 @@
                        var(--r-player) var(--r-leds) var(--r-acoes);
   }
   /* a barra vertical entre blocos irmãos — pedido dela */
-  .luz-grade .ctrl{border-left:1px solid var(--border-sutil);padding:0 8px 0 12px}
+  /* O PADDING SAIU DA COLUNA E FOI PARA AS CÉLULAS — 30/08/2026.
+     A borda separadora mora na CÉLULA (`> div > *`), e padding na coluna
+     recua a célula junto: a linha parava 21px antes da divisa e voltava a
+     ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
+     coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
+  .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 8px 0 12px}
+  /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
+     recua os filhos e a borda deles para 16px antes da divisa, e a linha
+     volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
+
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela:
+     *"com linha abaixo de cada campo"*.
+     POR QUE NA CÉLULA E NÃO NA GRADE: `.luz-grade` é um grid de 5 colunas, mas
+     as LINHAS não são dele — cada coluna é um grid próprio com as mesmas sete
+     alturas (`--r-des` … `--r-acoes`). Não existe "linha da grade" onde pendurar
+     uma borda; o que existe é a célula. Como as sete alturas são idênticas nas
+     cinco colunas, as bordas nascem no mesmo y e leem como uma linha só.
+     A borda cai no fim da célula, e o `row-gap` de 8px a separa do campo de
+     baixo — o respiro fica em cima da linha seguinte, não colado nela.
+     A ÚLTIMA não leva linha: separador depois do último campo não separa nada,
+     vira moldura, e a moldura do quadro já existe. */
+  /* A LINHA É UM PSEUDO-ELEMENTO, e não a borda da célula — 30/08/2026.
+     Como BORDA ela parava no padding da coluna e quebrava em cinco tracinhos;
+     movendo o padding para as células a linha ficou inteira mas o desenho do
+     controle perdeu 9px (a moldura tem `overflow:hidden` e o SVG cresce com a
+     largura). O `::after` com margem negativa resolve os dois: ele sai do
+     padding pelos dois lados e atravessa a coluna inteira, sem tocar em
+     geometria nenhuma. As cinco colunas têm as mesmas alturas de linha, então
+     os cinco segmentos nascem no mesmo y e leem como uma linha só. */
+  .luz-grade > div > *{position:relative}
+  /* A LINHA É `::before` DA CÉLULA DE BAIXO, e não `::after` da de cima.
+     Como `::after` ela era filha da moldura — e a moldura do DESENHO tem
+     `overflow:hidden` para conter o SVG, então ela cortava a própria linha
+     24px antes da divisa. A célula de baixo não recorta nada, e o traço
+     cai no mesmo lugar: entre uma linha e a outra. */
+  .luz-grade > div > *::before{content:'';position:absolute;top:0;height:0;
+    left:-12px;right:-8px;border-top:1px solid var(--rot-linha)}
+  /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
+     `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
+     8 de padding + 16 de gap = 24; a ÚLTIMA coluna não tem vão depois
+     dela, então volta a 8. A coluna de rótulos não tem padding: 0 e 16. */
+  .luz-grade > div:not(:last-child) > *::before{right:-24px}
+  .luz-grade > .rotulos > *::before{left:0;right:-16px}
+  .luz-grade > div > *:first-child::before{display:none}
 
   /* a coluna dos rótulos: todo título começa no mesmo x, e cada um ocupa a
      ALTURA INTEIRA da sua linha — é assim que a coluna acaba junto das outras */
   .luz-grade .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
+  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido dela: *"no nome das
+     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
+     perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
+     toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
+     lista solta e passar a ler como cabeçalho de linha. */
+  .luz-grade .rotulos > *{align-items:flex-end;text-align:right}
+  .luz-grade .rotulos .sec-rot{justify-content:flex-end}
   .luz-grade .rotulos > :not(.cel-des) > .sec-rot{flex:1}
-  .luz-grade .rotulos .cel-des{justify-content:flex-start;gap:8px}
-  .sec-rot{font-size:11px;color:var(--comment);text-transform:uppercase;
-           letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+  /* O RÓTULO DA PRIMEIRA LINHA VOLTOU A CENTRAR — 30/08/2026.
+     Ele estava preso no topo (`flex-start`) porque a legenda de sete linhas vinha
+     logo abaixo dele e as duas juntas enchiam a célula. A legenda virou dica no
+     mesmo dia, e o `flex-start` sobrou: o rótulo ficava sozinho no alto de uma
+     célula de 146 px, com o vazio inteiro embaixo. Centrado, ele fica na altura
+     do desenho que nomeia — a cura do vão é na ALTURA, regra dela. */
+  .luz-grade .rotulos .cel-des{gap:8px}
+  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
+     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
+     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
+     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     é a forma mais difícil de ler que existe.
+     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
+     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
+     player"), então nada precisou ser reescrito. */
+  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
+           display:flex;align-items:center;gap:6px}
   /* A LEGENDA NÃO É TÍTULO. Sem isto ela herda o `text-transform:uppercase` do
      rótulo e sai um parágrafo inteiro em caixa alta, que é o mais difícil de
      ler que existe. Medido no navegador em 27/08, na Vibração. */
@@ -504,7 +760,13 @@
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
   .guia{display:flex;gap:4px;align-items:center}
-  .guia .tom{flex:1;height:26px;border-radius:6px;border:1px solid var(--border-forte);
+  /* A MOLDURA DA AMOSTRA SAIU — 31/08/2026, e é a mais pura das "bordas
+     sobrando": um retângulo de 1px em volta de um retângulo CHEIO da cor que
+     ele mostra. São oito por controle, trinta e dois na tela, e nenhum deles
+     separava coisa nenhuma — o `gap:4px` já separa, e o conteúdo é a própria
+     cor. A borda continua existindo em `transparent`: é ela que o `.on` pinta,
+     e sem ela o tom escolhido mudaria de tamanho ao ser escolhido. */
+  .guia .tom{flex:1;height:26px;border-radius:6px;border:1px solid transparent;
              cursor:pointer;padding:0;display:block;min-width:0}
   /* o tom escolhido engrossa POR DENTRO, com sombra, e não com `border-width:2`:
      os nove são `flex:1` e a borda de 2px conta no piso do item — o escolhido
@@ -540,7 +802,7 @@
      (`.players button{height:var(--h-escolha)}`). */
   .players button{
     flex:1;border-radius:7px;gap:6px;min-width:0;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:pointer;font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
   }
   .players button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg)}
@@ -556,12 +818,18 @@
                  background:none;border:2px solid var(--plastico)}
 
   /* ---------- DISPOSIÇÃO DE LEDS ---------- */
-  .aceso{border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);
+  /* A CAIXA DA DISPOSIÇÃO PERDEU A MOLDURA — 31/08/2026. Ela era uma borda
+     dentro de outra: `.aceso` emoldurava, e o `.pad` lá dentro — 20px mais
+     abaixo — emoldurava de novo. Duas linhas onde uma basta, e a de fora não
+     separava nada: a faixa já está delimitada pela divisória de cima, pela de
+     baixo e pela barra vertical da coluna. Quem tem de ter contorno é o
+     touchpad, porque o contorno É o desenho dele. */
+  .aceso{border-radius:8px;background:var(--app-bg);
          display:flex;align-items:center;justify-content:center;gap:16px;height:100%}
   .tira-luz{width:6px;height:20px;border-radius:3px}
   .tira-luz.esq{box-shadow:-3px 0 12px 1px currentColor}
   .tira-luz.dir{box-shadow:3px 0 12px 1px currentColor}
-  .pad{width:56px;height:20px;border-radius:5px;border:1px solid var(--border-forte);
+  .pad{width:56px;height:20px;border-radius:5px;border:1px solid var(--linha);
        background:var(--panel);display:flex;align-items:flex-end;justify-content:center;
        padding-bottom:3px}
   /* AS DUAS CORES VIAJAM COM AS LÂMPADAS, e antes não viajavam: elas eram
@@ -583,10 +851,10 @@
   /* ---------- o antes e o depois da troca, na legenda ---------- */
   .troca{margin:8px 0 12px;font-size:11.5px}
   .troca-linha{display:flex;align-items:center;gap:10px;margin:5px 0;flex-wrap:wrap}
-  .troca-rot{flex:0 0 52px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;
+  .troca-rot{flex:0 0 52px;font-size:10.5px;
              color:var(--comment)}
   .troca-item{display:flex;align-items:center;gap:7px;padding:4px 9px;border-radius:7px;
-              border:1px solid var(--border-sutil);background:var(--app-bg)}
+              border:1px solid var(--linha);background:var(--app-bg)}
   .troca-item.mexeu{border-color:var(--purple);background:var(--sel-bg)}
   .troca-item .dono{width:9px;height:9px;border-radius:50%;display:block;flex:0 0 9px;
                     background:none;border:2px solid var(--plastico)}
@@ -616,7 +884,7 @@
   <div class="cabecalho">
     <!-- A LOGO NÃO MORA MAIS AQUI — 30/08/2026, e a razão está medida.
          Eram 55 linhas de SVG coladas neste arquivo, e por isso eram a versão
-         VELHA: ela redesenhou o logotipo em `novo-layout/assets/hefesto-logo.svg`
+         VELHA: ela redesenhou o logotipo em `layout/assets/hefesto-logo.svg`
          (6.039 bytes, com `transform-box`/`transform-origin` no anel, a chama
          nova e a bigorna com sombra) e as dez páginas continuaram mostrando o
          desenho de antes. Pior: havia TRÊS desenhos vivos ao mesmo tempo — o
@@ -777,19 +1045,14 @@
     <div class="quadro luzes">
       <div class="quadro-topo">
         <span class="quadro-titulo">Iluminação</span>
+        <!-- DE 777 PARA ~230 CARACTERES — 30/08/2026, mesma regra da Vibração: o
+             parágrafo que nomeia um campo vai para o `?` daquele campo. O da cor
+             das barras foi para "Cor", o de gravar foi para o rodapé (que já tem
+             `title` nos quatro botões desde hoje). -->
         <span class="ajuda">?<span class="dica">
-          A <b>barra de luz</b> é a faixa que acende dos dois lados do touchpad. Ela é a
+          A <b>barra de luz</b> é a faixa que acende dos dois lados do touchpad, e é a
           identidade do controle na mesa: você olha e sabe de quem é.<br><br>
-          As colunas são os <b>4 controles ligados agora</b>, cada uma com o desenho no
-          plástico dele. O plástico é físico e pode se repetir; a <b>luz</b> é o que nunca
-          se repete — é ela que separa dois controles do mesmo modelo.<br><br>
-          Cada coluna se ajusta sozinha, no lugar dela — <b>a fita lá em cima está esmaecida
-          porque não há um controle escolhido nesta aba</b>: estão os quatro.<br><br>
-          Sem escolha à mão, cada barra fica na <b>cor do número</b> do controle:
-          1 azul, 2 vermelho, 3 verde, 4 rosa. Os oito quadradinhos da guia são essas
-          mesmas oito cores; o último é o <b>livre</b>, para uma cor fora delas.<br><br>
-          O que você mudar vale <b>agora</b>; para que volte amanhã, é o <b>Salvar Perfil</b>
-          do rodapé que grava.
+          O plástico é físico e pode se repetir; a <b>luz</b> é o que nunca se repete.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -797,21 +1060,38 @@
         <div class="luz-grade">
 
           <div class="rotulos">
+            <!-- A LEGENDA VIROU DICA — 30/08/2026, pedido dela sobre este texto
+                 exato: *"esse texto selecionado não existia no original"*.
+                 Ela não some: passa para o `?`, que é onde esta aba já põe toda
+                 explicação (o rótulo "Cor", logo abaixo, faz igual desde 28/08).
+                 Sete linhas de prosa cinza na coluna de rótulos competiam com os
+                 rótulos e ainda empurravam "COR" para longe da linha dele. -->
             <div class="cel-des">
-              <div class="sec-rot">Controle</div>
-              <div class="legenda">A barra acende na cor do número. A borda da moldura é a
-                cor do plástico, e as cinco luzinhas acima do touchpad dizem o número.</div>
-            </div>
-            <div></div>
-            <div>
-              <div class="sec-rot"><svg class="gl" width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
-  
-  <rect x="6"  y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="22" y="7" width="4" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-  <line x1="13" y1="10" x2="13" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="19" y1="10" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> Cor
+              <div class="sec-rot">Controle
                 <span class="ajuda">?<span class="dica">
+                  A barra acende na cor do <b>número</b>. A borda da moldura é a cor do
+                  <b>plástico</b>, e as cinco luzinhas acima do touchpad dizem o número.<br><br>
+                  Cada coluna é um controle e se ajusta sozinha — por isso a fita do topo
+                  fica esmaecida aqui: não há um escolhido, estão os quatro.
+                </span></span></div>
+            </div>
+            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido dela:
+                 *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
+                 coluna serve como nome da linha"*. Esta célula existia vazia só para
+                 ocupar a linha `--r-nome` da grade, e uma coluna cujo trabalho é
+                 nomear linhas tinha uma linha sem nome. -->
+            <div><span class="sec-rot">Modelo</span></div>
+            <div>
+              <!-- O GLIFO SAIU DO RÓTULO — 30/08/2026, pedido dela: *"os svg do lado
+                   esquerdo dos nomes pode remover, eles tão diferentes demais"*. Eram
+                   três desenhos de origens diferentes (`lightbar`, `led-jogador`, `l2`/`r2`)
+                   ao lado de rótulos que os outros cinco não tinham — a coluna lia como
+                   duas gramáticas. O glifo continua no DESENHO do controle, que é onde
+                   ele diz de qual peça se fala. -->
+              <div class="sec-rot">Cor
+                <span class="ajuda">?<span class="dica">
+                  Sem escolha à mão, cada barra fica na <b>cor do número</b> do controle.
+                  O último quadradinho é o <b>livre</b>, para uma cor fora das oito.<br><br>
                   Os oito quadradinhos são as <b>oito cores do produto</b> — uma por número
                   de jogador (1 azul, 2 vermelho, 3 verde, 4 rosa, 5 amarelo, 6 ciano,
                   7 laranja, 8 roxo). O nono é o <b>livre</b>, para uma cor que não está
@@ -840,16 +1120,8 @@
                   manda nas luzinhas é o jogo, não esta escolha.
                 </span></span>
               </div>
-              <div class="legenda">Trocar troca os dois de lugar.</div>
             </div>
-            <div><div class="sec-rot"><svg class="gl" width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Indicador de jogador</title>
-  
-  <rect x="3"  y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="11" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="15" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg> Disposição de LEDs</div></div>
+            <div><div class="sec-rot">Disposição de LEDs</div></div>
             <div><div class="sec-rot">Opções</div></div>
           </div>
 
@@ -981,7 +1253,7 @@
   <g id="il-p1-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="il-p1-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="il-p1-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1051,8 +1323,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="il-p1-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="il-p1-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -1252,14 +1524,14 @@
           <div class="ctrl-rot">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
           <div class="cel-cor">
             <span class="guia">
-            <button class="tom on" style="background:#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
               <input type="color" class="livre" value="#0000ff"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -1413,7 +1685,7 @@
   <g id="il-p2-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="il-p2-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="il-p2-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1483,8 +1755,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="il-p2-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="il-p2-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -1684,14 +1956,14 @@
           <div class="ctrl-rot">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</div>
           <div class="cel-cor">
             <span class="guia">
-            <button class="tom" style="background:#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom on" style="background:#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
               <input type="color" class="livre" value="#ff0000"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -1845,7 +2117,7 @@
   <g id="il-p3-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="il-p3-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="il-p3-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1915,8 +2187,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="il-p3-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="il-p3-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -2116,14 +2388,14 @@
           <div class="ctrl-rot">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> BT</div>
           <div class="cel-cor">
             <span class="guia">
-            <button class="tom" style="background:#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom on" style="background:#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
+            <button class="tom" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
               <input type="color" class="livre" value="#00ff00"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -2277,7 +2549,7 @@
   <g id="il-p4-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="il-p4-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="il-p4-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -2347,8 +2619,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="il-p4-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="il-p4-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -2548,14 +2820,14 @@
           <div class="ctrl-rot">P4 <span class="pt">•</span> White <span class="pt">•</span> USB</div>
           <div class="cel-cor">
             <span class="guia">
-            <button class="tom" style="background:#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom on" style="background:#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra do White, e não muda o número dele."></button>
+            <button class="tom" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do White, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do White, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do White, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do White, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do White, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do White, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do White, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do White, e não muda o número dele."></button>
               <input type="color" class="livre" value="#ff0080"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -2591,13 +2863,39 @@
 
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O recibo ENCURTA e não sai: `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e o
-         porquê está no `monta.py`, onde este arquivo é lido. -->
-    <div class="recibo"><b style="color:var(--texto-suave)">Aplicar</b> vale agora <span class="pt">•</span> <b style="color:var(--texto-suave)">Salvar Perfil</b> grava no <b style="color:var(--texto-suave)">Mortal Kombat</b></div>
-    <button class="r-aplicar">Aplicar</button>
-    <button class="r-salvar">Salvar Perfil</button>
-    <button class="r-importar">Importar</button>
-    <button class="r-exportar">Exportar</button>
+    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido dela:
+         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
+         perfil, importar e exportar. em todas as abas."*
+
+         ISTO DERRUBA A `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e de propósito. Ela
+         já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então
+         foi ENCURTAR (96 caracteres viraram 57), porque perguntada se saía do
+         mockup ou do produto ela respondeu "deixa ela encurtada tanto lá quanto no
+         mockup" — resposta sobre ONDE, lida como resposta sobre SE. Agora ela disse
+         o destino com todas as letras, e o destino não é a barra.
+
+         O QUE A DECISÃO PROTEGIA CONTINUA PROTEGIDO, e é o teste que se aplica:
+         a diferença entre APLICAR (vale agora) e SALVAR (grava no perfil), e o NOME
+         do perfil — "a informação que faltava e lhe custou semanas". As duas coisas
+         estão nas dicas abaixo, palavra por palavra. Nada se perdeu; mudou de lugar.
+
+         E O PRODUTO JÁ FAZIA ASSIM: `gui/main.glade` dá `tooltip-text` aos quatro
+         botões do rodapé (`btn_footer_apply`, `btn_footer_save_profile`,
+         `btn_footer_import`, `btn_footer_restore_default`), e
+         `tests/unit/test_o_rodape_diz_o_que_grava.py` morde exigindo isso. Era o
+         MOCKUP que duplicava a informação como texto fixo na barra. O texto de
+         Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
+
+         `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
+         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
+         num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
+         `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
+         (`aba09.py`). -->
+    <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
+    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
+    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>

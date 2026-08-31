@@ -27,16 +27,51 @@ E o resto:
                           saída, mesa vazia, mesa de cinco, daemon calado)
     --abre <uniq>         qual card nasce aberto
     --prova-gesto         cliques sintéticos, para provar tela → Python → eco
+    --prova-interruptor   navega até a aba Jogar e LIGA e DESLIGA de verdade,
+                          mostrando o `gamepad_disabled.flag` sumir e voltar
+    --sem-interruptor     a MORDIDA do interruptor: não instala a ponte na aba
+                          Jogar, e a `--prova-interruptor` tem de REPROVAR
     --cor-duble 02,05     a cor do plástico vem de um dublê, sem mandar um byte
                           ao aparelho
     --sem-cor  --sem-mic  --sem-pactl      desliga cada leitor, um a um
 
-ESTA LEVA NÃO ESCREVE NADA. O único método de IPC que este programa pronuncia é
-`daemon.state_full` (ver `mesa_viva.METODO`); os gestos da tela — os dois
-interruptores de sensor, os dois botões de rota e os três botões de som (o 🎙,
-o ♪ e o Liberar do microfone) — chegam ao Python, são registrados e **ecoam de
-volta**. Nenhum perfil dela é tocado; o dono real de cada gesto está declarado
-em :data:`DONOS_DOS_GESTOS`, num lugar só.
+O QUE ESTE PROGRAMA ESCREVE, e é UMA COISA SÓ (31/08/2026)
+----------------------------------------------------------
+Até 30/08 este arquivo não escrevia nada. Mudou por pedido dela, literal: *"Não
+sei se o botão de ativar ele na interface tá funcionando viu. não sei se segue
+desativado."* e *"eu quero é que **ele funcione na interface e se lembre**"*.
+
+O único gesto que APLICA é a **fileira de modos da aba Jogar** — os botões
+`[data-modo]` de "O que o controle faz agora". Ele sai daqui por
+`app/actions/mode_transition.apply_mode`, que é o dono declarado da sequência
+desde o HARM-01, e o que ele grava no disco é o `gamepad_disabled.flag` do
+próprio produto (`utils/session.save_gamepad_emulation`) — **não há um segundo
+lugar de verdade**, e este arquivo não abre nenhum.
+
+Todo o resto continua ECO: os dois interruptores de sensor, os dois botões de
+rota e os três botões de som (o 🎙, o ♪ e o Liberar do microfone) chegam ao
+Python, são registrados e voltam para a tela sem tocar em perfil nenhum. O dono
+real de cada gesto está declarado em :data:`DONOS_DOS_GESTOS`, num lugar só — e
+os do modo **não são digitados lá**: saem de `painel.escritor_do_modo`, que é o
+dono da resposta.
+
+POR QUE O INTERRUPTOR MORA NESTE ARQUIVO, e não no piloto da aba Jogar
+----------------------------------------------------------------------
+Porque é **este** que ela abre: `./interface` → `scripts/abrir_interface.py` →
+este piloto. A tira de cima navega de verdade (`<a href="01-jogar.html">`), e a
+ponte da janela sobrevive à navegação — o que não sobrevivia era a PONTE DE
+GESTO, que só existia na página da aba Controles.
+
+MEDIDO em 31/08, antes de uma linha ser escrita: com o `./interface` aberto e a
+tira navegada até a Jogar, `[data-modo="gamepad"]` aparecia **ACESO**,
+`listeners=0` nos quatro botões, o clique sintético produziu **zero gestos** e o
+`gamepad_disabled.flag` não se moveu — enquanto o `mode_of_state` do daemon dizia
+`desktop`. A tela afirmava o estado do DESENHO, que é o F7 desta casa.
+
+Quando a MIGRA-JOGAR enxertar o `jogar_vivo.py` no lugar do mockup estático, o
+interruptor sai daqui **sem reescrever regra nenhuma**: a regra já está em
+`app/actions/jogar/painel` (leitor, escritor, trava e lembrança) e em
+`mode_transition` (a sequência). O que fica aqui é DOM.
 
 A JANELA, AS DUAS PONTES E A GUARDA DE CARGA SAÍRAM DAQUI em 29/08/2026: elas
 são de todas as abas, não desta, e agora moram em
@@ -67,7 +102,14 @@ from typing import Any
 # decorativo, é a ordem de inicialização do gi.
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
 
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk, WebKit2  # noqa: E402
+
+# O INTERRUPTOR É PRODUTO, e vem de `src/` inteiro: `painel` responde qual botão
+# acende, quem o aplica, por que um deles não tem quem o atenda e o que está
+# GRAVADO no disco; `mode_transition` é o dono da sequência de IPC. Nada disso é
+# reescrito aqui — o que sobra para este arquivo é o DOM.
+from hefesto_dualsense4unix.app.actions import mode_transition
+from hefesto_dualsense4unix.app.actions.jogar import painel
 
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
@@ -110,10 +152,37 @@ TIQUE_MS = 100
 #: que é o custo que a carona de 0,5 Hz do produto existe para não pagar.
 TIQUE_LENTO_MS = 2000
 
-#: O DONO REAL DE CADA GESTO, DECLARADO NUM LUGAR SÓ. Nesta leva nenhum deles é
-#: chamado — a aba é para ela AVALIAR, e um gesto que grave sem ela mandar é
-#: dano. O que o clique faz hoje é chegar aqui, ser registrado e ecoar.
+#: O tique do INTERRUPTOR, quando a tela está fora da aba Controles. Ele lê só o
+#: `state_full` (a mesma leitura do tique rápido) e pinta quatro botões — a 10 Hz
+#: seria pagar o preço do card inteiro para desenhar uma fileira que muda uma vez
+#: por sessão. Meio segundo é o piso do que se percebe numa fileira de modos.
+TIQUE_DO_INTERRUPTOR_MS = 500
+
+#: Quanto o clique dela continua valendo na tela enquanto o daemon não alcança.
+#: Trocar de modo cria uinput e faz grab — o `MODE_IPC_TIMEOUT_S` do produto é
+#: 2,0 s para a chamada, e o efeito ainda leva um tique de estado para aparecer.
+#:
+#: **O prazo é o que impede o F7 desta casa.** Sem ele o botão clicado ficaria
+#: aceso para sempre, e a tela passaria a afirmar um estado que o daemon recusou
+#: — que é exatamente o defeito que este interruptor nasceu para curar. Passado o
+#: prazo, a verdade do daemon vence e o piloto DIZ, em voz alta, que o modo
+#: pedido não foi alcançado.
+PRAZO_DO_MODO_S = 4.0
+
+#: O DONO REAL DE CADA GESTO, DECLARADO NUM LUGAR SÓ. Dos onze, **só os quatro
+#: do modo aplicam** (e um dos quatro nem isso: o "Desligado" não tem escritor).
+#: Os outros sete continuam eco — a aba é para ela AVALIAR, e um gesto que grave
+#: sem ela mandar é dano.
+#:
+#: As linhas do modo NÃO SÃO DIGITADAS AQUI: são lidas de
+#: `painel.escritor_do_modo`, que é o dono da resposta. Digitá-las seria a
+#: segunda cópia — e é assim que onze réguas desta casa reprovaram a melhora em
+#: vez do defeito, em 26/08: digitavam o que deviam LER.
 DONOS_DOS_GESTOS = {
+    **{
+        f"modo:{modo.chave}": painel.escritor_do_modo(modo.chave)
+        for modo in painel.MODOS_DA_TELA
+    },
     "sensor:giroscopio": "NÃO TEM DONO. Não há campo de sensor em "
     "profiles/schema.py nem método de sensor em daemon/ipc_server.py. "
     "A decisão dela de 18/08 (guardar giro e acelerômetro no perfil) "
@@ -484,6 +553,128 @@ window.HEF = (function(){
 'HEF-PRONTO'
 """
 
+#: O INTERRUPTOR — a fileira `[data-modo]` de QUALQUER página que a tenha.
+#:
+#: Ele é separado do :data:`BOOTSTRAP` de propósito: aquele é da aba Controles e
+#: endereça cards; este é da fileira de modos e endereça `[data-modo]`. A tira
+#: navega, e o que segue com ela é a fileira — não o card.
+#:
+#: **Ele não decide nada.** Qual botão acende, qual está travado e o que o
+#: `title` diz chegam prontos do Python, que os pergunta ao `painel`. Escrever
+#: aqui um `if modo === 'gamepad'` seria o segundo dono da regra, na linguagem
+#: em que ninguém a mede.
+INTERRUPTOR = r"""
+window.HEFSW = (function(){
+  const qa = s => Array.from(document.querySelectorAll(s));
+  function manda(o){ window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify(o)); }
+
+  // AS ESCRITAS DEVOLVEM QUANTAS ESCREVERAM — 0 quando o endereço não existe.
+  // Com `n++` cego, arrancar os `data-modo` não mudaria o número e a régua
+  // aprovaria uma pintura que não pinta nada.
+  function cls(el,c,on){ if(!el) return 0; el.classList.toggle(c, !!on); return 1; }
+  function trava(el,off){ if(!el) return 0; if(el.disabled!==!!off) el.disabled=!!off; return 1; }
+  function dica(el,v){ if(!el) return 0; if(el.title!==v) el.title=v; return 1; }
+
+  // A POSIÇÃO DO INTERRUPTOR — E ELA SEGUE O DAEMON, NÃO O CLIQUE (31/08/2026).
+  //
+  // O QUE QUEBROU: o mockup deixou de usar `<button>` na fileira de modos e
+  // passou a usar `<label>` sobre um `radio` escondido, que é como as dez abas
+  // abrem seção sem uma linha de JavaScript. O `ev.preventDefault()` do ouvinte
+  // abaixo era inofensivo num `<button>`; num `<label>` ele IMPEDE o rádio de
+  // mudar, e a seção não abriria nem fecharia.
+  //
+  // A CURA NÃO É TIRAR O `preventDefault`. Se o clique movesse o rádio sozinho,
+  // a tela abriria a seção do Modo Nativo enquanto o daemon continuasse em
+  // `gamepad` — o F7 desta casa, estado velho como padrão, na pergunta em que
+  // ele mais dói. A seção segue o DAEMON: quem move o rádio é a pintura.
+  //
+  // O ID DO RÁDIO NÃO É DIGITADO AQUI: ele sai do `for` do próprio rótulo
+  // (`htmlFor`), que é o que o gerador escreve. Escrevê-lo seria digitar o que
+  // se pode LER — a forma exata dos onze instrumentos falsos de 26/08 — e a
+  // régua da suíte confere justamente isso, então nem em comentário ele entra.
+  // E a REGRA de quais modos são "Ligado" não mora aqui: ela chega pronta em
+  // `p.hefesto_ligado`, de `painel.hefesto_ligado`.
+  function radioDoLado(qual){
+    const rot = document.querySelector('.hef-pos.' + qual);
+    return rot ? document.getElementById(rot.htmlFor) : null;
+  }
+  function lado(p){
+    // `null` = o daemon não respondeu. Empurrar o rádio para "desligado" aí
+    // seria a tela responder "Desligado" sem ter perguntado a ninguém.
+    if(p.hefesto_ligado !== true && p.hefesto_ligado !== false) return 0;
+    const rd = radioDoLado(p.hefesto_ligado ? 'ligado' : 'desligado');
+    if(!rd || rd.checked) return 0;
+    rd.checked = true;
+    return 1;
+  }
+  // O QUE A TELA FICOU MOSTRANDO — lido do DOM DEPOIS de escrever, e não o que
+  // se PEDIU. Relatar a intenção é como uma régua dá verde sobre uma pintura
+  // que não pintou: aqui a mordida (arrancar o `lado`) tem de aparecer como o
+  // rádio parado no lado errado, e só a leitura de volta mostra isso.
+  function ladoNaTela(){
+    const l = radioDoLado('ligado'), d = radioDoLado('desligado');
+    if(l && l.checked) return 'Ligado';
+    if(d && d.checked) return 'Desligado';
+    return 'SEM INTERRUPTOR';
+  }
+
+  function pinta(p){
+    let n = 0;
+    for(const b of qa('[data-modo]')){
+      const chave = b.dataset.modo;
+      const motivo = p.travados[chave] || '';
+      n += cls(b, 'on', chave === p.modo);
+      n += trava(b, !!motivo);
+      n += dica(b, motivo || (p.dicas[chave] || ''));
+    }
+    n += lado(p);
+    // A CHAVE DO RELATO CARREGA O MODO, e não só a contagem: com `n` sozinho o
+    // Python só ouviria a PRIMEIRA pintura, e uma troca de modo passaria calada.
+    // O LADO ENTRA NA CHAVE pelo mesmo motivo: o rádio só é escrito quando MUDA,
+    // então `n` volta ao valor de antes no tique seguinte, e sem o lado a virada
+    // do interruptor passaria calada — que é como a fita viva morreu em 27/08.
+    const marca = n + ':' + (p.modo || '') + ':' + Object.keys(p.travados).length
+                + ':' + p.hefesto_ligado;
+    if(marca !== window.__hefSW){ window.__hefSW = marca;
+      manda({gesto:'interruptor-pintou', valores:n, modo:p.modo||'',
+             hefesto_ligado:p.hefesto_ligado, lado:ladoNaTela()}); }
+    return n;
+  }
+
+  function ligar(){
+    let quantos = 0;
+    for(const b of qa('[data-modo]')){
+      if(b.dataset.ligado) continue; b.dataset.ligado='1'; quantos++;
+      b.addEventListener('click', ev=>{
+        ev.preventDefault(); ev.stopPropagation();
+        // `disabled` já impede o evento no navegador; a guarda fica porque o
+        // `disabled` pode sair da tela por pintura e o significado não muda.
+        if(b.disabled) return;
+        manda({gesto:'modo', modo:b.dataset.modo});
+      });
+    }
+    return quantos;
+  }
+
+  const ligados = ligar();
+  return {pinta:pinta, ligar:ligar,
+          quem:function(){ return qa('[data-modo]').length + '|' + ligados; }};
+})();
+'SW-PRONTO'
+"""
+
+
+def _unidade_do_hefesto() -> str:
+    """O nome da unidade, LIDO do produto — nunca digitado.
+
+    A variante muda o nome inteiro (`hefesto-dev-dualsense4unix.service` com
+    `HEFESTO_VARIANTE=dev`), e um literal nesta tela mandaria quem lê acordar o
+    daemon da OUTRA casa.
+    """
+    from hefesto_dualsense4unix.daemon.service_install import SERVICE_NORMAL
+
+    return str(SERVICE_NORMAL)
+
 
 def _leitor_duble(codigos: str | None) -> Any:
     """Um `ler_pelo_cabo` de mentira, que responde os códigos que se pedir.
@@ -546,6 +737,28 @@ class Janela:
         self.mic = None
         self._roteiro: list[dict] | None = None
         self._t0 = 0.0
+        #: O INTERRUPTOR: se a página à vista AGORA tem a fileira de modos ligada.
+        self.interruptor_ligado = False
+        #: O clique dela, valendo até o daemon alcançar — ou até o prazo estourar.
+        #: `None` = a tela mostra o modo VIVO, que é o padrão e o estado honesto.
+        self.eco_modo: str | None = None
+        self.eco_ate = 0.0
+        #: O que ESTE processo aplicou de verdade, na ordem — a régua do relato.
+        self.aplicados: list[str] = []
+        #: `(quando, o que o disco dizia)` a cada leitura do opt-out. É o que
+        #: prova o "se lembre": o flag sumindo e voltando, medido daqui.
+        self.lembrancas: list[tuple[str, bool | None]] = []
+        self.pinturas_do_interruptor = 0
+        #: Os lados que a TELA mostrou, na ordem, lidos do DOM. É a régua da
+        #: cura de 31/08: com o `hefesto_ligado` arrancado esta lista trava num
+        #: lado só, porque o rádio fica onde o mockup nasceu.
+        self.lados_do_interruptor: list[str] = []
+        self.recusas_de_modo: list[str] = []
+        #: Quantos cliques SINTÉTICOS a `--prova-interruptor` mandou. Sem este
+        #: número o relato não distingue "o botão estava TRAVADO" de "o botão
+        #: nem foi clicado" — que é o buraco pelo qual o `--prova-gesto` deu
+        #: verde sobre dois botões mortos em 29/08.
+        self.cliques_do_roteiro = 0
 
 
         # A JANELA, A PONTE E A GUARDA SÃO DA BIBLIOTECA. O que sobra aqui é a
@@ -564,6 +777,19 @@ class Janela:
         self.ponte = self.tela.ponte
         self.janela = self.tela.janela
 
+        # O SEGUNDO OUVINTE DE CARGA, e ele precisa ser próprio. O
+        # `ao_sair_da_aba` da biblioteca dispara UMA vez — na saída da aba desta
+        # janela — porque a guarda dela só existe para não matar a janela numa
+        # navegação legítima. Daqui em diante toda página é "fora da aba", e o
+        # callback não volta a ser chamado: Jogar → Gatilhos → Jogar não
+        # produziria evento nenhum, e o interruptor ficaria acreditando que ainda
+        # está na página onde nasceu. `load-changed` é do WebView e chega em
+        # TODAS as cargas; conectar um segundo handler é aditivo no GObject e não
+        # toca numa linha de `ponte_da_tela`, que é de todas as dez abas.
+        self.view.connect("load-changed", self._pagina_mudou)
+        if not args.sem_interruptor:
+            GLib.timeout_add(TIQUE_DO_INTERRUPTOR_MS, self._tique_do_interruptor)
+
     # -- carga -------------------------------------------------------------
     def _saiu_da_aba(self, titulo: str) -> None:
         """Ela clicou na tira. Sair da Controles só DESLIGA a pintura.
@@ -575,6 +801,194 @@ class Janela:
         """
         self.pronto = False
         print(f"[fora da Controles] {titulo} — o mockup estático; a pintura pausou.")
+
+    # -- o interruptor -----------------------------------------------------
+    def _pagina_mudou(self, _view: Any, evento: Any) -> None:
+        """Uma página TERMINOU de carregar — qualquer uma, inclusive a de volta.
+
+        A ponte de gesto vive no `window` da PÁGINA: navegar a destrói junto com
+        o `window` antigo. Por isso o estado do interruptor cai para desligado
+        aqui, sempre, e é reinstalado só depois de a página nova responder que
+        tem a fileira.
+        """
+        if evento != WebKit2.LoadEvent.FINISHED:
+            return
+        self.interruptor_ligado = False
+        if self.args.sem_interruptor:
+            return
+        # Um tique de folga: o `FINISHED` chega antes de o `document` da página
+        # nova estar pronto para responder `querySelector`. É o mesmo motivo pelo
+        # qual a guarda de carga da biblioteca PERGUNTA à página em vez de
+        # acreditar no evento.
+        GLib.timeout_add(80, self._talvez_ligar_o_interruptor)
+
+    def _talvez_ligar_o_interruptor(self) -> bool:
+        """A página à vista tem a fileira de modos? Então ela ganha a ponte.
+
+        A pergunta é feita ao DOM, nunca ao título: o endereço é `[data-modo]`,
+        que é o que o gerador escreve. Casar por título seria digitar o que se
+        pode LER — e o título do mockup carrega uma DATA ("mockup 26/08/2026"),
+        que envelhece sozinha e desligaria o interruptor calado.
+
+        A RESPOSTA TEM TRÊS VALORES, e o do meio é a ARMADILHA 1 do WebKit2
+        (`ponte_da_tela.AS_QUATRO_ARMADILHAS`): o `FINISHED` chega mais de uma
+        vez para a mesma página. MEDIDO em 31/08: a fileira era instalada DUAS
+        vezes na mesma carga — a segunda respondia `4|0` (nenhum ouvinte novo,
+        porque o `data-ligado` do JS já guardava), mas entre uma e outra o
+        `interruptor_ligado` caía para falso e a pintura parava. Perguntar se a
+        página JÁ tem o `window.HEFSW` separa "página nova" de "mesmo
+        `FINISHED` de novo" sem confiar no evento — que é a mesma disciplina da
+        guarda de carga da biblioteca.
+        """
+
+        def respondeu(valor: str | None, erro: Exception | None) -> None:
+            if erro is not None:
+                return
+            if valor == "ja":
+                self.interruptor_ligado = True
+                self._pintar_o_interruptor()
+                return
+            if valor == "sim":
+                self._ligar_o_interruptor()
+
+        self.ponte.perguntar(
+            "document.querySelector('[data-modo]')"
+            " ? (window.HEFSW ? 'ja' : 'sim') : 'nao'",
+            respondeu,
+        )
+        return False
+
+    def _ligar_o_interruptor(self) -> None:
+        def pronto(valor: str | None, erro: Exception | None) -> None:
+            if erro is not None:
+                print(f"interruptor: não instalou ({erro})", file=sys.stderr)
+                return
+            self.interruptor_ligado = True
+            lembra = painel.modo_lembrado()
+            self.lembrancas.append(("ao chegar na fileira", lembra.ligado))
+            print("[interruptor] a fileira de modos está VIVA — "
+                  f"{valor or 'sem resposta'}")
+            print(f"[interruptor] o disco diz: {lembra.frase}")
+            self._pintar_o_interruptor()
+
+        self.ponte.perguntar(INTERRUPTOR + ";window.HEFSW.quem()", pronto)
+
+    def _tique_do_interruptor(self) -> bool:
+        if self.interruptor_ligado:
+            self._pintar_o_interruptor()
+        return True
+
+    def _pintar_o_interruptor(self) -> None:
+        """O que a fileira mostra AGORA — a verdade do daemon, com prazo do eco.
+
+        O modo VIVO vence sempre, e o clique dela só o cobre enquanto o daemon
+        não teve tempo de alcançá-lo. Passado :data:`PRAZO_DO_MODO_S` o eco cai
+        **em voz alta**: um botão que continuasse aceso sozinho seria a tela
+        afirmando um estado que o daemon recusou.
+        """
+        state, _erro = self._estado()
+        vivo = painel.modo_vivo(state)
+        if self.eco_modo is not None:
+            if vivo == self.eco_modo:
+                print(f"[interruptor] o daemon alcançou “{self.eco_modo}”.")
+                self.eco_modo = None
+            elif time.monotonic() > self.eco_ate:
+                print(f"[interruptor] PRAZO ESTOURADO: pedi “{self.eco_modo}” e "
+                      f"o daemon continua em “{vivo}”. A tela volta à verdade.")
+                self.eco_modo = None
+        lembra = painel.modo_lembrado()
+        self.ponte.dizer(
+            "HEFSW.pinta",
+            {
+                "modo": self.eco_modo or vivo or "",
+                # OS TRAVADOS SÃO CALCULADOS, NÃO DIGITADOS: quem responde é o
+                # `painel`, e o dia em que o "Desligado" ganhar escritor o botão
+                # destrava sozinho.
+                "travados": {
+                    m.chave: painel.porque_nao_aplica(m.chave)
+                    for m in painel.MODOS_DA_TELA
+                    if painel.porque_nao_aplica(m.chave)
+                },
+                # A DICA DO "JOGAR PELO HEFESTO" É A RESPOSTA À PERGUNTA DELA.
+                # *"não sei se segue desativado"* se responde com o que está
+                # GRAVADO, não com o que está acontecendo: o daemon pode ter
+                # acabado de subir, e o disco é quem diz o que ela decidiu.
+                "dicas": {mode_transition.MODE_GAMEPAD: lembra.frase},
+                # A POSIÇÃO DO INTERRUPTOR, e ela é DERIVADA — nunca a
+                # comparação de um botão só. O Hefesto ligado é `gamepad` OU
+                # `desktop` (a Navegação); comparando `data-modo` um a um, com o
+                # modo vivo em `desktop` as duas posições ficam apagadas e a tela
+                # fica MUDA, que parece defeito. Vem do `state`, e não do eco: a
+                # seção que abre é a verdade do daemon, não o clique dela.
+                "hefesto_ligado": painel.hefesto_ligado(state),
+            },
+        )
+
+    def _aplicar_o_modo(self, chave: str) -> None:
+        """O clique dela virando pedido — pelo dono, e só por ele."""
+        motivo = painel.porque_nao_aplica(chave)
+        if motivo:
+            self.recusas_de_modo.append(chave)
+            print(f"[interruptor] RECUSADO — {motivo}")
+            return
+        antes = painel.modo_lembrado()
+        self.lembrancas.append((f"antes de aplicar {chave}", antes.ligado))
+        self.eco_modo = chave
+        self.eco_ate = time.monotonic() + PRAZO_DO_MODO_S
+        self.aplicados.append(chave)
+        plano = painel.plano_do_modo(chave) or []
+        print(f"[interruptor] APLICANDO “{chave}” — "
+              + " · ".join(metodo for metodo, _ in plano))
+
+        def deu(resultado: Any) -> bool:
+            depois = painel.modo_lembrado()
+            self.lembrancas.append((f"depois de aplicar {chave}", depois.ligado))
+            print(f"[interruptor] o daemon respondeu: {resultado}")
+            print(f"[interruptor] o disco agora diz: {depois.frase}")
+            return False
+
+        def falhou(erro: Exception) -> bool:
+            print(f"[interruptor] o daemon RECUSOU “{chave}”: {erro}",
+                  file=sys.stderr)
+            self.eco_modo = None
+            return False
+
+        mode_transition.apply_mode(chave, on_done=deu, on_fail=falhou)
+
+    def _marcar_o_interruptor_de_mentira(self) -> None:
+        """Cliques SINTÉTICOS na fileira de modos — os TRÊS, e todos aplicam.
+
+        O ENDEREÇO QUE ESTE ROTEIRO PERDEU: até 30/08 ele começava clicando o
+        `data-modo` do botão "Desligado", que era o botão sem dono, e a mordida
+        era a ORDEM — o travado primeiro, com zero gestos. (O endereço não é
+        escrito por extenso aqui de propósito: há régua que colhe os
+        `querySelector` deste arquivo e os confere contra o HTML, e um exemplo
+        citado dentro de um comentário entraria na conta como se fosse clique —
+        é a mesma armadilha que o `01-jogar.html` declara no CSS do interruptor.) **Em 31/08 esse botão saiu
+        do desenho** (ver a lápide `painel.MODO_DESLIGADO`), e `.click()` sobre
+        um `null` levanta `TypeError` dentro do WebKit: a régua morreria calada
+        no primeiro passo. Hoje a fileira não tem nenhum botão travado — os três
+        modos têm leitor e escritor —, então cliques e gestos TÊM de bater, e a
+        régua do "sem ouvinte" mudou de forma: é essa igualdade.
+
+        A ORDEM CONTINUA SENDO MEDIDA: DESLIGA (Modo Nativo), LIGA (Jogar pelo
+        Hefesto) e termina em `desktop` — que é onde a mesa dela estava quando
+        esta prova começou. Deixar a máquina dela noutro modo porque uma régua
+        rodou seria a régua mudando o produto pelas costas.
+        """
+        jogar = (PAGINA.parent / "01-jogar.html").as_uri()
+        roteiro: list[tuple[int, Any]] = [
+            (1200, lambda: self.view.load_uri(jogar)),
+            (2600, lambda: self._js(
+                "document.querySelector('[data-modo=\"native\"]').click()")),
+            (3400, lambda: self._js(
+                "document.querySelector('[data-modo=\"gamepad\"]').click()")),
+            (7000, lambda: self._js(
+                "document.querySelector('[data-modo=\"desktop\"]').click()")),
+        ]
+        for ms, passo in roteiro:
+            GLib.timeout_add(ms, lambda p=passo: (p(), False)[1])
+        self.cliques_do_roteiro = len(roteiro) - 1  # o primeiro passo é a navegação
 
     def _instalar(self) -> None:
         if self.args.sem_ponte:
@@ -595,6 +1009,8 @@ class Janela:
             GLib.timeout_add(TIQUE_MS, self._tique)
             if self.args.prova_gesto:
                 self._marcar_gestos_de_mentira()
+            if self.args.prova_interruptor:
+                self._marcar_o_interruptor_de_mentira()
             if self.args.arranca_enderecos:
                 # A MORDIDA DO ENDEREÇO: arranca os `data-*` que o `aba02.py`
                 # passou a escrever e vê a pintura DESABAR. Um endereço a menos
@@ -730,9 +1146,16 @@ class Janela:
         state, erro = self._estado()
         t_ipc = (time.perf_counter() - t0) * 1000
         if state is None:
+            # O TEXTO MANDAVA PARA UM BOTÃO QUE NÃO EXISTE. Dizia *"abra a aba
+            # Sistema e clique em 'Ligar o Hefesto'"*, e `grep -rn "Ligar o
+            # Hefesto" layout/*.html` devolve ZERO: a aba Sistema tem "Retomar",
+            # "Reiniciar o Hefesto", "Atualizar" e "Desligar o Hefesto" — o
+            # caminho de volta não está desenhado lá. Mandar alguém para um botão
+            # inexistente é a tela afirmando uma saída que ela não tem.
             self._mesa_ausente(
-                "Hefesto desligado — abra a aba Sistema e clique em "
-                f'"Ligar o Hefesto". ({erro})',
+                "O Hefesto não respondeu. Ele é um serviço do sistema: se estiver "
+                "desligado, quem o liga de volta é o systemd — no terminal, "
+                f"`systemctl --user start {_unidade_do_hefesto()}`. ({erro})",
                 bolinha="○",
                 cor="var(--red)",
                 conta=" 0 controles: ",
@@ -1054,6 +1477,29 @@ class Janela:
             self.valores.append(int(o.get("valores") or 0))
             print(f'[pintura] {o.get("valores")} valores escritos · {o.get("ms")} ms na página')
             return
+        if gesto == "interruptor-pintou":
+            self.pinturas_do_interruptor += 1
+            # O LADO É LIDO DO DOM, e é a régua da cura de 31/08: sem
+            # `painel.hefesto_ligado` o rádio fica onde o mockup nasceu e a tela
+            # abre a seção errada. `aceso` é o `.on` da fileira; `lado` é o
+            # interruptor de verdade.
+            lado = str(o.get("lado") or "?")
+            # A LISTA GUARDA AS VIRADAS, não os valores distintos: com um `set`
+            # de dois elementos "foi e voltou" e "foi e ficou" contam igual, e é
+            # a volta que prova que a tela SEGUE o daemon em vez de travar.
+            if not self.lados_do_interruptor or lado != self.lados_do_interruptor[-1]:
+                self.lados_do_interruptor.append(lado)
+            print(f'[interruptor] {o.get("valores")} valores escritos · '
+                  f'aceso: {o.get("modo") or "NENHUM"} · '
+                  f'a tela mostra: {lado}')
+            return
+        if gesto == "modo":
+            chave = str(o.get("modo") or "")
+            print(f"[gesto] modo → {chave}")
+            print(f"         dono real: "
+                  f"{DONOS_DOS_GESTOS.get(f'modo:{chave}', SEM_DONO)}")
+            self._aplicar_o_modo(chave)
+            return
         if gesto == "alvo":
             self.alvo = o.get("controle") or None
             print(f'[gesto] alvo → {o.get("radio")} ({self.alvo or "Todos"}) · '
@@ -1113,10 +1559,30 @@ class Janela:
                 f"· max {s[-1]:.2f}"
             )
 
+        def flag(v: bool | None) -> str:
+            return {True: "LIGADO", False: "DESLIGADO de propósito"}.get(
+                v, "nunca decidiu"
+            )
+
         linhas = [
             f"voltas: {self.voltas} · remontagens: {self.remontagens} · "
             f"gestos: {len([g for g in self.gestos if g.get('gesto') != 'pintou'])}",
             f"valores escritos por pintura: {sorted(set(self.valores)) or 'NENHUM'}",
+            # O INTERRUPTOR TEM RELATO PRÓPRIO, e ele é a régua desta leva. Uma
+            # prova que só contasse "gestos" não distinguiria o clique que chegou
+            # do clique que APLICOU — e é essa a diferença que ela pediu.
+            f"interruptor: {self.pinturas_do_interruptor} pintura(s) · "
+            f"{self.cliques_do_roteiro} clique(s) sintético(s) → "
+            f"{len([g for g in self.gestos if g.get('gesto') == 'modo'])} gesto(s) "
+            f"de modo — desde 31/08 a fileira não tem botão travado, então os "
+            f"dois números TÊM de bater; a diferença seria botão sem ouvinte",
+            f"aplicados: {self.aplicados or 'NENHUM'} · "
+            f"recusados por falta de dono: {self.recusas_de_modo or 'nenhum'}",
+            "o interruptor, LIDO DA TELA, na ordem: "
+            + (" → ".join(self.lados_do_interruptor) or "NUNCA PINTADO"),
+            "o disco (gamepad_disabled.flag), na ordem: "
+            + (" → ".join(f"{quando}: {flag(v)}" for quando, v in self.lembrancas)
+               or "NUNCA LIDO"),
             resumo("IPC ", self.custos_ipc),
             resumo("tela", self.custos_tela),
             resumo("volta", self.custos),
@@ -1166,6 +1632,12 @@ def main() -> int:
                    help="MORDIDA: apaga os data-* e prova que a pintura desaba")
     p.add_argument("--prova-gesto", action="store_true",
                    help="dispara cliques sintéticos e prova o eco")
+    p.add_argument("--prova-interruptor", action="store_true",
+                   help="navega até a aba Jogar e LIGA e DESLIGA de verdade, "
+                        "mostrando o gamepad_disabled.flag sumir e voltar")
+    p.add_argument("--sem-interruptor", action="store_true",
+                   help="MORDIDA: não instala a ponte na fileira de modos — a "
+                        "--prova-interruptor tem de REPROVAR")
     p.add_argument("--abre", help="uniq do controle que nasce aberto (prova)")
     p.add_argument("--duble", help="JSON com um state_full — em vez do daemon")
     args = p.parse_args()

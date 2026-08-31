@@ -13,10 +13,99 @@
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
-    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
+    /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
+       Ela apontou o sintoma três vezes, em três abas: *"os campos de importância
+       tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
+       de campos e essa fonte tem um contraste horrível"*, *"em todas as abas isso
+       tem que ser visto infelizmente"*.
+       MEDIDO nas dez abas, contraste WCAG de todo texto contra o fundo real:
+       390 elementos abaixo do limiar, e DUAS cores respondem por 93% deles —
+       `--comment` 217 vezes a 3,03:1 e `--texto-mudo` 146 vezes a 4,47:1.
+       O limiar para texto pequeno é 4,5:1; as duas ficavam abaixo, uma delas
+       por muito. Não era defeito de aba nenhuma: era a paleta.
+       O QUE MUDOU É SÓ A LUMINÂNCIA. O matiz e a saturação de cada uma
+       continuam os mesmos — a cara da interface não muda, o texto aparece:
+         --comment    #6272a4 -> #8896c4   3,03:1 -> 4,89:1
+         --texto-mudo #8b8fa8 -> #9a9eb8   4,47:1 -> 5,40:1
+       Os hex de origem eram do GUIA_IMPLEMENTACAO.md, e o `--comment` de lá é a
+       cor de COMENTÁRIO do Dracula — feita para código, onde apagar é o efeito
+       desejado. Usá-la em texto de interface é que era o engano. */
+    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     --sel-bg:rgba(189,147,249,0.16);
+    /* O RÓTULO DE CAMPO TEM COR DE RÓTULO, NÃO DE COMENTÁRIO.
+       `.sec-rot` nascia `var(--comment)` (#6272a4) nas SEIS abas que a usam, e
+       ela leu o resultado pelo que ele é: *"os campos de importância tipo cor,
+       brilho, selecione player tão invisíveis"*. #6272a4 sobre o `--panel`
+       (#282a36) dá contraste 2,6:1 — abaixo do 4,5:1 que texto pequeno pede.
+       O roxo é a cor de destaque DA CASA, medida: as dez abas pintam o
+       `.quadro-titulo` de #bd93f9, sem exceção.
+       Um TOKEN e não um hex por aba: assim a Vibração troca o dela numa linha
+       (ela pediu verde lá) sem ninguém digitar cor em seis arquivos — que é
+       exatamente como esta regra virou seis cópias divergentes.
+
+       VERDE, E NÃO ROXO — decisão dela, 30/08: *"deixa verde os nomes"*
+       (Iluminação) e *"os nomes das seções tem que ser verde"* (Gatilhos). Ela
+       já pedira verde na Vibração horas antes; agora vale para as dez, e a
+       exceção escopada em `.vib` some por ser redundante.
+       O roxo continua sendo a cor do TÍTULO do quadro (`.quadro-titulo`, as dez
+       pintam #bd93f9). São dois papéis: o título nomeia a ABA, o rótulo nomeia a
+       LINHA. Cores diferentes é o que os separa. */
+    --rot-campo:var(--green);
+    /* ---------------------------------------------------------------
+       A ESCALA DA BORDA ESTRUTURAL — UMA SÓ, 31/08/2026.
+
+       PEDIDO DELA, vendo Gatilhos, Iluminação e Vibração: *"é preciso remover as
+       bordas sobrando de tudo e deixar as bordas menos perceptíveis mas
+       presentes e modernas de forma que não roube a atenção de forma
+       negativa"*; e sobre a Perfis: *"nessa aba aqui as bordas tão horríveis"*.
+
+       O DEFEITO NÃO ERA UMA BORDA — ERA A FAIXA INTEIRA. Censo do DOM das
+       quatro abas, contraste de cada borda contra o fundo REAL atrás dela: a
+       borda ESTRUTURAL ia de **1,21:1** (`--border-sutil`, que sumia) a
+       **4,89:1** (`.btn`, que usava `--comment`) na MESMA tela — quatro vezes
+       de diferença. É isso que fazia a Gatilhos ler como GRADE: a divisória
+       horizontal gritava a 3,37:1 enquanto a vertical, encostada nela, sumia a
+       1,21:1. Não havia peso demais nem de menos; havia peso NENHUM em comum.
+
+       O VALOR, E DE ONDE ELE SAI. Um só, e ele é o MEIO EM LUMINÂNCIA entre os
+       dois extremos que ela mesma julgou: #343746 tem L 23,9% e ela o chamou de
+       invisível em 30/08; #767a92 tem L 51,8% e é o que ela chamou de excessivo
+       hoje. L 38% é o meio exato, e o matiz e a saturação continuam os da
+       família (H 231, S 13%) — muda só a luminância, como em 30/08.
+
+         --linha  #53576f   2,01:1 sobre --panel · 2,23:1 sobre --app-bg
+
+       São **40% menos** que a linha de 30/08 (3,37:1) e **66% mais** que a
+       borda que sumia (1,21:1). O rótulo verde ao lado dela está a 10,4:1 e o
+       texto mudo a 5,40:1: a linha recua diante dos dois, que é o que "presente
+       e não rouba a atenção" quer dizer em número.
+
+       QUEM NÃO LÊ DAQUI, e é o ponto: a borda que carrega INFORMAÇÃO. A cor do
+       plástico (D-A-BORDA-E-A-IDENTIDADE-DA-PECA), o estado (`.on`,
+       `.aba.ativa`, `:hover`) e o foco continuam com a cor deles — esmaecer
+       essas é apagar o dado, não o enfeite.
+       --------------------------------------------------------------- */
+    --linha:#53576f;
+    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido dela: *"linha abaixo de cada
+       campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
+       e, quando a viu: *"as linhas divisórias em todas as páginas tão
+       invisíveis (…) a primeira coluna serve como nome da linha e a divisória
+       entre eles tem que estar clara"*.
+
+       ELA ESTAVA CERTA, E O NÚMERO ERA BRUTAL. `--border-sutil` (#343746) sobre
+       o painel (#282a36) dá **1,21:1** — a linha existia no DOM e não na tela.
+       `--border-forte` também não servia: 1,56:1.
+
+       O QUE CADUCOU EM 31/08, e é a metade seguinte da mesma medição: o #767a92
+       escolhido em 30/08 mirava a WCAG 1.4.11 (3:1 para componente gráfico) e
+       chegava a **3,37:1**. Só que 1.4.11 é o piso do que IDENTIFICA um
+       controle — um traço que só separa duas células não precisa dele, e a esse
+       peso ele passou a competir com o que separa. Ela viu o resultado em três
+       abas e pediu o contrário. O nome fica (seis abas o escrevem); quem manda
+       agora é a escala acima, e ela vale para as dez de uma vez. */
+    --rot-linha:var(--linha);
     /* cores de plástico — a borda diz QUAL peça é (D-A-BORDA-E-A-IDENTIDADE-DA-PECA) */
     /* OS CINCO PLÁSTICOS SÃO GERADOS — `monta.py` os reescreve a cada geração,
        lendo o `<style>` que `scripts/gerar_cores_do_dualsense.py` pôs no SVG. Os
@@ -57,7 +146,7 @@
   .janela{
     width:1180px; height:var(--alt-janela); max-width:100%; background:var(--app-bg);
     display:flex; flex-direction:column;
-    border:1px solid var(--border-sutil); border-radius:10px; overflow:hidden;
+    border:1px solid var(--linha); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
   }
 
@@ -66,7 +155,7 @@
   .logo{
     width:46px;height:46px;border-radius:50%;flex:0 0 46px;
     background:radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%);
-    border:1px solid var(--border-forte);
+    border:1px solid var(--linha);
     display:flex;align-items:center;justify-content:center;font-size:20px;
   }
   h1{font-size:19px;font-weight:700;letter-spacing:.2px}
@@ -86,14 +175,41 @@
   .perfil-ativo{
     margin-left:auto;display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--border-forte);background:var(--panel);
+    border:1px solid var(--linha);background:var(--panel);
   }
-  .pa-rot{font-size:10.5px;color:var(--comment);text-transform:uppercase;letter-spacing:.5px}
+  .pa-rot{font-size:10.5px;color:var(--comment);}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
-  .fita.inerte{opacity:.42}
+  /* A FITA INERTE DEIXOU DE USAR `opacity` — 30/08/2026, e a troca é de
+     MECANISMO, não de valor.
+
+     ELA ERA `opacity:.42`, e isso escondia o texto de duas maneiras ao mesmo
+     tempo. A primeira: medido, "Ajustes vão para:" e os quatro chips ficavam a
+     **2,18:1** contra o fundo, e os `•` a 2,07:1 — menos da metade do 4,5:1 que
+     texto pequeno pede. A segunda é pior e explica por que ninguém via: a
+     opacidade mora no ANCESTRAL, então `getComputedStyle(filho).color` continua
+     devolvendo a cor cheia. **Toda régua de contraste que lê `color` é cega a
+     isto** — a desta casa era, e deu as sete abas por limpas.
+
+     SUBIR A OPACIDADE NÃO SERVIA. Medido: `.42 -> 2,18` · `.55 -> 2,80` ·
+     `.65 -> 3,36` · `.75 -> 4,00` · `.85 -> 4,73`. Só volta a AA em .85 — e a
+     .85 o esmaecido deixa de comunicar o que ela desenhou para comunicar
+     (decisão dela, 28/08: em Gatilhos, Iluminação e Vibração a fita fica
+     ESMAECIDA porque nada ali se ajusta por controle).
+
+     A CURA É COR EXPLÍCITA. O sinal de "inerte" continua — a fita fica mais
+     apagada que a viva, o chip perde a cor do plástico (que é o que diz a
+     IDENTIDADE, e identidade sem função é promessa falsa) e perde o fundo. Mas
+     cada texto tem cor própria, legível, e a régua passa a ENXERGAR. */
+  .fita.inerte{color:var(--comment)}
+  .fita.inerte .chip{border-color:var(--border-sutil);background:transparent;
+                     color:var(--comment)}
+  /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
+  .fita.inerte .chip.plastico{border-color:var(--border-sutil);border-width:1px}
+  .fita.inerte .chip.on{border-color:var(--comment);background:transparent;
+                        color:var(--texto-suave);font-weight:600}
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -115,7 +231,7 @@
   select option:checked{background:var(--sel-bg);color:var(--fg)}
 
   /* ---------- a tira de abas ---------- */
-  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--border-sutil)}
+  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
     padding:11px 13px;font-size:13px;color:var(--texto-mudo);
     border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
@@ -149,7 +265,7 @@
                           display:flex;flex-direction:column}
   .miolo > .quadro.estica > .quadro-corpo{flex:1;min-height:0;display:flex;flex-direction:column}
 
-  .quadro{border:1px solid var(--border-sutil);border-radius:9px;background:var(--panel)}
+  .quadro{border:1px solid var(--linha);border-radius:9px;background:var(--panel)}
   .quadro-topo{
     display:flex;align-items:center;gap:8px;padding:11px 14px 0;
   }
@@ -157,31 +273,66 @@
   /* o ícone "?" — onde TODO texto longo passa a morar (D4 + D-TUDO-QUE-EXPLICA-VIRA-DICA) */
   .ajuda{
     width:17px;height:17px;border-radius:50%;flex:0 0 17px;
-    border:1px solid var(--border-forte);color:var(--texto-mudo);
+    border:1px solid var(--linha);color:var(--texto-mudo);
     font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative;
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
-    background:var(--elevated);border:1px solid var(--border-forte);border-radius:7px;
+    background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
     padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
     text-align:left;font-weight:400;box-shadow:0 8px 24px rgba(0,0,0,.5);
   }
   .dica b{color:var(--fg)}
   .quadro-corpo{padding:10px 14px 14px}
 
-  .linha-rot{font-size:12px;color:var(--texto-suave);margin-bottom:7px}
+  /* ---------- SEÇÃO QUE ABRE E FECHA ----------
+     Pedido dela, 30/08/2026, sobre a Conexões: *"deixa todas essas seções
+     expansíveis igual fizemos em controles"*.
+
+     MESMO MECANISMO DA CONTROLES, e de propósito: `input` escondido +
+     `:has(:checked)` + `<label>`. Sem uma linha de JavaScript — o mockup abre
+     como arquivo, sem servidor, e é regra desta casa que ele continue assim.
+     A diferença é o TIPO: a Controles usa `radio` (um card aberto por vez, e a
+     fita aponta qual); aqui é `checkbox`, porque as seções são independentes e
+     ela pode querer duas abertas.
+
+     A seta é `::before` no rótulo, não um segundo elemento: um `<span>` a mais
+     no cabeçalho desalinharia o título dos outros nove quadros da casa, que já
+     nascem no mesmo x. */
+  .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+  label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
+  .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
+  .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
+  /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
+  .miolo > .quadro.estica:has(> input.abre:not(:checked)){flex:0 0 auto}
+
+  /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
+     Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
+     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e ela
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
+     `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
+  .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
 
   /* seletor segmentado */
   .seg{display:flex;gap:7px;flex-wrap:wrap}
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
-    font-family:inherit;border:1px solid var(--border-forte);
+    font-family:inherit;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
+  /* O TRAVADO TINHA CARA DE CLICÁVEL — achado de 31/08. O botão nasce
+     `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
+     dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
+     opacidade mora no ancestral e cega toda régua que lê `color`. */
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
 
   /* a linha de estado: o que VALE agora */
   .estado{
@@ -192,25 +343,34 @@
   .estado .verde{color:var(--green)}
   .estado .laranja{color:var(--orange)}
 
-  /* a escada de pontes — os 5 degraus que o PS+R3 gira */
+  /* a fileira de modos do Hefesto LIGADO — cinco chips na tela.
+     O NÚMERO DA TELA NÃO É O NÚMERO DO PRODUTO, e a diferença é decisão dela
+     de 31/08: `ponte_escada.ESCADA` tem QUATRO pontes, e uma delas (Nativo)
+     saiu da fileira para virar a posição DESLIGADO do interruptor. Dos cinco
+     chips, três são degrau (DualSense, Xbox, Steam Input) e dois não são
+     (Point And Click, Navegação) — por isso o algarismo do círculo é derivado
+     de `indice_do_degrau`, e não digitado. */
   .escada{display:flex;align-items:stretch;gap:7px}
   .degrau{
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
     padding:9px 10px;border-radius:7px;
-    font-size:12.5px;border:1px solid var(--border-forte);
+    font-size:12.5px;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
   }
   .degrau i{
     font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
     width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
-    border:1px solid var(--border-forte);color:var(--comment);
+    border:1px solid var(--linha);color:var(--comment);
   }
   .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   .degrau.on{
     border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600;
   }
   .degrau.on i{border-color:var(--purple);color:var(--purple)}
-  .seta{color:var(--border-forte);font-size:13px}
+  /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
+     #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
+     `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
+  .seta{color:var(--texto-mudo);font-size:13px}
 
   /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
@@ -221,7 +381,7 @@
 
   /* ---------- a área de avisos, com espaço reservado (P8) ---------- */
   .avisos{
-    min-height:38px;border:1px solid var(--border-sutil);border-radius:9px;
+    min-height:38px;border:1px solid var(--linha);border-radius:9px;
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
     font-size:12px;
   }
@@ -242,7 +402,7 @@
   /* a peça: SVG pequeno na cor do plástico + número */
   .cartao{
     display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;
-    border:2px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
+    border:2px solid var(--linha);border-radius:7px;background:var(--app-bg);
     font-size:11.5px;color:var(--texto-suave);
   }
   /* CSS MORTO, REMOVIDO em 27/08: `.cartao.c-red` e `.cartao.c-blue` eram uma
@@ -254,34 +414,52 @@
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+  /* A COR DO BOTÃO SECUNDÁRIO MUDOU DE LUGAR — 31/08/2026: do CONTORNO para a
+     PALAVRA. O `.btn` desenhava a borda com `--comment` (4,89:1) e as três
+     variantes com o acento cheio — verde 11,5:1, vermelho 4,53:1, roxo 5,90:1.
+     Numa coluna de Iluminação são dois botões empilhados, e na Vibração outros
+     dois: quatro retângulos gritando em volta de palavras que já dizem tudo.
+     Ela: *"botão com borda ao lado de botão com borda ao lado de célula com
+     borda"*.
+     NADA DE INFORMAÇÃO SAIU: o texto de cada variante continua verde, vermelho
+     ou roxo — é ele que diz "isto liga", "isto desliga", "isto guarda". O que
+     saiu foi o contorno repetindo em 300px de perímetro o que a palavra diz em
+     sete letras. E o acento VOLTA no `:hover`, que é onde ele informa de fato:
+     o botão sob o ponteiro se acende na cor da própria ação. */
   .btn{
     padding:8px 13px;border-radius:7px;font-size:12.5px;font-family:inherit;cursor:pointer;
-    border:1px solid var(--comment);background:transparent;color:var(--texto-suave);
+    border:1px solid var(--linha);background:transparent;color:var(--texto-suave);
   }
   .btn:hover{border-color:var(--texto-suave);color:var(--fg)}
-  .btn.verde{border-color:var(--green);color:var(--green)}
-  .btn.vermelho{border-color:var(--red);color:var(--red)}
-  .btn.roxo{border-color:var(--purple);color:var(--purple)}
+  .btn.verde{color:var(--green)}
+  .btn.vermelho{color:var(--red)}
+  .btn.roxo{color:var(--purple)}
+  .btn.verde:hover{border-color:var(--green);color:var(--green)}
+  .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
+  .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
   .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
-  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--border-sutil)}
-  .sep{color:var(--border-forte);margin:0 3px}
-  .degrau.auto i{border-color:var(--cyan);color:var(--cyan)}
+  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
+  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
-  .col-atencao{border-left:1px solid var(--border-sutil);padding-left:16px}
+  .col-atencao{border-left:1px solid var(--linha);padding-left:16px}
 
 
   /* ---------- rodapé ---------- */
   .rodape{
     display:flex;align-items:center;gap:10px;padding:12px 18px;
-    border-top:1px solid var(--border-sutil);background:var(--app-bg);
+    border-top:1px solid var(--linha);background:var(--app-bg);
   }
-  .rodape .recibo{font-size:11.5px;color:var(--comment);flex:1}
+  /* O EMPURRÃO TROCOU DE DONO. Era o `.recibo{flex:1}` que jogava os quatro
+     botões para a direita; ele saiu da barra em 30/08 (virou dica de cada botão,
+     ver `fim.html`) e sem substituto os botões cairiam para a esquerda. A margem
+     automática no primeiro faz o mesmo serviço sem um elemento vazio no DOM. */
+  .rodape .r-aplicar{margin-left:auto}
   .rodape button{
     padding:8px 15px;border-radius:7px;font-size:12.5px;font-family:inherit;
     font-weight:600;cursor:pointer;border:1px solid transparent;
@@ -304,7 +482,7 @@
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
-     Logo: novo-layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
+     Logo: layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
      na âncora que fica no cabeçalho, lá embaixo — nenhuma cópia mora aqui.
      (E a âncora NÃO se escreve aqui: a primeira versão deste comentário a citou
      literal, o `str.replace(…, 1)` casou com a CITAÇÃO em vez do cabeçalho, e o
@@ -549,7 +727,7 @@
                padding:2px 0;border-radius:4px;font-family:'JetBrains Mono',monospace}
   .selo.ok{background:var(--green);color:var(--app-bg)}
   .selo.warn{background:var(--orange);color:var(--app-bg)}
-  .selo.info{background:var(--comment);color:var(--fg)}
+  .selo.info{background:var(--comment);color:var(--app-bg)}
   .exame .txt{flex:1;min-width:0}
 
   /* ---- a ordem de serviço: imperativo, receita e ganho ---- */
@@ -686,7 +864,7 @@
      irmãos — a mesma gramática das colunas dos outros dois quadros */
   .gc-bloco{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .gc-bloco.barra{padding-left:12px;margin-left:2px;border-left:1px solid var(--border-sutil)}
-  .gc-bloco .rot{font-size:11.5px;color:var(--texto-suave);white-space:nowrap;
+  .gc-bloco .rot{font-size:11.5px;font-weight:600;color:var(--rot-campo);white-space:nowrap;
                  display:flex;align-items:center;gap:6px}
   /* `.le` (a leitura "Vale Sem teto, do global, abaixo" ao lado do campo) SAIU
      em 28/08 — `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`. A regra sai junto: CSS de
@@ -714,8 +892,8 @@
 
   /* ---- o inventário da mesa: DUAS tabelas, ambas com cabeçalho roxo ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px}
-  .tab th{text-align:left;font-weight:600;font-size:10px;color:var(--purple);
-          text-transform:uppercase;letter-spacing:.6px;padding:0 8px 6px 0;
+  .tab th{color:var(--rot-campo);font-weight:600;text-align:left;font-weight:600;font-size:10px;
+          padding:0 8px 6px 0;
           border-bottom:1px solid var(--border-forte)}
   .tab td{padding:6px 8px 6px 0;color:var(--texto-suave);border-bottom:1px solid var(--border-sutil)}
   .tab tr:last-child td{border-bottom:none}
@@ -743,7 +921,7 @@
      VAGAS tracejadas são os controles da MESA que hoje estão no cabo.
      ------------------------------------------------------------------ */
   .capa{display:flex;align-items:center;gap:12px;height:var(--h-escolha)}
-  .capa .rot{font-size:12px;color:var(--texto-suave)}
+  .capa .rot{font-size:12px;font-weight:600;color:var(--rot-campo)}
   /* `.teto` (a leitura "Teto da vibração • Sem teto") e `.capa select.pronto` (o
      dropdown dos três perfis) SAÍRAM em 28/08 — a leitura por
      `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`, o dropdown porque o teto global mudou-se
@@ -807,7 +985,7 @@
      não pintar por cima da última coluna de quadrados. */
   .tn-cx .moldura{padding-right:6px}
   .mm-rot{font-size:10px;font-weight:600;color:var(--purple);
-          text-transform:uppercase;letter-spacing:.06em}
+          }
   .mm-rot-linha{display:flex;align-items:center;gap:8px;height:19px}
 
   /* ---- a lista de aparelhos.
@@ -1013,7 +1191,7 @@
   <div class="cabecalho">
     <!-- A LOGO NÃO MORA MAIS AQUI — 30/08/2026, e a razão está medida.
          Eram 55 linhas de SVG coladas neste arquivo, e por isso eram a versão
-         VELHA: ela redesenhou o logotipo em `novo-layout/assets/hefesto-logo.svg`
+         VELHA: ela redesenhou o logotipo em `layout/assets/hefesto-logo.svg`
          (6.039 bytes, com `transform-box`/`transform-origin` no anel, a chama
          nova e a bigorna com sombra) e as dez páginas continuaram mostrando o
          desenho de antes. Pior: havia TRÊS desenhos vivos ao mesmo tempo — o
@@ -1171,10 +1349,110 @@
   <!-- ================= MIOLO ================= -->
   <div class="miolo">
 
-    <!-- ======== 1. GESTÃO CONTROLES — acordeão, um por controle ligado ======== -->
+    <!-- ======== 1. CHECK-UP — juízo à esquerda, conserto à direita ========
+         SUBIU PARA PRIMEIRO E MUDOU DE NOME — 30/08/2026, pedido dela:
+         *"a parte 'Está tudo certo' aparece como primeiro bloco na página e
+         mudamos o nome pra Check-up"*. Faz sentido de leitura: quem abre a
+         Conexões quer primeiro saber se há algo errado, e só depois a lista
+         de quem está na mesa. E "Check-up" é substantivo — nomeia a seção;
+         "Está tudo certo?" era pergunta, e título que pergunta faz a pessoa
+         procurar a resposta em vez de ler o que está embaixo. ======== -->
     <div class="quadro">
+      <!-- SÓ O CHECK-UP NASCE ABERTO — 30/08/2026, pedido dela: *"inicia as
+           demais abas de gestão e rádio minimizadas"*. Faz sentido de uso: quem
+           abre a Conexões quer primeiro saber se há algo errado; a lista da mesa
+           e o inventário de rádios são consulta, não alerta. E resolve, de
+           quebra, os 208px que o quadro de baixo perdia por não caber. -->
+      <input class="abre" type="checkbox" id="cx8-2" checked>
       <div class="quadro-topo">
-        <span class="quadro-titulo">Gestão Controles</span>
+        <label class="quadro-titulo" for="cx8-2">Check-up</label>
+        <span class="ajuda">?<span class="dica">
+          Um exame da <b>sala</b>: em que entradas os aparelhos estão, quanta energia elas
+          dão, e quem mais está falando no rádio perto do seu adaptador.<br><br>
+          É a resposta para "por que o controle no rádio engasga <b>aqui</b> e não engasga na
+          casa de outra pessoa".<br><br>
+          O exame <b>não muda nada sozinho</b>. Quando ele acha algo, aparece ao lado uma
+          ordem de serviço dizendo <b>o que mover para onde</b>.<br><br>
+          As duas perguntas que <b>só você</b> pode responder — a altura do dongle e se tem
+          gente entre ele e o sofá — mudaram de lugar em 28/08: elas moram no
+          <b>Mapear Entradas</b>, que é a janela onde você já declara a sala.
+        </span></span>
+        <span class="conta">Examinado há 3 minutos</span>
+      </div>
+      <div class="quadro-corpo">
+        <div class="duas-colunas">
+
+          <div class="lado-e">
+            <div class="col-exame">
+          <div class="exame">
+            <span class="selo ok">CERTO</span>
+            <span class="txt">As entradas dão energia para os 2 controles no cabo</span>
+            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma parece defeito do controle.</span></span>
+          </div>
+          <div class="exame">
+            <span class="selo warn">AJUSTAR</span>
+            <span class="txt">Dois rádios da bancada estão em entradas vizinhas</span>
+            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na <b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de serviço ao lado, e o <b>?</b> dela diz por que isso importa.</span></span>
+          </div>
+          <div class="exame">
+            <span class="selo ok">CERTO</span>
+            <span class="txt">Os 2 controles no cabo têm uma entrada cada um</span>
+            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das entradas onde estão o Player 1 e o Player 4.</span></span>
+          </div>
+          <div class="exame">
+            <span class="selo info">NOTA</span>
+            <span class="txt">4 rádios vizinhos ativos na faixa de 2,4 GHz</span>
+            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> 4 fontes de rádio perto. 2 você já nomeou; 2 continuam por nomear, na tabela de <b>Rádio e adaptadores</b>.<br><br><b>Por que importa:</b> 2 dos seus 4 controles falam nessa mesma faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe o que dá para desligar e o que não dá.</span></span>
+          </div>
+          <div class="exame">
+            <span class="selo ok">CERTO</span>
+            <span class="txt">Nenhuma outra ordem de serviço pendente</span>
+            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou ignorar não contam aqui — elas voltam em <b>Ver as ordens ignoradas</b>.</span></span>
+          </div>
+            </div>
+          </div>
+
+          <div class="lado-d">
+            <div class="col-ordem">
+            <div class="ordem">
+              <div class="faca">Mova o adaptador Bluetooth da Entrada 3 para a Entrada 9
+                <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
+                  <b>O que eu vi:</b> o adaptador Bluetooth está na <b>Entrada 3</b> e o
+                  receptor do teclado na <b>Entrada 4</b> — as duas saem do mesmo controlador
+                  USB 3.0.<br><br>
+                  <b>Por que importa:</b> USB 3.0 gera ruído exatamente na faixa de 2,4 GHz,
+                  que é a faixa do Bluetooth. É a causa mais comum de engasgo no rádio, e não
+                  aparece em log nenhum.
+                </span></span>
+              </div>
+              <div class="receita">
+                <span class="caixa" title="Entrada 3 — traseira do gabinete, USB 3.0. É a que divide o controlador com o receptor do teclado.">Entrada 3 <span class="pt">•</span> USB 3.0</span>
+                <span class="seta">→</span>
+                <span class="caixa alvo" title="Entrada 9 — traseira do gabinete, USB 2.0, num controlador que só ela usa.">Entrada 9 <span class="pt">•</span> USB 2.0</span>
+              </div>
+              <div class="ganho"><span>Ganho esperado:</span> sai do controlador do teclado e do
+                ruído do USB 3.0 — e são 2 controles dependendo desse rádio.</div>
+            </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- A FILEIRA ÚNICA COM OS QUATRO, na ordem que ela escreveu. -->
+        <div class="acoes quatro">
+          <button class="btn" title="Refaz o exame da mesa — entradas, energia e rádio — e repinta os selos, as linhas e as ordens de serviço.">Examinar de novo</button>
+          <button class="btn verde" title="Você diz que já mexeu no cabo. O exame roda de novo e compara o antes com o depois.">Já movi — reexaminar</button>
+          <button class="btn" title="Ignora este conselho enquanto os cabos estiverem assim. Ele volta em “Ver as ordens ignoradas”.">Ignorar</button>
+          <button class="btn" title="Mostra as ordens de serviço que você mandou ignorar neste arranjo de cabos, para reabrir alguma.">Ver as ordens ignoradas</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 2. GESTÃO CONTROLES — acordeão, um por controle ligado ======== -->
+    <div class="quadro">
+      <input class="abre" type="checkbox" id="cx8-1">
+      <div class="quadro-topo">
+        <label class="quadro-titulo" for="cx8-1">Gestão Controles</label>
         <span class="ajuda">?<span class="dica">
           Uma linha por controle <b>ligado</b>, e só eles. O que a <b>fita do topo</b> aponta vem
           aberto; clicar em outro abre ele e fecha os demais, e a fita acompanha. Clicar no que
@@ -1182,9 +1460,9 @@
           <b>A linha fechada</b> diz quem é o controle e resume o que importa: o que o jogo
           <b>vê como</b> (a máscara, que se escolhe na aba <b>Jogar</b>), o <b>microfone</b> e a
           <b>bateria</b>. Máscara e bateria são leitura aqui — quem as governa é outra aba.<br><br>
-          <b>A borda</b> é a cor do plástico que o Hefesto <b>leu do aparelho</b>. Pelo cabo ele
-          pergunta; pelo rádio ele <b>ainda não pergunta</b>, e aí a borda fica <b>neutra</b> —
-          porque uma borda colorida seria uma cor que ninguém leu. O <b>desenho</b> continua na
+          <b>A borda</b> é a cor do plástico que o Hefesto <b>leu do aparelho</b>. Quando a
+          leitura não aconteceu, a borda fica <b>neutra</b> — porque uma borda colorida seria
+          uma cor que ninguém leu. O <b>desenho</b> continua na
           cor que o resto do Hefesto já conhece: quem responde pela leitura é a borda, e é só
           ela que fica cinza. <b>A barra de luz</b> não é a cor do plástico: é a cor canônica do
           <i>jogador</i> (<code>core/led_control.player_slot_color</code>).<br><br>
@@ -1347,7 +1625,7 @@
   <g id="p1-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="p1-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="p1-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1417,8 +1695,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="p1-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="p1-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -1589,7 +1867,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="p1-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="p1-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -1599,7 +1877,7 @@
 </svg>
               <span class="gc-bloco">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
-  
+
   <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1611,7 +1889,7 @@
               </span>
               <span class="gc-bloco barra">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-  
+
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1768,7 +2046,7 @@
   <g id="p2-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="p2-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="p2-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1838,8 +2116,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="p2-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="p2-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -2010,7 +2288,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="p2-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="p2-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -2020,7 +2298,7 @@
 </svg>
               <span class="gc-bloco">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
-  
+
   <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2032,7 +2310,7 @@
               </span>
               <span class="gc-bloco barra">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-  
+
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2189,7 +2467,7 @@
   <g id="p3-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="p3-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="p3-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -2259,8 +2537,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="p3-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="p3-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -2431,7 +2709,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="p3-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="p3-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -2441,7 +2719,7 @@
 </svg>
               <span class="gc-bloco">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
-  
+
   <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2453,7 +2731,7 @@
               </span>
               <span class="gc-bloco barra">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-  
+
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2610,7 +2888,7 @@
   <g id="p4-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="p4-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="p4-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -2680,8 +2958,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="p4-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="p4-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -2852,7 +3130,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="p4-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="p4-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -2862,7 +3140,7 @@
 </svg>
               <span class="gc-bloco">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
-  
+
   <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2874,7 +3152,7 @@
               </span>
               <span class="gc-bloco barra">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-  
+
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2890,97 +3168,12 @@
       </div>
     </div>
 
-    <!-- ======== 2. ESTÁ TUDO CERTO? — juízo à esquerda, conserto à direita ======== -->
-    <div class="quadro">
-      <div class="quadro-topo">
-        <span class="quadro-titulo">Está tudo certo?</span>
-        <span class="ajuda">?<span class="dica">
-          Um exame da <b>sala</b>: em que entradas os aparelhos estão, quanta energia elas
-          dão, e quem mais está falando no rádio perto do seu adaptador.<br><br>
-          É a resposta para "por que o controle no rádio engasga <b>aqui</b> e não engasga na
-          casa de outra pessoa".<br><br>
-          O exame <b>não muda nada sozinho</b>. Quando ele acha algo, aparece ao lado uma
-          ordem de serviço dizendo <b>o que mover para onde</b>.<br><br>
-          As duas perguntas que <b>só você</b> pode responder — a altura do dongle e se tem
-          gente entre ele e o sofá — mudaram de lugar em 28/08: elas moram no
-          <b>Mapear Entradas</b>, que é a janela onde você já declara a sala.
-        </span></span>
-        <span class="conta">Examinado há 3 minutos</span>
-      </div>
-      <div class="quadro-corpo">
-        <div class="duas-colunas">
-
-          <div class="lado-e">
-            <div class="col-exame">
-          <div class="exame">
-            <span class="selo ok">CERTO</span>
-            <span class="txt">As entradas dão energia para os 2 controles no cabo</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma parece defeito do controle.</span></span>
-          </div>
-          <div class="exame">
-            <span class="selo warn">AJUSTAR</span>
-            <span class="txt">Dois rádios da bancada estão em entradas vizinhas</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na <b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de serviço ao lado, e o <b>?</b> dela diz por que isso importa.</span></span>
-          </div>
-          <div class="exame">
-            <span class="selo ok">CERTO</span>
-            <span class="txt">Os 2 controles no cabo têm uma entrada cada um</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das entradas onde estão o Player 1 e o Player 4.</span></span>
-          </div>
-          <div class="exame">
-            <span class="selo info">NOTA</span>
-            <span class="txt">4 rádios vizinhos ativos na faixa de 2,4 GHz</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> 4 fontes de rádio perto. 2 você já nomeou; 2 continuam por nomear, na tabela de <b>Rádio e adaptadores</b>.<br><br><b>Por que importa:</b> 2 dos seus 4 controles falam nessa mesma faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe o que dá para desligar e o que não dá.</span></span>
-          </div>
-          <div class="exame">
-            <span class="selo ok">CERTO</span>
-            <span class="txt">Nenhuma outra ordem de serviço pendente</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou ignorar não contam aqui — elas voltam em <b>Ver as ordens ignoradas</b>.</span></span>
-          </div>
-            </div>
-          </div>
-
-          <div class="lado-d">
-            <div class="col-ordem">
-            <div class="ordem">
-              <div class="faca">Mova o adaptador Bluetooth da Entrada 3 para a Entrada 9
-                <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
-                  <b>O que eu vi:</b> o adaptador Bluetooth está na <b>Entrada 3</b> e o
-                  receptor do teclado na <b>Entrada 4</b> — as duas saem do mesmo controlador
-                  USB 3.0.<br><br>
-                  <b>Por que importa:</b> USB 3.0 gera ruído exatamente na faixa de 2,4 GHz,
-                  que é a faixa do Bluetooth. É a causa mais comum de engasgo no rádio, e não
-                  aparece em log nenhum.
-                </span></span>
-              </div>
-              <div class="receita">
-                <span class="caixa" title="Entrada 3 — traseira do gabinete, USB 3.0. É a que divide o controlador com o receptor do teclado.">Entrada 3 <span class="pt">•</span> USB 3.0</span>
-                <span class="seta">→</span>
-                <span class="caixa alvo" title="Entrada 9 — traseira do gabinete, USB 2.0, num controlador que só ela usa.">Entrada 9 <span class="pt">•</span> USB 2.0</span>
-              </div>
-              <div class="ganho"><span>Ganho esperado:</span> sai do controlador do teclado e do
-                ruído do USB 3.0 — e são 2 controles dependendo desse rádio.</div>
-            </div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- A FILEIRA ÚNICA COM OS QUATRO, na ordem que ela escreveu. -->
-        <div class="acoes quatro">
-          <button class="btn" title="Refaz o exame da mesa — entradas, energia e rádio — e repinta os selos, as linhas e as ordens de serviço.">Examinar de novo</button>
-          <button class="btn verde" title="Você diz que já mexeu no cabo. O exame roda de novo e compara o antes com o depois.">Já movi — reexaminar</button>
-          <button class="btn" title="Ignora este conselho enquanto os cabos estiverem assim. Ele volta em “Ver as ordens ignoradas”.">Ignorar</button>
-          <button class="btn" title="Mostra as ordens de serviço que você mandou ignorar neste arranjo de cabos, para reabrir alguma.">Ver as ordens ignoradas</button>
-        </div>
-      </div>
-    </div>
-
     <!-- ======== 3. RÁDIO E ADAPTADORES — o inventário e, embaixo e separado,
          o Desempenho. ======== -->
     <div class="quadro">
+      <input class="abre" type="checkbox" id="cx8-3">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Rádio e adaptadores</span>
+        <label class="quadro-titulo" for="cx8-3">Rádio e adaptadores</label>
         <span class="ajuda">?<span class="dica">
           <b>Mapear Entradas</b> abre o desenho do seu gabinete e numera as entradas —
           depois disso o Hefesto para de dizer "porta 3-2.1" e passa a dizer "Entrada 9". É lá
@@ -3089,13 +3282,39 @@
 
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O recibo ENCURTA e não sai: `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e o
-         porquê está no `monta.py`, onde este arquivo é lido. -->
-    <div class="recibo"><b style="color:var(--texto-suave)">Aplicar</b> vale agora <span class="pt">•</span> <b style="color:var(--texto-suave)">Salvar Perfil</b> grava no <b style="color:var(--texto-suave)">Mortal Kombat</b></div>
-    <button class="r-aplicar">Aplicar</button>
-    <button class="r-salvar">Salvar Perfil</button>
-    <button class="r-importar">Importar</button>
-    <button class="r-exportar">Exportar</button>
+    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido dela:
+         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
+         perfil, importar e exportar. em todas as abas."*
+
+         ISTO DERRUBA A `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e de propósito. Ela
+         já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então
+         foi ENCURTAR (96 caracteres viraram 57), porque perguntada se saía do
+         mockup ou do produto ela respondeu "deixa ela encurtada tanto lá quanto no
+         mockup" — resposta sobre ONDE, lida como resposta sobre SE. Agora ela disse
+         o destino com todas as letras, e o destino não é a barra.
+
+         O QUE A DECISÃO PROTEGIA CONTINUA PROTEGIDO, e é o teste que se aplica:
+         a diferença entre APLICAR (vale agora) e SALVAR (grava no perfil), e o NOME
+         do perfil — "a informação que faltava e lhe custou semanas". As duas coisas
+         estão nas dicas abaixo, palavra por palavra. Nada se perdeu; mudou de lugar.
+
+         E O PRODUTO JÁ FAZIA ASSIM: `gui/main.glade` dá `tooltip-text` aos quatro
+         botões do rodapé (`btn_footer_apply`, `btn_footer_save_profile`,
+         `btn_footer_import`, `btn_footer_restore_default`), e
+         `tests/unit/test_o_rodape_diz_o_que_grava.py` morde exigindo isso. Era o
+         MOCKUP que duplicava a informação como texto fixo na barra. O texto de
+         Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
+
+         `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
+         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
+         num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
+         `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
+         (`aba09.py`). -->
+    <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
+    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
+    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>
@@ -3166,7 +3385,7 @@
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      
+
       <div class="moldura">
         <div class="ce-cartao">
           <span class="ce-perg">Onde fica esta entrada?</span>
@@ -3191,7 +3410,7 @@
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      
+
       <div class="moldura">
         <div class="ce-cartao">
           <span class="ce-perg">Acabou a parte sem levantar.</span>
@@ -3216,7 +3435,7 @@
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      
+
       <div class="moldura">
         <div class="ce-cartao">
           <span class="ce-perg">Pegue o DualSense e o cabo e encaixe numa entrada vazia. Qualquer aparelho que o computador reconheça serve — o DualSense é o melhor porque ele avisa na sua mão. Eu aviso quando achar.</span>

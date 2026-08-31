@@ -224,7 +224,16 @@ CSS = CSS_GLIFO + """
   /* `.duas-colunas` e `.col-nav` SAÍRAM daqui em 28/08: elas existiam só para a
      tela única que punha as duas tabelas lado a lado, e essa tela virou duas
      (uma tabela em cada). Ficaram sem um só elemento no HTML gerado. */
-  .sec-rot{font-size:11px;color:var(--comment);text-transform:uppercase;letter-spacing:.5px;
+  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
+     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
+     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
+     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     é a forma mais difícil de ler que existe.
+     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
+     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
+     player"), então nada precisou ser reescrito. */
+  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
            margin-bottom:5px;display:flex;align-items:center;gap:8px;height:17px}
   .sec-rot .ajuda{text-transform:none;letter-spacing:0}
   /* O RESPIRO DO TÍTULO: `sec-alta` estava escrita no HTML desde 27/08 e não
@@ -249,6 +258,30 @@ CSS = CSS_GLIFO + """
      quatro alturas de botão outra vez, e o vão de 5px é o que pagava os 10px
      que faltavam para as linhas caberem no token (veja `.at-linha`). */
   .at-col{display:flex;flex-direction:column;gap:0}
+
+  /* O SEGUNDO QUADRO PAGA O PRÓPRIO CABEÇALHO — 30/08/2026.
+     "As opções de ativação" era um `.sec-rot` de 17px dentro do quadro da
+     Navegação; virando quadro próprio (pedido dela) ela ganhou `.quadro-topo`
+     (28px), duas bordas e o padding de corpo — 26px a mais do que o miolo tem.
+     Medido: o miolo pedia 570 num espaço de 544.
+     O respiro sai de onde ele é folga e não leitura: o topo do segundo quadro e
+     as duas pontas do corpo dele. Nenhuma linha de escolha encolhe — elas
+     continuam nos 36px de `--h-escolha`, que é o alvo de clique. */
+  .miolo > .quadro + .quadro > .quadro-topo{padding:6px 14px 0}
+  .miolo > .quadro + .quadro > .quadro-corpo{padding:4px 14px 6px}
+  .miolo > .quadro:first-child > .quadro-corpo{padding-bottom:6px}
+
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
+     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
+     nome da linha e a divisória entre eles tem que estar clara. pra todas as
+     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
+     A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
+     moldura do quadro já existe. */
+  .at-col > .at-linha{border-bottom:1px solid var(--rot-linha)}
+  .at-col > .at-linha:last-child{border-bottom:0}
+  /* a `.tab` do quadro de cima, na MESMA janela, já separa as linhas dela
+     assim desde sempre — as duas listas passam a ter a mesma cadência. */
+
   .at-col:first-child{padding-right:21px}
   .at-col:last-child{border-left:1px solid var(--border-sutil);padding-left:20px}
   /* ---------------------------------------------------------------------
@@ -264,6 +297,8 @@ CSS = CSS_GLIFO + """
      linha de 32px transborda, e um campo de 32px ao lado de uma lista de 36
      recria a divergência do outro lado da mesma linha.
      --------------------------------------------------------------------- */
+  /* o rótulo da opção é verde e alinha à direita, como nas outras nove */
+  .at-linha > span:first-child{color:var(--rot-campo);font-weight:600;text-align:right}
   .at-linha{display:grid;grid-template-columns:190px 1fr;align-items:center;gap:12px;height:var(--h-escolha)}
   /* a linha que hospeda um botão de AÇÃO cresce para os 34px do token */
   .at-linha:has(.btn){height:var(--h-acao)}
@@ -289,7 +324,7 @@ CSS = CSS_GLIFO + """
   .campo-num .par{display:flex;align-items:center;gap:9px;flex:0 1 auto}
   .campo-num .par:last-child{flex:1 1 auto}
   .campo-num .par:last-child .bignum{margin-left:auto}
-  .campo-num .sub{font-size:10.5px;color:var(--comment);text-transform:uppercase;
+  .campo-num .sub{font-size:10.5px;color:var(--comment);
                   letter-spacing:.4px;white-space:nowrap}
   .campo-num .risco{width:1px;height:18px;background:var(--border-forte);margin:0 4px 0 5px}
   .bignum{display:inline-flex;align-items:center}
@@ -303,8 +338,8 @@ CSS = CSS_GLIFO + """
   /* ---- as TRÊS tabelas: mesma largura de bloco, mesma coluna de valor,
           cabeçalho em roxo (fala [90]) — inclusive a dos gestos ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
-  .tab th{text-align:left;font-weight:600;font-size:10px;color:var(--purple);
-          text-transform:uppercase;letter-spacing:.6px;padding:0 8px 4px 0;
+  .tab th{color:var(--rot-campo);font-weight:600;text-align:left;font-weight:600;font-size:10px;
+          padding:0 8px 4px 0;
           border-bottom:1px solid var(--border-forte)}
   /* a linha da tabela é o token + o fio de 1px que separa duas linhas, e mais
      nada. O `padding:1px 0` que havia aqui somava 2px por linha em cima de uma
@@ -829,9 +864,11 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma):
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="tn-frase">Valem para o controle que navega o PC — hoje o
-        <b style="color:var(--texto-suave)">P{NAVEGA} • {QUEM_NAVEGA["nome"]} •
-        {QUEM_NAVEGA["via"]}</b>. Os outros {len(MESA) - 1} continuam gamepad.</div>
+      <!-- TEXTO NA TELA É ZERO — regra dela, 30/08/2026: *"texto na interface é
+           zero, só deixamos se for algo extremamente importante, e se for de
+           média importância vira tooltip"*. Esta frase era prosa fixa a poucos
+           pixels de um `?` que explicava o mesmo assunto. Ela não sumiu: subiu
+           para a dica do cabeçalho, onde só aparece a quem pergunta. -->
       <div class="moldura">
         <table class="tab">
           <tr><th>Botão do controle</th><th>{coluna}</th></tr>
@@ -879,13 +916,17 @@ TELA_PONTO = f'''
         "Um <b>Estilo de Jogo</b>, como o FPS e o Corrida. O perfil escolhe usá-lo; "
         "o que ele faz é escrito <b>aqui</b>.<br><br>"
         "Enquanto ele estiver valendo, estas linhas mandam — as da aba voltam "
-        "quando o estilo sai.")}
+        "quando o estilo sai.<br><br>"
+        "Serve para jogo de <b>apontar e clicar</b>, que espera mouse e não entende "
+        "controle: <b>o touchpad vira o ponteiro</b>, e o toque vira o clique.")}
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="tn-frase">Serve para jogo de apontar e clicar, que espera mouse e não
-        entende controle. <b style="color:var(--texto-suave)">O touchpad vira o ponteiro</b>,
-        e o toque vira o clique.</div>
+      <!-- TEXTO NA TELA É ZERO — regra dela, 30/08/2026: *"texto na interface é
+           zero, só deixamos se for algo extremamente importante, e se for de
+           média importância vira tooltip"*. Esta frase era prosa fixa a poucos
+           pixels de um `?` que explicava o mesmo assunto. Ela não sumiu: subiu
+           para a dica do cabeçalho, onde só aparece a quem pergunta. -->
       <div class="moldura">
         <table class="tab">
           <tr><th>Botão do controle</th><th>O que ele faz neste estilo</th></tr>
@@ -974,8 +1015,25 @@ MIOLO = f'''
         </div>
         </div>
 
-        <!-- ---------- AS OPÇÕES DE ATIVAÇÃO (fala [56] + fala [11]) ---------- -->
-        <div class="sec-rot sec-alta">As opções de ativação</div>
+      </div>
+    </div>
+
+    <!-- ---------- AS OPÇÕES DE ATIVAÇÃO VIRARAM QUADRO PRÓPRIO ----------
+         Pedido dela, 30/08: *"a parte 'As opções de ativação' coloca na mesma cor
+         que o Navegação e divide em dois blocos, o superior e as opções de
+         ativação"*.
+
+         Ela era um `.sec-rot` — rótulo de CAMPO, verde, do mesmo peso que
+         "Controle" ou "Brilho" — dentro do quadro da Navegação. Mas ela não nomeia
+         um campo: nomeia um ASSUNTO, com sete linhas de escolha embaixo. Virando
+         `.quadro-titulo` ela ganha o roxo e o tamanho que a Navegação tem, e a
+         divisão em dois quadros diz na estrutura o que a leitura já dizia: em cima
+         quem navega e com quê, embaixo como ligar e com que velocidade. -->
+    <div class="quadro">
+      <div class="quadro-topo">
+        <span class="quadro-titulo">As opções de ativação</span>
+      </div>
+      <div class="quadro-corpo">
         <div class="moldura">
           <div class="ativacao">
             <div class="at-col">

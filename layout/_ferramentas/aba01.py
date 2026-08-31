@@ -76,25 +76,142 @@ BATERIA = {"p1": 100, "p2": 64, "p3": 41, "p4": 87}
 #: (`aba08.py`), não do produto.
 AVISOS = [("RÁDIO", "Dois rádios da bancada estão em portas vizinhas.")]
 
-#: O modo escolhido e o degrau aceso da escada.
+#: O INTERRUPTOR — **HEFESTO LIGADO / DESLIGADO**, decisão dela de 31/08/2026.
 #:
-#: A CHAVE DE CADA UM É ENDEREÇO, e ela casa com o vocabulário do produto —
-#: `app/actions/jogar/painel.MODOS_DA_TELA` e `.CHIPS_DA_ESCADA`, que viajam em
-#: worktree. As três primeiras chaves de modo são as de
-#: `mode_transition.MODES`; a quarta ("desligado") **não existe lá**, e é o
-#: buraco que a MIGRA-JOGAR-06 leva à mesa dela. Quem confere que os dois lados
-#: não divergiram é `tests/unit/test_regua_de_tela_a_aba_jogar.py`, LENDO os
-#: dois — nunca digitando a lista.
-MODOS = [("desligado", "Desligado"), ("desktop", "Controlar o PC"),
-         ("gamepad", "Jogar pelo Hefesto"), ("native", "Conexão Nativa (Sony)")]
-MODO_ACESO = "gamepad"
-ESCADA = [("automatico", "A", "Automático"), ("hefesto", "1", "Hefesto"),
-          ("sony", "2", "Sony (nativo)"), ("steam", "3", "Steam Input"),
-          ("desktop", "4", "Teclado + Mouse")]
-DEGRAU_ACESO = "automatico"
+#: A PERGUNTA QUE ABRIU ISTO É DELA, e ela era boa: *"qual a diferença de nativo
+#: pra dualsense?"*. A tela antiga punha os dois na MESMA fileira, como
+#: alternativas do mesmo tipo — e não são. Um é **sem** o Hefesto no meio; o
+#: outro é uma **cópia virtual** que ele controla. A resposta dela foi
+#: redesenhar:
+#:
+#:   *"vamos desconfundir isso que tal? Hefesto Ligado/Desligado, Modo Navegação
+#:   (Teclado e mouse), Modo Nativo (Dualsense da Forma como veio ao Mundo). Modo
+#:   Hefesto se Ligado Abre as seções de Modo, Steam Input, Xbox, Sony DualSense,
+#:   Point And Click. Esses 4 modos independente de tudo. Vão utilizar as
+#:   features do hefesto. E em Baixo temos a parte das Mascaras dos Controles."*
+#:
+#: **CADA POSIÇÃO É UM MODO REAL DO PRODUTO, com leitor E escritor** — e é isso
+#: que faz esta forma valer mais do que a fileira que ela substitui:
+#:
+#:   - **Ligado** = `mode_transition.MODE_GAMEPAD`. Lê por `mode_of_state`,
+#:     escreve por `apply_mode('gamepad')` (`painel.ESCRITOR_DOS_MODOS`), e o que
+#:     ele grava no disco é o `gamepad_disabled.flag` — a resposta à pergunta dela
+#:     de 31/08, *"não sei se segue desativado"* (`painel.modo_lembrado`);
+#:   - **Desligado** = `MODE_NATIVE`, que é também o **degrau 3** da
+#:     `ponte_escada.ESCADA`. Também tem leitor e também tem escritor.
+#:
+#: **O BOTÃO SEM DONO MORREU AQUI, e não por eu ter tirado.** A fileira antiga
+#: tinha um quarto botão "Desligado" que era um estado INVENTADO: `mode_of_state`
+#: é o ponto único de leitura do modo vivo e devolve TRÊS valores, nunca um
+#: quarto (`painel.MODOS_DA_TELA` declara o porquê, e a MIGRA-JOGAR-06 levava a
+#: pergunta a ela). A decisão dela responde a pergunta **sem construir nada**:
+#: "Desligado" passa a querer dizer **Modo Nativo**, que existe, lê e escreve.
+#: Encerrar o Hefesto INTEIRO continua sendo "Encerrar o serviço", na Sistema.
+#:
+#: A chave do meio é o `data-modo`, e ela casa com `mode_transition.MODES` —
+#: é por ele que `controles_vivos.INTERRUPTOR` acende, trava e aplica.
+INTERRUPTOR = [
+    ("ligado", "gamepad", "Ligado",
+     "O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um "
+     "jogador para cada controle e escolhe como o jogo vê o aparelho."),
+    ("desligado", "native", "Desligado",
+     "Modo Nativo — o DualSense da forma como veio ao mundo. O Hefesto sai do "
+     "meio e o jogo fala direto com o aparelho: os gatilhos ficam duros como no "
+     "PS5. Alguns jogos derrubam o controle no meio da partida assim."),
+]
+#: Em qual posição a cena nasce.
+HEFESTO_LIGADO = True
+#: O "AUTOMÁTICO" CONTINUA FORA — 31/08/2026, palavra dela: *"na aba jogar o
+#: Botão Automático não existe."*, e a regra que a frase fixou
+#: (`docs/process/2026-08-30-RETOMADA-o-estado-real-e-o-que-fazer.md` §1.2) é
+#: **botão sem dono no produto não vai para a tela**. Ele não tinha os dois:
+#: `painel.CHIPS_DA_ESCADA` o declara com `ponte=None`, e `degrau_vivo` acende
+#: comparando pontes — nenhuma `Ponte` é igual a `None`, então nenhum estado do
+#: produto podia acendê-lo; e não há IPC que fixe um degrau.
+#: **O MECANISMO NÃO SAIU — só o botão:** "tenta na ordem e para quando acerta" é
+#: o que `integrations/ponte_tentativa` faz sozinho, sempre, e está dito na dica.
+#: (Não confundir com o "Automático" da MÁSCARA, que caducou em 29/08 por
+#: ERRAR — 13 dos 14 jogos dela.)
+#:
+#: OS CINCO MODOS DE DENTRO DO HEFESTO LIGADO — decisão dela, 31/08/2026:
+#: *"Modo Hefesto se Ligado Abre as seções de Modo, Steam Input, Xbox, Sony
+#: DualSense, Point And Click"*, mais a **Navegação**, que ela pôs aqui dentro
+#: respondendo à dúvida que sobrou: quem emula teclado e mouse é o daemon do
+#: Hefesto, então com ele desligado não existe teclado nem mouse.
+#:
+#: O QUE A ESCADA PLANA DE QUATRO ESCONDIA, medido hoje contra
+#: `integrations/ponte_escada.ESCADA`:
+#:
+#:   - o chip chamado **"Hefesto"** era `Ponte(KIND_GAMEPAD, MASCARA_DUALSENSE)`
+#:     — o nome do PRODUTO no lugar do nome da máscara, numa tela em que os
+#:     outros três também são o Hefesto. Vira **Sony DualSense**;
+#:   - o degrau **Xbox** (`Ponte(KIND_GAMEPAD, MASCARA_XBOX)`), que é o
+#:     **segundo** que o produto tenta, **nunca chegou à tela** — era o que
+#:     `painel.degraus_sem_chip()` denunciava. Entra agora;
+#:   - **"Teclado + Mouse"** não existe na `ESCADA` (`KIND_DESKTOP` é constante,
+#:     e `indice_do_degrau` devolve -1). Vira **Navegação**;
+#:   - **"Nativo"** sai da fileira: é o interruptor DESLIGADO.
+#:
+#: NÃO HÁ ALGARISMO — decisão dela, 31/08/2026, e ela resolveu uma contradição
+#: de três pontas que a própria tela carregava:
+#:
+#:   a tela escrevia   ③ Steam Input
+#:   o produto tenta   em QUARTO (`indice_do_degrau + 1` == 4)
+#:   a legenda dizia   que o número É `indice_do_degrau + 1`
+#:
+#: Os três não podiam estar certos, e a causa era a decisão dela do mesmo dia: o
+#: terceiro degrau é o **Nativo**, que saiu da fileira para virar a posição
+#: DESLIGADO do interruptor. Sobravam três saídas — numerar 1·2·4 com um buraco
+#: no 3, numerar pela posição na tela (e a legenda passar a mentir), ou tirar os
+#: números. **Ela escolheu tirar.**
+#:
+#: A ORDEM NÃO SE PERDEU: ela mora na dica de cada modo ("é o primeiro que o
+#: Hefesto tenta", "é o segundo", "é o último") e na dica do "Modo de conexão".
+#: O que saiu foi o número, que era a única peça que podia divergir do produto
+#: sem ninguém notar — e tinha divergido.
+#:
+#: `sem_dono` é o que a casa exige desde 30/08 (*botão sem dono no produto não
+#: vai para a tela como se funcionasse*) casado com a ordem dela de MANTER os
+#: dois: eles aparecem, e **dizem** que ainda não têm quem os atenda.
+MODOS = [
+    {"chave": "dualsense", "rot": "Sony DualSense", "modo": "",
+     "sem_dono": False,
+     "dica": "A cópia virtual completa: giroscópio, acelerômetro, os dois pontos "
+             "do touchpad, o clique e a vibração. Dez linhas do mapa-controles.csv "
+             "só chegam ao jogo por aqui. É o primeiro que o Hefesto tenta."},
+    {"chave": "xbox", "rot": "Xbox", "modo": "",
+     "sem_dono": False,
+     "dica": "O piso mais largo que existe: sete eixos e vibração que funciona em "
+             "todo jogo. Não carrega nenhuma das dez linhas uhid — sem giroscópio "
+             "e sem touchpad para o jogo. É o segundo que o Hefesto tenta."},
+    {"chave": "steam", "rot": "Steam Input", "modo": "",
+     "sem_dono": False,
+     "dica": "A Steam entrega a entrada e o Hefesto fica inteiro na saída: os seus "
+             "ajustes vencem o jogo. É o mais caro de trocar — exige fechar a "
+             "Steam, reabrir a Steam e reabrir o jogo —, e por isso é o último "
+             "que o Hefesto tenta."},
+    {"chave": "pointclick", "rot": "Point And Click", "modo": "",
+     "sem_dono": True,
+     "dica": "AINDA NÃO TEM QUEM O ATENDA no Hefesto: não é degrau da escada "
+             "(integrations/ponte_escada.ESCADA) nem modo do produto "
+             "(mode_transition.MODES). Está aqui por decisão sua, de 31/08 — é "
+             "modo, não perfil, e a ponte do PS+R3 traz o perfil dele junto."},
+    {"chave": "navegacao", "rot": "Navegação", "modo": "desktop",
+     "sem_dono": False,
+     "dica": "O controle vira teclado e mouse do computador, e quem emula é o "
+             "próprio Hefesto — por isso ele mora aqui dentro, e não do lado "
+             "desligado. O modo TEM dono e funciona hoje "
+             "(mode_transition.apply_mode('desktop')); o que ainda não existe é "
+             "o PS+R3 parar aqui: a Navegação não é degrau da escada."},
+]
+#: O MODO ACESO. `ponte_escada.ESCADA[0]` é `Ponte(KIND_GAMEPAD,
+#: MASCARA_DUALSENSE)`, que é este chip — a cena acende o que o produto acenderia.
+MODO_ACESO = "dualsense"
 
-#: A pendência da faixa de baixo — o rascunho que espera o Aplicar.
-PENDENTE = "Conexão Nativa (Sony)"
+#: A pendência da faixa de baixo — o rascunho que espera o Aplicar. O nome é o
+#: da posição DESLIGADA do interruptor, e não mais "Conexão Nativa (Sony)": duas
+#: palavras para o mesmo estado na mesma tela é como esta casa cria divergência.
+PENDENTE = "Modo Nativo"
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +225,98 @@ PENDENTE = "Conexão Nativa (Sony)"
 # ---------------------------------------------------------------------------
 CSS = """
   /* ---------- A ABA JOGAR ---------- */
+
+  /* ---------- O INTERRUPTOR DO HEFESTO (31/08/2026) ----------
+     SEM UMA LINHA DE JAVASCRIPT, como as outras nove abas: dois `radio` com o
+     mesmo `name`, escondidos, e `<label for>` por cima. É o MESMO mecanismo do
+     acordeão da Controles (`aba02`) e das seções que abrem da Conexões
+     (`topo.html`) — o navegador já garante que ligar um desliga o outro, e o
+     combinador `~` faz a seção de baixo aparecer e sumir sem script. O mockup
+     abre por duplo clique, e é regra desta casa que continue assim.
+
+     POR QUE `label` E NÃO `button`: só o par `radio` + `label` muda de estado
+     sem script. O preço está medido e declarado no relatório desta leva — a
+     ponte viva (`controles_vivos.INTERRUPTOR`) chama `ev.preventDefault()` no
+     clique, e num `label` isso IMPEDE o rádio de mudar. É uma linha lá, não
+     aqui. */
+  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+
+  /* O RÓTULO FICA NA MESMA LINHA DO INTERRUPTOR, e isso é PAGAMENTO DE ALTURA,
+     não estética: o miolo desta aba tinha **2px** de folga em 542 (medido hoje,
+     antes desta mudança). Um `linha-rot` por cima custaria 22px e a aba passaria
+     a rolar por dentro. Deitado, ele custa zero — e é a forma que ela desenhou:
+     `HEFESTO [ Ligado ● / Desligado ○ ]`, tudo numa linha. */
+  .hef-linha{display:flex;align-items:center;gap:8px}
+  .hef-linha .linha-rot{margin-bottom:0;flex:0 0 auto;margin-right:6px}
+  .hef-pos{
+    height:var(--h-escolha);display:inline-flex;align-items:center;gap:9px;
+    padding:0 18px;border-radius:7px;font-size:12.5px;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:pointer;user-select:none;
+  }
+  .hef-pos:hover{border-color:var(--comment);color:var(--texto-suave)}
+  /* ● / ○ — o marcador das duas posições, e é o `.pino` do interruptor que a
+     Navegação (`aba06`) já usa: mesmo tamanho, mesmo verde, mesmo brilho. */
+  .hef-pos .pino{width:9px;height:9px;border-radius:50%;flex:0 0 9px;
+                 border:1px solid var(--linha);background:transparent}
+  /* ACESO POR DOIS CAMINHOS, e os dois têm de existir. O `:checked` é o do
+     MOCKUP — ela clica no arquivo, sem daemon nenhum. O `.on` é o da PINTURA
+     VIVA: `controles_vivos.INTERRUPTOR` escreve `.on` em `[data-modo]` a partir
+     do `mode_of_state`. Sem o segundo, a tela viva mostraria o DESENHO em vez do
+     estado do daemon — o F7 desta casa, e foi exatamente o defeito medido em
+     31/08: a tela mostrava "Jogar pelo Hefesto" aceso com o daemon em `desktop`.
+     O ENDEREÇO NÃO SE ESCREVE NESTE COMENTÁRIO, e a razão é uma régua real: o
+     `test_o_botao_de_ligar_funciona_e_se_lembra` lê os endereços do HTML por
+     EXPRESSÃO REGULAR, e um exemplo citado dentro de um comentário entra na
+     conta como se fosse botão. É a mesma armadilha que pôs o logotipo inteiro
+     dentro de um comentário de CSS em 30/08 — o `replace` casou com a citação. */
+  #hef-ligado:checked ~ .hef-linha .hef-pos.ligado,
+  #hef-desligado:checked ~ .hef-linha .hef-pos.desligado,
+  .hef-pos.on{border-color:var(--purple);background:var(--sel-bg);
+              color:var(--fg);font-weight:600}
+  #hef-ligado:checked ~ .hef-linha .hef-pos.ligado .pino,
+  .hef-pos.ligado.on .pino{background:var(--green);border-color:var(--green);
+                           box-shadow:0 0 7px var(--green)}
+  #hef-desligado:checked ~ .hef-linha .hef-pos.desligado .pino,
+  .hef-pos.desligado.on .pino{background:var(--texto-mudo);
+                              border-color:var(--texto-mudo)}
+
+  /* AS DUAS SEÇÕES SÃO EXCLUSIVAS, e é isso que ela pediu: *"Modo Hefesto se
+     Ligado Abre as seções de Modo"*. A do desligado tem a MESMA altura (rótulo +
+     uma faixa de 36px), para a tela não pular quando ela vai e volta — a mesma
+     razão pela qual as dez abas têm uma altura só. */
+  .hef-rd ~ .so-ligado, .hef-rd ~ .so-desligado{display:none}
+  #hef-ligado:checked ~ .so-ligado{display:block}
+  #hef-desligado:checked ~ .so-desligado{display:block}
+  /* E ELAS ABREM NO MESMO y E FECHAM NO MESMO y. O rótulo da seção do LIGADO
+     leva o ícone `?` (17px) e o do DESLIGADO é só texto (13px): sem esta linha a
+     tela PULAVA 4px a cada volta do interruptor — medido, 180 contra 176. "Muda
+     tudo ao clicar" é a queixa dela que fixou a altura única das dez abas, e ela
+     vale dentro de uma aba também. A cura é na ALTURA, e manda o mais alto. */
+  .hef .sub-secao > .linha-rot{display:flex;align-items:center;height:17px}
+
+  /* O CHIP SEM DONO — a honestidade desta tela, e ela tem uma regra e uma ordem
+     em cima. A regra é de 30/08 (*botão sem dono no produto não vai para a tela
+     como se funcionasse*); a ordem dela, de 31/08, é MANTER o Point And Click e
+     a Navegação. As duas convivem de um jeito só: eles aparecem e DIZEM que
+     ainda não têm quem os atenda.
+     NADA DE `opacity`, e a razão é medida (`topo.html`, a fita inerte): a
+     opacidade mora no ancestral, o texto cai para ~2:1 e TODA régua de contraste
+     que lê `color` fica cega a isso. Aqui é cor explícita, borda tracejada — que
+     é como esta casa já escreve "isto ainda não vale" (`.avisos.vazio`,
+     `.pendente`) — e o cursor de "não clique". O porquê está no `title`. */
+  .degrau.sem-dono{border-style:dashed;color:var(--comment);cursor:not-allowed}
+  .degrau.sem-dono:hover{border-color:var(--linha);color:var(--comment)}
+  .degrau.sem-dono i{border-style:dashed}
+  /* O TRAÇO NO LUGAR DO ALGARISMO. O círculo diz a ordem em que o Hefesto TENTA
+     sozinho; quem não é degrau da `ponte_escada.ESCADA` não tem ordem nenhuma, e
+     um número ali diria que o PS+R3 para naquele modo. É a mesma disciplina do
+     `painel.SEM_LEITOR`: um traço, e não um zero. */
+  .degrau i.tr{color:var(--comment);border-style:dashed}
+  /* A FAIXA DO DESLIGADO não se clica: ela não é uma escolha, é o que o
+     interruptor JÁ escolheu. Sem `cursor:pointer` e sem `:hover`. */
+  .degrau.fixo{cursor:default;justify-content:flex-start;padding-left:14px}
+  .degrau.fixo .mud{color:var(--texto-mudo);font-weight:400}
 
   /* OS QUATRO NUMA FILEIRA SÓ, E TODOS DA MESMA LARGURA. Era `flex`, e os dois
      cartões mediam 228.8 e 225.2 px — a largura vinha do nome do plástico. */
@@ -166,7 +375,27 @@ CSS = """
      O botão é `--panel` sobre o cartão `--app-bg` — o inverso do `.seg`, que é
      `--app-bg` sobre o quadro `--panel`. Nos dois casos o que se clica é o tom
      que se destaca do fundo em que está. */
-  .mascara{display:flex;flex-direction:column;gap:4px}
+  /* AS TRÊS MÁSCARAS EM 2+1 — 30/08/2026, e é PAGAMENTO DE ALTURA, não estética.
+     Deitar a Atenção (acima) fez o quadro crescer 69px, e o miolo tinha 6px de
+     folga: nasceu barra de rolagem por dentro, com o "Reconectar Controles" fora
+     da tela. Ela autorizou o ajuste com uma condição — *"desde que não percamos
+     as features"* —, então nenhuma máscara sai: elas mudam de arranjo.
+
+     O QUE MUDOU DESDE O COMENTÁRIO ACIMA: ele diz que três lado a lado pediriam
+     ~326px e o cartão tinha 208. Com a Atenção fora da fileira o cartão passou a
+     272,8px, e dois por linha ficam com 126,4px cada — cabem. O "Nintendo Pro",
+     que é o mais largo, vai sozinho na linha de baixo com 256,8px.
+     TESTADA E REPROVADA a variante com os três numa fileira só: o "Nintendo Pro"
+     quebra em duas linhas e o chip vai de 28 para 44px. */
+  .mascara{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  /* O DUALSENSE OCUPA A LINHA INTEIRA, e os outros dois dividem a de baixo.
+     Era o contrário, e ela viu na hora: *"o DualSense é o foco do app e o
+     Nintendo Pro tá roubando a cena"*. Estava certa — na primeira versão do 2+1
+     eu pus o terceiro chip esticado só porque "Nintendo Pro" é o rótulo mais
+     largo, e com isso dei ao menos importante o maior pedaço da tela.
+     Cabe: "Xbox 360" e "Nintendo Pro" medem 47 e 74px de texto, e cada metade
+     tem 126,4 — o mais largo sobra 52. */
+  .mascara .chip:nth-child(1){grid-column:1/-1}
   /* É O CHIP, e não o botão de 36px — e a escolha tem preço medido dos dois lados.
      Com `.seg button` (o `--h-escolha` de 36px) as três máscaras somam 116px por
      cartão, o miolo pede 560px e a janela oferece 542: o quadro "Conectado agora"
@@ -201,23 +430,47 @@ CSS = """
      têm de bater, senão a barra vertical da coluna de avisos desce e erra a
      borda do botão por 85px, que é o que aconteceu quando eram dois números. */
   .quadro-corpo{--col-avisos:245px}
-  .dupla{display:grid;grid-template-columns:1fr var(--col-avisos);gap:14px;align-items:start}
+  /* A `.dupla` SAIU DAQUI — 30/08/2026. Com a Atenção deitando (abaixo), a grade
+     de duas colunas ficou sem segunda coluna. A regra do `topo.html` volta a ser
+     a única — que é o que ela já era antes desta aba a redefinir. */
 
-  /* A MESMA GRADE DA DUPLA, e o mesmo `gap`: é isso que faz a borda esquerda do
-     botão cair exatamente sob a barra vertical da coluna de avisos. Com `flex`
-     o botão parava 85px à direita dela — perto o bastante para ler como erro. */
-  .faixa-final{display:grid;grid-template-columns:1fr var(--col-avisos);gap:14px;
-               align-items:center;margin-top:12px}
-  .faixa-final .pendente{margin-top:0}
-  .faixa-final .btn{justify-self:start}
-  /* A BARRA VERTICAL VAI ATÉ EMBAIXO. Com `align-items:start` no `.dupla` a
-     coluna media a altura do seu conteúdo — 56px de um aviso ao lado de 158px de
-     cartões —, e a barra que separa os dois blocos virava um toco de um terço.
-     `stretch` faz dela a divisória inteira. O espaço que sobra abaixo do aviso é
-     RESERVADO de propósito (P8): é onde o segundo e o terceiro aviso entram sem
-     empurrar a tela. */
-  .col-atencao{border-left:1px solid var(--border-sutil);padding-left:16px;
-               align-self:stretch}
+  /* A FAIXA FINAL VOLTOU AO `flex` DO `topo.html` — 30/08/2026, e são DOIS
+     pedidos dela numa cura só: *"o reconectar controles vai pra direita enquanto
+     o 'Vai mudar para Conexão Nativa (Sony)…' extendo pra chegar ao reconectar
+     controles"*.
+
+     A grade de duas colunas que vivia aqui existia para casar a borda do botão
+     com a barra vertical da coluna de avisos. Essa barra deixou de existir (a
+     Atenção deitou), e com ela o motivo. O `topo.html` já tem exatamente o que
+     ela quer, e estava morto sob esta redefinição:
+         .faixa-final{display:flex;align-items:center;gap:12px}
+         .faixa-final .pendente{flex:1}
+     O `flex:1` da barra tracejada é o "estende"; a ausência de segunda coluna é
+     o "vai pra direita" — o botão passa a terminar no `right` do quadro, no
+     mesmo x em que terminam a fileira de cartões e a fileira de modos.
+     Medido: a barra vai de 853 para 940px e o botão de x=1271..1431 para
+     x=1356..1516. */
+  .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
+  /* A ATENÇÃO DESCEU — 30/08/2026, pedido dela: *"esse atenção desce"*.
+     Ela era a segunda coluna da `.dupla`, ao lado dos cartões, com a barra
+     vertical à esquerda. Media 129px de VAZIO — 70% da própria coluna —, porque
+     a altura dela vinha do irmão (`align-self:stretch`) e o conteúdo era um
+     aviso de uma linha.
+
+     Deitada, ela é uma faixa de largura inteira entre os cartões e a faixa
+     final, e a divisória troca de eixo: a barra vertical vira linha horizontal,
+     que é a mesma gramática das outras nove abas.
+     O RESERVADO DO P8 continua existindo — ele agora é o espaço que a faixa
+     ganha ao receber o segundo aviso, e cresce para baixo em vez de ficar
+     esperando em branco. */
+  /* OS RESPIROS SÃO 8/6 E NÃO 12/10, e o motivo é o orçamento: com 12/10 o miolo
+     pedia 556 de 542 e nascia barra de rolagem por dentro. Aqui cada pixel é
+     disputado — ver o comentário do `--alt-janela` no `topo.html`. */
+  .col-atencao{border-top:1px solid var(--rot-linha);margin-top:8px;padding-top:6px;
+               display:flex;align-items:center;gap:12px}
+  .col-atencao .cab-col{margin-bottom:0;flex:0 0 auto}
+  .col-atencao .aviso-item{flex:1;min-width:0}
+  .col-atencao .conta-avisos{margin-left:auto;flex:0 0 auto}
 """
 
 
@@ -313,14 +566,43 @@ def frase_das_mascaras():
 
 CARTOES = "\n".join(cartao(c) for c in MESA)
 
-_MODOS = "\n".join(
-    f'          <button{" class=\"on\"" if k == MODO_ACESO else ""}'
-    f' data-modo="{k}">{m}</button>'
-    for k, m in MODOS)
-_ESCADA = "\n".join(
-    f'            <span class="degrau{" auto" if n == "A" else ""}'
-    f'{" on" if k == DEGRAU_ACESO else ""}" data-degrau="{k}"><i>{n}</i>{r}</span>'
-    for k, n, r in ESCADA)
+# AS DUAS POSIÇÕES DO INTERRUPTOR. O `for=` do `<label>` é o que muda o rádio no
+# mockup; o `data-modo` é o endereço da pintura viva. São dois mecanismos com
+# alvos diferentes no MESMO elemento, de propósito — a alternativa era a tela
+# ter um estado no desenho e outro no daemon, que é o defeito que a pintura
+# existe para não ter.
+_INTERRUPTOR = "\n".join(
+    f'          <label class="hef-pos {lado}" for="hef-{lado}" data-modo="{modo}"\n'
+    f'                 title="{dica}"><span class="pino"></span>{rot}</label>'
+    for lado, modo, rot, dica in INTERRUPTOR)
+
+# A CLASSE `auto` NÃO É MAIS ESCRITA (31/08): ela existia só para o algarismo "A"
+# do "Automático" ganhar o ciano (`.degrau.auto i`, no `topo.html`). A regra órfã
+# continua no esqueleto — ela é de lá, e tirá-la é mexer em arquivo de outro dono.
+
+
+def _chip_do_modo(m):
+    """Um dos cinco chips de dentro do Hefesto ligado.
+
+    TRÊS ENDEREÇOS, e cada um responde a uma pergunta diferente:
+
+    - ``data-degrau`` — a identidade na fileira que o PS+R3 gira. Todos têm;
+    - ``data-modo`` — só quem É um modo de ``mode_transition.MODES``. Hoje é a
+      **Navegação** e só ela (``desktop``): é ela que `apply_mode` sabe aplicar.
+      Escrever este endereço nos outros quatro seria oferecer um escritor que
+      não existe;
+    - ``title`` — o que este modo é, em uma linha, e se ele tem quem o atenda.
+    """
+    classe = ("degrau"
+              + (" on" if m["chave"] == MODO_ACESO else "")
+              + (" sem-dono" if m["sem_dono"] else ""))
+    modo = f' data-modo="{m["modo"]}"' if m["modo"] else ""
+    # SEM `<i>`: os algarismos saíram em 31/08 (ver o comentário do `MODOS`).
+    return (f'            <span class="{classe}" data-degrau="{m["chave"]}"{modo}\n'
+            f'                  title="{m["dica"]}">{m["rot"]}</span>')
+
+
+_MODOS = "\n".join(_chip_do_modo(m) for m in MODOS)
 
 
 def aviso(selo, texto):
@@ -342,22 +624,31 @@ _CONTA = f"{len(AVISOS)} aviso" + ("s" if len(AVISOS) != 1 else "")
 
 
 MIOLO = f'''
-    <!-- ---------- QUANDO O JOGO ABRIR ---------- -->
+    <!-- ---------- QUANDO O JOGO ABRIR ----------
+         DOIS NÍVEIS desde 31/08/2026, decisão dela: em cima o interruptor do
+         Hefesto, e o que ele abre embaixo. A pergunta que o motivou é dela —
+         *"qual a diferença de nativo pra dualsense?"* — e a resposta é
+         estrutural: Nativo é o Hefesto FORA do meio, e os outros são jeitos de
+         ele estar no meio. Numa fileira só, os dois liam como irmãos. -->
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">Quando o jogo abrir</span>
         <span class="ajuda">?<span class="dica">
-          <b>Controlar o PC</b> — o controle vira mouse e teclado do computador.<br><br>
-          <b>Jogar pelo Hefesto</b> — escolha certa para quase todos os jogos: o Hefesto acende as luzes, faz o controle vibrar e dá um jogador para cada controle.<br><br>
-          <b>Conexão Nativa (Sony)</b> — só para jogos feitos para o PlayStation 5: os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida neste modo.<br><br>
-          <b>Desligado</b> — o Hefesto para de agir. O controle continua funcionando como um controle comum do Linux.
+          <b>Ligado</b> — o Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho. Os cinco modos de baixo são jeitos de ele fazer isso.<br><br>
+          <b>Desligado</b> — <b>Modo Nativo</b>: o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho; os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim.<br><br>
+          Isto <b>não</b> encerra o Hefesto. Para desligar o serviço inteiro, é a aba <b>Sistema</b>.
         </span></span>
       </div>
-      <div class="quadro-corpo">
+      <div class="quadro-corpo hef">
 
-        <div class="linha-rot">O que o controle faz agora:</div>
-        <div class="seg">
-{_MODOS}
+        <!-- OS DOIS RÁDIOS VÊM PRIMEIRO porque o combinador é o `~`: eles têm de
+             ser irmãos ANTERIORES das duas seções que abrem. -->
+        <input type="radio" name="hefesto" id="hef-ligado" class="hef-rd"{" checked" if HEFESTO_LIGADO else ""}>
+        <input type="radio" name="hefesto" id="hef-desligado" class="hef-rd"{"" if HEFESTO_LIGADO else " checked"}>
+
+        <div class="hef-linha">
+          <span class="linha-rot">Hefesto</span>
+{_INTERRUPTOR}
         </div>
 
         <!-- O SELETOR DE MÁSCARA SAIU DAQUI em 28/08. Decisão dela: a máscara é
@@ -366,20 +657,32 @@ MIOLO = f'''
              modo é estado do processo — existe um só (`app/actions/mode_transition.py`),
              e por isso ele não podia descer para o cartão junto com a máscara. -->
 
-        <div class="sub-secao" title="Esta seção só aparece com &quot;Jogar pelo Hefesto&quot; escolhido.">
+        <div class="sub-secao so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
           <div class="linha-rot">
-            <b style="color:var(--texto-suave)">Modo de conexão</b>
+            <b style="color:var(--texto-suave)">Modo</b>
             <span class="ajuda" style="display:inline-block;vertical-align:-3px;margin-left:3px">?<span class="dica">
-              <b>Automático</b> — o Hefesto tenta na ordem abaixo e <b>para quando acerta</b>; depois não pergunta mais para aquele jogo.<br><br>
-              A ordem tem razão medida: dez recursos do controle (giroscópio, acelerômetro, os dois pontos do touchpad, o clique, a vibração) <b>só chegam ao jogo pelo primeiro degrau</b>. Errar ali custa os dez, e custa em silêncio.<br><br>
-              <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle — útil quando o jogo não responde e você não quer sair dele.
+              Os cinco <b>usam as features do Hefesto</b>: luz, vibração, gatilho e o número do jogador continuam por conta dele em todos.<br><br>
+              O Hefesto <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo. Ele já faz isso sozinho, sempre — não é um botão, é o que a escada é.<br><br>
+              A ordem tem razão medida: dez recursos do controle (giroscópio, acelerômetro, os dois pontos do touchpad, o clique, a vibração) <b>só chegam ao jogo pelo Sony DualSense</b>. Errar ali custa os dez, e custa em silêncio.<br><br>
+              <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle. Hoje ele gira <b>quatro</b> pontes de verdade, nesta ordem: Sony DualSense, Xbox, <b>Modo Nativo</b> — que aqui é o interruptor <b>Desligado</b> — e Steam Input. <b>Point And Click</b> e <b>Navegação</b> ainda não são degraus: o PS+R3 não para neles.
             </span></span>
           </div>
           <div class="escada">
-{_ESCADA}
+{_MODOS}
           </div>
         </div>
 
+        <!-- O OUTRO LADO DO INTERRUPTOR. Mesma altura da seção de cima (rótulo +
+             36px), para a tela não pular quando ela vai e volta. -->
+        <div class="sub-secao so-desligado" title="Esta seção só aparece com o Hefesto DESLIGADO.">
+          <div class="linha-rot">
+            <b style="color:var(--texto-suave)">Modo</b>
+          </div>
+          <div class="escada">
+            <span class="degrau on fixo"
+                  title="Sem cópia virtual: o jogo fala com o DualSense físico. É a ponte dos jogos que escrevem no hidraw direto e recusam um intermediário. Só vale no próximo lançamento — com o jogo aberto, o resultado é ZERO controles.">Modo Nativo <span class="sep">·</span> <span class="mud">o DualSense da forma como veio ao mundo</span></span>
+          </div>
+        </div>
 
       </div>
     </div>
@@ -397,8 +700,7 @@ MIOLO = f'''
       </div>
       <div class="quadro-corpo">
 
-        <div class="dupla">
-          <div>
+        <div>
             <div class="linha-rot cab-col">
               O jogo vê cada controle como:
               <span class="ajuda" style="margin-left:5px">?<span class="dica">
@@ -421,13 +723,12 @@ MIOLO = f'''
             </div>
           </div>
 
-          <div class="col-atencao" data-lista="avisos">
-            <div class="linha-rot cab-col">
-              <b style="color:var(--orange)">Atenção</b>
-              <span class="conta-avisos" data-campo="atencao-conta">{_CONTA}</span>
-            </div>
-{_AVISOS}
+        <div class="col-atencao" data-lista="avisos">
+          <div class="linha-rot cab-col">
+            <b style="color:var(--orange)">Atenção</b>
           </div>
+{_AVISOS}
+          <span class="conta-avisos" data-campo="atencao-conta">{_CONTA}</span>
         </div>
 
         <div class="faixa-final">
@@ -456,6 +757,36 @@ MIOLO = f'''
 LEGENDA = f'''<div class="nota">
   <h2>O que mudou, e por quê</h2>
   <ul>
+    <li><b>A fileira plana virou DOIS NÍVEIS</b> — sua palavra, 31/08:
+      <span class="marca">"vamos desconfundir isso que tal? Hefesto Ligado/Desligado (…) Modo
+      Hefesto se Ligado Abre as seções de Modo"</span>. A pergunta que abriu isto também é sua
+      — <span class="marca">"qual a diferença de nativo pra dualsense?"</span> —, e ela era
+      boa: a tela punha os dois na <b>mesma</b> fileira, como alternativas do mesmo tipo. Não
+      são. <b>Nativo é o Hefesto FORA do meio</b>; os outros são jeitos de ele <b>estar</b> no
+      meio. Agora a tela mostra isso: em cima o interruptor, embaixo o que ele abre.</li>
+    <li><b>"Desligado" deixou de ser um estado inventado, e isso fecha a MIGRA-JOGAR-06</b> —
+      sem construir nada. O quarto botão da fileira antiga não tinha leitor:
+      <code>mode_transition.mode_of_state</code> é o ponto único de leitura do modo vivo e
+      devolve <b>três</b> valores, nunca um quarto. Com a sua decisão, <b>Desligado = Modo
+      Nativo</b> (<code>MODE_NATIVE</code>), que <b>lê</b> (o mesmo <code>mode_of_state</code>)
+      e <b>escreve</b> (<code>apply_mode('native')</code>, em <code>painel.ESCRITOR_DOS_MODOS</code>).
+      Encerrar o Hefesto inteiro continua sendo <b>"Encerrar o serviço"</b>, na Sistema.</li>
+    <li><b>O chip que se chamava "Hefesto" virou "Sony DualSense"</b> — ele sempre foi
+      <code>Ponte(gamepad, dualsense)</code>, o primeiro degrau de
+      <code>integrations/ponte_escada.ESCADA</code>. Era o nome do <b>produto</b> no lugar do
+      nome da <b>máscara</b>, numa fileira em que os outros também são o Hefesto.</li>
+    <li><b>O Xbox chegou à tela pela primeira vez</b> — <code>Ponte(gamepad, xbox)</code> é o
+      <b>segundo</b> degrau que o produto tenta, e nenhum chip o nomeava. Era exatamente o que
+      <code>painel.degraus_sem_chip()</code> denunciava: <span class="marca">"um degrau real não
+      tem chip na tela"</span>. Agora tem.</li>
+    <li><b>Os algarismos saíram, e é decisão dela de 31/08</b> — a tela escrevia
+      <b>③ Steam Input</b>, o produto o tenta em <b>quarto</b>
+      (<code>ponte_escada.indice_do_degrau + 1</code> = 4) e esta legenda prometia que o número
+      ERA esse índice. Os três não podiam estar certos, e a causa é a própria decisão dela do
+      mesmo dia: o terceiro degrau é o <b>Nativo</b>, que saiu da fileira para virar o
+      interruptor <b>Desligado</b>. Havia três saídas — numerar <i>1 · 2 · 4</i> com o buraco do
+      3, numerar pela posição na tela (e esta linha passar a mentir), ou tirar os números. Ela
+      tirou. <b>A ordem não se perdeu</b>: está na dica de cada modo e na do "Modo de conexão".</li>
     <li><b>A máscara virou POR CONTROLE</b> — decisão sua, 28/08. Três opções e
       <b>sem "Automático"</b>: DualSense · Xbox 360 · Nintendo Pro. O seletor mora dentro
       do cartão de cada controle. O que era um seletor único lá em cima
@@ -470,6 +801,13 @@ LEGENDA = f'''<div class="nota">
     <li><b>"Automático" saiu da máscara</b> — substitui a <code>D-A-MASCARA-GANHA-O-AUTOMATICO</code>
       de 26/08, que o queria como terceira opção ligada. A heurística que o moveria
       (<code>api_de_entrada.py</code>) errou em <b>13 dos 14</b> jogos do seu censo.</li>
+    <li><b>"Automático" saiu também do Modo de conexão</b> — sua palavra, 31/08:
+      <span class="marca">"na aba jogar o Botão Automático não existe"</span>. E não existe
+      mesmo: ele não tinha <b>leitor</b> (<code>painel.CHIPS_DA_ESCADA</code> o declara com
+      <code>ponte=None</code>, e <code>degrau_vivo</code> só acende comparando pontes — nenhum
+      estado do produto podia acendê-lo) nem <b>escritor</b> (não há método de IPC que fixe um
+      degrau). <b>O mecanismo ficou</b>: tentar na ordem e parar quando acerta é o que o produto
+      já faz sozinho, e está dito na dica.</li>
     <li><b>A fita ficou viva, e agora ela tem alvo</b> — era a contradição que esta legenda
       declarava em aberto: a fita dizia <span class="marca">"vai para o controle escolhido
       aqui"</span> numa aba em que nada era por controle. A máscara resolveu isso. O cartão
@@ -479,7 +817,18 @@ LEGENDA = f'''<div class="nota">
       máscara. Não é descuido: o modo é <b>estado do processo</b> — existe um só
       (<code>app/actions/mode_transition.py</code>), e duas peças pedindo modos diferentes
       não têm resposta. Máscara é do <b>aparelho</b>; modo é da <b>máquina</b>.</li>
-    <li><b>Quatro modos, não três</b> — <span class="marca">Desligado</span> entra na fileira como você decidiu; a Sistema fica com "Encerrar o serviço".</li>
+    <li><b>Os DOIS que ainda não têm quem os atenda aparecem, e dizem isso</b> — é a sua ordem
+      de 31/08 (manter <b>Point And Click</b> e <b>Navegação</b>) somada à regra que você fixou
+      em 30/08 (<i>botão sem dono no produto não vai para a tela como se funcionasse</i>). Elas
+      convivem de um jeito só: os dois entram <b>marcados</b>, e o porquê está no ponteiro do
+      mouse. Nada de <code>opacity</code> — a lição da fita inerte é que a opacidade some com o
+      texto e cega toda régua de contraste; aqui é <b>borda tracejada</b>, cor explícita e
+      cursor de "não clique".
+      <br><b>Point And Click</b> não é degrau da escada <b>nem</b> modo do produto: não tem nada.
+      <br><b>Navegação</b> é o caso do meio, e é bom: o <b>modo</b> tem dono e funciona hoje
+      (<code>apply_mode('desktop')</code>, o antigo "Controlar o PC"). O que ainda não existe é
+      o <b>PS + R3</b> parar nela — a Navegação não é degrau. Por isso ela leva traço no
+      dica que diz o que falta, mas <b>não</b> a borda tracejada.</li>
     <li><b>Quatro controles na mesa, um cartão cada</b> — a lista é a <code>MESA</code> do <code>monta.py</code>: não há "quatro" escrito num laço, e o número do jogador é campo, não a posição na fila. Continua sendo só a peça, com o <b>SVG pequeno na cor do plástico</b> — o card completo é da aba Controles.</li>
     <li><b>A borda e a cor vêm do mapa</b> — a cor do plástico sai do <code>cores-do-dualsense.csv</code> pela folha que o gerador escreveu dentro do desenho. Não está digitada aqui.</li>
     <li><b>As cinco lâmpadas do jogador ficam apagadas neste cartão</b> — medido de novo hoje,
@@ -511,7 +860,27 @@ LEGENDA = f'''<div class="nota">
       é DualSense nos quatro.</li>
     <li><b>Clicar num cartão leva a fita para ele</b> — é a mesma gramática que você fixou hoje
       para o acordeão da Controles ("clicar num card muda a fita").</li>
-    <li><b>A ordem dos modos</b> — pus Desligado primeiro (é o "menos"), depois Controlar o PC, Jogar pelo Hefesto e Nativa. Pode ser o inverso.</li>
+    <li><b>A ordem dos cinco modos não é a ordem em que você os listou</b>, e é a única coisa
+      em que me afastei do seu texto. Você escreveu <span class="marca">"Steam Input, Xbox, Sony
+      DualSense, Point And Click"</span>; eu pus <b>Sony DualSense · Xbox · Steam Input</b>,
+      que é a ordem <b>medida</b> em que o produto tenta
+      (<code>ponte_escada.ESCADA</code>): a DualSense primeiro porque <b>dez</b> linhas do
+      <code>mapa-controles.csv</code> só chegam ao jogo por ela, e o Steam Input por último
+      porque é o único que exige <b>fechar a Steam, reabrir a Steam e reabrir o jogo</b>. Sem os
+      algarismos, <b>a ordem da fileira é a única coisa que ainda diz o que o produto tenta
+      primeiro</b> — trocá-la para a sua ordem passaria a afirmar que o Hefesto começa pelo Steam
+      Input, e isso é falso e caro. <b>Se você preferir a sua ordem mesmo assim</b>, é uma linha
+      no <code>MODOS</code>; mas então a dica de cada modo tem de deixar de dizer "é o primeiro
+      que o Hefesto tenta", ou a tela volta a se contradizer.</li>
+    <li><b>O rótulo "Hefesto" ficou DEITADO, ao lado do interruptor</b>, e não em cima como as
+      outras linhas desta casa. É pagamento de altura: o miolo desta aba tinha <b>2px</b> de
+      folga em 542 antes desta mudança, e um rótulo por cima custa 22px — a aba passaria a
+      rolar por dentro. Deitado ele custa zero, e é a forma que você desenhou
+      (<span class="marca">"Hefesto Ligado/Desligado"</span>, tudo numa linha).</li>
+    <li><b>O nome da seção de baixo é "Modo", e não "Modo de conexão"</b> — é a sua palavra
+      (<span class="marca">"Abre as seções de Modo"</span>). O quadro continua se chamando
+      <b>Quando o jogo abrir</b>, e o de baixo <b>Conectado agora</b>: os dois títulos são seus,
+      de 26 e 28/08, e não os troquei sem você pedir.</li>
     <li><b>A linha laranja tracejada</b> é a prova de que o Aplicar ainda deve. Ela só aparece com escolha pendente — e o espaço dela é reservado, para a tela não pular.</li>
     <li><b>A carga de cada bateria é o único dado inventado desta aba</b> — 100, 64, 41 e 87%. Bateria é estado do momento, e o mockup mostra um momento; todo o resto (cor, nome, transporte, jogador, desenho) sai de arquivo.</li>
     <li><b>O recibo do rodapé nomeia o perfil</b> — é onde a mudança vai cair, que era a informação que faltava e te custou semanas.</li>
@@ -519,6 +888,18 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O que isto encomenda ao código</h2>
   <ul>
+    <li><b>O interruptor tem de ler DOIS modos como "Ligado"</b>. Hoje a pintura viva acende um
+      botão comparando <code>data-modo</code> com o modo do daemon, um a um — e o Hefesto ligado
+      é <b>gamepad</b> <i>ou</i> <b>desktop</b> (Navegação). Sem uma leitura derivada
+      (<code>ligado = modo in {{gamepad, desktop}}</code>) o interruptor fica apagado dos dois
+      lados quando você escolhe a Navegação: a tela não estaria mentindo, estaria muda — e mudo
+      é pior, porque parece defeito.</li>
+    <li><b>Fixar um modo pela tela ainda não existe</b>, e vale para os três degraus reais:
+      <span class="marca">"a escada existe e SOBE sozinha, mas ninguém a fixa pela tela: não há
+      método de IPC que diga 'use este degrau'"</span>. Clicar em <b>Sony DualSense</b>, <b>Xbox</b>
+      ou <b>Steam Input</b> hoje não muda nada no daemon — quem muda é o <b>PS + R3</b> na sua
+      mão. Os dois que faltam (Point And Click e Navegação como degrau) são mais um passo além
+      disso.</li>
     <li><b>A máscara Nintendo Pro não existe hoje</b>, e entra assim mesmo — isto é mockup, e
       mockup desenha o produto que vai existir. O catálogo do produto
       (<code>integrations/uinput_gamepad.py</code>, <code>FLAVORS</code>) tem <b>duas</b>

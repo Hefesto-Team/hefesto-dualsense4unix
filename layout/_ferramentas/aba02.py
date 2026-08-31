@@ -1,6 +1,6 @@
 import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA,
-                   SEPARADOR, cor_da_zona, luzinhas, player_slot_color)
+                   SEPARADOR, cor_da_zona, luzinhas, player_slot_color, tom_da_casa)
 
 # ---------------------------------------------------------------------------
 # D-A-LEITURA-DO-ACELERÔMETRO-SAI-DA-TELA (29/08/2026) — MUDANÇA DE ESPECIFICAÇÃO.
@@ -200,7 +200,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      controle — e agora não têm como, porque são o mesmo `<label>`. */
   .faixa{display:flex;align-items:center;gap:9px;
          font-size:11.5px;color:var(--texto-mudo);
-         text-transform:uppercase;letter-spacing:.5px}
+         }
   .faixa b{color:var(--texto-suave)}
   /* todo item da faixa tem a MESMA altura de linha. O ícone "?" do aviso de
      máscara tinha 17px e esticava só aquele span para 19px, subindo o texto
@@ -220,7 +220,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      o que morreu manda a próxima pessoa procurar uma pintura que não há. Agora
      é `.leia`, que é o que ela faz: diz que aquele item tem texto embaixo. */
   .faixa .leia{cursor:help}
-  .faixa .div{color:var(--border-forte)}
+  .faixa .div{color:var(--texto-mudo)}   /* cor de texto, não de borda (topo.html: `.seta`) */
   /* os gatilhos: número EM CIMA da barra, como no original.
      O `margin-top:auto` SAIU, e ele era a causa do maior buraco da tela.
      Enquanto L2/R2 moravam dentro da moldura do giroscópio, aquele `auto`
@@ -235,10 +235,42 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .gat-linha .trilho{position:relative;height:8px;border-radius:4px;background:var(--panel);
                      border:1px solid var(--border-forte)}
   .gat-linha .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--pink)}
+  /* `white-space:nowrap` NO NÚMERO, e ele não é enfeite. O `.n` é absoluto com
+     `left:50%` e sem `right`, então a largura que o navegador lhe dá é METADE do
+     trilho: num trilho de 92px ele tem 46 para "200 / 255", que mede 57 — e
+     quebrava em duas linhas, uma delas por cima da barra. Aparecia só quando a
+     coluna encolhia, que é o estado que ninguém fotografa. */
   .gat-linha .n{position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+                white-space:nowrap;
                 font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave)}
   /* SEM as três caixas: o miolo é uma grade de blocos soltos */
-  .card-corpo{display:grid;grid-template-columns:168px 226px 212px 1fr 186px;gap:11px;
+  /* AS CINCO COLUNAS SÃO PROPORÇÕES, E NÃO PIXELS — 31/08/2026.
+     Os números são os mesmos: na janela do produto (1180px) o `card-corpo` tem
+     1036px para repartir, e 168+226+212+308+122 = 1036. Cada coluna nasce com a
+     largura exata que tinha. O que muda é o que acontece quando a janela é MENOR
+     que 1180 (o `.janela` é `max-width:100%`): com quatro colunas em pixel fixo,
+     TODO o encolhimento caía na única coluna flexível — a do som. Medido em
+     31/08 num navegador de 1000px: ela ia a 78px e os três botões do Modo do
+     Mic, mais o "Todo o som do PC", pintavam 200px POR CIMA dos Sensores e dos
+     Gatilhos. É a tela que ela fotografou. Em proporção, as cinco encolhem
+     juntas e nenhuma colapsa — que é como as outras nove abas se comportam.
+     `minmax(0,…)` continua obrigatório: `Nfr` sozinho tem mínimo automático
+     `auto` (= min-content), e é ele que faz a coluna se recusar a encolher.
+
+     A COLUNA DO SOM GANHOU 46px E A DOS SENSORES OS PERDEU (244 -> 290,
+     186 -> 140), e a conta é medida, não gosto: a linha do rótulo do Microfone
+     pede 278px ("Microfone" 55 + o selo 45 + o "?" 17 + os três botões de modo
+     150, mais o padding da moldura) e recebia 244 — os 34px de diferença eram o
+     "Nativo" e metade do "Desativado" pintados FORA da moldura, atravessando o
+     bloco vizinho. Do outro lado sobrava: com os dois sensores numa moldura só,
+     a quinta coluna pede 99px de conteúdo natural.
+     E 140 É PISO, NÃO ESCOLHA: abaixo disso a barrinha de cada eixo cai de 51px
+     para menos de 40 e deixa de dizer magnitude — que é a única coisa que ela
+     diz. Foi por isso que a primeira tentativa (122) foi desfeita: a régua deu
+     verde e a FOTO mostrou seis barras de 23px. Medir sem olhar não fecha. */
+  .card-corpo{display:grid;gap:11px;
+              grid-template-columns:minmax(0,168fr) minmax(0,226fr) minmax(0,212fr)
+                                    minmax(0,290fr) minmax(0,140fr);
               padding:12px 14px 0;align-items:stretch}
   /* as cinco colunas terminam na mesma linha. A do som manda a altura; nas outras
      o CONTEÚDO cresce para acompanhar — o touchpad estica, os analógicos ficam
@@ -278,9 +310,56 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      ry, speaker, touchpad, medido no `state_full` de agora). Desenhar o campo
      antes da leitura existir seria trocar um buraco por outro. */
   .card-corpo > div:last-child > .moldura{display:flex;flex-direction:column}
-  .card-corpo > div:last-child > .moldura.giro{flex:1 1 0%;min-height:94px}
-  .card-corpo > div:last-child > .moldura.gatilhos{flex:1 1 0%;min-height:87px}
-  .card-corpo > div:last-child > .moldura.giro > .eixo{flex:1 1 auto}
+  /* TRÊS BLOCOS NA COLUNA, e não dois: o acelerômetro entrou em 30/08.
+     Os pisos caem de 94/87 para 78/72/72 porque a altura do card não mudou —
+     ela é a mesma nas dez abas (`--alt-janela`). Três eixos a 18px mais o
+     rótulo cabem em 72; abaixo disso a barra some antes do número. */
+  /* DOIS SENSORES NUMA MOLDURA. Os pisos saem da conta, não do gosto: o rótulo
+     mede 17, cada sub-rótulo 13 e cada eixo 14 — 17 + 2*(13 + 3*14) = 127. Com os
+     Gatilhos (72) e o vão de 9, a coluna pede 208 dos 232 que ela pode gastar. */
+  /* O BLOCO DOS SENSORES PEDE A ALTURA QUE ELE TEM, e os Gatilhos absorvem a
+     sobra. Com `flex:1 1 0%` nos dois o flex reparte a coluna em partes IGUAIS
+     (111 e 111) — e os sensores precisam de 143. O resultado era o bloco
+     cortado no meio do acelerômetro: ela viu e disse *"tá muito quebrado"*.
+     `flex:0 0 auto` aqui, `flex:1 1 auto` nos Gatilhos: cada um pede o que
+     precisa e quem estica é o que tem folga. */
+  /* A CLASSE SE CHAMA `leituras`, E NÃO `sensores` — 31/08/2026, e é a cicatriz
+     da linha 125 deste arquivo repetida dentro dele.
+     `.sensores` JÁ EXISTIA aqui embaixo (o grupo do "Calibrar sensores da mesa",
+     no cabeçalho do quadro) e traz `margin-left:auto`. Quando a moldura nova
+     nasceu com esse nome, em 30/08, herdou a margem — e `margin-left:auto` num
+     container `flex-direction:column` é margem no EIXO CRUZADO: ela DESLIGA o
+     stretch. Medido no Chrome: a moldura parou de acompanhar a coluna (99px de
+     largura em vez de 186) e foi empurrada 87px para a direita, desalinhada da
+     dos Gatilhos, logo abaixo dela. Foi o que ela viu e chamou de quebrado.
+     Nome de classe se confere no arquivo INTEIRO antes de escrever, não só no
+     `topo.html`. */
+  .card-corpo > div:last-child > .moldura.leituras{flex:0 0 auto}
+  /* O EIXO ENCOLHE DE 18 PARA 16 SÓ AQUI, e é conta: a moldura tem 151px
+     (os 232 da coluna menos os 72 dos Gatilhos e o vão de 9), e seis eixos a 18
+     mais dois sub-rótulos e o rótulo pedem 158. Dois pixels por eixo fecham a
+     conta sem tirar sensor nenhum — que é o que ela pediu ao autorizar o ajuste:
+     *"desde que não percamos as features"*. A barra continua com 6px. */
+  /* O EIXO APERTA A COLUNA DO NÚMERO SÓ AQUI: 46px em vez de 52, e o vão de 6 em
+     vez de 8. O valor mais largo desta moldura tem sete caracteres monoespaçados
+     ("−412.0" com o sinal), que medem 44px — os 52 eram folga. Os 10px que saem
+     vão inteiros para a barrinha, que é o que se lê de longe. */
+  .card-corpo > div:last-child > .moldura.leituras > .eixo{height:14px;flex:0 0 auto;
+                                                           grid-template-columns:11px 46px 1fr;gap:6px}
+  /* O `gap` DA MOLDURA VAI A ZERO AQUI, e é ELE que estourava o card.
+     `.moldura` traz `gap:8px`, pensada para 3 ou 4 filhos. Esta tem DEZ (rótulo,
+     dois sub-rótulos e seis eixos): nove vãos de 8 são **72px**, mais da metade
+     do bloco — mais que os seis eixos somados. Com o gap em zero e o respiro
+     posto só ONDE ELE SIGNIFICA (antes de cada sub-rótulo, que é onde um sensor
+     acaba e o outro começa), o bloco cai de 228 para dentro dos 151 que a coluna
+     tem. Medido no navegador, não estimado. */
+  .card-corpo > div:last-child > .moldura.leituras{gap:0;padding:5px 9px}
+  .card-corpo > div:last-child > .moldura.gatilhos{flex:1 1 auto;min-height:72px}
+  /* o sub-rótulo de cada sensor: diz de qual dos dois são os três eixos abaixo,
+     e a unidade — que é o que os separa (graus/s contra g). */
+  .sub-sensor{font-size:10px;color:var(--rot-campo);font-weight:600;margin-top:3px;line-height:12px}
+  .sub-sensor:first-of-type{margin-top:2px}
+  .sub-sensor .mudo{font-weight:400}
   /* O PISO DO TOUCHPAD É A PROPORÇÃO DO SENSOR DE VERDADE. Ele era 118px de
      altura para 148 de largura — 1,25:1 — e o touchpad do DualSense é
      **1920x1080**, medido no `state_full` dela agora: 16:9, ou 83px para os
@@ -307,7 +386,14 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .moldura > .glifos{height:100%;align-content:space-between}
   /* moldura SÓ onde o original põe */
   .moldura{border:1px solid var(--border-forte);border-radius:6px;background:var(--app-bg);padding:7px 9px}
-  .rot{font-size:11.5px;color:var(--texto-suave);margin-bottom:5px}
+  /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
+     Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
+     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e ela
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
+     `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
+  .rot{font-size:11.5px;font-weight:600;color:var(--rot-campo);margin-bottom:5px}
   .rot-linha{display:flex;align-items:center}
   /* O HEXADECIMAL FICA — decisão dela, 28/08: "fica nas duas", Controles e
      Iluminação. Ele já esteve aqui, saiu em 27/08 por escolha minha ("cru é para
@@ -338,7 +424,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .sticks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   /* o título do analógico é o único sem moldura, e por isso nascia 8px ACIMA dos
      outros três. O padding da moldura entra aqui como margem, e os quatro alinham. */
-  .stick-rot{font-size:10.5px;color:var(--texto-mudo);text-align:center;line-height:1.3;
+  .stick-rot{font-size:10.5px;font-weight:600;color:var(--rot-campo);text-align:center;line-height:1.3;
              padding-top:8px;margin-bottom:5px}
   /* O CÍRCULO, A CRUZ E O RÓTULO L3/R3 VÊM DE `--plastico`.
      Eram `var(--cosmic-red)` e dois `rgba(177,31,84,…)` digitados — e 177,31,84 é
@@ -351,7 +437,10 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .stick::before{left:50%;top:6px;bottom:6px;width:1px}
   .stick::after{top:50%;left:6px;right:6px;height:1px}
   .stick .rotl{font-family:'JetBrains Mono',monospace;font-size:26px;
-               color:color-mix(in srgb, var(--plastico) 42%, transparent)}
+               /* 42% dava 1,16:1 contra o fundo — a letra sumia. 72% a põe
+                  visível sem virar rótulo: ela é marca-d'água DENTRO do
+                  círculo, e quem nomeia o analógico é o texto acima dele. */
+               color:color-mix(in srgb, var(--plastico) 72%, transparent)}
   /* A BOLINHA É POSICIONADA PELO CENTRO, e o `translate` é o que diz isso.
      DEFEITO MEDIDO EM 29/08: sem ele, `left`/`top` põem o CANTO da bolinha de
      9px na conta, e o repouso (128) nascia 4,69px abaixo e à direita da cruz —
@@ -375,7 +464,9 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .onda.mudo i{background:var(--border-forte);opacity:.5}
   .selo-ativo{font-size:9.5px;font-family:'JetBrains Mono',monospace;padding:1px 6px;border-radius:3px;
               background:var(--green);color:var(--app-bg);font-weight:600}
-  .selo-ativo.off{background:var(--border-forte);color:var(--texto-mudo)}
+  /* 3,47:1 sobre o próprio fundo -> 9,3:1. O selo continua dizendo
+     "desligado" pelo FUNDO cinza, que é o sinal; o texto passa a ser lido. */
+  .selo-ativo.off{background:var(--border-forte);color:var(--texto-suave)}
   .vol{display:flex;align-items:center;gap:8px;height:22px}
   .vol .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
   .vol .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
@@ -411,6 +502,20 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .solta{height:20px;flex:0 0 auto;margin-left:auto;padding:0 8px;border-radius:5px;cursor:pointer;
          border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
          font-size:10.5px;font-family:inherit;white-space:nowrap}
+  /* O MODO DO MIC é o `.rota` em miniatura: mesma gramática (fileira de
+     escolha exclusiva, um aceso), altura de RÓTULO em vez de altura de
+     escolha, porque ele divide a linha com o nome do bloco. */
+  /* O VÃO E O RECUO SÃO OS MENORES QUE AINDA SEPARAM — 2px entre os três botões
+     e 5px de cada lado do texto. Com os 3 e 7 que eles tinham, a fileira media
+     164px e a linha do rótulo pedia 292 numa moldura de 242: os 50px de
+     diferença eram o "Nativo" e metade do "Desativado" pintados fora da caixa,
+     por cima do bloco dos sensores. Aqui a fileira mede 150 e cabe com folga. */
+  .mic-modo{display:inline-flex;gap:2px;margin-left:auto}
+  .mic-modo button{height:17px;padding:0 5px;border-radius:4px;font-size:9.5px;
+    font-family:inherit;cursor:pointer;white-space:nowrap;
+    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .mic-modo button.on{border-color:var(--purple);background:var(--sel-bg);
+    color:var(--fg);font-weight:600}
   .rota{display:flex;gap:5px;margin-top:6px}
   .rota button{flex:1;height:var(--h-escolha);border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
@@ -454,7 +559,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
                  gap:8px;margin-left:auto}
   .sensores-peca .sw{
     height:26px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
-    text-transform:uppercase;letter-spacing:.5px;
+
     border:1px solid var(--green);background:rgba(80,250,123,.09);color:var(--green);
     display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;
   }
@@ -559,7 +664,7 @@ def luz_do_jogador(c):
     mesma que `monta.PADRAO_JOGADOR` já usa para as cinco lâmpadas. Digitar aqui
     seria inventar uma segunda verdade sobre o que o produto acende.
     """
-    return "#%02x%02x%02x" % player_slot_color(c["jogador"])
+    return tom_da_casa("#%02X%02X%02X" % player_slot_color(c["jogador"]))
 
 
 # O TOUCHPAD PRECISA DIZER ALGO QUANDO NINGUÉM ESTÁ TOCANDO, e era isto que
@@ -731,7 +836,8 @@ DICA_ALTO_SEM_POSSE = ("Apagado porque o volume deste alto-falante ainda é desc
 
 def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_pc, estado_alto,
-          alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True):
+          alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
+          mic_modo="virtual", accel=None):
     """Uma caixa de controle, a partir do ITEM DA MESA — nunca de um nome digitado.
 
     É UMA função para as duas formas, porque agora é uma caixa só: o rádio diz
@@ -763,6 +869,11 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
     gx = lambda fam, e, v, cor: (f'''            <div class="eixo" data-eixo="{fam}-{e.lower()}"><span>{e}</span><span>{v}</span>
               <span class="g"><span class="v" style="{cor}"></span></span></div>''')
     giro_html = chr(10).join(gx("giro", e, v, cor) for e, v, cor in giro)
+    # O ACELERÔMETRO SAI DA MESMA FUNÇÃO QUE O GIRO — mesma forma, mesma
+    # linha, mesma barra. O que muda é a UNIDADE (g, não graus/s) e a
+    # ESCALA: 1 g é o repouso, então a barra tem de mostrar 0,976 sem
+    # estourar. Ver o comentário do bloco, abaixo.
+    accel_html = chr(10).join(gx("accel", e, v, cor) for e, v, cor in (accel or []))
     fx = f'''      <label class="faixa" for="{rid}" title="{ABRE_O_CARD}">
 {identidade(c, bat=bat, meio=resumo_fechado(mic_mudo))}
       </label>'''
@@ -821,15 +932,55 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
 
         <div>
           <div class="moldura" data-bloco="microfone">
+            <!-- O "LIBERAR" SAIU — 30/08/2026, e o argumento é dela, não meu:
+                 *"o botão do Controle sempre controla a interface, por isso não faz
+                 sentido o liberar ali"*.
+
+                 EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
+                 `mic.set {{muted: null}}` EXISTE (`ipc_handlers.py:4779`) e devolve a
+                 posse ao `hid-playstation` — a minha objeção era que o botão tinha
+                 dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
+                 nunca deixa de comandar a interface, não há posse a devolver, e um
+                 botão que desfaz algo que não acontece é um botão que ensina errado.
+                 O método continua no daemon, para quem precisar dele. -->
             <div class="rot rot-linha">Microfone
               <span class="selo-ativo{mic_off}" style="margin-left:5px" data-campo="mic-selo">{mic_selo}</span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala no
-                <b>firmware</b> e apaga a luz vermelha do plástico — e a partir dele quem
-                manda no mudo é o Hefesto: o botão do controle para de valer até você
-                clicar em <b>Liberar</b>, que devolve o comando ao aparelho.
+                <b>firmware</b> e apaga a luz vermelha do plástico.<br><br>
+                O <b>modo</b>, à direita, diz por onde o som do microfone chega ao PC.
               </span></span>
-              <button class="solta" data-mudo="mic-liberar"{mic_trava} title="{DICA_MIC_LIBERAR}">Liberar</button>
+              <!-- O MODO DO MICROFONE — pedido dela, 30/08: *"tá faltando o Modo do
+                   Mic: Virtual, Desativado e Nativo"*.
+
+                   ELE MORA NA LINHA DO RÓTULO, e isso é orçamento, não estética.
+                   Como fileira própria embaixo ele custava 42px (36 da altura de
+                   escolha + 6 de margem), e o card ia de 304 para 350 — contra os
+                   308 que `PARA_O_CARD` reserva. O quadro passava a rolar por
+                   dentro e o P4 saía da tela; medido antes de escolher este lugar.
+                   Aqui ele ocupa o vão que o "Liberar" deixou: custo ZERO de
+                   altura, e ainda fica ao lado do selo que diz se o mic está
+                   ATIVO — que é a informação com que ele conversa. -->
+              <!-- AS CHAVES SÃO SIMPLES, E A DUPLA ERA UM BOTÃO MORTO.
+                   Este bloco é `return f` com aspas triplas (linha 834), e chave
+                   dupla ESCAPA para chave simples literal: a expressão nunca era
+                   avaliada e os 12 botões (4 controles x 3 modos) nasciam todos com
+                   a mesma classe crua, nenhum aceso. Medido pelo cético:
+                   classList.contains("on") falso nos doze.
+                   É o defeito que o CLAUDE.md nomeia — *"uma validação de interface
+                   que não cobre o botão novo é uma validação que mente"*: eu conferi
+                   que os três botões EXISTEM e não que um deles ACENDE.
+                   E o comentário que eu escrevi para explicar isto quebrou o gerador,
+                   porque trazia chaves dentro da própria f-string. Por isso ele não
+                   as tem. -->
+              <span class="mic-modo" data-campo="mic-modo">
+                <button class="{'on' if mic_modo == 'virtual' else ''}" data-mic-modo="virtual"
+                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
+                <button class="{'on' if mic_modo == 'desativado' else ''}" data-mic-modo="desativado"
+                  title="O microfone do controle não chega ao PC. O botão do aparelho continua acendendo e apagando a luz vermelha do plástico.">Desativado</button>
+                <button class="{'on' if mic_modo == 'nativo' else ''}" data-mic-modo="nativo"
+                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
+              </span>
             </div>
             {onda(mic_v, mic_mudo)}
             <div class="vol">
@@ -837,6 +988,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
               <span class="n">{mic_vol}</span>
               <button class="mudo-i{mic_on}" data-mudo="microfone" title="{DICA_MIC_MUDO}">🎙</button>
             </div>
+
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
             <div class="rot">Alto-falante <span class="mudo" data-campo="alto-estado">· {alto_v[0]} % · {estado_alto}</span>
@@ -859,17 +1011,38 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
         </div>
 
         <div>
-          <div class="moldura giro">
-            <div class="rot">Giroscópio <span class="mudo">(graus/s)</span>
+          <!-- UM BLOCO, DOIS SENSORES — 30/08/2026.
+
+               O acelerômetro entrou por decisão dela (*"não era pra ele sair, era
+               pra ele FUNCIONAR"*), e como MOLDURA PRÓPRIA ele não cabia: medido,
+               a coluna dos sensores passava de 190 para 278px de conteúdo natural,
+               contra os **232** que as cinco colunas compartilham (a conta está no
+               `ALTURA_DO_CARD`, e o card tem 4px de folga). O quadro rolava por
+               dentro e o P4 saía da tela.
+
+               Dois sensores numa moldura só custam UM rótulo e UMA borda em vez de
+               dois — e é honesto: eles são o MESMO nó evdev (`Motion Sensors`),
+               separados só pelo código do eixo. ABS_RX/RY/RZ é o giro, ABS_X/Y/Z é
+               o acelerômetro; as escalas é que são independentes (1024 contra
+               8192), e por isso cada grupo diz a sua unidade.
+
+               Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
+               {{'x': 0.105, 'y': 0.976, 'z': 0.170}} — |v| = 0,996 g, a gravidade. -->
+          <div class="moldura leituras">
+            <div class="rot">Sensores
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
                 Leitura viva do aparelho, dez vezes por segundo. Nada aqui se clica.<br><br>
-                O <b>acelerômetro</b> não aparece aqui, e o motivo é do Hefesto, não do
-                aparelho: o controle <b>entrega</b> os três eixos dele, pelo cabo e pelo
-                rádio, e o Hefesto ainda <b>não os lê</b> para a tela. O interruptor dele
-                continua na linha do controle, porque ligar e desligar é outra coisa.
+                O <b>giroscópio</b> mede o quanto o controle gira, em graus por segundo.
+                O <b>acelerômetro</b> mede a inclinação e o chacoalhar, em g — parado
+                numa mesa plana a soma dos três eixos dá <b>1 g</b>, que é a gravidade,
+                e é por isso que um deles fica perto de 1 e os outros perto de 0.<br><br>
+                Um traço no lugar do número quer dizer que a leitura ainda não chegou.
               </span></span>
             </div>
+            <div class="sub-sensor">Giroscópio <span class="mudo">°/s</span></div>
 {giro_html}
+            <div class="sub-sensor">Acelerômetro <span class="mudo">g</span></div>
+{accel_html}
           </div>
           <div class="moldura gatilhos" style="margin-top:9px">
             <div class="rot">Gatilhos</div>
@@ -929,6 +1102,14 @@ ESTADO = {
     giro=[("X", "+143.2", "left:50%;width:22%;background:var(--red)"),
           ("Y", "−412.0", "left:12%;width:38%;background:var(--green)"),
           ("Z", " +22.8", "left:50%;width:4%;background:var(--cyan)")],
+    # O ACELERÔMETRO, em g. O P1 traz os números MEDIDOS no daemon vivo em
+    # 30/08 (|v| = 0,996 g). O P3 mostra o estado que a tela precisa saber
+    # dizer: o leitor ainda não acordou, e um traço é mais honesto que zero.
+    accel=[
+          ("X", " +0.105", "left:50%;width:3%;background:var(--cyan)"),
+          ("Y", " +0.976", "left:50%;width:24%;background:var(--green)"),
+          ("Z", " +0.170", "left:50%;width:4%;background:var(--cyan)"),
+    ],
     mic_v=[22, 48, 72, 95, 64, 38, 52, 80, 44, 26, 58, 88, 40, 20], mic_mudo=False,
     alto_v=[100, 88, 64, 92, 76, 54, 82, 96, 70, 48, 86, 60, 74, 90], rota_pc=False),
 
@@ -939,7 +1120,13 @@ ESTADO = {
   "p2": dict(bat=64, estado_alto="Acordado", mic_vol=0, glifos_on=set(), tocando=False,
     l2=0, r2=0, touch=(50, 50), sticks=(128, 128, 128, 128),
     giro=PARADO,
-    mic_v=[4, 6, 5, 4, 6, 5, 4, 5, 6, 4, 5, 4, 6, 5], mic_mudo=True,
+    # deitado na mesa: quase toda a gravidade num eixo só
+    accel=[
+          ("X", " −0.032", "left:49%;width:1%;background:var(--cyan)"),
+          ("Y", " +0.998", "left:50%;width:25%;background:var(--green)"),
+          ("Z", " +0.041", "left:50%;width:1%;background:var(--cyan)"),
+    ],
+    mic_v=[4, 6, 5, 4, 6, 5, 4, 5, 6, 4, 5, 4, 6, 5], mic_modo="desativado", mic_mudo=True,
     alto_v=[70, 52, 66, 44, 72, 58, 48, 64, 54, 70, 46, 60, 50, 68], rota_pc=True),
 
   "p3": dict(bat=31, estado_alto="Acordado",
@@ -948,7 +1135,15 @@ ESTADO = {
     giro=[("X", " +11.4", "left:50%;width:3%;background:var(--cyan)"),
           ("Y", "  −6.2", "left:48%;width:2%;background:var(--cyan)"),
           ("Z", "  +2.0", "left:50%;width:1%;background:var(--cyan)")],
-    mic_v=[18, 30, 22, 41, 28, 19, 35, 24, 30, 20, 38, 26, 22, 31], mic_mudo=False,
+    # O ACELERÔMETRO, em g. O P1 traz os números MEDIDOS no daemon vivo em
+    # 30/08 (|v| = 0,996 g). O P3 mostra o estado que a tela precisa saber
+    # dizer: o leitor ainda não acordou, e um traço é mais honesto que zero.
+    accel=[
+          ("X", "      —", "left:50%;width:0%"),
+          ("Y", "      —", "left:50%;width:0%"),
+          ("Z", "      —", "left:50%;width:0%"),
+    ],
+    mic_v=[18, 30, 22, 41, 28, 19, 35, 24, 30, 20, 38, 26, 22, 31], mic_modo="nativo", mic_mudo=False,
     alto_v=[55, 40, 62, 48, 58, 36, 50, 44, 60, 38, 52, 46, 42, 56], rota_pc=False),
 
   "p4": dict(bat=88, estado_alto="Acordado",
@@ -957,6 +1152,14 @@ ESTADO = {
     giro=[("X", "  −8.6", "left:48%;width:2%;background:var(--cyan)"),
           ("Y", " +30.5", "left:50%;width:6%;background:var(--green)"),
           ("Z", "  +1.1", "left:50%;width:1%;background:var(--cyan)")],
+    # O ACELERÔMETRO, em g. O P1 traz os números MEDIDOS no daemon vivo em
+    # 30/08 (|v| = 0,996 g). O P3 mostra o estado que a tela precisa saber
+    # dizer: o leitor ainda não acordou, e um traço é mais honesto que zero.
+    accel=[
+          ("X", " +0.412", "left:50%;width:10%;background:var(--orange)"),
+          ("Y", " +0.884", "left:50%;width:22%;background:var(--green)"),
+          ("Z", " −0.201", "left:45%;width:5%;background:var(--cyan)"),
+    ],
     mic_v=[5, 4, 6, 5, 4, 5, 6, 4, 5, 6, 4, 5, 4, 6], mic_mudo=True,
     alto_v=[80, 66, 74, 58, 84, 62, 70, 76, 54, 68, 60, 78, 64, 72], rota_pc=False),
 }
@@ -972,13 +1175,16 @@ BLOCOS = "\n".join(bloco(c, **ESTADO[c["pref"]]) for c in MESA)
 
 # OS NÚMEROS DA APERTADA, medidos no Chrome em 27/08 e usados na legenda. Ficam
 # aqui, e não escritos na prosa, porque a prosa envelhece calada.
-# O CARD NÃO ENCOLHE: as cinco colunas param em ~232px de conteúdo natural.
+# O CARD NÃO ENCOLHE: as cinco colunas param em ~236px de conteúdo natural.
 # ERA 301, E 301 CADUCOU EM 29/08. Medido no WebKit do piloto, na cena fixa de
 # quatro com o "Todos" aberto: **304,3 px**. Quem cresceu foi a coluna 1, ao
 # partir a Barra de luz em dois campos (118 do touchpad + 9 + 55 da barra + 9 +
-# 41 do LED do jogador = 232, contra 229 de antes). A coluna dos sensores NÃO
-# entra na conta: partida em Giroscópio + Gatilhos ela pede 190 px naturais, bem
-# abaixo dos 232 que a coluna 1 e a do som mandam.
+# 45 do LED do jogador = 236, contra 229 de antes). A coluna dos sensores NÃO
+# entra na conta: com os dois numa moldura só, ela pede 228 px naturais (148 das
+# leituras + 9 + 71 dos Gatilhos), abaixo dos 236 que a coluna 1 e a do som
+# mandam — e é por isso que os Gatilhos é que esticam para fechar a coluna.
+# ERAM 190, e 190 CADUCOU EM 30/08, quando o acelerômetro entrou: o número era o
+# do par Giroscópio + Gatilhos, que deixou de existir.
 # O preço está no `ROLA_EM_TODOS` aqui embaixo, e só nele: com 4 cards de 304 em
 # vez de 301, o "Todos" rola 807 px em vez de 794. O estado em que a aba ABRE
 # continua sem rolar — `PARA_O_CARD` (308) ainda cobre o card, agora com 4 px de
@@ -1073,9 +1279,9 @@ CSS += f"""
 MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Os controles da mesa</span>
+        <span class="quadro-titulo">Conectados</span>
         <span class="ajuda">?<span class="dica">
-          Os <b>{len(MESA)} controles da mesa</b> estão todos aqui. O escolhido abre com a
+          Os <b>{len(MESA)} controles conectados agora</b>. O escolhido abre com a
           leitura viva do aparelho; os outros ficam numa <b>linha</b>, com quem eles são, o
           que o jogo vê, o microfone e a bateria.<br><br>
           <b>Clique na linha de um controle para abri-lo</b> — os outros fecham. Escolhê-lo
@@ -1146,7 +1352,7 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>O estado em que a aba abre não rola, e nada some.</b> A conta fecha sem sobra: {VISIVEL} px da caixa menos {PAD_DO_CORPO} de padding são {VISIVEL - PAD_DO_CORPO}; as {FECHADOS} linhas fechadas de {ALTURA_FECHADA} px com {GAP_ENTRE} px entre cada duas caixas somam {FECHADOS * ALTURA_FECHADA + (len(MESA) - 1) * GAP_ENTRE}; sobram <b>{PARA_O_CARD} px</b> para o card, que são os {ALTURA_DO_CARD} dele mais os {PARA_O_CARD - ALTURA_DO_CARD} que ele cresce para não deixar vão.</li>
     <li><b>O passo entre irmãos virou um só.</b> Eram dois — 14 px entre o card e o grupo das tiras, 9 px entre tiras —, porque eram dois containers. Agora as {len(MESA)} caixas são irmãs no mesmo lugar, e o passo é <b>{GAP_ENTRE} px</b> em todos os vãos.</li>
-    <li><b>"Todos" abre os {len(MESA)}, e aí a caixa rola {ROLA_EM_TODOS} px.</b> É o único estado desta aba que rola, e é o preço do gesto: {len(MESA)} cards de {ALTURA_DO_CARD} px somam {ALTURA_EM_TODOS} px numa caixa de {VISIVEL - PAD_DO_CORPO}. Não dá para encolher o card — as cinco colunas param todas em <b>232 px</b> de conteúdo natural, e quem manda são duas: a do som (microfone 92 + 9 + alto-falante 131) e a do touchpad (118 + 9 + barra 55 + 9 + LED 41). A dos sensores parou de mandar: partida em Giroscópio + Gatilhos ela pede 190 px, e sobra.</li>
+    <li><b>"Todos" abre os {len(MESA)}, e aí a caixa rola {ROLA_EM_TODOS} px.</b> É o único estado desta aba que rola, e é o preço do gesto: {len(MESA)} cards de {ALTURA_DO_CARD} px somam {ALTURA_EM_TODOS} px numa caixa de {VISIVEL - PAD_DO_CORPO}. Não dá para encolher o card — as cinco colunas param todas em <b>236 px</b> de conteúdo natural, e quem manda são duas: a do som (microfone 96 + 9 + alto-falante 131) e a do touchpad (118 + 9 + barra 55 + 9 + LED 45). A dos sensores não manda: com os dois numa moldura só ela pede 228 px, e sobra.</li>
     <li><b>E o preço, dito inteiro:</b> nesse estado o P1 aparece todo, o P2 aparece pela metade (141 px dos 301) e o <b>P3 e o P4 começam com zero pixel à mostra</b>. O que diz que eles estão ali são três coisas, e as três estão na tela: o chip <b>Todos</b> aceso, o <span class="marca">{len(MESA)} controles</span> do cabeçalho e a <b>barra de rolagem</b>, que nasce junto com a rolagem e ocupa 10 px. Foi por isso que a barra precisou de regra própria — a do Chrome é sobreposta e some quando ninguém está rolando, e aí seria o defeito de 27/08 de volta com outra roupa.</li>
     <li><b>2×2 foi medido e é pior.</b> Meio card tem 515 px de largura útil para cinco colunas que pedem 884; viraria três fileiras e cada card passaria a ~545 px de altura — aí só <b>um</b> aparece de cada vez.</li>
     <li><b>O corpo fechado não pode ser <code>display:none</code>, e o motivo é a régua.</b> Ela lê a altura de todo botão e reprova família com alturas divergentes; com <code>display:none</code> os dois botões de rota de cada card fechado medem <b>0</b>, e ela acusa <span class="marca">altura divergente em button.-: 0 / 36</span> — um defeito que só existiria porque o elemento sumiu. Com <code>height:0;overflow:hidden</code> o corpo continua <b>desenhado</b> no tamanho natural e só recortado: a régua segue medindo os <b>{len(MESA)}</b> cards por dentro, não só o que está à mostra. Ela ficou mais severa, não menos.</li>

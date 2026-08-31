@@ -1,7 +1,7 @@
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from itertools import cycle
 from monta import (monta, svg, glifo, CSS_GLIFO, CSS_LUZINHAS, MESA,
-                   cor_da_zona, luzinhas, player_slot_color)
+                   cor_da_zona, luzinhas, player_slot_color, tom_da_casa)
 
 # ---------------------------------------------------------------------------
 # AS TRÊS MUDANÇAS DE 28/08/2026, e a que arrastou o resto.
@@ -60,9 +60,29 @@ NUMEROS = sorted(c["jogador"] for c in MESA)
 _b = cycle((82, 100, 70, 45))
 BRILHO = {c["pref"]: next(_b) for c in MESA}
 
-#: A GUIA DE TONS SÃO AS OITO CORES DO PRODUTO — as mesmas que ele acende
-#: sozinho, uma por número (`player_slot_color`, 1..8). Nenhuma é digitada aqui.
-TONS = [luz(n) for n in range(1, 9)]
+#: AS OITO CORES, NO TOM DA CASA — 30/08/2026.
+#:
+#: Ela, olhando a fileira: *"essas cores de seleção do lightbar seguem me
+#: incomodando profundamente, pq destoam demais do resto do layout. (…) pode ser
+#: as mesmas cores mas num tom que fiquem em harmonia com o resto do layout"*.
+#:
+#: O QUE ELAS ERAM: as primárias cruas que `player_slot_color` devolve —
+#: #0000FF, #FF0000, #00FF00, #FF0080, #FFFF00… Cor de monitor de teste, com
+#: saturação total, ao lado de uma interface inteira construída na paleta
+#: Dracula. Não é gosto: uma primária pura sobre o painel #282a36 grita mais que
+#: qualquer coisa da tela, e a fileira roubava a atenção do desenho do controle.
+#:
+#: O QUE ELAS SÃO AGORA: as MESMAS OITO MATIZES, no tom que a casa já usa em
+#: todo o resto. Azul e roxo compartilham a família do `--purple` porque a
+#: paleta não tem um azul próprio — e o azul do player 1 é a cor que mais
+#: aparece, então ela vai para o `--cyan`, que é o azul desta casa.
+#:
+#: ISTO É PROPOSTA DE PRODUTO, e está aqui porque mockup é especificação: o
+#: `core/led_control.player_slot_color` continua devolvendo as primárias, e
+#: enquanto ele não adotar estes tons o controle acende a cor de cima e a tela
+#: mostra a de baixo. A troca no produto foi aprovada por ela; falta executar.
+# (o mapa mora em `monta.py` — dois donos: esta guia e a barra de luz da 02)
+TONS = [tom_da_casa(luz(n)) for n in range(1, 9)]
 
 #: O EXEMPLO DA TROCA, derivado da mesa. É o caso dela, de 26/08: quem tem o 1
 #: hoje, e o primeiro da mesa que NÃO o tem — na mesa de hoje, o Cosmic Red e o
@@ -89,8 +109,21 @@ CSS = """
      = 400, mais seis passos de 8 = 448, e o miolo dá 452. Mexer numa linha sem
      tirar de outra faz a aba rolar por dentro — e quadro que rola por dentro é
      conteúdo que ninguém sabe que existe. */
+  /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026, pedido dela: *"as linhas
+     horizontais (…) precisam melhorar ali"*.
+
+     Elas já atravessavam as cinco colunas, no mesmo y — mas o `gap:16px` do grid
+     abria um buraco entre cada duas, e o olho lia CINCO TRACINHOS em vez de uma
+     linha. Ampliado a 2x fica evidente.
+
+     A cura é trocar o vão HORIZONTAL por respiro DENTRO da célula: `column-gap:0`
+     e o padding que já existia no `.ctrl` cresce para os dois lados. A distância
+     entre o conteúdo de duas colunas continua a mesma; o que muda é que agora ela
+     é padding — e padding não interrompe borda. O vão VERTICAL (`row-gap`) fica:
+     é ele que separa uma linha da outra. */
   .luz-grade{
-    display:grid;grid-template-columns:132px repeat(4,1fr);gap:16px;
+    display:grid;grid-template-columns:132px repeat(4,1fr);
+    gap:16px;
     --r-des:146px;--r-nome:16px;--r-cor:44px;--r-brilho:26px;
     --r-player:62px;--r-leds:34px;--r-acoes:72px;--r-passo:8px;
   }
@@ -100,15 +133,80 @@ CSS = """
                        var(--r-player) var(--r-leds) var(--r-acoes);
   }
   /* a barra vertical entre blocos irmãos — pedido dela */
-  .luz-grade .ctrl{border-left:1px solid var(--border-sutil);padding:0 8px 0 12px}
+  /* O PADDING SAIU DA COLUNA E FOI PARA AS CÉLULAS — 30/08/2026.
+     A borda separadora mora na CÉLULA (`> div > *`), e padding na coluna
+     recua a célula junto: a linha parava 21px antes da divisa e voltava a
+     ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
+     coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
+  .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 8px 0 12px}
+  /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
+     recua os filhos e a borda deles para 16px antes da divisa, e a linha
+     volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
+
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela:
+     *"com linha abaixo de cada campo"*.
+     POR QUE NA CÉLULA E NÃO NA GRADE: `.luz-grade` é um grid de 5 colunas, mas
+     as LINHAS não são dele — cada coluna é um grid próprio com as mesmas sete
+     alturas (`--r-des` … `--r-acoes`). Não existe "linha da grade" onde pendurar
+     uma borda; o que existe é a célula. Como as sete alturas são idênticas nas
+     cinco colunas, as bordas nascem no mesmo y e leem como uma linha só.
+     A borda cai no fim da célula, e o `row-gap` de 8px a separa do campo de
+     baixo — o respiro fica em cima da linha seguinte, não colado nela.
+     A ÚLTIMA não leva linha: separador depois do último campo não separa nada,
+     vira moldura, e a moldura do quadro já existe. */
+  /* A LINHA É UM PSEUDO-ELEMENTO, e não a borda da célula — 30/08/2026.
+     Como BORDA ela parava no padding da coluna e quebrava em cinco tracinhos;
+     movendo o padding para as células a linha ficou inteira mas o desenho do
+     controle perdeu 9px (a moldura tem `overflow:hidden` e o SVG cresce com a
+     largura). O `::after` com margem negativa resolve os dois: ele sai do
+     padding pelos dois lados e atravessa a coluna inteira, sem tocar em
+     geometria nenhuma. As cinco colunas têm as mesmas alturas de linha, então
+     os cinco segmentos nascem no mesmo y e leem como uma linha só. */
+  .luz-grade > div > *{position:relative}
+  /* A LINHA É `::before` DA CÉLULA DE BAIXO, e não `::after` da de cima.
+     Como `::after` ela era filha da moldura — e a moldura do DESENHO tem
+     `overflow:hidden` para conter o SVG, então ela cortava a própria linha
+     24px antes da divisa. A célula de baixo não recorta nada, e o traço
+     cai no mesmo lugar: entre uma linha e a outra. */
+  .luz-grade > div > *::before{content:'';position:absolute;top:0;height:0;
+    left:-12px;right:-8px;border-top:1px solid var(--rot-linha)}
+  /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
+     `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
+     8 de padding + 16 de gap = 24; a ÚLTIMA coluna não tem vão depois
+     dela, então volta a 8. A coluna de rótulos não tem padding: 0 e 16. */
+  .luz-grade > div:not(:last-child) > *::before{right:-24px}
+  .luz-grade > .rotulos > *::before{left:0;right:-16px}
+  .luz-grade > div > *:first-child::before{display:none}
 
   /* a coluna dos rótulos: todo título começa no mesmo x, e cada um ocupa a
      ALTURA INTEIRA da sua linha — é assim que a coluna acaba junto das outras */
   .luz-grade .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
+  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido dela: *"no nome das
+     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
+     perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
+     toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
+     lista solta e passar a ler como cabeçalho de linha. */
+  .luz-grade .rotulos > *{align-items:flex-end;text-align:right}
+  .luz-grade .rotulos .sec-rot{justify-content:flex-end}
   .luz-grade .rotulos > :not(.cel-des) > .sec-rot{flex:1}
-  .luz-grade .rotulos .cel-des{justify-content:flex-start;gap:8px}
-  .sec-rot{font-size:11px;color:var(--comment);text-transform:uppercase;
-           letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+  /* O RÓTULO DA PRIMEIRA LINHA VOLTOU A CENTRAR — 30/08/2026.
+     Ele estava preso no topo (`flex-start`) porque a legenda de sete linhas vinha
+     logo abaixo dele e as duas juntas enchiam a célula. A legenda virou dica no
+     mesmo dia, e o `flex-start` sobrou: o rótulo ficava sozinho no alto de uma
+     célula de 146 px, com o vazio inteiro embaixo. Centrado, ele fica na altura
+     do desenho que nomeia — a cura do vão é na ALTURA, regra dela. */
+  .luz-grade .rotulos .cel-des{gap:8px}
+  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
+     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
+     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
+     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     é a forma mais difícil de ler que existe.
+     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
+     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
+     player"), então nada precisou ser reescrito. */
+  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
+           display:flex;align-items:center;gap:6px}
   /* A LEGENDA NÃO É TÍTULO. Sem isto ela herda o `text-transform:uppercase` do
      rótulo e sai um parágrafo inteiro em caixa alta, que é o mais difícil de
      ler que existe. Medido no navegador em 27/08, na Vibração. */
@@ -170,7 +268,13 @@ CSS = """
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
   .guia{display:flex;gap:4px;align-items:center}
-  .guia .tom{flex:1;height:26px;border-radius:6px;border:1px solid var(--border-forte);
+  /* A MOLDURA DA AMOSTRA SAIU — 31/08/2026, e é a mais pura das "bordas
+     sobrando": um retângulo de 1px em volta de um retângulo CHEIO da cor que
+     ele mostra. São oito por controle, trinta e dois na tela, e nenhum deles
+     separava coisa nenhuma — o `gap:4px` já separa, e o conteúdo é a própria
+     cor. A borda continua existindo em `transparent`: é ela que o `.on` pinta,
+     e sem ela o tom escolhido mudaria de tamanho ao ser escolhido. */
+  .guia .tom{flex:1;height:26px;border-radius:6px;border:1px solid transparent;
              cursor:pointer;padding:0;display:block;min-width:0}
   /* o tom escolhido engrossa POR DENTRO, com sombra, e não com `border-width:2`:
      os nove são `flex:1` e a borda de 2px conta no piso do item — o escolhido
@@ -206,7 +310,7 @@ CSS = """
      (`.players button{height:var(--h-escolha)}`). */
   .players button{
     flex:1;border-radius:7px;gap:6px;min-width:0;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:pointer;font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
   }
   .players button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg)}
@@ -222,12 +326,18 @@ CSS = """
                  background:none;border:2px solid var(--plastico)}
 
   /* ---------- DISPOSIÇÃO DE LEDS ---------- */
-  .aceso{border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);
+  /* A CAIXA DA DISPOSIÇÃO PERDEU A MOLDURA — 31/08/2026. Ela era uma borda
+     dentro de outra: `.aceso` emoldurava, e o `.pad` lá dentro — 20px mais
+     abaixo — emoldurava de novo. Duas linhas onde uma basta, e a de fora não
+     separava nada: a faixa já está delimitada pela divisória de cima, pela de
+     baixo e pela barra vertical da coluna. Quem tem de ter contorno é o
+     touchpad, porque o contorno É o desenho dele. */
+  .aceso{border-radius:8px;background:var(--app-bg);
          display:flex;align-items:center;justify-content:center;gap:16px;height:100%}
   .tira-luz{width:6px;height:20px;border-radius:3px}
   .tira-luz.esq{box-shadow:-3px 0 12px 1px currentColor}
   .tira-luz.dir{box-shadow:3px 0 12px 1px currentColor}
-  .pad{width:56px;height:20px;border-radius:5px;border:1px solid var(--border-forte);
+  .pad{width:56px;height:20px;border-radius:5px;border:1px solid var(--linha);
        background:var(--panel);display:flex;align-items:flex-end;justify-content:center;
        padding-bottom:3px}
 """ + CSS_LUZINHAS.lstrip("\n") + """
@@ -239,10 +349,10 @@ CSS = """
   /* ---------- o antes e o depois da troca, na legenda ---------- */
   .troca{margin:8px 0 12px;font-size:11.5px}
   .troca-linha{display:flex;align-items:center;gap:10px;margin:5px 0;flex-wrap:wrap}
-  .troca-rot{flex:0 0 52px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;
+  .troca-rot{flex:0 0 52px;font-size:10.5px;
              color:var(--comment)}
   .troca-item{display:flex;align-items:center;gap:7px;padding:4px 9px;border-radius:7px;
-              border:1px solid var(--border-sutil);background:var(--app-bg)}
+              border:1px solid var(--linha);background:var(--app-bg)}
   .troca-item.mexeu{border-color:var(--purple);background:var(--sel-bg)}
   .troca-item .dono{width:9px;height:9px;border-radius:50%;display:block;flex:0 0 9px;
                     background:none;border:2px solid var(--plastico)}
@@ -334,19 +444,14 @@ MIOLO = f'''
     <div class="quadro luzes">
       <div class="quadro-topo">
         <span class="quadro-titulo">Iluminação</span>
+        <!-- DE 777 PARA ~230 CARACTERES — 30/08/2026, mesma regra da Vibração: o
+             parágrafo que nomeia um campo vai para o `?` daquele campo. O da cor
+             das barras foi para "Cor", o de gravar foi para o rodapé (que já tem
+             `title` nos quatro botões desde hoje). -->
         <span class="ajuda">?<span class="dica">
-          A <b>barra de luz</b> é a faixa que acende dos dois lados do touchpad. Ela é a
+          A <b>barra de luz</b> é a faixa que acende dos dois lados do touchpad, e é a
           identidade do controle na mesa: você olha e sabe de quem é.<br><br>
-          As colunas são os <b>{len(MESA)} controles ligados agora</b>, cada uma com o desenho no
-          plástico dele. O plástico é físico e pode se repetir; a <b>luz</b> é o que nunca
-          se repete — é ela que separa dois controles do mesmo modelo.<br><br>
-          Cada coluna se ajusta sozinha, no lugar dela — <b>a fita lá em cima está esmaecida
-          porque não há um controle escolhido nesta aba</b>: estão os quatro.<br><br>
-          Sem escolha à mão, cada barra fica na <b>cor do número</b> do controle:
-          1 azul, 2 vermelho, 3 verde, 4 rosa. Os oito quadradinhos da guia são essas
-          mesmas oito cores; o último é o <b>livre</b>, para uma cor fora delas.<br><br>
-          O que você mudar vale <b>agora</b>; para que volte amanhã, é o <b>Salvar Perfil</b>
-          do rodapé que grava.
+          O plástico é físico e pode se repetir; a <b>luz</b> é o que nunca se repete.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -354,15 +459,38 @@ MIOLO = f'''
         <div class="luz-grade">
 
           <div class="rotulos">
+            <!-- A LEGENDA VIROU DICA — 30/08/2026, pedido dela sobre este texto
+                 exato: *"esse texto selecionado não existia no original"*.
+                 Ela não some: passa para o `?`, que é onde esta aba já põe toda
+                 explicação (o rótulo "Cor", logo abaixo, faz igual desde 28/08).
+                 Sete linhas de prosa cinza na coluna de rótulos competiam com os
+                 rótulos e ainda empurravam "COR" para longe da linha dele. -->
             <div class="cel-des">
-              <div class="sec-rot">Controle</div>
-              <div class="legenda">A barra acende na cor do número. A borda da moldura é a
-                cor do plástico, e as cinco luzinhas acima do touchpad dizem o número.</div>
-            </div>
-            <div></div>
-            <div>
-              <div class="sec-rot">{glifo("lightbar", tam=14)} Cor
+              <div class="sec-rot">Controle
                 <span class="ajuda">?<span class="dica">
+                  A barra acende na cor do <b>número</b>. A borda da moldura é a cor do
+                  <b>plástico</b>, e as cinco luzinhas acima do touchpad dizem o número.<br><br>
+                  Cada coluna é um controle e se ajusta sozinha — por isso a fita do topo
+                  fica esmaecida aqui: não há um escolhido, estão os quatro.
+                </span></span></div>
+            </div>
+            <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido dela:
+                 *"a parte do Modelo tá faltando, tá o espaço vazio ali. a primeira
+                 coluna serve como nome da linha"*. Esta célula existia vazia só para
+                 ocupar a linha `--r-nome` da grade, e uma coluna cujo trabalho é
+                 nomear linhas tinha uma linha sem nome. -->
+            <div><span class="sec-rot">Modelo</span></div>
+            <div>
+              <!-- O GLIFO SAIU DO RÓTULO — 30/08/2026, pedido dela: *"os svg do lado
+                   esquerdo dos nomes pode remover, eles tão diferentes demais"*. Eram
+                   três desenhos de origens diferentes (`lightbar`, `led-jogador`, `l2`/`r2`)
+                   ao lado de rótulos que os outros cinco não tinham — a coluna lia como
+                   duas gramáticas. O glifo continua no DESENHO do controle, que é onde
+                   ele diz de qual peça se fala. -->
+              <div class="sec-rot">Cor
+                <span class="ajuda">?<span class="dica">
+                  Sem escolha à mão, cada barra fica na <b>cor do número</b> do controle.
+                  O último quadradinho é o <b>livre</b>, para uma cor fora das oito.<br><br>
                   Os oito quadradinhos são as <b>oito cores do produto</b> — uma por número
                   de jogador (1 azul, 2 vermelho, 3 verde, 4 rosa, 5 amarelo, 6 ciano,
                   7 laranja, 8 roxo). O nono é o <b>livre</b>, para uma cor que não está
@@ -391,9 +519,8 @@ MIOLO = f'''
                   manda nas luzinhas é o jogo, não esta escolha.
                 </span></span>
               </div>
-              <div class="legenda">Trocar troca os dois de lugar.</div>
             </div>
-            <div><div class="sec-rot">{glifo("led-jogador", tam=14)} Disposição de LEDs</div></div>
+            <div><div class="sec-rot">Disposição de LEDs</div></div>
             <div><div class="sec-rot">Opções</div></div>
           </div>
 

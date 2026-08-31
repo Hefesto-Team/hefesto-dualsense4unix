@@ -13,10 +13,99 @@
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
-    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
+    /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
+       Ela apontou o sintoma três vezes, em três abas: *"os campos de importância
+       tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
+       de campos e essa fonte tem um contraste horrível"*, *"em todas as abas isso
+       tem que ser visto infelizmente"*.
+       MEDIDO nas dez abas, contraste WCAG de todo texto contra o fundo real:
+       390 elementos abaixo do limiar, e DUAS cores respondem por 93% deles —
+       `--comment` 217 vezes a 3,03:1 e `--texto-mudo` 146 vezes a 4,47:1.
+       O limiar para texto pequeno é 4,5:1; as duas ficavam abaixo, uma delas
+       por muito. Não era defeito de aba nenhuma: era a paleta.
+       O QUE MUDOU É SÓ A LUMINÂNCIA. O matiz e a saturação de cada uma
+       continuam os mesmos — a cara da interface não muda, o texto aparece:
+         --comment    #6272a4 -> #8896c4   3,03:1 -> 4,89:1
+         --texto-mudo #8b8fa8 -> #9a9eb8   4,47:1 -> 5,40:1
+       Os hex de origem eram do GUIA_IMPLEMENTACAO.md, e o `--comment` de lá é a
+       cor de COMENTÁRIO do Dracula — feita para código, onde apagar é o efeito
+       desejado. Usá-la em texto de interface é que era o engano. */
+    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     --sel-bg:rgba(189,147,249,0.16);
+    /* O RÓTULO DE CAMPO TEM COR DE RÓTULO, NÃO DE COMENTÁRIO.
+       `.sec-rot` nascia `var(--comment)` (#6272a4) nas SEIS abas que a usam, e
+       ela leu o resultado pelo que ele é: *"os campos de importância tipo cor,
+       brilho, selecione player tão invisíveis"*. #6272a4 sobre o `--panel`
+       (#282a36) dá contraste 2,6:1 — abaixo do 4,5:1 que texto pequeno pede.
+       O roxo é a cor de destaque DA CASA, medida: as dez abas pintam o
+       `.quadro-titulo` de #bd93f9, sem exceção.
+       Um TOKEN e não um hex por aba: assim a Vibração troca o dela numa linha
+       (ela pediu verde lá) sem ninguém digitar cor em seis arquivos — que é
+       exatamente como esta regra virou seis cópias divergentes.
+
+       VERDE, E NÃO ROXO — decisão dela, 30/08: *"deixa verde os nomes"*
+       (Iluminação) e *"os nomes das seções tem que ser verde"* (Gatilhos). Ela
+       já pedira verde na Vibração horas antes; agora vale para as dez, e a
+       exceção escopada em `.vib` some por ser redundante.
+       O roxo continua sendo a cor do TÍTULO do quadro (`.quadro-titulo`, as dez
+       pintam #bd93f9). São dois papéis: o título nomeia a ABA, o rótulo nomeia a
+       LINHA. Cores diferentes é o que os separa. */
+    --rot-campo:var(--green);
+    /* ---------------------------------------------------------------
+       A ESCALA DA BORDA ESTRUTURAL — UMA SÓ, 31/08/2026.
+
+       PEDIDO DELA, vendo Gatilhos, Iluminação e Vibração: *"é preciso remover as
+       bordas sobrando de tudo e deixar as bordas menos perceptíveis mas
+       presentes e modernas de forma que não roube a atenção de forma
+       negativa"*; e sobre a Perfis: *"nessa aba aqui as bordas tão horríveis"*.
+
+       O DEFEITO NÃO ERA UMA BORDA — ERA A FAIXA INTEIRA. Censo do DOM das
+       quatro abas, contraste de cada borda contra o fundo REAL atrás dela: a
+       borda ESTRUTURAL ia de **1,21:1** (`--border-sutil`, que sumia) a
+       **4,89:1** (`.btn`, que usava `--comment`) na MESMA tela — quatro vezes
+       de diferença. É isso que fazia a Gatilhos ler como GRADE: a divisória
+       horizontal gritava a 3,37:1 enquanto a vertical, encostada nela, sumia a
+       1,21:1. Não havia peso demais nem de menos; havia peso NENHUM em comum.
+
+       O VALOR, E DE ONDE ELE SAI. Um só, e ele é o MEIO EM LUMINÂNCIA entre os
+       dois extremos que ela mesma julgou: #343746 tem L 23,9% e ela o chamou de
+       invisível em 30/08; #767a92 tem L 51,8% e é o que ela chamou de excessivo
+       hoje. L 38% é o meio exato, e o matiz e a saturação continuam os da
+       família (H 231, S 13%) — muda só a luminância, como em 30/08.
+
+         --linha  #53576f   2,01:1 sobre --panel · 2,23:1 sobre --app-bg
+
+       São **40% menos** que a linha de 30/08 (3,37:1) e **66% mais** que a
+       borda que sumia (1,21:1). O rótulo verde ao lado dela está a 10,4:1 e o
+       texto mudo a 5,40:1: a linha recua diante dos dois, que é o que "presente
+       e não rouba a atenção" quer dizer em número.
+
+       QUEM NÃO LÊ DAQUI, e é o ponto: a borda que carrega INFORMAÇÃO. A cor do
+       plástico (D-A-BORDA-E-A-IDENTIDADE-DA-PECA), o estado (`.on`,
+       `.aba.ativa`, `:hover`) e o foco continuam com a cor deles — esmaecer
+       essas é apagar o dado, não o enfeite.
+       --------------------------------------------------------------- */
+    --linha:#53576f;
+    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido dela: *"linha abaixo de cada
+       campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
+       e, quando a viu: *"as linhas divisórias em todas as páginas tão
+       invisíveis (…) a primeira coluna serve como nome da linha e a divisória
+       entre eles tem que estar clara"*.
+
+       ELA ESTAVA CERTA, E O NÚMERO ERA BRUTAL. `--border-sutil` (#343746) sobre
+       o painel (#282a36) dá **1,21:1** — a linha existia no DOM e não na tela.
+       `--border-forte` também não servia: 1,56:1.
+
+       O QUE CADUCOU EM 31/08, e é a metade seguinte da mesma medição: o #767a92
+       escolhido em 30/08 mirava a WCAG 1.4.11 (3:1 para componente gráfico) e
+       chegava a **3,37:1**. Só que 1.4.11 é o piso do que IDENTIFICA um
+       controle — um traço que só separa duas células não precisa dele, e a esse
+       peso ele passou a competir com o que separa. Ela viu o resultado em três
+       abas e pediu o contrário. O nome fica (seis abas o escrevem); quem manda
+       agora é a escala acima, e ela vale para as dez de uma vez. */
+    --rot-linha:var(--linha);
     /* cores de plástico — a borda diz QUAL peça é (D-A-BORDA-E-A-IDENTIDADE-DA-PECA) */
     /* OS CINCO PLÁSTICOS SÃO GERADOS — `monta.py` os reescreve a cada geração,
        lendo o `<style>` que `scripts/gerar_cores_do_dualsense.py` pôs no SVG. Os
@@ -57,7 +146,7 @@
   .janela{
     width:1180px; height:var(--alt-janela); max-width:100%; background:var(--app-bg);
     display:flex; flex-direction:column;
-    border:1px solid var(--border-sutil); border-radius:10px; overflow:hidden;
+    border:1px solid var(--linha); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
   }
 
@@ -66,7 +155,7 @@
   .logo{
     width:46px;height:46px;border-radius:50%;flex:0 0 46px;
     background:radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%);
-    border:1px solid var(--border-forte);
+    border:1px solid var(--linha);
     display:flex;align-items:center;justify-content:center;font-size:20px;
   }
   h1{font-size:19px;font-weight:700;letter-spacing:.2px}
@@ -86,14 +175,41 @@
   .perfil-ativo{
     margin-left:auto;display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--border-forte);background:var(--panel);
+    border:1px solid var(--linha);background:var(--panel);
   }
-  .pa-rot{font-size:10.5px;color:var(--comment);text-transform:uppercase;letter-spacing:.5px}
+  .pa-rot{font-size:10.5px;color:var(--comment);}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
-  .fita.inerte{opacity:.42}
+  /* A FITA INERTE DEIXOU DE USAR `opacity` — 30/08/2026, e a troca é de
+     MECANISMO, não de valor.
+
+     ELA ERA `opacity:.42`, e isso escondia o texto de duas maneiras ao mesmo
+     tempo. A primeira: medido, "Ajustes vão para:" e os quatro chips ficavam a
+     **2,18:1** contra o fundo, e os `•` a 2,07:1 — menos da metade do 4,5:1 que
+     texto pequeno pede. A segunda é pior e explica por que ninguém via: a
+     opacidade mora no ANCESTRAL, então `getComputedStyle(filho).color` continua
+     devolvendo a cor cheia. **Toda régua de contraste que lê `color` é cega a
+     isto** — a desta casa era, e deu as sete abas por limpas.
+
+     SUBIR A OPACIDADE NÃO SERVIA. Medido: `.42 -> 2,18` · `.55 -> 2,80` ·
+     `.65 -> 3,36` · `.75 -> 4,00` · `.85 -> 4,73`. Só volta a AA em .85 — e a
+     .85 o esmaecido deixa de comunicar o que ela desenhou para comunicar
+     (decisão dela, 28/08: em Gatilhos, Iluminação e Vibração a fita fica
+     ESMAECIDA porque nada ali se ajusta por controle).
+
+     A CURA É COR EXPLÍCITA. O sinal de "inerte" continua — a fita fica mais
+     apagada que a viva, o chip perde a cor do plástico (que é o que diz a
+     IDENTIDADE, e identidade sem função é promessa falsa) e perde o fundo. Mas
+     cada texto tem cor própria, legível, e a régua passa a ENXERGAR. */
+  .fita.inerte{color:var(--comment)}
+  .fita.inerte .chip{border-color:var(--border-sutil);background:transparent;
+                     color:var(--comment)}
+  /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
+  .fita.inerte .chip.plastico{border-color:var(--border-sutil);border-width:1px}
+  .fita.inerte .chip.on{border-color:var(--comment);background:transparent;
+                        color:var(--texto-suave);font-weight:600}
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -115,7 +231,7 @@
   select option:checked{background:var(--sel-bg);color:var(--fg)}
 
   /* ---------- a tira de abas ---------- */
-  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--border-sutil)}
+  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
     padding:11px 13px;font-size:13px;color:var(--texto-mudo);
     border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
@@ -149,7 +265,7 @@
                           display:flex;flex-direction:column}
   .miolo > .quadro.estica > .quadro-corpo{flex:1;min-height:0;display:flex;flex-direction:column}
 
-  .quadro{border:1px solid var(--border-sutil);border-radius:9px;background:var(--panel)}
+  .quadro{border:1px solid var(--linha);border-radius:9px;background:var(--panel)}
   .quadro-topo{
     display:flex;align-items:center;gap:8px;padding:11px 14px 0;
   }
@@ -157,31 +273,66 @@
   /* o ícone "?" — onde TODO texto longo passa a morar (D4 + D-TUDO-QUE-EXPLICA-VIRA-DICA) */
   .ajuda{
     width:17px;height:17px;border-radius:50%;flex:0 0 17px;
-    border:1px solid var(--border-forte);color:var(--texto-mudo);
+    border:1px solid var(--linha);color:var(--texto-mudo);
     font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative;
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
-    background:var(--elevated);border:1px solid var(--border-forte);border-radius:7px;
+    background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
     padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
     text-align:left;font-weight:400;box-shadow:0 8px 24px rgba(0,0,0,.5);
   }
   .dica b{color:var(--fg)}
   .quadro-corpo{padding:10px 14px 14px}
 
-  .linha-rot{font-size:12px;color:var(--texto-suave);margin-bottom:7px}
+  /* ---------- SEÇÃO QUE ABRE E FECHA ----------
+     Pedido dela, 30/08/2026, sobre a Conexões: *"deixa todas essas seções
+     expansíveis igual fizemos em controles"*.
+
+     MESMO MECANISMO DA CONTROLES, e de propósito: `input` escondido +
+     `:has(:checked)` + `<label>`. Sem uma linha de JavaScript — o mockup abre
+     como arquivo, sem servidor, e é regra desta casa que ele continue assim.
+     A diferença é o TIPO: a Controles usa `radio` (um card aberto por vez, e a
+     fita aponta qual); aqui é `checkbox`, porque as seções são independentes e
+     ela pode querer duas abertas.
+
+     A seta é `::before` no rótulo, não um segundo elemento: um `<span>` a mais
+     no cabeçalho desalinharia o título dos outros nove quadros da casa, que já
+     nascem no mesmo x. */
+  .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+  label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
+  .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
+  .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
+  /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
+  .miolo > .quadro.estica:has(> input.abre:not(:checked)){flex:0 0 auto}
+
+  /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
+     Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
+     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e ela
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
+     `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
+  .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
 
   /* seletor segmentado */
   .seg{display:flex;gap:7px;flex-wrap:wrap}
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
-    font-family:inherit;border:1px solid var(--border-forte);
+    font-family:inherit;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
+  /* O TRAVADO TINHA CARA DE CLICÁVEL — achado de 31/08. O botão nasce
+     `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
+     dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
+     opacidade mora no ancestral e cega toda régua que lê `color`. */
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
 
   /* a linha de estado: o que VALE agora */
   .estado{
@@ -192,25 +343,34 @@
   .estado .verde{color:var(--green)}
   .estado .laranja{color:var(--orange)}
 
-  /* a escada de pontes — os 5 degraus que o PS+R3 gira */
+  /* a fileira de modos do Hefesto LIGADO — cinco chips na tela.
+     O NÚMERO DA TELA NÃO É O NÚMERO DO PRODUTO, e a diferença é decisão dela
+     de 31/08: `ponte_escada.ESCADA` tem QUATRO pontes, e uma delas (Nativo)
+     saiu da fileira para virar a posição DESLIGADO do interruptor. Dos cinco
+     chips, três são degrau (DualSense, Xbox, Steam Input) e dois não são
+     (Point And Click, Navegação) — por isso o algarismo do círculo é derivado
+     de `indice_do_degrau`, e não digitado. */
   .escada{display:flex;align-items:stretch;gap:7px}
   .degrau{
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
     padding:9px 10px;border-radius:7px;
-    font-size:12.5px;border:1px solid var(--border-forte);
+    font-size:12.5px;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
   }
   .degrau i{
     font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
     width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
-    border:1px solid var(--border-forte);color:var(--comment);
+    border:1px solid var(--linha);color:var(--comment);
   }
   .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   .degrau.on{
     border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600;
   }
   .degrau.on i{border-color:var(--purple);color:var(--purple)}
-  .seta{color:var(--border-forte);font-size:13px}
+  /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
+     #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
+     `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
+  .seta{color:var(--texto-mudo);font-size:13px}
 
   /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
@@ -221,7 +381,7 @@
 
   /* ---------- a área de avisos, com espaço reservado (P8) ---------- */
   .avisos{
-    min-height:38px;border:1px solid var(--border-sutil);border-radius:9px;
+    min-height:38px;border:1px solid var(--linha);border-radius:9px;
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
     font-size:12px;
   }
@@ -242,7 +402,7 @@
   /* a peça: SVG pequeno na cor do plástico + número */
   .cartao{
     display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;
-    border:2px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
+    border:2px solid var(--linha);border-radius:7px;background:var(--app-bg);
     font-size:11.5px;color:var(--texto-suave);
   }
   /* CSS MORTO, REMOVIDO em 27/08: `.cartao.c-red` e `.cartao.c-blue` eram uma
@@ -254,34 +414,52 @@
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+  /* A COR DO BOTÃO SECUNDÁRIO MUDOU DE LUGAR — 31/08/2026: do CONTORNO para a
+     PALAVRA. O `.btn` desenhava a borda com `--comment` (4,89:1) e as três
+     variantes com o acento cheio — verde 11,5:1, vermelho 4,53:1, roxo 5,90:1.
+     Numa coluna de Iluminação são dois botões empilhados, e na Vibração outros
+     dois: quatro retângulos gritando em volta de palavras que já dizem tudo.
+     Ela: *"botão com borda ao lado de botão com borda ao lado de célula com
+     borda"*.
+     NADA DE INFORMAÇÃO SAIU: o texto de cada variante continua verde, vermelho
+     ou roxo — é ele que diz "isto liga", "isto desliga", "isto guarda". O que
+     saiu foi o contorno repetindo em 300px de perímetro o que a palavra diz em
+     sete letras. E o acento VOLTA no `:hover`, que é onde ele informa de fato:
+     o botão sob o ponteiro se acende na cor da própria ação. */
   .btn{
     padding:8px 13px;border-radius:7px;font-size:12.5px;font-family:inherit;cursor:pointer;
-    border:1px solid var(--comment);background:transparent;color:var(--texto-suave);
+    border:1px solid var(--linha);background:transparent;color:var(--texto-suave);
   }
   .btn:hover{border-color:var(--texto-suave);color:var(--fg)}
-  .btn.verde{border-color:var(--green);color:var(--green)}
-  .btn.vermelho{border-color:var(--red);color:var(--red)}
-  .btn.roxo{border-color:var(--purple);color:var(--purple)}
+  .btn.verde{color:var(--green)}
+  .btn.vermelho{color:var(--red)}
+  .btn.roxo{color:var(--purple)}
+  .btn.verde:hover{border-color:var(--green);color:var(--green)}
+  .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
+  .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
   .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
-  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--border-sutil)}
-  .sep{color:var(--border-forte);margin:0 3px}
-  .degrau.auto i{border-color:var(--cyan);color:var(--cyan)}
+  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
+  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
-  .col-atencao{border-left:1px solid var(--border-sutil);padding-left:16px}
+  .col-atencao{border-left:1px solid var(--linha);padding-left:16px}
 
 
   /* ---------- rodapé ---------- */
   .rodape{
     display:flex;align-items:center;gap:10px;padding:12px 18px;
-    border-top:1px solid var(--border-sutil);background:var(--app-bg);
+    border-top:1px solid var(--linha);background:var(--app-bg);
   }
-  .rodape .recibo{font-size:11.5px;color:var(--comment);flex:1}
+  /* O EMPURRÃO TROCOU DE DONO. Era o `.recibo{flex:1}` que jogava os quatro
+     botões para a direita; ele saiu da barra em 30/08 (virou dica de cada botão,
+     ver `fim.html`) e sem substituto os botões cairiam para a esquerda. A margem
+     automática no primeiro faz o mesmo serviço sem um elemento vazio no DOM. */
+  .rodape .r-aplicar{margin-left:auto}
   .rodape button{
     padding:8px 15px;border-radius:7px;font-size:12.5px;font-family:inherit;
     font-weight:600;cursor:pointer;border:1px solid transparent;
@@ -304,7 +482,7 @@
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
-     Logo: novo-layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
+     Logo: layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
      na âncora que fica no cabeçalho, lá embaixo — nenhuma cópia mora aqui.
      (E a âncora NÃO se escreve aqui: a primeira versão deste comentário a citou
      literal, o `str.replace(…, 1)` casou com a CITAÇÃO em vez do cabeçalho, e o
@@ -408,6 +586,98 @@
 
   /* ---------- A ABA JOGAR ---------- */
 
+  /* ---------- O INTERRUPTOR DO HEFESTO (31/08/2026) ----------
+     SEM UMA LINHA DE JAVASCRIPT, como as outras nove abas: dois `radio` com o
+     mesmo `name`, escondidos, e `<label for>` por cima. É o MESMO mecanismo do
+     acordeão da Controles (`aba02`) e das seções que abrem da Conexões
+     (`topo.html`) — o navegador já garante que ligar um desliga o outro, e o
+     combinador `~` faz a seção de baixo aparecer e sumir sem script. O mockup
+     abre por duplo clique, e é regra desta casa que continue assim.
+
+     POR QUE `label` E NÃO `button`: só o par `radio` + `label` muda de estado
+     sem script. O preço está medido e declarado no relatório desta leva — a
+     ponte viva (`controles_vivos.INTERRUPTOR`) chama `ev.preventDefault()` no
+     clique, e num `label` isso IMPEDE o rádio de mudar. É uma linha lá, não
+     aqui. */
+  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+
+  /* O RÓTULO FICA NA MESMA LINHA DO INTERRUPTOR, e isso é PAGAMENTO DE ALTURA,
+     não estética: o miolo desta aba tinha **2px** de folga em 542 (medido hoje,
+     antes desta mudança). Um `linha-rot` por cima custaria 22px e a aba passaria
+     a rolar por dentro. Deitado, ele custa zero — e é a forma que ela desenhou:
+     `HEFESTO [ Ligado ● / Desligado ○ ]`, tudo numa linha. */
+  .hef-linha{display:flex;align-items:center;gap:8px}
+  .hef-linha .linha-rot{margin-bottom:0;flex:0 0 auto;margin-right:6px}
+  .hef-pos{
+    height:var(--h-escolha);display:inline-flex;align-items:center;gap:9px;
+    padding:0 18px;border-radius:7px;font-size:12.5px;
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:pointer;user-select:none;
+  }
+  .hef-pos:hover{border-color:var(--comment);color:var(--texto-suave)}
+  /* ● / ○ — o marcador das duas posições, e é o `.pino` do interruptor que a
+     Navegação (`aba06`) já usa: mesmo tamanho, mesmo verde, mesmo brilho. */
+  .hef-pos .pino{width:9px;height:9px;border-radius:50%;flex:0 0 9px;
+                 border:1px solid var(--linha);background:transparent}
+  /* ACESO POR DOIS CAMINHOS, e os dois têm de existir. O `:checked` é o do
+     MOCKUP — ela clica no arquivo, sem daemon nenhum. O `.on` é o da PINTURA
+     VIVA: `controles_vivos.INTERRUPTOR` escreve `.on` em `[data-modo]` a partir
+     do `mode_of_state`. Sem o segundo, a tela viva mostraria o DESENHO em vez do
+     estado do daemon — o F7 desta casa, e foi exatamente o defeito medido em
+     31/08: a tela mostrava "Jogar pelo Hefesto" aceso com o daemon em `desktop`.
+     O ENDEREÇO NÃO SE ESCREVE NESTE COMENTÁRIO, e a razão é uma régua real: o
+     `test_o_botao_de_ligar_funciona_e_se_lembra` lê os endereços do HTML por
+     EXPRESSÃO REGULAR, e um exemplo citado dentro de um comentário entra na
+     conta como se fosse botão. É a mesma armadilha que pôs o logotipo inteiro
+     dentro de um comentário de CSS em 30/08 — o `replace` casou com a citação. */
+  #hef-ligado:checked ~ .hef-linha .hef-pos.ligado,
+  #hef-desligado:checked ~ .hef-linha .hef-pos.desligado,
+  .hef-pos.on{border-color:var(--purple);background:var(--sel-bg);
+              color:var(--fg);font-weight:600}
+  #hef-ligado:checked ~ .hef-linha .hef-pos.ligado .pino,
+  .hef-pos.ligado.on .pino{background:var(--green);border-color:var(--green);
+                           box-shadow:0 0 7px var(--green)}
+  #hef-desligado:checked ~ .hef-linha .hef-pos.desligado .pino,
+  .hef-pos.desligado.on .pino{background:var(--texto-mudo);
+                              border-color:var(--texto-mudo)}
+
+  /* AS DUAS SEÇÕES SÃO EXCLUSIVAS, e é isso que ela pediu: *"Modo Hefesto se
+     Ligado Abre as seções de Modo"*. A do desligado tem a MESMA altura (rótulo +
+     uma faixa de 36px), para a tela não pular quando ela vai e volta — a mesma
+     razão pela qual as dez abas têm uma altura só. */
+  .hef-rd ~ .so-ligado, .hef-rd ~ .so-desligado{display:none}
+  #hef-ligado:checked ~ .so-ligado{display:block}
+  #hef-desligado:checked ~ .so-desligado{display:block}
+  /* E ELAS ABREM NO MESMO y E FECHAM NO MESMO y. O rótulo da seção do LIGADO
+     leva o ícone `?` (17px) e o do DESLIGADO é só texto (13px): sem esta linha a
+     tela PULAVA 4px a cada volta do interruptor — medido, 180 contra 176. "Muda
+     tudo ao clicar" é a queixa dela que fixou a altura única das dez abas, e ela
+     vale dentro de uma aba também. A cura é na ALTURA, e manda o mais alto. */
+  .hef .sub-secao > .linha-rot{display:flex;align-items:center;height:17px}
+
+  /* O CHIP SEM DONO — a honestidade desta tela, e ela tem uma regra e uma ordem
+     em cima. A regra é de 30/08 (*botão sem dono no produto não vai para a tela
+     como se funcionasse*); a ordem dela, de 31/08, é MANTER o Point And Click e
+     a Navegação. As duas convivem de um jeito só: eles aparecem e DIZEM que
+     ainda não têm quem os atenda.
+     NADA DE `opacity`, e a razão é medida (`topo.html`, a fita inerte): a
+     opacidade mora no ancestral, o texto cai para ~2:1 e TODA régua de contraste
+     que lê `color` fica cega a isso. Aqui é cor explícita, borda tracejada — que
+     é como esta casa já escreve "isto ainda não vale" (`.avisos.vazio`,
+     `.pendente`) — e o cursor de "não clique". O porquê está no `title`. */
+  .degrau.sem-dono{border-style:dashed;color:var(--comment);cursor:not-allowed}
+  .degrau.sem-dono:hover{border-color:var(--linha);color:var(--comment)}
+  .degrau.sem-dono i{border-style:dashed}
+  /* O TRAÇO NO LUGAR DO ALGARISMO. O círculo diz a ordem em que o Hefesto TENTA
+     sozinho; quem não é degrau da `ponte_escada.ESCADA` não tem ordem nenhuma, e
+     um número ali diria que o PS+R3 para naquele modo. É a mesma disciplina do
+     `painel.SEM_LEITOR`: um traço, e não um zero. */
+  .degrau i.tr{color:var(--comment);border-style:dashed}
+  /* A FAIXA DO DESLIGADO não se clica: ela não é uma escolha, é o que o
+     interruptor JÁ escolheu. Sem `cursor:pointer` e sem `:hover`. */
+  .degrau.fixo{cursor:default;justify-content:flex-start;padding-left:14px}
+  .degrau.fixo .mud{color:var(--texto-mudo);font-weight:400}
+
   /* OS QUATRO NUMA FILEIRA SÓ, E TODOS DA MESMA LARGURA. Era `flex`, e os dois
      cartões mediam 228.8 e 225.2 px — a largura vinha do nome do plástico. */
   .pecas{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
@@ -465,7 +735,27 @@
      O botão é `--panel` sobre o cartão `--app-bg` — o inverso do `.seg`, que é
      `--app-bg` sobre o quadro `--panel`. Nos dois casos o que se clica é o tom
      que se destaca do fundo em que está. */
-  .mascara{display:flex;flex-direction:column;gap:4px}
+  /* AS TRÊS MÁSCARAS EM 2+1 — 30/08/2026, e é PAGAMENTO DE ALTURA, não estética.
+     Deitar a Atenção (acima) fez o quadro crescer 69px, e o miolo tinha 6px de
+     folga: nasceu barra de rolagem por dentro, com o "Reconectar Controles" fora
+     da tela. Ela autorizou o ajuste com uma condição — *"desde que não percamos
+     as features"* —, então nenhuma máscara sai: elas mudam de arranjo.
+
+     O QUE MUDOU DESDE O COMENTÁRIO ACIMA: ele diz que três lado a lado pediriam
+     ~326px e o cartão tinha 208. Com a Atenção fora da fileira o cartão passou a
+     272,8px, e dois por linha ficam com 126,4px cada — cabem. O "Nintendo Pro",
+     que é o mais largo, vai sozinho na linha de baixo com 256,8px.
+     TESTADA E REPROVADA a variante com os três numa fileira só: o "Nintendo Pro"
+     quebra em duas linhas e o chip vai de 28 para 44px. */
+  .mascara{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  /* O DUALSENSE OCUPA A LINHA INTEIRA, e os outros dois dividem a de baixo.
+     Era o contrário, e ela viu na hora: *"o DualSense é o foco do app e o
+     Nintendo Pro tá roubando a cena"*. Estava certa — na primeira versão do 2+1
+     eu pus o terceiro chip esticado só porque "Nintendo Pro" é o rótulo mais
+     largo, e com isso dei ao menos importante o maior pedaço da tela.
+     Cabe: "Xbox 360" e "Nintendo Pro" medem 47 e 74px de texto, e cada metade
+     tem 126,4 — o mais largo sobra 52. */
+  .mascara .chip:nth-child(1){grid-column:1/-1}
   /* É O CHIP, e não o botão de 36px — e a escolha tem preço medido dos dois lados.
      Com `.seg button` (o `--h-escolha` de 36px) as três máscaras somam 116px por
      cartão, o miolo pede 560px e a janela oferece 542: o quadro "Conectado agora"
@@ -500,23 +790,47 @@
      têm de bater, senão a barra vertical da coluna de avisos desce e erra a
      borda do botão por 85px, que é o que aconteceu quando eram dois números. */
   .quadro-corpo{--col-avisos:245px}
-  .dupla{display:grid;grid-template-columns:1fr var(--col-avisos);gap:14px;align-items:start}
+  /* A `.dupla` SAIU DAQUI — 30/08/2026. Com a Atenção deitando (abaixo), a grade
+     de duas colunas ficou sem segunda coluna. A regra do `topo.html` volta a ser
+     a única — que é o que ela já era antes desta aba a redefinir. */
 
-  /* A MESMA GRADE DA DUPLA, e o mesmo `gap`: é isso que faz a borda esquerda do
-     botão cair exatamente sob a barra vertical da coluna de avisos. Com `flex`
-     o botão parava 85px à direita dela — perto o bastante para ler como erro. */
-  .faixa-final{display:grid;grid-template-columns:1fr var(--col-avisos);gap:14px;
-               align-items:center;margin-top:12px}
-  .faixa-final .pendente{margin-top:0}
-  .faixa-final .btn{justify-self:start}
-  /* A BARRA VERTICAL VAI ATÉ EMBAIXO. Com `align-items:start` no `.dupla` a
-     coluna media a altura do seu conteúdo — 56px de um aviso ao lado de 158px de
-     cartões —, e a barra que separa os dois blocos virava um toco de um terço.
-     `stretch` faz dela a divisória inteira. O espaço que sobra abaixo do aviso é
-     RESERVADO de propósito (P8): é onde o segundo e o terceiro aviso entram sem
-     empurrar a tela. */
-  .col-atencao{border-left:1px solid var(--border-sutil);padding-left:16px;
-               align-self:stretch}
+  /* A FAIXA FINAL VOLTOU AO `flex` DO `topo.html` — 30/08/2026, e são DOIS
+     pedidos dela numa cura só: *"o reconectar controles vai pra direita enquanto
+     o 'Vai mudar para Conexão Nativa (Sony)…' extendo pra chegar ao reconectar
+     controles"*.
+
+     A grade de duas colunas que vivia aqui existia para casar a borda do botão
+     com a barra vertical da coluna de avisos. Essa barra deixou de existir (a
+     Atenção deitou), e com ela o motivo. O `topo.html` já tem exatamente o que
+     ela quer, e estava morto sob esta redefinição:
+         .faixa-final{display:flex;align-items:center;gap:12px}
+         .faixa-final .pendente{flex:1}
+     O `flex:1` da barra tracejada é o "estende"; a ausência de segunda coluna é
+     o "vai pra direita" — o botão passa a terminar no `right` do quadro, no
+     mesmo x em que terminam a fileira de cartões e a fileira de modos.
+     Medido: a barra vai de 853 para 940px e o botão de x=1271..1431 para
+     x=1356..1516. */
+  .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
+  /* A ATENÇÃO DESCEU — 30/08/2026, pedido dela: *"esse atenção desce"*.
+     Ela era a segunda coluna da `.dupla`, ao lado dos cartões, com a barra
+     vertical à esquerda. Media 129px de VAZIO — 70% da própria coluna —, porque
+     a altura dela vinha do irmão (`align-self:stretch`) e o conteúdo era um
+     aviso de uma linha.
+
+     Deitada, ela é uma faixa de largura inteira entre os cartões e a faixa
+     final, e a divisória troca de eixo: a barra vertical vira linha horizontal,
+     que é a mesma gramática das outras nove abas.
+     O RESERVADO DO P8 continua existindo — ele agora é o espaço que a faixa
+     ganha ao receber o segundo aviso, e cresce para baixo em vez de ficar
+     esperando em branco. */
+  /* OS RESPIROS SÃO 8/6 E NÃO 12/10, e o motivo é o orçamento: com 12/10 o miolo
+     pedia 556 de 542 e nascia barra de rolagem por dentro. Aqui cada pixel é
+     disputado — ver o comentário do `--alt-janela` no `topo.html`. */
+  .col-atencao{border-top:1px solid var(--rot-linha);margin-top:8px;padding-top:6px;
+               display:flex;align-items:center;gap:12px}
+  .col-atencao .cab-col{margin-bottom:0;flex:0 0 auto}
+  .col-atencao .aviso-item{flex:1;min-width:0}
+  .col-atencao .conta-avisos{margin-left:auto;flex:0 0 auto}
 
 </style>
 </head>
@@ -528,7 +842,7 @@
   <div class="cabecalho">
     <!-- A LOGO NÃO MORA MAIS AQUI — 30/08/2026, e a razão está medida.
          Eram 55 linhas de SVG coladas neste arquivo, e por isso eram a versão
-         VELHA: ela redesenhou o logotipo em `novo-layout/assets/hefesto-logo.svg`
+         VELHA: ela redesenhou o logotipo em `layout/assets/hefesto-logo.svg`
          (6.039 bytes, com `transform-box`/`transform-origin` no anel, a chama
          nova e a bigorna com sombra) e as dez páginas continuaram mostrando o
          desenho de antes. Pior: havia TRÊS desenhos vivos ao mesmo tempo — o
@@ -686,25 +1000,34 @@
   <!-- ================= MIOLO ================= -->
   <div class="miolo">
 
-    <!-- ---------- QUANDO O JOGO ABRIR ---------- -->
+    <!-- ---------- QUANDO O JOGO ABRIR ----------
+         DOIS NÍVEIS desde 31/08/2026, decisão dela: em cima o interruptor do
+         Hefesto, e o que ele abre embaixo. A pergunta que o motivou é dela —
+         *"qual a diferença de nativo pra dualsense?"* — e a resposta é
+         estrutural: Nativo é o Hefesto FORA do meio, e os outros são jeitos de
+         ele estar no meio. Numa fileira só, os dois liam como irmãos. -->
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">Quando o jogo abrir</span>
         <span class="ajuda">?<span class="dica">
-          <b>Controlar o PC</b> — o controle vira mouse e teclado do computador.<br><br>
-          <b>Jogar pelo Hefesto</b> — escolha certa para quase todos os jogos: o Hefesto acende as luzes, faz o controle vibrar e dá um jogador para cada controle.<br><br>
-          <b>Conexão Nativa (Sony)</b> — só para jogos feitos para o PlayStation 5: os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida neste modo.<br><br>
-          <b>Desligado</b> — o Hefesto para de agir. O controle continua funcionando como um controle comum do Linux.
+          <b>Ligado</b> — o Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho. Os cinco modos de baixo são jeitos de ele fazer isso.<br><br>
+          <b>Desligado</b> — <b>Modo Nativo</b>: o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho; os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim.<br><br>
+          Isto <b>não</b> encerra o Hefesto. Para desligar o serviço inteiro, é a aba <b>Sistema</b>.
         </span></span>
       </div>
-      <div class="quadro-corpo">
+      <div class="quadro-corpo hef">
 
-        <div class="linha-rot">O que o controle faz agora:</div>
-        <div class="seg">
-          <button data-modo="desligado">Desligado</button>
-          <button data-modo="desktop">Controlar o PC</button>
-          <button class="on" data-modo="gamepad">Jogar pelo Hefesto</button>
-          <button data-modo="native">Conexão Nativa (Sony)</button>
+        <!-- OS DOIS RÁDIOS VÊM PRIMEIRO porque o combinador é o `~`: eles têm de
+             ser irmãos ANTERIORES das duas seções que abrem. -->
+        <input type="radio" name="hefesto" id="hef-ligado" class="hef-rd" checked>
+        <input type="radio" name="hefesto" id="hef-desligado" class="hef-rd">
+
+        <div class="hef-linha">
+          <span class="linha-rot">Hefesto</span>
+          <label class="hef-pos ligado" for="hef-ligado" data-modo="gamepad"
+                 title="O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho."><span class="pino"></span>Ligado</label>
+          <label class="hef-pos desligado" for="hef-desligado" data-modo="native"
+                 title="Modo Nativo — o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho: os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim."><span class="pino"></span>Desligado</label>
         </div>
 
         <!-- O SELETOR DE MÁSCARA SAIU DAQUI em 28/08. Decisão dela: a máscara é
@@ -713,24 +1036,41 @@
              modo é estado do processo — existe um só (`app/actions/mode_transition.py`),
              e por isso ele não podia descer para o cartão junto com a máscara. -->
 
-        <div class="sub-secao" title="Esta seção só aparece com &quot;Jogar pelo Hefesto&quot; escolhido.">
+        <div class="sub-secao so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
           <div class="linha-rot">
-            <b style="color:var(--texto-suave)">Modo de conexão</b>
+            <b style="color:var(--texto-suave)">Modo</b>
             <span class="ajuda" style="display:inline-block;vertical-align:-3px;margin-left:3px">?<span class="dica">
-              <b>Automático</b> — o Hefesto tenta na ordem abaixo e <b>para quando acerta</b>; depois não pergunta mais para aquele jogo.<br><br>
-              A ordem tem razão medida: dez recursos do controle (giroscópio, acelerômetro, os dois pontos do touchpad, o clique, a vibração) <b>só chegam ao jogo pelo primeiro degrau</b>. Errar ali custa os dez, e custa em silêncio.<br><br>
-              <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle — útil quando o jogo não responde e você não quer sair dele.
+              Os cinco <b>usam as features do Hefesto</b>: luz, vibração, gatilho e o número do jogador continuam por conta dele em todos.<br><br>
+              O Hefesto <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo. Ele já faz isso sozinho, sempre — não é um botão, é o que a escada é.<br><br>
+              A ordem tem razão medida: dez recursos do controle (giroscópio, acelerômetro, os dois pontos do touchpad, o clique, a vibração) <b>só chegam ao jogo pelo Sony DualSense</b>. Errar ali custa os dez, e custa em silêncio.<br><br>
+              <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle. Hoje ele gira <b>quatro</b> pontes de verdade, nesta ordem: Sony DualSense, Xbox, <b>Modo Nativo</b> — que aqui é o interruptor <b>Desligado</b> — e Steam Input. <b>Point And Click</b> e <b>Navegação</b> ainda não são degraus: o PS+R3 não para neles.
             </span></span>
           </div>
           <div class="escada">
-            <span class="degrau auto on" data-degrau="automatico"><i>A</i>Automático</span>
-            <span class="degrau" data-degrau="hefesto"><i>1</i>Hefesto</span>
-            <span class="degrau" data-degrau="sony"><i>2</i>Sony (nativo)</span>
-            <span class="degrau" data-degrau="steam"><i>3</i>Steam Input</span>
-            <span class="degrau" data-degrau="desktop"><i>4</i>Teclado + Mouse</span>
+            <span class="degrau on" data-degrau="dualsense"
+                  title="A cópia virtual completa: giroscópio, acelerômetro, os dois pontos do touchpad, o clique e a vibração. Dez linhas do mapa-controles.csv só chegam ao jogo por aqui. É o primeiro que o Hefesto tenta.">Sony DualSense</span>
+            <span class="degrau" data-degrau="xbox"
+                  title="O piso mais largo que existe: sete eixos e vibração que funciona em todo jogo. Não carrega nenhuma das dez linhas uhid — sem giroscópio e sem touchpad para o jogo. É o segundo que o Hefesto tenta.">Xbox</span>
+            <span class="degrau" data-degrau="steam"
+                  title="A Steam entrega a entrada e o Hefesto fica inteiro na saída: os seus ajustes vencem o jogo. É o mais caro de trocar — exige fechar a Steam, reabrir a Steam e reabrir o jogo —, e por isso é o último que o Hefesto tenta.">Steam Input</span>
+            <span class="degrau sem-dono" data-degrau="pointclick"
+                  title="AINDA NÃO TEM QUEM O ATENDA no Hefesto: não é degrau da escada (integrations/ponte_escada.ESCADA) nem modo do produto (mode_transition.MODES). Está aqui por decisão sua, de 31/08 — é modo, não perfil, e a ponte do PS+R3 traz o perfil dele junto.">Point And Click</span>
+            <span class="degrau" data-degrau="navegacao" data-modo="desktop"
+                  title="O controle vira teclado e mouse do computador, e quem emula é o próprio Hefesto — por isso ele mora aqui dentro, e não do lado desligado. O modo TEM dono e funciona hoje (mode_transition.apply_mode('desktop')); o que ainda não existe é o PS+R3 parar aqui: a Navegação não é degrau da escada.">Navegação</span>
           </div>
         </div>
 
+        <!-- O OUTRO LADO DO INTERRUPTOR. Mesma altura da seção de cima (rótulo +
+             36px), para a tela não pular quando ela vai e volta. -->
+        <div class="sub-secao so-desligado" title="Esta seção só aparece com o Hefesto DESLIGADO.">
+          <div class="linha-rot">
+            <b style="color:var(--texto-suave)">Modo</b>
+          </div>
+          <div class="escada">
+            <span class="degrau on fixo"
+                  title="Sem cópia virtual: o jogo fala com o DualSense físico. É a ponte dos jogos que escrevem no hidraw direto e recusam um intermediário. Só vale no próximo lançamento — com o jogo aberto, o resultado é ZERO controles.">Modo Nativo <span class="sep">·</span> <span class="mud">o DualSense da forma como veio ao mundo</span></span>
+          </div>
+        </div>
 
       </div>
     </div>
@@ -748,8 +1088,7 @@
       </div>
       <div class="quadro-corpo">
 
-        <div class="dupla">
-          <div>
+        <div>
             <div class="linha-rot cab-col">
               O jogo vê cada controle como:
               <span class="ajuda" style="margin-left:5px">?<span class="dica">
@@ -897,7 +1236,7 @@
   <g id="jg-p1-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="jg-p1-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="jg-p1-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -967,8 +1306,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="jg-p1-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="jg-p1-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -1139,7 +1478,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="jg-p1-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="jg-p1-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -1148,7 +1487,7 @@
     </g>
 </svg>
                 <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player 1</b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  
+
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
   <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1291,7 +1630,7 @@
   <g id="jg-p2-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="jg-p2-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="jg-p2-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1361,8 +1700,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="jg-p2-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="jg-p2-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -1533,7 +1872,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="jg-p2-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="jg-p2-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -1542,7 +1881,7 @@
     </g>
 </svg>
                 <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player 2</b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  
+
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
   <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1685,7 +2024,7 @@
   <g id="jg-p3-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="jg-p3-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="jg-p3-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -1755,8 +2094,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="jg-p3-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="jg-p3-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -1927,7 +2266,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="jg-p3-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="jg-p3-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -1936,7 +2275,7 @@
     </g>
 </svg>
                 <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player 3</b><br><span data-campo="identidade">Galactic Purple <span class="pt">•</span> BT</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  
+
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
   <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2079,7 +2418,7 @@
   <g id="jg-p4-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
   <g id="jg-p4-grupo-chassi">
     <title>CHASSI</title>
-    
+
   </g>
   <g id="jg-p4-grupo-face">
     <title>BOTÕES DA FACE</title>
@@ -2149,8 +2488,8 @@
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
     <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
     <g id="jg-p4-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
-    
-    
+
+
   </g>
   <g id="jg-p4-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
@@ -2321,7 +2660,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    
+
   </g>
   <g id="jg-p4-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="jg-p4-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -2330,7 +2669,7 @@
     </g>
 </svg>
                 <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player 4</b><br><span data-campo="identidade">White <span class="pt">•</span> USB</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  
+
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
   <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2347,16 +2686,15 @@
             </div>
           </div>
 
-          <div class="col-atencao" data-lista="avisos">
-            <div class="linha-rot cab-col">
-              <b style="color:var(--orange)">Atenção</b>
-              <span class="conta-avisos" data-campo="atencao-conta">1 aviso</span>
-            </div>
+        <div class="col-atencao" data-lista="avisos">
+          <div class="linha-rot cab-col">
+            <b style="color:var(--orange)">Atenção</b>
+          </div>
             <div class="aviso-item" data-aviso>
               <span class="selo alerta" data-campo="aviso-selo">RÁDIO</span>
               <span data-campo="aviso-texto">Dois rádios da bancada estão em portas vizinhas.</span>
             </div>
-          </div>
+          <span class="conta-avisos" data-campo="atencao-conta">1 aviso</span>
         </div>
 
         <div class="faixa-final">
@@ -2368,7 +2706,7 @@
                minúsculo porque é meio da MESMA frase. -->
           <div class="pendente" data-campo="pendente">
             <span>●</span>
-            <span>Vai mudar para <b data-campo="pendente-alvo">Conexão Nativa (Sony)</b> quando você clicar em <b>Aplicar</b></span>
+            <span>Vai mudar para <b data-campo="pendente-alvo">Modo Nativo</b> quando você clicar em <b>Aplicar</b></span>
           </div>
           <button class="btn" data-gesto="reconectar">Reconectar Controles</button>
         </div>
@@ -2380,13 +2718,39 @@
 
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O recibo ENCURTA e não sai: `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e o
-         porquê está no `monta.py`, onde este arquivo é lido. -->
-    <div class="recibo"><b style="color:var(--texto-suave)">Aplicar</b> vale agora <span class="pt">•</span> <b style="color:var(--texto-suave)">Salvar Perfil</b> grava no <b style="color:var(--texto-suave)">Mortal Kombat</b></div>
-    <button class="r-aplicar">Aplicar</button>
-    <button class="r-salvar">Salvar Perfil</button>
-    <button class="r-importar">Importar</button>
-    <button class="r-exportar">Exportar</button>
+    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido dela:
+         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
+         perfil, importar e exportar. em todas as abas."*
+
+         ISTO DERRUBA A `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e de propósito. Ela
+         já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então
+         foi ENCURTAR (96 caracteres viraram 57), porque perguntada se saía do
+         mockup ou do produto ela respondeu "deixa ela encurtada tanto lá quanto no
+         mockup" — resposta sobre ONDE, lida como resposta sobre SE. Agora ela disse
+         o destino com todas as letras, e o destino não é a barra.
+
+         O QUE A DECISÃO PROTEGIA CONTINUA PROTEGIDO, e é o teste que se aplica:
+         a diferença entre APLICAR (vale agora) e SALVAR (grava no perfil), e o NOME
+         do perfil — "a informação que faltava e lhe custou semanas". As duas coisas
+         estão nas dicas abaixo, palavra por palavra. Nada se perdeu; mudou de lugar.
+
+         E O PRODUTO JÁ FAZIA ASSIM: `gui/main.glade` dá `tooltip-text` aos quatro
+         botões do rodapé (`btn_footer_apply`, `btn_footer_save_profile`,
+         `btn_footer_import`, `btn_footer_restore_default`), e
+         `tests/unit/test_o_rodape_diz_o_que_grava.py` morde exigindo isso. Era o
+         MOCKUP que duplicava a informação como texto fixo na barra. O texto de
+         Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
+
+         `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
+         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
+         num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
+         `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
+         (`aba09.py`). -->
+    <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
+    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
+    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>
@@ -2395,6 +2759,36 @@
 <div class="nota">
   <h2>O que mudou, e por quê</h2>
   <ul>
+    <li><b>A fileira plana virou DOIS NÍVEIS</b> — sua palavra, 31/08:
+      <span class="marca">"vamos desconfundir isso que tal? Hefesto Ligado/Desligado (…) Modo
+      Hefesto se Ligado Abre as seções de Modo"</span>. A pergunta que abriu isto também é sua
+      — <span class="marca">"qual a diferença de nativo pra dualsense?"</span> —, e ela era
+      boa: a tela punha os dois na <b>mesma</b> fileira, como alternativas do mesmo tipo. Não
+      são. <b>Nativo é o Hefesto FORA do meio</b>; os outros são jeitos de ele <b>estar</b> no
+      meio. Agora a tela mostra isso: em cima o interruptor, embaixo o que ele abre.</li>
+    <li><b>"Desligado" deixou de ser um estado inventado, e isso fecha a MIGRA-JOGAR-06</b> —
+      sem construir nada. O quarto botão da fileira antiga não tinha leitor:
+      <code>mode_transition.mode_of_state</code> é o ponto único de leitura do modo vivo e
+      devolve <b>três</b> valores, nunca um quarto. Com a sua decisão, <b>Desligado = Modo
+      Nativo</b> (<code>MODE_NATIVE</code>), que <b>lê</b> (o mesmo <code>mode_of_state</code>)
+      e <b>escreve</b> (<code>apply_mode('native')</code>, em <code>painel.ESCRITOR_DOS_MODOS</code>).
+      Encerrar o Hefesto inteiro continua sendo <b>"Encerrar o serviço"</b>, na Sistema.</li>
+    <li><b>O chip que se chamava "Hefesto" virou "Sony DualSense"</b> — ele sempre foi
+      <code>Ponte(gamepad, dualsense)</code>, o primeiro degrau de
+      <code>integrations/ponte_escada.ESCADA</code>. Era o nome do <b>produto</b> no lugar do
+      nome da <b>máscara</b>, numa fileira em que os outros também são o Hefesto.</li>
+    <li><b>O Xbox chegou à tela pela primeira vez</b> — <code>Ponte(gamepad, xbox)</code> é o
+      <b>segundo</b> degrau que o produto tenta, e nenhum chip o nomeava. Era exatamente o que
+      <code>painel.degraus_sem_chip()</code> denunciava: <span class="marca">"um degrau real não
+      tem chip na tela"</span>. Agora tem.</li>
+    <li><b>Os algarismos saíram, e é decisão dela de 31/08</b> — a tela escrevia
+      <b>③ Steam Input</b>, o produto o tenta em <b>quarto</b>
+      (<code>ponte_escada.indice_do_degrau + 1</code> = 4) e esta legenda prometia que o número
+      ERA esse índice. Os três não podiam estar certos, e a causa é a própria decisão dela do
+      mesmo dia: o terceiro degrau é o <b>Nativo</b>, que saiu da fileira para virar o
+      interruptor <b>Desligado</b>. Havia três saídas — numerar <i>1 · 2 · 4</i> com o buraco do
+      3, numerar pela posição na tela (e esta linha passar a mentir), ou tirar os números. Ela
+      tirou. <b>A ordem não se perdeu</b>: está na dica de cada modo e na do "Modo de conexão".</li>
     <li><b>A máscara virou POR CONTROLE</b> — decisão sua, 28/08. Três opções e
       <b>sem "Automático"</b>: DualSense · Xbox 360 · Nintendo Pro. O seletor mora dentro
       do cartão de cada controle. O que era um seletor único lá em cima
@@ -2409,6 +2803,13 @@
     <li><b>"Automático" saiu da máscara</b> — substitui a <code>D-A-MASCARA-GANHA-O-AUTOMATICO</code>
       de 26/08, que o queria como terceira opção ligada. A heurística que o moveria
       (<code>api_de_entrada.py</code>) errou em <b>13 dos 14</b> jogos do seu censo.</li>
+    <li><b>"Automático" saiu também do Modo de conexão</b> — sua palavra, 31/08:
+      <span class="marca">"na aba jogar o Botão Automático não existe"</span>. E não existe
+      mesmo: ele não tinha <b>leitor</b> (<code>painel.CHIPS_DA_ESCADA</code> o declara com
+      <code>ponte=None</code>, e <code>degrau_vivo</code> só acende comparando pontes — nenhum
+      estado do produto podia acendê-lo) nem <b>escritor</b> (não há método de IPC que fixe um
+      degrau). <b>O mecanismo ficou</b>: tentar na ordem e parar quando acerta é o que o produto
+      já faz sozinho, e está dito na dica.</li>
     <li><b>A fita ficou viva, e agora ela tem alvo</b> — era a contradição que esta legenda
       declarava em aberto: a fita dizia <span class="marca">"vai para o controle escolhido
       aqui"</span> numa aba em que nada era por controle. A máscara resolveu isso. O cartão
@@ -2418,7 +2819,18 @@
       máscara. Não é descuido: o modo é <b>estado do processo</b> — existe um só
       (<code>app/actions/mode_transition.py</code>), e duas peças pedindo modos diferentes
       não têm resposta. Máscara é do <b>aparelho</b>; modo é da <b>máquina</b>.</li>
-    <li><b>Quatro modos, não três</b> — <span class="marca">Desligado</span> entra na fileira como você decidiu; a Sistema fica com "Encerrar o serviço".</li>
+    <li><b>Os DOIS que ainda não têm quem os atenda aparecem, e dizem isso</b> — é a sua ordem
+      de 31/08 (manter <b>Point And Click</b> e <b>Navegação</b>) somada à regra que você fixou
+      em 30/08 (<i>botão sem dono no produto não vai para a tela como se funcionasse</i>). Elas
+      convivem de um jeito só: os dois entram <b>marcados</b>, e o porquê está no ponteiro do
+      mouse. Nada de <code>opacity</code> — a lição da fita inerte é que a opacidade some com o
+      texto e cega toda régua de contraste; aqui é <b>borda tracejada</b>, cor explícita e
+      cursor de "não clique".
+      <br><b>Point And Click</b> não é degrau da escada <b>nem</b> modo do produto: não tem nada.
+      <br><b>Navegação</b> é o caso do meio, e é bom: o <b>modo</b> tem dono e funciona hoje
+      (<code>apply_mode('desktop')</code>, o antigo "Controlar o PC"). O que ainda não existe é
+      o <b>PS + R3</b> parar nela — a Navegação não é degrau. Por isso ela leva traço no
+      dica que diz o que falta, mas <b>não</b> a borda tracejada.</li>
     <li><b>Quatro controles na mesa, um cartão cada</b> — a lista é a <code>MESA</code> do <code>monta.py</code>: não há "quatro" escrito num laço, e o número do jogador é campo, não a posição na fila. Continua sendo só a peça, com o <b>SVG pequeno na cor do plástico</b> — o card completo é da aba Controles.</li>
     <li><b>A borda e a cor vêm do mapa</b> — a cor do plástico sai do <code>cores-do-dualsense.csv</code> pela folha que o gerador escreveu dentro do desenho. Não está digitada aqui.</li>
     <li><b>As cinco lâmpadas do jogador ficam apagadas neste cartão</b> — medido de novo hoje,
@@ -2450,7 +2862,27 @@
       é DualSense nos quatro.</li>
     <li><b>Clicar num cartão leva a fita para ele</b> — é a mesma gramática que você fixou hoje
       para o acordeão da Controles ("clicar num card muda a fita").</li>
-    <li><b>A ordem dos modos</b> — pus Desligado primeiro (é o "menos"), depois Controlar o PC, Jogar pelo Hefesto e Nativa. Pode ser o inverso.</li>
+    <li><b>A ordem dos cinco modos não é a ordem em que você os listou</b>, e é a única coisa
+      em que me afastei do seu texto. Você escreveu <span class="marca">"Steam Input, Xbox, Sony
+      DualSense, Point And Click"</span>; eu pus <b>Sony DualSense · Xbox · Steam Input</b>,
+      que é a ordem <b>medida</b> em que o produto tenta
+      (<code>ponte_escada.ESCADA</code>): a DualSense primeiro porque <b>dez</b> linhas do
+      <code>mapa-controles.csv</code> só chegam ao jogo por ela, e o Steam Input por último
+      porque é o único que exige <b>fechar a Steam, reabrir a Steam e reabrir o jogo</b>. Sem os
+      algarismos, <b>a ordem da fileira é a única coisa que ainda diz o que o produto tenta
+      primeiro</b> — trocá-la para a sua ordem passaria a afirmar que o Hefesto começa pelo Steam
+      Input, e isso é falso e caro. <b>Se você preferir a sua ordem mesmo assim</b>, é uma linha
+      no <code>MODOS</code>; mas então a dica de cada modo tem de deixar de dizer "é o primeiro
+      que o Hefesto tenta", ou a tela volta a se contradizer.</li>
+    <li><b>O rótulo "Hefesto" ficou DEITADO, ao lado do interruptor</b>, e não em cima como as
+      outras linhas desta casa. É pagamento de altura: o miolo desta aba tinha <b>2px</b> de
+      folga em 542 antes desta mudança, e um rótulo por cima custa 22px — a aba passaria a
+      rolar por dentro. Deitado ele custa zero, e é a forma que você desenhou
+      (<span class="marca">"Hefesto Ligado/Desligado"</span>, tudo numa linha).</li>
+    <li><b>O nome da seção de baixo é "Modo", e não "Modo de conexão"</b> — é a sua palavra
+      (<span class="marca">"Abre as seções de Modo"</span>). O quadro continua se chamando
+      <b>Quando o jogo abrir</b>, e o de baixo <b>Conectado agora</b>: os dois títulos são seus,
+      de 26 e 28/08, e não os troquei sem você pedir.</li>
     <li><b>A linha laranja tracejada</b> é a prova de que o Aplicar ainda deve. Ela só aparece com escolha pendente — e o espaço dela é reservado, para a tela não pular.</li>
     <li><b>A carga de cada bateria é o único dado inventado desta aba</b> — 100, 64, 41 e 87%. Bateria é estado do momento, e o mockup mostra um momento; todo o resto (cor, nome, transporte, jogador, desenho) sai de arquivo.</li>
     <li><b>O recibo do rodapé nomeia o perfil</b> — é onde a mudança vai cair, que era a informação que faltava e te custou semanas.</li>
@@ -2458,6 +2890,18 @@
 
   <h2>O que isto encomenda ao código</h2>
   <ul>
+    <li><b>O interruptor tem de ler DOIS modos como "Ligado"</b>. Hoje a pintura viva acende um
+      botão comparando <code>data-modo</code> com o modo do daemon, um a um — e o Hefesto ligado
+      é <b>gamepad</b> <i>ou</i> <b>desktop</b> (Navegação). Sem uma leitura derivada
+      (<code>ligado = modo in {gamepad, desktop}</code>) o interruptor fica apagado dos dois
+      lados quando você escolhe a Navegação: a tela não estaria mentindo, estaria muda — e mudo
+      é pior, porque parece defeito.</li>
+    <li><b>Fixar um modo pela tela ainda não existe</b>, e vale para os três degraus reais:
+      <span class="marca">"a escada existe e SOBE sozinha, mas ninguém a fixa pela tela: não há
+      método de IPC que diga 'use este degrau'"</span>. Clicar em <b>Sony DualSense</b>, <b>Xbox</b>
+      ou <b>Steam Input</b> hoje não muda nada no daemon — quem muda é o <b>PS + R3</b> na sua
+      mão. Os dois que faltam (Point And Click e Navegação como degrau) são mais um passo além
+      disso.</li>
     <li><b>A máscara Nintendo Pro não existe hoje</b>, e entra assim mesmo — isto é mockup, e
       mockup desenha o produto que vai existir. O catálogo do produto
       (<code>integrations/uinput_gamepad.py</code>, <code>FLAVORS</code>) tem <b>duas</b>
