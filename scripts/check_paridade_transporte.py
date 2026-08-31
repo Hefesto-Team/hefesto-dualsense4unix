@@ -176,6 +176,41 @@ FALHA (as duas mais novas)
                           conta de citações vai ao resumo para que um zero
                           (= parou de olhar) apareça sem ninguém desconfiar.
 
+ 19. `lado-sem-regua`  — um lado com `aciona` RESPONDIDO, alguma coluna de
+                          CONTEÚDO daquele lado escrita (`*_offset`,
+                          `*_report_id`, `*_comando`, `*_evidencia`,
+                          `*_detalhe`, `*_ressalva`, `*_codigo_ref` — a lista é
+                          `SUFIXOS_DE_CONTEUDO`) e o `*_de_onde_sei` daquele
+                          lado VAZIO. Nasceu em 31/08/2026, da cegueira medida
+                          logo abaixo.
+
+A cegueira que a regra 19 fecha — e a metade que ela NÃO fecha (31/08/2026)
+--------------------------------------------------------------------------
+Medido em duas leituras independentes, numa leva de levantamento em fonte
+externa: este portão é **cego ao CONTEÚDO** das colunas sem domínio. Quatro
+estragos plausíveis em células recém-escritas passaram com `rc=0` — o byte do
+LED de jogador trocado de 11 para 47, o `report[11]` do clique do touchpad
+trocado para `report[27]`, uma `fonte_externa` apontando repositório
+inexistente, e um `radio_offset` cheio com o `radio_de_onde_sei` esvaziado —
+enquanto o CONTROLE POSITIVO (valor fora do domínio em `radio_canal`, data
+ilegível em `provado_em`) reprovou com `rc=1`. A régua estava viva; a cegueira
+era localizada.
+
+Três dos quatro estragos **continuam passando, e isso é honesto**: nenhum portão
+sem hardware e sem rede consegue dizer que o byte é 11 e não 47, ou que um
+repositório existe. O que a regra 19 fecha é o quarto, que é de FORMA e não de
+conteúdo: **quem escreve o byte tem de dizer de onde o sabe.** É a mesma forma
+da regra 1 (`sem-mordida`) e da 16 (`causa-nao-declarada`) — a régua sabe o QUÊ
+e cala sobre o DE ONDE.
+
+Por que ela pode nascer DURA, como a 13 e ao contrário da 7: medida contra o CSV
+de 31/08/2026, ela acha **ZERO** células. A versão irrestrita (sem exigir
+`aciona` respondido) acharia 4, todas `*_comando` das duas linhas
+`entrada.emulacao_mouse.*`, com `aciona` vazio nos dois lados — que é buraco de
+censo, exatamente o que a regra 7 aprendeu a não castigar. Por isso a
+restrição por `aciona` está no enunciado, e não é conveniência: é a fronteira
+entre "ninguém respondeu" e "respondeu e não disse de onde".
+
 Os dois degraus que faltavam (19/08/2026)
 -----------------------------------------
 Até esta data a escada de `ate_onde_foi` cobria só a IDA — produto para aparelho
@@ -669,6 +704,21 @@ DOMINIO_POR_SUFIXO = {
 }
 DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 
+#: Os sufixos que carregam CONTEÚDO de um lado — o que a célula AFIRMA sobre
+#: aquele transporte. Nenhum deles tem domínio (não dá para fechar prosa num
+#: `frozenset`), e é exatamente por isso que a regra 19 existe: ela não lê o que
+#: está escrito, cobra a PROVENIÊNCIA de quem escreveu. Ver a seção "A cegueira
+#: que a regra 19 fecha", na docstring.
+SUFIXOS_DE_CONTEUDO = (
+    "offset",
+    "report_id",
+    "comando",
+    "evidencia",
+    "detalhe",
+    "ressalva",
+    "codigo_ref",
+)
+
 #: ─────────────────────────────────────────────────────────────────────────
 #: A PONTE — por qual caminho a feature chega ao JOGO (regra 15).
 #: ─────────────────────────────────────────────────────────────────────────
@@ -829,6 +879,11 @@ class Resumo:
     #: cima: se ele zerar, ninguém mais cita a escada de vibração no mapa — e
     #: uma regra que não acha nada passa sempre, calada.
     citacoes_da_escada_de_vibracao: int = 0
+    #: Os dois números da regra 19, pelo mesmo motivo dos de cima: o primeiro
+    #: diz se ela ENXERGA (zero = ninguém escreve conteúdo de lado no mapa, e a
+    #: regra virou enfeite), o segundo é o que ela cobra.
+    celulas_com_conteudo: int = 0
+    conteudo_sem_regua: int = 0
 
 
 def e_arquivo_que_pytest_coleta(nome: str) -> bool:
@@ -1675,6 +1730,36 @@ def censo(
                         "vazia: a régua sabe que não aciona e não sabe de quem é "
                         "a culpa. Preencha com uma das causas do domínio "
                         f"({sorted(DOMINIO_POR_SUFIXO['por_que_nao_aciona'] - {''})})",
+                    )
+                )
+
+            # Regra 19 (31/08/2026): conteúdo escrito num lado cujo
+            # `de_onde_sei` daquele lado está VAZIO. O `s in pares` é a mesma
+            # descoberta por sufixo da regra 16: coluna ausente quer dizer
+            # "esta metade da regra está desligada nesta árvore", nunca
+            # `KeyError` — fixture antiga sem `*_ressalva` não vira reprovação.
+            escritas_sem_regua = [
+                sufixo
+                for sufixo in SUFIXOS_DE_CONTEUDO
+                if sufixo in pares and (linha.get(f"{lado}_{sufixo}") or "").strip()
+            ]
+            if escritas_sem_regua:
+                resumo.celulas_com_conteudo += 1
+            if aciona and not de_onde_sei and escritas_sem_regua:
+                resumo.conteudo_sem_regua += 1
+                achados.append(
+                    Achado(
+                        FALHA,
+                        "lado-sem-regua",
+                        numero,
+                        ident,
+                        lado,
+                        f"`{lado}_aciona = {aciona}` e "
+                        + ", ".join(f"`{lado}_{s}`" for s in escritas_sem_regua)
+                        + f" escrito(s), mas `{lado}_de_onde_sei` está vazia: a "
+                        "célula afirma sobre este transporte sem dizer de onde "
+                        "sabe. Preencha com um valor do domínio "
+                        f"({sorted(DOMINIO_POR_SUFIXO['de_onde_sei'] - {''})})",
                     )
                 )
 
@@ -2551,6 +2636,15 @@ def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
         (
             "citações da escada de vibração conferidas contra o dono",
             resumo.citacoes_da_escada_de_vibracao,
+        ),
+        # A conta que diz se a regra 19 ENXERGA, pelo mesmo motivo das de cima.
+        (
+            "células com conteúdo de um lado (offset, evidência, ressalva…)",
+            resumo.celulas_com_conteudo,
+        ),
+        (
+            "     dessas, SEM `de_onde_sei` daquele lado",
+            resumo.conteudo_sem_regua,
         ),
     ]
     largura = max(len(rotulo) for rotulo, _ in linhas)
