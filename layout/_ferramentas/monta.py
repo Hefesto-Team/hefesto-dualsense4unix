@@ -241,6 +241,40 @@ def rotulo(c, forma="completa"):
     return SEPARADOR.join(["Sony", f'Player {c["jogador"]}', c["nome"], c["via"]])
 
 
+#: AS OITO CORES DE JOGADOR, NO TOM DA CASA — 30/08/2026.
+#:
+#: Ela: *"essas cores de seleção do lightbar seguem me incomodando profundamente,
+#: pq destoam demais do resto do layout (…) pode ser as mesmas cores mas num tom
+#: que fiquem em harmonia"*. `core/led_control.player_slot_color` devolve
+#: primárias cruas (#0000FF, #FF0000, #00FF00…) — cor de monitor de teste ao lado
+#: de uma interface inteira construída na paleta Dracula.
+#:
+#: MORA AQUI, E NÃO NA `aba04`, porque tem DOIS donos: a guia de cores da
+#: Iluminação e a barra de luz da Controles. A primeira volta desta cura ficou só
+#: na 04, e o cético mediu o resultado: a 02 continuou pintando #0000FF na barra
+#: e escrevendo o hex cru na tela. Uma cura pela metade deixa as duas versões
+#: vivas, que é o defeito que a regra da casa existe para matar.
+#:
+#: O AZUL É O `--starlight-blue` (#7EB8D4) e não o `--cyan`: a paleta Dracula não
+#: tem azul próprio, e mapear o azul do player 1 para o ciano fazia DUAS casas da
+#: guia caírem na mesma cor — oito casas, sete cores. O cético contou.
+TOM_DA_CASA = {
+    "#0000FF": "#7EB8D4",   # azul     -> o azul da casa (plástico Starlight Blue)
+    "#FF0000": "#FF5555",   # vermelho -> --red
+    "#00FF00": "#50FA7B",   # verde    -> --green
+    "#FF0080": "#FF79C6",   # rosa     -> --pink
+    "#FFFF00": "#F1FA8C",   # amarelo  -> --yellow
+    "#00FFFF": "#8BE9FD",   # ciano    -> --cyan
+    "#FF8000": "#FFB86C",   # laranja  -> --orange
+    "#8000FF": "#BD93F9",   # roxo     -> --purple
+}
+
+
+def tom_da_casa(hexa):
+    """O hex cru do produto, no tom da casa. Desconhecido volta como veio."""
+    return TOM_DA_CASA.get(hexa.upper(), hexa)
+
+
 def cor_da_zona(colorway, zona="casca-solida"):
     """A cor de uma zona daquele modelo, LIDA do que o gerador escreveu no SVG.
 

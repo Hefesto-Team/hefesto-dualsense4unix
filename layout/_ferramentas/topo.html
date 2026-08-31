@@ -13,10 +13,99 @@
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
-    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
+    /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
+       Ela apontou o sintoma três vezes, em três abas: *"os campos de importância
+       tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
+       de campos e essa fonte tem um contraste horrível"*, *"em todas as abas isso
+       tem que ser visto infelizmente"*.
+       MEDIDO nas dez abas, contraste WCAG de todo texto contra o fundo real:
+       390 elementos abaixo do limiar, e DUAS cores respondem por 93% deles —
+       `--comment` 217 vezes a 3,03:1 e `--texto-mudo` 146 vezes a 4,47:1.
+       O limiar para texto pequeno é 4,5:1; as duas ficavam abaixo, uma delas
+       por muito. Não era defeito de aba nenhuma: era a paleta.
+       O QUE MUDOU É SÓ A LUMINÂNCIA. O matiz e a saturação de cada uma
+       continuam os mesmos — a cara da interface não muda, o texto aparece:
+         --comment    #6272a4 -> #8896c4   3,03:1 -> 4,89:1
+         --texto-mudo #8b8fa8 -> #9a9eb8   4,47:1 -> 5,40:1
+       Os hex de origem eram do GUIA_IMPLEMENTACAO.md, e o `--comment` de lá é a
+       cor de COMENTÁRIO do Dracula — feita para código, onde apagar é o efeito
+       desejado. Usá-la em texto de interface é que era o engano. */
+    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     --sel-bg:rgba(189,147,249,0.16);
+    /* O RÓTULO DE CAMPO TEM COR DE RÓTULO, NÃO DE COMENTÁRIO.
+       `.sec-rot` nascia `var(--comment)` (#6272a4) nas SEIS abas que a usam, e
+       ela leu o resultado pelo que ele é: *"os campos de importância tipo cor,
+       brilho, selecione player tão invisíveis"*. #6272a4 sobre o `--panel`
+       (#282a36) dá contraste 2,6:1 — abaixo do 4,5:1 que texto pequeno pede.
+       O roxo é a cor de destaque DA CASA, medida: as dez abas pintam o
+       `.quadro-titulo` de #bd93f9, sem exceção.
+       Um TOKEN e não um hex por aba: assim a Vibração troca o dela numa linha
+       (ela pediu verde lá) sem ninguém digitar cor em seis arquivos — que é
+       exatamente como esta regra virou seis cópias divergentes.
+
+       VERDE, E NÃO ROXO — decisão dela, 30/08: *"deixa verde os nomes"*
+       (Iluminação) e *"os nomes das seções tem que ser verde"* (Gatilhos). Ela
+       já pedira verde na Vibração horas antes; agora vale para as dez, e a
+       exceção escopada em `.vib` some por ser redundante.
+       O roxo continua sendo a cor do TÍTULO do quadro (`.quadro-titulo`, as dez
+       pintam #bd93f9). São dois papéis: o título nomeia a ABA, o rótulo nomeia a
+       LINHA. Cores diferentes é o que os separa. */
+    --rot-campo:var(--green);
+    /* ---------------------------------------------------------------
+       A ESCALA DA BORDA ESTRUTURAL — UMA SÓ, 31/08/2026.
+
+       PEDIDO DELA, vendo Gatilhos, Iluminação e Vibração: *"é preciso remover as
+       bordas sobrando de tudo e deixar as bordas menos perceptíveis mas
+       presentes e modernas de forma que não roube a atenção de forma
+       negativa"*; e sobre a Perfis: *"nessa aba aqui as bordas tão horríveis"*.
+
+       O DEFEITO NÃO ERA UMA BORDA — ERA A FAIXA INTEIRA. Censo do DOM das
+       quatro abas, contraste de cada borda contra o fundo REAL atrás dela: a
+       borda ESTRUTURAL ia de **1,21:1** (`--border-sutil`, que sumia) a
+       **4,89:1** (`.btn`, que usava `--comment`) na MESMA tela — quatro vezes
+       de diferença. É isso que fazia a Gatilhos ler como GRADE: a divisória
+       horizontal gritava a 3,37:1 enquanto a vertical, encostada nela, sumia a
+       1,21:1. Não havia peso demais nem de menos; havia peso NENHUM em comum.
+
+       O VALOR, E DE ONDE ELE SAI. Um só, e ele é o MEIO EM LUMINÂNCIA entre os
+       dois extremos que ela mesma julgou: #343746 tem L 23,9% e ela o chamou de
+       invisível em 30/08; #767a92 tem L 51,8% e é o que ela chamou de excessivo
+       hoje. L 38% é o meio exato, e o matiz e a saturação continuam os da
+       família (H 231, S 13%) — muda só a luminância, como em 30/08.
+
+         --linha  #53576f   2,01:1 sobre --panel · 2,23:1 sobre --app-bg
+
+       São **40% menos** que a linha de 30/08 (3,37:1) e **66% mais** que a
+       borda que sumia (1,21:1). O rótulo verde ao lado dela está a 10,4:1 e o
+       texto mudo a 5,40:1: a linha recua diante dos dois, que é o que "presente
+       e não rouba a atenção" quer dizer em número.
+
+       QUEM NÃO LÊ DAQUI, e é o ponto: a borda que carrega INFORMAÇÃO. A cor do
+       plástico (D-A-BORDA-E-A-IDENTIDADE-DA-PECA), o estado (`.on`,
+       `.aba.ativa`, `:hover`) e o foco continuam com a cor deles — esmaecer
+       essas é apagar o dado, não o enfeite.
+       --------------------------------------------------------------- */
+    --linha:#53576f;
+    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido dela: *"linha abaixo de cada
+       campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
+       e, quando a viu: *"as linhas divisórias em todas as páginas tão
+       invisíveis (…) a primeira coluna serve como nome da linha e a divisória
+       entre eles tem que estar clara"*.
+
+       ELA ESTAVA CERTA, E O NÚMERO ERA BRUTAL. `--border-sutil` (#343746) sobre
+       o painel (#282a36) dá **1,21:1** — a linha existia no DOM e não na tela.
+       `--border-forte` também não servia: 1,56:1.
+
+       O QUE CADUCOU EM 31/08, e é a metade seguinte da mesma medição: o #767a92
+       escolhido em 30/08 mirava a WCAG 1.4.11 (3:1 para componente gráfico) e
+       chegava a **3,37:1**. Só que 1.4.11 é o piso do que IDENTIFICA um
+       controle — um traço que só separa duas células não precisa dele, e a esse
+       peso ele passou a competir com o que separa. Ela viu o resultado em três
+       abas e pediu o contrário. O nome fica (seis abas o escrevem); quem manda
+       agora é a escala acima, e ela vale para as dez de uma vez. */
+    --rot-linha:var(--linha);
     /* cores de plástico — a borda diz QUAL peça é (D-A-BORDA-E-A-IDENTIDADE-DA-PECA) */
     /* OS CINCO PLÁSTICOS SÃO GERADOS — `monta.py` os reescreve a cada geração,
        lendo o `<style>` que `scripts/gerar_cores_do_dualsense.py` pôs no SVG. Os
@@ -57,7 +146,7 @@
   .janela{
     width:1180px; height:var(--alt-janela); max-width:100%; background:var(--app-bg);
     display:flex; flex-direction:column;
-    border:1px solid var(--border-sutil); border-radius:10px; overflow:hidden;
+    border:1px solid var(--linha); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
   }
 
@@ -66,7 +155,7 @@
   .logo{
     width:46px;height:46px;border-radius:50%;flex:0 0 46px;
     background:radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%);
-    border:1px solid var(--border-forte);
+    border:1px solid var(--linha);
     display:flex;align-items:center;justify-content:center;font-size:20px;
   }
   h1{font-size:19px;font-weight:700;letter-spacing:.2px}
@@ -86,14 +175,41 @@
   .perfil-ativo{
     margin-left:auto;display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--border-forte);background:var(--panel);
+    border:1px solid var(--linha);background:var(--panel);
   }
-  .pa-rot{font-size:10.5px;color:var(--comment);text-transform:uppercase;letter-spacing:.5px}
+  .pa-rot{font-size:10.5px;color:var(--comment);}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
-  .fita.inerte{opacity:.42}
+  /* A FITA INERTE DEIXOU DE USAR `opacity` — 30/08/2026, e a troca é de
+     MECANISMO, não de valor.
+
+     ELA ERA `opacity:.42`, e isso escondia o texto de duas maneiras ao mesmo
+     tempo. A primeira: medido, "Ajustes vão para:" e os quatro chips ficavam a
+     **2,18:1** contra o fundo, e os `•` a 2,07:1 — menos da metade do 4,5:1 que
+     texto pequeno pede. A segunda é pior e explica por que ninguém via: a
+     opacidade mora no ANCESTRAL, então `getComputedStyle(filho).color` continua
+     devolvendo a cor cheia. **Toda régua de contraste que lê `color` é cega a
+     isto** — a desta casa era, e deu as sete abas por limpas.
+
+     SUBIR A OPACIDADE NÃO SERVIA. Medido: `.42 -> 2,18` · `.55 -> 2,80` ·
+     `.65 -> 3,36` · `.75 -> 4,00` · `.85 -> 4,73`. Só volta a AA em .85 — e a
+     .85 o esmaecido deixa de comunicar o que ela desenhou para comunicar
+     (decisão dela, 28/08: em Gatilhos, Iluminação e Vibração a fita fica
+     ESMAECIDA porque nada ali se ajusta por controle).
+
+     A CURA É COR EXPLÍCITA. O sinal de "inerte" continua — a fita fica mais
+     apagada que a viva, o chip perde a cor do plástico (que é o que diz a
+     IDENTIDADE, e identidade sem função é promessa falsa) e perde o fundo. Mas
+     cada texto tem cor própria, legível, e a régua passa a ENXERGAR. */
+  .fita.inerte{color:var(--comment)}
+  .fita.inerte .chip{border-color:var(--border-sutil);background:transparent;
+                     color:var(--comment)}
+  /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
+  .fita.inerte .chip.plastico{border-color:var(--border-sutil);border-width:1px}
+  .fita.inerte .chip.on{border-color:var(--comment);background:transparent;
+                        color:var(--texto-suave);font-weight:600}
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo);
+    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -115,7 +231,7 @@
   select option:checked{background:var(--sel-bg);color:var(--fg)}
 
   /* ---------- a tira de abas ---------- */
-  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--border-sutil)}
+  .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
     padding:11px 13px;font-size:13px;color:var(--texto-mudo);
     border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
@@ -149,7 +265,7 @@
                           display:flex;flex-direction:column}
   .miolo > .quadro.estica > .quadro-corpo{flex:1;min-height:0;display:flex;flex-direction:column}
 
-  .quadro{border:1px solid var(--border-sutil);border-radius:9px;background:var(--panel)}
+  .quadro{border:1px solid var(--linha);border-radius:9px;background:var(--panel)}
   .quadro-topo{
     display:flex;align-items:center;gap:8px;padding:11px 14px 0;
   }
@@ -157,31 +273,66 @@
   /* o ícone "?" — onde TODO texto longo passa a morar (D4 + D-TUDO-QUE-EXPLICA-VIRA-DICA) */
   .ajuda{
     width:17px;height:17px;border-radius:50%;flex:0 0 17px;
-    border:1px solid var(--border-forte);color:var(--texto-mudo);
+    border:1px solid var(--linha);color:var(--texto-mudo);
     font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative;
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
-    background:var(--elevated);border:1px solid var(--border-forte);border-radius:7px;
+    background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
     padding:9px 11px;font-size:11.5px;line-height:1.5;color:var(--texto-suave);
     text-align:left;font-weight:400;box-shadow:0 8px 24px rgba(0,0,0,.5);
   }
   .dica b{color:var(--fg)}
   .quadro-corpo{padding:10px 14px 14px}
 
-  .linha-rot{font-size:12px;color:var(--texto-suave);margin-bottom:7px}
+  /* ---------- SEÇÃO QUE ABRE E FECHA ----------
+     Pedido dela, 30/08/2026, sobre a Conexões: *"deixa todas essas seções
+     expansíveis igual fizemos em controles"*.
+
+     MESMO MECANISMO DA CONTROLES, e de propósito: `input` escondido +
+     `:has(:checked)` + `<label>`. Sem uma linha de JavaScript — o mockup abre
+     como arquivo, sem servidor, e é regra desta casa que ele continue assim.
+     A diferença é o TIPO: a Controles usa `radio` (um card aberto por vez, e a
+     fita aponta qual); aqui é `checkbox`, porque as seções são independentes e
+     ela pode querer duas abertas.
+
+     A seta é `::before` no rótulo, não um segundo elemento: um `<span>` a mais
+     no cabeçalho desalinharia o título dos outros nove quadros da casa, que já
+     nascem no mesmo x. */
+  .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+  label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
+  .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
+  .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
+  /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
+  .miolo > .quadro.estica:has(> input.abre:not(:checked)){flex:0 0 auto}
+
+  /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
+     Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
+     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e ela
+     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
+     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
+     ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
+     `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
+  .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
 
   /* seletor segmentado */
   .seg{display:flex;gap:7px;flex-wrap:wrap}
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
-    font-family:inherit;border:1px solid var(--border-forte);
+    font-family:inherit;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
+  /* O TRAVADO TINHA CARA DE CLICÁVEL — achado de 31/08. O botão nasce
+     `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
+     dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
+     opacidade mora no ancestral e cega toda régua que lê `color`. */
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
 
   /* a linha de estado: o que VALE agora */
   .estado{
@@ -192,25 +343,34 @@
   .estado .verde{color:var(--green)}
   .estado .laranja{color:var(--orange)}
 
-  /* a escada de pontes — os 5 degraus que o PS+R3 gira */
+  /* a fileira de modos do Hefesto LIGADO — cinco chips na tela.
+     O NÚMERO DA TELA NÃO É O NÚMERO DO PRODUTO, e a diferença é decisão dela
+     de 31/08: `ponte_escada.ESCADA` tem QUATRO pontes, e uma delas (Nativo)
+     saiu da fileira para virar a posição DESLIGADO do interruptor. Dos cinco
+     chips, três são degrau (DualSense, Xbox, Steam Input) e dois não são
+     (Point And Click, Navegação) — por isso o algarismo do círculo é derivado
+     de `indice_do_degrau`, e não digitado. */
   .escada{display:flex;align-items:stretch;gap:7px}
   .degrau{
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
     padding:9px 10px;border-radius:7px;
-    font-size:12.5px;border:1px solid var(--border-forte);
+    font-size:12.5px;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
   }
   .degrau i{
     font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
     width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
-    border:1px solid var(--border-forte);color:var(--comment);
+    border:1px solid var(--linha);color:var(--comment);
   }
   .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   .degrau.on{
     border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600;
   }
   .degrau.on i{border-color:var(--purple);color:var(--purple)}
-  .seta{color:var(--border-forte);font-size:13px}
+  /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
+     #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
+     `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
+  .seta{color:var(--texto-mudo);font-size:13px}
 
   /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
@@ -221,7 +381,7 @@
 
   /* ---------- a área de avisos, com espaço reservado (P8) ---------- */
   .avisos{
-    min-height:38px;border:1px solid var(--border-sutil);border-radius:9px;
+    min-height:38px;border:1px solid var(--linha);border-radius:9px;
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
     font-size:12px;
   }
@@ -242,7 +402,7 @@
   /* a peça: SVG pequeno na cor do plástico + número */
   .cartao{
     display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;
-    border:2px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
+    border:2px solid var(--linha);border-radius:7px;background:var(--app-bg);
     font-size:11.5px;color:var(--texto-suave);
   }
   /* CSS MORTO, REMOVIDO em 27/08: `.cartao.c-red` e `.cartao.c-blue` eram uma
@@ -254,34 +414,52 @@
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+  /* A COR DO BOTÃO SECUNDÁRIO MUDOU DE LUGAR — 31/08/2026: do CONTORNO para a
+     PALAVRA. O `.btn` desenhava a borda com `--comment` (4,89:1) e as três
+     variantes com o acento cheio — verde 11,5:1, vermelho 4,53:1, roxo 5,90:1.
+     Numa coluna de Iluminação são dois botões empilhados, e na Vibração outros
+     dois: quatro retângulos gritando em volta de palavras que já dizem tudo.
+     Ela: *"botão com borda ao lado de botão com borda ao lado de célula com
+     borda"*.
+     NADA DE INFORMAÇÃO SAIU: o texto de cada variante continua verde, vermelho
+     ou roxo — é ele que diz "isto liga", "isto desliga", "isto guarda". O que
+     saiu foi o contorno repetindo em 300px de perímetro o que a palavra diz em
+     sete letras. E o acento VOLTA no `:hover`, que é onde ele informa de fato:
+     o botão sob o ponteiro se acende na cor da própria ação. */
   .btn{
     padding:8px 13px;border-radius:7px;font-size:12.5px;font-family:inherit;cursor:pointer;
-    border:1px solid var(--comment);background:transparent;color:var(--texto-suave);
+    border:1px solid var(--linha);background:transparent;color:var(--texto-suave);
   }
   .btn:hover{border-color:var(--texto-suave);color:var(--fg)}
-  .btn.verde{border-color:var(--green);color:var(--green)}
-  .btn.vermelho{border-color:var(--red);color:var(--red)}
-  .btn.roxo{border-color:var(--purple);color:var(--purple)}
+  .btn.verde{color:var(--green)}
+  .btn.vermelho{color:var(--red)}
+  .btn.roxo{color:var(--purple)}
+  .btn.verde:hover{border-color:var(--green);color:var(--green)}
+  .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
+  .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
   .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
-  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--border-sutil)}
-  .sep{color:var(--border-forte);margin:0 3px}
-  .degrau.auto i{border-color:var(--cyan);color:var(--cyan)}
+  .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
+  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
-  .col-atencao{border-left:1px solid var(--border-sutil);padding-left:16px}
+  .col-atencao{border-left:1px solid var(--linha);padding-left:16px}
 
 
   /* ---------- rodapé ---------- */
   .rodape{
     display:flex;align-items:center;gap:10px;padding:12px 18px;
-    border-top:1px solid var(--border-sutil);background:var(--app-bg);
+    border-top:1px solid var(--linha);background:var(--app-bg);
   }
-  .rodape .recibo{font-size:11.5px;color:var(--comment);flex:1}
+  /* O EMPURRÃO TROCOU DE DONO. Era o `.recibo{flex:1}` que jogava os quatro
+     botões para a direita; ele saiu da barra em 30/08 (virou dica de cada botão,
+     ver `fim.html`) e sem substituto os botões cairiam para a esquerda. A margem
+     automática no primeiro faz o mesmo serviço sem um elemento vazio no DOM. */
+  .rodape .r-aplicar{margin-left:auto}
   .rodape button{
     padding:8px 15px;border-radius:7px;font-size:12.5px;font-family:inherit;
     font-weight:600;cursor:pointer;border:1px solid transparent;
@@ -304,7 +482,7 @@
   .marca{color:var(--orange)}
 
   /* ---------- os SVGs REAIS ----------
-     Logo: novo-layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
+     Logo: layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
      na âncora que fica no cabeçalho, lá embaixo — nenhuma cópia mora aqui.
      (E a âncora NÃO se escreve aqui: a primeira versão deste comentário a citou
      literal, o `str.replace(…, 1)` casou com a CITAÇÃO em vez do cabeçalho, e o
@@ -415,7 +593,7 @@
   <div class="cabecalho">
     <!-- A LOGO NÃO MORA MAIS AQUI — 30/08/2026, e a razão está medida.
          Eram 55 linhas de SVG coladas neste arquivo, e por isso eram a versão
-         VELHA: ela redesenhou o logotipo em `novo-layout/assets/hefesto-logo.svg`
+         VELHA: ela redesenhou o logotipo em `layout/assets/hefesto-logo.svg`
          (6.039 bytes, com `transform-box`/`transform-origin` no anel, a chama
          nova e a bigorna com sombra) e as dez páginas continuaram mostrando o
          desenho de antes. Pior: havia TRÊS desenhos vivos ao mesmo tempo — o

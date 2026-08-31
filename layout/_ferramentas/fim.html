@@ -1,12 +1,38 @@
   <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O recibo ENCURTA e não sai: `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e o
-         porquê está no `monta.py`, onde este arquivo é lido. -->
-    <div class="recibo"><b style="color:var(--texto-suave)">Aplicar</b> vale agora <span class="pt">•</span> <b style="color:var(--texto-suave)">Salvar Perfil</b> grava no <b style="color:var(--texto-suave)">Mortal Kombat</b></div>
-    <button class="r-aplicar">Aplicar</button>
-    <button class="r-salvar">Salvar Perfil</button>
-    <button class="r-importar">Importar</button>
-    <button class="r-exportar">Exportar</button>
+    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido dela:
+         *"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria
+         em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
+         perfil, importar e exportar. em todas as abas."*
+
+         ISTO DERRUBA A `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e de propósito. Ela
+         já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então
+         foi ENCURTAR (96 caracteres viraram 57), porque perguntada se saía do
+         mockup ou do produto ela respondeu "deixa ela encurtada tanto lá quanto no
+         mockup" — resposta sobre ONDE, lida como resposta sobre SE. Agora ela disse
+         o destino com todas as letras, e o destino não é a barra.
+
+         O QUE A DECISÃO PROTEGIA CONTINUA PROTEGIDO, e é o teste que se aplica:
+         a diferença entre APLICAR (vale agora) e SALVAR (grava no perfil), e o NOME
+         do perfil — "a informação que faltava e lhe custou semanas". As duas coisas
+         estão nas dicas abaixo, palavra por palavra. Nada se perdeu; mudou de lugar.
+
+         E O PRODUTO JÁ FAZIA ASSIM: `gui/main.glade` dá `tooltip-text` aos quatro
+         botões do rodapé (`btn_footer_apply`, `btn_footer_save_profile`,
+         `btn_footer_import`, `btn_footer_restore_default`), e
+         `tests/unit/test_o_rodape_diz_o_que_grava.py` morde exigindo isso. Era o
+         MOCKUP que duplicava a informação como texto fixo na barra. O texto de
+         Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
+
+         `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
+         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
+         num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
+         `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
+         (`aba09.py`). -->
+    <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
+    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
+    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>

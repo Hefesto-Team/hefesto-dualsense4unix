@@ -75,7 +75,7 @@ CSS = CSS_GLIFO + """
      no `auto`, e o quadro cresceu 116px além do miolo levando a fileira de botões
      para fora da janela. */
   .perfis{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;align-items:stretch;
-          border:1px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
+          border:1px solid var(--linha);border-radius:7px;background:var(--app-bg);
           overflow:hidden}
   /* `min-height:0` em cada elo: por padrão um filho de flex não encolhe abaixo do
      próprio conteúdo. Sem ele, a lista sem teto empurrou a coluna para baixo e a
@@ -86,7 +86,16 @@ CSS = CSS_GLIFO + """
 
   .perfis > div > .moldura{flex:1;min-height:0;display:flex;flex-direction:column}
   .moldura{border:none;background:none;padding:0}
-  .sec-rot{font-size:11px;color:var(--comment);text-transform:uppercase;letter-spacing:.5px;
+  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
+     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
+     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
+     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     é a forma mais difícil de ler que existe.
+     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
+     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
+     player"), então nada precisou ser reescrito. */
+  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
            margin-bottom:10px;display:flex;align-items:center;gap:6px;height:15px}
   /* A LISTA LÊ COMO TABELA: cabeçalho com fundo próprio e linhas zebradas. Quem
      diz que há mais perfis abaixo é a barra de rolagem de verdade (ver abaixo). */
@@ -96,6 +105,19 @@ CSS = CSS_GLIFO + """
      literalmente zero necessidade de não usar ele". Agora ela ocupa o que o bloco
      tem, e o bloco ocupa até o rodapé. */
   .lista{position:relative;flex:1;display:flex;min-height:0}
+  /* A ROLAGEM ENCOSTA EM LINHA INTEIRA — 30/08/2026.
+     A barra de verdade (cura de 28/08) funciona: 12px, e os 3 perfis de baixo
+     são alcançáveis. O que sobrava era a FRAÇÃO: a caixa mede 363px e a linha
+     32, então a 12ª aparecia com 11px — a faixa acima da linha de base, ou
+     seja, uma tira VAZIA. Meia linha com meio texto diz "tem mais abaixo";
+     meia linha sem texto nenhum lê como quebrada, que foi o que a medição
+     apontou.
+     `scroll-snap` não muda a altura de nada e não esconde perfil nenhum: ele só
+     faz a rolagem PARAR em fronteira de linha. `proximity` e não `mandatory` —
+     o mandatory sequestra o gesto e brigaria com a barra que ela acabou de
+     ganhar. */
+  .rolo{scroll-snap-type:y proximity}
+  .rolo tr{scroll-snap-align:start}
   /* A BARRA É A DE VERDADE, CLÁSSICA, E OCUPA ESPAÇO — a mesma cura que a 02 já
      aplicou no `.quadro-corpo`.
      O QUE ESTAVA AQUI ESCONDIA A LISTA. `.rolo` trazia `scrollbar-width:none` e
@@ -112,7 +134,14 @@ CSS = CSS_GLIFO + """
      proporção sozinha e anda junto — os estados em que a lista cabe não pagam
      nada por ela. É por isso que ela vale mais que `scrollbar-gutter:stable`,
      que reservaria a faixa em toda tela. */
-  .rolo{flex:1;overflow-y:auto;border:1px solid var(--border-sutil);border-radius:6px;
+  /* SEM MOLDURA — 31/08/2026. `.rolo` e `.campos` moram DENTRO do `.perfis`,
+     que já é uma moldura, e cada um tem o fundo `--panel` sobre o `--app-bg`
+     dela. A borda era a terceira linha do mesmo contorno, e é metade do que
+     ela chamou de *"borda dupla"*: *"os campos ... com borda dura em volta de
+     cada um, e a caixa que os contém com outra borda por fora"*. O que separa
+     os dois blocos é o fundo e o vão — que é a *"ilusão de um único bloco"*
+     que ela pediu em 27/08, e que a moldura de dentro desfazia. */
+  .rolo{flex:1;overflow-y:auto;border-radius:6px;
         background:var(--panel)}
   .rolo::-webkit-scrollbar{width:10px}
   .rolo::-webkit-scrollbar-track{background:transparent}
@@ -120,11 +149,11 @@ CSS = CSS_GLIFO + """
   .rolo::-webkit-scrollbar-thumb:hover{background:var(--comment)}
   .tab{width:100%;border-collapse:collapse;font-size:11.5px}
   .tab thead th{position:sticky;top:0;z-index:2;text-align:left;font-weight:600;font-size:10px;
-          color:var(--purple);text-transform:uppercase;letter-spacing:.6px;
+          color:var(--rot-campo);
           padding:7px 10px;background:var(--elevated);
-          border-bottom:1px solid var(--border-forte)}
+          border-bottom:1px solid var(--linha)}
   .tab td{padding:8px 10px;color:var(--texto-suave);cursor:pointer;
-          border-bottom:1px solid var(--border-sutil)}
+          border-bottom:1px solid var(--linha)}
   .tab tbody tr:nth-child(even) td{background:rgba(255,255,255,.018)}
   .tab tbody tr:last-child td{border-bottom:none}
   .tab tr.ativo td{color:var(--green);font-weight:600}
@@ -145,18 +174,40 @@ CSS = CSS_GLIFO + """
      próprio conteúdo, e a tabela de baixo levou `Duplicar · Voltar · Recarregar`
      19px além da borda do quadro — que tem `overflow:hidden`, então os três
      simplesmente sumiam da tela. Medido em 27/08, no primeiro desenho desta tabela. */
-  .campos{flex:1;min-height:0;border:1px solid var(--border-sutil);border-radius:6px;
+  .campos{flex:1;min-height:0;border-radius:6px;
           background:var(--panel);
           padding:10px 12px;display:flex;flex-direction:column;justify-content:flex-start}
   /* `flex-start` e não `center`: com a lista limitada a 236px o bloco era baixo e
      centrar não aparecia. Solto o teto, os campos passaram a flutuar no meio, com
      um vão em cima e a lista da esquerda começando bem mais acima. */
+  /* o rótulo do campo é verde e alinha à direita, como nas outras nove */
+  .campo > span:first-child{color:var(--rot-campo);font-weight:600;text-align:right}
   .campo{display:grid;grid-template-columns:var(--rot-p) 1fr;align-items:center;gap:12px;
          height:var(--h-escolha);font-size:12px;color:var(--texto-mudo);margin-bottom:4px}
+
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
+     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
+     nome da linha e a divisória entre eles tem que estar clara. pra todas as
+     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
+     A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
+     moldura do quadro já existe. */
+  /* A DIVISÓRIA SAIU DE CIMA DA BORDA DO CAMPO — 31/08/2026, e era a outra
+     metade da *"borda dupla"*. O `.campo` tem exatamente a altura do campo que
+     carrega (`--h-escolha`), então a `border-bottom` dele nascia ENCOSTADA na
+     borda de baixo do `<input>`: duas linhas de 1px a 1px uma da outra, que o
+     olho lê como um traço grosso e torto. Medido na foto, ampliada 2x.
+     Como `::after` absoluto ela cai no meio do vão de 4px — 3px livres da
+     borda do campo — e NÃO mexe em geometria nenhuma, que é o que importa numa
+     aba onde cada pixel de altura já foi medido contra o `overflow` do quadro.
+     A última não leva: separador depois do último campo vira moldura. */
+  .campos > .campo{position:relative}
+  .campos > .campo::after{content:'';position:absolute;left:0;right:0;bottom:-3px;
+                          border-bottom:1px solid var(--linha)}
+  .campos > .campo:last-of-type::after{display:none}
   .campo .val{display:flex;align-items:center;gap:10px}
   .campo input[type=text],.campo select{
     flex:1;min-width:0;height:var(--h-escolha);border-radius:7px;font-size:12.5px;font-family:inherit;
-    padding:0 11px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);
+    padding:0 11px;border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
   }
   .campo select{cursor:pointer}
   .campo select.destaque{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
@@ -180,7 +231,7 @@ CSS = CSS_GLIFO + """
      quadro novo: não é outra tela, é o resto DESTE perfil. E é LEITURA: quem
      escolhe o alvo de um ajuste é a fita, que aqui continua esmaecida. */
   .guarda{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
-          margin-top:7px;padding-top:7px;border-top:1px solid var(--border-sutil)}
+          margin-top:7px;padding-top:7px;border-top:1px solid var(--linha)}
   /* `height:100%` na tabela e as quatro linhas dividem a altura que sobra — a
      cura do vão é na ALTURA, nunca `space-between`, que ela reprovou com todas
      as letras. Aqui o vão nem chega a nascer: se sobrar espaço, ele vira altura
@@ -190,7 +241,7 @@ CSS = CSS_GLIFO + """
      que sobra do editor, e ela tem de caber INTEIRA — quatro linhas e o cabeçalho —
      sem empurrar a fileira de botões nem um pixel. Cada valor aqui foi medido
      contra o `overflow` do quadro, não escolhido. */
-  .tab.miuda thead th{padding:3px 8px;background:none;border-bottom:1px solid var(--border-sutil)}
+  .tab.miuda thead th{padding:3px 8px;background:none;border-bottom:1px solid var(--linha)}
   .tab.miuda td{padding:1px 8px;cursor:default}
   .gd-nome{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:11px}
   /* O DESENHO DE 32px SAIU, e a barrinha de plástico ficou com o trabalho.
@@ -223,7 +274,13 @@ CSS = CSS_GLIFO + """
   .gd-pecas{width:150px}
   .gd-pecas .gls{gap:11px}
   /* aceso = tem ajuste só dele · apagado = usa o do perfil, como os outros */
-  .gr{display:inline-flex;align-items:center;gap:2px;color:var(--border-forte)}
+  /* O APAGADO PASSOU DE `--border-forte` PARA `--comment` — 30/08/2026.
+     #44475a sobre o painel dá **1,56:1**: não era glifo apagado, era glifo
+     INVISÍVEL — e um estado que não se vê não comunica estado nenhum, só
+     ausência. #8896c4 dá 4,89:1 e continua nitidamente mais fosco que o
+     aceso (roxo #bd93f9 com o halo do `drop-shadow`), que é o que separa os
+     dois. Ela: *"sobe também"*. */
+  .gr{display:inline-flex;align-items:center;gap:2px;color:var(--comment)}
   .gr.on{color:var(--purple);filter:drop-shadow(0 0 4px rgba(189,147,249,.45))}
   .gr .gl{vertical-align:-3px}
   .gd-id{width:112px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;
@@ -326,18 +383,16 @@ MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo">Perfis</span>
+        <!-- A DICA DO QUADRO ENCOLHEU — 30/08/2026, pedido dela: *"olha esse tooltip
+             quilométrico. ao invés de estar tudo em Perfis deveria estar em cada
+             seção"*. Ela estava certa por dois motivos: o bloco tinha quatro
+             parágrafos e cobria meia tela ao abrir, e cada assunto dele JÁ tinha
+             dono na tela — Prioridade, Estilo de Jogo e a tabela por controle têm
+             `title` próprio, a poucos pixels de onde a pessoa está olhando.
+             Aqui fica só o que nenhum campo diz: o que É um perfil. -->
         <span class="ajuda">?<span class="dica">
           Um perfil guarda <b>tudo</b> o que você ajustou nas outras abas — gatilho, luz,
-          vibração, som, sensores e máscara — e o traz de volta quando aquele jogo abre.<br><br>
-          <b>Prioridade</b> decide quem ganha quando dois perfis poderiam entrar; o maior vence.
-          O <b>Universal</b> fica em zero, para nunca atropelar ninguém e nunca deixar o
-          controle sem nada.<br><br>
-          <b>Estilo de Jogo</b> pré-aplica um perfil inteiro: escolhe FPS e gatilho, luz,
-          vibração e máscara já vêm resolvidos. Os catorze de fábrica não se editam; o
-          <b>Personalizado</b> usa o que você ajustou nas abas.<br><br>
-          <b>E o perfil não guarda uma configuração, guarda uma por controle</b> — a tabela
-          de baixo mostra, para cada um dos seus {len(MESA)} controles, quais dos quatro
-          ajustes ele tem só para si e quais usa do perfil.
+          vibração, som, sensores e máscara — e o traz de volta quando aquele jogo abre.
         </span></span>
         <span class="conta"><span data-hef="perfis.conta">{len(PERFIS)} perfis</span> <span class="sep">·</span>
           <span data-hef="perfis.com-ajuste">{COM_AJUSTE} de {len(MESA)} controles com ajuste próprio neste perfil</span></span>
@@ -377,7 +432,7 @@ MIOLO = f'''
               </div>
               <div class="campo">
                 <span>Prioridade</span>
-                <span class="val" data-hef="editor.prioridade.dica" title="O maior vence a disputa quando dois perfis poderiam entrar.">
+                <span class="val" data-hef="editor.prioridade.dica" title="Decide quem ganha quando dois perfis poderiam entrar: o maior vence. O Universal fica em zero, para nunca atropelar ninguém e nunca deixar o controle sem nada.">
                   <span class="trilho"><span class="cheio" data-hef="editor.prioridade" style="width:90%"></span></span>
                   <span class="n" data-hef="editor.prioridade.n">90</span>
                 </span>
@@ -396,7 +451,7 @@ MIOLO = f'''
                 </span>
               </div>
               <div class="campo">
-                <span>Estilo de Jogo</span>
+                <span title="Pré-aplica um perfil inteiro: escolhendo FPS, o gatilho, a luz, a vibração e a máscara já vêm resolvidos. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo">
 {opts(ESTILOS, "Luta")}
                 </select></span>
@@ -405,7 +460,7 @@ MIOLO = f'''
               <div class="guarda">
                 <table class="tab miuda">
                   <thead><tr>
-                    <th>Controle</th>
+                    <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada um da mesa, quais ajustes ele tem só para si e quais usa do perfil.">Controle</th>
                     <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os quatro ajustes que o perfil sabe guardar por controle — luz, gatilhos, vibração e alto-falante.">Ajuste próprio</th>
                     <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
                   </tr></thead>

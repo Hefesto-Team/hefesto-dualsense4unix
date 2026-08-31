@@ -55,7 +55,45 @@ CSS = CSS_GLIFO + """
      legenda da aba cita a altura da coluna e a altura de uma barra, e um número
      digitado no CSS mais outro digitado no texto são duas verdades que acabam
      divergindo. Lá elas são UMA, e a conta da coluna é a soma delas. */
+  /* COLUNA COLADA, RESPIRO NA CÉLULA — 30/08/2026, mesma cura da Iluminação e da
+     Vibração. Com `column-gap:12px` a linha separadora quebrava quatro vezes e o
+     olho lia tracinhos; com o vão em zero e o padding nas células ela atravessa a
+     grade inteira, cortada só pela barra vertical de 1px entre blocos. */
   .duas-colunas{display:grid;grid-template-columns:128px repeat(4,1fr);gap:0 12px}
+
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
+     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
+     nome da linha e a divisória entre eles tem que estar clara. pra todas as
+     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
+     A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
+     moldura do quadro já existe. */
+  /* A LINHA É UM PSEUDO-ELEMENTO, e não a borda da célula — 30/08/2026.
+     Como BORDA ela parava no padding da coluna e quebrava em cinco tracinhos;
+     movendo o padding para as células a linha ficou inteira mas o desenho do
+     controle perdeu 9px (a moldura tem `overflow:hidden` e o SVG cresce com a
+     largura). O `::after` com margem negativa resolve os dois: ele sai do
+     padding pelos dois lados e atravessa a coluna inteira, sem tocar em
+     geometria nenhuma. As cinco colunas têm as mesmas alturas de linha, então
+     os cinco segmentos nascem no mesmo y e leem como uma linha só. */
+  .duas-colunas > div > *{position:relative}
+  /* A LINHA É `::before` DA CÉLULA DE BAIXO, e não `::after` da de cima.
+     Como `::after` ela era filha da moldura — e a moldura do DESENHO tem
+     `overflow:hidden` para conter o SVG, então ela cortava a própria linha
+     24px antes da divisa. A célula de baixo não recorta nada, e o traço
+     cai no mesmo lugar: entre uma linha e a outra. */
+  .duas-colunas > div > *::before{content:'';position:absolute;top:0;height:0;
+    left:-13px;right:-12px;border-top:1px solid var(--rot-linha)}
+  /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
+     `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
+     12 de padding + 12 de gap = 24; a ÚLTIMA coluna não tem vão depois
+     dela, então volta a 12. A coluna de rótulos não tem padding: 0 e 12. */
+  .duas-colunas > div:not(:last-child) > *::before{right:-24px}
+  .duas-colunas > .rotulos > *::before{left:0;right:-12px}
+  .duas-colunas > div > *:first-child::before,
+  .duas-colunas > div > .vao-l2-r2::before{display:none}
+  /* o `.sep-linha` (um elemento de 1px entre os blocos L2 e R2) SAIU: com a borda
+     de célula acima ele desenhava a SEGUNDA linha, 10px abaixo da primeira. */
+
   .duas-colunas > div{
     display:grid;row-gap:var(--r-passo);
     grid-template-rows:var(--r-nome) var(--r-modo) var(--r-pronto) var(--r-aj-e)
@@ -64,20 +102,40 @@ CSS = CSS_GLIFO + """
   }
   /* a barra vertical entre blocos irmãos — pedido dela. Ela mora na COLUNA do
      controle, e não na de rótulos: é o rótulo que serve as quatro. */
-  .duas-colunas .ctrl{border-left:1px solid var(--border-sutil);padding-left:13px}
+  .duas-colunas .ctrl{border-left:1px solid var(--linha);padding:0 12px 0 13px}
   /* O RÓTULO OCUPA A ALTURA INTEIRA DA SUA LINHA, e o texto fica centrado
      dentro dele. Sem isto o rótulo da última linha acaba acima dos botões que
      ele nomeia, e a régua lê — com razão — um vão entre as colunas. */
   .duas-colunas .rotulos > *{display:flex;flex-direction:column;justify-content:center}
+  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido dela: *"no nome das
+     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
+     perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
+     toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
+     lista solta e passar a ler como cabeçalho de linha. */
+  .duas-colunas .rotulos > *{align-items:flex-end;text-align:right}
+  .duas-colunas .rotulos .sec-rot{justify-content:flex-end}
   .duas-colunas .rotulos > * > *{flex:1;display:flex;align-items:center}
-  .sec-rot{font-size:11px;color:var(--comment);text-transform:uppercase;
-           letter-spacing:.5px;gap:7px}
+  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
+     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
+     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
+     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     é a forma mais difícil de ler que existe.
+     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
+     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
+     player"), então nada precisou ser reescrito. */
+  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
+           gap:7px}
   /* O RÓTULO DE UMA LISTA FICA NA LINHA DO PRIMEIRO ITEM, e não no meio da
      caixa. Centrado, o "Ajustes" caía entre a segunda e a terceira barra do P1 e
      ABAIXO da última barra do P3 — nomeava de baixo uma lista que começa em
      cima. Os 5px são o que põe a linha de 11px no centro da primeira barra
      (82px / 4 = 20,5px de altura por barra). */
-  .duas-colunas .rotulos .no-topo > *{align-items:flex-start;padding-top:5px}
+  /* O `.no-topo` SAIU — 30/08/2026, pedido dela: *"centraliza os nomes dentro
+     das distâncias verticais de cada linha"*. Ele prendia "Ajustes" no alto de
+     uma célula de 92px, e o nome ficava a 40px do conteúdo que nomeia. Com o
+     centro, ele cai na altura do bloco — e é a mesma regra que as outras seis
+     linhas da coluna já seguiam. */
   /* "GATILHO / ESQUERDO" em duas linhas: com o glifo de 36px ao lado, a palavra
      inteira numa linha só pediria 154px de coluna de rótulo, e sobrariam 218px
      por controle — 2px a menos do que o efeito pronto mais longo precisa. */
@@ -90,7 +148,6 @@ CSS = CSS_GLIFO + """
      "Meus efeitos"). Visto no navegador, 28/08. */
   .duas-colunas .rotulos .legenda{display:block;font-size:10.5px;line-height:1.4;
     color:var(--comment);text-transform:none;letter-spacing:0;padding-top:2px}
-  .sep-linha{background:var(--border-sutil)}
 
   /* O CHIP DO CONTROLE é o mesmo chip da fita, com a borda na cor do plástico —
      é como ela sabe de quem é a coluna (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). Ele
@@ -106,7 +163,7 @@ CSS = CSS_GLIFO + """
      19 descrições no `title` de cada opção: nenhum modo e nenhuma frase saiu. */
   select.modo,select.pronto{
     width:100%;padding:0 9px;border-radius:6px;font-size:11.5px;
-    font-family:inherit;border:1px solid var(--border-forte);
+    font-family:inherit;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-suave);cursor:pointer;
     height:var(--h-escolha);
   }
@@ -269,7 +326,15 @@ def coluna(c):
           <div><span class="chip plastico" style="--plastico:{cor_da_zona(c['cor'])}"
                      title="{c["nome"]} — a borda é a cor do plástico">{rot}</span></div>
 {esq}
-          <div class="sep-linha"></div>
+<!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
+               1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
+               em `.duas-colunas > div`). Tirei-o em 30/08 pensando que era só um
+               traço, e "Gatilho direito" caiu nessa trilha e nasceu com **1px de
+               altura** — as cinco colunas saíram de registro e as divisórias
+               passaram a cortar o conteúdo de P3 e P4 no meio. O traço VISÍVEL
+               agora vem da borda de célula (`--rot-linha`); esta célula só guarda
+               o lugar, e por isso não leva borda. -->
+          <div class="vao-l2-r2"></div>
 {dire}
           <div><button class="btn roxo">Guardar esse efeito</button></div>
         </div>'''
@@ -311,16 +376,44 @@ CSS_DA_CENA = f"""
   .ajustes.d{{grid-template-rows:repeat({N_DIR},1fr)}}
 """
 
+# O GLIFO ANTES DA PALAVRA, e é a gramática das vizinhas: a `aba08` escreve
+# `{glifo("mic", tam=16)} Microfone e botões`, a `aba06` monta `glifo + nome` no
+# `_um()`, e a `aba02` põe o glifo sozinho no botão. Aqui é o mesmo molde, com o
+# `<title>` do SVG dizendo o nome da peça (L2 / R2) — nunca um `title=` no
+# `<svg>`, que o navegador ignora (`monta.glifo`, docstring).
+#
+# ELES JÁ TINHAM SIDO ESCRITOS, E CAÍRAM CALADOS. Estavam nestas duas linhas até
+# 48b4e1a2; a leva das divisórias de 30/08 reescreveu o bloco `ROTULOS` inteiro e
+# levou os dois `glifo()` junto — sem nota, sem pedido, e com a legenda da aba
+# continuando a prometê-los ("Os glifos são os do mapa"). Sobreviveram o `GL = 36`
+# com a conta paga e o `import glifo` na linha 9, os dois sem um único chamador:
+# é a assinatura do `a-casa-sabe-e-o-produto-nao-faz`. Devolvidos em 31/08/2026,
+# a pedido dela: *"abas como gatilhos tinhamos os svgs do r2 e l2, isso tem que
+# voltar."*
+#
+# CUSTO DE ALTURA: ZERO, e é medido. As nove trilhas de `.duas-colunas > div`
+# são px FIXOS (`grid-template-rows`), então o glifo de 36px entra na trilha
+# `--r-modo`, que também é 36px — a coluna continua em ALT_COLUNA px e o miolo
+# não rola. Quem cresce é a LARGURA da coluna de rótulos, e ela já foi paga: os
+# 128px do `grid-template-columns` e o "Gatilho / esquerdo" em duas linhas
+# existem por causa deste glifo — está escrito no comentário do `.sec-rot .duas`.
 ROTULOS = f'''        <div class="rotulos">
           <div><span class="sec-rot">Controle</span></div>
           <div><span class="sec-rot">{glifo("l2", tam=GL)}<span class="duas">Gatilho<br>esquerdo</span></span></div>
           <div><span class="sec-rot">Efeito pronto</span></div>
           <div class="no-topo"><span class="sec-rot">Ajustes</span></div>
-          <div class="sep-linha"></div>
+<!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
+               1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
+               em `.duas-colunas > div`). Tirei-o em 30/08 pensando que era só um
+               traço, e "Gatilho direito" caiu nessa trilha e nasceu com **1px de
+               altura** — as cinco colunas saíram de registro e as divisórias
+               passaram a cortar o conteúdo de P3 e P4 no meio. O traço VISÍVEL
+               agora vem da borda de célula (`--rot-linha`); esta célula só guarda
+               o lugar, e por isso não leva borda. -->
+          <div class="vao-l2-r2"></div>
           <div><span class="sec-rot">{glifo("r2", tam=GL)}<span class="duas">Gatilho<br>direito</span></span></div>
           <div><span class="sec-rot">Efeito pronto</span></div>
           <div class="no-topo"><span class="sec-rot">Ajustes</span></div>
-          <div><span class="legenda">Guarda o par L2+R2 em <b>Meus efeitos</b>.</span></div>
         </div>'''
 
 MIOLO = f'''
@@ -336,8 +429,8 @@ MIOLO = f'''
           quem está com ele na mão sente na hora.<br><br>
           <b>A descrição de cada modo está na lista</b> — passe o mouse por ela antes de soltar
           o botão, porque soltar já manda.<br><br>
-          <b>O controle não responde de volta.</b> O protocolo não tem canal de leitura de gatilho:
-          esta tela diz o que o Hefesto <b>escreveu</b>, nunca o que o aparelho confirmou.
+          <b>Esta tela mostra o que o Hefesto escreveu no gatilho.</b> A confirmação é o que
+          você sente na mão — é assim que se prova um efeito adaptativo.
         </span></span>
       </div>
       <div class="quadro-corpo">

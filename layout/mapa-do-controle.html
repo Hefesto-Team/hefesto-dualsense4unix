@@ -162,7 +162,7 @@
      conteúdo cai de 864 para 832 px, cabe nas duas colunas, e a página fecha
      com ZERO de rolagem (era 12 px). */
   .grupo + .grupo{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-sutil)}
-  .grupo-rot{font-size:10.5px;color:var(--comment);text-transform:uppercase;
+  .grupo-rot{font-size:10.5px;color:var(--comment);
               letter-spacing:.6px;margin-bottom:6px}
   .item{display:flex;align-items:center;gap:11px;padding:4px 9px;border-radius:7px;
          border:1px solid transparent;color:var(--texto-suave);cursor:default}
@@ -174,7 +174,7 @@
   .item .ap{font-size:11px;color:var(--texto-mudo)}
   .item .id{margin-left:auto;font-size:10.5px;color:var(--texto-mudo)}
   .item .prop{font-size:9.5px;color:var(--orange);border:1px solid var(--orange);
-               border-radius:4px;padding:0 4px;text-transform:uppercase;letter-spacing:.4px}
+               border-radius:4px;padding:0 4px;}
   .nota-peca{flex:0 0 15px;width:15px;height:15px;border-radius:50%;font-size:10px;
               line-height:13px;text-align:center;border:1px solid var(--border-forte);
               color:var(--texto-mudo);cursor:help;font-family:var(--m)}
@@ -190,7 +190,7 @@
   /* O RÓTULO DOS TRÊS BLOCOS COMEÇA NO MESMO x, e os três terminam no mesmo y.
      O vão se cura na ALTURA — os controles têm todos 28px —, nunca com
      `space-between` entre eles: ela reprovou isso com todas as letras. */
-  .prova-rot{font-size:10.5px;color:var(--comment);text-transform:uppercase;
+  .prova-rot{font-size:10.5px;color:var(--comment);
               letter-spacing:.6px;line-height:1}
   .prova .linha{display:flex;gap:6px;align-items:center}
   .ct{height:28px;background:var(--elevated);color:var(--fg);
@@ -211,6 +211,19 @@
   .rodape{padding:12px 20px;border-top:1px solid var(--border-sutil);
            font-size:11.5px;color:var(--texto-mudo);display:flex;gap:22px;flex-wrap:wrap}
   .rodape b{color:var(--texto-suave)}
+  /* O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: *"ok temos um botão pra vir
+     pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
+     devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
+     mockup abre como ARQUIVO, onde nem sempre há um.
+     O destino não é chute: `grep -l mapa-do-controle.html layout/*.html`
+     devolve UMA aba, a Navegação. Cada mapa tem uma origem só. */
+  .voltar{position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
+           padding:5px 11px;border-radius:7px;text-decoration:none;
+           border:1px solid var(--border-forte);background:var(--panel);
+           color:var(--texto-suave);font-size:12px}
+  .voltar:hover{border-color:var(--purple);color:var(--fg)}
+  .topo{position:relative;padding-left:132px}
+
 
   .mapa:has(.item-triangle:hover) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-triangle:hover) .s-triangle{color:var(--fg) !important;opacity:1}
@@ -356,6 +369,7 @@
 
 <div class="cx">
   <div class="topo">
+    <a class="voltar" href="06-navegacao.html" title="Volta para a aba Navegação, que é de onde este mapa se abre.">← Voltar</a>
     <h1><span class="p">O mapa do controle</span> — a fonte da verdade das peças</h1>
     <div class="sub">passe o mouse num glifo e a peça acende no desenho · passe na peça e o glifo acende</div>
   </div>
@@ -828,7 +842,7 @@
   </g>
   <g id="mp-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>CENTRO</title>
-    <g id="mp-touchpad" class="z-touch" data-entrada="touchpad" data-feature="touchpad" style="filter: url(&quot;#outline-filter-1&quot;);" transform="matrix(1.001104, 0, 0, 1, -0.095276, 0)">
+    <g id="mp-touchpad" class="z-touch" data-entrada="touchpad" data-feature="touchpad" style="filter: url(&quot;#mp-outline-filter-1&quot;);" transform="matrix(1.001104, 0, 0, 1, -0.095276, 0)">
       <title>Touchpad</title>
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 46.88 28.593 C 51.286 27.585 60.03 27.088 64.869 27.088 C 69.922 27.088 76.626 27.388 81.892 28.593 C 84.132 29.105 85.332 29.955 85.883 31.041 C 86.42 32.1 86.264 33.255 86.142 34.131 C 85.658 37.616 84.982 41.794 84.21 46.56 L 84.208 46.574 C 83.804 49.063 82.786 50.798 81.445 51.908 C 80.109 53.014 78.493 53.463 76.951 53.463 L 50.855 53.463 C 48.838 53.463 47.274 52.944 46.141 52.053 C 45.007 51.16 44.347 49.927 44.085 48.58 C 43.58 45.984 42.85 41.844 42.029 37.195 L 41.667 35.145 C 41.253 32.806 41.617 31.292 42.687 30.292 C 43.201 29.812 43.843 29.484 44.549 29.23 C 45.252 28.975 46.048 28.783 46.88 28.593 M 64.869 28.103 C 60.045 28.103 51.391 28.6 47.098 29.583 C 46.263 29.773 45.521 29.954 44.88 30.185 C 44.241 30.416 43.736 30.687 43.358 31.039 C 42.647 31.705 42.262 32.792 42.646 34.965 L 43.008 37.015 C 43.829 41.666 44.558 45.796 45.061 48.382 C 45.282 49.521 45.83 50.525 46.749 51.25 C 47.67 51.974 49.006 52.449 50.855 52.449 L 59.826 52.449 L 76.951 52.449 C 78.308 52.449 79.69 52.053 80.818 51.12 C 81.942 50.19 82.856 48.693 83.225 46.409 L 83.227 46.405 C 84 41.631 84.675 37.462 85.157 33.988 C 85.284 33.072 85.371 32.238 85 31.508 C 84.643 30.804 83.784 30.064 81.675 29.583 C 76.52 28.404 69.905 28.103 64.869 28.103" style="stroke-width: 1.97183px;"/>
     </g>
@@ -988,28 +1002,28 @@
     <title>LUZES</title>
     <g id="mp-lightbar" data-feature="lightbar" data-posicao="ladeia-o-touchpad" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
       <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
-      <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;)" fill="#3a3f4b">
+      <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#3a3f4b">
         <title>Lightbar — tira esquerda</title>
       </path>
-      <path class="peca" fill-rule="evenodd" d="M 86.239 29.327 L 86.562 30.327 L 86.627 31.327 L 86.597 32.327 L 86.477 33.327 L 86.333 34.327 L 86.193 35.327 L 86.042 36.327 L 85.888 37.327 L 85.741 38.327 L 85.583 39.327 L 85.432 40.327 L 85.271 41.327 L 85.11 42.327 L 84.956 43.327 L 84.794 44.327 L 84.64 45.327 L 84.437 46.327 L 84.141 47.327 L 83.715 48.327 L 83.128 49.327 L 81.972 49.327 L 82.559 48.327 L 82.985 47.327 L 83.281 46.327 L 83.484 45.327 L 83.638 44.327 L 83.8 43.327 L 83.954 42.327 L 84.115 41.327 L 84.276 40.327 L 84.427 39.327 L 84.585 38.327 L 84.732 37.327 L 84.886 36.327 L 85.037 35.327 L 85.177 34.327 L 85.321 33.327 L 85.441 32.327 L 85.471 31.327 L 85.406 30.327 L 85.083 29.327 L 86.239 29.327 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;)" fill="#3a3f4b">
+      <path class="peca" fill-rule="evenodd" d="M 86.239 29.327 L 86.562 30.327 L 86.627 31.327 L 86.597 32.327 L 86.477 33.327 L 86.333 34.327 L 86.193 35.327 L 86.042 36.327 L 85.888 37.327 L 85.741 38.327 L 85.583 39.327 L 85.432 40.327 L 85.271 41.327 L 85.11 42.327 L 84.956 43.327 L 84.794 44.327 L 84.64 45.327 L 84.437 46.327 L 84.141 47.327 L 83.715 48.327 L 83.128 49.327 L 81.972 49.327 L 82.559 48.327 L 82.985 47.327 L 83.281 46.327 L 83.484 45.327 L 83.638 44.327 L 83.8 43.327 L 83.954 42.327 L 84.115 41.327 L 84.276 40.327 L 84.427 39.327 L 84.585 38.327 L 84.732 37.327 L 84.886 36.327 L 85.037 35.327 L 85.177 34.327 L 85.321 33.327 L 85.441 32.327 L 85.471 31.327 L 85.406 30.327 L 85.083 29.327 L 86.239 29.327 Z" style="stroke-width: 2.03409px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#3a3f4b">
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    <g id="mp-led-jogador" data-feature="led-jogador" style="filter: url(&quot;#outline-filter-0&quot;)" transform="matrix(1, 0, 0, 0.625399, 0, 19.636679)">
+    <g id="mp-led-jogador" data-feature="led-jogador" style="filter: url(&quot;#mp-outline-filter-0&quot;)" transform="matrix(1, 0, 0, 0.625399, 0, 19.636679)">
       <title>Indicador de jogador (cinco lâmpadas: 1, vão, 3, vão, 1)</title>
-      <rect class="peca" id="mp-led-jogador-1" x="56.3" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;)" fill="#c9ced8">
+      <rect class="peca" id="mp-led-jogador-1" x="56.3" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
         <title>Indicador de jogador — lâmpada 1 (sozinha, à esquerda)</title>
       </rect>
-      <rect class="peca" id="mp-led-jogador-2" x="60.6" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;)" fill="#c9ced8">
+      <rect class="peca" id="mp-led-jogador-2" x="60.6" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
         <title>Indicador de jogador — lâmpada 2</title>
       </rect>
-      <rect class="peca" id="mp-led-jogador-3" x="63.0" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;)" fill="#c9ced8">
+      <rect class="peca" id="mp-led-jogador-3" x="63.0" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
         <title>Indicador de jogador — lâmpada 3 (a do meio)</title>
       </rect>
-      <rect class="peca" id="mp-led-jogador-4" x="65.4" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;)" fill="#c9ced8">
+      <rect class="peca" id="mp-led-jogador-4" x="65.4" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
         <title>Indicador de jogador — lâmpada 4</title>
       </rect>
-      <rect class="peca" id="mp-led-jogador-5" x="69.7" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;)" fill="#c9ced8">
+      <rect class="peca" id="mp-led-jogador-5" x="69.7" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#c9ced8">
         <title>Indicador de jogador — lâmpada 5 (sozinha, à direita)</title>
       </rect>
     </g>

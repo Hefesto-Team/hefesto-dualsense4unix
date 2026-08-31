@@ -1,5 +1,6 @@
 import ast
 import pathlib
+import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -35,12 +36,26 @@ NOS = 2 * N + N
 #: número de FOTO: mexeu no miolo, meça de novo antes de repetir a frase.
 #: O miolo desta janela tem `MIOLO_H` de altura útil; o conteúdo da aba mede
 #: `ALTURA`. Enquanto `ALTURA <= MIOLO_H`, nada rola por dentro e nada é fatiado.
-MIOLO_H, ALTURA = 542, 540
+MIOLO_H, ALTURA = 544, 542
 
 
 def _lista(nomes):
     """`a`, `b` e `c` — em português, com "e" antes do último."""
     return nomes[0] if len(nomes) == 1 else f"{', '.join(nomes[:-1])} e {nomes[-1]}"
+
+
+def _frase(nomes):
+    """A mesma lista, em CAIXA DE FRASE: só a primeira letra é maiúscula.
+
+    Regra dela, 30/08: *"a maiúscula a regra é sobre a primeira letra a ser
+    capitalizada"*. `LINHAS_DO_TETO` guarda cada nome capitalizado porque lá
+    cada um é um TÍTULO de linha; enroladas num valor de campo só, elas viram
+    uma frase — e "Gatilhos, Barra de luz e Giroscópio" tem três maiúsculas no
+    meio de uma. Nenhum dos nomes é próprio, caminho ou sigla, então nenhum
+    perde forma ao descer. Derivado, nunca digitado: o dono continua sendo o
+    produto.
+    """
+    return _lista([nomes[0]] + [n[0].lower() + n[1:] for n in nomes[1:]])
 
 
 # ---------------------------------------------------------------------------
@@ -240,7 +255,16 @@ CSS = """
   .avancado{display:grid;grid-template-columns:246px 1px 1fr;gap:0 20px;align-items:stretch}
   .risco{background:var(--border-sutil)}
 
-  .sec-rot{font-size:11px;color:var(--comment);text-transform:uppercase;letter-spacing:.5px;
+  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
+     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
+     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
+     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
+     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
+     é a forma mais difícil de ler que existe.
+     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
+     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
+     player"), então nada precisou ser reescrito. */
+  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
            margin-bottom:5px;height:17px;display:grid;gap:0 20px;align-items:center}
   .sec-rot > span{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
   .sec-rot .ajuda{text-transform:none;letter-spacing:0}
@@ -268,7 +292,18 @@ CSS = """
   /* a linha de estado: glifo E cor mudam juntos — quem não distingue verde de
      laranja continua lendo o estado pelo símbolo. Antes "ok" e "aviso" usavam o MESMO ●. */
   .est{display:flex;align-items:center;gap:8px;height:30px;font-size:11.5px;color:var(--texto-mudo)}
-  .est .rot{flex:0 0 170px;white-space:nowrap}
+
+  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
+     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
+     nome da linha e a divisória entre eles tem que estar clara. pra todas as
+     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
+     A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
+     moldura do quadro já existe. */
+  .est{border-bottom:1px solid var(--rot-linha)}
+  .col-est .est:last-child, .bat .est:last-child{border-bottom:0}
+  /* custo de layout ZERO: `box-sizing:border-box` põe a borda dentro dos 30px. */
+
+  .est .rot{flex:0 0 170px;white-space:nowrap;color:var(--rot-campo);font-weight:600}
   .est .val{color:var(--fg);font-weight:600;white-space:nowrap}
   .est .g{flex:0 0 14px;text-align:center;font-size:11px;font-weight:700}
   .est.ok .g{color:var(--green)} .est.ok .val{color:var(--green)}
@@ -318,15 +353,13 @@ CSS = """
      borda do bloco — como os quatro botões do irmão, que também vão de ponta a
      ponta da coluna deles. É a régua dela de 27/08: colunas terminando juntas. */
   .est select.pronto{flex:1;min-width:0}
-  /* A FRASE: o que o perfil escolhido impõe, e o que o teto ainda não alcança.
-     Ela não é decoração de vão — é o que impede a tela de prometer teto sobre
-     coisa que ninguém limita, que é a razão escrita do `alcance_de_hoje()` no
-     produto: *"silêncio, nesta tela, seria lido como «o teto vale para tudo»"*.
-     `margin-top:auto` gruda a frase no pé do bloco, e não `space-between`: o
-     que ela pediu é que os blocos ACABEM juntos. */
-  .bat .frase{margin-top:auto;font-size:11.5px;line-height:1.55;color:var(--texto-mudo);
-              border-top:1px solid var(--border-sutil);padding-top:9px}
-  .bat .frase b{color:var(--texto-suave);font-weight:600}
+  /* A `.frase` SAIU do CSS junto com o parágrafo que ela vestia (31/08/2026).
+     O que ela dizia — onde o teto age e onde ainda não age — continua na tela,
+     como duas linhas de estado: é a razão do `alcance_de_hoje()` no produto
+     (*"silêncio, nesta tela, seria lido como «o teto vale para tudo»"*) dita em
+     dado, não em prosa. Regra deixada para quem vier: um bloco desta aba ACABA
+     onde o irmão acaba, e a cura do vão é conteúdo em altura — nunca
+     `space-between`, nunca linha esticada. */
 
   /* a saúde: selo curto + veredito; o "o que eu vi / por que importa / o que fazer"
      mora na dica (D-TUDO-QUE-EXPLICA-VIRA-DICA). O selo carrega GLIFO e cor.
@@ -339,7 +372,7 @@ CSS = """
   .selo .sg{margin-right:4px;font-weight:700}
   .selo.ok{background:var(--green);color:var(--app-bg)}
   .selo.aviso{background:var(--orange);color:var(--app-bg)}
-  .selo.nt{background:var(--comment);color:var(--fg)}
+  .selo.nt{background:var(--comment);color:var(--app-bg)}
   .saude .txt{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
   .saude .txt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* ---------------------------------------------------------------------
@@ -530,9 +563,7 @@ D_BATERIA = ('<span class="ajuda">?<span class="dica">'
              'continuam mandando no que fazem — nenhum ajuste seu é apagado.<br><br>'
              + _LINHAS_DA_DICA +
              '<br>É o perfil da <b>mesa</b>: vale para os '
-             f'{N} controles. Cada um pode sobrepô-lo na linha dele.<br><br>'
-             f'Hoje o teto alcança <b>{_lista(ALCANCA)}</b> e nada mais. '
-             f'{_lista(PENDENTES)} entram quando ganharem por onde ser limitados.'
+             f'{N} controles. Cada um pode sobrepô-lo na linha dele.'
              '</span></span>')
 
 D_EXAME = ('<span class="ajuda">?<span class="dica">'
@@ -602,18 +633,32 @@ MIOLO = f'''
             </div>
 {est("O que ele impõe", impoe(PERFIL_DA_MESA), "info", "◆", dica="O que este perfil limita hoje, na mesa inteira. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela.", ident=_id("bateria-impoe"))}
 {est("Vale para", f"Os {N} controles", "info", "◆", dica="É o teto da MESA. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo.", ident=_id("bateria-vale-para"))}
-            <!-- A FRASE TEM DUAS LINHAS DE ORÇAMENTO, e o número é medido:
-                 36 (o seletor) + 30 + 30 das linhas de estado deixam 58px para
-                 ela num bloco de 154, e cada linha custa 17,8 (11,5px × 1,55)
-                 mais 10 de risco e respiro. Com TRÊS linhas o bloco vai a 159,4,
-                 o irmão estica junto e o miolo passa a rolar 3px por dentro —
-                 medido nesta rodada, e é o defeito dos 93px escondidos em
-                 miniatura. Encurtar o texto é a cura; esconder o que sobra não. -->
-            <div class="frase" data-id="{_id("bateria-frase")}">
-              <b>{ROT_PERFIL[_SO_ESTE]}</b> é o único que põe teto — {forca_do_perfil(_SO_ESTE)} —
-              e alcança {_lista(ALCANCA)} e nada mais. {_lista(PENDENTES)} não têm
-              por onde ser limitados.
-            </div>
+{est("O teto alcança", _frase(ALCANCA), "info", "◆", dica="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela.")}
+{est("Ainda sem teto", _frase(PENDENTES), "info", "◆", dica="O perfil ainda não tem por onde limitar estes. Cada um entra quando ganhar ponto de aplicação no daemon, e some daqui sozinho.")}
+            <!-- O VÃO DE 58px, E POR QUE ELE ERA O DEFEITO — 31/08/2026.
+                 Palavra dela: *"aqui em perfil da bateria essa seção tá muito feia
+                 e distoante do resto da página, tá destacando negativamente"*.
+
+                 MEDIDO no Chrome antes de mexer: o bloco tem 154px (a altura vem
+                 do irmão, "O Hefesto", que soma 4 botões de 34 + 3 vãos de 6), e o
+                 conteúdo daqui tinha 96 — 36 do seletor + 30 + 30. Sobravam **58px
+                 de painel vazio**, o único vão da aba: as outras cinco colunas
+                 desta página são engenhadas para ACABAR NO MESMO y (4 achados de
+                 25,5 = 3 botões de 34 = 102; 3 botões de 34 + 2 vãos = o log de
+                 110). Esta era a única que não acabava com a irmã, e por isso era
+                 a única que destoava.
+
+                 O vão nasceu em 30/08, quando a `.frase` que o preenchia saiu por
+                 repetir a dica. Tirar o texto estava certo; deixar o buraco, não —
+                 e o buraco é o que ela viu no dia seguinte.
+
+                 A CURA NÃO É DEVOLVER A PROSA. O que a frase dizia vira DADO, na
+                 mesma gramática do resto da página (rótulo → valor): duas linhas
+                 de estado de 30px. 36 + 30×4 = 156, e o irmão estica 2px junto.
+                 Medido depois: vão 0, e o miolo ainda não rola (sobram 2px).
+                 E a dica perdeu o parágrafo que estas duas linhas passaram a
+                 dizer — na conta final a tela tem MENOS texto que em 29/08, não
+                 mais. -->
           </div>
 
         </div>
@@ -715,7 +760,7 @@ LEGENDA = f'''<div class="nota">
       errado: o produto já chama a chave de <code>PERFIL_BATERIA_LONGA</code>
       (<code>secao_orcamento.py:127</code>), e a <code>D-PERFIL-DE-DESEMPENHO</code> registra que o
       perfil <i>"decide o que custa BATERIA"</i>.</li>
-    <li><b>O bloco herdou a medida do irmão, e está medido:</b> <b>535,5 × 154px</b>, o mesmo
+    <li><b>O bloco herdou a medida do irmão, e está medido:</b> <b>535,5 × 156px</b>, o mesmo
       <i>x</i>, <i>y</i>, largura e altura do bloco "O Hefesto" — que é o que ela pediu em 27/08
       (<i>"Altura e largura dos blocos O Hefesto e Gamepad virtual são iguais"</i>). O miolo
       continua em <b>{MIOLO_H}px sem rolar nada</b>.</li>
@@ -728,12 +773,22 @@ LEGENDA = f'''<div class="nota">
       era literal.</li>
     <li><b>A leitura "Sem teto" NÃO veio junto</b> (<code>D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES</code>):
       ela mandou tirá-la dos dois lugares da Conexões, e trazer o campo para cá seria fazê-lo
-      renascer numa terceira tela. Veio o seletor. A frase que sobrou não afirma teto onde não há —
-      diz <i>"{impoe_texto}"</i> e nomeia as quatro coisas que o teto ainda não alcança, que é a
-      razão escrita do <code>alcance_de_hoje()</code> no produto: <i>"silêncio, nesta tela, seria
-      lido como «o teto vale para tudo»"</i>.</li>
+      renascer numa terceira tela. Veio o seletor. A tela não afirma teto onde não há — diz
+      <i>"{impoe_texto}"</i> e <b>nomeia em duas linhas</b> onde o teto age e onde ainda não age,
+      que é a razão escrita do <code>alcance_de_hoje()</code> no produto: <i>"silêncio, nesta
+      tela, seria lido como «o teto vale para tudo»"</i>.</li>
     <li><b>Duas minúsculas sumiram sozinhas:</b> <i>os seus</i> e <i>um por jogador</i> eram os
       rótulos da cadeia, e foram embora com ela.</li>
+    <li><b>O vão de 58px, e a régua que nasceu dele — 31/08/2026.</b> Palavra dela: <i>"aqui em
+      perfil da bateria essa seção tá muito feia e distoante do resto da página, tá destacando
+      negativamente"</i>. O bloco tinha <b>96px de conteúdo em 154</b> — o único vão da aba, num
+      lugar onde as outras duas faixas são engenhadas para acabar no mesmo <i>y</i>. Ele nasceu em
+      30/08, quando a <code>.frase</code> saiu por repetir a dica: tirar o texto estava certo,
+      deixar o buraco não. O que a frase dizia virou <b>duas linhas de estado</b> — a gramática do
+      resto da página —, e a dica perdeu o parágrafo que elas passaram a dizer: <b>menos texto na
+      tela que em 29/08, não mais</b>. Agora há portão no gerador: ele lê as quatro alturas do CSS
+      e do esqueleto, conta as linhas dos dois blocos e <b>reprova em voz alta</b> quando eles
+      deixam de acabar juntos — <code>96px … 58px de painel vazio</code>, com a cura arrancada.</li>
   </ul>
 
   <h2>A regra da maiúscula, escrita para as outras abas seguirem</h2>
@@ -812,6 +867,74 @@ LEGENDA = f'''<div class="nota">
 </body>
 </html>
 '''
+
+# ---------------------------------------------------------------------------
+# O PORTÃO DOS DOIS BLOCOS DA PRIMEIRA FAIXA — 31/08/2026.
+#
+# Ele existe porque o defeito que ela apontou hoje era INVISÍVEL para toda régua
+# desta casa: o `regua.py` deu verde sobre um bloco com **58px de painel vazio**,
+# e o mockup abriu assim por um dia. O que a página promete é que colunas irmãs
+# ACABAM NO MESMO y — é a conta escrita nas outras duas faixas (4 achados de
+# 25,5 = 3 botões de 34; 3 botões + 2 vãos = o log de 110) — e essa promessa não
+# tinha quem a cobrasse na faixa de cima.
+#
+# NENHUM NÚMERO É DIGITADO AQUI: as quatro alturas são LIDAS — duas do CSS desta
+# aba, duas dos tokens do esqueleto —, e as contagens de linha e de botão saem
+# do HTML já montado. Digitá-las seria repetir o defeito que este arquivo inteiro
+# evita: um segundo dono que diverge calado.
+# ---------------------------------------------------------------------------
+def _medida(texto, regra, prop):
+    """`height:30px` de dentro de uma regra de CSS — lido, nunca digitado."""
+    bloco = re.search(re.escape(regra) + r"\{([^}]*)\}", texto)
+    if not bloco:
+        raise SystemExit(f"ERRO: a regra CSS `{regra}` sumiu — o portão da faixa "
+                         "de cima mede por ela.")
+    px = re.search(prop + r":(\d+(?:\.\d+)?)px", bloco.group(1))
+    if not px:
+        raise SystemExit(f"ERRO: `{regra}` não declara mais `{prop}` em px.")
+    return float(px.group(1))
+
+
+def _token(texto, nome):
+    """`--h-escolha:36px` do esqueleto. O `:root` dele aparece mais de uma vez,
+    então a busca é pelo TOKEN, não pelo bloco que o hospeda."""
+    px = re.search(re.escape(nome) + r":(\d+(?:\.\d+)?)px", texto)
+    if not px:
+        raise SystemExit(f"ERRO: o esqueleto não declara mais `{nome}` em px — "
+                         "o portão da faixa de cima mede por ele.")
+    return float(px.group(1))
+
+
+def _conta(html, de, ate, o_que):
+    """Quantas vezes `o_que` aparece entre dois marcos do HTML montado."""
+    i = html.index(de)
+    return html[i:html.index(ate, i)].count(o_que)
+
+
+_TOPO = (pathlib.Path(__file__).parent / "topo.html").read_text()
+H_EST = _medida(CSS, ".est", "height")                 # a linha de estado
+GAP_ACAO = _medida(CSS, ".col-acao", "gap")            # o vão entre botões
+H_ESCOLHE = _token(_TOPO, "--h-escolha")               # select, campo, escolha
+H_ACAO = _token(_TOPO, "--h-acao")                     # botão de ação
+
+_N_BAT = _conta(MIOLO, '<div class="bat">', "<!-- ---------- SAÚDE", 'class="est')
+_N_EST = _conta(MIOLO, '<div class="col-est">', '<div class="risco">', 'class="est')
+_N_BTN = _conta(MIOLO, '<div class="col-acao">', "</div>", "<button")
+
+#: O seletor mede `--h-escolha`; as outras linhas do bloco medem uma linha de
+#: estado. O irmão é o mais alto entre a coluna de estados e a de botões.
+_ALT_BAT = H_ESCOLHE + (_N_BAT - 1) * H_EST
+_ALT_IRMAO = max(_N_EST * H_EST, _N_BTN * H_ACAO + (_N_BTN - 1) * GAP_ACAO)
+#: 2px de tolerância: é o que o seletor de 36 custa a mais que a linha de 30, e
+#: é o desencontro que a faixa já carrega hoje sem parecer vão.
+if abs(_ALT_BAT - _ALT_IRMAO) > 2:
+    raise SystemExit(
+        f"ERRO: o Perfil de Bateria mede {_ALT_BAT:.0f}px e o bloco 'O Hefesto' "
+        f"mede {_ALT_IRMAO:.0f}px — {abs(_ALT_BAT - _ALT_IRMAO):.0f}px de painel "
+        "vazio na primeira faixa. Foi exatamente isto que ela viu em 31/08/2026 "
+        '("essa seção tá muito feia e distoante do resto da página"). Duas '
+        "colunas irmãs desta aba acabam no mesmo y — dê conteúdo ao bloco curto "
+        "ou tire altura do alto, mas não entregue o vão.")
 
 n = monta("09-sistema", "Sistema", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
 print(f"09-sistema: OK, {n} divs")
