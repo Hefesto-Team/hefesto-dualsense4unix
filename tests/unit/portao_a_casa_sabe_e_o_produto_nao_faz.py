@@ -34,6 +34,66 @@ enumeráveis por varredura:
   ``python3 - "${ROOT_DIR}" <<'PYEOF'``. Um portão que acusa de dívida quem está
   certo é pior que portão nenhum: ensina a próxima pessoa a não acreditar nele.
 
+  Conta também a **PONTE DA INTERFACE NOVA** — o piloto de ``layout/``
+  que a janela de hoje é. Ver a seção logo abaixo: ela nasceu em 31/08/2026 e
+  é a mudança mais recente da definição de "produção" deste arquivo.
+
+A PONTE DA INTERFACE NOVA É PRODUÇÃO — 31/08/2026
+--------------------------------------------------
+A decisão ``D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`` (28/08)
+tirou a interface do ``Gtk.Notebook`` e a pôs num ``WebKit2.WebView``: o mockup
+**é** a interface. O produto que ela abre não entra mais só pelos
+``console_scripts`` do ``pyproject.toml`` — entra também por
+``packaging/hefesto-dev-dualsense4unix.desktop`` (``Exec=@RAIZ@/interface``) →
+``interface`` → ``scripts/abrir_interface.py`` → o piloto
+``layout/_ferramentas/controles_vivos.py``, que importa ``src/`` e o chama dez
+vezes por segundo.
+
+Até 31/08 este portão não sabia disso, e o preço estava MEDIDO: 125 promessas
+soltas, 65 delas sem classificação. Com a boca declarada caem para 110 e 53 —
+as 15 que saíram são curas VIVAS na tela dela. TRÊS delas eram lápides de
+``gui/ponte_da_tela.py`` cujo próprio texto já dizia *"O QUE FECHA: … ou, antes
+dela, o lançador da interface nova, o que vier primeiro"*: o lançador veio, e
+as três foram apagadas neste mesmo commit, cobradas por
+``test_nenhuma_lapide_sobreviveu_a_propria_cura``. Um portão que acusa de
+dívida a janela que a usuária tem aberta ensina a próxima pessoa a não
+acreditar nele — é o mesmo defeito de ``strip_quirks_token``, uma migração
+depois.
+
+**A LINHA QUE ISTO NÃO PODE APAGAR, e é o ponto delicado:** se
+``layout/_ferramentas/`` inteiro contasse, uma cura chamada só por um
+**instrumento de bancada** (a ``regua.py``, o ``olhar.py``) ou só por um
+**pedaço de mordida** de dentro do próprio piloto (``--prova-gesto``,
+``--sem-ponte``, ``--arranca-enderecos``) passaria a contar como LIGADA — e
+não é. Seria o portão comprando a própria régua como prova, que é a forma da
+dívida que ele existe para acusar.
+
+A distinção é DERIVADA duas vezes, nunca digitada como lista de nomes:
+
+1. **Ponte viva ≠ pasta.** A ponte é o **fecho de import a partir da boca
+   declarada** (``_PILOTO_DA_INTERFACE_NOVA``), dentro de
+   ``layout/_ferramentas/``, e é só isso. MEDIDO em 31/08/2026: são QUATRO
+   arquivos — ``controles_vivos``, ``mesa_viva``, ``monta``, ``aba02`` — dos 29
+   da pasta. Os 25 de fora saem por construção, e entre eles estão os cinco
+   instrumentos (``regua``, ``regua_estados``, ``regua_popup``, ``olhar``,
+   ``ver``) e os quatro pilotos de aba que **nenhum lançador abre**
+   (``jogar_vivo``, ``conexoes_vivas``, ``perfis_vivos``, ``sistema_viva``) —
+   o próprio piloto escreve isso em ``controles_vivos.py``:71: *"Quando a
+   MIGRA-JOGAR enxertar o `jogar_vivo.py` no lugar do mockup estático…"*.
+2. **Espinha viva ≠ bancada, DENTRO da ponte.** O ``.desktop`` roda o lançador
+   **sem uma única flag**. Logo toda flag do ``argparse`` do piloto é bancada,
+   e o corpo guardado por ela — ``if self.args.prova_gesto:`` — não é caminho
+   de produção. As flags são colhidas dos ``add_argument`` do próprio arquivo
+   (``_flags_de_bancada``), então uma flag nova nasce coberta; a poda segue as
+   rotinas que **só** a bancada chama (``_marcar_gestos_de_mentira`` e irmãs)
+   até o ponto fixo. ``if not args.X:`` é o contrário e fica INTEIRO: o corpo
+   ali é o que roda sem a flag.
+
+A prova de que a distinção não é decorativa está em
+``TestAPonteDaInterfaceNovaEProducao``: uma cura fabricada chamada só de dentro
+de ``if self.args.prova_gesto:`` continua ACUSADA, e sai da acusação no
+instante em que a chamada é movida para fora da guarda.
+
 ``tests/`` NUNCA conta como caminho, e é essa linha que separa as curas soltas
 do resto da árvore: REMEDIDO em 22/08/2026, 52 dos 60 símbolos que este portão
 acusa hoje têm chamador em ``tests/`` e nenhum em produção — pareciam
@@ -218,12 +278,20 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`python -m hefesto_dualsense4unix` — a boca que não passa pelo wheel",
     ),
     "broker/hidraw_broker.py": (
-        "install.sh",
+        "scripts/lib/camada_de_maquina.sh",
         "src/hefesto_dualsense4unix/broker/hidraw_broker.py",
-        "install.sh:1021 o COPIA para /usr/local/lib/hefesto-dualsense4unix/ "
-        "(o .deb em scripts/build_deb.sh:323 e o flatpak em "
-        "flatpak/br.andrefarias.Hefesto.yml:320 fazem o mesmo), e ele é o "
-        "ExecStart de assets/systemd/hefesto-hidraw-broker.service:34",
+        "ENDEREÇO CORRIGIDO em 31/08/2026, e quem mandou corrigir foi esta "
+        "própria régua: a fonte era `install.sh` e o commit a53f44e2 do mesmo "
+        "dia (*a camada de máquina ganha casa própria*) mudou a boca de lugar "
+        "— as dez curas de HOST saíram do instalador e viraram "
+        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh`:988 passa a "
+        "carregar com `source`. O `install_broker_host` de lá (:169) é quem "
+        "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
+        "`sudo install -Dm755`, e o ExecStart continua sendo "
+        "assets/systemd/hefesto-hidraw-broker.service:34. O .deb "
+        "(scripts/build_deb.sh:346) e o flatpak fazem o mesmo por conta "
+        "própria. A boca não morreu; ela mudou de arquivo, que é exatamente o "
+        "caso que esta régua manda CONFERIR em vez de apagar",
     ),
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
@@ -270,6 +338,54 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
 #: isso acusava de órfã a ``strip_quirks_token``, que o desinstalar chama.
 #: MEDIDO em 13/08/2026.
 _ROTEIROS_DE_PRODUCAO = ("install.sh", "uninstall.sh")
+
+#: A BOCA DA INTERFACE NOVA — o piloto que o ``.desktop`` dela abre.
+#:
+#: NASCEU em 31/08/2026. É o análogo exato de ``_PONTOS_DE_ENTRADA``, do outro
+#: lado da fronteira: um arquivo que roda de FORA do pacote, importa ``src/`` e
+#: o chama — como o Python embutido nos heredocs, e pela mesma razão.
+_PILOTO_DA_INTERFACE_NOVA = "layout/_ferramentas/controles_vivos.py"
+
+#: A pasta onde a ponte mora. O fecho de import NÃO sai daqui: um piloto que
+#: importasse um irmão de outra pasta viraria outra conversa, e esta régua
+#: prefere calar a adivinhar.
+_PASTA_DA_PONTE = "layout/_ferramentas"
+
+#: A CADEIA que torna o piloto uma boca, elo por elo, com a agulha de cada um.
+#: ``test_a_cadeia_do_lancador_da_interface_nova_esta_viva`` confere que cada
+#: fonte ainda diz o que esta tabela afirma — a mesma disciplina de
+#: ``test_todo_ponto_de_entrada_tem_fonte_viva``, e pela mesma razão: chão
+#: apodrece calado, e um chão de TRÊS elos apodrece em três lugares.
+#:
+#: Por que a cadeia inteira, e não só o último elo: o ``abrir_interface.py``
+#: sozinho não prova que alguém o roda — ele é um envoltório. Quem o roda é o
+#: ``interface``, e quem roda o ``interface`` é o ``.desktop`` que o
+#: ``install-dev.sh``:381 escreve em ``~/.local/share/applications``. Cortado
+#: qualquer elo, o piloto vira instrumento de bancada e a ponte inteira sai da
+#: produção — que é exatamente o que este portão tem de saber dizer.
+_CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
+    (
+        "packaging/hefesto-dev-dualsense4unix.desktop",
+        "Exec=@RAIZ@/interface",
+        "o `.desktop` do app de dev — o `@RAIZ@` é substituído pelo caminho da "
+        "árvore por `install-dev.sh`:381. É o ícone que ela clica.",
+    ),
+    (
+        "interface",
+        'exec "$PY" "$ABRIDOR"',
+        "o lançador da raiz, pedido dela em 29/08/2026 (*'cria um arquivo .sh "
+        "chamado interface na raiz do outro dev pra eu clicar'*). Ele não abre "
+        "o piloto direto: entrega ao envoltório de identidade, para a janela "
+        "nascer com a logo e o WM_CLASS certos.",
+    ),
+    (
+        "scripts/abrir_interface.py",
+        '"layout" / "_ferramentas" / "controles_vivos.py"',
+        "o envoltório versionado: veste `prgname`, `program_class` e ícone no "
+        "PROCESSO e só então carrega o piloto com `runpy`, sem mudar uma linha "
+        "dele.",
+    ),
+)
 
 #: Abertura de heredoc alimentando um interpretador Python — ``python3 - <<'EOF'``,
 #: ``python <<EOF``, ``sudo python3 - "$X" <<-'PY'``. O delimitador é CAPTURADO
@@ -878,6 +994,50 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "neste não tem mais. A PODA É DELA: é símbolo público, está no "
         "`__all__` (:1293), e apagar wrapper documentado por conta própria não "
         "é deste portão."
+    ),
+    # --- 31/08/2026: as três da aba Jogar que NÃO são promessa à tela --------
+    # As outras cinco do mesmo módulo são dívida e estão em `_SEM_CAMINHO_HOJE`.
+    # A linha entre as duas listas foi MEDIDA uma a uma, e a régua é simples:
+    # existe alguém que PINTA o que ela devolve? Se sim é dívida (falta abrir a
+    # aba); se não, ela nunca foi para a tela.
+    "app/actions/jogar/painel.py::chips_sem_degrau": (
+        "MEDIDO em 31/08/2026. Diagnóstico, e o próprio docstring dela o diz em "
+        "maiúsculas: `ISTO NÃO É 'SEM DONO', E CONFUNDIR OS DOIS PINTA A TELA "
+        "ERRADA`. Ela responde `quais chips nomeiam uma ponte que a ESCADA não "
+        "tem` — hoje só a Navegação, que TEM escritor (`apply_mode('desktop')`) "
+        "e funciona. Pintar por ela seria a tela dizendo 'não dá' sobre um botão "
+        "que dá; quem pinta é a irmã `chips_sem_dono`, e essa É chamada. O único "
+        "lugar que a nomeia fora de teste é o COMENTÁRIO de "
+        "`layout/_ferramentas/jogar_vivo.py`:823, que existe justamente para "
+        "explicar por que ela NÃO está sendo usada ali — comentário não é "
+        "chamador, e neste caso é a evidência. Não deve ganhar chamador de "
+        "pintura: o que ela mede é a distância entre a ESCADA e a tela, e quem "
+        "lê isso é quem desenvolve."
+    ),
+    "app/actions/jogar/painel.py::degraus_sem_chip": (
+        "MEDIDO em 31/08/2026. Irmã da anterior, do outro lado da mesma "
+        "pergunta: `quais degraus da ESCADA não têm onde aparecer`. É a régua do "
+        "código devendo à TELA, e desde 31/08 devolve `()` — o Xbox entrou na "
+        "fileira e o Nativo virou a posição Desligado do interruptor "
+        "(`PONTES_DO_INTERRUPTOR`). Não há nada a pintar quando a resposta é "
+        "vazia, e quando não for vazia o destinatário é quem desenvolve, não "
+        "ela: um degrau que a escada sobe e a tela não mostra é defeito de "
+        "desenho, não de estado. Quem a exercita é "
+        "`tests/unit/test_o_botao_de_ligar_funciona_e_se_lembra.py`:326, com a "
+        "mordida ao lado (:329) que acrescenta um degrau falso e cobra a "
+        "denúncia. Instrumento com régua própria não é dívida."
+    ),
+    "app/actions/jogar/painel.py::indice_do_chip": (
+        "MEDIDO em 31/08/2026. É RESTO, e da forma mais literal: o corpo inteiro "
+        "é `return chip.indice`. Quem faz a conta é a property `Chip.indice`, "
+        "que consulta `ponte_escada.indice_do_degrau` — e MÉTODO não entra nesta "
+        "varredura por decisão declarada no topo deste arquivo, então a property "
+        "é invisível aqui e a função de módulo aparece sozinha. Zero ocorrências "
+        "do nome em `src/`, em `layout/` e em `tests/`: ela nasceu em 29/08 como "
+        "porta de módulo para quem não tivesse o `Chip` na mão, e ninguém "
+        "precisou. A PODA É DELA — símbolo público está no `__all__` e não se "
+        "apaga por conta própria —, e apagá-la não perde regra nenhuma: a regra "
+        "mora na property."
     ),
 }
 
@@ -1627,43 +1787,83 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "de tela. O QUE FECHA: a Onda 11 · Sistema, ou quem publicar a chave "
         "primeiro (§10 da sprint)."
     ),
-    # --- 29/08/2026: `gui/ponte_da_tela.py` nasceu HOJE, e o produto ainda
-    # entra pelo `Gtk.Notebook` do `gui/main.glade`. As três lápides abaixo são
-    # a MESMA dívida, e ela tem data marcada.
-    "gui/ponte_da_tela.py::PonteDaTela": (
-        "NASCEU em 29/08/2026, extraído do piloto da aba Controles "
-        "(`novo-layout/_ferramentas/controles_vivos.py`), que era ao mesmo "
-        "tempo a janela, a ponte, a pintura e a aba. São as duas pontes que "
-        "decidiram a tecnologia da interface: `evaluate_javascript` (Python → "
-        "página) e `register_script_message_handler` (página → Python). ONDE O "
-        "CAMINHO SE PERDE: quem as chama hoje é o PILOTO, e ele mora em "
-        "`novo-layout/`, que é .gitignore:108 — logo não é produção por "
-        "definição deste portão, e está certo que não seja. O QUE FECHA: a "
-        "sprint `MIGRA-CONTROLES-01`, que enxerta o WebView no `Gtk.Notebook` "
-        "de `gui/main.glade` por um `gui/webview_de_aba.py`; a partir dela o "
-        "produto passa por aqui dez vezes por segundo. A régua que já a mede "
-        "sem produção é `tests/unit/test_ponte_da_tela_a_biblioteca_das_dez_abas.py`."
+    # AS TRÊS LÁPIDES DE `gui/ponte_da_tela.py` MORARAM AQUI e SAÍRAM em
+    # 31/08/2026 — `PonteDaTela`, `JanelaDaAba` e `literal_js`. Não foi
+    # limpeza: foi o portão cobrando. As três diziam, com estas palavras, que o
+    # que as fecharia era a `MIGRA-CONTROLES-01` *"ou, antes dela, o lançador
+    # da interface nova, o que vier primeiro"*. O lançador veio primeiro — o
+    # `.desktop` do app de dev, o `interface` e o `scripts/abrir_interface.py`,
+    # que estão declarados em `_CADEIA_DA_INTERFACE_NOVA` —, e a partir do
+    # momento em que a ponte virou fonte externa deste portão as três passaram
+    # a ser ALCANÇADAS. `test_nenhuma_lapide_sobreviveu_a_propria_cura`
+    # reprovou nomeando as três, que é exatamente o que ela promete fazer. A
+    # DECISÃO MEDIDA que elas guardavam (a tecnologia da interface é
+    # `evaluate_javascript` + `register_script_message_handler`, e o valor
+    # atravessa a fronteira como DADO e nunca como texto) continua escrita, com
+    # a data, no docstring do próprio `gui/ponte_da_tela.py`.
+    # --- 31/08/2026: a aba JOGAR viva existe e NENHUM lançador a abre --------
+    # As cinco abaixo são a MESMA dívida, com o mesmo endereço e a mesma cura, e
+    # ela é de UMA LINHA. O piloto que ela abre (`controles_vivos.py`) instala a
+    # ponte de gesto em qualquer página que tenha `[data-modo]` — por isso o
+    # INTERRUPTOR da aba Jogar já é produto e não está nesta lista. O resto da
+    # página (cartões, coluna Atenção, chips da escada) é pintado por
+    # `layout/_ferramentas/jogar_vivo.py`, que é aba viva completa, mede-se
+    # sozinha e **nada roda**: nem o `.desktop`, nem o `interface`, nem o
+    # `abrir_interface.py` a nomeiam. O próprio piloto escreve isso em
+    # `controles_vivos.py`:71 — *"Quando a MIGRA-JOGAR enxertar o
+    # `jogar_vivo.py` no lugar do mockup estático, o interruptor sai daqui sem
+    # reescrever regra nenhuma"*. Enquanto o enxerto não acontece, o que a
+    # usuária vê na aba Jogar, fora o interruptor, é o mockup ESTÁTICO: os
+    # quatro controles do desenho e o "1 aviso" chumbado.
+    # O QUE FECHA AS CINCO DE UMA VEZ: a MIGRA-JOGAR, enxertando o
+    # `jogar_vivo.py` no piloto (ou declarando-o em `_CADEIA_DA_INTERFACE_NOVA`
+    # se ele ganhar lançador próprio). No dia em que isso acontecer estas cinco
+    # entradas viram lápides caducas e `test_nenhuma_lapide_sobreviveu_a_propria`
+    # `_cura` cobra o apagamento — que é como esta lista deve encolher.
+    "app/actions/jogar/painel.py::avisos_do_estado": (
+        "MEDIDO em 31/08/2026. É a coluna Atenção inteira: seis fontes puras de "
+        "`home_actions` (pausa, gamepad degradado, rádio frágil, wrapper, trava "
+        "de autoswitch, cadeado cego), com a garantia de que uma fonte que "
+        "levanta exceção não derruba as outras cinco. TEM chamador — "
+        "`layout/_ferramentas/jogar_vivo.py`:723 (no tique) e :797 (no pacote de "
+        "pintura) —, e o chamador é a aba viva que nenhum lançador abre. ONDE O "
+        "CAMINHO SE PERDE: no enxerto, não no código; ver o bloco acima."
     ),
-    "gui/ponte_da_tela.py::JanelaDaAba": (
-        "NASCEU em 29/08/2026, no mesmo movimento da `PonteDaTela` acima — é a "
-        "janela GTK3 que hospeda uma aba do mockup, com a `Gtk.HeaderBar` (sem "
-        "ela os botões saem do lado errado no COSMIC), as duas folhas de "
-        "usuário e a guarda de carga que NÃO mata a janela quando ela clica na "
-        "tira. ONDE O CAMINHO SE PERDE: o produto de hoje abre a janela pelo "
-        "`app/app.py` sobre o `gui/main.glade`; esta é a janela da interface "
-        "NOVA, e por enquanto só o piloto (em `novo-layout/`, .gitignore:108) a "
-        "levanta. O QUE FECHA: `MIGRA-CONTROLES-01` — ou, antes dela, o "
-        "lançador da interface nova, o que vier primeiro."
+    "app/actions/jogar/painel.py::chips_sem_dono": (
+        "MEDIDO em 31/08/2026. É a régua que a TELA usa para marcar um chip como "
+        "inerte — sem degrau na `ESCADA` E sem modo em `mode_transition`. Hoje "
+        "devolve um só, o Point And Click, que está na fileira por ordem dela "
+        "(*manter*) e precisa dizer que ninguém o atende, senão a tela promete o "
+        "que não cumpre. Chamador: `layout/_ferramentas/jogar_vivo.py`:835, que "
+        "monta os `degraus_travados` do pacote de pintura. ONDE O CAMINHO SE "
+        "PERDE: no enxerto da aba, ver o bloco acima."
     ),
-    "gui/ponte_da_tela.py::literal_js": (
-        "NASCEU em 29/08/2026. É a regra de que o valor atravessa a fronteira "
-        "como DADO e nunca como texto: um nome de plástico com apóstrofo — e o "
-        "`docs/data/cores-do-dualsense.csv` tem 28 modelos — quebraria o script "
-        "inteiro, calado. ONDE O CAMINHO SE PERDE: ela é chamada por "
-        "`PonteDaTela.dizer`, que é a lápide acima; enquanto a ponte não tiver "
-        "chamador de produção, esta também não tem. O QUE FECHA: a mesma "
-        "`MIGRA-CONTROLES-01`. A mordida que prova que ela segura alguma coisa "
-        "está em `test_a_mordida_do_literal_a_interpolacao_crua_quebra_a_pintura`."
+    "app/actions/jogar/painel.py::degrau_vivo": (
+        "MEDIDO em 31/08/2026. Diz qual chip da escada está aceso, lendo o "
+        "carimbo POR JOGO que `integrations/prontuario_dos_jogos.pontes"
+        "_confirmadas` guarda nos perfis do disco — e devolve `None` sem jogo "
+        "aberto, que é o caso comum e a resposta honesta. Chamador: "
+        "`layout/_ferramentas/jogar_vivo.py`:843. ONDE O CAMINHO SE PERDE: no "
+        "enxerto da aba, ver o bloco acima. ATENÇÃO ao fechar: o `pontes` entra "
+        "por argumento de propósito, para a régua entregar um dicionário próprio "
+        "em vez de mexer nos perfis dela."
+    ),
+    "app/actions/jogar/painel.py::nome_do_perfil": (
+        "MEDIDO em 31/08/2026. UM leitor do perfil ativo para os DOIS lugares "
+        "que o mostram — o crachá do topo e o recibo do rodapé. Nasceu de um "
+        "defeito visto na aba Controles em 29/08: com dois leitores, o topo "
+        "dizia o perfil vivo e o rodapé continuava dizendo `Mortal Kombat`, que "
+        "é o do mockup. Chamador: `layout/_ferramentas/jogar_vivo.py`:814. ONDE "
+        "O CAMINHO SE PERDE: no enxerto da aba, ver o bloco acima."
+    ),
+    "app/actions/jogar/painel.py::texto_da_conta": (
+        "MEDIDO em 31/08/2026. Escreve `1 aviso` / `3 avisos` / `nenhum aviso` "
+        "no canto da coluna Atenção. A palavra do zero mora aqui e não no "
+        "desenho porque o desenho tem `1 aviso` chumbado e zero avisos é o "
+        "estado NORMAL de uma máquina saudável — sem esta função a tela de quem "
+        "está bem seria a única sem legenda. Chamador: "
+        "`layout/_ferramentas/jogar_vivo.py`:844. ONDE O CAMINHO SE PERDE: no "
+        "enxerto da aba, ver o bloco acima."
     ),
     "integrations/proton_pin.py::steam_root_ou_recusa": (
         "ENTREGUE em 24/08/2026 (T-09, ONDA0-Z7). `default_steam_root` "
@@ -2147,8 +2347,198 @@ def _candidatas(mapa: _Mapa, alvo: Path) -> list[tuple[Promessa, str, int]]:
     return saida
 
 
-def _fontes_externas(raiz_do_projeto: Path) -> list[tuple[str, ast.Module]]:
-    """O Python que roda de FORA do pacote: os heredocs dos dois roteiros."""
+# --- A ponte da interface nova: a espinha viva, sem a bancada --------------
+
+
+def _flags_de_bancada(arvore: ast.AST) -> frozenset[str]:
+    """As flags de linha de comando que o próprio arquivo declara.
+
+    DERIVADA dos ``add_argument`` dele, nunca de uma lista escrita aqui — uma
+    flag nova nasce coberta, e nenhuma frente precisa lembrar de vir avisar
+    este portão. É a mesma disciplina de ``_DECORADORES_DE_FRAMEWORK``: mede-se
+    o IDIOMA, não os nomes.
+
+    POR QUE TODA FLAG É BANCADA, e não só as três mordidas: o ``.desktop`` roda
+    ``Exec=@RAIZ@/interface`` **sem um único argumento**, e o lançador só
+    repassa o que receber. Logo o que ela abre é o piloto com todas as flags
+    ausentes — e qualquer corpo que só roda COM flag é de quem está na bancada,
+    não dela.
+    """
+    flags: set[str] = set()
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.Call):
+            continue
+        alvo = no.func
+        if not (isinstance(alvo, ast.Attribute) and alvo.attr == "add_argument"):
+            continue
+        for argumento in no.args:
+            if (
+                isinstance(argumento, ast.Constant)
+                and isinstance(argumento.value, str)
+                and argumento.value.startswith("--")
+            ):
+                flags.add(argumento.value[2:].replace("-", "_"))
+    return frozenset(flags)
+
+
+def _lado_de_bancada(no: ast.If, flags: frozenset[str]) -> str | None:
+    """Que metade deste ``if`` só roda na BANCADA — ``body``, ``orelse``, ou nada.
+
+    ``if args.prova_gesto:`` → o corpo é bancada. ``if not args.sem_cor:`` → o
+    corpo é o caminho SEM a flag, isto é, o vivo; quem é bancada ali é o
+    ``else``. Confundir os dois seria podar a espinha: MEDIDO em 31/08/2026,
+    ``controles_vivos.py``:790 pendura o tique do interruptor num
+    ``if not args.sem_interruptor:`` — cortar esse corpo apagaria a pintura
+    inteira do interruptor dela e este portão passaria a acusar seis curas
+    vivas.
+
+    Teste composto (``and``/``or``, comparação, chamada) devolve ``None`` de
+    propósito: sem certeza de qual metade é a bancada, a régua não poda. Errar
+    para o lado de PERDOAR custa perdão ocasional; errar para o outro custa
+    acusar quem está certo, que é o que este portão não pode fazer.
+    """
+    teste: ast.expr = no.test
+    negado = False
+    if isinstance(teste, ast.UnaryOp) and isinstance(teste.op, ast.Not):
+        teste = teste.operand
+        negado = True
+    nome: str | None = None
+    if isinstance(teste, ast.Attribute):
+        nome = teste.attr
+    elif isinstance(teste, ast.Name):
+        nome = teste.id
+    if nome is None or nome not in flags:
+        return None
+    return "orelse" if negado else "body"
+
+
+def _podar_a_bancada(arvore: ast.Module) -> tuple[ast.Module, list[ast.AST]]:
+    """A árvore da ponte SEM os pedaços que só a bancada roda.
+
+    Devolve a árvore podada e os nós podados — os segundos existem para
+    ``test_nenhuma_promessa_e_alcancada_so_pela_bancada`` poder medir o que a
+    poda tirou, em vez de acreditar nela.
+
+    Duas passadas, e a segunda é o que faz a primeira valer alguma coisa:
+
+    1. o corpo (ou o ``else``) de todo ``if`` guardado por uma flag vira
+       ``pass``;
+    2. **ponto fixo** sobre as rotinas que só aquele corpo chamava. Sem ela a
+       poda seria decorativa: ``if self.args.prova_gesto:`` só contém a linha
+       ``self._marcar_gestos_de_mentira()`` — o roteiro de cliques sintéticos
+       inteiro mora no corpo do MÉTODO, que é nó de topo da classe e continuaria
+       sendo lido.
+
+    A régua da passada 2 é estreita de propósito: só cai a função cujo nome é
+    citado pela bancada e por **mais ninguém** na árvore já podada. Uma função
+    que nada cita (despacho por string, retrocompatibilidade) fica de pé — a
+    dúvida sempre resolve a favor de continuar contando.
+    """
+    flags = _flags_de_bancada(arvore)
+    podados: list[ast.AST] = []
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.If):
+            continue
+        lado = _lado_de_bancada(no, flags)
+        if lado == "body":
+            podados.extend(no.body)
+            no.body = [ast.Pass()]
+        elif lado == "orelse" and no.orelse:
+            podados.extend(no.orelse)
+            no.orelse = []
+    citados_pela_bancada: set[str] = set()
+    for no in podados:
+        citados_pela_bancada |= _refs(no)
+    while True:
+        vivos = _refs(arvore)
+        alvo = next(
+            (
+                (corpo, indice, definicao)
+                for corpo, indice, definicao in _definicoes_de_funcao(arvore)
+                if definicao.name in citados_pela_bancada
+                and definicao.name not in vivos
+            ),
+            None,
+        )
+        if alvo is None:
+            return arvore, podados
+        corpo, indice, definicao = alvo
+        corpo[indice] = ast.Pass()
+        podados.append(definicao)
+        citados_pela_bancada |= _refs(definicao)
+
+
+def _definicoes_de_funcao(
+    arvore: ast.Module,
+) -> list[tuple[list[ast.stmt], int, ast.FunctionDef | ast.AsyncFunctionDef]]:
+    """Toda função do módulo e da classe, com o corpo e o índice que a seguram.
+
+    Dois níveis bastam e é medido: um piloto é um módulo com funções soltas e
+    UMA classe ``Janela`` cheia de métodos. Descer mais fundo pagaria por
+    ``closure`` — e uma ``closure`` some junto com a função que a hospeda.
+    """
+    saida: list[tuple[list[ast.stmt], int, ast.FunctionDef | ast.AsyncFunctionDef]] = []
+    for indice, no in enumerate(arvore.body):
+        if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            saida.append((arvore.body, indice, no))
+        elif isinstance(no, ast.ClassDef):
+            for posicao, membro in enumerate(no.body):
+                if isinstance(membro, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    saida.append((no.body, posicao, membro))
+    return saida
+
+
+def pontes_vivas(raiz_do_projeto: Path | None = None) -> dict[str, Path]:
+    """Os arquivos da ponte da interface nova — o fecho a partir da BOCA.
+
+    Exposta pela mesma razão que ``modulos_alcancados``: uma régua que encolhe
+    calada faz o portão cobrar de quem está certo, e sem poder olhar o fecho
+    ninguém descobre por quê.
+
+    O fecho segue só ``import irmão`` e ``from irmão import x`` dentro de
+    ``layout/_ferramentas/`` — que é como um piloto importa o gerador do
+    mockup, e é o único idioma que essa pasta usa (ela não é pacote: os pilotos
+    entram nela pelo ``sys.path``). Nada de ``rglob``: instrumento de bancada
+    não entra em produção por morar na mesma pasta que a ponte.
+    """
+    base = _RAIZ if raiz_do_projeto is None else raiz_do_projeto
+    pasta = base / _PASTA_DA_PONTE
+    boca = base / _PILOTO_DA_INTERFACE_NOVA
+    if not boca.is_file():
+        return {}
+    vizinhos = {
+        p.stem: p for p in sorted(pasta.glob("*.py")) if "__pycache__" not in p.parts
+    }
+    achados: dict[str, Path] = {}
+    fila = [boca.stem]
+    while fila:
+        nome = fila.pop()
+        if nome in achados or nome not in vizinhos:
+            continue
+        caminho = vizinhos[nome]
+        try:
+            arvore = _arvore(caminho)
+        except (OSError, SyntaxError):  # pragma: no cover — piloto quebrado é dele
+            continue
+        achados[nome] = caminho
+        for no in ast.walk(arvore):
+            if isinstance(no, ast.Import):
+                fila.extend(a.name for a in no.names if a.name in vizinhos)
+            elif isinstance(no, ast.ImportFrom) and no.module in vizinhos:
+                fila.append(no.module)
+    return achados
+
+
+def _fontes_externas(
+    raiz_do_projeto: Path, *, podar_a_bancada: bool = True
+) -> list[tuple[str, ast.Module]]:
+    """O Python que roda de FORA do pacote: os heredocs, e a ponte da interface.
+
+    ``podar_a_bancada=False`` devolve a ponte INTEIRA, com os pedaços de
+    mordida. Não é o modo do portão: existe só para
+    ``test_nenhuma_promessa_e_alcancada_so_pela_bancada`` medir a diferença
+    entre as duas réguas, em vez de afirmar que ela é zero.
+    """
     saida: list[tuple[str, ast.Module]] = []
     for roteiro in _ROTEIROS_DE_PRODUCAO:
         caminho = raiz_do_projeto / roteiro
@@ -2159,6 +2549,14 @@ def _fontes_externas(raiz_do_projeto: Path) -> list[tuple[str, ast.Module]]:
                 saida.append((f"{roteiro}#heredoc{indice}", ast.parse(trecho)))
             except SyntaxError:  # pragma: no cover — heredoc quebrado é do roteiro
                 continue
+    for nome, caminho in sorted(pontes_vivas(raiz_do_projeto).items()):
+        try:
+            arvore = _arvore(caminho)
+        except (OSError, SyntaxError):  # pragma: no cover — piloto quebrado é dele
+            continue
+        if podar_a_bancada:
+            arvore, _podados = _podar_a_bancada(arvore)
+        saida.append((f"{_PASTA_DA_PONTE}/{nome}.py", arvore))
     return saida
 
 
@@ -2168,6 +2566,12 @@ def modulos_alcancados(raiz: Path | None = None) -> set[str]:
     Exposta porque é a metade da régua que mais engana quando quebra: se o
     fecho encolher, o portão passa a acusar quem está certo, e sem poder olhar
     o fecho ninguém descobre por quê.
+
+    Desde 31/08/2026 as raízes não são só as do ``pyproject.toml`` e dos
+    heredocs: a ponte da interface nova (``pontes_vivas``) importa ``src/`` de
+    fora do pacote e entra aqui pelo mesmo caminho que o Python embutido no
+    instalador. MEDIDO no dia: 223 módulos alcançados viraram 226, e os três
+    que entraram são a janela do WebView (``gui/ponte_da_tela``) e o que ela usa.
     """
     alvo = _SRC if raiz is None else raiz
     mapa = _mapear(alvo)
@@ -2182,7 +2586,9 @@ def modulos_alcancados(raiz: Path | None = None) -> set[str]:
     return _fecho_de_import(mapa, raizes)
 
 
-def promessas_sem_caminho(raiz: Path | None = None) -> dict[str, Promessa]:
+def promessas_sem_caminho(
+    raiz: Path | None = None, *, podar_a_bancada: bool = True
+) -> dict[str, Promessa]:
     """Funções e classes públicas de módulo que nada em produção alcança.
 
     A régua, desde 22/08/2026: um símbolo está alcançado quando algum nó de
@@ -2196,11 +2602,17 @@ def promessas_sem_caminho(raiz: Path | None = None) -> dict[str, Promessa]:
     (ver ``TestOPortaoMorde``) — mutilar ou aumentar ``src/`` na árvore viva
     contamina a medição de quem estiver trabalhando ao lado
     (``ARVORE-CONGELADA-01``).
+
+    ``podar_a_bancada=False`` mede com a ponte INTEIRA, mordidas incluídas.
+    Não é o portão: é a segunda régua que
+    ``test_nenhuma_promessa_e_alcancada_so_pela_bancada`` compara com a
+    primeira, e a diferença entre as duas é a lista de curas que só a régua
+    chama (31/08/2026).
     """
     alvo = _SRC if raiz is None else raiz
     mapa = _mapear(alvo)
     raiz_do_projeto = _RAIZ if raiz is None else raiz.parents[1]
-    externas = _fontes_externas(raiz_do_projeto)
+    externas = _fontes_externas(raiz_do_projeto, podar_a_bancada=podar_a_bancada)
 
     raizes: set[str] = set()
     for entrada in _PONTOS_DE_ENTRADA:
@@ -2814,6 +3226,172 @@ class TestTodaPromessaPublicaTemCaminho:
 
 
 # ===========================================================================
+# P4 — a ponte da interface nova é produção, e a bancada não é
+# ===========================================================================
+
+#: Instrumentos de bancada de ``layout/_ferramentas/``, escolhidos por MEDIÇÃO:
+#: são os cinco arquivos da pasta que medem a tela em vez de serem a tela — os
+#: três que dirigem o Chrome pelo Playwright (``regua``, ``regua_estados``,
+#: ``regua_popup``, e o ``olhar``) e o visualizador ``ver``. Nenhum deles é
+#: importado pelo piloto, e é por isso que a régua abaixo pode ser uma
+#: CONFERÊNCIA e não uma exclusão: eles ficam de fora por construção, e esta
+#: lista só existe para que o dia em que um deles entrar no fecho seja um dia
+#: de vermelho, e não de silêncio.
+_INSTRUMENTOS_DA_BANCADA = ("regua", "regua_estados", "regua_popup", "olhar", "ver")
+
+
+class TestAPonteDaInterfaceNovaEProducao:
+    """A janela que ela abre conta como caminho — a régua que a mede, não.
+
+    NASCEU em 31/08/2026. As quatro réguas desta classe seguram os quatro
+    lugares por onde a definição de "produção" pode apodrecer depois que a
+    interface migrou para o WebView: a cadeia do lançador, o fecho da ponte, a
+    exclusão da bancada, e a distância entre as duas réguas.
+    """
+
+    def test_a_cadeia_do_lancador_da_interface_nova_esta_viva(self) -> None:
+        """Os TRÊS elos, conferidos contra o que cada arquivo diz hoje.
+
+        É a irmã de ``test_todo_ponto_de_entrada_tem_fonte_viva``, e existe pelo
+        mesmo motivo — com um agravante: aqui o chão tem três elos, e basta um
+        apodrecer para a ponte inteira deixar de ser produção sem que nada
+        avise. Um portão que fica MAIS PERMISSIVO em silêncio é pior que um que
+        fica mais estrito, porque a dívida some sozinha do relatório.
+        """
+        piloto = _RAIZ / _PILOTO_DA_INTERFACE_NOVA
+        assert piloto.is_file(), (
+            f"a boca declarada da interface nova não existe: {piloto}\n"
+            "CORRIJA `_PILOTO_DA_INTERFACE_NOVA`, ou APAGUE a declaração se a "
+            "interface passou a entrar por outro lugar — e então tudo o que só "
+            "ela alcançava volta a ser dívida, que é a verdade."
+        )
+        quebrados = []
+        for fonte, agulha, razao in _CADEIA_DA_INTERFACE_NOVA:
+            arquivo = _RAIZ / fonte
+            if not arquivo.is_file():
+                quebrados.append(f"a fonte {fonte!r} sumiu — {razao}")
+                continue
+            if agulha not in arquivo.read_text(encoding="utf-8", errors="ignore"):
+                quebrados.append(
+                    f"{fonte!r} não diz mais {agulha!r} — {razao}"
+                )
+        assert not quebrados, (
+            f"a cadeia que faz o piloto ser produção quebrou em "
+            f"{len(quebrados)} de {len(_CADEIA_DA_INTERFACE_NOVA)} elo(s):\n"
+            + "\n".join(f"  - {q}" for q in quebrados)
+            + "\nCONFIRA se o elo mudou de forma (e corrija a agulha) ou se a "
+            "interface deixou de ser aberta assim (e então a ponte não é mais "
+            "produção, e as curas que só ela alcança voltam a ser dívida)."
+        )
+
+    def test_a_ponte_e_o_fecho_da_boca_e_nao_a_pasta_inteira(self) -> None:
+        """A ponte é o que o piloto IMPORTA — não o que mora ao lado dele.
+
+        Sem esta linha, ``layout/_ferramentas/`` inteiro viraria produção e a
+        pasta passaria a absolver por VIZINHANÇA. MEDIDO em 31/08/2026: são 4
+        arquivos de 29.
+        """
+        ponte = pontes_vivas()
+        assert Path(_PILOTO_DA_INTERFACE_NOVA).stem in ponte, (
+            "o fecho não contém nem a própria boca — `pontes_vivas` quebrou, e "
+            "com ela a interface nova inteira sumiu da produção"
+        )
+        assert "mesa_viva" in ponte, (
+            "o fecho não alcança `mesa_viva`, que o piloto importa e que é o "
+            "dono da mesa para a Controles e para a fita — o seguimento de "
+            "`import irmão` parou de funcionar"
+        )
+        pasta = _RAIZ / _PASTA_DA_PONTE
+        assert len(ponte) < len(list(pasta.glob("*.py"))), (
+            "o fecho engoliu a pasta inteira — ele deixou de ser um fecho e "
+            "virou um `glob`, e a bancada entrou junto com a ponte"
+        )
+
+    def test_o_instrumento_de_bancada_nao_entra_no_fecho(self) -> None:
+        """O que MEDE a tela não é a tela — e as duas moram na mesma pasta.
+
+        Esta é a régua da distinção inteira, e ela é conferida nos dois
+        sentidos: os cinco instrumentos TÊM de existir no disco (senão o caso
+        passaria por ausência, que é o modo mais silencioso de um teste deixar
+        de medir) e TÊM de estar fora do fecho.
+        """
+        pasta = _RAIZ / _PASTA_DA_PONTE
+        sumidos = [
+            nome for nome in _INSTRUMENTOS_DA_BANCADA
+            if not (pasta / f"{nome}.py").is_file()
+        ]
+        assert not sumidos, (
+            f"estes instrumentos não existem mais em {_PASTA_DA_PONTE}: "
+            f"{sumidos}\nATUALIZE `_INSTRUMENTOS_DA_BANCADA` — uma testemunha "
+            "que sumiu deixa este caso verde sem medir nada."
+        )
+        ponte = pontes_vivas()
+        invasores = sorted(set(_INSTRUMENTOS_DA_BANCADA) & set(ponte))
+        assert not invasores, (
+            f"instrumento de bancada entrou no fecho da ponte: {invasores}\n"
+            "Ou o piloto passou a importar a própria régua (e aí é o piloto "
+            "que está errado), ou `pontes_vivas` virou varredura de pasta. "
+            "Enquanto isso valer, uma cura chamada só pela régua conta como "
+            "ligada — que é a dívida que este portão existe para acusar."
+        )
+
+    def test_a_bancada_de_dentro_do_piloto_e_reconhecida(self) -> None:
+        """As flags do piloto são colhidas, e o ``if not`` NÃO é podado.
+
+        Duas metades, e a segunda é a que dói: ``controles_vivos.py``:790
+        pendura o tique do interruptor num ``if not args.sem_interruptor:``. Se
+        a poda tratasse o corpo negado como bancada, ela apagaria a pintura
+        inteira do interruptor dela e o portão passaria a acusar seis curas
+        vivas — a régua reprovando a melhora em vez do defeito.
+        """
+        piloto = _arvore(_RAIZ / _PILOTO_DA_INTERFACE_NOVA)
+        flags = _flags_de_bancada(piloto)
+        assert {"prova_gesto", "sem_ponte", "arranca_enderecos"} <= flags, (
+            f"as mordidas do piloto não foram colhidas dos `add_argument`: "
+            f"{sorted(flags)}\n`_flags_de_bancada` parou de ver o idioma, e "
+            "com ela toda a poda virou decoração."
+        )
+        positivo = ast.parse("if self.args.prova_gesto:\n    x()\n").body[0]
+        negativo = ast.parse("if not args.sem_interruptor:\n    x()\n").body[0]
+        assert isinstance(positivo, ast.If) and isinstance(negativo, ast.If)
+        assert _lado_de_bancada(positivo, flags) == "body", (
+            "a guarda POSITIVA de uma mordida deixou de marcar o corpo como "
+            "bancada — `--prova-gesto` voltou a contar como caminho"
+        )
+        assert _lado_de_bancada(negativo, flags) == "orelse", (
+            "a guarda NEGADA foi lida como bancada: a poda vai cortar o corpo "
+            "que roda SEM a flag, que é justamente a espinha viva"
+        )
+
+    def test_nenhuma_promessa_e_alcancada_so_pela_bancada(self) -> None:
+        """A distância entre as duas réguas — e hoje ela é ZERO.
+
+        Com a ponte inteira (mordidas incluídas) o portão perdoa um conjunto;
+        com a ponte podada, outro. A diferença é a lista de curas que **só a
+        régua chama** — escritas, testadas, e nunca ligadas na tela que ela
+        abre. É a forma mais fina do defeito-mãe, porque ela vem embrulhada em
+        verde.
+
+        MEDIDO em 31/08/2026: vazia. Este caso não existe para celebrar o zero;
+        existe para o dia em que alguém fiar uma cura ao `--prova-gesto` e achar
+        que entregou.
+        """
+        podada = set(promessas_sem_caminho())
+        inteira = set(promessas_sem_caminho(podar_a_bancada=False))
+        so_a_bancada = sorted(podada - inteira)
+        assert not so_a_bancada, (
+            "estas promessas só são alcançadas por um pedaço de MORDIDA do "
+            "piloto — `--prova-gesto`, `--sem-ponte`, `--arranca-enderecos` — e "
+            "por mais nada:\n"
+            + "\n".join(f"  - {c}" for c in so_a_bancada)
+            + "\nA régua não é caminho. FIE a cura na espinha viva do piloto "
+            "(o tique, a pintura, o gesto dela), ou declare-a como dívida. "
+            "Uma cura que só a própria prova exercita é uma cura desligada com "
+            "teste verde."
+        )
+
+
+# ===========================================================================
 # O portão apontado para si mesmo
 # ===========================================================================
 
@@ -3209,6 +3787,118 @@ class TestOPortaoMorde:
         assert chave not in _promessas_publicas_por_chave(copia), (
             "o arquivo foi apagado da cópia e o símbolo continua sendo listado "
             "como promessa pública — a mordida está medindo a árvore viva"
+        )
+        assert chave not in promessas_sem_caminho(), (
+            "a árvore de verdade foi contaminada pela mordida"
+        )
+
+    def test_sem_a_boca_da_interface_nova_a_janela_do_webview_e_divida(
+        self, tmp_path: Path
+    ) -> None:
+        """A mordida da BOCA da interface nova, nas duas pontas.
+
+        ``gui/ponte_da_tela.py::JanelaDaAba`` é a janela GTK3 que hospeda o
+        mockup — a interface que ela abre. NADA em ``src/`` a importa: quem a
+        levanta é o piloto de ``layout/_ferramentas/``, e é só a declaração da
+        cadeia do lançador que a tira da lista de dívida. Numa cópia sem
+        ``layout/``, ela TEM de voltar a ser acusada — senão a declaração não
+        está fazendo trabalho nenhum e as três lápides apagadas em 31/08/2026
+        teriam saído por engano.
+        """
+        chave = "gui/ponte_da_tela.py::JanelaDaAba"
+        assert chave not in promessas_sem_caminho(), (
+            f"{chave!r} está acusada na árvore viva — a boca da interface nova "
+            "parou de abrir alcance, e o portão voltou a chamar de dívida a "
+            "janela que a usuária tem aberta"
+        )
+        copia = _copia_de_src(tmp_path)
+        assert not pontes_vivas(tmp_path), (
+            "a cópia nasceu com ponte — `_copia_de_src` passou a levar "
+            "`layout/` junto, e esta mordida deixou de medir a declaração"
+        )
+        assert chave in promessas_sem_caminho(copia), (
+            "sem o piloto, o portão NÃO voltou a acusar a janela do WebView: a "
+            "absolvição dela vem de outro lugar, e a cadeia declarada em "
+            "`_CADEIA_DA_INTERFACE_NOVA` não está segurando nada"
+        )
+
+    def test_a_cura_chamada_so_pela_mordida_do_piloto_continua_acusada(
+        self, tmp_path: Path
+    ) -> None:
+        """O ponto delicado da migração, medido em vez de afirmado.
+
+        Contar a ponte como produção sem separar a ESPINHA da BANCADA faria uma
+        cura chamada só de dentro de ``if self.args.prova_gesto:`` passar por
+        ligada. Aqui a mesma cura é medida três vezes na mesma cópia: acusada
+        sob a guarda, absolvida quando a régua de comparação (a ponte inteira,
+        sem poda) é usada, e absolvida de novo quando a chamada SAI da guarda.
+        A segunda medição é o que prova que quem acusa é a poda, e não a
+        ausência de ponte.
+        """
+        copia = _copia_de_src(tmp_path)
+        (copia / "daemon" / "cura_recem_nascida.py").write_text(
+            "def rearmar_o_gatilho_da_cor() -> bool:\n    return True\n",
+            encoding="utf-8",
+        )
+        chave = "daemon/cura_recem_nascida.py::rearmar_o_gatilho_da_cor"
+
+        pasta = tmp_path / _PASTA_DA_PONTE
+        pasta.mkdir(parents=True)
+        piloto = tmp_path / _PILOTO_DA_INTERFACE_NOVA
+        cabeca = (
+            "import argparse\n"
+            "\n"
+            "from hefesto_dualsense4unix.daemon import cura_recem_nascida\n"
+            "\n\n"
+            "class Janela:\n"
+            "    def __init__(self, args):\n"
+            "        self.args = args\n"
+            "\n"
+            "    def _instalar(self):\n"
+        )
+        rabo = (
+            "\n"
+            "    def _marcar_gestos_de_mentira(self):\n"
+            "        return cura_recem_nascida.rearmar_o_gatilho_da_cor()\n"
+            "\n\n"
+            "def main():\n"
+            "    p = argparse.ArgumentParser()\n"
+            '    p.add_argument("--prova-gesto", action="store_true")\n'
+            "    return Janela(p.parse_args())\n"
+        )
+        piloto.write_text(
+            cabeca
+            + "        if self.args.prova_gesto:\n"
+            + "            self._marcar_gestos_de_mentira()\n"
+            + rabo,
+            encoding="utf-8",
+        )
+        assert pontes_vivas(tmp_path), (
+            "o piloto fabricado não virou ponte — o fecho não achou a boca, e "
+            "as duas medições abaixo passariam por ausência"
+        )
+        assert chave in promessas_sem_caminho(copia), (
+            "a cura chamada SÓ de dentro de `if self.args.prova_gesto:` foi "
+            "dada por ligada. A poda da bancada parou de valer, e a partir "
+            "daqui basta uma linha na régua para uma cura desligada ficar "
+            "verde — que é exatamente a dívida que este portão existe para ver."
+        )
+        assert chave not in promessas_sem_caminho(copia, podar_a_bancada=False), (
+            "com a ponte INTEIRA a cura continuou acusada — então não é a poda "
+            "que a está acusando, e esta mordida não mede a distinção entre "
+            "espinha e bancada"
+        )
+
+        piloto.write_text(
+            cabeca
+            + "        self._marcar_gestos_de_mentira()\n"
+            + rabo,
+            encoding="utf-8",
+        )
+        assert chave not in promessas_sem_caminho(copia), (
+            "tirada a guarda, a chamada passou a ser espinha viva e o portão "
+            "continuou acusando — a poda ficou larga demais e agora cobra de "
+            "quem está fiado, que é o defeito mais caro que este portão pode ter"
         )
         assert chave not in promessas_sem_caminho(), (
             "a árvore de verdade foi contaminada pela mordida"

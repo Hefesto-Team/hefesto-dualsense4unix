@@ -853,7 +853,7 @@ class Janela:
 
         self.ponte.perguntar(
             "document.querySelector('[data-modo]')"
-            " ? (window.HEFSW ? 'ja' : 'sim') : 'nao'",
+            " ? (window.HEFSW ? 'ja' : 'sim') : 'nao'",  # (noqa-acento): sentinela comparada no JS
             respondeu,
         )
         return False

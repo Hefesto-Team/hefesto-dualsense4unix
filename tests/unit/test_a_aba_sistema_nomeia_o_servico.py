@@ -248,7 +248,7 @@ class TestQuemNaoRespondeuEOServico:
     """
 
     @pytest.mark.parametrize(
-        "funcao",
+        "funcao",  # (noqa-acento): nome do parâmetro, casado por pytest
         [
             ambiente_na_tela.descrever_teclado_na_tela,
             ambiente_na_tela.descrever_display_grafico,

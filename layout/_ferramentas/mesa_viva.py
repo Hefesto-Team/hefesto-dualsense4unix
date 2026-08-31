@@ -179,7 +179,7 @@ def _codigo_para_colorway() -> dict[str, tuple[str, str]]:
     `docs/data/cores-do-dualsense.csv` é o MESMO código que
     `integrations/cor_do_plastico.NOMES_DE_FABRICA` indexa, e nenhuma linha de
     `src/` lê esse CSV. Esta função é a costura, e ela mora aqui porque é a
-    tela que precisa do slug — o produto entrega `CorDoPlastico(codigo, nome,
+    tela que precisa do slug — o produto entrega `CorDoPlastico(codigo, nome,  (noqa-acento: assinatura citada, não prosa)
     tom)`, e o desenho pinta por `data-colorway`.
     """
     fora: dict[str, tuple[str, str]] = {}
@@ -317,7 +317,7 @@ def mesa_do_estado(
         cor = cores.get(uniq)
         slug, nome = ("", COR_DESCONHECIDA)
         if cor is not None:
-            slug, nome = CORES.get(getattr(cor, "codigo", ""), ("", getattr(cor, "nome", "")))
+            slug, nome = CORES.get(getattr(cor, "codigo", ""), ("", getattr(cor, "nome", "")))  # (noqa-acento): nome de atributo
             nome = nome or getattr(cor, "nome", COR_DESCONHECIDA)
         fora.append(
             {

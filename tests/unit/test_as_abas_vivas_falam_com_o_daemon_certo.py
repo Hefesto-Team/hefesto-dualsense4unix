@@ -54,7 +54,15 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-FERRAMENTAS = RAIZ / "novo-layout" / "_ferramentas"
+#: A PASTA MUDOU E ESTE ARQUIVO FICOU PARA TRÁS — corrigido em 31/08/2026.
+#: O commit `48b4e1a2` fez o produto ler de `layout/`; esta constante seguiu
+#: apontando para `novo-layout/`, que virou referência congelada. As duas cópias
+#: já divergiram 25 KB, então a régua media um arquivo que o produto não abre.
+#: É a QUARTA migração pela metade achada hoje — depois do gancho da régua de
+#: tela (13 reprovações), do portão de dependências que ficou verde medindo a
+#: menos, e do `test_arranjo_invariantes`. O padrão: a parte que ninguém roda no
+#: dia seguinte é a que fica.
+FERRAMENTAS = RAIZ / "layout" / "_ferramentas"
 
 #: As abas vivas de hoje. Uma aba nova entra aqui — e é de propósito que a lista
 #: seja escrita: um `glob` deixaria uma aba nova nascer sem régua e ninguém

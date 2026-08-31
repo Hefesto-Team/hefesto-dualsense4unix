@@ -121,9 +121,9 @@ def main() -> int:
     # `org.gnome.desktop.wm.preferences button-layout`, que nesta maquina esta
     # em `close,maximize,minimize:` — os dois pontos no fim mandam tudo para a
     # ESQUERDA, e foi o que ela viu. Os apps do COSMIC (o terminal, o gestor de
-    # arquivos) desenham a propria barra e poem os botoes a DIREITA.
+    # arquivos) desenham a própria barra e poem os botoes a DIREITA.
     #
-    # Com `Gtk.HeaderBar` a janela passa a desenhar a propria decoracao (CSD),
+    # Com `Gtk.HeaderBar` a janela passa a desenhar a própria decoracao (CSD),
     # que e o que todo app GTK moderno faz e o que o COSMIC espera — e os
     # botoes ganham o tema do sistema em vez do desenho do compositor.
     barra = Gtk.HeaderBar()

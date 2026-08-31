@@ -29,16 +29,30 @@ set -euo pipefail
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# O piloto e o mockup moram em `novo-layout/`, que é .gitignore e NÃO viaja em
-# worktree — por isso a árvore de origem é a fonte quando esta cópia não os tem.
+# O PILOTO MORA EM `layout/`, E ESTE ARQUIVO DIZIA `novo-layout/` — corrigido em
+# 31/08/2026. O commit `48b4e1a2` ("o produto lê de `layout/`; `novo-layout/`
+# volta a ser só referência") migrou o produto, e este lançador ficou para trás.
+#
+# NÃO QUEBRAVA POR SORTE, e a sorte era fina: quem escolhe o piloto de verdade é
+# o `scripts/abrir_interface.py`, que já lia de `layout/`. O `$PILOTO` daqui só
+# servia para achar o `.venv` — mas as duas cópias JÁ DIVERGIRAM 25 KB (81.755
+# contra 56.416 bytes), e bastava alguém passar a usar este caminho para a
+# interface abrir a versão de anteontem.
+#
+# `layout/` é VERSIONADO e viaja em worktree; o fallback para a árvore de origem
+# fica para o caso de esta cópia estar incompleta, e agora procura nas duas
+# pastas em ordem: a viva primeiro, a de referência depois.
 ORIGEM="/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix"
+PILOTO=""
 for RAIZ in "$AQUI" "$ORIGEM"; do
-    PILOTO="$RAIZ/novo-layout/_ferramentas/controles_vivos.py"
-    [ -f "$PILOTO" ] && break
+    for PASTA in layout novo-layout; do
+        CANDIDATO="$RAIZ/$PASTA/_ferramentas/controles_vivos.py"
+        [ -f "$CANDIDATO" ] && { PILOTO="$CANDIDATO"; break 2; }
+    done
 done
 
-if [ ! -f "$PILOTO" ]; then
-    echo "não achei o piloto (novo-layout/_ferramentas/controles_vivos.py)" >&2
+if [ -z "$PILOTO" ]; then
+    echo "não achei o piloto (layout/_ferramentas/controles_vivos.py)" >&2
     echo "procurei em: $AQUI e $ORIGEM" >&2
     read -rp "Enter para fechar" _ || true
     exit 1

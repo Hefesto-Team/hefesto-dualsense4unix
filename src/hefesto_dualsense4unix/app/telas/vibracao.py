@@ -63,8 +63,9 @@ def teto_da_barra() -> int:
     passa dele"*.
 
     Era o literal ``150`` no gerador. Derivá-lo do ``RUMBLE_POLICY_MULT`` é o
-    que impede a barra de prometer um teto que o daemon já não pratica: este
-    número **já esteve errado pelo dobro** na dica desta aba (dizia 60% para o
+    que impede a barra de prometer um teto que o daemon já não
+    pratica  (noqa-acento: verbo praticar, correto sem acento). Este número
+    **já esteve errado pelo dobro** na dica desta aba (dizia 60% para o
     Economia) e nenhuma régua o via, porque estava digitado dos dois lados.
     """
     from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
