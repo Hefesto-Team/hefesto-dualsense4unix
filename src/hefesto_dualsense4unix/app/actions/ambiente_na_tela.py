@@ -59,7 +59,7 @@ def descrever_teclado_na_tela(state: object) -> str:
     tem teclado na tela, só que esta janela não sabe.
     """
     if not isinstance(state, dict) or "osk_disponivel" not in state:
-        return "Teclado na tela: não consegui ler — o Hefesto pode estar desligado."
+        return "Teclado na tela: não consegui ler — o serviço pode estar desligado."
     disponivel = state.get("osk_disponivel")
     if disponivel is True:
         return "Teclado na tela: instalado — o L3 abre um teclado que digita."
@@ -84,7 +84,7 @@ def descrever_display_grafico(state: object) -> str:
     presunção o T-01 desta mesma sprint corrigiu na origem — não aqui).
     """
     if not isinstance(state, dict) or "window_detect_backend" not in state:
-        return "Detector de janela: não consegui ler — o Hefesto pode estar desligado."
+        return "Detector de janela: não consegui ler — o serviço pode estar desligado."
     backend = state.get("window_detect_backend")
     if not isinstance(backend, str) or backend in ("", "null"):
         return (
@@ -109,7 +109,7 @@ def descrever_steam_encontrada(state: object) -> str:
     honesta e não um defeito: publicar a chave é gancho de outra onda.
     """
     if not isinstance(state, dict) or "steam_layout_achado" not in state:
-        return "Steam: não consegui ler — o Hefesto pode estar desligado."
+        return "Steam: não consegui ler — o serviço pode estar desligado."
     layout = state.get("steam_layout_achado")
     if isinstance(layout, str) and layout:
         return f"Steam: encontrada ({_escapar_markup(layout)})."

@@ -937,14 +937,14 @@
 
         <!-- ---------- O HEFESTO · PERFIL DE BATERIA ---------- -->
         <div class="sec-rot sr-par2">
-          <span>O Hefesto <span class="ajuda">?<span class="dica">O Hefesto é um serviço que fica rodando em segundo plano. Ele é quem fala com os controles — sem ele, o Linux vê 4 gamepads comuns e nada mais.<br><br><b>Reiniciar</b> resolve a maioria dos travamentos e não perde nenhum ajuste seu, em nenhum dos 4.<br><br><b>Retomar</b> só acende quando o Hefesto está pausado. A pausa fica gravada em disco e <b>sobrevive a desligar o computador</b>: sem este botão, ele renasce pausado.</span></span></span><span></span>
+          <span>O serviço <span class="ajuda">?<span class="dica">O serviço é o Hefesto rodando em segundo plano. Ele é quem fala com os controles — sem ele, o Linux vê 4 gamepads comuns e nada mais.<br><br><b>Parar o serviço não é desligar o Hefesto na aba Jogar</b>: lá ele continua rodando e só sai do meio do jogo; aqui ele deixa de rodar.<br><br><b>Reiniciar</b> resolve a maioria dos travamentos e não perde nenhum ajuste seu, em nenhum dos 4.<br><br><b>Retomar</b> só acende quando o serviço está pausado. A pausa fica gravada em disco e <b>sobrevive a desligar o computador</b>: sem este botão, ele renasce pausado.</span></span></span><span></span>
           <span>Perfil de Bateria <span class="ajuda">?<span class="dica">O que fica ligado na mesa inteira, e quanto isso custa de bateria. As abas continuam mandando no que fazem — nenhum ajuste seu é apagado.<br><br><b>Tudo ligado</b> — nada é limitado; o que o jogo pedir chega inteiro.<br><b>Bateria longa</b> — põe teto na vibração: 30% da força.<br><b>Eu escolho</b> — você decide item a item, aba por aba.<br><br>É o perfil da <b>mesa</b>: vale para os 4 controles. Cada um pode sobrepô-lo na linha dele.</span></span></span>
         </div>
         <div class="par2">
 
           <div class="bloco2">
             <div class="col-est">
-            <div class="est ok" data-id="hefesto-estado"><span class="g">✓</span><span class="rot">O Hefesto está</span><span class="val">Ligado</span></div>
+            <div class="est ok" data-id="hefesto-estado"><span class="g">✓</span><span class="rot">O serviço está</span><span class="val">Ligado</span></div>
             <div class="est warn" title="A pausa fica gravada em disco e sobrevive a desligar o computador. O botão Retomar, ao lado, é a saída — até 27/08/2026 só o terminal saía dela." data-id="hefesto-pausa"><span class="g">!</span><span class="rot">Pausado</span><span class="val">Sim, e volta pausado</span></div>
             <div class="est ok" data-id="hefesto-troca-de-perfil"><span class="g">✓</span><span class="rot">Trocar de perfil ao abrir o jogo</span><span class="val">Ligado</span></div>
             <div class="est info" data-id="hefesto-ambiente"><span class="g">◆</span><span class="rot">Como ele enxerga a janela</span><span class="val">Wayland · COSMIC</span></div>
@@ -953,10 +953,10 @@
             </div>
             <div class="risco"></div>
             <div class="col-acao">
-            <button class="btn verde" title="Tira o Hefesto da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador." data-gesto="retomar">Retomar</button>
-            <button class="btn" title="Desliga e liga. Resolve a maioria dos travamentos e não perde nenhum ajuste seu." data-gesto="reiniciar">Reiniciar o Hefesto</button>
+            <button class="btn verde" title="Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador." data-gesto="retomar">Retomar</button>
+            <button class="btn" title="Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu." data-gesto="reiniciar">Reiniciar o serviço</button>
             <button class="btn" title="Relê tudo o que esta aba mostra. Não muda nada." data-gesto="atualizar">Atualizar</button>
-            <button class="btn vermelho" title="Os 4 viram gamepads comuns do Linux. Pergunta antes, dizendo o que se perde." data-gesto="desligar">Desligar o Hefesto</button>
+            <button class="btn vermelho" title="O Hefesto deixa de rodar e os 4 viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde." data-gesto="desligar">Parar o serviço</button>
             </div>
           </div>
 
@@ -976,7 +976,7 @@
                  e distoante do resto da página, tá destacando negativamente"*.
 
                  MEDIDO no Chrome antes de mexer: o bloco tem 154px (a altura vem
-                 do irmão, "O Hefesto", que soma 4 botões de 34 + 3 vãos de 6), e o
+                 do irmão, "O serviço", que soma 4 botões de 34 + 3 vãos de 6), e o
                  conteúdo daqui tinha 96 — 36 do seletor + 30 + 30. Sobravam **58px
                  de painel vazio**, o único vão da aba: as outras cinco colunas
                  desta página são engenhadas para ACABAR NO MESMO y (4 achados de
@@ -1017,7 +1017,7 @@
             <div class="saude">
               <span class="selo ok"><span class="sg">✓</span>OK</span>
               <span class="txt"><span>O serviço sobe sozinho no login</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> a unidade <b>hefesto.service</b> está habilitada para o seu usuário.<br><br><b>Por que importa:</b> sem isso você teria de ligar o Hefesto à mão toda vez que ligasse o computador.<br><br><b>O que fazer:</b> nada. Para desfazer, é o interruptor <b>Ligar junto com o computador</b>, acima.</span></span>
+              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> a unidade <b>hefesto.service</b> está habilitada para o seu usuário.<br><br><b>Por que importa:</b> sem isso você teria de ligar o serviço à mão toda vez que ligasse o computador.<br><br><b>O que fazer:</b> nada. Para desfazer, é o interruptor <b>Ligar junto com o computador</b>, acima.</span></span>
             </div>
             <div class="saude">
               <span class="selo ok"><span class="sg">✓</span>OK</span>
@@ -1146,6 +1146,33 @@
 
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
+  <h2>A palavra "Hefesto" ficou com a aba Jogar — esta aba nomeia o SERVIÇO (31/08/2026)</h2>
+  <ul>
+    <li><b>A colisão.</b> Duas abas diziam <i>"Hefesto ligado/desligado"</i> e significavam coisas
+      diferentes: na <b>Jogar</b> é o <b>modo</b> (o Hefesto no meio do jogo, ou o aparelho puro),
+      e aqui era o <b>processo</b> (<code>systemctl --user stop</code>). Quem desligava na Jogar
+      continuava com o serviço rodando; quem desligava aqui matava tudo. É a mesma família da
+      confusão <i>Nativo × DualSense</i> que ela mandou desfazer no mesmo dia.</li>
+    <li><b>A escolha dela.</b> A palavra <b>Hefesto</b> fica com a <b>Jogar</b>. Aqui: a faixa
+      <i>O Hefesto</i> virou <b>O serviço</b>, a linha <i>O Hefesto está</i> virou <b>O serviço
+      está</b>, <i>Reiniciar o Hefesto</i> virou <b>Reiniciar o serviço</b> e <i>Desligar o
+      Hefesto</i> virou <b>Parar o serviço</b>.</li>
+    <li><b>Quatro ocorrências ficaram, e não é esquecimento.</b> Onde "Hefesto" é o <b>programa</b>
+      — quem escreve nos controles, quem cria os 4 gamepads virtuais, o dono do registro técnico
+      — a palavra fica. Trocá-las seria o defeito ao contrário: a tela passaria a dizer que quem
+      cria gamepad virtual é uma unidade do systemd.</li>
+    <li><b>A dica agora explica a diferença</b>, porque as duas coisas passaram a existir na mesma
+      interface: <i>"Parar o serviço não é desligar o Hefesto na aba Jogar: lá ele continua rodando
+      e só sai do meio do jogo; aqui ele deixa de rodar."</i> O botão vermelho repete o ponteiro
+      curto — <i>"não é o interruptor Hefesto da aba Jogar"</i> — porque é ali que a confusão custa.</li>
+    <li><b>Nenhum <code>data-id</code> e nenhum <code>data-gesto</code> mudou.</b>
+      <code>hefesto-estado</code>, <code>hefesto-pausa</code>, <code>desligar</code>… são
+      <b>endereços</b> do contrato de <code>gui/aba_sistema.py</code>, lidos por AST em
+      <code>_id()</code>/<code>_gesto()</code>. O vocabulário da <b>tela</b> e o endereço do
+      <b>dado</b> são coisas separadas — é por isso que esta mudança coube num arquivo só, sem
+      tocar o produto que ela usa.</li>
+  </ul>
+
   <h2>O defeito que esta rodada curou: 93px escondidos</h2>
   <ul>
     <li><b>O que a foto mostrava.</b> O miolo rolava <b>93px por dentro</b>: o segundo botão do
@@ -1266,7 +1293,7 @@
       (<code>integrations/desktop_notifications.py:272</code>). Com 4 controles a pergunta pesa
       mais: são 4 baterias a acabar em horários diferentes. Opções: (a) na faixa <b>Perfil de
       Bateria</b>, que nasceu hoje e é onde a palavra "bateria" agora mora; (b) na faixa "O
-      Hefesto"; (c) na aba Controles, junto da bateria de cada um.</li>
+      serviço"; (c) na aba Controles, junto da bateria de cada um.</li>
     <li><b>Entra uma linha de saúde para o canal DSX?</b> A porta 127.0.0.1:6969 aceita gatilho e
       cor de qualquer programa local e nenhuma tela conta isso
       (<code>daemon/udp_server.py</code>). É a explicação que falta quando o gatilho muda sozinho.

@@ -39,8 +39,10 @@ Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
    **FECHADO SEM CONSTRUIR NADA:** o botão saiu da fileira e virou a *posição*
    Desligado do interruptor, que **é** o ``MODE_NATIVE`` — e esse lê (o mesmo
    ``mode_of_state``) e escreve (``apply_mode('native')``). A lápide, com a
-   data, é :data:`MODO_DESLIGADO`. Encerrar o Hefesto INTEIRO continua sendo
-   "Encerrar o serviço", na aba Sistema.
+   data, é :data:`MODO_DESLIGADO`. Parar o Hefesto INTEIRO continua sendo
+   "Parar o serviço", na aba Sistema — e a palavra é escolha dela de 31/08:
+   "parar" é o que o `systemctl stop` faz e é o par de "Ligado"; "encerrar"
+   sugeria fim definitivo, e o serviço volta no próximo login.
 
 2. **A escada tinha cinco chips no desenho e quatro degraus no código**, e um
    degrau REAL — ``Ponte(gamepad, xbox)``, o segundo que o produto tenta —

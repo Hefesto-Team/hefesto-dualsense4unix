@@ -590,9 +590,8 @@
      SEM UMA LINHA DE JAVASCRIPT, como as outras nove abas: dois `radio` com o
      mesmo `name`, escondidos, e `<label for>` por cima. É o MESMO mecanismo do
      acordeão da Controles (`aba02`) e das seções que abrem da Conexões
-     (`topo.html`) — o navegador já garante que ligar um desliga o outro, e o
-     combinador `~` faz a seção de baixo aparecer e sumir sem script. O mockup
-     abre por duplo clique, e é regra desta casa que continue assim.
+     (`topo.html`) — o navegador já garante que ligar um desliga o outro. O
+     mockup abre por duplo clique, e é regra desta casa que continue assim.
 
      POR QUE `label` E NÃO `button`: só o par `radio` + `label` muda de estado
      sem script. O preço está medido e declarado no relatório desta leva — a
@@ -601,12 +600,35 @@
      aqui. */
   .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
 
-  /* O RÓTULO FICA NA MESMA LINHA DO INTERRUPTOR, e isso é PAGAMENTO DE ALTURA,
-     não estética: o miolo desta aba tinha **2px** de folga em 542 (medido hoje,
-     antes desta mudança). Um `linha-rot` por cima custaria 22px e a aba passaria
-     a rolar por dentro. Deitado, ele custa zero — e é a forma que ela desenhou:
-     `HEFESTO [ Ligado ● / Desligado ○ ]`, tudo numa linha. */
+  /* ---------- ELE SUBIU PARA FORA DO QUADRO — 31/08/2026, à tarde ----------
+     ENQUADRAMENTO, e o defeito era de significado, não de pixel: o interruptor
+     nasceu DENTRO do quadro "Quando o jogo abrir", e um quadro é um escopo. Ali
+     ele lia como *"ligar o Hefesto quando um jogo abrir"*, e não é isso — o
+     Hefesto ligado ou desligado vale SEMPRE, com jogo aberto ou sem nenhum. O
+     que é decidido no lançamento é o MODO, e só ele fica no quadro.
+
+     ELE É FILHO DIRETO DO MIOLO, e o precedente é a FITA do `topo.html`
+     ("Ajustes vão para: [Todos] [P1…]"): rótulo deitado + a fileira do que se
+     escolhe, sem moldura, acima do que ela governa. A diferença é o escopo —
+     a fita é da JANELA (fica acima da tira, nas dez abas) e este é da ABA, logo
+     mora no miolo, que é onde a aba começa.
+
+     O `padding-left` de 15px NÃO É MARGEM: é o que põe o "Hefesto" no MESMO x
+     dos títulos dos dois quadros (o `.quadro-titulo` nasce em dx=15 — 1px de
+     borda + os 14 do `--pad-quadro`, e a régua mede isso). Sem ele o rótulo
+     ficava 15px à esquerda de "Quando o jogo abrir" e "Conectado agora", que é
+     o desalinhamento que ela cobra desde 27/08. E tem de ser PADDING, não
+     margem: a régua exige que todo filho direto do miolo comece no x do miolo e
+     tenha a largura inteira — padding não move a caixa de borda, margem move. */
+  .hef-topo{padding-left:15px}
+
+  /* O RÓTULO FICA NA MESMA LINHA DO INTERRUPTOR — e continua deitado por uma
+     razão que sobreviveu à mudança de lugar. Um `linha-rot` por cima custa 22px;
+     deitado custa zero, e é a forma que ela desenhou: `HEFESTO [ Ligado ● /
+     Desligado ○ ]`, tudo numa linha. O orçamento hoje é outro (a subida do
+     interruptor DEVOLVEU 13px em vez de custar), mas a forma é dela. */
   .hef-linha{display:flex;align-items:center;gap:8px}
+  .hef-linha .ajuda{margin-left:2px}
   .hef-linha .linha-rot{margin-bottom:0;flex:0 0 auto;margin-right:6px}
   .hef-pos{
     height:var(--h-escolha);display:inline-flex;align-items:center;gap:9px;
@@ -642,18 +664,40 @@
                               border-color:var(--texto-mudo)}
 
   /* AS DUAS SEÇÕES SÃO EXCLUSIVAS, e é isso que ela pediu: *"Modo Hefesto se
-     Ligado Abre as seções de Modo"*. A do desligado tem a MESMA altura (rótulo +
-     uma faixa de 36px), para a tela não pular quando ela vai e volta — a mesma
-     razão pela qual as dez abas têm uma altura só. */
-  .hef-rd ~ .so-ligado, .hef-rd ~ .so-desligado{display:none}
-  #hef-ligado:checked ~ .so-ligado{display:block}
-  #hef-desligado:checked ~ .so-desligado{display:block}
-  /* E ELAS ABREM NO MESMO y E FECHAM NO MESMO y. O rótulo da seção do LIGADO
-     leva o ícone `?` (17px) e o do DESLIGADO é só texto (13px): sem esta linha a
-     tela PULAVA 4px a cada volta do interruptor — medido, 180 contra 176. "Muda
-     tudo ao clicar" é a queixa dela que fixou a altura única das dez abas, e ela
-     vale dentro de uma aba também. A cura é na ALTURA, e manda o mais alto. */
-  .hef .sub-secao > .linha-rot{display:flex;align-items:center;height:17px}
+     Ligado Abre as seções de Modo"*. Continua SEM UMA LINHA DE JAVASCRIPT.
+
+     O COMBINADOR MUDOU DE `~` PARA `:has()`, e a troca é FORÇADA, não gosto.
+     Com o interruptor fora do quadro, os rádios deixaram de ser irmãos das duas
+     seções — o `~` só enxerga irmão POSTERIOR, e agora há uma borda de quadro no
+     caminho. Havia duas saídas:
+
+       a) pendurar os dois `<input>` direto no `.miolo`, e daí o `~` alcançaria
+          (`#hef-ligado:checked ~ .quadro .so-ligado`). REPROVADA, e por uma
+          régua real: `regua.py` exige que TODO filho direto do miolo comece no x
+          do miolo e tenha a largura inteira, e um `input` de 0×0 é filho direto
+          com largura própria. A cura teria custado um erro na régua da aba que
+          É a referência das outras nove;
+       b) `:has()` no invólucro, que é o que está aqui. NÃO É MECANISMO NOVO
+          NESTA CASA: o `topo.html` já abre e fecha as seções da Conexões com
+          `.quadro:has(> input.abre:not(:checked))`, e o WebKitGTK desta máquina
+          é 2.52.3 — `:has()` entrou no WebKit em 2.38.
+
+     A ESPECIFICIDADE FECHA: `:has()` vale o do argumento mais específico, então
+     a regra que MOSTRA leva um `#id` e vence a que esconde, que é só classe. */
+  .hef-topo ~ .quadro .so-ligado,
+  .hef-topo ~ .quadro .so-desligado{display:none}
+  .hef-topo:has(#hef-ligado:checked) ~ .quadro .so-ligado{display:block}
+  .hef-topo:has(#hef-desligado:checked) ~ .quadro .so-desligado{display:block}
+  /* E ELAS ABREM NO MESMO y E FECHAM NO MESMO y — 180 contra 176 foi o que se
+     mediu quando divergiram, e "muda tudo ao clicar" é a queixa dela que fixou a
+     altura única das dez abas; ela vale dentro de uma aba também.
+     A CAUSA ORIGINAL SUMIU E A TRAVA FICOU, de propósito: o `?` que só a seção
+     do LIGADO tinha subiu para o topo do quadro (ele passou a ser a ajuda do
+     quadro inteiro, que agora só tem os modos dentro), então os dois rótulos são
+     texto puro e já nasceriam iguais. A linha continua aqui porque é ela que
+     GARANTE a igualdade — sem ela, o dia em que um dos dois ganhar um ícone a
+     tela volta a pular, e ninguém vai lembrar por quê. A cura é na ALTURA. */
+  .hef-modo > .linha-rot{display:flex;align-items:center;height:17px}
 
   /* O CHIP SEM DONO — a honestidade desta tela, e ela tem uma regra e uma ordem
      em cima. A regra é de 30/08 (*botão sem dono no produto não vai para a tela
@@ -1000,35 +1044,62 @@
   <!-- ================= MIOLO ================= -->
   <div class="miolo">
 
+    <!-- ---------- O INTERRUPTOR DO HEFESTO — FORA DE TUDO ----------
+         DOIS NÍVEIS desde 31/08/2026 (manhã), decisão dela: em cima o
+         interruptor do Hefesto, e o que ele abre embaixo. A pergunta que o
+         motivou é dela — *"qual a diferença de nativo pra dualsense?"* — e a
+         resposta é estrutural: Nativo é o Hefesto FORA do meio, e os outros são
+         jeitos de ele estar no meio. Numa fileira só, os dois liam como irmãos.
+
+         E ELE SUBIU PARA FORA DO QUADRO na mesma tarde, decisão dela ao ver a
+         foto: dentro de "Quando o jogo abrir" o interruptor lia como *"ligar o
+         Hefesto quando um jogo abrir"*, e não é isso — ligado ou desligado vale
+         SEMPRE. O quadro fica com o que É decidido no lançamento: o modo.
+
+         A GRAMÁTICA É A DA FITA do `topo.html` ("Ajustes vão para: [Todos]
+         [P1…]"): rótulo deitado, a fileira do que se escolhe, sem moldura, acima
+         do que ela governa. -->
+    <div class="hef-topo">
+
+      <!-- OS DOIS RÁDIOS VÊM PRIMEIRO porque o `~` de dentro desta caixa (o que
+           acende a posição escolhida) só enxerga irmão POSTERIOR. Quem alcança
+           as duas seções lá dentro do quadro é o `:has()` — ver o CSS. -->
+      <input type="radio" name="hefesto" id="hef-ligado" class="hef-rd" checked>
+      <input type="radio" name="hefesto" id="hef-desligado" class="hef-rd">
+
+      <div class="hef-linha">
+        <span class="linha-rot">Hefesto</span>
+        <label class="hef-pos ligado" for="hef-ligado" data-modo="gamepad"
+               title="O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho."><span class="pino"></span>Ligado</label>
+        <label class="hef-pos desligado" for="hef-desligado" data-modo="native"
+               title="Modo Nativo — o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho: os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim."><span class="pino"></span>Desligado</label>
+        <span class="ajuda">?<span class="dica">
+          <b>Ligado</b> — o Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho. Os cinco modos do quadro abaixo são jeitos de ele fazer isso.<br><br>
+          <b>Desligado</b> — <b>Modo Nativo</b>: o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho; os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim.<br><br>
+          Isto vale <b>sempre</b>, com jogo aberto ou sem nenhum — por isso está fora do quadro.<br><br>
+          E isto <b>não</b> encerra o Hefesto. Para desligar o serviço inteiro, é a aba <b>Sistema</b>.
+        </span></span>
+      </div>
+    </div>
+
     <!-- ---------- QUANDO O JOGO ABRIR ----------
-         DOIS NÍVEIS desde 31/08/2026, decisão dela: em cima o interruptor do
-         Hefesto, e o que ele abre embaixo. A pergunta que o motivou é dela —
-         *"qual a diferença de nativo pra dualsense?"* — e a resposta é
-         estrutural: Nativo é o Hefesto FORA do meio, e os outros são jeitos de
-         ele estar no meio. Numa fileira só, os dois liam como irmãos. -->
+         O que sobra aqui é o que o lançamento decide de verdade. -->
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">Quando o jogo abrir</span>
+        <!-- O `?` DOS MODOS SUBIU do rótulo "Modo" para cá em 31/08 à tarde, e é
+             consequência do interruptor ter saído: com só os modos dentro, a
+             ajuda do quadro É a ajuda dos modos, e dois `?` a três linhas um do
+             outro diriam a mesma coisa duas vezes. De quebra, os rótulos das
+             duas seções ficaram idênticos — texto puro dos dois lados. -->
         <span class="ajuda">?<span class="dica">
-          <b>Ligado</b> — o Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho. Os cinco modos de baixo são jeitos de ele fazer isso.<br><br>
-          <b>Desligado</b> — <b>Modo Nativo</b>: o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho; os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim.<br><br>
-          Isto <b>não</b> encerra o Hefesto. Para desligar o serviço inteiro, é a aba <b>Sistema</b>.
+          Os cinco <b>usam as features do Hefesto</b>: luz, vibração, gatilho e o número do jogador continuam por conta dele em todos.<br><br>
+          O Hefesto <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo. Ele já faz isso sozinho, sempre — não é um botão, é o que a escada é.<br><br>
+          A ordem tem razão medida: dez recursos do controle (giroscópio, acelerômetro, os dois pontos do touchpad, o clique, a vibração) <b>só chegam ao jogo pelo Sony DualSense</b>. Errar ali custa os dez, e custa em silêncio.<br><br>
+          <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle. Hoje ele gira <b>quatro</b> pontes de verdade, nesta ordem: Sony DualSense, Xbox, <b>Modo Nativo</b> — que é o interruptor <b>Desligado</b>, acima — e Steam Input. <b>Point And Click</b> e <b>Navegação</b> ainda não são degraus: o PS+R3 não para neles.
         </span></span>
       </div>
       <div class="quadro-corpo hef">
-
-        <!-- OS DOIS RÁDIOS VÊM PRIMEIRO porque o combinador é o `~`: eles têm de
-             ser irmãos ANTERIORES das duas seções que abrem. -->
-        <input type="radio" name="hefesto" id="hef-ligado" class="hef-rd" checked>
-        <input type="radio" name="hefesto" id="hef-desligado" class="hef-rd">
-
-        <div class="hef-linha">
-          <span class="linha-rot">Hefesto</span>
-          <label class="hef-pos ligado" for="hef-ligado" data-modo="gamepad"
-                 title="O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho."><span class="pino"></span>Ligado</label>
-          <label class="hef-pos desligado" for="hef-desligado" data-modo="native"
-                 title="Modo Nativo — o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho: os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim."><span class="pino"></span>Desligado</label>
-        </div>
 
         <!-- O SELETOR DE MÁSCARA SAIU DAQUI em 28/08. Decisão dela: a máscara é
              POR CONTROLE, e o seletor mora dentro do cartão de cada um, no quadro
@@ -1036,15 +1107,9 @@
              modo é estado do processo — existe um só (`app/actions/mode_transition.py`),
              e por isso ele não podia descer para o cartão junto com a máscara. -->
 
-        <div class="sub-secao so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
+        <div class="hef-modo so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
           <div class="linha-rot">
             <b style="color:var(--texto-suave)">Modo</b>
-            <span class="ajuda" style="display:inline-block;vertical-align:-3px;margin-left:3px">?<span class="dica">
-              Os cinco <b>usam as features do Hefesto</b>: luz, vibração, gatilho e o número do jogador continuam por conta dele em todos.<br><br>
-              O Hefesto <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo. Ele já faz isso sozinho, sempre — não é um botão, é o que a escada é.<br><br>
-              A ordem tem razão medida: dez recursos do controle (giroscópio, acelerômetro, os dois pontos do touchpad, o clique, a vibração) <b>só chegam ao jogo pelo Sony DualSense</b>. Errar ali custa os dez, e custa em silêncio.<br><br>
-              <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle. Hoje ele gira <b>quatro</b> pontes de verdade, nesta ordem: Sony DualSense, Xbox, <b>Modo Nativo</b> — que aqui é o interruptor <b>Desligado</b> — e Steam Input. <b>Point And Click</b> e <b>Navegação</b> ainda não são degraus: o PS+R3 não para neles.
-            </span></span>
           </div>
           <div class="escada">
             <span class="degrau on" data-degrau="dualsense"
@@ -1062,7 +1127,7 @@
 
         <!-- O OUTRO LADO DO INTERRUPTOR. Mesma altura da seção de cima (rótulo +
              36px), para a tela não pular quando ela vai e volta. -->
-        <div class="sub-secao so-desligado" title="Esta seção só aparece com o Hefesto DESLIGADO.">
+        <div class="hef-modo so-desligado" title="Esta seção só aparece com o Hefesto DESLIGADO.">
           <div class="linha-rot">
             <b style="color:var(--texto-suave)">Modo</b>
           </div>
@@ -2766,13 +2831,30 @@
       boa: a tela punha os dois na <b>mesma</b> fileira, como alternativas do mesmo tipo. Não
       são. <b>Nativo é o Hefesto FORA do meio</b>; os outros são jeitos de ele <b>estar</b> no
       meio. Agora a tela mostra isso: em cima o interruptor, embaixo o que ele abre.</li>
+    <li><b>E o interruptor SUBIU para fora do quadro</b> — sua decisão da tarde de 31/08,
+      olhando a foto: ele tinha nascido <b>dentro</b> de "Quando o jogo abrir", e um quadro é um
+      <b>escopo</b>. Ali ele lia como <i>"ligar o Hefesto quando um jogo abrir"</i>, e não é isso:
+      <b>ligado ou desligado vale sempre</b>, com jogo aberto ou sem nenhum. O que o lançamento
+      decide de verdade é o <b>modo</b>, e é só ele que fica no quadro.
+      <br>A gramática é a da <b>fita</b> do topo da janela (<span class="marca">"Ajustes vão para:
+      [Todos] [P1 · Cosmic Red · USB]…"</span>): rótulo deitado, a fileira do que se escolhe, sem
+      moldura, acima do que ela governa. O "Hefesto" nasce no <b>mesmo x</b> de "Quando o jogo
+      abrir" e "Conectado agora" — os três títulos da aba numa coluna só.
+      <br><b>E ela DEVOLVEU altura em vez de custar</b>, que era o risco: o quadro perdeu a linha
+      do interruptor e a divisória que a separava dos modos (63px), e o que subiu custa 50 (a
+      fileira de 36 mais o passo de 14 do miolo). Saldo <b>−13px</b>: o miolo pedia <b>514</b> de
+      542 e passou a pedir <b>501</b>; a folga foi de <b>28</b> para <b>41px</b>, nas duas
+      posições do interruptor.</li>
     <li><b>"Desligado" deixou de ser um estado inventado, e isso fecha a MIGRA-JOGAR-06</b> —
       sem construir nada. O quarto botão da fileira antiga não tinha leitor:
       <code>mode_transition.mode_of_state</code> é o ponto único de leitura do modo vivo e
       devolve <b>três</b> valores, nunca um quarto. Com a sua decisão, <b>Desligado = Modo
       Nativo</b> (<code>MODE_NATIVE</code>), que <b>lê</b> (o mesmo <code>mode_of_state</code>)
       e <b>escreve</b> (<code>apply_mode('native')</code>, em <code>painel.ESCRITOR_DOS_MODOS</code>).
-      Encerrar o Hefesto inteiro continua sendo <b>"Encerrar o serviço"</b>, na Sistema.</li>
+      Parar o Hefesto inteiro continua sendo <b>"Parar o serviço"</b>, na Sistema — e o verbo
+      é escolha dela de 31/08: <i>parar</i> é o que o <code>systemctl stop</code> faz e é o par
+      de <i>Ligado</i>; <i>encerrar</i> sugeria fim definitivo, e o serviço volta no próximo
+      login.</li>
     <li><b>O chip que se chamava "Hefesto" virou "Sony DualSense"</b> — ele sempre foi
       <code>Ponte(gamepad, dualsense)</code>, o primeiro degrau de
       <code>integrations/ponte_escada.ESCADA</code>. Era o nome do <b>produto</b> no lugar do
@@ -2788,7 +2870,8 @@
       mesmo dia: o terceiro degrau é o <b>Nativo</b>, que saiu da fileira para virar o
       interruptor <b>Desligado</b>. Havia três saídas — numerar <i>1 · 2 · 4</i> com o buraco do
       3, numerar pela posição na tela (e esta linha passar a mentir), ou tirar os números. Ela
-      tirou. <b>A ordem não se perdeu</b>: está na dica de cada modo e na do "Modo de conexão".</li>
+      tirou. <b>A ordem não se perdeu</b>: está na dica de cada modo e na do quadro
+      <b>Quando o jogo abrir</b>.</li>
     <li><b>A máscara virou POR CONTROLE</b> — decisão sua, 28/08. Três opções e
       <b>sem "Automático"</b>: DualSense · Xbox 360 · Nintendo Pro. O seletor mora dentro
       do cartão de cada controle. O que era um seletor único lá em cima
@@ -2875,14 +2958,31 @@
       no <code>MODOS</code>; mas então a dica de cada modo tem de deixar de dizer "é o primeiro
       que o Hefesto tenta", ou a tela volta a se contradizer.</li>
     <li><b>O rótulo "Hefesto" ficou DEITADO, ao lado do interruptor</b>, e não em cima como as
-      outras linhas desta casa. É pagamento de altura: o miolo desta aba tinha <b>2px</b> de
-      folga em 542 antes desta mudança, e um rótulo por cima custa 22px — a aba passaria a
-      rolar por dentro. Deitado ele custa zero, e é a forma que você desenhou
-      (<span class="marca">"Hefesto Ligado/Desligado"</span>, tudo numa linha).</li>
-    <li><b>O nome da seção de baixo é "Modo", e não "Modo de conexão"</b> — é a sua palavra
+      outras linhas desta casa. Nasceu como pagamento de altura — o miolo tinha <b>2px</b> de
+      folga em 542 antes do redesenho da manhã, e um rótulo por cima custa 22px. Esse aperto
+      passou (a subida devolveu 13px, e a folga hoje é de 41), mas ele <b>continua deitado</b>
+      porque é a forma que você desenhou (<span class="marca">"Hefesto Ligado/Desligado"</span>,
+      tudo numa linha) — e porque é a da fita do topo da janela, que é o lugar de onde ele
+      agora fala.</li>
+    <li><b>O "?" dos modos subiu do rótulo "Modo" para o topo do quadro</b> — é consequência de
+      o interruptor ter saído: com só os cinco modos dentro, a ajuda do quadro <b>é</b> a ajuda
+      dos modos, e dois "?" a três linhas um do outro diriam a mesma coisa duas vezes. Nada de
+      texto se perdeu — ele está inteiro no "?" do <b>Quando o jogo abrir</b>. De quebra os
+      rótulos das duas posições ficaram idênticos (texto puro dos dois lados), que é o que já
+      tinha custado <b>180 contra 176</b> quando divergiram.</li>
+    <li><b>O nome da seção é "Modo", e não "Modo de conexão"</b> — é a sua palavra
       (<span class="marca">"Abre as seções de Modo"</span>). O quadro continua se chamando
       <b>Quando o jogo abrir</b>, e o de baixo <b>Conectado agora</b>: os dois títulos são seus,
       de 26 e 28/08, e não os troquei sem você pedir.</li>
+    <li><b>Continua sem uma linha de JavaScript, mas o combinador mudou</b> — e a troca foi
+      forçada, não gosto. Com o interruptor fora do quadro, os dois <code>radio</code> deixaram
+      de ser irmãos das seções que abrem, e o <code>~</code> só enxerga irmão posterior. A saída
+      óbvia — pendurar os dois <code>input</code> direto no miolo — <b>reprovou numa régua real</b>:
+      o <code>regua.py</code> exige que todo filho direto do miolo comece no x do miolo e tenha a
+      largura inteira, e um <code>input</code> de 0×0 é filho direto com largura própria; a cura
+      teria custado um erro na régua da aba que <b>é a referência das outras nove</b>. O que
+      está lá é <code>:has()</code>, que não é mecanismo novo aqui: o esqueleto já abre e fecha
+      as seções da <b>Conexões</b> com ele.</li>
     <li><b>A linha laranja tracejada</b> é a prova de que o Aplicar ainda deve. Ela só aparece com escolha pendente — e o espaço dela é reservado, para a tela não pular.</li>
     <li><b>A carga de cada bateria é o único dado inventado desta aba</b> — 100, 64, 41 e 87%. Bateria é estado do momento, e o mockup mostra um momento; todo o resto (cor, nome, transporte, jogador, desenho) sai de arquivo.</li>
     <li><b>O recibo do rodapé nomeia o perfil</b> — é onde a mudança vai cair, que era a informação que faltava e te custou semanas.</li>

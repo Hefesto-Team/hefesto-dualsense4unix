@@ -428,7 +428,7 @@ def est(rot, val, cls="", g="●", mono=False, dica="", ident=""):
     * **Valor de campo começa com maiúscula.** É o que fica à direita de um
       rótulo, numa linha de estado ou num campo: `Ligado`, `Sim, e volta
       pausado`, `Os 4 controles`. Ele é uma RESPOSTA, não a continuação da frase
-      do rótulo — "O Hefesto está" e "Ligado" são duas caixas, e quem lê a
+      do rótulo — "O serviço está" e "Ligado" são duas caixas, e quem lê a
       coluna de valores sozinha lê uma lista de respostas.
     * **O que não é valor de campo fica em minúscula:** a contagem no rótulo de
       uma seção (`8 linhas · nenhum aviso`), a legenda sob um elemento, o rótulo
@@ -496,7 +496,7 @@ ACHADOS = [
           "<br><br><b>O que fazer:</b> nada — está no lugar."),
     saude("OK", "✓", "O serviço sobe sozinho no login",
           "<b>O que eu vi:</b> a unidade <b>hefesto.service</b> está habilitada para o seu usuário."
-          "<br><br><b>Por que importa:</b> sem isso você teria de ligar o Hefesto à mão toda vez que ligasse o computador."
+          "<br><br><b>Por que importa:</b> sem isso você teria de ligar o serviço à mão toda vez que ligasse o computador."
           "<br><br><b>O que fazer:</b> nada. Para desfazer, é o interruptor <b>Ligar junto com o computador</b>, acima."),
     saude("OK", "✓", "Steam Input estava ligado em 2 jogos — desliguei",
           "<b>O que eu vi:</b> <b>Mortal Kombat 1</b> e <b>Elden Ring</b> estavam com o Steam Input ligado. O exame "
@@ -536,12 +536,34 @@ ACHADOS = [
 
 MEIO = len(ACHADOS) // 2 + len(ACHADOS) % 2
 
-D_HEFESTO = ('<span class="ajuda">?<span class="dica">'
-             f'O Hefesto é um serviço que fica rodando em segundo plano. Ele é quem fala com os '
+# A PALAVRA "HEFESTO" SAIU DAQUI, E É DECISÃO DELA — 31/08/2026.
+#
+# Duas abas diziam "Hefesto ligado/desligado" e significavam coisas DIFERENTES:
+# na Jogar é o MODO (o Hefesto no meio do jogo, ou o aparelho puro — o
+# `INTERRUPTOR` do `aba01.py`), e aqui era o PROCESSO (`systemctl --user stop`).
+# Quem desligava na Jogar continuava com o serviço rodando; quem desligava aqui
+# matava tudo. É a mesma família da confusão "Nativo × DualSense" que ela mandou
+# desfazer no mesmo dia. **A palavra "Hefesto" fica com a aba Jogar**, e esta
+# passa a nomear o SERVIÇO.
+#
+# O QUE NÃO MUDOU, e não é esquecimento: onde "Hefesto" é o PROGRAMA — quem
+# cria os gamepads virtuais, quem escreve nos controles, o dono do registro
+# técnico — a palavra fica. Trocar essas seria o defeito ao contrário: a tela
+# passaria a dizer que quem cria gamepad virtual é uma unidade do systemd.
+#
+# E os `data-id`/`data-gesto` NÃO se tocam: `hefesto-estado`, `hefesto-pausa`,
+# `desligar`… são endereços do contrato de `gui/aba_sistema.py`, lidos por AST
+# em `_id()`/`_gesto()`. Renomeá-los aqui derrubaria o gerador (linha 151) e
+# quebraria a pintura do produto — o vocabulário da TELA e o endereço do DADO
+# são coisas separadas, e é por isso que esta mudança cabe num arquivo só.
+D_SERVICO = ('<span class="ajuda">?<span class="dica">'
+             f'O serviço é o Hefesto rodando em segundo plano. Ele é quem fala com os '
              f'controles — sem ele, o Linux vê {N} gamepads comuns e nada mais.<br><br>'
+             '<b>Parar o serviço não é desligar o Hefesto na aba Jogar</b>: lá ele continua '
+             'rodando e só sai do meio do jogo; aqui ele deixa de rodar.<br><br>'
              f'<b>Reiniciar</b> resolve a maioria dos travamentos e não perde nenhum ajuste seu, '
              f'em nenhum dos {N}.<br><br>'
-             '<b>Retomar</b> só acende quando o Hefesto está pausado. A pausa fica gravada em '
+             '<b>Retomar</b> só acende quando o serviço está pausado. A pausa fica gravada em '
              'disco e <b>sobrevive a desligar o computador</b>: sem este botão, ele renasce pausado.'
              '</span></span>')
 
@@ -599,14 +621,14 @@ MIOLO = f'''
 
         <!-- ---------- O HEFESTO · PERFIL DE BATERIA ---------- -->
         <div class="sec-rot sr-par2">
-          <span>O Hefesto {D_HEFESTO}</span><span></span>
+          <span>O serviço {D_SERVICO}</span><span></span>
           <span>Perfil de Bateria {D_BATERIA}</span>
         </div>
         <div class="par2">
 
           <div class="bloco2">
             <div class="col-est">
-{est("O Hefesto está", "Ligado", "ok", "✓", ident=_id("hefesto-estado"))}
+{est("O serviço está", "Ligado", "ok", "✓", ident=_id("hefesto-estado"))}
 {est("Pausado", "Sim, e volta pausado", "warn", "!", dica="A pausa fica gravada em disco e sobrevive a desligar o computador. O botão Retomar, ao lado, é a saída — até 27/08/2026 só o terminal saía dela.", ident=_id("hefesto-pausa"))}
 {est("Trocar de perfil ao abrir o jogo", "Ligado", "ok", "✓", ident=_id("hefesto-troca-de-perfil"))}
 {est("Como ele enxerga a janela", "Wayland · COSMIC", "info", "◆", ident=_id("hefesto-ambiente"))}
@@ -615,10 +637,10 @@ MIOLO = f'''
             </div>
             <div class="risco"></div>
             <div class="col-acao">
-{item("Retomar", "Tira o Hefesto da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.", "btn verde", gesto=_gesto("retomar"))}
-{item("Reiniciar o Hefesto", "Desliga e liga. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.", gesto=_gesto("reiniciar"))}
+{item("Retomar", "Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.", "btn verde", gesto=_gesto("retomar"))}
+{item("Reiniciar o serviço", "Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.", gesto=_gesto("reiniciar"))}
 {item("Atualizar", "Relê tudo o que esta aba mostra. Não muda nada.", gesto=_gesto("atualizar"))}
-{item("Desligar o Hefesto", f"Os {N} viram gamepads comuns do Linux. Pergunta antes, dizendo o que se perde.", "btn vermelho", gesto=_gesto("desligar"))}
+{item("Parar o serviço", f"O Hefesto deixa de rodar e os {N} viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde.", "btn vermelho", gesto=_gesto("desligar"))}
             </div>
           </div>
 
@@ -640,7 +662,7 @@ MIOLO = f'''
                  e distoante do resto da página, tá destacando negativamente"*.
 
                  MEDIDO no Chrome antes de mexer: o bloco tem 154px (a altura vem
-                 do irmão, "O Hefesto", que soma 4 botões de 34 + 3 vãos de 6), e o
+                 do irmão, "O serviço", que soma 4 botões de 34 + 3 vãos de 6), e o
                  conteúdo daqui tinha 96 — 36 do seletor + 30 + 30. Sobravam **58px
                  de painel vazio**, o único vão da aba: as outras cinco colunas
                  desta página são engenhadas para ACABAR NO MESMO y (4 achados de
@@ -722,6 +744,33 @@ impoe_texto = impoe(PERFIL_DA_MESA)
 n_achados = len(ACHADOS)
 
 LEGENDA = f'''<div class="nota">
+  <h2>A palavra "Hefesto" ficou com a aba Jogar — esta aba nomeia o SERVIÇO (31/08/2026)</h2>
+  <ul>
+    <li><b>A colisão.</b> Duas abas diziam <i>"Hefesto ligado/desligado"</i> e significavam coisas
+      diferentes: na <b>Jogar</b> é o <b>modo</b> (o Hefesto no meio do jogo, ou o aparelho puro),
+      e aqui era o <b>processo</b> (<code>systemctl --user stop</code>). Quem desligava na Jogar
+      continuava com o serviço rodando; quem desligava aqui matava tudo. É a mesma família da
+      confusão <i>Nativo × DualSense</i> que ela mandou desfazer no mesmo dia.</li>
+    <li><b>A escolha dela.</b> A palavra <b>Hefesto</b> fica com a <b>Jogar</b>. Aqui: a faixa
+      <i>O Hefesto</i> virou <b>O serviço</b>, a linha <i>O Hefesto está</i> virou <b>O serviço
+      está</b>, <i>Reiniciar o Hefesto</i> virou <b>Reiniciar o serviço</b> e <i>Desligar o
+      Hefesto</i> virou <b>Parar o serviço</b>.</li>
+    <li><b>Quatro ocorrências ficaram, e não é esquecimento.</b> Onde "Hefesto" é o <b>programa</b>
+      — quem escreve nos controles, quem cria os {N} gamepads virtuais, o dono do registro técnico
+      — a palavra fica. Trocá-las seria o defeito ao contrário: a tela passaria a dizer que quem
+      cria gamepad virtual é uma unidade do systemd.</li>
+    <li><b>A dica agora explica a diferença</b>, porque as duas coisas passaram a existir na mesma
+      interface: <i>"Parar o serviço não é desligar o Hefesto na aba Jogar: lá ele continua rodando
+      e só sai do meio do jogo; aqui ele deixa de rodar."</i> O botão vermelho repete o ponteiro
+      curto — <i>"não é o interruptor Hefesto da aba Jogar"</i> — porque é ali que a confusão custa.</li>
+    <li><b>Nenhum <code>data-id</code> e nenhum <code>data-gesto</code> mudou.</b>
+      <code>hefesto-estado</code>, <code>hefesto-pausa</code>, <code>desligar</code>… são
+      <b>endereços</b> do contrato de <code>gui/aba_sistema.py</code>, lidos por AST em
+      <code>_id()</code>/<code>_gesto()</code>. O vocabulário da <b>tela</b> e o endereço do
+      <b>dado</b> são coisas separadas — é por isso que esta mudança coube num arquivo só, sem
+      tocar o produto que ela usa.</li>
+  </ul>
+
   <h2>O defeito que esta rodada curou: 93px escondidos</h2>
   <ul>
     <li><b>O que a foto mostrava.</b> O miolo rolava <b>93px por dentro</b>: o segundo botão do
@@ -842,7 +891,7 @@ LEGENDA = f'''<div class="nota">
       (<code>integrations/desktop_notifications.py:272</code>). Com {N} controles a pergunta pesa
       mais: são {N} baterias a acabar em horários diferentes. Opções: (a) na faixa <b>Perfil de
       Bateria</b>, que nasceu hoje e é onde a palavra "bateria" agora mora; (b) na faixa "O
-      Hefesto"; (c) na aba Controles, junto da bateria de cada um.</li>
+      serviço"; (c) na aba Controles, junto da bateria de cada um.</li>
     <li><b>Entra uma linha de saúde para o canal DSX?</b> A porta 127.0.0.1:6969 aceita gatilho e
       cor de qualquer programa local e nenhuma tela conta isso
       (<code>daemon/udp_server.py</code>). É a explicação que falta quando o gatilho muda sozinho.
@@ -929,12 +978,62 @@ _ALT_IRMAO = max(_N_EST * H_EST, _N_BTN * H_ACAO + (_N_BTN - 1) * GAP_ACAO)
 #: é o desencontro que a faixa já carrega hoje sem parecer vão.
 if abs(_ALT_BAT - _ALT_IRMAO) > 2:
     raise SystemExit(
-        f"ERRO: o Perfil de Bateria mede {_ALT_BAT:.0f}px e o bloco 'O Hefesto' "
+        f"ERRO: o Perfil de Bateria mede {_ALT_BAT:.0f}px e o bloco 'O serviço' "
         f"mede {_ALT_IRMAO:.0f}px — {abs(_ALT_BAT - _ALT_IRMAO):.0f}px de painel "
         "vazio na primeira faixa. Foi exatamente isto que ela viu em 31/08/2026 "
         '("essa seção tá muito feia e distoante do resto da página"). Duas '
         "colunas irmãs desta aba acabam no mesmo y — dê conteúdo ao bloco curto "
         "ou tire altura do alto, mas não entregue o vão.")
 
+# ---------------------------------------------------------------------------
+# O PORTÃO DA PALAVRA — 31/08/2026, e ele guarda uma decisão DELA.
+#
+# "Hefesto" ficou com a aba Jogar, onde ela nomeia o MODO. Aqui a faixa, a linha
+# de estado e os botões nomeiam o SERVIÇO. As duas coisas existem na mesma
+# interface, e um rótulo que volte a dizer "Hefesto" recria a colisão exata que
+# ela mandou desfazer — sem quebrar nada, sem mudar altura e sem que régua
+# nenhuma desta casa pudesse ver. Foi assim que o mockup abriu um dia inteiro
+# com 58px de vão: o defeito de VOCABULÁRIO é invisível para quem só mede caixa.
+#
+# ELE OLHA SÓ PARA O RÓTULO, e é de propósito. O `title` do botão vermelho DIZ
+# "Hefesto" — "não é o interruptor Hefesto da aba Jogar" —, e é justamente essa
+# frase que explica a diferença. Um portão que varresse a aba inteira reprovaria
+# a cura junto com o defeito, que é o erro das onze réguas de 26/08.
+#
+# NADA É DIGITADO: os quatro rótulos saem do HTML já montado.
+# ---------------------------------------------------------------------------
+def _entre(html, de, ate):
+    i = html.index(de) + len(de)
+    return html[i:html.index(ate, i)]
+
+
+#: A faixa, a linha de estado e os quatro botões — o texto que a pessoa LÊ.
+_ROTULOS = {
+    "a faixa": re.search(r'<div class="sec-rot sr-par2">\s*<span>([^<]*)<',
+                         MIOLO).group(1),
+    "a linha de estado": re.search(
+        r'data-id="hefesto-estado"[^>]*>.*?<span class="rot">([^<]*)</span>',
+        MIOLO, re.S).group(1),
+}
+for _i, _b in enumerate(re.findall(
+        r">([^<>]*)</button>", _entre(MIOLO, '<div class="col-acao">', "</div>"))):
+    _ROTULOS[f"o botão {_i + 1}"] = _b
+
+if not _ROTULOS.get("o botão 1"):
+    raise SystemExit("ERRO: o portão da palavra não achou botão nenhum na faixa do "
+                     "serviço — a régua deixou de saber onde olhar.")
+
+_RECAIDA = {onde: t.strip() for onde, t in _ROTULOS.items() if "Hefesto" in t}
+if _RECAIDA:
+    raise SystemExit(
+        "ERRO: " + " · ".join(f"{onde} diz {t!r}" for onde, t in _RECAIDA.items())
+        + " — e nesta aba o rótulo nomeia o SERVIÇO, não o Hefesto. A palavra "
+        '"Hefesto" ficou com a aba Jogar por decisão dela (31/08/2026), onde ela '
+        "quer dizer o MODO: o Hefesto no meio do jogo, ou o aparelho puro. Quem "
+        "desliga lá continua com o serviço rodando; quem para aqui mata tudo. "
+        "Dois rótulos iguais para as duas é a colisão que ela mandou desfazer. "
+        "O `title` do botão PODE dizer Hefesto — é lá que a diferença se explica.")
+
 n = monta("09-sistema", "Sistema", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
-print(f"09-sistema: OK, {n} divs")
+print(f"09-sistema: OK, {n} divs · a faixa do serviço: "
+      + " · ".join(f"{t.strip()!r}" for t in _ROTULOS.values()))
