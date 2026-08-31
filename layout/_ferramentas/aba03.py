@@ -115,6 +115,46 @@ CSS = CSS_GLIFO + """
   .duas-colunas .rotulos > *{align-items:flex-end;text-align:right}
   .duas-colunas .rotulos .sec-rot{justify-content:flex-end}
   .duas-colunas .rotulos > * > *{flex:1;display:flex;align-items:center}
+  /* OS DOIS GLIFOS NO MESMO x, E O ALINHAMENTO À DIREITA FICA — 31/08/2026.
+     MEDIDO ANTES DA CURA, no Chrome e no WebKit2 (o motor que a janela usa),
+     com os mesmos números: o L2 nascia em x=434,20 e o R2 em x=448,08 —
+     **13,88px** de diferença, que é exatamente o quanto "esquerdo" (54,80px) é
+     mais largo que "direito" (40,92px). Com o par glifo+palavra encostado na
+     divisa direita, quem manda no x do glifo é a largura da PALAVRA, e as duas
+     palavras não têm a mesma largura. Numa coluna de rótulos isso salta aos
+     olhos, e ela viu na foto.
+     A CURA NÃO DESFAZ O PEDIDO DELA: o par glifo+palavra deixa de ser uma caixa
+     que ENCOLHE até o texto e passa a ocupar uma TRILHA da grade, larga o
+     bastante para o maior dos dois. A coluna de rótulos ganha duas trilhas —
+     [1fr elástico][o par] —, e a segunda é COMPARTILHADA pela linha do L2 e pela
+     do R2: o navegador mede o par mais largo e dá a largura dele aos dois. É por
+     isso que ninguém DIGITA "54,8px" aqui — um número desses ficaria errado
+     calado no dia em que a palavra mudasse, e o desalinho voltaria sem aviso.
+     Dentro da trilha, `space-between` prende o glifo na esquerda dela e a palavra
+     na divisa direita: o glifo nasce em x=434,20 nas duas linhas e as duas
+     palavras continuam acabando em x=532, com o resto da coluna igual.
+     O QUE SOBRA VIRA VÃO ENTRE O GLIFO E A PALAVRA — 7px no L2 e 20,88 no R2 —,
+     e isso é inevitável: palavras de larguras diferentes, encostadas à direita,
+     com o glifo no mesmo x. O que se escolhe é onde a diferença aparece, e ela
+     aparece no vão interno em vez de aparecer na coluna de glifos, que é o que
+     ela viu.
+     As linhas sem glifo atravessam as duas trilhas (`grid-column:1/-1`) e
+     continuam encostadas na divisa — as divisórias medem os mesmos 404→532 de
+     antes, conferido célula a célula.
+     CUSTO DE ALTURA: ZERO, e é medido. As nove trilhas de linha são px FIXOS
+     (`grid-template-rows`) e nada aqui as toca: o miolo continua com 544px de
+     caixa para 544 de conteúdo, e a grade com os mesmos 444px.
+     `display:contents` NO `.sec-rot` FOI TENTADO E DESCARTADO, e a razão é a
+     régua: sem box, `getBoundingClientRect()` devolve 0 para as duas linhas de
+     gatilho, e o "títulos de seção em x diferentes" do `regua.py` deixa de
+     enxergá-las — passaria a dar verde sobre elas mesmo desalinhadas. A cura que
+     desliga a régua em silêncio é o defeito desta casa, não a cura. Aqui o
+     `.sec-rot` continua com box, e a régua lê nele o x REAL do glifo. */
+  .duas-colunas .rotulos{grid-template-columns:1fr auto}
+  .duas-colunas .rotulos > *{grid-column:1/-1}
+  .duas-colunas .rotulos > *:has(.gl){display:grid;grid-template-columns:subgrid}
+  .duas-colunas .rotulos > *:has(.gl) > .sec-rot{grid-column:2;
+    justify-content:space-between}
   /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
      PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
      letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:

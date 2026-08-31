@@ -626,7 +626,17 @@ class TestOPortaoMorde:
         invisíveis para quem lesse a reprovação.
         """
         par = pares_com_metade_ligada()["_steam_input_vpad_suspenso"]
-        for endereco in ("daemon/lifecycle.py:2258", "daemon/subsystems/hotkey.py:261"):
+        # O NÚMERO ENVELHECEU E NINGUÉM VIU — corrigido em 31/08/2026.
+        # Estava `hotkey.py:261`, e a leitura pelo acessor mora na **285**
+        # (`if steam_input_excecao_ativa(daemon) or steam_input_vpad_suspenso(daemon)`);
+        # a 261 virou linha de DOCSTRING quando o arquivo cresceu. O portão
+        # sempre apontou a 285 — quem estava errado era esta linha.
+        #
+        # É a classe que o `validar-citacoes-de-linha.py` passou a cobrir hoje,
+        # e ele NÃO alcança aqui: ele varre `docs/` e as planilhas de
+        # `docs/data/`, não número cravado em teste. Fica dito: enquanto um
+        # teste citar `arquivo:linha` à mão, ele envelhece calado.
+        for endereco in ("daemon/lifecycle.py:2258", "daemon/subsystems/hotkey.py:285"):
             assert any(onde.startswith(endereco) for onde in par.leituras), (
                 f"o portão não nomeia {endereco}, que LÊ a flag pelo acessor. "
                 f"Ele listou: {par.leituras}"

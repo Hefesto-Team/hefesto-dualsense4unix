@@ -148,7 +148,7 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
        (`_keyboard_emulation_payload`), e esta função a procura no TOPO do
        `state`. Contra os dois `state_full` reais desta bancada — capturados
        com a máquina TENDO teclado na tela (`keyboard_emulation.osk_disponivel
-       == True`) — ela responde *"não consegui ler — o Hefesto pode estar
+       == True`) — ela responde *"não consegui ler — o serviço pode estar
        desligado"*. Pendurá-la seria pôr uma frase FALSA na tela dela;
     2. **o defeito que ela existia para curar já fechou, por outro caminho.**
        Em 25/08 (`e909b62`, N12) `mouse_actions._anotar_teclado_na_tela` passou

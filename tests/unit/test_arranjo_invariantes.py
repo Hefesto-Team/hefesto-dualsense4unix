@@ -44,8 +44,10 @@ from __future__ import annotations
 
 import ast
 import math
+import re
 from collections.abc import Iterator
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -511,47 +513,156 @@ def test_a_regua_da_copia_sabe_recusar() -> None:
         "HZ_INPUT_SEM_MIC", "SLOTS_POR_RELATORIO"}
 
 
-#: **O MOCKUP DO ARRANJO EXISTE EM DOIS LUGARES, e esta régua via UM.**
+#: **O MOCKUP DO ARRANJO EXISTE EM TRÊS CASAS, E ELAS NÃO TÊM O MESMO PAPEL.**
 #:
-#: Medido em 29/08/2026: este teste passava verde enquanto
-#: ``novo-layout/mapa-das-portas.html`` carregava
-#: ``var CUSTO_SEM_MIC = 260, CUSTO_COM_MIC = 277`` e ``>277</b>/s`` — que é
-#: exatamente o literal que a última linha daqui proíbe. O ponto cego é
-#: estrutural e não é de cálculo: a régua nomeava **um caminho**, e a cópia que
-#: ela abre com duplo clique é a outra (``novo-layout/`` é onde os mockups
-#: moram). Uma correção pela metade deixa as duas versões vivas — que é o
-#: defeito que esta régua existe para matar.
+#: FATO CORRIGIDO EM 31/08/2026. O comentário que morava aqui dizia que
+#: ``novo-layout/`` "é onde os mockups moram", e mandava a régua medir aquela
+#: cópia. Caducou no commit ``48b4e1a2`` — *"o produto lê de `layout/`;
+#: `novo-layout/` volta a ser só referência"* —, e a palavra dela está escrita
+#: no ``.gitignore``: *"não tava trackeado por um motivo ÓBVIO: é só pra
+#: referência do desenvolvimento. Se fosse pra usar, ao menos copiasse todos os
+#: html e criasse uma pasta chamada layout."* A régua ficou apontada para a casa
+#: errada — a mesma migração pela metade que no mesmo dia deixou 13 reprovações
+#: em ``test_o_gancho_induz_a_regua_de_tela.py``.
 #:
-#: A cópia do ``novo-layout`` também citava a fonte errada da medição
-#: (``daemon/subsystems/bt_mic.py``, onde o A/B está em
+#: O ACHADO DE 29/08 CONTINUA VALENDO, e é por isso que a régua não encolhe: ela
+#: passava verde enquanto uma das cópias carregava
+#: ``var CUSTO_SEM_MIC = 260, CUSTO_COM_MIC = 277`` e ``>277</b>/s`` — o literal
+#: que a última linha do §11 proíbe — porque nomeava **um caminho** e a cópia
+#: que se abre com duplo clique era outra. Aquela cópia também citava a fonte
+#: errada da medição (``daemon/subsystems/bt_mic.py``, quando o A/B está em
 #: ``integrations/dualsense_bt_audio.py:77``).
 #:
-#: As duas passam a ser medidas, e a igualdade entre elas também: enquanto o
-#: arquivo for o mesmo em dois lugares, nenhum dos dois pode andar sozinho.
+#: AS TRÊS CASAS, medidas em 31/08/2026:
+#:
+#: * ``docs/.../2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`` — **a
+#:   origem congelada**. O ``LEIA.md`` ao lado diz o que ela é: *"não é
+#:   rascunho: é a especificação executável de quatro sprints, e a única
+#:   descrição existente do motor de arranjo"*. ``arranjo_da_mesa.py:4`` e
+#:   ``mesa_do_mockup.py:4`` citam ESTE caminho como fonte do porte, e o
+#:   ``fumaca.js`` — a régua que RODA o miolo em 29 estados — só existe nesta
+#:   pasta. Último commit dela: ``79759cd5``, 25/08. É a única casa sem irmãs
+#:   ao lado: abre com duplo clique e não tem para onde navegar.
+#: * ``layout/mapa-das-portas.html`` — **a cópia do produto**, versionada e
+#:   viva. É para ela que ``layout/08-conexoes.html:3188`` aponta, e é a que a
+#:   GUI carrega no ``WebKit2.WebView``. Não é gerada: ninguém em
+#:   ``layout/_ferramentas/`` a escreve, então a igualdade abaixo é mantível.
+#: * ``novo-layout/mapa-das-portas.html`` — **a referência do desenho**,
+#:   ``.gitignore:108``. Não existe em árvore de agente e ninguém escreve nela.
+#:
+#: O QUE A RÉGUA MEDE, E POR QUE ELA NÃO EXIGE MAIS QUE AS TRÊS SEJAM IGUAIS: os
+#: NÚMEROS são cobrados de toda casa que exista no disco — custo zero, e é
+#: exatamente o defeito de 29/08. A IGUALDADE fica só entre as duas casas
+#: VERSIONADAS, porque só elas viajam com o git e só elas podem divergir sem
+#: ninguém ver. Exigir igualdade com a referência congelada seria portão
+#: gritando falso já no dia seguinte — ela não acompanha o ``layout/``, por
+#: decisão dela —, e portão que grita falso é portão que se desliga.
+_ORIGEM_CONGELADA = "docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html"
+_COPIA_DO_PRODUTO = "layout/mapa-das-portas.html"
+_REFERENCIA_DO_DESENHO = "novo-layout/mapa-das-portas.html"
+
+#: Toda casa onde o mockup pode estar. Os NÚMEROS são cobrados de todas.
 _CAMINHOS_DO_MOCKUP_DO_ARRANJO = (
-    "docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html",
-    "novo-layout/mapa-das-portas.html",
+    _ORIGEM_CONGELADA,
+    _COPIA_DO_PRODUTO,
+    _REFERENCIA_DO_DESENHO,
 )
+
+#: As duas casas versionadas — as que a igualdade compara. Nenhuma delas pode
+#: faltar: as duas estão no ``git ls-files``, logo viajam para qualquer árvore.
+#: Se uma sumir, o portão passaria por VACUIDADE, que é o pior estado de todos.
+_CASAS_VERSIONADAS = (_ORIGEM_CONGELADA, _COPIA_DO_PRODUTO)
+
+
+class _Divergencia(NamedTuple):
+    """Um pedaço em que a cópia do produto PODE diferir da origem congelada.
+
+    Nasceu do mesmo desconforto que o ``SERVE_UM_LADO_SO`` do
+    ``test_install_serve_os_dois_lados_da_cerca.py``: uma lacuna sem dono vira
+    paisagem. Aqui a lacuna não é "esta parte não é medida" — é "esta parte é
+    medida como EXATAMENTE este bloco". Nada mais se esconde dentro dela, e
+    mexer no botão obriga a redeclarar, com data nova.
+    """
+
+    na_origem: str
+    no_produto: str
+    porque: str
+
+
+#: O botão de voltar, e por que ele NÃO pode ir para a origem congelada.
+#:
+#: Medido em 31/08/2026: a pasta da sprint tem três arquivos — ``fumaca.js``,
+#: ``LEIA.md`` e o mockup. **Não há ``08-conexoes.html`` ali**, e o ``LEIA.md``
+#: diz que aquele arquivo se abre com duplo clique, autocontido. Copiar o botão
+#: para lá entregaria um botão que não vai a lugar nenhum — pior do que não ter
+#: botão. As duas cópias, portanto, NÃO PODEM ser byte-idênticas, e a régua que
+#: exigia isso estava pedindo o impossível.
+_VOLTAR_NA_ORIGEM = '  <header class="topo">\n'
+_VOLTAR_NO_PRODUTO = """\
+  <header class="topo" style="position:relative;padding-left:132px">
+    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: "ok temos um botão pra vir
+         pra cá. Mas e o botão pra voltar?". Não havia nenhum href de saída nesta
+         página. O destino não é chute: `grep -l mapa-das-portas.html layout/*.html`
+         devolve UMA aba, a Conexões. -->
+    <a href="08-conexoes.html" title="Volta para a aba Conexões, que é de onde este mapa se abre."
+       style="position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
+              padding:5px 11px;border-radius:7px;text-decoration:none;
+              border:1px solid var(--border-forte);background:var(--panel);
+              color:var(--texto-suave);font-size:12px">← Voltar</a>
+"""
+
+#: A lista inteira das divergências justificadas. Uma só, em 31/08/2026.
+_DIVERGENCIAS_DECLARADAS = (
+    _Divergencia(
+        na_origem=_VOLTAR_NA_ORIGEM,
+        no_produto=_VOLTAR_NO_PRODUTO,
+        porque=(
+            "30/08/2026 — o botão de voltar, que ela pediu com estas palavras: "
+            '"ok temos um botão pra vir pra cá. Mas e o botão pra voltar?". Ele '
+            "aponta para `08-conexoes.html`, que existe ao lado da cópia do "
+            "produto e NÃO existe na pasta da sprint (só `fumaca.js`, `LEIA.md` "
+            "e o mockup). Levá-lo para a origem congelada criaria link quebrado."
+        ),
+    ),
+)
+
+#: Link relativo para outra página, que é o único tipo que este mockup usa.
+#: Âncora, `http(s):` e `mailto:` ficam de fora porque não são arquivo no disco.
+_LINK_RELATIVO_DO_MOCKUP = re.compile(r'href="(?!https?:|//|#|mailto:)([^"#?]+\.html)"')
+
+
+def _descontar_o_declarado(produto: str) -> str:
+    """A cópia do produto com cada divergência declarada trocada pela da origem.
+
+    Separado do teste de propósito: assim a régua pode ser mordida sem tocar em
+    arquivo nenhum — ver ``test_a_regua_da_igualdade_sabe_recusar``.
+    """
+    reduzido = produto
+    for divergencia in _DIVERGENCIAS_DECLARADAS:
+        reduzido = reduzido.replace(divergencia.no_produto, divergencia.na_origem, 1)
+    return reduzido
 
 
 def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
-    """Corrigir nos DOIS foi a palavra dela, e esta linha é o que a mantém viva.
+    """O número da tela é o número medido — em TODA cópia que exista no disco.
 
     A paridade de ``test_arranjo_da_mesa_bate_com_o_mockup.py`` já pegaria uma
     divergência de CÁLCULO. Esta pega a divergência de TEXTO: o mockup é o
     artefato que ela abre com duplo clique, e um número arredondado na legenda
     seria a segunda verdade voltando pela porta da tela.
 
-    E ela mede **as duas cópias** — ver o comentário acima.
+    O nome deste teste passou a dizer o que ele faz. Até 31/08 ele carregava,
+    além dos números, uma igualdade byte a byte que reprovava por uma razão
+    completamente diferente — e foi ela, não um número, que ficou vermelha.
     """
     raiz = _FONTE_DO_MOTOR.parents[3]
-    textos = {}
+    medidas = 0
     for caminho in _CAMINHOS_DO_MOCKUP_DO_ARRANJO:
         mockup = raiz / caminho
-        if not mockup.exists():  # pragma: no cover - árvore de agente sem os docs
+        if not mockup.exists():  # pragma: no cover - árvore sem o `novo-layout/`
             continue
         texto = mockup.read_text(encoding="utf-8")
-        textos[caminho] = texto
+        medidas += 1
         assert (
             "var CUSTO_SEM_MIC = 260.4, CUSTO_COM_MIC = 276.7, SLOTS = 1600;" in texto
         ), f"{caminho}: as constantes do motor não são as medidas"
@@ -560,10 +671,98 @@ def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
         assert ">277<" not in texto, f"{caminho}: o número arredondado voltou"
         assert "dualsense_bt_audio.py" in texto, (
             f"{caminho}: a legenda tem de citar onde o A/B foi medido")
-    if not textos:  # pragma: no cover - árvore de agente sem os docs
-        pytest.skip("o mockup não está nesta árvore")
-    if len(textos) == len(_CAMINHOS_DO_MOCKUP_DO_ARRANJO):
-        a, b = textos.values()
-        assert a == b, (
-            "as duas cópias de mapa-das-portas.html divergiram — "
-            "corrigir numa e não na outra é o defeito que esta régua mata")
+    assert medidas >= len(_CASAS_VERSIONADAS), (
+        f"só {medidas} cópia(s) do mockup foram medidas; as duas casas "
+        f"versionadas {_CASAS_VERSIONADAS} viajam com o git e têm de estar aqui")
+
+
+def test_as_duas_casas_versionadas_do_mockup_nao_andam_sozinhas() -> None:
+    """Corrigir nos DOIS foi a palavra dela, e esta linha é o que a mantém viva.
+
+    A origem congelada é a especificação executável do motor; a cópia do produto
+    é o que ela abre. Se as duas divergirem em silêncio, o ``fumaca.js`` e o
+    porte em Python passam a descrever uma tela que não é a que ela vê — que é o
+    defeito das duas versões vivas, escrito de outro jeito.
+
+    A igualdade desconta as divergências DECLARADAS, e só elas. Cada uma tem de
+    estar presente na cópia do produto, ausente da origem, e aparecer uma vez
+    só: o que sobrar depois do desconto tem de bater byte a byte.
+    """
+    raiz = _FONTE_DO_MOTOR.parents[3]
+    textos = {}
+    for caminho in _CASAS_VERSIONADAS:
+        arquivo = raiz / caminho
+        assert arquivo.exists(), (
+            f"{caminho} não está nesta árvore — mas é versionado. Sem ele a "
+            "igualdade passaria por vacuidade, que é o pior estado de um portão")
+        textos[caminho] = arquivo.read_text(encoding="utf-8")
+
+    origem = textos[_ORIGEM_CONGELADA]
+    produto = textos[_COPIA_DO_PRODUTO]
+
+    for divergencia in _DIVERGENCIAS_DECLARADAS:
+        assert produto.count(divergencia.no_produto) == 1, (
+            "a divergência declarada não aparece exatamente uma vez em "
+            f"{_COPIA_DO_PRODUTO} — declaração e arquivo se separaram.\n"
+            f"  motivo declarado: {divergencia.porque}")
+        assert divergencia.no_produto not in origem, (
+            f"o pedaço declarado como exclusivo do produto apareceu em "
+            f"{_ORIGEM_CONGELADA}. Se ele passou a valer lá, a declaração é que "
+            "tem de sair — e o link tem de existir naquela pasta.\n"
+            f"  motivo declarado: {divergencia.porque}")
+        assert origem.count(divergencia.na_origem) == 1, (
+            f"o pedaço que a origem tem no lugar da divergência sumiu de "
+            f"{_ORIGEM_CONGELADA}; a declaração ficou velha.\n"
+            f"  motivo declarado: {divergencia.porque}")
+
+    assert _descontar_o_declarado(produto) == origem, (
+        "as duas casas versionadas de mapa-das-portas.html divergiram fora do "
+        "que está declarado — corrigir numa e não na outra é o defeito que esta "
+        "régua mata.\n"
+        f"  origem congelada: {_ORIGEM_CONGELADA}\n"
+        f"  cópia do produto: {_COPIA_DO_PRODUTO}\n"
+        "FAÇA UMA das duas:\n"
+        "  1. LEVE a mesma correção para a outra casa; ou\n"
+        "  2. DECLARE em `_DIVERGENCIAS_DECLARADAS`, com data e com o motivo de "
+        "a outra casa não poder receber aquele pedaço.")
+
+
+def test_nenhum_botao_do_mockup_vai_a_lugar_nenhum() -> None:
+    """Botão que aponta para arquivo que não existe ao lado não está entregue.
+
+    Esta é a MEDIÇÃO que sustenta a divergência declarada, em vez de uma
+    opinião: o botão de voltar existe onde o ``08-conexoes.html`` existe, e a
+    régua reprova no dia em que alguém o copiar para uma pasta sem destino —
+    inclusive para a da sprint, que tem três arquivos e nenhuma aba.
+    """
+    raiz = _FONTE_DO_MOTOR.parents[3]
+    links = 0
+    for caminho in _CAMINHOS_DO_MOCKUP_DO_ARRANJO:
+        mockup = raiz / caminho
+        if not mockup.exists():  # pragma: no cover - árvore sem o `novo-layout/`
+            continue
+        for alvo in _LINK_RELATIVO_DO_MOCKUP.findall(mockup.read_text(encoding="utf-8")):
+            links += 1
+            assert (mockup.parent / alvo).exists(), (
+                f"{caminho}: o botão aponta para `{alvo}`, que não existe ao "
+                f"lado ({mockup.parent}). Um botão que não vai a lugar nenhum é "
+                "pior do que não ter botão")
+    assert links, "nenhum link relativo foi medido — a régua passaria por vacuidade"
+
+
+def test_a_regua_da_igualdade_sabe_recusar() -> None:
+    """Régua que só sabe passar não é régua — esta reprova o que não foi declarado.
+
+    O dublê é do tamanho do problema: uma mudança de UMA letra fora do pedaço
+    declarado tem de sobreviver ao desconto e derrubar a comparação.
+    """
+    origem = "a\n" + _VOLTAR_NA_ORIGEM + "b\n"
+    produto = "a\n" + _VOLTAR_NO_PRODUTO + "b\n"
+    assert _descontar_o_declarado(produto) == origem
+
+    # o desconto NÃO pode engolir uma segunda verdade que viajou de carona
+    contrabando = produto.replace("b\n", "B\n")
+    assert _descontar_o_declarado(contrabando) != origem
+
+    # e nem apagar o que ele não conhece: sem a divergência, nada muda
+    assert _descontar_o_declarado(origem) == origem

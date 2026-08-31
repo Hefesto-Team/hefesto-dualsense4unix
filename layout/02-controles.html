@@ -1035,21 +1035,15 @@
           font-size:10px;line-height:20px;text-align:center;padding:0;font-family:inherit}
   .mudo-i.on{border-color:var(--red);color:var(--red);background:rgba(255,85,85,.1)}
   /* SEM POSSE, SEM GESTO. `speaker.set {muted}` é RECUSADO pelo daemon enquanto
-     o volume do controle for desconhecido (`ipc_handlers.py`), e o "Liberar" do
-     microfone só tem o que devolver quando a posse do mudo é NOSSA — na mesa
-     dela agora ela é do kernel (`mic_mudo_desejado: null`, medido nos dois). Um
-     botão que a tela oferece e o produto recusa é a mentira que esta aba existe
-     para não contar: ele apaga e para de responder ao clique. */
-  .mudo-i[disabled],.solta[disabled]{opacity:.4;cursor:not-allowed}
-  /* O "LIBERAR" DO MICROFONE — o botão que o contrato exige e o mockup perdeu.
-     Ele DEVOLVE ao botão físico do controle o comando do mudo (`mic.set
-     {muted:null}`), e por isso não cabe como ícone: quem lê "🎙" não adivinha
-     "devolver a posse". Fica na MESMA linha do volume, e o custo vertical é
-     zero — a linha já tem 22px e sobram 8 no bloco do microfone na mesa de
-     quatro, que é a apertada. */
-  .solta{height:20px;flex:0 0 auto;margin-left:auto;padding:0 8px;border-radius:5px;cursor:pointer;
-         border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
-         font-size:10.5px;font-family:inherit;white-space:nowrap}
+     o volume do controle for desconhecido (`ipc_handlers.py`). Um botão que a
+     tela oferece e o produto recusa é a mentira que esta aba existe para não
+     contar: ele apaga e para de responder ao clique. */
+  .mudo-i[disabled]{opacity:.4;cursor:not-allowed}
+  /* O `.solta` — o botão "Liberar" do microfone — SAIU em 31/08/2026, por
+     decisão dela, e a regra de estilo saiu junto: CSS de elemento que ninguém
+     mais escreve é promessa esperando alguém tropeçar nela. A história inteira
+     (o fato errado que custou o botão, e o preço de não ter volta nesta tela)
+     está na lápide de `tests/unit/test_regua_de_tela_a_aba_controles.py`. */
   /* O MODO DO MIC é o `.rota` em miniatura: mesma gramática (fileira de
      escolha exclusiva, um aceso), altura de RÓTULO em vez de altura de
      escolha, porque ele divide a linha com o nome do bloco. */
@@ -1137,6 +1131,13 @@
   body:has(#c-p3:checked) .chip[for="c-p3"],
   body:has(#c-p4:checked) .chip[for="c-p4"]{background:var(--sel-bg);color:var(--fg);font-weight:600}
   .fita label.chip{cursor:pointer}
+  /* A LÁPIDE DA LEGENDA. Um item que fala do que SAIU não pode ter a mesma cara
+     de um item que fala do que está na tela: era assim que o "Liberar" seguia
+     lido como novidade dois dias depois de ser removido. O recuo e a cor mais
+     apagada dizem "isto é registro", e a régua do gerador usa esta mesma classe
+     como a única licença para nomear um termo que o desenho não escreve. */
+  .nota li.foi{color:var(--texto-mudo);border-left:2px solid var(--border-forte);
+    padding-left:9px;list-style:none;margin-left:-16px}
 
 </style>
 </head>
@@ -1531,7 +1532,7 @@
             <div class="vol">
               <span class="trilho"><span class="cheio" style="width:80%"></span></span>
               <span class="n">80</span>
-              <button class="mudo-i" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer até você clicar em Liberar.">🎙</button>
+              <button class="mudo-i" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
             </div>
 
           </div>
@@ -1817,7 +1818,7 @@
             <div class="vol">
               <span class="trilho"><span class="cheio" style="width:0%"></span></span>
               <span class="n">0</span>
-              <button class="mudo-i on" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer até você clicar em Liberar.">🎙</button>
+              <button class="mudo-i on" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
             </div>
 
           </div>
@@ -2103,7 +2104,7 @@
             <div class="vol">
               <span class="trilho"><span class="cheio" style="width:60%"></span></span>
               <span class="n">60</span>
-              <button class="mudo-i" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer até você clicar em Liberar.">🎙</button>
+              <button class="mudo-i" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
             </div>
 
           </div>
@@ -2389,7 +2390,7 @@
             <div class="vol">
               <span class="trilho"><span class="cheio" style="width:75%"></span></span>
               <span class="n">75</span>
-              <button class="mudo-i on" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer até você clicar em Liberar.">🎙</button>
+              <button class="mudo-i on" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
             </div>
 
           </div>
@@ -2519,19 +2520,31 @@
 
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
-  <h2>O que mudou hoje, 29/08</h2>
+  <h2>O que mudou em 31/08</h2>
   <ul>
-    <li><b>Os botões do som passaram a existir.</b> O <b>🎙</b> e o <b>♪</b> tinham cara de botão — o cursor virava mãozinha — e <b>não tinham nada atrás</b>: nenhum clique chegava ao programa. Medido: dois cliques neles produziram <b>zero</b>, enquanto os de rota, ao lado, respondiam. Agora os três respondem, e o <b>♪</b> acende quando o alto-falante está mudo — o dado sempre esteve chegando e a tela não o lia.</li>
-    <li><b>O microfone ganhou o botão que faltava: <code>Liberar</code>.</b> Ele devolve ao <b>botão físico do controle</b> o comando do mudo. Ele nasce <b>apagado</b>, e isso é a verdade da sua mesa agora: quem manda no mudo dos seus dois controles é o próprio aparelho, então não há o que devolver — ele acende assim que você usar o 🎙. E a explicação do bloco estava <b>errada</b>: dizia que o 🎙 "é o mesmo que apertar o botão do controle", e não é — clicar ali faz o Hefesto <b>tomar</b> o comando, e o botão do controle para de valer até o Liberar.</li>
+    <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o produto tem o botão (<code>app/widgets/controller_card.py:490</code>) e o daemon aceita <code>mic.set {muted: null}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta só existe pela janela do aplicativo completo ou reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
+    <li><b>Esta legenda anunciava o botão de cima como novidade — dois dias depois de ele sair da tela.</b> É o defeito que esta aba existe para não cometer, virado para dentro: <i>a prosa afirmando o que o produto não faz</i>. Agora o gerador <b>para</b> se a legenda citar um rótulo que o desenho não escreve, e só um <code>&lt;li class="foi"&gt;</code> — a lápide, o item recuado aqui em cima — tem licença de nomear o que saiu. A mesma régua recusa título com data relativa: foi um <i>"hoje"</i> num <code>&lt;h2&gt;</code> que envelheceu calado.</li>
+  </ul>
+
+  <h2>O que mudou em 30/08</h2>
+  <ul>
+    <li><b>O modo do microfone entrou</b> — <b>Virtual</b>, <b>Desativado</b> e <b>Nativo</b>, pedido seu. Ele mora na <b>linha do rótulo</b>, e isso é orçamento e não estética: como fileira própria embaixo custaria 42 px e o card iria de 304 para 350, contra os 308 que a caixa reserva — o quadro passaria a rolar por dentro e o P4 sairia da tela. Ali o custo de altura é <b>zero</b>, e ele fica ao lado do selo que diz se o mic está ATIVO.</li>
+    <li><b>O acelerômetro passou a aparecer na tela</b>, com os três eixos e a unidade em <b>g</b>, embaixo do giroscópio e na <b>mesma moldura</b> — que por isso deixou de se chamar <i>Giroscópio</i> e virou <b>Sensores</b>. É a resposta à pergunta que a legenda de 29/08 deixou aberta (<i>vale ler?</i>): vale, e os números do P1 no desenho são <b>medidos</b> no daemon vivo — X +0,105 · Y +0,976 · Z +0,170, que dão <b>0,996 g</b>, a gravidade.</li>
+  </ul>
+
+  <h2>O que mudou em 29/08</h2>
+  <ul>
+    <li><b>Os botões do som passaram a existir.</b> O <b>🎙</b> e o <b>♪</b> tinham cara de botão — o cursor virava mãozinha — e <b>não tinham nada atrás</b>: nenhum clique chegava ao programa. Medido: dois cliques neles produziram <b>zero</b>, enquanto os de rota, ao lado, respondiam. Naquele dia passaram a responder <b>três</b>; hoje são <b>dois</b>, porque o terceiro saiu em 31/08 (acima). E o <b>♪</b> acende quando o alto-falante está mudo — o dado sempre esteve chegando e a tela não o lia.</li>
+    <li><b>A dica do 🎙 estava errada, e a correção ficou.</b> Ela dizia que o 🎙 <i>"é o mesmo que apertar o botão do controle"</i>, e não é: clicar ali faz o Hefesto <b>tomar</b> o comando do mudo, e o botão do aparelho para de valer. A dica de hoje diz esse preço — é a informação que a antiga escondia.</li>
     <li><b>Os analógicos estavam mentindo de dois jeitos.</b> (1) No fim do curso — analógico todo à esquerda ou todo para cima — o valor <b>0</b> era trocado por <b>128</b>, o centro: a bolinha <b>pulava de volta ao meio</b> no talo. (2) A bolinha era posicionada pelo <b>canto</b> e não pelo <b>centro</b>, então em repouso ela nascia <b>4,7 px</b> abaixo e à direita da cruz — como se cada eixo tivesse 12,5 unidades presas. Agora o desvio em repouso é <b>0,19 px</b> e os dois extremos são simétricos.</li>
-    <li><b>A leitura do acelerômetro saiu — e o motivo que eu te dei ontem estava errado.</b> Eu escrevi aqui que <b>"o aparelho não entrega esse dado"</b>. Ele entrega. Medido nos seus dois controles agora: o mesmo nó de sensor publica os três eixos do acelerômetro a <b>250 leituras por segundo</b>, calibrados, e a conta fecha na gravidade — <b>0,996 g</b> num controle e <b>0,993 g</b> no outro, contra 1 g de referência. Os dois estão em <b>poses diferentes</b> na sua mesa (25° de diferença), então não é número decorado, é leitura. Quem não lê é o <b>Hefesto</b>: o dado chega até a linha que o descarta. A tela ficou certa (ele não está lá), a <b>explicação</b> é que estava falsa, e a pergunta que sobra é sua: <b>vale ler?</b></li>
+    <li><b>O motivo que eu te dei para o acelerômetro não estar na tela era falso.</b> Eu escrevi aqui que <b>"o aparelho não entrega esse dado"</b>. Ele entrega. Medido nos seus dois controles: o mesmo nó de sensor publica os três eixos do acelerômetro a <b>250 leituras por segundo</b>, calibrados, e a conta fecha na gravidade — <b>0,996 g</b> num controle e <b>0,993 g</b> no outro, contra 1 g de referência. Os dois estavam em <b>poses diferentes</b> na sua mesa (25° de diferença), então não é número decorado, é leitura. Quem não lia era o <b>Hefesto</b>: o dado chegava até a linha que o descarta. A pergunta que ficou — <i>vale ler?</i> — foi respondida no dia seguinte, e o campo está na tela desde 30/08.</li>
     <li><b>O touchpad passou a dizer alguma coisa.</b> Ele é um retângulo que só mostra um ponto <b>enquanto o dedo está lá</b> — e medindo 238 leituras dos seus dois controles, o dedo estava lá em <b>zero</b> delas. Ele nunca mostrava nada. Agora o canto diz <b>Sem toque</b> ou <b>Tocando</b>, como na janela de hoje. E a superfície ganhou a <b>proporção do sensor de verdade</b> (16:9, que é o 1920×1080 do touchpad): ela estava 41% esticada na vertical, e com ela a posição do dedo.</li>
     <li><b>O LED do jogador virou campo</b>, com rótulo e moldura próprios, embaixo da Barra de luz — as cinco lâmpadas no padrão do controle. Ele nasceu ontem como uma <b>linha espremida</b> dentro da moldura da Barra de luz (13 px num campo de 75) e agora é o <b>terceiro campo</b> da coluna. Com ele ali, <b>o número do jogador saiu do título do card</b>, como você pediu. Ele <b>continua nas linhas fechadas</b>, e isso é de propósito: linha fechada não tem lâmpada, e sem o número não sobraria quem aquele controle é.</li>
     <li><b>O touchpad tinha voltado a esticar, e agora ele não estica mais.</b> Ontem a superfície ganhou a proporção do sensor como <b>piso</b>, não como regra — e com um piso ela virou a esponja da coluna: medido hoje na sua mesa, <b>148 × 203</b>, que são <b>2,4 vezes</b> a altura que 148 px de largura pedem num sensor 16:9. A correção de anteontem tinha derrubado 41% de esticada e o piso devolveu 145%. Agora a superfície é <b>148 × 83</b> em qualquer mesa, e quem cresce são a <b>cor</b> da barra e o <b>campo</b> do LED, que não têm proporção a respeitar.</li>
-    <li><b>O maior buraco da tela fechou: eram 181 px.</b> Entre o eixo Z do giroscópio e o L2 havia um vazio do tamanho de meio card, e ele não era desenho — era <b>resto</b>: o L2/R2 morava dentro da moldura do giroscópio, colado no pé, e a sobra da coluna inteira empoçava no meio. Ele até mudava de tamanho com a mesa (181 px com os seus dois controles, 95 com quatro). Agora <b>Giroscópio</b> e <b>Gatilhos</b> são <b>dois campos</b>, cada um com rótulo, e a sobra entra por dentro dos dois abrindo as linhas. Maior vão da coluna: <b>5 px</b>. As cinco colunas continuam terminando na mesma linha.</li>
+    <li><b>O maior buraco da tela fechou: eram 181 px.</b> Entre o eixo Z do giroscópio e o L2 havia um vazio do tamanho de meio card, e ele não era desenho — era <b>resto</b>: o L2/R2 morava dentro da moldura do giroscópio, colado no pé, e a sobra da coluna inteira empoçava no meio. Ele até mudava de tamanho com a mesa (181 px com os seus dois controles, 95 com quatro). Agora a coluna são <b>dois campos</b>, cada um com rótulo — <b>Sensores</b> e <b>Gatilhos</b> —, e a sobra entra por dentro dos dois abrindo as linhas. Maior vão da coluna: <b>5 px</b>. As cinco colunas continuam terminando na mesma linha.</li>
   </ul>
 
-  <h2>O acordeão, que é o que você pediu ontem</h2>
+  <h2>O acordeão, que você pediu em 28/08</h2>
   <ul>
     <li><b>Clicar num abre e fecha os outros</b> — na <b>linha do controle</b> ou no <b>chip da fita</b>, indiferente: é o mesmo gesto. O <b>Todos</b> abre os 4.</li>
     <li><b>Sem uma linha de JavaScript</b>, como você pediu. São 5 rádios com o mesmo <code>name</code> — um por controle, mais o do <b>Todos</b> — o navegador já garante que ligar um desliga os outros, que é a regra do acordeão inteira. A linha e o chip são <code>&lt;label for&gt;</code> do <b>mesmo</b> rádio, e é por isso que fita e card não têm como divergir: não há dois estados para manter de acordo, há <b>um</b>, e ele mora no rádio.</li>
@@ -2542,7 +2555,7 @@
   <h2>Os sensores desceram para cada controle; o Calibrar ficou e cresceu</h2>
   <ul>
     <li><b>O giroscópio e o acelerômetro são estado de cada peça</b>, e por isso o interruptor de cada um está agora na <b>linha do controle</b>, nas 4. Eles estavam no topo do quadro, valendo para a mesa toda — e um interruptor global com 4 controles na mesa <b>mente sobre 3 deles</b>.</li>
-    <li><b>O Calibrar ficou onde estava, e virou gesto de mesa</b> — sua decisão de hoje: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os 4 controles ao mesmo tempo"</i>. O rótulo agora diz o escopo (<span class="marca">Calibrar sensores da mesa</span>) e o ponteiro diz o gesto: os 4 numa passada só, todos parados numa mesa plana.</li>
+    <li><b>O Calibrar ficou onde estava, e virou gesto de mesa</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os 4 controles ao mesmo tempo"</i>. O rótulo agora diz o escopo (<span class="marca">Calibrar sensores da mesa</span>) e o ponteiro diz o gesto: os 4 numa passada só, todos parados numa mesa plana.</li>
     <li><b>O par custa 246,6 px, e só coube porque duas leituras saíram.</b> A linha mais apertada é a do <b>P3</b>, o nome mais longo da mesa: ela tinha <b>103,2 px</b> livres, e o par pede 246,6 mais o vão. Saíram <span class="marca">Hefesto on</span> (91,7 px, e dizia a mesma coisa nas 4 linhas) e <span class="marca">Giroscópio em rajadas</span> (168,8 px), que juntas devolvem 260,5 — <b>mais</b> do que o par ocupa. Depois da troca a mesma linha do P3 tem <b>108 px</b> livres (4,8 a mais do que antes) e a do card aberto, 270,8.</li>
     <li><b>O "vê como" ficou, e a contradição é sua para desempatar.</b> Você escreveu <i>"se der problema de espaço remover Giroscópio, Hefesto e vê como (na real remove eles)"</i> — mas a sua decisão de ontem, na mesma tela, diz que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>, e <b>máscara é o "vê como"</b>. Duas frases suas em sentidos opostos: tirei as duas leituras que nenhuma decisão protegia, e a conta acima mostra que não precisou de mais. <b>Se você quiser o "vê como" fora também</b>, é uma linha no gerador — ele custa 144,6 px na linha do P3, com o separador e os dois vãos.</li>
     <li><b>E o que saiu não é o que entrou, embora tenham a mesma palavra.</b> Saiu a <b>leitura</b> <span class="marca">Giroscópio 250 Hz</span>; entrou o <b>interruptor</b> de giroscópio. O número medido não virou lápide: ele está no ponteiro do interruptor, e responde por transporte — <b>250,0 Hz exatos</b> no cabo, <b>em rajadas</b> no rádio.</li>
@@ -2588,8 +2601,8 @@
     <li><b>Os 16 quadradinhos viram o desenho do DualSense?</b> A pergunta é sua, do contrato da aba. A medição pende para os quadradinhos: a coluna deles tem 212 px e é a única das cinco que ainda estica sem estourar — o desenho inteiro do controle nessa largura empurraria o card muito além dos 304 px, e o card tem exatamente <b>4 px</b> de folga.</li>
     <li><b>O botão de mic do controle muda o mudo do PC inteiro?</b> O campo existe no perfil e o daemon já o aplica, sem nenhuma tela que o escreva (<code>profiles/schema.py:451</code>).</li>
     <li><b>Histórico de bateria.</b> O diário grava por controle desde sempre e ninguém lê (<code>daemon/battery_journal.py:214</code>). Com 4 na mesa o P3 já aparece em 31%.</li>
-    <li><b>A régua não vê o "Todos".</b> Ela mede a página como ela abre, e a página abre com um card e 3 linhas — nenhum quadro escondido, nenhuma rolagem. O estado que rola só existe depois de um clique, e régua nenhuma desta casa clica. Medi-o à mão, clicando, e os números estão acima; fica dito, porque a régua não é minha para mexer.</li>
-    <li><b>E o <code>olhar.py</code> esconde a barra de rolagem</b> — não é a página, é a ferramenta: o Playwright levanta o Chrome com <code>--hide-scrollbars</code>. Foi o que quase me fez entregar o "Todos" com o P3 e o P4 sumidos e <i>nada</i> na tela dizendo que existiam. Medido com a barra de volta: ela ocupa <b>10 px</b> no "Todos" e <b>0</b> em todos os outros estados. Se você fotografar esta aba com a ferramenta, a barra não vai aparecer na foto — mas aparece na sua tela.</li>
+    <li><b>O acelerômetro está desenhado e não é pintado ao vivo.</b> Os três eixos em <b>g</b> aparecem no card, mas a ponte que dá vida a esta aba só escreve os do giroscópio: ela procura o endereço <code>acel-x</code> e a tela escreve <code>accel-x</code>, com dois cc (<code>controles_vivos.py:1340</code>). Com o daemon ligado, esses números ficam <b>parados</b> na medição de 30/08 em vez de acompanharem o aparelho — e número parado tem a mesma cara de número lido. A cura é de uma linha, mas mora fora deste gerador; fica dito aqui porque quem fotografar a aba não tem como notar.</li>
+    <li><b>A régua não vê o "Todos".</b> Ela mede a página como ela abre, e a página abre com um card e 3 linhas — nenhum quadro escondido, nenhuma rolagem. O estado que rola só existe depois de um clique, e a régua de arranjo não clica. Medi-o à mão, clicando, e os números estão acima; fica dito, porque a régua não é minha para mexer.<br><br><b>Fechou:</b> esta legenda avisava que o <code>olhar.py</code> escondia a barra de rolagem e que ela não sairia na foto. Não é mais verdade — a ferramenta foi curada em 30/08 e hoje fotografa a barra, os <b>10 px</b> que ela ocupa no "Todos" inclusive.</li>
   </ul>
 </div>
 

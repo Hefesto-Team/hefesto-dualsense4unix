@@ -299,7 +299,37 @@ CSS = CSS_GLIFO + """
      --------------------------------------------------------------------- */
   /* o rótulo da opção é verde e alinha à direita, como nas outras nove */
   .at-linha > span:first-child{color:var(--rot-campo);font-weight:600;text-align:right}
-  .at-linha{display:grid;grid-template-columns:190px 1fr;align-items:center;gap:12px;height:var(--h-escolha)}
+  .at-linha{display:grid;grid-template-columns:190px minmax(0,1fr);align-items:center;gap:12px;height:var(--h-escolha)}
+  /* AS DUAS COLUNAS DO BLOCO VIRAM PROPORÇÃO, E NÃO PIXEL — 31/08/2026.
+     Mesma família da cura da Controles (`aba02.py`, 31/08): com a coluna do
+     rótulo em PIXEL FIXO, todo o encolhimento da janela caía na única coluna
+     flexível — a do campo.
+
+     A conta que condena o `190px`: o maior rótulo desta lista ("Velocidade de
+     cursor", "Navegação Interna") pede 84px de `min-content`; com o `?` e o vão
+     dele são 107. Os outros 83px eram folga MORTA, e ela não encolhia nem
+     quando a vizinha pintava fora da janela.
+
+     Do outro lado, o campo `[Dois dedos − 4 +][Analógico − 1 +]` pedia 328,3px
+     e recebia 320 na janela de 1180 — 8,3px pintados FORA da coluna, por cima
+     do vão da moldura. Não era caso de canto: era a tela do produto. A régua
+     que só olha a borda da `.janela` dava VERDE (o campo ainda estava dentro
+     dela), mas o olho via o campo da "Velocidade da rolagem" mais comprido que
+     o da "Velocidade de cursor" logo acima e o do "Modo Steam" logo abaixo.
+     Abaixo de 1136px de janela os mesmos 8,3px viravam vazamento de verdade —
+     67,3px fora da janela num navegador de 1000px.
+
+     186/324 e não 190/320: os 4px que o rótulo devolve são o que faltava para o
+     campo caber inteiro na coluna com folga, e as três alturas de campo desta
+     coluna passam a terminar no MESMO x (1133). `minmax(0,…)` é obrigatório —
+     `Nfr` sozinho tem mínimo automático `min-content`, que é exatamente o piso
+     que fazia as faixas se recusarem a encolher.
+
+     A LISTA DA POP-UP FICA NO PIXEL, de propósito: a `.tn-cx` é uma caixa de
+     660px que não encolhe com a janela, e lá a coluna do campo já sobra (420
+     para 316 de conteúdo). Proporção numa caixa fixa só engordaria o rótulo
+     para 222px sem curar nada. */
+  .at-col > .at-linha{grid-template-columns:minmax(0,186fr) minmax(0,324fr)}
   /* a linha que hospeda um botão de AÇÃO cresce para os 34px do token */
   .at-linha:has(.btn){height:var(--h-acao)}
   .at-rot{font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:6px}
@@ -321,15 +351,40 @@ CSS = CSS_GLIFO + """
      rolagem", que tem um par só, acabava 86px antes da vizinha de cima e a
      caixa parecia inacabada; empurrar o par INTEIRO só trocava o buraco de
      lado. */
-  .campo-num .par{display:flex;align-items:center;gap:9px;flex:0 1 auto}
+  /* `min-width:0` no par, e é a REDE: sem ele o mínimo automático de um item de
+     flex é o `min-content` dele, e o campo inteiro se recusava a encolher —
+     era assim que ele saía pela borda da janela em vez de apertar o que dá para
+     apertar. Abaixo de ~1090px de janela nenhuma proporção salva, e a escolha
+     passa a ser entre um rótulo encurtado DENTRO da janela e um campo inteiro
+     pintado FORA dela. Na janela do produto (1180) nada é cortado — medido. */
+  .campo-num .par{display:flex;align-items:center;gap:9px;flex:0 1 auto;min-width:0}
   .campo-num .par:last-child{flex:1 1 auto}
   .campo-num .par:last-child .bignum{margin-left:auto}
-  .campo-num .sub{font-size:10.5px;color:var(--comment);
-                  letter-spacing:.4px;white-space:nowrap}
+  /* O `letter-spacing` SAIU, e ele era órfão: existia para abrir a CAIXA ALTA,
+     que saiu daqui em 31/08 (`f7c6c199`) junto com a das outras. O comentário
+     daquela cura, quatro telas acima neste mesmo arquivo, já dizia "o
+     `letter-spacing` sai junto" — só que a regra foi aplicada no `.sec-rot` e
+     esquecida NESTE seletor. Meia cura deixa as duas versões vivas, que é o
+     defeito que a regra da casa existe para matar. Custava 7,6px de largura no
+     campo mais apertado da aba ("Dois dedos" + "Analógico" = 19 caracteres).
+     O `overflow:hidden` faz dois trabalhos: corta com reticências quando não há
+     mesmo espaço, e zera o mínimo automático deste item de flex — sem ele o
+     `min-width:0` do par não bastaria. */
+  .campo-num .sub{font-size:10.5px;color:var(--comment);white-space:nowrap;
+                  overflow:hidden;text-overflow:ellipsis}
   .campo-num .risco{width:1px;height:18px;background:var(--border-forte);margin:0 4px 0 5px}
-  .bignum{display:inline-flex;align-items:center}
+  /* `flex:none` na trinca: quando o campo aperta, quem cede é o RÓTULO, nunca o
+     `− N +`. Sem isso os botões de 22px encolheriam até o tamanho do sinal
+     dentro deles, e o alvo de clique é a única coisa desta caixa que não pode
+     encolher. */
+  .bignum{display:inline-flex;align-items:center;flex:none}
+  /* 22px, o mesmo dos dois botões ao lado: a trinca `− N +` vira três células
+     iguais. 26 era folga sobre folga — o valor vai de 1 a 10, e "10" mede
+     18,02px nesta fonte (JetBrains Mono 15px/600), logo cabe nos 22 com 2px de
+     cada lado. Os 4px por `.bignum` são 8px no campo, e são eles que deixam a
+     "Velocidade da rolagem" caber na coluna em vez de pintar fora dela. */
   .bignum b{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--fg);
-            font-weight:600;min-width:26px;text-align:center}
+            font-weight:600;min-width:22px;text-align:center}
   .passo{width:22px;height:24px;border:1px solid var(--border-forte);border-radius:5px;
          background:transparent;color:var(--texto-mudo);font-size:14px;font-family:inherit;
          cursor:pointer;line-height:1;padding:0}

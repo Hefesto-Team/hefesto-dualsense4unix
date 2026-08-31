@@ -20,7 +20,7 @@ faz as chamadas de verdade.
 
 A REGRA QUE MAIS PESA AQUI: A AUSÊNCIA DE DADO É UM VALOR
 ---------------------------------------------------------
-Com o Hefesto desligado, o mockup diz *"O Hefesto está **Ligado**"*, *"Pausado:
+Com o serviço desligado, o mockup diz *"O serviço está **Ligado**"*, *"Pausado:
 **Sim, e volta pausado**"*, *"**Os 4** controles"* — são literais do desenho
 (``novo-layout/_ferramentas/aba09.py``), e a tela nova que os deixasse à mostra
 estaria **afirmando o estado do desenho**. É o defeito mais caro possível nesta
@@ -213,6 +213,32 @@ def _campos_de_janela(state: object) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 # As linhas, uma função por linha
 # ---------------------------------------------------------------------------
+# A PALAVRA "HEFESTO" SAIU DAS DICAS DE ESTADO — 31/08/2026, DECISÃO DELA.
+#
+# Duas abas diziam "Hefesto ligado/desligado" e significavam coisas DIFERENTES:
+# na Jogar é o MODO (o Hefesto no meio do jogo, ou o aparelho puro), e aqui é o
+# PROCESSO (`systemctl --user stop`). Quem desligava lá continuava com o serviço
+# rodando; quem desligava aqui matava tudo. **A palavra "Hefesto" ficou com a
+# aba Jogar**, e esta aba passou a nomear o SERVIÇO — o desenho já mudou
+# (`layout/_ferramentas/aba09.py`: a faixa "O serviço", a linha "O serviço
+# está", os botões "Reiniciar o serviço" e "Parar o serviço").
+#
+# A TELA NOVA LÊ ESTAS DICAS. Enquanto elas diziam "Hefesto", o rótulo dizia "O
+# serviço está" e a dica dele dizia "O Hefesto está rodando…" — a tela se
+# contradizia dentro de si mesma, e nenhuma régua de caixa podia ver isso.
+#
+# O QUE NÃO MUDOU, E NÃO É ESQUECIMENTO. Onde "Hefesto" é o PROGRAMA — quem
+# enxerga a janela, quem escreve nos controles, de quem é a saída crua — a
+# palavra fica. Trocar essas seria o defeito ao contrário: a tela passaria a
+# dizer que quem enxerga janela é uma unidade do systemd. É o mesmo censo que o
+# gerador do desenho fez, e o portão que o guarda é
+# `tests/unit/test_a_aba_sistema_nomeia_o_servico.py`, que olha SÓ a dica das
+# linhas de estado — o `title` de um botão PRECISA dizer "Hefesto" para
+# explicar a diferença.
+#
+# E os endereços NÃO se tocam: `hefesto-estado`, `hefesto-pausa`,
+# `_ESTADO_DO_HEFESTO`, `linha_do_hefesto` são o contrato do DADO, lido por AST
+# pelo gerador. O vocabulário da TELA e o endereço do DADO são coisas separadas.
 #: O que cada estado da matriz de três fontes diz NESTA tela. O produto de hoje
 #: tem as suas próprias palavras em ``_set_daemon_status_markup`` (" Funcionando
 #: (liga sozinho com o computador)"), e elas são de OUTRA tela — a do Glade. O
@@ -221,7 +247,7 @@ def _campos_de_janela(state: object) -> dict[str, Any] | None:
 _ESTADO_DO_HEFESTO: dict[str, Linha] = {
     "online_systemd": Linha(
         "Ligado", OK, GLIFO_OK,
-        "O Hefesto está rodando. Se travar, ele volta sozinho.",
+        "O serviço está rodando. Se travar, ele volta sozinho.",
     ),
     "online_avulso": Linha(
         "Ligado, em modo improvisado",
@@ -240,7 +266,7 @@ _ESTADO_DO_HEFESTO: dict[str, Linha] = {
         "Desligado",
         AVISO,
         GLIFO_AVISO,
-        "O Hefesto não está rodando — o controle funciona, mas sem luzes, "
+        "O serviço não está rodando — o controle funciona, mas sem luzes, "
         "gatilhos nem os seus ajustes.",
     ),
 }
@@ -251,7 +277,7 @@ def linha_do_hefesto(status: str | None) -> Linha:
     if status is None:
         return Linha(
             NAO_DEU, INFO, GLIFO_INFO,
-            "Não consegui perguntar ao systemd em que estado o Hefesto está.",
+            "Não consegui perguntar ao systemd em que estado o serviço está.",
         )
     linha = _ESTADO_DO_HEFESTO.get(status)
     if linha is None:
@@ -275,7 +301,7 @@ def linha_da_pausa(state: object) -> Linha:
     if not isinstance(state, dict) or "paused" not in state:
         return Linha(
             NAO_DEU, INFO, GLIFO_INFO,
-            "O Hefesto não respondeu — não dá para saber se está pausado.",
+            "O serviço não respondeu — não dá para saber se está pausado.",
         )
     if state.get("paused"):
         return Linha(
@@ -285,7 +311,7 @@ def linha_da_pausa(state: object) -> Linha:
             "A pausa fica gravada em disco e sobrevive a desligar o "
             "computador. O botão Retomar, ao lado, é a saída.",
         )
-    return Linha("Não", OK, GLIFO_OK, "O Hefesto está despachando as entradas normalmente.")
+    return Linha("Não", OK, GLIFO_OK, "O serviço está despachando as entradas normalmente.")
 
 
 def linha_da_troca_de_perfil(state: object, frase: str | None) -> Linha:
@@ -293,7 +319,7 @@ def linha_da_troca_de_perfil(state: object, frase: str | None) -> Linha:
     dica = sem_markup(frase) if frase else ""
     campos = _campos_de_janela(state)
     if campos is None:
-        return Linha(NAO_DEU, INFO, GLIFO_INFO, dica or "O Hefesto pode estar desligado.")
+        return Linha(NAO_DEU, INFO, GLIFO_INFO, dica or "O serviço pode estar desligado.")
     backend = campos["backend"]
     if not isinstance(backend, str) or backend in ("", "null"):
         return Linha("Não funciona neste sistema", AVISO, GLIFO_AVISO, dica)
@@ -353,7 +379,7 @@ def linha_do_vale_para(state: object) -> Linha:
     if quantos is None:
         return Linha(
             NAO_DEU, INFO, GLIFO_INFO,
-            "O Hefesto não respondeu quantos controles estão na mesa.",
+            "O serviço não respondeu quantos controles estão na mesa.",
         )
     if quantos == 0:
         return Linha(
@@ -545,7 +571,7 @@ def exame(achados: list[tuple[str, str]] | None) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # As travas
 # ---------------------------------------------------------------------------
-#: Os estados em que o Hefesto está DE PÉ. É a mesma matriz de
+#: Os estados em que o serviço está DE PÉ. É a mesma matriz de
 #: ``daemon_actions._ESTADOS_COM_DAEMON_DE_PE``, e a razão de ela existir aqui é
 #: que o botão cinza precisa dela ANTES de haver widget: a tela nova não tem
 #: `set_sensitive`, tem `disabled` na página.
@@ -570,16 +596,16 @@ def travas(leitura: Leitura) -> dict[str, str]:
 
     if not pausado:
         presas["retomar"] = (
-            "O Hefesto não está pausado — não há de que retomar."
+            "O serviço não está pausado — não há de que retomar."
             if leitura.status is not None
-            else "Não deu para saber se o Hefesto está pausado."
+            else "Não deu para saber se o serviço está pausado."
         )
     if not de_pe:
-        presas["desligar"] = "O Hefesto já está desligado."
-        presas["reiniciar"] = "O Hefesto está desligado — não há o que reiniciar."
+        presas["desligar"] = "O serviço já está desligado."
+        presas["reiniciar"] = "O serviço está desligado — não há o que reiniciar."
     for gesto in ("ver-plugins", "ver-detalhes"):
         if not de_pe:
-            presas[gesto] = "O Hefesto está desligado — não há o que perguntar a ele."
+            presas[gesto] = "O serviço está desligado — não há o que perguntar a ele."
     return presas
 
 
