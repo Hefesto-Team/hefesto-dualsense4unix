@@ -28,6 +28,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from tests.unit.fonte_do_instalador import texto_do_instalador
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "bt_rebind_orphans.sh"
 SCRIPT_TEXT = SCRIPT.read_text(encoding="utf-8")
@@ -186,7 +188,7 @@ class TestIntegracaoComOWatchdog:
         )
 
     def test_install_e_uninstall_sao_simetricos(self) -> None:
-        install = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
+        install = texto_do_instalador()
         uninstall = (REPO_ROOT / "uninstall.sh").read_text(encoding="utf-8")
         assert "bt_rebind_orphans.sh" in install, "o helper precisa ser instalado"
         assert "bt_rebind_orphans.sh" in uninstall, "e removido junto (simetria)"

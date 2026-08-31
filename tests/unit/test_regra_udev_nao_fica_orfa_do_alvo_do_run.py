@@ -71,7 +71,7 @@ from pathlib import Path
 
 from tests.unit.test_install_serve_os_dois_lados_da_cerca import (
     alcancadas_de,
-    corpos_e_topo,
+    corpos_das_duas_casas,
     regioes,
 )
 from tests.unit.test_uninstall_simetrico_ao_install import _alvos_run_das_regras
@@ -292,11 +292,15 @@ def test_a_camada_do_alvo_alcanca_os_dois_lados_da_cerca() -> None:
     defeito, porque o dia em que alguém renomear a função para fora do sufixo
     `_host` o portão geral fica cego e este não.
     """
-    corpos, _ = corpos_e_topo()
+    # Os CORPOS saem das duas casas — a função mudou para
+    # `scripts/lib/camada_de_maquina.sh` em 31/08/2026 — e as REGIÕES
+    # continuam saindo do `install.sh`, porque a cerca é dele.
+    corpos = corpos_das_duas_casas()
     assert "install_bt_resilience_host" in corpos, (
-        "`install_bt_resilience_host` sumiu do install.sh. Se a camada ONDA-R2 "
-        "voltou a ser um bloco de código de topo, ela voltou a servir um lado "
-        "só da cerca — que é o defeito de 22/08/2026."
+        "`install_bt_resilience_host` sumiu do instalador (procurei no "
+        "install.sh e em scripts/lib/camada_de_maquina.sh). Se a camada "
+        "ONDA-R2 voltou a ser um bloco de código de topo, ela voltou a servir "
+        "um lado só da cerca — que é o defeito de 22/08/2026."
     )
     por_regiao = regioes()
     assert por_regiao, "não achei a cerca do install.sh (ver o teste da âncora)"

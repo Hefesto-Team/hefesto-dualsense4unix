@@ -55,6 +55,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import MANUAL_PROFILE_LOCK_SEC
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session as session_mod
+from tests.unit.fonte_do_instalador import texto_do_instalador
 
 _GLADE = (
     Path(__file__).resolve().parents[2]
@@ -616,7 +617,11 @@ class TestParamsDeModuloAQuenteNoInstallSh:
     """
 
     _RAIZ = Path(__file__).resolve().parents[2]
-    _INSTALL = (_RAIZ / "install.sh").read_text(encoding="utf-8")
+    #: O `install.sh` MAIS `scripts/lib/camada_de_maquina.sh`: as duas
+    #: funções de DKMS que este teste abre mudaram de arquivo em
+    #: 31/08/2026, sem mudar uma linha do que fazem. Ver
+    #: `tests/unit/fonte_do_instalador.py`.
+    _INSTALL = texto_do_instalador()
     _HOST_UDEV = (_RAIZ / "scripts" / "install-host-udev.sh").read_text(
         encoding="utf-8"
     )

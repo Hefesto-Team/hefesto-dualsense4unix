@@ -49,6 +49,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.fonte_do_instalador import texto_do_instalador
+
 #: Os scripts da família `bt_*` que registram no journal. Todos passaram a
 #: escrever por `_registrar`, e é isso que o portão desta lista guarda.
 SCRIPTS_QUE_REGISTRAM = (
@@ -568,7 +570,7 @@ class TestFiacao:
         )
 
     def test_install_instala_e_uninstall_remove(self) -> None:
-        assert "bt_bonds_autorestore.sh" in INSTALL.read_text(encoding="utf-8")
+        assert "bt_bonds_autorestore.sh" in texto_do_instalador()
         assert "bt_bonds_autorestore.sh" in UNINSTALL.read_text(encoding="utf-8")
 
     def test_o_install_nao_promete_mais_restauro_manual(self) -> None:
@@ -579,7 +581,7 @@ class TestFiacao:
         contradição). Fato errado se SUBSTITUI — e este portão impede que ele
         volte por descuido.
         """
-        texto = INSTALL.read_text(encoding="utf-8")
+        texto = texto_do_instalador()
         assert "restauração é MANUAL" not in texto, (
             "o install.sh voltou a prometer restauro manual — contradiz a "
             "decisão dela de 08/08 e o código que está no drop-in"

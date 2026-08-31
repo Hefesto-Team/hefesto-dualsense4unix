@@ -28,6 +28,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from tests.unit.fonte_do_instalador import texto_do_instalador
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BT_BLOCK = REPO_ROOT / "assets" / "bluetooth" / "hefesto-bt.block"
 DROPIN = REPO_ROOT / "assets" / "systemd" / "bluetooth-dropin-10-hefesto-resilience.conf"
@@ -98,7 +100,7 @@ class TestBlocoUnificadoMainConf:
             "bluez_config.sh deve remover os três blocos sentinelados antes de apensar"
         )
         assert "hefesto-bt.block" in text
-        assert 'scripts/bluez_config.sh" aplicar' in INSTALL.read_text(encoding="utf-8")
+        assert 'scripts/bluez_config.sh" aplicar' in texto_do_instalador()
 
     def test_uninstall_remove_o_bloco_unificado(self) -> None:
         text = BLUEZ_CONFIG.read_text(encoding="utf-8")
@@ -323,7 +325,7 @@ class TestInvariantesDosScripts:
             assert flag in text
         # O install NUNCA liga a captura: pode CITAR o comando em mensagem de
         # ajuda, mas nenhuma linha pode EXECUTÁ-LO (sudo/execução direta).
-        install_text = INSTALL.read_text(encoding="utf-8")
+        install_text = texto_do_instalador()
         assert not re.search(
             r"^\s*(sudo\s+)?(/[\w/.-]*)?bt_crash_capture\.sh\s+--on", install_text, re.M
         ), "install.sh não pode executar a captura forense (é opt-in humano)"
@@ -331,13 +333,19 @@ class TestInvariantesDosScripts:
 
 class TestSimetriaInstallUninstall:
     def test_units_instaladas_sao_removidas(self) -> None:
-        install_text = INSTALL.read_text(encoding="utf-8")
+        install_text = texto_do_instalador()
         uninstall_text = UNINSTALL.read_text(encoding="utf-8")
         for unit in UNITS:
-            assert unit.name in install_text, f"install.sh não instala {unit.name}"
+            assert unit.name in install_text, (
+                f"o instalador não instala {unit.name} (procurei no install.sh "
+                "e em scripts/lib/camada_de_maquina.sh)"
+            )
             assert unit.name in uninstall_text, f"uninstall.sh não remove {unit.name}"
         for script in SCRIPTS:
-            assert script.name in install_text, f"install.sh não instala {script.name}"
+            assert script.name in install_text, (
+                f"o instalador não instala {script.name} (procurei no install.sh "
+                "e em scripts/lib/camada_de_maquina.sh)"
+            )
             assert script.name in uninstall_text, f"uninstall.sh não remove {script.name}"
         assert "10-hefesto-resilience.conf" in uninstall_text
         # O uninstall também precisa desarmar uma janela forense esquecida.
@@ -353,7 +361,7 @@ class TestSimetriaInstallUninstall:
 
 class TestAlvoBluez586:
     def test_install_aponta_para_o_alvo_586(self) -> None:
-        text = INSTALL.read_text(encoding="utf-8")
+        text = texto_do_instalador()
         # 22/07: o alvo virou a VERSÃO COMPLETA ~hefesto24.04.2 (patch BOND-KEEP-01)
         # — o compare-versions precisa distinguir .1 de .2; um "5.86" nu pularia
         # o upgrade. Aceita 5.86 base OU a versão hefesto completa.

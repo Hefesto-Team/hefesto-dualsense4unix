@@ -30,8 +30,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from tests.unit.fonte_do_instalador import texto_do_instalador
+
 RAIZ = Path(__file__).resolve().parents[2]
-INSTALL = RAIZ / "install.sh"
 UNIT = RAIZ / "assets" / "systemd" / "hefesto-bt-agent.service"
 
 
@@ -46,7 +47,11 @@ def test_o_install_reseta_o_failed_antes_de_ligar_o_agente() -> None:
     ressuscita nada nesta execução — o `enable --now` já falhou, e a unit só
     voltaria no próximo install, que é o cenário que custou as oito horas.
     """
-    corpo = _corpo(INSTALL)
+    # `install_bt_agent_host` mudou para `scripts/lib/camada_de_maquina.sh`
+    # em 31/08/2026, e levou junto o `reset-failed`. A ordem que este teste
+    # mede continua sendo a mesma, dentro do mesmo bloco — só o arquivo em
+    # que o bloco está é que mudou.
+    corpo = texto_do_instalador()
 
     reset = corpo.find("systemctl reset-failed hefesto-bt-agent.service")
     assert reset != -1, (

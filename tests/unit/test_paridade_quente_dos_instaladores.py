@@ -44,8 +44,13 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from tests.unit.fonte_do_instalador import texto_do_instalador
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-INSTALL = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
+#: O `install.sh` MAIS `scripts/lib/camada_de_maquina.sh`: as três funções de
+#: DKMS, que são quem REARMA os params a quente, mudaram de casa em
+#: 31/08/2026. Ver `tests/unit/fonte_do_instalador.py`.
+INSTALL = texto_do_instalador()
 UNINSTALL = (REPO_ROOT / "uninstall.sh").read_text(encoding="utf-8")
 HOST_UDEV = (REPO_ROOT / "scripts" / "install-host-udev.sh").read_text(encoding="utf-8")
 

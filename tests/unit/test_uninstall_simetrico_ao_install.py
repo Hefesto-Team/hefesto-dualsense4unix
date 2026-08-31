@@ -13,6 +13,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from tests.unit.fonte_do_instalador import CAMADA_DE_MAQUINA, texto_do_instalador
+
 RAIZ = Path(__file__).resolve().parents[2]
 ASSETS = RAIZ / "assets"
 INSTALL = RAIZ / "install.sh"
@@ -84,7 +86,12 @@ def test_uninstall_nao_cita_regra_que_nao_existe_mais() -> None:
 
 def test_helpers_bt_instalados_sao_os_mesmos_removidos() -> None:
     """Mesma armadilha, outra lista: os scripts de resiliência do Bluetooth."""
-    inst = INSTALL.read_text(encoding="utf-8")
+    # A lista `for _btres_s in ...` mudou para
+    # `scripts/lib/camada_de_maquina.sh` em 31/08/2026, junto com
+    # `install_bt_resilience_host`. Procurá-la só no `install.sh` fazia o
+    # `assert m is not None` abaixo reprovar — e um afrouxamento aqui
+    # (aceitar `m is None`) deixaria helper BT instalado e nunca removido.
+    inst = texto_do_instalador()
     unin = UNINSTALL.read_text(encoding="utf-8")
 
     m = re.search(r"for _btres_s in ([^;]+); do", inst)
@@ -350,7 +357,9 @@ def test_a_unit_dsx_recover_nao_existe_em_lugar_nenhum() -> None:
     assert not (ASSETS / "hefesto-dsx-recover.service").exists(), (
         "o asset da unidade fantasma voltou"
     )
-    for arquivo in (UNINSTALL, DOCTOR, INSTALL):
+    # A lib das curas de HOST entra na varredura: a unit fantasma não pode
+    # voltar por ela tampouco.
+    for arquivo in (UNINSTALL, DOCTOR, INSTALL, CAMADA_DE_MAQUINA):
         texto = arquivo.read_text(encoding="utf-8")
         assert "hefesto-dsx-recover" not in texto, (
             f"{arquivo.name} voltou a citar a unit hefesto-dsx-recover"
