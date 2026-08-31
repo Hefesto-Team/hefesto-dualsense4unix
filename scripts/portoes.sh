@@ -55,6 +55,11 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 _LISTA() {
   cat <<'TABELA'
 rapido|contrato-ipc|py|scripts/gerar-contrato-ipc.py --check
+# 31/08/2026, decisão dela: este portão passou a cobrir também as planilhas de
+# `docs/data/` — o mapa carregava 762 citações `arquivo:linha` e NENHUMA tinha
+# portão. Nasce em zero (nenhuma aponta além do fim hoje), e continua na camada
+# rápida porque o preço foi medido: 33 ms só `docs/protocol/`, 101 ms com o
+# mapa, o caderno e as decisões dela juntos -- 903 citações conferidas.
 rapido|citacoes-de-linha|py|scripts/validar-citacoes-de-linha.py --all
 rapido|mapa-de-canais|py|scripts/gerar-mapa.py --check
 rapido|fatos-de-tela|py|scripts/gerar-fatos-de-tela.py --check
