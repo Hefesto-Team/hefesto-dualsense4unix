@@ -264,15 +264,15 @@ PISO_DA_ABA = 2
 PROVAS = [
     # O 🎙 — e o `True` é o ALTERNAR: o controle da régua vem com `audio: {}`,
     # logo não está mudo, logo o clique manda calar.
-    {"pagina": PAGINA, "gesto": "mudo", "clique": {"mudo": "microfone"},
+    {"pagina": PAGINA, "gesto": "mudo", "clique": {"mudo": "microfone"},  # (noqa-acento)
      "chama": [("mic_set", [True], {"uniq": "aa:bb:cc:00:00:01"})]},
     # O ♪ — SEM `volume` no payload, e isso é o contrato: o controle da régua
     # vem com `speaker: {}`, que é o estado real de quem nunca recebeu um
     # `speaker.set`. Inventar um número aqui esconderia a recusa do daemon.
-    {"pagina": PAGINA, "gesto": "mudo", "clique": {"mudo": "alto-falante"},
+    {"pagina": PAGINA, "gesto": "mudo", "clique": {"mudo": "alto-falante"},  # (noqa-acento)
      "chama": [("speaker_set", [], {"muted": True, "uniq": "aa:bb:cc:00:00:01"})]},
     # "Sons do jogo" — a rota sai da constante, nunca do número digitado.
-    {"pagina": PAGINA, "gesto": "rota", "clique": {"rota": "jogo"},
+    {"pagina": PAGINA, "gesto": "rota", "clique": {"rota": "jogo"},  # (noqa-acento)
      "chama": [("speaker_set", [],
                 {"rota": SAIDA_L_FONE_R_ALTO_FALANTE, "uniq": "aa:bb:cc:00:00:01"})]},
 ]

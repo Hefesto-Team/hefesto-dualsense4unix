@@ -116,7 +116,7 @@ def pacote(ctx: Contexto) -> dict:
 #      que a pergunta dela corrigiu em 01/09: *"não estamos refazendo do zero
 #      né?"*
 #   2. o `uniq` chega em `o["uniq"]`, já traduzido pelo piloto: a tela endereça
-#      por `pref` (`p1`) e o daemon por `uniq` (`d4:2f:…`).
+#      por `pref` (`p1`) e o daemon por `uniq` (`d4:2f:00:00:…`).
 #   3. a ponte é INJETADA — a função não importa o bridge, recebe. Por isso a
 #      régua a testa com um dublê e cobra QUAL função foi chamada e com quê.
 #   4. o que o produto não faz não vira botão que finge: vira botão que recusa
@@ -258,14 +258,14 @@ METODOS = {"lightbar.reset"}
 PAGINA = "04-iluminacao.html"
 PISO_DA_ABA = 4
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},
+    {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento)
      "chama": [("led_set", [(255, 128, 0)], {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "apagar", "clique": {},
+    {"pagina": PAGINA, "gesto": "apagar", "clique": {},  # (noqa-acento)
      "chama": [("led_set", [(0, 0, 0)], {"uniq": "aa:bb:cc:00:00:01"})]},
     # DUAS chamadas, e a ordem importa: largar o claim e SÓ ENTÃO pintar.
-    {"pagina": PAGINA, "gesto": "auto", "clique": {},
+    {"pagina": PAGINA, "gesto": "auto", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["lightbar.reset"], {"uniq": "aa:bb:cc:00:00:01"}),
                ("led_set", [(0, 0, 255)], {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},
+    {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},  # (noqa-acento)
      "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {})]},
 ]

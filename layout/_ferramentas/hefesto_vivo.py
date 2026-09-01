@@ -19,7 +19,7 @@ e é diferente de um pacote vazio.
 
 AS DUAS LÍNGUAS, e a tradução mora AQUI de propósito:
 
-    o daemon fala `uniq`   — `d4:2f:…`, o endereço do aparelho
+    o daemon fala `uniq`   — `d4:2f:00:00:…`, o endereço do aparelho
     o desenho fala `pref`  — `p1`, `p2`, que é o que o `data-controle` traz
 
 As funções de pacote falam a língua do daemon, porque é dele que leem. A tela
@@ -161,8 +161,8 @@ BOOTSTRAP = r"""
     // parecer o desenho, em vez de inventar um terceiro estado.
     for(const pref of (p.vazios || [])){
       for(const el of document.querySelectorAll('[data-controle="' + pref + '"]')){
-        if(el.dataset.conectado !== 'nao'){  // noqa-acento valor do atributo
-          el.dataset.conectado = 'nao'; n += 1;  // noqa-acento idem
+        if(el.dataset.conectado !== 'nao'){  // (noqa-acento) valor do atributo
+          el.dataset.conectado = 'nao'; n += 1;  // (noqa-acento) idem
         }
         if(!el.classList.contains('off')){ el.classList.add('off'); }
         el.classList.remove('alvo');
@@ -469,14 +469,14 @@ class Piloto:
         """
         self.gestos.append(o)
         nome = str(o.get("gesto") or "")
-        pagina = str(o.get("pagina") or self.pagina)  # noqa-acento-verbo  (nome de variável)
+        pagina = str(o.get("pagina") or self.pagina)  # (noqa-acento: verbo)  (nome de variável)
         acao = pacotes.gesto_da_pagina(pagina, nome)
         if acao is None:
             self.recusados.append(f"{pagina}:{nome}")
             print(f"[gesto sem dono] {pagina} · {nome} · {o.get('texto', '')!r}")
             return
         # O `uniq` É RESOLVIDO AQUI, e não dentro do gesto: a tela endereça por
-        # `pref` (`p1`), o daemon por `uniq` (`d4:2f:…`), e a mesa que traduz é
+        # `pref` (`p1`), o daemon por `uniq` (`d4:2f:00:00:…`), e a mesa que traduz é
         # do piloto. Cada gesto resolvendo por conta própria seria a mesma
         # tradução escrita nove vezes — e a nona estaria errada.
         pref = str(o.get("controle") or "")

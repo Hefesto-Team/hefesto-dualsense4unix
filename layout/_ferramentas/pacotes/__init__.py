@@ -218,7 +218,7 @@ def normalizar(pacote: dict, para_pref: dict[str, str] | None = None) -> dict:
     devolvia zero sem uma linha de erro, que é a forma exata do defeito que esta
     casa chama de *ausência de notícia lida como sucesso*.
 
-    `para_pref` traduz `uniq → pref`. O daemon endereça por `uniq` (`d4:2f:…`) e
+    `para_pref` traduz `uniq → pref`. O daemon endereça por `uniq` (`d4:2f:00:00:…`) e
     o desenho por `pref` (`p1`), que é o que o `data-controle` das páginas traz.
     Sem a tradução o `querySelector` procura um MAC numa página que só conhece
     `p1` e devolve `null` — zero escrito, zero erro.
@@ -252,7 +252,7 @@ def normalizar(pacote: dict, para_pref: dict[str, str] | None = None) -> dict:
 
 
 def _so_hex(chave: str) -> str:
-    """`d42f4b4846d8` → o mesmo, e `d4:2f:…` → `d42f…`. Uma forma só para casar."""
+    """`d42f4b0000d8` → o mesmo, e `d4:2f:00:00:…` → `d42f…`. Uma forma só para casar."""
     return chave.replace(":", "").lower()
 
 

@@ -83,54 +83,67 @@ def _escolhido(todos: list[dict], ativo: str) -> str:
 
 @registrar("10-perfis.html")
 def pacote(ctx: Contexto) -> dict:
-    """A tabela de perfis e o editor, com os nomes que a página tem.
+    """DELEGA para `app/actions/perfis_web.pacote_da_aba` — a camada do PRODUTO.
 
-    ESTA ABA ENDEREÇA POR `data-hef`, e são SETENTA E SETE — `perfis.conta`,
-    `perfis.linha.nome`, `editor.prioridade`. É o vocabulário do
-    `perfis_vivos.py`, o piloto próprio dela, e ele continua valendo: o piloto
-    único aceita os três vocabulários das dez páginas em vez de renomear 105
-    endereços e quebrar cinco pilotos vivos.
+    ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA. O `casa-sabe` a listava como
+    promessa sem caminho: `perfis_web.pacote_da_aba` não tinha um chamador em
+    produção desde 30/08/2026.
 
-    AS TRÊS COLUNAS SÃO LISTAS, e a tela as distribui pelos catorze blocos de
-    mesmo endereço, na ordem. Sem isso o pacote teria de emitir
-    `perfis.linha.nome-0`, `-1`… e o gerador teria de saber de antemão quantos
-    perfis ela tem — que hoje são 33 no disco e catorze no desenho.
+    E ELA SABE MAIS QUE O QUE ESTE PACOTE TINHA: a coluna "Quando usar" diz *"Só
+    neste programa"* onde eu escrevia *"Jogo"*; ela traz `com_ajuste` ("0 de 2
+    controles com ajuste próprio neste perfil"), a `guarda` dos overrides por
+    controle, os `travados` e o `editor` inteiro. Cada uma dessas frases é texto
+    de tela que alguém escreveu com ela, e reescrevê-las por fora seria a
+    segunda verdade.
+
+    O QUE SOBRA AQUI é o ACHATAMENTO para os `data-hef` da página, que são 77.
     """
-    st = ctx.state
-    ativo = str(st.get("active_profile") or "")
-    todos = sorted(perfil.lista(), key=lambda x: (-x["prioridade"], x["nome"]))
-    # O EDITOR MOSTRA O PERFIL ESCOLHIDO NA LISTA, e não o que está valendo — é
-    # o que a aba Perfis da janela estável faz desde sempre
-    # (`on_profile_selection_changed` → `_populate_editor`,
-    # `profiles_actions.py:2984`), e é o que dá alvo aos botões da coluna. A
-    # escolha nasce no perfil ATIVO, como lá (`_sync_selection_with_active_
-    # profile`, `:1479`), e daí em diante quem manda é o clique dela.
-    escolhido = _escolhido(todos, ativo)
-    aberto = perfil.ativo(escolhido)
-    return {
-        "perfis.conta": f"{len(todos)} perfis",
-        "perfis.linha.nome": [p["nome"] for p in todos],
-        "perfis.linha.prioridade": [p["prioridade"] for p in todos],
-        "perfis.linha.quando": [QUANDO.get(p["casamento"], p["casamento"]) for p in todos],
-        "editor.nome": aberto.get("name") or escolhido or "—",
-        "editor.prioridade": aberto.get("priority"),
-        "editor.prioridade.n": aberto.get("priority"),
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions import perfis_web as _tela
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+
+    ativo = str(ctx.state.get("active_profile") or "")
+    try:
+        bruto = _tela.pacote_da_aba(load_all_profiles(), ativo=ativo or None,
+                                    mesa=ctx.mesa)
+    except Exception:
+        return {"sem_dono": {}, "cobertura": {"pintados": 0, "sem_dono": 1}}
+
+    lista = bruto.get("lista") or []
+    editor = bruto.get("editor") or {}
+    fora = {
+        "perfis.conta": bruto.get("conta", "—"),
+        "perfis.com-ajuste": bruto.get("com_ajuste", ""),
+        # AS TRÊS COLUNAS SÃO LISTAS, e a tela as distribui pelos blocos de
+        # mesmo endereço, na ordem — sem o gerador precisar saber quantos
+        # perfis ela tem.
+        "perfis.linha.nome": [x.get("nome", "") for x in lista],
+        "perfis.linha.prioridade": [x.get("prioridade", "") for x in lista],
+        "perfis.linha.quando": [x.get("quando", "") for x in lista],
         "ativo": ativo or "—",
-        # A LINHA ABERTA NO EDITOR. Não tem endereço na página ainda — sai aqui
-        # para quem consome o pacote fora da tela (a régua, o relato) e para o
-        # dia em que a lista souber acender a linha escolhida.
-        "selecionado": escolhido or "—",
-        "travado": bool(st.get("autoswitch_locked")),
-        "jogo": st.get("jogo_steam") or "",
-        "quantos": len(todos),
-        "editor": {
-            "gatilhos": bool(aberto.get("triggers")), "leds": bool(aberto.get("leds")),
-            "rumble": bool(aberto.get("rumble")), "mouse": bool(aberto.get("mouse")),
-            "casamento": (aberto.get("match") or {}).get("type", ""),
-        } if aberto else {},
+        "quantos": len(lista),
+        "travado": bool(ctx.state.get("autoswitch_locked")),
         "sem_dono": {},
-        "cobertura": {"pintados": 8 + len(todos) * 3, "sem_dono": len(SEM_DONO)},
     }
+    # O SEPARADOR É O PONTO, e não o hífen: a página endereça
+    # `editor.prioridade.dica`, e um `editor.prioridade-dica` cai no vazio. Os
+    # 77 `data-hef` desta aba usam ponto do começo ao fim.
+    for chave, valor in editor.items():
+        if not isinstance(valor, (dict, list)):
+            fora[f"editor.{chave.replace('_', '.')}"] = valor
+
+    # A GUARDA são os overrides por controle — o que cada um guarda de próprio
+    # neste perfil. O produto já a monta; a tela a distribui por linha.
+    guarda = bruto.get("guarda") or []
+    if isinstance(guarda, list) and guarda:
+        fora["guarda.nome"] = [g.get("nome", "") for g in guarda]
+        fora["guarda.id"] = [g.get("id", "") for g in guarda]
+        fora["guarda.secao"] = [s for g in guarda for s in (g.get("secoes") or [])]
+        fora["guarda.linhas"] = str(len(guarda))
+    fora["cobertura"] = {"pintados": len(fora) + len(lista) * 3, "sem_dono": 0}
+    return fora
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -279,7 +292,7 @@ PISO_DA_ABA = 3
 #: provado por medição própria, com uma pasta de perfis de verdade num diretório
 #: temporário; o relato desta leva traz o número.
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "ativar", "clique": {"texto": "Ação"},
+    {"pagina": PAGINA, "gesto": "ativar", "clique": {"texto": "Ação"},  # (noqa-acento)
      "chama": [("profile_switch", ["Ação"], {})]},
 ]
 

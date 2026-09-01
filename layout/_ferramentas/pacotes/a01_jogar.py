@@ -94,7 +94,7 @@ def _do_exame() -> list[dict]:
 # Escrever aqui `p.chamar("gamepad.emulation.set", enabled=True)` seria o
 # terceiro dono. Então esta aba **pergunta**:
 #
-#     painel.plano_do_modo(chave, mascara) -> [(metodo, params), ...]
+#     painel.plano_do_modo(chave, mascara) -> [(metodo, params), ...]  # (noqa-acento)
 #
 # que delega ao `plan_mode_transition` sem uma linha de regra própria, e devolve
 # `None` quando o botão não tem escritor. A tradução chip → máscara também não é
@@ -172,7 +172,7 @@ def _aplicar(p, plano: list[tuple[str, dict]]) -> None:
 
 #: ACHADO, 01/09/2026 — e ele fica escrito porque muda o que este arquivo pode
 #: prometer: **`pacotes/ponte.chamar` não tem folga de tempo.** Ele chama
-#: `_safe_call(metodo, params)` com o default de **250 ms**, que é o timeout de
+#: `_safe_call(metodo, params)` com o default de **250 ms**, que é o timeout de  # (noqa-acento)
 #: LEITURA da ponte, e desde o BUG-IPC-READ-NO-TIMEOUT-01 esse prazo cobre
 #: também a resposta (`ipc_bridge._run_call`).
 #:
@@ -399,33 +399,33 @@ _MANUAL_OFF = {"enabled": False, "origin": "manual"}
 PROVAS = [
     # LIGADO: sai do Modo Nativo e SÓ ENTÃO liga o gamepad. Invertidos, o vpad
     # nasceria com o físico ainda grabado pelo jogo (HARM-01).
-    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "gamepad"},
+    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "gamepad"},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"], _MANUAL_ON)]},
     # DESLIGADO é o Modo Nativo, e é UM passo só — decisão dela, 31/08.
-    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "native"},
+    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "native"},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_ON)]},
     # O CHIP MUDA A MÁSCARA, NÃO O MODO: o `flavor` é a única diferença entre
     # este e o Xbox logo abaixo. Ele sai de `painel.CHIPS_DA_ESCADA`, não é
     # digitado no gesto — o que está digitado aqui é a EXPECTATIVA.
-    {"pagina": PAGINA, "gesto": "modo-dualsense", "clique": {},
+    {"pagina": PAGINA, "gesto": "modo-dualsense", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"],
                 {**_MANUAL_ON, "flavor": "dualsense"})]},
-    {"pagina": PAGINA, "gesto": "modo-xbox", "clique": {},
+    {"pagina": PAGINA, "gesto": "modo-xbox", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"],
                 {**_MANUAL_ON, "flavor": "xbox"})]},
     # TRÊS, e o terceiro é o que separa "entrei no modo" de "entrei num modo sem
     # função": `mouse.emulation.restore` liga o mouse conforme a preferência
     # persistida (HARM-06), e vem POR ÚLTIMO de propósito.
-    {"pagina": PAGINA, "gesto": "modo-navegacao", "clique": {},
+    {"pagina": PAGINA, "gesto": "modo-navegacao", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
                ("chamar", ["mouse.emulation.restore"], {})]},
     # RECONCILIAR ANTES DE RENUMERAR: renumerar primeiro compactaria uma mesa
     # que ainda não está completa (`home_actions.py:3122`).
-    {"pagina": PAGINA, "gesto": "reconectar", "clique": {},
+    {"pagina": PAGINA, "gesto": "reconectar", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["coop.sync"], {}),
                ("chamar", ["identity.renumber"], {})]},
 ]
