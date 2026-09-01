@@ -567,8 +567,20 @@ def coluna(c):
         # leva. Sem os dois o botão era pintura pura: o piloto via um `<button>`
         # sem `data-*` e não tinha o que mandar ao daemon. Medido em 01/09/2026
         # — dos 202 botões das dez páginas, 178 estavam assim.
+        #
+        # O `data-hex` LEVA A COR DO PRODUTO, não o tom da casa, e a diferença
+        # foi um defeito de verdade que a prova botão a botão pegou em
+        # 01/09/2026, no pedido dela: *"no aparelho por favor valida botão a
+        # botão"*. O `monta.TOM_DA_CASA` traduz `#0000FF → #7EB8D4` para o
+        # DESENHO — a paleta Dracula não usa azul puro — e o botão levava esse
+        # tom AO APARELHO. A tela pintava no plástico dela a cor de tela.
+        #
+        # Os dois lados ficam, e cada um no seu lugar: `style="background"` usa
+        # o tom da casa (é o que ela vê) e `data-hex` usa `luz(i)` (é o que o
+        # produto acende). É a mesma cura que a linha do `.tom.on` já fazia para
+        # a comparação — faltava fazê-la para o VALOR.
         f'            <button class="tom{" on" if t == tom_da_casa(cor) else ""}" style="background:{t}"'
-        f' data-gesto="cor" data-hex="{t}"'
+        f' data-gesto="cor" data-hex="{luz(i)}"'
         f' title="Cor automática do Player {i} — usar aqui pinta a barra do'
         f' {c["nome"]}, e não muda o número dele."></button>'
         for i, t in enumerate(TONS, 1))

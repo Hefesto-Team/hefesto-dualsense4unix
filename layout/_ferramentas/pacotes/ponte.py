@@ -116,3 +116,32 @@ def chamar_detalhado(metodo: str, **params):
     falha calado é a mesma doença de um botão que não faz nada.
     """
     return _b._call_checked(metodo, params)
+
+
+# ---------------------------------------------------------------------------
+# O QUE SÓ A JANELA PODE FAZER — e por isso é INJETADO, não importado
+# ---------------------------------------------------------------------------
+#: ESCOLHER UM ARQUIVO é do SISTEMA, não da página: o WebView não abre
+#: `FileChooserDialog`, e a página não tem acesso ao disco. Quem pode abri-lo é
+#: o piloto, que é GTK — e ele substitui esta função ao subir
+#: (`ponte.escolher_arquivo = self._escolher_arquivo`).
+#:
+#: POR QUE UM PONTO DE EXTENSÃO E NÃO UM IMPORT DE GTK AQUI: porque os pacotes
+#: são PUROS e é isso que os torna testáveis sem abrir janela. Um `import gi`
+#: neste módulo obrigaria toda régua a ter GTK, e o CI a rodar com display.
+#:
+#: O padrão RECUSA DIZENDO. Rodar um gesto de importação fora da janela é um
+#: erro de quem chamou, e um `None` silencioso aqui viraria "ela cancelou" —
+#: que é uma mentira sobre o que aconteceu.
+def escolher_arquivo(titulo: str, padrao: str = "*", **_) -> str | None:
+    """O caminho que ela escolheu, ou `None` se cancelou. Substituído pelo piloto."""
+    raise RuntimeError(
+        f"escolher_arquivo({titulo!r}) foi chamado fora da janela. Só o piloto "
+        f"pode abrir o seletor do sistema — ele substitui esta função ao subir.")
+
+
+def salvar_arquivo(titulo: str, sugestao: str = "", **_) -> str | None:
+    """Onde ela quer gravar, ou `None` se cancelou. Substituído pelo piloto."""
+    raise RuntimeError(
+        f"salvar_arquivo({titulo!r}) foi chamado fora da janela. Só o piloto "
+        f"pode abrir o seletor do sistema — ele substitui esta função ao subir.")

@@ -697,9 +697,25 @@ def cartao(c, bateria=None):
                 </div>
               </div>'''
 
+    # O `data-gesto` DOS CHIPS DE MÁSCARA — 01/09/2026, e ele é uma RECUSA, não
+    # uma ligação. Medido contra os 39 métodos que o daemon atende:
+    #
+    #   * a máscara do gamepad virtual é UMA SÓ para a máquina —
+    #     `gamepad.emulation.set` recebe `flavor` e **não** recebe `uniq`
+    #     (`daemon/ipc_handlers.py:5060`), e o vpad que ela desenha é o do
+    #     processo, não o de um controle;
+    #   * "Nintendo Pro" não é máscara nenhuma do produto: o portão de entrada
+    #     RECUSA em voz alta o que não for `dualsense`/`xbox` e os sinônimos
+    #     (`ipc_handlers.py:5090`, *"nome desconhecido é erro, não default"*).
+    #
+    # Logo, o chip por controle não tem quem o atenda, e ele NÃO ganha `@gesto`
+    # em `pacotes/a01_jogar.py`. O que ele ganha é o ENDEREÇO: com ele o piloto
+    # recusa dizendo o nome; sem ele o clique sumia calado — e a mesma tela
+    # continuava desenhando três máscaras escolhíveis. O chip do LUGAR VAZIO
+    # segue sem endereço, de propósito: sem controle não há sequer o que pedir.
     chips = "\n".join(
         f'                  <span class="chip{" on" if m == c["mascara"] else ""}"'
-        f' data-mascara="{m}">{m}</span>'
+        f' data-gesto="mascara" data-mascara="{m}">{m}</span>'
         for m in MASCARAS)
     return f'''              <div class="cartao{" alvo" if c["alvo"] else ""}" style="--plastico:{monta.cor_da_zona(c["cor"])}"
                    data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim"
@@ -740,8 +756,21 @@ CARTOES = "\n".join(cartao(c) for c in MESA)
 # alvos diferentes no MESMO elemento, de propósito — a alternativa era a tela
 # ter um estado no desenho e outro no daemon, que é o defeito que a pintura
 # existe para não ter.
+#
+# E DESDE 01/09/2026 SÃO TRÊS: o `data-gesto` é o endereço do CLIQUE. O ouvinte
+# único do piloto (`hefesto_vivo.py`) monta o nome do gesto por
+# `d.gesto || d.hefGesto || d.papel` — sem ele o clique nas duas posições chegava
+# ao Python com o nome `clique`, que não é gesto de aba nenhuma, e o despachante
+# devolvia "sem dono". O `data-modo` continua sendo o que diz QUAL posição: ele
+# viaja no mesmo recado (`o["modo"]`), então um gesto só atende as duas.
+#
+# POR QUE UM SÓ, E NÃO UM POR POSIÇÃO: o que muda entre Ligado e Desligado é a
+# chave do modo, e a sequência de IPC de cada um já é de
+# `mode_transition.plan_mode_transition`. Dois gestos escreveriam duas vezes a
+# mesma delegação.
 _INTERRUPTOR = "\n".join(
-    f'        <label class="hef-pos {lado}" for="hef-{lado}" data-modo="{modo}"\n'
+    f'        <label class="hef-pos {lado}" for="hef-{lado}"'
+    f' data-gesto="hefesto" data-modo="{modo}"\n'
     f'               title="{dica}"><span class="pino"></span>{rot}</label>'
     for lado, modo, rot, dica in INTERRUPTOR)
 
@@ -753,21 +782,41 @@ _INTERRUPTOR = "\n".join(
 def _chip_do_modo(m):
     """Um dos cinco chips de dentro do Hefesto ligado.
 
-    TRÊS ENDEREÇOS, e cada um responde a uma pergunta diferente:
+    QUATRO ENDEREÇOS, e cada um responde a uma pergunta diferente:
 
     - ``data-degrau`` — a identidade na fileira que o PS+R3 gira. Todos têm;
     - ``data-modo`` — só quem É um modo de ``mode_transition.MODES``. Hoje é a
       **Navegação** e só ela (``desktop``): é ela que `apply_mode` sabe aplicar.
       Escrever este endereço nos outros quatro seria oferecer um escritor que
       não existe;
+    - ``data-gesto`` — o endereço do CLIQUE (01/09/2026). Todos têm, e o valor é
+      ``modo-<chave>``, que é o que o piloto lê para achar quem atende;
     - ``title`` — o que este modo é, em uma linha, e se ele tem quem o atenda.
+
+    **O `data-degrau` NÃO SERVIA PARA O CLIQUE, e é por isso que o quarto
+    endereço precisou existir.** O ouvinte único do piloto
+    (`hefesto_vivo.py`) transporta um conjunto fechado de atributos, e
+    ``data-degrau`` não está nele — o clique chegava ao Python com o nome
+    `clique` e sem dizer em qual chip. Pôr a chave dentro do próprio
+    ``data-gesto`` resolve sem inventar um vocabulário novo: é o mesmo atributo
+    que a Iluminação e a Sistema já usam, e é um dos que o portão do desenho
+    conta como invisível (`check_o_desenho_aprovado.INVISIVEIS`), então marcar
+    os chips não move um pixel nem reprova a régua do mockup.
+
+    **E MARCAR NÃO É LIGAR.** O ``modo-steam`` sai daqui marcado e **não tem
+    `@gesto`** em `pacotes/a01_jogar.py`: não há IPC que ligue o Steam Input
+    (ver a lista de `pacotes/daemon.metodos()`), e o degrau dele custa fechar a
+    Steam e reabrir o jogo (`ponte_escada`, § *OS DOIS TRAMOS*). Marcado, o
+    piloto recusa **dizendo o nome**; sem marca, o clique sumiria calado — e
+    calado é o que faz quem clicou concluir que funcionou.
     """
     classe = ("degrau"
               + (" on" if m["chave"] == MODO_ACESO else "")
               + (" sem-dono" if m["sem_dono"] else ""))
     modo = f' data-modo="{m["modo"]}"' if m["modo"] else ""
     # SEM `<i>`: os algarismos saíram em 31/08 (ver o comentário do `MODOS`).
-    return (f'            <span class="{classe}" data-degrau="{m["chave"]}"{modo}\n'
+    return (f'            <span class="{classe}" data-degrau="{m["chave"]}"'
+            f' data-gesto="modo-{m["chave"]}"{modo}\n'
             f'                  title="{m["dica"]}">{m["rot"]}</span>')
 
 
