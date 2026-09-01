@@ -52,7 +52,7 @@ GUARDA = {
 }
 
 # O ID DA PEÇA é o endereço de rádio normalizado — a MESMA chave que o
-# `_validate_controllers_keys` aceita e canoniza (`profiles/schema.py:1114`), e
+# `_validate_controllers_keys` aceita e canoniza (`profiles/schema.py:1188`), e
 # a mesma que a dica do "Perfil ativo" promete no esqueleto: *"pelo ID da peça —
 # amanhã, em outra porta ou no rádio, ele traz de volta o que você deixou hoje"*.
 # A promessa é verdadeira porque o endereço é ESTÁVEL entre USB e BT no

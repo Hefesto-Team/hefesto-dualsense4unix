@@ -802,6 +802,17 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "core/acoes_de_botao.py::por_grupo": (
+        "A lista agrupada como a tela a desenha "
+        "(core/acoes_de_botao.py). Quem a chama e o GERADOR da aba Navegacao, "
+        "`interface/aba06.py` - que e BANCADA e sai da conta pela poda de "
+        "`promessas_sem_caminho`. Ela nasceu em 01/09/2026 justamente para a "
+        "lista deixar de ser DIGITADA no gerador: as duas copias ja tinham "
+        "divergido, e a da tela deixava de fora o Backspace e o Delete "
+        "que o produto emite no touchpad. A IRMA dela, `token_do_rotulo`, e do "
+        "produto: o gesto `guardar-definicoes` a chama a cada Guardar. "
+        "MEDIDO em 01/09/2026."
+    ),
     "interface/monta.py::larg_rotulos": (
         "Auxiliar do gerador do mockup (interface/monta.py:406), chamado só pelos "
         "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "

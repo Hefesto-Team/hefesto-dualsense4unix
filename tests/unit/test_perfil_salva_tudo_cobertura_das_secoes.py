@@ -58,6 +58,23 @@ _IRMAO = Path(__file__).with_name("test_perfil_salva_tudo_ida_e_volta.py")
 #: Isenção sem razão é lista de exceções disfarçada de decisão; a razão é o que
 #: permite a próxima pessoa discordar com conhecimento de causa.
 ISENTOS: dict[str, str] = {
+    "button_actions": (
+        "FEAT-ACOES-DE-BOTAO-01 (01/09/2026). A isenção é do INSTRUMENTO, não do "
+        "campo: o irmão deste portão dirige a JANELA GTK — ele exige `gi` real e "
+        "aciona os mixins de `app/actions/` —, e este campo não tem superfície "
+        "lá. Quem o escreve é a interface nova, no gesto `guardar-definicoes` da "
+        "aba Navegação (`interface/pacotes/a06_navegacao.py`), e o caminho dele "
+        "não passa por widget nenhum. Um caso de ida e volta aqui teria de "
+        "fabricar um rascunho que a janela nunca produz — mediria o dublê. "
+        "ELE TEM RÉGUA, e são duas, com mordida: "
+        "`test_o_que_cada_botao_faz_tem_campo.py` cobre os quatro elos (padrão "
+        "derivado, campo no perfil, resolução, device obedecendo) e "
+        "`test_a_tela_entrega_as_vinte_e_uma_linhas.py` dirige a página "
+        "publicada num Chrome e confere que as 21 linhas chegam ao Python. "
+        "A ISENÇÃO CAI no dia em que a aba Navegação virar tela GTK — o que a "
+        "decisão dela de 01/09 (*'a versão antiga não segue disponível'*) torna "
+        "improvável, mas quem a reverter tem de reler esta linha."
+    ),
     "version": (
         "constante do esquema (`Literal[1] = 1`). Não é configuração dela, não "
         "há gesto que a mude e o pydantic recusa qualquer outro valor no load "

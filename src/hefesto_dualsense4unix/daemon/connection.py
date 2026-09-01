@@ -374,6 +374,13 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         keyboard_device_provider=lambda: getattr(
             daemon, "_keyboard_device", None
         ),
+        # FEAT-ACOES-DE-BOTAO-01: o que cada botão faz VAI no restore, ao
+        # contrário do `mouse_applier` logo abaixo. A razão é a mesma que o
+        # comentário do `rumble_policy_applier` dá quinze linhas adiante: o
+        # `button_actions` não tem flag persistido próprio, então o perfil é a
+        # única fonte — e ele não cria nem destrói device, só troca o mapa de um
+        # que já existe. Sem o risco do BUG-BOOT-RESTORE-FLIPS-EMULATION-01.
+        mouse_device_provider=lambda: getattr(daemon, "_mouse_device", None),
         mouse_applier=None,
         suppression_applier=getattr(daemon, "apply_profile_suppression", None),
         # FEAT-PROFILE-MODE-01: mode_applier=None no restore pela MESMA

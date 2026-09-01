@@ -113,6 +113,7 @@ INVISIVEIS = re.compile(
     # divergência de desenho onde só há endereço.
     r'|data-hef-gesto|data-hef|data-ajuste|data-player'
         r'|data-hex|data-v|data-hef-alvo|data-hef-rolar'
+    r'|data-linha|data-hef-forma'
     r')="[^"]*"'
 )
 

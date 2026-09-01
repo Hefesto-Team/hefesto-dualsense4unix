@@ -129,6 +129,14 @@ class ProfileManager:
     # `apply_keyboard` resolve o provider a cada ativação. Quando presente,
     # tem precedência sobre `keyboard_device` (mantido para backcompat).
     keyboard_device_provider: Callable[[], object | None] | None = None
+    # FEAT-ACOES-DE-BOTAO-01 (01/09/2026): provider LAZY do device de MOUSE,
+    # pelo qual `apply_button_actions` empurra o que cada botão faz. É LAZY pela
+    # mesma razão escrita acima para o teclado — o device nasce depois do
+    # manager e é recriado a cada liga/desliga da emulação, então capturar a
+    # referência eager congela `None` para sempre.
+    # None = perfil sem quem atender; a ativação ignora a seção e DIZ isso no
+    # relatório, que é diferente de "aplicou".
+    mouse_device_provider: Callable[[], object | None] | None = None
     # FEAT-POINT-AND-CLICK-01: applier da seção `mouse` do perfil. Os callsites
     # injetam `daemon.set_mouse_emulation` (retorna bool — por isso o retorno é
     # `object`, não `None`). Assinatura: (enabled, speed, scroll_speed) mais o
@@ -292,6 +300,7 @@ class ProfileManager:
         # `apply` para as categorias travadas na mão entrarem nele — ver lá.
         self.apply(profile, origin=origin, relatorio=relatorio)
         self.apply_keyboard(profile, relatorio=relatorio)
+        self.apply_button_actions(profile, relatorio=relatorio)
         self.apply_emulation(profile, origin=origin, relatorio=relatorio)
         self.store.set_active_profile(profile.name)
         self.store.bump("profile.activated")
@@ -557,6 +566,71 @@ class ProfileManager:
             )
         except Exception as exc:
             logger.debug("auto_player_colors_configure_falhou", err=str(exc))
+
+    def apply_button_actions(
+        self, profile: Profile, *, relatorio: dict[str, str] | None = None
+    ) -> None:
+        """Propaga `button_actions` do perfil aos DOIS devices (FEAT-ACOES-DE-BOTAO-01).
+
+        Ele é o irmão do `apply_keyboard`, e a diferença é o alcance: aquele
+        escreve os nove botões que o teclado virtual conhece; este escreve as
+        vinte e uma linhas que a tela mostra, e o
+        `core/acoes_de_botao.resolver()` é quem as separa entre o device de
+        mouse (`BTN_*`) e o de teclado (`KEY_*` e os tokens virtuais).
+
+        A ORDEM IMPORTA, e ela é: este método roda DEPOIS do `apply_keyboard`.
+        Sem `button_actions` no perfil ele não toca em nada — o `None` do campo
+        significa "herda o de fábrica", e o de fábrica já é o que os dois
+        devices fazem. Com o campo preenchido, ele escreve por cima, e o que
+        escreve é o resolvido: um botão nunca fica nos dois devices.
+
+        OS TRÊS ESTADOS DO RELATÓRIO, como no irmão — e "sem device" NÃO é
+        "aplicou" nem "falhou". É a tela podendo dizer que a escolha está no
+        disco e ainda não pousou em lugar nenhum, que é a verdade quando a
+        emulação de mouse está desligada.
+        """
+        if profile.button_actions is None:
+            if relatorio is not None:
+                relatorio["button_actions"] = "de_fabrica"
+            return
+
+        from hefesto_dualsense4unix.core.acoes_de_botao import resolver
+
+        do_mouse, do_teclado, sem_dono = resolver(profile.button_actions)
+        if sem_dono:
+            # A TELA OFERECE O QUE O PRODUTO AINDA NÃO ATENDE — "Abrir a Steam",
+            # "Sair do modo jogo", "Escolher um programa…" e os dois papéis de
+            # eixo pedidos a um botão. Registrar é o mínimo: um perfil que os
+            # carrega tem de deixar rastro, senão a escolha some no silêncio.
+            logger.info(
+                "button_actions_sem_atendente",
+                profile=profile.name,
+                botoes=sorted(sem_dono),
+            )
+
+        provider = self.mouse_device_provider
+        device = provider() if provider is not None else None
+        if device is None:
+            if relatorio is not None:
+                relatorio["button_actions"] = "ignorado_sem_device"
+            return
+        try:
+            device.set_button_actions(do_mouse)  # type: ignore[attr-defined]
+            teclado_provider = self.keyboard_device_provider
+            teclado = (teclado_provider() if teclado_provider is not None
+                       else self.keyboard_device)
+            if teclado is not None:
+                teclado.set_bindings(  # type: ignore[attr-defined]
+                    resolve_key_bindings(dict(
+                        (b, list(toks)) for b, toks in do_teclado.items())))
+        except Exception as exc:
+            logger.warning(
+                "button_actions_apply_failed", profile=profile.name, err=str(exc))
+            if relatorio is not None:
+                relatorio["button_actions"] = "falhou"
+            return
+        if relatorio is not None:
+            relatorio["button_actions"] = "aplicado"
 
     def apply_keyboard(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None
@@ -1955,6 +2029,11 @@ def gerente_do_daemon(
     argumentos: dict[str, Any] = {
         "controller": controller if controller is not None else daemon.controller,
         "keyboard_device_provider": lambda: getattr(daemon, "_keyboard_device", None),
+        # FEAT-ACOES-DE-BOTAO-01: o irmão do de cima, e ele entra AQUI porque é
+        # aqui que a maioria das rotas monta o manager. Sem esta linha o campo
+        # `button_actions` do perfil existiria, gravaria e nunca acenderia nada
+        # — a cura escrita e nunca ligada, que é o defeito mais caro desta casa.
+        "mouse_device_provider": lambda: getattr(daemon, "_mouse_device", None),
     }
     if store is not None:
         argumentos["store"] = store
