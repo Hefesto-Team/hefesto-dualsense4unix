@@ -19,6 +19,9 @@ from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta  # noqa: E402
 # produto mudar a faixa, a porcentagem desenhada aqui muda junto ou REPROVA.
 sys.path.insert(0, str(R / "src"))
 from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS  # noqa: E402
+from hefesto_dualsense4unix.profiles.trigger_presets import (
+    FEEDBACK_POSITION_LABELS,
+)
 
 SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 
@@ -411,17 +414,74 @@ def barras(modo, escolha):
     return saida
 
 
+# ---------------------------------------------------------------------------
+# O `value` DE CADA OPÇÃO É O CONTRATO, e o texto é o RÓTULO. Os dois campos, os
+# dois donos — a mesma separação que o `trigger_specs.py` faz entre `name` e
+# `label`, escrita ali com todas as letras: o `name` está serializado no perfil
+# em disco (`triggers.left.mode`), no IPC (`trigger.set`) e no DSX; o `label` é
+# só texto de tela.
+#
+# ATÉ HOJE ESTA PÁGINA SÓ TINHA O RÓTULO, e por isso o clique não tinha o que
+# mandar ao daemon: `trigger.set` quer `Rigid`, e a opção dizia `Rígido`.
+#
+# E O `value` NÃO SE DIGITA — ele sai do `PRESETS`, PELA ORDEM. As duas listas
+# têm 19 entradas na mesma sequência (Desligado=Off … Montar do zero=Custom), e
+# casá-las por RÓTULO seria casar por um campo que já divergiu: `MODOS` diz
+# "Arco de flecha" e o produto diz "Arco de flecha (Bow)"; `MODOS` diz "Disparo"
+# e o produto diz "Disparo (Weapon)" — as duas decisões dela de 07/08 que esta
+# página não acompanhou. A ordem é o que as duas listas têm em comum, e a guarda
+# abaixo reprova alto no dia em que uma delas mudar de tamanho.
+if len(MODOS) != len(PRESETS):
+    raise SystemExit(
+        f"ERRO: a aba desenha {len(MODOS)} modos e o produto tem {len(PRESETS)} "
+        f"(`app/actions/trigger_specs.PRESETS`). O casamento é PELA ORDEM — com "
+        f"tamanhos diferentes, o `value` de cada opção sairia trocado, e o clique "
+        f"mandaria ao daemon o modo errado sem nada na tela dizendo.")
+CHAVE_DO_MODO = {rot: spec.name for (rot, _), spec in zip(MODOS, PRESETS, strict=True)}
+
+# O "EFEITO PRONTO" TEM DONO NO PRODUTO, e o dono é `profiles/trigger_presets.py`:
+# os cinco nomes desta lista são, letra por letra, cinco dos seis
+# `FEEDBACK_POSITION_LABELS`. Eles não são enfeite de mockup — cada um resolve
+# para dez intensidades de 0 a 8, que é o que o modo "Curva de força"
+# (`MultiPositionFeedback`) manda ao controle.
+#
+# `— Nenhum —` VIRA `custom`, e não uma palavra inventada: `custom` é o token do
+# próprio produto para "nenhuma curva pronta, os valores são os que estão aí"
+# (`FEEDBACK_POSITION_LABELS["custom"]`, e o `_populate_preset_combo` da GUI
+# estável abre nele). Um `""` aqui obrigaria a tela a ter um sexto token só dela.
+_PRONTO_POR_ROTULO = {rot: chave for chave, rot in FEEDBACK_POSITION_LABELS.items()}
+CHAVE_DO_PRONTO = {PRONTOS[0]: "custom"}
+for _rot in PRONTOS[1:]:
+    if _rot not in _PRONTO_POR_ROTULO:
+        raise SystemExit(
+            f"ERRO: o efeito pronto {_rot!r} não existe em "
+            f"`profiles/trigger_presets.FEEDBACK_POSITION_LABELS`. Ou o produto "
+            f"perdeu a curva, ou esta aba oferece uma que ninguém sabe aplicar — "
+            f"e a segunda é um botão que responde calado.")
+    CHAVE_DO_PRONTO[_rot] = _PRONTO_POR_ROTULO[_rot]
+# OS "MEUS EFEITOS" NASCEM SEM CHAVE, e o vazio é a afirmação: não há, em todo o
+# `src/`, onde guardar um efeito com nome. Eles ficam no desenho porque ela os
+# aprovou; o `value=""` é o que faz o gesto RECUSAR DIZENDO em vez de aplicar
+# outra coisa no lugar.
+for _rot in MEUS:
+    CHAVE_DO_PRONTO[_rot] = ""
+
+
 def opcoes_modo(escolhido):
     return "\n".join(
-        f'                <option{" selected" if n == escolhido else ""} title="{d}">{n}</option>'
+        f'                <option value="{CHAVE_DO_MODO[n]}"'
+        f'{" selected" if n == escolhido else ""} title="{d}">{n}</option>'
         for n, d in MODOS)
 
 
+def _op_pronto(n, escolhido):
+    return (f'                <option value="{CHAVE_DO_PRONTO[n]}"'
+            f'{" selected" if n == escolhido else ""}>{n}</option>')
+
+
 def opcoes_pronto(escolhido):
-    fora = [f'                <option{" selected" if n == escolhido else ""}>{n}</option>'
-            for n in PRONTOS]
-    dentro = [f'                <option{" selected" if n == escolhido else ""}>{n}</option>'
-              for n in MEUS]
+    fora = [_op_pronto(n, escolhido) for n in PRONTOS]
+    dentro = [_op_pronto(n, escolhido) for n in MEUS]
     return ("\n".join(fora) + '\n                <option disabled>──── Meus efeitos ────</option>\n'
             + "\n".join(dentro))
 
@@ -438,14 +498,27 @@ def bloco(lado, sigla, modo, pronto, ajustes):
             </div>''' for i, (n, p, v) in enumerate(ajustes))
     else:
         aj = '            <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>'
+    # O ENDEREÇO DE PINTURA DO MODO É A **CHAVE**, e não o rótulo — e junto vem o
+    # `data-hef-alvo="valor"`. Os dois consertam o mesmo defeito, medido em
+    # 01/09/2026 lendo o `escrever()` do piloto (`hefesto_vivo.py:100-115`): sem
+    # `data-hef-alvo`, o alvo padrão é `texto`, e `select.textContent = "Rígido"`
+    # **apaga as 19 opções** e põe um nó de texto no lugar. A primeira pintura
+    # destruiria o campo de escolha desta aba, nas cinco colunas.
+    # Com `valor`, o piloto faz `select.value = t` — e é por isso que o endereço
+    # tem de ser `modo-chave-*` (`Rigid`), que é o que o `value` das opções
+    # carrega. O `modo-*` (o rótulo "Rígido") continua saindo do pacote porque
+    # `tests/unit/test_o_perfil_chega_na_tela.py:125` o cobra, mas nenhum
+    # elemento o lê: o que casa com a opção é a chave.
     return f'''          <div>
-            <select class="modo" data-campo="modo-{sigla}" data-lado="{sigla}"
+            <select class="modo" data-gesto="modo" data-campo="modo-chave-{sigla}"
+                    data-hef-alvo="valor" data-lado="{sigla}"
                     title="Gatilho {lado} — os 19 modos, com a descrição de cada um">
 {opcoes_modo(modo)}
             </select>
           </div>
           <div>
-            <select class="pronto" data-campo="pronto-{sigla}" data-lado="{sigla}"
+            <select class="pronto" data-gesto="pronto" data-campo="pronto-{sigla}"
+                    data-hef-alvo="valor" data-lado="{sigla}"
                     title="Efeito pronto do gatilho {lado}">
 {opcoes_pronto(pronto)}
             </select>
@@ -501,7 +574,7 @@ def coluna(c):
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
 {dire}
-          <div><button class="btn roxo">Guardar esse efeito</button></div>
+          <div><button class="btn roxo" data-gesto="guardar">Guardar esse efeito</button></div>
         </div>'''
 
 
@@ -847,6 +920,30 @@ def _conferir(doc):
     # 4. A ALTURA CABE, com folga. Zero de folga já mordeu duas vezes hoje.
     exigir(TETO_DA_GRADE - ALT_COLUNA >= 10,
            f"a grade tem só {TETO_DA_GRADE - ALT_COLUNA}px de folga — um pixel não é folga")
+
+    # 5. OS BOTÕES TÊM ENDEREÇO — 01/09/2026. Sem `data-gesto` o clique não
+    #    atravessa a ponte, e o piloto nem consegue RECUSAR dizendo o nome: o
+    #    ouvinte dele (`hefesto_vivo.py:190`) só enxerga quem está marcado.
+    for _g in ("modo", "pronto", "guardar"):
+        exigir(f'data-gesto="{_g}"' in corpo,
+               f"o endereço do gesto {_g!r} sumiu do desenho — o clique some calado")
+
+    # 6. TODO MODO CARREGA O CONTRATO DE DISCO NO `value`. `trigger.set` quer
+    #    `Rigid`; a opção que só tivesse "Rígido" mandaria um modo que o
+    #    `build_from_name` não conhece, e a recusa viria do daemon, não da tela.
+    for _spec in PRESETS:
+        exigir(f'<option value="{_spec.name}"' in corpo,
+               f"o modo {_spec.name} perdeu o `value` — o clique iria sem contrato")
+
+    # 7. TODO CAMPO DE ESCOLHA PINTA POR `valor`, nunca por texto. Com o alvo
+    #    padrão (`texto`), a primeira pintura faria `select.textContent = …` e
+    #    APAGARIA as opções — as 19 do modo e as 8 do efeito pronto, nas quatro
+    #    colunas. Medido no `escrever()` do piloto, `hefesto_vivo.py:100-115`.
+    _campos = corpo.count("<select")
+    _por_valor = corpo.count('data-hef-alvo="valor"')
+    exigir(_por_valor == _campos,
+           f"{_campos} campos de escolha e {_por_valor} pintando por valor — "
+           f"o que sobra pinta por texto e perde as opções na primeira pintura")
 
     if falhas:
         raise SystemExit("ERRO em 03-gatilhos — decisão dela desfeita:\n  "

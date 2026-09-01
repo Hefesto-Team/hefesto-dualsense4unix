@@ -645,18 +645,35 @@ ACOES_GESTO = [
 ]
 
 
-def drop(grupos, escolhido, classe="campo-linha"):
-    """Um <select> de verdade em TODA linha — nenhum travado (falas [55], [57], [91])."""
+def drop(grupos, escolhido, classe="campo-linha", gesto=""):
+    """Um <select> de verdade em TODA linha — nenhum travado (falas [55], [57], [91]).
+
+    O `gesto` só NOMEIA o campo para o piloto (ver `simples`): `<select>` nenhum
+    liga por clique. As 49 listas das três telas de pop-up ficam SEM nome de
+    propósito — elas são os CAMPOS de um formulário cujo ponto de gravação é o
+    "Guardar", e é o Guardar que sai no inventário do que falta. Nomear as 49
+    encheria o relato de 49 linhas que dizem a mesma coisa.
+    """
     partes = []
     for rot, ops in grupos:
         op = "".join(f'<option{" selected" if o == escolhido else ""}>{o}</option>' for o in ops)
         partes.append(f'<optgroup label="{rot}">{op}</optgroup>' if rot else op)
-    return f'<select class="{classe}">{"".join(partes)}</select>'
+    g = f' data-gesto="{gesto}"' if gesto else ""
+    return f'<select class="{classe}"{g}>{"".join(partes)}</select>'
 
 
-def simples(ops, classe="escolha-at"):
+def simples(ops, classe="escolha-at", gesto=""):
+    """Um `<select>` das opções, com o ENDEREÇO do clique quando ele tem nome.
+
+    O `data-gesto` aqui NÃO liga o campo — nenhum `<select>` desta casa liga, e a
+    razão está medida em `hefesto_vivo.py:188`: o piloto ouve `click`, e o clique
+    num `<select>` chega quando a lista ABRE, com o valor ANTIGO. O que ele faz é
+    dar NOME ao campo, para o piloto recusar dizendo qual é — em vez de o clique
+    sumir sem uma linha. É a mesma escolha dos sete botões da aba Sistema.
+    """
+    g = f' data-gesto="{gesto}"' if gesto else ""
     op = "".join(f'<option{" selected" if i == 0 else ""}>{o}</option>' for i, o in enumerate(ops))
-    return f'<select class="{classe}">{op}</select>'
+    return f'<select class="{classe}"{g}>{op}</select>'
 
 
 def bignum(*pares):
@@ -665,14 +682,34 @@ def bignum(*pares):
     Cada par vai num `.par`, e o risco separador viaja DENTRO do par seguinte:
     é isso que deixa o último par encostar na borda direita do campo sem largar
     o separador para trás.
+
+    O par é `(rótulo, valor)` e pode levar mais dois, que são o que LIGA o campo:
+
+        (rótulo, valor, gesto)          os dois `<button>` viram
+                                        `<gesto>-menos` e `<gesto>-mais`
+        (rótulo, valor, gesto, campo)   e o número ganha endereço de pintura
+
+    SEM O QUARTO, O BOTÃO RESPONDE CALADO: o `−`/`+` muda o daemon e o número na
+    tela fica onde estava até alguém recarregar. O `data-campo` é o que o piloto
+    reescreve a cada tique (`hefesto_vivo.py`, `window.__hef.pintar`), e é por
+    isso que ele anda junto com o gesto, e não depois.
     """
-    dentro = "".join(
-        f'<span class="par">{"" if i == 0 else "<span class=\'risco\'></span>"}'
-        f'<span class="sub">{rot}</span><span class="bignum">'
-        f'<button class="passo">−</button><b>{v}</b><button class="passo">+</button>'
-        f'</span></span>'
-        for i, (rot, v) in enumerate(pares))
-    return f'<div class="campo-num">{dentro}</div>'
+    partes = []
+    for i, par in enumerate(pares):
+        rot, v = par[0], par[1]
+        g = par[2] if len(par) > 2 else ""
+        campo = par[3] if len(par) > 3 else ""
+        menos = f' data-gesto="{g}-menos"' if g else ""
+        mais = f' data-gesto="{g}-mais"' if g else ""
+        end = f' data-campo="{campo}"' if campo else ""
+        risco = "" if i == 0 else "<span class='risco'></span>"
+        partes.append(
+            f'<span class="par">{risco}'
+            f'<span class="sub">{rot}</span><span class="bignum">'
+            f'<button class="passo"{menos}>−</button><b{end}>{v}</b>'
+            f'<button class="passo"{mais}>+</button>'
+            f'</span></span>')
+    return f'<div class="campo-num">{"".join(partes)}</div>'
 
 
 def ajuda(txt, largura=""):
@@ -813,7 +850,7 @@ def linha_combo(n, pecas, faz):
     combo = f' <span class="mais">+</span> '.join(nomes)
     return (f'                <tr class="g g{n}"><td class="b">'
             f'<span class="gls"><span class="mk-n">{n}</span>{combo}</span></td>'
-            f'<td>{drop(ACOES_GESTO, faz)}</td></tr>')
+            f'<td>{drop(ACOES_GESTO, faz, gesto="acao-do-gesto")}</td></tr>')
 
 # A LISTA ÚNICA DE BOTÕES — a MESMA primeira coluna nas duas telas de botões.
 # Ela, 27/08: "Em que cada linha seria um dos botões do controle" e, da tabela da
@@ -892,8 +929,21 @@ D_STEAM = ajuda(
 # botões que ficavam sob a tabela do mouse. Ela, 27/08: "Status do Modo: ao clicar
 # no botão Ligado. Ao clicar nele de novo desligado." e "Suspender Mouse e Teclado,
 # Sair do Modo Jogo, deixam de existir devido ao botão status na parte superior."
+#
+# O `data-gesto` VAI NO `<label>`, e não no `<input>`: o `.tog-in` é
+# `display:none`, então clique nenhum o alcança direto — quem recebe o clique é
+# o rótulo, e é dele que o `closest()` do piloto parte.
+#
+# O QUE ESTE ENDEREÇO **NÃO** RESOLVE, e é dívida declarada: a marca de qual
+# lado o interruptor está mora no `:checked` do CSS, e o piloto não sabe
+# escrever `checked` — o `escrever()` dele cobre texto, largura, fundo e
+# `value`, mais nada. Então o desenho nasce `checked` e o daemon dela nasce com
+# `mouse_emulation.enabled=false`: os dois podem discordar até alguém dar ao
+# piloto um alvo de `checked`. O gesto trata isso do único jeito honesto que lhe
+# resta — decide pelo DAEMON, nunca pelo que a caixinha mostra.
 STATUS_MODO = ('<input type="checkbox" id="st-modo" class="tog-in" checked>'
-               '<label class="tog" for="st-modo"><span class="pino"></span>'
+               '<label class="tog" for="st-modo" data-gesto="modo">'
+               '<span class="pino"></span>'
                '<span class="txt"></span></label>')
 
 # ---------------------------------------------------------------------------
@@ -934,20 +984,38 @@ ATIVACAO_ESQ = [
     ("Função do teclado", D_TECLADO, simples([
         "Ligada — atalhos e teclado na tela",
         "Só fora do jogo",
-        "Desligada"])),
+        "Desligada"], gesto="teclado")),
     ("Navegação Interna", D_INTERNA, simples([
         "Ligada — cada controle navega o Hefesto",
         f"Só o Player {NAVEGA} navega",
-        "Desligada"])),
+        "Desligada"], gesto="navegacao-interna")),
 ]
 
+# AS DUAS METADES DE CADA LINHA NÃO SÃO IRMÃS, e foi isto que a ligação mediu:
+# só a da direita ("Analógico") tem dono no produto.
+#
+#   · `mouse_emulation.speed`        é UM número (1..12), e o cursor do TOUCHPAD
+#     sai dele: `emit_touchpad_move` escala por
+#     `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
+#     (`integrations/uinput_mouse.py:446`). Não há segunda velocidade a ajustar
+#     — o "Touch" da tela é uma conta que ninguém faz do outro lado.
+#   · `mouse_emulation.scroll_speed` é UM número (1..5) e vale só para o
+#     analógico DIREITO: `_emit_scroll(rx, ry)` (`uinput_mouse.py:412`). Rolagem
+#     por dois dedos no touchpad **não existe** no produto — nem uma linha.
+#
+# Os dois campos sem dono ficam com NOME e sem gesto, que é o que faz o piloto
+# recusar dizendo qual é, em vez de o clique sumir.
 ATIVACAO_DIR = [
-    ("Velocidade de cursor", D_VEL, bignum(("Touch", 4), ("Analógico", 6))),
-    ("Velocidade da rolagem", D_ROL, bignum(("Dois dedos", 4), ("Analógico", 1))),
+    ("Velocidade de cursor", D_VEL,
+     bignum(("Touch", 4, "vel-touch"),
+            ("Analógico", 6, "vel-cursor", "vel-cursor"))),
+    ("Velocidade da rolagem", D_ROL,
+     bignum(("Dois dedos", 4, "rolagem-dedos"),
+            ("Analógico", 1, "rolagem", "vel-rolagem"))),
     ("Modo Steam", D_STEAM, simples([
         "Desligado",
         "Ligado — o controle navega a Steam como num Steam Deck",
-        "Ligado, e a Steam abre em Modo Jogo na próxima vez"])),
+        "Ligado, e a Steam abre em Modo Jogo na próxima vez"], gesto="modo-steam")),
 ]
 
 # A FILEIRA AO PÉ DO BLOCO: os QUATRO botões com a mesma largura, ocupando-o inteiro.
@@ -982,7 +1050,11 @@ FILEIRA = f'''
                 <span>Devolver a aba <b>Navegação</b> inteira ao de fábrica — as opções
                   de ativação, os {len(COMBOS)} gestos e as {len(BOTOES)} linhas das duas
                   telas de botões?</span>
-                <label for="conf-padrao" class="btn-conf vermelho">Confirmar</label>
+                <!-- O ENDEREÇO VAI NO "Confirmar", nunca no "Voltar ao padrão":
+                     o de cima só ABRE a pergunta (é `<label for>` do mesmo
+                     checkbox, e funciona), e marcá-lo faria o piloto acusar de
+                     sem dono um botão que faz o que promete. -->
+                <label for="conf-padrao" class="btn-conf vermelho" data-gesto="padrao-da-aba">Confirmar</label>
                 <label for="conf-padrao" class="btn-conf">Cancelar</label>
               </div>
             </div>'''
@@ -1009,7 +1081,15 @@ PONTO_MAPA = [
 # que aquele botão apaga — e o que ele NÃO apaga, que é o que a frase antiga,
 # única e comum às duas tabelas, não podia dizer.
 # ---------------------------------------------------------------------------
-def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma):
+def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padrao):
+    """Uma das duas telas de botões.
+
+    Os dois últimos argumentos são os NOMES dos gestos que a tela tem — o
+    "Cancelar" e o "×" não levam nome porque **funcionam**: fecham a pop-up pelo
+    `:target` do CSS, sem uma linha de script. Marcar um botão que faz o que
+    promete o faria aparecer no relato como "sem dono", que é o inverso da
+    verdade.
+    """
     return f'''
 <div class="tela-nova" id="{ident}">
   <div class="tn-cx">
@@ -1034,10 +1114,10 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma):
     <div class="tn-rod grupo-padrao">
       <a class="btn" href="#">Cancelar</a>
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
-      <a class="btn roxo" href="#">Guardar</a>
+      <a class="btn roxo" href="#" data-gesto="{guardar}">Guardar</a>
       <div class="confirma">
         <span>{confirma}</span>
-        <button class="btn-conf vermelho">Confirmar</button>
+        <button class="btn-conf vermelho" data-gesto="{padrao}">Confirmar</button>
         <button class="btn-conf">Cancelar</button>
       </div>
     </div>
@@ -1052,7 +1132,8 @@ TELA_DEFINICOES = tela_de_botoes(
     chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(ACOES_UNI, f)}</td></tr>'
                  for b, f in BOTOES),
     f"Devolver ao de fábrica as {len(BOTOES)} linhas de <b>o que cada botão faz</b>? "
-    "O <b>Remapeamento dos botões</b> não é tocado.")
+    "O <b>Remapeamento dos botões</b> não é tocado.",
+    guardar="guardar-definicoes", padrao="padrao-definicoes")
 
 TELA_REMAPEAMENTO = tela_de_botoes(
     "remapeamento", "Remapeamento dos botões", D_REMAPEAMENTO,
@@ -1060,7 +1141,8 @@ TELA_REMAPEAMENTO = tela_de_botoes(
     chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(REMAP, SEM_TROCA)}</td></tr>'
                  for b, _ in BOTOES),
     f"Devolver as {len(BOTOES)} linhas ao <b>{SEM_TROCA}</b>? "
-    "As <b>Definições Controle e Mouse</b> não são tocadas.")
+    "As <b>Definições Controle e Mouse</b> não são tocadas.",
+    guardar="guardar-remapeamento", padrao="padrao-remapeamento")
 
 TELA_PONTO = f'''
 <div class="tela-nova" id="point-and-click">
@@ -1095,9 +1177,15 @@ TELA_PONTO = f'''
           {bignum(("Dois dedos", 4), ("Analógico", 1))}</div>
       </div>
     </div>
+    <!-- OS DOIS `bignum` DESTA TELA FICAM SEM ENDEREÇO, e é decisão medida: eles
+         são a velocidade DO ESTILO Point-and-click, que o perfil escolhe usar —
+         não a velocidade viva do daemon. Ligá-los ao `mouse.emulation.set`
+         mudaria o cursor AGORA enquanto ela pensa que edita um estilo guardado,
+         que é a pior forma de um botão mentir. Quem carrega o que falta é o
+         "Guardar no estilo", que é o ponto de gravação de todos eles. -->
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
-      <a class="btn roxo" href="#">Guardar no estilo</a>
+      <a class="btn roxo" href="#" data-gesto="guardar-ponto">Guardar no estilo</a>
     </div>
   </div>
 </div>

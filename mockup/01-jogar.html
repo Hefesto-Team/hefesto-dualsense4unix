@@ -753,7 +753,7 @@
   }
   .peca-topo{display:flex;align-items:center;gap:6px}
   /* A ENTRELINHA É A CURA DO VÃO, e ela é na ALTURA — encolher o mais alto.
-     Com `1.45` o cartão media 67,5px e a coluna de avisos ao lado, 55: doze e
+     Com `1.45` o cartão media 67,5px e a coluna de avisos ao lado, 55: doze e  # noqa-acento  (`media` é o verbo medir)
      meio de vão. Em pixel, e não em múltiplo, porque o rótulo tem três linhas
      e cada pixel aqui vale três. */
   .cartao .rotulo{color:var(--texto-mudo);line-height:15px;white-space:nowrap}
@@ -766,7 +766,7 @@
   .cartao .ds-svg{width:62px;flex:0 0 62px}
   /* AS CINCO LÂMPADAS DO JOGADOR NÃO EXISTEM NESTE CARTÃO — decisão dela, 28/08:
      elas saem dos desenhos pequenos e ficam só nos grandes, da Iluminação. Aqui
-     o desenho tem 62px e cada lâmpada media 1,06 × 0,36 px; passar de 1px de
+     o desenho tem 62px e cada lâmpada media 1,06 × 0,36 px; passar de 1px de  # noqa-acento  (`media` é o verbo medir)
      altura pediria ~340px de desenho, um cartão de ~460px, e os quatro somariam
      1840px numa fileira que tem 1163px.
      Quem diz o número do jogador aqui é o rótulo: `Sony • Player 1 • …`.
@@ -913,7 +913,7 @@
   .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
   /* A ATENÇÃO DESCEU — 30/08/2026, pedido dela: *"esse atenção desce"*.
      Ela era a segunda coluna da `.dupla`, ao lado dos cartões, com a barra
-     vertical à esquerda. Media 129px de VAZIO — 70% da própria coluna —, porque
+     vertical à esquerda. Media 129px de VAZIO — 70% da própria coluna —, porque  # noqa-acento  (`media` é o verbo medir)
      a altura dela vinha do irmão (`align-self:stretch`) e o conteúdo era um
      aviso de uma linha.
 
@@ -1123,9 +1123,9 @@
 
       <div class="hef-linha">
         <span class="linha-rot">Status</span>
-        <label class="hef-pos ligado" for="hef-ligado" data-modo="gamepad"
+        <label class="hef-pos ligado" for="hef-ligado" data-gesto="hefesto" data-modo="gamepad"
                title="O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho."><span class="pino"></span>Ligado</label>
-        <label class="hef-pos desligado" for="hef-desligado" data-modo="native"
+        <label class="hef-pos desligado" for="hef-desligado" data-gesto="hefesto" data-modo="native"
                title="Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle."><span class="pino"></span>Desligado</label>
         <span class="ajuda">?<span class="dica">
           <b>Ligado</b> — o Hefesto fica no meio: luz, vibração, gatilho e o número do jogador são por conta dele.<br><br>
@@ -1161,13 +1161,13 @@
 
         <div class="hef-modo so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
           <div class="escada">
-            <span class="degrau on" data-degrau="dualsense"
+            <span class="degrau on" data-degrau="dualsense" data-gesto="modo-dualsense"
                   title="O jogo desenha os botões do PlayStation. É o primeiro que o Hefesto tenta.">Sony DualSense</span>
-            <span class="degrau" data-degrau="xbox"
+            <span class="degrau" data-degrau="xbox" data-gesto="modo-xbox"
                   title="O jogo desenha os botões do Xbox — o formato que todo jogo entende. É o segundo que o Hefesto tenta.">Xbox</span>
-            <span class="degrau" data-degrau="steam"
+            <span class="degrau" data-degrau="steam" data-gesto="modo-steam"
                   title="A Steam entrega a entrada, e os seus ajustes vencem os do jogo. Trocar para cá exige reabrir a Steam e o jogo — por isso é o último que o Hefesto tenta.">Steam Input</span>
-            <span class="degrau" data-degrau="navegacao" data-modo="desktop"
+            <span class="degrau" data-degrau="navegacao" data-gesto="modo-navegacao" data-modo="desktop"
                   title="O controle vira teclado e mouse do computador. O PS+R3 ainda não para aqui.">Navegação</span>
           </div>
         </div>
@@ -1592,9 +1592,9 @@
 </svg> <span data-campo="bateria">100%</span></span></span>
                 </div>
                 <div class="mascara">
-                  <span class="chip on" data-mascara="DualSense">DualSense</span>
-                  <span class="chip" data-mascara="Xbox 360">Xbox 360</span>
-                  <span class="chip" data-mascara="Nintendo Pro">Nintendo Pro</span>
+                  <span class="chip on" data-gesto="mascara" data-mascara="DualSense">DualSense</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Xbox 360">Xbox 360</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
               <div class="cartao" style="--plastico:#7eb8d4"
@@ -1986,9 +1986,9 @@
 </svg> <span data-campo="bateria">64%</span></span></span>
                 </div>
                 <div class="mascara">
-                  <span class="chip" data-mascara="DualSense">DualSense</span>
-                  <span class="chip on" data-mascara="Xbox 360">Xbox 360</span>
-                  <span class="chip" data-mascara="Nintendo Pro">Nintendo Pro</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="DualSense">DualSense</span>
+                  <span class="chip on" data-gesto="mascara" data-mascara="Xbox 360">Xbox 360</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
               <div class="cartao off"
@@ -2955,7 +2955,7 @@
       <b>Iluminação</b>.</li>
     <li><b>A caixa "Não trocar de perfil sozinho" saiu</b> — o perfil ativo já diz isso.</li>
     <li><b>"Reconciliar jogadores" virou "Reconectar Controles"</b>.</li>
-    <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>
+    <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>  <!-- noqa-acento: `media` é o verbo medir -->
     <li><b>32 frases viraram 12</b> — o resto está nos três ícones <b>?</b>. Passe o mouse neles.</li>
   </ul>
 

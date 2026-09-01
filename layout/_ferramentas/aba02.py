@@ -51,6 +51,20 @@ from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTAD
 # O acelerômetro CHEGA; quem descarta é o `MotionSensorReader`, cujo laço de
 # `_handle_event` percorre só ABS_RX/RY/RZ. `aciona=não` continua certo, e é o
 # que a tela mostra: o produto não publica. O que mudou é a EXPLICAÇÃO.
+#
+# ESTE BLOCO INTEIRO É LÁPIDE — CADUCOU NO MESMO 29/08, MAIS TARDE. Ela derrubou
+# a premissa com estas palavras: *"não era pra ele sair. era pra ele
+# FUNCIONAR."*, e a `ONDA-CONTROLES-04` fez o produto publicar `inputs.accel`.
+# A leitura VOLTOU (é o `accel_html` e o `data-bloco="acelerometro"` logo
+# abaixo), e a linha 2 acima virou FATO ERRADO — conferido em 01/09/2026:
+#
+#     docs/data/mapa-controles.csv:175  movimento.acelerometro@dualsense
+#         cabo_aciona = SIM · radio_aciona = SIM   (desde 29/08/2026)
+#
+# O bloco fica porque a decisão de tirar a leitura foi TOMADA e depois
+# REVERTIDA, e apagar isso faria a próxima pessoa refazer a conta dos 81px. Mas
+# ninguém deve mais ler `aciona=não` daqui: o número certo está na linha do CSV
+# acima, que é o dono.
 # ---------------------------------------------------------------------------
 
 CSS = CSS_GLIFO + CSS_LUZINHAS + """

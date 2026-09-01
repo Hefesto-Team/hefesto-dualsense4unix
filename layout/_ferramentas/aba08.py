@@ -347,11 +347,20 @@ def viz_sel(escolhida):
                    for v in VIZINHOS)
 
 
-def sel(opcoes, escolhida, classe="pronto", dica=""):
-    """Um `<select>` com a opção escolhida marcada — uma forma só na tela."""
+def sel(opcoes, escolhida, classe="pronto", dica="", gesto=""):
+    """Um `<select>` com a opção escolhida marcada — uma forma só na tela.
+
+    `gesto` é o ENDEREÇO do que este campo faz, e ele entra mesmo quando ninguém
+    o atende ainda: o piloto único (`hefesto_vivo.py`) imprime
+    `[gesto sem dono] 08-conexoes.html · <nome>` e o clique vira inventário do
+    que falta, em vez de sumir sem uma linha. Sem o atributo, o `closest()` do
+    ouvinte não acha nada e o clique não produz **nem recusa** — que é a forma
+    calada do mesmo defeito.
+    """
+    marca = f' data-gesto="{gesto}"' if gesto else ""
     corpo = "".join(f'<option{" selected" if o == escolhida else ""}>{o}</option>'
                     for o in opcoes)
-    return f'<select class="{classe}" title="{dica}">{corpo}</select>'
+    return f'<select class="{classe}" title="{dica}"{marca}>{corpo}</select>'
 
 
 # ---------------------------------------------------------------------------
@@ -1143,7 +1152,7 @@ def exame(classe, palavra, txt, dica):
             <span class="selo {classe}" data-campo="selo">{palavra}</span>
             <span class="txt" data-campo="achado">{txt}</span>
             <span class="ajuda">?<span class="dica">{dica}</span></span>
-            <button class="ignora" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>'''
 
 
@@ -1159,7 +1168,8 @@ def viz_bloco(nome, escolha, pergunta=False):
          "para você escrever o nome.")
     c = "pronto pergunta" if pergunta else "pronto"
     return (f'              <div class="viz"><span class="qual" title="{nome}">{nome}</span>'
-            f'<select class="{c}" title="{d}">{viz_sel(escolha)}</select></div>')
+            f'<select class="{c}" title="{d}" data-gesto="vizinho-o-que-e">'
+            f'{viz_sel(escolha)}</select></div>')
 
 
 # ---------------------------------------------------------------------------
@@ -1277,11 +1287,13 @@ def linha_do_controle(c):
     campo_teto = teto_que_vale(c)[0]
     opcoes_teto = [SEGUE_O_GLOBAL, ORC["SEM_TETO"], fala_do_teto(COM_TETO)]
     mic_dica = (MIC_PELO_RADIO.format(c=num(CUSTO_DO_MIC)) if no_radio else MIC_PELO_CABO)
-    botao = (f'<button class="btn" title="{LUZ_NO_RADIO}">A luz não acende</button>' if no_radio
-             else f'<button class="btn apagado" title="{LUZ_NO_CABO}">A luz não acende</button>')
-    return f'''          <div class="gc-item gc-{c["pref"]}"{estilo}>
+    botao = (f'<button class="btn" data-gesto="luz-nao-acende" '
+             f'title="{LUZ_NO_RADIO}">A luz não acende</button>' if no_radio
+             else f'<button class="btn apagado" data-gesto="luz-nao-acende" '
+                  f'title="{LUZ_NO_CABO}">A luz não acende</button>')
+    return f'''          <div class="gc-item gc-{c["pref"]}" data-controle="{c["pref"]}"{estilo}>
             <div class="gc-cabeca">
-              <label class="gc-abre" for="gc-{c["pref"]}"
+              <label class="gc-abre" for="gc-{c["pref"]}" data-gesto="alvo"
                      title="{SO_ESTE_DICA} A fita do topo passa a apontar para ele.">
               <span class="gc-nome">{rotulo(c)}</span>
               <span class="gc-resumo">
@@ -1290,11 +1302,11 @@ def linha_do_controle(c):
                 <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b>{da_controles["bat"]}%</b></span>
               </span>
               </label>
-              <label class="gc-seta abre" for="gc-{c["pref"]}"
+              <label class="gc-seta abre" for="gc-{c["pref"]}" data-gesto="alvo"
                      title="{SO_ESTE_DICA}">▾</label>
-              <label class="gc-seta so" for="gc-{c["pref"]}"
+              <label class="gc-seta so" for="gc-{c["pref"]}" data-gesto="alvo"
                      title="{SO_ESTE_DICA}">só este</label>
-              <label class="gc-seta fecha" for="gc-todos"
+              <label class="gc-seta fecha" for="gc-todos" data-gesto="todos"
                      title="Fecha — a fita volta para “Todos”, e os {len(CONECTADOS)} controles abrem juntos.">▴</label>
             </div>
             <div class="gc-corpo">
@@ -1302,13 +1314,13 @@ def linha_do_controle(c):
               <span class="gc-bloco">
                 <span class="rot">{glifo("mic", ativo=True, tam=16)} Microfone e botões
                   <span class="ajuda">?<span class="dica">{MIC_LIGADO_DICA}<br><br>{BOTAO_DICA}</span></span></span>
-                {sel(["Ligado", "Desligado"], "Ligado", dica="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz.")}
-                {sel([BOTAO_DO_MIC, "O computador inteiro"], BOTAO_DO_MIC, dica="O botão físico do microfone deste controle cala só ele ou o computador inteiro — inclusive a chamada de voz aberta fora do jogo.")}
+                {sel(["Ligado", "Desligado"], "Ligado", gesto="mic-existe", dica="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz.")}
+                {sel([BOTAO_DO_MIC, "O computador inteiro"], BOTAO_DO_MIC, gesto="mic-escopo", dica="O botão físico do microfone deste controle cala só ele ou o computador inteiro — inclusive a chamada de voz aberta fora do jogo.")}
               </span>
               <span class="gc-bloco barra">
                 <span class="rot">{glifo("rumble_esquerdo", ativo=True, tam=16)} Teto da vibração
                   <span class="ajuda">?<span class="dica">{teto_dica(c)}</span></span></span>
-                {sel(opcoes_teto, campo_teto, dica="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora.")}
+                {sel(opcoes_teto, campo_teto, gesto="teto-da-vibracao", dica="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora.")}
               </span>
               {botao}
             </div>
@@ -1764,6 +1776,7 @@ def ap_botao(esp, no, em, quem):
     # (`mapa_da_mesa._desenhar_aparelhos` só chama `set_tooltip_text` sob `if onde:`).
     dica = DICA_JA_COLOCADO.format(n=em) if em else ""
     return (f'<button class="mm-ap{" on" if no == ESCOLHIDO else ""}" '
+            f'data-gesto="escolher-aparelho" '
             f'title="{dica} · Na mesa: {quem}.">{esp}'
             f'<span class="pt">·</span><code>{no}</code></button>')
 
@@ -1788,7 +1801,12 @@ def quadrado(n, esticada=False):
     if esticada:
         linhas.append(f'<span class="mm-ext">{MAPA["ROTULO_POR_EXTENSAO"]}</span>')
     linhas.append(f'<span class="mm-v">{texto}</span>')
-    return (f'<button class="mm-sq" data-v="{estado}" title="{" ".join(dizeres)}">'
+    # `data-v` É O VOCABULÁRIO QUE ESTA TELA JÁ TINHA — a CSS pinta por ele
+    # (`.mm-sq[data-v="cheia"]`), e o ouvinte do piloto já o capta. O
+    # `data-gesto` entra AO LADO, e não no lugar: trocar um pelo outro apagaria
+    # a cor do quadrado.
+    return (f'<button class="mm-sq" data-v="{estado}" data-gesto="escolher-entrada" '
+            f'title="{" ".join(dizeres)}">'
             + "".join(linhas) + "</button>")
 
 
@@ -1833,7 +1851,7 @@ def face_dos_hubs():
         for mae, filha in EXTENSAO.items())
     return f'''            <div class="mm-face">
               <div class="mm-face-cab"><span class="mm-face-nome">Hubs e extensões</span>
-                <button class="btn mini" title="Acrescenta um hub ou uma extensão à mesa e pergunta em que entrada ele está ligado. Cabo passivo não tem descritor USB: nenhuma leitura do sistema o enxerga, e por isso quem o declara é você.">Acrescentar hub</button></div>
+                <button class="btn mini" data-gesto="novo-hub" title="Acrescenta um hub ou uma extensão à mesa e pergunta em que entrada ele está ligado. Cabo passivo não tem descritor USB: nenhuma leitura do sistema o enxerga, e por isso quem o declara é você.">Acrescentar hub</button></div>
               <div class="mm-grade mm-grade-hubs">{celulas}</div>
             </div>'''
 
@@ -1842,12 +1860,30 @@ def face_bloco(nome, numeros):
     grade = "".join(celula(n) for n in numeros)
     return f'''            <div class="mm-face">
               <div class="mm-face-cab"><span class="mm-face-nome">{nome}</span>
-                <button class="btn mini" title="Acrescenta a esta face o menor número que ainda não existe em face nenhuma — os números são do GABINETE, e dois buracos diferentes não podem levar o mesmo.">{MAPA["ROTULO_NOVA_ENTRADA"]}</button></div>
+                <button class="btn mini" data-gesto="nova-entrada" title="Acrescenta a esta face o menor número que ainda não existe em face nenhuma — os números são do GABINETE, e dois buracos diferentes não podem levar o mesmo.">{MAPA["ROTULO_NOVA_ENTRADA"]}</button></div>
               <div class="mm-grade">{grade}</div>
             </div>'''
 
 
-def pergunta_da_sala(texto, dica, opcoes, marcada):
+#: AS TRÊS RESPOSTAS DE CADA PERGUNTA DA SALA, com o **id do esquema** ao lado
+#: do rótulo — os mesmos pares de `secao_mesa._declaracoes`. O rótulo é o que
+#: ela lê; o id é o que vai ao `maquina.json` (`MesaDeclarada.altura_da_antena`
+#: e `.linha_de_visada`), e é ele que o gesto manda no `machine.declare`.
+#:
+#: "NÃO SEI" É `""` AQUI, E VIRA `None` LÁ. O esquema é `Literal["acima",
+#: "abaixo"] | None` com `extra="forbid"`: mandar a string `"nao_sei"` faria o
+#: pydantic recusar o DOCUMENTO INTEIRO, e o sintoma na tela seria "não consegui
+#: gravar" em vez de "valor inválido" — é o que `secao_mesa._valor_do_seletor`
+#: (`:1498`) já resolve do mesmo jeito, e a razão está escrita lá.
+RESPOSTAS_DA_ALTURA = (("acima", "Sim"), ("abaixo", "Não"), ("", "Não sei"))
+RESPOSTAS_DA_VISADA = (("com_gente", "Sim"), ("livre", "Não"), ("", "Não sei"))
+_confere_no_produto(
+    R / "src/hefesto_dualsense4unix/app/actions/config/secao_mesa.py",
+    ['("acima", "Sim")', '("abaixo", "Não")',
+     '("com_gente", "Sim")', '("livre", "Não")', '("nao_sei", "Não sei")'])
+
+
+def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
     """Uma das duas perguntas que barramento nenhum responde.
 
     Pergunta, dica e as TRÊS opções são literais de `secao_mesa._declaracoes`.
@@ -1865,8 +1901,10 @@ def pergunta_da_sala(texto, dica, opcoes, marcada):
     está na tela, por extenso, três linhas abaixo (`ESPERA_O_APLICAR`) — repeti-la
     no hover seria a mesma frase duas vezes na mesma caixa.
     """
-    botoes = "".join(f'<button class="{"on" if o == marcada else ""}">{o}</button>'
-                     for o in opcoes)
+    botoes = "".join(
+        f'<button class="{"on" if nome == marcada else ""}" '
+        f'data-gesto="{gesto}" data-modo="{ident}">{nome}</button>'
+        for ident, nome in respostas)
     return f'''              <div class="mm-perg">
                 <span class="mm-q" title="{dica}">{texto}</span>
                 <div class="seg">{botoes}</div>
@@ -1903,18 +1941,18 @@ TELA_MAPEAR = f'''
         <div class="mm-sala">
           <div class="mm-rot-linha"><span class="mm-rot" title="Estas duas mudaram-se da aba para cá em 28/08, e aqui elas preenchem um vazio real: a janela do desenho não guardava um único fato que só você tem. Sem resposta não é o mesmo que “Não sei”: enquanto você não responder, o Hefesto sabe que ninguém disse; “Não sei” é você dizendo que olhou e não sabe.">O que só você sabe</span></div>
 {pergunta_da_sala(SALA["_PERGUNTA_DA_ALTURA"], SALA["_DICA_DA_ALTURA"],
-                  ("Sim", "Não", "Não sei"), "Sim")}
+                  RESPOSTAS_DA_ALTURA, "Sim", "sala-altura")}
 {pergunta_da_sala(SALA["_PERGUNTA_DA_VISADA"], SALA["_DICA_DA_VISADA"],
-                  ("Sim", "Não", "Não sei"), None)}
+                  RESPOSTAS_DA_VISADA, None, "sala-visada")}
         </div>
       </div>
       {CONFISSAO_NA_TELA}
 
       <div class="acoes mm-acoes">
-        <button class="btn apagado" title="Acende quando você clica numa entrada que TEM aparelho. Ele escreve “sem aparelho” nessa entrada — a entrada continua no desenho, só fica vazia.">{MAPA["ROTULO_TIRAR"]}</button>
-        <button class="btn apagado" title="Acende quando você clica numa entrada cujo número é só dígito. Cria a filha dela — a 10 vira 10a, depois 10b. Não há neta.">{MAPA["ROTULO_EXTENSAO"]}</button>
+        <button class="btn apagado" data-gesto="tirar-daqui" title="Acende quando você clica numa entrada que TEM aparelho. Ele escreve “sem aparelho” nessa entrada — a entrada continua no desenho, só fica vazia.">{MAPA["ROTULO_TIRAR"]}</button>
+        <button class="btn apagado" data-gesto="nova-extensao" title="Acende quando você clica numa entrada cujo número é só dígito. Cria a filha dela — a 10 vira 10a, depois 10b. Não há neta.">{MAPA["ROTULO_EXTENSAO"]}</button>
         <span class="mm-nova"><input class="mm-campo" placeholder="{MAPA["NOME_DA_FACE_EM_BRANCO"]}" maxlength="16">
-          <button class="btn" title="Cria uma face com o nome que você escreveu, sem entrada nenhuma. Sem nome, não cria.">{MAPA["ROTULO_NOVA_FACE"]}</button></span>
+          <button class="btn" data-gesto="nova-face" title="Cria uma face com o nome que você escreveu, sem entrada nenhuma. Sem nome, não cria.">{MAPA["ROTULO_NOVA_FACE"]}</button></span>
       </div>
       <div class="tn-frase mm-aplicar">{MAPA["ESPERA_O_APLICAR"]}</div>
     </div>
@@ -2267,7 +2305,7 @@ MIOLO = f'''
             </table>
             <div class="acoes empurra">
               <a class="btn" href="#mapear-entradas" title="Abre o desenho do seu gabinete e numera as entradas. É lá que ficam as duas perguntas que só você pode responder: a altura do dongle e se tem gente entre ele e o sofá.">{MAPEAR_ENTRADAS}</a>
-              <button class="btn" title="Refaz o exame das entradas — energia e rádio — e repinta os selos, as linhas e as ordens de serviço do Check-up.">{EXAMINAR_PORTAS}</button>
+              <button class="btn" data-gesto="examinar-portas" title="Refaz o exame das entradas — energia e rádio — e repinta os selos, as linhas e as ordens de serviço do Check-up.">{EXAMINAR_PORTAS}</button>
             </div>
           </div>
 

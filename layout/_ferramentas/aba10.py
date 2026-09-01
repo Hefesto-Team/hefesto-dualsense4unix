@@ -456,10 +456,28 @@ def linha_do_perfil(nome, prioridade, quando, ativo, dica=""):
     cópia dele. O `title` nasce vazio no mockup porque a dica é a DISPUTA, e
     disputa é dado — o mockup não tem nenhum, e um texto inventado aqui viraria
     a tela afirmando uma disputa que não existe.
+
+    O ENDEREÇO DO CLIQUE MORA NA CÉLULA DO NOME, e não na `<tr>` — 01/09/2026,
+    ao ligar os botões. A razão é medida, e são duas:
+
+    1. **O ouvinte do piloto não enxerga a linha.** Ele casa
+       `[data-gesto],[data-hef-gesto],[data-papel],…` (`hefesto_vivo.py:190`), e
+       a `<tr>` só tinha `data-hef-perfil`, que não está na lista. Clicar num
+       perfil não mandava nada a lugar nenhum.
+    2. **O nome VIVO só existe na célula.** O clique leva
+       `texto: alvo.textContent` — na `<tr>` isso seria "Ação90Jogo", os três
+       campos colados; na célula é o nome, e é o nome que o `profile.switch`
+       quer. E o `data-hef-perfil` da linha é do MOCKUP: a pintura escreve o
+       texto das células e nunca reescreve o atributo, então quem lesse o
+       atributo leria o perfil do desenho, não o do disco.
+
+    `data-hef-gesto` e não `data-gesto`: esta aba já tem 77 endereços nesse
+    vocabulário, e o despachante aceita os três — inventar um quarto aqui seria
+    a segunda verdade que esta casa persegue.
     """
     return (f'                <tr class="{"ativo" if ativo else ""}" '
             f'data-hef-perfil="{nome}" title="{dica}">'
-            f'<td data-hef="perfis.linha.nome">{nome}</td>'
+            f'<td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">{nome}</td>'
             f'<td class="pri" data-hef="perfis.linha.prioridade">{prioridade}</td>'
             f'<td class="quando" data-hef="perfis.linha.quando">{quando}</td></tr>')
 
