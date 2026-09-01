@@ -13,6 +13,12 @@ tudo isso é do `doctor` e do instalador, não do `state_full`.
 """
 from __future__ import annotations
 
+# O IMPORT É DE MÓDULO — o portão do `casa-sabe` segue o fecho de IMPORT a
+# partir do piloto, e um `from … import` dentro de uma função não entra nele: a
+# camada do produto continuava contando como promessa sem caminho mesmo depois
+# de eu a ligar. O `sys.path` já tem o `src/` quando esta linha roda.
+from hefesto_dualsense4unix.gui import aba_sistema as _tela
+
 from . import Contexto, perfil, registrar
 
 #: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # (noqa-acento) id
@@ -50,7 +56,6 @@ def _leitura(ctx: Contexto):
     import subprocess
 
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui import aba_sistema as _tela
 
     try:
         auto = subprocess.run(
@@ -80,7 +85,6 @@ def pacote(ctx: Contexto) -> dict:
     frases dele eram minhas, enquanto estas foram escritas com ela.
     """
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui import aba_sistema as _tela
 
     try:
         bruto = _tela.pacote(_leitura(ctx))

@@ -256,6 +256,32 @@ def _so_hex(chave: str) -> str:
     return chave.replace(":", "").lower()
 
 
+#: OS DEZ, IMPORTADOS PELO NOME — e a redundância com o `_carregar_tudo()` é
+#: deliberada. Ele usa `importlib.import_module`, que é IMPORT DINÂMICO: o
+#: `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de import lendo o
+#: **AST**, e um nome montado em tempo de execução não aparece ali. Sem estas
+#: linhas, os dez pacotes ficam fora do fecho a partir do piloto — e as camadas
+#: de tela que eles chamam (`app/telas/vibracao.py`, `gui/aba_sistema.py`,
+#: `app/actions/perfis_web.py`) continuam contando como promessa SEM CAMINHO
+#: mesmo depois de ligadas. Medido em 01/09/2026.
+#:
+#: O `_carregar_tudo()` fica: ele é quem pega um pacote NOVO sem ninguém
+#: precisar lembrar de escrever a linha. Estas dez são o que uma ferramenta que
+#: lê código estático consegue ver.
+from . import (
+    a01_jogar,  # noqa: F401
+    a02_controles,  # noqa: F401
+    a03_gatilhos,  # noqa: F401
+    a04_iluminacao,  # noqa: F401
+    a05_vibracao,  # noqa: F401
+    a06_navegacao,  # noqa: F401
+    a08_conexoes,  # noqa: F401
+    a09_sistema,  # noqa: F401
+    a10_perfis,  # noqa: F401
+    rodape,  # noqa: F401
+)
+
+
 def _carregar_tudo() -> None:
     """Importa os módulos de pacote, que é o que os registra."""
     import importlib

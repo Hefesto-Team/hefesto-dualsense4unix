@@ -30,6 +30,16 @@ que escreve tem de avisar o daemon depois (`profile.switch` para reaplicar,
 """
 from __future__ import annotations
 
+# O IMPORT É DE MÓDULO, e não de dentro da função — 01/09/2026. O
+# `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
+# piloto que o lançador abre, e um `from … import` escondido dentro de uma
+# função não entra nesse fecho: a camada do produto continuava aparecendo como
+# "promessa sem caminho" mesmo depois de eu a ligar.
+#
+# O `sys.path` já tem o `src/` quando esta linha roda: `pacotes/__init__.py` o
+# insere no import do pacote.
+from hefesto_dualsense4unix.app.actions import perfis_web as _tela
+
 from . import Contexto, perfil, registrar
 
 #: CORRIGIDO EM 01/09/2026. Estava escrito que a lista "vem de `profiles.*`, não
@@ -99,7 +109,6 @@ def pacote(ctx: Contexto) -> dict:
     O QUE SOBRA AQUI é o ACHATAMENTO para os `data-hef` da página, que são 77.
     """
     perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions import perfis_web as _tela
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
 
     ativo = str(ctx.state.get("active_profile") or "")

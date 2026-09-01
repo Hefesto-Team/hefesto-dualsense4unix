@@ -25,6 +25,16 @@ from __future__ import annotations
 
 import time
 
+# O IMPORT É DE MÓDULO, e não de dentro da função — 01/09/2026. O
+# `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
+# piloto que o lançador abre, e um `from … import` escondido dentro de uma
+# função não entra nesse fecho: a camada do produto continuava aparecendo como
+# "promessa sem caminho" mesmo depois de eu a ligar.
+#
+# O `sys.path` já tem o `src/` quando esta linha roda: `pacotes/__init__.py` o
+# insere no import do pacote.
+from hefesto_dualsense4unix.app.telas import vibracao as _tela
+
 from . import Contexto, registrar
 
 SEM_DONO: dict[str, str] = {}
@@ -66,7 +76,6 @@ def pacote(ctx: Contexto) -> dict:
     """
     import mesa_viva
 
-    from hefesto_dualsense4unix.app.telas import vibracao as _tela
 
     bruto = _tela.pacote_da_mesa(ctx.state, ctx.mesa, ctx.conectados,
                                  contagem=mesa_viva.texto_da_contagem(ctx.mesa))
