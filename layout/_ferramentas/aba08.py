@@ -538,7 +538,20 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .selo.ok{background:var(--green);color:var(--app-bg)}
   .selo.warn{background:var(--orange);color:var(--app-bg)}
   .selo.info{background:var(--comment);color:var(--app-bg)}
-  .exame .txt{flex:1;min-width:0}
+  /* O `?` ENCOSTA NO TEXTO E SÓ O IGNORAR FICA ISOLADO — 01/09/2026, decisão
+     dela: *"tem que alinhar as tooltip pra ficar do lado esquerdo encostando nas
+     palavras e só deixar o ignorar isolado."*
+
+     O `.txt` era `flex:1` e comia todo o espaço da linha, empurrando os DOIS
+     ícones para a borda direita. Ali eles liam como um par, e não são: o `?`
+     explica AQUELA frase — ele pertence a ela — e o `⊘` é uma ação sobre a
+     linha inteira. Colados, o ponteiro passa por um para chegar ao outro.
+
+     Agora o texto ocupa o que precisa, o `?` vem logo depois dele, e o
+     `margin-left:auto` do ignorar é o que abre o vão até a borda: uma regra, e o
+     espaço vazio passa a separar em vez de agrupar. */
+  .exame .txt{flex:0 1 auto;min-width:0}
+  .exame .ignora{margin-left:auto}
 
   /* ---- a ordem de serviço: imperativo, receita e ganho ---- */
   .ordem{border:1px solid var(--border-forte);border-radius:7px;background:var(--app-bg);

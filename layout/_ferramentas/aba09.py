@@ -4,7 +4,7 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from monta import MESA, glifo, monta, CSS_GLIFO  # noqa: E402
+from monta import MESA, CONECTADOS, glifo, monta, CSS_GLIFO  # noqa: E402
 
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
 # arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
@@ -23,9 +23,13 @@ R = pathlib.Path(__file__).resolve().parents[2]
 # e uma contagem digitada é a que diverge no dia em que a mesa muda. Foi assim
 # que o cabeçalho dizia "2 controles" com quatro chips na fita, em 27/08.
 # ---------------------------------------------------------------------------
-N = len(MESA)
-USB = [c for c in MESA if c["via"] == "USB"]
-BT = [c for c in MESA if c["via"] == "BT"]
+# O `N` CONTA OS CONECTADOS — 01/09/2026, e era o mesmo defeito de três outras
+# abas hoje: a tela dizia *"Os 4 controles"* com dois na mesa. A `MESA` sabe dos
+# quatro LUGARES; toda frase que promete alcance tem de contar os ocupados.
+N = len(CONECTADOS)
+LUGARES = len(MESA)
+USB = [c for c in CONECTADOS if c["via"] == "USB"]
+BT = [c for c in CONECTADOS if c["via"] == "BT"]
 #: Nós de `/dev/input/js*`: cada DualSense publica DOIS (o gamepad e os sensores
 #: de movimento — é o `uniq` que os colapsa num aparelho só, em
 #: `emulation_actions._chave_do_aparelho`), e cada gamepad virtual publica um.
@@ -44,7 +48,27 @@ def _lista(nomes):
     return nomes[0] if len(nomes) == 1 else f"{', '.join(nomes[:-1])} e {nomes[-1]}"
 
 
-def _frase(nomes):
+#: OS NOMES LONGOS, ENCURTADOS SÓ PARA A TELA — 01/09/2026, pedido dela.
+#:
+#: MEDIDO: a frase inteira tem 303px e a linha dela ocupa TUDO, do rótulo à
+#: borda direita do bloco, enquanto as outras três do mesmo quadro ("Nada é
+#: limitado", "Os 2 controles", "Vibração") sobram espaço. Ela lê como se
+#: estivesse vazando, e é o que ela viu.
+#:
+#: O DADO NÃO MUDA: o dono continua sendo `ORC["LINHAS_DO_TETO"]`, do produto, e
+#: a frase INTEIRA continua no `title` do valor — a cura de 31/08 que pôs as
+#: reticências também pôs o `title`, e é ele que segura a informação. O que
+#: encurta é a etiqueta, e só onde ela não cabe.
+#:
+#: Nenhum apelido é inventado: cada um é o nome do produto sem o qualificador
+#: que a linha vizinha já dá.
+APELIDO_NA_TELA = {
+    "Barra de luz": "luz",
+    "Microfone por rádio": "microfone",
+}
+
+
+def _frase(nomes, curto=True):
     """A mesma lista, em CAIXA DE FRASE: só a primeira letra é maiúscula.
 
     Regra dela, 30/08: *"a maiúscula a regra é sobre a primeira letra a ser
@@ -55,7 +79,12 @@ def _frase(nomes):
     perde forma ao descer. Derivado, nunca digitado: o dono continua sendo o
     produto.
     """
-    return _lista([nomes[0]] + [n[0].lower() + n[1:] for n in nomes[1:]])
+    # `curto=False` devolve a frase INTEIRA, e é o que vai para o `title`.
+    # Encurtar sem guardar o completo em lugar nenhum não é simplificar — é
+    # apagar: "barra de luz" e "microfone POR RÁDIO" carregam o qualificador que
+    # diz de qual microfone se fala.
+    curtos = [APELIDO_NA_TELA.get(n, n) for n in nomes] if curto else list(nomes)
+    return _lista([curtos[0]] + [n[0].lower() + n[1:] for n in curtos[1:]])
 
 
 # ---------------------------------------------------------------------------
@@ -516,7 +545,7 @@ AUTOSTART_CLS = "ok" if AUTOSTART_LIGADO else "off"
 AUTOSTART_CHAVE = " on" if AUTOSTART_LIGADO else ""
 
 
-def est(rot, val, cls="", g="●", mono=False, dica="", ident=""):
+def est(rot, val, cls="", g="●", mono=False, dica="", ident="", inteiro=None):
     """Uma linha de estado: glifo, rótulo à esquerda, VALOR à direita.
 
     O `ident` vira `data-id` NA LINHA, não no `.val`: a pintura precisa de três
@@ -549,7 +578,7 @@ def est(rot, val, cls="", g="●", mono=False, dica="", ident=""):
             # o `title` no VALOR, e não na linha: se ele couber, o hover não
             # aparece atrapalhando; se ele cortar, é ali que a pessoa passa o
             # mouse para ler o resto.
-            f'''<span class="val" title="{val}">{val}</span></div>''')
+            f'''<span class="val" title="{inteiro or val}">{val}</span></div>''')
 
 
 def saude(selo, g, txt, dica, glifos=()):
@@ -790,7 +819,7 @@ MIOLO = f'''
 {est("O que ele impõe", impoe(PERFIL_DA_MESA), "info", "◆", dica="O que este perfil limita hoje, na mesa inteira. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela.", ident=_id("bateria-impoe"))}
 {est("Vale para", f"Os {N} controles", "info", "◆", dica="É o teto da MESA. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo.", ident=_id("bateria-vale-para"))}
 {est("O teto alcança", _frase(ALCANCA), "info", "◆", dica="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela.")}
-{est("Ainda sem teto", _frase(PENDENTES), "info", "◆", dica="O perfil ainda não tem por onde limitar estes. Cada um entra quando ganhar ponto de aplicação no daemon, e some daqui sozinho.")}
+{est("Ainda sem teto", _frase(PENDENTES), "info", "◆", inteiro=_frase(PENDENTES, curto=False), dica="O perfil ainda não tem por onde limitar estes. Cada um entra quando ganhar ponto de aplicação no daemon, e some daqui sozinho.")}
             <!-- O VÃO DE 58px, E POR QUE ELE ERA O DEFEITO — 31/08/2026.
                  Palavra dela: *"aqui em perfil da bateria essa seção tá muito feia
                  e distoante do resto da página, tá destacando negativamente"*.
@@ -838,7 +867,7 @@ MIOLO = f'''
           </div>
           <div class="risco"></div>
           <div class="col-acao">
-{item("Refazer os consertos automáticos", f"Sem senha e sem fechar nada: arruma o áudio dos {N} controles, desliga o Steam Input onde ele atrapalha e põe a linha de inicialização nos jogos instalados, com cópia de segurança. O exame já rodou isto — o botão refaz.", "btn verde", gesto=_gesto("refazer-consertos"))}
+{item("Refazer os consertos automáticos", f"Sem senha e sem fechar nada: arruma o áudio dos {N} controles, desliga o Steam Input onde ele atrapalha e põe a linha de inicialização nos jogos instalados, com cópia de segurança. O exame já rodou isto — o botão refaz.", "btn", gesto=_gesto("refazer-consertos"))}
 {item("Refazer a fixação do Proton", "Trava de novo o Proton que você validou nos jogos escolhidos — e diz o motivo em português quando não dá.", gesto=_gesto("refazer-proton"))}
 {item("Procurar sobreposição de novo", "Procura de novo a camada que picota o jogo. Se achar, mostra qual é antes de tirar.", gesto=_gesto("procurar-camadas"))}
           </div>

@@ -33,7 +33,27 @@
   h1 .p{color:var(--pink)}
   .sub{font-family:var(--m);font-size:11.5px;color:var(--comment);margin-top:3px}
 
-  .mapa{display:grid;grid-template-columns:minmax(0,1fr) 720px;gap:0;align-items:stretch}
+  /* A LISTA GANHOU 140px E UMA TERCEIRA COLUNA — 01/09/2026, pedido dela:
+     *"o que eu não quero na mapa é barra de rolagem nem pra esquerda nem
+     vertical; pode ir realocando os elementos pra terem mais harmonia."*
+
+     MEDIDO ANTES: a página pedia 1042px numa janela de 800 — 242px de rolagem
+     vertical. O culpado era a LISTA, com 832px fixos, enquanto o desenho ao lado
+     encolhia com a janela (710px em 1080, 387px em 800). Duas colunas de 28
+     peças em 12 grupos não cabem em tela nenhuma abaixo de 1080.
+
+     COM TRÊS COLUNAS ELA CAI PARA 573px, e a página passa a caber inteira:
+     **zero rolagem vertical e zero lateral** em 1920x1080, 1600x900, 1440x900 e
+     1390x800 — as quatro medidas.
+
+     E OS 920px SÃO HARMONIA MEDIDA, que foi a outra metade do pedido dela. Com
+     os 860 que a conta da rolagem pedia, **8 dos 28 itens quebravam em duas
+     linhas** (`feat-rumble-esquerdo`, `feat-giroscopio`, `led-jogador`), e dois
+     chegavam a 61px de altura numa lista onde o padrão é 36. Com 920 são 4, e o
+     mais alto cai para 44. Testei até 1100: de 920 em diante o ganho estagna
+     (24, 24, 25, 25 itens inteiros) e o desenho é que encolhe — 920 é onde a
+     curva vira. */
+  .mapa{display:grid;grid-template-columns:minmax(0,1fr) 920px;gap:0;align-items:stretch}
   .lado-ds{padding:20px 24px;display:flex;align-items:center;justify-content:center}
   /* A LISTA NÃO ROLA DE LADO — 31/08/2026, pedido dela: *"a página de mapa do
      dualsense tem uma barra horizontal desnecessária."*
@@ -52,7 +72,7 @@
      coluna e 2 é o TETO — numa tela estreita ele cai para uma sozinho, em vez
      de espremer duas. */
   .lado-lista{border-left:1px solid var(--border-sutil);padding:14px 18px;
-               columns:330px 2;column-gap:20px;column-fill:balance}
+               columns:260px 3;column-gap:20px;column-fill:balance}
   .grupo{break-inside:avoid;-webkit-column-break-inside:avoid}
   .ds{width:100%;height:auto;max-height:74vh}
   /* TUDO PREENCHIDO — decisão dela, 27/08: os paths deste SVG são FAIXAS e
