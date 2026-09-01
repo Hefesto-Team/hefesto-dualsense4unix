@@ -80,6 +80,25 @@ _CAMADAS = ("rapido|", "completo|", "suite|")
 #: dívida envelhecer calada. No dia em que o chamador nascer, a entrada REPROVA
 #: e tem de ser apagada (`test_nenhuma_divida_sobreviveu_a_propria_cura`).
 _SEM_CHAMADOR_HOJE: dict[str, str] = {
+    "scripts/check_bancada_de_bt.py": (
+        "MEDIDO em 01/09/2026, e ele NASCEU sem chamador de propósito. A escada "
+        "de releases (`docs/process/2026-08-24-A-ESCADA-DE-RELEASES.md`, degrau "
+        "0.9.5) o nomeia como o que mede a bancada de BT dela, e o arquivo não "
+        "existia — o degrau só era descrito, nunca conferido. Ele lê os dois "
+        "CSV (`mapa-controles.csv`, `ensaios.csv`) e roda no CI sem hardware. "
+        "RODA VERMELHO hoje, de propósito: `python scripts/check_bancada_de_bt.py`"
+        " -> exit=1, com R1=48, R2=30, R3=7, R4=98 — 183 pendências. "
+        "POR QUE NÃO ESTÁ NO `portoes.sh`: ele mede o DEGRAU, não o commit. Uma "
+        "leva que não toca o mapa de rádio ficaria vermelha por 183 pendências "
+        "que não criou, e um portão vermelho permanente é um portão que se "
+        "aprende a ignorar — que é o oposto do que este arquivo existe para "
+        "fazer. O QUE O LIGA, quando as quatro réguas zerarem: "
+        "`completo|bancada-de-bt|py|scripts/check_bancada_de_bt.py` na tabela do "
+        "`scripts/portoes.sh`, mais o passo correspondente no `ci.yml` (os dois, "
+        "senão o `test_portao_a_lista_de_portoes_e_uma_so.py` reprova). "
+        "A régua do próprio script é `tests/unit/test_a_bancada_de_bt_tem_regua.py`, "
+        "que roda na suíte e cobre as quatro réguas contra CSV de mentira."
+    ),
     "scripts/check_broadcast_proibido.py": (
         "MEDIDO em 25/08/2026 (AUDITORIA-DE-PERDA-01/C2). Nasceu em `826ee18` "
         "(ONDA0-Z3-8) e nenhum runner o chama: não está na tabela de "
