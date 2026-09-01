@@ -58,7 +58,7 @@ PUBLICADO = RAIZ / "layout"
 
 #: O DESVIO DA ESCRITA, e ele existe para UMA coisa: deixar um portão rodar os
 #: dez geradores sem tocar na bancada dela. Com `HEFESTO_BANCADA` apontando para
-#: um diretório temporário, `pagina()` e `gravar()` passam a escrever lá — e o
+#: um diretório temporário, `pagina()` e `gravar()` passam a escrever lá — e o  # noqa: acentuacao  (`pagina()` é a função)
 #: portão compara o que SAIU com o que está no disco.
 #:
 #: POR QUE ISSO PRECISOU EXISTIR, medido em 01/09/2026: `aba06.py` estava

@@ -46,7 +46,7 @@ ORIGEM="/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix"
 PILOTO=""
 for RAIZ in "$AQUI" "$ORIGEM"; do
     for PASTA in layout novo-layout; do
-        CANDIDATO="$RAIZ/$PASTA/_ferramentas/controles_vivos.py"
+        CANDIDATO="$RAIZ/$PASTA/_ferramentas/hefesto_vivo.py"
         [ -f "$CANDIDATO" ] && { PILOTO="$CANDIDATO"; break 2; }
     done
 done

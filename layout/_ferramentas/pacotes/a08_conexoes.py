@@ -48,10 +48,25 @@ def _exame() -> list[dict]:
             for it in (r if isinstance(r, (list, tuple)) else [r]):
                 if it is None:
                     continue
+                # OS CAMPOS SÃO `rotulo`, `estado` e `porque` — os do
+                # `exame_da_mesa.Item`, lidos do dataclass. A primeira versão
+                # daqui pedia `titulo` com `or str(it)` de reserva, e o `Item`
+                # não tem `titulo`: a reserva ganhava sempre e o **`repr` do
+                # objeto Python foi parar na tela dela**, visível na foto de
+                # 01/09 — `Item(chave='energia_do_radio', rotulo='Economia de
+                # energia desligada', estado='a`, cortado no meio.
+                #
+                # Um `getattr` com reserva é o disfarce perfeito para um campo
+                # que não existe: ele não levanta, e o que sai parece dado.
+                estado = str(getattr(it, "estado", "") or "")
                 itens.append({
                     "chave": getattr(it, "chave", fn),
-                    "titulo": getattr(it, "titulo", "") or str(it)[:80],
-                    "grave": bool(getattr(it, "grave", False)),
+                    "titulo": str(getattr(it, "rotulo", "") or ""),
+                    "porque": str(getattr(it, "porque", "") or ""),
+                    "estado": estado,
+                    # `certo` é o único estado que não pede nada — os outros
+                    # (`ajustar`, `atencao`) são achados de verdade.  # noqa: acentuacao
+                    "grave": estado.lower() not in {"certo", ""},
                 })
         return itens
     except Exception:

@@ -60,6 +60,11 @@ PRIMEIRA = "01-jogar.html"
 #: por volta ficou em 0,9% do orçamento, com IPC de mediana 0,8 ms.
 TIQUE_MS = 500
 
+#: OS QUATRO LUGARES DA MESA DO DESENHO. O HTML nasce com eles todos — dois
+#: conectados e dois vazios, por decisão dela em 31/08 — e o produto tem de
+#: apagar o que a mesa de agora não preenche.
+TODOS_OS_LUGARES = {"p1", "p2", "p3", "p4"}
+
 #: A aba que NÃO tem pacote, por decisão dela — só o botão que leva a ela.
 SEM_PACOTE = {"07-lancadores.html"}
 
@@ -148,6 +153,17 @@ BOOTSTRAP = r"""
       if(v !== null && typeof v === 'object') continue;
       for(const el of alvos) n += escrever(el, v);
     }
+    // 1b. OS LUGARES VAZIOS ganham a marca do desenho. `data-conectado` e a
+    // classe `off` são o que o gerador escreve nos dois lugares que ela mandou
+    // deixar desconectados — usar as MESMAS marcas é o que faz o produto
+    // parecer o desenho, em vez de inventar um terceiro estado.
+    for(const pref of (p.vazios || [])){
+      for(const el of document.querySelectorAll('[data-controle="' + pref + '"]')){
+        if(el.dataset.conectado !== 'nao'){ el.dataset.conectado = 'nao'; n += 1; }  // noqa: acentuacao  ('nao' é o valor do atributo, do desenho)
+        if(!el.classList.contains('off')){ el.classList.add('off'); }
+        el.classList.remove('alvo');
+      }
+    }
     // 2. OS CAMPOS POR CONTROLE — dentro do bloco daquele `data-controle`.
     for(const [pref, campos] of Object.entries(p.colunas || {})){
       for(const raiz of document.querySelectorAll('[data-controle="' + pref + '"]')){
@@ -202,7 +218,7 @@ def _pausar(piloto, o: dict) -> None:
     """Parar ou retomar o serviço. `daemon.pause` / `daemon.resume`.
 
     O `daemon.resume` tinha UM chamador em todo o `src/` — o terminal
-    (`cli/app.py:421`), como a `gui/aba_sistema.py:77` já media: *"a pausa fica
+    (`cli/app.py:421`), como a `gui/aba_sistema.py:77` já media: *"a pausa fica  # noqa: acentuacao  (`media` é o verbo medir)
     gravada em disco e sobrevive a desligar o computador; até hoje só o terminal
     saía dela."* Este é o segundo, e é uma tela.
     """
@@ -325,7 +341,7 @@ class Piloto:
         """
         self.gestos.append(o)
         nome = str(o.get("gesto") or "")
-        pagina = str(o.get("pagina") or self.pagina)
+        pagina = str(o.get("pagina") or self.pagina)  # noqa: acentuacao  (nome de variável)
         acao = GESTOS_COM_DONO.get((pagina, nome)) or GESTOS_COM_DONO.get(("*", nome))
         if acao is None:
             self.recusados.append(f"{pagina}:{nome}")
@@ -492,6 +508,29 @@ class Piloto:
         # e a foto da aba Perfis o mostrou de novo em 01/09/2026, já com o topo
         # e a tabela corretos ao lado.
         carga["fita"] = _fita(ctx.mesa)
+
+        # OS LUGARES VAZIOS RECEBEM TRAVESSÃO, e sem isto a tela MENTE. O HTML
+        # publicado nasce com quatro colunas — a mesa do desenho, dois
+        # conectados e dois vazios. Com UM controle na mesa, a coluna do P2
+        # continuava mostrando o que o mockup escreveu: "Sony · Player 2 ·
+        # Starlight Blue · BT · 64%". Visível na foto de 01/09, ao lado de um
+        # topo que dizia "1 controle" e de uma fita já correta.
+        #
+        # É a sétima aparição do mesmo defeito nesta casa — *a tela afirmando um
+        # controle que não está na mesa* — e a única cura que não depende de
+        # cada aba lembrar-se dela é esta: quem pinta apaga o que sobra.
+        chaves = set()
+        for campos in carga["colunas"].values():
+            chaves |= set(campos)
+        vivos = set(carga["colunas"])
+        apagar = sorted(TODOS_OS_LUGARES - vivos)
+        for pref in apagar:
+            carga["colunas"][pref] = dict.fromkeys(chaves, "—")
+        # A MOLDURA TAMBÉM, e não só o texto: com os travessões escritos, o card
+        # do P2 continuava com a borda de CONECTADO e os botões de máscara
+        # acesos. Meio apagado é pior que aceso — quem olha lê a borda antes de
+        # ler o campo.
+        carga["vazios"] = apagar
 
         def contou(valor, erro) -> None:
             if erro is not None:
