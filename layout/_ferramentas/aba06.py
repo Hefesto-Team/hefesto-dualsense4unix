@@ -662,18 +662,31 @@ def drop(grupos, escolhido, classe="campo-linha", gesto=""):
     return f'<select class="{classe}"{g}>{"".join(partes)}</select>'
 
 
-def simples(ops, classe="escolha-at", gesto=""):
-    """Um `<select>` das opções, com o ENDEREÇO do clique quando ele tem nome.
+def simples(ops, classe="escolha-at", gesto="", campo=""):
+    """Um `<select>` das opções, com o ENDEREÇO do clique e o da PINTURA.
 
-    O `data-gesto` aqui NÃO liga o campo — nenhum `<select>` desta casa liga, e a
-    razão está medida em `hefesto_vivo.py:188`: o piloto ouve `click`, e o clique
-    num `<select>` chega quando a lista ABRE, com o valor ANTIGO. O que ele faz é
-    dar NOME ao campo, para o piloto recusar dizendo qual é — em vez de o clique
-    sumir sem uma linha. É a mesma escolha dos sete botões da aba Sistema.
+    O `data-gesto` liga o campo **desde 01/09/2026**, e a frase que estava aqui
+    ("nenhum `<select>` desta casa liga") caducou no mesmo dia: o piloto passou a
+    ouvir `change` além de `click` (`hefesto_vivo.py:196`) e a mandar o `valor` e
+    o `rotulo` da opção escolhida. O motivo antigo era real — o clique num
+    `<select>` chega quando a lista ABRE, com o valor ANTIGO —, e é exatamente o
+    que o `change` resolve.
+
+    O `campo` é o SEGUNDO endereço, e ele não é enfeite: sem ele a lista fica
+    mostrando o que ela escolheu mesmo quando o gesto RECUSOU, porque a recusa
+    de um gesto só imprime no terminal (`hefesto_vivo.py:519`) — na tela não
+    aparece nada. Com ele, o tique seguinte reescreve o `value` com o que o
+    DAEMON diz, e a opção sem dono volta sozinha para o lugar. É a única forma
+    de uma recusa ser visível nesta aba.
+
+    `data-hef-alvo="valor"` é obrigatório junto: sem ele a pintura escreveria o
+    texto DENTRO do `<select>` (o alvo padrão do `escrever` é `textContent`) e
+    comeria as opções.
     """
     g = f' data-gesto="{gesto}"' if gesto else ""
+    c = f' data-campo="{campo}" data-hef-alvo="valor"' if campo else ""
     op = "".join(f'<option{" selected" if i == 0 else ""}>{o}</option>' for i, o in enumerate(ops))
-    return f'<select class="{classe}"{g}>{op}</select>'
+    return f'<select class="{classe}"{g}{c}>{op}</select>'
 
 
 def bignum(*pares):
@@ -979,12 +992,28 @@ D_REMAPEAMENTO = ajuda(
     f"Valem para o controle que navega o PC: o <b>P{NAVEGA} "
     f"{QUEM_NAVEGA['nome']} {QUEM_NAVEGA['via']}</b>.")
 
+#: AS TRÊS PALAVRAS DA "Função do teclado", e elas são o CONTRATO do gesto.
+#:
+#: O `<option>` não leva `value` de propósito: `value` não está entre os
+#: atributos que `scripts/check_o_desenho_aprovado.INVISIVEIS` ignora, então
+#: pô-lo aqui faria toda marcação virar divergência de desenho. Sem ele, o
+#: `select.value` que chega ao Python É o texto da opção — e é por isso que
+#: `pacotes/a06_navegacao.py` casa por texto.
+#:
+#: **A MESMA LISTA ESTÁ LÁ, e a repetição é declarada**: o gesto casa pela
+#: PRIMEIRA palavra (tolerante ao que vier depois do travessão) e a pintura usa
+#: as duas frases inteiras. Quem reescrever uma opção aqui tem de abrir
+#: `a06_navegacao.py` — o cabeçalho de `_TECLADO` diz o que muda de cada lado.
+OPCOES_TECLADO = [
+    "Ligada — atalhos e teclado na tela",
+    "Só fora do jogo",
+    "Desligada",
+]
+
 ATIVACAO_ESQ = [
     ("Status do Modo", D_QUANDO, STATUS_MODO),
-    ("Função do teclado", D_TECLADO, simples([
-        "Ligada — atalhos e teclado na tela",
-        "Só fora do jogo",
-        "Desligada"], gesto="teclado")),
+    ("Função do teclado", D_TECLADO,
+     simples(OPCOES_TECLADO, gesto="teclado", campo="teclado-estado")),
     ("Navegação Interna", D_INTERNA, simples([
         "Ligada — cada controle navega o Hefesto",
         f"Só o Player {NAVEGA} navega",

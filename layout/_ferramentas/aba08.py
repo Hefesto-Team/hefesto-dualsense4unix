@@ -26,6 +26,10 @@ R = pathlib.Path(__file__).resolve().parents[2]
 # `monta` já pôs `src/` no caminho — é de lá que ele traz o padrão das lâmpadas.
 from hefesto_dualsense4unix.utils.color_contrast import razao_contraste  # noqa: E402
 
+# A CAMADA DE TELA DESTA ABA, que já existe no produto e nunca foi ligada.
+# Daqui sai a lista de respostas do "— O que é? —": ver `VIZINHOS`, abaixo.
+from hefesto_dualsense4unix.gui import aba_conexoes as _aba_conexoes  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # OS NÚMEROS DO PRODUTO VÊM DO PRODUTO, LIDOS POR AST.
 #
@@ -338,8 +342,19 @@ RADIOS_VIZINHOS = [
     ("Unknown 0e8d:0608", "— O que é? —", True),
 ]
 
-VIZINHOS = ["— O que é? —", "Wi-Fi", "Teclado", "Mouse", "Webcam", "Caixa de som",
-            "Outro", "Não sei"]
+#: AS RESPOSTAS DO "— O que é? —", E ELAS NÃO SE DIGITAM MAIS AQUI — 01/09/2026.
+#:
+#: A lista estava escrita duas vezes: nesta linha e em
+#: `gui/aba_conexoes.RESPOSTAS_DO_VIZINHO`, que é a camada de tela DESTA MESMA
+#: aba. As duas eram idênticas byte a byte, e é essa a armadilha: enquanto forem
+#: iguais ninguém vê problema, e no dia em que uma ganhar uma opção a tela
+#: oferece uma resposta que o gesto não sabe traduzir — o `<select>` mostra
+#: "Fone", ela escolhe, e o clique **recusa dizendo que não conhece a palavra**.
+#:
+#: O gesto `vizinho-o-que-e` traduz o rótulo desta lista para o `tipo` do
+#: esquema (`secao_mesa._TIPOS_DE_RADIO`); derivar daqui é o que mantém as três
+#: listas amarradas num dono só.
+VIZINHOS = list(_aba_conexoes.RESPOSTAS_DO_VIZINHO)
 
 
 def viz_sel(escolhida):
@@ -347,7 +362,7 @@ def viz_sel(escolhida):
                    for v in VIZINHOS)
 
 
-def sel(opcoes, escolhida, classe="pronto", dica="", gesto=""):
+def sel(opcoes, escolhida, classe="pronto", dica="", gesto="", campo=""):
     """Um `<select>` com a opção escolhida marcada — uma forma só na tela.
 
     `gesto` é o ENDEREÇO do que este campo faz, e ele entra mesmo quando ninguém
@@ -356,11 +371,19 @@ def sel(opcoes, escolhida, classe="pronto", dica="", gesto=""):
     que falta, em vez de sumir sem uma linha. Sem o atributo, o `closest()` do
     ouvinte não acha nada e o clique não produz **nem recusa** — que é a forma
     calada do mesmo defeito.
+
+    `campo` é o endereço da PINTURA, e ele vem com `data-hef-alvo="valor"` de
+    propósito: sem o alvo, o piloto escreveria o texto DENTRO do `<select>` em
+    vez de escolher a opção (`hefesto_vivo.BOOTSTRAP`, `escrever()`), e a lista
+    ganharia uma linha solta "Ligado" no meio das opções. Um campo com gesto e
+    sem pintura é pior que os dois faltando: o clique grava e a tela continua
+    mostrando o padrão do desenho, então o segundo clique parece o primeiro.
     """
     marca = f' data-gesto="{gesto}"' if gesto else ""
+    endereco = f' data-campo="{campo}" data-hef-alvo="valor"' if campo else ""
     corpo = "".join(f'<option{" selected" if o == escolhida else ""}>{o}</option>'
                     for o in opcoes)
-    return f'<select class="{classe}" title="{dica}"{marca}>{corpo}</select>'
+    return f'<select class="{classe}" title="{dica}"{marca}{endereco}>{corpo}</select>'
 
 
 # ---------------------------------------------------------------------------
@@ -1139,7 +1162,7 @@ RENOMEAR_DICA = ("Dê um duplo clique para dar um nome seu a este adaptador — 
                  "“Extra”. É por ele que o resto da tela passa a chamá-lo.")
 
 
-def exame(classe, palavra, txt, dica):
+def exame(classe, palavra, txt, dica, linha=0):
     """Uma linha do exame: o selo, o que ele achou, o `?` e o gesto de ignorar.
 
     O IGNORAR SAIU DA FILEIRA E VIROU GLIFO NA LINHA — 31/08/2026, decisão dela:
@@ -1147,12 +1170,26 @@ def exame(classe, palavra, txt, dica):
     um botão pra ignorar no formato de glifo ali"*. E ela tem razão pelo que o
     botão FAZIA: um `Ignorar` no rodapé do quadro não dizia O QUÊ ignorar — havia
     cinco linhas e um botão só. Na linha, o gesto tem sujeito.
+
+    `linha` É O SUJEITO DO CLIQUE, e ele precisou existir em 01/09/2026 para o
+    ⊘ deixar de ser botão morto. O ouvinte do piloto manda `data-v` e o
+    `textContent` do que foi clicado; o `textContent` do ⊘ é "⊘" nas cinco
+    linhas, e o `closest('[data-controle],[data-uniq]')` não acha nada aqui —
+    então, sem este número, as cinco linhas mandavam **o mesmo clique**.
+    Ignorar a segunda calaria a que estivesse no lugar da primeira.
+
+    É a POSIÇÃO e não a chave da regra porque o HTML é estático: as cinco
+    linhas nascem com o achado do desenho e são repintadas a cada tique com o
+    exame da mesa dela (a pintura distribui a lista pelos elementos de mesmo
+    `data-campo`, na ordem). Quem sabe QUAL achado caiu na posição 2 é quem
+    pintou — `a08_conexoes.pacote()` —, e é lá que o número vira ordem de
+    serviço.
     """
     return f'''          <div class="exame" data-campo="exame">
             <span class="selo {classe}" data-campo="selo">{palavra}</span>
             <span class="txt" data-campo="achado">{txt}</span>
             <span class="ajuda">?<span class="dica">{dica}</span></span>
-            <button class="ignora" data-gesto="ignorar" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="{linha}" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>'''
 
 

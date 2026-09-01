@@ -521,19 +521,39 @@ MIOLO = f'''
               <div class="botoes">
                 <button class="btn verde" data-hef-gesto="ativar" title="Passa a usar este perfil agora, em todas as abas.">Ativar</button>
                 <button class="btn" data-hef-gesto="novo" title="Perfil em branco, já com a regra do jogo aberto agora — venha ele de onde vier.">Novo</button>
-                <button class="btn vermelho" data-hef-gesto="remover" title="Apaga do disco. Pergunta antes.">Remover</button>
+                <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" title="Apaga do disco. Pergunta antes.">Remover</button>
               </div>
             </div>
           </div>
 
           <div>
             <div class="moldura">
+              <!-- OS QUATRO CAMPOS DESTE BLOCO PEDEM `data-hef-alvo="valor"`, e sem ele
+                   o editor era a única parte da tela que MENTIA sozinha. Medido em
+                   01/09/2026, num Chrome de verdade, injetando o `BOOTSTRAP` do piloto
+                   sobre o `layout/10-perfis.html` publicado (`hefesto_vivo.py:100-115`):
+
+                     editor.ambiente   5 opções → 0     `select.textContent = "Jogo da
+                     editor.estilo    15 opções → 0      Steam"` APAGA a lista inteira
+                     editor.nome      value fica "Mortal Kombat"   ← o do MOCKUP
+                     editor.jogo      value fica "Mortal Kombat 1" ← o do MOCKUP
+
+                   Nos dois `<select>` o estrago é destrutivo: a primeira pintura
+                   esvazia o campo de escolha e ele não volta. Nos dois `<input>` é
+                   invisível: `textContent` num campo de texto não aparece, então a
+                   tela seguia mostrando o jogo do desenho qualquer que fosse o perfil.
+                   É a mesma cura que a aba Gatilhos já tinha aplicado nos seus cinco
+                   `<select>` (`aba03.py:502`).
+
+                   E É O QUE TORNA OS GESTOS HONESTOS: sem isto, ligar o campo Nome
+                   faria ela renomear um perfil olhando para o nome de outro. -->
               <div class="sec-rot">Definições</div>
               <div class="campos">
 
               <div class="campo">
                 <span>Nome:</span>
-                <span class="val"><input type="text" data-hef="editor.nome" data-hef-gesto="editor.nome" value="Mortal Kombat"></span>
+                <span class="val"><input type="text" data-hef="editor.nome" data-hef-gesto="editor.nome"
+                       data-hef-alvo="valor" value="Mortal Kombat"></span>
               </div>
               <div class="campo">
                 <span>Prioridade:</span>
@@ -544,20 +564,21 @@ MIOLO = f'''
               </div>
               <div class="campo">
                 <span>Funciona em:</span>
-                <span class="val"><select data-hef="editor.ambiente" data-hef-gesto="editor.ambiente">
+                <span class="val"><select data-hef="editor.ambiente" data-hef-gesto="editor.ambiente" data-hef-alvo="valor">
 {opts(AMBIENTES, "Jogo")}
                 </select></span>
               </div>
               <div class="campo">
                 <span>Nome do Jogo:</span>
                 <span class="val">
-                  <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo" value="Mortal Kombat 1">
+                  <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo"
+                         data-hef-alvo="valor" value="Mortal Kombat 1">
                   <button class="btn roxo" data-hef-gesto="detectar" title="Pega o jogo que está rodando atrás desta janela e monta a regra — funciona com jogo de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
               </div>
               <div class="campo">
                 <span title="Pré-aplica um perfil inteiro: escolhendo FPS, o gatilho, a luz, a vibração e a máscara já vêm resolvidos. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
-                <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo">
+                <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
 {opts(ESTILOS, "Luta")}
                 </select></span>
               </div>

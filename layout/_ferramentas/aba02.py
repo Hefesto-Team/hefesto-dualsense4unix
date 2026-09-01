@@ -572,11 +572,21 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      por cima do bloco dos sensores. Aqui a fileira mede 150 e cabe com folga. */
   /* O `.mic-modo` HERDA A `.rota` INTEIRA e não acrescenta nada — 31/08/2026,
      quando ela mandou os dois descerem *"igual o Sons do Jogo e Todo o som do
-     PC"*. O seletor fica no HTML (`class="rota mic-modo"`) porque a ponte viva
-     endereça por ele (`data-campo="mic-modo"`), mas de estilo ele não tem UMA
-     linha própria: dois blocos que fazem o mesmo gesto na mesma coluna têm de
-     ser o mesmo botão, e uma regra a mais aqui é como as duas alturas voltam.
+     PC"*. O seletor fica no HTML (`class="rota mic-modo"`) para dizer QUAL
+     fileira é esta, mas de estilo ele não tem UMA linha própria: dois blocos
+     que fazem o mesmo gesto na mesma coluna têm de ser o mesmo botão, e uma
+     regra a mais aqui é como as duas alturas voltam.
      As 5 linhas de pastilha de 17px que moravam aqui saíram junto. */
+  /* O `data-campo="mic-modo"` SAIU DAQUI EM 01/09/2026, e ele APAGAVA os dois
+     botões. Esta linha dizia que "a ponte viva endereça por ele" — endereçava
+     mesmo, e o preço está medido: o `escrever` do piloto faz
+     `el.textContent = t`, e o `t` de um valor vazio é `—`. Como o
+     `data-campo` estava no `<span>` que ENVOLVE Virtual e Nativo, o primeiro
+     tique da pintura trocava os dois botões por um travessão.
+     Medido no Chrome headless sobre a página publicada: `[data-mic-modo]`
+     antes 4, depois 0, nos dois valores que o pacote emitia (`''` e
+     `'sem posse'`). Endereço de pintura só pode morar em FOLHA — um container
+     endereçado é um container que some. */
   /* 30px, E NÃO OS 36 DE `--h-escolha` — 31/08/2026, e o número é o preço do
      pedido dela. Até hoje a coluna do som tinha UMA fileira de escolha (a rota
      do alto-falante); com os modos do microfone descendo *"igual o Sons do Jogo"*
@@ -1103,10 +1113,18 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                  alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
                  Duas gramáticas para "escolher a rota do som" na mesma coluna
                  era uma a mais. -->
-              <span class="rota mic-modo" data-campo="mic-modo">
-                <button class="{'on' if mic_modo == 'virtual' else ''}" data-mic-modo="virtual"
+              <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
+                   razão do `data-gesto="mudo"` lá em cima: o piloto monta o
+                   nome do gesto como `d.gesto || d.hefGesto || d.papel ||
+                   'clique'` (`hefesto_vivo.py:221`). Sem ele, Virtual e Nativo
+                   chegavam ao despachante chamando-se `clique`, disputando um
+                   nome com os interruptores de sensor da mesma aba.
+                   E O CONTAINER PERDEU O `data-campo` — ver o comentário no
+                   CSS: endereçá-lo trocava os dois botões por um travessão. -->
+              <span class="rota mic-modo">
+                <button class="{'on' if mic_modo == 'virtual' else ''}" data-gesto="mic-modo" data-mic-modo="virtual"
                   title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="{'on' if mic_modo == 'nativo' else ''}" data-mic-modo="nativo"
+                <button class="{'on' if mic_modo == 'nativo' else ''}" data-gesto="mic-modo" data-mic-modo="nativo"
                   title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
               </span>
 
@@ -1759,6 +1777,17 @@ def _conferir(doc):
     exigir('data-mic-modo="desativado"' not in corpo, "o Desativado do microfone voltou")
     exigir(corpo.count('data-mic-modo="') == 2 * len(CONECTADOS),
            "os modos do microfone não são 2 por controle conectado")
+    # 2b. OS DOIS MODOS TÊM QUEM OS ATENDA, e o container NÃO é endereço de
+    #     pintura. As duas metades da cura de 01/09/2026, e as duas mordem:
+    #     sem `data-gesto` os botões chegam ao despachante chamando-se `clique`
+    #     e o gesto recusa; com `data-campo` no `<span>` que os envolve, o
+    #     primeiro tique da pintura os troca por um travessão — medido, 4
+    #     botões antes e 0 depois.
+    exigir(corpo.count('data-gesto="mic-modo"') == 2 * len(CONECTADOS),
+           "os modos do microfone perderam o `data-gesto` — chegam como 'clique'")
+    exigir('data-campo="mic-modo"' not in corpo,
+           "o `data-campo` voltou ao container dos modos do microfone: a "
+           "pintura vai apagar os dois botões")
 
     # 3. O "· 100 % · Acordado" saiu do rótulo do alto-falante.
     exigir("Acordado" not in corpo, "o estado do alto-falante voltou ao rótulo")
