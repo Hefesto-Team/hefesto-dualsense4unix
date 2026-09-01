@@ -411,7 +411,7 @@ VAO_DO_GLIFO = 10
 ROTULO_DA_FITA = "Selecionar:"
 
 
-def fita(ativo="todos", inerte=False, titulo=None):
+def fita(ativo="todos", inerte=False, titulo=None, mesa=None):
     """Os chips da fita, um por controle da mesa, gerados.
 
     ANTES ELES ERAM DOIS, DIGITADOS NO `topo.html` — dois `<span>` com o texto e
@@ -421,6 +421,21 @@ def fita(ativo="todos", inerte=False, titulo=None):
 
     `ativo`: "todos" ou o `pref` de um controle. `inerte`: a aba não ajusta por
     controle, e a fita fica esmaecida — é o que o `title` explica.
+
+    `mesa`: OS CONTROLES DE VERDADE, quando quem chama os tem. O padrão `None`
+    usa os `CONECTADOS` do mockup, e é por isso que as dez páginas geradas saem
+    byte a byte iguais ao que ela aprovou — o desenho não mudou.
+
+    ELE PRECISOU EXISTIR, e o defeito estava na tela em 01/09/2026: com UM
+    controle no cabo, o piloto pintava o card certo (`Starlight Blue · USB`) e o
+    topo certo (`1 controle: 1 USB · 0 BT`), mas a fita continuava mostrando
+    `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT` — os dois do mockup. O
+    controle dela aparecia na fita como P2 NO RÁDIO enquanto estava no cabo.
+
+    É a quarta vez que este defeito aparece nesta casa, e sempre com a mesma
+    forma: **uma frase que nomeia um controle que não está na mesa**. As outras
+    três foram o botão de jogador da Iluminação, o primário da Navegação e o
+    censo da Conexões.
     """
     t = titulo or ("Esta aba não usa o controle escolhido aqui — os cards são leitura."
                    if inerte else "O que você mudar nesta aba vai para o controle escolhido aqui.")
@@ -429,7 +444,7 @@ def fita(ativo="todos", inerte=False, titulo=None):
     # oferecer um destino que não existe, e é o oposto do que ela pediu na lista
     # ("ele só fica ativo se surgir controle naquela área").
     chips = [f'<span class="chip{" on" if ativo == "todos" else ""}">Todos</span>']
-    for c in CONECTADOS:
+    for c in (CONECTADOS if mesa is None else mesa):
         on = " on" if ativo == c["pref"] else ""
         chips.append(
             f'<span class="chip plastico{on}" style="--plastico:{cor_da_zona(c["cor"])}"'

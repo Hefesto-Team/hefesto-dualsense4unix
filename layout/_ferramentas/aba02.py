@@ -1645,12 +1645,17 @@ def a_legenda_nao_promete_o_que_a_tela_nao_tem(legenda, miolo):
 # entregar uma fita que não clica, calada. Foi assim que a fita viva morreu sem
 # sintoma em 27/08, e a lição é a mesma.
 # ---------------------------------------------------------------------------
-def fita_clicavel(doc):
+def fita_clicavel(doc, mesa=None):
     # OS RÁDIOS SÃO OS DA MESA — 31/08/2026, quando ela mandou deixar dois
     # controles desconectados. A fita só desenha chip de quem está conectado
     # (`monta.fita()`), e um `id` a mais aqui faz a régua abaixo reprovar com
     # `3 chips para 5 rádios`. Foi ela quem pegou a propagação incompleta.
-    ids = ["c-todos"] + [f'c-{c["pref"]}' for c in CONECTADOS]
+    #
+    # `mesa` É PARA O PILOTO, e o padrão `None` mantém o mockup byte-idêntico.
+    # Trocar `aba02.MESA` de fora NÃO alcança aqui: `CONECTADOS` é derivado de
+    # `MESA` no IMPORT e nunca recalculado — a mesma armadilha que fazia a fita
+    # do produto mostrar dois controles do mockup com UM no cabo (01/09/2026).
+    ids = ["c-todos"] + [f'c-{c["pref"]}' for c in (CONECTADOS if mesa is None else mesa)]
     linhas = doc.split("\n")
     achados = 0
     for k, linha in enumerate(linhas):

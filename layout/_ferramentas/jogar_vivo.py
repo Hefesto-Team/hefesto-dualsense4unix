@@ -168,7 +168,10 @@ def html_da_fita(mesa: list[dict], alvo: str | None) -> str:
     monta.MESA = mesa
     try:
         escolhido = next((c["pref"] for c in mesa if c["uniq"] == alvo), "todos")
-        return monta.fita(ativo=escolhido)
+        # A mesa como ARGUMENTO — `monta.MESA` acima não alcança a fita,
+        # porque `monta.CONECTADOS` é derivado no import. Ver a nota gêmea em
+        # `controles_vivos.html_da_fita`.
+        return monta.fita(ativo=escolhido, mesa=mesa)
     finally:
         monta.MESA = antes
 

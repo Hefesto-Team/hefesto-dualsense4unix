@@ -294,8 +294,17 @@ def html_da_fita(mesa: list[dict]) -> str:
     antes_monta, antes_aba = monta.MESA, aba02.MESA
     monta.MESA, aba02.MESA = mesa, mesa
     try:
-        bruta = monta.fita(ativo=(mesa[0]["pref"] if mesa else "todos"))
-        return aba02.fita_clicavel(bruta)
+        # A MESA VAI COMO ARGUMENTO, e não pelo `monta.MESA` acima. A troca
+        # de `monta.MESA` NÃO alcança a fita: `monta.CONECTADOS` é derivado de
+        # `MESA` no IMPORT (`[c for c in MESA if c.get("conectado", True)]`) e
+        # nunca recalculado, e é sobre ele que `fita()` itera.
+        #
+        # MEDIDO NA TELA em 01/09/2026, com UM controle no cabo: o card dizia
+        # `Starlight Blue · USB` e o topo `1 controle: 1 USB · 0 BT`, enquanto a
+        # fita mostrava `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT` —
+        # o controle dela aparecendo no RÁDIO como P2 enquanto estava no cabo.
+        bruta = monta.fita(ativo=(mesa[0]["pref"] if mesa else "todos"), mesa=mesa)
+        return aba02.fita_clicavel(bruta, mesa=mesa)
     finally:
         monta.MESA, aba02.MESA = antes_monta, antes_aba
 
