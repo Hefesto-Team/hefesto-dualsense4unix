@@ -375,9 +375,9 @@ _PASTA_DA_PONTE = "layout/_ferramentas"
 #: produção — que é exatamente o que este portão tem de saber dizer.
 _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
     (
-        "packaging/hefesto-dev-dualsense4unix.desktop",
+        "packaging/hefesto-dualsense4unix.desktop",
         "Exec=@RAIZ@/interface.sh",
-        "o `.desktop` do app de dev — o `@RAIZ@` é substituído pelo caminho da "
+        "o `.desktop` do app — o `@RAIZ@` é substituído pelo caminho da "
         "árvore por `install-dev.sh`:381. É o ícone que ela clica.",
     ),
     (
@@ -677,6 +677,24 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
 #: que a fecharia. Quem entregar a cura APAGA a entrada, e é essa a única
 #: manutenção.
 _SEM_MAO_HOJE: dict[str, str] = {
+    "HEFESTO_VARIANTE": (
+        "MEDIDO em 01/09/2026, e ela ficou sem mão porque a FEATURE acabou. A "
+        "variante existia para permitir DOIS apps na mesma máquina — o estável "
+        "dela e o de desenvolvimento — e ela a encerrou com todas as letras: "
+        "*'o -dev sai de tudo não quero mais essa confusão'* e *'a versão antiga "
+        "não segue disponível, vai gerar confusão nos agentes'*. O app é UM, e "
+        "`identidade.atual()` resolve para `hefesto-dualsense4unix` com a env "
+        "vazia. A unit ainda escreve `Environment=HEFESTO_VARIANTE=` (vazio), e "
+        "é por isso que a régua não a enxerga como mão: um valor vazio não liga "
+        "coisa nenhuma, e ela está CERTA em dizer isso. "
+        "O QUE A FECHA, e é decisão dela, não trabalho de agente: apagar a "
+        "variante de `utils/identidade.py` — as constantes `DEV`, `VARIANTE_ENV` "
+        "e `VARIANTE_DEV`, mais o `atual()` que as lê — e com ela os caminhos "
+        "por slug que dela dependem. NÃO foi feito aqui porque a variante é a "
+        "porta de saída se um dia voltarem a existir dois apps, e apagá-la no "
+        "mesmo dia em que a segunda instalação morreu seria fechar a porta antes "
+        "de saber se ela faz falta. Enquanto isso, a lacuna é esta linha."
+    ),
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "MEDIDO em 12/08/2026, e este é o achado mais desconfortável da lista, "
         "porque a porta parece existir e não existe: `install.sh` TEM a opção "
