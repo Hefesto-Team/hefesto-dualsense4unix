@@ -69,3 +69,29 @@ def pacote(ctx: Contexto) -> dict:
         "sem_dono": {},
         "cobertura": {"pintados": 7 + len(todos) * 3, "sem_dono": len(SEM_DONO)},
     }
+
+
+# ---------------------------------------------------------------------------
+# OS GESTOS — ver o exemplo comentado em `a04_iluminacao.py`
+# ---------------------------------------------------------------------------
+from . import gesto  # noqa: E402
+
+
+@gesto("10-perfis.html", "ativar")
+def ativar(ctx: Contexto, o: dict, p) -> None:
+    """Ativar o perfil selecionado na tabela. `profile.switch`.
+
+    O NOME VEM DO TEXTO DA LINHA, e não de um `data-` novo: a tabela já mostra o
+    nome, e é o nome que o `profile.switch` quer. Marcar um segundo endereço com
+    o mesmo valor seria a segunda verdade que esta casa persegue.
+    """
+    nome = str(o.get("texto") or "").strip()
+    if not nome:
+        raise ValueError("ativar: o clique não trouxe o nome do perfil")
+    # `profile_switch` é do `ipc_bridge` — a mesma função que a aba Perfis da
+    # GUI estável usa. Nada aqui monta payload.
+    p.profile_switch(nome)
+
+
+PONTE = {"profile_switch"}
+METODOS: set[str] = set()

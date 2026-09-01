@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from . import Contexto, perfil, registrar
 
-#: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # noqa: acentuacao
+#: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # noqa-acento
 #: pintura. **"plugins" continua sem dono NA TELA, e a razão não é minha** — a
 #: `gui/aba_sistema.py:95` já a tinha medido e escrito:
 #:
@@ -70,7 +70,7 @@ def pacote(ctx: Contexto) -> dict:
         # ("Os 4 controles") foi uma delas.
         "bateria-vale-para": f"O {n} controle" if n == 1 else f"Os {n} controles",
         # O resto continua saindo, para quem consome o pacote fora da tela.
-        "versao": _versao(),  # noqa: acentuacao  (a chave é o `data-campo` da página)
+        "versao": _versao(),  # noqa-acento  (a chave é o `data-campo` da página)
         "controles": n,
         "coop": bool(st.get("coop")),
         "steam-input": bool(st.get("steam_input")),
@@ -86,3 +86,45 @@ def pacote(ctx: Contexto) -> dict:
         "sem_dono": {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()},
         "cobertura": {"pintados": 12 + len(jan), "sem_dono": len(SEM_DONO)},
     }
+
+
+# ---------------------------------------------------------------------------
+# OS GESTOS — ver o exemplo comentado em `a04_iluminacao.py`
+# ---------------------------------------------------------------------------
+from . import gesto  # noqa: E402
+
+
+@gesto("09-sistema.html", "retomar")
+def retomar(ctx: Contexto, o: dict, p) -> None:
+    """Sair da pausa. `daemon.resume`.
+
+    ELE TINHA UM CHAMADOR EM TODO O `src/` — o terminal (`cli/app.py:421`), como
+    a `gui/aba_sistema.py:77` já tinha medido: *"a pausa fica gravada em disco e
+    sobrevive a desligar o computador; até hoje só o terminal saía dela."* Este
+    é o segundo, e é uma tela.
+    """
+    # `daemon.resume` não tem função no `ipc_bridge` — é o degrau 3 da ponte, e
+    # passa pelo mesmo `_safe_call`, com o mesmo timeout do resto do produto.
+    p.chamar("daemon.resume")
+
+
+@gesto("09-sistema.html", "atualizar")
+def atualizar(ctx: Contexto, o: dict, p) -> None:
+    """Recarregar a configuração. `daemon.reload`.
+
+    ELE LEVA 9,5 SEGUNDOS, medido no daemon dela em 01/09/2026 — contra 1 ms do
+    `daemon.resume` e 57 ms do `daemon.status`. É a razão de os gestos rodarem em
+    thread: síncrono, este botão congelaria a janela inteira por nove segundos e
+    meio, e quem clicou concluiria que o app travou.
+    """
+    p.chamar("daemon.reload")
+
+
+#: OS SETE QUE NÃO SÃO IPC, e por isso não estão aqui: `reiniciar`, `desligar`,
+#: `autostart`, `refazer-consertos`, `refazer-proton`, `procurar-camadas`,
+#: `restaurar-de-fabrica`. São `systemctl` e ações do app — ligá-los da tela
+#: exige o helper privilegiado. Eles saem no relato do piloto como `sem dono`,
+#: com página e nome: é o inventário honesto do que falta, e é melhor que um
+#: botão que responde calado.
+PONTE = {"chamar"}
+METODOS = {"daemon.resume", "daemon.reload"}

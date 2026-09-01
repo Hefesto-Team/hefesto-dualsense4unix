@@ -492,7 +492,7 @@ def botao_player(c, n):
                 f"que tem o {n} hoje, fica com o {c['jogador']}. Os dois trocam de "
                 f"lugar — ninguém repete número e ninguém fica sem.")
     return (f'<button class="{"on" if eu else ""}" data-campo="player-{n}" '
-            f'data-player="{n}" title="{dica}">{anel}{n}</button>')
+            f'data-gesto="player" data-player="{n}" title="{dica}">{anel}{n}</button>')
 
 
 def coluna_vazia(c):
@@ -563,7 +563,12 @@ def coluna(c):
     # A CURA TRADUZ OS DOIS LADOS, não escolhe um: o botão continua pintado com o
     # tom da casa (é o que ela vê) e a comparação passa a ser entre tons.
     tons = "\n".join(
+        # `data-gesto="cor"` É O ENDEREÇO DO CLIQUE, e `data-hex` é o que ele
+        # leva. Sem os dois o botão era pintura pura: o piloto via um `<button>`
+        # sem `data-*` e não tinha o que mandar ao daemon. Medido em 01/09/2026
+        # — dos 202 botões das dez páginas, 178 estavam assim.
         f'            <button class="tom{" on" if t == tom_da_casa(cor) else ""}" style="background:{t}"'
+        f' data-gesto="cor" data-hex="{t}"'
         f' title="Cor automática do Player {i} — usar aqui pinta a barra do'
         f' {c["nome"]}, e não muda o número dele."></button>'
         for i, t in enumerate(TONS, 1))
@@ -593,8 +598,8 @@ def coluna(c):
             <span class="tira-luz dir" style="background:{tinta};color:{tinta};opacity:{b / 100}"></span>
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
-            <button class="btn vermelho" title="Apaga a barra de luz do {c["nome"]}.">Desligar</button>
+            <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
+            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz do {c["nome"]}.">Desligar</button>
           </div>
         </div>'''
 

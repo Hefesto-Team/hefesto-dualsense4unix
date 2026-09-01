@@ -1631,14 +1631,14 @@
           <div class="ctrl-rot" data-campo="identidade">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
           <div class="cel-cor">
             <span class="guia">
-            <button class="tom on" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom on" style="background:#7EB8D4" data-gesto="cor" data-hex="#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF5555" data-gesto="cor" data-hex="#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
               <input type="color" class="livre" value="#0000ff"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -1649,10 +1649,10 @@
             <span class="num" data-campo="brilho">82%</span>
           </div>
           <div class="players">
-            <button class="on" data-campo="player-1" data-player="1" title="O Cosmic Red É o Player 1 — é o número dele hoje."><i class="dono" style="--plastico:#ae335a"></i>1</button>
-            <button class="" data-campo="player-2" data-player="2" title="Dar o Player 2 ao Cosmic Red: o Starlight Blue (BT), que tem o 2 hoje, fica com o 1. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
-            <button class="" data-campo="player-3" data-player="3" title="Player 3 — livre.">3</button>
-            <button class="" data-campo="player-4" data-player="4" title="Player 4 — livre.">4</button>
+            <button class="on" data-campo="player-1" data-gesto="player" data-player="1" title="O Cosmic Red É o Player 1 — é o número dele hoje."><i class="dono" style="--plastico:#ae335a"></i>1</button>
+            <button class="" data-campo="player-2" data-gesto="player" data-player="2" title="Dar o Player 2 ao Cosmic Red: o Starlight Blue (BT), que tem o 2 hoje, fica com o 1. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
+            <button class="" data-campo="player-3" data-gesto="player" data-player="3" title="Player 3 — livre.">3</button>
+            <button class="" data-campo="player-4" data-gesto="player" data-player="4" title="Player 4 — livre.">4</button>
           </div>
           <div class="aceso" data-campo="aceso" title="O Cosmic Red aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player 1.">
             <span class="tira-luz esq" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82"></span>
@@ -1660,8 +1660,8 @@
             <span class="tira-luz dir" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82"></span>
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
-            <button class="btn vermelho" title="Apaga a barra de luz do Cosmic Red.">Desligar</button>
+            <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
+            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz do Cosmic Red.">Desligar</button>
           </div>
         </div>
         <div class="ctrl" data-controle="p2" data-conectado="sim">
@@ -2063,14 +2063,14 @@
           <div class="ctrl-rot" data-campo="identidade">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</div>
           <div class="cel-cor">
             <span class="guia">
-            <button class="tom" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom on" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#7EB8D4" data-gesto="cor" data-hex="#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom on" style="background:#FF5555" data-gesto="cor" data-hex="#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" data-gesto="cor" data-hex="#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" data-gesto="cor" data-hex="#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
               <input type="color" class="livre" value="#ff0000"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -2081,10 +2081,10 @@
             <span class="num" data-campo="brilho">100%</span>
           </div>
           <div class="players">
-            <button class="" data-campo="player-1" data-player="1" title="Dar o Player 1 ao Starlight Blue: o Cosmic Red (USB), que tem o 1 hoje, fica com o 2. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#ae335a"></i>1</button>
-            <button class="on" data-campo="player-2" data-player="2" title="O Starlight Blue É o Player 2 — é o número dele hoje."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
-            <button class="" data-campo="player-3" data-player="3" title="Player 3 — livre.">3</button>
-            <button class="" data-campo="player-4" data-player="4" title="Player 4 — livre.">4</button>
+            <button class="" data-campo="player-1" data-gesto="player" data-player="1" title="Dar o Player 1 ao Starlight Blue: o Cosmic Red (USB), que tem o 1 hoje, fica com o 2. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#ae335a"></i>1</button>
+            <button class="on" data-campo="player-2" data-gesto="player" data-player="2" title="O Starlight Blue É o Player 2 — é o número dele hoje."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
+            <button class="" data-campo="player-3" data-gesto="player" data-player="3" title="Player 3 — livre.">3</button>
+            <button class="" data-campo="player-4" data-gesto="player" data-player="4" title="Player 4 — livre.">4</button>
           </div>
           <div class="aceso" data-campo="aceso" title="O Starlight Blue aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player 2.">
             <span class="tira-luz esq" style="background:#FF5555;color:#FF5555;opacity:1.0"></span>
@@ -2092,8 +2092,8 @@
             <span class="tira-luz dir" style="background:#FF5555;color:#FF5555;opacity:1.0"></span>
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
-            <button class="btn vermelho" title="Apaga a barra de luz do Starlight Blue.">Desligar</button>
+            <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
+            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz do Starlight Blue.">Desligar</button>
           </div>
         </div>
         <div class="ctrl vazia" data-conectado="nao"

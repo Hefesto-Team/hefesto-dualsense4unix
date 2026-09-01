@@ -100,7 +100,7 @@ def test_o_instrumento_acha_os_tres_vocabularios(casamento):
     assert len(campos5) >= 10, "a Vibração endereça por `data-papel`"
 
 
-@pytest.mark.parametrize("pagina", sorted(PISO))  # noqa: acentuacao  (nome do parâmetro)
+@pytest.mark.parametrize("pagina", sorted(PISO))  # noqa-acento  (nome do parâmetro)
 def test_a_aba_casa_pelo_menos_o_piso(casamento, pagina):
     """Zero é ERRO, e uma queda também.
 

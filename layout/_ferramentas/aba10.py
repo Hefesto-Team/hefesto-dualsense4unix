@@ -169,7 +169,7 @@ CSS = CSS_GLIFO + """
   .tab tbody tr:hover:not(.ativo) td{background:var(--sel-bg)}
   /* `Pri.` VIROU `Priorização` — 31/08/2026, pedido dela. Os 46px do valor
      antigo JÁ NÃO ERAM VERDADE: `table-layout` é `auto`, então `width` é
-     sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa  # noqa: acentuacao
+     sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa  # noqa-acento
      a ser o medido; escrever 46 embaixo de uma coluna de 86 é deixar no CSS uma
      afirmação que a tela desmente. */
   .tab .pri{font-family:'JetBrains Mono',monospace;width:86px;text-align:right}
