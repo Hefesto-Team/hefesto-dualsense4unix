@@ -159,9 +159,74 @@ BOOTSTRAP = r"""
     }
     return n;
   };
+  // O OUVINTE DE CLIQUE, e ele é UM SÓ para a página inteira. Um
+  // `addEventListener` por botão seria N ouvintes a religar a cada repintura —
+  // e um botão que a pintura substitua perde o seu, calado. Delegar no
+  // documento sobrevive a qualquer troca de HTML, que é o que a fita faz a
+  // cada mudança de mesa.
+  if(!window.__hef.ouvindo){
+    window.__hef.ouvindo = true;
+    document.addEventListener('click', function(ev){
+      // Os quatro atributos que marcam algo CLICÁVEL nas dez páginas. Eles já
+      // existiam — cada piloto de aba usava o seu.
+      const alvo = ev.target.closest(
+        '[data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player]');
+      if(!alvo) return;
+      const d = alvo.dataset;
+      manda({
+        gesto: d.gesto || d.hefGesto || d.papel || 'clique',
+        modo: d.modo || '', forca: d.forca || '', player: d.player || '',
+        lado: d.lado || '', campo: d.campo || '', hef: d.hef || '',
+        texto: (alvo.textContent || '').trim().slice(0, 60),
+      });
+    }, true);
+  }
+  function manda(o){
+    o.pagina = location.pathname.split('/').pop();
+    window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify(o));
+  }
   return 'ok';
 })();
 """
+
+
+def _trocar_perfil(piloto, o: dict) -> None:
+    """Ativar um perfil da tabela da aba Perfis. `profile.switch` é o dono."""
+    nome = str(o.get("texto") or "").strip()
+    if not nome:
+        raise ValueError("o clique não trouxe o nome do perfil")
+    piloto._ipc("profile.switch", name=nome)
+
+
+def _pausar(piloto, o: dict) -> None:
+    """Parar ou retomar o serviço. `daemon.pause` / `daemon.resume`.
+
+    O `daemon.resume` tinha UM chamador em todo o `src/` — o terminal
+    (`cli/app.py:421`), como a `gui/aba_sistema.py:77` já media: *"a pausa fica
+    gravada em disco e sobrevive a desligar o computador; até hoje só o terminal
+    saía dela."* Este é o segundo, e é uma tela.
+    """
+    texto = str(o.get("texto") or "").lower()
+    piloto._ipc("daemon.resume" if "retomar" in texto else "daemon.pause")
+
+
+#: OS GESTOS QUE TÊM DONO NO DAEMON, e a chave é `(página, gesto)`. `"*"` vale
+#: em qualquer aba.
+#:
+#: A LISTA É CURTA DE PROPÓSITO. Um botão que responde calado quando não há quem
+#: atenda é pior que um botão que recusa dizendo por quê: quem clicou conclui
+#: que funcionou. Os que não estão aqui saem no relato como `sem dono`, com o
+#: nome e a página — que é o inventário do que falta ligar.
+GESTOS_COM_DONO = {
+    # OS TRÊS QUE O DAEMON ATENDE POR IPC, medidos no `ipc_server.py`. Os
+    # outros sete gestos da aba Sistema (`reiniciar`, `desligar`, `autostart`,
+    # `refazer-consertos`…) NÃO são IPC — são `systemctl` e ações do app, e
+    # ligá-los daqui exigiria o helper privilegiado. Eles saem no relato como
+    # `sem dono`, que é o inventário honesto do que falta.
+    ("09-sistema.html", "retomar"): _pausar,
+    ("09-sistema.html", "atualizar"): lambda pi, o: pi._ipc("daemon.reload"),
+    ("10-perfis.html", "ativar"): _trocar_perfil,
+}
 
 
 def _fita(mesa: list[dict]) -> str:
@@ -218,6 +283,12 @@ class Piloto:
         self.pinturas: dict[str, list[int]] = {}
         self.visitadas: list[str] = []
         self.custos: list[float] = []
+        #: O que ESTE processo mandou ao daemon, e o que recusou por falta de
+        #: dono. Os dois contados: sem o segundo, "nada aconteceu" e "não havia
+        #: quem atendesse" ficariam indistinguíveis.
+        self.gestos: list[dict] = []
+        self.aplicados: list[str] = []
+        self.recusados: list[str] = []
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
         #: Os `uniq` já perguntados ao leitor de cor. Sem esta trava, cada tique
         #: abriria uma thread nova para o mesmo controle — 2 por segundo.
@@ -227,6 +298,7 @@ class Piloto:
             arquivo=onde.pagina(PRIMEIRA, publicado=True),
             titulo_esperado=TITULO_DE_QUALQUER_ABA,
             ao_carregar=self._instalar,
+            ao_receber=self._gesto,
             ao_sair_da_aba=self._navegou,
             oculta=args.oculta,
             subtitulo="as dez abas, vivas",
@@ -240,6 +312,77 @@ class Piloto:
         # piloto ficaria pintando a página errada. É a mesma nota que o
         # `controles_vivos` carrega, e a razão é a mesma.
         self.view.connect("load-changed", self._carregou)
+
+    # -- os gestos ---------------------------------------------------------
+    def _gesto(self, o: dict) -> None:
+        """tela → Python, já em JSON. Quem recusa o que não é objeto é a ponte.
+
+        O QUE ELE FAZ E O QUE NÃO FAZ, e a diferença é a regra desta casa: ele
+        despacha o que tem DONO no daemon e RECUSA o resto **com o motivo na
+        tela**. Um botão que responde calado quando não há quem atenda é a
+        `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura — quem clica conclui que
+        funcionou.
+        """
+        self.gestos.append(o)
+        nome = str(o.get("gesto") or "")
+        pagina = str(o.get("pagina") or self.pagina)
+        acao = GESTOS_COM_DONO.get((pagina, nome)) or GESTOS_COM_DONO.get(("*", nome))
+        if acao is None:
+            self.recusados.append(f"{pagina}:{nome}")
+            print(f"[gesto sem dono] {pagina} · {nome} · {o.get('texto', '')!r}")
+            return
+        # EM THREAD, e não no laço do GTK. MEDIDO em 01/09/2026, com o daemon
+        # dela: `daemon.reload` leva **9,5 segundos** — `daemon.resume` leva 1
+        # ms e `daemon.status` 57. Um gesto síncrono congelaria a janela inteira
+        # por nove segundos e meio, sem nada na tela dizendo por quê, e quem
+        # clicou concluiria que o app travou.
+        def trabalhar() -> None:
+            try:
+                acao(self, o)
+            except Exception as erro:
+                # O `erro` é AMARRADO no argumento do lambda, e não capturado
+                # do escopo: o `except ... as` do Python apaga o nome ao sair do
+                # bloco, e o lambda roda DEPOIS, no laço do GTK. Sem a amarra é
+                # `NameError` na hora de relatar a falha — o erro comendo o
+                # relato do erro.
+                GLib.idle_add(lambda x=erro: (print(f"[gesto falhou] {pagina} · {nome}: {x}",
+                                                    file=sys.stderr), False)[1])
+                return
+            GLib.idle_add(lambda: (self._deu_certo(pagina, nome), False)[1])
+
+        threading.Thread(target=trabalhar, daemon=True).start()
+
+    def _deu_certo(self, pagina: str, nome: str) -> None:
+        self.aplicados.append(f"{pagina}:{nome}")
+        print(f"[gesto] {pagina} · {nome} → aplicado")
+
+    def _ipc(self, metodo: str, **params) -> dict:
+        """Uma chamada ao daemon, por escrito. É o ÚNICO caminho de escrita.
+
+        `mesa_viva` é de LEITURA e diz isso no cabeçalho; escrever por lá
+        abriria um segundo dono do socket. Aqui a escrita fica visível e
+        contável — `self.aplicados` é o que o relato mostra.
+        """
+        import json
+        import socket
+
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        # QUINZE SEGUNDOS, e o número é medido: `daemon.reload` respondeu em
+        # 9,5 s no daemon dela. Com os três de antes, o "Atualizar" da aba
+        # Sistema dava `timed out` e o gesto contava como FALHA — quando o
+        # daemon estava fazendo o trabalho pedido.
+        s.settimeout(15)
+        s.connect(mesa_viva.socket_do_daemon())
+        s.sendall((json.dumps({"jsonrpc": "2.0", "id": 1,
+                               "method": metodo, "params": params}) + "\n").encode())
+        buf = b""
+        while not buf.endswith(b"\n"):
+            pedaco = s.recv(65536)
+            if not pedaco:
+                break
+            buf += pedaco
+        s.close()
+        return json.loads(buf.decode() or "{}")
 
     # -- navegação ---------------------------------------------------------
     def _navegou(self, titulo: str) -> None:
@@ -391,6 +534,26 @@ class Piloto:
             total = int(self.args.segundos * 1000)
         GLib.timeout_add(total, lambda: (self._relatar(), Gtk.main_quit(), False)[2])
 
+    def _provar_cliques(self) -> None:
+        """Cliques SINTÉTICOS nos gestos INÓCUOS, para provar o caminho.
+
+        `el.click()` percorre o MESMO caminho de eventos do clique do rato — o
+        ouvinte delegado do bootstrap é o que responde. Clicar por coordenada é
+        a armadilha que esta casa já pagou duas vezes, e a janela é Offscreen.
+
+        SÓ OS INÓCUOS, e a lista é curta de propósito: `atualizar` é
+        `daemon.reload` e `retomar` é `daemon.resume` num daemon que não está
+        pausado. `desligar`, `restaurar-de-fabrica` e `refazer-proton` NÃO
+        entram — uma régua não mexe na máquina dela para provar que sabe clicar.
+        """
+        for i, gesto in enumerate(("atualizar", "retomar")):
+            GLib.timeout_add(600 + i * 700, lambda g=gesto: (self._js(
+                f"(document.querySelector('[data-gesto=\"{g}\"]')||{{click(){{}}}}).click()"
+            ), False)[1])
+
+    def _js(self, script: str) -> None:
+        self.ponte.rodar(script)
+
     def _ir(self, pagina: str) -> None:
         self.view.load_uri(onde.pagina(pagina, publicado=True).as_uri())
 
@@ -402,8 +565,10 @@ class Piloto:
             return
         self.relatou = True
         if self.args.foto:
+            # `fotografar()` JÁ IMPRIME o caminho — a linha que estava aqui era
+            # a segunda, e foi ela que fez o log de 01/09 mostrar dois "foto:"
+            # e parecer que o relato rodava duas vezes. Não rodava.
             self.tela.fotografar(self.args.foto)
-            print(f"foto: {self.args.foto}")
         print(f"\nvoltas: {self.voltas} · abas visitadas: {len(self.visitadas)}")
         print(f"{'aba':22s} {'pinturas':>8s} {'valores':>8s}")
         mudas = []
@@ -413,6 +578,11 @@ class Piloto:
             print(f"{pagina:22s} {len(conta):8d} {pico:8d}")
             if conta and pico == 0:
                 mudas.append(pagina)
+        if self.gestos:
+            print(f"gestos: {len(self.gestos)} · aplicados: {len(self.aplicados)} · "
+                  f"sem dono: {len(set(self.recusados))}")
+            for r in sorted(set(self.recusados)):
+                print(f"   sem dono: {r}")
         if self.custos:
             ordenado = sorted(self.custos)
             print(f"custo do tique: mediana {ordenado[len(ordenado)//2]:.2f} ms · "
@@ -444,11 +614,15 @@ def main() -> None:
                    help="ms em cada aba durante o passeio")
     p.add_argument("--foto", default="")
     p.add_argument("--abre", default="", help="abrir direto numa aba")
+    p.add_argument("--prova-clique", action="store_true",
+                   help="clica os gestos inócuos e prova que chegam ao daemon")
     p.add_argument("--sem-cor", action="store_true",
                    help="MORDIDA: sem o leitor de cor do plástico")
     args = p.parse_args()
 
     piloto = Piloto(args)
+    if args.prova_clique:
+        GLib.timeout_add(1500, lambda: (piloto._provar_cliques(), False)[1])
     if args.abre:
         GLib.timeout_add(400, lambda: (piloto._ir(args.abre), False)[1])
     Gtk.main()
