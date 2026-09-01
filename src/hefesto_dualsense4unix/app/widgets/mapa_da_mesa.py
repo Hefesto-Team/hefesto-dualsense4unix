@@ -102,6 +102,20 @@ ROTULO_VAZIA = "vazia"
 ROTULO_POR_EXTENSAO = "por extensão"
 NOME_DA_FACE_EM_BRANCO = "Nome da face"
 
+#: AS TRÊS DICAS DOS QUADRADOS, e elas ganharam nome em 01/09/2026. Eram
+#: literais dentro do corpo da janela GTK, e a aba nova as havia COPIADO — o
+#: gerador do mockup guardava uma terceira grafia, e um portão dele
+#: (`_confere_no_produto`) existia só para conferir que as duas ainda batiam.
+#: Um portão que compara duas cópias é a confissão de que há duas; agora há uma,
+#: e os dois desenhos a leem.
+DICA_JA_COLOCADO = "Você já colocou este aparelho na entrada {n}."
+DICA_ENUMERA = "O sistema enumera este aparelho como {c}."
+DICA_EXTENSAO = (
+    "Foi você quem disse que há uma extensão aqui. Nenhuma "
+    "leitura do sistema distingue isto de um aparelho na "
+    "própria entrada do hub."
+)
+
 #: O rádio que não pendura em USB nenhum — o embutido do notebook. Ele é um
 #: quadrado FIXO, fora das faces e nunca editável. Sem ele o dono do notebook
 #: abre o mapa, não acha o Bluetooth dele em entrada nenhuma e conclui que o
@@ -614,9 +628,7 @@ if _GTK_DISPONIVEL:
                 onde = self.logica.entrada_do_caminho(aparelho.nome_do_kernel)
                 if onde:
                     botao.set_tooltip_text(
-                        _("Você já colocou este aparelho na entrada {n}.").format(
-                            n=onde
-                        )
+                        _(DICA_JA_COLOCADO).format(n=onde)
                     )
                 botao.connect("clicked", self._ao_escolher, aparelho.nome_do_kernel)
                 self._caixa_aparelhos.pack_start(botao, False, False, 0)
@@ -689,15 +701,11 @@ if _GTK_DISPONIVEL:
             dizeres: list[str] = []
             if extensao:
                 dizeres.append(
-                    _(
-                        "Foi você quem disse que há uma extensão aqui. Nenhuma "
-                        "leitura do sistema distingue isto de um aparelho na "
-                        "própria entrada do hub."
-                    )
+                    _(DICA_EXTENSAO)
                 )
             elif caminho:
                 dizeres.append(
-                    _("O sistema enumera este aparelho como {c}.").format(c=caminho)
+                    _(DICA_ENUMERA).format(c=caminho)
                 )
             if veredito is not None and veredito.porque:
                 dizeres.append(veredito.porque)
