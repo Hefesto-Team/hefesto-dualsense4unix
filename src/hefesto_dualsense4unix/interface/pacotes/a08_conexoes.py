@@ -494,10 +494,18 @@ from . import gesto  # noqa: E402
 #: lista não é lápide: o piloto imprime `[gesto sem dono] 08-conexoes.html · X`
 #: a cada clique nesses botões, e é assim que o que falta aparece na tela em vez
 #: de sumir. Quem ligar um deles tira a linha daqui.
+# `luz-nao-acende` SAIU DAQUI em 01/09/2026, e o que o segurava era uma
+# conclusão, não um fato. A entrada dizia: *"`Disconnect` do BlueZ pelo D-Bus —
+# `integrations/gesto_de_reconexao.py`, que roda `busctl` e não passa pelo
+# daemon. Não há método IPC para isto."* As duas primeiras frases estão certas;
+# a terceira é verdadeira e IRRELEVANTE — um gesto não precisa de IPC, precisa
+# de quem faça. O `gesto_de_reconexao` faz, é puro, mascara o endereço e devolve
+# a frase de tela pronta. Foi escrito para esta cura e nunca tinha sido chamado.
+#
+# É a mesma forma do `ver-detalhes` da aba Sistema, curado hoje de manhã: a nota
+# dizia que ligá-lo *"exige o helper privilegiado ou um método de log que o
+# daemon não tem"*, e bastava `journalctl --user`.
 SEM_GESTO: dict[str, str] = {
-    "luz-nao-acende":
-        "`Disconnect` do BlueZ pelo D-Bus — `integrations/gesto_de_reconexao.py`, "
-        "que roda `busctl` e não passa pelo daemon. Não há método IPC para isto.",
     "mic-escopo":
         "CONTRADIÇÃO, e o ouvinte de `change` de 01/09 NÃO a desfaz: é "
         "`mic_button_toggles_system`, e o produto guarda UM por máquina "
@@ -977,6 +985,55 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
 #: inventado aparece aqui, e não na mão de quem clica.
+@gesto("08-conexoes.html", "luz-nao-acende")
+def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Derruba este controle do rádio para ela apertar PS e a luz voltar.
+
+    O QUE ELE CURA, e o desenho já o dizia: no Bluetooth a barra de luz pode
+    parar de obedecer, e o caminho de volta é a RECONEXÃO — cair do rádio e
+    entrar de novo pelo botão PS.
+
+    NÃO É IPC, E NÃO PRECISA SER. O `Disconnect` é do BlueZ, pelo D-Bus, e o
+    produto já tem quem o peça: `integrations/gesto_de_reconexao.desconectar`,
+    que é puro (o `busctl` entra por argumento), mascara o endereço em todo log
+    e devolve a frase de tela pronta em português. Foi escrito para esta cura e
+    nunca tinha sido chamado por tela nenhuma.
+
+    A RECUSA DO CABO É DO DESENHO, não minha: o `title` do botão apagado diz
+    *"Este controle está no cabo, onde a barra de luz não depende de reconexão
+    nenhuma"*. Derrubar um controle que está no cabo não o derruba — e um botão
+    que aceita o clique e não faz nada é o que responde calado.
+
+    OS QUATRO DESFECHOS VIRAM DOIS, e a linha que os separa é do módulo:
+    `Resultado.caiu` conta `desconectou` E `ja_estava_fora` como sucesso, porque
+    *"para quem espera o botão PS, os dois estados pedem exatamente o mesmo
+    gesto"*. `nao_deu` e `sem_alvo` são "não sei" e "não achei", e os dois
+    LEVANTAM com a frase que o módulo escreveu.
+
+    O ENDEREÇO NUNCA APARECE INTEIRO. O `Resultado.endereco` já vem mascarado, e
+    é ele que entra na frase — nesta casa há dois portões que reprovam um MAC de
+    doze hexa em arquivo versionado, e uma exceção de tela vira log.
+    """
+    from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
+
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError(
+            "o clique não disse em qual controle — a luz é de um aparelho, não "
+            "da mesa.")
+    dele = ctx.por_uniq(uniq)
+    transporte = str(dele.get("transport") or "").lower()
+    if transporte and transporte != "bt":
+        raise RuntimeError(
+            "este controle está no cabo, e no cabo a barra de luz não depende "
+            "de reconexão nenhuma. A cura é do rádio: derrubar a conexão para "
+            "você apertar PS.")
+
+    resultado = radio.desconectar(uniq)
+    if not resultado.caiu:
+        raise RuntimeError(resultado.porque)
+
+
 PONTE = {"chamar", "machine_declare"}
 METODOS = {"controller.target.set"}
 
@@ -985,7 +1042,7 @@ METODOS = {"controller.target.set"}
 #: teste, para que ligar uma aba não exija editar um arquivo que oito pessoas
 #: editariam ao mesmo tempo.
 PAGINA = "08-conexoes.html"
-PISO_DA_ABA = 8
+PISO_DA_ABA = 9
 PROVAS = [
     # O `index` da prova é 0 porque o controle de mentira é o único da lista —
     # e o `_indice` cai na posição quando o daemon não publicou `index`.
