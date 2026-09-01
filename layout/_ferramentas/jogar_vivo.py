@@ -645,7 +645,17 @@ class Janela:
         conferindo cada endereço daqui contra o `layout/01-jogar.html`.
         """
         roteiro = [
-            (1200, "document.querySelector('[data-degrau=\"pointclick\"]').click()"),
+            # O `pointclick` SAIU DO DESENHO — decisão dela em 31/08/2026, quando
+            # o Point And Click deixou de ser um degrau da escada de conexão. O
+            # roteiro ficou com a referência velha, e `.click()` sobre `null`
+            # levanta `TypeError` dentro do WebKit: a régua morreria no meio,
+            # CALADA, e as três provas seguintes nunca rodariam.
+            #
+            # A régua que pegou isto está na suíte
+            # (`test_o_botao_de_ligar_funciona_e_se_lembra`), e ela confere cada
+            # endereço deste roteiro contra o `layout/01-jogar.html`. É o tipo de
+            # defeito que só a suíte inteira acha: os portões rápidos não a rodam.
+            (1200, "document.querySelector('[data-degrau=\"dualsense\"]').click()"),
             (1500, "document.querySelector('[data-modo=\"native\"]').click()"),
             (1800, "document.querySelector('[data-degrau=\"steam\"]').click()"),
             # O ÚLTIMO CARTÃO, E NÃO O `[1]`. O mockup tem quatro cartões, mas a

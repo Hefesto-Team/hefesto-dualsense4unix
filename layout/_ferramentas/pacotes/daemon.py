@@ -8,7 +8,7 @@ inventaria um nome — que é o defeito mais caro desta casa: uma tela que prome
 um ajuste que o produto não faz, e que ninguém descobre porque a ausência de
 notícia se lê como sucesso.
 
-A LISTA SAI DO CÓDIGO. `metodos()` lê o dicionário de rotas do `ipc_server.py` e  # (noqa-acento)
+A LISTA SAI DO CÓDIGO. `metodos()` lê o dicionário de rotas do `ipc_server.py` e  # (noqa-acento) id
 devolve o que está lá HOJE. Um método que sair do daemon some daqui no mesmo
 instante, e o `confere()` reprova quem o citava — em vez de a chamada falhar em
 silêncio na mão de quem clicou.

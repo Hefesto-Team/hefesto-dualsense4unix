@@ -298,7 +298,7 @@ def _prova(nome: str, clique: dict, chama: list) -> dict:
     # por isso a linha leva o marcador de isenção, e uma vez só. (Escrever a
     # palavra AQUI, no comentário, também acusava: a régua de acentuação não
     # distingue prosa de identificador nem quando o identificador é o assunto.)
-    return {"pagina": PAGINA, "gesto": nome,  # (noqa-acento)
+    return {"pagina": PAGINA, "gesto": nome,  # (noqa-acento) chave do contrato
             "clique": clique, "chama": chama}
 
 

@@ -349,16 +349,16 @@ PAGINA = "05-vibracao.html"
 PISO_DA_ABA = 3
 PROVAS = [
     # A política NÃO leva alvo: é da mesa, e mirar antes só mentiria melhor.
-    {"pagina": PAGINA, "gesto": "forca", "clique": {"forca": "max"},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "forca", "clique": {"forca": "max"},  # (noqa-acento) id
      "chama": [("rumble_policy_set_checked", ["max"], {"timeout": 1.0})]},
     # QUATRO chamadas, e a ordem é o gesto inteiro: mirar, vibrar, calar,
     # devolver. Invertidas, o passthrough soltaria antes de o silêncio ir.
-    {"pagina": PAGINA, "gesto": "testar", "clique": {},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "testar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["controller.target.set"], {"index": 0}),
                ("rumble_set_checked", [160, 220], {}),
                ("rumble_stop", [], {}),
                ("rumble_passthrough", [True], {})]},
-    {"pagina": PAGINA, "gesto": "parar", "clique": {},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "parar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["controller.target.set"], {"index": 0}),
                ("rumble_stop_checked", [], {}),
                ("rumble_passthrough", [True], {})]},

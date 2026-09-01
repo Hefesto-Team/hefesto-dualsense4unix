@@ -57,6 +57,10 @@ PERFIL_CURVA = {
     },
 }
 
+#: A mesa, na língua do DESENHO — `pref`, `jogador`, `nome`, `via`.
+MESA = [{"pref": "p1", "jogador": 1, "uniq": "aa:bb:cc:00:00:01", "nome": "Régua",
+         "via": "USB", "cor": "starlight-blue", "mascara": "DualSense", "alvo": True}]
+
 #: Um controle com a forma do que o daemon devolve. MAC da faixa sintética da
 #: casa — há dois portões de anonimato nesta árvore e eles não perdoam.
 FALSO = {
@@ -94,8 +98,12 @@ def ctx_com(com_perfis):
     from pacotes import Contexto
 
     def montar(nome: str) -> Contexto:
+        # A MESA TEM OUTRA FORMA QUE O CONTROLE: `pref`/`jogador`/`nome`/`via`
+        # (a língua do desenho) contra `player`/`transport` (a do daemon).
+        # Passar o controle como mesa dá `KeyError: 'jogador'` dentro da camada
+        # do produto, e só na suíte completa.
         return Contexto(state={"active_profile": nome, "rumble_policy": "balanceado"},
-                        mesa=[FALSO], conectados=[FALSO], estados={})
+                        mesa=MESA, conectados=[FALSO], estados={})
     return montar
 
 

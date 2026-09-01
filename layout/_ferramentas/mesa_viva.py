@@ -342,7 +342,12 @@ def texto_da_contagem(mesa: list[dict[str, Any]]) -> tuple[str, str]:
     porque escrever a frase inteira num `textContent` apagaria o `<b>`.
     """
     n = len(mesa)
-    usb = sum(1 for c in mesa if c["via"] == "USB")
+    # `.get` E NÃO `[...]`: uma mesa pode chegar sem a chave — a de uma régua,
+    # ou a de um controle que o daemon publicou antes de resolver o transporte.
+    # Derrubar a contagem por isso derruba a aba INTEIRA, e o que se perde é uma
+    # palavra. Medido em 01/09/2026: `KeyError: 'via'` na suíte completa, vindo
+    # do pacote da Vibração, que passou a chamar esta função.
+    usb = sum(1 for c in mesa if c.get("via") == "USB")
     bt = n - usb
     palavra = "controle" if n == 1 else "controles"
     return (f"● {n} {palavra}: ", f"{usb} USB · {bt} BT")

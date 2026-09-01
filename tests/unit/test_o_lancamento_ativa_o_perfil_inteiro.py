@@ -351,7 +351,7 @@ def test_o_relatorio_da_ativacao_sobe_no_retorno(
     _daemon, resultado = _armar(env_dir, monkeypatch, na_allowlist=na_allowlist)
 
     assert resultado is not None
-    entrou = resultado.get("ativacao")  # chave de payload (noqa-acento)
+    entrou = resultado.get("ativacao")  # chave de payload (noqa-acento) identificador
     assert isinstance(entrou, dict) and entrou, (
         "o retorno do arming não carrega o que a ativação fez. Quem pergunta "
         "'o perfil entrou?' continua tendo de adivinhar pelo aparelho"
@@ -374,7 +374,7 @@ def test_ativacao_que_levanta_nao_impede_o_arming_do_modo(
 
     assert resultado is not None and resultado["armado"] is True
     assert len(daemon.aplicados) == 1, "o modo deixou de ser armado por causa da falha"
-    assert resultado["ativacao"] == {}, (  # chave de payload (noqa-acento)
+    assert resultado["ativacao"] == {}, (  # chave de payload (noqa-acento) identificador
         "relatório vazio é o que uma exceção deixa; um relatório cheio de "
         "`ignorado_*` conta outra história, e as duas precisam ser distinguíveis"
     )

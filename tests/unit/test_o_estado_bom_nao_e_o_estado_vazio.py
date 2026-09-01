@@ -162,4 +162,4 @@ def test_o_estado_de_cada_cabecalho_e_o_vocabulario_do_exame() -> None:
     """
     for campos in AS_QUATRO.values():
         topo = ordens.cabecalho(**campos)  # type: ignore[arg-type]
-        assert topo.estado in {"certo", "atencao", "nao_sei"}  # (noqa-acento)
+        assert topo.estado in {"certo", "atencao", "nao_sei"}  # (noqa-acento) estado do daemon

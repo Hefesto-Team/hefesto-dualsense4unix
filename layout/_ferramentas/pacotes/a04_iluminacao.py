@@ -258,14 +258,14 @@ METODOS = {"lightbar.reset"}
 PAGINA = "04-iluminacao.html"
 PISO_DA_ABA = 4
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
      "chama": [("led_set", [(255, 128, 0)], {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "apagar", "clique": {},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "apagar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("led_set", [(0, 0, 0)], {"uniq": "aa:bb:cc:00:00:01"})]},
     # DUAS chamadas, e a ordem importa: largar o claim e SÓ ENTÃO pintar.
-    {"pagina": PAGINA, "gesto": "auto", "clique": {},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "auto", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["lightbar.reset"], {"uniq": "aa:bb:cc:00:00:01"}),
                ("led_set", [(0, 0, 255)], {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},  # (noqa-acento) id
      "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {})]},
 ]

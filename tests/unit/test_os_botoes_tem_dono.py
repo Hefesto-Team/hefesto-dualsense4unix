@@ -188,7 +188,7 @@ def test_o_gesto_chama_a_funcao_certa(pac, ctx, pacote, prova):
 
     A forma de uma prova:
 
-        {"pagina": "04-iluminacao.html", "gesto": "cor",  # (noqa-acento)
+        {"pagina": "04-iluminacao.html", "gesto": "cor",  # (noqa-acento) chave do contrato
          "clique": {"hex": "#FF8000"},
          "chama": [("led_set", ((255, 128, 0),), {"uniq": UNIQ})]}
 
@@ -196,14 +196,14 @@ def test_o_gesto_chama_a_funcao_certa(pac, ctx, pacote, prova):
     "Automático" larga o claim e então pinta a cor padrão, e invertidas o reset
     apagaria a cor que acabou de ir.
     """
-    fn = pac.gesto_da_pagina(prova["pagina"], prova["gesto"])  # (noqa-acento)
-    assert fn is not None, f"{prova['pagina']}:{prova['gesto']} não tem dono"  # (noqa-acento)
+    fn = pac.gesto_da_pagina(prova["pagina"], prova["gesto"])  # (noqa-acento) chave do contrato
+    assert fn is not None, f"{prova['pagina']}:{prova['gesto']} não tem dono"  # (noqa-acento) id
 
     p = PonteDeMentira()
     fn(ctx, _clique(**prova.get("clique", {})), p)
 
     assert p.chamadas, (
-        f"{prova['pagina']}:{prova['gesto']} não chamou NADA. É o defeito que "  # (noqa-acento)
+        f"{prova['pagina']}:{prova['gesto']} não chamou NADA. É o defeito que "  # (noqa-acento) id
         f"esta régua existe para pegar: o gesto registrado que não faz nada "
         f"passa por qualquer teste de registro, e na tela o clique some sem "
         f"uma linha de erro.")
@@ -211,7 +211,7 @@ def test_o_gesto_chama_a_funcao_certa(pac, ctx, pacote, prova):
     esperado = prova["chama"]
     nomes = [c[0] for c in p.chamadas]
     assert nomes == [e[0] for e in esperado], (
-        f"{prova['pagina']}:{prova['gesto']} chamou {nomes}, esperava "  # (noqa-acento)
+        f"{prova['pagina']}:{prova['gesto']} chamou {nomes}, esperava "  # (noqa-acento) id
         f"{[e[0] for e in esperado]}. A ORDEM importa.")
     for (chamou, a, kw), (_, args, kwargs) in zip(p.chamadas, esperado, strict=True):
         assert a == tuple(args), (

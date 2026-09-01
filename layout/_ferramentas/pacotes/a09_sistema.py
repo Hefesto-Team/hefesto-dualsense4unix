@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from . import Contexto, perfil, registrar
 
-#: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # (noqa-acento)
+#: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # (noqa-acento) id
 #: pintura. **"plugins" continua sem dono NA TELA, e a razão não é minha** — a
 #: `gui/aba_sistema.py:95` já a tinha medido e escrito:
 #:
@@ -41,51 +41,71 @@ def _versao() -> str:
         return ""
 
 
+def _leitura(ctx: Contexto):
+    """O `Leitura` que a camada do produto espera.
+
+    Cada campo dele nomeia quem o produz, e o docstring de lá lista os seis. O
+    que esta função faz é buscá-los; nenhum é calculado aqui.
+    """
+    import subprocess
+
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui import aba_sistema as _tela
+
+    try:
+        auto = subprocess.run(
+            ["systemctl", "--user", "is-enabled", "hefesto-dev-dualsense4unix.service"],
+            capture_output=True, text=True, timeout=3).stdout.strip()
+    except Exception:
+        auto = None
+    # `online_systemd` porque o daemon respondeu: se `ctx.state` tem chave, ele
+    # está no ar. O `daemon_actions._daemon_status()` distingue avulso de unit,
+    # e essa distinção é da janela antiga — aqui o que importa é responder.
+    return _tela.Leitura(status="online_systemd" if ctx.state else "offline",
+                         autostart=auto, state=ctx.state or None)
+
+
 @registrar("09-sistema.html")
 def pacote(ctx: Contexto) -> dict:
-    """As linhas de estado da aba Sistema, com os nomes que a página tem.
+    """DELEGA para `gui/aba_sistema.pacote` — a camada do PRODUTO.
 
-    CADA CHAVE É UM `data-campo` do `09-sistema.html`, e eles saem do mesmo
-    `ident` que a linha já usava no `data-id`. Até 01/09/2026 esta aba emitia
-    oito valores e a página não tinha um só lugar onde pô-los: a `est()` marcava
-    a LINHA e não o VALOR, e a pintura escrevia zero sem uma linha de erro.
+    ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA: dezoito nomes públicos em
+    `gui/aba_sistema.py`, e o `casa-sabe` os listava como promessa sem caminho.
+    E ela foi escrita PARA ESTA PÁGINA — as chaves que devolve são os
+    `data-campo` daqui: `hefesto-estado`, `hefesto-pausa`,
+    `hefesto-troca-de-perfil`, `hefesto-ambiente`.
+
+    E SABE MAIS QUE O QUE EU TINHA ESCRITO: cada valor vem com `txt`, a classe
+    do selo (`cls`), o glifo (`g`) e a dica. Meu pacote só tinha o texto — e as
+    frases dele eram minhas, enquanto estas foram escritas com ela.
     """
-    st = ctx.state
-    jan = {k[len("window_detect_"):]: v for k, v in st.items()
-           if k.startswith("window_detect_")}
-    n = len(ctx.conectados)
-    return {
-        # AS LINHAS DE ESTADO, na língua da tela. A regra da maiúscula é a que
-        # a `aba09.est` documenta: valor de campo é uma RESPOSTA, e começa
-        # maiúsculo.
-        "hefesto-estado": "Parado" if st.get("paused") else "Ligado",
-        "hefesto-pausa": "Sim, e volta pausado" if st.get("paused") else "Não",
-        "hefesto-troca-de-perfil": ("Ligado" if st.get("window_detect_healthy")
-                                    else "Sem detector de janela"),
-        "hefesto-ambiente": st.get("window_detect_backend") or "—",
-        "bateria-impoe": ("Nada é limitado" if not st.get("emulation_suppressed")
-                          else "A emulação está contida"),
-        # A FRASE CONTA OS CONECTADOS, nunca a mesa: nomear um controle que não
-        # está foi o defeito que apareceu cinco vezes nesta casa, e esta linha
-        # ("Os 4 controles") foi uma delas.
-        "bateria-vale-para": f"O {n} controle" if n == 1 else f"Os {n} controles",
-        # O resto continua saindo, para quem consome o pacote fora da tela.
-        "versao": _versao(),  # (noqa-acento)  (a chave é o `data-campo` da página)
-        "controles": n,
-        "coop": bool(st.get("coop")),
-        "steam-input": bool(st.get("steam_input")),
-        "modo-nativo": bool(st.get("native_mode")),
-        "nativo-origem": st.get("native_mode_origin") or "",
-        "janela": jan,
-        "janela-saudavel": bool(st.get("window_detect_healthy")),
-        "consertos": {
-            "motivo": st.get("window_detect_reason") or "",
-            "jogo": st.get("window_detect_current_class") or "",
-            "backend": st.get("window_detect_backend") or "",
-        },
-        "sem_dono": {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()},
-        "cobertura": {"pintados": 12 + len(jan), "sem_dono": len(SEM_DONO)},
-    }
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui import aba_sistema as _tela
+
+    try:
+        bruto = _tela.pacote(_leitura(ctx))
+    except Exception as erro:
+        return {"sem_dono": {"tela": {"sem_dono": True, "oque": str(erro)}},
+                "cobertura": {"pintados": 0, "sem_dono": 1}}
+
+    fora: dict[str, object] = {}
+    for chave, v in (bruto.get("valores") or {}).items():
+        # O ACHATAMENTO: a camada devolve `{"txt": …, "cls": …}` e a tela
+        # endereça o texto. A classe e o glifo são pintura de estado, e ficam
+        # para quem os quiser — o `-cls` e o `-g` são endereços novos.
+        if isinstance(v, dict):
+            fora[chave] = v.get("txt", "—")
+            fora[f"{chave}-cls"] = v.get("cls", "")
+        else:
+            fora[chave] = v
+    for chave in ("frase", "autostart", "perfil", "registro"):
+        if not isinstance(bruto.get(chave), (dict, list)):
+            fora[chave] = bruto.get(chave)
+    fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
+    fora["cobertura"] = {"pintados": len(fora), "sem_dono": len(SEM_DONO)}
+    return fora
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -243,20 +263,21 @@ METODOS = {"daemon.resume", "daemon.reload", "machine.declare"}
 PAGINA = "09-sistema.html"
 PISO_DA_ABA = 3
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "retomar", "clique": {},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "retomar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["daemon.resume"], {})]},
-    {"pagina": PAGINA, "gesto": "atualizar", "clique": {},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "atualizar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["daemon.reload"], {})]},
     # A CHAVE DE DISCO NÃO SE DIGITA NA PROVA. Se a prova dissesse `"economia"`
     # e alguém trocasse a tradução no produto, a régua continuaria verde
     # cobrando o valor VELHO — a régua virando o segundo dono do fato que ela
     # existe para medir.
-    {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "bateria_longa"},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "perfil-da-mesa",  # (noqa-acento) id
+     "clique": {"v": "bateria_longa"},
      "chama": [("machine_declare",
                 [{"orcamento": {"teto": _teto_do_perfil("bateria_longa")}}], {})]},
     # O "Eu escolho" grava `None` PRESENTE, e é a prova de que a ausência de
     # teto viaja como escolha e não como omissão.
-    {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "eu_escolho"},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "eu_escolho"},  # (noqa-acento) id
      "chama": [("machine_declare",
                 [{"orcamento": {"teto": _teto_do_perfil("eu_escolho")}}], {})]},
 ]

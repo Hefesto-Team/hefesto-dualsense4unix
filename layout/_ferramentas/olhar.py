@@ -34,7 +34,7 @@ with sync_playwright() as pw:
     # mesmo num contêiner que rola 300px. Medido no mesmo dia, numa varredura das
     # dez abas: nove agentes concluíram "não há barra" e um deles ia relatar como
     # DEFEITO GRAVE um comentário do gerador que estava certo. A régua não media  # (noqa-acento: verbo medir, imperfeito)
-    # a tela — media o próprio flag.  # (noqa-acento: verbo medir, imperfeito)
+    # a tela — media o próprio flag.  # (noqa-acento: verbo medir, imperfeito) verbo medir
     b = pw.chromium.launch(executable_path="/usr/bin/google-chrome",
                            args=["--no-sandbox"],
                            ignore_default_args=["--hide-scrollbars"])
