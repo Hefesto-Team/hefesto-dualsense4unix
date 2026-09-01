@@ -457,6 +457,132 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(motivo or f"o daemon não aplicou a curva {chave!r}")
 
 
+@gesto("03-gatilhos.html", "guardar")
+def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Guardar esse efeito": o que está na coluna vai para o PERFIL, neste controle.
+
+    POR QUE ELE PRECISA EXISTIR, e é a diferença entre esta aba e as outras: os
+    dois gestos vizinhos (`modo` e `pronto`) APLICAM na hora — é a decisão dela
+    de 01/09, *"clicar já aplica"*. Mas aplicar não guarda: o efeito vale até a
+    próxima troca de perfil, e o disco continua com o que estava lá. Este botão
+    é o ponto de gravação, e é a única coisa nesta tela que sobrevive a um
+    `profile.switch`.
+
+    DE ONDE VEM O QUE ELE GRAVA — e a resposta não é o daemon. O DualSense **não
+    devolve** o modo em que está: gatilho é comando de ida, e o `state_full` não
+    o publica (é por isso que `modo` e `pronto` estão no `SEM_ECO` desta aba).
+    Logo o único lugar onde a escolha viva existe é a TELA, e é dela que a
+    `forma` vem — o piloto recolhe a coluna inteira quando o botão traz
+    `data-hef-forma="@controle"`.
+
+    O ALVO É O OVERRIDE DO CONTROLE, e não a seção global: `ControllerOverrides`
+    tem `triggers` desde a PERFIL-02, e a aba mostra uma coluna POR CONTROLE.
+    Gravar no global faria o "Guardar" do P2 mudar o gatilho do P1 — a mesma
+    contradição que mantém o `mic-escopo` da aba Conexões recusando.
+
+    A FUSÃO É POR CAMPO, e o esquema a escreve: *"`None` = sem opinião — o
+    controle herda a seção GLOBAL do perfil (merge POR CAMPO na aplicação,
+    PERFIL-01: override parcial nunca apaga a cor global no replug)"*. Por isso
+    este gesto só toca `triggers` do controle clicado e devolve o resto intacto.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("guardar: o clique não disse em qual controle")
+    forma = o.get("forma")
+    if not isinstance(forma, dict) or not forma:
+        raise RuntimeError(
+            "não consegui ler a coluna deste controle. O botão precisa do "
+            "`data-hef-forma` para o piloto recolher os campos — sem ele não há "
+            "o que guardar, porque o daemon não devolve o modo do gatilho.")
+
+    nome = str((ctx.state or {}).get("active_profile") or "").strip()
+    if not nome:
+        raise RuntimeError(
+            "não há perfil ativo agora, e o efeito do gatilho é do perfil — não "
+            "da máquina. Escolha um perfil na aba Perfis e tente de novo.")
+
+    dos_lados = {}
+    for lado, sigla in (("left", "e"), ("right", "d")):
+        modo = str(forma.get(f"modo-chave-{sigla}") or "").strip()
+        if not modo:
+            continue
+        dos_lados[lado] = {"mode": modo, "params": _ajustes_da_coluna(forma, sigla, modo)}
+    if not dos_lados:
+        raise RuntimeError(
+            "a coluna não trouxe modo nenhum. Os dois `<select>` de modo são "
+            "`modo-chave-e` e `modo-chave-d` — se eles mudaram de endereço, o "
+            "Guardar deixou de achar o que guardar.")
+
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+    novo = _com_os_gatilhos(prof, uniq, dos_lados)
+    if novo is None:
+        return
+    perfil.gravar_e_reaplicar(novo, ctx, p)
+
+
+def _ajustes_da_coluna(forma: dict[str, Any], sigla: str, modo: str) -> list[int]:
+    """Os ajustes daquele lado, na ORDEM do spec — nunca na ordem da tela.
+
+    A ordem é a que o daemon lê, e ela tem dono: `preset_to_positional_params`
+    (ver `_padroes`). A tela desenha uma barra por parâmetro, na mesma ordem,
+    endereçadas `aj-val-<lado>-<i>` — então o índice da barra É o índice do
+    parâmetro. Ler por índice, e não por NOME, é o que faz isto sobreviver a uma
+    tradução de rótulo.
+
+    O QUE NÃO VEIO NA TELA CAI NO PADRÃO DO MODO. Um modo de quatro parâmetros
+    desenhado numa coluna que só mostra dois não pode gravar dois — o daemon lê
+    a lista posicional inteira, e uma curta muda o que ela não escolheu.
+    """
+    padrao = _padroes(modo)
+    fora = list(padrao)
+    for i in range(len(padrao)):
+        cru = str(forma.get(f"aj-val-{sigla}-{i}") or "").strip()
+        if not cru:
+            continue
+        try:
+            fora[i] = int(float(cru))
+        except ValueError:
+            # UM VALOR QUE NÃO É NÚMERO NÃO VIRA ZERO. Zero é uma medida; o que
+            # a tela não soube dizer tem de cair no padrão do modo, que é o que
+            # o daemon aplicaria de qualquer jeito.
+            continue
+    return fora
+
+
+def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
+    """O perfil com o gatilho DESTE controle trocado, ou `None` se nada mudou.
+
+    `None` evita o barulho: regravar um perfil idêntico troca a data do arquivo
+    e faz o daemon reaplicar — e um `profile.switch` no meio de uma partida não
+    é de graça.
+
+    A CHAVE DO OVERRIDE É O `uniq` NORMALIZADO, e é o que o esquema espera
+    (`_validate_controllers_keys`). Escrever `d4:2f:…` onde o disco guarda
+    `d42f…` criaria um segundo dono para o mesmo controle.
+    """
+    from hefesto_dualsense4unix.profiles.schema import (
+        ControllerOverrides,
+        TriggerConfig,
+        TriggersConfig,
+    )
+
+    chave = uniq.replace(":", "").lower()
+    atuais = dict(prof.controllers or {})
+    dele = atuais.get(chave) or ControllerOverrides()
+    antes = dele.triggers
+    novos = TriggersConfig(
+        left=TriggerConfig(**dos_lados["left"]) if "left" in dos_lados
+        else (antes.left if antes else TriggerConfig(mode="Off")),
+        right=TriggerConfig(**dos_lados["right"]) if "right" in dos_lados
+        else (antes.right if antes else TriggerConfig(mode="Off")),
+    )
+    if antes is not None and antes == novos:
+        return None
+    atuais[chave] = dele.model_copy(update={"triggers": novos})
+    return prof.model_copy(update={"controllers": atuais})
+
+
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
 #: inventado aparece aqui, e não na mão de quem clica.
 PONTE = {"trigger_set_detalhado", "trigger_reset_detalhado"}
@@ -467,7 +593,7 @@ METODOS: set[str] = set()
 
 #: O PISO E AS PROVAS MORAM AQUI, e não no teste — território exclusivo.
 PAGINA = "03-gatilhos.html"
-PISO_DA_ABA = 2
+PISO_DA_ABA = 3
 #: O `uniq` da prova é a faixa sintética da casa: há dois portões de anonimato
 #: nesta árvore e eles não perdoam.
 _UNIQ = "aa:bb:cc:00:00:01"
