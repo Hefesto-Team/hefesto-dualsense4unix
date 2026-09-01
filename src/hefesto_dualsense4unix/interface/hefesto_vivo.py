@@ -283,13 +283,25 @@ BOOTSTRAP = r"""
         // recolher; um clique comum não paga a varredura, e nenhum outro gesto
         // recebe um campo que não pediu.
         forma: (function(){
-          const id = alvo.dataset.hefForma;
-          if(!id) return null;
-          const cx = document.getElementById(id);
+          const pedido = alvo.dataset.hefForma;
+          if(!pedido) return null;
+          // DOIS RECIPIENTES, e o segundo nasceu em 01/09/2026 para a aba
+          // Gatilhos: lá o "Guardar" é da COLUNA de um controle, e as colunas
+          // não têm `id` — elas se endereçam por `data-controle`, que é o
+          // vocabulário que a mesa inteira já usa. `@controle` quer dizer "o
+          // bloco do controle em que eu estou".
+          const cx = pedido === '@controle'
+            ? alvo.closest('[data-controle],[data-uniq]')
+            : document.getElementById(pedido);
           if(!cx) return null;
           const fora = {};
-          for(const el of cx.querySelectorAll('[data-linha]')){
-            fora[el.dataset.linha] = ('value' in el)
+          // A CHAVE É O `data-linha`, OU o `data-campo` quando não há. A aba
+          // Navegação marcou as 21 linhas com `data-linha`; a Gatilhos já tinha
+          // `data-campo` em cada valor da coluna, e marcá-los de novo seria a
+          // segunda cópia do mesmo endereço.
+          for(const el of cx.querySelectorAll('[data-linha],[data-campo]')){
+            const chave = el.dataset.linha || el.dataset.campo;
+            fora[chave] = ('value' in el)
               ? String(el.value ?? '') : (el.textContent || '').trim();
           }
           return fora;

@@ -582,7 +582,7 @@ def coluna(c):
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
 {dire}
-          <div><button class="btn roxo" data-gesto="guardar">Guardar esse efeito</button></div>
+          <div><button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button></div>
         </div>'''
 
 
