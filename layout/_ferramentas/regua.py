@@ -41,15 +41,32 @@ ROT = 92   # o token --rot, em px — a coluna de rótulo de toda aba
 # conveniência de quem desenha.
 # ---------------------------------------------------------------------------
 DISPENSAS = {
+    "06-navegacao.html": [
+        ('quadro "Navegação"',
+         "01/09/2026 — o padding de baixo é MENOR que o padrão de propósito, e o "
+         "preço de voltar está medido: com `10px 14px 14px` a aba estoura o miolo "
+         "por 1px e passa a rolar. É escolha justificada, não descuido. "
+         "PREEXISTENTE: existe idêntico no produto publicado, e "
+         "`regua.py 06-navegacao.html --publicado` prova."),
+        ('quadro "As opções de ativação"',
+         "01/09/2026 — a mesma razão do quadro acima, e o mesmo 1px de margem. "
+         "Os dois quadros desta aba pagam altura no padding porque o conteúdo "
+         "dela é o mais denso das dez."),
+    ],
+    "08-conexoes.html": [
+        ("titulo x=",
+         "01/09/2026 — os três blocos desta aba são ACORDEÕES, e o corpo de um "
+         "acordeão fechado tem largura zero: o `x=-37.5` que a régua lê é a caixa "
+         "colapsada, não conteúdo fora de lugar. Medir alinhamento contra um "
+         "corpo que não existe é a régua perguntando no lugar errado — a "
+         "armadilha do `COMO-OLHAR-A-TELA.md`. PREEXISTENTE, e idêntico no "
+         "produto publicado."),
+        ("altura de button.btn",
+         "01/09/2026 — os botões dos acordeões FECHADOS medem 0 porque estão "
+         "dentro do corpo colapsado. Zero não é altura divergente: é ausência. "
+         "PREEXISTENTE, e idêntico no produto publicado."),
+    ],
     "03-gatilhos.html": [
-        ("titulos de secao em x diferentes",
-         "30/08, ela: 'no nome das linhas deixa alinhadas à direita. Todas'. "
-         "Alinhados à direita, rótulos de larguras diferentes COMEÇAM em x "
-         "diferentes — é a consequência aritmética do que ela pediu, não um "
-         "defeito. O que tem de bater é onde eles ACABAM, e acabam: todos na "
-         "divisa da coluna. A régua mede o início; a dispensa diz por quê. "
-         "MEDIDO em 31/08: o desalinhamento existe no produto publicado e na "
-         "bancada, idêntico — `regua.py 03-gatilhos.html --publicado` prova."),
         ("conteúdo das colunas",
          "27/08, ela: 'Nenhuma. Talvez a régua tenha que ser ajustada por aba.' "
          "L2 e R2 mostram as barras do MODO escolhido, e modos diferentes têm "

@@ -8,7 +8,6 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import re  # noqa: E402
 import onde  # noqa: E402
-import medidas  # noqa: E402
 import monta as monta_  # noqa: E402  o MÓDULO, para ler CONECTADOS
 from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta  # noqa: E402
 
@@ -34,7 +33,7 @@ SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 # 10,5px (`.pa-rot`, `.selo`). Abaixo disso não é texto, é textura. Logo o piso é
 #     9 × tam / 32 ≥ 10  →  tam ≥ 35,6px  →  **36px**,
 # que é exatamente `--h-escolha`: o glifo vale uma linha da escala.
-GL = medidas.GLIFO_DA_SECAO
+GL = monta_.GLIFO_DA_SECAO
 
 CSS = CSS_GLIFO + """
   /* ---------- Gatilhos · a mesa de quatro ----------
@@ -573,7 +572,7 @@ ALT_COLUNA = sum(LINHAS) + (len(LINHAS) - 1) * R_PASSO
 #: trilha só) e virou 138 quando o glifo ganhou trilha própria — e 138 não batia
 #: com os 132 da Iluminação e da Vibração. Ela viu: *"tem algo que deixa estranho
 #: essa área da primeira coluna."*
-LARG_ROT = medidas.larg_rotulos("03-gatilhos", com_glifo=True)
+LARG_ROT = monta_.larg_rotulos("03-gatilhos", com_glifo=True)
 #: O TETO DA GRADE, MEDIDO NO CHROME — 477px com a janela de 777.
 #:
 #: ELE ERA 454, e 454 era o número da janela de 757px. Com os 777 que ela pediu
@@ -606,7 +605,7 @@ CSS_DA_CENA = f"""
        mesmo lugar que o `glifo(tam=GL)` lê. Digitados no CSS, os dois divergem
        no dia em que alguém mudar um só — é a cicatriz das cores do plástico e a
        do padrão das lâmpadas. */
-    --gl:{GL}px; --larg-rot:{LARG_ROT}px; --gap-col:{medidas.GAP_DAS_COLUNAS}px; --vao-gl:{medidas.VAO_DO_GLIFO}px;
+    --gl:{GL}px; --larg-rot:{LARG_ROT}px; --gap-col:{monta_.GAP_DAS_COLUNAS}px; --vao-gl:{monta_.VAO_DO_GLIFO}px;
   }}
   .ajustes.e{{grid-template-rows:repeat({N_ESQ},1fr)}}
   .ajustes.d{{grid-template-rows:repeat({N_DIR},1fr)}}
