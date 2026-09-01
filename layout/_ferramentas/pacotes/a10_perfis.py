@@ -30,6 +30,8 @@ que escreve tem de avisar o daemon depois (`profile.switch` para reaplicar,
 """
 from __future__ import annotations
 
+import time
+
 # O IMPORT É DE MÓDULO, e não de dentro da função — 01/09/2026. O
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
 # piloto que o lançador abre, e um `from … import` escondido dentro de uma
@@ -91,6 +93,80 @@ def _escolhido(todos: list[dict], ativo: str) -> str:
     return _ESCOLHIDO or ativo
 
 
+#: A JANELA DA CONFIRMAÇÃO do "Remover", em segundos. Não é gosto: um armamento
+#: sem prazo é uma armadilha — ela clica, se distrai, volta meia hora depois,
+#: clica de novo e o perfil some sem que nada na tela tenha dito por quê.
+SEGUNDOS_PARA_CONFIRMAR = 8.0
+
+#: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
+_ARMADO: tuple[str, float] | None = None
+
+#: O perfil cujos campos de TEXTO já foram pintados, e o instante do último
+#: tique desta aba. Ver `_uma_vez_so`.
+_PINTADO_PARA: str = ""
+_ULTIMO_TIQUE: float = 0.0
+
+#: OS TRÊS CAMPOS QUE NÃO SE REPINTAM. Os dois primeiros porque ela DIGITA
+#: neles; o terceiro porque o valor é sempre o mesmo (não existe campo de
+#: Estilo no perfil) e repintá-lo custava uma escrita por tique para sempre —
+#: medido no Chrome em 01/09/2026: "2º tique pintou 1", e o 1 era ele.
+CAMPOS_QUE_ELA_DIGITA = ("editor.nome", "editor.jogo", "editor.estilo")
+
+
+def _uma_vez_so(alvo: str) -> tuple[str, ...]:
+    """Os endereços a OMITIR deste tique. Vazio = pinte tudo.
+
+    O PROBLEMA, medido em 01/09/2026 lendo o `escrever()` do piloto
+    (`hefesto_vivo.py:114`): com `data-hef-alvo="valor"` a pintura faz
+    `el.value = t` sempre que o valor difere. O tique é de 500 ms
+    (`hefesto_vivo.py:63`). Na segunda tecla que ela digita, o campo já difere
+    do que está no disco — e meio segundo depois a pintura o devolve ao valor
+    do perfil. **O campo ficaria intocável.**
+
+    A CURA É PINTAR UMA VEZ POR ESCOLHA: quando o perfil aberto no editor muda,
+    os três campos vão uma vez; enquanto ela fica no mesmo perfil, ninguém
+    escreve neles. Foi assim que o campo pôde ganhar gesto — sem isto, ligar o
+    Nome seria ligar um campo que se apaga sozinho.
+
+    E ELE VOLTA A PINTAR QUANDO ELA SAI DA ABA E VOLTA. Sem esta segunda
+    guarda, a página recarregada mostraria de novo o "Mortal Kombat" do
+    MOCKUP — o `<input>` nasce com o valor do desenho, e a memória deste módulo
+    diria "já pintei". O sinal é o BURACO no tique: as dez abas dividem o mesmo
+    piloto, e `pacote()` só é chamado enquanto esta página está aberta, a cada
+    500 ms. Um intervalo maior que 2 s significa que a página foi embora e
+    voltou.
+    """
+    global _PINTADO_PARA, _ULTIMO_TIQUE
+    agora = time.monotonic()
+    voltou = (agora - _ULTIMO_TIQUE) > 2.0
+    _ULTIMO_TIQUE = agora
+    if voltou or alvo != _PINTADO_PARA:
+        _PINTADO_PARA = alvo
+        return ()
+    return CAMPOS_QUE_ELA_DIGITA
+
+
+def _rotulo_do_remover() -> str:
+    """"Remover", ou a PERGUNTA que a dica dela promete.
+
+    A dica no desenho diz *"Apaga do disco. Pergunta antes."* — e esta janela
+    não tem diálogo. O `on_profile_remove` da janela estável abre um
+    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3167`), que é
+    GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
+    thread** (`hefesto_vivo.py:520`) e GTK só aceita diálogo no laço principal.
+
+    E a recusa do piloto não serve de pergunta: ela sai em `stderr`
+    (`hefesto_vivo.py:527`), no terminal, onde a dona não está olhando.
+
+    Então a pergunta é o PRÓPRIO RÓTULO do botão. É o único pedaço de tela que
+    já existe, que ela está olhando no instante do clique, e que o piloto sabe
+    pintar. O desenho não muda: o mockup continua escrevendo "Remover".
+    """
+    if _ARMADO and (time.monotonic() - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR:
+        return f"Remover “{_ARMADO[0]}”? Clique de novo"
+    return "Remover"
+
+
 @registrar("10-perfis.html")
 def pacote(ctx: Contexto) -> dict:
     """DELEGA para `app/actions/perfis_web.pacote_da_aba` — a camada do PRODUTO.
@@ -110,11 +186,21 @@ def pacote(ctx: Contexto) -> dict:
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.slug import find_by_slug
 
     ativo = str(ctx.state.get("active_profile") or "")
     try:
-        bruto = _tela.pacote_da_aba(load_all_profiles(), ativo=ativo or None,
-                                    mesa=ctx.mesa)
+        todos = load_all_profiles()
+        # O `editado` FALTAVA, e o editor mostrava o perfil ERRADO — corrigido
+        # em 01/09/2026, ao ligar os campos. Sem ele `pacote_da_aba` cai no
+        # ativo (`perfis_web.py:426`), então clicar numa linha mudava o alvo dos
+        # botões e o editor ao lado continuava pintando OUTRO perfil. Enquanto
+        # nenhum campo tinha gesto isso era só uma tela desalinhada; com o Nome
+        # e o Nome do Jogo ligados, seria ela renomear um perfil olhando para o
+        # nome de outro.
+        alvo = find_by_slug(_escolhido([{"nome": x.name} for x in todos], ativo), todos)
+        bruto = _tela.pacote_da_aba(todos, ativo=ativo or None,
+                                    mesa=ctx.mesa, editado=alvo)
     except Exception:
         return {"sem_dono": {}, "cobertura": {"pintados": 0, "sem_dono": 1}}
 
@@ -146,6 +232,16 @@ def pacote(ctx: Contexto) -> dict:
     for chave, valor in editor.items():
         if not isinstance(valor, (dict, list)):
             fora[f"editor.{chave.replace('_', '.')}"] = valor
+
+    # OS TRÊS CAMPOS QUE SE PINTAM UMA VEZ SÓ — e a razão é medida, não gosto.
+    # Ver `_uma_vez_so`: repintar um `<input>` a cada 500 ms apagaria o que ela
+    # está digitando na segunda tecla.
+    for chave in _uma_vez_so(str(getattr(alvo, "name", ""))):
+        fora.pop(chave, None)
+
+    # O RÓTULO DO REMOVER, e ele é a pergunta que a dica dela promete. Sai daqui
+    # e não do JS porque o armamento vive no Python (ver o gesto `remover`).
+    fora["perfis.remover"] = _rotulo_do_remover()
 
     # A GUARDA são os overrides por controle — o que cada um guarda de próprio
     # neste perfil. O produto já a monta; a tela a distribui por linha.
