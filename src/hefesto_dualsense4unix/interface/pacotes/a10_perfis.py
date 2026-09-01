@@ -449,21 +449,14 @@ PRESET_DO_ROTULO = {v: k for k, v in _tela.AMBIENTE_DO_PRESET.items()}
 def _gravar(prof: Any, ctx: Contexto, p: Any, *, era: str = "") -> None:
     """Os três tempos: disco, reaplicar se for o ativo, avisar a antecipação.
 
-    `era` é o nome ANTERIOR — num renomear, é ele que tem de casar com o ativo,
-    porque o daemon ainda não ouviu falar do nome novo.
-
-    A COMPARAÇÃO É POR SLUG, não por string: com "Navegação" no disco e
-    "Navegacao" no daemon, um `==` cru diria que são perfis diferentes e o
-    reaplicar não aconteceria (R-10, `profiles/slug.py:52`).
+    O CORPO MUDOU DE CASA em 01/09/2026, e a razão é que ele ganhou um SEGUNDO
+    chamador: o `a06_navegacao`, que devolve os atalhos de botão ao de fábrica,
+    precisa exatamente destes três tempos. Uma segunda cópia é a que esquece o
+    `launch_env.refresh` no dia em que alguém mexer numa só — então o corpo foi
+    para `pacotes/perfil.py`, que é o módulo que as abas já compartilham, e este
+    nome fica como a porta desta aba.
     """
-    from hefesto_dualsense4unix.profiles.loader import save_profile
-    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
-
-    save_profile(prof, origem="interface-nova")
-    ativo = str(ctx.state.get("active_profile") or "")
-    if ativo and mesmo_slug(ativo, era or prof.name):
-        p.profile_switch(prof.name)
-    p.chamar("launch_env.refresh")
+    perfil.gravar_e_reaplicar(prof, ctx, p, era=era)
 
 
 def _nome_livre(base: str, todos: Any) -> str:
