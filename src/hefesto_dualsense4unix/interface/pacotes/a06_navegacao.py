@@ -361,16 +361,72 @@ def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _mandar(p, scroll_speed=atual + _passo(o), origin=MANUAL)
 
 
-#: OS TREZE QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
+@gesto("06-navegacao.html", "padrao-definicoes")
+def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Voltar ao padrão" das 21 linhas de *o que cada botão faz*.
+
+    O QUE ELE FAZ: grava `key_bindings = None` no perfil ATIVO e manda o daemon
+    reaplicá-lo. `None` não é "vazio" — o esquema o define como *"herda
+    `DEFAULT_BUTTON_BINDINGS` do core"* (`profiles/schema.py:985`), e `{}` é
+    outra coisa (teclado silencioso). Escrever `{}` aqui devolveria um controle
+    MUDO com o botão dizendo "de fábrica".
+
+    E ELE DEVOLVE AS VINTE E UMA, ao contrário do que parece. Contadas na tela e
+    no fonte, em 01/09/2026:
+
+        9 linhas   `key_bindings` as alcança — l1, r1, l3, r3, options, create
+                   e as três regiões do touchpad (`core/keyboard_mappings.py:41`)
+        12 linhas  mapas FIXOS do produto — `BUTTON_TO_UINPUT`, `DPAD_TO_KEY` e
+                   `EDGE_KEY_MAP` (`integrations/uinput_mouse.py:93,99,105`),
+                   mais o L2/R2 e a DIREÇÃO dos analógicos, que binding nenhum
+                   alcança
+
+    As 12 não têm onde ser mudadas — logo estão **sempre** de fábrica, e zerar as
+    9 devolve a tabela inteira ao de fábrica. É por isso que este botão fecha
+    inteiro, enquanto o "Guardar" ao lado dele não fecha: guardar 9 de 21
+    escolhas e perder 12 caladas é o botão que responde calado.
+
+    O ALVO É O PERFIL ATIVO, e ele é dito: `key_bindings` é campo de perfil
+    (`profiles/schema.py:988`), não da máquina. Sem perfil ativo o botão RECUSA
+    — devolver ao padrão "o perfil nenhum" não quer dizer nada.
+
+    A GRAVAÇÃO É A DA CASA: `perfil.gravar_e_reaplicar`, a mesma que a aba
+    Perfis usa. O `save_profile` grava em disco e o `profile.switch` reaplica se
+    for o ativo.
+
+    FATO SUBSTITUÍDO, e é o que destravou este botão: o `SEM_GESTO` abaixo dizia
+    que "gravar perfil não tem método". Tem — `profiles/loader.save_profile`, e
+    o `a10_perfis` já o usava desde a mesma leva que escreveu a frase.
+    """
+    nome = str((ctx.state or {}).get("active_profile") or "").strip()
+    if not nome:
+        raise RuntimeError(
+            "não há perfil ativo agora, e os atalhos de botão são do perfil — "
+            "não da máquina. Escolha um perfil na aba Perfis e tente de novo.")
+
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+    if prof.key_bindings is None:
+        # JÁ ESTÁ DE FÁBRICA. Gravar de novo trocaria a data do arquivo e faria
+        # o daemon reaplicar um perfil idêntico — barulho sem efeito, e um
+        # `profile.switch` no meio de uma partida não é de graça.
+        return
+    perfil.gravar_e_reaplicar(prof.model_copy(update={"key_bindings": None}), ctx, p)
+
+
+#: OS DOZE QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
 #: inventário honesto do que falta, no lugar de um botão que responde calado. O
 #: piloto os recusa PELO NOME (`[gesto sem dono] 06-navegacao.html · <nome>`), e
 #: por isso as chaves aqui são os nomes que ele vai imprimir, um por um: os dois
 #: `bignum` sem dono viram quatro linhas (`-menos` e `-mais`), porque são quatro
 #: botões.
 #:
-#: ERAM QUATORZE. O `teclado` saiu daqui na segunda leva: o que o segurava não
-#: era falta de método, era o piloto não mandar o valor de um `<select>` — e
-#: isso mudou em 01/09/2026.
+#: ERAM QUATORZE, depois TREZE. O `teclado` saiu na segunda leva — o que o
+#: segurava não era falta de método, era o piloto não mandar o valor de um
+#: `<select>`. O `padrao-definicoes` saiu na TERCEIRA, e o que o segurava era
+#: um FATO ERRADO escrito aqui: que gravar perfil não tinha método. Tinha, e o
+#: `a10_perfis` já o usava. As duas saídas têm a mesma forma — o que prendia o
+#: botão não era o produto, era o que estava escrito sobre ele.
 #:
 #: -------------------------------------------------------------------------
 #: `mouse.emulation.restore` NÃO virou botão, e a segunda leva reconfirmou a
@@ -406,33 +462,51 @@ SEM_GESTO = {
     # FATO SUBSTITUÍDO (segunda leva): dizia "os cinco combos moram em
     # `key_bindings` do perfil". Não moram — `key_bindings` são os nove BOTÕES
     # do `DEFAULT_BUTTON_BINDINGS`, e combo nenhum aparece lá.
+    # FATO AFINADO (terceira leva, 01/09/2026): esta entrada dizia que "método
+    # de IPC nenhum escreve" o `ps_button_action`. Escreve — `daemon.reload`
+    # aceita `config_overrides` com qualquer campo do `DaemonConfig`
+    # (`ipc_handlers.py:4556`). O que ele NÃO faz é gravar: o handler roda
+    # `replace(config, **overrides)` e `reload_config(...)` e para aí (`:4567`),
+    # então a escolha morre no próximo start do daemon. E o `ps_button_action` é
+    # do PS SOLO, não dos combos — a tabela desta tela é dos cinco COMBOS.
     "acao-do-gesto": "os cinco combos são callbacks montados em código "
-                     "(`daemon/subsystems/hotkey.py:86,414`), não dado: o único "
-                     "pedaço ajustável é `config.ps_button_action`, que método "
-                     "de IPC nenhum escreve",
+                     "(`daemon/subsystems/hotkey.py:86,414`), não dado. O "
+                     "vizinho deles, o `config.ps_button_action` do PS solo, "
+                     "tem escritor VIVO (`daemon.reload` com `config_overrides`) "
+                     "e nenhum que grave em disco — e ele nem é o que esta "
+                     "tabela oferece trocar",
     "padrao-da-aba": "a frase do botão promete a aba INTEIRA — as opções de "
                      "ativação, os 5 gestos e as 21 linhas das duas telas. Só as "
                      "duas velocidades têm rota (`mouse.emulation.set` "
                      "speed-only); as outras três promessas não têm nenhuma, e "
                      "um 'Voltar ao padrão' que devolve dois números de cinco "
                      "coisas é um botão que responde calado sobre as outras três",
-    # FATO SUBSTITUÍDO (segunda leva): dizia "sem método de IPC" para escrever
-    # `key_bindings`. HÁ um — `profile.apply_draft` tem seção `keyboard` com
-    # `key_bindings` (`daemon/ipc_draft_applier.py:646`). O que ele NÃO faz é o
-    # que este botão promete, e são três coisas medidas.
-    "guardar-definicoes": "`profile.apply_draft` empurra `key_bindings` ao "
-                          "device VIVO (`ipc_draft_applier.py:646`) e nunca "
-                          "grava em disco — um 'Guardar' que some no próximo "
-                          "`profile.switch`. Some antes disso, aliás: sem "
-                          "`_keyboard_device` ele volta calado (`:669`) e a "
-                          "resposta ainda diz `applied: [keyboard]`. E ele "
-                          "alcança 9 das 21 linhas — as do "
-                          "`DEFAULT_BUTTON_BINDINGS`; as outras 12 são os três "
-                          "mapas FIXOS de `uinput_mouse.py:93,99,105` "
-                          "(`BUTTON_TO_UINPUT`, `DPAD_TO_KEY`, `EDGE_KEY_MAP`), "
-                          "que não têm campo em perfil nenhum",
-    "padrao-definicoes": "idem, ao contrário (`key_bindings: null` devolve o "
-                         "`DEFAULT_BUTTON_BINDINGS`) — e com o mesmo silêncio",
+    # FATO SUBSTITUÍDO (terceira leva, 01/09/2026). Esta entrada dizia que
+    # gravar `key_bindings` "nunca grava em disco" e concluía daí que o botão
+    # não tinha rota. **A conclusão estava errada**, e a prova estava a duas
+    # portas: `profiles/loader.save_profile` grava, e o `a10_perfis` já o usava
+    # desde a MESMA leva que escreveu esta frase. Foi essa correção que deu dono
+    # ao `padrao-definicoes` logo acima.
+    #
+    # O QUE SEGURA O "GUARDAR" É OUTRA COISA, e é a tela: das 21 linhas que ela
+    # deixa escolher, o perfil alcança 9 — l1, r1, l3, r3, options, create e as
+    # três regiões do touchpad (`core/keyboard_mappings.py:41`). As outras 12
+    # são mapas FIXOS (`uinput_mouse.py:93,99,105`) mais o L2/R2 e a DIREÇÃO dos
+    # analógicos, que campo de perfil nenhum alcança. Guardar 9 e perder 12
+    # caladas é o botão que responde calado — e o "Voltar ao padrão" fecha
+    # justamente porque as 12 estão SEMPRE de fábrica, então zerar as 9 devolve
+    # a tabela inteira.
+    #
+    # A DECISÃO É DELA, e está na mesa: ou as 12 linhas nascem travadas na tela
+    # (e o Guardar fecha com as 9), ou o produto ganha onde guardá-las.
+    "guardar-definicoes": "a tela deixa escolher 21 linhas e o perfil alcança 9 "
+                          "(`core/keyboard_mappings.py:41`); as outras 12 são "
+                          "mapas fixos de `uinput_mouse.py:93,99,105` mais o "
+                          "L2/R2 e a direção dos analógicos, que campo de perfil "
+                          "nenhum alcança. Gravar 9 de 21 escolhas e perder 12 "
+                          "caladas é pior que recusar. O caminho de gravar EXISTE "
+                          "(`profiles/loader.save_profile`, o mesmo que a aba "
+                          "Perfis usa) — o que falta é a decisão dela sobre as 12",
     "guardar-remapeamento": "o remapeamento botão-por-botão não tem sequer campo "
                             "no perfil, quanto mais método de IPC",
     "padrao-remapeamento": "idem, ao contrário",
@@ -449,7 +523,7 @@ METODOS = {"mouse.emulation.set", "keyboard.emulation.set"}
 
 
 PAGINA = "06-navegacao.html"
-PISO_DA_ABA = 6
+PISO_DA_ABA = 7
 
 
 def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any]:

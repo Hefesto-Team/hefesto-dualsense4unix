@@ -27,7 +27,9 @@ DualSense **não devolve** o modo em que está (é comando de ida, e o
 `docs/data/mapa-controles.csv` diz o mesmo pela outra ponta). Logo o perfil é a
 melhor fonte que existe, e mostrar `Rigid` é mais verdadeiro que mostrar `—`.
 
-NADA AQUI ESCREVE. Ler o perfil é seguro; gravá-lo é da aba Perfis e do daemon.
+QUEM LÊ NÃO ESCREVE. As funções de leitura são puras; a `gravar_e_reaplicar()`
+no fim do arquivo é a ÚNICA que escreve, e ela nasceu em 01/09/2026 porque duas
+abas passaram a precisar dos mesmos três tempos — ver o docstring dela.
 """
 from __future__ import annotations
 
@@ -146,3 +148,40 @@ def lista() -> list[dict[str, Any]]:
             "arquivo": p.name,
         })
     return fora
+
+
+def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
+    """Grava o perfil em disco e, se ele for o ATIVO, manda o daemon reaplicá-lo.
+
+    OS TRÊS TEMPOS, e a ordem importa: disco, reaplicar, avisar a antecipação de
+    lançamento. Gravar sem reaplicar deixa a tela dizendo uma coisa e o aparelho
+    fazendo outra até a próxima troca de perfil.
+
+    A COMPARAÇÃO É POR SLUG, não por string: com "Navegação" no disco e
+    "Navegacao" no daemon, um `==` cru diria que são perfis diferentes e o
+    reaplicar não aconteceria (R-10, `profiles/slug.py:52`). `era` é o nome
+    ANTERIOR — num renomear, é ele que tem de casar com o ativo, porque o daemon
+    ainda não ouviu falar do nome novo.
+
+    POR QUE ELA MORA AQUI, e não na aba Perfis onde nasceu: a partir de
+    01/09/2026 ela tem DOIS chamadores — o `a10_perfis`, que edita o perfil
+    inteiro, e o `a06_navegacao`, que devolve os atalhos de botão ao de fábrica.
+    Deixá-la lá obrigaria a segunda aba a importar a primeira (um pacote de aba
+    dependendo de outro, que é o oposto do território exclusivo) ou a escrever
+    uma segunda cópia dos três tempos — e a segunda cópia é a que esquece o
+    `launch_env.refresh` no dia em que alguém mexer numa só.
+
+    O CABEÇALHO DESTE MÓDULO DIZIA *"nada aqui escreve"*. Deixou de valer hoje,
+    e a linha foi corrigida em vez de contornada: o que continua verdadeiro é
+    que **quem lê** não escreve — as funções de leitura acima seguem puras.
+    """
+    loader = _com_o_src()
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    loader.save_profile(prof, origem="interface-nova")
+    ativo_agora = str((getattr(ctx, "state", None) or {}).get("active_profile") or "")
+    if ativo_agora and mesmo_slug(ativo_agora, era or prof.name):
+        p.profile_switch(prof.name)
+    # A ANTECIPAÇÃO DE LANÇAMENTO relê o que os jogos vão receber. Sem ela, o
+    # perfil novo só chega ao jogo no próximo start do daemon.
+    p.chamar("launch_env.refresh")
