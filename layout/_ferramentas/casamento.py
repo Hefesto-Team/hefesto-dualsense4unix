@@ -73,7 +73,7 @@ def do_html(pagina: str) -> tuple[set[str], set[str]]:
 #: O estado que a régua usa. Um teste que monte um perfil de mentira o troca —
 #: sem perfil o pacote da Gatilhos emite `Desligado` e o da Perfis lista zero,
 #: e o piso cairia por falta de DADO, não por regressão.
-ESTADO_DA_REGUA = {"active_profile": "acao", "rumble_policy": "balanceado"}
+ESTADO_DA_REGUA = {"active_profile": "acao", "rumble_policy": "balanceado"}  # noqa: acentuacao  (`acao` é o nome do arquivo de perfil)
 
 
 def do_pacote(pagina: str, estado: dict | None = None) -> tuple[set[str], set[str]]:
@@ -104,7 +104,7 @@ def medir(pagina: str) -> dict:
     da_mesa, do_controle = do_pacote(pagina)
     emite = da_mesa | do_controle
     return {
-        "pagina": pagina,
+        "pagina": pagina,  # noqa: acentuacao  (nome do parâmetro)
         "html": campos, "controles": controles,
         "emite": emite,
         "casam": campos & emite,

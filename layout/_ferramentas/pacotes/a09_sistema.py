@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from . import Contexto, perfil, registrar
 
-#: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram
+#: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # noqa: acentuacao
 #: pintura. **"plugins" continua sem dono NA TELA, e a razão não é minha** — a
 #: `gui/aba_sistema.py:95` já a tinha medido e escrito:
 #:
@@ -70,7 +70,7 @@ def pacote(ctx: Contexto) -> dict:
         # ("Os 4 controles") foi uma delas.
         "bateria-vale-para": f"O {n} controle" if n == 1 else f"Os {n} controles",
         # O resto continua saindo, para quem consome o pacote fora da tela.
-        "versao": _versao(),
+        "versao": _versao(),  # noqa: acentuacao  (a chave é o `data-campo` da página)
         "controles": n,
         "coop": bool(st.get("coop")),
         "steam-input": bool(st.get("steam_input")),

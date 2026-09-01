@@ -427,7 +427,7 @@ CSS = """
   }
   .peca-topo{display:flex;align-items:center;gap:6px}
   /* A ENTRELINHA É A CURA DO VÃO, e ela é na ALTURA — encolher o mais alto.
-     Com `1.45` o cartão media 67,5px e a coluna de avisos ao lado, 55: doze e
+     Com `1.45` o cartão media 67,5px e a coluna de avisos ao lado, 55: doze e  # noqa: acentuacao  (`media` é o verbo medir)
      meio de vão. Em pixel, e não em múltiplo, porque o rótulo tem três linhas
      e cada pixel aqui vale três. */
   .cartao .rotulo{color:var(--texto-mudo);line-height:15px;white-space:nowrap}
@@ -440,7 +440,7 @@ CSS = """
   .cartao .ds-svg{width:62px;flex:0 0 62px}
   /* AS CINCO LÂMPADAS DO JOGADOR NÃO EXISTEM NESTE CARTÃO — decisão dela, 28/08:
      elas saem dos desenhos pequenos e ficam só nos grandes, da Iluminação. Aqui
-     o desenho tem 62px e cada lâmpada media 1,06 × 0,36 px; passar de 1px de
+     o desenho tem 62px e cada lâmpada media 1,06 × 0,36 px; passar de 1px de  # noqa: acentuacao  (`media` é o verbo medir)
      altura pediria ~340px de desenho, um cartão de ~460px, e os quatro somariam
      1840px numa fileira que tem 1163px.
      Quem diz o número do jogador aqui é o rótulo: `Sony • Player 1 • …`.
@@ -587,7 +587,7 @@ CSS = """
   .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
   /* A ATENÇÃO DESCEU — 30/08/2026, pedido dela: *"esse atenção desce"*.
      Ela era a segunda coluna da `.dupla`, ao lado dos cartões, com a barra
-     vertical à esquerda. Media 129px de VAZIO — 70% da própria coluna —, porque
+     vertical à esquerda. Media 129px de VAZIO — 70% da própria coluna —, porque  # noqa: acentuacao  (`media` é o verbo medir)
      a altura dela vinha do irmão (`align-self:stretch`) e o conteúdo era um
      aviso de uma linha.
 
@@ -1026,7 +1026,7 @@ LEGENDA = f'''<div class="nota">
       <b>Iluminação</b>.</li>
     <li><b>A caixa "Não trocar de perfil sozinho" saiu</b> — o perfil ativo já diz isso.</li>
     <li><b>"Reconciliar jogadores" virou "Reconectar Controles"</b>.</li>
-    <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>
+    <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>  <!-- noqa-acento: `media` é o verbo medir -->
     <li><b>32 frases viraram 12</b> — o resto está nos três ícones <b>?</b>. Passe o mouse neles.</li>
   </ul>
 

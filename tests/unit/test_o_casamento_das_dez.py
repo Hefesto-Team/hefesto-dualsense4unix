@@ -100,13 +100,13 @@ def test_o_instrumento_acha_os_tres_vocabularios(casamento):
     assert len(campos5) >= 10, "a Vibração endereça por `data-papel`"
 
 
-@pytest.mark.parametrize("pagina", sorted(PISO))
+@pytest.mark.parametrize("pagina", sorted(PISO))  # noqa: acentuacao  (nome do parâmetro)
 def test_a_aba_casa_pelo_menos_o_piso(casamento, pagina):
     """Zero é ERRO, e uma queda também.
 
     A mordida: renomeie uma chave no pacote daquela aba (`identidade` →
     `mascara`, por exemplo) e este teste reprova com a diferença nomeada. Foi
-    exatamente esse renome, feito por descuido em dois lados diferentes, que
+    exatamente esse renome, nascido de um descuido em dois lados diferentes, que
     deixou a aba Jogar pintando 1 de 5.
     """
     m = casamento.medir(pagina)

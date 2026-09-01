@@ -62,7 +62,21 @@ RAIZ = AQUI.parent
 # O piloto e o mockup moram em `layout/`, que é .gitignore e NÃO viaja em
 # worktree — por isso a árvore de origem entra como segunda tentativa.
 ORIGEM = Path("/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix")
+#: O PILOTO DAS DEZ ABAS VEM PRIMEIRO — 01/09/2026. Até aqui o lançador abria o
+#: `controles_vivos.py`, que é o piloto de UMA aba: a Controles ficava viva e as
+#: outras nove eram o mockup ESTÁTICO, sem um dado do daemon. Clicar na tira
+#: levava a uma tela bonita e morta.
+#:
+#: `hefesto_vivo.py` é uma janela com as dez, a navegação entre elas funcionando
+#: e a pintura por página — 122 valores escritos por travessia, medidos com o
+#: controle dela no cabo e os 33 perfis no disco.
+#:
+#: O `controles_vivos.py` FICA como segunda tentativa, e não é nostalgia: se
+#: esta cópia da árvore estiver incompleta, abrir a aba Controles viva é melhor
+#: que não abrir nada. A ordem é a que importa.
 CANDIDATOS_DO_PILOTO = (
+    RAIZ / "layout" / "_ferramentas" / "hefesto_vivo.py",
+    ORIGEM / "layout" / "_ferramentas" / "hefesto_vivo.py",
     RAIZ / "layout" / "_ferramentas" / "controles_vivos.py",
     ORIGEM / "layout" / "_ferramentas" / "controles_vivos.py",
 )
@@ -74,7 +88,7 @@ CANDIDATOS_DO_ICONE = (
 
 
 def achar_o_piloto() -> Path | None:
-    """O primeiro `controles_vivos.py` que existir, ou `None`."""
+    """O primeiro piloto que existir, na ordem dos candidatos, ou `None`."""
     return next((c for c in CANDIDATOS_DO_PILOTO if c.is_file()), None)
 
 
