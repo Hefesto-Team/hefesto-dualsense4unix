@@ -30,6 +30,7 @@ dez páginas. Fica no piloto, que é quem já tem a mesa na mão.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import pathlib
 import sys
 import threading
@@ -253,6 +254,46 @@ def _fita(mesa: list[dict]) -> str:
         return ""
 
 
+#: OS GESTOS QUE MEXEM NA MÁQUINA DELA, e que a prova botão a botão NÃO clica
+#: sozinha. Não é timidez: `desligar` para o daemon e ela fica sem controle no
+#: meio do trabalho; `restaurar-de-fabrica` apaga configuração; `reiniciar`
+#: derruba a sessão do daemon. Uma régua não mexe na máquina de alguém para
+#: provar que sabe clicar.
+#:
+#: Para incluí-los, `--incluir-perigosos` — e aí é escolha de quem roda.
+PERIGOSOS = {
+    "desligar", "reiniciar", "restaurar-de-fabrica", "refazer-proton",
+    "remover", "novo", "voltar-a-de-ontem", "autostart",
+}
+
+
+def _achatar(o, prefixo="") -> dict:
+    """O estado do daemon como `{caminho: valor}` — para comparar antes/depois.
+
+    Achatar é o que torna a comparação LEGÍVEL: sem isso, "o estado mudou" seria
+    um diff de dois dicionários aninhados de 49 chaves, e ninguém leria qual
+    campo se mexeu. Com isso, o relato diz
+    `controllers.0.lightbar_rgb: [0,0,255] → [126,184,212]`.
+    """
+    fora = {}
+    if isinstance(o, dict):
+        for k, v in o.items():
+            fora.update(_achatar(v, f"{prefixo}.{k}" if prefixo else str(k)))
+    elif isinstance(o, list):
+        for i, v in enumerate(o[:4]):
+            fora.update(_achatar(v, f"{prefixo}.{i}"))
+    else:
+        fora[prefixo] = o
+    return fora
+
+
+#: OS CAMPOS QUE MUDAM SOZINHOS a cada tique — o relógio do daemon, os contadores
+#: de força-feedback, a posição dos analógicos. Compará-los faria TODO gesto
+#: parecer que mudou alguma coisa, que é o mesmo que não medir nada.
+RUIDO = ("visto_ha_s", "ha_s", "_count", "nascimento", "age_sec", "uptime",
+         "inputs.", "motion_", "forwards", "counters.", "_ultimos_")
+
+
 def _pagina_da_uri(uri: str | None) -> str:
     """O nome do arquivo à vista, ou `""`.
 
@@ -290,6 +331,8 @@ class Piloto:
         #: eles, um clique que chega entre dois tiques não teria com que
         #: trabalhar, e resolver o `uniq` na hora exigiria um IPC a mais por
         #: clique.
+        #: O que a prova botão a botão mediu, um por gesto.
+        self.provas: list[dict] = []
         self._mesa_de_agora: list[dict] = []
         self._ctx_de_agora = pacotes.Contexto(state={})
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
@@ -315,6 +358,57 @@ class Piloto:
         # piloto ficaria pintando a página errada. É a mesma nota que o
         # `controles_vivos` carrega, e a razão é a mesma.
         self.view.connect("load-changed", self._carregou)
+
+        # O SELETOR DE ARQUIVO É DA JANELA, e por isso é ligado AQUI. Os pacotes
+        # são puros — um `import gi` neles obrigaria toda régua a ter GTK e o CI
+        # a rodar com display. A ponte declara o ponto de extensão recusando; o
+        # piloto o preenche ao subir.
+        ponte.escolher_arquivo = self._escolher_arquivo
+        ponte.salvar_arquivo = self._salvar_arquivo
+
+    # -- o seletor de arquivo, que é do sistema ---------------------------
+    def _dialogo(self, titulo: str, acao, rotulo: str, *, sugestao="", padrao="*"):
+        """Um `FileChooserDialog` modal, e ele RODA NO LAÇO DO GTK.
+
+        POR QUE `Gtk.Dialog.run()` E NÃO UM CALLBACK: o gesto está numa thread
+        (os gestos correm fora do laço, porque `daemon.reload` leva 9,5 s), e
+        precisa do caminho para seguir. `run()` bombeia o laço do GTK por
+        dentro, então a janela continua viva enquanto ela escolhe.
+
+        COM A JANELA OCULTA NÃO HÁ DIÁLOGO: uma `Gtk.OffscreenWindow` não tem
+        onde pôr um modal, e abrir um sem pai o jogaria NA TELA DELA — que é
+        exatamente o que `--oculta` existe para impedir. Nesse caso devolve
+        `None`, e o gesto o lê como "cancelou".
+        """
+        if self.args.oculta:
+            print(f"[seletor] {titulo}: a janela está oculta, não abro diálogo",
+                  file=sys.stderr)
+            return None
+        dlg = Gtk.FileChooserDialog(title=titulo, transient_for=self.tela.janela,
+                                    action=acao)
+        dlg.add_buttons("Cancelar", Gtk.ResponseType.CANCEL,
+                        rotulo, Gtk.ResponseType.ACCEPT)
+        if sugestao:
+            dlg.set_current_name(pathlib.Path(sugestao).name)
+            with contextlib.suppress(Exception):
+                dlg.set_current_folder(str(pathlib.Path(sugestao).parent))
+        if padrao != "*":
+            f = Gtk.FileFilter()
+            f.set_name(padrao)
+            f.add_pattern(padrao)
+            dlg.add_filter(f)
+        try:
+            escolhido = dlg.get_filename() if dlg.run() == Gtk.ResponseType.ACCEPT else None
+        finally:
+            dlg.destroy()
+        return escolhido
+
+    def _escolher_arquivo(self, titulo: str, padrao: str = "*", **_):
+        return self._dialogo(titulo, Gtk.FileChooserAction.OPEN, "Abrir", padrao=padrao)
+
+    def _salvar_arquivo(self, titulo: str, sugestao: str = "", **_):
+        return self._dialogo(titulo, Gtk.FileChooserAction.SAVE, "Guardar",
+                             sugestao=sugestao)
 
     # -- os gestos ---------------------------------------------------------
     def _gesto(self, o: dict) -> None:
@@ -570,6 +664,68 @@ class Piloto:
     def _js(self, script: str) -> None:
         self.ponte.rodar(script)
 
+    def _provar_no_aparelho(self) -> None:
+        """A PROVA BOTÃO A BOTÃO, no aparelho dela — pedido dela, 01/09/2026.
+
+        *"no aparelho por favor valida botão a botão tá bom?"*
+
+        E ela está certa sobre o que basta: `[gesto] → aplicado` só prova que a
+        função rodou sem levantar. O que prova de verdade é o ESTADO DO DAEMON
+        MUDAR — e é o que este modo mede, um gesto por vez:
+
+            lê o estado → clica → espera → lê de novo → diz o que mudou
+
+        Um gesto que aplica e não muda nada aparece como `SEM EFEITO`, que é
+        informação e não falha: pode ser um botão que já estava no valor pedido.
+        O que ele nunca faz é passar por sucesso calado.
+        """
+        alvos = [n for (p, n) in sorted(pacotes.GESTOS) if p == self.pagina]
+        if not self.args.incluir_perigosos:
+            alvos = [n for n in alvos if n not in PERIGOSOS]
+        if not alvos:
+            print(f"[prova] {self.pagina} não tem gesto seguro a clicar")
+            return
+        print(f"[prova] {len(alvos)} gesto(s) em {self.pagina}: {', '.join(alvos)}")
+        for i, nome in enumerate(alvos):
+            GLib.timeout_add(400 + i * self.args.entre,
+                             lambda g=nome: (self._um_botao(g), False)[1])
+
+    def _um_botao(self, nome: str) -> None:
+        """Um gesto: fotografa o daemon, clica, e mede o que mudou."""
+        try:
+            antes = _achatar(mesa_viva.estado_do_daemon())
+        except Exception as e:
+            print(f"[prova] {nome}: não li o daemon antes ({e})", file=sys.stderr)
+            return
+        self._antes_do_gesto = (nome, antes)
+        self._js(
+            "(document.querySelector('[data-gesto=\"" + nome + "\"],"
+            "[data-hef-gesto=\"" + nome + "\"],[data-papel=\"" + nome + "\"]')"
+            "||{click(){}}).click()")
+        # A ESPERA É OBRIGATÓRIA e não é folga: o daemon escreve no aparelho e
+        # só então republica o estado. Medir na hora leria o valor VELHO e diria
+        # "sem efeito" sobre um botão que funcionou.
+        GLib.timeout_add(self.args.espera, lambda: (self._depois_do_gesto(), False)[1])
+
+    def _depois_do_gesto(self) -> None:
+        nome, antes = getattr(self, "_antes_do_gesto", (None, {}))
+        if nome is None:
+            return
+        try:
+            depois = _achatar(mesa_viva.estado_do_daemon())
+        except Exception as e:
+            print(f"[prova] {nome}: não li o daemon depois ({e})", file=sys.stderr)
+            return
+        mudou = {k: (antes.get(k), v) for k, v in depois.items()
+                 if antes.get(k) != v and not any(r in k for r in RUIDO)}
+        self.provas.append({"gesto": nome, "mudou": mudou})
+        if mudou:
+            print(f"[PROVA] {self.pagina} · {nome} → MUDOU {len(mudou)} campo(s):")
+            for k, (a, d) in sorted(mudou.items())[:6]:
+                print(f"          {k}: {a!r} → {d!r}")
+        else:
+            print(f"[PROVA] {self.pagina} · {nome} → SEM EFEITO no estado do daemon")
+
     def _ir(self, pagina: str) -> None:
         self.view.load_uri(onde.pagina(pagina, publicado=True).as_uri())
 
@@ -594,6 +750,13 @@ class Piloto:
             print(f"{pagina:22s} {len(conta):8d} {pico:8d}")
             if conta and pico == 0:
                 mudas.append(pagina)
+        if self.provas:
+            mudaram = sum(1 for p in self.provas if p["mudou"])
+            print(f"\nPROVA NO APARELHO: {mudaram}/{len(self.provas)} gestos "
+                  f"mudaram o estado do daemon")
+            for p in self.provas:
+                marca = "✓" if p["mudou"] else "—"
+                print(f"   {marca} {p['gesto']}")
         if self.gestos:
             print(f"gestos: {len(self.gestos)} · aplicados: {len(self.aplicados)} · "
                   f"sem dono: {len(set(self.recusados))}")
@@ -630,6 +793,16 @@ def main() -> None:
                    help="ms em cada aba durante o passeio")
     p.add_argument("--foto", default="")
     p.add_argument("--abre", default="", help="abrir direto numa aba")
+    p.add_argument("--prova-no-aparelho", action="store_true",
+                   help="clica CADA gesto da aba, um por vez, e mede o que mudou "
+                        "no estado do daemon — a prova que ela pediu")
+    p.add_argument("--entre", type=int, default=2500,
+                   help="ms entre um gesto e o próximo")
+    p.add_argument("--espera", type=int, default=1200,
+                   help="ms entre o clique e a leitura do daemon")
+    p.add_argument("--incluir-perigosos", action="store_true",
+                   help="inclui os gestos que mexem na máquina dela (desligar, "
+                        "reiniciar, restaurar) — escolha de quem roda")
     p.add_argument("--prova-clique", default="",
                    help="lista de gestos a clicar, separada por vírgula — "
                         "eles chegam ao daemon de verdade")
@@ -638,6 +811,8 @@ def main() -> None:
     args = p.parse_args()
 
     piloto = Piloto(args)
+    if args.prova_no_aparelho:
+        GLib.timeout_add(2500, lambda: (piloto._provar_no_aparelho(), False)[1])
     if args.prova_clique:
         GLib.timeout_add(2000, lambda: (piloto._provar_cliques(), False)[1])
     if args.abre:

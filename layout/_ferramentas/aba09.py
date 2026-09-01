@@ -618,10 +618,23 @@ def item(rotulo, diz, cls="btn", gesto=""):
 #: `RUMBLE_POLICY_MULT` do daemon. O aceso é `PERFIL_DA_MESA`, o mesmo dado que
 #: as quatro linhas abaixo já leem — logo o botão aceso e o que elas dizem não
 #: têm como discordar.
+#:
+#: `data-v` E NÃO `data-perfil` — 01/09/2026, e o atributo antigo era um ENDEREÇO
+#: MORTO. O ouvinte de clique do piloto (`hefesto_vivo.py:191-207`) encaminha uma
+#: lista FIXA de campos ao Python — `gesto, modo, forca, player, lado, campo,
+#: hef, hex, sensor, rota, mudo, micModo, v, controle, texto` — e `perfil` não
+#: está nela. O botão parecia endereçado e chegava do outro lado sem dizer QUAL
+#: dos três perfis foi clicado: os três eram o mesmo clique.
+#:
+#: Não se guardam os DOIS atributos com o mesmo valor. Um deles seria o que
+#: ninguém lê, e a próxima pessoa leria `data-perfil` concluindo que é ele que
+#: chega — que é exatamente o engano que custou este comentário. `data-v` é o
+#: nome que o piloto já capta (a aba Conexões o usa em `aba08.py:1791`), e o
+#: guia manda usar o vocabulário que existe em vez de inventar um terceiro.
 def _botoes_bateria():
     return "".join(
         f'<button class="{"on" if p == PERFIL_DA_MESA else ""}"'
-        f' data-gesto="{_gesto("perfil-da-mesa")}" data-perfil="{p}"'
+        f' data-gesto="{_gesto("perfil-da-mesa")}" data-v="{p}"'
         f' title="{ROT_PERFIL[p]}: {impoe(p).lower()}. Vale para os {N} controles —'
         f' cada um pode sobrepô-lo na linha dele.">{ROT_PERFIL[p]}</button>'
         for p in ORC["PERFIS"])
@@ -1250,7 +1263,11 @@ if (_ON, _G, _CLS) != ((True, "✓", "ok") if _ON else (False, "○", "off")):
 #    Os nomes são cobrados contra `ROTULOS_DOS_PERFIS` — se alguém digitar um
 #    quarto nome aqui, ou renomear um perfil no produto sem olhar a tela, a régua
 #    acusa. E escolha ÚNICA quer dizer exatamente um aceso.
-_BOTOES_BAT = re.findall(r'<button class="(on)?"[^>]*data-perfil="([^"]+)"[^>]*>([^<]+)</button>',
+#
+#    O SELETOR LÊ `data-v`, que é o atributo que o piloto ENCAMINHA ao Python
+#    (ver `_botoes_bateria`). Enquanto ele dizia `data-perfil`, esta régua ficava
+#    verde sobre três botões que chegavam do outro lado indistinguíveis.
+_BOTOES_BAT = re.findall(r'<button class="(on)?"[^>]*data-v="([^"]+)"[^>]*>([^<]+)</button>',
                          _entre(MIOLO, '<div class="seg bat-perfis"', "</div>"))
 if len(_BOTOES_BAT) != len(ORC["PERFIS"]):
     raise SystemExit(f"ERRO: o Perfil de Bateria tem {len(_BOTOES_BAT)} botões e o produto "

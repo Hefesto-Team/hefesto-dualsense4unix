@@ -649,6 +649,27 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
 #   data-bloco     nas duas molduras de som (microfone · alto-falante)
 #   data-rota      nos dois botões de rota     data-sensor  nos dois interruptores
 #   data-campo     nos leitores soltos (mascara, mic-selo, alto-estado, l3/r3)
+#
+# O `data-gesto` ENTROU EM 01/09/2026, e ele NÃO substitui os de cima — cada um
+# responde uma pergunta diferente do mesmo clique:
+#
+#   data-gesto="mudo" · data-mudo="microfone"   QUEM atende · SOBRE O QUÊ
+#
+# A razão é medida no piloto: `hefesto_vivo.py:202` monta o nome do gesto como
+# `d.gesto || d.hefGesto || d.papel || 'clique'`. Um botão marcado só com
+# `data-mudo` chega ao despachante chamando-se **`clique`** — os oito botões de
+# som e sensor da aba disputariam UM nome, e o gesto teria de adivinhar qual
+# deles foi pelo texto. O `data-gesto` é o endereço de QUEM atende; o
+# `data-mudo`/`data-rota` continua sendo o argumento, e é por isso que os dois
+# ficam.
+#
+# E TRÊS PARES CONTINUAM SEM `data-gesto`, DE PROPÓSITO — os dois interruptores
+# de sensor e os dois modos do microfone. Não é esquecimento: o daemon não
+# atende nenhum dos dois (não há método de sensor nos 39 do `ipc_server`, e o
+# modo Virtual/Nativo é a `ONDA-CONEXOES-06`, que ainda não existe em código).
+# Sem `data-gesto` eles caem no `clique`, que não tem dono, e o piloto os RECUSA
+# dizendo o nome. Marcá-los seria a mentira que esta casa persegue: o botão que
+# responde calado, e quem clicou conclui que funcionou.
 # ---------------------------------------------------------------------------
 GL16 = [("cross","✕"),("circle","○"),("square","□"),("triangle","△"),
         ("dpad_up","↑"),("dpad_down","↓"),("dpad_left","←"),("dpad_right","→"),
@@ -1055,7 +1076,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
             <div class="vol">
               <span class="trilho"><span class="cheio" style="width:{mic_vol}%"></span></span>
               <span class="n">{mic_vol}</span>
-              <button class="mudo-i{mic_on}" data-mudo="microfone" title="{DICA_MIC_MUDO}">🎙</button>
+              <button class="mudo-i{mic_on}" data-gesto="mudo" data-mudo="microfone" title="{DICA_MIC_MUDO}">🎙</button>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
                  *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
@@ -1087,11 +1108,11 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
             <div class="vol">
               <span class="trilho"><span class="cheio" style="width:{alto_v[0]}%"></span></span>
               <span class="n">{alto_v[0]}</span>
-              <button class="mudo-i{alto_on}" data-mudo="alto-falante"{alto_trava} title="{alto_dica}">♪</button>
+              <button class="mudo-i{alto_on}" data-gesto="mudo" data-mudo="alto-falante"{alto_trava} title="{alto_dica}">♪</button>
             </div>
             <div class="rota">
-              <button class="{'on' if not rota_pc else ''}" data-rota="jogo">Sons do jogo</button>
-              <button class="{'on' if rota_pc else ''}" data-rota="pc">Todo o som do PC</button>
+              <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo">Sons do jogo</button>
+              <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc">Todo o som do PC</button>
             </div>
           </div>
         </div>

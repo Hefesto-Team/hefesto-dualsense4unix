@@ -262,6 +262,12 @@ def _carregar_tudo() -> None:
     aqui = pathlib.Path(__file__).resolve().parent
     for f in sorted(aqui.glob("a[0-9][0-9]_*.py")):
         importlib.import_module(f"pacotes.{f.stem}")
+    # O RODAPÉ É DAS DEZ, e por isso não casa com `aNN_*`: ele mora no
+    # `topo.html`, o esqueleto compartilhado, e seus gestos são registrados em
+    # `("*", nome)`. Sem esta linha ele não é importado, logo não se registra,
+    # logo os quatro botões do rodapé recusam em todas as abas — em silêncio,
+    # porque um gesto não registrado é indistinguível de um gesto sem dono.
+    importlib.import_module("pacotes.rodape")
 
 
 _carregar_tudo()

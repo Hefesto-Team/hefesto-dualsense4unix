@@ -58,6 +58,11 @@ from typing import Any
 
 # A BIBLIOTECA VEM ANTES DO `gi.repository`, e não é import decorativo: é ela
 # que crava os quatro pinos de `gi.require_version` com o Gdk DEPOIS do Gtk.
+#
+# O `isort:skip` NÃO É ENFEITE, e um `ruff --fix` cego o removeu em 01/09/2026,
+# reordenando estas três linhas: o `gi.repository` subiu para antes da
+# biblioteca, e a ordem que este comentário protege se perdeu. Ferramenta de
+# formatação não lê comentário — a marca é o que ela lê.
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
@@ -108,9 +113,21 @@ DONOS_DOS_GESTOS = {
     "reconectar": "app/actions/home_actions.RECONCILIAR_LABEL + o gesto de "
     "reconciliação de jogadores, que JÁ é produto que funciona na janela de "
     "hoje. O que faltava era a tela nova ter onde ligá-lo.",
-    "rodape": "Aplicar/Salvar Perfil/Importar/Exportar — os quatro têm dono no "
-    "produto (app/actions/profiles_actions.py). Nesta leva nenhum é chamado: "
-    "'Salvar Perfil' GRAVA NO DISCO DELA, e esta leva não escreve nada.",
+    # FATO ERRADO, SUBSTITUÍDO (01/09/2026). Aqui estava escrito que "os quatro
+    # têm dono no produto (app/actions/profiles_actions.py)". São TRÊS.
+    # Medido: `footer_actions.py` tem `on_apply_draft`, `on_save_profile` e
+    # `on_import_profile`; `profiles_actions.py` tem new/duplicate/remove/
+    # activate/reload/save; e o `main.glade` traz `btn_footer_apply`,
+    # `btn_footer_import` e `btn_footer_save_profile` — **e nenhum botão de
+    # exportar**. Não há handler de exportação em lugar nenhum do `src/`.
+    #
+    # "Exportar" é um botão que o DESENHO criou e o produto nunca teve. É
+    # feature nova — barata, porque o perfil já é JSON no disco — mas não é
+    # ligação, e chamá-la de ligação esconderia trabalho.
+    "rodape": "Aplicar/Salvar/Importar têm dono (app/actions/footer_actions.py: "
+    "on_apply_draft, on_save_profile, on_import_profile). EXPORTAR NÃO TEM — "
+    "não existe handler no src/ nem botão no main.glade. Nesta leva nenhum é "
+    "chamado: 'Salvar Perfil' GRAVA NO DISCO DELA, e esta leva não escreve.",
 }
 
 #: O que se diz de um gesto SEM linha na tabela acima. Era um `KeyError` cru no
