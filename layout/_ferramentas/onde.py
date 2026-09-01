@@ -42,6 +42,7 @@ CÓPIA do gerador REESCREVIA o mockup dela.
 """
 from __future__ import annotations
 
+import os
 import pathlib
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
@@ -55,6 +56,29 @@ BANCADA = RAIZ / "mockup"
 PUBLICADO = RAIZ / "layout"
 
 
+#: O DESVIO DA ESCRITA, e ele existe para UMA coisa: deixar um portão rodar os
+#: dez geradores sem tocar na bancada dela. Com `HEFESTO_BANCADA` apontando para
+#: um diretório temporário, `pagina()` e `gravar()` passam a escrever lá — e o
+#: portão compara o que SAIU com o que está no disco.
+#:
+#: POR QUE ISSO PRECISOU EXISTIR, medido em 01/09/2026: `aba06.py` estava
+#: marcada com os endereços da pintura e o `mockup/06-navegacao.html` NÃO — o
+#: gerador fora editado e nunca rodado. O produto mostrava zero endereços numa
+#: aba que o gerador dizia ter oito, e portão nenhum desta casa via a
+#: diferença. É o mesmo buraco que deixou a `novo-layout/` divergir 25 KB calada.
+#:
+#: Ele NÃO tem efeito quando a variável não está posta, que é sempre — nenhum
+#: fluxo dela passa por aqui, e um desvio que agisse sozinho seria pior que a
+#: doença.
+_DESVIO = "HEFESTO_BANCADA"
+
+
+def saida() -> pathlib.Path:
+    """Para onde os geradores escrevem AGORA: a bancada, ou o desvio do portão."""
+    desviado = os.environ.get(_DESVIO)
+    return pathlib.Path(desviado) if desviado else BANCADA
+
+
 def pagina(nome: str, publicado: bool = False) -> pathlib.Path:
     """O caminho de uma página, na bancada (padrão) ou no publicado.
 
@@ -65,7 +89,7 @@ def pagina(nome: str, publicado: bool = False) -> pathlib.Path:
     `docs/process/COMO-OLHAR-A-TELA.md` (*"régua que pergunta no lugar errado
     produz não-achado convincente"*), e ela reincidiu quatro vezes só em 31/08.
     """
-    return (PUBLICADO if publicado else BANCADA) / nome
+    return (PUBLICADO if publicado else saida()) / nome
 
 
 def paginas(publicado: bool = False) -> list[pathlib.Path]:

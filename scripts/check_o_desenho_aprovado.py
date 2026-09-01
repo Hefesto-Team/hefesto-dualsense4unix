@@ -99,7 +99,16 @@ INVISIVEIS = re.compile(
     r'\s(?:data-campo|data-papel|data-gesto|data-controle|data-uniq|data-id'
     r'|data-eixo|data-bloco|data-lado|data-sensor|data-mudo|data-rota'
     r'|data-mic-modo|data-forca|data-mascara|data-conectado|data-lista'
-    r'|data-degrau|data-modo|data-gatilho|data-entrada|data-clique)="[^"]*"'
+    r'|data-degrau|data-modo|data-gatilho|data-entrada|data-clique'
+    # `data-hef` e `data-hef-gesto` são o esquema que a aba Perfis usa — o
+    # outro agente marcou as 77 do arquivo dela com esse nome enquanto eu
+    # usava `data-campo` nas minhas. OS DOIS CONVIVEM de propósito: unificar
+    # agora custaria reescrever 77 marcações que já funcionam, e o nome do
+    # atributo não é o contrato — o contrato é o despachante, que aceita os
+    # dois. O que NÃO pode é um deles ficar de fora daqui e o portão acusar
+    # divergência de desenho onde só há endereço.
+    r'|data-hef-gesto|data-hef|data-ajuste|data-player'
+    r')="[^"]*"'
 )
 
 

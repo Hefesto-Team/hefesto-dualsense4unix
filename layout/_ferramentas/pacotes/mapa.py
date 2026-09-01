@@ -6,7 +6,7 @@ temos até a parte do BT mapeada por agentes."* O `specs.html` é a página que 
 abre; o CSV é o dado que a gera, e é dele que se lê.
 
 O QUE O CSV RESPONDE, e é exatamente o que falta a um valor de tela para deixar
-de ser enfeite (308 linhas, uma por peça × controle):
+de ser enfeite (308 linhas, uma por peça e controle):
 
     cabo_aciona / radio_aciona     o Hefesto MEXE nisso naquele transporte?
     cabo_canal  / radio_canal      por onde (hidraw, uhid, evdev, sysfs…)
@@ -51,17 +51,17 @@ def canal(chave: str, transporte: str = "cabo") -> dict | None:
     `None` engolido é o endereço inventado voltando pela porta dos fundos.
     """
     t = "radio" if transporte.upper() in {"BT", "RADIO", "RÁDIO"} else "cabo"
-    for l in _linhas():
-        if l["chave"] == chave:
+    for linha in _linhas():
+        if linha["chave"] == chave:
             return {
-                "chave": chave, "rotulo": l["rotulo"], "familia": l["familia"],
-                "aciona": (l[f"{t}_aciona"] or "").strip().lower() in {"sim", "true", "1"},
-                "aceita": (l[f"{t}_aceita"] or "").strip().lower() in {"sim", "true", "1"},
-                "canal": l[f"{t}_canal"] or "",
-                "report_id": l[f"{t}_report_id"] or "",
-                "comando": l[f"{t}_comando"] or "",
-                "por_que_nao": l[f"{t}_por_que_nao_aciona"] or "",
-                "estado_hoje": l["estado_hoje"] or "",
+                "chave": chave, "rotulo": linha["rotulo"], "familia": linha["familia"],
+                "aciona": (linha[f"{t}_aciona"] or "").strip().lower() in {"sim", "true", "1"},
+                "aceita": (linha[f"{t}_aceita"] or "").strip().lower() in {"sim", "true", "1"},
+                "canal": linha[f"{t}_canal"] or "",
+                "report_id": linha[f"{t}_report_id"] or "",
+                "comando": linha[f"{t}_comando"] or "",
+                "por_que_nao": linha[f"{t}_por_que_nao_aciona"] or "",
+                "estado_hoje": linha["estado_hoje"] or "",
                 "transporte": t,
             }
     return None
@@ -74,7 +74,7 @@ def da_familia(familia: str) -> tuple[str, ...]:
     É por aqui que uma aba pergunta "o que existe no meu assunto", em vez de
     alguém digitar a lista e ela envelhecer calada.
     """
-    return tuple(dict.fromkeys(l["chave"] for l in _linhas() if l["familia"] == familia))
+    return tuple(dict.fromkeys(x["chave"] for x in _linhas() if x["familia"] == familia))
 
 
 def sem_dono(oque: str) -> dict:

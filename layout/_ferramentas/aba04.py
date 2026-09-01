@@ -491,7 +491,8 @@ def botao_player(c, n):
         dica = (f"Dar o Player {n} ao {c['nome']}: o {d['nome']} ({d['via']}), "
                 f"que tem o {n} hoje, fica com o {c['jogador']}. Os dois trocam de "
                 f"lugar — ninguém repete número e ninguém fica sem.")
-    return f'<button class="{"on" if eu else ""}" title="{dica}">{anel}{n}</button>'
+    return (f'<button class="{"on" if eu else ""}" data-campo="player-{n}" '
+            f'data-player="{n}" title="{dica}">{anel}{n}</button>')
 
 
 def coluna_vazia(c):
@@ -566,27 +567,27 @@ def coluna(c):
         f' title="Cor automática do Player {i} — usar aqui pinta a barra do'
         f' {c["nome"]}, e não muda o número dele."></button>'
         for i, t in enumerate(TONS, 1))
-    return f'''        <div class="ctrl">
+    return f'''        <div class="ctrl" data-controle="{c.get("uniq") or p}" data-conectado="sim">
           <div class="moldura" style="--plastico:{cor_da_zona(c["cor"])}" title="O {c["nome"]} agora: a barra na cor do Player {j}, e as cinco lâmpadas no padrão dele.">
             {svg(f"il-{p}", c["cor"], jogador=j, luz=tinta)}
           </div>
-          <div class="ctrl-rot">P{j} <span class="pt">•</span> {c["nome"]} <span class="pt">•</span> {c["via"]}</div>
+          <div class="ctrl-rot" data-campo="identidade">P{j} <span class="pt">•</span> {c["nome"]} <span class="pt">•</span> {c["via"]}</div>
           <div class="cel-cor">
             <span class="guia">
 {tons}
               <input type="color" class="livre" value="{cor.lower()}"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
-            <span class="hex">{cor}</span>
+            <span class="hex" data-campo="hex">{cor}</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" style="width:{b}%"></span></span>
-            <span class="num">{b}%</span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" style="width:{b}%"></span></span>
+            <span class="num" data-campo="brilho">{b}%</span>
           </div>
           <div class="players">
 {chr(10).join("            " + botao_player(c, n) for n in NUMEROS)}
           </div>
-          <div class="aceso" title="O {c["nome"]} aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player {j}.">
+          <div class="aceso" data-campo="aceso" title="O {c["nome"]} aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player {j}.">
             <span class="tira-luz esq" style="background:{tinta};color:{tinta};opacity:{b / 100}"></span>
             <span class="pad">{luzinhas(j)}</span>
             <span class="tira-luz dir" style="background:{tinta};color:{tinta};opacity:{b / 100}"></span>

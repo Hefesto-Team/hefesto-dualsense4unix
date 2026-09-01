@@ -1132,10 +1132,12 @@
           <div class="rot-r2-2"><span class="sec-rot">Efeito pronto</span></div>
           <div class="rot-r2-3 no-topo"><span class="sec-rot">Ajustes</span></div>
         </div>
-        <div class="ctrl">
+        <div class="ctrl" data-controle="p1"
+             data-conectado="sim">
           <div><span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span></div>
           <div>
-            <select class="modo" title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+            <select class="modo" data-campo="modo-e" data-lado="e"
+                    title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
                 <option title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1158,7 +1160,8 @@
             </select>
           </div>
           <div>
-            <select class="pronto" title="Efeito pronto do gatilho esquerdo">
+            <select class="pronto" data-campo="pronto-e" data-lado="e"
+                    title="Efeito pronto do gatilho esquerdo">
                 <option>— Nenhum —</option>
                 <option>Rampa crescente</option>
                 <option>Rampa decrescente</option>
@@ -1171,25 +1174,25 @@
             </select>
           </div>
           <div class="ajustes e">
-            <div class="barra">
-              <span class="nome">Força</span>
-              <span class="trilho"><span class="cheio" style="width:78%"></span></span>
-              <span class="num">7</span>
+            <div class="barra" data-ajuste="e-0">
+              <span class="nome" data-campo="aj-nome-e-0">Força</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" style="width:78%"></span></span>
+              <span class="num" data-campo="aj-val-e-0">7</span>
             </div>
-            <div class="barra">
-              <span class="nome">Frequência</span>
-              <span class="trilho"><span class="cheio" style="width:44%"></span></span>
-              <span class="num">4</span>
+            <div class="barra" data-ajuste="e-1">
+              <span class="nome" data-campo="aj-nome-e-1">Frequência</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" style="width:44%"></span></span>
+              <span class="num" data-campo="aj-val-e-1">4</span>
             </div>
-            <div class="barra">
-              <span class="nome">Início do curso</span>
-              <span class="trilho"><span class="cheio" style="width:25%"></span></span>
-              <span class="num">25</span>
+            <div class="barra" data-ajuste="e-2">
+              <span class="nome" data-campo="aj-nome-e-2">Início do curso</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" style="width:25%"></span></span>
+              <span class="num" data-campo="aj-val-e-2">25</span>
             </div>
-            <div class="barra">
-              <span class="nome">Fim do curso</span>
-              <span class="trilho"><span class="cheio" style="width:90%"></span></span>
-              <span class="num">230</span>
+            <div class="barra" data-ajuste="e-3">
+              <span class="nome" data-campo="aj-nome-e-3">Fim do curso</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-3" style="width:90%"></span></span>
+              <span class="num" data-campo="aj-val-e-3">230</span>
             </div>
           </div>
 <!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
@@ -1202,7 +1205,8 @@
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
           <div>
-            <select class="modo" title="Gatilho direito — os 19 modos, com a descrição de cada um">
+            <select class="modo" data-campo="modo-d" data-lado="d"
+                    title="Gatilho direito — os 19 modos, com a descrição de cada um">
                 <option title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1225,7 +1229,8 @@
             </select>
           </div>
           <div>
-            <select class="pronto" title="Efeito pronto do gatilho direito">
+            <select class="pronto" data-campo="pronto-d" data-lado="d"
+                    title="Efeito pronto do gatilho direito">
                 <option>— Nenhum —</option>
                 <option>Rampa crescente</option>
                 <option>Rampa decrescente</option>
@@ -1238,23 +1243,25 @@
             </select>
           </div>
           <div class="ajustes d">
-            <div class="barra">
-              <span class="nome">Força no fim</span>
-              <span class="trilho"><span class="cheio" style="width:66%"></span></span>
-              <span class="num">6</span>
+            <div class="barra" data-ajuste="d-0">
+              <span class="nome" data-campo="aj-nome-d-0">Força no fim</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-0" style="width:66%"></span></span>
+              <span class="num" data-campo="aj-val-d-0">6</span>
             </div>
-            <div class="barra">
-              <span class="nome">Início do curso</span>
-              <span class="trilho"><span class="cheio" style="width:15%"></span></span>
-              <span class="num">15</span>
+            <div class="barra" data-ajuste="d-1">
+              <span class="nome" data-campo="aj-nome-d-1">Início do curso</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-1" style="width:15%"></span></span>
+              <span class="num" data-campo="aj-val-d-1">15</span>
             </div>
           </div>
           <div><button class="btn roxo">Guardar esse efeito</button></div>
         </div>
-        <div class="ctrl">
+        <div class="ctrl" data-controle="p2"
+             data-conectado="sim">
           <div><span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span></div>
           <div>
-            <select class="modo" title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+            <select class="modo" data-campo="modo-e" data-lado="e"
+                    title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
                 <option title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1277,7 +1284,8 @@
             </select>
           </div>
           <div>
-            <select class="pronto" title="Efeito pronto do gatilho esquerdo">
+            <select class="pronto" data-campo="pronto-e" data-lado="e"
+                    title="Efeito pronto do gatilho esquerdo">
                 <option>— Nenhum —</option>
                 <option>Rampa crescente</option>
                 <option>Rampa decrescente</option>
@@ -1290,20 +1298,20 @@
             </select>
           </div>
           <div class="ajustes e">
-            <div class="barra">
-              <span class="nome">Início do curso</span>
-              <span class="trilho"><span class="cheio" style="width:20%"></span></span>
-              <span class="num">3</span>
+            <div class="barra" data-ajuste="e-0">
+              <span class="nome" data-campo="aj-nome-e-0">Início do curso</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" style="width:20%"></span></span>
+              <span class="num" data-campo="aj-val-e-0">3</span>
             </div>
-            <div class="barra">
-              <span class="nome">Fim do curso</span>
-              <span class="trilho"><span class="cheio" style="width:60%"></span></span>
-              <span class="num">6</span>
+            <div class="barra" data-ajuste="e-1">
+              <span class="nome" data-campo="aj-nome-e-1">Fim do curso</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" style="width:60%"></span></span>
+              <span class="num" data-campo="aj-val-e-1">6</span>
             </div>
-            <div class="barra">
-              <span class="nome">Força</span>
-              <span class="trilho"><span class="cheio" style="width:62%"></span></span>
-              <span class="num">5</span>
+            <div class="barra" data-ajuste="e-2">
+              <span class="nome" data-campo="aj-nome-e-2">Força</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" style="width:62%"></span></span>
+              <span class="num" data-campo="aj-val-e-2">5</span>
             </div>
           </div>
 <!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
@@ -1316,7 +1324,8 @@
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
           <div>
-            <select class="modo" title="Gatilho direito — os 19 modos, com a descrição de cada um">
+            <select class="modo" data-campo="modo-d" data-lado="d"
+                    title="Gatilho direito — os 19 modos, com a descrição de cada um">
                 <option title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option selected title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1339,7 +1348,8 @@
             </select>
           </div>
           <div>
-            <select class="pronto" title="Efeito pronto do gatilho direito">
+            <select class="pronto" data-campo="pronto-d" data-lado="d"
+                    title="Efeito pronto do gatilho direito">
                 <option selected>— Nenhum —</option>
                 <option>Rampa crescente</option>
                 <option>Rampa decrescente</option>
@@ -1352,23 +1362,25 @@
             </select>
           </div>
           <div class="ajustes d">
-            <div class="barra">
-              <span class="nome">Posição</span>
-              <span class="trilho"><span class="cheio" style="width:56%"></span></span>
-              <span class="num">5</span>
+            <div class="barra" data-ajuste="d-0">
+              <span class="nome" data-campo="aj-nome-d-0">Posição</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-0" style="width:56%"></span></span>
+              <span class="num" data-campo="aj-val-d-0">5</span>
             </div>
-            <div class="barra">
-              <span class="nome">Força</span>
-              <span class="trilho"><span class="cheio" style="width:78%"></span></span>
-              <span class="num">200</span>
+            <div class="barra" data-ajuste="d-1">
+              <span class="nome" data-campo="aj-nome-d-1">Força</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-1" style="width:78%"></span></span>
+              <span class="num" data-campo="aj-val-d-1">200</span>
             </div>
           </div>
           <div><button class="btn roxo">Guardar esse efeito</button></div>
         </div>
-        <div class="ctrl">
+        <div class="ctrl" data-controle="p3"
+             data-conectado="nao">
           <div><span class="chip vazio" title="Nenhum controle neste lugar.">P3 <span class="pt">•</span> Desconectado</span></div>
           <div>
-            <select class="modo" title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+            <select class="modo" data-campo="modo-e" data-lado="e"
+                    title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
                 <option selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1391,7 +1403,8 @@
             </select>
           </div>
           <div>
-            <select class="pronto" title="Efeito pronto do gatilho esquerdo">
+            <select class="pronto" data-campo="pronto-e" data-lado="e"
+                    title="Efeito pronto do gatilho esquerdo">
                 <option selected>— Nenhum —</option>
                 <option>Rampa crescente</option>
                 <option>Rampa decrescente</option>
@@ -1416,7 +1429,8 @@
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
           <div>
-            <select class="modo" title="Gatilho direito — os 19 modos, com a descrição de cada um">
+            <select class="modo" data-campo="modo-d" data-lado="d"
+                    title="Gatilho direito — os 19 modos, com a descrição de cada um">
                 <option selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1439,7 +1453,8 @@
             </select>
           </div>
           <div>
-            <select class="pronto" title="Efeito pronto do gatilho direito">
+            <select class="pronto" data-campo="pronto-d" data-lado="d"
+                    title="Efeito pronto do gatilho direito">
                 <option selected>— Nenhum —</option>
                 <option>Rampa crescente</option>
                 <option>Rampa decrescente</option>
@@ -1456,10 +1471,12 @@
           </div>
           <div><button class="btn roxo">Guardar esse efeito</button></div>
         </div>
-        <div class="ctrl">
+        <div class="ctrl" data-controle="p4"
+             data-conectado="nao">
           <div><span class="chip vazio" title="Nenhum controle neste lugar.">P4 <span class="pt">•</span> Desconectado</span></div>
           <div>
-            <select class="modo" title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+            <select class="modo" data-campo="modo-e" data-lado="e"
+                    title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
                 <option selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1482,7 +1499,8 @@
             </select>
           </div>
           <div>
-            <select class="pronto" title="Efeito pronto do gatilho esquerdo">
+            <select class="pronto" data-campo="pronto-e" data-lado="e"
+                    title="Efeito pronto do gatilho esquerdo">
                 <option selected>— Nenhum —</option>
                 <option>Rampa crescente</option>
                 <option>Rampa decrescente</option>
@@ -1507,7 +1525,8 @@
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
           <div>
-            <select class="modo" title="Gatilho direito — os 19 modos, com a descrição de cada um">
+            <select class="modo" data-campo="modo-d" data-lado="d"
+                    title="Gatilho direito — os 19 modos, com a descrição de cada um">
                 <option selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1530,7 +1549,8 @@
             </select>
           </div>
           <div>
-            <select class="pronto" title="Efeito pronto do gatilho direito">
+            <select class="pronto" data-campo="pronto-d" data-lado="d"
+                    title="Efeito pronto do gatilho direito">
                 <option selected>— Nenhum —</option>
                 <option>Rampa crescente</option>
                 <option>Rampa decrescente</option>

@@ -431,20 +431,22 @@ def bloco(lado, sigla, modo, pronto, ajustes):
     alturas diferentes, porque cada uma vale o maior modo que está NELA."""
     if ajustes:
         aj = "\n".join(
-            f'''            <div class="barra">
-              <span class="nome">{n}</span>
-              <span class="trilho"><span class="cheio" style="width:{p}%"></span></span>
-              <span class="num">{v}</span>
-            </div>''' for n, p, v in ajustes)
+            f'''            <div class="barra" data-ajuste="{sigla}-{i}">
+              <span class="nome" data-campo="aj-nome-{sigla}-{i}">{n}</span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-{sigla}-{i}" style="width:{p}%"></span></span>
+              <span class="num" data-campo="aj-val-{sigla}-{i}">{v}</span>
+            </div>''' for i, (n, p, v) in enumerate(ajustes))
     else:
         aj = '            <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>'
     return f'''          <div>
-            <select class="modo" title="Gatilho {lado} — os 19 modos, com a descrição de cada um">
+            <select class="modo" data-campo="modo-{sigla}" data-lado="{sigla}"
+                    title="Gatilho {lado} — os 19 modos, com a descrição de cada um">
 {opcoes_modo(modo)}
             </select>
           </div>
           <div>
-            <select class="pronto" title="Efeito pronto do gatilho {lado}">
+            <select class="pronto" data-campo="pronto-{sigla}" data-lado="{sigla}"
+                    title="Efeito pronto do gatilho {lado}">
 {opcoes_pronto(pronto)}
             </select>
           </div>
@@ -485,7 +487,8 @@ def coluna(c):
     dire = bloco("direito", "d", *cena["dir"][:2], barras(*cena["dir"][::2]))
     rot = (f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}'
            f' <span class="pt">•</span> {c["via"]}')
-    return f'''        <div class="ctrl">
+    return f'''        <div class="ctrl" data-controle="{c.get("uniq") or c["pref"]}"
+             data-conectado="{"sim" if c.get("conectado", True) else "nao"}">
           <div>{_chip(c, rot)}</div>
 {esq}
 <!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
