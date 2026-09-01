@@ -3486,6 +3486,20 @@ class IpcHandlersMixin:
             "volume": max(0, min(255, volume)),
             "muted": bool(speaker.get("muted")),
         }
+        # A ROTA ENTRA NO ESTADO — 01/09/2026, e a falta dela era uma assimetria
+        # medida: o `speaker.set` RESPONDE com a rota
+        # (`{"status": "ok", "speaker": {"volume": 102, "muted": false,
+        # "rota": 0}}`) e o `state_full` não a publicava. Quem trocasse a saída
+        # do alto-falante pela tela não conseguia ler de volta qual ficou
+        # valendo — o botão mudava algo que a interface não sabia mostrar.
+        #
+        # `None` NÃO É ZERO aqui: a rota 0 é uma saída de verdade (fone à
+        # esquerda, alto-falante à direita) e `None` é "o controle não disse".
+        # Por isso a chave só entra quando existe, em vez de nascer com um
+        # padrão que mentiria sobre o aparelho.
+        rota = speaker.get("rota")
+        if isinstance(rota, int) and not isinstance(rota, bool):
+            bloco["rota"] = rota
         if isinstance(status, dict):
             bloco.update(status)
         entry["speaker"] = bloco

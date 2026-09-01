@@ -35,23 +35,60 @@ from . import Contexto, gesto, perfil
 PAGINA = "*"
 
 
-def _draft_do_ativo(nome: str):
-    """O `DraftConfig` do perfil ativo, ou `None`.
+def _draft_do_ativo(nome: str, ctx: Contexto | None = None):
+    """O `DraftConfig` do perfil ativo, com o que está VALENDO por cima.
 
     O DRAFT É DO PRODUTO e não se reescreve: `app/draft_config.DraftConfig` é
     pydantic puro (zero GTK), com `from_profile`, `to_ipc_dict` e `to_profile`.
     É o mesmo objeto que o rodapé da janela estável monta.
+
+    O QUE MUDA AQUI É DE ONDE VEM O CONTEÚDO, e a razão é a decisão dela de
+    01/09: **a interface nova é de ação imediata** — clicar num tom já pinta o
+    controle, sem passar por rascunho. A janela estável guarda um `self.draft`
+    em memória e o atualiza a cada widget mexido; aqui não há esse draft, e
+    carregar só do disco faria o "Salvar" gravar o que JÁ ESTAVA LÁ.
+
+    MEDIDO em 01/09/2026, e por isso esta função existe assim: com a luz do P1
+    em `[255, 0, 255]` (clicada) e o perfil no disco dizendo `[0, 255, 128]`, um
+    "Salvar" que só lesse o disco gravaria o verde — **perdendo a mudança
+    dela**, calado.
+
+    O QUE O DAEMON PUBLICA VENCE O DISCO: cor da barra, política de vibração,
+    passthrough, velocidade do mouse, mudo do microfone, volume do alto-falante.
+    O QUE ELE NÃO PUBLICA fica do perfil — e o caso é os GATILHOS: o DualSense
+    não devolve o modo em que está (é comando de ida), como o
+    `a03_gatilhos.py` mede pela outra ponta.
     """
     perfil._com_o_src()
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig, LedsDraft
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     if not nome:
         return None
     try:
-        return DraftConfig.from_profile(load_profile(nome))
+        draft = DraftConfig.from_profile(load_profile(nome))
     except Exception:
         return None
+    if ctx is None:
+        return draft
+
+    for c in ctx.conectados:
+        uniq = str(c.get("uniq") or "")
+        rgb = c.get("lightbar_rgb") or []
+        if not uniq or len(rgb) < 3:
+            continue
+        # A COR VIVA VIRA OVERRIDE DAQUELE CONTROLE, e não a cor global: cada
+        # controle tem a sua, e é assim que o perfil já guarda (o
+        # `ControllerOverrides.leds` do schema existe desde antes desta aba).
+        draft = draft.with_controller_leds(uniq, LedsDraft(
+            lightbar_rgb=tuple(int(x) for x in rgb[:3]),
+            lightbar_brightness=draft.leds.lightbar_brightness,
+            player_leds=list(draft.leds.player_leds),
+            # SE ELA ESCOLHEU UMA COR, a automática não pode voltar por cima —
+            # senão salvar a escolha dela a apagaria no próximo Aplicar.
+            auto_player_colors=False,
+        ))
+    return draft
 
 
 @gesto("*", "aplicar")
@@ -88,7 +125,9 @@ def salvar(ctx: Contexto, o: dict, p) -> None:
     tipo de estrago que não se desfaz por engano.
     """
     nome = str(ctx.state.get("active_profile") or "")
-    draft = _draft_do_ativo(nome)
+    # O `ctx` VAI JUNTO: é o que faz o Salvar gravar o que ESTÁ VALENDO, e não
+    # o que já estava no disco.
+    draft = _draft_do_ativo(nome, ctx)
     if draft is None:
         raise ValueError("salvar: não há perfil ativo. Escolha um na aba Perfis.")
     perfil._com_o_src()

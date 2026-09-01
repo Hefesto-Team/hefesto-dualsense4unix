@@ -191,16 +191,22 @@ BOOTSTRAP = r"""
       // existiam — cada piloto de aba usava o seu.
       const alvo = ev.target.closest(
         '[data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],' +
-        '[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]');
+        '[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v],' +
+        '.r-aplicar,.r-salvar,.r-importar,.r-exportar');
       if(!alvo) return;
       const d = alvo.dataset;
       // DE QUAL CONTROLE, e sem isto o gesto é ambíguo: a mesa tem quatro
       // colunas iguais e um "Desligar" clicado na terceira não diz em qual
       // barra de luz mexer. O `closest` sobe até o bloco do controle — é o
       // mesmo `data-controle` que a pintura usa para achar onde escrever.
+      // O RODAPÉ ENDEREÇA POR CLASSE, e não por `data-`: ele mora no
+      // `topo.html`, o esqueleto das dez, e um `data-gesto` ali mudaria as dez
+      // páginas de uma vez. A classe `r-<nome>` já era o endereço dele no
+      // `jogar_vivo.py` — este é o quarto vocabulário, e é o último.
+      const doRodape = (alvo.className.match(/\br-([a-z]+)\b/) || [])[1];
       const dono = alvo.closest('[data-controle],[data-uniq]');
       manda({
-        gesto: d.gesto || d.hefGesto || d.papel || 'clique',
+        gesto: d.gesto || d.hefGesto || d.papel || doRodape || 'clique',
         modo: d.modo || '', forca: d.forca || '', player: d.player || '',
         lado: d.lado || '', campo: d.campo || '', hef: d.hef || '',
         hex: d.hex || '', sensor: d.sensor || '', rota: d.rota || '',
@@ -254,6 +260,26 @@ def _fita(mesa: list[dict]) -> str:
         return ""
 
 
+#: O SELETOR DO CLIQUE SINTÉTICO, e ele cobre os QUATRO vocabulários das dez
+#: páginas — `data-gesto`, `data-hef-gesto`, `data-papel` e a classe `r-<nome>`
+#: do rodapé, que endereça assim porque mora no esqueleto compartilhado.
+#:
+#: Um seletor que cobrisse só o primeiro daria "clicou" sobre um `null` — e
+#: `null.click()` não levanta com o `||{click(){}}`, então a prova passaria em
+#: silêncio sobre um botão nunca tocado. Foi assim que o `--prova-gesto` da
+#: Controles deu verde sobre dois botões mortos em 29/08.
+SELETOR = ("(document.querySelector('[data-gesto=\"%s\"],[data-hef-gesto=\"%s\"],"
+           "[data-papel=\"%s\"],.r-%s')||{click(){}}).click()")
+
+#: O MÉTODO LENTO DE CADA GESTO, para a prova esperar o tempo dele. Só os que
+#: passam do padrão precisam de linha aqui.
+_METODO_DO_GESTO = {
+    "atualizar": "daemon.reload", "modo-dualsense": "gamepad.emulation.set",
+    "modo-xbox": "gamepad.emulation.set", "modo-navegacao": "mouse.emulation.set",
+    "hefesto": "native.mode.set", "ativar": "profile.switch",
+    "aplicar": "profile.apply_draft", "reconectar": "coop.sync",
+}
+
 #: OS GESTOS QUE MEXEM NA MÁQUINA DELA, e que a prova botão a botão NÃO clica
 #: sozinha. Não é timidez: `desligar` para o daemon e ela fica sem controle no
 #: meio do trabalho; `restaurar-de-fabrica` apaga configuração; `reiniciar`
@@ -261,9 +287,21 @@ def _fita(mesa: list[dict]) -> str:
 #: provar que sabe clicar.
 #:
 #: Para incluí-los, `--incluir-perigosos` — e aí é escolha de quem roda.
+#: A chave é `(página, gesto)`, e a qualificação NÃO é preciosismo: `modo` na
+#: Navegação liga a emulação de mouse e MEXE NO CURSOR DELA — na tela dela,
+#: enquanto ela trabalha. O mesmo `modo` nos Gatilhos escolhe um efeito e é
+#: inócuo. Uma lista por nome cru trataria os dois igual, e a escolha seria
+#: entre não provar o seguro ou estragar o trabalho dela.
 PERIGOSOS = {
-    "desligar", "reiniciar", "restaurar-de-fabrica", "refazer-proton",
-    "remover", "novo", "voltar-a-de-ontem", "autostart",
+    ("09-sistema.html", "desligar"), ("09-sistema.html", "reiniciar"),
+    ("09-sistema.html", "restaurar-de-fabrica"), ("09-sistema.html", "refazer-proton"),
+    ("09-sistema.html", "autostart"),
+    ("10-perfis.html", "remover"), ("10-perfis.html", "novo"),
+    ("10-perfis.html", "voltar-a-de-ontem"),
+    # O CURSOR É DELA. Ligar a emulação de mouse move o ponteiro na tela em que
+    # ela está trabalhando — é o mesmo motivo de toda janela desta casa nascer
+    # com `--oculta`.
+    ("06-navegacao.html", "modo"),
 }
 
 
@@ -291,7 +329,15 @@ def _achatar(o, prefixo="") -> dict:
 #: de força-feedback, a posição dos analógicos. Compará-los faria TODO gesto
 #: parecer que mudou alguma coisa, que é o mesmo que não medir nada.
 RUIDO = ("visto_ha_s", "ha_s", "_count", "nascimento", "age_sec", "uptime",
-         "inputs.", "motion_", "forwards", "counters.", "_ultimos_")
+         "inputs.", "motion_", "forwards", "counters.", "_ultimos_",
+         # OS EIXOS NA RAIZ DO STATE, e não só dentro de `inputs`. O daemon
+         # publica `lx`, `ly`, `rx`, `ry`, `l2_raw` e `r2_raw` nos DOIS lugares,
+         # e o filtro só cobria o segundo. Um analógico em repouso oscila um
+         # ponto — `ry: 128 → 129` — e isso fazia um botão qualquer parecer que
+         # mudou o aparelho. Medido em 01/09 na aba Conexões: o `sala-altura`
+         # deu ✓ sobre o tremor do polegar dela.
+         "lx", "ly", "rx", "ry", "l2_raw", "r2_raw", "buttons",
+         "battery_pct", "bt_mic")
 
 
 def _pagina_da_uri(uri: str | None) -> str:
@@ -333,6 +379,7 @@ class Piloto:
         #: clique.
         #: O que a prova botão a botão mediu, um por gesto.
         self.provas: list[dict] = []
+        self._fila: list[str] = []
         self._mesa_de_agora: list[dict] = []
         self._ctx_de_agora = pacotes.Contexto(state={})
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
@@ -657,9 +704,8 @@ class Piloto:
         entram — uma régua não mexe na máquina dela para provar que sabe clicar.
         """
         for i, gesto in enumerate(self.args.prova_clique.split(",")):
-            GLib.timeout_add(600 + i * 700, lambda g=gesto: (self._js(
-                f"(document.querySelector('[data-gesto=\"{g}\"]')||{{click(){{}}}}).click()"
-            ), False)[1])
+            GLib.timeout_add(600 + i * 900, lambda g=gesto: (self._js(SELETOR % (g, g, g, g)),
+                                                             False)[1])
 
     def _js(self, script: str) -> None:
         self.ponte.rodar(script)
@@ -681,14 +727,27 @@ class Piloto:
         """
         alvos = [n for (p, n) in sorted(pacotes.GESTOS) if p == self.pagina]
         if not self.args.incluir_perigosos:
-            alvos = [n for n in alvos if n not in PERIGOSOS]
+            alvos = [n for n in alvos if (self.pagina, n) not in PERIGOSOS]
         if not alvos:
             print(f"[prova] {self.pagina} não tem gesto seguro a clicar")
             return
         print(f"[prova] {len(alvos)} gesto(s) em {self.pagina}: {', '.join(alvos)}")
-        for i, nome in enumerate(alvos):
-            GLib.timeout_add(400 + i * self.args.entre,
-                             lambda g=nome: (self._um_botao(g), False)[1])
+        # UMA FILA SERIAL, e não timers fixos. Com `timeout_add` de intervalo
+        # constante os gestos se ATROPELAM: `daemon.reload` leva 9,5 s e o
+        # intervalo era 2,5 — o segundo gesto começava com o primeiro no ar, o
+        # `_antes_do_gesto` (que é um só) era sobrescrito, e o relato saiu com
+        # `retomar` DUAS vezes e `perfil-da-mesa` nenhuma. Medido em 01/09.
+        #
+        # Cada gesto agenda o próximo quando o SEU termina. O relato passa a ter
+        # uma linha por gesto, na ordem, e nenhuma medição pega o efeito da
+        # anterior.
+        self._fila = list(alvos)
+        GLib.timeout_add(400, lambda: (self._proximo_da_fila(), False)[1])
+
+    def _proximo_da_fila(self) -> None:
+        if not self._fila:
+            return
+        self._um_botao(self._fila.pop(0))
 
     def _um_botao(self, nome: str) -> None:
         """Um gesto: fotografa o daemon, clica, e mede o que mudou."""
@@ -696,16 +755,21 @@ class Piloto:
             antes = _achatar(mesa_viva.estado_do_daemon())
         except Exception as e:
             print(f"[prova] {nome}: não li o daemon antes ({e})", file=sys.stderr)
+            self._proximo_da_fila()
             return
         self._antes_do_gesto = (nome, antes)
-        self._js(
-            "(document.querySelector('[data-gesto=\"" + nome + "\"],"
-            "[data-hef-gesto=\"" + nome + "\"],[data-papel=\"" + nome + "\"]')"
-            "||{click(){}}).click()")
+        self._js(SELETOR % (nome, nome, nome, nome))
         # A ESPERA É OBRIGATÓRIA e não é folga: o daemon escreve no aparelho e
         # só então republica o estado. Medir na hora leria o valor VELHO e diria
         # "sem efeito" sobre um botão que funcionou.
-        GLib.timeout_add(self.args.espera, lambda: (self._depois_do_gesto(), False)[1])
+        #
+        # E ELA É POR GESTO: o `TETOS` da ponte diz que `daemon.reload` leva 15 s
+        # e `gamepad.emulation.set` 2 — esperar o mesmo para os dois faz o
+        # instrumento medir antes de o lento terminar, e ler "sem efeito".
+        from pacotes import ponte as _p
+
+        espera = max(self.args.espera, int(_p.teto(_METODO_DO_GESTO.get(nome, "")) * 1000) + 800)
+        GLib.timeout_add(espera, lambda: (self._depois_do_gesto(), False)[1])
 
     def _depois_do_gesto(self) -> None:
         nome, antes = getattr(self, "_antes_do_gesto", (None, {}))
@@ -715,16 +779,40 @@ class Piloto:
             depois = _achatar(mesa_viva.estado_do_daemon())
         except Exception as e:
             print(f"[prova] {nome}: não li o daemon depois ({e})", file=sys.stderr)
+            self._proximo_da_fila()
             return
         mudou = {k: (antes.get(k), v) for k, v in depois.items()
                  if antes.get(k) != v and not any(r in k for r in RUIDO)}
-        self.provas.append({"gesto": nome, "mudou": mudou})
+        # SEM ECO NÃO É SEM EFEITO, e confundir os dois é o que faria esta régua
+        # acusar um botão que funciona. O `state_full` do daemon não publica
+        # gatilho — o DualSense não devolve o modo em que está, é comando de ida
+        # — então um `trigger.set` aceito não muda campo nenhum aqui.
+        #
+        # Quem declara isso é o PACOTE, em `SEM_ECO`, e a prova daqueles gestos
+        # é outra: o gesto usa a porta `_detalhado`, que levanta quando o daemon
+        # recusa. Chegar a "aplicado" já é o daemon ter aceitado.
+        sem_eco = nome in self._sem_eco_da_pagina()
+        self.provas.append({"gesto": nome, "mudou": mudou, "sem_eco": sem_eco})
         if mudou:
             print(f"[PROVA] {self.pagina} · {nome} → MUDOU {len(mudou)} campo(s):")
             for k, (a, d) in sorted(mudou.items())[:6]:
                 print(f"          {k}: {a!r} → {d!r}")
+        elif sem_eco:
+            print(f"[PROVA] {self.pagina} · {nome} → ACEITO, sem eco no state "
+                  f"(o daemon não publica este assunto)")
         else:
             print(f"[PROVA] {self.pagina} · {nome} → SEM EFEITO no estado do daemon")
+        self._proximo_da_fila()
+
+    def _sem_eco_da_pagina(self) -> set:
+        """Os gestos daquela aba cujo efeito o daemon não publica."""
+        import importlib
+
+        for arq in sorted((AQUI / "pacotes").glob("a[0-9][0-9]_*.py")):
+            mod = importlib.import_module(f"pacotes.{arq.stem}")
+            if getattr(mod, "PAGINA", "") == self.pagina:
+                return set(getattr(mod, "SEM_ECO", ()))
+        return set()
 
     def _ir(self, pagina: str) -> None:
         self.view.load_uri(onde.pagina(pagina, publicado=True).as_uri())
@@ -752,11 +840,19 @@ class Piloto:
                 mudas.append(pagina)
         if self.provas:
             mudaram = sum(1 for p in self.provas if p["mudou"])
-            print(f"\nPROVA NO APARELHO: {mudaram}/{len(self.provas)} gestos "
-                  f"mudaram o estado do daemon")
+            aceitos = sum(1 for p in self.provas if not p["mudou"] and p["sem_eco"])
+            mudos = [p["gesto"] for p in self.provas
+                     if not p["mudou"] and not p["sem_eco"]]
+            print(f"\nPROVA NO APARELHO: {mudaram} mudaram o daemon · "
+                  f"{aceitos} aceitos sem eco · {len(mudos)} sem efeito")
             for p in self.provas:
-                marca = "✓" if p["mudou"] else "—"
+                marca = "✓" if p["mudou"] else ("·" if p["sem_eco"] else "—")
                 print(f"   {marca} {p['gesto']}")
+            if mudos:
+                # UM GESTO MUDO E NÃO DECLARADO é o que esta régua persegue: ou
+                # ele não faz nada, ou faz algo que o daemon não conta e ninguém
+                # escreveu isso. As duas coisas precisam de alguém.
+                print(f"   sem efeito e sem `SEM_ECO`: {', '.join(mudos)}")
         if self.gestos:
             print(f"gestos: {len(self.gestos)} · aplicados: {len(self.aplicados)} · "
                   f"sem dono: {len(set(self.recusados))}")

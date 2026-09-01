@@ -356,3 +356,12 @@ PROVAS = [
                ("rumble_stop_checked", [], {}),
                ("rumble_passthrough", [True], {})]},
 ]
+
+#: OS DOIS QUE O DAEMON ACEITA E NÃO PUBLICA, e a razão é do assunto: "Testar"
+#: e "Parar" produzem um efeito FÍSICO — o plástico treme na mão dela — e o
+#: tremor não deixa rastro no `state_full`. O `rumble_ff` conta os pedidos do
+#: JOGO ao gamepad virtual; um teste mandado pela tela não passa por ali.
+#:
+#: A prova destes dois é a mão dela, e é honesto dizer isso em vez de fingir que
+#: uma régua os alcança.
+SEM_ECO = ("testar", "parar")

@@ -260,3 +260,14 @@ PROVAS = [
      "chama": [("machine_declare",
                 [{"orcamento": {"teto": _teto_do_perfil("eu_escolho")}}], {})]},
 ]
+
+#: OS TRÊS CUJO EFEITO O `state_full` NÃO MOSTRA, e cada um por um motivo:
+#:
+#:   atualizar       `daemon.reload` relê a configuração — o estado publicado
+#:                   fica igual quando nada no disco mudou, e é o certo.
+#:   perfil-da-mesa  grava `orcamento.teto` no `maquina.json`, não no daemon.
+#:   retomar         `daemon.resume` num daemon que não está pausado é no-op.
+#:                   Ele TEM eco — provado em 01/09: com `paused=True`, o clique
+#:                   o levou a `False`. A régua o clica sem pausar antes, e é
+#:                   por isso que ele entra aqui.
+SEM_ECO = ("atualizar", "perfil-da-mesa", "retomar")

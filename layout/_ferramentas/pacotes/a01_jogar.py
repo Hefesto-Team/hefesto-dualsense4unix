@@ -102,7 +102,6 @@ def _do_exame() -> list[dict]:
 # cada chip da fileira nomeia.
 from . import gesto  # noqa: E402
 
-
 #: OS BOTÕES DESTA ABA QUE **NINGUÉM ATENDE**, com o motivo medido. Eles saem do
 #: gerador COM `data-gesto` e sem `@gesto`: o piloto recusa dizendo o nome, e o
 #: nome aparece no relato como inventário do que falta. É a única forma honesta
@@ -374,21 +373,58 @@ METODOS = {
 #: está marcado no desenho e **não** tem `@gesto` (ver `BOTOES_SEM_DONO`).
 PAGINA = "01-jogar.html"
 PISO_DA_ABA = 5
-#: As chamadas de cada prova NÃO SÃO DIGITADAS À MÃO — elas são o que
-#: `plan_mode_transition` devolve hoje. Digitá-las faria a régua medir a minha
-#: cópia da sequência em vez da do produto, que é o defeito que o HARM-01 curou:
-#: se o plano ganhar um passo, esta lista ganha junto e o gesto continua provado.
-def _prova(nome: str, clique: dict, plano) -> dict:
-    return {"pagina": PAGINA, "gesto": nome, "clique": clique,
-            "chama": [("chamar", [metodo], params) for metodo, params in plano]}
 
+#: AS PROVAS SÃO LITERAIS, E É ESCOLHA — a tentação era montá-las chamando o
+#: mesmo `_plano()` que o gesto chama, para "não digitar o que tem dono". Isso
+#: teria custado as duas coisas que uma régua existe para dar:
+#:
+#:   1. **a régua viraria tautologia.** Os dois lados perguntariam ao mesmo
+#:      `plan_mode_transition`, e um gesto que passasse a chave ERRADA (o chip
+#:      Xbox pedindo a máscara `dualsense`) daria verde nos dois lados;
+#:   2. **o pacote deixaria de ser puro.** `PROVAS` é lido no IMPORT, e montá-lo
+#:      com `_plano()` puxaria `painel` → `home_actions` → GTK para dentro do
+#:      import das dez abas — o contrário do que `_painel()` existe para evitar.
+#:
+#: O preço, declarado: se o produto mudar a sequência de um modo, ESTA LISTA
+#: reprova. É o preço certo — é a régua avisando que a definição do modo se
+#: moveu, que é exatamente a notícia que se quer ter.
+#:
+#: `origin="manual"` aparece em todo passo que DEFINE modo, e não é enfeite: sem
+#: ele o daemon lê o pedido como reconciliação automática e o recusa quando há
+#: Steam Input na jogada (ORIGEM-QUE-MENTE-01, medido na máquina dela — o botão
+#: "Jogar pelo Hefesto" parou de funcionar com o Sackboy marcado).
+_MANUAL_ON = {"enabled": True, "origin": "manual"}
+_MANUAL_OFF = {"enabled": False, "origin": "manual"}
 
 PROVAS = [
-    _prova("hefesto", {"modo": "gamepad"}, _plano("gamepad")),
-    _prova("hefesto", {"modo": "native"}, _plano("native")),
-    _prova("modo-dualsense", {}, _plano_do_chip("dualsense")),
-    _prova("modo-xbox", {}, _plano_do_chip("xbox")),
-    _prova("modo-navegacao", {}, _plano_do_chip("navegacao")),
+    # LIGADO: sai do Modo Nativo e SÓ ENTÃO liga o gamepad. Invertidos, o vpad
+    # nasceria com o físico ainda grabado pelo jogo (HARM-01).
+    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "gamepad"},
+     "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
+               ("chamar", ["gamepad.emulation.set"], _MANUAL_ON)]},
+    # DESLIGADO é o Modo Nativo, e é UM passo só — decisão dela, 31/08.
+    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "native"},
+     "chama": [("chamar", ["native.mode.set"], _MANUAL_ON)]},
+    # O CHIP MUDA A MÁSCARA, NÃO O MODO: o `flavor` é a única diferença entre
+    # este e o Xbox logo abaixo. Ele sai de `painel.CHIPS_DA_ESCADA`, não é
+    # digitado no gesto — o que está digitado aqui é a EXPECTATIVA.
+    {"pagina": PAGINA, "gesto": "modo-dualsense", "clique": {},
+     "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
+               ("chamar", ["gamepad.emulation.set"],
+                {**_MANUAL_ON, "flavor": "dualsense"})]},
+    {"pagina": PAGINA, "gesto": "modo-xbox", "clique": {},
+     "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
+               ("chamar", ["gamepad.emulation.set"],
+                {**_MANUAL_ON, "flavor": "xbox"})]},
+    # TRÊS, e o terceiro é o que separa "entrei no modo" de "entrei num modo sem
+    # função": `mouse.emulation.restore` liga o mouse conforme a preferência
+    # persistida (HARM-06), e vem POR ÚLTIMO de propósito.
+    {"pagina": PAGINA, "gesto": "modo-navegacao", "clique": {},
+     "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
+               ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
+               ("chamar", ["mouse.emulation.restore"], {})]},
+    # RECONCILIAR ANTES DE RENUMERAR: renumerar primeiro compactaria uma mesa
+    # que ainda não está completa (`home_actions.py:3122`).
     {"pagina": PAGINA, "gesto": "reconectar", "clique": {},
      "chama": [("chamar", ["coop.sync"], {}),
                ("chamar", ["identity.renumber"], {})]},

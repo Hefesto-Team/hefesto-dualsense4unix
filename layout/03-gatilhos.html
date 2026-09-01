@@ -1133,44 +1133,46 @@
           <div class="rot-r2-3 no-topo"><span class="sec-rot">Ajustes</span></div>
         </div>
         <div class="ctrl" data-controle="p1"
-             data-conectado="sim">
+             data-conectado="sim">  # noqa-acento
           <div><span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span></div>
           <div>
-            <select class="modo" data-campo="modo-e" data-lado="e"
+            <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
+                    data-hef-alvo="valor" data-lado="e"
                     title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
-                <option title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
-                <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option selected title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
-                <option title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
+                <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
+                <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
+                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
+                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
+                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
+                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
+                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
+                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
+                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
+                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
+                <option value="Machine" selected title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
+                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
+                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
+                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
+                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
+                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
+                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
+                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
           <div>
-            <select class="pronto" data-campo="pronto-e" data-lado="e"
+            <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
+                    data-hef-alvo="valor" data-lado="e"
                     title="Efeito pronto do gatilho esquerdo">
-                <option>— Nenhum —</option>
-                <option>Rampa crescente</option>
-                <option>Rampa decrescente</option>
-                <option>Plateau central</option>
-                <option>Stop hard</option>
-                <option>Stop macio</option>
+                <option value="custom">— Nenhum —</option>
+                <option value="rampa_crescente">Rampa crescente</option>
+                <option value="rampa_decrescente">Rampa decrescente</option>
+                <option value="plateau_central">Plateau central</option>
+                <option value="stop_hard">Stop hard</option>
+                <option value="stop_macio">Stop macio</option>
                 <option disabled>──── Meus efeitos ────</option>
-                <option selected>Recuo do MK — pesado no fim</option>
-                <option>Freio do carro — trava tardia</option>
+                <option value="" selected>Recuo do MK — pesado no fim</option>
+                <option value="">Freio do carro — trava tardia</option>
             </select>
           </div>
           <div class="ajustes e">
@@ -1205,41 +1207,43 @@
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
           <div>
-            <select class="modo" data-campo="modo-d" data-lado="d"
+            <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
+                    data-hef-alvo="valor" data-lado="d"
                     title="Gatilho direito — os 19 modos, com a descrição de cada um">
-                <option title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
-                <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option selected title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
-                <option title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
+                <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
+                <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
+                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
+                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
+                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
+                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
+                <option value="Bow" selected title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
+                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
+                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
+                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
+                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
+                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
+                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
+                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
+                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
+                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
+                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
+                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
           <div>
-            <select class="pronto" data-campo="pronto-d" data-lado="d"
+            <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
+                    data-hef-alvo="valor" data-lado="d"
                     title="Efeito pronto do gatilho direito">
-                <option>— Nenhum —</option>
-                <option>Rampa crescente</option>
-                <option>Rampa decrescente</option>
-                <option>Plateau central</option>
-                <option>Stop hard</option>
-                <option>Stop macio</option>
+                <option value="custom">— Nenhum —</option>
+                <option value="rampa_crescente">Rampa crescente</option>
+                <option value="rampa_decrescente">Rampa decrescente</option>
+                <option value="plateau_central">Plateau central</option>
+                <option value="stop_hard">Stop hard</option>
+                <option value="stop_macio">Stop macio</option>
                 <option disabled>──── Meus efeitos ────</option>
-                <option selected>Recuo do MK — pesado no fim</option>
-                <option>Freio do carro — trava tardia</option>
+                <option value="" selected>Recuo do MK — pesado no fim</option>
+                <option value="">Freio do carro — trava tardia</option>
             </select>
           </div>
           <div class="ajustes d">
@@ -1254,47 +1258,49 @@
               <span class="num" data-campo="aj-val-d-1">15</span>
             </div>
           </div>
-          <div><button class="btn roxo">Guardar esse efeito</button></div>
+          <div><button class="btn roxo" data-gesto="guardar">Guardar esse efeito</button></div>
         </div>
         <div class="ctrl" data-controle="p2"
-             data-conectado="sim">
+             data-conectado="sim">  # noqa-acento
           <div><span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span></div>
           <div>
-            <select class="modo" data-campo="modo-e" data-lado="e"
+            <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
+                    data-hef-alvo="valor" data-lado="e"
                     title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
-                <option title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
-                <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option selected title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
-                <option title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
+                <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
+                <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
+                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
+                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
+                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
+                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
+                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
+                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
+                <option value="SemiAutoGun" selected title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
+                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
+                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
+                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
+                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
+                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
+                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
+                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
+                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
+                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
           <div>
-            <select class="pronto" data-campo="pronto-e" data-lado="e"
+            <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
+                    data-hef-alvo="valor" data-lado="e"
                     title="Efeito pronto do gatilho esquerdo">
-                <option>— Nenhum —</option>
-                <option>Rampa crescente</option>
-                <option>Rampa decrescente</option>
-                <option>Plateau central</option>
-                <option selected>Stop hard</option>
-                <option>Stop macio</option>
+                <option value="custom">— Nenhum —</option>
+                <option value="rampa_crescente">Rampa crescente</option>
+                <option value="rampa_decrescente">Rampa decrescente</option>
+                <option value="plateau_central">Plateau central</option>
+                <option value="stop_hard" selected>Stop hard</option>
+                <option value="stop_macio">Stop macio</option>
                 <option disabled>──── Meus efeitos ────</option>
-                <option>Recuo do MK — pesado no fim</option>
-                <option>Freio do carro — trava tardia</option>
+                <option value="">Recuo do MK — pesado no fim</option>
+                <option value="">Freio do carro — trava tardia</option>
             </select>
           </div>
           <div class="ajustes e">
@@ -1324,41 +1330,43 @@
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
           <div>
-            <select class="modo" data-campo="modo-d" data-lado="d"
+            <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
+                    data-hef-alvo="valor" data-lado="d"
                     title="Gatilho direito — os 19 modos, com a descrição de cada um">
-                <option title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
-                <option selected title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
-                <option title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
+                <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="Rigid" selected title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
+                <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
+                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
+                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
+                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
+                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
+                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
+                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
+                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
+                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
+                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
+                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
+                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
+                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
+                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
+                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
+                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
+                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
           <div>
-            <select class="pronto" data-campo="pronto-d" data-lado="d"
+            <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
+                    data-hef-alvo="valor" data-lado="d"
                     title="Efeito pronto do gatilho direito">
-                <option selected>— Nenhum —</option>
-                <option>Rampa crescente</option>
-                <option>Rampa decrescente</option>
-                <option>Plateau central</option>
-                <option>Stop hard</option>
-                <option>Stop macio</option>
+                <option value="custom" selected>— Nenhum —</option>
+                <option value="rampa_crescente">Rampa crescente</option>
+                <option value="rampa_decrescente">Rampa decrescente</option>
+                <option value="plateau_central">Plateau central</option>
+                <option value="stop_hard">Stop hard</option>
+                <option value="stop_macio">Stop macio</option>
                 <option disabled>──── Meus efeitos ────</option>
-                <option>Recuo do MK — pesado no fim</option>
-                <option>Freio do carro — trava tardia</option>
+                <option value="">Recuo do MK — pesado no fim</option>
+                <option value="">Freio do carro — trava tardia</option>
             </select>
           </div>
           <div class="ajustes d">
@@ -1373,47 +1381,49 @@
               <span class="num" data-campo="aj-val-d-1">200</span>
             </div>
           </div>
-          <div><button class="btn roxo">Guardar esse efeito</button></div>
+          <div><button class="btn roxo" data-gesto="guardar">Guardar esse efeito</button></div>
         </div>
         <div class="ctrl" data-controle="p3"
-             data-conectado="nao">
+             data-conectado="nao">  # noqa-acento
           <div><span class="chip vazio" title="Nenhum controle neste lugar.">P3 <span class="pt">•</span> Desconectado</span></div>
           <div>
-            <select class="modo" data-campo="modo-e" data-lado="e"
+            <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
+                    data-hef-alvo="valor" data-lado="e"
                     title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
-                <option selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
-                <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
-                <option title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
+                <option value="Off" selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
+                <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
+                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
+                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
+                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
+                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
+                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
+                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
+                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
+                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
+                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
+                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
+                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
+                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
+                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
+                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
+                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
+                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
           <div>
-            <select class="pronto" data-campo="pronto-e" data-lado="e"
+            <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
+                    data-hef-alvo="valor" data-lado="e"
                     title="Efeito pronto do gatilho esquerdo">
-                <option selected>— Nenhum —</option>
-                <option>Rampa crescente</option>
-                <option>Rampa decrescente</option>
-                <option>Plateau central</option>
-                <option>Stop hard</option>
-                <option>Stop macio</option>
+                <option value="custom" selected>— Nenhum —</option>
+                <option value="rampa_crescente">Rampa crescente</option>
+                <option value="rampa_decrescente">Rampa decrescente</option>
+                <option value="plateau_central">Plateau central</option>
+                <option value="stop_hard">Stop hard</option>
+                <option value="stop_macio">Stop macio</option>
                 <option disabled>──── Meus efeitos ────</option>
-                <option>Recuo do MK — pesado no fim</option>
-                <option>Freio do carro — trava tardia</option>
+                <option value="">Recuo do MK — pesado no fim</option>
+                <option value="">Freio do carro — trava tardia</option>
             </select>
           </div>
           <div class="ajustes e">
@@ -1429,87 +1439,91 @@
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
           <div>
-            <select class="modo" data-campo="modo-d" data-lado="d"
+            <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
+                    data-hef-alvo="valor" data-lado="d"
                     title="Gatilho direito — os 19 modos, com a descrição de cada um">
-                <option selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
-                <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
-                <option title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
+                <option value="Off" selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
+                <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
+                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
+                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
+                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
+                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
+                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
+                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
+                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
+                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
+                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
+                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
+                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
+                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
+                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
+                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
+                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
+                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
           <div>
-            <select class="pronto" data-campo="pronto-d" data-lado="d"
+            <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
+                    data-hef-alvo="valor" data-lado="d"
                     title="Efeito pronto do gatilho direito">
-                <option selected>— Nenhum —</option>
-                <option>Rampa crescente</option>
-                <option>Rampa decrescente</option>
-                <option>Plateau central</option>
-                <option>Stop hard</option>
-                <option>Stop macio</option>
+                <option value="custom" selected>— Nenhum —</option>
+                <option value="rampa_crescente">Rampa crescente</option>
+                <option value="rampa_decrescente">Rampa decrescente</option>
+                <option value="plateau_central">Plateau central</option>
+                <option value="stop_hard">Stop hard</option>
+                <option value="stop_macio">Stop macio</option>
                 <option disabled>──── Meus efeitos ────</option>
-                <option>Recuo do MK — pesado no fim</option>
-                <option>Freio do carro — trava tardia</option>
+                <option value="">Recuo do MK — pesado no fim</option>
+                <option value="">Freio do carro — trava tardia</option>
             </select>
           </div>
           <div class="ajustes d">
             <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>
           </div>
-          <div><button class="btn roxo">Guardar esse efeito</button></div>
+          <div><button class="btn roxo" data-gesto="guardar">Guardar esse efeito</button></div>
         </div>
         <div class="ctrl" data-controle="p4"
-             data-conectado="nao">
+             data-conectado="nao">  # noqa-acento
           <div><span class="chip vazio" title="Nenhum controle neste lugar.">P4 <span class="pt">•</span> Desconectado</span></div>
           <div>
-            <select class="modo" data-campo="modo-e" data-lado="e"
+            <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
+                    data-hef-alvo="valor" data-lado="e"
                     title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
-                <option selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
-                <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
-                <option title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
+                <option value="Off" selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
+                <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
+                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
+                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
+                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
+                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
+                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
+                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
+                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
+                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
+                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
+                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
+                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
+                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
+                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
+                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
+                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
+                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
           <div>
-            <select class="pronto" data-campo="pronto-e" data-lado="e"
+            <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
+                    data-hef-alvo="valor" data-lado="e"
                     title="Efeito pronto do gatilho esquerdo">
-                <option selected>— Nenhum —</option>
-                <option>Rampa crescente</option>
-                <option>Rampa decrescente</option>
-                <option>Plateau central</option>
-                <option>Stop hard</option>
-                <option>Stop macio</option>
+                <option value="custom" selected>— Nenhum —</option>
+                <option value="rampa_crescente">Rampa crescente</option>
+                <option value="rampa_decrescente">Rampa decrescente</option>
+                <option value="plateau_central">Plateau central</option>
+                <option value="stop_hard">Stop hard</option>
+                <option value="stop_macio">Stop macio</option>
                 <option disabled>──── Meus efeitos ────</option>
-                <option>Recuo do MK — pesado no fim</option>
-                <option>Freio do carro — trava tardia</option>
+                <option value="">Recuo do MK — pesado no fim</option>
+                <option value="">Freio do carro — trava tardia</option>
             </select>
           </div>
           <div class="ajustes e">
@@ -1525,47 +1539,49 @@
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
           <div>
-            <select class="modo" data-campo="modo-d" data-lado="d"
+            <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
+                    data-hef-alvo="valor" data-lado="d"
                     title="Gatilho direito — os 19 modos, com a descrição de cada um">
-                <option selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
-                <option title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
-                <option title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
-                <option title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
-                <option title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
-                <option title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
-                <option title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
-                <option title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
-                <option title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
-                <option title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
-                <option title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
-                <option title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
-                <option title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
-                <option title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
-                <option title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
-                <option title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
-                <option title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
-                <option title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
-                <option title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
+                <option value="Off" selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
+                <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
+                <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
+                <option value="PulseA" title="Pulso com a subida mais suave: a força cresce antes do estalo.">Pulso (curva A)</option>
+                <option value="PulseB" title="Pulso com a descida mais suave: o estalo vem e a força cai devagar.">Pulso (curva B)</option>
+                <option value="Resistance" title="Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.">Resistência</option>
+                <option value="Bow" title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">Arco de flecha</option>
+                <option value="Galloping" title="Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.">Galope</option>
+                <option value="SemiAutoGun" title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">Arma semi-automática</option>
+                <option value="AutoGun" title="Vibra continuamente enquanto está apertado — rajada.">Arma automática</option>
+                <option value="Machine" title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">Metralhadora</option>
+                <option value="Feedback" title="Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.">Ponto duro</option>
+                <option value="Weapon" title="Trava, solta no estalo e fica leve até o fim — espingarda.">Disparo</option>
+                <option value="Vibration" title="Treme o gatilho na frequência escolhida, sem opor força.">Vibração</option>
+                <option value="SlopeFeedback" title="A força sobe em linha reta do início ao fim do curso.">Rampa de força</option>
+                <option value="MultiPositionFeedback" title="Você desenha a força em dez posições do curso, uma por uma.">Curva de força</option>
+                <option value="MultiPositionVibration" title="Treme só na faixa do curso que você marcar.">Vibração por posição</option>
+                <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
           <div>
-            <select class="pronto" data-campo="pronto-d" data-lado="d"
+            <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
+                    data-hef-alvo="valor" data-lado="d"
                     title="Efeito pronto do gatilho direito">
-                <option selected>— Nenhum —</option>
-                <option>Rampa crescente</option>
-                <option>Rampa decrescente</option>
-                <option>Plateau central</option>
-                <option>Stop hard</option>
-                <option>Stop macio</option>
+                <option value="custom" selected>— Nenhum —</option>
+                <option value="rampa_crescente">Rampa crescente</option>
+                <option value="rampa_decrescente">Rampa decrescente</option>
+                <option value="plateau_central">Plateau central</option>
+                <option value="stop_hard">Stop hard</option>
+                <option value="stop_macio">Stop macio</option>
                 <option disabled>──── Meus efeitos ────</option>
-                <option>Recuo do MK — pesado no fim</option>
-                <option>Freio do carro — trava tardia</option>
+                <option value="">Recuo do MK — pesado no fim</option>
+                <option value="">Freio do carro — trava tardia</option>
             </select>
           </div>
           <div class="ajustes d">
             <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>
           </div>
-          <div><button class="btn roxo">Guardar esse efeito</button></div>
+          <div><button class="btn roxo" data-gesto="guardar">Guardar esse efeito</button></div>
         </div>
         </div>
       </div>

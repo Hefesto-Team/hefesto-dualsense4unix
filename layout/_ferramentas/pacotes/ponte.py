@@ -94,7 +94,37 @@ daemon_status_basic = _b.daemon_status_basic
 # ---------------------------------------------------------------------------
 # Degrau 3: o cru, e SÓ para o que não tem função em lugar nenhum.
 # ---------------------------------------------------------------------------
-def chamar(metodo: str, **params) -> bool:
+#: OS TETOS DE TEMPO DO PRODUTO, e cada um é uma cicatriz medida — achado do
+#: agente que ligou a aba Jogar em 01/09/2026:
+#:
+#:     `_safe_call` sem timeout usa **250 ms**, e desde o
+#:     BUG-IPC-READ-NO-TIMEOUT-01 esse teto cobre também a LEITURA da resposta
+#:     (`app/ipc_bridge.py:63-83`). Mas trocar de modo CRIA uinput e faz grab: o
+#:     produto declara **2,0 s** para isso (`app/actions/mode_transition.py:37`,
+#:     `MODE_IPC_TIMEOUT_S`), e o comentário de lá diz por quê — *"sem folga o
+#:     toast dizia 'Falha' com o modo JÁ aplicado"*. O `profile.switch` teve a
+#:     mesma cicatriz e ganhou **3,0 s** (`ipc_bridge.py:49`).
+#:
+#: Sem isto, um `chamar("gamepad.emulation.set", …)` volta `False` com o modo
+#: aplicado — e um gesto que levantasse nesse `False` reintroduziria o defeito
+#: exato que o `MODE_IPC_TIMEOUT_S` curou.
+TETOS = {
+    "gamepad.emulation.set": 2.0, "native.mode.set": 2.0,
+    "mouse.emulation.set": 2.0, "keyboard.emulation.set": 2.0,
+    "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
+    "profile.switch": 3.0, "profile.apply_draft": 3.0,
+    "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
+    # Medido no daemon dela em 01/09: `daemon.reload` leva 9,5 SEGUNDOS.
+    "daemon.reload": 15.0,
+}
+
+
+def teto(metodo: str) -> float:
+    """Quanto tempo esperar por aquele método. O padrão é o do bridge."""
+    return TETOS.get(metodo, 0.25)
+
+
+def chamar(metodo: str, timeout: float | None = None, **params) -> bool:
     """Um método do daemon que ainda não tem função no bridge nem na CLI.
 
     ANTES DE USAR ISTO, procure: o `ipc_bridge` tem 36 funções e a CLI tem os
@@ -105,7 +135,7 @@ def chamar(metodo: str, **params) -> bool:
     Ele passa pelo `_safe_call` do bridge de propósito: herda o timeout e o
     tratamento de erro, e não vira um segundo caminho de escrita.
     """
-    ok, _ = _b._safe_call(metodo, params)
+    ok, _ = _b._safe_call(metodo, params, timeout=timeout or teto(metodo))
     return bool(ok)
 
 
@@ -115,7 +145,7 @@ def chamar_detalhado(metodo: str, **params):
     Prefira esta quando o botão precisar DIZER por que não deu. Um botão que
     falha calado é a mesma doença de um botão que não faz nada.
     """
-    return _b._call_checked(metodo, params)
+    return _b._call_checked(metodo, params, timeout=teto(metodo))
 
 
 # ---------------------------------------------------------------------------
