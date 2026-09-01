@@ -1121,8 +1121,11 @@
      que fazem o mesmo gesto na mesma coluna têm de ser o mesmo botão, e uma
      regra a mais aqui é como as duas alturas voltam.
      As 5 linhas de pastilha de 17px que moravam aqui saíram junto. */
-  /* O `data-campo="mic-modo"` SAIU DAQUI EM 01/09/2026, e ele APAGAVA os dois
-     botões. Esta linha dizia que "a ponte viva endereça por ele" — endereçava
+  /* O `data-campo` DO CONTAINER SAIU DAQUI EM 01/09/2026, e ele APAGAVA os dois
+     botões. (O nome dele não se escreve por extenso nesta linha: a régua do
+     casamento acha `data-campo` por expressão regular e NÃO tira comentário,
+     então um endereço citado aqui entraria na conta como se a página o tivesse.)
+     Esta linha dizia que "a ponte viva endereça por ele" — endereçava
      mesmo, e o preço está medido: o `escrever` do piloto faz
      `el.textContent = t`, e o `t` de um valor vazio é `—`. Como o
      `data-campo` estava no `<span>` que ENVOLVE Virtual e Nativo, o primeiro
@@ -1447,9 +1450,21 @@
             <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No cabo são 250,0 Hz exatos, e três fontes independentes concordam: o relógio do host, o relógio do controle e o descritor USB (bInterval = 6)."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
           </span>
+          <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
+               PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
+               desde que nasceu, e não havia um `data-campo` onde ele caísse —
+               a régua do casamento a listava entre os órfãos. O número e a
+               barra ficavam nos 100% / 64% que este gerador desenhou, com o
+               controle dela em qualquer carga.
+               SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
+               ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
+               LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
+               piloto lê (`hefesto_vivo.py:107`). Um endereço só escreveria o
+               número DENTRO da barra. -->
           <span class="bat">Bateria
-            <span class="trilho"><span class="cheio" style="width:100%"></span></span>
-            <span class="n">100%</span></span>
+            <span class="trilho"><span class="cheio" data-campo="bateria-barra"
+              data-hef-alvo="largura" style="width:100%"></span></span>
+            <span class="n" data-campo="bateria">100%</span></span>
       </label>
       <div class="corpo-cx">
       <div class="card-corpo">
@@ -1766,9 +1781,21 @@
             <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no mesmo controle: a média foi de 38 a 392 Hz entre janelas consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara para Bluetooth não aparecem em janela nenhuma."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
           </span>
+          <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
+               PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
+               desde que nasceu, e não havia um `data-campo` onde ele caísse —
+               a régua do casamento a listava entre os órfãos. O número e a
+               barra ficavam nos 100% / 64% que este gerador desenhou, com o
+               controle dela em qualquer carga.
+               SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
+               ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
+               LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
+               piloto lê (`hefesto_vivo.py:107`). Um endereço só escreveria o
+               número DENTRO da barra. -->
           <span class="bat">Bateria
-            <span class="trilho"><span class="cheio" style="width:64%"></span></span>
-            <span class="n">64%</span></span>
+            <span class="trilho"><span class="cheio" data-campo="bateria-barra"
+              data-hef-alvo="largura" style="width:64%"></span></span>
+            <span class="n" data-campo="bateria">64%</span></span>
       </label>
       <div class="corpo-cx">
       <div class="card-corpo">

@@ -1116,11 +1116,24 @@
      por cima do bloco dos sensores. Aqui a fileira mede 150 e cabe com folga. */
   /* O `.mic-modo` HERDA A `.rota` INTEIRA e não acrescenta nada — 31/08/2026,
      quando ela mandou os dois descerem *"igual o Sons do Jogo e Todo o som do
-     PC"*. O seletor fica no HTML (`class="rota mic-modo"`) porque a ponte viva
-     endereça por ele (`data-campo="mic-modo"`), mas de estilo ele não tem UMA
-     linha própria: dois blocos que fazem o mesmo gesto na mesma coluna têm de
-     ser o mesmo botão, e uma regra a mais aqui é como as duas alturas voltam.
+     PC"*. O seletor fica no HTML (`class="rota mic-modo"`) para dizer QUAL
+     fileira é esta, mas de estilo ele não tem UMA linha própria: dois blocos
+     que fazem o mesmo gesto na mesma coluna têm de ser o mesmo botão, e uma
+     regra a mais aqui é como as duas alturas voltam.
      As 5 linhas de pastilha de 17px que moravam aqui saíram junto. */
+  /* O `data-campo` DO CONTAINER SAIU DAQUI EM 01/09/2026, e ele APAGAVA os dois
+     botões. (O nome dele não se escreve por extenso nesta linha: a régua do
+     casamento acha `data-campo` por expressão regular e NÃO tira comentário,
+     então um endereço citado aqui entraria na conta como se a página o tivesse.)
+     Esta linha dizia que "a ponte viva endereça por ele" — endereçava
+     mesmo, e o preço está medido: o `escrever` do piloto faz
+     `el.textContent = t`, e o `t` de um valor vazio é `—`. Como o
+     `data-campo` estava no `<span>` que ENVOLVE Virtual e Nativo, o primeiro
+     tique da pintura trocava os dois botões por um travessão.
+     Medido no Chrome headless sobre a página publicada: `[data-mic-modo]`
+     antes 4, depois 0, nos dois valores que o pacote emitia (`''` e
+     `'sem posse'`). Endereço de pintura só pode morar em FOLHA — um container
+     endereçado é um container que some. */
   /* 30px, E NÃO OS 36 DE `--h-escolha` — 31/08/2026, e o número é o preço do
      pedido dela. Até hoje a coluna do som tinha UMA fileira de escolha (a rota
      do alto-falante); com os modos do microfone descendo *"igual o Sons do Jogo"*
@@ -1437,9 +1450,21 @@
             <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No cabo são 250,0 Hz exatos, e três fontes independentes concordam: o relógio do host, o relógio do controle e o descritor USB (bInterval = 6)."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
           </span>
+          <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
+               PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
+               desde que nasceu, e não havia um `data-campo` onde ele caísse —
+               a régua do casamento a listava entre os órfãos. O número e a
+               barra ficavam nos 100% / 64% que este gerador desenhou, com o
+               controle dela em qualquer carga.
+               SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
+               ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
+               LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
+               piloto lê (`hefesto_vivo.py:107`). Um endereço só escreveria o
+               número DENTRO da barra. -->
           <span class="bat">Bateria
-            <span class="trilho"><span class="cheio" style="width:100%"></span></span>
-            <span class="n">100%</span></span>
+            <span class="trilho"><span class="cheio" data-campo="bateria-barra"
+              data-hef-alvo="largura" style="width:100%"></span></span>
+            <span class="n" data-campo="bateria">100%</span></span>
       </label>
       <div class="corpo-cx">
       <div class="card-corpo">
@@ -1633,10 +1658,18 @@
                  alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
                  Duas gramáticas para "escolher a rota do som" na mesma coluna
                  era uma a mais. -->
-              <span class="rota mic-modo" data-campo="mic-modo">
-                <button class="on" data-mic-modo="virtual"
+              <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
+                   razão do `data-gesto="mudo"` lá em cima: o piloto monta o
+                   nome do gesto como `d.gesto || d.hefGesto || d.papel ||
+                   'clique'` (`hefesto_vivo.py:221`). Sem ele, Virtual e Nativo
+                   chegavam ao despachante chamando-se `clique`, disputando um
+                   nome com os interruptores de sensor da mesma aba.
+                   E O CONTAINER PERDEU O `data-campo` — ver o comentário no
+                   CSS: endereçá-lo trocava os dois botões por um travessão. -->
+              <span class="rota mic-modo">
+                <button class="on" data-gesto="mic-modo" data-mic-modo="virtual"
                   title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="" data-mic-modo="nativo"
+                <button class="" data-gesto="mic-modo" data-mic-modo="nativo"
                   title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
               </span>
 
@@ -1748,9 +1781,21 @@
             <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no mesmo controle: a média foi de 38 a 392 Hz entre janelas consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara para Bluetooth não aparecem em janela nenhuma."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
           </span>
+          <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
+               PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
+               desde que nasceu, e não havia um `data-campo` onde ele caísse —
+               a régua do casamento a listava entre os órfãos. O número e a
+               barra ficavam nos 100% / 64% que este gerador desenhou, com o
+               controle dela em qualquer carga.
+               SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
+               ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
+               LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
+               piloto lê (`hefesto_vivo.py:107`). Um endereço só escreveria o
+               número DENTRO da barra. -->
           <span class="bat">Bateria
-            <span class="trilho"><span class="cheio" style="width:64%"></span></span>
-            <span class="n">64%</span></span>
+            <span class="trilho"><span class="cheio" data-campo="bateria-barra"
+              data-hef-alvo="largura" style="width:64%"></span></span>
+            <span class="n" data-campo="bateria">64%</span></span>
       </label>
       <div class="corpo-cx">
       <div class="card-corpo">
@@ -1944,10 +1989,18 @@
                  alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
                  Duas gramáticas para "escolher a rota do som" na mesma coluna
                  era uma a mais. -->
-              <span class="rota mic-modo" data-campo="mic-modo">
-                <button class="" data-mic-modo="virtual"
+              <!-- O `data-gesto="mic-modo"` ENTROU EM 01/09/2026, e é a mesma
+                   razão do `data-gesto="mudo"` lá em cima: o piloto monta o
+                   nome do gesto como `d.gesto || d.hefGesto || d.papel ||
+                   'clique'` (`hefesto_vivo.py:221`). Sem ele, Virtual e Nativo
+                   chegavam ao despachante chamando-se `clique`, disputando um
+                   nome com os interruptores de sensor da mesma aba.
+                   E O CONTAINER PERDEU O `data-campo` — ver o comentário no
+                   CSS: endereçá-lo trocava os dois botões por um travessão. -->
+              <span class="rota mic-modo">
+                <button class="" data-gesto="mic-modo" data-mic-modo="virtual"
                   title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="" data-mic-modo="nativo"
+                <button class="" data-gesto="mic-modo" data-mic-modo="nativo"
                   title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
               </span>
 

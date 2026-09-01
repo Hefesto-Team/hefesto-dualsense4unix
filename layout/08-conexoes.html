@@ -1494,31 +1494,31 @@
             <span class="selo ok" data-campo="selo">CERTO</span>
             <span class="txt" data-campo="achado">As entradas dão energia para o 1 controle no cabo</span>
             <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma parece defeito do controle.</span></span>
-            <button class="ignora" data-gesto="ignorar" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="0" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <span class="selo warn" data-campo="selo">AJUSTAR</span>
             <span class="txt" data-campo="achado">Dois rádios da bancada estão em entradas vizinhas</span>
             <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na <b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de serviço ao lado, e o <b>?</b> dela diz por que isso importa.</span></span>
-            <button class="ignora" data-gesto="ignorar" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="1" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <span class="selo ok" data-campo="selo">CERTO</span>
             <span class="txt" data-campo="achado">O controle no cabo tem uma entrada só para ele</span>
             <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das entradas onde estão o Player 1.</span></span>
-            <button class="ignora" data-gesto="ignorar" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="2" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <span class="selo info" data-campo="selo">NOTA</span>
             <span class="txt" data-campo="achado">4 rádios vizinhos ativos na faixa de 2,4 GHz</span>
             <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> 4 fontes de rádio perto. 2 você já nomeou; 2 continuam por nomear, na tabela de <b>Rádio e adaptadores</b>.<br><br><b>Por que importa:</b> 1 dos seus 2 controles falam nessa mesma faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe o que dá para desligar e o que não dá.</span></span>
-            <button class="ignora" data-gesto="ignorar" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="3" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <span class="selo ok" data-campo="selo">CERTO</span>
             <span class="txt" data-campo="achado">Nenhuma outra ordem de serviço pendente</span>
             <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou ignorar não contam aqui — elas voltam em <b>Ver as ordens ignoradas</b>.</span></span>
-            <button class="ignora" data-gesto="ignorar" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="4" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
             </div>
           </div>
@@ -2003,7 +2003,7 @@
   <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg> Microfone e botões
                   <span class="ajuda">?<span class="dica">Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, e a linha ao lado diz qual é.<br><br>Decide se o botão físico do microfone <b>deste controle</b> cala só ele ou o <b>computador inteiro</b> — inclusive a chamada de voz que estiver aberta fora do jogo.</span></span></span>
-                <select class="pronto" title="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz." data-gesto="mic-existe"><option selected>Ligado</option><option>Desligado</option></select>
+                <select class="pronto" title="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
                 <select class="pronto" title="O botão físico do microfone deste controle cala só ele ou o computador inteiro — inclusive a chamada de voz aberta fora do jogo." data-gesto="mic-escopo"><option selected>Só este controle</option><option>O computador inteiro</option></select>
               </span>
               <span class="gc-bloco barra">
@@ -2424,7 +2424,7 @@
   <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg> Microfone e botões
                   <span class="ajuda">?<span class="dica">Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, e a linha ao lado diz qual é.<br><br>Decide se o botão físico do microfone <b>deste controle</b> cala só ele ou o <b>computador inteiro</b> — inclusive a chamada de voz que estiver aberta fora do jogo.</span></span></span>
-                <select class="pronto" title="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz." data-gesto="mic-existe"><option selected>Ligado</option><option>Desligado</option></select>
+                <select class="pronto" title="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
                 <select class="pronto" title="O botão físico do microfone deste controle cala só ele ou o computador inteiro — inclusive a chamada de voz aberta fora do jogo." data-gesto="mic-escopo"><option selected>Só este controle</option><option>O computador inteiro</option></select>
               </span>
               <span class="gc-bloco barra">
@@ -2497,10 +2497,10 @@
           <div class="lado-d">
             <div class="linha-rot"><b style="color:var(--texto-suave)">Outros rádios na faixa de 2,4 GHz</b></div>
             <div class="vizinhos">
-              <div class="viz"><span class="qual" title="Intel AX211 (banda 2,4)">Intel AX211 (banda 2,4)</span><select class="pronto" title="O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo para você escrever o nome." data-gesto="vizinho-o-que-e"><option>— O que é? —</option><option selected>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
-              <div class="viz"><span class="qual" title="Logitech Unifying">Logitech Unifying</span><select class="pronto" title="O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo para você escrever o nome." data-gesto="vizinho-o-que-e"><option>— O que é? —</option><option>Wi-Fi</option><option selected>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
-              <div class="viz"><span class="qual" title="2.4G Wireless Rcvr">2.4G Wireless Rcvr</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e"><option selected>— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
-              <div class="viz"><span class="qual" title="Unknown 0e8d:0608">Unknown 0e8d:0608</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e"><option selected>— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
+              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Intel AX211 (banda 2,4)">Intel AX211 (banda 2,4)</span><select class="pronto" title="O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo para você escrever o nome." data-gesto="vizinho-o-que-e" data-v="0" data-campo="vizinho-tipo" data-hef-alvo="valor"><option>— O que é? —</option><option selected>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
+              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Logitech Unifying">Logitech Unifying</span><select class="pronto" title="O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo para você escrever o nome." data-gesto="vizinho-o-que-e" data-v="1" data-campo="vizinho-tipo" data-hef-alvo="valor"><option>— O que é? —</option><option>Wi-Fi</option><option selected>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
+              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="2.4G Wireless Rcvr">2.4G Wireless Rcvr</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e" data-v="2" data-campo="vizinho-tipo" data-hef-alvo="valor"><option selected>— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
+              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Unknown 0e8d:0608">Unknown 0e8d:0608</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e" data-v="3" data-campo="vizinho-tipo" data-hef-alvo="valor"><option selected>— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
             </div>
             <div class="acoes empurra">
               <a class="btn" href="#mapear-entrada-a-entrada" title="Um toque por aparelho e o Hefesto aprende em que entrada cada um está.">Mapear Entrada a Entrada</a>

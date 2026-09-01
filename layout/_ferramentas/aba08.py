@@ -1197,15 +1197,29 @@ def exame(classe, palavra, txt, dica, linha=0):
 #: duas linhas. Nada se perdeu: o nome cru continua em cima, a resposta continua
 #: embaixo, e o "O que é" que era cabeçalho de coluna virou o que sempre foi — a
 #: pergunta que o próprio campo faz.
-def viz_bloco(nome, escolha, pergunta=False):
+def viz_bloco(nome, escolha, pergunta=False, linha=0):
+    """Um vizinho: o nome cru que o sistema entrega, e o que ELA diz que ele é.
+
+    `linha` tem a mesma razão do `linha` do :func:`exame`, e o mesmo preço se
+    faltar: os quatro `<select>` são iguais e o ouvinte não teria como dizer
+    qual mudou — declarar "isto é um teclado" gravaria no rádio errado.
+
+    O que endereça o rádio no `maquina.json` é `vid:pid`
+    (`MesaDeclarada._chave_de_radio_e_vid_pid`), e ele NÃO cabe aqui: os quatro
+    blocos são HTML estático e o par só se sabe depois de ler o barramento. Quem
+    lê é `a08_conexoes.pacote()`, que pinta o nome e guarda a ordem — a posição
+    é a ponte entre o desenho e a mesa dela.
+    """
     d = ("O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá "
          "para desligar e o que não dá. “Outro” abre um campo para você escrever."
          if pergunta else
          "O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo "
          "para você escrever o nome.")
     c = "pronto pergunta" if pergunta else "pronto"
-    return (f'              <div class="viz"><span class="qual" title="{nome}">{nome}</span>'
-            f'<select class="{c}" title="{d}" data-gesto="vizinho-o-que-e">'
+    return (f'              <div class="viz">'
+            f'<span class="qual" data-campo="vizinho-nome" title="{nome}">{nome}</span>'
+            f'<select class="{c}" title="{d}" data-gesto="vizinho-o-que-e" data-v="{linha}"'
+            f' data-campo="vizinho-tipo" data-hef-alvo="valor">'
             f'{viz_sel(escolha)}</select></div>')
 
 
@@ -1351,7 +1365,7 @@ def linha_do_controle(c):
               <span class="gc-bloco">
                 <span class="rot">{glifo("mic", ativo=True, tam=16)} Microfone e botões
                   <span class="ajuda">?<span class="dica">{MIC_LIGADO_DICA}<br><br>{BOTAO_DICA}</span></span></span>
-                {sel(["Ligado", "Desligado"], "Ligado", gesto="mic-existe", dica="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz.")}
+                {sel(["Ligado", "Desligado"], "Ligado", gesto="mic-existe", campo="mic-existe", dica="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz.")}
                 {sel([BOTAO_DO_MIC, "O computador inteiro"], BOTAO_DO_MIC, gesto="mic-escopo", dica="O botão físico do microfone deste controle cala só ele ou o computador inteiro — inclusive a chamada de voz aberta fora do jogo.")}
               </span>
               <span class="gc-bloco barra">
@@ -2205,16 +2219,16 @@ MIOLO = f'''
        f'{_plural(len(NO_CABO), "controle", "controles")} no cabo',
        "<b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que "
        "importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma "
-       "parece defeito do controle.")}
+       "parece defeito do controle.", linha=0)}
 {exame("warn", "AJUSTAR", "Dois rádios da bancada estão em entradas vizinhas",
        "<b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na "
        "<b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de "
-       "serviço ao lado, e o <b>?</b> dela diz por que isso importa.")}
+       "serviço ao lado, e o <b>?</b> dela diz por que isso importa.", linha=1)}
 {exame("ok", "CERTO",
        (f'Os {len(NO_CABO)} controles no cabo têm uma entrada cada um' if len(NO_CABO) > 1
         else 'O controle no cabo tem uma entrada só para ele'),
        f'<b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das '
-       f'entradas onde estão o {JOGADORES_NO_CABO}.')}
+       f'entradas onde estão o {JOGADORES_NO_CABO}.', linha=2)}
 {exame("info", "NOTA",
        f'{len(RADIOS_VIZINHOS)} rádios vizinhos ativos na faixa de 2,4 GHz',
        f'<b>O que eu vi:</b> {len(RADIOS_VIZINHOS)} fontes de rádio perto. {len(JA_NOMEADOS)} você '
@@ -2222,10 +2236,10 @@ MIOLO = f'''
        f'<b>Rádio e adaptadores</b>.<br><br>'
        f'<b>Por que importa:</b> {len(NO_RADIO)} dos seus {len(CONECTADOS)} controles falam nessa mesma '
        f'faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe '
-       f'o que dá para desligar e o que não dá.')}
+       f'o que dá para desligar e o que não dá.', linha=3)}
 {exame("ok", "CERTO", "Nenhuma outra ordem de serviço pendente",
        "<b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou "
-       f"ignorar não contam aqui — elas voltam em <b>{VER_IGNORADAS}</b>.")}
+       f"ignorar não contam aqui — elas voltam em <b>{VER_IGNORADAS}</b>.", linha=4)}
             </div>
           </div>
 
@@ -2349,7 +2363,7 @@ MIOLO = f'''
           <div class="lado-d">
             <div class="linha-rot"><b style="color:var(--texto-suave)">Outros rádios na faixa de 2,4 GHz</b></div>
             <div class="vizinhos">
-{chr(10).join(viz_bloco(*v) for v in RADIOS_VIZINHOS)}
+{chr(10).join(viz_bloco(*v, linha=i) for i, v in enumerate(RADIOS_VIZINHOS))}
             </div>
             <div class="acoes empurra">
               <a class="btn" href="#mapear-entrada-a-entrada" title="Um toque por aparelho e o Hefesto aprende em que entrada cada um está.">{MAPEAR_UMA_A_UMA}</a>
