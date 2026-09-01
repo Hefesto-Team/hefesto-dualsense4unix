@@ -46,11 +46,19 @@ import gi  # noqa: E402
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-import mesa_viva  # noqa: E402
-import onde  # noqa: E402
-import pacotes  # noqa: E402
 from gi.repository import GLib, Gtk  # noqa: E402
-from pacotes import ponte  # noqa: E402
+
+# PELO NOME DO PACOTE, e não pelo nome curto do vizinho. Eram
+# `import mesa_viva` / `import pacotes`, herdados de quando esta pasta vivia em
+# `layout/` e os pilotos entravam nela pelo `sys.path`. Dentro do `src/` isso
+# custava caro e em silêncio: uma ferramenta que lê o código ESTÁTICO não
+# resolve `import pacotes` para `hefesto_dualsense4unix.interface.pacotes`, e o
+# `portao_a_casa_sabe_e_o_produto_nao_faz` chegava a **zero** módulos da interface
+# alcançados a partir das bocas do produto. O portão que existe para achar a
+# cura escrita e nunca ligada não enxergava a interface INTEIRA — e por isso
+# acusava de dívida as camadas que ela já chama.
+from hefesto_dualsense4unix.interface import mesa_viva, onde, pacotes  # noqa: E402
+from hefesto_dualsense4unix.interface.pacotes import ponte  # noqa: E402
 
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
 

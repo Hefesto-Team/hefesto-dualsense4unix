@@ -227,6 +227,7 @@ deixa de bater com a árvore e o portão cobra que ela seja APAGADA.
 from __future__ import annotations
 
 import ast
+import contextlib
 import functools
 import re
 import shutil
@@ -267,10 +268,16 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "(assets/hefesto-dualsense4unix.service:22, `daemon start --foreground`)",
     ),
     "app/main.py": (
-        "pyproject.toml",
-        'hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.app.main:main"',
-        "console_script da janela; ExecStart de "
-        "assets/hefesto-dualsense4unix-gui-hotplug.service:12",
+        "run.sh",
+        "python3 -m hefesto_dualsense4unix.app.main",
+        "ENDEREÇO CORRIGIDO em 01/09/2026, e por decisão DELA: *\"a versão "
+        "antiga não segue disponível, vai gerar confusão nos agentes\"*. O "
+        "console_script `-gui` deixou de apontar para a janela GTK e passa a "
+        "abrir a interface nova (a entrada abaixo). A janela antiga NÃO virou "
+        "dívida por isso — ela continua sendo aberta pelo `run.sh:78`, que é "
+        "a boca de quem desenvolve, e os 74 handlers de `app/actions/` são o "
+        "MOTOR que a interface nova chama. A boca mudou de arquivo, que é "
+        "exatamente o caso que esta régua manda CONFERIR em vez de apagar.",
     ),
     "__main__.py": (
         "src/hefesto_dualsense4unix/__main__.py",
@@ -361,6 +368,11 @@ _PILOTO_DA_INTERFACE_NOVA = "src/hefesto_dualsense4unix/interface/hefesto_vivo.p
 #: prefere calar a adivinhar.
 _PASTA_DA_PONTE = "src/hefesto_dualsense4unix/interface"
 
+#: O MESMO LUGAR, dito como MÓDULO. Derivado do caminho acima e não
+#: digitado: os dois nomeiam a mesma pasta, e escrever o segundo à mão é
+#: criar o par que diverge no dia em que a pasta mudar de nome.
+_MODULO_DA_PONTE = _PASTA_DA_PONTE.removeprefix("src/").replace("/", ".")
+
 #: A CADEIA que torna o piloto uma boca, elo por elo, com a agulha de cada um.
 #: ``test_a_cadeia_do_lancador_da_interface_nova_esta_viva`` confere que cada
 #: fonte ainda diz o que esta tabela afirma — a mesma disciplina de
@@ -426,6 +438,17 @@ _PORTAS_DE_AMBIENTE: dict[str, tuple[str, ...]] = {
 #: razão é o que permite a próxima pessoa discordar com conhecimento de causa.
 #: Interruptor novo que ninguém classificar reprova por estar SEM CLASSIFICAÇÃO.
 _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
+    "HEFESTO_BANCADA": (
+        "Desvia para onde os geradores de página ESCREVEM "
+        "(interface/onde.py:_DESVIO). Existe para UMA coisa: deixar um portão "
+        "rodar os dez geradores num diretório temporário e comparar o que SAIU "
+        "com o que está no disco, sem tocar na bancada dela. O próprio módulo "
+        "escreve a razão de ele não agir sozinho: `Ele NÃO tem efeito quando a "
+        "variável não está posta, que é sempre — nenhum fluxo dela passa por "
+        "aqui, e um desvio que agisse sozinho seria pior que a doença`. Não "
+        "abre feature nenhuma; ausente é o caminho de produção. MEDIDO em "
+        "01/09/2026."
+    ),
     "HEFESTO_BROKER_SOCKET": (
         "Endereço do socket do broker de hidraw. Não é escolha dela: é ponto de "
         "injeção para o teste apontar o cliente a um socket de mentira "
@@ -779,455 +802,42 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "interface/monta.py::larg_rotulos": (
+        "Auxiliar do gerador do mockup (interface/monta.py:406), chamado só pelos "
+        "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
+        "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
+        "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
+    ),
+    "interface/monta.py::luzinhas": (
+        "Auxiliar do gerador do mockup (interface/monta.py:571), chamado só pelos "
+        "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
+        "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
+        "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
+    ),
+    "interface/monta.py::monta": (
+        "O gerador do esqueleto das dez páginas. A página que ele escreve É o que o "
+        "WebView renderiza, mas quem o chama são os dez `interface/abaNN.py`, que "
+        "são BANCADA: rodam à mão, escrevem em `mockup/`, e o produto lê o HTML já "
+        "pronto de `interface/paginas/`. A poda da bancada em "
+        "`promessas_sem_caminho` tira os geradores da conta e, com eles, os "
+        "chamadores desta função. MEDIDO em 01/09/2026."
+    ),
+    "interface/monta.py::tom_da_casa": (
+        "Auxiliar do gerador do mockup (interface/monta.py:340), chamado só pelos "
+        "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
+        "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
+        "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
+    ),
+    "interface/monta.py::troca": (
+        "Auxiliar do gerador do mockup (interface/monta.py:809), chamado só pelos "
+        "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
+        "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
+        "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
+    ),
     # ── AS CAMADAS DE TELA DA INTERFACE NOVA, 01/09/2026 ──────────────
     # Elas entraram quando a boca passou a ser o `hefesto_vivo.py`, o
     # piloto das DEZ abas: o fecho de import alcançou seis módulos que
     # ninguém chamava, e cada função pública deles virou acusação.
-    "app/actions/jogar/painel.py::Aviso": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`app/actions/jogar/painel.py` a chama em `degrau_vivo`. Ela entrou na"
-        "acusação quando a boca da interface nova passou a ser o"
-        "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
-        "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `plano_do_modo`, que src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py"
-        "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
-    ),
-    "app/actions/jogar/painel.py::Chip": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`app/actions/jogar/painel.py` a chama em `modo_lembrado`. Ela entrou na"
-        "acusação quando a boca da interface nova passou a ser o"
-        "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
-        "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `plano_do_modo`, que src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py"
-        "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
-    ),
-    "app/actions/jogar/painel.py::Lembranca": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`app/actions/jogar/painel.py` a chama em `plano_do_modo`,"
-        "`modo_lembrado`. Ela entrou na acusação quando a boca da interface nova"
-        "passou a ser o `hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de"
-        "import alcançou este módulo. Não é promessa pendente: o caminho existe e"
-        "passa pela porta `plano_do_modo`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "app/actions/jogar/painel.py::ligado_por_modo": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`app/actions/jogar/painel.py` a chama em `hefesto_ligado`. Ela entrou na"
-        "acusação quando a boca da interface nova passou a ser o"
-        "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
-        "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `plano_do_modo`, que src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py"
-        "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
-    ),
-    "app/actions/jogar/painel.py::modo_vivo": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`app/actions/jogar/painel.py` a chama em `hefesto_ligado`. Ela entrou na"
-        "acusação quando a boca da interface nova passou a ser o"
-        "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
-        "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `plano_do_modo`, que src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py"
-        "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
-    ),
-    "app/telas/vibracao.py::motores_do_controle": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`app/telas/vibracao.py` a chama em `pacote_da_coluna`,"
-        "`estado_da_coluna`. Ela entrou na acusação quando a boca da interface"
-        "nova passou a ser o `hefesto_vivo.py` — o piloto das DEZ abas — e o"
-        "fecho de import alcançou este módulo. Não é promessa pendente: o caminho"
-        "existe e passa pela porta `pacote_da_mesa`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py chama. O que falta é"
-        "chamador de FORA, e uma auxiliar não precisa de um."
-    ),
-    "app/telas/vibracao.py::pacote_da_coluna": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`app/telas/vibracao.py` a chama em `pacote_da_mesa`. Ela entrou na"
-        "acusação quando a boca da interface nova passou a ser o"
-        "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
-        "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `pacote_da_mesa`, que src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py"
-        "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
-    ),
-    "app/telas/vibracao.py::teto_da_barra": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`app/telas/vibracao.py` a chama em `pacote_da_coluna`. Ela entrou na"
-        "acusação quando a boca da interface nova passou a ser o"
-        "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
-        "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `pacote_da_mesa`, que src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py"
-        "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_conexoes.py::controles_do_estado": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_conexoes.py::EnderecoInvalido": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `familia_de`, `v`, `g`. Ela entrou na"
-        "acusação quando a boca da interface nova passou a ser o"
-        "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
-        "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `pintura`, que —  ainda não ligada chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_conexoes.py::endereco_por_posicao": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `v`. Ela entrou na acusação quando a"
-        "boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pintura`, que —  ainda"
-        "não ligada chama. O que falta é chamador de FORA, e uma auxiliar não"
-        "precisa de um."
-    ),
-    "gui/aba_conexoes.py::familia_de": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `v`. Ela entrou na acusação quando a"
-        "boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pintura`, que —  ainda"
-        "não ligada chama. O que falta é chamador de FORA, e uma auxiliar não"
-        "precisa de um."
-    ),
-    "gui/aba_conexoes.py::html_da_ordem": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_conexoes.py::html_das_linhas": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_conexoes.py::html_das_pistas": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_conexoes.py::html_do_exame": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_conexoes.py::html_dos_adaptadores": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_conexoes.py::html_dos_vizinhos": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_conexoes.py::mascara_da_maquina": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_conexoes.py::Pintura": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_conexoes.py::texto_da_contagem": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_conexoes.py` a chama em `pintura`. Ela entrou na acusação"
-        "quando a boca da interface nova passou a ser o `hefesto_vivo.py` — o"
-        "piloto das DEZ abas — e o fecho de import alcançou este módulo. Não é"
-        "promessa pendente: o caminho existe e passa pela porta `pintura`, que —"
-        "ainda não ligada chama. O que falta é chamador de FORA, e uma auxiliar"
-        "não precisa de um."
-    ),
-    "gui/aba_sistema.py::autostart_ligado": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::exame": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::forca_do_perfil": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `linha_do_impoe`, `frase_do_teto`. Ela"
-        "entrou na acusação quando a boca da interface nova passou a ser o"
-        "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
-        "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `pacote`, que src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O"
-        "que falta é chamador de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::frase_do_teto": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::Linha": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `_campos_de_janela`, `linha_do_hefesto`,"
-        "`linha_da_pausa`…. Ela entrou na acusação quando a boca da interface"
-        "nova passou a ser o `hefesto_vivo.py` — o piloto das DEZ abas — e o"
-        "fecho de import alcançou este módulo. Não é promessa pendente: o caminho"
-        "existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::linha_da_pausa": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::linha_da_troca_de_perfil": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::linha_do_ambiente": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::linha_do_hefesto": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::linha_do_impoe": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::linha_do_vale_para": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::quantos_controles": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `linha_do_vale_para`. Ela entrou na"
-        "acusação quando a boca da interface nova passou a ser o"
-        "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
-        "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `pacote`, que src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O"
-        "que falta é chamador de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::rotulo_do_perfil": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::sem_markup": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `linha_da_troca_de_perfil`,"
-        "`linha_do_ambiente`. Ela entrou na acusação quando a boca da interface"
-        "nova passou a ser o `hefesto_vivo.py` — o piloto das DEZ abas — e o"
-        "fecho de import alcançou este módulo. Não é promessa pendente: o caminho"
-        "existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "gui/aba_sistema.py::travas": (
-        "MEDIDO em 01/09/2026. Auxiliar INTERNA da camada de tela:"
-        "`gui/aba_sistema.py` a chama em `pacote`. Ela entrou na acusação quando"
-        "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
-        "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
-        "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
-        "de FORA, e uma auxiliar não precisa de um."
-    ),
-    "app/actions/jogar/painel.py::escritor_do_modo": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
-        "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
-        "`src/` que esta régua varre."
-    ),
-    "app/actions/jogar/painel.py::hefesto_ligado": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
-        "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
-        "`src/` que esta régua varre."
-    ),
-    "app/actions/jogar/painel.py::Modo": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
-        "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
-        "`src/` que esta régua varre."
-    ),
-    "app/actions/jogar/painel.py::modo_lembrado": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
-        "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
-        "`src/` que esta régua varre."
-    ),
-    "app/actions/jogar/painel.py::plano_do_modo": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
-        "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
-        "`src/` que esta régua varre."
-    ),
-    "app/actions/jogar/painel.py::porque_nao_aplica": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
-        "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
-        "`src/` que esta régua varre."
-    ),
-    "app/actions/perfis_web.py::pacote_da_aba": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/actions/perfis_web.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é"
-        "`src/hefesto_dualsense4unix/interface/pacotes/a10_perfis.py`, e o alcance não a enxerga"
-        "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
-        "varre."
-    ),
-    "app/telas/vibracao.py::degraus_da_forca": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/telas/vibracao.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é"
-        "`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
-        "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
-        "varre."
-    ),
-    "app/telas/vibracao.py::estado_da_coluna": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/telas/vibracao.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é"
-        "`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
-        "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
-        "varre."
-    ),
-    "app/telas/vibracao.py::gesto_do_clique": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/telas/vibracao.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é"
-        "`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
-        "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
-        "varre."
-    ),
-    "app/telas/vibracao.py::pacote_da_mesa": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`app/telas/vibracao.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é"
-        "`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
-        "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
-        "varre."
-    ),
-    "gui/aba_sistema.py::Leitura": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`gui/aba_sistema.py` — a função que a interface nova chama, ou chamará."
-        "Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py`, e o"
-        "alcance não a enxerga porque o chamador mora em `layout/`, fora do"
-        "`src/` que esta régua varre."
-    ),
-    "gui/aba_sistema.py::pacote": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`gui/aba_sistema.py` — a função que a interface nova chama, ou chamará."
-        "Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py`, e o"
-        "alcance não a enxerga porque o chamador mora em `layout/`, fora do"
-        "`src/` que esta régua varre."
-    ),
-    "gui/aba_sistema.py::perfil_do_rotulo": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`gui/aba_sistema.py` — a função que a interface nova chama, ou chamará."
-        "Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py`, e o"
-        "alcance não a enxerga porque o chamador mora em `layout/`, fora do"
-        "`src/` que esta régua varre."
-    ),
-    "app/ipc_bridge.py::mic_volume_set": (
-        "MEDIDO em 26/08/2026, e é a SOMBRA de uma cura que chegou. Ela é o "
-        "embrulho `bool` sobre `mic_volume_set_detalhado`, e ficou sem chamador "
-        "de produção no dia em que `controller_card.py` passou a chamar a "
-        "detalhada — que é literalmente o que a lápide de `alvo_honrado` "
-        "prescrevia como cura, e que esta leva executou. O `bool` colapsava "
-        "`sem_fonte`, daemon offline e sem-controle no mesmo `False`; com a "
-        "mesa cheia isso mexia no microfone de OUTRA pessoa devolvendo `True`. "
-        "NÃO É PROMESSA PENDENTE, é resto: o caminho existe e está fiado. O que "
-        "a apaga é a poda, junto com a do `led_set` e a do `player_leds_set`, "
-        "que carregam esta mesma nota. DONO: a próxima leva. O docstring dela "
-        "guarda a tabela das três camadas do microfone (firmware x fonte do "
-        "sistema) e essa medição tem de sobreviver à poda."
-    ),
     "daemon/subsystems/identity.py::reset_identity_registry": (
         "MEDIDO em 12/08/2026. Instrumento de isolamento entre casos: o próprio "
         "docstring diz `APENAS testes — isola estado entre casos`, e o corpo "
@@ -1282,23 +892,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "mesma espécie: quem tem a linha inteira usa. NÃO foi podada de "
         "propósito; a nota datada está no docstring dela."
     ),
-    "profiles/sanidade.py::verificar_perfis_do_disco": (
-        "RECLASSIFICADA em 26/08/2026, e esta entrada SUBSTITUI uma que morava "
-        "em `_SEM_CAMINHO_HOJE` prescrevendo a cura ERRADA: *'o `doctor` chamar "
-        "isto. É a lacuna mais barata desta lista de fechar — uma chamada'*. "
-        "MEDIDO: o doctor JÁ faz o trabalho inteiro, e faz MELHOR. "
-        "`cli/cmd_doctor.py::_linhas_perfis` chama `load_all_profiles()` dentro "
-        "de um `try/except OSError`, e só então `sanidade.verificar_perfis` e "
-        "`sanidade.linhas_de_relatorio`; `_print_bloco_perfis` imprime o bloco "
-        "`== perfis (coerência entre eles) ==` e devolve o achado grave para o "
-        "código de saída. A corrente não está quebrada: ela roda. "
-        "E fiar ESTA conveniência no lugar seria PIORAR o produto — ela não tem "
-        "o `except OSError`, então trocaria a linha *'não deu para ler os "
-        "perfis: <erro>'* por um traceback na cara de quem foi pedir "
-        "diagnóstico justamente porque algo quebrou. É atalho de teste "
-        "(`test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py`:319), com "
-        "nota datada no próprio docstring, e não deve ganhar chamador."
-    ),
     "integrations/kernel_cmdline.py::apply_plan": (
         "MEDIDO em 12/08/2026. Instrumento: o docstring diz `SIMULA o plano "
         "sobre os tokens (para testes e para o doctor comparar)` e `Não toca "
@@ -1313,46 +906,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
     # para ABORTAR o passo do cmdline quando a guarda anti-reintrodução dispara.
     # Ela só parecia instrumento porque a varredura era cega a heredoc. O portão
     # cobrou o apagamento sozinho, que é exatamente o que ele existe para fazer.
-    "daemon/subsystems/gamepad.py::suspend_vpads_for_steam_input": (
-        "MEDIDO em 12/08/2026. LÁPIDE COM NOTA DATADA, e a nota está no próprio "
-        "corpo: `NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): fora do "
-        "caminho da marca do Steam Input. Nenhuma borda da exceção chama mais "
-        "esta função.` O texto declara os três motivos de ela ficar inteira — o "
-        "raciocínio foi medido e não se apaga decisão medida; o co-op lê o "
-        "estado que ela publica; e um daemon que subiu ANTES da cura pode estar "
-        "com uma suspensão de pé, cuja saída (`resume_vpads_after_steam_input`, "
-        "essa sim viva em gamepad.py:332) é o caminho de volta dele. Não deve "
-        "chamador: ela deve continuar não sendo chamada."
-    ),
-    "core/led_control.py::apply_led_settings": (
-        "MEDIDO em 13/08/2026, e esta entrada é a CORREÇÃO de uma que dizia o "
-        "contrário. Ela morava em `_SEM_CAMINHO_HOJE` porque o docstring da "
-        "função afirmava que sem ela `os bits nunca chegam ao controle` — e o "
-        "portão tomou o sintoma descrito pelo estado da árvore. Os bits chegam: "
-        "`ProfileManager.apply` emite `player_leds` no `OutputSpec` de "
-        "`apply_output_defaults` (profiles/manager.py:392) e o backend converte "
-        "em `_write_partial_output` (backend_pydualsense.py:2801). É LÁPIDE COM "
-        "NOTA DATADA: a nota está no próprio docstring, que hoje diz o endereço "
-        "do caminho vivo em vez do sintoma; a função é a forma `aplicar um "
-        "LedSettings inteiro`, correta e pública, e não deve chamador porque "
-        "quem manda no aparelho é o `OutputSpec` — o único que sabe dizer `não "
-        "mexe neste campo` com `None`, de que a trava manual por categoria "
-        "depende. A PODA É DELA: símbolo público não se apaga por conta "
-        "própria. A ligação perfil→bitmask é conferida em "
-        "`tests/unit/test_perfil_acende_os_pontinhos_do_jogador.py`."
-    ),
-    "core/led_control.py::player_bitmask": (
-        "MEDIDO em 13/08/2026. Cai junto com `apply_led_settings`, pela mesma "
-        "correção: é a conversão que o aplicador usa, e o caminho vivo faz a "
-        "MESMA conversão inline em backend_pydualsense.py:2801 (`sum(1 << i for "
-        "i, b in enumerate(out.player_leds) if b)`). A pergunta que a entrada "
-        "antiga deixava em aberto era se os dois layouts divergem — não "
-        "divergem, e isso deixou de ser leitura e virou teste: "
-        "`test_a_conversao_do_backend_e_a_de_led_control_sao_a_mesma` compara os "
-        "32 padrões possíveis. Não é dívida: é a mesma regra escrita duas vezes, "
-        "com guarda contra as duas se separarem. Apagar uma delas é decisão "
-        "DELA, não deste portão."
-    ),
     # `utils/session.py::load_coop_enabled` MOROU AQUI e a entrada SAIU em
     # 26/08/2026 porque o SÍMBOLO foi podado — não porque a classificação
     # mudasse. A entrada dizia que o corpo ficava de pé porque "a assinatura é
@@ -1364,27 +917,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
     # caminho. A DECISÃO MEDIDA que a lápide guardava (COOP-SEM-INTERRUPTOR-01,
     # 06/08/2026: o co-op local não tem mais opt-out) continua escrita, com a
     # data, no lugar onde a função morava, em `utils/session.py`.
-    "app/audio_saida.py::estado_do_sono": (
-        "MEDIDO em 18/08/2026. LÁPIDE COM NOTA DATADA, e a nota está no próprio "
-        "docstring, escrita nesta data. A promessa que a fez nascer é o item 6 "
-        "da `SOM-QUE-NAO-DORME-01` — `a aba Status consegue dizer o estado, "
-        "inclusive denunciar a cura arrancada` — e ela ESTÁ entregue, por outro "
-        "caminho: a `SOM-ACORDADO-01` mediu o desenho e escolheu dizer o estado "
-        "POR CONTROLE, no rótulo da moldura de cada card, em vez de uma frase "
-        "global. O caminho vivo é `RotaDeSaida.estado` (audio_saida.py:817) "
-        "publicando os canais, `status_actions.py`:1038 lendo "
-        "`regra_nunca_dorme_instalada()` na MESMA worker, :1249 entregando os "
-        "dois ao card por `definir_estado_do_canal`, e "
-        "`controller_card.py`:4216-4224 escrevendo as frases — inclusive a "
-        "`DICA_CANAL_SEM_A_REGRA`, que é a cura arrancada sendo denunciada na "
-        "tela. Não deve chamador: fiá-la na janela seria um SEGUNDO leitor de "
-        "PipeWire lá dentro (o defeito que controller_card.py:4044-4049 descreve) "
-        "para repetir o que já está escrito. A PODA É DELA — símbolo público "
-        "não se apaga por conta própria, e apagar este arruinaria de quebra "
-        "`texto_do_sono` e `sono_dos_sinks_do_controle`, que hoje só são "
-        "alcançados por ele e que `tests/unit/test_o_alto_falante_nunca_dorme_01.py`"
-        ":573-608 exercita como as funções PURAS da decisão."
-    ),
     # --- A BANCADA (22/08/2026): o que só um instrumento de `scripts/` usa ----
     # Os cinco do broker entraram quando `_TERRITORIOS_DE_PRODUCAO =
     # ("scripts",)` saiu; o sexto, `gerar_tabela_markdown`, entraria de todo
@@ -1399,34 +931,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
     # cura, o portão viu, e a entrada foi apagada em vez de atualizada — é a
     # regra desta casa: fato que a medição derrubou sai, não fica ao lado do
     # certo.
-    "integrations/hidraw_broker_client.py::porta_provavel": (
-        "MEDIDO em 22/08/2026. Instrumento: `scripts/record_hid_capture.py`"
-        ":66+420 e `scripts/ensaios/comum.py`:92+481 a usam para imprimir por "
-        "qual porta o ensaio está falando. É cabeçalho de relatório de bancada e "
-        "não muda nada no aparelho — quem escolhe a porta em produção é "
-        "`broker_client_for` (:386)."
-    ),
-    "integrations/hidraw_broker_client.py::estado_do_grab": (
-        "MEDIDO em 22/08/2026. Instrumento, e o docstring (:735) o diz: existe "
-        "para o ensaio saber se o zero que ele contou é do aparelho ou da "
-        "ausência de leitura. Chamadores: "
-        "`scripts/ensaio_o_keepalive_mata_o_rumble.py`:64+281 e "
-        "`scripts/ensaio_rumble_em_par.py`:93. O daemon não pergunta isso — ele "
-        "É quem segura o grab."
-    ),
-    "integrations/hidraw_broker_client.py::linha_do_grab": (
-        "MEDIDO em 22/08/2026. Formata a linha de cabeçalho `grab do evdev ....` "
-        "de um relatório de ensaio; chamada em "
-        "`scripts/ensaio_o_keepalive_mata_o_rumble.py`:373 e "
-        "`scripts/ensaio_rumble_em_par.py`:333. Irmã de `estado_do_grab`: sem o "
-        "instrumento não há onde imprimir."
-    ),
-    "integrations/hidraw_broker_client.py::leitura_de_zero": (
-        "MEDIDO em 22/08/2026. Instrumento declarado: o docstring (:744) diz que "
-        "ela existe para uma CÉLULA DE TABELA de ensaio não chamar de `0` o que "
-        "é `MUDO`. O único uso é a reexportação de `scripts/ensaios/comum.py`:89, "
-        "marcada `# noqa: F401 - reexportado para os instrumentos`."
-    ),
     "profiles/curva_propria.py::gerar_tabela_markdown": (
         "MEDIDO em 22/08/2026, e isto SUBSTITUI a nota de 15/08 que o dava por "
         "fiado em produção. O docstring (:290) diz o que ele é: gera a tabela de "
@@ -1437,71 +941,11 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`tests/`."
     ),
     # --- CONFIG-06 (23/08/2026) apagou o único chamador do embrulho estreito -
-    "app/ipc_bridge.py::machine_declare": (
-        "MEDIDO em 24/08/2026 (AUDITORIA-DE-PERDA-01). Mesma forma de "
-        "`led_control.py::apply_led_settings` acima: LÁPIDE COM NOTA DATADA, e "
-        "a nota já estava no próprio docstring da função, escrita quando a "
-        "CONFIG-06 nasceu — `machine_declare_detalhado` existe porque "
-        "`machine_declare` 'está no `__all__` e a dupla `(ok, motivo)` é o "
-        "contrato de quem já a chama'. Essa frase ficou falsa no mesmo dia em "
-        "que foi escrita: `footer_actions.py`:323 chama "
-        "`ipc_bridge.machine_declare_detalhado` diretamente, e é o ÚNICO lugar "
-        "do produto que declara a mesa — não sobrou segundo chamador para a "
-        "dupla estreita. O corpo de `machine_declare` (:830) CHAMA "
-        "`machine_declare_detalhado` — não o contrário —, mas nada de "
-        "produção chama `machine_declare`: ela virou uma casca que embrulha a "
-        "variante rica sem que ninguém peça a casca. É a mesma forma do par "
-        "`apply_draft`/"
-        "`apply_draft_detalhado` que o próprio docstring cita como precedente "
-        "— só que naquele par o embrulho estreito ainda tem para quem servir; "
-        "neste não tem mais. A PODA É DELA: é símbolo público, está no "
-        "`__all__` (:1293), e apagar wrapper documentado por conta própria não "
-        "é deste portão."
-    ),
     # --- 31/08/2026: as três da aba Jogar que NÃO são promessa à tela --------
     # As outras cinco do mesmo módulo são dívida e estão em `_SEM_CAMINHO_HOJE`.
     # A linha entre as duas listas foi MEDIDA uma a uma, e a régua é simples:
     # existe alguém que PINTA o que ela devolve? Se sim é dívida (falta abrir a
     # aba); se não, ela nunca foi para a tela.
-    "app/actions/jogar/painel.py::chips_sem_degrau": (
-        "MEDIDO em 31/08/2026. Diagnóstico, e o próprio docstring dela o diz em "
-        "maiúsculas: `ISTO NÃO É 'SEM DONO', E CONFUNDIR OS DOIS PINTA A TELA "
-        "ERRADA`. Ela responde `quais chips nomeiam uma ponte que a ESCADA não "
-        "tem` — hoje só a Navegação, que TEM escritor (`apply_mode('desktop')`) "
-        "e funciona. Pintar por ela seria a tela dizendo 'não dá' sobre um botão "
-        "que dá; quem pinta é a irmã `chips_sem_dono`, e essa É chamada. O único "
-        "lugar que a nomeia fora de teste é o COMENTÁRIO de "
-        "`src/hefesto_dualsense4unix/interface/jogar_vivo.py`:823, que existe justamente para "
-        "explicar por que ela NÃO está sendo usada ali — comentário não é "
-        "chamador, e neste caso é a evidência. Não deve ganhar chamador de "
-        "pintura: o que ela mede é a distância entre a ESCADA e a tela, e quem "
-        "lê isso é quem desenvolve."
-    ),
-    "app/actions/jogar/painel.py::degraus_sem_chip": (
-        "MEDIDO em 31/08/2026. Irmã da anterior, do outro lado da mesma "
-        "pergunta: `quais degraus da ESCADA não têm onde aparecer`. É a régua do "
-        "código devendo à TELA, e desde 31/08 devolve `()` — o Xbox entrou na "
-        "fileira e o Nativo virou a posição Desligado do interruptor "
-        "(`PONTES_DO_INTERRUPTOR`). Não há nada a pintar quando a resposta é "
-        "vazia, e quando não for vazia o destinatário é quem desenvolve, não "
-        "ela: um degrau que a escada sobe e a tela não mostra é defeito de "
-        "desenho, não de estado. Quem a exercita é "
-        "`tests/unit/test_o_botao_de_ligar_funciona_e_se_lembra.py`:326, com a "
-        "mordida ao lado (:329) que acrescenta um degrau falso e cobra a "
-        "denúncia. Instrumento com régua própria não é dívida."
-    ),
-    "app/actions/jogar/painel.py::indice_do_chip": (
-        "MEDIDO em 31/08/2026. É RESTO, e da forma mais literal: o corpo inteiro "
-        "é `return chip.indice`. Quem faz a conta é a property `Chip.indice`, "
-        "que consulta `ponte_escada.indice_do_degrau` — e MÉTODO não entra nesta "
-        "varredura por decisão declarada no topo deste arquivo, então a property "
-        "é invisível aqui e a função de módulo aparece sozinha. Zero ocorrências "
-        "do nome em `src/`, em `layout/` e em `tests/`: ela nasceu em 29/08 como "
-        "porta de módulo para quem não tivesse o `Chip` na mão, e ninguém "
-        "precisou. A PODA É DELA — símbolo público está no `__all__` e não se "
-        "apaga por conta própria —, e apagá-la não perde regra nenhuma: a regra "
-        "mora na property."
-    ),
 }
 
 #: As promessas públicas SEM CAMINHO de 12/08/2026 — a dívida, com endereço e
@@ -1512,6 +956,198 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    "app/actions/jogar/painel.py::chips_sem_degrau": (
+        "Os chips que nomeiam uma ponte que a `ESCADA` não tem "
+        "(app/actions/jogar/painel.py:534) — a tela prometendo o que o produto não "
+        "faz, medido de dentro. Ninguém a chama, então a divergência não aparece em "
+        "lugar nenhum. Fecha virando régua da suíte ou linha da aba Sistema. MEDIDO "
+        "em 01/09/2026."
+    ),
+    "app/actions/jogar/painel.py::degraus_sem_chip": (
+        "Os degraus da `ESCADA` que a tela NÃO mostra em lugar nenhum — o código "
+        "devendo à tela, e a frase é do autor (app/actions/jogar/painel.py:566). É "
+        "o outro sentido da `chips_sem_degrau`, e a escada de conexão ganhou dois "
+        "níveis em 31/08 sem que nada conferisse os dois lados. Fecha com ela. "
+        "MEDIDO em 01/09/2026."
+    ),
+    "app/actions/jogar/painel.py::escritor_do_modo": (
+        "Quem APLICA aquele botão, ou o porquê de ninguém aplicar "
+        "(app/actions/jogar/painel.py:274). É a fonte da frase de recusa que a "
+        "regra da casa exige — botão sem dono recusa dizendo. Hoje as recusas da "
+        "aba Jogar são escritas no gesto. Fecha quando o gesto perguntar a ela. "
+        "MEDIDO em 01/09/2026."
+    ),
+    "app/audio_saida.py::estado_do_sono": (
+        "A leitura completa numa frase só, e ela BLOQUEIA — o docstring manda rodar "
+        "em worker (app/audio_saida.py:1077). O sono da placa de áudio é a causa "
+        "histórica de o alto-falante do controle não funcionar, e a frase existe "
+        "para a tela dizer isso. Nenhuma aba a mostra. Fecha quando a Conexões ou a "
+        "Sistema a pedirem, em thread. MEDIDO em 01/09/2026."
+    ),
+    "app/telas/vibracao.py::degraus_da_forca": (
+        "As chaves dos quatro degraus, na ordem da tela, lidas do produto "
+        "(app/telas/vibracao.py:77). A aba Vibração já foi ligada e chama três "
+        "funções desta camada; esta ficou de fora — o pacote `a05_vibracao` deriva "
+        "os degraus por conta própria. Fecha quando ele perguntar em vez de "
+        "derivar. MEDIDO em 01/09/2026."
+    ),
+    "app/telas/vibracao.py::estado_da_coluna": (
+        "O estado no formato que `aba05._coluna` desenha, para a REMONTAGEM "
+        "(app/telas/vibracao.py:266). A remontagem de coluna é o caminho que troca "
+        "o bloco inteiro quando a mesa muda; a aba viva pinta campo a campo e nunca "
+        "remonta. Fecha quando a Vibração passar a trocar a coluna. MEDIDO em "
+        "01/09/2026."
+    ),
+    "app/telas/vibracao.py::gesto_do_clique": (
+        "O par (chave, dono) de um gesto que a página mandou "
+        "(app/telas/vibracao.py:290) — a tradução `data-papel`+`data-lado` para "
+        "motor, que o pacote `a05_vibracao` refaz por dentro. Duas verdades sobre o "
+        "mesmo endereço. Fecha quando o gesto delegar. MEDIDO em 01/09/2026."
+    ),
+    "core/led_control.py::apply_led_settings": (
+        "Aplica settings no controle (core/led_control.py:167) — o caminho DIRETO, "
+        "sem passar pelo daemon. O produto de hoje escreve pela IPC (`led.set`), "
+        "que é o certo enquanto o daemon segura o hidraw. Fecha, ou some, quando a "
+        "decisão sobre escrita direta for tomada; hoje é caminho vivo sem chamador. "
+        "MEDIDO em 01/09/2026."
+    ),
+    "daemon/subsystems/gamepad.py::suspend_vpads_for_steam_input": (
+        "Retira o gamepad virtual de cena pelo tempo do jogo da allowlist (JOGO-01, "
+        "daemon/subsystems/gamepad.py:796). É a cura do terceiro controle — o "
+        "espelho que o Steam Input faz de CADA gamepad que vê, inclusive do nosso. "
+        "Nenhum caminho do daemon a chama. Fecha quando a allowlist de jogo passar "
+        "a acioná-la. MEDIDO em 01/09/2026."
+    ),
+    "gui/aba_sistema.py::perfil_do_rotulo": (
+        "O caminho de volta: o que a página mandou vira a chave do produto "
+        "(gui/aba_sistema.py:445). O gesto `perfil-da-mesa` de `a09_sistema.py` faz "
+        "essa tradução por conta própria, com `_teto_do_perfil` — logo há DUAS "
+        "traduções da mesma coisa, e esta é a do produto. Fecha quando o gesto "
+        "delegar a ela, como já delega a pintura para `aba_sistema.pacote`. MEDIDO "
+        "em 01/09/2026."
+    ),
+    "interface/mesa_viva.py::estado_do_card": (
+        "O estado de UM card da mesa — mic, volume, canal, rota "
+        "(interface/mesa_viva.py:431). O único chamador é o `controles_vivos.py`, o "
+        "piloto de UMA aba, que é BANCADA e sai da conta pela poda. O piloto único "
+        "(`hefesto_vivo.py`) não a chama: o pacote `a02_controles` monta o estado "
+        "do card por outro caminho, e são duas verdades sobre o mesmo dado. Fecha "
+        "quando o pacote da aba Controles delegar a ela, como o da Sistema já "
+        "delega a `gui/aba_sistema.pacote`. MEDIDO em 01/09/2026."
+    ),
+    "interface/pacotes/daemon.py::confere": (
+        "Os métodos citados que o daemon NÃO atende "
+        "(interface/pacotes/daemon.py:76). É a porta que o produto usaria para "
+        "dizer na tela que aquele botão não tem quem atenda; hoje quem a usa é a "
+        "régua dos botões. Fecha no mesmo lugar que a irmã do inventário. "
+        "MEDIDO em 01/09/2026."
+    ),
+    "interface/pacotes/daemon.py::metodos": (  # (noqa-acento) nome de função
+        "O inventário do que o daemon atende, lido do `ipc_server.py` "
+        "(interface/pacotes/daemon.py:39). Hoje só a RÉGUA o consulta "
+        "(`tests/unit/test_os_botoes_tem_dono.py`), e régua não conta. Fecha quando "
+        "o despachante recusar em tempo de execução o gesto que cita método "
+        "inexistente, em vez de deixar o clique morrer no timeout do socket. MEDIDO "
+        "em 01/09/2026."
+    ),
+    "interface/pacotes/daemon.py::parametros": (
+        "Os `params.get()` que o handler daquele método lê, na ordem "
+        "(interface/pacotes/daemon.py:49). Irmã do inventário, e com o mesmo "
+        "caminho faltando: só a régua a chama. Fecha junto com ela, na recusa em "
+        "tempo de execução. MEDIDO em 01/09/2026."
+    ),
+    "interface/pacotes/mapa.py::canal": (
+        "O que o `docs/data/mapa-controles.csv` diz sobre uma peça naquele "
+        "transporte (interface/pacotes/mapa.py:47). O mapa é a rede contra "
+        "regressão cabo/rádio, e a tela deveria consultá-lo antes de prometer um "
+        "ajuste que só existe no cabo. Nenhuma aba o consulta ainda. Fecha quando a "
+        "Vibração e os Gatilhos passarem a apagar o que o transporte de agora não "
+        "aciona. MEDIDO em 01/09/2026."
+    ),
+    "interface/pacotes/mapa.py::confere": (
+        "As chaves que NÃO existem no mapa (interface/pacotes/mapa.py:90) — a "
+        "recusa a inventar valor de tela sem linha no CSV, que o docstring do "
+        "despachante nomeia como regra: um valor de tela sem linha lá é um valor "
+        "sem dono. Só a régua a chama. Fecha com a `canal`. MEDIDO em 01/09/2026."
+    ),
+    "interface/pacotes/mapa.py::da_familia": (
+        "As chaves de uma família do mapa de canais — `luz`, `gatilho`, `vibracao`, "
+        "`audio` (interface/pacotes/mapa.py:71). Mesma lacuna da `canal`: existe "
+        "para a tela perguntar, e nenhuma aba pergunta. Fecha com ela. MEDIDO em "
+        "01/09/2026."
+    ),
+    "interface/pacotes/ponte.py::chamar_detalhado": (
+        "A variante que devolve `(ok, motivo)` — a recusa do daemon traduzida em "
+        "frase de tela (interface/pacotes/ponte.py:142). Nenhum dos 50 gestos a "
+        "usa: todos chamam `chamar`, que devolve `bool`, e por isso um botão que o "
+        "daemon RECUSA falha sem dizer por quê. Fecha quando os gestos que podem "
+        "ser recusados (gatilho com trava armada, modo nativo, troca de perfil) "
+        "passarem a usá-la. MEDIDO em 01/09/2026."
+    ),
+    "profiles/sanidade.py::verificar_perfis_do_disco": (
+        "Carrega o diretório de perfis do XDG e verifica "
+        "(profiles/sanidade.py:366). A verificação de sanidade dos perfis existe e "
+        "nada no produto a roda — nem o `doctor`, nem a aba Perfis. Fecha quando o "
+        "exame da aba Sistema ou o `doctor` a chamarem. MEDIDO em 01/09/2026."
+    ),
+    "app/actions/jogar/painel.py::hefesto_ligado": (
+        "A posição do interruptor Hefesto, com `None` para *'o daemon não "
+        "respondeu'* (app/actions/jogar/painel.py:204). A aba Jogar foi ligada e "
+        "usa as quatro funções vizinhas; esta ficou de fora, e o pacote lê o estado "
+        "direto. Fecha quando `a01_jogar` perguntar a ela — é a dona do terceiro "
+        "estado. MEDIDO em 01/09/2026."
+    ),
+    "app/actions/jogar/painel.py::indice_do_chip": (
+        "A posição de um chip na `ponte_escada.ESCADA` "
+        "(app/actions/jogar/painel.py:524). É a peça das duas conferências abaixo "
+        "(`chips_sem_degrau`, `degraus_sem_chip`), e sai da dívida junto com elas. "
+        "MEDIDO em 01/09/2026."
+    ),
+    "app/actions/jogar/painel.py::modo_lembrado": (
+        "O opt-out persistido do gamepad virtual, com a frase da tela "
+        "(app/actions/jogar/painel.py:351). A aba Jogar não mostra o que ficou "
+        "LEMBRADO, só o que está valendo agora — e a diferença entre os dois é o "
+        "que confunde quem desligou o virtual ontem. Fecha quando a aba mostrar a "
+        "lembrança. MEDIDO em 01/09/2026."
+    ),
+    "core/led_control.py::player_bitmask": (
+        "Converte as cinco lâmpadas em bitmask 0-31 (core/led_control.py:83). O "
+        "produto manda `bits` por `led.player_set`, e quem os monta hoje é cada "
+        "chamador. Fecha quando a aba Iluminação montar o padrão por aqui. MEDIDO "
+        "em 01/09/2026."
+    ),
+    "integrations/hidraw_broker_client.py::estado_do_grab": (
+        "Devolve se o `EVIOCGRAB` de um nó evdev está livre ou outro processo o "
+        "segura (integrations/hidraw_broker_client.py:689). São as quatro frases "
+        "que explicam POR QUE um controle não responde — a diferença entre 'não "
+        "funciona' e 'outro processo está segurando este nó'. Nenhuma tela as "
+        "mostra: a aba Conexões diz o resultado e não a causa. Fecha quando o exame "
+        "da Conexões passar a perguntar por elas. MEDIDO em 01/09/2026."
+    ),
+    "integrations/hidraw_broker_client.py::leitura_de_zero": (
+        "Devolve o que escrever numa célula que contou ZERO — e isso DEPENDE do "
+        "grab (integrations/hidraw_broker_client.py:744). São as quatro frases que "
+        "explicam POR QUE um controle não responde — a diferença entre 'não "
+        "funciona' e 'outro processo está segurando este nó'. Nenhuma tela as "
+        "mostra: a aba Conexões diz o resultado e não a causa. Fecha quando o exame "
+        "da Conexões passar a perguntar por elas. MEDIDO em 01/09/2026."
+    ),
+    "integrations/hidraw_broker_client.py::linha_do_grab": (
+        "Devolve a linha de cabeçalho do grab, no mesmo formato da porta "
+        "(integrations/hidraw_broker_client.py:739). São as quatro frases que "
+        "explicam POR QUE um controle não responde — a diferença entre 'não "
+        "funciona' e 'outro processo está segurando este nó'. Nenhuma tela as "
+        "mostra: a aba Conexões diz o resultado e não a causa. Fecha quando o exame "
+        "da Conexões passar a perguntar por elas. MEDIDO em 01/09/2026."
+    ),
+    "integrations/hidraw_broker_client.py::porta_provavel": (
+        "Devolve `(porta, motivo)` ANTES de abrir nada, para o cabeçalho do "
+        "relatório (integrations/hidraw_broker_client.py:661). São as quatro frases "
+        "que explicam POR QUE um controle não responde — a diferença entre 'não "
+        "funciona' e 'outro processo está segurando este nó'. Nenhuma tela as "
+        "mostra: a aba Conexões diz o resultado e não a causa. Fecha quando o exame "
+        "da Conexões passar a perguntar por elas. MEDIDO em 01/09/2026."
+    ),
     "gui/aba_conexoes.py::chave_da_mesa": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`gui/aba_conexoes.py` — a função que a interface nova chama, ou chamará."
@@ -2089,42 +1725,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # ZERO. Um processo Rust não importa função Python.
     #
     # RESTAM TRÊS, abaixo: as duas da Lightbar e o mic da mesa cheia.
-    "app/ipc_bridge.py::led_set": (
-        "MEDIDO em 26/08/2026, e é EFEITO da própria cura (BG-01): os três "
-        "chamadores de produção eram `app/actions/lightbar_actions.py` — o "
-        "`Aplicar no controle`, o `Apagar` e o funil por MAC do `Todos` —, e a "
-        "BG-01 trocou os três por `led_set_detalhado`, porque o `bool` desta "
-        "função jogava fora o `aplicado_em`/`guardado_em` que o daemon publica "
-        "desde a APLICAR-VERDADE-01. Ficou o invólucro que descarta o corpo, "
-        "com zero chamadores — a mesma forma dos cinco invólucros podados em "
-        "26/08/2026 pela BG-07, cuja nota está no comentário logo acima. "
-        "O QUE A FECHA: apagar `led_set` e deixar só o `_detalhado`, levando o "
-        "docstring do FEAT-LED-BRIGHTNESS-01/PERFIL-05 junto. "
-        "FATO ERRADO, SUBSTITUÍDO em 26/08/2026: esta razão dizia que "
-        "`app/ipc_bridge.py` estava no `nao_toca` da leva. Está na POSSE da "
-        "LEVA-3-C, e a BG-07 podou cinco irmãos deste no mesmo arquivo. O que "
-        "segurou `led_set` foi a ORDEM da frente, que nomeia cinco funções e "
-        "não esta — e a razão escrita ali (`led_set` continuaria viva por "
-        "outro caminho) foi MEDIDA e é falsa: AST e `grep` concordam que não "
-        "há chamador nenhum em `src/` fora do próprio módulo. "
-        "DONO: a próxima leva, e agora sem trava — é poda pura de dez linhas, "
-        "mais os CINCO pontos que as citam em "
-        "`tests/unit/test_ipc_bridge.py` (:148, :152, :176, :257, :262) e os "
-        "DOIS métodos de "
-        "`tests/unit/test_p1_a_resposta_do_daemon_atravessa_a_ponte.py` (:396 "
-        "e :407)."
-    ),
-    "app/ipc_bridge.py::player_leds_set": (
-        "MEDIDO em 26/08/2026: irmão exato do `led_set` acima, e pela mesma "
-        "edição (BG-01). O único chamador de produção era `_enviar_player_leds` "
-        "em `app/actions/lightbar_actions.py`, nas duas rotas — alvo escolhido "
-        "e um pedido por MAC em `Todos` —, e as duas passaram a "
-        "`player_leds_set_detalhado`, que entrega o corpo com `bits` ecoado "
-        "(`ipc_handlers.py`, `_handle_led_player_set`). "
-        "O QUE A FECHA: a mesma poda do `led_set`, no mesmo commit e pelo mesmo "
-        "dono. DONO: a próxima leva — ver a correção de fato na razão do "
-        "`led_set`, que vale igual para este."
-    ),
     "app/actions/external_controllers.py::short_button_label": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. O docstring descreve uma "
         "superfície concreta que não existe: `Rótulo curto para o botão do "
@@ -2414,7 +2014,17 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
 #: hoje isenta 41 subcomandos de CLI (``@app.command``/``@app.callback`` do
 #: typer, em ``cli/app.py`` e nos dez ``cli/cmd_*.py``), e isentará sozinho o
 #: subcomando 42.
-_DECORADORES_DE_FRAMEWORK = frozenset({"command", "callback", "hookimpl"})
+#:
+#: `gesto` e `registrar` entraram em 01/09/2026, e são o MESMO idioma: o
+#: despachante da interface nova (`interface/pacotes/__init__.py`) guarda a
+#: função em `GESTOS` ou `PACOTES` e passa a ser quem a chama — é ele que o
+#: piloto consulta a cada clique e a cada tique. Sem eles, os 50 gestos das
+#: dez abas apareciam como promessa sem chamador: o portão acusando de
+#: dívida exatamente os botões que acabaram de ser LIGADOS, e a resposta
+#: natural a isso é desligar o portão. É a mesma isenção dos 41 subcomandos
+#: do typer, e pelo mesmo motivo — quem chama é o framework.
+_DECORADORES_DE_FRAMEWORK = frozenset(
+    {"command", "callback", "hookimpl", "gesto", "registrar"})
 
 
 @dataclass(frozen=True)
@@ -3025,8 +2635,22 @@ def pontes_vivas(raiz_do_projeto: Path | None = None) -> dict[str, Path]:
         for no in ast.walk(arvore):
             if isinstance(no, ast.Import):
                 fila.extend(a.name for a in no.names if a.name in vizinhos)
-            elif isinstance(no, ast.ImportFrom) and no.module in vizinhos:
-                fila.append(no.module)
+            elif isinstance(no, ast.ImportFrom):
+                if no.module in vizinhos:
+                    fila.append(no.module)
+                # O TERCEIRO IDIOMA, e ele é o CERTO desde 01/09/2026:
+                # `from hefesto_dualsense4unix.interface import mesa_viva`. O
+                # fecho seguia só o nome curto do vizinho, herdado de quando
+                # esta pasta vivia em `layout/` e os pilotos entravam nela pelo
+                # `sys.path`. Dentro do pacote o import passou a ser pelo nome
+                # completo — e sem esta linha o fecho encolheu para a boca
+                # sozinha, que é a régua encolhendo calada.
+                elif (no.module or "").startswith(_MODULO_DA_PONTE):
+                    resto = (no.module or "")[len(_MODULO_DA_PONTE):].lstrip(".")
+                    if resto in vizinhos:
+                        fila.append(resto)
+                    else:
+                        fila.extend(a.name for a in no.names if a.name in vizinhos)
     return achados
 
 
@@ -3137,17 +2761,80 @@ def promessas_sem_caminho(
             refs_por_no.append((modulo, indice, visitante.resolvidas))
             planas |= visitante.planas
     for rotulo, arvore in externas:
-        contexto = _Contexto(
-            mapa, rotulo, _tabela_de_nomes(mapa, rotulo, arvore, externo=True),
-            frozenset(),
-        )
+        # A PONTE NÃO É MAIS "EXTERNA" — 01/09/2026. Os heredocs do instalador
+        # continuam sendo (moram num `.sh`), mas os arquivos da ponte da
+        # interface passaram a viver DENTRO de `src/`, e por isso já são
+        # módulos do mapa. Tratá-los como fonte externa apagava a própria
+        # identidade deles: sem `define`, uma referência do módulo a um símbolo
+        # do MESMO módulo não resolvia, e `hefesto_vivo.py::Piloto` — a janela
+        # que ela abre, instanciada em `main()` três telas abaixo — aparecia
+        # como promessa sem chamador.
+        #
+        # Eles entram por aqui e não por `_PONTOS_DE_ENTRADA` de propósito: é
+        # este caminho que passa pela PODA DA BANCADA, e é a poda que impede uma
+        # cura chamada só de dentro de `if self.args.prova_gesto:` de contar
+        # como ligada.
+        modulo_da_ponte = ""
+        if rotulo.endswith(".py") and "#heredoc" not in rotulo:
+            caminho = raiz_do_projeto / rotulo
+            if caminho.is_file():
+                with contextlib.suppress(ValueError):
+                    modulo_da_ponte = _nome_de_modulo(alvo, caminho)
+        if modulo_da_ponte and modulo_da_ponte in mapa.arvores:
+            contexto = _Contexto(
+                mapa, modulo_da_ponte,
+                _tabela_de_nomes(mapa, modulo_da_ponte, arvore),
+                mapa.define[modulo_da_ponte],
+            )
+        else:
+            contexto = _Contexto(
+                mapa, rotulo, _tabela_de_nomes(mapa, rotulo, arvore, externo=True),
+                frozenset(),
+            )
         visitante = _Referencias(contexto)
         visitante.visit(arvore)
         refs_por_no.append((rotulo, -1, visitante.resolvidas))
         planas |= visitante.planas
 
+    # A BANCADA DE DESENHO NÃO É PROMESSA DO PRODUTO, e a lista de quem ela é
+    # sai DERIVADA — nunca escrita aqui. MEDIDO em 01/09/2026, no dia em que a
+    # interface se mudou para dentro do `src/`: a varredura saltou de 76 para
+    # 291, e as ~170 novas eram os auxiliares dos dez geradores de página
+    # (`aba01.cartao`, `aba02.grade`, `aba06.bignum`…) e das réguas de bancada.
+    # Nenhum deles é promessa quebrada: um gerador de mockup NÃO tem chamador em
+    # produção, e não deve ter.
+    #
+    # A REGRA É A MESMA QUE ESTE PORTÃO JÁ USA para separar espinha de bancada:
+    # `pontes_vivas()` é o fecho de import a partir da BOCA. Um arquivo que mora
+    # ao lado do piloto e que o piloto não alcança é bancada — e é exatamente o
+    # que `test_a_ponte_e_o_fecho_da_boca_e_nao_a_pasta_inteira` já cobrava no
+    # outro sentido.
+    #
+    # POR QUE NÃO UMA DENYLIST DE NOMES ou um prefixo `aba*`: prefixo fura
+    # calado. O dia em que um gerador virasse produção, uma lista de nomes o
+    # deixaria isento para sempre; o fecho o traz de volta sozinho. E o
+    # subdiretório `pacotes/` NÃO é podado — ele é o produto, e o piloto o
+    # importa.
+    #
+    # A PODA SÓ VALE COM O FECHO VIVO. Se `pontes_vivas` devolvesse vazio (a
+    # boca sumiu), podar a pasta inteira absolveria também o piloto — então
+    # nesse caso não se poda nada, e o portão volta a acusar tudo, que é o
+    # estado seguro.
+    ponte_viva = pontes_vivas(raiz_do_projeto)
+    bancada_do_desenho: set[str] = set()
+    if ponte_viva:
+        pasta_da_ponte = raiz_do_projeto / _PASTA_DA_PONTE
+        if pasta_da_ponte.is_dir():
+            bancada_do_desenho = {
+                p.relative_to(alvo).as_posix()
+                for p in pasta_da_ponte.glob("*.py")
+                if p.stem not in ponte_viva
+            }
+
     orfas: dict[str, Promessa] = {}
     for promessa, modulo, indice in _candidatas(mapa, alvo):
+        if promessa.arquivo in bancada_do_desenho:
+            continue
         se_alcanca = (modulo, promessa.nome)
         if any(
             se_alcanca in refs
@@ -3909,8 +3596,18 @@ class TestAPonteDaInterfaceNovaEProducao:
 # ===========================================================================
 
 
-def _copia_de_src(destino: Path) -> Path:
+def _copia_de_src(destino: Path, *, sem_a_ponte: bool = False) -> Path:
     """Uma cópia de ``src/`` onde se pode fabricar defeito sem sujar a árvore.
+
+    ``sem_a_ponte`` deixa ``interface/`` de fora. Ele nasceu em 01/09/2026, e a
+    razão é a mudança de lugar: a interface morava em ``layout/``, FORA de
+    ``src/``, e uma cópia de ``src/`` nascia sem ela por construção. Duas
+    mordidas dependiam disso — a que fabrica um piloto de mentira, e a que
+    confere se a janela do WebView volta a ser dívida quando a boca some. Com a
+    interface dentro do ``src/``, a cópia passou a nascer COM a ponte real: uma
+    morreu em ``FileExistsError`` ao criar a pasta, e a outra deixou de medir a
+    declaração. A ausência voltou a ser DITA, em vez de ser um efeito colateral
+    do lugar em que a pasta estava.
 
     Mutilar (ou aumentar) ``src/`` na árvore viva contamina a medição de quem
     estiver trabalhando ao lado — é a ``ARVORE-CONGELADA-01``, e é a mesma
@@ -3919,9 +3616,10 @@ def _copia_de_src(destino: Path) -> Path:
     """
     copia = destino / "src" / "hefesto_dualsense4unix"
     copia.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(
-        _SRC, copia, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
-    )
+    padroes = ["__pycache__", "*.pyc"]
+    if sem_a_ponte:
+        padroes.append(Path(_PASTA_DA_PONTE).name)
+    shutil.copytree(_SRC, copia, ignore=shutil.ignore_patterns(*padroes))
     # Os roteiros de shell vão junto desde 13/08/2026: o Python embutido neles é
     # caminho de produção (ver `_ROTEIROS_DE_PRODUCAO`), e uma cópia sem eles
     # mediria uma árvore onde o `uninstall.sh` não existe. A mordida do heredoc
@@ -4324,10 +4022,16 @@ class TestOPortaoMorde:
             "parou de abrir alcance, e o portão voltou a chamar de dívida a "
             "janela que a usuária tem aberta"
         )
-        copia = _copia_de_src(tmp_path)
+        # SEM A PONTE, e agora DITO em vez de herdado do lugar: até 01/09/2026
+        # a interface morava em `layout/`, fora do `src/`, e uma cópia de `src/`
+        # nascia sem ela por construção. Com a mudança para dentro do pacote a
+        # cópia passou a trazer o piloto REAL — e esta mordida, que precisa
+        # medir o que acontece SEM a boca, deixou de medir coisa alguma.
+        copia = _copia_de_src(tmp_path, sem_a_ponte=True)
         assert not pontes_vivas(tmp_path), (
-            "a cópia nasceu com ponte — `_copia_de_src` passou a levar "
-            "`layout/` junto, e esta mordida deixou de medir a declaração"
+            "a cópia nasceu com ponte mesmo pedida SEM ela — o `sem_a_ponte` "
+            "parou de podar `interface/`, e esta mordida deixou de medir a "
+            "declaração"
         )
         assert chave in promessas_sem_caminho(copia), (
             "sem o piloto, o portão NÃO voltou a acusar a janela do WebView: a "
@@ -4348,7 +4052,13 @@ class TestOPortaoMorde:
         A segunda medição é o que prova que quem acusa é a poda, e não a
         ausência de ponte.
         """
-        copia = _copia_de_src(tmp_path)
+        # SEM A PONTE REAL, e agora DITO: o piloto fabricado abaixo mora em
+        # `_PILOTO_DA_INTERFACE_NOVA`, que desde 01/09/2026 é um arquivo que
+        # EXISTE dentro de `src/`. Copiar a pasta inteira e escrever por cima
+        # trocaria a mordida por uma sobrescrita do piloto de verdade — e o
+        # resto da interface continuaria alcançando a cura fabricada, deixando
+        # este caso verde sem medir a poda.
+        copia = _copia_de_src(tmp_path, sem_a_ponte=True)
         (copia / "daemon" / "cura_recem_nascida.py").write_text(
             "def rearmar_o_gatilho_da_cor() -> bool:\n    return True\n",
             encoding="utf-8",
@@ -4356,7 +4066,7 @@ class TestOPortaoMorde:
         chave = "daemon/cura_recem_nascida.py::rearmar_o_gatilho_da_cor"
 
         pasta = tmp_path / _PASTA_DA_PONTE
-        pasta.mkdir(parents=True)
+        pasta.mkdir(parents=True, exist_ok=True)
         piloto = tmp_path / _PILOTO_DA_INTERFACE_NOVA
         cabeca = (
             "import argparse\n"
