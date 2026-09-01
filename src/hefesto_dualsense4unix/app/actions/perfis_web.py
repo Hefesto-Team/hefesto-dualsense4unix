@@ -25,7 +25,7 @@ Por isso o contrato desta rota é: **o Python manda DADO, a página escreve
 TEXTO**. Quem monta a linha na tela é o ajudante da página, clonando o ``<tr>``
 que o gerador do mockup já escreveu e preenchendo cada endereço por
 ``textContent``. Assim o desenho continua tendo UM dono (o
-``novo-layout/_ferramentas/aba10.py``) e nenhum caractere dela atravessa a
+``src/hefesto_dualsense4unix/interface/aba10.py``) e nenhum caractere dela atravessa a
 fronteira como marcação.
 
 O QUE ESTE MÓDULO NÃO FAZ, E É DE PROPÓSITO

@@ -50,14 +50,14 @@ AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORIGEM="/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix"
 PILOTO=""
 for RAIZ in "$AQUI" "$ORIGEM"; do
-    for PASTA in layout novo-layout; do
+    for PASTA in src/hefesto_dualsense4unix/interface; do
         CANDIDATO="$RAIZ/$PASTA/_ferramentas/hefesto_vivo.py"
         [ -f "$CANDIDATO" ] && { PILOTO="$CANDIDATO"; break 2; }
     done
 done
 
 if [ -z "$PILOTO" ]; then
-    echo "não achei o piloto (layout/_ferramentas/controles_vivos.py)" >&2
+    echo "não achei o piloto (src/hefesto_dualsense4unix/interface/hefesto_vivo.py)" >&2
     echo "procurei em: $AQUI e $ORIGEM" >&2
     read -rp "Enter para fechar" _ || true
     exit 1

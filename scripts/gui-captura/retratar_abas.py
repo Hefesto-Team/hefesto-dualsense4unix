@@ -188,10 +188,10 @@ os.environ.setdefault("GDK_BACKEND", "x11")
 # Um instrumento que muda o que mede não serve de instrumento — e esta casa já
 # pagou três medições falsas num dia por esquecer isso.
 
-import gi  # noqa: E402 — depois de gi.require_version, obrigatoriamente
+import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import Gtk
 
 GLADE = RAIZ / "src/hefesto_dualsense4unix/gui/main.glade"
 

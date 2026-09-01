@@ -65,7 +65,7 @@ if os.path.isdir(_SRC) and _SRC not in sys.path:
     # ele — um só, nunca uma cópia — que abre hidraw para todo instrumento.
     sys.path.insert(0, _SRC)
 
-from identidade_do_vpad import campos_do_uevent, e_vpad_do_hefesto  # noqa: E402
+from identidade_do_vpad import campos_do_uevent, e_vpad_do_hefesto
 
 #: Por que o import da porta é tolerante: `quem_e_quem.py` e
 #: `audio_por_transporte.py` não abrem hidraw nenhum, e não seria razoável que

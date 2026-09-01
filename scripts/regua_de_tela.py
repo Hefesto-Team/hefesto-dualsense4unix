@@ -9,7 +9,7 @@ A interface nova é o mockup aprovado rodando num ``WebKit2.WebView`` dentro de
 uma janela GTK3. Isso a torna **dirigível**: ``evaluate_javascript`` clica, lê e
 mede; ``register_script_message_handler`` traz a resposta de volta ao Python.
 Este arquivo é essa capacidade tirada de dentro do piloto da aba Controles
-(``layout/_ferramentas/controles_vivos.py --prova-gesto``) e posta onde
+(``src/hefesto_dualsense4unix/interface/controles_vivos.py --prova-gesto``) e posta onde
 qualquer aba alcança.
 
     from regua_de_tela import Tela
@@ -19,7 +19,7 @@ qualquer aba alcança.
         t.clicar_e_ouvir('.ctl [data-mudo="microfone"]')   # botão MORTO reprova
         print(t.medir('.stick[data-stick="l"] .p'))
 
-POR QUE ELE MORA EM ``scripts/`` E NÃO EM ``layout/_ferramentas/``
+POR QUE ELE MORA EM ``scripts/`` E NÃO EM ``src/hefesto_dualsense4unix/interface/``
 ----------------------------------------------------------------------
 ``layout/`` é ``.gitignore:108``. Logo tudo que mora lá **não é versionado
 e não viaja em worktree** — ``git worktree add`` não copia arquivo ignorado. É a
@@ -35,7 +35,7 @@ O que continua morando em ``layout/`` é o **alvo** (o mockup), não a régua;
 
 O QUE ESTE INSTRUMENTO NÃO É
 ----------------------------
-Ele **não substitui** o ``layout/_ferramentas/olhar.py``. Aquele dirige o
+Ele **não substitui** o ``src/hefesto_dualsense4unix/interface/olhar.py``. Aquele dirige o
 mockup num Chrome headless pelo Playwright e serve para medir layout, ``:hover``
 e fotografar o DESENHO. O Playwright controla Chromium, Firefox e o WebKit dele
 próprio — **não** um ``WebView`` embutido numa janela GTK. Esta régua alcança o
@@ -97,7 +97,7 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("WebKit2", "4.1")
 
-from gi.repository import GLib, Gtk, WebKit2  # noqa: E402
+from gi.repository import GLib, Gtk, WebKit2
 
 #: O que este instrumento NÃO consegue fazer. Fica em código, e não só em
 #: prosa, porque um instrumento que promete demais é pior que um limitado e
@@ -143,7 +143,7 @@ O_MANUAL = "docs/process/2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md
 # ---------------------------------------------------------------------------
 # Os erros. Cada um nomeia o que faltou — nenhum é silêncio.
 # ---------------------------------------------------------------------------
-class ErroDeRegua(AssertionError):  # noqa: N818 — o projeto é em português
+class ErroDeRegua(AssertionError):
     """Raiz de tudo que esta régua reprova.
 
     Herda de `AssertionError` de propósito: uma reprovação desta régua É uma
@@ -296,7 +296,7 @@ def achar_a_aba(nome: str, *, avisar: bool = True) -> pathlib.Path:
     mockup de ontem e daria verde sobre a cura de hoje.
 
     Ordenar por mtime é legítimo AQUI porque a página é um artefato GERADO
-    (`layout/_ferramentas/monta.py`): cópia velha em worktree é sobra, não
+    (`src/hefesto_dualsense4unix/interface/monta.py`): cópia velha em worktree é sobra, não
     variante. `HEFESTO_NOVO_LAYOUT` vence sempre, para quem quiser fixar.
 
     E quando há mais de uma, o aviso vai para o `stderr` nomeando as duas — o

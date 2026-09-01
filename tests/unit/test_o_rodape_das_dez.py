@@ -35,7 +35,7 @@ import sys
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(RAIZ / "layout/_ferramentas"))
+sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PERFIL = {
     "name": "Importado", "version": 1, "priority": 42,

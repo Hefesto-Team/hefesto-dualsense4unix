@@ -134,7 +134,7 @@ def test_o_aviso_separa_a_biblioteca_das_reguas_do_mockup() -> None:
     """Listar sete arquivos em fila é um enigma, não uma indução.
 
     Quem lê o aviso é justamente quem ainda não sabe por onde começar. As réguas
-    de ``novo-layout/_ferramentas/`` são Playwright sobre o mockup e NÃO
+    de ``src/hefesto_dualsense4unix/interface/`` são Playwright sobre o mockup e NÃO
     alcançam o ``WebView`` do produto; a versionada é biblioteca e se importa de
     um ``tests/unit/test_*.py``. O aviso tem de dizer qual é qual.
     """

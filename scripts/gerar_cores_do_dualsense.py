@@ -4,7 +4,7 @@
 
 O DEFEITO QUE ELE MATA (27/08/2026). As cinco cores que o produto conhecia eram
 CSS escrito à mão, numa zona só (`.corpo` / `[id$="-touchpad"] .peca`), repetido
-em `layout/_ferramentas/topo.html:295-326` e em `mapa.py`. Duas
+em `src/hefesto_dualsense4unix/interface/topo.html:295-326` e em `mapa.py`. Duas
 consequências, e as duas já custaram:
 
   1. **nenhuma régua sabia dizer se o hex ali estava certo**, porque não havia
@@ -52,7 +52,7 @@ sys.path.insert(0, str(RAIZ / "src"))
 #: cru não é uma borda preta: é a AUSÊNCIA de borda" — com a mistura com branco
 #: (e não a subida de luminosidade em HLS, que devolve azul elétrico para o
 #: quase-preto). Reusar é o que impede a terceira tabela de contraste desta casa.
-from hefesto_dualsense4unix.integrations.cor_do_plastico import (  # noqa: E402
+from hefesto_dualsense4unix.integrations.cor_do_plastico import (
     FUNDO_DO_CARD,
     RAZAO_DA_BORDA,
     tom_para_a_borda,
@@ -64,7 +64,7 @@ CSV_PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
 #: Gerar num só deixaria o mapa e o produto com desenhos diferentes.
 ALVOS = (
     RAIZ / "assets/control-svg/dualsense.svg",
-    RAIZ / "layout/_ferramentas/ds_limpo.svg",
+    RAIZ / "src/hefesto_dualsense4unix/interface/ds_limpo.svg",
 )
 
 #: As zonas do `cores-do-dualsense.csv` que têm SUPERFÍCIE no desenho, na ordem

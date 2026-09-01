@@ -12,7 +12,7 @@ o SERVIÇO.
 
 O DESENHO JÁ MUDOU — E O PRODUTO É QUEM ESCREVE AS DICAS
 --------------------------------------------------------
-``layout/_ferramentas/aba09.py`` tem o portão dele desde o mesmo dia: a faixa é
+``src/hefesto_dualsense4unix/interface/aba09.py`` tem o portão dele desde o mesmo dia: a faixa é
 "O serviço", a linha é "O serviço está", os botões são "Reiniciar o serviço" e
 "Parar o serviço". **Mas a tela nova lê as dicas e os motivos do produto**, e
 enquanto o produto escrevia "Hefesto" o resultado, na tela viva, era a linha
@@ -35,7 +35,8 @@ passar um "trocar tudo" por cima, ele reprova.
 
 NADA É DIGITADO
 ---------------
-Os rótulos saem do HTML que a aba abre (``layout/09-sistema.html``) e as dicas
+Os rótulos saem do HTML que a aba abre
+(``src/hefesto_dualsense4unix/interface/paginas/09-sistema.html``) e as dicas
 saem de ``aba_sistema.pacote()`` — o mesmo código que a interface roda. A régua
 prova primeiro que **sabe achar** (``test_a_regua_sabe_onde_olhar``): sem isso,
 um rótulo renomeado calaria o portão inteiro em silêncio, que é a armadilha nº1
@@ -53,7 +54,7 @@ from hefesto_dualsense4unix.app.actions import ambiente_na_tela
 from hefesto_dualsense4unix.gui import aba_sistema
 
 RAIZ = Path(__file__).resolve().parents[2]
-PAGINA = RAIZ / "layout" / "09-sistema.html"
+PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
 
 #: A palavra que não pode aparecer onde o rótulo nomeia o serviço.
 PALAVRA = "Hefesto"

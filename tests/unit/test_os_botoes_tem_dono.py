@@ -32,7 +32,7 @@ import sys
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(RAIZ / "layout/_ferramentas"))
+sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 #: Um controle de mentira. MAC da faixa sintética da casa — há dois portões de
 #: anonimato nesta árvore e eles não perdoam.
@@ -58,7 +58,8 @@ def _pacotes():
     import importlib
 
     fora = []
-    for arq in sorted((RAIZ / "layout/_ferramentas/pacotes").glob("a[0-9][0-9]_*.py")):
+    for arq in sorted((RAIZ /
+    "src/hefesto_dualsense4unix/interface/pacotes").glob("a[0-9][0-9]_*.py")):
         fora.append((arq.stem, importlib.import_module(f"pacotes.{arq.stem}")))
     return fora
 
@@ -140,7 +141,8 @@ def test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende(pac):
     from pacotes import daemon
 
     usados: set[str] = set()
-    for arq in sorted((RAIZ / "layout/_ferramentas/pacotes").glob("a[0-9][0-9]_*.py")):
+    for arq in sorted((RAIZ /
+    "src/hefesto_dualsense4unix/interface/pacotes").glob("a[0-9][0-9]_*.py")):
         mod = importlib.import_module(f"pacotes.{arq.stem}")
         usados |= set(getattr(mod, "METODOS", set()))
     inventados = daemon.confere(usados)
@@ -234,7 +236,8 @@ def test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem():
 
     from pacotes import ponte
 
-    for arq in sorted((RAIZ / "layout/_ferramentas/pacotes").glob("a[0-9][0-9]_*.py")):
+    for arq in sorted((RAIZ /
+    "src/hefesto_dualsense4unix/interface/pacotes").glob("a[0-9][0-9]_*.py")):
         mod = importlib.import_module(f"pacotes.{arq.stem}")
         for nome in sorted(getattr(mod, "PONTE", set())):
             assert hasattr(ponte, nome), (

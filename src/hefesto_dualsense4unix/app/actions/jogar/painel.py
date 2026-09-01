@@ -1,7 +1,8 @@
 """O que a aba **Jogar** pode dizer hoje — e, com o mesmo peso, o que não pode.
 
 29/08/2026, refeito em 31/08. A aba Jogar é a que ABRE o aplicativo, e no
-desenho aprovado (``layout/01-jogar.html``) ela tem quatro grupos de valor: o
+desenho aprovado (``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``) ela tem quatro
+grupos de valor: o
 **interruptor do Hefesto** com os cinco modos que ele abre, os **cartões da
 mesa** e a coluna **Atenção**. Desde 31/08 o produto responde pelos quatro — o
 que sobra em aberto está no fim deste cabeçalho, e é pouco.
@@ -15,7 +16,7 @@ O que NÃO mora aqui, de propósito
 ---------------------------------
 
 * **A montagem da mesa** (um item por controle, com cor, transporte e número do
-  jogador) é de ``layout/_ferramentas/mesa_viva.mesa_do_estado``, que já é
+  jogador) é de ``src/hefesto_dualsense4unix/interface/mesa_viva.mesa_do_estado``, que já é
   o dono dela para a aba Controles e para a fita. Reescrevê-la aqui criaria o
   segundo dono do mesmo valor — o defeito que a fita viva de 27/08 pagou.
 * **A janela e as duas pontes** são de
@@ -113,7 +114,8 @@ SEM_ALGARISMO = "\N{EN DASH}"
 # 31/08/2026, ela redesenhou o Modo de conexão e a resposta veio pela forma:
 # **Desligado = Modo Nativo**, *"o DualSense da forma como veio ao mundo"*. O
 # botão órfão sumiu do desenho e a posição Desligado do interruptor passou a
-# endereçar `MODE_NATIVE` (`layout/01-jogar.html`, `data-modo="native"`), que TEM
+# endereçar `MODE_NATIVE` (`src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`,
+# `data-modo="native"`), que TEM
 # leitor e TEM escritor. A MIGRA-JOGAR-06 fecha sem uma linha de produto nova.
 #
 # A CONSTANTE FICA porque ela é a resposta a uma pergunta que volta: *"e o botão
@@ -148,7 +150,7 @@ class Modo(NamedTuple):
 #: dois conjuntos são o mesmo conjunto: todo endereço da tela tem leitor E
 #: escritor, e nenhum modo do produto ficou sem lugar na tela.
 #:
-#: Onde cada um mora no desenho (``layout/01-jogar.html``):
+#: Onde cada um mora no desenho (``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``):
 #:
 #:   * ``gamepad`` — a posição **Ligado** do interruptor;
 #:   * ``native``  — a posição **Desligado** ("Modo Nativo");
@@ -420,7 +422,7 @@ class Chip(NamedTuple):
         para virar a posição DESLIGADO do interruptor. Havia três saídas —
         numerar ``1 · 2 · 4`` com o buraco, numerar pela posição na tela, ou
         tirar os números; **ela tirou**. A ordem passou a viver na dica de cada
-        modo. Ver ``layout/_ferramentas/aba01.py``, o comentário do ``MODOS``.
+        modo. Ver ``src/hefesto_dualsense4unix/interface/aba01.py``, o comentário do ``MODOS``.
 
         ELA FICA, e não é código morto por acaso: enquanto a ordem for uma
         afirmação do produto, este é o **único** lugar de onde um número pode
@@ -440,7 +442,8 @@ class Chip(NamedTuple):
 
 
 #: OS CINCO MODOS DO LADO **LIGADO**, na ordem do desenho, com a ponte que cada
-#: um nomeia. Os rótulos são dela (``layout/01-jogar.html``); a ponte é a
+#: um nomeia. Os rótulos são dela (``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``);
+#: a ponte é a
 #: tradução para o vocabulário de ``integrations/ponte_escada``.
 #:
 #: **A tradução é declarada aqui e o ALGARISMO é calculado** — nunca digitado

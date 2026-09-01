@@ -127,13 +127,13 @@ sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ))
 os.environ.setdefault("GDK_BACKEND", "x11")
 
-import gi  # noqa: E402 — depois de gi.require_version, obrigatoriamente
+import gi
 
 gi.require_version("Gtk", "3.0")
 # O `Gdk` precisa de versão EXPLÍCITA: importado antes do `Gtk` (a ordem
 # alfabética que o formatador impõe), ele cairia no 4.0 e o import quebraria.
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, Gtk  # noqa: E402
+from gi.repository import Gdk, Gtk
 
 CSS = RAIZ / "src/hefesto_dualsense4unix/gui/theme.css"
 

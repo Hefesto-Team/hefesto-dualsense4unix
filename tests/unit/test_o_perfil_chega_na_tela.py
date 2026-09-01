@@ -28,7 +28,7 @@ import sys
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(RAIZ / "layout/_ferramentas"))
+sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 #: O perfil de mentira, com a forma EXATA do disco dela — medida em 01/09/2026
 #: no perfil "Ação". Os dois lados de propósito diferentes: um escalar

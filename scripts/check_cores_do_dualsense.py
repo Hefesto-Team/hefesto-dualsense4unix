@@ -39,7 +39,7 @@ RAIZ = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "scripts"))
 
-from gerar_cores_do_dualsense import (  # noqa: E402
+from gerar_cores_do_dualsense import (
     GLIFOS_DA_FACE,
     NAO_MEDIDA,
     ZONAS_DA_CASCA,
@@ -47,13 +47,21 @@ from gerar_cores_do_dualsense import (  # noqa: E402
     ZONAS_SEM_ALVO,
     legivel,
 )
-from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
+from hefesto_dualsense4unix.core.led_control import (
     player_led_pattern,
     player_slot_color,
 )
 
 SVG = RAIZ / "assets/control-svg/dualsense.svg"
-MAPA = RAIZ / "layout/mapa-do-controle.html"
+# O DONO DOS CAMINHOS É O `onde.py`, e desde 01/09/2026 ele mora dentro do
+# pacote (`src/hefesto_dualsense4unix/interface/onde.py`), junto da interface que
+# virou o produto. Este portão repetia a literal `layout/` — quando a pasta virou
+# `interface/paginas/`, ele passou a navegar para um arquivo que não existe mais
+# e MORREU DE PLAYWRIGHT, com um traceback que não diz o que quebrou. Uma régua
+# que aponta para o lugar errado dá o veredicto errado; agora ela pergunta.
+from hefesto_dualsense4unix.interface import onde
+
+MAPA = onde.PUBLICADO / "mapa-do-controle.html"
 CSV_CORES = RAIZ / "docs/data/cores-do-dualsense.csv"
 CSV_PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
 
@@ -163,10 +171,10 @@ def so_o_codigo(texto: str) -> str:
 
 
 sujos = []
-for arq in (RAIZ / "layout/_ferramentas/mapa.py",
-            RAIZ / "layout/_ferramentas/monta.py",
-            RAIZ / "layout/_ferramentas/exportar.py",
-            RAIZ / "layout/_ferramentas/topo.html"):
+for arq in (RAIZ / "src/hefesto_dualsense4unix/interface/mapa.py",
+            RAIZ / "src/hefesto_dualsense4unix/interface/monta.py",
+            RAIZ / "src/hefesto_dualsense4unix/interface/exportar.py",
+            RAIZ / "src/hefesto_dualsense4unix/interface/topo.html"):
     txt = so_o_codigo(arq.read_text())
     for h in DIGITADOS:
         if h in txt:
@@ -177,12 +185,12 @@ diz(not sujos, f"nenhum hex de plástico digitado nos geradores do mockup — {s
 #     geradas por `monta.py` a cada `abaNN.py`, mas a `01-jogar.html` é escrita à
 #     mão e NÃO passa por ele — sem esta régua, ela mostra a cor velha para
 #     sempre, e a 01 é o esqueleto do qual as outras nove nascem.
-sys.path.insert(0, str(RAIZ / "layout/_ferramentas"))
-import monta  # noqa: E402
+sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
+import monta
 
 velhas = []
-for arq in (RAIZ / "layout/_ferramentas/topo.html",
-            RAIZ / "layout/01-jogar.html"):
+for arq in (RAIZ / "src/hefesto_dualsense4unix/interface/topo.html",
+            RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"):
     txt = arq.read_text()
     for nome, colorway in monta.PLASTICOS_DO_ESQUELETO.items():
         m = re.search(rf"--{nome}:(#[0-9a-fA-F]{{6}})", txt)
@@ -199,7 +207,7 @@ diz(not velhas, f"as cores do esqueleto batem com o desenho — velhas: {velhas}
 #     `topo.html`. É o mesmo caminho por onde o Cosmic Red virou `#b11f54` e
 #     ninguém tinha como ver. Achado pela conferência das dez abas, 27/08.
 da_mesa = {monta.cor_da_zona(c["cor"]).lower() for c in monta.MESA}
-jogar = (RAIZ / "layout/01-jogar.html").read_text()
+jogar = (RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html").read_text()
 forasteiras = sorted({h.lower() for h in re.findall(r"--plastico:\s*(#[0-9a-fA-F]{6})", jogar)}
                      - da_mesa)
 diz(not forasteiras,

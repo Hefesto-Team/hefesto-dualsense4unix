@@ -218,7 +218,7 @@ def test_o_codigo_publica_o_wm_class_por_processo_e_nao_por_janela():
 def test_o_envoltorio_da_interface_veste_a_identidade_de_dev():
     """`scripts/abrir_interface.py` é o que dá logo à janela do piloto.
 
-    O piloto (`novo-layout/_ferramentas/controles_vivos.py`) não pode ser
+    O piloto (`src/hefesto_dualsense4unix/interface/controles_vivos.py`) não pode ser
     editado por esta leva e nem sequer viaja em worktree — `novo-layout/` é
     `.gitignore`. A identidade tem de estar no envoltório versionado.
     """

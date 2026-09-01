@@ -32,7 +32,7 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("WebKit2", "4.1")
 
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, WebKit2  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, WebKit2
 
 #: Quanto esperar a carga e a pintura, em passos de 10 ms. O WebKit avisa a
 #: carga antes de pintar — daí os dois laços.

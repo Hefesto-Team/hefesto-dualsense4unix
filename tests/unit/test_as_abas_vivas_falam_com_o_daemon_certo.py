@@ -6,7 +6,7 @@ silenciosos: nenhuma exceção, nenhum log, só a tela mostrando o passado.
 
 1. O SOCKET IGNORAVA A VARIANTE
 -------------------------------
-`novo-layout/_ferramentas/mesa_viva.py` montava o caminho do socket à mão, com
+`src/hefesto_dualsense4unix/interface/mesa_viva.py` montava o caminho do socket à mão, com
 o nome da casa escrito como literal::
 
     SOCKET = os.path.join(XDG_RUNTIME_DIR, "hefesto-dualsense4unix",
@@ -66,7 +66,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 #: tela (13 reprovações), do portão de dependências que ficou verde medindo a
 #: menos, e do `test_arranjo_invariantes`. O padrão: a parte que ninguém roda no
 #: dia seguinte é a que fica.
-FERRAMENTAS = RAIZ / "layout" / "_ferramentas"
+FERRAMENTAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 
 #: As abas vivas de hoje. Uma aba nova entra aqui — e é de propósito que a lista
 #: seja escrita: um `glob` deixaria uma aba nova nascer sem régua e ninguém

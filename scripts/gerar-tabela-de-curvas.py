@@ -49,7 +49,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 
-from hefesto_dualsense4unix.profiles.curva_propria import (  # noqa: E402
+from hefesto_dualsense4unix.profiles.curva_propria import (
     CatalogoCurvasProprias,
     gerar_tabela_markdown,
 )
