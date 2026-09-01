@@ -65,7 +65,7 @@ def _exame() -> list[dict]:
                     "porque": str(getattr(it, "porque", "") or ""),
                     "estado": estado,
                     # `certo` é o único estado que não pede nada — os outros
-                    # (`ajustar`, `atencao`) são achados de verdade.  # noqa: acentuacao
+                    # (`ajustar`, `atencao`) são achados de verdade.  # noqa-acento
                     "grave": estado.lower() not in {"certo", ""},
                 })
         return itens

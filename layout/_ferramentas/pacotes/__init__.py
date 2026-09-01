@@ -108,6 +108,56 @@ def registrar(pagina: str):
     return dentro
 
 
+#: OS GESTOS, e a chave é `(página, nome)`. Cada pacote declara OS SEUS, no
+#: próprio arquivo, com `@gesto(...)` — do mesmo jeito que `@registrar` declara
+#: quem pinta.
+#:
+#: POR QUE NÃO UM DICIONÁRIO ESCRITO À MÃO, e a razão é de processo: a lista dos
+#: gestos com dono vivia num dicionário único dentro do piloto, e ligar as dez
+#: abas em paralelo significaria oito pessoas editando a MESMA linha. Com o
+#: decorador, cada aba tem território exclusivo: quem liga a Iluminação toca só
+#: `a04_iluminacao.py`, e não há merge a resolver.
+GESTOS: dict[tuple[str, str], object] = {}
+
+
+def gesto(pagina: str, nome: str):
+    """Decorador: `@gesto("04-iluminacao.html", "cor")` liga um botão.
+
+    A função recebe `(ctx, o, ipc)`:
+
+    * `ctx` — o mesmo `Contexto` da pintura: mesa, conectados, estado do daemon;
+    * `o` — o clique como o JS o mandou (`texto`, `campo`, `player`, `lado`…);
+    * `ipc` — o carimbo para falar com o daemon: `ipc("profile.switch", name=…)`.
+
+    O `ipc` É INJETADO, e não importado: sem ele a função abriria um socket, e
+    uma função que abre socket não se testa sem daemon. Com ele, a régua passa
+    um `ipc` de mentira e cobra QUAL método foi chamado e com quais parâmetros —
+    que é a única forma de provar que o botão faz o que promete, em vez de
+    provar que ele existe.
+    """
+    def dentro(fn):
+        chave = (pagina, nome)
+        if chave in GESTOS:
+            raise SystemExit(
+                f"ERRO: o gesto {nome!r} de {pagina} já tem dono "
+                f"({GESTOS[chave].__module__}). Dois donos para o mesmo botão é "
+                f"o defeito que este despachante existe para impedir.")
+        GESTOS[chave] = fn
+        return fn
+    return dentro
+
+
+def gesto_da_pagina(pagina: str, nome: str):
+    """Quem atende aquele botão, ou `None`.
+
+    `None` NÃO é erro: é o estado honesto de um botão que ainda não foi ligado,
+    e quem chama tem de **recusar dizendo**. Um botão que responde calado quando
+    não há quem atenda é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura —
+    quem clicou conclui que funcionou.
+    """
+    return GESTOS.get((pagina, nome)) or GESTOS.get(("*", nome))
+
+
 def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict | None:
     """O pacote daquela página, ou `None` se ela ainda não tem quem a pinte.
 

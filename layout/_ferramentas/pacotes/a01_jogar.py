@@ -33,7 +33,6 @@ def pacote(ctx: Contexto) -> dict:
 
     `layout/_ferramentas/casamento.py` é a régua que passou a medir isso.
     """
-    st = ctx.state
     cartoes = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")

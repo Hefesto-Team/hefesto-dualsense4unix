@@ -49,6 +49,7 @@ import mesa_viva  # noqa: E402
 import onde  # noqa: E402
 import pacotes  # noqa: E402
 from gi.repository import GLib, Gtk  # noqa: E402
+from pacotes import ponte  # noqa: E402
 
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
 
@@ -159,7 +160,9 @@ BOOTSTRAP = r"""
     // parecer o desenho, em vez de inventar um terceiro estado.
     for(const pref of (p.vazios || [])){
       for(const el of document.querySelectorAll('[data-controle="' + pref + '"]')){
-        if(el.dataset.conectado !== 'nao'){ el.dataset.conectado = 'nao'; n += 1; }  // noqa: acentuacao  ('nao' é o valor do atributo, do desenho)
+        if(el.dataset.conectado !== 'nao'){  // noqa-acento valor do atributo
+          el.dataset.conectado = 'nao'; n += 1;  // noqa-acento idem
+        }
         if(!el.classList.contains('off')){ el.classList.add('off'); }
         el.classList.remove('alvo');
       }
@@ -186,13 +189,22 @@ BOOTSTRAP = r"""
       // Os quatro atributos que marcam algo CLICÁVEL nas dez páginas. Eles já
       // existiam — cada piloto de aba usava o seu.
       const alvo = ev.target.closest(
-        '[data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player]');
+        '[data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],' +
+        '[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]');
       if(!alvo) return;
       const d = alvo.dataset;
+      // DE QUAL CONTROLE, e sem isto o gesto é ambíguo: a mesa tem quatro
+      // colunas iguais e um "Desligar" clicado na terceira não diz em qual
+      // barra de luz mexer. O `closest` sobe até o bloco do controle — é o
+      // mesmo `data-controle` que a pintura usa para achar onde escrever.
+      const dono = alvo.closest('[data-controle],[data-uniq]');
       manda({
         gesto: d.gesto || d.hefGesto || d.papel || 'clique',
         modo: d.modo || '', forca: d.forca || '', player: d.player || '',
         lado: d.lado || '', campo: d.campo || '', hef: d.hef || '',
+        hex: d.hex || '', sensor: d.sensor || '', rota: d.rota || '',
+        mudo: d.mudo || '', micModo: d.micModo || '', v: d.v || '',
+        controle: dono ? (dono.dataset.controle || dono.dataset.uniq || '') : '',
         texto: (alvo.textContent || '').trim().slice(0, 60),
       });
     }, true);
@@ -206,43 +218,12 @@ BOOTSTRAP = r"""
 """
 
 
-def _trocar_perfil(piloto, o: dict) -> None:
-    """Ativar um perfil da tabela da aba Perfis. `profile.switch` é o dono."""
-    nome = str(o.get("texto") or "").strip()
-    if not nome:
-        raise ValueError("o clique não trouxe o nome do perfil")
-    piloto._ipc("profile.switch", name=nome)
-
-
-def _pausar(piloto, o: dict) -> None:
-    """Parar ou retomar o serviço. `daemon.pause` / `daemon.resume`.
-
-    O `daemon.resume` tinha UM chamador em todo o `src/` — o terminal
-    (`cli/app.py:421`), como a `gui/aba_sistema.py:77` já media: *"a pausa fica  # noqa: acentuacao  (`media` é o verbo medir)
-    gravada em disco e sobrevive a desligar o computador; até hoje só o terminal
-    saía dela."* Este é o segundo, e é uma tela.
-    """
-    texto = str(o.get("texto") or "").lower()
-    piloto._ipc("daemon.resume" if "retomar" in texto else "daemon.pause")
-
-
-#: OS GESTOS QUE TÊM DONO NO DAEMON, e a chave é `(página, gesto)`. `"*"` vale
-#: em qualquer aba.
+#: A TABELA LOCAL MORREU em 01/09/2026, e a razão é de processo: ela era um
+#: dicionário num arquivo só, e ligar as dez abas em paralelo significaria oito
+#: pessoas editando a MESMA linha. Cada pacote passa a declarar os seus com
+#: `@gesto(...)`, no próprio arquivo — território exclusivo, zero merge.
 #:
-#: A LISTA É CURTA DE PROPÓSITO. Um botão que responde calado quando não há quem
-#: atenda é pior que um botão que recusa dizendo por quê: quem clicou conclui
-#: que funcionou. Os que não estão aqui saem no relato como `sem dono`, com o
-#: nome e a página — que é o inventário do que falta ligar.
-GESTOS_COM_DONO = {
-    # OS TRÊS QUE O DAEMON ATENDE POR IPC, medidos no `ipc_server.py`. Os
-    # outros sete gestos da aba Sistema (`reiniciar`, `desligar`, `autostart`,
-    # `refazer-consertos`…) NÃO são IPC — são `systemctl` e ações do app, e
-    # ligá-los daqui exigiria o helper privilegiado. Eles saem no relato como
-    # `sem dono`, que é o inventário honesto do que falta.
-    ("09-sistema.html", "retomar"): _pausar,
-    ("09-sistema.html", "atualizar"): lambda pi, o: pi._ipc("daemon.reload"),
-    ("10-perfis.html", "ativar"): _trocar_perfil,
-}
+#: Os dois que moravam aqui foram para `a09_sistema.py` e `a10_perfis.py`.
 
 
 def _fita(mesa: list[dict]) -> str:
@@ -305,6 +286,12 @@ class Piloto:
         self.gestos: list[dict] = []
         self.aplicados: list[str] = []
         self.recusados: list[str] = []
+        #: A mesa e o contexto do último tique — é o que o gesto recebe. Sem
+        #: eles, um clique que chega entre dois tiques não teria com que
+        #: trabalhar, e resolver o `uniq` na hora exigiria um IPC a mais por
+        #: clique.
+        self._mesa_de_agora: list[dict] = []
+        self._ctx_de_agora = pacotes.Contexto(state={})
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
         #: Os `uniq` já perguntados ao leitor de cor. Sem esta trava, cada tique
         #: abriria uma thread nova para o mesmo controle — 2 por segundo.
@@ -341,12 +328,22 @@ class Piloto:
         """
         self.gestos.append(o)
         nome = str(o.get("gesto") or "")
-        pagina = str(o.get("pagina") or self.pagina)  # noqa: acentuacao  (nome de variável)
-        acao = GESTOS_COM_DONO.get((pagina, nome)) or GESTOS_COM_DONO.get(("*", nome))
+        pagina = str(o.get("pagina") or self.pagina)  # noqa-acento-verbo  (nome de variável)
+        acao = pacotes.gesto_da_pagina(pagina, nome)
         if acao is None:
             self.recusados.append(f"{pagina}:{nome}")
             print(f"[gesto sem dono] {pagina} · {nome} · {o.get('texto', '')!r}")
             return
+        # O `uniq` É RESOLVIDO AQUI, e não dentro do gesto: a tela endereça por
+        # `pref` (`p1`), o daemon por `uniq` (`d4:2f:…`), e a mesa que traduz é
+        # do piloto. Cada gesto resolvendo por conta própria seria a mesma
+        # tradução escrita nove vezes — e a nona estaria errada.
+        pref = str(o.get("controle") or "")
+        for c in self._mesa_de_agora:
+            if c.get("pref") == pref or str(c.get("uniq") or "") == pref:
+                o = {**o, "uniq": str(c.get("uniq") or "")}
+                break
+
         # EM THREAD, e não no laço do GTK. MEDIDO em 01/09/2026, com o daemon
         # dela: `daemon.reload` leva **9,5 segundos** — `daemon.resume` leva 1
         # ms e `daemon.status` 57. Um gesto síncrono congelaria a janela inteira
@@ -354,7 +351,7 @@ class Piloto:
         # clicou concluiria que o app travou.
         def trabalhar() -> None:
             try:
-                acao(self, o)
+                acao(self._ctx_de_agora, o, ponte)
             except Exception as erro:
                 # O `erro` é AMARRADO no argumento do lambda, e não capturado
                 # do escopo: o `except ... as` do Python apaga o nome ao sair do
@@ -372,33 +369,10 @@ class Piloto:
         self.aplicados.append(f"{pagina}:{nome}")
         print(f"[gesto] {pagina} · {nome} → aplicado")
 
-    def _ipc(self, metodo: str, **params) -> dict:
-        """Uma chamada ao daemon, por escrito. É o ÚNICO caminho de escrita.
-
-        `mesa_viva` é de LEITURA e diz isso no cabeçalho; escrever por lá
-        abriria um segundo dono do socket. Aqui a escrita fica visível e
-        contável — `self.aplicados` é o que o relato mostra.
-        """
-        import json
-        import socket
-
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        # QUINZE SEGUNDOS, e o número é medido: `daemon.reload` respondeu em
-        # 9,5 s no daemon dela. Com os três de antes, o "Atualizar" da aba
-        # Sistema dava `timed out` e o gesto contava como FALHA — quando o
-        # daemon estava fazendo o trabalho pedido.
-        s.settimeout(15)
-        s.connect(mesa_viva.socket_do_daemon())
-        s.sendall((json.dumps({"jsonrpc": "2.0", "id": 1,
-                               "method": metodo, "params": params}) + "\n").encode())
-        buf = b""
-        while not buf.endswith(b"\n"):
-            pedaco = s.recv(65536)
-            if not pedaco:
-                break
-            buf += pedaco
-        s.close()
-        return json.loads(buf.decode() or "{}")
+    # O `_ipc` CRU MORREU em 01/09/2026. Ele abria o socket à mão e montava o
+    # JSON-RPC — reescrevendo o que o `app/ipc_bridge.py` já faz há meses, com
+    # timeout pensado e a recusa do daemon traduzida em frase de tela. Quem
+    # escreve agora é `pacotes/ponte.py`, e ele é UM caminho só.
 
     # -- navegação ---------------------------------------------------------
     def _navegou(self, titulo: str) -> None:
@@ -477,6 +451,9 @@ class Piloto:
         except Exception as e:
             print(f"[mesa] não montou: {e}", file=sys.stderr)
             return True
+        # A MESA DE AGORA fica guardada para o gesto: um clique chega entre dois
+        # tiques, e sem ela resolver o `uniq` custaria um IPC a mais por clique.
+        self._mesa_de_agora, self._ctx_de_agora = ctx.mesa, ctx
         try:
             pacote = pacotes.pacote_da_pagina(self.pagina, ctx)
         except Exception as e:
@@ -585,7 +562,7 @@ class Piloto:
         pausado. `desligar`, `restaurar-de-fabrica` e `refazer-proton` NÃO
         entram — uma régua não mexe na máquina dela para provar que sabe clicar.
         """
-        for i, gesto in enumerate(("atualizar", "retomar")):
+        for i, gesto in enumerate(self.args.prova_clique.split(",")):
             GLib.timeout_add(600 + i * 700, lambda g=gesto: (self._js(
                 f"(document.querySelector('[data-gesto=\"{g}\"]')||{{click(){{}}}}).click()"
             ), False)[1])
@@ -653,15 +630,16 @@ def main() -> None:
                    help="ms em cada aba durante o passeio")
     p.add_argument("--foto", default="")
     p.add_argument("--abre", default="", help="abrir direto numa aba")
-    p.add_argument("--prova-clique", action="store_true",
-                   help="clica os gestos inócuos e prova que chegam ao daemon")
+    p.add_argument("--prova-clique", default="",
+                   help="lista de gestos a clicar, separada por vírgula — "
+                        "eles chegam ao daemon de verdade")
     p.add_argument("--sem-cor", action="store_true",
                    help="MORDIDA: sem o leitor de cor do plástico")
     args = p.parse_args()
 
     piloto = Piloto(args)
     if args.prova_clique:
-        GLib.timeout_add(1500, lambda: (piloto._provar_cliques(), False)[1])
+        GLib.timeout_add(2000, lambda: (piloto._provar_cliques(), False)[1])
     if args.abre:
         GLib.timeout_add(400, lambda: (piloto._ir(args.abre), False)[1])
     Gtk.main()
