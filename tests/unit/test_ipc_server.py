@@ -213,7 +213,7 @@ async def test_json_malformado_retorna_parse_error(running_server):
     _server, socket_path, _ = running_server
     reader, writer = await asyncio.open_unix_connection(str(socket_path))
     try:
-        writer.write(b"{isto nao e json}\n")  # noqa-acento
+        writer.write(b"{isto nao e json}\n")  # (noqa-acento)
         await writer.drain()
         raw = await reader.readline()
     finally:

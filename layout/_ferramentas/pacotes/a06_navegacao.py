@@ -290,11 +290,16 @@ def _prova(nome: str, clique: dict, chama: list) -> dict:
     """Uma linha do `PROVAS`, para a chave da régua ser escrita UMA vez.
 
     Cinco dicionários escritos por extenso repetiam a chave da página cinco
-    vezes — e cada repetição custava um marcador `# noqa-acento` (a chave é do
+    vezes — e cada repetição custava um marcador `# (noqa-acento)` (a chave é do
     contrato da régua, não texto em português) e um aviso do ruff sobre ele. Um
     construtor paga o preço uma vez só.
     """
-    return {"pagina": PAGINA, "gesto": nome, "clique": clique, "chama": chama}  # noqa-acento  (a chave que a régua lê)
+    # A primeira chave é o NOME do contrato da régua, não texto em português —
+    # por isso a linha leva o marcador de isenção, e uma vez só. (Escrever a
+    # palavra AQUI, no comentário, também acusava: a régua de acentuação não
+    # distingue prosa de identificador nem quando o identificador é o assunto.)
+    return {"pagina": PAGINA, "gesto": nome,  # (noqa-acento)
+            "clique": clique, "chama": chama}
 
 
 #: O `ctx` da régua não tem `mouse_emulation`, então cada gesto parte do padrão

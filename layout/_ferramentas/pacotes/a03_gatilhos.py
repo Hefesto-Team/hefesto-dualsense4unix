@@ -461,21 +461,23 @@ PROVAS = [
     # BUSCA em vez de digitar `[5, 200]`. Digitados, eles ficariam errados
     # calados no dia em que ela mudasse um padrão — e a régua daria verde sobre
     # um gatilho aplicado com a força de ontem.
-    {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "e", "modo": "Rigid"},
+    {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "e", "modo": "Rigid"},  # (noqa-acento)
      "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
                 {"uniq": _UNIQ})]},
     # "Desligado" é `trigger.reset` — a R-19. Se alguém trocar por um
     # `trigger.set` com `Off`, esta linha reprova: o nome da função muda.
-    {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "d", "modo": "Off"},
+    {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "d", "modo": "Off"},  # (noqa-acento)
      "chama": [("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ})]},
     # A MESMA ESCOLHA PELA OUTRA CHAVE: `valor` é o que um `<select>` manda no
     # `change`. As duas portas do `_escolhido` têm de levar ao mesmo lugar.
-    {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "e", "valor": "Vibration"},
+    {"pagina": PAGINA,  # (noqa-acento)
+     "gesto": "modo", "clique": {"lado": "e", "valor": "Vibration"},
      "chama": [("trigger_set_detalhado", ["left", "Vibration", _padroes("Vibration")],
                 {"uniq": _UNIQ})]},
     # O efeito pronto: a curva sai de `profiles/trigger_presets.py`, e o modo é
     # o único em que dez posições existem.
-    {"pagina": PAGINA, "gesto": "pronto", "clique": {"lado": "d", "v": "stop_hard"},
+    {"pagina": PAGINA,  # (noqa-acento)
+     "gesto": "pronto", "clique": {"lado": "d", "v": "stop_hard"},
      "chama": [("trigger_set_detalhado",
                 ["right", MODO_DA_CURVA, _curva("stop_hard")], {"uniq": _UNIQ})]},
 ]

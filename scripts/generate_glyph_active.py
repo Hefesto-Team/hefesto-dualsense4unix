@@ -20,7 +20,7 @@ GLYPHS_DIR = pathlib.Path(__file__).parent.parent / "assets" / "glyphs"
 
 def gerar(svg_path: pathlib.Path) -> pathlib.Path:
     """Substitui a cor padrão pela cor ativa e salva como _active.svg."""
-    conteudo = svg_path.read_text(encoding="utf-8")  # noqa-acento
+    conteudo = svg_path.read_text(encoding="utf-8")  # (noqa-acento)
     conteudo_ativo = conteudo.replace(FG_PADRAO, FG_ATIVO)
     destino = svg_path.with_name(svg_path.stem + "_active.svg")
     destino.write_text(conteudo_ativo, encoding="utf-8")

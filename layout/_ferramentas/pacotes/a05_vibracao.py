@@ -45,58 +45,65 @@ def _do_vpad(ff: dict, player) -> dict:
 
 @registrar("05-vibracao.html")
 def pacote(ctx: Contexto) -> dict:
-    st = ctx.state
-    ff = st.get("rumble_ff") or {}
+    """DELEGA para `app/telas/vibracao.pacote_da_mesa` — a camada do PRODUTO.
 
+    ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA, e é o `casa-sabe` que a denunciou:
+    `app/telas/vibracao.py` tem oito funções públicas — `pacote_da_mesa`,
+    `pacote_da_coluna`, `estado_da_coluna`, `degraus_da_forca`,
+    `motores_do_controle`, `teto_da_barra`, `gesto_do_clique` — e **nenhuma
+    tinha chamador em produção**. O portão as listava como promessa sem caminho
+    desde 31/08/2026.
+
+    Ela é MAIS COMPLETA que o que este pacote tinha: devolve a largura da barra
+    já em `%` (`pct.w`), o número formatado, o `sabe` que distingue "zero" de
+    "não sei", a cor do plástico e o `treme` por motor. Reescrever isso era a
+    duplicação que a pergunta dela de 01/09 pegou — *"não estamos refazendo do
+    zero né?"*
+
+    O QUE SOBRA AQUI é o ACHATAMENTO: o produto devolve `{"pct": {"w": "46.7%"}}`
+    e a tela endereça `data-campo="forca-pct"`. Traduzir a forma é da interface;
+    calcular o valor é do produto.
+    """
+    import mesa_viva
+
+    from hefesto_dualsense4unix.app.telas import vibracao as _tela
+
+    bruto = _tela.pacote_da_mesa(ctx.state, ctx.mesa, ctx.conectados,
+                                 contagem=mesa_viva.texto_da_contagem(ctx.mesa))
     colunas: dict[str, dict] = {}
-    for c in ctx.conectados:
-        uniq = str(c.get("uniq") or "")
-        v = _do_vpad(ff, c.get("player"))
-        maior = v.get("ff_maior_pedido") or [0, 0]
-        col = {
-            # `e`/`d` É A LÍNGUA DA TELA, e ela vence: o desenho dela chama os
-            # lados de esquerdo e direito, e `aba05._barra` endereça
-            # `data-campo="motor-e"`. O pacote nascera com `esq`/`dir` e os
-            # dezesseis valores caíam no vazio — zero casamentos, medido em
-            # 01/09/2026.
-            #
-            # `strong` é o motor PESADO e fica à esquerda; `weak` é o leve, à
-            # direita. A inversão é o que este assunto convida, e o
-            # `aba05.LADOS` já carrega a mesma nota.
-            "motor-e": v.get("last_strong", 0),
-            "motor-d": v.get("last_weak", 0),
-            "motor-e-pct": round(max(0, min(100, (v.get("last_strong") or 0) / 255 * 100))),
-            "motor-d-pct": round(max(0, min(100, (v.get("last_weak") or 0) / 255 * 100))),
-            "maior-e": maior[1] if len(maior) > 1 else 0,
-            "maior-d": maior[0] if maior else 0,
-            "plays": v.get("ff_play_count", 0),
-            "descartados": v.get("ff_descartado_count", 0),
-            # O JOGO ESTÁ COM O CONTROLE ABERTO? Sem isto, um zero em todos os
-            # motores parece defeito quando é só "nenhum jogo pediu nada".
-            "jogo-aberto": bool(v.get("game_open")),
-            "no-fisico": v.get("rumble_no_fisico"),
+    for uniq, col in (bruto.get("colunas") or {}).items():
+        pct = col.get("pct") or {}
+        plano = {
+            "identidade": _sem_marcacao(col.get("identidade", "")),
+            "forca": col.get("forca", "—"),
+            "forca-pct": str(pct.get("w", "")).rstrip("%"),
         }
-        colunas[uniq] = col
-
+        for lado, m in (col.get("motores") or {}).items():
+            plano[f"motor-{lado}"] = m.get("n", "—")
+            plano[f"motor-{lado}-pct"] = str(m.get("w", "")).rstrip("%")
+        colunas[uniq] = plano
     return {
-        "mesa": {
-            "forca": st.get("rumble_policy") or "—",
-            # A BARRA DA FORÇA, em porcentagem da faixa que o desenho usa. O
-            # `rumble_mult_applied` é um multiplicador (0,7 = 70%), e o teto do
-            # desenho é 150% — é o que `aba05.TETO` declara.
-            "forca-pct": None if st.get("rumble_mult_applied") is None
-                         else round(min(100, float(st["rumble_mult_applied"]) / 1.5 * 100)),
-            "mult": st.get("rumble_mult_applied"),
-            "custom": st.get("rumble_policy_custom_mult"),
-            "tremendo": bool(st.get("rumble_active")),
-            "passthrough": bool(st.get("rumble_passthrough")),
-            "paradas": ff.get("paradas", 0),
-        },
         "colunas": colunas,
+        "mesa": {"forca": ctx.state.get("rumble_policy") or "—",
+                 "passthrough": bool(ctx.state.get("rumble_passthrough"))},
         "sem_dono": {},
-        "cobertura": {"pintados": 6 + sum(len(v) for v in colunas.values()),
-                      "sem_dono": len(SEM_DONO)},
+        "cobertura": {"pintados": sum(len(v) for v in colunas.values()) + 2,
+                      "sem_dono": 0},
     }
+
+
+def _sem_marcacao(texto: str) -> str:
+    """Tira o HTML do produto: a tela nova escreve `textContent`, não `innerHTML`.
+
+    A camada do produto monta `P1 <span class="pt">•</span> Não sei` porque a
+    janela dela injeta como HTML. Escrever isso num `textContent` mostraria as
+    tags. O separador vira o `·` que o resto desta interface usa.
+    """
+    import re as _re
+
+    return _re.sub(r"<[^>]+>", "·", texto).replace("··", "·").strip()
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -342,16 +349,16 @@ PAGINA = "05-vibracao.html"
 PISO_DA_ABA = 3
 PROVAS = [
     # A política NÃO leva alvo: é da mesa, e mirar antes só mentiria melhor.
-    {"pagina": PAGINA, "gesto": "forca", "clique": {"forca": "max"},
+    {"pagina": PAGINA, "gesto": "forca", "clique": {"forca": "max"},  # (noqa-acento)
      "chama": [("rumble_policy_set_checked", ["max"], {"timeout": 1.0})]},
     # QUATRO chamadas, e a ordem é o gesto inteiro: mirar, vibrar, calar,
     # devolver. Invertidas, o passthrough soltaria antes de o silêncio ir.
-    {"pagina": PAGINA, "gesto": "testar", "clique": {},
+    {"pagina": PAGINA, "gesto": "testar", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["controller.target.set"], {"index": 0}),
                ("rumble_set_checked", [160, 220], {}),
                ("rumble_stop", [], {}),
                ("rumble_passthrough", [True], {})]},
-    {"pagina": PAGINA, "gesto": "parar", "clique": {},
+    {"pagina": PAGINA, "gesto": "parar", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["controller.target.set"], {"index": 0}),
                ("rumble_stop_checked", [], {}),
                ("rumble_passthrough", [True], {})]},

@@ -20,7 +20,7 @@ OS TRÊS DEGRAUS DO REUSO, nesta ordem — e a ordem é a regra:
                              `identity_number_set`, `profile_switch`…
     2. os módulos da CLI     `cli/cmd_native.py`, `cli/cmd_coop.py` — também
                              puros, e donos dos métodos que o bridge não expõe.
-    3. `chamar(metodo, …)`   o degrau cru, e SÓ para o que não tem nenhum dos
+    3. `chamar(metodo, …)`   o degrau cru, e SÓ para o que não tem nenhum dos  # (noqa-acento)
                              dois. Ele passa pelo `_safe_call` do bridge, então
                              herda o timeout e o tratamento de erro — não é um
                              segundo caminho de escrita, é o mesmo sem atalho.

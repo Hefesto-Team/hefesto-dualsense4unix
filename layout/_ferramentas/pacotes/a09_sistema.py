@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from . import Contexto, perfil, registrar
 
-#: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # noqa-acento
+#: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # (noqa-acento)
 #: pintura. **"plugins" continua sem dono NA TELA, e a razão não é minha** — a
 #: `gui/aba_sistema.py:95` já a tinha medido e escrito:
 #:
@@ -70,7 +70,7 @@ def pacote(ctx: Contexto) -> dict:
         # ("Os 4 controles") foi uma delas.
         "bateria-vale-para": f"O {n} controle" if n == 1 else f"Os {n} controles",
         # O resto continua saindo, para quem consome o pacote fora da tela.
-        "versao": _versao(),  # noqa-acento  (a chave é o `data-campo` da página)
+        "versao": _versao(),  # (noqa-acento)  (a chave é o `data-campo` da página)
         "controles": n,
         "coop": bool(st.get("coop")),
         "steam-input": bool(st.get("steam_input")),
@@ -243,20 +243,20 @@ METODOS = {"daemon.resume", "daemon.reload", "machine.declare"}
 PAGINA = "09-sistema.html"
 PISO_DA_ABA = 3
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "retomar", "clique": {},
+    {"pagina": PAGINA, "gesto": "retomar", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["daemon.resume"], {})]},
-    {"pagina": PAGINA, "gesto": "atualizar", "clique": {},
+    {"pagina": PAGINA, "gesto": "atualizar", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["daemon.reload"], {})]},
     # A CHAVE DE DISCO NÃO SE DIGITA NA PROVA. Se a prova dissesse `"economia"`
     # e alguém trocasse a tradução no produto, a régua continuaria verde
     # cobrando o valor VELHO — a régua virando o segundo dono do fato que ela
     # existe para medir.
-    {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "bateria_longa"},
+    {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "bateria_longa"},  # (noqa-acento)
      "chama": [("machine_declare",
                 [{"orcamento": {"teto": _teto_do_perfil("bateria_longa")}}], {})]},
     # O "Eu escolho" grava `None` PRESENTE, e é a prova de que a ausência de
     # teto viaja como escolha e não como omissão.
-    {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "eu_escolho"},
+    {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "eu_escolho"},  # (noqa-acento)
      "chama": [("machine_declare",
                 [{"orcamento": {"teto": _teto_do_perfil("eu_escolho")}}], {})]},
 ]

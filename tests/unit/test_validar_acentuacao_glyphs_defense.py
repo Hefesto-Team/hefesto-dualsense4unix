@@ -59,7 +59,7 @@ class TestPrePassPulaLinhaComGlyph:
         """
         arq = tmp_path / "exemplo.py"
         glyph = chr(0x25CF)  # BLACK CIRCLE
-        alvo_sem_acento = "func" + "ao"  # noqa-acento — alvo cru para teste do pre-pass
+        alvo_sem_acento = "func" + "ao"  # (noqa-acento) — alvo cru para teste do pre-pass
         conteúdo = f'msg = "{glyph} {alvo_sem_acento} status atual"\n'
         arq.write_text(conteúdo, encoding="utf-8")
 
@@ -112,7 +112,7 @@ class TestPrePassPulaLinhaComGlyph:
         """Glyph em docstring `.py` é preservado pelo pre-pass."""
         arq = tmp_path / "modulo.py"
         glyph = chr(0x25CF)
-        alvo_sem_acento = "func" + "ao"  # noqa-acento — alvo cru para teste do pre-pass
+        alvo_sem_acento = "func" + "ao"  # (noqa-acento) — alvo cru para teste do pre-pass
         conteúdo = (
             "def status():\n"
             f'    """Retorna {glyph} ativo na {alvo_sem_acento}."""\n'
@@ -281,10 +281,10 @@ class TestPrePassWhiteBox:
         arq = tmp_path / "exemplo.py"
         glyph = chr(0x25CF)
         # Múltiplas palavras-alvo do dicionário na mesma linha.
-        alvo_a = "func" + "ao"  # noqa-acento — alvo cru para teste do pre-pass
-        alvo_b = "valid" + "acao"  # noqa-acento — alvo cru para teste do pre-pass
-        alvo_c = "configur" + "acao"  # noqa-acento — alvo cru para teste do pre-pass
-        alvo_d = "comunic" + "acao"  # noqa-acento — alvo cru para teste do pre-pass
+        alvo_a = "func" + "ao"  # (noqa-acento) — alvo cru para teste do pre-pass
+        alvo_b = "valid" + "acao"  # (noqa-acento) — alvo cru para teste do pre-pass
+        alvo_c = "configur" + "acao"  # (noqa-acento) — alvo cru para teste do pre-pass
+        alvo_d = "comunic" + "acao"  # (noqa-acento) — alvo cru para teste do pre-pass
         conteúdo = (
             f'msg = "{glyph} {alvo_a} {alvo_b} {alvo_c} {alvo_d}"\n'
         )
