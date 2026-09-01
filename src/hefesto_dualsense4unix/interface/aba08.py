@@ -1808,11 +1808,15 @@ CONFISSAO_NA_TELA = (
 
 #: As três dicas de botão da janela do desenho — literais de dentro de função,
 #: logo fora do alcance do AST. O portão abaixo é quem as segura.
-DICA_JA_COLOCADO = "Você já colocou este aparelho na entrada {n}."
-DICA_ENUMERA = "O sistema enumera este aparelho como {c}."
-DICA_EXTENSAO = ("Foi você quem disse que há uma extensão aqui. Nenhuma "
-                 "leitura do sistema distingue isto de um aparelho na "
-                 "própria entrada do hub.")
+# AS TRÊS GANHARAM NOME NO PRODUTO em 01/09/2026 e são LIDAS — eram uma
+# terceira grafia, e o `_confere_no_produto` logo abaixo existia só para
+# conferir que ela ainda batia com a do `mapa_da_mesa.py`. Um portão que compara
+# duas cópias é a confissão de que há duas.
+from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import (  # noqa: E402
+    DICA_ENUMERA,
+    DICA_EXTENSAO,
+    DICA_JA_COLOCADO,
+)
 _MAPA_PY = R / "src/hefesto_dualsense4unix/app/widgets/mapa_da_mesa.py"
 _confere_no_produto(_MAPA_PY, [
     "Você já colocou este aparelho na entrada {n}.",
@@ -1913,13 +1917,29 @@ def face_dos_hubs():
             </div>'''
 
 
-def face_bloco(nome, numeros):
-    grade = "".join(celula(n) for n in numeros)
-    return f'''            <div class="mm-face">
-              <div class="mm-face-cab"><span class="mm-face-nome">{nome}</span>
-                <button class="btn mini" data-gesto="nova-entrada" title="Acrescenta a esta face o menor número que ainda não existe em face nenhuma — os números são do GABINETE, e dois buracos diferentes não podem levar o mesmo.">{MAPA["ROTULO_NOVA_ENTRADA"]}</button></div>
-              <div class="mm-grade">{grade}</div>
-            </div>'''
+#: O DESENHO É DO PRODUTO desde 01/09/2026 — `gui/aba_conexoes.html_do_mapa`.
+#: Ele vivia aqui, e com ele vivia uma SEGUNDA CÓPIA do motor: a `veredito()`
+#: logo acima reescrevia à mão o `arranjo_da_mesa.julgar`, com os cinco
+#: vereditos digitados como constantes. Agora o gerador passa a CENA e o
+#: produto desenha — o mesmo desenho que o piloto usa com o gabinete DELA.
+#:
+#: A `veredito()` daqui FICA, e é ela que este gerador injeta: o motor de
+#: verdade precisa de uma `Bancada`, que precisa do censo do barramento — e um
+#: gerador de mockup não pode ler o `/sys` de quem o roda, senão a página sai
+#: diferente em cada máquina. A cópia deixou de ser a da TELA e passou a ser o
+#: que ela sempre foi: a cena de bancada.
+MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
+    [{"nome": nome, "portas": numeros} for nome, numeros in FACES],
+    quem_esta=QUEM_ESTA,
+    extensoes=EXTENSAO,
+    veredito_de=veredito,
+    rotulos={"vazia": MAPA["ROTULO_VAZIA"],
+             "por_extensao": MAPA["ROTULO_POR_EXTENSAO"],
+             "nova_entrada": MAPA["ROTULO_NOVA_ENTRADA"]},
+    dicas={"esticada": DICA_EXTENSAO,
+           "enumera": DICA_ENUMERA,
+           "nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA,
+           "novo_hub": _aba_conexoes.DICA_NOVO_HUB})
 
 
 #: AS TRÊS RESPOSTAS DE CADA PERGUNTA DA SALA, com o **id do esquema** ao lado
@@ -1992,8 +2012,17 @@ TELA_MAPEAR = f'''
         <div class="mm-lista">
 {chr(10).join("          " + ap_botao(*a) for a in CENSO)}
         </div>
-{chr(10).join(face_bloco(*f) for f in FACES)}
-{face_dos_hubs()}
+        <!-- O RECIPIENTE DO MAPA — 01/09/2026. Ele existe para o piloto poder
+             TROCAR o miolo inteiro: as faces e as entradas são as que ELA
+             declarou, e o número delas muda. Um bloco cujo número de filhos
+             muda com o dado não tem como ser pintado campo a campo — é a mesma
+             razão da fita, que se troca inteira desde que a mesa passou a ter
+             dois lugares vazios.
+             SEM CSS PRÓPRIO de propósito: é um `<div>` de bloco, e as
+             `.mm-face` dentro dele empilham como empilhavam. -->
+        <div class="mm-faces">
+{MAPA_DESENHADO}
+        </div>
 
         <div class="mm-sala">
           <div class="mm-rot-linha"><span class="mm-rot" title="Estas duas mudaram-se da aba para cá em 28/08, e aqui elas preenchem um vazio real: a janela do desenho não guardava um único fato que só você tem. Sem resposta não é o mesmo que “Não sei”: enquanto você não responder, o Hefesto sabe que ninguém disse; “Não sei” é você dizendo que olhou e não sabe.">O que só você sabe</span></div>

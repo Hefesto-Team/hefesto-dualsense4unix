@@ -161,6 +161,23 @@ BOOTSTRAP = r"""
       const f = document.querySelector('.fita');
       if(f && f.outerHTML !== p.fita){ f.outerHTML = p.fita; n += 1; }
     }
+    // OS BLOCOS QUE SE TROCAM INTEIROS, e a fita acima é o primeiro deles —
+    // esta é a mesma ideia, com endereço. Um bloco cujo NÚMERO DE FILHOS muda
+    // com o dado não tem como ser pintado campo a campo: não há endereço para
+    // um filho que ainda não existe.
+    //
+    // O SEGUNDO CASO É O MAPA DO GABINETE (01/09/2026): as faces e as entradas
+    // são as que ELA declarou, e podem ser zero. Enquanto o bloco era estático,
+    // a aba mostrava um gabinete de bancada — e os seis botões que mexem no
+    // mapa não podiam ser ligados, porque clicar declararia no disco dela o
+    // desenho de um exemplo.
+    //
+    // TROCA O MIOLO, e não o próprio nó: `outerHTML` no container mataria o
+    // elemento que o seletor achou, e a próxima pintura não teria onde pousar.
+    for(const [seletor, html] of Object.entries(p.blocos || {})){
+      const alvo = document.querySelector(seletor);
+      if(alvo && alvo.innerHTML !== html){ alvo.innerHTML = html; n += 1; }
+    }
     // 1. OS CAMPOS DA MESA — soltos no documento, valem para a página toda.
     for(const [k, v] of Object.entries(p.mesa || {})){
       const alvos = achar(document, k);

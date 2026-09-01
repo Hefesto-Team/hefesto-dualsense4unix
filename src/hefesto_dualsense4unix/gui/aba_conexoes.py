@@ -685,3 +685,133 @@ def gesto_valido(objeto: Mapping[str, Any]) -> bool:
     por nome vindo de fora sem esta peneira é o buraco que esta casa não abre.
     """
     return str(objeto.get("gesto", "")) in GESTOS
+
+
+# ---------------------------------------------------------------------------
+# O MAPA DO GABINETE — o desenho ÚNICO, 01/09/2026
+# ---------------------------------------------------------------------------
+# POR QUE ELE MUDOU DE CASA: o desenho das faces e dos quadrados vivia no
+# GERADOR (`interface/aba08.py`), e junto com ele vivia uma SEGUNDA CÓPIA do
+# motor — uma função `veredito()` que reescrevia à mão o
+# `arranjo_da_mesa.julgar`, com os mesmos cinco vereditos ("ocupada", "vale
+# evitar", "melhor lugar"…) digitados como constantes.
+#
+# O PREÇO DISSO ERA DUPLO, e os dois lados foram medidos em 01/09/2026:
+#
+#   1. O JUÍZO DA TELA NÃO ERA O DO PRODUTO. A cópia julgava por uma tabela de
+#      vizinhos do mockup; o motor julga pela mesa real, sabe de entrada azul,
+#      de folga na fileira e de extensor, e ainda CONFESSA o que não sabe
+#      (`confissao_do_desenho`). A tela mostrava menos e podia mostrar diferente.
+#   2. O GABINETE DESENHADO NÃO ERA O DELA. `FACES`, `QUEM_ESTA` e `EXTENSAO`
+#      eram constantes de bancada — duas faces e dez entradas de exemplo —, e o
+#      `maquina.json` dela **não existe**: o mapa declarado está vazio. A aba
+#      mostrava um gabinete que não é o dela, e por isso os seis botões que
+#      mexem no mapa não podiam ser ligados: clicar declararia no disco DELA o
+#      desenho de uma bancada de exemplo.
+#
+# AQUI O DESENHO É UM SÓ e recebe DADO: o gerador o chama com a cena do mockup,
+# o piloto com o que ela declarou. É a mesma disciplina dos outros `html_*`
+# deste módulo — função pura sobre dado já lido, sem GTK, sem `/sys`, sem IPC.
+
+
+#: AS DUAS DICAS DOS BOTÕES DO MAPA. Elas são da tela WEB — a janela GTK põe os
+#: mesmos gestos em botões sem tooltip —, e por isso moram aqui, no lado Python
+#: dela, e não em `mapa_da_mesa.py`. O gerador do mockup e o piloto leem daqui:
+#: eram duas grafias até 01/09/2026.
+DICA_NOVA_ENTRADA = (
+    "Acrescenta a esta face o menor número que ainda não existe em face "
+    "nenhuma — os números são do GABINETE, e dois buracos diferentes não podem "
+    "levar o mesmo."
+)
+DICA_NOVO_HUB = (
+    "Acrescenta um hub ou uma extensão à mesa e pergunta em que entrada ele "
+    "está ligado. Cabo passivo não tem descritor USB: nenhuma leitura do "
+    "sistema o enxerga, e por isso quem o declara é você."
+)
+
+
+def html_do_mapa(
+    faces: Sequence[Mapping[str, Any]],
+    *,
+    quem_esta: Mapping[str, tuple[str, str]],
+    extensoes: Mapping[str, str],
+    veredito_de: Any,
+    rotulos: Mapping[str, str],
+    dicas: Mapping[str, str],
+) -> str:
+    """As faces do gabinete, com um quadrado por entrada.
+
+    `faces` é `[{"nome": …, "portas": [numero, …]}, …]` — a forma do
+    `MapaDaMesa`, para que o chamador não precise traduzir nada.
+
+    `quem_esta` é `numero -> (espécie, nome do kernel)`. A espécie é o que o
+    quadrado mostra; o nome do kernel é o que a dica diz, porque é ele que
+    distingue dois aparelhos iguais.
+
+    `veredito_de(numero, esticada)` devolve `(classe, texto, porque)`. Ele é
+    INJETADO e não importado: o motor de verdade (`arranjo_da_mesa.julgar`,
+    pelo `mapa_da_mesa.veredito_do_quadrado`) precisa de uma `Bancada`, que
+    precisa do censo do barramento — e este módulo não lê `/sys` por decisão,
+    escrita no cabeçalho dele. Quem lê é quem chama.
+
+    O `data-v` E O `data-gesto` CONVIVEM no quadrado, e não se trocam: a CSS
+    pinta por `data-v` (`.mm-sq[data-v="cheia"]`) e o piloto ouve o
+    `data-gesto`. Trocar um pelo outro apagaria a cor.
+    """
+    def quadrado(numero: str, esticada: bool = False) -> str:
+        classe, texto, porque = veredito_de(numero, esticada)
+        dentro = quem_esta.get(numero)
+        corpo = dentro[0] if dentro else rotulos["vazia"]
+        dizeres = []
+        if esticada:
+            dizeres.append(dicas["esticada"])
+        elif dentro:
+            dizeres.append(dicas["enumera"].format(c=dentro[1]))
+        dizeres.append(porque)
+        linhas = [f'<span class="mm-n">{_e(numero)}</span>',
+                  f'<span class="mm-c{"" if dentro else " mm-vazia"}">{_e(corpo)}</span>']
+        if esticada:
+            linhas.append(f'<span class="mm-ext">{_e(rotulos["por_extensao"])}</span>')
+        linhas.append(f'<span class="mm-v">{_e(texto)}</span>')
+        return (f'<button class="mm-sq" data-v="{_e(classe)}" '
+                f'data-gesto="escolher-entrada" data-entrada="{_e(numero)}" '
+                f'title="{_e(" ".join(dizeres))}">' + "".join(linhas) + "</button>")
+
+    #: DE QUAL FACE É CADA ENTRADA — para o hub poder dizer onde está ligado.
+    #: Sai das próprias faces, nunca digitado.
+    face_da_entrada = {n: str(f.get("nome", "")) for f in faces for n in f.get("portas", [])}
+
+    if not faces:
+        # O ESTADO VAZIO TEM FRASE, e ela é do produto: `ROTULO_SEM_FACE`. Sem
+        # ela o mapa de quem nunca desenhou o gabinete seria uma caixa em
+        # branco — e "não há nada aqui" é indistinguível de "isto quebrou".
+        from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import ROTULO_SEM_FACE
+
+        return f'            <div class="tn-frase">{_e(ROTULO_SEM_FACE)}</div>'
+
+    blocos = []
+    for indice, face in enumerate(faces):
+        grade = "".join(f'<div class="mm-cel">{quadrado(str(n))}</div>'
+                        for n in face.get("portas", []))
+        blocos.append(
+            f'''            <div class="mm-face" data-face="{indice}">
+              <div class="mm-face-cab"><span class="mm-face-nome">{_e(face.get("nome", ""))}</span>
+                <button class="btn mini" data-gesto="nova-entrada" data-face="{indice}" '''
+            f'''title="{_e(dicas["nova_entrada"])}">{_e(rotulos["nova_entrada"])}</button></div>
+              <div class="mm-grade">{grade}</div>
+            </div>''')
+
+    if extensoes:
+        celulas = "".join(
+            f'<div class="mm-cel">{quadrado(filha, esticada=True)}'
+            f'<span class="mm-ligado">ligado na entrada <b>{_e(mae)}</b>'
+            f' <span class="mudo">· {_e(face_da_entrada.get(mae, ""))}</span></span></div>'
+            for mae, filha in extensoes.items())
+        blocos.append(
+            f'''            <div class="mm-face" data-face="hubs">
+              <div class="mm-face-cab"><span class="mm-face-nome">Hubs e extensões</span>
+                <button class="btn mini" data-gesto="novo-hub" '''
+            f'''title="{_e(dicas["novo_hub"])}">Acrescentar hub</button></div>
+              <div class="mm-grade mm-grade-hubs">{celulas}</div>
+            </div>''')
+    return "\n".join(blocos)

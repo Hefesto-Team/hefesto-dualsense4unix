@@ -135,6 +135,63 @@ def _mesa_do_radio(recarregar: bool = False) -> Any:
     return _MESA_DO_RADIO
 
 
+#: O CENSO DO BARRAMENTO, lido UMA vez e renovado pelo "Examinar Portas" — a
+#: mesma regra do `_mesa_do_radio` acima, e pelo mesmo motivo: é varredura de
+#: `/sys`, e o tique desta aba é de 500 ms.
+_CENSO: Any = None
+
+
+def _censo(recarregar: bool = False) -> Any:
+    """Tudo que o barramento tem, para o motor julgar as entradas.
+
+    `None` quando a leitura falhou, e ele é diferente de um censo VAZIO: sem
+    censo o motor não julga, e o mapa mostra as entradas sem veredito — o que é
+    honesto. Um censo vazio faria toda entrada parecer livre.
+    """
+    global _CENSO
+    if _CENSO is None or recarregar:
+        try:
+            perfil._com_o_src()
+            from hefesto_dualsense4unix.integrations.censo_do_barramento import (
+                ler_o_barramento,
+            )
+
+            _CENSO = ler_o_barramento()
+        except Exception:
+            return None
+    return _CENSO
+
+
+def _logica_do_mapa() -> Any:
+    """O rascunho do gabinete DELA — `LogicaDoMapa` sobre o que ela declarou.
+
+    ELE É O ESTADO DOS SEIS BOTÕES do mapa. `LogicaDoMapa` é a camada do produto
+    que já existia e que tela nenhuma tinha chamado: ela guarda as faces, as
+    entradas e o aparelho na mão, e tem os quatro gestos que os mudam
+    (`acrescentar_entrada`, `acrescentar_face`, `acrescentar_extensao`,
+    `colocar`/`tirar`). Sem GTK — o próprio docstring dela diz por quê.
+
+    NÃO SE RECRIA A CADA TIQUE, e a razão é o `escolhido`: o gesto de dois
+    tempos ("clique no aparelho, depois na entrada") guarda o primeiro tempo
+    AQUI. Reconstruir do disco a cada pintura apagaria o aparelho da mão dela
+    entre um clique e outro.
+    """
+    global _LOGICA
+    if _LOGICA is None:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
+        from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
+
+        declarada = _declaracao()
+        mapa = getattr(declarada, "mapa", None) or MapaDaMesa()
+        _LOGICA = LogicaDoMapa(mapa)
+    return _LOGICA
+
+
+#: O rascunho vivo. `None` = ainda não montado.
+_LOGICA: Any = None
+
+
 def _chave_do_radio(r: Any) -> str:
     """`vid:pid` — a chave do `maquina.json`, e não o nó do sysfs.
 
@@ -374,6 +431,110 @@ def _adaptadores(conectados: Any) -> dict[str, Any]:
         return {}
 
 
+def _bancada() -> Any:
+    """A mesa do motor montada sobre o rascunho DELA — ou `None` sem censo.
+
+    `None` não é borda: sem censo o motor não tem o que julgar, e o mapa sai
+    com as entradas e sem veredito. É honesto — um veredito inventado sobre um
+    barramento que ninguém leu seria pior que a ausência dele.
+    """
+    censo = _censo()
+    if censo is None:
+        return None
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import bancada_do_rascunho
+
+    with contextlib.suppress(Exception):
+        return bancada_do_rascunho(_logica_do_mapa(), censo)
+    return None
+
+
+def _html_do_mapa() -> str:
+    """As faces do gabinete DELA, desenhadas pelo produto.
+
+    O DESENHO É UM SÓ (`gui/aba_conexoes.html_do_mapa`) e o gerador do mockup
+    usa o MESMO — a diferença é o dado: lá é a cena de bancada, aqui é o que ela
+    declarou. Foi assim que a extração se provou fiel: a página regerada saiu
+    byte a byte igual à que ela aprovou.
+
+    O VEREDITO VEM DO MOTOR, e não de uma cópia: `veredito_do_quadrado` chama
+    `arranjo_da_mesa.julgar`, que sabe de entrada azul, de folga na fileira e de
+    extensor — e CONFESSA o que não sabe. O gerador tinha uma reescrita à mão
+    disso, com os cinco vereditos digitados.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.widgets import mapa_da_mesa as mm
+    from hefesto_dualsense4unix.gui import aba_conexoes as _tela
+
+    logica = _logica_do_mapa()
+    bancada = _bancada()
+
+    def veredito_de(numero: str, esticada: bool) -> tuple[str, str, str]:
+        if bancada is None:
+            return "", "", ""
+        v = mm.veredito_do_quadrado(bancada, numero, logica.escolhido)
+        return ("", "", "") if v is None else (v.v, v.texto, v.porque)
+
+    quem_esta: dict[str, tuple[str, str]] = {}
+    censo = _censo()
+    por_caminho = {a.nome_do_kernel: a for a in (censo.conectados() if censo else ())}
+    for numero, porta in logica.portas.items():
+        caminho = str(porta.get("caminho") or "")
+        if not caminho:
+            continue
+        achado = por_caminho.get(caminho)
+        quem_esta[numero] = (achado.especie if achado else caminho, caminho)
+
+    extensoes = {str(p.get("filha_de")): n
+                 for n, p in logica.portas.items() if p.get("filha_de")}
+
+    return _tela.html_do_mapa(
+        [{"nome": f["nome"], "portas": f["portas"]} for f in logica.faces],
+        quem_esta=quem_esta,
+        extensoes=extensoes,
+        veredito_de=veredito_de,
+        rotulos={"vazia": mm.ROTULO_VAZIA,
+                 "por_extensao": mm.ROTULO_POR_EXTENSAO,
+                 "nova_entrada": mm.ROTULO_NOVA_ENTRADA},
+        dicas={"esticada": mm.DICA_EXTENSAO, "enumera": mm.DICA_ENUMERA,
+               "nova_entrada": _tela.DICA_NOVA_ENTRADA,
+               "novo_hub": _tela.DICA_NOVO_HUB})
+
+
+def _html_dos_aparelhos() -> str:
+    """O que o censo achou — o PRIMEIRO tempo do gesto de dois tempos.
+
+    A lista era a constante `CENSO` do gerador: sete aparelhos de exemplo. Aqui
+    são os do barramento DELA, e é o que faz `escolher-aparelho` deixar de ser
+    um botão que escolhe um aparelho que não existe.
+
+    O `data-caminho` É O ENDEREÇO, e ele é o `nome_do_kernel`: o rótulo repete
+    entre dois adaptadores iguais (`rotulo_do_aparelho` diz por quê), e clicar
+    por rótulo escolheria o errado.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.widgets import mapa_da_mesa as mm
+    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+
+    censo = _censo()
+    if censo is None:
+        return ""
+    logica = _logica_do_mapa()
+    onde_esta = {str(p.get("caminho")): n for n, p in logica.portas.items()
+                 if p.get("caminho")}
+    fora = []
+    for a in mm.aparelhos_para_colocar(censo):
+        caminho = a.nome_do_kernel
+        em = onde_esta.get(caminho, "")
+        dica = (mm.DICA_JA_COLOCADO.format(n=em) if em else "")
+        aceso = " on" if logica.escolhido == caminho else ""
+        fora.append(
+            f'          <button class="mm-ap{aceso}" data-gesto="escolher-aparelho" '
+            f'data-caminho="{_e(caminho)}" title="{_e(dica)}">{_e(a.especie)}'
+            f'<span class="pt">·</span><code>{_e(caminho)}</code></button>')
+    return "\n".join(fora)
+
+
 @registrar("08-conexoes.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     global _ORDENS_NA_TELA, _VIZINHOS
@@ -433,6 +594,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         }
     return {
         "colunas": colunas,
+        # O MAPA DO GABINETE, trocado INTEIRO — 01/09/2026. Ele não se pinta
+        # campo a campo porque o número de faces e de entradas é o que ELA
+        # declarou, e pode ser zero; não há endereço para um quadrado que ainda
+        # não existe. É a mesma razão da fita.
+        #
+        # E ATÉ HOJE ELE NÃO SE PINTAVA DE JEITO NENHUM: o desenho era
+        # `FACES`/`QUEM_ESTA`, constantes de bancada, e o `maquina.json` dela
+        # nem existe. A aba mostrava um gabinete que não é o dela — e era por
+        # isso que os seis botões do mapa não podiam ser ligados: clicar
+        # declararia no disco DELA o desenho de um exemplo.
+        "blocos": {".mm-faces": _html_do_mapa(), ".mm-lista": _html_dos_aparelhos()},
         # AS DUAS LISTAS SÃO O QUE A TELA MOSTRA, uma por bloco de achado: o
         # selo (CERTO/AJUSTAR) e a frase. Elas se distribuem pelos elementos de
         # mesmo `data-campo`, na ordem — o gerador não precisa saber quantos
@@ -521,25 +693,31 @@ SEM_GESTO: dict[str, str] = {
         "AUMENTAR a força. `gui/aba_conexoes.SEM_FONTE`, linha "
         "`controle.*.vibracao.teto`: sobrepor mudaria o DAEMON, não a tela. "
         "Dona: MIGRA-CONEXOES-11, §0.5, palavra dela.",
-    "escolher-aparelho":
-        "a lista de aparelhos é a constante `CENSO` do gerador, não o censo do "
-        "barramento dela. Escolher aqui é um dos dois tempos de um gesto que só "
-        "termina na entrada, e nenhum dos dois lados é dado vivo.",
-    "escolher-entrada":
-        "os quadrados saem de `FACES`/`QUEM_ESTA`, constantes do gerador. Declarar "
-        "`mapa.portas` a partir deles escreveria no `maquina.json` dela o desenho "
-        "de uma bancada de exemplo.",
-    "nova-entrada": "mesma razão de `escolher-entrada`: a face é do mockup.",
-    "novo-hub": "mesma razão — e o hub ainda pergunta em que entrada está.",
-    "tirar-daqui": "mesma razão: o alvo é um quadrado do mockup.",
-    "nova-extensao": "mesma razão: a mãe é um quadrado do mockup.",
-    "nova-face":
-        "O MOTIVO MUDOU EM 01/09: o ouvinte passou a mandar `valor`, então o nome "
-        "digitado CHEGA. O que impede agora é a fileira: `MapaDaMesa.faces` é uma "
-        "LISTA, e `fundir_declaracao` troca lista inteira em vez de fundir — criar "
-        "uma face é reescrever as que já existem. E o desenho das faces é do "
-        "mockup (`FACES`), que o pacote não repinta: a face nasceria em disco e "
-        "não apareceria na tela, então o segundo clique dela criaria a segunda.",
+    # OS SEIS DO MAPA SAÍRAM DAQUI em 01/09/2026, e a medição que os segurava
+    # estava CERTA: *"a lista de aparelhos é a constante `CENSO` do gerador"*,
+    # *"os quadrados saem de `FACES`/`QUEM_ESTA`"*, *"o desenho das faces é do
+    # mockup, que o pacote não repinta"*. Enquanto isso valesse, clicar
+    # declararia no `maquina.json` DELA o desenho de uma bancada de exemplo.
+    #
+    # A CURA FOI NO DESENHO, não nos botões: a aba passou a PINTAR o gabinete
+    # dela (`_html_do_mapa`) e a lista de aparelhos do barramento dela
+    # (`_html_dos_aparelhos`), com o desenho ÚNICO que o produto agora tem
+    # (`gui/aba_conexoes.html_do_mapa`) e o motor de verdade
+    # (`arranjo_da_mesa.julgar`, pelo `veredito_do_quadrado`). Com alvo real, os
+    # seis passaram a poder agir.
+    #
+    # E A ÚLTIMA RAZÃO DA `nova-face` CAIU PELA RAIZ: dizia-se que
+    # `fundir_declaracao` troca a lista de faces inteira e que criar uma
+    # reescreveria as que já existem. Troca mesmo — e por isso o
+    # `_gravar_o_mapa` manda o rascunho INTEIRO, que já contém as antigas.
+    "novo-hub":
+        "ele é o único dos sete que sobra, e por duas razões que não são de "
+        "desenho. A primeira: `LogicaDoMapa` não tem `acrescentar_hub` — um hub "
+        "de bancada não é entrada do gabinete, e o produto não tem campo para "
+        "ele. A segunda está no próprio `title` do botão: ele promete "
+        "*\"pergunta em que entrada ele está ligado\"*, e a tela não tem onde "
+        "perguntar. Pendurá-lo no `acrescentar_extensao` faria o botão criar uma "
+        "filha numa entrada que ela não escolheu.",
 }
 
 
@@ -985,6 +1163,161 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
 #: inventado aparece aqui, e não na mão de quem clica.
+# ---------------------------------------------------------------------------
+# OS SEIS DO MAPA DO GABINETE — 01/09/2026
+# ---------------------------------------------------------------------------
+# TODOS PASSAM PELA MESMA CAMADA, e ela já existia: `LogicaDoMapa`, em
+# `app/widgets/mapa_da_mesa.py`, cujo docstring diz *"o rascunho do gabinete e
+# os quatro gestos que o mudam — sem GTK"*. Ela nunca tinha sido chamada por
+# tela nenhuma.
+#
+# O QUE OS SEGURAVA ERA O DESENHO, e a medição estava certa: enquanto as faces
+# e as entradas eram `FACES`/`QUEM_ESTA` — constantes de bancada —, clicar
+# declararia no `maquina.json` DELA o desenho de um exemplo. A cura foi a aba
+# passar a PINTAR o gabinete dela (ver `_html_do_mapa`); os botões vieram junto.
+#
+# O RASCUNHO É UM SÓ (`_logica_do_mapa`), e é ele que guarda o aparelho na mão
+# entre o primeiro e o segundo tempo. Cada gesto muda o rascunho e GRAVA —
+# decisão dela, 01/09: *"clicar na cor já deveria aplicar a cor no controle"*.
+
+
+def _gravar_o_mapa(p: Any) -> None:
+    """Manda ao daemon o rascunho inteiro do mapa, e RECUSA DIZENDO se não deu.
+
+    O MAPA VAI INTEIRO, ao contrário da mesa (`_declarar`, que manda pedaço): as
+    faces são uma LISTA, e `fundir_declaracao` troca lista inteira em vez de
+    fundir (`utils/maquina.py`). Mandar meia lista apagaria as faces que ela já
+    tinha — e era uma das razões escritas para `nova-face` não ser ligada.
+
+    Mandar o rascunho INTEIRO resolve isso pela raiz: o que sai daqui é o estado
+    completo do mapa depois do clique, e a troca de lista passa a ser o
+    comportamento certo em vez de um risco.
+    """
+    ok, motivo = _resposta(p.machine_declare({"mapa": _logica_do_mapa().como_documento()}))
+    if not ok:
+        raise RuntimeError(motivo or "não consegui gravar o desenho do gabinete")
+
+
+@gesto("08-conexoes.html", "escolher-aparelho")
+def escolher_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Primeiro tempo: o aparelho vai para a mão dela. Clicar de novo desescolhe.
+
+    NÃO GRAVA NADA, e é o único dos seis que não grava: escolher é estado de
+    tela, não declaração. O que vai ao disco é o SEGUNDO tempo.
+
+    O ENDEREÇO É O CAMINHO DO KERNEL (`data-caminho`), e não o rótulo: os dois
+    adaptadores Bluetooth desta bancada são o mesmo modelo, e `rotulo_do_aparelho`
+    já explica que só o caminho os distingue.
+    """
+    caminho = str(o.get("caminho") or "").strip()
+    if not caminho:
+        raise ValueError(
+            "o clique não disse qual aparelho — sem o caminho do kernel, dois "
+            "adaptadores iguais seriam o mesmo botão.")
+    _logica_do_mapa().escolher(caminho)
+
+
+@gesto("08-conexoes.html", "escolher-entrada")
+def escolher_entrada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Segundo tempo: põe nesta entrada o aparelho que está na mão.
+
+    SEM APARELHO NA MÃO, RECUSA DIZENDO. O desenho já ensina o gesto de dois
+    tempos, e um clique na entrada sem ter escolhido antes não tem o que fazer —
+    engolir isso faria a pessoa clicar dez vezes achando que o mapa quebrou.
+
+    UM APARELHO ESTÁ EM UM LUGAR SÓ: `colocar` tira de onde estava no mesmo
+    gesto, e a razão está escrita lá — *"sem isso o mesmo dongle apareceria em
+    duas entradas e o mapa passaria a mentir de um jeito novo"*.
+    """
+    numero = str(o.get("entrada") or "").strip()
+    if not numero:
+        raise ValueError("o clique não disse qual entrada.")
+    logica = _logica_do_mapa()
+    if not logica.escolhido:
+        raise RuntimeError(
+            "escolha antes o aparelho, na lista de cima — este gesto tem dois "
+            "tempos: primeiro o que vai, depois onde vai.")
+    if not logica.colocar(numero):
+        raise RuntimeError(
+            f"não consegui pôr o aparelho na entrada {numero} — ela não está no "
+            f"desenho do gabinete.")
+    _gravar_o_mapa(p)
+
+
+@gesto("08-conexoes.html", "tirar-daqui")
+def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Esvazia a entrada. Ela CONTINUA no desenho — só fica sem aparelho.
+
+    É o que o `title` do botão promete, e a diferença importa: tirar a ENTRADA
+    seria outro gesto, e o gabinete não perde um buraco porque ela desplugou
+    algo dele.
+    """
+    numero = str(o.get("entrada") or "").strip()
+    if not numero:
+        raise ValueError("o clique não disse de qual entrada tirar.")
+    if not _logica_do_mapa().tirar(numero):
+        raise RuntimeError(f"a entrada {numero} já está vazia.")
+    _gravar_o_mapa(p)
+
+
+@gesto("08-conexoes.html", "nova-entrada")
+def nova_entrada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Acrescenta a esta face o menor número que ainda não existe em face nenhuma.
+
+    A REGRA DO NÚMERO É DO PRODUTO (`acrescentar_entrada`), e ela é o motivo de
+    o botão não perguntar nada: os números são do GABINETE, e dois buracos
+    diferentes não podem levar o mesmo.
+    """
+    face = str(o.get("face") or "").strip()
+    if not face.isdigit():
+        raise ValueError("o clique não disse em qual face acrescentar.")
+    if not _logica_do_mapa().acrescentar_entrada(int(face)):
+        raise RuntimeError("não achei essa face no desenho do gabinete.")
+    _gravar_o_mapa(p)
+
+
+@gesto("08-conexoes.html", "nova-extensao")
+def nova_extensao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Cria a entrada-filha desta: a `10` vira `10a`, depois `10b`. Não há neta.
+
+    A EXISTÊNCIA DO EXTENSOR É DECLARAÇÃO DELA, e não há como ser outra coisa:
+    cabo passivo não tem descritor USB, e o dongle na ponta enumera como se
+    estivesse na entrada do hub. Nenhuma leitura de `/sys`, hoje ou nunca,
+    distingue os dois casos.
+    """
+    numero = str(o.get("entrada") or "").strip()
+    if not numero:
+        raise ValueError("o clique não disse em qual entrada há a extensão.")
+    if not _logica_do_mapa().acrescentar_extensao(numero):
+        raise RuntimeError(
+            f"não dá para pendurar uma extensão na {numero}: ou ela não está no "
+            f"desenho, ou já é filha de outra — não há neta.")
+    _gravar_o_mapa(p)
+
+
+@gesto("08-conexoes.html", "nova-face")
+def nova_face(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Cria uma face com o nome que ela escreveu. Sem nome, não cria.
+
+    O NOME CHEGA EM `valor`, e é o que mudou em 01/09/2026: o ouvinte do piloto
+    passou a mandar o `value` do campo. Antes só chegava `texto`, que num
+    `<input>` é vazio — e era essa a primeira razão de este botão não ter dono.
+
+    A SEGUNDA RAZÃO CAIU JUNTO: dizia-se que `fundir_declaracao` troca a lista
+    de faces inteira e que criar uma reescreveria as que já existem. Troca
+    mesmo — e por isso o `_gravar_o_mapa` manda o rascunho INTEIRO, que já
+    contém as antigas mais a nova.
+    """
+    nome = str(o.get("valor") or "").strip()
+    if not nome:
+        raise ValueError(
+            "a face precisa de um nome — escreva no campo ao lado antes de "
+            "clicar. Sem nome, não cria.")
+    if not _logica_do_mapa().acrescentar_face(nome):
+        raise RuntimeError("não consegui criar a face.")
+    _gravar_o_mapa(p)
+
+
 @gesto("08-conexoes.html", "luz-nao-acende")
 def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Derruba este controle do rádio para ela apertar PS e a luz voltar.
@@ -1042,7 +1375,7 @@ METODOS = {"controller.target.set"}
 #: teste, para que ligar uma aba não exija editar um arquivo que oito pessoas
 #: editariam ao mesmo tempo.
 PAGINA = "08-conexoes.html"
-PISO_DA_ABA = 9
+PISO_DA_ABA = 15
 PROVAS = [
     # O `index` da prova é 0 porque o controle de mentira é o único da lista —
     # e o `_indice` cai na posição quando o daemon não publicou `index`.
