@@ -68,8 +68,22 @@
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_ID="hefesto-dev-dualsense4unix"
-VARIANTE="dev"
+# O `dev` SAIU DE TUDO — decisão dela, 01/09/2026: *"Vamos remover o dev do nome
+# da nossa versão, no nome da pasta inclusive (…) o -dev sai de tudo não quero
+# mais essa confusão"*. A árvore antiga virou `hefesto-dualsense4unix-estavel` e
+# esta ocupou o nome canônico.
+#
+# O QUE ISSO MUDA NO PRODUTO: `HEFESTO_VARIANTE` volta a ser vazio, e com ele
+# `utils/identidade.py` resolve o slug `hefesto-dualsense4unix` — a config, o
+# socket, a unit, o WM_CLASS e o ícone. Os dados dela foram migrados de
+# `~/.config/hefesto-dev-dualsense4unix` para `~/.config/hefesto-dualsense4unix`
+# no mesmo dia, com os 33 perfis.
+#
+# NÃO HÁ MAIS DOIS APPS. Era o que a variante existia para permitir, e ela a
+# encerrou: *"a versão antiga não segue disponível, vai gerar confusão nos
+# agentes. Só a nova está disponível e deve ser integrada."*
+APP_ID="hefesto-dualsense4unix"
+VARIANTE=""
 
 BIN="${HOME}/.local/bin"
 APLICATIVOS="${HOME}/.local/share/applications"
@@ -117,30 +131,27 @@ conferir() {
 
     # 1. Nenhum alvo pode ser um arquivo do estável. Esta é a checagem que
     #    impede o sequestro descrito no cabeçalho.
-    local alvo
-    for alvo in "$DESKTOP" "$UNIT" "${BIN}/${APP_ID}" "${BIN}/${APP_ID}-gui"; do
-        case "$alvo" in
-            "$ESTAVEL_DESKTOP"|"$ESTAVEL_UNIT"|"$ESTAVEL_BIN"|"$ESTAVEL_BIN_GUI")
-                vermelho "  RECUSO: '$alvo' é do Hefesto ESTÁVEL."
-                problemas=1 ;;
-        esac
-    done
-    # E por forma, não só por lista: um nome sem `-dev-` no meio é, por
-    # construção, um nome que pode alcançar o estável.
-    if [[ "$APP_ID" != *"-dev-"* ]]; then
-        vermelho "  RECUSO: APP_ID='${APP_ID}' não tem 'dev' no MEIO do nome."
-        vermelho "          O 'dev' no FIM faria o pgrep -f da GUI dela"
-        vermelho "          (app/main.py) matar este app — casamento por substring."
-        problemas=1
-    fi
+    # AS DUAS GUARDAS DO ESTÁVEL MORRERAM — 01/09/2026, e a razão é a decisão
+    # dela: *"a versão antiga não segue disponível, vai gerar confusão nos
+    # agentes. Só a nova está disponível e deve ser integrada."*
+    #
+    # Elas existiam para impedir que este instalador SEQUESTRASSE o app dela: um
+    # `APP_ID` sem `dev` no meio escreveria por cima do `.desktop`, do symlink e
+    # da unit do estável. Não há mais estável instalado — o `--desfazer` correu
+    # antes desta leva e o `ls ~/.local/bin | grep hefesto` devolveu vazio — e a
+    # árvore antiga virou `hefesto-dualsense4unix-estavel`, sem instalação.
+    #
+    # O QUE ISSO NÃO APAGA, e é o que a segunda guarda media: o `pgrep -f` da
+    # GUI casa por SUBSTRING. Com um app só, não há dois nomes para se
+    # confundirem — e é exatamente por isso que ela encerrou a variante.
+    #
+    # SE UM DIA VOLTAREM A EXISTIR DOIS APPS, estas guardas voltam junto: o
+    # sequestro que elas impediam é real, e está descrito no cabeçalho deste
+    # arquivo com o número da linha de cada escrita do `install.sh`.
 
-    # 2. A árvore tem de ser a de dev, não a dela.
-    if [[ "$RAIZ" == "/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix" ]]; then
-        vermelho "  RECUSO: esta é a ÁRVORE ESTÁVEL dela (branch dev)."
-        vermelho "          O app de desenvolvimento sai da árvore -dev."
-        problemas=1
-    fi
-
+    # 2. A ÁRVORE: qualquer uma serve, desde que tenha o produto. A checagem
+    #    de nome morreu com o `-dev` — a pasta desta árvore passou a se chamar
+    #    `hefesto-dualsense4unix`, e a antiga, `hefesto-dualsense4unix-estavel`.
     # 3. Precisa de .venv próprio — senão o app de dev rodaria o código dela.
     if [[ ! -x "${RAIZ}/.venv/bin/python" ]]; then
         vermelho "  RECUSO: ${RAIZ}/.venv não existe."
@@ -179,15 +190,19 @@ conferir() {
     #    não haver régua assim que duas janelas do produto nasceram com app_id
     #    errado. Aqui a régua roda ANTES de instalar.
     local wm_do_codigo wm_do_desktop
-    wm_do_codigo="$("${RAIZ}/.venv/bin/python" -c \
+    # A IDENTIDADE QUE ESTE INSTALADOR VAI USAR, e não a `DEV` fixa. Ela
+    # dependia de `HEFESTO_VARIANTE`, e a variante virou vazia em 01/09 quando o
+    # `dev` saiu de tudo: ler `identidade.DEV` aqui acusava divergência entre um
+    # WM_CLASS que ninguém mais escreve e o `.desktop` de hoje.
+    wm_do_codigo="$(HEFESTO_VARIANTE="${VARIANTE}" "${RAIZ}/.venv/bin/python" -c \
         'import sys; sys.path.insert(0,"'"${RAIZ}"'/src");
 from hefesto_dualsense4unix.utils import identidade
-print(identidade.DEV.wm_class)' 2>/dev/null || echo "")"
+print(identidade.atual().wm_class)' 2>/dev/null || echo "")"
     wm_do_desktop="$(sed -n 's/^StartupWMClass=//p' \
         "${RAIZ}/packaging/${APP_ID}.desktop" 2>/dev/null || echo "")"
     if [[ -z "$wm_do_codigo" || "$wm_do_codigo" != "$wm_do_desktop" ]]; then
         vermelho "  RECUSO: o WM_CLASS do código e o do .desktop divergem."
-        vermelho "          código  : '${wm_do_codigo}'  (utils/identidade.py:DEV)"
+        vermelho "          código  : '${wm_do_codigo}'  (utils/identidade.atual())"
         vermelho "          .desktop: '${wm_do_desktop}'  (packaging/${APP_ID}.desktop)"
         vermelho "          Com eles diferentes a dock não acha o ícone."
         problemas=1
@@ -207,7 +222,7 @@ print(identidade.DEV.wm_class)' 2>/dev/null || echo "")"
         printf '         degrada CALADO — vira aviso no log, não erro na tela.\n'
         printf '         Instale depois deste install:\n'
         printf '             ./install-dev.sh --camada-de-maquina\n'
-        printf '         A interface (./interface) funciona mesmo assim: ela só LÊ.\n'
+        printf '         A interface (./interface.sh) funciona mesmo assim: ela só LÊ.\n'
     fi
     if systemctl --user is-active --quiet hefesto-dualsense4unix.service 2>/dev/null; then
         printf '  aviso: o daemon ESTÁVEL está no ar agora.\n'
@@ -365,10 +380,17 @@ mkdir -p "$BIN"
 ln -sfn "${RAIZ}/.venv/bin/hefesto-dualsense4unix" "${BIN}/${APP_ID}"
 cat > "${BIN}/${APP_ID}-gui" <<LANCA
 #!/usr/bin/env bash
-# Gerado por install-dev.sh. HEFESTO_VARIANTE=dev é o que dá a este processo
-# casa própria: config, socket, unit, WM_CLASS e ícone (utils/identidade.py).
-export HEFESTO_VARIANTE=${VARIANTE}
-setsid nohup env GDK_BACKEND=x11 "${RAIZ}/run.sh" "\$@" </dev/null >/dev/null 2>&1 &
+# Gerado por install-dev.sh.
+#
+# ELE ABRE A INTERFACE NOVA — decisão dela, 01/09/2026: *"a versão antiga não
+# segue disponível, vai gerar confusão nos agentes. Só a nova está disponível e
+# deve ser integrada."* Até aqui esta linha chamava o \`run.sh\`, que abre a
+# janela GTK; agora chama o \`interface.sh\`, que abre as dez abas vivas.
+#
+# A JANELA GTK NÃO SOME DO CÓDIGO, e é de propósito: os 74 handlers de
+# \`app/actions/\`, o \`app/ipc_bridge.py\` e as camadas de \`app/telas/\` são o
+# MOTOR que a interface nova chama. O que sai é a janela, não o produto.
+setsid nohup "${RAIZ}/interface.sh" "\$@" </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 LANCA
 chmod +x "${BIN}/${APP_ID}-gui"
@@ -386,7 +408,7 @@ command -v update-desktop-database >/dev/null 2>&1 &&
 verde "  $DESKTOP"
 
 # --- 4. unit ----------------------------------------------------------------
-passo "4/5  unit systemd --user (instalada, NÃO habilitada)"
+passo "4/5  unit systemd --user (instalada e HABILITADA)"
 mkdir -p "$UNITS"
 cat > "$UNIT" <<UNITFIM
 [Unit]
@@ -410,10 +432,12 @@ WantedBy=default.target
 UNITFIM
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 verde "  $UNIT"
-printf '  NÃO habilitada de propósito: dois daemons disputam o aparelho.\n'
-printf '  Quando quiser o de dev no boot:\n'
-printf '      hefesto-chave estavel off\n'
-printf '      systemctl --user enable --now %s.service\n' "$APP_ID"
+# HABILITADA — 01/09/2026. Ela ficava instalada e DESLIGADA porque havia dois
+# apps e *"dois daemons disputam o aparelho"*. Não há mais dois: a variante
+# morreu com o `dev`, e um produto cujo daemon não sobe sozinho não é produto.
+systemctl --user enable --now "${APP_ID}.service" >/dev/null 2>&1 \
+    && verde "  habilitada e no ar" \
+    || vermelho "  não consegui habilitar — rode: systemctl --user enable --now ${APP_ID}.service"
 
 # --- 5. o retrato ------------------------------------------------------------
 passo "5/5  como está a máquina agora"
@@ -423,7 +447,7 @@ cat <<FIM
 
 pronto.
 
-  abrir a interface nova : ${RAIZ}/interface
+  abrir a interface nova : ${RAIZ}/interface.sh
   abrir o app completo   : ${APP_ID}-gui
   desligar o estável     : hefesto-chave estavel off
   religar o estável      : hefesto-chave estavel on

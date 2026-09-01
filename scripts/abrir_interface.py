@@ -30,7 +30,7 @@ AS TRÊS LINHAS QUE CURAM, e por que são de PROCESSO e não de janela
 piloto ainda não abriu — enquanto ``Gtk.Window.set_wmclass`` é por janela, é
 depreciado, e obrigaria a editar o piloto a cada janela nova. Medido em 29/08,
 Xvfb + ``xprop``: sem ela a janela filha sai ``"Medir.py"``; com ela sai
-``"Hefesto-Dev-Dualsense4Unix"``, igual à principal.
+``"Hefesto-Dualsense4Unix"`` — o nome único, desde 01/09/2026.
 
 O ÍCONE TEM DOIS CAMINHOS, e o segundo é o que funciona SEM INSTALAR
 ---------------------------------------------------------------------
@@ -82,8 +82,11 @@ CANDIDATOS_DO_PILOTO = (
 )
 #: O PNG que vira `_NET_WM_ICON` quando o tema ainda não conhece o nome.
 CANDIDATOS_DO_ICONE = (
-    RAIZ / "assets" / "appimage" / "Hefesto-Dev-Dualsense4Unix.png",
-    ORIGEM / "assets" / "appimage" / "Hefesto-Dev-Dualsense4Unix.png",
+    # O `Dev` SAIU DO ÍCONE — 01/09/2026, com o resto do nome. O arquivo
+    # `Hefesto-Dev-Dualsense4Unix.png` continua na pasta como a logo que ela
+    # desenhou para a variante; a que vale agora é a canônica.
+    RAIZ / "assets" / "appimage" / "Hefesto-Dualsense4Unix.png",
+    ORIGEM / "assets" / "appimage" / "Hefesto-Dualsense4Unix.png",
 )
 
 
@@ -152,7 +155,12 @@ def main(argv: list[str] | None = None) -> int:
         sys.path.insert(0, str(src))
     from hefesto_dualsense4unix.utils import identidade
 
-    for linha in vestir_a_identidade(identidade.DEV):
+    # A IDENTIDADE DE HOJE, e não a `DEV` fixa: a variante morreu em 01/09 e
+    # `identidade.atual()` resolve pela `HEFESTO_VARIANTE`, que passou a ser
+    # vazia. Cravar `DEV` aqui punha `Hefesto-Dev-Dualsense4Unix` no WM_CLASS de
+    # uma janela cujo `.desktop` declara `Hefesto-Dualsense4Unix` — e a dock não
+    # acha o ícone quando os dois divergem.
+    for linha in vestir_a_identidade(identidade.atual()):
         print(f"  {linha}")
     print()
 

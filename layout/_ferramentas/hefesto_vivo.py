@@ -715,8 +715,19 @@ class Piloto:
                     lambda a=alvo: (self._ir(a), False)[1],
                 )
             total = 1600 + len(pacotes.PACOTES) * self.args.parada
-        else:
+        elif self.args.segundos:
             total = int(self.args.segundos * 1000)
+        else:
+            # SEM PRAZO: a janela fica aberta até ELA fechar. É o padrão do
+            # PRODUTO, e o contrário disso foi um defeito que ela sentiu em
+            # 01/09/2026 — abriu o `interface.sh`, a janela viveu 8 segundos e
+            # sumiu. O `--segundos` tinha `default=6.0`, herdado de quando este
+            # arquivo era só régua de bancada.
+            #
+            # A REGRA QUE ISSO DEIXA: toda flag de bancada nasce DESLIGADA. Um
+            # padrão de régua que vira padrão de produto é um produto que se
+            # comporta como régua na mão de quem usa.
+            return
         GLib.timeout_add(total, lambda: (self._relatar(), Gtk.main_quit(), False)[2])
 
     def _provar_cliques(self) -> None:
@@ -910,7 +921,10 @@ def main() -> None:
     p.add_argument("--oculta", action="store_true",
                    help="Gtk.OffscreenWindow — nada aparece na tela dela. "
                         "Ela tem UMA tela; é o padrão de toda régua desta casa.")
-    p.add_argument("--segundos", type=float, default=6.0)
+    p.add_argument("--segundos", type=float, default=0.0,
+                   help="fecha a janela depois de N segundos e relata. ZERO (o "
+                        "padrão) mantém a janela aberta até ela fechar — que é "
+                        "o comportamento do PRODUTO. Só a bancada põe prazo.")
     p.add_argument("--passear", action="store_true",
                    help="visita as dez abas e mede a pintura de cada uma")
     p.add_argument("--parada", type=int, default=900,

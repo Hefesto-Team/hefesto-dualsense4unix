@@ -44,7 +44,7 @@ A decisão ``D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`` (28/08)
 tirou a interface do ``Gtk.Notebook`` e a pôs num ``WebKit2.WebView``: o mockup
 **é** a interface. O produto que ela abre não entra mais só pelos
 ``console_scripts`` do ``pyproject.toml`` — entra também por
-``packaging/hefesto-dev-dualsense4unix.desktop`` (``Exec=@RAIZ@/interface``) →
+``packaging/hefesto-dev-dualsense4unix.desktop`` (``Exec=@RAIZ@/interface.sh``) →
 ``interface`` → ``scripts/abrir_interface.py`` → o piloto
 ``layout/_ferramentas/controles_vivos.py``, que importa ``src/`` e o chama dez
 vezes por segundo.
@@ -376,12 +376,12 @@ _PASTA_DA_PONTE = "layout/_ferramentas"
 _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
     (
         "packaging/hefesto-dev-dualsense4unix.desktop",
-        "Exec=@RAIZ@/interface",
+        "Exec=@RAIZ@/interface.sh",
         "o `.desktop` do app de dev — o `@RAIZ@` é substituído pelo caminho da "
         "árvore por `install-dev.sh`:381. É o ícone que ela clica.",
     ),
     (
-        "interface",
+        "interface.sh",
         'exec "$PY" "$ABRIDOR"',
         "o lançador da raiz, pedido dela em 29/08/2026 (*'cria um arquivo .sh "
         "chamado interface na raiz do outro dev pra eu clicar'*). Ele não abre "
@@ -2842,7 +2842,7 @@ def _flags_de_bancada(arvore: ast.AST) -> frozenset[str]:
     o IDIOMA, não os nomes.
 
     POR QUE TODA FLAG É BANCADA, e não só as três mordidas: o ``.desktop`` roda
-    ``Exec=@RAIZ@/interface`` **sem um único argumento**, e o lançador só
+    ``Exec=@RAIZ@/interface.sh`` **sem um único argumento**, e o lançador só
     repassa o que receber. Logo o que ela abre é o piloto com todas as flags
     ausentes — e qualquer corpo que só roda COM flag é de quem está na bancada,
     não dela.
