@@ -13,6 +13,8 @@ tudo isso é do `doctor` e do instalador, não do `state_full`.
 """
 from __future__ import annotations
 
+from typing import Any
+
 # O IMPORT É DE MÓDULO — o portão do `casa-sabe` segue o fecho de IMPORT a
 # partir do piloto, e um `from … import` dentro de uma função não entra nele: a
 # camada do produto continuava contando como promessa sem caminho mesmo depois
@@ -47,7 +49,7 @@ def _versao() -> str:
         return ""
 
 
-def _leitura(ctx: Contexto):
+def _leitura(ctx: Contexto) -> Any:
     """O `Leitura` que a camada do produto espera.
 
     Cada campo dele nomeia quem o produz, e o docstring de lá lista os seis. O
@@ -80,7 +82,7 @@ def _leitura(ctx: Contexto):
 
 
 @registrar("09-sistema.html")
-def pacote(ctx: Contexto) -> dict:
+def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `gui/aba_sistema.pacote` — a camada do PRODUTO.
 
     ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA: dezoito nomes públicos em
@@ -128,7 +130,7 @@ from . import gesto  # noqa: E402
 
 
 @gesto("09-sistema.html", "retomar")
-def retomar(ctx: Contexto, o: dict, p) -> None:
+def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Sair da pausa. `daemon.resume`.
 
     ELE TINHA UM CHAMADOR EM TODO O `src/` — o terminal (`cli/app.py:421`), como
@@ -142,7 +144,7 @@ def retomar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("09-sistema.html", "atualizar")
-def atualizar(ctx: Contexto, o: dict, p) -> None:
+def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Recarregar a configuração. `daemon.reload`.
 
     ELE LEVA 9,5 SEGUNDOS, medido no daemon dela em 01/09/2026 — contra 1 ms do
@@ -179,7 +181,7 @@ def _teto_do_perfil(escolha: str) -> str | None:
     return TETO_POR_PERFIL[escolha]
 
 
-def _ok_e_motivo(resposta) -> tuple[bool, str | None]:
+def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
     """`(ok, motivo)`, seja tupla ou `bool` o que a ponte devolveu.
 
     O `ipc_bridge.machine_declare:861` devolve `(ok, motivo)` com o motivo já
@@ -201,7 +203,7 @@ def _ok_e_motivo(resposta) -> tuple[bool, str | None]:
 
 
 @gesto("09-sistema.html", "perfil-da-mesa")
-def perfil_da_mesa(ctx: Contexto, o: dict, p) -> None:
+def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Os três botões do Perfil de Bateria. `machine.declare`, e vale AGORA.
 
     POR QUE `machine.declare` E NÃO `rumble.policy_set`, que seria o palpite: o
@@ -255,7 +257,7 @@ REGISTRO = "registro-texto"
 
 
 @gesto("09-sistema.html", "ver-plugins")
-def ver_plugins(ctx: Contexto, o: dict, p) -> dict:
+def ver_plugins(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """Relê os plugins do disco e ESCREVE a lista no painel de registro.
 
     O daemon atende os dois métodos desde sempre (`ipc_server.py:184-185`); o
@@ -290,7 +292,7 @@ def ver_plugins(ctx: Contexto, o: dict, p) -> dict:
 
 
 @gesto("09-sistema.html", "ver-detalhes")
-def ver_detalhes(ctx: Contexto, o: dict, p) -> dict:
+def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """As últimas 80 linhas do registro técnico, no painel ao lado.
 
     NÃO É IPC, E NÃO PRECISA SER: o daemon não tem método de log, mas o registro

@@ -31,9 +31,18 @@ import csv, json, pathlib, re, sys
 # uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
 # ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
 # segunda árvore de trabalhar sem tocar na primeira.
-R = pathlib.Path(__file__).resolve().parents[2]
-CSV = R / "docs/data/pecas-do-dualsense.csv"
-CSV_CORES = R / "docs/data/cores-do-dualsense.csv"
+# A RAIZ TEM DONO, e é o `onde.py`. Era `parents[2]` — o que, desde a mudança
+# da interface para dentro do pacote em 01/09/2026, dá a pasta `src/` e faz
+# toda leitura de `docs/data/` procurar em `src/docs/data/`.
+import sys as _sys, pathlib as _pathlib
+_sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
+from onde import RAIZ as R  # noqa: E402
+
+#: O `docs/data/` do repositório. Dono único, para não voltar a ser montado
+#: à mão a partir de um contador de níveis.
+DADOS_DO_REPO = R / "docs/data"
+CSV = DADOS_DO_REPO / "pecas-do-dualsense.csv"
+CSV_CORES = DADOS_DO_REPO / "cores-do-dualsense.csv"
 
 # O PADRÃO DAS CINCO LÂMPADAS E A COR DE CADA JOGADOR VÊM DO PRODUTO, e não de
 # uma tabela digitada aqui. O `monta.py` tinha uma cópia, e nela o jogador 3

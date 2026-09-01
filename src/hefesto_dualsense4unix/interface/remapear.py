@@ -15,7 +15,14 @@ grupo de cada peça, para o mapa e o portão voltarem a reconhecê-las.
 """
 import pathlib, re, sys
 
-R = pathlib.Path(__file__).resolve().parents[2]
+# A RAIZ TEM DONO, e é o `onde.py`. `parents[2]` virou a pasta `src/` quando a
+# interface se mudou para dentro do pacote, e toda leitura de `docs/data/`
+# passou a procurar em `src/docs/data/`.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from onde import RAIZ as R  # noqa: E402
+
+#: O `docs/data/` do repositório. Dono único.
+DADOS_DO_REPO = R / "docs/data"
 
 
 def bloco_do_grupo(s, i):
@@ -144,7 +151,7 @@ def main():
         print("  ·", f)
     ids = set(re.findall(r'\bid="([^"]+)"', s))
     import csv
-    linhas = [l for l in (R / "docs/data/pecas-do-dualsense.csv").read_text().splitlines()
+    linhas = [l for l in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
               if l and not l.startswith("#")]
     esperadas = [p["id"] for p in csv.DictReader(linhas)]
     faltam = [p for p in esperadas if p not in ids]

@@ -48,6 +48,7 @@ que escreve tem de avisar o daemon depois (`profile.switch` para reaplicar,
 from __future__ import annotations
 
 import time
+from typing import Any
 
 # O IMPORT É DE MÓDULO, e não de dentro da função — 01/09/2026. O
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
@@ -87,7 +88,7 @@ QUANDO = {"criteria": "Jogo", "any": "Todos — quando nenhum casa",
 _ESCOLHIDO: str = ""
 
 
-def _escolhido(todos: list[dict], ativo: str) -> str:
+def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
     """A linha aberta no editor: a última clicada, ou o perfil ativo.
 
     ELE DEIXA DE VALER SOZINHO quando o perfil sai do disco — apagado por fora,
@@ -194,7 +195,7 @@ def _rotulo_do_remover() -> str:
 
 
 @registrar("10-perfis.html")
-def pacote(ctx: Contexto) -> dict:
+def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `app/actions/perfis_web.pacote_da_aba` — a camada do PRODUTO.
 
     ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA. O `casa-sabe` a listava como
@@ -294,7 +295,7 @@ from . import gesto  # noqa: E402
 
 
 @gesto("10-perfis.html", "selecionar")
-def selecionar(ctx: Contexto, o: dict, p) -> None:
+def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Abrir um perfil no editor. É o clique na CÉLULA DO NOME, na lista.
 
     ELE NÃO FALA COM O DAEMON, e é o único desta aba que não fala — de
@@ -321,7 +322,7 @@ def selecionar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("10-perfis.html", "ativar")
-def ativar(ctx: Contexto, o: dict, p) -> None:
+def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Ativar o perfil selecionado na tabela. `profile.switch`.
 
     O NOME VEM DO TEXTO DA LINHA, e não de um `data-` novo: a tabela já mostra o
@@ -354,7 +355,7 @@ def ativar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("10-perfis.html", "voltar-a-de-ontem")
-def voltar_a_de_ontem(ctx: Contexto, o: dict, p) -> None:
+def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Desfazer a última gravação do perfil aberto. `profiles/loader.py`.
 
     O QUE ELE DESFAZ, e o produto já sabia fazer isto pelo terminal:
@@ -445,7 +446,7 @@ def _perfil_do_editor(ctx: Contexto) -> str:
 PRESET_DO_ROTULO = {v: k for k, v in _tela.AMBIENTE_DO_PRESET.items()}
 
 
-def _gravar(prof, ctx: Contexto, p, *, era: str = "") -> None:
+def _gravar(prof: Any, ctx: Contexto, p: Any, *, era: str = "") -> None:
     """Os três tempos: disco, reaplicar se for o ativo, avisar a antecipação.
 
     `era` é o nome ANTERIOR — num renomear, é ele que tem de casar com o ativo,
@@ -465,7 +466,7 @@ def _gravar(prof, ctx: Contexto, p, *, era: str = "") -> None:
     p.chamar("launch_env.refresh")
 
 
-def _nome_livre(base: str, todos) -> str:
+def _nome_livre(base: str, todos: Any) -> str:
     """`base`, ou `base 2`, `base 3`… — o primeiro que não colide por SLUG.
 
     A colisão é por slug e não por nome à vista porque é o slug que vira nome
@@ -484,7 +485,7 @@ def _nome_livre(base: str, todos) -> str:
     return f"{base} {n}"
 
 
-def _so_mudou(o: dict) -> bool:
+def _so_mudou(o: dict[str, Any]) -> bool:
     """`False` quando o clique foi só um clique — e aí o campo não age.
 
     MEDIDO NO CHROME em 01/09/2026, injetando o `BOOTSTRAP` do piloto sobre o
@@ -510,7 +511,7 @@ def _so_mudou(o: dict) -> bool:
 
 
 @gesto("10-perfis.html", "editor.nome")
-def editor_nome(ctx: Contexto, o: dict, p) -> None:
+def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Renomear o perfil aberto no editor. `save_profile` + `delete_profile`.
 
     O VALOR VEM DE `valor`, E NÃO DE `texto` — foi a causa nomeada na primeira
@@ -574,7 +575,7 @@ def editor_nome(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("10-perfis.html", "editor.ambiente")
-def editor_ambiente(ctx: Contexto, o: dict, p) -> None:
+def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Funciona em": trocar a REGRA que faz o perfil entrar. `from_simple_choice`.
 
     QUEM MONTA A REGRA É O PRODUTO, e não este arquivo:
@@ -626,7 +627,7 @@ def editor_ambiente(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("10-perfis.html", "editor.jogo")
-def editor_jogo(ctx: Contexto, o: dict, p) -> None:
+def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Nome do Jogo": o programa (ou o número da Steam) que faz o perfil entrar.
 
     ELE SÓ TEM EFEITO EM DUAS DAS CINCO OPÇÕES do "Funciona em":
@@ -680,7 +681,7 @@ def editor_jogo(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("10-perfis.html", "detectar")
-def detectar(ctx: Contexto, o: dict, p) -> None:
+def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Detectar": pegar o jogo em foco e montar a regra com ele.
 
     A AFIRMAÇÃO QUE ESTAVA NO PRODUTO ESTÁ ERRADA PELA METADE, e é o que
@@ -733,7 +734,7 @@ def detectar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("10-perfis.html", "novo")
-def novo(ctx: Contexto, o: dict, p) -> None:
+def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Novo": um perfil em branco no disco, já com a regra do jogo em foco.
 
     NASCE NO DISCO, e não num rascunho, porque esta aba não tem "Salvar"
@@ -770,7 +771,7 @@ def novo(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("10-perfis.html", "duplicar")
-def duplicar(ctx: Contexto, o: dict, p) -> None:
+def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Duplicar": o perfil inteiro numa cópia, e o editor abre nela.
 
     A DICA DELA DIZ *"Copia o perfil inteiro para o editor, com «(cópia)» no
@@ -803,7 +804,7 @@ def duplicar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("10-perfis.html", "remover")
-def remover(ctx: Contexto, o: dict, p) -> None:
+def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Remover": apagar o perfil do disco. PERGUNTA ANTES, no rótulo do botão.
 
     É O GESTO MAIS DESTRUTIVO DESTA ABA, e tem TRÊS guardas, nesta ordem:
@@ -858,7 +859,7 @@ def remover(ctx: Contexto, o: dict, p) -> None:
     p.chamar("launch_env.refresh")
 
 
-def _editor_de(prof) -> dict:
+def _editor_de(prof: Any) -> dict[str, Any]:
     """Os campos do editor daquele perfil, pela porta da FRENTE do produto.
 
     `pacote_da_aba` é a função pública de `perfis_web`, e é a mesma que
@@ -869,7 +870,9 @@ def _editor_de(prof) -> dict:
     O `ambiente_travado` que ela devolve é a válvula do R-12 — a razão de os
     dois gestos do editor consultarem isto antes de gravar.
     """
-    return _tela.pacote_da_aba([prof], ativo=None, editado=prof)["editor"]
+    editor: dict[str, Any] = _tela.pacote_da_aba(
+        [prof], ativo=None, editado=prof)["editor"]
+    return editor
 
 
 #: OS DOIS QUE CONTINUAM SEM DONO, e o motivo de cada um é MEDIDO.
@@ -913,7 +916,7 @@ PISO_DA_ABA = 10
 #: num diretório temporário, três perfis dela copiados, e um dublê de ponte
 #: igual ao desta régua — os números estão no relato desta leva, gesto a gesto,
 #: com a mordida de cada um.
-PROVAS = [
+PROVAS: list[dict[str, Any]] = [
     {"pagina": PAGINA, "gesto": "ativar", "clique": {"texto": "Ação"},  # (noqa-acento) id
      "chama": [("profile_switch", ["Ação"], {})]},
 ]

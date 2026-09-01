@@ -278,7 +278,7 @@ aba02.luz_do_jogador = _luz_tolerante
 CAMPOS_DO_BLOCO = frozenset(inspect.signature(aba02.bloco).parameters) - {"c"}
 
 
-def html_da_mesa(mesa: list[dict], estados: dict[str, dict]) -> str:
+def html_da_mesa(mesa: list[dict[str, Any]], estados: dict[str, dict[str, Any]]) -> str:
     """As caixas de controle, pelo gerador do mockup — nunca por HTML meu.
 
     É o que faz o desenho ACOMPANHAR a mudança por construção: quando ela mudar
@@ -290,7 +290,7 @@ def html_da_mesa(mesa: list[dict], estados: dict[str, dict]) -> str:
     )
 
 
-def html_da_fita(mesa: list[dict]) -> str:
+def html_da_fita(mesa: list[dict[str, Any]]) -> str:
     """A fita de chips, também pelo gerador — e clicável, como nesta aba."""
     antes_monta, antes_aba = monta.MESA, aba02.MESA
     monta.MESA, aba02.MESA = mesa, mesa
@@ -310,7 +310,7 @@ def html_da_fita(mesa: list[dict]) -> str:
         monta.MESA, aba02.MESA = antes_monta, antes_aba
 
 
-def css_dos_chips(mesa: list[dict]) -> str:
+def css_dos_chips(mesa: list[dict[str, Any]]) -> str:
     """A regra que acende o chip do controle aberto, para os prefs VIVOS.
 
     O `aba02.CHIP_ACESO` é gerado da mesa fixa de quatro; com cinco na mesa o
@@ -726,7 +726,7 @@ class Janela:
         self.voltas = 0
         self.rss: list[int] = []
         self.remontagens = 0
-        self.gestos: list[dict] = []
+        self.gestos: list[dict[str, Any]] = []
         self.valores: list[int] = []
         #: O ECO, e ele mora SÓ AQUI — na memória desta janela, nunca no perfil
         #: dela. É o que faz o clique continuar valendo no tique seguinte em vez
@@ -739,13 +739,13 @@ class Janela:
         #: clique dela sumiria em 100 ms — que é o que já acontecia com a rota.
         self.eco_mudo: dict[str, dict[str, Any]] = {}
         self.ondas: dict[str, deque] = {}
-        self.lento: dict[str, dict] = {}
+        self.lento: dict[str, dict[str, Any]] = {}
         self.leitor_de_cor = mesa_viva.LeitorDeCor(
             ligado=not args.sem_cor, leitor=_leitor_duble(args.cor_duble)
         )
         self.perguntando: set[str] = set()
         self.mic = None
-        self._roteiro: list[dict] | None = None
+        self._roteiro: list[dict[str, Any]] | None = None
         self._t0 = 0.0
         #: O INTERRUPTOR: se a página à vista AGORA tem a fileira de modos ligada.
         self.interruptor_ligado = False
@@ -1267,7 +1267,7 @@ class Janela:
         fila.append(mesa_viva.PISO_DA_ONDA if nivel is None else round(nivel * 100))
         return list(fila)
 
-    def _remontar(self, mesa: list[dict], estados: dict) -> None:
+    def _remontar(self, mesa: list[dict[str, Any]], estados: dict) -> None:
         self.remontagens += 1
         para_o_card, rola = conta_da_altura(len(mesa))
         aberto = next((c for c in mesa if c["alvo"]), mesa[0])
@@ -1306,7 +1306,7 @@ class Janela:
             },
         )
 
-    def _pintar(self, state: dict, mesa: list[dict], conectados: list[dict], estados: dict) -> None:
+    def _pintar(self, state: dict, mesa: list[dict[str, Any]], conectados: list[dict[str, Any]], estados: dict) -> None:
         self.ondas.pop("__vazio__", None)
         conta, conta_b = mesa_viva.texto_da_contagem(mesa)
         cards = {}
@@ -1449,7 +1449,7 @@ class Janela:
             padrao = audio_saida.sink_padrao_da_saida(
                 audio_saida.rodar_leitura(["pactl", "info"])
             )
-            novo: dict[str, dict] = {}
+            novo: dict[str, dict[str, Any]] = {}
             for uniq in alvos:
                 sink = self.mic.sink_de(uniq) if self.mic is not None else ""
                 canal = audio_saida.estado_do_canal(lista, sink) if sink else ""

@@ -34,13 +34,14 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
+from typing import Any
 
 #: A árvore, para achar o `src/`. Este módulo mora em
 #: `src/hefesto_dualsense4unix/interface/pacotes/`, logo a raiz está três níveis acima.
 RAIZ = pathlib.Path(__file__).resolve().parents[4]
 
 
-def _com_o_src():
+def _com_o_src() -> Any:
     """Põe o `src/` DESTA árvore no caminho, e devolve o `loader`.
 
     O `sys.path.insert(0, ...)` é a segunda trava do `.envrc-voo`: sem ele, um
@@ -78,7 +79,7 @@ def pasta() -> pathlib.Path | None:
         return None
 
 
-def ativo(nome: str | None) -> dict:
+def ativo(nome: str | None) -> dict[str, Any]:
     """O perfil ativo como dicionário cru, ou `{}` quando não há.
 
     CRU DE PROPÓSITO, e não um `Profile` do pydantic: quem consome é uma função
@@ -108,7 +109,7 @@ def ativo(nome: str | None) -> dict:
     if not alvo.exists():
         try:
             _com_o_src()
-            from hefesto_dualsense4unix.profiles.loader import slugify
+            from hefesto_dualsense4unix.profiles.slug import slugify
 
             alvo = onde / f"{slugify(str(nome))}.json"
         except Exception:
@@ -116,12 +117,13 @@ def ativo(nome: str | None) -> dict:
     if not alvo.exists():
         return {}
     try:
-        return json.loads(alvo.read_text(encoding="utf-8"))
+        lido: dict[str, Any] = json.loads(alvo.read_text(encoding="utf-8"))
     except Exception:
         return {}
+    return lido
 
 
-def lista() -> list[dict]:
+def lista() -> list[dict[str, Any]]:
     """Todos os perfis do disco: nome, prioridade e tipo de casamento.
 
     A aba Perfis pergunta isto ao daemon por `profile.list`; esta função é a

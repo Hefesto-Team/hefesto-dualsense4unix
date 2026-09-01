@@ -29,13 +29,14 @@ from __future__ import annotations
 import csv
 import functools
 import pathlib
+from typing import Any
 
 RAIZ = pathlib.Path(__file__).resolve().parents[4]
 CSV = RAIZ / "docs/data/mapa-controles.csv"
 
 
 @functools.lru_cache(maxsize=1)
-def _linhas() -> list[dict]:
+def _linhas() -> list[dict[str, Any]]:
     if not CSV.exists():
         raise SystemExit(f"ERRO: não achei {CSV.relative_to(RAIZ)}. Ele é a fonte "
                          f"dos endereços — sem ele, todo valor da tela vira chute.")
@@ -44,7 +45,7 @@ def _linhas() -> list[dict]:
 
 
 @functools.lru_cache(maxsize=512)
-def canal(chave: str, transporte: str = "cabo") -> dict | None:
+def canal(chave: str, transporte: str = "cabo") -> dict[str, Any] | None:
     """O que o mapa diz sobre uma peça naquele transporte.
 
     Devolve `None` quando a chave não existe — e quem chama TEM de tratar. Um
@@ -77,7 +78,7 @@ def da_familia(familia: str) -> tuple[str, ...]:
     return tuple(dict.fromkeys(x["chave"] for x in _linhas() if x["familia"] == familia))
 
 
-def sem_dono(oque: str) -> dict:
+def sem_dono(oque: str) -> dict[str, Any]:
     """O valor que a tela mostra mas o produto ainda não faz.
 
     ELE APARECE NA TELA, e é decisão desta casa desde 30/08: *botão sem dono no

@@ -17,11 +17,13 @@ interruptor, e é por isso que o botão da Jogar funciona hoje.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from . import Contexto, registrar
 
 
 @registrar("01-jogar.html")
-def pacote(ctx: Contexto) -> dict:
+def pacote(ctx: Contexto) -> dict[str, Any]:
     """Os valores da aba Jogar, com os NOMES que a página tem.
 
     CADA CHAVE AQUI É UM `data-campo` DO `01-jogar.html`, e isso não é
@@ -69,7 +71,7 @@ def pacote(ctx: Contexto) -> dict:
     return fora
 
 
-def _do_exame() -> list[dict]:
+def _do_exame() -> list[dict[str, Any]]:
     """Os achados do exame da mesa, ou lista vazia. Nunca levanta."""
     try:
         from . import a08_conexoes
@@ -125,7 +127,7 @@ BOTOES_SEM_DONO: dict[str, str] = {
 }
 
 
-def _painel():
+def _painel() -> Any:
     """`app/actions/jogar/painel` — o dono das perguntas desta aba.
 
     Importado DENTRO das funções, e não no topo: `painel` puxa `home_actions`,
@@ -138,7 +140,7 @@ def _painel():
     return painel
 
 
-def _plano(chave: str, mascara: str | None = None) -> list[tuple[str, dict]]:
+def _plano(chave: str, mascara: str | None = None) -> list[tuple[str, dict[str, Any]]]:
     """A sequência de IPC daquele modo — DELEGADA, sem uma linha de regra aqui.
 
     `painel.plano_do_modo` devolve `None` quando o botão não tem escritor, e o
@@ -146,13 +148,14 @@ def _plano(chave: str, mascara: str | None = None) -> list[tuple[str, dict]]:
     que faz o botão recusar DIZENDO, em vez de falhar calado.
     """
     painel = _painel()
-    plano = painel.plano_do_modo(chave, mascara)
+    plano: list[tuple[str, dict[str, Any]]] | None = painel.plano_do_modo(
+        chave, mascara)
     if plano is None:
         raise RuntimeError(painel.porque_nao_aplica(chave))
     return plano
 
 
-def _aplicar(p, plano: list[tuple[str, dict]]) -> None:
+def _aplicar(p: Any, plano: list[tuple[str, dict[str, Any]]]) -> None:
     """Despacha o plano na ORDEM, pelo degrau 3 da ponte.
 
     NENHUM DESTES QUATRO MÉTODOS TEM FUNÇÃO NO `app/ipc_bridge.py` — conferido
@@ -195,7 +198,7 @@ ACHADO_DO_TIMEOUT = (
 
 
 @gesto("01-jogar.html", "hefesto")
-def hefesto(ctx: Contexto, o: dict, p) -> None:
+def hefesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O INTERRUPTOR: Ligado (`gamepad`) ou Desligado (`native`).
 
     QUAL POSIÇÃO É O `data-modo` do rótulo clicado, e ele chega em `o["modo"]`
@@ -231,7 +234,7 @@ def hefesto(ctx: Contexto, o: dict, p) -> None:
     _aplicar(p, _plano(chave))
 
 
-def _plano_do_chip(chave: str) -> list[tuple[str, dict]]:
+def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
     """A sequência daquele chip da fileira — a máscara sai do PRODUTO.
 
     `painel.CHIPS_DA_ESCADA` é quem guarda qual ponte cada chip nomeia
@@ -259,7 +262,7 @@ def _plano_do_chip(chave: str) -> list[tuple[str, dict]]:
 
 
 @gesto("01-jogar.html", "modo-dualsense")
-def modo_dualsense(ctx: Contexto, o: dict, p) -> None:
+def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Sony DualSense": o jogo desenha os botões do PlayStation.
 
     É a máscara `054c:0df2`, e ela é o PRIMEIRO degrau que o produto tenta —
@@ -277,7 +280,7 @@ def modo_dualsense(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("01-jogar.html", "modo-xbox")
-def modo_xbox(ctx: Contexto, o: dict, p) -> None:
+def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Xbox": o formato que todo jogo entende — o SEGUNDO que o Hefesto tenta.
 
     ESTE CHIP NASCEU EM 31/08/2026 E É UMA DÍVIDA PAGA: `Ponte(gamepad, xbox)` é
@@ -294,7 +297,7 @@ def modo_xbox(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("01-jogar.html", "modo-navegacao")
-def modo_navegacao(ctx: Contexto, o: dict, p) -> None:
+def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Navegação": o controle vira teclado e mouse do computador.
 
     O CASO DO MEIO, e `painel` o explica melhor do que eu resumiria: a Navegação
@@ -317,7 +320,7 @@ def modo_navegacao(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("01-jogar.html", "reconectar")
-def reconectar(ctx: Contexto, o: dict, p) -> None:
+def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Reconectar Controles": os jogadores voltam, e a numeração se ajeita.
 
     O NOME DA TELA É DELA E É NOVO; o gesto não é. A legenda desta aba registra

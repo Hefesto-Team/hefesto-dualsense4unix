@@ -347,7 +347,7 @@ class Janela:
         self.voltas = 0
         self.remontagens = 0
         self.rss: list[int] = []
-        self.gestos: list[dict] = []
+        self.gestos: list[dict[str, Any]] = []
         self.valores: list[int] = []
         #: O que ela escolheu na lista. Mora SÓ AQUI, na memória desta janela —
         #: nunca no perfil dela — e some quando a janela fecha.

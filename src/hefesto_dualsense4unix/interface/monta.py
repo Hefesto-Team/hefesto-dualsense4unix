@@ -7,6 +7,7 @@ o piloto abre no WebView, então gerar uma aba **já trocava o produto** sem
 passar pelo olho dela.
 """
 import csv, html, pathlib, re, sys
+from typing import Any
 
 import onde
 
@@ -90,7 +91,7 @@ LOGO = (R / "assets/hefesto-logo.svg").read_text()
 MARCA_DA_LOGO = '<div class="logo"><!--LOGO--></div>'
 
 
-def _logo_em_linha(x):
+def _logo_em_linha(x: str) -> str:
     """O SVG dela, pronto para viver dentro do HTML.
 
     Duas mudanças, e nenhuma toca o desenho: sai a declaração `<?xml?>` (que
@@ -158,6 +159,23 @@ from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
     player_led_pattern,
 )
 
+# `player_slot_color` É REEXPORTADA, e a linha leva `noqa: F401` porque este
+# módulo NÃO a usa — quem a usa são QUATRO geradores, que a importam DAQUI:
+# `aba02`, `aba04`, `aba06` e `aba08`.
+#
+# FOI ASSIM QUE OS QUATRO QUEBRARAM, e a causa é mecânica: sem o `noqa`, o
+# `ruff --fix` a apaga como *imported but unused*, e os quatro passam a morrer
+# em `ImportError: cannot import name 'player_slot_color' from 'monta'`.
+# Aconteceu na mudança da interface para dentro do `src/` (`6f7e0119`, cuja
+# mensagem diz *"a árvore inteira passa no lint"*) — e aconteceu DE NOVO em
+# 01/09/2026, minutos depois de eu a devolver, no `ruff --fix` seguinte.
+#
+# Da primeira vez ninguém viu, porque a bancada não tinha quem a rodasse. Agora
+# tem: `tests/unit/test_os_dez_geradores_rodam.py` acusou os quatro na hora.
+from hefesto_dualsense4unix.core.led_control import (  # noqa: E402, F401
+    player_slot_color,
+)
+
 PADRAO_JOGADOR = {
     n: "".join(str(i + 1) for i, on in enumerate(player_led_pattern(n)) if on)
     for n in range(1, 9)
@@ -172,6 +190,13 @@ PADRAO_JOGADOR = {
 #: quem instala por `pip` recebe o desenho dentro da página. Esta pasta é de
 #: quem GERA, e gerar exige o repositório.
 GLIFOS = RAIZ_DO_REPO / "assets/glyphs"
+
+#: O `docs/data/` DO REPOSITÓRIO, e ele NÃO é `R / "docs/data"`. Seis
+#: geradores da bancada montavam esse caminho a partir do `R` — que, desde a
+#: mudança para dentro do pacote, é a PASTA DESTE MÓDULO. Eles morriam em
+#: `FileNotFoundError: .../interface/docs/data/pecas-do-dualsense.csv`, e
+#: ninguém tinha visto porque ninguém os rodou desde a mudança.
+DADOS_DO_REPO = RAIZ_DO_REPO / "docs/data"
 
 # O NOME DE CADA PEÇA, EM PORTUGUÊS — e ele é LIDO, não digitado.
 #
@@ -191,7 +216,7 @@ GLIFOS = RAIZ_DO_REPO / "assets/glyphs"
 # A derivação fecha EXATA hoje: 27 arquivos em `assets/glyphs/` e 27 linhas com
 # glifo no CSV, sem sobra de nenhum dos dois lados. Glifo sem linha no CSV PARA a
 # geração em `nome_do_glifo()`, em vez de deixar a aba inventar um nome.
-def _nomes_das_pecas():
+def _nomes_das_pecas() -> dict[str, str]:
     linhas = [x for x in _do_repo("docs/data/pecas-do-dualsense.csv").splitlines()
               if not x.startswith("#")]
     return {p["glifo"]: p["nome"] for p in csv.DictReader(linhas) if p["glifo"] != "-"}
@@ -200,7 +225,7 @@ def _nomes_das_pecas():
 NOME_DA_PECA = _nomes_das_pecas()
 
 
-def nome_do_glifo(nome):
+def nome_do_glifo(nome: str) -> str:
     """Como a peça se chama na tela, e RECUSA o glifo que o CSV não conhece.
 
     A ausência PARA a geração — é a regra desta casa para âncora que sumiu. Um
@@ -279,7 +304,7 @@ CONECTADOS = [c for c in MESA if c.get("conectado", True)]
 SEPARADOR = ' <span class="pt">•</span> '
 
 
-def rotulo(c, forma="completa"):
+def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     """O rótulo de um controle, e ele tem UMA ordem só.
 
     Decisão dela, 26/08: **marca • player • plástico • transporte**.
@@ -337,12 +362,12 @@ TOM_DA_CASA = {
 }
 
 
-def tom_da_casa(hexa):
+def tom_da_casa(hexa: str) -> str:
     """O hex cru do produto, no tom da casa. Desconhecido volta como veio."""
     return TOM_DA_CASA.get(hexa.upper(), hexa)
 
 
-def cor_da_zona(colorway, zona="casca-solida"):
+def cor_da_zona(colorway: str, zona: str = "casca-solida") -> str:
     """A cor de uma zona daquele modelo, LIDA do que o gerador escreveu no SVG.
 
     Não é uma tabela nova: é a mesma folha que pinta o desenho
@@ -403,7 +428,7 @@ MAIOR_ROTULO = {
 RESPIRO_DO_ROTULO = 12
 
 
-def larg_rotulos(aba, com_glifo=False):
+def larg_rotulos(aba: str, com_glifo: bool = False) -> int:
     """A largura da coluna de rótulos daquela aba.
 
     `com_glifo=True` só na Gatilhos, onde o L2/R2 ocupa uma trilha própria à
@@ -448,7 +473,8 @@ VAO_DO_GLIFO = 10
 ROTULO_DA_FITA = "Selecionar:"
 
 
-def fita(ativo="todos", inerte=False, titulo=None, mesa=None):
+def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
+         mesa: list[dict[str, Any]] | None = None) -> str:
     """Os chips da fita, um por controle da mesa, gerados.
 
     ANTES ELES ERAM DOIS, DIGITADOS NO `topo.html` — dois `<span>` com o texto e
@@ -484,7 +510,7 @@ def fita(ativo="todos", inerte=False, titulo=None, mesa=None):
     for c in (CONECTADOS if mesa is None else mesa):
         on = " on" if ativo == c["pref"] else ""
         chips.append(
-            f'<span class="chip plastico{on}" style="--plastico:{cor_da_zona(c["cor"])}"'
+            f'<span class="chip plastico{on}" style="--plastico:{cor_da_zona(str(c["cor"]))}"'
             f' title="{c["nome"]} — a borda é a cor do plástico">'
             f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}'
             f' <span class="pt">•</span> {c["via"]}</span>')
@@ -492,7 +518,7 @@ def fita(ativo="todos", inerte=False, titulo=None, mesa=None):
             f'      <span>{ROTULO_DA_FITA}</span>\n      ' + "\n      ".join(chips)
             + "\n    </div>")
 
-def glifo(nome, ativo=False, tam=24):
+def glifo(nome: str, ativo: bool = False, tam: int = 24) -> str:
     """Os mesmos SVGs de glifo que a aba Status usa — 27 peças, com versão acesa.
 
     FATO ERRADO, SUBSTITUÍDO (28/08/2026): dizia "19 peças", aqui e no `CSS_GLIFO`.
@@ -568,7 +594,7 @@ CSS_LUZINHAS = """
 """
 
 
-def luzinhas(jogador, extra=""):
+def luzinhas(jogador: int, extra: str = "") -> str:
     """As cinco lâmpadas do indicador, no padrão CANÔNICO do produto.
 
     `1 | vão | 3 | vão | 1` — as cinco não são igualmente espaçadas, e o
@@ -683,7 +709,7 @@ CSS_POPUP = """
 """
 
 
-def _so_o_colorway(x, colorway):
+def _so_o_colorway(x: str, colorway: str) -> str:
     """Do `<style>` gerado, guarda só as regras DESTE modelo.
 
     O SVG traz os 28 — é o que faz o arquivo abrir colorido sozinho e o que o
@@ -691,16 +717,16 @@ def _so_o_colorway(x, colorway):
     quatro cópias dos 28, e o HTML da aba passaria de 300 KB de CSS que ninguém
     lê. Aqui cada cópia fica com o seu, e as cinco linhas do modelo pedido.
     """
-    def _corta(m):
+    def _corta(m: Any) -> str:
         dentro = m.group(1)
         fica = [l for l in dentro.splitlines()
                 if f'data-colorway="{colorway}"' in l or "/*" in l or "*/" in l
                 or not l.strip().startswith("svg[")]
-        return m.group(0).replace(dentro, "\n".join(fica))
+        return str(m.group(0)).replace(dentro, "\n".join(fica))
     return re.sub(r'<style id="cores-do-dualsense-folha">(.*?)</style>', _corta, x, flags=re.S)
 
 
-def _tira_grupo(x, gid, quem):
+def _tira_grupo(x: str, gid: str, quem: str) -> str:
     """Arranca o `<g id="{gid}">…</g>` inteiro, e RECUSA se a âncora sumiu.
 
     Conta o aninhamento em vez de parar no primeiro `</g>`: hoje o grupo das
@@ -729,8 +755,10 @@ def _tira_grupo(x, gid, quem):
         n, j = n - 1, f
 
 
-def svg(pref, colorway, classes="ds-svg", acesos=(), jogador=None, luz=None,
-        apertados=(), lampadas=True):
+def svg(pref: str, colorway: str, classes: str = "ds-svg",
+        acesos: tuple[str, ...] = (), jogador: int | None = None,
+        luz: str | None = None, apertados: tuple[str, ...] = (),
+        lampadas: bool = True) -> str:
     """O DualSense, na cor pedida.
 
     `lampadas=False` arranca as cinco lâmpadas do jogador do desenho.
@@ -806,7 +834,7 @@ def svg(pref, colorway, classes="ds-svg", acesos=(), jogador=None, luz=None,
         x = x.replace(f'<g id="{pref}-lightbar"', f'<g id="{pref}-lightbar" style="--luz:{luz}"', 1)
     return x
 
-def troca(t, arq, de, para):
+def troca(t: str, arq: str, de: str, para: str) -> str:
     """Substitui UMA vez e reprova se a âncora não existir mais.
 
     Uma `str.replace` que não casa devolve o texto intacto e não avisa. Foi
@@ -833,7 +861,8 @@ PLASTICOS_DO_ESQUELETO = {
 MARCA_DA_FITA = '    <div class="fita'
 
 
-def monta(arq, titulo_aba, miolo, css_extra="", fita_viva=False, legenda=""):
+def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
+          fita_viva: bool = False, legenda: str = "") -> int:
     t = TOPO
     t = t.replace("<title>Hefesto — aba JOGAR (mockup 26/08/2026)</title>",
                   f"<title>Hefesto — aba {titulo_aba.upper()} (mockup 26/08/2026)</title>")
@@ -911,8 +940,17 @@ def monta(arq, titulo_aba, miolo, css_extra="", fita_viva=False, legenda=""):
         k = fim.index('<div class="nota">')
         fim = fim[:k] + legenda
     doc = t + '  <div class="miolo">\n' + miolo + '\n  </div>\n\n' + fim
-    a, b = doc.count("<div"), doc.count("</div>")
-    if a != b:
-        raise SystemExit(f"ERRO em {arq}: <div>={a} </div>={b} — desbalanceado")
+    # NOMES PRÓPRIOS, e não `a`/`b`: `a` já era um `str` neste escopo, e
+    # reusá-lo para uma contagem fazia o `mypy` acusar dois erros de tipo
+    # sobre a mesma linha. Duas coisas diferentes com o mesmo nome é o defeito
+    # que esta casa persegue em prosa; em código também vale.
+    abertas, fechadas = doc.count("<div"), doc.count("</div>")
+    if abertas != fechadas:
+        raise SystemExit(
+            f"ERRO em {arq}: <div>={abertas} </div>={fechadas} — desbalanceado")
     onde.gravar(f"{arq}.html", doc)
-    return a
+    # A CONTAGEM DE `<div>`, que os dez geradores imprimem como prova de que a
+    # página fechou. Era `return a` — e `a` era, no mesmo escopo, o nome de um
+    # `str` da tira de abas. A anotação `-> str` que eu escrevi passava por
+    # causa dessa colisão, e o `aba09` chegou a imprimir `OK, 10-perfis divs`.
+    return abertas

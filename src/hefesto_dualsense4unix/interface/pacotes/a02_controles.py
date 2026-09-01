@@ -13,11 +13,13 @@ microfone e o alto-falante, com posse e mudo), `lightbar_rgb`, `player`,
 """
 from __future__ import annotations
 
+from typing import Any
+
 from . import Contexto, registrar
 
 
 @registrar("02-controles.html")
-def pacote(ctx: Contexto) -> dict:
+def pacote(ctx: Contexto) -> dict[str, Any]:
     """Os valores da aba Controles, com os nomes que a página tem.
 
     O DESENCONTRO ERA DE PONTUAÇÃO E DE SENTIDO. O pacote emitia `mic_mudo` com
@@ -178,7 +180,7 @@ from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 from . import gesto  # noqa: E402
 
 
-def _uniq(o: dict) -> str:
+def _uniq(o: dict[str, Any]) -> str:
     """O `uniq` do controle onde ela clicou. Vazio = clique solto, e recusa.
 
     `""` NÃO vira "todos": um mudo sem dono calaria os quatro controles da mesa
@@ -189,7 +191,7 @@ def _uniq(o: dict) -> str:
     return str(o.get("uniq") or "")
 
 
-def _volume_conhecido(dele: dict) -> dict:
+def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
     """`{"volume": N}` quando o daemon sabe o número, `{}` quando não sabe.
 
     ELE NÃO SE INVENTA, e a razão é do aparelho: o DualSense **não devolve** o
@@ -206,7 +208,7 @@ def _volume_conhecido(dele: dict) -> dict:
 
 
 @gesto("02-controles.html", "mudo")
-def mudo(ctx: Contexto, o: dict, p) -> None:
+def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O 🎙 e o ♪ — os dois botões de calar, e eles ALTERNAM o que a tela mostra.
 
     UM GESTO PARA OS DOIS porque a página os marca com o mesmo `data-mudo`, e o
@@ -267,7 +269,7 @@ def mudo(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("02-controles.html", "rota")
-def rota(ctx: Contexto, o: dict, p) -> None:
+def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Onde o som do controle sai. **"Sons do jogo" tem dono; "Todo o som do PC" não.**
 
     "SONS DO JOGO" É UM BYTE, e ele é o caso que ela descreveu com o Zelda —
@@ -323,7 +325,7 @@ def rota(ctx: Contexto, o: dict, p) -> None:
             "parado, ou este controle saiu da mesa")
 
 
-def _resposta(r) -> tuple[bool, str]:
+def _resposta(r: Any) -> tuple[bool, str]:
     """`(ok, motivo)` do `machine_declare`, tolerando ponte que devolva só `bool`.
 
     `ipc_bridge.machine_declare:861` devolve `(ok, motivo)`, com o motivo já
@@ -343,7 +345,7 @@ def _resposta(r) -> tuple[bool, str]:
     return bool(r), ""
 
 
-def _como_o_produto_ve(ctx: Contexto, uniq: str):
+def _como_o_produto_ve(ctx: Contexto, uniq: str) -> Any:
     """O controle na forma que `pode_ligar_o_mic` e `dica_do_microfone` leem.
 
     Os quatro campos são os do `DadosDoControle` da GUI estável, e cada um sai
@@ -374,7 +376,7 @@ def _como_o_produto_ve(ctx: Contexto, uniq: str):
 
 
 @gesto("02-controles.html", "mic-modo")
-def mic_modo(ctx: Contexto, o: dict, p) -> None:
+def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Virtual" e "Nativo": por onde o som do microfone deste controle chega ao PC.
 
     O QUE OS DOIS BOTÕES SÃO, e a resposta não estava na palavra "virtual" — a

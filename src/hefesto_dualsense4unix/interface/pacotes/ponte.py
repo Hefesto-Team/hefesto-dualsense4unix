@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
+from typing import Any
 
 RAIZ = pathlib.Path(__file__).resolve().parents[4]
 if str(RAIZ / "src") not in sys.path:
@@ -124,7 +125,7 @@ def teto(metodo: str) -> float:
     return TETOS.get(metodo, 0.25)
 
 
-def chamar(metodo: str, timeout: float | None = None, **params) -> bool:
+def chamar(metodo: str, timeout: float | None = None, **params: Any) -> bool:
     """Um método do daemon que ainda não tem função no bridge nem na CLI.
 
     ANTES DE USAR ISTO, procure: o `ipc_bridge` tem 36 funções e a CLI tem os
@@ -139,7 +140,7 @@ def chamar(metodo: str, timeout: float | None = None, **params) -> bool:
     return bool(ok)
 
 
-def chamar_detalhado(metodo: str, **params):
+def chamar_detalhado(metodo: str, **params: Any) -> tuple[bool, str | None]:
     """Como `chamar`, mas devolve `(ok, motivo)` — a recusa do daemon traduzida.
 
     Prefira esta quando o botão precisar DIZER por que não deu. Um botão que
@@ -148,7 +149,7 @@ def chamar_detalhado(metodo: str, **params):
     return _b._call_checked(metodo, params, timeout=teto(metodo))
 
 
-def resultado(metodo: str, timeout: float | None = None, **params):
+def resultado(metodo: str, timeout: float | None = None, **params: Any) -> Any:
     """O QUE O DAEMON RESPONDEU — e não só se ele aceitou.
 
     POR QUE ELA PRECISOU EXISTIR, 01/09/2026: `chamar()` devolve `bool` e joga
@@ -185,14 +186,14 @@ def resultado(metodo: str, timeout: float | None = None, **params):
 #: O padrão RECUSA DIZENDO. Rodar um gesto de importação fora da janela é um
 #: erro de quem chamou, e um `None` silencioso aqui viraria "ela cancelou" —
 #: que é uma mentira sobre o que aconteceu.
-def escolher_arquivo(titulo: str, padrao: str = "*", **_) -> str | None:
+def escolher_arquivo(titulo: str, padrao: str = "*", **_: Any) -> str | None:
     """O caminho que ela escolheu, ou `None` se cancelou. Substituído pelo piloto."""
     raise RuntimeError(
         f"escolher_arquivo({titulo!r}) foi chamado fora da janela. Só o piloto "
         f"pode abrir o seletor do sistema — ele substitui esta função ao subir.")
 
 
-def salvar_arquivo(titulo: str, sugestao: str = "", **_) -> str | None:
+def salvar_arquivo(titulo: str, sugestao: str = "", **_: Any) -> str | None:
     """Onde ela quer gravar, ou `None` se cancelou. Substituído pelo piloto."""
     raise RuntimeError(
         f"salvar_arquivo({titulo!r}) foi chamado fora da janela. Só o piloto "

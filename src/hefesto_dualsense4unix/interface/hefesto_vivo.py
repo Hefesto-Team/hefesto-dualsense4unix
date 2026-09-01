@@ -29,6 +29,8 @@ dez páginas. Fica no piloto, que é quem já tem a mesa na mão.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import argparse
 import contextlib
 import pathlib
@@ -274,7 +276,7 @@ BOOTSTRAP = r"""
 #: Os dois que moravam aqui foram para `a09_sistema.py` e `a10_perfis.py`.
 
 
-def _fita(mesa: list[dict]) -> str:
+def _fita(mesa: list[dict[str, Any]]) -> str:
     """A fita de chips com a mesa VIVA, pelo mesmo gerador do desenho.
 
     `monta.fita()` é o dono dela nas dez páginas. Passar `mesa` é obrigatório:
@@ -294,7 +296,7 @@ def _fita(mesa: list[dict]) -> str:
         # portão e está certo em erguer.
         return ""
     try:
-        import monta
+        from hefesto_dualsense4unix.interface import monta
 
         return monta.fita(ativo=(mesa[0]["pref"] if mesa else "todos"), mesa=mesa)
     except (Exception, SystemExit):
@@ -352,7 +354,7 @@ PERIGOSOS = {
 }
 
 
-def _achatar(o, prefixo="") -> dict:
+def _achatar(o: Any, prefixo: str = "") -> dict[str, Any]:
     """O estado do daemon como `{caminho: valor}` — para comparar antes/depois.
 
     Achatar é o que torna a comparação LEGÍVEL: sem isso, "o estado mudou" seria
@@ -417,7 +419,7 @@ class Piloto:
         #: O que ESTE processo mandou ao daemon, e o que recusou por falta de
         #: dono. Os dois contados: sem o segundo, "nada aconteceu" e "não havia
         #: quem atendesse" ficariam indistinguíveis.
-        self.gestos: list[dict] = []
+        self.gestos: list[dict[str, Any]] = []
         self.aplicados: list[str] = []
         self.recusados: list[str] = []
         #: A mesa e o contexto do último tique — é o que o gesto recebe. Sem
@@ -425,9 +427,9 @@ class Piloto:
         #: trabalhar, e resolver o `uniq` na hora exigiria um IPC a mais por
         #: clique.
         #: O que a prova botão a botão mediu, um por gesto.
-        self.provas: list[dict] = []
+        self.provas: list[dict[str, Any]] = []
         self._fila: list[str] = []
-        self._mesa_de_agora: list[dict] = []
+        self._mesa_de_agora: list[dict[str, Any]] = []
         self._ctx_de_agora = pacotes.Contexto(state={})
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
         #: Os `uniq` já perguntados ao leitor de cor. Sem esta trava, cada tique
@@ -461,7 +463,8 @@ class Piloto:
         ponte.salvar_arquivo = self._salvar_arquivo
 
     # -- o seletor de arquivo, que é do sistema ---------------------------
-    def _dialogo(self, titulo: str, acao, rotulo: str, *, sugestao="", padrao="*"):
+    def _dialogo(self, titulo: str, acao: Any, rotulo: str, *,
+                 sugestao: str = "", padrao: str = "*") -> str | None:
         """Um `FileChooserDialog` modal, e ele RODA NO LAÇO DO GTK.
 
         POR QUE `Gtk.Dialog.run()` E NÃO UM CALLBACK: o gesto está numa thread
@@ -497,15 +500,15 @@ class Piloto:
             dlg.destroy()
         return escolhido
 
-    def _escolher_arquivo(self, titulo: str, padrao: str = "*", **_):
+    def _escolher_arquivo(self, titulo: str, padrao: str = "*", **_: Any) -> str | None:
         return self._dialogo(titulo, Gtk.FileChooserAction.OPEN, "Abrir", padrao=padrao)
 
-    def _salvar_arquivo(self, titulo: str, sugestao: str = "", **_):
+    def _salvar_arquivo(self, titulo: str, sugestao: str = "", **_: Any) -> str | None:
         return self._dialogo(titulo, Gtk.FileChooserAction.SAVE, "Guardar",
                              sugestao=sugestao)
 
     # -- os gestos ---------------------------------------------------------
-    def _gesto(self, o: dict) -> None:
+    def _gesto(self, o: dict[str, Any]) -> None:
         """tela → Python, já em JSON. Quem recusa o que não é objeto é a ponte.
 
         O QUE ELE FAZ E O QUE NÃO FAZ, e a diferença é a regra desta casa: ele
@@ -549,11 +552,11 @@ class Piloto:
                 GLib.idle_add(lambda x=erro: (print(f"[gesto falhou] {pagina} · {nome}: {x}",
                                                     file=sys.stderr), False)[1])
                 return
-            GLib.idle_add(lambda r=resposta: (self._deu_certo(pagina, nome, r), False)[1])
+            GLib.idle_add(lambda r=resposta: self._deu_certo(pagina, nome, r))
 
         threading.Thread(target=trabalhar, daemon=True).start()
 
-    def _deu_certo(self, pagina: str, nome: str, resposta: object = None) -> None:
+    def _deu_certo(self, pagina: str, nome: str, resposta: object = None) -> bool:
         """O gesto voltou. Se ele TROUXE ALGO, o que trouxe vai para a tela.
 
         O CAMINHO DE VOLTA, e por que ele precisou existir (01/09/2026): o gesto
@@ -576,8 +579,9 @@ class Piloto:
             # trocado, e o `__hef` morre com o documento.
             self._js(f"window.__hef && window.__hef.pintar({_json(resposta)})")
             print(f"[gesto] {pagina} · {nome} → aplicado, e a resposta foi para a tela")
-            return
+            return False
         print(f"[gesto] {pagina} · {nome} → aplicado")
+        return False
 
     # O `_ipc` CRU MORREU em 01/09/2026. Ele abria o socket à mão e montava o
     # JSON-RPC — reescrevendo o que o `app/ipc_bridge.py` já faz há meses, com
@@ -589,7 +593,7 @@ class Piloto:
         """Ela clicou na tira. Aqui isso não pausa nada — é o ponto do piloto."""
         print(f"[navegou] {titulo}")
 
-    def _carregou(self, _view, evento) -> None:
+    def _carregou(self, _view: Any, evento: Any) -> None:
         from gi.repository import WebKit2
 
         if evento != WebKit2.LoadEvent.FINISHED:
@@ -609,7 +613,7 @@ class Piloto:
     def _instalar(self) -> None:
         self.ponte.perguntar(BOOTSTRAP, self._instalado)
 
-    def _instalado(self, _valor, erro) -> None:
+    def _instalado(self, _valor: Any, erro: Any) -> None:
         if erro is not None:
             print(f"ERRO: o bootstrap não instalou em {self.pagina}: {erro}", file=sys.stderr)
             return
@@ -625,7 +629,7 @@ class Piloto:
             self._agendar()
 
     # -- a pintura ---------------------------------------------------------
-    def _contexto(self, st: dict) -> tuple[pacotes.Contexto, dict[str, str]]:
+    def _contexto(self, st: dict[str, Any]) -> tuple[pacotes.Contexto, dict[str, str]]:
         """O contexto do tique, e o dicionário `uniq → pref` para traduzir."""
         ctx_conectados = [c for c in (st.get("controllers") or [])
                           if c.get("connected", True)]
@@ -719,7 +723,7 @@ class Piloto:
         # ler o campo.
         carga["vazios"] = apagar
 
-        def contou(valor, erro) -> None:
+        def contou(valor: Any, erro: Any) -> None:
             if erro is not None:
                 print(f"[{self.pagina}] a pintura falhou: {erro}", file=sys.stderr)
                 return
@@ -753,7 +757,7 @@ class Piloto:
             for i, alvo in enumerate(sorted(pacotes.PACOTES)):
                 GLib.timeout_add(
                     1200 + i * self.args.parada,
-                    lambda a=alvo: (self._ir(a), False)[1],
+                    lambda a=alvo: self._ir(a),
                 )
             total = 1600 + len(pacotes.PACOTES) * self.args.parada
         elif self.args.segundos:
@@ -769,9 +773,17 @@ class Piloto:
             # padrão de régua que vira padrão de produto é um produto que se
             # comporta como régua na mão de quem usa.
             return
-        GLib.timeout_add(total, lambda: (self._relatar(), Gtk.main_quit(), False)[2])
+        def fechar() -> bool:
+            # DUAS AÇÕES, e por isso uma função com nome em vez de um `lambda`:
+            # relatar e SÓ ENTÃO fechar. Invertidas, o `main_quit` levaria o laço
+            # embora antes de a última linha do relato sair.
+            self._relatar()
+            Gtk.main_quit()
+            return False
 
-    def _provar_cliques(self) -> None:
+        GLib.timeout_add(total, fechar)
+
+    def _provar_cliques(self) -> bool:
         """Cliques SINTÉTICOS nos gestos INÓCUOS, para provar o caminho.
 
         `el.click()` percorre o MESMO caminho de eventos do clique do rato — o
@@ -801,11 +813,12 @@ class Piloto:
 
         for i, gesto in enumerate(self.args.prova_clique.split(",")):
             GLib.timeout_add(600 + i * 900, lambda g=gesto: clicar(g))
+        return False
 
     def _js(self, script: str) -> None:
         self.ponte.rodar(script)
 
-    def _provar_no_aparelho(self) -> None:
+    def _provar_no_aparelho(self) -> bool:
         """A PROVA BOTÃO A BOTÃO, no aparelho dela — pedido dela, 01/09/2026.
 
         *"no aparelho por favor valida botão a botão tá bom?"*
@@ -825,7 +838,7 @@ class Piloto:
             alvos = [n for n in alvos if (self.pagina, n) not in PERIGOSOS]
         if not alvos:
             print(f"[prova] {self.pagina} não tem gesto seguro a clicar")
-            return
+            return False
         print(f"[prova] {len(alvos)} gesto(s) em {self.pagina}: {', '.join(alvos)}")
         # UMA FILA SERIAL, e não timers fixos. Com `timeout_add` de intervalo
         # constante os gestos se ATROPELAM: `daemon.reload` leva 9,5 s e o
@@ -837,12 +850,21 @@ class Piloto:
         # uma linha por gesto, na ordem, e nenhuma medição pega o efeito da
         # anterior.
         self._fila = list(alvos)
-        GLib.timeout_add(400, lambda: (self._proximo_da_fila(), False)[1])
+        GLib.timeout_add(400, self._proximo_da_fila)
+        return False
 
-    def _proximo_da_fila(self) -> None:
-        if not self._fila:
-            return
-        self._um_botao(self._fila.pop(0))
+    def _proximo_da_fila(self) -> bool:
+        """O próximo gesto da prova no aparelho.
+
+        O `False` É O CONTRATO DO GLib — "não me chame de novo" —, e ele passou a
+        ser dito AQUI em 01/09/2026. Antes cada sítio de chamada montava
+        `(self._proximo_da_fila(), False)[1]`: uma tupla feita para se jogar
+        fora o primeiro item, que obriga quem lê a saber de cor que o método
+        devolve `None`. Os cinco callbacks desta classe seguem a mesma regra.
+        """
+        if self._fila:
+            self._um_botao(self._fila.pop(0))
+        return False
 
     def _um_botao(self, nome: str) -> None:
         """Um gesto: fotografa o daemon, clica, e mede o que mudou."""
@@ -864,20 +886,25 @@ class Piloto:
         from pacotes import ponte as _p
 
         espera = max(self.args.espera, int(_p.teto(_METODO_DO_GESTO.get(nome, "")) * 1000) + 800)
-        GLib.timeout_add(espera, lambda: (self._depois_do_gesto(), False)[1])
+        GLib.timeout_add(espera, self._depois_do_gesto)
 
-    def _depois_do_gesto(self) -> None:
+    def _depois_do_gesto(self) -> bool:
+        # O TIPO É DITO, e não inferido do `{}`: o padrão do `getattr` faz o
+        # `mypy` ler `antes` como um dicionário VAZIO e sem chaves, e aí
+        # `antes.get("qualquer coisa")` vira erro de sobrecarga.
         nome, antes = getattr(self, "_antes_do_gesto", (None, {}))
+        antes_do_daemon: dict[str, Any] = dict(antes)
         if nome is None:
-            return
+            return False
         try:
             depois = _achatar(mesa_viva.estado_do_daemon())
         except Exception as e:
             print(f"[prova] {nome}: não li o daemon depois ({e})", file=sys.stderr)
             self._proximo_da_fila()
-            return
-        mudou = {k: (antes.get(k), v) for k, v in depois.items()
-                 if antes.get(k) != v and not any(r in k for r in RUIDO)}
+            return False
+        mudou = {k: (antes_do_daemon.get(k), v) for k, v in depois.items()
+                 if antes_do_daemon.get(k) != v
+                 and not any(r in k for r in RUIDO)}
         # SEM ECO NÃO É SEM EFEITO, e confundir os dois é o que faria esta régua
         # acusar um botão que funciona. O `state_full` do daemon não publica
         # gatilho — o DualSense não devolve o modo em que está, é comando de ida
@@ -897,9 +924,9 @@ class Piloto:
                   f"(o daemon não publica este assunto)")
         else:
             print(f"[PROVA] {self.pagina} · {nome} → SEM EFEITO no estado do daemon")
-        self._proximo_da_fila()
+        return self._proximo_da_fila()
 
-    def _sem_eco_da_pagina(self) -> set:
+    def _sem_eco_da_pagina(self) -> set[str]:
         """Os gestos daquela aba cujo efeito o daemon não publica."""
         import importlib
 
@@ -909,15 +936,17 @@ class Piloto:
                 return set(getattr(mod, "SEM_ECO", ()))
         return set()
 
-    def _ir(self, pagina: str) -> None:
+    def _ir(self, pagina: str) -> bool:
+        """Abre uma aba. `False` para o GLib — ver `_proximo_da_fila`."""
         self.view.load_uri(onde.pagina(pagina, publicado=True).as_uri())
+        return False
 
-    def _relatar(self) -> None:
+    def _relatar(self) -> bool:
         # UMA VEZ SÓ. O `_agendar` roda no `_instalado`, que dispara a cada
         # carga de página; sem esta trava o passeio agendava dez saídas e o
         # relato saía repetido — dois "foto:" no log de 01/09.
         if self.relatou:
-            return
+            return False
         self.relatou = True
         if self.args.foto:
             # `fotografar()` JÁ IMPRIME o caminho — a linha que estava aqui era
@@ -964,9 +993,10 @@ class Piloto:
             # endereço nenhum.
             print(f"\nABAS MUDAS (pacote sem endereço que case): {', '.join(mudas)}")
             raise SystemExit(1)
+        return False
 
 
-def _json(obj) -> str:
+def _json(obj: Any) -> str:
     import json
 
     return json.dumps(obj, ensure_ascii=False, default=str)
@@ -1006,11 +1036,11 @@ def main() -> None:
 
     piloto = Piloto(args)
     if args.prova_no_aparelho:
-        GLib.timeout_add(2500, lambda: (piloto._provar_no_aparelho(), False)[1])
+        GLib.timeout_add(2500, piloto._provar_no_aparelho)
     if args.prova_clique:
-        GLib.timeout_add(2000, lambda: (piloto._provar_cliques(), False)[1])
+        GLib.timeout_add(2000, piloto._provar_cliques)
     if args.abre:
-        GLib.timeout_add(400, lambda: (piloto._ir(args.abre), False)[1])
+        GLib.timeout_add(400, lambda: piloto._ir(args.abre))
     Gtk.main()
 
 
