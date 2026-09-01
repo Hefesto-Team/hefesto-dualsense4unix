@@ -5,15 +5,20 @@
 # outro dev pra eu clicar e lá abrir a visão final das páginas desenvolvidas pra
 # eu ir testando sempre"*.
 #
-# O QUE ELE ABRE: a aba **Controles** viva — o mockup aprovado rodando num
-# WebKit2.WebView dentro de uma janela GTK3, pintado pelo daemon 10x por segundo,
-# com a mesa REAL (os controles que estiverem ligados agora, não os quatro do
-# desenho). A tira de cima navega: clicando nas outras nove abas ela vê o desenho
-# aprovado, ainda estático — é a "visão final das páginas desenvolvidas" pedida.
+# O QUE ELE ABRE — 01/09/2026, e mudou: as DEZ abas vivas, não mais só a
+# Controles. O mockup aprovado roda num `WebKit2.WebView` dentro de uma janela
+# GTK3, pintado pelo daemon duas vezes por segundo, com a mesa REAL (os
+# controles ligados agora, não os quatro do desenho). A tira de cima navega, e
+# cada aba que ela abre continua viva.
 #
-# ELE NÃO ESCREVE NADA. O único método de IPC que o piloto pronuncia é
-# `daemon.state_full`, que é leitura. Nenhum perfil dela é tocado, nenhum byte vai
-# ao aparelho.
+# ELE ESCREVE, e isso também mudou. São 48 botões com dono: clicar num tom pinta
+# a barra do controle, "Desligar" a apaga, o modo troca a máscara do gamepad
+# virtual, "Salvar Perfil" grava no disco. O que o produto NÃO faz continua sem
+# gesto, e o piloto recusa dizendo o nome — nunca calado.
+#
+# A JANELA NÃO FECHA SOZINHA. O `--segundos` existe para a bancada e nasce em
+# ZERO; ele já teve `default=6.0`, e em 01/09 ela abriu o lançador e viu a
+# janela viver oito segundos e sumir.
 #
 # A LOGO NA DOCK (29/08/2026, o outro pedido dela). O `.sh` NÃO decide ícone
 # nenhum: quem decide é a JANELA, pelo `WM_CLASS` que ela publica e pelo
@@ -79,13 +84,22 @@ PY="$(dirname "$PILOTO")/../../.venv/bin/python"
 # "[Errno 111] Conexão recusada" com o daemon de dev vivo e vendo o controle.
 #
 # Medido: sem a variável, `daemon_state_full()` devolve None; com ela, 1 controle.
-export HEFESTO_VARIANTE="${HEFESTO_VARIANTE:-dev}"
+# A VARIANTE MORREU EM 01/09/2026 — o `dev` saiu de tudo, por decisão dela, e
+# `HEFESTO_VARIANTE` vazia é o app único. Esta linha forçava `dev` e mandaria o
+# lançador para uma casa que não existe mais: config, socket e unit foram todos
+# migrados para `hefesto-dualsense4unix`.
+#
+# Ela fica como export vazio para o caso de alguém a ter no ambiente: sem isto,
+# um `HEFESTO_VARIANTE=dev` herdado do shell dela abriria a interface contra um
+# socket que ninguém escuta, e o sintoma seria a tela dizendo "Hefesto
+# desligado" com o daemon no ar.
+export HEFESTO_VARIANTE=""
 
 echo "Hefesto — a interface nova"
 echo "  piloto : $PILOTO"
 echo "  python : $PY"
 echo
-echo "A aba Controles está VIVA (dado do daemon). As outras nove são o desenho."
+echo "As DEZ abas estão vivas, com o dado do daemon. 48 botões agem."
 echo "Feche a janela para sair."
 echo
 echo "identidade da janela:"

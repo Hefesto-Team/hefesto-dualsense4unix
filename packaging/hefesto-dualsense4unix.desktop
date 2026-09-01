@@ -1,10 +1,34 @@
 [Desktop Entry]
-Name=Hefesto - Dualsense4Unix
-Comment=Gerenciador DualSense para Linux
-Exec=/usr/bin/hefesto-dualsense4unix-gui
-Icon=hefesto
-Terminal=false
+# O .desktop do Hefesto de DESENVOLVIMENTO — o "outro app" que ela pediu em
+# 29/08/2026: *"Ele é instalado como OUTRO APP com a logo alterada em dev"*.
+#
+# @RAIZ@ é substituído pelo caminho da árvore de dev por quem instala
+# (`scripts/instalar_atalho_da_interface.sh` ou `install-dev.sh`). O arquivo
+# versionado NÃO carrega caminho de máquina.
+#
+# StartupWMClass É O ELO, e ele tem de casar LETRA POR LETRA o segundo campo do
+# WM_CLASS que a janela publica. Sob XWayland o cosmic-comp publica esse campo
+# como `app_id` (cosmic-comp/src/shell/element/surface.rs:237 →
+# smithay/src/xwayland/xwm/surface.rs:1083), e é por ele que a dock acha o
+# .desktop. Quem publica o valor do lado do código é
+# `utils/identidade.py:DEV.wm_class`, aplicado por `Gdk.set_program_class` em
+# `app/main.py` e em `scripts/abrir_interface.py`.
+# `tests/unit/test_identidade_das_duas_casas.py` compara os dois e reprova
+# divergência — foi por não existir régua assim que duas janelas do produto
+# ficaram com `app_id` errado desde que nasceram.
 Type=Application
-Categories=Game;Settings;HardwareSettings;
-Keywords=DualSense;PS5;controle;gamepad;trigger;haptic;
+Name=Hefesto — DualSense4Unix
+GenericName=DualSense Controller — desenvolvimento
+Comment=Gerenciador de DualSense para Linux. As dez abas, com o dado do aparelho.
+Exec=@RAIZ@/interface.sh
+Icon=hefesto-dev-dualsense4unix
+Categories=Settings;HardwareSettings;
+Terminal=false
+StartupNotify=true
 StartupWMClass=Hefesto-Dualsense4Unix
+# Este app NÃO entra em .deb/.rpm/Arch/Nix: ele é instalado só por
+# `install-dev.sh`, na máquina de quem desenvolve. A chave abaixo é a
+# declaração que dispensa o `check_packaging_parity.sh` de cobrar o PNG dele
+# nos quatro empacotadores — sem ela, o portão cobra, e está certo em cobrar.
+X-HefestoNaoEmpacotado=true
+
