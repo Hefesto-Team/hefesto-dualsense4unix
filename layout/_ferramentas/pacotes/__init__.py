@@ -120,6 +120,85 @@ def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict | None:
     return fn(ctx) if fn else None
 
 
+#: AS TRÊS PALAVRAS PARA A MESMA COISA. Cada aba nasceu com a sua — `cartoes` na
+#: Jogar, `cards` na Controles, `colunas` nas outras sete — porque cada uma foi
+#: escrita olhando o desenho dela, e o desenho as chama assim.
+#:
+#: NÃO SE UNIFICA NO PACOTE, e a razão é dela: as funções falam a língua da aba
+#: que servem, e renomear `cartoes` para `colunas` na Jogar afastaria o código
+#: do desenho sem ganhar nada. Unifica-se AQUI, na saída, que é onde o piloto lê.
+POR_CONTROLE = ("colunas", "cartoes", "cards")
+
+#: O que NUNCA é valor de tela: a contagem da régua e a lista de órfãos. As duas
+#: são metadado do pacote e pintá-las escreveria "{'pintados': 25}" numa caixa.
+NAO_SAO_VALOR = {"cobertura", "sem_dono"}
+
+
+def topo(ctx: Contexto) -> dict:
+    """Os três valores do CABEÇALHO, que são iguais nas dez abas.
+
+    A contagem de controles e o nome do perfil ativo vivem no `topo.html`, que é
+    um só para as dez páginas — logo não pertencem a pacote nenhum. Medido em
+    01/09/2026: `conta`, `conta-b` e `perfil` apareciam como campos VAZIOS em
+    todas as abas, porque cada função de pacote cuidava da sua aba e ninguém
+    cuidava do que era de todas.
+
+    A contagem sai do `mesa_viva.texto_da_contagem`, que já é dona dela e
+    devolve as duas metades separadas — o desenho põe a segunda em `<b>`, e
+    escrever a frase inteira num `textContent` apagaria a tag.
+    """
+    import mesa_viva
+
+    conta, conta_b = mesa_viva.texto_da_contagem(ctx.mesa)
+    return {
+        # O `●` é do desenho e já está na página; o texto começa depois dele.
+        "conta": conta.replace("● ", "").strip(),
+        "conta-b": conta_b,
+        "perfil": ctx.state.get("active_profile") or "—",
+    }
+
+
+def normalizar(pacote: dict, para_pref: dict[str, str] | None = None) -> dict:
+    """O pacote na forma que a tela consome: `{mesa, colunas}` e nada mais.
+
+    POR QUE ELA EXISTE, medido em 01/09/2026 na primeira execução do piloto
+    único: a aba Jogar pintou **0 valores** com um pacote de cinco. O piloto lia
+    `colunas` e `mesa`; o pacote da Jogar devolvia `cartoes` e punha `perfil`,
+    `conta` e `conta_b` na RAIZ. Nada casava, e nada acusava — a pintura
+    devolvia zero sem uma linha de erro, que é a forma exata do defeito que esta
+    casa chama de *ausência de notícia lida como sucesso*.
+
+    `para_pref` traduz `uniq → pref`. O daemon endereça por `uniq` (`d4:2f:…`) e
+    o desenho por `pref` (`p1`), que é o que o `data-controle` das páginas traz.
+    Sem a tradução o `querySelector` procura um MAC numa página que só conhece
+    `p1` e devolve `null` — zero escrito, zero erro.
+    """
+    para_pref = para_pref or {}
+    colunas: dict[str, dict] = {}
+    for nome in POR_CONTROLE:
+        for chave, valores in (pacote.get(nome) or {}).items():
+            if not isinstance(valores, dict):
+                continue
+            # O `uniq` do daemon vem com e sem os dois-pontos conforme a aba;
+            # as duas formas procuram a mesma tradução.
+            pref = para_pref.get(chave) or para_pref.get(_so_hex(chave)) or chave
+            colunas.setdefault(pref, {}).update(valores)
+
+    mesa = dict(pacote.get("mesa") or {})
+    for chave, valor in pacote.items():
+        if chave in NAO_SAO_VALOR or chave in POR_CONTROLE or chave == "mesa":
+            continue
+        if isinstance(valor, (dict, list)):
+            continue
+        mesa.setdefault(chave, valor)
+    return {"mesa": mesa, "colunas": colunas}
+
+
+def _so_hex(chave: str) -> str:
+    """`d42f4b4846d8` → o mesmo, e `d4:2f:…` → `d42f…`. Uma forma só para casar."""
+    return chave.replace(":", "").lower()
+
+
 def _carregar_tudo() -> None:
     """Importa os módulos de pacote, que é o que os registra."""
     import importlib

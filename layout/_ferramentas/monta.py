@@ -830,8 +830,24 @@ def monta(arq, titulo_aba, miolo, css_extra="", fita_viva=False, legenda=""):
     # divergência que esta linha nasceu para matar.
     usb = sum(1 for c in CONECTADOS if c["via"] == "USB")
     bt = sum(1 for c in CONECTADOS if c["via"] == "BT")
+    # OS DOIS `data-campo` SÃO O ENDEREÇO DA PINTURA, e eles valem para as DEZ
+    # páginas porque o cabeçalho é um só. Sem eles o piloto tinha onde buscar o
+    # número e nenhum lugar onde escrevê-lo: medido em 01/09/2026, a aba Jogar
+    # emitia `conta` e `conta_b` e a página não tinha nem um dos dois — a
+    # pintura escrevia zero, calada.
+    #
+    # Eles não mudam UMA LINHA do que se vê. O portão do desenho aprovado
+    # ignora os atributos invisíveis de propósito, e foi por isto que ela pediu
+    # o ajuste: *"a ideia do mockup é o desenho ser possível de ser comparado
+    # ao produto final"* — comparar o que se VÊ, não o andaime.
     t = re.sub(r'(<div class="conectado"><span class="bolinha">●</span> )[^<]*<b>[^<]*</b>',
-               rf'\g<1>{len(CONECTADOS)} controles: <b>{usb} USB · {bt} BT</b>', t, count=1)
+               rf'\g<1><span data-campo="conta">{len(CONECTADOS)} controles:</span> '
+               rf'<b data-campo="conta-b">{usb} USB · {bt} BT</b>', t, count=1)
+
+    # O PERFIL ATIVO, mesma razão: o nome vem do daemon (`active_profile`) e a
+    # página tinha o texto do mockup ("Mortal Kombat") sem endereço nenhum.
+    t = t.replace('<span class="pa-nome">',
+                  '<span class="pa-nome" data-campo="perfil">', 1)
 
     # A FITA É GERADA, e não mais remendada. Ela era dois `<span>` fixos no
     # `topo.html`, e `monta()` os remendava com três `str.replace` encadeados —
