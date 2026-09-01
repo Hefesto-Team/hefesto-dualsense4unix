@@ -9,17 +9,34 @@ O QUE TEM DONO: o perfil em vigor (`active_profile`) e o travamento do
 autoswitch (`autoswitch_locked`), que é o que diz se a troca automática está
 segurada.
 
-OS ONZE GESTOS MARCADOS, E OS TRÊS COM DONO — 01/09/2026, ao ligar os botões:
+OS DOZE GESTOS MARCADOS, E OS DEZ COM DONO — 01/09/2026, em duas levas:
 
     selecionar          a célula do nome, na lista. Abre o perfil no editor.
     ativar              `profile.switch`
     voltar-a-de-ontem   `restaurar_do_historico` + reaplicar + `launch_env.refresh`
+    ---- a segunda leva ----------------------------------------------------
+    editor.nome         renomeia: `save_profile` do nome novo + `delete_profile`
+    editor.ambiente     troca a REGRA: `from_simple_choice` + `save_profile`
+    editor.jogo         o programa (ou o appid) dentro da regra
+    detectar            o jogo da Steam em foco, de `window_detect_last_class`
+    novo                um perfil em branco, com a regra do jogo em foco
+    duplicar            `model_copy` com "(cópia)" no nome, e o editor abre nela
+    remover             `delete_profile`, com a pergunta NO RÓTULO do botão
 
-Os outros NOVE ficaram SEM DONO **de propósito** (os quatro `editor.*` contam
-um a um), e o inventário com o motivo medido de cada um está logo acima do
-`PONTE`, no fim deste arquivo. O resumo:
-esta aba não tem rascunho de editor nem "Salvar" — o rodapé das dez abas é a
-fase 3 — e quase todo botão que sobrou depende de um dos dois.
+A SEGUNDA LEVA SÓ FOI POSSÍVEL POR TRÊS CORREÇÕES, e nenhuma é do daemon:
+
+1. o clique passou a trazer `valor` — o `value` do `<input>`/`<select>`. A
+   primeira leva parou exatamente aqui: *"o ouvinte manda `texto:
+   alvo.textContent`, que num `<input>` é vazio"*;
+2. os quatro campos ganharam `data-hef-alvo="valor"` no gerador. Sem isso a
+   pintura APAGAVA as opções dos dois `<select>` (medido: 5 → 0 e 15 → 0) e
+   deixava os dois `<input>` com o texto do MOCKUP para sempre;
+3. `pacote()` passou a mandar `editado=` para o produto. Sem isso o editor
+   pintava o perfil ATIVO enquanto os botões agiam sobre o ESCOLHIDO — e ligar
+   o campo Nome seria ela renomear um perfil olhando o nome de outro.
+
+OS DOIS QUE CONTINUAM SEM DONO — `recarregar` e `editor.estilo` — estão com o
+motivo medido logo acima do `PONTE`, no fim deste arquivo.
 
 O QUE ESTA ABA NÃO SABE FAZER, e é o teto de tudo o que está acima: **o daemon
 não tem `profile.save` nem `profile.delete`.** Os 39 métodos que ele atende
@@ -79,10 +96,19 @@ def _escolhido(todos: list[dict], ativo: str) -> str:
     erro falaria de um perfil que ela não vê na lista.
 
     A SINCRONIZAÇÃO INICIAL É ESCRITA AQUI DE PROPÓSITO, e a guarda é o que a
-    torna segura de repetir: só grava quando a lista tem aquele nome. Numa
-    árvore de teste a pasta de perfis é vazia (o `conftest.py` desvia `HOME` e
-    os quatro `XDG_*`), então nada é gravado e a régua dos botões continua vendo
-    o estado limpo — medido em 01/09/2026, com `perfil.lista()` devolvendo `[]`.
+    torna segura de repetir: só grava quando a lista tem aquele nome. Na régua
+    dos botões o `active_profile` é "regua" e nenhum perfil se chama assim,
+    então nada é gravado e o estado do módulo continua limpo.
+
+    FATO SUBSTITUÍDO — 01/09/2026, segunda leva. Aqui estava escrito que "numa
+    árvore de teste a pasta de perfis é vazia", medido com `perfil.lista()`
+    devolvendo `[]`. A medição estava certa e a CONCLUSÃO, errada: `pacote()`
+    não chama `perfil.lista()`, chama `load_all_profiles()` — e essa SEMEIA os
+    presets de fábrica (`loader._maybe_seed_presets:485`, uma vez por processo).
+    Medido no mesmo lar de mentira do `conftest.py`: `perfil.lista()` → 0
+    itens, `load_all_profiles()` → **9 perfis** (Ação, Aventura, Corrida,
+    Esportes, FPS, Navegação, fallback, meu_perfil, point_and_click). Duas
+    funções, duas respostas, a mesma pasta.
     """
     global _ESCOLHIDO
     nomes = {p["nome"] for p in todos}
@@ -373,49 +399,538 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict, p) -> None:
     p.chamar("launch_env.refresh")
 
 
-#: OS NOVE QUE FICARAM SEM DONO, e o motivo de cada um está no relato desta
-#: leva. Em resumo, e é o mesmo diagnóstico para quase todos: **esta aba não
-#: tem rascunho de editor nem um "Salvar"** — o rodapé das dez abas é a fase 3.
+# ---------------------------------------------------------------------------
+# OS GESTOS QUE ESCREVEM NO DISCO — 01/09/2026, a segunda leva desta aba.
+#
+# O TETO CONTINUA SENDO O MESMO, e é o que dá forma a todos eles: **o daemon
+# não tem `profile.save` nem `profile.delete`**. Gravar e apagar perfil roda no
+# processo da janela, em `profiles/loader.py`, que é puro. Por isso cada um
+# destes gestos tem a MESMA forma de três tempos:
+#
+#     1. escreve no disco       `save_profile` / `delete_profile`
+#     2. reaplica, se for o ativo   `profile.switch` — o daemon NÃO relê JSON de
+#                               perfil por conta própria (PERFIL-SAVE-APPLY-01)
+#     3. avisa a antecipação    `launch_env.refresh` — a regra pode ter mudado,
+#                               e com ela o `steam_app_<id>.env`
+#
+# A ordem é a da janela estável (`footer_actions.py:205`): reaplicar primeiro,
+# avisar depois. Invertida, o refresh leria o perfil que ainda não valia.
+# ---------------------------------------------------------------------------
+
+
+def _perfil_do_editor(ctx: Contexto) -> str:
+    """O perfil em que o editor está aberto. Vazio é RECUSA, nunca "o primeiro".
+
+    É o mesmo alvo que `pacote()` manda pintar (`editado=`), e tem de ser: um
+    gesto que agisse sobre outro perfil faria ela editar o que não está vendo.
+    """
+    nome = _ESCOLHIDO or str(ctx.state.get("active_profile") or "")
+    if not nome:
+        raise ValueError("escolha um perfil na lista primeiro — a coluna da "
+                         "esquerda; o editor abre na linha que você clicar.")
+    return nome
+
+
+#: O CAMINHO DE VOLTA do rótulo do seletor para a chave do produto. Ele é a
+#: INVERSÃO de `perfis_web.AMBIENTE_DO_PRESET`, e não uma segunda tabela: o
+#: dono das quatro palavras é aquele módulo, e digitá-las aqui seria a segunda
+#: verdade no dia em que uma delas mudasse.
 #:
-#:   novo, duplicar   a janela estável só PREENCHE O EDITOR (`profiles_actions
-#:                    .py:3016` e `:3144`); quem grava é o Salvar. A dica da
-#:                    própria tela diz "Copia o perfil inteiro **para o
-#:                    editor**".
-#:   remover          `delete_profile` é puro e reusável, mas a dica dela promete
-#:                    "Pergunta antes" e o `on_profile_remove` (`:3162`) o
-#:                    esconde atrás de `confirm_delete_profile`
-#:                    (BUG-DELETE-NO-CONFIRM-01). Não há diálogo nesta janela.
-#:   recarregar       a lista já é relida do disco a cada tique de 500 ms
-#:                    (`perfil.lista()`). Não há IPC atrás dele.
-#:   detectar         o daemon responde (`daemon.state_full` →
-#:                    `window_detect_last_class`), mas a dica promete "monta a
-#:                    regra" — e a regra é `match` gravado no perfil, que é o
-#:                    Salvar da fase 3.
-#:   editor.*         `<input>` e `<select>` marcados como gesto: o clique não
-#:                    carrega o valor digitado nem a opção escolhida, e o piloto
-#:                    não ouve `change`.
+#: "Estilo de Jogo" É A QUINTA OPÇÃO DO DESENHO e não está aqui — não existe
+#: preset para ela (`profiles/simple_match.SIMPLE_MATCH_PRESETS` tem sete, e
+#: nenhum é estilo). Cair fora desta tabela é o que faz o gesto RECUSAR
+#: dizendo, em vez de gravar `MatchAny()` calado — que é o que
+#: `from_simple_choice` faz com chave desconhecida (`simple_match.py:248`), e
+#: seria a tela rebaixando a regra dela em silêncio.
+PRESET_DO_ROTULO = {v: k for k, v in _tela.AMBIENTE_DO_PRESET.items()}
+
+
+def _gravar(prof, ctx: Contexto, p, *, era: str = "") -> None:
+    """Os três tempos: disco, reaplicar se for o ativo, avisar a antecipação.
+
+    `era` é o nome ANTERIOR — num renomear, é ele que tem de casar com o ativo,
+    porque o daemon ainda não ouviu falar do nome novo.
+
+    A COMPARAÇÃO É POR SLUG, não por string: com "Navegação" no disco e
+    "Navegacao" no daemon, um `==` cru diria que são perfis diferentes e o
+    reaplicar não aconteceria (R-10, `profiles/slug.py:52`).
+    """
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    save_profile(prof, origem="interface-nova")
+    ativo = str(ctx.state.get("active_profile") or "")
+    if ativo and mesmo_slug(ativo, era or prof.name):
+        p.profile_switch(prof.name)
+    p.chamar("launch_env.refresh")
+
+
+def _nome_livre(base: str, todos) -> str:
+    """`base`, ou `base 2`, `base 3`… — o primeiro que não colide por SLUG.
+
+    A colisão é por slug e não por nome à vista porque é o slug que vira nome
+    de arquivo (`loader.save_profile:1419`): dois nomes que só diferem no
+    acento caem no MESMO arquivo, e o segundo apagaria o primeiro sem uma
+    palavra na tela — "Acao (cópia)" e "Ação (cópia)".  (noqa-acento: exemplo)
+    """
+    from hefesto_dualsense4unix.profiles.slug import slugify
+
+    usados = {slugify(x.name) for x in todos}
+    if slugify(base) not in usados:
+        return base
+    n = 2
+    while slugify(f"{base} {n}") in usados:
+        n += 1
+    return f"{base} {n}"
+
+
+def _so_mudou(o: dict) -> bool:
+    """`False` quando o clique foi só um clique — e aí o campo não age.
+
+    MEDIDO NO CHROME em 01/09/2026, injetando o `BOOTSTRAP` do piloto sobre o
+    `layout/10-perfis.html` e trocando o `postMessage` por um coletor. Mexer
+    nos quatro campos como ela mexeria produziu **treze** mensagens, e quatro
+    delas são `evento=click`:
+
+        editor.nome   tipo=input   evento=change  valor='Elden Ring BR'
+        editor.jogo   tipo=input   evento=click   valor='1245620'      ← só cliquei
+        editor.jogo   tipo=input   evento=change  valor='1599660'
+        editor.nome   tipo=input   evento=click   valor='Elden Ring BR' ← só cliquei
+
+    O ouvinte do piloto escuta `click` E `change` (`hefesto_vivo.py:188-200`), e
+    **clicar dentro de um campo para pôr o cursor manda o valor que já estava
+    lá**. Sem esta guarda, clicar no "Nome do Jogo" de um perfil em "Todos"
+    faria o gesto inferir a regra e GRAVAR — uma troca de regra disparada por
+    um clique que não mudou nada.
+
+    A guarda é `!= "click"`, e não `== "change"`, de propósito: um clique de
+    régua (um dicionário montado à mão, sem `evento`) tem de continuar valendo.
+    """
+    return str(o.get("evento") or "") != "click"
+
+
+@gesto("10-perfis.html", "editor.nome")
+def editor_nome(ctx: Contexto, o: dict, p) -> None:
+    """Renomear o perfil aberto no editor. `save_profile` + `delete_profile`.
+
+    O VALOR VEM DE `valor`, E NÃO DE `texto` — foi a causa nomeada na primeira
+    leva: *"o ouvinte manda `texto: alvo.textContent`, que num `<input>` é
+    vazio"*. Desde 01/09 o clique traz o `value` do campo
+    (`hefesto_vivo.py:228`) e o piloto escuta `change` além de `click`, que é o
+    único evento que um campo de texto dispara com o valor novo.
+
+    POR QUE RENOMEAR NA HORA, e não guardar num rascunho: decisão dela de
+    01/09 — *"clicar na cor já deveria aplicar a cor no controle"* —, e esta aba
+    não tem "Salvar" próprio (o do rodapé grava o perfil ATIVO a partir do que
+    está valendo no daemon, `rodape.py:114`, e nem olha para este campo). Um
+    campo que aceita texto e não guarda nada é o botão que responde calado.
+
+    NÃO HÁ `rename` NO PRODUTO — medido: `profiles/loader.py` tem
+    `save_profile`, `delete_profile`, `load_profile` e `restaurar_do_historico`,
+    e nenhum renomeia. A janela estável faz a mesma dupla no Salvar, com o
+    diálogo do R-10 se oferecendo para apagar o antigo. Aqui a ordem é gravar
+    PRIMEIRO e apagar depois: invertida, uma falha no meio perderia o perfil.
+
+    E O ANTIGO NÃO SOME DE VEZ: `delete_profile` arquiva a última versão em
+    `profiles/.historico/<slug>/` antes do `unlink` (PERFIL-SEM-RASTRO-01,
+    `loader.py:1601`). Um renomear por engano se desfaz com
+    `hefesto-dualsense4unix profile restore <nome-antigo>`.
+
+    AS DUAS RECUSAS:
+
+    * nome vazio — apagar o campo não pode virar um arquivo `.json`;
+    * nome que já é de OUTRO perfil — o `save_profile` grava por SLUG, então
+      renomear "Elden Ring" para "Pragmata" gravaria por cima do Pragmata dela,
+      calado. É o mesmo estrago que o `_nome_livre` evita no Duplicar.
+    """
+    global _ESCOLHIDO
+    from hefesto_dualsense4unix.profiles.loader import (
+        delete_profile,
+        load_all_profiles,
+        load_profile,
+    )
+    from hefesto_dualsense4unix.profiles.slug import slugify
+
+    if not _so_mudou(o):
+        return
+    novo = str(o.get("valor") or "").strip()
+    era = _perfil_do_editor(ctx)
+    if not novo:
+        raise ValueError("o perfil precisa de um nome — o campo ficou vazio.")
+    prof = load_profile(era)
+    if prof.name == novo:
+        return
+    troca_de_arquivo = slugify(novo) != slugify(prof.name)
+    if troca_de_arquivo:
+        for outro in load_all_profiles():
+            if slugify(outro.name) == slugify(novo):
+                raise ValueError(
+                    f"já existe um perfil chamado “{outro.name}”. Escolha outro "
+                    f"nome — gravar este por cima apagaria o dele.")
+    _gravar(prof.model_copy(update={"name": novo}), ctx, p, era=era)
+    if troca_de_arquivo:
+        delete_profile(era)
+    _ESCOLHIDO = novo
+
+
+@gesto("10-perfis.html", "editor.ambiente")
+def editor_ambiente(ctx: Contexto, o: dict, p) -> None:
+    """"Funciona em": trocar a REGRA que faz o perfil entrar. `from_simple_choice`.
+
+    QUEM MONTA A REGRA É O PRODUTO, e não este arquivo:
+    `profiles/simple_match.from_simple_choice:203` é a mesma função que o Salvar
+    da janela estável usa (`profiles_actions._build_profile_from_editor`), com
+    as frases de recusa já escritas em português ("Diga o número do jogo na
+    Steam (ex.: 1599660)"). Montar um `MatchCriteria` aqui seria a segunda
+    verdade sobre o que cada opção significa.
+
+    O `regra_do_disco` NÃO É ENFEITE: para "Jogo da Steam" ele preserva o
+    `process_name` do MESMO jogo, que ela nunca viu na tela e portanto nunca
+    pediu para tirar (ESCONDER-EM-VEZ-DE-SAIR-01, `simple_match.py:382`).
+
+    AS DUAS RECUSAS, e as duas existem para não REBAIXAR a regra dela:
+
+    * **o seletor travado** — quando o perfil casa por uma regra que esta tela
+      não sabe mostrar (`window_title_regex`, lista de classes), o produto abre
+      o campo travado com a frase do que fazer (`perfis_web.py:172`). Aceitar a
+      troca ali seria o defeito R-12: substituir uma regra fina por "Todos".
+      MEDIDO: sete dos nove perfis de fábrica caem nesse estado.
+    * **"Estilo de Jogo"** — é a quinta opção do desenho e não tem preset
+      nenhum atrás. `from_simple_choice` devolve `MatchAny()` para chave
+      desconhecida, sem reclamar (`simple_match.py:248`): escolher "Estilo de
+      Jogo" gravaria um catch-all no lugar da regra do jogo dela, em silêncio.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
+
+    if not _so_mudou(o):
+        return
+    rotulo = str(o.get("valor") or o.get("rotulo") or "").strip()
+    nome = _perfil_do_editor(ctx)
+    chave = PRESET_DO_ROTULO.get(rotulo)
+    if chave is None:
+        raise ValueError(
+            f"“{rotulo}” não é uma regra que o perfil saiba guardar. O produto "
+            f"conhece {', '.join(sorted(PRESET_DO_ROTULO))} — “Estilo de Jogo” "
+            f"está desenhado e não tem campo nem preset atrás dele.")
+    prof = load_profile(nome)
+    editor = _editor_de(prof)
+    if editor.get("ambiente_travado"):
+        raise ValueError(str(editor.get("ambiente_recado") or ""))
+    # O NOME DO JOGO VEM DO DISCO, e não do campo ao lado: o `<input>` pode ter
+    # texto que ela digitou e ainda não confirmou (o `change` só dispara quando
+    # o foco sai). Ler o disco é ler o que o perfil de fato tem.
+    prof.match = from_simple_choice(chave, editor.get("jogo") or "",
+                                    regra_do_disco=prof.match)
+    _gravar(prof, ctx, p)
+
+
+@gesto("10-perfis.html", "editor.jogo")
+def editor_jogo(ctx: Contexto, o: dict, p) -> None:
+    """"Nome do Jogo": o programa (ou o número da Steam) que faz o perfil entrar.
+
+    ELE SÓ TEM EFEITO EM DUAS DAS CINCO OPÇÕES do "Funciona em":
+    `from_simple_choice` só lê o `custom_name` em "game" e "steam_game"
+    (`simple_match.py:236-247`). Com o seletor em "Todos" ou "Steam", o texto
+    seria descartado sem uma palavra — ela digitaria o nome do jogo, veria o
+    campo aceitar, e a regra continuaria a mesma.
+
+    ENTÃO O SELETOR ANDA JUNTO, e isso desfaz um IMPASSE que eu mesmo criei e
+    medi antes de entregar: com o perfil em "Todos", escolher "Jogo" no seletor
+    recusava por falta de nome (`MSG_JOGO_SEM_NOME`), e digitar o nome recusava
+    por o seletor estar em "Todos". **Os dois caminhos fechados, e o perfil
+    preso em "Todos" para sempre.** Digitar o nome de um jogo é dizer "este
+    perfil é deste jogo": o gesto grava a regra inteira, e o seletor mostra o
+    resultado no tique seguinte.
+
+    O PRODUTO JÁ FAZ ISSO, e não é invenção desta tela: o
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3128`) chama
+    `_select_radio("steam_game")` **e** preenche o campo, no mesmo gesto.
+
+    QUAL DAS DUAS ELE ESCOLHE: `normalize_appid` decide — só dígitos (ou um
+    endereço da loja, que ele sabe ler) é "Jogo da Steam"; qualquer outra coisa
+    é "Jogo", com o nome do programa. E ele SÓ decide quando o seletor não
+    estava numa das duas: com "Jogo" ou "Jogo da Steam" já escolhido por ela,
+    a escolha dela manda — digitar "1245620" num perfil que ela pôs em "Jogo"
+    não pode virar um perfil da Steam pelas costas dela.
+
+    R-12: o nome do programa vai **como ela digitar**, sem `.lower()` — o
+    matcher compara com o basename cru de `/proc/PID/exe`, e
+    `Cyberpunk2077.exe` nunca casaria com `cyberpunk2077.exe`.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.profiles.simple_match import (
+        from_simple_choice,
+        normalize_appid,
+    )
+
+    if not _so_mudou(o):
+        return
+    texto = str(o.get("valor") or "").strip()
+    nome = _perfil_do_editor(ctx)
+    prof = load_profile(nome)
+    editor = _editor_de(prof)
+    if editor.get("ambiente_travado"):
+        raise ValueError(str(editor.get("ambiente_recado") or ""))
+    chave = PRESET_DO_ROTULO.get(str(editor.get("ambiente") or ""))
+    if chave not in ("game", "steam_game"):
+        chave = "steam_game" if normalize_appid(texto) is not None else "game"
+    prof.match = from_simple_choice(chave, texto, regra_do_disco=prof.match)
+    _gravar(prof, ctx, p)
+
+
+@gesto("10-perfis.html", "detectar")
+def detectar(ctx: Contexto, o: dict, p) -> None:
+    """"Detectar": pegar o jogo em foco e montar a regra com ele.
+
+    A AFIRMAÇÃO QUE ESTAVA NO PRODUTO ESTÁ ERRADA PELA METADE, e é o que
+    destravou este botão. `perfis_web.DONOS_DOS_GESTOS["detectar"]` diz *"o IPC
+    NÃO PUBLICA o título nem a classe"* — e daí a primeira leva o deixou sem
+    dono. MEDIDO em 01/09/2026, contra o daemon `dev` desta árvore, com
+    `ipc_bridge.daemon_state_full()`: das 49 chaves do `state_full`, SETE são
+    de detecção de janela, e duas delas são a classe —
+    `window_detect_last_class` e `window_detect_current_class`. O TÍTULO é que
+    não é publicado. A janela estável já lia exatamente esta chave desde o
+    PERFIL-NASCE-CERTO-01 (`profiles_actions._aplicar_nascimento_com_jogo`).
+
+    O QUE ELE FAZ E O QUE AINDA NÃO FAZ:
+
+    * **jogo da Steam** — a classe vem como `steam_app_<id>` e o appid sai dela
+      pela fonte única do produto (`profiles/steam_app.steam_appid_from_wm_class`,
+      UNIFICA-PREDICADO-01). A regra vira "Jogo da Steam" com aquele número.
+    * **jogo de fora da Steam** — RECUSA DIZENDO a classe que viu. A dica dela
+      promete *"funciona com jogo de qualquer lugar"* e esta metade não tem
+      dono: o detector entrega uma **wm_class**, e o produto só sabe guardá-la
+      como `MatchCriteria(window_class=…)`, que é uma regra que este editor não
+      sabe MOSTRAR — o perfil abriria travado, com a frase de usar a linha de
+      comando. Gravar isso a partir de um botão seria empurrar o perfil dela
+      para fora da tela. Escrevê-la como `process_name` seria pior: é outro
+      dado (o basename de `/proc/PID/exe`), e casaria por acaso.
+
+    `last_class` ANTES de `current_class`: a primeira é a última classe ÚTIL
+    vista (`launch_wrapper_dialog.py:81`) e sobrevive ao foco ir para a janela
+    do Hefesto — que é exatamente o que acontece quando ela clica neste botão.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
+    from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+
+    nome = _perfil_do_editor(ctx)
+    classe = str(ctx.state.get("window_detect_last_class")
+                 or ctx.state.get("window_detect_current_class") or "")
+    appid = steam_appid_from_wm_class(classe) if classe else None
+    if appid is None:
+        visto = f"“{classe}”" if classe and classe != "unknown" else "nenhuma janela"
+        raise ValueError(
+            f"não achei jogo da Steam em foco — o detector está vendo {visto}. "
+            f"Abra o jogo, deixe-o em foco por um instante e clique de novo; "
+            f"para jogo de fora da Steam, a regra ainda se escreve pela linha "
+            f"de comando (`hefesto-dualsense4unix profile`).")
+    prof = load_profile(nome)
+    prof.match = from_simple_choice("steam_game", str(appid),
+                                    regra_do_disco=prof.match)
+    _gravar(prof, ctx, p)
+
+
+@gesto("10-perfis.html", "novo")
+def novo(ctx: Contexto, o: dict, p) -> None:
+    """"Novo": um perfil em branco no disco, já com a regra do jogo em foco.
+
+    NASCE NO DISCO, e não num rascunho, porque esta aba não tem "Salvar"
+    próprio — a janela estável só PREENCHE O EDITOR (`on_profile_new:3016`) e
+    quem grava é o botão seguinte. Aqui, com a ação imediata que ela pediu, o
+    arquivo nasce e a lista o mostra no tique seguinte, já aberto no editor.
+
+    A REGRA DO JOGO EM FOCO É A MESMA DO PRODUTO, e a guarda também: o
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3088`) só age quando há
+    **appid da Steam**, e devolve `False` calado no resto. É o que este gesto
+    faz — com jogo da Steam em foco nasce mirando aquele jogo, sem ele nasce
+    catch-all, "que é o certo para um perfil de desktop" (palavras de lá).
+
+    O QUE ELE NÃO CARREGA, e é dívida honesta: a janela estável ainda sobe a
+    prioridade acima dos catch-all (`_prioridade_acima_dos_catch_all`), e essa
+    conta mora num mixin GTK que depende de widget. Este perfil nasce com a
+    prioridade padrão do esquema. Ele NÃO é ativado: nascer não é passar a
+    valer.
+    """
+    global _ESCOLHIDO
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+    from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
+    from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+
+    classe = str(ctx.state.get("window_detect_last_class")
+                 or ctx.state.get("window_detect_current_class") or "")
+    appid = steam_appid_from_wm_class(classe) if classe else None
+    regra = (from_simple_choice("steam_game", str(appid)) if appid is not None
+             else MatchAny())
+    nome = _nome_livre("Novo perfil", load_all_profiles())
+    _gravar(Profile(name=nome, match=regra), ctx, p)
+    _ESCOLHIDO = nome
+
+
+@gesto("10-perfis.html", "duplicar")
+def duplicar(ctx: Contexto, o: dict, p) -> None:
+    """"Duplicar": o perfil inteiro numa cópia, e o editor abre nela.
+
+    A DICA DELA DIZ *"Copia o perfil inteiro para o editor, com «(cópia)» no
+    nome"*, e as três partes se cumprem — a última por consequência da segunda:
+    a cópia nasce no disco e o `_ESCOLHIDO` passa a ser ela, então é ela que o
+    editor pinta no tique seguinte.
+
+    "O PERFIL INTEIRO" É LITERAL, e é a diferença para o defeito
+    BUG-DUPLICATE-NO-CONFIG-COPY-01, que a janela estável já pagou: a cópia
+    tinha só o nome trocado e o resto virava default. O `model_copy` do pydantic
+    leva gatilhos, luz, vibração, alto-falante, máscara e os overrides por
+    controle — tudo, menos o nome.
+
+    E A CÓPIA NÃO É ATIVADA. Duplicar não é trocar o perfil que está valendo; a
+    coluna tem um "Ativar" para isso. Por isso `_gravar` não reaplica aqui: o
+    nome novo nunca é o ativo.
+
+    O NÚMERO NO FIM ("(cópia) 2") NÃO É ENFEITE: sem ele, duplicar duas vezes o
+    mesmo perfil gravaria a segunda cópia POR CIMA da primeira — `save_profile`
+    escreve por slug.
+    """
+    global _ESCOLHIDO
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles, load_profile
+
+    era = _perfil_do_editor(ctx)
+    prof = load_profile(era)
+    copia = _nome_livre(f"{prof.name} (cópia)", load_all_profiles())
+    _gravar(prof.model_copy(update={"name": copia}), ctx, p)
+    _ESCOLHIDO = copia
+
+
+@gesto("10-perfis.html", "remover")
+def remover(ctx: Contexto, o: dict, p) -> None:
+    """"Remover": apagar o perfil do disco. PERGUNTA ANTES, no rótulo do botão.
+
+    É O GESTO MAIS DESTRUTIVO DESTA ABA, e tem TRÊS guardas, nesta ordem:
+
+    1. **precisa de um perfil escolhido.** Sem ele, `_perfil_do_editor` recusa
+       — nunca "o primeiro da lista".
+    2. **não age sobre o perfil que está VALENDO.** Apagar o ativo deixaria o
+       daemon aplicando um arquivo que não existe mais, e o produto já tem uma
+       frase para esse risco (`frase_da_remocao_do_perfil_ativo`). Aqui a
+       resposta é mais curta: recusa e diz para ativar outro antes.
+    3. **pergunta.** O primeiro clique ARMA e levanta; o rótulo do botão vira
+       a pergunta no tique seguinte (≤500 ms) e o segundo clique, dentro de
+       oito segundos, apaga. Ver `_rotulo_do_remover` para por que a pergunta
+       mora no rótulo e não num diálogo.
+
+    O ARMAMENTO É POR PERFIL: escolher outra linha e clicar em Remover não
+    aproveita a confirmação da anterior — seria a pior forma de perder o perfil
+    errado.
+
+    E O APAGADO TEM VOLTA: `delete_profile` arquiva a última versão em
+    `profiles/.historico/<slug>/` antes do `unlink` (PERFIL-SEM-RASTRO-01,
+    `loader.py:1601`). O caminho de volta hoje é a linha de comando —
+    `hefesto-dualsense4unix profile restore <nome>` —, porque o "Voltar à de
+    ontem" desta aba precisa do perfil na LISTA para escolhê-lo.
+    """
+    global _ARMADO, _ESCOLHIDO
+    from hefesto_dualsense4unix.profiles.loader import delete_profile
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    nome = _perfil_do_editor(ctx)
+    ativo = str(ctx.state.get("active_profile") or "")
+    if ativo and mesmo_slug(ativo, nome):
+        raise ValueError(
+            f"“{nome}” é o perfil que está valendo agora. Ative outro na lista "
+            f"antes de apagar este — senão o Hefesto fica aplicando um arquivo "
+            f"que não existe mais.")
+    agora = time.monotonic()
+    armado = (_ARMADO and _ARMADO[0] == nome
+              and (agora - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR)
+    if not armado:
+        _ARMADO = (nome, agora)
+        raise RuntimeError(
+            f"Apagar “{nome}” do disco? Clique em Remover de novo para "
+            f"confirmar — o botão espera oito segundos.")
+    _ARMADO = None
+    delete_profile(nome)
+    _ESCOLHIDO = ""
+    # SEM `profile.switch` AQUI, de propósito: o perfil apagado não é o ativo
+    # (a guarda 2 garante), então não há o que reaplicar. O `launch_env`
+    # precisa saber assim mesmo — o `steam_app_<id>.env` do perfil que morreu
+    # fica rançoso se ninguém avisar (DEDUP-04, `profiles_actions.py:3199`).
+    p.chamar("launch_env.refresh")
+
+
+def _editor_de(prof) -> dict:
+    """Os campos do editor daquele perfil, pela porta da FRENTE do produto.
+
+    `pacote_da_aba` é a função pública de `perfis_web`, e é a mesma que
+    `pacote()` chama a cada tique. Ler `_pacote_do_editor` (privada) daria o
+    mesmo dicionário com uma linha a menos e um acoplamento a mais; o que se
+    quer daqui é justamente o que a TELA está mostrando, e a tela chama esta.
+
+    O `ambiente_travado` que ela devolve é a válvula do R-12 — a razão de os
+    dois gestos do editor consultarem isto antes de gravar.
+    """
+    return _tela.pacote_da_aba([prof], ativo=None, editado=prof)["editor"]
+
+
+#: OS DOIS QUE CONTINUAM SEM DONO, e o motivo de cada um é MEDIDO.
+#:
+#:   recarregar    NÃO HÁ O QUE CHAMAR. A dica dela diz "Relê a lista do disco.
+#:                 Não descarta o que está no editor ao lado" — e a lista já é
+#:                 relida do disco a cada tique de 500 ms, em `pacote()`, por
+#:                 `load_all_profiles()`. Ligar este botão a um `load_all` extra
+#:                 seria um botão que finge trabalho que já está feito. O que
+#:                 falta não é motor: é o botão sair do desenho, e isso é dela.
+#:   editor.estilo NÃO EXISTE EM LUGAR NENHUM, e o produto já o declara assim:
+#:                 `perfis_web.GESTOS_SEM_MOTOR["editor.estilo"]` diz *"não
+#:                 existe campo de Estilo de Jogo no perfil, nem preset que o
+#:                 resolva"*. Conferido em 01/09/2026: não há campo em
+#:                 `profiles/schema.Profile`, não há chave em
+#:                 `SIMPLE_MATCH_PRESETS` e os quinze estilos do desenho não têm
+#:                 arquivo atrás. Quem lhe dá motor é a ONDA-PERFIS-04.
+#:                 A tela não mente mais sobre ele: com `data-hef-alvo="valor"`
+#:                 e o valor vazio, o seletor abre em BRANCO em vez de dizer
+#:                 "Luta" para todo perfil.
 PONTE = {"profile_switch", "chamar"}
 METODOS = {"launch_env.refresh"}
 
 
 PAGINA = "10-perfis.html"
-PISO_DA_ABA = 3
-#: `voltar-a-de-ontem` NÃO TEM PROVA DECLARADA, e a razão é medida: ele começa
-#: por uma escrita em DISCO, e a régua roda com `HOME` e os quatro `XDG_*`
-#: desviados para um lar de mentira — a pasta de perfis é vazia, então
-#: `restaurar_do_historico` levanta antes de qualquer chamada à ponte. Ele foi
-#: provado por medição própria, com uma pasta de perfis de verdade num diretório
-#: temporário; o relato desta leva traz o número.
+PISO_DA_ABA = 10
+#: SÓ UMA PROVA DECLARADA PARA DEZ GESTOS, e a razão é estrutural, não
+#: preguiça: os outros nove agem sobre o perfil ESCOLHIDO, e o `ctx` desta
+#: régua é fixo — `active_profile="regua"`, sem `_ESCOLHIDO` (um gesto que
+#: dependesse do estado deixado por outro teste seria pior que não ter prova).
+#: MEDIDO em 01/09/2026, no mesmo lar de mentira que o `conftest.py` monta:
+#: `load_all_profiles()` devolve **9 perfis** — os de fábrica, que ela mesma
+#: semeia — e nenhum se chama "regua". Cada um dos nove levanta
+#: `FileNotFoundError` no `load_profile("regua")`, antes de tocar a ponte.
+#:
+#: NÃO É "a pasta de perfis é vazia", que foi o que a primeira leva escreveu
+#: aqui: essa medição usou `perfil.lista()`, que lê a pasta sem semear. A
+#: pasta que `pacote()` enxerga tem nove.
+#:
+#: ELES FORAM PROVADOS, e não por leitura: com uma pasta de perfis DE VERDADE
+#: num diretório temporário, três perfis dela copiados, e um dublê de ponte
+#: igual ao desta régua — os números estão no relato desta leva, gesto a gesto,
+#: com a mordida de cada um.
 PROVAS = [
     {"pagina": PAGINA, "gesto": "ativar", "clique": {"texto": "Ação"},  # (noqa-acento) id
      "chama": [("profile_switch", ["Ação"], {})]},
 ]
 
-#: O QUE NÃO FALA COM O DAEMON, de propósito: `selecionar` muda o ALVO dos
-#: botões ao lado, na memória desta janela — escolher uma linha não pode trocar
-#: o perfil que está valendo, senão a coluna não precisaria de um "Ativar".
+#: O QUE NÃO ECOA NO `state_full`, e são NOVE dos dez. A razão é uma só e está
+#: no alto deste arquivo: **o daemon não guarda perfil, o disco guarda**. Ele
+#: publica `active_profile` (um nome) e mais nada sobre o conteúdo — renomear,
+#: duplicar, apagar, trocar a regra do jogo, restaurar a versão de ontem: nada
+#: disso aparece nas 49 chaves que ele devolve. O efeito se vê na LISTA desta
+#: aba, que `pacote()` relê do disco a cada tique.
 #:
-#: E ISSO MUDA A PROVA: `ativar` sozinho não tem o que ativar. A sequência é
-#: `selecionar` e ENTÃO `ativar`, e uma régua que os clicasse em ordem
-#: alfabética diria "sem efeito" sobre os dois.
-SEM_ECO = ("selecionar",)
+#: `selecionar` é o único que não fala com ninguém, e é de propósito: escolher
+#: uma linha muda o ALVO dos botões ao lado, na memória desta janela. Se
+#: trocasse o perfil que está valendo, a coluna não precisaria de um "Ativar".
+#:
+#: E ISSO MUDA A PROVA de quase todos: eles agem sobre o perfil ESCOLHIDO, e
+#: uma régua que os clicasse em ordem alfabética — sem `selecionar` antes —
+#: veria nove recusas em vez de nove gestos.
+SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
+           "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem")

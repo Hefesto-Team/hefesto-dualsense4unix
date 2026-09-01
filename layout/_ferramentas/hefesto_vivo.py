@@ -319,7 +319,13 @@ PERIGOSOS = {
     ("09-sistema.html", "restaurar-de-fabrica"), ("09-sistema.html", "refazer-proton"),
     ("09-sistema.html", "autostart"),
     ("10-perfis.html", "remover"), ("10-perfis.html", "novo"),
-    ("10-perfis.html", "voltar-a-de-ontem"),
+    ("10-perfis.html", "voltar-a-de-ontem"), ("10-perfis.html", "duplicar"),
+    # OS CAMPOS DO EDITOR GRAVAM NO DISCO DELA, e o `editor.nome` RENOMEIA o
+    # perfil escolhido. Uma régua que os clicasse com o valor que estivesse na
+    # tela renomearia um perfil dela para provar que sabe digitar — e o `nome` é
+    # a identidade do arquivo, não um campo qualquer.
+    ("10-perfis.html", "editor.nome"), ("10-perfis.html", "editor.jogo"),
+    ("10-perfis.html", "editor.ambiente"), ("10-perfis.html", "detectar"),
     # O CURSOR É DELA. Ligar a emulação de mouse move o ponteiro na tela em que
     # ela está trabalhando — é o mesmo motivo de toda janela desta casa nascer
     # com `--oculta`.

@@ -577,8 +577,11 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      que fazem o mesmo gesto na mesma coluna têm de ser o mesmo botão, e uma
      regra a mais aqui é como as duas alturas voltam.
      As 5 linhas de pastilha de 17px que moravam aqui saíram junto. */
-  /* O `data-campo="mic-modo"` SAIU DAQUI EM 01/09/2026, e ele APAGAVA os dois
-     botões. Esta linha dizia que "a ponte viva endereça por ele" — endereçava
+  /* O `data-campo` DO CONTAINER SAIU DAQUI EM 01/09/2026, e ele APAGAVA os dois
+     botões. (O nome dele não se escreve por extenso nesta linha: a régua do
+     casamento acha `data-campo` por expressão regular e NÃO tira comentário,
+     então um endereço citado aqui entraria na conta como se a página o tivesse.)
+     Esta linha dizia que "a ponte viva endereça por ele" — endereçava
      mesmo, e o preço está medido: o `escrever` do piloto faz
      `el.textContent = t`, e o `t` de um valor vazio é `—`. Como o
      `data-campo` estava no `<span>` que ENVOLVE Virtual e Nativo, o primeiro
@@ -906,9 +909,21 @@ def identidade(c, *, bat, meio=""):
                alcançável. -->
           <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b></span>{meio}
 {sensores_da_peca(c)}
+          <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
+               PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
+               desde que nasceu, e não havia um `data-campo` onde ele caísse —
+               a régua do casamento a listava entre os órfãos. O número e a
+               barra ficavam nos 100% / 64% que este gerador desenhou, com o
+               controle dela em qualquer carga.
+               SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
+               ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
+               LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
+               piloto lê (`hefesto_vivo.py:107`). Um endereço só escreveria o
+               número DENTRO da barra. -->
           <span class="bat">Bateria
-            <span class="trilho"><span class="cheio" style="width:{bat}%"></span></span>
-            <span class="n">{bat}%</span></span>'''
+            <span class="trilho"><span class="cheio" data-campo="bateria-barra"
+              data-hef-alvo="largura" style="width:{bat}%"></span></span>
+            <span class="n" data-campo="bateria">{bat}%</span></span>'''
 
 
 def resumo_fechado(mic_mudo):
@@ -1788,6 +1803,19 @@ def _conferir(doc):
     exigir('data-campo="mic-modo"' not in corpo,
            "o `data-campo` voltou ao container dos modos do microfone: a "
            "pintura vai apagar os dois botões")
+
+    # 2c. A BATERIA TEM ENDEREÇO, os DOIS. Sem eles o número e a barra ficam
+    #     nos 100% / 64% que este gerador desenhou, com o controle dela em
+    #     qualquer carga — e nada na tela diz que aquilo é do mockup.
+    #     A régua mora AQUI e não no piso do casamento porque lá ela não morde:
+    #     a aba casa 10 endereços contra um piso de 9, então perder UM passa.
+    for campo in ("bateria", "bateria-barra"):
+        exigir(corpo.count(f'data-campo="{campo}"') == len(CONECTADOS),
+               f"a bateria perdeu o endereço `{campo}` — o número volta a ser "
+               f"o do desenho")
+    exigir(corpo.count('data-hef-alvo="largura"') == len(CONECTADOS),
+           "a barra da bateria perdeu o `data-hef-alvo=largura`: a pintura vai "
+           "escrever o número DENTRO da barra, em vez de dar-lhe a largura")
 
     # 3. O "· 100 % · Acordado" saiu do rótulo do alto-falante.
     exigir("Acordado" not in corpo, "o estado do alto-falante voltou ao rótulo")

@@ -112,9 +112,25 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "grava footer_actions._perfil_que_as_abas_editam:884; o do editor gravava o "
     "alvo memorizado), e fundir sem fechar a divergência é o caminho mais curto "
     "para gravar por cima do perfil errado. Quem fecha é a ONDA-PERFIS-08.",
-    "detectar": "NÃO TEM DONO. O daemon LÊ a janela em foco "
-    "(daemon/state_store.py:714, window_detect_backend) e o IPC NÃO PUBLICA o "
-    "título nem a classe. Quem lhe dá motor é a ONDA-PERFIS-03.",
+    # FATO ERRADO PELA METADE, SUBSTITUÍDO em 01/09/2026. Aqui estava escrito
+    # que "o IPC NÃO PUBLICA o título nem a classe". A CLASSE É PUBLICADA.
+    #
+    # MEDIDO contra o daemon `dev` desta árvore, por `daemon.state_full`: das 49
+    # chaves da resposta, SETE são de detecção de janela —
+    # `window_detect_backend`, `window_detect_healthy`,
+    # `window_detect_last_class`, `window_detect_current_class`,
+    # `window_detect_useful_age_sec`, `window_detect_seeing` e
+    # `window_detect_reason`. E o produto já lê uma delas: o
+    # `profiles_actions._aplicar_nascimento_com_jogo:3088` usa
+    # `window_detect_last_class` desde o PERFIL-NASCE-CERTO-01.
+    #
+    # O que continua verdadeiro é a outra metade: o TÍTULO não é publicado. Para
+    # um "Detectar" que preencha o nome do jogo, a classe basta — e é o que a
+    # interface nova passou a usar.
+    "detectar": "TEM DONO, e ele é a CLASSE da janela: o `state_full` publica "
+    "`window_detect_last_class` e `window_detect_current_class` "
+    "(daemon/state_store.py:714). O TÍTULO é que não é publicado. Quem quiser o "
+    "título espera a ONDA-PERFIS-03.",
     "voltar-a-de-ontem": "O MOTOR EXISTE E NUNCA TEVE TELA: "
     "profiles/loader.restaurar_do_historico:1509 e listar_historico:1272, com "
     "HISTORICO_MAX_VERSOES = 10 (loader.py:1246). Os únicos chamadores estão na "

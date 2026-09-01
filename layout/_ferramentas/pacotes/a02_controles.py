@@ -39,8 +39,16 @@ def pacote(ctx: Contexto) -> dict:
         # O MUDO TEM TRÊS CARAS, e o selo da tela diz qual: mudo pelo aparelho,
         # mudo pedido pelo Hefesto, e sem posse (o kernel manda).
         mudo = bool(a.get("mic_mudo"))
+        pct = c.get("battery_pct")
         cards[uniq] = {
-            "bateria": f"{c.get('battery_pct')}%" if c.get("battery_pct") is not None else "—",
+            "bateria": f"{pct}%" if pct is not None else "—",
+            # A BARRA, e ela precisa do NÚMERO CRU: o `escrever` do piloto com
+            # `data-hef-alvo="largura"` monta `width: <t>%`, e um "95%" ali
+            # viraria `width: 95%%`. Zero quando o daemon não sabe — deixar a
+            # barra na largura que o gerador desenhou seria a tela afirmando uma
+            # carga que ninguém mediu.
+            "bateria-barra": int(pct) if isinstance(pct, int) and not isinstance(pct, bool)
+                             else 0,
             "via": (c.get("transport") or "").upper(),
             # A MÁSCARA É O NOME QUE O JOGO VÊ, e a tradução já tem dono em
             # `mesa_viva.NOME_DA_MASCARA`. `uhid` é o backend, e é outra coisa.
@@ -76,9 +84,10 @@ def pacote(ctx: Contexto) -> dict:
 # ---------------------------------------------------------------------------
 # OS GESTOS — o clique dela chegando ao aparelho
 # ---------------------------------------------------------------------------
-# ESTA ABA TEM OITO BOTÕES POR CONTROLE e só TRÊS deles têm dono no daemon. O
-# resto desta seção é sobre os cinco que não têm, porque é aí que uma tela
-# mente: o botão que responde calado deixa quem clicou concluir que funcionou.
+# ESTA ABA TEM OITO BOTÕES POR CONTROLE. Eram TRÊS com dono depois da primeira
+# leva; são CINCO desde 01/09/2026 — o Virtual e o Nativo entraram. O resto
+# desta seção é sobre os três que continuam sem, porque é aí que uma tela mente:
+# o botão que responde calado deixa quem clicou concluir que funcionou.
 #
 # O QUE TEM DONO, medido nos 39 métodos do `ipc_server` em 01/09/2026:
 #
@@ -107,7 +116,7 @@ def pacote(ctx: Contexto) -> dict:
 #   Giroscópio / Acelerômetro   não há método de sensor nos 39 (medido de novo
 #                               em 01/09: `daemon.metodos()` não traz um único
 #                               `sensor.*`, `gyro.*` nem `motion.*`). O
-#                               `sensor_hub` só LÊ — as suas 17 funções são
+#                               `sensor_hub` só LÊ — as suas 15 funções são
 #                               `leitura`, `reconciliar`, `_abrir_*`, e nenhuma
 #                               liga ou desliga nada. `profiles/schema.py:902`
 #                               diz que os dois estão "FORA POR AUSÊNCIA, NÃO
@@ -141,22 +150,28 @@ def pacote(ctx: Contexto) -> dict:
 # `common[7]`) e tem dono nomeado em `core/ds_output_report.py:136`, que é
 # módulo puro — o outro lugar onde ele aparece com nome é
 # `app/widgets/controller_card.py:716`, e aquele importa GTK.
-from hefesto_dualsense4unix.core.ds_output_report import (  # noqa: E402
-    SAIDA_L_FONE_R_ALTO_FALANTE,
-)
-
-#: A REGRA DO MICROFONE E AS TRÊS FRASES DELA, do produto estável. `secao_*` é
-#: seção da aba Configurações e o guia manda desconfiar de `app/actions/*` —
-#: mas o aviso de lá é sobre os MIXINS GTK (`self._get`, `self._toast_light`), e
-#: estas duas são funções de MÓDULO, puras, sobre um objeto de dados. Medido em
-#: 01/09/2026: o import roda sem display e sem `gi` (o `from gi.repository import
-#: Gtk` do arquivo mora DENTRO dos construtores de widget).
-#:
-#: REESCREVÊ-LAS SERIA A SEGUNDA VERDADE: a condição "só no rádio" e a frase que
-#: explica o porquê já existem, com dono, e são exatamente o que este botão
-#: precisa dizer quando recusa.
+#
+# `secao_controles` É A REGRA DO MICROFONE E AS TRÊS FRASES DELA, do produto
+# estável. O guia manda desconfiar de `app/actions/*` — mas o aviso de lá é
+# sobre os MIXINS GTK (`self._get`, `self._toast_light`), e `pode_ligar_o_mic` e
+# `dica_do_microfone` são funções de MÓDULO, puras, sobre um objeto de dados.
+# Medido em 01/09/2026: o import roda sem display e sem `gi` (o `from
+# gi.repository import Gtk` daquele arquivo mora DENTRO dos construtores de
+# widget). Reescrevê-las seria a segunda verdade: a condição "só no rádio" e a
+# frase que a explica já existem, com dono, e são exatamente o que este botão
+# precisa dizer quando recusa.
+#
+# `norm_mac` é o dono da CHAVE do `maquina.json` — doze hex minúsculos. O daemon
+# publica o `uniq` ora com dois-pontos, ora sem, e montar a chave à mão aqui
+# gravaria a declaração num controle que não existe.
+#
+# A ORDEM DESTE BLOCO É A DO `ruff --select I`, não a da leitura: um bloco fora
+# de ordem reprova o portão de lint, e é ele que decide a integração.
 from hefesto_dualsense4unix.app.actions.config import (  # noqa: E402
     secao_controles as _mic_do_produto,
+)
+from hefesto_dualsense4unix.core.ds_output_report import (  # noqa: E402
+    SAIDA_L_FONE_R_ALTO_FALANTE,
 )
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 
@@ -343,7 +358,7 @@ def _como_o_produto_ve(ctx: Contexto, uniq: str):
       mesma chave;
     * `adotado` — `True`, e é afirmação medida: o `state_full["controllers"]`
       sai do `describe_controllers` do controlador de DualSense
-      (`ipc_handlers.py:2568`), e cada entrada traz `lightbar_rgb`,
+      (`ipc_handlers.py:2567`), e cada entrada traz `lightbar_rgb`,
       `player_slot` e `vpad_backend`. Controle externo (8BitDo, Pro) não entra
       por essa porta — ele vem por `controller.list`, que esta aba não lê.
     """
@@ -446,11 +461,12 @@ METODOS: set[str] = set()
 #: largura, fundo e `value` (`hefesto_vivo.py:100-116`) — não sabe acender uma
 #: classe. Depois de clicar "Nativo", o "Virtual" segue aceso até o gerador
 #: rodar de novo. Ligar isso é do PILOTO, que não é território desta aba.
-SEM_ECO = {
-    "mic-modo": "grava no `maquina.json` (`machine.declare`), e o `state_full` "
-                "não devolve a declaração — o tique é de 20 Hz e ela muda por "
-                "gesto dela",
-}
+#: TUPLA, e não dicionário com o motivo: as outras cinco abas ligadas declaram
+#: assim (`a03`, `a05`, `a08`, `a09`, `a10`) e o piloto faz
+#: `set(getattr(mod, "SEM_ECO", ()))` — um dicionário passaria, e seria a sexta
+#: gramática para a mesma lista. O motivo fica no comentário, que é onde ele
+#: cabe inteiro.
+SEM_ECO = ("mic-modo",)
 
 
 #: O QUE ESTA ABA DECLARA À RÉGUA. O piso e as provas moram AQUI, e não no

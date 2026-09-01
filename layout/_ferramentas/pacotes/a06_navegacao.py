@@ -6,9 +6,17 @@ O daemon marca um controle como primário, e a tela já dizia isso à mão: o
 `NAVEGA` do gerador tirava o MENOR número da mesa, que acerta por coincidência
 enquanto o P1 estiver na frente. Agora sai do daemon.
 
-O QUE NÃO TEM: os cinco gestos (PS+Options, PS+↑…) e as velocidades de cursor e
-rolagem. Eles moram no PERFIL, não no `state_full` — e o perfil só chega à tela
-por outro caminho de IPC, que esta aba ainda não tem.
+O QUE NÃO TEM: os cinco gestos (PS+Options, PS+↑…). Eles NÃO são configuráveis —
+`daemon/subsystems/hotkey.py` monta um callback por combo, em código, e o único
+pedaço ajustável é o `ps_button_action` da config, que método de IPC nenhum
+escreve. A tabela da tela oferece trocar o que cada combo faz; o produto não tem
+onde guardar essa troca.
+
+FATO SUBSTITUÍDO (01/09/2026, segunda leva): esta linha dizia que os cinco
+gestos "moram no PERFIL". Não moram — o perfil guarda `key_bindings`, que são
+os BOTÕES (options, create, l1, r1, l3, r3 e as três regiões do touchpad), e
+combo nenhum. A frase sobre as velocidades de cursor e rolagem, que estava na
+mesma linha, já tinha caído na primeira leva (ver o `SEM_DONO` logo abaixo).
 """
 from __future__ import annotations
 
@@ -20,8 +28,26 @@ from . import Contexto, perfil, registrar
 #: bloqueada — medido no daemon dela: `{"enabled": false, "speed": 6,
 #: "scroll_speed": 1, "bloqueio": "desligada"}`.
 #:
-#: Os gestos vêm do perfil (`key_bindings`), que também tem dono. Sobra nada.
+#: Os atalhos de BOTÃO vêm do perfil (`key_bindings`), que também tem dono.
+#: Sobra nada.
 SEM_DONO: dict[str, str] = {}
+
+#: AS DUAS FRASES DA LISTA "Função do teclado" QUE O DAEMON SABE DIZER, e elas
+#: são o outro lado do contrato que `layout/_ferramentas/aba06.py:OPCOES_TECLADO`
+#: desenha. A repetição é declarada, e os dois lados falham de jeitos diferentes
+#: de propósito:
+#:
+#: * o GESTO casa pela primeira palavra (`_ESCOLHA`), então reescrever o que vem
+#:   depois do travessão não desliga o botão;
+#: * a PINTURA usa a frase inteira, porque `escrever()` do piloto faz
+#:   `el.value = texto` e o `<select>` só aceita o texto exato de uma `<option>`
+#:   (as opções não têm `value` — ver a nota no gerador sobre o portão do
+#:   desenho).
+#:
+#: A terceira opção do desenho, "Só fora do jogo", NÃO está aqui porque o daemon
+#: não tem esse estado — ver `SEM_GESTO` e o corpo de `teclado()`.
+TECLADO_LIGADA = "Ligada — atalhos e teclado na tela"
+TECLADO_DESLIGADA = "Desligada"
 
 
 @registrar("06-navegacao.html")
@@ -39,24 +65,43 @@ def pacote(ctx: Contexto) -> dict:
             "navega": "Navega o PC" if primario else "Só a janela",
             "via": (c.get("transport") or "").upper(),
         }
+    mesa = {
+        # AS DUAS VELOCIDADES, do daemon — não do perfil. O perfil guarda o
+        # que ela SALVOU; o daemon diz o que está VALENDO agora, e é o
+        # segundo que a tela mostra.
+        "vel-cursor": rato.get("speed"),
+        "vel-rolagem": rato.get("scroll_speed"),
+        "rato-ligado": bool(rato.get("enabled")),
+        "rato-bloqueio": rato.get("bloqueio") or "",
+        "rato-despachando": bool(rato.get("despachando")),
+        "teclado-ligado": bool(tecla.get("enabled")),
+        "teclado-osk": bool(tecla.get("osk_disponivel")),
+        "gestos": len(atalhos),
+        "gestos-lista": {k: v for k, v in list(atalhos.items())[:12]},
+    }
+    # A LISTA "Função do teclado" SÓ É REESCRITA QUANDO O DAEMON FALOU, e a
+    # ausência da chave é o que impede a mentira: sem o bloco
+    # `keyboard_emulation` (daemon mudo, ou config inacessível — o `state_full`
+    # OMITE o bloco nesse caso) escrever "Desligada" afirmaria um estado que
+    # ninguém mediu. Chave ausente = a pintura não toca no `<select>`.
+    #
+    # E ela é o ÚNICO canal de recusa VISÍVEL desta aba: um gesto que levanta só
+    # imprime no terminal (`hefesto_vivo.py:519`). Escolher "Só fora do jogo",
+    # que não tem dono, deixa a lista parada na opção errada até o tique
+    # seguinte reescrevê-la com o que o daemon diz.
+    if "keyboard_emulation" in st:
+        mesa["teclado-estado"] = (
+            TECLADO_LIGADA if tecla.get("enabled") else TECLADO_DESLIGADA)
     return {
         "colunas": cards,
-        "mesa": {
-            # AS DUAS VELOCIDADES, do daemon — não do perfil. O perfil guarda o
-            # que ela SALVOU; o daemon diz o que está VALENDO agora, e é o
-            # segundo que a tela mostra.
-            "vel-cursor": rato.get("speed"),
-            "vel-rolagem": rato.get("scroll_speed"),
-            "rato-ligado": bool(rato.get("enabled")),
-            "rato-bloqueio": rato.get("bloqueio") or "",
-            "rato-despachando": bool(rato.get("despachando")),
-            "teclado-ligado": bool(tecla.get("enabled")),
-            "teclado-osk": bool(tecla.get("osk_disponivel")),
-            "gestos": len(atalhos),
-            "gestos-lista": {k: v for k, v in list(atalhos.items())[:12]},
-        },
+        "mesa": mesa,
         "sem_dono": {},
-        "cobertura": {"pintados": len(cards) * 2 + 9, "sem_dono": len(SEM_DONO)},
+        # O NÚMERO SAI DOS DICIONÁRIOS, e não de uma constante escrita à mão:
+        # foi uma soma digitada (`len(cards) * 2 + 9`) que deixou a curva da aba
+        # Gatilhos fora da cobertura, e aqui ela erraria no tique em que a lista
+        # do teclado entra — o valor é condicional.
+        "cobertura": {"pintados": sum(len(v) for v in cards.values()) + len(mesa),
+                      "sem_dono": len(SEM_DONO)},
     }
 
 
@@ -192,6 +237,82 @@ def modo(ctx: Contexto, o: dict, p) -> None:
         raise RuntimeError("o mouse mudou e o teclado não — o Hefesto não respondeu")
 
 
+#: O QUE CADA PALAVRA DA LISTA MANDA FAZER. A chave é a PRIMEIRA palavra da
+#: opção, em minúsculas — e as três se distinguem por ela ("ligada", "só",
+#: "desligada"), o que deixa o gesto sobreviver a uma reescrita do que vem
+#: depois do travessão. Casar a frase inteira quebraria no dia em que alguém
+#: melhorasse o texto da tela, e quebraria CALADO: um `<select>` cujo valor não
+#: casa com nada simplesmente não faria nada.
+#:
+#: `None` é a opção que a tela oferece e o daemon NÃO tem. Ela não vira `False`
+#: por conveniência: ver `teclado()`.
+_ESCOLHA: dict[str, bool | None] = {"ligada": True, "desligada": False, "só": None}
+
+
+@gesto("06-navegacao.html", "teclado")
+def teclado(ctx: Contexto, o: dict, p) -> None:
+    """A lista "Função do teclado". `keyboard.emulation.set`.
+
+    O VALOR VEM EM `valor`, E ISSO É O QUE MUDOU DESDE A PRIMEIRA LEVA: o
+    ouvinte do piloto passou a escutar `change` além de `click` e a mandar o
+    `value` do alvo (`hefesto_vivo.py:196` e `:230`). Antes só chegava `texto`,
+    que num `<select>` é a lista INTEIRA de opções concatenada — foi por isso
+    que esta lista ficou sem dono na primeira leva, e não por falta de método.
+
+    O `rotulo` É O SEGUNDO CAMINHO, não um enfeite: as `<option>` desta lista
+    não têm atributo `value` (`value` não está entre os que o portão do desenho
+    ignora), então `select.value` **é** o texto — mas um `<option value=…>` que
+    nasça amanhã mandaria a chave em `valor` e a frase em `rotulo`, e é o
+    `rotulo` que continuaria casando com o desenho.
+
+    DUAS DAS TRÊS OPÇÕES TÊM DONO, e a terceira RECUSA DIZENDO — que é a regra
+    da casa, não uma falha desta ligação:
+
+    * "Ligada…" → `enabled=True`; "Desligada" → `enabled=False`. O handler
+      (`daemon/ipc_handlers.py:5038`) só lê `enabled`, e ele é bool.
+    * "Só fora do jogo" **não existe do outro lado**. O que mais se parece com
+      ela é o "modo jogo" (`daemon.emulation.suppress`), e ele é o contrário do
+      que o rótulo promete: suspende mouse E teclado **agora**, no desktop,
+      independentemente de haver jogo — `set_emulation_suppressed`
+      (`daemon/lifecycle.py:1879`) só inverte um bool. O único caminho que
+      liga a supressão SOZINHO quando um jogo começa é o perfil
+      (`apply_profile_suppression`, a partir de `suppress_desktop_emulation`),
+      e método de IPC nenhum grava perfil. Pendurar a opção no
+      `emulation.suppress` faria a tela dizer "só fora do jogo" e o teclado
+      morrer DENTRO do desktop, no mesmo clique.
+
+    SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
+    portão de lá existe porque ligar o MOUSE derruba o gamepad virtual
+    (`daemon/lifecycle.py:1359`). `set_keyboard_emulation`
+    (`daemon/lifecycle.py:1448`) não toca no vpad — cria ou destrói o teclado
+    virtual e nada mais —, e com o gamepad despachando o teclado nem chega a
+    ser consultado (`lifecycle.py:4742`, `if not gamepad_dispatched`). Copiar o
+    portão daqui bloquearia, dentro do jogo, o único interruptor que existe
+    para calar o Alt+Tab do R1 — que é o defeito que este método nasceu para
+    curar (queixa dela, 29/07).
+
+    O QUE ESTE BOTÃO AINDA NÃO DIZ, e está no relato: desligar tira também o
+    teclado na tela do L3/R3 e as três regiões do touchpad (o handler manda a
+    interface repassar isso). O piloto não tem canal de aviso — um gesto só
+    imprime no terminal —, então o recado não tem onde aparecer.
+    """
+    escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
+    chave = escolhido.split()[0].lower() if escolhido else ""
+    if chave not in _ESCOLHA:
+        raise ValueError(
+            f"teclado: não reconheci a opção escolhida ({escolhido!r}). As três "
+            f"do desenho estão em `layout/_ferramentas/aba06.py:OPCOES_TECLADO`.")
+    ligar = _ESCOLHA[chave]
+    if ligar is None:
+        raise RuntimeError(
+            "\"Só fora do jogo\" ainda não tem dono: o Hefesto liga e desliga o "
+            "teclado, mas não sabe fazê-lo só durante o jogo — isso mora no "
+            "perfil (`suppress_desktop_emulation`), e não há comando que grave "
+            "perfil. A lista volta sozinha para o que está valendo.")
+    if not p.chamar("keyboard.emulation.set", enabled=ligar):
+        raise RuntimeError("o Hefesto não respondeu — o teclado ficou como estava")
+
+
 @gesto("06-navegacao.html", "vel-cursor-mais")
 @gesto("06-navegacao.html", "vel-cursor-menos")
 def vel_cursor(ctx: Contexto, o: dict, p) -> None:
@@ -238,24 +359,41 @@ def vel_rolagem(ctx: Contexto, o: dict, p) -> None:
     _mandar(p, scroll_speed=atual + _passo(o), origin=MANUAL)
 
 
-#: OS QUATORZE QUE FICARAM SEM DONO, com o motivo de cada um — o inventário
-#: honesto do que falta, no lugar de um botão que responde calado. O piloto os
-#: recusa PELO NOME (`[gesto sem dono] 06-navegacao.html · <nome>`), e por isso
-#: as chaves aqui são os nomes que ele vai imprimir, um por um: os dois `bignum`
-#: sem dono viram quatro linhas (`-menos` e `-mais`), porque são quatro botões.
+#: OS TREZE QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
+#: inventário honesto do que falta, no lugar de um botão que responde calado. O
+#: piloto os recusa PELO NOME (`[gesto sem dono] 06-navegacao.html · <nome>`), e
+#: por isso as chaves aqui são os nomes que ele vai imprimir, um por um: os dois
+#: `bignum` sem dono viram quatro linhas (`-menos` e `-mais`), porque são quatro
+#: botões.
 #:
-#: `mouse.emulation.restore` NÃO virou botão, e é o terceiro método que esta aba
-#: tinha à mão. O handler dele diz por quê, com todas as letras: *"entra na
-#: transição de modo (`app/actions/mode_transition.py`), **nunca em um botão
-#: solto**"* (`daemon/ipc_handlers.py:5011`). Ele devolve a preferência
-#: PERSISTIDA, que não é "o de fábrica" nem "o que a tela mostra" — pendurá-lo
-#: no "Voltar ao padrão" faria o botão prometer uma coisa e fazer outra.
+#: ERAM QUATORZE. O `teclado` saiu daqui na segunda leva: o que o segurava não
+#: era falta de método, era o piloto não mandar o valor de um `<select>` — e
+#: isso mudou em 01/09/2026.
+#:
+#: -------------------------------------------------------------------------
+#: `mouse.emulation.restore` NÃO virou botão, e a segunda leva reconfirmou a
+#: recusa com uma razão MAIOR que a da primeira. Três coisas, e a terceira é a
+#: que fecha a porta:
+#:
+#: 1. o handler diz o lugar dele com todas as letras — *"entra na transição de
+#:    modo (`app/actions/mode_transition.py`), **nunca em um botão solto**"*
+#:    (`daemon/ipc_handlers.py:5011`);
+#: 2. ele devolve a preferência PERSISTIDA — não "o de fábrica" nem "o que a
+#:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
+#:    prometer uma coisa e fazer outra;
+#: 3. **ele LIGA o mouse.** `restore_mouse_preference`
+#:    (`daemon/lifecycle.py:1385`) chama `set_mouse_emulation(pref, …)` e, com a
+#:    preferência nunca gravada, `pref` vira `True` por default (`:1403`) — o
+#:    cursor DELA passa a andar pelo controle, e o gamepad virtual cai junto
+#:    (`:1359`). Isso o põe na mesma prateleira do gesto `modo`, que já está em
+#:    `hefesto_vivo.PERIGOSOS` justamente para a prova botão a botão não o
+#:    clicar. Ligá-lo aqui criaria um gesto perigoso NOVO **fora** daquela
+#:    lista, e a lista mora num arquivo que esta aba não pode tocar.
 SEM_GESTO = {
-    "teclado": "três estados na tela ('Ligada', 'Só fora do jogo', 'Desligada') "
-               "e um bool no daemon (`keyboard.emulation.set` só lê `enabled`); "
-               "e `<select>` não liga por clique",
     "navegacao-interna": "navegar a janela do Hefesto com o controle não tem "
-                         "método no daemon — nenhum dos 39",
+                         "método no daemon — nenhum dos 39, e o "
+                         "`core/disputa_de_botao.py` que as sprints citam não "
+                         "existe no disco",
     "modo-steam": "não há método de Modo Steam no daemon — nenhum dos 39",
     "vel-touch-menos": "o cursor do touchpad SAI do mesmo `mouse_speed` "
                        "(`uinput_mouse.py:446`); não há segundo número a ajustar",
@@ -263,18 +401,44 @@ SEM_GESTO = {
     "rolagem-dedos-menos": "rolagem por dois dedos no touchpad não existe no "
                            "produto: `_emit_scroll` lê só o analógico direito",
     "rolagem-dedos-mais": "idem",
-    "acao-do-gesto": "os cinco combos moram em `key_bindings` do perfil, e não "
-                     "há método de IPC que escreva key_bindings",
-    "padrao-da-aba": "devolver a aba ao de fábrica mexe em `key_bindings` e nas "
-                     "opções do perfil — sem método de IPC",
-    "guardar-definicoes": "gravar as 21 linhas é escrever `key_bindings` — "
-                          "sem método de IPC",
-    "padrao-definicoes": "idem, ao contrário",
+    # FATO SUBSTITUÍDO (segunda leva): dizia "os cinco combos moram em
+    # `key_bindings` do perfil". Não moram — `key_bindings` são os nove BOTÕES
+    # do `DEFAULT_BUTTON_BINDINGS`, e combo nenhum aparece lá.
+    "acao-do-gesto": "os cinco combos são callbacks montados em código "
+                     "(`daemon/subsystems/hotkey.py:86,414`), não dado: o único "
+                     "pedaço ajustável é `config.ps_button_action`, que método "
+                     "de IPC nenhum escreve",
+    "padrao-da-aba": "a frase do botão promete a aba INTEIRA — as opções de "
+                     "ativação, os 5 gestos e as 21 linhas das duas telas. Só as "
+                     "duas velocidades têm rota (`mouse.emulation.set` "
+                     "speed-only); as outras três promessas não têm nenhuma, e "
+                     "um 'Voltar ao padrão' que devolve dois números de cinco "
+                     "coisas é um botão que responde calado sobre as outras três",
+    # FATO SUBSTITUÍDO (segunda leva): dizia "sem método de IPC" para escrever
+    # `key_bindings`. HÁ um — `profile.apply_draft` tem seção `keyboard` com
+    # `key_bindings` (`daemon/ipc_draft_applier.py:646`). O que ele NÃO faz é o
+    # que este botão promete, e são três coisas medidas.
+    "guardar-definicoes": "`profile.apply_draft` empurra `key_bindings` ao "
+                          "device VIVO (`ipc_draft_applier.py:646`) e nunca "
+                          "grava em disco — um 'Guardar' que some no próximo "
+                          "`profile.switch`. Some antes disso, aliás: sem "
+                          "`_keyboard_device` ele volta calado (`:669`) e a "
+                          "resposta ainda diz `applied: [keyboard]`. E ele "
+                          "alcança 9 das 21 linhas — as do "
+                          "`DEFAULT_BUTTON_BINDINGS`; as outras 12 são os três "
+                          "mapas FIXOS de `uinput_mouse.py:93,99,105` "
+                          "(`BUTTON_TO_UINPUT`, `DPAD_TO_KEY`, `EDGE_KEY_MAP`), "
+                          "que não têm campo em perfil nenhum",
+    "padrao-definicoes": "idem, ao contrário (`key_bindings: null` devolve o "
+                         "`DEFAULT_BUTTON_BINDINGS`) — e com o mesmo silêncio",
     "guardar-remapeamento": "o remapeamento botão-por-botão não tem sequer campo "
                             "no perfil, quanto mais método de IPC",
     "padrao-remapeamento": "idem, ao contrário",
-    "guardar-ponto": "o Estilo Point-and-click é um estilo de jogo do perfil; "
-                     "gravá-lo não tem método de IPC",
+    "guardar-ponto": "'Estilo de Jogo' não existe em campo, widget ou preset "
+                     "nenhum do produto — está escrito em "
+                     "`app/actions/perfis_web.py`, que já mediu isto para a aba "
+                     "Perfis. O `point_and_click` que existe é um PERFIL em "
+                     "disco, não um estilo, e gravar perfil não tem método",
 }
 
 
@@ -283,7 +447,7 @@ METODOS = {"mouse.emulation.set", "keyboard.emulation.set"}
 
 
 PAGINA = "06-navegacao.html"
-PISO_DA_ABA = 5
+PISO_DA_ABA = 6
 
 
 def _prova(nome: str, clique: dict, chama: list) -> dict:
@@ -322,4 +486,17 @@ PROVAS = [
            [("chamar", [_MOUSE], {"scroll_speed": 2, "origin": "manual"})]),
     _prova("rolagem-menos", {"gesto": "rolagem-menos"},
            [("chamar", [_MOUSE], {"scroll_speed": 0, "origin": "manual"})]),
+    # AS DUAS PONTAS DA LISTA DO TECLADO, e as duas provam a mesma coisa por
+    # lados opostos: que o `valor` do `<select>` decide o bool. O `clique` traz
+    # `valor` porque é ele que o piloto manda desde 01/09 — `texto`, num
+    # `<select>`, é a lista inteira concatenada, e foi essa confusão que deixou
+    # esta lista sem dono na primeira leva.
+    #
+    # A OPÇÃO DO MEIO NÃO TEM PROVA AQUI de propósito: `PROVAS` só sabe cobrar
+    # chamada, e o certo para "Só fora do jogo" é NÃO chamar nada. Ela é provada
+    # pela mordida, no relato.
+    _prova("teclado", {"valor": TECLADO_LIGADA},
+           [("chamar", ["keyboard.emulation.set"], {"enabled": True})]),
+    _prova("teclado", {"valor": TECLADO_DESLIGADA},
+           [("chamar", ["keyboard.emulation.set"], {"enabled": False})]),
 ]
