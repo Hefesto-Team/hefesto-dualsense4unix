@@ -1,4 +1,7 @@
-import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import sys, pathlib, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import onde
+import medidas
+import monta as monta_
 from itertools import cycle
 from monta import (monta, svg, glifo, CSS_GLIFO, CSS_LUZINHAS, MESA,
                    cor_da_zona, luzinhas, player_slot_color, tom_da_casa)
@@ -122,10 +125,27 @@ CSS = """
      é padding — e padding não interrompe borda. O vão VERTICAL (`row-gap`) fica:
      é ele que separa uma linha da outra. */
   .luz-grade{
-    display:grid;grid-template-columns:132px repeat(4,1fr);
-    gap:16px;
+    display:grid;
+    /* A LARGURA DA COLUNA DE RÓTULOS E O VÃO ATÉ A PRIMEIRA COLUNA DE
+       CONTROLE VÊM DE `medidas.py` — o dono deles nas TRÊS abas que têm
+       essa coluna. Eram 132px e 16 aqui, 138 e 12 na Gatilhos, e o texto
+       acabava em x=536 numa e x=542 na outra. Ela viu: *"tem algo que
+       deixa estranho essa área da primeira coluna."* */
+    grid-template-columns:var(--larg-rot) repeat(4,1fr);
+    gap:var(--gap-col);
     --r-des:146px;--r-nome:16px;--r-cor:44px;--r-brilho:26px;
-    --r-player:62px;--r-leds:34px;--r-acoes:72px;--r-passo:8px;
+    --r-player:62px;--r-leds:34px;--r-acoes:72px;
+    /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido dela:
+       *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
+       construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
+       Vibração: 5.
+       MEDIDO ANTES: o passo era 8 e a divisória ficava em `top:0` — encostada no
+       conteúdo de cima, com o vão INTEIRO embaixo. `a_divisoria_sobe: [0]`.
+       O QUE ELE CUSTA: o passo vai de 8 para 10, e 2px em seis vãos são 12. A
+       coluna vai de 448 para 460, contra o teto MEDIDO de 476 — 16px de folga.
+       A parte que NÃO custa nada é a que arruma o feio: descer a linha meio
+       passo só muda de que lado dela o vão está. */
+    --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
   .luz-grade > div{
     display:grid;row-gap:var(--r-passo);
@@ -139,6 +159,62 @@ CSS = """
      ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
      coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
   .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 8px 0 12px}
+
+  /* ---------- O LUGAR VAZIO ----------
+     A mesma gramática da Jogar, da Controles e da Gatilhos: cor explícita e
+     NADA de `opacity` — a lição medida da `.fita.inerte`, que a opacidade tira
+     contraste e peso do traço ao mesmo tempo.
+
+     O DESENHO FICA CINZA POR `!important` porque a cor da peça é `style=` INLINE
+     dentro do SVG: o gerador de cores a escreve lá para o arquivo abrir colorido
+     sozinho, e regra externa não vence atributo inline sem isto. `.corpo` entra
+     junto com `.peca` — foi a ampliação da foto na aba Jogar que o achou, com o
+     P3 continuando roxo e o P4 branco depois da primeira volta. */
+  /* O TRAVESSÃO PREENCHE A CÉLULA, e isto é a régua de alinhamento falando.
+     A coluna vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas —
+     medido. O que acabava 26px antes era o CONTEÚDO da última célula: dois
+     botões empilhados preenchem os 74px de `--r-acoes`; um travessão centrado
+     para no meio. A régua leu isso como "o conteúdo das colunas acaba em y
+     diferentes", e leu certo.
+     `height:100%` no marcador resolve sem mexer em altura nenhuma: ele passa a
+     ocupar a célula e o texto continua centrado dentro dele. */
+  .luz-grade .ctrl.vazia .nada{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
+  .luz-grade .ctrl.vazia .ctrl-rot,
+  .luz-grade .ctrl.vazia .nada{color:var(--linha)}
+  .luz-grade .ctrl.vazia .moldura{border-color:var(--border-forte)}
+  .luz-grade .ctrl.vazia .ds-svg .peca,
+  .luz-grade .ctrl.vazia .ds-svg .corpo,
+  .luz-grade .ctrl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
+  .luz-grade .ctrl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
+  /* OS DETALHES CLAROS TAMBÉM CAEM, e eles só aparecem AQUI. Na aba Jogar o
+     desenho tem 62px e estes elementos somem sozinhos; nesta aba ele tem 146 e
+     eles ficam à mostra — medido no DOM do lugar vazio: 8 `line` em branco
+     (#f8f8f2), 7 `text` em `--texto-suave` e 4 `path` em #d8d8d8, que são os
+     glifos L/R/PS e os traços dos botões.
+     Copiar a regra da Jogar não bastava: o que muda com o TAMANHO do desenho
+     tem de ser medido no tamanho em que ele é desenhado. */
+  .luz-grade .ctrl.vazia .ds-svg text{fill:var(--linha) !important}
+  .luz-grade .ctrl.vazia .ds-svg line{stroke:var(--linha) !important}
+  .luz-grade .ctrl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+                                                            stroke:var(--linha) !important}
+  /* O TOUCHPAD E OS BOTÕES SÃO `rect`, `circle` e `polygon`, e a ampliação foi
+     quem os achou: com `path`, `line` e `text` já apagados, o touchpad continuou
+     cinza-claro (#8a8a96) no meio de um controle inteiro em `--linha`.
+     `fill` NÃO leva `none` como valor aqui, e é de propósito: pintar um contorno
+     vazado apagaria a forma em vez de escurecê-la. Quem tem `fill:none` no
+     arquivo continua sem, porque `var(--linha)` só substitui uma cor que existe. */
+  .luz-grade .ctrl.vazia .ds-svg rect:not([fill="none"]),
+  .luz-grade .ctrl.vazia .ds-svg circle:not([fill="none"]),
+  .luz-grade .ctrl.vazia .ds-svg polygon:not([fill="none"]),
+  .luz-grade .ctrl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  .luz-grade .ctrl.vazia .ds-svg rect,
+  .luz-grade .ctrl.vazia .ds-svg circle,
+  .luz-grade .ctrl.vazia .ds-svg polygon,
+  .luz-grade .ctrl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
+  /* O TRAVESSÃO FICA ONDE O CONTEÚDO FICARIA — centrado na célula, para as sete
+     linhas continuarem legíveis como linhas. */
+  .luz-grade .ctrl.vazia > *{display:flex;align-items:center;justify-content:center}
+  .luz-grade .ctrl.vazia .moldura{display:block}
   /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
@@ -168,7 +244,15 @@ CSS = """
      `overflow:hidden` para conter o SVG, então ela cortava a própria linha
      24px antes da divisa. A célula de baixo não recorta nada, e o traço
      cai no mesmo lugar: entre uma linha e a outra. */
-  .luz-grade > div > *::before{content:'';position:absolute;top:0;height:0;
+  /* A LINHA DESCE MEIO PASSO E CAI NO MEIO DO VÃO — 31/08/2026. O comentário
+     acima dizia que *"o `row-gap` de 8px a separa do campo de baixo — o respiro
+     fica em cima da linha seguinte, não colado nela"*, e isso descrevia metade
+     do que acontecia: o vão ficava TODO de um lado. O olho lê linha grudada em
+     cima e buraco embaixo — que é o *"sobrando e sem respiro"* dela.
+     Com `top:-var(--r-ar)` cada campo fica com o mesmo ar acima e abaixo da sua
+     divisória, e a tabela mede o mesmo pixel. */
+  .luz-grade > div > *::before{content:'';position:absolute;
+    top:calc(var(--r-ar) * -1);height:0;
     left:-12px;right:-8px;border-top:1px solid var(--rot-linha)}
   /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
      `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
@@ -186,8 +270,20 @@ CSS = """
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
-  .luz-grade .rotulos > *{align-items:flex-end;text-align:right}
-  .luz-grade .rotulos .sec-rot{justify-content:flex-end}
+  /* O RÓTULO ALINHA À ESQUERDA — decisão dela, 31/08/2026: *"alinha a esquerda a
+     primeira coluna."*
+
+     E ELA REVOGA A DECISÃO DELA MESMA de 30/08 (*"no nome das linhas deixa
+     alinhadas à direita. Todas"*). Não é contradição a resolver: é o projeto
+     vivo, e o que mudou no meio foi a própria coluna — ela encolheu de 138 para
+     o tamanho do conteúdo de cada aba, e à direita, numa coluna justa, o texto
+     passou a encostar na divisa em vez de se aproximar do que nomeia.
+
+     DE QUEBRA ISSO CURA UM DESALINHAMENTO QUE A RÉGUA ACUSAVA e que era
+     consequência aritmética do alinhamento à direita: rótulos de larguras
+     diferentes COMEÇAM em x diferentes. À esquerda, todos começam no mesmo. */
+  .luz-grade .rotulos > *{align-items:flex-start;text-align:left}
+  .luz-grade .rotulos .sec-rot{justify-content:flex-start}
   .luz-grade .rotulos > :not(.cel-des) > .sec-rot{flex:1}
   /* O RÓTULO DA PRIMEIRA LINHA VOLTOU A CENTRAR — 30/08/2026.
      Ele estava preso no topo (`flex-start`) porque a legenda de sete linhas vinha
@@ -369,8 +465,22 @@ CSS = """
 
 
 def botao_player(c, n):
-    """Um número, na coluna de UM controle: dá-lo a `c` troca `c` com o dono."""
+    """Um número, na coluna de UM controle: dá-lo a `c` troca `c` com o dono.
+
+    O DONO SÓ EXISTE SE ELE ESTIVER NA MESA — 31/08/2026, e foi a régua desta
+    aba que achou. O `title` dizia *"Dar o Player 3 ao Cosmic Red: o Galactic
+    Purple (BT), que tem o 3 hoje, fica com o 1"* — e o Galactic Purple está
+    DESCONECTADO. Ele não tem o 3 hoje; ele não tem nada hoje.
+
+    É a mesma família do que ela mandou tirar do cabeçalho da coluna (*"colocar
+    algo como Desconectado e não os controles mockados"*): a `MESA` sabe que o
+    P3 é um Galactic Purple, e a TELA não deve saber enquanto ele não estiver
+    lá. Um número sem dono na mesa é um número **livre**, e é isso que a dica
+    passa a dizer.
+    """
     d = DONO.get(n)
+    if d is not None and not d.get("conectado", True):
+        d = None
     eu = d is c
     anel = (f'<i class="dono" style="--plastico:{cor_da_zona(d["cor"])}"></i>'
             if d is not None else "")
@@ -385,18 +495,81 @@ def botao_player(c, n):
     return f'<button class="{"on" if eu else ""}" title="{dica}">{anel}{n}</button>'
 
 
+def coluna_vazia(c):
+    """O LUGAR de um controle que não está na mesa — ordem dela, 31/08/2026:
+
+        "Todas as abas tem que ter só dois controles conectados no momento, o
+         resto fica off." · "Deixa os outros espaços dos 4 controles a mostra
+         ainda mas cinza igual vc fez na aba jogar."
+
+    A COLUNA CONTINUA NA TELA, com as sete linhas na mesma altura — é isso que
+    mantém as divisórias atravessando as cinco colunas no mesmo y, que é o que
+    ela mandou arrumar em 30/08. O que sai é o ESTADO: a cor, o brilho, o número
+    do player e os botões, porque nenhum deles tem controle para valer.
+
+    O NOME DIZ A POSIÇÃO E O ESTADO, nunca o do plástico — a mesma decisão que
+    ela tomou na Gatilhos no mesmo dia: *"colocar algo como Desconectado e não
+    os controles mockados."*
+
+    O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe um
+    controle; um desenho cinza diz.
+    """
+    j = c["jogador"]
+    return f'''        <div class="ctrl vazia" data-conectado="nao"
+             title="Nenhum controle neste lugar.">
+          <div class="moldura">
+            {svg(f"il-{c['pref']}", c["cor"], lampadas=False)}
+          </div>
+          <div class="ctrl-rot">P{j} <span class="pt">•</span> Desconectado</div>
+          <div class="cel-cor"><span class="nada">{VAZIO}</span></div>
+          <div class="cel-brilho"><span class="nada">{VAZIO}</span></div>
+          <div class="players"><span class="nada">{VAZIO}</span></div>
+          <div class="aceso"><span class="nada">{VAZIO}</span></div>
+          <div class="cel-acoes"><span class="nada">{VAZIO}</span></div>
+        </div>'''
+
+
+#: O marcador de campo vazio — o mesmo travessão da Jogar e da Controles.
+VAZIO = "—"
+
+
 def coluna(c):
     """A coluna de UM controle: o desenho dele e tudo o que se ajusta nele."""
-    p, cor, j = c["pref"], luz(c["jogador"]), c["jogador"]
+    # DUAS ESCALAS DA MESMA COR, e ela viu: *"a cor selecionada (…) precisa
+    # refletir no lightbar."* `luz()` devolve o hex CRU que o produto manda ao
+    # controle (#0000FF); `tom_da_casa()` traduz para o tom desta janela, que é
+    # o que a guia de oito cores pinta. Até 31/08 a guia usava um e o lightbar,
+    # as luzinhas e o desenho usavam o outro — a mesma cor em dois azuis
+    # diferentes na mesma coluna.
+    #
+    # QUEM MANDA NA TELA É O TOM DA CASA, porque é ele que ela clica. O hex cru
+    # continua ESCRITO embaixo da guia, e é o certo: aquele campo diz o valor que
+    # o produto grava, não a tinta que a janela usa para desenhá-lo.
+    p, j = c["pref"], c["jogador"]
+    cor = luz(j)                 # o hex cru do produto — o que o `.hex` mostra
+    tinta = tom_da_casa(cor)     # o tom desta janela — o que a tela ACENDE
     b = BRILHO[c["pref"]]
+    # O TOM ESCOLHIDO NUNCA ACENDIA, e ela viu sem medir: *"a cor selecionada
+    # precisa ter uma borda."* Medido no DOM: `.tom.on` casava ZERO botões nos
+    # dois controles conectados — a guia de oito cores mostrava a escolha em
+    # nenhuma delas.
+    #
+    # A CAUSA são duas escalas comparadas como se fossem uma. `TONS` passa por
+    # `tom_da_casa()`, que traduz o hex CRU do produto para o tom desta janela; a
+    # comparação era contra `cor`, que é o hex cru. `#0000FF` nunca é igual ao
+    # azul da casa, então nada casava — e um `if` que nunca é verdadeiro não dá
+    # erro, dá SILÊNCIO. É a régua que "acha zero" em forma de CSS.
+    #
+    # A CURA TRADUZ OS DOIS LADOS, não escolhe um: o botão continua pintado com o
+    # tom da casa (é o que ela vê) e a comparação passa a ser entre tons.
     tons = "\n".join(
-        f'            <button class="tom{" on" if t == cor else ""}" style="background:{t}"'
+        f'            <button class="tom{" on" if t == tom_da_casa(cor) else ""}" style="background:{t}"'
         f' title="Cor automática do Player {i} — usar aqui pinta a barra do'
         f' {c["nome"]}, e não muda o número dele."></button>'
         for i, t in enumerate(TONS, 1))
     return f'''        <div class="ctrl">
           <div class="moldura" style="--plastico:{cor_da_zona(c["cor"])}" title="O {c["nome"]} agora: a barra na cor do Player {j}, e as cinco lâmpadas no padrão dele.">
-            {svg(f"il-{p}", c["cor"], jogador=j, luz=cor)}
+            {svg(f"il-{p}", c["cor"], jogador=j, luz=tinta)}
           </div>
           <div class="ctrl-rot">P{j} <span class="pt">•</span> {c["nome"]} <span class="pt">•</span> {c["via"]}</div>
           <div class="cel-cor">
@@ -415,12 +588,12 @@ def coluna(c):
 {chr(10).join("            " + botao_player(c, n) for n in NUMEROS)}
           </div>
           <div class="aceso" title="O {c["nome"]} aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player {j}.">
-            <span class="tira-luz esq" style="background:{cor};color:{cor};opacity:{b / 100}"></span>
+            <span class="tira-luz esq" style="background:{tinta};color:{tinta};opacity:{b / 100}"></span>
             <span class="pad">{luzinhas(j)}</span>
-            <span class="tira-luz dir" style="background:{cor};color:{cor};opacity:{b / 100}"></span>
+            <span class="tira-luz dir" style="background:{tinta};color:{tinta};opacity:{b / 100}"></span>
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Voltar ao automático</button>
+            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" title="Apaga a barra de luz do {c["nome"]}.">Desligar</button>
           </div>
         </div>'''
@@ -502,7 +675,7 @@ MIOLO = f'''
             </div>
             <div><div class="sec-rot">Brilho</div></div>
             <div>
-              <div class="sec-rot">Selecione o player
+              <div class="sec-rot">Jogador
                 <span class="ajuda">?<span class="dica">
                   O player é quem este controle é na mesa: o número do cabeçalho, o dos cards
                   da aba <b>Controles</b>, e o das cinco luzinhas brancas acima do
@@ -520,11 +693,11 @@ MIOLO = f'''
                 </span></span>
               </div>
             </div>
-            <div><div class="sec-rot">Disposição de LEDs</div></div>
+            <div><div class="sec-rot">LEDs</div></div>
             <div><div class="sec-rot">Opções</div></div>
           </div>
 
-{chr(10).join(coluna(c) for c in MESA)}
+{chr(10).join(coluna(c) if c.get('conectado', True) else coluna_vazia(c) for c in MESA)}
 
         </div>
 
@@ -611,7 +784,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>Cor e Brilho na mesma largura</b> — os dois são a coluna inteira do controle.</li>
     <li><b>Os títulos têm todos o mesmo estilo</b>, e agora começam todos no mesmo x, porque
         moram na mesma coluna: <span class="marca">Controle · Cor · Brilho · Selecione o
-        player · Disposição de LEDs · Opções</span>.</li>
+        Jogador · LEDs · Opções</span>.</li>
     <li><b>Os dois botões de Opções</b> continuam <span class="marca">roxo</span> e
         <span class="marca">vermelho</span>, como o <b>Parar</b> da Vibração.</li>
     <li><b>As cinco colunas acabam no mesmo y</b> — as sete linhas são compartilhadas, e a
@@ -640,5 +813,108 @@ LEGENDA = f'''<div class="nota">
 # Vibração os quatro ficam lado a lado, sempre visíveis, e a fita fica
 # esmaecida. Ela não é o alvo desta aba porque não há alvo: cada coluna se
 # ajusta no seu lugar.
-n = monta("04-iluminacao", "Iluminação", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
-print(f"04-iluminacao: OK, {n} divs · {len(MESA)} controles · números {NUMEROS}")
+def _conferir(doc):
+    """As decisões dela nesta aba, conferidas NA SAÍDA.
+
+    Só o miolo e sem comentário HTML — a régua da Jogar nasceu errada duas vezes
+    por casar token na legenda e no próprio comentário que a explicava.
+    """
+    corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
+    corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
+    # E O `<style>` SAI JUNTO: os SVGs carregam a folha das cores do plástico
+    # dentro deles, com um comentário por modelo (`/* Galactic Purple · código
+    # 04 */`). Isso é DADO do CSV, não tela — e contá-lo fez a régua reprovar
+    # um nome que ela mesma não põe em lugar nenhum visível.
+    corpo = re.sub(r"<style[^>]*>.*?</style>", "", corpo, flags=re.S)
+    if len(corpo) < 2000:
+        raise SystemExit("ERRO: a régua não achou o miolo desta aba.")
+    falhas = []
+
+    def exigir(cond, oque):
+        if not cond:
+            falhas.append(oque)
+
+    # 1. O RESPIRO — *"aba iluminação tem a mesma questão do respiro vertical."*
+    #    A divisória cai no MEIO do vão, e o passo é o DOBRO do ar. As duas
+    #    metades, porque uma sem a outra deixa o vão todo de um lado.
+    exigir("top:calc(var(--r-ar) * -1)" in doc,
+           "a divisória voltou para o topo da célula — vão todo de um lado só")
+    exigir("--r-passo:calc(var(--r-ar) * 2)" in doc,
+           "o passo deixou de ser o dobro do ar")
+
+    # 2. A MESA — dois conectados, dois lugares vazios. *"Todas as abas tem que
+    #    ter só dois controles conectados no momento, o resto fica off."*
+    vazios = [c for c in MESA if not c.get("conectado", True)]
+    exigir(corpo.count('class="ctrl vazia"') == len(vazios),
+           f"as colunas vazias não são {len(vazios)}")
+    exigir(corpo.count('class="ctrl"') == len(MESA) - len(vazios),
+           "uma coluna conectada virou vazia, ou o contrário")
+
+    # 3. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO — a mesma decisão da Gatilhos:
+    #    *"colocar algo como Desconectado e não os controles mockados."*
+    for c in vazios:
+        exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
+               f"a coluna do P{c['jogador']} não diz Desconectado")
+        exigir(c["nome"] not in corpo,
+               f"o nome do plástico {c['nome']!r} voltou a uma coluna vazia")
+
+    # 4. NENHUM AJUSTE VIVO NUM LUGAR VAZIO. Sem controle não há cor, brilho nem
+    #    número de player — desenhar um é oferecer um ajuste que não existe.
+    for pedaco in corpo.split('class="ctrl vazia"')[1:]:
+        bloco = pedaco.split('<div class="ctrl', 1)[0]
+        for proibido in ('class="tom', 'type="color"', 'class="cheio"', 'class="pl'):
+            exigir(proibido not in bloco,
+                   f"um lugar vazio tem ajuste vivo: {proibido!r}")
+
+    # 5. OS TRÊS RÓTULOS QUE ELA ENCURTOU — 31/08/2026: *"aonde tem Voltar ao
+    #    automático deixa só Automático; onde tem Disposição dos LEDs coloca só
+    #    LEDs; Selecione o player coloca só Jogador — vai ficar subentendido."*
+    #    As duas metades: o curto tem de estar lá, e o longo NÃO.
+    for curto, longo in ((">Automático</button>", "Voltar ao automático"),
+                         (">LEDs</div>", "Disposição de LEDs"),
+                         (">Jogador", "Selecione o player")):
+        exigir(curto in corpo, f"o rótulo curto sumiu: {curto!r}")
+        exigir(longo not in corpo, f"o rótulo longo voltou: {longo!r}")
+
+    # 6. A COR ESCOLHIDA APARECE MARCADA, e a marca é o `.on` — *"a cor
+    #    selecionada precisa ter uma borda."* Ele já existia no CSS e casava
+    #    ZERO botões, porque a comparação era entre duas escalas.
+    exigir(corpo.count('class="tom on"') == len(monta_.CONECTADOS),
+           "a cor escolhida não está marcada em todos os controles da mesa")
+
+    # 7. A GUIA E O LIGHTBAR ACENDEM A MESMA TINTA — *"e precisa refletir no
+    #    lightbar."* A régua compara o que o gerador escreveu nos dois lugares,
+    #    porque foi justamente aí que eles divergiram.
+    # A RÉGUA OLHA A TIRA, e a primeira versão dela NÃO OLHAVA: ela procurava a
+    # tinta em qualquer lugar do miolo, e a tinta também está no SVG e nas
+    # luzinhas — então ela passava com a tira pintada de cor crua. Descoberto na
+    # mordida: eu devolvi o `background:{cor}` à tira e a régua ficou VERDE.
+    # É a armadilha do `COMO-OLHAR-A-TELA.md` outra vez: casar um token em
+    # qualquer lugar do texto, em vez do campo que o significa.
+    for c in monta_.CONECTADOS:
+        tinta = tom_da_casa(luz(c["jogador"]))
+        for lado in ("esq", "dir"):
+            exigir(f'class="tira-luz {lado}" style="background:{tinta};color:{tinta}' in corpo,
+                   f"a tira {lado} do P{c['jogador']} não acende a tinta da guia ({tinta})")
+
+    if falhas:
+        raise SystemExit("ERRO em 04-iluminacao — decisão dela desfeita:\n  "
+                         + "\n  ".join(f"- {f}" for f in falhas))
+
+
+#: AS DUAS MEDIDAS DA PRIMEIRA COLUNA, injetadas do dono (`medidas.py`). Elas não
+#: podem ser digitadas no bloco `CSS` acima porque ele é uma string crua — e um
+#: número digitado ali seria a terceira cópia do mesmo valor, que é o defeito que
+#: `medidas.py` nasceu para matar.
+CSS_DAS_MEDIDAS = f"""
+  .luz-grade{{
+    --larg-rot:{medidas.larg_rotulos('04-iluminacao')}px;
+    --gap-col:{medidas.GAP_DAS_COLUNAS}px;
+  }}
+"""
+
+n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS, fita_viva=False, legenda=LEGENDA)
+_conferir(onde.pagina("04-iluminacao.html").read_text())
+print(f"04-iluminacao: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
+      f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
+      f"números {NUMEROS} · respiro 5px, a divisória no meio do vão")

@@ -250,9 +250,27 @@ CSS = """
   /* AS FAIXAS. Cada uma é [bloco | barra de 1px | bloco], e o rótulo de cada
      coluna nasce EXATAMENTE no x da coluna que ele nomeia — por isso o
      `sec-rot` repete o `grid-template-columns` da faixa que encabeça. */
-  .par2{display:grid;grid-template-columns:1fr 1px 1fr;gap:0 20px;align-items:stretch}
-  .exame{display:grid;grid-template-columns:1fr 1px 246px;gap:0 20px;align-items:stretch}
-  .avancado{display:grid;grid-template-columns:246px 1px 1fr;gap:0 20px;align-items:stretch}
+  /* `minmax(0,1fr)` NAS TRÊS FAIXAS — 31/08/2026, e o defeito foi ela quem viu:
+     o Perfil de Bateria **saindo para fora do limite** da coluna, levando junto o
+     terceiro botão e os quatro valores.
+
+     A CAUSA, medida subindo a cadeia de ancestrais: `1fr` é `minmax(auto,1fr)`, e
+     `auto` num item de grid tem por piso o TAMANHO DO CONTEÚDO. A coluna do
+     Perfil de Bateria pedia 569px, recusava-se a encolher, e as colunas somavam
+     mais que o grid: `527 + 1 + 569 + 40 de gap = 1137` dentro de **1112** — os
+     **+25px** exatos que vazavam.
+
+     DUAS HIPÓTESES CAÍRAM ANTES DESTA, e as duas eram minhas: o grid dos três
+     botões (curado com `minmax(0,1fr)`, e os 569 continuaram) e o valor em
+     `nowrap` (idem). Nenhuma era a causa — os dois só ACOMPANHAVAM uma coluna
+     que já tinha estourado. A pista estava na medida desde o começo: valores e
+     botões vazavam os MESMOS +25px, e o que vaza junto tem um dono só.
+
+     As três faixas levam a cura, não só a de cima: é a mesma armadilha, e a
+     próxima linha longa cairia na primeira que ficasse sem. */
+  .par2{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 20px;align-items:stretch}
+  .exame{display:grid;grid-template-columns:minmax(0,1fr) 1px 246px;gap:0 20px;align-items:stretch}
+  .avancado{display:grid;grid-template-columns:246px 1px minmax(0,1fr);gap:0 20px;align-items:stretch}
   .risco{background:var(--border-sutil)}
 
   /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
@@ -303,22 +321,90 @@ CSS = """
   .col-est .est:last-child, .bat .est:last-child{border-bottom:0}
   /* custo de layout ZERO: `box-sizing:border-box` põe a borda dentro dos 30px. */
 
-  .est .rot{flex:0 0 170px;white-space:nowrap;color:var(--rot-campo);font-weight:600}
-  .est .val{color:var(--fg);font-weight:600;white-space:nowrap}
+  /* O RÓTULO NÃO É VERDE — 31/08/2026, e o defeito foi ela quem viu:
+     *"Trocar de perfil ao abrir o jogo / Ligado tem a mesma cor. tá difícil e
+     confuso entender"*. Estava: `.est .rot` era `--rot-campo` (verde) e
+     `.est.ok .val` também é verde — nas linhas ligadas o nome e a resposta
+     saíam da mesma cor, encostados na mesma linha.
+     A REGRA É A QUE ELA APROVOU NA ABA PERFIS meia hora antes: **o verde é de
+     ESTADO, não de nome.** Aqui o estado tem dois donos que bastam — o glifo e o
+     valor —, e o nome passa a ser o texto secundário da linha, que é o que ele é:
+     quem lê a coluna procura a RESPOSTA. */
+  .est .rot{flex:0 0 170px;white-space:nowrap;color:var(--texto-mudo);font-weight:600}
+  /* O VALOR ENCOLHE ANTES DE EMPURRAR — 31/08/2026, e esta é a cura de verdade
+     do que ela viu: o bloco do Perfil de Bateria saindo do limite da coluna.
+     A primeira hipótese foi o grid dos três botões, e a medição a DERRUBOU: com
+     `minmax(0,1fr)` os 569px continuaram lá. Quem estoura é o VALOR — `Gatilhos,
+     barra de luz, microfone por rádio e giroscópio` em `nowrap`, sem poder
+     encolher, cresce o `.est`, que cresce o `.bat`, e os botões apenas ACOMPANHAM
+     a largura que já estourou. A pista estava na medida: os quatro valores vazavam
+     exatamente os mesmos +25px que os botões.
+     `min-width:0` é o que falta a todo filho de flex para poder encolher; as
+     reticências são o que sobra quando ele encolhe até o limite — e o `title` do
+     valor guarda a frase inteira, para não perder informação no corte. */
+  .est{min-width:0}
+  .est .val{color:var(--fg);font-weight:600;white-space:nowrap;margin-left:auto;
+            text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .est .g{flex:0 0 14px;text-align:center;font-size:11px;font-weight:700}
   .est.ok .g{color:var(--green)} .est.ok .val{color:var(--green)}
   .est.warn .g{color:var(--orange)} .est.warn .val{color:var(--orange)}
   .est.info .g{color:var(--cyan)}
+  /* desligado: o glifo existe e está apagado — some seria voltar ao vazio. */
+  .est.off .g{color:var(--texto-mudo)}
+  /* OS TRÊS BOTÕES DIVIDEM A LARGURA EM PARTES IGUAIS. `1fr 1fr 1fr` e não o
+     `flex` solto do `.seg`: com flex cada botão fica do tamanho do próprio nome,
+     e `Tudo ligado`, `Bateria longa` e `Eu escolho` têm três larguras — três
+     alvos de clique diferentes para três escolhas do mesmo peso. A altura é a
+     mesma `--h-escolha` do `<select>` que saiu. */
+  /* `minmax(0,1fr)` E NÃO `1fr` — 31/08/2026, e o defeito foi ELA quem viu, na
+     máquina dela: o bloco do Perfil de Bateria saía **para fora do limite** da
+     coluna, levando junto o terceiro botão e os quatro valores da direita.
+
+     `1fr` é `minmax(auto,1fr)`, e `auto` num item de grid é o TAMANHO DO
+     CONTEÚDO: os três botões se recusavam a encolher abaixo do próprio texto e
+     empurravam o bloco inteiro para fora. Com a fonte do Chrome headless os três
+     cabiam (536px numa coluna que dá 536) e nada vazava — por isso a minha foto
+     estava limpa e a tela dela não. Medido com o texto a 14px: **569px**, e o
+     bloco vazando **+25px**, com os quatro valores fora junto.
+
+     `minmax(0,…)` deixa a coluna encolher; o `min-width:0` e o corte por
+     reticências são a rede: numa fonte grande demais o nome do perfil abrevia,
+     que é feio mas fica DENTRO — e a tela deixa de mentir sobre onde acaba. */
+  .bat-perfis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+              height:var(--h-escolha)}
+  .bat-perfis button{min-width:0;padding:0 8px;overflow:hidden;
+                     text-overflow:ellipsis;white-space:nowrap}
+
+  /* O VALOR ANCORA NA DIREITA — 31/08/2026, e o defeito foi ela quem viu:
+     *"o alinhamento da seção O serviço tá muito estranha"*.
+     MEDIDO antes de mexer, e a medida explica o que o olho dela pegou: a coluna
+     do rótulo é fixa em 170px, e os dez rótulos desta aba medem de 47 a 168.
+     `Trocar de perfil ao abrir o jogo` (167) e `Ligar junto com o computador`
+     (168) paravam a **3px e 2px** do valor, colados; `Pausado` (47) parava a
+     123px dele. Na mesma coluna, duas linhas encostavam e as outras oito
+     flutuavam — e nada disso é alinhamento, é o resto de uma largura fixa.
+     Com o valor na borda direita, toda linha passa a ter as duas âncoras que uma
+     lista de estado quer: o NOME onde a coluna começa, a RESPOSTA onde ela
+     acaba. O vão do meio deixa de ser um número aleatório por linha. */
+  /* (a âncora da direita mora na regra `.est .val` lá em cima, junto das
+     outras propriedades do valor: duas regras para o mesmo seletor é o que fez
+     esta régua ler a primeira e reprovar a cura que estava na segunda.) */
   /* `vm` = valor-mono. NÃO se chama `mono`: o esqueleto da Jogar já tem
      `.mono{font-family:'JetBrains Mono'}` (topo.html:30), que pegaria a LINHA
      inteira e levaria o RÓTULO junto — duas tipografias na mesma coluna de
      rótulos. É a mesma cicatriz de colisão de nome que obrigou `.nota` a virar
      `.nt` aqui dentro. Só o valor é mono. */
   .est.vm .val{font-family:'JetBrains Mono',monospace;font-weight:400;font-size:11px}
-  /* O interruptor obedece à MESMA coluna de valores das outras linhas de estado:
-     sem isto o `margin-left:auto` da `.chave` o jogava 85px à direita do início
-     da coluna, colado no risco de 1px — a única exceção da aba. */
-  .est .chave{margin-left:0}
+  /* O INTERRUPTOR SEGUE OS VALORES, e em 31/08/2026 eles se mudaram.
+     Esta regra era `margin-left:0` e tinha razão escrita: *"o interruptor obedece
+     à MESMA coluna de valores das outras linhas"* — sem ela, o `margin-left:auto`
+     da `.chave` o jogava para a borda direita, sozinho, longe da coluna onde
+     todos os valores começavam.
+     A PREMISSA CADUCOU no mesmo dia: os valores passaram a ancorar na borda
+     direita (ver a regra do `.est .val`, acima), e é lá que a chave tem de estar
+     para continuar obedecendo à mesma coluna. A regra mudou de valor porque o que
+     ela persegue — *a chave onde estão os valores* — não mudou. */
+  .est .chave{margin-left:auto}
 
   /* ---------------------------------------------------------------------
      O PERFIL DE BATERIA — o bloco que tomou o lugar do Gamepad virtual.
@@ -412,6 +498,24 @@ CSS = """
 """ + CSS_GLIFO
 
 
+#: O interruptor "Ligar junto com o computador" — e as TRÊS coisas que ele
+#: pinta saem daqui, nenhuma digitada: a chave, o glifo e a cor da linha.
+#:
+#: ELE ESTAVA SEM GLIFO, e ela viu: *"Ligar junto com o computador notei que tá
+#: sem glifo também"*. A linha era a única das cinco montada à mão, fora do
+#: `est()` — por isso passou com `<span class="g"></span>` vazio, reservando os
+#: 14px da coluna e não desenhando nada neles.
+#:
+#: E O GLIFO NÃO PODE SER UM LITERAL: com a chave em `on` e um `✓` digitado,
+#: nada impede que alguém desligue a chave e o `✓` fique. É o mesmo defeito que
+#: ela pegou na aba Jogar em 31/08 — a faixa anunciava um modo e a tela desenhava
+#: outro —, e a cura foi a mesma: deixar de ter dois lugares que podem discordar.
+AUTOSTART_LIGADO = True
+AUTOSTART_G = "✓" if AUTOSTART_LIGADO else "○"
+AUTOSTART_CLS = "ok" if AUTOSTART_LIGADO else "off"
+AUTOSTART_CHAVE = " on" if AUTOSTART_LIGADO else ""
+
+
 def est(rot, val, cls="", g="●", mono=False, dica="", ident=""):
     """Uma linha de estado: glifo, rótulo à esquerda, VALOR à direita.
 
@@ -442,7 +546,10 @@ def est(rot, val, cls="", g="●", mono=False, dica="", ident=""):
     i = f' data-id="{ident}"' if ident else ""
     return (f'''            <div class="est {cls}{' vm' if mono else ''}"{t}{i}>'''
             f'''<span class="g">{g}</span><span class="rot">{rot}</span>'''
-            f'''<span class="val">{val}</span></div>''')
+            # o `title` no VALOR, e não na linha: se ele couber, o hover não
+            # aparece atrapalhando; se ele cortar, é ali que a pessoa passa o
+            # mouse para ler o resto.
+            f'''<span class="val" title="{val}">{val}</span></div>''')
 
 
 def saude(selo, g, txt, dica, glifos=()):
@@ -469,6 +576,20 @@ def item(rotulo, diz, cls="btn", gesto=""):
     """
     g = f' data-gesto="{gesto}"' if gesto else ""
     return f'''            <button class="{cls}" title="{diz}"{g}>{rotulo}</button>'''
+
+
+#: Os três botões do Perfil de Bateria. NENHUM nome e NENHUMA dica digitados:
+#: o rótulo vem de `ROTULOS_DOS_PERFIS` e a dica de `impoe()`, que é a conta do
+#: `RUMBLE_POLICY_MULT` do daemon. O aceso é `PERFIL_DA_MESA`, o mesmo dado que
+#: as quatro linhas abaixo já leem — logo o botão aceso e o que elas dizem não
+#: têm como discordar.
+def _botoes_bateria():
+    return "".join(
+        f'<button class="{"on" if p == PERFIL_DA_MESA else ""}"'
+        f' data-gesto="{_gesto("perfil-da-mesa")}" data-perfil="{p}"'
+        f' title="{ROT_PERFIL[p]}: {impoe(p).lower()}. Vale para os {N} controles —'
+        f' cada um pode sobrepô-lo na linha dele.">{ROT_PERFIL[p]}</button>'
+        for p in ORC["PERFIS"])
 
 
 def sel(opcoes, escolhida, dica="", ident="", gesto=""):
@@ -632,8 +753,8 @@ MIOLO = f'''
 {est("Pausado", "Sim, e volta pausado", "warn", "!", dica="A pausa fica gravada em disco e sobrevive a desligar o computador. O botão Retomar, ao lado, é a saída — até 27/08/2026 só o terminal saía dela.", ident=_id("hefesto-pausa"))}
 {est("Trocar de perfil ao abrir o jogo", "Ligado", "ok", "✓", ident=_id("hefesto-troca-de-perfil"))}
 {est("Como ele enxerga a janela", "Wayland · COSMIC", "info", "◆", ident=_id("hefesto-ambiente"))}
-              <div class="est" data-id="{_id("hefesto-autostart")}"><span class="g"></span><span class="rot">Ligar junto com o computador</span>
-                <span class="chave on" data-gesto="{_gesto("autostart")}"></span></div>
+              <div class="est {AUTOSTART_CLS}" data-id="{_id("hefesto-autostart")}"><span class="g">{AUTOSTART_G}</span><span class="rot">Ligar junto com o computador</span>
+                <span class="chave{AUTOSTART_CHAVE}" data-gesto="{_gesto("autostart")}"></span></div>
             </div>
             <div class="risco"></div>
             <div class="col-acao">
@@ -647,12 +768,25 @@ MIOLO = f'''
           <div class="risco"></div>
 
           <div class="bat">
-            <div class="est escolhe"><span class="g"></span>
-              <span class="rot">O perfil da mesa</span>
-              {sel([ROT_PERFIL[p] for p in ORC["PERFIS"]], ROT_PERFIL[PERFIL_DA_MESA],
-                   dica=f"O que fica ligado na mesa inteira, e quanto isso custa de bateria. Vale para os {N} controles — cada um pode sobrepô-lo na linha dele.",
-                   ident=_id("bateria-perfil"), gesto=_gesto("perfil-da-mesa"))}
-            </div>
+            <!-- TRÊS BOTÕES, ESCOLHA ÚNICA — ponto 7.1 da lista dela, 31/08/2026:
+                 *"perfil da bateria transforma em três botões lado a lado com escolha
+                 única e tira o 'O perfil da mesa' pronto isso resolve"*.
+
+                 O RÓTULO SAI E NADA SE PERDE: ele nomeava a linha do `<select>`, e
+                 três botões visíveis já dizem que ali se escolhe um entre três. Era
+                 a última linha desta aba a gastar 89px de coluna para nomear o que a
+                 forma do controle nomeia sozinha.
+
+                 OS TRÊS NOMES NÃO SE INVENTAM — saem de `ROTULOS_DOS_PERFIS`, no
+                 `secao_orcamento.py`, e o `title` de cada um sai de `impoe()`, que é a
+                 conta de `RUMBLE_POLICY_MULT`. Um nome digitado aqui divergiria do
+                 produto no dia em que alguém renomeasse um perfil lá.
+
+                 A GRAMÁTICA É A DA ABA VIBRAÇÃO (`.seg` do esqueleto), como a lista
+                 dela manda: *"copie, não invente"*. A altura é a mesma `--h-escolha`
+                 do `<select>` que saiu, então a conta do portão dos dois blocos não
+                 muda de valor — só de forma. -->
+            <div class="seg bat-perfis" data-id="{_id("bateria-perfil")}">{_botoes_bateria()}</div>
 {est("O que ele impõe", impoe(PERFIL_DA_MESA), "info", "◆", dica="O que este perfil limita hoje, na mesa inteira. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela.", ident=_id("bateria-impoe"))}
 {est("Vale para", f"Os {N} controles", "info", "◆", dica="É o teto da MESA. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo.", ident=_id("bateria-vale-para"))}
 {est("O teto alcança", _frase(ALCANCA), "info", "◆", dica="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela.")}
@@ -970,9 +1104,18 @@ _N_BAT = _conta(MIOLO, '<div class="bat">', "<!-- ---------- SAÚDE", 'class="es
 _N_EST = _conta(MIOLO, '<div class="col-est">', '<div class="risco">', 'class="est')
 _N_BTN = _conta(MIOLO, '<div class="col-acao">', "</div>", "<button")
 
-#: O seletor mede `--h-escolha`; as outras linhas do bloco medem uma linha de
-#: estado. O irmão é o mais alto entre a coluna de estados e a de botões.
-_ALT_BAT = H_ESCOLHE + (_N_BAT - 1) * H_EST
+#: A fileira de escolha mede `--h-escolha`; cada linha do bloco mede uma linha
+#: de estado. O irmão é o mais alto entre a coluna de estados e a de botões.
+#:
+#: A CONTA MUDOU DE FORMA EM 31/08/2026, quando os três botões substituíram o
+#: `<select>`: antes a escolha morava DENTRO de uma `.est` (daí o `_N_BAT - 1`),
+#: agora ela é uma fileira à parte e as `.est` são só as linhas de estado. A
+#: altura total não mudou um pixel — 36 + 4×30 = 156 nas duas formas —, mas a
+#: régua contava a linha da escolha entre as de estado e passou a errar por 30px.
+#: Ela reprovou na hora, dizendo `126 contra 154`, e foi assim que este comentário
+#: existe: *a régua que mede a estrutura pega a própria mudança de estrutura.*
+_ESCOLHA_FORA = '<div class="seg bat-perfis"' in MIOLO
+_ALT_BAT = H_ESCOLHE + (_N_BAT if _ESCOLHA_FORA else _N_BAT - 1) * H_EST
 _ALT_IRMAO = max(_N_EST * H_EST, _N_BTN * H_ACAO + (_N_BTN - 1) * GAP_ACAO)
 #: 2px de tolerância: é o que o seletor de 36 custa a mais que a linha de 30, e
 #: é o desencontro que a faixa já carrega hoje sem parecer vão.
@@ -1033,6 +1176,105 @@ if _RECAIDA:
         "desliga lá continua com o serviço rodando; quem para aqui mata tudo. "
         "Dois rótulos iguais para as duas é a colisão que ela mandou desfazer. "
         "O `title` do botão PODE dizer Hefesto — é lá que a diferença se explica.")
+
+# ---------------------------------------------------------------------------
+# AS DUAS RÉGUAS DA FAIXA DE ESTADO — 31/08/2026, e as duas nasceram de defeito
+# que ELA viu antes de qualquer instrumento desta casa.
+
+# 1. NENHUMA LINHA DE ESTADO SEM GLIFO. A régua olha TODAS as `.est`, não só a do
+#    autostart: o defeito foi uma linha montada à mão fora do `est()`, e a
+#    próxima linha montada à mão repetiria o vazio. Ela pega a CLASSE do defeito,
+#    não o caso.
+_SEM_GLIFO = re.findall(r'<div class="est[^"]*"[^>]*>\s*<span class="g">\s*</span>'
+                        r'\s*<span class="rot">([^<]*)</span>', MIOLO)
+if _SEM_GLIFO:
+    raise SystemExit("ERRO: linha de estado sem glifo: "
+                     + " · ".join(repr(r) for r in _SEM_GLIFO)
+                     + " — a coluna de 14px fica reservada e vazia, e foi assim que "
+                     "'Ligar junto com o computador' atravessou até ela ver.")
+
+# 2. A CHAVE, O GLIFO E A CLASSE DIZEM A MESMA COISA. Os três saem de
+#    `AUTOSTART_LIGADO`, então HOJE não há como discordarem — esta régua existe
+#    para o dia em que alguém voltar a digitar o glifo à mão, que é como o
+#    defeito nasceu. Sem ela, a mordida "cravo o ✓ com a chave desligada" passa,
+#    e uma mordida que passa não mede nada.
+_LINHA_AUTO = re.search(r'<div class="est ([a-z]*)"[^>]*>'
+                        r'<span class="g">(.)</span><span class="rot">Ligar junto[^<]*</span>\s*'
+                        r'<span class="chave( on)?"', MIOLO)
+if not _LINHA_AUTO:
+    raise SystemExit("ERRO: a linha do autostart mudou de forma e a régua da coerência "
+                     "ficou cega — seletor que casa ZERO é erro, não silêncio.")
+_CLS, _G, _ON = _LINHA_AUTO.group(1), _LINHA_AUTO.group(2), bool(_LINHA_AUTO.group(3))
+if (_ON, _G, _CLS) != ((True, "✓", "ok") if _ON else (False, "○", "off")):
+    raise SystemExit(f"ERRO: a linha do autostart se contradiz — chave "
+                     f"{'ligada' if _ON else 'desligada'}, glifo {_G!r}, classe {_CLS!r}. "
+                     "Os três saem de AUTOSTART_LIGADO; quem digitou um deles à mão "
+                     "criou o segundo lugar que pode discordar da tela.")
+
+# 3. OS TRÊS BOTÕES DO PERFIL DE BATERIA, e o rótulo que ela mandou tirar.
+#    Os nomes são cobrados contra `ROTULOS_DOS_PERFIS` — se alguém digitar um
+#    quarto nome aqui, ou renomear um perfil no produto sem olhar a tela, a régua
+#    acusa. E escolha ÚNICA quer dizer exatamente um aceso.
+_BOTOES_BAT = re.findall(r'<button class="(on)?"[^>]*data-perfil="([^"]+)"[^>]*>([^<]+)</button>',
+                         _entre(MIOLO, '<div class="seg bat-perfis"', "</div>"))
+if len(_BOTOES_BAT) != len(ORC["PERFIS"]):
+    raise SystemExit(f"ERRO: o Perfil de Bateria tem {len(_BOTOES_BAT)} botões e o produto "
+                     f"declara {len(ORC['PERFIS'])} perfis — a tela deixou de mostrar todos.")
+for _on, _p, _rot in _BOTOES_BAT:
+    if _rot != ROT_PERFIL[_p]:
+        raise SystemExit(f"ERRO: o botão de {_p!r} diz {_rot!r} e o produto o chama de "
+                         f"{ROT_PERFIL[_p]!r} — nome de perfil não se digita nesta tela.")
+if sum(1 for on, _, _ in _BOTOES_BAT if on) != 1:
+    raise SystemExit("ERRO: a escolha do Perfil de Bateria não é única — ela pediu "
+                     '"três botões lado a lado com escolha única".')
+#    A RÉGUA OLHA O `<span class="rot">`, NÃO A PÁGINA: escrita como
+#    `"O perfil da mesa" in MIOLO` ela reprovou na primeira execução — quem casava
+#    era o COMENTÁRIO logo acima dos botões, que conta por que o rótulo saiu.
+#    *Comentário não é tela*, e esta casa já perdeu tempo com isso duas vezes hoje.
+if '<span class="rot">O perfil da mesa' in MIOLO:
+    raise SystemExit('ERRO: o rótulo "O perfil da mesa" voltou. Ela mandou tirá-lo no '
+                     "ponto 7.1: três botões visíveis já dizem que ali se escolhe um "
+                     "entre três, e o rótulo gastava 89px de coluna para isso.")
+
+# 4. O VALOR ANCORA NA BORDA DIREITA. A régua lê a REGRA, e a prova de tela mora
+#    no `medir_servico.py`: com a âncora, os cinco valores da faixa terminam no
+#    mesmo x; sem ela, dois rótulos param a 2px do valor e um a 123px.
+_R_VAL = re.search(r"\.est \.val\{[^}]*\}", CSS)
+if not _R_VAL or "margin-left:auto" not in _R_VAL.group(0):
+    raise SystemExit("ERRO: o valor da linha de estado perdeu a âncora da direita. "
+                     "A coluna do rótulo é fixa em 170px e os rótulos medem de 47 a "
+                     "168: sem a âncora, 'Trocar de perfil ao abrir o jogo' encosta no "
+                     "valor e 'Pausado' fica a 123px dele — que é o alinhamento "
+                     "estranho que ela viu em 31/08/2026.")
+
+# 5. NENHUMA FAIXA DE DUAS COLUNAS PODE ESTOURAR. `1fr` tem por piso o tamanho
+#    do conteúdo; `minmax(0,1fr)` é o que deixa a coluna encolher. Sem isto, uma
+#    linha longa empurra o bloco inteiro para fora do limite — que é o que ela viu
+#    em 31/08, com o Perfil de Bateria vazando 25px.
+for _faixa in (".par2", ".exame", ".avancado"):
+    _r = re.search(re.escape(_faixa) + r"\{[^}]*grid-template-columns:([^;]*);", CSS)
+    if not _r:
+        raise SystemExit(f"ERRO: a faixa `{_faixa}` sumiu ou deixou de declarar colunas — "
+                         "a régua do estouro ficou cega.")
+    if re.search(r"(^|\s)1fr", _r.group(1)):
+        raise SystemExit(f"ERRO: a faixa `{_faixa}` voltou a usar `1fr` cru: "
+                         f"`{_r.group(1).strip()}`. O piso de `1fr` é o CONTEÚDO, então a "
+                         "coluna não encolhe e o bloco sai do limite da janela — foi o que "
+                         "ela viu no Perfil de Bateria, vazando 25px com os quatro valores "
+                         "junto. Use `minmax(0,1fr)`.")
+
+# 6. O NOME NÃO USA A COR DO ESTADO. A régua lê a REGRA `.est .rot` inteira, não
+#    procura o token na página: `--rot-campo` continua vivo no `topo.html` e em
+#    `.sec-rot`, e casar solto reprovaria os certos — foi o que aconteceu na aba
+#    Perfis hoje, com a régua irmã desta.
+_R_ROT = re.search(r"\.est \.rot\{[^}]*\}", CSS)
+if not _R_ROT:
+    raise SystemExit("ERRO: a regra `.est .rot` sumiu do CSS — a régua da cor ficou cega.")
+if "var(--rot-campo)" in _R_ROT.group(0):
+    raise SystemExit("ERRO: o nome da linha de estado voltou ao verde, e o valor de "
+                     "toda linha `ok` também é verde — 'Trocar de perfil ao abrir o "
+                     "jogo' e 'Ligado' voltam a sair da mesma cor. O verde é de "
+                     "ESTADO (o glifo e o valor), não de nome.")
 
 n = monta("09-sistema", "Sistema", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
 print(f"09-sistema: OK, {n} divs · a faixa do serviço: "

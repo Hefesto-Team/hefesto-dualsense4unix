@@ -553,7 +553,18 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    --alt-janela:757px; /* a MESMA altura nas dez abas — veja `.janela` */
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido dela: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
+       Ela estava certa, e o número diz por quê: o card aberto da Controles
+       ESTICA para preencher o corpo, então a folga de verdade é
+       `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
+       conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
+       é folga: é sorte, e ela já tinha visto a barra aparecer na tela dela.
+       Com 777 a folga passa a 21px.
+       O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
+       vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
+       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar. */
+    --alt-janela:777px; /* a MESMA altura nas dez abas — veja `.janela` */
   }
   .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
     height:var(--h-escolha);padding-top:0;padding-bottom:0;
@@ -589,9 +600,27 @@
   /* AS FAIXAS. Cada uma é [bloco | barra de 1px | bloco], e o rótulo de cada
      coluna nasce EXATAMENTE no x da coluna que ele nomeia — por isso o
      `sec-rot` repete o `grid-template-columns` da faixa que encabeça. */
-  .par2{display:grid;grid-template-columns:1fr 1px 1fr;gap:0 20px;align-items:stretch}
-  .exame{display:grid;grid-template-columns:1fr 1px 246px;gap:0 20px;align-items:stretch}
-  .avancado{display:grid;grid-template-columns:246px 1px 1fr;gap:0 20px;align-items:stretch}
+  /* `minmax(0,1fr)` NAS TRÊS FAIXAS — 31/08/2026, e o defeito foi ela quem viu:
+     o Perfil de Bateria **saindo para fora do limite** da coluna, levando junto o
+     terceiro botão e os quatro valores.
+
+     A CAUSA, medida subindo a cadeia de ancestrais: `1fr` é `minmax(auto,1fr)`, e
+     `auto` num item de grid tem por piso o TAMANHO DO CONTEÚDO. A coluna do
+     Perfil de Bateria pedia 569px, recusava-se a encolher, e as colunas somavam
+     mais que o grid: `527 + 1 + 569 + 40 de gap = 1137` dentro de **1112** — os
+     **+25px** exatos que vazavam.
+
+     DUAS HIPÓTESES CAÍRAM ANTES DESTA, e as duas eram minhas: o grid dos três
+     botões (curado com `minmax(0,1fr)`, e os 569 continuaram) e o valor em
+     `nowrap` (idem). Nenhuma era a causa — os dois só ACOMPANHAVAM uma coluna
+     que já tinha estourado. A pista estava na medida desde o começo: valores e
+     botões vazavam os MESMOS +25px, e o que vaza junto tem um dono só.
+
+     As três faixas levam a cura, não só a de cima: é a mesma armadilha, e a
+     próxima linha longa cairia na primeira que ficasse sem. */
+  .par2{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 20px;align-items:stretch}
+  .exame{display:grid;grid-template-columns:minmax(0,1fr) 1px 246px;gap:0 20px;align-items:stretch}
+  .avancado{display:grid;grid-template-columns:246px 1px minmax(0,1fr);gap:0 20px;align-items:stretch}
   .risco{background:var(--border-sutil)}
 
   /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
@@ -642,22 +671,90 @@
   .col-est .est:last-child, .bat .est:last-child{border-bottom:0}
   /* custo de layout ZERO: `box-sizing:border-box` põe a borda dentro dos 30px. */
 
-  .est .rot{flex:0 0 170px;white-space:nowrap;color:var(--rot-campo);font-weight:600}
-  .est .val{color:var(--fg);font-weight:600;white-space:nowrap}
+  /* O RÓTULO NÃO É VERDE — 31/08/2026, e o defeito foi ela quem viu:
+     *"Trocar de perfil ao abrir o jogo / Ligado tem a mesma cor. tá difícil e
+     confuso entender"*. Estava: `.est .rot` era `--rot-campo` (verde) e
+     `.est.ok .val` também é verde — nas linhas ligadas o nome e a resposta
+     saíam da mesma cor, encostados na mesma linha.
+     A REGRA É A QUE ELA APROVOU NA ABA PERFIS meia hora antes: **o verde é de
+     ESTADO, não de nome.** Aqui o estado tem dois donos que bastam — o glifo e o
+     valor —, e o nome passa a ser o texto secundário da linha, que é o que ele é:
+     quem lê a coluna procura a RESPOSTA. */
+  .est .rot{flex:0 0 170px;white-space:nowrap;color:var(--texto-mudo);font-weight:600}
+  /* O VALOR ENCOLHE ANTES DE EMPURRAR — 31/08/2026, e esta é a cura de verdade
+     do que ela viu: o bloco do Perfil de Bateria saindo do limite da coluna.
+     A primeira hipótese foi o grid dos três botões, e a medição a DERRUBOU: com
+     `minmax(0,1fr)` os 569px continuaram lá. Quem estoura é o VALOR — `Gatilhos,
+     barra de luz, microfone por rádio e giroscópio` em `nowrap`, sem poder
+     encolher, cresce o `.est`, que cresce o `.bat`, e os botões apenas ACOMPANHAM
+     a largura que já estourou. A pista estava na medida: os quatro valores vazavam
+     exatamente os mesmos +25px que os botões.
+     `min-width:0` é o que falta a todo filho de flex para poder encolher; as
+     reticências são o que sobra quando ele encolhe até o limite — e o `title` do
+     valor guarda a frase inteira, para não perder informação no corte. */
+  .est{min-width:0}
+  .est .val{color:var(--fg);font-weight:600;white-space:nowrap;margin-left:auto;
+            text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .est .g{flex:0 0 14px;text-align:center;font-size:11px;font-weight:700}
   .est.ok .g{color:var(--green)} .est.ok .val{color:var(--green)}
   .est.warn .g{color:var(--orange)} .est.warn .val{color:var(--orange)}
   .est.info .g{color:var(--cyan)}
+  /* desligado: o glifo existe e está apagado — some seria voltar ao vazio. */
+  .est.off .g{color:var(--texto-mudo)}
+  /* OS TRÊS BOTÕES DIVIDEM A LARGURA EM PARTES IGUAIS. `1fr 1fr 1fr` e não o
+     `flex` solto do `.seg`: com flex cada botão fica do tamanho do próprio nome,
+     e `Tudo ligado`, `Bateria longa` e `Eu escolho` têm três larguras — três
+     alvos de clique diferentes para três escolhas do mesmo peso. A altura é a
+     mesma `--h-escolha` do `<select>` que saiu. */
+  /* `minmax(0,1fr)` E NÃO `1fr` — 31/08/2026, e o defeito foi ELA quem viu, na
+     máquina dela: o bloco do Perfil de Bateria saía **para fora do limite** da
+     coluna, levando junto o terceiro botão e os quatro valores da direita.
+
+     `1fr` é `minmax(auto,1fr)`, e `auto` num item de grid é o TAMANHO DO
+     CONTEÚDO: os três botões se recusavam a encolher abaixo do próprio texto e
+     empurravam o bloco inteiro para fora. Com a fonte do Chrome headless os três
+     cabiam (536px numa coluna que dá 536) e nada vazava — por isso a minha foto
+     estava limpa e a tela dela não. Medido com o texto a 14px: **569px**, e o
+     bloco vazando **+25px**, com os quatro valores fora junto.
+
+     `minmax(0,…)` deixa a coluna encolher; o `min-width:0` e o corte por
+     reticências são a rede: numa fonte grande demais o nome do perfil abrevia,
+     que é feio mas fica DENTRO — e a tela deixa de mentir sobre onde acaba. */
+  .bat-perfis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+              height:var(--h-escolha)}
+  .bat-perfis button{min-width:0;padding:0 8px;overflow:hidden;
+                     text-overflow:ellipsis;white-space:nowrap}
+
+  /* O VALOR ANCORA NA DIREITA — 31/08/2026, e o defeito foi ela quem viu:
+     *"o alinhamento da seção O serviço tá muito estranha"*.
+     MEDIDO antes de mexer, e a medida explica o que o olho dela pegou: a coluna
+     do rótulo é fixa em 170px, e os dez rótulos desta aba medem de 47 a 168.
+     `Trocar de perfil ao abrir o jogo` (167) e `Ligar junto com o computador`
+     (168) paravam a **3px e 2px** do valor, colados; `Pausado` (47) parava a
+     123px dele. Na mesma coluna, duas linhas encostavam e as outras oito
+     flutuavam — e nada disso é alinhamento, é o resto de uma largura fixa.
+     Com o valor na borda direita, toda linha passa a ter as duas âncoras que uma
+     lista de estado quer: o NOME onde a coluna começa, a RESPOSTA onde ela
+     acaba. O vão do meio deixa de ser um número aleatório por linha. */
+  /* (a âncora da direita mora na regra `.est .val` lá em cima, junto das
+     outras propriedades do valor: duas regras para o mesmo seletor é o que fez
+     esta régua ler a primeira e reprovar a cura que estava na segunda.) */
   /* `vm` = valor-mono. NÃO se chama `mono`: o esqueleto da Jogar já tem
      `.mono{font-family:'JetBrains Mono'}` (topo.html:30), que pegaria a LINHA
      inteira e levaria o RÓTULO junto — duas tipografias na mesma coluna de
      rótulos. É a mesma cicatriz de colisão de nome que obrigou `.nota` a virar
      `.nt` aqui dentro. Só o valor é mono. */
   .est.vm .val{font-family:'JetBrains Mono',monospace;font-weight:400;font-size:11px}
-  /* O interruptor obedece à MESMA coluna de valores das outras linhas de estado:
-     sem isto o `margin-left:auto` da `.chave` o jogava 85px à direita do início
-     da coluna, colado no risco de 1px — a única exceção da aba. */
-  .est .chave{margin-left:0}
+  /* O INTERRUPTOR SEGUE OS VALORES, e em 31/08/2026 eles se mudaram.
+     Esta regra era `margin-left:0` e tinha razão escrita: *"o interruptor obedece
+     à MESMA coluna de valores das outras linhas"* — sem ela, o `margin-left:auto`
+     da `.chave` o jogava para a borda direita, sozinho, longe da coluna onde
+     todos os valores começavam.
+     A PREMISSA CADUCOU no mesmo dia: os valores passaram a ancorar na borda
+     direita (ver a regra do `.est .val`, acima), e é lá que a chave tem de estar
+     para continuar obedecendo à mesma coluna. A regra mudou de valor porque o que
+     ela persegue — *a chave onde estão os valores* — não mudou. */
+  .est .chave{margin-left:auto}
 
   /* ---------------------------------------------------------------------
      O PERFIL DE BATERIA — o bloco que tomou o lugar do Gamepad virtual.
@@ -879,7 +976,7 @@
       <h1><span class="p">Hefesto</span> <span class="t">—</span> <span class="b">DualSense</span><span class="n">4</span><span class="b">Unix</span></h1>
       <div class="sub">Gerenciador DualSense para Linux</div>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> 4 controles: <b>2 USB · 2 BT</b></div>
+    <div class="conectado"><span class="bolinha">●</span> 2 controles: <b>1 USB · 1 BT</b></div>
   </div>
 
   <!-- A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
@@ -891,8 +988,6 @@
       <span class="chip on">Todos</span>
       <span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
       <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#74588e" title="Galactic Purple — a borda é a cor do plástico">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#e4e0d8" title="White — a borda é a cor do plástico">P4 <span class="pt">•</span> White <span class="pt">•</span> USB</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -944,11 +1039,11 @@
 
           <div class="bloco2">
             <div class="col-est">
-            <div class="est ok" data-id="hefesto-estado"><span class="g">✓</span><span class="rot">O serviço está</span><span class="val">Ligado</span></div>
-            <div class="est warn" title="A pausa fica gravada em disco e sobrevive a desligar o computador. O botão Retomar, ao lado, é a saída — até 27/08/2026 só o terminal saía dela." data-id="hefesto-pausa"><span class="g">!</span><span class="rot">Pausado</span><span class="val">Sim, e volta pausado</span></div>
-            <div class="est ok" data-id="hefesto-troca-de-perfil"><span class="g">✓</span><span class="rot">Trocar de perfil ao abrir o jogo</span><span class="val">Ligado</span></div>
-            <div class="est info" data-id="hefesto-ambiente"><span class="g">◆</span><span class="rot">Como ele enxerga a janela</span><span class="val">Wayland · COSMIC</span></div>
-              <div class="est" data-id="hefesto-autostart"><span class="g"></span><span class="rot">Ligar junto com o computador</span>
+            <div class="est ok" data-id="hefesto-estado"><span class="g">✓</span><span class="rot">O serviço está</span><span class="val" title="Ligado">Ligado</span></div>
+            <div class="est warn" title="A pausa fica gravada em disco e sobrevive a desligar o computador. O botão Retomar, ao lado, é a saída — até 27/08/2026 só o terminal saía dela." data-id="hefesto-pausa"><span class="g">!</span><span class="rot">Pausado</span><span class="val" title="Sim, e volta pausado">Sim, e volta pausado</span></div>
+            <div class="est ok" data-id="hefesto-troca-de-perfil"><span class="g">✓</span><span class="rot">Trocar de perfil ao abrir o jogo</span><span class="val" title="Ligado">Ligado</span></div>
+            <div class="est info" data-id="hefesto-ambiente"><span class="g">◆</span><span class="rot">Como ele enxerga a janela</span><span class="val" title="Wayland · COSMIC">Wayland · COSMIC</span></div>
+              <div class="est ok" data-id="hefesto-autostart"><span class="g">✓</span><span class="rot">Ligar junto com o computador</span>
                 <span class="chave on" data-gesto="autostart"></span></div>
             </div>
             <div class="risco"></div>
@@ -963,14 +1058,29 @@
           <div class="risco"></div>
 
           <div class="bat">
-            <div class="est escolhe"><span class="g"></span>
-              <span class="rot">O perfil da mesa</span>
-              <select class="pronto" title="O que fica ligado na mesa inteira, e quanto isso custa de bateria. Vale para os 4 controles — cada um pode sobrepô-lo na linha dele." data-id="bateria-perfil" data-gesto="perfil-da-mesa"><option selected>Tudo ligado</option><option>Bateria longa</option><option>Eu escolho</option></select>
-            </div>
-            <div class="est info" title="O que este perfil limita hoje, na mesa inteira. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela." data-id="bateria-impoe"><span class="g">◆</span><span class="rot">O que ele impõe</span><span class="val">Nada é limitado</span></div>
-            <div class="est info" title="É o teto da MESA. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo." data-id="bateria-vale-para"><span class="g">◆</span><span class="rot">Vale para</span><span class="val">Os 4 controles</span></div>
-            <div class="est info" title="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela."><span class="g">◆</span><span class="rot">O teto alcança</span><span class="val">Vibração</span></div>
-            <div class="est info" title="O perfil ainda não tem por onde limitar estes. Cada um entra quando ganhar ponto de aplicação no daemon, e some daqui sozinho."><span class="g">◆</span><span class="rot">Ainda sem teto</span><span class="val">Gatilhos, barra de luz, microfone por rádio e giroscópio</span></div>
+            <!-- TRÊS BOTÕES, ESCOLHA ÚNICA — ponto 7.1 da lista dela, 31/08/2026:
+                 *"perfil da bateria transforma em três botões lado a lado com escolha
+                 única e tira o 'O perfil da mesa' pronto isso resolve"*.
+
+                 O RÓTULO SAI E NADA SE PERDE: ele nomeava a linha do `<select>`, e
+                 três botões visíveis já dizem que ali se escolhe um entre três. Era
+                 a última linha desta aba a gastar 89px de coluna para nomear o que a
+                 forma do controle nomeia sozinha.
+
+                 OS TRÊS NOMES NÃO SE INVENTAM — saem de `ROTULOS_DOS_PERFIS`, no
+                 `secao_orcamento.py`, e o `title` de cada um sai de `impoe()`, que é a
+                 conta de `RUMBLE_POLICY_MULT`. Um nome digitado aqui divergiria do
+                 produto no dia em que alguém renomeasse um perfil lá.
+
+                 A GRAMÁTICA É A DA ABA VIBRAÇÃO (`.seg` do esqueleto), como a lista
+                 dela manda: *"copie, não invente"*. A altura é a mesma `--h-escolha`
+                 do `<select>` que saiu, então a conta do portão dos dois blocos não
+                 muda de valor — só de forma. -->
+            <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-perfil="tudo_ligado" title="Tudo ligado: nada é limitado. Vale para os 4 controles — cada um pode sobrepô-lo na linha dele.">Tudo ligado</button><button class="" data-gesto="perfil-da-mesa" data-perfil="bateria_longa" title="Bateria longa: vibração em 30% da força. Vale para os 4 controles — cada um pode sobrepô-lo na linha dele.">Bateria longa</button><button class="" data-gesto="perfil-da-mesa" data-perfil="eu_escolho" title="Eu escolho: nada é limitado. Vale para os 4 controles — cada um pode sobrepô-lo na linha dele.">Eu escolho</button></div>
+            <div class="est info" title="O que este perfil limita hoje, na mesa inteira. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela." data-id="bateria-impoe"><span class="g">◆</span><span class="rot">O que ele impõe</span><span class="val" title="Nada é limitado">Nada é limitado</span></div>
+            <div class="est info" title="É o teto da MESA. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo." data-id="bateria-vale-para"><span class="g">◆</span><span class="rot">Vale para</span><span class="val" title="Os 4 controles">Os 4 controles</span></div>
+            <div class="est info" title="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela."><span class="g">◆</span><span class="rot">O teto alcança</span><span class="val" title="Vibração">Vibração</span></div>
+            <div class="est info" title="O perfil ainda não tem por onde limitar estes. Cada um entra quando ganhar ponto de aplicação no daemon, e some daqui sozinho."><span class="g">◆</span><span class="rot">Ainda sem teto</span><span class="val" title="Gatilhos, barra de luz, microfone por rádio e giroscópio">Gatilhos, barra de luz, microfone por rádio e giroscópio</span></div>
             <!-- O VÃO DE 58px, E POR QUE ELE ERA O DEFEITO — 31/08/2026.
                  Palavra dela: *"aqui em perfil da bateria essa seção tá muito feia
                  e distoante do resto da página, tá destacando negativamente"*.

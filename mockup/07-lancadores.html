@@ -553,7 +553,18 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    --alt-janela:757px; /* a MESMA altura nas dez abas — veja `.janela` */
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido dela: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
+       Ela estava certa, e o número diz por quê: o card aberto da Controles
+       ESTICA para preencher o corpo, então a folga de verdade é
+       `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
+       conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
+       é folga: é sorte, e ela já tinha visto a barra aparecer na tela dela.
+       Com 777 a folga passa a 21px.
+       O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
+       vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
+       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar. */
+    --alt-janela:777px; /* a MESMA altura nas dez abas — veja `.janela` */
   }
   .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
     height:var(--h-escolha);padding-top:0;padding-bottom:0;
@@ -773,7 +784,7 @@
       <h1><span class="p">Hefesto</span> <span class="t">—</span> <span class="b">DualSense</span><span class="n">4</span><span class="b">Unix</span></h1>
       <div class="sub">Gerenciador DualSense para Linux</div>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> 4 controles: <b>2 USB · 2 BT</b></div>
+    <div class="conectado"><span class="bolinha">●</span> 2 controles: <b>1 USB · 1 BT</b></div>
   </div>
 
   <!-- A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
@@ -785,8 +796,6 @@
       <span class="chip on">Todos</span>
       <span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
       <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#74588e" title="Galactic Purple — a borda é a cor do plástico">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#e4e0d8" title="White — a borda é a cor do plástico">P4 <span class="pt">•</span> White <span class="pt">•</span> USB</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -827,7 +836,7 @@
           lá</b>, o que impede quando não chegam, e conserta o que dá para consertar sozinho.<br><br>
           O que impede é do <b>lançador</b>, nunca do controle — é a linha de inicialização, a
           exceção do Steam Input, a permissão de aparelho. Por isso a resposta vale igual para os
-          <b>4</b> (2 no cabo, 2 no rádio), e por isso a fita lá em cima está
+          <b>2</b> (1 no cabo, 1 no rádio), e por isso a fita lá em cima está
           esmaecida aqui: não há o que escolher por controle.<br><br>
           <b>Detectar o jogo que está aberto</b> é o caminho curto: abra o jogo de onde for,
           volte aqui e clique — o perfil nasce com a regra certa, sem digitar nada.
@@ -848,7 +857,7 @@
           <span class="lanc-selo ok">CHEGAM</span>
           <span class="lanc-jogos">412 jogos</span>
         </div>
-        <div class="lanc-diz">Os 4 controles chegam. O atalho de inicialização está no lugar em todos os jogos marcados.</div>
+        <div class="lanc-diz">Os 2 controles chegam. O atalho de inicialização está no lugar em todos os jogos marcados.</div>
         <div class="acoes">
           <button class="btn">Abrir o lançador</button>
           <button class="btn">Criar perfil para um jogo</button>
@@ -874,7 +883,7 @@
           <span class="lanc-selo ok">CHEGAM</span>
           <span class="lanc-jogos">17 jogos</span>
         </div>
-        <div class="lanc-diz">Os 4 controles chegam. A exceção do Steam Input está gravada para os jogos que precisavam.</div>
+        <div class="lanc-diz">Os 2 controles chegam. A exceção do Steam Input está gravada para os jogos que precisavam.</div>
         <div class="acoes">
           <button class="btn">Abrir o lançador</button>
           <button class="btn">Criar perfil para um jogo</button>
@@ -886,7 +895,7 @@
           <span class="lanc-selo ok">CHEGAM</span>
           <span class="lanc-jogos">9 jogos</span>
         </div>
-        <div class="lanc-diz">Os 4 controles chegam. As permissões de aparelho estão abertas para os pacotes de jogo.</div>
+        <div class="lanc-diz">Os 2 controles chegam. As permissões de aparelho estão abertas para os pacotes de jogo.</div>
         <div class="acoes">
           <button class="btn">Abrir o lançador</button>
           <button class="btn">Criar perfil para um jogo</button>
@@ -898,7 +907,7 @@
           <span class="lanc-selo ok">CHEGAM</span>
           <span class="lanc-jogos">—</span>
         </div>
-        <div class="lanc-diz">Emulador. Os 4 controles chegam. Este é o lugar do <b class='roxo-txt'>Estilo Retrô/Emulador</b>, que já vem pensado para console antigo.</div>
+        <div class="lanc-diz">Emulador. Os 2 controles chegam. Este é o lugar do <b class='roxo-txt'>Estilo Retrô/Emulador</b>, que já vem pensado para console antigo.</div>
         <div class="acoes">
           <button class="btn roxo">Aplicar o estilo Retrô/Emulador</button>
           <button class="btn">Abrir o lançador</button>
@@ -973,9 +982,9 @@
   <h2>O que os quatro controles mudaram aqui — e o que não mudaram</h2>
   <ul>
     <li><b>O desenho não mudou uma caixa.</b> Ela fechou a aba (<i>"lançadores perfeito parabéns"</i>) e a deixou placeholder (<i>"essa aba em si só vamos desenhar e deixar placeholder mesmo"</i>). Nenhum bloco andou, nenhum botão nasceu.</li>
-    <li><b>O que mudou é o alcance da promessa.</b> A aba dizia <i>"O controle chega"</i>, no singular, com quatro na mesa — e a primeira pergunta de quem lê era <i>"qual deles?"</i>. Agora diz <b>"Os 4 controles chegam"</b>, e o selo acompanha (<code>CHEGAM</code> / <code>NÃO CHEGAM</code>). O número sai da <code>MESA</code>, não do teclado.</li>
+    <li><b>O que mudou é o alcance da promessa.</b> A aba dizia <i>"O controle chega"</i>, no singular, com quatro na mesa — e a primeira pergunta de quem lê era <i>"qual deles?"</i>. Agora diz <b>"Os 2 controles chegam"</b>, e o selo acompanha (<code>CHEGAM</code> / <code>NÃO CHEGAM</code>). O número sai da <code>MESA</code>, não do teclado.</li>
     <li><b>E os quatro chegam pelo mesmo motivo, que é medido:</b> nenhuma função de <code>prontuario_dos_jogos.py</code> recebe controle, MAC, device ou transporte. Os cinco impedimentos (<code>:139-143</code>) e as duas curas (<code>:878</code>) são fatos do jogo em disco. É por isso que a fita desta aba é esmaecida de propósito — <code>fita_viva=False</code> — e agora o "?" diz isso em português.</li>
-    <li><b>O mapa de canais não tem linha para esta aba, e isso é resposta:</b> <code>mapa-controles.csv</code> responde por <i>peça</i> e por <i>transporte</i> (cabo/rádio). "O controle chega no jogo" não é canal do aparelho — é a linha de inicialização do lançador. Por isso a aba não se divide por transporte, com 2 no cabo e 2 no rádio na mesa.</li>
+    <li><b>O mapa de canais não tem linha para esta aba, e isso é resposta:</b> <code>mapa-controles.csv</code> responde por <i>peça</i> e por <i>transporte</i> (cabo/rádio). "O controle chega no jogo" não é canal do aparelho — é a linha de inicialização do lançador. Por isso a aba não se divide por transporte, com 1 no cabo e 1 no rádio na mesa.</li>
     <li><b>A contagem do quadro passou a sair da lista.</b> Estava digitada "6 encontrados", contando os seis cartões — inclusive o <code>Dolphin · mGBA</code>, que o próprio cartão carimba <b>NÃO ACHEI</b>. Agora são <b>5</b>, derivados, e a aba parou de se contradizer na mesma tela.</li>
   </ul>
 

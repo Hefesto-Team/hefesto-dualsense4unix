@@ -553,7 +553,18 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    --alt-janela:757px; /* a MESMA altura nas dez abas — veja `.janela` */
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido dela: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
+       Ela estava certa, e o número diz por quê: o card aberto da Controles
+       ESTICA para preencher o corpo, então a folga de verdade é
+       `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
+       conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
+       é folga: é sorte, e ela já tinha visto a barra aparecer na tela dela.
+       Com 777 a folga passa a 21px.
+       O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
+       vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
+       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar. */
+    --alt-janela:777px; /* a MESMA altura nas dez abas — veja `.janela` */
   }
   .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
     height:var(--h-escolha);padding-top:0;padding-bottom:0;

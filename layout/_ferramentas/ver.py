@@ -32,7 +32,11 @@ gi.require_version("WebKit2", "4.1")
 
 from gi.repository import Gtk, WebKit2  # noqa: E402
 
-D = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import onde  # noqa: E402
+
+# ABRE A BANCADA (`mockup/`) — o desenho de hoje, que é o que ela olha.
+D = onde.BANCADA
 
 #: As dez, na ordem da tira que ela aprovou (`D-A-ORDEM-DA-TIRA-E-A-DO-MOCKUP`).
 ABAS = [

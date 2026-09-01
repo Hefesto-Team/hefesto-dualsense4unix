@@ -553,7 +553,18 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    --alt-janela:757px; /* a MESMA altura nas dez abas — veja `.janela` */
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido dela: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
+       Ela estava certa, e o número diz por quê: o card aberto da Controles
+       ESTICA para preencher o corpo, então a folga de verdade é
+       `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
+       conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
+       é folga: é sorte, e ela já tinha visto a barra aparecer na tela dela.
+       Com 777 a folga passa a 21px.
+       O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
+       vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
+       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar. */
+    --alt-janela:777px; /* a MESMA altura nas dez abas — veja `.janela` */
   }
   .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
     height:var(--h-escolha);padding-top:0;padding-bottom:0;
@@ -649,8 +660,14 @@
      faixa com conteúdo elástico): −12px ali pagam `--r-ar:6px`, e o controle
      encolhe 11%. */
   .vib{
-    display:grid;grid-template-columns:132px repeat(4,1fr);
-    gap:16px;
+    display:grid;
+    /* A LARGURA DA COLUNA DE RÓTULOS E O VÃO ATÉ A PRIMEIRA COLUNA DE
+       CONTROLE VÊM DE `medidas.py` — o dono deles nas TRÊS abas que têm
+       essa coluna. Eram 132px e 16 aqui, 138 e 12 na Gatilhos, e o texto
+       acabava em x=536 numa e x=542 na outra. Ela viu: *"tem algo que
+       deixa estranho essa área da primeira coluna."* */
+    grid-template-columns:var(--larg-rot) repeat(4,1fr);
+    gap:var(--gap-col);
     --r-des:124px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
     --r-acoes:74px;
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
@@ -667,6 +684,50 @@
      ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
      coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
   .vib .ctrl{border-left:1px solid var(--linha);padding:0 10px 0 14px}
+
+  /* ---------- O LUGAR VAZIO ----------
+     A mesma gramática das outras quatro abas: cor explícita e NADA de `opacity`
+     (a lição medida da `.fita.inerte`). O DESENHO fica cinza por `!important`
+     porque a cor da peça é `style=` INLINE dentro do SVG, e regra externa não
+     vence atributo inline sem isto.
+     OS DETALHES CLAROS TAMBÉM CAEM — `text`, `line` e os `path` sem classe são
+     os glifos L/R/PS e os traços dos botões, e só aparecem em desenho GRANDE.
+     Medido na Iluminação no mesmo dia: copiar a regra da aba Jogar não bastava,
+     porque lá o desenho tem 62px e aqui tem 124. */
+  .vib .ctrl.vazia{border-color:var(--border-forte)}
+  /* O TRAVESSÃO PREENCHE A CÉLULA, e isto é a régua de alinhamento falando.
+     A coluna vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas —
+     medido. O que acabava 26px antes era o CONTEÚDO da última célula: dois
+     botões empilhados preenchem os 74px de `--r-acoes`; um travessão centrado
+     para no meio. A régua leu isso como "o conteúdo das colunas acaba em y
+     diferentes", e leu certo.
+     `height:100%` no marcador resolve sem mexer em altura nenhuma: ele passa a
+     ocupar a célula e o texto continua centrado dentro dele. */
+  .vib .ctrl.vazia .nada{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
+  .vib .ctrl.vazia .rot-ctrl,
+  .vib .ctrl.vazia .nada{color:var(--linha)}
+  .vib .ctrl.vazia .moldura{border-color:var(--border-forte)}
+  .vib .ctrl.vazia .ds-svg .peca,
+  .vib .ctrl.vazia .ds-svg .corpo,
+  .vib .ctrl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
+  .vib .ctrl.vazia .ds-svg text{fill:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg line{stroke:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+                                                       stroke:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg rect:not([fill="none"]),
+  .vib .ctrl.vazia .ds-svg circle:not([fill="none"]),
+  .vib .ctrl.vazia .ds-svg polygon:not([fill="none"]),
+  .vib .ctrl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg rect,
+  .vib .ctrl.vazia .ds-svg circle,
+  .vib .ctrl.vazia .ds-svg polygon,
+  .vib .ctrl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
+  /* O travessão fica ONDE o conteúdo ficaria — centrado na célula, para as sete
+     linhas continuarem legíveis como linhas. */
+  .vib .ctrl.vazia .seg,
+  .vib .ctrl.vazia .nada-lin,
+  .vib .ctrl.vazia .acoes-col{display:flex;align-items:center;justify-content:center}
   /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
@@ -720,8 +781,20 @@
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
-  .vib .rotulos > *{align-items:flex-end;text-align:right}
-  .vib .rotulos .sec-rot{justify-content:flex-end}
+  /* O RÓTULO ALINHA À ESQUERDA — decisão dela, 31/08/2026: *"alinha a esquerda a
+     primeira coluna."*
+
+     E ELA REVOGA A DECISÃO DELA MESMA de 30/08 (*"no nome das linhas deixa
+     alinhadas à direita. Todas"*). Não é contradição a resolver: é o projeto
+     vivo, e o que mudou no meio foi a própria coluna — ela encolheu de 138 para
+     o tamanho do conteúdo de cada aba, e à direita, numa coluna justa, o texto
+     passou a encostar na divisa em vez de se aproximar do que nomeia.
+
+     DE QUEBRA ISSO CURA UM DESALINHAMENTO QUE A RÉGUA ACUSAVA e que era
+     consequência aritmética do alinhamento à direita: rótulos de larguras
+     diferentes COMEÇAM em x diferentes. À esquerda, todos começam no mesmo. */
+  .vib .rotulos > *{align-items:flex-start;text-align:left}
+  .vib .rotulos .sec-rot{justify-content:flex-start}
   /* O RÓTULO OCUPA A ALTURA INTEIRA DA LINHA, e o texto fica centrado dentro
      dele. Não é enfeite: sem isto o rótulo da última linha acaba 29px acima dos
      botões que ele nomeia, e a régua lê — com razão — um vão entre as colunas.
@@ -836,6 +909,11 @@
   .vib .ds-svg .oculta{opacity:0 !important}
   .vib .ds-svg .oculta.acesa{opacity:.95 !important;
                              filter:drop-shadow(0 0 1.8px var(--plastico))}
+
+  .vib{
+    --larg-rot:138px;
+    --gap-col:16px;
+  }
 
 </style>
 </head>
@@ -961,7 +1039,7 @@
       <h1><span class="p">Hefesto</span> <span class="t">—</span> <span class="b">DualSense</span><span class="n">4</span><span class="b">Unix</span></h1>
       <div class="sub">Gerenciador DualSense para Linux</div>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> 4 controles: <b>2 USB · 2 BT</b></div>
+    <div class="conectado"><span class="bolinha">●</span> 2 controles: <b>1 USB · 1 BT</b></div>
   </div>
 
   <!-- A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
@@ -973,8 +1051,6 @@
       <span class="chip on">Todos</span>
       <span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
       <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#74588e" title="Galactic Purple — a borda é a cor do plástico">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#e4e0d8" title="White — a borda é a cor do plástico">P4 <span class="pt">•</span> White <span class="pt">•</span> USB</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1881,7 +1957,8 @@
               <button class="btn vermelho" data-papel="parar">Parar</button>
             </div>
           </div>
-          <div class="ctrl" data-uniq="" style="--plastico:#74588e">
+          <div class="ctrl vazia" data-conectado="nao"
+               title="Nenhum controle neste lugar.">
             <div class="moldura" data-papel="desenho"><?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2148,11 +2225,11 @@
         <title>Bateria — peça 2</title>
       </path>
     </g>
-    <g id="vb-p3-feat-rumble-esquerdo" class="oculta acesa" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
+    <g id="vb-p3-feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
       <title>Motor de vibração esquerdo (contrapeso maior — soa grosso)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975 M 20.164 33.834 C 17.509 38.843 11.748 52.364 9.406 67.515 C 7.927 77.083 8.055 84.531 9.154 89.873 C 10.257 95.241 12.313 98.371 14.579 99.498 C 16.229 100.319 17.028 100.234 17.44 100.013 C 17.844 99.799 18.043 99.397 18.281 98.916 L 18.361 98.756 C 18.602 98.154 18.953 97.261 19.39 96.146 C 20.749 92.688 22.948 87.087 25.365 81.341 C 28.562 73.742 32.172 65.801 34.748 62.214 C 37.247 58.732 39.04 56.947 40.742 55.255 C 41.79 54.211 43.84 50.792 43.074 45.839 C 42.489 42.044 41.828 38.262 41.092 34.494 C 41.005 33.8 40.976 32.729 41.186 31.761 C 41.281 31.326 41.433 30.869 41.679 30.475 C 39.209 30.457 35.761 30.576 32.161 30.98 C 27.886 31.459 23.442 32.335 20.164 33.834" style=""/>
     </g>
-    <g id="vb-p3-feat-rumble-direito" class="oculta acesa" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
+    <g id="vb-p3-feat-rumble-direito" class="oculta" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
       <title>Motor de vibração direito (contrapeso menor — soa fino)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895 M 107.64 33.763 C 110.298 38.786 116.063 52.343 118.407 67.535 C 119.888 77.129 119.759 84.596 118.659 89.952 C 117.554 95.334 115.498 98.473 113.229 99.603 C 111.577 100.426 110.778 100.34 110.365 100.119 C 109.961 99.905 109.762 99.502 109.524 99.02 L 109.446 98.858 C 109.203 98.255 108.852 97.36 108.414 96.242 C 107.054 92.775 104.853 87.159 102.433 81.397 C 99.234 73.778 95.62 65.817 93.043 62.22 C 90.541 58.729 88.746 56.939 87.043 55.242 C 85.994 54.195 83.941 50.766 84.708 45.801 C 85.294 41.996 85.956 38.203 86.692 34.426 C 86.78 33.729 86.808 32.656 86.598 31.685 C 86.503 31.249 86.351 30.791 86.105 30.396 C 88.577 30.377 92.028 30.497 95.631 30.902 C 99.91 31.382 104.358 32.261 107.64 33.763" style=""/>
     </g>
@@ -2258,35 +2335,15 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-papel="identidade">P3 <span class="pt">•</span> Galactic Purple
-              <span class="pt">•</span> BT</div>
-            <div class="seg"><button class="" data-papel="forca" data-forca="economia">Economia</button><button class="" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-papel="forca" data-forca="max">Máximo</button><button class="on" data-papel="forca" data-forca="auto">Auto</button></div>
-            <div class="motor" data-papel="forca"><span></span><span class="trilho"><span class="cheio" style="width:46.7%"></span></span><span class="num">70%</span><span class="teto"></span></div>
-            <div class="motor" data-papel="motor" data-lado="e"><button class="lado on" data-papel="lado" data-lado="e" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><span class="trilho"><span class="cheio" style="width:35.3%"></span></span><span class="num">90</span><span class="teto">/255</span></div>
-            <div class="motor" data-papel="motor" data-lado="d"><button class="lado on" data-papel="lado" data-lado="d" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
-
-  <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><span class="trilho"><span class="cheio" style="width:35.3%"></span></span><span class="num">90</span><span class="teto">/255</span></div>
-            <div class="acoes-col">
-              <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
-                   *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
-                   O par Testar/Parar já diz a duração pelo próprio par: quem começa
-                   escolhe quando termina. O meio segundo continua sendo o que o
-                   gesto manda ao daemon; o que sai é a PROMESSA na tela. -->
-              <button class="btn" data-papel="testar">Testar</button>
-              <button class="btn vermelho" data-papel="parar">Parar</button>
-            </div>
+            <div class="rot-ctrl">P3 <span class="pt">•</span> Desconectado</div>
+            <div class="seg"><span class="nada">—</span></div>
+            <div class="nada-lin"><span class="nada">—</span></div>
+            <div class="nada-lin"><span class="nada">—</span></div>
+            <div class="nada-lin"><span class="nada">—</span></div>
+            <div class="acoes-col"><span class="nada">—</span></div>
           </div>
-          <div class="ctrl" data-uniq="" style="--plastico:#e4e0d8">
+          <div class="ctrl vazia" data-conectado="nao"
+               title="Nenhum controle neste lugar.">
             <div class="moldura" data-papel="desenho"><?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2553,7 +2610,7 @@
         <title>Bateria — peça 2</title>
       </path>
     </g>
-    <g id="vb-p4-feat-rumble-esquerdo" class="oculta acesa" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
+    <g id="vb-p4-feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
       <title>Motor de vibração esquerdo (contrapeso maior — soa grosso)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975 M 20.164 33.834 C 17.509 38.843 11.748 52.364 9.406 67.515 C 7.927 77.083 8.055 84.531 9.154 89.873 C 10.257 95.241 12.313 98.371 14.579 99.498 C 16.229 100.319 17.028 100.234 17.44 100.013 C 17.844 99.799 18.043 99.397 18.281 98.916 L 18.361 98.756 C 18.602 98.154 18.953 97.261 19.39 96.146 C 20.749 92.688 22.948 87.087 25.365 81.341 C 28.562 73.742 32.172 65.801 34.748 62.214 C 37.247 58.732 39.04 56.947 40.742 55.255 C 41.79 54.211 43.84 50.792 43.074 45.839 C 42.489 42.044 41.828 38.262 41.092 34.494 C 41.005 33.8 40.976 32.729 41.186 31.761 C 41.281 31.326 41.433 30.869 41.679 30.475 C 39.209 30.457 35.761 30.576 32.161 30.98 C 27.886 31.459 23.442 32.335 20.164 33.834" style=""/>
     </g>
@@ -2663,33 +2720,12 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-papel="identidade">P4 <span class="pt">•</span> White
-              <span class="pt">•</span> USB</div>
-            <div class="seg"><button class="on" data-papel="forca" data-forca="economia">Economia</button><button class="" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-papel="forca" data-forca="max">Máximo</button><button class="" data-papel="forca" data-forca="auto">Auto</button></div>
-            <div class="motor" data-papel="forca"><span></span><span class="trilho"><span class="cheio" style="width:20.0%"></span></span><span class="num">30%</span><span class="teto"></span></div>
-            <div class="motor" data-papel="motor" data-lado="e"><button class="lado on" data-papel="lado" data-lado="e" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><span class="trilho"><span class="cheio" style="width:15.7%"></span></span><span class="num">40</span><span class="teto">/255</span></div>
-            <div class="motor off" data-papel="motor" data-lado="d"><button class="lado" data-papel="lado" data-lado="d" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
-
-  <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><span class="trilho"><span class="cheio" style="width:0.0%"></span></span><span class="num">0</span><span class="teto">/255</span></div>
-            <div class="acoes-col">
-              <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
-                   *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
-                   O par Testar/Parar já diz a duração pelo próprio par: quem começa
-                   escolhe quando termina. O meio segundo continua sendo o que o
-                   gesto manda ao daemon; o que sai é a PROMESSA na tela. -->
-              <button class="btn" data-papel="testar">Testar</button>
-              <button class="btn vermelho" data-papel="parar">Parar</button>
-            </div>
+            <div class="rot-ctrl">P4 <span class="pt">•</span> Desconectado</div>
+            <div class="seg"><span class="nada">—</span></div>
+            <div class="nada-lin"><span class="nada">—</span></div>
+            <div class="nada-lin"><span class="nada">—</span></div>
+            <div class="nada-lin"><span class="nada">—</span></div>
+            <div class="acoes-col"><span class="nada">—</span></div>
           </div>
 
         </div>

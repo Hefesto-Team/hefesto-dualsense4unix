@@ -1,7 +1,9 @@
 # A PASTA, não /tmp: o `monta` e o `topo.html` vivem aqui, e é daqui que esta
 # aba os lê. Ver o cabeçalho do aba09.py para o defeito que isso curou.
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA
+import re
+import onde
+from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR
 
 # ---------------------------------------------------------------------------
 # O QUE O PERFIL GUARDA DE CADA CONTROLE — e isto NÃO é escolha de desenho.
@@ -95,7 +97,13 @@ CSS = CSS_GLIFO + """
      O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
      O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
      player"), então nada precisou ser reescrito. */
-  .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
+  /* O TÍTULO DE BLOCO CONTINUA VERDE — 31/08/2026, ela decidiu no mesmo turno
+     em que mandou tirar o verde dos nomes: *"coloca essa na cor ver[de] e o
+     Definições também"*. E é coerente com a regra que ela desenhou: o verde
+     saiu de quem NOMEIA UMA LINHA (rótulo de campo, cabeçalho de coluna) e
+     ficou em quem ABRE UM BLOCO — são dois, `Perfis Salvos` e `Definições`, e
+     eles é que dizem onde a pessoa está. */
+  .sec-rot{font-size:12px;font-weight:700;color:var(--rot-campo);
            margin-bottom:10px;display:flex;align-items:center;gap:6px;height:15px}
   /* A LISTA LÊ COMO TABELA: cabeçalho com fundo próprio e linhas zebradas. Quem
      diz que há mais perfis abaixo é a barra de rolagem de verdade (ver abaixo). */
@@ -148,8 +156,8 @@ CSS = CSS_GLIFO + """
   .rolo::-webkit-scrollbar-thumb{background:var(--border-forte);border-radius:5px}
   .rolo::-webkit-scrollbar-thumb:hover{background:var(--comment)}
   .tab{width:100%;border-collapse:collapse;font-size:11.5px}
-  .tab thead th{position:sticky;top:0;z-index:2;text-align:left;font-weight:600;font-size:10px;
-          color:var(--rot-campo);
+  .tab thead th{position:sticky;top:0;z-index:2;text-align:left;font-weight:700;font-size:10px;
+          color:var(--fg);
           padding:7px 10px;background:var(--elevated);
           border-bottom:1px solid var(--linha)}
   .tab td{padding:8px 10px;color:var(--texto-suave);cursor:pointer;
@@ -159,7 +167,12 @@ CSS = CSS_GLIFO + """
   .tab tr.ativo td{color:var(--green);font-weight:600}
   .tab tr.ativo td:first-child{box-shadow:inset 3px 0 0 var(--green)}
   .tab tbody tr:hover:not(.ativo) td{background:var(--sel-bg)}
-  .tab .pri{font-family:'JetBrains Mono',monospace;width:46px;text-align:right}
+  /* `Pri.` VIROU `Priorização` — 31/08/2026, pedido dela. Os 46px do valor
+     antigo JÁ NÃO ERAM VERDADE: `table-layout` é `auto`, então `width` é
+     sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa
+     a ser o medido; escrever 46 embaixo de uma coluna de 86 é deixar no CSS uma
+     afirmação que a tela desmente. */
+  .tab .pri{font-family:'JetBrains Mono',monospace;width:86px;text-align:right}
   .tab .quando{color:var(--texto-mudo);font-weight:400}
   .conta-perfis{font-size:10.5px;color:var(--comment);margin-left:auto;text-transform:none;
                 letter-spacing:0}
@@ -180,30 +193,42 @@ CSS = CSS_GLIFO + """
   /* `flex-start` e não `center`: com a lista limitada a 236px o bloco era baixo e
      centrar não aparecia. Solto o teto, os campos passaram a flutuar no meio, com
      um vão em cima e a lista da esquerda começando bem mais acima. */
-  /* o rótulo do campo é verde e alinha à direita, como nas outras nove */
-  .campo > span:first-child{color:var(--rot-campo);font-weight:600;text-align:right}
+  /* O RÓTULO ALINHA À ESQUERDA — 31/08/2026, pedido dela olhando a aba:
+     *"alinha os nomes a esquerda e trás os slicers pra iniciarem deles"*.
+     Ele alinhava à direita, como nas outras nove; aqui não alinha mais, e a
+     divergência é a que ela pediu.
+     `nowrap` porque a coluna passou a ser JUSTA: sem ele um rótulo que crescer
+     vira duas linhas e estoura a altura do campo, que nesta aba é medida contra
+     o `overflow` do quadro. */
+  /* MENOS VERDE — 31/08/2026, pedido dela olhando a aba: *"acho que tem muito
+     verde na página. Talvez alterar com um branco com negrito ativado em alguns
+     cantos"*.
+     A REGRA QUE ESCOLHI, e ela é o que decide QUAIS cantos: **o verde fica onde
+     significa ESTADO; o que só NOMEIA vira branco em negrito.** Havia 20 pedaços
+     verdes na janela e a maior parte só dava nome a uma coisa — cabeçalho de
+     coluna, título de bloco, rótulo de campo —, então o verde tinha deixado de
+     querer dizer alguma coisa: quando tudo é verde, o perfil ATIVO em verde não
+     salta.
+     Continuam verdes, e cada um por um motivo: a linha do perfil ativo (é o
+     estado da lista), o botão `Ativar` (a ação primária) e o cabeçalho do topo
+     (que é do `topo.html` e vale para as dez).
+     O NEGRITO É QUEM PAGA O CONTRASTE PERDIDO: `--fg` sobre `--elevated` é mais
+     claro que o verde, mas sem peso um cabeçalho de coluna vira dado. */
+  .campo > span:first-child{color:var(--fg);font-weight:700;text-align:left;
+                            white-space:nowrap}
   .campo{display:grid;grid-template-columns:var(--rot-p) 1fr;align-items:center;gap:12px;
          height:var(--h-escolha);font-size:12px;color:var(--texto-mudo);margin-bottom:4px}
 
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
-     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
-     nome da linha e a divisória entre eles tem que estar clara. pra todas as
-     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
-     A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
-     moldura do quadro já existe. */
-  /* A DIVISÓRIA SAIU DE CIMA DA BORDA DO CAMPO — 31/08/2026, e era a outra
-     metade da *"borda dupla"*. O `.campo` tem exatamente a altura do campo que
-     carrega (`--h-escolha`), então a `border-bottom` dele nascia ENCOSTADA na
-     borda de baixo do `<input>`: duas linhas de 1px a 1px uma da outra, que o
-     olho lê como um traço grosso e torto. Medido na foto, ampliada 2x.
-     Como `::after` absoluto ela cai no meio do vão de 4px — 3px livres da
-     borda do campo — e NÃO mexe em geometria nenhuma, que é o que importa numa
-     aba onde cada pixel de altura já foi medido contra o `overflow` do quadro.
-     A última não leva: separador depois do último campo vira moldura. */
-  .campos > .campo{position:relative}
-  .campos > .campo::after{content:'';position:absolute;left:0;right:0;bottom:-3px;
-                          border-bottom:1px solid var(--linha)}
-  .campos > .campo:last-of-type::after{display:none}
+  /* AS DIVISÓRIAS SAÍRAM DESTE TRECHO — 31/08/2026, pedido dela olhando a aba:
+     *"remove as linhas horizontais desse trecho"*.
+     Elas nasceram de um pedido dela de 30/08 — *"as linhas divisórias em todas
+     as páginas (…) a primeira coluna serve como nome da linha e a divisória
+     entre eles tem que estar clara. pra todas as abas"* — e esse pedido CONTINUA
+     valendo nas outras nove: o molde está no `aba04.py`, com a razão escrita lá.
+     O que mudou foi o TRABALHO da divisória. Ela separava duas colunas distantes:
+     o rótulo terminava a 22px do campo, alinhado à direita. Com o rótulo à
+     esquerda e a coluna justa, o nome já encosta no campo — e a linha deixou de
+     separar para virar mais uma borda ao lado das cinco que os campos já têm. */
   .campo .val{display:flex;align-items:center;gap:10px}
   .campo input[type=text],.campo select{
     flex:1;min-width:0;height:var(--h-escolha);border-radius:7px;font-size:12.5px;font-family:inherit;
@@ -218,7 +243,17 @@ CSS = CSS_GLIFO + """
     border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
   .campo .n{flex:0 0 40px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .campo .btn{flex:0 0 auto;white-space:nowrap}
-  :root{--rot-p:104px}
+  /* A COLUNA DO RÓTULO É JUSTA — remedida no Chrome em 31/08/2026, DEPOIS que ela
+     pediu os dois pontos e a maiúscula — com a preposição minúscula, que foi a
+     segunda palavra dela: `Nome:` 36px · `Prioridade:` 63 · `Funciona em:` 77 ·
+     `Estilo de Jogo:` 85 · `Nome do Jogo:` **86** — que trocou de dono, era o
+     `Estilo de Jogo` com 82 antes dos dois pontos.
+     Os 104 antigos deixavam 17px de vão morto à direita de todo rótulo — e é
+     esse vão que os campos ganharam.
+     NÃO dá para usar `max-content`: cada `.campo` é um grid PRÓPRIO, então a
+     coluna se resolveria linha a linha e as cinco desalinhariam. Quem mudar o
+     texto de um rótulo tem de remedir no Chrome e trazer o número para cá. */
+  :root{--rot-p:86px}
 
   /* ---------- as QUATRO configurações que cabem dentro deste perfil ----------
      O editor mostrava CINCO campos e gravava vinte, e a única frase que dizia
@@ -241,7 +276,30 @@ CSS = CSS_GLIFO + """
      que sobra do editor, e ela tem de caber INTEIRA — quatro linhas e o cabeçalho —
      sem empurrar a fileira de botões nem um pixel. Cada valor aqui foi medido
      contra o `overflow` do quadro, não escolhido. */
-  .tab.miuda thead th{padding:3px 8px;background:none;border-bottom:1px solid var(--linha)}
+  .tab.miuda thead th{padding:5px 8px;background-color:var(--panel);border-bottom:1px solid var(--linha)}
+
+  /* UM FUNDO POR COLUNA — 31/08/2026, pedido dela: *"deixa o background do nome
+     das 3 colunas com outras cores, pra diferenciar e ajudar no suspiro ali
+     dessa seção"*.
+     AS DUAS TABELAS DESTA ABA TÊM TRÊS COLUNAS e são lidas juntas, então as duas
+     recebem a mesma escala: 1ª cyan · 2ª roxo · 3ª laranja. Dar a uma só faria a
+     outra parecer quebrada — a mesma cicatriz da aba que nasceu sem `Gtk.Frame`
+     em 22/08 e foi lida como defeito.
+     `color-mix` E NÃO UM HEXADECIMAL DIGITADO: a cor sai das mesmas variáveis da
+     casa, então quem trocar a paleta troca isto junto. Baixa o suficiente para o
+     fundo separar a coluna sem competir com o dado — o texto continua `--fg` em
+     negrito.
+     O `padding` subiu de 3 para 5px porque fundo sem respiro é mancha, não faixa:
+     é a metade *"suspiro"* do pedido dela. */
+  /* A COR VEM COMO `background-image`, E ISSO NÃO É ESTILO — É O QUE IMPEDE UM
+     DEFEITO: o cabeçalho é `position:sticky` e a lista de perfis ROLA por baixo
+     dele. Uma cor translúcida em `background-color` deixaria os nomes dos perfis
+     aparecerem ATRAVÉS do cabeçalho ao rolar. Como `background-image` ela se
+     empilha sobre a cor opaca da base (`--elevated` na lista, `--panel` na
+     tabela por controle), e o resultado é opaco. */
+  .tab thead th:nth-child(1){background-image:linear-gradient(color-mix(in srgb, var(--cyan) 14%, transparent),color-mix(in srgb, var(--cyan) 14%, transparent))}
+  .tab thead th:nth-child(2){background-image:linear-gradient(color-mix(in srgb, var(--purple) 20%, transparent),color-mix(in srgb, var(--purple) 20%, transparent))}
+  .tab thead th:nth-child(3){background-image:linear-gradient(color-mix(in srgb, var(--orange) 14%, transparent),color-mix(in srgb, var(--orange) 14%, transparent))}
   .tab.miuda td{padding:1px 8px;cursor:default}
   .gd-nome{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:11px}
   /* O DESENHO DE 32px SAIU, e a barrinha de plástico ficou com o trabalho.
@@ -291,6 +349,12 @@ CSS = CSS_GLIFO + """
      nunca de um hexadecimal digitado. É a mesma gramática do `tr.ativo` da tabela
      ao lado: uma barra fina à esquerda diz de quem é a linha. */
   .tab.miuda td:first-child{box-shadow:inset 3px 0 0 var(--plastico,transparent)}
+  /* O LUGAR SEM CONTROLE — a cor é a do `.vazio` da Gatilhos (`--comment`), que é
+     a página que ela mandou copiar. O contraste está medido no comentário da
+     régua: aqui o fundo é `--panel`, não o `--app-bg` da Jogar, e foi por olhar
+     só o token — e não o CONTRASTE contra o fundo de CADA aba — que o lugar
+     vazio da Jogar saiu mais aceso que o controle na mesa, em 31/08. */
+  .tab.miuda tr.fora .gd-nome{color:var(--comment)}
 """
 
 AMBIENTES = ["Todos","Steam","Estilo de Jogo","Jogo","Jogo da Steam"]
@@ -338,6 +402,7 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
     EXECUÇÃO, e a mesa também. Reproduzir esta linha à mão no piloto criaria a
     segunda verdade sobre o desenho, que é o defeito que esta casa mais paga.
     """
+    na_mesa = c.get("conectado", True)
     tem = GUARDA[c["pref"]] if tem is None else tem
     id_visivel = ID_DA_PECA[c["pref"]] if id_da_peca is None else id_da_peca
     endereco = uniq if uniq is not None else c["pref"]
@@ -351,10 +416,32 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
                       f' data-hef-secao="{campo}" title="{titulo}">{gs}</span>')
     quantos = (f'{len(tem)} de {len(SECOES)} ajustes só deste controle'
                if tem else "nada só dele — herda os quatro ajustes do perfil")
-    return f'''                  <tr data-hef-uniq="{endereco}" style="--plastico:{cor_da_zona(c['cor'])}"
-                      title="{c['nome']} — {quantos}.">
+    # O LUGAR DE QUEM NÃO ESTÁ NA MESA — 31/08/2026, decisão dela, e ela vale para
+    # TODA página que eu tocar: *"o espaço fica, mas o nome do canto muda: agora o
+    # p3 e o p4 será P3 bolinha Desconectado, igual página gatilhos"*.
+    #
+    # O TEXTO COPIA A GATILHOS — `P3 • Desconectado`, com o mesmo `SEPARADOR` que
+    # todo rótulo desta casa usa. Não é o rótulo curto com campos vazios: um lugar
+    # sem controle não tem plástico nem transporte para mostrar, e inventar um
+    # travessão em cada campo diria que ali FALTA dado, quando o que falta é o
+    # controle.
+    #
+    # O QUE FICA ACESO, e é a decisão dela de mais cedo: o que o PERFIL guarda
+    # daquela peça, e o ID. O perfil guarda por ID da peça, que é estável entre
+    # cabo e rádio — logo ele conhece o P3 mesmo com o P3 fora da mesa, e apagar
+    # isso apagaria a resposta à pergunta que a tabela existe para responder.
+    #
+    # A BARRA DA COR DO PLÁSTICO SAI. Ela identifica a peça que está ali; sem
+    # peça, ela afirmaria uma cor que ninguém pode conferir na tela.
+    nome = rotulo(c, "curta") if na_mesa else f'P{c["jogador"]}{SEPARADOR}Desconectado'
+    plastico = cor_da_zona(c['cor']) if na_mesa else "transparent"
+    dica = (f"{c['nome']} — {quantos}." if na_mesa else
+            f"Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: "
+            f"quando o P{c['jogador']} voltar, ele encontra o que você deixou.")
+    return f'''                  <tr data-hef-uniq="{endereco}"{'' if na_mesa else ' class="fora"'}
+                      style="--plastico:{plastico}" title="{dica}">
                     <td class="gd-nome">
-                      <span data-hef="guarda.nome">{rotulo(c, "curta")}</span>
+                      <span data-hef="guarda.nome">{nome}</span>
                     </td>
                     <td class="gd-pecas"><span class="gls">{"".join(grupos)}</span></td>
                     <td class="gd-id" data-hef="guarda.id">{id_visivel}</td>
@@ -402,11 +489,11 @@ MIOLO = f'''
 
           <div>
             <div class="moldura">
-              <div class="sec-rot">Perfis salvos</div>
+              <div class="sec-rot">Perfis Salvos</div>
               <div class="lista">
               <div class="rolo">
               <table class="tab">
-                <thead><tr><th>Nome</th><th class="pri">Pri.</th><th>Quando usar</th></tr></thead>
+                <thead><tr><th>Nome</th><th class="pri">Priorização</th><th>Quando usar</th></tr></thead>
                 <tbody data-hef="perfis.lista">
 {chr(10).join(linha_do_perfil(n, p, q, a) for n,p,q,a in PERFIS)}
                 </tbody>
@@ -423,35 +510,35 @@ MIOLO = f'''
 
           <div>
             <div class="moldura">
-              <div class="sec-rot"></div>
+              <div class="sec-rot">Definições</div>
               <div class="campos">
 
               <div class="campo">
-                <span>Nome</span>
+                <span>Nome:</span>
                 <span class="val"><input type="text" data-hef="editor.nome" data-hef-gesto="editor.nome" value="Mortal Kombat"></span>
               </div>
               <div class="campo">
-                <span>Prioridade</span>
+                <span>Prioridade:</span>
                 <span class="val" data-hef="editor.prioridade.dica" title="Decide quem ganha quando dois perfis poderiam entrar: o maior vence. O Universal fica em zero, para nunca atropelar ninguém e nunca deixar o controle sem nada.">
                   <span class="trilho"><span class="cheio" data-hef="editor.prioridade" style="width:90%"></span></span>
                   <span class="n" data-hef="editor.prioridade.n">90</span>
                 </span>
               </div>
               <div class="campo">
-                <span>Funciona em</span>
+                <span>Funciona em:</span>
                 <span class="val"><select data-hef="editor.ambiente" data-hef-gesto="editor.ambiente">
 {opts(AMBIENTES, "Jogo")}
                 </select></span>
               </div>
               <div class="campo">
-                <span>Nome do jogo</span>
+                <span>Nome do Jogo:</span>
                 <span class="val">
                   <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo" value="Mortal Kombat 1">
                   <button class="btn roxo" data-hef-gesto="detectar" title="Pega o jogo que está rodando atrás desta janela e monta a regra — funciona com jogo de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
               </div>
               <div class="campo">
-                <span title="Pré-aplica um perfil inteiro: escolhendo FPS, o gatilho, a luz, a vibração e a máscara já vêm resolvidos. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo</span>
+                <span title="Pré-aplica um perfil inteiro: escolhendo FPS, o gatilho, a luz, a vibração e a máscara já vêm resolvidos. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo">
 {opts(ESTILOS, "Luta")}
                 </select></span>
@@ -575,5 +662,113 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
+def _conferir(html: str) -> None:
+    """Lê o HTML que acabou de sair e reprova se uma decisão dela cair.
+
+    O QUE ELA MEDE, E O QUE NÃO: ela lê o CSS escrito, não a tela pintada — o
+    gerador não abre navegador, e abrir um a cada execução custaria segundos a
+    cada regeração. A TELA foi medida no Chrome em 31/08/2026, e o número está no
+    comentário de cada regra: os cinco rótulos começam no mesmo x, os cinco
+    campos começam no mesmo x, e os campos foram de 394 para 416px de largura.
+    Quem mudar estas regras remede lá, não aqui.
+
+    E ela olha a REGRA INTEIRA, nunca um token solto no meio da página — a
+    armadilha que o `COMO-OLHAR-A-TELA.md` chama de *"régua que casa um token em
+    qualquer lugar do texto, em vez do campo que o significa"*, e que já reprovou
+    três rótulos certos nesta casa porque a legenda os citava.
+    """
+    falhas = []
+
+    def exigir(cond, queixa):
+        if not cond:
+            falhas.append(queixa)
+
+    # A REGRA DO RÓTULO, extraída inteira: casar `text-align:left` na página
+    # solta acharia qualquer outra regra que o use.
+    regra = re.search(r"\.campo > span:first-child\{[^}]*\}", html)
+    exigir(regra is not None, "a regra do rótulo do campo sumiu do CSS")
+    if regra:
+        exigir("text-align:left" in regra.group(0),
+               "o rótulo do campo não alinha mais à esquerda")
+        exigir("text-align:right" not in regra.group(0),
+               "o rótulo do campo voltou a alinhar à direita")
+        exigir("white-space:nowrap" in regra.group(0),
+               "o `nowrap` saiu — um rótulo que crescer vira duas linhas e estoura a altura")
+
+        exigir("var(--fg)" in regra.group(0),
+               "o rótulo do campo voltou ao verde — o verde é de ESTADO, não de nome")
+        exigir("font-weight:700" in regra.group(0),
+               "o negrito do rótulo saiu — sem ele o nome vira dado")
+
+    # O VERDE SÓ ONDE É ESTADO — e a régua olha REGRA A REGRA, não a página.
+    # A primeira versão desta linha procurava `color:var(--rot-campo)` no HTML
+    # inteiro e reprovou na hora: quem casava era `.linha-rot`, do `topo.html`
+    # compartilhado, que esta aba nem usa. A régua estava medindo o CSS das dez
+    # abas para julgar uma. Mesmo defeito que já reprovou três rótulos certos
+    # nesta casa: *casar um token em qualquer lugar do texto*.
+    r = re.search(r"\.tab thead th\{[^}]*\}", html)
+    exigir(r is not None, "a regra dos cabeçalhos de coluna sumiu do CSS")
+    if r:
+        exigir("color:var(--fg)" in r.group(0),
+               "os cabeçalhos de coluna voltaram ao verde — verde é de ESTADO, não de nome")
+        exigir("font-weight:700" in r.group(0),
+               "o negrito dos cabeçalhos saiu — sem ele o nome vira dado")
+
+    # O TÍTULO DE BLOCO é a exceção que ela mesma abriu: verde, e são só dois.
+    r = re.search(r"\.sec-rot\{[^}]*\}", html)
+    exigir(r is not None, "a regra do título de bloco sumiu do CSS")
+    if r:
+        exigir("color:var(--rot-campo)" in r.group(0),
+               "o título de bloco perdeu o verde que ela pediu")
+    for titulo in ("Perfis Salvos", "Definições"):
+        exigir(f'class="sec-rot">{titulo}<' in html,
+               f"o título de bloco '{titulo}' não está na tela")
+
+    # OS RÓTULOS COM DOIS PONTOS, e o cabeçalho por extenso.
+    for rot in ("Nome:", "Prioridade:", "Funciona em:", "Nome do Jogo:", "Estilo de Jogo:"):
+        exigir(f">{rot}</span>" in html, f"o rótulo '{rot}' não está na tela")
+    exigir('class="pri">Priorização<' in html, "o cabeçalho voltou a ser abreviado")
+
+    # O FUNDO POR COLUNA — três regras, três cores. Se as três virarem uma só, a
+    # coluna deixa de se distinguir e o pedido dela caiu.
+    fundos = re.findall(r"\.tab thead th:nth-child\(\d\)\{background-image:([^}]*)\}", html)
+    exigir(len(fundos) == 3, f"não são 3 fundos de coluna no CSS, e sim {len(fundos)}")
+    exigir(len(set(fundos)) == 3, "os fundos das três colunas não são cores diferentes")
+
+    # O LUGAR DE QUEM NÃO ESTÁ NA MESA — um por controle desconectado, com o
+    # texto da Gatilhos. E a régua cobra as DUAS metades: que o nome novo esteja
+    # lá, e que o rótulo curto do controle NÃO esteja — foi assim que uma cura
+    # desta casa passou pela metade, tirando o texto e levando o dado junto.
+    fora = [c for c in MESA if not c.get("conectado", True)]
+    exigir(html.count("Desconectado</span>") == len(fora),
+           f"não são {len(fora)} lugares 'Desconectado' na tabela por controle")
+    for c in fora:
+        exigir(rotulo(c, "curta") not in html,
+               f"o rótulo de mesa do P{c['jogador']} continua na tela — ele não está na mesa")
+    exigir(html.count('class="fora"') == len(fora),
+           "os lugares desconectados perderam a classe que os apaga")
+
+    # A DIVISÓRIA HORIZONTAL, que ela mandou remover DESTE trecho.
+    exigir(".campos > .campo::after" not in html,
+           "as linhas horizontais voltaram ao editor de perfil")
+
+    # A COLUNA JUSTA. O `104px` é o valor antigo, e o vão morto de 22px é ele.
+    exigir("--rot-p:86px" in html,
+           "a coluna do rótulo não é mais a medida do rótulo mais largo (86px)")
+    exigir("--rot-p:104px" not in html,
+           "a coluna do rótulo voltou aos 104px — 22px de vão morto por rótulo")
+
+    if falhas:
+        raise SystemExit("ERRO em 10-perfis — decisão dela desfeita:\n  "
+                         + "\n  ".join(f"- {f}" for f in falhas))
+
+
 n = monta("10-perfis", "Perfis", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
-print(f"10-perfis: OK, {n} divs")
+_conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
+# O NÚMERO SAI DO CSS, não de um literal aqui: ele já mentiu duas vezes hoje —
+# a coluna mudou de 82 para 87 e para 86 enquanto ela ajustava os rótulos, e a
+# linha de saída continuou anunciando o valor velho. O que tem dono não se digita.
+ROT_P = re.search(r"--rot-p:(\d+)px", CSS).group(1)
+FORA = sum(1 for c in MESA if not c.get("conectado", True))
+print(f"10-perfis: OK, {n} divs · rótulo à esquerda com dois pontos, coluna de {ROT_P}px, "
+      f"zero divisórias no editor · Perfis Salvos e Definições · {FORA} lugar(es) Desconectado")

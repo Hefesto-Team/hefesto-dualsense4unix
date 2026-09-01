@@ -553,7 +553,18 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    --alt-janela:757px; /* a MESMA altura nas dez abas — veja `.janela` */
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido dela: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
+       Ela estava certa, e o número diz por quê: o card aberto da Controles
+       ESTICA para preencher o corpo, então a folga de verdade é
+       `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
+       conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
+       é folga: é sorte, e ela já tinha visto a barra aparecer na tela dela.
+       Com 777 a folga passa a 21px.
+       O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
+       vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
+       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar. */
+    --alt-janela:777px; /* a MESMA altura nas dez abas — veja `.janela` */
   }
   .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
     height:var(--h-escolha);padding-top:0;padding-bottom:0;
@@ -820,6 +831,51 @@
      MESMO realce do chip escolhido, para os dois lerem como a mesma escolha. */
   .cartao.alvo{background:var(--sel-bg)}
 
+  /* ---------- O LUGAR VAZIO ----------
+     Decisão dela, 31/08/2026: *"deixa os outros dois controles desconectados,
+     só coloca algo como `-` nos campos que deveriam ter algo e escurece tudo."*
+
+     NADA DE `opacity`, e a razão é medida — é a lição da `.fita.inerte`
+     (`topo.html`, 30/08): `opacity` esconde o texto DUAS vezes ao mesmo tempo
+     (o alfa some com o contraste E com o peso do traço), e o resultado deixa de
+     comunicar o que ela desenhou. Aqui cada cor é explícita.
+
+     O QUE O ESCURO TIRA, e é de propósito: a borda perde a cor do plástico, o
+     rótulo cai para `--comment` e a bateria perde o verde. Isso NÃO fere a regra
+     de "nunca toque na cor do plástico" — aquela regra protege a informação de
+     QUAL controle é qual, e num lugar vazio não há controle a identificar. A cor
+     continua dentro do SVG, intacta, para o dia em que ele conectar. */
+  .cartao.off{border-color:var(--border-sutil);background:transparent}
+  /* A COR É `--linha`, E NÃO `--comment`, e a escolha é medida. Sobre o
+     `--app-bg` (#21222c) o `--comment` dá **5,42:1** contra os **5,98:1** do
+     rótulo conectado — 9% de diferença, que a olho nenhum lê como "apagado".
+     A primeira volta usou `--comment` (a cor da `.fita.inerte`) e a foto
+     desmentiu: o lugar vazio saiu MAIS aceso que o controle na mesa, porque o
+     `--comment` é mais SATURADO. `--linha` dá **2,23:1** — e aqui isso é certo,
+     não descuido: o que está escrito é um travessão, um marcador de ausência.
+     Não há texto a ler num lugar onde não há controle. */
+  .cartao.off .rotulo,
+  .cartao.off .bat{color:var(--linha)}
+  /* O DESENHO CINZA PRECISA DE `!important` porque a cor da peça é `style=`
+     INLINE dentro do SVG (o gerador de cores a escreve lá, para o arquivo abrir
+     colorido sozinho). Regra externa não vence atributo inline sem isto — e o
+     hex certo continua no arquivo, então `check_cores_do_dualsense.py` segue
+     verde: o que muda é a pintura, não o dado. */
+  /* `.corpo` ENTRA JUNTO, e foi a foto que o achou. A primeira volta escreveu
+     só `.peca` e `.miolo`: o P3 continuou ROXO e o P4 BRANCO na ampliação. O
+     chassi — a peça grande que carrega a cor do plástico — é `path.corpo`, uma
+     classe que nenhuma régua desta aba nomeava. Medido no DOM:
+     `path.corpo fill=rgb(116,88,142)`, o Galactic Purple inteiro. */
+  .cartao.off .ds-svg .peca,
+  .cartao.off .ds-svg .corpo,
+  .cartao.off .ds-svg .miolo *{fill:var(--linha) !important}
+  .cartao.off .ds-svg .corpo{stroke:var(--border-forte) !important}
+  /* Os chips do lugar vazio não se clicam: não há controle para receber a
+     máscara. Sem `on` em nenhum, e sem `:hover`. */
+  .cartao.off .mascara .chip{border-color:var(--border-sutil);color:var(--linha);
+                             background:transparent;cursor:default}
+  .cartao.off .mascara .chip:hover{border-color:var(--border-sutil);color:var(--linha)}
+
   /* O CABEÇALHO DAS DUAS COLUNAS TEM UMA ALTURA SÓ. O da esquerda ganhou o
      ícone de ajuda (17px) e o da direita é só texto (14,4px): sem isto a
      fileira de cartões e a lista de avisos começariam 2,6px fora de registro.
@@ -1000,7 +1056,7 @@
       <h1><span class="p">Hefesto</span> <span class="t">—</span> <span class="b">DualSense</span><span class="n">4</span><span class="b">Unix</span></h1>
       <div class="sub">Gerenciador DualSense para Linux</div>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> 4 controles: <b>2 USB · 2 BT</b></div>
+    <div class="conectado"><span class="bolinha">●</span> 2 controles: <b>1 USB · 1 BT</b></div>
   </div>
 
   <!-- A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
@@ -1012,8 +1068,6 @@
       <span class="chip">Todos</span>
       <span class="chip plastico on" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
       <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#74588e" title="Galactic Purple — a borda é a cor do plástico">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#e4e0d8" title="White — a borda é a cor do plástico">P4 <span class="pt">•</span> White <span class="pt">•</span> USB</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1068,16 +1122,15 @@
       <input type="radio" name="hefesto" id="hef-desligado" class="hef-rd">
 
       <div class="hef-linha">
-        <span class="linha-rot">Hefesto</span>
+        <span class="linha-rot">Status</span>
         <label class="hef-pos ligado" for="hef-ligado" data-modo="gamepad"
                title="O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho."><span class="pino"></span>Ligado</label>
         <label class="hef-pos desligado" for="hef-desligado" data-modo="native"
-               title="Modo Nativo — o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho: os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim."><span class="pino"></span>Desligado</label>
+               title="Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle."><span class="pino"></span>Desligado</label>
         <span class="ajuda">?<span class="dica">
-          <b>Ligado</b> — o Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho. Os cinco modos do quadro abaixo são jeitos de ele fazer isso.<br><br>
-          <b>Desligado</b> — <b>Modo Nativo</b>: o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho; os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim.<br><br>
-          Isto vale <b>sempre</b>, com jogo aberto ou sem nenhum — por isso está fora do quadro.<br><br>
-          E isto <b>não</b> encerra o Hefesto. Para desligar o serviço inteiro, é a aba <b>Sistema</b>.
+          <b>Ligado</b> — o Hefesto fica no meio: luz, vibração, gatilho e o número do jogador são por conta dele.<br><br>
+          <b>Desligado</b> — o Hefesto sai do meio e o jogo fala direto com o controle.<br><br>
+          Isto não encerra o serviço. Para isso, a aba <b>Sistema</b>.
         </span></span>
       </div>
     </div>
@@ -1086,17 +1139,16 @@
          O que sobra aqui é o que o lançamento decide de verdade. -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Quando o jogo abrir</span>
+        <span class="quadro-titulo">Modo</span>
         <!-- O `?` DOS MODOS SUBIU do rótulo "Modo" para cá em 31/08 à tarde, e é
              consequência do interruptor ter saído: com só os modos dentro, a
              ajuda do quadro É a ajuda dos modos, e dois `?` a três linhas um do
              outro diriam a mesma coisa duas vezes. De quebra, os rótulos das
              duas seções ficaram idênticos — texto puro dos dois lados. -->
         <span class="ajuda">?<span class="dica">
-          Os cinco <b>usam as features do Hefesto</b>: luz, vibração, gatilho e o número do jogador continuam por conta dele em todos.<br><br>
-          O Hefesto <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo. Ele já faz isso sozinho, sempre — não é um botão, é o que a escada é.<br><br>
-          A ordem tem razão medida: dez recursos do controle (giroscópio, acelerômetro, os dois pontos do touchpad, o clique, a vibração) <b>só chegam ao jogo pelo Sony DualSense</b>. Errar ali custa os dez, e custa em silêncio.<br><br>
-          <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle. Hoje ele gira <b>quatro</b> pontes de verdade, nesta ordem: Sony DualSense, Xbox, <b>Modo Nativo</b> — que é o interruptor <b>Desligado</b>, acima — e Steam Input. <b>Point And Click</b> e <b>Navegação</b> ainda não são degraus: o PS+R3 não para neles.
+          Vale <b>quando o jogo abrir</b>. O que muda entre os quatro é <b>como o jogo desenha os botões</b> — luz, vibração, gatilho, giroscópio e áudio são por conta do Hefesto em todos.<br><br>
+          Ele <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo.<br><br>
+          <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle.
         </span></span>
       </div>
       <div class="quadro-corpo hef">
@@ -1108,32 +1160,24 @@
              e por isso ele não podia descer para o cartão junto com a máscara. -->
 
         <div class="hef-modo so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
-          <div class="linha-rot">
-            <b style="color:var(--texto-suave)">Modo</b>
-          </div>
           <div class="escada">
             <span class="degrau on" data-degrau="dualsense"
-                  title="A cópia virtual completa: giroscópio, acelerômetro, os dois pontos do touchpad, o clique e a vibração. Dez linhas do mapa-controles.csv só chegam ao jogo por aqui. É o primeiro que o Hefesto tenta.">Sony DualSense</span>
+                  title="O jogo desenha os botões do PlayStation. É o primeiro que o Hefesto tenta.">Sony DualSense</span>
             <span class="degrau" data-degrau="xbox"
-                  title="O piso mais largo que existe: sete eixos e vibração que funciona em todo jogo. Não carrega nenhuma das dez linhas uhid — sem giroscópio e sem touchpad para o jogo. É o segundo que o Hefesto tenta.">Xbox</span>
+                  title="O jogo desenha os botões do Xbox — o formato que todo jogo entende. É o segundo que o Hefesto tenta.">Xbox</span>
             <span class="degrau" data-degrau="steam"
-                  title="A Steam entrega a entrada e o Hefesto fica inteiro na saída: os seus ajustes vencem o jogo. É o mais caro de trocar — exige fechar a Steam, reabrir a Steam e reabrir o jogo —, e por isso é o último que o Hefesto tenta.">Steam Input</span>
-            <span class="degrau sem-dono" data-degrau="pointclick"
-                  title="AINDA NÃO TEM QUEM O ATENDA no Hefesto: não é degrau da escada (integrations/ponte_escada.ESCADA) nem modo do produto (mode_transition.MODES). Está aqui por decisão sua, de 31/08 — é modo, não perfil, e a ponte do PS+R3 traz o perfil dele junto.">Point And Click</span>
+                  title="A Steam entrega a entrada, e os seus ajustes vencem os do jogo. Trocar para cá exige reabrir a Steam e o jogo — por isso é o último que o Hefesto tenta.">Steam Input</span>
             <span class="degrau" data-degrau="navegacao" data-modo="desktop"
-                  title="O controle vira teclado e mouse do computador, e quem emula é o próprio Hefesto — por isso ele mora aqui dentro, e não do lado desligado. O modo TEM dono e funciona hoje (mode_transition.apply_mode('desktop')); o que ainda não existe é o PS+R3 parar aqui: a Navegação não é degrau da escada.">Navegação</span>
+                  title="O controle vira teclado e mouse do computador. O PS+R3 ainda não para aqui.">Navegação</span>
           </div>
         </div>
 
         <!-- O OUTRO LADO DO INTERRUPTOR. Mesma altura da seção de cima (rótulo +
              36px), para a tela não pular quando ela vai e volta. -->
         <div class="hef-modo so-desligado" title="Esta seção só aparece com o Hefesto DESLIGADO.">
-          <div class="linha-rot">
-            <b style="color:var(--texto-suave)">Modo</b>
-          </div>
           <div class="escada">
             <span class="degrau on fixo"
-                  title="Sem cópia virtual: o jogo fala com o DualSense físico. É a ponte dos jogos que escrevem no hidraw direto e recusam um intermediário. Só vale no próximo lançamento — com o jogo aberto, o resultado é ZERO controles.">Modo Nativo <span class="sep">·</span> <span class="mud">o DualSense da forma como veio ao mundo</span></span>
+                  title="O Hefesto sai do meio e o jogo fala direto com o controle. Vale no próximo jogo que abrir.">Modo Nativo <span class="sep">·</span> <span class="mud">o DualSense da forma como veio ao mundo</span></span>
           </div>
         </div>
 
@@ -1143,37 +1187,24 @@
     <!-- ---------- UM BLOCO SÓ: Conectado agora | Atenção ---------- -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Conectado agora</span>
+        <span class="quadro-titulo">O Controle é visto como:</span>
+        <!-- AS DUAS DICAS VIRARAM UMA — 31/08/2026, quando ela mandou o rótulo
+             "O jogo vê cada controle como:" subir para o título. Com o rótulo
+             fora, dois `?` a três linhas um do outro diriam a mesma coisa duas
+             vezes: é o mesmo movimento que o `?` dos modos já tinha feito. -->
         <span class="ajuda">?<span class="dica">
-          O detalhe de cada controle — entradas, sensores, áudio, o que o jogo está
-          recebendo — está na aba <b>Controles</b>.<br><br>
-          <b>Reconectar Controles</b> traz de volta quem caiu do co-op no meio da partida e
-          arruma a numeração para 1..N. Pode clicar com o jogo aberto: só a numeração espera.
+          A máscara é <b>por controle</b>: cada um pode aparecer de um jeito para o jogo, e o que muda é <b>o desenho dos botões na tela</b>.<br><br>
+          <b>DualSense</b> — △ ○ ✕ ▢. &nbsp; <b>Xbox 360</b> — Y B A X. &nbsp; <b>Nintendo Pro</b> — X A B Y, com ZL/ZR e − +.<br><br>
+          O controle na sua mão continua o mesmo: luz, gatilho, giroscópio e áudio seguem por conta do Hefesto em qualquer máscara.<br><br>
+          Clicar num cartão leva a fita de cima para ele. O detalhe de cada um está na aba <b>Controles</b>.
         </span></span>
       </div>
       <div class="quadro-corpo">
 
         <div>
-            <div class="linha-rot cab-col">
-              O jogo vê cada controle como:
-              <span class="ajuda" style="margin-left:5px">?<span class="dica">
-                A máscara é <b>por controle</b>: cada um pode aparecer de um jeito
-                para o jogo.<br><br>
-                Ela muda <b>o que o jogo vê</b> — e por isso os botões que ele desenha
-                na tela. O controle na sua mão continua o mesmo: a luz, o gatilho e o
-                giroscópio seguem por conta do Hefesto em qualquer máscara.<br><br>
-                <b>DualSense</b> — o jogo desenha os botões do PlayStation:
-                △ ○ ✕ ▢.<br>
-                <b>Xbox 360</b> — o jogo desenha os do Xbox: Y B A X.<br>
-                <b>Nintendo Pro</b> — o jogo desenha os da Nintendo: X A B Y, com
-                <b>ZL</b> e <b>ZR</b> nos gatilhos e <b>−</b> <b>+</b> no lugar de
-                Criar e Opções.<br><br>
-                Clicar num cartão leva a fita de cima para ele.
-              </span></span>
-            </div>
             <div class="pecas" data-lista="cartoes">
               <div class="cartao alvo" style="--plastico:#ae335a"
-                   data-controle="p1"
+                   data-controle="p1" data-conectado="sim"
                    title="Sony • Player 1 • Cosmic Red • USB">
                 <div class="peca-topo">
                 <svg data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
@@ -1567,7 +1598,7 @@
                 </div>
               </div>
               <div class="cartao" style="--plastico:#7eb8d4"
-                   data-controle="p2"
+                   data-controle="p2" data-conectado="sim"
                    title="Sony • Player 2 • Starlight Blue • BT">
                 <div class="peca-topo">
                 <svg data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
@@ -1960,9 +1991,9 @@
                   <span class="chip" data-mascara="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
-              <div class="cartao" style="--plastico:#74588e"
-                   data-controle="p3"
-                   title="Sony • Player 3 • Galactic Purple • BT">
+              <div class="cartao off"
+                   data-controle="p3" data-conectado="nao"
+                   title="Lugar vazio: nenhum controle conectado aqui.">
                 <div class="peca-topo">
                 <svg data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2339,24 +2370,24 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player 3</b><br><span data-campo="identidade">Galactic Purple <span class="pt">•</span> BT</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo">—<br>—<br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
   <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="17" y1="14" x2="17" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> <span data-campo="bateria">41%</span></span></span>
+</svg> <span>—</span></span></span>
                 </div>
                 <div class="mascara">
-                  <span class="chip on" data-mascara="DualSense">DualSense</span>
+                  <span class="chip" data-mascara="DualSense">DualSense</span>
                   <span class="chip" data-mascara="Xbox 360">Xbox 360</span>
                   <span class="chip" data-mascara="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
-              <div class="cartao" style="--plastico:#e4e0d8"
-                   data-controle="p4"
-                   title="Sony • Player 4 • White • USB">
+              <div class="cartao off"
+                   data-controle="p4" data-conectado="nao"
+                   title="Lugar vazio: nenhum controle conectado aqui.">
                 <div class="peca-topo">
                 <svg data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2733,19 +2764,19 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player 4</b><br><span data-campo="identidade">White <span class="pt">•</span> USB</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo">—<br>—<br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
   <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="17" y1="14" x2="17" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> <span data-campo="bateria">87%</span></span></span>
+</svg> <span>—</span></span></span>
                 </div>
                 <div class="mascara">
                   <span class="chip" data-mascara="DualSense">DualSense</span>
                   <span class="chip" data-mascara="Xbox 360">Xbox 360</span>
-                  <span class="chip on" data-mascara="Nintendo Pro">Nintendo Pro</span>
+                  <span class="chip" data-mascara="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
             </div>
@@ -2771,7 +2802,7 @@
                minúsculo porque é meio da MESMA frase. -->
           <div class="pendente" data-campo="pendente">
             <span>●</span>
-            <span>Vai mudar para <b data-campo="pendente-alvo">Modo Nativo</b> quando você clicar em <b>Aplicar</b></span>
+            <span>Vai mudar para <b data-campo="pendente-alvo">Sony DualSense</b> quando você clicar em <b>Aplicar</b></span>
           </div>
           <button class="btn" data-gesto="reconectar">Reconectar Controles</button>
         </div>
@@ -2941,7 +2972,7 @@
       ~104px; três na horizontal precisariam de ~326px. A saída seria dois cartões por
       fileira (423px cada), e o preço disso é desfazer <b>os quatro numa fileira só</b>, que é
       o que deixa a mesa inteira num relance. Se você preferir a horizontal, é esse o troco.</li>
-    <li><b>As máscaras que aparecem escolhidas</b> — P1 e P3 em DualSense, o P2 em Xbox 360 e o P4 em Nintendo Pro. É para você <b>ver</b> que a escolha é por controle; a sua mesa hoje
+    <li><b>As máscaras que aparecem escolhidas</b> — o P1 em DualSense e o P2 em Xbox 360. É para você <b>ver</b> que a escolha é por controle; a sua mesa hoje
       é DualSense nos quatro.</li>
     <li><b>Clicar num cartão leva a fita para ele</b> — é a mesma gramática que você fixou hoje
       para o acordeão da Controles ("clicar num card muda a fita").</li>

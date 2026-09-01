@@ -6,6 +6,10 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import re  # noqa: E402
+import onde  # noqa: E402
+import medidas  # noqa: E402
+import monta as monta_  # noqa: E402  o MÓDULO, para ler CONECTADOS
 from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta  # noqa: E402
 
 # OS PARÂMETROS DE CADA MODO SAEM DO PRODUTO, e não de uma tabela digitada aqui.
@@ -30,7 +34,7 @@ SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 # 10,5px (`.pa-rot`, `.selo`). Abaixo disso não é texto, é textura. Logo o piso é
 #     9 × tam / 32 ≥ 10  →  tam ≥ 35,6px  →  **36px**,
 # que é exatamente `--h-escolha`: o glifo vale uma linha da escala.
-GL = 36
+GL = medidas.GLIFO_DA_SECAO
 
 CSS = CSS_GLIFO + """
   /* ---------- Gatilhos · a mesa de quatro ----------
@@ -59,7 +63,10 @@ CSS = CSS_GLIFO + """
      Vibração. Com `column-gap:12px` a linha separadora quebrava quatro vezes e o
      olho lia tracinhos; com o vão em zero e o padding nas células ela atravessa a
      grade inteira, cortada só pela barra vertical de 1px entre blocos. */
-  .duas-colunas{display:grid;grid-template-columns:128px repeat(4,1fr);gap:0 12px}
+  /* `--gl` é o tamanho do glifo que titula a seção, e ele é o MESMO número que
+     o Python usa em `glifo(tam=GL)`. Escrito duas vezes, ele diverge no dia em
+     que alguém mudar um dos dois — é a cicatriz das cores do plástico. */
+  .duas-colunas{display:grid;grid-template-columns:var(--larg-rot) repeat(4,1fr);gap:0 var(--gap-col)}
 
   /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
      *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
@@ -81,7 +88,23 @@ CSS = CSS_GLIFO + """
      `overflow:hidden` para conter o SVG, então ela cortava a própria linha
      24px antes da divisa. A célula de baixo não recorta nada, e o traço
      cai no mesmo lugar: entre uma linha e a outra. */
-  .duas-colunas > div > *::before{content:'';position:absolute;top:0;height:0;
+  /* A LINHA DESCE MEIO PASSO E CAI NO MEIO DO VÃO — 31/08/2026, e é a cura que
+     a Vibração já tinha e esta aba não. Pedido dela: *"lá precisa de respiro em
+     tudo (…) as bordas das 3 páginas tão sobrando de um jeito feio e tão sem dar
+     respiro."*
+
+     MEDIDO ANTES DA CURA: o respiro das células desta aba era **0px/0px**, e a
+     divisória ficava em `top:0` — encostada no conteúdo de cima, com o vão
+     INTEIRO embaixo dela. O olho lê isso como linha grudada em cima e buraco
+     embaixo, que é exatamente o "sobrando e sem respiro" que ela viu. A hipótese
+     da lista dela estava certa: *"o problema não era só contraste — é respiro"*.
+
+     CUSTO DE ALTURA: ZERO. `top:-var(--r-ar)` só muda DE QUE LADO da linha o vão
+     está; a tabela mede o mesmo pixel. E `--r-ar` é o dono do passo (`--r-passo`
+     é o dobro dele, por construção), então nenhuma das duas pode voltar a ficar
+     torta sem que alguém mude as duas de uma vez — e elas são uma só. */
+  .duas-colunas > div > *::before{content:'';position:absolute;
+    top:calc(var(--r-ar) * -1);height:0;
     left:-13px;right:-12px;border-top:1px solid var(--rot-linha)}
   /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
      `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
@@ -112,8 +135,53 @@ CSS = CSS_GLIFO + """
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
-  .duas-colunas .rotulos > *{align-items:flex-end;text-align:right}
-  .duas-colunas .rotulos .sec-rot{justify-content:flex-end}
+  /* ---------- A COLUNA DE RÓTULOS TEM DUAS TRILHAS ----------
+     A da esquerda é do GLIFO que titula a seção; a da direita, dos rótulos de
+     linha. Cada célula diz onde fica (`grid-area`), e nenhuma depende da ORDEM
+     em que está no HTML — a ordem já quebrou esta grade uma vez, quando alguém
+     tirou o `.vao-l2-r2` achando que era enfeite e "Gatilho direito" caiu na
+     trilha de 1px. Com posição explícita, tirar um elemento deixa um buraco
+     visível em vez de deslocar os oito seguintes em silêncio. */
+  .duas-colunas .rotulos{grid-template-columns:var(--gl) 1fr;column-gap:var(--vao-gl)}
+  /* TODOS QUALIFICADOS COM `.rotulos`, e a primeira volta não os qualificou:
+     o `.vao-l2-r2` existe nas CINCO colunas (é ele que guarda a trilha de 1px
+     entre o bloco do L2 e o do R2), e um `grid-area:5/1/6/3` solto o mandou
+     ocupar três colunas dentro das colunas de CONTROLE — que têm uma só. A
+     grade delas cresceu para três, o conteúdo saiu de registro e a aba nasceu
+     com rolagem lateral. Pego na foto, na volta seguinte. */
+  .duas-colunas .rotulos > .rot-linha-1{grid-area:1/2}
+  .duas-colunas .rotulos > .g-l2{grid-area:2/1/5/2}
+  .duas-colunas .rotulos > .rot-l2-1{grid-area:2/2}
+  .duas-colunas .rotulos > .rot-l2-2{grid-area:3/2}
+  .duas-colunas .rotulos > .rot-l2-3{grid-area:4/2}
+  .duas-colunas .rotulos > .vao-l2-r2{grid-area:5/1/6/3}
+  .duas-colunas .rotulos > .g-r2{grid-area:6/1/9/2}
+  .duas-colunas .rotulos > .rot-r2-1{grid-area:6/2}
+  .duas-colunas .rotulos > .rot-r2-2{grid-area:7/2}
+  .duas-colunas .rotulos > .rot-r2-3{grid-area:8/2}
+  /* O GLIFO FICA NO MEIO DA SEÇÃO — decisão dela, 31/08/2026: *"o l2 e o r2 tem
+     que tá centralizado entre modo, efeito pronto e ajustes (verticalmente)."*
+
+     EU TINHA ESCRITO O CONTRÁRIO AQUI, e o argumento era que cabeçalho encosta
+     no que titula. Ela olhou a foto e decidiu o oposto — e a decisão é dela: um
+     glifo que titula TRÊS linhas, preso na primeira, lê como se fosse só dela.
+     No meio, ele pertence às três. */
+  .duas-colunas .rotulos > .sec-glifo{display:flex;align-items:center;
+             justify-content:center}
+  /* O RÓTULO ALINHA À ESQUERDA — decisão dela, 31/08/2026: *"alinha a esquerda a
+     primeira coluna."*
+
+     E ELA REVOGA A DECISÃO DELA MESMA de 30/08 (*"no nome das linhas deixa
+     alinhadas à direita. Todas"*). Não é contradição a resolver: é o projeto
+     vivo, e o que mudou no meio foi a própria coluna — ela encolheu de 138 para
+     o tamanho do conteúdo de cada aba, e à direita, numa coluna justa, o texto
+     passou a encostar na divisa em vez de se aproximar do que nomeia.
+
+     DE QUEBRA ISSO CURA UM DESALINHAMENTO QUE A RÉGUA ACUSAVA e que era
+     consequência aritmética do alinhamento à direita: rótulos de larguras
+     diferentes COMEÇAM em x diferentes. À esquerda, todos começam no mesmo. */
+  .duas-colunas .rotulos > *{align-items:flex-start;text-align:left}
+  .duas-colunas .rotulos .sec-rot{justify-content:flex-start}
   .duas-colunas .rotulos > * > *{flex:1;display:flex;align-items:center}
   /* OS DOIS GLIFOS NO MESMO x, E O ALINHAMENTO À DIREITA FICA — 31/08/2026.
      MEDIDO ANTES DA CURA, no Chrome e no WebKit2 (o motor que a janela usa),
@@ -192,8 +260,30 @@ CSS = CSS_GLIFO + """
   /* O CHIP DO CONTROLE é o mesmo chip da fita, com a borda na cor do plástico —
      é como ela sabe de quem é a coluna (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). Ele
      NÃO acende: aqui ele não é escolha, é cabeçalho. */
+  /* O NOME DA COLUNA FICA CENTRADO — decisão dela, 31/08/2026: *"temos que
+     centralizar o nome das colunas dos controles, ou então colocarmos os SVG de
+     cada controle ao lado direito do nome."*
+
+     ESCOLHI CENTRALIZAR, e a razão é orçamento: o chip mede 126px numa coluna de
+     232, então centrá-lo custa ZERO. O SVG ao lado pediria altura que a linha do
+     nome não tem — ela é `--r-nome`, 24px, e um desenho de 24px de altura é o
+     mesmo caso das lâmpadas do jogador que ela mandou sair dos desenhos
+     pequenos: não é desenho apagado, é desenho que não cabe. Para caber, a linha
+     iria a 40px e comeria 16 dos 24px de folga que a grade tem.
+     Se ela quiser o SVG, o preço está aqui e é dela a escolha. */
+  /* `justify-items`, e não `align-items`: a célula é uma GRADE de uma coluna,
+     e `align-items` mexe no eixo vertical — o chip continuou colado à
+     esquerda e a foto mostrou. É o eixo errado, e a diferença só aparece
+     olhando. */
+  .duas-colunas .ctrl > *:first-child{justify-items:center;text-align:center}
   .duas-colunas .ctrl .chip{padding:0 8px;font-size:11px;height:22px;
     display:inline-flex;align-items:center;align-self:center;white-space:nowrap}
+  /* O CHIP DO LUGAR VAZIO. A borda inteira se declara aqui, e não só a cor: o
+     `.chip.plastico` usa `var(--plastico)`, e uma `var()` sem valor invalida a
+     declaração TODA — a borda não fica cinza, ela deixa de existir. Medido na
+     aba Controles no mesmo dia, com a foto mostrando dois lugares sem caixa. */
+  .duas-colunas .ctrl .chip.vazio{border:1px solid var(--border-forte);
+    color:var(--linha);background:transparent}
 
   /* O SELETOR DOS 19 MODOS. Era uma grade de 19 botões de 172px, e com quatro
      controles na tela ela não existe mais: a coluna de um controle mede 220px de
@@ -285,10 +375,19 @@ CENA = {
            "dir": ("Arco de flecha", MEUS[0], None)},
     "p2": {"esq": ("Arma semi-automática", "Stop hard", [("Início", 3), ("Fim", 6), ("Força", 5)]),
            "dir": ("Rígido", PRONTOS[0], [("Posição", 5), ("Força", 200)])},
-    "p3": {"esq": ("Resistência", "Rampa crescente", [("Início", 3), ("Força", 5)]),
-           "dir": ("Vibração", PRONTOS[0], [("Posição", 3), ("Amplitude", 4), ("Frequência", 40)])},
+    # O P3 E O P4 SÃO LUGAR VAZIO — decisão dela, 31/08/2026: *"os demais 3 e o 4
+    # ficam lá com os espaços mas tudo com Desligado e Nenhum, fora a borda do P1
+    # e P2."* A coluna continua na tela (é o "ficam lá com os espaços"); o que
+    # sai é o ESTADO, porque não há controle para tê-lo.
+    #
+    # E ISSO DEVOLVE ALTURA, que é o que a aba mais precisa: a linha de ajustes
+    # do R2 valia o MAIOR modo que estivesse nela, e o maior era a Vibração do
+    # P3, com três barras. Sem ela, o R2 passa a valer duas — 23px de volta para
+    # o respiro que ela pediu, sem tirar nada de quem está conectado.
+    "p3": {"esq": ("Desligado", PRONTOS[0], []),
+           "dir": ("Desligado", PRONTOS[0], [])},
     "p4": {"esq": ("Desligado", PRONTOS[0], []),
-           "dir": ("Ponto duro", "Plateau central", [("Posição", 5), ("Intensidade", 4)])},
+           "dir": ("Desligado", PRONTOS[0], [])},
 }
 
 
@@ -355,6 +454,31 @@ def bloco(lado, sigla, modo, pronto, ajustes):
           </div>'''
 
 
+def _chip(c, rot):
+    """O cabeçalho da coluna. A BORDA DE COR SÓ SAI PARA QUEM ESTÁ NA MESA.
+
+    Decisão dela, 31/08/2026: *"os demais 3 e o 4 ficam lá com os espaços mas
+    tudo com Desligado e Nenhum, **fora a borda do P1 e P2**."*
+
+    A borda desta aba é o `D-A-BORDA-E-A-IDENTIDADE-DA-PECA`: ela é como se sabe
+    de quem é a coluna. Num lugar vazio não há de quem — e pintar a cor de um
+    plástico que não está na mesa é dizer que ele está.
+    """
+    if not c.get("conectado", True):
+        # O NOME DO PLÁSTICO NÃO VAI PARA A TELA — decisão dela, 31/08/2026: *"na
+        # parte do nome do P3 e do P4 colocar algo como Desconectado e não os
+        # controles mockados."*
+        #
+        # A `MESA` sabe que o P3 é um Galactic Purple, e ELA não deve saber: o
+        # lugar está vazio, e escrever ali o nome de um controle que não está na
+        # mesa é a mesma mentira que a borda de cor era. O que a tela precisa
+        # dizer é a POSIÇÃO (P3, P4) e o ESTADO — e é só isso que sobra.
+        return (f'<span class="chip vazio" title="Nenhum controle neste lugar.">'
+                f'P{c["jogador"]} <span class="pt">•</span> Desconectado</span>')
+    return (f'<span class="chip plastico" style="--plastico:{cor_da_zona(c["cor"])}"'
+            f' title="{c["nome"]} — a borda é a cor do plástico">{rot}</span>')
+
+
 def coluna(c):
     """Uma coluna = UM controle da `MESA`. A aba não sabe contar até quatro."""
     cena = CENA[c["pref"]]
@@ -363,8 +487,7 @@ def coluna(c):
     rot = (f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}'
            f' <span class="pt">•</span> {c["via"]}')
     return f'''        <div class="ctrl">
-          <div><span class="chip plastico" style="--plastico:{cor_da_zona(c['cor'])}"
-                     title="{c["nome"]} — a borda é a cor do plástico">{rot}</span></div>
+          <div>{_chip(c, rot)}</div>
 {esq}
 <!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
                1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
@@ -384,8 +507,10 @@ def coluna(c):
 # AS NOVE LINHAS DA GRADE, e a altura da coluna é a SOMA delas.
 #
 # A LINHA DE AJUSTES SAI DA CENA, e não de um número escolhido no olho: ela vale
-# o MAIOR modo que está NELA — 4 barras no L2 (a Metralhadora do P1) e 3 no R2
-# (a Vibração do P3). Com um número só para as duas, a linha do R2 herdava a
+# o MAIOR modo que está NELA. Quem é esse modo MUDA com a cena — em 31/08 o P3
+# virou lugar vazio e o R2 deixou de valer a Vibração dele —, e por isso nem o
+# número nem o NOME se digitam: os dois saem de `_dono_da_linha()`, logo abaixo.
+# Com um número só para as duas, a linha do R2 herdava a
 # altura do L2 e as três colunas de dois ajustes ficavam com uma barra de vão em
 # cima do botão. É a regra dela: a cura do vão é na ALTURA.
 #
@@ -395,13 +520,79 @@ def coluna(c):
 # conteúdo que ninguém sabe que existe.
 # ---------------------------------------------------------------------------
 ALT_BARRA = 23   # uma barra: 11,5px de rótulo e 5 de trilho
-R_NOME, R_MODO, R_PRONTO, R_SEP, R_ACAO, R_PASSO = 24, 36, 36, 1, 34, 10
+#: O PASSO ENTRE LINHAS — 10 até 31/08, 14 desde então. Pedido dela:
+#: *"lá precisa de respiro em tudo (…) fora o respiro entre as linhas na questão
+#: do espaço vertical."*
+#:
+#: E ELE FOI PAGO, não raspado: os 4px a mais em oito vãos custam 32px, e os 32
+#: vieram de duas coisas que ela mesma decidiu no mesmo turno — o P3 e o P4
+#: desligados devolveram 23 (a linha de ajustes do R2 valia a Vibração do P3, com
+#: três barras, e passou a valer duas), e a janela de 777px devolveu os outros.
+#: É a regra desta casa: a cura do vão é na ALTURA, e a altura tem dono.
+R_NOME, R_MODO, R_PRONTO, R_SEP, R_ACAO = 24, 36, 36, 1, 34
+#: O RESPIRO É O DONO, e o passo é o DOBRO dele — a mesma construção da Vibração
+#: (`aba05.py`, 30/08). Assim a divisória cai no MEIO do vão e todo conteúdo
+#: centrado na célula fica centrado na FAIXA. Escrever os dois à mão é como a
+#: Vibração ficou torta antes de 30/08.
+R_AR = 7
+R_PASSO = R_AR * 2
 N_ESQ = max(len(barras(*CENA[c["pref"]]["esq"][::2])) for c in MESA)
 N_DIR = max(len(barras(*CENA[c["pref"]]["dir"][::2])) for c in MESA)
 R_AJ_E, R_AJ_D = N_ESQ * ALT_BARRA, N_DIR * ALT_BARRA
+
+
+def _dono_da_linha(lado, n):
+    """Quem manda na altura da linha de ajustes — LIDO da cena, nunca digitado.
+
+    A legenda dizia *"3 no R2 (a Vibração do P3)"*, e em 31/08 o P3 virou lugar
+    vazio por decisão dela: o número caiu para 2 (o gerador o calcula) e o NOME
+    continuou apontando um modo que saiu da tela. Metade certa, metade mentindo
+    — que é o pior estado de uma legenda, porque a metade certa a faz parecer
+    conferida. Agora as duas metades saem do mesmo lugar.
+    """
+    donos = [(c, CENA[c["pref"]][lado][0]) for c in MESA
+             if len(barras(*CENA[c["pref"]][lado][::2])) == n]
+    if not donos:
+        raise SystemExit(f"ERRO: nenhum modo do {lado} tem {n} barra(s) — a "
+                         f"legenda ficaria sem dono para citar.")
+    c, modo = donos[0]
+    # SEM ARTIGO, e não é estilo: o artigo obriga a saber o GÊNERO de 19 nomes de
+    # modo, e a primeira versão escreveu *"a Arco de flecha do P1"*. Um gerador
+    # que precisa concordar em gênero com dado que ele lê ou carrega uma tabela
+    # de gêneros — outra coisa para envelhecer calada — ou erra o português na
+    # primeira troca de cena. A vírgula resolve as duas.
+    return f'{modo}, do P{c["jogador"]}'
+
+
+DONO_ESQ, DONO_DIR = _dono_da_linha("esq", N_ESQ), _dono_da_linha("dir", N_DIR)
 LINHAS = [R_NOME, R_MODO, R_PRONTO, R_AJ_E, R_SEP, R_MODO, R_PRONTO, R_AJ_D, R_ACAO]
 ALT_COLUNA = sum(LINHAS) + (len(LINHAS) - 1) * R_PASSO
-TETO_DA_GRADE = 454
+
+#: A largura da coluna de rótulos VEM DE `medidas.py`, que é o dono dela nas
+#: TRÊS abas que têm essa coluna. Ela era 128 (o par glifo+palavra espremido numa
+#: trilha só) e virou 138 quando o glifo ganhou trilha própria — e 138 não batia
+#: com os 132 da Iluminação e da Vibração. Ela viu: *"tem algo que deixa estranho
+#: essa área da primeira coluna."*
+LARG_ROT = medidas.larg_rotulos("03-gatilhos", com_glifo=True)
+#: O TETO DA GRADE, MEDIDO NO CHROME — 477px com a janela de 777.
+#:
+#: ELE ERA 454, e 454 era o número da janela de 757px. Com os 777 que ela pediu
+#: em 31/08 ele ficou pequeno demais: teria reprovado um desenho que cabe.
+#:
+#: E EU TENTEI DERIVÁ-LO DA SOMA DAS PARTES ANTES DE MEDIR — cabeçalho + tira +
+#: rodapé + paddings + cromo do quadro — e deu **528**, 51px a mais do que a
+#: tela aguenta. Uma conta de layout que não passa pelo navegador erra por
+#: margens que ninguém lembra de somar, e um teto folgado demais é pior que
+#: nenhum: ele deixa passar a aba que rola.
+#:
+#: O COMANDO QUE O MEDE, e ele é reproduzível — empurra a coluna 2px por vez e
+#: acha onde o `.miolo` começa a rolar:
+#:
+#:     pg.add_style_tag(content=f".duas-colunas > div{{padding-bottom:{n}px}}")
+#:     m.scrollHeight > m.clientHeight + 1
+#:
+#: Última coluna que coube: 477px. A primeira que rolou: 479px.
+TETO_DA_GRADE = 477
 if ALT_COLUNA > TETO_DA_GRADE:
     raise SystemExit(f"ERRO: a coluna pede {ALT_COLUNA}px e a grade tem "
                      f"{TETO_DA_GRADE}px — o quadro passaria a rolar por dentro.")
@@ -410,7 +601,12 @@ CSS_DA_CENA = f"""
   .duas-colunas{{
     --r-nome:{R_NOME}px;--r-modo:{R_MODO}px;--r-pronto:{R_PRONTO}px;
     --r-aj-e:{R_AJ_E}px;--r-sep:{R_SEP}px;--r-aj-d:{R_AJ_D}px;
-    --r-acao:{R_ACAO}px;--r-passo:{R_PASSO}px;
+    --r-acao:{R_ACAO}px;--r-ar:{R_AR}px;--r-passo:calc(var(--r-ar) * 2);
+    /* O TAMANHO DO GLIFO E A LARGURA DA COLUNA DE RÓTULOS saem do Python, do
+       mesmo lugar que o `glifo(tam=GL)` lê. Digitados no CSS, os dois divergem
+       no dia em que alguém mudar um só — é a cicatriz das cores do plástico e a
+       do padrão das lâmpadas. */
+    --gl:{GL}px; --larg-rot:{LARG_ROT}px; --gap-col:{medidas.GAP_DAS_COLUNAS}px; --vao-gl:{medidas.VAO_DO_GLIFO}px;
   }}
   .ajustes.e{{grid-template-rows:repeat({N_ESQ},1fr)}}
   .ajustes.d{{grid-template-rows:repeat({N_DIR},1fr)}}
@@ -438,10 +634,28 @@ CSS_DA_CENA = f"""
 # 128px do `grid-template-columns` e o "Gatilho / esquerdo" em duas linhas
 # existem por causa deste glifo — está escrito no comentário do `.sec-rot .duas`.
 ROTULOS = f'''        <div class="rotulos">
-          <div><span class="sec-rot">Controle</span></div>
-          <div><span class="sec-rot">{glifo("l2", tam=GL)}<span class="duas">Gatilho<br>esquerdo</span></span></div>
-          <div><span class="sec-rot">Efeito pronto</span></div>
-          <div class="no-topo"><span class="sec-rot">Ajustes</span></div>
+          <div class="rot-linha-1"><span class="sec-rot">Controle</span></div>
+
+          <!-- O L2 E O R2 TITULAM A SEÇÃO — decisão dela, 31/08/2026: *"o L2 e o
+               R2 deveriam controlar a seção e não ficar do lado esquerdo de
+               gatilho esquerdo ou direito."*
+
+               ATÉ HOJE o glifo era um adorno colado no rótulo da PRIMEIRA linha
+               da seção (`[L2] Gatilho esquerdo`), e as outras duas linhas dela —
+               Efeito pronto e Ajustes — não tinham dono visível. Ele agora ocupa
+               uma trilha própria e ATRAVESSA as três (`grid-row: span 3`): é o
+               cabeçalho da seção, e as três linhas ficam claramente debaixo dele.
+
+               "GATILHO ESQUERDO" SAIU, e não é perda: o glifo L2 já diz qual
+               gatilho é — a palavra repetia o desenho. O que sobra em cada linha
+               é o que ela nomeia: Modo, Efeito pronto, Ajustes.
+
+               CUSTO DE ALTURA: ZERO. A célula ocupa trilhas que já existiam. -->
+          <div class="sec-glifo g-l2">{glifo("l2", tam=GL)}</div>
+          <div class="rot-l2-1"><span class="sec-rot">Modo</span></div>
+          <div class="rot-l2-2"><span class="sec-rot">Efeito pronto</span></div>
+          <div class="rot-l2-3 no-topo"><span class="sec-rot">Ajustes</span></div>
+
 <!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
                1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
                em `.duas-colunas > div`). Tirei-o em 30/08 pensando que era só um
@@ -451,9 +665,11 @@ ROTULOS = f'''        <div class="rotulos">
                agora vem da borda de célula (`--rot-linha`); esta célula só guarda
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
-          <div><span class="sec-rot">{glifo("r2", tam=GL)}<span class="duas">Gatilho<br>direito</span></span></div>
-          <div><span class="sec-rot">Efeito pronto</span></div>
-          <div class="no-topo"><span class="sec-rot">Ajustes</span></div>
+
+          <div class="sec-glifo g-r2">{glifo("r2", tam=GL)}</div>
+          <div class="rot-r2-1"><span class="sec-rot">Modo</span></div>
+          <div class="rot-r2-2"><span class="sec-rot">Efeito pronto</span></div>
+          <div class="rot-r2-3 no-topo"><span class="sec-rot">Ajustes</span></div>
         </div>'''
 
 MIOLO = f'''
@@ -513,8 +729,8 @@ LEGENDA = f'''<div class="nota">
     <li><b>"Efeito pronto" e "Ajustes" viraram rótulo de LINHA</b>, na coluna da esquerda. Repetidos
         dentro de cada controle seriam oito rótulos dizendo a mesma coisa, e o mais longo deles
         não caberia ao lado do campo.</li>
-    <li><b>A caixa de ajustes vale o maior modo que está na LINHA</b> — {N_ESQ} barras no L2 (a
-        Metralhadora do P1) e {N_DIR} no R2 (a Vibração do P3). O modo com duas barras ocupa as duas
+    <li><b>A caixa de ajustes vale o maior modo que está na LINHA</b> — {N_ESQ} barras no L2 ({DONO_ESQ}) e
+        {N_DIR} no R2 ({DONO_DIR}). O modo com duas barras ocupa as duas
         primeiras, e a primeira barra de todas as colunas começa no mesmo y. A altura é da linha, e
         as cinco colunas a dividem: é o que as faz acabarem no mesmo y sem
         <code>space-between</code>. Uma altura só para as duas linhas daria ao R2 a altura do L2, e
@@ -562,7 +778,83 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
+def _conferir(doc):
+    """As decisões dela de 31/08 nesta aba, conferidas NA SAÍDA.
+
+    Só o miolo e sem comentário HTML — a régua da aba Jogar nasceu errada duas
+    vezes por casar token na legenda e no próprio comentário que a explicava.
+    """
+    corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
+    corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
+    if len(corpo) < 2000:
+        raise SystemExit("ERRO: a régua não achou o miolo desta aba.")
+    falhas = []
+
+    def exigir(cond, oque):
+        if not cond:
+            falhas.append(oque)
+
+    # 1. O L2 E O R2 TITULAM A SEÇÃO — *"deveriam controlar a seção e não ficar
+    #    do lado esquerdo de gatilho esquerdo ou direito."*
+    for g in ("g-l2", "g-r2"):
+        exigir(f'class="sec-glifo {g}"' in corpo, f"o glifo {g[-2:].upper()} não titula a seção")
+    exigir("Gatilho<br>esquerdo" not in corpo and "Gatilho<br>direito" not in corpo,
+           "o rótulo 'Gatilho esquerdo/direito' voltou para o lado do glifo")
+    exigir(corpo.count(">Modo</span>") == 2, "as duas seções não se chamam 'Modo'")
+
+    # 2. O P3 E O P4 SÃO LUGAR VAZIO — *"tudo com Desligado e Nenhum, fora a
+    #    borda do P1 e P2."* A régua olha as DUAS metades: o estado e a borda.
+    vazios = [c for c in MESA if not c.get("conectado", True)]
+    exigir(corpo.count('class="chip vazio"') == len(vazios),
+           f"os chips sem cor do plástico não são {len(vazios)}")
+    exigir(corpo.count('class="chip plastico"') == len(MESA) - len(vazios),
+           "a borda de cor saiu de quem ESTÁ na mesa, ou ficou em quem não está")
+    for c in vazios:
+        exigir(CENA[c["pref"]]["esq"][0] == "Desligado"
+               and CENA[c["pref"]]["dir"][0] == "Desligado",
+               f"o {c['pref'].upper()} tem modo de gatilho e é lugar vazio")
+
+    # 2-bis. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO, nunca o nome de um plástico
+    #    que não está na mesa — *"na parte do nome do P3 e do P4 colocar algo como
+    #    Desconectado e não os controles mockados."* A régua olha as DUAS metades:
+    #    a palavra tem de estar lá, e o nome do plástico NÃO.
+    for c in vazios:
+        exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
+               f"o lugar do P{c['jogador']} não diz Desconectado")
+        exigir(c["nome"] not in corpo,
+               f"o nome do plástico {c['nome']!r} voltou a um lugar vazio")
+
+    # 2-ter. O GLIFO CENTRA VERTICALMENTE NA SEÇÃO — *"o l2 e o r2 tem que tá
+    #    centralizado entre modo, efeito pronto e ajustes (verticalmente)."*
+    #    Ela decidiu o CONTRÁRIO do que eu tinha escrito no CSS um turno antes, e
+    #    é por isso que a régua nomeia o valor errado: quem herdar o comentário
+    #    velho e "consertar" para `flex-start` esbarra aqui.
+    exigir("align-items:flex-start" not in doc.split(".sec-glifo", 1)[-1][:200],
+           "o glifo voltou a ficar preso no alto da seção")
+    exigir(".rotulos > .sec-glifo{display:flex;align-items:center" in doc,
+           "o glifo deixou de centrar verticalmente na seção")
+
+    # 3. O RESPIRO — a divisória cai no MEIO do vão, e o passo é o DOBRO do ar.
+    #    *"lá precisa de respiro em tudo (…) o respiro entre as linhas."*
+    exigir("top:calc(var(--r-ar) * -1)" in doc,
+           "a divisória voltou para o topo da célula — vão todo de um lado só")
+    exigir("--r-passo:calc(var(--r-ar) * 2)" in doc,
+           "o passo deixou de ser o dobro do ar — os dois podem divergir de novo")
+    exigir(R_PASSO == R_AR * 2, "R_PASSO e R_AR divergiram no Python")
+
+    # 4. A ALTURA CABE, com folga. Zero de folga já mordeu duas vezes hoje.
+    exigir(TETO_DA_GRADE - ALT_COLUNA >= 10,
+           f"a grade tem só {TETO_DA_GRADE - ALT_COLUNA}px de folga — um pixel não é folga")
+
+    if falhas:
+        raise SystemExit("ERRO em 03-gatilhos — decisão dela desfeita:\n  "
+                         + "\n  ".join(f"- {f}" for f in falhas))
+
+
 n = monta("03-gatilhos", "Gatilhos", MIOLO, CSS + CSS_DA_CENA,
           fita_viva=False, legenda=LEGENDA)
-print(f"03-gatilhos: OK, {n} divs · {len(MESA)} controles lado a lado · "
-      f"{len(MODOS)} modos por gatilho · fita esmaecida")
+_conferir(onde.pagina("03-gatilhos.html").read_text())
+print(f"03-gatilhos: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
+      f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
+      f"{len(MODOS)} modos · coluna {ALT_COLUNA}px de {TETO_DA_GRADE} "
+      f"({TETO_DA_GRADE - ALT_COLUNA}px de folga) · respiro {R_AR}px")

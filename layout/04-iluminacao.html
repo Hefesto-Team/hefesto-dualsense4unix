@@ -553,7 +553,18 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    --alt-janela:757px; /* a MESMA altura nas dez abas — veja `.janela` */
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido dela: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
+       Ela estava certa, e o número diz por quê: o card aberto da Controles
+       ESTICA para preencher o corpo, então a folga de verdade é
+       `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
+       conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
+       é folga: é sorte, e ela já tinha visto a barra aparecer na tela dela.
+       Com 777 a folga passa a 21px.
+       O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
+       vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
+       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar. */
+    --alt-janela:777px; /* a MESMA altura nas dez abas — veja `.janela` */
   }
   .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
     height:var(--h-escolha);padding-top:0;padding-bottom:0;
@@ -614,10 +625,27 @@
      é padding — e padding não interrompe borda. O vão VERTICAL (`row-gap`) fica:
      é ele que separa uma linha da outra. */
   .luz-grade{
-    display:grid;grid-template-columns:132px repeat(4,1fr);
-    gap:16px;
+    display:grid;
+    /* A LARGURA DA COLUNA DE RÓTULOS E O VÃO ATÉ A PRIMEIRA COLUNA DE
+       CONTROLE VÊM DE `medidas.py` — o dono deles nas TRÊS abas que têm
+       essa coluna. Eram 132px e 16 aqui, 138 e 12 na Gatilhos, e o texto
+       acabava em x=536 numa e x=542 na outra. Ela viu: *"tem algo que
+       deixa estranho essa área da primeira coluna."* */
+    grid-template-columns:var(--larg-rot) repeat(4,1fr);
+    gap:var(--gap-col);
     --r-des:146px;--r-nome:16px;--r-cor:44px;--r-brilho:26px;
-    --r-player:62px;--r-leds:34px;--r-acoes:72px;--r-passo:8px;
+    --r-player:62px;--r-leds:34px;--r-acoes:72px;
+    /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido dela:
+       *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
+       construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
+       Vibração: 5.
+       MEDIDO ANTES: o passo era 8 e a divisória ficava em `top:0` — encostada no
+       conteúdo de cima, com o vão INTEIRO embaixo. `a_divisoria_sobe: [0]`.
+       O QUE ELE CUSTA: o passo vai de 8 para 10, e 2px em seis vãos são 12. A
+       coluna vai de 448 para 460, contra o teto MEDIDO de 476 — 16px de folga.
+       A parte que NÃO custa nada é a que arruma o feio: descer a linha meio
+       passo só muda de que lado dela o vão está. */
+    --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
   .luz-grade > div{
     display:grid;row-gap:var(--r-passo);
@@ -631,6 +659,62 @@
      ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
      coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
   .luz-grade .ctrl{border-left:1px solid var(--linha);padding:0 8px 0 12px}
+
+  /* ---------- O LUGAR VAZIO ----------
+     A mesma gramática da Jogar, da Controles e da Gatilhos: cor explícita e
+     NADA de `opacity` — a lição medida da `.fita.inerte`, que a opacidade tira
+     contraste e peso do traço ao mesmo tempo.
+
+     O DESENHO FICA CINZA POR `!important` porque a cor da peça é `style=` INLINE
+     dentro do SVG: o gerador de cores a escreve lá para o arquivo abrir colorido
+     sozinho, e regra externa não vence atributo inline sem isto. `.corpo` entra
+     junto com `.peca` — foi a ampliação da foto na aba Jogar que o achou, com o
+     P3 continuando roxo e o P4 branco depois da primeira volta. */
+  /* O TRAVESSÃO PREENCHE A CÉLULA, e isto é a régua de alinhamento falando.
+     A coluna vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas —
+     medido. O que acabava 26px antes era o CONTEÚDO da última célula: dois
+     botões empilhados preenchem os 74px de `--r-acoes`; um travessão centrado
+     para no meio. A régua leu isso como "o conteúdo das colunas acaba em y
+     diferentes", e leu certo.
+     `height:100%` no marcador resolve sem mexer em altura nenhuma: ele passa a
+     ocupar a célula e o texto continua centrado dentro dele. */
+  .luz-grade .ctrl.vazia .nada{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
+  .luz-grade .ctrl.vazia .ctrl-rot,
+  .luz-grade .ctrl.vazia .nada{color:var(--linha)}
+  .luz-grade .ctrl.vazia .moldura{border-color:var(--border-forte)}
+  .luz-grade .ctrl.vazia .ds-svg .peca,
+  .luz-grade .ctrl.vazia .ds-svg .corpo,
+  .luz-grade .ctrl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
+  .luz-grade .ctrl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
+  /* OS DETALHES CLAROS TAMBÉM CAEM, e eles só aparecem AQUI. Na aba Jogar o
+     desenho tem 62px e estes elementos somem sozinhos; nesta aba ele tem 146 e
+     eles ficam à mostra — medido no DOM do lugar vazio: 8 `line` em branco
+     (#f8f8f2), 7 `text` em `--texto-suave` e 4 `path` em #d8d8d8, que são os
+     glifos L/R/PS e os traços dos botões.
+     Copiar a regra da Jogar não bastava: o que muda com o TAMANHO do desenho
+     tem de ser medido no tamanho em que ele é desenhado. */
+  .luz-grade .ctrl.vazia .ds-svg text{fill:var(--linha) !important}
+  .luz-grade .ctrl.vazia .ds-svg line{stroke:var(--linha) !important}
+  .luz-grade .ctrl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+                                                            stroke:var(--linha) !important}
+  /* O TOUCHPAD E OS BOTÕES SÃO `rect`, `circle` e `polygon`, e a ampliação foi
+     quem os achou: com `path`, `line` e `text` já apagados, o touchpad continuou
+     cinza-claro (#8a8a96) no meio de um controle inteiro em `--linha`.
+     `fill` NÃO leva `none` como valor aqui, e é de propósito: pintar um contorno
+     vazado apagaria a forma em vez de escurecê-la. Quem tem `fill:none` no
+     arquivo continua sem, porque `var(--linha)` só substitui uma cor que existe. */
+  .luz-grade .ctrl.vazia .ds-svg rect:not([fill="none"]),
+  .luz-grade .ctrl.vazia .ds-svg circle:not([fill="none"]),
+  .luz-grade .ctrl.vazia .ds-svg polygon:not([fill="none"]),
+  .luz-grade .ctrl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  .luz-grade .ctrl.vazia .ds-svg rect,
+  .luz-grade .ctrl.vazia .ds-svg circle,
+  .luz-grade .ctrl.vazia .ds-svg polygon,
+  .luz-grade .ctrl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
+  /* O TRAVESSÃO FICA ONDE O CONTEÚDO FICARIA — centrado na célula, para as sete
+     linhas continuarem legíveis como linhas. */
+  .luz-grade .ctrl.vazia > *{display:flex;align-items:center;justify-content:center}
+  .luz-grade .ctrl.vazia .moldura{display:block}
   /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
@@ -660,7 +744,15 @@
      `overflow:hidden` para conter o SVG, então ela cortava a própria linha
      24px antes da divisa. A célula de baixo não recorta nada, e o traço
      cai no mesmo lugar: entre uma linha e a outra. */
-  .luz-grade > div > *::before{content:'';position:absolute;top:0;height:0;
+  /* A LINHA DESCE MEIO PASSO E CAI NO MEIO DO VÃO — 31/08/2026. O comentário
+     acima dizia que *"o `row-gap` de 8px a separa do campo de baixo — o respiro
+     fica em cima da linha seguinte, não colado nela"*, e isso descrevia metade
+     do que acontecia: o vão ficava TODO de um lado. O olho lê linha grudada em
+     cima e buraco embaixo — que é o *"sobrando e sem respiro"* dela.
+     Com `top:-var(--r-ar)` cada campo fica com o mesmo ar acima e abaixo da sua
+     divisória, e a tabela mede o mesmo pixel. */
+  .luz-grade > div > *::before{content:'';position:absolute;
+    top:calc(var(--r-ar) * -1);height:0;
     left:-12px;right:-8px;border-top:1px solid var(--rot-linha)}
   /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
      `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
@@ -678,8 +770,20 @@
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
-  .luz-grade .rotulos > *{align-items:flex-end;text-align:right}
-  .luz-grade .rotulos .sec-rot{justify-content:flex-end}
+  /* O RÓTULO ALINHA À ESQUERDA — decisão dela, 31/08/2026: *"alinha a esquerda a
+     primeira coluna."*
+
+     E ELA REVOGA A DECISÃO DELA MESMA de 30/08 (*"no nome das linhas deixa
+     alinhadas à direita. Todas"*). Não é contradição a resolver: é o projeto
+     vivo, e o que mudou no meio foi a própria coluna — ela encolheu de 138 para
+     o tamanho do conteúdo de cada aba, e à direita, numa coluna justa, o texto
+     passou a encostar na divisa em vez de se aproximar do que nomeia.
+
+     DE QUEBRA ISSO CURA UM DESALINHAMENTO QUE A RÉGUA ACUSAVA e que era
+     consequência aritmética do alinhamento à direita: rótulos de larguras
+     diferentes COMEÇAM em x diferentes. À esquerda, todos começam no mesmo. */
+  .luz-grade .rotulos > *{align-items:flex-start;text-align:left}
+  .luz-grade .rotulos .sec-rot{justify-content:flex-start}
   .luz-grade .rotulos > :not(.cel-des) > .sec-rot{flex:1}
   /* O RÓTULO DA PRIMEIRA LINHA VOLTOU A CENTRAR — 30/08/2026.
      Ele estava preso no topo (`flex-start`) porque a legenda de sete linhas vinha
@@ -874,6 +978,11 @@
      trocadilho com outra coisa. */
   .sec-rot .gl{opacity:.9;flex:0 0 auto}
 
+  .luz-grade{
+    --larg-rot:85px;
+    --gap-col:16px;
+  }
+
 </style>
 </head>
 <body>
@@ -998,7 +1107,7 @@
       <h1><span class="p">Hefesto</span> <span class="t">—</span> <span class="b">DualSense</span><span class="n">4</span><span class="b">Unix</span></h1>
       <div class="sub">Gerenciador DualSense para Linux</div>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> 4 controles: <b>2 USB · 2 BT</b></div>
+    <div class="conectado"><span class="bolinha">●</span> 2 controles: <b>1 USB · 1 BT</b></div>
   </div>
 
   <!-- A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
@@ -1010,8 +1119,6 @@
       <span class="chip on">Todos</span>
       <span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
       <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#74588e" title="Galactic Purple — a borda é a cor do plástico">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#e4e0d8" title="White — a borda é a cor do plástico">P4 <span class="pt">•</span> White <span class="pt">•</span> USB</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1103,7 +1210,7 @@
             </div>
             <div><div class="sec-rot">Brilho</div></div>
             <div>
-              <div class="sec-rot">Selecione o player
+              <div class="sec-rot">Jogador
                 <span class="ajuda">?<span class="dica">
                   O player é quem este controle é na mesa: o número do cabeçalho, o dos cards
                   da aba <b>Controles</b>, e o das cinco luzinhas brancas acima do
@@ -1121,7 +1228,7 @@
                 </span></span>
               </div>
             </div>
-            <div><div class="sec-rot">Disposição de LEDs</div></div>
+            <div><div class="sec-rot">LEDs</div></div>
             <div><div class="sec-rot">Opções</div></div>
           </div>
 
@@ -1486,7 +1593,7 @@
   </g>
   <g id="il-p1-grupo-luzes" style="filter: none;" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
     <title>LUZES</title>
-    <g id="il-p1-lightbar" style="--luz:#0000FF" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+    <g id="il-p1-lightbar" style="--luz:#7EB8D4" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
       <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
       <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
         <title>Lightbar — tira esquerda</title>
@@ -1524,7 +1631,7 @@
           <div class="ctrl-rot">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
           <div class="cel-cor">
             <span class="guia">
-            <button class="tom" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom on" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
             <button class="tom" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
             <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
             <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
@@ -1544,16 +1651,16 @@
           <div class="players">
             <button class="on" title="O Cosmic Red É o Player 1 — é o número dele hoje."><i class="dono" style="--plastico:#ae335a"></i>1</button>
             <button class="" title="Dar o Player 2 ao Cosmic Red: o Starlight Blue (BT), que tem o 2 hoje, fica com o 1. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
-            <button class="" title="Dar o Player 3 ao Cosmic Red: o Galactic Purple (BT), que tem o 3 hoje, fica com o 1. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#74588e"></i>3</button>
-            <button class="" title="Dar o Player 4 ao Cosmic Red: o White (USB), que tem o 4 hoje, fica com o 1. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#e4e0d8"></i>4</button>
+            <button class="" title="Player 3 — livre.">3</button>
+            <button class="" title="Player 4 — livre.">4</button>
           </div>
           <div class="aceso" title="O Cosmic Red aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player 1.">
-            <span class="tira-luz esq" style="background:#0000FF;color:#0000FF;opacity:0.82"></span>
+            <span class="tira-luz esq" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82"></span>
             <span class="pad"><span class="luzinhas"><i></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i></i></span></span>
-            <span class="tira-luz dir" style="background:#0000FF;color:#0000FF;opacity:0.82"></span>
+            <span class="tira-luz dir" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82"></span>
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Voltar ao automático</button>
+            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" title="Apaga a barra de luz do Cosmic Red.">Desligar</button>
           </div>
         </div>
@@ -1918,7 +2025,7 @@
   </g>
   <g id="il-p2-grupo-luzes" style="filter: none;" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
     <title>LUZES</title>
-    <g id="il-p2-lightbar" style="--luz:#FF0000" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+    <g id="il-p2-lightbar" style="--luz:#FF5555" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
       <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
       <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
         <title>Lightbar — tira esquerda</title>
@@ -1957,7 +2064,7 @@
           <div class="cel-cor">
             <span class="guia">
             <button class="tom" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom on" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
             <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
             <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
             <button class="tom" style="background:#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
@@ -1976,21 +2083,22 @@
           <div class="players">
             <button class="" title="Dar o Player 1 ao Starlight Blue: o Cosmic Red (USB), que tem o 1 hoje, fica com o 2. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#ae335a"></i>1</button>
             <button class="on" title="O Starlight Blue É o Player 2 — é o número dele hoje."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
-            <button class="" title="Dar o Player 3 ao Starlight Blue: o Galactic Purple (BT), que tem o 3 hoje, fica com o 2. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#74588e"></i>3</button>
-            <button class="" title="Dar o Player 4 ao Starlight Blue: o White (USB), que tem o 4 hoje, fica com o 2. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#e4e0d8"></i>4</button>
+            <button class="" title="Player 3 — livre.">3</button>
+            <button class="" title="Player 4 — livre.">4</button>
           </div>
           <div class="aceso" title="O Starlight Blue aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player 2.">
-            <span class="tira-luz esq" style="background:#FF0000;color:#FF0000;opacity:1.0"></span>
+            <span class="tira-luz esq" style="background:#FF5555;color:#FF5555;opacity:1.0"></span>
             <span class="pad"><span class="luzinhas"><i></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i></i></span></span>
-            <span class="tira-luz dir" style="background:#FF0000;color:#FF0000;opacity:1.0"></span>
+            <span class="tira-luz dir" style="background:#FF5555;color:#FF5555;opacity:1.0"></span>
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Voltar ao automático</button>
+            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" title="Apaga a barra de luz do Starlight Blue.">Desligar</button>
           </div>
         </div>
-        <div class="ctrl">
-          <div class="moldura" style="--plastico:#74588e" title="O Galactic Purple agora: a barra na cor do Player 3, e as cinco lâmpadas no padrão dele.">
+        <div class="ctrl vazia" data-conectado="nao"
+             title="Nenhum controle neste lugar.">
+          <div class="moldura">
             <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2350,7 +2458,7 @@
   </g>
   <g id="il-p3-grupo-luzes" style="filter: none;" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
     <title>LUZES</title>
-    <g id="il-p3-lightbar" style="--luz:#00FF00" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+    <g id="il-p3-lightbar" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
       <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
       <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
         <title>Lightbar — tira esquerda</title>
@@ -2359,24 +2467,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    <g id="il-p3-led-jogador" data-feature="led-jogador" style="filter: url(&quot;#outline-filter-0&quot;);" transform="matrix(1, 0, 0, 0.625399, 0, 19.636679)">
-      <title>Indicador de jogador (cinco lâmpadas: 1, vão, 3, vão, 1)</title>
-      <rect class="peca led-on" id="il-p3-led-jogador-1" x="56.3" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 1 (sozinha, à esquerda)</title>
-      </rect>
-      <rect class="peca" id="il-p3-led-jogador-2" x="60.6" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 2</title>
-      </rect>
-      <rect class="peca led-on" id="il-p3-led-jogador-3" x="63.0" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 3 (a do meio)</title>
-      </rect>
-      <rect class="peca" id="il-p3-led-jogador-4" x="65.4" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 4</title>
-      </rect>
-      <rect class="peca led-on" id="il-p3-led-jogador-5" x="69.7" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 5 (sozinha, à direita)</title>
-      </rect>
-    </g>
+
   </g>
   <g id="il-p3-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="il-p3-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -2385,44 +2476,16 @@
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> BT</div>
-          <div class="cel-cor">
-            <span class="guia">
-            <button class="tom" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-            <button class="tom" style="background:#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do Galactic Purple, e não muda o número dele."></button>
-              <input type="color" class="livre" value="#00ff00"
-                     title="Livre — abre o seletor para uma cor que não está na guia.">
-            </span>
-            <span class="hex">#00FF00</span>
-          </div>
-          <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" style="width:70%"></span></span>
-            <span class="num">70%</span>
-          </div>
-          <div class="players">
-            <button class="" title="Dar o Player 1 ao Galactic Purple: o Cosmic Red (USB), que tem o 1 hoje, fica com o 3. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#ae335a"></i>1</button>
-            <button class="" title="Dar o Player 2 ao Galactic Purple: o Starlight Blue (BT), que tem o 2 hoje, fica com o 3. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
-            <button class="on" title="O Galactic Purple É o Player 3 — é o número dele hoje."><i class="dono" style="--plastico:#74588e"></i>3</button>
-            <button class="" title="Dar o Player 4 ao Galactic Purple: o White (USB), que tem o 4 hoje, fica com o 3. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#e4e0d8"></i>4</button>
-          </div>
-          <div class="aceso" title="O Galactic Purple aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player 3.">
-            <span class="tira-luz esq" style="background:#00FF00;color:#00FF00;opacity:0.7"></span>
-            <span class="pad"><span class="luzinhas"><i class="on"></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i class="on"></i></span></span>
-            <span class="tira-luz dir" style="background:#00FF00;color:#00FF00;opacity:0.7"></span>
-          </div>
-          <div class="cel-acoes">
-            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Voltar ao automático</button>
-            <button class="btn vermelho" title="Apaga a barra de luz do Galactic Purple.">Desligar</button>
-          </div>
+          <div class="ctrl-rot">P3 <span class="pt">•</span> Desconectado</div>
+          <div class="cel-cor"><span class="nada">—</span></div>
+          <div class="cel-brilho"><span class="nada">—</span></div>
+          <div class="players"><span class="nada">—</span></div>
+          <div class="aceso"><span class="nada">—</span></div>
+          <div class="cel-acoes"><span class="nada">—</span></div>
         </div>
-        <div class="ctrl">
-          <div class="moldura" style="--plastico:#e4e0d8" title="O White agora: a barra na cor do Player 4, e as cinco lâmpadas no padrão dele.">
+        <div class="ctrl vazia" data-conectado="nao"
+             title="Nenhum controle neste lugar.">
+          <div class="moldura">
             <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2782,7 +2845,7 @@
   </g>
   <g id="il-p4-grupo-luzes" style="filter: none;" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
     <title>LUZES</title>
-    <g id="il-p4-lightbar" style="--luz:#FF0080" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+    <g id="il-p4-lightbar" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
       <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
       <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
         <title>Lightbar — tira esquerda</title>
@@ -2791,24 +2854,7 @@
         <title>Lightbar — tira direita</title>
       </path>
     </g>
-    <g id="il-p4-led-jogador" data-feature="led-jogador" style="filter: url(&quot;#outline-filter-0&quot;);" transform="matrix(1, 0, 0, 0.625399, 0, 19.636679)">
-      <title>Indicador de jogador (cinco lâmpadas: 1, vão, 3, vão, 1)</title>
-      <rect class="peca led-on" id="il-p4-led-jogador-1" x="56.3" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 1 (sozinha, à esquerda)</title>
-      </rect>
-      <rect class="peca led-on" id="il-p4-led-jogador-2" x="60.6" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 2</title>
-      </rect>
-      <rect class="peca" id="il-p4-led-jogador-3" x="63.0" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 3 (a do meio)</title>
-      </rect>
-      <rect class="peca led-on" id="il-p4-led-jogador-4" x="65.4" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 4</title>
-      </rect>
-      <rect class="peca led-on" id="il-p4-led-jogador-5" x="69.7" y="51.9" width="2.0" height="1.15" rx="0.57" style="vector-effect: non-scaling-stroke; stroke-miterlimit: 1; fill-rule: nonzero; stroke-width: 2px; filter: url(&quot;#outline-filter-2&quot;);" fill="#c9ced8">
-        <title>Indicador de jogador — lâmpada 5 (sozinha, à direita)</title>
-      </rect>
-    </g>
+
   </g>
   <g id="il-p4-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
   <g id="il-p4-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
@@ -2817,41 +2863,12 @@
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot">P4 <span class="pt">•</span> White <span class="pt">•</span> USB</div>
-          <div class="cel-cor">
-            <span class="guia">
-            <button class="tom" style="background:#7EB8D4" title="Cor automática do Player 1 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF5555" title="Cor automática do Player 2 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#50FA7B" title="Cor automática do Player 3 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF79C6" title="Cor automática do Player 4 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#F1FA8C" title="Cor automática do Player 5 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#8BE9FD" title="Cor automática do Player 6 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFB86C" title="Cor automática do Player 7 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-            <button class="tom" style="background:#BD93F9" title="Cor automática do Player 8 — usar aqui pinta a barra do White, e não muda o número dele."></button>
-              <input type="color" class="livre" value="#ff0080"
-                     title="Livre — abre o seletor para uma cor que não está na guia.">
-            </span>
-            <span class="hex">#FF0080</span>
-          </div>
-          <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" style="width:45%"></span></span>
-            <span class="num">45%</span>
-          </div>
-          <div class="players">
-            <button class="" title="Dar o Player 1 ao White: o Cosmic Red (USB), que tem o 1 hoje, fica com o 4. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#ae335a"></i>1</button>
-            <button class="" title="Dar o Player 2 ao White: o Starlight Blue (BT), que tem o 2 hoje, fica com o 4. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
-            <button class="" title="Dar o Player 3 ao White: o Galactic Purple (BT), que tem o 3 hoje, fica com o 4. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#74588e"></i>3</button>
-            <button class="on" title="O White É o Player 4 — é o número dele hoje."><i class="dono" style="--plastico:#e4e0d8"></i>4</button>
-          </div>
-          <div class="aceso" title="O White aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player 4.">
-            <span class="tira-luz esq" style="background:#FF0080;color:#FF0080;opacity:0.45"></span>
-            <span class="pad"><span class="luzinhas"><i class="on"></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i class="on"></i></span></span>
-            <span class="tira-luz dir" style="background:#FF0080;color:#FF0080;opacity:0.45"></span>
-          </div>
-          <div class="cel-acoes">
-            <button class="btn roxo" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Voltar ao automático</button>
-            <button class="btn vermelho" title="Apaga a barra de luz do White.">Desligar</button>
-          </div>
+          <div class="ctrl-rot">P4 <span class="pt">•</span> Desconectado</div>
+          <div class="cel-cor"><span class="nada">—</span></div>
+          <div class="cel-brilho"><span class="nada">—</span></div>
+          <div class="players"><span class="nada">—</span></div>
+          <div class="aceso"><span class="nada">—</span></div>
+          <div class="cel-acoes"><span class="nada">—</span></div>
         </div>
 
         </div>
@@ -2986,7 +3003,7 @@
     <li><b>Cor e Brilho na mesma largura</b> — os dois são a coluna inteira do controle.</li>
     <li><b>Os títulos têm todos o mesmo estilo</b>, e agora começam todos no mesmo x, porque
         moram na mesma coluna: <span class="marca">Controle · Cor · Brilho · Selecione o
-        player · Disposição de LEDs · Opções</span>.</li>
+        Jogador · LEDs · Opções</span>.</li>
     <li><b>Os dois botões de Opções</b> continuam <span class="marca">roxo</span> e
         <span class="marca">vermelho</span>, como o <b>Parar</b> da Vibração.</li>
     <li><b>As cinco colunas acabam no mesmo y</b> — as sete linhas são compartilhadas, e a

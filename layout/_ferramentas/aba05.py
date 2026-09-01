@@ -20,6 +20,10 @@ Aqui isso quer dizer quatro coisas, e nenhuma é digitada:
 import csv
 import pathlib
 import sys
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
+import medidas  # noqa: E402
+import onde  # noqa: E402
+from monta import CONECTADOS  # noqa: E402
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from monta import (  # noqa: E402
@@ -176,8 +180,14 @@ CSS = """
      faixa com conteúdo elástico): −12px ali pagam `--r-ar:6px`, e o controle
      encolhe 11%. */
   .vib{
-    display:grid;grid-template-columns:132px repeat(4,1fr);
-    gap:16px;
+    display:grid;
+    /* A LARGURA DA COLUNA DE RÓTULOS E O VÃO ATÉ A PRIMEIRA COLUNA DE
+       CONTROLE VÊM DE `medidas.py` — o dono deles nas TRÊS abas que têm
+       essa coluna. Eram 132px e 16 aqui, 138 e 12 na Gatilhos, e o texto
+       acabava em x=536 numa e x=542 na outra. Ela viu: *"tem algo que
+       deixa estranho essa área da primeira coluna."* */
+    grid-template-columns:var(--larg-rot) repeat(4,1fr);
+    gap:var(--gap-col);
     --r-des:124px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
     --r-acoes:74px;
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
@@ -194,6 +204,50 @@ CSS = """
      ler como tracinho. Com o padding na célula, ela vai de ponta a ponta da
      coluna e encosta na vizinha — o respiro do conteúdo é o mesmo. */
   .vib .ctrl{border-left:1px solid var(--linha);padding:0 10px 0 14px}
+
+  /* ---------- O LUGAR VAZIO ----------
+     A mesma gramática das outras quatro abas: cor explícita e NADA de `opacity`
+     (a lição medida da `.fita.inerte`). O DESENHO fica cinza por `!important`
+     porque a cor da peça é `style=` INLINE dentro do SVG, e regra externa não
+     vence atributo inline sem isto.
+     OS DETALHES CLAROS TAMBÉM CAEM — `text`, `line` e os `path` sem classe são
+     os glifos L/R/PS e os traços dos botões, e só aparecem em desenho GRANDE.
+     Medido na Iluminação no mesmo dia: copiar a regra da aba Jogar não bastava,
+     porque lá o desenho tem 62px e aqui tem 124. */
+  .vib .ctrl.vazia{border-color:var(--border-forte)}
+  /* O TRAVESSÃO PREENCHE A CÉLULA, e isto é a régua de alinhamento falando.
+     A coluna vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas —
+     medido. O que acabava 26px antes era o CONTEÚDO da última célula: dois
+     botões empilhados preenchem os 74px de `--r-acoes`; um travessão centrado
+     para no meio. A régua leu isso como "o conteúdo das colunas acaba em y
+     diferentes", e leu certo.
+     `height:100%` no marcador resolve sem mexer em altura nenhuma: ele passa a
+     ocupar a célula e o texto continua centrado dentro dele. */
+  .vib .ctrl.vazia .nada{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
+  .vib .ctrl.vazia .rot-ctrl,
+  .vib .ctrl.vazia .nada{color:var(--linha)}
+  .vib .ctrl.vazia .moldura{border-color:var(--border-forte)}
+  .vib .ctrl.vazia .ds-svg .peca,
+  .vib .ctrl.vazia .ds-svg .corpo,
+  .vib .ctrl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
+  .vib .ctrl.vazia .ds-svg text{fill:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg line{stroke:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+                                                       stroke:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg rect:not([fill="none"]),
+  .vib .ctrl.vazia .ds-svg circle:not([fill="none"]),
+  .vib .ctrl.vazia .ds-svg polygon:not([fill="none"]),
+  .vib .ctrl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  .vib .ctrl.vazia .ds-svg rect,
+  .vib .ctrl.vazia .ds-svg circle,
+  .vib .ctrl.vazia .ds-svg polygon,
+  .vib .ctrl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
+  /* O travessão fica ONDE o conteúdo ficaria — centrado na célula, para as sete
+     linhas continuarem legíveis como linhas. */
+  .vib .ctrl.vazia .seg,
+  .vib .ctrl.vazia .nada-lin,
+  .vib .ctrl.vazia .acoes-col{display:flex;align-items:center;justify-content:center}
   /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
@@ -247,8 +301,20 @@ CSS = """
      perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
      toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
      lista solta e passar a ler como cabeçalho de linha. */
-  .vib .rotulos > *{align-items:flex-end;text-align:right}
-  .vib .rotulos .sec-rot{justify-content:flex-end}
+  /* O RÓTULO ALINHA À ESQUERDA — decisão dela, 31/08/2026: *"alinha a esquerda a
+     primeira coluna."*
+
+     E ELA REVOGA A DECISÃO DELA MESMA de 30/08 (*"no nome das linhas deixa
+     alinhadas à direita. Todas"*). Não é contradição a resolver: é o projeto
+     vivo, e o que mudou no meio foi a própria coluna — ela encolheu de 138 para
+     o tamanho do conteúdo de cada aba, e à direita, numa coluna justa, o texto
+     passou a encostar na divisa em vez de se aproximar do que nomeia.
+
+     DE QUEBRA ISSO CURA UM DESALINHAMENTO QUE A RÉGUA ACUSAVA e que era
+     consequência aritmética do alinhamento à direita: rótulos de larguras
+     diferentes COMEÇAM em x diferentes. À esquerda, todos começam no mesmo. */
+  .vib .rotulos > *{align-items:flex-start;text-align:left}
+  .vib .rotulos .sec-rot{justify-content:flex-start}
   /* O RÓTULO OCUPA A ALTURA INTEIRA DA LINHA, e o texto fica centrado dentro
      dele. Não é enfeite: sem isto o rótulo da última linha acaba 29px acima dos
      botões que ele nomeia, e a régua lê — com razão — um vão entre as colunas.
@@ -416,6 +482,41 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado=""):
 LADOS = (("e", ESQ, "esq"), ("d", DIR, "dir"))
 
 
+#: O marcador de campo vazio — o mesmo travessão da Jogar, da Controles, da
+#: Gatilhos e da Iluminação.
+VAZIO = "—"
+
+
+def _coluna_vazia(c):
+    """O LUGAR de um controle que não está na mesa — ordem dela, 31/08/2026:
+
+        "Todas as abas tem que ter só dois controles conectados no momento, o
+         resto fica off." · "Deixa os outros espaços dos 4 controles a mostra
+         ainda mas cinza igual vc fez na aba jogar."
+
+    A COLUNA CONTINUA NA TELA, com as sete linhas na mesma altura — é isso que
+    mantém as divisórias atravessando as cinco colunas no mesmo y. O que sai é o
+    ESTADO: a força, os dois motores e as ações, porque nenhum deles tem controle
+    para valer. Testar a vibração de um lugar vazio não é um botão fraco: é um
+    botão que mente.
+
+    O NOME DIZ A POSIÇÃO E O ESTADO, nunca o do plástico — a mesma decisão que
+    ela tomou na Gatilhos e na Iluminação no mesmo dia.
+    """
+    j = c["jogador"]
+    return f'''
+          <div class="ctrl vazia" data-conectado="nao"
+               title="Nenhum controle neste lugar.">
+            <div class="moldura" data-papel="desenho">{svg(f'vb-{c["pref"]}', c["cor"], lampadas=False)}</div>
+            <div class="rot-ctrl">P{j} <span class="pt">•</span> Desconectado</div>
+            <div class="seg"><span class="nada">{VAZIO}</span></div>
+            <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
+            <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
+            <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
+            <div class="acoes-col"><span class="nada">{VAZIO}</span></div>
+          </div>'''
+
+
 def _coluna(c, e=None):
     """Uma coluna da mesa: o desenho, o nome, a força, os dois motores, as ações.
 
@@ -538,7 +639,7 @@ MIOLO = f'''
                 a mão ao jogo.
               </span></span></span></div>
           </div>
-{"".join(_coluna(c) for c in MESA)}
+{"".join(_coluna(c) if c.get("conectado", True) else _coluna_vazia(c) for c in MESA)}
 
         </div>
       </div>
@@ -585,6 +686,66 @@ LEGENDA = f'''<div class="nota">
 # Vibração os quatro ficam lado a lado, sempre visíveis, e a fita fica
 # esmaecida. Ela não é o alvo destas três abas porque não há alvo: cada coluna
 # se ajusta no seu lugar.
-n = monta("05-vibracao", "Vibração", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
-print(f"05-vibracao: OK, {n} divs · {len(MESA)} controles · motores do mapa: "
+#: AS DUAS MEDIDAS DA PRIMEIRA COLUNA, injetadas do dono (`medidas.py`). Elas não
+#: podem ser digitadas no bloco `CSS` acima porque ele é uma string crua — e um
+#: número digitado ali seria a terceira cópia do mesmo valor, que é o defeito que
+#: `medidas.py` nasceu para matar.
+CSS_DAS_MEDIDAS = f"""
+  .vib{{
+    --larg-rot:{medidas.larg_rotulos('05-vibracao')}px;
+    --gap-col:{medidas.GAP_DAS_COLUNAS}px;
+  }}
+"""
+
+def _conferir(doc):
+    """As decisões dela nesta aba, conferidas NA SAÍDA. Só o miolo, sem
+    comentário HTML e sem o `<style>` — as três armadilhas que fizeram as réguas
+    das outras abas reprovarem o que estava certo."""
+    import re as _re
+    corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
+    corpo = _re.sub(r"<!--.*?-->", "", corpo, flags=_re.S)
+    corpo = _re.sub(r"<style[^>]*>.*?</style>", "", corpo, flags=_re.S)
+    if len(corpo) < 2000:
+        raise SystemExit("ERRO: a régua não achou o miolo desta aba.")
+    falhas = []
+
+    def exigir(cond, oque):
+        if not cond:
+            falhas.append(oque)
+
+    vazios = [c for c in MESA if not c.get("conectado", True)]
+    # 1. A MESA — dois conectados, dois lugares vazios.
+    exigir(corpo.count('class="ctrl vazia"') == len(vazios),
+           f"as colunas vazias não são {len(vazios)}")
+    # 2. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO, nunca o nome do plástico.
+    for c in vazios:
+        exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
+               f"a coluna do P{c['jogador']} não diz Desconectado")
+        exigir(c["nome"] not in corpo,
+               f"o nome do plástico {c['nome']!r} voltou a uma coluna vazia")
+    # 3. NENHUM AJUSTE VIVO NUM LUGAR VAZIO. Testar a vibração de um lugar vazio
+    #    não é botão fraco: é botão que mente.
+    for pedaco in corpo.split('class="ctrl vazia"')[1:]:
+        bloco = pedaco.split('<div class="ctrl', 1)[0]
+        for proibido in ('data-papel="forca"', 'data-papel="lado"',
+                         'data-papel="testar"', 'data-papel="motor"'):
+            exigir(proibido not in bloco, f"um lugar vazio tem ajuste vivo: {proibido!r}")
+    # 4. O RESPIRO — a divisória no meio do vão, e o passo como o dobro do ar.
+    exigir("--r-passo:calc(var(--r-ar) * 2)" in doc, "o passo deixou de ser o dobro do ar")
+    exigir("top:calc(var(--r-ar) * -1)" in doc or "top:-var(--r-ar)" in doc
+           or "top: calc(var(--r-ar) * -1)" in doc,
+           "a divisória saiu do meio do vão")
+    # 5. OS RÓTULOS ALINHAM À ESQUERDA — decisão dela de 31/08.
+    exigir(".rotulos > *{align-items:flex-start;text-align:left}" in doc,
+           "os rótulos voltaram a alinhar à direita")
+
+    if falhas:
+        raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "
+                         + "\n  ".join(f"- {f}" for f in falhas))
+
+
+n = monta("05-vibracao", "Vibração", MIOLO, CSS + CSS_DAS_MEDIDAS, fita_viva=False, legenda=LEGENDA)
+_conferir(onde.pagina("05-vibracao.html").read_text())
+print(f"05-vibracao: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
+      f"+ {len(MESA) - len(CONECTADOS)} lugar(es) vazio(s) · motores do mapa: "
       f'{ESQ["id"]} / {DIR["id"]}')
