@@ -141,7 +141,7 @@ conferir() {
     # antes desta leva e o `ls ~/.local/bin | grep hefesto` devolveu vazio — e a
     # árvore antiga virou `hefesto-dualsense4unix-estavel`, sem instalação.
     #
-    # O QUE ISSO NÃO APAGA, e é o que a segunda guarda media: o `pgrep -f` da
+    # O QUE ISSO NÃO APAGA, e é o que a segunda guarda mediu: o `pgrep -f` da
     # GUI casa por SUBSTRING. Com um app só, não há dois nomes para se
     # confundirem — e é exatamente por isso que ela encerrou a variante.
     #
