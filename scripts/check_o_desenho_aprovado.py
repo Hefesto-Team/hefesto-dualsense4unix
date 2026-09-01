@@ -64,7 +64,7 @@ def paginas() -> list[str]:
     """As páginas que a régua cobre, enumeradas a partir da BANCADA.
 
     A enumeração mudou de lado junto com o fluxo: página nova nasce no desenho,
-    não no produto. `.dc.html` fica de FORA — são canvas do Claude Design
+    não no produto. `.dc.html` fica de FORA — são canvas de ferramenta de desenho
     (logo, paleta, telas), ferramenta de desenho, não página que ela abre.
     Cobri-los faria o portão cobrar publicação de rascunho.
     """

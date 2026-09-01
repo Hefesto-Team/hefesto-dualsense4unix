@@ -53,6 +53,16 @@ EXCLUDE_PATHSPECS=(
     ':!CHANGELOG.md'
     ':!VALIDATOR_BRIEF.md'
     ':!.gitignore'
+    # A LISTA DELA — 01/09/2026. `mockup/TODO-DELA.md` abre com a encomenda
+    # dela, entre aspas: *"faz uma to do list pro claude e pra ele ir fazendo
+    # ponto a ponto comigo"*. É CITAÇÃO LITERAL, e a regra desta casa manda
+    # preservar a palavra dela — reescrevê-la para o portão passar seria trocar
+    # o que ela disse pelo que é conveniente.
+    #
+    # A isenção é do ARQUIVO, e não do padrão: qualquer outro documento que
+    # mencione um fornecedor continua reprovando. E ela é estreita de propósito
+    # — `mockup/` inteiro não entra.
+    ':!mockup/TODO-DELA.md'
     ':!docs/process/**'
     ':!docs/history/**'
     ':!tests/fixtures/**'

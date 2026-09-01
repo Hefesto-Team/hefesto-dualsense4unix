@@ -200,8 +200,33 @@ EXTERNOS = frozenset(
         "universal-sanitizer.py",
         "setup.py",
         "conftest.py",
+        # AS FONTES DA PESQUISA DE CANAIS DE RÁDIO — 31/08/2026. Os três
+        # documentos `fontes-r1/r2/r3.md` citam o código dos projetos que
+        # foram LIDOS para conferir o protocolo: o `hid-playstation` do
+        # kernel, o `xpadneo`, o `8bitdo-spec`, o `Pro2`. Citar o arquivo é
+        # citar a fonte, e a fonte é o ponto do documento — ela não deveria
+        # estar versionada aqui.
+        #
+        # Sem estas linhas, 34 referências legítimas contam como mortas, e a
+        # reação natural a um portão que acusa quem está certo é desligá-lo.
+        "sony_gamepad.py",
+        "checksum.py",
+        "enums.py",
+        "base_device.py",
+        "base_gamepad.py",
+        "swGetVer.sh",
+        "swExitDinput.sh",
+        "swChangeDinput.sh",
+        "test_sony.py",
+        "8bitso_sn30_windows.md",
     }
 )
+
+#: Os DIRETÓRIOS de projeto externo. Um `README.md` não se distingue pelo nome —
+#: `Pro2/README.md` e `SwitchMode/README.md` são do `8bitdo-spec`, e pôr
+#: `README.md` na lista acima perdoaria o desta casa também.
+EXTERNOS_POR_PASTA = ("Pro2/", "SwitchMode/", "SN30ProPlus/", "xpadneo/",
+                      "8bitdo-spec/", "tests_kernel/")
 
 #: Marcador que a autora do documento pode escrever para dizer "eu sei que este
 #: arquivo não existe, e o assunto do parágrafo é exatamente esse".
@@ -655,6 +680,8 @@ def candidatos_da_linha(linha: str) -> list[tuple[str, bool]]:
         if extensao not in EXTENSOES:
             continue
         if veio_de_crase and "/" not in texto and extensao not in EXTENSOES_NOME_SOLTO:
+            continue
+        if any(p in texto for p in EXTERNOS_POR_PASTA):
             continue
         if Path(texto).name in EXTERNOS:
             continue
