@@ -186,9 +186,21 @@ BOOTSTRAP = r"""
   // cada mudança de mesa.
   if(!window.__hef.ouvindo){
     window.__hef.ouvindo = true;
+    // O `change` ALÉM DO `click`, e ele é o que faltava para metade dos botões
+    // sem dono. Um `<select>` não se "clica" no sentido útil — ele MUDA; e um
+    // `<input>` de texto nunca dispara clique com o valor novo. Medido em
+    // 01/09/2026: os quatro campos do editor da aba Perfis, os selects da
+    // Conexões e o nome da face nova ficaram sem dono por isto, e o relato dos
+    // agentes nomeia a causa uma vez por aba — *"o ouvinte manda `texto:
+    // alvo.textContent`, que num `<input>` é vazio"*.
+    document.addEventListener('change', function(ev){ manda_do_alvo(ev); }, true);
     document.addEventListener('click', function(ev){
       // Os quatro atributos que marcam algo CLICÁVEL nas dez páginas. Eles já
       // existiam — cada piloto de aba usava o seu.
+      manda_do_alvo(ev);
+    }, true);
+  }
+  function manda_do_alvo(ev){
       const alvo = ev.target.closest(
         '[data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],' +
         '[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v],' +
@@ -212,9 +224,19 @@ BOOTSTRAP = r"""
         hex: d.hex || '', sensor: d.sensor || '', rota: d.rota || '',
         mudo: d.mudo || '', micModo: d.micModo || '', v: d.v || '',
         controle: dono ? (dono.dataset.controle || dono.dataset.uniq || '') : '',
+        // O VALOR, e ele é o que o `textContent` não alcança: num `<input>` o
+        // texto é vazio, e num `<select>` é a lista INTEIRA de opções. Sem
+        // isto, um campo digitado chega ao Python sem o que ela digitou.
+        valor: (('value' in alvo) ? String(alvo.value ?? '') : ''),
+        // `selectedOptions` dá o rótulo VISÍVEL da opção escolhida — o que ela
+        // leu na tela — enquanto `value` dá a chave do contrato. Os dois vão,
+        // porque o gesto precisa de um e a mensagem de erro do outro.
+        rotulo: (alvo.selectedOptions && alvo.selectedOptions[0]
+                 ? alvo.selectedOptions[0].textContent.trim() : ''),
+        tipo: (alvo.tagName || '').toLowerCase(),
+        evento: ev.type,
         texto: (alvo.textContent || '').trim().slice(0, 60),
       });
-    }, true);
   }
   function manda(o){
     o.pagina = location.pathname.split('/').pop();

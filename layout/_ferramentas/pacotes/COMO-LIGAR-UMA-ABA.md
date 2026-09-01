@@ -73,7 +73,18 @@ METODOS: set[str] = set()    # os métodos crus, se usar `p.chamar`
 
 * `ctx` — a mesa e o estado do daemon (`ctx.conectados`, `ctx.por_uniq(uniq)`)
 * `o` — o clique: `uniq` (já traduzido de `pref`), `texto`, `hex`, `player`,
-  `lado`, `campo`, `modo`, `forca`, `sensor`, `rota`, `mudo`, `v`
+  `lado`, `campo`, `modo`, `forca`, `sensor`, `rota`, `mudo`, `v` — e, desde
+  01/09/2026, **o valor de campos e listas**:
+
+  | campo | o que traz |
+  | --- | --- |
+  | `valor` | o `value` de um `<input>` ou `<select>` — o que ela digitou ou escolheu |
+  | `rotulo` | o texto VISÍVEL da opção escolhida num `<select>` |
+  | `tipo` | `input`, `select`, `button`… |
+  | `evento` | `click` ou `change` |
+
+  **`texto` num `<input>` é VAZIO** — foi a causa de metade dos botões que a
+  primeira leva não conseguiu ligar. Para campo e lista, use `valor`.
 * `p` — a ponte
 
 **3. Declare o piso e as provas NO SEU PACOTE** — nunca no arquivo de teste.
