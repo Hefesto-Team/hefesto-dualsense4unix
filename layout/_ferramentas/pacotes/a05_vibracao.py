@@ -52,13 +52,21 @@ def pacote(ctx: Contexto) -> dict:
         v = _do_vpad(ff, c.get("player"))
         maior = v.get("ff_maior_pedido") or [0, 0]
         col = {
-            # `strong` é o motor pesado; a tela o mostra à esquerda.
-            "motor-esq": v.get("last_strong", 0),
-            "motor-dir": v.get("last_weak", 0),
-            "motor-esq-pct": round(max(0, min(100, (v.get("last_strong") or 0) / 255 * 100))),
-            "motor-dir-pct": round(max(0, min(100, (v.get("last_weak") or 0) / 255 * 100))),
-            "maior-esq": maior[1] if len(maior) > 1 else 0,
-            "maior-dir": maior[0] if maior else 0,
+            # `e`/`d` É A LÍNGUA DA TELA, e ela vence: o desenho dela chama os
+            # lados de esquerdo e direito, e `aba05._barra` endereça
+            # `data-campo="motor-e"`. O pacote nascera com `esq`/`dir` e os
+            # dezesseis valores caíam no vazio — zero casamentos, medido em
+            # 01/09/2026.
+            #
+            # `strong` é o motor PESADO e fica à esquerda; `weak` é o leve, à
+            # direita. A inversão é o que este assunto convida, e o
+            # `aba05.LADOS` já carrega a mesma nota.
+            "motor-e": v.get("last_strong", 0),
+            "motor-d": v.get("last_weak", 0),
+            "motor-e-pct": round(max(0, min(100, (v.get("last_strong") or 0) / 255 * 100))),
+            "motor-d-pct": round(max(0, min(100, (v.get("last_weak") or 0) / 255 * 100))),
+            "maior-e": maior[1] if len(maior) > 1 else 0,
+            "maior-d": maior[0] if maior else 0,
             "plays": v.get("ff_play_count", 0),
             "descartados": v.get("ff_descartado_count", 0),
             # O JOGO ESTÁ COM O CONTROLE ABERTO? Sem isto, um zero em todos os
@@ -71,6 +79,11 @@ def pacote(ctx: Contexto) -> dict:
     return {
         "mesa": {
             "forca": st.get("rumble_policy") or "—",
+            # A BARRA DA FORÇA, em porcentagem da faixa que o desenho usa. O
+            # `rumble_mult_applied` é um multiplicador (0,7 = 70%), e o teto do
+            # desenho é 150% — é o que `aba05.TETO` declara.
+            "forca-pct": None if st.get("rumble_mult_applied") is None
+                         else round(min(100, float(st["rumble_mult_applied"]) / 1.5 * 100)),
             "mult": st.get("rumble_mult_applied"),
             "custom": st.get("rumble_policy_custom_mult"),
             "tremendo": bool(st.get("rumble_active")),

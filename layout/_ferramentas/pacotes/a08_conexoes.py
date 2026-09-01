@@ -91,6 +91,12 @@ def pacote(ctx: Contexto) -> dict:
         }
     return {
         "colunas": colunas,
+        # AS DUAS LISTAS SÃO O QUE A TELA MOSTRA, uma por bloco de achado: o
+        # selo (CERTO/AJUSTAR) e a frase. Elas se distribuem pelos elementos de
+        # mesmo `data-campo`, na ordem — o gerador não precisa saber quantos
+        # achados o exame vai devolver.
+        "selo": ["AJUSTAR" if i["grave"] else "CERTO" for i in itens],
+        "achado": [i["titulo"] for i in itens],
         "exame": itens,
         "achados": len(itens),
         "graves": sum(1 for i in itens if i["grave"]),

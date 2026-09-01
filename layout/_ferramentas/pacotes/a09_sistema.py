@@ -43,21 +43,39 @@ def _versao() -> str:
 
 @registrar("09-sistema.html")
 def pacote(ctx: Contexto) -> dict:
+    """As linhas de estado da aba Sistema, com os nomes que a página tem.
+
+    CADA CHAVE É UM `data-campo` do `09-sistema.html`, e eles saem do mesmo
+    `ident` que a linha já usava no `data-id`. Até 01/09/2026 esta aba emitia
+    oito valores e a página não tinha um só lugar onde pô-los: a `est()` marcava
+    a LINHA e não o VALOR, e a pintura escrevia zero sem uma linha de erro.
+    """
     st = ctx.state
     jan = {k[len("window_detect_"):]: v for k, v in st.items()
            if k.startswith("window_detect_")}
+    n = len(ctx.conectados)
     return {
+        # AS LINHAS DE ESTADO, na língua da tela. A regra da maiúscula é a que
+        # a `aba09.est` documenta: valor de campo é uma RESPOSTA, e começa
+        # maiúsculo.
+        "hefesto-estado": "Parado" if st.get("paused") else "Ligado",
+        "hefesto-pausa": "Sim, e volta pausado" if st.get("paused") else "Não",
+        "hefesto-troca-de-perfil": ("Ligado" if st.get("window_detect_healthy")
+                                    else "Sem detector de janela"),
+        "hefesto-ambiente": st.get("window_detect_backend") or "—",
+        "bateria-impoe": ("Nada é limitado" if not st.get("emulation_suppressed")
+                          else "A emulação está contida"),
+        # A FRASE CONTA OS CONECTADOS, nunca a mesa: nomear um controle que não
+        # está foi o defeito que apareceu cinco vezes nesta casa, e esta linha
+        # ("Os 4 controles") foi uma delas.
+        "bateria-vale-para": f"O {n} controle" if n == 1 else f"Os {n} controles",
+        # O resto continua saindo, para quem consome o pacote fora da tela.
         "versao": _versao(),
-        "pausado": bool(st.get("paused")),
-        "perfil": st.get("active_profile") or "—",
-        "controles": len(ctx.conectados),
+        "controles": n,
         "coop": bool(st.get("coop")),
         "steam-input": bool(st.get("steam_input")),
         "modo-nativo": bool(st.get("native_mode")),
         "nativo-origem": st.get("native_mode_origin") or "",
-        # A JANELA: o detector é o que diz se a troca de perfil por jogo
-        # funciona. `healthy` falso com `reason` preenchido é o conserto que a
-        # aba oferece — e é o que o botão "Refazer os consertos" ataca.
         "janela": jan,
         "janela-saudavel": bool(st.get("window_detect_healthy")),
         "consertos": {
@@ -66,5 +84,5 @@ def pacote(ctx: Contexto) -> dict:
             "backend": st.get("window_detect_backend") or "",
         },
         "sem_dono": {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()},
-        "cobertura": {"pintados": 10 + len(jan), "sem_dono": len(SEM_DONO)},
+        "cobertura": {"pintados": 12 + len(jan), "sem_dono": len(SEM_DONO)},
     }
