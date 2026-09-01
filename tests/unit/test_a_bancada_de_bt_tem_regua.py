@@ -59,7 +59,7 @@ def test_ele_roda_e_relata(mod):
 
 def test_r1_pega_a_celula_que_nao_nomeia_a_culpa(mod):
     """"Não funciona" sem dizer por quê é a pior forma de vazio."""
-    peca = {"chave": "x.y", "rotulo": "algo", "radio_aciona": "nao",
+    peca = {"chave": "x.y", "rotulo": "algo", "radio_aciona": "nao",  # (noqa-acento) valor do CSV
             "radio_por_que_nao_aciona": "", "familia": "luz"}
     assert mod.r1([peca]), "a célula muda passou"
     peca["radio_por_que_nao_aciona"] = "decisao-tomada"
