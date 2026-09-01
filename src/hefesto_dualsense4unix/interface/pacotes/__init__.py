@@ -197,7 +197,7 @@ def topo(ctx: Contexto) -> dict:
     devolve as duas metades separadas — o desenho põe a segunda em `<b>`, e
     escrever a frase inteira num `textContent` apagaria a tag.
     """
-    import mesa_viva
+    from hefesto_dualsense4unix.interface import mesa_viva
 
     conta, conta_b = mesa_viva.texto_da_contagem(ctx.mesa)
     return {
@@ -287,13 +287,19 @@ def _carregar_tudo() -> None:
     import importlib
     aqui = pathlib.Path(__file__).resolve().parent
     for f in sorted(aqui.glob("a[0-9][0-9]_*.py")):
-        importlib.import_module(f"pacotes.{f.stem}")
+        # `__name__` E NÃO A LITERAL `"pacotes"`: este módulo é importado com
+        # DOIS nomes — `pacotes` (as réguas, que entram na pasta pelo
+        # `sys.path`) e `hefesto_dualsense4unix.interface.pacotes` (o produto).
+        # Com a literal, o carregamento a partir do produto criava uma SEGUNDA
+        # cópia de cada módulo de aba, com um segundo registro de gestos — e o
+        # piloto consultava um enquanto o decorador escrevia no outro.
+        importlib.import_module(f"{__name__}.{f.stem}")
     # O RODAPÉ É DAS DEZ, e por isso não casa com `aNN_*`: ele mora no
     # `topo.html`, o esqueleto compartilhado, e seus gestos são registrados em
     # `("*", nome)`. Sem esta linha ele não é importado, logo não se registra,
     # logo os quatro botões do rodapé recusam em todas as abas — em silêncio,
     # porque um gesto não registrado é indistinguível de um gesto sem dono.
-    importlib.import_module("pacotes.rodape")
+    importlib.import_module(f"{__name__}.rodape")
 
 
 _carregar_tudo()
