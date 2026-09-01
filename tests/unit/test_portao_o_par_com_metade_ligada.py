@@ -634,9 +634,30 @@ class TestOPortaoMorde:
         #
         # É a classe que o `validar-citacoes-de-linha.py` passou a cobrir hoje,
         # e ele NÃO alcança aqui: ele varre `docs/` e as planilhas de
-        # `docs/data/`, não número cravado em teste. Fica dito: enquanto um
-        # teste citar `arquivo:linha` à mão, ele envelhece calado.
-        for endereco in ("daemon/lifecycle.py:2270", "daemon/subsystems/hotkey.py:285"):
+        # `docs/data/`, não número cravado em teste.
+        #
+        # E O NÚMERO PAROU DE SER CRAVADO — 01/09/2026, na terceira vez que ele
+        # envelheceu. A frase acima dizia "enquanto um teste citar
+        # `arquivo:linha` à mão, ele envelhece calado"; ele envelheceu DUAS
+        # vezes na mesma sessão, porque duas curas em `lifecycle.py` empurraram
+        # a linha 12 e depois mais 9. A cura é a que a casa já usa em toda
+        # parte: **derivar**. Procura-se a CHAMADA, e o número sai dela.
+        #
+        # A MORDIDA CONTINUA INTEIRA: se o portão parar de nomear o sítio, a
+        # asserção reprova igual — o que deixou de existir é a manutenção de um
+        # número que nada tinha a ver com o que o caso mede.
+        for arquivo, chamada in (
+            ("daemon/lifecycle.py", "if steam_input_vpad_suspenso(self):"),
+            ("daemon/subsystems/hotkey.py",
+             "steam_input_excecao_ativa(daemon) or steam_input_vpad_suspenso(daemon)"),
+        ):
+            fonte = (_RAIZ / "src" / "hefesto_dualsense4unix" / arquivo).read_text(
+                encoding="utf-8").split("\n")
+            numeros = [i for i, linha in enumerate(fonte, 1) if chamada in linha]
+            assert len(numeros) == 1, (
+                f"achei {len(numeros)} linhas com {chamada!r} em {arquivo} — a "
+                f"régua precisa de UMA para saber qual endereço cobrar.")
+            endereco = f"{arquivo}:{numeros[0]}"
             assert any(onde.startswith(endereco) for onde in par.leituras), (
                 f"o portão não nomeia {endereco}, que LÊ a flag pelo acessor. "
                 f"Ele listou: {par.leituras}"
