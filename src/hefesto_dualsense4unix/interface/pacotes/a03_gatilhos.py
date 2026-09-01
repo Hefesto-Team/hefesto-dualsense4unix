@@ -36,6 +36,8 @@ qual está falando.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from . import Contexto, perfil, registrar
 
 #: Nada. E a lista vazia é uma AFIRMAÇÃO, não um esquecimento: cada valor desta
@@ -50,7 +52,7 @@ SEM_DONO: dict[str, str] = {}
 LADOS = {"e": "left", "d": "right"}
 
 
-def _specs():
+def _specs() -> Any:
     """A tabela de presets do produto, ou `None` se o `src/` não abrir.
 
     `None` NÃO vira travessão silencioso: sem a tabela, o pacote não sabe
@@ -66,7 +68,7 @@ def _specs():
         return None
 
 
-def _prontos():
+def _prontos() -> Any:
     """As curvas prontas do produto (`profiles/trigger_presets.py`), ou `None`.
 
     São as MESMAS cinco que o desenho oferece em "Efeito pronto" — a tela não as
@@ -108,11 +110,11 @@ def _pronto_da_curva(nome: str, curva: list[int]) -> str:
         return "custom"
     for chave, valores in tp.FEEDBACK_POSITION_PRESETS.items():
         if list(valores) == list(curva):
-            return chave
+            return str(chave)
     return "custom"
 
 
-def _do_lado(cfg: dict, specs) -> dict:
+def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
     """Um lado do gatilho, do perfil para a tela.
 
     `cfg` é o `{"mode": "Rigid", "params": [0, 180]}` do disco. Sai o rótulo em
@@ -136,6 +138,12 @@ def _do_lado(cfg: dict, specs) -> dict:
         "pronto": "custom",
         "ajustes": [],
     }
+    # O NOME PRÓPRIO PELA MESMA RAZÃO DA CURVA ACIMA: reler
+    # `fora["ajustes"]` devolve `object`, que não tem `.append`. A lista tem
+    # um nome e um tipo, e o dicionário guarda ELA — as duas apontam para o
+    # mesmo objeto, então o que se acrescenta aqui sai lá.
+    ajustes: list[dict[str, Any]] = []
+    fora["ajustes"] = ajustes
     if spec is None:
         return fora
 
@@ -150,11 +158,18 @@ def _do_lado(cfg: dict, specs) -> dict:
     #: conta foi o que quebrou este pacote na primeira execução — `[1] - 0`
     #: não é uma subtração que exista.
     if any(isinstance(v, list) for v in valores):
-        fora["curva"] = [int(v[0]) if isinstance(v, list) and v else int(v or 0)
-                         for v in valores]
+        # O NOME PRÓPRIO, e não `fora["curva"]` relido três vezes: o `fora` é
+        # um `dict[str, Any]`, e cada releitura devolvia `object` — o que o
+        # `mypy` recusava iterar, indexar e passar adiante. A lista tem um
+        # nome e um tipo, e as três linhas seguintes falam com ela.
+        curva_da_tela: list[int] = [
+            int(v[0]) if isinstance(v, list) and v else int(v or 0)
+            for v in valores]
+        fora["curva"] = curva_da_tela
         # A escala da curva é 0..8, a mesma dos `_RAMPA_PADRAO` do produto.
-        fora["curva-pct"] = [round(max(0, min(100, x / 8 * 100))) for x in fora["curva"]]
-        fora["pronto"] = _pronto_da_curva(nome, fora["curva"])
+        fora["curva-pct"] = [round(max(0, min(100, x / 8 * 100)))
+                             for x in curva_da_tela]
+        fora["pronto"] = _pronto_da_curva(nome, curva_da_tela)
         return fora
 
     #: O EFEITO PRONTO NÃO É O MODO — corrigido em 01/09/2026. Estava escrito
@@ -170,7 +185,7 @@ def _do_lado(cfg: dict, specs) -> dict:
     for i, p in enumerate(spec.params):
         valor = valores[i] if i < len(valores) else p.default
         largura = max(1, p.max_value - p.min_value)
-        fora["ajustes"].append({
+        ajustes.append({
             "nome": p.label,
             "valor": valor,
             # A PORCENTAGEM É DA FAIXA DAQUELE AJUSTE, não de 0..255. Um
@@ -183,7 +198,7 @@ def _do_lado(cfg: dict, specs) -> dict:
 
 
 @registrar("03-gatilhos.html")
-def pacote(ctx: Contexto) -> dict:
+def pacote(ctx: Contexto) -> dict[str, Any]:
     """Endereço → valor, por controle da mesa.
 
     O gatilho é do PERFIL, e o perfil é um só para a mesa inteira — logo as
@@ -199,7 +214,7 @@ def pacote(ctx: Contexto) -> dict:
 
     lados = {sig: _do_lado(trig.get(disco) or {}, specs) for sig, disco in LADOS.items()}
 
-    colunas: dict[str, dict] = {}
+    colunas: dict[str, dict[str, Any]] = {}
     pintados = 0
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
@@ -256,7 +271,7 @@ def pacote(ctx: Contexto) -> dict:
 from . import gesto  # noqa: E402
 
 
-def _uniq(o: dict) -> str:
+def _uniq(o: dict[str, Any]) -> str:
     """O `uniq` da coluna onde ela clicou. Vazio = recusa, nunca "todos".
 
     ESTA ABA TEM UMA COLUNA POR CONTROLE, e o alcance é a diferença entre um
@@ -268,7 +283,7 @@ def _uniq(o: dict) -> str:
     return str(o.get("uniq") or "")
 
 
-def _lado(o: dict) -> str:
+def _lado(o: dict[str, Any]) -> str:
     """`e`/`d` da tela → `left`/`right` do daemon, pela tradução que já existe.
 
     O `LADOS` lá em cima é o dono dessa tradução e serve a pintura desde que
@@ -282,7 +297,7 @@ def _lado(o: dict) -> str:
     return LADOS[sigla]
 
 
-def _escolhido(o: dict) -> str:
+def _escolhido(o: dict[str, Any]) -> str:
     """O que ela escolheu no campo, sem inventar nada quando não veio.
 
     DUAS CHAVES, E AS DUAS SÃO REAIS. `modo`/`v` é o `data-modo`/`data-v` que o
@@ -297,7 +312,7 @@ def _escolhido(o: dict) -> str:
     return str(o.get("modo") or o.get("v") or o.get("valor") or "").strip()
 
 
-def _desfecho(resposta) -> tuple[bool, str]:
+def _desfecho(resposta: Any) -> tuple[bool, str]:
     """`(ok, motivo)` de uma resposta da ponte, que tem TRÊS formas.
 
     `trigger_set` devolve `bool`, `trigger_set_checked` devolve `(ok, motivo)` e
@@ -358,7 +373,7 @@ def _curva(chave: str) -> list[int]:
 
 
 @gesto("03-gatilhos.html", "modo")
-def modo(ctx: Contexto, o: dict, p) -> None:
+def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Escolher um modo APLICA o efeito naquele gatilho, naquele controle.
 
     É O QUE O PRÓPRIO DESENHO PROMETE, na dica do quadro: *"Escolher um modo já
@@ -405,7 +420,7 @@ def modo(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("03-gatilhos.html", "pronto")
-def pronto(ctx: Contexto, o: dict, p) -> None:
+def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Escolher um efeito pronto põe aquela CURVA no gatilho, na hora.
 
     O EFEITO PRONTO TEM DONO, e o dono é `profiles/trigger_presets.py`: os cinco

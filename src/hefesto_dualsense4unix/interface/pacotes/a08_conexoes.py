@@ -24,6 +24,7 @@ linha do Check-up ter um sujeito para calar.
 from __future__ import annotations
 
 import contextlib
+from typing import Any
 
 from . import Contexto, perfil, registrar
 
@@ -83,7 +84,11 @@ _EXTRAS: tuple[object, ...] = ()
 
 #: A ordem de serviço de cada POSIÇÃO da tira do exame, ou `None` quando aquela
 #: linha é uma conferência (que não se dispensa). Mesma ponte do `_VIZINHOS`.
-_ORDENS_NA_TELA: tuple[object | None, ...] = ()
+#: `Any` E NÃO `object`: o que mora aqui é a `ordem` que o exame da mesa
+#: devolve, com `.chave` e `.arranjo`. `object` não tem atributo nenhum, e
+#: então o `ignorar` que os lê não passava no `mypy` — a anotação estava
+#: dizendo menos do que se sabe sobre o valor.
+_ORDENS_NA_TELA: tuple[Any | None, ...] = ()
 
 #: `{chave da regra: arranjo dispensado}` — o que a decisão dela está segurando.
 #: Sai do disco e é atualizado NA HORA pelo `ignorar`: sem isso a linha voltaria
@@ -92,7 +97,7 @@ _ORDENS_NA_TELA: tuple[object | None, ...] = ()
 _DISPENSADAS: dict[str, str] = {}
 
 
-def _declaracao(recarregar: bool = False):
+def _declaracao(recarregar: bool = False) -> Any:
     """O `maquina.json` já validado, ou `None` se não deu para ler.
 
     `carregar_maquina` **nunca levanta** — no pior caso devolve o documento
@@ -111,7 +116,7 @@ def _declaracao(recarregar: bool = False):
     return _DECLARACAO
 
 
-def _mesa_do_radio(recarregar: bool = False):
+def _mesa_do_radio(recarregar: bool = False) -> Any:
     """Adaptadores e rádios vizinhos, lidos do `/sys` — uma vez, e no botão.
 
     Devolve `None` quando a varredura falhou, e o `None` é diferente de uma
@@ -130,7 +135,7 @@ def _mesa_do_radio(recarregar: bool = False):
     return _MESA_DO_RADIO
 
 
-def _chave_do_radio(r) -> str:
+def _chave_do_radio(r: Any) -> str:
     """`vid:pid` — a chave do `maquina.json`, e não o nó do sysfs.
 
     A razão é do produto e está escrita em `secao_mesa._ao_declarar_o_radio`: o
@@ -176,7 +181,7 @@ def _a_pergunta() -> str:
         return ""
 
 
-def _mesa_declarada(declaracao) -> dict:
+def _mesa_declarada(declaracao: Any) -> dict[str, Any]:
     """As duas respostas que barramento nenhum dá: a altura e a visada.
 
     Elas alimentam `exame_da_mesa.vizinhanca_das_portas`, e é o que fecha o laço
@@ -191,7 +196,7 @@ def _mesa_declarada(declaracao) -> dict:
         return {}
 
 
-def _radios_declarados(declaracao) -> dict[str, str]:
+def _radios_declarados(declaracao: Any) -> dict[str, str]:
     """`{vid:pid: tipo}` — o que ela já respondeu sobre cada rádio vizinho."""
     try:
         return {str(k): str(v.tipo or "")
@@ -200,7 +205,7 @@ def _radios_declarados(declaracao) -> dict[str, str]:
         return {}
 
 
-def _mic_declarado(declaracao, uniq: str) -> bool:
+def _mic_declarado(declaracao: Any, uniq: str) -> bool:
     """A ponte de microfone DESTE controle está declarada?
 
     **Só `True` conta**, e é regra do produto (`bt_mic.uniqs_declarados`):
@@ -221,7 +226,7 @@ def _so_hex(uniq: str) -> str:
     return uniq.replace(":", "").replace("-", "").strip().lower()
 
 
-def _dispensadas_do_disco(declaracao) -> None:
+def _dispensadas_do_disco(declaracao: Any) -> None:
     """Recarrega `{chave: arranjo}` do que ela mandou calar."""
     global _DISPENSADAS
     with contextlib.suppress(Exception):
@@ -230,7 +235,7 @@ def _dispensadas_do_disco(declaracao) -> None:
             for k, v in (declaracao.mesa.ordens_dispensadas or {}).items()}
 
 
-def _reler_a_declaracao():
+def _reler_a_declaracao() -> Any:
     """O disco de novo, depois de um gesto que escreveu nele.
 
     O daemon grava sob lock e só então responde `{"ok": true}`
@@ -241,7 +246,7 @@ def _reler_a_declaracao():
     return _declaracao(recarregar=True)
 
 
-def _conferencias() -> list:
+def _conferencias() -> list[Any]:
     """As conferências que cabem NO TIQUE — as três que não forkam processo.
 
     ELAS TOCAM O SISTEMA (sysfs), logo podem demorar ou falhar — e uma falha
@@ -275,7 +280,7 @@ def _conferencias() -> list:
         return []
 
 
-def _itens_da_tela() -> list:
+def _itens_da_tela() -> list[Any]:
     """As linhas do Check-up: as três do tique mais o que o exame completo trouxe.
 
     O QUE ELA DISPENSOU NÃO VOLTA, e é a metade do gesto `ignorar` que o disco
@@ -297,7 +302,7 @@ def _itens_da_tela() -> list:
     return conferidas
 
 
-def _linha(item) -> dict:
+def _linha(item: Any) -> dict[str, Any]:
     """Um `Item` do exame na forma que a tela consome.
 
     OS CAMPOS SÃO `rotulo`, `estado` e `porque` — os do `exame_da_mesa.Item`,
@@ -328,7 +333,7 @@ def _linha(item) -> dict:
     }
 
 
-def _exame() -> list[dict]:
+def _exame() -> list[dict[str, Any]]:
     """As linhas do Check-up, em dicionário. **ESTE NOME É CONTRATO.**
 
     A ABA JOGAR CHAMA ISTO (`a01_jogar._do_exame`), e é de propósito: o aviso do
@@ -352,7 +357,7 @@ def _exame() -> list[dict]:
     return [_linha(i) for i in _itens_da_tela()]
 
 
-def _adaptadores(conectados) -> dict:
+def _adaptadores(conectados: Any) -> dict[str, Any]:
     """Quem está em qual adaptador de rádio.
 
     O MAC NÃO SAI DAQUI CRU para lugar nenhum que se grave: este pacote devolve
@@ -370,7 +375,7 @@ def _adaptadores(conectados) -> dict:
 
 
 @registrar("08-conexoes.html")
-def pacote(ctx: Contexto) -> dict:
+def pacote(ctx: Contexto) -> dict[str, Any]:
     global _ORDENS_NA_TELA, _VIZINHOS
     st = ctx.state
     vivos = _itens_da_tela()
@@ -530,7 +535,7 @@ SEM_GESTO: dict[str, str] = {
 }
 
 
-def _uniq(o: dict) -> str:
+def _uniq(o: dict[str, Any]) -> str:
     """O `uniq` do controle onde ela clicou. Vazio = clique solto, e recusa.
 
     O piloto traduz `pref` → `uniq` antes de chamar (`hefesto_vivo.py:337`); o
@@ -565,7 +570,7 @@ def _indice(ctx: Contexto, uniq: str) -> int | None:
     return None
 
 
-def _resposta(r) -> tuple[bool, str]:
+def _resposta(r: Any) -> tuple[bool, str]:
     """`(ok, motivo)` do `machine_declare`, tolerando ponte que devolva só `bool`.
 
     `ipc_bridge.machine_declare:861` devolve `(ok, motivo)`, e o motivo já vem
@@ -584,7 +589,7 @@ def _resposta(r) -> tuple[bool, str]:
     return bool(r), ""
 
 
-def _declarar(p, mesa: dict) -> None:
+def _declarar(p: Any, mesa: dict[str, Any]) -> None:
     """Grava um pedaço da declaração da mesa, na hora.
 
     DECISÃO DELA, 01/09/2026: **clicar já aplica** — a interface nova não junta
@@ -606,7 +611,7 @@ def _declarar(p, mesa: dict) -> None:
 
 
 @gesto("08-conexoes.html", "alvo")
-def alvo(ctx: Contexto, o: dict, p) -> None:
+def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Só este": as ações de saída passam a mirar SÓ este controle.
 
     É o que a própria tela promete no `title` das três etiquetas que abrem a
@@ -640,7 +645,7 @@ def alvo(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("08-conexoes.html", "todos")
-def todos(ctx: Contexto, o: dict, p) -> None:
+def todos(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"▴": volta ao broadcast — as ações voltam a valer para a mesa inteira.
 
     O `title` do botão é o contrato: *"Fecha — a fita volta para 'Todos', e os N
@@ -657,7 +662,7 @@ def todos(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("08-conexoes.html", "sala-altura")
-def sala_altura(ctx: Contexto, o: dict, p) -> None:
+def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"O dongle fica acima da cabeça de quem joga sentado?" — grava a resposta.
 
     É uma das duas coisas que barramento nenhum responde, e por isso ela é
@@ -681,7 +686,7 @@ def sala_altura(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("08-conexoes.html", "sala-visada")
-def sala_visada(ctx: Contexto, o: dict, p) -> None:
+def sala_visada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Tem gente sentada entre o dongle e o sofá?" — grava a resposta.
 
     O par da de cima: `MesaDeclarada.linha_de_visada` (`utils/maquina.py:278`),
@@ -752,7 +757,7 @@ def _sem_endereco() -> str:
                 "ele não há chave no maquina.json para guardar a ponte")
 
 
-def _slot(o: dict, quantos: int, quem: str) -> int:
+def _slot(o: dict[str, Any], quantos: int, quem: str) -> int:
     """A POSIÇÃO em que ela clicou, conferida contra o que foi pintado.
 
     O ouvinte do piloto manda `data-v`, e o gerador escreve nele o número da
@@ -774,7 +779,7 @@ def _slot(o: dict, quantos: int, quem: str) -> int:
 
 
 @gesto("08-conexoes.html", "mic-existe")
-def mic_existe(ctx: Contexto, o: dict, p) -> None:
+def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Microfone: Ligado / Desligado" — a ponte de mic DESTE controle.
 
     TEM DONO, E ELE NÃO É O `mic.set`. O `mic.set` é o MUDO no firmware
@@ -825,7 +830,7 @@ def mic_existe(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("08-conexoes.html", "vizinho-o-que-e")
-def vizinho_o_que_e(ctx: Contexto, o: dict, p) -> None:
+def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"— O que é? —": ela responde o que é aquele rádio vizinho.
 
     TEM DONO: `MesaDeclarada.radios[vid:pid].tipo` (`utils/maquina.py:279`), e
@@ -867,7 +872,7 @@ def vizinho_o_que_e(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("08-conexoes.html", "examinar-portas")
-def examinar_portas(ctx: Contexto, o: dict, p) -> None:
+def examinar_portas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Examinar Portas": refaz o exame INTEIRO e a leitura do barramento.
 
     O QUE MUDOU DESDE A PRIMEIRA LEVA, e por isso ele deixa de ser botão morto:
@@ -925,7 +930,7 @@ def examinar_portas(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("08-conexoes.html", "ignorar")
-def ignorar(ctx: Contexto, o: dict, p) -> None:
+def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"⊘": cala ESTA ordem de serviço enquanto os cabos estiverem assim.
 
     TEM DONO: `MesaDeclarada.ordens_dispensadas[chave] = {quando, arranjo}`

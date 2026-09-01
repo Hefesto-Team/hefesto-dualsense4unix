@@ -42,7 +42,25 @@ from __future__ import annotations
 
 import pathlib
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
+
+#: OS DOIS CONTRATOS DESTE MÓDULO, ditos uma vez. Eles nasceram em 01/09/2026,
+#: quando a interface entrou no `src/` e passou a ser conferida pelo `mypy` em
+#: modo `strict` como todo o resto do pacote — os outros 285 arquivos já
+#: passavam. Sem eles, os decoradores ficam sem tipo e o `mypy` marca as 50
+#: funções que eles decoram como "untyped by decorator": 59 erros que somem
+#: escrevendo estas duas linhas.
+#:
+#: `Any` no lugar da ponte é HONESTO, e não preguiça: a régua injeta um dublê
+#: que responde a qualquer nome de propósito (ver `PonteDeMentira`), e um
+#: `Protocol` com as 38 funções da ponte seria uma SEGUNDA lista que
+#: envelheceria calada — o defeito que esta casa persegue. Quem confere que o
+#: nome existe é `test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem`, contra a
+#: ponte de verdade.
+Pintura = Callable[["Contexto"], "dict[str, Any]"]
+Gesto = Callable[["Contexto", "dict[str, Any]", Any], "dict[str, Any] | None"]
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
@@ -61,12 +79,12 @@ class Contexto:
     * `estados` — o estado vivo por `uniq` (sticks, botões, sensores).
     """
 
-    state: dict
-    mesa: list[dict] = field(default_factory=list)
-    conectados: list[dict] = field(default_factory=list)
-    estados: dict = field(default_factory=dict)
+    state: dict[str, Any]
+    mesa: list[dict[str, Any]] = field(default_factory=list)
+    conectados: list[dict[str, Any]] = field(default_factory=list)
+    estados: dict[str, Any] = field(default_factory=dict)
 
-    def por_uniq(self, uniq: str) -> dict:
+    def por_uniq(self, uniq: str) -> dict[str, Any]:
         """A entrada do daemon daquele controle, ou `{}` — nunca levanta.
 
         Levantar aqui derrubaria a pintura da aba INTEIRA por causa de um
@@ -88,17 +106,17 @@ class Contexto:
 #: `test_o_despachante_serve_as_dez.py` conta as duas coisas separadas e é ela
 #: que diz, a cada rodada, quanto falta. Uma aba que sai desta tabela some da
 #: contagem e a régua fica verde por VACUIDADE — que é o pior estado.
-PACOTES: dict[str, object] = {}
+PACOTES: dict[str, Pintura] = {}
 
 
-def registrar(pagina: str):
+def registrar(pagina: str) -> Callable[[Pintura], Pintura]:
     """Decorador: `@registrar("01-jogar.html")` põe a função na tabela.
 
     POR QUE DECORADOR, e não um dicionário escrito à mão: o dicionário obriga a
     escrever o nome da página duas vezes — no módulo e na tabela — e é o segundo
     lugar que diverge. Aqui o módulo declara a si mesmo, e importar é registrar.
     """
-    def dentro(fn):
+    def dentro(fn: Pintura) -> Pintura:
         if pagina in PACOTES:
             raise SystemExit(f"ERRO: {pagina} já tem pacote ({PACOTES[pagina].__module__}). "
                              f"Dois donos para a mesma página é o defeito que este "
@@ -117,10 +135,10 @@ def registrar(pagina: str):
 #: abas em paralelo significaria oito pessoas editando a MESMA linha. Com o
 #: decorador, cada aba tem território exclusivo: quem liga a Iluminação toca só
 #: `a04_iluminacao.py`, e não há merge a resolver.
-GESTOS: dict[tuple[str, str], object] = {}
+GESTOS: dict[tuple[str, str], Gesto] = {}
 
 
-def gesto(pagina: str, nome: str):
+def gesto(pagina: str, nome: str) -> Callable[[Gesto], Gesto]:
     """Decorador: `@gesto("04-iluminacao.html", "cor")` liga um botão.
 
     A função recebe `(ctx, o, ipc)`:
@@ -135,7 +153,7 @@ def gesto(pagina: str, nome: str):
     que é a única forma de provar que o botão faz o que promete, em vez de
     provar que ele existe.
     """
-    def dentro(fn):
+    def dentro(fn: Gesto) -> Gesto:
         chave = (pagina, nome)
         if chave in GESTOS:
             raise SystemExit(
@@ -147,7 +165,7 @@ def gesto(pagina: str, nome: str):
     return dentro
 
 
-def gesto_da_pagina(pagina: str, nome: str):
+def gesto_da_pagina(pagina: str, nome: str) -> Gesto | None:
     """Quem atende aquele botão, ou `None`.
 
     `None` NÃO é erro: é o estado honesto de um botão que ainda não foi ligado,
@@ -158,7 +176,7 @@ def gesto_da_pagina(pagina: str, nome: str):
     return GESTOS.get((pagina, nome)) or GESTOS.get(("*", nome))
 
 
-def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict | None:
+def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict[str, Any] | None:
     """O pacote daquela página, ou `None` se ela ainda não tem quem a pinte.
 
     `None` NÃO é erro: é o estado honesto de uma aba que ainda não foi ligada, e
@@ -184,7 +202,7 @@ POR_CONTROLE = ("colunas", "cartoes", "cards")
 NAO_SAO_VALOR = {"cobertura", "sem_dono"}
 
 
-def topo(ctx: Contexto) -> dict:
+def topo(ctx: Contexto) -> dict[str, Any]:
     """Os três valores do CABEÇALHO, que são iguais nas dez abas.
 
     A contagem de controles e o nome do perfil ativo vivem no `topo.html`, que é
@@ -208,7 +226,7 @@ def topo(ctx: Contexto) -> dict:
     }
 
 
-def normalizar(pacote: dict, para_pref: dict[str, str] | None = None) -> dict:
+def normalizar(pacote: dict[str, Any], para_pref: dict[str, str] | None = None) -> dict[str, Any]:
     """O pacote na forma que a tela consome: `{mesa, colunas}` e nada mais.
 
     POR QUE ELA EXISTE, medido em 01/09/2026 na primeira execução do piloto
@@ -224,7 +242,7 @@ def normalizar(pacote: dict, para_pref: dict[str, str] | None = None) -> dict:
     `p1` e devolve `null` — zero escrito, zero erro.
     """
     para_pref = para_pref or {}
-    colunas: dict[str, dict] = {}
+    colunas: dict[str, dict[str, Any]] = {}
     for nome in POR_CONTROLE:
         for chave, valores in (pacote.get(nome) or {}).items():
             if not isinstance(valores, dict):

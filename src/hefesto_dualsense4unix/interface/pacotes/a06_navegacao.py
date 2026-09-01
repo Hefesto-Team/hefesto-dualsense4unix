@@ -20,6 +20,8 @@ mesma linha, já tinha caído na primeira leva (ver o `SEM_DONO` logo abaixo).
 """
 from __future__ import annotations
 
+from typing import Any
+
 from . import Contexto, perfil, registrar
 
 #: CORRIGIDO EM 01/09/2026. Aqui estava escrito que a velocidade do cursor e da
@@ -51,7 +53,7 @@ TECLADO_DESLIGADA = "Desligada"
 
 
 @registrar("06-navegacao.html")
-def pacote(ctx: Contexto) -> dict:
+def pacote(ctx: Contexto) -> dict[str, Any]:
     st = ctx.state
     rato = st.get("mouse_emulation") or {}
     tecla = st.get("keyboard_emulation") or {}
@@ -140,7 +142,7 @@ from . import gesto  # noqa: E402
 MANUAL = "manual"
 
 
-def _rato(ctx: Contexto) -> dict:
+def _rato(ctx: Contexto) -> dict[str, Any]:
     """O bloco `mouse_emulation` do último tique — o que está VALENDO agora.
 
     Ele é o do DAEMON, e não o do perfil: o perfil guarda o que ela salvou, e a
@@ -150,7 +152,7 @@ def _rato(ctx: Contexto) -> dict:
     return ctx.state.get("mouse_emulation") or {}
 
 
-def _passo(o: dict) -> int:
+def _passo(o: dict[str, Any]) -> int:
     """`+1` ou `-1`, lido do NOME do gesto que chegou.
 
     O piloto manda `o["gesto"]` com o `data-gesto` do botão clicado
@@ -168,7 +170,7 @@ def _passo(o: dict) -> int:
     raise ValueError(f"velocidade: o clique não disse a direção (veio {nome!r})")
 
 
-def _mandar(p, **params) -> None:
+def _mandar(p: Any, **params: Any) -> None:
     """`mouse.emulation.set`, e RECLAMA quando ninguém respondeu.
 
     `p.chamar` devolve `False` só em falha de TRANSPORTE — o `_safe_call`
@@ -183,7 +185,7 @@ def _mandar(p, **params) -> None:
 
 
 @gesto("06-navegacao.html", "modo")
-def modo(ctx: Contexto, o: dict, p) -> None:
+def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Status do Modo": o interruptor que liga mouse E teclado.
 
     POR QUE OS DOIS, e não só o mouse: este interruptor é o que ela pediu em
@@ -250,7 +252,7 @@ _ESCOLHA: dict[str, bool | None] = {"ligada": True, "desligada": False, "só": N
 
 
 @gesto("06-navegacao.html", "teclado")
-def teclado(ctx: Contexto, o: dict, p) -> None:
+def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A lista "Função do teclado". `keyboard.emulation.set`.
 
     O VALOR VEM EM `valor`, E ISSO É O QUE MUDOU DESDE A PRIMEIRA LEVA: o
@@ -315,7 +317,7 @@ def teclado(ctx: Contexto, o: dict, p) -> None:
 
 @gesto("06-navegacao.html", "vel-cursor-mais")
 @gesto("06-navegacao.html", "vel-cursor-menos")
-def vel_cursor(ctx: Contexto, o: dict, p) -> None:
+def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O menos e o mais do "Analógico" da Velocidade de cursor. `mouse_emulation.speed`.
 
     SEM `enabled` DE PROPÓSITO, e é a rota que o produto criou para isto: o
@@ -343,7 +345,7 @@ def vel_cursor(ctx: Contexto, o: dict, p) -> None:
 
 @gesto("06-navegacao.html", "rolagem-mais")
 @gesto("06-navegacao.html", "rolagem-menos")
-def vel_rolagem(ctx: Contexto, o: dict, p) -> None:
+def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O menos e o mais do "Analógico" da Velocidade da rolagem. `scroll_speed`.
 
     Mesma rota speed-only do vizinho, e o mesmo motivo. O que muda é o alcance:
@@ -450,7 +452,7 @@ PAGINA = "06-navegacao.html"
 PISO_DA_ABA = 6
 
 
-def _prova(nome: str, clique: dict, chama: list) -> dict:
+def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any]:
     """Uma linha do `PROVAS`, para a chave da régua ser escrita UMA vez.
 
     Cinco dicionários escritos por extenso repetiam a chave da página cinco

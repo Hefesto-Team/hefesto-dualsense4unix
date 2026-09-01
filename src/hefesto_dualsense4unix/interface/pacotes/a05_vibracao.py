@@ -24,6 +24,7 @@ existência dele, e a tela a carrega no `title`.
 from __future__ import annotations
 
 import time
+from typing import Any
 
 # O IMPORT É DE MÓDULO, e não de dentro da função — 01/09/2026. O
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
@@ -40,7 +41,7 @@ from . import Contexto, registrar
 SEM_DONO: dict[str, str] = {}
 
 
-def _do_vpad(ff: dict, player) -> dict:
+def _do_vpad(ff: dict[str, Any], player: Any) -> dict[str, Any]:
     """O bloco `per_vpad` daquele jogador, ou `{}`.
 
     Casa por `player`, não por posição na lista: a ordem do `per_vpad` é a de
@@ -49,12 +50,13 @@ def _do_vpad(ff: dict, player) -> dict:
     """
     for v in (ff or {}).get("per_vpad") or []:
         if v.get("player") == player:
-            return v
+            do_vpad: dict[str, Any] = v
+            return do_vpad
     return {}
 
 
 @registrar("05-vibracao.html")
-def pacote(ctx: Contexto) -> dict:
+def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `app/telas/vibracao.pacote_da_mesa` — a camada do PRODUTO.
 
     ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA, e é o `casa-sabe` que a denunciou:
@@ -79,7 +81,7 @@ def pacote(ctx: Contexto) -> dict:
 
     bruto = _tela.pacote_da_mesa(ctx.state, ctx.mesa, ctx.conectados,
                                  contagem=mesa_viva.texto_da_contagem(ctx.mesa))
-    colunas: dict[str, dict] = {}
+    colunas: dict[str, dict[str, Any]] = {}
     for uniq, col in (bruto.get("colunas") or {}).items():
         pct = col.get("pct") or {}
         plano = {
@@ -154,7 +156,7 @@ PAR_DE_TESTE = (160, 220)
 SEGUNDOS_DO_TESTE = 0.5
 
 
-def _uniq(o: dict) -> str:
+def _uniq(o: dict[str, Any]) -> str:
     """O `uniq` do controle onde ela clicou. Vazio = clique solto, e recusa.
 
     `""` NÃO vira "todos": sem alvo o `rumble.set` faz BROADCAST, e um "Testar"
@@ -188,7 +190,7 @@ def _indice(ctx: Contexto, uniq: str) -> int:
     raise ValueError(f"o controle {uniq} não está na mesa agora")
 
 
-def _resposta(r) -> tuple[bool, str | None]:
+def _resposta(r: Any) -> tuple[bool, str | None]:
     """`(ok, motivo)` seja qual for a forma que a função da ponte devolveu.
 
     O `ipc_bridge` tem DUAS formas de retorno, e esta aba usa as duas: as
@@ -205,7 +207,7 @@ def _resposta(r) -> tuple[bool, str | None]:
     return bool(r), None
 
 
-def _mirar(ctx: Contexto, o: dict, p) -> str:
+def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     """Aponta o alvo de output para a coluna clicada, e devolve o `uniq`.
 
     ISTO NÃO É ENFEITE: é a única forma de o botão da coluna falar com AQUELE
@@ -231,7 +233,7 @@ def _mirar(ctx: Contexto, o: dict, p) -> str:
 
 
 @gesto("05-vibracao.html", "forca")
-def forca(ctx: Contexto, o: dict, p) -> None:
+def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Um dos quatro degraus: quanto da vibração pedida chega ao aparelho.
 
     `rumble_policy_set_checked` é a ÚNICA porta do `rumble.policy_set` desde
@@ -269,7 +271,7 @@ def forca(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("05-vibracao.html", "testar")
-def testar(ctx: Contexto, o: dict, p) -> None:
+def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Testar": AQUELE controle treme meio segundo e a mão volta para o jogo.
 
     QUATRO CHAMADAS, e a ordem é a da janela estável mais o alvo que esta aba
@@ -315,7 +317,7 @@ def testar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("05-vibracao.html", "parar")
-def parar(ctx: Contexto, o: dict, p) -> None:
+def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Parar": corta a vibração daquele controle AGORA e devolve a mão ao jogo.
 
     SÃO DUAS COISAS, e nesta aba elas são um botão só — a dica publicada diz

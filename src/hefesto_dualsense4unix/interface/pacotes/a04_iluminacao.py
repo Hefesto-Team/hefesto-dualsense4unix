@@ -37,6 +37,8 @@ diferença, é a tela que precisa contá-la.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from . import Contexto, perfil, registrar
 
 #: Vazio, e o vazio é uma AFIRMAÇÃO: cada valor desta aba tem dono medido. A
@@ -44,7 +46,7 @@ from . import Contexto, perfil, registrar
 SEM_DONO: dict[str, str] = {}
 
 
-def _hex(rgb) -> str:
+def _hex(rgb: Any) -> str:
     """`[0, 0, 255]` → `#0000FF`, e `—` quando não há cor.
 
     O travessão NÃO é enfeite: é a mesma marca de "não há valor" que os lugares
@@ -56,7 +58,7 @@ def _hex(rgb) -> str:
 
 
 @registrar("04-iluminacao.html")
-def pacote(ctx: Contexto) -> dict:
+def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo(ctx.state.get("active_profile"))
     leds = (p.get("leds") or {}) if p else {}
     #: O BRILHO É DO PERFIL, e é um só para a mesa — como o gatilho. O
@@ -66,7 +68,7 @@ def pacote(ctx: Contexto) -> dict:
     brilho = leds.get("lightbar_brightness")
     overrides = (p.get("controllers") or {}) if p else {}
 
-    colunas: dict[str, dict] = {}
+    colunas: dict[str, dict[str, Any]] = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         rgb = c.get("lightbar_rgb") or []
@@ -124,7 +126,7 @@ def pacote(ctx: Contexto) -> dict:
 from . import gesto  # noqa: E402
 
 
-def _uniq(o: dict) -> str:
+def _uniq(o: dict[str, Any]) -> str:
     """O `uniq` do controle onde ela clicou. Vazio = clique solto, e recusa.
 
     `""` NÃO vira "todos": um "Desligar" sem dono apagaria a barra dos quatro
@@ -134,7 +136,7 @@ def _uniq(o: dict) -> str:
 
 
 @gesto("04-iluminacao.html", "cor")
-def cor(ctx: Contexto, o: dict, p) -> None:
+def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Ela clicou num tom. A cor vai AO CONTROLE NA HORA.
 
     DECISÃO DELA, 01/09/2026: *"clicar na cor já deveria aplicar a cor no
@@ -157,7 +159,7 @@ def cor(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("04-iluminacao.html", "apagar")
-def apagar(ctx: Contexto, o: dict, p) -> None:
+def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Desligar": a barra vai a preto.
 
     NÃO é `lightbar.reset` — esse devolve a cor AUTOMÁTICA, que é o outro botão.
@@ -171,7 +173,7 @@ def apagar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("04-iluminacao.html", "auto")
-def automatico(ctx: Contexto, o: dict, p) -> None:
+def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Automático": LARGAR a luz, para o jogo escolher a cor.
 
     DECISÃO DELA, 01/09/2026, e ela corrigiu a minha leitura: *"voltar ao
@@ -221,7 +223,7 @@ def automatico(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("04-iluminacao.html", "player")
-def player(ctx: Contexto, o: dict, p) -> None:
+def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Dar o Player N a este controle." `ipc_bridge.identity_number_set`.
 
     NÃO é `identity.renumber`, e a diferença está escrita no

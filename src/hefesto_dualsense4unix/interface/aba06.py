@@ -1,6 +1,6 @@
 import sys, pathlib, csv, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde
-from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, R, MESA, CONECTADOS,
+from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA, CONECTADOS,
                    cor_da_zona, player_slot_color, DS)
 
 # ---------------------------------------------------------------------------
@@ -15,7 +15,7 @@ from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, R, MESA, CONECTADOS,
 # e que o portão `scripts/check_pecas_do_dualsense.py` mede.
 # ---------------------------------------------------------------------------
 PECAS = {p["id"]: p for p in csv.DictReader(
-    [l for l in (R / "docs/data/pecas-do-dualsense.csv").read_text().splitlines()
+    [l for l in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
      if l and not l.startswith("#")])}
 
 

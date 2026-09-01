@@ -29,13 +29,14 @@ aplicar, ele não aplica e não abre o pop up"*.
 from __future__ import annotations
 
 import pathlib
+from typing import Any
 
 from . import Contexto, gesto, perfil
 
 PAGINA = "*"
 
 
-def _draft_do_ativo(nome: str, ctx: Contexto | None = None):
+def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
     """O `DraftConfig` do perfil ativo, com o que está VALENDO por cima.
 
     O DRAFT É DO PRODUTO e não se reescreve: `app/draft_config.DraftConfig` é
@@ -81,9 +82,15 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None):
         # controle tem a sua, e é assim que o perfil já guarda (o
         # `ControllerOverrides.leds` do schema existe desde antes desta aba).
         draft = draft.with_controller_leds(uniq, LedsDraft(
-            lightbar_rgb=tuple(int(x) for x in rgb[:3]),
+            # AS FORMAS SÃO FIXAS NO SCHEMA — três canais de cor e cinco
+            # lâmpadas —, e o `LedsDraft` as declara assim. Um `tuple(...)`
+            # genérico ou uma `list` perdem esse tamanho, e o produto passa a
+            # aceitar quatro cores sem ninguém ver.
+            lightbar_rgb=(int(rgb[0]), int(rgb[1]), int(rgb[2])),
             lightbar_brightness=draft.leds.lightbar_brightness,
-            player_leds=list(draft.leds.player_leds),
+            player_leds=(draft.leds.player_leds[0], draft.leds.player_leds[1],
+                         draft.leds.player_leds[2], draft.leds.player_leds[3],
+                         draft.leds.player_leds[4]),
             # SE ELA ESCOLHEU UMA COR, a automática não pode voltar por cima —
             # senão salvar a escolha dela a apagaria no próximo Aplicar.
             auto_player_colors=False,
@@ -92,7 +99,7 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None):
 
 
 @gesto("*", "aplicar")
-def aplicar(ctx: Contexto, o: dict, p) -> None:
+def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O botão verde. Manda o perfil ativo aos controles, sem gravar.
 
     `profile.apply_draft` é o método, e o payload é o `to_ipc_dict()` do draft —
@@ -112,7 +119,7 @@ def aplicar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("*", "salvar")
-def salvar(ctx: Contexto, o: dict, p) -> None:
+def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Grava o que está valendo no perfil ATIVO, no disco dela.
 
     A JANELA ESTÁVEL PERGUNTA O NOME — `on_save_profile` abre um diálogo. Aqui
@@ -139,7 +146,7 @@ def salvar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("*", "exportar")
-def exportar(ctx: Contexto, o: dict, p) -> None:
+def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Escreve o perfil ativo num `.json` na pasta pessoal dela.
 
     FEATURE NOVA, e a nota importa: o produto estável NÃO tem exportação — não
@@ -162,7 +169,7 @@ def exportar(ctx: Contexto, o: dict, p) -> None:
     origem = pasta / f"{nome}.json"
     if not origem.exists():
         perfil._com_o_src()
-        from hefesto_dualsense4unix.profiles.loader import slugify
+        from hefesto_dualsense4unix.profiles.slug import slugify
 
         origem = pasta / f"{slugify(nome)}.json"
     if not origem.exists():
@@ -177,7 +184,7 @@ def exportar(ctx: Contexto, o: dict, p) -> None:
 
 
 @gesto("*", "importar")
-def importar(ctx: Contexto, o: dict, p) -> None:
+def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Carrega um perfil de um `.json` que ela escolhe.
 
     O SELETOR É DO SISTEMA, e por isso vem INJETADO: o WebView não abre
@@ -214,7 +221,7 @@ def importar(ctx: Contexto, o: dict, p) -> None:
         raise RuntimeError("importar: não achei a pasta de perfis.")
     pasta.mkdir(parents=True, exist_ok=True)
 
-    from hefesto_dualsense4unix.profiles.loader import slugify
+    from hefesto_dualsense4unix.profiles.slug import slugify
 
     base = slugify(novo.name)
     destino, n = pasta / f"{base}.json", 1
@@ -227,7 +234,7 @@ def importar(ctx: Contexto, o: dict, p) -> None:
 
 
 PISO_DA_ABA = 4
-PROVAS = [
+PROVAS: list[dict[str, Any]] = [
     # O "aplicar" e o "salvar" dependem do perfil ATIVO, e a régua roda sem
     # daemon: eles são provados pelo teste de recusa, abaixo, e no aparelho.
 ]

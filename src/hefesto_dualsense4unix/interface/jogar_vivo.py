@@ -169,7 +169,7 @@ aba01.monta.cor_da_zona = _cor_da_zona_tolerante
 # ---------------------------------------------------------------------------
 # O gerador do mockup, usado como biblioteca
 # ---------------------------------------------------------------------------
-def html_dos_cartoes(mesa: list[dict], baterias: dict[str, Any]) -> str:
+def html_dos_cartoes(mesa: list[dict[str, Any]], baterias: dict[str, Any]) -> str:
     """Um cartão por controle PRESENTE, pelo gerador — nunca por HTML meu.
 
     Zero, um, dois ou N: o desenho tem quatro porque a cena tem quatro, e o
@@ -179,7 +179,7 @@ def html_dos_cartoes(mesa: list[dict], baterias: dict[str, Any]) -> str:
     return "\n".join(aba01.cartao(c, bateria=baterias.get(c["uniq"])) for c in mesa)
 
 
-def html_da_fita(mesa: list[dict], alvo: str | None) -> str:
+def html_da_fita(mesa: list[dict[str, Any]], alvo: str | None) -> str:
     """A fita de chips, também pelo gerador, com a mesa VIVA."""
     antes = monta.MESA
     monta.MESA = mesa
@@ -540,7 +540,7 @@ class Janela:
         self.voltas = 0
         self.rss: list[int] = []
         self.remontagens = 0
-        self.gestos: list[dict] = []
+        self.gestos: list[dict[str, Any]] = []
         self.valores: list[int] = []
         #: Os lados que a TELA mostrou, na ordem, lidos do DOM. É a régua da
         #: cura de 31/08: com o `hefesto_ligado` arrancado esta lista trava num
@@ -560,7 +560,7 @@ class Janela:
             ligado=not args.sem_cor, leitor=_leitor_duble(args.cor_duble)
         )
         self.perguntando: set[str] = set()
-        self._roteiro: list[dict] | None = None
+        self._roteiro: list[dict[str, Any]] | None = None
         self._t0 = 0.0
 
         self.tela = JanelaDaAba(
@@ -780,7 +780,7 @@ class Janela:
                 pass
         return True
 
-    def _baterias(self, conectados: list[dict]) -> dict[str, Any]:
+    def _baterias(self, conectados: list[dict[str, Any]]) -> dict[str, Any]:
         """`{uniq: carga}` — e a carga que o daemon não deu vira `"— "`.
 
         No mockup a bateria é o ÚNICO dado inventado (a legenda o declara). Aqui
@@ -795,7 +795,7 @@ class Janela:
             fora[uniq] = bat if isinstance(bat, int) and not isinstance(bat, bool) else "— "
         return fora
 
-    def _remontar(self, mesa: list[dict], avisos: list[dict], conectados: list[dict]) -> None:
+    def _remontar(self, mesa: list[dict[str, Any]], avisos: list[dict[str, Any]], conectados: list[dict[str, Any]]) -> None:
         self.remontagens += 1
         self.ponte.dizer(
             "HEF.remonta",
@@ -819,7 +819,7 @@ class Janela:
         self.ponte.dizer("HEF.pinta", self._pacote(None, [], []))
 
     def _pacote(
-        self, state: dict | None, mesa: list[dict], conectados: list[dict]
+        self, state: dict | None, mesa: list[dict[str, Any]], conectados: list[dict[str, Any]]
     ) -> dict[str, Any]:
         """O que a página recebe numa pintura. UMA chamada, sempre."""
         conta, conta_b = mesa_viva.texto_da_contagem(mesa)
@@ -877,7 +877,7 @@ class Janela:
         }
 
     def _pintar(
-        self, state: dict, mesa: list[dict], conectados: list[dict], avisos: list[dict]
+        self, state: dict, mesa: list[dict[str, Any]], conectados: list[dict[str, Any]], avisos: list[dict[str, Any]]
     ) -> None:
         self.ponte.dizer("HEF.pinta", self._pacote(state, mesa, conectados))
 

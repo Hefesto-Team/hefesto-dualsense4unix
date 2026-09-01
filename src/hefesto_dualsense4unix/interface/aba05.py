@@ -23,11 +23,11 @@ import sys
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
 import onde  # noqa: E402
 import monta as monta_  # noqa: E402
-from monta import CONECTADOS  # noqa: E402
+from monta import CONECTADOS, DADOS_DO_REPO  # noqa: E402
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from monta import (  # noqa: E402
-    MESA, R, cor_da_zona, glifo, monta, svg,
+    MESA, cor_da_zona, glifo, monta, svg,
 )
 
 # O DONO ÚNICO DO DEGRAU DE FORÇA. O `monta` já põe `src/` no `sys.path` para
@@ -45,7 +45,7 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
 # ---------------------------------------------------------------------------
 _LINHAS = [
     l for l in csv.DictReader(
-        x for x in (R / "docs/data/pecas-do-dualsense.csv").read_text().splitlines()
+        x for x in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
          if not x.startswith("#"))
     if l["regiao"] == "vibracao"
 ]

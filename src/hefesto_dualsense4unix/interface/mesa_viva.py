@@ -134,7 +134,8 @@ def estado_do_daemon(*, timeout: float = 2.0) -> dict[str, Any]:
         raise DaemonMudo(f"resposta ilegível: {erro}") from erro
     if "result" not in resposta:
         raise DaemonMudo(str(resposta.get("error")))
-    return resposta["result"]
+    resultado: dict[str, Any] = resposta["result"]
+    return resultado
 
 
 # ---------------------------------------------------------------------------
