@@ -553,7 +553,18 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    --alt-janela:757px; /* a MESMA altura nas dez abas — veja `.janela` */
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido dela: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
+       Ela estava certa, e o número diz por quê: o card aberto da Controles
+       ESTICA para preencher o corpo, então a folga de verdade é
+       `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
+       conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
+       é folga: é sorte, e ela já tinha visto a barra aparecer na tela dela.
+       Com 777 a folga passa a 21px.
+       O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
+       vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
+       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar. */
+    --alt-janela:777px; /* a MESMA altura nas dez abas — veja `.janela` */
   }
   .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
     height:var(--h-escolha);padding-top:0;padding-bottom:0;
@@ -695,6 +706,57 @@
      é o mesmo `rgba(255,255,255,.03)` do hover da fila de abas (`topo.html`).
      Uma segunda gramática de "clicável" na mesma janela é uma a mais. */
   .ctl:hover{background:rgba(255,255,255,.03)}
+
+  /* ---------- O LUGAR VAZIO ----------
+     Decisão dela, 31/08/2026: *"Deixa os outros espaços dos 4 controles a mostra
+     ainda mas cinza igual vc fez na aba jogar."* — e, no mesmo turno,
+     *"tiramos o modo p3. p4 (seções expandidas não aparecem)"*.
+
+     A GRAMÁTICA É A MESMA DA JOGAR, de propósito: cor explícita e nada de
+     `opacity` (a lição medida da `.fita.inerte`), borda `--border-sutil` no
+     lugar do plástico, e o texto em `--linha`. Duas gramáticas de "vazio" na
+     mesma janela seria uma a mais — a mesma razão que o `.ctl:hover` acima dá.
+
+     A ALTURA É 24, E ELA É O QUE PAGA OS BOTÕES NOVOS. Um lugar vazio não tem
+     giroscópio para ligar nem bateria para medir, então não precisa dos 34 de
+     `--h-acao`. Medido: com os dois lugares em 34 o `.quadro-corpo` pedia 509
+     e recebia 478 — o quadro rolava e os dois botões saíam da tela pela metade.
+     Não se clica: sem `<input>` no HTML, não há o que expandir. */
+  /* A BORDA SE DECLARA INTEIRA AQUI, e não só a cor — e isto é uma armadilha de
+     CSS que custou duas voltas. `.ctl` diz `border:2px solid var(--plastico)`, e
+     o lugar vazio NÃO tem `--plastico` (não há controle, não há cor de
+     plástico). Uma `var()` sem valor **invalida a declaração inteira**, em
+     silêncio: a borda não fica cinza — ela deixa de existir. Medido no DOM,
+     depois de a foto mostrar dois lugares soltos, sem caixa nenhuma:
+     `border-width: 0px, border-style: none`, com o `border-color` que eu tinha
+     escrito ali, intacto e inútil.
+     Trocar só a COR de uma regra que usa `var()` indefinido não conserta nada.
+
+     E A COR NÃO É A `--border-sutil` DA JOGAR: lá o cartão vazio fica sobre
+     `--app-bg` (#21222c) e aquele #343746 aparece; aqui ele fica sobre `--panel`
+     (#282a36) e sumiria de novo. Copiar a gramática é copiar o CONTRASTE, não o
+     token. */
+  .ctl.off{height:24px;border:1px solid var(--border-forte);background:transparent}
+  .ctl.off > .faixa{cursor:default;color:var(--linha)}
+  .ctl.off:hover{background:transparent}
+  .ctl.off .card-nome,
+  .ctl.off .div,
+  .ctl.off .leia,
+  .ctl.off .bat{color:var(--linha)}
+
+  /* ---------- OS DOIS BOTÕES DO FIM ----------
+     Ela, 31/08: *"Temos que ter dois botões no final."* Eles são `<a>`, e não
+     `<button>`, porque abrem PÁGINA — o `.btn` desta casa já é usado nas duas
+     formas, e um link que se veste de botão continua sendo um link para quem
+     usa teclado e leitor de tela. */
+  /* OS DOIS BOTÕES DO CANTO SUPERIOR DIREITO. Eles são `<a>` e não `<button>`
+     porque abrem PÁGINA — um link que se veste de botão continua sendo link
+     para quem usa teclado e leitor de tela. A `.sensores` (logo abaixo) é quem
+     os empurra para a direita; aqui só a altura, que é a do `.btn` da casa.
+     ELES JÁ ESTIVERAM NO FIM DO QUADRO, entre 31/08 e o turno seguinte, e ela
+     mandou voltarem: *"A posição deles volta pro canto superior direito."* */
+  .sensores .btn{display:inline-flex;align-items:center;text-decoration:none;
+                 height:var(--h-acao);padding:0 13px;font-size:12.5px}
   .corpo-cx{flex:0 0 0;height:0;overflow:hidden;visibility:hidden}
   /* "TODOS" É O ÚNICO ESTADO QUE ROLA, E A BARRA TEM DE APARECER — senão ele
      é o defeito de 27/08 de volta com outra roupa. Medido agora, sem esta
@@ -1052,14 +1114,25 @@
      164px e a linha do rótulo pedia 292 numa moldura de 242: os 50px de
      diferença eram o "Nativo" e metade do "Desativado" pintados fora da caixa,
      por cima do bloco dos sensores. Aqui a fileira mede 150 e cabe com folga. */
-  .mic-modo{display:inline-flex;gap:2px;margin-left:auto}
-  .mic-modo button{height:17px;padding:0 5px;border-radius:4px;font-size:9.5px;
-    font-family:inherit;cursor:pointer;white-space:nowrap;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
-  .mic-modo button.on{border-color:var(--purple);background:var(--sel-bg);
-    color:var(--fg);font-weight:600}
-  .rota{display:flex;gap:5px;margin-top:6px}
-  .rota button{flex:1;height:var(--h-escolha);border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
+  /* O `.mic-modo` HERDA A `.rota` INTEIRA e não acrescenta nada — 31/08/2026,
+     quando ela mandou os dois descerem *"igual o Sons do Jogo e Todo o som do
+     PC"*. O seletor fica no HTML (`class="rota mic-modo"`) porque a ponte viva
+     endereça por ele (`data-campo="mic-modo"`), mas de estilo ele não tem UMA
+     linha própria: dois blocos que fazem o mesmo gesto na mesma coluna têm de
+     ser o mesmo botão, e uma regra a mais aqui é como as duas alturas voltam.
+     As 5 linhas de pastilha de 17px que moravam aqui saíram junto. */
+  /* 30px, E NÃO OS 36 DE `--h-escolha` — 31/08/2026, e o número é o preço do
+     pedido dela. Até hoje a coluna do som tinha UMA fileira de escolha (a rota
+     do alto-falante); com os modos do microfone descendo *"igual o Sons do Jogo"*
+     ela passou a ter DUAS, e a coluna foi de 236 para 269px. O card foi junto,
+     de 308 para 341, contra os 328 que a caixa reserva: 13px a mais, e o P4
+     saindo da tela.
+     Medido: 6px por fileira em duas fileiras, mais 1px de margem em cada, dão
+     os 14 que faltavam. Não é altura inventada — é a mesma faixa do chip da
+     fita (28 a 30px) que esta aba já usa no `.mascara .chip`, e as duas
+     fileiras continuam IGUAIS entre si, que é o que ela pediu. */
+  .rota{display:flex;gap:5px;margin-top:5px}
+  .rota button{flex:1;height:30px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   /* os 16 glifos: grandes, SOLTOS (sem caixa) e coloridos por identidade.
@@ -1263,7 +1336,7 @@
       <h1><span class="p">Hefesto</span> <span class="t">—</span> <span class="b">DualSense</span><span class="n">4</span><span class="b">Unix</span></h1>
       <div class="sub">Gerenciador DualSense para Linux</div>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> 4 controles: <b>2 USB · 2 BT</b></div>
+    <div class="conectado"><span class="bolinha">●</span> 2 controles: <b>1 USB · 1 BT</b></div>
   </div>
 
   <!-- A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
@@ -1275,8 +1348,6 @@
       <label for="c-todos" class="chip" title="Abre os 4 cards de uma vez — e aí a caixa rola.">Todos</label>
       <label for="c-p1" class="chip plastico" style="--plastico:#ae335a" title="Clique para abrir o card dele. Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</label>
       <label for="c-p2" class="chip plastico" style="--plastico:#7eb8d4" title="Clique para abrir o card dele. Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</label>
-      <label for="c-p3" class="chip plastico" style="--plastico:#74588e" title="Clique para abrir o card dele. Galactic Purple — a borda é a cor do plástico">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> BT</label>
-      <label for="c-p4" class="chip plastico" style="--plastico:#e4e0d8" title="Clique para abrir o card dele. White — a borda é a cor do plástico">P4 <span class="pt">•</span> White <span class="pt">•</span> USB</label>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1309,7 +1380,7 @@
 
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Conectados</span>
+        <span class="quadro-titulo">Dispositivos Conectados</span>
         <span class="ajuda">?<span class="dica">
           Os <b>4 controles conectados agora</b>. O escolhido abre com a
           leitura viva do aparelho; os outros ficam numa <b>linha</b>, com quem eles são, o
@@ -1324,8 +1395,18 @@
           interruptor de cada um está na <b>linha dele</b>. O botão acima é o único que vale
           para a <b>mesa toda</b>: ele calibra os 4 de uma vez.
         </span></span>
+        <!-- OS DOIS BOTÕES VOLTARAM AO CANTO SUPERIOR DIREITO — decisão dela,
+             31/08/2026: *"A posição deles volta pro canto superior direito."*
+             É onde o Calibrar morava antes desta leva, e a classe `.sensores`
+             que os alinha à direita nunca deixou de existir.
+             DE QUEBRA, ELES DEIXAM DE DISPUTAR ALTURA com a lista de controles:
+             no fim do quadro custavam 46px do corpo, e foi por isso que o card
+             precisou dos 24px dos lugares vazios para caber. -->
         <span class="sensores">
-          <button class="btn" title="Calibra os 4 controles da mesa numa passada só: deixa o giroscópio e o acelerômetro de cada um no zero, com todos parados numa mesa plana.">Calibrar sensores da mesa</button>
+          <a class="btn" href="calibrar-sensores.html"
+             title="Calibra o giroscópio e o acelerômetro dos 2 controles conectados numa passada só, com todos parados numa mesa plana.">Calibrar Sensores de Movimento</a>
+          <a class="btn" href="mapa-do-controle.html"
+             title="Abre o mapa do controle: cada peça do DualSense com o nome, o glifo e o que o Hefesto lê dela.">Mapa do Controle</a>
         </span>
       </div>
       <div class="quadro-corpo">
@@ -1335,7 +1416,22 @@
       <label class="faixa" for="c-p1" title="Clique para abrir o card deste controle — os outros fecham. É o mesmo gesto de escolhê-lo na fita lá em cima.">
           <span class="card-nome"><span class="so-fechado">P1 <span class="pt">•</span> </span>Cosmic Red <span class="pt">•</span> USB</span>
           <span class="div">·</span>
-          <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura.">vê como <b data-campo="mascara">DualSense</b></span><span class="div so-fechado">·</span>
+          <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão dela,
+               31/08/2026, em duas frases: *"remover o vê como de todos os
+               controles"* e, na correção logo em seguida, *"era o texto Vê como
+               mas o nome da máscara fica"*.
+
+               A PRIMEIRA VOLTA TIROU O SPAN INTEIRO e levou a máscara junto —
+               era ler o pedido pela metade. O que sobra aqui é o dado: o nome
+               que o jogo vê, com o `data-campo="mascara"` intacto, que é o
+               endereço por onde a ponte viva o pinta. Tirar o endereço junto
+               teria quebrado a pintura sem uma linha de aviso.
+
+               O `title` FICA no lugar do texto: quem quiser saber de onde vem a
+               máscara passa o mouse. É a mesma economia que ela mandou fazer nos
+               tooltips do resto da janela — o rótulo sai, a explicação continua
+               alcançável. -->
+          <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura."><b data-campo="mascara">DualSense</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo" data-campo="mic-selo">ATIVO</span></span>
           <span class="sensores-peca">
             <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No cabo são 250,0 Hz exatos, e três fontes independentes concordam: o relógio do host, o relógio do controle e o descritor USB (bInterval = 6)."><span class="p"></span>Giroscópio</button>
@@ -1519,14 +1615,6 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
-              <span class="mic-modo" data-campo="mic-modo">
-                <button class="on" data-mic-modo="virtual"
-                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="" data-mic-modo="desativado"
-                  title="O microfone do controle não chega ao PC. O botão do aparelho continua acendendo e apagando a luz vermelha do plástico.">Desativado</button>
-                <button class="" data-mic-modo="nativo"
-                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
-              </span>
             </div>
             <span class="onda"><i style="height:22%"></i><i style="height:48%"></i><i style="height:72%"></i><i style="height:95%"></i><i style="height:64%"></i><i style="height:38%"></i><i style="height:52%"></i><i style="height:80%"></i><i style="height:44%"></i><i style="height:26%"></i><i style="height:58%"></i><i style="height:88%"></i><i style="height:40%"></i><i style="height:20%"></i></span>
             <div class="vol">
@@ -1534,10 +1622,27 @@
               <span class="n">80</span>
               <button class="mudo-i" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
             </div>
+            <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
+                 *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
+                 igual o Sons do Jogo e Todo o som do PC."*
+
+                 ELES MORAVAM NA LINHA DO RÓTULO, e ali o custo de altura era
+                 ZERO — foi o argumento que os pôs lá em 30/08, quando eram TRÊS
+                 e não cabiam embaixo. Com o "Desativado" fora (ordem dela do
+                 mesmo dia) sobraram dois, e dois cabem na mesma fileira que o
+                 alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
+                 Duas gramáticas para "escolher a rota do som" na mesma coluna
+                 era uma a mais. -->
+              <span class="rota mic-modo" data-campo="mic-modo">
+                <button class="on" data-mic-modo="virtual"
+                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
+                <button class="" data-mic-modo="nativo"
+                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
+              </span>
 
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
-            <div class="rot">Alto-falante <span class="mudo" data-campo="alto-estado">· 100 % · Acordado</span>
+            <div class="rot">Alto-falante<span class="mudo" data-campo="alto-estado" hidden></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.
@@ -1574,8 +1679,8 @@
 
                Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
                {'x': 0.105, 'y': 0.976, 'z': 0.170} — |v| = 0,996 g, a gravidade. -->
-          <div class="moldura leituras">
-            <div class="rot">Sensores
+          <div class="moldura leituras" data-bloco="giroscopio">
+            <div class="rot">Giroscópio
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
                 Leitura viva do aparelho, dez vezes por segundo. Nada aqui se clica.<br><br>
                 O <b>giroscópio</b> mede o quanto o controle gira, em graus por segundo.
@@ -1585,14 +1690,15 @@
                 Um traço no lugar do número quer dizer que a leitura ainda não chegou.
               </span></span>
             </div>
-            <div class="sub-sensor">Giroscópio <span class="mudo">°/s</span></div>
             <div class="eixo" data-eixo="giro-x"><span>X</span><span>+143.2</span>
               <span class="g"><span class="v" style="left:50%;width:22%;background:var(--red)"></span></span></div>
             <div class="eixo" data-eixo="giro-y"><span>Y</span><span>−412.0</span>
               <span class="g"><span class="v" style="left:12%;width:38%;background:var(--green)"></span></span></div>
             <div class="eixo" data-eixo="giro-z"><span>Z</span><span> +22.8</span>
               <span class="g"><span class="v" style="left:50%;width:4%;background:var(--cyan)"></span></span></div>
-            <div class="sub-sensor">Acelerômetro <span class="mudo">g</span></div>
+          </div>
+          <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
+            <div class="rot">Acelerômetro</div>
             <div class="eixo" data-eixo="accel-x"><span>X</span><span> +0.105</span>
               <span class="g"><span class="v" style="left:50%;width:3%;background:var(--cyan)"></span></span></div>
             <div class="eixo" data-eixo="accel-y"><span>Y</span><span> +0.976</span>
@@ -1621,7 +1727,22 @@
       <label class="faixa" for="c-p2" title="Clique para abrir o card deste controle — os outros fecham. É o mesmo gesto de escolhê-lo na fita lá em cima.">
           <span class="card-nome"><span class="so-fechado">P2 <span class="pt">•</span> </span>Starlight Blue <span class="pt">•</span> BT</span>
           <span class="div">·</span>
-          <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura.">vê como <b data-campo="mascara">Xbox 360</b></span><span class="div so-fechado">·</span>
+          <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão dela,
+               31/08/2026, em duas frases: *"remover o vê como de todos os
+               controles"* e, na correção logo em seguida, *"era o texto Vê como
+               mas o nome da máscara fica"*.
+
+               A PRIMEIRA VOLTA TIROU O SPAN INTEIRO e levou a máscara junto —
+               era ler o pedido pela metade. O que sobra aqui é o dado: o nome
+               que o jogo vê, com o `data-campo="mascara"` intacto, que é o
+               endereço por onde a ponte viva o pinta. Tirar o endereço junto
+               teria quebrado a pintura sem uma linha de aviso.
+
+               O `title` FICA no lugar do texto: quem quiser saber de onde vem a
+               máscara passa o mouse. É a mesma economia que ela mandou fazer nos
+               tooltips do resto da janela — o rótulo sai, a explicação continua
+               alcançável. -->
+          <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura."><b data-campo="mascara">Xbox 360</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Calado no firmware do controle — a luz vermelha do plástico está apagada.">Microfone <span class="selo-ativo off" data-campo="mic-selo">MUDO</span></span>
           <span class="sensores-peca">
             <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no mesmo controle: a média foi de 38 a 392 Hz entre janelas consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara para Bluetooth não aparecem em janela nenhuma."><span class="p"></span>Giroscópio</button>
@@ -1805,14 +1926,6 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
-              <span class="mic-modo" data-campo="mic-modo">
-                <button class="" data-mic-modo="virtual"
-                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="on" data-mic-modo="desativado"
-                  title="O microfone do controle não chega ao PC. O botão do aparelho continua acendendo e apagando a luz vermelha do plástico.">Desativado</button>
-                <button class="" data-mic-modo="nativo"
-                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
-              </span>
             </div>
             <span class="onda mudo"><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i></span>
             <div class="vol">
@@ -1820,10 +1933,27 @@
               <span class="n">0</span>
               <button class="mudo-i on" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
             </div>
+            <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
+                 *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
+                 igual o Sons do Jogo e Todo o som do PC."*
+
+                 ELES MORAVAM NA LINHA DO RÓTULO, e ali o custo de altura era
+                 ZERO — foi o argumento que os pôs lá em 30/08, quando eram TRÊS
+                 e não cabiam embaixo. Com o "Desativado" fora (ordem dela do
+                 mesmo dia) sobraram dois, e dois cabem na mesma fileira que o
+                 alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
+                 Duas gramáticas para "escolher a rota do som" na mesma coluna
+                 era uma a mais. -->
+              <span class="rota mic-modo" data-campo="mic-modo">
+                <button class="" data-mic-modo="virtual"
+                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
+                <button class="" data-mic-modo="nativo"
+                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
+              </span>
 
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
-            <div class="rot">Alto-falante <span class="mudo" data-campo="alto-estado">· 70 % · Acordado</span>
+            <div class="rot">Alto-falante<span class="mudo" data-campo="alto-estado" hidden></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.
@@ -1860,8 +1990,8 @@
 
                Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
                {'x': 0.105, 'y': 0.976, 'z': 0.170} — |v| = 0,996 g, a gravidade. -->
-          <div class="moldura leituras">
-            <div class="rot">Sensores
+          <div class="moldura leituras" data-bloco="giroscopio">
+            <div class="rot">Giroscópio
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
                 Leitura viva do aparelho, dez vezes por segundo. Nada aqui se clica.<br><br>
                 O <b>giroscópio</b> mede o quanto o controle gira, em graus por segundo.
@@ -1871,14 +2001,15 @@
                 Um traço no lugar do número quer dizer que a leitura ainda não chegou.
               </span></span>
             </div>
-            <div class="sub-sensor">Giroscópio <span class="mudo">°/s</span></div>
             <div class="eixo" data-eixo="giro-x"><span>X</span><span>  +0.0</span>
               <span class="g"><span class="v" style="left:50%;width:1%;background:var(--border-forte)"></span></span></div>
             <div class="eixo" data-eixo="giro-y"><span>Y</span><span>  +0.0</span>
               <span class="g"><span class="v" style="left:50%;width:1%;background:var(--border-forte)"></span></span></div>
             <div class="eixo" data-eixo="giro-z"><span>Z</span><span>  +0.0</span>
               <span class="g"><span class="v" style="left:50%;width:1%;background:var(--border-forte)"></span></span></div>
-            <div class="sub-sensor">Acelerômetro <span class="mudo">g</span></div>
+          </div>
+          <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
+            <div class="rot">Acelerômetro</div>
             <div class="eixo" data-eixo="accel-x"><span>X</span><span> −0.032</span>
               <span class="g"><span class="v" style="left:49%;width:1%;background:var(--cyan)"></span></span></div>
             <div class="eixo" data-eixo="accel-y"><span>Y</span><span> +0.998</span>
@@ -1902,576 +2033,22 @@
       </div>
       </div>
     </div>
-    <div class="ctl card" style="--plastico:#74588e" data-controle="p3">
-      <input class="radio-mesa" type="radio" name="mesa" id="c-p3">
-      <label class="faixa" for="c-p3" title="Clique para abrir o card deste controle — os outros fecham. É o mesmo gesto de escolhê-lo na fita lá em cima.">
-          <span class="card-nome"><span class="so-fechado">P3 <span class="pt">•</span> </span>Galactic Purple <span class="pt">•</span> BT</span>
-          <span class="div">·</span>
-          <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura.">vê como <b data-campo="mascara">DualSense</b></span><span class="div so-fechado">·</span>
-          <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo" data-campo="mic-selo">ATIVO</span></span>
-          <span class="sensores-peca">
-            <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no mesmo controle: a média foi de 38 a 392 Hz entre janelas consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara para Bluetooth não aparecem em janela nenhuma."><span class="p"></span>Giroscópio</button>
-            <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-          </span>
-          <span class="bat">Bateria
-            <span class="trilho"><span class="cheio" style="width:31%"></span></span>
-            <span class="n">31%</span></span>
-      </label>
-      <div class="corpo-cx">
-      <div class="card-corpo">
-
-        <div>
-          <div class="moldura touchp">
-            <div class="rot rot-linha">Touchpad
-              <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense só publica posição enquanto alguém encosta na superfície.">Tocando</span></div>
-            <div class="touch">
-              <span class="ponto" style="left:38%;top:71%"></span></div>
-          </div>
-          <div class="moldura luz" style="margin-top:9px">
-            <div class="rot rot-linha">Barra de luz
-              <span class="de-quem" data-campo="luz-hex" title="Este é o código da cor do JOGADOR, não a do plástico — quem escolhe é o produto, pela mesma tabela que acende as cinco lâmpadas (core/led_control.py::player_slot_color). Ele não é digitado aqui: sai da tabela, e muda no dia em que ela mudar.">#50FA7B</span></div>
-            <div class="barra-luz" style="background:#50FA7B"></div>
-          </div>
-          <div class="moldura led" style="margin-top:9px" title="As cinco lâmpadas do controle, no padrão do jogador (1 no meio para o P1, as das pontas para o P2, e assim por diante). É DERIVADO do número do jogador, não lido do aparelho — o daemon publica o número, não o que está aceso.">
-            <div class="rot rot-linha">LED do jogador</div>
-            <div class="lampadas"><span class="luzinhas"><i class="on"></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i class="on"></i></span></div>
-          </div>
-        </div>
-
-        <div>
-          <div class="moldura">
-            <div class="sticks">
-              <div>
-                <div class="stick-rot">Analógico<br>esquerdo</div>
-                <div class="stick" data-stick="l">
-                  <span class="rotl" data-campo="l3">L3</span>
-                  <span class="p" style="left:50.2%;top:50.2%"></span></div>
-                <div class="xy" data-xy="l">X: 128<br>Y: 128</div>
-              </div>
-              <div>
-                <div class="stick-rot">Analógico<br>direito</div>
-                <div class="stick" data-stick="r">
-                  <span class="rotl" data-campo="r3">R3</span>
-                  <span class="p" style="left:55.3%;top:47.8%"></span></div>
-                <div class="xy" data-xy="r">X: 141<br>Y: 122</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="moldura">
-            <div class="glifos">
-            <span class="gb plast" data-glifo="cross"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
-
-  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb on" data-glifo="circle"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
-
-  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span>
-            <span class="gb" data-glifo="square"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
-
-  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></span>
-            <span class="gb" data-glifo="triangle"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
-
-  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></span>
-            <span class="gb" data-glifo="dpad_up"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
-
-  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
-</svg></span>
-            <span class="gb" data-glifo="dpad_down"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
-
-  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
-</svg></span>
-            <span class="gb" data-glifo="dpad_left"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Esquerda</title>
-
-  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
-</svg></span>
-            <span class="gb" data-glifo="dpad_right"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Direita</title>
-
-  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
-</svg></span>
-            <span class="gb" data-glifo="l1"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
-
-  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
-</svg></span>
-            <span class="gb" data-glifo="r1"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
-
-  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
-</svg></span>
-            <span class="gb plast" data-glifo="l2"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
-
-  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
-  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb plast" data-glifo="r2"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
-
-  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
-  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb" data-glifo="share"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
-
-  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb" data-glifo="options"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
-
-  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb" data-glifo="ps"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-
-  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
-    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
-  </g>
-</svg></span>
-            <span class="gb" data-glifo="touchpad"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-
-  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
-  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
-  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
-  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg></span>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="moldura" data-bloco="microfone">
-            <!-- O "LIBERAR" SAIU — 30/08/2026, e o argumento é dela, não meu:
-                 *"o botão do Controle sempre controla a interface, por isso não faz
-                 sentido o liberar ali"*.
-
-                 EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
-                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:4779`) e devolve a
-                 posse ao `hid-playstation` — a minha objeção era que o botão tinha
-                 dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
-                 nunca deixa de comandar a interface, não há posse a devolver, e um
-                 botão que desfaz algo que não acontece é um botão que ensina errado.
-                 O método continua no daemon, para quem precisar dele. -->
-            <div class="rot rot-linha">Microfone
-              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo">ATIVO</span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala no
-                <b>firmware</b> e apaga a luz vermelha do plástico.<br><br>
-                O <b>modo</b>, à direita, diz por onde o som do microfone chega ao PC.
-              </span></span>
-              <!-- O MODO DO MICROFONE — pedido dela, 30/08: *"tá faltando o Modo do
-                   Mic: Virtual, Desativado e Nativo"*.
-
-                   ELE MORA NA LINHA DO RÓTULO, e isso é orçamento, não estética.
-                   Como fileira própria embaixo ele custava 42px (36 da altura de
-                   escolha + 6 de margem), e o card ia de 304 para 350 — contra os
-                   308 que `PARA_O_CARD` reserva. O quadro passava a rolar por
-                   dentro e o P4 saía da tela; medido antes de escolher este lugar.
-                   Aqui ele ocupa o vão que o "Liberar" deixou: custo ZERO de
-                   altura, e ainda fica ao lado do selo que diz se o mic está
-                   ATIVO — que é a informação com que ele conversa. -->
-              <!-- AS CHAVES SÃO SIMPLES, E A DUPLA ERA UM BOTÃO MORTO.
-                   Este bloco é `return f` com aspas triplas (linha 834), e chave
-                   dupla ESCAPA para chave simples literal: a expressão nunca era
-                   avaliada e os 12 botões (4 controles x 3 modos) nasciam todos com
-                   a mesma classe crua, nenhum aceso. Medido pelo cético:
-                   classList.contains("on") falso nos doze.
-                   É o defeito que o CLAUDE.md nomeia — *"uma validação de interface
-                   que não cobre o botão novo é uma validação que mente"*: eu conferi
-                   que os três botões EXISTEM e não que um deles ACENDE.
-                   E o comentário que eu escrevi para explicar isto quebrou o gerador,
-                   porque trazia chaves dentro da própria f-string. Por isso ele não
-                   as tem. -->
-              <span class="mic-modo" data-campo="mic-modo">
-                <button class="" data-mic-modo="virtual"
-                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="" data-mic-modo="desativado"
-                  title="O microfone do controle não chega ao PC. O botão do aparelho continua acendendo e apagando a luz vermelha do plástico.">Desativado</button>
-                <button class="on" data-mic-modo="nativo"
-                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
-              </span>
-            </div>
-            <span class="onda"><i style="height:18%"></i><i style="height:30%"></i><i style="height:22%"></i><i style="height:41%"></i><i style="height:28%"></i><i style="height:19%"></i><i style="height:35%"></i><i style="height:24%"></i><i style="height:30%"></i><i style="height:20%"></i><i style="height:38%"></i><i style="height:26%"></i><i style="height:22%"></i><i style="height:31%"></i></span>
-            <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:60%"></span></span>
-              <span class="n">60</span>
-              <button class="mudo-i" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
-            </div>
-
-          </div>
-          <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
-            <div class="rot">Alto-falante <span class="mudo" data-campo="alto-estado">· 55 % · Acordado</span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação.
-              </span></span>
-            </div>
-            <span class="onda"><i style="height:55%"></i><i style="height:40%"></i><i style="height:62%"></i><i style="height:48%"></i><i style="height:58%"></i><i style="height:36%"></i><i style="height:50%"></i><i style="height:44%"></i><i style="height:60%"></i><i style="height:38%"></i><i style="height:52%"></i><i style="height:46%"></i><i style="height:42%"></i><i style="height:56%"></i></span>
-            <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:55%"></span></span>
-              <span class="n">55</span>
-              <button class="mudo-i" data-mudo="alto-falante" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
-            </div>
-            <div class="rota">
-              <button class="on" data-rota="jogo">Sons do jogo</button>
-              <button class="" data-rota="pc">Todo o som do PC</button>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <!-- UM BLOCO, DOIS SENSORES — 30/08/2026.
-
-               O acelerômetro entrou por decisão dela (*"não era pra ele sair, era
-               pra ele FUNCIONAR"*), e como MOLDURA PRÓPRIA ele não cabia: medido,
-               a coluna dos sensores passava de 190 para 278px de conteúdo natural,
-               contra os **232** que as cinco colunas compartilham (a conta está no
-               `ALTURA_DO_CARD`, e o card tem 4px de folga). O quadro rolava por
-               dentro e o P4 saía da tela.
-
-               Dois sensores numa moldura só custam UM rótulo e UMA borda em vez de
-               dois — e é honesto: eles são o MESMO nó evdev (`Motion Sensors`),
-               separados só pelo código do eixo. ABS_RX/RY/RZ é o giro, ABS_X/Y/Z é
-               o acelerômetro; as escalas é que são independentes (1024 contra
-               8192), e por isso cada grupo diz a sua unidade.
-
-               Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
-               {'x': 0.105, 'y': 0.976, 'z': 0.170} — |v| = 0,996 g, a gravidade. -->
-          <div class="moldura leituras">
-            <div class="rot">Sensores
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
-                Leitura viva do aparelho, dez vezes por segundo. Nada aqui se clica.<br><br>
-                O <b>giroscópio</b> mede o quanto o controle gira, em graus por segundo.
-                O <b>acelerômetro</b> mede a inclinação e o chacoalhar, em g — parado
-                numa mesa plana a soma dos três eixos dá <b>1 g</b>, que é a gravidade,
-                e é por isso que um deles fica perto de 1 e os outros perto de 0.<br><br>
-                Um traço no lugar do número quer dizer que a leitura ainda não chegou.
-              </span></span>
-            </div>
-            <div class="sub-sensor">Giroscópio <span class="mudo">°/s</span></div>
-            <div class="eixo" data-eixo="giro-x"><span>X</span><span> +11.4</span>
-              <span class="g"><span class="v" style="left:50%;width:3%;background:var(--cyan)"></span></span></div>
-            <div class="eixo" data-eixo="giro-y"><span>Y</span><span>  −6.2</span>
-              <span class="g"><span class="v" style="left:48%;width:2%;background:var(--cyan)"></span></span></div>
-            <div class="eixo" data-eixo="giro-z"><span>Z</span><span>  +2.0</span>
-              <span class="g"><span class="v" style="left:50%;width:1%;background:var(--cyan)"></span></span></div>
-            <div class="sub-sensor">Acelerômetro <span class="mudo">g</span></div>
-            <div class="eixo" data-eixo="accel-x"><span>X</span><span>      —</span>
-              <span class="g"><span class="v" style="left:50%;width:0%"></span></span></div>
-            <div class="eixo" data-eixo="accel-y"><span>Y</span><span>      —</span>
-              <span class="g"><span class="v" style="left:50%;width:0%"></span></span></div>
-            <div class="eixo" data-eixo="accel-z"><span>Z</span><span>      —</span>
-              <span class="g"><span class="v" style="left:50%;width:0%"></span></span></div>
-          </div>
-          <div class="moldura gatilhos" style="margin-top:9px">
-            <div class="rot">Gatilhos</div>
-            <div class="gat">
-              <div class="gat-linha" data-gatilho="l2"><span>L2</span>
-                <span class="trilho"><span class="cheio" style="width:0%"></span>
-                  <span class="n">0 / 255</span></span></div>
-              <div class="gat-linha" data-gatilho="r2"><span>R2</span>
-                <span class="trilho"><span class="cheio" style="width:7%"></span>
-                  <span class="n">18 / 255</span></span></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
+    <div class="ctl off" data-controle="p3" data-conectado="nao"
+         title="Lugar vazio: nenhum controle conectado aqui.">
+      <div class="faixa">
+        <span class="card-nome">P3</span>
+        <span class="div">·</span>
+        <span class="leia">—</span>
+        <span class="bat">—</span>
       </div>
     </div>
-    <div class="ctl card" style="--plastico:#e4e0d8" data-controle="p4">
-      <input class="radio-mesa" type="radio" name="mesa" id="c-p4">
-      <label class="faixa" for="c-p4" title="Clique para abrir o card deste controle — os outros fecham. É o mesmo gesto de escolhê-lo na fita lá em cima.">
-          <span class="card-nome"><span class="so-fechado">P4 <span class="pt">•</span> </span>White <span class="pt">•</span> USB</span>
-          <span class="div">·</span>
-          <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura.">vê como <b data-campo="mascara">Nintendo Pro</b></span><span class="div so-fechado">·</span>
-          <span class="leia so-fechado" title="Calado no firmware do controle — a luz vermelha do plástico está apagada.">Microfone <span class="selo-ativo off" data-campo="mic-selo">MUDO</span></span>
-          <span class="sensores-peca">
-            <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No cabo são 250,0 Hz exatos, e três fontes independentes concordam: o relógio do host, o relógio do controle e o descritor USB (bInterval = 6)."><span class="p"></span>Giroscópio</button>
-            <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-          </span>
-          <span class="bat">Bateria
-            <span class="trilho"><span class="cheio" style="width:88%"></span></span>
-            <span class="n">88%</span></span>
-      </label>
-      <div class="corpo-cx">
-      <div class="card-corpo">
-
-        <div>
-          <div class="moldura touchp">
-            <div class="rot rot-linha">Touchpad
-              <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense só publica posição enquanto alguém encosta na superfície.">Tocando</span></div>
-            <div class="touch">
-              <span class="ponto" style="left:50%;top:50%"></span></div>
-          </div>
-          <div class="moldura luz" style="margin-top:9px">
-            <div class="rot rot-linha">Barra de luz
-              <span class="de-quem" data-campo="luz-hex" title="Este é o código da cor do JOGADOR, não a do plástico — quem escolhe é o produto, pela mesma tabela que acende as cinco lâmpadas (core/led_control.py::player_slot_color). Ele não é digitado aqui: sai da tabela, e muda no dia em que ela mudar.">#FF79C6</span></div>
-            <div class="barra-luz" style="background:#FF79C6"></div>
-          </div>
-          <div class="moldura led" style="margin-top:9px" title="As cinco lâmpadas do controle, no padrão do jogador (1 no meio para o P1, as das pontas para o P2, e assim por diante). É DERIVADO do número do jogador, não lido do aparelho — o daemon publica o número, não o que está aceso.">
-            <div class="rot rot-linha">LED do jogador</div>
-            <div class="lampadas"><span class="luzinhas"><i class="on"></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i class="on"></i></span></div>
-          </div>
-        </div>
-
-        <div>
-          <div class="moldura">
-            <div class="sticks">
-              <div>
-                <div class="stick-rot">Analógico<br>esquerdo</div>
-                <div class="stick" data-stick="l">
-                  <span class="rotl" data-campo="l3">L3</span>
-                  <span class="p" style="left:50.2%;top:50.2%"></span></div>
-                <div class="xy" data-xy="l">X: 128<br>Y: 128</div>
-              </div>
-              <div>
-                <div class="stick-rot">Analógico<br>direito</div>
-                <div class="stick" data-stick="r">
-                  <span class="rotl" data-campo="r3">R3</span>
-                  <span class="p" style="left:37.6%;top:50.2%"></span></div>
-                <div class="xy" data-xy="r">X:  96<br>Y: 128</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="moldura">
-            <div class="glifos">
-            <span class="gb plast" data-glifo="cross"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
-
-  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb" data-glifo="circle"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
-
-  <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span>
-            <span class="gb" data-glifo="square"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
-
-  <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></span>
-            <span class="gb on" data-glifo="triangle"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
-
-  <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></span>
-            <span class="gb" data-glifo="dpad_up"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
-
-  <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
-</svg></span>
-            <span class="gb" data-glifo="dpad_down"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
-
-  <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
-</svg></span>
-            <span class="gb" data-glifo="dpad_left"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Esquerda</title>
-
-  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
-</svg></span>
-            <span class="gb" data-glifo="dpad_right"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Direita</title>
-
-  <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
-</svg></span>
-            <span class="gb" data-glifo="l1"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
-
-  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
-</svg></span>
-            <span class="gb on" data-glifo="r1"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
-
-  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
-</svg></span>
-            <span class="gb plast" data-glifo="l2"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
-
-  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
-  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb plast" data-glifo="r2"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
-
-  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
-  <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
-  <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb" data-glifo="share"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
-
-  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb" data-glifo="options"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
-
-  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span>
-            <span class="gb" data-glifo="ps"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-
-  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
-    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
-  </g>
-</svg></span>
-            <span class="gb" data-glifo="touchpad"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
-
-  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
-  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
-  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
-  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg></span>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="moldura" data-bloco="microfone">
-            <!-- O "LIBERAR" SAIU — 30/08/2026, e o argumento é dela, não meu:
-                 *"o botão do Controle sempre controla a interface, por isso não faz
-                 sentido o liberar ali"*.
-
-                 EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
-                 `mic.set {muted: null}` EXISTE (`ipc_handlers.py:4779`) e devolve a
-                 posse ao `hid-playstation` — a minha objeção era que o botão tinha
-                 dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
-                 nunca deixa de comandar a interface, não há posse a devolver, e um
-                 botão que desfaz algo que não acontece é um botão que ensina errado.
-                 O método continua no daemon, para quem precisar dele. -->
-            <div class="rot rot-linha">Microfone
-              <span class="selo-ativo off" style="margin-left:5px" data-campo="mic-selo">MUDO</span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala no
-                <b>firmware</b> e apaga a luz vermelha do plástico.<br><br>
-                O <b>modo</b>, à direita, diz por onde o som do microfone chega ao PC.
-              </span></span>
-              <!-- O MODO DO MICROFONE — pedido dela, 30/08: *"tá faltando o Modo do
-                   Mic: Virtual, Desativado e Nativo"*.
-
-                   ELE MORA NA LINHA DO RÓTULO, e isso é orçamento, não estética.
-                   Como fileira própria embaixo ele custava 42px (36 da altura de
-                   escolha + 6 de margem), e o card ia de 304 para 350 — contra os
-                   308 que `PARA_O_CARD` reserva. O quadro passava a rolar por
-                   dentro e o P4 saía da tela; medido antes de escolher este lugar.
-                   Aqui ele ocupa o vão que o "Liberar" deixou: custo ZERO de
-                   altura, e ainda fica ao lado do selo que diz se o mic está
-                   ATIVO — que é a informação com que ele conversa. -->
-              <!-- AS CHAVES SÃO SIMPLES, E A DUPLA ERA UM BOTÃO MORTO.
-                   Este bloco é `return f` com aspas triplas (linha 834), e chave
-                   dupla ESCAPA para chave simples literal: a expressão nunca era
-                   avaliada e os 12 botões (4 controles x 3 modos) nasciam todos com
-                   a mesma classe crua, nenhum aceso. Medido pelo cético:
-                   classList.contains("on") falso nos doze.
-                   É o defeito que o CLAUDE.md nomeia — *"uma validação de interface
-                   que não cobre o botão novo é uma validação que mente"*: eu conferi
-                   que os três botões EXISTEM e não que um deles ACENDE.
-                   E o comentário que eu escrevi para explicar isto quebrou o gerador,
-                   porque trazia chaves dentro da própria f-string. Por isso ele não
-                   as tem. -->
-              <span class="mic-modo" data-campo="mic-modo">
-                <button class="on" data-mic-modo="virtual"
-                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="" data-mic-modo="desativado"
-                  title="O microfone do controle não chega ao PC. O botão do aparelho continua acendendo e apagando a luz vermelha do plástico.">Desativado</button>
-                <button class="" data-mic-modo="nativo"
-                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
-              </span>
-            </div>
-            <span class="onda mudo"><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i></span>
-            <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:75%"></span></span>
-              <span class="n">75</span>
-              <button class="mudo-i on" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
-            </div>
-
-          </div>
-          <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
-            <div class="rot">Alto-falante <span class="mudo" data-campo="alto-estado">· 80 % · Acordado</span>
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação.
-              </span></span>
-            </div>
-            <span class="onda"><i style="height:80%"></i><i style="height:66%"></i><i style="height:74%"></i><i style="height:58%"></i><i style="height:84%"></i><i style="height:62%"></i><i style="height:70%"></i><i style="height:76%"></i><i style="height:54%"></i><i style="height:68%"></i><i style="height:60%"></i><i style="height:78%"></i><i style="height:64%"></i><i style="height:72%"></i></span>
-            <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:80%"></span></span>
-              <span class="n">80</span>
-              <button class="mudo-i" data-mudo="alto-falante" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
-            </div>
-            <div class="rota">
-              <button class="on" data-rota="jogo">Sons do jogo</button>
-              <button class="" data-rota="pc">Todo o som do PC</button>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <!-- UM BLOCO, DOIS SENSORES — 30/08/2026.
-
-               O acelerômetro entrou por decisão dela (*"não era pra ele sair, era
-               pra ele FUNCIONAR"*), e como MOLDURA PRÓPRIA ele não cabia: medido,
-               a coluna dos sensores passava de 190 para 278px de conteúdo natural,
-               contra os **232** que as cinco colunas compartilham (a conta está no
-               `ALTURA_DO_CARD`, e o card tem 4px de folga). O quadro rolava por
-               dentro e o P4 saía da tela.
-
-               Dois sensores numa moldura só custam UM rótulo e UMA borda em vez de
-               dois — e é honesto: eles são o MESMO nó evdev (`Motion Sensors`),
-               separados só pelo código do eixo. ABS_RX/RY/RZ é o giro, ABS_X/Y/Z é
-               o acelerômetro; as escalas é que são independentes (1024 contra
-               8192), e por isso cada grupo diz a sua unidade.
-
-               Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
-               {'x': 0.105, 'y': 0.976, 'z': 0.170} — |v| = 0,996 g, a gravidade. -->
-          <div class="moldura leituras">
-            <div class="rot">Sensores
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
-                Leitura viva do aparelho, dez vezes por segundo. Nada aqui se clica.<br><br>
-                O <b>giroscópio</b> mede o quanto o controle gira, em graus por segundo.
-                O <b>acelerômetro</b> mede a inclinação e o chacoalhar, em g — parado
-                numa mesa plana a soma dos três eixos dá <b>1 g</b>, que é a gravidade,
-                e é por isso que um deles fica perto de 1 e os outros perto de 0.<br><br>
-                Um traço no lugar do número quer dizer que a leitura ainda não chegou.
-              </span></span>
-            </div>
-            <div class="sub-sensor">Giroscópio <span class="mudo">°/s</span></div>
-            <div class="eixo" data-eixo="giro-x"><span>X</span><span>  −8.6</span>
-              <span class="g"><span class="v" style="left:48%;width:2%;background:var(--cyan)"></span></span></div>
-            <div class="eixo" data-eixo="giro-y"><span>Y</span><span> +30.5</span>
-              <span class="g"><span class="v" style="left:50%;width:6%;background:var(--green)"></span></span></div>
-            <div class="eixo" data-eixo="giro-z"><span>Z</span><span>  +1.1</span>
-              <span class="g"><span class="v" style="left:50%;width:1%;background:var(--cyan)"></span></span></div>
-            <div class="sub-sensor">Acelerômetro <span class="mudo">g</span></div>
-            <div class="eixo" data-eixo="accel-x"><span>X</span><span> +0.412</span>
-              <span class="g"><span class="v" style="left:50%;width:10%;background:var(--orange)"></span></span></div>
-            <div class="eixo" data-eixo="accel-y"><span>Y</span><span> +0.884</span>
-              <span class="g"><span class="v" style="left:50%;width:22%;background:var(--green)"></span></span></div>
-            <div class="eixo" data-eixo="accel-z"><span>Z</span><span> −0.201</span>
-              <span class="g"><span class="v" style="left:45%;width:5%;background:var(--cyan)"></span></span></div>
-          </div>
-          <div class="moldura gatilhos" style="margin-top:9px">
-            <div class="rot">Gatilhos</div>
-            <div class="gat">
-              <div class="gat-linha" data-gatilho="l2"><span>L2</span>
-                <span class="trilho"><span class="cheio" style="width:4%"></span>
-                  <span class="n">12 / 255</span></span></div>
-              <div class="gat-linha" data-gatilho="r2"><span>R2</span>
-                <span class="trilho"><span class="cheio" style="width:100%"></span>
-                  <span class="n">255 / 255</span></span></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
+    <div class="ctl off" data-controle="p4" data-conectado="nao"
+         title="Lugar vazio: nenhum controle conectado aqui.">
+      <div class="faixa">
+        <span class="card-nome">P4</span>
+        <span class="div">·</span>
+        <span class="leia">—</span>
+        <span class="bat">—</span>
       </div>
     </div>
       </div>
@@ -2528,8 +2105,8 @@
 
   <h2>O que mudou em 30/08</h2>
   <ul>
-    <li><b>O modo do microfone entrou</b> — <b>Virtual</b>, <b>Desativado</b> e <b>Nativo</b>, pedido seu. Ele mora na <b>linha do rótulo</b>, e isso é orçamento e não estética: como fileira própria embaixo custaria 42 px e o card iria de 304 para 350, contra os 308 que a caixa reserva — o quadro passaria a rolar por dentro e o P4 sairia da tela. Ali o custo de altura é <b>zero</b>, e ele fica ao lado do selo que diz se o mic está ATIVO.</li>
-    <li><b>O acelerômetro passou a aparecer na tela</b>, com os três eixos e a unidade em <b>g</b>, embaixo do giroscópio e na <b>mesma moldura</b> — que por isso deixou de se chamar <i>Giroscópio</i> e virou <b>Sensores</b>. É a resposta à pergunta que a legenda de 29/08 deixou aberta (<i>vale ler?</i>): vale, e os números do P1 no desenho são <b>medidos</b> no daemon vivo — X +0,105 · Y +0,976 · Z +0,170, que dão <b>0,996 g</b>, a gravidade.</li>
+    <li><b>O modo do microfone são DOIS, e eles desceram para baixo do slider</b> — suas duas ordens de 31/08: <i>"remove o desligado (fica desligado com slicer no zero)"</i> e <i>"os botões Virtual e Nativo ficam na parte de baixo do slider, igual o Sons do Jogo e Todo o som do PC"</i>. Agora são a <b>mesma fileira</b> que o alto-falante usa — mesma classe, mesma altura, mesmo gesto.<br><b>Em 30/08 eles eram TRÊS e moravam na linha do rótulo</b>, e o motivo era orçamento: como fileira embaixo custariam 42 px e o card estouraria a caixa. Com o "Desativado" fora sobraram dois, e o preço ficou pagável — mas ele existiu: a coluna do som foi de 236 para 269 px, e as duas fileiras de escolha passaram de 36 para <b>30 px</b> de altura para o card caber. É a mesma faixa do chip da fita, e as duas continuam iguais entre si.</li>
+    <li><b>O acelerômetro passou a aparecer na tela</b>, com os três eixos e a unidade em <b>g</b>, embaixo do giroscópio e na <b>mesma moldura</b> — que por isso passou a se chamar <b>Sensores</b>. <b>Em 31/08 ela virou DUAS</b>, por ordem sua — <i>"é pra ser 3: um Giroscópio, outra Acelerômetro e outra gatilhos"</i> —, e as unidades (<i>°/s</i> e <i>g</i>) saíram dos rótulos junto. Coube sem custo: a coluna continua nos mesmos px. É a resposta à pergunta que a legenda de 29/08 deixou aberta (<i>vale ler?</i>): vale, e os números do P1 no desenho são <b>medidos</b> no daemon vivo — X +0,105 · Y +0,976 · Z +0,170, que dão <b>0,996 g</b>, a gravidade.</li>
   </ul>
 
   <h2>O que mudou em 29/08</h2>
@@ -2555,12 +2132,12 @@
   <h2>Os sensores desceram para cada controle; o Calibrar ficou e cresceu</h2>
   <ul>
     <li><b>O giroscópio e o acelerômetro são estado de cada peça</b>, e por isso o interruptor de cada um está agora na <b>linha do controle</b>, nas 4. Eles estavam no topo do quadro, valendo para a mesa toda — e um interruptor global com 4 controles na mesa <b>mente sobre 3 deles</b>.</li>
-    <li><b>O Calibrar ficou onde estava, e virou gesto de mesa</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os 4 controles ao mesmo tempo"</i>. O rótulo agora diz o escopo (<span class="marca">Calibrar sensores da mesa</span>) e o ponteiro diz o gesto: os 4 numa passada só, todos parados numa mesa plana.</li>
+    <li><b>O Calibrar ficou onde estava, e virou gesto de mesa</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os 4 controles ao mesmo tempo"</i>. <b>Em 31/08 ele mudou de nome e ganhou um irmão</b>, por ordem sua: <i>"o calibrar sensores de movimento, ao invés de mesa"</i> e <i>"o botão Mapa do Controle que abre a interface do mapa do Controle"</i>. <span class="marca">Calibrar Sensores de Movimento</span> diz <b>o que se calibra</b> — o escopo continua no ponteiro. Os dois <b>chegaram a ir para o fim do quadro</b> e você os mandou voltar: <i>"a posição deles volta pro canto superior direito"</i>. E o Calibrar abre uma <b>página nova</b> (<code>calibrar-sensores.html</code>) com o procedimento em três passos e os controles conectados lado a lado.</li>
     <li><b>O par custa 246,6 px, e só coube porque duas leituras saíram.</b> A linha mais apertada é a do <b>P3</b>, o nome mais longo da mesa: ela tinha <b>103,2 px</b> livres, e o par pede 246,6 mais o vão. Saíram <span class="marca">Hefesto on</span> (91,7 px, e dizia a mesma coisa nas 4 linhas) e <span class="marca">Giroscópio em rajadas</span> (168,8 px), que juntas devolvem 260,5 — <b>mais</b> do que o par ocupa. Depois da troca a mesma linha do P3 tem <b>108 px</b> livres (4,8 a mais do que antes) e a do card aberto, 270,8.</li>
-    <li><b>O "vê como" ficou, e a contradição é sua para desempatar.</b> Você escreveu <i>"se der problema de espaço remover Giroscópio, Hefesto e vê como (na real remove eles)"</i> — mas a sua decisão de ontem, na mesma tela, diz que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>, e <b>máscara é o "vê como"</b>. Duas frases suas em sentidos opostos: tirei as duas leituras que nenhuma decisão protegia, e a conta acima mostra que não precisou de mais. <b>Se você quiser o "vê como" fora também</b>, é uma linha no gerador — ele custa 144,6 px na linha do P3, com o separador e os dois vãos.</li>
+    <li><b>Você desempatou o "vê como", em 31/08 — e em duas frases.</b> A legenda de 30/08 deixou a contradição aberta: você tinha escrito <i>"remover Giroscópio, Hefesto e vê como"</i> e, no dia anterior, que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>. Agora: <i>"remover o vê como de todos os controles"</i> e, logo depois, <i>"era o texto Vê como mas o nome da máscara fica"</i>. <b>Sai o rótulo, fica o dado.</b> A primeira volta tirou o span inteiro e levou a máscara junto — era ler o pedido pela metade. De onde ela vem continua no ponteiro, para quem passar o mouse.</li>
     <li><b>E o que saiu não é o que entrou, embora tenham a mesma palavra.</b> Saiu a <b>leitura</b> <span class="marca">Giroscópio 250 Hz</span>; entrou o <b>interruptor</b> de giroscópio. O número medido não virou lápide: ele está no ponteiro do interruptor, e responde por transporte — <b>250,0 Hz exatos</b> no cabo, <b>em rajadas</b> no rádio.</li>
     <li><b>Os 8 botões nascem nos mesmos dois x</b> (992,4 e 1119,7), com <b>119,3 px</b> cada. Quem iguala é a <b>grade</b>, não o comprimento do rótulo, e quem os prende ali é o <code>margin-left:auto</code>, que saiu da bateria e passou ao par: com os dois pedindo o vão, o flex partiria a sobra ao meio e o grupo flutuaria em 4 lugares diferentes.</li>
-    <li><b>26 px de altura, e não os 34 de <code>--h-acao</code>.</b> A linha fechada tem 34 px por fora e <b>30 por dentro</b> — um botão de 34 não cabe em 30. Crescer a linha também não era saída: a conta ali embaixo fecha com 4 px de sobra, e 3 linhas 6 px mais altas roubariam 18 do card. Não é uma altura inventada: é a mesma pastilha da <b>fita</b> lá em cima (o chip mede 28 a 30 px) e do <b>Perfil ativo</b> (29 px) — que é o que estes botões são, e não botão de decidir.</li>
+    <li><b>26 px de altura, e não os 34 de <code>--h-acao</code>.</b> A linha fechada tem 34 px por fora e <b>30 por dentro</b> — um botão de 34 não cabe em 30. Crescer a linha também não era saída: a conta ali embaixo fecha com 24 px de sobra, e 1 linhas 6 px mais altas roubariam 18 do card. Não é uma altura inventada: é a mesma pastilha da <b>fita</b> lá em cima (o chip mede 28 a 30 px) e do <b>Perfil ativo</b> (29 px) — que é o que estes botões são, e não botão de decidir.</li>
     <li><b>Clicar no interruptor não abre o card</b> — medido, clicando: o botão vive dentro do <code>&lt;label&gt;</code> que abre o controle, e o navegador não repassa o clique ao rádio quando o alvo é um botão. Clicar em qualquer outro ponto da linha continua abrindo.</li>
   </ul>
 
@@ -2576,7 +2153,7 @@
 
   <h2>Onde apertou, com o número</h2>
   <ul>
-    <li><b>O estado em que a aba abre não rola, e nada some.</b> A conta fecha sem sobra: 461 px da caixa menos 24 de padding são 437; as 3 linhas fechadas de 34 px com 9 px entre cada duas caixas somam 129; sobram <b>308 px</b> para o card, que são os 304 dele mais os 4 que ele cresce para não deixar vão.</li>
+    <li><b>O estado em que a aba abre não rola, e nada some.</b> A conta fecha sem sobra: 461 px da caixa menos 24 de padding são 437; as 1 linhas fechadas de 34 px com 9 px entre cada duas caixas somam 61; sobram <b>328 px</b> para o card, que são os 304 dele mais os 24 que ele cresce para não deixar vão.</li>
     <li><b>O passo entre irmãos virou um só.</b> Eram dois — 14 px entre o card e o grupo das tiras, 9 px entre tiras —, porque eram dois containers. Agora as 4 caixas são irmãs no mesmo lugar, e o passo é <b>9 px</b> em todos os vãos.</li>
     <li><b>"Todos" abre os 4, e aí a caixa rola 806 px.</b> É o único estado desta aba que rola, e é o preço do gesto: 4 cards de 304 px somam 1243 px numa caixa de 437. Não dá para encolher o card — as cinco colunas param todas em <b>236 px</b> de conteúdo natural, e quem manda são duas: a do som (microfone 96 + 9 + alto-falante 131) e a do touchpad (118 + 9 + barra 55 + 9 + LED 45). A dos sensores não manda: com os dois numa moldura só ela pede 228 px, e sobra.</li>
     <li><b>E o preço, dito inteiro:</b> nesse estado o P1 aparece todo, o P2 aparece pela metade (141 px dos 301) e o <b>P3 e o P4 começam com zero pixel à mostra</b>. O que diz que eles estão ali são três coisas, e as três estão na tela: o chip <b>Todos</b> aceso, o <span class="marca">4 controles</span> do cabeçalho e a <b>barra de rolagem</b>, que nasce junto com a rolagem e ocupa 10 px. Foi por isso que a barra precisou de regra própria — a do Chrome é sobreposta e some quando ninguém está rolando, e aí seria o defeito de 27/08 de volta com outra roupa.</li>
@@ -2598,11 +2175,11 @@
 
   <h2>Ainda aberto</h2>
   <ul>
-    <li><b>Os 16 quadradinhos viram o desenho do DualSense?</b> A pergunta é sua, do contrato da aba. A medição pende para os quadradinhos: a coluna deles tem 212 px e é a única das cinco que ainda estica sem estourar — o desenho inteiro do controle nessa largura empurraria o card muito além dos 304 px, e o card tem exatamente <b>4 px</b> de folga.</li>
+    <li><b>Os 16 quadradinhos viram o desenho do DualSense?</b> A pergunta é sua, do contrato da aba. A medição pende para os quadradinhos: a coluna deles tem 212 px e é a única das cinco que ainda estica sem estourar — o desenho inteiro do controle nessa largura empurraria o card muito além dos 304 px, e o card tem exatamente <b>24 px</b> de folga.</li>
     <li><b>O botão de mic do controle muda o mudo do PC inteiro?</b> O campo existe no perfil e o daemon já o aplica, sem nenhuma tela que o escreva (<code>profiles/schema.py:451</code>).</li>
     <li><b>Histórico de bateria.</b> O diário grava por controle desde sempre e ninguém lê (<code>daemon/battery_journal.py:214</code>). Com 4 na mesa o P3 já aparece em 31%.</li>
     <li><b>O acelerômetro está desenhado e não é pintado ao vivo.</b> Os três eixos em <b>g</b> aparecem no card, mas a ponte que dá vida a esta aba só escreve os do giroscópio: ela procura o endereço <code>acel-x</code> e a tela escreve <code>accel-x</code>, com dois cc (<code>controles_vivos.py:1340</code>). Com o daemon ligado, esses números ficam <b>parados</b> na medição de 30/08 em vez de acompanharem o aparelho — e número parado tem a mesma cara de número lido. A cura é de uma linha, mas mora fora deste gerador; fica dito aqui porque quem fotografar a aba não tem como notar.</li>
-    <li><b>A régua não vê o "Todos".</b> Ela mede a página como ela abre, e a página abre com um card e 3 linhas — nenhum quadro escondido, nenhuma rolagem. O estado que rola só existe depois de um clique, e a régua de arranjo não clica. Medi-o à mão, clicando, e os números estão acima; fica dito, porque a régua não é minha para mexer.<br><br><b>Fechou:</b> esta legenda avisava que o <code>olhar.py</code> escondia a barra de rolagem e que ela não sairia na foto. Não é mais verdade — a ferramenta foi curada em 30/08 e hoje fotografa a barra, os <b>10 px</b> que ela ocupa no "Todos" inclusive.</li>
+    <li><b>A régua não vê o "Todos".</b> Ela mede a página como ela abre, e a página abre com um card e 1 linhas — nenhum quadro escondido, nenhuma rolagem. O estado que rola só existe depois de um clique, e a régua de arranjo não clica. Medi-o à mão, clicando, e os números estão acima; fica dito, porque a régua não é minha para mexer.<br><br><b>Fechou:</b> esta legenda avisava que o <code>olhar.py</code> escondia a barra de rolagem e que ela não sairia na foto. Não é mais verdade — a ferramenta foi curada em 30/08 e hoje fotografa a barra, os <b>10 px</b> que ela ocupa no "Todos" inclusive.</li>
   </ul>
 </div>
 

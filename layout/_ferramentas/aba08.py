@@ -10,7 +10,8 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from monta import (MESA, CSS_GLIFO, CSS_POPUP, cor_da_zona, glifo,  # noqa: E402
+import onde  # noqa: E402
+from monta import (MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, cor_da_zona, glifo,  # noqa: E402
                    monta, player_slot_color, svg)
 
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
@@ -356,13 +357,24 @@ def sel(opcoes, escolhida, classe="pronto", dica=""):
 # ---------------------------------------------------------------------------
 # O QUE A MESA RESPONDE — tudo o que a tela conta, contado aqui.
 #
-# QUANTOS CARDS: quantos estiverem ligados, e só eles (decisão dela, 28/08). A
-# `MESA` É essa lista — ela é o que está na bancada agora. Um filtro por um
-# campo "ligado" que não existe seria inventar estado; o laço percorre a mesa, e
-# no dia em que ela tiver três ou cinco nada aqui muda.
+# QUANTOS CARDS: quantos estiverem ligados, e só eles (decisão dela, 28/08).
+#
+# O CAMPO PASSOU A EXISTIR — 31/08/2026. Este comentário dizia *"um filtro por um
+# campo 'ligado' que não existe seria inventar estado"*, e estava certo até o dia
+# em que ela mandou deixar dois lugares vazios na mesa: nasceu `conectado` em
+# `monta.MESA`, e com ele a lista `CONECTADOS`.
+#
+# ENQUANTO ISSO NÃO FOI FEITO, A ABA CONTAVA QUATRO EM SILÊNCIO: o Check-up dizia
+# *"as entradas dão energia para os 2 controles no cabo"* contando o P4, que não
+# está na mesa, e *"2 dos seus 4 controles falam nessa mesma faixa"* contando o
+# P3. Nenhuma régua viu — as frases estavam gramaticalmente perfeitas e os
+# números batiam com a lista errada.
+#
+# `MESA` continua sendo quem o DESENHO percorre: é ela que dá os quatro lugares,
+# e é o lugar vazio que ensina que ali cabe um e ele não está.
 # ---------------------------------------------------------------------------
-NO_CABO = [c for c in MESA if c["via"] == "USB"]
-NO_RADIO = [c for c in MESA if c["via"] == "BT"]
+NO_CABO = [c for c in CONECTADOS if c["via"] == "USB"]
+NO_RADIO = [c for c in CONECTADOS if c["via"] == "BT"]
 POR_PREF = {c["pref"]: c for c in MESA}
 
 #: O microfone segue o TRANSPORTE — ponto final dela, 28/08: *"se tiver em modo
@@ -419,13 +431,61 @@ def tinta_legivel(fundo_hex):
 
 
 CSS = CSS_GLIFO + CSS_POPUP + """
+  /* 6.1 · O RESPIRO DO RÓTULO QUE EXPANDE — 31/08/2026, pedido dela com duas
+     fotos desta aba: *"o nome dos campos que expandem não tem respiro"*.
+
+     MEDIDO no Chrome antes de mexer, e a medida acha a causa exata: o
+     `.quadro-topo` do esqueleto é `padding:11px 14px 0` — **zero embaixo**. Num
+     quadro comum isso não aparece, porque o conteúdo vem logo abaixo e traz o
+     próprio respiro. Num acordeão FECHADO não vem nada: sobrava **1px** entre o
+     texto e a borda de baixo da faixa, contra 12px em cima. O rótulo não estava
+     centrado na faixa — estava encostado nela.
+
+     A CURA DEFINITIVA É UMA VARIÁVEL NO `topo.html`, como a lista dela manda —
+     e o `topo.html` está CONGELADO por decisão dela de hoje, enquanto duas
+     sessões trabalham na mesma árvore. Esta regra é local à Conexões, que é a
+     única aba com acordeão de verdade (medido: `input.abre` = 3 aqui, 0 nas
+     outras doze páginas). Quando o esqueleto descongelar, ela sobe para lá e
+     esta some. */
+  .quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}
+
+  /* O GLIFO DE IGNORAR, um por linha do exame. Ele mora na ponta direita, depois
+     do `?`, e nasce apagado: é gesto de recusa, não de ação principal — aceso
+     como o `?` ele competiria com o selo, que é quem diz o que a linha achou. */
+  .exame .ignora{flex:0 0 17px;width:17px;height:17px;border-radius:50%;padding:0;
+    border:1px solid var(--linha);background:none;color:var(--texto-mudo);
+    font-size:11px;line-height:1;cursor:pointer}
+  .exame .ignora:hover{border-color:var(--orange);color:var(--orange)}
+
+  /* A DICA DAS LINHAS DO EXAME ABRE PARA A ESQUERDA — 31/08/2026, pedido dela:
+     *"jogar o tooltip pra alinhar a esquerda"*. A `.dica` do esqueleto nasce em
+     `left:22px`, crescendo para a DIREITA a partir do `?`. Aqui o `?` fica na
+     ponta direita da linha, a 30px da borda do quadro: 330px de dica crescendo
+     para lá saem da janela. Ancorada pela direita, ela cresce para dentro. */
+  .exame .ajuda .dica{left:auto;right:22px}
+
+  /* O NOME DO ADAPTADOR É EDITÁVEL NO LUGAR — o botão `Renomear` saiu.
+     `contenteditable` é o que o mockup faz sem JavaScript; o DUPLO clique que ela
+     pediu é gesto do produto. O tracejado é o que diz que ali se escreve — sem
+     ele o campo mente por omissão, parecendo texto morto. */
+  .renomeia{border-bottom:1px dashed var(--linha);cursor:text}
+  .renomeia:hover{border-bottom-color:var(--cyan)}
+  .renomeia:focus{outline:none;border-bottom-style:solid;border-bottom-color:var(--cyan)}
+
+  /* O LUGAR SEM CONTROLE na Gestão. A cor é a do `.vazio` da Gatilhos, que é a
+     página que ela mandou copiar; o contraste está medido na prova de tela. A
+     borda do plástico não vem — ela identifica a peça que está ali, e não há
+     peça a identificar. */
+  .gc-item.fora .gc-nome{color:var(--comment)}
+  .gc-item.fora{cursor:default}
+
   /* ================= Conexões =================
      Três assuntos, três quadros, agrupados por PERGUNTA:
        1. "está tudo certo?"   — DUAS colunas: o que eu vi · o que fazer. A
           terceira ("o que só você sabe") saiu em 28/08: as duas perguntas de
           rádio passaram a morar no "Mapear Entradas", que é a janela onde
           ela já declara a sala.
-       2. "Gestão Controles"   — os controles ligados, em acordeão: o da fita
+       2. "Gestão de Controles"   — os controles ligados, em acordeão: o da fita
           aberto, os outros na linha fechada com o resumo.
        3. "Rádio e adaptadores"— o inventário físico da mesa, e o Desempenho
           embaixo, separado, porque os turnos são POR ADAPTADOR.
@@ -509,7 +569,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   /* o dropdown que ainda espera resposta chama o olho pela borda, não por faixa */
   select.pronto.pergunta{border-color:var(--cyan);color:var(--cyan)}
 
-  /* ================= o acordeão da Gestão Controles =================
+  /* ================= o acordeão da Gestão de Controles =================
      CSS PURO, ZERO JAVASCRIPT — o mockup inteiro não tem uma linha de script, e
      o cruzamento do mapa do controle já é feito só com `:has()`. Aqui a peça é
      um grupo de `<input type=radio>` escondido: cada linha fechada é um
@@ -767,8 +827,17 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   /* SETE COLUNAS, para toda face, e o produto escreve a razão: "sete é a fileira
      do hub dela, que é a maior face desta casa" (`_COLUNAS = 7`). O `minmax` deixa
      o quadrado encolher em vez de rolar de lado quando a barra vertical aparece. */
+  /* COLUNAS DE VERDADE — 31/08/2026: *"ajusta os alinhamentos e distribuições de
+     tudo"*. A grade já era `repeat(7, …)`, mas a filha empilhada dentro da célula
+     furava a coluna: medido, 8 x diferentes numa grade de 7, e dois quadrados de
+     larguras diferentes (82 e 73). Com a filha fora, toda entrada é uma célula de
+     uma coluna, e as duas faces alinham na mesma régua de x. */
   .mm-grade{display:grid;grid-template-columns:repeat(7,minmax(0,84px));
             gap:5px;align-items:start;justify-content:start}
+  /* o hub carrega uma legenda embaixo, então a célula dele é mais larga */
+  .mm-grade-hubs{grid-template-columns:repeat(3,minmax(0,148px))}
+  .mm-ligado{font-size:10px;color:var(--texto-mudo);line-height:1.4;padding-left:2px}
+  .mm-ligado b{color:var(--texto-suave);font-weight:600}
   .mm-cel{display:flex;flex-direction:column;gap:4px}
   /* 84×56 é `botao.set_size_request(84, 56)`, que em GTK é MÍNIMO e não teto —
      por isso `min-height` aqui, e não `height`: "Aparelho de entrada" quebra em
@@ -857,10 +926,18 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mm-conf-linha b{font-weight:600;color:var(--texto-suave)}
   .mm-conf-linha span{cursor:help;border-bottom:1px dotted var(--border-forte)}
 
-  /* ---- os gestos de baixo. `.apagado` deixou de ser só da Gestão Controles:
+  /* ---- os gestos de baixo. `.apagado` deixou de ser só da Gestão de Controles:
      os dois botões de ação desta pop-up nascem apagados pela mesma regra dela —
      botão que SOME ensina que a tela é instável. */
-  .mm-acoes{align-items:center}
+  /* OS DOIS GESTOS TÊM O MESMO TAMANHO — 31/08/2026, parte do *"ajusta os
+     alinhamentos e distribuições de tudo"*. Eles medem o texto: `Tirar daqui`
+     dava 92px e `Tem uma extensão aqui` 170, lado a lado, e dois botões do mesmo
+     peso com tamanhos tão diferentes leem como hierarquia que não existe — os
+     dois agem sobre a MESMA entrada que você acabou de clicar.
+     O grupo de criar face continua empurrado à direita: ele não age sobre a
+     entrada selecionada, e a distância é o que diz isso. */
+  .mm-acoes{display:flex;align-items:center;gap:8px}
+  .mm-acoes > .btn{flex:0 0 auto;min-width:172px;justify-content:center}
   .mm-nova{display:flex;align-items:center;gap:8px;margin-left:auto}
   .mm-campo{height:var(--h-acao);width:118px;padding:0 9px;border-radius:7px;
             background:var(--app-bg);border:1px solid var(--border-forte);
@@ -880,8 +957,23 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .ce-cont{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--purple)}
   .ce-quem{font-size:11.5px;color:var(--texto-suave);line-height:1.55}
   .ce-quem code{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-mudo)}
-  .ce-botoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-  .tn-cx .ce-botoes .btn{flex:0 0 auto;text-decoration:none}
+  /* OS LUGARES CABEM NUMA LINHA SÓ — 31/08/2026, e ela mandou com a foto na mão:
+     *"botões em duas linhas. deveria ser uma."*
+
+     A causa era `flex-wrap:wrap` com botões do tamanho do próprio texto: some a
+     largura dos quatro (`Frente do gabinete` é 40% maior que `Em cima da mesa`)
+     e, no dia em que a soma passa da caixa, o último cai sozinho para a segunda
+     linha. Depende da FONTE que carregou — por isso a foto dela mostrava duas
+     linhas e o Chrome headless mostrava uma: com fallback mais estreito, cabia.
+     Régua nenhuma pegaria isso; só o olho dela, na máquina dela.
+
+     `grid-auto-flow:column` com `grid-auto-columns:1fr` é a gramática que a casa
+     já usa em `.miolo .acoes`: os botões dividem a largura em partes iguais,
+     nunca quebram, e o alvo de clique é o mesmo para as quatro escolhas — que é
+     o que quatro escolhas do mesmo peso pedem. */
+  .ce-botoes{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-top:12px}
+  .tn-cx .ce-botoes .btn{width:100%;text-decoration:none;justify-content:center;
+                         padding:0 6px;min-width:0}
   /* o foco É o anúncio (R13): não há live region alcançável pelo PyGObject, então
      mover o foco é a única forma que a janela tem de dizer "o passo mudou". */
   .btn.foco{outline:2px solid var(--purple);outline-offset:2px}
@@ -913,7 +1005,10 @@ CSS += f"\n  .gc-cabeca{{--larg-nome:{LARG_NOME}px}}\n"
 # O gesto "voltar para Todos" existe e está no lugar mais próximo — a própria
 # própria linha aberta —, com o `title` dizendo o que ele faz.
 # ---------------------------------------------------------------------------
-ESTADOS = ["todos"] + [c["pref"] for c in MESA]
+#: Um rádio por controle QUE ABRE, mais o "todos". Gerar um para quem não
+#: está na mesa deixaria no CSS uma regra que nenhum label pode disparar —
+#: e regra que ninguém alcança é a mesma coisa que régua que casa zero.
+ESTADOS = ["todos"] + [c["pref"] for c in CONECTADOS]
 
 _regras = [
     "  /* o destaque estático da fita perde para o do acordeão: `.fita .chip.on`",
@@ -1005,12 +1100,37 @@ VER_IGNORADAS = "Ver as ordens ignoradas"
 MAPEAR_ENTRADAS = "Mapear Entradas"
 MAPEAR_UMA_A_UMA = "Mapear Entrada a Entrada"
 
+#: O botão que sobrou dos quatro do Check-up, já na seção das entradas.
+#:
+#: A PALAVRA "PORTAS" É DELA, e ela colide com a `D-A-PALAVRA-ENTRADA` (24/08),
+#: que fixou **entrada** para não confundir com porta de rede. A colisão está
+#: ANOTADA e não resolvida por mim: quem escolheu "porta" aqui foi ela, no mesmo
+#: turno em que mandou o botão descer, e a seção de destino já hospeda o link
+#: *"Banco de provas: o mapa das portas"* — a palavra já vive ali.
+EXAMINAR_PORTAS = "Examinar Portas"
+
+#: O RENOMEAR DEIXOU DE SER BOTÃO — 31/08/2026: *"tirar o botão Renomear e
+#: adicionar a possibilidade de renomear dando duplo clique no nome"*.
+#: `contenteditable` é o que o mockup sabe fazer sem uma linha de JavaScript; o
+#: DUPLO clique é gesto do produto, e é ele que a dica promete.
+RENOMEAR_DICA = ("Dê um duplo clique para dar um nome seu a este adaptador — “Sala”, "
+                 "“Extra”. É por ele que o resto da tela passa a chamá-lo.")
+
 
 def exame(classe, palavra, txt, dica):
+    """Uma linha do exame: o selo, o que ele achou, o `?` e o gesto de ignorar.
+
+    O IGNORAR SAIU DA FILEIRA E VIROU GLIFO NA LINHA — 31/08/2026, decisão dela:
+    *"ignorar e ver ordens ignoradas … são referentes ao check-up, então colocar
+    um botão pra ignorar no formato de glifo ali"*. E ela tem razão pelo que o
+    botão FAZIA: um `Ignorar` no rodapé do quadro não dizia O QUÊ ignorar — havia
+    cinco linhas e um botão só. Na linha, o gesto tem sujeito.
+    """
     return f'''          <div class="exame">
             <span class="selo {classe}">{palavra}</span>
             <span class="txt">{txt}</span>
             <span class="ajuda">?<span class="dica">{dica}</span></span>
+            <button class="ignora" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>'''
 
 
@@ -1115,6 +1235,25 @@ def linha_do_controle(c):
     luz sai do produto, o rótulo sai da ordem dela, a máscara e a bateria saem
     da aba Controles, e o transporte decide o que a linha pode prometer.
     """
+    # O LUGAR DE QUEM NÃO ESTÁ NA MESA — 31/08/2026, regra dela para toda página:
+    # *"o espaço fica, mas o nome do canto muda: agora o p3 e o p4 será
+    # P3 bolinha Desconectado, igual página gatilhos"*.
+    #
+    # ELE NÃO ABRE, E ISSO É ESTRUTURA, NÃO REGRA: a linha nasce sem `<label
+    # for=...>`, e sem label não há o que marque o rádio que o CSS expande. Uma
+    # regra que PROÍBA abrir alguém desfaz sem perceber; um lugar sem gatilho não
+    # tem como abrir. É a mesma escolha da aba Controles, no ponto 2.5 da lista.
+    #
+    # E NADA DO RESUMO SOBRA: máscara, microfone e bateria são leituras do
+    # aparelho, e não há aparelho. Um travessão em cada uma diria que a leitura
+    # falhou; a ausência diz que o controle não está.
+    if not c.get("conectado", True):
+        return f'''          <div class="gc-item gc-{c["pref"]} fora">
+            <div class="gc-cabeca">
+              <span class="gc-nome" title="Nenhum controle neste lugar.">Player {c["jogador"]} <span class="pt">•</span> Desconectado</span>
+            </div>
+          </div>'''
+
     no_radio = c["via"] == "BT"
     luz = "#%02x%02x%02x" % player_slot_color(c["jogador"])
     # a borda só é pintada de quem foi LIDO — o resto fica com a neutra do CSS
@@ -1143,7 +1282,7 @@ def linha_do_controle(c):
               <label class="gc-seta so" for="gc-{c["pref"]}"
                      title="{SO_ESTE_DICA}">só este</label>
               <label class="gc-seta fecha" for="gc-todos"
-                     title="Fecha — a fita volta para “Todos”, e os {len(MESA)} controles abrem juntos.">▴</label>
+                     title="Fecha — a fita volta para “Todos”, e os {len(CONECTADOS)} controles abrem juntos.">▴</label>
             </div>
             <div class="gc-corpo">
               {svg(c["pref"], c["cor"], classes="ds-svg ds-mini", luz=luz, lampadas=False)}
@@ -1167,7 +1306,9 @@ def linha_do_controle(c):
 # A PISTA DE UM ADAPTADOR — os blocos em uso e as vagas, todos contados.
 # ---------------------------------------------------------------------------
 def pista(a):
-    dentro = [POR_PREF[p] for p in a["prefs"]]
+    # SÓ QUEM ESTÁ NA MESA OCUPA BANDA: um controle desconectado não gasta
+    # turno de rádio, e desenhá-lo na pista afirmaria uma disputa que não existe.
+    dentro = [POR_PREF[p] for p in a["prefs"] if POR_PREF[p].get("conectado", True)]
     if not dentro:
         return f'''        <div class="pista">
           <span class="quem" title="{a["modelo"]} — {a["onde"]}">{a["nome"]}</span>
@@ -1196,7 +1337,7 @@ def pista(a):
     # AS VAGAS SÃO OS CONTROLES DA MESA QUE HOJE ESTÃO NO CABO — não um "+1"
     # imaginário. A pergunta que a régua responde deixou de ser "quantos
     # caberiam" e passou a ser "e se os meus quatro viessem para o rádio".
-    for c in [x for x in MESA if x["pref"] not in a["prefs"]]:
+    for c in [x for x in CONECTADOS if x["pref"] not in a["prefs"]]:
         if usado + CUSTO_COM_MIC > TETO:
             break
         usado += CUSTO_COM_MIC
@@ -1224,7 +1365,7 @@ falam só de OCUPAÇÃO: rádio cheio tem volta, basta tirar um controle daqui."
 POR_NOMEAR = [v for v in RADIOS_VIZINHOS if v[2]]
 JA_NOMEADOS = [v for v in RADIOS_VIZINHOS if not v[2]]
 TOTAL_NO_RADIO = sum(custo(c) for c in NO_RADIO)
-TODOS_COM_MIC = len(MESA) * CUSTO_COM_MIC
+TODOS_COM_MIC = len(CONECTADOS) * CUSTO_COM_MIC
 #: "o Player 1 e o Player 4" — a lista escrita por extenso, do jeito que se lê.
 JOGADORES_NO_CABO = " e o ".join(f"Player {c['jogador']}" for c in NO_CABO)
 
@@ -1260,7 +1401,7 @@ def _plural(n, um, muitos):
 #
 # A ORDEM DOS QUADROS MUDOU, e ela é o que devolveu o terceiro para a tela. Só
 # os quadros ACIMA de um decidem quanto dele aparece: com "Está tudo certo?" e
-# "Gestão Controles" na frente somando 469px, sobravam 29 para o terceiro — a
+# "Gestão de Controles" na frente somando 469px, sobravam 29 para o terceiro — a
 # barra do título e nada mais. A conta é fria: para o terceiro mostrar os 64px
 # que a régua exige (título + primeira linha), os dois da frente têm de somar no
 # máximo 434. Não havia arranjo dos três em que "Está tudo certo?" viesse antes e
@@ -1275,13 +1416,13 @@ ESCONDE_ANTES = 332
 #: mudou nesta leva, e um `Q1` teria passado a significar outro quadro sem que
 #: nenhuma linha da legenda mudasse de texto.
 Q_GESTAO, Q_EXAME, Q_RADIO = 219, 204, 343
-Q_GESTAO_ANTES = 265         # a Gestão Controles antes de virar lista
+Q_GESTAO_ANTES = 265         # a Gestão de Controles antes de virar lista
 VISIVEL_3 = 75    # o que o terceiro quadro mostra hoje — a régua exige 64
 VISIVEL_3_ANTES = 29
 TETO_DOS_DOIS = 434  # o quanto os dois primeiros podem somar sem afogar o terceiro
 DESEMPENHO = 145  # a seção que fica embaixo, separada, no terceiro quadro
 INVENTARIO = 130  # as duas colunas do terceiro quadro, com os dois botões
-TODOS = 339       # a Gestão Controles com os quatro abertos — eram 409
+TODOS = 339       # a Gestão de Controles com os quatro abertos — eram 409
 TODOS_ANTES = 409
 ESCONDE_TODOS = 406          # o que rola por dentro no estado "Todos" — eram 476
 ESCONDE_TODOS_ANTES = 476
@@ -1421,9 +1562,19 @@ def ajuda(txt, largura=""):
 # ---------------------------------------------------------------------------
 #: `(espécie, nome do kernel, entrada em que ela o pôs, o que é na mesa dela)`
 CENSO = [
-    ("Aparelho de entrada", "1-2", "1",   f'o P{MESA[0]["jogador"]} {MESA[0]["nome"]}, no cabo'),
+    ("Aparelho de entrada", "1-2", "1",   f'o P{CONECTADOS[0]["jogador"]} {CONECTADOS[0]["nome"]}, no {"cabo" if CONECTADOS[0]["via"] == "USB" else "rádio"}'),
     ("Mouse",               "1-3", "7",   "o receptor do mouse"),
-    ("Aparelho de entrada", "1-5", "2",   f'o P{MESA[3]["jogador"]} {MESA[3]["nome"]}, no cabo'),
+    # O SEGUNDO APARELHO DE ENTRADA É O SEGUNDO CONECTADO, não o `MESA[3]` —
+    # 01/09/2026. Ele citava *"o P4 White, no cabo"*, e o P4 está DESCONECTADO
+    # desde que ela mandou a mesa ter dois: o tooltip anunciava, na entrada 2, um
+    # aparelho que não está na bancada.
+    #
+    # É a mesma família do que já se curou hoje na Iluminação (o botão de player
+    # dizia *"o Galactic Purple, que tem o 3 hoje"* de um controle fora da mesa)
+    # e na Navegação (quem navega o PC saía da `MESA`). Toda frase que nomeia um
+    # controle tem de sair de `CONECTADOS` — a `MESA` sabe dos quatro lugares, e
+    # a TELA só pode falar dos que estão ocupados.
+    ("Aparelho de entrada", "1-5", "2",   f'o P{CONECTADOS[1]["jogador"]} {CONECTADOS[1]["nome"]}, no {"cabo" if CONECTADOS[1]["via"] == "USB" else "rádio"}'),
     ("Bluetooth",           "3-3", "3",   f'o adaptador “{ADAPTADORES[0]["nome"]}”'
                                           f' — {ADAPTADORES[0]["modelo"]}'),
     ("Teclado",             "3-4", "4",   "o receptor do teclado que o exame desta aba cita"),
@@ -1629,14 +1780,49 @@ def quadrado(n, esticada=False):
 
 
 def celula(n):
-    """A entrada e, DENTRO do quadrado dela, a filha por extensão.
+    """Uma entrada do gabinete, e só ela.
 
-    Não na fileira: pôr a `10a` na fileira faria uma face de oito virar nove, e
-    o desenho deixaria de bater com o metal (`mapa_da_mesa.py:667-675`).
+    A FILHA POR EXTENSÃO SAIU DAQUI — 31/08/2026, e é o começo do que ela pediu:
+    *"até mesmo uma seção diferente pra hubs e onde ele tá conectado"*.
+
+    Ela morava empilhada DENTRO do quadrado da mãe, e o preço estava na medida:
+    a coluna do `10` ficava com dois quadrados de larguras diferentes (82 e 73px,
+    por causa do recuo de 9px que marcava a filiação), e a face inteira deixava
+    de ter colunas — medi **8 colunas distintas** numa grade de 7.
+
+    A regra que ela protegia continua de pé: a traseira segue com as OITO
+    entradas do metal (`mapa_da_mesa.py:667-675`). O hub não entrou na fileira
+    dela — ganhou face própria, e lá ele pode dizer o que aqui não cabia: em que
+    entrada está ligado.
     """
-    filha = EXTENSAO.get(n)
-    return ('<div class="mm-cel">' + quadrado(n)
-            + (quadrado(filha, esticada=True) if filha else "") + "</div>")
+    return '<div class="mm-cel">' + quadrado(n) + "</div>"
+
+
+#: DE QUAL FACE É CADA ENTRADA — para o hub poder dizer onde está ligado. Sai das
+#: próprias `FACES`, nunca digitado: mover uma entrada de face aqui muda o texto
+#: do hub junto, e não há um segundo lugar para esquecer.
+FACE_DA_ENTRADA = {n: nome for nome, numeros in FACES for n in numeros}
+
+
+def face_dos_hubs():
+    """A terceira face: o que não é buraco do gabinete.
+
+    Ela existe porque hub e entrada não são a mesma coisa, e a tela os desenhava
+    iguais: um hub é um aparelho que VOCÊ pôs na mesa e que CARREGA entradas —
+    o gabinete não sabe dele. Aqui ele diz de onde pendura.
+    """
+    if not EXTENSAO:
+        return ""
+    celulas = "".join(
+        f'<div class="mm-cel">{quadrado(filha, esticada=True)}'
+        f'<span class="mm-ligado">ligado na entrada <b>{mae}</b>'
+        f' <span class="mudo">· {FACE_DA_ENTRADA[mae]}</span></span></div>'
+        for mae, filha in EXTENSAO.items())
+    return f'''            <div class="mm-face">
+              <div class="mm-face-cab"><span class="mm-face-nome">Hubs e extensões</span>
+                <button class="btn mini" title="Acrescenta um hub ou uma extensão à mesa e pergunta em que entrada ele está ligado. Cabo passivo não tem descritor USB: nenhuma leitura do sistema o enxerga, e por isso quem o declara é você.">Acrescentar hub</button></div>
+              <div class="mm-grade mm-grade-hubs">{celulas}</div>
+            </div>'''
 
 
 def face_bloco(nome, numeros):
@@ -1699,6 +1885,7 @@ TELA_MAPEAR = f'''
 {chr(10).join("          " + ap_botao(*a) for a in CENSO)}
         </div>
 {chr(10).join(face_bloco(*f) for f in FACES)}
+{face_dos_hubs()}
 
         <div class="mm-sala">
           <div class="mm-rot-linha"><span class="mm-rot" title="Estas duas mudaram-se da aba para cá em 28/08, e aqui elas preenchem um vazio real: a janela do desenho não guardava um único fato que só você tem. Sem resposta não é o mesmo que “Não sei”: enquanto você não responder, o Hefesto sabe que ninguém disse; “Não sei” é você dizendo que olhou e não sabe.">O que só você sabe</span></div>
@@ -1888,7 +2075,23 @@ MIOLO = f'''
            abre a Conexões quer primeiro saber se há algo errado; a lista da mesa
            e o inventário de rádios são consulta, não alerta. E resolve, de
            quebra, os 208px que o quadro de baixo perdia por não caber. -->
-      <input class="abre" type="checkbox" id="cx8-2" checked>
+      <!-- ABRIR UMA MINIMIZA AS OUTRAS — 31/08/2026, pedido dela: *"abrir uma
+           expansão minimiza a outra"*.
+
+           `type="radio"` COM O MESMO `name`, e não JavaScript: é a gramática que
+           esta casa já usa no interruptor da aba Jogar e nos três estados da
+           página de calibração. O navegador é quem garante a exclusão — não há
+           estado a sincronizar, e o mockup continua sem uma linha de script.
+
+           O QUE ISSO TROCA, e é troca boa: com rádio não se fecha a última
+           clicando nela de novo, então há SEMPRE uma seção aberta. Medido antes:
+           com as três fechadas sobravam **428px** de vão até o rodapé, e com as
+           três abertas a página passava **248px** do miolo e rolava. Os dois
+           extremos deixam de existir.
+
+           O CSS do esqueleto não precisou mudar: ele lê `input.abre:checked`,
+           que vale igual para caixa e para rádio. -->
+      <input class="abre" type="radio" name="cx8-secao" id="cx8-2" checked>
       <div class="quadro-topo">
         <label class="quadro-titulo" for="cx8-2">Check-up</label>
         <span class="ajuda">?<span class="dica">
@@ -1929,7 +2132,7 @@ MIOLO = f'''
        f'<b>O que eu vi:</b> {len(RADIOS_VIZINHOS)} fontes de rádio perto. {len(JA_NOMEADOS)} você '
        f'já nomeou; {len(POR_NOMEAR)} continuam por nomear, na tabela de '
        f'<b>Rádio e adaptadores</b>.<br><br>'
-       f'<b>Por que importa:</b> {len(NO_RADIO)} dos seus {len(MESA)} controles falam nessa mesma '
+       f'<b>Por que importa:</b> {len(NO_RADIO)} dos seus {len(CONECTADOS)} controles falam nessa mesma '
        f'faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe '
        f'o que dá para desligar e o que não dá.')}
 {exame("ok", "CERTO", "Nenhuma outra ordem de serviço pendente",
@@ -1965,25 +2168,33 @@ MIOLO = f'''
 
         </div>
 
-        <!-- A FILEIRA ÚNICA COM OS QUATRO, na ordem que ela escreveu. -->
-        <div class="acoes quatro">
-          <button class="btn" title="Refaz o exame da mesa — entradas, energia e rádio — e repinta os selos, as linhas e as ordens de serviço.">Examinar de novo</button>
-          <button class="btn verde" title="Você diz que já mexeu no cabo. O exame roda de novo e compara o antes com o depois.">Já movi — reexaminar</button>
-          <button class="btn" title="Ignora este conselho enquanto os cabos estiverem assim. Ele volta em “{VER_IGNORADAS}”.">Ignorar</button>
-          <button class="btn" title="Mostra as ordens de serviço que você mandou ignorar neste arranjo de cabos, para reabrir alguma.">{VER_IGNORADAS}</button>
-        </div>
+        <!-- OS QUATRO BOTÕES SAÍRAM — 31/08/2026, e cada um por um motivo dela.
+
+             *"não faz sentido termos o examinar e o reexaminar"*: os dois faziam
+             a MESMA coisa — refazer o exame. `Já movi — reexaminar` só prometia
+             comparar o antes com o depois, e essa comparação não estava desenhada
+             em lugar nenhum. Sobrou um, e ele desceu para a seção que fala das
+             entradas, como ela mandou.
+
+             `Ignorar` virou glifo em cada linha do exame (ver `exame()`), que é
+             onde o gesto tem sujeito. E `{VER_IGNORADAS}` saiu com ele.
+
+             O QUE FICA EM ABERTO, e é dela: sem aquele botão, **não há hoje por
+             onde reabrir uma ordem ignorada**. O desenho precisa dizer para onde
+             a linha ignorada vai — apagada na própria lista é o caminho mais
+             curto, e é decisão dela. -->
       </div>
     </div>
 
-    <!-- ======== 2. GESTÃO CONTROLES — acordeão, um por controle ligado ======== -->
+    <!-- ======== 2. GESTÃO DE CONTROLES — acordeão, um por controle ligado ======== -->
     <div class="quadro">
-      <input class="abre" type="checkbox" id="cx8-1">
+      <input class="abre" type="radio" name="cx8-secao" id="cx8-1">
       <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx8-1">Gestão Controles</label>
+        <label class="quadro-titulo" for="cx8-1">Gestão de Controles</label>
         <span class="ajuda">?<span class="dica">
           Uma linha por controle <b>ligado</b>, e só eles. O que a <b>fita do topo</b> aponta vem
           aberto; clicar em outro abre ele e fecha os demais, e a fita acompanha. Clicar no que
-          já está aberto volta para <b>Todos</b>, com os {len(MESA)} abertos.<br><br>
+          já está aberto volta para <b>Todos</b>, com os {len(CONECTADOS)} abertos.<br><br>
           <b>A linha fechada</b> diz quem é o controle e resume o que importa: o que o jogo
           <b>vê como</b> (a máscara, que se escolhe na aba <b>Jogar</b>), o <b>microfone</b> e a
           <b>bateria</b>. Máscara e bateria são leitura aqui — quem as governa é outra aba.<br><br>
@@ -1998,7 +2209,7 @@ MIOLO = f'''
           {num(CUSTO_DO_MIC)} turnos que ele custa no rádio são <b>consequência</b>, e aparecem
           na régua de Desempenho.
         </span></span>
-        <span class="conta">{len(MESA)} na mesa <span class="pt">•</span> {len(NO_CABO)} no cabo <span class="pt">•</span> {len(NO_RADIO)} no rádio</span>
+        <span class="conta">{len(CONECTADOS)} na mesa <span class="pt">•</span> {len(NO_CABO)} no cabo <span class="pt">•</span> {len(NO_RADIO)} no rádio</span>
       </div>
       <div class="quadro-corpo">
         <input type="radio" name="gc" id="gc-todos" class="gc-r">
@@ -2013,9 +2224,9 @@ MIOLO = f'''
     <!-- ======== 3. RÁDIO E ADAPTADORES — o inventário e, embaixo e separado,
          o Desempenho. ======== -->
     <div class="quadro">
-      <input class="abre" type="checkbox" id="cx8-3">
+      <input class="abre" type="radio" name="cx8-secao" id="cx8-3">
       <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx8-3">Rádio e adaptadores</label>
+        <label class="quadro-titulo" for="cx8-3">Rádio e Adaptadores</label>
         <span class="ajuda">?<span class="dica">
           <b>{MAPEAR_ENTRADAS}</b> abre o desenho do seu gabinete e numera as entradas —
           depois disso o Hefesto para de dizer "porta 3-2.1" e passa a dizer "Entrada 9". É lá
@@ -2035,15 +2246,15 @@ MIOLO = f'''
           <div class="lado-e">
             <div class="linha-rot"><b style="color:var(--texto-suave)">Adaptadores Bluetooth</b></div>
             <table class="tab">
-              <tr><th>Nome</th><th>Adaptador</th><th>Onde está</th><th></th></tr>
-{chr(10).join(f"""              <tr><td{' class="mudo"' if a["nome"] == SEM_NOME else ""}>{a["nome"]}</td>
+              <tr><th>Nome</th><th>Adaptador</th><th>Onde está</th></tr>
+{chr(10).join(f"""              <tr><td{' class="mudo"' if a["nome"] == SEM_NOME else ""}><span class="renomeia" contenteditable="true" title="{RENOMEAR_DICA}">{a["nome"]}</span></td>
                   <td class="mudo">{a["modelo"]}</td>
-                  <td>{a["onde"]} <span class="mudo">· {a["detalhe"]}</span></td>
-                  <td style="text-align:right"><span class="acao" title="Dá um nome seu a este adaptador — “Sala”, “Extra”. É por ele que o resto da tela passa a chamá-lo.">Renomear</span></td></tr>"""
+                  <td>{a["onde"]} <span class="mudo">· {a["detalhe"]}</span></td></tr>"""
                   for a in ADAPTADORES)}
             </table>
             <div class="acoes empurra">
               <a class="btn" href="#mapear-entradas" title="Abre o desenho do seu gabinete e numera as entradas. É lá que ficam as duas perguntas que só você pode responder: a altura do dongle e se tem gente entre ele e o sofá.">{MAPEAR_ENTRADAS}</a>
+              <button class="btn" title="Refaz o exame das entradas — energia e rádio — e repinta os selos, as linhas e as ordens de serviço do Check-up.">{EXAMINAR_PORTAS}</button>
             </div>
           </div>
 
@@ -2082,7 +2293,7 @@ MIOLO = f'''
               <b>O teto da vibração não mora mais aqui:</b> o dropdown dos três perfis mudou-se
               para a aba <b>{ABA_DO_TETO_GLOBAL}</b>, onde se chama <b>{CASA_DO_TETO_GLOBAL}</b> —
               ele decide o que custa <b>bateria</b>, e esta régua mede o <b>rádio</b>. Cada
-              controle continua podendo sobrepô-lo na linha dele, na <b>Gestão Controles</b>.
+              controle continua podendo sobrepô-lo na linha dele, na <b>Gestão de Controles</b>.
             </span></span>
           </div>
 
@@ -2169,17 +2380,17 @@ LEGENDA = f'''<div class="nota">
   <h2>O terceiro quadro voltou para a tela — e o que ainda não cabe</h2>
   <ul>
     <li><b>“Rádio e adaptadores” mostrava {VISIVEL_3_ANTES}&nbsp;px de {Q_RADIO}: a barra do título, e mais nada.</b> Hoje mostra <b>{VISIVEL_3}</b> — título e a primeira linha do corpo, que é o piso que a régua passou a exigir. E isso <b>não</b> se conseguiu encolhendo o terceiro quadro: só quem está <b>acima</b> de um quadro decide quanto dele aparece. Os dois da frente somavam {Q_EXAME + Q_GESTAO_ANTES}&nbsp;px e o teto é <b>{TETO_DOS_DOIS}</b>; agora somam {Q_GESTAO + Q_EXAME}.</li>
-    <li><b>Os {Q_GESTAO_ANTES - Q_GESTAO}&nbsp;px vieram de dois lugares, e nenhum deles é conteúdo.</b> A <b>Gestão Controles</b> virou uma <b>lista emoldurada</b> em vez de {len(MESA)} cartões soltos: {len(MESA)}×4&nbsp;px de borda mais 27 de vão somavam <b>43&nbsp;px que não mostram nada</b> — mais do que uma linha inteira de controle —, e a lista os troca por 5&nbsp;px de fio: <b>saldo de 38</b>. Os outros <b>8</b> saíram do respiro do corpo aberto, que era 48 e é 40 — o campo continua com os {H_ESCOLHA} do token <code>--h-escolha</code>, o que saiu foi padding, e no estado “Todos” esses 8 valem por {len(MESA)}. <b>A ordem dos quadros não pagou px nenhum</b>: ela mudou de <i>onde</i> os px caem, que é o que decide o que aparece.</li>
+    <li><b>Os {Q_GESTAO_ANTES - Q_GESTAO}&nbsp;px vieram de dois lugares, e nenhum deles é conteúdo.</b> A <b>Gestão de Controles</b> virou uma <b>lista emoldurada</b> em vez de {len(MESA)} cartões soltos: {len(MESA)}×4&nbsp;px de borda mais 27 de vão somavam <b>43&nbsp;px que não mostram nada</b> — mais do que uma linha inteira de controle —, e a lista os troca por 5&nbsp;px de fio: <b>saldo de 38</b>. Os outros <b>8</b> saíram do respiro do corpo aberto, que era 48 e é 40 — o campo continua com os {H_ESCOLHA} do token <code>--h-escolha</code>, o que saiu foi padding, e no estado “Todos” esses 8 valem por {len(MESA)}. <b>A ordem dos quadros não pagou px nenhum</b>: ela mudou de <i>onde</i> os px caem, que é o que decide o que aparece.</li>
     <li><b>E a nova ordem também lê melhor.</b> Os controles vêm primeiro — é o que a pessoa veio ver —, e o exame da sala desceu para junto do inventário dela: o exame fala da <b>“Entrada 3”</b>, e a tabela que diz o que está na Entrada 3 agora é a de baixo, e não a de outro lugar da aba.</li>
-    <li><b>A aba mede {ALTURA}&nbsp;px e o miolo mostra {VISIVEL}: ficam {ESCONDE}&nbsp;px por dentro</b> (eram {ESCONDE_ANTES}). No estado <b>“Todos”</b>, {ESCONDE_TODOS} (eram {ESCONDE_TODOS_ANTES}) — e ali a <b>Gestão Controles inteira cabe</b>, com os {len(MESA)} abertos: antes o P{MESA[-1]["jogador"]} ficava cortado no meio.</li>
-    <li><b>O que AINDA não cabe, e o número é este: no estado “Todos” o terceiro quadro continua em ZERO.</b> A conta é fria — com os {len(MESA)} abertos a Gestão Controles mede {TODOS}&nbsp;px (eram {TODOS_ANTES}), e {TODOS} + {Q_EXAME} = {TODOS + Q_EXAME} contra o teto de {TETO_DOS_DOIS}. <b>Faltam {TODOS + Q_EXAME - TETO_DOS_DOIS}&nbsp;px</b>, e não há onde tirá-los sem cortar: cada corpo aberto é uma linha de campo de {H_ESCOLHA}&nbsp;px, que é o token <code>--h-escolha</code> desta casa.</li>
+    <li><b>A aba mede {ALTURA}&nbsp;px e o miolo mostra {VISIVEL}: ficam {ESCONDE}&nbsp;px por dentro</b> (eram {ESCONDE_ANTES}). No estado <b>“Todos”</b>, {ESCONDE_TODOS} (eram {ESCONDE_TODOS_ANTES}) — e ali a <b>Gestão de Controles inteira cabe</b>, com os {len(MESA)} abertos: antes o P{MESA[-1]["jogador"]} ficava cortado no meio.</li>
+    <li><b>O que AINDA não cabe, e o número é este: no estado “Todos” o terceiro quadro continua em ZERO.</b> A conta é fria — com os {len(MESA)} abertos a Gestão de Controles mede {TODOS}&nbsp;px (eram {TODOS_ANTES}), e {TODOS} + {Q_EXAME} = {TODOS + Q_EXAME} contra o teto de {TETO_DOS_DOIS}. <b>Faltam {TODOS + Q_EXAME - TETO_DOS_DOIS}&nbsp;px</b>, e não há onde tirá-los sem cortar: cada corpo aberto é uma linha de campo de {H_ESCOLHA}&nbsp;px, que é o token <code>--h-escolha</code> desta casa.</li>
     <li><b>Se a aba tiver de caber INTEIRA, o que teria de sair — e o preço de cada um.</b> A seção <b>“Desempenho”</b> ({DESEMPENHO}&nbsp;px), a <b>tabela dos adaptadores com os dois botões</b> ({INVENTARIO}), ou o quadro <b>“Está tudo certo?”</b> inteiro ({Q_EXAME}). <b>A decisão é sua</b> — nenhuma delas foi tomada aqui. Note o que <b>não</b> paga nada: as cinco linhas do exame não encolhem sem sumir uma, e a fileira dos rádios vizinhos não manda na altura da coluna em que está — tirá-la economiza zero.</li>
     <li><b>Mas na SUA janela ela já cabe.</b> Numa tela de {num(ALT_TV)}&nbsp;px o miolo tem {UTIL_TV}&nbsp;px de conteúdo, e a aba agora pede {ALTURA - 34}: <b>sobram {UTIL_TV - (ALTURA - 34)}&nbsp;px</b>. Antes desta leva faltavam 9. A janela abre com 757 nas dez abas porque foi assim que a Jogar foi aprovada — se a altura da janela subir, esta aba deixa de esconder qualquer coisa, e é <b>uma</b> decisão para as dez, não dez.</li>
   </ul>
 
   <h2>Escolhas que precisam do seu aval</h2>
   <ul>
-    <li><b>A ordem dos quadros mudou, e é a mudança que devolveu o terceiro para a tela.</b> “Gestão Controles” passou a vir <b>primeiro</b>, e “Está tudo certo?” desceu para junto de “Rádio e adaptadores”. Duas razões: a aritmética (só quem está acima decide quanto do de baixo aparece, e não havia arranjo com o exame na frente em que o terceiro coubesse), e a leitura — o exame fala da <b>Entrada 3</b>, e a tabela que diz o que está na Entrada 3 agora é a de baixo, não a de outro lugar. <b>Se você preferir o exame na frente</b>, ele volta: o preço é o terceiro quadro voltar a mostrar {VISIVEL_3_ANTES}&nbsp;px.</li>
+    <li><b>A ordem dos quadros mudou, e é a mudança que devolveu o terceiro para a tela.</b> “Gestão de Controles” passou a vir <b>primeiro</b>, e “Está tudo certo?” desceu para junto de “Rádio e adaptadores”. Duas razões: a aritmética (só quem está acima decide quanto do de baixo aparece, e não havia arranjo com o exame na frente em que o terceiro coubesse), e a leitura — o exame fala da <b>Entrada 3</b>, e a tabela que diz o que está na Entrada 3 agora é a de baixo, não a de outro lugar. <b>Se você preferir o exame na frente</b>, ele volta: o preço é o terceiro quadro voltar a mostrar {VISIVEL_3_ANTES}&nbsp;px.</li>
     <li><b>“Vale Sem teto, do global, abaixo” SAIU — e o desempate que esta linha pedia deixou de existir.</b> Ela mandou tirar a leitura e deixar só o seletor (<code>D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES</code>), e a frase saiu dos <b>dois</b> lugares em que estava: destas {len(MESA)} linhas de controle (o que ela via) e da capa do Desempenho (y=834, fora da dobra — o que casava letra por letra com o pedido, e que ela não podia ter visto). O <b>“abaixo”</b> caducou de qualquer jeito, por uma segunda razão independente: com o teto global mudando-se para a <b>{ABA_DO_TETO_GLOBAL}</b>, o endereço que a frase dava aponta para um lugar que não existe mais nesta aba. <b>A frase não se perdeu</b> — ela vive no <code>?</code> do campo, que a lê sob demanda em vez de gastar uma coluna nas {len(MESA)} linhas. E o desempate que este item pedia (“o teto global morar na mesma moldura dos {len(MESA)} tetos de controle”, por {H_ESCOLHA + 9}&nbsp;px) está <b>respondido</b>: o global saiu da aba inteira, e não custa px nenhum aqui.</li>
     <li><b>Os quatro botões viraram UMA fileira, e ela custou zero.</b> Você escreveu a ordem com todas as letras — <i>“Examinar de novo. / Já Movi - Reexaminar. / Ignorar / Ver Ordens ignoradas.”</i> — e com um par em cada coluna essa ordem não existe: a leitura de uma grade de duas colunas é esquerda→direita, e “Ignorar” (que estava à direita) teria de vir antes de “{VER_IGNORADAS}” (que estava à esquerda). <b>Medido:</b> o quadro tinha 204&nbsp;px e continua com {Q_EXAME}; a fileira nasce no mesmo y=575; os quatro botões passaram de 265,5 para <b>272&nbsp;px cada</b>, todos iguais, e a borda direita não andou um pixel.</li>
     <li><b>“Ver as ordens caladas” virou “{VER_IGNORADAS}”, e o motivo é o PAR.</b> O botão irmão chama-se <b>Ignorar</b>: quem o aperta procura depois as ordens <i>ignoradas</i>. “Caladas” era a única palavra da dupla sem par na tela. <b>Uma diferença para a sua frase:</b> você escreveu “Ver Ordens ignoradas” e a tela diz “Ver <u>as</u> ordens ignoradas” — o artigo é o que já estava lá, e só a última palavra mudou. Se você quiser a sua frase ao pé da letra, é <b>uma</b> palavra a menos.</li>
@@ -2206,14 +2417,93 @@ n = monta("08-conexoes", "Conexões", MIOLO, CSS, fita_viva=True, legenda=LEGEND
 # `position:fixed`, logo ela não pertence ao miolo nem custa um pixel dele.
 # É a mesma injeção que o `aba06.py` faz desde 28/08, na mesma marca.
 # ---------------------------------------------------------------------------
-p = R / "layout" / "08-conexoes.html"
+p = onde.pagina("08-conexoes.html")
 x = p.read_text()
 MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
 if MARCA not in x:
     raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
 TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR, TELA_SENTADA, TELA_FIM, TELA_EM_PE))
 x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
-p.write_text(x)
+onde.gravar("08-conexoes.html", x)
+
+
+# ---------------------------------------------------------------------------
+# AS QUATRO RÉGUAS DA CONEXÕES — 31/08/2026, e cada uma guarda um pedido dela.
+# Elas leem o HTML JÁ GRAVADO, que é a última coisa que a página é.
+# ---------------------------------------------------------------------------
+_HTML = onde.pagina("08-conexoes.html").read_text()
+_falhas = []
+
+
+def _exigir(cond, queixa):
+    if not cond:
+        _falhas.append(queixa)
+
+
+# 1. ABRIR UMA MINIMIZA AS OUTRAS. Três rádios com o MESMO `name` — com
+#    `checkbox` as três abriam juntas e a página passava 248px do miolo.
+_ABRE = re.findall(r'<input class="abre" type="(\w+)"(?: name="([^"]*)")?', _HTML)
+_exigir(len(_ABRE) == 3, f"não são 3 seções que expandem, e sim {len(_ABRE)}")
+_exigir(all(t == "radio" for t, _ in _ABRE),
+        "uma seção voltou a ser `checkbox` — duas abertas ao mesmo tempo é o que "
+        "ela mandou desfazer: *abrir uma expansão minimiza a outra*")
+_exigir(len({n for _, n in _ABRE}) == 1 and _ABRE[0][1],
+        "os rádios das seções não dividem o mesmo `name` — sem isso o navegador "
+        "não tem como fechar a outra")
+
+# 2. O RESPIRO DO RÓTULO QUE EXPANDE. O `.quadro-topo` do esqueleto é
+#    `padding:11px 14px 0`: sem esta regra sobra 1px embaixo do texto.
+_exigir(".quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}" in _HTML,
+        "o rótulo das seções que expandem perdeu o respiro de baixo — volta a "
+        "1px contra os 12 de cima, que é o que ela viu nas duas fotos")
+
+# 3. O LUGAR DE QUEM NÃO ESTÁ NA MESA. As duas metades: o nome novo presente, e
+#    o rótulo de mesa daquele controle AUSENTE — tirar só uma delas foi como uma
+#    cura desta casa passou pela metade em 31/08.
+_FORA = [c for c in MESA if not c.get("conectado", True)]
+_exigir(_HTML.count("Desconectado</span>") == len(_FORA),
+        f"não são {len(_FORA)} lugares 'Desconectado' na Gestão de Controles")
+for _c in _FORA:
+    _exigir(rotulo(_c) not in _HTML,
+            f"o rótulo de mesa do Player {_c['jogador']} continua na tela — ele não está na mesa")
+
+# 4. QUEM CONTA CONTROLE CONTA QUEM ESTÁ NA MESA. A aba contava quatro em
+#    silêncio: o Check-up prometia energia para "os 2 controles no cabo" contando
+#    o P4, que não está.
+#    A RÉGUA REFAZ A CONTA A PARTIR DA `MESA`, e NÃO lê `NO_CABO`/`CONECTADOS`.
+#    Escrita como `f"{len(NO_CABO)} controle" in _HTML` ela PASSOU na mordida que
+#    devolvia `NO_CABO = [... for c in MESA ...]`: o HTML nascia do mesmo valor
+#    errado que a régua usava para procurar, e os dois concordavam. Uma régua que
+#    compara o produto com a variável que o produziu não mede nada — mede a si
+#    mesma. Aqui os números saem do HTML e a verdade sai de `MESA` + `conectado`.
+_na_mesa = [c for c in MESA if c.get("conectado", True)]
+_cabo = len([c for c in _na_mesa if c["via"] == "USB"])
+_radio = len([c for c in _na_mesa if c["via"] == "BT"])
+
+
+def _numero(padrao, onde_diz):
+    achado = re.search(padrao, _HTML)
+    if not achado:
+        _falhas.append(f"a régua não achou {onde_diz} no HTML — seletor cego é ERRO, "
+                       "não silêncio")
+        return None
+    return int(achado.group(1))
+
+
+_exigir(_numero(r">(\d+) na mesa", "a contagem do cabeçalho") == len(_na_mesa),
+        f"o cabeçalho da Gestão não conta os {len(_na_mesa)} que estão na mesa")
+_exigir(_numero(r"energia para o?s? ?(\d+) ", "a frase da energia") == _cabo,
+        f"o Check-up não fala dos {_cabo} controle(s) no cabo — ele voltou a contar "
+        "quem não está na mesa")
+_exigir(_numero(r"<b>Por que importa:</b> (\d+) ", "a frase do rádio") == _radio,
+        f"a frase do rádio não fala dos {_radio} controle(s) no rádio")
+_exigir(_numero(r"dos seus (\d+) controles", "o total da frase do rádio") == len(_na_mesa),
+        f"a frase do rádio não fala dos seus {len(_na_mesa)} controles")
+
+if _falhas:
+    raise SystemExit("ERRO em 08-conexoes — decisão dela desfeita:\n  "
+                     + "\n  ".join(f"- {f}" for f in _falhas))
 
 print(f"08-conexoes: OK, {n} divs · 4 telas novas "
-      f"(1 do desenho + {3} da cerimônia)")
+      f"(1 do desenho + {3} da cerimônia) · 3 seções exclusivas · "
+      f"{len(CONECTADOS)} na mesa + {len(_FORA)} desconectado(s)")

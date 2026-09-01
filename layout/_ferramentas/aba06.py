@@ -1,5 +1,6 @@
 import sys, pathlib, csv, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, R, MESA,
+import onde
+from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, R, MESA, CONECTADOS,
                    cor_da_zona, player_slot_color, DS)
 
 # ---------------------------------------------------------------------------
@@ -88,8 +89,18 @@ TOUCH_REGIOES = [f"clique {x.strip()}" for x in
 # (`daemon/subsystems/coop.py:1871` — `forward_analog`/`forward_buttons`).
 # Logo: com quatro na mesa, mouse, teclado e os cinco gestos saem de um
 # controle só, o do jogador 1. A aba diz isso na cara em vez de esconder.
-NAVEGA = min(c["jogador"] for c in MESA)
-QUEM_NAVEGA = next(c for c in MESA if c["jogador"] == NAVEGA)
+# QUEM NAVEGA SAI DOS CONECTADOS, não da MESA — 31/08/2026, quando a mesa passou
+# a ter dois lugares vazios. Um controle desconectado não navega o PC, e o menor
+# número da MESA podia ser justamente ele: a tela apontaria o cursor para um
+# aparelho que não está aqui.
+NAVEGA = min(c["jogador"] for c in CONECTADOS)
+QUEM_NAVEGA = next((c for c in CONECTADOS if c["jogador"] == NAVEGA), None)
+if QUEM_NAVEGA is None:
+    # SEM ESTA LINHA o `next()` estourava com `StopIteration` cru, e quem lesse a
+    # saída não tinha como saber o que aconteceu. Régua que quebra não diz o que
+    # está errado — a lição do mesmo dia, na aba Controles.
+    raise SystemExit(f"ERRO: o Player {NAVEGA} navega o PC e NÃO está na mesa. "
+                     f"Quem navega sai de `CONECTADOS`, nunca de `MESA`.")
 
 
 def _hex(rgb):
@@ -167,6 +178,37 @@ CSS = CSS_GLIFO + """
   .nav-ctl{display:flex;flex-direction:column;justify-content:center;gap:4px;
            border:2px solid var(--plastico,var(--border-forte));border-radius:8px;
            background:var(--app-bg);padding:6px 5px}
+
+  /* ---------- O LUGAR VAZIO ----------
+     A mesma gramática das outras cinco abas: cor explícita e NADA de `opacity`
+     (a lição medida da `.fita.inerte`). A borda se declara INTEIRA aqui, e não
+     só a cor: o `.nav-ctl` usa `var(--plastico)`, e uma `var()` sem valor
+     invalida a declaração toda — a borda não fica cinza, ela deixa de existir.
+     Medido na aba Controles no mesmo dia, com a foto mostrando dois lugares
+     soltos, sem caixa nenhuma.
+     OS DETALHES CLAROS DO DESENHO CAEM JUNTO — `text`, `line` e os `path` sem
+     classe são os glifos L/R/PS, e eles só aparecem em desenho GRANDE: aqui ele
+     tem 111px, contra os 62 da aba Jogar. O que muda com o TAMANHO tem de ser
+     medido no tamanho em que é desenhado. */
+  .nav-ctl.vazia{border:1px solid var(--border-forte);background:transparent}
+  .nav-ctl.vazia .nav-rot,
+  .nav-ctl.vazia .nav-est{color:var(--linha)}
+  .nav-ctl.vazia .ds-svg .peca,
+  .nav-ctl.vazia .ds-svg .corpo,
+  .nav-ctl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
+  .nav-ctl.vazia .ds-svg text{fill:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg line{stroke:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+                                                     stroke:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg rect:not([fill="none"]),
+  .nav-ctl.vazia .ds-svg circle:not([fill="none"]),
+  .nav-ctl.vazia .ds-svg polygon:not([fill="none"]),
+  .nav-ctl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg rect,
+  .nav-ctl.vazia .ds-svg circle,
+  .nav-ctl.vazia .ds-svg polygon,
+  .nav-ctl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
   .nav-ctl .ds-svg{width:100%}
   /* a barra de luz acesa na cor automática do jogador. Sem esta regra o `--luz`
      que o `monta.svg()` escreve não pinta NADA: as duas tiras são `.peca`, e a
@@ -393,7 +435,14 @@ CSS = CSS_GLIFO + """
   /* ---- as TRÊS tabelas: mesma largura de bloco, mesma coluna de valor,
           cabeçalho em roxo (fala [90]) — inclusive a dos gestos ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
-  .tab th{color:var(--rot-campo);font-weight:600;text-align:left;font-weight:600;font-size:10px;
+  /* O CABEÇALHO DA TABELA DE GESTOS É BRANCO E NEGRITO — decisão dela,
+     31/08/2026: *"Combinação no controle / O que faz: tira do verde, deixa
+     branco e negrito."*
+     Ele era `--rot-campo` (o verde que nomeia CAMPO nesta janela), e não é isso
+     que ele é: campo é o que se ajusta, e estas duas são as COLUNAS de uma
+     tabela — cabeçalho, não rótulo de campo. Pintá-lo de verde dava a duas
+     palavras que não se clicam a mesma cor das que se clicam. */
+  .tab th{color:var(--fg);font-weight:700;text-align:left;font-size:10px;
           padding:0 8px 4px 0;
           border-bottom:1px solid var(--border-forte)}
   /* a linha da tabela é o token + o fio de 1px que separa duas linhas, e mais
@@ -440,8 +489,29 @@ CSS = CSS_GLIFO + """
     background:transparent;color:var(--texto-suave);
     display:inline-flex;align-items:center;justify-content:center}
   .btn-conf.vermelho{border-color:var(--red);color:var(--red)}
-  .grupo-padrao:has(.btn-padrao:hover) .confirma,
-  .grupo-padrao:has(.confirma:hover) .confirma{display:flex}
+  /* O POP-UP ABRE NO CLIQUE E SÓ FECHA NA OPÇÃO OU FORA — decisão dela,
+     31/08/2026: *"voltar ao padrão tem que ficar aquele pop up ativo e só
+     desativar se eu clicar na opção ou fora dela."*
+
+     ERA `:hover`, e o hover é o gatilho errado para uma pergunta que espera
+     resposta: ela sumia assim que o ponteiro saía do caminho entre o botão e o
+     "Confirmar", e ler a frase inteira já bastava para perdê-la. Uma confirmação
+     que foge do ponteiro não é confirmação — é aviso.
+
+     COMO FUNCIONA, sem uma linha de JavaScript:
+     · o `<input type="checkbox">` escondido guarda o estado (aberto/fechado);
+     · o `<label for>` que se veste de botão é quem o liga;
+     · o **véu** (`.veu`) é um segundo `<label for>` do MESMO checkbox, que cobre
+       a tela inteira ATRÁS do pop-up — clicar em qualquer lugar fora fecha,
+       porque clicar nele desmarca a caixa;
+     · "Confirmar" e "Cancelar" também são `<label for>` do mesmo checkbox,
+       então a opção fecha junto.
+     O véu só existe quando está aberto (`display:none` no fechado), então ele
+     nunca engole clique de quem não abriu nada. */
+  .abre-conf{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+  .veu{display:none;position:fixed;inset:0;z-index:5;cursor:default}
+  .abre-conf:checked ~ .veu{display:block}
+  .abre-conf:checked ~ .confirma{display:flex}
 
   /* as duas linhas de estado ficam no MESMO y: altura fixa e fundo da coluna */
   .estado{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--texto-mudo)}
@@ -694,6 +764,30 @@ CSS += """
 """
 
 
+#: O marcador de campo vazio — o mesmo travessão das outras cinco abas.
+VAZIO = "—"
+
+
+def controle_vazio(c):
+    """O LUGAR de um controle que não está na mesa — ordem dela, 31/08/2026:
+    *"todas as abas tem que ter só dois controles conectados no momento, o resto
+    fica off"* e *"colocar algo como Desconectado e não os controles mockados"*.
+
+    O CARD CONTINUA NA FILEIRA, e é o ponto: quem olha precisa saber que a mesa
+    tem quatro lugares e dois vazios, não que ela tem dois. O que sai é o estado
+    — a cor do plástico, o transporte e o "Só a janela", porque nenhum deles tem
+    aparelho para valer.
+    """
+    n = c["jogador"]
+    return (
+        f'              <div class="nav-ctl vazia" data-conectado="nao"'
+        f' title="Nenhum controle neste lugar.">\n'
+        f'                {svg(c["pref"], c["cor"], classes="ds-svg", lampadas=False)}\n'
+        f'                <div class="nav-rot">P{n} <span class="pt">•</span> Desconectado</div>\n'
+        f'                <div class="nav-est">{VAZIO}</div>\n'
+        f'              </div>')
+
+
 def controle(c):
     """Um dos quatro da mesa: o desenho na cor do plástico, o rótulo na ordem
     dela (player • plástico • transporte) e o que ele navega agora."""
@@ -877,13 +971,18 @@ FILEIRA = f'''
               <a class="btn roxo" href="#definicoes-mouse">Definições Controle e Mouse</a>
               <a class="btn roxo" href="#remapeamento">Remapeamento dos botões</a>
               <a class="btn roxo" href="#point-and-click">Configurar o estilo Point-and-click</a>
-              <button class="btn btn-padrao">Voltar ao padrão</button>
+              <!-- O RÁDIO VEM ANTES de tudo o que reage a ele: o `~` do CSS só
+                   enxerga irmão POSTERIOR. É a mesma armadilha que o interruptor
+                   da aba Jogar documenta, e a mesma cura. -->
+              <input type="checkbox" id="conf-padrao" class="abre-conf">
+              <label for="conf-padrao" class="btn btn-padrao">Voltar ao padrão</label>
+              <label for="conf-padrao" class="veu" title="Fecha sem mudar nada."></label>
               <div class="confirma">
                 <span>Devolver a aba <b>Navegação</b> inteira ao de fábrica — as opções
                   de ativação, os {len(COMBOS)} gestos e as {len(BOTOES)} linhas das duas
                   telas de botões?</span>
-                <button class="btn-conf vermelho">Confirmar</button>
-                <button class="btn-conf">Cancelar</button>
+                <label for="conf-padrao" class="btn-conf vermelho">Confirmar</label>
+                <label for="conf-padrao" class="btn-conf">Cancelar</label>
               </div>
             </div>'''
 
@@ -1058,7 +1157,7 @@ MIOLO = f'''
         <div class="gestos">
           <div class="previa">
             <div class="nav-mesa">
-{chr(10).join(controle(c) for c in MESA)}
+{chr(10).join(controle(c) if c.get('conectado', True) else controle_vazio(c) for c in MESA)}
             </div>
           </div>
           <div class="combos">
@@ -1282,7 +1381,7 @@ n = monta("06-navegacao", "Navegação", MIOLO, CSS, fita_viva=False, legenda=LE
 # A FITA fica apagada nesta aba, mas o motivo herdado da Jogar é falso aqui: não há
 # card nenhum, há 28 campos editáveis. Trocado na saída, porque o texto mora no
 # esqueleto (topo.html) e esta aba só pode mexer no arquivo dela.
-p = R / "layout" / "06-navegacao.html"
+p = onde.pagina("06-navegacao.html")
 s = p.read_text()
 ANTES = 'title="Esta aba não usa o controle escolhido aqui — os cards são leitura."'
 DEPOIS = ('title="Não se aplica: mouse, teclado e gestos saem de um controle só — '
@@ -1297,6 +1396,73 @@ if MARCA not in s:
     raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
 TELAS = "\n".join(t.strip() for t in (TELA_DEFINICOES, TELA_REMAPEAMENTO, TELA_PONTO))
 s = s.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
-p.write_text(s)
+onde.gravar("06-navegacao.html", s)
 
-print(f"06-navegacao: OK, {n} divs · mesa de {len(MESA)} · {len(BOTOES)} botões do mapa")
+
+def _conferir(doc):
+    """As decisões dela nesta aba, conferidas NA SAÍDA.
+
+    Só o miolo, sem comentário HTML e sem o `<style>` — as três armadilhas que
+    fizeram as réguas das abas irmãs reprovarem o que estava certo.
+    """
+    import re as _re
+    corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
+    corpo = _re.sub(r"<!--.*?-->", "", corpo, flags=_re.S)
+    corpo = _re.sub(r"<style[^>]*>.*?</style>", "", corpo, flags=_re.S)
+    if len(corpo) < 2000:
+        raise SystemExit("ERRO: a régua não achou o miolo desta aba.")
+    falhas = []
+
+    def exigir(cond, oque):
+        if not cond:
+            falhas.append(oque)
+
+    vazios = [c for c in MESA if not c.get("conectado", True)]
+    # 1. A MESA — dois conectados, dois lugares vazios, e os quatro cards na tela.
+    exigir(corpo.count('class="nav-ctl vazia"') == len(vazios),
+           f"os lugares vazios não são {len(vazios)}")
+    exigir(corpo.count('class="nav-ctl') == len(MESA),
+           f"a fileira não tem os {len(MESA)} lugares")
+    # 2. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO, nunca o nome do plástico.
+    for c in vazios:
+        exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
+               f"o lugar do P{c['jogador']} não diz Desconectado")
+        exigir(c["nome"] not in corpo,
+               f"o nome do plástico {c['nome']!r} voltou a um lugar vazio")
+    # A ORDEM SE MEDE COM `find`, E O RECORTE COM `[1:]` — nunca com `[1]`.
+    # A primeira versão desta régua fazia `split(...)[1]` e ESTOUROU com
+    # `IndexError` na mordida que tirava os lugares vazios: o gerador morreu e a
+    # mensagem que ele devia imprimir nunca saiu. Na mordida isso é
+    # indistinguível de uma régua que não pegou nada. Já tinha acontecido na aba
+    # Controles hoje, com `index` em vez de `find` — mesma família, mesma cura.
+    for pedaco in corpo.split('class="nav-ctl vazia"')[1:]:
+        bloco = pedaco.split('class="nav-ctl', 1)[0]
+        exigir("Só a janela" not in bloco and "Navega o PC" not in bloco,
+               "um lugar vazio diz o que ele navega — e ele não navega nada")
+
+    # 2-bis. A BORDA DO LUGAR VAZIO SE DECLARA INTEIRA, e não só a cor.
+    #    `.nav-ctl` diz `border:1px solid var(--plastico)`, e o lugar vazio NÃO
+    #    tem `--plastico`. Uma `var()` sem valor **invalida a declaração toda**:
+    #    a borda não fica cinza, ela DEIXA DE EXISTIR — em silêncio, com o
+    #    `border-color` que alguém escreveu ali intacto e inútil.
+    #    Isto já me pegou duas vezes hoje (Controles e Gatilhos), e a mordida
+    #    mostrou que nenhuma régua via. Agora vê.
+    exigir(".nav-ctl.vazia{border:1px solid var(--border-forte)" in doc,
+           "a borda do lugar vazio voltou a ser só COR — com `var(--plastico)` "
+           "indefinido, a declaração inteira cai e o lugar fica sem caixa")
+    # 3. QUEM NAVEGA ESTÁ NA MESA. Apontar o cursor para um aparelho que não está
+    #    aqui é a mesma mentira que o nome do plástico num lugar vazio.
+    exigir(QUEM_NAVEGA.get("conectado", True),
+           f"quem navega (P{NAVEGA}) não está conectado")
+    exigir(f'>P{NAVEGA} <span class="pt">•</span> {QUEM_NAVEGA["nome"]}</div>' in corpo,
+           "o card de quem navega não é o do controle certo")
+
+    if falhas:
+        raise SystemExit("ERRO em 06-navegacao — decisão dela desfeita:\n  "
+                         + "\n  ".join(f"- {f}" for f in falhas))
+
+
+_conferir(onde.pagina("06-navegacao.html").read_text())
+print(f"06-navegacao: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
+      f"+ {len(MESA) - len(CONECTADOS)} lugar(es) vazio(s) · "
+      f"quem navega: P{NAVEGA} · {len(BOTOES)} botões do mapa")

@@ -15,7 +15,19 @@ import subprocess, sys, json, re, pathlib
 # uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
 # ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
 # segunda árvore de trabalhar sem tocar na primeira.
-D = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import onde  # noqa: E402
+
+# A RÉGUA MEDE A BANCADA (`mockup/`), que é onde o desenho de hoje mora.
+# Apontá-la para `layout/` a faria medir a página congelada — verde sobre o
+# desenho velho, a armadilha do `COMO-OLHAR-A-TELA.md`.
+#
+# `--publicado` MEDE O PRODUTO, e existe para uma pergunta só: *este
+# desalinhamento é meu ou já estava aqui?* Sem ela, quem mexe numa aba herda a
+# dívida de quem mexeu antes e não tem como separar as duas — foi o que
+# aconteceu em 31/08 com um `17 / 36` que parecia novo e era de dias atrás.
+PUBLICADO = "--publicado" in sys.argv
+D = onde.PUBLICADO if PUBLICADO else onde.BANCADA
 REF = "01-jogar.html"
 ROT = 92   # o token --rot, em px — a coluna de rótulo de toda aba
 
@@ -30,6 +42,14 @@ ROT = 92   # o token --rot, em px — a coluna de rótulo de toda aba
 # ---------------------------------------------------------------------------
 DISPENSAS = {
     "03-gatilhos.html": [
+        ("titulos de secao em x diferentes",
+         "30/08, ela: 'no nome das linhas deixa alinhadas à direita. Todas'. "
+         "Alinhados à direita, rótulos de larguras diferentes COMEÇAM em x "
+         "diferentes — é a consequência aritmética do que ela pediu, não um "
+         "defeito. O que tem de bater é onde eles ACABAM, e acabam: todos na "
+         "divisa da coluna. A régua mede o início; a dispensa diz por quê. "
+         "MEDIDO em 31/08: o desalinhamento existe no produto publicado e na "
+         "bancada, idêntico — `regua.py 03-gatilhos.html --publicado` prova."),
         ("conteúdo das colunas",
          "27/08, ela: 'Nenhuma. Talvez a régua tenha que ser ajustada por aba.' "
          "L2 e R2 mostram as barras do MODO escolhido, e modos diferentes têm "
@@ -301,7 +321,12 @@ if __name__ == "__main__":
     print(f"  rótulo: {ref.get('rotulos')} · fileiras: "
           + " · ".join(f"{k}={v[0]}" for k,v in list(ref.get("larguras",{}).items())[:4]))
     falhou = 0
-    for arq in sys.argv[1:]:
+    # AS FLAGS NÃO SÃO ARQUIVO. Sem este filtro, `regua.py 03.html --publicado`
+    # tentava abrir um arquivo chamado `--publicado`, estourava — e quem contasse
+    # a saída com `grep` lia um número que era do TRACEBACK. Aconteceu na volta
+    # em que a flag nasceu: a régua "achou 3 desalinhamentos" numa aba que ela
+    # nunca chegou a medir.
+    for arq in [a for a in sys.argv[1:] if not a.startswith("-")]:
         r = medir(arq); m = r["m"]; e = list(r["erros"])
         # O AVISO DE ROLAGEM ESPERA O CABEÇALHO. Ele era impresso durante a
         # medição, ANTES do `=== {arq} ===`, e por isso aparecia debaixo do nome

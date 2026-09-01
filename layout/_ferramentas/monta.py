@@ -1,5 +1,14 @@
-"""Monta uma aba a partir do esqueleto VALIDADO da Jogar + o miolo dado."""
+"""Monta uma aba a partir do esqueleto VALIDADO da Jogar + o miolo dado.
+
+ONDE ELE ESCREVE, e mudou em 31/08/2026 por decisão dela: na **BANCADA**
+(`mockup/`), nunca no publicado. O caminho tem dono único — `onde.py` —, e o
+porquê está escrito lá: até 31/08 `monta()` gravava em `layout/`, que é o que
+o piloto abre no WebView, então gerar uma aba **já trocava o produto** sem
+passar pelo olho dela.
+"""
 import csv, html, pathlib, re, sys
+
+import onde
 
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
 # arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
@@ -194,16 +203,37 @@ def nome_do_glifo(nome):
 #: mesma sessão. A Jogar é literal e ninguém a lê. Aqui há um lugar só.
 MASCARAS = ("DualSense", "Xbox 360", "Nintendo Pro")
 
+#: `conectado` — DOIS NA MESA, DOIS FORA. Decisão dela, 31/08/2026:
+#:
+#:     "Vamos deixar os outros dois controles desconectados, só colocamos algo
+#:      como `-` nos campos que deveriam ter algo e escurecemos tudo. Todas as
+#:      abas tem que ter só dois controles conectados no momento, o resto fica off."
+#:
+#: O LUGAR VAZIO CONTINUA NA TELA, e é isso que o campo compra: um controle que
+#: some não ensina nada; um que fica apagado, com `-` no lugar do dado, ensina
+#: que ali cabe um e que ele não está. É a mesma escolha que a fita do topo já
+#: fazia com `.fita.inerte` — o desenho permanece, a informação sai.
+#:
+#: A ORDEM É A DA MESA, e o desconectado vai para o fim: quem está lá em cima é
+#: quem está jogando.
 MESA = [
     {"pref": "p1", "jogador": 1, "cor": "cosmic-red",     "nome": "Cosmic Red",
-     "via": "USB", "alvo": True,  "mascara": "DualSense"},
+     "via": "USB", "alvo": True,  "mascara": "DualSense",    "conectado": True},
     {"pref": "p2", "jogador": 2, "cor": "starlight-blue", "nome": "Starlight Blue",
-     "via": "BT",  "alvo": False, "mascara": "Xbox 360"},
+     "via": "BT",  "alvo": False, "mascara": "Xbox 360",     "conectado": True},
     {"pref": "p3", "jogador": 3, "cor": "galactic-purple", "nome": "Galactic Purple",
-     "via": "BT",  "alvo": False, "mascara": "DualSense"},
+     "via": "BT",  "alvo": False, "mascara": "DualSense",    "conectado": False},
     {"pref": "p4", "jogador": 4, "cor": "white",          "nome": "White",
-     "via": "USB", "alvo": False, "mascara": "Nintendo Pro"},
+     "via": "USB", "alvo": False, "mascara": "Nintendo Pro", "conectado": False},
 ]
+
+#: Os que estão de fato na mesa. Quem conta controle conta ESTES — o cabeçalho, a
+#: fita e toda frase que diz "N controles".
+#:
+#: POR QUE UMA LISTA À PARTE, e não um `MESA` de dois: o desenho precisa dos
+#: quatro para pintar os dois lugares vazios. Filtrar na fonte apagaria o lugar,
+#: que é justamente o que ela mandou mostrar.
+CONECTADOS = [c for c in MESA if c.get("conectado", True)]
 
 
 #: O separador dos rótulos, num lugar só — ele era um literal dentro de
@@ -308,8 +338,12 @@ def fita(ativo="todos", inerte=False, titulo=None):
     """
     t = titulo or ("Esta aba não usa o controle escolhido aqui — os cards são leitura."
                    if inerte else "O que você mudar nesta aba vai para o controle escolhido aqui.")
+    # A FITA SÓ MOSTRA QUEM ESTÁ NA MESA — 31/08/2026, decisão dela de deixar dois
+    # fora. Um controle desconectado não se escolhe: pôr o chip dele aqui seria
+    # oferecer um destino que não existe, e é o oposto do que ela pediu na lista
+    # ("ele só fica ativo se surgir controle naquela área").
     chips = [f'<span class="chip{" on" if ativo == "todos" else ""}">Todos</span>']
-    for c in MESA:
+    for c in CONECTADOS:
         on = " on" if ativo == c["pref"] else ""
         chips.append(
             f'<span class="chip plastico{on}" style="--plastico:{cor_da_zona(c["cor"])}"'
@@ -689,10 +723,14 @@ def monta(arq, titulo_aba, miolo, css_extra="", fita_viva=False, legenda=""):
     # A CONTAGEM DO CABEÇALHO SAI DA MESA. Ela estava digitada no esqueleto
     # ("2 controles: 1 USB · 1 BT") e divergiria da fita no primeiro controle a
     # mais — que é exatamente o que aconteceu quando a mesa virou quatro.
-    usb = sum(1 for c in MESA if c["via"] == "USB")
-    bt = sum(1 for c in MESA if c["via"] == "BT")
+    # QUEM CONTA É `CONECTADOS`, não `MESA` — 31/08/2026, decisão dela de deixar
+    # dois fora. O cabeçalho promete o que está na mesa AGORA; contar os quatro
+    # aqui faria a janela anunciar quatro e desenhar dois acesos, que é a mesma
+    # divergência que esta linha nasceu para matar.
+    usb = sum(1 for c in CONECTADOS if c["via"] == "USB")
+    bt = sum(1 for c in CONECTADOS if c["via"] == "BT")
     t = re.sub(r'(<div class="conectado"><span class="bolinha">●</span> )[^<]*<b>[^<]*</b>',
-               rf'\g<1>{len(MESA)} controles: <b>{usb} USB · {bt} BT</b>', t, count=1)
+               rf'\g<1>{len(CONECTADOS)} controles: <b>{usb} USB · {bt} BT</b>', t, count=1)
 
     # A FITA É GERADA, e não mais remendada. Ela era dois `<span>` fixos no
     # `topo.html`, e `monta()` os remendava com três `str.replace` encadeados —
@@ -705,7 +743,7 @@ def monta(arq, titulo_aba, miolo, css_extra="", fita_viva=False, legenda=""):
     # a tira: marca a aba ativa
     tira = ['  <div class="tira">']
     for nome, a in ABAS:
-        existe = (R/"layout"/f"{a}.html").exists() or a == arq
+        existe = onde.pagina(f"{a}.html").exists() or a == arq
         atv = ' ativa' if a == arq else ''
         tira.append(f'    <a class="aba{atv}" href="{a}.html">{nome}</a>' if existe
                     else f'    <span class="aba falta" title="ainda não desenhada">{nome}</span>')
@@ -722,5 +760,5 @@ def monta(arq, titulo_aba, miolo, css_extra="", fita_viva=False, legenda=""):
     a, b = doc.count("<div"), doc.count("</div>")
     if a != b:
         raise SystemExit(f"ERRO em {arq}: <div>={a} </div>={b} — desbalanceado")
-    (R/"layout"/f"{arq}.html").write_text(doc)
+    onde.gravar(f"{arq}.html", doc)
     return a

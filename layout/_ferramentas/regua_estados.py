@@ -23,7 +23,12 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-D = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import onde  # noqa: E402
+
+# MEDE A BANCADA (`mockup/`) — 31/08/2026. Este caminho era `parent.parent`,
+# que resolvia para `layout/`; apontá-lo lá hoje mediria a página congelada.
+D = onde.BANCADA
 
 SONDA = r"""
 () => {

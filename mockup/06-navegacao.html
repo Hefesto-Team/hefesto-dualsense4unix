@@ -553,7 +553,18 @@
     --gap:14px;         /* o passo vertical entre quadros */
     --pad-quadro:14px;  /* a margem interna de todo quadro */
     --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    --alt-janela:757px; /* a MESMA altura nas dez abas — veja `.janela` */
+    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido dela: *"talvez
+       estender mais verticalmente o Dispositivos Conectados faça caber."*
+       Ela estava certa, e o número diz por quê: o card aberto da Controles
+       ESTICA para preencher o corpo, então a folga de verdade é
+       `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
+       conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
+       é folga: é sorte, e ela já tinha visto a barra aparecer na tela dela.
+       Com 777 a folga passa a 21px.
+       O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
+       vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
+       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar. */
+    --alt-janela:777px; /* a MESMA altura nas dez abas — veja `.janela` */
   }
   .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
     height:var(--h-escolha);padding-top:0;padding-bottom:0;
@@ -647,6 +658,37 @@
   .nav-ctl{display:flex;flex-direction:column;justify-content:center;gap:4px;
            border:2px solid var(--plastico,var(--border-forte));border-radius:8px;
            background:var(--app-bg);padding:6px 5px}
+
+  /* ---------- O LUGAR VAZIO ----------
+     A mesma gramática das outras cinco abas: cor explícita e NADA de `opacity`
+     (a lição medida da `.fita.inerte`). A borda se declara INTEIRA aqui, e não
+     só a cor: o `.nav-ctl` usa `var(--plastico)`, e uma `var()` sem valor
+     invalida a declaração toda — a borda não fica cinza, ela deixa de existir.
+     Medido na aba Controles no mesmo dia, com a foto mostrando dois lugares
+     soltos, sem caixa nenhuma.
+     OS DETALHES CLAROS DO DESENHO CAEM JUNTO — `text`, `line` e os `path` sem
+     classe são os glifos L/R/PS, e eles só aparecem em desenho GRANDE: aqui ele
+     tem 111px, contra os 62 da aba Jogar. O que muda com o TAMANHO tem de ser
+     medido no tamanho em que é desenhado. */
+  .nav-ctl.vazia{border:1px solid var(--border-forte);background:transparent}
+  .nav-ctl.vazia .nav-rot,
+  .nav-ctl.vazia .nav-est{color:var(--linha)}
+  .nav-ctl.vazia .ds-svg .peca,
+  .nav-ctl.vazia .ds-svg .corpo,
+  .nav-ctl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
+  .nav-ctl.vazia .ds-svg text{fill:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg line{stroke:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+                                                     stroke:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg rect:not([fill="none"]),
+  .nav-ctl.vazia .ds-svg circle:not([fill="none"]),
+  .nav-ctl.vazia .ds-svg polygon:not([fill="none"]),
+  .nav-ctl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  .nav-ctl.vazia .ds-svg rect,
+  .nav-ctl.vazia .ds-svg circle,
+  .nav-ctl.vazia .ds-svg polygon,
+  .nav-ctl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
   .nav-ctl .ds-svg{width:100%}
   /* a barra de luz acesa na cor automática do jogador. Sem esta regra o `--luz`
      que o `monta.svg()` escreve não pinta NADA: as duas tiras são `.peca`, e a
@@ -952,7 +994,14 @@
   /* ---- as TRÊS tabelas: mesma largura de bloco, mesma coluna de valor,
           cabeçalho em roxo (fala [90]) — inclusive a dos gestos ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
-  .tab th{color:var(--rot-campo);font-weight:600;text-align:left;font-weight:600;font-size:10px;
+  /* O CABEÇALHO DA TABELA DE GESTOS É BRANCO E NEGRITO — decisão dela,
+     31/08/2026: *"Combinação no controle / O que faz: tira do verde, deixa
+     branco e negrito."*
+     Ele era `--rot-campo` (o verde que nomeia CAMPO nesta janela), e não é isso
+     que ele é: campo é o que se ajusta, e estas duas são as COLUNAS de uma
+     tabela — cabeçalho, não rótulo de campo. Pintá-lo de verde dava a duas
+     palavras que não se clicam a mesma cor das que se clicam. */
+  .tab th{color:var(--fg);font-weight:700;text-align:left;font-size:10px;
           padding:0 8px 4px 0;
           border-bottom:1px solid var(--border-forte)}
   /* a linha da tabela é o token + o fio de 1px que separa duas linhas, e mais
@@ -999,8 +1048,29 @@
     background:transparent;color:var(--texto-suave);
     display:inline-flex;align-items:center;justify-content:center}
   .btn-conf.vermelho{border-color:var(--red);color:var(--red)}
-  .grupo-padrao:has(.btn-padrao:hover) .confirma,
-  .grupo-padrao:has(.confirma:hover) .confirma{display:flex}
+  /* O POP-UP ABRE NO CLIQUE E SÓ FECHA NA OPÇÃO OU FORA — decisão dela,
+     31/08/2026: *"voltar ao padrão tem que ficar aquele pop up ativo e só
+     desativar se eu clicar na opção ou fora dela."*
+
+     ERA `:hover`, e o hover é o gatilho errado para uma pergunta que espera
+     resposta: ela sumia assim que o ponteiro saía do caminho entre o botão e o
+     "Confirmar", e ler a frase inteira já bastava para perdê-la. Uma confirmação
+     que foge do ponteiro não é confirmação — é aviso.
+
+     COMO FUNCIONA, sem uma linha de JavaScript:
+     · o `<input type="checkbox">` escondido guarda o estado (aberto/fechado);
+     · o `<label for>` que se veste de botão é quem o liga;
+     · o **véu** (`.veu`) é um segundo `<label for>` do MESMO checkbox, que cobre
+       a tela inteira ATRÁS do pop-up — clicar em qualquer lugar fora fecha,
+       porque clicar nele desmarca a caixa;
+     · "Confirmar" e "Cancelar" também são `<label for>` do mesmo checkbox,
+       então a opção fecha junto.
+     O véu só existe quando está aberto (`display:none` no fechado), então ele
+     nunca engole clique de quem não abriu nada. */
+  .abre-conf{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+  .veu{display:none;position:fixed;inset:0;z-index:5;cursor:default}
+  .abre-conf:checked ~ .veu{display:block}
+  .abre-conf:checked ~ .confirma{display:flex}
 
   /* as duas linhas de estado ficam no MESMO y: altura fixa e fundo da coluna */
   .estado{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--texto-mudo)}
@@ -1172,7 +1242,7 @@
       <h1><span class="p">Hefesto</span> <span class="t">—</span> <span class="b">DualSense</span><span class="n">4</span><span class="b">Unix</span></h1>
       <div class="sub">Gerenciador DualSense para Linux</div>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> 4 controles: <b>2 USB · 2 BT</b></div>
+    <div class="conectado"><span class="bolinha">●</span> 2 controles: <b>1 USB · 1 BT</b></div>
   </div>
 
   <!-- A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
@@ -1184,8 +1254,6 @@
       <span class="chip on">Todos</span>
       <span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
       <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#74588e" title="Galactic Purple — a borda é a cor do plástico">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> BT</span>
-      <span class="chip plastico" style="--plastico:#e4e0d8" title="White — a borda é a cor do plástico">P4 <span class="pt">•</span> White <span class="pt">•</span> USB</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1993,7 +2061,7 @@
                 <div class="nav-rot">P2 <span class="pt">•</span> Starlight Blue</div>
                 <div class="nav-est">BT <span class="pt">•</span> Só a janela</div>
               </div>
-              <div class="nav-ctl" style="--plastico:#74588e" title="Player 3 • Galactic Purple • BT">
+              <div class="nav-ctl vazia" data-conectado="nao" title="Nenhum controle neste lugar.">
                 <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2353,7 +2421,7 @@
   </g>
   <g id="p3-grupo-luzes" style="filter: none;" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
     <title>LUZES</title>
-    <g id="p3-lightbar" style="--luz:#00ff00" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+    <g id="p3-lightbar" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
       <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
       <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
         <title>Lightbar — tira esquerda</title>
@@ -2370,10 +2438,10 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <div class="nav-rot">P3 <span class="pt">•</span> Galactic Purple</div>
-                <div class="nav-est">BT <span class="pt">•</span> Só a janela</div>
+                <div class="nav-rot">P3 <span class="pt">•</span> Desconectado</div>
+                <div class="nav-est">—</div>
               </div>
-              <div class="nav-ctl" style="--plastico:#e4e0d8" title="Player 4 • White • USB">
+              <div class="nav-ctl vazia" data-conectado="nao" title="Nenhum controle neste lugar.">
                 <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2733,7 +2801,7 @@
   </g>
   <g id="p4-grupo-luzes" style="filter: none;" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
     <title>LUZES</title>
-    <g id="p4-lightbar" style="--luz:#ff0080" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+    <g id="p4-lightbar" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
       <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
       <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
         <title>Lightbar — tira esquerda</title>
@@ -2750,8 +2818,8 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <div class="nav-rot">P4 <span class="pt">•</span> White</div>
-                <div class="nav-est">USB <span class="pt">•</span> Só a janela</div>
+                <div class="nav-rot">P4 <span class="pt">•</span> Desconectado</div>
+                <div class="nav-est">—</div>
               </div>
             </div>
           </div>
@@ -2854,13 +2922,18 @@
               <a class="btn roxo" href="#definicoes-mouse">Definições Controle e Mouse</a>
               <a class="btn roxo" href="#remapeamento">Remapeamento dos botões</a>
               <a class="btn roxo" href="#point-and-click">Configurar o estilo Point-and-click</a>
-              <button class="btn btn-padrao">Voltar ao padrão</button>
+              <!-- O RÁDIO VEM ANTES de tudo o que reage a ele: o `~` do CSS só
+                   enxerga irmão POSTERIOR. É a mesma armadilha que o interruptor
+                   da aba Jogar documenta, e a mesma cura. -->
+              <input type="checkbox" id="conf-padrao" class="abre-conf">
+              <label for="conf-padrao" class="btn btn-padrao">Voltar ao padrão</label>
+              <label for="conf-padrao" class="veu" title="Fecha sem mudar nada."></label>
               <div class="confirma">
                 <span>Devolver a aba <b>Navegação</b> inteira ao de fábrica — as opções
                   de ativação, os 5 gestos e as 21 linhas das duas
                   telas de botões?</span>
-                <button class="btn-conf vermelho">Confirmar</button>
-                <button class="btn-conf">Cancelar</button>
+                <label for="conf-padrao" class="btn-conf vermelho">Confirmar</label>
+                <label for="conf-padrao" class="btn-conf">Cancelar</label>
               </div>
             </div>
         </div>

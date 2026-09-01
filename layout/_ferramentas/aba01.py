@@ -58,6 +58,7 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import onde  # noqa: E402
 import monta  # noqa: E402
 from monta import MASCARAS, MESA, glifo, monta as montar, rotulo, svg  # noqa: E402
 
@@ -121,10 +122,18 @@ INTERRUPTOR = [
     ("ligado", "gamepad", "Ligado",
      "O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um "
      "jogador para cada controle e escolhe como o jogo vê o aparelho."),
+    # O TEXTO ENCOLHEU — decisão dela, 31/08/2026, e ela deu a regra em duas frases:
+    #
+    #     "o modo nativo já existe ali (…) e se eu quiser desligar modo hefesto
+    #      clico em desligado e o modo nativo fica online. Qualquer coisa fora
+    #      isso tá incorreta."
+    #
+    # SAIU: *"os gatilhos ficam duros como no PS5. Alguns jogos derrubam o
+    # controle no meio da partida assim."* — a segunda metade é AFIRMAÇÃO FORTE
+    # sem régua: nenhum ensaio deste repositório mede "alguns jogos derrubam".
+    # Alarme sem medição é o que esta casa cobra no `check_paridade_transporte`.
     ("desligado", "native", "Desligado",
-     "Modo Nativo — o DualSense da forma como veio ao mundo. O Hefesto sai do "
-     "meio e o jogo fala direto com o aparelho: os gatilhos ficam duros como no "
-     "PS5. Alguns jogos derrubam o controle no meio da partida assim."),
+     "Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle."),
 ]
 #: Em qual posição a cena nasce.
 HEFESTO_LIGADO = True
@@ -182,45 +191,72 @@ HEFESTO_LIGADO = True
 #: `sem_dono` é o que a casa exige desde 30/08 (*botão sem dono no produto não
 #: vai para a tela como se funcionasse*) casado com a ordem dela de MANTER os
 #: dois: eles aparecem, e **dizem** que ainda não têm quem os atenda.
+#: O POINT AND CLICK SAIU DA FILEIRA — decisão dela, 31/08/2026: *"nos mockups
+#: tira o point and click e deixa só o navegação."* Confirmada no mesmo dia: sai
+#: **só da fileira**. O perfil de fábrica `assets/profiles_default/point_and_click.json`
+#: continua, e o `Estilo Point-and-click` da aba Navegação continua. É o MODO que sai.
+#:
+#: DE QUEBRA, `sem_dono` FICOU SEM USO: o `pointclick` era o único chip marcado
+#: assim. A regra CSS `.degrau.sem-dono` fica de pé de propósito, e não é
+#: esquecimento — ela é a gramática desta casa para *"botão que aparece e diz que
+#: ainda não tem quem o atenda"*, e a próxima fileira que precisar dela não vai
+#: ter de reinventá-la. O campo continua no dicionário pelo mesmo motivo.
+#:
+#: AS DICAS FORAM REESCRITAS — pedido dela, 31/08/2026, com estas palavras:
+#:
+#:     "independente do modo, todas as features vão funcionar. Então o tooltip
+#:      falando o contrário é sem nexo."
+#:     "todos os tooltips tem que ser corrigidos e simplificados."
+#:
+#: DUAS AFIRMAÇÕES CAÍRAM, e elas se sustentavam uma na outra:
+#:
+#:   o Xbox dizia        "sem giroscópio e sem touchpad para o jogo"
+#:   o DualSense dizia   "dez linhas do mapa-controles.csv só chegam ao jogo por aqui"
+#:
+#: Se a feature chega em todo modo, "só por aqui" cai junto com "sem giroscópio".
+#: O que sobra em cada dica é o que de fato MUDA entre os modos: **como o jogo
+#: desenha os botões** e **em que ordem o Hefesto tenta**. Luz, vibração, gatilho,
+#: giroscópio, áudio e o número do jogador seguem por conta do Hefesto nos quatro
+#: — e isso se diz UMA vez, na dica do quadro, não quatro vezes aqui.
+#:
+#: E ELAS ENCOLHERAM: as cinco dicas somavam 1.147 caracteres e passaram a somar
+#: 396. A dica que ocupa meia tela não é lida — é fechada.
 MODOS = [
     {"chave": "dualsense", "rot": "Sony DualSense", "modo": "",
      "sem_dono": False,
-     "dica": "A cópia virtual completa: giroscópio, acelerômetro, os dois pontos "
-             "do touchpad, o clique e a vibração. Dez linhas do mapa-controles.csv "
-             "só chegam ao jogo por aqui. É o primeiro que o Hefesto tenta."},
+     "dica": "O jogo desenha os botões do PlayStation. É o primeiro que o "
+             "Hefesto tenta."},
     {"chave": "xbox", "rot": "Xbox", "modo": "",
      "sem_dono": False,
-     "dica": "O piso mais largo que existe: sete eixos e vibração que funciona em "
-             "todo jogo. Não carrega nenhuma das dez linhas uhid — sem giroscópio "
-             "e sem touchpad para o jogo. É o segundo que o Hefesto tenta."},
+     "dica": "O jogo desenha os botões do Xbox — o formato que todo jogo "
+             "entende. É o segundo que o Hefesto tenta."},
     {"chave": "steam", "rot": "Steam Input", "modo": "",
      "sem_dono": False,
-     "dica": "A Steam entrega a entrada e o Hefesto fica inteiro na saída: os seus "
-             "ajustes vencem o jogo. É o mais caro de trocar — exige fechar a "
-             "Steam, reabrir a Steam e reabrir o jogo —, e por isso é o último "
-             "que o Hefesto tenta."},
-    {"chave": "pointclick", "rot": "Point And Click", "modo": "",
-     "sem_dono": True,
-     "dica": "AINDA NÃO TEM QUEM O ATENDA no Hefesto: não é degrau da escada "
-             "(integrations/ponte_escada.ESCADA) nem modo do produto "
-             "(mode_transition.MODES). Está aqui por decisão sua, de 31/08 — é "
-             "modo, não perfil, e a ponte do PS+R3 traz o perfil dele junto."},
+     "dica": "A Steam entrega a entrada, e os seus ajustes vencem os do jogo. "
+             "Trocar para cá exige reabrir a Steam e o jogo — por isso é o "
+             "último que o Hefesto tenta."},
     {"chave": "navegacao", "rot": "Navegação", "modo": "desktop",
      "sem_dono": False,
-     "dica": "O controle vira teclado e mouse do computador, e quem emula é o "
-             "próprio Hefesto — por isso ele mora aqui dentro, e não do lado "
-             "desligado. O modo TEM dono e funciona hoje "
-             "(mode_transition.apply_mode('desktop')); o que ainda não existe é "
-             "o PS+R3 parar aqui: a Navegação não é degrau da escada."},
+     "dica": "O controle vira teclado e mouse do computador. O PS+R3 ainda não "
+             "para aqui."},
 ]
 #: O MODO ACESO. `ponte_escada.ESCADA[0]` é `Ponte(KIND_GAMEPAD,
 #: MASCARA_DUALSENSE)`, que é este chip — a cena acende o que o produto acenderia.
 MODO_ACESO = "dualsense"
 
-#: A pendência da faixa de baixo — o rascunho que espera o Aplicar. O nome é o
-#: da posição DESLIGADA do interruptor, e não mais "Conexão Nativa (Sony)": duas
-#: palavras para o mesmo estado na mesma tela é como esta casa cria divergência.
-PENDENTE = "Modo Nativo"
+#: A pendência da faixa de baixo — o que o **Aplicar** vai gravar.
+#:
+#: ELA ESTAVA CRAVADA E CONTRADIZIA A PRÓPRIA TELA. Ela viu, em 31/08/2026:
+#: *"'Vai mudar para Modo Nativo quando você clicar em Aplicar' essa frase tá
+#: errada também. viu?"* — e estava. A tela desenha o interruptor em **Ligado**
+#: com **Sony DualSense** marcado, e a faixa anunciava **Modo Nativo**, que é a
+#: posição **Desligado**. Os dois estados na mesma foto, um contradizendo o outro.
+#:
+#: A CURA NÃO É TROCAR O LITERAL: é DEIXAR DE TER UM. A frase passa a sair de
+#: `MODO_ACESO`, que é o mesmo dado que acende o chip — então ela não tem como
+#: discordar do que está desenhado. É a mesma cura que a `frase_das_mascaras()`,
+#: o padrão das lâmpadas e a contagem do cabeçalho já receberam nesta casa.
+PENDENTE = next(m["rot"] for m in MODOS if m["chave"] == MODO_ACESO)
 
 
 # ---------------------------------------------------------------------------
@@ -469,6 +505,51 @@ CSS = """
      MESMO realce do chip escolhido, para os dois lerem como a mesma escolha. */
   .cartao.alvo{background:var(--sel-bg)}
 
+  /* ---------- O LUGAR VAZIO ----------
+     Decisão dela, 31/08/2026: *"deixa os outros dois controles desconectados,
+     só coloca algo como `-` nos campos que deveriam ter algo e escurece tudo."*
+
+     NADA DE `opacity`, e a razão é medida — é a lição da `.fita.inerte`
+     (`topo.html`, 30/08): `opacity` esconde o texto DUAS vezes ao mesmo tempo
+     (o alfa some com o contraste E com o peso do traço), e o resultado deixa de
+     comunicar o que ela desenhou. Aqui cada cor é explícita.
+
+     O QUE O ESCURO TIRA, e é de propósito: a borda perde a cor do plástico, o
+     rótulo cai para `--comment` e a bateria perde o verde. Isso NÃO fere a regra
+     de "nunca toque na cor do plástico" — aquela regra protege a informação de
+     QUAL controle é qual, e num lugar vazio não há controle a identificar. A cor
+     continua dentro do SVG, intacta, para o dia em que ele conectar. */
+  .cartao.off{border-color:var(--border-sutil);background:transparent}
+  /* A COR É `--linha`, E NÃO `--comment`, e a escolha é medida. Sobre o
+     `--app-bg` (#21222c) o `--comment` dá **5,42:1** contra os **5,98:1** do
+     rótulo conectado — 9% de diferença, que a olho nenhum lê como "apagado".
+     A primeira volta usou `--comment` (a cor da `.fita.inerte`) e a foto
+     desmentiu: o lugar vazio saiu MAIS aceso que o controle na mesa, porque o
+     `--comment` é mais SATURADO. `--linha` dá **2,23:1** — e aqui isso é certo,
+     não descuido: o que está escrito é um travessão, um marcador de ausência.
+     Não há texto a ler num lugar onde não há controle. */
+  .cartao.off .rotulo,
+  .cartao.off .bat{color:var(--linha)}
+  /* O DESENHO CINZA PRECISA DE `!important` porque a cor da peça é `style=`
+     INLINE dentro do SVG (o gerador de cores a escreve lá, para o arquivo abrir
+     colorido sozinho). Regra externa não vence atributo inline sem isto — e o
+     hex certo continua no arquivo, então `check_cores_do_dualsense.py` segue
+     verde: o que muda é a pintura, não o dado. */
+  /* `.corpo` ENTRA JUNTO, e foi a foto que o achou. A primeira volta escreveu
+     só `.peca` e `.miolo`: o P3 continuou ROXO e o P4 BRANCO na ampliação. O
+     chassi — a peça grande que carrega a cor do plástico — é `path.corpo`, uma
+     classe que nenhuma régua desta aba nomeava. Medido no DOM:
+     `path.corpo fill=rgb(116,88,142)`, o Galactic Purple inteiro. */
+  .cartao.off .ds-svg .peca,
+  .cartao.off .ds-svg .corpo,
+  .cartao.off .ds-svg .miolo *{fill:var(--linha) !important}
+  .cartao.off .ds-svg .corpo{stroke:var(--border-forte) !important}
+  /* Os chips do lugar vazio não se clicam: não há controle para receber a
+     máscara. Sem `on` em nenhum, e sem `:hover`. */
+  .cartao.off .mascara .chip{border-color:var(--border-sutil);color:var(--linha);
+                             background:transparent;cursor:default}
+  .cartao.off .mascara .chip:hover{border-color:var(--border-sutil);color:var(--linha)}
+
   /* O CABEÇALHO DAS DUAS COLUNAS TEM UMA ALTURA SÓ. O da esquerda ganhou o
      ícone de ajuda (17px) e o da direita é só texto (14,4px): sem isto a
      fileira de cartões e a lista de avisos começariam 2,6px fora de registro.
@@ -555,6 +636,12 @@ def _desenho(c):
                   svg(f'jg-{c["pref"]}', c["cor"], lampadas=False))
 
 
+#: O MARCADOR DE CAMPO VAZIO, num lugar só. É o travessão, não o hífen: ela
+#: escreveu *"algo como `-`"*, e o travessão é o que esta janela já usa para
+#: "não há valor" (a tabela de bateria da própria aba escreve `— `).
+_VAZIO = "—"
+
+
 def cartao(c, bateria=None):
     """Um cartão da fileira: desenho na cor do plástico, rótulo e as máscaras.
 
@@ -584,12 +671,38 @@ def cartao(c, bateria=None):
     inline sem estilo — que é o que permite endereçar sem mover um pixel, que é
     a promessa desta mudança.
     """
+    # O LUGAR VAZIO — decisão dela, 31/08/2026: *"Vamos deixar os outros dois
+    # controles desconectados, só colocamos algo como `-` nos campos que deveriam
+    # ter algo e escurecemos tudo."*
+    #
+    # O CARTÃO CONTINUA NA TELA, e é isso que ela comprou: um controle que SOME
+    # não ensina nada — quem olha não sabe se a aba tem dois lugares ou quatro. O
+    # lugar apagado ensina que ali cabe um e que ele não está.
+    #
+    # NENHUMA MÁSCARA FICA `on`: máscara é escolha por controle, e sem controle
+    # não há escolha. Marcar uma seria desenhar um ajuste que não existe.
+    if not c.get("conectado", True):
+        chips = "\n".join(
+            f'                  <span class="chip" data-mascara="{m}">{m}</span>'
+            for m in MASCARAS)
+        return f'''              <div class="cartao off"
+                   data-controle="{c["pref"]}" data-conectado="nao"
+                   title="Lugar vazio: nenhum controle conectado aqui.">
+                <div class="peca-topo">
+                {_desenho(c)}
+                <span class="rotulo">{_VAZIO}<br>{_VAZIO}<br><span class="bat">{_BATERIA_GLIFO} <span>{_VAZIO}</span></span></span>
+                </div>
+                <div class="mascara">
+{chips}
+                </div>
+              </div>'''
+
     chips = "\n".join(
         f'                  <span class="chip{" on" if m == c["mascara"] else ""}"'
         f' data-mascara="{m}">{m}</span>'
         for m in MASCARAS)
     return f'''              <div class="cartao{" alvo" if c["alvo"] else ""}" style="--plastico:{monta.cor_da_zona(c["cor"])}"
-                   data-controle="{c.get("uniq") or c["pref"]}"
+                   data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim"
                    title="{rotulo(c, "completa").replace('<span class="pt">•</span>', '•')}">
                 <div class="peca-topo">
                 {_desenho(c)}
@@ -609,7 +722,10 @@ def frase_das_mascaras():
     """
     partes = []
     for m in MASCARAS:
-        ps = [f'P{c["jogador"]}' for c in MESA if c["mascara"] == m]
+        # SÓ OS CONECTADOS — 31/08/2026. Um lugar vazio não tem máscara
+        # escolhida (o cartão dele não marca nenhuma), e listá-lo aqui faria a
+        # legenda prometer um ajuste que a tela não mostra.
+        ps = [f'P{c["jogador"]}' for c in monta.CONECTADOS if c["mascara"] == m]
         if not ps:
             continue
         quem = " e ".join([", ".join(ps[:-1]), ps[-1]] if len(ps) > 2 else ps)
@@ -701,13 +817,12 @@ MIOLO = f'''
       <input type="radio" name="hefesto" id="hef-desligado" class="hef-rd"{"" if HEFESTO_LIGADO else " checked"}>
 
       <div class="hef-linha">
-        <span class="linha-rot">Hefesto</span>
+        <span class="linha-rot">Status</span>
 {_INTERRUPTOR}
         <span class="ajuda">?<span class="dica">
-          <b>Ligado</b> — o Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho. Os cinco modos do quadro abaixo são jeitos de ele fazer isso.<br><br>
-          <b>Desligado</b> — <b>Modo Nativo</b>: o DualSense da forma como veio ao mundo. O Hefesto sai do meio e o jogo fala direto com o aparelho; os gatilhos ficam duros como no PS5. Alguns jogos derrubam o controle no meio da partida assim.<br><br>
-          Isto vale <b>sempre</b>, com jogo aberto ou sem nenhum — por isso está fora do quadro.<br><br>
-          E isto <b>não</b> encerra o Hefesto. Para desligar o serviço inteiro, é a aba <b>Sistema</b>.
+          <b>Ligado</b> — o Hefesto fica no meio: luz, vibração, gatilho e o número do jogador são por conta dele.<br><br>
+          <b>Desligado</b> — o Hefesto sai do meio e o jogo fala direto com o controle.<br><br>
+          Isto não encerra o serviço. Para isso, a aba <b>Sistema</b>.
         </span></span>
       </div>
     </div>
@@ -716,17 +831,16 @@ MIOLO = f'''
          O que sobra aqui é o que o lançamento decide de verdade. -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Quando o jogo abrir</span>
+        <span class="quadro-titulo">Modo</span>
         <!-- O `?` DOS MODOS SUBIU do rótulo "Modo" para cá em 31/08 à tarde, e é
              consequência do interruptor ter saído: com só os modos dentro, a
              ajuda do quadro É a ajuda dos modos, e dois `?` a três linhas um do
              outro diriam a mesma coisa duas vezes. De quebra, os rótulos das
              duas seções ficaram idênticos — texto puro dos dois lados. -->
         <span class="ajuda">?<span class="dica">
-          Os cinco <b>usam as features do Hefesto</b>: luz, vibração, gatilho e o número do jogador continuam por conta dele em todos.<br><br>
-          O Hefesto <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo. Ele já faz isso sozinho, sempre — não é um botão, é o que a escada é.<br><br>
-          A ordem tem razão medida: dez recursos do controle (giroscópio, acelerômetro, os dois pontos do touchpad, o clique, a vibração) <b>só chegam ao jogo pelo Sony DualSense</b>. Errar ali custa os dez, e custa em silêncio.<br><br>
-          <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle. Hoje ele gira <b>quatro</b> pontes de verdade, nesta ordem: Sony DualSense, Xbox, <b>Modo Nativo</b> — que é o interruptor <b>Desligado</b>, acima — e Steam Input. <b>Point And Click</b> e <b>Navegação</b> ainda não são degraus: o PS+R3 não para neles.
+          Vale <b>quando o jogo abrir</b>. O que muda entre os quatro é <b>como o jogo desenha os botões</b> — luz, vibração, gatilho, giroscópio e áudio são por conta do Hefesto em todos.<br><br>
+          Ele <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo.<br><br>
+          <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle.
         </span></span>
       </div>
       <div class="quadro-corpo hef">
@@ -738,9 +852,6 @@ MIOLO = f'''
              e por isso ele não podia descer para o cartão junto com a máscara. -->
 
         <div class="hef-modo so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
-          <div class="linha-rot">
-            <b style="color:var(--texto-suave)">Modo</b>
-          </div>
           <div class="escada">
 {_MODOS}
           </div>
@@ -749,12 +860,9 @@ MIOLO = f'''
         <!-- O OUTRO LADO DO INTERRUPTOR. Mesma altura da seção de cima (rótulo +
              36px), para a tela não pular quando ela vai e volta. -->
         <div class="hef-modo so-desligado" title="Esta seção só aparece com o Hefesto DESLIGADO.">
-          <div class="linha-rot">
-            <b style="color:var(--texto-suave)">Modo</b>
-          </div>
           <div class="escada">
             <span class="degrau on fixo"
-                  title="Sem cópia virtual: o jogo fala com o DualSense físico. É a ponte dos jogos que escrevem no hidraw direto e recusam um intermediário. Só vale no próximo lançamento — com o jogo aberto, o resultado é ZERO controles.">Modo Nativo <span class="sep">·</span> <span class="mud">o DualSense da forma como veio ao mundo</span></span>
+                  title="O Hefesto sai do meio e o jogo fala direto com o controle. Vale no próximo jogo que abrir.">Modo Nativo <span class="sep">·</span> <span class="mud">o DualSense da forma como veio ao mundo</span></span>
           </div>
         </div>
 
@@ -764,34 +872,21 @@ MIOLO = f'''
     <!-- ---------- UM BLOCO SÓ: Conectado agora | Atenção ---------- -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Conectado agora</span>
+        <span class="quadro-titulo">O Controle é visto como:</span>
+        <!-- AS DUAS DICAS VIRARAM UMA — 31/08/2026, quando ela mandou o rótulo
+             "O jogo vê cada controle como:" subir para o título. Com o rótulo
+             fora, dois `?` a três linhas um do outro diriam a mesma coisa duas
+             vezes: é o mesmo movimento que o `?` dos modos já tinha feito. -->
         <span class="ajuda">?<span class="dica">
-          O detalhe de cada controle — entradas, sensores, áudio, o que o jogo está
-          recebendo — está na aba <b>Controles</b>.<br><br>
-          <b>Reconectar Controles</b> traz de volta quem caiu do co-op no meio da partida e
-          arruma a numeração para 1..N. Pode clicar com o jogo aberto: só a numeração espera.
+          A máscara é <b>por controle</b>: cada um pode aparecer de um jeito para o jogo, e o que muda é <b>o desenho dos botões na tela</b>.<br><br>
+          <b>DualSense</b> — △ ○ ✕ ▢. &nbsp; <b>Xbox 360</b> — Y B A X. &nbsp; <b>Nintendo Pro</b> — X A B Y, com ZL/ZR e − +.<br><br>
+          O controle na sua mão continua o mesmo: luz, gatilho, giroscópio e áudio seguem por conta do Hefesto em qualquer máscara.<br><br>
+          Clicar num cartão leva a fita de cima para ele. O detalhe de cada um está na aba <b>Controles</b>.
         </span></span>
       </div>
       <div class="quadro-corpo">
 
         <div>
-            <div class="linha-rot cab-col">
-              O jogo vê cada controle como:
-              <span class="ajuda" style="margin-left:5px">?<span class="dica">
-                A máscara é <b>por controle</b>: cada um pode aparecer de um jeito
-                para o jogo.<br><br>
-                Ela muda <b>o que o jogo vê</b> — e por isso os botões que ele desenha
-                na tela. O controle na sua mão continua o mesmo: a luz, o gatilho e o
-                giroscópio seguem por conta do Hefesto em qualquer máscara.<br><br>
-                <b>DualSense</b> — o jogo desenha os botões do PlayStation:
-                △ ○ ✕ ▢.<br>
-                <b>Xbox 360</b> — o jogo desenha os do Xbox: Y B A X.<br>
-                <b>Nintendo Pro</b> — o jogo desenha os da Nintendo: X A B Y, com
-                <b>ZL</b> e <b>ZR</b> nos gatilhos e <b>−</b> <b>+</b> no lugar de
-                Criar e Opções.<br><br>
-                Clicar num cartão leva a fita de cima para ele.
-              </span></span>
-            </div>
             <div class="pecas" data-lista="cartoes">
 {CARTOES}
             </div>
@@ -1051,7 +1146,107 @@ LEGENDA = f'''<div class="nota">
 '''
 
 
+def _conferir(doc):
+    """As decisões dela de 31/08, conferidas NA SAÍDA. O gerador para se caírem.
+
+    POR QUE NA SAÍDA, e não sobre as constantes: uma régua que lê `MODOS` prova
+    que a LISTA está certa, não que a PÁGINA está. As duas já divergiram nesta
+    casa — a fita viva morreu em silêncio quando o texto do chip mudou e o
+    remendo deixou de casar, com o gerador imprimindo OK. Aqui a régua lê o HTML
+    que acabou de ser escrito, que é o que ela vai abrir.
+
+    E CADA UMA MORDE NOS DOIS SENTIDOS: além de exigir o que ela pediu, exigem
+    que o que devia sair tenha saído. Uma régua que só confere presença dá verde
+    sobre uma página onde nada foi removido.
+    """
+    # SÓ O MIOLO, e esta linha é a régua da régua. A primeira volta leu a página
+    # INTEIRA e reprovou três rótulos que estavam certos: `>Hefesto</span>` casava
+    # com o `<h1>` do cabeçalho — o NOME DO PRODUTO — e "Quando o jogo abrir" e
+    # "Conectado agora" casavam **oito vezes cada** dentro da `<div class="nota">`,
+    # que é a legenda contando a história da mudança. Citação não é rótulo, e
+    # apagar a citação para calar a régua seria apagar o registro.
+    #
+    # É a armadilha nomeada no `COMO-OLHAR-A-TELA.md` — *"régua que casa um token
+    # em QUALQUER lugar do texto, em vez do campo que o significa"* —, e ela
+    # produziu aqui exatamente o sintoma que a página descreve: três alarmes
+    # convincentes e falsos.
+    #
+    # E OS COMENTÁRIOS HTML SAEM JUNTO, pela mesma razão: comentário não é tela.
+    # Achado na volta seguinte — o comentário que explica a fusão das dicas cita o
+    # rótulo "O jogo vê cada controle como:", e a régua contou 2 e reprovou o
+    # texto que ela mesma tinha acabado de exigir.
+    corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
+    corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
+    if len(corpo) < 2000:
+        raise SystemExit("ERRO: a régua não achou o miolo — o recorte mudou de forma. "
+                         "Uma régua que mede 0 caractere passa com qualquer desenho.")
+
+    falhas = []
+
+    def exigir(cond, oquê):
+        if not cond:
+            falhas.append(oquê)
+
+    # 1. O POINT AND CLICK SAIU DA FILEIRA — *"nos mockups tira o point and click
+    #    e deixa só o navegação."* O `Point-and-click` da aba Navegação e o perfil
+    #    de fábrica continuam: por isso a régua olha o DEGRAU, não a palavra solta.
+    exigir('data-degrau="pointclick"' not in corpo, "o Point And Click voltou à fileira")
+    exigir(corpo.count('class="degrau') >= 4, "a fileira perdeu degrau")
+
+    # 2. NENHUM TOOLTIP NEGA FEATURE POR MODO — *"independente do modo, todas as
+    #    features vão funcionar. Então o tooltip falando o contrário é sem nexo."*
+    #    As duas frases que caíram, e elas se sustentavam uma na outra.
+    for frase in ("sem giroscópio", "só chegam ao jogo por aqui",
+                  "só chegam ao jogo pelo", "sem touchpad para o jogo"):
+        exigir(frase not in corpo, f"um tooltip voltou a negar feature: {frase!r}")
+
+    # 3. OS TRÊS RÓTULOS QUE ELA TROCOU, e o antigo não pode ter sobrado.
+    for novo, velho in (("<span class=\"linha-rot\">Status</span>", ">Hefesto</span>"),
+                        (">Modo</span>", ">Quando o jogo abrir<"),
+                        (">O Controle é visto como:</span>", ">Conectado agora<")):
+        exigir(novo in corpo, f"o rótulo novo sumiu: {novo!r}")
+        exigir(velho not in corpo, f"o rótulo antigo voltou: {velho!r}")
+    # e o rótulo interno não pode ter ficado junto com o título novo
+    exigir(corpo.count("O Controle é visto como:") == 1,
+           "o rótulo interno das máscaras voltou (o texto aparece 2×)")
+    exigir("O jogo vê cada controle como" not in corpo,
+           "o título anterior voltou — ela o trocou em 31/08")
+
+    # 4. A MESA — dois na mesa, dois lugares vazios, e o cabeçalho contando os
+    #    conectados. *"Todas as abas tem que ter só dois controles conectados."*
+    exigir(corpo.count('data-conectado="sim"') == 2, "não são 2 controles conectados")
+    exigir(corpo.count('data-conectado="nao"') == 2, "não são 2 lugares vazios")
+    exigir(f"{len(monta.CONECTADOS)} controles:" in doc,
+           "o cabeçalho não conta os conectados")
+
+    # 5. LUGAR VAZIO NÃO TEM MÁSCARA ESCOLHIDA. Sem controle não há escolha, e
+    #    marcar uma desenharia um ajuste que não existe.
+    for pedaco in corpo.split('class="cartao off"')[1:]:
+        exigir('class="chip on"' not in pedaco.split("</div>\n              </div>")[0],
+               "um lugar vazio tem máscara marcada")
+
+    # 6-bis. NENHUM ALARME SEM MEDIÇÃO. Ela, 31/08: *"qualquer coisa fora isso
+    #    tá incorreta"* — a regra do Nativo é só "Desligado põe o Nativo online".
+    #    As duas frases que caíram alarmavam sobre número que ensaio nenhum deste
+    #    repositório mede.
+    for frase in ("derrubam o controle", "resultado é ZERO", "duros como no PS5"):
+        exigir(frase not in corpo, f"um texto voltou a alarmar sem medição: {frase!r}")
+
+    # 6. A PENDÊNCIA DIZ O QUE ESTÁ MARCADO — ela viu a contradição: a tela em
+    #    Ligado + Sony DualSense e a faixa anunciando Modo Nativo.
+    exigir(f"<b data-campo=\"pendente-alvo\">{PENDENTE}</b>" in corpo,
+           "a faixa de pendência não diz o modo marcado")
+    exigir(PENDENTE != "Modo Nativo",
+           "a pendência voltou a ser Modo Nativo com o interruptor em Ligado")
+
+    if falhas:
+        raise SystemExit("ERRO em 01-jogar — decisão dela desfeita:\n  "
+                         + "\n  ".join(f"- {f}" for f in falhas))
+
+
 if __name__ == "__main__":
     n = montar("01-jogar", "Jogar", MIOLO, CSS, fita_viva=True, legenda=LEGENDA)
-    print(f"01-jogar: OK, {n} divs · mesa de {len(MESA)} · "
-          f"máscaras {frase_das_mascaras()}")
+    _conferir(onde.pagina("01-jogar.html").read_text())
+    print(f"01-jogar: OK, {n} divs · mesa de {len(monta.CONECTADOS)} conectado(s) "
+          f"+ {len(MESA) - len(monta.CONECTADOS)} lugar(es) vazio(s) · "
+          f"máscaras {frase_das_mascaras()} · as 5 decisões dela conferidas")

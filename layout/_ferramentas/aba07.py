@@ -3,7 +3,7 @@
 # abas vinham de um montador e de um esqueleto de ontem, e nenhuma correção
 # no topo.html desta pasta as alcançava. Achado em 27/08.
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from monta import MESA, monta
+from monta import MESA, CONECTADOS, monta
 
 # ---------------------------------------------------------------------------
 # A MESA RESPONDE PELO NÚMERO — aqui não se escreve "quatro".
@@ -25,9 +25,15 @@ from monta import MESA, monta
 #
 # Por isso o número sai de `MESA` e não do teclado: no dia em que a mesa mudar, o
 # texto dos cartões muda junto com o cabeçalho, que já sai de lá.
-N_CTRL = len(MESA)
-N_USB = sum(1 for c in MESA if c["via"] == "USB")
-N_BT = sum(1 for c in MESA if c["via"] == "BT")
+# QUEM CONTA CONTROLE CONTA QUEM ESTÁ NA MESA — 31/08/2026. A `MESA` passou a ter
+# um campo `conectado`, e com ele dois lugares vazios: esta aba prometia que "os 4
+# controles chegam" com dois deles fora, em QUATRO cartões de lançador. A promessa
+# não era pouca — ela é o que a aba existe para dizer.
+#
+# `MESA` continua sendo a lista dos quatro LUGARES; `CONECTADOS` é quem está neles.
+N_CTRL = len(CONECTADOS)
+N_USB = sum(1 for c in CONECTADOS if c["via"] == "USB")
+N_BT = sum(1 for c in CONECTADOS if c["via"] == "BT")
 
 #: A promessa de um cartão que não impede nada, no plural da mesa.
 CHEGAM = f"Os {N_CTRL} controles chegam."
@@ -230,6 +236,31 @@ LEGENDA = f'''<div class="nota">
 </body>
 </html>
 '''
+
+# ---------------------------------------------------------------------------
+# A RÉGUA DA PROMESSA — 31/08/2026.
+#
+# Esta aba existe para dizer UMA coisa: se os controles chegam ao lançador. Com
+# dois lugares vazios na mesa, ela prometia isso para QUATRO em cinco cartões.
+#
+# ELA REFAZ A CONTA A PARTIR DA `MESA`, e não lê `N_CTRL` — ler a variável que
+# escreveu o texto é comparar o produto com ele mesmo. Foi assim que uma régua
+# irmã, na aba Conexões, passou por uma mordida hoje.
+# ---------------------------------------------------------------------------
+import re  # noqa: E402
+
+_NA_MESA = len([c for c in MESA if c.get("conectado", True)])
+_PROMESSAS = re.findall(r"Os (\d+) controles chegam", MIOLO)
+if not _PROMESSAS:
+    raise SystemExit("ERRO: nenhuma promessa 'Os N controles chegam' no miolo — a régua "
+                     "ficou cega, e seletor que casa ZERO é erro, não silêncio.")
+_ERRADAS = {n for n in _PROMESSAS if int(n) != _NA_MESA}
+if _ERRADAS:
+    raise SystemExit(
+        f"ERRO: {len(_PROMESSAS)} cartão(ões) prometem chegar a {sorted(_ERRADAS)} "
+        f"controles, e na mesa há {_NA_MESA}. Esta aba existe para dizer se os "
+        "controles chegam ao lançador — prometer para quem não está é a única "
+        "frase que ela não pode errar.")
 
 n = monta("07-lancadores", "Lançadores", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
 print(f"07-lancadores: OK, {n} divs · mesa {N_CTRL} ({N_USB} USB/{N_BT} BT) · "

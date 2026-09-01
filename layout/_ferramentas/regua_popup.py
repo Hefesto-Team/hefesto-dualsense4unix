@@ -38,9 +38,14 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import onde  # noqa: E402
+
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA — mesma razão da `regua.py`: rodar uma
 # CÓPIA do gerador não pode reescrever o mockup DELA.
-D = pathlib.Path(__file__).resolve().parents[1]
+# MEDE A BANCADA (`mockup/`) — 31/08/2026. Este caminho era `parent.parent`,
+# que resolvia para `layout/`; apontá-lo lá hoje mediria a página congelada.
+D = onde.BANCADA
 
 # O RESPIRO, e por que 20px de cada lado: é o mesmo número que o teto da
 # `.tn-cx` já usa — `min(717px, calc(100vh - 40px))`, com 717 = 757 − 40. A

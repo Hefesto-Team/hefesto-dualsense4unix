@@ -1,5 +1,6 @@
 import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA,
+import onde
+from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTADOS,
                    SEPARADOR, cor_da_zona, luzinhas, player_slot_color, tom_da_casa)
 
 # ---------------------------------------------------------------------------
@@ -147,6 +148,57 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      é o mesmo `rgba(255,255,255,.03)` do hover da fila de abas (`topo.html`).
      Uma segunda gramática de "clicável" na mesma janela é uma a mais. */
   .ctl:hover{background:rgba(255,255,255,.03)}
+
+  /* ---------- O LUGAR VAZIO ----------
+     Decisão dela, 31/08/2026: *"Deixa os outros espaços dos 4 controles a mostra
+     ainda mas cinza igual vc fez na aba jogar."* — e, no mesmo turno,
+     *"tiramos o modo p3. p4 (seções expandidas não aparecem)"*.
+
+     A GRAMÁTICA É A MESMA DA JOGAR, de propósito: cor explícita e nada de
+     `opacity` (a lição medida da `.fita.inerte`), borda `--border-sutil` no
+     lugar do plástico, e o texto em `--linha`. Duas gramáticas de "vazio" na
+     mesma janela seria uma a mais — a mesma razão que o `.ctl:hover` acima dá.
+
+     A ALTURA É 24, E ELA É O QUE PAGA OS BOTÕES NOVOS. Um lugar vazio não tem
+     giroscópio para ligar nem bateria para medir, então não precisa dos 34 de
+     `--h-acao`. Medido: com os dois lugares em 34 o `.quadro-corpo` pedia 509
+     e recebia 478 — o quadro rolava e os dois botões saíam da tela pela metade.
+     Não se clica: sem `<input>` no HTML, não há o que expandir. */
+  /* A BORDA SE DECLARA INTEIRA AQUI, e não só a cor — e isto é uma armadilha de
+     CSS que custou duas voltas. `.ctl` diz `border:2px solid var(--plastico)`, e
+     o lugar vazio NÃO tem `--plastico` (não há controle, não há cor de
+     plástico). Uma `var()` sem valor **invalida a declaração inteira**, em
+     silêncio: a borda não fica cinza — ela deixa de existir. Medido no DOM,
+     depois de a foto mostrar dois lugares soltos, sem caixa nenhuma:
+     `border-width: 0px, border-style: none`, com o `border-color` que eu tinha
+     escrito ali, intacto e inútil.
+     Trocar só a COR de uma regra que usa `var()` indefinido não conserta nada.
+
+     E A COR NÃO É A `--border-sutil` DA JOGAR: lá o cartão vazio fica sobre
+     `--app-bg` (#21222c) e aquele #343746 aparece; aqui ele fica sobre `--panel`
+     (#282a36) e sumiria de novo. Copiar a gramática é copiar o CONTRASTE, não o
+     token. */
+  .ctl.off{height:24px;border:1px solid var(--border-forte);background:transparent}
+  .ctl.off > .faixa{cursor:default;color:var(--linha)}
+  .ctl.off:hover{background:transparent}
+  .ctl.off .card-nome,
+  .ctl.off .div,
+  .ctl.off .leia,
+  .ctl.off .bat{color:var(--linha)}
+
+  /* ---------- OS DOIS BOTÕES DO FIM ----------
+     Ela, 31/08: *"Temos que ter dois botões no final."* Eles são `<a>`, e não
+     `<button>`, porque abrem PÁGINA — o `.btn` desta casa já é usado nas duas
+     formas, e um link que se veste de botão continua sendo um link para quem
+     usa teclado e leitor de tela. */
+  /* OS DOIS BOTÕES DO CANTO SUPERIOR DIREITO. Eles são `<a>` e não `<button>`
+     porque abrem PÁGINA — um link que se veste de botão continua sendo link
+     para quem usa teclado e leitor de tela. A `.sensores` (logo abaixo) é quem
+     os empurra para a direita; aqui só a altura, que é a do `.btn` da casa.
+     ELES JÁ ESTIVERAM NO FIM DO QUADRO, entre 31/08 e o turno seguinte, e ela
+     mandou voltarem: *"A posição deles volta pro canto superior direito."* */
+  .sensores .btn{display:inline-flex;align-items:center;text-decoration:none;
+                 height:var(--h-acao);padding:0 13px;font-size:12.5px}
   .corpo-cx{flex:0 0 0;height:0;overflow:hidden;visibility:hidden}
   /* "TODOS" É O ÚNICO ESTADO QUE ROLA, E A BARRA TEM DE APARECER — senão ele
      é o defeito de 27/08 de volta com outra roupa. Medido agora, sem esta
@@ -504,14 +556,25 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      164px e a linha do rótulo pedia 292 numa moldura de 242: os 50px de
      diferença eram o "Nativo" e metade do "Desativado" pintados fora da caixa,
      por cima do bloco dos sensores. Aqui a fileira mede 150 e cabe com folga. */
-  .mic-modo{display:inline-flex;gap:2px;margin-left:auto}
-  .mic-modo button{height:17px;padding:0 5px;border-radius:4px;font-size:9.5px;
-    font-family:inherit;cursor:pointer;white-space:nowrap;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
-  .mic-modo button.on{border-color:var(--purple);background:var(--sel-bg);
-    color:var(--fg);font-weight:600}
-  .rota{display:flex;gap:5px;margin-top:6px}
-  .rota button{flex:1;height:var(--h-escolha);border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
+  /* O `.mic-modo` HERDA A `.rota` INTEIRA e não acrescenta nada — 31/08/2026,
+     quando ela mandou os dois descerem *"igual o Sons do Jogo e Todo o som do
+     PC"*. O seletor fica no HTML (`class="rota mic-modo"`) porque a ponte viva
+     endereça por ele (`data-campo="mic-modo"`), mas de estilo ele não tem UMA
+     linha própria: dois blocos que fazem o mesmo gesto na mesma coluna têm de
+     ser o mesmo botão, e uma regra a mais aqui é como as duas alturas voltam.
+     As 5 linhas de pastilha de 17px que moravam aqui saíram junto. */
+  /* 30px, E NÃO OS 36 DE `--h-escolha` — 31/08/2026, e o número é o preço do
+     pedido dela. Até hoje a coluna do som tinha UMA fileira de escolha (a rota
+     do alto-falante); com os modos do microfone descendo *"igual o Sons do Jogo"*
+     ela passou a ter DUAS, e a coluna foi de 236 para 269px. O card foi junto,
+     de 308 para 341, contra os 328 que a caixa reserva: 13px a mais, e o P4
+     saindo da tela.
+     Medido: 6px por fileira em duas fileiras, mais 1px de margem em cada, dão
+     os 14 que faltavam. Não é altura inventada — é a mesma faixa do chip da
+     fita (28 a 30px) que esta aba já usa no `.mascara .chip`, e as duas
+     fileiras continuam IGUAIS entre si, que é o que ela pediu. */
+  .rota{display:flex;gap:5px;margin-top:5px}
+  .rota button{flex:1;height:30px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   /* os 16 glifos: grandes, SOLTOS (sem caixa) e coloridos por identidade.
@@ -781,7 +844,22 @@ def identidade(c, *, bat, meio=""):
     """
     return f'''          <span class="card-nome"><span class="so-fechado">P{c["jogador"]}{SEPARADOR}</span>{rotulo(c, "peca")}</span>
           <span class="div">·</span>
-          <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}">vê como <b data-campo="mascara">{c["mascara"]}</b></span>{meio}
+          <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão dela,
+               31/08/2026, em duas frases: *"remover o vê como de todos os
+               controles"* e, na correção logo em seguida, *"era o texto Vê como
+               mas o nome da máscara fica"*.
+
+               A PRIMEIRA VOLTA TIROU O SPAN INTEIRO e levou a máscara junto —
+               era ler o pedido pela metade. O que sobra aqui é o dado: o nome
+               que o jogo vê, com o `data-campo="mascara"` intacto, que é o
+               endereço por onde a ponte viva o pinta. Tirar o endereço junto
+               teria quebrado a pintura sem uma linha de aviso.
+
+               O `title` FICA no lugar do texto: quem quiser saber de onde vem a
+               máscara passa o mouse. É a mesma economia que ela mandou fazer nos
+               tooltips do resto da janela — o rótulo sai, a explicação continua
+               alcançável. -->
+          <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b></span>{meio}
 {sensores_da_peca(c)}
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" style="width:{bat}%"></span></span>
@@ -972,14 +1050,6 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
-              <span class="mic-modo" data-campo="mic-modo">
-                <button class="{'on' if mic_modo == 'virtual' else ''}" data-mic-modo="virtual"
-                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="{'on' if mic_modo == 'desativado' else ''}" data-mic-modo="desativado"
-                  title="O microfone do controle não chega ao PC. O botão do aparelho continua acendendo e apagando a luz vermelha do plástico.">Desativado</button>
-                <button class="{'on' if mic_modo == 'nativo' else ''}" data-mic-modo="nativo"
-                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
-              </span>
             </div>
             {onda(mic_v, mic_mudo)}
             <div class="vol">
@@ -987,10 +1057,27 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
               <span class="n">{mic_vol}</span>
               <button class="mudo-i{mic_on}" data-mudo="microfone" title="{DICA_MIC_MUDO}">🎙</button>
             </div>
+            <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
+                 *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
+                 igual o Sons do Jogo e Todo o som do PC."*
+
+                 ELES MORAVAM NA LINHA DO RÓTULO, e ali o custo de altura era
+                 ZERO — foi o argumento que os pôs lá em 30/08, quando eram TRÊS
+                 e não cabiam embaixo. Com o "Desativado" fora (ordem dela do
+                 mesmo dia) sobraram dois, e dois cabem na mesma fileira que o
+                 alto-falante usa: a mesma classe, a mesma altura, o mesmo gesto.
+                 Duas gramáticas para "escolher a rota do som" na mesma coluna
+                 era uma a mais. -->
+              <span class="rota mic-modo" data-campo="mic-modo">
+                <button class="{'on' if mic_modo == 'virtual' else ''}" data-mic-modo="virtual"
+                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
+                <button class="{'on' if mic_modo == 'nativo' else ''}" data-mic-modo="nativo"
+                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
+              </span>
 
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
-            <div class="rot">Alto-falante <span class="mudo" data-campo="alto-estado">· {alto_v[0]} % · {estado_alto}</span>
+            <div class="rot">Alto-falante<span class="mudo" data-campo="alto-estado" hidden></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.
@@ -1027,8 +1114,8 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
 
                Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
                {{'x': 0.105, 'y': 0.976, 'z': 0.170}} — |v| = 0,996 g, a gravidade. -->
-          <div class="moldura leituras">
-            <div class="rot">Sensores
+          <div class="moldura leituras" data-bloco="giroscopio">
+            <div class="rot">Giroscópio
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
                 Leitura viva do aparelho, dez vezes por segundo. Nada aqui se clica.<br><br>
                 O <b>giroscópio</b> mede o quanto o controle gira, em graus por segundo.
@@ -1038,9 +1125,10 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                 Um traço no lugar do número quer dizer que a leitura ainda não chegou.
               </span></span>
             </div>
-            <div class="sub-sensor">Giroscópio <span class="mudo">°/s</span></div>
 {giro_html}
-            <div class="sub-sensor">Acelerômetro <span class="mudo">g</span></div>
+          </div>
+          <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
+            <div class="rot">Acelerômetro</div>
 {accel_html}
           </div>
           <div class="moldura gatilhos" style="margin-top:9px">
@@ -1170,7 +1258,40 @@ ESTADO = {
 # ERA UM LAÇO POR FORMA (um para os cards, outro para as tiras); agora é UM, e é
 # assim que se sabe que a caixa é uma só. "Quatro" continua sem estar escrito em
 # lugar nenhum: no dia em que a mesa tiver três ou cinco, esta linha não muda.
-BLOCOS = "\n".join(bloco(c, **ESTADO[c["pref"]]) for c in MESA)
+def lugar_vazio(c):
+    """O lugar de um controle que não está na mesa — decisão dela, 31/08/2026:
+
+        "Deixa os outros espaços dos 4 controles a mostra ainda mas cinza igual
+         vc fez na aba jogar."
+
+    ELE NÃO ABRE, e é pedido dela no mesmo turno: *"tiramos o modo p3. p4
+    (seções expandidas não aparecem)"*. Por isso não há `<input type=radio>`
+    aqui — sem rádio o CSS não tem como expandi-lo, e a impossibilidade fica na
+    ESTRUTURA, não numa regra que alguém desfaz sem perceber.
+
+    E ELE É MAIS BAIXO QUE UMA LINHA FECHADA, de propósito: um lugar vazio não
+    tem giroscópio para ligar, nem microfone para resumir, nem bateria para
+    medir. O que sobra é o número do lugar e travessões. Medido: 24px contra os
+    34 da linha fechada — e esses 10px por lugar são o que faz os dois botões
+    novos caberem sem o quadro rolar.
+    """
+    return f'''    <div class="ctl off" data-controle="{c["pref"]}" data-conectado="nao"
+         title="Lugar vazio: nenhum controle conectado aqui.">
+      <div class="faixa">
+        <span class="card-nome">P{c["jogador"]}</span>
+        <span class="div">·</span>
+        <span class="leia">{_VAZIO}</span>
+        <span class="bat">{_VAZIO}</span>
+      </div>
+    </div>'''
+
+
+#: O marcador de campo vazio, o mesmo travessão da aba Jogar.
+_VAZIO = "—"
+
+BLOCOS = "\n".join(
+    bloco(c, **ESTADO[c["pref"]]) if c.get("conectado", True) else lugar_vazio(c)
+    for c in MESA)
 
 # OS NÚMEROS DA APERTADA, medidos no Chrome em 27/08 e usados na legenda. Ficam
 # aqui, e não escritos na prosa, porque a prosa envelhece calada.
@@ -1189,8 +1310,21 @@ BLOCOS = "\n".join(bloco(c, **ESTADO[c["pref"]]) for c in MESA)
 # continua sem rolar — `PARA_O_CARD` (308) ainda cobre o card, agora com 4 px de
 # folga em vez de 7, e é o `assert` logo abaixo que guarda isso.
 ALTURA_DO_CARD = 304
-VISIVEL = 461                 # o `quadro-corpo` com o quadro esticado até o rodapé
-PAD_DO_CORPO = 24             # o padding 10px em cima + 14px embaixo, que rola junto
+FECHADOS = len(CONECTADOS) - 1          # as linhas fechadas: os conectados menos o aberto
+VAZIOS = len(MESA) - len(CONECTADOS)    # os lugares apagados, que não abrem
+ALTURA_VAZIA = 24                       # `.ctl.off` — sem sensor, sem bateria, sem 34
+
+# O `quadro-corpo` com o quadro esticado até o rodapé, MEDIDO no Chrome hoje.
+# Os dois botões não entram nesta conta desde que ela os mandou de volta ao canto
+# superior direito: lá eles moram no `.quadro-topo`, que já existia, e custam
+# ZERO do corpo — o cabeçalho mede os mesmos 45px com e sem eles.
+#
+# ELE JÁ FOI 478 NESTA MESMA SESSÃO, e por poucos minutos: era o que o corpo
+# recebia enquanto os botões viviam DENTRO dele. Um número de layout copiado de
+# um estado que não existe mais é a forma mais barata de uma régua mentir — e
+# esta mentiu duas vezes hoje. O comando que o mede está no `COMO-OLHAR-A-TELA`.
+VISIVEL = 461
+PAD_DO_CORPO = 24             # 10px em cima + 14px embaixo, que rolam junto
 ALTURA_FECHADA = 34           # --h-acao, e o `border-box` põe as duas bordas dentro
 GAP_ENTRE = 9                 # o mesmo passo que separa duas molduras dentro do card
 # A LARGURA DA BATERIA, IGUAL NAS QUATRO LINHAS. O teto é a linha mais apertada —
@@ -1217,7 +1351,16 @@ CUSTO_HEFESTO_ON = 91.7       # o span (71) + o separador (2,7) + os dois vãos 
 CUSTO_GIRO_RAJADAS = 168.8    # o span (148,1) + o separador + os vãos, na linha do P3
 CUSTO_VE_COMO_P3 = 144.6      # idem, se um dia ela quiser este fora também
 EMPILHADOS = len(MESA) * ALTURA_DO_CARD + (len(MESA) - 1) * 14   # o que NÃO cabia
-FECHADOS = len(MESA) - 1
+
+# A CONTA FOI REFEITA EM 31/08/2026, e a versão antiga MENTIA. Ela dizia
+# `FECHADOS = len(MESA) - 1` — três linhas fechadas —, e o gerador imprimia
+# *"1 aberto de 308px e 3 linhas de 34px, sem rolar"* enquanto o Chrome mostrava
+# o quadro ROLANDO e os dois botões novos cortados pela metade. Três coisas
+# tinham mudado debaixo dela: dois controles viraram LUGAR VAZIO (24px, não 34),
+# nasceu o bloco de AÇÕES no fim, e o padding de baixo do corpo saiu.
+#
+# *Uma régua que afirma "sem rolar" sem medir é pior que nenhuma:* ela encerra a
+# conferência. Os números abaixo saem do Chrome, com o comando ao lado.
 # O QUE O CARD ABERTO GANHA — e é aqui que se vê se a mesa cabe. A conta é a
 # mesma que o CSS faz: a caixa menos o padding, menos as linhas fechadas, menos
 # um passo de 9px entre cada duas caixas.
@@ -1227,7 +1370,7 @@ FECHADOS = len(MESA) - 1
 # irmãs no mesmo container, e duas medidas para o mesmo vão seria a mesma
 # incoerência que a régua cobra nos títulos: o passo entre irmãos é um.
 PARA_O_CARD = (VISIVEL - PAD_DO_CORPO - FECHADOS * ALTURA_FECHADA
-               - (len(MESA) - 1) * GAP_ENTRE)
+               - VAZIOS * ALTURA_VAZIA - (len(MESA) - 1) * GAP_ENTRE)
 # A CONTA É UM PORTÃO, e não um comentário: se um dia a mesa crescer a ponto de o
 # card aberto não caber, o gerador PARA aqui em vez de entregar uma tela que
 # esconde controle calada — que é exatamente o defeito que esta aba curou.
@@ -1285,7 +1428,7 @@ CSS += f"""
 MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Conectados</span>
+        <span class="quadro-titulo">Dispositivos Conectados</span>
         <span class="ajuda">?<span class="dica">
           Os <b>{len(MESA)} controles conectados agora</b>. O escolhido abre com a
           leitura viva do aparelho; os outros ficam numa <b>linha</b>, com quem eles são, o
@@ -1300,8 +1443,18 @@ MIOLO = f'''
           interruptor de cada um está na <b>linha dele</b>. O botão acima é o único que vale
           para a <b>mesa toda</b>: ele calibra os {len(MESA)} de uma vez.
         </span></span>
+        <!-- OS DOIS BOTÕES VOLTARAM AO CANTO SUPERIOR DIREITO — decisão dela,
+             31/08/2026: *"A posição deles volta pro canto superior direito."*
+             É onde o Calibrar morava antes desta leva, e a classe `.sensores`
+             que os alinha à direita nunca deixou de existir.
+             DE QUEBRA, ELES DEIXAM DE DISPUTAR ALTURA com a lista de controles:
+             no fim do quadro custavam 46px do corpo, e foi por isso que o card
+             precisou dos 24px dos lugares vazios para caber. -->
         <span class="sensores">
-          <button class="btn" title="Calibra os {len(MESA)} controles da mesa numa passada só: deixa o giroscópio e o acelerômetro de cada um no zero, com todos parados numa mesa plana.">Calibrar sensores da mesa</button>
+          <a class="btn" href="calibrar-sensores.html"
+             title="Calibra o giroscópio e o acelerômetro dos {len(CONECTADOS)} controles conectados numa passada só, com todos parados numa mesa plana.">Calibrar Sensores de Movimento</a>
+          <a class="btn" href="mapa-do-controle.html"
+             title="Abre o mapa do controle: cada peça do DualSense com o nome, o glifo e o que o Hefesto lê dela.">Mapa do Controle</a>
         </span>
       </div>
       <div class="quadro-corpo">
@@ -1320,8 +1473,8 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O que mudou em 30/08</h2>
   <ul>
-    <li><b>O modo do microfone entrou</b> — <b>Virtual</b>, <b>Desativado</b> e <b>Nativo</b>, pedido seu. Ele mora na <b>linha do rótulo</b>, e isso é orçamento e não estética: como fileira própria embaixo custaria 42 px e o card iria de {ALTURA_DO_CARD} para 350, contra os {PARA_O_CARD} que a caixa reserva — o quadro passaria a rolar por dentro e o P4 sairia da tela. Ali o custo de altura é <b>zero</b>, e ele fica ao lado do selo que diz se o mic está ATIVO.</li>
-    <li><b>O acelerômetro passou a aparecer na tela</b>, com os três eixos e a unidade em <b>g</b>, embaixo do giroscópio e na <b>mesma moldura</b> — que por isso deixou de se chamar <i>Giroscópio</i> e virou <b>Sensores</b>. É a resposta à pergunta que a legenda de 29/08 deixou aberta (<i>vale ler?</i>): vale, e os números do P1 no desenho são <b>medidos</b> no daemon vivo — X +0,105 · Y +0,976 · Z +0,170, que dão <b>0,996 g</b>, a gravidade.</li>
+    <li><b>O modo do microfone são DOIS, e eles desceram para baixo do slider</b> — suas duas ordens de 31/08: <i>"remove o desligado (fica desligado com slicer no zero)"</i> e <i>"os botões Virtual e Nativo ficam na parte de baixo do slider, igual o Sons do Jogo e Todo o som do PC"</i>. Agora são a <b>mesma fileira</b> que o alto-falante usa — mesma classe, mesma altura, mesmo gesto.<br><b>Em 30/08 eles eram TRÊS e moravam na linha do rótulo</b>, e o motivo era orçamento: como fileira embaixo custariam 42 px e o card estouraria a caixa. Com o "Desativado" fora sobraram dois, e o preço ficou pagável — mas ele existiu: a coluna do som foi de 236 para 269 px, e as duas fileiras de escolha passaram de 36 para <b>30 px</b> de altura para o card caber. É a mesma faixa do chip da fita, e as duas continuam iguais entre si.</li>
+    <li><b>O acelerômetro passou a aparecer na tela</b>, com os três eixos e a unidade em <b>g</b>, embaixo do giroscópio e na <b>mesma moldura</b> — que por isso passou a se chamar <b>Sensores</b>. <b>Em 31/08 ela virou DUAS</b>, por ordem sua — <i>"é pra ser 3: um Giroscópio, outra Acelerômetro e outra gatilhos"</i> —, e as unidades (<i>°/s</i> e <i>g</i>) saíram dos rótulos junto. Coube sem custo: a coluna continua nos mesmos px. É a resposta à pergunta que a legenda de 29/08 deixou aberta (<i>vale ler?</i>): vale, e os números do P1 no desenho são <b>medidos</b> no daemon vivo — X +0,105 · Y +0,976 · Z +0,170, que dão <b>0,996 g</b>, a gravidade.</li>
   </ul>
 
   <h2>O que mudou em 29/08</h2>
@@ -1347,9 +1500,9 @@ LEGENDA = f'''<div class="nota">
   <h2>Os sensores desceram para cada controle; o Calibrar ficou e cresceu</h2>
   <ul>
     <li><b>O giroscópio e o acelerômetro são estado de cada peça</b>, e por isso o interruptor de cada um está agora na <b>linha do controle</b>, nas {len(MESA)}. Eles estavam no topo do quadro, valendo para a mesa toda — e um interruptor global com {len(MESA)} controles na mesa <b>mente sobre {len(MESA) - 1} deles</b>.</li>
-    <li><b>O Calibrar ficou onde estava, e virou gesto de mesa</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os {len(MESA)} controles ao mesmo tempo"</i>. O rótulo agora diz o escopo (<span class="marca">Calibrar sensores da mesa</span>) e o ponteiro diz o gesto: os {len(MESA)} numa passada só, todos parados numa mesa plana.</li>
+    <li><b>O Calibrar ficou onde estava, e virou gesto de mesa</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os {len(MESA)} controles ao mesmo tempo"</i>. <b>Em 31/08 ele mudou de nome e ganhou um irmão</b>, por ordem sua: <i>"o calibrar sensores de movimento, ao invés de mesa"</i> e <i>"o botão Mapa do Controle que abre a interface do mapa do Controle"</i>. <span class="marca">Calibrar Sensores de Movimento</span> diz <b>o que se calibra</b> — o escopo continua no ponteiro. Os dois <b>chegaram a ir para o fim do quadro</b> e você os mandou voltar: <i>"a posição deles volta pro canto superior direito"</i>. E o Calibrar abre uma <b>página nova</b> (<code>calibrar-sensores.html</code>) com o procedimento em três passos e os controles conectados lado a lado.</li>
     <li><b>O par custa {num(LARG_PAR_SENSORES)} px, e só coube porque duas leituras saíram.</b> A linha mais apertada é a do <b>P3</b>, o nome mais longo da mesa: ela tinha <b>{num(VAO_ANTES_P3)} px</b> livres, e o par pede {num(LARG_PAR_SENSORES)} mais o vão. Saíram <span class="marca">Hefesto on</span> ({num(CUSTO_HEFESTO_ON)} px, e dizia a mesma coisa nas {len(MESA)} linhas) e <span class="marca">Giroscópio em rajadas</span> ({num(CUSTO_GIRO_RAJADAS)} px), que juntas devolvem {num(CUSTO_HEFESTO_ON + CUSTO_GIRO_RAJADAS)} — <b>mais</b> do que o par ocupa. Depois da troca a mesma linha do P3 tem <b>{num(VAO_DEPOIS_P3)} px</b> livres ({num(VAO_DEPOIS_P3 - VAO_ANTES_P3)} a mais do que antes) e a do card aberto, {num(VAO_DEPOIS_P1)}.</li>
-    <li><b>O "vê como" ficou, e a contradição é sua para desempatar.</b> Você escreveu <i>"se der problema de espaço remover Giroscópio, Hefesto e vê como (na real remove eles)"</i> — mas a sua decisão de ontem, na mesma tela, diz que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>, e <b>máscara é o "vê como"</b>. Duas frases suas em sentidos opostos: tirei as duas leituras que nenhuma decisão protegia, e a conta acima mostra que não precisou de mais. <b>Se você quiser o "vê como" fora também</b>, é uma linha no gerador — ele custa {num(CUSTO_VE_COMO_P3)} px na linha do P3, com o separador e os dois vãos.</li>
+    <li><b>Você desempatou o "vê como", em 31/08 — e em duas frases.</b> A legenda de 30/08 deixou a contradição aberta: você tinha escrito <i>"remover Giroscópio, Hefesto e vê como"</i> e, no dia anterior, que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>. Agora: <i>"remover o vê como de todos os controles"</i> e, logo depois, <i>"era o texto Vê como mas o nome da máscara fica"</i>. <b>Sai o rótulo, fica o dado.</b> A primeira volta tirou o span inteiro e levou a máscara junto — era ler o pedido pela metade. De onde ela vem continua no ponteiro, para quem passar o mouse.</li>
     <li><b>E o que saiu não é o que entrou, embora tenham a mesma palavra.</b> Saiu a <b>leitura</b> <span class="marca">Giroscópio 250 Hz</span>; entrou o <b>interruptor</b> de giroscópio. O número medido não virou lápide: ele está no ponteiro do interruptor, e responde por transporte — <b>250,0 Hz exatos</b> no cabo, <b>em rajadas</b> no rádio.</li>
     <li><b>Os {len(MESA) * 2} botões nascem nos mesmos dois x</b> ({num(X_PAR_SENSORES[0])} e {num(X_PAR_SENSORES[1])}), com <b>{num(LARG_SW)} px</b> cada. Quem iguala é a <b>grade</b>, não o comprimento do rótulo, e quem os prende ali é o <code>margin-left:auto</code>, que saiu da bateria e passou ao par: com os dois pedindo o vão, o flex partiria a sobra ao meio e o grupo flutuaria em {len(MESA)} lugares diferentes.</li>
     <li><b>{ALT_SW} px de altura, e não os {ALTURA_FECHADA} de <code>--h-acao</code>.</b> A linha fechada tem {ALTURA_FECHADA} px por fora e <b>30 por dentro</b> — um botão de {ALTURA_FECHADA} não cabe em 30. Crescer a linha também não era saída: a conta ali embaixo fecha com {PARA_O_CARD - ALTURA_DO_CARD} px de sobra, e {FECHADOS} linhas 6 px mais altas roubariam 18 do card. Não é uma altura inventada: é a mesma pastilha da <b>fita</b> lá em cima (o chip mede 28 a 30 px) e do <b>Perfil ativo</b> (29 px) — que é o que estes botões são, e não botão de decidir.</li>
@@ -1430,10 +1583,11 @@ LEGENDA = f'''<div class="nota">
 # ou estado. Nome de classe ou de `data-*` não entra: a legenda fala com ela, e
 # ela lê o que está escrito na tela.
 TERMOS_DA_TELA = (
-    "Liberar", "Sons do jogo", "Todo o som do PC", "Calibrar sensores da mesa",
+    "Liberar", "Sons do jogo", "Todo o som do PC",
+    "Calibrar sensores de movimento", "Mapa do Controle", "Dispositivos Conectados",
     "Sem toque", "Tocando", "LED do jogador", "Barra de luz", "Touchpad",
-    "Microfone", "Alto-falante", "Gatilhos", "Sensores", "Giroscópio",
-    "Acelerômetro", "Virtual", "Desativado", "Nativo",
+    "Microfone", "Alto-falante", "Gatilhos", "Giroscópio",
+    "Acelerômetro", "Virtual", "Nativo",
 )
 
 
@@ -1492,7 +1646,11 @@ def a_legenda_nao_promete_o_que_a_tela_nao_tem(legenda, miolo):
 # sintoma em 27/08, e a lição é a mesma.
 # ---------------------------------------------------------------------------
 def fita_clicavel(doc):
-    ids = ["c-todos"] + [f'c-{c["pref"]}' for c in MESA]
+    # OS RÁDIOS SÃO OS DA MESA — 31/08/2026, quando ela mandou deixar dois
+    # controles desconectados. A fita só desenha chip de quem está conectado
+    # (`monta.fita()`), e um `id` a mais aqui faz a régua abaixo reprovar com
+    # `3 chips para 5 rádios`. Foi ela quem pegou a propagação incompleta.
+    ids = ["c-todos"] + [f'c-{c["pref"]}' for c in CONECTADOS]
     linhas = doc.split("\n")
     achados = 0
     for k, linha in enumerate(linhas):
@@ -1531,13 +1689,115 @@ def fita_clicavel(doc):
 # um `import aba02` regeraria o `02-controles.html` da mesa fixa de quatro no
 # meio da execução do produto — reescrevendo, calada, a especificação aprovada
 # por ela.
+
+def _conferir(doc):
+    """As decisões dela de 31/08 nesta aba, conferidas NA SAÍDA.
+
+    SÓ O MIOLO, e sem comentário HTML. A régua da aba Jogar nasceu errada duas
+    vezes pela mesma família — casou o nome do produto no cabeçalho, oito
+    citações na legenda e o próprio comentário que a explicava. É a armadilha do
+    `COMO-OLHAR-A-TELA.md`: *"régua que casa um token em qualquer lugar do texto,
+    em vez do campo que o significa"*. Aqui ela já nasce sabendo.
+    """
+    corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
+    corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
+    if len(corpo) < 2000:
+        raise SystemExit("ERRO: a régua não achou o miolo — régua que mede 0 "
+                         "caractere passa com qualquer desenho.")
+    falhas = []
+
+    def exigir(cond, oque):
+        if not cond:
+            falhas.append(oque)
+
+    # 1. "Conectados" virou "Dispositivos Conectados".
+    exigir(">Dispositivos Conectados</span>" in corpo, "o título novo sumiu")
+    exigir(">Conectados</span>" not in corpo, "o título antigo voltou")
+
+    # 2. O "Desativado" do microfone saiu. *"remove o desligado (fica desligado
+    #    com slicer no zero)"* — o slider em 0 é o que desliga.
+    exigir('data-mic-modo="desativado"' not in corpo, "o Desativado do microfone voltou")
+    exigir(corpo.count('data-mic-modo="') == 2 * len(CONECTADOS),
+           "os modos do microfone não são 2 por controle conectado")
+
+    # 3. O "· 100 % · Acordado" saiu do rótulo do alto-falante.
+    exigir("Acordado" not in corpo, "o estado do alto-falante voltou ao rótulo")
+
+    # 4. TRÊS molduras, e as unidades fora. *"É pra ser 3: um Giroscópio, outra
+    #    Acelerômetro e outra gatilhos."*
+    for b in ("giroscopio", "acelerometro"):
+        exigir(f'data-bloco="{b}"' in corpo, f"a moldura {b} sumiu")
+    exigir(">Sensores" not in corpo, "a moldura única 'Sensores' voltou")
+    for u in (">°/s<", "Acelerômetro <span"):
+        exigir(u not in corpo, f"uma unidade voltou ao rótulo do sensor: {u!r}")
+
+    # 5. A mesa: os conectados abrem, os vazios não. *"tiramos o modo p3. p4
+    #    (seções expandidas não aparecem)"* — sem `<input>` não há o que expandir.
+    exigir(corpo.count('data-conectado="nao"') == VAZIOS,
+           f"os lugares vazios não são {VAZIOS}")
+    for pedaco in corpo.split('class="ctl off"')[1:]:
+        exigir("<input" not in pedaco.split("</div>")[0],
+               "um lugar vazio ganhou rádio — ele abriria")
+
+    # 6. OS DOIS BOTÕES, e eles apontam para páginas que EXISTEM. Um botão que
+    #    abre o nada é pior que nenhum botão.
+    for destino, rot in (("calibrar-sensores.html", "Calibrar sensores de movimento"),
+                         ("mapa-do-controle.html", "Mapa do Controle")):
+        exigir(f'href="{destino}"' in corpo, f"o botão {rot!r} sumiu")
+        exigir(onde.pagina(destino).exists(),
+               f"o botão {rot!r} aponta para {destino}, que NÃO existe na bancada")
+    exigir("Calibrar sensores da mesa" not in corpo, "o nome antigo do Calibrar voltou")
+    exigir(">Calibrar Sensores de Movimento</a>" in corpo,
+           "o rótulo do Calibrar não é o que ela escreveu")
+    # E ELES MORAM NO CABEÇALHO, não no fim — *"a posição deles volta pro canto
+    # superior direito."* Já estiveram nos dois lugares nesta mesma sessão.
+    topo = corpo.split('<div class="quadro-corpo">', 1)[0]
+    exigir('href="calibrar-sensores.html"' in topo and 'href="mapa-do-controle.html"' in topo,
+           "os dois botões saíram do canto superior direito")
+    exigir("acoes-da-mesa" not in corpo, "o bloco de ações do FIM do quadro voltou")
+
+    # 7. OS MODOS DO MICROFONE FICAM ABAIXO DO SLIDER, na mesma fileira do som —
+    #    *"os botões Virtual e Nativo ficam na parte de baixo do slider, igual o
+    #    Sons do Jogo e Todo o som do PC."* A régua olha a CLASSE, que é o que
+    #    faz os dois serem o mesmo botão: `class="rota mic-modo"`.
+    #    A ORDEM SE MEDE COM `find`, NUNCA COM `index` — a primeira versão desta
+    #    régua usava `index` e, quando a classe sumia, ela ESTOURAVA com
+    #    `ValueError` em vez de acusar. Na mordida isso é indistinguível de uma
+    #    régua que não pegou nada: o gerador morreu, e a mensagem que ele devia
+    #    imprimir nunca saiu. Régua que quebra não diz o que está errado.
+    tem_rota = 'class="rota mic-modo"' in corpo
+    exigir(tem_rota, "os modos do microfone não estão na fileira `.rota` do som")
+    if tem_rota:
+        for pedaco in corpo.split('data-bloco="microfone"')[1:]:
+            i_vol, i_rota = pedaco.find('class="vol"'), pedaco.find('class="rota mic-modo"')
+            exigir(0 <= i_vol < i_rota,
+                   "os modos do microfone voltaram para ACIMA do slider")
+
+    # 8. O TEXTO "vê como" SAIU E A MÁSCARA FICOU. As duas metades, porque a
+    #    primeira volta tirou o span inteiro e levou o dado junto.
+    exigir("vê como" not in corpo, "o texto 'vê como' voltou")
+    exigir(corpo.count('data-campo="mascara"') == len(CONECTADOS),
+           "a máscara sumiu com o texto — ela FICA, e é o dado")
+
+    if falhas:
+        raise SystemExit("ERRO em 02-controles — decisão dela desfeita:\n  "
+                         + "\n  ".join(f"- {f}" for f in falhas))
+
+
 if __name__ == "__main__":
     # ANTES DE ESCREVER, e não depois: um gerador que grava e só então reclama
     # já deixou a tela errada no disco para quem abrir o arquivo.
     a_legenda_nao_promete_o_que_a_tela_nao_tem(LEGENDA, MIOLO)
     n = monta("02-controles", "Controles", MIOLO, CSS, fita_viva=True, legenda=LEGENDA)
-    SAIDA = pathlib.Path(__file__).resolve().parent.parent / "02-controles.html"
+    # A SAÍDA É A BANCADA (`mockup/`) — 31/08/2026, quando o fluxo inverteu.
+    # Este caminho não dizia "layout": era `parent.parent`, e por isso o censo
+    # por texto não o achou. Quem o achou foi a régua da fita logo abaixo, que
+    # reprovou com `0 chips para 5 rádios` — ela lia o arquivo VELHO, já com os
+    # `<label>` da execução anterior. Régua que acha zero é ERRO, não silêncio.
+    SAIDA = onde.pagina("02-controles.html")
     SAIDA.write_text(fita_clicavel(SAIDA.read_text()))
-    print(f"02-controles: OK, {n} divs · {len(MESA)} controles na tela — 1 aberto de "
-          f"{PARA_O_CARD}px e {FECHADOS} linhas de {ALTURA_FECHADA}px, sem rolar; "
-          f"em 'Todos', os {len(MESA)} abertos e {ROLA_EM_TODOS}px de rolagem")
+    _conferir(SAIDA.read_text())
+    print(f"02-controles: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
+          f"+ {VAZIOS} lugar(es) vazio(s) — 1 card de {PARA_O_CARD}px, "
+          f"{FECHADOS} linha(s) de {ALTURA_FECHADA} e {VAZIOS} de {ALTURA_VAZIA}; "
+          f"em 'Todos', {ROLA_EM_TODOS}px de rolagem")

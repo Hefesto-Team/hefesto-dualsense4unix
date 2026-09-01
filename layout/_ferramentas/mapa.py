@@ -40,14 +40,20 @@ CSV_CORES = R / "docs/data/cores-do-dualsense.csv"
 # estava escrito "234" quando o canônico é "135" — as duas pontas e o centro.
 # Ninguém tinha visto porque os mockups só usam os jogadores 1 e 2. Banco de
 # provas com tabela própria prova a tabela dele, não o produto.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(R / "src"))
+import onde  # noqa: E402
 from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
     player_led_pattern,
     player_slot_color,
 )
 GLIFOS = R / "assets/glyphs"
 SVG = R / "layout/_ferramentas/ds_limpo.svg"
-SAIDA = R / "layout/mapa-do-controle.html"
+# A SAÍDA É A BANCADA — 31/08/2026. Este gerador tinha ficado de fora quando o
+# escopo foi reduzido a "só o mockup"; ele voltou porque ela pediu mudança no
+# mapa (a linha de instrução do hover). Escrever em `layout/` trocaria o
+# produto que ela usa, sem ela ver.
+SAIDA = onde.pagina("mapa-do-controle.html")
 
 REGIOES = [("face", "Botões da face"), ("direcional", "Direcional"),
            ("ombros", "Ombros"), ("gatilhos", "Gatilhos"),
@@ -678,9 +684,24 @@ def main():
 
   .mapa{{display:grid;grid-template-columns:minmax(0,1fr) 720px;gap:0;align-items:stretch}}
   .lado-ds{{padding:20px 24px;display:flex;align-items:center;justify-content:center}}
+  /* A LISTA NÃO ROLA DE LADO — 31/08/2026, pedido dela: *"a página de mapa do
+     dualsense tem uma barra horizontal desnecessária."*
+
+     A CAUSA eram três regras que se contradiziam: `column-width` deixa o
+     navegador criar QUANTAS colunas couberem na largura, `max-height` limita a
+     altura, e `column-fill:balance` manda encher todas por igual. Quando o
+     conteúdo não cabe na altura, ele não rola — ele CRIA colunas novas, e as
+     que não cabem na largura vão para fora. Medido: a lista recebia 719px e
+     pedia **1071** — 352px de excesso, três colunas onde cabiam duas.
+
+     A CURA É TIRAR O TETO DE ALTURA. Sem ele, o balanceamento acontece na
+     altura que a lista pede, e nenhuma coluna nasce fora. A página cresce 32px
+     e rola na vertical, que é o que uma lista faz.
+     `columns:330px 2` guarda as duas coisas: 330 é a largura ideal de cada
+     coluna e 2 é o TETO — numa tela estreita ele cai para uma sozinho, em vez
+     de espremer duas. */
   .lado-lista{{border-left:1px solid var(--border-sutil);padding:14px 18px;
-               max-height:80vh;overflow-y:auto;
-               column-width:330px;column-gap:20px;column-fill:balance}}
+               columns:330px 2;column-gap:20px;column-fill:balance}}
   .grupo{{break-inside:avoid;-webkit-column-break-inside:avoid}}
   .ds{{width:100%;height:auto;max-height:74vh}}
   /* TUDO PREENCHIDO — decisão dela, 27/08: os paths deste SVG são FAIXAS e
@@ -875,9 +896,20 @@ def main():
 
 <div class="cx">
   <div class="topo">
-    <a class="voltar" href="06-navegacao.html" title="Volta para a aba Navegação, que é de onde este mapa se abre.">← Voltar</a>
+    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO. Medido em 31/08/2026: DUAS abas
+         abrem este mapa — a Controles (o botão novo, pedido dela) e a
+         Navegação (`a.porta`). Um destino fixo estaria errado para metade de
+         quem chega. O `href` é o fallback de quem abre o arquivo direto, com
+         duplo clique, que é como ela abre. -->
+    <a class="voltar" href="02-controles.html"
+       onclick="if (document.referrer) {{ history.back(); return false }}"
+       title="Volta para a aba de onde você veio.">← Voltar</a>
     <h1><span class="p">O mapa do controle</span> — a fonte da verdade das peças</h1>
-    <div class="sub">passe o mouse num glifo e a peça acende no desenho · passe na peça e o glifo acende</div>
+    <!-- A LINHA DE INSTRUÇÃO SAIU — decisão dela, 31/08/2026: *"passe o mouse
+         num glifo e a peça acende no desenho · passe na peça e o glifo acende
+         só remove isso."* O comportamento FICA: o que sai é a legenda que o
+         narrava. Quem passa o mouse descobre em meio segundo; quem não passa
+         não precisava da frase. -->
   </div>
 
 {provas}
