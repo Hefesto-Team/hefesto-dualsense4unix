@@ -76,9 +76,25 @@ METODOS: set[str] = set()    # os métodos crus, se usar `p.chamar`
   `lado`, `campo`, `modo`, `forca`, `sensor`, `rota`, `mudo`, `v`
 * `p` — a ponte
 
-**3. Suba o piso** em `tests/unit/test_os_botoes_tem_dono.py` (`PISO`) e
-acrescente uma linha ao `parametrize` por gesto, dizendo qual função da ponte
-ele chama e com quais argumentos.
+**3. Declare o piso e as provas NO SEU PACOTE** — nunca no arquivo de teste.
+Ele é lido por ele, e é o que dá território exclusivo a cada aba:
+
+```python
+PAGINA = "NN-x.html"
+PISO_DA_ABA = 3          # quantos gestos esta aba tem. Só sobe.
+PROVAS = [
+    {"pagina": PAGINA, "gesto": "nome-do-gesto",
+     "clique": {"lado": "e"},                       # o que o botão manda
+     "chama": [("trigger_set", ["left", "Rigid", [0, 180]], {})]},
+]
+```
+
+`chama` é a lista **na ordem**: um botão pode precisar de duas chamadas — o
+"Automático" da Iluminação larga o claim e SÓ ENTÃO pinta a cor padrão, e
+invertidas o reset apagaria a cor que acabou de ir.
+
+O `uniq` do clique de prova é sempre `aa:bb:cc:00:00:01` (faixa sintética da
+casa — há dois portões de anonimato nesta árvore).
 
 **4. Prove clicando**, com a janela OCULTA — ela tem UMA tela:
 

@@ -43,14 +43,31 @@ FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense"}]
 
-#: O PISO: quantos gestos cada aba tem com dono. Ele SÓ SOBE — uma queda é um
-#: botão que parou de agir, e isso não aparece na tela (o clique simplesmente
-#: não faz nada). Medido em 01/09/2026, quando a Iluminação virou o exemplo.
-PISO = {
-    "04-iluminacao.html": 4,
-    "09-sistema.html": 2,
-    "10-perfis.html": 1,
-}
+#: O PISO E AS PROVAS MORAM NOS PACOTES, não aqui — e a razão é de processo:
+#: com oito abas sendo ligadas em paralelo, este arquivo seria editado oito
+#: vezes na mesma região, e seriam oito conflitos. Cada `aNN_*.py` declara
+#: `PISO_DA_ABA` (quantos gestos tem) e `PROVAS` (o que cada clique deve
+#: chamar), e esta régua os LÊ.
+#:
+#: Território exclusivo é o que torna o paralelo seguro; foi a mesma razão de o
+#: dicionário de gestos ter virado o decorador `@gesto`.
+
+
+def _pacotes():
+    """Os módulos de pacote, com o que cada um declara sobre os seus botões."""
+    import importlib
+
+    fora = []
+    for arq in sorted((RAIZ / "layout/_ferramentas/pacotes").glob("a[0-9][0-9]_*.py")):
+        fora.append((arq.stem, importlib.import_module(f"pacotes.{arq.stem}")))
+    return fora
+
+
+def _provas():
+    """Cada prova declarada, com o nome do pacote que a declarou."""
+    for nome, mod in _pacotes():
+        for prova in getattr(mod, "PROVAS", ()):
+            yield nome, prova
 
 
 class PonteDeMentira:
@@ -136,56 +153,74 @@ def test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende(pac):
 # --------------------------------------------------------------------------
 # 2. o piso por aba
 # --------------------------------------------------------------------------
-@pytest.mark.parametrize("pagina", sorted(PISO))
-def test_a_aba_tem_o_piso_de_gestos(pac, pagina):
+@pytest.mark.parametrize("nome", [n for n, _ in _pacotes()])
+def test_a_aba_tem_o_piso_de_gestos(pac, nome):
+    """`PISO_DA_ABA` é declarado no pacote e SÓ SOBE.
+
+    Uma queda não aparece na tela: o clique simplesmente não faz nada.
+    """
+    import importlib
+
+    mod = importlib.import_module(f"pacotes.{nome}")
+    piso = getattr(mod, "PISO_DA_ABA", 0)
+    if not piso:
+        pytest.skip(f"{nome} ainda não declarou PISO_DA_ABA — aba não ligada")
+    pagina = getattr(mod, "PAGINA", "")
+    assert pagina, f"{nome} declara PISO_DA_ABA e não declara PAGINA"
     quantos = sum(1 for (p, _) in pac.GESTOS if p == pagina)
-    assert quantos >= PISO[pagina], (
-        f"{pagina} tem {quantos} gestos com dono e o piso é {PISO[pagina]}. "
-        f"Uma queda aqui não aparece na tela: o clique simplesmente não faz nada.")
+    assert quantos >= piso, (
+        f"{pagina} tem {quantos} gestos com dono e o piso é {piso}.")
 
 
 # --------------------------------------------------------------------------
 # 3. o gesto CHAMA o daemon — a parte que separa ligar de fingir
 # --------------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("pagina", "nome", "clique", "funcao", "args", "kwargs"),
-    [
-        ("04-iluminacao.html", "cor", {"hex": "#FF8000"}, "led_set",
-         ((255, 128, 0),), {"uniq": UNIQ}),
-        ("04-iluminacao.html", "apagar", {}, "led_set", ((0, 0, 0),), {"uniq": UNIQ}),
-        # DUAS chamadas, e a ordem importa: largar o claim e SÓ ENTÃO pintar a
-        # cor padrão. Invertido, o `reset` apagaria a cor que acabou de ir.
-        ("04-iluminacao.html", "auto", {}, "chamar", ("lightbar.reset",), {"uniq": UNIQ}),
-        ("04-iluminacao.html", "player", {"player": "2"}, "identity_number_set",
-         (UNIQ, 2), {}),
-        ("09-sistema.html", "retomar", {}, "chamar", ("daemon.resume",), {}),
-        ("09-sistema.html", "atualizar", {}, "chamar", ("daemon.reload",), {}),
-        ("10-perfis.html", "ativar", {"texto": "Ação"}, "profile_switch", ("Ação",), {}),
-    ],
-)
-def test_o_gesto_chama_a_funcao_certa(pac, ctx, pagina, nome, clique, funcao, args, kwargs):
-    """O coração da régua: o clique vira UMA chamada à ponte, com os argumentos.
+    ("pacote", "prova"), list(_provas()),
+    ids=lambda x: x if isinstance(x, str) else x.get("gesto", "?"))
+def test_o_gesto_chama_a_funcao_certa(pac, ctx, pacote, prova):
+    """O coração da régua: o clique vira chamadas à ponte, com os argumentos.
 
     E a ponte é o `app/ipc_bridge.py` — a mesma camada que a GUI estável usa.
-    Um gesto que monte o payload à mão passa por aqui só se chamar `chamar()`,
-    e o teste seguinte cobra que ele não faça isso com o que já tem função.
+    A prova é DECLARADA PELO PACOTE, no `PROVAS`, para que ligar uma aba não
+    exija editar este arquivo (e oito abas em paralelo não virem oito
+    conflitos).
+
+    A forma de uma prova:
+
+        {"pagina": "04-iluminacao.html", "gesto": "cor",
+         "clique": {"hex": "#FF8000"},
+         "chama": [("led_set", ((255, 128, 0),), {"uniq": UNIQ})]}
+
+    `chama` é a lista, NA ORDEM: um botão pode precisar de duas chamadas — o
+    "Automático" larga o claim e então pinta a cor padrão, e invertidas o reset
+    apagaria a cor que acabou de ir.
     """
-    fn = pac.gesto_da_pagina(pagina, nome)
-    assert fn is not None, f"{pagina}:{nome} não tem dono"
+    fn = pac.gesto_da_pagina(prova["pagina"], prova["gesto"])
+    assert fn is not None, f"{prova['pagina']}:{prova['gesto']} não tem dono"
 
     p = PonteDeMentira()
-    fn(ctx, _clique(**clique), p)
+    fn(ctx, _clique(**prova.get("clique", {})), p)
 
     assert p.chamadas, (
-        f"{pagina}:{nome} não chamou NADA. É o defeito que esta régua existe "
-        f"para pegar: o gesto registrado que não faz nada passa por qualquer "
-        f"teste de registro, e na tela o clique some sem uma linha de erro.")
-    chamada, a, kw = p.chamadas[0]
-    assert chamada == funcao, f"{pagina}:{nome} chamou {chamada!r}, esperava {funcao!r}"
-    assert a == args, f"{pagina}:{nome} passou {a!r}, esperava {args!r}"
-    for chave, valor in kwargs.items():
-        assert kw.get(chave) == valor, (
-            f"{pagina}:{nome} mandou {chave}={kw.get(chave)!r}, esperava {valor!r}")
+        f"{prova['pagina']}:{prova['gesto']} não chamou NADA. É o defeito que "
+        f"esta régua existe para pegar: o gesto registrado que não faz nada "
+        f"passa por qualquer teste de registro, e na tela o clique some sem "
+        f"uma linha de erro.")
+
+    esperado = prova["chama"]
+    nomes = [c[0] for c in p.chamadas]
+    assert nomes == [e[0] for e in esperado], (
+        f"{prova['pagina']}:{prova['gesto']} chamou {nomes}, esperava "
+        f"{[e[0] for e in esperado]}. A ORDEM importa.")
+    for (chamou, a, kw), (_, args, kwargs) in zip(p.chamadas, esperado, strict=True):
+        assert a == tuple(args), (
+            f"{prova['gesto']}: passou {a!r} a {chamou}, esperava {tuple(args)!r}")
+        for chave, valor in kwargs.items():
+            assert kw.get(chave) == valor, (
+                f"{prova['gesto']}: mandou {chave}={kw.get(chave)!r}, "
+                f"esperava {valor!r}")
+
 
 
 def test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem():

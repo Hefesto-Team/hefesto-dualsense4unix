@@ -95,3 +95,11 @@ def ativar(ctx: Contexto, o: dict, p) -> None:
 
 PONTE = {"profile_switch"}
 METODOS: set[str] = set()
+
+
+PAGINA = "10-perfis.html"
+PISO_DA_ABA = 1
+PROVAS = [
+    {"pagina": PAGINA, "gesto": "ativar", "clique": {"texto": "Ação"},
+     "chama": [("profile_switch", ["Ação"], {})]},
+]

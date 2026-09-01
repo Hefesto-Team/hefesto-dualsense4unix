@@ -128,3 +128,13 @@ def atualizar(ctx: Contexto, o: dict, p) -> None:
 #: botão que responde calado.
 PONTE = {"chamar"}
 METODOS = {"daemon.resume", "daemon.reload"}
+
+
+PAGINA = "09-sistema.html"
+PISO_DA_ABA = 2
+PROVAS = [
+    {"pagina": PAGINA, "gesto": "retomar", "clique": {},
+     "chama": [("chamar", ["daemon.resume"], {})]},
+    {"pagina": PAGINA, "gesto": "atualizar", "clique": {},
+     "chama": [("chamar", ["daemon.reload"], {})]},
+]
