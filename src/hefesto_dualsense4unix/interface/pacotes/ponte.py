@@ -148,6 +148,28 @@ def chamar_detalhado(metodo: str, **params):
     return _b._call_checked(metodo, params, timeout=teto(metodo))
 
 
+def resultado(metodo: str, timeout: float | None = None, **params):
+    """O QUE O DAEMON RESPONDEU — e não só se ele aceitou.
+
+    POR QUE ELA PRECISOU EXISTIR, 01/09/2026: `chamar()` devolve `bool` e joga
+    fora o `result` que o `_safe_call` já traz de graça. Para um botão que
+    ESCREVE isso basta; para um botão cuja promessa é MOSTRAR, não — e foi
+    exatamente o que deixou `ver-plugins` sem dono na aba Sistema, com o daemon
+    atendendo `plugin.list` desde sempre. Um gesto que chamasse `plugin.list` e
+    descartasse a lista seria o botão "Ver os plugins carregados" que não mostra
+    plugin nenhum: o botão que responde calado.
+
+    ELA LEVANTA quando o daemon não atende, em vez de devolver `None`: um `None`
+    silencioso viraria "não há plugins", que é uma afirmação diferente de "não
+    consegui perguntar". O piloto pega a exceção e a imprime como `[gesto
+    falhou]` — quem clicou fica sabendo.
+    """
+    ok, r = _b._safe_call(metodo, params, timeout=timeout or teto(metodo))
+    if not ok:
+        raise RuntimeError(f"o daemon não respondeu a {metodo}")
+    return r
+
+
 # ---------------------------------------------------------------------------
 # O QUE SÓ A JANELA PODE FAZER — e por isso é INJETADO, não importado
 # ---------------------------------------------------------------------------
