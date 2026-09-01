@@ -1,12 +1,13 @@
 """Aba 05 · Vibração — o adaptador: o que a tela recebe e o que ela manda.
 
-A página é ``novo-layout/05-vibracao.html``, aprovada por ela com elogio literal
+A página é ``src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html``, aprovada por ela com
+elogio literal
 (``_ferramentas/CORRECOES-DELA.md:39``). Este módulo é o outro lado dela: pega o
 ``daemon.state_full`` e devolve **um pacote por tique** — nunca uma chamada por
 valor —, e traduz de volta o gesto que a página mandar.
 
 Ele não abre janela, não importa ``gi`` e não fala IPC. Quem faz isso é quem
-chama (hoje o piloto ``novo-layout/_ferramentas/vibracao_viva.py``; amanhã o
+chama (hoje o piloto ``src/hefesto_dualsense4unix/interface/vibracao_viva.py``; amanhã o
 enxerto da ``MIGRA-VIBRACAO-01``).
 
 O QUE ESTA ABA TEM DE FONTE, E O QUE NÃO TEM

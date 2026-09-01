@@ -33,7 +33,7 @@ O pedido dela diz "o hook do **novo dev**", e a leitura natural seria: fale na
 worktree `hefesto-dualsense4unix-dev` e cale na árvore dela. MEDIDO em
 29/08/2026, essa leitura erra o alvo:
 
-* o `layout/_ferramentas/controles_vivos.py` — o piloto que PROVA a ponte
+* o `src/hefesto_dualsense4unix/interface/controles_vivos.py` — o piloto que PROVA a ponte
   JS, o exemplo que o próprio pedido invoca — mora na árvore **dela**, não na
   `-dev`, e nem sequer está sob o git (`git ls-files --error-unmatch` recusa).
   Um gancho preso ao diretório `-dev` seria mudo justamente sobre o arquivo que
@@ -113,7 +113,7 @@ O QUE ELE **NÃO** MEDE — e a lista importa tanto quanto o que ele mede
   Playwright dentro do `pre-commit` — que é como se ensina alguém a desligar
   gancho.
 * **Não prova que a régua MORDE.** Régua desta casa já nasceu falsa duas vezes
-  (as duas cicatrizes do `layout/_ferramentas/LEIA-ME.md`), e o remédio
+  (as duas cicatrizes do `src/hefesto_dualsense4unix/interface/LEIA-ME.md`), e o remédio
   contra isso é a mordida da própria régua (`regua_popup.py --morde`), não este
   arquivo.
 * **Não sabe se a régua cobre a MUDANÇA.** Ele vê que uma régua foi tocada, não
@@ -155,7 +155,7 @@ NAO_E_DESENHO = (
 )
 
 #: Como se reconhece uma RÉGUA DE TELA pelo nome. São PREFIXOS, e prefixo é
-#: convenção — a desta pasta, escrita no `layout/_ferramentas/LEIA-ME.md`
+#: convenção — a desta pasta, escrita no `src/hefesto_dualsense4unix/interface/LEIA-ME.md`
 #: ("conferidos por `regua.py`"). Não é inventário de arquivos, que apodreceria
 #: no dia em que nascesse a próxima régua.
 #:
@@ -177,20 +177,20 @@ PREFIXOS_DE_REGUA = ("regua", "conferir", "olhar", "medir")
 #:
 #: O próprio `check_regua_de_tela.py` NÃO é régua, e o prefixo `check` diz
 #: isso: ele PERGUNTA pela medição, não mede.
-PASTAS_DE_REGUA = ("layout/_ferramentas", "scripts")
+PASTAS_DE_REGUA = ("src/hefesto_dualsense4unix/interface", "scripts")
 
 #: A ponte JS — o piloto que dirige o `WebView` por dentro (`--prova-gesto`).
 #: Nomeado à parte porque não segue a convenção de prefixo, e é a régua mais
 #: importante da interface nova: é a única que exercita o MOTOR que ela vai
 #: usar, com o daemon vivo.
-A_PONTE_JS = "layout/_ferramentas/controles_vivos.py"
+A_PONTE_JS = "src/hefesto_dualsense4unix/interface/controles_vivos.py"
 
 #: A pasta das ferramentas do mockup.
-FERRAMENTAS = "layout/_ferramentas"
+FERRAMENTAS = "src/hefesto_dualsense4unix/interface"
 
 #: O INSTRUMENTO versionado: a biblioteca com que se escreve régua nova sobre a
 #: interface que roda num `WebView`. Nomeado à parte da lista porque ele não é
-#: um par das outras — as de `layout/_ferramentas/` são scripts que se
+#: um par das outras — as de `src/hefesto_dualsense4unix/interface/` são scripts que se
 #: rodam à mão sobre o mockup no Chrome; esta se IMPORTA de dentro de um
 #: `tests/unit/test_*.py` e dirige o motor do produto.
 O_INSTRUMENTO = "scripts/regua_de_tela.py"
@@ -245,7 +245,7 @@ def e_regua(caminho: str) -> bool:
 
     Três formas, e as três são convenção desta casa — nenhuma é inventário:
 
-    * um arquivo de `layout/_ferramentas/` cujo nome começa por um dos
+    * um arquivo de `src/hefesto_dualsense4unix/interface/` cujo nome começa por um dos
       `PREFIXOS_DE_REGUA`;
     * a ponte JS, nomeada à parte porque não segue a convenção;
     * um `tests/unit/test_*.py` — construir validação aqui muitas vezes é
@@ -282,8 +282,8 @@ def _sob(caminho: str, prefixo: str) -> bool:
 def aba_de(caminho: str) -> str | None:
     """O número da aba que este caminho mexe, ou `None`.
 
-    Sai do PRÓPRIO nome do arquivo — `layout/06-navegacao.html` e
-    `layout/_ferramentas/aba06.py` são os dois a aba `06`. Não há tabela
+    Sai do PRÓPRIO nome do arquivo — `src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html` e
+    `src/hefesto_dualsense4unix/interface/aba06.py` são os dois a aba `06`. Não há tabela
     de abas aqui, e é de propósito: tabela apodrece, nome de arquivo não.
     """
     p = PurePosixPath(caminho)
@@ -443,11 +443,11 @@ def _bloco(raiz: Path, desenho: list[str], abas: list[str]) -> str:
         linhas.append("  layout e `:hover`. Não alcançam o WebView do produto:")
         linhas += [f"    {r}" for r in do_mockup]
     if not disco:
-        linhas.append("  Não achei régua nenhuma em `layout/_ferramentas/`.")
+        linhas.append("  Não achei régua nenhuma em `src/hefesto_dualsense4unix/interface/`.")
     linhas += [
         "",
         "  E ela precisa MORDER: régua desta casa já nasceu falsa duas vezes (as",
-        "  cicatrizes do `layout/_ferramentas/LEIA-ME.md`), e em 29/08 o",
+        "  cicatrizes do `src/hefesto_dualsense4unix/interface/LEIA-ME.md`), e em 29/08 o",
         "  `--prova-gesto` deu VERDE sobre dois botões que nunca clicava. Arranque",
         "  a cura, veja a régua reprovar, devolva.",
         "",

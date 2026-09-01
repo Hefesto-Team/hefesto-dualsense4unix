@@ -31,7 +31,7 @@ import sys
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(RAIZ / "layout/_ferramentas"))
+sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 #: O PISO MEDIDO em 01/09/2026, com o alinhamento fechado. Cada número é quantos
 #: endereços daquela página têm quem os pinte. Eles só sobem: uma queda é um

@@ -14,7 +14,7 @@ E a reorientação do mesmo dia, que é o que inverteu este arquivo:
 
 O FLUXO, e a direção é `mockup/` → `layout/`:
 
-    layout/_ferramentas/abaNN.py   ← os geradores ficam aqui
+    src/hefesto_dualsense4unix/interface/abaNN.py   ← os geradores ficam aqui
               │  python3 abaNN.py
     mockup/NN-*.html               ← a BANCADA. O desenho sendo concluído.
               │  --publicar NN, depois do OK dela na aba INTEIRA
@@ -24,7 +24,7 @@ ELE NASCEU INVERTIDO, e o ponto 0 do `mockup/TODO-DELA.md` era consertá-lo. Na
 primeira versão o `--aprovar` copiava `layout/` → `mockup/`, o que faz o desenho
 seguir o produto — o contrário do que ela decidiu. Enquanto isso valia, todo
 desenho novo caía direto no produto que ela usa: `monta()` gravava em `layout/`,
-e `layout/02-controles.html` é a página que o piloto `controles_vivos.py` abre
+e `src/hefesto_dualsense4unix/interface/paginas/02-controles.html` é a página que o piloto `controles_vivos.py` abre
 num `WebKit2.WebView`. Gerar uma aba **já trocava o produto**, sem passar pelo
 olho dela.
 
@@ -54,9 +54,13 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 #: A bancada — o desenho de hoje. É onde os geradores escrevem e é o que ela olha.
-BANCADA = RAIZ / "mockup"
+sys.path.insert(0, str(RAIZ / "src"))
+from hefesto_dualsense4unix.interface import onde
+
+BANCADA = onde.BANCADA
 #: O publicado — o que o produto renderiza. Só muda pelo `--publicar`.
-PUBLICADO = RAIZ / "layout"
+
+PUBLICADO = onde.PUBLICADO
 DECLARACOES = BANCADA / "DIVERGENCIAS.md"
 
 

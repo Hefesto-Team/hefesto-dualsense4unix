@@ -590,7 +590,7 @@ def monta(rapido: dict, cache: dict) -> str:
         _kpi(str(censo["arquivos"]), "arquivos de sprint na árvore", "ac"),
         _kpi(str(censo["fora_da_fila"]), "não citados no SPRINT_ORDER", "lac"),
         _kpi(str(mapa.get("chaves", "?")), "chaves no mapa de canais", "frio"),
-        _kpi(str(mapa.get("assimetrias", "?")), "features que divergem cabo × rádio", "lac"),  # noqa: RUF001
+        _kpi(str(mapa.get("assimetrias", "?")), "features que divergem cabo × rádio", "lac"),
         _kpi(str(mapa.get("sem_teste", "?")), "linhas sem teste que morda", "mal"),
     ]
     abertas = len([

@@ -15,14 +15,14 @@ POR QUE ELE É PURO, E ISSO NÃO É PREFERÊNCIA
 Nada aqui roda ``systemctl``, abre soquete ou lê disco: quem faz isso é o
 chamador, e entrega o resultado no :class:`Leitura`. É o que deixa a régua medir
 **este** código — o mesmo que a interface roda — sem daemon, sem rede e sem
-tocar a mesa dela. O piloto ``novo-layout/_ferramentas/sistema_viva.py`` é quem
+tocar a mesa dela. O piloto ``src/hefesto_dualsense4unix/interface/sistema_viva.py`` é quem
 faz as chamadas de verdade.
 
 A REGRA QUE MAIS PESA AQUI: A AUSÊNCIA DE DADO É UM VALOR
 ---------------------------------------------------------
 Com o serviço desligado, o mockup diz *"O serviço está **Ligado**"*, *"Pausado:
 **Sim, e volta pausado**"*, *"**Os 4** controles"* — são literais do desenho
-(``novo-layout/_ferramentas/aba09.py``), e a tela nova que os deixasse à mostra
+(``src/hefesto_dualsense4unix/interface/aba09.py``), e a tela nova que os deixasse à mostra
 estaria **afirmando o estado do desenho**. É o defeito mais caro possível nesta
 aba. Toda função deste módulo devolve, no lugar do branco, **o que faltou**:
 :data:`NAO_DEU`, com o motivo, no lugar do valor.
@@ -43,7 +43,7 @@ from typing import Any, NamedTuple
 #: O ENDEREÇO DE CADA VALOR DA TELA, e quem é a fonte dele no produto.
 #:
 #: Esta tabela é a fonte única: o gerador do desenho
-#: (``novo-layout/_ferramentas/aba09.py``) a lê por AST para emitir os
+#: (``src/hefesto_dualsense4unix/interface/aba09.py``) a lê por AST para emitir os
 #: ``data-id``, a pintura a lê para saber o que escrever, e a régua a lê para
 #: exigir que a página tenha exatamente estes endereços. **Nenhum dos três a
 #: digita** — foi assim que onze réguas desta casa reprovaram a melhora em vez
@@ -220,7 +220,7 @@ def _campos_de_janela(state: object) -> dict[str, Any] | None:
 # PROCESSO (`systemctl --user stop`). Quem desligava lá continuava com o serviço
 # rodando; quem desligava aqui matava tudo. **A palavra "Hefesto" ficou com a
 # aba Jogar**, e esta aba passou a nomear o SERVIÇO — o desenho já mudou
-# (`layout/_ferramentas/aba09.py`: a faixa "O serviço", a linha "O serviço
+# (`src/hefesto_dualsense4unix/interface/aba09.py`: a faixa "O serviço", a linha "O serviço
 # está", os botões "Reiniciar o serviço" e "Parar o serviço").
 #
 # A TELA NOVA LÊ ESTAS DICAS. Enquanto elas diziam "Hefesto", o rótulo dizia "O

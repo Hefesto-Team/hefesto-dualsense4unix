@@ -7,7 +7,8 @@ atravessou dois meses porque nenhuma régua comparava o NOME da peça com o LUGA
 dela — e quem viu foi ela, passando o mouse por cima, em 27/08/2026.
 
 Fonte da verdade: docs/data/pecas-do-dualsense.csv
-Mapa que ele mede:  layout/mapa-do-controle.html (gerado por _ferramentas/mapa.py)
+Mapa que ele mede:  o publicado, que quem diz onde é `interface/onde.py`
+                    (gerado por `interface/mapa.py`)
 
 A régua do mapa — o cruzamento tem de valer nos DOIS sentidos, peça a peça.
 
@@ -30,6 +31,14 @@ from playwright.sync_api import sync_playwright
 # ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
 # segunda árvore de trabalhar sem tocar na primeira.
 R = pathlib.Path(__file__).resolve().parents[1]
+
+# QUEM DIZ ONDE E O `onde.py` — este portao repetia `layout/`, e quando a pasta
+# virou `interface/paginas/` ele morreu num traceback de Playwright em vez de
+# dizer o que quebrou. Regua que aponta para o lugar errado da veredicto errado.
+import sys as _sys
+_sys.path.insert(0, str(R / "src"))
+from hefesto_dualsense4unix.interface import onde as _onde
+_MAPA = _onde.PUBLICADO / "mapa-do-controle.html"
 ROSA = "rgb(255, 121, 198)"
 PINTAVEL = ":is(.peca, rect, circle, path, ellipse)"
 
@@ -41,7 +50,7 @@ falhas = []
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
     pg = b.new_page(viewport={"width": 1920, "height": 1080})
-    pg.goto(f"file://{R}/layout/mapa-do-controle.html")
+    pg.goto(f"file://{_MAPA}")
     pg.wait_for_load_state("networkidle"); pg.wait_for_timeout(400)
     print(f"=== o mapa · {len(pecas)} peças, cruzamento nos dois sentidos ===")
     for p in pecas:

@@ -46,7 +46,7 @@ tirou a interface do ``Gtk.Notebook`` e a pôs num ``WebKit2.WebView``: o mockup
 ``console_scripts`` do ``pyproject.toml`` — entra também por
 ``packaging/hefesto-dev-dualsense4unix.desktop`` (``Exec=@RAIZ@/interface.sh``) →
 ``interface`` → ``scripts/abrir_interface.py`` → o piloto
-``layout/_ferramentas/controles_vivos.py``, que importa ``src/`` e o chama dez
+``src/hefesto_dualsense4unix/interface/controles_vivos.py``, que importa ``src/`` e o chama dez
 vezes por segundo.
 
 Até 31/08 este portão não sabia disso, e o preço estava MEDIDO: 125 promessas
@@ -61,7 +61,7 @@ acreditar nele — é o mesmo defeito de ``strip_quirks_token``, uma migração
 depois.
 
 **A LINHA QUE ISTO NÃO PODE APAGAR, e é o ponto delicado:** se
-``layout/_ferramentas/`` inteiro contasse, uma cura chamada só por um
+``src/hefesto_dualsense4unix/interface/`` inteiro contasse, uma cura chamada só por um
 **instrumento de bancada** (a ``regua.py``, o ``olhar.py``) ou só por um
 **pedaço de mordida** de dentro do próprio piloto (``--prova-gesto``,
 ``--sem-ponte``, ``--arranca-enderecos``) passaria a contar como LIGADA — e
@@ -72,7 +72,7 @@ A distinção é DERIVADA duas vezes, nunca digitada como lista de nomes:
 
 1. **Ponte viva ≠ pasta.** A ponte é o **fecho de import a partir da boca
    declarada** (``_PILOTO_DA_INTERFACE_NOVA``), dentro de
-   ``layout/_ferramentas/``, e é só isso. MEDIDO em 31/08/2026: são QUATRO
+   ``src/hefesto_dualsense4unix/interface/``, e é só isso. MEDIDO em 31/08/2026: são QUATRO
    arquivos — ``controles_vivos``, ``mesa_viva``, ``monta``, ``aba02`` — dos 29
    da pasta. Os 25 de fora saem por construção, e entre eles estão os cinco
    instrumentos (``regua``, ``regua_estados``, ``regua_popup``, ``olhar``,
@@ -354,12 +354,12 @@ _ROTEIROS_DE_PRODUCAO = ("install.sh", "uninstall.sh")
 #: camadas de tela do produto que ninguém chamava (`app/telas/vibracao.py`,
 #: `app/actions/perfis_web.py`, `gui/aba_sistema.py`) deixam de ser promessa sem
 #: caminho no dia em que um pacote as chama, que é o que esta leva fez.
-_PILOTO_DA_INTERFACE_NOVA = "layout/_ferramentas/hefesto_vivo.py"
+_PILOTO_DA_INTERFACE_NOVA = "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
 #: A pasta onde a ponte mora. O fecho de import NÃO sai daqui: um piloto que
 #: importasse um irmão de outra pasta viraria outra conversa, e esta régua
 #: prefere calar a adivinhar.
-_PASTA_DA_PONTE = "layout/_ferramentas"
+_PASTA_DA_PONTE = "src/hefesto_dualsense4unix/interface"
 
 #: A CADEIA que torna o piloto uma boca, elo por elo, com a agulha de cada um.
 #: ``test_a_cadeia_do_lancador_da_interface_nova_esta_viva`` confere que cada
@@ -390,7 +390,7 @@ _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "scripts/abrir_interface.py",
-        '"layout" / "_ferramentas" / "hefesto_vivo.py"',
+        '"src" / "hefesto_dualsense4unix" / "interface" / "hefesto_vivo.py"',
         "o envoltório versionado: veste `prgname`, `program_class` e ícone no "
         "PROCESSO e só então carrega o piloto com `runpy`, sem mudar uma linha "
         "dele.",
@@ -789,7 +789,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "acusação quando a boca da interface nova passou a ser o"
         "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
         "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `plano_do_modo`, que layout/_ferramentas/pacotes/a01_jogar.py"
+        "porta `plano_do_modo`, que src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py"
         "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
     ),
     "app/actions/jogar/painel.py::Chip": (
@@ -798,7 +798,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "acusação quando a boca da interface nova passou a ser o"
         "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
         "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `plano_do_modo`, que layout/_ferramentas/pacotes/a01_jogar.py"
+        "porta `plano_do_modo`, que src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py"
         "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
     ),
     "app/actions/jogar/painel.py::Lembranca": (
@@ -808,7 +808,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "passou a ser o `hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de"
         "import alcançou este módulo. Não é promessa pendente: o caminho existe e"
         "passa pela porta `plano_do_modo`, que"
-        "layout/_ferramentas/pacotes/a01_jogar.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "app/actions/jogar/painel.py::ligado_por_modo": (
@@ -817,7 +817,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "acusação quando a boca da interface nova passou a ser o"
         "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
         "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `plano_do_modo`, que layout/_ferramentas/pacotes/a01_jogar.py"
+        "porta `plano_do_modo`, que src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py"
         "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
     ),
     "app/actions/jogar/painel.py::modo_vivo": (
@@ -826,7 +826,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "acusação quando a boca da interface nova passou a ser o"
         "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
         "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `plano_do_modo`, que layout/_ferramentas/pacotes/a01_jogar.py"
+        "porta `plano_do_modo`, que src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py"
         "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
     ),
     "app/telas/vibracao.py::motores_do_controle": (
@@ -836,7 +836,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "nova passou a ser o `hefesto_vivo.py` — o piloto das DEZ abas — e o"
         "fecho de import alcançou este módulo. Não é promessa pendente: o caminho"
         "existe e passa pela porta `pacote_da_mesa`, que"
-        "layout/_ferramentas/pacotes/a05_vibracao.py chama. O que falta é"
+        "src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py chama. O que falta é"
         "chamador de FORA, e uma auxiliar não precisa de um."
     ),
     "app/telas/vibracao.py::pacote_da_coluna": (
@@ -845,7 +845,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "acusação quando a boca da interface nova passou a ser o"
         "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
         "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `pacote_da_mesa`, que layout/_ferramentas/pacotes/a05_vibracao.py"
+        "porta `pacote_da_mesa`, que src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py"
         "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
     ),
     "app/telas/vibracao.py::teto_da_barra": (
@@ -854,7 +854,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "acusação quando a boca da interface nova passou a ser o"
         "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
         "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `pacote_da_mesa`, que layout/_ferramentas/pacotes/a05_vibracao.py"
+        "porta `pacote_da_mesa`, que src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py"
         "chama. O que falta é chamador de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_conexoes.py::controles_do_estado": (
@@ -980,7 +980,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::exame": (
@@ -989,7 +989,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::forca_do_perfil": (
@@ -998,7 +998,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "entrou na acusação quando a boca da interface nova passou a ser o"
         "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
         "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `pacote`, que layout/_ferramentas/pacotes/a09_sistema.py chama. O"
+        "porta `pacote`, que src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O"
         "que falta é chamador de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::frase_do_teto": (
@@ -1007,7 +1007,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::Linha": (
@@ -1017,7 +1017,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "nova passou a ser o `hefesto_vivo.py` — o piloto das DEZ abas — e o"
         "fecho de import alcançou este módulo. Não é promessa pendente: o caminho"
         "existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::linha_da_pausa": (
@@ -1026,7 +1026,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::linha_da_troca_de_perfil": (
@@ -1035,7 +1035,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::linha_do_ambiente": (
@@ -1044,7 +1044,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::linha_do_hefesto": (
@@ -1053,7 +1053,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::linha_do_impoe": (
@@ -1062,7 +1062,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::linha_do_vale_para": (
@@ -1071,7 +1071,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::quantos_controles": (
@@ -1080,7 +1080,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "acusação quando a boca da interface nova passou a ser o"
         "`hefesto_vivo.py` — o piloto das DEZ abas — e o fecho de import alcançou"
         "este módulo. Não é promessa pendente: o caminho existe e passa pela"
-        "porta `pacote`, que layout/_ferramentas/pacotes/a09_sistema.py chama. O"
+        "porta `pacote`, que src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O"
         "que falta é chamador de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::rotulo_do_perfil": (
@@ -1089,7 +1089,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::sem_markup": (
@@ -1099,7 +1099,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "nova passou a ser o `hefesto_vivo.py` — o piloto das DEZ abas — e o"
         "fecho de import alcançou este módulo. Não é promessa pendente: o caminho"
         "existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "gui/aba_sistema.py::travas": (
@@ -1108,48 +1108,48 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a boca da interface nova passou a ser o `hefesto_vivo.py` — o piloto das"
         "DEZ abas — e o fecho de import alcançou este módulo. Não é promessa"
         "pendente: o caminho existe e passa pela porta `pacote`, que"
-        "layout/_ferramentas/pacotes/a09_sistema.py chama. O que falta é chamador"
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py chama. O que falta é chamador"
         "de FORA, e uma auxiliar não precisa de um."
     ),
     "app/actions/jogar/painel.py::escritor_do_modo": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `layout/_ferramentas/pacotes/a01_jogar.py`,"
+        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
         "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
         "`src/` que esta régua varre."
     ),
     "app/actions/jogar/painel.py::hefesto_ligado": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `layout/_ferramentas/pacotes/a01_jogar.py`,"
+        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
         "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
         "`src/` que esta régua varre."
     ),
     "app/actions/jogar/painel.py::Modo": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `layout/_ferramentas/pacotes/a01_jogar.py`,"
+        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
         "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
         "`src/` que esta régua varre."
     ),
     "app/actions/jogar/painel.py::modo_lembrado": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `layout/_ferramentas/pacotes/a01_jogar.py`,"
+        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
         "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
         "`src/` que esta régua varre."
     ),
     "app/actions/jogar/painel.py::plano_do_modo": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `layout/_ferramentas/pacotes/a01_jogar.py`,"
+        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
         "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
         "`src/` que esta régua varre."
     ),
     "app/actions/jogar/painel.py::porque_nao_aplica": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/actions/jogar/painel.py` — a função que a interface nova chama, ou"
-        "chamará. Hoje quem a chama é `layout/_ferramentas/pacotes/a01_jogar.py`,"
+        "chamará. Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py`,"
         "e o alcance não a enxerga porque o chamador mora em `layout/`, fora do"
         "`src/` que esta régua varre."
     ),
@@ -1157,7 +1157,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/actions/perfis_web.py` — a função que a interface nova chama, ou"
         "chamará. Hoje quem a chama é"
-        "`layout/_ferramentas/pacotes/a10_perfis.py`, e o alcance não a enxerga"
+        "`src/hefesto_dualsense4unix/interface/pacotes/a10_perfis.py`, e o alcance não a enxerga"
         "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
         "varre."
     ),
@@ -1165,7 +1165,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/telas/vibracao.py` — a função que a interface nova chama, ou"
         "chamará. Hoje quem a chama é"
-        "`layout/_ferramentas/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
+        "`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
         "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
         "varre."
     ),
@@ -1173,7 +1173,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/telas/vibracao.py` — a função que a interface nova chama, ou"
         "chamará. Hoje quem a chama é"
-        "`layout/_ferramentas/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
+        "`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
         "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
         "varre."
     ),
@@ -1181,7 +1181,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/telas/vibracao.py` — a função que a interface nova chama, ou"
         "chamará. Hoje quem a chama é"
-        "`layout/_ferramentas/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
+        "`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
         "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
         "varre."
     ),
@@ -1189,28 +1189,28 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`app/telas/vibracao.py` — a função que a interface nova chama, ou"
         "chamará. Hoje quem a chama é"
-        "`layout/_ferramentas/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
+        "`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py`, e o alcance não a enxerga"
         "porque o chamador mora em `layout/`, fora do `src/` que esta régua"
         "varre."
     ),
     "gui/aba_sistema.py::Leitura": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`gui/aba_sistema.py` — a função que a interface nova chama, ou chamará."
-        "Hoje quem a chama é `layout/_ferramentas/pacotes/a09_sistema.py`, e o"
+        "Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py`, e o"
         "alcance não a enxerga porque o chamador mora em `layout/`, fora do"
         "`src/` que esta régua varre."
     ),
     "gui/aba_sistema.py::pacote": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`gui/aba_sistema.py` — a função que a interface nova chama, ou chamará."
-        "Hoje quem a chama é `layout/_ferramentas/pacotes/a09_sistema.py`, e o"
+        "Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py`, e o"
         "alcance não a enxerga porque o chamador mora em `layout/`, fora do"
         "`src/` que esta régua varre."
     ),
     "gui/aba_sistema.py::perfil_do_rotulo": (
         "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
         "`gui/aba_sistema.py` — a função que a interface nova chama, ou chamará."
-        "Hoje quem a chama é `layout/_ferramentas/pacotes/a09_sistema.py`, e o"
+        "Hoje quem a chama é `src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py`, e o"
         "alcance não a enxerga porque o chamador mora em `layout/`, fora do"
         "`src/` que esta régua varre."
     ),
@@ -1471,7 +1471,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "e funciona. Pintar por ela seria a tela dizendo 'não dá' sobre um botão "
         "que dá; quem pinta é a irmã `chips_sem_dono`, e essa É chamada. O único "
         "lugar que a nomeia fora de teste é o COMENTÁRIO de "
-        "`layout/_ferramentas/jogar_vivo.py`:823, que existe justamente para "
+        "`src/hefesto_dualsense4unix/interface/jogar_vivo.py`:823, que existe justamente para "
         "explicar por que ela NÃO está sendo usada ali — comentário não é "
         "chamador, e neste caso é a evidência. Não deve ganhar chamador de "
         "pintura: o que ela mede é a distância entre a ESCADA e a tela, e quem "
@@ -2308,7 +2308,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # ponte de gesto em qualquer página que tenha `[data-modo]` — por isso o
     # INTERRUPTOR da aba Jogar já é produto e não está nesta lista. O resto da
     # página (cartões, coluna Atenção, chips da escada) é pintado por
-    # `layout/_ferramentas/jogar_vivo.py`, que é aba viva completa, mede-se
+    # `src/hefesto_dualsense4unix/interface/jogar_vivo.py`, que é aba viva completa, mede-se
     # sozinha e **nada roda**: nem o `.desktop`, nem o `interface`, nem o
     # `abrir_interface.py` a nomeiam. O próprio piloto escreve isso em
     # `controles_vivos.py`:71 — *"Quando a MIGRA-JOGAR enxertar o
@@ -2326,7 +2326,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`home_actions` (pausa, gamepad degradado, rádio frágil, wrapper, trava "
         "de autoswitch, cadeado cego), com a garantia de que uma fonte que "
         "levanta exceção não derruba as outras cinco. TEM chamador — "
-        "`layout/_ferramentas/jogar_vivo.py`:723 (no tique) e :797 (no pacote de "
+        "`src/hefesto_dualsense4unix/interface/jogar_vivo.py`:723 (no tique) e :797 (no pacote de "
         "pintura) —, e o chamador é a aba viva que nenhum lançador abre. ONDE O "
         "CAMINHO SE PERDE: no enxerto, não no código; ver o bloco acima."
     ),
@@ -2335,7 +2335,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "inerte — sem degrau na `ESCADA` E sem modo em `mode_transition`. Hoje "
         "devolve um só, o Point And Click, que está na fileira por ordem dela "
         "(*manter*) e precisa dizer que ninguém o atende, senão a tela promete o "
-        "que não cumpre. Chamador: `layout/_ferramentas/jogar_vivo.py`:835, que "
+        "que não cumpre. Chamador: `src/hefesto_dualsense4unix/interface/jogar_vivo.py`:835, que "
         "monta os `degraus_travados` do pacote de pintura. ONDE O CAMINHO SE "
         "PERDE: no enxerto da aba, ver o bloco acima."
     ),
@@ -2344,7 +2344,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "carimbo POR JOGO que `integrations/prontuario_dos_jogos.pontes"
         "_confirmadas` guarda nos perfis do disco — e devolve `None` sem jogo "
         "aberto, que é o caso comum e a resposta honesta. Chamador: "
-        "`layout/_ferramentas/jogar_vivo.py`:843. ONDE O CAMINHO SE PERDE: no "
+        "`src/hefesto_dualsense4unix/interface/jogar_vivo.py`:843. ONDE O CAMINHO SE PERDE: no "
         "enxerto da aba, ver o bloco acima. ATENÇÃO ao fechar: o `pontes` entra "
         "por argumento de propósito, para a régua entregar um dicionário próprio "
         "em vez de mexer nos perfis dela."
@@ -2354,7 +2354,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "que o mostram — o crachá do topo e o recibo do rodapé. Nasceu de um "
         "defeito visto na aba Controles em 29/08: com dois leitores, o topo "
         "dizia o perfil vivo e o rodapé continuava dizendo `Mortal Kombat`, que "
-        "é o do mockup. Chamador: `layout/_ferramentas/jogar_vivo.py`:814. ONDE "
+        "é o do mockup. Chamador: `src/hefesto_dualsense4unix/interface/jogar_vivo.py`:814. ONDE "
         "O CAMINHO SE PERDE: no enxerto da aba, ver o bloco acima."
     ),
     "app/actions/jogar/painel.py::texto_da_conta": (
@@ -2363,7 +2363,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "desenho porque o desenho tem `1 aviso` chumbado e zero avisos é o "
         "estado NORMAL de uma máquina saudável — sem esta função a tela de quem "
         "está bem seria a única sem legenda. Chamador: "
-        "`layout/_ferramentas/jogar_vivo.py`:844. ONDE O CAMINHO SE PERDE: no "
+        "`src/hefesto_dualsense4unix/interface/jogar_vivo.py`:844. ONDE O CAMINHO SE PERDE: no "
         "enxerto da aba, ver o bloco acima."
     ),
     "integrations/proton_pin.py::steam_root_ou_recusa": (
@@ -2997,7 +2997,7 @@ def pontes_vivas(raiz_do_projeto: Path | None = None) -> dict[str, Path]:
     ninguém descobre por quê.
 
     O fecho segue só ``import irmão`` e ``from irmão import x`` dentro de
-    ``layout/_ferramentas/`` — que é como um piloto importa o gerador do
+    ``src/hefesto_dualsense4unix/interface/`` — que é como um piloto importa o gerador do
     mockup, e é o único idioma que essa pasta usa (ela não é pacote: os pilotos
     entram nela pelo ``sys.path``). Nada de ``rglob``: instrumento de bancada
     não entra em produção por morar na mesma pasta que a ponte.
@@ -3730,7 +3730,7 @@ class TestTodaPromessaPublicaTemCaminho:
 # P4 — a ponte da interface nova é produção, e a bancada não é
 # ===========================================================================
 
-#: Instrumentos de bancada de ``layout/_ferramentas/``, escolhidos por MEDIÇÃO:
+#: Instrumentos de bancada de ``src/hefesto_dualsense4unix/interface/``, escolhidos por MEDIÇÃO:
 #: são os cinco arquivos da pasta que medem a tela em vez de serem a tela — os
 #: três que dirigem o Chrome pelo Playwright (``regua``, ``regua_estados``,
 #: ``regua_popup``, e o ``olhar``) e o visualizador ``ver``. Nenhum deles é
@@ -3788,7 +3788,7 @@ class TestAPonteDaInterfaceNovaEProducao:
     def test_a_ponte_e_o_fecho_da_boca_e_nao_a_pasta_inteira(self) -> None:
         """A ponte é o que o piloto IMPORTA — não o que mora ao lado dele.
 
-        Sem esta linha, ``layout/_ferramentas/`` inteiro viraria produção e a
+        Sem esta linha, ``src/hefesto_dualsense4unix/interface/`` inteiro viraria produção e a
         pasta passaria a absolver por VIZINHANÇA. MEDIDO em 31/08/2026: são 4
         arquivos de 29.
         """
@@ -4312,7 +4312,7 @@ class TestOPortaoMorde:
 
         ``gui/ponte_da_tela.py::JanelaDaAba`` é a janela GTK3 que hospeda o
         mockup — a interface que ela abre. NADA em ``src/`` a importa: quem a
-        levanta é o piloto de ``layout/_ferramentas/``, e é só a declaração da
+        levanta é o piloto de ``src/hefesto_dualsense4unix/interface/``, e é só a declaração da
         cadeia do lançador que a tira da lista de dívida. Numa cópia sem
         ``layout/``, ela TEM de voltar a ser acusada — senão a declaração não
         está fazendo trabalho nenhum e as três lápides apagadas em 31/08/2026

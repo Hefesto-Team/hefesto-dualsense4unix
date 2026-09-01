@@ -286,7 +286,7 @@ def assimetrias(linhas: list[dict]) -> int:
 #: dela era justamente que os dois artefatos ficassem sincronizados.
 #: O `--check` desta página compara CONTEÚDO, então mexer lá deixa esta
 #: vermelha, que é o comportamento certo.
-from paleta_da_casa import TOKENS  # noqa: E402
+from paleta_da_casa import TOKENS
 
 ESTILO = """
 *, *::before, *::after { box-sizing: border-box; }

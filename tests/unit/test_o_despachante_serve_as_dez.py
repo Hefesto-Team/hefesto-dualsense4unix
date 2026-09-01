@@ -25,7 +25,7 @@ import sys
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-FERR = RAIZ / "layout" / "_ferramentas"
+FERR = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(FERR))
 
 #: AS DEZ, e a lista é FIXA de propósito. Derivá-la do diretório faria a régua
@@ -122,7 +122,7 @@ def test_a_pagina_tem_onde_pintar(aba):
     Foi o buraco que a medição de 01/09 achou e que o plano de uma hora não
     tinha: **72 endereços para 172 valores vivos**, com CINCO abas em zero.
     """
-    html = (RAIZ / "layout" / aba)
+    html = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / aba)  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
     assert html.exists(), f"{aba} não existe no produto"
     n = len(ENDERECO.findall(html.read_text(encoding="utf-8")))
     assert n > 0, f"{aba}: nenhum endereço de pintura — o pacote dela pintaria no vazio"

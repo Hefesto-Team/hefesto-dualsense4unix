@@ -47,7 +47,7 @@ sys.path.append(str(Path(__file__).resolve().parent))
 # Vocabulário com um dono só (Z6-01): nada aqui redigita valor de domínio — os
 # três nomes vêm do portão que já é dono deles, exatamente como
 # `scripts/gerar-mapa.py` já faz para a legenda da ESCADA no `specs.html`.
-from check_paridade_transporte import (  # noqa: E402
+from check_paridade_transporte import (
     DOMINIO_EXISTE,
     DOMINIO_POR_SUFIXO,
     LADOS,

@@ -544,9 +544,10 @@ def test_a_regua_da_copia_sabe_recusar() -> None:
 #:   pasta. Último commit dela: ``79759cd5``, 25/08. É a única casa sem irmãs
 #:   ao lado: abre com duplo clique e não tem para onde navegar.
 #: * ``layout/mapa-das-portas.html`` — **a cópia do produto**, versionada e
-#:   viva. É para ela que ``layout/08-conexoes.html:3188`` aponta, e é a que a
+#:   viva. É para ela que ``src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html:3188``
+#:   aponta, e é a que a
 #:   GUI carrega no ``WebKit2.WebView``. Não é gerada: ninguém em
-#:   ``layout/_ferramentas/`` a escreve, então a igualdade abaixo é mantível.
+#:   ``src/hefesto_dualsense4unix/interface/`` a escreve, então a igualdade abaixo é mantível.
 #: * ``novo-layout/mapa-das-portas.html`` — **a referência do desenho**,
 #:   ``.gitignore:108``. Não existe em árvore de agente e ninguém escreve nela.
 #:

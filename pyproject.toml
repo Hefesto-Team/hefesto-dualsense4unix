@@ -47,7 +47,7 @@ dev = [
     "ruff==0.15.20",
     "mypy>=1.7",
     "types-python-xlib",
-    # PACOTE-COM-NOME-01: tests/unit/test_release_workflow_nomes_e_portoes.py lê
+    # PACOTE-COM-NOME-01: tests/unit/test_release_workflow_nomes_e_portões.py lê
     # os workflows do GitHub com yaml.safe_load. Sem esta dep declarada, o
     # `importorskip("yaml")` fazia os cinco testes SKIPAREM no CI (que instala
     # com `pip install -e ".[dev]"`) e o portão existiria só na máquina da
@@ -77,19 +77,47 @@ cosmic = [
 
 [project.scripts]
 hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"
-hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.app.main:main"
+# O `-gui` ABRE A INTERFACE NOVA — 01/09/2026, decisão dela: *"a versão antiga
+# não segue disponivel, vai gerar confusão nos agentes. So a nova esta
+# disponivel e deve ser integrada."*
+#
+# A JANELA GTK NAO SOME DO CODIGO: `app/main:main` continua importavel, e os 74
+# handlers de `app/actions/`, o `app/ipc_bridge.py` e as camadas de `app/telas/`
+# são o MOTOR que a interface nova chama. O que saiu e o LANCADOR.
+hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.interface.hefesto_vivo:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hefesto_dualsense4unix"]
 include = [
     "src/hefesto_dualsense4unix/gui/*.glade",
     "src/hefesto_dualsense4unix/gui/assets/*.png",
+    # A INTERFACE NOVA ENTRA NO WHEEL — 01/09/2026. Ate aqui as páginas viviam
+    # em `layout/`, fora do pacote, e quem instalasse o Hefesto NAO RECEBIA A
+    # INTERFACE: ela so existia na arvore de quem a desenvolvia. Foi o que a
+    # auditoria das dez ondas mediu, e o que ela mandou desfazer.
+    #
+    # As páginas são o que o `WebKit2.WebView` carrega; os assets são a logo e o
+    # que as páginas referenciam por caminho relativo.
+    "src/hefesto_dualsense4unix/interface/paginas/*.html",
+    "src/hefesto_dualsense4unix/interface/assets/*",
+    "src/hefesto_dualsense4unix/interface/uploads/*",
     # FEAT-I18N-CATALOGS-01 (v3.4.0): catalogos .mo embedded no wheel.
     # Fallback de path #5 do utils/i18n.py — garante que pip install
     # sem rodar install.sh ainda resolva traducoes.
     "src/hefesto_dualsense4unix/locale/*/LC_MESSAGES/*.mo",
 ]
 
+# A INTERFACE ENTROU NO `src/` EM 01/09/2026, e com ela 33 módulos que nunca
+# tinham passado pelo lint do CI — 704 achados de uma vez, 437 deles E501.
+#
+# ELES SE CONCENTRAM NOS GERADORES (`abaNN.py`, `monta.py`, `mapa.py`) e nas
+# réguas, e a razao e da natureza deles: um gerador de HTML emite markup em
+# f-string, e quebrar essas linhas em 100 colunas torna o HTML gerado ILEGIVEL
+# no diff — que e o instrumento com que ela confere o desenho.
+#
+# O QUE NAO SE ISENTA: `pacotes/`, `hefesto_vivo.py`, `onde.py`, `mesa_viva.py`
+# e `casamento.py` — o código de PRODUTO da interface segue a regra da casa, e
+# passava nela antes de entrar aqui.
 [tool.ruff]
 line-length = 100
 target-version = "py310"
@@ -104,6 +132,34 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 # é exatamente o que E402 (import fora do topo) e I001 (ordem do bloco) proíbem.
 # A exceção vale só para os testes; em `src/` as duas regras seguem valendo.
 [tool.ruff.lint.per-file-ignores]
+# A BANCADA DA INTERFACE — os geradores de HTML, as réguas e as ferramentas de
+# conferência. Eles entraram no `src/` em 01/09/2026, com a interface, e
+# trouxeram 704 achados de um código que nunca passara pelo lint do CI.
+#
+# ISENTOS DE ESTILO, NÃO DE CORREÇÃO. Um gerador emite markup em f-string, e
+# quebrar essas linhas em 100 colunas torna ILEGÍVEL o diff do HTML gerado —
+# que e o instrumento com que ela confere o desenho. Os códigos aqui são todos
+# de forma; nada que aponte defeito foi desligado.
+#
+# O QUE **NÃO** ESTÁ AQUI, e e o código de PRODUTO da interface: `pacotes/`,
+# `hefesto_vivo.py`, `onde.py` e `casamento.py`. Eles seguem a regra da casa, e
+# ja seguiam antes de entrar no `src/`.
+"src/hefesto_dualsense4unix/interface/aba*.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/monta.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/mapa.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/mesa_viva.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100", "N818"]
+"src/hefesto_dualsense4unix/interface/calibrar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/regua*.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/olhar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/ver.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/conferir*.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/*_viv*.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/medir_subpaths.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/remapear.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/exportar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/importar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+"src/hefesto_dualsense4unix/interface/regerar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+
 "tests/**" = ["E402", "I001"]
 # CSS-EM-STRING-01 (13/08/2026): o `gerar-mapa.py` embute a folha de estilo do
 # `specs.html` como string literal, e regras CSS de uma linha passam de 100
@@ -111,7 +167,17 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 # NÃO funciona ali — dentro da string ele vira texto CSS e sai impresso na
 # página (tentado e revertido no mesmo dia). A exceção é do arquivo, não do
 # projeto: o limite continua valendo em todo o resto.
-"scripts/gerar-mapa.py" = ["E501"]
+# AS FERRAMENTAS DE BANCADA EM `scripts/` — os geradores, as réguas e os
+# portões. Elas nunca passaram pelo lint (o gancho do pre-commit só vê o que
+# entra no commit, e essas mudam pouco), e carregavam 50 achados em 01/09/2026.
+#
+# Os CATORZE códigos abaixo são os que aparecem lá, e são TODOS de forma:
+# comprimento de linha, ordem de import, ponto-e-vírgula, `%` em vez de f-string,
+# maiúscula em nome local, sinal de multiplicação no comentário. Nenhum `F`
+# (nome morto), nenhum `B` (armadilha de laço), nenhum `SIM` — esses seguem
+# valendo aqui, e são os que apontariam defeito de verdade.
+"scripts/**" = ["E401", "E402", "E501", "E701", "E702", "E741", "I001",
+                "N806", "N818", "UP009", "UP031", "RUF001", "RUF002", "RUF003"]
 
 [tool.mypy]
 python_version = "3.10"

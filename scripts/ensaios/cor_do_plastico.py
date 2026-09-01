@@ -117,7 +117,7 @@ _AQUI = os.path.dirname(os.path.abspath(__file__))
 if _AQUI not in sys.path:
     sys.path.insert(0, _AQUI)
 
-from comum import (  # noqa: E402
+from comum import (
     RADIO,
     Aparelho,
     PortaFechadaError,

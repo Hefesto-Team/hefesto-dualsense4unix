@@ -24,7 +24,7 @@ Este arquivo segura os QUATRO jeitos de esvaziar aquele portão:
 * **desligar** — `test_o_gancho_chama_o_portao` reprova se o `pre-commit`
   parar de invocá-lo;
 * **apodrecer** — `test_a_convencao_de_nome_alcanca_as_reguas_do_disco` varre
-  `layout/_ferramentas/` e reprova se nascer régua que a convenção de
+  `src/hefesto_dualsense4unix/interface/` e reprova se nascer régua que a convenção de
   prefixo não reconhece. Sem ele, uma régua com nome novo passaria a não contar
   como régua, e o portão cobraria régua de quem acabou de escrever uma.
 
@@ -90,13 +90,13 @@ def _linhas_de_codigo(caminho: Path) -> list[str]:
 
 portao = _carregar(PORTAO, "check_regua_de_tela")
 
-UMA_ABA = "layout/_ferramentas/aba06.py"
-UMA_PAGINA = "layout/06-navegacao.html"
+UMA_ABA = "src/hefesto_dualsense4unix/interface/aba06.py"
+UMA_PAGINA = "src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html"
 O_WIDGET = "src/hefesto_dualsense4unix/app/widgets/controller_card.py"
-UMA_REGUA = "layout/_ferramentas/regua_popup.py"
-A_PONTE = "layout/_ferramentas/controles_vivos.py"
+UMA_REGUA = "src/hefesto_dualsense4unix/interface/regua_popup.py"
+A_PONTE = "src/hefesto_dualsense4unix/interface/controles_vivos.py"
 UM_PYTEST = "tests/unit/test_o_gesto_chega.py"
-UMA_PROSA = "layout/_ferramentas/CORRECOES-DELA.md"
+UMA_PROSA = "src/hefesto_dualsense4unix/interface/CORRECOES-DELA.md"
 
 
 # ------------------------------------------------------------- a mordida
@@ -125,7 +125,8 @@ def test_fala_quando_a_tela_muda_sem_regua(de_tela: str) -> None:
 
 def test_nomeia_a_aba_que_o_commit_tocou() -> None:
     """Sem o número da aba o aviso não é acionável — foi o pedido dela."""
-    _, _, _, abas = portao.julgar([UMA_ABA, UMA_PAGINA, "layout/08-conexoes.html"])
+    _, _, _, abas = portao.julgar([UMA_ABA, UMA_PAGINA,
+    "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"])
     assert abas == ["06", "08"]
 
 
@@ -179,7 +180,8 @@ def test_a_repeticao_vira_uma_linha() -> None:
 def test_aba_nova_traz_o_bloco_de_volta() -> None:
     """A dívida na 06 não pode comprar silêncio sobre a 08."""
     veredito, _, _, abas = portao.julgar(
-        [UMA_ABA, "layout/08-conexoes.html"], abas_ja_devendo=["06"]
+        [UMA_ABA, "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"],
+        abas_ja_devendo=["06"]
     )
     assert veredito == portao.SEM_REGUA
     assert "08" in abas
@@ -231,7 +233,7 @@ def test_a_regua_versionada_do_webview_conta_como_regua() -> None:
     """`scripts/regua_de_tela.py` é a régua da interface nova, e tem de contar.
 
     MEDIDO em 29/08/2026: a primeira versão deste portão só reconhecia régua
-    dentro de `layout/_ferramentas/`, e a régua que dirige o `WebView` por
+    dentro de `src/hefesto_dualsense4unix/interface/`, e a régua que dirige o `WebView` por
     dentro nasceu em `scripts/` DE PROPÓSITO — `layout/` é
     `.gitignore:108`, e instrumento permanente tem de ser versionado para
     viajar em worktree.

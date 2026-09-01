@@ -31,7 +31,8 @@ acende e nunca dizia quem aplica o clique.
 AS SEIS RÉGUAS, E ONDE CADA UMA MORDE
 --------------------------------------
 1. :func:`test_todo_botao_do_desenho_tem_linha_na_fileira` — a fileira é LIDA do
-   ``layout/01-jogar.html``, nunca digitada. **Morde** trocando um
+   ``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``, nunca digitada. **Morde**
+   trocando um
    ``data-modo`` no mockup: o botão órfão aparece.
 2. :func:`test_quem_aplica_e_o_dono_e_nao_uma_copia` — o plano é DELEGADO.
    **Morde** com a delegação arrancada (o teste troca o dono em tempo de
@@ -65,8 +66,8 @@ from hefesto_dualsense4unix.app.actions import mode_transition
 from hefesto_dualsense4unix.app.actions.jogar import painel
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-DESENHO = RAIZ / "layout" / "01-jogar.html"
-PILOTO = RAIZ / "layout" / "_ferramentas" / "controles_vivos.py"
+DESENHO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "01-jogar.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
+PILOTO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py"
 
 #: Os `data-modo` que o DESENHO tem, lidos dele. Nunca digitados: o dia em que
 #: ela acrescentar um botão à fileira, esta régua o encontra sozinha.
@@ -86,7 +87,8 @@ def test_todo_botao_do_desenho_tem_linha_na_fileira() -> None:
     """Nenhum botão do desenho fica órfão, e nenhuma linha sobra sem botão.
 
     **A mordida:** troque ``data-modo="gamepad"`` por ``data-modo="jogar"`` no
-    ``layout/01-jogar.html`` e este teste acusa o órfão nos dois sentidos.
+    ``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`` e este teste acusa o órfão nos
+    dois sentidos.
     """
     do_desenho = modos_do_desenho()
     da_fileira = {modo.chave for modo in painel.MODOS_DA_TELA}
@@ -474,7 +476,7 @@ _CLIQUE_POR_ENDERECO = re.compile(r"""querySelector\('\[data-(modo|degrau)=\\"([
 #: Os `data-degrau` do desenho, lidos dele — o par do :data:`_DATA_MODO`.
 _DATA_DEGRAU = re.compile(r'data-degrau="([a-z-]+)"')
 
-JOGAR_VIVO = RAIZ / "layout" / "_ferramentas" / "jogar_vivo.py"
+JOGAR_VIVO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "jogar_vivo.py"
 
 
 def test_o_roteiro_das_provas_clica_endereco_que_existe() -> None:
@@ -488,7 +490,7 @@ def test_o_roteiro_das_provas_clica_endereco_que_existe() -> None:
     sai verde por não ter medido nada.
 
     **A mordida:** troque um endereço do roteiro por um que não existe no
-    ``layout/01-jogar.html`` e este teste o nomeia.
+    ``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`` e este teste o nomeia.
     """
     texto = DESENHO.read_text(encoding="utf-8") if DESENHO.is_file() else ""
     if not texto:

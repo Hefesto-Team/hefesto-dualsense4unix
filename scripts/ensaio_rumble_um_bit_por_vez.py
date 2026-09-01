@@ -104,8 +104,8 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "ensaios"))
-import identidade_do_vpad  # noqa: E402  — a régua única do vpad
-from comum import PortaFechadaError, abrir_no_hidraw, declaracao_da_porta  # noqa: E402
+import identidade_do_vpad
+from comum import PortaFechadaError, abrir_no_hidraw, declaracao_da_porta
 
 SERVICO = "hefesto-dualsense4unix.service"
 CADERNO = RAIZ / "docs" / "data" / "ensaios.csv"

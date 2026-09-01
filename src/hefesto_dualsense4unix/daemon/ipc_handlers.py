@@ -1861,7 +1861,7 @@ class IpcHandlersMixin:
 
             # TROCA, não rodízio — decisão dela, 28/08/2026: *"Trocar é TROCA,
             # não fila: pôr o azul no 1 faz quem era 1 virar 2. Ninguém repete
-            # número, ninguém fica sem."* (`novo-layout/_ferramentas/aba04.py`)
+            # número, ninguém fica sem."* (`src/hefesto_dualsense4unix/interface/aba04.py`)
             #
             # ISTO SUBSTITUI UM `pop`+`insert`, e a diferença é medida: o
             # rodízio empurra TODOS entre a origem e o destino. Com quatro na

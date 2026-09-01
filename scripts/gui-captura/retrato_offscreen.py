@@ -16,7 +16,7 @@ from pathlib import Path
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import Gtk
 
 # A raiz sai do PRÓPRIO arquivo, nunca de um caminho de disco de ninguém: este
 # script mora em `scripts/gui-captura/`, dois níveis abaixo da raiz. Antes de

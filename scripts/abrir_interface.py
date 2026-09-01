@@ -6,7 +6,7 @@ dock"*.
 
 POR QUE ESTE ARQUIVO EXISTE, EM VEZ DE DUAS LINHAS NO PILOTO
 ------------------------------------------------------------
-O piloto (``layout/_ferramentas/controles_vivos.py``) está sendo editado
+O piloto (``src/hefesto_dualsense4unix/interface/controles_vivos.py``) está sendo editado
 por outra leva agora, e mora em ``layout/``, que é ``.gitignore`` e não
 viaja em worktree. Este envoltório resolve os dois problemas de uma vez: a
 identidade é versionada aqui, e o piloto é carregado sem uma linha de mudança.
@@ -75,10 +75,10 @@ ORIGEM = Path("/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix")
 #: esta cópia da árvore estiver incompleta, abrir a aba Controles viva é melhor
 #: que não abrir nada. A ordem é a que importa.
 CANDIDATOS_DO_PILOTO = (
-    RAIZ / "layout" / "_ferramentas" / "hefesto_vivo.py",
-    ORIGEM / "layout" / "_ferramentas" / "hefesto_vivo.py",
-    RAIZ / "layout" / "_ferramentas" / "controles_vivos.py",
-    ORIGEM / "layout" / "_ferramentas" / "controles_vivos.py",
+    RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "hefesto_vivo.py",
+    ORIGEM / "src" / "hefesto_dualsense4unix" / "interface" / "hefesto_vivo.py",
+    RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py",
+    ORIGEM / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py",
 )
 #: O PNG que vira `_NET_WM_ICON` quando o tema ainda não conhece o nome.
 CANDIDATOS_DO_ICONE = (
@@ -142,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
 
     piloto = achar_o_piloto()
     if piloto is None:
-        print("não achei o piloto (layout/_ferramentas/controles_vivos.py)",
+        print("não achei o piloto (src/hefesto_dualsense4unix/interface/controles_vivos.py)",
               file=sys.stderr)
         for c in CANDIDATOS_DO_PILOTO:
             print(f"  procurei em: {c}", file=sys.stderr)

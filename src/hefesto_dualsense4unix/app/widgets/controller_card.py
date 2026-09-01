@@ -3209,7 +3209,7 @@ if _GTK_DISPONIVEL:
             `sensor_widgets.GyroBars`.
 
             **Ao lado e não embaixo, e a escolha é medida.** O mockup aprovado
-            desenha os dois EMPILHADOS (`novo-layout/_ferramentas/aba02.py`,
+            desenha os dois EMPILHADOS (`src/hefesto_dualsense4unix/interface/aba02.py`,
             `acel_html` logo depois de `giro_html`, na mesma moldura), e foi
             assim que esta função nasceu. Empilhado o card cresce 76px (68 no
             compacto) e passa a pedir 540px para uma faixa de 472: a aba Status

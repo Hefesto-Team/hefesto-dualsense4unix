@@ -178,7 +178,7 @@ class TestAtribuirNumero:
         O que o derrubou: a especificação visual aprovada por ela promete
         TROCA em dezessete lugares (os 16 tooltips de botão de número e a
         legenda *"Os dois trocam, os outros não se mexem"*,
-        ``novo-layout/_ferramentas/aba04.py``), e a palavra dela de 28/08 é
+        ``src/hefesto_dualsense4unix/interface/aba04.py``), e a palavra dela de 28/08 é
         *"Trocar é TROCA, não fila"*. Rodízio e troca dão o MESMO resultado
         quando o salto é de um número (vizinhos) — que é o único caso
         desenhado no mockup e o único que esta classe exercitava —, e resultados

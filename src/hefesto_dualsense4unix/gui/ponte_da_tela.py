@@ -3,7 +3,7 @@
 A interface nova é o mockup aprovado rodando num ``WebKit2.WebView`` dentro de
 uma janela GTK3 (``D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK``).
 Até 29/08/2026 tudo isso morava DENTRO do piloto da aba Controles
-(``novo-layout/_ferramentas/controles_vivos.py``), que era ao mesmo tempo a
+(``src/hefesto_dualsense4unix/interface/controles_vivos.py``), que era ao mesmo tempo a
 janela, a ponte, a pintura e a aba. **Nove cópias disso seria o defeito que esta
 casa mais paga: o mesmo valor com vários donos.** Este arquivo é a parte que não
 é de aba nenhuma, tirada de lá e posta onde as dez alcançam.
@@ -21,7 +21,7 @@ quem chama.
     )
     janela.ponte.dizer("HEF.pinta", pacote)   # Python → tela, UMA chamada
 
-POR QUE ELE MORA EM ``src/`` E NÃO EM ``novo-layout/_ferramentas/`` NEM EM ``scripts/``
+POR QUE ELE MORA EM ``src/`` E NÃO EM ``src/hefesto_dualsense4unix/interface/`` NEM EM ``scripts/``
 --------------------------------------------------------------------------------------
 ``novo-layout/`` **saiu do ``.gitignore`` em 30/08/2026**, a pedido dela
 (*"pode tirar do gitignore então"*): a pasta guarda os desenhos que ela faz, uma

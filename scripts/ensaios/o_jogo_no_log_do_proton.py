@@ -141,7 +141,7 @@ if os.path.isdir(_SRC) and _SRC not in sys.path:
 # recopiada. `identidade_do_vpad.py` nasceu (VPAD-NO-ESPELHO-01, 12/08/2026)
 # porque a pergunta "isto é um vpad?" estava escrita três vezes e uma delas
 # respondia errado.
-from identidade_do_vpad import VPAD_HID_PHYS, VPAD_UNIQ_PREFIXO  # noqa: E402
+from identidade_do_vpad import VPAD_HID_PHYS, VPAD_UNIQ_PREFIXO
 
 #: O carimbo que o PRODUTO escreve, quando o pacote é importável. NÃO é uma
 #: segunda cópia da palavra: é a conferência de que as duas metades da régua
