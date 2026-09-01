@@ -22,6 +22,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+
 from . import Contexto, perfil, registrar
 
 #: CORRIGIDO EM 01/09/2026. Aqui estava escrito que a velocidade do cursor e da
@@ -276,7 +278,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
       ela é o "modo jogo" (`daemon.emulation.suppress`), e ele é o contrário do
       que o rótulo promete: suspende mouse E teclado **agora**, no desktop,
       independentemente de haver jogo — `set_emulation_suppressed`
-      (`daemon/lifecycle.py:1879`) só inverte um bool. O único caminho que
+      (`daemon/lifecycle.py:1876`) só inverte um bool. O único caminho que
       liga a supressão SOZINHO quando um jogo começa é o perfil
       (`apply_profile_suppression`, a partir de `suppress_desktop_emulation`),
       e método de IPC nenhum grava perfil. Pendurar a opção no
@@ -284,11 +286,16 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
       morrer DENTRO do desktop, no mesmo clique.
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
-    portão de lá existe porque ligar o MOUSE derruba o gamepad virtual
-    (`daemon/lifecycle.py:1359`). `set_keyboard_emulation`
-    (`daemon/lifecycle.py:1448`) não toca no vpad — cria ou destrói o teclado
-    virtual e nada mais —, e com o gamepad despachando o teclado nem chega a
-    ser consultado (`lifecycle.py:4742`, `if not gamepad_dispatched`). Copiar o
+    portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
+    `set_mouse_emulation` (`daemon/lifecycle.py:1336`).
+
+    Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
+    Quem o liga e desliga é o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:1469`): ele cria ou destrói o
+    teclado virtual e nada mais.
+
+    E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
+    guarda está em `lifecycle.py:2240`, no `if not gamepad_dispatched`. Copiar o
     portão daqui bloquearia, dentro do jogo, o único interruptor que existe
     para calar o Alt+Tab do R1 — que é o defeito que este método nasceu para
     curar (queixa dela, 29/07).
@@ -329,8 +336,9 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     estável (`app/actions/mouse_actions.py:559`) manda exatamente este payload.
 
     NÃO SE APARA O NÚMERO AQUI. O teto e o piso têm dono e é o daemon:
-    `max(1, min(12, int(speed)))` em `daemon/lifecycle.py:1429` e de novo em
-    `UinputMouseDevice.set_speed` (`integrations/uinput_mouse.py:260`). Repetir
+    A faixa tem dono desde 01/09/2026 —
+    `MOUSE_SPEED_MIN`/`MAX` em `integrations/uinput_mouse.py:78`, lidos
+    pelo `set_speed` (`integrations/uinput_mouse.py:279`). Repetir
     `1..12` neste arquivo seria a segunda verdade que esta casa persegue — e ela
     envelheceria calada no dia em que a faixa mudasse. Um `13` chega, vira 12, e
     o tique seguinte repinta 12 na tela.
@@ -350,15 +358,103 @@ def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     Mesma rota speed-only do vizinho, e o mesmo motivo. O que muda é o alcance:
     `scroll_speed` multiplica o passo do analógico DIREITO em `_emit_scroll`
-    (`integrations/uinput_mouse.py:426`) e nada mais — o touchpad não rola.
+    (`integrations/uinput_mouse.py:466`) e nada mais — o touchpad não rola.
 
     A FAIXA DELE É OUTRA, e o daemon é quem a impõe: `max(1, min(5, …))`
-    (`daemon/lifecycle.py:1431`), contra os 12 do cursor. A dica da tela diz "De
+    (`daemon/lifecycle.py:1449` e `:1452`), contra os 12 do cursor. A dica da tela
     1 a 10" nas duas linhas, e nas duas está errada — está no relato.
     """
     atual = _rato(ctx).get("scroll_speed")
     atual = DEFAULT_SCROLL_SPEED if atual is None else int(atual)
     _mandar(p, scroll_speed=atual + _passo(o), origin=MANUAL)
+
+
+def _perfil_ativo_ou_recusa(ctx: Contexto) -> str:
+    """O nome do perfil ativo, ou a recusa com o motivo.
+
+    OS ATALHOS SÃO DO PERFIL, não da máquina (`profiles/schema.py`), e essa é a
+    frase que a recusa precisa carregar: sem ela, "não deu" vira mistério.
+    """
+    nome = str((ctx.state or {}).get("active_profile") or "").strip()
+    if not nome:
+        raise RuntimeError(
+            "não há perfil ativo agora, e o que cada botão faz é do perfil — não "
+            "da máquina. Escolha um perfil na aba Perfis e tente de novo.")
+    return nome
+
+
+@gesto("06-navegacao.html", "guardar-definicoes")
+def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Guardar" das 21 linhas de *o que cada botão faz*. `Profile.button_actions`.
+
+    ELE PASSOU A TER DONO EM 01/09/2026, por decisão dela: *"ganha campo. essa é
+    a parte das features que precisam ou serem ajustadas ou desenvolvidas."* O
+    que o segurava era medido e verdadeiro — a tela deixava escolher 21 linhas e
+    o perfil alcançava 9 —, e a cura foi o campo nascer, não o botão fingir.
+
+    DE ONDE VEM O QUE ELE GRAVA: da `forma`, que o piloto recolhe quando o botão
+    traz `data-hef-forma`. O ouvinte manda o valor do elemento CLICADO, e o
+    Guardar é outro elemento — sem a forma, ele não teria como saber o que está
+    escolhido em cada linha, e era por isso que só podia recusar.
+
+    SÓ O QUE MUDOU VAI PARA O DISCO. Gravar as 21 sempre encheria o perfil de
+    linhas iguais ao padrão, e no dia em que o padrão do produto mudasse o perfil
+    congelaria o padrão VELHO sem ninguém ter escolhido isso. `button_actions`
+    guarda diferença, e é o que o `None` do campo quer dizer: herda.
+
+    E QUANDO NADA MUDOU, ele grava `None` — que apaga o campo. É o mesmo estado
+    de um perfil que nunca foi editado, e não um `{}`, que seria "nenhum botão
+    faz nada".
+
+    O QUE A TELA OFERECE E O PRODUTO NÃO ATENDE **é dito, não engolido**: os
+    comandos "Abrir a Steam", "Sair do modo jogo" e "Escolher um programa…", os
+    dois papéis de eixo pedidos a um botão, e os gatilhos L2/R2, que são espelho
+    do cross e do triangle (`uinput_mouse._resolve_emulated_set`). O gesto GRAVA
+    o resto e LEVANTA nomeando o que não pousou — quem clicou fica sabendo, em
+    vez de descobrir pelo botão que não responde.
+    """
+    nome = _perfil_ativo_ou_recusa(ctx)
+    forma = o.get("forma")
+    if not isinstance(forma, dict) or not forma:
+        raise RuntimeError(
+            "não consegui ler as linhas da tela. O botão precisa do "
+            "`data-hef-forma` para o piloto recolher os campos — se ele sumiu do "
+            "desenho, o Guardar não tem o que gravar.")
+
+    escolhas: dict[str, str] = {}
+    nao_reconhecidas: list[str] = []
+    for botao, rotulo in forma.items():
+        if botao not in acoes.BOTOES:
+            continue
+        token = acoes.token_do_rotulo(str(rotulo))
+        if token is None:
+            nao_reconhecidas.append(f"{botao}={rotulo!r}")
+            continue
+        escolhas[botao] = token
+    if nao_reconhecidas:
+        raise ValueError(
+            "estas linhas trazem uma opção que o produto não conhece: "
+            + ", ".join(nao_reconhecidas)
+            + ". A lista da tela e a do produto saem do mesmo lugar "
+              "(`core/acoes_de_botao.ACOES`) — se divergiram, foi o desenho que "
+              "andou sem o gerador.")
+
+    de_fabrica = acoes.padrao()
+    diferentes = {b: a for b, a in escolhas.items() if de_fabrica.get(b) != a}
+
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+    novo = diferentes or None
+    if prof.button_actions == novo:
+        return
+    perfil.gravar_e_reaplicar(prof.model_copy(update={"button_actions": novo}), ctx, p)
+
+    _, _, sem_dono = acoes.resolver(novo)
+    if sem_dono:
+        raise RuntimeError(
+            "guardei o que o produto sabe fazer, e estas linhas ficaram sem "
+            "quem as atenda: " + ", ".join(sem_dono) + ". Elas estão no perfil e "
+            "não acendem nada hoje — é feature que falta, não erro seu.")
 
 
 @gesto("06-navegacao.html", "padrao-definicoes")
@@ -386,9 +482,14 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     inteiro, enquanto o "Guardar" ao lado dele não fecha: guardar 9 de 21
     escolhas e perder 12 caladas é o botão que responde calado.
 
-    O ALVO É O PERFIL ATIVO, e ele é dito: `key_bindings` é campo de perfil
-    (`profiles/schema.py:988`), não da máquina. Sem perfil ativo o botão RECUSA
-    — devolver ao padrão "o perfil nenhum" não quer dizer nada.
+    ELE ZERA OS DOIS CAMPOS desde 01/09/2026: o `key_bindings` (as nove teclas)
+    e o `button_actions` (as vinte e uma linhas da tela, que nasceu no mesmo
+    dia). Zerar só um deixaria a tabela metade de fábrica, com o botão dizendo
+    o contrário.
+
+    O ALVO É O PERFIL ATIVO, e ele é dito: os dois são campo de perfil
+    (`profiles/schema.py`), não da máquina. Sem perfil ativo o botão RECUSA —
+    devolver ao padrão "o perfil nenhum" não quer dizer nada.
 
     A GRAVAÇÃO É A DA CASA: `perfil.gravar_e_reaplicar`, a mesma que a aba
     Perfis usa. O `save_profile` grava em disco e o `profile.switch` reaplica se
@@ -398,23 +499,25 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     que "gravar perfil não tem método". Tem — `profiles/loader.save_profile`, e
     o `a10_perfis` já o usava desde a mesma leva que escreveu a frase.
     """
-    nome = str((ctx.state or {}).get("active_profile") or "").strip()
-    if not nome:
-        raise RuntimeError(
-            "não há perfil ativo agora, e os atalhos de botão são do perfil — "
-            "não da máquina. Escolha um perfil na aba Perfis e tente de novo.")
-
+    nome = _perfil_ativo_ou_recusa(ctx)
     loader = perfil._com_o_src()
     prof = loader.load_profile(nome)
-    if prof.key_bindings is None:
+    # OS DOIS CAMPOS, e não só um — 01/09/2026, quando o `button_actions`
+    # nasceu. O perfil passou a guardar o que cada botão faz em DOIS lugares:
+    # o `key_bindings` (as nove teclas, da FEAT-KEYBOARD-PERSISTENCE-01) e o
+    # `button_actions` (as vinte e uma linhas da tela). Um "Voltar ao padrão"
+    # que zerasse só o primeiro deixaria a tabela metade de fábrica e metade
+    # não — e o botão diria "de fábrica" sobre isso.
+    if prof.key_bindings is None and prof.button_actions is None:
         # JÁ ESTÁ DE FÁBRICA. Gravar de novo trocaria a data do arquivo e faria
         # o daemon reaplicar um perfil idêntico — barulho sem efeito, e um
         # `profile.switch` no meio de uma partida não é de graça.
         return
-    perfil.gravar_e_reaplicar(prof.model_copy(update={"key_bindings": None}), ctx, p)
+    perfil.gravar_e_reaplicar(
+        prof.model_copy(update={"key_bindings": None, "button_actions": None}), ctx, p)
 
 
-#: OS DOZE QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
+#: OS OITO QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
 #: inventário honesto do que falta, no lugar de um botão que responde calado. O
 #: piloto os recusa PELO NOME (`[gesto sem dono] 06-navegacao.html · <nome>`), e
 #: por isso as chaves aqui são os nomes que ele vai imprimir, um por um: os dois
@@ -440,7 +543,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;
 #: 3. **ele LIGA o mouse.** `restore_mouse_preference`
-#:    (`daemon/lifecycle.py:1385`) chama `set_mouse_emulation(pref, …)` e, com a
+#:    (`daemon/lifecycle.py:1402`) chama `set_mouse_emulation(pref, …)` e, com a
 #:    preferência nunca gravada, `pref` vira `True` por default (`:1403`) — o
 #:    cursor DELA passa a andar pelo controle, e o gamepad virtual cai junto
 #:    (`:1359`). Isso o põe na mesma prateleira do gesto `modo`, que já está em
@@ -453,12 +556,17 @@ SEM_GESTO = {
                          "`core/disputa_de_botao.py` que as sprints citam não "
                          "existe no disco",
     "modo-steam": "não há método de Modo Steam no daemon — nenhum dos 39",
-    "vel-touch-menos": "o cursor do touchpad SAI do mesmo `mouse_speed` "
-                       "(`uinput_mouse.py:446`); não há segundo número a ajustar",
-    "vel-touch-mais": "idem",
-    "rolagem-dedos-menos": "rolagem por dois dedos no touchpad não existe no "
-                           "produto: `_emit_scroll` lê só o analógico direito",
-    "rolagem-dedos-mais": "idem",
+    # OS QUATRO DE VELOCIDADE SAÍRAM DAQUI porque saíram da TELA — 01/09/2026,
+    # decisão dela ao ler a medição: *"só ajustar o texto e deixar rolagem,
+    # ajustar ali pra deixar um só se for o caso pra ambos"*.
+    #
+    # O que estava escrito aqui era: o cursor do touchpad sai do MESMO
+    # `mouse_speed` (`uinput_mouse.py:446`), e rolagem por dois dedos não existe
+    # (`_emit_scroll` lê só o analógico direito). As duas linhas do desenho
+    # ofereciam DOIS números onde o produto tem UM — e a cura foi no desenho, não
+    # num gesto que fingisse o segundo. As dicas passaram a ler a faixa do
+    # produto, que também estava errada nas duas ("De 1 a 10", quando o cursor
+    # vai a 12 e a rolagem a 5).
     # FATO SUBSTITUÍDO (segunda leva): dizia "os cinco combos moram em
     # `key_bindings` do perfil". Não moram — `key_bindings` são os nove BOTÕES
     # do `DEFAULT_BUTTON_BINDINGS`, e combo nenhum aparece lá.
@@ -481,32 +589,19 @@ SEM_GESTO = {
                      "speed-only); as outras três promessas não têm nenhuma, e "
                      "um 'Voltar ao padrão' que devolve dois números de cinco "
                      "coisas é um botão que responde calado sobre as outras três",
-    # FATO SUBSTITUÍDO (terceira leva, 01/09/2026). Esta entrada dizia que
-    # gravar `key_bindings` "nunca grava em disco" e concluía daí que o botão
-    # não tinha rota. **A conclusão estava errada**, e a prova estava a duas
-    # portas: `profiles/loader.save_profile` grava, e o `a10_perfis` já o usava
-    # desde a MESMA leva que escreveu esta frase. Foi essa correção que deu dono
-    # ao `padrao-definicoes` logo acima.
+    # `guardar-definicoes` SAIU DAQUI em 01/09/2026, e não porque a medição
+    # estivesse errada: ela estava certa. A tela deixava escolher 21 linhas e o
+    # perfil alcançava 9, e guardar 9 de 21 caladas seria o botão que responde
+    # calado. O que mudou foi o PRODUTO — decisão dela ao ler a medição:
+    # *"ganha campo. essa é a parte das features que precisam ou serem ajustadas
+    # ou desenvolvidas."* `Profile.button_actions` nasceu, o
+    # `core/acoes_de_botao` virou o dono do vocabulário e do padrão, e o device
+    # de mouse passou a obedecer.
     #
-    # O QUE SEGURA O "GUARDAR" É OUTRA COISA, e é a tela: das 21 linhas que ela
-    # deixa escolher, o perfil alcança 9 — l1, r1, l3, r3, options, create e as
-    # três regiões do touchpad (`core/keyboard_mappings.py:41`). As outras 12
-    # são mapas FIXOS (`uinput_mouse.py:93,99,105`) mais o L2/R2 e a DIREÇÃO dos
-    # analógicos, que campo de perfil nenhum alcança. Guardar 9 e perder 12
-    # caladas é o botão que responde calado — e o "Voltar ao padrão" fecha
-    # justamente porque as 12 estão SEMPRE de fábrica, então zerar as 9 devolve
-    # a tabela inteira.
-    #
-    # A DECISÃO É DELA, e está na mesa: ou as 12 linhas nascem travadas na tela
-    # (e o Guardar fecha com as 9), ou o produto ganha onde guardá-las.
-    "guardar-definicoes": "a tela deixa escolher 21 linhas e o perfil alcança 9 "
-                          "(`core/keyboard_mappings.py:41`); as outras 12 são "
-                          "mapas fixos de `uinput_mouse.py:93,99,105` mais o "
-                          "L2/R2 e a direção dos analógicos, que campo de perfil "
-                          "nenhum alcança. Gravar 9 de 21 escolhas e perder 12 "
-                          "caladas é pior que recusar. O caminho de gravar EXISTE "
-                          "(`profiles/loader.save_profile`, o mesmo que a aba "
-                          "Perfis usa) — o que falta é a decisão dela sobre as 12",
+    # O QUE AINDA NÃO PousA está DITO, não engolido: os três comandos
+    # ("Abrir a Steam", "Sair do modo jogo", "Escolher um programa…"), os dois
+    # papéis de eixo pedidos a um botão, e os gatilhos L2/R2, que são espelho do
+    # cross e do triangle. O gesto grava o resto e LEVANTA nomeando esses.
     "guardar-remapeamento": "o remapeamento botão-por-botão não tem sequer campo "
                             "no perfil, quanto mais método de IPC",
     "padrao-remapeamento": "idem, ao contrário",
@@ -523,7 +618,7 @@ METODOS = {"mouse.emulation.set", "keyboard.emulation.set"}
 
 
 PAGINA = "06-navegacao.html"
-PISO_DA_ABA = 7
+PISO_DA_ABA = 8
 
 
 def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any]:

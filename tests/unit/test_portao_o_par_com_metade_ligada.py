@@ -10,7 +10,7 @@ O RAIO DO ESTRAGO — cinco leitores em produção, e DOIS estão na tela
 --------------------------------------------------------------------
 Censo de 25/08/2026. Nenhum destes cinco pode responder ``True``:
 
-1. ``daemon/lifecycle.py:2258`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
+1. ``daemon/lifecycle.py:2270`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
    do gate do desktop, e ela **nunca é devolvida**;
 2. ``daemon/subsystems/hotkey.py:261`` — ramo de modo, num ``or`` cujo outro
    lado (``steam_input_excecao_ativa``) carrega a decisão sozinho;
@@ -157,7 +157,7 @@ _PAR_ACEITO: dict[str, str] = {
         "leitores em produção, e DOIS deles estão na tela — a frase da ponte em "
         "app/actions/home_actions.py:1139 (Início) e a frase do vpad recolhido em "
         "app/actions/emulation_actions.py:529 (Emulação) são inalcançáveis. Os outros "
-        "três: lifecycle.py:2258 (CALADA_VPAD_SUSPENSO), hotkey.py:261 e "
+        "três: lifecycle.py:2270 (CALADA_VPAD_SUSPENSO), hotkey.py:261 e "
         "ipc_handlers.py:2210, e nenhuma dessas leituras pode ser verdadeira. Ou as "
         "leituras saem, ou a suspensão ganha caminho de volta — as duas mexem em "
         "arquivo de outra frente e a escolha é DELA, não deste portão."
@@ -636,7 +636,7 @@ class TestOPortaoMorde:
         # e ele NÃO alcança aqui: ele varre `docs/` e as planilhas de
         # `docs/data/`, não número cravado em teste. Fica dito: enquanto um
         # teste citar `arquivo:linha` à mão, ele envelhece calado.
-        for endereco in ("daemon/lifecycle.py:2258", "daemon/subsystems/hotkey.py:285"):
+        for endereco in ("daemon/lifecycle.py:2270", "daemon/subsystems/hotkey.py:285"):
             assert any(onde.startswith(endereco) for onde in par.leituras), (
                 f"o portão não nomeia {endereco}, que LÊ a flag pelo acessor. "
                 f"Ele listou: {par.leituras}"

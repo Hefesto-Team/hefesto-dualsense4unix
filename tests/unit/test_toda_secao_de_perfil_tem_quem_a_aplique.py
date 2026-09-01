@@ -172,6 +172,20 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "capturar a referência agora congelaria `None` para sempre)."
         )
     ),
+    "button_actions": SecaoDireta(
+        razao=(
+            "FEAT-ACOES-DE-BOTAO-01 (01/09/2026). `apply_button_actions` resolve "
+            "a escolha em DUAS metades (`core/acoes_de_botao.resolver`) e as "
+            "empurra aos dois devices virtuais: o de mouse pelo "
+            "`mouse_device_provider` e o de teclado pelo "
+            "`keyboard_device_provider`. Os dois são `lambda` resolvidos a cada "
+            "ativação e por isso NÃO entram em `APPLIERS_DO_DAEMON`, pela mesma "
+            "razão escrita no `key_bindings` acima: o manager nasce antes de os "
+            "devices subirem, e eles são recriados a cada liga/desliga da "
+            "emulação — capturar a referência agora congelaria `None` para "
+            "sempre."
+        )
+    ),
     "controllers": SecaoDireta(
         razao=(
             "Mapa ADITIVO de overrides por controle físico: `apply` o resolve "

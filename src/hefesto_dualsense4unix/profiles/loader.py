@@ -1223,6 +1223,13 @@ _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
     # (`test_profile_speaker_section.py::test_binario_antigo_...`), não
     # previsto pela sprint.
     "teclado_emulado",
+    # FEAT-ACOES-DE-BOTAO-01 (01/09/2026): a terceira vez que a MESMA regra é
+    # cobrada pelo mesmo teste, e a terceira vez que ela não foi lembrada por
+    # quem escreveu o campo — eu inclusive. O `test_binario_antigo_ainda_carrega
+    # _perfil_salvo_por_este` pegou na hora: sem esta linha, todo save passa a
+    # gravar `"button_actions": null` e um binário anterior a esta feature
+    # rejeitaria TODOS os perfis dela num downgrade, não só os que usam o campo.
+    "button_actions",
 )
 
 

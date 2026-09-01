@@ -538,7 +538,7 @@ SEM_GESTO: dict[str, str] = {
 def _uniq(o: dict[str, Any]) -> str:
     """O `uniq` do controle onde ela clicou. Vazio = clique solto, e recusa.
 
-    O piloto traduz `pref` → `uniq` antes de chamar (`hefesto_vivo.py:337`); o
+    O piloto traduz `pref` → `uniq` antes de chamar (`hefesto_vivo.py:556`); o
     que chega aqui vazio é clique sem dono, e "" NÃO vira "o primeiro".
     """
     return str(o.get("uniq") or "")

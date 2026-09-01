@@ -817,10 +817,19 @@ class Daemon:
         mouse_on, mouse_speed, mouse_scroll = load_mouse_emulation()
         if mouse_on and not self._native_mode:
             self.config.mouse_emulation_enabled = True
+            # A FAIXA TEM DONO — `integrations/uinput_mouse.py`. Este terceiro
+            # par de literais escapou da primeira varredura de 01/09/2026 e só
+            # apareceu quando a régua das citações de linha obrigou a reler o
+            # arquivo inteiro. Três cópias de um número é como a tela passou a
+            # dizer "De 1 a 10" sobre uma faixa que vai a 12.
+            from hefesto_dualsense4unix.integrations import uinput_mouse as _um
+
             if mouse_speed is not None:
-                self.config.mouse_speed = max(1, min(12, int(mouse_speed)))
+                self.config.mouse_speed = max(
+                    _um.MOUSE_SPEED_MIN, min(_um.MOUSE_SPEED_MAX, int(mouse_speed)))
             if mouse_scroll is not None:
-                self.config.mouse_scroll_speed = max(1, min(5, int(mouse_scroll)))
+                self.config.mouse_scroll_speed = max(
+                    _um.SCROLL_SPEED_MIN, min(_um.SCROLL_SPEED_MAX, int(mouse_scroll)))
         # FEAT-DSX-GAMEPAD-FLAVOR-01: restaura o gamepad virtual (liga + flavor)
         # se a sessão anterior o deixou ligado. Mútua exclusão: o gamepad tem
         # precedência sobre o mouse (jogar = controle vai pro jogo).
@@ -1346,10 +1355,18 @@ class Daemon:
 
         if origin == "manual":
             self._emu_manual_ts = time.monotonic()
+        # A FAIXA TEM DONO desde 01/09/2026 — `integrations/uinput_mouse.py`.
+        # Os quatro `min()` desta classe eram literais, e a tela da aba
+        # Navegação escrevia um terceiro par (a dica dizia 'De 1 a 10' nas
+        # duas linhas, e nas duas estava errada).
+        from hefesto_dualsense4unix.integrations import uinput_mouse as _um
+
         if speed is not None:
-            self.config.mouse_speed = max(1, min(12, int(speed)))
+            self.config.mouse_speed = max(
+                _um.MOUSE_SPEED_MIN, min(_um.MOUSE_SPEED_MAX, int(speed)))
         if scroll_speed is not None:
-            self.config.mouse_scroll_speed = max(1, min(5, int(scroll_speed)))
+            self.config.mouse_scroll_speed = max(
+                _um.SCROLL_SPEED_MIN, min(_um.SCROLL_SPEED_MAX, int(scroll_speed)))
         # BUG-EMU-DEVICE-RACE-01: serializa a transição de device (create/destroy)
         # para não colidir com set_gamepad_emulation/outra thread.
         with self._emu_lock:
@@ -1425,10 +1442,14 @@ class Daemon:
         nada é escrito (criar o flag aqui religaria a emulação no boot — a
         regressão exata do A4).
         """
+        from hefesto_dualsense4unix.integrations import uinput_mouse as _um
+
         if speed is not None:
-            self.config.mouse_speed = max(1, min(12, int(speed)))
+            self.config.mouse_speed = max(
+                _um.MOUSE_SPEED_MIN, min(_um.MOUSE_SPEED_MAX, int(speed)))
         if scroll_speed is not None:
-            self.config.mouse_scroll_speed = max(1, min(5, int(scroll_speed)))
+            self.config.mouse_scroll_speed = max(
+                _um.SCROLL_SPEED_MIN, min(_um.SCROLL_SPEED_MAX, int(scroll_speed)))
         if self._mouse_device is not None:
             self._mouse_device.set_speed(
                 mouse_speed=self.config.mouse_speed,

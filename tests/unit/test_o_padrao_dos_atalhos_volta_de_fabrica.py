@@ -60,12 +60,17 @@ class PerfilDeMentira:
     `match` válido, e a régua passaria a medir o esquema em vez do botão.
     """
 
-    def __init__(self, nome: str, key_bindings: dict[str, list[str]] | None) -> None:
+    def __init__(self, nome: str, key_bindings: dict[str, list[str]] | None,
+                 button_actions: dict[str, str] | None = None) -> None:
         self.name = nome
         self.key_bindings = key_bindings
+        # O SEGUNDO CAMPO nasceu em 01/09/2026 (`FEAT-ACOES-DE-BOTAO-01`), e o
+        # dublê o ganhou junto: o "Voltar ao padrão" zera OS DOIS, e um dublê
+        # que só conhecesse o primeiro deixaria a metade nova sem medição.
+        self.button_actions = button_actions
 
     def model_copy(self, *, update: dict[str, Any]) -> PerfilDeMentira:
-        novo = PerfilDeMentira(self.name, self.key_bindings)
+        novo = PerfilDeMentira(self.name, self.key_bindings, self.button_actions)
         for k, v in update.items():
             setattr(novo, k, v)
         return novo
@@ -123,6 +128,10 @@ def test_grava_none_e_nunca_dicionario_vazio(pac, gesto, disco) -> None:
         f"(`profiles/schema.py:985-987`) — o segundo devolveria um controle "
         f"mudo com o botão dizendo 'de fábrica'.")
     assert gravados[0].name == "Mortal Kombat", "gravou por cima de outro perfil"
+    assert gravados[0].button_actions is None, (
+        "o `button_actions` não foi zerado junto. Os dois campos guardam o que "
+        "cada botão faz — zerar só um deixa a tabela metade de fábrica, com o "
+        "botão dizendo o contrário.")
 
 
 def test_reaplica_o_perfil_ativo_e_relê_o_ambiente(pac, gesto, disco) -> None:
@@ -145,7 +154,7 @@ def test_reaplica_o_perfil_ativo_e_relê_o_ambiente(pac, gesto, disco) -> None:
 def test_ja_de_fabrica_nao_mexe_em_nada(pac, gesto, disco) -> None:
     """Regravar um perfil idêntico é barulho, e o `switch` não é de graça."""
     estado, gravados = disco
-    estado["Navegacao"] = PerfilDeMentira("Navegacao", None)
+    estado["Navegacao"] = PerfilDeMentira("Navegacao", None, None)
     p = PonteDeMentira()
 
     gesto(_ctx(pac, "Navegacao"), {}, p)
@@ -154,6 +163,23 @@ def test_ja_de_fabrica_nao_mexe_em_nada(pac, gesto, disco) -> None:
     assert p.chamadas == [], (
         f"pediu {p.chamadas} ao daemon sem ter o que mudar — um "
         f"`profile.switch` no meio de uma partida não é de graça.")
+
+
+def test_zera_tambem_quando_so_o_campo_novo_esta_preenchido(pac, gesto, disco) -> None:
+    """A metade nova sozinha. Sem este caso, `key_bindings is None` bastaria
+    para o gesto desistir — e a tabela ficaria com as escolhas do
+    `button_actions` intactas debaixo de um botão que diz "de fábrica".
+    """
+    estado, gravados = disco
+    estado["Navegacao"] = PerfilDeMentira("Navegacao", None, {"dpad_up": "BTN_LEFT"})
+    p = PonteDeMentira()
+
+    gesto(_ctx(pac, "Navegacao"), {}, p)
+
+    assert len(gravados) == 1, (
+        "o gesto desistiu porque o `key_bindings` já era `None` — e o "
+        "`button_actions` continuava com escolha dentro")
+    assert gravados[0].button_actions is None
 
 
 def test_sem_perfil_ativo_recusa_dizendo(pac, gesto, disco) -> None:

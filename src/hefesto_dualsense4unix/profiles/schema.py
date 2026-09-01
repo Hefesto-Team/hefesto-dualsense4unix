@@ -986,6 +986,21 @@ class Profile(BaseModel):
     # - {} = desativa todos os bindings do perfil (teclado silencioso).
     # - {"triangle": ["KEY_C"]} = override apenas desse botão; demais seguem default.
     key_bindings: dict[str, list[str]] | None = None
+    # FEAT-ACOES-DE-BOTAO-01 (01/09/2026): o que cada um dos 21 botões da tela
+    # faz, num campo só. Decisão dela, ao ler que doze das vinte e uma linhas
+    # aceitavam escolha e não tinham onde ser guardadas: *"ganha campo. essa é a
+    # parte das features que precisam ou serem ajustadas ou desenvolvidas."*
+    #
+    # - None = herda o de fábrica INTEIRO (`core/acoes_de_botao.padrao()`, que
+    #   por sua vez é derivado dos mapas do produto — não há terceira cópia).
+    # - {"cross": "KEY_ENTER"} = troca só esse botão; os outros seguem o padrão.
+    #
+    # POR QUE ELE NÃO SUBSTITUI O `key_bindings` ACIMA: aquele é o contrato do
+    # TECLADO virtual e tem chamador vivo desde a FEAT-KEYBOARD-PERSISTENCE-01.
+    # Este é o da TELA, que fala dos dois devices de uma vez — o `resolver()` do
+    # `acoes_de_botao` é quem os separa. Aposentar um em favor do outro é
+    # trabalho com dono e não se faz junto com o nascimento do campo.
+    button_actions: dict[str, str] | None = None
     # FEAT-POINT-AND-CLICK-01: seção opcional de emulação de mouse.
     # - None = ativar o perfil não toca no estado da emulação (comportamento v1).
     # - Preenchida = ativar o perfil liga/desliga a emulação com as velocidades
@@ -1082,6 +1097,40 @@ class Profile(BaseModel):
             slugify(value)
         except ValueError as exc:
             raise ValueError(f"name não produz slug válido: {value!r}") from exc
+        return value
+
+    @field_validator("button_actions")
+    @classmethod
+    def _validate_button_actions(
+        cls, value: dict[str, str] | None
+    ) -> dict[str, str] | None:
+        """Recusa botão que a tela não mostra e ação que o vocabulário não tem.
+
+        AS DUAS RECUSAS SÃO DERIVADAS, e é o que as impede de envelhecer: os
+        nomes válidos saem de `core/acoes_de_botao.BOTOES` e `.ACOES`, que por
+        sua vez saem dos mapas do produto. Uma lista escrita aqui seria a quarta
+        cópia do mesmo fato — e a que ninguém lembraria de atualizar.
+
+        O ERRO NOMEIA O QUE ACEITA. Um perfil que chega de outra máquina com um
+        botão que esta versão não conhece precisa dizer QUAL, senão a mensagem
+        vira "perfil inválido" e a pessoa perde a tarde.
+        """
+        if value is None:
+            return value
+        from hefesto_dualsense4unix.core.acoes_de_botao import ACOES, BOTOES
+
+        for botao, acao in value.items():
+            if botao not in BOTOES:
+                raise ValueError(
+                    f"button_actions: {botao!r} não é um dos botões da tela. "
+                    f"Os que existem: {', '.join(BOTOES)}"
+                )
+            if not isinstance(acao, str) or acao not in ACOES:
+                raise ValueError(
+                    f"button_actions[{botao!r}]: {acao!r} não é uma ação "
+                    f"conhecida. As que existem estão em "
+                    f"`core/acoes_de_botao.ACOES`."
+                )
         return value
 
     @field_validator("key_bindings")

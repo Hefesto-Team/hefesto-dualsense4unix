@@ -1,5 +1,30 @@
 import sys, pathlib, csv, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde
+
+# AS FAIXAS E OS PADRÕES SÃO DO PRODUTO, e a tela os LÊ. Digitá-los aqui foi
+# como as duas dicas passaram a dizer 'De 1 a 10' — errado nas duas linhas.
+# O QUE CADA BOTÃO FAZ, e a LISTA do que ele pode fazer, vêm do produto — não
+# são digitados aqui. `core/acoes_de_botao` é o dono desde 01/09/2026, e ele
+# deriva o padrão dos quatro mapas do daemon.
+from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
+    EIXO_DIREITO,
+    EIXO_ESQUERDO,
+    por_grupo,
+)
+from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
+    rotulo as rotulo_da_acao,
+)
+from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
+    padrao as _padrao_dos_botoes,
+)
+from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
+    DEFAULT_MOUSE_SPEED,
+    DEFAULT_SCROLL_SPEED,
+    MOUSE_SPEED_MAX,
+    MOUSE_SPEED_MIN,
+    SCROLL_SPEED_MAX,
+    SCROLL_SPEED_MIN,
+)
 from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA, CONECTADOS,
                    cor_da_zona, player_slot_color, DS)
 
@@ -401,7 +426,15 @@ CSS = CSS_GLIFO + """
      pintado FORA dela. Na janela do produto (1180) nada é cortado — medido. */
   .campo-num .par{display:flex;align-items:center;gap:9px;flex:0 1 auto;min-width:0}
   .campo-num .par:last-child{flex:1 1 auto}
-  .campo-num .par:last-child .bignum{margin-left:auto}
+  /* O `margin-left:auto` SÓ VALE QUANDO HÁ UM PAR ANTES — 01/09/2026. Ele
+     existe para empurrar o SEGUNDO número até a borda direita do campo, e com
+     dois pares fazia exatamente isso. Quando as duas linhas passaram a ter UM
+     número só (decisão dela), o par único é `:last-child` **e** `:first-child`,
+     e a mesma regra jogava o `− 6 +` para a direita deixando o campo vazio à
+     esquerda — um campo que parece quebrado, ao lado de listas que começam
+     coladas na borda. O `:not(:first-child)` é a diferença entre "empurra o
+     segundo" e "empurra o único". */
+  .campo-num .par:not(:first-child):last-child .bignum{margin-left:auto}
   /* O `letter-spacing` SAIU, e ele era órfão: existia para abrir a CAIXA ALTA,
      que saiu daqui em 31/08 (`f7c6c199`) junto com a das outras. O comentário
      daquela cura, quatro telas acima neste mesmo arquivo, já dizia "o
@@ -606,19 +639,13 @@ def gl(*pids, sep="/", rot=None, tam=18):
 # UMA lista só, com as opções dos DOIS lados — ela, 27/08: "as opções que temos
 # em ambos os lados no dropin". Antes eram duas listas, e um botão que estivesse
 # nas duas tabelas fazia as duas coisas em silêncio.
-ACOES_UNI = [
-    ("Mouse", ["Botão esquerdo", "Botão direito", "Botão do meio",
-               "Movimento do cursor", "Rolagem vertical e horizontal"]),
-    ("Função do teclado", ["Seta para cima", "Seta para baixo",
-                           "Seta para a esquerda", "Seta para a direita",
-                           "Enter", "Esc", "Espaço",
-                           "Alt + Tab", "Alt + Shift + Tab", "Super (tecla Windows)",
-                           "PrintScreen", "F11"]),
-    ("Executar Comando", ["Abrir o teclado na tela", "Fechar o teclado na tela",
-                          "Abrir a Steam", "Sair do modo jogo",
-                          "Escolher um programa…"]),
-    ("", ["— Nada —"]),
-]
+#
+# ELA DEIXOU DE SER DIGITADA em 01/09/2026, e a razão é medida: a mesma lista
+# existia em `core/acoes_de_botao.ACOES`, do lado do produto, e as duas JÁ
+# DIVERGIAM — faltavam aqui o `Backspace` e o `Delete`, que o produto emite nas
+# regiões esquerda e direita do touchpad. Com a lista digitada, a tela não
+# conseguia sequer MOSTRAR o que três das suas vinte e uma linhas fazem.
+ACOES_UNI = por_grupo()
 
 # O REMAPEAMENTO: para qual botão do controle este botão passa a valer.
 #
@@ -645,7 +672,7 @@ ACOES_GESTO = [
 ]
 
 
-def drop(grupos, escolhido, classe="campo-linha", gesto=""):
+def drop(grupos, escolhido, classe="campo-linha", gesto="", linha=""):
     """Um <select> de verdade em TODA linha — nenhum travado (falas [55], [57], [91]).
 
     O `gesto` só NOMEIA o campo para o piloto (ver `simples`): `<select>` nenhum
@@ -659,7 +686,12 @@ def drop(grupos, escolhido, classe="campo-linha", gesto=""):
         op = "".join(f'<option{" selected" if o == escolhido else ""}>{o}</option>' for o in ops)
         partes.append(f'<optgroup label="{rot}">{op}</optgroup>' if rot else op)
     g = f' data-gesto="{gesto}"' if gesto else ""
-    return f'<select class="{classe}"{g}>{"".join(partes)}</select>'
+    # O ENDEREÇO DA LINHA — 01/09/2026. Sem ele o "Guardar" da tela não tem como
+    # saber QUAL botão cada `<select>` representa: o ouvinte do piloto manda o
+    # valor do elemento CLICADO, e o Guardar é outro elemento, a três telas de
+    # distância. É o que faz o botão poder GRAVAR em vez de só recusar.
+    ln = f' data-linha="{linha}"' if linha else ""
+    return f'<select class="{classe}"{g}{ln}>{"".join(partes)}</select>'
 
 
 def simples(ops, classe="escolha-at", gesto="", campo=""):
@@ -716,9 +748,14 @@ def bignum(*pares):
         mais = f' data-gesto="{g}-mais"' if g else ""
         end = f' data-campo="{campo}"' if campo else ""
         risco = "" if i == 0 else "<span class='risco'></span>"
+        # SEM RÓTULO, quando não há com quem comparar. Com DOIS números o `.sub`
+        # dizia qual era qual ("Touch"/"Analógico"); com UM, ele repetiria o
+        # rótulo da linha. Um `<span>` vazio não é neutro: ele continua ocupando
+        # a coluna e abre um vão que a régua de alinhamento acusaria.
+        sub = f'<span class="sub">{rot}</span>' if rot else ""
         partes.append(
             f'<span class="par">{risco}'
-            f'<span class="sub">{rot}</span><span class="bignum">'
+            f'{sub}<span class="bignum">'
             f'<button class="passo"{menos}>−</button><b{end}>{v}</b>'
             f'<button class="passo"{mais}>+</button>'
             f'</span></span>')
@@ -869,34 +906,44 @@ def linha_combo(n, pecas, faz):
 # Ela, 27/08: "Em que cada linha seria um dos botões do controle" e, da tabela da
 # direita, "Repetindo a mesma tabela da Esquerda".
 # (peça do mapa, qualificador, o que ele faz)
+#: O PADRÃO DE CADA LINHA VEM DO PRODUTO — `core/acoes_de_botao.padrao()`, que
+#: por sua vez o deriva dos quatro mapas. Antes ele era DIGITADO aqui, ao lado
+#: de cada glifo, e três das vinte e uma linhas estavam erradas desde que foram
+#: escritas: o touchpad dizia "Botão esquerdo · Botão direito · F11" e o produto
+#: faz "Backspace · Enter · Delete". Nada as comparava.
+#:
+#: A ORDEM E OS GLIFOS CONTINUAM AQUI, porque são desenho; o que saiu foi o
+#: FATO. `_PADRAO_DOS_BOTOES` casa a linha da tela com o endereço do produto.
+#: botão -> RÓTULO, que é o que o `<select>` mostra como escolhido.
+_PADRAO_DOS_BOTOES = {b: rotulo_da_acao(a)
+                      for b, a in _padrao_dos_botoes().items()}
+
 BOTOES = [
-    (gl("cross"),                               "Botão esquerdo"),
-    (gl("circle"),                              "Enter"),
-    (gl("square"),                              "Esc"),
-    (gl("triangle"),                            "Botão direito"),
-    (gl("l1"),                                  "Alt + Shift + Tab"),
-    (gl("r1"),                                  "Alt + Tab"),
-    (gl("l2"),                                  "Botão esquerdo"),
-    (gl("r2"),                                  "Botão direito"),
-    (gl("stick_l", rot="clique"),               "Abrir o teclado na tela"),
-    (gl("stick_l", rot="direção"),              "Movimento do cursor"),
-    (gl("stick_r", rot="clique"),               "Botão do meio"),
-    (gl("stick_r", rot="direção"),              "Rolagem vertical e horizontal"),
+    (gl("cross"),                                "cross"),
+    (gl("circle"),                               "circle"),
+    (gl("square"),                               "square"),
+    (gl("triangle"),                             "triangle"),
+    (gl("l1"),                                   "l1"),
+    (gl("r1"),                                   "r1"),
+    (gl("l2"),                                   "l2"),
+    (gl("r2"),                                   "r2"),
+    (gl("stick_l", rot="clique"),                "l3"),
+    (gl("stick_l", rot="direção"),               EIXO_ESQUERDO),
+    (gl("stick_r", rot="clique"),                "r3"),
+    (gl("stick_r", rot="direção"),               EIXO_DIREITO),
     # cada direcional é uma LINHA — ela, 27/08. Numa linha só, as quatro setas
     # dividiam um valor e não havia como dar destino diferente a cada direção.
-    # A palavra de cada direção sai do `nome` do mapa ("D-pad Cima" -> "cima").
-    (gl("dpad_up",    rot=dir_de("dpad_up")),    "Seta para cima"),
-    (gl("dpad_down",  rot=dir_de("dpad_down")),  "Seta para baixo"),
-    (gl("dpad_left",  rot=dir_de("dpad_left")),  "Seta para a esquerda"),
-    (gl("dpad_right", rot=dir_de("dpad_right")), "Seta para a direita"),
-    (gl("options"),                             "Super (tecla Windows)"),
-    (gl("share"),                               "PrintScreen"),
+    (gl("dpad_up",    rot=dir_de("dpad_up")),    "dpad_up"),
+    (gl("dpad_down",  rot=dir_de("dpad_down")),  "dpad_down"),
+    (gl("dpad_left",  rot=dir_de("dpad_left")),  "dpad_left"),
+    (gl("dpad_right", rot=dir_de("dpad_right")), "dpad_right"),
+    (gl("options"),                              "options"),
+    (gl("share"),                                "create"),
     # as TRÊS regiões do touchpad ganharam linha — ela, 27/08: "o touchpad tem o
     # click pra esquerda, linha do clique direita linha do click centro".
-    # Os três nomes saem da `nota` do mapa, que é quem os declara.
-    (gl("touchpad", rot=TOUCH_REGIOES[0]),      "Botão esquerdo"),
-    (gl("touchpad", rot=TOUCH_REGIOES[1]),      "Botão direito"),
-    (gl("touchpad", rot=TOUCH_REGIOES[2]),      "F11"),
+    (gl("touchpad", rot=TOUCH_REGIOES[0]),       "touchpad_left_press"),
+    (gl("touchpad", rot=TOUCH_REGIOES[1]),       "touchpad_right_press"),
+    (gl("touchpad", rot=TOUCH_REGIOES[2]),       "touchpad_middle_press"),
 ]
 SEM_TROCA = REMAP[-1][1][0]
 
@@ -914,14 +961,19 @@ D_MOUSE = ajuda(
     "Os <b>mapeamentos pré-prontos</b> de mouse. Trocar aqui reescreve as linhas "
     "da tabela <b>O controle como mouse</b>; qualquer linha continua "
     "editável depois.")
+#: AS DUAS DICAS SÃO LIDAS DO PRODUTO, e antes eram digitadas — as duas diziam
+#: *"De 1 a 10"*, e as duas estavam erradas: o cursor vai a 12 e a rolagem a 5
+#: (`integrations/uinput_mouse.py`, que desde 01/09/2026 é o dono da faixa).
 D_VEL = ajuda(
-    "Duas velocidades separadas, porque são dois aparelhos: o <b>touch</b> do "
-    "touchpad e o <b>analógico</b> esquerdo.<br><br>"
-    "De 1 a 10. O padrão do Hefesto é 4 no touch e 6 no analógico.")
+    f"Uma velocidade só, porque é um número só no Hefesto: o <b>analógico "
+    f"esquerdo</b> e o <b>touch</b> do touchpad andam pelo mesmo ajuste.<br><br>"
+    f"De {MOUSE_SPEED_MIN} a {MOUSE_SPEED_MAX}. O padrão do Hefesto é "
+    f"{DEFAULT_MOUSE_SPEED}.")
 D_ROL = ajuda(
-    "Duas velocidades separadas, porque são dois aparelhos: <b>dois dedos</b> no "
-    "touchpad e o <b>analógico direito</b>.<br><br>"
-    "De 1 a 10. O padrão do Hefesto é 4 nos dois dedos e 1 no analógico.")
+    f"Rola com o <b>analógico direito</b>. Rolar com dois dedos no touchpad é "
+    f"outra coisa, e o Hefesto ainda não faz.<br><br>"
+    f"De {SCROLL_SPEED_MIN} a {SCROLL_SPEED_MAX}. O padrão do Hefesto é "
+    f"{DEFAULT_SCROLL_SPEED}.")
 D_INTERNA = ajuda(
     "Navegar <b>a janela do Hefesto</b> com o controle — abas, botões e listas.<br><br>"
     f"Com os {len(MESA)} controles na mesa, cada jogador anda no seu próprio card "
@@ -1026,7 +1078,7 @@ ATIVACAO_ESQ = [
 #   · `mouse_emulation.speed`        é UM número (1..12), e o cursor do TOUCHPAD
 #     sai dele: `emit_touchpad_move` escala por
 #     `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
-#     (`integrations/uinput_mouse.py:446`). Não há segunda velocidade a ajustar
+#     (`integrations/uinput_mouse.py:486`). Não há segunda velocidade a ajustar
 #     — o "Touch" da tela é uma conta que ninguém faz do outro lado.
 #   · `mouse_emulation.scroll_speed` é UM número (1..5) e vale só para o
 #     analógico DIREITO: `_emit_scroll(rx, ry)` (`uinput_mouse.py:412`). Rolagem
@@ -1035,12 +1087,16 @@ ATIVACAO_ESQ = [
 # Os dois campos sem dono ficam com NOME e sem gesto, que é o que faz o piloto
 # recusar dizendo qual é, em vez de o clique sumir.
 ATIVACAO_DIR = [
+    # UM NÚMERO EM CADA LINHA — decisão dela, 01/09/2026: *"só ajustar o texto e
+    # deixar rolagem, ajustar ali pra deixar um só se for o caso pra ambos"*.
+    # O segundo número de cada par prometia um ajuste que o produto não tem, e a
+    # medição está logo acima: `mouse_speed` move o touchpad E o analógico, e
+    # rolagem por dois dedos não existe. Os quatro botões `−`/`+` que sobravam
+    # saíram do desenho junto com os rótulos.
     ("Velocidade de cursor", D_VEL,
-     bignum(("Touch", 4, "vel-touch"),
-            ("Analógico", 6, "vel-cursor", "vel-cursor"))),
+     bignum(("", DEFAULT_MOUSE_SPEED, "vel-cursor", "vel-cursor"))),
     ("Velocidade da rolagem", D_ROL,
-     bignum(("Dois dedos", 4, "rolagem-dedos"),
-            ("Analógico", 1, "rolagem", "vel-rolagem"))),
+     bignum(("", DEFAULT_SCROLL_SPEED, "rolagem", "vel-rolagem"))),
     ("Modo Steam", D_STEAM, simples([
         "Desligado",
         "Ligado — o controle navega a Steam como num Steam Deck",
@@ -1143,7 +1199,7 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
     <div class="tn-rod grupo-padrao">
       <a class="btn" href="#">Cancelar</a>
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
-      <a class="btn roxo" href="#" data-gesto="{guardar}">Guardar</a>
+      <a class="btn roxo" href="#" data-gesto="{guardar}" data-hef-forma="{ident}">Guardar</a>
       <div class="confirma">
         <span>{confirma}</span>
         <button class="btn-conf vermelho" data-gesto="{padrao}">Confirmar</button>
@@ -1158,8 +1214,10 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
 TELA_DEFINICOES = tela_de_botoes(
     "definicoes-mouse", "Definições Controle e Mouse", D_DEFINICOES,
     "O que ele faz",
-    chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(ACOES_UNI, f)}</td></tr>'
-                 for b, f in BOTOES),
+    chr(10).join(
+        f'          <tr><td class="b">{b}</td>'
+        f'<td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], linha=i)}</td></tr>'
+        for b, i in BOTOES),
     f"Devolver ao de fábrica as {len(BOTOES)} linhas de <b>o que cada botão faz</b>? "
     "O <b>Remapeamento dos botões</b> não é tocado.",
     guardar="guardar-definicoes", padrao="padrao-definicoes")
@@ -1201,9 +1259,9 @@ TELA_PONTO = f'''
       </div>
       <div class="tn-vel">
         <div class="at-linha"><span class="at-rot">Velocidade de cursor{D_VEL}</span>
-          {bignum(("Touch", 8), ("Analógico", 6))}</div>
+          {bignum(("", 8))}</div>
         <div class="at-linha"><span class="at-rot">Velocidade da rolagem{D_ROL}</span>
-          {bignum(("Dois dedos", 4), ("Analógico", 1))}</div>
+          {bignum(("", 4))}</div>
       </div>
     </div>
     <!-- OS DOIS `bignum` DESTA TELA FICAM SEM ENDEREÇO, e é decisão medida: eles

@@ -256,6 +256,27 @@ BOOTSTRAP = r"""
                  ? alvo.selectedOptions[0].textContent.trim() : ''),
         tipo: (alvo.tagName || '').toLowerCase(),
         evento: ev.type,
+        // A FORMA INTEIRA, e ela nasceu em 01/09/2026 para os três "Guardar"
+        // das telas de pop-up. O ouvinte manda o valor do elemento CLICADO — e
+        // o Guardar é OUTRO elemento, a três telas de distância dos 21
+        // `<select>` que ele promete gravar. Sem isto, o botão só podia
+        // recusar: não tinha como saber o que estava escolhido em cada linha.
+        //
+        // SÓ QUANDO O BOTÃO PEDE. `data-hef-forma` nomeia o container a
+        // recolher; um clique comum não paga a varredura, e nenhum outro gesto
+        // recebe um campo que não pediu.
+        forma: (function(){
+          const id = alvo.dataset.hefForma;
+          if(!id) return null;
+          const cx = document.getElementById(id);
+          if(!cx) return null;
+          const fora = {};
+          for(const el of cx.querySelectorAll('[data-linha]')){
+            fora[el.dataset.linha] = ('value' in el)
+              ? String(el.value ?? '') : (el.textContent || '').trim();
+          }
+          return fora;
+        })(),
         texto: (alvo.textContent || '').trim().slice(0, 60),
       });
   }

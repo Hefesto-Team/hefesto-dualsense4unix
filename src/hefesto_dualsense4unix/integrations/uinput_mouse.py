@@ -68,6 +68,15 @@ SCROLL_DEADZONE = 40
 SCROLL_RATE_LIMIT_SEC = 0.050
 DEFAULT_MOUSE_SPEED = 6
 DEFAULT_SCROLL_SPEED = 1
+
+# AS DUAS FAIXAS, e elas ganharam nome em 01/09/2026. Os números viviam como
+# LITERAIS em dois lugares — `set_speed()` logo abaixo e
+# `daemon/lifecycle.py:1429-1431` —, e a tela da aba Navegação escrevia um
+# TERCEIRO: a dica dizia *"De 1 a 10"* nas duas linhas, e nas duas estava errada.
+# Três cópias de um fato é o defeito que esta casa persegue; agora há uma, e a
+# tela a LÊ em vez de digitar.
+MOUSE_SPEED_MIN, MOUSE_SPEED_MAX = 1, 12
+SCROLL_SPEED_MIN, SCROLL_SPEED_MAX = 1, 5
 TRIGGER_PRESS_THRESHOLD = 64
 
 # FEAT-MOUSE-CURSOR-FEEL-01 (A7) — pipeline float do stick esquerdo.
@@ -194,6 +203,20 @@ class UinputMouseDevice:
     # O daemon passa `config.poll_hz` nos callsites — nunca hardcodar 60 lá.
     poll_hz: int = DEFAULT_POLL_HZ
 
+    # OS TRÊS MAPAS VIRARAM ESTADO DO DEVICE — 01/09/2026,
+    # FEAT-ACOES-DE-BOTAO-01. Eles eram constantes de módulo lidas direto pelos
+    # três emissores, e por isso o perfil não tinha como trocar o que um botão
+    # faz: doze das vinte e uma linhas da tela ofereciam escolha que não ia a
+    # lugar nenhum.
+    #
+    # NASCEM IGUAIS ÀS CONSTANTES, e é isso que mantém o comportamento de hoje
+    # quando ninguém escolhe nada: `set_button_actions` é quem os troca, e o
+    # perfil sem `button_actions` nunca o chama.
+    _mapa_botoes: dict[str, str] = field(
+        default_factory=lambda: dict(BUTTON_TO_UINPUT))
+    _mapa_dpad: dict[str, str] = field(default_factory=lambda: dict(DPAD_TO_KEY))
+    _mapa_tap: dict[str, str] = field(default_factory=lambda: dict(EDGE_KEY_MAP))
+
     _device: Any = None
     _uinput_mod: Any = None
     _last_buttons_emulated: frozenset[str] = field(default_factory=frozenset)
@@ -257,9 +280,40 @@ class UinputMouseDevice:
                   scroll_speed: int | None = None) -> None:
         """Ajusta velocidades em runtime (sem recriar device)."""
         if mouse_speed is not None:
-            self.mouse_speed = max(1, min(12, int(mouse_speed)))
+            self.mouse_speed = max(MOUSE_SPEED_MIN, min(MOUSE_SPEED_MAX,
+                                                        int(mouse_speed)))
         if scroll_speed is not None:
-            self.scroll_speed = max(1, min(5, int(scroll_speed)))
+            self.scroll_speed = max(SCROLL_SPEED_MIN, min(SCROLL_SPEED_MAX,
+                                                          int(scroll_speed)))
+
+    def set_button_actions(self, do_mouse: dict[str, str] | None) -> None:
+        """Troca o que os botões fazem NESTE device. `None` volta ao de fábrica.
+
+        FEAT-ACOES-DE-BOTAO-01 (01/09/2026). `do_mouse` é a primeira sacola do
+        `core/acoes_de_botao.resolver()` — botão -> `BTN_*` —, e é o perfil que
+        a decide. Sem chamada, o device segue com os três mapas de fábrica, que
+        é o comportamento de sempre.
+
+        OS TRÊS MAPAS SÃO RECONSTRUÍDOS DO ZERO a cada chamada, e não remendados:
+        um `update()` deixaria vivo o botão que a escolha ANTERIOR tinha posto e
+        a nova tirou — o perfil trocaria de dono e o botão continuaria clicando.
+
+        UM BOTÃO ESTÁ EM UM MAPA SÓ. `BTN_*` é do mouse; `KEY_*` do d-pad e do
+        tap continuam vindo do padrão, porque quem os troca é o teclado virtual
+        (a segunda sacola do `resolver`), e não este device. Pôr a mesma tecla
+        nos dois faria o botão emitir duas vezes.
+        """
+        if do_mouse is None:
+            self._mapa_botoes = dict(BUTTON_TO_UINPUT)
+            self._mapa_dpad = dict(DPAD_TO_KEY)
+            self._mapa_tap = dict(EDGE_KEY_MAP)
+            return
+        self._mapa_botoes = dict(do_mouse)
+        # O QUE SAIU DO MOUSE SAI DOS OUTROS DOIS TAMBÉM. Um `dpad_up` que
+        # passou a ser `BTN_LEFT` não pode continuar emitindo `KEY_UP` pelo
+        # `_emit_dpad` — seriam duas coisas no mesmo aperto.
+        self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items() if b not in do_mouse}
+        self._mapa_tap = {b: k for b, k in EDGE_KEY_MAP.items() if b not in do_mouse}
 
     def dispatch(
         self,
@@ -296,7 +350,7 @@ class UinputMouseDevice:
         self._emit_move(lx, ly)
         self._emit_scroll(rx, ry, now)
         self._last_buttons_emulated = emulated
-        self._prev_edge_keys = frozenset(b for b in buttons if b in EDGE_KEY_MAP)
+        self._prev_edge_keys = frozenset(b for b in buttons if b in self._mapa_tap)
 
     def _resolve_emulated_set(
         self, buttons: frozenset[str], l2: int, r2: int
@@ -318,18 +372,18 @@ class UinputMouseDevice:
         """Edge-triggered press/release dos botões do mouse."""
         u = self._uinput_mod
         # Filtra só botões que mapeiam pra BTN_* (cross, triangle, r3)
-        relevant_now = {b for b in emulated if b in BUTTON_TO_UINPUT}
-        relevant_last = {b for b in self._last_buttons_emulated if b in BUTTON_TO_UINPUT}
+        relevant_now = {b for b in emulated if b in self._mapa_botoes}
+        relevant_last = {b for b in self._last_buttons_emulated if b in self._mapa_botoes}
 
         newly_pressed = relevant_now - relevant_last
         newly_released = relevant_last - relevant_now
 
         for name in newly_pressed:
-            ev = getattr(u, BUTTON_TO_UINPUT[name], None)
+            ev = getattr(u, self._mapa_botoes[name], None)
             if ev is not None:
                 self._device.emit(ev, 1, syn=False)
         for name in newly_released:
-            ev = getattr(u, BUTTON_TO_UINPUT[name], None)
+            ev = getattr(u, self._mapa_botoes[name], None)
             if ev is not None:
                 self._device.emit(ev, 0, syn=False)
 
@@ -339,18 +393,18 @@ class UinputMouseDevice:
     def _emit_dpad(self, buttons: frozenset[str]) -> None:
         """Edge-triggered D-pad → KEY_UP/DOWN/LEFT/RIGHT."""
         u = self._uinput_mod
-        dpad_now = {b for b in buttons if b in DPAD_TO_KEY}
-        dpad_last = {b for b in self._last_buttons_emulated if b in DPAD_TO_KEY}
+        dpad_now = {b for b in buttons if b in self._mapa_dpad}
+        dpad_last = {b for b in self._last_buttons_emulated if b in self._mapa_dpad}
 
         newly_pressed = dpad_now - dpad_last
         newly_released = dpad_last - dpad_now
 
         for name in newly_pressed:
-            ev = getattr(u, DPAD_TO_KEY[name], None)
+            ev = getattr(u, self._mapa_dpad[name], None)
             if ev is not None:
                 self._device.emit(ev, 1, syn=False)
         for name in newly_released:
-            ev = getattr(u, DPAD_TO_KEY[name], None)
+            ev = getattr(u, self._mapa_dpad[name], None)
             if ev is not None:
                 self._device.emit(ev, 0, syn=False)
 
@@ -365,14 +419,14 @@ class UinputMouseDevice:
         de subida gera nova emissão.
         """
         u = self._uinput_mod
-        edge_now = {b for b in buttons if b in EDGE_KEY_MAP}
+        edge_now = {b for b in buttons if b in self._mapa_tap}
         newly_pressed = edge_now - self._prev_edge_keys
 
         if not newly_pressed:
             return
 
         for name in newly_pressed:
-            ev = getattr(u, EDGE_KEY_MAP[name], None)
+            ev = getattr(u, self._mapa_tap[name], None)
             if ev is None:
                 continue
             self._device.emit(ev, 1, syn=False)
