@@ -561,7 +561,7 @@ def coluna(c):
     rot = (f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}'
            f' <span class="pt">•</span> {c["via"]}')
     return f'''        <div class="ctrl" data-controle="{c.get("uniq") or c["pref"]}"
-             data-conectado="{"sim" if c.get("conectado", True) else "nao"}">  # (noqa-acento)
+             data-conectado="{"sim" if c.get("conectado", True) else "nao"}">  # (noqa-acento) id
           <div>{_chip(c, rot)}</div>
 {esq}
 <!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de

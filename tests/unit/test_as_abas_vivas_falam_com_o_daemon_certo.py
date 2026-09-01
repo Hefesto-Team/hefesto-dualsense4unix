@@ -57,9 +57,9 @@ RAIZ = Path(__file__).resolve().parents[2]
 #: A PASTA MUDOU E ESTE ARQUIVO FICOU PARA TRÁS — corrigido em 31/08/2026.
 #: O commit `48b4e1a2` fez o produto ler de `layout/`; esta constante seguiu
 #: apontando para `novo-layout/`, que virou referência congelada. As duas cópias
-#: já divergiram 25 KB, então a régua media  (noqa-acento: verbo medir, imperfeito)
+#: já divergiram 25 KB, então a régua media  (noqa-acento: verbo medir, imperfeito) verbo medir
 #: um arquivo que o produto não abre.
-#: (noqa-acento: verbo medir, imperfeito — "a régua media", não "a média")
+#: (noqa-acento: verbo medir, imperfeito — "a régua media", não "a média") verbo medir
 #: O ESCAPE É POR LINHA: esta razão nasceu só na linha de baixo do achado, e
 #: por isso não o alcançava. A marca tem de estar NA linha da palavra.
 #: É a QUARTA migração pela metade achada hoje — depois do gancho da régua de

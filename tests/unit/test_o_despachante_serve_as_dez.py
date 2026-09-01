@@ -83,9 +83,23 @@ FALSO = {
 }
 
 
+#: A MESA TEM OUTRA FORMA QUE O CONTROLE, e confundi-las derruba os pacotes que
+#: delegam para a camada do produto. `mesa_viva.mesa_do_estado` devolve `pref`,
+#: `jogador`, `nome`, `via`, `cor`, `uniq` e `mascara`; o item de `controllers`
+#: devolve `player`, `transport`, `lightbar_rgb`… São vocabulários diferentes de
+#: propósito — um é o do desenho, o outro é o do daemon.
+#:
+#: Medido em 01/09/2026: passar o CONTROLE como mesa dava `KeyError: 'jogador'`
+#: dentro de `app/telas/vibracao.py`, e só na suíte completa — porque isolado o
+#: pacote ainda não delegava.
+MESA = [{"pref": "p1", "jogador": 1, "uniq": "aa:bb:cc:00:00:01",
+         "nome": "Régua", "via": "USB", "cor": "starlight-blue",
+         "mascara": "DualSense", "alvo": True}]
+
+
 def test_todo_pacote_declara_cobertura(pacotes_mod):
     ctx = pacotes_mod.Contexto(state={"active_profile": "x", "rumble_policy": "balanceado"},
-                               mesa=[FALSO], conectados=[FALSO], estados={})
+                               mesa=MESA, conectados=[FALSO], estados={})
     for aba in ABAS:
         if aba in SEM_PACOTE:
             assert pacotes_mod.pacote_da_pagina(aba, ctx) is None

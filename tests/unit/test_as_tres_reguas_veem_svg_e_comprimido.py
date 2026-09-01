@@ -94,7 +94,7 @@ def test_o_mesmo_conteudo_cru_continua_sendo_pego(tmp_path: Path) -> None:
 
 def test_gz_ilegivel_nao_derruba_a_varredura(tmp_path: Path) -> None:
     """Portão que morre no primeiro arquivo estranho é portão que se desliga."""
-    lixo = b"isto " + b"nao" + b" e gzip"  # cru de propósito (noqa-acento)
+    lixo = b"isto " + b"nao" + b" e gzip"  # cru de propósito (noqa-acento) valor do atributo
     repo = _repo(tmp_path, {"docs/quebrado.csv.gz": lixo})
     r = _rodar(repo)
     assert r.returncode == 0, (

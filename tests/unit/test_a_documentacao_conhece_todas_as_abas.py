@@ -5,7 +5,7 @@ nasce, entra na tira, é fotografada — e a documentação continua descrevendo
 outras. Em 22/08/2026, com a leva da aba Configurações inteira commitada, o
 `docs/usage/interface.md` ainda abria com *"a janela principal tem dez abas"* e
 o `README.md` ainda mostrava dez imagens. Nada reclamou, porque nada
-media.  (noqa-acento: verbo medir, imperfeito)
+media.  (noqa-acento: verbo medir, imperfeito) verbo medir
 
 **A LISTA DE ABAS É DERIVADA DO PRÓPRIO GLADE**, e essa é a decisão que faz o
 portão valer alguma coisa. Uma lista escrita à mão aqui envelheceria junto com a

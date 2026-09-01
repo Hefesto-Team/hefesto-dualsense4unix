@@ -65,7 +65,7 @@ def _exame() -> list[dict]:
                     "porque": str(getattr(it, "porque", "") or ""),
                     "estado": estado,
                     # `certo` é o único estado que não pede nada — os outros
-                    # (`ajustar`, `atencao`) são achados de verdade.  # (noqa-acento)
+                    # (`ajustar`, `atencao`) são achados de verdade.  # (noqa-acento) id
                     "grave": estado.lower() not in {"certo", ""},
                 })
         return itens
@@ -394,17 +394,17 @@ PISO_DA_ABA = 4
 PROVAS = [
     # O `index` da prova é 0 porque o controle de mentira é o único da lista —
     # e o `_indice` cai na posição quando o daemon não publicou `index`.
-    {"pagina": PAGINA, "gesto": "alvo", "clique": {},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "alvo", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["controller.target.set"], {"index": 0})]},
     # SEM `uniq` no clique de propósito: "todos" não tem sujeito, e a régua
     # prova que ele não passa a exigir um.
-    {"pagina": PAGINA, "gesto": "todos", "clique": {"uniq": "", "controle": ""},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "todos", "clique": {"uniq": "", "controle": ""},  # (noqa-acento) id
      "chama": [("chamar", ["controller.target.set"], {"index": None})]},
-    {"pagina": PAGINA, "gesto": "sala-altura", "clique": {"modo": "acima"},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "sala-altura", "clique": {"modo": "acima"},  # (noqa-acento) id
      "chama": [("machine_declare", [{"mesa": {"altura_da_antena": "acima"}}], {})]},
     # "Não sei" chega como `""` e tem de virar `None` — a string `"nao_sei"`
     # derrubaria o documento inteiro no pydantic.
-    {"pagina": PAGINA, "gesto": "sala-visada", "clique": {"modo": ""},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "sala-visada", "clique": {"modo": ""},  # (noqa-acento) id
      "chama": [("machine_declare", [{"mesa": {"linha_de_visada": None}}], {})]},
 ]
 

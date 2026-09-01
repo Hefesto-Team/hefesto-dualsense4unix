@@ -128,14 +128,24 @@ def pacote(ctx: Contexto) -> dict:
     # O SEPARADOR É O PONTO, e não o hífen: a página endereça
     # `editor.prioridade.dica`, e um `editor.prioridade-dica` cai no vazio. Os
     # 77 `data-hef` desta aba usam ponto do começo ao fim.
+    # O EDITOR TAMBÉM: sem perfil aberto, os campos vão a travessão em vez de
+    # ficar com o texto do desenho.
+    for chave in ("nome", "jogo", "estilo", "ambiente", "prioridade"):
+        fora.setdefault(f"editor.{chave}", "—")
+    fora.setdefault("editor.prioridade.n", "—")
+    fora.setdefault("editor.prioridade.dica", "")
     for chave, valor in editor.items():
         if not isinstance(valor, (dict, list)):
             fora[f"editor.{chave.replace('_', '.')}"] = valor
 
     # A GUARDA são os overrides por controle — o que cada um guarda de próprio
     # neste perfil. O produto já a monta; a tela a distribui por linha.
+    # AS CHAVES SAEM MESMO VAZIAS, e é o que faz a tela APAGAR a lista do
+    # mockup quando não há perfil. Emiti-las só quando há conteúdo deixaria os
+    # catorze nomes do desenho na tela de quem não tem perfil nenhum — a mesma
+    # mentira dos lugares vazios da mesa, que já custou sete reincidências.
     guarda = bruto.get("guarda") or []
-    if isinstance(guarda, list) and guarda:
+    if isinstance(guarda, list):
         fora["guarda.nome"] = [g.get("nome", "") for g in guarda]
         fora["guarda.id"] = [g.get("id", "") for g in guarda]
         fora["guarda.secao"] = [s for g in guarda for s in (g.get("secoes") or [])]
@@ -292,7 +302,7 @@ PISO_DA_ABA = 3
 #: provado por medição própria, com uma pasta de perfis de verdade num diretório
 #: temporário; o relato desta leva traz o número.
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "ativar", "clique": {"texto": "Ação"},  # (noqa-acento)
+    {"pagina": PAGINA, "gesto": "ativar", "clique": {"texto": "Ação"},  # (noqa-acento) id
      "chama": [("profile_switch", ["Ação"], {})]},
 ]
 

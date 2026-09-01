@@ -109,7 +109,6 @@ SEM_RAZAO_PINADOS: dict[str, int] = {
     "tests/unit/test_hidraw_broker_open_fd.py": 1,
     "tests/unit/test_ipc_server.py": 1,
     "tests/unit/test_modo01_o_modo_jogo_liga_sozinho.py": 1,
-    "tests/unit/test_o_estado_bom_nao_e_o_estado_vazio.py": 1,
     "tests/unit/test_o_gesto_da_ponte_e_universal.py": 2,
     "tests/unit/test_o_preset_nao_escolhe_a_mascara.py": 2,
     "tests/unit/test_profile_manager.py": 2,
