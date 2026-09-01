@@ -21,8 +21,8 @@ import csv
 import pathlib
 import sys
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
-import medidas  # noqa: E402
 import onde  # noqa: E402
+import monta as monta_  # noqa: E402
 from monta import CONECTADOS  # noqa: E402
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -692,8 +692,8 @@ LEGENDA = f'''<div class="nota">
 #: `medidas.py` nasceu para matar.
 CSS_DAS_MEDIDAS = f"""
   .vib{{
-    --larg-rot:{medidas.larg_rotulos('05-vibracao')}px;
-    --gap-col:{medidas.GAP_DAS_COLUNAS}px;
+    --larg-rot:{monta_.larg_rotulos('05-vibracao')}px;
+    --gap-col:{monta_.GAP_DAS_COLUNAS}px;
   }}
 """
 

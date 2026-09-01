@@ -1,6 +1,5 @@
 import sys, pathlib, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde
-import medidas
 import monta as monta_
 from itertools import cycle
 from monta import (monta, svg, glifo, CSS_GLIFO, CSS_LUZINHAS, MESA,
@@ -908,8 +907,8 @@ def _conferir(doc):
 #: `medidas.py` nasceu para matar.
 CSS_DAS_MEDIDAS = f"""
   .luz-grade{{
-    --larg-rot:{medidas.larg_rotulos('04-iluminacao')}px;
-    --gap-col:{medidas.GAP_DAS_COLUNAS}px;
+    --larg-rot:{monta_.larg_rotulos('04-iluminacao')}px;
+    --gap-col:{monta_.GAP_DAS_COLUNAS}px;
   }}
 """
 
