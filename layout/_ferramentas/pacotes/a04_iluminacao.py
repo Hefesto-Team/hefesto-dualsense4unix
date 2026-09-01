@@ -250,3 +250,22 @@ def player(ctx: Contexto, o: dict, p) -> None:
 #: inventado aparece aqui, e não na mão de quem clica.
 PONTE = {"led_set", "identity_number_set", "chamar"}
 METODOS = {"lightbar.reset"}
+
+
+#: O QUE ESTA ABA DECLARA À RÉGUA — o piso e as provas moram AQUI, e não no
+#: teste, para que ligar uma aba não exija editar um arquivo que oito pessoas
+#: editariam ao mesmo tempo.
+PAGINA = "04-iluminacao.html"
+PISO_DA_ABA = 4
+PROVAS = [
+    {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},
+     "chama": [("led_set", [(255, 128, 0)], {"uniq": "aa:bb:cc:00:00:01"})]},
+    {"pagina": PAGINA, "gesto": "apagar", "clique": {},
+     "chama": [("led_set", [(0, 0, 0)], {"uniq": "aa:bb:cc:00:00:01"})]},
+    # DUAS chamadas, e a ordem importa: largar o claim e SÓ ENTÃO pintar.
+    {"pagina": PAGINA, "gesto": "auto", "clique": {},
+     "chama": [("chamar", ["lightbar.reset"], {"uniq": "aa:bb:cc:00:00:01"}),
+               ("led_set", [(0, 0, 255)], {"uniq": "aa:bb:cc:00:00:01"})]},
+    {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},
+     "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {})]},
+]
