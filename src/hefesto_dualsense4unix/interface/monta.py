@@ -147,7 +147,13 @@ ABAS = [("Jogar","01-jogar"),("Controles","02-controles"),("Gatilhos","03-gatilh
 # mockups só usam os jogadores 1 e 2. A cura não é corrigir o literal: é DEIXAR
 # DE TER UM. A tabela agora vem do produto, e diverge no dia em que o produto
 # divergir — que é o único jeito de ela não mentir de novo.
-sys.path.insert(0, str(R / "src"))
+# O `src/` É DA RAIZ DO REPOSITÓRIO, não desta pasta. Era `R / "src"` — que
+# apontava para `interface/src`, inexistente — desde que este módulo se mudou
+# para dentro do pacote em 01/09/2026. O import abaixo só continuava
+# funcionando porque o `.envrc-voo` já punha `src/` no `PYTHONPATH`: a
+# quebra estava calada, à espera de quem rodasse um gerador sem ele.
+# Instalado por `pip` não há repositório, e aí o pacote já está importável.
+sys.path.insert(0, str(RAIZ_DO_REPO / "src"))
 from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
     player_led_pattern,
 )
@@ -157,7 +163,15 @@ PADRAO_JOGADOR = {
     for n in range(1, 9)
 }
 
-GLIFOS = R / "assets/glyphs"
+#: AS 54 PEÇAS DE GLIFO, e elas moram na RAIZ do repositório — não ao lado da
+#: logo. `R / "assets/glyphs"` (a pasta deste módulo) não existe, e foi o que
+#: derrubou os geradores 08 e 09 com `FileNotFoundError` depois da mudança
+#: para dentro do pacote.
+#:
+#: ELAS NÃO PRECISAM ENTRAR NO WHEEL: o glifo é INLINE no HTML gerado, então
+#: quem instala por `pip` recebe o desenho dentro da página. Esta pasta é de
+#: quem GERA, e gerar exige o repositório.
+GLIFOS = RAIZ_DO_REPO / "assets/glyphs"
 
 # O NOME DE CADA PEÇA, EM PORTUGUÊS — e ele é LIDO, não digitado.
 #

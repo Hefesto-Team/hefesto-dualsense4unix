@@ -112,7 +112,7 @@ INVISIVEIS = re.compile(
     # dois. O que NÃO pode é um deles ficar de fora daqui e o portão acusar
     # divergência de desenho onde só há endereço.
     r'|data-hef-gesto|data-hef|data-ajuste|data-player'
-        r'|data-hex|data-v|data-hef-alvo'
+        r'|data-hex|data-v|data-hef-alvo|data-hef-rolar'
     r')="[^"]*"'
 )
 

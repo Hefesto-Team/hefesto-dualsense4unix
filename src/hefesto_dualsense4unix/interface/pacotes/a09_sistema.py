@@ -57,9 +57,18 @@ def _leitura(ctx: Contexto):
 
     perfil._com_o_src()
 
+    # A UNIT NÃO SE DIGITA — ela tem dono, e digitá-la já mentiu. Medido em
+    # 01/09/2026: esta linha trazia a literal `hefesto-dev-dualsense4unix.service`,
+    # sobrevivente da purga do `-dev`. A unit com esse nome NÃO EXISTE mais;
+    # `systemctl --user is-enabled` devolvia `not-found` enquanto a verdade da
+    # máquina dela era `enabled`. A linha "Ligar junto com o computador" da aba
+    # Sistema afirmava o contrário do que estava valendo, e nenhuma régua via —
+    # porque o valor lido era um `str` plausível, não um erro.
+    from hefesto_dualsense4unix.utils import identidade
+
     try:
         auto = subprocess.run(
-            ["systemctl", "--user", "is-enabled", "hefesto-dev-dualsense4unix.service"],
+            ["systemctl", "--user", "is-enabled", identidade.atual().unit_daemon],
             capture_output=True, text=True, timeout=3).stdout.strip()
     except Exception:
         auto = None
@@ -239,7 +248,90 @@ def perfil_da_mesa(ctx: Contexto, o: dict, p) -> None:
         raise RuntimeError(motivo or "não consegui gravar o perfil da mesa")
 
 
-#: OS OITO QUE NÃO SÃO IPC, e por isso não estão aqui. Medidos no fonte em
+#: O ENDEREÇO DO PAINEL DE REGISTRO, e ele é o mesmo do gerador
+#: (`aba09.py`, `_id("registro-texto")`). Escrito UMA vez aqui porque dois
+#: gestos o usam; digitá-lo duas vezes seria a segunda cópia de um fato.
+REGISTRO = "registro-texto"
+
+
+@gesto("09-sistema.html", "ver-plugins")
+def ver_plugins(ctx: Contexto, o: dict, p) -> dict:
+    """Relê os plugins do disco e ESCREVE a lista no painel de registro.
+
+    O daemon atende os dois métodos desde sempre (`ipc_server.py:184-185`); o
+    que faltava era o caminho de volta, e ele nasceu em 01/09/2026 — um gesto
+    pode devolver a mesma carga que a pintura consome, e o piloto a escreve.
+
+    A ORDEM É RELER E DEPOIS LISTAR, e não o contrário: o botão promete *"Lista
+    os plugins do daemon e relê"*, e listar antes de reler mostraria o estado
+    VELHO — quem clicou depois de mexer num plugin leria a lista de antes e
+    concluiria que o arquivo dele não foi visto.
+
+    QUANDO NÃO HÁ PLUGINS a página diz isso com todas as letras, e diz o
+    porquê: `_handle_plugin_list` devolve `[]` tanto quando o subsistema está
+    desligado quanto quando ele está ligado e vazio. Um "Nenhum plugin" seco
+    faria as duas situações parecerem a mesma.
+    """
+    releu = p.chamar("plugin.reload")
+    lista = p.resultado("plugin.list")
+    itens = lista if isinstance(lista, list) else []
+    if not itens:
+        motivo = ("os plugins estão ligados e não há nenhum no diretório"
+                  if releu else "os plugins não estão habilitados neste daemon")
+        return {"mesa": {REGISTRO: f"Nenhum plugin carregado — {motivo}."}}
+    linhas = [f"{len(itens)} plugin(s) carregado(s)" + ("" if releu else " · a releitura falhou")]
+    for it in itens:
+        d = it if isinstance(it, dict) else {}
+        nome = str(d.get("name") or d.get("nome") or "?")
+        estado = "desligado" if d.get("disabled") else "ligado"
+        casa = str(d.get("profile_match") or "todos os perfis")
+        linhas.append(f"  {nome} · {estado} · {casa}")
+    return {"mesa": {REGISTRO: "\n".join(linhas)}}
+
+
+@gesto("09-sistema.html", "ver-detalhes")
+def ver_detalhes(ctx: Contexto, o: dict, p) -> dict:
+    """As últimas 80 linhas do registro técnico, no painel ao lado.
+
+    NÃO É IPC, E NÃO PRECISA SER: o daemon não tem método de log, mas o registro
+    dele é o journal da unit do USUÁRIO — `journalctl --user` o lê sem sudo e
+    sem helper privilegiado. A nota que dizia *"ligá-lo da tela exige o helper
+    privilegiado"* estava errada e saiu; medido em 01/09/2026 nesta máquina.
+
+    A UNIT NÃO SE DIGITA. Ela vem de `utils/identidade`, pelo mesmo motivo que a
+    leitura do autostart passou a vir: a literal do `-dev` sobreviveu à purga
+    num lugar e fez a tela afirmar `not-found` sobre uma unit `enabled`.
+    """
+    import subprocess
+
+    from hefesto_dualsense4unix.utils import identidade
+
+    unidade = identidade.atual().unit_daemon
+    try:
+        saida = subprocess.run(
+            # `--output cat` É A LINHA DO DAEMON, e nada mais. O padrão
+            # (`short-precise`) prefixa cada linha com data, host e
+            # `unidade[pid]:` — 62 colunas antes da primeira letra da mensagem.
+            # Fotografado em 01/09/2026: no painel de 110px o prefixo ocupava a
+            # largura inteira e a mensagem saía pela direita, fora da vista.
+            # E ele seria um SEGUNDO carimbo de tempo: o daemon já escreve o
+            # dele (`2026-09-01T15:34:02.460365 [info ] …`), que é o que a
+            # pessoa precisa para casar a linha com o que ela fez.
+            ["journalctl", "--user", "-u", unidade, "-n", "80",
+             "--no-pager", "--output", "cat"],
+            capture_output=True, text=True, timeout=8)
+    except Exception as erro:  # a frase de tela precisa do motivo, e ele vem do erro
+        return {"mesa": {REGISTRO: f"Não consegui ler o registro de {unidade}: {erro}"}}
+    texto = (saida.stdout or "").strip()
+    if not texto:
+        # O `stderr` É A FRASE, e não um "sem linhas" nosso: `journalctl` diz
+        # por que não deu — unit inexistente, sem permissão, journal vazio — e
+        # inventar um texto aqui apagaria a única pista de quem clicou.
+        texto = (saida.stderr or "").strip() or f"O registro de {unidade} está vazio."
+    return {"mesa": {REGISTRO: texto}}
+
+
+#: OS SETE QUE NÃO SÃO IPC, e por isso não estão aqui. Medidos no fonte em
 #: 01/09/2026, um a um — a linha de cada um está no relato da leva:
 #:
 #:   `reiniciar`            `systemctl --user restart` (daemon_actions.py:2277)
@@ -249,23 +341,19 @@ def perfil_da_mesa(ctx: Contexto, o: dict, p) -> None:
 #:   `refazer-proton`       diálogo GTK + `config.vdf` da Steam (…:1793)
 #:   `procurar-camadas`     censo do `system.reg` em disco (emulation_actions.py:2075)
 #:   `restaurar-de-fabrica` cópia do asset + `DraftConfig` (footer_actions.py:1477)
-#:   `ver-detalhes`         `journalctl --user -n 80` (daemon_actions.py:2767)
 #:
-#: `ver-detalhes` É O OITAVO, e ele estava fora desta lista. Ligá-lo da tela
-#: exige o helper privilegiado ou um método de log que o daemon não tem.
-#:
-#: E `ver-plugins` É DE OUTRA ESPÉCIE — o daemon ATENDE (`plugin.list` e
-#: `plugin.reload`, `ipc_server.py:184-185`). O que falta é o caminho de VOLTA:
-#: o gesto do piloto devolve `None` (`hefesto_vivo.py:_gesto`), e não há por
-#: onde escrever a lista na página. Um gesto que chamasse `plugin.list` e
-#: jogasse o resultado fora seria o botão "Ver os plugins carregados" que não
-#: mostra plugin nenhum — o botão que responde calado, exatamente.
-PONTE = {"chamar", "machine_declare"}
-METODOS = {"daemon.resume", "daemon.reload", "machine.declare"}
+#: ERAM OITO. `ver-detalhes` saiu desta lista em 01/09/2026, e a nota que o
+#: mantinha aqui estava errada: ela dizia que ligá-lo *"exige o helper
+#: privilegiado ou um método de log que o daemon não tem"*. O registro do daemon
+#: é o journal de uma unit do USUÁRIO — `journalctl --user` o lê sem sudo.
+#: `ver-plugins` saiu junto, pelo caminho de volta que nasceu no mesmo dia.
+PONTE = {"chamar", "machine_declare", "resultado"}
+METODOS = {"daemon.resume", "daemon.reload", "machine.declare",
+           "plugin.reload", "plugin.list"}
 
 
 PAGINA = "09-sistema.html"
-PISO_DA_ABA = 3
+PISO_DA_ABA = 5
 PROVAS = [
     {"pagina": PAGINA, "gesto": "retomar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["daemon.resume"], {})]},
@@ -284,6 +372,12 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "eu_escolho"},  # (noqa-acento) id
      "chama": [("machine_declare",
                 [{"orcamento": {"teto": _teto_do_perfil("eu_escolho")}}], {})]},
+    # RELER E DEPOIS LISTAR, nesta ordem — e a ordem é o que a prova cobra.
+    # Listar antes de reler mostraria o estado velho, e quem clicou depois de
+    # mexer num plugin leria a lista de antes.
+    {"pagina": PAGINA, "gesto": "ver-plugins", "clique": {},  # (noqa-acento) id
+     "chama": [("chamar", ["plugin.reload"], {}),
+               ("resultado", ["plugin.list"], {})]},
 ]
 
 #: OS TRÊS CUJO EFEITO O `state_full` NÃO MOSTRA, e cada um por um motivo:
@@ -295,4 +389,9 @@ PROVAS = [
 #:                   Ele TEM eco — provado em 01/09: com `paused=True`, o clique
 #:                   o levou a `False`. A régua o clica sem pausar antes, e é
 #:                   por isso que ele entra aqui.
-SEM_ECO = ("atualizar", "perfil-da-mesa", "retomar")
+#:
+#: OS DOIS QUE MOSTRAM entram aqui por outra razão, e ela é de espécie: eles não
+#: MUDAM o daemon, LEEM. `state_full` não teria o que ecoar mesmo que tudo
+#: funcionasse — o efeito deles é a tela, e quem os mede é
+#: `test_o_gesto_devolve_para_a_tela.py`.
+SEM_ECO = ("atualizar", "perfil-da-mesa", "retomar", "ver-plugins", "ver-detalhes")

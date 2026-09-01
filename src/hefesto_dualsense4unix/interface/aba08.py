@@ -21,7 +21,13 @@ from monta import (MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, cor_da_zona, glifo,  
 # uma cópia noutro diretório. É o mesmo estrago de 25/08, quando o mockup que
 # ela ia abrir sumiu do disco na frente dela — e é o que impediria qualquer
 # segunda árvore de trabalhar sem tocar na primeira.
-R = pathlib.Path(__file__).resolve().parents[2]
+# A RAIZ TEM DONO, e é o `onde.py`. Ela era `parents[2]` aqui — o que dava
+# a pasta `src/` depois que a interface se mudou para dentro dela em
+# 01/09/2026, e fazia toda leitura de fonte procurar em `src/src/…`. Os
+# geradores 08 e 09 pararam de RODAR por isso, calados até alguém tentar:
+# `FileNotFoundError: .../src/src/hefesto_dualsense4unix/app/actions/...`.
+# O contador de níveis é o defeito que o `onde.py` existe para não repetir.
+from onde import RAIZ as R  # noqa: E402
 
 # `monta` já pôs `src/` no caminho — é de lá que ele traz o padrão das lâmpadas.
 from hefesto_dualsense4unix.utils.color_contrast import razao_contraste  # noqa: E402

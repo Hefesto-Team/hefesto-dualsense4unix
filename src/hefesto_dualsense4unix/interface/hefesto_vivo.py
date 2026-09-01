@@ -113,7 +113,18 @@ BOOTSTRAP = r"""
       return 0;
     }
     if(alvo === 'valor'){ if(el.value !== t){ el.value = t; return 1; } return 0; }
-    if(el.textContent !== t){ el.textContent = t; return 1; }
+    if(el.textContent !== t){
+      el.textContent = t;
+      // O PAINEL QUE MOSTRA O FIM. Um registro tem ordem: o que acabou de
+      // acontecer é a última linha, e um painel de seis linhas que abre nas
+      // seis PRIMEIRAS de oitenta mostra o mais velho — inútil para quem
+      // clicou "Ver detalhes" agora. Fotografado em 01/09/2026.
+      //
+      // É UM ATRIBUTO, e não uma regra geral por altura: rolar todo elemento
+      // que transborde mexeria em painéis onde o começo é o que importa.
+      if(el.dataset.hefRolar === 'fim'){ el.scrollTop = el.scrollHeight; }
+      return 1;
+    }
     return 0;
   }
   // OS TRÊS VOCABULÁRIOS DE ENDEREÇO, e nenhum se aposenta. Medido em
@@ -520,7 +531,7 @@ class Piloto:
         # clicou concluiria que o app travou.
         def trabalhar() -> None:
             try:
-                acao(self._ctx_de_agora, o, ponte)
+                resposta = acao(self._ctx_de_agora, o, ponte)
             except Exception as erro:
                 # O `erro` é AMARRADO no argumento do lambda, e não capturado
                 # do escopo: o `except ... as` do Python apaga o nome ao sair do
@@ -530,12 +541,34 @@ class Piloto:
                 GLib.idle_add(lambda x=erro: (print(f"[gesto falhou] {pagina} · {nome}: {x}",
                                                     file=sys.stderr), False)[1])
                 return
-            GLib.idle_add(lambda: (self._deu_certo(pagina, nome), False)[1])
+            GLib.idle_add(lambda r=resposta: (self._deu_certo(pagina, nome, r), False)[1])
 
         threading.Thread(target=trabalhar, daemon=True).start()
 
-    def _deu_certo(self, pagina: str, nome: str) -> None:
+    def _deu_certo(self, pagina: str, nome: str, resposta: object = None) -> None:
+        """O gesto voltou. Se ele TROUXE ALGO, o que trouxe vai para a tela.
+
+        O CAMINHO DE VOLTA, e por que ele precisou existir (01/09/2026): o gesto
+        devolvia `None` e não havia por onde escrever um resultado na página.
+        Isso deixou sem dono os botões cuja promessa é MOSTRAR — "Ver os
+        plugins carregados" e "Ver detalhes" da aba Sistema. O daemon atende
+        `plugin.list` desde sempre; o que faltava era o retorno. Um gesto que
+        chamasse `plugin.list` e jogasse a lista fora seria o botão que responde
+        calado — o defeito que esta casa tem nome para.
+
+        A CARGA É A MESMA DA PINTURA, de propósito: `{"mesa": {...}}`,
+        `{"colunas": {...}}`. Nenhum segundo vocabulário nasce aqui, e um gesto
+        que devolve endereço escreve no mesmo lugar em que a pintura escreveria
+        — logo o tique seguinte não briga com ele, sobrescreve com o valor vivo.
+        """
         self.aplicados.append(f"{pagina}:{nome}")
+        if isinstance(resposta, dict) and resposta:
+            # A GUARDA `window.__hef &&` é a mesma da pintura, e pela mesma
+            # razão: entre o clique e a volta da thread a página pode ter
+            # trocado, e o `__hef` morre com o documento.
+            self._js(f"window.__hef && window.__hef.pintar({_json(resposta)})")
+            print(f"[gesto] {pagina} · {nome} → aplicado, e a resposta foi para a tela")
+            return
         print(f"[gesto] {pagina} · {nome} → aplicado")
 
     # O `_ipc` CRU MORREU em 01/09/2026. Ele abria o socket à mão e montava o
@@ -742,9 +775,24 @@ class Piloto:
         pausado. `desligar`, `restaurar-de-fabrica` e `refazer-proton` NÃO
         entram — uma régua não mexe na máquina dela para provar que sabe clicar.
         """
+        # O PRIMEIRO CLIQUE ESPERAVA UM RELÓGIO, e o relógio estava errado.
+        # Medido em 01/09/2026: com `--prova-clique "ver-plugins,ver-detalhes"`
+        # só o SEGUNDO saía no relato; sozinho, cada um saía. Aos 600 ms o
+        # `BOOTSTRAP` ainda não instalou nesta página, e o `el.click()` acha o
+        # botão mas não há ouvinte para responder — o clique some, calado.
+        #
+        # A cura não é aumentar o número: é PERGUNTAR se a página está pronta.
+        # Um prazo maior continuaria sendo uma aposta sobre a máquina de quem
+        # roda, e a régua voltaria a perder o primeiro gesto na primeira máquina
+        # mais lenta que esta.
+        def clicar(g: str) -> bool:
+            if not self.pronto:
+                return True  # ainda não; o GLib chama de novo no próximo tique
+            self._js(SELETOR % (g, g, g, g))
+            return False
+
         for i, gesto in enumerate(self.args.prova_clique.split(",")):
-            GLib.timeout_add(600 + i * 900, lambda g=gesto: (self._js(SELETOR % (g, g, g, g)),
-                                                             False)[1])
+            GLib.timeout_add(600 + i * 900, lambda g=gesto: clicar(g))
 
     def _js(self, script: str) -> None:
         self.ponte.rodar(script)
