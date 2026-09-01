@@ -23,29 +23,49 @@ from . import Contexto, perfil, registrar
 SEM_DONO: dict[str, str] = {}
 
 
+#: COMO A TELA CHAMA O QUE O PERFIL GUARDA — `match.type` no disco, uma frase
+#: na coluna "Quando usar". A tradução mora aqui e não no JS: é vocabulário do
+#: produto, e o desenho dela já fixou as palavras.
+QUANDO = {"criteria": "Jogo", "any": "Todos — quando nenhum casa",
+          "manual": "Só quando eu escolher"}
+
+
 @registrar("10-perfis.html")
 def pacote(ctx: Contexto) -> dict:
+    """A tabela de perfis e o editor, com os nomes que a página tem.
+
+    ESTA ABA ENDEREÇA POR `data-hef`, e são SETENTA E SETE — `perfis.conta`,
+    `perfis.linha.nome`, `editor.prioridade`. É o vocabulário do
+    `perfis_vivos.py`, o piloto próprio dela, e ele continua valendo: o piloto
+    único aceita os três vocabulários das dez páginas em vez de renomear 105
+    endereços e quebrar cinco pilotos vivos.
+
+    AS TRÊS COLUNAS SÃO LISTAS, e a tela as distribui pelos catorze blocos de
+    mesmo endereço, na ordem. Sem isso o pacote teria de emitir
+    `perfis.linha.nome-0`, `-1`… e o gerador teria de saber de antemão quantos
+    perfis ela tem — que hoje são 33 no disco e catorze no desenho.
+    """
     st = ctx.state
     ativo = str(st.get("active_profile") or "")
-    todos = perfil.lista()
+    todos = sorted(perfil.lista(), key=lambda x: (-x["prioridade"], x["nome"]))
     aberto = perfil.ativo(ativo)
     return {
+        "perfis.conta": f"{len(todos)} perfis",
+        "perfis.linha.nome": [p["nome"] for p in todos],
+        "perfis.linha.prioridade": [p["prioridade"] for p in todos],
+        "perfis.linha.quando": [QUANDO.get(p["casamento"], p["casamento"]) for p in todos],
+        "editor.nome": aberto.get("name") or ativo or "—",
+        "editor.prioridade": aberto.get("priority"),
+        "editor.prioridade.n": aberto.get("priority"),
         "ativo": ativo or "—",
         "travado": bool(st.get("autoswitch_locked")),
         "jogo": st.get("jogo_steam") or "",
-        # A LISTA INTEIRA, ordenada como a tela mostra: prioridade primeiro,
-        # que é a ordem em que o produto resolve o casamento.
-        "lista": sorted(todos, key=lambda x: (-x["prioridade"], x["nome"])),
         "quantos": len(todos),
-        # O QUE O PERFIL ABERTO GUARDA — é o que o editor da aba mostra.
         "editor": {
-            "gatilhos": bool(aberto.get("triggers")),
-            "leds": bool(aberto.get("leds")),
-            "rumble": bool(aberto.get("rumble")),
-            "mouse": bool(aberto.get("mouse")),
-            "prioridade": aberto.get("priority"),
+            "gatilhos": bool(aberto.get("triggers")), "leds": bool(aberto.get("leds")),
+            "rumble": bool(aberto.get("rumble")), "mouse": bool(aberto.get("mouse")),
             "casamento": (aberto.get("match") or {}).get("type", ""),
         } if aberto else {},
         "sem_dono": {},
-        "cobertura": {"pintados": 5 + len(todos), "sem_dono": len(SEM_DONO)},
+        "cobertura": {"pintados": 7 + len(todos) * 3, "sem_dono": len(SEM_DONO)},
     }

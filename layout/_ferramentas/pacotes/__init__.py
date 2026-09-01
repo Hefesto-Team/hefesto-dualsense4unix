@@ -188,7 +188,14 @@ def normalizar(pacote: dict, para_pref: dict[str, str] | None = None) -> dict:
     for chave, valor in pacote.items():
         if chave in NAO_SAO_VALOR or chave in POR_CONTROLE or chave == "mesa":
             continue
-        if isinstance(valor, (dict, list)):
+        # UMA LISTA DE ESCALARES PASSA: a tela a distribui por N blocos iguais
+        # (os achados do exame, os perfis). Uma lista de dicionários não — ela
+        # é estrutura, e escrever `[object Object]` numa caixa é pior que nada.
+        if isinstance(valor, list):
+            if valor and all(not isinstance(x, (dict, list)) for x in valor):
+                mesa.setdefault(chave, valor)
+            continue
+        if isinstance(valor, dict):
             continue
         mesa.setdefault(chave, valor)
     return {"mesa": mesa, "colunas": colunas}

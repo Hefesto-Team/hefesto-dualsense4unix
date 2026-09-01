@@ -573,12 +573,18 @@ def est(rot, val, cls="", g="●", mono=False, dica="", ident="", inteiro=None):
     """
     t = f' title="{dica}"' if dica else ""
     i = f' data-id="{ident}"' if ident else ""
+    #: O SEGUNDO ENDEREÇO, e ele é do VALOR. O `data-id` acima endereça a
+    #: LINHA — para quem precisa do glifo e da classe do selo junto. Quem só
+    #: quer escrever o texto do valor precisa dele aqui: sem isto a aba Sistema
+    #: emitia oito valores e a página não tinha um lugar onde pô-los, e a
+    #: pintura escrevia zero sem uma linha de erro. Medido em 01/09/2026.
+    c = f' data-campo="{ident}"' if ident else ""
     return (f'''            <div class="est {cls}{' vm' if mono else ''}"{t}{i}>'''
             f'''<span class="g">{g}</span><span class="rot">{rot}</span>'''
             # o `title` no VALOR, e não na linha: se ele couber, o hover não
             # aparece atrapalhando; se ele cortar, é ali que a pessoa passa o
             # mouse para ler o resto.
-            f'''<span class="val" title="{inteiro or val}">{val}</span></div>''')
+            f'''<span class="val"{c} title="{inteiro or val}">{val}</span></div>''')
 
 
 def saude(selo, g, txt, dica, glifos=()):

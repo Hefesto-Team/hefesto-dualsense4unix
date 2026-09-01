@@ -81,7 +81,10 @@ def pacote(ctx: Contexto) -> dict:
             "brilho-pct": None if b is None else round(float(b) * 100),
             "hex": _hex(rgb),
             "rgb": list(rgb[:3]) if len(rgb) >= 3 else [],
-            "acesa": bool(c.get("lightbar_on", True)),
+            # `aceso`, e não `acesa`: é o `data-campo` que a página tem. Uma
+            # letra separava o valor do lugar onde ele cabia.
+            "aceso": "Aceso" if c.get("lightbar_on", True) else "Apagado",
+            "identidade": f"P{c.get('player') or '—'}",
             "player": c.get("player"),
             "fonte": c.get("lightbar_source") or "",
             # O RECADO SÓ APARECE QUANDO A DISPUTA EXISTE. Um aviso permanente

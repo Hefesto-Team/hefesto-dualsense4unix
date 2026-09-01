@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O CASAMENTO: o que o pacote emite × o que a página tem onde pintar.
+"""O CASAMENTO: o que o pacote emite contra o que a página tem onde pintar.
 
 POR QUE ISTO EXISTE, e é o instrumento que faltava em 01/09/2026: o piloto único
 abriu a aba Jogar com um pacote de cinco valores e pintou **UM**. Nada acusou —
@@ -37,7 +37,10 @@ for _p in (str(AQUI), str(RAIZ / "src")):
 import onde  # noqa: E402
 import pacotes  # noqa: E402
 
-CAMPO = re.compile(r'data-campo="([^"]+)"')
+#: OS TRÊS VOCABULÁRIOS. `data-campo` nas oito abas novas, `data-papel` só na
+#: Vibração (28) e `data-hef` só na Perfis (77) — cada um nasceu com o piloto
+#: da sua aba. O piloto único aceita os três, e esta régua conta os três.
+CAMPO = re.compile(r'data-(?:campo|papel|hef)="([^"]+)"')
 CONTROLE = re.compile(r'data-controle="([^"]+)"')
 
 #: Um controle de mentira com a forma do que o daemon devolve. MAC da faixa
@@ -67,6 +70,12 @@ def do_html(pagina: str) -> tuple[set[str], set[str]]:
     return set(CAMPO.findall(doc)), set(CONTROLE.findall(doc))
 
 
+#: O estado que a régua usa. Um teste que monte um perfil de mentira o troca —
+#: sem perfil o pacote da Gatilhos emite `Desligado` e o da Perfis lista zero,
+#: e o piso cairia por falta de DADO, não por regressão.
+ESTADO_DA_REGUA = {"active_profile": "acao", "rumble_policy": "balanceado"}
+
+
 def do_pacote(pagina: str, estado: dict | None = None) -> tuple[set[str], set[str]]:
     """As chaves que o pacote emite: as da mesa e as por controle.
 
@@ -75,7 +84,7 @@ def do_pacote(pagina: str, estado: dict | None = None) -> tuple[set[str], set[st
     estar certo.
     """
     ctx = pacotes.Contexto(
-        state=estado or {"active_profile": "acao", "rumble_policy": "balanceado"},
+        state=estado or ESTADO_DA_REGUA,
         mesa=MESA_FALSA, conectados=[FALSO], estados={})
     bruto = pacotes.pacote_da_pagina(pagina, ctx)
     if bruto is None:

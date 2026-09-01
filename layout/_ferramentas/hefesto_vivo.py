@@ -109,19 +109,51 @@ BOOTSTRAP = r"""
     if(el.textContent !== t){ el.textContent = t; return 1; }
     return 0;
   }
+  // OS TRÊS VOCABULÁRIOS DE ENDEREÇO, e nenhum se aposenta. Medido em
+  // 01/09/2026, nas dez páginas publicadas:
+  //
+  //     data-campo   oito abas          o mais novo, e o do piloto único
+  //     data-papel   só a Vibração (28) um PAR com `data-lado`
+  //     data-hef     só a Perfis (77)   nomes com ponto: `perfis.linha.nome`
+  //
+  // Cada um nasceu com o piloto da sua aba, e os pilotos ainda os usam. Trocar
+  // tudo por um só renomearia 105 endereços e quebraria cinco pilotos vivos
+  // para ganhar consistência de nome — o piloto único aceita os três, que é o
+  // que custa uma linha aqui.
+  function achar(raiz, chave){
+    const esc = chave.replace(/"/g, '\\"');
+    return raiz.querySelectorAll(
+      '[data-campo="' + esc + '"],[data-papel="' + esc + '"],[data-hef="' + esc + '"]');
+  }
   window.__hef.pintar = function(p){
     let n = 0;
+    // A FITA SE TROCA INTEIRA, e não campo a campo: o número de chips muda com
+    // a mesa, e não há endereço para um chip que ainda não existe.
+    if(p.fita){
+      const f = document.querySelector('.fita');
+      if(f && f.outerHTML !== p.fita){ f.outerHTML = p.fita; n += 1; }
+    }
     // 1. OS CAMPOS DA MESA — soltos no documento, valem para a página toda.
     for(const [k, v] of Object.entries(p.mesa || {})){
+      const alvos = achar(document, k);
+      // UMA LISTA SE DISTRIBUI pelos elementos de mesmo endereço, na ordem.
+      // É como a aba Conexões mostra os achados do exame e a Perfis a lista de
+      // perfis: N blocos iguais, um por item, todos com o mesmo `data-campo`.
+      // Sem isto o pacote teria de emitir `achado-0`, `achado-1`… e o gerador
+      // teria de saber de antemão QUANTOS itens o exame acha.
+      if(Array.isArray(v)){
+        alvos.forEach(function(el, i){ n += escrever(el, i < v.length ? v[i] : ''); });
+        continue;
+      }
       if(v !== null && typeof v === 'object') continue;
-      for(const el of document.querySelectorAll('[data-campo="' + k + '"]')) n += escrever(el, v);
+      for(const el of alvos) n += escrever(el, v);
     }
     // 2. OS CAMPOS POR CONTROLE — dentro do bloco daquele `data-controle`.
     for(const [pref, campos] of Object.entries(p.colunas || {})){
       for(const raiz of document.querySelectorAll('[data-controle="' + pref + '"]')){
         for(const [k, v] of Object.entries(campos)){
           if(v !== null && typeof v === 'object') continue;
-          for(const el of raiz.querySelectorAll('[data-campo="' + k + '"]')) n += escrever(el, v);
+          for(const el of achar(raiz, k)) n += escrever(el, v);
         }
       }
     }
@@ -130,6 +162,33 @@ BOOTSTRAP = r"""
   return 'ok';
 })();
 """
+
+
+def _fita(mesa: list[dict]) -> str:
+    """A fita de chips com a mesa VIVA, pelo mesmo gerador do desenho.
+
+    `monta.fita()` é o dono dela nas dez páginas. Passar `mesa` é obrigatório:
+    sem o argumento ele cai nos `CONECTADOS` do mockup, que são derivados no
+    IMPORT e nunca recalculados — trocar `monta.MESA` de fora não alcança.
+    """
+    if not mesa or any(not c.get("cor") for c in mesa):
+        # A COR AINDA NÃO CHEGOU. O leitor do plástico é perguntado em thread e
+        # a mesa nasce sem cor — `monta.fita` levanta `SystemExit: colorway ''
+        # não existe` nesse instante. Devolver "" deixa a fita como está e o
+        # tique seguinte a pinta; erguer aqui derrubaria a aba inteira por meio
+        # segundo de espera.
+        #
+        # `SystemExit` NÃO é `Exception` — herda de `BaseException`, e um
+        # `except Exception` passa ao lado. Foi o que aconteceu na primeira
+        # execução: o piloto morreu com a mensagem do portão de cores, que é um
+        # portão e está certo em erguer.
+        return ""
+    try:
+        import monta
+
+        return monta.fita(ativo=(mesa[0]["pref"] if mesa else "todos"), mesa=mesa)
+    except (Exception, SystemExit):
+        return ""
 
 
 def _pagina_da_uri(uri: str | None) -> str:
@@ -150,6 +209,7 @@ class Piloto:
         self.args = args
         self.pronto = False
         self.agendado = False
+        self.relatou = False
         self.pagina = PRIMEIRA
         self.voltas = 0
         #: Quantos valores cada aba pintou, na ordem em que foram visitadas. É o
@@ -281,6 +341,15 @@ class Piloto:
         for chave, valor in pacotes.topo(ctx).items():
             carga["mesa"].setdefault(chave, valor)
 
+        # A FITA É DE TODAS AS ABAS, e ela MENTE se não for repintada: o HTML
+        # publicado traz os dois chips do mockup ("P1 · Cosmic Red · USB",
+        # "P2 · Starlight Blue · BT"), e com UM controle no cabo a tela dizia
+        # que havia dois, um deles no rádio. É a quinta reincidência do mesmo
+        # defeito nesta casa — *uma frase que nomeia um controle fora da mesa* —
+        # e a foto da aba Perfis o mostrou de novo em 01/09/2026, já com o topo
+        # e a tabela corretos ao lado.
+        carga["fita"] = _fita(ctx.mesa)
+
         def contou(valor, erro) -> None:
             if erro is not None:
                 print(f"[{self.pagina}] a pintura falhou: {erro}", file=sys.stderr)
@@ -289,9 +358,19 @@ class Piloto:
                 n = int(str(valor))
             except (TypeError, ValueError):
                 n = -1
-            self.pinturas.setdefault(self.pagina, []).append(n)
+            # O `-1` (página trocada no meio) NÃO entra na conta: contá-lo
+            # como zero faria uma aba viva parecer muda na travessia.
+            if n >= 0:
+                self.pinturas.setdefault(self.pagina, []).append(n)
 
-        self.ponte.perguntar(f"window.__hef.pintar({_json(carga)})", contou)
+        # A GUARDA `window.__hef &&` NÃO É ZELO: entre o tique começar e o JS
+        # rodar, a página pode ter trocado — e o `__hef` é do DOCUMENTO, morre
+        # com ele. Medido em 01/09/2026, passeando pelas dez: duas abas
+        # devolviam `TypeError: undefined is not an object` a cada travessia.
+        # O `-1` diz "a página trocou no meio", que é diferente de "pintei
+        # nada" — e o relato conta os dois separados.
+        self.ponte.perguntar(
+            f"(window.__hef && window.__hef.pintar({_json(carga)})) || -1", contou)
         self.voltas += 1
         self.custos.append((time.perf_counter() - t0) * 1000)
         return True
@@ -316,6 +395,12 @@ class Piloto:
         self.view.load_uri(onde.pagina(pagina, publicado=True).as_uri())
 
     def _relatar(self) -> None:
+        # UMA VEZ SÓ. O `_agendar` roda no `_instalado`, que dispara a cada
+        # carga de página; sem esta trava o passeio agendava dez saídas e o
+        # relato saía repetido — dois "foto:" no log de 01/09.
+        if self.relatou:
+            return
+        self.relatou = True
         if self.args.foto:
             self.tela.fotografar(self.args.foto)
             print(f"foto: {self.args.foto}")

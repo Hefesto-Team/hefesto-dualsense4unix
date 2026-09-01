@@ -467,10 +467,23 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado=""):
     """
     pct = round(100 * valor / teto, 1)
     endereco = f' data-papel="{papel}"' + (f' data-lado="{lado}"' if lado else "")
+
+    #: O SEGUNDO ENDEREÇO, e ele não substitui o primeiro. Esta aba nasceu com
+    #: `data-papel` + `data-lado`, que é um PAR — e o piloto `vibracao_viva.py`
+    #: o usa. O piloto ÚNICO das dez endereça por `data-campo`, uma chave só,
+    #: porque é o que as outras nove páginas trazem.
+    #:
+    #: Medido em 01/09/2026: a aba Vibração tinha 28 `data-papel` e TRÊS
+    #: `data-campo` (os do cabeçalho, que são de todas). O pacote dela emitia
+    #: dezesseis valores e nenhum tinha onde cair — zero casamentos, sem uma
+    #: linha de erro. Os dois vocabulários convivem: um par para quem já o
+    #: usava, uma chave para quem chegou depois.
+    campo = f"{papel}-{lado}" if lado else papel
     return (f'<div class="motor{"" if ligado else " off"}"{endereco}>'
             f'{botao or "<span></span>"}'
-            f'<span class="trilho"><span class="cheio" style="width:{pct}%"></span></span>'
-            f'<span class="num">{valor}{"%" if teto == TETO else ""}</span>'
+            f'<span class="trilho"><span class="cheio" data-campo="{campo}-pct"'
+            f' data-hef-alvo="largura" style="width:{pct}%"></span></span>'
+            f'<span class="num" data-campo="{campo}">{valor}{"%" if teto == TETO else ""}</span>'
             f'<span class="teto">{sufixo}</span></div>')
 
 
