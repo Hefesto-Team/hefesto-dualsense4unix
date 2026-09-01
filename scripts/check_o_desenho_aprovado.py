@@ -75,8 +75,47 @@ def paginas() -> list[str]:
     )
 
 
+#: O QUE NÃO MUDA UM PIXEL, e por isso não conta como divergência de DESENHO.
+#:
+#: Decisão dela, 01/09/2026, com a razão: *"a ideia do mockup é o desenho ser
+#: possível de ser comparado ao produto final. sempre a nossa referência."* —
+#: e, sobre este portão: *"ok, pode comparar então o que se vê."*
+#:
+#: POR QUE ELE PRECISOU EXISTIR: ligar a interface exige marcar cada valor da
+#: tela com um endereço (`data-campo`, `data-papel`, `data-gesto`) para a pintura
+#: saber onde escrever. São 100 marcações nas dez abas, e nenhuma move um pixel —
+#: mas todas mudam o sha256. Sem esta regra, o portão passaria a acusar
+#: divergência em toda aba que ganhasse vida, e a resposta natural seria
+#: desligá-lo. **Portão que grita falso é portão que se desliga.**
+#:
+#: A ALTERNATIVA ERA PIOR, e ela chegou a pedi-la: *"ajustar o portão pra ignorar
+#: o mockup"*. Ignorar mata a régua inteira; comparar o que se VÊ mantém-na
+#: medindo exatamente o que ela nasceu para medir.
+#:
+#: O QUE CONTINUA ACUSANDO: texto, classe, estilo, estrutura, ordem — tudo o que
+#: chega aos olhos. Trocar uma palavra, mover um bloco ou mudar uma cor reprova
+#: como sempre reprovou. A mordida abaixo prova as duas metades.
+INVISIVEIS = re.compile(
+    r'\s(?:data-campo|data-papel|data-gesto|data-controle|data-uniq|data-id'
+    r'|data-eixo|data-bloco|data-lado|data-sensor|data-mudo|data-rota'
+    r'|data-mic-modo|data-forca|data-mascara|data-conectado|data-lista'
+    r'|data-degrau|data-modo|data-gatilho|data-entrada|data-clique)="[^"]*"'
+)
+
+
+def o_que_se_ve(caminho: Path) -> bytes:
+    """O HTML sem os endereços de pintura — o que chega aos olhos.
+
+    NÃO É "ignorar atributo": é ignorar ESTES, nomeados um a um. Uma regra
+    genérica (`data-*`) engoliria também o `data-colorway`, que PINTA o desenho
+    inteiro — e aí o portão deixaria passar a troca da cor do plástico, que é a
+    informação de qual controle é qual.
+    """
+    return INVISIVEIS.sub("", caminho.read_text(encoding="utf-8")).encode("utf-8")
+
+
 def soma(caminho: Path) -> str:
-    return hashlib.sha256(caminho.read_bytes()).hexdigest()
+    return hashlib.sha256(o_que_se_ve(caminho)).hexdigest()
 
 
 def declaradas() -> set[str]:
