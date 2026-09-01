@@ -1139,9 +1139,9 @@ def exame(classe, palavra, txt, dica):
     botão FAZIA: um `Ignorar` no rodapé do quadro não dizia O QUÊ ignorar — havia
     cinco linhas e um botão só. Na linha, o gesto tem sujeito.
     """
-    return f'''          <div class="exame">
-            <span class="selo {classe}">{palavra}</span>
-            <span class="txt">{txt}</span>
+    return f'''          <div class="exame" data-campo="exame">
+            <span class="selo {classe}" data-campo="selo">{palavra}</span>
+            <span class="txt" data-campo="achado">{txt}</span>
             <span class="ajuda">?<span class="dica">{dica}</span></span>
             <button class="ignora" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>'''

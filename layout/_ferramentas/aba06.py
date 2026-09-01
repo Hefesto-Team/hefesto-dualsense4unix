@@ -797,10 +797,11 @@ def controle(c):
     return (
         f'              <div class="nav-ctl{" navega" if navega else ""}"'
         f' style="--plastico:{cor_da_zona(c["cor"])}"'
+        f' data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim"'
         f' title="Player {n} • {c["nome"]} • {c["via"]}">\n'
         f'                {svg(c["pref"], c["cor"], classes="ds-svg", lampadas=False, luz=_hex(player_slot_color(n)))}\n'
         f'                <div class="nav-rot">P{n} <span class="pt">•</span> {c["nome"]}</div>\n'
-        f'                <div class="nav-est">{ponto}{c["via"]} <span class="pt">•</span> '
+        f'                <div class="nav-est" data-campo="navega">{ponto}{c["via"]} <span class="pt">•</span> '
         f'{"Navega o PC" if navega else "Só a janela"}</div>\n'
         f'              </div>')
 
