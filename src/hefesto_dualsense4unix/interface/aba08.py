@@ -146,10 +146,16 @@ CUSTO_DO_MIC = CUSTO_COM_MIC - CUSTO_SEM_MIC
 # ---------------------------------------------------------------------------
 MULT = _constantes(R / "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py",
                    {"RUMBLE_POLICY_MULT"})["RUMBLE_POLICY_MULT"]
-COM_TETO = _constantes(R / "src/hefesto_dualsense4unix/core/rumble.py",
-                       {"_ORCAMENTO_COM_TETO"})["_ORCAMENTO_COM_TETO"]
+#: `SEM_TETO` SAIU DO `secao_orcamento` em 01/09/2026 e está aqui, ao lado do
+#: `_ORCAMENTO_COM_TETO` — aquele módulo puxa `gi`/`Gtk` no import, e a camada de
+#: tela que precisa da palavra promete não ter GTK. Este `_constantes` reprova em
+#: voz alta se ele mudar de casa outra vez, que é o contrato dele.
+_RUM = _constantes(R / "src/hefesto_dualsense4unix/core/rumble.py",
+                   {"_ORCAMENTO_COM_TETO", "SEM_TETO"})
+COM_TETO = _RUM["_ORCAMENTO_COM_TETO"]
 ORC = _constantes(R / "src/hefesto_dualsense4unix/app/actions/config/secao_orcamento.py",
-                  {"PERFIS", "ROTULOS_DOS_PERFIS", "TETO_POR_PERFIL", "SEM_TETO"})
+                  {"PERFIS", "ROTULOS_DOS_PERFIS", "TETO_POR_PERFIL"})
+ORC["SEM_TETO"] = _RUM["SEM_TETO"]
 
 #: A FRASE DO TETO É DO PRODUTO — 01/09/2026. Esta função existia AQUI, com a
 #: mesma conta escrita de novo, e agora ela é um ponteiro para
@@ -317,15 +323,36 @@ ABA_DO_TETO_GLOBAL = _aba_conexoes.ABA_DO_TETO_GLOBAL
 #: *"vale Sem teto, do global, na aba Sistema. O global hoje é Sem teto, e quem o
 #: muda é o Perfil de Bateria, na aba Sistema"* — "Sem teto" duas vezes e "na aba
 #: Sistema" duas vezes, na mesma dica.
+#: O GLOBAL VIVO DA BANCADA — o `state['rumble_policy']` que o daemon publicaria.
+#: O desenho mostra a mesa em repouso, e "em repouso" é o padrão que o produto
+#: assume quando ninguém escolheu nada (`profiles/manager._RUMBLE_POLICY_PADRAO`).
+#: ELE NÃO É O ORÇAMENTO, e a distinção é o defeito inteiro que 01/09/2026
+#: corrigiu: o orçamento põe um teto POR CIMA da política viva, e é a viva que
+#: multiplica o que chega ao motor.
+GLOBAL_VIVO = _constantes(R / "src/hefesto_dualsense4unix/profiles/manager.py",
+                          {"_RUMBLE_POLICY_PADRAO"})["_RUMBLE_POLICY_PADRAO"]
+
+
+def _vibracao_da_bancada(c):
+    """As quatro pontas que a BANCADA declara para um controle do desenho."""
+    return _aba_conexoes.Vibracao(
+        do_controle=TETO_DO_CONTROLE.get(c["pref"]),
+        do_perfil=None,
+        a_viva=GLOBAL_VIVO,
+        orcamento=ORCAMENTO_DA_MESA,
+    )
+
+
 def teto_que_vale(c):
     """(o que a tela mostra no CAMPO, a frase de quem manda neste controle).
 
     A CONTA É DO PRODUTO desde 01/09/2026 — `gui.aba_conexoes.teto_que_vale`. O
     que sobra aqui é a BANCADA: qual controle sobrepõe (`TETO_DO_CONTROLE`) e
     qual perfil de mesa esta tela mostra escolhido (`PERFIL_DA_MESA`). Na tela
-    viva, os dois vêm do perfil dela e do `maquina.json`.
+    viva, as quatro pontas vêm do perfil dela, do `state` do daemon e do
+    `maquina.json`.
     """
-    return _aba_conexoes.teto_que_vale(TETO_DO_CONTROLE.get(c["pref"]), ORCAMENTO_DA_MESA)
+    return _aba_conexoes.teto_que_vale(_vibracao_da_bancada(c))
 
 
 # ---------------------------------------------------------------------------
@@ -1327,7 +1354,7 @@ def teto_dica(c):
     A FRASE É DO PRODUTO — `gui.aba_conexoes.dica_do_teto`. Aqui ficou só a
     bancada: qual controle sobrepõe e qual perfil de mesa esta tela mostra.
     """
-    return _aba_conexoes.dica_do_teto(TETO_DO_CONTROLE.get(c["pref"]), ORCAMENTO_DA_MESA)
+    return _aba_conexoes.dica_do_teto(_vibracao_da_bancada(c))
 
 
 def linha_do_controle(c):
