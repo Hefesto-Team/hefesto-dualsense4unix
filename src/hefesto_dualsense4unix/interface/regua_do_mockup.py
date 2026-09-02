@@ -126,12 +126,18 @@ class _Campo:
     :param alvo: o mesmo ``data-hef-alvo`` que o bootstrap lê — o que na tela
         recebe o valor: o texto, a largura da barra, o ``value`` do campo.
     :param valor: o que está CRAVADO no arquivo publicado.
+    :param quando: só para o alvo ``classe`` — o ``data-hef-quando``, que é
+        QUEM ESTE ELEMENTO É dentro do grupo. Os quatro degraus da Vibração
+        compartilham um endereço só, e sem isto a régua não saberia que uma
+        declaração de ``'max'`` deixa os outros três apagados DE PROPÓSITO —
+        acusaria três endereços mortos onde o produto acertou.
     """
 
     chave: str
     dono: str
     alvo: str
     valor: str
+    quando: str = ""
 
     @property
     def endereco(self) -> str:
@@ -296,6 +302,16 @@ class _Leitor(html.parser.HTMLParser):
                 valor = d.get("value", "")
         elif alvo == "largura":
             valor = _do_estilo(d.get("style", ""), "width")
+        elif alvo == "cor":
+            # LIDA DE VERDADE, e não pelo texto: a normalização do WebKit para
+            # ``color`` é fechada e ``_cor_css`` a reproduz. Ver a nota do
+            # ``LER_CAMPOS``, com a sondagem que a mediu.
+            valor = _cor_css(_do_estilo(d.get("style", ""), "color"))
+        elif alvo == "classe":
+            classe = d.get("data-hef-classe") or "on"
+            quando = d.get("data-hef-quando") or ""
+            aceso = classe in (d.get("class") or "").split()
+            valor = (quando or "sim") if aceso else ""
         elif alvo in ("fundo", "html"):
             # OS DOIS ALVOS QUE A RÉGUA LÊ PELO TEXTO, e ela DIZ que faz isso.
             # ``el.style.background`` e ``el.innerHTML`` voltam do WebKit
@@ -305,7 +321,8 @@ class _Leitor(html.parser.HTMLParser):
             # comum, e é o que responde a pergunta desta régua: quem olha a tela
             # está lendo dado ou desenho?
             valor = texto
-        return _Campo(chave=quadro["chave"], dono=quadro["dono"], alvo=alvo, valor=valor)
+        return _Campo(chave=quadro["chave"], dono=quadro["dono"], alvo=alvo,
+                      valor=valor, quando=d.get("data-hef-quando") or "")
 
 
 #: Um comprimento CSS: o número e a unidade. Serve para reproduzir, do lado
@@ -331,6 +348,112 @@ def _numero_css(valor: str) -> str:
         return valor.strip()
     curto = f"{n:g}"
     return f"{curto}{unidade}"
+
+
+#: As duas formas de cor que o CSSOM REESCREVE. Todo o resto — palavra
+#: (``red``, ``transparent``), ``var(--x)``, ``currentcolor`` — volta como foi
+#: escrito, e por isso passa direto.
+_HEXA = re.compile(r"^#([0-9a-f]{3,8})$", re.IGNORECASE)
+_FUNCAO_DE_COR = re.compile(r"^(rgba?)\((.*)\)$", re.IGNORECASE | re.DOTALL)
+
+
+def _canal(bruto: str) -> int | None:
+    """Um canal de cor — ``"186"`` ou ``"50.439%"`` — no inteiro 0-255 do CSSOM."""
+    bruto = bruto.strip()
+    try:
+        if bruto.endswith("%"):
+            return max(0, min(255, round(float(bruto[:-1]) * 255 / 100)))
+        return max(0, min(255, round(float(bruto))))
+    except ValueError:
+        return None
+
+
+def _alfa(bruto: str) -> str:
+    """A opacidade como o CSSOM a serializa: ``".5"`` → ``"0.5"``, 170/255 → ``"0.667"``."""
+    try:
+        n = float(bruto.strip().rstrip("%"))
+    except ValueError:
+        return bruto.strip()
+    if bruto.strip().endswith("%"):
+        n /= 100
+    return f"{round(n, 3):g}"
+
+
+def _cor_css(valor: str) -> str:
+    """A cor como ``el.style.color`` a devolve — a forma do NAVEGADOR, não a do arquivo.
+
+    SONDADO NO WEBKIT desta máquina em 02/09/2026, com a página offscreen, e
+    esta função reproduz linha a linha o que a sonda mediu::
+
+        '#6272a4'                → 'rgb(98, 114, 164)'
+        '#fff'                   → 'rgb(255, 255, 255)'
+        '#ff5555aa'              → 'rgba(255, 85, 85, 0.667)'
+        'rgb(1,2,3)'             → 'rgb(1, 2, 3)'
+        'rgb(37.355% 50.439% 0%)'→ 'rgb(95, 129, 0)'
+        'rgba(0,0,0,.5)'         → 'rgba(0, 0, 0, 0.5)'
+        'red' · 'transparent'    → iguais
+        'currentColor'           → 'currentcolor'
+        'var(--plastico)'        → 'var(--plastico)'
+        ''                       → ''
+
+    POR QUE ISTO EXISTE, e é a diferença entre medir e desistir: sem a forma do
+    navegador, um campo de cor teria de ser lido pelo TEXTO — e pintar uma cor
+    não mexe numa letra, logo o campo seria INDECIDÍVEL para sempre. É o que
+    acontece hoje com o alvo ``fundo``, e a nota dele diz que a razão é a
+    normalização. **A sonda derruba metade dessa razão**: ``el.style.background``
+    de ``background:#6272a4`` volta ``'rgb(98, 114, 164)'`` — a MESMA forma que
+    esta função produz. Trocar o ``fundo`` mexe no número de outra frente e fica
+    para quem for dono dele; o fato fica medido aqui.
+
+    O QUE ELA NÃO SABE: uma cor que o navegador reescreva de outro jeito passa
+    direto e o campo lê como PRODUTO sem ninguém ter pintado. A guarda do DOM
+    virgem do ``--prova-de-mockup`` pega isso na hora — ela confere este parser
+    contra o leitor de tela, endereço a endereço — e a divergência sai como
+    cegueira, que REPROVA. Ou seja: o erro possível aqui é barulhento, não mudo.
+    """
+    valor = valor.strip()
+    if not valor:
+        return ""
+    if valor.lower().startswith("var("):
+        return valor
+    achou = _HEXA.match(valor)
+    if achou:
+        d = achou.group(1)
+        if len(d) in (3, 4):
+            d = "".join(c * 2 for c in d)
+        if len(d) == 6:
+            r, g, b = (int(d[i:i + 2], 16) for i in (0, 2, 4))
+            return f"rgb({r}, {g}, {b})"
+        if len(d) == 8:
+            r, g, b, a = (int(d[i:i + 2], 16) for i in (0, 2, 4, 6))
+            return f"rgba({r}, {g}, {b}, {round(a / 255, 3):g})"
+        return valor.lower()
+    achou = _FUNCAO_DE_COR.match(valor)
+    if achou:
+        partes = [p for p in re.split(r"[,\s/]+", achou.group(2).strip()) if p]
+        canais = [_canal(p) for p in partes[:3]]
+        if len(canais) == 3 and None not in canais:
+            if len(partes) >= 4:
+                return (f"rgba({canais[0]}, {canais[1]}, {canais[2]}, "
+                        f"{_alfa(partes[3])})")
+            return f"rgb({canais[0]}, {canais[1]}, {canais[2]})"
+    return valor.lower()
+
+
+def _ligado(texto: str) -> bool:
+    """O que conta como LIGADO no alvo ``classe`` — a mesma lista do ``ligado()`` do JS.
+
+    Sem esta função os dois lados discordariam no caso mais comum: o pacote
+    emite ``True`` e ``_como_a_tela_escreveria`` devolve ``"True"``, enquanto o
+    JS escreveria ``"true"``. Para texto isso é inofensivo (o campo cai em
+    MOCKUP, que é o erro para o lado seguro); para uma CLASSE seria o contrário
+    — a régua acusaria endereço morto sobre um botão que acende certo.
+    """
+    b = texto.strip().lower()
+    # (noqa-acento) `nao` sem til é VALOR de máquina, e não prosa: é o que um
+    # pacote pode emitir. O `escrever()` do JS lê a mesma lista, nas duas grafias.
+    return b not in ("", TRAVESSAO, "0", "false", "nao", "não", "off",  # (noqa-acento)
+                     "none", "null")
 
 
 def _do_estilo(estilo: str, propriedade: str) -> str:
@@ -423,7 +546,7 @@ def _declarados_do_pacote(carga: dict[str, Any]) -> dict[tuple[str, str], Any]:
 SUMIU = "\x00o bloco foi trocado"
 
 
-def _alinhar(cravados: list[_Campo], vivos: list[tuple[str, str, str, str]],
+def _alinhar(cravados: list[_Campo], vivos: list[tuple[str, ...]],
             ) -> tuple[list[str], list[tuple[str, str]]]:
     """Casa cada campo do ARQUIVO com o que a tela mostra nele AGORA.
 
@@ -445,7 +568,8 @@ def _alinhar(cravados: list[_Campo], vivos: list[tuple[str, str, str, str]],
         estão no arquivo — os dois são obra do produto, e o relato os separa.
     """
     por_endereco: dict[tuple[str, str], list[str]] = {}
-    for chave, dono, _alvo, valor in vivos:
+    for linha in vivos:
+        chave, dono, _alvo, valor = linha[:4]
         por_endereco.setdefault((str(chave), str(dono)), []).append(str(valor))
     gastos: dict[tuple[str, str], int] = {}
     fora: list[str] = []
@@ -460,10 +584,59 @@ def _alinhar(cravados: list[_Campo], vivos: list[tuple[str, str, str, str]],
     return fora, nasceram
 
 
+def _selos_alinhados(cravados: list[_Campo],
+                     vivos: list[tuple[Any, ...]]) -> list[bool]:
+    """O SELO DA VISITA de cada campo, na ordem de ``cravados``.
+
+    Mesmo casamento do ``_alinhar`` — por endereço e por ordem de ocorrência —,
+    só que sobre o quinto elemento que o ``LER_CAMPOS`` passou a devolver: se o
+    ``escrever()`` do piloto ESTEVE naquele elemento. Um campo que sumiu da tela
+    (bloco trocado) vale ``False``: não há elemento para ter selo, e o
+    ``_classificar`` já o julga PRODUTO por outro caminho.
+
+    POR QUE FUNÇÃO SEPARADA, e não um terceiro retorno do ``_alinhar``: ele é
+    chamado em teste com quatro colunas e mudar a aridade quebraria a chamada
+    sem que ninguém ganhasse nada. Acrescentar é a regra desta casa.
+    """
+    por_endereco: dict[tuple[str, str], list[bool]] = {}
+    for linha in vivos:
+        chave, dono = str(linha[0]), str(linha[1])
+        por_endereco.setdefault((chave, dono), []).append(
+            bool(linha[4]) if len(linha) > 4 else False)
+    gastos: dict[tuple[str, str], int] = {}
+    fora: list[bool] = []
+    for campo in cravados:
+        endereco = (campo.chave, campo.dono)
+        i = gastos.get(endereco, 0)
+        gastos[endereco] = i + 1
+        disponiveis = por_endereco.get(endereco) or []
+        fora.append(disponiveis[i] if i < len(disponiveis) else False)
+    return fora
+
+
+def _declarado_neste_elemento(campo: _Campo, declarado: str) -> str:
+    """O que ESTE elemento mostraria se a declaração do pacote fosse pintada.
+
+    SÓ O ALVO ``classe`` PRECISA DISTO, e sem ele a régua acusaria três
+    endereços mortos toda vez que o produto acertasse: os quatro degraus da
+    Vibração dividem UM endereço, o pacote declara ``'max'`` uma vez só, e o
+    bootstrap visita os quatro com esse mesmo valor. Quem não é ``max`` fica
+    apagado DE PROPÓSITO — e apagado é ``''``, não ``'max'``.
+
+    Para todo outro alvo a declaração vale como veio.
+    """
+    if campo.alvo != "classe":
+        return declarado
+    if campo.quando:
+        return campo.quando if declarado == campo.quando else ""
+    return "sim" if _ligado(declarado) else ""
+
+
 def _classificar(
     cravados: list[_Campo],
     vivos: list[str],
     declarados: dict[tuple[str, str], Any] | None = None,
+    selos: list[bool] | None = None,
 ) -> list[_Veredito]:
     """O veredito de cada campo: PRODUTO, MOCKUP ou INDECIDIVEL.
 
@@ -471,6 +644,11 @@ def _classificar(
     :param vivos: o que a TELA mostra em cada um deles, na mesma ordem.
     :param declarados: o que o pacote emitiu naquele tique — usado só para
         separar ``MOCKUP`` de ``INDECIDIVEL``, e para nomear o endereço morto.
+    :param selos: se o ``escrever()`` do piloto ESTEVE em cada elemento. É o
+        que decide um INDECIDÍVEL: valor igual ao cravado **com** selo é o
+        produto pintando um valor que por acaso coincide com o desenho — e isso
+        é PRODUTO, provado. Sem os selos (uma chamada antiga, um teste que só
+        compara valores) a classificação é a de antes, campo por campo.
 
     A ORDEM É O CASAMENTO, e as duas listas têm de ter o mesmo tamanho: quem
     garante isso é o ``--prova-de-mockup``, que compara o conjunto de endereços
@@ -486,15 +664,21 @@ def _classificar(
     #: declarada se distribui pelos elementos de mesmo endereço, do mesmo jeito
     #: que o bootstrap distribui.
     ja_vistos: dict[tuple[str, str], int] = {}
+    selados = list(selos or [False] * len(cravados))
+    if len(selados) != len(cravados):
+        raise ValueError(
+            f"a régua recebeu {len(cravados)} campos e {len(selados)} selos de "
+            f"visita. Casar selo com o vizinho é pior que não ter selo nenhum.")
     fora: list[_Veredito] = []
-    for campo, vivo in zip(cravados, vivos, strict=True):
+    for campo, vivo, selo in zip(cravados, vivos, selados, strict=True):
         endereco = (campo.dono, campo.chave)
         i = ja_vistos.get(endereco, 0)
         ja_vistos[endereco] = i + 1
         bruto = declarados.get(endereco, declarados.get(("", campo.chave), ...))
         if isinstance(bruto, list):
             bruto = bruto[i] if i < len(bruto) else ""
-        declarado = None if bruto is ... else _como_a_tela_escreveria(bruto)
+        declarado = (None if bruto is ... else
+                     _declarado_neste_elemento(campo, _como_a_tela_escreveria(bruto)))
 
         if vivo == SUMIU:
             fora.append(_Veredito(
@@ -507,11 +691,23 @@ def _classificar(
         elif declarado is None:
             fora.append(_Veredito(campo, vivo, MOCKUP, None,
                                  "nenhum pacote declara este endereço"))
+        elif declarado == vivo and selo:
+            # O INDECIDÍVEL DECIDIDO. Eram 74 campos em 330 assim, e a nota
+            # abaixo dizia a verdade: ler a TELA não separa "pintou igual" de
+            # "não pintou". O selo não é a tela — é o piloto declarando que
+            # ESTEVE neste elemento com este valor. Com ele o campo é do
+            # produto, provado, e a coincidência com o desenho passa a ser o
+            # que sempre foi: uma coincidência.
+            fora.append(_Veredito(
+                campo, vivo, PRODUTO, declarado,
+                "o piloto ESCREVEU este valor neste elemento — coincide com o "
+                "que o desenho cravou, e é o produto que manda"))
         elif declarado == vivo:
             fora.append(_Veredito(
                 campo, vivo, INDECIDIVEL, declarado,
-                "o pacote declara este mesmo valor — ler a tela não separa "
-                "'pintou igual' de 'não pintou'"))
+                "o pacote declara este mesmo valor e o piloto NÃO passou por "
+                "este elemento — ler a tela não separa 'pintou igual' de 'não "
+                "pintou'"))
         else:
             # O ENDEREÇO MORTO, e ele é o pior dos casos: o pacote monta o valor
             # e escreve num lugar que a página não tem. A tela continua no
