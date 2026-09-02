@@ -134,8 +134,31 @@ readonly MARCA_MIC_DST="${MARCA_MIC_DIR}/mic-do-dualsense-pedido.conf"
 readonly DOCTOR_SH="${ROOT_DIR}/scripts/doctor.sh"
 
 MODE="install"
+# MIC-DA-MESA-ELEICAO-01: `--fonte-se-sustenta` aceita o nome colado
+# (`--fonte-se-sustenta=NOME`) ou no argumento seguinte. `AGUARDA_NOME` é o
+# que faz a segunda forma funcionar dentro de um `for arg in "$@"`.
+FONTE_CONSULTADA=""
+AGUARDA_NOME=0
 for arg in "$@"; do
+    if [[ "${AGUARDA_NOME}" -eq 1 ]]; then
+        FONTE_CONSULTADA="$arg"
+        AGUARDA_NOME=0
+        continue
+    fi
     case "$arg" in
+        --fonte-se-sustenta=*)
+            MODE="fonte-se-sustenta"
+            FONTE_CONSULTADA="${arg#*=}"
+            continue
+            ;;
+        --fonte-se-sustenta)
+            MODE="fonte-se-sustenta"
+            AGUARDA_NOME=1
+            continue
+            ;;
+    esac
+    case "$arg" in
+        --melhor-fonte-elegivel) MODE="melhor-fonte-elegivel" ;;
         --install)        MODE="install" ;;
         --disable-source) MODE="disable" ;;
         --reset-only)     MODE="reset" ;;
@@ -266,6 +289,48 @@ fontes_elegiveis() {
                    tolower(\$2) ~ /\\.monitor\$/ { next }
                    { print }"
     ' -- "${DOCTOR_SH}" "${longo}" 2>/dev/null || true
+}
+
+# MIC-DA-MESA-ELEICAO-01 — "ESTA FONTE SE SUSTENTA?", e por que a pergunta
+# mora AQUI.
+#
+# A eleição de microfone por botão precisa saber, ANTES de escrever, se o nó que
+# ela vai eleger para de pé. Do lado Python **não existe uma linha** que olhe
+# porta: `integrations/audio_control.py` filtra só `.monitor` e `alsa_output.`.
+# Portar o critério criaria a SEGUNDA régua sobre o mesmo estado — que é
+# literalmente o defeito que esta casa já pagou duas vezes neste arquivo:
+# RECEITA-ERRADA-01 (o doctor) e `other_source_available` (aqui), as duas
+# contando "linha na lista" enquanto o eleitor contava "porta usável".
+#
+# O dono do critério é `doctor.sh:_sources_com_porta_usavel`, e é ele que
+# responde — daqui só sai a resposta.
+#
+# DIFERENÇA DELIBERADA PARA `fontes_elegiveis`: aquela função EXCLUI o DualSense
+# de propósito, porque a pergunta dela é *"qual é a melhor que NÃO é o
+# controle"* — a régua do caminho de VOLTA. Esta pergunta é outra: *"o nó que eu
+# quero eleger para de pé?"*, e o nó que se quer eleger normalmente **é** o
+# controle. Misturar as duas faria a eleição recusar sempre.
+#
+# CONTRATO DE SAÍDA, o mesmo de `pick_target_source_name`:
+#   exit 1        — não deu para consultar (sem doctor, sem pactl);
+#   exit 0, vazio — consultei, e este nome NÃO se sustenta;
+#   exit 0 + nome — consultei, e ele se sustenta.
+fonte_se_sustenta() {
+    local nome="${1:-}"
+    [[ -n "${nome}" ]] || return 0
+    [[ -r "${DOCTOR_SH}" ]] || return 1
+    command -v pactl >/dev/null 2>&1 || return 1
+    local longo curta
+    longo="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+    curta="$(LC_ALL=C pactl list sources short 2>/dev/null || true)"
+    [[ -n "${curta}" ]] || return 1
+    printf '%s\n' "${curta}" | bash -c '
+        doutor="$1"; longo="$2"; alvo="$3"
+        set --
+        source "${doutor}" >/dev/null 2>&1 || exit 0
+        _sources_com_porta_usavel "${longo}" \
+            | awk -v alvo="${alvo}" "\$2 == alvo { print \$2 }"
+    ' -- "${DOCTOR_SH}" "${longo}" "${nome}" 2>/dev/null || true
 }
 
 pick_target_source_name() {
@@ -896,7 +961,13 @@ promote_source_dualsense() {
 #
 # `--status` é o único de fora: ele é leitura, e leitura não escreve.
 ACORDADO_MUDOU=1
-if [[ "${MODE}" != "status" && "${MODE}" != "marcar-gesto" && "${MODE}" != "apagar-gesto" ]]; then
+# MIC-DA-MESA-ELEICAO-01: `fonte-se-sustenta` e `melhor-fonte-elegivel` são
+# CONSULTA. O gesto do botão do mic passa por aqui e não pode escrever drop-in
+# nenhum na máquina dela a cada aperto — ver o bloco `melhor-fonte-elegivel`
+# no `case` abaixo.
+if [[ "${MODE}" != "status" && "${MODE}" != "marcar-gesto" \
+   && "${MODE}" != "apagar-gesto" && "${MODE}" != "fonte-se-sustenta" \
+   && "${MODE}" != "melhor-fonte-elegivel" ]]; then
     rc_acordado=0
     install_dropin_acordado || rc_acordado=$?
     case "${rc_acordado}" in
@@ -910,6 +981,37 @@ fi
 case "${MODE}" in
     status)
         show_status
+        ;;
+    fonte-se-sustenta)
+        # Consulta pura. Sem log, sem prefixo `[wp-fix]`: a saída é para ser
+        # LIDA por outro programa, e um prefixo obrigaria o leitor a parsear.
+        rc_consulta=0
+        fonte_se_sustenta "${FONTE_CONSULTADA}" || rc_consulta=$?
+        exit "${rc_consulta}"
+        ;;
+    melhor-fonte-elegivel)
+        # MIC-DA-MESA-ELEICAO-01 — O CAMINHO DE VOLTA, e a DECISÃO ESCRITA NO
+        # CÓDIGO: o gesto do botão do mic **não** toca em drop-in, **não** chama
+        # `doctor --fix-mic` e **não** reinicia o WirePlumber. Ele consulta aqui
+        # e escreve com `pactl set-default-source`, e nada mais.
+        #
+        # POR QUE, e o "por quê" é o `promote_source_dualsense` logo acima:
+        # aquele gesto APAGA o drop-in 51, delega as camadas 1 e 2 ao doctor e
+        # REINICIA o WirePlumber — mudança global, persistente e fora de tela,
+        # que ainda troca o sinal que `doctor.sh:_prefere_mic_do_dualsense` lê
+        # para decidir se pode eleger por cima. Um toque de botão não pode
+        # reescrever a política de microfone da máquina inteira a cada vez, com
+        # ela usando o computador. `--promote-source` continua sendo o gesto
+        # HUMANO explícito de quem quer que a escolha sobreviva à política.
+        #
+        # O PREÇO ACEITO, e ele tem de estar na tela: com o drop-in 51 no lugar
+        # a entrada do controle fica em `priority.session = 1500`, abaixo de
+        # qualquer captura real (2009) — logo **plugar a webcam desfaz a
+        # escolha dela**, e o LED tem de apagar quando isso acontecer, porque
+        # ele é pintado da RELEITURA do ativo, nunca do que mandamos.
+        rc_consulta=0
+        pick_target_source_name || rc_consulta=$?
+        exit "${rc_consulta}"
         ;;
     nunca-dorme)
         # Modo isolado: o `install.sh` o chama SEM FLAG, em todos os formatos,

@@ -175,6 +175,9 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     BT_INPUT_CRC_SEED,
     bt_crc32,
 )
+from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+    PREFIXO_SOURCE_PONTE_BT,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -825,7 +828,14 @@ class PonteMicBluetooth:
         self.no = no
         self._opener = opener or abrir_hidraw_rw
         self._decodificador_injetado = decodificador
-        self._nome_source = nome_source or f"hefesto_dualsense_bt_{no.nome_curto}"
+        # MIC-DA-MESA-ELEICAO-01: o prefixo tinha DOIS donos — esta f-string
+        # e uma constante redigitada em `app/mic_monitor.py`, que é quem LÊ o
+        # nome de volta para descobrir de que controle a source é. Trocar um
+        # lado deixaria o outro procurando um prefixo que não existe mais, em
+        # silêncio. Agora ele é lido de `integrations/fontes_de_captura.py`.
+        self._nome_source = (
+            nome_source or f"{PREFIXO_SOURCE_PONTE_BT}{no.nome_curto}"
+        )
         self._source = source
         self._fd: int | None = None
         self._dec: Any = None

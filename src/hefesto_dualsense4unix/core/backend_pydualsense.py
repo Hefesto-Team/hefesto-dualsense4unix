@@ -300,11 +300,11 @@ CLOSE_JOIN_TIMEOUT_SEC = 0.5
 #: interno, e a usuária não tem como saber que ele existe.
 PRIMARIO_RESERVA_SEC: float = 30.0
 
-#: AUDIO-STATUS-01: índice do byte de estado de áudio dentro do `states`
-#: NORMALIZADO da pydualsense (o mesmo em USB e BT — ver
-#: `_PinnedPyDualSense._captura_status_audio`). Um a mais que o índice de
-#: bateria que a própria pydualsense usa (`states[53]`).
-_INPUT_AUDIO_STATUS_IDX = 54
+#: AUDIO-STATUS-01 / MIC-DA-MESA-ELEICAO-01: o offset do byte de estado de
+#: áudio NÃO mora mais aqui. O dono é `core/physical_report_reader`
+#: (`JACK_STATUS_OFFSET`, lido por `extract_jack_status`), que é quem já aplica
+#: CRC de BT e recusa o report de ÁUDIO. Havia duas leituras do mesmo byte e
+#: só uma tinha disciplina; a de cá foi apagada em vez de duplicada.
 
 #: AUDIO-OWNER-01: bit de validação (flag0) e offset no common de cada byte de
 #: áudio, na ORDEM de `_PinnedPyDualSense._volumes_audio`
@@ -749,6 +749,13 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # zero: a pydualsense já guarda o report cru em `self.states` a cada
         # leitura; aqui só copiamos UM byte no mesmo laço que já roda.
         self._audio_status: int | None = None
+        # MIC-DA-MESA-ELEICAO-01 — a BORDA do bit de mudo, por controle.
+        # `_mic_mudo` é o último valor visto (None = nunca vimos report
+        # íntegro), `_mic_mudo_seq` é o contador monotônico de bordas e
+        # `_mic_mudo_em` o carimbo de tempo da última.
+        self._mic_mudo: bool | None = None
+        self._mic_mudo_seq: int = 0
+        self._mic_mudo_em: float | None = None
 
     # O nome manglado de `pydualsense.__find_device` é
     # `_pydualsense__find_device`; o `init()` do upstream chama
@@ -804,7 +811,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 else:
                     self._registrar_leitura_viva()
                     self.readInput(in_report)
-                    self._captura_status_audio()
+                    self._captura_status_audio(in_report)
                 # FEAT-NATIVE-OUTPUT-MUTE-01: mutado (Modo Nativo) = NENHUM
                 # write; o jogo é o dono do output deste controle.
                 if not self._output_muted:
@@ -998,23 +1005,75 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
     # --- AUDIO-STATUS-01 / AUDIO-OWNER-01 --------------------------------
 
-    def _captura_status_audio(self) -> None:
-        """Copia o byte de estado de áudio do último report de INPUT lido.
+    def _captura_status_audio(self, in_report: Any) -> None:
+        """Guarda o byte de estado de áudio do report CRU — com disciplina.
 
-        A pydualsense guarda o report cru NORMALIZADO em `self.states` dentro
-        do `readInput` (por USB são os bytes do report; por BT ela descarta o
-        byte de seq/flags do envelope). Nos dois casos o índice do byte de
-        áudio é o MESMO 54 — é o offset 53 do `USBGetStateData`, um a mais que
-        o byte de bateria que a própria pydualsense lê em `states[53]`.
+        MIC-DA-MESA-ELEICAO-01 (01/09/2026) — POR QUE O CAMINHO MUDOU.
 
-        Custo: uma indexação de lista por report já lido. NÃO abrimos fd novo,
-        NÃO fazemos leitura extra — o report de input já estava na mão.
+        Esta função lia `self.states[54]`, que é o report já digerido pelo
+        `readInput` da pydualsense 0.7.5. Aquele caminho **não confere nada**:
+        nem o report id, nem o tamanho, nem o CRC-32 do BT, nem o
+        `INPUT_FLAG_AUDIO`. Com a ponte de microfone por Bluetooth de pé, o
+        DualSense manda Opus no MESMO report `0x31`, com os MESMOS 78 bytes, e
+        o byte 55 cai dentro da janela de Opus (`raw[3:74]`,
+        `integrations/dualsense_bt_audio.py`). É o defeito PS-PRESO-01 inteiro,
+        escrito em `core/physical_report_reader.py`: foi assim que os botões
+        MIC e PS ficaram presos e ela desligou o controle.
+
+        Enquanto este byte só pintava um selo na tela, o estrago era cosmético.
+        A partir da ELEIÇÃO DE MICROFONE ele é o gesto dela — e um pacote
+        corrompido de rádio elegendo microfone sozinho é o pior desfecho
+        possível deste trabalho.
+
+        A cura é **um fato, um dono**: quem lê `status[1]` do report cru já é o
+        `extract_jack_status` (`core/physical_report_reader.py`), com CRC de BT
+        e com a recusa do report de áudio. Aqui só se chama.
+
+        `None` do extrator — id desconhecido, tamanho curto, CRC ruim, report de
+        ÁUDIO — **NÃO mexe no cache**, e isso é diferente de `0x00`: `0x00` é
+        "o report chegou íntegro e não há fone nem microfone mudo".
         """
-        estados = getattr(self, "states", None)
-        if isinstance(estados, list) and len(estados) > _INPUT_AUDIO_STATUS_IDX:
-            valor = estados[_INPUT_AUDIO_STATUS_IDX]
-            if isinstance(valor, int):
-                self._audio_status = valor & 0xFF
+        from hefesto_dualsense4unix.core.physical_report_reader import (
+            extract_jack_status,
+        )
+
+        try:
+            cru = bytes(in_report)
+        except (TypeError, ValueError):
+            return
+        valor = extract_jack_status(cru)
+        if valor is None:
+            return
+        self._audio_status = valor & 0xFF
+        self._registrar_borda_do_mic(valor & 0xFF)
+
+    def _registrar_borda_do_mic(self, status: int) -> None:
+        """Conta as BORDAS do bit de mudo do firmware neste controle.
+
+        MIC-DA-MESA-ELEICAO-01. O `hid-playstation` **consome** o botão do
+        microfone: ele não vira evento evdev, o driver detecta a borda e
+        alterna `ds->mic_muted` por conta própria
+        (`docs/protocol/driver-hid-playstation.md`, `buttons[2]` BIT(2)). Logo
+        não existe "botão do mic" com endereço — o que existe é a CONSEQUÊNCIA
+        do aperto, o bit `STATUS_MIC_MUDO` de `status[1]`, e ele chega por um fd
+        que é só deste controle. **A identidade vem do fd, não do report.**
+
+        É CONTADOR, não leitura de estado, e o motivo é medido pelo contrário:
+        um toque duplo entre duas amostragens do consumidor devolveria o mesmo
+        valor de estado e a segunda eleição sumiria. Sumir uma borda é sumir
+        uma eleição dela.
+        """
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            STATUS_MIC_MUDO,
+        )
+
+        mudo = bool(status & STATUS_MIC_MUDO)
+        anterior = self._mic_mudo
+        self._mic_mudo = mudo
+        if anterior is None or anterior == mudo:
+            return
+        self._mic_mudo_seq += 1
+        self._mic_mudo_em = time.monotonic()
 
     def set_microphone_mute(self, muted: bool | None) -> None:
         """Assume (ou devolve) a POSSE do mudo de microfone do firmware.
@@ -3881,8 +3940,8 @@ class PyDualSenseController(IController):
                     err=str(exc),
                 )
 
-    def set_mic_led(self, muted: bool) -> None:
-        """Acende/apaga o LED do microfone em TODOS os controles (INFRA-SET-MIC-LED-01).
+    def set_mic_led(self, aceso: bool, *, uniq: str | None = None) -> None:
+        """Acende/apaga o LED do microfone — no ALVO, ou no controle `uniq`.
 
         Delega para `ds.audio.setMicrophoneLED(bool)`, que só marca o estado; o
         byte é o `common[8]`, e quem o embrulha é o `prepareReport` DESTA casa
@@ -3901,13 +3960,60 @@ class PyDualSenseController(IController):
         bit `0x01` do flag1 estava sempre ligado —, e o preço era o produto
         apagar, no report seguinte, o LED que o kernel acendeu quando ela
         aperta o botão de mudo. Quem NÃO chama isto não é mais dono do byte.
+
+        MIC-DA-MESA-ELEICAO-01 (01/09/2026) — O ENDEREÇO, e o estrago que a
+        falta dele fazia. Este método não aceitava alvo e caía no `_for_each`
+        sem `broadcast`: com o seletor da GUI em "Todos" ele escrevia em TODOS
+        os handles E, pior, o `record` com `target_key=None` faz o
+        `_record_desired_locked` **zerar o campo `mic_led` de todos os
+        overrides por-uniq**. Numa mesa de quatro, a borda do Jogador 2
+        acenderia os quatro LEDs e apagaria o estado por-controle dos outros
+        três — o pedido dela (*"cada uma vê no PRÓPRIO controle se o mic dela
+        está no ar"*) era inalcançável por esta porta.
+
+        `uniq` fecha isso: escreve SÓ naquele handle e grava SÓ no override
+        dele, como `set_microphone_mute(muted, uniq=)` já fazia.
+
+        `aceso` é o que a LUZ faz, e nesta casa a luz mudou de significado:
+        **aceso = este microfone está VIVO**, a inversão que ela pediu em
+        01/09/2026. O byte não inverteu — quem decide o argumento é o chamador
+        (`daemon/subsystems/mic_da_mesa.py`, que passa `not mudo`).
         """
-        flag = bool(muted)
+        flag = bool(aceso)
+        if uniq is not None:
+            self._set_mic_led_em(uniq, flag)
+            return
         self._for_each(
             lambda h: _escrever_led_do_mic(h, flag),
             what="set_mic_led",
             record={"mic_led": flag},
         )
+
+    def _set_mic_led_em(self, uniq: str, aceso: bool) -> bool:
+        """Escreve o LED do mic SÓ no handle de `uniq`, e grava SÓ no override dele."""
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        alvo = norm_mac(uniq)
+        with self._io_lock:
+            escolhido: tuple[str, Any] | None = None
+            for key, handle in self._handles.items():
+                if self._key_to_uniq(key) == alvo:
+                    escolhido = (key, handle)
+                    break
+            if escolhido is not None:
+                self._record_desired_locked(escolhido[0], {"mic_led": aceso})
+        if escolhido is None:
+            logger.info("output_alvo_ausente_noop", op="set_mic_led", alvo=uniq)
+            return False
+        key, handle = escolhido
+        try:
+            _escrever_led_do_mic(handle, aceso)
+        except Exception as exc:
+            logger.warning(
+                "output_handle_failed", op="set_mic_led", key=key, err=str(exc)
+            )
+            return False
+        return True
 
     # --- Áudio do controle (AUDIO-STATUS-01 / AUDIO-OWNER-01) -------------
 
@@ -4286,6 +4392,46 @@ class PyDualSenseController(IController):
         logger.info("microphone_mute_set", muted=muted, uniq=uniq, ok=ok)
         return ok
 
+    def set_microphone_led(
+        self, aceso: bool | None, *, uniq: str | None = None
+    ) -> bool:
+        """Assume (`True`/`False`) ou DEVOLVE (`None`) a posse do `common[8]`.
+
+        MIC-DA-MESA-ELEICAO-01 — A PORTA DE EMERGÊNCIA, e ela precisava existir
+        ANTES da primeira escrita de LED nova.
+
+        A devolução de posse por-byte já estava construída e testada
+        (`_PinnedPyDualSense.set_microphone_led(None)`,
+        `tests/unit/test_led_do_mudo_nao_apaga_o_que_o_kernel_acendeu.py`) e
+        **não tinha um único chamador de produção**: os dois caminhos de
+        escrita passam por `_escrever_led_do_mic`, que só sabe passar `bool`.
+        Consequência medida no código: tomada a posse do LED numa sessão, ela
+        só caía quando o handle morresse — ou seja, ela teria de desligar o
+        controle para o kernel voltar a mandar na luz.
+
+        Isto NÃO é o `RELEASE_LEDS` (0x31, `core/lightbar_reset.py`): aquele só
+        existe no rádio, apaga os player-LEDs sempre e trava a lightbar na
+        janela pós-conexão. Aqui só o bit `0x01` do flag1 cai, nos dois
+        transportes, e nada mais é tocado.
+        """
+        alvo = self._handle_for(uniq)
+        if alvo is None:
+            logger.debug("output_offline_noop", op="set_microphone_led")
+            return False
+        tomar = getattr(alvo, "set_microphone_led", None)
+        if not callable(tomar):
+            logger.warning("output_handle_failed", op="set_microphone_led", err="sem_api")
+            return False
+        try:
+            tomar(aceso)
+        except Exception as exc:
+            logger.warning(
+                "output_handle_failed", op="set_microphone_led", err=str(exc)
+            )
+            return False
+        logger.info("microphone_led_set", aceso=aceso, uniq=uniq)
+        return True
+
     def microphone_mute_for(self, uniq: str | None = None) -> bool | None:
         """Valor de mudo que o HEFESTO afirma no firmware, ou None (MIC-USB-01).
 
@@ -4464,9 +4610,18 @@ class PyDualSenseController(IController):
                 broadcast=True,
             )
         if spec.mic_led is not None:
+            # MIC-DA-MESA-ELEICAO-01 — A POSSE DO PERFIL NÃO CHEGAVA AO BYTE.
+            # Aqui se chamava `h.audio.setMicrophoneLED(flag)` CRU, que só mexe
+            # no espelho da pydualsense. `_mic_led_desejado` continuava `None`,
+            # e com `None` o `_build_common` APAGA o bit 0x01 do flag1 e deixa
+            # `common[8]` inerte: o LED do PERFIL em broadcast não acendia um
+            # único byte, enquanto o MESMO campo pelo `apply_output_for`
+            # acendia. Dois caminhos do mesmo campo, um deles mudo.
+            # `_escrever_led_do_mic` é o dono da posse, e é por onde
+            # `_write_partial_output` e `apply_output_for` já passavam.
             flag = spec.mic_led
             self._for_each(
-                lambda h: h.audio.setMicrophoneLED(flag),
+                lambda h: _escrever_led_do_mic(h, flag),
                 what="apply_output_defaults",
                 broadcast=True,
             )
@@ -5074,6 +5229,45 @@ class PyDualSenseController(IController):
         """
         with self._io_lock:
             return self._merged_desired_for_key(uniq).led
+
+    # --- MIC-DA-MESA-ELEICAO-01: a borda do mic, COM endereço -------------
+
+    def bordas_do_mic(self) -> dict[str, tuple[int, bool, float | None]]:
+        """Contador de bordas do bit de mudo, por `uniq`.
+
+        `{uniq: (seq, mudo, quando)}` — `seq` é monotônico por controle e só
+        sobe quando o bit VIRA; `mudo` é o valor depois da virada; `quando` é o
+        `time.monotonic()` da última.
+
+        POR QUE ESTE É O ÚNICO LUGAR POSSÍVEL. É aqui que o produto vê todo
+        report de TODO controle **com identidade** — cada `_PinnedPyDualSense`
+        tem fd, thread e byte de áudio próprios. As duas alternativas não
+        servem, e não é preferência:
+
+        - `EventTopic.BUTTON_DOWN` **não carrega `uniq`** (contrato de perfil e
+          de plugin, `profiles/schema.py`); dar-lhe um endereço quebraria os
+          dois. Além disso o botão do mic nem chega ali: o `hid-playstation`
+          consome a borda e ela não vira evdev.
+        - `read_state()` só enxerga o PRIMÁRIO — numa mesa de quatro, três
+          apertos ficariam sem dono.
+
+        Handles sem `uniq` resolvível (key por path, sem serial) ficam de fora:
+        eleição sem endereço é eleição do controle errado.
+        """
+        with self._io_lock:
+            items = list(self._handles.items())
+        out: dict[str, tuple[int, bool, float | None]] = {}
+        for key, handle in items:
+            uniq = self._key_to_uniq(key)
+            if uniq is None:
+                continue
+            seq = getattr(handle, "_mic_mudo_seq", None)
+            mudo = getattr(handle, "_mic_mudo", None)
+            if not isinstance(seq, int) or not isinstance(mudo, bool):
+                continue
+            quando = getattr(handle, "_mic_mudo_em", None)
+            out[uniq] = (seq, mudo, quando if isinstance(quando, float) else None)
+        return out
 
     # --- introspecção / leitura do primário -----------------------------
 

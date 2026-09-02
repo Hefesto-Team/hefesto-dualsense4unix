@@ -42,6 +42,12 @@ class EventTopic:
     CONTROLLER_DISCONNECTED = "controller.disconnected"
     TRIGGER_SET = "trigger.set"
     LED_SET = "led.set"
+    #: MIC-DA-MESA-ELEICAO-01: a borda do botão de microfone COM ENDEREÇO —
+    #: `{uniq, mudo, seq}`. Tópico PRÓPRIO, e não `BUTTON_DOWN`, por dois
+    #: motivos medidos: (1) o `BUTTON_DOWN` não carrega `uniq` e dar-lhe um
+    #: quebraria o contrato de perfil e de plugin; (2) o botão do mic nem
+    #: chega lá — o `hid-playstation` CONSOME a borda e ela não vira evdev.
+    MIC_DA_MESA = "mic.da_mesa"
 
 
 @dataclass
