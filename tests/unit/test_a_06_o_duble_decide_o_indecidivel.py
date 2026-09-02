@@ -269,8 +269,12 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     acima reduzem ao mesmo predicado — *o declarado é diferente do cravado* — e
     LIXO também é diferente: com todo valor trocado por `'LIXO — ISTO NÃO É DADO'` as
     duas passam, com o mesmo veredito de sempre. Quem pegava lixo era só
-    `test_todo_valor_do_duble_existe_como_opcao`, e só para os 22 `<select>`;
-    os outros sete não tinham guarda nenhuma.
+    `test_todo_valor_do_duble_existe_como_opcao`, e só para os 22 `<select>`.
+
+    DOS SETE QUE SOBRAVAM, o que existia antes desta linha era UM: o
+    `test_a_linha_do_cartao_leva_o_transporte` do arquivo irmão, sobre um cartão
+    só e com a mesa montada à mão. `vel-cursor` e `vel-rolagem` não apareciam em
+    teste nenhum desta árvore — grepados pelo endereço, em 02/09/2026.
 
     O QUE ELA COBRA, e a distinção é a razão de ela existir: **o esperado sai do
     DUBLÊ, não do pacote**. Nada aqui chama `a06_navegacao` para descobrir a
