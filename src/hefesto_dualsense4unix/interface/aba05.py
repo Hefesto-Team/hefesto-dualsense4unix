@@ -458,12 +458,34 @@ CSS = """
 # na Iluminação, onde o controle é grande.
 # ---------------------------------------------------------------------------
 
-def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado=""):
+def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
+           campo_num=""):
     """Uma linha de barra: interruptor · trilho · número · sufixo.
 
-    `papel`/`lado` são o ENDEREÇO da linha, e sem eles a pintura só alcança as
+    `papel`/`lado` são o ENDEREÇO DO CLIQUE, e sem eles a pintura só alcança as
     três barras de uma coluna por POSIÇÃO — que é o casamento que quebra em
     silêncio no dia em que alguém trocar duas linhas aqui.
+
+    `campo_num` é o ENDEREÇO DO NÚMERO quando ele NÃO PODE ser o nome do papel,
+    e entrou em 02/09/2026. O pintor procura um valor por
+    `[data-campo=X],[data-papel=X],[data-hef=X]` (`hefesto_vivo.py:183`): um
+    nome que seja `data-papel` de um botão e `data-campo` de um número faz a
+    pintura escrever o valor DENTRO do botão. Era o caso do `forca` — a linha
+    do "Personalizado" tinha `data-papel="forca"` e `data-campo="forca"`, e os
+    quatro degraus da coluna também são `data-papel="forca"`. Um tique escrevia
+    `"balanceado"` em dez elementos e apagava a linha inteira.
+
+    SÓ O NÚMERO TROCA DE NOME, e o trilho continua `forca-pct`. Não é descuido:
+    o trilho nunca esteve em colisão — ele é um `<span>` filho, e o que o apagava
+    era a pintura do PAI. Renomeá-lo junto seria mais bonito e custaria caro
+    agora: o `casamento.py:66` mede contra a página PUBLICADA, e a publicação é
+    ato DELA — um nome novo lá vira órfão até ela publicar. Quando a
+    `05-vibracao` sair da `mockup/DIVERGENCIAS.md`, unificar o par em
+    `mult`/`mult-pct` é uma linha aqui e uma no pacote.
+
+    Quando não se diz nada, o número herda o nome do papel — que é o que as
+    barras dos motores querem (`motor-e`, `motor-d`), porque ali o papel é
+    `motor` e o campo leva o lado junto.
     """
     pct = round(100 * valor / teto, 1)
     endereco = f' data-papel="{papel}"' + (f' data-lado="{lado}"' if lado else "")
@@ -483,7 +505,8 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado=""):
             f'{botao or "<span></span>"}'
             f'<span class="trilho"><span class="cheio" data-campo="{campo}-pct"'
             f' data-hef-alvo="largura" style="width:{pct}%"></span></span>'
-            f'<span class="num" data-campo="{campo}">{valor}{"%" if teto == TETO else ""}</span>'
+            f'<span class="num" data-campo="{campo_num or campo}">'
+            f'{valor}{"%" if teto == TETO else ""}</span>'
             f'<span class="teto">{sufixo}</span></div>')
 
 
@@ -517,8 +540,11 @@ def _coluna_vazia(c):
     ela tomou na Gatilhos e na Iluminação no mesmo dia.
     """
     j = c["jogador"]
+    # O `data-controle` TAMBÉM AQUI, e pela mesma razão que na coluna viva: é
+    # por ele que `hefesto_vivo.py:229` acha o lugar e o marca `conectado="nao"`.
+    # Sem ele, o lugar vazio só é vazio porque o DESENHO o desenhou vazio.
     return f'''
-          <div class="ctrl vazia" data-conectado="nao"
+          <div class="ctrl vazia" data-controle="{c["pref"]}" data-conectado="nao"
                title="Nenhum controle neste lugar.">
             <div class="moldura" data-papel="desenho">{svg(f'vb-{c["pref"]}', c["cor"], lampadas=False)}</div>
             <div class="rot-ctrl">P{j} <span class="pt">•</span> Desconectado</div>
@@ -565,13 +591,39 @@ def _coluna(c, e=None):
     # `data-uniq` VAZIO NA CENA ESTÁTICA, e não é descuido: o mockup não tem MAC
     # de verdade e não pode ter — `AA:BB:CC:DD:EE:FF` num arquivo é o que os dois
     # portões de anonimato existem para reprovar. Quem o preenche é a mesa viva.
+    #
+    # O `data-controle` ENTROU EM 02/09/2026, e é o que faltava para esta aba
+    # existir como produto. Ele NÃO substitui o `data-uniq`: o `uniq` é o
+    # endereço do APARELHO e nasce vazio aqui; o `pref` é o endereço da COLUNA e
+    # é o que o pintor e o ouvinte de clique procuram. As três frentes que ele
+    # destrava, medidas em 02/09 contra o daemon dela:
+    #
+    # 1. A PINTURA POR CONTROLE. `hefesto_vivo.py:240` faz
+    #    `querySelectorAll('[data-controle="p1"]')` e pinta DENTRO. Sem o
+    #    atributo, os doze valores por coluna — identidade, o multiplicador e os
+    #    dois motores, nos dois controles — não tinham onde cair: a aba pintava
+    #    13 valores, e os 13 eram do cabeçalho e da destruição dos degraus. A
+    #    tela continuava mostrando `0 /255` e `60 /255` do desenho com o daemon
+    #    dizendo `—`.
+    # 2. O DONO DO CLIQUE. O ouvinte sobe com
+    #    `closest('[data-controle],[data-uniq]')` (`hefesto_vivo.py:286`) e lê
+    #    `dataset.controle || dataset.uniq`. Achava este `<div>` e lia `""`, de
+    #    modo que "Testar" e "Parar" chegavam ao pacote sem controle nenhum e
+    #    RECUSAVAM SEMPRE — para ela, com o rato de verdade. A régua unitária
+    #    passava porque injeta o `uniq` à mão: verde sobre dois botões mortos.
+    # 3. O LUGAR QUE ESVAZIA. `hefesto_vivo.py:229` marca os lugares sem
+    #    controle por `[data-controle="pN"]`. Sem o atributo, um controle só na
+    #    mesa deixava a coluna do P2 com os números do desenho — a sétima
+    #    aparição do defeito que o pintor já sabia curar.
     return f'''
-          <div class="ctrl" data-uniq="{c.get("uniq", "")}" style="--plastico:{plastico}">
+          <div class="ctrl" data-controle="{c["pref"]}" data-uniq="{c.get("uniq", "")}"
+               style="--plastico:{plastico}">
             <div class="moldura" data-papel="desenho">{desenho}</div>
             <div class="rot-ctrl" data-papel="identidade">P{c["jogador"]} <span class="pt">•</span> {c["nome"]}
               <span class="pt">•</span> {c["via"]}</div>
             <div class="seg">{degraus}</div>
-            {_barra(e["pct"], TETO, "Máx" if e["pct"] == TETO else "", papel="forca")}
+            {_barra(e["pct"], TETO, "Máx" if e["pct"] == TETO else "", papel="forca",
+                    campo_num="mult")}
             {linhas[0]}
             {linhas[1]}
             <div class="acoes-col">
@@ -751,6 +803,27 @@ def _conferir(doc):
     # 5. OS RÓTULOS ALINHAM À ESQUERDA — decisão dela de 31/08.
     exigir(".rotulos > *{align-items:flex-start;text-align:left}" in doc,
            "os rótulos voltaram a alinhar à direita")
+    # 6. NENHUM NOME É VALOR E CLIQUE AO MESMO TEMPO — 02/09/2026.
+    #    O pintor procura um valor por `[data-campo=X],[data-papel=X],
+    #    [data-hef=X]` (`hefesto_vivo.py:183`) e o ouvinte de clique lê
+    #    `data-papel` como o nome do gesto (`hefesto_vivo.py:288`). Um nome nos
+    #    dois papéis faz a pintura escrever o valor DENTRO do botão. Aconteceu
+    #    com `forca`, e a foto de 02/09 mostra os quatro degraus lendo
+    #    "balanceado" e a linha do "Personalizado" apagada.
+    campos = set(_re.findall(r'data-campo="([^"]+)"', corpo))
+    papeis = set(_re.findall(r'data-papel="([^"]+)"', corpo))
+    exigir(not (campos & papeis),
+           f"nome que é valor E clique ao mesmo tempo: {sorted(campos & papeis)} — "
+           f"a pintura escreve o valor dentro do botão")
+    # 7. TODA COLUNA TEM ENDEREÇO DE COLUNA — 02/09/2026.
+    #    Sem `data-controle`, o pintor não acha onde pôr os valores daquele
+    #    controle e o ouvinte não sabe de quem foi o clique: "Testar" e "Parar"
+    #    recusavam sempre.
+    for c in MESA:
+        exigir(f'data-controle="{c["pref"]}"' in corpo,
+               f'a coluna do {c["pref"]} não tem data-controle')
+    exigir(corpo.count('data-controle="p') == len(MESA),
+           f'as colunas endereçadas não são {len(MESA)}')
 
     if falhas:
         raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "
