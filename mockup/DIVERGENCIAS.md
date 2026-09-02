@@ -250,3 +250,48 @@ seção daqui**: a aba deixou de estar em trabalho.
   apagaria o desenho, porque ali o alvo é `texto` e `textContent` mata os filhos
   (é a razão de `pacotes.enderecos_que_o_texto_apaga`, que protege esta célula
   pelo nome). Publicando a 04, a célula passa a viver.
+## 06-navegacao.html
+- **02/09/2026** — **a "Função do teclado" ganhou as três palavras que você
+  escolheu**, e é a única mudança que se vê: `Só dentro do jogo` · `Só fora do
+  jogo` · `Desativado`. A lista **nasce marcada em `Só fora do jogo`**, que é o
+  padrão que você pediu.
+
+  **A opção que saiu foi "Ligada — atalhos e teclado na tela", e ela estava
+  mentindo.** O Hefesto já cala o teclado emulado quando um jogo assume o
+  controle — é a cura da sua queixa de 29/07 (*"aperto r1 e ele muda de app ao
+  invés de funcionar no jogo"*), em `daemon/lifecycle.py:2263`. Logo o teclado
+  ligado **já era** "só fora do jogo": a etiqueta é que prometia mais.
+
+  **Uma das três recusa dizendo, e é a `Só dentro do jogo`.** Ela é o inverso do
+  que o produto faz, e precisa de um campo novo no perfil (o portão com o sinal
+  trocado). Enquanto ele não existir, escolhê-la não faz nada e a lista volta
+  sozinha para o que está valendo — em vez de fingir que mudou.
+
+  **O QUE VOCÊ JÁ VÊ HOJE, sem publicar nada** — fotografado às 19h25 com os
+  seus dois controles: a linha diz **`Só fora do jogo`**, no lugar do
+  `Ligada — atalhos e teclado na tela` que o desenho publicado cravava. Deu
+  certo por acaso: `Só fora do jogo` já era a opção do meio na página publicada.
+
+  **O QUE ESPERA A PUBLICAÇÃO é só o estado DESLIGADO.** A pintura de um
+  `<select>` só entra quando o texto casa com uma `<option>`
+  (`hefesto_vivo.py`, ramo `alvo === 'valor'`), e `Desativado` ainda não existe
+  na lista publicada — a de lá diz `Desligada`. Enquanto isso, desligar o
+  teclado deixa esta linha parada no que estiver, sem piscar e sem erro. As
+  outras 28 linhas da aba continuam pintando normalmente.
+
+- **02/09/2026** — **as 21 listas de "o que cada botão faz" pararam de desfazer
+  a sua escolha**, que é a decisão que você tomou junto com o "Guardar FICA".
+  Nenhum pixel mudou: o que entrou foram endereços invisíveis
+  (`data-gesto="linha-de-botao"` nas 21, e `data-gesto="fechar-definicoes"` no
+  `×` e no `Cancelar` da tela de definições).
+
+  **O que eles curam, medido:** trocar uma linha nunca chegava ao Python — o
+  ouvinte da janela não reconhece `data-campo` nem `data-linha` como algo
+  clicável — e o tique de meio segundo reescrevia a sua escolha por cima em até
+  1,5 s. Com isso, o "Guardar" ao lado **nunca recebia** uma tabela diferente do
+  perfil: ele caía sempre no "não havia o que guardar", e a recusa ainda mandava
+  *"troque a linha antes de clicar"*, um caminho que não existia.
+
+  Agora a tabela para de ser repintada enquanto você mexe, e volta a acompanhar
+  o perfil quando você **guarda**, quando **volta ao padrão**, quando **fecha a
+  tela** (o `×` ou o `Cancelar`) ou quando **sai da aba**.

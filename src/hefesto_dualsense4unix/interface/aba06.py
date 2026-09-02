@@ -675,10 +675,23 @@ ACOES_GESTO = [
 def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo=""):
     """Um <select> de verdade em TODA linha — nenhum travado (falas [55], [57], [91]).
 
-    O `gesto` só NOMEIA o campo para o piloto (ver `simples`): `<select>` nenhum
-    liga por clique. As listas das três telas de pop-up ficam SEM `data-gesto` de
-    propósito — elas são os CAMPOS de um formulário cujo ponto de gravação é o
-    "Guardar".
+    O `gesto` NOMEIA o campo para o piloto (ver `simples`), e é o que faz o
+    `change` chegar ao Python.
+
+    FATO SUBSTITUÍDO (02/09/2026, segunda correção): aqui estava escrito que
+    *"as listas das três telas de pop-up ficam SEM `data-gesto` de propósito —
+    elas são os CAMPOS de um formulário cujo ponto de gravação é o Guardar"*. A
+    primeira metade caducou com a decisão dela de 02/09 (*"as 21 listas param de
+    ser repintadas enquanto ela está mexendo"*): sem nome, o `change` de uma
+    linha **não chega ao Python** — o `closest` do ouvinte
+    (`hefesto_vivo.py:367`) não conhece `data-campo` nem `data-linha` —, e sem
+    ele o pacote não tem como saber que ela está mexendo. As 21 linhas de *o que
+    cada botão faz* passaram a levar `gesto=LINHA_DE_BOTAO`. A segunda metade
+    continua de pé: **o ponto de gravação é o "Guardar"**, e este gesto não
+    grava nada.
+
+    As duas outras telas continuam sem `gesto` **e** sem `campo`, e é a mesma
+    razão de sempre: os "Guardar" delas não têm dono no produto.
 
     FATO SUBSTITUÍDO (02/09/2026): aqui estava escrito que as 49 listas ficam
     "sem nome" porque só o Guardar importa. **Sem nome elas nunca são pintadas**,
@@ -711,7 +724,7 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo=""):
     return f'<select class="{classe}"{g}{ln}{c}>{"".join(partes)}</select>'
 
 
-def simples(ops, classe="escolha-at", gesto="", campo=""):
+def simples(ops, classe="escolha-at", gesto="", campo="", escolhido=""):
     """Um `<select>` das opções, com o ENDEREÇO do clique e o da PINTURA.
 
     O `data-gesto` liga o campo **desde 01/09/2026**, e a frase que estava aqui
@@ -731,10 +744,21 @@ def simples(ops, classe="escolha-at", gesto="", campo=""):
     `data-hef-alvo="valor"` é obrigatório junto: sem ele a pintura escreveria o
     texto DENTRO do `<select>` (o alvo padrão do `escrever` é `textContent`) e
     comeria as opções.
+
+    O `escolhido` NASCEU EM 02/09/2026, e a razão é a decisão dela sobre a
+    "Função do teclado": as três opções passaram a ser `Só dentro do jogo` ·
+    `Só fora do jogo` · `Desativado`, e **o padrão é a do meio**. Sem este
+    argumento a lista nasceria marcada na PRIMEIRA — que é justamente a única
+    das três sem dono no produto. Uma tela que nasce mostrando a opção que o
+    produto não sabe fazer promete o que não entrega nos 500 ms anteriores ao
+    primeiro tique (`hefesto_vivo.TIQUE_MS`).
     """
     g = f' data-gesto="{gesto}"' if gesto else ""
     c = f' data-campo="{campo}" data-hef-alvo="valor"' if campo else ""
-    op = "".join(f'<option{" selected" if i == 0 else ""}>{o}</option>' for i, o in enumerate(ops))
+    marcada = escolhido if escolhido else (ops[0] if ops else "")
+    if escolhido and escolhido not in ops:
+        raise SystemExit(f"ERRO: a opção padrão {escolhido!r} não está na lista {ops}")
+    op = "".join(f'<option{" selected" if o == marcada else ""}>{o}</option>' for o in ops)
     return f'<select class="{classe}"{g}{c}>{op}</select>'
 
 
@@ -1070,19 +1094,38 @@ D_REMAPEAMENTO = ajuda(
 #: `pacotes/a06_navegacao.py` casa por texto.
 #:
 #: **A MESMA LISTA ESTÁ LÁ, e a repetição é declarada**: o gesto casa pela
-#: PRIMEIRA palavra (tolerante ao que vier depois do travessão) e a pintura usa
-#: as duas frases inteiras. Quem reescrever uma opção aqui tem de abrir
-#: `a06_navegacao.py` — o cabeçalho de `_TECLADO` diz o que muda de cada lado.
+#: palavra que DISTINGUE (`dentro`, `fora`, `desativado`) e a pintura usa a
+#: frase inteira. Quem reescrever uma opção aqui tem de abrir
+#: `a06_navegacao.py` — o cabeçalho de `_ESCOLHA` diz o que muda de cada lado.
+#:
+#: AS TRÊS SÃO DECISÃO DELA, 02/09/2026: *"`Só dentro do jogo` · `Só fora do
+#: jogo` · `Desativado`. O padrão de um perfil novo é `Só fora do jogo` — no
+#: jogo o L3 é o clique do analógico e o teclado atrapalha; no desktop é onde
+#: ele serve."*
+#:
+#: A PRIMEIRA OPÇÃO SAIU PORQUE O NOME ESTAVA ERRADO, e isto é medição e não
+#: gosto: ela dizia **"Ligada — atalhos e teclado na tela"**, e "ligada"
+#: afirmava um alcance que o produto NÃO tem. O daemon já cala a emulação de
+#: desktop quando um jogo assume — `_jogo_no_controle_do_desktop`
+#: (`daemon/lifecycle.py:2263`, a cura da queixa dela de 29/07 *"aperto r1 e ele
+#: muda de app ao invés de funcionar no jogo"*) e o `gamepad_dispatched` do laço
+#: (`:4780`). O que o teclado emulado faz hoje **é** "só fora do jogo": a
+#: etiqueta é que mentia.
 OPCOES_TECLADO = [
-    "Ligada — atalhos e teclado na tela",
+    "Só dentro do jogo",
     "Só fora do jogo",
-    "Desligada",
+    "Desativado",
 ]
+
+#: A opção que a lista mostra ANTES do primeiro tique. É a que ela escolheu como
+#: padrão, e é a única das três com dono no produto hoje — ver `OPCOES_TECLADO`.
+TECLADO_PADRAO = OPCOES_TECLADO[1]
 
 ATIVACAO_ESQ = [
     ("Status do Modo", D_QUANDO, STATUS_MODO),
     ("Função do teclado", D_TECLADO,
-     simples(OPCOES_TECLADO, gesto="teclado", campo="teclado-estado")),
+     simples(OPCOES_TECLADO, gesto="teclado", campo="teclado-estado",
+             escolhido=TECLADO_PADRAO)),
     ("Navegação Interna", D_INTERNA, simples([
         "Ligada — cada controle navega o Hefesto",
         f"Só o Player {NAVEGA} navega",
@@ -1183,22 +1226,37 @@ PONTO_MAPA = [
 # que aquele botão apaga — e o que ele NÃO apaga, que é o que a frase antiga,
 # única e comum às duas tabelas, não podia dizer.
 # ---------------------------------------------------------------------------
-def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padrao):
+def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padrao,
+                   fechar=""):
     """Uma das duas telas de botões.
 
-    Os dois últimos argumentos são os NOMES dos gestos que a tela tem — o
-    "Cancelar" e o "×" não levam nome porque **funcionam**: fecham a pop-up pelo
-    `:target` do CSS, sem uma linha de script. Marcar um botão que faz o que
-    promete o faria aparecer no relato como "sem dono", que é o inverso da
-    verdade.
+    Os NOMES dos gestos vêm por argumento, e desde 02/09/2026 são TRÊS: o de
+    guardar, o de voltar ao de fábrica e o de FECHAR.
+
+    FATO SUBSTITUÍDO (02/09/2026): aqui estava escrito que *"o 'Cancelar' e o
+    '×' não levam nome porque funcionam: fecham a pop-up pelo `:target` do CSS.
+    Marcar um botão que faz o que promete o faria aparecer no relato como 'sem
+    dono'"*. Continua verdade que eles fecham sozinhos — e **deixou de ser
+    verdade que fechar é tudo o que eles têm a fazer**. Com a decisão dela de
+    02/09 (*"as 21 listas param de ser repintadas enquanto ela está mexendo,
+    até guardar ou sair"*), FECHAR É O "SAIR": é o instante em que as escolhas
+    pendentes têm de ser largadas e a tabela voltar ao que o perfil guarda.
+    Sem nome, esse instante não chega ao Python e a trava ficaria presa depois
+    de ela desistir. Eles não aparecem como "sem dono" porque agora TÊM dono —
+    `a06_navegacao.fechar_definicoes`.
+
+    A tela que passa `fechar=""` continua sem os nomes, e é o caso da de
+    remapeamento: lá não há trava a soltar, porque o `Guardar` dela não tem
+    dono no produto (ver `SEM_GESTO`).
     """
+    x = f' data-gesto="{fechar}"' if fechar else ""
     return f'''
 <div class="tela-nova" id="{ident}">
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">{titulo}</span>
       {dica}
-      <a class="tn-x" href="#" title="Fechar">×</a>
+      <a class="tn-x" href="#" title="Fechar"{x}>×</a>
     </div>
     <div class="tn-corpo">
       <!-- TEXTO NA TELA É ZERO — regra dela, 30/08/2026: *"texto na interface é
@@ -1214,7 +1272,7 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
       </div>
     </div>
     <div class="tn-rod grupo-padrao">
-      <a class="btn" href="#">Cancelar</a>
+      <a class="btn" href="#"{x}>Cancelar</a>
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
       <a class="btn roxo" href="#" data-gesto="{guardar}" data-hef-forma="{ident}">Guardar</a>
       <div class="confirma">
@@ -1228,16 +1286,30 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
 '''
 
 
+#: O NOME DO GESTO DAS 21 LINHAS. Ele não grava nada — quem grava é o
+#: "Guardar". O que ele faz é DIZER ao Python que ela está mexendo, e é o que
+#: destrava a decisão dela de 02/09: *"as 21 listas param de ser repintadas
+#: enquanto ela está mexendo, até guardar ou sair"*.
+#:
+#: SEM ELE A ESCOLHA NUNCA CHEGAVA AO PYTHON, e isto foi medido: o ouvinte do
+#: piloto só reconhece um alvo que case com o `closest` de `manda_do_alvo`
+#: (`hefesto_vivo.py:367` — `[data-gesto]`, `[data-modo]`, `[data-papel]`…), e
+#: os 21 `<select>` tinham só `data-campo`, `data-linha` e `data-hef-alvo`.
+#: O `change` morria no navegador; o tique de 500 ms reescrevia a escolha por
+#: cima; e o "Guardar" ao lado nunca via uma forma diferente do perfil.
+LINHA_DE_BOTAO = "linha-de-botao"
+
 TELA_DEFINICOES = tela_de_botoes(
     "definicoes-mouse", "Definições Controle e Mouse", D_DEFINICOES,
     "O que ele faz",
     chr(10).join(
         f'          <tr><td class="b">{b}</td>'
-        f'<td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], linha=i, campo=f"acao-{i}")}</td></tr>'
+        f'<td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], gesto=LINHA_DE_BOTAO, linha=i, campo=f"acao-{i}")}</td></tr>'
         for b, i in BOTOES),
     f"Devolver ao de fábrica as {len(BOTOES)} linhas de <b>o que cada botão faz</b>? "
     "O <b>Remapeamento dos botões</b> não é tocado.",
-    guardar="guardar-definicoes", padrao="padrao-definicoes")
+    guardar="guardar-definicoes", padrao="padrao-definicoes",
+    fechar="fechar-definicoes")
 
 TELA_REMAPEAMENTO = tela_de_botoes(
     "remapeamento", "Remapeamento dos botões", D_REMAPEAMENTO,
@@ -1649,6 +1721,35 @@ def _conferir(doc):
            f"quem navega (P{NAVEGA}) não está conectado")
     exigir(f'>P{NAVEGA} <span class="pt">•</span> {QUEM_NAVEGA["nome"]}</div>' in corpo,
            "o card de quem navega não é o do controle certo")
+
+    # 4. AS VINTE E UMA LINHAS DIZEM AO PYTHON QUE ELA ESTÁ MEXENDO — decisão
+    #    dela, 02/09/2026. O `data-gesto` é o ÚNICO atributo destes `<select>`
+    #    que o ouvinte do piloto reconhece (`hefesto_vivo.py:367`); sem ele o
+    #    `change` morre no navegador, o tique reescreve a escolha por cima em
+    #    ≤1,5 s e o "Guardar" ao lado nunca vê forma diferente do perfil.
+    #    Tirá-lo desfaz a decisão CALADO, e é por isso que ele é conferido aqui.
+    exigir(corpo.count(f'data-gesto="{LINHA_DE_BOTAO}"') == len(BOTOES),
+           f"as {len(BOTOES)} linhas de 'o que cada botão faz' perderam o "
+           f"`data-gesto=\"{LINHA_DE_BOTAO}\"` — sem ele a pintura volta a "
+           f"desfazer a escolha antes do clique em Guardar")
+    # 4-bis. E O "SAIR" TEM NOME. O `×` e o `Cancelar` da tela de definições
+    #    fecham a pop-up pelo `:target` sozinhos; o que eles NÃO faziam era
+    #    avisar o Python, e é nesse instante que as escolhas pendentes têm de
+    #    ser largadas. São DOIS na tela de definições, e ZERO na de
+    #    remapeamento, que não tem trava a soltar.
+    exigir(corpo.count('data-gesto="fechar-definicoes"') == 2,
+           "o `×` e o `Cancelar` da tela de definições perderam o "
+           "`data-gesto=\"fechar-definicoes\"` — a trava das 21 linhas ficaria "
+           "presa depois de ela desistir")
+    # 5. A LISTA DO TECLADO NASCE NA OPÇÃO QUE ELA ESCOLHEU COMO PADRÃO, e ela
+    #    é a única das três com dono no produto. Nascer marcada na primeira
+    #    ("Só dentro do jogo") faria a tela prometer, nos 500 ms anteriores ao
+    #    primeiro tique, o que o Hefesto ainda não sabe fazer.
+    exigir(f'<option selected>{TECLADO_PADRAO}</option>' in corpo,
+           f"a 'Função do teclado' não nasce em {TECLADO_PADRAO!r}")
+    for opcao in OPCOES_TECLADO:
+        exigir(f">{opcao}</option>" in corpo,
+               f"a opção {opcao!r} da 'Função do teclado' sumiu do desenho")
 
     if falhas:
         raise SystemExit("ERRO em 06-navegacao — decisão dela desfeita:\n  "
