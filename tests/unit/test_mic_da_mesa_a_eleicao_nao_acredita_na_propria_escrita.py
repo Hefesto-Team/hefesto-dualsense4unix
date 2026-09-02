@@ -312,12 +312,24 @@ def test_a_eleicao_que_o_wireplumber_desfez_nao_registra_dono(pactl: Any) -> Non
     assert eleitor.eleito is None, "a escrita aconteceu, a posse não"
 
 
-def test_a_devolucao_solta_a_posse_com_ou_sem_para_onde_voltar(pactl: Any) -> None:
-    """Os DOIS desfechos da volta soltam o `eleito`.
+def test_a_devolucao_solta_a_posse_so_quando_ela_foi_conferida(pactl: Any) -> None:
+    """A posse muda pela RELEITURA DO ATIVO, e agora nos dois sentidos.
 
-    O controle saiu do ar nos dois casos. Continuar anotando-o como eleito faria
-    a próxima borda dele ser lida como "o eleito devolvendo de novo", e a de
-    outro jogador como recusa — o defeito de volta, ao contrário.
+    FATO SUBSTITUÍDO (02/09/2026). Este teste se chamava
+    `..._com_ou_sem_para_onde_voltar` e exigia que a posse caísse também no
+    fracasso, com a razão *"o controle saiu do ar nos dois casos"*. A premissa
+    era falsa e este arquivo é justamente o que a derruba: sem fonte que se
+    sustente, o `set-default-source` **nunca roda** — o padrão do sistema
+    continua sendo o canal daquele controle, e ele NÃO saiu do ar.
+
+    O módulo inteiro existe para não acreditar na própria escrita. Soltar a
+    posse numa devolução que não devolveu é o mesmo defeito com o sinal
+    trocado: declarar sucesso pela intenção.
+
+    E é o que a decisão dela de 02/09 exige por baixo do LED — *"quando a
+    devolução é recusada, o canal continua sendo daquele controle, logo o
+    microfone está no ar, logo a luz fica acesa"*. Luz acesa com a posse caída
+    seria o plástico e a tela dando vereditos opostos sobre quem está no ar.
     """
     eleitor = elm.EleitorDeMicrofone()
     eleitor.eleger_por_uniq(
@@ -326,7 +338,7 @@ def test_a_devolucao_solta_a_posse_com_ou_sem_para_onde_voltar(pactl: Any) -> No
     assert eleitor.eleito == "aabbcc000011"
 
     assert eleitor.devolver_o_microfone().ok is True
-    assert eleitor.eleito is None, "com destino, a posse cai"
+    assert eleitor.eleito is None, "a volta foi CONFERIDA: a posse cai"
 
     eleitor.eleger_por_uniq(
         "aabbcc000011", fontes=[_ALVO], uniqs_com_audio=["aabbcc000011"]
@@ -335,4 +347,8 @@ def test_a_devolucao_solta_a_posse_com_ou_sem_para_onde_voltar(pactl: Any) -> No
     pactl.sustenta = False  # não há para onde voltar
 
     assert eleitor.devolver_o_microfone().ok is False
-    assert eleitor.eleito is None, "sem destino também — o controle saiu do ar"
+    assert eleitor.eleito == "aabbcc000011", (
+        "nada foi escrito: o microfone da mesa continua sendo o dele, e a "
+        "próxima borda dele TEM de ser lida como uma nova tentativa de "
+        "devolver — não como a de quem não tem o canal"
+    )
