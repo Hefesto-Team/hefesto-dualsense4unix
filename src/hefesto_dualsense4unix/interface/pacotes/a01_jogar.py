@@ -299,9 +299,21 @@ def _painel() -> Any:
     """`app/actions/jogar/painel` — o dono das perguntas desta aba.
 
     Importado DENTRO das funções, e não no topo: `painel` puxa `home_actions`,
-    que puxa GTK. As funções de pacote são puras por contrato
-    (`pacotes/__init__`), e um import de GTK no topo faria as dez abas o
-    carregarem para pintar um travessão.
+    que puxa GTK.
+
+    FATO ERRADO, SUBSTITUÍDO — 02/09/2026. Esta linha dizia que sem o import
+    tardio *"as dez abas carregariam GTK para pintar um travessão"*. **GTK já
+    chega antes de qualquer aba**, e a medição é de uma linha:
+
+        import pacotes            ->  38 módulos `gi` carregados
+        import pacotes.a01_jogar  ->  os mesmos 38, nenhum a mais
+
+    Quem o traz é o próprio despachante, por `app/actions/base.py:9`. O import
+    tardio segue valendo, e o motivo verdadeiro é OUTRO e menor: `painel` puxa a
+    escada, as pontes e o prontuário dos jogos (217 ms de import frio contra
+    166 ms do `mode_transition`, que não puxa GTK nenhum). É custo de partida,
+    não de pureza — as funções de pacote continuam sem TOCAR GTK, que é o que o
+    contrato do `pacotes/__init__` pede.
     """
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
