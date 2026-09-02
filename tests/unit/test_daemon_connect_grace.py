@@ -224,9 +224,17 @@ async def test_mic_toggle_after_settling(
 
     A CARÊNCIA continua sendo o assunto deste arquivo e continua valendo: ela
     só mudou de laço. A borda do microfone com endereço nasce em
-    `daemon/subsystems/mic_da_mesa.py`, que aplica o MESMO `INPUT_GRACE_SEC` —
-    e o teste da carência lá é
-    `test_mic_repique_01_o_botao_que_mutava_sozinho.py::TestARajadaDeBordas`.
+    `daemon/subsystems/mic_da_mesa.py`, que aplica o MESMO `INPUT_GRACE_SEC`.
+
+    PONTEIRO CORRIGIDO em 02/09/2026 (auditoria). Aqui se lia que o teste da
+    carência do laço novo "é
+    `test_mic_repique_01_o_botao_que_mutava_sozinho.py::TestARajadaDeBordas`".
+    Não era: os três testes daquela classe começavam com `asyncio.sleep(0.4)`,
+    que PASSA POR CIMA da carência de 0,3 s, e nenhum apertava dentro dela —
+    arrancar a linha inteira do `mic_da_mesa_loop` deixava 859 réguas verdes.
+    O ponteiro agora aponta para o teste que de fato existe:
+    `TestARajadaDeBordas::test_a_borda_dentro_da_carencia_nao_vira_gesto`,
+    escrito na mesma auditoria.
 
     O que sobra aqui é a metade que continua sendo deste arquivo: passado o
     grace, o `BUTTON_DOWN` do `mic_btn` chega ao laço e **nada é mutado**.

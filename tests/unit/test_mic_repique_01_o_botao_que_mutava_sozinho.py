@@ -241,6 +241,59 @@ class TestARajadaDeBordas:
         vistos = {fila.get_nowait()["uniq"] for _ in range(2)}
         assert vistos == {_P1, _P2}
 
+    @pytest.mark.asyncio
+    async def test_a_borda_dentro_da_carencia_nao_vira_gesto(self) -> None:
+        """A CARÊNCIA PÓS-CONEXÃO, medida — e ela não tinha régua nenhuma.
+
+        ACHADO DA AUDITORIA DE 02/09/2026. O laço novo aplica o mesmo
+        `INPUT_GRACE_SEC` que curou o micBtn fantasma do hotplug — o defeito que
+        fez um controle dela ser DESLIGADO —, e ninguém o guardava: arrancada a
+        linha inteira de `daemon/subsystems/mic_da_mesa.py`, 859 réguas de
+        mic/áudio/hotkey ficaram verdes.
+
+        E havia um PONTEIRO FALSO no repositório: o docstring de
+        `test_daemon_connect_grace.py` afirmava que "o teste da carência lá é
+        `TestARajadaDeBordas`". Os três testes desta classe começavam com
+        `await asyncio.sleep(0.4)`, que PASSA POR CIMA da carência de 0,3 s.
+        Nenhum apertava dentro dela. Este aperta.
+
+        As duas metades, porque uma cura que mata o botão não é cura: a borda
+        DENTRO da carência não vira gesto, e o mesmo botão volta a valer depois.
+
+        CURA A ARRANCAR: a checagem `(agora - nasceu_em) < INPUT_GRACE_SEC` do
+        `mic_da_mesa_loop` — esta régua reprova com o gesto fantasma.
+        """
+        backend = _BackendComBordas((_P1,))
+        daemon = _Daemon(controller=backend, config=_Config())
+        fila = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)
+
+        dentro: list[int] = []
+
+        async def corpo(d: _Daemon) -> None:
+            # A carência é 0,3 s e o laço varre a cada 0,05 s: apertar aos
+            # 0,10 s dá ao laço duas varreduras — a que adota o contador e a
+            # que vê a borda — as duas dentro da janela.
+            await asyncio.sleep(0.10)
+            backend.apertar(_P1)
+            await asyncio.sleep(0.15)
+            dentro.append(fila.qsize())
+            # E agora, PASSADA a carência, o mesmo botão tem de valer.
+            await asyncio.sleep(0.35)
+            backend.apertar(_P1)
+            await asyncio.sleep(0.15)
+
+        await _rodar_bordas(daemon, corpo)
+
+        assert dentro == [0], (
+            "uma borda DENTRO da carência pós-conexão virou gesto — é o micBtn "
+            "fantasma do hotplug com outro nome, e desta vez ele troca o "
+            f"microfone padrão do sistema: fila com {dentro}"
+        )
+        assert fila.qsize() == 1, (
+            "passada a carência o botão tem de voltar a valer — uma guarda que "
+            "mata o gesto não é guarda"
+        )
+
 
 # ---------------------------------------------------------------------------
 # (B) Os dois donos do mudo
