@@ -24,16 +24,31 @@ campos MENCIONADOS, três PINTADOS.
 O QUE ESTA RÉGUA MEDE, e a diferença é o ponto inteiro: ela lê o valor que está
 NA TELA, com o daemon vivo, e compara com o valor CRAVADO no arquivo publicado.
 
-    PRODUTO      o valor mudou — alguém pintou
+    PRODUTO      o valor mudou — alguém pintou; ou é igual ao cravado E o
+                 piloto SELOU o elemento, que é o mesmo fato provado por outro
+                 caminho
     MOCKUP       igual ao cravado, e nenhum pacote declara este campo
-    INDECIDIVEL  igual ao cravado, e o pacote declara EXATAMENTE esse valor
+    INDECIDIVEL  igual ao cravado, o pacote declara EXATAMENTE esse valor, e o
+                 piloto NÃO passou pelo elemento
 
-A TERCEIRA CLASSE NÃO É PREGUIÇA, é o limite honesto do instrumento. Se o
-desenho escreveu ``85%`` e o controle dela está mesmo em ``85%``, ler a tela não
-distingue "pintou o valor certo" de "nunca pintou". Separá-las exigiria marcar
-cada elemento no momento da escrita — uma marca no caminho quente da pintura,
-paga por toda volta do tique, para responder uma pergunta de bancada. A régua
-prefere DIZER QUANTOS SÃO a inventar certeza.
+A TERCEIRA CLASSE ERA 74 CAMPOS EM 330, e hoje é ZERO. Esta seção dizia:
+*"separá-las exigiria marcar cada elemento no momento da escrita — uma marca no
+caminho quente da pintura, paga por toda volta do tique, para responder uma
+pergunta de bancada"*, e concluía que a régua preferia dizer quantos eram.
+**A conta estava errada, e foi medida em 02/09/2026:** a marca é um
+``el.dataset.hefVisto = '1'`` no ``escrever()``, e o custo do tique não se mexeu
+— mediana **1,13 ms antes, 1,03 ms depois**, na mesma aba e na mesma mesa. Os 74
+viraram PRODUTO, e o número de MOCKUP não mudou uma unidade.
+
+E A MARCA NÃO É "LER O CÓDIGO", que é o erro que esta régua existe para não
+repetir: ela não pergunta se o nome do campo aparece no pacote — ela registra,
+em tempo de execução, que o valor emitido CHEGOU a um elemento desta página.
+Endereço morto continua sem selo, e continua acusado. A mordida que prova que o
+selo decide alguma coisa é ``--sem-selo``: os 74 voltam.
+
+A CLASSE FICA, e não é resíduo: um bloco que a pintura troca INTEIRO
+(``innerHTML``) não passa pelo ``escrever()``, e um filho dele que nasça igual
+ao desenho volta a ser indecidível — com a nota dizendo isso.
 
 O QUARTO CASO CAI EM ``MOCKUP``, e é o mais grave dos três: o pacote declara o
 campo com OUTRO valor e a tela continua no cravado. Isso é **endereço morto** —
