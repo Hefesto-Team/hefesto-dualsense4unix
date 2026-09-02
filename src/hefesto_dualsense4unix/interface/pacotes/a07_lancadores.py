@@ -73,6 +73,7 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     integrations/prontuario_dos_jogos.pontes_confirmadas quem já sabe por onde entrar
     integrations/jogos_locais.pastas_de_atalhos          onde moram os `.desktop`
     app/actions/launch_wrapper_dialog.load_dismissed_appids  quem ela dispensou
+    app/actions/launch_wrapper_dialog.remove_dismissed_appid o "voltar a perguntar"
 
 `carona_do_wrapper.passada()` responderia parte disto — mas ela ESCREVE no
 `localconfig.vdf` quando há o que repor, e uma PINTURA que escreve em disco a
@@ -594,6 +595,33 @@ def voltar_a_usar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _resposta(VIGIA.ler())
 
 
+@gesto("07-lancadores.html", "voltar-a-perguntar")
+def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Voltar a perguntar": tira o appid do `launch_dialog_dismissed.json`.
+
+    O DESFAZER QUE NÃO EXISTIA, e a falta era de MOTOR e não de tela: até hoje
+    `launch_wrapper_dialog` só tinha `add_dismissed_appid`. Clicar em *"Não
+    perguntar para este jogo"* no lembrete da GTK produzia um silêncio
+    permanente, e desfazê-lo pedia editar um JSON à mão. Decisão dela,
+    02/09/2026 — nasce o par, e o botão é este.
+
+    A RECUSA VAI PARA A TELA, e é por isso que `remove_dismissed_appid` devolve
+    `bool` em vez de engolir como o `add`: se o arquivo não deu para reescrever,
+    a linha continuaria na lista e o segundo clique pareceria o primeiro — o
+    botão que aceita o clique e não faz nada.
+    """
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+
+    appid = _appid_do_clique(o, "voltar-a-perguntar")
+    if not lwd.remove_dismissed_appid(appid):
+        raise RuntimeError(
+            "Não consegui tirar este jogo da lista de dispensados. O arquivo "
+            "`launch_dialog_dismissed.json` não aceitou a escrita — o lembrete "
+            "continua desligado para ele.")
+    VIGIA.esquecer()
+    return _resposta(VIGIA.ler())
+
+
 #: VAZIOS, E É A MEDIÇÃO QUE OS DEIXA VAZIOS: nenhum gesto desta aba fala com o
 #: daemon. O wrapper vive em dois arquivos em disco, e `pacotes.daemon.metodos()`
 #: não traz um método sequer que os toque.
@@ -602,7 +630,8 @@ METODOS: set[str] = set()
 
 
 PAGINA = "07-lancadores.html"
-PISO_DA_ABA = 6
+#: SUBIU DE 6 PARA 7 em 02/09/2026, com o "Voltar a perguntar" (decisão dela).
+PISO_DA_ABA = 7
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
 #: `PonteDeMentira` e cobra QUAL função da ponte o gesto chamou. Um gesto que
@@ -613,8 +642,9 @@ PISO_DA_ABA = 6
 #: o efeito cobrado NO ARQUIVO — que é a prova mais forte, não a mais fraca.
 PROVAS: list[dict[str, Any]] = []
 
-#: TODOS OS SEIS, e não por preguiça: o `state_full` do daemon não tem UMA
-#: chave sobre a Steam, sobre o `localconfig.vdf` ou sobre a lista de
-#: recusados. O efeito destes botões é o DISCO e a TELA — e os dois têm régua.
+#: TODOS OS SETE, e não por preguiça: o `state_full` do daemon não tem UMA
+#: chave sobre a Steam, sobre o `localconfig.vdf`, sobre a lista de recusados ou
+#: sobre a de dispensados. O efeito destes botões é o DISCO e a TELA — e os dois
+#: têm régua.
 SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
-           "tirar-daqui", "voltar-a-usar")
+           "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar")
