@@ -907,10 +907,13 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
     seção `mic` do perfil valha no próximo toque sem restart. Desligado, não
     elegemos nada e o kernel segue dono do mudo e da luz.
 
-    E O LED SÓ ACENDE DEPOIS DA RELEITURA. `set_mic_led(..., uniq=)` é chamado
-    com o resultado da eleição CONFERIDA — nunca com o que mandamos. Um LED
-    pintado da escrita seria a mentira de segunda geração: o plástico dizendo
-    "estou no ar" sobre um nó que o WirePlumber já desfez.
+    E O LED SÓ ACENDE — E SÓ APAGA — DEPOIS DA RELEITURA.
+    `set_mic_led(..., uniq=)` é chamado com o resultado CONFERIDO, nunca com o
+    que mandamos, nos DOIS sentidos. Um LED pintado da escrita seria a mentira
+    de segunda geração: o plástico dizendo "estou no ar" sobre um nó que o
+    WirePlumber já desfez. E um LED apagado da INTENÇÃO é a mesma mentira ao
+    contrário — foi o que acontecia na devolução recusada, com o canal
+    continuando a ser o do controle e a luz caindo assim mesmo.
 
     O sossego e a carência não estão aqui: eles moram no laço das bordas, que
     é onde a borda nasce. Duas réguas sobre o mesmo estado é o defeito que esta
@@ -990,7 +993,7 @@ async def _eleger_ou_devolver(
             #
             # E A FRASE FALA DA MESA, NÃO DA MEMÓRIA DO ELEITOR (auditoria de
             # 02/09/2026). O eleito pode ter SAÍDO da mesa: nada em `src/`
-            # devolve o microfone no hotplug-out — as três únicas escritas de
+            # devolve o microfone no hotplug-out — as únicas escritas de
             # `EleitorDeMicrofone.eleito` são caminhos de eleição. Com a J1
             # fora do cabo, `recusa_de_quem_nao_elegeu(eleitor.eleito)` dizia
             # ao J2 *"o microfone da mesa está com outro controle"* e mandava
@@ -1001,12 +1004,27 @@ async def _eleger_ou_devolver(
             # para `eleito is None`: da mesa, ninguém está com o microfone.
             # Nenhuma frase nova nasce aqui — texto de tela é dela.
             #
-            # `conectados` VAZIO não é mesa vazia: quem apertou o botão está
-            # nela por construção, logo a lista vazia só pode ser o backend que
-            # não sabe listar. Aí o dono fica de pé, porque "não sei" nunca
+            # E QUEM DIZ QUEM ESTÁ NA MESA É UMA FUNÇÃO SÓ, que é a mesma que
+            # o `state_full` usa: `recado_do_microfone.mesa_de_agora`. Esta
+            # linha perguntava a `_uniqs_conectados`, que **não exige o
+            # `connected`** — a lista dele vai para a ELEIÇÃO, e lá a pergunta
+            # é outra. O backend real devolve uma entrada POR HANDLE e mantém
+            # o `uniq` preenchido com `connected: False`
+            # (`core/backend_pydualsense.py:5298`), então o controle que saiu
+            # DE VERDADE continuava na lista e o dono não caía.
+            #
+            # Medido com o laço deste arquivo e um backend que faz o que o real
+            # faz: o MESMO `state_full` saía com `eleito_na_mesa: false` e o
+            # recado do J2 dizendo *"o microfone da mesa está com outro
+            # controle"*. Duas leituras do mesmo estado, dois vereditos.
+            #
+            # Mesa `None` (backend que não sabe listar) e mesa VAZIA deixam o
+            # dono de pé: quem apertou o botão está na mesa por construção,
+            # logo o vazio só pode ser instrumento cego — e "não sei" nunca
             # vira "saiu".
             dono = eleitor.eleito
-            if dono is not None and conectados and dono not in conectados:
+            mesa = recado_do_microfone.mesa_de_agora(daemon)
+            if dono is not None and mesa and dono not in mesa:
                 dono = None
             recusa = recusa_de_quem_nao_elegeu(dono)
             logger.info(
@@ -1029,7 +1047,24 @@ async def _eleger_ou_devolver(
                 await daemon._run_blocking(_acender, acender_outro, False, uniq)
             return
         resultado = await daemon._run_blocking(eleitor.devolver_o_microfone)
-        aceso = False
+        # A LUZ FICA ACESA QUANDO A DEVOLUÇÃO É RECUSADA — decisão dela, e ela
+        # não é nova: o contrato do LED é *"aceso = este mic está no ar"*
+        # (01/09/2026). Se o produto não conseguiu devolver, o padrão do
+        # sistema continua sendo o canal DESTE controle — logo o microfone
+        # dele está no ar, logo a luz fica acesa.
+        #
+        # Aqui estava `aceso = False`, cravado ANTES de saber o desfecho. Com
+        # `melhor_fonte_elegivel()` vazia — o estado desta bancada, com a
+        # webcam fora e as três portas analógicas `not available` — a
+        # devolução volta `ok=False` sem ter escrito nada, e o plástico apagava
+        # sobre um canal que continuava sendo o dele. Era a mentira de segunda
+        # geração ao contrário: o LED dizendo "saí do ar" com o sistema
+        # gravando por ele.
+        #
+        # E é a MESMA regra dos dois lados — a luz segue a leitura CONFERIDA,
+        # nunca o que mandamos. `eleger` acende quando o ativo relido é o
+        # controle; `devolver` só apaga quando o ativo relido deixou de ser.
+        aceso = not bool(resultado.ok)
     else:
         resultado = await daemon._run_blocking(
             eleitor.eleger_o_controle, uniq, conectados
