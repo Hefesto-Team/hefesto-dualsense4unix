@@ -458,6 +458,20 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "abre feature nenhuma; ausente é o caminho de produção. MEDIDO em "
         "01/09/2026."
     ),
+    "HEFESTO_SEM_JANELA": (
+        "A TRAVA DA TELA DELA (gui/ponte_da_tela.py:janela_proibida_na_tela). "
+        "Quem a exporta não consegue abrir janela visível nesta máquina: a "
+        "`JanelaDaAba` cai para `Gtk.OffscreenWindow` mesmo quando o chamador "
+        "pediu janela na tela, e o visor `interface/ver.py` recusa dizendo. "
+        "NÃO abre nem fecha feature nenhuma do produto: ausente é o caminho de "
+        "produção, e o lançador dela abre exatamente como sempre. Ela existe "
+        "para quem TRABALHA na máquina dela — uma leva de agente, um portão, "
+        "um ensaio —, e nasceu de uma foto: com treze frentes em voo, oito "
+        "cópias da mesma janela nasceram empilhadas na tela dela, em cima do "
+        "que ela estava fazendo. O `--oculta` já existia e não bastou porque a "
+        "regra vivia no prompt de quem abre, e todo caminho novo nasce sem "
+        "ela. MEDIDO em 02/09/2026."
+    ),
     "HEFESTO_BROKER_SOCKET": (
         "Endereço do socket do broker de hidraw. Não é escolha dela: é ponto de "
         "injeção para o teste apontar o cliente a um socket de mentira "

@@ -127,6 +127,38 @@ CANAL_PADRAO = "hefesto"
 TAMANHO_NA_TELA = (1180, 757)
 TAMANHO_OCULTA = (1180, 900)
 
+#: A TRAVA DA TELA DELA — 02/09/2026, e ela nasceu de uma foto.
+#:
+#: Com treze frentes de agente em voo, oito cópias da MESMA janela nasceram
+#: empilhadas na tela dela, em cima do que ela estava fazendo. Ela fotografou e
+#: perguntou *"pq sempre abre essas inúmeras abas da mesma tela?"*.
+#:
+#: O `--oculta` do piloto sempre existiu e a regra da casa sempre foi usá-lo.
+#: **Isso não bastou, e a razão é estrutural:** a regra vivia no PROMPT de quem
+#: abre. Todo caminho novo — um teste, um script de ensaio, um visor antigo,
+#: uma frente com pressa — nasce sem ela, e o custo cai na tela DELA, que é uma
+#: só. Uma regra que depende de quem chama lembrar dela não é regra; é sorte.
+#:
+#: Então a trava mora AQUI, no dono ÚNICO da criação de janela desta casa, e é
+#: do ambiente: quem exporta ``HEFESTO_SEM_JANELA`` não consegue abrir janela
+#: visível nem querendo. O briefing de toda leva de agente a exporta.
+#:
+#: O QUE ELA NÃO FAZ, de propósito: ela não some com a janela do PRODUTO. Sem a
+#: variável, o comportamento é exatamente o de antes — ela abre para quem a
+#: chamou. A trava é para quem trabalha na máquina dela, não para quem usa.
+SEM_JANELA_NA_TELA = "HEFESTO_SEM_JANELA"
+
+
+def janela_proibida_na_tela() -> bool:
+    """O ambiente proíbe abrir janela visível nesta máquina?
+
+    Lê a cada chamada, e não uma vez na importação: um teste que exporta a
+    variável no meio da sessão precisa ser obedecido, e um que a remove também.
+    """
+    import os
+
+    return bool(os.environ.get(SEM_JANELA_NA_TELA, "").strip())
+
 
 def literal_js(valor: object) -> str:
     """Um valor Python virando literal JavaScript, por JSON e só por JSON.
@@ -334,6 +366,17 @@ class JanelaDaAba:
         )
         self.view = self.ponte.view
         self.view.connect("load-changed", self._carregou)
+
+        # A TRAVA DA TELA DELA vem ANTES do `if`, e é de propósito: ela não
+        # avisa e segue, ela DECIDE. Ver `SEM_JANELA_NA_TELA`, no topo.
+        if not oculta and janela_proibida_na_tela():
+            print(
+                f"[janela] {SEM_JANELA_NA_TELA} está no ambiente: abrindo "
+                f"OCULTA em vez de na tela dela ({titulo}).",
+                file=sys.stderr,
+            )
+            oculta = True
+            self.oculta = True
 
         if oculta:
             self.janela: Any = Gtk.OffscreenWindow()

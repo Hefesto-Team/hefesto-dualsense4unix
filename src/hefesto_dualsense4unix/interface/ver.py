@@ -111,6 +111,29 @@ def main() -> int:
         print("rode antes: src/hefesto_dualsense4unix/interface/regerar.py", file=sys.stderr)
         return 1
 
+    # A TRAVA DA TELA DELA — 02/09/2026. Este visor abre VISÍVEL de propósito
+    # (é ela quem manda abrir, e o fim dele é ser visto), então aqui a trava
+    # RECUSA em vez de esconder: abrir oculto um visor que existe para ser
+    # olhado devolveria uma janela que ninguém vê e um sucesso que mente.
+    #
+    # Quem exporta `HEFESTO_SEM_JANELA` é quem trabalha NA máquina dela — uma
+    # leva de agente, um portão, um ensaio. Nesse ambiente, o certo é não abrir.
+    from hefesto_dualsense4unix.gui.ponte_da_tela import (
+        SEM_JANELA_NA_TELA,
+        janela_proibida_na_tela,
+    )
+
+    if janela_proibida_na_tela():
+        print(
+            f"recusado: {SEM_JANELA_NA_TELA} está no ambiente, e este visor só "
+            "serve aberto na tela dela.\n"
+            "Para OLHAR sem aparecer, use o piloto com `--oculta --foto`:\n"
+            "  src/hefesto_dualsense4unix/interface/hefesto_vivo.py "
+            f"--oculta --abre {inicial} --segundos 8 --foto /tmp/aba.png",
+            file=sys.stderr,
+        )
+        return 2
+
     janela = Gtk.Window(title="Hefesto — a interface nova (mockup no motor de verdade)")
     janela.set_default_size(LARGURA, ALTURA)
     janela.connect("destroy", Gtk.main_quit)
