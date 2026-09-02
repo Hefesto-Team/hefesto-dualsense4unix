@@ -1019,17 +1019,24 @@ echo "== teclado na tela do L3 (instalador × empacotamentos × doctor × daemon
 # alguém apagasse o instalador — o portão calaria justo no defeito que ele
 # existe para acusar.
 #
-# Então o gate é o que CRIA a promessa: o token `__OPEN_OSK__` no mapa de
-# fábrica. Enquanto o produto oferecer "abrir teclado na tela" no L3, ele tem
-# de instalar, declarar e conferir o que isso precisa. Se um dia a promessa
-# sair do mapa, a seção fica quieta por direito — e é isso que também mantém
-# esta seção silenciosa nos checkouts sintéticos dos testes do próprio portão,
-# que trazem só `scripts/` e `assets/`.
+# Então o gate é o que CRIA a promessa: um token de OSK no mapa de fábrica.
+# Enquanto o produto oferecer teclado na tela num botão, ele tem de instalar,
+# declarar e conferir o que isso precisa. Se um dia a promessa sair do mapa, a
+# seção fica quieta por direito — e é isso que também mantém esta seção
+# silenciosa nos checkouts sintéticos dos testes do próprio portão, que trazem
+# só `scripts/` e `assets/`.
+#
+# A ÂNCORA É `_OSK__`, E NÃO `__OPEN_OSK__` — corrigido em 02/09/2026, no dia em
+# que o L3 virou alternador. O mapa passou a ter TRÊS tokens
+# (`__TOGGLE_OSK__`, `__OPEN_OSK__`, `__CLOSE_OSK__`), e uma âncora presa ao
+# nome de UM deles emudeceria a seção inteira no dia em que alguém aposentasse
+# justamente esse — sem que a promessa tivesse saído do produto. É a armadilha
+# que o parágrafo acima descreve, escrita dentro da própria cura.
 _osk_promessa="src/hefesto_dualsense4unix/core/keyboard_mappings.py"
-if [[ ! -f "${_osk_promessa}" ]] || ! grep -q '__OPEN_OSK__' "${_osk_promessa}" 2>/dev/null; then
-    echo "[ OK ] teclado na tela: o mapa de fábrica não promete __OPEN_OSK__ neste checkout — nada a checar"
+if [[ ! -f "${_osk_promessa}" ]] || ! grep -q '_OSK__' "${_osk_promessa}" 2>/dev/null; then
+    echo "[ OK ] teclado na tela: o mapa de fábrica não promete teclado na tela neste checkout — nada a checar"
 elif [[ ! -f scripts/install_osk.sh ]]; then
-    echo "[FAIL] o mapa de fábrica promete __OPEN_OSK__ no L3 e scripts/install_osk.sh não existe"
+    echo "[FAIL] o mapa de fábrica promete teclado na tela num botão e scripts/install_osk.sh não existe"
     echo "       o teclado na tela ficou sem dono: o produto oferece o gesto e não instala nada."
     rc=1
 else

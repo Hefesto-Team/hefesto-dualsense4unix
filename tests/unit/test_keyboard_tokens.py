@@ -1,4 +1,9 @@
-"""Testes de tokens virtuais `__OPEN_OSK__`/`__CLOSE_OSK__` no UinputKeyboardDevice.
+"""Testes dos tokens virtuais de OSK no UinputKeyboardDevice.
+
+São três desde 02/09/2026: `__TOGGLE_OSK__` (o preset do L3), `__OPEN_OSK__` e
+`__CLOSE_OSK__` (o preset do R3). O que o L3 FAZ com o segundo aperto é medido
+em `test_o_l3_alterna_o_teclado_na_tela.py`; aqui o que se cobra é que o token
+saia pelo callback e nunca pelo uinput.
 
 Cobre FEAT-KEYBOARD-UI-01 (59.3) — tokens não devem emitir via uinput; são
 delegados ao `virtual_token_callback` do subsystem. Teste monkeypatch do
@@ -12,6 +17,7 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
     DEFAULT_BUTTON_BINDINGS,
     TOKEN_CLOSE_OSK,
     TOKEN_OPEN_OSK,
+    TOKEN_TOGGLE_OSK,
     is_virtual_token,
 )
 from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDevice
@@ -64,6 +70,7 @@ def _make_device_preset(
 
 
 def test_is_virtual_token_detecta_corretamente() -> None:
+    assert is_virtual_token("__TOGGLE_OSK__")
     assert is_virtual_token("__OPEN_OSK__")
     assert is_virtual_token("__CLOSE_OSK__")
     assert not is_virtual_token("KEY_C")
@@ -73,10 +80,10 @@ def test_is_virtual_token_detecta_corretamente() -> None:
 
 def test_token_virtual_delega_ao_callback_e_nao_emite() -> None:
     dev, fake_device, calls = _make_device_preset()
-    # L3 default = __OPEN_OSK__; press então release
+    # L3 default = __TOGGLE_OSK__ desde 02/09/2026; press então release
     dev.dispatch(frozenset({"l3"}))
     dev.dispatch(frozenset())
-    assert calls == [(TOKEN_OPEN_OSK, "press"), (TOKEN_OPEN_OSK, "release")]
+    assert calls == [(TOKEN_TOGGLE_OSK, "press"), (TOKEN_TOGGLE_OSK, "release")]
     # Nada emitido via uinput.
     assert fake_device.emitted == []
 

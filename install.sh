@@ -2522,9 +2522,10 @@ fi
 # ---------------------------------------------------------------------------
 # 4f. Teclado na tela — o que o L3 do controle abre (TECLADO-QUE-NAO-DIGITA-01)
 # ---------------------------------------------------------------------------
-# O mapa de fábrica dá ao L3 o token `__OPEN_OSK__` desde sempre, e o daemon o
-# cumpre abrindo um teclado na tela DO SISTEMA. Só que ninguém instalava esse
-# teclado: medido em 09/08/2026 na máquina dela, `command -v onboard
+# O mapa de fábrica dá ao L3 um token de OSK desde sempre (`__TOGGLE_OSK__`
+# desde 02/09/2026, quando o L3 virou alternador; antes `__OPEN_OSK__`), e o
+# daemon o cumpre abrindo um teclado na tela DO SISTEMA. Só que ninguém
+# instalava esse teclado: medido em 09/08/2026 na máquina dela, `command -v onboard
 # wvkbd-mobintl` não achava nenhum dos dois e `grep -c onboard install.sh` dava
 # ZERO. Como nenhum dos nove atalhos de fábrica digita uma LETRA (Super,
 # PrintScreen, Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois
