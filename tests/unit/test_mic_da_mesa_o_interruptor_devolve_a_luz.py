@@ -206,3 +206,35 @@ def test_a_secao_sem_opiniao_sobre_o_botao_nao_mexe_em_nada() -> None:
 
     assert daemon.config.mic_button_toggles_system is True
     assert backend.posse == []
+
+
+def test_backend_sem_o_metodo_recusa_dizendo_em_vez_de_sair_calado() -> None:
+    """MEDIDO na auditoria: o dublê da suíte NÃO tem `set_microphone_led`.
+
+    Nem `core/controller.IController` nem
+    `testing/fake_controller.FakeController` declaram o método — só o
+    `PyDualSenseController`. Num daemon dublado a devolução simplesmente não
+    acontece, e sair calado daqui faria o log dizer que a luz voltou ao kernel
+    quando ela não voltou. O aviso `mic_da_mesa_posse_sem_backend` é o que
+    separa "não havia o que devolver" de "não consegui devolver".
+
+    Isto NÃO conserta a divergência interface/dublê — ela é dívida ANOTADA na
+    auditoria de 02/09/2026, e fechá-la muda a assinatura de `set_mic_led` em
+    três arquivos. Esta régua fixa o que é verdade hoje e reprova quando alguém
+    mudar, para a próxima pessoa reencontrar a dívida em vez de tropeçar nela.
+    """
+    from hefesto_dualsense4unix.core.controller import IController
+    from hefesto_dualsense4unix.daemon.subsystems.hotkey import devolver_a_luz_ao_kernel
+    from hefesto_dualsense4unix.testing.fake_controller import FakeController
+
+    assert not hasattr(IController, "set_microphone_led"), (
+        "a interface ganhou o método — reveja esta régua e a dívida que ela cita"
+    )
+    assert not hasattr(FakeController, "set_microphone_led")
+
+    class _Mudo:
+        def describe_controllers(self) -> list[dict[str, Any]]:
+            return [{"uniq": _J1}]
+
+    daemon = _Daemon(_Mudo())  # type: ignore[arg-type]
+    assert devolver_a_luz_ao_kernel(daemon) == 0  # type: ignore[arg-type]

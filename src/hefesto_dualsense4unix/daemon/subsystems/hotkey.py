@@ -1048,6 +1048,12 @@ def devolver_a_luz_ao_kernel(daemon: DaemonProtocol) -> int:
     """
     devolver = getattr(daemon.controller, "set_microphone_led", None)
     if not callable(devolver):
+        # NÃO É HIPÓTESE: medido em 02/09/2026, nem `core/controller.IController`
+        # nem o `FakeController` da suíte declaram `set_microphone_led` — só o
+        # `PyDualSenseController`. Num daemon dublado a devolução não acontece,
+        # e sair calado daqui seria a tela e o log dizendo que a luz voltou ao
+        # kernel quando ela não voltou.
+        logger.warning("mic_da_mesa_posse_sem_backend")
         return 0
     quantos = 0
     for uniq in _uniqs_conectados(daemon) or [None]:  # type: ignore[list-item]
