@@ -90,8 +90,15 @@ MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 #: aqui: `SUBSTITUÍDO em 14/08/2026`, `FATO ERRADO SUBSTITUÍDO`,
 #: `caducou em 19/07`, `REFUTADA por medição em 03/08` e `E CAIU — 11/08/2026`
 #: são todas frases que já estavam no CSV antes deste portão existir.
+#:
+#: `CORRIGID` entrou em 02/09/2026, na segunda rodada de curadoria: o mapa já
+#: usava as duas palavras como sinônimas para o mesmo gesto — `CORREÇÃO DE
+#: FATO` é o vocabulário do próprio `CLAUDE.md` —, e metade das células que a
+#: rodada enterrou tinha sido escrita com ela. Ampliar a lista é o oposto de
+#: afrouxar o portão: sem `CORRIGID` ele reprovaria a célula CURADA e
+#: continuaria cego à podre.
 MARCA_DE_SEPULTAMENTO = re.compile(
-    r"SUBSTITU|FATO ERRADO|caduc|REFUTAD|derrubad|"
+    r"SUBSTITU|FATO ERRADO|caduc|REFUTAD|derrubad|CORRIGID|"
     r"E CAIU|caíram|CAIU EM|deixou de valer|SAIU em \d",
     re.IGNORECASE,
 )
@@ -252,6 +259,146 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
             "`O JOGO RECEBEU` e `O JOGO REAGIU` entraram em `ESCADA` no mesmo "
             "dia em que a nota foi escrita, com as regras 13 e 14 do "
             "scripts/check_paridade_transporte.py"
+        ),
+    ),
+    # ------------------------------------------------------------------
+    # SEGUNDA RODADA DE CURADORIA — 02/09/2026. Seis historiadores
+    # confrontaram o mapa com o CÓDIGO do produto (a primeira rodada tinha
+    # lido commits, ensaios e estudos). O que muda de fonte muda de forma: a
+    # primeira achou prosa que outra medição derrubou; esta achou prosa que o
+    # próprio `src/` desmente. As oito abaixo são as que RECRUTAM — a frase é
+    # afirmativa, distinta e convincente, e quem a lesse sairia com o
+    # diagnóstico errado.
+    # ------------------------------------------------------------------
+    Derrubado(
+        nome="a única rota de LED de jogador por rádio é o sysfs",
+        padrao=re.compile(
+            r"ÚNICA rota: sysfs"
+            r"|A rota hidraw é suprimida incondicionalmente"
+            r"|SÓ o sysfs\. Por Bluetooth a rota da pydualsense",
+            re.IGNORECASE,
+        ),
+        caiu_em="12/08/2026",
+        quem_derrubou=(
+            "a ROTA-BT-EM-REGIME-01 criou a SEGUNDA rota: o report 0x31 avulso "
+            "escrito no hidraw, com o bit PLAYER_INDICATOR e o common[43] — "
+            "`_pintar_por_hidraw_bt`, chamado pelo `_for_each_led` FORA do "
+            "`if node is not None`. O que segue suprimido por rádio é só o "
+            "fallback da pydualsense dentro do report_thread"
+        ),
+    ),
+    Derrubado(
+        nome="nenhum report de ENTRADA devolve o mudo de firmware do microfone",
+        padrao=re.compile(
+            r"nenhum report de ENTRADA conhecido devolve volume, rota, "
+            r"pré-amp ou o mudo de firmware",
+            re.IGNORECASE,
+        ),
+        caiu_em="01/09/2026",
+        quem_derrubou=(
+            "o mudo VOLTA no bit 0x04 de payload[53] — o mesmo byte do jack — e "
+            "o produto o LÊ desde a MIC-DA-MESA-ELEICAO-01: `extract_jack_status`"
+            " → `_registrar_borda_do_mic` → `bordas_do_mic` → `mic_da_mesa_loop`,"
+            " nos dois transportes. A linha irmã `audio.jack.deteccao@dualsense` "
+            "sempre disse que o bit2 desse byte é o MIC_MUTE"
+        ),
+    ),
+    Derrubado(
+        nome="`_struct_base` não testa o bit de áudio do report 0x31",
+        padrao=re.compile(
+            r"`_struct_base` NÃO testa o bit1 de report\[1\]"
+            r"|FURO ABERTO \(BT-FURO-FINO-01 defeito 1\)",
+        ),
+        caiu_em="16/08/2026",
+        quem_derrubou=(
+            "o PS-PRESO-01 fechou o furo: `if report[1] & INPUT_FLAG_AUDIO: "
+            "return None` em core/physical_report_reader.py, com "
+            "tests/unit/test_ps_preso_01_audio_lido_como_botao.py verde. A "
+            "tranquilização que vinha colada — «inerte só porque a ponte de mic "
+            "nasce DESLIGADA» — é a metade mais perigosa: a eleição do "
+            "microfone pelo botão entrou em 01/09/2026"
+        ),
+    ),
+    Derrubado(
+        nome="o produto não lê o acelerômetro — ABS_X/Y/Z «não entram aqui»",
+        padrao=re.compile(
+            r"não entram aqui"
+            r"|o acelerômetro não é um número — é PASSAGEM",
+            re.IGNORECASE,
+        ),
+        caiu_em="29/08/2026",
+        quem_derrubou=(
+            "a ONDA-CONTROLES-04 fez o acelerômetro ser LIDO: o laço de "
+            "`ABS_X/ABS_Y/ABS_Z` em core/evdev_reader.py, `g_por_unidade`, e o "
+            "`SensorHub` publicando `inputs.accel` com três casas "
+            "(daemon/sensor_hub.py) até `accel_do_inputs` na tela. A docstring "
+            "que a frase citava foi trocada no mesmo dia, e diz o contrário"
+        ),
+    ),
+    Derrubado(
+        nome="nenhum ensaio de `entrada.bruta` foi escrito na leva de 15/08",
+        padrao=re.compile(
+            r"Subir o grau exige ensaio em docs/data/ensaios\.csv, e nenhum "
+            r"foi escrito nesta leva",
+            re.IGNORECASE,
+        ),
+        caiu_em="15/08/2026, 22:12",
+        quem_derrubou=(
+            "OITO ensaios de `entrada.bruta@dualsense` estão no caderno, todos "
+            "de 2026-08-15T22:12 com `observado_por = aparelho` — quatro por "
+            "cabo e quatro por rádio: `bruta-contador-*` e `bruta-reservados-*`."
+            " O teto do grau continua `MONTOU`, mas por outra razão"
+        ),
+    ),
+    Derrubado(
+        nome=(
+            "o teto do throttle é a única peça do código que reconhece mais de "
+            "um controle na mesa"
+        ),
+        padrao=re.compile(
+            r"único lugar da árvore que reconhece que dois controles na mesa"
+            r"|única peça do código que reconhece que dois na mesa"
+            r"|única peça do produto que reconhece que quatro na mesa",
+            re.IGNORECASE,
+        ),
+        caiu_em="27/06/2026",
+        quem_derrubou=(
+            "o `daemon/subsystems/coop.py` são 2.004 linhas cuja razão de "
+            "existir é exatamente «dois na mesa não é um», e ele faz SAÍDA — "
+            "`_apply_coop_player_leds` acende o padrão do jogador de CADA "
+            "controle e `_make_player_rumble_sink` roteia rumble por jogador. "
+            "Ele nasceu ANTES do índice de 10/08 que a frase cita como origem"
+        ),
+    ),
+    Derrubado(
+        nome="o Hefesto não lê o `hardware_version` do sysfs",
+        padrao=re.compile(
+            r"O Hefesto NÃO lê este nó: `hardware_version` não aparece uma vez",
+            re.IGNORECASE,
+        ),
+        caiu_em="22/08/2026",
+        quem_derrubou=(
+            "o commit e2c9d401 (BARRA-MUDA-01) criou "
+            "integrations/sinal_da_barra.py, cujo `instancias_dualsense` lê o "
+            "`hardware_version` de toda conexão viva; o daemon a chama no "
+            "hotplug, a janela GTK ao montar a aba, e o valor sai pelo IPC para "
+            "a tela — sete dias DEPOIS do «conferido em 15/08/2026» da célula"
+        ),
+    ),
+    Derrubado(
+        nome="nenhum DualSense esteve no fio em 15/08, e o lado do cabo é inferência",
+        padrao=re.compile(
+            r"o cabo continua `inferido-do-código` porque nenhum deles esteve "
+            r"no fio neste dia",
+            re.IGNORECASE,
+        ),
+        caiu_em="15/08/2026, 22:12",
+        quem_derrubou=(
+            "o `cabo_evidencia` da própria linha descreve a mesa 2+2 com dois "
+            "controles no fio, `cabo_de_onde_sei` é `medido`, e o caderno tem "
+            "quatro ensaios com `transporte = cabo` na mesma hora. A frase era o "
+            "estado de ANTES das 22:12 e sobreviveu à subida, do outro lado da "
+            "mesma linha"
         ),
     ),
 )
