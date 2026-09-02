@@ -2076,7 +2076,9 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
 fi
 
 step "3g" "ONDA-R: agente de pareamento BT persistente (cura o bond meio-salvo)"
-install_bt_agent_host# ---------------------------------------------------------------------------
+install_bt_agent_host
+
+# ---------------------------------------------------------------------------
 # 3h. Broker root hide-hidraw (BROKER-01/Onda S — fd-injection) — DEFAULT
 # ---------------------------------------------------------------------------
 # Esconde o hidraw FÍSICO do DualSense do JOGO (cura de RAIZ do controle

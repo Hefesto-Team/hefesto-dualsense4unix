@@ -25,7 +25,15 @@
 # `utils/identidade.py:HEFESTO.wm_class`, aplicado por `Gdk.set_program_class`
 # em `app/main.py` e em `scripts/abrir_interface.py`.
 Type=Application
-Name=Hefesto — DualSense4Unix
+# O NOME NA DOCK É CURTO, e ele veio da MÁQUINA dela, não deste arquivo: o
+# atalho instalado dizia `Name=Hefesto` desde antes de 01/09/2026, reescrito por
+# um editor de `.desktop` (comentários preservados, `Name=` trocado, quebra
+# final some — a assinatura do `GKeyFile`). Alinhar aqui é o que impede o
+# instalador de desfazer a escolha dela a cada execução.
+#
+# O nome POR EXTENSO continua existindo, no lugar dele: `identidade.nome_longo`
+# é o título da janela e o do `--version`.
+Name=Hefesto
 GenericName=DualSense Controller
 Comment=Gerenciador de DualSense para Linux. As dez abas, com o dado do aparelho.
 Exec=@RAIZ@/interface.sh
