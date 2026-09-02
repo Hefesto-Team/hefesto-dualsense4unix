@@ -2139,7 +2139,7 @@ class IpcHandlersMixin:
         (TECLADO-QUE-NAO-DIGITA-01):
 
         - `osk_disponivel` -- há teclado na tela instalado na MÁQUINA. É o que
-                         decide se o L3 (`__OPEN_OSK__`, o binding de fábrica)
+                         decide se o L3 (`__TOGGLE_OSK__`, o de fábrica)
                          abre alguma coisa ou só avisa que não tem o que abrir —
                          e, como nenhum dos nove atalhos de fábrica digita uma
                          LETRA, é também o que decide se existe algum caminho

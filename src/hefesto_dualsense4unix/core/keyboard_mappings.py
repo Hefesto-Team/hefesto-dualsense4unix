@@ -37,20 +37,35 @@ KeyBinding = tuple[str, ...]
 # evita literais mágicos espalhados pelo código.
 TOKEN_OPEN_OSK = "__OPEN_OSK__"
 TOKEN_CLOSE_OSK = "__CLOSE_OSK__"
+#: O TERCEIRO, e é o preset do L3 desde 02/09/2026. DECISÃO DELA, verbatim:
+#: *"deixar no preset do botão L3, no mapeamento, abrir o teclado virtual e
+#: fechar o teclado virtual caso apertado novamente."*
+#:
+#: POR QUE UM TOKEN NOVO, e não `__OPEN_OSK__` passando a alternar: quem
+#: escolhe "Abrir" numa das vinte e uma linhas da tela pede ABRIR, e um botão
+#: que fecha o que a pessoa acabou de abrir seria outra coisa com o mesmo nome.
+#: Os dois antigos continuam valendo — o que muda é qual deles o L3 recebe de
+#: fábrica.
+TOKEN_TOGGLE_OSK = "__TOGGLE_OSK__"
 
 DEFAULT_BUTTON_BINDINGS: dict[str, KeyBinding] = {
     "options": ("KEY_LEFTMETA",),
     "create": ("KEY_SYSRQ",),
     "l1": ("KEY_LEFTALT", "KEY_LEFTSHIFT", "KEY_TAB"),
     "r1": ("KEY_LEFTALT", "KEY_TAB"),
-    # L3/R3 abrem/fecham teclado virtual do sistema (onboard/wvkbd-mobintl).
-    # O token virtual é interceptado pelo UinputKeyboardDevice e delegado ao
-    # keyboard subsystem — não emite evento real de tecla. Previne colisão
-    # com R3=BTN_MIDDLE do mouse porque este último só atua quando
-    # `mouse_emulation_enabled=True`. Quem habilita mouse+teclado juntos
-    # pode sobrescrever l3/r3 via UI (FEAT-KEYBOARD-UI-01) removendo o
-    # conflito explicitamente.
-    "l3": (TOKEN_OPEN_OSK,),
+    # L3 ALTERNA o teclado virtual do sistema (onboard/wvkbd-mobintl) desde
+    # 02/09/2026; R3 continua fechando. O token virtual é interceptado pelo
+    # UinputKeyboardDevice e delegado ao keyboard subsystem — não emite evento
+    # real de tecla. Previne colisão com R3=BTN_MIDDLE do mouse porque este
+    # último só atua quando `mouse_emulation_enabled=True`. Quem habilita
+    # mouse+teclado juntos pode sobrescrever l3/r3 via UI (FEAT-KEYBOARD-UI-01)
+    # removendo o conflito explicitamente.
+    #
+    # ANTES o L3 era `__OPEN_OSK__` puro, e o único jeito de fechar era o R3 —
+    # que em modo mouse é o Botão do meio, e por isso a pessoa que joga não o
+    # tem livre. Um botão que só abre deixa a janela do teclado por cima do
+    # jogo, e o produto não oferecia saída no mesmo dedo.
+    "l3": (TOKEN_TOGGLE_OSK,),
     "r3": (TOKEN_CLOSE_OSK,),
     # Regiões do touchpad (click firme, não toque leve) — emitidas pelo
     # `TouchpadReader` no device separado expose pelo kernel hid_playstation.
@@ -74,11 +89,12 @@ def parse_binding(spec: str) -> KeyBinding:
     Formato aceito:
     - Tecla única: `"KEY_ENTER"`.
     - Combo: `"KEY_LEFTALT+KEY_TAB"`, `"KEY_LEFTCTRL+KEY_LEFTSHIFT+KEY_T"`.
-    - Token virtual OSK: `"__OPEN_OSK__"`, `"__CLOSE_OSK__"` — aceitos COMO
-      ESTÃO (marcadores `__*__` do `is_virtual_token`), sem exigir `KEY_*`.
-      São os defaults de l3/r3 e a legenda da UI manda digitá-los; o
-      downstream (`UinputKeyboardDevice` / keyboard subsystem) os intercepta
-      via `is_virtual_token` e delega ao callback de OSK em vez de emitir tecla.
+    - Token virtual OSK: `"__TOGGLE_OSK__"`, `"__OPEN_OSK__"`,
+      `"__CLOSE_OSK__"` — aceitos COMO ESTÃO (marcadores `__*__` do
+      `is_virtual_token`), sem exigir `KEY_*`. O primeiro é o default de l3 e o
+      terceiro o de r3; a legenda da UI manda digitá-los. O downstream
+      (`UinputKeyboardDevice` / keyboard subsystem) os intercepta via
+      `is_virtual_token` e delega ao callback de OSK em vez de emitir tecla.
 
     Tokens são stripped e uppercased. Vazio retorna tupla vazia. Strings que
     não sejam `KEY_*` nem token virtual `__*__` levantam `ValueError` —
@@ -90,7 +106,8 @@ def parse_binding(spec: str) -> KeyBinding:
     tokens = [tok.strip().upper() for tok in spec.split("+") if tok.strip()]
     for tok in tokens:
         if is_virtual_token(tok):
-            # Marcador `__OPEN_OSK__`/`__CLOSE_OSK__` — preservado como está.
+            # Marcador `__TOGGLE_OSK__`/`__OPEN_OSK__`/`__CLOSE_OSK__` —
+            # preservado como está.
             continue
         if not tok.startswith("KEY_"):
             raise ValueError(
@@ -109,6 +126,7 @@ __all__ = [
     "DEFAULT_BUTTON_BINDINGS",
     "TOKEN_CLOSE_OSK",
     "TOKEN_OPEN_OSK",
+    "TOKEN_TOGGLE_OSK",
     "KeyBinding",
     "format_binding",
     "is_virtual_token",

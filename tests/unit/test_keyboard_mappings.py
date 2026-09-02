@@ -14,7 +14,7 @@ def test_default_bindings_cobertura_sprint_3() -> None:
     """Sub-sprint 3 (FEAT-KEYBOARD-UI-01) expande os defaults.
 
     - 4 originais (sub-sprint 1): options/create/l1/r1.
-    - L3/R3 mapeiam para tokens virtuais __OPEN_OSK__/__CLOSE_OSK__.
+    - L3/R3 mapeiam para tokens virtuais __TOGGLE_OSK__/__CLOSE_OSK__.
     - 3 regiões de touchpad viram KEY_BACKSPACE/ENTER/DELETE
       (INFRA-EVDEV-TOUCHPAD-01 destravou o caminho).
     """
@@ -100,12 +100,14 @@ def test_format_binding_inverso_de_parse() -> None:
 def test_parse_binding_aceita_tokens_virtuais_osk() -> None:
     """GUI Sprint 4 T1 (perda de dados): tokens virtuais OSK NÃO podem levantar.
 
-    `__OPEN_OSK__`/`__CLOSE_OSK__` são os defaults de l3/r3 e a legenda da UI
-    manda digitá-los na célula; `parse_binding` tem de aceitá-los COMO ESTÃO
+    `__TOGGLE_OSK__`/`__CLOSE_OSK__` são os defaults de l3/r3 (o `__OPEN_OSK__`
+    continua sendo uma escolha da tela) e a legenda da UI manda digitá-los na
+    célula; `parse_binding` tem de aceitá-los COMO ESTÃO
     (sem exigir `KEY_*`), preservando o token para o downstream (que os
     intercepta via `is_virtual_token` e delega ao callback de OSK). Antes deste
     fix, `_persist_key_bindings_to_draft` descartava l3/r3 no `except ValueError`.
     """
+    assert parse_binding("__TOGGLE_OSK__") == ("__TOGGLE_OSK__",)
     assert parse_binding("__OPEN_OSK__") == ("__OPEN_OSK__",)
     assert parse_binding("__CLOSE_OSK__") == ("__CLOSE_OSK__",)
     # Entrada case-insensitive (normalizada para uppercase, como os KEY_*).
@@ -114,7 +116,7 @@ def test_parse_binding_aceita_tokens_virtuais_osk() -> None:
 
 def test_parse_binding_round_trip_tokens_virtuais() -> None:
     """Round-trip `format_binding(parse_binding(x)) == x` para os tokens OSK."""
-    for spec in ("__OPEN_OSK__", "__CLOSE_OSK__"):
+    for spec in ("__TOGGLE_OSK__", "__OPEN_OSK__", "__CLOSE_OSK__"):
         assert format_binding(parse_binding(spec)) == spec
 
 # "Conhece-te a ti mesmo." — Sócrates

@@ -6,8 +6,9 @@ O DEFEITO, medido na máquina dela em 09-10/08/2026:
     grep -c onboard install.sh               ->  0
     grep -c onboard packaging/debian/control ->  0
 
-O mapa de fábrica do teclado emulado dá ao L3 o token ``__OPEN_OSK__``
-(``core/keyboard_mappings.py``) e o daemon o cumpre abrindo um teclado na tela
+O mapa de fábrica do teclado emulado dá ao L3 um token de OSK
+(``__TOGGLE_OSK__`` desde 02/09/2026; ``__OPEN_OSK__`` antes disso) em
+``core/keyboard_mappings.py``, e o daemon o cumpre abrindo um teclado na tela
 do SISTEMA (``daemon/subsystems/keyboard.py``). Só que nenhum instalador,
 nenhum empacotamento e nenhum doctor desta casa o instalava, declarava ou
 conferia. E o preço não é um gesto a menos: nenhum dos nove atalhos de fábrica

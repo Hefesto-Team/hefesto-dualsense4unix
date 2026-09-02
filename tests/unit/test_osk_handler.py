@@ -1,4 +1,9 @@
-"""Testes do `_OSKController` — abrir/fechar onboard/wvkbd-mobintl."""
+"""Testes do `_OSKController` — abrir/fechar onboard/wvkbd-mobintl.
+
+O TERCEIRO VERBO, `toggle()`, tem régua própria em
+`test_o_l3_alterna_o_teclado_na_tela.py`: ele é o preset do L3 desde 02/09/2026
+e o caso que decide é o SEGUNDO aperto, que não se mede aqui.
+"""
 from __future__ import annotations
 
 from typing import Any

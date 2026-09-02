@@ -34,7 +34,11 @@ import subprocess
 import time
 from typing import TYPE_CHECKING
 
-from hefesto_dualsense4unix.core.keyboard_mappings import TOKEN_CLOSE_OSK, TOKEN_OPEN_OSK
+from hefesto_dualsense4unix.core.keyboard_mappings import (
+    TOKEN_CLOSE_OSK,
+    TOKEN_OPEN_OSK,
+    TOKEN_TOGGLE_OSK,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -157,6 +161,11 @@ class _OSKController:
     é logado uma única vez se nenhum dos candidatos estiver instalado. Abrir
     quando já há processo ativo é no-op (evita stack de janelas sobrepostas).
     Fechar sem processo ativo também é no-op.
+
+    TRÊS VERBOS, e o terceiro é o do L3: `open`, `close` e `toggle`. O
+    alternador não é açúcar em cima dos dois primeiros — ele depende de
+    `aberto()`, que pergunta ao PROCESSO se ele ainda vive em vez de acreditar
+    no atributo. Ver o corpo daquele método para o que isso evita.
     """
 
     def __init__(self) -> None:
@@ -229,6 +238,44 @@ class _OSKController:
 
             notify_teclado_na_tela_ausente(candidatos)
 
+    def aberto(self) -> bool:
+        """True se HÁ um teclado na tela vivo que este daemon abriu.
+
+        ELA NÃO É `self._process is not None`, e a diferença é o defeito que o
+        alternador teria: o wvkbd/onboard pode morrer por fora (ela fecha a
+        janela, o compositor o derruba, a sessão troca) e o `Popen` continua no
+        atributo, com `poll()` já devolvendo o código de saída. Um alternador
+        que confiasse na presença do objeto mandaria FECHAR o que já está
+        fechado, e o próximo aperto abriria — o L3 passaria a precisar de dois
+        toques para abrir, de forma intermitente.
+
+        Enxuga o atributo quando o processo morreu por fora, para o `close()`
+        seguinte não ter o que terminar e o estado não ficar mentindo.
+        """
+        proc = self._process
+        if proc is None:
+            return False
+        if proc.poll() is None:
+            return True
+        self._process = None
+        return False
+
+    def toggle(self) -> None:
+        """O SEGUNDO TOQUE FECHA — decisão dela, 02/09/2026.
+
+        *"deixar no preset do botão L3, no mapeamento, abrir o teclado virtual e
+        fechar o teclado virtual caso apertado novamente."*
+
+        Sem binário instalado, `open()` avisa e não deixa processo: o estado
+        continua "fechado" e o toque seguinte volta a tentar abrir, que é o
+        certo — o aviso tem dedup próprio e o TTL do `_resolve` faz um pacote
+        instalado com o daemon no ar passar a valer em até dez segundos.
+        """
+        if self.aberto():
+            self.close()
+        else:
+            self.open()
+
     def open(self) -> None:
         if self._process is not None and self._process.poll() is None:
             return
@@ -270,7 +317,9 @@ class _OSKController:
         """
         if phase != "press":
             return
-        if token == TOKEN_OPEN_OSK:
+        if token == TOKEN_TOGGLE_OSK:
+            self.toggle()
+        elif token == TOKEN_OPEN_OSK:
             self.open()
         elif token == TOKEN_CLOSE_OSK:
             self.close()

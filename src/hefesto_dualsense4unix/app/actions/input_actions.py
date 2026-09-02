@@ -170,6 +170,12 @@ _KEY_LABELS: dict[str, str] = {
     "KEY_DOWN": "Seta ↓",
     "KEY_LEFT": "Seta ←",
     "KEY_RIGHT": "Seta →",
+    # O ALTERNADOR é o preset do L3 desde 02/09/2026 (decisão dela). Sem esta
+    # linha a aba Teclado da janela mostraria `__TOGGLE_OSK__` CRU na linha do
+    # L3 — jargão de kernel na tela dela, que é exatamente o que a KBD-01 tirou
+    # daqui. O texto acompanha a forma dos dois vizinhos e ESPERA a palavra
+    # dela, que decidiu o comportamento e não o rótulo.
+    "__TOGGLE_OSK__": "Abrir e fechar teclado na tela",
     "__OPEN_OSK__": "Abrir teclado na tela",
     "__CLOSE_OSK__": "Fechar teclado na tela",
 }
