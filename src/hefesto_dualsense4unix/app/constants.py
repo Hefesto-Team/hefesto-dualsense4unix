@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from hefesto_dualsense4unix.utils import identidade
-
 # Layout do source repo: parents[3] = root (~/Desenvolvimento/hefesto-dualsense4unix).
 # Layout instalado (deb/flatpak/AppImage/wheel): parents[3] aponta para fora do
 # pacote (site-packages/), e src/ não existe. Os paths canônicos pegam recursos
@@ -25,14 +23,6 @@ def _resolve_icon_path() -> Path:
         GUI_DIR / "assets" / "logo.png",
         raiz / "assets" / "appimage" / "Hefesto-Dualsense4Unix.png",
     ]
-    # AS DUAS CASAS (29/08/2026): o app de desenvolvimento usa a logo DELE, e
-    # ela vem na frente das duas acima — senão os dois Hefestos mostrariam o
-    # mesmo desenho no cabeçalho e na barra de título, que é o oposto do que
-    # ela pediu ("instalado como OUTRO APP com a logo alterada em dev").
-    if identidade.atual().variante:
-        candidates.insert(
-            0, raiz / "assets" / "appimage" / "Hefesto-Dev-Dualsense4Unix.png"
-        )
     for c in candidates:
         if c.exists():
             return c

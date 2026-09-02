@@ -218,23 +218,21 @@ echo "== Icon pedido pelo CÓDIGO (janela + bandeja) × nome instalado =="
 # melhora em vez do defeito, porque digitava o que devia LER*.
 #
 # Agora ela lê o literal de onde ele passou a viver, e continua sendo texto
-# puro (sem depender do venv, que este script não tem). Só o bloco ESTAVEL
-# conta: o app de desenvolvimento não é empacotado em .deb/.rpm/Arch/Nix, e
-# cobrar o ícone dele desses formatos seria exigir arquivo que não deve existir.
-echo "       (o nome vem de utils/identidade.py:ESTAVEL — ver o comentário aqui)"
+# puro (sem depender do venv, que este script não tem).
+echo "       (o nome vem de utils/identidade.py:HEFESTO — ver o comentário aqui)"
 IDENTIDADE_PY=src/hefesto_dualsense4unix/utils/identidade.py
 code_icons=()
 if [[ -f "${IDENTIDADE_PY}" ]]; then
-    icone_estavel="$(awk '/^ESTAVEL = Identidade\(/,/^\)/' "${IDENTIDADE_PY}" \
+    icone_do_app="$(awk '/^HEFESTO = Identidade\(/,/^\)/' "${IDENTIDADE_PY}" \
         | sed -n 's/^[[:space:]]*icone="\([^"]*\)".*/\1/p' | head -1)"
-    if [[ -n "${icone_estavel}" ]]; then
-        code_icons+=("${icone_estavel}")
+    if [[ -n "${icone_do_app}" ]]; then
+        code_icons+=("${icone_do_app}")
         # A BANDEJA pede o mesmo nome com `-symbolic` (app/tray.py:
         # TRAY_ICON_NAME). O sufixo é contrato — APPLET-MONOCROMÁTICO-01 —,
         # então a régua só o deriva se o código ainda o construir assim.
         if grep -q 'TRAY_ICON_NAME[[:space:]]*=.*-symbolic' \
             src/hefesto_dualsense4unix/app/tray.py 2>/dev/null; then
-            code_icons+=("${icone_estavel}-symbolic")
+            code_icons+=("${icone_do_app}-symbolic")
         else
             echo "[FAIL] app/tray.py não constrói mais um nome terminado em -symbolic"
             echo "       APPLET-MONOCROMÁTICO-01: sem o sufixo, o painel não recolore"
@@ -247,12 +245,12 @@ fi
 if ! grep -q 'set_default_icon_name(.*\.icone)' \
     src/hefesto_dualsense4unix/app/main.py 2>/dev/null; then
     echo "[FAIL] app/main.py não pede mais o ícone por identidade.icone"
-    echo "       o nome do ícone voltou a estar cravado, e esta régua deixa de"
-    echo "       enxergar as duas casas."
+    echo "       o nome do ícone voltou a estar cravado, e um literal que"
+    echo "       diverge do resto do produto some do menu sem avisar."
     rc=1
 fi
 if [[ "${#code_icons[@]}" -eq 0 ]]; then
-    echo "[FAIL] não achei nome de ícone em ${IDENTIDADE_PY} (bloco ESTAVEL)"
+    echo "[FAIL] não achei nome de ícone em ${IDENTIDADE_PY} (bloco HEFESTO)"
     echo "       sem isso a JANELA e a BANDEJA caem no ícone genérico e"
     echo "       ninguém é avisado — por isso é FAIL, e não mais WARN."
     rc=1

@@ -20,10 +20,9 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: A unit do daemon DESTA variante (29/08/2026). Sem `HEFESTO_VARIANTE` no
-#: ambiente é literalmente "hefesto-dualsense4unix.service", como sempre foi.
-#: Com a variante de dev, os botões "Ligar/Parar/Reiniciar daemon" da GUI de
-#: dev falam com a unit de dev — e não com a dela.
+#: O nome da unit do daemon, e ele NÃO se digita: vem de `utils/identidade.py`.
+#: Foi um literal digitado que fez a aba Sistema afirmar `not-found` sobre uma
+#: unit `enabled`, em 01/09/2026.
 SERVICE_NORMAL = identidade.atual().unit_daemon
 
 # Diretórios system-wide onde .deb e empacotamentos Debian-likes instalam

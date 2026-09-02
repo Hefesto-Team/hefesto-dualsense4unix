@@ -2316,14 +2316,36 @@ if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
     fi
 fi
 
+# O QUE O ATALHO ABRE É A INTERFACE HTML — 01/09/2026, ordem dela: *"tudo tem
+# que apontar pro nosso lancher html e tudo tem que apontar pros arquivos na
+# nossa pasta"*. O `interface.sh` da raiz é a CARA (o que ela clica); ele
+# delega ao `run.sh --gui`, que ativa a venv desta árvore, cuida do XWayland e
+# do pixbuf, e chama `scripts/abrir_interface.py` — quem veste prgname,
+# WM_CLASS e ícone no processo antes da primeira janela nascer.
+#
+# Aqui havia `Exec=${ROOT_DIR}/run.sh` quando o `run.sh` abria a janela GTK
+# velha. O motor GTK não sumiu (os 74 handlers de `app/actions/` são o que a
+# interface nova chama); o que mudou foi o LANÇADOR.
 if [[ "${FORCE_XWAYLAND}" -eq 1 ]]; then
-    _EXEC_LINE="env GDK_BACKEND=x11 ${ROOT_DIR}/run.sh"
+    _EXEC_LINE="env GDK_BACKEND=x11 ${ROOT_DIR}/interface.sh"
     printf '      .desktop com GDK_BACKEND=x11 (fallback XWayland)\n'
 else
-    _EXEC_LINE="${ROOT_DIR}/run.sh"
+    _EXEC_LINE="${ROOT_DIR}/interface.sh"
 fi
 
-cat > "${DESKTOP_TARGET}" <<DESKTOP
+# O CABEÇALHO É O DO REPOSITÓRIO, e não um texto digitado aqui. O arquivo
+# versionado (`packaging/${APP_ID}.desktop`) traz `@RAIZ@` no `Exec=`; a
+# substituição abaixo é a única coisa de máquina que entra. Antes deste bloco
+# havia um `.desktop` inteiro escrito à mão neste script, e ele já divergiu do
+# versionado — foi assim que o `GenericName` existiu num e não no outro.
+_DESKTOP_FONTE="${ROOT_DIR}/packaging/${APP_ID}.desktop"
+if [[ -r "${_DESKTOP_FONTE}" ]]; then
+    sed -e "s|@RAIZ@|${ROOT_DIR}|g" \
+        -e "s|^Exec=.*|Exec=${_EXEC_LINE}|" \
+        "${_DESKTOP_FONTE}" > "${DESKTOP_TARGET}"
+else
+    warn "packaging/${APP_ID}.desktop ausente — atalho escrito no mínimo"
+    cat > "${DESKTOP_TARGET}" <<DESKTOP
 [Desktop Entry]
 Type=Application
 Name=Hefesto - Dualsense4Unix
@@ -2336,6 +2358,7 @@ Terminal=false
 StartupNotify=true
 StartupWMClass=Hefesto-Dualsense4Unix
 DESKTOP
+fi
 
 command -v desktop-file-validate >/dev/null 2>&1 \
     && desktop-file-validate "${DESKTOP_TARGET}" >/dev/null 2>&1 || true
@@ -2347,7 +2370,11 @@ command -v update-desktop-database >/dev/null 2>&1 \
 mkdir -p "${BIN_DIR}"
 cat > "${LAUNCHER}" <<LAUNCH
 #!/usr/bin/env bash
-setsid nohup "${ROOT_DIR}/run.sh" "\$@" </dev/null >/dev/null 2>&1 &
+# O console script do mesmo nome (pyproject.toml) abre a MESMA interface, por
+# `interface.hefesto_vivo:main`. Este arquivo o SOBRESCREVE de propósito: ele
+# desprende a janela do terminal (setsid+nohup) e passa pelo `run.sh`, que
+# cuida do XWayland e do pixbuf antes de o Python subir.
+setsid nohup "${ROOT_DIR}/interface.sh" "\$@" </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 LAUNCH
 chmod +x "${LAUNCHER}"
@@ -2496,6 +2523,19 @@ ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4un
 # formato `sh -c` com caminho absoluto) continua a mesma: funciona SEM PATH.
 if [[ -x "${LAUNCH_WRAPPER_TARGET}" ]]; then
     ln -sf "${LAUNCH_WRAPPER_TARGET}" "${BIN_DIR}/hefesto-launch"
+fi
+
+# A CHAVE — `hefesto-chave off|on|estado`, o desligamento completo e reversível.
+# Pedido dela, 29/08/2026: *"temos que garantir que eu possa DESLIGAR o impacto
+# por completo e RELIGAR"*. Ela para, desabilita e MASCARA as units do app, põe
+# a chave em disco que o daemon lê no boot (`utils/chave.py` — o furo que a
+# máscara não tapa é o botão "Ligar daemon" da GUI, que cai num `Popen`) e
+# esconde o atalho da dock. Nada de sudo, nada apagado: `on` desfaz tudo.
+#
+# É CÓPIA, e não symlink: quem desliga o produto tem de conseguir desligá-lo
+# mesmo que a árvore de desenvolvimento saia do disco.
+if [[ -f "${ROOT_DIR}/scripts/hefesto-chave.sh" ]]; then
+    install -m 755 "${ROOT_DIR}/scripts/hefesto-chave.sh" "${BIN_DIR}/hefesto-chave"
 fi
 ok
 

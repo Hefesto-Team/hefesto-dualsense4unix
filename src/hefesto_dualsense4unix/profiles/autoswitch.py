@@ -84,10 +84,8 @@ DEFAULT_DEBOUNCE_SAIDA_SEC = 12.0
 #: também seria retido) — é o valor que a nossa GUI de fato reporta sob
 #: XWayland, então precisa estar coberto.
 #:
-#: AS DUAS CASAS, 29/08/2026: com o app de desenvolvimento instalado ao lado,
-#: a janela DELE também é "nossa" — alt-tab dev↔jogo não é "ela saiu do jogo".
-#: A lista deriva de `utils.identidade.AS_DUAS` em vez de repetir literais:
-#: uma variante nova entra aqui sozinha, e não silenciosamente de fora.
+#: A lista DERIVA de `utils.identidade` em vez de repetir literais: mudar o
+#: nome do app lá muda esta lista sozinho, e não silenciosamente de fora.
 OWN_GUI_WM_CLASSES: frozenset[str] = frozenset(
     {
         "main.py",
@@ -95,8 +93,11 @@ OWN_GUI_WM_CLASSES: frozenset[str] = frozenset(
     }
     | {
         nome.casefold()
-        for casa in identidade.AS_DUAS
-        for nome in (casa.wm_instance, casa.wm_class, casa.entrypoint_gui)
+        for nome in (
+            identidade.HEFESTO.wm_instance,
+            identidade.HEFESTO.wm_class,
+            identidade.HEFESTO.entrypoint_gui,
+        )
     }
 )
 
