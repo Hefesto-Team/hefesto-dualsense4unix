@@ -212,6 +212,108 @@ def publicar(argv: list[str]) -> int:
     return 0
 
 
+#: A frase que toda declaração precisa ter: o que o produto FAZ enquanto espera.
+#:
+#: PEÇA 3 da cura de 02/09/2026, decidida por ela. Uma declaração que só diz
+#: "esta aba mudou" deixa a próxima pessoa adivinhar o custo da espera — e o
+#: custo foi medido três vezes num dia: clique morto, tela afirmando o contrário
+#: e conteúdo vazando por cima da linha de baixo.
+#:
+#: A declaração passa a ser CONTRATO: ela diz o que ela vê HOJE, com a página
+#: que o produto renderiza agora.
+DIZ_O_QUE_ESPERA = re.compile(
+    r"enquanto|at[ée] (?:ela |voc[êe] )?publicar|hoje ela v[êe]|"
+    r"o produto continua|na tela dela hoje|sem publicar|at[ée] l[áa]",
+    re.I,
+)
+
+
+def declaracoes_sem_custo() -> list[str]:
+    """As seções que não dizem o que o produto faz enquanto espera o OK dela."""
+    if not DECLARACOES.exists():
+        return []
+    _, sep, corpo = DECLARACOES.read_text(encoding="utf-8").partition("\n---\n")
+    if not sep:
+        return []
+    mudas, atual, texto = [], None, []
+    for linha in corpo.splitlines():
+        titulo = re.match(r"^##\s+(\S+\.html)\s*$", linha)
+        if titulo:
+            if atual and not DIZ_O_QUE_ESPERA.search("\n".join(texto)):
+                mudas.append(atual)
+            atual, texto = titulo.group(1), []
+        elif atual:
+            texto.append(linha)
+    if atual and not DIZ_O_QUE_ESPERA.search("\n".join(texto)):
+        mudas.append(atual)
+    return mudas
+
+
+def so_mudou_endereco(nome: str) -> bool:
+    """A bancada e o produto MOSTRAM a mesma coisa, e só os endereços mudaram?
+
+    `o_que_se_ve` apaga os trinta atributos de endereçamento antes de comparar;
+    se as duas páginas batem depois disso, a diferença não move um pixel.
+    """
+    no_produto = PUBLICADO / nome
+    if not no_produto.exists():
+        return False
+    return o_que_se_ve(BANCADA / nome) == o_que_se_ve(no_produto)
+
+
+def publicar_enderecos(argv: list[str]) -> int:
+    """Leva ao produto SÓ o que não muda um pixel — e recusa o resto.
+
+    POR QUE ISTO EXISTE, e ela decidiu em 02/09/2026 depois de a armadilha
+    derrubar TRÊS frentes num dia:
+
+    O pacote (Python) e o desenho (HTML) mudam juntos e chegam ao produto em
+    tempos diferentes — o pacote entra no merge, o desenho espera o OK dela. No
+    intervalo, o produto roda com METADE NOVA E METADE VELHA, e é aí que o
+    clique morre calado (o gesto emite o rótulo novo, a página publicada só
+    oferece o antigo) e o conteúdo vaza (o pacote enche uma caixa que só cresce
+    na bancada).
+
+    **Mas metade do que esperava por ela NUNCA FOI DECISÃO DELA.** Um
+    `data-campo` novo num elemento que já existia não muda nada do que ela vê:
+    não há o que aprovar. O que ela decide é o DESENHO — rótulo, ordem, tamanho,
+    o que aparece.
+
+    Esta função separa os dois. Ela publica a página **só se** o desenho for
+    idêntico, e RECUSA dizendo quando um pixel mudou — nesse caso o `--publicar`
+    continua sendo o caminho, e continua sendo ato dela.
+
+    A distinção não é nova: o portão já a fazia em `o_que_se_ve`. O que faltava
+    era ela chegar à publicação.
+    """
+    alvos = _alvos(argv)
+    levadas, recusadas, ja_iguais = [], [], []
+    for nome in alvos:
+        if not (PUBLICADO / nome).exists():
+            recusadas.append((nome, "a página não existe no produto — é desenho novo"))
+        elif soma(BANCADA / nome) == soma(PUBLICADO / nome):
+            ja_iguais.append(nome)
+        elif so_mudou_endereco(nome):
+            shutil.copy2(BANCADA / nome, PUBLICADO / nome)
+            levadas.append(nome)
+        else:
+            recusadas.append((nome, "o DESENHO mudou — isto é decisão dela"))
+
+    print(f"endereços: {len(levadas)} levada(s) · {len(recusadas)} recusada(s) "
+          f"· {len(ja_iguais)} já igual(is)")
+    for nome in levadas:
+        print(f"  levada   {nome}  (nenhum pixel mudou)")
+    for nome, porque in recusadas:
+        print(f"  RECUSADA {nome}  ({porque})")
+    if recusadas:
+        print("\n  As recusadas esperam o OK dela:")
+        for nome, _ in recusadas:
+            print(f"      scripts/check_o_desenho_aprovado.py --publicar {nome[:2]}")
+    # As levadas deixam de estar em trabalho SÓ se nada mais as separa.
+    _tirar_declaracoes([n for n in levadas if soma(BANCADA / n) == soma(PUBLICADO / n)])
+    return 0
+
+
 def _tirar_declaracoes(alvos: list[str]) -> None:
     """Apaga do DIVERGENCIAS.md a seção das páginas publicadas.
 
@@ -241,6 +343,10 @@ def main() -> int:
     if not BANCADA.exists():
         print("ERRO: não há `mockup/`. Ela é a bancada — sem ela não há desenho.")
         return 2
+    if "--publicar-enderecos" in sys.argv:
+        return publicar_enderecos(
+            sys.argv[sys.argv.index("--publicar-enderecos") + 1:]
+        )
     if "--publicar" in sys.argv:
         return publicar(sys.argv[sys.argv.index("--publicar") + 1:])
     if "--aprovar" in sys.argv:
@@ -288,7 +394,22 @@ def main() -> int:
             print(f"  - {n}")
         print("  Declaração que envelhece calada vira paisagem, e paisagem ninguém lê.")
 
-    if sem_declarar or so_publicado or orfas or [n for n in so_bancada if n not in decl]:
+    mudas = declaracoes_sem_custo()
+    if mudas:
+        print(f"\nFALHA: {len(mudas)} declaração(ões) não dizem o que o produto FAZ")
+        print("       enquanto espera o OK dela:")
+        for n in mudas:
+            print(f"  - {n}")
+        print("\n  Isto custou TRÊS frentes em 02/09/2026, e sempre do mesmo jeito: o")
+        print("  pacote foi para o merge com o rótulo novo e a página publicada ficou")
+        print("  com o antigo. O produto rodou com metade nova e metade velha —")
+        print("  clique morto, tela afirmando o contrário, conteúdo vazando.")
+        print("\n  Escreva na seção o que ela vê HOJE, com a página de agora. Por")
+        print("  exemplo: `Até publicar, o pacote se limita às quatro casas que a")
+        print("  página tem e diz quantos ajustes ficaram de fora.`")
+
+    if (sem_declarar or so_publicado or orfas or mudas
+            or [n for n in so_bancada if n not in decl]):
         return 1
     print("\nOK: o produto não está atrás do desenho dela sem dizer por quê.")
     return 0

@@ -38,6 +38,13 @@ seção daqui**: a aba deixou de estar em trabalho.
 
   A linha **some** quando não há nada a dizer (`.vib-estado:empty`).
 
+  **O QUE ELA VÊ ENQUANTO ESPERA:** nada muda. O bloco do estado só existe
+  na bancada, então o `querySelector` do piloto devolve `null` na página
+  publicada e o laço não faz coisa nenhuma — medido: 2 pinturas e 14
+  valores, iguais antes e depois. A aba continua exatamente como está até
+  ela publicar; o aviso de que a força não chega a jogo nenhum nasce no
+  minuto do `--publicar 05`.
+
   **A FRASE ENCURTOU — 02/09/2026, e foi a sua decisão.** Ela tinha 211
   caracteres e ocupava 1072 px numa caixa de 1072: quebrava em duas sublinhas, e
   a segunda — *"que você fixar aqui embaixo."* — ficava **cortada** pela borda
