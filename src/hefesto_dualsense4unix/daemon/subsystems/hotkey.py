@@ -16,7 +16,11 @@ import subprocess as _sp
 import threading
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.daemon.subsystems import recado_do_microfone
 from hefesto_dualsense4unix.integrations import ponte_tentativa
+from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+    recusa_de_quem_nao_elegeu,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -976,9 +980,25 @@ async def _eleger_ou_devolver(
         # elegido nada — na bancada de hoje isso não aparece só porque não há
         # fonte elegível, o que é sorte, não cura.
         if eleitor.eleito != uniq:
+            # A RECUSA CHEGA À TELA — MIC-RECUSA-NA-TELA-01 (02/09/2026).
+            # Este ramo voltava só com o `logger.info` abaixo: o jogador que
+            # apertou o botão via a luz apagar, o microfone continuar no
+            # vizinho, e o produto não dizia uma palavra. É quem MAIS precisa
+            # da frase — a dona do canal pelo menos tem o LED aceso dizendo
+            # que está no ar.
+            recusa = recusa_de_quem_nao_elegeu(eleitor.eleito)
             logger.info(
                 "mic_da_mesa_mudo_de_quem_nao_elegeu",
                 uniq=uniq,
+                eleito=eleitor.eleito,
+                motivo=recusa.motivo,
+            )
+            recado_do_microfone.anotar(
+                daemon,
+                uniq,
+                gesto="recusa",
+                ok=False,
+                motivo=recusa.motivo,
                 eleito=eleitor.eleito,
             )
             acender_outro = getattr(daemon.controller, "set_mic_led", None)
@@ -999,6 +1019,22 @@ async def _eleger_ou_devolver(
         ok=resultado.ok,
         ativo=resultado.ativo,
         motivo=resultado.motivo,
+    )
+    # ...E A MESMA FRASE VAI PARA A TELA. As cinco frases de
+    # `ResultadoDaEleicao.motivo` ("não há canal de captura atribuível a este
+    # controle", "o WirePlumber reelegeu por cima", "não há microfone para onde
+    # voltar"…) saíam SÓ no `logger.info` acima, e o docstring do tipo já
+    # prometia que elas eram "o texto que vai para a tela". O recado sobrevive
+    # ao tique seguinte porque fica GUARDADO — ver
+    # `daemon/subsystems/recado_do_microfone`.
+    recado_do_microfone.anotar(
+        daemon,
+        uniq,
+        gesto="devolver" if mudo else "eleger",
+        ok=bool(resultado.ok),
+        motivo=resultado.motivo,
+        ativo=resultado.ativo,
+        eleito=eleitor.eleito,
     )
     acender = getattr(daemon.controller, "set_mic_led", None)
     if callable(acender):
