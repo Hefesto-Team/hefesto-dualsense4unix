@@ -211,26 +211,79 @@ pick_target_source_id() {
 # captura que se sustente" — e nesse caso não se elege nada. Eleger por eleger é
 # o que produzia o falso sucesso. Exit 1 é outra coisa: "não consegui consultar"
 # (sem doctor, sem pactl) — só aí o chamador cai no caminho antigo do `wpctl`.
-pick_target_source_name() {
+#
+# O-ELEITOR-QUE-ELEGIA-O-PROIBIDO-01 (01/09/2026)
+# ------------------------------------------------
+# ESTA FUNÇÃO ELEGIA O DUALSENSE, que é exatamente o que o gesto existe para
+# tirar. O mecanismo está em `doctor.sh:_melhor_source_de_captura`, na linha do
+# `prefere=0`::
+#
+#     escolha = (outro != "") ? outro : ds
+#
+# Com a webcam dela desconectada e a entrada analógica da placa-mãe filtrada
+# pelo `_sources_com_porta_usavel` (as três portas de captura dela estão `not
+# available`), `outro` fica VAZIO — e a função cai de volta no DualSense. O
+# eleitor herdava esse fallback; a régua o proíbe dois passos depois. Medido no
+# log do `install.sh` de 01/09: *"fonte padrão reeleita para
+# …DualSense…iec958-stereo (porta usável, critério do doctor)"* seguido de
+# *"FALHA: o MIC (alsa_input) do DualSense ainda é o ativo"*.
+#
+# E ISSO NÃO CONVERGIA: rodar de novo repetia a eleição e a reprovação, culpando
+# o drop-in ("drop-in não aplicou?"), que estava certo. Um gesto que não
+# converge não é idempotente — é um laço com uma acusação errada no fim.
+#
+# A CURA é tirar o DualSense da lista ANTES de perguntar qual é a melhor: sem
+# ele entre os candidatos, `ds` nunca é preenchido e o fallback não tem para
+# onde cair. O filtro de porta continua sendo o do doctor, que é o ponto — um
+# critério só, para os dois programas.
+#
+# O QUE ESTA FUNÇÃO NÃO FAZ, e é decisão: ela não mexe no
+# `_melhor_source_de_captura`. Aquele `prefere` serve ao doctor, que precisa
+# responder "qual é a melhor fonte de captura" mesmo quando a resposta é o
+# DualSense. A pergunta DESTE gesto é outra: "qual é a melhor que NÃO seja ele".
+#
+# OS MONITORES SAEM AQUI, e não no ranqueador. Medido no mesmo dia, um degrau
+# abaixo do defeito acima: a lista devolvia `…hdmi-stereo.monitor` e
+# `…iec958-stereo.monitor`, porque quem descartava monitor era o
+# `_melhor_source_de_captura` lá na frente. O ELEITOR ficava certo (o
+# ranqueador os comia); a RÉGUA `other_source_available`, que lê a lista crua,
+# passava a contar dois monitores como "outras fontes disponíveis" — e voltava a
+# acusar o drop-in. Uma lista que não significa o próprio nome vira duas
+# verdades assim que ganha o segundo leitor.
+fontes_elegiveis() {
     [[ -r "${DOCTOR_SH}" ]] || return 1
     command -v pactl >/dev/null 2>&1 || return 1
     local longo curta
     longo="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
     curta="$(LC_ALL=C pactl list sources short 2>/dev/null || true)"
     [[ -n "${curta}" ]] || return 1
-    # Subshell própria: carrega o doctor SEM despachar o main dele (mesmo molde
-    # do `source scripts/doctor.sh` dos testes) e sem contaminar este script.
-    # O `set --` limpa os posicionais para o doctor não despachar o `main` dele
-    # ao ser carregado — e por isso ele vem DEPOIS de os argumentos serem
-    # guardados. Na primeira versão ele vinha antes, e apagava justamente o
-    # `$1`/`$2` que as linhas seguintes usavam: a função devolvia vazio SEMPRE,
-    # e vazio aqui é indistinguível de "não há fonte elegível".
     printf '%s\n' "${curta}" | bash -c '
         doutor="$1"; longo="$2"
         set --
         source "${doutor}" >/dev/null 2>&1 || exit 0
-        _sources_com_porta_usavel "${longo}" | _melhor_source_de_captura 0
+        _sources_com_porta_usavel "${longo}" \
+            | awk "tolower(\$2) ~ /dualsense/ { next }
+                   tolower(\$2) ~ /\\.monitor\$/ { next }
+                   { print }"
     ' -- "${DOCTOR_SH}" "${longo}" 2>/dev/null || true
+}
+
+pick_target_source_name() {
+    # A subshell carrega o doctor SEM despachar o main dele (mesmo molde do
+    # `source scripts/doctor.sh` dos testes). O `set --` limpa os posicionais
+    # para isso, e por isso vem DEPOIS de os argumentos serem guardados — na
+    # primeira versão vinha antes e apagava o `$1`/`$2` que as linhas seguintes
+    # usam: a função devolvia vazio SEMPRE, e vazio aqui é indistinguível de
+    # "não há fonte elegível".
+    local elegiveis
+    elegiveis="$(fontes_elegiveis)" || return 1
+    [[ -n "${elegiveis}" ]] || return 0
+    printf '%s\n' "${elegiveis}" | bash -c '
+        doutor="$1"
+        set --
+        source "${doutor}" >/dev/null 2>&1 || exit 0
+        _melhor_source_de_captura 0
+    ' -- "${DOCTOR_SH}" 2>/dev/null || true
 }
 
 install_dropin() {
@@ -406,8 +459,31 @@ active_default_source() {
         insrc && /\*/ { sub(/.*\*[[:space:]]+[0-9]+\.[[:space:]]*/, ""); print; exit }'
 }
 
-# 0 se há alguma fonte de captura available que NÃO seja o DualSense.
+# 0 se há alguma fonte de captura ELEGÍVEL que não seja o DualSense.
+#
+# ELEGÍVEL É A MESMA PALAVRA QUE O ELEITOR USA, e é o ponto desta função
+# (01/09/2026). Ela contava QUALQUER linha não-DualSense do `wpctl status` —
+# inclusive a entrada analógica da placa-mãe, cujas três portas de captura estão
+# `not available` e que o `_sources_com_porta_usavel` filtra fora justamente por
+# isso (RECEITA-ERRADA-01). O eleitor olhava "porta usável"; esta régua olhava
+# "aparece na lista". Duas réguas sobre o mesmo estado, e a consequência era um
+# diagnóstico que acusava um inocente:
+#
+#     FALHA: o MIC do DualSense ainda é o ativo, com outra fonte disponível
+#            (drop-in não aplicou?)
+#
+# O drop-in tinha aplicado. Não havia outra fonte — havia uma linha. A resposta
+# certa para esse estado é o AVISO de escassez (exit 2), que já existia logo
+# abaixo e nunca era alcançado.
+#
+# O `wpctl` fica como PLANO B, para a máquina sem `pactl`/doctor: ali a única
+# pergunta que se pode fazer é a antiga, e ela é melhor que nenhuma.
 other_source_available() {
+    local elegiveis
+    if elegiveis="$(fontes_elegiveis)"; then
+        [[ -n "${elegiveis}" ]]
+        return
+    fi
     wpctl status 2>/dev/null | awk '
         /Sources:/ {insrc=1; next}
         insrc && (/Filters:/ || /Sinks:/ || /Streams:/ || /Video/) {insrc=0}
@@ -434,13 +510,52 @@ is_monitor_source() {
 # DualSense (settle ~2s).
 # Exit: 0 OK; 2 ÚNICO (DualSense por escassez — aviso); 1 FALHA real;
 #       3 MONITOR (INSTALADOR-QUE-APROVOU-O-MONITOR-01 — nem DualSense, nem voz).
+# PURA: 0 quando `$1` é o nó de ESCASSEZ do PipeWire — o `auto_null`, que ele
+# cria quando não há dispositivo pronto. Não é um microfone, não é um monitor de
+# hardware: é "ainda não sei", e por isso não se julga em cima dele.
+e_o_nada_do_pipewire() {
+    [[ "$1" == auto_null* ]]
+}
+
 verify_active_not_dualsense() {
+    # O-VEREDICTO-QUE-DEPENDIA-DO-RELÓGIO-01 (01/09/2026)
+    # ----------------------------------------------------
+    # ESTE LAÇO SÓ ESPERAVA O DUALSENSE SAIR. Qualquer outra resposta o
+    # interrompia na primeira volta — inclusive o `auto_null.monitor`, que é o
+    # nó que o PipeWire cria enquanto NADA está pronto. Como esta função roda
+    # logo depois de `restart_wireplumber`, ela lia o grafo antes de assentar e
+    # dava FALHA de MONITOR sobre um estado que durava dois segundos.
+    #
+    # MEDIDO em 01/09: `--install` dizia "FALHA: a fonte padrão é um MONITOR
+    # (auto_null.monitor)"; cinco segundos depois, `pactl get-default-source`
+    # respondia o DualSense. Mesmo estado de máquina, dois veredictos —
+    # dependendo de quando se olhou. Um julgamento que depende do relógio não é
+    # idempotente, e ela nomeou isso.
+    #
+    # A CURA é esperar por uma resposta que SIGNIFIQUE alguma coisa: enquanto
+    # for vazia, `auto_null` ou o mic do DualSense, o grafo ainda pode mudar.
+    # O orçamento subiu de ~2s para ~5s pela mesma razão — foi o tempo medido
+    # para o WirePlumber reeleger depois de um restart.
+    #
+    # E SE O ORÇAMENTO ACABAR COM `auto_null` NA MÃO, isso deixa de ser espera e
+    # vira o diagnóstico: não há fonte de captura nenhuma pronta nesta máquina.
     local i cur=""
-    for i in 1 2 3 4 5 6 7 8; do          # ~2s (8 x 250ms)
+    for i in $(seq 1 20); do              # ~5s (20 x 250ms)
         cur="$(active_default_source || true)"
-        is_dualsense_mic "${cur}" || break
+        if [[ -n "${cur}" ]] \
+           && ! e_o_nada_do_pipewire "${cur}" \
+           && ! is_dualsense_mic "${cur}"; then
+            break
+        fi
         sleep 0.25
     done
+    if e_o_nada_do_pipewire "${cur}"; then
+        log "FALHA: depois de ~5s a fonte padrão ainda é o ${cur} — o nó de"
+        log "       escassez do PipeWire. Não há fonte de captura PRONTA nesta"
+        log "       máquina: nem microfone, nem webcam, nem o DualSense."
+        log "       Conecte um microfone e rode de novo."
+        return 3
+    fi
     # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o monitor vem ANTES do resto. Ele não é
     # o mic do DualSense — e era exatamente por isso que a resposta saía "OK",
     # enquanto o doctor reprovava o mesmo estado dois minutos depois. Monitor é

@@ -1311,8 +1311,15 @@ if [[ "${FORMAT}" != "native" ]]; then
             || warn "disable-source falhou — rode: bash scripts/fix_wireplumber_default_source.sh --disable-source"
     elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
         step "mic" "áudio: a voz do controle acima do eco da saída (MIC-EM-TODO-FORMATO-01)"
-        bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install \
-            || warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
+        # O `-ne 1` e não o `||`: rc 2 (o DualSense é a única fonte) e rc 3 (a
+        # fonte padrão ainda não é um microfone) NÃO são falha do gesto — são o
+        # estado da máquina, e o script já os explica na tela. Tratá-los como
+        # falha mandaria ela rodar de novo um comando que faria exatamente o
+        # mesmo, que é o laço que 01/09 curou.
+        if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; rc=$?; \
+           [[ "${rc:-0}" -eq 1 ]]; then
+            warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
+        fi
     fi
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
@@ -2926,12 +2933,26 @@ elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; rc=$?; [[ "${rc:-0}" -ne 1 ]]; then
         # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o drop-in ter entrado NÃO é o
         # microfone estar certo, e dizer "fonte padrão reeleita" quando ela não
-        # foi era a metade da contradição que ela leu na tela. rc 3 = monitor.
-        if [[ "${rc:-0}" -eq 3 ]]; then
-            printf '      drop-in do WirePlumber instalado (a fonte padrão ainda não é um microfone)\n'
-        else
-            printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
-        fi
+        # foi era a metade da contradição que ela leu na tela.
+        #
+        # OS TRÊS DESFECHOS BONS SÃO DIFERENTES ENTRE SI, e desde 01/09/2026 a
+        # tela diz qual foi. O `2` nasceu naquele dia: com a webcam dela
+        # desconectada, o DualSense é a ÚNICA fonte de captura com porta usável,
+        # e não há o que eleger no lugar dele. Cair no `else` diria "fonte
+        # padrão reeleita" sobre uma eleição que não houve.
+        case "${rc:-0}" in
+            2)
+                printf '      drop-in do WirePlumber instalado; o DualSense é a ÚNICA fonte de\n'
+                printf '      captura com porta usável — conecte um microfone/webcam, ou rode\n'
+                printf '      ./install.sh --with-wireplumber-disable-mic para tirá-lo de vez\n'
+                ;;
+            3)
+                printf '      drop-in do WirePlumber instalado (a fonte padrão ainda não é um microfone)\n'
+                ;;
+            *)
+                printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
+                ;;
+        esac
     else
         warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
     fi
