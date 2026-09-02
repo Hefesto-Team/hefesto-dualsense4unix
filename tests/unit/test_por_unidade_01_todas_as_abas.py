@@ -27,11 +27,20 @@ O que este arquivo vigia, e por quê cada um:
    do fim provam a omissão pelos dois lados: o que o disco recebe e o que o
    rascunho intocado produz.
 
-4. **O que NÃO cabe por unidade continua recusado na BORDA.** ``mode``,
-   ``mouse``, ``key_bindings`` e ``mic`` não entram no mapa, e o ``auto`` do
-   rumble também não — cada um por um motivo escrito no esquema. Recusa no
-   load, com mensagem, é a disciplina desta casa; campo aceito-e-ignorado vira
-   comportamento errado silencioso meses depois.
+4. **O que ainda não tem CAMINHO por unidade continua recusado na BORDA.**
+   ``mode``, ``mouse``, ``key_bindings``, ``mic`` e o modo-jogo não entram no
+   mapa, e o ``auto`` do rumble também não.
+
+   **A RAZÃO MUDOU EM 02/09/2026, e a recusa não.** Esta linha dizia *"o que
+   NÃO CABE por unidade"*, e ela derrubou isso: o perfil por controle passa a
+   ser TUDO (*"acelerômetro, giroscópio, e todas as demais features. é tudo
+   mesmo"*). Nenhum dos cinco está fora por não caber — cada um espera um
+   caminho de aplicação por unidade, e a fila deles, ordenada por custo e com a
+   medição de cada um, está na docstring de ``ControllerOverrides``. Enquanto o
+   caminho não existir, aceitar o campo seria guardar um valor que ninguém lê,
+   e a tela passaria a prometer; recusa no load, com mensagem, é a disciplina
+   desta casa. Quem conta os campos contra os consumidores é
+   ``tests/unit/test_perfil_por_controle_o_campo_espera_o_caminho.py``.
 
 MORDIDA (o que arrancar para ver reprovar) — cada teste diz a sua no corpo.
 MAC mascarado pela regra da casa: octetos 4 e 5 zerados.
@@ -407,7 +416,7 @@ def test_o_rascunho_intocado_nao_semeia_campo_novo(
 
 
 # ---------------------------------------------------------------------------
-# 4. O que NÃO cabe por unidade é recusado na BORDA, com mensagem
+# 4. O que ainda não tem CAMINHO por unidade é recusado na BORDA, com mensagem
 # ---------------------------------------------------------------------------
 
 
@@ -416,19 +425,23 @@ def test_o_rascunho_intocado_nao_semeia_campo_novo(
     ["mode", "mouse", "key_bindings", "mic", "suppress_desktop_emulation"],
     ids=["modo", "mouse", "teclado", "microfone", "modo_jogo"],
 )
-def test_o_que_e_da_sessao_nao_entra_no_mapa_por_peca(secao: str) -> None:
-    """Modo, mouse, teclado, mic e modo-jogo não são da peça de plástico.
+def test_o_que_ainda_nao_tem_caminho_nao_entra_no_mapa_por_peca(secao: str) -> None:
+    """Os cinco esperam um caminho de aplicação por unidade — e até lá, recusa.
 
-    Três motivos distintos, todos escritos no esquema: o modo (e a máscara) são
-    da SESSÃO por decisão dela em 10/08/2026; mouse e teclado esbarram numa
-    MEDIÇÃO — ``read_state`` diz, em comentário de código, que "INPUT vem
-    SEMPRE do controle PRIMÁRIO" e a emulação é single-controller por
-    construção; o mic esbarra no barramento, que publica ``BUTTON_DOWN`` sem
-    ``uniq``, e num alvo (o microfone padrão do sistema) que é um só.
+    **NOTA DATADA — 02/09/2026.** Esta docstring dizia que os cinco *"não são
+    da peça de plástico"*, e ela derrubou a frase: o perfil por controle é
+    TUDO. O que sobra das medições antigas não é recusa, é fila de engenharia,
+    e ela está na docstring de ``ControllerOverrides`` ordenada por custo — o
+    ``mic`` na frente, porque as três primitivas por ``uniq`` dele já existem
+    (MIC-DA-MESA-ELEICAO-01, 01/09/2026, deu endereço ao gesto do microfone) e
+    falta só a costura; a entrada emulada no fim, porque ``read_state`` lê o
+    PRIMÁRIO e há UM device de mouse e UM de teclado no daemon.
 
     Recusa na BORDA e não no applier, pela razão de sempre: arquivo inválido é
     rejeitado no load, com mensagem, em vez de virar comportamento errado
-    silencioso meses depois.
+    silencioso meses depois. E o campo aceito ANTES do caminho é o defeito
+    espelhado: a tela acende dizendo "esta peça tem ajuste próprio" e nada
+    aplica.
 
     MORDIDA: trocar ``extra="forbid"`` por ``extra="allow"`` no
     ``ControllerOverrides``.

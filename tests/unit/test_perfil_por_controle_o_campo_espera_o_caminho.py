@@ -1,0 +1,382 @@
+"""PERFIL-POR-CONTROLE (02/09/2026) — campo por peça só entra COM caminho.
+
+O QUE ELA DECIDIU, e é o que abre esta régua
+---------------------------------------------
+*"acelerômetro, giroscópio, e todas as demais features. **é tudo mesmo**"* — o
+perfil por controle passa a ser TUDO, e a lista de exclusões que morava na
+docstring de ``ControllerOverrides`` caiu com ela.
+
+O QUE A DECISÃO **NÃO** DERRUBA, e é o defeito que este arquivo existe para
+impedir: **um campo que grava e ninguém lê é pior que campo nenhum.** Ele faz a
+tela prometer — a coluna da aba Perfis acende dizendo *"este controle tem
+ajuste próprio"* sobre um valor que nada aplica, e a próxima pessoa gasta uma
+tarde procurando o defeito no lugar errado. A ordem, então, não se inverte:
+primeiro o caminho por unidade EXISTIR, depois o campo entrar no esquema.
+
+POR QUE ESTA RÉGUA E NÃO A QUE JÁ EXISTIA
+------------------------------------------
+``test_toda_secao_de_perfil_tem_quem_a_aplique`` classifica
+``Profile.model_fields`` — o perfil INTEIRO. Ela é exaustiva e morde, e
+**ControllerOverrides não passa por ela**: o mapa ``controllers`` é UM campo do
+``Profile``, e o que está DENTRO de cada entrada nunca foi contado. Um campo
+novo aqui entra sem uma linha vermelha em lugar nenhum — que é exatamente o
+buraco por onde a leva de hoje passaria, com a decisão dela na mão e nove
+seções para trazer.
+
+O QUE CADA TESTE VIGIA
+-----------------------
+1. a classificação bate com ``ControllerOverrides.model_fields`` nos DOIS
+   sentidos: campo sem consumidor reprova, consumidor órfão reprova;
+2. o consumidor declarado EXISTE e LÊ o campo — derivado da fonte do gerente,
+   não digitado aqui;
+3. o consumidor ENDEREÇA a peça: um perfil que escreve o campo para UM ``uniq``
+   produz saída carregando aquele ``uniq``. É o que separa *"guardei"* de
+   *"chega ao aparelho"*;
+4. a régua sabe RECUSAR — as duas contas são funções puras, exercitadas com um
+   conjunto sintético. Régua que só sabe passar não é régua;
+5. **os fios de gatilho da fila**: o que hoje IMPEDE cada campo de entrar está
+   afirmado como medição, não como opinião. Quando um deles ficar vermelho, a
+   notícia é boa — o caminho nasceu, e a mensagem diz qual campo trazer.
+
+MORDIDA (o que arrancar para ver reprovar): acrescente ``sensors: bool | None =
+None`` a ``ControllerOverrides`` sem tocar em mais nada. O teste 1 aponta o
+campo pelo nome e diz que ele não tem quem o leia por peça.
+
+Endereços de rádio: faixa SINTÉTICA da casa, reusada do banco de provas do
+backend (``aabbcc…``) — nunca o OUI de um aparelho real.
+"""
+from __future__ import annotations
+
+import inspect
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.daemon import sensor_hub as sensor_hub_module
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+from hefesto_dualsense4unix.integrations import audio_control
+from hefesto_dualsense4unix.profiles import manager as manager_module
+from hefesto_dualsense4unix.profiles.manager import (
+    ProfileManager,
+    _controllers_to_rumble_scales,
+    _controllers_to_specs,
+)
+from hefesto_dualsense4unix.profiles.schema import (
+    ControllerOverrides,
+    ControllerRumbleOverride,
+    LedsConfig,
+    MatchAny,
+    Profile,
+    ProfileSpeakerConfig,
+    RumbleConfig,
+    TriggerConfig,
+    TriggersConfig,
+)
+from tests.unit.test_por_unidade_01_todas_as_abas import BRANCO, _StoreSemTrava
+
+# ---------------------------------------------------------------------------
+# A CLASSIFICAÇÃO — exaustiva, e é ela que ninguém contorna em silêncio
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ConsumidorPorUnidade:
+    """Quem lê este campo POR PEÇA, e o que ele faz chegar ao aparelho."""
+
+    #: a função do `profiles/manager.py` que percorre `profile.controllers`.
+    funcao: str
+    #: em uma frase, o que sai dela com o endereço junto — o vocabulário de
+    #: quem lê o defeito, não o nome do parâmetro.
+    chega_em: str
+
+
+#: Um campo de `ControllerOverrides` por entrada. Campo novo que não esteja
+#: aqui reprova por estar SEM CONSUMIDOR — nunca por estar numa denylist.
+_CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
+    "leds": ConsumidorPorUnidade(
+        funcao="_controllers_to_specs",
+        chega_em="OutputSpec por MAC, com a cor já escalada pelo brilho",
+    ),
+    "triggers": ConsumidorPorUnidade(
+        funcao="_controllers_to_specs",
+        chega_em="OutputSpec por MAC, com o efeito de L2/R2 daquela peça",
+    ),
+    "rumble": ConsumidorPorUnidade(
+        funcao="_controllers_to_rumble_scales",
+        chega_em="{uniq: fator}, aplicado na saída de cada handle",
+    ),
+    "speaker": ConsumidorPorUnidade(
+        funcao="apply_controller_speakers",
+        chega_em="apply_speaker(uniq=...) → set_speaker_volume(uniq=...)",
+    ),
+}
+
+
+def _campos_sem_consumidor(
+    campos: set[str], classificacao: dict[str, ConsumidorPorUnidade]
+) -> list[str]:
+    """Campos do esquema que ninguém lê por peça. Função pura, testada abaixo."""
+    return sorted(campos - set(classificacao))
+
+
+def _consumidores_orfaos(
+    campos: set[str], classificacao: dict[str, ConsumidorPorUnidade]
+) -> list[str]:
+    """Entradas que sobraram de um campo removido. Função pura, testada abaixo."""
+    return sorted(set(classificacao) - campos)
+
+
+def test_a_classificacao_cobre_o_esquema_nos_dois_sentidos() -> None:
+    """Campo sem consumidor reprova; consumidor órfão reprova.
+
+    MORDIDA: acrescente um campo qualquer a ``ControllerOverrides`` sem lhe dar
+    consumidor — este teste o aponta pelo nome.
+    """
+    campos = set(ControllerOverrides.model_fields)
+    sem_dono = _campos_sem_consumidor(campos, _CONSUMIDOR)
+    assert not sem_dono, (
+        "campo(s) de ControllerOverrides sem caminho por unidade: "
+        f"{sem_dono}. A ordem não se inverte — primeiro o caminho existir, "
+        "depois o campo entrar. A fila do que falta, com a medição de cada um, "
+        "está na docstring de ControllerOverrides (profiles/schema.py)."
+    )
+    orfaos = _consumidores_orfaos(campos, _CONSUMIDOR)
+    assert not orfaos, (
+        f"consumidor declarado para campo que não existe mais: {orfaos}"
+    )
+
+
+def test_a_regua_sabe_recusar() -> None:
+    """As duas contas, exercitadas com um conjunto sintético.
+
+    Sem isto, um erro nas duas funções puras faria o teste acima passar em
+    silêncio para sempre — o formato *régua que se confere contra ela mesma*.
+    """
+    sintetico = {"leds", "sensors"}
+    assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["sensors"]
+    assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
+        "rumble",
+        "speaker",
+        "triggers",
+    ]
+
+
+# ---------------------------------------------------------------------------
+# O CONSUMIDOR EXISTE E LÊ O CAMPO — derivado da fonte, não digitado
+# ---------------------------------------------------------------------------
+
+
+def _fonte_da_funcao(nome: str) -> str:
+    alvo = getattr(manager_module, nome, None) or getattr(ProfileManager, nome, None)
+    assert alvo is not None, f"{nome} não existe em profiles/manager.py"
+    return inspect.getsource(alvo)
+
+
+@pytest.mark.parametrize("campo", sorted(_CONSUMIDOR))
+def test_o_consumidor_declarado_le_o_campo(campo: str) -> None:
+    """A função nomeada existe e cita o campo — e percorre `controllers`.
+
+    MORDIDA: troque o nome da função na classificação por um vizinho que não
+    lê aquele campo (``_controllers_to_led_scales`` para ``speaker``, por
+    exemplo) e veja reprovar.
+    """
+    fonte = _fonte_da_funcao(_CONSUMIDOR[campo].funcao)
+    assert re.search(rf"\bcfg\.{campo}\b|getattr\(cfg, \"{campo}\"", fonte), (
+        f"{_CONSUMIDOR[campo].funcao} não lê o campo {campo!r} de cada entrada"
+    )
+    assert "controllers" in fonte, (
+        f"{_CONSUMIDOR[campo].funcao} não percorre o mapa por peça"
+    )
+
+
+# ---------------------------------------------------------------------------
+# O CONSUMIDOR ENDEREÇA A PEÇA — é o que separa "guardei" de "chegou"
+# ---------------------------------------------------------------------------
+
+
+def _prova_leds(uniq: str) -> object:
+    specs = _controllers_to_specs(
+        {uniq: ControllerOverrides(leds=LedsConfig(lightbar=(9, 9, 9)))},
+        LedsConfig(),
+    )
+    return None if uniq not in specs else specs[uniq].led
+
+
+def _prova_triggers(uniq: str) -> object:
+    specs = _controllers_to_specs(
+        {
+            uniq: ControllerOverrides(
+                triggers=TriggersConfig(left=TriggerConfig(mode="Off"))
+            )
+        }
+    )
+    return None if uniq not in specs else specs[uniq].trigger_left
+
+
+def _prova_rumble(uniq: str) -> object:
+    escalas = _controllers_to_rumble_scales(
+        {uniq: ControllerOverrides(rumble=ControllerRumbleOverride(policy="max"))},
+        RumbleConfig(),
+    )
+    return escalas.get(uniq)
+
+
+def _prova_speaker(uniq: str) -> object:
+    alvos: list[str | None] = []
+
+    def applier(volume: int, muted: bool = False, **kw: Any) -> str:
+        alvos.append(kw.get("uniq"))
+        return "aplicado"
+
+    gerente = ProfileManager(
+        controller=object(),  # type: ignore[arg-type]
+        store=_StoreSemTrava(),  # type: ignore[arg-type]
+        speaker_applier=applier,
+    )
+    perfil = Profile(
+        name="uma_peca_so",
+        match=MatchAny(),
+        controllers={uniq: ControllerOverrides(speaker=ProfileSpeakerConfig(volume=40))},
+    )
+    gerente.apply_controller_speakers(perfil)
+    return alvos == [uniq] or None
+
+
+_PROVAS = {
+    "leds": _prova_leds,
+    "triggers": _prova_triggers,
+    "rumble": _prova_rumble,
+    "speaker": _prova_speaker,
+}
+
+
+def test_toda_entrada_da_classificacao_tem_prova() -> None:
+    """A tabela de provas acompanha a classificação — senão ela envelhece calada."""
+    assert sorted(_PROVAS) == sorted(_CONSUMIDOR)
+
+
+@pytest.mark.parametrize("campo", sorted(_CONSUMIDOR))
+def test_o_valor_da_peca_sai_com_o_endereco_dela(campo: str) -> None:
+    """Escrito para UM ``uniq``, o valor sai endereçado àquele ``uniq``.
+
+    MORDIDA: em ``_controllers_to_specs``, troque a chave ``out[uniq]`` por uma
+    chave fixa qualquer; em ``apply_controller_speakers``, tire o
+    ``uniq=str(uniq)`` da chamada. Nos dois casos o dado continua sendo
+    calculado e deixa de ter dono — que é o defeito, e não a ausência do valor.
+    """
+    resultado = _PROVAS[campo](BRANCO)
+    assert resultado, (
+        f"o override de {campo!r} de uma peça não saiu endereçado a ela "
+        f"({_CONSUMIDOR[campo].chega_em})"
+    )
+
+
+# ---------------------------------------------------------------------------
+# OS FIOS DE GATILHO DA FILA — o que hoje impede cada campo de entrar
+#
+# Estes cinco afirmam MEDIÇÕES, não opiniões. Vermelho aqui é boa notícia: o
+# caminho por unidade nasceu, e a mensagem diz qual campo trazer para o
+# esquema. A fila por extenso, ordenada por custo, está na docstring de
+# `ControllerOverrides`.
+# ---------------------------------------------------------------------------
+
+
+def test_o_microfone_ja_tem_endereco_por_peca() -> None:
+    """As três primitivas do mic por unidade existem — e é o item mais barato.
+
+    Isto DERRUBA a frase que morava na docstring do esquema: *"o
+    ``EventTopic.BUTTON_DOWN`` não carrega uniq, então o laço do mic não sabe
+    de qual peça veio o toque"*. Desde MIC-DA-MESA-ELEICAO-01 (01/09/2026) o
+    gesto do microfone não passa mais pelo ``BUTTON_DOWN``: ele tem tópico
+    próprio, e o tópico carrega o endereço.
+
+    O que falta são três costuras, todas fora de ``profiles/schema.py``, e
+    estão nomeadas na fila da docstring. Este teste fixa o que JÁ existe para
+    que não se reaprenda de novo que "não dá".
+    """
+    assert hasattr(EventTopic, "MIC_DA_MESA"), (
+        "a borda do botão de mic COM endereço sumiu — sem ela o mic volta a "
+        "não saber de qual peça veio o toque"
+    )
+    assert "uniq" in inspect.signature(audio_control.fonte_de_captura_do_uniq).parameters
+    assert "uniq" in inspect.signature(
+        PyDualSenseController.set_microphone_mute
+    ).parameters
+
+
+def test_o_volume_do_mic_por_peca_ainda_nao_esta_ligado_na_ativacao() -> None:
+    """``apply_profile_mic`` recebe ``uniq`` e resolve a fonte SEM ele.
+
+    A rota global devolve a PRIMEIRA fonte de captura da lista; com dois
+    controles no cabo há DUAS placas de som (MIC-DA-MESA-CHEIA-01, 20/08/2026).
+    Enquanto esta linha for a global, um ``mic`` por peça no perfil mandaria o
+    volume para o microfone do vizinho — e é por isso que o campo ainda não
+    entrou.
+
+    VERMELHO AQUI É BOA NOTÍCIA: a costura foi feita. Traga ``mic`` para
+    ``ControllerOverrides`` (com o ``apply_controller_mics`` no gerente) e
+    apague este teste.
+    """
+    fonte = inspect.getsource(Daemon.apply_profile_mic)
+    assert "fonte_de_captura_do_controle" in fonte
+    assert "fonte_de_captura_do_uniq" not in fonte
+
+
+def test_os_sensores_nao_tem_por_onde_ser_desligados() -> None:
+    """O hub publica por ``uniq`` e só LÊ; o IPC não tem método de sensor.
+
+    O giroscópio e o acelerômetro têm caminho de LEITURA por peça — e leitura
+    não é aplicação. Um campo ``sensors`` no perfil hoje seria a tela
+    prometendo um botão que não desliga nada, em transporte nenhum.
+
+    VERMELHO AQUI É BOA NOTÍCIA: o interruptor nasceu (``sensors.set`` no IPC
+    ou um método de escrita no hub). Traga ``ProfileSensorsConfig`` para o
+    ``Profile`` e para ``ControllerOverrides`` — é a ONDA-CONTROLES-07.
+    """
+    publicos = {
+        nome
+        for nome, _ in inspect.getmembers(sensor_hub_module.SensorHub, inspect.isfunction)
+        if not nome.startswith("_")
+    }
+    assert publicos == {"leitura", "reconciliar", "stop_all"}, (
+        f"o SensorHub ganhou método público novo: {sorted(publicos)}"
+    )
+
+    from hefesto_dualsense4unix.daemon import ipc_server
+
+    fonte_ipc = Path(inspect.getsourcefile(ipc_server) or "").read_text(encoding="utf-8")
+    metodos = set(re.findall(r'"([a-z_]+\.[a-z_]+)":\s*self\._handle', fonte_ipc))
+    de_sensor = sorted(
+        m for m in metodos if re.search(r"sensor|gyro|giro|motion|accel", m)
+    )
+    assert not de_sensor, f"o IPC ganhou método de sensor: {de_sensor}"
+
+
+def test_a_entrada_continua_de_um_controle_so() -> None:
+    """Mouse, teclado e ações de botão esbarram no mesmo pipeline único.
+
+    ``read_state`` lê o PRIMÁRIO e o ``Daemon`` tem UM device de cada. Guardar
+    por controle é fácil; fazer valer exige ler cada peça e despachar para o
+    device dela — é o item mais caro da fila, e destrava cinco campos de uma
+    vez (``mouse``, ``key_bindings``, ``button_actions``, ``teclado_emulado``,
+    ``suppress_desktop_emulation``).
+
+    VERMELHO AQUI É BOA NOTÍCIA: a entrada virou por unidade.
+    """
+    anotacoes = getattr(Daemon, "__annotations__", {})
+    assert "_mouse_device" in anotacoes and "_keyboard_device" in anotacoes
+    for slot in ("_mouse_device", "_keyboard_device"):
+        assert "dict" not in str(anotacoes[slot]).lower(), (
+            f"{slot} virou um mapa — a emulação passou a ter um device por "
+            "peça, e os cinco campos de entrada podem entrar no esquema"
+        )
+    fonte = inspect.getsource(PyDualSenseController.read_state)
+    assert "PRIMÁRIO" in fonte, (
+        "o comentário que documenta o pipeline único saiu de read_state — "
+        "confira se a entrada passou a ser por unidade antes de acreditar"
+    )
