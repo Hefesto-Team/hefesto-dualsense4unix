@@ -22,8 +22,52 @@ abas temos praticamente tudo pronto."* Está mesmo. Três degraus, **nesta ordem
 **Nunca** monte payload à mão nem abra socket. O bridge já traz o payload, o
 timeout e a recusa do daemon traduzida em frase de tela.
 
-**Não** tente reusar `app/actions/*.py`: são mixins GTK (`self._get`,
-`self._toast_light`), a camada da janela antiga.
+### O quarto degrau: `app/actions/` e `app/widgets/` — e a regra é por FUNÇÃO
+
+**FATO ERRADO, SUBSTITUÍDO EM 02/09/2026.** Esta linha dizia *"**Não** tente
+reusar `app/actions/*.py`: são mixins GTK"*, e a proibição em bloco escondia a
+maior parte do legado. Medido em `app/actions/`:
+
+```
+def de módulo:  355 (199 públicas)   ← importam sem janela nenhuma
+métodos (self): 571 (119 públicos)   ← precisam da Gtk.Window inteira
+```
+
+**63% das defs públicas são de módulo.** E **oito arquivos são PUROS** — têm
+função pública de módulo e nenhum método: `ambiente_na_tela`, `config/moldura`,
+`config/secao_janela`, `external_controllers`, `mode_transition`, `perfis_web`,
+`relancar`, `trigger_specs`.
+
+**A regra que vale, e ela decide caso a caso:**
+
+> **`def nome(args)` no topo do módulo → REUSA.** Importa sem janela, responde
+> *"qual é o valor?"*.
+> **`def nome(self, …)` dentro de classe → NÃO ATRAVESSA.** Precisa da
+> `Gtk.Window`, responde *"onde ponho na tela?"*.
+
+Os dois lados, no mesmo arquivo — `app/actions/triggers_actions.py`:
+
+```python
+def humanizar_erro_gatilho(motivo, spec=None):   # :53  REUSA (e nenhum pacote a chama)
+class TriggersActionsMixin(WidgetAccessMixin):   # :78
+    def _rebuild_params(self, …):                #      NÃO ATRAVESSA
+```
+
+Como se decide em três segundos, sem abrir o arquivo:
+
+```bash
+grep -c "^def "    src/hefesto_dualsense4unix/app/actions/ALVO.py   # reusam
+grep -c "    def " src/hefesto_dualsense4unix/app/actions/ALVO.py   # não
+```
+
+`footer_actions.py` é o único onde a proibição antiga acertava: 1.837 linhas,
+**zero** função de módulo. `external_controllers.py` é o oposto: **25 funções
+públicas de módulo, zero método**.
+
+**O que cada aba deveria estar chamando e não chama está medido em
+`docs/process/sprints/2026-09-02-ROTA-B1-o-inventario-do-motor.md`. Leia antes
+de escrever uma função** — o motor oferece 314 funções que atravessam para HTML,
+e a tela nova chama treze.
 
 ## O nome do método não diz o que ele faz
 
