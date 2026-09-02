@@ -952,14 +952,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # chamador de propósito: quem os chama são os dez `interface/pacotes/aNN_*.py`,
     # e dez frentes estavam dentro deles no mesmo instante. Ligar é a leva
     # seguinte, e cada uma fecha uma linha desta lista.
-    "interface/pacotes/__init__.py::jogador_de": (
-        "O número do jogador lendo as DUAS chaves que o daemon publica — "
-        "`player_slot` e depois `player` —, na mesma ordem da GTK "
-        "(`app/actions/base.numero_do_controle`). Hoje `a01_jogar.py:48` e "
-        "`a04_iluminacao.py:89` leem só `player`, e por isso a Iluminação "
-        "escreve `P—` no rótulo com o botão 2 aceso logo abaixo. Fecha quando "
-        "esses pacotes chamarem esta função. MEDIDO em 02/09/2026."
-    ),
+    # `jogador_de` SAIU DAQUI NA INTEGRAÇÃO DE 02/09/2026 — a lápide durou
+    # menos de duas horas. Ela dizia "fecha quando esses pacotes chamarem esta
+    # função", e foi o que aconteceu no merge: a aba 04 migrou na própria
+    # frente dela, e `a01_jogar.py` foi ligado pela integração, com a medição
+    # contra o daemon vivo (o do CABO dizia `Player —` e passou a dizer
+    # `Player 2`). O portão pegou a lápide sobrevivente antes de mim.
     "interface/pacotes/__init__.py::identidade_de": (
         "O nome do controle na tela, na ordem 'o que ELA nomeou > o modelo "
         "decodificado > o transporte' — e NUNCA a posição. Hoje `Cosmic Red` e "
