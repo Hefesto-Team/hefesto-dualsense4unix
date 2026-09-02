@@ -5349,10 +5349,39 @@ readonly HEFESTO_DKMS_HID_NINTENDO_PKG="hefesto-hid-nintendo"
 readonly HEFESTO_DKMS_HID_NINTENDO_VER="1.0.0"
 
 # T-2/PKG-1 (auditoria 21/07): kernel contra o qual os patches T e W foram
-# escritos/testados (KERNEL_TESTED dos dois BASELINE — hoje o mesmo). Num
-# upgrade de kernel em que o .c ainda COMPILE, o DKMS de safra antiga mascara
-# para sempre o in-tree mais novo (fixes/devices novos) e o doctor daria pass.
+# escritos/testados. Num upgrade de kernel em que o .c ainda COMPILE, o DKMS de
+# safra antiga mascara para sempre o in-tree mais novo (fixes/devices novos) e o
+# doctor daria pass.
 readonly HEFESTO_DKMS_KERNEL_TESTED="7.0.11-76070011-generic"
+
+# A LISTA INTEIRA, LIDA DA BASELINE — 01/09/2026, e a constante acima deixou de
+# ser a resposta sozinha.
+#
+# O QUE ELE DIZIA E ERA FALSO: com o `rtw88-usb` revalidado para o
+# 7.1.5-76070105 no mesmo dia, o doctor continuava comparando com o
+# `KERNEL_TESTED` (o primeiro) e avisava *"kernel atual != kernel testado (…) o
+# módulo do hefesto pode estar MASCARANDO um in-tree mais novo"* — sobre um
+# módulo medido contra ESTE kernel. Pior que o alarme: o conselho era `sudo dkms
+# remove`, isto é, arrancar uma cura válida.
+#
+# É A FORMA QUE ESTA CASA JÁ NOMEOU: a régua DIGITAVA o que devia LER. Agora ela
+# lê `KERNELS_VALIDADOS` do `patch/BASELINE`, que é o dono do fato — e o dono é
+# o mesmo que o `dkms.conf` usa no `BUILD_EXCLUSIVE_KERNEL`.
+#
+# O `KERNEL_TESTED` fica como piso: numa árvore instalada sem os assets (pacote
+# que não leva `patch/`), a leitura devolve vazio e o comportamento é o de antes.
+_dkms_kernels_validados() {
+    local baseline lista=""
+    for baseline in \
+        "${ROOT_DIR}/assets/dkms/rtw88-usb/patch/BASELINE" \
+        "/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/patch/BASELINE" \
+    ; do
+        [[ -r "${baseline}" ]] || continue
+        lista="$(sed -n 's/^KERNELS_VALIDADOS=//p' "${baseline}" | head -1)"
+        [[ -n "${lista}" ]] && break
+    done
+    printf '%s\n' "${lista}"
+}
 
 # Guard idempotente do aviso de Secure Boot (PKG-1): as duas seções DKMS
 # chamam o helper, mas o aviso sai UMA vez por execução do doctor.
@@ -5361,11 +5390,21 @@ _DKMS_SB_WARNED=0
 # T-2: WARN (não fail) quando o kernel atual difere do KERNEL_TESTED — o
 # módulo patchado de safra antiga pode estar mascarando um in-tree mais novo.
 _check_dkms_kernel_drift() {
-    local kver
+    local kver validados build
     kver="$(uname -r)"
-    if [[ "${kver}" != "${HEFESTO_DKMS_KERNEL_TESTED}" ]]; then
-        warn "kernel atual (${kver}) != kernel testado dos patches DKMS (${HEFESTO_DKMS_KERNEL_TESTED}) — se o build passou, o módulo do hefesto pode estar MASCARANDO um in-tree mais novo (fixes/suporte a devices); confira o rebase do BASELINE antes de confiar na cura, ou 'sudo dkms remove' para voltar ao in-tree"
-    fi
+    [[ "${kver}" == "${HEFESTO_DKMS_KERNEL_TESTED}" ]] && return
+
+    # `7.1.5-76070105-generic` -> `7.1.5-76070105`: a BASELINE lista o BUILD, e
+    # o sufixo de sabor (-generic, -lowlatency) não muda ABI nenhuma.
+    validados="$(_dkms_kernels_validados)"
+    for build in ${validados}; do
+        if [[ "${kver%-*}" == "${build}" ]]; then
+            pass "kernel atual (${kver}) está entre os kernels validados na BASELINE do DKMS"
+            return
+        fi
+    done
+
+    warn "kernel atual (${kver}) não está entre os kernels validados dos patches DKMS (${validados:-${HEFESTO_DKMS_KERNEL_TESTED}}) — se o build passou, o módulo do hefesto pode estar MASCARANDO um in-tree mais novo (fixes/suporte a devices); confira o rebase do BASELINE antes de confiar na cura, ou 'sudo dkms remove' para voltar ao in-tree"
 }
 
 # PKG-1: com Secure Boot enforcing e MOK não enrolado, o load do .ko de
