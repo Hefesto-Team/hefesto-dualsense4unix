@@ -40,6 +40,7 @@ sem dono, e o `pacotes/mapa.py` recusa inventar.
 """
 from __future__ import annotations
 
+import html.parser
 import pathlib
 import re
 import sys
@@ -232,8 +233,15 @@ NAO_SAO_VALOR = {"cobertura", "sem_dono"}
 #                                       (igual antes e depois — o molde se cala
 #                                        quando há dono)
 #
+# ESSAS TRÊS LINHAS SÃO DESTA CURA SOZINHA, e a árvore andou no mesmo dia: com o
+# SELO DA VISITA junto (a outra metade da fundação) o INDECIDÍVEL vai a ZERO, e
+# as mesmas medições dão `222 · 108 · 0` com a mesa vazia sem o filtro dos
+# filhos mudos, `218 · 112 · 0` com ele, e `262 · 68 · 0` com a mesa cheia (dois
+# controles, um USB e um BT). Os quatro campos de diferença na mesa vazia são
+# ENTREGA e não regressão — ver `enderecos_que_o_texto_apaga`.
+#
 # A CAUSA, e ela não é de nenhuma das dez abas: o piloto já apaga os lugares
-# sem dono (`hefesto_vivo.py:1005-1016`), mas as CHAVES que ele apaga são a
+# sem dono (por `apagar_os_lugares_sem_dono`), mas as CHAVES que ele apaga são a
 # união do que as colunas VIVAS trouxeram — e com zero controles não há coluna
 # viva nenhuma. `set()` de chaves faz `dict.fromkeys(chaves, "—")` devolver
 # `{}`, e o desenho fica inteiro na tela.
@@ -255,7 +263,7 @@ NAO_SAO_VALOR = {"cobertura", "sem_dono"}
 #: direto nas colunas dos lugares sem dono APAGARIA A MOLDURA: o piloto calcula
 #: `apagar = TODOS_OS_LUGARES - set(carga["colunas"])` e só marca
 #: `data-conectado="nao"` / classe `off` no que sobra dessa conta
-#: (`hefesto_vivo.py:1008-1016`). Com `p1`…`p4` ocupados pelo molde, a conta dá
+#: (`apagar_os_lugares_sem_dono`). Com `p1`…`p4` ocupados pelo molde, a conta dá
 #: lista vazia e os quatro lugares ficariam com a moldura de CONECTADO — meio
 #: apagado, que é pior que aceso. Sob `*` a conta continua dando os quatro, o
 #: piloto escreve o travessão em todos E acende a moldura de vazio.
@@ -263,6 +271,47 @@ NAO_SAO_VALOR = {"cobertura", "sem_dono"}
 #: `*` é a mesma reserva que os gestos do rodapé já usam (`GESTOS[("*", nome)]`
 #: — "de todas as abas"), e não um segundo vocabulário.
 LUGAR_SEM_DONO = "*"
+
+#: OS QUATRO LUGARES DA MESA DO DESENHO. O HTML nasce com eles todos — dois
+#: conectados e dois vazios, por decisão dela em 31/08 — e o produto tem de
+#: apagar o que a mesa de agora não preenche.
+TODOS_OS_LUGARES = frozenset({"p1", "p2", "p3", "p4"})
+
+
+def apagar_os_lugares_sem_dono(carga: dict[str, Any]) -> dict[str, Any]:
+    """Escreve travessão em todo lugar do desenho que a mesa de agora não tem.
+
+    ELA MORA AQUI, e não no piloto, POR CAUSA DA RÉGUA. O molde do despachante
+    só vira travessão na tela porque alguém aplica esta conta, e a régua que
+    guardava esse acoplamento COBRAVA TRÊS LITERAIS dentro do `hefesto_vivo.py`
+    — a PALAVRA, não o ATO. Medido em 02/09/2026: acrescentar
+    `if pref_ == "*": continue` ao laço da união mata a cura inteira (a régua do
+    mockup volta ao `330 · 114 · 179 · 37` de antes dela, com a mesa vazia) e os
+    três literais continuam no arquivo, com **13 testes verdes**. Extrair a
+    conta é o que deixa o teste RODAR o que o produto roda.
+
+    A CHAVE RESERVADA ENTRA NA UNIÃO DE PROPÓSITO: é a coluna do `*` que traz o
+    molde, e é dela que saem as chaves a apagar quando não há uma só coluna
+    viva. Pulá-la — o que qualquer pessoa faria ao "limpar" um dicionário de
+    `p1..p4` com um `*` no meio — é exatamente o que desfaz a cura.
+
+    :param carga: o que `normalizar()` devolveu, já com o `topo()` somado. Volta
+        a MESMA carga, mexida no lugar, com `vazios` dizendo quais lugares a
+        moldura tem de marcar como desconectados.
+    """
+    colunas = carga.setdefault("colunas", {})
+    chaves: set[str] = set()
+    for campos in colunas.values():
+        chaves |= set(campos)
+    apagar = sorted(TODOS_OS_LUGARES - set(colunas))
+    for pref in apagar:
+        colunas[pref] = dict.fromkeys(chaves, TRAVESSAO)
+    # A MOLDURA TAMBÉM, e não só o texto: com os travessões escritos, o card do
+    # P2 continuava com a borda de CONECTADO e os botões de máscara acesos. Meio
+    # apagado é pior que aceso — quem olha lê a borda antes de ler o campo.
+    carga["vazios"] = apagar
+    return carga
+
 
 #: O CONTROLE DE MENTIRA que a aba responde para dizer QUAIS campos um lugar
 #: tem. Ele traz o `uniq` e nada mais **de propósito**: o molde precisa dos
@@ -309,7 +358,7 @@ _MOLDE: dict[tuple[str, str], dict[str, str]] = {}
 TRAVESSAO = "—"
 
 
-#: OS DOIS ALVOS QUE O TRAVESSÃO NÃO ATENDE, e os dois foram medidos, não
+#: OS TRÊS ALVOS QUE O TRAVESSÃO NÃO ATENDE, e os três foram medidos, não
 #: supostos (02/09/2026, com o dublê de mesa vazia sobre a `02-controles`):
 #:
 #: `largura` — o `escrever()` do piloto monta `el.style.width = "—%"`, que o
@@ -323,17 +372,92 @@ TRAVESSAO = "—"
 #:   quatro botões de jogador da Iluminação (`players`) e a explicação do teto
 #:   da Conexões (`teto-explica`) viram um traço. O desenho não faz isso no
 #:   lugar vazio dele.
+#: `fundo` — SOFRE A MESMA RECUSA QUE TIROU A `largura`, e faltava aqui. O ramo
+#:   do `escrever()` é `if(el.style.background !== t){ el.style.background = t;
+#:   return 1; }`: `background: "—"` é tão inválido quanto `width: "—%"`, o
+#:   CSSOM não guarda, a comparação nunca casa e o contador soma +1 por tique
+#:   para sempre. Hoje é LATENTE — nenhuma das dez páginas publicadas tem um só
+#:   `data-hef-alvo="fundo"` (medido) —, e é exatamente por isso que ele
+#:   precisava entrar antes de o desenho ganhar o primeiro.
 #:
 #: `valor` FICA, e é de propósito: num `<select>` o piloto só escreve o que o
 #: campo oferece, então o travessão é no-op onde não há opção `—` e acerta onde
 #: houver. Nada quebra, e nada precisa ser lembrado no dia em que o desenho
 #: ganhar essa opção.
-ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE = {"largura", "html"}
+#:
+#: `cor` FICA pela razão inversa e igualmente medida: o ramo dele ESCREVE e
+#: depois COMPARA (`el.style.color = t; return el.style.color === antes ? 0 : 1`),
+#: então um travessão recusado devolve 0 e o contador não mente.
+ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE = {"largura", "html", "fundo"}
 
-_ENDERECO_NO_HTML = re.compile(r'data-(?:campo|papel|hef)="([^"]+)"')
-_ALVO_NO_HTML = re.compile(r'data-hef-alvo="([^"]+)"')
-_ELEMENTO_NO_HTML = re.compile(r"<[A-Za-z][^>]*>")
 _LUGAR_NO_HTML = re.compile(r'data-controle="(p\d+)"')
+
+#: As tags que não fecham. Sem esta lista, um `<input data-campo="x">` deixaria
+#: um quadro aberto para sempre e engoliria os irmãos todos.
+_SEM_FECHO = frozenset({
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
+    "meta", "param", "source", "track", "wbr",
+})
+
+
+class _OlhoNaPagina(html.parser.HTMLParser):
+    """A página publicada, lida UMA vez, para as duas perguntas do molde.
+
+    POR QUE UM PARSER, E NÃO TRÊS EXPRESSÕES REGULARES: a segunda pergunta é
+    sobre ESTRUTURA — *este endereço tem filho de elemento?* —, e busca de texto
+    não responde estrutura. É a mesma razão que o `_Leitor` da régua já carrega,
+    e esta casa já pagou por ler árvore com `grep`.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        #: `endereço` → os alvos com que a página o escreve.
+        self.alvos: dict[str, set[str]] = {}
+        #: Os endereços cujo elemento tem um filho MUDO — ver `molde_do_lugar`.
+        self.mudos: set[str] = set()
+        self._pilha: list[dict[str, Any]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        d = {k: (v or "") for k, v in attrs}
+        chave = (d.get("data-campo") or d.get("data-papel")
+                 or d.get("data-hef") or "")
+        alvo = d.get("data-hef-alvo") or "texto"
+        if chave:
+            self.alvos.setdefault(chave, set()).add(alvo)
+        quadro: dict[str, Any] = {"tag": tag, "chave": chave, "alvo": alvo,
+                                  "texto": [], "filhos": []}
+        if self._pilha:
+            self._pilha[-1]["filhos"].append(quadro)
+        self._pilha.append(quadro)
+        if tag in _SEM_FECHO:
+            self._fechar(tag)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        if tag not in _SEM_FECHO:
+            self._fechar(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        self._fechar(tag)
+
+    def handle_data(self, data: str) -> None:
+        for quadro in self._pilha:
+            quadro["texto"].append(data)
+
+    def _fechar(self, tag: str) -> None:
+        # PROCURA O QUADRO DA TAG, e não presume que é o topo: um `</div>`
+        # sobrando desalinharia a pilha para sempre.
+        for i in range(len(self._pilha) - 1, -1, -1):
+            if self._pilha[i]["tag"] == tag:
+                break
+        else:
+            return
+        while len(self._pilha) > i:
+            quadro = self._pilha.pop()
+            if (quadro["chave"] and quadro["alvo"] == "texto"
+                    and any(not "".join(f["texto"]).strip()
+                            for f in quadro["filhos"])):
+                self.mudos.add(quadro["chave"])
 
 #: Os lugares de controle de cada página publicada, lidos uma vez.
 _LUGARES: dict[str, frozenset[str]] = {}
@@ -373,9 +497,26 @@ def lugares_da_pagina(pagina: str) -> frozenset[str]:
     _LUGARES[pagina] = fora
     return fora
 
-#: `pagina` → `{endereço: os alvos daquele endereço}`.  # noqa-acento (nome do parametro)
-#: Lido uma vez por página.
-_ALVOS: dict[str, dict[str, set[str]]] = {}
+#: `pagina` → o olho já passado por ela. Lido uma vez por página.  # noqa-acento
+_ALVOS: dict[str, _OlhoNaPagina] = {}
+
+
+def _olhar_a_pagina(pagina: str) -> _OlhoNaPagina | None:
+    """A página publicada, lida e lembrada. `None` quando ela não abre."""
+    lembrado = _ALVOS.get(pagina)
+    if lembrado is not None:
+        return lembrado
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        doc = onde.pagina(pagina, publicado=True).read_text(encoding="utf-8")
+    except OSError:
+        return None
+    olho = _OlhoNaPagina()
+    olho.feed(doc)
+    olho.close()
+    _ALVOS[pagina] = olho
+    return olho
 
 
 def alvos_da_pagina(pagina: str) -> dict[str, set[str]]:
@@ -390,25 +531,50 @@ def alvos_da_pagina(pagina: str) -> dict[str, set[str]]:
     Vazio quando a página não abre — e aí `molde_do_lugar` desiste, porque sem
     saber como a página escreve o molde escreveria travessão numa barra.
     """
-    lembrado = _ALVOS.get(pagina)
-    if lembrado is not None:
-        return lembrado
-    from hefesto_dualsense4unix.interface import onde
+    olho = _olhar_a_pagina(pagina)
+    return olho.alvos if olho is not None else {}
 
-    try:
-        doc = onde.pagina(pagina, publicado=True).read_text(encoding="utf-8")
-    except OSError:
-        return {}
-    fora: dict[str, set[str]] = {}
-    for elemento in _ELEMENTO_NO_HTML.findall(doc):
-        endereco = _ENDERECO_NO_HTML.search(elemento)
-        if endereco is None:
-            continue
-        alvo = _ALVO_NO_HTML.search(elemento)
-        fora.setdefault(endereco.group(1), set()).add(
-            alvo.group(1) if alvo else "texto")
-    _ALVOS[pagina] = fora
-    return fora
+
+def enderecos_que_o_texto_apaga(pagina: str) -> frozenset[str]:
+    """Os endereços cujo elemento tem um filho que o TEXTO não sabe dizer.
+
+    A TERCEIRA EXCEÇÃO DO TRAVESSÃO, e ela é de COMPORTAMENTO, não de contador.
+    O alvo `texto` escreve `el.textContent`, e isso APAGA os filhos. Onde o
+    filho é `<span class="pt">•</span>` nada se perde: o ponto está no texto e
+    volta no texto. Onde o filho é MUDO — um elemento sem texto nenhum, que só
+    existe para o CSS desenhar algo — o texto não tem como devolvê-lo.
+
+    MEDIDO em 02/09/2026, com o piloto de verdade e um dublê de TEMPO (mesa
+    vazia até 8 s, mesa real depois; o daemon dela nunca foi tocado), na
+    `06-navegacao`::
+
+        com o molde   1-mesa-vazia  navega filhos=0 '—'
+                      2-o-controle-voltou  filhos=0 'USB • Navega o PC'
+        sem o molde   1-mesa-vazia  navega filhos=2 'USB • Navega o PC'
+                      2-o-controle-voltou  filhos=2 'USB • Navega o PC'
+
+    O endereço `navega` é `<div class="nav-est" data-campo="navega"><span
+    class="bolinha"></span>USB <span class="pt">•</span> Navega o PC</div>`. O
+    travessão matou o `<span class="bolinha">` — o PONTO VERDE que diz quem
+    navega o PC —, e ele **não volta quando o controle volta**: `a06_navegacao`
+    emite exatamente o texto que já está lá, `el.textContent !== t` dá falso, e
+    o nó nunca mais é tocado. Só trocar de aba (que recarrega o documento) o
+    traz de volta.
+
+    UMA CURA QUE APAGA E NÃO DEVOLVE É PIOR QUE A DOENÇA: a mesa dela conecta e
+    desconecta o tempo todo, e o dano dura enquanto ela ficar naquela aba.
+
+    OS DOIS ENDEREÇOS QUE ISTO POUPA HOJE, medidos nas dez publicadas:
+    `06-navegacao·navega` (o ponto) e `04-iluminacao·aceso` (um `<div>` de texto
+    vazio com três `<span>` mudos, que são o DESENHO da barra de luz).
+
+    O QUE ISTO NÃO PODE PARECER: uma desculpa para o desenho ficar na tela. Os
+    `identidade` da Jogar, da Iluminação e da Vibração TÊM filho — mas o filho é
+    `<span class="pt">•</span>`, que o texto reproduz. Eles continuam no molde,
+    e a cura do estado vazio continua inteira onde ela pega.
+    """
+    olho = _olhar_a_pagina(pagina)
+    return frozenset(olho.mudos) if olho is not None else frozenset()
 
 
 def chaves_por_controle(pacote: dict[str, Any]) -> set[str]:
@@ -497,9 +663,11 @@ def molde_do_lugar(
         # UMA ABA QUE LEVANTA NÃO DERRUBA A PINTURA. A de verdade já rodou e já
         # deu certo antes desta chamada; o que se perde aqui é só o molde dela.
         seria = {}
+    apaga = enderecos_que_o_texto_apaga(pagina)
     molde = dict.fromkeys(
         sorted(k for k in chaves_por_controle(seria)
-               if not (alvos.get(k, set()) & ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE)),
+               if not (alvos.get(k, set()) & ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE)
+               and k not in apaga),
         TRAVESSAO)
     _MOLDE[chave] = molde
     return dict(molde)

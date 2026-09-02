@@ -31,14 +31,19 @@ NA TELA, com o daemon vivo, e compara com o valor CRAVADO no arquivo publicado.
     INDECIDIVEL  igual ao cravado, o pacote declara EXATAMENTE esse valor, e o
                  piloto NÃO passou pelo elemento
 
-A TERCEIRA CLASSE ERA 74 CAMPOS EM 330, e hoje é ZERO. Esta seção dizia:
-*"separá-las exigiria marcar cada elemento no momento da escrita — uma marca no
-caminho quente da pintura, paga por toda volta do tique, para responder uma
-pergunta de bancada"*, e concluía que a régua preferia dizer quantos eram.
+A TERCEIRA CLASSE ERA 74 CAMPOS EM 330, e hoje é ZERO — **medido em 02/09/2026
+com DOIS controles na mesa, um no USB e um no BT**. O número depende da mesa, e
+dizer qual mesa é obrigatório: o mesmo instrumento, no mesmo dia e sem uma linha
+de código mudar, deu ``114 PRODUTO · 179 MOCKUP · 37 INDECIDÍVEL`` com a mesa
+VAZIA e ``262 · 68 · 0`` com ela cheia. Esta seção dizia: *"separá-las exigiria
+marcar cada elemento no momento da escrita — uma marca no caminho quente da
+pintura, paga por toda volta do tique, para responder uma pergunta de bancada"*,
+e concluía que a régua preferia dizer quantos eram.
 **A conta estava errada, e foi medida em 02/09/2026:** a marca é um
 ``el.dataset.hefVisto = '1'`` no ``escrever()``, e o custo do tique não se mexeu
-— mediana **1,13 ms antes, 1,03 ms depois**, na mesma aba e na mesma mesa. Os 74
-viraram PRODUTO, e o número de MOCKUP não mudou uma unidade.
+— mediana **1,13 ms antes, 1,03 ms depois**, na mesma aba e na mesma mesa (a de
+dois controles). Os 74 viraram PRODUTO, e o número de MOCKUP não mudou uma
+unidade.
 
 E A MARCA NÃO É "LER O CÓDIGO", que é o erro que esta régua existe para não
 repetir: ela não pergunta se o nome do campo aparece no pacote — ela registra,
@@ -75,8 +80,10 @@ cobrar dela o que cobra de toda promessa.
 """
 from __future__ import annotations
 
+import colorsys
 import dataclasses
 import html.parser
+import math
 import re
 from typing import Any
 
@@ -365,94 +372,194 @@ def _numero_css(valor: str) -> str:
     return f"{curto}{unidade}"
 
 
-#: As duas formas de cor que o CSSOM REESCREVE. Todo o resto — palavra
-#: (``red``, ``transparent``), ``var(--x)``, ``currentcolor`` — volta como foi
-#: escrito, e por isso passa direto.
-_HEXA = re.compile(r"^#([0-9a-f]{3,8})$", re.IGNORECASE)
-_FUNCAO_DE_COR = re.compile(r"^(rgba?)\((.*)\)$", re.IGNORECASE | re.DOTALL)
+#: AS TRÊS FAMÍLIAS DE COR QUE O CSSOM REESCREVE — hexadecimal, ``rgb()`` e
+#: ``hsl()``. Palavra (``red``, ``transparent``, ``currentcolor``), ``var(--x)``
+#: e as funções que o motor não resolve (``color-mix``) voltam como foram
+#: escritas, só em minúsculas.
+_HEXA = re.compile(r"^#([0-9a-f]*)$", re.IGNORECASE)
+_FUNCAO_DE_COR = re.compile(r"^(rgba?|hsla?)\((.*)\)$", re.IGNORECASE | re.DOTALL)
+
+#: Uma palavra-chave de CSS: uma só, sem espaço. Serve para separar ``red`` de
+#: ``Cosmic Red``, que o CSSOM RECUSA devolvendo ``''``.
+_UMA_PALAVRA = re.compile(r"^[a-z][a-z0-9-]*$", re.IGNORECASE)
+
+#: As unidades de ângulo do matiz, e o fator que leva cada uma a GRAUS. A ordem
+#: é POR TAMANHO, do maior para o menor, e não é enfeite: ``"grad"`` termina em
+#: ``"rad"``, e testar ``rad`` primeiro leria ``200grad`` como ``200g`` radianos.
+_ANGULO = (("turn", 360.0), ("grad", 0.9), ("deg", 1.0), ("rad", 180.0 / math.pi))
+
+
+def _meio_para_cima(n: float) -> int:
+    """O arredondamento do CSSOM, que NÃO é o do Python.
+
+    ``round()`` do Python é bancário — ``round(76.5)`` dá ``76``. O CSSOM
+    arredonda meio PARA CIMA, e a diferença aparece: ``rgba(10%, 20%, 30%, 50%)``
+    volta do WebKit com o canal azul em ``77`` (30% de 255 = 76,5) e esta régua
+    dizia ``76``. Sondado no WebKit desta máquina em 02/09/2026.
+    """
+    return math.floor(n + 0.5)
 
 
 def _canal(bruto: str) -> int | None:
     """Um canal de cor — ``"186"`` ou ``"50.439%"`` — no inteiro 0-255 do CSSOM."""
     bruto = bruto.strip()
     try:
-        if bruto.endswith("%"):
-            return max(0, min(255, round(float(bruto[:-1]) * 255 / 100)))
-        return max(0, min(255, round(float(bruto))))
+        n = float(bruto[:-1]) * 255 / 100 if bruto.endswith("%") else float(bruto)
     except ValueError:
         return None
+    return max(0, min(255, _meio_para_cima(n)))
 
 
-def _alfa(bruto: str) -> str:
-    """A opacidade como o CSSOM a serializa: ``".5"`` → ``"0.5"``, 170/255 → ``"0.667"``."""
+def _fracao(bruto: str, teto: float = 1.0) -> float | None:
+    """``"50%"`` ou ``"50"`` → ``0.5``. A saturação e a luminosidade do ``hsl()``.
+
+    O TETO É INFINITO PARA A SATURAÇÃO, e isso foi medido: o WebKit não corta a
+    saturação em 100% — ele calcula com o valor cheio e corta os CANAIS.
+    ``hsl(210, 150%, 40%)`` volta ``rgb(0, 102, 255)``; cortando a saturação
+    antes dá ``rgb(0, 102, 204)``, que foi a última divergência da sonda.
+    """
+    bruto = bruto.strip()
     try:
-        n = float(bruto.strip().rstrip("%"))
+        n = float(bruto[:-1] if bruto.endswith("%") else bruto)
     except ValueError:
-        return bruto.strip()
-    if bruto.strip().endswith("%"):
-        n /= 100
-    return f"{round(n, 3):g}"
+        return None
+    return max(0.0, min(teto, n / 100))
+
+
+def _matiz(bruto: str) -> float | None:
+    """O matiz do ``hsl()`` na volta 0-1, aceitando ``deg``/``grad``/``rad``/``turn``."""
+    bruto = bruto.strip().lower()
+    escala = 1.0
+    for unidade, fator in _ANGULO:
+        if bruto.endswith(unidade):
+            bruto, escala = bruto[: -len(unidade)], fator
+            break
+    try:
+        graus = float(bruto) * escala
+    except ValueError:
+        return None
+    return (graus % 360.0) / 360.0
+
+
+def _opacidade(bruto: str) -> int | None:
+    """A opacidade em BYTE — que é como o CSSOM a guarda antes de serializar."""
+    bruto = bruto.strip()
+    try:
+        n = float(bruto[:-1]) / 100 if bruto.endswith("%") else float(bruto)
+    except ValueError:
+        return None
+    return max(0, min(255, _meio_para_cima(n * 255)))
+
+
+def _alfa(byte: int) -> str:
+    """O byte de opacidade na forma mais CURTA que volta ao mesmo byte.
+
+    É o que o CSSOM serializa, e não um arredondamento a três casas: ``128``
+    vira ``0.5`` — não ``0.502`` —, ``170`` vira ``0.667`` e ``1`` vira
+    ``0.004``. Sondado no WebKit desta máquina em 02/09/2026; era esta a
+    metade errada da família de oito dígitos que a régua dizia reproduzir.
+    """
+    for casas in (1, 2, 3):
+        curto = f"{byte / 255:.{casas}f}"
+        if _meio_para_cima(float(curto) * 255) == byte:
+            return f"{float(curto):g}"
+    return f"{byte / 255:.3f}"
+
+
+def _tinta(canais: list[int], byte: int | None) -> str:
+    """Os três canais e a opacidade na forma serializada do CSSOM.
+
+    ``alfa`` cheio some: o WebKit devolve ``rgb(0, 0, 255)`` para ``#0000ffff``.
+    """
+    r, g, b = canais
+    if byte is None or byte >= 255:
+        return f"rgb({r}, {g}, {b})"
+    return f"rgba({r}, {g}, {b}, {_alfa(byte)})"
 
 
 def _cor_css(valor: str) -> str:
     """A cor como ``el.style.color`` a devolve — a forma do NAVEGADOR, não a do arquivo.
 
-    SONDADO NO WEBKIT desta máquina em 02/09/2026, com a página offscreen, e
-    esta função reproduz linha a linha o que a sonda mediu::
-
-        '#6272a4'                → 'rgb(98, 114, 164)'
-        '#fff'                   → 'rgb(255, 255, 255)'
-        '#ff5555aa'              → 'rgba(255, 85, 85, 0.667)'
-        'rgb(1,2,3)'             → 'rgb(1, 2, 3)'
-        'rgb(37.355% 50.439% 0%)'→ 'rgb(95, 129, 0)'
-        'rgba(0,0,0,.5)'         → 'rgba(0, 0, 0, 0.5)'
-        'red' · 'transparent'    → iguais
-        'currentColor'           → 'currentcolor'
-        'var(--plastico)'        → 'var(--plastico)'
-        ''                       → ''
-
     POR QUE ISTO EXISTE, e é a diferença entre medir e desistir: sem a forma do
     navegador, um campo de cor teria de ser lido pelo TEXTO — e pintar uma cor
-    não mexe numa letra, logo o campo seria INDECIDÍVEL para sempre. É o que
-    acontece hoje com o alvo ``fundo``, e a nota dele diz que a razão é a
-    normalização. **A sonda derruba metade dessa razão**: ``el.style.background``
-    de ``background:#6272a4`` volta ``'rgb(98, 114, 164)'`` — a MESMA forma que
-    esta função produz. Trocar o ``fundo`` mexe no número de outra frente e fica
-    para quem for dono dele; o fato fica medido aqui.
+    não mexe numa letra, logo o campo seria INDECIDÍVEL para sempre.
 
-    O QUE ELA NÃO SABE: uma cor que o navegador reescreva de outro jeito passa
-    direto e o campo lê como PRODUTO sem ninguém ter pintado. A guarda do DOM
-    virgem do ``--prova-de-mockup`` pega isso na hora — ela confere este parser
-    contra o leitor de tela, endereço a endereço — e a divergência sai como
-    cegueira, que REPROVA. Ou seja: o erro possível aqui é barulhento, não mudo.
+    O QUE ELA COBRE, e cada linha é uma sonda no WebKit desta máquina, não uma
+    suposição (``test_a_cor_e_medida_no_webkit_e_nao_transcrita`` refaz a sonda
+    a cada execução e reprova se as duas se separarem)::
+
+        #RGB · #RGBA · #RRGGBB · #RRGGBBAA    → rgb()/rgba(), com o alfa CURTO
+        rgb() · rgba(), vírgula ou espaço     → rgb()/rgba(), canais 0-255
+        hsl() · hsla(), deg/grad/rad/turn     → rgb()/rgba()
+        red · transparent · currentColor      → minúsculas, como foram escritas
+        var(--plastico) · color-mix(…)        → intactas
+        hexadecimal e função INVÁLIDOS        → '' , que é o que o CSSOM recusa
+
+    **A AFIRMAÇÃO ANTERIOR CAIU, e ela estava escrita aqui e no ``LER_CAMPOS``
+    do piloto:** *"a normalização é FECHADA e pequena — hexadecimal e ``rgb()``
+    viram uma só forma, e todo o resto volta como foi escrito"*. Não é fechada.
+    Medido em 02/09/2026 com uma sonda de 51 formas: o ``hsl()`` também vira
+    ``rgb()``, o alfa de oito dígitos é serializado CURTO (``#0000ff80`` dá
+    ``0.5``, e a régua dizia ``0.502``), o alfa cheio DESAPARECE (``#0000ffff``
+    dá ``rgb(…)``), o arredondamento é meio-para-cima e não bancário, e todo CSS
+    inválido volta ``''`` em vez de voltar como foi escrito.
+
+    O QUE ELA AINDA NÃO SABE, e é o único buraco que sobra: uma PALAVRA de uma
+    só peça que não seja cor de verdade (``vermelho``, ``azull``) passa por aqui
+    e o CSSOM devolveria ``''``. Separar as duas exigiria a lista das 148 cores
+    nomeadas do CSS, e o erro é barulhento: a guarda do DOM virgem do
+    ``--prova-de-mockup`` compara este parser com o leitor de tela endereço a
+    endereço, e a divergência sai como CEGUEIRA, que reprova.
     """
     valor = valor.strip()
     if not valor:
         return ""
-    if valor.lower().startswith("var("):
+    baixo = valor.lower()
+    if baixo.startswith("var("):
         return valor
     achou = _HEXA.match(valor)
     if achou:
-        d = achou.group(1)
-        if len(d) in (3, 4):
-            d = "".join(c * 2 for c in d)
-        if len(d) == 6:
-            r, g, b = (int(d[i:i + 2], 16) for i in (0, 2, 4))
-            return f"rgb({r}, {g}, {b})"
-        if len(d) == 8:
-            r, g, b, a = (int(d[i:i + 2], 16) for i in (0, 2, 4, 6))
-            return f"rgba({r}, {g}, {b}, {round(a / 255, 3):g})"
-        return valor.lower()
+        digitos = achou.group(1)
+        if len(digitos) not in (3, 4, 6, 8):
+            # HEXADECIMAL INVÁLIDO: o CSSOM recusa e o elemento fica sem cor de
+            # linha, logo `el.style.color` devolve `''`. Voltar a string crua
+            # diria PRODUTO sobre um campo que o navegador nem aceitou.
+            return ""
+        if len(digitos) in (3, 4):
+            digitos = "".join(c * 2 for c in digitos)
+        canais = [int(digitos[i:i + 2], 16) for i in (0, 2, 4)]
+        return _tinta(canais, int(digitos[6:8], 16) if len(digitos) == 8 else None)
     achou = _FUNCAO_DE_COR.match(valor)
     if achou:
+        nome = achou.group(1).lower()
         partes = [p for p in re.split(r"[,\s/]+", achou.group(2).strip()) if p]
-        canais = [_canal(p) for p in partes[:3]]
-        if len(canais) == 3 and None not in canais:
-            if len(partes) >= 4:
-                return (f"rgba({canais[0]}, {canais[1]}, {canais[2]}, "
-                        f"{_alfa(partes[3])})")
-            return f"rgb({canais[0]}, {canais[1]}, {canais[2]})"
-    return valor.lower()
+        if len(partes) not in (3, 4):
+            return ""
+        byte = _opacidade(partes[3]) if len(partes) == 4 else None
+        if len(partes) == 4 and byte is None:
+            return ""
+        if nome.startswith("rgb"):
+            crus = [_canal(p) for p in partes[:3]]
+            if any(c is None for c in crus):
+                return ""
+            canais = [c for c in crus if c is not None]
+        else:
+            matiz = _matiz(partes[0])
+            saturacao = _fracao(partes[1], teto=math.inf)
+            luz = _fracao(partes[2])
+            if matiz is None or saturacao is None or luz is None:
+                return ""
+            canais = [max(0, min(255, _meio_para_cima(c * 255)))
+                      for c in colorsys.hls_to_rgb(matiz, luz, saturacao)]
+        return _tinta(canais, byte)
+    if "(" in valor:
+        # UMA FUNÇÃO QUE O CSSOM NÃO RESOLVE — `color-mix`, `light-dark` — volta
+        # como foi escrita.
+        return baixo
+    if not _UMA_PALAVRA.match(valor):
+        # NÃO É PALAVRA-CHAVE NENHUMA (`Cosmic Red` tem espaço): o CSSOM recusa.
+        return ""
+    return baixo
 
 
 def _ligado(texto: str) -> bool:
@@ -629,22 +736,52 @@ def _selos_alinhados(cravados: list[_Campo],
     return fora
 
 
-def _declarado_neste_elemento(campo: _Campo, declarado: str) -> str:
+def _declarado_neste_elemento(campo: _Campo, declarado: str,
+                              quandos: frozenset[str] = frozenset()) -> str:
     """O que ESTE elemento mostraria se a declaração do pacote fosse pintada.
 
-    SÓ O ALVO ``classe`` PRECISA DISTO, e sem ele a régua acusaria três
-    endereços mortos toda vez que o produto acertasse: os quatro degraus da
-    Vibração dividem UM endereço, o pacote declara ``'max'`` uma vez só, e o
-    bootstrap visita os quatro com esse mesmo valor. Quem não é ``max`` fica
-    apagado DE PROPÓSITO — e apagado é ``''``, não ``'max'``.
+    DOIS ALVOS PRECISAM DISTO, e os dois pelo mesmo motivo: entre o que o pacote
+    EMITE e o que a tela MOSTRA há uma tradução, e comparar os dois crus acusa
+    endereço morto sobre o produto que acertou.
+
+    ``classe`` — os quatro degraus da Vibração dividem UM endereço, o pacote
+    declara ``'max'`` uma vez só, e o bootstrap visita os quatro com esse mesmo
+    valor. Quem não é ``max`` fica apagado DE PROPÓSITO, e apagado é ``''``.
+
+    ``cor`` — o CSSOM NORMALIZA na atribuição: o pacote emite ``'#0000FF'``
+    (``a04_iluminacao._hex`` produz exatamente isso) e ``el.style.color``
+    devolve ``'rgb(0, 0, 255)'``. Sem passar a declaração pelo mesmo
+    ``_cor_css`` que o parser e o leitor de tela já usam, as duas nunca casam e
+    a régua chama de ENDEREÇO MORTO a cor que o produto pintou CERTO. Só a forma
+    ``var(--x)`` escapava, e é a única que os testes usavam.
+
+    :param quandos: os ``data-hef-quando`` de TODOS os membros do grupo. Sem
+        eles o alvo ``classe`` fica cego ao valor errado: um token que ninguém
+        conhece apagaria o grupo inteiro, e como apagado é ``''`` nos dois lados
+        a régua daria o MESMO veredito da tela que acende certo. Com eles, o
+        token desconhecido volta como veio e cai no ramo do endereço morto.
 
     Para todo outro alvo a declaração vale como veio.
     """
+    if campo.alvo == "cor":
+        # O VAZIO APAGA A COR DE LINHA — o `escrever()` põe `''` no
+        # `style.color`, e não o travessão, que não é cor nenhuma.
+        return _cor_css("" if declarado == TRAVESSAO else declarado)
     if campo.alvo != "classe":
         return declarado
-    if campo.quando:
-        return campo.quando if declarado == campo.quando else ""
-    return "sim" if _ligado(declarado) else ""
+    if not campo.quando:
+        return "sim" if _ligado(declarado) else ""
+    if declarado == campo.quando:
+        return campo.quando
+    if quandos and _ligado(declarado) and declarado not in quandos:
+        # O TOKEN QUE NENHUM MEMBRO DO GRUPO CONHECE. A tela apaga TUDO, e
+        # apagado é `''` — o mesmo que este elemento mostraria se o produto
+        # tivesse acertado. Colapsar aqui para `''` daria PRODUTO sobre um
+        # grupo inteiramente APAGADO: medido em 02/09/2026, `'maximo'` no lugar  # noqa-acento (token de máquina)
+        # de `'max'` dava os mesmos 4 PRODUTO da tela que acende. Devolvendo o
+        # token cru, ele não casa com o vazio da tela e a régua acusa.
+        return declarado
+    return ""
 
 
 def _classificar(
@@ -679,6 +816,14 @@ def _classificar(
     #: declarada se distribui pelos elementos de mesmo endereço, do mesmo jeito
     #: que o bootstrap distribui.
     ja_vistos: dict[tuple[str, str], int] = {}
+    #: OS MEMBROS DE CADA GRUPO DO ALVO ``classe``, por endereço. É o que deixa
+    #: `_declarado_neste_elemento` distinguir "apagado de propósito" de "o
+    #: pacote emitiu um token que ninguém conhece" — sem isso os dois têm a
+    #: mesma cara na tela (``''``) e a régua não acusa nem um nem outro.
+    quandos: dict[tuple[str, str], set[str]] = {}
+    for campo in cravados:
+        if campo.alvo == "classe" and campo.quando:
+            quandos.setdefault((campo.dono, campo.chave), set()).add(campo.quando)
     selados = list(selos or [False] * len(cravados))
     if len(selados) != len(cravados):
         raise ValueError(
@@ -692,8 +837,9 @@ def _classificar(
         bruto = declarados.get(endereco, declarados.get(("", campo.chave), ...))
         if isinstance(bruto, list):
             bruto = bruto[i] if i < len(bruto) else ""
-        declarado = (None if bruto is ... else
-                     _declarado_neste_elemento(campo, _como_a_tela_escreveria(bruto)))
+        declarado = (None if bruto is ... else _declarado_neste_elemento(
+            campo, _como_a_tela_escreveria(bruto),
+            frozenset(quandos.get(endereco, ()))))
 
         if vivo == SUMIU:
             fora.append(_Veredito(

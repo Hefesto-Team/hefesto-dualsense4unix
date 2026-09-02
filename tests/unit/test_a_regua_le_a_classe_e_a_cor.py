@@ -19,9 +19,38 @@ arquivo cobre o lado Python das duas leituras; o lado JS — e o casamento dos
 dois — está em ``test_o_pintor_acende_a_classe_e_apaga_as_irmas.py``, que abre
 um WebKit de verdade.
 
-A MORDIDA: faça ``_campo()`` cair no ramo do texto para ``alvo == "classe"`` e
-``test_a_classe_cravada_e_lida_do_arquivo`` reprova — a régua leria o RÓTULO do
-botão ("Máximo") onde tinha de ler o estado ("max").
+O ALVO TAMBÉM NÃO BASTA DOS DOIS LADOS: entre o que o PACOTE emite e o que a
+tela mostra há uma tradução, e comparar os dois crus acusa endereço morto sobre
+o produto que acertou. Foi o que aconteceu com os dois alvos novos, e os dois
+achados são de 02/09/2026:
+
+* a **cor** declarada não passava pelo ``_cor_css``. O pacote emite
+  ``'#0000FF'`` (é o que ``a04_iluminacao._hex`` devolve), a tela mostra
+  ``'rgb(0, 0, 255)'``, e a régua chamava de ENDEREÇO MORTO. Só ``var(--x)``
+  escapava — a única forma que os testes usavam.
+* a **classe** era CEGA ao token errado: um ``'maximo'`` (noqa-acento, é
+  token de máquina) no lugar de ``'max'`` apaga os quatro degraus, e a régua
+  dava os MESMOS quatro PRODUTO da tela que acende certo — o detector de
+  endereço morto estava desarmado.
+
+A MORDIDA, e são quatro:
+
+1. faça ``_campo()`` cair no ramo do texto para ``alvo == "classe"`` e
+   ``test_a_classe_cravada_e_lida_do_arquivo`` reprova — a régua leria o RÓTULO
+   do botão ("Máximo") onde tinha de ler o estado ("max");
+2. faça ``_declarado_neste_elemento`` devolver ``declarado`` cru no alvo ``cor``
+   e ``test_a_cor_declarada_pelo_pacote_passa_pela_mesma_normalizacao`` reprova
+   no ``#6272a4``;
+3. tire o ramo do token desconhecido e
+   ``test_o_token_que_nenhum_degrau_conhece_e_endereco_morto`` reprova com
+   quatro PRODUTO sobre uma tela apagada;
+4. faça o token desconhecido acusar SEM olhar o ``ligado()`` e
+   ``test_apagar_o_grupo_inteiro_continua_sendo_legitimo`` reprova — o travessão
+   do lugar vazio apaga o grupo DE PROPÓSITO.
+
+A sonda de cor contra o WebKit de verdade mora no arquivo vizinho,
+``test_o_pintor_acende_a_classe_e_apaga_as_irmas.py``: aqui não há tabela de
+respostas digitada à mão, e a razão está escrita lá.
 """
 from __future__ import annotations
 
@@ -91,37 +120,57 @@ def test_a_cor_cravada_e_lida_do_estilo_e_nao_do_texto():
     assert [c.valor for c in campos] == ["rgb(98, 114, 164)", ""]
 
 
-# -- a normalização de cor, sondada no WebKit desta máquina ---------------
-def test_a_cor_normaliza_como_o_webkit_sondado():
-    """A tabela é a SAÍDA LITERAL da sonda de 02/09/2026, não uma suposição.
+# -- a cor DECLARADA atravessa a mesma normalização -----------------------
+def test_a_cor_declarada_pelo_pacote_passa_pela_mesma_normalizacao():
+    """O terceiro lado do casamento, e era o que faltava.
 
-    Se o WebKit de amanhã normalizar diferente, a guarda do DOM virgem do
-    ``--prova-de-mockup`` acusa como cegueira e REPROVA — o erro possível aqui
-    é barulhento, não mudo.
+    OS TRÊS LADOS têm de falar a mesma língua, e só DOIS falavam::
+
+        o ARQUIVO   `_Leitor._campo`  -> `_cor_css(_do_estilo(...))`  normalizado
+        a TELA      `LER_CAMPOS`      -> `el.style.color`   normalizado pelo CSSOM
+        o PACOTE    `_classificar`    -> `_como_a_tela_escreveria()`  CRU
+
+    E NÃO É HIPÓTESE: `a04_iluminacao._hex([0,0,255])` devolve `'#0000FF'` —
+    hexadecimal —, e as duas páginas de Iluminação cravam a cor em hexadecimal
+    também. O pacote acerta a cor, a tela mostra a cor certa, e a régua dizia
+    ENDEREÇO MORTO. Só a forma `var(--x)` escapava, que é justamente a única que
+    os testes usavam.
+
+    A MORDIDA: faça `_declarado_neste_elemento` devolver `declarado` para o
+    alvo `cor` e este teste reprova no `#6272a4`.
     """
-    sondado = {
-        "#6272a4": "rgb(98, 114, 164)",
-        "#FF5555": "rgb(255, 85, 85)",
-        "#7EB8D4": "rgb(126, 184, 212)",
-        "#fff": "rgb(255, 255, 255)",
-        "var(--plastico)": "var(--plastico)",
-        "rgb(186, 218, 85)": "rgb(186, 218, 85)",
-        "red": "red",
-        "rgba(0,0,0,.5)": "rgba(0, 0, 0, 0.5)",
-        "": "",
-        "rgb(37.355% 50.439% 0%)": "rgb(95, 129, 0)",
-        "rgb(1 2 3)": "rgb(1, 2, 3)",
-        "#6272A4": "rgb(98, 114, 164)",
-        " #6272a4 ": "rgb(98, 114, 164)",
-        "transparent": "transparent",
-        "currentColor": "currentcolor",
-        "rgb(1,2,3)": "rgb(1, 2, 3)",
-        "#ff5555aa": "rgba(255, 85, 85, 0.667)",
-    }
-    for escrito, esperado in sondado.items():
-        assert regua._cor_css(escrito) == esperado, (
-            f"{escrito!r} tinha de virar {esperado!r} — é o que o WebKit "
-            f"devolveu em `el.style.color` na sonda de 02/09/2026")
+    cravados = regua._campos_cravados(
+        '<span data-campo="l3" data-hef-alvo="cor" style="color:#6272a4">L3</span>')
+    for declarado in ("#6272a4", "#6272A4", "rgb(98, 114, 164)",
+                      "rgb(98,114,164)"):
+        (v,) = regua._classificar(cravados, ["rgb(98, 114, 164)"],
+                                  {("", "l3"): declarado}, [True])
+        assert v.classe == regua.PRODUTO, (
+            f"o pacote declarou {declarado!r}, a tela mostra "
+            f"'rgb(98, 114, 164)' e a régua disse {v.classe}: {v.nota}")
+
+
+def test_a_cor_que_o_pacote_erra_continua_acusada():
+    """A cura não pode cegar a régua: cor DIFERENTE continua endereço morto."""
+    cravados = regua._campos_cravados(
+        '<span data-campo="l3" data-hef-alvo="cor" style="color:#6272a4">L3</span>')
+    (v,) = regua._classificar(cravados, ["rgb(98, 114, 164)"],
+                              {("", "l3"): "#FF5555"}, [True])
+    assert v.classe == regua.MOCKUP and "ENDEREÇO MORTO" in v.nota
+
+
+def test_a_cor_vazia_declarada_e_a_cor_apagada_na_tela():
+    """`None` num campo de cor APAGA a cor de linha — não escreve travessão.
+
+    O `escrever()` do piloto faz `el.style.color = ''` no vazio, e `''` é o que
+    o leitor devolve. Traduzir o vazio para `'—'`, como o texto faz, acusaria
+    endereço morto sobre o analógico que acabou de ser solto.
+    """
+    cravados = regua._campos_cravados(
+        '<span data-campo="l3" data-hef-alvo="cor">L3</span>')
+    for declarado in (None, ""):
+        (v,) = regua._classificar(cravados, [""], {("", "l3"): declarado}, [True])
+        assert v.classe == regua.PRODUTO, f"{declarado!r}: {v.nota}"
 
 
 # -- a declaração de um GRUPO ---------------------------------------------
@@ -161,6 +210,61 @@ def test_o_grupo_que_o_produto_declara_errado_continua_acusado():
         "o pacote manda acender `economia` e a tela continua com `max` aceso — "
         "o botão do `economia` é endereço morto, e a régua tem de dizer")
     assert classes[2] == regua.MOCKUP and "ENDEREÇO MORTO" in vereditos[2].nota
+
+
+def test_o_token_que_nenhum_degrau_conhece_e_endereco_morto():
+    """O DETECTOR DE ENDEREÇO MORTO ESTAVA DESARMADO neste alvo.
+
+    Medido em 02/09/2026: com o pacote emitindo ``'maximo'`` (noqa-acento, é
+    valor de máquina) — um token que NENHUM dos quatro degraus conhece —, a
+    tela fica INTEIRAMENTE APAGADA, e a régua dava os MESMOS ``4 PRODUTO`` da
+    tela que acende certo. A causa: a
+    localização do grupo colapsava toda declaração que não casa para ``''``, e
+    ``''`` é exatamente o que um degrau apagado mostra.
+
+    O defeito que o enunciado desta cura manda impedir — *"o segundo clique
+    deixa dois degraus acesos"* — tem um irmão que ninguém via: **nenhum aceso**.
+
+    A MORDIDA: tire o ramo do token desconhecido de
+    ``_declarado_neste_elemento`` e este teste reprova com quatro PRODUTO.
+    """
+    cravados = regua._campos_cravados(DEGRAUS)
+    apagada = ["", "", "", ""]
+    vereditos = regua._classificar(cravados, apagada,
+                                   {("p1", "degrau"): "maximo"}, [True] * 4)  # noqa-acento
+    conta = regua._contar(vereditos)
+    assert conta[regua.MOCKUP] == 3, (
+        "os três degraus que a tela mostra apagados E o arquivo cravou apagados "
+        f"têm de acusar o token que ninguém conhece: {conta}")
+    mortos = [v for v in vereditos if "ENDEREÇO MORTO" in v.nota]
+    assert len(mortos) == 3 and "'maximo'" in mortos[0].nota, (  # noqa-acento
+        "a nota tem de NOMEAR o token que o pacote emitiu — senão quem lê o "
+        "relato não sabe o que procurar no código")
+
+    # e o token CERTO continua dando os quatro do produto: a régua nova não
+    # pode acusar quem acerta.
+    acesa = ["", "", "max", ""]
+    certos = regua._classificar(cravados, acesa, {("p1", "degrau"): "max"},
+                                [True] * 4)
+    assert [v.classe for v in certos] == [regua.PRODUTO] * 4
+
+
+def test_apagar_o_grupo_inteiro_continua_sendo_legitimo():
+    """Um lugar VAZIO da mesa apaga os quatro degraus, e isso não é defeito.
+
+    O molde do lugar sem dono escreve travessão, e o ``ligado()`` dos dois lados
+    trata o travessão como DESLIGADO. Se esta régua nova acusasse aqui, ela
+    reprovaria a cura do estado vazio — o defeito que esta casa já nomeou onze
+    vezes num dia.
+    """
+    cravados = regua._campos_cravados(DEGRAUS)
+    for declarado in ("—", "", None, False):
+        vereditos = regua._classificar(cravados, ["", "", "", ""],
+                                       {("p1", "degrau"): declarado}, [True] * 4)
+        classes = [v.classe for v in vereditos]
+        assert classes[:2] == [regua.PRODUTO] * 2, (
+            f"{declarado!r} apaga o grupo DE PROPÓSITO: {classes}")
+        assert not any("ENDEREÇO MORTO" in v.nota for v in vereditos[:2])
 
 
 def test_o_booleano_atravessa_o_true_do_python():
