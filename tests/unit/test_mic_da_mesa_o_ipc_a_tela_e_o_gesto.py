@@ -164,7 +164,7 @@ def test_o_selo_do_mic_tem_tres_estados_e_um_dono_so() -> None:
     """O selo do card, medido pelo COMPORTAMENTO — e nos DOIS pintores.
 
     ACHADO DA AUDITORIA DE 02/09/2026. Esta régua era `inspect.getsource` do
-    `Janela._pacote_do_card` mais `assert '<literal>' in fonte`. Media o TEXTO:
+    `Janela._pacote_do_card` mais `assert '<literal>' in fonte`. Olhava o TEXTO:
     arrancada a cura de verdade (`mic_sabemos = True`, que faz o card do
     controle CAÍDO voltar a pintar ATIVO), ela ficava VERDE — e nenhuma outra
     régua desta casa pegava, porque `test_regua_de_tela_a_aba_controles.py` é
