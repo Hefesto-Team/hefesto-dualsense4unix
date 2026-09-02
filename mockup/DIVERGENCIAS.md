@@ -93,3 +93,46 @@ seção daqui**: a aba deixou de estar em trabalho.
   **O que espera o seu OK:** nada visual. A bancada e o publicado diferem por
   esta linha só; enquanto ela não publicar, o produto que ela usa continua
   igual.
+
+
+## 08-conexoes.html
+- **02/09/2026** — **o QUARTO SELO do Check-up**, que é a sua decisão de hoje:
+  *"o que está quebrado agora não pode parecer igual ao que só podia estar
+  melhor."*
+
+  O exame da mesa tem QUATRO estados (`certo`, `atencao`, `problema`,
+  `nao_sei`) e esta tela tinha TRÊS cores: `atencao` e `problema` dividiam a
+  pílula laranja, pela mesma palavra do mapa do produto
+  (`gui/aba_conexoes.SELO_DO_ESTADO`).
+
+  **O que mudou na bancada, e são duas linhas:**
+
+  1. cada uma das cinco pílulas ganhou o endereço `data-campo="selo-estado"`,
+     com alvo `classe` — o produto acende `grave` na linha cujo estado for
+     `problema`. A palavra continua no seu próprio endereço, num `<span>` filho
+     (um `data-campo` por elemento, e o selo tem dois dados: a palavra e a cor);
+  2. nasceu a regra `.selo.grave{background:var(--red);color:var(--app-bg)}` —
+     o `--red` (`#ff5555`) é o token da casa para o que está quebrado, o mesmo
+     do `.btn.vermelho`. Ela é declarada DEPOIS da laranja de propósito: as
+     duas classes convivem na pílula e a última declarada é a que pinta.
+
+  **Zero pixel mudou no desenho parado.** Nenhuma das cinco linhas cravadas
+  está em `problema`, então a bancada abre idêntica à página que você usa. A
+  cor só aparece quando a sua mesa tiver um achado quebrado.
+
+  Medido no Chrome, acendendo a classe na segunda linha: `rgb(255, 184, 108)`
+  (laranja) → `rgb(255, 85, 85)` (vermelho).
+
+  **O que espera o seu OK, e é a outra metade da decisão: A PALAVRA.**
+  `SELO_DO_ESTADO` manda `atencao` e `problema` para **AJUSTAR**, e escolher o
+  texto do quarto selo é seu. Enquanto você não disser, a linha quebrada
+  aparece vermelha dizendo "AJUSTAR". Três propostas, e a razão de cada uma:
+
+  | palavra | por que ela |
+  | --- | --- |
+  | **QUEBRADO** | é o que o estado é, e é a sua própria palavra na decisão |
+  | **PAROU** | diz que era para funcionar e não está — sem julgar de quem é |
+  | **URGENTE** | fala do que fazer, e não do que houve; é a que menos afirma |
+
+  Quando você escolher, quem muda é `gui/aba_conexoes.SELO_DO_ESTADO` — e a
+  mudança alcança **a janela GTK junto**, porque a linha dela lê o mesmo mapa.

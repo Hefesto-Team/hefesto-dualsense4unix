@@ -615,6 +615,25 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .selo.ok{background:var(--green);color:var(--app-bg)}
   .selo.warn{background:var(--orange);color:var(--app-bg)}
   .selo.info{background:var(--comment);color:var(--app-bg)}
+  /* O QUARTO SELO — decisão dela, 02/09/2026: *"o que está quebrado agora não
+     pode parecer igual ao que só podia estar melhor"*. O `Item` do exame tem
+     QUATRO estados (`certo`, `atencao`, `problema`, `nao_sei`) e esta tela  (noqa-acento: chaves de máquina)
+     tinha TRÊS cores: `atencao` e `problema` dividiam a pílula laranja.  (noqa-acento: idem)
+
+     A COR É A DA CASA, e não uma nova: `--red` (#ff5555) é o token do que está
+     quebrado — é ele que o `.btn.vermelho` do `topo.html` usa. A gramática é a
+     mesma das três de cima: fundo cheio no token, texto no `--app-bg`.
+
+     ELA VEM DEPOIS DAS OUTRAS TRÊS DE PROPÓSITO. A pílula nasce no HTML com a
+     classe do desenho (`ok`/`warn`/`info`) e o produto ACRESCENTA `grave`
+     quando o estado é `problema` — as duas classes convivem no elemento, e com
+     a mesma especificidade quem vem por último manda. Trocar a ordem devolveria
+     a pílula laranja sem uma linha de diferença no resto.
+
+     A PALAVRA AINDA É "AJUSTAR", e isso é espera DELA: `SELO_DO_ESTADO`
+     (`gui/aba_conexoes.py`) manda os dois estados para a mesma palavra, e o
+     texto do quarto selo ela ainda não disse. Esta leva entrega a cor. */
+  .selo.grave{background:var(--red);color:var(--app-bg)}
   /* O `?` ENCOSTA NO TEXTO E SÓ O IGNORAR FICA ISOLADO — 01/09/2026, decisão
      dela: *"tem que alinhar as tooltip pra ficar do lado esquerdo encostando nas
      palavras e só deixar o ignorar isolado."*
@@ -1242,9 +1261,30 @@ def exame(classe, palavra, txt, dica, linha=0):
     O ALVO É `html`, e pela mesma razão do `teto-explica`: a dica do produto
     traz `<b>` e `<br>`, e o `textContent` do ramo padrão escreveria os
     marcadores como texto literal.
+
+    A PÍLULA GANHOU DOIS ENDEREÇOS, E SÃO DOIS ELEMENTOS — 02/09/2026, o quarto
+    selo dela. A palavra continua em `data-campo="selo"`; o ESTADO entrou em
+    `data-campo="selo-estado"`, com alvo `classe`. **Um elemento só não dava**:
+    o vocabulário é UM `data-campo` por nó, e a palavra e a cor são dois dados
+    diferentes do mesmo selo. Por isso a palavra desceu para um `<span>` filho
+    — inline e sem estilo próprio, então nada muda um pixel — e a pílula de
+    fora ficou com a classe.
+
+    `data-hef-quando="problema"` é o gatilho, e ele lê o ESTADO do exame, não a
+    classe CSS: quem traduz estado em cor é esta folha de estilo (`.selo.grave`,
+    acima), e é aqui que essa decisão tem de morar. O pacote emite o estado cru
+    (`a08_conexoes.pacote`, chave `selo-estado`), e as cinco linhas se
+    distribuem pela lista como já fazem o selo, o achado e o `?`.
+
+    O QUE ELE **NÃO** CURA, e é honesto dizer: as três classes do desenho
+    (`ok`/`warn`/`info`) continuam CRAVADAS por posição. Com três achados
+    `certo`, a segunda linha segue mostrando a palavra CERTO dentro da pílula
+    laranja — defeito antigo, e ele pede um endereço por estado, não um. O que
+    esta linha entrega é o que ela decidiu: `problema` deixa de se parecer
+    com o `atencao` do exame.  (noqa-acento: chave de máquina)
     """
     return f'''          <div class="exame" data-campo="exame">
-            <span class="selo {classe}" data-campo="selo">{palavra}</span>
+            <span class="selo {classe}" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">{palavra}</span></span>
             <span class="txt" data-campo="achado">{txt}</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html">{dica}</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="{linha}" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>

@@ -632,16 +632,49 @@ def test_a_recusa_velha_saiu_dos_dois_lugares(a08, tela) -> None:
 # ---------------------------------------------------------------------------
 # 7. o desenho dela não mudou
 # ---------------------------------------------------------------------------
-def test_o_desenho_dela_nao_mudou() -> None:
-    """Os dois endereços novos são INVISÍVEIS para o portão do desenho.
+#: A CURA DO QUARTO SELO, na forma em que ela aparece no HTML — 02/09/2026.
+#: Descontá-la é o que deixa o resto da página ser comparado byte a byte.
+_REGRA_DO_QUARTO_SELO = ".selo.grave{background:var(--red);color:var(--app-bg)}\n"
+_COMECO_DO_BLOCO = "  /* O QUARTO SELO"
+#: A pílula ganhou um `<span>` filho para a palavra: um `data-campo` por
+#: elemento, e o selo tem dois dados (a palavra e a cor). Desembrulhar devolve
+#: exatamente o que o publicado tem.
+_PILULA = re.compile(r'(<span class="selo [a-z]+"[^>]*>)<span[^>]*>(.*?)</span></span>')
 
-    `scripts/check_o_desenho_aprovado.py` compara `o_que_se_ve()`, que APAGA
-    `data-campo` e `data-hef-alvo` antes do sha256. Este caso confere que o
-    mockup e o publicado têm a MESMA aparência — que é a prova de que a feature
-    entrou sem tocar no que ela aprovou.
 
-    MORDIDA: mude uma palavra visível de um `<option>` no gerador e regere — os
-    dois sha divergem e este caso reprova.
+def _sem_o_quarto_selo(bruto: bytes) -> str:
+    """A bancada como ela era ANTES da cura — para o resto ser comparado."""
+    texto = bruto.decode("utf-8")
+    i = texto.index(_COMECO_DO_BLOCO)
+    j = texto.index(_REGRA_DO_QUARTO_SELO, i) + len(_REGRA_DO_QUARTO_SELO)
+    texto = texto[:i] + texto[j:]
+    for atributo in (' data-hef-classe="grave"', ' data-hef-quando="problema"'):
+        texto = texto.replace(atributo, "")
+    return _PILULA.sub(r"\1\2</span>", texto)
+
+
+def test_o_desenho_dela_so_mudou_no_quarto_selo() -> None:
+    """Descontada a cura de hoje, a bancada e o publicado são o MESMO desenho.
+
+    `scripts/check_o_desenho_aprovado.py` compara `o_que_se_ve()`, que APAGA os
+    endereços de pintura antes do sha256 — eles não movem um pixel. Até
+    02/09/2026 este caso podia exigir igualdade CRUA entre os dois arquivos.
+
+    **HOJE ELE NÃO PODE MAIS, e a razão é uma decisão dela:** o quarto selo
+    (`problema` deixa de se parecer com `atencao`) trouxe uma regra de CSS  # (noqa-acento) chaves
+    nova e um `<span>` a mais em cada pílula. **Os dois são invisíveis na
+    página parada** — nenhuma das cinco linhas cravadas está em `problema`,
+    então `.selo.grave` não pinta nada, e o `<span>` é inline sem estilo —, mas
+    os dois mudam o sha, e é por isso que a `08-conexoes.html` está declarada
+    em `mockup/DIVERGENCIAS.md` até ela publicar.
+
+    O QUE ESTE CASO PASSOU A MEDIR, e é mais estreito que antes: descontada
+    EXATAMENTE a cura de hoje, o que sobra tem de bater byte a byte. Uma
+    palavra trocada, um bloco movido, uma cor mudada — tudo o que chega aos
+    olhos — continua reprovando aqui.
+
+    MORDIDA: mude uma palavra visível de um `<option>` no gerador e regere —
+    ela não é descontada por nada acima, e este caso reprova.
     """
     import importlib.util
 
@@ -654,10 +687,25 @@ def test_o_desenho_dela_nao_mudou() -> None:
     sys.modules["check_desenho_da_regua"] = mod
     spec.loader.exec_module(mod)
 
-    assert mod.o_que_se_ve(onde.BANCADA / "08-conexoes.html") == mod.o_que_se_ve(
-        onde.PUBLICADO / "08-conexoes.html"), (
-        "o que o produto RENDERIZA divergiu do desenho que ela aprovou — e a "
-        "divergência não é de atributo, porque `o_que_se_ve` já os apaga.")
+    bancada = _sem_o_quarto_selo(mod.o_que_se_ve(onde.BANCADA / "08-conexoes.html"))
+    publicado = mod.o_que_se_ve(onde.PUBLICADO / "08-conexoes.html").decode("utf-8")
+    assert bancada == publicado, (
+        "o que o produto RENDERIZA divergiu do desenho que ela aprovou por algo "
+        "que NÃO é o quarto selo — e a divergência não é de endereço, porque "
+        "`o_que_se_ve` já os apaga.")
+
+
+def test_a_divergencia_do_quarto_selo_esta_declarada() -> None:
+    """Bancada à frente do publicado só vale DECLARADA — é o portão do desenho.
+
+    Sem a seção em `mockup/DIVERGENCIAS.md`, o `desenho-aprovado` reprova a aba
+    inteira; com ela, o que espera a palavra dela fica escrito onde ela lê.
+    """
+    texto = (RAIZ / "mockup/DIVERGENCIAS.md").read_text(encoding="utf-8")
+    corpo = texto.split("\n---\n", 1)[-1]
+    assert "## 08-conexoes.html" in corpo, (
+        "a bancada da 08 andou à frente do publicado e ninguém declarou — o "
+        "portão `desenho-aprovado` reprova, e com razão")
 
 
 def test_o_json_do_perfil_sobrevive_ao_disco(tmp_path, pac, tela, gesto,
