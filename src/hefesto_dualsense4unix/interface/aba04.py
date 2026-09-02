@@ -570,11 +570,39 @@ def coluna(c):
         # o tom da casa (é o que ela vê) e `data-hex` usa `luz(i)` (é o que o
         # produto acende). É a mesma cura que a linha do `.tom.on` já fazia para
         # a comparação — faltava fazê-la para o VALOR.
+        # O ANEL DA COR ESCOLHIDA DEIXOU DE SER PINTURA — 02/09/2026. O `on`
+        # acima é o que o GERADOR soube: a cor cravada do mockup. Quem escolhe
+        # uma cor fora da guia, ou muda a cor pelo aparelho, via o anel parado
+        # no tom velho para sempre — a pintura da casa sabia texto, largura,
+        # fundo, valor e HTML, e o estado desta guia é uma CLASSE.
+        #
+        # Agora sabe: `data-hef-alvo="classe"` com `data-hef-quando` acende no
+        # botão cujo valor casa com o pintado, e apaga nos outros — sem lista de
+        # irmãos, porque os oito dividem o MESMO `data-campo` e cada um decide
+        # por si (`hefesto_vivo.escrever`, o ramo do alvo `classe`).
+        #
+        # O ENDEREÇO É `hex`, o MESMO da caixa `#RRGGBB` logo abaixo, e não um
+        # segundo: é UM valor — a cor gravada — em duas renderizações. Um nome
+        # novo faria o pacote emitir a mesma cor duas vezes, e as duas poderiam
+        # divergir. O `data-hef-quando` leva `luz(i)`, o hex do PRODUTO, porque
+        # é ele que o pacote emite; o `style` continua no tom da casa, que é o
+        # que ela vê.
         f'            <button class="tom{" on" if t == tom_da_casa(cor) else ""}" style="background:{t}"'
+        f' data-campo="hex" data-hef-alvo="classe" data-hef-quando="{luz(i)}"'
         f' data-gesto="cor" data-hex="{luz(i)}"'
         f' title="Cor automática do Player {i} — usar aqui pinta a barra do'
         f' {c["nome"]}, e não muda o número dele."></button>'
         for i, t in enumerate(TONS, 1))
+    # A DICA DA CÉLULA `LEDs` SAIU DA CÉLULA E ENTROU NO DESENHO — 02/09/2026,
+    # decisões 7 e 8 dela. Ela dizia *"O Cosmic Red **aceso**: as duas tiras na
+    # cor escolhida, e as cinco lâmpadas no padrão do Player 1"*: o nome do
+    # MOCKUP, e uma palavra que ela já tinha mandado tirar (a GTK obedeceu em
+    # 25/08 — ver `pacotes/a04_iluminacao.dica_da_luz`).
+    #
+    # POR QUE ELA NÃO PODIA FICAR NA CÉLULA: `title` é ATRIBUTO, e o piloto não
+    # tem alvo de pintura para atributo. Toda dica escrita aqui fica CONGELADA
+    # no que o gerador soube — e o gerador só sabe o mockup. Dentro do desenho
+    # ela viaja pelo alvo `html` do `luz`, que se troca a cada tique.
     return f'''        <div class="ctrl" data-controle="{c.get("uniq") or p}" data-conectado="sim">
           <div class="moldura" style="--plastico:{cor_da_zona(c["cor"])}" title="O {c["nome"]} agora: a barra na cor do Player {j}, e as cinco lâmpadas no padrão dele.">
             {svg(f"il-{p}", c["cor"], jogador=j, luz=tinta)}
@@ -595,8 +623,8 @@ def coluna(c):
           <div class="players" data-campo="players" data-hef-alvo="html">
 {_pacote04.fileira_de_players(c["nome"], c["jogador"], DONOS_NA_MESA, "            ")}
           </div>
-          <div class="aceso" data-campo="luz" data-hef-alvo="html" title="O {c["nome"]} aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player {j}.">
-{_pacote04.desenho_da_luz(tinta, b / 100, j, recuo="            ")}
+          <div class="aceso" data-campo="luz" data-hef-alvo="html">
+{_pacote04.desenho_da_luz(tinta, b / 100, j, dica=_pacote04.dica_da_luz(c["nome"], c["via"], "", j), recuo="            ")}
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
