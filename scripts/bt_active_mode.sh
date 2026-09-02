@@ -426,7 +426,13 @@ if ! command -v hciconfig >/dev/null 2>&1; then
     log "NÃO apliquei o SNIFF default de ${ADAPTADORES[*]}: o 'hciconfig' foi depreciado pelo BlueZ e não está nesta máquina, e nenhuma ferramenta viva escreve link policy — instale bluez-deprecated (ou bluez-deprecated-tools). O alias 'Nintendo*' acima segue valendo; o 8BitDo pode não completar a probe se o adaptador estiver sem SNIFF"
 else
     for HCI in "${ADAPTADORES[@]}"; do
-        if ! hciconfig "${HCI}" lp 2>/dev/null | grep -q 'SNIFF'; then
+        # LIDO PARA VARIÁVEL: `cmd | grep -q` devolve 141 quando ACHA (o
+        # `grep -q` fecha o cano e quem escreve leva SIGPIPE), e sob `pipefail`
+        # a guarda `if !` se inverte — o `hciconfig lp` seria REESCRITO em todo
+        # adaptador que já estava certo. Ver `tests/unit/test_o_pipefail_nao_
+        # transforma_acerto_em_falha.py`.
+        _lp="$(hciconfig "${HCI}" lp 2>/dev/null || true)"
+        if [[ "${_lp}" != *SNIFF* ]]; then
             hciconfig "${HCI}" lp rswitch,hold,sniff,park 2>/dev/null \
                 && log "link policy default de ${HCI} -> RSWITCH,HOLD,SNIFF,PARK (o clone 8BitDo precisa do SNIFF para probar)" \
                 || log "falha ao devolver o SNIFF ao default de ${HCI} (adaptador não pronto?)"

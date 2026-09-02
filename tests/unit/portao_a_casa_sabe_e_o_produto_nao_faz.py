@@ -382,7 +382,7 @@ _MODULO_DA_PONTE = _PASTA_DA_PONTE.removeprefix("src/").replace("/", ".")
 #: Por que a cadeia inteira, e não só o último elo: o ``abrir_interface.py``
 #: sozinho não prova que alguém o roda — ele é um envoltório. Quem o roda é o
 #: ``interface``, e quem roda o ``interface`` é o ``.desktop`` que o
-#: ``install-dev.sh``:381 escreve em ``~/.local/share/applications``. Cortado
+#: ``install.sh`` escreve em ``~/.local/share/applications``. Cortado
 #: qualquer elo, o piloto vira instrumento de bancada e a ponte inteira sai da
 #: produção — que é exatamente o que este portão tem de saber dizer.
 _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (

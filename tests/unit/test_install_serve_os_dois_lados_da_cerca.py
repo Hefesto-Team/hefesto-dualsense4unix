@@ -92,10 +92,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 INSTALL = RAIZ / "install.sh"
 #: As curas de HOST MUDARAM DE CASA em 31/08/2026 — moravam no `install.sh`
-#: (linhas 873-893 e 989-1677) e passaram para cá, sourceadas pelos DOIS
-#: instaladores (o `install.sh` e o `install-dev.sh --camada-de-maquina`). O
-#: motivo, com data, está no cabeçalho da lib: ela desinstalou o Hefesto
-#: estável, e o app de dev dependia do estável para essa camada.
+#: (linhas 873-893 e 989-1677) e passaram para cá. O motivo, com data, está no
+#: cabeçalho da lib.
 #:
 #: A RÉGUA NÃO AFROUXOU COM A MUDANÇA, e é importante ver por quê: os CORPOS
 #: das funções passaram a ser lidos dos dois arquivos, mas as REGIÕES — o
@@ -495,62 +493,20 @@ def test_a_abertura_nao_atravessa_a_quebra_de_linha() -> None:
 
 
 # ---------------------------------------------------------------------------
-# A TRAVA DA MUDANÇA DE CASA (31/08/2026)
-#
-# A lib ganhou um atalho — `instalar_camada_de_maquina`, que chama as DEZ
-# curas de uma vez — para o `install-dev.sh --camada-de-maquina`, que instala a
-# camada de máquina SEM instalar app nenhum.
-#
-# Chamado do `install.sh`, esse atalho DESLIGARIA este arquivo inteiro, e sem
-# reprovar nada: o fecho transitivo passaria a alcançar as dez curas a partir
-# de qualquer região que o chamasse, e `test_toda_cura_de_host_alcanca_os_dois
-# _lados` daria tudo por servido para sempre. Um portão que aprova por
-# construção é pior que portão nenhum — o nenhum ao menos não dá confiança.
+# O ATALHO MORREU — 01/09/2026, e a trava dele saiu no MESMO commit
 # ---------------------------------------------------------------------------
-
-ATALHO = "instalar_camada_de_maquina"
-
-
-def test_o_atalho_da_camada_nao_e_chamado_do_install() -> None:
-    corpos = corpos_das_duas_casas()
-    assert ATALHO in corpos, (
-        f"`{ATALHO}` sumiu da lib. Se ele foi embora de propósito, apague esta "
-        "trava no mesmo commit; se não, o `install-dev.sh --camada-de-maquina` "
-        "está chamando uma função que não existe."
-    )
-    por_regiao = regioes()
-    alcance = {
-        regiao: alcancadas_de(linhas, corpos) for regiao, linhas in por_regiao.items()
-    }
-    culpadas = sorted(regiao for regiao, nomes in alcance.items() if ATALHO in nomes)
-    assert not culpadas, (
-        f"`{ATALHO}` é alcançável do `install.sh`, na(s) região(ões) "
-        f"{culpadas}.\n"
-        "Ele chama as DEZ curas de host de uma vez: alcançá-lo daqui daria "
-        "todas por servidas e `test_toda_cura_de_host_alcanca_os_dois_lados` "
-        "deixaria de medir qualquer coisa.\n"
-        "O `install.sh` chama cada `*_host` no seu lugar, de propósito, e é "
-        "assim que se sabe que ela chega aos dois lados da cerca. O atalho é "
-        "só do `install-dev.sh --camada-de-maquina`, que não instala app "
-        "nenhum e por isso não tem cerca."
-    )
-
-
-def test_o_atalho_chama_todas_as_curas_de_host() -> None:
-    """O outro lado da trava: o atalho não pode esquecer uma cura.
-
-    Ele existe para instalar a camada INTEIRA numa chamada só. Uma cura de
-    fora dele é uma cura que o app de dev não recebe — e o sintoma seria o
-    mesmo que fez a flag nascer: ausência de dado, não erro. Foi assim que
-    `/dev/uhid` ficou `crw------- root root` e o daemon caiu para uinput
-    calado, em 31/08/2026.
-    """
-    corpos = corpos_das_duas_casas()
-    chamadas = chamadas_diretas(corpos[ATALHO], set(corpos))
-    faltando = sorted(set(curas_de_host()) - chamadas)
-    assert not faltando, (
-        f"`{ATALHO}` não chama: {faltando}\n"
-        "Ou acrescente a chamada, na posição em que a ordem do `install.sh` a "
-        "põe (udev primeiro, os DKMS antes do `flush_initramfs_host`), ou "
-        "escreva no corpo do atalho por que o app de dev dispensa essa cura."
-    )
+# Havia aqui `instalar_camada_de_maquina()`: a camada inteira numa chamada só,
+# e duas travas em volta — uma proibindo o `install.sh` de chamá-la (o fecho
+# transitivo daria as dez curas por servidas de uma vez e este portão viraria
+# decoração), outra exigindo que ela não esquecesse nenhuma.
+#
+# Ela existia para UM consumidor: o instalador de desenvolvimento, que punha a
+# camada sem pôr app nenhum. Esse instalador foi aposentado quando o app virou
+# único, e a função ficou sem chamador — que é o defeito mais caro desta casa,
+# cura escrita e nunca ligada.
+#
+# A PRÓPRIA MENSAGEM DA TRAVA MANDAVA FAZER ISTO: *"Se ele foi embora de
+# propósito, apague esta trava no mesmo commit"*.
+#
+# O QUE ESTE ARQUIVO CONTINUA MEDINDO, e é o que sempre importou: cada `*_host`
+# tem de chegar aos DOIS lados da cerca do `install.sh`, uma a uma.
