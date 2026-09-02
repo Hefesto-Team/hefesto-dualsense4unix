@@ -941,16 +941,50 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
 async def _eleger_ou_devolver(
     daemon: DaemonProtocol, uniq: str, mudo: bool
 ) -> None:
-    """O controle passou a NÃO-MUDO: elege. Passou a MUDO: devolve o microfone.
+    """O controle passou a NÃO-MUDO: elege. O ELEITO passou a MUDO: devolve.
 
-    O caminho de VOLTA é o item 6 dela, e não é opcional: hoje ninguém devolve
-    o microfone, e o desfecho padrão de ela tirar o mic do controle é o
-    `.monitor` do sink ou o `auto_null` — o sistema gravando o som que SAI no
-    lugar da voz dela (FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01).
+    O caminho de VOLTA não é opcional: sem ele, o desfecho padrão de ela tirar
+    o mic do controle é o `.monitor` do sink ou o `auto_null` — o sistema
+    gravando o som que SAI no lugar da voz dela
+    (FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01).
+
+    **SÓ O ELEITO DEVOLVE** (auditoria de 02/09/2026). `devolver_o_microfone()`
+    é GLOBAL — não recebe `uniq` —, e aqui se decidia só pelo bit `mudo`. Numa
+    mesa de quatro isso é o defeito inteiro: a J1 elege, o J2 aperta o botão
+    DELE, e o microfone sai da J1, que fica com o LED aceso dizendo "estou no
+    ar". Quem não é o eleito e vai a mudo apaga só a própria luz.
     """
     eleitor = _eleitor(daemon)
     conectados = _uniqs_conectados(daemon)
     if mudo:
+        # SÓ QUEM ESTÁ COM O MICROFONE PODE DEVOLVÊ-LO (auditoria 02/09/2026).
+        #
+        # Aqui se decidia só pelo bit `mudo`, sem perguntar de QUEM ele era. Na
+        # mesa de quatro que ela nomeou, isso é o defeito inteiro: a J1 elege e
+        # o plástico dela acende; o J2 aperta o botão DELE, o mudo do firmware
+        # dele vira `True`, e o `devolver_o_microfone()` — que é GLOBAL, não
+        # recebe `uniq` — tirava o padrão do sistema da J1, que continuava com
+        # o LED aceso dizendo "estou no ar". É a mentira que esta onda existe
+        # para matar, e era alcançável no PRIMEIRO toque.
+        #
+        # Quem não elegeu e vai a mudo só apaga a PRÓPRIA luz: o mudo do
+        # firmware é dele, a luz é dele, e o microfone da mesa não é.
+        #
+        # `eleito is None` cai no mesmo ramo, e de propósito: ninguém tomou o
+        # microfone, logo não há o que devolver. Devolver ali reelegeria a
+        # "melhor fonte" e trocaria o padrão do sistema dela sem que ela tivesse
+        # elegido nada — na bancada de hoje isso não aparece só porque não há
+        # fonte elegível, o que é sorte, não cura.
+        if eleitor.eleito != uniq:
+            logger.info(
+                "mic_da_mesa_mudo_de_quem_nao_elegeu",
+                uniq=uniq,
+                eleito=eleitor.eleito,
+            )
+            acender_outro = getattr(daemon.controller, "set_mic_led", None)
+            if callable(acender_outro):
+                await daemon._run_blocking(_acender, acender_outro, False, uniq)
+            return
         resultado = await daemon._run_blocking(eleitor.devolver_o_microfone)
         aceso = False
     else:

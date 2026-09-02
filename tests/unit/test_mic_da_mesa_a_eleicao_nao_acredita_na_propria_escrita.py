@@ -259,3 +259,80 @@ def test_a_memoria_e_gravada_uma_vez_por_sessao(pactl: Any) -> None:
 
     eleitor._eleger_nome(_ALVO)
     assert eleitor.anterior == _OUTRO, "a segunda eleição não pode reescrever a memória"
+
+
+# ---------------------------------------------------------------------------
+# 10. O eleitor SABE QUEM ELEGEU — e é isso que impede o J2 de tirar o mic da J1
+# ---------------------------------------------------------------------------
+#
+# ACHADO DA AUDITORIA DE 02/09/2026. `devolver_o_microfone()` é GLOBAL: não
+# recebe `uniq`. Sem um campo dizendo quem está com o microfone, o laço decidia
+# a devolução só pelo bit `mudo` — e na mesa de quatro que ela nomeou o botão
+# do Jogador 2 tirava o padrão do sistema da Jogadora 1, que ficava com o LED
+# aceso dizendo "estou no ar".
+#
+# ESTAS RÉGUAS SÃO SOBRE O ELEITOR DE VERDADE, e o motivo é o defeito nº 5 desta
+# própria onda: *"o portão não mordia porque o dublê trazia o mesmo default
+# falso"*. As réguas de cena em `test_mic_da_mesa_o_ipc_a_tela_e_o_gesto.py`
+# usam um `EleitorDeMicrofone` dublado, que mantém o campo por conta própria —
+# arrancar a linha do produto não as faria reprovar.
+
+
+def test_a_eleicao_conferida_registra_quem_esta_com_o_microfone(pactl: Any) -> None:
+    """CURA A ARRANCAR: `self.eleito = uniq` em `eleger_por_uniq`.
+
+    Sem ela o `_eleger_ou_devolver` volta a devolver o microfone da mesa na
+    borda de QUALQUER controle.
+    """
+    eleitor = elm.EleitorDeMicrofone()
+    assert eleitor.eleito is None, "ninguém elegeu ainda"
+
+    r = eleitor.eleger_por_uniq(
+        "aabbcc000011", fontes=[_ALVO], uniqs_com_audio=["aabbcc000011"]
+    )
+
+    assert r.ok is True
+    assert eleitor.eleito == "aabbcc000011"
+
+
+def test_a_eleicao_que_o_wireplumber_desfez_nao_registra_dono(pactl: Any) -> None:
+    """A escrita não basta: a posse só vale com o ATIVO relido batendo.
+
+    É o mesmo contrato do LED — registrar como dono quem o WirePlumber já
+    reelegeu por cima seria a mentira de segunda geração com outro nome.
+    """
+    pactl.ativo_depois = _OUTRO
+    eleitor = elm.EleitorDeMicrofone()
+
+    r = eleitor.eleger_por_uniq(
+        "aabbcc000011", fontes=[_ALVO], uniqs_com_audio=["aabbcc000011"]
+    )
+
+    assert r.ok is False
+    assert eleitor.eleito is None, "a escrita aconteceu, a posse não"
+
+
+def test_a_devolucao_solta_a_posse_com_ou_sem_para_onde_voltar(pactl: Any) -> None:
+    """Os DOIS desfechos da volta soltam o `eleito`.
+
+    O controle saiu do ar nos dois casos. Continuar anotando-o como eleito faria
+    a próxima borda dele ser lida como "o eleito devolvendo de novo", e a de
+    outro jogador como recusa — o defeito de volta, ao contrário.
+    """
+    eleitor = elm.EleitorDeMicrofone()
+    eleitor.eleger_por_uniq(
+        "aabbcc000011", fontes=[_ALVO], uniqs_com_audio=["aabbcc000011"]
+    )
+    assert eleitor.eleito == "aabbcc000011"
+
+    assert eleitor.devolver_o_microfone().ok is True
+    assert eleitor.eleito is None, "com destino, a posse cai"
+
+    eleitor.eleger_por_uniq(
+        "aabbcc000011", fontes=[_ALVO], uniqs_com_audio=["aabbcc000011"]
+    )
+    assert eleitor.eleito == "aabbcc000011"
+    pactl.sustenta = False  # não há para onde voltar
+
+    assert eleitor.devolver_o_microfone().ok is False
+    assert eleitor.eleito is None, "sem destino também — o controle saiu do ar"

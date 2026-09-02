@@ -231,6 +231,18 @@ class EleitorDeMicrofone:
     anterior: str | None = None
     _guardou: bool = field(default=False, repr=False)
 
+    #: O `uniq` do controle que está com o microfone da mesa AGORA. `None` =
+    #: ninguém elegeu (ou já devolveu).
+    #:
+    #: ACHADO DA AUDITORIA DE 02/09/2026, e é sobre a mesa de quatro que ela
+    #: nomeou (*"com 4 pessoas com controle na mão localmente isso é
+    #: necessário"*). Sem este campo, `_eleger_ou_devolver` decidia só pelo bit
+    #: `mudo` e nunca perguntava se ESTE `uniq` era o eleito: a J1 elegia, o J2
+    #: apertava o botão DELE, e o `devolver_o_microfone()` tirava o padrão do
+    #: sistema da J1 — que continuava com o LED aceso dizendo "estou no ar".
+    #: É exatamente a mentira que esta onda existe para matar.
+    eleito: str | None = None
+
     def guardar_anterior(self) -> str | None:
         """Guarda o `get-default-source` de antes — UMA vez por sessão."""
         if self._guardou:
@@ -272,7 +284,14 @@ class EleitorDeMicrofone:
                     "rádio ele só aparece com a ponte de microfone de pé"
                 ),
             )
-        return self._eleger_nome(alvo)
+        resultado = self._eleger_nome(alvo)
+        # QUEM ESTÁ COM O MICROFONE só muda quando a eleição foi CONFERIDA —
+        # `_eleger_nome` releu o ativo e ele bate com o alvo. Marcar na escrita
+        # seria a mesma mentira de segunda geração que o LED evita: registrar
+        # como dono quem o WirePlumber já reelegeu por cima.
+        if resultado.ok:
+            self.eleito = uniq
+        return resultado
 
     def _eleger_nome(self, alvo: str) -> ResultadoDaEleicao:
         # A memória é guardada AQUI, e não só em `eleger_por_uniq`: toda
@@ -385,6 +404,10 @@ class EleitorDeMicrofone:
         """
         nome = melhor_fonte_elegivel()
         if nome is None:
+            # A POSSE CAI MESMO SEM DESTINO. O controle saiu do ar; continuar
+            # anotando-o como eleito faria a próxima borda dele ser lida como
+            # "o eleito devolvendo de novo", e a de outro jogador como recusa.
+            self.eleito = None
             return ResultadoDaEleicao(
                 ok=False,
                 motivo=(
@@ -394,6 +417,7 @@ class EleitorDeMicrofone:
                     "gravaria o som do sistema no lugar da voz"
                 ),
             )
+        self.eleito = None
         return self._eleger_nome(nome)
 
 

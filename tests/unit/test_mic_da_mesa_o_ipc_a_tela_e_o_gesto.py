@@ -347,17 +347,26 @@ class _Resultado:
 
 
 class _EleitorDublado:
-    """`EleitorDeMicrofone` de bancada: guarda o que lhe pediram."""
+    """`EleitorDeMicrofone` de bancada: guarda o que lhe pediram.
+
+    O campo `eleito` é o do produto, com o mesmo contrato: passa a valer o
+    `uniq` na eleição CONFERIDA e cai na devolução. Um dublê sem ele traria de
+    volta o defeito nº 5 desta própria onda — *"o portão não mordia porque o
+    dublê trazia o mesmo default falso"*.
+    """
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, Any]] = []
+        self.eleito: str | None = None
 
     def eleger_o_controle(self, uniq: str, conectados: list[str]) -> _Resultado:
         self.chamadas.append(("eleger", uniq))
+        self.eleito = uniq
         return _Resultado(ok=True, ativo=f"mic_de_{uniq}", motivo="")
 
     def devolver_o_microfone(self) -> _Resultado:
         self.chamadas.append(("devolver", None))
+        self.eleito = None
         return _Resultado(ok=True, ativo="mic_da_placa_mae", motivo="")
 
 
@@ -478,3 +487,97 @@ async def test_a_borda_sem_endereco_nao_elege_ninguem() -> None:
         "eleição de outro"
     )
     assert backend.leds == {}, "e nenhum plástico pode acender por isso"
+
+
+@pytest.mark.asyncio
+async def test_o_mudo_de_quem_nao_elegeu_nao_tira_o_microfone_de_quem_elegeu() -> None:
+    """A MESA DE QUATRO, na cena que ela nomeou — e era alcançável no 1º toque.
+
+    ACHADO DA AUDITORIA DE 02/09/2026. `devolver_o_microfone()` é GLOBAL: não
+    recebe `uniq`. `_eleger_ou_devolver` decidia só pelo bit `mudo` e nunca
+    perguntava se ESTE controle era o eleito. Medido com dublês puros, antes da
+    cura:
+
+        apos J1 eleger  : leds = {J1: True}            chamadas = [(eleger, J1)]
+        apos J2 apertar : leds = {J1: True, J2: False} chamadas = [..., (DEVOLVER,)]
+
+    A J1 nunca soltou o microfone e ainda assim o perdeu — com o LED dela
+    ACESO, dizendo "estou no ar". É a mentira que esta onda existe para matar,
+    e o próprio módulo escreve *"o LED do controle passaria a mentir sobre o
+    microfone dela"*.
+
+    CURA A ARRANCAR: o ramo `if eleitor.eleito != uniq:` de
+    `_eleger_ou_devolver` — esta régua reprova com a devolução fantasma.
+    """
+    backend = _BackendDaMesa((_J1, _J2))
+    daemon = _DaemonDoGesto(backend)
+
+    await _rodar_o_gesto(
+        daemon,
+        [
+            {"uniq": _J1, "mudo": False},  # a J1 elege
+            {"uniq": _J2, "mudo": True},   # o J2 aperta o botão DELE
+        ],
+    )
+
+    eleitor = daemon._eleitor_de_microfone
+    assert ("devolver", None) not in eleitor.chamadas, (
+        "o mudo do Jogador 2 devolveu o microfone da MESA — tirou o padrão do "
+        f"sistema da Jogadora 1, que nunca o soltou: {eleitor.chamadas}"
+    )
+    assert eleitor.eleito == _J1, "e a J1 continua sendo quem está com o mic"
+    assert backend.leds[_J1] is True, (
+        "o LED da J1 tem de continuar aceso — ela continua no ar"
+    )
+    assert backend.leds[_J2] is False, (
+        "e o do J2 apaga: o mudo do firmware é dele, a luz é dele"
+    )
+
+
+@pytest.mark.asyncio
+async def test_o_eleito_que_vai_a_mudo_devolve_de_verdade() -> None:
+    """A outra metade: uma cura que mata o caminho de volta não é cura.
+
+    CURA A ARRANCAR: transformar o ramo novo em `return` incondicional — o
+    caminho de volta morreria calado, e é ele que impede o `.monitor` do sink
+    de virar a fonte padrão dela (FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01).
+    """
+    backend = _BackendDaMesa((_J1, _J2))
+    daemon = _DaemonDoGesto(backend)
+
+    await _rodar_o_gesto(
+        daemon,
+        [
+            {"uniq": _J1, "mudo": False},  # a J1 elege
+            {"uniq": _J1, "mudo": True},   # e a J1 devolve
+        ],
+    )
+
+    eleitor = daemon._eleitor_de_microfone
+    assert eleitor.chamadas == [("eleger", _J1), ("devolver", None)]
+    assert eleitor.eleito is None, "a posse cai quando o eleito devolve"
+    assert backend.leds[_J1] is False, "e o plástico dela apaga junto"
+
+
+@pytest.mark.asyncio
+async def test_sem_ninguem_eleito_o_mudo_nao_reelege_a_melhor_fonte() -> None:
+    """Não se devolve o que não se tomou.
+
+    Com `eleito is None`, uma borda de mudo caía em `devolver_o_microfone()`,
+    que elege a "melhor fonte elegível" — trocando o padrão do sistema dela sem
+    que ninguém tivesse elegido nada. Na bancada de hoje isso não aparece só
+    porque não há fonte elegível, o que é sorte, não cura.
+
+    E é o PRIMEIRO toque: medido no daemon vivo em 02/09, os dois controles
+    dela estão `mic_mudo: False`, logo o próximo aperto de qualquer um é
+    `mudo=True`.
+    """
+    backend = _BackendDaMesa((_J1, _J2))
+    daemon = _DaemonDoGesto(backend)
+
+    await _rodar_o_gesto(daemon, [{"uniq": _J2, "mudo": True}])
+
+    assert daemon._eleitor_de_microfone.chamadas == [], (
+        "um mudo sem eleição prévia mexeu no microfone padrão do sistema"
+    )
+    assert backend.leds == {_J2: False}, "só a luz de quem apertou"
