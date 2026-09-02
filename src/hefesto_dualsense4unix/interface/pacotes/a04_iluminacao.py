@@ -29,6 +29,21 @@ A distinção que FICA, porque ela muda o que a tela diz: o brilho é o que est�
 `lightbar_rgb`). Quando os dois discordam, quem manda na tela é o vivo — e é por
 isso que o `hex` continua vindo do daemon e só o brilho vem do disco.
 
+A BANCADA ANDOU E O PRODUTO NÃO — 02/09/2026, e é de propósito. O
+`mockup/04-iluminacao.html` ganhou três atributos de ENDEREÇO
+(`data-hef-alvo="largura"` no trilho do brilho; `data-campo="players"` +
+`data-hef-alvo="html"` no `.players`; e os quatro `data-campo="player-N"` saíram
+dos botões). Publicar é ato DELA. O `check_o_desenho_aprovado.py` fica VERDE sem
+declaração porque ele compara `o_que_se_ve()` — o HTML **sem** os endereços de
+pintura —, e é ele quem prova, sozinho, que nenhum pixel mudou.
+
+O QUE A PUBLICAÇÃO CONSERTA, medido em Chrome headless com o BOOTSTRAP real::
+
+    publicado   trilho: texto '' -> '100'   largura 141.641px -> 141.641px
+    bancada     trilho: texto '' -> ''      largura 141.641px -> 172.75px
+    publicado   o botão aceso continua o do DESENHO; a dica idem
+    bancada     o botão aceso segue o número vivo, e a dica diz o transporte de agora
+
 A `lightbar_disputada` É O VALOR MAIS IMPORTANTE DESTA ABA, e é o que separa
 esta tela de uma tela bonita: quando a Steam tem o controle aberto, a cor que o
 daemon publica é a **pedida**, não a **acesa**. Pintar o hex sem dizer isso é
@@ -57,6 +72,123 @@ def _hex(rgb: Any) -> str:
     return "#{:02X}{:02X}{:02X}".format(*(int(x) for x in rgb[:3]))
 
 
+#: Os quatro números que a página oferece, e o gerador desenha.
+NUMEROS = (1, 2, 3, 4)
+
+
+def _da_mesa(ctx: Contexto, uniq: str) -> dict[str, Any]:
+    """O item da MESA daquele controle, ou `{}`.
+
+    A MESA é quem sabe o `nome` do modelo e a `via` — o `conectados` cru não
+    sabe. É a mesma porta que `a01_jogar.py:44` usa, e usar outra criaria uma
+    segunda verdade sobre o mesmo controle na mesma janela.
+    """
+    for m in ctx.mesa:
+        if str(m.get("uniq") or "") == uniq:
+            return m
+    return {}
+
+
+def _numero(ctx: Contexto, c: dict[str, Any]) -> int:
+    """O número deste controle, pela regra do MOTOR — e ela tem UM dono.
+
+    `app/actions/base.numero_do_controle` é a fonte única (COR-01/D6): o
+    `player_slot` de sessão, que sobrevive a desconectar e reconectar, com queda
+    para a posição. O docstring dele conta por que existe: *"Existia uma cópia
+    dessa regra em cada tela (…) Duas verdades na mesma janela sobre qual é o
+    'Controle 1'."*
+
+    ESTA ABA TINHA A TERCEIRA CÓPIA, e ela era a errada: o rótulo lia só
+    `player`, que é `None` para quem não é jogador do co-op — e a mesma aba
+    escrevia `Modelo: P—` no rótulo com o botão `2` ACESO logo abaixo (D2,
+    fotografado em 02/09/2026). A quarta cópia estava no gesto `auto`
+    (`player_slot or player or 1`).
+
+    A MESA JÁ CHAMA O MOTOR: `mesa_viva.mesa_do_estado:324` põe
+    `numero_do_controle(entrada)` em `jogador`. Ler dela é o caminho mais curto
+    e é o que faz esta aba concordar com a fita e o cabeçalho acima dela;
+    perguntar direto ao motor é a queda para quando o controle não está na mesa.
+    """
+    da_mesa = _da_mesa(ctx, str(c.get("uniq") or "")).get("jogador")
+    if isinstance(da_mesa, int) and not isinstance(da_mesa, bool):
+        return da_mesa
+    from hefesto_dualsense4unix.app.actions.base import numero_do_controle
+
+    return numero_do_controle(c)
+
+
+def _cor_do_plastico(slug: str) -> str:
+    """O hex da casca daquele modelo, ou `""` quando ninguém sabe ainda.
+
+    `monta.cor_da_zona` é o dono — ele LÊ a folha que pinta o desenho
+    (`scripts/gerar_cores_do_dualsense.py`) em vez de digitar o hex, e é por
+    isso que o Cosmic Red do mockup deixou de divergir da amostragem.
+
+    O `""` NÃO é desistência: a cor do plástico chega pelo broker, uma vez por
+    endereço e em thread, então o primeiro tique de uma sessão sempre tem a mesa
+    sem cor. Sem hex, o botão sai SEM anel — que é exatamente o que o desenho
+    faz com um número cujo dono não está aqui.
+    """
+    if not slug:
+        return ""
+    try:
+        import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
+        return str(monta.cor_da_zona(slug))
+    except Exception:
+        # `cor_da_zona` levanta `SystemExit` para colorway que o SVG não tem.
+        # Derrubar a pintura da aba por causa de um modelo novo seria trocar um
+        # anel que falta por uma tela congelada.
+        return ""
+
+
+def um_botao_de_player(nome: str, meu: int, n: int,
+                       dono: dict[str, Any] | None) -> str:
+    """Um número, na coluna de UM controle: dá-lo a este troca-o com o dono.
+
+    ESTA FUNÇÃO TEM DOIS CHAMADORES E UM DONO. O gerador `aba04.py` a chama para
+    desenhar a bancada; o pacote a chama a cada tique para pintar a fileira
+    viva. Enquanto eram duas escritas, o botão do desenho e o botão do produto
+    podiam divergir sem ninguém ver — e é o mesmo defeito que deixou a
+    `novo-layout/` divergir 25 KB calada.
+
+    O DONO SÓ EXISTE SE ELE ESTIVER NA MESA — 31/08/2026. O `title` dizia *"o
+    Galactic Purple, que tem o 3 hoje"* com o Galactic Purple DESCONECTADO. Ele
+    não tem o 3 hoje; ele não tem nada hoje. Um número sem dono na mesa é um
+    número **livre**, e é isso que a dica diz.
+    """
+    cor = _cor_do_plastico(str(dono.get("cor") or "")) if dono else ""
+    anel = f'<i class="dono" style="--plastico:{cor}"></i>' if dono is not None and cor else ""
+    if n == meu:
+        dica = f"O {nome} É o Player {n} — é o número dele hoje."
+    elif dono is None:
+        dica = f"Player {n} — livre."
+    else:
+        dica = (f"Dar o Player {n} ao {nome}: o {dono['nome']} ({dono['via']}), "
+                f"que tem o {n} hoje, fica com o {meu}. Os dois trocam de "
+                f"lugar — ninguém repete número e ninguém fica sem.")
+    return (f'<button class="{"on" if n == meu else ""}" '
+            f'data-gesto="player" data-player="{n}" title="{dica}">{anel}{n}</button>')
+
+
+def fileira_de_players(nome: str, meu: int, donos: dict[int, dict[str, Any]],
+                       recuo: str = "") -> str:
+    """Os quatro botões de uma coluna, em HTML — o miolo de `.players`.
+
+    POR QUE A FILEIRA INTEIRA, e não um endereço por botão: o que muda com o
+    dado é **qual botão fica `on`** e **o texto da dica**, e a pintura desta
+    casa (`hefesto_vivo.escrever`) sabe escrever texto, largura, fundo, valor e
+    HTML — **classe, não**. Com um `data-campo` por botão, os quatro só podiam
+    receber texto, e texto num `<button>` apaga o anel do dono que está dentro
+    dele. A fileira inteira pelo alvo `html` é o mesmo degrau que a fita e o
+    mapa do gabinete já usam: um bloco cujo conteúdo muda com a mesa se troca
+    inteiro. O ouvinte de clique é delegado no documento, então trocar o HTML
+    não desliga botão nenhum.
+    """
+    return "\n".join(recuo + um_botao_de_player(nome, meu, n, donos.get(n))
+                     for n in NUMEROS)
+
+
 @registrar("04-iluminacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo(ctx.state.get("active_profile"))
@@ -68,39 +200,75 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     brilho = leds.get("lightbar_brightness")
     overrides = (p.get("controllers") or {}) if p else {}
 
+    # A FRASE DA DISPUTA É DO MOTOR, e não se reescreve.
+    # `app/widgets/controller_card.rotulo_lightbar` é a mesma que os cards da
+    # GUI estável já usam, e ela sabe QUATRO estados onde este pacote sabia um:
+    # Nativo (o jogo é dono do LED), a Steam segurando o `fd`, cor desconhecida
+    # e apagada. O texto que estava aqui era a segunda verdade — e ainda dizia
+    # mais do que o campo mede: `lightbar_disputada` sai de quem SEGURA o
+    # `fd`, não de quem escreve (426 reports contra 1, medido em 22/08).
+    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+
+    # OS DONOS DOS NÚMEROS, uma vez para a mesa inteira: cada coluna precisa
+    # saber de QUEM é o número que ela oferece, e não só do próprio.
+    donos: dict[int, dict[str, Any]] = {}
+    for c in ctx.conectados:
+        casa_dele = _da_mesa(ctx, str(c.get("uniq") or ""))
+        # SEM ITEM DE MESA NÃO HÁ DONO A NOMEAR. A dica do botão diz o `nome` e
+        # a `via` de quem tem o número, e os dois moram na mesa; inventá-los
+        # seria a oitava aparição da *frase que nomeia um controle que não
+        # está lá*. Sem eles o número sai como LIVRE, que é o honesto.
+        if casa_dele:
+            donos[_numero(ctx, c)] = casa_dele
+
     colunas: dict[str, dict[str, Any]] = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         rgb = c.get("lightbar_rgb") or []
-        disputada = bool(c.get("lightbar_disputada"))
         meu = overrides.get(uniq) or {}
         seus = (meu.get("leds") or {}) if isinstance(meu, dict) else {}
         b = seus.get("lightbar_brightness", brilho)
+        pct = None if b is None else round(float(b) * 100)
+        casa = _da_mesa(ctx, uniq)
+        n = _numero(ctx, c)
+        nome = str(casa.get("nome") or "—")
+        via = str(casa.get("via") or (c.get("transport") or "").upper() or "—")
+        recado, _base = rotulo_lightbar(c, ctx.state)
         colunas[uniq] = {
-            "brilho": b,
-            #: A TELA MOSTRA PORCENTAGEM e o disco guarda 0..1. A conversão mora
-            #: aqui, não no JS: um `0.82` chegando cru viraria "0,82%" na tela.
-            "brilho-pct": None if b is None else round(float(b) * 100),
+            #: A TELA MOSTRA PORCENTAGEM, e o `%` é DELA: o desenho escreve
+            #: `82%` nesta caixa. Emitir o `0.82` cru — o que esta linha fazia
+            #: até 02/09/2026 — punha um `1` ao lado de uma barra parada, que é
+            #: metade do defeito D7 fotografado naquele dia.
+            "brilho": "—" if pct is None else f"{pct}%",
+            #: A OUTRA METADE é a LARGURA da barra, e ela depende de a página
+            #: trazer `data-hef-alvo="largura"` — as abas 02 e 05 têm, esta não
+            #: tinha, e por isso o `100` era impresso DENTRO do trilho.
+            "brilho-pct": pct,
             "hex": _hex(rgb),
             "rgb": list(rgb[:3]) if len(rgb) >= 3 else [],
             # `aceso`, e não `acesa`: é o `data-campo` que a página tem. Uma
             # letra separava o valor do lugar onde ele cabia.
             "aceso": "Aceso" if c.get("lightbar_on", True) else "Apagado",
-            "identidade": f"P{c.get('player') or '—'}",
-            "player": c.get("player"),
-            "fonte": c.get("lightbar_source") or "",
-            # O RECADO SÓ APARECE QUANDO A DISPUTA EXISTE. Um aviso permanente
-            # vira paisagem, e paisagem ninguém lê — é a regra desta casa.
-            "recado": ("A Steam tem este controle aberto: a cor publicada é a "
-                       "PEDIDA, e pode não ser a acesa." if disputada else ""),
+            #: O RÓTULO INTEIRO, e não só o número. O desenho escreve
+            #: `P1 • Cosmic Red • USB`; emitir só o `P1` fazia o primeiro tique
+            #: APAGAR o nome do controle e o transporte da tela dela — a
+            #: pintura escreve `textContent`, e três pedaços viravam um.
+            "identidade": f"P{n} • {nome} • {via}",
+            #: A FILEIRA DOS QUATRO NÚMEROS, viva. O `on` sai daqui, e as dicas
+            #: também: as do HTML publicado estão CONGELADAS do desenho e
+            #: nomeiam controle por transporte que já mudou.
+            "players": fileira_de_players(nome, n, donos),
+            "recado": recado or "",
         }
     return {
         "colunas": colunas,
         "perfil": ctx.state.get("active_profile") or "",
         "sem_dono": {},
-        #: SETE, não cinco: o brilho e a porcentagem entraram. Contar por uma
-        #: constante escrita à mão foi o que deixou a curva da aba Gatilhos fora
-        #: da cobertura na mesma leva — o número tem de sair do dicionário.
+        #: O NÚMERO SAI DO DICIONÁRIO, nunca de uma constante escrita à mão —
+        #: foi assim que a curva da aba Gatilhos ficou fora da cobertura.
+        #: `player` e `fonte` saíram em 02/09/2026: os dois eram ÓRFÃOS
+        #: (`casamento.py` os listava, a página não tem onde pôr), e o que eles
+        #: diziam passou a viver em `identidade` e em `recado`.
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO)},
     }
@@ -217,9 +385,13 @@ def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     #    paleta mudar — é a regra da casa: o que tem dono não se digita.
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
+    # O NÚMERO SAI DO MOTOR, e não de uma queda escrita aqui. Esta linha era
+    # `dele.get("player_slot") or dele.get("player") or 1` — a QUARTA cópia de
+    # uma regra que tem dono (`app/actions/base.numero_do_controle`), e o `or 1`
+    # dela era a POSIÇÃO disfarçada de default: um controle sem número nenhum
+    # ganharia a cor do P1.
     dele = ctx.por_uniq(uniq) or {}
-    slot = dele.get("player_slot") or dele.get("player") or 1
-    p.led_set(tuple(player_slot_color(int(slot))), uniq=uniq)
+    p.led_set(tuple(player_slot_color(_numero(ctx, dele or {"uniq": uniq}))), uniq=uniq)
 
 
 @gesto("04-iluminacao.html", "player")
