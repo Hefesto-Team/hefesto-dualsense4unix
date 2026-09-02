@@ -409,6 +409,15 @@ def _selo_do_estado(estado: str) -> tuple[str, str]:
     O IMPORT É TARDIO pela razão de sempre neste arquivo: `gui.aba_conexoes`
     puxa a cadeia de tela, e o topo deste módulo tem de continuar importável
     numa árvore sem `src/` no caminho.
+
+    A PALAVRA DE `problema` AINDA É A DE `atencao` — 02/09/2026, e é  (noqa-acento)
+    ESPERA DELA. O mapa do dono manda os dois estados para **AJUSTAR**, e ela
+    decidiu que *"o que está quebrado agora não pode parecer igual ao que só
+    podia estar melhor"*. **A COR já saiu** (ver `selo-estado`, na
+    :func:`pacote`, e a regra `.selo.grave` do gerador); a PALAVRA é dela, e
+    trocá-la aqui seria escolher no lugar dela. Quando ela disser, quem muda é
+    `gui.aba_conexoes.SELO_DO_ESTADO` — e ali a mudança alcança a janela GTK
+    junto, porque a linha dela lê o mesmo mapa (`html_do_exame`).
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.gui.aba_conexoes import SELO_DO_ESTADO
@@ -417,19 +426,33 @@ def _selo_do_estado(estado: str) -> tuple[str, str]:
 
 
 def _dica_da_linha(item: Any) -> str:
-    """O `?` de uma linha do Check-up, em HTML.
+    """O `?` de uma linha do Check-up, em HTML: o que importa e a cura.
 
-    A MONTAGEM É DO PRODUTO — `secao_exame._dica_do_item`, que é o dono das três
-    metades e da ordem entre elas: a frase que diz **o que a linha significa**
-    (`DICAS_DAS_LINHAS`, por chave de regra), a **medição desta rodada**
-    (`Item.porque`) e a **cura** com o prefixo que tem dono
-    (`PREFIXO_DA_CURA`). Reescrever a costura aqui daria a quarta grafia da
-    mesma dica, e a razão de existir dela está escrita lá: sem a metade de
-    baixo, a dica continua afirmando o que a linha ao lado contradiz.
+    DUAS METADES, E NÃO TRÊS — decisão dela, 02/09/2026: *"o ponto de
+    interrogação para de repetir a linha"*. Com a publicação de hoje a linha
+    passou a mostrar a MEDIÇÃO (`Item.porque`, ver a chave `achado` do
+    :func:`pacote`), e a dica ao lado repetia a mesma frase na segunda metade.
+    O que sobra é o que a linha NÃO diz: **por que aquilo importa**
+    (`DICAS_DAS_LINHAS`, por chave de regra) e **o que fazer**
+    (`PREFIXO_DA_CURA` + `Item.cura`).
+
+    AS DUAS FRASES CONTINUAM SENDO DO PRODUTO. O que esta função monta é a
+    ORDEM entre elas; nenhuma palavra é escrita aqui, e as duas constantes são
+    as mesmas que `secao_exame._dica_do_item` usa. Uma frase reescrita aqui
+    seria a quarta grafia da mesma dica.
+
+    POR QUE O PACOTE PEDE A METADE, E NÃO O DONO MUDA — a alternativa foi
+    medida e recusada. `_dica_do_item` é do GTK também
+    (`secao_exame.PainelDoExame`, `:1181`), e ali a linha mostra
+    `item.rotulo` — o NOME da conferência (`:1177`). Naquela janela a dica é o
+    ÚNICO caminho de `Item.porque` até a tela; cortar a metade do meio no dono
+    apagaria a medição da janela estável para curar uma repetição que só existe
+    AQUI. Duas telas mostram coisas diferentes na linha, logo elas pedem
+    dicas diferentes — e quem pede é quem sabe o que já mostrou.
 
     SÓ A QUEBRA DE LINHA É NOSSA. O dono junta com `\\n\\n` porque escreve num
     `set_tooltip_text` do GTK; esta tela é HTML, onde `\\n` não quebra nada — o
-    `?` sairia com as três frases coladas. `<br><br>` é a tradução, e é o que o
+    `?` sairia com as frases coladas. `<br><br>` é a tradução, e é o que o
     desenho dela já usa nas dicas cravadas.
 
     E O TEXTO É ESCAPADO ANTES: o alvo é `html`, então um `&` ou um `<` vindo do
@@ -445,10 +468,21 @@ def _dica_da_linha(item: Any) -> str:
     """
     try:
         perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_exame import _dica_do_item
+        from hefesto_dualsense4unix.app.actions.config.secao_exame import (
+            DICAS_DAS_LINHAS,
+            PREFIXO_DA_CURA,
+        )
         from hefesto_dualsense4unix.gui.aba_conexoes import _e
+        from hefesto_dualsense4unix.utils.i18n import _
 
-        return _e(_dica_do_item(item)).replace("\n\n", "<br><br>")
+        # O `_()` É O MESMO DO DONO (`secao_exame` importa este). Sem ele, as
+        # duas dicas da mesma linha sairiam por caminhos de tradução
+        # diferentes na hora em que esta casa tiver um segundo idioma.
+        partes = [_(str(DICAS_DAS_LINHAS.get(str(getattr(item, "chave", "")), "")))]
+        cura = str(getattr(item, "cura", "") or "")
+        if cura:
+            partes.append(_(PREFIXO_DA_CURA) + _(cura))
+        return "<br><br>".join(_e(p) for p in partes if p)
     except Exception:
         return ""
 
@@ -510,14 +544,22 @@ def _linha(item: Any) -> dict[str, Any]:
         "titulo": str(getattr(item, "rotulo", "") or ""),
         "porque": str(getattr(item, "porque", "") or ""),
         "estado": estado,
-        # A PALAVRA E A CLASSE, do dono. A classe (`ok`/`warn`/`info`) viaja
-        # junto e ainda NÃO é pintada: o `escrever()` do piloto conhece cinco
+        # A PALAVRA E A CLASSE, do dono.
+        #
+        # FATO ERRADO, SUBSTITUÍDO em 02/09/2026: estas linhas diziam que a
+        # classe *"ainda NÃO é pintada: o `escrever()` do piloto conhece cinco
         # alvos (`texto`, `largura`, `fundo`, `valor`, `html`) e nenhum acende
-        # ou apaga uma classe CSS. Fotografado nesta bancada: com três achados
-        # `certo`, a segunda linha mostra a palavra **CERTO** dentro da pílula
-        # LARANJA do desenho, e as duas linhas que sobram mostram `—` numa
-        # pílula azul e noutra verde. Sai daqui pronto para o dia em que houver
-        # alvo — inventar um sexto caminho aqui seria a segunda verdade.
+        # ou apaga uma classe CSS"*. Ele conhece SETE, e dois deles nasceram
+        # para exatamente isto: `classe` (`hefesto_vivo.py:217`, com
+        # `data-hef-classe` e `data-hef-quando`) e `cor` (`:246`). O que a
+        # linha descrevia — CERTO dentro da pílula laranja do desenho —
+        # continua verdadeiro e continua sendo defeito; o que não é mais
+        # verdade é que falte caminho.
+        #
+        # A CLASSE DAQUI SEGUE SENDO INFORMATIVA, e de propósito: quem acende a
+        # pílula é o `selo-estado` da :func:`pacote`, que emite o ESTADO cru e
+        # deixa a gramática de cor no desenho (`aba08.exame`). Emitir a classe
+        # como valor de pintura poria a folha de estilo dentro do Python.
         "selo": _selo_do_estado(estado)[1],
         "classe": _selo_do_estado(estado)[0],
         "dica": _dica_da_linha(item),
@@ -899,6 +941,31 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `data-campo`, na ordem — o gerador não precisa saber quantos achados
         # o exame vai devolver.
         "selo": [i["selo"] for i in itens],
+        # O QUARTO SELO — decisão dela, 02/09/2026: *"o que está quebrado agora
+        # não pode parecer igual ao que só podia estar melhor"*. O `Item` tem
+        # QUATRO estados e a tela tinha TRÊS cores: `atencao` e  # (noqa-acento)
+        # `problema`
+        # caíam os dois na pílula laranja, pela mesma palavra do dono
+        # (`SELO_DO_ESTADO`).
+        #
+        # O QUE VAI DAQUI É O ESTADO CRU, e não a classe CSS. Quem traduz
+        # estado em cor é o DESENHO: cada pílula do gerador leva
+        # `data-hef-alvo="classe" data-hef-classe="grave"
+        # data-hef-quando="problema"`, e o `escrever()` do piloto acende a
+        # classe na linha cujo estado casar (`hefesto_vivo.py:217`). Emitir a
+        # classe daqui poria a folha de estilo dentro do Python, e amarraria o
+        # pacote a um nome de classe que só o desenho conhece.
+        #
+        # A PALAVRA CONTINUA A MESMA, E É ESPERA DELA — ver `_selo_do_estado`.
+        # Esta leva entrega a COR; o texto do quarto selo é decisão dela, e
+        # escolhê-lo aqui seria escolher no lugar dela.
+        #
+        # O ENDEREÇO ESPERA A PUBLICAÇÃO: `selo-estado` existe na bancada
+        # (`mockup/08-conexoes.html`, declarado em `mockup/DIVERGENCIAS.md`) e
+        # ainda não na página publicada. Emitir antes não custa nada — o
+        # `achar()` do piloto não encontra o endereço e escreve zero — e é o
+        # que faz a cor nascer certa no minuto em que ela publicar.
+        "selo-estado": [i["estado"] for i in itens],
         # O `porque`, E NÃO O `rotulo` — corrigido em 02/09/2026, e a regra é do
         # produto: `gui.aba_conexoes.html_do_exame` diz, no docstring, *"O texto
         # é o `porque` — a MEDIÇÃO em uma frase —, nunca o rótulo: a tela
@@ -917,15 +984,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # O `titulo` não se perdeu: ele é a primeira metade do `?`, que é onde a
         # `secao_exame` já o punha (`DICAS_DAS_LINHAS`, por chave de regra).
         "achado": [i["porque"] for i in itens],
-        # O `?` DE CADA LINHA — endereço novo, e ele espera a publicação dela.
-        # A página PUBLICADA ainda não tem `data-campo="achado-explica"`; a
-        # bancada tem (`mockup/08-conexoes.html`, declarada em
-        # `mockup/DIVERGENCIAS.md`). Emitir antes é o que faz a dica nascer
-        # certa no minuto em que ela publicar, e não custa nada até lá: o
-        # `achar()` do piloto não encontra o endereço e escreve zero.
+        # O `?` DE CADA LINHA. **ELA PUBLICOU** — 02/09/2026, e o que estava
+        # escrito aqui caducou no mesmo dia: dizia que *"a página PUBLICADA
+        # ainda não tem `data-campo="achado-explica"`"*. Tem — as cinco linhas
+        # da `interface/paginas/08-conexoes.html` o trazem, e a `08-conexoes`
+        # saiu da `mockup/DIVERGENCIAS.md`. A dica desta aba é PINTADA hoje.
         "achado-explica": [i["dica"] for i in itens],
-        # O CARIMBO do topo do Check-up — endereço novo, na mesma condição do
-        # `achado-explica`: existe na bancada e espera a publicação dela.
+        # O CARIMBO do topo do Check-up — publicado no mesmo dia e pela mesma
+        # decisão, e também já pintado.
         "examinado": _carimbo_do_exame(),
         "vizinho-nome": vizinho_nome,
         "vizinho-tipo": vizinho_tipo,
@@ -938,11 +1004,24 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # política de vibração guardada no perfil que o `<select>` da tela não
         # sabe mostrar. Declarar é o oposto de pintar a opção errada.
         "sem_dono": sem_dono,
-        # O `+ len(itens) * 3` conta as TRÊS listas por achado (o selo, a frase
-        # e o `?`), e o `+ 1` é o carimbo. A conta anterior somava `len(itens)`
-        # uma vez só, com o selo e a frase já sendo duas listas — ela contava
-        # metade do que emitia.
-        "cobertura": {"pintados": 4 + len(itens) * 3 + 1 + len(adap)
+        # O `+ len(itens) * 4` conta as QUATRO listas por achado (o selo, o
+        # ESTADO do selo, a frase e o `?`), e o `+ 1` é o carimbo. Ela já
+        # esteve em `* 3` com o selo e a frase sendo duas listas — contando
+        # metade do que emitia —, e volta a errar assim toda vez que uma lista
+        # nova por achado nascer e esta linha ficar para trás.
+        #
+        # ELA CONTA A MAIS, E ISSO ESTÁ MEDIDO — 02/09/2026. O
+        # `sum(len(v) for v in colunas.values())` inclui `via`, `bateria`,
+        # `ponte` e `fragil`, e a página publicada **não tem endereço para
+        # nenhum dos quatro** (os treze `data-campo` dela estão listados no
+        # relato desta leva). Eles não fazem mal — `achar()` não os encontra e
+        # escreve zero —, mas somam quatro por controle a um número que se
+        # chama "pintados". Este número é auto-relato: régua nenhuma o lê
+        # (`pacotes.NAO_SAO_VALOR` o descarta antes da tela), e quem decide a
+        # cobertura desta aba é a `--prova-de-mockup`, que lê a TELA. Fica dito
+        # porque um número que se chama cobertura e não é foi o defeito que
+        # esta casa mais pagou.
+        "cobertura": {"pintados": 4 + len(itens) * 4 + 1 + len(adap)
                       + len(vizinho_nome) * 2
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO) + len(sem_dono)},
