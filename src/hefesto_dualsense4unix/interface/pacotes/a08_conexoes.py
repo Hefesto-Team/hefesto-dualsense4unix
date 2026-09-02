@@ -1513,6 +1513,13 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # O RASCUNHO É UM SÓ (`_logica_do_mapa`), e é ele que guarda o aparelho na mão
 # entre o primeiro e o segundo tempo. Cada gesto muda o rascunho e GRAVA —
 # decisão dela, 01/09: *"clicar na cor já deveria aplicar a cor no controle"*.
+#
+# OS CINCO QUE GRAVAM SÃO **SEM ECO**, e isso foi MEDIDO em 02/09/2026, não
+# deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
+# delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:5258`) → `maquina.json`, e
+# ali ele PARA. Nada volta pelo estado. Ver a nota do `SEM_ECO`, no fim deste
+# arquivo, para o que isso significa para quem lê a régua do piloto.
 
 
 def _gravar_o_mapa(p: Any) -> None:
@@ -1538,6 +1545,13 @@ def escolher_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     NÃO GRAVA NADA, e é o único dos seis que não grava: escolher é estado de
     tela, não declaração. O que vai ao disco é o SEGUNDO tempo.
+
+    E É POR ISSO QUE ELE ESTÁ NO `SEM_ECO` COM RAZÃO DIFERENTE DOS OUTROS
+    CINCO: eles não ecoam porque o `state_full` não publica o `mapa`; ESTE não
+    ecoa porque não chama a ponte de forma nenhuma — medido com dublê em
+    02/09/2026, o clique dirigido (`caminho="3-1.1.4"`) fez ZERO chamadas.
+    Um gesto de meio-caminho é o que o `escolhido` guarda, e guardar é tudo o
+    que ele tem a fazer.
 
     O ENDEREÇO É O CAMINHO DO KERNEL (`data-caminho`), e não o rótulo: os dois
     adaptadores Bluetooth desta bancada são o mesmo modelo, e `rotulo_do_aparelho`
@@ -1680,6 +1694,17 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O ENDEREÇO NUNCA APARECE INTEIRO. O `Resultado.endereco` já vem mascarado, e
     é ele que entra na frase — nesta casa há dois portões que reprovam um MAC de
     doze hexa em arquivo versionado, e uma exceção de tela vira log.
+
+    ESTE GESTO NÃO ENTRA NO `SEM_ECO`, E ISSO É DE PROPÓSITO — 02/09/2026.
+    Ele é o único dos sete acusados que TEM eco, e o eco é o maior desta aba:
+    derrubar um controle do rádio o tira da lista `controllers` do `state_full`.
+    Declará-lo sem eco cegaria a régua exatamente onde ela mais enxerga — um
+    "Disconnect" que não derruba nada passaria a contar como sucesso.
+
+    E A RECUSA MEDIDA EM 02/09 ESTAVA CERTA. A régua do piloto clicou este botão
+    com o controle do CABO e leu "sem efeito"; o gesto tinha levantado a frase
+    acima. **Não conserte isto.** O que faltou foi o instrumento passar o alvo,
+    e um `RuntimeError` explicando o cabo é o comportamento contratado.
     """
     from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
 
@@ -1741,8 +1766,19 @@ PROVAS = [
                 [{"controles": {"aabbcc000001": {"microfone": None}}}], {})]},
 ]
 
-#: OS QUATRO GESTOS SEM PROVA AQUI, e o motivo é o limite desta régua — não é
+#: OS GESTOS SEM PROVA AQUI, e o motivo é o limite desta régua — não é
 #: descuido, e por isso está escrito:
+#:
+#:     os SEIS do mapa    dependem do `_logica_do_mapa()`, que é montado a
+#:     do gabinete        partir do `maquina.json` DE QUEM RODA a régua. O
+#:                        payload de `machine_declare` é o gabinete inteiro:
+#:                        cravá-lo aqui faria a prova passar nesta bancada e
+#:                        reprovar em qualquer outra — a mesma razão que
+#:                        mantém `vizinho-o-que-e` fora. A prova deles injeta
+#:                        um gabinete de bancada no `_LOGICA` e está em
+#:                        `tests/unit/test_os_sete_de_conexoes_recusam_dizendo.py`,
+#:                        junto com a recusa de cada um.
+#:
 #:
 #:     examinar-portas    não chama a ponte. Ele é sysfs + `busctl`, e a régua
 #:                        mede QUAL função da ponte o gesto chamou.
@@ -1786,5 +1822,41 @@ PROVAS = [
 #: por controle nenhum, então a prova dele também é o ARQUIVO. Ele TEM efeito
 #: vivo (o `profile.switch` de `gravar_e_reaplicar` faz `ProfileManager.apply` publicar
 #: as escalas no backend); o que ele não tem é ECO.
+#: OS SEIS DO MAPA DO GABINETE ENTRARAM EM 02/09/2026, e a razão de cada um
+#: está escrita porque `SEM_ECO` sem razão é lápide para esconder defeito.
+#:
+#: A MEDIÇÃO QUE OS PÔS AQUI — dublê da ponte, nenhum comando ao daemon vivo:
+#:
+#:     gesto              clique cego          clique dirigido       chamou
+#:     escolher-aparelho  ValueError           ACEITOU               NADA
+#:     escolher-entrada   ValueError           RuntimeError (1º tempo)  —
+#:     tirar-daqui        ValueError           ACEITOU               machine_declare
+#:     nova-entrada       ValueError           ACEITOU               machine_declare
+#:     nova-extensao      ValueError           ACEITOU               machine_declare
+#:     nova-face          ValueError           ACEITOU               machine_declare
+#:
+#: `escolher-aparelho` — o ÚNICO que não chama a ponte. Ele é o primeiro tempo
+#: do gesto de dois: guarda o aparelho na mão (`LogicaDoMapa.escolhido`) e para
+#: aí. Não há o que ecoar porque não há o que gravar.
+#:
+#: `escolher-entrada` · `tirar-daqui` · `nova-entrada` · `nova-extensao` ·
+#: `nova-face` — os cinco gravam `{"mapa": …}` pelo `_gravar_o_mapa`, e o
+#: `state_full` NÃO PUBLICA O MAPA. Medido contra o daemon vivo em 02/09: 47
+#: chaves de topo, e nem `mapa` nem `maquina` está entre elas. O desenho do
+#: gabinete DELA é declaração em disco, não estado de aparelho — barramento
+#: nenhum devolve "quantas faces tem o seu gabinete". A prova deles é o
+#: ARQUIVO, e está em `tests/unit/test_o_mapa_do_gabinete_e_o_dela.py`.
+#:
+#: E FICA O AVISO PARA QUEM LER A RÉGUA DO PILOTO: "sem efeito e sem `SEM_ECO`"
+#: NÃO quer dizer "disse aplicado". `_depois_do_gesto`
+#: (`interface/hefesto_vivo.py`) compara o estado do daemon antes e depois do
+#: clique e NÃO consulta se o gesto levantou — quando ele levanta, o piloto
+#: imprime `[gesto falhou]` no stderr e `self.aplicados` não recebe nada. Um
+#: gesto que RECUSOU DIZENDO cai na mesma lista de um que mentiu. Foi assim que
+#: os sete desta aba entraram na conta dos "dezesseis aplicados que não
+#: aplicam" de 02/09: eles recusaram, com frase, porque o clique automático não
+#: levava o argumento do próprio botão (`caminho`, `entrada`, `face`, `uniq`).
 SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
-           "ignorar", "examinar-portas", "teto-da-vibracao")
+           "ignorar", "examinar-portas", "teto-da-vibracao",
+           "escolher-aparelho", "escolher-entrada", "tirar-daqui",
+           "nova-entrada", "nova-extensao", "nova-face")
