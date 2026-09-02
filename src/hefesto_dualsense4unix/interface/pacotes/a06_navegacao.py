@@ -17,6 +17,18 @@ gestos "moram no PERFIL". Não moram — o perfil guarda `key_bindings`, que sã
 os BOTÕES (options, create, l1, r1, l3, r3 e as três regiões do touchpad), e
 combo nenhum. A frase sobre as velocidades de cursor e rolagem, que estava na
 mesma linha, já tinha caído na primeira leva (ver o `SEM_DONO` logo abaixo).
+
+FATO SUBSTITUÍDO (02/09/2026): **"esta aba MENCIONA 7 campos e PINTA 3"** —
+escrito a partir do `--passear`, que imprime `06-navegacao.html  1  3`. Ela
+pinta os OITO elementos endereçados. O `3` é contagem de MUDANÇA: o `escrever()`
+do piloto devolve `1` só quando o valor novo difere do que a tela já mostra, e
+cinco dos oito já coincidiam com o daemon dela (`2 controles:`, `1 USB · 1 BT`,
+`6`, `1`, `Ligada — atalhos e teclado na tela`). Ler "mudança" como "pintura" é
+a mesma confusão entre a PALAVRA e o ATO que produziu o "77%" falso, com o sinal
+trocado — e aqui ela escondia os defeitos REAIS da aba, que a medição achou:
+metade da linha do cartão indo para a tela (`_linha_do_cartao`), 8 chaves de 14
+emitidas para o vazio (`SEM_ENDERECO`) e um "Guardar" que apagava o perfil
+(`guardar_definicoes`).
 """
 from __future__ import annotations
 
@@ -36,6 +48,49 @@ from . import Contexto, perfil, registrar
 #: Sobra nada.
 SEM_DONO: dict[str, str] = {}
 
+#: O QUE O PACOTE SABE E A PÁGINA NÃO TEM ONDE PÔR — medido em 02/09/2026, com
+#: `casamento.py 06-navegacao.html`. É o INVERSO do `SEM_DONO`: lá o produto não
+#: sabe responder; aqui ele sabe, e o desenho não tem lugar para a resposta.
+#:
+#: POR QUE ISTO PRECISOU EXISTIR: `casamento.py` já imprimia os órfãos e
+#: **reprovava só o zero**. Esta aba emitia oito chaves para o vazio com o
+#: portão verde — e uma delas, `via`, não era falta de lugar: era o pacote
+#: mandando METADE de uma linha cujo endereço cobre a linha inteira. Órfão
+#: silencioso e defeito real ficavam na mesma pilha, sem ninguém para separá-los.
+#: `test_a_06_nao_manda_para_o_vazio.py` passou a cobrar que toda chave órfã
+#: esteja AQUI, com a razão.
+#:
+#: `via` SAIU: virou parte do `navega` (ver `_linha_do_cartao`).
+#: `teclado-ligado` SAIU: era o mesmo bit de `teclado-estado`, que tem endereço.
+SEM_ENDERECO: dict[str, str] = {
+    # OS TRÊS DO MOUSE — o desenho TEM onde: o interruptor "Status do Modo". O
+    # que falta é o piloto poder escrevê-lo. O widget é um
+    # `<input type="checkbox" checked>` cujo estado a CSS lê (`.tog-in:checked
+    # + .tog`), e a palavra "Ligado"/"Desligado" sai de um `content:` — não há
+    # nó de texto para pintar, e `escrever()` não sabe marcar uma caixa nem pôr
+    # uma classe. Medido em 02/09: o daemon dela tinha `mouse_emulation.enabled
+    # = False` e a tela dizia **Ligado**. É a maior mentira desta aba, e a cura
+    # é no piloto (um alvo que escreva atributo/classe), não aqui.
+    "rato-ligado": "o 'Status do Modo' é um <input checkbox> e o piloto não sabe "
+                   "marcar caixa nem trocar classe — hoje ele diz 'Ligado' com a "
+                   "emulação desligada",
+    "rato-bloqueio": "o motivo do bloqueio não tem linha no desenho; a frase do "
+                     "produto é `app/actions/mouse_actions.frase_da_recusa_do_mouse`",
+    "rato-despachando": "idem — quem despacha o cursor não aparece no desenho",
+    # O TECLADO NA TELA: o produto TEM a frase pronta e humana em
+    # `app/actions/input_actions.frase_do_teclado_na_tela(osk_disponivel)`, que a
+    # GTK mostra. O desenho desta aba não tem onde pô-la.
+    "teclado-osk": "o desenho não tem linha para 'há teclado na tela nesta "
+                   "máquina'; a frase existe em "
+                   "`app/actions/input_actions.frase_do_teclado_na_tela`",
+    # OS ATALHOS DO PERFIL: a tabela da tela é a dos cinco COMBOS (PS+Options…),
+    # que não são `key_bindings`. Não há onde mostrar a contagem, e mostrá-la na
+    # tabela dos combos seria pôr um número ao lado de outra coisa.
+    "gestos": "a tabela da tela é a dos cinco COMBOS, e `key_bindings` são os "
+              "nove BOTÕES — não é o mesmo dado, e não há linha para ele",
+    "gestos-lista": "idem; e a lista é estrutura, que o piloto pula",
+}
+
 #: AS DUAS FRASES DA LISTA "Função do teclado" QUE O DAEMON SABE DIZER, e elas
 #: são o outro lado do contrato que `src/hefesto_dualsense4unix/interface/aba06.py:OPCOES_TECLADO`
 #: desenha. A repetição é declarada, e os dois lados falham de jeitos diferentes
@@ -53,6 +108,60 @@ SEM_DONO: dict[str, str] = {}
 TECLADO_LIGADA = "Ligada — atalhos e teclado na tela"
 TECLADO_DESLIGADA = "Desligada"
 
+#: O SEPARADOR DO CARTÃO — o mesmo `•` que o desenho põe entre o transporte e o
+#: papel (`aba06.controle`: `{via} <span class="pt">•</span> {papel}`). Ele é
+#: texto porque o endereço `data-campo="navega"` cobre a LINHA INTEIRA: o piloto
+#: escreve `textContent`, e o que não vier na string some da tela.
+PONTO = " • "
+
+#: O PREFIXO DAS VINTE E UMA LINHAS de *o que cada botão faz*. Um por botão de
+#: `core/acoes_de_botao.BOTOES` — a lista é do produto, e não se digita aqui.
+PREFIXO_DA_ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
+
+
+def _linha_do_cartao(c: dict[str, Any], primario: bool) -> str:
+    """A linha inteira do cartão: `"BT • Navega o PC"`.
+
+    ELA ERA METADE, e a metade que faltava era o TRANSPORTE — medido em
+    02/09/2026, com a foto ao lado. O desenho escreve
+    `{via} <span class="pt">•</span> {papel}` e põe o `data-campo="navega"` na
+    `<div>` que os contém; o pacote mandava só o papel. Como o piloto escreve
+    `textContent`, o primeiro tique APAGAVA o "USB •" do cartão — a tela nascia
+    dizendo por onde o controle está ligado e parava de dizer meio segundo
+    depois, sem que nada acusasse.
+
+    O `via` NÃO SE CALCULA AQUI. `mesa_viva` é o dono da regra
+    (`"USB" if transporte == "usb" else "BT"`), e ela já vem mastigada na mesa
+    que o piloto monta — repeti-la seria a segunda verdade que envelhece calada.
+    O `ctx.conectados` é a resposta CRUA do daemon e traz `transport`; a mesa
+    traz `via`. Quem entra na tela é o da mesa.
+    """
+    papel = "Navega o PC" if primario else "Só a janela"
+    return PONTO.join(x for x in (str(c.get("via") or ""), papel) if x)
+
+
+def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
+    """As 21 linhas de *o que cada botão faz*, com o RÓTULO que o desenho mostra.
+
+    O VOCABULÁRIO É O DO MOTOR, inteiro: `acoes.BOTOES` diz quais linhas
+    existem, `acoes.padrao()` diz o que cada uma faz de fábrica e
+    `acoes.rotulo()` traduz o token no texto da `<option>`. O gerador monta as
+    mesmas listas do mesmo lugar (`aba06.ACOES_UNI = por_grupo()`), e é por isso
+    que o valor emitido aqui SEMPRE existe como opção — condição do
+    `escrever()` com `data-hef-alvo="valor"`, que se cala quando não casa.
+
+    O PERFIL VENCE O DE FÁBRICA linha a linha, e não em bloco: `button_actions`
+    guarda DIFERENÇA (`None` quer dizer "herda"), então uma linha ausente não é
+    "nada" — é o de fábrica.
+    """
+    escolhas = (p.get("button_actions") or {}) if p else {}
+    de_fabrica = acoes.padrao()
+    return {
+        f"{PREFIXO_DA_ACAO}{botao}": acoes.rotulo(
+            str(escolhas.get(botao) or de_fabrica.get(botao) or ""))
+        for botao in acoes.BOTOES
+    }
+
 
 @registrar("06-navegacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
@@ -64,11 +173,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     cards = {}
     for c in ctx.conectados:
-        primario = bool(c.get("is_primary"))
-        cards[str(c.get("uniq") or "")] = {
-            "navega": "Navega o PC" if primario else "Só a janela",
-            "via": (c.get("transport") or "").upper(),
-        }
+        uniq = str(c.get("uniq") or "")
+        # A MESA É QUEM TEM O `via`. `ctx.conectados` é a resposta crua do
+        # daemon (`transport`), e a tradução para "USB"/"BT" tem dono em
+        # `mesa_viva.mesa_do_estado`. Sem casa na mesa (um controle que entrou
+        # entre a montagem da mesa e este tique), a linha sai só com o papel —
+        # meia verdade, nunca um transporte inventado.
+        na_mesa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
+        cards[uniq] = {"navega": _linha_do_cartao(na_mesa, bool(c.get("is_primary")))}
     mesa = {
         # AS DUAS VELOCIDADES, do daemon — não do perfil. O perfil guarda o
         # que ela SALVOU; o daemon diz o que está VALENDO agora, e é o
@@ -78,11 +190,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "rato-ligado": bool(rato.get("enabled")),
         "rato-bloqueio": rato.get("bloqueio") or "",
         "rato-despachando": bool(rato.get("despachando")),
-        "teclado-ligado": bool(tecla.get("enabled")),
         "teclado-osk": bool(tecla.get("osk_disponivel")),
         "gestos": len(atalhos),
         "gestos-lista": {k: v for k, v in list(atalhos.items())[:12]},
     }
+    # AS VINTE E UMA LINHAS DE *O QUE CADA BOTÃO FAZ*, do perfil dela — e elas
+    # não existiam aqui até 02/09/2026. O botão "Guardar" LIA essas linhas
+    # (`data-hef-forma`) e nada as ESCREVIA, então a tela mostrava para sempre o
+    # que o desenho escolheu. Ver `guardar_definicoes` para o que isso custava.
+    mesa.update(_linhas_dos_botoes(p))
     # A LISTA "Função do teclado" SÓ É REESCRITA QUANDO O DAEMON FALOU, e a
     # ausência da chave é o que impede a mentira: sem o bloco
     # `keyboard_emulation` (daemon mudo, ou config inacessível — o `state_full`
@@ -104,7 +220,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # foi uma soma digitada (`len(cards) * 2 + 9`) que deixou a curva da aba
         # Gatilhos fora da cobertura, e aqui ela erraria no tique em que a lista
         # do teclado entra — o valor é condicional.
-        "cobertura": {"pintados": sum(len(v) for v in cards.values()) + len(mesa),
+        #
+        # E ELE DESCONTA O QUE NÃO TEM ONDE CAIR — 02/09/2026. Contar chave
+        # EMITIDA como "pintado" é a mesma confusão entre a PALAVRA e o ATO que
+        # produziu o "77%" falso desta casa: medido no mesmo dia, esta aba
+        # emitia 14 chaves e a página tinha endereço para 6. O instrumento dizia
+        # 14. Um contador que mente é pior que um campo parado.
+        "cobertura": {"pintados": (sum(len(v) for v in cards.values())
+                                   + len(set(mesa) - set(SEM_ENDERECO))),
                       "sem_dono": len(SEM_DONO)},
     }
 
@@ -406,6 +529,22 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     de um perfil que nunca foi editado, e não um `{}`, que seria "nenhum botão
     faz nada".
 
+    ELE ERA UM APAGADOR COM RÓTULO DE "GUARDAR", e isso foi medido em
+    02/09/2026, contra a página PUBLICADA: as 21 `<select>` da tela de pop-up
+    têm `data-linha` (que o Guardar LÊ) e nenhum `data-campo` (que a pintura
+    ESCREVERIA), então nada nunca as pintou com o perfil dela — elas mostram o
+    que o gerador cravou. Medido linha a linha: as 21 opções cravadas são
+    **exatamente** `acoes.padrao()`, logo `diferentes` saía `{}` e o gesto
+    gravava `button_actions = None` — apagando, em silêncio, qualquer escolha
+    que o perfil dela guardasse. O botão dizia "Guardar" e fazia o contrário.
+
+    A CURA TEM DUAS METADES, e só a primeira é deste arquivo:
+
+    * o pacote passa a EMITIR as 21 linhas (`_linhas_dos_botoes`), e o gerador a
+      marcá-las com `data-campo` — quando o desenho for publicado, a tela mostra
+      o perfil e o Guardar volta a ser verdade;
+    * até lá, o gesto RECUSA em vez de apagar (a trava logo abaixo).
+
     O QUE A TELA OFERECE E O PRODUTO NÃO ATENDE **é dito, não engolido**: os
     comandos "Abrir a Steam", "Sair do modo jogo" e "Escolher um programa…", os
     dois papéis de eixo pedidos a um botão, e os gatilhos L2/R2, que são espelho
@@ -447,6 +586,25 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     novo = diferentes or None
     if prof.button_actions == novo:
         return
+    # A TRAVA CONTRA O APAGADOR — 02/09/2026, e ela vale enquanto a tela não
+    # mostrar o perfil. "Nada diferente do de fábrica" só quer dizer "ela zerou
+    # as 21 linhas" se as 21 linhas tiverem chegado a MOSTRAR o que o perfil
+    # guarda; com a página publicada de hoje elas nunca mostram, e então esta
+    # forma quer dizer outra coisa: *o piloto releu o desenho*.
+    #
+    # E ZERAR TEM BOTÃO PRÓPRIO, a dois centímetros: "Voltar ao padrão"
+    # (`padrao-definicoes`), que zera dizendo e ainda pede confirmação. Um
+    # "Guardar" que apaga em silêncio é o botão que responde calado — o defeito
+    # que esta casa mais persegue.
+    if novo is None and prof.button_actions:
+        raise RuntimeError(
+            "não guardei: as 21 linhas da tela estão todas no de fábrica, e o "
+            f"perfil “{nome}” guarda "
+            f"{len(prof.button_actions)} escolha(s) sua(s). Gravar isto as "
+            "apagaria. Enquanto a tela não mostrar o que o perfil guarda, o "
+            "Guardar não pode ler o desenho como se fosse a sua escolha — para "
+            "voltar tudo ao de fábrica de propósito, use o “Voltar ao padrão” "
+            "ao lado.")
     perfil.gravar_e_reaplicar(prof.model_copy(update={"button_actions": novo}), ctx, p)
 
     _, _, sem_dono = acoes.resolver(novo)
