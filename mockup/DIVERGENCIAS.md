@@ -71,26 +71,6 @@ seção daqui**: a aba deixou de estar em trabalho.
   aparece nesta aba (a fita do topo é inerte, decisão sua de 28/08); nasce no
   tom certo quando a força ganhar endereço por controle.
 
-## 08-conexoes.html
-- **02/09/2026** — **dois endereços novos no Check-up, e nenhum pixel mudou.**
-  O desenho é o mesmo que ela aprovou; o que a bancada ganhou foram dois
-  `data-campo` em elementos que já estavam lá, para que o produto pare de
-  mentir neles:
-
-  | onde | o que era | o que passa a escrever |
-  | --- | --- | --- |
-  | o `?` de cada uma das cinco linhas | a explicação do MOCKUP, ao lado do achado DELA | `secao_exame._dica_do_item` — o que a linha significa, a medição desta rodada e a cura |
-  | o `Examinado há 3 minutos` do topo | a frase fixa desde que o mockup nasceu | `secao_exame.frase_de_quando`, com a idade do último **Examinar Portas** |
-
-  Fotografado nesta bancada, com dois controles na mesa: a linha 1 dizia
-  **"Economia de energia desligada"** e o `?` ao lado explicava *"as entradas
-  em uso entregam 500 mA ou mais"* — a medição de OUTRO achado. Nas duas
-  posições que o exame não preencheu, o texto vinha `—` e o `?` continuava
-  contando os quatro rádios vizinhos do desenho.
-
-  **O pacote já emite os dois** (`achado-explica` e `examinado`): no dia em que
-  ela publicar, a tela nasce certa; até lá o piloto não acha o endereço e
-  escreve zero — nada muda no produto que ela usa.
 
 ## 07-lancadores.html
 - **02/09/2026** — **um comentário HTML dentro da lista do cartão da Steam, e
