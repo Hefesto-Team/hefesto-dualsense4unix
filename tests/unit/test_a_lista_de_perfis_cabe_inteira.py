@@ -205,6 +205,12 @@ def test_sem_perfil_ativo_ninguem_se_realca() -> None:
     ativo onde não havia nenhum. Com perfil ativo a mentira passava despercebida
     porque ``ordem_de_exibicao`` põe o ativo em primeiro — e a classe do desenho
     está exatamente na primeira linha.
+
+    A PRIMEIRA ASSERÇÃO É A CURA DE UM VÁCUO — 02/09/2026, achado de auditoria.
+    Este teste tinha só a negativa, e com a emissão do ``blocos`` arrancada
+    ``_linhas()`` devolve ``[]``: a negativa fica trivialmente verdadeira. Medido
+    na mordida completa do ``blocos``, o irmão acima reprovava e **este passava**
+    — ele não distinguia "nenhuma linha realçada" de "nenhuma linha".
     """
     from hefesto_dualsense4unix.app.actions import profiles_actions
 
@@ -213,6 +219,9 @@ def test_sem_perfil_ativo_ninguem_se_realca() -> None:
         # o disco também tem de calar, senão a régua mede o marcador da máquina.
         mp.setattr(profiles_actions, "perfil_que_ela_ativou", lambda: None)
         linhas = _linhas(_pacote(["Primeiro", "Segundo"], ativo=""))
+    assert len(linhas) == 2, (
+        f"a lista parou de ser emitida — {len(linhas)} linha(s) para 2 perfis; "
+        f"sem isto a negativa abaixo fica verde para sempre")
     assert not [x for x in linhas if 'class="ativo"' in x]
 
 

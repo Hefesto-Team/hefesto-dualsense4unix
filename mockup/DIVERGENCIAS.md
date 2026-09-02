@@ -93,3 +93,35 @@ seção daqui**: a aba deixou de estar em trabalho.
   **O que espera o seu OK:** nada visual. A bancada e o publicado diferem por
   esta linha só; enquanto ela não publicar, o produto que ela usa continua
   igual.
+
+
+## 10-perfis.html
+- **02/09/2026** — **o "Estilo de Jogo" ganha o travessão, e é decisão sua deste
+  dia.** O `<select>` passa a nascer com uma primeira opção `value=""`, texto
+  `—`, marcada; nenhuma das quinze nasce marcada.
+
+  **Por que ele existe:** o desenho trazia `<option selected>Luta</option>`, e
+  por isso os seus **33 perfis** apareciam como `Luta` — um valor que ninguém
+  escreveu. O perfil não tem campo de Estilo (`profiles/schema.Profile` não tem,
+  `SIMPLE_MATCH_PRESETS` não tem chave), então `perfis_web` devolve
+  `estilo: None`. É a sua regra do mesmo dia — *"se não tá mostrando agora, não
+  tem info pra mostrar no produto"* — aplicada ao desenho.
+
+  **A pintura não resolvia isto sozinha, e a medição é o motivo de ser desenho:**
+  o `escrever()` do piloto troca vazio por `'—'` ANTES do ramo `valor`
+  (`hefesto_vivo.py`, `const t = vazio ? '—' : …`). Num `<select>` cuja opção
+  vazia tem `value=""`, escrever `'—'` passa a guarda pelo TEXTO da opção e
+  depois deixa `selectedIndex = -1`: o campo renderiza **em branco**, e o
+  contador de pinturas soma +1 a cada visita porque `el.value` nunca volta igual
+  ao escrito. Por isso o pacote **parou de escrever** neste endereço
+  (`a10_perfis.NAO_PINTAVEIS`, com a medição) e quem diz o `—` é o desenho.
+
+- **02/09/2026** — **um comentário HTML caduco, e nenhum pixel mudou.** O bloco
+  ao lado do trilho da Prioridade dizia que *"enquanto esta página não for
+  PUBLICADA por ela, `a10_perfis.NAO_PINTAVEIS` segura a emissão do
+  `editor.prioridade`"*. As duas metades caíram: a página foi publicada
+  (`70b58116`) e o nome saiu de `NAO_PINTAVEIS` (`1f6e356b`). O texto foi
+  substituído pelo fato.
+
+  **O que espera o seu OK:** só a linha do travessão é visível. Enquanto você
+  não publicar, o campo continua abrindo em `Luta` no produto que você usa.
