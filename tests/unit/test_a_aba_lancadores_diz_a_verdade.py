@@ -171,12 +171,25 @@ def test_nenhum_lancador_sem_fonte_afirma_que_os_controles_chegam(desenho):
 
     A prova de que os cinco não são medidos, refeita a cada execução: nenhum
     módulo de `src/` os nomeia fora de comentário.
+
+    E OS TRÊS ESTADOS ENTRAM, desde 02/09 à tarde. O produto passou a PROCURAR
+    os cinco (sem ler dentro deles), e a régua tinha de acompanhar: um cartão
+    achado, um não achado e um ainda-não-procurado são desenhos diferentes, e
+    NENHUM dos três pode afirmar que os controles chegam. Cobrar só o terceiro
+    deixaria os outros dois livres para acender `CHEGAM` sem ninguém ver.
     """
-    for chave, _nome in desenho.SEM_FONTE:
-        cartao = next(c for c in desenho.cartoes(None) if c.chave == chave)
-        assert cartao.selo == "nao_sei", (
-            f"o cartão {chave!r} afirma {desenho.SELOS[cartao.selo]!r} e o "
-            f"produto não tem uma função que o olhe.")
+    for item in desenho.SEM_FONTE:
+        for onde in (None, "", f"{item.chave}.desktop"):
+            cartao = desenho.cartao_sem_censo(item, onde)
+            assert cartao.selo in ("nao_sei", "off"), (
+                f"o cartão {item.chave!r} com onde={onde!r} afirma "
+                f"{desenho.SELOS[cartao.selo]!r} e o produto não lê a "
+                f"biblioteca dele.")
+        # E o `cartoes(None)` — a primeira meia volta — continua no `nao_sei`
+        # dos três, porque ali o produto ainda não procurou nada.
+        nascendo = next(c for c in desenho.cartoes(None) if c.chave == item.chave)
+        assert nascendo.selo == "nao_sei" and not nascendo.presente, (
+            f"o cartão {item.chave!r} afirma algo antes de a leitura voltar")
 
 
 def test_os_cinco_lancadores_sem_fonte_continuam_sem_fonte():
@@ -434,3 +447,198 @@ def test_o_piso_de_gestos_da_aba_e_seis(a07):
     quantos = sum(1 for (p, _) in pacotes.GESTOS if p == PAGINA)
     assert quantos >= a07.PISO_DA_ABA == 6, (
         f"{PAGINA} tem {quantos} gestos com dono e o piso é {a07.PISO_DA_ABA}")
+
+
+# --------------------------------------------------------------------------
+# 6. o que o produto PROCURA — a presença dos cinco sem censo
+#
+# NASCEU EM 02/09/2026, À TARDE, e a razão é uma distinção que a aba não fazia:
+# os cinco cartões diziam `NÃO SEI` por CONSTANTE. Um campo que mostra `NÃO
+# SEI` porque o produto mediu e não sabe é honesto; um que mostra `NÃO SEI`
+# porque ninguém pintou é o desenho fingindo ser produto — e ler a tela não
+# separava os dois.
+# --------------------------------------------------------------------------
+def _pastas_falsas(monkeypatch, tmp_path, *stems: str):
+    """Uma pasta de `.desktop` de mentira, com os atalhos que o teste quiser.
+
+    O `PATH` vai junto e vai VAZIO: sem isso o `shutil.which` cairia no PATH da
+    máquina dela, e o `flatpak` de verdade faria o teste passar por acidente —
+    a régua daria verde sobre a bancada, não sobre a cura.
+    """
+    from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+    pasta = tmp_path / "applications"
+    pasta.mkdir(parents=True, exist_ok=True)
+    for stem in stems:
+        (pasta / f"{stem}.desktop").write_text(
+            "[Desktop Entry]\nName=de mentira\n", encoding="utf-8")
+    monkeypatch.setattr(jl, "pastas_de_atalhos", lambda: [pasta])
+    monkeypatch.setenv("PATH", str(tmp_path / "sem-binario-nenhum"))
+    return pasta
+
+
+def test_o_produto_procura_os_cinco_pelas_pastas_do_motor(a07, monkeypatch,
+                                                          tmp_path):
+    """ACHEI e NÃO ACHEI saem de um `stat`, e não de uma constante.
+
+    A MORDIDA: faça `_onde_estao_os_lancadores` devolver sempre `""` (ou volte
+    a montar os cartões com `DIZ_SEM_FONTE` fixo) e este teste reprova nos dois
+    lados — o achado deixa de ser achado E o ausente deixa de dizer que
+    procurou.
+    """
+    _pastas_falsas(monkeypatch, tmp_path, "net.lutris.Lutris")
+    onde = dict(a07._onde_estao_os_lancadores())
+    assert onde["lutris"] == "net.lutris.Lutris.desktop", (
+        f"o produto não achou o atalho que está em disco: {onde}")
+    assert onde["heroic"] == "", (
+        "o produto disse ter achado um lançador que não está na pasta")
+    assert set(onde) == {"heroic", "lutris", "flatpak", "retroarch",
+                         "emuladores"}, (
+        "a busca pulou um lançador — o cartão dele voltaria ao `NÃO SEI` de "
+        "constante sem ninguém ver")
+
+    # E O CAMINHO DA PINTURA TAMBÉM, e esta parte NASCEU DA MORDIDA: arrancar a
+    # cura no CHAMADOR (`onde_estao = ()` dentro do `_ler_do_disco`) deixava a
+    # metade de cima deste teste VERDE, porque ela chama a busca direto. Uma
+    # régua que prova a função e não prova quem a chama dá verde sobre uma tela
+    # que voltou ao desenho — é *"cura escrita, testada, e nunca ligada"*, que
+    # esta casa já nomeou.
+    assert dict(a07._ler_do_disco().onde_estao)["lutris"] == (
+        "net.lutris.Lutris.desktop"), (
+        "a busca funciona e a LEITURA não a carrega — a tela volta ao `NÃO "
+        "SEI` de constante com este teste verde")
+
+
+def test_o_atalho_do_kde_nao_e_o_emulador(a07, monkeypatch, tmp_path):
+    """`dolphin.desktop` é o gerenciador de arquivos do KDE, não o emulador.
+
+    Casar por PREFIXO acusaria o Dolphin em toda máquina com KDE — um `ACHEI`
+    sobre um lançador que não está aqui, que é a mentira que esta aba existe
+    para não contar.
+    """
+    _pastas_falsas(monkeypatch, tmp_path, "dolphin")
+    assert dict(a07._onde_estao_os_lancadores())["emuladores"] == "", (
+        "o `dolphin.desktop` do KDE passou por emulador")
+
+
+def test_o_cartao_achado_e_o_nao_achado_dizem_coisas_diferentes(desenho):
+    """Os três estados viram três telas — e o `NÃO ACHEI` deixa de ser letra morta.
+
+    `SELOS["off"]` existia desde que o desenho nasceu e NENHUM caminho o
+    produzia. Uma palavra que o produto nunca escreve é desenho, não vocabulário.
+    """
+    item = next(x for x in desenho.SEM_FONTE if x.chave == "heroic")
+    nao_procurei = desenho.cartao_sem_censo(item, None)
+    nao_achei = desenho.cartao_sem_censo(item, "")
+    achei = desenho.cartao_sem_censo(item, "com.heroicgameslauncher.hgl.desktop")
+
+    assert desenho.SELOS[nao_achei.selo] == "NÃO ACHEI"
+    assert not nao_achei.presente and not nao_procurei.presente
+    assert achei.presente, "um lançador achado não conta como encontrado no topo"
+    assert len({nao_procurei.diz, nao_achei.diz, achei.diz}) == 3, (
+        "dois dos três estados dizem a MESMA frase — a tela voltou a não "
+        "separar 'procurei e não achei' de 'ainda não procurei'")
+    assert "com.heroicgameslauncher.hgl.desktop" in achei.diz, (
+        "o cartão diz que achou e não diz ONDE — sem isso ela não tem como "
+        "conferir a resposta sem acreditar em mim")
+
+
+def test_a_contagem_do_topo_conta_presenca_e_nao_selo(desenho):
+    """`N encontrados` responde "quantos estão aqui", não "em quantos eu sei".
+
+    A MORDIDA: volte `Quadro.achados` para `x.selo in ("ok", "warn")` e o
+    lançador achado some da conta enquanto o cartão dele continua dizendo
+    "achei este lançador aqui" — duas afirmações opostas na mesma tela.
+    """
+    lida = desenho.Leitura(com_wrapper=("1",), instalados=1,
+                           onde_estao=(("heroic", "h.desktop"), ("lutris", "")))
+    quadro = desenho.Quadro(lancadores=desenho.cartoes(lida))
+    assert quadro.achados == 2, (
+        f"a Steam e o Heroic estão aqui e a conta diz {quadro.achados}")
+    assert "2 encontrados" in desenho.conta_html(quadro.achados, quadro.impedidos)
+
+
+def test_nenhuma_fileira_de_botoes_vira_travessao(desenho):
+    """Fileira vazia não pode virar `—` na tela. Fotografado em 02/09/2026.
+
+    O `escrever()` do bootstrap troca vazio por travessão — certo para um campo
+    de valor, errado para um contêiner de HTML. Enquanto a raiz não é curada
+    (`hefesto_vivo.py`, fora do território desta aba), o desenho não pode emitir
+    string vazia num alvo `html`.
+    """
+    item = next(x for x in desenho.SEM_FONTE if x.chave == "retroarch")
+    vazio = desenho.acoes_html(desenho.cartao_sem_censo(item, ""))
+    assert vazio, "a fileira vazia voltou a ser string vazia — a tela mostra `—`"
+    assert "<button" not in vazio, "um botão apareceu num cartão sem o que abrir"
+    assert desenho.valores_do_cartao(
+        desenho.cartao_sem_censo(item, ""))["retroarch-acoes"] == vazio
+
+    lida = desenho.Leitura(com_wrapper=("1",), instalados=1)
+    steam = desenho.valores_do_cartao(desenho.cartao_da_steam(lida))
+    assert steam["steam-fora"], (
+        "a lista vazia da Steam voltou a ser string vazia — era o traço solto "
+        "no pé do cartão, que estava lá desde 02/09 de manhã")
+
+
+# --------------------------------------------------------------------------
+# 7. as duas leituras do disco que tela NENHUMA mostrava
+# --------------------------------------------------------------------------
+def test_os_jogos_dispensados_do_lembrete_aparecem_na_lista(desenho):
+    """O `launch_dialog_dismissed.json` ganha a primeira tela da casa.
+
+    A escrita tinha dono (o botão "Não perguntar para este jogo" do lembrete da
+    GTK) e a LEITURA não tinha nenhuma: clicar produzia um silêncio permanente
+    que ninguém podia consultar depois.
+    """
+    lida = desenho.Leitura(com_wrapper=("1",), instalados=1,
+                           dispensados=(("4242", "Jogo Dispensado"),))
+    fora = desenho.valores_do_cartao(
+        desenho.cartao_da_steam(lida))["steam-fora"]
+    assert "Jogo Dispensado" in fora and "não perguntar mais" in fora, (
+        "o jogo dispensado não aparece na lista do cartão da Steam")
+    assert 'data-v="4242"' not in fora, (
+        "a linha do dispensado ganhou botão — e `launch_wrapper_dialog` não "
+        "tem `remove_dismissed_appid`: o clique não teria o que chamar")
+
+
+def test_a_ponte_confirmada_volta_ao_carimbo(desenho):
+    """`◆ N jogos já sabem por onde entrar` — a promessa que estava sem fonte.
+
+    O HTML de 02/09 dizia `◆ 3 jogos já sabem por onde entrar` com o número
+    DIGITADO, e `prontuario_dos_jogos.pontes_confirmadas` respondia a mesma
+    pergunta sem nenhum chamador.
+    """
+    sem = desenho.Leitura(com_wrapper=("1",), instalados=1)
+    assert desenho.carimbo_da_steam(sem) == "", (
+        "zero pontes ocupou a linha do carimbo para não dizer nada")
+
+    com = desenho.Leitura(com_wrapper=("1",), instalados=1, pontes=3,
+                          intocaveis=(("9", "Jogo", "linha à mão"),))
+    carimbo = desenho.carimbo_da_steam(com)
+    assert "3 jogos já sabem por onde entrar" in carimbo, (
+        f"a ponte confirmada sumiu do carimbo: {carimbo!r}")
+    assert "intocável" in carimbo, (
+        "o carimbo calou sobre o jogo que o produto decidiu não tocar — é "
+        "assim que ele fica sem o atalho para sempre sem ninguém saber")
+
+
+def test_a_steam_quebrada_nao_apaga_a_resposta_sobre_os_outros(a07, monkeypatch,
+                                                               tmp_path):
+    """Duas perguntas independentes não podem cair juntas.
+
+    A MORDIDA: mova o `_onde_estao_os_lancadores()` para DEPOIS do `try` do
+    censo e este teste reprova — um `localconfig.vdf` ilegível apagaria a
+    resposta sobre o Heroic, que não tem nada com a Steam.
+    """
+    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
+
+    _pastas_falsas(monkeypatch, tmp_path, "net.lutris.Lutris")
+
+    def explode(*a, **kw):
+        raise OSError("o vdf sumiu")
+
+    monkeypatch.setattr(sw, "censo_do_wrapper", explode)
+    lida = a07._ler_do_disco()
+    assert lida.erros, "o censo quebrou e a leitura não registrou o erro"
+    assert dict(lida.onde_estao)["lutris"] == "net.lutris.Lutris.desktop", (
+        "a Steam quebrada apagou a resposta sobre os outros lançadores")
