@@ -426,6 +426,34 @@ def _eixo_do_analogico(inputs: dict[str, Any], nome: str) -> int:
     return 128 if valor is None else int(valor)
 
 
+def selo_do_mic(mudo: bool, sabemos: bool) -> str:
+    """O selo do microfone no card: `MUDO`, `ATIVO`, ou `—` quando não se leu.
+
+    UM DONO PARA OS DOIS PINTORES (auditoria de 02/09/2026). O mesmo ternário
+    vivia escrito duas vezes — em `pacotes/a02_controles.py` e no
+    `Janela._pacote_do_card` de `interface/controles_vivos.py`. O commit da
+    MIC-DA-MESA-ELEICAO-01 diz com todas as letras que *"curar só um deixaria
+    as duas versões vivas, que é o defeito que a regra da casa existe para
+    matar"* — e curou os dois. O que ficou aberto é o outro lado da mesma
+    regra: **guardou um só**. A régua do segundo pintor era
+    `inspect.getsource` + `assert '<literal>' in fonte`, que mede o TEXTO:
+    medido em 02/09, trocar `mic_sabemos` por `True` deixa o controle caído
+    voltando a pintar ATIVO com a régua VERDE.
+
+    Com uma função só, a régua passa a ser sobre COMPORTAMENTO, e vale para os
+    dois pintores de uma vez.
+
+    O terceiro estado não é enfeite: `mic_sabemos` é falso quando o
+    `state_full` não trouxe a chave `audio` — o byte é atributo de INSTÂNCIA do
+    handle, e o handle novo do hotplug-out ainda não leu nada. Num contrato em
+    que aceso = "estou no ar", pintar ATIVO ali é o controle que acabou de cair
+    anunciando que está capturando, na frente de quatro pessoas.
+    """
+    if not sabemos:
+        return "—"
+    return "MUDO" if mudo else "ATIVO"
+
+
 def estado_do_card(
     entrada: dict[str, Any],
     *,
