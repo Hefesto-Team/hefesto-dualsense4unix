@@ -185,11 +185,29 @@ def test_o_duble_cobre_os_vinte_e_nove_enderecos(sob_o_duble):
 def test_quando_a_tela_acompanha_tudo_vira_produto(sob_o_duble):
     """O outro lado da mesma moeda: se a pintura pousar, os 29 saem PRODUTO.
 
-    Sem esta metade a régua acima passaria com um pacote que emitisse lixo: o
-    que ela cobra é *diferente do desenho*, e lixo também é diferente. Aqui os
-    `vivos` são o que o `escrever()` do bootstrap poria na tela para o valor
-    declarado — a mesma tradução que a `--prova-de-mockup` usa —, e o veredito
-    tem de ser PRODUTO em todos.
+    Aqui os `vivos` são o que o `escrever()` do bootstrap poria na tela para o
+    valor declarado — a mesma tradução que a `--prova-de-mockup` usa —, e o
+    veredito tem de ser PRODUTO em todos. É a metade que fecha o número que a
+    régua viva publica.
+
+    FATO SUBSTITUÍDO — 02/09/2026, corretivo. Este docstring justificava a
+    própria existência assim: *"sem esta metade a régua acima passaria com um
+    pacote que emitisse lixo"*. **Ela passa com lixo do mesmo jeito**, e a
+    medição é de um comando — o mesmo dublê com TODO valor declarado trocado
+    por `'LIXO — ISTO NÃO É DADO'`:
+
+        declarado CERTO  · teste1 INDECIDIVEL=[] · teste3 {PRODUTO 29, 0, 0}
+        declarado LIXO   · teste1 INDECIDIVEL=[] · teste3 {PRODUTO 29, 0, 0}
+
+    Os dois vereditos são IDÊNTICOS porque as duas metades reduzem ao MESMO
+    predicado — `_como_a_tela_escreveria(declarado) != cravado`
+    (`regua_do_mockup._classificar`). Uma passa `vivos = cravados` e a outra
+    `vivos = declarado`, e nos dois casos o que decide é a mesma comparação.
+
+    **Quem separa "pintar certo" de "escrever lixo" são as DUAS linhas
+    abaixo**, e nenhuma delas é esta: `test_todo_valor_do_duble_existe_como_opcao`
+    para os 22 `<select>`, e `test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz`
+    para os outros sete — que até hoje não tinham guarda nenhuma.
     """
     from hefesto_dualsense4unix.interface import regua_do_mockup as r
 
@@ -242,3 +260,78 @@ def test_todo_valor_do_duble_existe_como_opcao(sob_o_duble):
         f"conferi {conferidos} listas e a aba tem 22 (as 21 linhas de botão "
         "mais a 'Função do teclado') — se o número caiu, um `<select>` perdeu "
         "o endereço e saiu da conferência sem reprovar nada.")
+
+
+def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
+    """Os 7 campos que NÃO são `<select>` têm de dizer o que o dublê mandou.
+
+    O BURACO QUE ELA FECHA, medido em 02/09/2026 (corretivo). As duas metades
+    acima reduzem ao mesmo predicado — *o declarado é diferente do cravado* — e
+    LIXO também é diferente: com todo valor trocado por `'LIXO — ISTO NÃO É DADO'` as
+    duas passam, com o mesmo veredito de sempre. Quem pegava lixo era só
+    `test_todo_valor_do_duble_existe_como_opcao`, e só para os 22 `<select>`;
+    os outros sete não tinham guarda nenhuma.
+
+    O QUE ELA COBRA, e a distinção é a razão de ela existir: **o esperado sai do
+    DUBLÊ, não do pacote**. Nada aqui chama `a06_navegacao` para descobrir a
+    resposta — a contagem sai de `CONTROLES`, os números saem de `ESTADO`, e o
+    par via/papel de cada cartão sai do `transport`/`is_primary` do controle que
+    a mesa pôs naquele lugar. Uma régua que perguntasse ao pacote o que esperar
+    do pacote é a forma de instrumento falso que esta casa mais achou.
+
+    A MORDIDA: troque `speed` do dublê para 6, ou faça o pacote emitir qualquer
+    outra coisa em `vel-cursor` — esta linha reprova nomeando o endereço.
+    """
+    from hefesto_dualsense4unix.interface import mesa_viva
+
+    cravados, declarados = sob_o_duble
+    valor = {c.endereco: declarados.get((c.dono, c.chave),
+                                        declarados.get(("", c.chave)))
+             for c in cravados if c.alvo != "valor"}
+    assert len(valor) == 7, (
+        f"a página tem {len(valor)} campos fora dos `<select>` e esta régua foi "
+        "escrita sobre 7. Um campo novo sem linha aqui é um campo sem guarda "
+        "contra valor destruidor.")
+
+    ligados = [c for c in CONTROLES if c.get("connected")]
+    usb = sum(1 for c in ligados if c.get("transport") == "usb")
+    bt = len(ligados) - usb
+    rato = ESTADO["mouse_emulation"]
+    conta_b = str(valor["conta-b"])
+
+    assert str(len(ligados)) in str(valor["conta"]), (
+        f"o dublê tem {len(ligados)} controles ligados e o cabeçalho diz "
+        f"{valor['conta']!r}")
+    assert f"{usb} USB" in conta_b and f"{bt} BT" in conta_b, (
+        f"o dublê tem {usb} no cabo e {bt} no rádio, e a segunda metade do "
+        f"cabeçalho diz {conta_b!r}")
+    assert valor["perfil"] == ESTADO["active_profile"], (
+        f"o perfil ativo do dublê é {ESTADO['active_profile']!r} e a tela "
+        f"receberia {valor['perfil']!r}")
+    assert str(valor["vel-cursor"]) == str(rato["speed"]), (
+        f"o dublê manda `speed={rato['speed']}` e o campo diz "
+        f"{valor['vel-cursor']!r}")
+    assert str(valor["vel-rolagem"]) == str(rato["scroll_speed"]), (
+        f"o dublê manda `scroll_speed={rato['scroll_speed']}` e o campo diz "
+        f"{valor['vel-rolagem']!r}")
+
+    # OS DOIS CARTÕES. Quem diz qual controle caiu em `p1` é a mesa do produto
+    # (`mesa_viva`, dona da ordem); o que ele É — cabo ou rádio, primário ou não
+    # — sai do dublê, e é contra isso que a linha do cartão é conferida.
+    por_uniq = {str(c["uniq"]): c for c in CONTROLES}
+    conferidos = 0
+    for lugar in mesa_viva.mesa_do_estado(ESTADO, {}):
+        endereco = f"{lugar['pref']}·navega"
+        if endereco not in valor:
+            continue  # o desenho só tem dois cartões; o terceiro não aparece
+        c = por_uniq[str(lugar["uniq"])]
+        via = "USB" if c.get("transport") == "usb" else "BT"
+        papel = "Navega o PC" if c.get("is_primary") else "Só a janela"
+        linha = str(valor[endereco])
+        assert via in linha and papel in linha, (
+            f"{endereco}: o dublê pôs neste lugar um controle no {via} que "
+            f"{papel.lower()}, e a linha do cartão diz {linha!r}")
+        conferidos += 1
+    assert conferidos == 2, (
+        f"conferi {conferidos} cartões e o desenho tem 2 — se o número caiu, um "
+        "cartão perdeu o endereço e saiu da conferência sem reprovar nada.")

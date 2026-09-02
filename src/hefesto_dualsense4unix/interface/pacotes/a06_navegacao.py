@@ -50,6 +50,24 @@ valer, o "Guardar" nunca recebe uma forma diferente do perfil.** A cura é o
 TODA lista e TODO campo digitável das dez abas (o editor da Perfis, os
 `<select>` da Conexões), não só para esta aba. Por isso não se cura aqui.
 
+E O SEGUNDO DEFEITO DO PILOTO, medido em 02/09/2026 e também relatado: **a frase
+de recusa NÃO CHEGA À TELA DELA.** O `except` de `trabalhar()`
+(`hefesto_vivo.py:758-771`) faz duas coisas e volta — grava `self.desfechos`,
+que só a régua do aparelho lê, e imprime no `stderr`. Não chama `_js`, não chama
+`window.__hef`, e `pintar()` não tem canal para mensagem: varre `fita`,
+`blocos`, `mesa`, `vazios` e `colunas`, e nada mais. **Toda frase de recusa
+deste arquivo é escrita para o dia em que o piloto ganhar onde mostrá-la** — o
+que ela muda HOJE é o DESFECHO que a régua do aparelho lê, e essa é a diferença
+entre "recusou dizendo" e "disse aplicado e nada mudou".
+
+OS DOIS `return` MUDOS MORRERAM — 02/09/2026, corretivo. O "Guardar" e o "Voltar
+ao padrão" saíam sem gravar, sem chamar e **sem uma palavra** quando não havia o
+que fazer. No "Guardar" isso era cruel: a trava contra o apagador manda *"espere
+a tabela se preencher e clique de novo"*, e o segundo clique caía exatamente
+nesse `return`. Uma recusa que instrui a repetir o gesto e depois não responde
+nada promete que a segunda tentativa funciona. Os dois passaram a RECUSAR
+DIZENDO — ver `guardar_definicoes` e `padrao_definicoes`.
+
 FATO SUBSTITUÍDO (02/09/2026): **"esta aba MENCIONA 7 campos e PINTA 3"** —
 escrito a partir do `--passear`, que imprime `06-navegacao.html  1  3`. Ela
 pinta os OITO elementos endereçados. O `3` é contagem de MUDANÇA: o `escrever()`
@@ -160,6 +178,28 @@ def _nome_do_botao(botao: str) -> str:
     para a tela — ela lia *"estas linhas ficaram sem quem as atenda:
     touchpad_left_press"*, que é jargão de kernel na cara de quem clicou.
 
+    FATO SUBSTITUÍDO — 02/09/2026, corretivo. Este parágrafo citava TRÊS ids
+    como curados: `l2`, `touchpad_left_press` e `r3_direcao`. **Os dois eixos
+    continuam crus**, e a medição é de um comando:
+
+        _nome_do_botao('l2')                  → 'L2 (gatilho esquerdo)'
+        _nome_do_botao('touchpad_left_press') → 'Touchpad — lado esquerdo'
+        _nome_do_botao('r3_direcao')          → 'r3_direcao'
+        _nome_do_botao('l3_direcao')          → 'l3_direcao'
+
+    São 21 botões em `acoes.BOTOES` e 20 nomes em `_BUTTON_LABELS`, e os dois
+    que faltam são a DIREÇÃO dos analógicos. A cura mora no MOTOR
+    (`app/actions/input_actions.py:129`), não aqui — copiar duas linhas para
+    dentro deste arquivo criaria a segunda tabela que o
+    `test_o_nome_do_botao_e_o_do_motor_e_nao_uma_segunda_tabela` existe para
+    impedir, e a tela passaria a chamar o mesmo botão por dois nomes.
+
+    O DANO HOJE É DE FORMA, e por isso não se força a cura: `acoes.resolver()`
+    (`core/acoes_de_botao.py:285`) pula os eixos, então eles nunca chegam ao
+    `sem_dono` — medido, trocando o `cross`: `sem_dono == ['l2']`. O único
+    caminho que ainda os exporia é o `nao_reconhecidas` do "Guardar", que exige
+    a tela oferecer um rótulo que o produto não conhece.
+
     O IMPORT É TARDIO, E É POR ISSO: `input_actions` puxa GTK no topo (e
     `mouse_actions` junto). Os pacotes são puros de propósito — importáveis sem
     janela, testáveis sem display —, e um import no topo deste arquivo faria a
@@ -264,9 +304,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # ninguém mediu. Chave ausente = a pintura não toca no `<select>`.
     #
     # E ela é o ÚNICO canal de recusa VISÍVEL desta aba: um gesto que levanta só
-    # imprime no terminal (`hefesto_vivo.py:519`). Escolher "Só fora do jogo",
-    # que não tem dono, deixa a lista parada na opção errada até o tique
-    # seguinte reescrevê-la com o que o daemon diz.
+    # grava o desfecho e imprime no **stderr** do piloto
+    # (`hefesto_vivo.py:768-771`) — o `except` de `trabalhar()` não chama `_js`
+    # nem `window.__hef`, e `pintar()` não tem campo para mensagem. Escolher
+    # "Só fora do jogo", que não tem dono, deixa a lista parada na opção errada
+    # até o tique seguinte reescrevê-la com o que o daemon diz.
     if "keyboard_emulation" in st:
         mesa["teclado-estado"] = (
             TECLADO_LIGADA if tecla.get("enabled") else TECLADO_DESLIGADA)
@@ -583,9 +625,16 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     congelaria o padrão VELHO sem ninguém ter escolhido isso. `button_actions`
     guarda diferença, e é o que o `None` do campo quer dizer: herda.
 
-    E QUANDO NADA MUDOU, ele grava `None` — que apaga o campo. É o mesmo estado
-    de um perfil que nunca foi editado, e não um `{}`, que seria "nenhum botão
-    faz nada".
+    O CAMPO ZERADO É `None`, e nunca `{}`: `None` é o mesmo estado de um perfil
+    que nunca foi editado, e `{}` seria "nenhum botão faz nada". Depois das duas
+    recusas abaixo, o único caminho que ainda grava `None` é o perfil que já
+    tinha `{}` — a normalização de um estado que o esquema não pretende.
+
+    FATO SUBSTITUÍDO (02/09/2026, corretivo): esta linha dizia *"e quando nada
+    mudou, ele grava `None` — que apaga o campo"*. **Nada mudou deixou de gravar
+    coisa alguma.** Com o perfil guardando escolhas, a trava recusa; com o perfil
+    já igual à tela, a recusa nova diz que já está guardado. Nenhum dos dois
+    chega ao disco.
 
     ELE ERA UM APAGADOR COM RÓTULO DE "GUARDAR", e isso foi medido em
     02/09/2026: as 21 opções que a tela mostrava eram **exatamente**
@@ -647,8 +696,29 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     loader = perfil._com_o_src()
     prof = loader.load_profile(nome)
     novo = diferentes or None
+    # NADA A GRAVAR **É UM DESFECHO, E ELE FALA** — 02/09/2026, corretivo. Aqui
+    # havia um `return` seco, e ele era o outro lado da recusa logo abaixo: a
+    # trava manda "espere a tabela se preencher e clique de novo", e o segundo
+    # clique caía exatamente NESTE `return` — sem gravar, sem chamar e sem uma
+    # palavra. Encenado com dublê de disco e ponte muda:
+    #
+    #     1º clique (tabela ainda no desenho)  → RuntimeError, com a frase
+    #     2º clique (tabela cheia, = ao perfil) → voltou SEM levantar, gravou 0
+    #
+    # Uma recusa que INSTRUI a repetir o gesto e depois não responde nada é pior
+    # que uma recusa seca: ela promete que a segunda tentativa funciona. E um
+    # gesto que devolve `None` não toca o DOM (`hefesto_vivo._deu_certo`), logo
+    # o segundo clique era o botão que responde calado — o defeito que esta casa
+    # mais persegue.
     if prof.button_actions == novo:
-        return
+        guardadas = ("nenhuma escolha sua: as 21 linhas estão no de fábrica"
+                     if not novo else
+                     f"{len(novo)} escolha(s) sua(s)")
+        raise RuntimeError(
+            f"não havia o que guardar — o perfil “{nome}” já tem exatamente o "
+            f"que a tabela mostra ({guardadas}). Está guardado. Para mudar "
+            "alguma coisa, troque a linha antes de clicar; para voltar tudo ao "
+            "de fábrica, use o “Voltar ao padrão” ao lado.")
     # A TRAVA CONTRA O APAGADOR — 02/09/2026. "Nada diferente do de fábrica" só
     # quer dizer "ela zerou as 21 linhas" DEPOIS que as 21 linhas mostraram o
     # que o perfil guarda. Elas mostram desde que a página foi publicada, mas
@@ -735,8 +805,16 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if prof.key_bindings is None and prof.button_actions is None:
         # JÁ ESTÁ DE FÁBRICA. Gravar de novo trocaria a data do arquivo e faria
         # o daemon reaplicar um perfil idêntico — barulho sem efeito, e um
-        # `profile.switch` no meio de uma partida não é de graça.
-        return
+        # `profile.switch` no meio de uma partida não é de graça. **Mas não
+        # fazer nada não é não dizer nada:** até 02/09/2026 este ramo era um
+        # `return` seco, e a régua do aparelho o lia como "disse aplicado e
+        # nada mudou" — indistinguível de um botão que mentiu. Agora ele
+        # RECUSA DIZENDO, que é o desfecho verdadeiro: não havia o que voltar.
+        # Nada é gravado e o daemon continua sem ser incomodado.
+        raise RuntimeError(
+            f"não havia o que voltar — o perfil “{nome}” já está no de fábrica "
+            "nas 21 linhas de o que cada botão faz. Não gravei nada e não "
+            "incomodei o daemon.")
     perfil.gravar_e_reaplicar(
         prof.model_copy(update={"key_bindings": None, "button_actions": None}), ctx, p)
 
@@ -847,11 +925,12 @@ SEM_GESTO = {
 #: estado do daemon antes e depois do clique não tem como ver o efeito destes
 #: dois, por mais que eles funcionem — e eles funcionam:
 #:
-#:     gesto                              desfecho   chamou             gravou
-#:     guardar-definicoes (linha trocada) ACEITOU    profile_switch     1 perfil
-#:     guardar-definicoes (forma de fábr.) RECUSA     NADA               0
-#:     padrao-definicoes                  ACEITOU    profile_switch     1 perfil
-#:     padrao-definicoes (já de fábrica)  ACEITOU    NADA               0
+#:     gesto                               desfecho          chamou      gravou
+#:     guardar-definicoes (linha trocada)  ACEITOU           switch      1 perfil
+#:     guardar-definicoes (forma de fábr.) RECUSA dizendo    NADA        0
+#:     guardar-definicoes (= ao perfil)    RECUSA dizendo    NADA        0
+#:     padrao-definicoes                   ACEITOU           switch      1 perfil
+#:     padrao-definicoes (já de fábrica)   RECUSA dizendo    NADA        0
 #:
 #: A PROVA DELES É O ARQUIVO — mesma forma do `teto-da-vibracao` da aba Conexões
 #: (`a08_conexoes.SEM_ECO`), que também grava no perfil: efeito vivo pelo
@@ -859,11 +938,16 @@ SEM_GESTO = {
 #: `test_a_06_nao_manda_para_o_vazio.py` e
 #: `test_o_padrao_dos_atalhos_volta_de_fabrica.py`, contra o disco.
 #:
-#: A ÚLTIMA LINHA DA TABELA É O QUE OS PÔS AQUI: `padrao-definicoes` com o
-#: perfil já de fábrica sai pelo `return` de "nada a fazer" — sem gravar, sem
-#: chamar e sem levantar. Para a régua do aparelho isso é indistinguível de um
-#: botão que mentiu, e foi assim que ele entrou na lista dos dezesseis
-#: "aplicados que não aplicam" de 02/09.
+#: FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que *"a última
+#: linha da tabela é o que os pôs aqui"*: `padrao-definicoes` com o perfil já de
+#: fábrica saindo pelo `return` de "nada a fazer", sem gravar, sem chamar e sem
+#: levantar. **Isso caducou porque o `return` mudo morreu** — os dois ramos de
+#: "nada a fazer" (aqui e no `guardar-definicoes`) passaram a RECUSAR DIZENDO, e
+#: `recusou dizendo` vem ANTES de `aceito sem eco` na ordem de `classe()`
+#: (`hefesto_vivo.py:1492`). Logo esta declaração NÃO cobre mais o caso do
+#: não-fazer-nada calado: ele voltou a ser visível para a régua do aparelho, com
+#: nome próprio. O que `SEM_ECO` cobre é só o que está escrito acima — o daemon
+#: não publica conteúdo de perfil, e o efeito das linhas "ACEITOU" mora no disco.
 #:
 #: O `teclado` NÃO ENTRA, e a diferença é medida: ele chama
 #: `keyboard.emulation.set`, e `keyboard_emulation.enabled` VOLTA no
