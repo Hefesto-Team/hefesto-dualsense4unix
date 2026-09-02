@@ -33,7 +33,7 @@ def _por_a_chave(config_dir: Path) -> Path:
     alvo.parent.mkdir(parents=True, exist_ok=True)
     alvo.write_text(
         "desligado em 2026-08-29T21:00:00-03:00 por hefesto-chave\n"
-        "para religar:  hefesto-chave estavel on\n",
+        "para religar:  hefesto-chave on\n",
         encoding="utf-8",
     )
     return alvo
@@ -79,17 +79,21 @@ def test_chave_ilegivel_conta_como_desligado(tmp_path):
     assert "não pôde ser lida" in motivo
 
 
-def test_a_chave_de_uma_casa_nao_alcanca_a_outra(tmp_path):
-    """Desligar o estável não pode desligar o de desenvolvimento junto —
-    é literalmente o pedido dela ("garantir que ele funcione enquanto eu tenho
-    a versão estável instalada")."""
-    casa_dela = tmp_path / "hefesto-dualsense4unix"
-    casa_de_dev = tmp_path / "hefesto-dev-dualsense4unix"
-    casa_dela.mkdir()
-    casa_de_dev.mkdir()
-    _por_a_chave(casa_dela)
-    assert chave.motivo_do_desligamento(casa_dela) is not None
-    assert chave.motivo_do_desligamento(casa_de_dev) is None
+def test_a_chave_e_do_config_dir_e_nao_da_pasta_vizinha(tmp_path):
+    """A chave desliga o app CUJO `config_dir` a guarda, e mais nada.
+
+    O caso mede a única coisa que o produto promete aqui: `motivo_do_
+    desligamento` olha o diretório que recebeu, e não sai procurando arquivo de
+    chave em lugar nenhum. Uma implementação que varresse `~/.config` inteiro
+    passaria a desligar o app por causa de um arquivo alheio.
+    """
+    dele = tmp_path / "hefesto-dualsense4unix"
+    vizinha = tmp_path / "outro-app-qualquer"
+    dele.mkdir()
+    vizinha.mkdir()
+    _por_a_chave(dele)
+    assert chave.motivo_do_desligamento(dele) is not None
+    assert chave.motivo_do_desligamento(vizinha) is None
 
 
 def test_o_recado_diz_o_que_por_que_e_o_que_fazer():
@@ -131,7 +135,7 @@ def test_o_botao_da_gui_nao_contorna_a_chave_pelo_popen():
 
     `app/actions/daemon_actions.py` sobe o daemon por `Popen` quando o
     `systemctl start` falha — e `systemctl start` numa unit mascarada falha
-    SEMPRE. Sem esta guarda, `hefesto-chave estavel off` seria desfeito por um
+    SEMPRE. Sem esta guarda, `hefesto-chave off` seria desfeito por um
     clique no botão "Ligar". Arranque a guarda e este teste reprova.
     """
     fonte = (
@@ -167,12 +171,13 @@ def test_o_script_da_chave_usa_os_nomes_de_unit_que_existem():
     assert "hefesto-dualsense4unix-steam-input-guard" not in script
 
 
-def test_a_chave_nao_toca_a_camada_compartilhada():
+def test_a_chave_nao_toca_a_camada_da_maquina():
     """Regras udev, broker e bt-agent são da MÁQUINA, não do app.
 
-    O app de dev precisa deles para enxergar o aparelho, e mexer neles exigiria
-    sudo toda vez — custo que ela vetou em 22/08/2026. Se algum dia a chave
-    ganhar um `systemctl stop hefesto-hidraw-broker`, este teste reprova.
+    Mexer neles exigiria sudo toda vez — custo que ela vetou em 22/08/2026 —, e
+    desligá-los cegaria outra coisa qualquer que dependa do aparelho. Se algum
+    dia a chave ganhar um `systemctl stop hefesto-hidraw-broker`, este teste
+    reprova.
     """
     script = (RAIZ / "scripts" / "hefesto-chave.sh").read_text(encoding="utf-8")
     linhas_de_acao = [
@@ -192,9 +197,9 @@ def test_a_chave_nao_toca_a_camada_compartilhada():
 
 
 def test_a_chave_nao_mata_por_pgrep():
-    """`pgrep -f hefesto` alcançaria o OUTRO Hefesto — e este próprio script.
+    """`pgrep -f hefesto` alcançaria este próprio script, e o mataria.
 
-    O pid file é a única forma de mirar um processo desta casa e só dele.
+    O pid file é a única forma de mirar o daemon e a janela, e só eles.
     """
     script = (RAIZ / "scripts" / "hefesto-chave.sh").read_text(encoding="utf-8")
     acoes = [
@@ -211,7 +216,7 @@ def test_o_script_e_o_produto_concordam_no_nome_do_arquivo():
 
     Duas linguagens, um nome de arquivo — e nada obriga os dois a concordar.
     Troque uma letra de `chave.NOME_DO_ARQUIVO` ou do script e este teste
-    reprova: sem ele, `hefesto-chave estavel off` escreveria um arquivo que o
+    reprova: sem ele, `hefesto-chave off` escreveria um arquivo que o
     daemon nunca leria, e a chave diria "desliguei" sem ter desligado.
     """
     script = (RAIZ / "scripts" / "hefesto-chave.sh").read_text(encoding="utf-8")

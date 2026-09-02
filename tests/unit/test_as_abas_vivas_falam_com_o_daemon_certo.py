@@ -12,10 +12,10 @@ o nome da casa escrito como literal::
     SOCKET = os.path.join(XDG_RUNTIME_DIR, "hefesto-dualsense4unix",
                           "hefesto-dualsense4unix.sock")
 
-MEDIDO em 30/08 às 00:26, com o daemon de dev no ar e vendo um controle dela: as
-cinco abas vivas diziam ``[Errno 111] Conexão recusada`` e pintavam **5 valores**
-— a tela de "Hefesto desligado" — enquanto o daemon respondia normalmente em
-``/run/user/1000/hefesto-dev-dualsense4unix/``, o diretório ao lado.
+MEDIDO em 30/08 às 00:26, com o daemon no ar e vendo um controle dela: as cinco
+abas vivas diziam ``[Errno 111] Conexão recusada`` e pintavam **5 valores** — a
+tela de "Hefesto desligado" — enquanto o daemon respondia normalmente no
+diretório ao lado. O caminho digitado e o caminho de verdade não eram o mesmo.
 
 O dono verdadeiro sempre existiu: `utils/xdg_paths.ipc_socket_path()`, que deriva
 o diretório de `identidade.atual().slug` e ainda isola o socket no modo fake
@@ -133,20 +133,25 @@ def test_toda_aba_viva_deriva_a_raiz_do_proprio_arquivo(nome: str) -> None:
 # ---------------------------------------------------------------------------
 # 2. O SOCKET SEGUE A VARIANTE
 # ---------------------------------------------------------------------------
-def _mesa_viva_recarregado(monkeypatch: pytest.MonkeyPatch, variante: str | None):
-    """`mesa_viva` importado com a variante que se pedir.
+def _mesa_viva_recarregado(monkeypatch: pytest.MonkeyPatch, slug: str | None = None):
+    """`mesa_viva` importado do zero, opcionalmente com OUTRO slug de app.
 
-    Recarregar `identidade` e `xdg_paths` é OBRIGATÓRIO: o `_DIRS` do `xdg_paths`
-    é calculado no import, logo ele congela a variante de quem importou primeiro.
+    Recarregar `xdg_paths` é OBRIGATÓRIO: o `_DIRS` dele é calculado no import,
+    logo ele congela o slug de quem importou primeiro. O `slug` de mentira é o
+    que dá a MORDIDA: um caminho montado à mão no `mesa_viva` não muda quando o
+    produto muda o dele, e é assim que as duas versões ficam vivas ao mesmo
+    tempo.
     """
     from hefesto_dualsense4unix.utils import identidade
 
-    if variante is None:
-        monkeypatch.delenv(identidade.VARIANTE_ENV, raising=False)
-    else:
-        monkeypatch.setenv(identidade.VARIANTE_ENV, variante)
-    monkeypatch.syspath_prepend(str(FERRAMENTAS))
     importlib.reload(identidade)
+    if slug is not None:
+        from dataclasses import replace
+
+        monkeypatch.setattr(
+            identidade, "HEFESTO", replace(identidade.HEFESTO, slug=slug)
+        )
+    monkeypatch.syspath_prepend(str(FERRAMENTAS))
     xdg = importlib.import_module("hefesto_dualsense4unix.utils.xdg_paths")
     importlib.reload(xdg)
     mesa = importlib.import_module("mesa_viva")
@@ -164,20 +169,22 @@ def _devolver_os_modulos():
     sys.modules.pop("mesa_viva", None)
 
 
-def test_o_socket_das_abas_muda_com_a_variante(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`HEFESTO_VARIANTE=dev` tem de mudar o socket. É a régua que morde.
+def test_o_socket_das_abas_segue_o_nome_do_app(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Troque o slug em `utils/identidade.py` e o socket da aba TEM de mudar.
 
-    Com o caminho montado à mão que havia até 30/08, os dois lados desta
-    comparação eram a MESMA string — e era esse o defeito.
+    É a régua que morde. Com o caminho montado à mão que havia até 30/08, os
+    dois lados desta comparação eram a MESMA string — e era esse o defeito: a
+    aba dizia `[Errno 111] Conexão recusada` enquanto o daemon respondia
+    normalmente no diretório ao lado.
     """
-    dela = _mesa_viva_recarregado(monkeypatch, None).socket_do_daemon()
-    dev = _mesa_viva_recarregado(monkeypatch, "dev").socket_do_daemon()
-    assert dela != dev, (
-        "o socket é o mesmo nas duas casas: a aba de desenvolvimento vai falar "
-        f"com o daemon dela ({dela})"
+    de_verdade = _mesa_viva_recarregado(monkeypatch).socket_do_daemon()
+    inventado = _mesa_viva_recarregado(monkeypatch, "hefesto-de-mentira").socket_do_daemon()
+    assert de_verdade != inventado, (
+        "o socket da aba não mudou quando o nome do app mudou — ele está "
+        f"cravado à mão em vez de sair de `xdg_paths` ({de_verdade})"
     )
-    assert "hefesto-dev-dualsense4unix" in dev
-    assert "hefesto-dev-dualsense4unix" not in dela
+    assert "hefesto-de-mentira" in inventado
+    assert "hefesto-de-mentira" not in de_verdade
 
 
 def test_o_socket_das_abas_e_o_mesmo_que_o_produto_usa(
@@ -187,29 +194,28 @@ def test_o_socket_das_abas_e_o_mesmo_que_o_produto_usa(
 
     Comparar com `xdg_paths.ipc_socket_path()` é o que impede a cura de virar
     uma terceira cópia: se alguém reescrever o caminho à mão de novo, mesmo
-    acertando a variante, esta régua reprova no dia em que o produto mudar o
+    acertando o nome de hoje, esta régua reprova no dia em que o produto mudar o
     dele — que é exatamente quando as duas versões ficariam vivas ao mesmo tempo.
     """
-    for variante in (None, "dev"):
-        mesa = _mesa_viva_recarregado(monkeypatch, variante)
+    for slug in (None, "hefesto-de-mentira"):
+        mesa = _mesa_viva_recarregado(monkeypatch, slug)
         xdg = importlib.import_module("hefesto_dualsense4unix.utils.xdg_paths")
         assert mesa.socket_do_daemon() == str(xdg.ipc_socket_path())
 
 
 def test_o_socket_e_funcao_e_nao_constante() -> None:
-    """Constante calculada no import congela a variante do primeiro importador.
+    """Constante calculada no import congela o nome do primeiro importador.
 
     Uma `SOCKET = …` no topo do módulo passaria nos dois testes acima quando
     rodada sozinha e falharia dentro de um processo que já tivesse importado o
-    módulo com a outra variante — o pior tipo de reprovação, a que depende da
-    ordem dos testes.
+    módulo antes — o pior tipo de reprovação, a que depende da ordem dos testes.
     """
     fonte = _fonte("mesa_viva.py")
     assert re.search(r"^def socket_do_daemon\b", fonte, re.M), (
         "`socket_do_daemon()` sumiu — o socket voltou a ser constante?"
     )
     assert not re.search(r"^SOCKET\s*=", fonte, re.M), (
-        "voltou a haver uma constante `SOCKET` no topo: ela congela a variante "
+        "voltou a haver uma constante `SOCKET` no topo: ela congela o nome "
         "de quem importar primeiro."
     )
 

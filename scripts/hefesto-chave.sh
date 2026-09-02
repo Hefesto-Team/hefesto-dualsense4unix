@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
-# hefesto-chave — desliga um Hefesto por completo, e o religa igualzinho.
+# hefesto-chave — desliga o Hefesto por completo, e o religa igualzinho.
 #
 # Pedido dela, 29/08/2026: *"temos que garantir que eu possa DESLIGAR o impacto
-# do outro Hefesto por completo e RELIGAR ele. Não quero manchar o nosso novo
-# produto. E quero garantir que ele funcione enquanto eu tenho a versão estável
-# instalada (com o botão de desligar funcionando sem zuar o resto)."*
+# por completo e RELIGAR. (com o botão de desligar funcionando sem zuar o
+# resto)."*
 #
-#   hefesto-chave estavel off    desliga o Hefesto ESTÁVEL
-#   hefesto-chave estavel on     religa o Hefesto ESTÁVEL
-#   hefesto-chave dev off|on     idem, para o de desenvolvimento
-#   hefesto-chave estado         diz quem está ligado, e desde quando
+#   hefesto-chave off       desliga o Hefesto por completo
+#   hefesto-chave on        religa, exatamente como estava
+#   hefesto-chave estado    diz o que está ligado, e desde quando
 #
 # AS DUAS CINTAS, E POR QUE SÃO DUAS (as duas medidas em 29/08/2026)
 # -------------------------------------------------------------------
@@ -28,9 +26,8 @@
 # ---------------------------------
 # Regras udev, o broker hidraw (`hefesto-hidraw-broker.{service,socket}`), o
 # `hefesto-bt-agent`, o `bt-health-watchdog`, `/usr/local/lib/**`, perfis e
-# config. Essa é a camada COMPARTILHADA: o app de desenvolvimento PRECISA dela
-# para enxergar o aparelho, e mexer nela exigiria `sudo` toda vez — que é
-# exatamente o custo que ela vetou em 22/08/2026. Zero sudo aqui.
+# config. Essa é a camada da MÁQUINA, e mexer nela exigiria `sudo` toda vez —
+# que é exatamente o custo que ela vetou em 22/08/2026. Zero sudo aqui.
 #
 # E NÃO TOCA `hefesto-medicao-elapsed.{service,timer}`: apesar do nome, não é
 # do produto (a própria unit se descreve como "Medicao ELAPSED (descartavel)").
@@ -39,11 +36,11 @@ set -euo pipefail
 
 APLICATIVOS="${HOME}/.local/share/applications"
 
-# As units de USUÁRIO de cada casa. Conferidas na máquina dela em 29/08 com
+# As units de USUÁRIO do app. Conferidas na máquina dela em 29/08 com
 # `systemctl --user list-unit-files`: o vigia da Steam chama-se
 # `hefesto-steam-input-guard.*`, e NÃO `hefesto-dualsense4unix-steam-input-*`
 # — errar o nome faria o `stop` devolver sucesso sem parar coisa nenhuma.
-UNITS_ESTAVEL=(
+UNITS=(
     "hefesto-dualsense4unix.service"
     "hefesto-dualsense4unix-storm-watch.service"
     "hefesto-dualsense4unix-gui-hotplug.service"
@@ -51,48 +48,26 @@ UNITS_ESTAVEL=(
     "hefesto-steam-input-guard.timer"
     "hefesto-steam-input-guard.service"
 )
-UNITS_DEV=(
-    "hefesto-dev-dualsense4unix.service"
-)
 
 uso() {
     cat <<'FIM'
 uso:
-  hefesto-chave estavel off    desliga o Hefesto estável por completo
-  hefesto-chave estavel on     religa o Hefesto estável
-  hefesto-chave dev off|on     o mesmo, para o Hefesto de desenvolvimento
-  hefesto-chave estado         quem está ligado, e desde quando
+  hefesto-chave off       desliga o Hefesto por completo
+  hefesto-chave on        religa, exatamente como estava
+  hefesto-chave estado    o que está ligado, e desde quando
 
 Nada aqui pede sudo, e nada aqui apaga arquivo: `off` é inteiramente desfeito
 por `on`.
 FIM
 }
 
-# --- onde mora a config de cada casa ----------------------------------------
-config_de() {
-    local casa="$1" base="${XDG_CONFIG_HOME:-${HOME}/.config}"
-    case "$casa" in
-        estavel) printf '%s/hefesto-dualsense4unix\n' "$base" ;;
-        dev)     printf '%s/hefesto-dev-dualsense4unix\n' "$base" ;;
-        *)       return 1 ;;
-    esac
-}
-
-desktop_de() {
-    case "$1" in
-        estavel) printf '%s/hefesto-dualsense4unix.desktop\n' "$APLICATIVOS" ;;
-        dev)     printf '%s/hefesto-dev-dualsense4unix.desktop\n' "$APLICATIVOS" ;;
-        *)       return 1 ;;
-    esac
-}
-
-units_de() {
-    case "$1" in
-        estavel) printf '%s\n' "${UNITS_ESTAVEL[@]}" ;;
-        dev)     printf '%s\n' "${UNITS_DEV[@]}" ;;
-        *)       return 1 ;;
-    esac
-}
+# --- os três caminhos, todos derivados do MESMO slug -------------------------
+# O slug é o de `utils/identidade.py`. Ele está escrito aqui porque este script
+# roda sem venv e sem python; `test_o_script_e_o_produto_concordam_no_caminho`
+# é quem cobra que as duas grafias não divirjam.
+SLUG="hefesto-dualsense4unix"
+CONFIG="${XDG_CONFIG_HOME:-${HOME}/.config}/${SLUG}"
+DESKTOP="${APLICATIVOS}/${SLUG}.desktop"
 
 existe_unit() {
     systemctl --user cat "$1" >/dev/null 2>&1
@@ -100,43 +75,37 @@ existe_unit() {
 
 # --- o retrato ---------------------------------------------------------------
 estado() {
-    local casa
-    for casa in estavel dev; do
-        local cfg chave desk
-        cfg="$(config_de "$casa")"
-        chave="${cfg}/DESLIGADO-pela-chave.flag"
-        desk="$(desktop_de "$casa")"
+    local chave="${CONFIG}/DESLIGADO-pela-chave.flag"
 
-        printf '\n== Hefesto %s ==\n' "$casa"
-        if [[ -f "$chave" ]]; then
-            printf '  chave     : DESLIGADO\n'
-            sed 's/^/              /' "$chave"
-        else
-            printf '  chave     : ligado (sem chave posta)\n'
-        fi
+    printf '\n== Hefesto ==\n'
+    if [[ -f "$chave" ]]; then
+        printf '  chave     : DESLIGADO\n'
+        sed 's/^/              /' "$chave"
+    else
+        printf '  chave     : ligado (sem chave posta)\n'
+    fi
 
-        local achou=0 u
-        while IFS= read -r u; do
-            existe_unit "$u" || continue
-            achou=1
-            printf '  %-42s %-10s %s\n' "$u" \
-                "$(systemctl --user is-enabled "$u" 2>&1 | head -1)" \
-                "$(systemctl --user is-active "$u" 2>&1 | head -1)"
-        done < <(units_de "$casa")
-        [[ $achou -eq 1 ]] || printf '  (nenhuma unit desta casa instalada)\n'
-
-        if [[ -f "$desk" ]]; then
-            if grep -qx 'Hidden=true' "$desk"; then
-                printf '  atalho    : escondido da dock\n'
-            else
-                printf '  atalho    : visível\n'
-            fi
-        else
-            printf '  atalho    : não instalado\n'
-        fi
+    local achou=0 u
+    for u in "${UNITS[@]}"; do
+        existe_unit "$u" || continue
+        achou=1
+        printf '  %-42s %-10s %s\n' "$u" \
+            "$(systemctl --user is-enabled "$u" 2>&1 | head -1)" \
+            "$(systemctl --user is-active "$u" 2>&1 | head -1)"
     done
+    [[ $achou -eq 1 ]] || printf '  (nenhuma unit instalada)\n'
 
-    printf '\n== a camada COMPARTILHADA (a chave nunca a toca) ==\n'
+    if [[ -f "$DESKTOP" ]]; then
+        if grep -qx 'Hidden=true' "$DESKTOP"; then
+            printf '  atalho    : escondido da dock\n'
+        else
+            printf '  atalho    : visível\n'
+        fi
+    else
+        printf '  atalho    : não instalado\n'
+    fi
+
+    printf '\n== a camada da MÁQUINA (a chave nunca a toca) ==\n'
     local s
     for s in hefesto-hidraw-broker.socket hefesto-bt-agent.service; do
         printf '  %-38s %s\n' "$s" "$(systemctl is-active "$s" 2>&1 | head -1)"
@@ -149,14 +118,12 @@ estado() {
 
 # --- desligar ----------------------------------------------------------------
 desligar() {
-    local casa="$1" cfg desk u
-    cfg="$(config_de "$casa")" || { uso; exit 2; }
-    desk="$(desktop_de "$casa")"
+    local u
 
-    printf 'desligando o Hefesto %s\n\n' "$casa"
+    printf 'desligando o Hefesto\n\n'
 
     # 1. parar, desabilitar e MASCARAR o que existir.
-    while IFS= read -r u; do
+    for u in "${UNITS[@]}"; do
         if ! existe_unit "$u"; then
             printf '  %-42s (não instalada, pulei)\n' "$u"
             continue
@@ -165,27 +132,23 @@ desligar() {
         systemctl --user disable "$u" >/dev/null 2>&1 || true
         systemctl --user mask "$u" >/dev/null 2>&1 || true
         printf '  %-42s parada, desabilitada e mascarada\n' "$u"
-    done < <(units_de "$casa")
+    done
 
     # 2. a chave em disco — a cinta que a máscara não dá.
-    mkdir -p "$cfg"
+    mkdir -p "$CONFIG"
     {
         printf 'desligado em %s por hefesto-chave\n' "$(date -Is)"
-        printf 'para religar:  hefesto-chave %s on\n' "$casa"
-    } > "${cfg}/DESLIGADO-pela-chave.flag"
-    printf '  chave posta em %s\n' "${cfg}/DESLIGADO-pela-chave.flag"
+        printf 'para religar:  hefesto-chave on\n'
+    } > "${CONFIG}/DESLIGADO-pela-chave.flag"
+    printf '  chave posta em %s\n' "${CONFIG}/DESLIGADO-pela-chave.flag"
 
     # 3. o processo avulso — pelo PID FILE, nunca por `pgrep -f`.
-    #    `pgrep -f hefesto` alcançaria o OUTRO Hefesto (e este script), que é
-    #    precisamente o defeito que esta leva existe para não repetir.
+    #    `pgrep -f hefesto` alcançaria este próprio script, que é precisamente
+    #    o defeito que esta cinta existe para não repetir.
     local runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-    local slug pid f
-    case "$casa" in
-        estavel) slug="hefesto-dualsense4unix" ;;
-        dev)     slug="hefesto-dev-dualsense4unix" ;;
-    esac
+    local pid f
     for f in daemon gui; do
-        local arq="${runtime}/${slug}/${f}.pid"
+        local arq="${runtime}/${SLUG}/${f}.pid"
         [[ -f "$arq" ]] || continue
         pid="$(head -1 "$arq" 2>/dev/null | tr -dc '0-9')"
         [[ -n "$pid" ]] || continue
@@ -196,37 +159,35 @@ desligar() {
 
     # 4. esconder o atalho — a dock não deve oferecer um app desligado.
     #    EDITAR, nunca apagar: `on` tira a linha e o atalho volta inteiro.
-    if [[ -f "$desk" ]] && ! grep -qx 'Hidden=true' "$desk"; then
-        printf 'Hidden=true\n' >> "$desk"
-        printf '  atalho escondido da dock (%s)\n' "$(basename "$desk")"
+    if [[ -f "$DESKTOP" ]] && ! grep -qx 'Hidden=true' "$DESKTOP"; then
+        printf 'Hidden=true\n' >> "$DESKTOP"
+        printf '  atalho escondido da dock (%s)\n' "$(basename "$DESKTOP")"
     fi
     command -v update-desktop-database >/dev/null 2>&1 &&
         update-desktop-database -q "$APLICATIVOS" 2>/dev/null || true
 
     printf '\npronto. Para religar exatamente como estava:\n'
-    printf '    hefesto-chave %s on\n' "$casa"
+    printf '    hefesto-chave on\n'
 }
 
 # --- religar -----------------------------------------------------------------
 religar() {
-    local casa="$1" cfg desk u
-    cfg="$(config_de "$casa")" || { uso; exit 2; }
-    desk="$(desktop_de "$casa")"
+    local u
 
-    printf 'religando o Hefesto %s\n\n' "$casa"
+    printf 'religando o Hefesto\n\n'
 
-    rm -f "${cfg}/DESLIGADO-pela-chave.flag"
+    rm -f "${CONFIG}/DESLIGADO-pela-chave.flag"
     printf '  chave retirada\n'
 
-    if [[ -f "$desk" ]]; then
+    if [[ -f "$DESKTOP" ]]; then
         # `sed -i` só na linha exata que o `off` acrescentou.
-        sed -i '/^Hidden=true$/d' "$desk"
+        sed -i '/^Hidden=true$/d' "$DESKTOP"
         printf '  atalho de volta à dock\n'
     fi
     command -v update-desktop-database >/dev/null 2>&1 &&
         update-desktop-database -q "$APLICATIVOS" 2>/dev/null || true
 
-    while IFS= read -r u; do
+    for u in "${UNITS[@]}"; do
         systemctl --user unmask "$u" >/dev/null 2>&1 || true
         if ! existe_unit "$u"; then
             printf '  %-42s (não instalada, pulei)\n' "$u"
@@ -241,7 +202,7 @@ religar() {
         systemctl --user enable "$u" >/dev/null 2>&1 || true
         systemctl --user start "$u" >/dev/null 2>&1 || true
         printf '  %-42s desmascarada, habilitada e no ar\n' "$u"
-    done < <(units_de "$casa")
+    done
 
     printf '\npronto. Confira com:  hefesto-chave estado\n'
 }
@@ -249,13 +210,8 @@ religar() {
 # --- porta de entrada --------------------------------------------------------
 case "${1:-}" in
     estado|status|"") estado ;;
-    estavel|dev)
-        case "${2:-}" in
-            off|desligar) desligar "$1" ;;
-            on|religar)   religar "$1" ;;
-            *) uso; exit 2 ;;
-        esac
-        ;;
-    -h|--help|ajuda) uso ;;
+    off|desligar)     desligar ;;
+    on|religar)       religar ;;
+    -h|--help|ajuda)  uso ;;
     *) uso; exit 2 ;;
 esac

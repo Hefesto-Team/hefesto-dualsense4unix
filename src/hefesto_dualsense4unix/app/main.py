@@ -195,24 +195,20 @@ def _kill_previous_instances(logger: structlog.stdlib.BoundLogger) -> None:
     Pula próprio PID + PPID. Defesa anti-loop: daemons systemd-managed são
     detectados via /proc/<pid>/status PPid e preservados.
 
-    AS DUAS CASAS (29/08/2026): a LISTA em si mudou de dono e agora vive em
-    `utils/identidade.py`, porque o app de desenvolvimento precisa de padrões
-    que alcancem só os processos DELE. Sem `HEFESTO_VARIANTE` no ambiente os
-    padrões são exatamente os de antes.
+    A LISTA NÃO MORA AQUI: ela é `utils.identidade.atual().padroes_de_matanca`.
+    Um padrão digitado neste arquivo divergiria do nome que o resto do produto
+    usa, e um `pgrep -f` que não casa mata coisa nenhuma — calado.
     """
     own_pid = os.getpid()
     own_ppid = os.getppid()
 
-    # AS DUAS CASAS (29/08/2026): os padrões saem de `utils.identidade`, que só
-    # devolve os DESTA variante. Sem `HEFESTO_VARIANTE` a lista é literalmente a
-    # de sempre — `test_identidade_das_duas_casas.py` trava isso. Com o app de
-    # dev instalado ao lado, nenhum dos dois alcança o outro: `pgrep -f` casa por
-    # SUBSTRING, e "hefesto-dev-dualsense4unix-gui" não contém
-    # "hefesto-dualsense4unix-gui" (por isso o `dev` fica no MEIO do nome).
-    casa = identidade.atual()
-    patterns = list(casa.padroes_de_matanca)
+    # OS PADRÕES SAEM DE `utils.identidade`. E cuidado ao inventar nome novo:
+    # `pgrep -f` casa por SUBSTRING, então um sufixo ("…-gui-teste") conteria o
+    # nome original e o mataria junto.
+    app = identidade.atual()
+    patterns = list(app.padroes_de_matanca)
     # Daemon: pattern separado para checar systemd-managed antes de matar.
-    daemon_pattern = casa.padrao_do_daemon
+    daemon_pattern = app.padrao_do_daemon
 
     def _kill(pid: int, sig: int) -> None:
         if pid in (own_pid, own_ppid):

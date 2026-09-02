@@ -4,7 +4,7 @@
 # runtime-real) para sprints que tocam o daemon.
 #
 # Uso:
-#   ./run.sh                   abre a GUI GTK3 (hefesto-dualsense4unix-gui)
+#   ./run.sh                   abre a INTERFACE (as dez abas em HTML)
 #   ./run.sh --gui             idem
 #   ./run.sh --smoke           boot curto com FakeController USB (2s)
 #   ./run.sh --smoke --bt      boot curto com FakeController BT  (2s)
@@ -27,6 +27,10 @@ TRANSPORT="usb"
 FAKE=0
 FORCE=0
 SMOKE_DURATION="${HEFESTO_DUALSENSE4UNIX_SMOKE_DURATION:-2.0}"
+# O QUE ESTE ARQUIVO NÃO ENTENDE VAI PARA A INTERFACE, e não vira aviso. Sem
+# isto, `./run.sh --oculta` abria uma janela VISÍVEL na tela dela e dizia
+# "argumento desconhecido" — medido em 01/09/2026, com ela usando a máquina.
+EXTRA=()
 
 if [[ $# -eq 0 ]]; then
     MODE="gui"
@@ -41,7 +45,7 @@ for arg in "$@"; do
         --bt)     TRANSPORT="bt" ;;
         --usb)    TRANSPORT="usb" ;;
         --force)  FORCE=1 ;;
-        *) echo "aviso: argumento desconhecido: $arg" ;;
+        *) EXTRA+=("$arg") ;;
     esac
 done
 
@@ -75,7 +79,25 @@ if [[ "$MODE" == "gui" ]]; then
        && [[ "${XDG_CURRENT_DESKTOP:-}${XDG_SESSION_DESKTOP:-}" == *[Cc][Oo][Ss][Mm][Ii][Cc]* ]]; then
         export GDK_BACKEND=x11
     fi
-    exec python3 -m hefesto_dualsense4unix.app.main
+    # A INTERFACE QUE ABRE É A HTML — 01/09/2026, ordem dela: *"tudo tem que
+    # apontar pro nosso lancher html e tudo tem que apontar pros arquivos na
+    # nossa pasta"*, e antes disso *"a versão antiga não segue disponível, vai
+    # gerar confusão nos agentes. Só a nova está disponível e deve ser
+    # integrada"*.
+    #
+    # Aqui havia `python3 -m hefesto_dualsense4unix.app.main`, a janela GTK
+    # velha — e ela era o que o `.desktop` instalado abria, porque o `install.sh`
+    # aponta o `Exec=` para este arquivo. O motor não sumiu: os 74 handlers de
+    # `app/actions/`, o `app/ipc_bridge.py` e as camadas de `app/telas/` são o
+    # que a interface nova chama. O que mudou é o LANÇADOR.
+    #
+    # Passa pelo `scripts/abrir_interface.py` de propósito: é ele que veste
+    # prgname, WM_CLASS e ícone no PROCESSO antes da primeira janela nascer —
+    # sem isso a dock não acha o `.desktop` e o ícone sai genérico.
+    # `${EXTRA[@]+…}` e não `${EXTRA[@]}`: sob `set -u`, um array VAZIO expande
+    # para uma string vazia em bash 4.3 e anteriores, e a interface receberia um
+    # argumento em branco. A forma com `+` não expande nada quando não há nada.
+    exec python3 "${HERE}/scripts/abrir_interface.py" ${EXTRA[@]+"${EXTRA[@]}"}
 fi
 
 export HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT="$TRANSPORT"

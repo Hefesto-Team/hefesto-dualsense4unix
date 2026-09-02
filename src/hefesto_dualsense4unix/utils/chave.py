@@ -29,9 +29,9 @@ subir, DIZ por quê, diz desde quando, e imprime o comando exato que desfaz. O
 defeito mais caro desta casa é a cura escrita e nunca ligada; o segundo é a
 ausência de notícia lida como sucesso. Esta chave não pode ser nenhum dos dois.
 
-O arquivo mora no ``config_dir()`` da variante que está sendo desligada, então
-desligar o estável não alcança o de dev e vice-versa — cada casa tem a sua
-chave, pelo mesmo slug que separa perfis e socket (``utils/identidade.py``).
+O arquivo mora no ``config_dir()``, pelo mesmo slug que nomeia perfis e socket
+(``utils/identidade.py``) — e é isso que faz o ``hefesto-chave`` e o daemon
+falarem do MESMO arquivo sem nenhum dos dois digitar o caminho do outro.
 """
 from __future__ import annotations
 
@@ -59,11 +59,9 @@ NOME_DO_ARQUIVO = "DESLIGADO-pela-chave.flag"
 
 
 def caminho_da_chave(config_dir: Path | None = None) -> Path:
-    """Onde a chave desta variante mora.
+    """Onde a chave mora: no ``config_dir()`` do app.
 
-    `config_dir` explícito existe para a chave poder apontar a casa do OUTRO
-    app (é o que `hefesto-chave` faz ao desligar o estável de dentro do de
-    dev) e para o teste medir sem tocar o HOME.
+    `config_dir` explícito existe para o teste medir sem tocar o HOME.
     """
     if config_dir is None:
         from hefesto_dualsense4unix.utils.xdg_paths import config_dir as _cfg

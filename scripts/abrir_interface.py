@@ -35,20 +35,17 @@ Xvfb + ``xprop``: sem ela a janela filha sai ``"Medir.py"``; com ela sai
 O ÍCONE TEM DOIS CAMINHOS, e o segundo é o que funciona SEM INSTALAR
 ---------------------------------------------------------------------
 ``set_default_icon_name`` só resolve se o ícone estiver no tema ``hicolor`` —
-isto é, depois do ``install-dev.sh``. Antes disso o nome não resolve e a janela
+isto é, depois do ``install.sh``. Antes disso o nome não resolve e a janela
 fica sem ícone nenhum. Por isso aqui se PERGUNTA ao tema
 (``Gtk.IconTheme.has_icon``) e, se ele não tiver, carrega o PNG do disco, que
 vira ``_NET_WM_ICON`` na janela e não depende de instalação alguma. Ela pode
 clicar o ``interface`` num repositório recém-clonado e já ver a logo.
 
-ESTE ENVOLTÓRIO NÃO LIGA ``HEFESTO_VARIANTE``, E ISSO É DE PROPÓSITO
----------------------------------------------------------------------
-A interface nova é um VISOR: ela lê ``daemon.state_full`` do daemon que estiver
-no ar — o DELA — para mostrar a mesa real. Ligar a variante de dev mudaria o
-socket IPC (``utils/xdg_paths.ipc_socket_path``) para um caminho onde não há
-daemon nenhum, e a tela nasceria vazia. O que a variante de dev empresta aqui é
-só a IDENTIDADE DA JANELA: logo própria e ``app_id`` próprio, para a dock não
-fundir esta janela com a do Hefesto estável dela.
+A INTERFACE É UM VISOR
+-----------------------
+Ela lê ``daemon.state_full`` do daemon que estiver no ar para mostrar a mesa
+real. Este envoltório não mexe em socket, nem em config, nem em ambiente: ele
+veste a identidade da JANELA e sai da frente.
 """
 from __future__ import annotations
 
@@ -59,9 +56,6 @@ from pathlib import Path
 AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 
-# O piloto e o mockup moram em `layout/`, que é .gitignore e NÃO viaja em
-# worktree — por isso a árvore de origem entra como segunda tentativa.
-ORIGEM = Path("/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix")
 #: O PILOTO DAS DEZ ABAS VEM PRIMEIRO — 01/09/2026. Até aqui o lançador abria o
 #: `controles_vivos.py`, que é o piloto de UMA aba: a Controles ficava viva e as
 #: outras nove eram o mockup ESTÁTICO, sem um dado do daemon. Clicar na tira
@@ -74,19 +68,18 @@ ORIGEM = Path("/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix")
 #: O `controles_vivos.py` FICA como segunda tentativa, e não é nostalgia: se
 #: esta cópia da árvore estiver incompleta, abrir a aba Controles viva é melhor
 #: que não abrir nada. A ordem é a que importa.
+#:
+#: TUDO SAI DESTA ÁRVORE (`RAIZ`), e é ordem dela: *"tudo tem que apontar pro
+#: nosso lancher html e tudo tem que apontar pros arquivos na nossa pasta"*.
+#: Havia um segundo caminho apontando para uma árvore vizinha, e é assim que a
+#: interface abre a versão de anteontem sem ninguém perceber.
 CANDIDATOS_DO_PILOTO = (
     RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "hefesto_vivo.py",
-    ORIGEM / "src" / "hefesto_dualsense4unix" / "interface" / "hefesto_vivo.py",
     RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py",
-    ORIGEM / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py",
 )
 #: O PNG que vira `_NET_WM_ICON` quando o tema ainda não conhece o nome.
 CANDIDATOS_DO_ICONE = (
-    # O `Dev` SAIU DO ÍCONE — 01/09/2026, com o resto do nome. O arquivo
-    # `Hefesto-Dev-Dualsense4Unix.png` continua na pasta como a logo que ela
-    # desenhou para a variante; a que vale agora é a canônica.
     RAIZ / "assets" / "appimage" / "Hefesto-Dualsense4Unix.png",
-    ORIGEM / "assets" / "appimage" / "Hefesto-Dualsense4Unix.png",
 )
 
 
@@ -155,11 +148,9 @@ def main(argv: list[str] | None = None) -> int:
         sys.path.insert(0, str(src))
     from hefesto_dualsense4unix.utils import identidade
 
-    # A IDENTIDADE DE HOJE, e não a `DEV` fixa: a variante morreu em 01/09 e
-    # `identidade.atual()` resolve pela `HEFESTO_VARIANTE`, que passou a ser
-    # vazia. Cravar `DEV` aqui punha `Hefesto-Dev-Dualsense4Unix` no WM_CLASS de
-    # uma janela cujo `.desktop` declara `Hefesto-Dualsense4Unix` — e a dock não
-    # acha o ícone quando os dois divergem.
+    # A IDENTIDADE VEM DO DONO DELA, nunca de um literal aqui: um nome digitado
+    # neste arquivo põe no WM_CLASS algo que o `.desktop` não declara, e a dock
+    # não acha o ícone quando os dois divergem.
     for linha in vestir_a_identidade(identidade.atual()):
         print(f"  {linha}")
     print()

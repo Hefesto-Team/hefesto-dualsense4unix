@@ -301,14 +301,13 @@ class HefestoApp(
         # desktop`) para a dock COSMIC / GNOME associar o ícone do app.
         # Antes era `("hefesto", "Hefesto-Dualsense4Unix")` — instance
         # não casava e a dock mostrava ícone genérico.
-        # AS DUAS CASAS (29/08/2026): os literais saíram daqui e vieram de
-        # `utils.identidade` — sem `HEFESTO_VARIANTE` os valores são exatamente
-        # os de antes. A cura de verdade é `Gdk.set_program_class` em
-        # `app/main.py`, que alcança as 23 janelas do processo; esta linha fica
-        # como cinta para quem construir a `HefestoApp` sem passar pelo `main`
-        # (testes, applet), onde o program_class ainda seria o do argv[0].
-        _casa = identidade.atual()
-        self.window.set_wmclass(_casa.wm_instance, _casa.wm_class)
+        # Os literais não moram aqui: vêm de `utils.identidade`. A cura de
+        # verdade é `Gdk.set_program_class` em `app/main.py`, que alcança as 23
+        # janelas do processo; esta linha fica como cinta para quem construir a
+        # `HefestoApp` sem passar pelo `main` (testes, applet), onde o
+        # program_class ainda seria o do argv[0].
+        _app = identidade.atual()
+        self.window.set_wmclass(_app.wm_instance, _app.wm_class)
         if ICON_PATH.exists():
             self.window.set_icon_from_file(str(ICON_PATH))
 

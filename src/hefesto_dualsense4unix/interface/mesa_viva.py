@@ -55,28 +55,26 @@ RAIZ = str(pathlib.Path(__file__).resolve().parents[3])
 
 
 def socket_do_daemon() -> str:
-    """O socket do daemon DESTA variante, perguntado a quem já é dono dele.
+    """O socket do daemon, perguntado a quem já é dono dele.
 
-    É FUNÇÃO e não constante DE PROPÓSITO: a variante mora em
-    ``HEFESTO_VARIANTE``, e uma constante calculada no import congela o valor do
-    ambiente de quem importou primeiro — o que cega qualquer régua que queira
-    provar as duas casas no mesmo processo.
+    É FUNÇÃO e não constante DE PROPÓSITO: uma constante calculada no import
+    congela o nome de quem importou primeiro, e cega qualquer régua que queira
+    medir o caminho num processo que já importou o módulo.
 
     FATO ERRADO, SUBSTITUÍDO (30/08/2026). Aqui havia um caminho montado à mão::
 
         SOCKET = os.path.join(XDG_RUNTIME_DIR, "hefesto-dualsense4unix",
                               "hefesto-dualsense4unix.sock")
 
-    com o nome da casa ESCRITO COMO LITERAL. Era o mesmo valor com dois donos, e
+    com o nome do app ESCRITO COMO LITERAL. Era o mesmo valor com dois donos, e
     o segundo dono estava errado em dois pontos de uma vez:
 
-    1. **A variante.** ``xdg_paths`` deriva o diretório de
-       ``identidade.atual().slug``, que com ``HEFESTO_VARIANTE=dev`` vira
-       ``hefesto-dev-dualsense4unix``. O literal ignorava isso, então o app de
-       desenvolvimento batia no socket do ESTÁVEL. MEDIDO em 30/08 às 00:26,
-       com o daemon de dev no ar e vendo um controle: as cinco abas vivas
-       diziam ``[Errno 111] Conexão recusada`` e pintavam **5 valores** — a
-       tela de "Hefesto desligado" — enquanto o daemon respondia normalmente no
+    1. **O nome.** ``xdg_paths`` deriva o diretório de
+       ``identidade.atual().slug``; o literal ignorava isso e passava a apontar
+       para o lugar errado assim que o nome mudasse. MEDIDO em 30/08 às 00:26,
+       com o daemon no ar e vendo um controle: as cinco abas vivas diziam
+       ``[Errno 111] Conexão recusada`` e pintavam **5 valores** — a tela de
+       "Hefesto desligado" — enquanto o daemon respondia normalmente no
        diretório ao lado.
     2. **O modo fake.** ``ipc_socket_name()`` isola o socket quando
        ``HEFESTO_DUALSENSE4UNIX_FAKE=1`` e respeita o override explícito de
@@ -99,7 +97,6 @@ METODO = "daemon.state_full"
 
 class DaemonMudo(Exception):
     """O daemon não respondeu. NÃO é o mesmo que mesa vazia."""
-
 
 def estado_do_daemon(*, timeout: float = 2.0) -> dict[str, Any]:
     """O `state_full` de agora, ou :class:`DaemonMudo`.

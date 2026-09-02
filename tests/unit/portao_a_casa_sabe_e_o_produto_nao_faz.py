@@ -390,15 +390,24 @@ _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
         "packaging/hefesto-dualsense4unix.desktop",
         "Exec=@RAIZ@/interface.sh",
         "o `.desktop` do app — o `@RAIZ@` é substituído pelo caminho da "
-        "árvore por `install-dev.sh`:381. É o ícone que ela clica.",
+        "árvore pelo `install.sh`. É o ícone que ela clica.",
     ),
     (
         "interface.sh",
-        'exec "$PY" "$ABRIDOR"',
-        "o lançador da raiz, pedido dela em 29/08/2026 (*'cria um arquivo .sh "
-        "chamado interface na raiz do outro dev pra eu clicar'*). Ele não abre "
-        "o piloto direto: entrega ao envoltório de identidade, para a janela "
-        "nascer com a logo e o WM_CLASS certos.",
+        'exec "$MOTOR" --gui',
+        "o lançador da raiz, pedido dela em 29/08/2026 (um `.sh` chamado "
+        "`interface` na raiz, para ela clicar). Ele é a CARA e não o cérebro: "
+        "entrega ao `run.sh --gui`, que é o mesmo caminho que o atalho "
+        "instalado usa. Duas rotas para a mesma janela é como uma fica para "
+        "trás — já aconteceu aqui, com este arquivo procurando o piloto numa "
+        "pasta que não existe.",
+    ),
+    (
+        "run.sh",
+        'exec python3 "${HERE}/scripts/abrir_interface.py"',
+        "o motor: ativa a venv desta árvore, desarma o pixbuf de terminal "
+        "empacotado, força XWayland no COSMIC e entrega ao envoltório de "
+        "identidade. Aqui havia `python3 -m …app.main`, a janela GTK velha.",
     ),
     (
         "scripts/abrir_interface.py",
@@ -594,16 +603,6 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
 #: querer. Cada um precisa de UMA porta que o ligue — ou de uma lacuna
 #: declarada em ``_SEM_MAO_HOJE``.
 _PROMESSA_DE_AMBIENTE: dict[str, str] = {
-    "HEFESTO_VARIANTE": (
-        "Escolhe QUAL Hefesto este processo é — o estável dela ou o de "
-        "desenvolvimento (utils/identidade.py:atual). Dela sai a casa inteira: "
-        "config, perfis, socket, unit, WM_CLASS e ícone. É promessa dela, "
-        "pedida em 29/08/2026 (*'Ele é instalado como OUTRO APP com a logo "
-        "alterada em dev'*). MEDIDO em 29/08/2026: LIGADA, por `Environment=` "
-        "na unit e por `export` no lançador, os dois escritos por "
-        "`install-dev.sh`. Ausente = o app dela, com todos os literais de "
-        "antes — `test_identidade_das_duas_casas.py` trava isso."
-    ),
     "HEFESTO_BROKER_ALLOWED_UID": (
         "Qual UID pode falar com o broker de hidraw (broker/hidraw_broker.py:76). "
         "É promessa de sistema: sem ela o broker não serve a sessão dela. "
@@ -700,24 +699,6 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
 #: que a fecharia. Quem entregar a cura APAGA a entrada, e é essa a única
 #: manutenção.
 _SEM_MAO_HOJE: dict[str, str] = {
-    "HEFESTO_VARIANTE": (
-        "MEDIDO em 01/09/2026, e ela ficou sem mão porque a FEATURE acabou. A "
-        "variante existia para permitir DOIS apps na mesma máquina — o estável "
-        "dela e o de desenvolvimento — e ela a encerrou com todas as letras: "
-        "*'o -dev sai de tudo não quero mais essa confusão'* e *'a versão antiga "
-        "não segue disponível, vai gerar confusão nos agentes'*. O app é UM, e "
-        "`identidade.atual()` resolve para `hefesto-dualsense4unix` com a env "
-        "vazia. A unit ainda escreve `Environment=HEFESTO_VARIANTE=` (vazio), e "
-        "é por isso que a régua não a enxerga como mão: um valor vazio não liga "
-        "coisa nenhuma, e ela está CERTA em dizer isso. "
-        "O QUE A FECHA, e é decisão dela, não trabalho de agente: apagar a "
-        "variante de `utils/identidade.py` — as constantes `DEV`, `VARIANTE_ENV` "
-        "e `VARIANTE_DEV`, mais o `atual()` que as lê — e com ela os caminhos "
-        "por slug que dela dependem. NÃO foi feito aqui porque a variante é a "
-        "porta de saída se um dia voltarem a existir dois apps, e apagá-la no "
-        "mesmo dia em que a segunda instalação morreu seria fechar a porta antes "
-        "de saber se ela faz falta. Enquanto isso, a lacuna é esta linha."
-    ),
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "MEDIDO em 12/08/2026, e este é o achado mais desconfortável da lista, "
         "porque a porta parece existir e não existe: `install.sh` TEM a opção "
