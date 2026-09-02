@@ -1483,7 +1483,13 @@
           gente entre ele e o sofá — mudaram de lugar em 28/08: elas moram no
           <b>Mapear Entradas</b>, que é a janela onde você já declara a sala.
         </span></span>
-        <span class="conta">Examinado há 3 minutos</span>
+        <!-- O CARIMBO GANHOU ENDEREÇO em 02/09/2026. Ele dizia "há 3 minutos"
+             desde que o mockup nasceu, e nunca soube nada: nenhum pacote
+             escrevia aqui, então a frase era a mesma com o exame recém-corrido
+             e com a aba aberta desde ontem. A palavra da idade é do produto
+             (`secao_exame.frase_de_quando`), e a moldura "Examinado …" é a
+             deste desenho. -->
+        <span class="conta" data-campo="examinado">Examinado há 3 minutos</span>
       </div>
       <div class="quadro-corpo">
         <div class="duas-colunas">
@@ -1493,31 +1499,31 @@
           <div class="exame" data-campo="exame">
             <span class="selo ok" data-campo="selo">CERTO</span>
             <span class="txt" data-campo="achado">As entradas dão energia para o 1 controle no cabo</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma parece defeito do controle.</span></span>
+            <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma parece defeito do controle.</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="0" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <span class="selo warn" data-campo="selo">AJUSTAR</span>
             <span class="txt" data-campo="achado">Dois rádios da bancada estão em entradas vizinhas</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na <b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de serviço ao lado, e o <b>?</b> dela diz por que isso importa.</span></span>
+            <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na <b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de serviço ao lado, e o <b>?</b> dela diz por que isso importa.</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="1" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <span class="selo ok" data-campo="selo">CERTO</span>
             <span class="txt" data-campo="achado">O controle no cabo tem uma entrada só para ele</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das entradas onde estão o Player 1.</span></span>
+            <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das entradas onde estão o Player 1.</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="2" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <span class="selo info" data-campo="selo">NOTA</span>
             <span class="txt" data-campo="achado">4 rádios vizinhos ativos na faixa de 2,4 GHz</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> 4 fontes de rádio perto. 2 você já nomeou; 2 continuam por nomear, na tabela de <b>Rádio e adaptadores</b>.<br><br><b>Por que importa:</b> 1 dos seus 2 controles falam nessa mesma faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe o que dá para desligar e o que não dá.</span></span>
+            <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> 4 fontes de rádio perto. 2 você já nomeou; 2 continuam por nomear, na tabela de <b>Rádio e adaptadores</b>.<br><br><b>Por que importa:</b> 1 dos seus 2 controles falam nessa mesma faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe o que dá para desligar e o que não dá.</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="3" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <span class="selo ok" data-campo="selo">CERTO</span>
             <span class="txt" data-campo="achado">Nenhuma outra ordem de serviço pendente</span>
-            <span class="ajuda">?<span class="dica"><b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou ignorar não contam aqui — elas voltam em <b>Ver as ordens ignoradas</b>.</span></span>
+            <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou ignorar não contam aqui — elas voltam em <b>Ver as ordens ignoradas</b>.</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="4" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
             </div>
