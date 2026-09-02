@@ -948,6 +948,33 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # ROTA-A + ROTA-C (02/09/2026) — OS TRÊS DONOS DE FATO. Eles nasceram sem
+    # chamador de propósito: quem os chama são os dez `interface/pacotes/aNN_*.py`,
+    # e dez frentes estavam dentro deles no mesmo instante. Ligar é a leva
+    # seguinte, e cada uma fecha uma linha desta lista.
+    # `jogador_de` SAIU DAQUI NA INTEGRAÇÃO DE 02/09/2026 — a lápide durou
+    # menos de duas horas. Ela dizia "fecha quando esses pacotes chamarem esta
+    # função", e foi o que aconteceu no merge: a aba 04 migrou na própria
+    # frente dela, e `a01_jogar.py` foi ligado pela integração, com a medição
+    # contra o daemon vivo (o do CABO dizia `Player —` e passou a dizer
+    # `Player 2`). O portão pegou a lápide sobrevivente antes de mim.
+    "interface/pacotes/__init__.py::identidade_de": (
+        "O nome do controle na tela, na ordem 'o que ELA nomeou > o modelo "
+        "decodificado > o transporte' — e NUNCA a posição. Hoje `Cosmic Red` e "
+        "`Starlight Blue` estão cravados 170 vezes no HTML publicado, e o nome "
+        "vinha da ordem da lista: com um controle o do cabo era 'Starlight "
+        "Blue'; com dois, o MESMO cabo virou 'Cosmic Red'. Fecha quando os "
+        "geradores `interface/abaNN.py` derem `data-campo` ao rótulo e os "
+        "pacotes o pintarem. MEDIDO em 02/09/2026."
+    ),
+    "interface/pacotes/__init__.py::degradacao_de": (
+        "A frase 'Emulação degradada (uinput): …', que delega para "
+        "`app/widgets/controller_card.texto_degradacao`. `vpad_motivo` é lido "
+        "UMA vez na GTK e ZERO em `interface/pacotes/` — a razão pela qual a "
+        "emulação caiu não chega à tela nova. Fecha quando a aba Controles, "
+        "que já lê `vpad_backend`, passar a mostrar o porquê. MEDIDO em "
+        "02/09/2026."
+    ),
     "app/actions/jogar/painel.py::chips_sem_degrau": (
         "Os chips que nomeiam uma ponte que a `ESCADA` não tem "
         "(app/actions/jogar/painel.py:534) — a tela prometendo o que o produto não "
@@ -1857,21 +1884,16 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "_nao_tem.py::TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade` trava a "
         "medição e reprova em quem consertar o nível sem escolher."
     ),
-    "app/actions/ambiente_na_tela.py::descrever_display_grafico": (
-        "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê "
-        "`window_detect_backend`/`window_detect_reason`, complementando (sem "
-        "substituir) `daemon_actions.descrever_deteccao_de_janela`. REMEDIDO "
-        "em 26/08/2026 (LEVA-3-D): ao contrário da irmã acima, esta função LÊ "
-        "as chaves certas — `daemon/ipc_handlers.py:_window_detect_payload` as "
-        "publica no TOPO do `state_full`, e contra os três fixtures reais ela "
-        "responde a verdade. ONDE O CAMINHO SE PERDE: só falta o chamador, e "
-        "ele mora fora do alcance de quem escreveu isto — o cartão é o "
-        "`storm_card` do `gui/main.glade:2823` ('Saúde do sistema'), pintado "
-        "por `app/actions/daemon_actions.py:1160 _refresh_window_detect_diag`, "
-        "e uma frase a mais ali pede um `GtkLabel` novo no Glade (recurso de "
-        "bancada, uma sprint por vez). O QUE FECHA: a Onda 11 · Sistema, com o "
-        "rótulo no Glade e a pintura ao lado do `window_detect_diag_label`."
-    ),
+    # A LÁPIDE DE `descrever_display_grafico` SAIU EM 02/09/2026, e foi o
+    # portão que a cobrou: ela dizia que "só falta o chamador, e ele mora fora
+    # do alcance de quem escreveu isto — o cartão é o `storm_card` do
+    # `gui/main.glade:2823`, e uma frase a mais ali pede um `GtkLabel` novo no
+    # Glade". O QUE ELA PREVIA ("O QUE FECHA: a Onda 11 · Sistema") aconteceu,
+    # e por outra porta que não o Glade: a aba 09 da interface NOVA tem a linha
+    # "Como ele enxerga a janela" desenhada, e
+    # `interface/pacotes/a09_sistema._leitura` passou a chamar a função para
+    # preencher `Leitura.ambiente`. O caminho é
+    # `hefesto_vivo` -> `pacotes` -> `a09_sistema` -> `ambiente_na_tela`.
     "app/actions/ambiente_na_tela.py::descrever_steam_encontrada": (
         "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `steam_layout_achado` — "
         "chave que NENHUMA frente desta sprint publica ainda em `state_full` "

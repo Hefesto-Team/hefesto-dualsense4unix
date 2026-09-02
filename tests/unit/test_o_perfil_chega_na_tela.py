@@ -169,11 +169,17 @@ def test_o_brilho_do_perfil_chega_em_porcentagem(ctx_com):
 
     r = pacote_da_pagina("04-iluminacao.html", ctx_com("régua"))
     col = next(iter(r["colunas"].values()))
-    assert col["brilho"] == 0.7, (
+    #: A RÉGUA COBRAVA O CONTRÁRIO DO QUE O NOME DELA PROMETE, e foi assim até
+    #: 02/09/2026: o título diz *"vira 70% na tela"* e a linha exigia `0.7`. A
+    #: tela obedeceu à linha e não ao título — a foto de 02/09 mostra `1` ao
+    #: lado da barra de brilho, nas duas colunas, que é o `1.0` do disco escrito
+    #: cru. O `%` é da TELA (o desenho escreve `82%` nesta caixa) e a conversão
+    #: mora no pacote, porque o JS não sabe se um número é porcentagem.
+    assert col["brilho"] == "70%", (
         f"o brilho saiu {col.get('brilho')!r}. `leds.lightbar_brightness` está "
         f"no schema com faixa declarada e preenchido nos 33 perfis dela; "
-        f"`None` aqui é o travessão de volta.")
-    assert col["brilho-pct"] == 70, "o disco guarda 0..1 e a tela mostra 0..100"
+        f"`—` aqui é o travessão de volta, e `0.7` é o disco cru na tela.")
+    assert col["brilho-pct"] == 70, "o disco guarda 0..1 e a barra pede 0..100"
 
     #: A COR CONTINUA VINDO DO DAEMON, não do perfil: o brilho é o que está
     #: SALVO, a cor é o que está ACESO, e quando discordam manda o vivo.
@@ -185,10 +191,40 @@ def test_o_brilho_do_perfil_chega_em_porcentagem(ctx_com):
 def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
     """O saldo da cura, e ele é a régua contra a recaída.
 
-    Era 17 órfãos; hoje é UM — `plugins`, e ele não é erro meu: a
+    Era 17 órfãos; em 01/09 ficou UM — `plugins`, que não é erro de ninguém: a
     `gui/aba_sistema.py:95` já tinha medido que o IPC `plugin.list` existe e que
-    **só a CLI o chama**. Um número maior que isto aqui é alguém tendo voltado a
+    **só a CLI o chama**. Um número maior que este é alguém tendo voltado a
     escrever travessão em cima de dado que existe.
+
+    ATUALIZADA EM 02/09/2026, na integração da leva das treze frentes, e os
+    SETE novos foram conferidos um a um contra a exigência desta régua — *prove
+    que perguntou ao perfil, ao IPC e à `gui/aba_*.py` antes*. Nenhum é
+    travessão sobre dado que existe; **cada um é um caminho que o produto não
+    tem**, e a razão de cada um está escrita no `SEM_DONO` do próprio pacote:
+
+    Da `05-vibracao` — TRÊS deles esperam o PINTOR, não o pacote:
+      * `degrau-aceso` e `mult-teto` — o alvo é uma CLASSE e um rótulo que às
+        vezes não existe; `hefesto_vivo.escrever()` alcança texto, largura,
+        fundo, valor e html, e classe não é um deles. Emiti-los era o que
+        apagava os quatro rótulos dos botões até 02/09;
+      * `barra:motor` — o dono do gesto ESTÁ escrito
+        (`app/telas/vibracao.DONOS_DOS_GESTOS`); o que falta é o NÚMERO: a
+        linha é um `<div>`, e um `<div>` não tem `value`. Trocar a barra por um
+        controle arrastável é decisão DELA;
+      * `lado:ligado` — os oito interruptores de punho são desenho, e o produto
+        concorda por escrito em `app/telas/vibracao.SEM_FONTE`: não há campo no
+        esquema, nem método de IPC, nem chave no `state_full`.
+
+    Da `07-lancadores`, a aba que nasceu nesta leva:
+      * `abrir-lancador` — abrir a Steam é `xdg-open`, não IPC;
+      * `criar-perfil` — é da aba Perfis, e dois caminhos para o mesmo disco é
+        como duas telas passam a discordar;
+      * `heroic` — **medido**: o produto não tem UMA função que olhe o Heroic,
+        o Lutris, o RetroArch, o Dolphin ou o mGBA. As cinco menções em `src/`
+        são comentário, e por isso os cartões deles dizem NÃO SEI.
+
+    O `sem_dono` é o oposto de esconder: é a tela dizendo *"isto eu não sei"*
+    em vez de mostrar o desenho como se fosse dado.
     """
     from pacotes import PACOTES, pacote_da_pagina
 
@@ -199,7 +235,11 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         n = r["cobertura"]["sem_dono"]
         if n:
             orfaos[pagina] = sorted(r.get("sem_dono") or {})
-    assert orfaos == {"09-sistema.html": ["plugins"]}, (
+    assert orfaos == {
+        "05-vibracao.html": ["barra:motor", "degrau-aceso", "lado:ligado", "mult-teto"],
+        "07-lancadores.html": ["abrir-lancador", "criar-perfil", "heroic"],
+        "09-sistema.html": ["plugins"],
+    }, (
         f"os órfãos mudaram: {orfaos}. Cada um aqui é um valor que a tela mostra "
         f"como travessão — e a lição de 01/09 é que doze deles tinham dono e "
         f"ninguém tinha ido olhar. Se acrescentou um, prove que perguntou ao "

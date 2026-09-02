@@ -256,6 +256,20 @@ MODO_ACESO = "dualsense"
 #: `MODO_ACESO`, que é o mesmo dado que acende o chip — então ela não tem como
 #: discordar do que está desenhado. É a mesma cura que a `frase_das_mascaras()`,
 #: o padrão das lâmpadas e a contagem do cabeçalho já receberam nesta casa.
+#:
+#: NOTA DATADA — 02/09/2026, E ELA É SOBRE O QUE ESTA CURA NÃO ALCANÇOU. Derivar
+#: a palavra de `MODO_ACESO` matou a CONTRADIÇÃO que ela viu (a faixa dizendo
+#: "Modo Nativo" com o interruptor em Ligado) e deixou uma TAUTOLOGIA no lugar:
+#: colada no chip aceso, a frase só sabe prometer o que já está valendo. E a
+#: outra metade dela — *"quando você clicar em Aplicar"* — é falsa nesta
+#: interface em TODO estado: o Aplicar daqui manda `profile.apply_draft`, e
+#: `app/draft_config.to_ipc_dict` declara que **`mode` não viaja no "Aplicar"**
+#: (PERFIL-SALVA-TUDO-01).
+#:
+#: QUEM PASSOU A DIZER A VERDADE É O PRODUTO, não este desenho: a faixa é pintada
+#: por `pacotes/a01_jogar._faixa_do_pendente`, que escreve por cima da frase toda
+#: a cada tique. O texto CRAVADO continua sendo o que ela aprovou e o que a
+#: bancada mostra sem daemon — trocá-lo é decisão dela, não deste arquivo.
 PENDENTE = next(m["rot"] for m in MODOS if m["chave"] == MODO_ACESO)
 
 

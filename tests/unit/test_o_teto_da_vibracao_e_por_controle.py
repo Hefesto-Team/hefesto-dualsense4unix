@@ -66,7 +66,7 @@ CHAVE = "aabbcc000001"
 #: O MAC FORJADO pelo `usb_probe_degrade` quando não há endereço: `02` + VID +
 #: PID + bus. Dois clones do mesmo modelo recebem o MESMO, e persistir isso
 #: gravaria a FUSÃO de dois aparelhos num perfil.
-UNIQ_FORJADO = "02:11:22:00:00:33"
+UNIQ_FORJADO = "02:fe:00:00:00:33"
 
 
 def _bancada(**campos):

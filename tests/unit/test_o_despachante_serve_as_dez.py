@@ -37,10 +37,18 @@ ABAS = [
     "08-conexoes.html", "09-sistema.html", "10-perfis.html",
 ]
 
-#: A ÚNICA SEM PACOTE, por decisão dela em 01/09: *"a única que não faremos, só
-#: deixamos o botão levando pra ela, é a de lançadores."* Ela está aqui com nome
-#: e razão — uma exceção sem dono vira paisagem.
-SEM_PACOTE = {"07-lancadores.html"}
+#: NENHUMA, DESDE 02/09/2026 — e a exceção que morreu fica registrada, porque
+#: não se apaga decisão medida:
+#:
+#:   01/09 — *"a única que não faremos, só deixamos o botão levando pra ela, é
+#:            a de lançadores."*
+#:   02/09 — *"não daria para incluir G e F aqui? (…) temos um mapa funcional
+#:            disso no gtk."*   <-- a `F` é a Lançadores
+#:
+#: A segunda vale, e traz a razão: `sentinela_do_wrapper`, `prontuario_dos_jogos`
+#: e `steam_launch_options` já respondiam o que aquela tela pergunta. O pacote é
+#: `a07_lancadores.py` e a sprint é a ROTA-F.
+SEM_PACOTE: set[str] = set()
 
 #: Os dois esquemas de endereço que convivem: `data-campo` (o meu) e `data-hef`
 #: (o do outro agente, nas 77 marcações da Perfis). O nome não é o contrato.
@@ -58,9 +66,14 @@ def test_toda_aba_tem_pacote_ou_razao(pacotes_mod):
     assert not faltam, f"sem função de pacote: {faltam}"
 
 
-def test_a_sem_pacote_e_so_a_lancadores(pacotes_mod):
-    # A MORDIDA DOS DOIS LADOS: se alguém escrever um pacote para a Lançadores,
-    # esta régua acusa — porque a decisão dela foi que ela NÃO tem.
+def test_as_dez_tem_pacote_e_nenhuma_esta_de_fora(pacotes_mod):
+    """A MORDIDA DOS DOIS LADOS, e ela mudou de lado em 02/09/2026.
+
+    Enquanto valeu a decisão de 01/09, esta régua acusava quem ESCREVESSE um
+    pacote para a Lançadores. Com a de 02/09 (*"não daria para incluir G e F
+    aqui?"*), ela passa a acusar quem o TIRAR — e uma aba que saísse da tabela
+    ficaria verde por vacuidade, que é o pior estado.
+    """
     tem = {a for a in ABAS if a in pacotes_mod.PACOTES}
     assert tem == set(ABAS) - SEM_PACOTE, (
         f"a lista de quem pinta mudou sem a decisão dela mudar: {sorted(tem)}")

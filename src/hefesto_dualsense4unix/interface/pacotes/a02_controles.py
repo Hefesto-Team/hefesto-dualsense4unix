@@ -10,12 +10,66 @@ TUDO O QUE ESTA ABA MOSTRA TEM DONO, e é por isso que ela foi a primeira a
 viver: `inputs` (os dois analógicos, os gatilhos, os botões), `audio` (o
 microfone e o alto-falante, com posse e mudo), `lightbar_rgb`, `player`,
 `battery_pct`, `transport` e `vpad_backend`. Zero `sem_dono`.
+
+E EM 02/09/2026 O CASAMENTO FECHOU — os dois lados, medidos pelo
+`casamento.medir("02-controles.html")`:
+
+    ANTES (ponta de `dev`, 2b219284)      DEPOIS
+    casam :  10                           casam : 12
+    órfãos: ['l2', 'r2', 'via']           órfãos: []
+    vazios: ['l3', 'r3']                  vazios: []
+
+Os dois lados eram o MESMO defeito de forma, em espelho: três valores emitidos
+a cada tique para endereços que a página não tem, e dois endereços na página
+que ninguém pintava. Nenhum dos cinco dava erro — `querySelector` de endereço
+inexistente devolve `null`, e o pacote contava os três órfãos em
+`cobertura.pintados`, reportando 13 onde pintava 10.
 """
 from __future__ import annotations
 
 from typing import Any
 
 from . import Contexto, registrar
+
+# ---------------------------------------------------------------------------
+# O TEXTO DE TELA DESTA ABA — e ele mora AQUI, não no gerador
+# ---------------------------------------------------------------------------
+# Quem escreve estas palavras na tela é o produto, a cada tique; o gerador as
+# desenha uma vez e as lê daqui (`aba02.py`, no topo). A seta aponta para cá por
+# medição, não por gosto: o `portao_a_casa_sabe_e_o_produto_nao_faz` PODA os
+# `abaNN.py` da conta por serem BANCADA, e importar o gerador de dentro do
+# pacote arrastaria a bancada para o fecho de produção — medido em 02/09/2026,
+# três lápides de `interface/monta.py` (`monta`, `luzinhas`, `tom_da_casa`)
+# viraram alcançáveis e o portão reprovou nomeando as três.
+
+#: O TOUCHPAD PRECISA DIZER ALGO QUANDO NINGUÉM ESTÁ TOCANDO. Medido em 29/08:
+#: 238 leituras dos dois controles dela, `touching` verdadeiro em ZERO delas — a
+#: superfície de 148x83 mostrava um ponto invisível em 238 de 238 amostras, e um
+#: retângulo que nunca mostra nada lê como quebrado. O rótulo é o do produto
+#: (`app/widgets/sensor_widgets.py`: "Sem toque" / "N toque").
+SEM_TOQUE = "Sem toque"
+COM_TOQUE = "Tocando"
+
+#: O CLIQUE DO ANALÓGICO — o rótulo dentro do círculo, e ele é ENDEREÇO, não
+#: enfeite: `data-campo="l3"` e `data-campo="r3"` estão na página desde o
+#: primeiro desenho e, até 02/09/2026, NINGUÉM os pintava.
+#:
+#: O CLICADO É O RÓTULO ENTRE COLCHETES, e esta é a única escolha de TEXTO DE
+#: TELA desta cura — logo, dela. É uma edição de uma linha trocá-la. A razão de
+#: ser colchete e não palavra é de medida: o `.rotl` é JetBrains Mono 26px
+#: dentro de um círculo de 100px — cabem quatro caracteres (4 x ~15,6px = 62px),
+#: e não cabe "Clicado".
+#:
+#: POR QUE NÃO A COR, que é o que o produto faz: o dono na GTK
+#: (`app/widgets/controller_card.py:5453-5461`) e o piloto antigo desta aba
+#: (`interface/controles_vivos.py:388`) mostram o clique MUDANDO A COR do
+#: rótulo. O piloto único não sabe: o `escrever` do `hefesto_vivo.py:110-153`
+#: tem cinco alvos — `texto`, `largura`, `fundo`, `valor` e `html` — e nenhum é
+#: `color`. Emitir uma cor daqui escreveria `var(--plastico)` DENTRO do círculo,
+#: por `textContent`. Enquanto o piloto não tiver o alvo, o texto é o canal
+#: honesto.
+ROTULO_DO_CLIQUE = {"l": "L3", "r": "R3"}
+CLICADO = "[%s]"
 
 
 @registrar("02-controles.html")
@@ -32,6 +86,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     cards = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
+        # `inputs` TEM TRÊS ESTADOS, E O PRODUTO SÓ ENXERGAVA DOIS. O `or {}`
+        # abaixo continua servindo para LER campo por campo; o que ele NÃO pode
+        # decidir é se houve leitura — `None` e `{}` viram o mesmo dicionário
+        # vazio, e daí em diante "não sei" é indistinguível de "solto".
+        # Medido em 02/09/2026, com os dois controles dela ligados: só o
+        # `is_primary` traz `inputs`; o outro vem `None`
+        # (`daemon/ipc_handlers.py:3379-3383`).
+        tem_leitor = isinstance(c.get("inputs"), dict)
         e = c.get("inputs") or {}
         a = c.get("audio") or {}
         sp = c.get("speaker") or {}
@@ -42,6 +104,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # mudo pedido pelo Hefesto, e sem posse (o kernel manda).
         mudo = bool(a.get("mic_mudo"))
         pct = c.get("battery_pct")
+        # OS BOTÕES APERTADOS, com o nome que o daemon publica. É a MESMA leitura
+        # do dono na GTK (`app/widgets/controller_card.py:5453`, `"l3" in
+        # buttons_pressed`) e a mesma que `mesa_viva.estado_do_card:451` faz para
+        # os glifos — `inputs["buttons"]` é uma lista de nomes, e `l3`/`r3`
+        # entram nela crus (o `TRADUZ_GLIFO` só reescreve `create` → `share`).
+        apertados = set(e.get("buttons") or ())
+        # O TOQUE, LIDO — e ele era uma CONSTANTE. Esta linha dizia
+        # `"touch-estado": "Sem toque"`, literal: a tela afirmava, sem ler nada,
+        # que ninguém estava encostando no touchpad. Um dedo na superfície não
+        # mudava um pixel. Quem lê de verdade é `mesa_viva.estado_do_card:461`
+        # (`inputs["touchpad"]["touching"]`), e é essa leitura que vem para cá.
+        toque = e.get("touchpad") or {}
         cards[uniq] = {
             "bateria": f"{pct}%" if pct is not None else "—",
             # A BARRA, e ela precisa do NÚMERO CRU: o `escrever` do piloto com
@@ -51,7 +125,34 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # carga que ninguém mediu.
             "bateria-barra": int(pct) if isinstance(pct, int) and not isinstance(pct, bool)
                              else 0,
-            "via": (c.get("transport") or "").upper(),
+            # O `via` SAIU DAQUI EM 02/09/2026, e a saída é uma MEDIÇÃO, não
+            # arrumação: `casamento.medir("02-controles.html")` na ponta de `dev`
+            # (2b219284) dava `orfaos: ['l2', 'r2', 'via']` — três valores
+            # emitidos a cada tique para endereços que a página publicada NÃO
+            # TEM. O piloto único procura por `data-campo`, `data-papel` e
+            # `data-hef` (`hefesto_vivo.py:180`), e nenhum dos três existe para
+            # estes nomes. Eles não escreviam nada, e ainda assim entravam na
+            # conta de `cobertura.pintados` — o pacote se reportava 13 e pintava
+            # 10.
+            #
+            # O QUE CADA UM QUERIA DIZER, e onde a tela ainda mente por não ter
+            # onde pô-lo:
+            #
+            #   `via`      o transporte. O cabeçalho do card é
+            #              `<span class="card-nome">P1 • Cosmic Red • USB</span>`
+            #              (`paginas/02-controles.html:1430`), texto do desenho,
+            #              SEM endereço nenhum. Medido em 02/09 às 04:23: a mesa
+            #              viva dá `p1 → BT` e `p2 → USB`, e os dois cabeçalhos
+            #              na tela diziam o CONTRÁRIO, congelados desde o mockup.
+            #              Dar-lhe endereço é partir aquele `<span>` em três, que
+            #              é desenho — logo, decisão dela.
+            #   `l2`/`r2`  os gatilhos crus. A linha existe e é
+            #              `.gat-linha[data-gatilho="l2"]`, com `.n` e `.cheio`
+            #              dentro — `data-gatilho` é o quinto vocabulário, e o
+            #              piloto único não o lê.
+            #
+            # Não é perda de dado: os três continuam a UM `.get` do `state_full`
+            # no dia em que a página ganhar onde pô-los.
             # A MÁSCARA É O NOME QUE O JOGO VÊ, e a tradução já tem dono em
             # `mesa_viva.NOME_DA_MASCARA`. `uhid` é o backend, e é outra coisa.
             "mascara": casa.get("mascara")
@@ -76,8 +177,22 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # tinha lugar no desenho — estava sendo escrito por cima dos botões,
             # não num campo dela. Dar-lhe um lugar é decisão dela, não daqui.
             "alto-estado": "Mudo" if sp.get("muted") else f"{sp.get('volume', 0)}%",
-            "touch-estado": "Sem toque",
-            "l2": e.get("l2_raw"), "r2": e.get("r2_raw"),
+            "touch-estado": (
+                COM_TOQUE if toque.get("touching") else SEM_TOQUE
+            ) if tem_leitor else mesa_viva.SEM_LEITOR,
+            # O CLIQUE DOS DOIS ANALÓGICOS — os dois endereços que a página tinha
+            # e ninguém pintava. O rótulo e a marca do clicado são do GERADOR
+            # (`ROTULO_DO_CLIQUE` e `CLICADO`, no topo deste arquivo), e o
+            # GERADOR os lê daqui — a seta aponta para o produto, e a razão
+            # medida está escrita lá em cima.
+            **{
+                campo: (
+                    (CLICADO % rot if campo in apertados else rot)
+                    if tem_leitor else mesa_viva.SEM_LEITOR
+                )
+                for campo, rot in (("l3", ROTULO_DO_CLIQUE["l"]),
+                                   ("r3", ROTULO_DO_CLIQUE["r"]))
+            },
         }
     return {"cards": cards, "sem_dono": {},
             "cobertura": {"pintados": sum(len(v) for v in cards.values()), "sem_dono": 0}}
