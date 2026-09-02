@@ -35,6 +35,16 @@ Quatro afirmações, quatro contradições. **A cura não é apagar o desenho** 
 dar-lhe fonte, e dizer `NÃO SEI` onde não há fonte. Um selo `CHEGAM` sobre um
 lançador que ninguém olhou é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na cor verde.
 
+E O NÚMERO ANDOU NO MESMO DIA, o que é o argumento inteiro desta aba: às 19h20
+de 02/09, `censo_do_wrapper(anotar=False)` respondia **62** appids com o wrapper
+e **um reparável — o PRAGMATA, com motivo `regressao`** (*"tinha o atalho e
+perdeu"*). Às 15h a mesma leitura dava 63 e zero reparáveis. A Steam comeu a
+linha de novo entre as duas medições, e **nada a repôs**: a carona
+(`carona_do_wrapper.pegar_carona_no_gesto`) nunca migrou para a interface nova
+— `grep -rn carona_do_wrapper src/hefesto_dualsense4unix/interface/` devolve só
+comentário. Enquanto ela não abrir esta aba e clicar em Consertar, o jogo fica
+sem o atalho. Está relatado como trabalho de fora desta aba.
+
 O QUE MUDOU EM 02/09, À TARDE, e é a diferença entre duas perguntas
 -------------------------------------------------------------------
 Os cinco cartões sem censo diziam `NÃO SEI` por CONSTANTE: o pacote escrevia
@@ -73,6 +83,7 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     integrations/prontuario_dos_jogos.pontes_confirmadas quem já sabe por onde entrar
     integrations/jogos_locais.pastas_de_atalhos          onde moram os `.desktop`
     app/actions/launch_wrapper_dialog.load_dismissed_appids  quem ela dispensou
+    app/actions/launch_wrapper_dialog.remove_dismissed_appid o "voltar a perguntar"
 
 `carona_do_wrapper.passada()` responderia parte disto — mas ela ESCREVE no
 `localconfig.vdf` quando há o que repor, e uma PINTURA que escreve em disco a
@@ -388,14 +399,29 @@ def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
     O `blocos` É O MECANISMO QUE JÁ EXISTE para isto, e não um segundo
     vocabulário: `a08_conexoes` troca o mapa do gabinete e a lista de aparelhos
     pelo mesmo caminho, pela mesma razão (um bloco cujo conteúdo muda de FORMA,
-    e não só de valor). O piloto troca o `innerHTML` **só quando ele difere**,
-    então a grade não se reescreve a cada tique.
+    e não só de valor). O piloto troca o `innerHTML` **só quando ele difere**.
 
     OS ENDEREÇOS CONTINUAM SENDO EMITIDOS, e isso não é redundância: eles são o
     contrato que a régua da aba cobra nos dois sentidos (nada emitido cai no
-    chão, nada da página fica sem dono). O `blocos` corre ANTES da `mesa` no
-    piloto, de modo que os campos pousam na grade recém-trocada e escrevem o
-    mesmo valor — zero pintura, zero briga.
+    chão, nada da página fica sem dono).
+
+    FATO ERRADO, SUBSTITUÍDO — esta docstring afirmava que *"o `blocos` corre
+    ANTES da `mesa` no piloto, de modo que os campos pousam na grade
+    recém-trocada e escrevem o mesmo valor — zero pintura, zero briga"*. **Não
+    é zero.** Medido na janela dela em 02/09/2026, com a MESMA carga pintada 20
+    vezes seguidas: o piloto conta **uma pintura por volta, para sempre**, e a
+    causa é do PINTOR e não daqui — o `escrever()` carimba
+    `el.dataset.hefVisto = '1'` em todo elemento que visita
+    (`hefesto_vivo.py:150`), a grade emitida NÃO tem esse atributo, e o
+    `alvo.innerHTML !== html` de `:303` nunca casa. A ordem correta (`blocos`
+    antes de `mesa`) é justamente o que garante o desencontro.
+
+    NÃO É O APÓSTROFO, e a distinção importa para quem for curar: com um nome
+    de jogo sem apóstrofo a contagem já era `1` a cada volta. O apóstrofo
+    somava um SEGUNDO laço, na lista de jogos, e esse morreu com o `_e`/`_a` do
+    desenho (ver :func:`desenho_dos_lancadores._e`). Este resta, e está
+    relatado como trabalho do PINTOR: comparar ignorando o `data-hef-visto`,
+    carimbar depois de comparar, ou pintar `blocos` DEPOIS de `mesa`.
     """
     return {
         "mesa": desenho.Quadro(lancadores=lancadores).valores(),
@@ -594,6 +620,33 @@ def voltar_a_usar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _resposta(VIGIA.ler())
 
 
+@gesto("07-lancadores.html", "voltar-a-perguntar")
+def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Voltar a perguntar": tira o appid do `launch_dialog_dismissed.json`.
+
+    O DESFAZER QUE NÃO EXISTIA, e a falta era de MOTOR e não de tela: até hoje
+    `launch_wrapper_dialog` só tinha `add_dismissed_appid`. Clicar em *"Não
+    perguntar para este jogo"* no lembrete da GTK produzia um silêncio
+    permanente, e desfazê-lo pedia editar um JSON à mão. Decisão dela,
+    02/09/2026 — nasce o par, e o botão é este.
+
+    A RECUSA VAI PARA A TELA, e é por isso que `remove_dismissed_appid` devolve
+    `bool` em vez de engolir como o `add`: se o arquivo não deu para reescrever,
+    a linha continuaria na lista e o segundo clique pareceria o primeiro — o
+    botão que aceita o clique e não faz nada.
+    """
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+
+    appid = _appid_do_clique(o, "voltar-a-perguntar")
+    if not lwd.remove_dismissed_appid(appid):
+        raise RuntimeError(
+            "Não consegui tirar este jogo da lista de dispensados. O arquivo "
+            "`launch_dialog_dismissed.json` não aceitou a escrita — o lembrete "
+            "continua desligado para ele.")
+    VIGIA.esquecer()
+    return _resposta(VIGIA.ler())
+
+
 #: VAZIOS, E É A MEDIÇÃO QUE OS DEIXA VAZIOS: nenhum gesto desta aba fala com o
 #: daemon. O wrapper vive em dois arquivos em disco, e `pacotes.daemon.metodos()`
 #: não traz um método sequer que os toque.
@@ -602,7 +655,8 @@ METODOS: set[str] = set()
 
 
 PAGINA = "07-lancadores.html"
-PISO_DA_ABA = 6
+#: SUBIU DE 6 PARA 7 em 02/09/2026, com o "Voltar a perguntar" (decisão dela).
+PISO_DA_ABA = 7
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
 #: `PonteDeMentira` e cobra QUAL função da ponte o gesto chamou. Um gesto que
@@ -613,8 +667,9 @@ PISO_DA_ABA = 6
 #: o efeito cobrado NO ARQUIVO — que é a prova mais forte, não a mais fraca.
 PROVAS: list[dict[str, Any]] = []
 
-#: TODOS OS SEIS, e não por preguiça: o `state_full` do daemon não tem UMA
-#: chave sobre a Steam, sobre o `localconfig.vdf` ou sobre a lista de
-#: recusados. O efeito destes botões é o DISCO e a TELA — e os dois têm régua.
+#: TODOS OS SETE, e não por preguiça: o `state_full` do daemon não tem UMA
+#: chave sobre a Steam, sobre o `localconfig.vdf`, sobre a lista de recusados ou
+#: sobre a de dispensados. O efeito destes botões é o DISCO e a TELA — e os dois
+#: têm régua.
 SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
-           "tirar-daqui", "voltar-a-usar")
+           "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar")
