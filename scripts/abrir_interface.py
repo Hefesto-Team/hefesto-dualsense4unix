@@ -41,6 +41,34 @@ fica sem ícone nenhum. Por isso aqui se PERGUNTA ao tema
 vira ``_NET_WM_ICON`` na janela e não depende de instalação alguma. Ela pode
 clicar o ``interface`` num repositório recém-clonado e já ver a logo.
 
+OS BOTÕES DA JANELA SAEM À ESQUERDA, E A CULPA NÃO É DO CÓDIGO (02/09/2026)
+---------------------------------------------------------------------------
+Ela fotografou fechar/maximizar/minimizar **à esquerda e fora de ordem**,
+diferentes de toda outra janela da sessão dela. O código está certo: a
+``JanelaDaAba`` já põe uma ``Gtk.HeaderBar`` e **não** chama
+``set_decoration_layout``, logo herda o do ambiente. Medido no GTK vivo, sem
+abrir janela nenhuma::
+
+    Gtk.Settings.get_default().get_property("gtk-decoration-layout")
+    → 'close,maximize,minimize:'
+
+O que vem ANTES dos dois-pontos vai para a ESQUERDA, e a ordem é literalmente
+essa. É o sintoma inteiro, e ele vale para **todo** aplicativo GTK desta
+sessão. A configuração está em dois lugares dela, dizendo o mesmo::
+
+    ~/.config/gtk-3.0/settings.ini   gtk-decoration-layout=close,maximize,minimize:
+    gsettings get org.gnome.desktop.wm.preferences button-layout
+                                     'close,maximize,minimize:'
+
+As janelas nativas do COSMIC não leem essa chave — o toolkit delas é outro —,
+e é por isso que só as GTK destoam.
+
+**NÃO SE CONSERTA AQUI.** Um aplicativo que chamasse ``set_decoration_layout``
+passaria a ignorar a escolha global dela, e a próxima pessoa procuraria a causa
+no lugar errado. O conserto é de UMA LINHA, na máquina dela, e é decisão dela
+qual lado quer: ``:minimize,maximize,close`` põe os três à direita, na ordem
+usual do COSMIC.
+
 A INTERFACE É UM VISOR
 -----------------------
 Ela lê ``daemon.state_full`` do daemon que estiver no ar para mostrar a mesa
