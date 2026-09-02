@@ -53,8 +53,11 @@ class RumbleCommand:
 #: ``balanceado`` e ``max`` porque a dica delas promete, palavra por palavra,
 #: *"tudo como o jogo pedir, sem teto"*; ``auto`` porque o teto dele seria
 #: MÓVEL — muda a cada tique com a bateria —, e a casa já decidiu não prometer
-#: número móvel na tela (`profiles/manager.py:1556-1567`, o pulo com log
+#: número móvel na tela (`profiles/manager.py:1870-1876`, o pulo com log
 #: `escala_de_vibracao_pulada_base_movel`).
+#: PONTEIRO CORRIGIDO em 01/09/2026: ele dizia `:1556-1567`, que é o
+#: `carimbar_ponte` — assunto inteiramente diferente, e quem o seguisse
+#: concluiria que a cura não existe.
 _ORCAMENTO_COM_TETO = "economia"
 
 
@@ -93,9 +96,12 @@ def _sob_o_teto(mult: float, teto: float | None) -> float:
     número escrito na tela.
 
     E ``min`` preserva o denominador de ``_controllers_to_rumble_scales``
-    (`profiles/manager.py:1541-1546`): o valor que chega ao backend já vem
+    (`profiles/manager.py:1834-1881`): o valor que chega ao backend já vem
     escalado pela política global, então o fator por unidade é RELATIVO — um
     produto mexeria na base daquela conta sem ninguém saber.
+
+    PONTEIRO CORRIGIDO em 01/09/2026: ele dizia `:1541-1546`, que é o
+    ``ponte_confirmada_do_appid``.
     """
     if teto is None:
         return mult
@@ -169,10 +175,25 @@ def _effective_mult(
     ``ipc_rumble_policy.apply_rumble_policy`` (o ``rumble.set`` e o "Aplicar" do
     rodapé), ``subsystems.gamepad._game_rumble_mult`` (o force-feedback do
     JOGO) e ``subsystems.rumble.reassert_rumble`` (o tique de 200 ms do rumble
-    fixado) —, então um ponto de aplicação basta e não há como um caminho
-    escapar do teto. As QUATRO saídas o respeitam, o fallback de política
-    desconhecida inclusive: deixar uma de fora abriria um caminho em que o
-    orçamento simplesmente não vale.
+    fixado) —, então um ponto de aplicação basta para a POLÍTICA. As QUATRO
+    saídas o respeitam, o fallback de política desconhecida inclusive: deixar
+    uma de fora abriria um caminho em que o orçamento simplesmente não vale.
+
+    **O QUE ESTE FUNIL NÃO ALCANÇA, e a linha que dizia o contrário caiu em
+    01/09/2026.** Ela afirmava que *"não há como um caminho escapar do teto"*.
+    Há: a escala POR PEÇA (`POR-UNIDADE-01`) é aplicada um andar ABAIXO e
+    DEPOIS deste ``min``, em ``core/backend_pydualsense._escalar_rumble``
+    (`:3797-3818`), sobre o valor que já saiu daqui. Com o orçamento em
+    ``economia`` (teto 0,3), o perfil global em ``economia`` e uma peça em
+    ``max``, ``_controllers_to_rumble_scales`` publica ``1,5/0,3 = 5,0`` e o
+    motor daquela peça recebe cinco vezes o que o teto prometeu.
+
+    ESTÁ INERTE NA MESA DELA, medido em 01/09/2026: ``orcamento_em_vigor()``
+    devolve ``None`` (o ``maquina.json`` não existe), e os 33 perfis não têm
+    um único ``controllers[*].rumble``. **A aritmética não se toca aqui**:
+    corrigi-la exige escolher entre saturar o produto no teto e fazer o fator
+    ser ``min`` também, e as duas mudam o que o motor faz — é decisão dela, e é
+    sprint própria.
 
     **Teto, não troca**: o ``config.rumble_policy`` dela não é reescrito em
     lugar nenhum. Voltar o orçamento para Balanceado devolve o mult inteiro sem

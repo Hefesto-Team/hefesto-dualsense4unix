@@ -123,6 +123,15 @@ BOOTSTRAP = r"""
       return 0;
     }
     if(alvo === 'valor'){ if(el.value !== t){ el.value = t; return 1; } return 0; }
+    // O ALVO `html` EXISTE PARA UM BLOCO COM MARCAÇÃO — a dica do `?` do teto
+    // da vibração (`aba08.teto_dica`) traz `<b>` e `<code>` no desenho dela, e o
+    // `textContent` do ramo padrão escreveria os marcadores como texto literal
+    // na tela. Acrescentado em 01/09/2026.
+    //
+    // POR QUE NÃO O `blocos:` QUE JÁ EXISTE: aquele troca UM elemento por
+    // `document.querySelector`, e o `?` do teto é um POR CONTROLE. É o mesmo
+    // degrau, um tamanho menor — o endereço é `data-campo`, distribuído.
+    if(alvo === 'html'){ if(el.innerHTML !== t){ el.innerHTML = t; return 1; } return 0; }
     if(el.textContent !== t){
       el.textContent = t;
       // O PAINEL QUE MOSTRA O FIM. Um registro tem ordem: o que acabou de

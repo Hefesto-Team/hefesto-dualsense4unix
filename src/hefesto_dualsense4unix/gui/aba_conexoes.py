@@ -119,10 +119,16 @@ SEM_FONTE: tuple[tuple[str, str, str], ...] = (
         "MIGRA-CONEXOES-06 — §0.7 do índice, e é palavra dela.",
     ),
     (
-        "controle.*.vibracao.teto",
-        "A tela oferece 'Segue o global / Sem teto / 30%' por controle. O "
-        "produto aplica `min` (`core/rumble.py`), e o `min` é o que impede um "
-        "'teto' de AUMENTAR a força — sobrepor mudaria o daemon, não a tela.",
+        "controle.*.vibracao.sem-teto",
+        "'Sem teto' é a única das TRÊS opções sem representação possível: "
+        "`ControllerRumbleOverride` (`profiles/schema.py:762`) só diz QUAL "
+        "política a peça usa, nunca 'esta peça ignora o teto do orçamento'; e o "
+        "`min` que imporia um teto de verdade vive em "
+        "`core.rumble._effective_mult`, que não conhece `uniq` e roda antes de a "
+        "peça ser endereçada. Traduzi-la por 'balanceado' deixaria a peça mais "
+        "FRACA que as outras sob um global 'max' (1,0/1,5 = 0,667); por 'max', "
+        "mais FORTE que o global sob 'balanceado' — um campo chamado teto "
+        "AUMENTANDO a força. As outras duas ganharam fonte em 01/09/2026.",
         "MIGRA-CONEXOES-11 — §0.5 do índice, e é palavra dela.",
     ),
     (
@@ -330,6 +336,170 @@ def html_das_linhas(controles: Sequence[Controle], mascara: str) -> str:
 #: primeiras e :func:`sobraram` diz quantas ficaram de fora, em voz alta.
 FATIAS_DO_ACORDEAO = 4
 
+#: A opção que NÃO grava nada. O merge do perfil é POR CAMPO
+#: (`profiles/manager._controllers_to_rumble_scales:1864-1866` pula quem não tem
+#: `policy` em `model_fields_set`), então "seguir o global" é a ausência da
+#: chave — não um valor a escrever.
+SEGUE_O_GLOBAL = "Segue o global"
+
+
+def fala_do_teto(chave: str | None) -> str:
+    """A frase de tela do teto que uma chave de disco impõe.
+
+    UM FATO, UM DONO — 01/09/2026. Estas mesmas três frases existiam em TRÊS
+    grafias: as literais desta função (digitadas no HTML desta aba), o
+    `fala_do_teto` do gerador do mockup (`interface/aba08.py`, que já as
+    derivava por AST) e o que o pacote da interface nova precisaria. Digitar
+    "30% da força" numa quarta é o mesmo defeito que o `aba08.py` mediu em
+    28/08: a dica dizia *"corta a força em 60%"* e o produto cortava em 30 —
+    o dobro do limite real, e nenhuma régua podia vê-lo.
+
+    OS DOIS IMPORTS SÃO TARDIOS, e o de cima é o que obriga: medido em
+    01/09/2026, `app.actions.config.secao_orcamento` puxa `gi` e
+    `gi.repository.Gtk` no import (por `app.widgets.segmented_selector`), e o
+    docstring da linha 1 deste módulo promete *"sem GTK"*. `core.rumble` e
+    `daemon.subsystems.rumble` não puxam — mas ficam tardios pela mesma razão
+    dos outros dois desta casa (:func:`_turnos` e o `ROTULO_SEM_FACE`): o topo
+    deste arquivo é `import html` e mais nada de produto.
+    """
+    from hefesto_dualsense4unix.app.actions.config.secao_orcamento import SEM_TETO
+    from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+    if chave != _ORCAMENTO_COM_TETO:
+        return str(SEM_TETO)
+    return f"{round(RUMBLE_POLICY_MULT[_ORCAMENTO_COM_TETO] * 100)}% da força"
+
+
+def opcoes_do_teto() -> tuple[str, str, str]:
+    """As três opções do campo, NA ORDEM DA TELA — o desenho que ela aprovou.
+
+    A ordem é a do mockup (`mockup/08-conexoes.html`), e ela não é alfabética:
+    primeiro a que não grava nada, depois as duas que sobrepõem. Quem confere um
+    clique confere contra esta lista, nunca contra três literais soltos — foi
+    assim que o `mic-existe` se protegeu de um rótulo traduzido.
+    """
+    from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
+
+    return (SEGUE_O_GLOBAL, fala_do_teto(""), fala_do_teto(_ORCAMENTO_COM_TETO))
+
+
+#: ONDE O TETO GLOBAL SE MUDA — e não é nesta aba. Decisão dela, 28/08/2026:
+#: *"Teto da Vibração, que na verdade é Perfil de Bateria"*. O dropdown dos três
+#: perfis do produto (`app/actions/config/secao_orcamento.py`) mora na aba
+#: **Sistema**; esta aba é LEITORA do global e sobrepõe-no por controle.
+CASA_DO_TETO_GLOBAL = "Perfil de Bateria"
+ABA_DO_TETO_GLOBAL = "Sistema"
+
+
+def politica_do_rotulo(rotulo: str) -> str | None:
+    """A ``policy`` de disco que uma opção do campo grava. ``None`` = não grava.
+
+    DUAS DAS TRÊS TÊM TRADUÇÃO, e a terceira não tem — está em :data:`SEM_FONTE`,
+    linha ``controle.*.vibracao.sem-teto``. Esta função **levanta** para ela em
+    vez de escolher uma tradução: cada escolha possível faz o rótulo mentir num
+    dos casos, e a frase que falta é dela.
+
+    :raises ValueError: para "Sem teto" e para qualquer coisa fora da lista.
+    """
+    from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
+
+    segue, sem_teto, economia = opcoes_do_teto()
+    if rotulo == segue:
+        return None
+    if rotulo == economia:
+        return str(_ORCAMENTO_COM_TETO)
+    if rotulo == sem_teto:
+        raise ValueError(
+            f"{sem_teto!r} é a única das três opções sem tradução para o "
+            f"perfil. `ControllerRumbleOverride` só diz QUAL política esta peça "
+            f"usa, nunca 'esta peça ignora o teto do orçamento': gravar "
+            f"'balanceado' a deixaria mais FRACA que as outras quando o global "
+            f"for 'max' (1,0/1,5 = 0,667), e gravar 'max' a deixaria mais FORTE "
+            f"que o global quando ele for 'balanceado' — um campo chamado teto "
+            f"aumentando a força. A frase que falta é dela "
+            f"(MIGRA-CONEXOES-11).")
+    raise ValueError(f"{rotulo!r} não é resposta desta lista: {list(opcoes_do_teto())}")
+
+
+def rotulo_da_politica(policy: str | None) -> str | None:
+    """O que o CAMPO mostra para uma ``policy`` guardada. ``None`` = não sabe.
+
+    ``None`` de entrada é "sem override" e vira :data:`SEGUE_O_GLOBAL`. ``None``
+    de SAÍDA é outra coisa: o perfil guarda uma política que este campo não sabe
+    mostrar, e quem chama tem de DECLARAR isso em vez de escolher uma das três.
+
+    POR QUE NÃO SERVE A :func:`fala_do_teto` AQUI, e a diferença custou um
+    defeito nesta mesma leva: ela responde pelo ORÇAMENTO DA MESA, onde só o
+    `economia` impõe teto e todo o resto é "Sem teto". Aplicada a um override
+    por controle, ela traduziria `balanceado` e `max` — os dois — como "Sem
+    teto", que é justamente a opção sem tradução. Aqui a pergunta é outra: das
+    quatro políticas que `ControllerRumbleOverride` aceita
+    (`profiles/schema.py:795`), **uma só** tem opção no campo.
+    """
+    from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
+
+    if not policy:
+        return SEGUE_O_GLOBAL
+    if policy == _ORCAMENTO_COM_TETO:
+        return fala_do_teto(_ORCAMENTO_COM_TETO)
+    return None
+
+
+def teto_que_vale(policy: str | None, orcamento: str | None) -> tuple[str | None, str]:
+    """``(o que o CAMPO mostra, a frase de quem manda neste controle)``.
+
+    ``policy`` é o que o perfil guarda para ESTE controle
+    (``controllers[uniq].rumble.policy``) — ``None`` quando ele não sobrepõe
+    nada. ``orcamento`` é a chave de disco do orçamento da mesa
+    (``secao_orcamento.orcamento_em_vigor``), e ``None`` ali quer dizer que
+    ninguém declarou — o que, no efeito, é o mesmo que não impor teto
+    (``core.rumble.teto_do_orcamento`` devolve ``None`` para os dois).
+
+    O PRIMEIRO ITEM É ``None`` quando o campo não sabe mostrar a política
+    guardada. Quem pinta NÃO escreve nada no ``<select>`` nesse caso, e a razão
+    é medida: escrever num ``<select>`` um valor que não é opção nenhuma deixa
+    ``selectedIndex = -1``, e o ``escrever()`` do piloto contaria uma pintura
+    NOVA a cada tique para sempre — um contador que mente é pior que um campo
+    parado. A frase do ``?``, essa, diz o que há.
+
+    UMA FRASE POR CASO, não três pedaços costurados. Costurada, o texto saía
+    *"vale Sem teto, do global, na aba Sistema. O global hoje é Sem teto…"* —
+    "Sem teto" duas vezes na mesma dica.
+    """
+    global_ = fala_do_teto(orcamento)
+    if not policy:
+        return SEGUE_O_GLOBAL, (
+            f"este controle <b>segue o global</b>, que vale <b>{global_}</b>")
+    meu = rotulo_da_politica(policy)
+    if meu is None:
+        return None, (
+            f"o perfil guarda <code>{_e(policy)}</code> para este controle, e "
+            f"este campo não sabe mostrar essa política — o perfil manda, e a "
+            f"caixa fica como está. O global vale <b>{global_}</b>")
+    return meu, (f"este controle <b>sobrepõe</b> o global e vale "
+                 f"<b>{meu}</b> — o global vale <b>{global_}</b>")
+
+
+def dica_do_teto(policy: str | None, orcamento: str | None) -> str:
+    """A frase inteira do ``?`` do campo, com marcação — dono único das duas telas.
+
+    Ela nasceu no gerador do mockup (`interface/aba08.teto_dica`) e mudou-se
+    para cá em 01/09/2026, quando o `?` ganhou endereço de pintura
+    (``data-campo="teto-explica"``). Enquanto a frase vivesse só lá, o pacote
+    da interface nova teria de escrevê-la de novo — e a segunda grafia é a que
+    fica para trás no dia em que a primeira mudar.
+
+    TRAZ `<b>` E `<code>`, de propósito: quem a pinta usa o alvo ``html`` do
+    `hefesto_vivo.BOOTSTRAP`, e não o ``texto`` padrão.
+    """
+    return (f"O teto da vibração <b>deste controle</b>. O global manda e o do controle "
+            f"sobrepõe: hoje {teto_que_vale(policy, orcamento)[1]}. Quem muda o global é o "
+            f"<b>{CASA_DO_TETO_GLOBAL}</b>, na aba <b>{ABA_DO_TETO_GLOBAL}</b> — ele decide "
+            f"o que custa bateria, e esta aba mede o rádio. O degrau vem de "
+            f"<code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único "
+            f"recurso com teto real hoje.")
+
 
 def _html_de_uma_linha(c: Controle, mascara: str, posicao: int) -> str:
     """Uma linha do acordeão. **A CLASSE É POSIÇÃO; O ENDEREÇO É IDENTIDADE.**
@@ -348,6 +518,14 @@ def _html_de_uma_linha(c: Controle, mascara: str, posicao: int) -> str:
     """
     borda = f"--plastico:{_e(c.plastico)}" if c.plastico else ""
     fatia = f"gc-p{posicao}"
+    # A PRIMEIRA É A ESCOLHIDA porque é a que não grava nada: sem override no
+    # perfil, este controle segue o global. Quem pinta o estado de disco por
+    # cima é o pacote da interface nova (`a08_conexoes.pacote`); esta janela
+    # ainda não lê o perfil aqui, e mostrar o padrão é o honesto até que leia.
+    opcoes_teto = "".join(
+        f'<option{" selected" if i == 0 else ""}>{_e(o)}</option>'
+        for i, o in enumerate(opcoes_do_teto())
+    )
     return (
         f'<div class="gc-item {fatia}" data-controle="{_e(c.uniq)}" style="{borda}">'
         f'<div class="gc-cabeca">'
@@ -375,9 +553,7 @@ def _html_de_uma_linha(c: Controle, mascara: str, posicao: int) -> str:
         f"<option>O computador inteiro</option></select></span>"
         f'<span class="gc-bloco barra">'
         f'<select class="pronto" data-g="{g("controle.vibracao.teto")}" '
-        f'data-alvo="{_e(c.uniq)}">'
-        f"<option selected>Segue o global</option><option>Sem teto</option>"
-        f"<option>30% da força</option></select></span>"
+        f'data-alvo="{_e(c.uniq)}">{opcoes_teto}</select></span>'
         f'<button class="btn apagado" data-g="{g("controle.luz.nao-acende")}" '
         f'data-trava="{v("controle", c.uniq, "luz")}" '
         f'data-alvo="{_e(c.uniq)}"{"" if c.pelo_radio else " disabled"}>'

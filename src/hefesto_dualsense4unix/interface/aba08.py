@@ -151,20 +151,27 @@ COM_TETO = _constantes(R / "src/hefesto_dualsense4unix/core/rumble.py",
 ORC = _constantes(R / "src/hefesto_dualsense4unix/app/actions/config/secao_orcamento.py",
                   {"PERFIS", "ROTULOS_DOS_PERFIS", "TETO_POR_PERFIL", "SEM_TETO"})
 
-#: A frase do teto que uma chave de disco impõe. É a MESMA conta de
-#: `core.rumble.teto_do_orcamento` + `secao_orcamento.alcance_de_hoje`: só o
-#: `economia` impõe teto; os outros devolvem "Sem teto", que não é "100%".
-def fala_do_teto(chave):
-    if chave != COM_TETO:
-        return ORC["SEM_TETO"]
-    return f"{round(MULT[COM_TETO] * 100)}% da força"
-
+#: A FRASE DO TETO É DO PRODUTO — 01/09/2026. Esta função existia AQUI, com a
+#: mesma conta escrita de novo, e agora ela é um ponteiro para
+#: `gui.aba_conexoes.fala_do_teto`. Havia TRÊS grafias das mesmas três frases (a
+#: desta bancada, as três literais que a `gui/aba_conexoes.py` digitava no HTML e
+#: a que o pacote da interface nova ia precisar), e a direção desta casa é o
+#: gerador LER o produto: se `RUMBLE_POLICY_MULT["economia"]` deixar de ser 0,3,
+#: a tela, o mockup e o pacote mudam juntos ou nenhum.
+#:
+#: As leituras por AST de `MULT` e `ORC["SEM_TETO"]` FICAM: elas servem os
+#: outros usos deste arquivo (a tabela do orçamento, o `teto_dica`), e são a
+#: única forma de ler um número sem importar `structlog`.
+fala_do_teto = _aba_conexoes.fala_do_teto
 
 #: O perfil da mesa que esta tela mostra escolhido. É id de BOTÃO do produto, e
 #: a tradução para disco é do produto também — a tela não inventa nenhuma das
 #: duas pontas.
 PERFIL_DA_MESA = ORC["PERFIS"][0]
-TETO_GLOBAL = fala_do_teto(ORC["TETO_POR_PERFIL"][PERFIL_DA_MESA])
+#: A chave de DISCO daquele perfil — o que `orcamento_em_vigor()` devolveria se
+#: ela tivesse declarado este perfil. É o argumento das frases do produto.
+ORCAMENTO_DA_MESA = ORC["TETO_POR_PERFIL"][PERFIL_DA_MESA]
+TETO_GLOBAL = fala_do_teto(ORCAMENTO_DA_MESA)
 
 # A VÍRGULA TEM UM DONO SÓ — `app/fala_do_mapa.formata_pt_br`, desde 26/08/2026.
 # Carregado POR CAMINHO, como o `validar-fala-de-tela.py` o carrega: o módulo é
@@ -250,7 +257,9 @@ if faltam := {c["pref"] for c in MESA} - set(DA_CONTROLES):
 # O P3 é o que sobrepõe porque é o que está com a bateria mais baixa da mesa
 # (31%, medido na aba Controles, de onde esta tela lê o número).
 # ---------------------------------------------------------------------------
-SEGUE_O_GLOBAL = "Segue o global"
+#: Também do produto, e pela mesma razão de `fala_do_teto`: a opção que não
+#: grava nada tem um dono só (`gui.aba_conexoes.SEGUE_O_GLOBAL`).
+SEGUE_O_GLOBAL = _aba_conexoes.SEGUE_O_GLOBAL
 TETO_DO_CONTROLE = {"p3": COM_TETO}
 BOTAO_DO_MIC = "Só este controle"
 
@@ -285,8 +294,11 @@ BOTAO_DO_MIC = "Só este controle"
 #: piorar: o perfil agora se chama "Perfil de Bateria" e mora noutra aba, e nesta
 #: sobra um sentido só para a palavra. O que a seção mede — quanto do tempo do
 #: rádio está em uso — é desempenho, e de nada mais.
-CASA_DO_TETO_GLOBAL = "Perfil de Bateria"
-ABA_DO_TETO_GLOBAL = "Sistema"
+#: Os dois nomes MUDARAM-SE PARA O PRODUTO em 01/09/2026 — `gui.aba_conexoes` —,
+#: junto com a frase do `?` que os usa. O comentário acima fica: ele é a razão
+#: da mudança de aba, e razão não se repete no outro arquivo.
+CASA_DO_TETO_GLOBAL = _aba_conexoes.CASA_DO_TETO_GLOBAL
+ABA_DO_TETO_GLOBAL = _aba_conexoes.ABA_DO_TETO_GLOBAL
 
 #: A LEITURA "Vale Sem teto, do global, abaixo" SAIU DA TELA — decisão dela,
 #: `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES` (28/08): *"some a leitura, fica o
@@ -306,14 +318,14 @@ ABA_DO_TETO_GLOBAL = "Sistema"
 #: muda é o Perfil de Bateria, na aba Sistema"* — "Sem teto" duas vezes e "na aba
 #: Sistema" duas vezes, na mesma dica.
 def teto_que_vale(c):
-    """(o que a tela mostra no CAMPO, a frase de quem manda neste controle)."""
-    proprio = TETO_DO_CONTROLE.get(c["pref"])
-    if proprio is None:
-        return SEGUE_O_GLOBAL, (f"este controle <b>segue o global</b>, que vale "
-                                f"<b>{TETO_GLOBAL}</b>")
-    return fala_do_teto(proprio), (f"este controle <b>sobrepõe</b> o global e vale "
-                                   f"<b>{fala_do_teto(proprio)}</b> — o global vale "
-                                   f"<b>{TETO_GLOBAL}</b>")
+    """(o que a tela mostra no CAMPO, a frase de quem manda neste controle).
+
+    A CONTA É DO PRODUTO desde 01/09/2026 — `gui.aba_conexoes.teto_que_vale`. O
+    que sobra aqui é a BANCADA: qual controle sobrepõe (`TETO_DO_CONTROLE`) e
+    qual perfil de mesa esta tela mostra escolhido (`PERFIL_DA_MESA`). Na tela
+    viva, os dois vêm do perfil dela e do `maquina.json`.
+    """
+    return _aba_conexoes.teto_que_vale(TETO_DO_CONTROLE.get(c["pref"]), ORCAMENTO_DA_MESA)
 
 
 # ---------------------------------------------------------------------------
@@ -1300,12 +1312,22 @@ SO_ESTE_DICA = ("Deixa só este controle aberto — os outros fecham.")
 
 
 def teto_dica(c):
-    return (f"O teto da vibração <b>deste controle</b>. O global manda e o do controle "
-            f"sobrepõe: hoje {teto_que_vale(c)[1]}. Quem muda o global é o "
-            f"<b>{CASA_DO_TETO_GLOBAL}</b>, na aba <b>{ABA_DO_TETO_GLOBAL}</b> — ele decide "
-            f"o que custa bateria, e esta aba mede o rádio. O degrau vem de "
-            f"<code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único "
-            f"recurso com teto real hoje.")
+    """A frase do `?` do teto — desenho de bancada, REPINTADA pelo pacote.
+
+    O `?` GANHOU ENDEREÇO em 01/09/2026 (`data-campo="teto-explica"`), e ele tem
+    de ser pintado JUNTO com o `<select>`: a frase daqui diz *"este controle
+    segue o global, que vale …"* a partir de `PERFIL_DA_MESA`, que é constante
+    de bancada. Ligar só a caixa deixaria a tela dizendo "30% da força" no campo
+    e "segue o global" na dica — uma contradição NOVA, introduzida por nós.
+
+    O ALVO É `html`, e não o `texto` padrão: esta frase traz `<b>` e `<code>` no
+    desenho dela, e o `textContent` do `escrever()` os escreveria como texto
+    literal — a dica mostraria os próprios marcadores.
+
+    A FRASE É DO PRODUTO — `gui.aba_conexoes.dica_do_teto`. Aqui ficou só a
+    bancada: qual controle sobrepõe e qual perfil de mesa esta tela mostra.
+    """
+    return _aba_conexoes.dica_do_teto(TETO_DO_CONTROLE.get(c["pref"]), ORCAMENTO_DA_MESA)
 
 
 def linha_do_controle(c):
@@ -1342,7 +1364,10 @@ def linha_do_controle(c):
     # só o CAMPO sai daqui: o "Vale …, do global" que ficava ao lado saiu da tela
     # (`D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`) e vive agora no `?` do campo.
     campo_teto = teto_que_vale(c)[0]
-    opcoes_teto = [SEGUE_O_GLOBAL, ORC["SEM_TETO"], fala_do_teto(COM_TETO)]
+    # A LISTA E A SUA ORDEM SÃO DO PRODUTO — `gui.aba_conexoes.opcoes_do_teto`.
+    # Montá-la aqui pela terceira vez é o que fazia a borda do gesto conferir o
+    # clique contra literais em vez de contra a lista que a tela desenhou.
+    opcoes_teto = list(_aba_conexoes.opcoes_do_teto())
     mic_dica = (MIC_PELO_RADIO.format(c=num(CUSTO_DO_MIC)) if no_radio else MIC_PELO_CABO)
     botao = (f'<button class="btn" data-gesto="luz-nao-acende" '
              f'title="{LUZ_NO_RADIO}">A luz não acende</button>' if no_radio
@@ -1376,8 +1401,8 @@ def linha_do_controle(c):
               </span>
               <span class="gc-bloco barra">
                 <span class="rot">{glifo("rumble_esquerdo", ativo=True, tam=16)} Teto da vibração
-                  <span class="ajuda">?<span class="dica">{teto_dica(c)}</span></span></span>
-                {sel(opcoes_teto, campo_teto, gesto="teto-da-vibracao", dica="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora.")}
+                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">{teto_dica(c)}</span></span></span>
+                {sel(opcoes_teto, campo_teto, gesto="teto-da-vibracao", campo="teto-da-vibracao", dica="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora.")}
               </span>
               {botao}
             </div>
