@@ -471,11 +471,29 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
     por aqui — o dia em que uma ganhar um ``&`` é o dia em que a linha some da
     tela sem uma palavra de erro.
 
-    **``quote=False``, e ele não é gosto — 02/09/2026.** O padrão do
-    ``html.escape`` troca ``"`` por ``&quot;``, e isto aqui é conteúdo de
-    TEXTO, nunca atributo: a entidade é desnecessária **e o navegador nunca a
-    devolve**. Medido no WebKit, escrevendo em ``el.innerHTML`` e lendo de
-    volta::
+    **AS DUAS FATIAS ESCAPAM DIFERENTE, e a diferença é o ponto — 02/09/2026.**
+
+    ========================  =============  ==================================
+    fatia                     ``quote``      por quê
+    ========================  =============  ==================================
+    ``tom``, em ``class="…"``  ``True``      é ATRIBUTO. Uma ``"`` ali FECHA o
+                                             atributo e o resto do valor vira
+                                             markup: é assim que um apóstrofo
+                                             quebra a tela.
+    ``frase``, entre spans     ``False``     é conteúdo de TEXTO. A entidade é
+                                             desnecessária **e o navegador
+                                             nunca a devolve**.
+    ========================  =============  ==================================
+
+    O ``quote=False`` no ``tom`` era o defeito: ele desligava o escape justo na
+    fatia que precisa dele, e o argumento vinha com o comentário dizendo o
+    contrário — *"isto aqui é conteúdo de TEXTO, nunca atributo"*. Hoje o
+    ``tom`` só vale :data:`DIZ`/:data:`ALERTA`/:data:`INFO`, três constantes
+    deste módulo; o escape é o que impede que a próxima classe de tom, vinda de
+    um dado, saia do atributo.
+
+    **E NO ``frase`` O ``quote=False`` É MEDIDO**, não gosto. Escrevendo em
+    ``el.innerHTML`` e lendo de volta no WebKit::
 
         as frases de HOJE ......... volta igual: True   (aspas tipográficas “ ”)
         uma frase com & e < ....... volta igual: True
@@ -484,17 +502,17 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
             devolvido: <span>clique "Testar"</span>
 
     O guarda do pintor é ``if (alvo && alvo.innerHTML !== html)``
-    (``hefesto_vivo.py:213``). Com a aspa reta a comparação seria VERDADEIRA
-    sempre: o bloco repintaria e contaria ``+1`` a cada tique, a 2 Hz, para
-    sempre — o defeito que o ramo ``SELECT`` do ``escrever()`` foi escrito para
-    impedir, e o mesmo instrumento com que esta casa prova que um endereço
-    existe. Hoje não morde porque as quatro frases usam ``“ ”``; o gatilho é
-    uma aspa reta em texto que muda sem passar por aqui.
+    (``hefesto_vivo.py:213``). Com ``&quot;`` no conteúdo a comparação seria
+    VERDADEIRA sempre: o bloco repintaria e contaria ``+1`` a cada tique, a
+    2 Hz, para sempre — o defeito que o ramo ``SELECT`` do ``escrever()`` foi
+    escrito para impedir, e o mesmo instrumento com que esta casa prova que um
+    endereço existe. No ATRIBUTO isso não acontece: o navegador devolve a
+    ``class`` já normalizada e o ``&quot;`` nunca chega ao ``innerHTML`` lido.
     """
     import html as _html
 
     return "".join(
-        f'<div class="est {_html.escape(tom, quote=False)}">'
+        f'<div class="est {_html.escape(tom)}">'
         f'<span class="sinal">{"▲" if tom == ALERTA else "●"}</span>'
         f"<span>{_html.escape(frase, quote=False)}</span></div>"
         for tom, frase in linhas
