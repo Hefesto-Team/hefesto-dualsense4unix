@@ -37,7 +37,7 @@ Complemento de scripts: tab-completion funciona em zsh e bash via
 | `hefesto-dualsense4unix coop on/status` | Co-op local (`coop off` recusa e explica). |
 | `hefesto-dualsense4unix controller list/target` | Mira as ações de output num controle específico. |
 | `hefesto-dualsense4unix plugin list/reload` | Plugins do daemon. |
-| `hefesto-dualsense4unix mic on/off/status/promote/demote/mute/unmute/release/bt/bt-status` | Microfone do controle — política do sistema, mudo de firmware e a ponte por Bluetooth. |
+| `hefesto-dualsense4unix mic on/off/status/promote/demote/mute/unmute/release/led-on/led-off/led-release/bt/bt-status` | Microfone do controle — política do sistema, mudo de firmware, LED do botão e a ponte por Bluetooth. |
 | `hefesto-dualsense4unix speaker status/volume/mute/unmute/release` | Alto-falante e fone do controle — inclusive a DEVOLUÇÃO da posse. |
 | `hefesto-dualsense4unix tui` / `hefesto-dualsense4unix tray` | Interfaces alternativas. |
 
@@ -306,7 +306,7 @@ inventar nome. Ver [`jogos-e-mascaras.md`](jogos-e-mascaras.md).
   reescritos por este comando.
 - `hefesto-dualsense4unix battery` — percentual de bateria.
 - `hefesto-dualsense4unix mic <ação>` — microfone embutido do DualSense. São
-  **dez ações em quatro grupos**, e eles respondem perguntas diferentes:
+  **treze ações em cinco grupos**, e eles respondem perguntas diferentes:
   - **política do WirePlumber** (`on` · `off` · `status`) — valem no cabo, onde
     o mic é um dispositivo de áudio USB comum;
   - **quem é o microfone padrão do sistema** (`promote` · `demote`) — `promote`
@@ -317,13 +317,24 @@ inventar nome. Ver [`jogos-e-mascaras.md`](jogos-e-mascaras.md).
     **diferentes**: `unmute` não é `release`. **`release` devolve a posse** — e
     o preço é que, enquanto ela não voltar a nós, o botão do controle não
     responde;
+  - **o LED do botão de mudo** (`led-on` · `led-off` · `led-release`) —
+    MIC-DA-MESA-ELEICAO-01. É OUTRO byte (`common[8]`, autorizado pelo
+    `MIC_MUTE_LED_CONTROL_ENABLE`), com bit de autorização próprio: **acender
+    não muta nada**. E nesta casa a luz mudou de significado — decisão dela,
+    01/09/2026: **aceso = este microfone está VIVO**, ao contrário da convenção
+    da Sony. Os três são pedidos diferentes, no mesmo molde do grupo acima:
+    `led-off` é a ORDEM "apaga", e **`led-release` devolve a posse** ao
+    `hid-playstation`, que volta a escrever a luz na borda do botão físico —
+    era a única saída que não existia, e sem ela a posse só caía quando o
+    controle fosse desligado;
   - **a ponte por Bluetooth** (`bt` · `bt-status`) — `bt` sobe a ponte que
     decodifica o Opus tunelado nos relatórios HID e publica o microfone no
     PipeWire (Ctrl-C encerra); `bt-status` só diagnostica as pré-condições, sem
     mexer em nada. Ver [`bluetooth.md`](bluetooth.md).
 
   Com mais de um controle na mesa, `--uniq <MAC normalizado>` escolhe qual deles
-  recebe `mute`/`unmute`/`release`; sem a opção, vale o primário.
+  recebe `mute`/`unmute`/`release` e `led-on`/`led-off`/`led-release`; sem a
+  opção, vale o primário.
 - `hefesto-dualsense4unix speaker status|volume <0-100>|mute|unmute|release` —
   alto-falante **e fone** do controle (é um volume só: o mesmo valor vai nos dois
   bytes). Exige o daemon. O volume mora no firmware e o controle **não o

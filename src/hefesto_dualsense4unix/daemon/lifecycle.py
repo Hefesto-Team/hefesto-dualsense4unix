@@ -265,10 +265,39 @@ class DaemonConfig:
     # e o cálculo entende isso como "nenhum teto" — nunca como teto de 100 %.
     # Quem fia é `run()`, ao lado da leitura do `maquina.json`.
     orcamento_da_mesa: Callable[[], str | None] | None = None
-    # FEAT-HOTKEY-MIC-01 — o botão de mic do controle alterna o mute do
-    # microfone PADRÃO DO SISTEMA (wpctl/pactl) e acompanha o LED do mic.
-    # Desligado, o botão vira só um botão (o kernel segue mudando o mic do
-    # próprio controle — isso é dele, não nosso).
+    # FEAT-HOTKEY-MIC-01, reescrito por MIC-DA-MESA-ELEICAO-01 (01/09/2026).
+    #
+    # O NOME FICOU, o SIGNIFICADO MUDOU, e o significado velho era este:
+    # "o botão de mic alterna o MUTE do microfone padrão do sistema". Decisão
+    # dela: *"O botão de silenciar é confuso e mexendo com ambos os canais de
+    # áudio é péssimo."*
+    #
+    # Hoje ligado quer dizer: o botão do microfone é NOSSO, e apertá-lo ELEGE o
+    # canal de captura DAQUELE controle como microfone padrão do sistema
+    # (`integrations/eleicao_de_microfone.py`), acendendo o LED dele quando a
+    # eleição é CONFERIDA. Não muta nada — o mudo do firmware continua sendo do
+    # `hid-playstation`, que alterna na borda do botão físico.
+    #
+    # Desligado, não elegemos e não acendemos.
+    #
+    # FRASE CORRIGIDA em 02/09/2026 (auditoria). Aqui se lia que, desligado,
+    # "o kernel segue dono do mudo E da luz do próprio controle, que é o
+    # contrato de fábrica". A segunda metade era FALSA depois da primeira
+    # eleição: a posse do `common[8]` é grudenta e só cai por
+    # `set_microphone_led(None)`. Medido sobre o `_build_common` desta árvore —
+    # depois de uma eleição, `flag1&0x01=1` e `common[8]=1`, e desligar o
+    # interruptor não mexia em nenhum dos dois.
+    #
+    # O caminho é reentrante em runtime (`daemon/ipc_draft_applier.py` escreve
+    # este campo sem restart), então a cena é real: ela joga, aperta o mic, e
+    # depois carrega um perfil de gravação com `mic.button_toggles_system:
+    # false` — a luz ficava congelada no que a última eleição deixou.
+    #
+    # HOJE A FRASE É VERDADE PORQUE O CÓDIGO A CUMPRE: o applier chama
+    # `hotkey.devolver_a_luz_ao_kernel` na transição ligado -> desligado, e aí
+    # sim o kernel volta a mandar no mudo E na luz. A porta de emergência
+    # (`hefesto-dualsense4unix mic led-release`) continua existindo para quem
+    # tomar a posse por outro caminho.
     mic_button_toggles_system: bool = True
     # BT-MIC-REGISTRY-01 + QUATRO-MICROFONES-01 (22/08/2026) — ponte de
     # microfone por Bluetooth (Opus tunelado em HID), POR CONTROLE. OPT-IN por

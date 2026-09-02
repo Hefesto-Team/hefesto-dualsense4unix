@@ -51,9 +51,22 @@ FALSO = {
     "lightbar_rgb": [0, 0, 255], "lightbar_on": True, "lightbar_source": "perfil",
     "inputs": {"lx": 127, "ly": 128, "rx": 127, "ry": 128,
                "l2_raw": 0, "r2_raw": 0, "buttons": []},
+    # MIC-DA-MESA-ELEICAO-01: `mic_mudo` aqui é uma LEITURA de verdade
+    # (`False` = o report chegou íntegro e o mic não está mudo), e não o
+    # default que a ausência produz. A diferença é o ponto inteiro: enquanto
+    # este dublê trazia a chave, nenhum portão conseguia morder o caso REAL —
+    # o do `state_full` SEM a chave `audio`, que é o que acontece no instante
+    # seguinte ao hotplug-out. Ver `SEM_AUDIO` logo abaixo.
     "audio": {"mic_mudo": False, "mic_mudo_desejado": None},
     "speaker": {"volume": 102, "muted": False, "rota": 0},
 }
+
+#: O MESMO controle, mas com a chave `audio` AUSENTE — o estado real do
+#: instante seguinte a um hotplug-out, quando o handle novo ainda não leu um
+#: report íntegro e `audio_status_for` devolve `None`. Existe para que a régua
+#: possa morder a ausência: com o `FALSO` acima, que sempre traz a chave, o
+#: caminho de "não sei" nunca era exercitado (MIC-DA-MESA-ELEICAO-01).
+FALSO_SEM_AUDIO = {k: v for k, v in FALSO.items() if k != "audio"}
 
 #: A mesa como o desenho a conhece — `pref`, que é o que o `data-controle` traz.
 MESA_FALSA = [{"pref": "p1", "jogador": 1, "cor": "starlight-blue",

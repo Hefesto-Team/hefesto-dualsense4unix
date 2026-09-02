@@ -65,6 +65,87 @@ fez nascer está na `QUATRO-COMPONENTES-02`, logo abaixo.
 
 ## [Unreleased]
 
+### MIC-DA-MESA-ELEICAO-01 (01/09/2026) — o botão do microfone ELEGE, em vez de calar
+
+Decisão dela: *"Se eu apertar o botão físico mic do controle e ele acender,
+significa que eu quero que o canal de áudio do microfone seja o controle. O
+botão de silenciar é confuso e mexendo com ambos os canais de áudio é péssimo."*
+
+#### Adicionado
+
+- **Eleição de microfone por controle** (`integrations/eleicao_de_microfone.py`):
+  apertar o botão do mic torna o canal de captura DAQUELE controle o microfone
+  padrão do sistema. Ela guarda o padrão anterior, confere que o alvo se
+  sustenta ANTES de escrever, e **relê o ATIVO** — só declara sucesso se o
+  ativo relido for o alvo (o WirePlumber não honra nó sem porta usável e
+  reelege sozinho).
+- **O caminho de volta**: controle eleito que fica mudo, cai do rádio/cabo, ou
+  perde a ponte devolve o microfone à melhor fonte elegível. Quando não há
+  nenhuma — o caso desta bancada hoje —, **não elege nada e diz por quê**, em
+  vez de cair no `.monitor` do sink.
+- **A borda do mic COM ENDEREÇO**: tópico `EventTopic.MIC_DA_MESA`
+  (`{uniq, mudo, seq}`) e o subsistema `daemon/subsystems/mic_da_mesa.py`. O
+  `hid-playstation` consome o botão e ele não vira evdev; a identidade vem do
+  fd de cada handle, não do report.
+- **IPC `mic.led.set {aceso: bool|null, uniq?}`** e as ações de CLI
+  `hefesto mic led-on | led-off | led-release`. `null` DEVOLVE a posse do
+  `common[8]` ao kernel — a devolução já existia e **não tinha um único
+  chamador de produção**.
+- **`--fonte-se-sustenta` e `--melhor-fonte-elegivel`** no
+  `scripts/fix_wireplumber_default_source.sh`, que é o dono do critério de
+  "fonte de captura que se sustenta". O lado Python consulta, nunca reimplementa.
+
+#### Mudado
+
+- **O LED do microfone INVERTEU de significado: aceso = este mic está VIVO.** O
+  contrato do byte não mudou; quem decide o argumento é o chamador. Acender não
+  muta nada — `common[8]` e `common[9]` têm bits de autorização diferentes, e
+  **esta leva não escreve uma linha no `common[9]`**: as três recusas medidas
+  (BT-E-VPAD-01, MIC-BT-DONO-01, MIC-DOIS-DONOS-01) continuam inteiras.
+- `set_mic_led` passou a aceitar `uniq`. Sem ele, escrevia em TODOS os handles
+  **e zerava o campo `mic_led` dos overrides por-uniq dos outros** — numa mesa
+  de quatro, a borda do Jogador 2 apagava o estado dos outros três.
+- `mic_button_toggles_system` continua sendo o interruptor de "o botão é nosso",
+  mas o que ele liga mudou: eleição, não mute. Os textos que o descrevem foram
+  reescritos no mesmo passo.
+- `escolher_fonte`/`CasamentoUSB`/`sufixo_da_ponte_bt` desceram de `app/` para
+  `integrations/fontes_de_captura.py` (o daemon não importa nada de `app/`),
+  com reexportação no lugar antigo. O prefixo `hefesto_dualsense_bt_` tinha
+  DOIS donos e agora tem um.
+
+#### Corrigido
+
+- **O byte de estado de áudio era lido SEM disciplina.** Vinha de
+  `self.states[54]`, o report já digerido pela pydualsense, que não confere CRC,
+  nem report id, nem o `INPUT_FLAG_AUDIO` — e com a ponte de mic por BT de pé o
+  Opus cai exatamente ali (PS-PRESO-01). Agora quem lê é `extract_jack_status`.
+- **O LED do PERFIL não acendia um único byte.** `apply_output_defaults` chamava
+  `setMicrophoneLED` cru, o que só mexe no espelho: `_mic_led_desejado` ficava
+  `None` e `_build_common` apagava o bit de autorização. O mesmo campo pelo
+  `apply_output_for` acendia — dois caminhos, um deles mudo.
+- **A tela anunciava que o controle recém-caído estava no ar.** Sem a chave
+  `audio` no `state_full`, `bool(None)` virava `False` e o selo pintava ATIVO.
+  Agora há um terceiro estado, nos DOIS pintores, e o dublê da suíte parou de
+  trazer o default falso (era ele que impedia o portão de morder).
+- **Uma eleição podia virar uma INSTALAÇÃO.** O
+  `fix_wireplumber_default_source.sh` trata argumento desconhecido como aviso e
+  mantém `MODE=install`: chamá-lo com uma flag que ele não conhece **roda o
+  instalador e reinicia o WirePlumber**. Como o script instalado pode ser mais
+  velho que o pacote, o lado Python passou a conferir que ele conhece a flag
+  antes de invocar.
+
+#### Sabido e NÃO entregue
+
+- **O LED não acende em Modo Nativo** — ali o dono do output é o jogo. A
+  ELEIÇÃO funciona nos dois modos (a leitura acontece antes do gate); o aviso no
+  plástico, não.
+- **Quatro microfones PADRÃO ao mesmo tempo não existe** — `get-default-source`
+  devolve um nome só. Quatro canais vivos, sim; quatro padrões, não.
+- **O ensaio de bancada do `common[9]` zerado** precisa de um toque dela, e
+  `luz.led_microfone` segue `inferido-do-codigo` até ele acontecer.
+- **A colisão do nome curto na ponte BT** continua aberta, com régua
+  `xfail(strict=True)` registrando o vermelho.
+
 ### A leva da madrugada de 25/08 — vinte e duas frentes, e o que apareceu quando elas se encontraram
 
 **164 commits, 278 arquivos.** Ela saiu por sete horas e delegou: *"aja como PO e

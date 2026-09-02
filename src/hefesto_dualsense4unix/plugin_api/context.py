@@ -66,9 +66,13 @@ class ControllerProxy:
         """Define os 5 LEDs de player. bits[0] = LED 1 (esquerda)."""
         self._ctrl.set_player_leds(bits)
 
-    def set_mic_led(self, muted: bool) -> None:
-        """Acende/apaga LED do microfone. True = mudo (LED aceso)."""
-        self._ctrl.set_mic_led(muted)
+    def set_mic_led(self, aceso: bool) -> None:
+        """Acende/apaga o LED do microfone. `True` = ACESO = mic VIVO.
+
+        MIC-DA-MESA-ELEICAO-01: a luz mudou de significado (era a convenção da
+        Sony, "aceso = mudo"). Acender não muta nada — o byte é outro.
+        """
+        self._ctrl.set_mic_led(aceso)
 
     # -- estado read-only ----------------------------------------------------
 

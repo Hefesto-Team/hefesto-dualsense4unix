@@ -215,7 +215,30 @@ async def test_press_after_settling_emits_button_down(
 async def test_mic_toggle_after_settling(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Toggle manual do mic (apertando o botão de verdade) funciona após o grace."""
+    """O `mic_btn` do `BUTTON_DOWN` não muta mais nada, nem depois do grace.
+
+    MIC-DA-MESA-ELEICAO-01 (01/09/2026). Este teste exigia que o aperto real,
+    passada a carência, chamasse `toggle_default_source_mute` — e é justamente
+    a coisa que ela mandou parar de fazer: *"O botão de silenciar é confuso e
+    mexendo com ambos os canais de áudio é péssimo."*
+
+    A CARÊNCIA continua sendo o assunto deste arquivo e continua valendo: ela
+    só mudou de laço. A borda do microfone com endereço nasce em
+    `daemon/subsystems/mic_da_mesa.py`, que aplica o MESMO `INPUT_GRACE_SEC`.
+
+    PONTEIRO CORRIGIDO em 02/09/2026 (auditoria). Aqui se lia que o teste da
+    carência do laço novo "é
+    `test_mic_repique_01_o_botao_que_mutava_sozinho.py::TestARajadaDeBordas`".
+    Não era: os três testes daquela classe começavam com `asyncio.sleep(0.4)`,
+    que PASSA POR CIMA da carência de 0,3 s, e nenhum apertava dentro dela —
+    arrancar a linha inteira do `mic_da_mesa_loop` deixava 859 réguas verdes.
+    O ponteiro agora aponta para o teste que de fato existe:
+    `TestARajadaDeBordas::test_a_borda_dentro_da_carencia_nao_vira_gesto`,
+    escrito na mesma auditoria.
+
+    O que sobra aqui é a metade que continua sendo deste arquivo: passado o
+    grace, o `BUTTON_DOWN` do `mic_btn` chega ao laço e **nada é mutado**.
+    """
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.05
     )
@@ -244,8 +267,10 @@ async def test_mic_toggle_after_settling(
         daemon.stop()
         await run_task
 
-    mock_audio.toggle_default_source_mute.assert_called()
-    assert True in fc.mic_led_history
+    mock_audio.toggle_default_source_mute.assert_not_called()
+    assert fc.mic_led_history == [], (
+        "o LED só é pintado da RELEITURA da eleição, e por um caminho com `uniq`"
+    )
 
 
 # ---------------------------------------------------------------------------
