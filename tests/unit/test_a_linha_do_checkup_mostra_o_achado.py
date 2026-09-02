@@ -31,13 +31,34 @@ desenho dela crava na quarta linha. Um "não deu para olhar" chegava à tela com
 **O `?` NÃO TINHA ENDEREÇO.** Ele continuava sendo o do MOCKUP enquanto o selo
 e a frase ao lado já eram os dela — a linha 1 dizia "Economia de energia
 desligada" e o `?` explicava *"as entradas em uso entregam 500 mA ou mais"*, que
-é a medição de OUTRO achado. A montagem tem dono
-(``secao_exame._dica_do_item``): a frase do que a linha significa, a medição
-desta rodada e a cura com o prefixo que tem dono.
+é a medição de OUTRO achado.
+
+**E ENTÃO O `?` PASSOU A REPETIR A LINHA — decisão dela, 02/09/2026.** Com a
+publicação do mesmo dia a linha passou a mostrar a MEDIÇÃO, e a dica ao lado
+trazia essa mesma medição na segunda das três metades: a pessoa lia a frase e
+a lia de novo ao parar o ponteiro. O `?` fica com o que a linha NÃO diz — **por
+que aquilo importa** e **o que fazer**.
+
+A montagem continua sendo do produto (``DICAS_DAS_LINHAS`` e
+``PREFIXO_DA_CURA``, de ``secao_exame``); o que mudou é QUEM PEDE. O dono
+``_dica_do_item`` fica intacto porque a janela GTK também o usa, e **lá a linha
+mostra o ``rotulo``** (``secao_exame.PainelDoExame``, ``:1177``) — naquela tela
+a dica é o único caminho de ``Item.porque`` até a pessoa. Duas telas mostram
+coisas diferentes na linha, logo pedem dicas diferentes.
+
+**O QUARTO SELO — decisão dela, 02/09/2026.** ``SELO_DO_ESTADO`` manda
+``atencao`` e ``problema`` para a MESMA palavra e a MESMA pílula  (noqa-acento)
+laranja, e ela
+decidiu que *"o que está quebrado agora não pode parecer igual ao que só podia
+estar melhor"*. Esta leva entrega a **cor**: a pílula ganhou o endereço
+``selo-estado`` (alvo ``classe``), o pacote emite o ESTADO cru e o desenho traz
+``.selo.grave`` em ``var(--red)``. **A PALAVRA continua sendo "AJUSTAR" e é
+espera dela** — trocá-la seria escolher no lugar dela.
 
 **A MORDIDA:** troque ``i["porque"]`` por ``i["titulo"]`` na chave ``achado`` do
-pacote, ou devolva o selo binário, ou tire o ``data-campo="achado-explica"`` do
-gerador — os três reprovam, cada um com a sua frase.
+pacote, devolva o selo binário, tire o ``data-campo="achado-explica"`` do
+gerador, ponha o ``porque`` de volta na dica, ou apague o ``selo-estado`` —
+todos reprovam, cada um com a sua frase.
 """
 from __future__ import annotations
 
@@ -138,11 +159,87 @@ def test_um_estado_que_a_tela_nao_conhece_nao_vira_verde():
     assert linha["classe"] == "info"
 
 
+# --- o QUARTO selo: `problema` deixa de parecer `atencao` ---  # (noqa-acento)
+
+
+def test_o_problema_e_o_atencao_chegam_a_tela_como_estados_diferentes():
+    """A cor sai do ESTADO, e é ele que separa os dois — não a palavra.
+
+    Enquanto o único canal era `SELO_DO_ESTADO`, os dois estados chegavam à
+    tela como a mesma pílula laranja e a mesma palavra: *"o que está quebrado
+    agora parecia igual ao que só podia estar melhor"*, que é a frase dela.
+    """
+    quebrado = a08._linha(_item(estado="problema"))
+    so_podia_melhorar = a08._linha(_item(estado="atencao"))  # (noqa-acento) id
+    assert quebrado["estado"] != so_podia_melhorar["estado"], (
+        "o pacote parou de distinguir `problema` de `atencao` no que manda "  # (noqa-acento) chave
+        "para a tela — sem isso a cor do quarto selo não tem em que se apoiar"
+    )
+    # A PALAVRA AINDA É A MESMA, e isso é ESPERA DELA, não descuido.
+    assert quebrado["selo"] == so_podia_melhorar["selo"] == "AJUSTAR"
+
+
+def test_o_pacote_emite_o_estado_de_cada_selo():
+    """Sem a lista `selo-estado`, a pílula não tem como saber que ficou vermelha.
+
+    Lida do FONTE pela mesma razão do `achado`: `pacote()` precisa do daemon e
+    do sysfs desta máquina, e a decisão é uma linha só.
+    """
+    fonte = PACOTE.read_text(encoding="utf-8")
+    assert re.search(r'"selo-estado":\s*\[i\["estado"\] for i in itens\]', fonte), (
+        "o pacote parou de emitir `selo-estado` — a linha `problema` volta a "
+        "usar a pílula laranja de `atencao`, que é o que ela mandou separar"  # (noqa-acento) chave
+    )
+
+
+def test_a_bancada_acende_o_quarto_selo_pelo_estado():
+    """As cinco pílulas do Check-up sabem virar `grave` quando o estado é `problema`.
+
+    O endereço é do DESENHO — é ele que traduz estado em cor. `data-hef-quando`
+    lê o estado do exame, e não a classe CSS: o pacote emite o estado cru
+    justamente para não pôr a folha de estilo dentro do Python.
+    """
+    html = BANCADA.read_text(encoding="utf-8")
+    endereco = ('data-campo="selo-estado" data-hef-alvo="classe" '
+                'data-hef-classe="grave" data-hef-quando="problema"')
+    assert html.count(endereco) == 5, (
+        "as cinco pílulas do Check-up perderam o endereço do quarto selo — "
+        "regere com `python src/hefesto_dualsense4unix/interface/aba08.py`"
+    )
+    # A PALAVRA CONTINUA NO SEU PRÓPRIO ENDEREÇO, e num elemento à parte: um
+    # `data-campo` por nó, e o selo tem dois dados (a palavra e a cor).
+    assert html.count('<span data-campo="selo">') == 5
+
+
+def test_a_bancada_tem_a_cor_do_quarto_selo_e_ela_vence_a_laranja():
+    """`.selo.grave` existe, é `--red`, e vem DEPOIS de `.selo.warn`.
+
+    A ordem é o que decide: a pílula nasce no HTML com a classe do desenho
+    (`warn`) e o produto ACRESCENTA `grave`. As duas têm a mesma
+    especificidade, então a última declarada é a que pinta. Escrita antes,
+    a regra existiria e não mudaria um pixel.
+    """
+    html = BANCADA.read_text(encoding="utf-8")
+    assert ".selo.grave{background:var(--red);color:var(--app-bg)}" in html
+    assert html.index(".selo.grave{") > html.index(".selo.warn{"), (
+        "a cor do quarto selo foi declarada ANTES da laranja — com a mesma "
+        "especificidade, a laranja volta a ganhar e a linha quebrada volta a "
+        "parecer com a que só podia estar melhor"
+    )
+
+
+def test_o_gerador_e_quem_escreve_o_endereco_do_quarto_selo():
+    """A bancada é gerada: quem o apagar do gerador some com ele no próximo `abaNN.py`."""
+    fonte = GERADOR.read_text(encoding="utf-8")
+    assert 'data-hef-classe="grave" data-hef-quando="problema"' in fonte
+    assert ".selo.grave{background:var(--red);color:var(--app-bg)}" in fonte
+
+
 # --- o `?`: a montagem do produto, em HTML ---------------------------------
 
 
-def test_a_dica_da_linha_traz_as_tres_metades_do_produto():
-    """O `?` é `secao_exame._dica_do_item`, e não uma quarta grafia dela."""
+def test_a_dica_da_linha_traz_as_duas_metades_do_produto():
+    """O `?` traz o "por que importa" e a cura — as duas frases do produto."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import (
         DICAS_DAS_LINHAS,
         PREFIXO_DA_CURA,
@@ -151,8 +248,41 @@ def test_a_dica_da_linha_traz_as_tres_metades_do_produto():
     it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento)
     dica = a08._linha(it)["dica"]
     assert DICAS_DAS_LINHAS["energia_das_portas"] in dica
-    assert it.porque in dica
     assert PREFIXO_DA_CURA + it.cura in dica
+
+
+def test_a_dica_nao_repete_a_medicao_que_a_linha_ja_mostra():
+    """Decisão dela, 02/09/2026 — e é a metade do meio que sai.
+
+    A linha ao lado mostra o `porque` (ver `achado`, acima). Repeti-lo no `?`
+    fazia a pessoa ler a mesma frase duas vezes: uma na tela, outra ao parar o
+    ponteiro. Na versão GTK a dica era o único lugar onde a medição cabia,
+    porque lá a linha mostra o RÓTULO — aqui ela não é mais.
+    """
+    it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento) id
+    linha = a08._linha(it)
+    assert linha["porque"] == it.porque, "a linha continua mostrando a medição"
+    assert it.porque not in linha["dica"], (
+        "o `?` da linha voltou a repetir a medição que a linha ao lado já "
+        "mostra — decisão dela de 02/09/2026"
+    )
+
+
+def test_o_dono_da_dica_continua_inteiro_para_a_janela_gtk():
+    """Curar no dono apagaria a medição da janela estável, onde ela é única.
+
+    `secao_exame._dica_do_item` é chamado pelo `PainelDoExame`, e ali a linha
+    mostra `item.rotulo` — o NOME da conferência. Tirar o `porque` DE LÁ deixaria
+    a janela GTK sem um caminho para a medição. Por isso quem pede a metade é
+    este pacote, e não o dono que muda.
+    """
+    from hefesto_dualsense4unix.app.actions.config.secao_exame import _dica_do_item
+
+    it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento) id
+    assert it.porque in _dica_do_item(it), (
+        "o dono da dica perdeu a medição — a janela GTK mostra o rótulo na "
+        "linha, e a dica era o único caminho do `porque` até a tela dela"
+    )
 
 
 def test_a_dica_quebra_linha_em_html_e_nao_em_texto():
@@ -163,8 +293,14 @@ def test_a_dica_quebra_linha_em_html_e_nao_em_texto():
 
 
 def test_a_dica_escapa_o_que_viesse_do_exame():
-    """Alvo `html` sem escape é marcação vinda do sistema entrando na tela."""
-    dica = a08._linha(_item(porque="a & b < c"))["dica"]
+    """Alvo `html` sem escape é marcação vinda do sistema entrando na tela.
+
+    A CURA É A METADE QUE VEM DO SISTEMA — ela nomeia porta, nó e comando
+    (`exame_da_mesa`), e é por ela que um `&` ou um `<` entraria. Este teste
+    usava o `porque` até 02/09/2026; ele saiu da dica (decisão dela, ver
+    acima) e o caminho de escape passou a ser este.
+    """
+    dica = a08._linha(_item(cura="use a & b < c"))["dica"]
     assert "&amp;" in dica
     assert "&lt;" in dica
 
