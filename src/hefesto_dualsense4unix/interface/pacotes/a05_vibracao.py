@@ -147,13 +147,25 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             plano[f"motor-{lado}"] = m.get("n", "—")
             plano[f"motor-{lado}-pct"] = str(m.get("w", "")).rstrip("%")
         colunas[uniq] = plano
+    # A LINHA DO ESTADO — 02/09/2026, e ela é a única coisa que esta aba diz
+    # sobre a MESA. Vai por `blocos` e não por campo: o NÚMERO de linhas muda com
+    # o estado (um aviso que não se aplica não aparece), e o pintor troca vazio
+    # por travessão — um `—` numa linha de alerta afirmaria "não sei" onde a
+    # resposta é "não há nada a avisar" (`hefesto_vivo.py:118`).
+    #
+    # O SELETOR É `#vib-estado`, e ele só existe na BANCADA até ela publicar. Na
+    # página publicada o `document.querySelector` devolve `null` e o laço do
+    # bootstrap não faz nada — nem erro, nem pintura contada. É o preço de a
+    # publicação ser ato dela, e está declarado em `mockup/DIVERGENCIAS.md`.
+    estado = _tela.html_do_estado(_tela.textos_do_estado(ctx.state))
     return {
         "colunas": colunas,
-        # A MESA NÃO EMITE NADA, e é o que a página comporta. `rumble_policy`
-        # não tem `data-campo` nenhum — o degrau aceso é uma CLASSE, não um
-        # texto — e `rumble_passthrough` também não. Emiti-los custava dez
+        # A MESA NÃO EMITE CAMPO NENHUM, e é o que a página comporta.
+        # `rumble_policy` não tem `data-campo` — o degrau aceso é uma CLASSE, não
+        # um texto — e `rumble_passthrough` também não. Emiti-los custava dez
         # elementos destruídos por tique e não pintava um valor sequer.
         "mesa": {},
+        "blocos": {"#vib-estado": estado},
         "sem_dono": dict(SEM_DONO),
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO)},

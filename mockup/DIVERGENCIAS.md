@@ -21,4 +21,23 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 05-vibracao.html
+- **02/09/2026** — **a linha do estado da vibração**, que a janela GTK tem e esta
+  aba não tinha. Ela nasce no rodapé do quadro e diz, com as palavras que já
+  eram do produto (`app/actions/rumble_actions.py:186,291,370`): quantas vezes o
+  jogo pediu vibração, se a intensidade escolhida **não está chegando** a jogo
+  nenhum, e se o orçamento da mesa limitou o multiplicador.
+
+  **Por que ela importa hoje:** com os dois controles na mesa, o daemon
+  respondia `rumble_ff.vpads == 0` — não há gamepad virtual —, e nesse estado os
+  quatro degraus de força **não agem sobre a vibração de jogo nenhum**. A janela
+  estável avisa isso desde 11/08; a aba nova ficava calada e a pessoa continuava
+  clicando em "Máximo".
+
+  A linha **some** quando não há nada a dizer (`.vib-estado:empty`), e no estado
+  normal ela cabe sem fazer a aba rolar — medido: o miolo tem 564 px e o quadro
+  passou de 476 para 498. Com um alerta aceso a aba rola, e isso é de propósito.
+
+  **O que espera o seu OK:** o texto sai inteiro do produto, mas o LUGAR e o
+  tamanho são desenho. Se preferir a linha no topo do quadro, ao lado do título,
+  é uma linha no gerador.
