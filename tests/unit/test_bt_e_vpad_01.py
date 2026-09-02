@@ -196,7 +196,7 @@ def test_ninguem_afirma_que_o_common9_para_o_kernel_de_alternar() -> None:
     import re
 
     raiz = pathlib.Path(__file__).resolve().parents[2]
-    MARCA_DE_RECITACAO = "recitação-da-frase-derrubada"
+    marca_de_recitacao = "recitação-da-frase-derrubada"
 
     # (a) o fato: a condição do toggle é o bit do botão no report de ENTRADA.
     fonte_c = (raiz / "assets/dkms/hid-playstation/hid-playstation.c").read_text(
@@ -231,7 +231,7 @@ def test_ninguem_afirma_que_o_common9_para_o_kernel_de_alternar() -> None:
                 # A frase só é a frase derrubada quando fala do byte ou do
                 # kernel; a vizinhança cobre a quebra de linha do parágrafo.
                 janela = "\n".join(linhas[max(0, n - 8) : n + 8])
-                if MARCA_DE_RECITACAO in janela:
+                if marca_de_recitacao in janela:
                     # Quem CITA a frase para dizer que ela é falsa carrega a
                     # marca. Sem esta porta a régua reprovaria a própria
                     # correção — o defeito das onze réguas de 26/08.

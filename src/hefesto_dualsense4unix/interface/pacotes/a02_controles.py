@@ -68,7 +68,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "luz-hex": "#{:02X}{:02X}{:02X}".format(*rgb[:3]) if len(rgb) >= 3 else "—",
             # UM DONO SÓ para o selo, nos dois pintores (auditoria 02/09/2026):
             # `mesa_viva.selo_do_mic`. O ternário estava escrito duas vezes, e
-            # a régua do outro lado media TEXTO — a cura de lá caía calada.
+            # a régua do outro lado olhava o TEXTO — a cura de lá caía calada.
             "mic-selo": mesa_viva.selo_do_mic(mudo, sabemos),
             # O `mic-modo` SAIU DAQUI EM 01/09/2026, e ele APAGAVA DOIS BOTÕES.
             # O endereço `data-campo="mic-modo"` não era uma folha: era o
