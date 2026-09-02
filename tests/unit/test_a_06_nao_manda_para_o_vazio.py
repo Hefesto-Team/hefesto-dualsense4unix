@@ -342,6 +342,53 @@ def test_o_guardar_zera_quando_o_perfil_ja_esta_de_fabrica(disco):
     assert not gravados
 
 
+def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
+    """O "Guardar" nomeia as linhas sem dono com o rótulo do MOTOR, não o id cru.
+
+    Medido em 02/09/2026 com dublê: trocar o `cross` faz o `l2` divergir do seu
+    espelho (`acoes.resolver` — o L2 é o cross por tabela), e a frase que ia
+    para a tela dizia *"ficaram sem quem as atenda: l2"*. `l2`,
+    `touchpad_left_press` e `r3_direcao` são jargão de kernel na cara de quem
+    clicou, e o produto já tem os vinte nomes em
+    `app/actions/input_actions.humanize_button` desde o KBD-01 — é o que a GTK
+    que ela usa mostra.
+
+    A mordida: faça `_nome_do_botao` devolver o argumento — este teste reprova
+    dizendo que a frase voltou a falar em `l2`.
+    """
+    import pacotes
+    from pacotes import a06_navegacao
+
+    estado, _ = disco
+    estado["regua"] = _PerfilDeMentira("regua")
+    ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
+
+    with pytest.raises(RuntimeError) as caiu:
+        a06_navegacao.guardar_definicoes(
+            ctx, {"forma": _forma_de_fabrica(cross="Esc")}, _PonteMuda())
+    frase = str(caiu.value)
+    assert "L2 (gatilho esquerdo)" in frase, (
+        f"a recusa saiu {frase!r} — o nome do botão tem de ser o que ela lê.")
+    assert not re.search(r"\bl2\b", frase), (
+        f"a recusa ainda traz o id cru do kernel: {frase!r}")
+
+
+def test_o_nome_do_botao_e_o_do_motor_e_nao_uma_segunda_tabela():
+    """Vinte nomes já existem no produto; escrevê-los de novo é o defeito.
+
+    LEI 0 desta migração, palavra dela: *"não temos que recriar nada, só
+    aproveitar o que foi feito"*. Esta linha reprova no dia em que alguém
+    copiar a tabela para dentro do pacote — as duas passariam a envelhecer
+    separadas, e a tela e a GTK diriam nomes diferentes para o mesmo botão.
+    """
+    from hefesto_dualsense4unix.app.actions import input_actions
+    from pacotes import a06_navegacao
+
+    for botao in ("l2", "touchpad_left_press", "create", "cross"):
+        assert a06_navegacao._nome_do_botao(botao) == \
+            input_actions.humanize_button(botao)
+
+
 def test_o_produto_nunca_esta_a_frente_do_desenho():
     """Endereço no publicado que a bancada não tem = alguém editou o produto.
 
