@@ -232,7 +232,13 @@ class EleitorDeMicrofone:
     _guardou: bool = field(default=False, repr=False)
 
     #: O `uniq` do controle que está com o microfone da mesa AGORA. `None` =
-    #: ninguém elegeu (ou já devolveu).
+    #: ninguém elegeu (ou já devolveu, e a devolução foi CONFERIDA).
+    #:
+    #: **Ele só muda com a releitura do ATIVO, nos dois sentidos.** Eleição que
+    #: o WirePlumber desfaz não anota dono; devolução que não conseguiu
+    #: devolver não tira o dono, porque o padrão do sistema continua sendo o
+    #: canal dele. É o mesmo *"a pós-condição canônica é o ATIVO relido"* do
+    #: topo do módulo, aplicado à posse.
     #:
     #: ACHADO DA AUDITORIA DE 02/09/2026, e é sobre a mesa de quatro que ela
     #: nomeou (*"com 4 pessoas com controle na mão localmente isso é
@@ -391,9 +397,10 @@ class EleitorDeMicrofone:
         ELEITO vai a mudo. Este docstring dizia *"quando o controle eleito
         passa a MUDO, cai do rádio/cabo, ou a ponte de microfone dele cai"*, e
         as duas últimas eram falsas: `grep -rn "devolver_o_microfone" src/`
-        devolve esta definição e aquela única chamada, e as três escritas de
-        `self.eleito` neste módulo são todas caminhos de eleição — a da
-        eleição conferida e as duas deste método.
+        devolve esta definição e aquela única chamada, e as DUAS escritas de
+        `self.eleito` neste módulo são caminhos de eleição CONFERIDA — a de
+        `eleger_por_uniq` e a deste método. (Eram três até 02/09, quando as
+        duas incondicionais daqui viraram uma condicionada ao `ok`.)
         **Não há gancho de hotplug-out**, e a posse fica de pé quando o
         controle cai. Enquanto ela ficar, quem publica o estado tem de dizer
         que o dono saiu da mesa em vez de nomeá-lo — é o `eleito_na_mesa` de
@@ -410,15 +417,12 @@ class EleitorDeMicrofone:
 
         **RESPOSTA VAZIA NÃO VIRA `.monitor`.** Quando não há fonte que se
         sustente — o estado desta bancada hoje, com a webcam fora e as três
-        portas analógicas `not available` —, não se elege NADA, e o motivo vai
-        para a tela.
+        portas analógicas `not available` —, não se elege NADA, o motivo vai
+        para a tela, **e a posse não cai**: sem escrita, o padrão do sistema
+        continua sendo o canal deste controle.
         """
         nome = melhor_fonte_elegivel()
         if nome is None:
-            # A POSSE CAI MESMO SEM DESTINO. O controle saiu do ar; continuar
-            # anotando-o como eleito faria a próxima borda dele ser lida como
-            # "o eleito devolvendo de novo", e a de outro jogador como recusa.
-            self.eleito = None
             return ResultadoDaEleicao(
                 ok=False,
                 motivo=(
@@ -428,8 +432,36 @@ class EleitorDeMicrofone:
                     "gravaria o som do sistema no lugar da voz"
                 ),
             )
-        self.eleito = None
-        return self._eleger_nome(nome)
+        resultado = self._eleger_nome(nome)
+        # A POSSE SÓ CAI QUANDO A DEVOLUÇÃO É CONFERIDA — a mesma régua de
+        # `eleger_por_uniq`, e agora nos dois sentidos.
+        #
+        # FATO SUBSTITUÍDO (02/09/2026). Estas duas escritas eram
+        # incondicionais, com o comentário *"A POSSE CAI MESMO SEM DESTINO — o
+        # controle saiu do ar"*. A premissa era falsa: quando a devolução
+        # falha, **nada foi escrito** — sem fonte elegível, sem fonte que se
+        # sustente, ou com o `pactl` recusando, o `set-default-source` nunca
+        # roda — e o padrão do sistema continua sendo o canal DESTE controle.
+        # Dizer que a posse caiu era declarar sucesso pela intenção, que é o
+        # *"silêncio não é sucesso"* na forma mais cara que ele tem aqui.
+        #
+        # Consequência medida no `state_full`: depois de uma devolução recusada
+        # o bloco publicava `eleito: null` com o canal ainda no controle — a
+        # tela dizendo que ninguém está no ar enquanto o sistema grava por ele.
+        #
+        # É o que a decisão dela de 02/09 exige por baixo do LED: *"quando a
+        # devolução é recusada, o canal continua sendo daquele controle, logo o
+        # microfone está no ar, logo a luz fica acesa"*. Luz acesa com posse
+        # caída seria o plástico e a tela dando vereditos opostos.
+        #
+        # E o que a premissa velha temia continua certo, só que ao contrário:
+        # a próxima borda deste controle SER lida como "o eleito devolvendo de
+        # novo" é o comportamento correto — ele ainda tem o canal e está
+        # tentando outra vez; e a borda de outro jogador SER recusa também é,
+        # porque o canal de fato não é dele.
+        if resultado.ok:
+            self.eleito = None
+        return resultado
 
 
 def recusa_de_quem_nao_elegeu(eleito: str | None) -> ResultadoDaEleicao:

@@ -27,11 +27,19 @@ J2 apagar a resposta da J1 (e vice-versa), e o card errado mostraria a frase do
 vizinho. A chave é o endereço do controle, que é o mesmo endereço que o card já
 usa (`data-uniq`).
 
-**O RELÓGIO É MONOTÔNICO, e a idade sai calculada.** Quem lê a tela decide se
-uma frase de dois minutos atrás ainda vale; o daemon não decide isso por ela.
-Publicar o instante cru (`time.monotonic()`) seria publicar um número sem
-origem — ele só significa algo comparado com o "agora" de quem o gravou, que é
-justamente o que o consumidor não tem.
+**O RELÓGIO É MONOTÔNICO, e a idade sai calculada.** Publicar o instante cru
+(`time.monotonic()`) seria publicar um número sem origem — ele só significa
+algo comparado com o "agora" de quem o gravou, que é justamente o que o
+consumidor não tem.
+
+**E O RECADO TEM PRAZO — decisão dela, 02/09/2026:** *"a frase de recusa some
+depois de um tempo, na ordem de 30 segundos. É aviso, não estado."* Passado o
+`VALIDADE_DO_RECADO_S`, o recado deixa de ser publicado e a chave do `uniq`
+some do bloco. Antes disso o depósito republicava a última resposta até o
+toque seguinte DAQUELE controle — e como um controle pode ficar horas sem
+tocar no botão, a tela mostrava uma frase de meia hora atrás com cara de
+agora. O que NÃO expira é o estado do canal (`eleito`, `eleito_na_mesa`): esse
+é fato da máquina, não aviso.
 
 **O QUE ESTE MÓDULO NÃO FAZ:** não decide cor, não escolhe onde a frase aparece
 na página e não inventa frase de sucesso. `ok=True` sai com `motivo` vazio, de
@@ -72,6 +80,29 @@ TETO: int = 8
 #:   produto só apaga a luz DELE. É o caminho que estava mais calado dos três.
 GESTOS = ("eleger", "devolver", "recusa")
 
+#: Quanto tempo um recado continua sendo publicado. Passado isso ele SOME do
+#: bloco — a chave do `uniq` deixa de existir, e a tela não tem o que pintar.
+#:
+#: **DECISÃO DELA (02/09/2026):** *"a frase de recusa some depois de um tempo,
+#: na ordem de 30 segundos. É aviso, não estado."* O depósito guarda AVISO; o
+#: estado do canal é o `eleito`/`eleito_na_mesa` do bloco, e esse não expira.
+#:
+#: **POR QUE 30 E NÃO OUTRO NÚMERO**, que é o que ela deixou para quem
+#: implementasse:
+#:
+#: * o piso é ser LIDA. A tela repinta a cada 500 ms, então a frase aparece no
+#:   tique seguinte ao toque — mas quem apertou o botão está com o controle na
+#:   mão e os olhos no jogo. Trinta segundos são 60 repinturas: dá para olhar o
+#:   plástico, não entender, e só então procurar a tela;
+#: * o teto é não sobreviver à cena que descreve. A eleição inteira cabe em
+#:   5 s (`eleicao_de_microfone.SETTLE_PASSOS` vezes `SETTLE_PASSO_S`), e numa mesa
+#:   de quatro em turnos o dono do canal troca em segundos. Uma frase de
+#:   minutos vira *"meia hora atrás com cara de agora"*, que é o defeito;
+#: * e ela NÃO substitui o `vale_agora`. Aquele campo mata a frase que virou
+#:   MENTIRA (a mesa mudou); este prazo mata a frase que virou VELHA mesmo
+#:   continuando verdadeira. Idade não é falsidade, e por isso são dois.
+VALIDADE_DO_RECADO_S: float = 30.0
+
 
 @dataclass(frozen=True)
 class RecadoDoMicrofone:
@@ -104,6 +135,15 @@ class RecadoDoMicrofone:
     eleito: str | None
     quando_s: float
 
+    def expirou(self, agora_s: float) -> bool:
+        """Passou de `VALIDADE_DO_RECADO_S`? Então ele não é mais publicado.
+
+        `agora_s` entra por argumento pela mesma razão de `em_dicionario`: uma
+        régua que precisa de `sleep` para provar prazo mede o relógio, não o
+        código.
+        """
+        return (agora_s - self.quando_s) >= VALIDADE_DO_RECADO_S
+
     def em_dicionario(self, agora_s: float, *, dono_agora: str | None) -> dict[str, Any]:
         """O recado como o IPC o publica, com a IDADE e a VALIDADE calculadas.
 
@@ -134,8 +174,24 @@ class RecadoDoMicrofone:
         }
 
 
-def _mesa_de_agora(daemon: Any) -> list[str] | None:
+def mesa_de_agora(daemon: Any) -> list[str] | None:
     """Os `uniq` na mesa AGORA, ou `None` quando o backend não sabe dizer.
+
+    **É A ÚNICA LEITURA DE "TEM CARD NA TELA", e ela é pública por isso.**
+    Nasceu privada em 02/09/2026 e o preço apareceu no mesmo dia: o
+    `hotkey._eleger_ou_devolver` perguntava a mesma coisa a `_uniqs_conectados`,
+    que NÃO exige o `connected`, e as duas respostas divergiam exatamente na
+    cena que a onda existe para curar. Reproduzido com o laço do produto e um
+    backend que devolve o handle com `connected: False` (que é o que o backend
+    real faz — ver abaixo):
+
+        bloco = {"eleito": "…011", "eleito_na_mesa": false,
+                 "recados": {"…022": {"motivo": "o microfone da mesa está com
+                 OUTRO CONTROLE…"}}}
+
+    O mesmo `state_full` dizia, em duas chaves, que o dono saiu da mesa e que o
+    canal está com ele. Duas réguas sobre o mesmo estado é o defeito que esta
+    casa já pagou onze vezes; agora há uma.
 
     **A diferença entre `[]` e `None` é a diferença entre "a mesa está vazia" e
     "não perguntei a ninguém"**, e confundi-las é como esta casa já publicou
@@ -148,7 +204,9 @@ def _mesa_de_agora(daemon: Any) -> list[str] | None:
     `ipc_handlers._uniqs_conectados` leem — só getattrs baratos, sem HID I/O —
     e por isso ela cabe no caminho de leitura, que roda a 10 Hz.
 
-    **E ELA EXIGE O `connected`, que aquelas duas não exigem.** O
+    **E ELA EXIGE O `connected`, que aquelas duas não exigem** — que é
+    justamente por que a pergunta *"tem card na tela?"* tem de vir a esta
+    função e não a elas. O
     `describe_controllers` do backend real devolve uma entrada POR HANDLE e
     preenche o `uniq` mesmo com `connected: False`
     (`core/backend_pydualsense.py:5274`) — ler só o `uniq` daria "está na mesa"
@@ -253,7 +311,15 @@ def publicar(daemon: Any, agora_s: float | None = None) -> dict[str, Any]:
       mesa.
     * ``recados`` — um por `uniq`, com a frase, a idade dela e o ``vale_agora``
       que diz se o retrato da mesa gravado JUNTO com a frase ainda é o de
-      agora.
+      agora. **Recado passado de `VALIDADE_DO_RECADO_S` não sai** — a chave do
+      `uniq` some, e a tela fica sem o que pintar, que é o que ela decidiu
+      (*"campo sem informação não mostra nada"*).
+
+    **O PRAZO FILTRA, NÃO APAGA.** `publicar` roda a 10 Hz no caminho de
+    LEITURA, e este módulo já recusou mexer no estado por aqui uma vez (o
+    `getattr` que não instancia o eleitor). Jogar o recado fora daria a este
+    caminho uma escrita, e não compra nada: quem limita a memória é o `TETO`,
+    e um recado expirado é substituído pelo próximo toque daquele controle.
 
     **O QUE `vale_agora` LICENCIA, e a tela não pode ir além disso.** Ele é a
     comparação entre o `eleito` CONGELADO no recado e o dono de agora do ponto
@@ -273,7 +339,7 @@ def publicar(daemon: Any, agora_s: float | None = None) -> dict[str, Any]:
     cru = getattr(eleitor, "eleito", None) if eleitor is not None else None
     eleito = cru if isinstance(cru, str) else None
 
-    mesa = _mesa_de_agora(daemon)
+    mesa = mesa_de_agora(daemon)
     eleito_na_mesa = None if (eleito is None or mesa is None) else eleito in mesa
     # "NÃO SEI" NUNCA VIRA "SAIU". Só o `False` MEDIDO tira o dono do retrato
     # da mesa; o `None` (backend que não sabe listar, ou ninguém eleito) deixa
@@ -285,7 +351,7 @@ def publicar(daemon: Any, agora_s: float | None = None) -> dict[str, Any]:
     recados: dict[str, Any] = {}
     if isinstance(deposito, dict):
         for uniq, recado in deposito.items():
-            if isinstance(recado, RecadoDoMicrofone):
+            if isinstance(recado, RecadoDoMicrofone) and not recado.expirou(agora):
                 recados[str(uniq)] = recado.em_dicionario(agora, dono_agora=dono_agora)
     return {
         "eleito": eleito,
@@ -298,7 +364,9 @@ __all__ = [
     "ATRIBUTO",
     "GESTOS",
     "TETO",
+    "VALIDADE_DO_RECADO_S",
     "RecadoDoMicrofone",
     "anotar",
+    "mesa_de_agora",
     "publicar",
 ]
