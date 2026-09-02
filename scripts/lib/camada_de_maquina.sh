@@ -40,22 +40,20 @@
 # As funções são as MESMAS, byte por byte. O portão
 # `tests/unit/test_install_serve_os_dois_lados_da_cerca.py` continua exigindo
 # que cada `*_host` alcance os dois lados da cerca do `install.sh` — ele passou
-# a ler os corpos DAQUI e as regiões DE LÁ. E ganhou uma trava nova: o
-# `instalar_camada_de_maquina` do fim deste arquivo NÃO pode ser chamado do
-# `install.sh`, porque chamá-lo de lá daria todas as dez por servidas de uma
-# vez e o portão viraria decoração.
+# a ler os corpos DAQUI e as regiões DE LÁ.
 #
 # shellcheck shell=bash
 
 # --- o que a lib espera de quem a sourceia --------------------------------
 # `warn` é a única função de fora que estas dez usam (medido: 43 chamadas).
 # Definida aqui só se quem sourceia não tiver a sua — o `install.sh` tem
-# (linha 325), o `install-dev.sh` não tinha.
+# (linha 325); um roteiro avulso que sourceie esta lib pode não ter.
 declare -F warn >/dev/null 2>&1 || warn() { printf '      aviso: %s\n' "$*"; }
 declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 
 # Os gates. O `install.sh` já os define no parser de argumentos (linhas
-# 200-245) e o `:=` abaixo não os toca; o `install-dev.sh` herda os defaults.
+# 200-245) e o `:=` abaixo não os toca; quem sourceia sem eles herda os
+# defaults.
 : "${ROOT_DIR:?camada_de_maquina.sh: defina ROOT_DIR (a raiz da árvore) antes do source}"
 : "${SKIP_UDEV:=0}"
 : "${NO_OSK:=0}"
@@ -575,9 +573,16 @@ install_dkms_hid_nintendo_host() {
         # passo vira silêncio — quem escreve abaixo é o `sudo tee`, não quem
         # testa o portão.
         if [[ -e /sys/module/hid_nintendo/parameters/bt_probe_retries ]]; then
-            printf '3' | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 || true
-            printf '1' | sudo tee /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded >/dev/null 2>&1 || true
-            printf '      params aplicados a quente (valem no próximo plug, sem reboot)\n'
+            # A ESCRITA É CONFERIDA, e não declarada — 01/09/2026. O portão
+            # acima é de EXISTÊNCIA (`-e`), por decisão declarada, logo ele NÃO
+            # pode saber se a escrita passou: com o ticket do sudo expirado ou
+            # param read-only, o `|| true` engolia e a frase mentia.
+            if printf '3' | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 \
+               && printf '1' | sudo tee /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded >/dev/null 2>&1; then
+                printf '      params aplicados a quente (valem no próximo plug, sem reboot)\n'
+            else
+                warn "não consegui escrever os params do hid-nintendo a quente — valem no próximo boot"
+            fi
         fi
         # Os três do patch 0003 (handshake USB do clone 057E:2009) são lidos NA
         # PROBE, então valem do próximo plug em diante. O uninstall os devolve a
@@ -657,8 +662,11 @@ install_dkms_hid_playstation_host() {
         # `sudo tee` logo abaixo nunca aconteceria (mesma restrição do
         # hid-nintendo acima).
         if [[ -e /sys/module/hid_playstation/parameters/feature_retries ]]; then
-            printf '2' | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1 || true
-            printf '      feature_retries aplicado a quente (vale na próxima conexão, sem reboot)\n'
+            if printf '2' | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1; then
+                printf '      feature_retries aplicado a quente (vale na próxima conexão, sem reboot)\n'
+            else
+                warn "não consegui escrever feature_retries a quente — vale no próximo boot"
+            fi
         fi
         # Mesma lógica para a cura do CLONE no cabo (pairing info de 9 bytes
         # em vez de 16): lidos a cada probe, valem no próximo plug. Ausentes
@@ -667,12 +675,18 @@ install_dkms_hid_playstation_host() {
         # LITERAIS de propósito: a paridade com o install-host-udev.sh é
         # verificada por grep (AUTO-01.7).
         if [[ -e /sys/module/hid_playstation/parameters/ds4_short_pairing_info ]]; then
-            printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info >/dev/null 2>&1 || true
-            printf '      ds4_short_pairing_info aplicado a quente (clone no cabo; vale no próximo plug)\n'
+            if printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info >/dev/null 2>&1; then
+                printf '      ds4_short_pairing_info aplicado a quente (clone no cabo; vale no próximo plug)\n'
+            else
+                warn "não consegui escrever ds4_short_pairing_info a quente — vale no próximo boot"
+            fi
         fi
         if [[ -e /sys/module/hid_playstation/parameters/ds4_synthetic_mac ]]; then
-            printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_synthetic_mac >/dev/null 2>&1 || true
-            printf '      ds4_synthetic_mac aplicado a quente (clone no cabo; vale no próximo plug)\n'
+            if printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_synthetic_mac >/dev/null 2>&1; then
+                printf '      ds4_synthetic_mac aplicado a quente (clone no cabo; vale no próximo plug)\n'
+            else
+                warn "não consegui escrever ds4_synthetic_mac a quente — vale no próximo boot"
+            fi
         fi
     elif [[ -d /sys/module/hid_playstation ]]; then
         printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria os DualSense, inclusive os por BT);\n'
@@ -799,121 +813,77 @@ install_dkms_rtw88_usb_host() {
 # Sem o agente, todo bond novo nasce meio-salvo (`Paired: yes / Bonded: no`) e
 # some — que é o "conectam sozinhos e desligam em sequência" que ela relatou.
 install_bt_agent_host() {
-    if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
-        step "3g" "ONDA-R: agente de pareamento BT persistente (cura o bond meio-salvo)"
-        if ! sudo -n true 2>/dev/null; then
-            warn "sudo recusado — agente de pareamento pulado (re-execute ./install.sh)"
+    # QUEM ANUNCIA O PASSO É O CHAMADOR, e esta função NÃO repete o `step`.
+    # Curado em 01/09/2026: quando o bloco de topo do `install.sh` virou função
+    # (commit `a53f44e2`), o `step` veio junto e o do chamador ficou — o
+    # cabeçalho `[3g]` saía DUAS VEZES no caminho normal. E com `--no-udev`
+    # saía UMA e mais nada: o único passo do instalador que anunciava e ficava
+    # calado, enquanto todos os vizinhos dizem `pulado (--no-udev)`.
+    if [[ "${SKIP_UDEV}" -ne 0 ]]; then
+        printf '      pulado (--no-udev)\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — agente de pareamento pulado (o bond meio-salvo continua)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — agente de pareamento pulado (re-execute ./install.sh)"
+    else
+        if ! command -v bt-agent >/dev/null 2>&1; then
+            printf '      bluez-tools ausente (fornece bt-agent) — instalando (sudo)\n'
+            # DEPS-UNIVERSAIS-01: nome canônico. No Fedora a tabela está
+            # VAZIA de propósito (não há `bluez-tools` com esse nome), e o
+            # `run_pkg` diz isso em voz alta em vez de instalar outra coisa.
+            # `run_pkg`/`comando_manual_pkg` são do `install.sh` — a tabela de
+            # pacotes por distro é dele e NÃO viaja para esta lib. Quem sourceia
+            # sem elas (o `install-dev.sh --camada-de-maquina`) não adivinha o
+            # gerenciador da distro: diz o que falta, em voz alta, em vez de
+            # fingir que instalou.
+            if declare -F run_pkg >/dev/null 2>&1; then
+                if run_pkg bt-agent; then
+                    printf '      bluez-tools instalado\n'
+                else
+                    warn "não consegui instalar o bt-agent — o bond meio-salvo pode voltar"
+                    printf '      quando quiser: %s\n' "$(comando_manual_pkg bt-agent)"
+                fi
+            else
+                warn "bluez-tools ausente (fornece bt-agent) e sem tabela de pacotes aqui — instale à mão (Debian/Ubuntu: sudo apt install bluez-tools) e rode de novo"
+            fi
         else
-            if ! command -v bt-agent >/dev/null 2>&1; then
-                printf '      bluez-tools ausente (fornece bt-agent) — instalando (sudo)\n'
-                # DEPS-UNIVERSAIS-01: nome canônico. No Fedora a tabela está
-                # VAZIA de propósito (não há `bluez-tools` com esse nome), e o
-                # `run_pkg` diz isso em voz alta em vez de instalar outra coisa.
-                # `run_pkg`/`comando_manual_pkg` são do `install.sh` — a tabela de
-                # pacotes por distro é dele e NÃO viaja para esta lib. Quem sourceia
-                # sem elas (o `install-dev.sh --camada-de-maquina`) não adivinha o
-                # gerenciador da distro: diz o que falta, em voz alta, em vez de
-                # fingir que instalou.
-                if declare -F run_pkg >/dev/null 2>&1; then
-                    if run_pkg bt-agent; then
-                        printf '      bluez-tools instalado\n'
-                    else
-                        warn "não consegui instalar o bt-agent — o bond meio-salvo pode voltar"
-                        printf '      quando quiser: %s\n' "$(comando_manual_pkg bt-agent)"
-                    fi
+            printf '      bluez-tools já presente (bt-agent em %s)\n' "$(command -v bt-agent)"
+        fi
+        if command -v bt-agent >/dev/null 2>&1; then
+            if sudo install -Dm644 "${ROOT_DIR}/assets/systemd/hefesto-bt-agent.service" \
+                    /etc/systemd/system/hefesto-bt-agent.service 2>/dev/null; then
+                sudo systemctl daemon-reload >/dev/null 2>&1 || true
+                # AGENTE-EM-FAILED-NAO-VOLTA-PELO-INSTALL-01 (15/08/2026) — MEDIDO.
+                #
+                # `enable --now` NÃO tira uma unit do estado `failed`: o systemd
+                # recusa iniciar quem bateu o `StartLimitBurst`, e o install
+                # terminava com "habilitado" no texto e o agente morto de fato.
+                #
+                # O preço disso foi medido em 14/08: o agente ficou `failed` das
+                # 16:17 às 00:31 e, sem ele, TODO bond novo nasce meio-salvo
+                # (`Paired: yes / Bonded: no`) e some — que é o "conectam sozinhos
+                # e desligam em sequência" que ela relatou. Reinstalar não
+                # resolveria; só um `reset-failed` explícito resolve.
+                #
+                # O `KillSignal=SIGKILL` da unit (mesma data) impede que ele
+                # ENTRE em `failed`. Esta linha cuida de quem JÁ está — as duas
+                # são necessárias, e nenhuma substitui a outra.
+                sudo systemctl reset-failed hefesto-bt-agent.service >/dev/null 2>&1 || true
+                if sudo systemctl enable --now hefesto-bt-agent.service >/dev/null 2>&1; then
+                    printf '      hefesto-bt-agent.service habilitado (agente NoInputNoOutput persistente)\n'
                 else
-                    warn "bluez-tools ausente (fornece bt-agent) e sem tabela de pacotes aqui — instale à mão (Debian/Ubuntu: sudo apt install bluez-tools) e rode de novo"
+                    warn "enable --now do hefesto-bt-agent.service falhou — habilite manualmente"
                 fi
             else
-                printf '      bluez-tools já presente (bt-agent em %s)\n' "$(command -v bt-agent)"
+                warn "não consegui gravar /etc/systemd/system/hefesto-bt-agent.service"
             fi
-            if command -v bt-agent >/dev/null 2>&1; then
-                if sudo install -Dm644 "${ROOT_DIR}/assets/systemd/hefesto-bt-agent.service" \
-                        /etc/systemd/system/hefesto-bt-agent.service 2>/dev/null; then
-                    sudo systemctl daemon-reload >/dev/null 2>&1 || true
-                    # AGENTE-EM-FAILED-NAO-VOLTA-PELO-INSTALL-01 (15/08/2026) — MEDIDO.
-                    #
-                    # `enable --now` NÃO tira uma unit do estado `failed`: o systemd
-                    # recusa iniciar quem bateu o `StartLimitBurst`, e o install
-                    # terminava com "habilitado" no texto e o agente morto de fato.
-                    #
-                    # O preço disso foi medido em 14/08: o agente ficou `failed` das
-                    # 16:17 às 00:31 e, sem ele, TODO bond novo nasce meio-salvo
-                    # (`Paired: yes / Bonded: no`) e some — que é o "conectam sozinhos
-                    # e desligam em sequência" que ela relatou. Reinstalar não
-                    # resolveria; só um `reset-failed` explícito resolve.
-                    #
-                    # O `KillSignal=SIGKILL` da unit (mesma data) impede que ele
-                    # ENTRE em `failed`. Esta linha cuida de quem JÁ está — as duas
-                    # são necessárias, e nenhuma substitui a outra.
-                    sudo systemctl reset-failed hefesto-bt-agent.service >/dev/null 2>&1 || true
-                    if sudo systemctl enable --now hefesto-bt-agent.service >/dev/null 2>&1; then
-                        printf '      hefesto-bt-agent.service habilitado (agente NoInputNoOutput persistente)\n'
-                    else
-                        warn "enable --now do hefesto-bt-agent.service falhou — habilite manualmente"
-                    fi
-                else
-                    warn "não consegui gravar /etc/systemd/system/hefesto-bt-agent.service"
-                fi
-            else
-                warn "bt-agent ainda ausente — agente de pareamento NÃO habilitado"
-            fi
+        else
+            warn "bt-agent ainda ausente — agente de pareamento NÃO habilitado"
         fi
     fi
-    return 0
-}
-
-# ---------------------------------------------------------------------------
-# A camada inteira, numa chamada só (31/08/2026)
-# ---------------------------------------------------------------------------
-# A ORDEM É A DO `install.sh`, e cada posição foi paga:
-#
-#   udev PRIMEIRO   — as regras criam o grupo `hefesto` e dão dono a
-#                     /dev/uhid e /dev/uinput; sem elas o broker sobe para um
-#                     nó que ninguém abre, e o daemon cai para uinput calado;
-#   broker          — precisa das regras já aplicadas para esconder hidraw;
-#   bt-res, ponte   — as regras udev 82 e 83 existem SÓ para chamar os alvos
-#                     que estas duas instalam em /usr/local/lib; regra sem
-#                     alvo falha a cada conexão Bluetooth, em silêncio
-#                     (medido em 07/08, estudo da cobertura do install, item 9);
-#   os três DKMS    — e o `flush_initramfs_host` DEPOIS dos três, um flush só:
-#                     regenerar por módulo custa dezenas de segundos e ~140 MB
-#                     de escrita cada (INITRAMFS-01);
-#   osk POR ÚLTIMO  — é pacote do sistema, não depende de nada acima.
-#
-# NÃO CHAME ESTA FUNÇÃO DO `install.sh`. Ela existe para quem instala a camada
-# SEM instalar um app — hoje só o `install-dev.sh --camada-de-maquina`. Chamada
-# do `install.sh`, ela daria as dez `*_host` por alcançadas de uma vez e o
-# portão `test_install_serve_os_dois_lados_da_cerca.py` viraria decoração: ele
-# deixaria de cobrar que cada cura chegue aos DOIS lados da cerca, que é a
-# única coisa que ele mede. Há teste que reprova essa chamada.
-instalar_camada_de_maquina() {
-    local passo_atual=0
-    _passo() { passo_atual=$((passo_atual + 1)); printf '\n[%d/11] %s\n' "${passo_atual}" "$1"; }
-
-    _passo "udev + grupo hefesto (dono de /dev/uhid e /dev/uinput)"
-    install_udev_host
-    _passo "broker root hide-hidraw (BROKER-01 — a cura do controle duplicado)"
-    install_broker_host
-    _passo "ONDA-R2: resiliência do bluetoothd (bonds que sobrevivem ao crash)"
-    install_bt_resilience_host
-    _passo "ONDA-R: agente de pareamento BT persistente (cura o bond meio-salvo)"
-    install_bt_agent_host
-    _passo "PONTE-PRIVILEGIADA-01: a ponte de root do Bluetooth"
-    install_bt_ponte_privilegiada_host
-    _passo "MOTOR-7: censo do gabinete pelo firmware"
-    install_censo_do_gabinete_host
-    _passo "DKMS hid-nintendo patchado (Onda T)"
-    install_dkms_hid_nintendo_host
-    _passo "DKMS rtw88_usb patchado (Onda W)"
-    install_dkms_rtw88_usb_host
-    _passo "DKMS hid-playstation patchado (contenção BT)"
-    install_dkms_hid_playstation_host
-    _passo "regenerar initramfs se algum módulo DKMS mudou (INITRAMFS-01)"
-    flush_initramfs_host
-    _passo "teclado na tela do L3 (TECLADO-QUE-NAO-DIGITA-01)"
-    install_osk_host
-
-    unset -f _passo
     return 0
 }

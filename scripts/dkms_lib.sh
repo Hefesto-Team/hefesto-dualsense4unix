@@ -258,6 +258,31 @@ _dkms_initramfs_desatualizado() {
     [[ "${_ko}" -nt "${_img}" ]]
 }
 
+#: LER O `dkms status` SEM MORRER DE SIGPIPE — 01/09/2026.
+#:
+#: O QUE ACONTECIA, e é a segunda vez que esta casa paga por esta forma (a
+#: primeira foi o `ldconfig -p | grep -q` de 19/08, documentada em
+#: `install.sh`:686): com o `set -o pipefail` de quem sourceia esta lib, um
+#:
+#:     sudo dkms status "$pkg/$ver" 2>/dev/null | grep -q .
+#:
+#: devolve **141**, e não 0, exatamente quando ACHA: o `grep -q` sai no primeiro
+#: acerto, fecha o cano, o `dkms` morre de SIGPIPE e o `pipefail` faz o
+#: pipeline inteiro reprovar. A guarda `if ! …` inverte isso e vira SEMPRE
+#: verdadeira — o passo protegido roda sempre.
+#:
+#: MEDIDO na máquina dela em 01/09/2026, com os módulos `installed` nos dois
+#: kernels: o instalador chamava `dkms add` num pacote já adicionado, o dkms
+#: recusava com *"DKMS tree already contains"*, e o aviso dizia **"in-tree
+#: continua"** — sobre dois módulos que estavam instalados e EM USO
+#: (`modinfo hid_playstation` → `updates/dkms/`). A mentira mais cara possível
+#: num instalador: ele anuncia degradação onde tudo funcionou.
+#:
+#: A CURA é ler para uma variável e perguntar à variável. Sem cano, sem sinal.
+_dkms_status_texto() {
+    sudo dkms status "$@" 2>/dev/null || true
+}
+
 dkms_install_patched_module() {
     local _pkg="$1" _ver="$2" _src="$3" _built="$4"
     local _kver _srcdst _dkms_lic
@@ -331,7 +356,7 @@ dkms_install_patched_module() {
     fi
 
     # 2) add (tolerante a "já adicionado")
-    if ! sudo dkms status "${_pkg}/${_ver}" 2>/dev/null | grep -q .; then
+    if [[ -z "$(_dkms_status_texto "${_pkg}/${_ver}")" ]]; then
         if ! sudo dkms add "${_pkg}/${_ver}"; then
             _dkms_warn "dkms add falhou p/ ${_pkg}/${_ver} — in-tree continua"
             return 0
@@ -339,15 +364,29 @@ dkms_install_patched_module() {
     fi
 
     # 3) build p/ o kernel atual (o AUTOINSTALL cobre kernels futuros)
-    if ! sudo dkms status "${_pkg}/${_ver}" -k "${_kver}" 2>/dev/null | grep -qE 'built|installed'; then
-        if ! sudo dkms build "${_pkg}/${_ver}" -k "${_kver}"; then
-            _dkms_warn "dkms build FALHOU p/ ${_pkg}/${_ver} no kernel ${_kver} — módulo in-tree continua (fail-safe); log: /var/lib/dkms/${_pkg}/${_ver}/build/make.log"
+    if [[ ! "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" =~ (built|installed) ]]; then
+        local _rc_build=0
+        sudo dkms build "${_pkg}/${_ver}" -k "${_kver}" || _rc_build=$?
+        # 77 NÃO É FALHA — é o `BUILD_EXCLUSIVE_KERNEL` do `dkms.conf` dizendo
+        # "este módulo não é para este kernel". Curado em 01/09/2026: a
+        # mensagem chamava isso de *"dkms build FALHOU"* e mandava ler um
+        # `make.log` **que não existe** (o dkms nem chega a compilar). Quem
+        # lesse iria caçar um erro de compilação inexistente. O `rtw88_usb`
+        # está pinado no build 7.0.11-76070011 de propósito: o layout de
+        # `struct rtw_dev` é congelado no nosso `main.h`, e casar outro kernel
+        # linkaria limpo e corromperia memória em runtime.
+        if [[ "${_rc_build}" -eq 77 ]]; then
+            _dkms_log "${_pkg} não é para o kernel ${_kver} (BUILD_EXCLUSIVE_KERNEL do dkms.conf) — o in-tree assume, como o pino manda"
+            return 0
+        fi
+        if [[ "${_rc_build}" -ne 0 ]]; then
+            _dkms_warn "dkms build FALHOU p/ ${_pkg}/${_ver} no kernel ${_kver} — módulo in-tree continua (fail-safe); log: /var/lib/dkms/${_pkg}/${_ver}/${_kver}/${_arch:-x86_64}/log/make.log"
             return 0
         fi
     fi
 
     # 4) install → /lib/modules/<kver>/updates/dkms (+ depmod pelo dkms)
-    if ! sudo dkms status "${_pkg}/${_ver}" -k "${_kver}" 2>/dev/null | grep -q 'installed'; then
+    if [[ "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" != *installed* ]]; then
         if ! sudo dkms install "${_pkg}/${_ver}" -k "${_kver}"; then
             _dkms_warn "dkms install falhou p/ ${_pkg}/${_ver} — in-tree continua"
             return 0
@@ -382,7 +421,7 @@ dkms_remove_patched_module() {
     local _pkg="$1" _ver="$2" _built="${3:-}" _srcdst
     _srcdst="$(_dkms_src_root)/${_pkg}-${_ver}"
     if command -v dkms >/dev/null 2>&1 &&
-        sudo dkms status "${_pkg}/${_ver}" 2>/dev/null | grep -q .; then
+        [[ -n "$(_dkms_status_texto "${_pkg}/${_ver}")" ]]; then
         if ! sudo dkms remove "${_pkg}/${_ver}" --all; then
             # Registro DKMS continua de pé: NÃO apagar o source (o dkms ainda
             # precisa dele p/ convergir) e NUNCA anunciar sucesso — re-rodar o

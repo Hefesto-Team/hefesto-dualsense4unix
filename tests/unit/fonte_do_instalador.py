@@ -4,11 +4,8 @@ POR QUE ESTE ARQUIVO EXISTE (31/08/2026)
 ========================================
 As onze curas de HOST mudaram de casa. Moravam no `install.sh` — o
 `_render_broker_units` nas linhas 873-893 e as dez `*_host` nas 989-1677 — e
-passaram para `scripts/lib/camada_de_maquina.sh`, que os DOIS instaladores
-sourceiam: o `install.sh` numa linha só, e o `install-dev.sh
---camada-de-maquina`. O motivo, com data, está no cabeçalho da lib: ela
-desinstalou o Hefesto estável e ficou só com o de desenvolvimento, e o app de
-dev dependia do estável para essa camada — parou de funcionar em silêncio.
+passaram para `scripts/lib/camada_de_maquina.sh`, que o `install.sh` sourceia
+numa linha só. O motivo, com data, está no cabeçalho da lib.
 
 **Nenhuma função mudou de comportamento.** São as mesmas, byte por byte. O que
 mudou foi o ARQUIVO em que o texto delas está.
@@ -60,13 +57,13 @@ RAIZ = Path(__file__).resolve().parents[2]
 #: comando — nada disso mudou de casa.
 INSTALL = RAIZ / "install.sh"
 
-#: As onze curas de HOST, desde 31/08/2026. Sourceada pelo `install.sh` e pelo
-#: `install-dev.sh --camada-de-maquina`.
+#: As onze curas de HOST, desde 31/08/2026. Sourceada pelo `install.sh`.
+#:
+#: ELA NASCEU PARA DOIS instaladores, e hoje serve um: o de desenvolvimento foi
+#: aposentado em 01/09/2026, quando o app virou único. A lib fica onde está —
+#: mover as onze de volta para dentro do `install.sh` reprovaria os mesmos 42
+#: testes de novo, e sem ganhar nada.
 CAMADA_DE_MAQUINA = RAIZ / "scripts" / "lib" / "camada_de_maquina.sh"
-
-#: O instalador do app de dev, que sourceia a mesma lib. Exportado para quem
-#: precisar cobrar a paridade entre os dois.
-INSTALL_DEV = RAIZ / "install-dev.sh"
 
 #: Os arquivos que, juntos, são "o instalador" para efeito de leitura.
 ARQUIVOS = (INSTALL, CAMADA_DE_MAQUINA)

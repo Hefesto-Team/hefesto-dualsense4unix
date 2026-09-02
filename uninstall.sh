@@ -113,6 +113,11 @@ readonly DESKTOP_TARGET="${HOME}/.local/share/applications/${APP_ID}.desktop"
 readonly ICON_TARGET="${HOME}/.local/share/icons/hicolor/256x256/apps/${APP_ID}.png"
 readonly LAUNCHER="${HOME}/.local/bin/hefesto-dualsense4unix-gui"
 readonly BIN_SYMLINK="${HOME}/.local/bin/hefesto-dualsense4unix"
+# A CHAVE — `install.sh` a copia para o PATH dela (passo 5). Sem esta linha ela
+# sobrevivia ao uninstall e continuava oferecendo `off`/`on` sobre units que
+# não existem mais: um comando que promete desligar o produto e não tem produto
+# para desligar.
+readonly CHAVE_BIN="${HOME}/.local/bin/hefesto-chave"
 readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4unix-gui-hotplug.service"
 
 # Artefatos do applet COSMIC (instalados por packaging/cosmic-applet via sudo).
@@ -428,7 +433,8 @@ if [[ -e /usr/share/applications/dsx-dualsense.desktop ]]; then
     sudo rm -f /usr/share/applications/dsx-dualsense.desktop 2>/dev/null || true
 fi
 
-for path in "${DESKTOP_TARGET}" "${ICON_TARGET}" "${LAUNCHER}" "${BIN_SYMLINK}"; do
+for path in "${DESKTOP_TARGET}" "${ICON_TARGET}" "${LAUNCHER}" "${BIN_SYMLINK}" \
+            "${CHAVE_BIN}"; do
     if [[ -e "${path}" ]]; then
         log "removendo ${path}"
         rm -f "${path}"
@@ -1615,6 +1621,15 @@ fi
 if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf" ]]; then
     log "removendo a sentinela do teclado na tela (o PACOTE wvkbd/onboard fica — é do sistema)"
     rm -f "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf"
+fi
+# MOTOR-7: o censo do gabinete. É estado NOSSO — o instalador o grava lendo a
+# tabela 8 do SMBIOS (`scripts/lib/camada_de_maquina.sh`), e a aba Conexões o
+# lê para saber quantos conectores a máquina tem. Sem esta linha ele
+# sobrevivia ao uninstall e ainda fazia o `rmdir` abaixo falhar calado,
+# deixando o diretório de estado inteiro de pé.
+if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json" ]]; then
+    log "removendo o censo do gabinete (~/.local/state/hefesto-dualsense4unix/gabinete.json)"
+    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
 fi
 rmdir "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
 # O passo anterior de limpeza do share-dir roda antes do wrapper sair — repete

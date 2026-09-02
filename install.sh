@@ -1204,8 +1204,15 @@ if [[ "${FORMAT}" != "native" ]]; then
     if [[ "${SKIP_SND_QUIRK}" -eq 0 ]]; then
         step "cura" "cura de raiz do storm (snd_usb_audio quirk — preserva mic+fone)"
         if bash "${ROOT_DIR}/scripts/install_snd_quirk.sh"; then
-            bash "${ROOT_DIR}/scripts/install_snd_quirk.sh" --runtime >/dev/null 2>&1 || true
-            printf '      cura instalada e ativada (replug do controle p/ valer já)\n'
+            # A ATIVAÇÃO A QUENTE É CONFERIDA, e não declarada: ela estava num
+            # `|| true` e a linha seguinte anunciava "instalada E ATIVADA" sem
+            # ter olhado. Instalar é gravar o `.conf` (vale no próximo boot);
+            # ativar é o `--runtime`, e os dois podem divergir.
+            if bash "${ROOT_DIR}/scripts/install_snd_quirk.sh" --runtime >/dev/null 2>&1; then
+                printf '      cura instalada e ativada (replug do controle p/ valer já)\n'
+            else
+                printf '      cura instalada; ativação a quente NÃO passou — vale no próximo boot\n'
+            fi
         else
             warn "install_snd_quirk.sh falhou — rode: sudo bash scripts/install_snd_quirk.sh"
         fi
@@ -2051,7 +2058,18 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                             _bz_arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
                             dpkg-query -W -f='${Package}\t${Version}\n' bluez bluez-cups "libbluetooth3:${_bz_arch}" \
                                 > "${_bz_dir}/VERSOES-ANTERIORES.txt" 2>/dev/null || true
-                            printf '      versões anteriores gravadas em %s\n' "${_bz_dir}/VERSOES-ANTERIORES.txt"
+                            # O `>` CRIA O ARQUIVO MESMO QUANDO O `dpkg-query`
+                            # FALHA, e o `|| true` engole o erro. Pior: o guarda
+                            # `! -f` acima faz um arquivo VAZIO nunca ser
+                            # reescrito — o restore do BlueZ no uninstall ficaria
+                            # sem manifesto PARA SEMPRE, e a tela teria dito
+                            # "gravadas". Vazio some, e a falha sai em voz alta.
+                            if [[ -s "${_bz_dir}/VERSOES-ANTERIORES.txt" ]]; then
+                                printf '      versões anteriores gravadas em %s\n' "${_bz_dir}/VERSOES-ANTERIORES.txt"
+                            else
+                                rm -f "${_bz_dir}/VERSOES-ANTERIORES.txt"
+                                warn "não consegui registrar as versões anteriores do BlueZ — o restore do uninstall não vai cobrir bluez/libbluetooth3"
+                            fi
                         fi
                         # DEBIAN_FRONTEND=noninteractive + --force-confdef/--force-confold:
                         # /etc/bluetooth/main.conf é conffile do dpkg e a esta altura JÁ
@@ -2675,8 +2693,43 @@ elif ! command -v systemctl >/dev/null 2>&1; then
     warn "systemctl ausente — daemon não habilitado (inicie com: hefesto-dualsense4unix daemon start)"
 else
     mkdir -p "${DAEMON_USER_UNIT_DIR}"
+
+    # A MÁSCARA DA CHAVE VEM ANTES DO `cp`, E ISSO É A CURA DE UM ESTRAGO REAL
+    # (01/09/2026). `hefesto-chave off` MASCARA as units, e uma máscara é um
+    # symlink `~/.config/systemd/user/<unit>` -> `/dev/null`. O `cp -f` SEGUE o
+    # symlink: a unit vai inteira para dentro do `/dev/null`, e o `cp` devolve
+    # `rc=0` — o `set -e` não pega. No `hefesto-chave on` seguinte o `unmask`
+    # apaga o symlink e não há arquivo por baixo: a unit do daemon DESAPARECE.
+    #
+    # MEDIDO: `ln -s /dev/null u; cp -f fonte u` -> `cp rc=0`, `u` ainda é
+    # symlink, conteúdo vazio.
+    #
+    # `unmask` antes do `cp` desfaz o symlink e o `cp` escreve arquivo de
+    # verdade. A chave EM DISCO continua valendo (é ela que faz o daemon
+    # recusar subir) e é lida logo abaixo — desmascarar não religa nada
+    # sozinho, e é de propósito: a decisão dela continua de pé.
+    if command -v systemctl >/dev/null 2>&1 \
+       && [[ -L "${DAEMON_UNIT_TARGET}" ]] \
+       && [[ "$(readlink -f "${DAEMON_UNIT_TARGET}" 2>/dev/null)" == "/dev/null" ]]; then
+        systemctl --user unmask "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 || true
+        rm -f "${DAEMON_UNIT_TARGET}"
+        printf '      a unit estava MASCARADA (hefesto-chave off) — máscara retirada para a unit poder ser gravada\n'
+    fi
+
     cp -f "${DAEMON_UNIT_SRC}" "${DAEMON_UNIT_TARGET}"
     systemctl --user daemon-reload >/dev/null 2>&1 || true
+
+    # A CHAVE EM DISCO: se ela desligou o Hefesto de propósito, o daemon vai
+    # RECUSAR subir (`utils/chave.py`, lido no boot do daemon) — e anunciar
+    # "daemon habilitado e no ar" em cima disso seria mentira. Não se apaga a
+    # chave aqui: a decisão é dela, e o comando que a desfaz está na tela.
+    _CHAVE_POSTA="${XDG_CONFIG_HOME:-${HOME}/.config}/${APP_ID}/DESLIGADO-pela-chave.flag"
+    if [[ -f "${_CHAVE_POSTA}" ]]; then
+        warn "o Hefesto está DESLIGADO pela chave — o daemon vai recusar subir"
+        printf '      a chave está em %s\n' "${_CHAVE_POSTA}"
+        printf '      para religar tudo como estava:  hefesto-chave on\n'
+        enable_daemon=0
+    fi
     if [[ "${enable_daemon}" -eq 1 ]]; then
         # `restart` e não `start`: numa reinstalação por cima, o daemon em memória
         # é o binário ANTIGO — sem isso a pessoa roda o install, vê "sucesso" e
@@ -2755,9 +2808,21 @@ elif ! command -v gnome-extensions >/dev/null 2>&1; then
     warn "gnome-extensions CLI ausente — habilite manualmente a extension AppIndicator depois"
 else
     _ext_id="ubuntu-appindicators@ubuntu.com"
-    if gnome-extensions list --enabled 2>/dev/null | grep -qx "${_ext_id}"; then
+    # LIDO PARA VARIÁVEL, e não por cano: sob o `set -o pipefail` deste arquivo
+    # (linha 188), `cmd | grep -q` devolve 141 quando ACHA — o `grep -q` sai no
+    # primeiro acerto e quem escreve morre de SIGPIPE. Numa guarda `if !` isso
+    # se inverte e vira sempre verdadeira. É o mesmo defeito do `ldconfig -p`
+    # de 19/08 (linha 686) e das guardas do DKMS de 01/09; `tests/unit/
+    # test_o_pipefail_nao_transforma_acerto_em_falha.py` guarda a forma.
+    _ext_habilitadas=$'\n'"$(gnome-extensions list --enabled 2>/dev/null || true)"$'\n'
+    _ext_todas=$'\n'"$(gnome-extensions list 2>/dev/null || true)"$'\n'
+    # As quebras em volta fazem o casamento ser de LINHA INTEIRA, que é o que o
+    # `grep -qx` fazia: sem elas, `foo@bar.com` casaria dentro de
+    # `outro-foo@bar.com.br` e o instalador diria "já habilitada" sobre a
+    # extension errada.
+    if [[ "${_ext_habilitadas}" == *$'\n'"${_ext_id}"$'\n'* ]]; then
         printf '      já habilitada\n'
-    elif ! gnome-extensions list 2>/dev/null | grep -qx "${_ext_id}"; then
+    elif [[ "${_ext_todas}" != *$'\n'"${_ext_id}"$'\n'* ]]; then
         warn "extension ${_ext_id} não instalada — instale via GNOME Extensions (https://extensions.gnome.org)"
     else
         printf '      extension %s está instalada mas desabilitada\n' "${_ext_id}"
