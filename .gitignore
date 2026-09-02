@@ -120,3 +120,9 @@ novo-layout/
 # Versionar a cópia escolhida criaria uma segunda verdade sobre qual ABI é a
 # nossa — e essa é a que corrompe memória sem avisar.
 assets/dkms/rtw88-usb/main.h
+
+# O ÍNDICE DE CÓDIGO (`fazer_grafos` / `code-review-graph build`) — 02/09/2026.
+# 356 MB de artefato DERIVADO: 1405 arquivos, 32.596 nós, 227.832 arestas.
+# Reconstruído em ~1 min por quem precisar; versioná-lo seria carregar no
+# repositório uma cópia que envelhece a cada commit.
+.code-review-graph/
