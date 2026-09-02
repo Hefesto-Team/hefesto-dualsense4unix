@@ -384,12 +384,19 @@ class ProfileMicConfig(BaseModel):
     `button_toggles_system` espelha `DaemonConfig.mic_button_toggles_system`,
     que até aqui era um campo SECRETO: existia no dataclass do lifecycle,
     gateava o subsystem `mic_hotkey` no boot e não aparecia em lugar nenhum —
-    nem na GUI, nem no draft, nem no perfil. Ligado (default do daemon), o
-    botão de mic do controle alterna o mute do microfone PADRÃO DO SISTEMA
-    (wpctl/pactl) e acende o LED do mic junto. Desligado, o botão não mexe no
-    áudio do sistema — é o que se quer num perfil de gravação/live, em que o
-    mute é do OBS/da mesa e um toque acidental no controle não pode derrubar
-    a captura.
+    nem na GUI, nem no draft, nem no perfil.
+
+    MIC-DA-MESA-ELEICAO-01 (01/09/2026) — O QUE ESTE CAMPO LIGA MUDOU. Ligado
+    (default do daemon), apertar o botão do microfone ELEGE o canal de captura
+    daquele controle como microfone padrão do sistema, e acende o LED dele
+    quando a eleição é conferida. Ele não muta mais nada: o texto anterior
+    dizia *"alterna o mute do microfone padrão do sistema"*, e essa é
+    exatamente a coisa que ela mandou parar de fazer — *"mexendo com ambos os
+    canais de áudio é péssimo"*.
+
+    Desligado, o botão não mexe no áudio do sistema — é o que se quer num
+    perfil de gravação/live, em que o mute é do OBS/da mesa e um toque
+    acidental no controle não pode trocar a captura.
 
     NÃO confundir com o mudo de microfone do FIRMWARE (`common[9]` do report
     de saída): esse é do kernel e o hefesto deixou de disputá-lo

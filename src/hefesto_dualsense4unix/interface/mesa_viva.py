@@ -491,7 +491,21 @@ def estado_do_card(
     # especificação está no cabeçalho de `aba02.py`
     # (D-A-LEITURA-DO-ACELERÔMETRO-SAI-DA-TELA).
 
+    # A AUSÊNCIA DE LEITURA DEIXOU DE VIRAR MENTIRA (MIC-DA-MESA-ELEICAO-01).
+    #
+    # Aqui se lia `bool(audio.get("mic_mudo"))`, e `bool(None)` é `False`, que a
+    # tela pinta como **ATIVO**. Só que `None` ali não quer dizer "não está
+    # mudo": quer dizer que NINGUÉM LEU. O byte de estado de áudio é atributo
+    # de INSTÂNCIA do handle; o handle morre no hotplug-out, o novo nasce sem
+    # leitura, `audio_status_for` devolve `None` e a chave `audio` some inteira
+    # do `state_full`.
+    #
+    # Num contrato em que ACESO = "este microfone está no ar", isso faz o
+    # controle que acabou de cair anunciar que está no ar — o pior default
+    # possível numa mesa de quatro. `mic_sabemos=False` é o terceiro estado, e
+    # a tela pinta DESCONHECIDO em vez de escolher um dos dois.
     audio = entrada.get("audio") or {}
+    mic_sabemos = isinstance(audio.get("mic_mudo"), bool)
     mic_mudo = bool(audio.get("mic_mudo"))
     # QUEM MANDA NO MUDO DO MICROFONE — e é o que diz se há o que "Liberar".
     # `mic_mudo_desejado` é `None` enquanto a posse for do kernel
@@ -540,6 +554,7 @@ def estado_do_card(
         "giro": giro_linhas,
         "mic_v": onda[-QUADROS_DA_ONDA:],
         "mic_mudo": mic_mudo,
+        "mic_sabemos": mic_sabemos,
         "mic_posse": mic_posse,
         "alto_mudo": alto_mudo,
         "alto_pode": alto_pode,

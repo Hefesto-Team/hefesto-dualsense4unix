@@ -79,6 +79,17 @@ _ACOES_FIRMWARE: dict[str, bool | None] = {
     "release": None,
 }
 
+#: MIC-DA-MESA-ELEICAO-01: o LED do botão de mudo, que é campo SEPARADO do
+#: mudo (`common[8]` e `common[9]`, bits de autorização diferentes). Acender
+#: NÃO muta. `led-release` é a devolução de posse ao kernel — a porta de
+#: emergência da inversão, e até 01/09/2026 ela não tinha chamador nenhum.
+#: Nesta casa, ACESO = o microfone deste controle está VIVO.
+_ACOES_LED: dict[str, bool | None] = {
+    "led-on": True,
+    "led-off": False,
+    "led-release": None,
+}
+
 #: Ações que NÃO passam pelo script do WirePlumber (são a ponte por BT).
 _ACOES_BT = ("bt", "bt-status")
 
@@ -104,7 +115,9 @@ def mic_cmd(action: str = "status", uniq: str | None = None) -> None:
 
     `bt` sobe a ponte do microfone por Bluetooth; `bt-status` diagnostica.
     `mute`/`unmute`/`release` mexem no mudo do FIRMWARE do controle
-    (MIC-USB-01, camada 3); `promote`/`demote` na política de microfone padrão.
+    (MIC-USB-01, camada 3); `led-on`/`led-off`/`led-release` mexem no LED do
+    botão de mudo, que é OUTRO byte e não muta nada (MIC-DA-MESA-ELEICAO-01);
+    `promote`/`demote` na política de microfone padrão.
     `uniq` (MAC normalizado) escolhe o controle nas ações de firmware.
     """
     action = action.lower()
@@ -112,12 +125,15 @@ def mic_cmd(action: str = "status", uniq: str | None = None) -> None:
         raise typer.Exit(code=_mic_bt(status_apenas=action == "bt-status"))
     if action in _ACOES_FIRMWARE:
         raise typer.Exit(code=_mic_firmware(_ACOES_FIRMWARE[action], uniq=uniq))
+    if action in _ACOES_LED:
+        raise typer.Exit(code=_mic_led(_ACOES_LED[action], uniq=uniq))
 
     flag = _ACTION_FLAG.get(action)
     if flag is None:
         console.print(
             f"[red]ação inválida: {action}[/red] — use: on | off | status | "
-            "promote | demote | mute | unmute | release | bt | bt-status"
+            "promote | demote | mute | unmute | release | "
+            "led-on | led-off | led-release | bt | bt-status"
         )
         raise typer.Exit(code=2)
 
@@ -139,6 +155,57 @@ def mic_cmd(action: str = "status", uniq: str | None = None) -> None:
 # ---------------------------------------------------------------------------
 # Mudo no FIRMWARE do controle (MIC-USB-01, camada 3)
 # ---------------------------------------------------------------------------
+
+
+def _mic_led(aceso: bool | None, *, uniq: str | None = None) -> int:
+    """Manda `mic.led.set` ao daemon (MIC-DA-MESA-ELEICAO-01).
+
+    Os três pedidos são diferentes, e `led-off` NÃO é `led-release`:
+
+    - ``True``  — acende, e a posse do `common[8]` passa a ser nossa;
+    - ``False`` — apaga; é uma ORDEM, e o kernel deixa de mandar na luz;
+    - ``None``  — devolve a posse ao `hid-playstation`, que volta a escrever
+      `mute_button_led = ds->mic_muted` a cada borda do botão físico.
+
+    Não existe leitura deste registrador no firmware — por isso a linha
+    impressa diz o que PEDIMOS, e nunca finge ser leitura.
+    """
+    import asyncio
+
+    from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+
+    payload: dict[str, object] = {"aceso": aceso}
+    if uniq:
+        payload["uniq"] = uniq
+
+    async def _chamar() -> dict[str, object] | None:
+        try:
+            async with IpcClient.connect() as client:
+                resposta = await client.call("mic.led.set", payload)
+        except (FileNotFoundError, ConnectionError, IpcError, OSError):
+            return None
+        return resposta if isinstance(resposta, dict) else {}
+
+    resultado = asyncio.run(_chamar())
+    if resultado is None:
+        console.print(
+            "[red]daemon offline[/red] — o LED do microfone só se altera pelo "
+            "daemon (inicie com 'hefesto-dualsense4unix daemon start')."
+        )
+        return 1
+    if resultado.get("status") != "ok":
+        console.print(
+            "[yellow]nenhum controle recebeu o pedido[/yellow] — conecte o "
+            "DualSense (ou confira o MAC passado em uniq)."
+        )
+        return 1
+    pedido = {
+        True: "ACESO (este microfone está vivo)",
+        False: "apagado",
+        None: "posse devolvida ao kernel",
+    }[aceso]
+    console.print(f"  LED do microfone ......... {pedido}")
+    return 0
 
 
 def _mic_firmware(muted: bool | None, *, uniq: str | None = None) -> int:

@@ -843,11 +843,22 @@ def stop_hotkey_manager(daemon: DaemonProtocol) -> None:
 
 
 def start_mic_hotkey(daemon: DaemonProtocol) -> None:
-    """Cria AudioControl e inicia task de consumo de BUTTON_DOWN para mic_btn."""
+    """Sobe os DOIS laços do microfone: as bordas com endereço, e a eleição.
+
+    MIC-DA-MESA-ELEICAO-01: são dois de propósito. O primeiro só LÊ (dá `uniq`
+    à borda, aplica sossego e carência) e o segundo só AGE (elege, confere,
+    acende). Separá-los é o que permite recusar a eleição — que toca no áudio
+    da máquina dela — sem perder a leitura do gesto.
+
+    O `AudioControl` continua sendo criado aqui porque outros gestos ainda o
+    usam; o gesto do microfone **não** o usa mais (ver `mic_button_loop`).
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.mic_da_mesa import start_mic_da_mesa
     from hefesto_dualsense4unix.integrations.audio_control import AudioControl
 
     if daemon._audio is None:
         daemon._audio = AudioControl()
+    start_mic_da_mesa(daemon)
     task = asyncio.create_task(mic_button_loop(daemon), name="mic_button_loop")
     daemon._tasks.append(task)
     logger.info("mic_hotkey_iniciado")
@@ -855,153 +866,159 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
 
 
 async def mic_button_loop(daemon: DaemonProtocol) -> None:
-    """Consome BUTTON_DOWN do bus e aciona mute/unmute do microfone do sistema.
+    """Consome `MIC_DA_MESA` e ELEGE o microfone do controle que apertou.
 
-    Filtra apenas eventos com button='mic_btn'. Chama AudioControl e atualiza
-    o LED do microfone. Não relança exceções: falhas viram warning. O mudo do
-    FIRMWARE fica com o `hid-playstation`, que é o contrato de fábrica — ver o
-    comentário MIC-DOIS-DONOS-01 no corpo do laço.
-    E só age quando a fonte padrão do sistema é o microfone do próprio
-    controle — BT-E-VPAD-01, o gate logo abaixo do sossego.
+    MIC-DA-MESA-ELEICAO-01 (01/09/2026) — ESTE LAÇO MUDOU DE DONO E DE EIXO.
 
-    O toggle de mute (wpctl/pactl via subprocess) e o set_mic_led (HID) são
-    chamadas SÍNCRONAS bloqueantes (até ~4s). Rodá-las direto no event loop
-    asyncio travaria o daemon inteiro; por isso são offloadadas para o executor
-    via `daemon._run_blocking`.
+    Decisão dela, com as palavras dela: *"Se eu apertar o botão físico mic do
+    controle e ele acender, significa que eu quero que o canal de áudio do
+    microfone seja o controle. O botão de silenciar é confuso e mexendo com
+    ambos os canais de áudio é péssimo."*
 
-    **A janela de sossego (MIC-REPIQUE-01, 19/08/2026).** O journal da noite de
-    18→19/08 tem três `mic_hotkey_toggle` em 2,5 s às 01:52:27 — `muted=False`,
-    `muted=True`, `muted=False`. Isso não é mão humana, e o produto não tinha
-    defesa nenhuma contra isso: toda a proteção estava terceirizada para o
-    debounce de 200 ms do `AudioControl`, que é inútil AQUI por três motivos,
-    cada um verificável no fonte:
+    O QUE SAIU, e as três medições que mandaram sair:
 
-    1. **O relógio dele começa no INÍCIO da chamada**
-       (`integrations/audio_control.py`: `self._last_call_at = now` é gravado
-       ANTES dos subprocessos). Como o toggle roda dois `wpctl`/`pactl` com
-       `timeout=2.0` cada, uma chamada pode levar segundos — e quando ela
-       termina o debounce já expirou faz tempo. A janela efetiva é
-       ``max(0, 0.2 - duração_do_toggle)``, ou seja: ZERO sempre que o áudio
-       demora. É por isso que uma rajada de bordas vira uma rajada de toggles
-       espaçados pela duração do subprocesso, e não um toggle só.
-    2. **Ele protege a coisa errada.** 200 ms é uma medida de teclinha
-       repicando; o que está do outro lado é um mudo LATCHED, do sistema
-       inteiro, invisível para quem está de controle na mão dentro de um jogo.
-    3. **Ele não sabe de onde vieram as bordas.** E há mais de uma fonte
-       possível: `mic_btn` não vem do evdev como os outros botões — vem do
-       HID cru (`ds.state.micBtn`), e esta casa já documentou "micBtn
-       fantasma" ao (re)conectar (`INPUT_GRACE_SEC`, lifecycle.py:57) e já
-       pegou áudio do próprio microfone sendo lido como estado de botão
-       (commit `702f5b6`). Além disso o poll loop zera `previous_buttons` a
-       cada blip de conexão, e um bit ainda alto vira BUTTON_DOWN de novo.
+    (a) **`audio.toggle_default_source_mute`.** Ele opera em
+        `@DEFAULT_AUDIO_SOURCE@` — GLOBAL, sem `uniq` — e muta o microfone de
+        quem quer que seja o padrão. Isso é o oposto do gesto dela, que é
+        *escolher* um canal, não silenciar dois.
 
-    A guarda daqui não precisa saber qual das fontes disparou: ela é contada a
-    partir do FIM do toggle e engole tudo que chegar dentro de
-    :data:`MIC_SOSSEGO_S`. N bordas viram UM toggle, venham de onde vierem. O
-    preço de um falso engolir é um toque ignorado — visível e refazível num
-    segundo; o preço de um falso toggle é a usuária muda no jogo sem saber.
-    Os repiques engolidos são contados e saem no `mic_hotkey_toggle` seguinte,
-    para que a próxima investigação veja a rajada em vez de adivinhá-la.
+    (b) **A guarda `fonte_padrao_e_o_controle`.** Ela pergunta por SUBSTRING
+        "dualsense" (`integrations/audio_control.py`), logo responde *"a fonte
+        padrão é ALGUM DualSense"* e nunca *"é ESTE"* — numa mesa de quatro os
+        quatro respondem `True`. E ela está escrita **de costas para o gesto
+        novo**: só deixava agir quando a fonte padrão JÁ era o controle, que é
+        exatamente o caso em que eleger não teria efeito nenhum.
+        O que ela protegia (BT-E-VPAD-01: o botão do controle não pode mutar
+        aparelho de terceiro) continua protegido **por construção** — o gesto
+        novo não muta nada, ele elege.
+
+    (c) **O `BUTTON_DOWN`.** O botão do mic não chega lá: o `hid-playstation`
+        CONSOME a borda e ela não vira evdev. E o `BUTTON_DOWN` não carrega
+        `uniq`, então o Jogador 2 apertando elegeria o Jogador 1. A borda com
+        endereço vem de `daemon/subsystems/mic_da_mesa.py`.
+
+    O QUE FICOU: `mic_button_toggles_system` continua sendo o interruptor de
+    *"o botão é nosso"*, consultado A CADA borda (e não no boot), para que a
+    seção `mic` do perfil valha no próximo toque sem restart. Desligado, não
+    elegemos nada e o kernel segue dono do mudo e da luz.
+
+    E O LED SÓ ACENDE DEPOIS DA RELEITURA. `set_mic_led(..., uniq=)` é chamado
+    com o resultado da eleição CONFERIDA — nunca com o que mandamos. Um LED
+    pintado da escrita seria a mentira de segunda geração: o plástico dizendo
+    "estou no ar" sobre um nó que o WirePlumber já desfez.
+
+    O sossego e a carência não estão aqui: eles moram no laço das bordas, que
+    é onde a borda nasce. Duas réguas sobre o mesmo estado é o defeito que esta
+    casa já pagou onze vezes.
     """
     from hefesto_dualsense4unix.core.events import EventTopic
 
-    relogio = asyncio.get_running_loop().time
-    queue = daemon.bus.subscribe(EventTopic.BUTTON_DOWN)
-    fim_do_ultimo_toggle = float("-inf")
-    repiques = 0
+    queue = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)
     try:
         while not daemon._is_stopping():
             try:
                 payload = await asyncio.wait_for(queue.get(), timeout=0.5)
             except asyncio.TimeoutError:
                 continue
-            if payload.get("button") != "mic_btn":
+            uniq = payload.get("uniq")
+            if not isinstance(uniq, str) or not uniq:
+                # O gesto EXIGE endereço. Cair no primário quando o clique não
+                # diz o controle é o que faria a mesa de quatro eleger sempre
+                # o mesmo — recusar é a resposta certa.
+                logger.warning("mic_da_mesa_sem_endereco")
                 continue
-            # MIC-EXPOSE-01: o flag é consultado AQUI, a cada evento, e não só
-            # no boot — assim a seção `mic` do perfil/draft vale no próximo
-            # toque do botão sem restart do daemon. Desligado, o botão não
-            # mexe no mute do sistema (nem no LED) e o kernel segue dono do
-            # mudo de microfone do próprio controle — nada de posse.
             if not getattr(daemon.config, "mic_button_toggles_system", True):
                 logger.debug("mic_hotkey_desligado_por_config")
                 continue
-            desde = relogio() - fim_do_ultimo_toggle
-            if desde < MIC_SOSSEGO_S:
-                repiques += 1
-                logger.debug("mic_hotkey_repique_engolido", desde_s=round(desde, 3))
-                continue
-            audio = daemon._audio
-            if audio is None:
-                continue
             try:
-                # BT-E-VPAD-01, defeito 1 — o botão do microfone do CONTROLE
-                # não pode mutar o microfone de OUTRO dispositivo.
-                #
-                # Medido em 01/08/2026: no Bluetooth o DualSense não tem placa
-                # de som nenhuma (o áudio vai dentro dos reports HID), então a
-                # fonte padrão do sistema é outra coisa — nesta máquina, o
-                # microfone da placa-mãe. O botão alternava aquele, e o LED do
-                # controle acendia para refletir um estado que não era dele.
-                #
-                # Das três saídas que a sprint desenhou, esta é a (a): o botão
-                # só age quando a fonte padrão É o controle. É a mais honesta
-                # e a mais barata. A (b) — mutar o registrador do firmware —
-                # foi recusada em 01/08/2026 porque TOMA A POSSE e faz o botão
-                # físico parar de valer, que é o oposto do que se espera de um
-                # botão físico.
-                #
-                # 19/08/2026, MIC-DOIS-DONOS-01: a medição de 01/08 continua
-                # de pé e o gate (a) continua sendo o primeiro portão daqui —
-                # o que caducou foi a recusa CATEGÓRICA da (b). O mudo do
-                # firmware é afirmado logo abaixo, mas só enquanto o botão é
-                # NOSSO (`mic_button_toggles_system`, checado acima): com o
-                # flag desligado não encostamos no firmware e a posse volta
-                # inteira para o `hid-playstation`, que é o contrato de
-                # fábrica — o botão físico segue valendo. Sem isso, os dois
-                # mudos em série saíam de fase e o microfone ficava morto no
-                # jogo com o `pactl` respondendo `Mute: não`.
-                #
-                # O `getattr`: o gate é da CAPACIDADE do backend de áudio de
-                # responder "a fonte padrão é o controle?". O `AudioControl`
-                # real responde, e nele o portão vale sempre; um backend que
-                # não conhece a pergunta não vira portão silencioso.
-                perguntar = getattr(audio, "fonte_padrao_e_o_controle", None)
-                if callable(perguntar):
-                    pertence = await daemon._run_blocking(perguntar)
-                    if not pertence:
-                        logger.info("mic_hotkey_fonte_nao_e_o_controle")
-                        continue
-                mudo = bool(
-                    await daemon._run_blocking(audio.toggle_default_source_mute)
-                )
-                await daemon._run_blocking(daemon.controller.set_mic_led, mudo)
-                # MIC-DOIS-DONOS-01 fica ABERTO de propósito. A leitura é certa —
-                # um toque move DOIS mudos (o do firmware, que o `hid-playstation`
-                # alterna na borda do botão, e o do sistema) e eles saem de fase.
-                # Mas a cura proposta (afirmar o mudo do firmware junto) foi
-                # RECUSADA por decisão medida, e a recusa é antiga: escrever ali
-                # TOMA A POSSE e o botão físico dela para de valer (BT-E-VPAD-01,
-                # 01/08; MIC-BT-DONO-01, 03/08; a linha `audio.microfone.mudo` do
-                # mapa de canais; e o `controller_card.py`, que chama isso de
-                # "sequestro silencioso que esta sprint foi fechar"). No rádio nem
-                # se sustenta — a posse EVAPORA, medido em 03/08: 100% -> 46% ->
-                # 100%, porque `_mic_mute_desejado` é atributo de um handle que
-                # morre a cada reconexão. E em co-op escreveria no controle
-                # ERRADO: o `BUTTON_DOWN` não carrega `uniq`, então o jogador 2
-                # mutaria o firmware do jogador 1.
-                logger.info(
-                    "mic_hotkey_toggle",
-                    muted=mudo,
-                    sistema_mudo=mudo,
-                    repiques_engolidos=repiques,
-                )
-                repiques = 0
+                await _eleger_ou_devolver(daemon, uniq, bool(payload.get("mudo")))
             except Exception as exc:
                 logger.warning("mic_hotkey_falhou", err=str(exc))
-            finally:
-                fim_do_ultimo_toggle = relogio()
     finally:
-        daemon.bus.unsubscribe(EventTopic.BUTTON_DOWN, queue)
+        daemon.bus.unsubscribe(EventTopic.MIC_DA_MESA, queue)
+
+
+async def _eleger_ou_devolver(
+    daemon: DaemonProtocol, uniq: str, mudo: bool
+) -> None:
+    """O controle passou a NÃO-MUDO: elege. Passou a MUDO: devolve o microfone.
+
+    O caminho de VOLTA é o item 6 dela, e não é opcional: hoje ninguém devolve
+    o microfone, e o desfecho padrão de ela tirar o mic do controle é o
+    `.monitor` do sink ou o `auto_null` — o sistema gravando o som que SAI no
+    lugar da voz dela (FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01).
+    """
+    eleitor = _eleitor(daemon)
+    conectados = _uniqs_conectados(daemon)
+    if mudo:
+        resultado = await daemon._run_blocking(eleitor.devolver_o_microfone)
+        aceso = False
+    else:
+        resultado = await daemon._run_blocking(
+            eleitor.eleger_o_controle, uniq, conectados
+        )
+        aceso = bool(resultado.ok)
+    logger.info(
+        "mic_da_mesa_eleicao",
+        uniq=uniq,
+        mudo=mudo,
+        ok=resultado.ok,
+        ativo=resultado.ativo,
+        motivo=resultado.motivo,
+    )
+    acender = getattr(daemon.controller, "set_mic_led", None)
+    if callable(acender):
+        await daemon._run_blocking(_acender, acender, aceso, uniq)
+
+
+def _acender(acender: Any, aceso: bool, uniq: str) -> None:
+    """Chama `set_mic_led(aceso, uniq=...)`, tolerando backend sem endereço.
+
+    O `TypeError` é o backend antigo (ou um dublê) que não aceita `uniq`. Cair
+    para a chamada sem endereço é degradar declarado — e o log diz qual foi,
+    porque "degradou calado" é como esta casa fabrica o LED do controle errado.
+    """
+    try:
+        acender(aceso, uniq=uniq)
+    except TypeError:
+        logger.warning("mic_da_mesa_led_sem_endereco", uniq=uniq)
+        acender(aceso)
+
+
+def _eleitor(daemon: DaemonProtocol) -> Any:
+    """O eleitor da SESSÃO. Um só, porque ele guarda o microfone de antes.
+
+    Se cada borda criasse um eleitor novo, a memória do "anterior" seria a
+    fonte que a borda passada acabou de eleger — e numa mesa em turnos o
+    caminho de volta devolveria o microfone ao controle do jogador anterior em
+    vez de ao microfone real dela.
+    """
+    from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+        EleitorDeMicrofone,
+    )
+
+    eleitor = getattr(daemon, "_eleitor_de_microfone", None)
+    if eleitor is None:
+        eleitor = EleitorDeMicrofone()
+        daemon._eleitor_de_microfone = eleitor  # type: ignore[attr-defined]
+    return eleitor
+
+
+def _uniqs_conectados(daemon: DaemonProtocol) -> list[str]:
+    """MACs dos controles na mesa agora — o `uniqs_com_audio` de `escolher_fonte`."""
+    descrever = getattr(daemon.controller, "describe_controllers", None)
+    if not callable(descrever):
+        return []
+    try:
+        itens = descrever()
+    except Exception:  # pragma: no cover - defensivo
+        return []
+    out: list[str] = []
+    for item in itens if isinstance(itens, list) else []:
+        uniq = item.get("uniq") if isinstance(item, dict) else None
+        if isinstance(uniq, str) and uniq:
+            out.append(uniq)
+    return out
 
 
 class HotkeySubsystem:

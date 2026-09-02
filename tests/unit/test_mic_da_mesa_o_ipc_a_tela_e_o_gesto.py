@@ -1,0 +1,251 @@
+"""MIC-DA-MESA-ELEICAO-01 — o IPC da devolução, a tela na ausência, e o gesto.
+
+Três réguas, três defeitos diferentes:
+
+* **`mic.led.set`** é a porta de emergência da inversão. A devolução de posse
+  por-byte já existia, já era testada e **não tinha um único chamador de
+  produção** — tomada a posse do LED numa sessão, ela só caía quando o handle
+  morresse. Confundir `false` com `null` foi o defeito do `3d9bb7e`, no byte
+  vizinho; por isso a chave é obrigatória.
+
+* **A tela não mente na ausência.** O byte de áudio é atributo de INSTÂNCIA do
+  handle: no hotplug-out o handle morre, o novo nasce sem leitura e a chave
+  `audio` SOME do `state_full`. `bool(None)` é `False`, que o selo pintava como
+  ATIVO — o controle que acabou de cair anunciando que está no ar.
+
+* **O gesto exige endereço.** Sem `uniq` não se elege "o primeiro": numa mesa
+  de quatro isso elegeria sempre o mesmo.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Any, ClassVar
+
+import pytest
+
+
+# ---------------------------------------------------------------------------
+# 5 (IPC). A devolução DEVOLVE, e `null` não é `false`
+# ---------------------------------------------------------------------------
+
+
+class _ControllerFalso:
+    def __init__(self) -> None:
+        self.pedidos: list[tuple[Any, Any]] = []
+
+    def set_microphone_led(self, aceso: bool | None, *, uniq: str | None = None) -> bool:
+        self.pedidos.append((aceso, uniq))
+        return True
+
+
+class _Handlers:
+    """O mixin de handlers com o mínimo que `mic.led.set` toca."""
+
+    def __init__(self) -> None:
+        from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+        self._mixin = IpcHandlersMixin
+        self.controller = _ControllerFalso()
+
+    async def chamar(self, params: dict[str, Any]) -> dict[str, Any]:
+        return await self._mixin._handle_mic_led_set(self, params)  # type: ignore[arg-type]
+
+
+def test_aceso_null_devolve_a_posse_ao_kernel() -> None:
+    """`null` chega ao backend como `None` — nunca como `False`.
+
+    CURA A ARRANCAR: fazer o handler tratar `null` como `False`. O bit de
+    autorização continuaria ligado e o kernel nunca voltaria a mandar na luz.
+    """
+    h = _Handlers()
+    r = asyncio.run(h.chamar({"aceso": None}))
+
+    assert h.controller.pedidos == [(None, None)]
+    assert r == {"status": "ok", "aceso": None}
+
+
+def test_aceso_false_e_uma_ordem_e_continua_valendo() -> None:
+    """A metade que prova que a régua não confunde os dois no outro sentido."""
+    h = _Handlers()
+    asyncio.run(h.chamar({"aceso": False, "uniq": "aabbcc000002"}))
+    assert h.controller.pedidos == [(False, "aabbcc000002")]
+
+
+def test_a_chave_omitida_levanta_erro_de_parametro() -> None:
+    """No molde do `mic.set`: omitir a chave não pode virar um `False` calado.
+
+    O `ValueError` vira `-32003` (CODE_INVALID_PARAMS) no dispatcher.
+    """
+    h = _Handlers()
+    with pytest.raises(ValueError, match="obrigatório"):
+        asyncio.run(h.chamar({}))
+    assert h.controller.pedidos == []
+
+
+def test_mic_led_set_esta_registrado_no_dispatcher() -> None:
+    """O handler existir e não estar na tabela seria um método invisível."""
+    import inspect
+
+    from hefesto_dualsense4unix.daemon import ipc_server
+
+    fonte = inspect.getsource(ipc_server)
+    assert '"mic.led.set": self._handle_mic_led_set' in fonte
+
+
+# ---------------------------------------------------------------------------
+# 10. A tela não mente na AUSÊNCIA
+# ---------------------------------------------------------------------------
+
+
+def test_o_selo_pinta_desconhecido_quando_o_state_full_nao_traz_audio() -> None:
+    """CURA A ARRANCAR: voltar `"MUDO" if mudo else "ATIVO"` sem o `sabemos`.
+
+    Pinta ATIVO sobre um controle que acabou de cair — e, com a inversão, o
+    plástico dele estaria dizendo "estou no ar".
+
+    **Esta régua só morde porque o dublê parou de trazer o default falso**: com
+    o `FALSO` de sempre, que sempre tem a chave `audio`, o caminho de "não sei"
+    nunca era exercitado.
+    """
+    from hefesto_dualsense4unix.interface import casamento
+    from hefesto_dualsense4unix.interface.pacotes import a02_controles
+
+    class _Ctx:
+        conectados: ClassVar[list[Any]] = [casamento.FALSO_SEM_AUDIO]
+        mesa: ClassVar[list[Any]] = casamento.MESA_FALSA
+
+    saida = a02_controles.pacote(_Ctx())  # type: ignore[arg-type]
+    card = saida["cards"][casamento.FALSO["uniq"]]
+    assert card["mic-selo"] == "—", "sem leitura, o selo diz NÃO SEI"
+
+
+def test_o_selo_continua_dizendo_a_verdade_quando_ha_leitura() -> None:
+    """A metade que prova que a cura não é "nunca mais mostra nada"."""
+    from hefesto_dualsense4unix.interface import casamento
+    from hefesto_dualsense4unix.interface.pacotes import a02_controles
+
+    class _Ctx:
+        conectados: ClassVar[list[Any]] = [casamento.FALSO]
+        mesa: ClassVar[list[Any]] = casamento.MESA_FALSA
+
+    saida = a02_controles.pacote(_Ctx())  # type: ignore[arg-type]
+    assert saida["cards"][casamento.FALSO["uniq"]]["mic-selo"] == "ATIVO"
+
+
+def test_o_dublê_da_ausencia_realmente_nao_tem_a_chave() -> None:
+    """Sem isto a régua de cima passaria por acidente."""
+    from hefesto_dualsense4unix.interface import casamento
+
+    assert "audio" not in casamento.FALSO_SEM_AUDIO
+    assert "audio" in casamento.FALSO
+
+
+def test_o_estado_do_card_diz_quando_nao_leu() -> None:
+    """`estado_do_card` sem a chave `audio`: `mic_sabemos` tem de ser falso.
+
+    São DOIS pintores do mesmo selo — o pacote da aba 02 e o card do piloto
+    vivo — e o segundo tinha a mesma mentira. Curar só um deixaria as duas
+    versões vivas, que é o defeito que a regra da casa existe para matar.
+    """
+    from hefesto_dualsense4unix.interface import casamento, mesa_viva
+
+    sem = mesa_viva.estado_do_card(casamento.FALSO_SEM_AUDIO)
+    com = mesa_viva.estado_do_card(casamento.FALSO)
+
+    assert sem["mic_sabemos"] is False
+    assert com["mic_sabemos"] is True
+    assert sem["mic_mudo"] is False, (
+        "o valor continua sendo False — o que muda é SABERMOS que não é leitura"
+    )
+
+
+def test_o_card_vivo_pinta_travessao_quando_nao_leu() -> None:
+    """CURA A ARRANCAR: `"MUDO" if eco_mic_mudo else "ATIVO"` sem o `sabemos`.
+
+    Pinta ATIVO, e com a inversão o plástico do controle caído diria "estou no
+    ar" na frente de quatro pessoas.
+    """
+    import inspect
+
+    from hefesto_dualsense4unix.interface import controles_vivos
+
+    fonte = inspect.getsource(controles_vivos.Janela._pacote_do_card)
+    assert '"selo": ("MUDO" if eco_mic_mudo else "ATIVO") if mic_sabemos else "—"' in fonte
+    assert '"off": eco_mic_mudo and mic_sabemos,' in fonte
+
+
+def test_mesa_viva_publica_o_terceiro_estado() -> None:
+    """`mic_sabemos` é o que permite à tela escolher entre três, e não dois."""
+    import inspect
+
+    from hefesto_dualsense4unix.interface import mesa_viva
+
+    fonte = inspect.getsource(mesa_viva)
+    assert '"mic_sabemos": mic_sabemos' in fonte
+    assert 'mic_sabemos = isinstance(audio.get("mic_mudo"), bool)' in fonte
+
+
+# ---------------------------------------------------------------------------
+# 11. O gesto novo EXIGE endereço
+# ---------------------------------------------------------------------------
+
+
+def _nomes_do_laco() -> frozenset[str]:
+    """Os nomes que o laço do mic REALMENTE toca — código, nunca prosa.
+
+    Ler `inspect.getsource` e procurar substring mediria a PALAVRA em vez do
+    ATO: o docstring desta casa cita os nomes que saíram, com o motivo de
+    terem saído. É a família das onze réguas falsas — a régua reprovaria
+    justamente porque alguém explicou bem a cura.
+
+    `co_names` é o que o bytecode carrega: atributos lidos e nomes globais.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    nomes: set[str] = set()
+    for fn in (hotkey.mic_button_loop, hotkey._eleger_ou_devolver):
+        c = fn.__code__
+        nomes.update(c.co_names)
+        nomes.update(c.co_varnames)
+        for const in c.co_consts:
+            # O DOCSTRING FICA DE FORA, e é o ponto: ele CITA os nomes que
+            # saíram, com o motivo. Contá-lo faria a régua reprovar justamente
+            # porque alguém explicou bem a cura.
+            if const is fn.__doc__:
+                continue
+            if isinstance(const, str):
+                nomes.add(const)
+            elif hasattr(const, "co_names"):
+                nomes.update(const.co_names)
+                nomes.update(
+                    k for k in const.co_consts if isinstance(k, str)
+                )
+    return frozenset(nomes)
+
+
+def test_o_laco_recusa_a_borda_sem_uniq() -> None:
+    """CURA A ARRANCAR: cair no primário quando a borda não diz o controle.
+
+    É esta régua que impede a mesa de quatro de eleger sempre o mesmo.
+    """
+    nomes = _nomes_do_laco()
+    assert "MIC_DA_MESA" in nomes, "o laço lê o tópico COM endereço"
+    assert "BUTTON_DOWN" not in nomes, "o BUTTON_DOWN não carrega uniq"
+
+    # E a recusa deixa rastro — o log é a única coisa que sobra quando o gesto
+    # dela não vira nada.
+    assert "mic_da_mesa_sem_endereco" in nomes
+
+
+def test_o_toggle_global_de_mute_saiu_do_gesto() -> None:
+    """`toggle_default_source_mute` opera em `@DEFAULT_AUDIO_SOURCE@` — global.
+
+    E a guarda `fonte_padrao_e_o_controle` pergunta por SUBSTRING "dualsense":
+    responde "é ALGUM DualSense", nunca "é ESTE". Numa mesa de quatro os quatro
+    respondem `True`. As duas saíram; se voltarem, esta régua reprova.
+    """
+    nomes = _nomes_do_laco()
+    assert "toggle_default_source_mute" not in nomes
+    assert "fonte_padrao_e_o_controle" not in nomes
+    assert "set_mic_led" in nomes, "e o que ficou foi a LUZ, com endereço"

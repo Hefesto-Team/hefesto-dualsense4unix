@@ -40,6 +40,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
         # O MUDO TEM TRÊS CARAS, e o selo da tela diz qual: mudo pelo aparelho,
         # mudo pedido pelo Hefesto, e sem posse (o kernel manda).
+        #
+        # E TEM UMA QUARTA, QUE É "NÃO SEI" (MIC-DA-MESA-ELEICAO-01). O byte de
+        # áudio é atributo de INSTÂNCIA do handle: no hotplug-out o handle
+        # morre, o novo nasce sem leitura e a chave `audio` SOME do `state_full`.
+        # `bool(None)` é `False`, que este selo pintava como **ATIVO** — ou
+        # seja, o controle que acabou de cair anunciava que estava capturando.
+        # Com a inversão da luz (aceso = no ar), isso vira mentira no plástico
+        # de quatro pessoas ao mesmo tempo.
+        sabemos = isinstance(a.get("mic_mudo"), bool)
         mudo = bool(a.get("mic_mudo"))
         pct = c.get("battery_pct")
         cards[uniq] = {
@@ -57,7 +66,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "mascara": casa.get("mascara")
                        or mesa_viva.NOME_DA_MASCARA.get(c.get("vpad_backend") or "", "—"),
             "luz-hex": "#{:02X}{:02X}{:02X}".format(*rgb[:3]) if len(rgb) >= 3 else "—",
-            "mic-selo": "MUDO" if mudo else "ATIVO",
+            "mic-selo": ("MUDO" if mudo else "ATIVO") if sabemos else "—",
             # O `mic-modo` SAIU DAQUI EM 01/09/2026, e ele APAGAVA DOIS BOTÕES.
             # O endereço `data-campo="mic-modo"` não era uma folha: era o
             # `<span class="rota mic-modo">` que ENVOLVE o Virtual e o Nativo. O

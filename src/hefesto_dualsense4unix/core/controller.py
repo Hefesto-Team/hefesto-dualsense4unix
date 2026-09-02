@@ -179,11 +179,28 @@ class IController(ABC):
         ...
 
     @abstractmethod
-    def set_mic_led(self, muted: bool) -> None:
-        """Acende (muted=True) ou apaga (muted=False) o LED do microfone.
+    def set_mic_led(self, aceso: bool) -> None:
+        """Acende (`aceso=True`) ou apaga (`aceso=False`) o LED do microfone.
 
-        Convenção de semântica: `muted=True` → LED aceso (vermelho, padrão do
-        firmware indicando "mic desligado"); `muted=False` → LED apagado.
+        MIC-DA-MESA-ELEICAO-01 (01/09/2026) — A INVERSÃO, e ela é do CHAMADOR.
+
+        Este docstring dizia *"`muted=True` → LED aceso (vermelho, padrão do
+        firmware indicando 'mic desligado')"*. Isso descrevia o significado que
+        a Sony dá à luz, e ela mandou trocar o significado, com estas palavras:
+        *"As pessoas precisam ter um aviso visual que o mic tá funcionando. (…)
+        com 4 pessoas com controle na mão localmente isso é necessário."*
+
+        **Nesta casa, aceso = este microfone está VIVO.** O contrato do BYTE
+        não mudou (`common[8]` continua "1 = LED ligado"); o que mudou é quem
+        decide o argumento — `daemon/subsystems/mic_da_mesa.py` passa
+        `not mudo`, ao contrário do kernel, que passa `mic_muted`
+        (`hid-playstation.c:1538-1540`).
+
+        Acender NÃO muta nada: o LED é campo próprio (`common[8]`, autorizado
+        pelo `MIC_MUTE_LED_CONTROL_ENABLE`), separado do mudo (`common[9]`,
+        autorizado pelo `POWER_SAVE_CONTROL_ENABLE`). Esta casa **não escreve**
+        no `common[9]` — as três recusas medidas (BT-E-VPAD-01, MIC-BT-DONO-01,
+        MIC-DOIS-DONOS-01) continuam inteiras.
 
         Implementação real via `ds.audio.setMicrophoneLED(bool)` (INFRA-SET-MIC-LED-01).
         Player LEDs ainda dependem de API complementar futura.

@@ -1342,6 +1342,14 @@ class Janela:
         # leitura devolveria o estado de antes do clique a cada 100 ms.
         eco = self.eco_mudo.get(c["uniq"], {})
         eco_mic_mudo = (eco["microfone"] == "on") if "microfone" in eco else e["mic_mudo"]
+        # A AUSÊNCIA DE LEITURA NÃO VIRA "ATIVO" (MIC-DA-MESA-ELEICAO-01).
+        # `mic_sabemos` é falso quando o `state_full` não trouxe a chave `audio`
+        # — o que acontece no instante seguinte a um hotplug-out, porque o byte
+        # é atributo de INSTÂNCIA do handle e o handle novo ainda não leu nada.
+        # Num contrato em que aceso = está no ar, pintar ATIVO ali seria o
+        # controle que acabou de cair anunciando que está capturando.
+        # O eco do clique dela vence, porque aí houve leitura de verdade.
+        mic_sabemos = ("microfone" in eco) or e.get("mic_sabemos", True)
         eco_alto_mudo = (eco["alto-falante"] == "on") if "alto-falante" in eco else e["alto_mudo"]
         eixos = {}
         # SÓ O GIROSCÓPIO. O laço percorria também `("acel", e["acel"])` e
@@ -1391,8 +1399,8 @@ class Janela:
             # que o da rota já entrava: sem isto o tique seguinte devolveria o
             # estado do daemon e o clique dela sumiria em 100 ms.
             "mic": {
-                "selo": "MUDO" if eco_mic_mudo else "ATIVO",
-                "off": eco_mic_mudo,
+                "selo": ("MUDO" if eco_mic_mudo else "ATIVO") if mic_sabemos else "—",
+                "off": eco_mic_mudo and mic_sabemos,
                 "onda": e["mic_v"],
                 "vol_w": f'{e["mic_vol"]}%',
                 "vol_n": str(e["mic_vol"]),
