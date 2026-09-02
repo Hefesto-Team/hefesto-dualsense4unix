@@ -232,7 +232,11 @@ def test_sem_gamepad_virtual_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
     )
     assert "não está chegando" in texto
     assert "Jogar pelo Hefesto" in texto, "a frase tem de dizer o gesto que cura"
-    assert "aqui embaixo" in texto, (
+    # `.lower()` desde 02/09/2026: a frase encurtou (decisão dela — ver
+    # `texto_do_alcance_da_intensidade`) e "Aqui embaixo" passou a ABRIR a
+    # última oração, com maiúscula. A régua mede a INFORMAÇÃO, não a caixa da
+    # letra; sem isto ela reprovaria a frase mais curta em vez do defeito.
+    assert "aqui embaixo" in texto.lower(), (
         "sem dizer o que a intensidade AINDA faz, o aviso vira 'não serve para "
         "nada' — que é falso: ela vale para a vibração fixada"
     )

@@ -333,6 +333,21 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     ``reassert_rumble`` e do ``apply_rumble_policy``, que não dependem de
     gamepad virtual nenhum. Sem essa metade, o aviso viraria "esta parte da
     tela não serve para nada", que é falso.
+
+    **A PRIMEIRA FRASE ENCURTOU — 02/09/2026, decisão dela, ciente do custo.**
+    Ela tinha 211 caracteres, e na aba HTML ocupava 1072 px de 1072
+    disponíveis: quebrava em DUAS sublinhas, o quadro passava a rolar 40 px e a
+    segunda metade — *"que você fixar aqui embaixo."* — ficava CORTADA pela
+    borda de baixo do miolo. Medido no WebKit da janela do produto (1180x757,
+    ``gui/ponte_da_tela.TAMANHO_NA_TELA``), com a mesa dela e ``vpads == 0``.
+
+    A frase de hoje tem 162 caracteres, ocupa 942 px e cabe em UMA sublinha. As
+    quatro informações continuam lá: o que não está acontecendo, por quê, o que
+    fazer, e o que a intensidade ainda faz. Ela escolheu encurtar em vez de
+    deixar a aba rolar — *"uma frase, um dono"*: **esta função é a única cópia,
+    e encurtar aqui muda a janela GTK junto**, de propósito. Escrever uma
+    segunda versão para a tela nova é o defeito que esta casa passou o dia
+    matando.
     """
     ff = state.get("rumble_ff")
     if not isinstance(ff, dict):
@@ -346,10 +361,9 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     backends = ("vpad",) * max(0, vpads)
     if sem_dono_do_rumble(native=native, backends=backends):
         return (
-            "A intensidade acima não está chegando a jogo nenhum: não há "
-            "gamepad virtual, e é por ele que ela passa. Ligue “Jogar pelo "
-            "Hefesto” na aba Início. Ela continua valendo para a vibração que "
-            "você fixar aqui embaixo."
+            "A intensidade não está chegando a jogo nenhum: falta o gamepad "
+            "virtual, por onde ela passa. Ligue “Jogar pelo Hefesto” na aba "
+            "Início. Aqui embaixo ela ainda vale."
         )
     if vpads == 0 and native:
         # NATIVO-RUMBLE-01 (19/08/2026): a oração final desta frase dizia "Ela
