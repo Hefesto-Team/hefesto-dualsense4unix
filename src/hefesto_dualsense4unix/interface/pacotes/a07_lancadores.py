@@ -35,6 +35,16 @@ Quatro afirmações, quatro contradições. **A cura não é apagar o desenho** 
 dar-lhe fonte, e dizer `NÃO SEI` onde não há fonte. Um selo `CHEGAM` sobre um
 lançador que ninguém olhou é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na cor verde.
 
+E O NÚMERO ANDOU NO MESMO DIA, o que é o argumento inteiro desta aba: às 19h20
+de 02/09, `censo_do_wrapper(anotar=False)` respondia **62** appids com o wrapper
+e **um reparável — o PRAGMATA, com motivo `regressao`** (*"tinha o atalho e
+perdeu"*). Às 15h a mesma leitura dava 63 e zero reparáveis. A Steam comeu a
+linha de novo entre as duas medições, e **nada a repôs**: a carona
+(`carona_do_wrapper.pegar_carona_no_gesto`) nunca migrou para a interface nova
+— `grep -rn carona_do_wrapper src/hefesto_dualsense4unix/interface/` devolve só
+comentário. Enquanto ela não abrir esta aba e clicar em Consertar, o jogo fica
+sem o atalho. Está relatado como trabalho de fora desta aba.
+
 O QUE MUDOU EM 02/09, À TARDE, e é a diferença entre duas perguntas
 -------------------------------------------------------------------
 Os cinco cartões sem censo diziam `NÃO SEI` por CONSTANTE: o pacote escrevia
@@ -389,14 +399,29 @@ def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
     O `blocos` É O MECANISMO QUE JÁ EXISTE para isto, e não um segundo
     vocabulário: `a08_conexoes` troca o mapa do gabinete e a lista de aparelhos
     pelo mesmo caminho, pela mesma razão (um bloco cujo conteúdo muda de FORMA,
-    e não só de valor). O piloto troca o `innerHTML` **só quando ele difere**,
-    então a grade não se reescreve a cada tique.
+    e não só de valor). O piloto troca o `innerHTML` **só quando ele difere**.
 
     OS ENDEREÇOS CONTINUAM SENDO EMITIDOS, e isso não é redundância: eles são o
     contrato que a régua da aba cobra nos dois sentidos (nada emitido cai no
-    chão, nada da página fica sem dono). O `blocos` corre ANTES da `mesa` no
-    piloto, de modo que os campos pousam na grade recém-trocada e escrevem o
-    mesmo valor — zero pintura, zero briga.
+    chão, nada da página fica sem dono).
+
+    FATO ERRADO, SUBSTITUÍDO — esta docstring afirmava que *"o `blocos` corre
+    ANTES da `mesa` no piloto, de modo que os campos pousam na grade
+    recém-trocada e escrevem o mesmo valor — zero pintura, zero briga"*. **Não
+    é zero.** Medido na janela dela em 02/09/2026, com a MESMA carga pintada 20
+    vezes seguidas: o piloto conta **uma pintura por volta, para sempre**, e a
+    causa é do PINTOR e não daqui — o `escrever()` carimba
+    `el.dataset.hefVisto = '1'` em todo elemento que visita
+    (`hefesto_vivo.py:150`), a grade emitida NÃO tem esse atributo, e o
+    `alvo.innerHTML !== html` de `:303` nunca casa. A ordem correta (`blocos`
+    antes de `mesa`) é justamente o que garante o desencontro.
+
+    NÃO É O APÓSTROFO, e a distinção importa para quem for curar: com um nome
+    de jogo sem apóstrofo a contagem já era `1` a cada volta. O apóstrofo
+    somava um SEGUNDO laço, na lista de jogos, e esse morreu com o `_e`/`_a` do
+    desenho (ver :func:`desenho_dos_lancadores._e`). Este resta, e está
+    relatado como trabalho do PINTOR: comparar ignorando o `data-hef-visto`,
+    carimbar depois de comparar, ou pintar `blocos` DEPOIS de `mesa`.
     """
     return {
         "mesa": desenho.Quadro(lancadores=lancadores).valores(),
