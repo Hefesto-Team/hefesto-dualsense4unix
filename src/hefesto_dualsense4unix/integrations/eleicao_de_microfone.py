@@ -421,6 +421,51 @@ class EleitorDeMicrofone:
         return self._eleger_nome(nome)
 
 
+def recusa_de_quem_nao_elegeu(eleito: str | None) -> ResultadoDaEleicao:
+    """A frase do jogador que apertou o botão e NÃO tem o microfone da mesa.
+
+    MIC-RECUSA-NA-TELA-01 (02/09/2026). Este era o caminho mais calado dos
+    três: `daemon/subsystems/hotkey._eleger_ou_devolver` apagava a luz do
+    controle e voltava com um `logger.info("mic_da_mesa_mudo_de_quem_nao_
+    elegeu")` — **sem motivo nenhum para a tela**. Quem está com o controle na
+    mão via a luz apagar e o microfone continuar no vizinho, sem uma palavra.
+
+    A frase mora AQUI, e não no laço do daemon, pela mesma razão que as outras
+    cinco: este módulo é o dono do vocabulário da eleição, e `ResultadoDaEleicao`
+    é o tipo que a casa já usa para "não deu, e o porquê vai para a tela".
+    Escrevê-la no `hotkey.py` criaria a sexta frase fora do lugar das cinco.
+
+    Os DOIS casos são distintos e a pessoa precisa deles separados:
+
+    * ``eleito is None`` — ninguém tomou o microfone da mesa. Não há o que
+      devolver, e devolver aqui reelegeria a "melhor fonte" trocando o padrão
+      do sistema dela sem que ela tivesse elegido nada;
+    * ``eleito`` é outro controle — o canal é de outra pessoa, e o botão só
+      apagou a luz de quem apertou.
+
+    **Não nomeia o dono.** O `uniq` é endereço de rádio, não nome de gente; a
+    tela sabe traduzi-lo em "P2" (é o mesmo `data-uniq` do card) e o
+    ``eleito`` viaja como DADO ao lado da frase, em
+    `daemon/subsystems/recado_do_microfone`.
+    """
+    if eleito is None:
+        return ResultadoDaEleicao(
+            ok=False,
+            motivo=(
+                "ninguém está com o microfone da mesa, então não há o que "
+                "devolver — este botão só apagou a luz deste controle"
+            ),
+        )
+    return ResultadoDaEleicao(
+        ok=False,
+        motivo=(
+            "o microfone da mesa está com outro controle: só quem elegeu pode "
+            "devolvê-lo. Este botão apagou a luz deste controle e não mexeu no "
+            "canal de áudio de ninguém"
+        ),
+    )
+
+
 def fontes_de_captura_agora() -> list[str]:
     """As sources de captura de DualSense que o PipeWire publica AGORA."""
     rc, saida = _rodar(["pactl", "list", "sources", "short"])
@@ -465,4 +510,5 @@ __all__ = [
     "fonte_se_sustenta",
     "fontes_de_captura_agora",
     "melhor_fonte_elegivel",
+    "recusa_de_quem_nao_elegeu",
 ]
