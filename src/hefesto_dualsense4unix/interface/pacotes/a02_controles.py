@@ -28,13 +28,25 @@ inexistente devolve `null`, e o pacote contava os três órfãos em
 TER DONO NÃO É DIZER A VERDADE, e é o que a tarde de 02/09/2026 mediu. Todos os
 campos acima tinham dono, o casamento fechava, e a **régua do mockup dava
 `produto 16 · mockup 0`** — "nenhum campo ainda mostra o desenho", que se lê
-como aba pronta. Com os DOIS controles dela na mesa, esta aba escrevia
-**"102%"** no alto-falante: `speaker.volume` é o registrador do protocolo, 0-255,
-e a linha colava um `%` no número CRU. A régua conta se o valor MUDOU em relação
-ao desenho — ela não sabe se ele está certo, e contou a mentira como PRODUTO.
-Depois da cura o número dela é o MESMO: `produto 16 · mockup 0 · indecidível 7`.
-O bloco do REUSO, logo abaixo dos imports, tem as cinco regras que saíram daqui
-e voltaram para o motor.
+como aba pronta. Com os DOIS controles dela na mesa, este pacote EMITIA
+**"102%"** para o `alto-estado`: `speaker.volume` é o registrador do protocolo,
+0-255, e a linha colava um `%` no número CRU. A régua conta se o valor MUDOU em
+relação ao desenho — ela não sabe se ele está certo, e contou a mentira como
+PRODUTO. Depois da cura o número dela é o MESMO: `produto 16 · mockup 0 ·
+indecidível 7`. O bloco do REUSO, logo abaixo dos imports, tem as cinco regras
+que saíram daqui e voltaram para o motor.
+
+**E "EMITIA" NÃO É "MOSTRAVA" — a diferença foi medida em 02/09/2026 e a
+primeira redação desta linha errava.** O `alto-estado` é
+`<span class="mudo" data-campo="alto-estado" hidden>` na página publicada
+(`paginas/02-controles.html:1678` e `:2009`), e o `hidden` é LITERAL no gerador
+(`aba02.py:1170`), sem condição; o `escrever` do piloto tem cinco alvos —
+texto, largura, fundo, `value` e `html` — e NENHUM toca o atributo `hidden`
+(zero ocorrências em `hefesto_vivo.py`). O "102%" ia para um vão invisível. O
+que ela VÊ no bloco do alto-falante é o `<span class="n">100</span>` e a
+`.cheio` de `width:100%` do desenho, e **nenhum dos dois tem endereço** — o
+volume na tela dela é 100 cravado, para todo controle, e esta cura não o
+alcança.
 """
 from __future__ import annotations
 
@@ -137,6 +149,80 @@ COM_TOQUE = "Tocando"
 ROTULO_DO_CLIQUE = {"l": "L3", "r": "R3"}
 CLICADO = "[%s]"
 
+# ---------------------------------------------------------------------------
+# A BARRA DE LUZ — as CINCO situações do motor, e o valor que cada uma mostra
+# ---------------------------------------------------------------------------
+# `rotulo_lightbar` devolve `(rótulo, base_do_accent)`, e O DISCRIMINADOR É O
+# PRIMEIRO. O segundo responde outra pergunta, e a docstring dele a escreve:
+# *"a cor devolvida é a BASE do accent (crua); `None` = usar o neutro"*
+# (`controller_card.py:1178`).
+#
+# TOMAR O SEGUNDO POR "há cor conhecida a mostrar?" COLAPSA DOIS PARES, e a
+# auditoria de 02/09/2026 mediu os dois com sonda, sem tocar o aparelho:
+#
+#   o motor DIZ                        base    o campo dizia   e devia dizer
+#   (sem rótulo) — conhecida e acesa   a cor   #0000FF         #0000FF
+#   Em Nativo o jogo é dono do LED     CRUA    #000000         não sei
+#   A Steam tem este controle aberto   CRUA    #000000         não sei
+#   Lightbar: cor desconhecida         None    —               não sei
+#   Lightbar: apagada                  None    —               apagada
+#
+# NOS DOIS DO MEIO A BASE É O `rgb` CRU (linhas 1183 e 1185 do motor), e com a
+# fonte desconhecida esse cru é `[0,0,0]` — exatamente a mentira que o motor
+# nomeia: *"o 0,0,0 do sysfs sem escrita nossa pode ser o azul-kernel brilhando
+# neste exato momento"*. A GTK mostra a cor COM a ressalva ao lado; aqui a
+# ressalva não tem endereço, então mostrar a cor sozinha é afirmar o que
+# ninguém mediu. Dizer "não sei" é o que sobra de honesto.
+#
+# E O ÚLTIMO É UM FATO, NÃO UMA AUSÊNCIA: `lightbar_on` falso com fonte NOSSA é
+# um estado que o motor AFIRMA, com frase positiva. Ele recebia o mesmo
+# `SEM_LEITOR` que o piloto usa para null/undefined (`hefesto_vivo.py:118`) —
+# "não medi" sobre a única coisa aqui que se mediu.
+
+#: O RÓTULO DA BARRA APAGADA — **perguntado ao motor, nunca digitado**.
+#:
+#: Das quatro frases que `rotulo_lightbar` devolve, só uma é constante exportada
+#: (`ROTULO_LIGHTBAR_SEGURADA`). Digitar as outras aqui seria a segunda cópia
+#: que a LEI 0 proíbe, e uma cópia MUDA: no dia em que o motor trocasse a frase,
+#: esta aba voltaria a colapsar os dois estados sem régua nenhuma reprovar.
+#:
+#: Então ela se PERGUNTA, com a entrada mínima que só o ramo "apagada" atende —
+#: fonte nossa, cor conhecida e não-preta, barra desligada. Quem tranca a
+#: pergunta é `test_o_rotulo_da_apagada_e_perguntado_ao_motor`, que cobra que
+#: ela seja diferente das outras três.
+ROTULO_DA_LUZ_APAGADA = rotulo_lightbar(
+    {"lightbar_rgb": [0, 0, 255], "lightbar_source": "sysfs", "lightbar_on": False}, {}
+)[0]
+
+#: O CÓDIGO DE COR DE UMA BARRA DESLIGADA, e ele não é uma opinião: sem corrente
+#: nos três canais o que a barra emite é zero em todos eles. O motor devolve
+#: `None` como base porque `None` ali quer dizer *"use o neutro no traço do
+#: card"* — é resposta de ACCENT, e este campo é o CÓDIGO DA COR.
+#:
+#: DEPOIS DESTA CURA, `#000000` APARECE AQUI SE E SOMENTE SE A BARRA ESTÁ
+#: APAGADA: o ramo da cor conhecida nunca o produz (o motor manda `rgb ==
+#: (0,0,0)` para "apagada", linha 1189), e os três ramos de "não sei" mostram o
+#: travessão. Antes ele aparecia justamente onde a cor era DESCONHECIDA.
+HEX_DA_LUZ_APAGADA = "#000000"
+
+
+def luz_hex(rotulo: str | None, base: tuple[int, ...] | None) -> str:
+    """O `luz-hex` a partir do que o motor RESPONDEU — as cinco situações.
+
+    Recebe o par inteiro de `rotulo_lightbar` de propósito: a decisão é do
+    rótulo, e passar só a base é o defeito que esta função existe para fechar.
+    """
+    import mesa_viva
+
+    if rotulo is None and base is not None:
+        return "#{:02X}{:02X}{:02X}".format(*base[:3])
+    if rotulo == ROTULO_DA_LUZ_APAGADA:
+        return HEX_DA_LUZ_APAGADA
+    # O `str` é para o `mypy`, que é portão: `mesa_viva` entra por `sys.path` e
+    # sem tipagem, então tudo o que vem dele é `Any` — devolver `Any` de uma
+    # função declarada `str` reprova com `no-any-return`.
+    return str(mesa_viva.SEM_LEITOR)
+
 
 @registrar("02-controles.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
@@ -178,7 +264,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # estado real de quem nunca recebeu um `speaker.set` — o registrador não
         # se lê, só se escreve (`ipc_handlers.py:4600`).
         sp_lido = speaker_do_entry(c)
-        # A COR DA BARRA DE LUZ, pelo dono das QUATRO situações. Ver `luz-hex`.
+        # A COR DA BARRA DE LUZ, pelo dono das CINCO situações. **Os DOIS
+        # valores são usados**: o rótulo é o discriminador e a base é a cor.
+        # Descartar o rótulo — que é o que esta linha fazia — jogava fora a
+        # única coisa que separa "apagada" de "não sei". Ver `luz_hex`.
         #
         # O `getattr` É POR CAUSA DE UM DUBLÊ, e ele está declarado para não
         # virar hábito: `Contexto.state` é campo do dataclass e o piloto sempre
@@ -189,7 +278,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # aba a ler o estado GLOBAL derruba a régua de outra. O dublê é que
         # precisa crescer; enquanto ele não cresce, `{}` é o que
         # `rotulo_lightbar` já trata (`state_global.get("native_mode")`).
-        _rotulo_da_luz, base_da_luz = rotulo_lightbar(c, getattr(ctx, "state", None) or {})
+        rotulo_da_luz, base_da_luz = rotulo_lightbar(c, getattr(ctx, "state", None) or {})
         casa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
 
         # O MUDO TEM TRÊS CARAS, e o selo da tela diz qual: mudo pelo aparelho,
@@ -293,29 +382,25 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "mascara": casa.get("mascara") or mesa_viva.NOME_DA_MASCARA.get(
                 mascara_viva({"gamepad_emulation": {"backend": c.get("vpad_backend")}})
                 or "", "—"),
-            # A COR DA BARRA — e ela AFIRMAVA UMA COR QUE NINGUÉM MEDIU. Esta
-            # linha era `"#{:02X}{:02X}{:02X}".format(*rgb[:3])` sobre o
-            # `lightbar_rgb` cru: com `lightbar_source == "desconhecida"` o
-            # `[0,0,0]` do sysfs virava `#000000` na tela, e o motor diz por que
-            # isso é mentira, com todas as letras — *"NUNCA 'apagada': o 0,0,0
-            # do sysfs sem escrita nossa pode ser o azul-kernel brilhando neste
-            # exato momento"* (`controller_card.rotulo_lightbar:1145`).
+            # A COR DA BARRA, PELO RÓTULO — o discriminador do motor, e não a
+            # base do accent. As cinco situações e o que cada uma mostra estão
+            # na tabela do `luz_hex`, no topo deste arquivo, com a sonda que as
+            # mediu; aqui fica só o que o campo NÃO pode fazer, que é decidir
+            # sozinho: esta linha já leu `lightbar_rgb` cru (afirmava `#000000`
+            # sobre cor desconhecida) e já leu só a base (colapsava "apagada"
+            # em "não sei"). Os dois defeitos são o mesmo — inventar o
+            # discriminador em vez de usar o que o dono devolve.
             #
-            # O DONO DAS QUATRO SITUAÇÕES É `rotulo_lightbar`, e ele já as
-            # separa: Modo Nativo (o jogo é dono do LED), lightbar disputada (a
-            # Steam segura o `fd`), fonte desconhecida e barra apagada. O
-            # SEGUNDO valor que ele devolve é exatamente a pergunta deste campo
-            # — *"há cor conhecida para mostrar?"*: `None` nas duas últimas,
-            # a cor nas duas primeiras.
-            #
-            # O RÓTULO — a frase que explica o caso — NÃO CABE AQUI: o campo é
-            # o `<span class="de-quem">` de 60px ao lado de "Barra de luz", e
-            # escrever "Em Nativo o jogo é dono do LED" dentro dele destruiria a
-            # linha. Dar-lhe lugar é desenho, logo dela.
-            "luz-hex": (
-                "#{:02X}{:02X}{:02X}".format(*base_da_luz)
-                if base_da_luz is not None else mesa_viva.SEM_LEITOR
-            ),
+            # A FRASE INTEIRA DO RÓTULO NÃO CABE, e agora está MEDIDO em vez de
+            # afirmado: o `<span class="de-quem">` não tem largura fixa (o CSS
+            # é `margin-left:auto;font-size:10.5px`, `02-controles.html:1015`) e
+            # a linha que o contém mede **148px**. No Chrome, com a fonte da
+            # página: `#7EB8D4` ocupa 45,3px, "A Steam segura" 78,8px numa linha
+            # só, e "Lightbar: apagada" 86,7px — este QUEBRA a linha (14px para
+            # 28px de altura). Ou seja: PALAVRA CABE aqui, frase não. Qual
+            # palavra é decisão dela; até ela dizer, o campo mostra código de
+            # cor ou travessão, que é o vocabulário que ele já tem.
+            "luz-hex": luz_hex(rotulo_da_luz, base_da_luz),
             # UM DONO SÓ para o selo, nos dois pintores (auditoria 02/09/2026):
             # `mesa_viva.selo_do_mic`. O ternário estava escrito duas vezes, e
             # a régua do outro lado olhava o TEXTO — a cura de lá caía calada.
@@ -346,8 +431,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #
             #   1. `speaker.volume` é **0-255**, o registrador do protocolo
             #      (`ipc_handlers.py:3584`, `:4799`). Com o valor vivo de hoje —
-            #      **102** — a tela dizia **"102%"**. Uma porcentagem acima de
-            #      cem, e ela subiria a "255%" no talo. E não é só o `%`
+            #      **102** — este pacote emitia **"102%"** (para o vão
+            #      `hidden`, ver o cabeçalho: não chegou aos olhos dela). Uma
+            #      porcentagem acima de cem, e ela subiria a "255%" no talo, no
+            #      dia em que o campo saísse do vão. E não é só o `%`
             #      sobrando: a conta certa NÃO é `bruto / 255`. O
             #      `core/speaker_scale.py` existe por isso e traz a curva
             #      MEDIDA no hardware (tom de 1 kHz, o microfone do próprio
