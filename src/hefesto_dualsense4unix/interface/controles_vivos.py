@@ -1349,7 +1349,11 @@ class Janela:
         # Num contrato em que aceso = está no ar, pintar ATIVO ali seria o
         # controle que acabou de cair anunciando que está capturando.
         # O eco do clique dela vence, porque aí houve leitura de verdade.
-        mic_sabemos = ("microfone" in eco) or e.get("mic_sabemos", True)
+        # O DEFAULT SEGURO DE "NÃO SEI" É NÃO SEI (auditoria 02/09/2026). Aqui
+        # se lia `e.get("mic_sabemos", True)`: no dia em que o `estado_do_card`
+        # deixasse de emitir a chave, o card voltaria a mentir CALADO — que é o
+        # mesmo `bool(None)` que esta onda foi curar, com outro nome.
+        mic_sabemos = ("microfone" in eco) or e.get("mic_sabemos", False)
         eco_alto_mudo = (eco["alto-falante"] == "on") if "alto-falante" in eco else e["alto_mudo"]
         eixos = {}
         # SÓ O GIROSCÓPIO. O laço percorria também `("acel", e["acel"])` e
@@ -1399,7 +1403,9 @@ class Janela:
             # que o da rota já entrava: sem isto o tique seguinte devolveria o
             # estado do daemon e o clique dela sumiria em 100 ms.
             "mic": {
-                "selo": ("MUDO" if eco_mic_mudo else "ATIVO") if mic_sabemos else "—",
+                # UM DONO SÓ para o selo, nos dois pintores (auditoria
+                # 02/09/2026): `mesa_viva.selo_do_mic`.
+                "selo": mesa_viva.selo_do_mic(eco_mic_mudo, mic_sabemos),
                 "off": eco_mic_mudo and mic_sabemos,
                 "onda": e["mic_v"],
                 "vol_w": f'{e["mic_vol"]}%',

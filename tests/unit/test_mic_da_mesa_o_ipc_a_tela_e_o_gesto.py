@@ -160,19 +160,84 @@ def test_o_estado_do_card_diz_quando_nao_leu() -> None:
     )
 
 
-def test_o_card_vivo_pinta_travessao_quando_nao_leu() -> None:
-    """CURA A ARRANCAR: `"MUDO" if eco_mic_mudo else "ATIVO"` sem o `sabemos`.
+def test_o_selo_do_mic_tem_tres_estados_e_um_dono_so() -> None:
+    """O selo do card, medido pelo COMPORTAMENTO — e nos DOIS pintores.
 
-    Pinta ATIVO, e com a inversão o plástico do controle caído diria "estou no
-    ar" na frente de quatro pessoas.
+    ACHADO DA AUDITORIA DE 02/09/2026. Esta régua era `inspect.getsource` do
+    `Janela._pacote_do_card` mais `assert '<literal>' in fonte`. Media o TEXTO:
+    arrancada a cura de verdade (`mic_sabemos = True`, que faz o card do
+    controle CAÍDO voltar a pintar ATIVO), ela ficava VERDE — e nenhuma outra
+    régua desta casa pegava, porque `test_regua_de_tela_a_aba_controles.py` é
+    SKIP nesta máquina.
+
+    O ternário vivia escrito duas vezes; agora tem um dono só,
+    `mesa_viva.selo_do_mic`, chamado pelo pacote `a02_controles` e pelo
+    `_pacote_do_card` do piloto. Uma régua sobre a função guarda os dois.
+
+    CURA A ARRANCAR: fazer `selo_do_mic` ignorar `sabemos` — reprova aqui.
+    """
+    from hefesto_dualsense4unix.interface import mesa_viva
+
+    assert mesa_viva.selo_do_mic(False, False) == "—", (
+        "sem leitura, a tela tem de dizer que não sabe — pintar ATIVO é o "
+        "controle que acabou de cair anunciando que está no ar"
+    )
+    assert mesa_viva.selo_do_mic(True, False) == "—"
+    assert mesa_viva.selo_do_mic(False, True) == "ATIVO"
+    assert mesa_viva.selo_do_mic(True, True) == "MUDO"
+
+
+def test_os_dois_pintores_chamam_o_mesmo_dono_do_selo() -> None:
+    """Nenhum dos dois pode voltar a escrever o ternário por conta própria.
+
+    O commit da onda escreve *"curar só um deixaria as duas versões vivas, que
+    é o defeito que a regra da casa existe para matar"*. Ele curou os dois e
+    guardou um. Esta régua guarda os dois.
+
+    E ela lê o BYTECODE, não o texto: o comentário dos dois pintores explica o
+    defeito e cita "ATIVO" com todas as letras, e uma régua de substring
+    reprovaria justamente porque alguém escreveu bem — a forma exata das onze
+    réguas que caíram nesta casa em 26/08. Comentário não entra em `co_consts`.
+
+    CURA A ARRANCAR: reescrever o ternário em qualquer um dos dois — reprova.
+    """
+    from hefesto_dualsense4unix.interface import controles_vivos
+    from hefesto_dualsense4unix.interface.pacotes import a02_controles
+
+    for alvo, nome in (
+        (a02_controles.pacote, "pacotes/a02_controles.py"),
+        (controles_vivos.Janela._pacote_do_card, "interface/controles_vivos.py"),
+    ):
+        codigo = alvo.__code__
+        nomes = set(codigo.co_names)
+        constantes = {c for c in codigo.co_consts if isinstance(c, str)}
+        constantes.discard(alvo.__doc__)
+
+        assert "selo_do_mic" in nomes, f"{nome} não chama o dono do selo"
+        assert "ATIVO" not in constantes, (
+            f"{nome} voltou a decidir o selo por conta própria — duas versões "
+            "vivas do mesmo ternário é o defeito que a casa mata"
+        )
+
+
+def test_o_default_de_mic_sabemos_no_piloto_e_nao_sei() -> None:
+    """A ausência da chave não pode virar ATIVO — nem por default.
+
+    A cura trazia `e.get("mic_sabemos", True)` embutido: no dia em que o
+    `estado_do_card` deixasse de emitir a chave, o card voltava a mentir
+    CALADO. É o mesmo `bool(None)` que esta onda foi curar, com outro nome.
+
+    CURA A ARRANCAR: devolver o default para `True` — reprova.
     """
     import inspect
 
     from hefesto_dualsense4unix.interface import controles_vivos
 
     fonte = inspect.getsource(controles_vivos.Janela._pacote_do_card)
-    assert '"selo": ("MUDO" if eco_mic_mudo else "ATIVO") if mic_sabemos else "—"' in fonte
-    assert '"off": eco_mic_mudo and mic_sabemos,' in fonte
+    assert 'e.get("mic_sabemos", False)' in fonte, (
+        "o default de `mic_sabemos` no piloto voltou a ser `True` — a ausência "
+        "de leitura passaria a pintar ATIVO de novo"
+    )
 
 
 def test_mesa_viva_publica_o_terceiro_estado() -> None:
