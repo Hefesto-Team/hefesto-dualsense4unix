@@ -77,6 +77,61 @@ DEFAULT_BUTTON_BINDINGS: dict[str, KeyBinding] = {
     "touchpad_right_press": ("KEY_DELETE",),
 }
 
+#: O PADRÃO QUE A TELA PUBLICADA AINDA NÃO SABE DIZER — e ele GRAVA no perfil
+#: dela uma escolha que ela não fez. Botão -> (o que o produto faz de fábrica,
+#: o que a página publicada mostra no lugar).
+#:
+#: MEDIDO em 02/09/2026, na base `onda/abas-0209` (242c3e0c), repetindo a conta
+#: de `interface/pacotes/a06_navegacao.guardar_definicoes` sobre a forma que a
+#: página publicada devolve ao piloto:
+#:
+#:     PUBLICADA  padrao_l3 = __TOGGLE_OSK__ · tela_l3 = 'Abrir o teclado na
+#:                tela' -> grava_no_perfil = {'l3': '__OPEN_OSK__'}
+#:     BANCADA    padrao_l3 = __TOGGLE_OSK__ · tela_l3 = 'Abrir e fechar o
+#:                teclado na tela' -> grava_no_perfil = None
+#:
+#: A CADEIA, e ela tem quatro elos: (1) o L3 nasce alternador aqui;
+#: (2) `acoes_de_botao.padrao()` deriva o padrão das 21 linhas DESTE mapa;
+#: (3) a página que o produto renderiza foi congelada antes do alternador
+#: existir, não tem a `<option>` do rótulo novo, e por isso a pintura do
+#: `acao-l3` é RECUSADA em silêncio (`hefesto_vivo.escrever`, alvo `valor`:
+#: um `<select>` só aceita o texto exato de uma opção que ele oferece);
+#: (4) o "Guardar" recolhe o `select.value` das 21 linhas, compara com o padrão
+#: e grava a diferença — que aqui não é escolha dela, é o desenho congelado.
+#: Ela não precisa tocar na linha do L3: basta clicar em "Guardar" para mudar
+#: qualquer OUTRA linha.
+#:
+#: O QUE ISSO CUSTA, medido pelo fio do daemon
+#: (`acoes_de_botao.resolver` -> `profiles.manager.resolve_key_bindings`):
+#: sem override o device recebe `['__TOGGLE_OSK__']`, com o que o "Guardar"
+#: grava ele recebe `['__OPEN_OSK__']` — **o L3 para de alternar naquele
+#: perfil**, e no tique seguinte a pintura volta a casar, o campo sai da lista
+#: de endereços mortos da régua do mockup e não sobra rastro em lugar nenhum.
+#: A saída existe e fica a dois centímetros na tela: o "Voltar ao padrão"
+#: (`a06_navegacao.padrao_definicoes`) zera `button_actions` e `key_bindings`.
+#:
+#: ESTA DECLARAÇÃO NÃO É A CURA — é o que a torna VISÍVEL e datada. A cura mora
+#: fora deste módulo, em três lugares possíveis, e nenhum deles é aqui:
+#:   * a PUBLICAÇÃO da `06-navegacao.html` (`check_o_desenho_aprovado.py
+#:     --publicar 06`), que é ato DELA e fecha o caso inteiro;
+#:   * `interface/pacotes/a06_navegacao.guardar_definicoes`, gravando só as
+#:     linhas que a pintura conseguiu escrever, ou dizendo antes o que vai
+#:     gravar;
+#:   * `interface/hefesto_vivo.escrever`, que hoje recusa um valor fora do
+#:     `<select>` sem contar a ninguém.
+#:
+#: A REGRA QUE ELA DEIXA, e vale para toda aba: **um padrão de fábrica fora do
+#: vocabulário da tela publicada vira escolha dela no disco.** Trocar um padrão
+#: e publicar a página são o mesmo trabalho, e a ordem importa.
+#:
+#: `tests/unit/test_o_padrao_de_fabrica_cabe_na_tela_publicada.py` cobra esta
+#: tabela contra a MEDIÇÃO, nos dois sentidos: padrão novo fora da tela sem
+#: declaração reprova na hora, e declaração que caducou (ela publicou) reprova
+#: também — é o sino que manda apagar a linha.
+PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ: dict[str, tuple[str, str]] = {
+    "l3": (TOKEN_TOGGLE_OSK, TOKEN_OPEN_OSK),
+}
+
 
 def is_virtual_token(token: str) -> bool:
     """True se `token` é um marcador `__XXX__` (delegado ao callback)."""
@@ -124,6 +179,7 @@ def format_binding(binding: KeyBinding) -> str:
 
 __all__ = [
     "DEFAULT_BUTTON_BINDINGS",
+    "PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ",
     "TOKEN_CLOSE_OSK",
     "TOKEN_OPEN_OSK",
     "TOKEN_TOGGLE_OSK",
