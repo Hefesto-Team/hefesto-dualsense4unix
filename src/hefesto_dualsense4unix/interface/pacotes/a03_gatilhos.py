@@ -89,8 +89,14 @@ _CASA = re.compile(r'data-campo="aj-nome-(?P<lado>[ed])-(?P<i>\d+)"')
 _BARRA = re.compile(
     r'<span[^>]*data-campo="aj-pct-[ed]-\d+"[^>]*>|<span[^>]*data-campo="aj-pct-[ed]-\d+"[^>]*/?>')
 
+#: O LUGAR QUE O DESENHO JÁ DÁ POR VAZIO. `data-controle` e `data-conectado`
+#: saem no MESMO elemento, nesta ordem, e o `[^>]*` atravessa a quebra de linha
+#: que o gerador põe entre os dois atributos.
+_LUGAR_VAZIO = re.compile(r'data-controle="(p\d+)"[^>]*data-conectado="nao"')
+
 _LIDO: tuple[dict[str, int], bool] | None = None
 _ENDERECOS: frozenset[str] | None = None
+_VAZIOS: frozenset[str] | None = None
 
 
 def _pagina_publicada() -> str:
@@ -118,20 +124,23 @@ def _casas_e_barras() -> tuple[dict[str, int], bool]:
     `querySelector` que não acha nada — inofensivo —, enquanto DEIXAR de
     endereçar uma que existe é o defeito D3 de volta.
 
-    O SEGUNDO VALOR É UM DEFEITO DECLARADO, e ele não é do pacote. `escrever()`
-    do piloto só põe LARGURA em quem declara `data-hef-alvo="largura"`; sem
-    isso o alvo é `texto`, e a pintura escreve o número DENTRO da barra em vez
-    de encompridá-la. Medido na página publicada de 02/09/2026: **os 16
-    `<select>` declaram `valor` e nenhuma das 11 barras declara `largura`.**
+    O SEGUNDO VALOR ERA UM DEFEITO DECLARADO, **e ele FECHOU**. `escrever()` do
+    piloto só põe LARGURA em quem declara `data-hef-alvo="largura"`; sem isso o
+    alvo é `texto`, e a pintura escreve o número DENTRO da barra em vez de
+    encompridá-la. O gerador ganhou o atributo, ela publicou (`70b58116`), e a
+    medição de 02/09/2026 na página publicada é a de agora:
 
-    O PACOTE PINTA A BARRA MESMO ASSIM, e a escolha é deliberada: calá-la
-    deixaria as 11 barras na largura do mockup ao lado de um valor que a pintura
-    já corrigiu — a tela AFIRMANDO 78% de uma força que não existe, que é
-    exatamente o defeito D3 pela metade. O conserto de forma é o
-    `data-hef-alvo` no gerador (`aba03.py`, feito nesta leva, na BANCADA), e
-    publicá-lo é ato dela. No dia em que a página vier com o alvo, esta função
-    devolve `True` e as barras acendem sem uma linha de código nova — é por
-    isso que ela LÊ em vez de digitar.
+        11 barras `aj-pct-*`, 11 com `data-hef-alvo="largura"`  → devolve True
+        16 `<select>`, 16 com `data-hef-alvo="valor"`
+
+    FATO SUBSTITUÍDO: esta docstring dizia *"nenhuma das 11 barras declara
+    `largura`"*, e era verdade no dia em que foi escrita — antes da publicação.
+    Guardá-la ao lado do número certo obrigaria a próxima pessoa a escolher
+    entre duas afirmações.
+
+    O `False` continua possível e continua querendo dizer a mesma coisa —
+    gerador esperando a publicação dela, não pacote incompleto —, e é por isso
+    que esta função LÊ em vez de digitar `True`.
     """
     global _LIDO
     if _LIDO is None:
@@ -157,6 +166,40 @@ def _enderecos_da_pagina() -> frozenset[str]:
     if _ENDERECOS is None:
         _ENDERECOS = frozenset(re.findall(r'data-campo="([^"]+)"', _pagina_publicada()))
     return _ENDERECOS
+
+
+def _lugares_que_o_desenho_da_por_vazios() -> frozenset[str]:
+    """Os `pref` que a página publicada já marca `data-conectado="nao"`.
+
+    POR QUE O PACOTE PRECISA SABER DISSO, e é o defeito D4, medido em
+    02/09/2026: os quatro `<select>` das colunas P3 e P4 são **endereço morto**.
+    O piloto preenche todo lugar que a mesa não tem com `dict.fromkeys(chaves,
+    "—")` (`hefesto_vivo.py:1006-1016`), e `escrever()` **recusa** escrever um
+    valor que o `<select>` não oferece (`hefesto_vivo.py:145-151`) — a recusa é
+    CERTA, porque escrever qualquer outra coisa deixaria o campo em branco
+    somando +1 por tique para sempre. O desfecho é que o travessão nunca pousa e
+    a coluna vazia continua mostrando o que o gerador escreveu.
+
+    Enquanto o valor cravado é `Off`/`custom`, isso passa por inofensivo. **Ele
+    não é**: o dia em que um controle sai do P3 com `Rígido` aplicado, o
+    `Rígido` FICA na tela — a coluna de um lugar sem aparelho afirmando um
+    efeito. É a nona aparição do defeito que esta casa nomeia, *a tela afirmando
+    o que não é*, e a única cura é o pacote escrever ali um valor que o
+    `<select>` aceite.
+
+    POR QUE SÓ OS LUGARES QUE O DESENHO JÁ DÁ POR VAZIOS, e não todo lugar
+    vazio: quem emite uma coluna SAI da conta `TODOS_OS_LUGARES - vivos` do
+    piloto, e com ela perde o `data-conectado="nao"` que o piloto escreveria —
+    que é o que segura o `pointer-events:none` do lugar vazio. Nas colunas que a
+    página já dá por vazias isso não custa nada (a marca está no arquivo); numa
+    que a página dá por conectada — o P2 com um controle só na mesa — custaria a
+    trava. O acoplamento é do piloto (ele deduz "vazio" de "quem não emitiu", em
+    vez de perguntar à mesa) e a cura é lá; aqui fica a metade que não regride.
+    """
+    global _VAZIOS
+    if _VAZIOS is None:
+        _VAZIOS = frozenset(_LUGAR_VAZIO.findall(_pagina_publicada()))
+    return _VAZIOS
 
 
 def _specs() -> Any:
@@ -402,6 +445,31 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         colunas[uniq] = col
         pintados += sum(1 for k in col if k in tem_endereco)
 
+    # O LUGAR VAZIO TAMBÉM É ESCRITO — a cura do D4, ver
+    # `_lugares_que_o_desenho_da_por_vazios`. A chave é o `pref` cru: o
+    # `pacotes.normalizar` traduz `uniq → pref` quando conhece a tradução e
+    # deixa passar o que já é `pref` (`pacotes/__init__.py:423`).
+    #
+    # O VALOR NÃO SE DIGITA: um lugar sem aparelho é um lugar sem configuração
+    # de gatilho, e `_do_lado({}, …)` é exatamente isso — a mesma função que
+    # traduz o perfil, com o perfil vazio. Sai `modo-chave='Off'` (o
+    # "Desligado" que o `<select>` oferece) e `pronto='custom'` (o "— Nenhum —"),
+    # que são os dois únicos valores desta coluna que querem dizer *não há
+    # efeito aqui*.
+    #
+    # SÓ OS DOIS CAMPOS POR LADO, e não as barras de ajuste: medido na página
+    # publicada de 02/09/2026, a coluna vazia não tem `aj-*` nenhum — ela traz
+    # "Este modo não tem o que ajustar." no lugar. Emitir `aj-val-e-0` ali seria
+    # o pacote dando-se nota por escrever no vazio, que é o que a `cobertura`
+    # desta aba passou a recusar.
+    ocupados = {str(m.get("pref") or "") for m in ctx.mesa}
+    sem_ninguem = _do_lado({}, specs, 0)
+    for pref in sorted(_lugares_que_o_desenho_da_por_vazios() - ocupados):
+        vazia = {f"modo-chave-{sig}": sem_ninguem["modo-chave"] for sig in LADOS}
+        vazia.update({f"pronto-{sig}": sem_ninguem["pronto"] for sig in LADOS})
+        colunas[pref] = vazia
+        pintados += sum(1 for k in vazia if k in tem_endereco)
+
     return {
         "colunas": colunas,
         "perfil": ctx.state.get("active_profile") or "",
@@ -515,6 +583,47 @@ def _desfecho(resposta: Any) -> tuple[bool, str]:
     return bool(resposta), ""
 
 
+def _na_lingua_da_tela(motivo: str, modo: str) -> str:
+    """A recusa do daemon na língua dos rótulos desta aba. Sem dono novo.
+
+    O TRADUTOR JÁ EXISTIA E NINGUÉM O CHAMAVA. `triggers_actions.
+    humanizar_erro_gatilho` (`app/actions/triggers_actions.py:53`) é a HARM-19,
+    escrita e testada para a aba Gatilhos da GUI estável: o daemon fala a língua
+    do `core/trigger_effects` — *"end (3) deve ser > start (5)"* — e ela devolve
+    *"Fim (3) precisa ser maior que Início (5)"*, com os MESMOS rótulos que o
+    `<select>` desta tela mostra, porque tira os dois do mesmo `spec.params`.
+    Conferido em 02/09/2026: zero pacotes da interface nova a chamavam, e a
+    recusa chegava CRUA à tela dela.
+
+    O `_rotulo_do_param` (`:45`) FICA PRIVADO, e é decisão escrita: quem precisa
+    dele é esta função, que já o usa por dentro. Torná-lo público criaria uma
+    segunda porta para a mesma tradução — e a próxima pessoa teria de escolher
+    entre duas, que é o defeito que a regra do dono único existe para matar.
+
+    O MOTIVO CRU VOLTA INTEIRO quando não há tradução, e é deliberado: o
+    `humanizar_erro_gatilho` devolve `None` para todo formato que não conhece
+    (*"aí o chamador mostra o texto cru do daemon, que ainda diz mais que
+    'daemon offline?'"*, palavras do próprio docstring dele). Calar aqui seria
+    trocar uma frase feia por nenhuma.
+
+    E ELE NÃO PODE DERRUBAR O GESTO. O módulo do tradutor importa `Gtk` no topo;
+    numa árvore sem PyGObject o import levanta, e um `except` que virasse erro
+    faria a interface recusar um clique VÁLIDO por causa da tradução da recusa.
+    """
+    if not motivo:
+        return motivo
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.triggers_actions import (
+            humanizar_erro_gatilho,
+        )
+    except Exception:
+        return motivo
+    specs = _specs()
+    spec = specs.get_spec(modo) if specs else None
+    return humanizar_erro_gatilho(motivo, spec) or motivo
+
+
 def _padroes(nome: str) -> list[int]:
     """Os ajustes PADRÃO daquele modo, na ordem em que o daemon os lê.
 
@@ -602,7 +711,8 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         ok, motivo = _desfecho(
             p.trigger_set_detalhado(lado, chave, _padroes(chave), uniq=uniq))
     if not ok:
-        raise RuntimeError(motivo or f"o daemon não aplicou o modo {chave!r}")
+        raise RuntimeError(_na_lingua_da_tela(motivo, chave)
+                           or f"o daemon não aplicou o modo {chave!r}")
 
 
 @gesto("03-gatilhos.html", "pronto")
@@ -638,7 +748,11 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ok, motivo = _desfecho(
         p.trigger_set_detalhado(lado, MODO_DA_CURVA, _curva(chave), uniq=uniq))
     if not ok:
-        raise RuntimeError(motivo or f"o daemon não aplicou a curva {chave!r}")
+        # O SPEC DA TRADUÇÃO É O DA CURVA, e não o do preset: quem recusa é o
+        # `MultiPositionFeedback`, e é dele que saem os rótulos `Posição 0..9`
+        # que a recusa vai nomear.
+        raise RuntimeError(_na_lingua_da_tela(motivo, MODO_DA_CURVA)
+                           or f"o daemon não aplicou a curva {chave!r}")
 
 
 @gesto("03-gatilhos.html", "guardar")
