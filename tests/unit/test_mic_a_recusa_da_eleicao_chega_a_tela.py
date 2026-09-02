@@ -106,12 +106,18 @@ class _EleitorDublado:
 
     def devolver_o_microfone(self) -> _Resultado:
         self.chamadas.append(("devolver", None))
-        # A POSSE CAI MESMO SEM DESTINO — o contrato do módulo de verdade
-        # (`eleicao_de_microfone.devolver_o_microfone`), inclusive no ramo que
-        # NÃO conseguiu devolver. Um dublê que só zerasse no sucesso esconderia
-        # a quinta frase, que é justamente a que nasce do fracasso.
-        self.eleito = None
+        # A POSSE SÓ CAI QUANDO A DEVOLUÇÃO É CONFERIDA — o contrato do módulo
+        # de verdade (`eleicao_de_microfone.devolver_o_microfone`) desde
+        # 02/09/2026.
+        #
+        # FATO SUBSTITUÍDO: este dublê zerava SEMPRE, copiando o comentário
+        # *"A POSSE CAI MESMO SEM DESTINO"* que estava no produto. A premissa
+        # era falsa — na devolução recusada nada é escrito e o padrão do
+        # sistema continua sendo o canal daquele controle. Um dublê que zera
+        # no fracasso é o defeito nº 5 desta onda de volta: a régua mediria o
+        # dublê e daria verde sobre o produto errado.
         if self._devolve_ok:
+            self.eleito = None
             return _Resultado(ok=True, ativo="mic_da_placa_mae")
         return _Resultado(ok=False, motivo=self._motivo_da_devolucao)
 
@@ -121,22 +127,34 @@ class _Backend:
 
     def __init__(self, uniqs: tuple[str, ...]) -> None:
         self.uniqs = list(uniqs)
+        self.caidos: set[str] = set()
         self.leds: dict[str, bool] = {}
 
     def sair_da_mesa(self, uniq: str) -> None:
-        """O hotplug-out: o controle deixa de aparecer no `describe_controllers`.
+        """O hotplug-out NA FORMA MAGRA: a entrada some do `describe_controllers`.
 
-        É exatamente o que o backend faz quando o cabo sai ou o rádio cai — e é
-        o único caminho por onde este defeito chega à tela, porque nenhuma
-        borda de botão acompanha um controle que sumiu.
+        É o que acontece quando o handle é fechado — e é a metade FÁCIL do
+        problema. A forma que o backend real produz está em `caiu_do_cabo`.
         """
         self.uniqs = [u for u in self.uniqs if u != uniq]
 
+    def caiu_do_cabo(self, uniq: str) -> None:
+        """O hotplug-out COMO O BACKEND REAL O ENTREGA: `connected: False`.
+
+        `core/backend_pydualsense.describe_controllers` devolve uma entrada por
+        HANDLE ABERTO e mantém o `uniq` preenchido quando o controle cai
+        (`backend_pydualsense.py:5298`). Quem lê só o `uniq` vê o controle na
+        mesa; só quem exige o `connected` vê que ele saiu.
+        """
+        self.caidos.add(uniq)
+
     def is_connected(self) -> bool:
-        return bool(self.uniqs)
+        return bool([u for u in self.uniqs if u not in self.caidos])
 
     def describe_controllers(self) -> list[dict[str, Any]]:
-        return [{"uniq": u, "connected": True} for u in self.uniqs]
+        return [
+            {"uniq": u, "connected": u not in self.caidos} for u in self.uniqs
+        ]
 
     def set_mic_led(self, aceso: bool, *, uniq: str | None = None) -> None:
         self.leds[uniq or "<sem endereço>"] = bool(aceso)
@@ -580,7 +598,7 @@ async def test_o_gesto_devolver_chega_a_tela_com_a_frase_do_caminho_de_volta() -
         "não há microfone para onde voltar: nenhuma fonte de captura com porta "
         "usável nesta máquina"
     )
-    daemon, _backend, eleitor = _mesa(
+    daemon, backend, eleitor = _mesa(
         devolve_ok=False, motivo_da_devolucao=sem_volta
     )
 
@@ -607,9 +625,18 @@ async def test_o_gesto_devolver_chega_a_tela_com_a_frase_do_caminho_de_volta() -
         "a frase do caminho de volta ficou no log: a pessoa apertou, o "
         f"microfone não voltou para lugar nenhum, e a tela não disse nada — {recado}"
     )
-    assert bloco["eleito"] is None, (
-        "a posse cai mesmo sem destino (contrato de `devolver_o_microfone`), e "
-        "a tela tem de ver isso"
+    assert bloco["eleito"] == _J1, (
+        "FATO SUBSTITUÍDO (02/09/2026): esta linha exigia `None`, com a razão "
+        "'a posse cai mesmo sem destino'. A premissa era falsa — a devolução "
+        "recusada não escreve nada, e o padrão do sistema continua sendo o "
+        "canal da J1. Publicar `eleito: null` com o canal ainda nela é a tela "
+        f"dizendo que ninguém está no ar enquanto o sistema grava por ela: {bloco}"
+    )
+    assert backend.leds == {_J1: True}, (
+        "A LUZ FICA ACESA — decisão dela, e consequência do contrato do LED "
+        "('aceso = este mic está no ar'). O canal continua sendo o da J1, "
+        "logo o microfone dela está no ar. Aqui o produto cravava "
+        f"`aceso = False` antes de saber o desfecho: {backend.leds}"
     )
 
 
@@ -816,3 +843,297 @@ def test_gesto_desconhecido_sai_nomeado() -> None:
             gesto="silenciar",
             ok=False,
         )
+
+
+# ---------------------------------------------------------------------------
+# 12. O HOTPLUG-OUT DE VERDADE — o handle fica aberto com `connected: False`
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_o_dono_que_caiu_do_cabo_com_o_handle_aberto_nao_e_nomeado() -> None:
+    """A cura anterior ficou pela METADE: ela só via o hotplug-out magro.
+
+    `test_o_eleito_que_saiu_da_mesa_nao_e_publicado_como_dono_de_agora` tira a
+    entrada inteira do `describe_controllers`. **O backend real não faz isso.**
+    Ele devolve uma entrada por HANDLE ABERTO e mantém o `uniq` preenchido com
+    `connected: False` (`core/backend_pydualsense.py:5298`) — o handle só
+    fecha quando alguém o fecha.
+
+    E aí as DUAS leituras da mesa divergiam, no mesmo `state_full`:
+
+    * `recado_do_microfone.publicar` exige o `connected` → `eleito_na_mesa:
+      false`;
+    * `hotkey._eleger_ou_devolver` perguntava a `_uniqs_conectados`, que lê só
+      o `uniq` → o dono continuava de pé, e o J2 recebia *"o microfone da mesa
+      está com OUTRO CONTROLE"*.
+
+    O segundo jogador lia que o canal está com alguém que não tem card na
+    tela — exatamente o defeito que a cura de 02/09 dizia ter matado.
+
+    CURA A ARRANCAR: trocar `recado_do_microfone.mesa_de_agora(daemon)` por
+    `conectados` de volta, em `hotkey._eleger_ou_devolver`.
+    """
+    daemon, backend, _eleitor = _mesa()
+
+    blocos = await _rodar_os_passos(
+        daemon,
+        [
+            {"uniq": _J1, "mudo": False},  # a J1 elege
+            lambda: backend.caiu_do_cabo(_J1),  # o cabo dela sai, o handle fica
+            {"uniq": _J2, "mudo": True},  # o J2 aperta o DELE
+        ],
+    )
+
+    assert blocos[1]["eleito_na_mesa"] is False, (
+        "a bancada não reproduziu o hotplug-out: o `connected: False` tem de "
+        f"chegar ao `describe_controllers` — {blocos[1]}"
+    )
+
+    recado = blocos[2]["recados"][_J2]
+    assert recado["motivo"] == recusa_de_quem_nao_elegeu(None).motivo, (
+        "o J2 leu que o canal está com outro controle, e esse controle caiu "
+        f"do cabo — mandaram ele procurar um dono sem card: {recado['motivo']!r}"
+    )
+    assert "outro controle" not in recado["motivo"]
+    assert recado["eleito"] is None, (
+        "o retrato da mesa não pode carregar o endereço de quem não está nela"
+    )
+    assert blocos[2]["eleito_na_mesa"] is False, (
+        "as duas leituras da mesa têm de dar o MESMO veredito no mesmo tique: "
+        f"{blocos[2]}"
+    )
+
+
+def test_a_leitura_da_mesa_e_uma_so_e_ela_exige_o_connected() -> None:
+    """`hotkey` e `state_full` perguntam à MESMA função quem tem card.
+
+    Duas réguas sobre o mesmo estado é o defeito que esta casa já pagou onze
+    vezes, e foi assim que ele voltou aqui. A função pública
+    `recado_do_microfone.mesa_de_agora` é a resposta.
+
+    CURA A ARRANCAR: qualquer segunda leitura de "quem está na mesa" dentro do
+    ramo de recusa do `hotkey`.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    class _Fantasma:
+        def describe_controllers(self) -> list[dict[str, Any]]:
+            return [
+                {"uniq": _J1, "connected": False},  # o handle que sobrou
+                {"uniq": _J2, "connected": True},
+            ]
+
+    class _Cru:
+        controller = _Fantasma()
+
+    cru = _Cru()
+
+    assert recado_do_microfone.mesa_de_agora(cru) == [_J2], (
+        "a leitura de 'tem card na tela' tem de exigir o `connected`"
+    )
+    assert hotkey._uniqs_conectados(cru) == [_J1, _J2], (  # type: ignore[arg-type]
+        "a lista da ELEIÇÃO continua sendo outra, e de propósito: ela responde "
+        "'quem pode ser eleito', não 'quem tem card'. Unificá-las mexeria em "
+        "quem pode ganhar o microfone"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 13. A LUZ FICA ACESA QUANDO A DEVOLUÇÃO É RECUSADA — decisão dela (02/09)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_luz_apaga_apenas_quando_a_devolucao_e_conferida() -> None:
+    """O par simétrico: devolveu de verdade apaga; não conseguiu, fica acesa.
+
+    Contrato do LED, escrito por ela em 01/09: *"aceso = este mic está no
+    ar"*. O produto cravava `aceso = False` ANTES de chamar
+    `devolver_o_microfone()` — a luz caía pela INTENÇÃO, que é a mesma mentira
+    de segunda geração que o lado da eleição já evitava, só que ao contrário.
+
+    CURA A ARRANCAR: `aceso = not bool(resultado.ok)` de volta para
+    `aceso = False`. O segundo caso reprova.
+    """
+    # a devolução DEU CERTO: o canal saiu dela, a luz apaga
+    daemon, backend, _eleitor = _mesa()
+    await _rodar_o_gesto(
+        daemon, [{"uniq": _J1, "mudo": False}, {"uniq": _J1, "mudo": True}]
+    )
+    assert backend.leds == {_J1: False}, (
+        f"a devolução foi conferida e a luz tinha de apagar: {backend.leds}"
+    )
+
+    # a devolução FOI RECUSADA: o canal continua dela, a luz fica acesa
+    daemon2, backend2, _e2 = _mesa(
+        devolve_ok=False,
+        motivo_da_devolucao="não há microfone para onde voltar",
+    )
+    await _rodar_o_gesto(
+        daemon2, [{"uniq": _J1, "mudo": False}, {"uniq": _J1, "mudo": True}]
+    )
+    assert backend2.leds == {_J1: True}, (
+        "o produto não conseguiu devolver: o padrão do sistema continua sendo "
+        "o canal deste controle, logo o microfone dele está no ar, logo a luz "
+        f"fica acesa. {backend2.leds}"
+    )
+
+
+def test_a_posse_so_cai_quando_a_devolucao_e_conferida() -> None:
+    """O `EleitorDeMicrofone` DE VERDADE — sem `pactl`, sem aparelho.
+
+    A luz e a posse têm de dar o mesmo veredito: luz acesa com
+    `mic_da_mesa.eleito: null` seria o plástico e a tela discordando sobre
+    quem está no ar.
+
+    FATO SUBSTITUÍDO (02/09/2026): `devolver_o_microfone` zerava `self.eleito`
+    incondicionalmente, com o comentário *"A POSSE CAI MESMO SEM DESTINO — o
+    controle saiu do ar"*. A premissa era falsa, e este teste a mede: nas duas
+    recusas o `set-default-source` **nunca roda**, então o padrão do sistema
+    continua sendo o canal do controle.
+
+    CURA A ARRANCAR: o `if resultado.ok:` de `devolver_o_microfone`.
+    """
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone as ele
+
+    def montar(
+        monkey: pytest.MonkeyPatch, *, destino: str | None, sustenta: bool
+    ) -> tuple[Any, list[list[str]]]:
+        escritas: list[list[str]] = []
+        monkey.setattr(ele, "melhor_fonte_elegivel", lambda: destino)
+        monkey.setattr(ele, "fonte_se_sustenta", lambda _nome: sustenta)
+        monkey.setattr(ele, "fonte_ativa", lambda: destino)
+        monkey.setattr(
+            ele, "_rodar", lambda argv: (escritas.append(argv), (0, ""))[1]
+        )
+        eleitor = ele.EleitorDeMicrofone()
+        eleitor.eleito = _J1
+        return eleitor, escritas
+
+    for rotulo, destino, sustenta in (
+        ("não há para onde voltar", None, True),
+        ("o destino não se sustenta", "mic_da_placa_mae", False),
+    ):
+        with pytest.MonkeyPatch.context() as monkey:
+            eleitor, escritas = montar(monkey, destino=destino, sustenta=sustenta)
+            resultado = eleitor.devolver_o_microfone()
+            assert resultado.ok is False, rotulo
+            assert escritas == [], (
+                f"{rotulo}: a recusa não pode ter escrito nada — {escritas}"
+            )
+            assert eleitor.eleito == _J1, (
+                f"{rotulo}: nada foi escrito, o padrão do sistema continua "
+                "sendo o canal deste controle, e a posse não pode cair"
+            )
+
+    with pytest.MonkeyPatch.context() as monkey:
+        eleitor, escritas = montar(
+            monkey, destino="mic_da_placa_mae", sustenta=True
+        )
+        resultado = eleitor.devolver_o_microfone()
+        assert resultado.ok is True
+        assert escritas == [["pactl", "set-default-source", "mic_da_placa_mae"]]
+        assert eleitor.eleito is None, (
+            "a devolução foi CONFERIDA pela releitura do ativo: agora a posse cai"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 14. O RECADO TEM PRAZO — decisão 19 dela (02/09): "é aviso, não estado"
+# ---------------------------------------------------------------------------
+
+
+def test_o_recado_some_depois_do_prazo_e_o_estado_do_canal_nao() -> None:
+    """*"A frase de recusa some depois de um tempo, na ordem de 30 segundos."*
+
+    O depósito republicava a última resposta em TODO `state_full` até o toque
+    seguinte DAQUELE controle. Um controle pode ficar horas sem tocar no botão:
+    a frase virava um aviso de meia hora atrás com cara de agora.
+
+    O que expira é o AVISO. O estado do canal (`eleito`, `eleito_na_mesa`) é
+    fato da máquina e continua saindo — a tela precisa dele para saber de quem
+    é o microfone.
+
+    CURA A ARRANCAR: o `and not recado.expirou(agora)` de `publicar`.
+    """
+    prazo = recado_do_microfone.VALIDADE_DO_RECADO_S
+
+    class _EleitorCru:
+        eleito = _J1
+
+    class _Mesa:
+        def describe_controllers(self) -> list[dict[str, Any]]:
+            return [{"uniq": _J1, "connected": True}, {"uniq": _J2, "connected": True}]
+
+    class _Cru:
+        controller = _Mesa()
+        _eleitor_de_microfone = _EleitorCru()
+
+    cru = _Cru()
+    recado_do_microfone.anotar(
+        cru,  # type: ignore[arg-type]
+        _J2,
+        gesto="recusa",
+        ok=False,
+        motivo=recusa_de_quem_nao_elegeu(_J1).motivo,
+        eleito=_J1,
+        agora_s=0.0,
+    )
+
+    logo_depois = recado_do_microfone.publicar(cru, agora_s=0.5)
+    assert _J2 in logo_depois["recados"], (
+        "a frase tem de estar na tela no tique seguinte ao toque"
+    )
+
+    quase = recado_do_microfone.publicar(cru, agora_s=prazo - 0.5)
+    assert _J2 in quase["recados"], (
+        f"meio segundo antes do prazo a frase ainda vale: {quase}"
+    )
+
+    depois = recado_do_microfone.publicar(cru, agora_s=prazo + 0.5)
+    assert depois["recados"] == {}, (
+        "passado o prazo o recado SOME — campo sem informação não mostra nada, "
+        f"que é a regra dela: {depois}"
+    )
+    assert depois["eleito"] == _J1, (
+        "o AVISO expira; o ESTADO do canal não. Apagar o dono junto faria a "
+        f"tela esquecer de quem é o microfone depois de meio minuto: {depois}"
+    )
+    assert depois["eleito_na_mesa"] is True
+
+    meia_hora = recado_do_microfone.publicar(cru, agora_s=1800.0)
+    assert meia_hora["recados"] == {}, (
+        "era exatamente a frase de meia hora atrás com cara de agora"
+    )
+
+
+def test_o_prazo_filtra_e_nao_escreve_no_deposito() -> None:
+    """`publicar` roda a 10 Hz no caminho de LEITURA: ele não mexe no estado.
+
+    O módulo já recusou mexer aqui uma vez (o `getattr` que não instancia o
+    eleitor). Jogar o recado fora não compra nada — quem limita a memória é o
+    `TETO`, e o próximo toque daquele controle substitui a entrada.
+
+    CURA A ARRANCAR: trocar o filtro por um `pop` dentro do laço de `publicar`.
+    """
+
+    class _Cru:
+        pass
+
+    cru = _Cru()
+    recado_do_microfone.anotar(
+        cru,  # type: ignore[arg-type]
+        _J1,
+        gesto="recusa",
+        ok=False,
+        motivo="qualquer",
+        agora_s=0.0,
+    )
+    recado_do_microfone.publicar(cru, agora_s=1800.0)
+
+    deposito = getattr(cru, recado_do_microfone.ATRIBUTO)
+    assert _J1 in deposito, (
+        "a leitura apagou o depósito: quem publica o estado não pode escrever "
+        f"nele — {deposito}"
+    )
