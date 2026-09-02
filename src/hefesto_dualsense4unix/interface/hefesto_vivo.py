@@ -122,7 +122,27 @@ BOOTSTRAP = r"""
       if(el.style.background !== t){ el.style.background = t; return 1; }
       return 0;
     }
-    if(alvo === 'valor'){ if(el.value !== t){ el.value = t; return 1; } return 0; }
+    if(alvo === 'valor'){
+      // UM <select> SÓ ACEITA O QUE ELE OFERECE, e escrever nele qualquer outra
+      // coisa deixa `selectedIndex = -1` e `value = ''` — o campo RENDERIZA EM
+      // BRANCO e, como `el.value` nunca volta igual ao que se escreveu, o
+      // contador conta uma pintura NOVA a cada tique, para sempre. Um contador
+      // que mente é pior que um campo parado, e ele é O instrumento com que esta
+      // casa prova que um endereço existe.
+      //
+      // MEDIDO em 01/09/2026: o lugar VAZIO da mesa (P2, com um controle só)
+      // recebe o travessão de `dict.fromkeys(chaves, "—")`, e o `<select>` do
+      // teto da vibração ficava em branco somando +1 por tique. A cura é aqui, e
+      // não em cada aba lembrar-se dela — é o mesmo cuidado que
+      // `gui.aba_conexoes.teto_que_vale` já tomava do lado Python.
+      if(el.tagName === 'SELECT'){
+        const tem = Array.prototype.some.call(el.options,
+                                              function(o){ return o.value === t || o.text === t; });
+        if(!tem) return 0;
+      }
+      if(el.value !== t){ el.value = t; return 1; }
+      return 0;
+    }
     // O ALVO `html` EXISTE PARA UM BLOCO COM MARCAÇÃO — a dica do `?` do teto
     // da vibração (`aba08.teto_dica`) traz `<b>` e `<code>` no desenho dela, e o
     // `textContent` do ramo padrão escreveria os marcadores como texto literal

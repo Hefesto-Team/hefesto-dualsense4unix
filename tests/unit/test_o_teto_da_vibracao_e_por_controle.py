@@ -54,6 +54,18 @@ CHAVE = "aabbcc000001"
 UNIQ_FORJADO = "02:11:22:00:00:33"
 
 
+def _bancada(**campos):
+    """A `Vibracao` de referência: global vivo `balanceado`, nada mais declarado.
+
+    É o estado em que o rótulo do campo e o que chega ao motor COINCIDEM — e é o
+    único em que coincidem. Passar `None` no lugar dela faria a dica dizer
+    "não dá para dizer quanta força chega", que é honesto mas não mede nada.
+    """
+    from hefesto_dualsense4unix.gui.aba_conexoes import Vibracao
+
+    return Vibracao(**{"a_viva": "balanceado", **campos})
+
+
 class PonteDeMentira:
     """Guarda o que foi pedido ao daemon, na ordem. NUNCA fala com o de verdade."""
 
@@ -442,7 +454,7 @@ def test_a_pintura_mostra_o_que_esta_no_disco(a08, tela) -> None:
     sem_dono: dict[str, str] = {}
 
     com = a08._teto_do_controle(
-        {CHAVE: {"rumble": {"policy": "economia"}}}, UNIQ, None, sem_dono)
+        {CHAVE: {"rumble": {"policy": "economia"}}}, UNIQ, _bancada(), sem_dono)
     assert com[0] == trinta, (
         f"com `policy='economia'` no disco o campo mostrou {com[0]!r}")
     assert "sobrepõe" in com[1], f"o `?` não diz que este controle sobrepõe: {com[1]!r}"
@@ -456,7 +468,7 @@ def test_a_pintura_mostra_o_que_esta_no_disco(a08, tela) -> None:
     assert tela.ABA_DO_TETO_GLOBAL in com[1] and "RUMBLE_POLICY_MULT" in com[1], (
         f"a dica pintada perdeu o ponteiro para onde o global se muda: {com[1]!r}")
 
-    sem = a08._teto_do_controle({}, UNIQ, None, sem_dono)
+    sem = a08._teto_do_controle({}, UNIQ, _bancada(), sem_dono)
     assert sem[0] == segue, f"sem override o campo mostrou {sem[0]!r}"
     assert "segue o global" in sem[1], f"o `?` não diz que segue: {sem[1]!r}"
     assert sem_dono == {}, f"declarou sem_dono sem ter motivo: {sem_dono}"
@@ -464,7 +476,7 @@ def test_a_pintura_mostra_o_que_esta_no_disco(a08, tela) -> None:
     # A CHAVE É A NORMALIZADA. Procurar por `aa:bb:…` não acharia nada, e o
     # campo mostraria "Segue o global" para sempre sobre um disco que discorda.
     assert a08._teto_do_controle(
-        {CHAVE: {"rumble": {"policy": "economia"}}}, UNIQ.upper(), None, {})[0] == trinta
+        {CHAVE: {"rumble": {"policy": "economia"}}}, UNIQ.upper(), _bancada(), {})[0] == trinta
 
 
 def test_a_politica_que_a_tela_nao_oferece_e_declarada(a08, tela) -> None:
@@ -476,7 +488,7 @@ def test_a_politica_que_a_tela_nao_oferece_e_declarada(a08, tela) -> None:
     """
     sem_dono: dict[str, str] = {}
     campo, frase = a08._teto_do_controle(
-        {CHAVE: {"rumble": {"policy": "max"}}}, UNIQ, None, sem_dono)
+        {CHAVE: {"rumble": {"policy": "max"}}}, UNIQ, _bancada(), sem_dono)
 
     assert campo is None, (
         f"o campo escolheu {campo!r} para uma política que ele não sabe mostrar "
@@ -488,7 +500,7 @@ def test_a_politica_que_a_tela_nao_oferece_e_declarada(a08, tela) -> None:
     # E `balanceado` CAI NO MESMO LUGAR — é o par que `fala_do_teto` traduziria
     # como "Sem teto", a única opção sem tradução.
     assert a08._teto_do_controle(
-        {CHAVE: {"rumble": {"policy": "balanceado"}}}, UNIQ, None, {})[0] is None
+        {CHAVE: {"rumble": {"policy": "balanceado"}}}, UNIQ, _bancada(), {})[0] is None
 
 
 def test_o_pacote_publica_os_dois_enderecos(pac, a08, tela, monkeypatch) -> None:
@@ -501,7 +513,7 @@ def test_o_pacote_publica_os_dois_enderecos(pac, a08, tela, monkeypatch) -> None
     monkeypatch.setattr(
         a08.perfil, "ativo",
         lambda _nome: {"controllers": {CHAVE: {"rumble": {"policy": "economia"}}}})
-    monkeypatch.setattr(a08, "_orcamento_da_mesa", lambda: None)
+    monkeypatch.setattr(a08, "_orcamento_da_mesa", lambda: (None, True))
 
     saida = a08.pacote(_ctx(pac))
     coluna = saida["colunas"][UNIQ]
@@ -677,3 +689,371 @@ def test_o_json_do_perfil_sobrevive_ao_disco(tmp_path, pac, tela, gesto,
     # `apply_profile` publicar as escalas no backend e a escolha VALER AGORA.
     assert ("profile_switch", ("Descartavel",)) in p.chamadas, (
         f"o gesto fez {p.chamadas} e não pediu o `profile.switch`")
+
+
+# ---------------------------------------------------------------------------
+# 8. A PALAVRA "GLOBAL" TEM UM DONO SÓ — os quatro bloqueantes de 01/09/2026
+#
+# A leva entregou o campo GRAVANDO e a frase do `?` ao lado dele MENTINDO: ela
+# chamava de "o global" o ORÇAMENTO DA MESA (`maquina.json`) e ignorava as duas
+# coisas que decidem a força de verdade —
+#
+#   `state['rumble_policy']`   o que MULTIPLICA no funil (`_effective_mult`)
+#   `Profile.rumble.policy`    o DENOMINADOR do fator por peça
+#
+# Medido: com a política viva em `economia` e nenhum override, o motor recebia
+# 30% e o `?` afirmava, em negrito, "o global vale **Sem teto**". Com um
+# override `economia` sob global vivo `max`, o campo dizia "30% da força" e o
+# motor recebia 45% — um campo chamado TETO entregando acima do teto.
+# ---------------------------------------------------------------------------
+def _fator_no_motor(fator: dict[str, float], mult: float, pedido: int = 200) -> int:
+    """O que o `_escalar_rumble` do backend entrega, com o funil já aplicado.
+
+    É a PONTA da cadeia, e não um dublê dela: o mesmo método que as duas rotas
+    de escrita do DualSense chamam antes de tocar o motor.
+    """
+    import threading
+
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+
+    m = PyDualSenseController.__new__(PyDualSenseController)
+    m._rumble_scale_by_uniq = {}
+    m._io_lock = threading.RLock()
+    m.set_rumble_scales(fator)
+    return int(m._escalar_rumble(UNIQ, int(pedido * mult), int(pedido * mult))[0])
+
+
+@pytest.mark.parametrize("viva", ["balanceado", "economia", "max"])
+def test_a_dica_diz_o_que_chega_ao_motor_e_nao_o_degrau_do_rotulo(tela, a08, viva) -> None:
+    """A CADEIA INTEIRA, medida: a frase do `?` == o que sai no `_escalar_rumble`.
+
+    É o elo que régua nenhuma desta casa cobria, e a ausência dele deixou passar
+    o bloqueante: o fator por peça é RELATIVO ao global do PERFIL
+    (`profiles/manager.fator_da_unidade`) e quem multiplica é a política VIVA do
+    DAEMON (`core.rumble.forca_do_global`). Os dois divergem com dois cliques
+    dentro desta mesma interface — a aba Vibração grava `daemon_cfg.rumble_policy`
+    e `apply_profile_rumble_policy` deixa política de origem MANUAL intocada.
+
+    MEDIDO em 01/09/2026, com um override `economia` (rótulo "30% da força")::
+
+        global vivo   motor        o que a frase dizia ANTES
+        balanceado    60/200=30%   "30% da força"  (a única em que era verdade)
+        economia      18/200= 9%   "30% da força"
+        max           90/200=45%   "30% da força"  — acima do teto que promete
+
+    MORDIDA: em `gui.aba_conexoes.forca_no_motor`, devolva o degrau nominal
+    (`RUMBLE_POLICY_MULT[v.do_controle]`) ignorando o global vivo — os casos
+    `economia` e `max` reprovam. Outra: apague o `global_ * fator` e devolva só
+    `global_` — os três reprovam.
+    """
+    from hefesto_dualsense4unix.core.rumble import _effective_mult
+    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.profiles.manager import _controllers_to_rumble_scales
+
+    prof = _perfil()
+    fator = _controllers_to_rumble_scales(
+        a08._com_o_teto(prof, CHAVE, "economia").controllers, prof.rumble)
+    cfg = DaemonConfig()
+    cfg.rumble_policy = viva
+    mult, _, _ = _effective_mult(cfg, 100, 0.0, 1.0, 0.0)
+    saiu = _fator_no_motor(fator, mult)
+
+    v = tela.Vibracao(do_controle="economia", do_perfil=prof.rumble.policy, a_viva=viva)
+    campo, frase = tela.teto_que_vale(v)
+    esperado = tela.por_cento(saiu / 200)
+    assert f"<b>{esperado}</b>" in frase, (
+        f"com o global vivo em {viva!r} o motor recebe {saiu}/200 = {esperado}, "
+        f"e a dica disse: {re.sub('<[^>]+>', '', frase)!r}")
+    # A CAIXA CONTINUA MOSTRANDO O DEGRAU ESCOLHIDO — ela é a escolha dela, não o
+    # resultado. Quando os dois divergem, a frase DIZ que o degrau é relativo; é a
+    # diferença entre a tela explicar e a tela mentir.
+    _, _, trinta = tela.opcoes_do_teto()
+    assert campo == trinta, f"a caixa deixou de mostrar a escolha dela: {campo!r}"
+    if esperado != trinta:
+        assert "RELATIVO" in frase, (
+            f"o motor entrega {esperado} com a caixa em {trinta}, e a dica não "
+            f"explica a diferença: {re.sub('<[^>]+>', '', frase)!r}")
+
+
+def test_o_global_do_perfil_nao_e_o_que_multiplica(tela) -> None:
+    """`Profile.rumble.policy` é DENOMINADOR, e não o global que a tela reporta.
+
+    O bloqueante em uma linha: com `meu_perfil.rumble.policy = "economia"` no
+    disco, a dica escrevia *"este controle segue o global, que vale **Sem
+    teto**"*. Sem override, o que chega ao motor é o que a política VIVA deixa
+    passar — e o global do perfil só entra como base do fator de quem sobrepõe.
+
+    MORDIDA: em `teto_que_vale`, volte a `global_ = fala_do_teto(v.orcamento)` e
+    à frase `"que vale <b>{global_}</b>"` — os dois `assert` abaixo reprovam.
+    """
+    from hefesto_dualsense4unix.core.rumble import SEM_TETO
+
+    segue = tela.teto_que_vale(tela.Vibracao(do_perfil="economia", a_viva="balanceado"))
+    assert SEM_TETO not in segue[1], (
+        f"a dica afirma {SEM_TETO!r} com a política viva em `balanceado`: {segue[1]!r}")
+    assert "<b>100% da força</b>" in segue[1], (
+        f"sem override, o motor recebe o que a viva deixa passar (1,0): {segue[1]!r}")
+
+    # E O DENOMINADOR IMPORTA PARA QUEM SOBREPÕE: a mesma peça em `economia`, sob
+    # um perfil cujo global JÁ é `economia`, tem fator 1,0 — logo entrega o que o
+    # global entrega, e não 30% de novo.
+    sobre = tela.teto_que_vale(
+        tela.Vibracao(do_controle="economia", do_perfil="economia", a_viva="balanceado"))
+    assert "<b>100% da força</b>" in sobre[1], (
+        f"o fator relativo ao próprio global do perfil é 1,0: {sobre[1]!r}")
+
+
+def test_o_teto_do_orcamento_entra_por_cima_da_politica_viva(tela) -> None:
+    """O `maquina.json` limita a viva com `min`, e a dica mostra o resultado.
+
+    MORDIDA: em `core.rumble.forca_do_global`, tire o `_sob_o_teto` e devolva
+    `RUMBLE_POLICY_MULT[policy]` cru — este caso reprova com 150%, e o
+    `_effective_mult` do daemon perde o teto junto (é o mesmo corpo).
+    """
+    sob_teto = tela.teto_que_vale(tela.Vibracao(a_viva="max", orcamento="economia"))[1]
+    assert "<b>30% da força</b>" in sob_teto, (
+        f"o orçamento `economia` não limitou o global `max`: {sob_teto!r}")
+    sem_teto = tela.teto_que_vale(tela.Vibracao(a_viva="max", orcamento=None))[1]
+    assert "<b>150% da força</b>" in sem_teto, (
+        f"sem orçamento declarado o `max` passa inteiro: {sem_teto!r}")
+
+
+@pytest.mark.parametrize("campos,porque", [
+    ({"a_viva": None}, "o serviço não publicou o `rumble_policy`"),
+    ({"a_viva": "auto"}, "o degrau do `auto` muda com a bateria a cada tique"),
+    ({"a_viva": "balanceado", "a_mesa_respondeu": False},
+     "o `maquina.json` não deu para ler"),
+])
+def test_o_que_nao_se_sabe_nao_vira_a_afirmacao_sem_teto(tela, campos, porque) -> None:
+    """"Não sei" é uma resposta; "Sem teto" é uma AFIRMAÇÃO sobre um limite.
+
+    Os três casos abaixo viravam a palavra em negrito **"Sem teto"** antes de
+    01/09/2026 — a ausência de notícia lida como sucesso, no campo que ela
+    clica. O dono da fonte proíbe a troca com todas as letras
+    (`secao_orcamento.orcamento_em_vigor`: *"None aqui significa 'não sei',
+    nunca 'sem teto'"*), e o `_orcamento_da_mesa` tinha um `except Exception:
+    return None` que a fazia em silêncio.
+
+    MORDIDA: em `forca_no_motor`, troque o `return None` do desvio do
+    `a_mesa_respondeu` por `return 1.0` — o terceiro caso reprova, porque a tela
+    passa a afirmar 100% sobre um arquivo que não foi lido.
+    """
+    from hefesto_dualsense4unix.core.rumble import SEM_TETO
+
+    frase = tela.teto_que_vale(tela.Vibracao(**campos))[1]
+    assert SEM_TETO not in frase, f"afirmou {SEM_TETO!r} quando {porque}: {frase!r}"
+    assert "% da força" not in frase, (
+        f"afirmou um percentual quando {porque}: {frase!r}")
+    assert tela.NAO_SEI_A_FORCA in frase, (
+        f"não disse que não sabe quando {porque}: {frase!r}")
+
+
+def test_o_orcamento_sai_da_declaracao_que_o_modulo_ja_tem_e_sem_gtk(a08, tela) -> None:
+    """`_orcamento_da_mesa` lê o cache do `maquina.json`, e distingue os dois `None`.
+
+    DUAS COISAS, e as duas eram defeito:
+
+    1. ele abria o arquivo DE NOVO a cada tique, por
+       `secao_orcamento.orcamento_em_vigor()`, que arrasta `gi`/`Gtk` para o
+       processo — com a resposta já em memória a 470 linhas de distância
+       (`_DECLARACAO`, o `maquina.json` inteiro já validado);
+    2. o `except Exception: return None` fazia "não consegui ler" e "ninguém
+       declarou" virarem o mesmo valor.
+
+    MORDIDA: devolva `(chave, True)` incondicionalmente — o `assert` do par
+    reprova. Outra: volte ao `orcamento_em_vigor()` em `_orcamento_da_mesa` ou ao
+    `from ...secao_orcamento import SEM_TETO` em `fala_do_teto` — o subprocesso
+    do Gtk reprova.
+    """
+    tela.opcoes_do_teto()
+    tela.teto_que_vale(tela.Vibracao(a_viva="balanceado"))
+    a08._orcamento_da_mesa()
+
+    guardado_cache, guardada = a08._DECLARACAO, a08._declaracao
+    passou: list[bool] = []
+
+    def _mudo(recarregar: bool = False) -> None:
+        passou.append(True)
+        return None
+
+    try:
+        a08._DECLARACAO = None
+        a08._declaracao = _mudo
+        assert a08._orcamento_da_mesa() == (None, False), (
+            "com o `maquina.json` ilegível, `_orcamento_da_mesa` tem de dizer que "
+            "a mesa NÃO respondeu — senão a dica publica `Sem teto` sobre um "
+            "arquivo que ninguém leu.")
+        assert passou, "não passou pelo `_declaracao()` deste módulo"
+    finally:
+        a08._declaracao = guardada
+        a08._DECLARACAO = guardado_cache
+
+
+def test_a_frase_do_orcamento_passa_pelo_dono_do_numero(tela, monkeypatch) -> None:
+    """`fala_do_teto` deriva de `core.rumble.teto_do_orcamento`, o dono declarado.
+
+    ERA A QUARTA GRAFIA da regra "chave de orçamento → frase do teto", e a única
+    que não passava pelo dono: as outras três (`gui.aba_sistema.forca_do_perfil`,
+    `secao_orcamento.celula_do_teto` e `_dica_da_bateria_longa`) já o chamavam.
+    Medido com o dono mordido para 0,5: a aba Sistema dizia "50% da força" e esta
+    aba dizia "30%" — duas abas do mesmo produto, dois números para o mesmo fato.
+
+    MORDIDA: esta é a mordida — o monkeypatch abaixo troca o DONO. Com a conta
+    escrita à mão em `fala_do_teto` (o `if chave != _ORCAMENTO_COM_TETO` indo
+    direto ao `RUMBLE_POLICY_MULT`), este caso reprova.
+    """
+    import hefesto_dualsense4unix.core.rumble as nucleo
+
+    monkeypatch.setattr(nucleo, "teto_do_orcamento",
+                        lambda o: 0.5 if o == "economia" else None)
+    assert tela.fala_do_teto("economia") == "50% da força", (
+        f"a frase não seguiu o dono do número: {tela.fala_do_teto('economia')!r}")
+
+
+def test_o_numero_da_recusa_e_derivado_e_nao_digitado(tela, monkeypatch) -> None:
+    """O `0,667` da recusa de "Sem teto" sai da tabela, não de três literais.
+
+    Ele estava DIGITADO em três lugares — o `SEM_FONTE`, a mensagem do
+    `ValueError` e um `assert "0,667" in frase` desta régua —, e a régua guardava
+    o número digitado: com o degrau `max` mordido para 2,0, os 18 casos ficavam
+    verdes e a frase mentia na cara dela.
+
+    MORDIDA: esta é a mordida — o monkeypatch troca o degrau. Com o número
+    digitado, este caso reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import rumble as subsistema
+
+    monkeypatch.setitem(subsistema.RUMBLE_POLICY_MULT, "max", 2.0)
+    with pytest.raises(ValueError) as erro:
+        tela.politica_do_rotulo("Sem teto")
+    assert "1/2 = 0,500" in str(erro.value), (
+        f"a conta da recusa não acompanhou o degrau: {erro.value}")
+
+
+def test_a_chave_da_pintura_e_a_mesma_da_gravacao(a08, tela) -> None:
+    """As duas passam pelo `_so_hex`, e um `uniq` sujo não separa o par.
+
+    A leva escreveu a expressão `replace(":","").replace("-","").lower()` mais
+    DUAS vezes — uma em `_chave_no_perfil` (a chave que GRAVA) e outra em
+    `_teto_do_controle` (a que PINTA) —, e a segunda já nascia sem o `.strip()`
+    do helper. Um `uniq` com espaço ou quebra fazia a gravação cair em
+    `aabbcc000001` e a pintura procurar outra coisa: a tela mostraria "Segue o
+    global" para sempre sobre um disco que diz `economia`.
+
+    MORDIDA: volte a expressão à mão em `_teto_do_controle`, sem o `.strip()` —
+    este caso reprova.
+    """
+    sujo = UNIQ + "\n"
+    assert a08._so_hex(sujo) == CHAVE
+    _, _, trinta = tela.opcoes_do_teto()
+    campo, _frase = a08._teto_do_controle(
+        {CHAVE: {"rumble": {"policy": "economia"}}}, sujo, _bancada(), {})
+    assert campo == trinta, (
+        f"a pintura não achou no disco o que a gravação escreveu: {campo!r}")
+
+
+def test_a_recusa_sem_endereco_fala_do_teto_e_nao_do_microfone(pac, gesto, tela) -> None:
+    """Duas recusas diferentes, duas frases — a do teto deixou de ser a do mic.
+
+    Ela escolhia um teto de VIBRAÇÃO e a tela respondia falando de "a quem esta
+    PONTE pertence" (`secao_controles.DICA_MIC_SEM_ENDERECO`), e num arquivo que
+    este gesto nem escreve: o teto vai para o PERFIL, a ponte para o
+    `maquina.json`. É a razão pela qual o próprio `_sem_endereco` existe separado
+    da frase do cabo — *"uma frase só para os dois mandaria a pessoa procurar
+    cabo onde o problema é endereço"*.
+
+    MORDIDA: volte o `raise RuntimeError(_sem_endereco())` — este caso reprova.
+    """
+    ctx = pac.Contexto(
+        state={"active_profile": "Bancada"}, mesa=[],
+        conectados=[{"uniq": UNIQ_FORJADO, "connected": True,
+                     "transport": "usb", "index": 0}],
+        estados={})
+
+    class _PonteQueAceitaTudo:
+        def __getattr__(self, _nome):
+            return lambda *a, **k: True
+
+    _, _, trinta = tela.opcoes_do_teto()
+    with pytest.raises(RuntimeError) as erro:
+        gesto(ctx, {"uniq": UNIQ_FORJADO, "valor": trinta}, _PonteQueAceitaTudo())
+
+    frase = str(erro.value)
+    assert "PONTE" not in frase and "ponte" not in frase, (
+        f"a recusa do teto fala da ponte do microfone: {frase!r}")
+    assert "perfil" in frase, (
+        f"a recusa não diz onde o teto seria guardado: {frase!r}")
+
+
+def test_o_select_do_piloto_nao_conta_pintura_sobre_valor_que_nao_e_opcao() -> None:
+    """Escrever `—` num `<select>` deixa `selectedIndex = -1` e mente para sempre.
+
+    MEDIDO em 01/09/2026, com o piloto oculto e um controle só na mesa: o lugar
+    VAZIO (P2) recebe o travessão de `dict.fromkeys(chaves, "—")`, o `<select>`
+    do teto renderiza EM BRANCO e, como `el.value` nunca volta igual a `"—"`, o
+    contador soma +1 por tique — 4/tique em regime permanente contra 3 com o
+    endereço arrancado da página. **O contador é O instrumento com que esta casa
+    prova que um endereço existe**; um contador que mente é pior que um campo
+    parado.
+
+    É o mesmo defeito que `gui.aba_conexoes.teto_que_vale` já evitava do lado
+    Python (devolvendo `None` para a política que o campo não sabe mostrar) e que
+    voltou pela porta do lugar vazio. A cura mora no piloto porque nenhuma aba
+    deve ter de lembrar-se dela.
+
+    MORDIDA: tire a guarda `el.tagName === 'SELECT'` do ramo `valor` do
+    `BOOTSTRAP` — este caso reprova.
+    """
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+
+    ramo = hefesto_vivo.BOOTSTRAP.split("if(alvo === 'valor')", 1)
+    assert len(ramo) == 2, "o ramo `valor` do BOOTSTRAP mudou de forma"
+    corpo = ramo[1].split("if(alvo === 'html')", 1)[0]
+    assert "SELECT" in corpo and "el.options" in corpo, (
+        "o ramo `valor` voltou a escrever em qualquer elemento sem conferir se um "
+        "`<select>` oferece a opção — o contador de pinturas passa a mentir a cada "
+        f"tique no lugar vazio da mesa. Corpo: {corpo!r}")
+
+
+def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
+    """A linha 1 de `gui/aba_conexoes.py` promete *"sem GTK"*, e o teto o quebrou.
+
+    O `fala_do_teto` da leva importava `SEM_TETO` de
+    `app/actions/config/secao_orcamento.py`, que puxa `gi` + `gi.repository.Gtk`
+    no import (pelo `app.widgets.segmented_selector`). O import era tardio, mas
+    isso muda QUANDO falha, não SE falha: quem chamasse `opcoes_do_teto()` ou
+    `html_das_linhas()` — que é o que a janela renderiza — trazia a janela GTK
+    inteira para dentro do processo. E `app/actions/` é justamente a camada que
+    a regra desta casa manda NÃO reusar. A cura foi `SEM_TETO` mudar de casa
+    para `core.rumble`, ao lado do `teto_do_orcamento` cujo `None` ela traduz.
+
+    EM SUBPROCESSO, e não neste: `pacotes/__init__` já traz GTK para o processo
+    da suíte por outro caminho (medido), então um `sys.modules` medido aqui não
+    responderia pela promessa DESTE módulo.
+
+    MORDIDA: volte o `from ...secao_orcamento import SEM_TETO` em `fala_do_teto`
+    — este caso reprova.
+    """
+    import subprocess
+
+    codigo = (
+        "import sys\n"
+        "from hefesto_dualsense4unix.gui import aba_conexoes as t\n"
+        "t.opcoes_do_teto()\n"
+        "t.fala_do_teto('economia')\n"
+        "t.teto_que_vale(t.Vibracao(a_viva='balanceado'))\n"
+        "c = t.Controle(uniq='aa:bb:cc:00:00:01', jogador=1, via='usb', bateria=50,\n"
+        "               plastico='#fff', cor_nome='Branco', fabricante='Sony',\n"
+        "               mic_ligado=False)\n"
+        "t.html_das_linhas([c], 'aa:bb:cc:**:**:01')\n"
+        "print('gi.repository.Gtk' in sys.modules)\n"
+    )
+    saida = subprocess.run(
+        [sys.executable, "-c", codigo], check=True, capture_output=True, text=True,
+        env={"PYTHONPATH": str(RAIZ / "src"), "PATH": "/usr/bin:/bin",
+             "HOME": "/nao-existe"},
+    )
+    assert saida.stdout.strip() == "False", (
+        "o caminho do teto da vibração puxou `gi.repository.Gtk` para o processo, "
+        "e a linha 1 deste módulo promete `sem GTK` — com três consequências "
+        f"medidas escritas logo abaixo dela. Saída: {saida.stdout!r}")

@@ -1831,6 +1831,38 @@ def _mult_da_politica(policy: str | None, custom_mult: float | None) -> float | 
     return RUMBLE_POLICY_MULT.get(policy)
 
 
+def fator_da_unidade(
+    policy_da_peca: str | None,
+    policy_global: str | None,
+    custom_da_peca: float | None = None,
+    custom_global: float | None = None,
+) -> float | None:
+    """O fator RELATIVO que uma peça registra contra o global do PERFIL.
+
+    É o corpo da conta de :func:`_controllers_to_rumble_scales`, extraído em
+    01/09/2026 porque a TELA precisava do mesmo número para dizer o que chega ao
+    motor (`gui.aba_conexoes.forca_no_motor`). Enquanto ele estivesse só dentro
+    do laço, a tela teria de reescrevê-lo — e o `?` da aba Conexões passou uma
+    leva inteira afirmando "o global vale Sem teto" justamente por não ter de
+    onde ler este denominador.
+
+    ``None`` = não dá para calcular: política fora da tabela, ou base móvel (o
+    global em ``auto``, cujo degrau muda com a bateria a cada tique). O
+    denominador é a política do PRÓPRIO perfil quando ele tem uma; sem opinião,
+    é o ``balanceado`` que o daemon assume.
+
+    **NÃO é o que chega ao motor**: o valor que sai daqui multiplica o que a
+    política VIVA do daemon já deixou passar (`core.rumble.forca_do_global`).
+    Os dois "globais" são coisas diferentes, e confundi-los é o defeito que esta
+    função existe para não deixar repetir.
+    """
+    base = _mult_da_politica(policy_global or _RUMBLE_POLICY_PADRAO, custom_global)
+    if base is None or base <= 0.0:
+        return None
+    mult = _mult_da_politica(policy_da_peca, custom_da_peca)
+    return None if mult is None else mult / base
+
+
 def _controllers_to_rumble_scales(
     controllers: dict[str, ControllerOverrides] | None,
     global_rumble: Any | None = None,
@@ -1855,17 +1887,15 @@ def _controllers_to_rumble_scales(
     """
     out: dict[str, float] = {}
     policy_global = getattr(global_rumble, "policy", None) or _RUMBLE_POLICY_PADRAO
-    base = _mult_da_politica(
-        policy_global, getattr(global_rumble, "custom_mult", None)
-    )
+    custom_global = getattr(global_rumble, "custom_mult", None)
+    base = _mult_da_politica(policy_global, custom_global)
     for uniq, cfg in (controllers or {}).items():
         if cfg.rumble is None:
             continue
         campos = cfg.rumble.model_fields_set
         if "policy" not in campos:
             continue
-        mult = _mult_da_politica(cfg.rumble.policy, cfg.rumble.custom_mult)
-        if mult is None:
+        if _mult_da_politica(cfg.rumble.policy, cfg.rumble.custom_mult) is None:
             continue
         if base is None or base <= 0.0:
             logger.info(
@@ -1874,8 +1904,13 @@ def _controllers_to_rumble_scales(
                 policy_global=policy_global,
             )
             continue
-        fator = mult / base
-        if fator == 1.0:
+        # A CONTA É DE :func:`fator_da_unidade`, e não deste laço — 01/09/2026.
+        # A tela do teto por controle precisa do MESMO número para dizer o que
+        # chega ao motor, e enquanto ele morasse aqui dentro ela o reescreveria.
+        fator = fator_da_unidade(
+            cfg.rumble.policy, policy_global, cfg.rumble.custom_mult, custom_global
+        )
+        if fator is None or fator == 1.0:
             continue
         out[uniq] = fator
     return out

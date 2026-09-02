@@ -61,6 +61,20 @@ class RumbleCommand:
 _ORCAMENTO_COM_TETO = "economia"
 
 
+#: O QUE A TELA ESCREVE QUANDO ``teto_do_orcamento`` DEVOLVE ``None``. Mora aqui,
+#: ao lado da função cujo ``None`` ela traduz, desde 01/09/2026 — antes vivia em
+#: ``app/actions/config/secao_orcamento.py``, que puxa ``gi``/``Gtk`` no import
+#: (por ``app.widgets.segmented_selector``, medido). Uma camada de tela sem GTK
+#: que precisasse desta palavra tinha de escolher entre arrastar a janela inteira
+#: para dentro do processo e digitar a frase de novo — e a segunda grafia é a que
+#: fica para trás. ``secao_orcamento`` reexporta, então ``secao_orcamento.SEM_TETO``
+#: continua valendo para quem já o lia.
+#:
+#: **Não é "100%"**: um percentual afirmaria um limite onde não há, e o "Máximo"
+#: da aba Rumble entrega 150% justamente por não ter limite.
+SEM_TETO = "Sem teto"
+
+
 def teto_do_orcamento(orcamento: str | None) -> float | None:
     """O teto que o orçamento da mesa impõe ao multiplicador, ou ``None``.
 
@@ -106,6 +120,48 @@ def _sob_o_teto(mult: float, teto: float | None) -> float:
     if teto is None:
         return mult
     return min(mult, teto)
+
+
+def forca_do_global(
+    policy: str | None,
+    orcamento: str | None,
+    custom_mult: float | None = None,
+) -> float | None:
+    """A fração do que o JOGO pediu que a política GLOBAL deixa passar hoje.
+
+    É o multiplicador do funil, já sob o teto do orçamento da mesa — o mesmo
+    número que :func:`_effective_mult` devolve para as políticas fixas, e por
+    isso ele **é** este corpo: a função de baixo chama esta, e não uma cópia.
+    Uma segunda conta aqui divergiria da do daemon no primeiro degrau que
+    mudasse, e o preço já foi pago nesta casa (a dica que dizia 60% enquanto o
+    produto cortava em 30).
+
+    ``None`` quer dizer **não dá para responder com uma conta só**, e nunca
+    "sem limite":
+
+    * ``auto`` — o degrau muda com a bateria a cada tique. Prometer um número
+      móvel na tela é a mesma razão pela qual
+      ``_controllers_to_rumble_scales`` PULA a peça sob um global ``auto``;
+    * ``custom`` sem ``custom_mult``, e política fora da tabela — quem chama
+      não sabe o suficiente para afirmar nada.
+
+    QUEM PERGUNTA PELA TELA TEM DE PASSAR A POLÍTICA **VIVA** — o
+    ``rumble_policy`` do ``state_full`` (`daemon/ipc_handlers.py:2864`), que é
+    o ``DaemonConfig.rumble_policy`` lido logo abaixo. A política do PERFIL não
+    serve: `daemon/lifecycle.apply_profile_rumble_policy` deixa a política de
+    origem MANUAL intocada quando o perfil não tem opinião, e aí as duas
+    divergem com dois cliques.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+    teto = teto_do_orcamento(orcamento)
+    if policy == "custom":
+        if custom_mult is None:
+            return None
+        return _sob_o_teto(float(custom_mult), teto)
+    if policy in RUMBLE_POLICY_MULT:
+        return _sob_o_teto(RUMBLE_POLICY_MULT[policy], teto)
+    return None
 
 
 def _orcamento_declarado(config: Any) -> str | None:
@@ -203,15 +259,18 @@ def _effective_mult(
     from hefesto_dualsense4unix.daemon.lifecycle import RUMBLE_POLICY_MULT
 
     policy = config.rumble_policy
-    teto = teto_do_orcamento(_orcamento_declarado(config))
+    orcamento = _orcamento_declarado(config)
+    teto = teto_do_orcamento(orcamento)
 
-    if policy == "custom":
-        mult = _sob_o_teto(float(config.rumble_policy_custom_mult), teto)
-        return mult, mult, last_auto_change_at
-
-    if policy in RUMBLE_POLICY_MULT:
-        mult = _sob_o_teto(RUMBLE_POLICY_MULT[policy], teto)
-        return mult, mult, last_auto_change_at
+    # AS DUAS FIXAS SAEM DE :func:`forca_do_global`, e não de uma conta escrita
+    # aqui — 01/09/2026. A tela do teto por controle precisa do MESMO número
+    # para dizer o que chega ao motor, e enquanto ele estivesse só aqui ela
+    # teria de reescrevê-lo. É a razão pela qual o `?` da aba Conexões afirmava
+    # "o global vale Sem teto" com o daemon cortando a 0,3.
+    if policy == "custom" or policy in RUMBLE_POLICY_MULT:
+        mult = forca_do_global(policy, orcamento, config.rumble_policy_custom_mult)
+        if mult is not None:
+            return mult, mult, last_auto_change_at
 
     if policy == "auto":
         # Calcula mult alvo baseado em bateria.
