@@ -234,6 +234,52 @@ def add_dismissed_appid(appid: str) -> None:
         logger.debug("launch_dialog_dismiss_save_falhou", erro=str(exc))
 
 
+def remove_dismissed_appid(appid: str) -> bool:
+    """DESFAZ a dispensa de UM appid. Devolve se ele saiu da lista.
+
+    O PAR QUE FALTAVA, e a falta era um caminho só de ida: até 02/09/2026 este
+    módulo só sabia ``add_dismissed_appid`` — o botão *"Não perguntar para este
+    jogo"* do lembrete. Clicar produzia um silêncio PERMANENTE, sem tela que o
+    mostrasse e sem gesto que o desfizesse; a única saída era editar o
+    ``launch_dialog_dismissed.json`` à mão. Decisão dela, 02/09/2026: nasce o
+    desfazer, e a aba Lançadores ganha o botão *"Voltar a perguntar"*.
+
+    MESMA ESCRITA DO ``add``: merge com o disco, ``mkstemp`` + ``os.replace`` no
+    MESMO diretório (atômico no POSIX). Duas telas escrevendo o arquivo não se
+    atropelam, e um disco cheio não deixa o JSON pela metade.
+
+    ELE DEVOLVE ``bool``, E O ``add`` NÃO — a diferença é deliberada. O ``add``
+    roda no tique da GUI, onde engolir a falha é o certo (o pior caso é o
+    lembrete voltar uma vez). Este roda no CLIQUE DELA, e um clique que falha
+    calado é o defeito mais caro desta casa: a linha continuaria na tela e o
+    segundo clique pareceria o primeiro. Quem chama levanta a recusa com a
+    frase; ver ``interface/pacotes/a07_lancadores.voltar_a_perguntar``.
+
+    ``False`` também quando o appid **já não estava** na lista: nos dois casos a
+    verdade para quem clicou é a mesma — *nada mudou por causa deste clique*.
+    """
+    alvo = str(appid).strip()
+    try:
+        atual = load_dismissed_appids()
+        if alvo not in atual:
+            logger.debug("launch_dialog_dismiss_remover_inexistente", appid=alvo)
+            return False
+        atual.discard(alvo)
+        path = _dismissed_path(ensure=True)
+        data = json.dumps({_DISMISSED_KEY: sorted(atual)}, ensure_ascii=False)
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".launch_dialog_")
+        try:
+            os.write(fd, data.encode())
+        finally:
+            os.close(fd)
+        os.replace(tmp, path)
+    except Exception as exc:
+        logger.debug("launch_dialog_dismiss_remover_falhou", erro=str(exc))
+        return False
+    logger.debug("launch_dialog_dismiss_removido", appid=alvo)
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Mixin da GUI
 # ---------------------------------------------------------------------------

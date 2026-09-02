@@ -117,14 +117,68 @@ class Lancador:
     presente: bool = False
 
 
+#: O ESPAÇO DURO É O QUARTO CARACTERE DA TABELA, e ninguém pensa nele. O DOM
+#: devolve `&nbsp;` para um U+00A0 que entrou cru — logo emiti-lo cru é a mesma
+#: reescrita eterna que o apóstrofo causa, num caractere que um `appmanifest`
+#: bem pode trazer.
+_DURO = "\u00a0"
+
+
 def _e(txt: object) -> str:
-    """Escapa para HTML. O nome do jogo vem do DISCO dela, nunca daqui.
+    """Escapa para HTML **em posição de TEXTO**. O nome do jogo vem do DISCO dela.
 
     Um `appmanifest` com `&` ou `<` no nome quebraria a marcação do cartão, e um
     nome de jogo é conteúdo de terceiro — a mesma razão pela qual
     `gui/aba_conexoes` escapa o rótulo do aparelho antes de o pôr na tela.
+
+    O `quote=False` NÃO É RELAXAMENTO — é o que impede um LAÇO INFINITO na
+    máquina dela, e a razão é o piloto: ele só reescreve quando
+    `innerHTML !== valor` (`hefesto_vivo.py:160` no campo, `:303` no bloco). As
+    duas comparações são de TEXTO LITERAL, e o lado esquerdo é o que o DOM
+    **devolve**, não o que se escreveu. Se a grafia emitida não for a que o DOM
+    devolve, a comparação nunca casa e a reescrita não para nunca.
+
+    MEDIDO NO WEBKIT DA JANELA DELA em 02/09/2026 (`<div>` solto, `innerHTML`
+    de ida e de volta, os seis caracteres nas duas grafias — 28 casos):
+
+        ==========  ==================  ==================
+        caractere   em TEXTO            em ATRIBUTO
+        ==========  ==================  ==================
+        ``&``       ``&amp;``           ``&amp;``
+        ``<``       ``&lt;``            ``&lt;``
+        ``>``       ``&gt;``            ``&gt;``
+        U+00A0      ``&nbsp;``          ``&nbsp;``
+        ``"``       **cru**             ``&quot;``
+        ``'``       **cru**             **cru**
+        ==========  ==================  ==================
+
+    `html.escape(quote=True)` emite `&#x27;` para o apóstrofo e `&quot;` para a
+    aspa — e o DOM devolve os dois CRUS no texto. Bastava **um** jogo com
+    apóstrofo no nome (a biblioteca dela tem 63) para a lista do cartão e a
+    grade inteira serem reescritas **duas vezes por segundo, para sempre**,
+    matando o foco e o `:hover` de quem estivesse com o mouse num botão.
+
+    A régua que segura isto é `test_a_marcacao_volta_igual_do_dom`, e ela não
+    digita a tabela acima: reserializa a marcação emitida pelas regras medidas e
+    exige que o texto volte idêntico.
     """
-    return html.escape(str(txt if txt is not None else ""), quote=True)
+    return html.escape(str(txt if txt is not None else ""),
+                       quote=False).replace(_DURO, "&nbsp;")
+
+
+def _a(txt: object) -> str:
+    """Escapa para HTML **em posição de ATRIBUTO** — o `_e` mais a aspa.
+
+    A DIFERENÇA É UMA LINHA e ela é obrigatória nos dois sentidos: dentro de um
+    atributo entre aspas duplas, uma aspa crua FECHA o atributo (foi medido:
+    `data-v="a"b"` volta do DOM como dois atributos), e um `&#x27;` volta cru.
+    Um único escape para os dois lugares erra sempre num dos dois.
+
+    TODO ATRIBUTO DESTE MÓDULO USA ASPAS DUPLAS — é o que torna a tabela acima o
+    contrato inteiro. O `<` e o `>` continuam escapados porque o WebKit os
+    devolve escapados **também no atributo**, e não porque a marcação precise.
+    """
+    return _e(txt).replace('"', "&quot;")
 
 
 def selo_html(selo: str) -> str:
@@ -163,8 +217,8 @@ def acao_html(a: Acao) -> str:
     fazer seria pior — a recusa aparece só no terminal, e na tela o clique some.
     """
     classe = f"btn {a.classe}".strip()
-    endereco = f' data-gesto="{_e(a.gesto)}"' if a.gesto else ""
-    valor = f' data-v="{_e(a.v)}"' if a.v else ""
+    endereco = f' data-gesto="{_a(a.gesto)}"' if a.gesto else ""
+    valor = f' data-v="{_a(a.v)}"' if a.v else ""
     return f'<button class="{classe}"{endereco}{valor}>{_e(a.rotulo)}</button>'
 
 
@@ -261,7 +315,9 @@ def um_cartao(lanc: Lancador) -> str:
     seria pintado nos seis com o mesmo valor — o defeito que a distribuição de
     lista do piloto faz de propósito, e que aqui seria acidente.
     """
-    k = _e(lanc.chave)
+    # A `chave` SÓ APARECE EM ATRIBUTO nesta função (`data-lancador`,
+    # `data-campo`), então ela é escapada como atributo — ver :func:`_a`.
+    k = _a(lanc.chave)
     # A FILEIRA SAI NUMA VARIÁVEL para a linha caber nos 100 caracteres do
     # `ruff` — o HTML emitido é o mesmo caractere por caractere, e a moldura de
     # espaço continua vindo de dentro de `acoes_html`, que é onde ela tem de
@@ -334,8 +390,8 @@ def linhas_de_jogos(itens: list[JogoNaLista], vazio: str = "") -> str:
     linhas = []
     for j in itens:
         botao = (
-            f'<button class="btn mini" data-gesto="{_e(j.gesto)}" '
-            f'data-v="{_e(j.appid)}">{_e(j.botao)}</button>'
+            f'<button class="btn mini" data-gesto="{_a(j.gesto)}" '
+            f'data-v="{_a(j.appid)}">{_e(j.botao)}</button>'
             if j.gesto else ""
         )
         linhas.append(
@@ -527,13 +583,18 @@ def lista_de_jogos(lida: Leitura) -> str:
     já está fora do reparo não mudaria nada — um botão que não muda nada é o que
     esta casa chama de botão que finge.
 
-    OS DISPENSADOS TAMBÉM, E POR OUTRA RAZÃO. Eles são o
-    `launch_dialog_dismissed.json`, escrito pelo botão *"Não perguntar para
-    este jogo"* do lembrete da GTK — e até hoje **nenhuma tela desta casa os
-    mostrava**. O efeito é um SILÊNCIO: o lembrete nunca mais aparece para
-    aquele jogo, e não havia onde ler por quê. Mostrar já cura o silêncio; o
-    botão de desfazer não existe porque `launch_wrapper_dialog` só tem
-    `add_dismissed_appid` — ver o relato desta frente.
+    OS DISPENSADOS TÊM BOTÃO, e ele nasceu em 02/09/2026 por decisão dela. Eles
+    são o `launch_dialog_dismissed.json`, escrito pelo botão *"Não perguntar
+    para este jogo"* do lembrete da GTK — e até hoje de manhã **nenhuma tela
+    desta casa os mostrava**. Mostrar curou o silêncio pela metade: a dispensa
+    continuava sendo um gesto SEM VOLTA pela tela, porque o motor só tinha
+    `add_dismissed_appid`. Agora tem o par (`remove_dismissed_appid`), e a linha
+    ganha *"Voltar a perguntar"* — pelo mesmo motivo que o "Voltar a usar"
+    existe ao lado do "Não usar neste jogo": *um gesto que só vai numa direção
+    deixa a pessoa presa no estado em que clicou.*
+
+    OS INTOCÁVEIS CONTINUAM SEM BOTÃO, e a diferença é a que separa as duas
+    listas: ali não há gesto que mude nada; aqui há.
 
     A LISTA É OUTRA, e não a mesma dos recusados: `jogos_sem_wrapper.txt` diz
     *"não ponha o atalho neste jogo"* e o dispensado diz *"não me lembre deste
@@ -554,7 +615,8 @@ def lista_de_jogos(lida: Leitura) -> str:
     ]
     itens += [
         JogoNaLista(appid=a, rotulo=r,
-                    porque="você mandou não perguntar mais por este jogo")
+                    porque="você mandou não perguntar mais por este jogo",
+                    gesto="voltar-a-perguntar", botao="Voltar a perguntar")
         for a, r in lida.dispensados
     ]
     return linhas_de_jogos(itens, vazio=LISTA_VAZIA)
@@ -665,10 +727,18 @@ def cartao_sem_censo(item: SemCenso, onde: str | None) -> Lancador:
     cartões saíam `ok`, `warn` ou `nao_sei`. Ele era a palavra que faltava para
     a tela poder dizer o que o produto mediu.
 
-    O BOTÃO SOME QUANDO NÃO HÁ O QUE ABRIR. "Abrir o lançador" sobre um
-    lançador que o produto não achou é o botão que finge no seu pior formato —
-    ele já não tem dono (`SEM_DONO["abrir-lancador"]`), e sobre um lançador
-    ausente ele nem teria o que fazer se tivesse.
+    O BOTÃO FICA NOS TRÊS ESTADOS — decisão dela, 02/09/2026, e ela DESFAZ uma
+    mudança que ninguém tinha submetido a ela. O estado `off` nasceu (na tarde
+    de 02/09) com `acoes=()`, pelo argumento de que "Abrir o lançador" sobre um
+    lançador ausente seria botão que finge. O argumento tem mérito e **não é
+    desta frente decidi-lo**: o desenho que ela aprovou tem o botão nos CINCO
+    cartões, e a tela dela não pode perder um botão por conta de um raciocínio
+    que ela não viu. Se ele deve sumir quando o lançador não está aqui, quem
+    diz é ela — está em `espera_a_palavra_dela`, junto com as três frases.
+
+    (Ele continua sem dono — `SEM_DONO["abrir-lancador"]` — nos seis cartões,
+    exatamente como no cartão da Steam. Sumir só neste era, além de mudança não
+    pedida, a única incoerência da fileira.)
     """
     abrir = (Acao("Abrir o lançador", "", "", ""),)
     if onde is None:
@@ -676,7 +746,7 @@ def cartao_sem_censo(item: SemCenso, onde: str | None) -> Lancador:
                         jogos="—", diz=DIZ_SEM_FONTE, acoes=abrir)
     if not onde:
         return Lancador(chave=item.chave, nome=item.nome, selo="off",
-                        jogos="—", diz=DIZ_NAO_ACHEI, acoes=())
+                        jogos="—", diz=DIZ_NAO_ACHEI, acoes=abrir)
     return Lancador(chave=item.chave, nome=item.nome, selo="nao_sei",
                     jogos="—", diz=DIZ_ACHEI.format(onde=_e(onde)),
                     acoes=abrir, presente=True)
