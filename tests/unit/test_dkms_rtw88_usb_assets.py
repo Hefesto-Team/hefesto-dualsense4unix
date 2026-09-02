@@ -6,10 +6,12 @@ Premissas: docs/process/estudos/2026-07-20-estudo-premissas-onda-w-rtw88.md.
 Contrato dos assets (falha-sem/passa-com; SEM root, SEM kernel vivo — só
 arquivos e ferramentas de usuário):
 
-- dkms.conf com os campos exatos + BUILD_EXCLUSIVE_KERNEL="^7\\.0\\.11-"
-  (pino de ABI: os headers privados do rtw88 empacotados congelam o layout
-  do v7.0.11 — kernel novo compilaria limpo e CORROMPERIA memória; com o
-  pino o dkms PULA o build e o in-tree volta, fail-safe);
+- dkms.conf com os campos exatos + o pino de ABI nos BUILDS validados
+  (os headers privados do rtw88 empacotados congelam o layout de
+  `struct rtw_dev` — kernel fora da lista compilaria limpo e CORROMPERIA
+  memória; com o pino o dkms PULA o build e o in-tree volta, fail-safe);
+- DOIS kernels validados desde 01/09/2026, e o `main.h` de cada um viaja em
+  `main-por-kernel/`, posto no lugar pelo `escolher-o-main.sh` (PRE_BUILD);
 - Makefile kbuild mínimo de 2 linhas (obj-m + usb.o);
 - usb.c/usb.h com a lógica device-gone + usb_queue_reset_device e a DECISÃO
   -EPROTO do §1.2 do desenho: -ENODEV/-ESHUTDOWN armam imediato (sinal
@@ -54,10 +56,15 @@ SOB_ANONIMO = (
     "<hefesto-dualsense4unix@users.noreply.github.com>"
 )
 
-# Fecho transitivo de includes do usb.c (provado no build do desenho §8):
-# 10 headers vanilla INTOCADOS — o linux-headers não os traz.
+# Fecho transitivo de includes do usb.c (provado no build do desenho §8): 10
+# headers vanilla INTOCADOS — o linux-headers não os traz (conferido: só
+# `Kconfig` e `Makefile`).
+#
+# O `main.h` SAIU DESTA LISTA em 01/09/2026: ele é o único que muda de kernel
+# para kernel, e por isso passou a ser derivado (`main-por-kernel/`). Os NOVE
+# que sobram são idênticos nos dois kernels validados — e é o que o
+# `SHA256_HEADERS_BUNDLE` mede agora.
 HEADERS_VANILLA = (
-    "main.h",
     "debug.h",
     "mac.h",
     "reg.h",
@@ -183,10 +190,54 @@ class TestDkmsConf:
         # diferente casaria "^7\.0\.11-" e corromperia memória. Com o build
         # exato, qualquer outro kernel (respin ou série nova) ⇒ dkms PULA o
         # build (in-tree volta, nunca sem WiFi) até o rebase do BASELINE.
-        assert 'BUILD_EXCLUSIVE_KERNEL="^7\\.0\\.11-76070011-"' in DKMS_CONF, (
-            "o pino tem de casar o BUILD exato (76070011); só a versão nominal "
-            "deixa um respin da mesma 7.0.11 corromper memória silenciosamente"
+        pino = re.search(r'^BUILD_EXCLUSIVE_KERNEL="(.+)"$', DKMS_CONF, re.MULTILINE)
+        assert pino is not None, "BUILD_EXCLUSIVE_KERNEL ausente"
+        # CADA build validado tem de estar no pino, e o pino não pode aceitar
+        # nada além deles. `76070011` e não só `7.0.11`: um respin da MESMA
+        # versão nominal com struct diferente casaria e corromperia memória.
+        for build in _baseline()["KERNELS_VALIDADOS"].split():
+            assert build.replace(".", "\\.") in pino.group(1), (
+                f"o build validado {build} não está no BUILD_EXCLUSIVE_KERNEL — "
+                f"o dkms vai PULAR um kernel que a BASELINE diz ter sido medido"
+            )
+        assert "76070011" in pino.group(1) and "76070105" in pino.group(1), (
+            "o pino tem de casar o BUILD exato; só a versão nominal deixa um "
+            "respin da mesma versão corromper memória silenciosamente"
         )
+
+    def test_o_pre_build_escolhe_o_main_do_kernel_alvo(self) -> None:
+        """Sem ele, o `main.h` do build ANTERIOR fica — e é a corrupção.
+
+        MEDIDO em 01/09/2026: compilar com o `main.h` errado contra os headers
+        do 7.1.5 não dá um erro, e os CRCs dos exports saem IDÊNTICOS
+        (`0x2a20bc53` / `0x2f18c1ed`), de modo que o modversions não pega. O
+        único sinal é o `.ko` ter 16 bytes a menos. Nada avisa.
+        """
+        assert 'PRE_BUILD="./escolher-o-main.sh $kernelver"' in DKMS_CONF, (
+            "o PRE_BUILD sumiu — o build vai usar o `main.h` que estiver na "
+            "pasta, e um `main.h` de outro kernel corrompe memória sem avisar"
+        )
+        escolhedor = ASSET_DIR / "escolher-o-main.sh"
+        assert escolhedor.is_file(), f"{escolhedor} não existe"
+        assert escolhedor.stat().st_mode & 0o111, "o escolhedor não é executável"
+
+    def test_todo_kernel_validado_tem_o_main_dele(self) -> None:
+        """A lista da BASELINE e os arquivos em disco, nos DOIS sentidos."""
+        dados = _baseline()
+        pasta = ASSET_DIR / "main-por-kernel"
+        em_disco = {p.name[len("main-"):-len(".h")] for p in pasta.glob("main-*.h")}
+        declarados = set(dados["KERNELS_VALIDADOS"].split())
+        assert declarados == em_disco, (
+            f"a BASELINE declara {sorted(declarados)} e a pasta tem "
+            f"{sorted(em_disco)} — um kernel sem `main.h` faz o PRE_BUILD "
+            f"recusar; um `main.h` sem declaração é ABI que ninguém mediu"
+        )
+        for build in declarados:
+            chave = "SHA256_MAIN_" + build.replace(".", "_").replace("-", "_")
+            assert _sha256(pasta / f"main-{build}.h") == dados.get(chave), (
+                f"o `main.h` de {build} não bate com {chave} — ou o arquivo foi "
+                f"editado, ou o sha não foi atualizado no mesmo commit"
+            )
 
     def test_make_e_clean_kbuild(self) -> None:
         make = re.search(r"^MAKE\[0\]=\"(.+)\"$", DKMS_CONF, re.MULTILINE)
@@ -392,6 +443,10 @@ class TestBaselineEParidadeDosPatches:
         dados = _baseline()
         assert dados.get("KERNEL_BASE") == "v7.0.11"
         assert dados.get("KERNEL_TESTED") == "7.0.11-76070011-generic"
+        assert dados.get("KERNEL_TESTED_2") == "7.1.5-76070105-generic"
+        assert dados.get("KERNELS_VALIDADOS", "").split() == [
+            "7.0.11-76070011", "7.1.5-76070105",
+        ]
         assert re.fullmatch(r"[0-9a-f]{40}", dados.get("POP_LINUX_COMMIT", "")), (
             "POP_LINUX_COMMIT precisa ser o sha do repo pop-os/linux"
         )
@@ -401,6 +456,10 @@ class TestBaselineEParidadeDosPatches:
             "SHA256_PATCHED_C",
             "SHA256_PATCHED_H",
             "SHA256_HEADERS_BUNDLE",
+            "SHA256_VANILLA_C_7_0_11",
+            "SHA256_VANILLA_C_7_1_5",
+            "SHA256_MAIN_7_0_11_76070011",
+            "SHA256_MAIN_7_1_5_76070105",
         ):
             assert re.fullmatch(r"[0-9a-f]{64}", dados.get(chave, "")), f"{chave} inválido"
         assert dados.get("PATCH_1") == PATCH1_PATH.name
@@ -434,6 +493,22 @@ class TestBaselineEParidadeDosPatches:
         assert resultado.stdout.split()[0] == _baseline()["SHA256_HEADERS_BUNDLE"], (
             "um header vanilla foi tocado — eles só existem no pacote porque o "
             "linux-headers não os traz; mudança neles é rebase, não edição"
+        )
+
+    def test_o_main_h_nao_e_versionado(self) -> None:
+        """Uma cópia versionada é uma SEGUNDA verdade sobre qual ABI é a nossa.
+
+        E é a que corrompe memória sem avisar: quem compilar sem passar pelo
+        PRE_BUILD pegaria essa cópia, que pode ser de outro kernel.
+        """
+        resultado = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "assets/dkms/rtw88-usb/main.h"],
+            cwd=ASSET_DIR.parents[2], capture_output=True, text=True, check=False,
+        )
+        assert resultado.returncode != 0, (
+            "`assets/dkms/rtw88-usb/main.h` voltou para o git. Ele é DERIVADO: "
+            "as fontes são `main-por-kernel/main-<build>.h`, e quem escolhe é o "
+            "`escolher-o-main.sh` no PRE_BUILD."
         )
 
     def test_patches_revertidos_devolvem_o_vanilla_exato(self, tmp_path: Path) -> None:
