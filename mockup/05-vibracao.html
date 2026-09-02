@@ -926,16 +926,36 @@
      travessão, e um `—` numa linha de alerta afirmaria "não sei" onde a
      resposta certa é "não há nada a avisar". Por isso o bloco inteiro é
      trocado (`p.blocos`) em vez de pintado campo a campo. */
-  /* AS MARGENS SÃO MEDIDAS, não gosto — 02/09/2026, no Chrome, nesta aba. O
-     miolo tem 564 px e o quadro tinha 476: sobravam **24 px**. Uma linha de
-     estado custa 18 px de texto, e `12px 4px 2px` de margem punha o total em 32
-     — a aba passava a ROLAR por dentro, e ela teria de arrastar para ver o
-     "Testar" que sempre esteve à vista. Com `4px 4px 0` o total é 22 e a aba
-     continua inteira na tela.
-     COM AVISO A ABA ROLA, e isso é de propósito: os dois alertas
-     (`alcance`, `teto`) só aparecem em estado excepcional, e um estado
-     excepcional merece empurrar a tela — o que não pode é o estado NORMAL
-     custar uma barra de rolagem. */
+  /* A CONTA DA MARGEM, e ela é apertada por CONSTRUÇÃO. `4px 4px 0` em vez do
+     `12px 4px 2px` que a linha nasceu tendo — os 10 px que sobram são o que
+     mantém o estado NORMAL sem barra de rolagem.
+
+     FATO SUBSTITUÍDO — 02/09/2026, e o número anterior foi medido na cena
+     errada. Este comentário dizia "o quadro tinha 476: sobravam 24 px" e
+     "com aviso a aba rola, e isso é de propósito: os dois alertas só aparecem
+     em ESTADO EXCEPCIONAL". As duas metades caíram na mesma medição.
+
+     MEDIDO no WebKit da janela do produto (1180x757), com a MESA DELA — dois
+     controles, um `usb` e um `bt` —, injetando o BOOTSTRAP do piloto e pintando
+     a carga do `a05_vibracao.pacote()`:
+
+       .miolo:  client 564 · padding 16 em cima e 18 embaixo -> 530 de conteúdo
+       ANTES da pintura (a cena CRAVADA, 1 linha):  quadro 528 · rola 0
+       DEPOIS da pintura (a mesa dela, 2 linhas):   quadro 570 · rola 40
+
+     São DOIS px de folga no desenho, e o estado dela custa 42. A segunda linha
+     do alerta — "que você fixar aqui embaixo." — fica CORTADA pela borda de
+     baixo do miolo, com a barra de rolagem à direita. Fotografado.
+
+     E `vpads == 0` NÃO É EXCEPCIONAL: é o estado corrente da máquina dela, com
+     os dois controles na mesa. O aviso que esta linha existe para dar é
+     exatamente o que fica pela metade.
+
+     O QUE FALTA É DECISÃO DELA, e não pixel: caber os 42 px exige encolher a
+     tabela que ela aprovou, e o `.miolo` (16px 3px 18px 18px) é do `topo.html`,
+     comum às dez abas. As três saídas — encolher uma linha da tabela, pôr o
+     bloco no TOPO do quadro (aí quem sai de vista é o "Parar"), ou aceitar a
+     rolagem — estão em `mockup/DIVERGENCIAS.md`, esperando o OK. */
   .vib-estado{margin:4px 4px 0;display:flex;flex-direction:column;gap:6px}
   .vib-estado:empty{display:none}
   .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
@@ -945,6 +965,14 @@
   .vib-estado .est.diz .sinal{color:var(--green)}
   .vib-estado .est.alerta{color:var(--orange)}
   .vib-estado .est.alerta .sinal{color:var(--orange)}
+  /* O TERCEIRO TOM, e ele é o da janela estável: `#8be9fd` é o token de INFO da
+     casa, o que ela usa na frase "grava aqui, manda ali"
+     (`rumble_actions.py:608`, com o comentário "a frase explica, não alarma").
+     Ela saía como `diz` — o cinza — e o erro só apareceria na tela no dia em
+     que a MIGRA-VIBRACAO-04 ligasse o alvo por controle. `--cyan` é o mesmo
+     hexadecimal, já declarado no `topo.html`. */
+  .vib-estado .est.info{color:var(--cyan)}
+  .vib-estado .est.info .sinal{color:var(--cyan)}
 
   .vib{
     --larg-rot:138px;

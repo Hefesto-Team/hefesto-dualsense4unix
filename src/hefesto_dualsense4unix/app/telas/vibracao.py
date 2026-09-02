@@ -46,16 +46,44 @@ from typing import Any
 #: como a inversão entra: aqui é um só.
 LADO_PARA_MOTOR: dict[str, str] = {"e": "strong", "d": "weak"}
 
-#: O degrau que NÃO tem multiplicador fixo, e por quê.
+#: O degrau que NÃO tem multiplicador MEDIDO, e por quê.
 #:
-#: ``RUMBLE_POLICY_MULT`` tem TRÊS entradas (economia, balanceado, max) e a tela
-#: tem QUATRO degraus. O quarto é o ``auto``, e a ausência dele na tabela não é
-#: esquecimento: ele escala pela BATERIA em ``core.rumble._effective_mult``
-#: (>50% → 1,0 · 20-50% → 0,7 · <20% → 0,3) e **nunca amplifica**.
+#: Ele escala pela BATERIA em ``core.rumble._effective_mult`` (>50% → 1,0 ·
+#: 20-50% → 0,7 · <20% → 0,3) e **nunca amplifica**. O 1,0 que ele tem em
+#: :func:`_escada` não é um degrau medido: é o TETO dele, onde o deslizador
+#: para — a palavra é do comentário de ``rumble_actions._POLICY_MULT:67-69``.
 #:
-#: FICA ESCRITO porque a ``MIGRA-VIBRACAO-02`` manda a régua exigir que os
-#: quatro degraus sejam ``set(RUMBLE_POLICY_MULT)`` — e são três mais um.
+#: FICA ESCRITO porque a ordem dos quatro na tela não sai de um ``dict``: ele é
+#: o último, e é o único cuja posição não vem do valor.
 FORCA_SEM_MULTIPLICADOR = "auto"
+
+
+def _escada() -> dict[str, float]:
+    """A ESCADA DOS QUATRO DEGRAUS, lida da única cópia autorizada em ``app/``.
+
+    **CORRIGIDO EM 02/09/2026, e o defeito era o `auto`.** Estas três funções
+    liam ``daemon.subsystems.rumble.RUMBLE_POLICY_MULT``, que tem TRÊS chaves;
+    a tela tem QUATRO botões. Com o degrau em ``Auto`` e o orçamento da mesa em
+    ``Economia``, a janela estável escreve *"100% · limitado a 30% pelo
+    orçamento"* e esta aba **não dizia nada** — medido lado a lado, uma
+    divergência em dez combinações de degrau e orçamento.
+
+    ``rumble_actions._POLICY_MULT`` é ``{**RUMBLE_POLICY_MULT, "auto": 1.0}`` e
+    o comentário de ``rumble_actions.py:402`` o chama, por escrito, de *"a única
+    cópia autorizada em ``app/``"*. Há portão que vigia isso por varredura —
+    ``test_orcamento_dono_unico_do_valor_efetivo.
+    test_nenhum_modulo_de_app_recalcula_a_escada`` reprova a escada do daemon
+    INDEXADA em qualquer arquivo de ``app/``, e este módulo o deixava
+    **VERMELHO** em duas linhas desde que nasceu (:74 e :87 no ``dev``
+    ``64644c5e``; nenhum dos 30 portões o via, porque ele é teste de suíte).
+
+    O import é tardio porque ``rumble_actions`` puxa ``gi``/``Gtk`` no topo: uma
+    régua que só pergunte o teto da barra não carrega a janela inteira.
+    """
+    from hefesto_dualsense4unix.app.actions.rumble_actions import _POLICY_MULT
+
+    return _POLICY_MULT
+
 
 def teto_da_barra() -> int:
     """O 100% da barra "Personalizado", em pontos percentuais (hoje: 150).
@@ -63,29 +91,27 @@ def teto_da_barra() -> int:
     Ela para no Máximo, e o Máximo é do produto. Decisão dela, 27/08 — *"não
     passa dele"*.
 
-    Era o literal ``150`` no gerador. Derivá-lo do ``RUMBLE_POLICY_MULT`` é o
-    que impede a barra de prometer um teto que o daemon já não
+    Era o literal ``150`` no gerador. Derivá-lo da :func:`_escada` é o que
+    impede a barra de prometer um teto que o daemon já não
     pratica  (noqa-acento: verbo praticar, correto sem acento). Este número
     **já esteve errado pelo dobro** na dica desta aba (dizia 60% para o
     Economia) e nenhuma régua o via, porque estava digitado dos dois lados.
     """
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
-
-    return round(RUMBLE_POLICY_MULT["max"] * 100)
+    return round(_escada()["max"] * 100)
 
 
 def degraus_da_forca() -> tuple[str, ...]:
     """As chaves dos quatro degraus, na ordem da tela — do produto, não daqui.
 
-    As três primeiras saem de ``RUMBLE_POLICY_MULT``; a quarta é o
-    :data:`FORCA_SEM_MULTIPLICADOR`. A ordem é a do desenho (do mais fraco ao
-    mais forte, e o ``auto`` por último), e ela é fixada aqui porque um
-    ``dict`` do produto não promete ordem de tela.
+    A ordem é a do desenho: do mais fraco ao mais forte, e o
+    :data:`FORCA_SEM_MULTIPLICADOR` por último. O ``auto`` **não** entra pelo
+    valor — o 1,0 dele empataria com o ``balanceado`` e a ordem dos botões
+    passaria a depender de qual chave o ``dict`` devolvesse primeiro.
     """
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
-
-    por_forca = sorted(RUMBLE_POLICY_MULT, key=lambda k: RUMBLE_POLICY_MULT[k])
-    return (*por_forca, FORCA_SEM_MULTIPLICADOR)
+    escada = _escada()
+    return tuple(sorted(
+        escada, key=lambda k: (k == FORCA_SEM_MULTIPLICADOR, escada[k])
+    ))
 
 
 #: O QUE A TELA MOSTRA E O PRODUTO NÃO SABE RESPONDER. Cada linha diz onde o
@@ -172,6 +198,21 @@ def motores_do_controle(entrada: dict[str, Any], state: dict[str, Any]) -> dict[
 
     O casamento controle → vpad também não se refaz aqui — ``_item_do_vpad``
     diz de si mesmo, por escrito, que é *"o dono único do casamento"*.
+
+    **E O ``pedido_de_vibracao_fresco`` NÃO ENTRA AQUI — a razão certa, 02/09.**
+    A razão que circulou era falsa: *"ele é consultado por dentro do
+    ``motores_no_fisico``"*. Não é — li o corpo (``controller_card.py:1511-1541``):
+    o freio dele é próprio (``rumble_no_fisico_ha_s > ATIVIDADE_FRESCA_S``), e
+    quem põe os dois em série é o CHAMADOR, ``estado_do_recurso`` (``:1719``
+    pergunta *"o jogo PEDIU?"*, e só então ``:1721`` pergunta *"chegou aos
+    motores?"*).
+
+    A razão que sobra é de assunto, e é esta: lá a pergunta é uma SITUAÇÃO
+    ("chegando" contra "parou") e o pedido do jogo é o que a separa; aqui a pergunta
+    é um NÚMERO — *"quanto foi ao motor agora?"* —, e a fonte dele é o par
+    físico. Um controle em que o jogo parou de pedir já responde ``None`` pelo
+    freio de ``motores_no_fisico``; acrescentar o segundo juiz não mudaria uma
+    coluna e criaria duas verdades sobre o mesmo pixel.
     """
     from hefesto_dualsense4unix.app.widgets.controller_card import (
         _item_do_vpad,
@@ -263,37 +304,57 @@ def pacote_da_mesa(
     }
 
 
-#: OS DOIS TONS DA LINHA DE ESTADO, e são os mesmos da janela GTK: ``diz`` conta
-#: o que está acontecendo; ``alerta`` avisa que o que ela escolheu **não chega**.
-#: Lá o segundo é o token ``#ffb86c`` do tema
-#: (``app/actions/rumble_actions.py:1259``); aqui viaja o NOME e a cor mora no
-#: CSS da aba — a mesma disciplina do ``conta_cor``, que manda ``var(--green)``
-#: em vez de um hexadecimal.
+#: OS TRÊS TONS DA LINHA DE ESTADO, um por token de cor da janela estável.
+#:
+#: **CORRIGIDO EM 02/09/2026: eram DOIS, e a janela GTK usa TRÊS neste card.**
+#: O comentário anterior dizia *"os dois tons ... são os mesmos da janela GTK"*,
+#: e a quarta frase saía como ``diz`` — cinza. Lá ela é ciano, e o comentário
+#: que a pinta explica por quê: *"a frase explica, não alarma"*.
+#:
+#: ==========  ===========================  ==================================
+#: tom         cor na estável               qual frase
+#: ==========  ===========================  ==================================
+#: ``diz``     a cor normal do rótulo       ``texto_dos_pedidos_de_vibracao``
+#: ``alerta``  ``#ffb86c`` (:1259, :545)    ``…do_alcance_da_intensidade`` e
+#:                                          ``…do_teto_do_orcamento``
+#: ``info``    ``#8be9fd`` (:608)           ``texto_de_onde_grava_e_onde_manda``
+#: ==========  ===========================  ==================================
+#:
+#: Viaja o NOME, e a cor mora no CSS da aba — a mesma disciplina do
+#: ``conta_cor``, que manda ``var(--green)`` em vez de um hexadecimal. Os três
+#: tokens já existem no mockup (``--orange``, ``--cyan``, ``--texto-suave``).
 DIZ = "diz"
 ALERTA = "alerta"
+INFO = "info"
 
 
 def _pedido_da_politica(state: dict[str, Any]) -> float | None:
     """O multiplicador que esta aba está PEDINDO, ou ``None``.
 
-    É a MESMA conta da janela estável
-    (``rumble_actions._pintar_a_linha_do_teto``): o degrau responde pela tabela
-    do daemon, e só o ``custom`` pergunta ao multiplicador aplicado. O ``auto``
-    responde ``None`` de propósito — o teto dele é móvel (escala pela bateria) e
-    esta casa já decidiu não prometer número móvel na tela.
+    É a MESMA conta da janela estável, e agora é verdade: a linha de
+    ``rumble_actions._pintar_a_linha_do_teto:537`` é
+    ``custom_mult if policy == "custom" else _POLICY_MULT.get(policy)``, e esta
+    é ela com o ``custom_mult`` vindo do ``state``. A escada sai da
+    :func:`_escada`, que é a cópia autorizada — não uma segunda tabela.
 
-    A tabela é a do produto, e não uma cópia: ``RUMBLE_POLICY_MULT`` é o mesmo
-    dicionário que :func:`teto_da_barra` e :func:`degraus_da_forca` já leem.
+    **O ``auto`` DIZ 100%, e o número é fixo.** O docstring anterior afirmava
+    que ele *"responde ``None`` de propósito — o teto dele é móvel"*, e o
+    ``None`` fazia esta aba calar onde a estável avisa. O móvel é o que o
+    ``auto`` ENTREGA (escala pela bateria); o 1,0 é o TETO dele, que nunca
+    amplifica — e a frase resultante fala do teto, não da entrega. Quem decide
+    quando calar é ``texto_do_teto_do_orcamento``, e ele já cala nos quatro
+    silêncios que documenta.
+
+    ``None`` aqui é só *"degrau que não existe"*: política fora dos quatro
+    (daemon velho, chave nova) ou ``custom`` sem multiplicador lido.
     """
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
-
     politica = str(state.get("rumble_policy") or "")
     if politica == "custom":
         aplicado = state.get("rumble_mult_applied")
         if isinstance(aplicado, bool) or not isinstance(aplicado, (int, float)):
             return None
         return float(aplicado)
-    return RUMBLE_POLICY_MULT.get(politica)
+    return _escada().get(politica)
 
 
 def _orcamento_da_maquina() -> str | None:
@@ -389,7 +450,7 @@ def textos_do_estado(
         alvo if alvo is not None else AlvoDeEdicao(estado=EstadoDoAlvo.TODOS)
     )
     if onde:
-        linhas.append((DIZ, onde))
+        linhas.append((INFO, onde))
     return linhas
 
 
@@ -409,13 +470,33 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
     nenhuma leva ``<`` ou ``&``, mas elas são texto de tela e mudam sem passar
     por aqui — o dia em que uma ganhar um ``&`` é o dia em que a linha some da
     tela sem uma palavra de erro.
+
+    **``quote=False``, e ele não é gosto — 02/09/2026.** O padrão do
+    ``html.escape`` troca ``"`` por ``&quot;``, e isto aqui é conteúdo de
+    TEXTO, nunca atributo: a entidade é desnecessária **e o navegador nunca a
+    devolve**. Medido no WebKit, escrevendo em ``el.innerHTML`` e lendo de
+    volta::
+
+        as frases de HOJE ......... volta igual: True   (aspas tipográficas “ ”)
+        uma frase com & e < ....... volta igual: True
+        uma frase com ASPA RETA ... volta igual: False
+            emitido:   <span>clique &quot;Testar&quot;</span>
+            devolvido: <span>clique "Testar"</span>
+
+    O guarda do pintor é ``if (alvo && alvo.innerHTML !== html)``
+    (``hefesto_vivo.py:213``). Com a aspa reta a comparação seria VERDADEIRA
+    sempre: o bloco repintaria e contaria ``+1`` a cada tique, a 2 Hz, para
+    sempre — o defeito que o ramo ``SELECT`` do ``escrever()`` foi escrito para
+    impedir, e o mesmo instrumento com que esta casa prova que um endereço
+    existe. Hoje não morde porque as quatro frases usam ``“ ”``; o gatilho é
+    uma aspa reta em texto que muda sem passar por aqui.
     """
     import html as _html
 
     return "".join(
-        f'<div class="est {_html.escape(tom)}">'
+        f'<div class="est {_html.escape(tom, quote=False)}">'
         f'<span class="sinal">{"▲" if tom == ALERTA else "●"}</span>'
-        f"<span>{_html.escape(frase)}</span></div>"
+        f"<span>{_html.escape(frase, quote=False)}</span></div>"
         for tom, frase in linhas
     )
 

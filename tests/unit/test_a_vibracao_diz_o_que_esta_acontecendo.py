@@ -29,12 +29,24 @@ AS MORDIDAS, e cada uma reprova um teste diferente:
   ``test_o_pacote_emite_o_bloco_do_estado`` reprova;
 * troque uma frase por texto digitado em ``textos_do_estado`` →
   ``test_as_frases_sao_as_do_produto`` reprova nomeando a frase;
+* **arranque a chamada ao teto do orçamento** → o mesmo caso reprova;
+* **acrescente uma frase que motor nenhum assina** → o mesmo caso reprova;
 * devolva ``dict`` fixo em vez de lista (a linha que não se aplica virando
   travessão) → ``test_o_que_nao_se_aplica_nao_e_montado`` reprova;
 * troque o alvo padrão para ``CONTROLE`` → ``test_o_alvo_padrao_desta_aba_e_todos``
   reprova;
+* **faça o ``auto`` responder ``None``** →
+  ``test_o_teto_e_a_mesma_frase_que_a_janela_estavel_escreve`` reprova;
+* **tire o ``quote=False`` do ``html_do_estado``** →
+  ``test_a_aspa_reta_nao_vira_entidade`` reprova;
 * tire o bloco do ``MIOLO`` do gerador → ``test_a_bancada_tem_o_bloco`` reprova
   (e o próprio ``_conferir`` do gerador recusa gerar).
+
+AS TRÊS MORDIDAS EM NEGRITO SÃO DE 02/09/2026, e as três primeiras existem
+porque a régua NÃO MORDIA. Reproduzido antes de curar: com o aviso do teto
+arrancado, **17 testes passavam**; com uma frase inventada no fim da lista, os
+mesmos **17 passavam** e a prosa chegava ao ``mockup/05-vibracao.html`` que ela
+olha, com o ``_conferir`` do gerador dizendo OK.
 """
 from __future__ import annotations
 
@@ -75,21 +87,55 @@ MUDA: dict = {"rumble_policy": "balanceado"}
 # --------------------------------------------------------------------------
 # 1. o texto é o do produto, e não uma segunda cópia
 # --------------------------------------------------------------------------
+#: OS ORÇAMENTOS QUE A RÉGUA VARRE. Só o ``economia`` impõe teto
+#: (``core.rumble._ORCAMENTO_COM_TETO``); os outros dois são os silêncios 1 e 2
+#: da :func:`texto_do_teto_do_orcamento`. Varrer os três é o que faz a frase do
+#: teto entrar na conta — sem isso ela fica solta, que é o defeito de 02/09.
+ORCAMENTOS = ["economia", "balanceado", None]
+
+
+@pytest.mark.parametrize("orcamento", ORCAMENTOS)
 @pytest.mark.parametrize("estado", [SEM_VPAD, QUIETA])
-def test_as_frases_sao_as_do_produto(estado):
-    """Cada frase da linha TEM de ser a que ``rumble_actions`` devolve.
+def test_as_frases_sao_as_do_produto(estado, orcamento, monkeypatch):
+    """A linha diz AS QUATRO do produto — nem menos, nem uma a mais.
 
     O esperado é COMPUTADO das mesmas funções, nunca digitado: uma régua que
     redigita a frase dá verde sobre a segunda cópia dela, que é exatamente o
     defeito que se quer impedir.
+
+    **CORRIGIDA EM 02/09/2026, e ela deixava passar as duas metades.** Antes o
+    esperado só somava DUAS das quatro funções e a asserção era de
+    SUBCONJUNTO — ``[f for f in do_produto if f not in ditas]``:
+
+    * a frase do TETO DO ORÇAMENTO não entrava na conta. Arrancar do
+      ``textos_do_estado`` as cinco linhas que a chamam deixava **17 testes
+      verdes**, o gerador gerando e o ``mockup/05-vibracao.html`` byte a byte
+      idêntico. Reproduzido em 02/09;
+    * o subconjunto pega a TROCA de uma frase e não o ACRÉSCIMO. Uma frase
+      inventada (``"a bateria vai acabar em 3 minutos"``) chegava ao desenho que
+      ela olha com os mesmos **17 verdes** e o ``_conferir`` do gerador dizendo
+      OK — porque ele também só pergunta se o HTML do produto está DENTRO do
+      corpo. Reproduzido em 02/09, com a prosa no ``mockup/``.
+
+    A comparação agora é de LISTA: mesmo conteúdo e mesma ORDEM. E o orçamento
+    é INJETADO, porque ``_orcamento_da_maquina`` lê o disco da máquina de quem
+    roda — com ele solto, esta régua mediria a configuração da máquina.
     """
-    do_produto = [f for f in (_ra.texto_dos_pedidos_de_vibracao(estado),
-                              _ra.texto_do_alcance_da_intensidade(estado)) if f]
+    monkeypatch.setattr(_tela, "_orcamento_da_maquina", lambda: orcamento)
+    do_produto = [f for f in (
+        _ra.texto_dos_pedidos_de_vibracao(estado),
+        _ra.texto_do_alcance_da_intensidade(estado),
+        _ra.texto_do_teto_do_orcamento(_tela._pedido_da_politica(estado), orcamento),
+        _ra.texto_de_onde_grava_e_onde_manda(
+            AlvoDeEdicao(estado=EstadoDoAlvo.TODOS)),
+    ) if f]
     ditas = [frase for _tom, frase in _tela.textos_do_estado(estado)]
-    faltam = [f for f in do_produto if f not in ditas]
-    assert not faltam, (
-        f"a aba deixou de dizer o que o produto já sabe: {faltam}. "
-        f"O que ela diz hoje: {ditas}")
+    assert ditas == do_produto, (
+        "a linha do estado divergiu do produto.\n"
+        f"  o produto diz: {do_produto}\n"
+        f"  a aba diz:     {ditas}\n"
+        "Falta = frase do produto que ninguém chama; sobra = prosa que motor "
+        "nenhum assina, e ela vai para o desenho que ELA olha.")
 
 
 def test_o_alerta_de_alcance_e_alerta():
@@ -142,18 +188,94 @@ def test_o_alvo_padrao_desta_aba_e_todos():
 
 
 def test_o_multiplicador_pedido_vem_da_tabela_do_produto():
-    """``_pedido_da_politica`` lê ``RUMBLE_POLICY_MULT``; não guarda cópia.
+    """``_pedido_da_politica`` é a conta da janela estável, degrau por degrau.
 
-    Um número digitado aqui divergiria no dia em que o produto mudar um degrau —
-    e a linha "limitado a 30% pelo orçamento" passaria a mentir por dentro.
+    A conta da estável é UMA LINHA, ``rumble_actions._pintar_a_linha_do_teto``::
+
+        pedido = custom_mult if policy == "custom" else _POLICY_MULT.get(policy)
+
+    e ``_POLICY_MULT`` é ``{**RUMBLE_POLICY_MULT, "auto": 1.0}`` — *"a única
+    cópia autorizada em ``app/``"* (``rumble_actions.py:402``). Um número
+    digitado aqui divergiria no dia em que o produto mudar um degrau, e a linha
+    "limitado a 30% pelo orçamento" passaria a mentir por dentro.
+
+    **ESTE CASO CIMENTAVA UM DEFEITO — 02/09/2026.** Ele afirmava
+    ``_pedido_da_politica({"rumble_policy": "auto"}) is None`` e nunca importava
+    ``_POLICY_MULT``: comparava o adaptador contra a tabela do DAEMON, que tem três
+    chaves, quando a tela tem quatro botões. Um teste que grava a divergência é
+    pior que teste nenhum — ele impede a próxima pessoa de consertar.
     """
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
-
-    for chave, mult in RUMBLE_POLICY_MULT.items():
-        assert _tela._pedido_da_politica({"rumble_policy": chave}) == mult
-    assert _tela._pedido_da_politica({"rumble_policy": "auto"}) is None
+    escada = _ra._POLICY_MULT
+    degraus = _tela.degraus_da_forca()
+    assert set(escada) == set(degraus), (
+        "os quatro degraus da tela deixaram de ser os quatro da escada")
+    # A ORDEM É DERIVADA, não digitada: do mais fraco ao mais forte, com o
+    # `auto` no fim. Ele empata em 1,0 com o `balanceado`, e ordenar só pelo
+    # valor deixaria a posição dos botões na mão da ordem de inserção do
+    # `dict` — que muda sem aviso e sem ninguém ver.
+    assert degraus[-1] == _tela.FORCA_SEM_MULTIPLICADOR, (
+        f"o degrau sem multiplicador medido saiu do fim: {degraus}")
+    com_valor = [escada[k] for k in degraus[:-1]]
+    assert com_valor == sorted(com_valor), (
+        f"os degraus com valor deixaram de subir: {degraus} -> {com_valor}")
+    for chave, mult in escada.items():
+        assert _tela._pedido_da_politica({"rumble_policy": chave}) == mult, (
+            f"o degrau {chave!r} pede um número que a estável não pede")
     assert _tela._pedido_da_politica(
         {"rumble_policy": "custom", "rumble_mult_applied": 0.7}) == 0.7
+    # `None` é "degrau que não existe", e só isso.
+    assert _tela._pedido_da_politica({"rumble_policy": "nao-existe"}) is None
+    assert _tela._pedido_da_politica({"rumble_policy": "custom"}) is None
+
+
+@pytest.mark.parametrize("orcamento", ORCAMENTOS)
+def test_o_teto_e_a_mesma_frase_que_a_janela_estavel_escreve(orcamento):
+    """Para os QUATRO degraus, a frase do teto é a da estável — inclusive `Auto`.
+
+    **O DEFEITO QUE ESTE CASO PEGA, medido em 02/09/2026.** Com o degrau em
+    ``Auto`` e o orçamento da mesa em ``Economia``:
+
+        pedido GTK    = 1.0    linha GTK    = "100% · limitado a 30% pelo orçamento"
+        pedido aba    = null   linha aba    = null   ← A ABA NÃO DIZIA NADA
+
+    Uma divergência em dez combinações de degrau e orçamento, e justamente no
+    degrau que tem botão próprio na tela. A causa era a tabela: a aba lia a do
+    daemon (três chaves) em vez da autorizada (quatro).
+
+    **O 1,0 do ``auto`` não promete número móvel.** O comentário que o põe lá
+    diz, por escrito: *"este 1,0 é só onde o deslizador para — o TETO do Auto,
+    que NUNCA amplifica"*. A frase resultante fala do teto, e é o que a estável
+    mostra desde sempre.
+
+    ALCANCE HOJE, e digo para não exagerar: a máquina dela responde orçamento
+    ``balanceado``, que não impõe teto nenhum — a frase não aparece em degrau
+    algum. O defeito acende no dia em que ela puser o orçamento em Economia.
+    """
+    for policy, mult in _ra._POLICY_MULT.items():
+        # a linha LITERAL de `_pintar_a_linha_do_teto`, com o custom fora
+        da_estavel = _ra.texto_do_teto_do_orcamento(mult, orcamento)
+        da_aba = _ra.texto_do_teto_do_orcamento(
+            _tela._pedido_da_politica({"rumble_policy": policy}), orcamento)
+        assert da_aba == da_estavel, (
+            f"degrau {policy!r} · orçamento {orcamento!r}: a estável escreve "
+            f"{da_estavel!r} e a aba escreve {da_aba!r}")
+
+
+def test_a_confissao_de_onde_grava_sai_no_tom_de_info():
+    """A quarta frase é INFO, como na estável — explica, não alarma.
+
+    Lá ela é pintada com ``#8be9fd`` (``rumble_actions.py:608``), e o comentário
+    ao lado diz por quê: *"a frase explica, não alarma — quem alarma é o aviso
+    de alcance, em laranja"*. Ela saía daqui como ``diz``, o cinza do rótulo
+    comum, e o tom só aparece no dia em que a ``MIGRA-VIBRACAO-04`` ligar o
+    alvo por controle — tarde demais para alguém notar.
+    """
+    com_alvo = _tela.textos_do_estado(
+        QUIETA, alvo=AlvoDeEdicao(estado=EstadoDoAlvo.CONTROLE, uniq=UNIQ))
+    tons = {frase: tom for tom, frase in com_alvo}
+    assert tons.get(_ra.TEXTO_ONDE_GRAVA_E_ONDE_MANDA) == _tela.INFO, (
+        f"a confissão saiu como {tons.get(_ra.TEXTO_ONDE_GRAVA_E_ONDE_MANDA)!r}")
+    assert _tela.INFO != _tela.DIZ != _tela.ALERTA != _tela.INFO
 
 
 # --------------------------------------------------------------------------
@@ -168,6 +290,35 @@ def test_o_html_escapa_o_que_vier():
     saiu = _tela.html_do_estado([(_tela.DIZ, 'a & b <script>x</script>')])
     assert "<script>" not in saiu
     assert "&amp;" in saiu and "&lt;script&gt;" in saiu
+
+
+def test_a_aspa_reta_nao_vira_entidade():
+    """Nada que sai daqui pode voltar DIFERENTE do ``innerHTML`` do navegador.
+
+    **O DEFEITO LATENTE, medido no WebKit em 02/09/2026** — escrevendo cada
+    HTML em ``el.innerHTML`` e lendo de volta::
+
+        as frases de HOJE ......... volta igual: True   (aspas tipográficas “ ”)
+        uma frase com & e < ....... volta igual: True
+        uma frase com ASPA RETA ... volta igual: False
+            emitido:   <span>clique &quot;Testar&quot;</span>
+            devolvido: <span>clique "Testar"</span>
+
+    O pintor só repinta quando ``alvo.innerHTML !== html``
+    (``hefesto_vivo.py:213``). Com a entidade, essa comparação é VERDADEIRA para
+    sempre: o bloco é reescrito e contado a cada tique, a 2 Hz — e o contador de
+    pinturas é O instrumento com que esta casa prova que um endereço existe.
+
+    A cura foi um argumento: ``html.escape(..., quote=False)``. Isto aqui é
+    conteúdo de TEXTO, nunca atributo — ``&``, ``<`` e ``>`` continuam
+    escapados, e é o que o caso acima confere.
+
+    MORDIDA: tire o ``quote=False`` do ``html_do_estado`` e este caso reprova.
+    """
+    saiu = _tela.html_do_estado([(_tela.DIZ, 'clique "Testar"')])
+    assert "&quot;" not in saiu, (
+        f"a entidade voltou ao HTML — o bloco repintaria a cada tique: {saiu!r}")
+    assert 'clique "Testar"' in saiu
 
 
 def test_o_pacote_emite_o_bloco_do_estado():

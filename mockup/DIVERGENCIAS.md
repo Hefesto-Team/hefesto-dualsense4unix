@@ -34,13 +34,40 @@ seção daqui**: a aba deixou de estar em trabalho.
   estável avisa isso desde 11/08; a aba nova ficava calada e a pessoa continuava
   clicando em "Máximo".
 
-  A linha **some** quando não há nada a dizer (`.vib-estado:empty`), e no estado
-  normal ela cabe sem fazer a aba rolar — medido: o miolo tem 564 px e o quadro
-  passou de 476 para 498. Com um alerta aceso a aba rola, e isso é de propósito.
+  A linha **some** quando não há nada a dizer (`.vib-estado:empty`).
 
-  **O que espera o seu OK:** o texto sai inteiro do produto, mas o LUGAR e o
-  tamanho são desenho. Se preferir a linha no topo do quadro, ao lado do título,
-  é uma linha no gerador.
+  **CORRIGIDO EM 02/09/2026 — o número anterior foi medido na cena errada.**
+  Esta seção dizia *"no estado normal ela cabe sem fazer a aba rolar — o miolo
+  tem 564 px e o quadro passou de 476 para 498"*. Isso é verdade sobre o
+  desenho CRAVADO, que tem UMA linha de propósito; é falso sobre a sua máquina.
+  Medido no WebKit da janela do produto (1180x757), com os seus dois controles:
+
+  | | quadro | a aba rola | a linha de estado |
+  | --- | --- | --- | --- |
+  | a cena do desenho | 528 px | 0 px | 1 linha, 18 px |
+  | **a sua mesa agora** | 570 px | **40 px** | 2 linhas, 60 px |
+
+  O miolo tem 530 px de conteúdo: **dois px de folga**, e o seu estado custa 42.
+  Resultado fotografado: a segunda linha do alerta laranja — *"que você fixar
+  aqui embaixo."* — fica **cortada** pela borda de baixo, com barra de rolagem à
+  direita. Para ler o aviso inteiro você tem de arrastar.
+
+  **O que espera o seu OK, e agora é uma escolha entre três:**
+
+  1. **deixar como está** — a aba rola 40 px quando há alerta, e você arrasta;
+  2. **o bloco no TOPO do quadro**, ao lado do título — o aviso fica sempre
+     inteiro à vista, e quem sai de vista é a linha "Testar agora" embaixo;
+  3. **encolher uma linha da tabela** em ~42 px — cabe tudo, mas mexe no
+     desenho que você aprovou em 27/08.
+
+  Não dá para caber sem escolher: o `.miolo` é do `topo.html`, comum às dez
+  abas, e mexer nele move as outras nove.
+
+  **Um tom novo, e ele é da janela estável:** a frase *"grava aqui, manda ali"*
+  saía cinza e lá é ciano — `#8be9fd`, o token de INFO da casa
+  (`rumble_actions.py:608`, *"a frase explica, não alarma"*). Hoje ela não
+  aparece nesta aba (a fita do topo é inerte, decisão sua de 28/08); nasce no
+  tom certo quando a força ganhar endereço por controle.
 
 ## 08-conexoes.html
 - **02/09/2026** — **dois endereços novos no Check-up, e nenhum pixel mudou.**
