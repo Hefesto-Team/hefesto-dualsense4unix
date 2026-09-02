@@ -39,6 +39,7 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
     DEFAULT_BUTTON_BINDINGS,
     TOKEN_CLOSE_OSK,
     TOKEN_OPEN_OSK,
+    TOKEN_TOGGLE_OSK,
 )
 from hefesto_dualsense4unix.integrations.uinput_mouse import (
     BUTTON_TO_UINPUT,
@@ -112,6 +113,12 @@ ACOES: dict[str, tuple[str, str]] = {
     "KEY_SYSRQ": (GRUPO_TECLADO, "PrintScreen"),
     "KEY_F11": (GRUPO_TECLADO, "F11"),
 
+    # O ALTERNADOR VEM PRIMEIRO porque é o de fábrica do L3 desde 02/09/2026.
+    # O rótulo ESPERA A PALAVRA DELA: ela decidiu o comportamento
+    # (*"abrir o teclado virtual e fechar o teclado virtual caso apertado
+    # novamente"*), não o texto. Este é a leitura direta da frase dela e segue
+    # a forma dos dois vizinhos.
+    TOKEN_TOGGLE_OSK: (GRUPO_COMANDO, "Abrir e fechar o teclado na tela"),
     TOKEN_OPEN_OSK: (GRUPO_COMANDO, "Abrir o teclado na tela"),
     TOKEN_CLOSE_OSK: (GRUPO_COMANDO, "Fechar o teclado na tela"),
     TOKEN_STEAM: (GRUPO_COMANDO, "Abrir a Steam"),

@@ -361,12 +361,22 @@ def notify_teclado_na_tela_ausente(candidatos: list[str]) -> bool:
 
     TECLADO-QUE-NAO-DIGITA-01 (09/08/2026). Nenhum atalho de fábrica do teclado
     emulado digita uma LETRA — o único caminho do produto para ESCREVER texto
-    com o controle é o teclado na tela em L3 (`__OPEN_OSK__`, o default de l3 em
-    `core/keyboard_mappings.py`), e ele depende de um programa externo
-    (`onboard` ou `wvkbd-mobintl`) que nenhum instalador, empacotamento ou
-    doctor desta casa instala, declara ou confere. Medido na máquina dela em
-    09/08: nenhum dos dois existe. Apertar L3 não fazia absolutamente nada, e o
-    único registro era um `warning` no journal — que ela não lê.
+    com o controle é o teclado na tela em L3 (`__TOGGLE_OSK__`, o default de l3
+    em `core/keyboard_mappings.py`), e ele depende de um programa externo
+    (`onboard` ou `wvkbd-mobintl`). Medido na máquina dela em 09/08: nenhum dos
+    dois existia. Apertar L3 não fazia absolutamente nada, e o único registro
+    era um `warning` no journal — que ela não lê.
+
+    FATO SUBSTITUÍDO — 02/09/2026. Esta linha dizia que o programa externo é
+    algo *"que nenhum instalador, empacotamento ou doctor desta casa instala,
+    declara ou confere"*. Falso desde 10/08: `scripts/install_osk.sh` instala
+    (chamado dos DOIS lados da cerca do `install.sh` por `install_osk_host`),
+    os cinco empacotamentos declaram, o `scripts/doctor.sh` confere e o
+    `scripts/check_packaging_parity.sh` cobra os três. Medido nesta máquina em
+    02/09: `install_osk.sh --status` devolve `instalado=wvkbd-mobintl`,
+    `casa=sim`. ESTE AVISO CONTINUA VALENDO — ele é o que sobra quando a
+    instalação não pôde acontecer (sem sudo, sem rede, distro sem o pacote, ou
+    `--no-osk`), e é por isso que ele não sai junto com o fato velho.
 
     Notifica SEMPRE, sem o opt-in `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS`,
     pelo mesmo motivo já declarado em `notify_emulation_suppressed`: é a resposta

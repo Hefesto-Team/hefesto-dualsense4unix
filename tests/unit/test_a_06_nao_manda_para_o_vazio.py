@@ -189,7 +189,9 @@ def test_as_vinte_e_uma_linhas_saem_do_perfil(tmp_path):
         "estaria mostrando o desenho no lugar da escolha dela.")
     # As outras 20 continuam no de fábrica, que é o que `None` quer dizer.
     assert mesa["acao-square"] == "Esc"
-    assert mesa["acao-l3"] == "Abrir o teclado na tela"
+    # O L3 ALTERNA desde 02/09/2026 (decisão dela), e por isso o rótulo mudou:
+    # `core/keyboard_mappings.DEFAULT_BUTTON_BINDINGS["l3"]` é o `__TOGGLE_OSK__`.
+    assert mesa["acao-l3"] == "Abrir e fechar o teclado na tela"
 
 
 def test_todo_valor_emitido_existe_como_opcao_daquela_lista(aba):

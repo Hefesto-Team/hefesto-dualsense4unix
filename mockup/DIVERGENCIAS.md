@@ -82,6 +82,34 @@ seção daqui**: a aba deixou de estar em trabalho.
   tom certo quando a força ganhar endereço por controle.
 
 
+## 06-navegacao.html
+- **02/09/2026** — **o L3 passou a ALTERNAR o teclado na tela, e as 21 listas
+  ganharam a opção que diz isso.** Decisão sua, verbatim: *"deixar no preset do
+  botão L3, no mapeamento, abrir o teclado virtual e fechar o teclado virtual
+  caso apertado novamente."*
+
+  O que mudou no desenho, e é só isto: cada `<select>` de ação ganhou
+  **`Abrir e fechar o teclado na tela`** no grupo *Executar Comando*, e a linha
+  do **L3** passou a nascer com ela marcada. Nenhum pixel a mais — 56 linhas,
+  todas dentro dos `<select>`. As outras vinte listas ganham a opção porque a
+  lista é UMA (`core/acoes_de_botao.ACOES`), e nenhuma delas muda de escolha.
+
+  **O produto JÁ alterna** — o `__TOGGLE_OSK__` está no mapa de fábrica e o
+  daemon o cumpre. Enquanto você não publicar, a página que o produto renderiza
+  continua oferecendo só *Abrir* e *Fechar*, e a linha do L3 continua
+  **mostrando** *"Abrir o teclado na tela"*: o piloto se recusa a escrever num
+  `<select>` um texto que ele não oferece (`hefesto_vivo.py`, ramo
+  `alvo === 'valor'`), então o campo fica no que está cravado em vez de ficar em
+  branco. É tela desatualizada, não tela quebrada.
+
+  **O QUE ESPERA O SEU OK É O TEXTO, não o comportamento.** Você decidiu o que o
+  botão faz; o rótulo é leitura direta da sua frase. Se preferir outro — *"Abrir
+  ou fechar o teclado na tela"*, *"Teclado na tela (abre e fecha)"* — ele muda
+  em um lugar só (`core/acoes_de_botao.ACOES`) e as 21 listas acompanham.
+
+  Publicar: `scripts/check_o_desenho_aprovado.py --publicar 06`.
+
+
 ## 07-lancadores.html
 - **02/09/2026** — **um comentário HTML dentro da lista do cartão da Steam, e
   nenhum pixel mudou.** O `<div class="lanc-fora">` nascia VAZIO; ele passa a
