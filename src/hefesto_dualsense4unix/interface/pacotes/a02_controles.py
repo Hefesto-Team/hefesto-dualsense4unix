@@ -24,12 +24,68 @@ a cada tique para endereços que a página não tem, e dois endereços na págin
 que ninguém pintava. Nenhum dos cinco dava erro — `querySelector` de endereço
 inexistente devolve `null`, e o pacote contava os três órfãos em
 `cobertura.pintados`, reportando 13 onde pintava 10.
+
+TER DONO NÃO É DIZER A VERDADE, e é o que a tarde de 02/09/2026 mediu. Todos os
+campos acima tinham dono, o casamento fechava, e a **régua do mockup dava
+`produto 16 · mockup 0`** — "nenhum campo ainda mostra o desenho", que se lê
+como aba pronta. Com os DOIS controles dela na mesa, esta aba escrevia
+**"102%"** no alto-falante: `speaker.volume` é o registrador do protocolo, 0-255,
+e a linha colava um `%` no número CRU. A régua conta se o valor MUDOU em relação
+ao desenho — ela não sabe se ele está certo, e contou a mentira como PRODUTO.
+Depois da cura o número dela é o MESMO: `produto 16 · mockup 0 · indecidível 7`.
+O bloco do REUSO, logo abaixo dos imports, tem as cinco regras que saíram daqui
+e voltaram para o motor.
 """
 from __future__ import annotations
 
 from typing import Any
 
+from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
+from hefesto_dualsense4unix.app.widgets.controller_card import (
+    rotulo_lightbar,
+    speaker_do_entry,
+)
+from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques, texto_volume
+
 from . import Contexto, registrar
+
+# ---------------------------------------------------------------------------
+# O MOTOR ACIMA, e por que ele entrou — 02/09/2026
+# ---------------------------------------------------------------------------
+# LEI 0 desta migração, palavra dela: *"no gtk eu já deixei praticamente tudo
+# pronto… Não temos que recriar nada."* Medido no dia: `controller_card.py` tem
+# **26 funções públicas de módulo** — 5.951 linhas de texto de tela que a GTK já
+# provou —, e a interface nova alcançava **duas** (`rotulo_lightbar`, pela aba
+# Iluminação, e `texto_degradacao`, pelo `pacotes/__init__.py`). Esta aba, que é
+# a mais servida das dez, chamava **zero**.
+#
+# CADA UM DOS CINCO NOMES ACIMA SUBSTITUI UMA REGRA REESCRITA AQUI, e três delas
+# estavam ERRADAS. O que cada um cura está escrito no ponto de uso; o resumo:
+#
+#   `speaker_do_entry`   o bloco do alto-falante mora em DUAS posições
+#                        (`entry.speaker` e `entry.inputs.speaker`), e este
+#                        arquivo lia só a primeira — em TRÊS lugares.
+#   `texto_volume`       o registrador é 0-255 e não por cento. Esta aba
+#                        escrevia o número CRU com um `%` colado.
+#   `texto_toques`       "Sem toque" estava redigitado aqui, com um comentário
+#                        dizendo que era "o do produto".
+#   `rotulo_lightbar`    cor de fonte DESCONHECIDA não é `#000000`.
+#   `mascara_viva`       `uhid` é BACKEND, e a tabela de nomes é de MÁSCARA.
+#
+# E UM SEXTO FOI MEDIDO E RECUSADO: `touchpad_do_inputs`. O enunciado desta
+# frente o dava como o dono do "toque", e ele é o dono da POSIÇÃO — a razão
+# está no ponto de uso, e ela é uma medição, não uma opinião.
+#
+# O IMPORT É POR SÍMBOLO, e isso importa para o `portao_a_casa_sabe_e_o_produto_
+# nao_faz`: ele resolve o nome ao MÓDULO DE ORIGEM (`from x.y import f` conta
+# para `x.y::f`, *"e para mais nada"*). Importar `home_actions` não declara
+# alcançadas as outras 34 funções dele.
+#
+# E ELE NÃO PUXA JANELA: medido em 02/09/2026 num processo sem `DISPLAY`, os
+# cinco importam e respondem. A regra desta casa que autoriza é a mesma que o
+# bloco do microfone já invoca mais abaixo — o aviso contra `app/actions/*` é
+# sobre os MIXINS GTK (`self._get`, `self._toast_light`), e `mascara_viva` é
+# função de MÓDULO, pura, sobre um dicionário.
 
 # ---------------------------------------------------------------------------
 # O TEXTO DE TELA DESTA ABA — e ele mora AQUI, não no gerador
@@ -45,9 +101,19 @@ from . import Contexto, registrar
 #: O TOUCHPAD PRECISA DIZER ALGO QUANDO NINGUÉM ESTÁ TOCANDO. Medido em 29/08:
 #: 238 leituras dos dois controles dela, `touching` verdadeiro em ZERO delas — a
 #: superfície de 148x83 mostrava um ponto invisível em 238 de 238 amostras, e um
-#: retângulo que nunca mostra nada lê como quebrado. O rótulo é o do produto
-#: (`app/widgets/sensor_widgets.py`: "Sem toque" / "N toque").
-SEM_TOQUE = "Sem toque"
+#: retângulo que nunca mostra nada lê como quebrado.
+#:
+#: O RÓTULO DEIXOU DE SER DIGITADO EM 02/09/2026. Ele já dizia, em texto, que
+#: era "o do produto (`app/widgets/sensor_widgets.py`)" — e ainda assim era uma
+#: SEGUNDA CÓPIA das mesmas cinco letras. `texto_toques(0)` é o dono; agora ele
+#: é chamado. Se o produto trocar a palavra, esta tela troca junto, que é a
+#: coisa inteira que a LEI 0 pede.
+SEM_TOQUE = texto_toques(0)
+#: O OUTRO LADO NÃO VEM DO MOTOR, e a diferença é de DADO, não de preguiça: o
+#: produto conta DEDOS (`texto_toques(1)` = "1 toque"), e o `state_full` publica
+#: `touchpad.touching`, que é um booleano — não há contagem para passar. "Tocando"
+#: é a palavra do desenho aprovado (`mockup/02-controles.html`, o card do P1), e
+#: trocá-la por "1 toque" seria mudar TEXTO DE TELA, que é decisão dela.
 COM_TOQUE = "Tocando"
 
 #: O CLIQUE DO ANALÓGICO — o rótulo dentro do círculo, e ele é ENDEREÇO, não
@@ -96,8 +162,34 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         tem_leitor = isinstance(c.get("inputs"), dict)
         e = c.get("inputs") or {}
         a = c.get("audio") or {}
-        sp = c.get("speaker") or {}
-        rgb = c.get("lightbar_rgb") or []
+        # O ALTO-FALANTE TEM UM DONO SÓ, e ele mora no motor. Esta linha era
+        # `sp = c.get("speaker") or {}`, e o `or {}` escondia DOIS defeitos:
+        #
+        #   1. o bloco chega em DUAS posições. `speaker_do_entry` aceita
+        #      `entry["speaker"]` **e** `entry["inputs"]["speaker"]` porque
+        #      *"quem publica é o daemon, e o widget não pode quebrar por causa
+        #      de onde o dado mora"* (`controller_card.py:1936`). Medido na mesa
+        #      dela em 02/09/2026 às 16h: o daemon publica nas DUAS. No dia em
+        #      que ele publicar só na de dentro, esta aba ficava cega e a de
+        #      cima continuava dizendo um número;
+        #   2. ausência virava `{}`, e `{}` virava zero. Ver `alto-estado`.
+        #
+        # `None` = o daemon nunca publicou `speaker` para este controle, que é o
+        # estado real de quem nunca recebeu um `speaker.set` — o registrador não
+        # se lê, só se escreve (`ipc_handlers.py:4600`).
+        sp_lido = speaker_do_entry(c)
+        # A COR DA BARRA DE LUZ, pelo dono das QUATRO situações. Ver `luz-hex`.
+        #
+        # O `getattr` É POR CAUSA DE UM DUBLÊ, e ele está declarado para não
+        # virar hábito: `Contexto.state` é campo do dataclass e o piloto sempre
+        # o traz, mas a régua do microfone monta um `Contexto` PARCIAL — uma
+        # classe com `conectados` e `mesa` e nada mais
+        # (`tests/unit/test_mic_da_mesa_o_ipc_a_tela_e_o_gesto.py:114`, com
+        # `# type: ignore[arg-type]` na chamada). Sem esta guarda, a primeira
+        # aba a ler o estado GLOBAL derruba a régua de outra. O dublê é que
+        # precisa crescer; enquanto ele não cresce, `{}` é o que
+        # `rotulo_lightbar` já trata (`state_global.get("native_mode")`).
+        _rotulo_da_luz, base_da_luz = rotulo_lightbar(c, getattr(ctx, "state", None) or {})
         casa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
 
         # O MUDO TEM TRÊS CARAS, e o selo da tela diz qual: mudo pelo aparelho,
@@ -122,9 +214,27 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # O TOQUE, LIDO — e ele era uma CONSTANTE. Esta linha dizia
         # `"touch-estado": "Sem toque"`, literal: a tela afirmava, sem ler nada,
         # que ninguém estava encostando no touchpad. Um dedo na superfície não
-        # mudava um pixel. Quem lê de verdade é `mesa_viva.estado_do_card:461`
-        # (`inputs["touchpad"]["touching"]`), e é essa leitura que vem para cá.
-        toque = e.get("touchpad") or {}
+        # mudava um pixel.
+        #
+        # E O `or {}` QUE VEIO DEPOIS DEIXOU O TERCEIRO ESTADO DE FORA. A cura
+        # de 02/09 pela manhã lia `e.get("touchpad") or {}` e decidia por
+        # `tem_leitor`, que é `isinstance(inputs, dict)` — mas `inputs` pode
+        # chegar SEM a chave `touchpad`, e aí a tela voltava a dizer "Sem toque"
+        # sobre uma leitura que não existe. É o MESMO `or {}` que já tinha
+        # apagado a diferença entre `None` e `{}` um degrau acima.
+        #
+        # `controller_card.touchpad_do_inputs` NÃO SERVE AQUI, e a medição é de
+        # 02/09/2026 — o enunciado desta frente mandava usá-lo para "o toque", e
+        # ele responde OUTRA pergunta. Ele devolve `(tocando, fx, fy)` e exige
+        # `bloco["x"]` e `bloco["y"]` para normalizar a POSIÇÃO: um bloco com
+        # `{"touching": True}` e sem coordenada cai no `except KeyError` e volta
+        # `None`. Trocado aqui, ele fazia a tela dizer "não sei" sobre um dedo
+        # que o daemon ESTÁ vendo — reprovado por
+        # `test_o_touchpad_deixou_de_ser_constante`, que monta exatamente esse
+        # bloco. Ele é o dono de ONDE está o dedo, não de SE há dedo; o dono do
+        # "se há" na GTK é `sensor_widgets.texto_toques`, que conta DEDOS, e o
+        # `state_full` publica um booleano. Ver o `COM_TOQUE` lá em cima.
+        toque = e.get("touchpad")
         cards[uniq] = {
             "bateria": f"{pct}%" if pct is not None else "—",
             # A BARRA, e ela precisa do NÚMERO CRU: o `escrever` do piloto com
@@ -164,9 +274,48 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # no dia em que a página ganhar onde pô-los.
             # A MÁSCARA É O NOME QUE O JOGO VÊ, e a tradução já tem dono em
             # `mesa_viva.NOME_DA_MASCARA`. `uhid` é o backend, e é outra coisa.
-            "mascara": casa.get("mascara")
-                       or mesa_viva.NOME_DA_MASCARA.get(c.get("vpad_backend") or "", "—"),
-            "luz-hex": "#{:02X}{:02X}{:02X}".format(*rgb[:3]) if len(rgb) >= 3 else "—",
+            #
+            # E O SEGUNDO RAMO ESTAVA NO ESPAÇO DE CHAVES ERRADO, medido em
+            # 02/09/2026: ele era
+            # `NOME_DA_MASCARA.get(c.get("vpad_backend") or "", "—")`, e
+            # `NOME_DA_MASCARA` só tem `dualsense` e `xbox` — que são MÁSCARAS.
+            # `vpad_backend` vale `uhid`, `uinput` ou `None`, e NENHUM dos três
+            # está na tabela: o ramo inteiro só sabia devolver `—`. Um `.get`
+            # com padrão não estoura, e por isso o defeito era mudo.
+            #
+            # QUEM CONVERTE BACKEND EM MÁSCARA É O MOTOR, e a regra dele não é
+            # um mapa: *"`backend == "uhid"` implica máscara DualSense e não
+            # pode ser outra coisa"*, porque o `virtual_pad._try_uhid` recusa o
+            # uhid para saída Xbox (`home_actions.mascara_viva:914`). E `uinput`
+            # é AMBÍGUO de propósito — Xbox normal e DualSense degradado usam o
+            # mesmo backend —, então ele devolve `None`, que aqui vira o
+            # travessão. Dizer "não sei" é o comportamento honesto.
+            "mascara": casa.get("mascara") or mesa_viva.NOME_DA_MASCARA.get(
+                mascara_viva({"gamepad_emulation": {"backend": c.get("vpad_backend")}})
+                or "", "—"),
+            # A COR DA BARRA — e ela AFIRMAVA UMA COR QUE NINGUÉM MEDIU. Esta
+            # linha era `"#{:02X}{:02X}{:02X}".format(*rgb[:3])` sobre o
+            # `lightbar_rgb` cru: com `lightbar_source == "desconhecida"` o
+            # `[0,0,0]` do sysfs virava `#000000` na tela, e o motor diz por que
+            # isso é mentira, com todas as letras — *"NUNCA 'apagada': o 0,0,0
+            # do sysfs sem escrita nossa pode ser o azul-kernel brilhando neste
+            # exato momento"* (`controller_card.rotulo_lightbar:1145`).
+            #
+            # O DONO DAS QUATRO SITUAÇÕES É `rotulo_lightbar`, e ele já as
+            # separa: Modo Nativo (o jogo é dono do LED), lightbar disputada (a
+            # Steam segura o `fd`), fonte desconhecida e barra apagada. O
+            # SEGUNDO valor que ele devolve é exatamente a pergunta deste campo
+            # — *"há cor conhecida para mostrar?"*: `None` nas duas últimas,
+            # a cor nas duas primeiras.
+            #
+            # O RÓTULO — a frase que explica o caso — NÃO CABE AQUI: o campo é
+            # o `<span class="de-quem">` de 60px ao lado de "Barra de luz", e
+            # escrever "Em Nativo o jogo é dono do LED" dentro dele destruiria a
+            # linha. Dar-lhe lugar é desenho, logo dela.
+            "luz-hex": (
+                "#{:02X}{:02X}{:02X}".format(*base_da_luz)
+                if base_da_luz is not None else mesa_viva.SEM_LEITOR
+            ),
             # UM DONO SÓ para o selo, nos dois pintores (auditoria 02/09/2026):
             # `mesa_viva.selo_do_mic`. O ternário estava escrito duas vezes, e
             # a régua do outro lado olhava o TEXTO — a cura de lá caía calada.
@@ -188,10 +337,43 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # estado em que o botão do plástico ainda manda no mudo). Ele não
             # tinha lugar no desenho — estava sendo escrito por cima dos botões,
             # não num campo dela. Dar-lhe um lugar é decisão dela, não daqui.
-            "alto-estado": "Mudo" if sp.get("muted") else f"{sp.get('volume', 0)}%",
+            # O ALTO-FALANTE — E ESTA LINHA ESCREVIA O REGISTRADOR CRU COM UM
+            # SINAL DE PORCENTAGEM. Ela era:
+            #
+            #     "Mudo" if sp.get("muted") else f"{sp.get('volume', 0)}%"
+            #
+            # DOIS DEFEITOS, e os dois medidos na mesa dela em 02/09/2026, 16h:
+            #
+            #   1. `speaker.volume` é **0-255**, o registrador do protocolo
+            #      (`ipc_handlers.py:3584`, `:4799`). Com o valor vivo de hoje —
+            #      **102** — a tela dizia **"102%"**. Uma porcentagem acima de
+            #      cem, e ela subiria a "255%" no talo. E não é só o `%`
+            #      sobrando: a conta certa NÃO é `bruto / 255`. O
+            #      `core/speaker_scale.py` existe por isso e traz a curva
+            #      MEDIDA no hardware (tom de 1 kHz, o microfone do próprio
+            #      controle como instrumento): abaixo de 38 tudo é mudo, acima
+            #      de 102 tudo é o mesmo volume — *"`bruto / 255` desenhava
+            #      50 % para um registrador em 128 que soa exatamente igual a
+            #      255"*. `texto_volume` é o rótulo que a GTK escreve
+            #      (`sensor_widgets.py:215`, e é a mesma régua da linha de
+            #      comando): `texto_volume(102, False)` = **"100 %"**;
+            #   2. `sp.get('volume', 0)` transformava AUSÊNCIA em **zero**. O
+            #      daemon só publica `speaker` depois do primeiro `speaker.set`
+            #      (`ipc_handlers.py:4600`) — antes dele a tela afirmava "0%"
+            #      sobre um alto-falante que ninguém mediu, que é o gêmeo exato
+            #      do "Sem toque" logo abaixo. `speaker_do_entry` devolve `None`
+            #      nesse caso, e `None` é o travessão.
+            "alto-estado": (
+                texto_volume(*sp_lido) if sp_lido is not None else mesa_viva.SEM_LEITOR
+            ),
+            # SEM BLOCO `touchpad` NÃO É "SEM TOQUE". `tem_leitor` separa
+            # `inputs: None` de `inputs: {}` (`ipc_handlers.py:3379-3383`); o
+            # `isinstance` abaixo separa `inputs` COM leitura de `inputs` sem a
+            # chave do touchpad — que é o mesmo travessão, pela mesma razão.
             "touch-estado": (
-                COM_TOQUE if toque.get("touching") else SEM_TOQUE
-            ) if tem_leitor else mesa_viva.SEM_LEITOR,
+                (COM_TOQUE if toque.get("touching") else SEM_TOQUE)
+                if tem_leitor and isinstance(toque, dict) else mesa_viva.SEM_LEITOR
+            ),
             # O CLIQUE DOS DOIS ANALÓGICOS — os dois endereços que a página tinha
             # e ninguém pintava. O rótulo e a marca do clicado são do GERADOR
             # (`ROTULO_DO_CLIQUE` e `CLICADO`, no topo deste arquivo), e o
@@ -329,9 +511,16 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
     E MANDÁ-LO QUANDO SE SABE É O QUE A GUI ESTÁVEL FAZ, pela cura de
     04/08/2026 (`controller_card.py:4265`): *"reafirmá-lo aqui é dizer ao
     firmware o mesmo que a tela mostra, em vez de deixá-lo adivinhar"*.
+
+    QUEM LÊ É `speaker_do_entry`, E NÃO ESTA FUNÇÃO. Ela fazia
+    `(dele.get("speaker") or {}).get("volume")` — uma das TRÊS leituras à mão
+    que este arquivo tinha do mesmo bloco, e todas as três conheciam só UMA das
+    duas posições em que ele chega. Com o daemon publicando `speaker` dentro de
+    `inputs`, o botão do ♪ recusava dizendo "o volume ainda é desconhecido"
+    sobre um volume que estava no payload, duas chaves ao lado.
     """
-    v = (dele.get("speaker") or {}).get("volume")
-    return {"volume": int(v)} if isinstance(v, int) and not isinstance(v, bool) else {}
+    lido = speaker_do_entry(dele)
+    return {"volume": lido[0]} if lido is not None else {}
 
 
 @gesto("02-controles.html", "mudo")
@@ -376,14 +565,20 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         return
 
     if qual == "alto-falante":
-        alto = dele.get("speaker") or {}
+        # O MUDO DE AGORA, pelo mesmo dono que a pintura usa. Esta linha era
+        # `alto = dele.get("speaker") or {}` seguida de `alto.get("muted")`, e
+        # ela era cega à segunda posição do bloco (`entry.inputs.speaker`) —
+        # `speaker_do_entry` aceita as duas, e devolve `None` quando não há
+        # nenhuma. `muted` é `None` quando o payload traz volume e não traz o
+        # mudo: `not None` é `True`, que é o pedido certo (ainda não calamos).
+        lido = speaker_do_entry(dele)
         # O VOLUME VAI JUNTO QUANDO SE SABE, e a razão é uma recusa do daemon,
         # não zelo: `speaker.set {muted}` sem volume conhecido é ERRO
         # (`ipc_handlers.py:4682`), porque mudo como primeira escrita tranca o
         # alto-falante em zero e o próprio mudo não o solta. O desenho já apaga
         # o botão nesse estado (`alto_pode` do `aba02.py`); esta linha é a
         # segunda trava, para o clique que chegar mesmo assim.
-        if not p.speaker_set(muted=not bool(alto.get("muted")), uniq=uniq,
+        if not p.speaker_set(muted=not bool(lido and lido[1]), uniq=uniq,
                              **_volume_conhecido(dele)):
             raise RuntimeError(
                 "o daemon não confirmou o mudo do alto-falante. Se o volume "
