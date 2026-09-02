@@ -112,3 +112,11 @@ STATE.md
 # copiasse todos os html e criasse uma pasta chamada layout."*
 # O produto lê de `layout/`, que é versionado.
 novo-layout/
+
+# O `main.h` do módulo DKMS do rtw88 é DERIVADO — 01/09/2026. Ele congela o
+# layout de `struct rtw_dev`, que muda de kernel para kernel, e por isso vive
+# em `assets/dkms/rtw88-usb/main-por-kernel/main-<build>.h`, um por kernel
+# validado. Quem o põe no lugar é o `escolher-o-main.sh`, no PRE_BUILD do DKMS.
+# Versionar a cópia escolhida criaria uma segunda verdade sobre qual ABI é a
+# nossa — e essa é a que corrompe memória sem avisar.
+assets/dkms/rtw88-usb/main.h
