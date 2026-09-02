@@ -226,6 +226,162 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------------------
+# OS DONOS DE FATO — um por pergunta que a tela faz sobre UM controle
+# ---------------------------------------------------------------------------
+# ROTA-A + ROTA-C (02/09/2026). Estas funções existem porque o levantamento
+# abaixo mediu a assinatura que a migração da GTK para o HTML deixou: **o HTML
+# lendo UMA chave onde a GTK lia DUAS**, ou não lendo nenhuma.
+#
+# O levantamento, feito varrendo `.get("<chave>")` nas duas árvores (02/09/2026,
+# na ponta de `dev` 2b219284) — as dezoito chaves que o daemon publica por
+# controle, contadas em `app/{widgets,actions,telas}` contra `interface/pacotes`:
+#
+#     chave                GTK  HTML   veredito
+#     player_slot            6     1   <- a assinatura: `jogador_de`
+#     player                10     7
+#     vpad_motivo            1     0   <- SÓ A GTK LÊ: `degradacao_de`
+#     nascimento             2     0   <- SÓ A GTK LÊ: sem dono ainda (ver abaixo)
+#     connected              6     0      não é perda: `ctx.conectados` já filtrou
+#     serial/modelo/…        —     —      nasceram nesta onda (ROTA-A)
+#
+# `nascimento` (SINAL-NO-NASCIMENTO-01) fica SEM dono de propósito: é chave
+# ÚNICA, não a assinatura de duas, e quem a consome é o botão "A luz não acende"
+# da aba Conexões — território de outra onda. Está escrito aqui para que a
+# próxima leva não precise refazer a varredura.
+
+
+def jogador_de(c: dict[str, Any]) -> int | None:
+    """Que jogador é este controle — o NÚMERO que a tela mostra, ou ``None``.
+
+    O daemon publica DUAS chaves: ``player_slot`` (a posição de sessão, que o
+    PRODUTO decide e que sobrevive a desconectar e reconectar) e ``player`` (o
+    número do jogador que o JOGO vê). A GTK sempre leu a primeira para o número
+    do card (``app/actions/base.numero_do_controle``); o HTML lia só a segunda.
+
+    **CORREÇÃO DE FATO, medida em 02/09/2026 com os dois controles na mesa.** O
+    MAPA e a ROTA-C diziam *"no rádio o `player` volta None"*. **Não é o
+    transporte.** O que se mediu foi:
+
+        uniq 444648e64203 · bt  · player 1    · player_slot 1 · is_primary TRUE
+        uniq d42f4b4846d8 · usb · player None · player_slot 2 · is_primary false
+
+    O ``None`` está no controle do CABO. A condição real está escrita em
+    ``daemon/subsystems/coop.CoopManager.player_indexes``: *"Só entra quem o
+    jogo enxerga: um secundário ainda aguardando o grab não tem vpad —
+    reservou o índice, mas não é jogador nenhum até ser promovido."* Confirmado
+    no estado vivo: ``coop.enabled=true``, ``coop.players=1``, e a ``coop.mesa``
+    tem UMA entrada — a do primário. **Quem volta ``None`` é quem não é jogador
+    do co-op**, em qualquer transporte. Com o co-op DESLIGADO
+    (``resolve_player_numbers``) todos os conectados são o jogador 1.
+
+    **A ORDEM DAS CHAVES É A DA GTK** — ``player_slot`` primeiro. A régua
+    ``test_os_donos_de_fato.py`` confere isso contra ``base.numero_do_controle``
+    e reprova se aquela função deixar de ler ``player_slot`` na frente: as duas
+    têm de mudar no mesmo commit.
+
+    **O QUE ESTA FUNÇÃO NÃO HERDA DA GTK, e é deliberado:** o
+    ``numero_do_controle`` cai em ``index + 1`` quando não há slot, e daí em 1.
+    Isso é a POSIÇÃO — exatamente o que fez o mesmo controle mudar de nome
+    quando o segundo entrou na mesa. Aqui a resposta é ``None``, e ``None`` vira
+    travessão. Melhor calar que numerar por ordem de chegada.
+    """
+    for chave in ("player_slot", "player"):
+        valor = c.get(chave)
+        if valor is None:
+            continue
+        try:
+            n = int(valor)
+        except (TypeError, ValueError):
+            continue
+        if n > 0:
+            return n
+    return None
+
+
+#: O que a mesa escreve quando a cor do plástico não foi lida
+#: (`interface/mesa_viva.COR_DESCONHECIDA`). Repetido aqui como literal para não
+#: importar `mesa_viva` — que puxa GTK pelo `actions/base` — só para comparar uma
+#: string; a régua `test_os_donos_de_fato.py` confere que as duas são a MESMA.
+NOME_SEM_LEITURA = "Não sei"
+
+#: Como o transporte cru do daemon se escreve na tela. É a MESMA tradução do
+#: `mesa_viva.mesa_do_estado` (`"USB" if transporte == "usb" else "BT"`).
+VIA_DO_TRANSPORTE = {"usb": "USB", "bt": "BT"}
+
+
+def identidade_de(
+    c: dict[str, Any], mesa: list[dict[str, Any]] | None = None
+) -> str:
+    """O nome deste controle na tela, ou o travessão.
+
+    Ordem: **o que ELA nomeou > o modelo decodificado > o transporte só.**
+    NUNCA a posição — foi o que fez o mesmo controle mudar de nome quando o
+    segundo entrou na mesa (ROTA-A, medido em 02/09/2026: com um controle o do
+    cabo era "Starlight Blue"; com dois, o MESMO cabo virou "Cosmic Red").
+
+    As quatro fontes, em ordem, e por que são quatro:
+
+    1. ``nome_declarado`` — a declaração dela em ``maquina.json``, publicada
+       pelo daemon. Vence tudo: ela é a dona do nome do aparelho dela;
+    2. ``modelo`` — o nome de fábrica que o daemon decodificou do serial;
+    3. ``mesa[…]["nome"]`` — **o MESMO fato pela outra porta**, e ele fica
+       porque é o que funciona HOJE: o ``mesa_viva.LeitorDeCor`` já lê a cor do
+       plástico pelo broker, uma vez por endereço, e o piloto já a tem na mão.
+       As chaves 1 e 2 só existem depois que o daemon dela for reiniciado — e
+       reiniciá-lo não é ato meu. Sem esta linha, ligar o dono novo seria
+       REGRESSÃO para a aba Jogar, que hoje usa a mesa;
+    4. o transporte sozinho — "USB"/"BT". É pouco, mas é verdade, e é o que a
+       tela pode afirmar sem inventar.
+
+    ``"Não sei"`` vindo da mesa **não** é nome: é a ausência de leitura, e
+    passá-lo adiante poria "Não sei · USB" onde cabia "USB".
+    """
+    declarado = c.get("nome_declarado")
+    if isinstance(declarado, str) and declarado.strip():
+        return declarado.strip()
+
+    modelo = c.get("modelo")
+    if isinstance(modelo, str) and modelo.strip():
+        return modelo.strip()
+
+    uniq = str(c.get("uniq") or "")
+    for item in mesa or []:
+        if str(item.get("uniq") or "") != uniq:
+            continue
+        nome = item.get("nome")
+        if isinstance(nome, str) and nome.strip() and nome.strip() != NOME_SEM_LEITURA:
+            return nome.strip()
+        break
+
+    via = VIA_DO_TRANSPORTE.get(str(c.get("transport") or "").lower(), "")
+    return via or "—"
+
+
+def degradacao_de(c: dict[str, Any]) -> str:
+    """A frase "Emulação degradada (uinput): …", ou ``""`` quando não há.
+
+    DUAS CHAVES, e o levantamento acima mostrou que o HTML não lia NENHUMA das
+    duas em conjunto: ``vpad_backend`` (que a aba Controles lê sozinho) e
+    ``vpad_motivo`` (que nenhum pacote lia). Sozinho, o backend não separa
+    "degradou" de "é uinput por design" — a máscara Xbox é uinput e não é
+    defeito nenhum.
+
+    **DELEGA para ``app/widgets/controller_card.texto_degradacao``**, que é o
+    dono da regra na GTK e traduz o motivo técnico para a frase leiga
+    (``MOTIVOS_DEGRADACAO_LEIGOS``). Reescrever a tabela aqui criaria uma
+    segunda lista de motivos, que envelheceria calada no primeiro motivo novo
+    que o daemon publicasse. O import é LAZY e não custa GTK: aquele módulo só
+    puxa ``gi`` dentro de uma função, bem depois.
+
+    ``""`` e não ``None``: o valor vai para um ``data-campo``, e a pintura
+    escreve string.
+    """
+    from hefesto_dualsense4unix.app.widgets.controller_card import texto_degradacao
+
+    return texto_degradacao(c) or ""
+
+
 def normalizar(pacote: dict[str, Any], para_pref: dict[str, str] | None = None) -> dict[str, Any]:
     """O pacote na forma que a tela consome: `{mesa, colunas}` e nada mais.
 

@@ -190,6 +190,24 @@ class CorDoPlastico:
     tom: str = ""
 
 
+@dataclass(frozen=True)
+class IdentidadeDeFabrica:
+    """O que o serial de fábrica diz deste aparelho. ``None`` = não sei.
+
+    ROTA-A (02/09/2026). Até aqui o módulo devolvia só a COR e jogava o serial
+    fora dentro de :func:`decodificar` — e o daemon, que é quem tem o fd, não
+    publicava nem um nem outro. O resultado media-se na tela dela: ``Cosmic
+    Red`` e ``Starlight Blue`` cravados no HTML, e o nome de um controle mudando
+    quando o segundo entrava na mesa, porque ele vinha da POSIÇÃO.
+
+    Os dois campos viajam juntos porque vêm da MESMA resposta e nascem no mesmo
+    instante; separá-los faria duas leituras do aparelho onde uma basta.
+    """
+
+    serial: str | None = None
+    cor: CorDoPlastico | None = None
+
+
 class _Pedidor(Protocol):
     """Assinatura do transporte: ``(caminho, pedido) -> resposta | None``."""
 
@@ -335,12 +353,18 @@ def conferir_pedido(buffer: bytes) -> None:
         )
 
 
-def decodificar(dados: bytes) -> CorDoPlastico | None:
+def serial_de(dados: bytes) -> str | None:
     """``buf[1]=1, buf[2]=19, buf[3]=2`` e então 17 caracteres ASCII.
 
     Os três primeiros bytes são o ECO do que se pediu, e qualquer divergência é
     erro — não é "veio outra coisa, vamos ler assim mesmo". Sem o eco certo, o
     que vem depois não é o serial, e decodificá-lo produziria uma cor inventada.
+
+    ELA SAIU DE DENTRO DO :func:`decodificar` em 02/09/2026 (ROTA-A) e não é
+    função nova: são as MESMAS quatro conferências, com o serial devolvido em
+    vez de descartado. O ``decodificar`` passou a chamá-la, para que a régua do
+    eco tenha um dono só — duas cópias dela se afastariam na primeira mudança de
+    firmware.
     """
     if len(dados) < 4 + TAMANHO_DO_SERIAL:
         return None
@@ -348,7 +372,14 @@ def decodificar(dados: bytes) -> CorDoPlastico | None:
         return None
     if dados[3] != MARCA_DE_RESPOSTA_BOA:
         return None
-    serial = dados[4 : 4 + TAMANHO_DO_SERIAL].decode("ascii", errors="replace")
+    return dados[4 : 4 + TAMANHO_DO_SERIAL].decode("ascii", errors="replace")
+
+
+def decodificar(dados: bytes) -> CorDoPlastico | None:
+    """A COR dentro da resposta ``0x81``, ou ``None``. Ver :func:`serial_de`."""
+    serial = serial_de(dados)
+    if serial is None:
+        return None
     return cor_do_serial(serial)
 
 
@@ -568,6 +599,60 @@ def _hidiocsfeature(tamanho: int) -> int:
     )
 
 
+def ler_identidade_pelo_cabo(
+    uniq: str,
+    *,
+    raiz: str = "/sys/class/hidraw",
+    listar: Any = os.listdir,
+    ler: Any = None,
+    perguntar: _Pedidor | None = None,
+) -> IdentidadeDeFabrica:
+    """Serial E cor do controle ``uniq``, lidos dele. Campos ``None`` = não sei.
+
+    **Nunca levanta.** Sem aparelho, sem permissão, com firmware que não responde
+    ou com código fora da tabela, os dois campos saem ``None`` — e ``None`` vira
+    travessão na tela, que é resposta válida em toda esta casa.
+
+    **É O MESMO CAMINHO DE SEMPRE, com o serial deixando de ser descartado.** O
+    :func:`ler_pelo_cabo` passou a delegar aqui: um transporte só, uma trava só,
+    um lugar só onde o ``ioctl`` acontece. Duas rotas para o mesmo report seriam
+    duas chances de uma delas passar sem a trava.
+
+    ``perguntar`` é o ponto único de injeção do transporte. Sem ele a função fala
+    com o ``hidraw`` de verdade; com ele, o teste exercita a decodificação inteira
+    sem encostar em aparelho nenhum — e sem que uma suíte distraída mande comando
+    de fábrica para os controles dela.
+
+    **O serial vem CRU, e é de propósito**: quem o publica decide se ele cabe na
+    tela. Ele identifica o aparelho de forma única, como um MAC — a régua de
+    anonimato desta casa vale para ele do mesmo jeito.
+    """
+    caminho = no_do_controle(uniq, raiz=raiz, listar=listar, ler=ler)
+    if caminho is None:
+        return IdentidadeDeFabrica()
+    transporte = perguntar if perguntar is not None else _perguntar_ao_hidraw
+    try:
+        resposta = transporte(caminho, montar_pedido())
+    except PedidoRecusadoError:
+        # A trava mordeu. Isso é sucesso da trava, não da leitura: NENHUM byte
+        # chegou ao aparelho, e é exatamente o que se quer de uma trava que erra.
+        logger.warning("cor_do_plastico_pedido_recusado", caminho=caminho)
+        return IdentidadeDeFabrica()
+    except Exception as erro:  # defensivo — a leitura jamais derruba a janela
+        logger.debug("cor_do_plastico_falhou", caminho=caminho, erro=str(erro))
+        return IdentidadeDeFabrica()
+    if not resposta:
+        return IdentidadeDeFabrica()
+    serial = serial_de(resposta)
+    # A COR PODE SER `None` COM O SERIAL PRESENTE, e isso não é defeito: a
+    # tabela tem vinte e uma entradas e a Sony fabrica edições novas sem avisar.
+    # Um serial legível com código fora da tabela é "sei qual aparelho é, não
+    # sei a cor dele" — duas respostas diferentes, e a tela as mostra diferente.
+    return IdentidadeDeFabrica(
+        serial=serial, cor=None if serial is None else cor_do_serial(serial)
+    )
+
+
 def ler_pelo_cabo(
     uniq: str,
     *,
@@ -578,29 +663,11 @@ def ler_pelo_cabo(
 ) -> CorDoPlastico | None:
     """A cor do plástico do controle ``uniq``, lida dele. ``None`` = não sei.
 
-    **Nunca levanta.** Sem aparelho, sem permissão, com firmware que não responde
-    ou com código fora da tabela, o resultado é ``None`` — e ``None`` vira "Não
-    sei" na tela, que é resposta válida em toda esta aba.
-
-    ``perguntar`` é o ponto único de injeção do transporte. Sem ele a função fala
-    com o ``hidraw`` de verdade; com ele, o teste exercita a decodificação inteira
-    sem encostar em aparelho nenhum — e sem que uma suíte distraída mande comando
-    de fábrica para os controles dela.
+    Embrulho de :func:`ler_identidade_pelo_cabo` — mesmo contrato de sempre, e
+    é por isso que ele fica: a aba Configurações e o `mesa_viva.LeitorDeCor`
+    pedem a COR, não o serial, e obrigá-los a desembrulhar seria espalhar a
+    estrutura nova por quem não precisa dela.
     """
-    caminho = no_do_controle(uniq, raiz=raiz, listar=listar, ler=ler)
-    if caminho is None:
-        return None
-    transporte = perguntar if perguntar is not None else _perguntar_ao_hidraw
-    try:
-        resposta = transporte(caminho, montar_pedido())
-    except PedidoRecusadoError:
-        # A trava mordeu. Isso é sucesso da trava, não da leitura: NENHUM byte
-        # chegou ao aparelho, e é exatamente o que se quer de uma trava que erra.
-        logger.warning("cor_do_plastico_pedido_recusado", caminho=caminho)
-        return None
-    except Exception as erro:  # defensivo — a leitura jamais derruba a janela
-        logger.debug("cor_do_plastico_falhou", caminho=caminho, erro=str(erro))
-        return None
-    if not resposta:
-        return None
-    return decodificar(resposta)
+    return ler_identidade_pelo_cabo(
+        uniq, raiz=raiz, listar=listar, ler=ler, perguntar=perguntar
+    ).cor
