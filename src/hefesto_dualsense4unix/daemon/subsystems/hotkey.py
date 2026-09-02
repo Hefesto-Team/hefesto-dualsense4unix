@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.daemon.subsystems import recado_do_microfone
 from hefesto_dualsense4unix.integrations import ponte_tentativa
 from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+    EleitorDeMicrofone,
     recusa_de_quem_nao_elegeu,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -986,11 +987,33 @@ async def _eleger_ou_devolver(
             # vizinho, e o produto não dizia uma palavra. É quem MAIS precisa
             # da frase — a dona do canal pelo menos tem o LED aceso dizendo
             # que está no ar.
-            recusa = recusa_de_quem_nao_elegeu(eleitor.eleito)
+            #
+            # E A FRASE FALA DA MESA, NÃO DA MEMÓRIA DO ELEITOR (auditoria de
+            # 02/09/2026). O eleito pode ter SAÍDO da mesa: nada em `src/`
+            # devolve o microfone no hotplug-out — as três únicas escritas de
+            # `EleitorDeMicrofone.eleito` são caminhos de eleição. Com a J1
+            # fora do cabo, `recusa_de_quem_nao_elegeu(eleitor.eleito)` dizia
+            # ao J2 *"o microfone da mesa está com outro controle"* e mandava
+            # ele procurar um dono que não tem card na tela — a nona vez que
+            # esta casa nomeia um controle fora da mesa.
+            #
+            # Com o dono fora da mesa a notícia certa é a que ela já escreveu
+            # para `eleito is None`: da mesa, ninguém está com o microfone.
+            # Nenhuma frase nova nasce aqui — texto de tela é dela.
+            #
+            # `conectados` VAZIO não é mesa vazia: quem apertou o botão está
+            # nela por construção, logo a lista vazia só pode ser o backend que
+            # não sabe listar. Aí o dono fica de pé, porque "não sei" nunca
+            # vira "saiu".
+            dono = eleitor.eleito
+            if dono is not None and conectados and dono not in conectados:
+                dono = None
+            recusa = recusa_de_quem_nao_elegeu(dono)
             logger.info(
                 "mic_da_mesa_mudo_de_quem_nao_elegeu",
                 uniq=uniq,
                 eleito=eleitor.eleito,
+                dono_na_mesa=dono,
                 motivo=recusa.motivo,
             )
             recado_do_microfone.anotar(
@@ -999,7 +1022,7 @@ async def _eleger_ou_devolver(
                 gesto="recusa",
                 ok=False,
                 motivo=recusa.motivo,
-                eleito=eleitor.eleito,
+                eleito=dono,
             )
             acender_outro = getattr(daemon.controller, "set_mic_led", None)
             if callable(acender_outro):
@@ -1120,11 +1143,15 @@ def _eleitor(daemon: DaemonProtocol) -> Any:
     fonte que a borda passada acabou de eleger — e numa mesa em turnos o
     caminho de volta devolveria o microfone ao controle do jogador anterior em
     vez de ao microfone real dela.
-    """
-    from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
-        EleitorDeMicrofone,
-    )
 
+    O import de `EleitorDeMicrofone` era preguiçoso e deixou de comprar
+    qualquer coisa em 02/09/2026, quando `recusa_de_quem_nao_elegeu` — do MESMO
+    módulo — subiu para o topo do arquivo: o módulo já está carregado quando
+    esta função roda. Ciclo não há (`eleicao_de_microfone` só importa
+    `integrations/fontes_de_captura` e `utils/logging_config`, nada que volte a
+    `daemon/`). Deixá-lo aqui faria a próxima pessoa supor um custo que não
+    existe e reproduzir o padrão por imitação.
+    """
     eleitor = getattr(daemon, "_eleitor_de_microfone", None)
     if eleitor is None:
         eleitor = EleitorDeMicrofone()

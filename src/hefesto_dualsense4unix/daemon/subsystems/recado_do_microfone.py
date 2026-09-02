@@ -81,9 +81,19 @@ class RecadoDoMicrofone:
     coisas que ela não tem e a tela precisa: de QUEM foi o toque (`uniq`), o
     que se tentou (`gesto`) e QUANDO (`quando_s`, monotônico).
 
-    `eleito` é o dono do microfone da mesa DEPOIS do gesto — a tela usa para
-    dizer que o canal está com outra pessoa sem ter de adivinhar. `None` é
-    "ninguém", e não "não sei".
+    `eleito` é o RETRATO da mesa no instante do gesto — quem estava com o
+    microfone quando esta frase nasceu. **Ele é congelado, e envelhece com a
+    frase**: a tela NUNCA o pinta como "de quem é o canal agora", porque o
+    dono pode ter mudado nos 500 ms seguintes. Quem é o dono AGORA está no
+    `eleito` do bloco (`publicar`), e `vale_agora` diz se os dois ainda são o
+    mesmo. `None` é "ninguém na mesa", e não "não sei".
+
+    CORREÇÃO DE FATO (02/09/2026, auditoria): este docstring dizia *"o dono do
+    microfone da mesa DEPOIS do gesto — a tela usa para dizer que o canal está
+    com outra pessoa"*, e a frase estava errada de um jeito caro: ela mandava o
+    pintor tratar um retrato congelado como o presente. Reproduzido — a J1
+    elege, o J2 é recusado, a J1 devolve, e o card do J2 seguia dizendo *"o
+    microfone da mesa está com outro controle"* a 10 Hz com NINGUÉM no canal.
     """
 
     uniq: str
@@ -94,12 +104,23 @@ class RecadoDoMicrofone:
     eleito: str | None
     quando_s: float
 
-    def em_dicionario(self, agora_s: float) -> dict[str, Any]:
-        """O recado como o IPC o publica, com a IDADE já calculada.
+    def em_dicionario(self, agora_s: float, *, dono_agora: str | None) -> dict[str, Any]:
+        """O recado como o IPC o publica, com a IDADE e a VALIDADE calculadas.
 
         `agora_s` entra por argumento em vez de ser lido aqui para a régua
         poder medir o envelhecimento sem dormir — um teste que precisa de
         `sleep` para provar idade é um teste que mede o relógio, não o código.
+
+        `dono_agora` é quem está com o microfone da mesa NESTE instante, do
+        ponto de vista da mesa (ver `publicar`). Ele é obrigatório e não tem
+        valor padrão de propósito: um padrão `None` faria todo recado com dono
+        congelado nascer `vale_agora=False` sem ninguém decidir isso, que é a
+        forma como esta casa fabrica campo que mente calado.
+
+        **IDADE NÃO É FALSIDADE.** Uma frase de 200 ms pode já estar errada e
+        uma de dois minutos pode estar certa — por isso `idade_s` e
+        `vale_agora` são campos SEPARADOS, e o segundo é o que decide se a
+        tela pode falar no presente.
         """
         return {
             "uniq": self.uniq,
@@ -109,7 +130,52 @@ class RecadoDoMicrofone:
             "ativo": self.ativo,
             "eleito": self.eleito,
             "idade_s": round(max(0.0, agora_s - self.quando_s), 3),
+            "vale_agora": self.eleito == dono_agora,
         }
+
+
+def _mesa_de_agora(daemon: Any) -> list[str] | None:
+    """Os `uniq` na mesa AGORA, ou `None` quando o backend não sabe dizer.
+
+    **A diferença entre `[]` e `None` é a diferença entre "a mesa está vazia" e
+    "não perguntei a ninguém"**, e confundi-las é como esta casa já publicou
+    ausência de dado como negação — o `bool(None)` que pintava ATIVO sobre o
+    controle que tinha acabado de cair. Backend legado, `FakeController` ou
+    `describe_controllers` que levanta devolvem `None`, e quem lê trata isso
+    como "não dá para afirmar que alguém saiu".
+
+    É a mesma fonte que `hotkey._uniqs_conectados` e
+    `ipc_handlers._uniqs_conectados` leem — só getattrs baratos, sem HID I/O —
+    e por isso ela cabe no caminho de leitura, que roda a 10 Hz.
+
+    **E ELA EXIGE O `connected`, que aquelas duas não exigem.** O
+    `describe_controllers` do backend real devolve uma entrada POR HANDLE e
+    preenche o `uniq` mesmo com `connected: False`
+    (`core/backend_pydualsense.py:5274`) — ler só o `uniq` daria "está na mesa"
+    a um handle que o controle já largou, que é exatamente o defeito que este
+    campo existe para matar. As outras duas montam a lista que vai para a
+    ELEIÇÃO (`eleger_o_controle`), e mudá-las mexeria em quem pode ser eleito;
+    aqui a pergunta é outra — *tem card na tela?* — e a resposta certa é a que
+    o backend dá no `connected`.
+    """
+    controlador = getattr(daemon, "controller", None)
+    descrever = getattr(controlador, "describe_controllers", None)
+    if not callable(descrever):
+        return None
+    try:
+        itens = descrever()
+    except Exception:  # pragma: no cover - defensivo, igual ao do hotkey
+        return None
+    if not isinstance(itens, list):
+        return None
+    return [
+        item["uniq"]
+        for item in itens
+        if isinstance(item, dict)
+        and isinstance(item.get("uniq"), str)
+        and item.get("uniq")
+        and item.get("connected")
+    ]
 
 
 def _deposito(daemon: Any) -> dict[str, RecadoDoMicrofone]:
@@ -171,13 +237,31 @@ def anotar(
 def publicar(daemon: Any, agora_s: float | None = None) -> dict[str, Any]:
     """O bloco `mic_da_mesa` do `daemon.state_full`. Shape SEMPRE o mesmo.
 
-    Duas chaves:
+    Três chaves:
 
-    * ``eleito`` — de quem é o microfone da mesa AGORA, lido do eleitor da
-      sessão (`hotkey._eleitor`). **Lido, nunca criado**: um `getattr` que
+    * ``eleito`` — de quem o ELEITOR da sessão diz que é o microfone da mesa,
+      lido de `hotkey._eleitor`. **Lido, nunca criado**: um `getattr` que
       instanciasse o eleitor aqui faria o handler de leitura mexer no estado
-      que ele existe para relatar, e a 10 Hz.
-    * ``recados`` — um por `uniq`, com a frase e a idade dela.
+      que ele existe para relatar, e a 10 Hz. É a verdade da MÁQUINA — a fonte
+      padrão do sistema aponta para lá — e não a da mesa; ver a chave seguinte.
+    * ``eleito_na_mesa`` — o `eleito` ainda está entre os controles
+      conectados? ``True``/``False``, e ``None`` quando não há eleito ou
+      quando o backend não sabe dizer quem está na mesa. **``False`` é o
+      hotplug-out sem devolução**: o controle caiu do cabo/rádio e nada em
+      `src/` limpou a posse, então a tela tem um dono que não tem card. Pintar
+      o nome dele seria a nona vez que esta casa nomeia um controle fora da
+      mesa.
+    * ``recados`` — um por `uniq`, com a frase, a idade dela e o ``vale_agora``
+      que diz se o retrato da mesa gravado JUNTO com a frase ainda é o de
+      agora.
+
+    **O QUE `vale_agora` LICENCIA, e a tela não pode ir além disso.** Ele é a
+    comparação entre o `eleito` CONGELADO no recado e o dono de agora do ponto
+    de vista da mesa. ``False`` significa: a mesa mudou desde o toque, o
+    `eleito` de dentro do recado virou história, e uma frase de ``recusa`` —
+    que nasce exatamente desse retrato — não pode mais ser pintada no
+    presente. ``True`` não promete que a frase é verdade; promete que o mundo
+    que ela descreve ainda é este.
 
     Daemon ausente (testes legados, modos sem daemon) devolve o bloco VAZIO em
     vez de sumir: chave que aparece e desaparece é o defeito que o
@@ -186,15 +270,26 @@ def publicar(daemon: Any, agora_s: float | None = None) -> dict[str, Any]:
     """
     agora = time.monotonic() if agora_s is None else agora_s
     eleitor = getattr(daemon, "_eleitor_de_microfone", None)
-    eleito = getattr(eleitor, "eleito", None) if eleitor is not None else None
+    cru = getattr(eleitor, "eleito", None) if eleitor is not None else None
+    eleito = cru if isinstance(cru, str) else None
+
+    mesa = _mesa_de_agora(daemon)
+    eleito_na_mesa = None if (eleito is None or mesa is None) else eleito in mesa
+    # "NÃO SEI" NUNCA VIRA "SAIU". Só o `False` MEDIDO tira o dono do retrato
+    # da mesa; o `None` (backend que não sabe listar, ou ninguém eleito) deixa
+    # o dono de pé. Inverter isto faria todo backend legado publicar que o
+    # controle eleito caiu, e a tela apagaria um canal que está no ar.
+    dono_agora = None if eleito_na_mesa is False else eleito
+
     deposito = getattr(daemon, ATRIBUTO, None)
     recados: dict[str, Any] = {}
     if isinstance(deposito, dict):
         for uniq, recado in deposito.items():
             if isinstance(recado, RecadoDoMicrofone):
-                recados[str(uniq)] = recado.em_dicionario(agora)
+                recados[str(uniq)] = recado.em_dicionario(agora, dono_agora=dono_agora)
     return {
-        "eleito": eleito if isinstance(eleito, str) else None,
+        "eleito": eleito,
+        "eleito_na_mesa": eleito_na_mesa,
         "recados": recados,
     }
 
