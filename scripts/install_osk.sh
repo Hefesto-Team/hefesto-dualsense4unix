@@ -4,8 +4,10 @@
 # POR QUE ISTO EXISTE
 # -------------------
 # O mapa de fábrica do teclado emulado (`core/keyboard_mappings.py`) dá ao L3 o
-# token `__OPEN_OSK__`, e o daemon (`daemon/subsystems/keyboard.py`) o cumpre
-# abrindo um teclado na tela DO SISTEMA. Medido na máquina dela em 09/08/2026:
+# token `__TOGGLE_OSK__` (era `__OPEN_OSK__` até 02/09/2026, quando o L3 virou
+# alternador por decisão dela), e o daemon (`daemon/subsystems/keyboard.py`) o
+# cumpre abrindo — e fechando — um teclado na tela DO SISTEMA. Medido na
+# máquina dela em 09/08/2026:
 #
 #     command -v onboard wvkbd-mobintl   ->  NENHUM DOS DOIS
 #     grep -c onboard install.sh         ->  0
