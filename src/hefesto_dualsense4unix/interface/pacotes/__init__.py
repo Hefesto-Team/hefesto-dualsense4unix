@@ -383,7 +383,22 @@ def degradacao_de(c: dict[str, Any]) -> str:
 
 
 def normalizar(pacote: dict[str, Any], para_pref: dict[str, str] | None = None) -> dict[str, Any]:
-    """O pacote na forma que a tela consome: `{mesa, colunas}` e nada mais.
+    """O pacote na forma que a tela consome: `{mesa, colunas, blocos}`.
+
+    O `blocos` É CHAVE DE CONTRATO, não valor de campo — e ficou DOIS DIAS
+    fora daqui, calado. O `BOOTSTRAP` do piloto sabe consumi-lo desde 01/09
+    (`hefesto_vivo.py`, o laço `for(const [seletor, html] of
+    Object.entries(p.blocos || {}))`), e `a08_conexoes.py` o emite para trocar
+    o mapa do gabinete DELA inteiro — mas o ramo `isinstance(valor, dict):
+    continue` abaixo o comia antes de chegar ao JS, porque um `dict` de HTML
+    parece um valor estruturado e não é.
+
+    MEDIDO em 02/09/2026, e por QUATRO frentes independentes desta leva, cada
+    uma pelo seu lado: `normalizar({"blocos": {".mm-faces": "<b>x</b>"}})`
+    devolvia `['colunas', 'mesa']`. O mapa do gabinete e a lista de aparelhos
+    da aba Conexões nunca chegaram à tela pelo tique — e nada acusava, que é a
+    forma exata do defeito que esta casa chama de *ausência de notícia lida
+    como sucesso*.
 
     POR QUE ELA EXISTE, medido em 01/09/2026 na primeira execução do piloto
     único: a aba Jogar pintou **0 valores** com um pacote de cinco. O piloto lia
@@ -422,7 +437,14 @@ def normalizar(pacote: dict[str, Any], para_pref: dict[str, str] | None = None) 
         if isinstance(valor, dict):
             continue
         mesa.setdefault(chave, valor)
-    return {"mesa": mesa, "colunas": colunas}
+    # O `blocos` atravessa INTACTO, e é o único `dict` que atravessa: quem o
+    # emite endereça por SELETOR CSS (`.mm-faces`), não por `data-campo`, e o
+    # valor é HTML pronto. Passar pelo laço acima o descartaria.
+    fora: dict[str, Any] = {"mesa": mesa, "colunas": colunas}
+    blocos = pacote.get("blocos")
+    if isinstance(blocos, dict) and blocos:
+        fora["blocos"] = blocos
+    return fora
 
 
 def _so_hex(chave: str) -> str:
