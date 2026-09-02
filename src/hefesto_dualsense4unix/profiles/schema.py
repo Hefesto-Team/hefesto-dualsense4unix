@@ -822,103 +822,142 @@ class ControllerRumbleOverride(BaseModel):
 class ControllerOverrides(BaseModel):
     """Overrides POR CONTROLE dentro do perfil (PERFIL-02, 2026-07-16).
 
-    Subconjunto deliberado das seções do perfil que fazem sentido por
-    controle físico. Campo ``None`` = sem opinião — o controle herda a seção
-    GLOBAL do perfil (merge POR CAMPO na aplicação, PERFIL-01: override
-    parcial nunca apaga a cor global no replug).
+    Campo ``None`` = sem opinião: o controle herda a seção GLOBAL do perfil
+    (merge POR CAMPO na aplicação, PERFIL-01 — override parcial nunca apaga a
+    cor global no replug).
 
+    O ALVO É TUDO — DECISÃO DELA, 02/09/2026
+    -----------------------------------------
+    *"acelerômetro, giroscópio, e todas as demais features. **é tudo mesmo**"*
+    — e ela marcou junto: teclas e ações de botão, mouse e teclado emulado,
+    modo (Hefesto/Xbox/Steam) e microfone.
+
+    **O QUE ISSO DERRUBA:** esta docstring trazia uma lista de seções *"FORA
+    porque NÃO TÊM RESPOSTA HONESTA por unidade"*. Essa lista caiu — a resposta
+    dela é que tem resposta, e é por controle. As medições que sustentavam a
+    lista continuam de pé, mas mudaram de papel: não são recusa, são FILA DE
+    ENGENHARIA, e estão abaixo com o que falta construir em cada uma.
+
+    **A ORDEM, e ela não se inverte:** primeiro o caminho por unidade EXISTIR,
+    depois o campo entrar aqui. Campo que grava e ninguém lê é pior que campo
+    nenhum — ele faz a tela prometer: a coluna da aba Perfis acende dizendo
+    *"este controle tem ajuste próprio"* sobre um valor que nada aplica. Há
+    régua, e ela é exaustiva nos dois sentidos:
+    ``tests/unit/test_perfil_por_controle_o_campo_espera_o_caminho.py``
+    classifica CADA campo desta classe contra o consumidor por-``uniq`` que o
+    lê, e reprova tanto campo sem consumidor quanto consumidor órfão.
+
+    O QUE JÁ CHEGA À PEÇA — e é só o que está declarado abaixo
+    ----------------------------------------------------------
     - ``leds`` (lightbar + player_leds + brilho) e ``triggers``, desde
-      PERFIL-02;
-    - ``rumble`` e ``speaker``, desde POR-UNIDADE-01 (10/08/2026) — a
-      intensidade da vibração e o alto-falante são da PEÇA: cada unidade tem
-      seus dois motores e seu alto-falante, e a fiação por-``uniq`` para os
-      dois já existia (``set_rumble_for``, ``apply_profile_speaker(uniq=...)``
-      e ``speaker.set``, todos com o alvo no parâmetro).
+      PERFIL-02: ``manager._controllers_to_specs`` os converte em ``OutputSpec``
+      por MAC, e o brilho sozinho vira fator em ``_controllers_to_led_scales``;
+    - ``rumble``, desde POR-UNIDADE-01 (10/08/2026):
+      ``manager._controllers_to_rumble_scales`` devolve ``{uniq: fator}``, que
+      o backend aplica na saída de cada handle (``set_rumble_scales``);
+    - ``speaker``, da mesma sprint: ``manager.apply_controller_speakers`` chama
+      ``apply_speaker(uniq=...)`` → ``apply_profile_speaker(uniq=...)`` →
+      ``set_speaker_volume(uniq=...)``, com o alvo no parâmetro em toda a
+      escada.
 
-    Fora por decisão (revisão adversarial do sprint perfis-por-controle):
+    Fora por decisão, e não por falta de caminho:
     - ``label`` — identidade visível é outra frente (4P-03);
     - ``mic_led`` — o mic jamais é colateral de troca de perfil
       (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01).
 
-    Fora porque NÃO TÊM RESPOSTA HONESTA por unidade — a nota datada de
-    10/08/2026, para não se reaprender (ver
-    ``docs/process/sprints/2026-08-10-POR-UNIDADE-01-*``). A máscara do gamepad
-    saiu desta lista em 15/08/2026: ela TEM resposta por unidade, só que a
-    resposta mora fora do perfil (ver a nota datada no primeiro item):
+    A FILA DO QUE FALTA, ORDENADA POR CUSTO — medida em 02/09/2026
+    ---------------------------------------------------------------
+    1. ``mic``. **O caminho por peça já existe inteiro; falta ligá-lo.** As três
+       primitivas estão de pé: ``EventTopic.MIC_DA_MESA`` publica a borda do
+       botão COM ``uniq`` (MIC-DA-MESA-ELEICAO-01, 01/09/2026),
+       ``audio_control.fonte_de_captura_do_uniq(uniq)`` resolve a placa de som
+       daquela peça (MIC-DA-MESA-CHEIA-01, 20/08) e
+       ``set_microphone_mute(muted, uniq=...)`` fala com o firmware dela.
+       Faltam três costuras, todas FORA deste arquivo: um
+       ``apply_controller_mics`` no gerente, irmão do de alto-falante;
+       ``lifecycle.apply_profile_mic`` usar ``fonte_de_captura_do_uniq`` quando
+       recebe ``uniq`` — hoje ele chama a rota GLOBAL
+       ``fonte_de_captura_do_controle()``, que devolve a PRIMEIRA fonte da
+       lista, então um volume por peça iria para o microfone do vizinho na mesa
+       cheia; e ``hotkey.mic_button_loop`` consultar o override daquele ``uniq``
+       antes de ``daemon.config.mic_button_toggles_system``, que é um por
+       máquina.
 
-    - ``mode`` é da SESSÃO, não da peça (decisão dela, 10/08/2026): duas
-      unidades pedindo modos diferentes no mesmo perfil não têm resposta,
-      porque o modo é estado do PROCESSO — existe um só, e o daemon não pode
-      estar em dois ao mesmo tempo;
+       **NOTA DATADA — 02/09/2026.** Esta docstring dizia que o ``mic`` não
+       cabia aqui porque *"o ``EventTopic.BUTTON_DOWN`` publica ``{"button",
+       "pressed"}`` e não carrega uniq, então o laço do mic não tem como saber
+       de qual peça veio o toque"*. A frase sobre o ``BUTTON_DOWN`` continua
+       verdadeira e o motivo dela morreu: o gesto do microfone deixou de passar
+       por ali. **O item mais caro da lista virou o mais barato.**
 
-      **NOTA DATADA — 15/08/2026 (MÁSCARA-POR-JOGADOR-01).** Esta frase dizia
-      ``mode`` **e a máscara do gamepad**, e ficou LARGA DEMAIS. Ela a
-      reescreveu para valer só para o ``mode``. O que a medição separou (o
-      diagnóstico inteiro está em
-      ``docs/process/sprints/2026-08-15-MASCARA-POR-JOGADOR-01-*``): o ``mode``
-      é mesmo um só, mas a máscara **já tem um lugar por jogador** — o co-op
-      cria um gamepad virtual por controle e cada um carrega o próprio
-      ``flavor``. Onde não havia resposta por unidade, havia; o motivo de 10/08
-      valia para o ``mode`` e foi emprestado à máscara sem medição própria.
-      **A máscara passa a ser do JOGADOR, com a do jogo como padrão herdado**
-      (D-5 de 14/08, respondida em 15/08).
+    2. ``giroscopio`` e ``acelerometro`` — a ``ProfileSensorsConfig`` que a
+       ONDA-CONTROLES-07 deve. O ``daemon/sensor_hub.py`` publica os dois POR
+       ``uniq``, mas só LÊ: os métodos públicos dele são ``leitura``,
+       ``reconciliar`` e ``stop_all``, e nenhum método do IPC do daemon casa
+       ``sensor``/``gyro``/``motion``/``accel``. **Não existe no produto nada
+       que desligue um sensor** — nem por peça, nem para todo mundo. O que
+       falta é o interruptor inteiro: ``sensors.set`` no IPC e a meia-janela
+       neutra do ``uhid_gamepad`` (o giroscópio e o acelerômetro viajam na
+       MESMA janela, em faixas de bytes distintas, e zerar meia faixa desliga
+       um sem tocar no outro). Enquanto ele não existir, um campo aqui seria a
+       tela prometendo um botão que não desliga nada.
 
-      **E mesmo assim ela NÃO é um campo daqui** — por uma razão diferente, e
-      medida: trocar a máscara **derruba e recria o gamepad virtual**. Num
-      campo de perfil, cada troca automática de perfil (cada alt-tab) faria o
-      controle sumir e voltar no meio da partida. Por isso a escolha por
-      unidade mora em ``daemon/subsystems/external_mask.py``, chaveada pela
-      identidade do APARELHO e persistida em arquivo próprio — com a MESMA
-      semântica de override que este modelo usa: sem escolha registrada, o
-      jogador herda a máscara do jogo (MÁSCARA-01, *"Onde a máscara mora"*);
-    - ``suppress_desktop_emulation`` (o "modo jogo") é irmão do ``mode`` pelo
-      mesmo eixo — ele cala a emulação do DESKTOP, que é uma só;
-    - ``mouse`` e ``key_bindings`` esbarram numa medição, não numa opinião:
-      ``PyDualSenseController.read_state`` diz, em comentário de código, que
-      *"INPUT vem SEMPRE do controle PRIMÁRIO"* e que a emulação de
-      mouse/teclado/gamepad é **single-controller por construção**. Há UM
-      ``_mouse_device`` e UM ``_keyboard_device`` no daemon, alimentados por
-      um ``read_state()`` por tick. Guardar velocidade por unidade sem
-      pipeline por unidade seria guardar um número que ninguém lê;
-    - ``mic.button_toggles_system`` pelo mesmo motivo do lado do barramento: o
-      ``EventTopic.BUTTON_DOWN`` publica ``{"button", "pressed"}`` e **não
-      carrega uniq**, então o laço do mic não tem como saber de qual peça veio
-      o toque. Somado a isso, o alvo do gesto é o microfone PADRÃO DO SISTEMA,
-      que é um só.
+    3. ``mode``, e ele é o único da fila com DOIS eixos. O ``mode`` é da SESSÃO
+       (decisão dela, 10/08/2026): existe um só, e o daemon não pode estar em
+       dois ao mesmo tempo. **A MÁSCARA do gamepad NÃO está nessa frase** —
+       ela ficou larga demais e ela a reescreveu em 15/08/2026
+       (MÁSCARA-POR-JOGADOR-01): o co-op cria um gamepad virtual por controle e
+       cada um carrega o próprio ``flavor``, então a máscara **é do jogador**,
+       com a do jogo como padrão herdado.
 
-    FORA POR AUSÊNCIA, NÃO POR DECISÃO — acrescentado em 29/08/2026, e é o
-    contrário de tudo que está acima. As duas listas anteriores são de coisas
-    que alguém pesou e recusou; **estas três nunca foram pesadas, e a lista sem
-    elas se lia como exaustiva**:
+       E mesmo assim a máscara não é campo daqui, por uma razão diferente e
+       medida: **trocar a máscara derruba e recria o gamepad virtual** — num
+       campo de perfil, cada troca automática (cada alt-tab) faria o controle
+       sumir e voltar no meio da partida. Por isso a escolha por unidade mora
+       em ``daemon/subsystems/external_mask.py``, chaveada pela identidade do
+       APARELHO e persistida em arquivo próprio, com a MESMA semântica de
+       override deste modelo: sem escolha registrada, o jogador herda a máscara
+       do jogo. Trazê-la para cá exige antes uma troca de máscara que NÃO
+       derrube o vpad.
 
-    - ``giroscopio`` e ``acelerometro`` — a interface já os mostra por controle
-      (``daemon/sensor_hub.py`` publica ``gyro``; o acelerômetro sai do MESMO
-      nó evdev e é descartado). Dona: ``ONDA-CONTROLES-07``, que traz a
-      ``ProfileSensorsConfig`` também para cá;
-    - ``touchpad`` — não existe em campo nenhum do perfil (``grep touch`` neste
-      arquivo devolve UMA linha, e é comentário), e nenhuma tela aprovada
-      oferece interruptor para ele: na aba Controles ele é leitura viva. **É
-      pergunta aberta para ela, não dívida com dono** — inventá-lo aqui seria
-      feature nova;
-    - ``microfone`` — tem resposta por unidade e ela JÁ FOI DADA, só que fora
-      daqui: mora em ``ControleDeclarado.microfone`` (``utils/maquina.py``),
-      por decisão dela de 22/08/2026 (*"por controle"*), com a razão escrita no
-      cabeçalho de ``daemon/subsystems/bt_mic.py`` — um microfone que liga ao
-      trocar de jogo é exatamente a surpresa que aquele módulo recusa. Trazê-lo
-      para o perfil é a ``ONDA-CONTROLES-06``, e é decisão dela, não daqui.
+    4. ``mouse``, ``key_bindings``, ``button_actions``, ``teclado_emulado`` e
+       ``suppress_desktop_emulation``. Os cinco esbarram na MESMA medição, e
+       ela continua de pé: ``PyDualSenseController.read_state`` diz, em
+       comentário de código, que *"INPUT vem SEMPRE do controle PRIMÁRIO"* e
+       que a emulação de mouse/teclado/gamepad é **single-controller por
+       construção**; o ``Daemon`` tem UM ``_mouse_device`` e UM
+       ``_keyboard_device`` (``daemon/lifecycle.py``), alimentados por um
+       ``read_state()`` por tique. Guardar por controle é fácil; **fazer valer**
+       exige um caminho de ENTRADA por unidade — ler cada peça e despachar para
+       o device dela. É o item mais caro da fila, e é o que destrava os cinco de
+       uma vez.
 
-    E O CONTRATO DO TOPO ESTÁ SOB REVISÃO DELA. ``Campo None = sem opinião``
-    vale para os quatro campos que existem, e ela derrubou o princípio geral em
-    18/08/2026 (*"o perfil tem de guardar tudo"*); a ``D-AUDIO-E-GIRO-NASCEM-LIGADOS``
-    de 25/08 o contradiz de frente, mandando áudio e giro nascerem LIGADOS em
-    todo jogo. A contradição está aberta e é dela — está registrada, não
-    resolvida, e ninguém deve fechá-la escrevendo código.
+    5. ``touchpad``. Continua sem campo em lugar nenhum do perfil e sem tela
+       aprovada que ofereça interruptor: na aba Controles ele é leitura viva.
+       **É pergunta aberta para ela, não dívida com dono** — inventá-lo aqui
+       seria feature nova.
+
+    A CONTRADIÇÃO ABERTA, E ELA É DELA — não se fecha escrevendo código
+    -------------------------------------------------------------------
+    Três frases desta casa não cabem juntas, e a decisão de 02/09 as põe frente
+    a frente:
+
+    - o contrato do topo desta classe: **campo ``None`` = sem opinião**, e
+      perfil que não pediu nada não impõe nada;
+    - ela, em 18/08/2026, derrubando o princípio geral: *"o perfil tem de
+      guardar tudo"*;
+    - ``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` (25/08): áudio e giroscópio nascem
+      **LIGADOS** em todo jogo — que é um default, não uma ausência.
+
+    Com "é tudo por controle", os três precisam ser reconciliados POR ELA. Está
+    registrado, não resolvido.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO QUATRO, e a tela oferece nove. O que falta e por quê está na última
-    # seção do docstring acima — três por ausência, não por decisão.
+    # SÃO QUATRO, e a tela oferece nove. O que falta, e o CAMINHO que cada um
+    # espera antes de poder entrar, está na fila da docstring acima — ordenada
+    # por custo, do mic (três costuras) à entrada por unidade (o pipeline).
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
