@@ -38,6 +38,30 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
     RUMBLE_POLICY_MULT,
 )
 
+# A LINHA DO ESTADO SAI DO PRODUTO, e não de prosa digitada aqui — 02/09/2026.
+# O mesmo par de funções que a tela viva chama monta o desenho da bancada: se um
+# dia a frase mudar no produto, o desenho muda junto e não fica um mockup
+# afirmando o que a tela já não diz.
+from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
+    html_do_estado,
+    textos_do_estado,
+)
+
+#: A CENA DA LINHA DE ESTADO no desenho, e o `economia` NÃO é enfeite.
+#:
+#: `textos_do_estado` consulta o ORÇAMENTO DA MÁQUINA (`carregar_maquina()`) para
+#: decidir se a linha "limitado a 30% pelo orçamento" aparece. Com um degrau
+#: qualquer, o desenho gerado passaria a depender da máquina de quem roda o
+#: gerador — e o portão `desenho-aprovado`, que compara byte a byte a bancada com
+#: o publicado, reprovaria sozinho na máquina seguinte.
+#:
+#: Com `economia` o teto NUNCA morde: o pedido é 0,3 e o único teto que o
+#: orçamento impõe é o mesmo 0,3 (`core.rumble.teto_do_orcamento`), e a função
+#: cala quando `pedido <= teto`. O desenho fica determinístico por CONSTRUÇÃO, e
+#: não por sorte da configuração de quem gerou.
+CENA_DO_ESTADO = {"rumble_policy": "economia",
+                  "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 1}}
+
 # ---------------------------------------------------------------------------
 # OS DOIS MOTORES, LIDOS DO MAPA. A coluna `regiao` do CSV é quem diz quais
 # peças são de vibração; o id no SVG é a coluna `no_svg`; o glifo é a coluna
@@ -429,6 +453,42 @@ CSS = """
   .vib .ds-svg .oculta{opacity:0 !important}
   .vib .ds-svg .oculta.acesa{opacity:.95 !important;
                              filter:drop-shadow(0 0 1.8px var(--plastico))}
+
+  /* ---------- A LINHA DO ESTADO — 02/09/2026 ----------
+     A janela estável tem QUATRO avisos nesta aba e a interface nova não tinha
+     nenhum. Eles não são decoração: um deles é o "a intensidade que você
+     escolheu não chega a jogo nenhum", que ficou onze dias sem tela.
+
+     DOIS TONS, e o nome do tom vem do produto (`app/telas/vibracao.DIZ` e
+     `.ALERTA`), nunca um hex emitido pelo Python: `diz` conta o que está
+     acontecendo, `alerta` avisa que o que ela escolheu não chega. O laranja é
+     o `--orange` do tema, o MESMO `#ffb86c` que a janela estável usa nestas
+     linhas — um token, não uma segunda cópia da cor.
+
+     `:empty{display:none}` é o que deixa a linha SUMIR quando não há o que
+     dizer. É a metade que o pintor não sabe fazer: `escrever()` troca vazio por
+     travessão, e um `—` numa linha de alerta afirmaria "não sei" onde a
+     resposta certa é "não há nada a avisar". Por isso o bloco inteiro é
+     trocado (`p.blocos`) em vez de pintado campo a campo. */
+  /* AS MARGENS SÃO MEDIDAS, não gosto — 02/09/2026, no Chrome, nesta aba. O
+     miolo tem 564 px e o quadro tinha 476: sobravam **24 px**. Uma linha de
+     estado custa 18 px de texto, e `12px 4px 2px` de margem punha o total em 32
+     — a aba passava a ROLAR por dentro, e ela teria de arrastar para ver o
+     "Testar" que sempre esteve à vista. Com `4px 4px 0` o total é 22 e a aba
+     continua inteira na tela.
+     COM AVISO A ABA ROLA, e isso é de propósito: os dois alertas
+     (`alcance`, `teto`) só aparecem em estado excepcional, e um estado
+     excepcional merece empurrar a tela — o que não pode é o estado NORMAL
+     custar uma barra de rolagem. */
+  .vib-estado{margin:4px 4px 0;display:flex;flex-direction:column;gap:6px}
+  .vib-estado:empty{display:none}
+  .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
+                   font-size:12px;line-height:1.5}
+  .vib-estado .est .sinal{flex:0 0 auto;font-size:9px;line-height:1.9}
+  .vib-estado .est.diz{color:var(--texto-suave)}
+  .vib-estado .est.diz .sinal{color:var(--green)}
+  .vib-estado .est.alerta{color:var(--orange)}
+  .vib-estado .est.alerta .sinal{color:var(--orange)}
 """
 
 # ---------------------------------------------------------------------------
@@ -707,6 +767,22 @@ MIOLO = f'''
 {"".join(_coluna(c) if c.get("conectado", True) else _coluna_vazia(c) for c in MESA)}
 
         </div>
+        <!-- A LINHA DO ESTADO — 02/09/2026. Ela existe na janela estável desde
+             sempre e NÃO existia aqui: a tela nova tinha os dois motores, os
+             quatro degraus e o "Testar", e nenhuma palavra sobre o que acontece
+             com eles. As quatro frases já estavam escritas e ninguém as chamava
+             (`app/actions/rumble_actions.py:186,291,370,459`).
+
+             DEPOIS DA GRADE, e não dentro: as cinco colunas compartilham as
+             alturas de linha, e uma linha a mais lá dentro empurraria o "Testar"
+             de todas as colunas para fora do y das divisórias — que é a régua
+             dela desde 30/08.
+
+             O `id` É O ENDEREÇO DO BLOCO: o pintor troca o miolo inteiro por
+             `p.blocos` (`hefesto_vivo.py:213`), porque o NÚMERO de linhas muda
+             com o estado e não há endereço para uma linha que ainda não existe.
+             Campo a campo, a linha que não se aplica viraria `—`. -->
+        <div class="vib-estado" id="vib-estado">{html_do_estado(textos_do_estado(CENA_DO_ESTADO))}</div>
       </div>
     </div>
 '''
@@ -824,6 +900,18 @@ def _conferir(doc):
                f'a coluna do {c["pref"]} não tem data-controle')
     exigir(corpo.count('data-controle="p') == len(MESA),
            f'as colunas endereçadas não são {len(MESA)}')
+    # 8. A LINHA DO ESTADO EXISTE E É A DO PRODUTO — 02/09/2026.
+    #    Não basta o bloco estar lá: o que ele mostra tem de ser BYTE A BYTE o
+    #    que `app/telas/vibracao` monta. É esta comparação que impede alguém de
+    #    "melhorar" a frase aqui e criar a segunda versão de um texto de tela —
+    #    o defeito que a regra de duas cópias existe para matar.
+    exigir('id="vib-estado"' in corpo, "a linha do estado sumiu da aba")
+    cena = textos_do_estado(CENA_DO_ESTADO)
+    exigir(len(cena) >= 1,
+           "a cena do estado ficou MUDA: o desenho não mostraria a linha, e "
+           "ninguém que abrisse o mockup saberia que ela existe")
+    exigir(html_do_estado(cena) in corpo,
+           "o texto da linha do estado não é o que o produto monta")
 
     if falhas:
         raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "

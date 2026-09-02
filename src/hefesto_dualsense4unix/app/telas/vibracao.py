@@ -263,6 +263,163 @@ def pacote_da_mesa(
     }
 
 
+#: OS DOIS TONS DA LINHA DE ESTADO, e são os mesmos da janela GTK: ``diz`` conta
+#: o que está acontecendo; ``alerta`` avisa que o que ela escolheu **não chega**.
+#: Lá o segundo é o token ``#ffb86c`` do tema
+#: (``app/actions/rumble_actions.py:1259``); aqui viaja o NOME e a cor mora no
+#: CSS da aba — a mesma disciplina do ``conta_cor``, que manda ``var(--green)``
+#: em vez de um hexadecimal.
+DIZ = "diz"
+ALERTA = "alerta"
+
+
+def _pedido_da_politica(state: dict[str, Any]) -> float | None:
+    """O multiplicador que esta aba está PEDINDO, ou ``None``.
+
+    É a MESMA conta da janela estável
+    (``rumble_actions._pintar_a_linha_do_teto``): o degrau responde pela tabela
+    do daemon, e só o ``custom`` pergunta ao multiplicador aplicado. O ``auto``
+    responde ``None`` de propósito — o teto dele é móvel (escala pela bateria) e
+    esta casa já decidiu não prometer número móvel na tela.
+
+    A tabela é a do produto, e não uma cópia: ``RUMBLE_POLICY_MULT`` é o mesmo
+    dicionário que :func:`teto_da_barra` e :func:`degraus_da_forca` já leem.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+    politica = str(state.get("rumble_policy") or "")
+    if politica == "custom":
+        aplicado = state.get("rumble_mult_applied")
+        if isinstance(aplicado, bool) or not isinstance(aplicado, (int, float)):
+            return None
+        return float(aplicado)
+    return RUMBLE_POLICY_MULT.get(politica)
+
+
+def _orcamento_da_maquina() -> str | None:
+    """A chave do orçamento GRAVADO, pelo dono dela; ``None`` = não sei.
+
+    ``secao_orcamento.orcamento_em_vigor`` aceita ``host=None`` e cai no
+    ``carregar_maquina()`` — é função de módulo, atravessa sem ``Gtk.Window``, e
+    é a mesma que a janela estável consulta. **Não se reescreve a leitura do
+    disco aqui**: quem sabe o que é "em vigor" (e por que o pendente do
+    "Aplicar" NÃO conta) é aquele módulo, por escrito.
+
+    O ``suppress`` é a diferença entre "não sei" e "quebrou a tela": esta linha
+    é um AVISO, e um orçamento ilegível não pode derrubar o tique que pinta os
+    dois motores.
+    """
+    import contextlib
+
+    from hefesto_dualsense4unix.app.actions.config.secao_orcamento import (
+        orcamento_em_vigor,
+    )
+
+    with contextlib.suppress(Exception):
+        return orcamento_em_vigor()
+    return None
+
+
+def textos_do_estado(
+    state: dict[str, Any], *, alvo: Any = None
+) -> list[tuple[str, str]]:
+    """A LINHA DE ESTADO da vibração: ``[(tom, frase), …]``, só o que tem a dizer.
+
+    **O buraco que ela fecha, medido em 02/09/2026.** A janela estável mostra
+    quatro avisos nesta aba e a interface nova mostrava ZERO — a tela nova tinha
+    os dois motores, os quatro degraus e o "Testar", e nenhuma palavra sobre o
+    que acontece com eles. As quatro frases já existiam, prontas, e ninguém as
+    chamava:
+
+    ==================================== =========================================
+    o que a linha diz                    de quem é a frase
+    ==================================== =========================================
+    quantas vezes o jogo pediu vibração  ``rumble_actions.texto_dos_pedidos_de_vibracao``
+    a intensidade não alcança o jogo     ``rumble_actions.texto_do_alcance_da_intensidade``
+    o orçamento limitou o multiplicador  ``rumble_actions.texto_do_teto_do_orcamento``
+    grava num lugar e manda em outro     ``rumble_actions.texto_de_onde_grava_e_onde_manda``
+    ==================================== =========================================
+
+    **NENHUMA FRASE NASCE AQUI.** Este módulo escolhe QUANDO perguntar e traduz
+    a resposta para a forma que a tela consome; o texto tem dono, e o dono é o
+    mesmo das duas telas. Duas cópias de um texto de tela divergem na primeira
+    edição — esta casa já pagou por isso.
+
+    **``None`` DE CADA UMA É "NÃO APARECE", nunca travessão.** O pintor troca
+    vazio por ``—`` (``hefesto_vivo.py:118``), e um travessão numa linha de
+    alerta afirmaria "não sei" onde a resposta é "não há o que avisar". Por isso
+    esta função devolve uma LISTA do que existe, e não um dicionário de campos
+    fixos: a linha que não se aplica não é apagada — ela **não é montada**.
+
+    :param alvo: o :class:`~app.alvo_de_edicao.AlvoDeEdicao` desta tela. O padrão
+        é ``TODOS``, e **é medição, não conveniência**: nesta aba a fita do topo
+        nasce inerte (decisão dela, 28/08), não há controle escolhido, e o único
+        clique que grava — o degrau de força — manda ``rumble.policy_set``, que
+        **não leva endereço**. Não há override de peça sendo escrito, logo não há
+        a divergência que aquela frase confessa, e um aviso permanente viraria
+        ruído crônico — é o próprio contrato da função, na letra.
+
+        A CHAMADA FICA MESMO ASSIM, e não é enfeite: no dia em que esta aba
+        ganhar alvo por controle (``MIGRA-VIBRACAO-04``), quem passar o alvo
+        certo aqui recebe a confissão pronta, sem ninguém redigir a frase de
+        novo. Uma linha de tela que a aba deveria ter e não tem é exatamente o
+        buraco que esta função fecha do outro lado.
+
+    **O QUE ELA NÃO COBRE**, e fica dito: a tela nova afirma QUATRO forças, uma
+    por coluna, e o produto tem UMA. Essa mentira é de outra natureza e já está
+    declarada em :data:`SEM_FONTE` (``forca:por-controle``); nenhuma das quatro
+    frases fala dela.
+    """
+    from hefesto_dualsense4unix.app.actions import rumble_actions as _ra
+    from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, EstadoDoAlvo
+
+    linhas: list[tuple[str, str]] = []
+    pedidos = _ra.texto_dos_pedidos_de_vibracao(state)
+    if pedidos:
+        linhas.append((DIZ, pedidos))
+    alcance = _ra.texto_do_alcance_da_intensidade(state)
+    if alcance:
+        linhas.append((ALERTA, alcance))
+    teto = _ra.texto_do_teto_do_orcamento(
+        _pedido_da_politica(state), _orcamento_da_maquina()
+    )
+    if teto:
+        linhas.append((ALERTA, teto))
+    onde = _ra.texto_de_onde_grava_e_onde_manda(
+        alvo if alvo is not None else AlvoDeEdicao(estado=EstadoDoAlvo.TODOS)
+    )
+    if onde:
+        linhas.append((DIZ, onde))
+    return linhas
+
+
+def html_do_estado(linhas: list[tuple[str, str]]) -> str:
+    """O miolo da linha de estado, em HTML. Lista vazia → string vazia.
+
+    **UM SÓ EMISSOR PARA OS DOIS LADOS**, e é por isso que ele mora aqui e não
+    no gerador nem no pacote: o desenho da bancada (``interface/aba05.py``) e a
+    tela viva (``pacotes/a05_vibracao.py``) montam estas linhas do MESMO lugar.
+    Dois emissores divergem no primeiro ajuste de classe, e aí o produto deixa
+    de parecer o desenho — que é o defeito que a pasta ``novo-layout/`` custou.
+
+    A STRING VAZIA É O PONTO: o CSS tem ``.vib-estado:empty{display:none}``, de
+    modo que "não há o que avisar" some da tela em vez de virar travessão.
+
+    O ``escape`` não é cerimônia: as frases vêm de ``rumble_actions`` e hoje
+    nenhuma leva ``<`` ou ``&``, mas elas são texto de tela e mudam sem passar
+    por aqui — o dia em que uma ganhar um ``&`` é o dia em que a linha some da
+    tela sem uma palavra de erro.
+    """
+    import html as _html
+
+    return "".join(
+        f'<div class="est {_html.escape(tom)}">'
+        f'<span class="sinal">{"▲" if tom == ALERTA else "●"}</span>'
+        f"<span>{_html.escape(frase)}</span></div>"
+        for tom, frase in linhas
+    )
+
+
 def estado_da_coluna(entrada: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
     """O estado no formato que ``aba05._coluna`` desenha, para a REMONTAGEM.
 
