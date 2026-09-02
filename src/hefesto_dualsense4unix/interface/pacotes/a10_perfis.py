@@ -1239,9 +1239,18 @@ def _editor_de(prof: Any) -> dict[str, Any]:
 #:                 `profiles/schema.Profile`, não há chave em
 #:                 `SIMPLE_MATCH_PRESETS` e os quinze estilos do desenho não têm
 #:                 arquivo atrás. Quem lhe dá motor é a ONDA-PERFIS-04.
-#:                 A tela não mente mais sobre ele: com `data-hef-alvo="valor"`
-#:                 e o valor vazio, o seletor abre em BRANCO em vez de dizer
-#:                 "Luta" para todo perfil.
+#:                 FATO ERRADO, SUBSTITUÍDO — 02/09/2026. Aqui estava escrito
+#:                 que *"a tela não mente mais sobre ele: com
+#:                 `data-hef-alvo="valor"` e o valor vazio, o seletor abre em
+#:                 BRANCO"*. **Ela mente.** Fotografado hoje, com o daemon vivo:
+#:                 o campo diz "Luta" para TODO perfil. A causa é o ramo `valor`
+#:                 do `escrever()` — um `<select>` só aceita o que ele oferece, e
+#:                 o vazio vira `'—'`, que não é opção nenhuma; a escrita é
+#:                 recusada e a marca `<option selected>Luta</option>` do desenho
+#:                 fica. Para o campo abrir em branco falta uma opção VAZIA no
+#:                 `<select>`, que é desenho — bancada e ato de publicar DELA.
+#:                 Enquanto isso, quinze estilos e um deles escolhido: a tela
+#:                 afirmando um valor que ninguém guarda.
 PONTE = {"profile_switch", "chamar"}
 METODOS = {"launch_env.refresh"}
 
