@@ -4,6 +4,9 @@ import monta as monta_
 from itertools import cycle
 from monta import (monta, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
                    cor_da_zona, luzinhas, player_slot_color, tom_da_casa)
+#: O PACOTE DESENHA A FILEIRA DE NÚMEROS, e o gerador a chama. Um dono, dois
+#: chamadores — ver `botao_player` abaixo.
+from pacotes import a04_iluminacao as _pacote04
 
 # ---------------------------------------------------------------------------
 # AS TRÊS MUDANÇAS DE 28/08/2026, e a que arrastou o resto.
@@ -463,36 +466,24 @@ CSS = """
 """
 
 
-def botao_player(c, n):
-    """Um número, na coluna de UM controle: dá-lo a `c` troca `c` com o dono.
+#: OS DONOS DOS NÚMEROS, como o desenho os conhece: só quem está na MESA.
+#:
+#: O DONO SÓ EXISTE SE ELE ESTIVER LÁ — 31/08/2026, e foi a régua desta aba que
+#: achou. O `title` dizia *"Dar o Player 3 ao Cosmic Red: o Galactic Purple
+#: (BT), que tem o 3 hoje, fica com o 1"* — e o Galactic Purple está
+#: DESCONECTADO. Ele não tem o 3 hoje; ele não tem nada hoje. É a mesma família
+#: do que ela mandou tirar do cabeçalho da coluna (*"colocar algo como
+#: Desconectado e não os controles mockados"*).
+DONOS_NA_MESA = {n: d for n, d in DONO.items() if d.get("conectado", True)}
 
-    O DONO SÓ EXISTE SE ELE ESTIVER NA MESA — 31/08/2026, e foi a régua desta
-    aba que achou. O `title` dizia *"Dar o Player 3 ao Cosmic Red: o Galactic
-    Purple (BT), que tem o 3 hoje, fica com o 1"* — e o Galactic Purple está
-    DESCONECTADO. Ele não tem o 3 hoje; ele não tem nada hoje.
 
-    É a mesma família do que ela mandou tirar do cabeçalho da coluna (*"colocar
-    algo como Desconectado e não os controles mockados"*): a `MESA` sabe que o
-    P3 é um Galactic Purple, e a TELA não deve saber enquanto ele não estiver
-    lá. Um número sem dono na mesa é um número **livre**, e é isso que a dica
-    passa a dizer.
-    """
-    d = DONO.get(n)
-    if d is not None and not d.get("conectado", True):
-        d = None
-    eu = d is c
-    anel = (f'<i class="dono" style="--plastico:{cor_da_zona(d["cor"])}"></i>'
-            if d is not None else "")
-    if eu:
-        dica = f"O {c['nome']} É o Player {n} — é o número dele hoje."
-    elif d is None:
-        dica = f"Player {n} — livre."
-    else:
-        dica = (f"Dar o Player {n} ao {c['nome']}: o {d['nome']} ({d['via']}), "
-                f"que tem o {n} hoje, fica com o {c['jogador']}. Os dois trocam de "
-                f"lugar — ninguém repete número e ninguém fica sem.")
-    return (f'<button class="{"on" if eu else ""}" data-campo="player-{n}" '
-            f'data-gesto="player" data-player="{n}" title="{dica}">{anel}{n}</button>')
+#: O `botao_player` DESTE ARQUIVO MORREU EM 02/09/2026, e a razão é a regra da
+#: casa: o produto passou a pintar esta fileira a cada tique (o `data-campo`
+#: saiu dos quatro botões e foi para o `.players`, com alvo `html`), e enquanto
+#: o botão fosse escrito em DOIS lugares o desenho e o produto podiam divergir
+#: sem ninguém ver — foi assim que a `novo-layout/` divergiu 25 KB calada.
+#: O dono único é `pacotes/a04_iluminacao.um_botao_de_player`, e este gerador é
+#: um dos dois chamadores.
 
 
 def coluna_vazia(c):
@@ -598,11 +589,11 @@ def coluna(c):
             <span class="hex" data-campo="hex">{cor}</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" style="width:{b}%"></span></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:{b}%"></span></span>
             <span class="num" data-campo="brilho">{b}%</span>
           </div>
-          <div class="players">
-{chr(10).join("            " + botao_player(c, n) for n in NUMEROS)}
+          <div class="players" data-campo="players" data-hef-alvo="html">
+{_pacote04.fileira_de_players(c["nome"], c["jogador"], DONOS_NA_MESA, "            ")}
           </div>
           <div class="aceso" data-campo="aceso" title="O {c["nome"]} aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player {j}.">
             <span class="tira-luz esq" style="background:{tinta};color:{tinta};opacity:{b / 100}"></span>
