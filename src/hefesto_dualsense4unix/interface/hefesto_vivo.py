@@ -78,10 +78,11 @@ PRIMEIRA = "01-jogar.html"
 #: por volta ficou em 0,9% do orçamento, com IPC de mediana 0,8 ms.
 TIQUE_MS = 500
 
-#: OS QUATRO LUGARES DA MESA DO DESENHO. O HTML nasce com eles todos — dois
-#: conectados e dois vazios, por decisão dela em 31/08 — e o produto tem de
-#: apagar o que a mesa de agora não preenche.
-TODOS_OS_LUGARES = {"p1", "p2", "p3", "p4"}
+#: OS QUATRO LUGARES DA MESA DO DESENHO mudaram de casa em 02/09/2026: vivem em
+#: `pacotes.TODOS_OS_LUGARES`, junto com a conta que os apaga
+#: (`pacotes.apagar_os_lugares_sem_dono`). O acoplamento entre o molde e quem o
+#: aplica tinha aqui uma régua que cobrava LITERAIS deste arquivo — e literal
+#: não é comportamento: a cura morria inteira com os três literais em pé.
 
 #: A aba que NÃO tem pacote, por decisão dela — só o botão que leva a ela.
 SEM_PACOTE = {"07-lancadores.html"}
@@ -113,13 +114,38 @@ TITULO_DE_QUALQUER_ABA = "Hefesto — aba "
 BOOTSTRAP = r"""
 (function(){
   window.__hef = window.__hef || {};
+  // O QUE CONTA COMO LIGADO, e vale só para o alvo `classe`. A lista é a mesma
+  // dos dois lados — `regua_do_mockup._ligado` repete estas nove palavras — e
+  // é ela que faz o `True` do Python e o `true` do JS quererem dizer a mesma
+  // coisa neste alvo. O travessão entra porque é o que o `escrever` põe no
+  // lugar de um valor vazio: um lugar VAZIO da mesa apaga a classe.
+  function ligado(t){
+    const b = String(t).trim().toLowerCase();
+    return !(b === '' || b === '—' || b === '0' || b === 'false'
+             || b === 'nao' || b === 'não' || b === 'off'  // (noqa-acento) valores
+             || b === 'none' || b === 'null');
+  }
   function escrever(el, v){
     if(!el) return 0;
-    const t = (v === null || v === undefined || v === '') ? '—' : String(v);
+    const vazio = (v === null || v === undefined || v === '');
+    const t = vazio ? '—' : String(v);
     // O ALVO PADRÃO É O TEXTO. `data-hef-alvo` desvia para um atributo quando a
     // tela precisa de outra coisa — a largura de uma barra, o `value` de um
     // campo. Sem isso, pintar uma barra escreveria o número DENTRO dela.
     const alvo = el.dataset.hefAlvo || 'texto';
+    // O SELO DA VISITA, e ele é O QUE DECIDE UM INDECIDÍVEL. A régua do mockup
+    // lê a TELA e por isso não consegue separar "o produto pintou o mesmo valor
+    // que o desenho cravou" de "ninguém tocou aqui" — eram 74 campos em 330.
+    // Este selo é o único fato que a tela não mostra: o piloto ESTEVE neste
+    // elemento com um valor. Ele é escrito a cada visita, mesmo quando nada
+    // muda, porque é justamente a visita SEM mudança que não deixa rastro.
+    //
+    // ELE NÃO É "LER O CÓDIGO". A casa já se enganou lendo o fonte e publicando
+    // 77% onde a tela mostrava 36%. O selo não afirma que um endereço existe no
+    // pacote: ele registra que o valor emitido CHEGOU a um elemento desta
+    // página — que é exatamente o degrau que faltava entre o `declarado` e o
+    // `vivo`. Endereço morto continua sem selo, e continua acusado.
+    el.dataset.hefVisto = '1';
     if(alvo === 'largura'){
       if(el.style.width !== t + '%'){ el.style.width = t + '%'; return 1; }
       return 0;
@@ -158,6 +184,70 @@ BOOTSTRAP = r"""
     // `document.querySelector`, e o `?` do teto é um POR CONTROLE. É o mesmo
     // degrau, um tamanho menor — o endereço é `data-campo`, distribuído.
     if(alvo === 'html'){ if(el.innerHTML !== t){ el.innerHTML = t; return 1; } return 0; }
+    // O ALVO `classe` — o ESTADO, que na tela dela é uma classe e não uma
+    // palavra. Ele destrava cinco coisas que a página já desenha e o produto
+    // não alcançava: qual dos quatro degraus da Vibração está aceso, o rótulo
+    // `Máx` do teto, qual botão de jogador acende na Iluminação, o clique do
+    // analógico e a coluna "Ajuste próprio" da Perfis.
+    //
+    // A SEMÂNTICA, e ela é a que os CINCO pilotos de aba já usavam — só que
+    // escrita cinco vezes e nunca no piloto único:
+    //
+    //     cls(b, 'on', b.dataset.rota === d.alto.rota)      controles_vivos:427
+    //     cls(chip, 'on', chip.dataset.mascara === d.mascara)  jogar_vivo:297
+    //     cls(b, 'on', p.autostart === true)                  sistema_viva:284
+    //
+    // Cada elemento do grupo diz QUEM ELE É em `data-hef-quando`, e a classe
+    // acende no que casar com o valor pintado. `data-hef-classe` nomeia a
+    // classe (`on` por omissão).
+    //
+    // LIGAR UM DESLIGA AS IRMÃS, e não por lista de irmãs: os quatro degraus
+    // compartilham o MESMO `data-campo`, então o `achar()` os visita todos com
+    // o mesmo valor e cada um decide por si. Um segundo clique não pode deixar
+    // dois acesos porque não há caminho no código em que dois casem — é a
+    // diferença entre apagar o vizinho e nunca ter acendido dois.
+    //
+    // SEM `data-hef-quando` O ALVO É BOOLEANO — o elemento acende por si, que é
+    // o caso do rótulo `Máx` e da coluna "Ajuste próprio".
+    //
+    // IDEMPOTENTE: compara antes de mexer e devolve 0 quando nada mudou. O
+    // `cls()` dos pilotos velhos devolvia 1 SEMPRE, e um alvo assim infla a
+    // contagem de pinturas de toda aba que o use — que é o instrumento com que
+    // esta casa prova que um endereço existe.
+    if(alvo === 'classe'){
+      const c = el.dataset.hefClasse || 'on';
+      const quando = el.dataset.hefQuando;
+      const aceso = (quando === undefined || quando === '') ? ligado(t) : (t === quando);
+      if(el.classList.contains(c) === aceso) return 0;
+      el.classList.toggle(c, aceso);
+      return 1;
+    }
+    // O ALVO `cor` — o `color` do elemento, e ele é o par que faltava do
+    // `fundo`. O clique do analógico é COR na GTK
+    // (`app/widgets/controller_card.py:5461`, "accent do CONTROLE quando
+    // pressionados") e era cor no piloto velho desta aba
+    // (`interface/controles_vivos.py:388`,
+    // `{color: s.on ? 'var(--plastico)' : ''}`). Sem este alvo, o pacote da
+    // aba Controles teve de escrever `[L3]` em TEXTO e deixou a razão escrita
+    // em `a02_controles.py:63` — *"enquanto o piloto não tiver o alvo, o texto
+    // é o canal honesto"*. Agora tem.
+    //
+    // ESCREVE E DEPOIS COMPARA, ao contrário dos outros alvos, e é a única
+    // forma de ser idempotente aqui: o CSSOM NORMALIZA na atribuição
+    // (`#6272a4` volta `rgb(98, 114, 164)` — medido no WebKit desta máquina em
+    // 02/09/2026), então comparar o que se vai escrever com o que está escrito
+    // acusaria mudança em TODO tique. De quebra, uma cor inválida é recusada
+    // pelo CSSOM sem mexer no valor antigo, e isto devolve 0 — em vez de somar
+    // uma pintura que não aconteceu.
+    //
+    // VAZIO APAGA a cor de linha, devolvendo o elemento à folha de estilo. É o
+    // que o piloto velho fazia com `''`, e é o que faz um analógico solto
+    // voltar à cor de sempre em vez de ficar aceso para sempre.
+    if(alvo === 'cor'){
+      const antes = el.style.color;
+      el.style.color = vazio ? '' : t;
+      return el.style.color === antes ? 0 : 1;
+    }
     if(el.textContent !== t){
       el.textContent = t;
       // O PAINEL QUE MOSTRA O FIM. Um registro tem ordem: o que acabou de
@@ -475,6 +565,28 @@ CLIQUE_COM_ALVO = r"""
 })(%s, %s)
 """
 
+#: O PEDIDO DE PINTURA — a expressão exata que o tique manda ao WebView.
+#:
+#: A GUARDA `window.__hef` NÃO É ZELO: entre o tique começar e o JS rodar, a
+#: página pode ter trocado, e o `__hef` é do DOCUMENTO — morre com ele. Medido
+#: em 01/09/2026, passeando pelas dez: duas abas devolviam `TypeError:
+#: undefined is not an object` a cada travessia. O `-1` diz "a página trocou no
+#: meio", que é diferente de "pintei nada", e o relato conta os dois separados.
+#:
+#: E ELA É UM TERNÁRIO, NÃO UM `|| -1`. Em JavaScript `0 || -1` é `-1`: com o
+#: `||`, TODO tique que pintava zero voltava como "a página trocou", nunca
+#: entrava na conta, e o detector de aba muda do relato era **ramo morto** —
+#: justamente a linha escrita para pegar a `06-navegacao` publicando zero
+#: endereços em 01/09. Medido em 02/09/2026: 178 tiques na `02-controles` e a
+#: lista de pinturas com UM elemento só.
+#:
+#: ELA É CONSTANTE, e não uma f-string solta no tique, para que
+#: `test_um_tique_que_pinta_zero_nao_vira_pagina_trocada` possa RODÁ-LA no
+#: WebKit — a expressão que o produto manda, e não uma reescrita dela.
+PEDIR_A_PINTURA = r"""
+(window.__hef && window.__hef.pintar) ? window.__hef.pintar(CARGA) : -1
+"""
+
 #: O LEITOR DO DOM, e ele é O instrumento do `--prova-de-mockup`: devolve, em
 #: ordem de documento, o que a TELA está mostrando em cada endereço de pintura.
 #:
@@ -487,6 +599,28 @@ CLIQUE_COM_ALVO = r"""
 #: a forma do arquivo com a forma do navegador acusaria mudança onde não houve.
 #: `regua_do_mockup._campo` lê os mesmos dois pelo texto, e é isso que faz os
 #: dois lados casarem.
+#:
+#: `cor` NÃO CAI NO TEXTO, e a diferença com o `fundo` é medida, não de gosto.
+#: Sondado no WebKit desta máquina em 02/09/2026, com a página offscreen:
+#:
+#:     '#6272a4'   → 'rgb(98, 114, 164)'     'red'         → 'red'
+#:     '#fff'      → 'rgb(255, 255, 255)'    'transparent' → 'transparent'
+#:     'var(--x)'  → 'var(--x)'              'rgb(1,2,3)'  → 'rgb(1, 2, 3)'
+#:
+#: **A FRASE QUE ESTAVA AQUI CAIU NO MESMO DIA**: *"a normalização é FECHADA e
+#: pequena — hexadecimal e `rgb()` viram uma só forma, e todo o resto volta como
+#: foi escrito"*. Não é fechada. A sonda de 51 formas mostrou que o `hsl()`
+#: também vira `rgb()`, que o alfa é serializado CURTO, que o alfa cheio some, e
+#: que todo CSS inválido volta `''` em vez de voltar como foi escrito.
+#: `regua_do_mockup._cor_css` acompanha TODAS essas famílias, e quem confere não
+#: é uma transcrição: `test_a_cor_e_medida_no_webkit_e_nao_transcrita` refaz a
+#: sonda neste motor a cada execução. Por isso a régua pode ler o `color` de
+#: verdade em vez do texto visível. Um campo de cor lido pelo texto seria
+#: INDECIDÍVEL para sempre: pintar a cor não mexe numa letra.
+#:
+#: O QUINTO CAMPO É O SELO DA VISITA, e ele não vem da tela — vem do piloto.
+#: Ver o comentário do `el.dataset.hefVisto` no BOOTSTRAP: é o que separa
+#: "pintou igual" de "não pintou" nos 74 campos que a régua não decidia.
 LER_CAMPOS = r"""
 (function(){
   const fora = [];
@@ -498,8 +632,19 @@ LER_CAMPOS = r"""
     let v;
     if(alvo === 'largura'){ v = el.style.width; }
     else if(alvo === 'valor'){ v = ('value' in el) ? String(el.value ?? '') : ''; }
+    else if(alvo === 'cor'){ v = el.style.color; }
+    else if(alvo === 'classe'){
+      // O QUE ESTE ELEMENTO MOSTRA, na MESMA língua em que o `escrever` recebe:
+      // o `data-hef-quando` de quem está aceso, ou `sim` quando o alvo é
+      // booleano. Devolver "quem do grupo está aceso" exigiria o leitor
+      // conhecer o grupo, e o parser de Python do outro lado não conhece — as
+      // duas leituras têm de casar endereço a endereço, e é essa igualdade que
+      // a guarda do DOM virgem cobra a cada aba.
+      const c = el.dataset.hefClasse || 'on';
+      v = el.classList.contains(c) ? (el.dataset.hefQuando || 'sim') : '';
+    }
     else { v = (el.textContent || '').replace(/\s+/g, ' ').trim(); }
-    fora.push([chave, dono, alvo, v]);
+    fora.push([chave, dono, alvo, v, el.dataset.hefVisto === '1']);
   }
   return JSON.stringify(fora);
 })()
@@ -601,10 +746,21 @@ class Piloto:
         self.relatou = False
         self.pagina = PRIMEIRA
         self.voltas = 0
-        #: Quantos valores cada aba pintou, na ordem em que foram visitadas. É o
-        #: relato do fim, e é o que distingue "a aba não tem dado" de "a aba tem
-        #: pacote e nenhum endereço casou".
+        #: Quantos valores cada aba pintou, na ordem em que foram visitadas —
+        #: só os tiques que escreveram ALGUMA coisa. É o que mede a quietude:
+        #: uma aba sadia pinta uma vez e sossega, e uma que soma pintura a cada
+        #: tique tem endereço que o navegador recusa.
         self.pinturas: dict[str, list[int]] = {}
+        #: Quantos tiques cada aba levou, PINTANDO OU NÃO. Sem este contador não
+        #: dá para dizer "a aba tem pacote e nenhum endereço casou": um tique de
+        #: zero valor não deixava rastro nenhum, e o detector de aba muda ficava
+        #: inalcançável. Medido em 02/09/2026 — 178 tiques na `02-controles` e um
+        #: só elemento em `pinturas`.
+        self.tiques: dict[str, int] = {}
+        #: Quantas vezes a página TROCOU no meio de um tique. É o `-1`, e ele é
+        #: um fato diferente de "pintei nada" — misturar os dois foi o que
+        #: engoliu o zero.
+        self.trocas: dict[str, int] = {}
         self.visitadas: list[str] = []
         self.custos: list[float] = []
         #: O que ESTE processo mandou ao daemon, e o que recusou por falta de
@@ -1002,18 +1158,12 @@ class Piloto:
         # É a sétima aparição do mesmo defeito nesta casa — *a tela afirmando um
         # controle que não está na mesa* — e a única cura que não depende de
         # cada aba lembrar-se dela é esta: quem pinta apaga o que sobra.
-        chaves = set()
-        for campos in carga["colunas"].values():
-            chaves |= set(campos)
-        vivos = set(carga["colunas"])
-        apagar = sorted(TODOS_OS_LUGARES - vivos)
-        for pref in apagar:
-            carga["colunas"][pref] = dict.fromkeys(chaves, "—")
-        # A MOLDURA TAMBÉM, e não só o texto: com os travessões escritos, o card
-        # do P2 continuava com a borda de CONECTADO e os botões de máscara
-        # acesos. Meio apagado é pior que aceso — quem olha lê a borda antes de
-        # ler o campo.
-        carga["vazios"] = apagar
+        #
+        # A CONTA MORA NO DESPACHANTE, e a mudança é de 02/09/2026: escrita
+        # aqui, ela só tinha uma régua que procurava LITERAIS neste arquivo — e
+        # a cura morria inteira sem que os literais sumissem. Ver
+        # `pacotes.apagar_os_lugares_sem_dono`.
+        pacotes.apagar_os_lugares_sem_dono(carga)
 
         def contou(valor: Any, erro: Any) -> None:
             if erro is not None:
@@ -1023,19 +1173,21 @@ class Piloto:
                 n = int(str(valor))
             except (TypeError, ValueError):
                 n = -1
-            # O `-1` (página trocada no meio) NÃO entra na conta: contá-lo
-            # como zero faria uma aba viva parecer muda na travessia.
-            if n >= 0:
+            # O `-1` (página trocada no meio) NÃO entra na conta de tiques:
+            # contá-lo como zero faria uma aba viva parecer muda na travessia.
+            if n < 0:
+                self.trocas[self.pagina] = self.trocas.get(self.pagina, 0) + 1
+                return
+            self.tiques[self.pagina] = self.tiques.get(self.pagina, 0) + 1
+            # O ZERO CONTA COMO TIQUE E NÃO COMO PINTURA, e é essa separação que
+            # faltava: `pinturas` mede a quietude (uma aba sadia pinta uma vez e
+            # para), `tiques` mede que a aba RODOU. Sem os dois, "pintou uma vez
+            # e sossegou" e "a página trocou 177 vezes" saíam iguais.
+            if n > 0:
                 self.pinturas.setdefault(self.pagina, []).append(n)
 
-        # A GUARDA `window.__hef &&` NÃO É ZELO: entre o tique começar e o JS
-        # rodar, a página pode ter trocado — e o `__hef` é do DOCUMENTO, morre
-        # com ele. Medido em 01/09/2026, passeando pelas dez: duas abas
-        # devolviam `TypeError: undefined is not an object` a cada travessia.
-        # O `-1` diz "a página trocou no meio", que é diferente de "pintei
-        # nada" — e o relato conta os dois separados.
-        self.ponte.perguntar(
-            f"(window.__hef && window.__hef.pintar({_json(carga)})) || -1", contou)
+        self.ponte.perguntar(PEDIR_A_PINTURA.replace("CARGA", _json(carga)),
+                             contou)
         # A CARGA DESTE TIQUE fica guardada: é ela — e não o código-fonte do
         # pacote — que diz o que o produto DECLAROU pintar nesta aba agora. Ler
         # daqui é o que separa esta régua das anteriores, que perguntavam se o
@@ -1129,7 +1281,7 @@ class Piloto:
             self._proxima_aba()
             return
         try:
-            vivos: list[list[str]] = json.loads(str(valor))
+            vivos: list[list[Any]] = json.loads(str(valor))
         except ValueError as e:
             self.cegueiras.append(f"{pagina}: a leitura final não veio em JSON — {e}")
             self._proxima_aba()
@@ -1158,7 +1310,8 @@ class Piloto:
                 f"{pagina}: o DOM virgem trouxe {len(virgem)} endereços e o "
                 f"arquivo {len(cravados)}")
         else:
-            for c, (k, d, _, v) in zip(cravados, virgem, strict=True):
+            for c, linha in zip(cravados, virgem, strict=True):
+                k, d, _alvo, v = linha[:4]
                 if (str(k), str(d)) != (c.chave, c.dono):
                     self.cegueiras.append(
                         f"{pagina}: o arquivo põe {c.endereco} onde a página "
@@ -1169,8 +1322,15 @@ class Piloto:
                         f"arquivo e a página virgem mostra {v!r} — o parser e o "
                         f"leitor de tela discordam neste alvo ({c.alvo})")
 
+        # O SELO VIAJA JUNTO, e ele é o quinto elemento de cada linha. Vem como
+        # `true`/`false` do JSON e é o único que NÃO se converte para texto: o
+        # `str(False)` é `'False'`, que é verdadeiro em Python, e isso daria selo
+        # a todo campo — todos os 74 indecidíveis viravam PRODUTO de graça.
         alinhados, nasceram = regua_do_mockup._alinhar(
-            cravados, [(str(a), str(b), str(c), str(d)) for a, b, c, d in vivos])
+            cravados, [(str(x[0]), str(x[1]), str(x[2]), str(x[3])) for x in vivos])
+        selos = regua_do_mockup._selos_alinhados(
+            cravados, [(str(x[0]), str(x[1]), str(x[2]), str(x[3]),
+                        bool(x[4]) if len(x) > 4 else False) for x in vivos])
         if nasceram:
             print(f"[prova-de-mockup] {pagina}: {len(nasceram)} endereço(s) "
                   f"NASCERAM na tela (o produto trocou um bloco): "
@@ -1186,8 +1346,14 @@ class Piloto:
             cravados = [dataclasses.replace(c, valor="\x00cura arrancada")
                         for c in cravados]
         declarados = regua_do_mockup._declarados_do_pacote(self._carga_de_agora)
+        if self.args.sem_selo:
+            # A OUTRA MORDIDA, e ela é do selo: sem ele, todo campo que coincide
+            # com o desenho volta a ser INDECIDÍVEL. Uma execução com isto ligado
+            # que devolva o MESMO número de indecidíveis está dizendo que o selo
+            # não decidiu nada — e aí ele é enfeite, não instrumento.
+            selos = [False] * len(cravados)
         self.vereditos[pagina] = regua_do_mockup._classificar(
-            cravados, alinhados, declarados)
+            cravados, alinhados, declarados, selos)
         contas = regua_do_mockup._contar(self.vereditos[pagina])
         print(f"[prova-de-mockup] {pagina:22s} "
               f"produto {contas[regua_do_mockup.PRODUTO]:3d} · "
@@ -1225,11 +1391,28 @@ class Piloto:
                 marca = " ← ENDEREÇO MORTO" if preso.declarado is not None else ""
                 print(f"      {preso.campo.endereco:28s} = {preso.vivo!r}{marca}")
 
+        # O QUE O SELO DECIDIU, e a conta é ESTREITA de propósito: só os campos
+        # em que a tela continua IGUAL ao arquivo. Contar todo PRODUTO cujo
+        # declarado bate com o vivo daria 222 — a maioria são campos que a
+        # pintura MUDOU, e esses já eram decididos pelo valor. Errei essa conta
+        # uma vez e o relato publicou 222 onde a diferença é 74.
+        coincidem = sum(
+            1 for vs in self.vereditos.values() for v in vs
+            if v.classe == r.PRODUTO and v.vivo == v.campo.valor
+            and v.declarado is not None and v.declarado == v.vivo)
+        if coincidem:
+            print(f"\nDESTES, {coincidem} SÃO PRODUTO PELO SELO DA VISITA: o valor que o "
+                  "piloto\nescreveu COINCIDE com o que o desenho cravou, e antes do selo "
+                  "isso\nera INDECIDÍVEL. O selo não é a tela — é o `escrever()` "
+                  "registrando\nque esteve naquele elemento com aquele valor. Para "
+                  "conferir que ele\ndecide alguma coisa: `--sem-selo` tem de devolvê-los "
+                  "aos indecidíveis.")
         if soma[r.INDECIDIVEL]:
-            print(f"\nOS {soma[r.INDECIDIVEL]} INDECIDÍVEIS não são um buraco: são campos em "
-                  "que o valor\nque o produto pinta COINCIDE com o que o desenho "
-                  "cravou. Ler a tela\nnão separa 'pintou igual' de 'não pintou' — "
-                  "e a régua prefere dizer\nquantos são a inventar certeza.")
+            print(f"\nOS {soma[r.INDECIDIVEL]} INDECIDÍVEIS que SOBRAM são campos em que o "
+                  "valor coincide\ncom o desenho e o piloto NÃO passou pelo elemento — "
+                  "quase sempre\num bloco que a pintura trocou inteiro. Ler a tela não "
+                  "separa\n'pintou igual' de 'não pintou', e a régua prefere dizer "
+                  "quantos são\na inventar certeza.")
 
         if self.cegueiras:
             print(f"\nA RÉGUA NÃO ENXERGOU {len(self.cegueiras)} coisa(s) — e isso reprova, "
@@ -1480,14 +1663,26 @@ class Piloto:
             # e parecer que o relato rodava duas vezes. Não rodava.
             self.tela.fotografar(self.args.foto)
         print(f"\nvoltas: {self.voltas} · abas visitadas: {len(self.visitadas)}")
-        print(f"{'aba':22s} {'pinturas':>8s} {'valores':>8s}")
+        print(f"{'aba':22s} {'tiques':>7s} {'pinturas':>8s} {'valores':>8s}")
         mudas = []
         for pagina in sorted(pacotes.PACOTES):
             conta = self.pinturas.get(pagina) or []
             pico = max(conta) if conta else 0
-            print(f"{pagina:22s} {len(conta):8d} {pico:8d}")
-            if conta and pico == 0:
+            tiques = self.tiques.get(pagina, 0)
+            print(f"{pagina:22s} {tiques:7d} {len(conta):8d} {pico:8d}")
+            # A ABA MUDA É A QUE RODOU E NUNCA ESCREVEU UM VALOR. Antes esta
+            # linha perguntava `pico == 0` sobre uma lista em que o zero nunca
+            # entrava — era ramo morto. Agora `tiques` conta o tique e
+            # `pinturas` conta só quem escreveu, e a diferença entre os dois é o
+            # fato: pacote com endereço que não casa.
+            if tiques and not conta:
                 mudas.append(pagina)
+        # AS TROCAS SAEM NO RELATO, e não ficam num contador que ninguém lê: um
+        # `-1` é a página tendo trocado no meio do tique, e ver muitos deles é
+        # ver o passeio andando rápido demais para a pintura acompanhar.
+        if self.trocas:
+            print("página trocada no meio do tique: " + " · ".join(
+                f"{p} {n}" for p, n in sorted(self.trocas.items())))
         if self.provas:
             def classe(p: dict[str, Any]) -> str:
                 if p.get("desfecho") == "sem dono":
@@ -1598,6 +1793,10 @@ def main() -> None:
                    help="MORDIDA: arranca a comparação com o arquivo publicado e "
                         "compara a tela com ela mesma. A régua tem de parar de "
                         "acusar — se continuar acusando, ela não mede o que diz")
+    p.add_argument("--sem-selo", action="store_true",
+                   help="MORDIDA: arranca o selo da visita. Os campos que "
+                        "coincidem com o desenho voltam a ser INDECIDÍVEIS — e "
+                        "se o número não voltar, o selo não estava decidindo nada")
     args = p.parse_args()
 
     if args.prova_de_mockup and not args.oculta:
