@@ -229,37 +229,93 @@ def test_quando_a_tela_acompanha_tudo_vira_produto(sob_o_duble):
 #: linha de erro em lugar nenhum.
 _SELECT = r'<select[^>]*data-campo="{}"[^>]*>(.*?)</select>'
 
+#: OS CAMPOS QUE ESPERAM A PUBLICAÇÃO DELA, com a razão — 02/09/2026.
+#:
+#: POR QUE ESTA LISTA PRECISOU EXISTIR: o desenho anda na BANCADA e o produto só
+#: recebe quando ela publica (`scripts/check_o_desenho_aprovado.py --publicar`),
+#: e nesse intervalo o pacote fala uma língua que a página publicada ainda não
+#: entende. Para um `<select>`, isso não dá erro nenhum: o `escrever()` do
+#: piloto devolve `0` **em silêncio** quando o texto não casa com nenhuma
+#: `<option>` — o campo simplesmente para, e nada acusa.
+#:
+#: Então a régua não pode nem reprovar (o desenho novo é decisão dela, e a
+#: publicação também) nem calar (parar de pintar um campo é exatamente o
+#: defeito que ela existe para pegar). Ela COBRA A DECLARAÇÃO: contra a bancada
+#: o casamento é obrigatório e sem exceção; contra o publicado, todo campo que
+#: deixar de casar tem de estar aqui, com o que se perde enquanto isso durar.
+#:
+#: `teclado-estado` — as três palavras da "Função do teclado" mudaram por
+#: decisão dela de 02/09 (`Só dentro do jogo` · `Só fora do jogo` ·
+#: `Desativado`), e a página publicada ainda oferece as antigas: `Ligada —
+#: atalhos e teclado na tela` · `Só fora do jogo` · `Desligada`.
+#:
+#: A TRAVESSIA É PELA METADE, e é bom que a régua diga qual metade: **`Só fora
+#: do jogo` já existe nas duas páginas**, então o teclado LIGADO continua sendo
+#: pintado no produto de hoje — e passa a ser pintado com a palavra certa, no
+#: lugar do "Ligada…" que o desenho publicado crava. Quem espera a publicação é
+#: só o estado DESLIGADO: `Desativado` não existe na lista publicada, e é
+#: exatamente o estado do dublê. Enquanto ela não publicar, desligar o teclado
+#: deixa esta linha da tela parada no que estiver.
+ESPERANDO_A_PUBLICACAO = {"teclado-estado"}
+
+
+def _opcoes_da_pagina(publicado: bool, chave: str) -> set[str] | None:
+    """As `<option>` daquele `<select>`, na bancada ou no publicado."""
+    import onde
+
+    doc = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
+    bloco = re.search(_SELECT.format(re.escape(chave)), doc, re.S)
+    if not bloco:
+        return None
+    return set(re.findall(r"<option[^>]*>(.*?)</option>", bloco.group(1)))
+
 
 def test_todo_valor_do_duble_existe_como_opcao(sob_o_duble):
-    """As 21 escolhas do dublê têm de ser oferecidas pela lista daquela linha.
+    """As 22 escolhas do dublê têm de ser oferecidas pela lista daquela linha.
 
     O teste irmão (`test_a_06_nao_manda_para_o_vazio`) cobre isto para o
     **de fábrica**; aqui o alvo são as opções que só aparecem quando o perfil
     dela diverge — que é justamente o caso que nunca foi exercitado, e o que
     faria um campo ficar parado para sempre sem ninguém ver.
-    """
-    import onde
 
-    doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    DUAS PÁGINAS, E O QUE CADA UMA COBRA — 02/09/2026. Contra a **bancada** (o
+    desenho de hoje) o casamento é obrigatório: um valor sem `<option>` ali é
+    defeito do pacote, sem atenuante. Contra o **publicado** ele é o que mede a
+    travessia: enquanto ela não publicar, um campo cujo desenho mudou para de
+    ser pintado no produto, e isso tem de estar DECLARADO em
+    `ESPERANDO_A_PUBLICACAO` com o preço escrito — nunca calado.
+
+    A MORDIDA: tire `teclado-estado` da declaração — esta régua acusa que o
+    campo parou de casar com a página que ela usa hoje.
+    """
     cravados, declarados = sob_o_duble
-    conferidos = 0
+    conferidos, parados = 0, set()
     for campo in cravados:
         if campo.alvo != "valor":
             continue
-        valor = declarados.get((campo.dono, campo.chave),
-                               declarados.get(("", campo.chave)))
-        bloco = re.search(_SELECT.format(re.escape(campo.chave)), doc, re.S)
-        assert bloco, f"{campo.endereco}: sem `<select>` com esse endereço"
-        opcoes = set(re.findall(r"<option[^>]*>(.*?)</option>", bloco.group(1)))
-        assert str(valor) in opcoes, (
-            f"{campo.endereco}: o dublê manda {valor!r} e a lista do desenho "
-            "não oferece essa opção — a pintura se calaria e o campo ficaria "
-            "parado para sempre.")
+        valor = str(declarados.get((campo.dono, campo.chave),
+                                   declarados.get(("", campo.chave))))
+        na_bancada = _opcoes_da_pagina(False, campo.chave)
+        assert na_bancada is not None, (
+            f"{campo.endereco}: a bancada não tem `<select>` com esse endereço")
+        assert valor in na_bancada, (
+            f"{campo.endereco}: o dublê manda {valor!r} e a lista do desenho de "
+            "hoje não oferece essa opção — a pintura se calaria e o campo "
+            "ficaria parado para sempre.")
+        no_produto = _opcoes_da_pagina(True, campo.chave)
+        if no_produto is None or valor not in no_produto:
+            parados.add(campo.chave)
         conferidos += 1
     assert conferidos == 22, (
         f"conferi {conferidos} listas e a aba tem 22 (as 21 linhas de botão "
         "mais a 'Função do teclado') — se o número caiu, um `<select>` perdeu "
         "o endereço e saiu da conferência sem reprovar nada.")
+    assert parados == ESPERANDO_A_PUBLICACAO, (
+        f"os campos que a página PUBLICADA já não sabe receber são {sorted(parados)}, "
+        f"e a declaração diz {sorted(ESPERANDO_A_PUBLICACAO)}.\n"
+        "Um campo a mais é uma linha da tela dela que parou de ser pintada sem "
+        "ninguém dizer; um a menos é declaração que envelheceu — e declaração "
+        "velha é a régua se desligando sozinha.")
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
