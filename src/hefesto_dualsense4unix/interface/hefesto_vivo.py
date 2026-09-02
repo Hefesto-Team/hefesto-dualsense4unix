@@ -87,6 +87,15 @@ TIQUE_MS = 500
 #: A aba que NÃO tem pacote, por decisão dela — só o botão que leva a ela.
 SEM_PACOTE = {"07-lancadores.html"}
 
+#: QUANTO TEMPO A FRASE DE RECUSA FICA NA TELA. Decisão dela, 02/09/2026, sobre
+#: a recusa do microfone: *"a frase de recusa SOME depois de um tempo — ~30 s e
+#: desaparece. É aviso, não estado."*
+#:
+#: O CANAL É UM SÓ PARA AS DEZ ABAS, então a vida da frase também é: dois
+#: relógios para a mesma coisa seriam a segunda cópia da mesma regra, e a
+#: segunda divergiria. Ver `Piloto._recados_para_a_tela`.
+SEGUNDOS_DO_RECADO = 30.0
+
 #: O QUE A GUARDA DE CARGA ACEITA. Os pilotos de uma aba só passavam o nome
 #: dela — `"Controles"` — e a guarda matava a janela em qualquer outra página.
 #: Aqui as DEZ são legítimas, então o esperado é o que as dez compartilham:
@@ -278,6 +287,79 @@ BOOTSTRAP = r"""
     return raiz.querySelectorAll(
       '[data-campo="' + esc + '"],[data-papel="' + esc + '"],[data-hef="' + esc + '"]');
   }
+  // A CARA DO AVISO, e ela REUSA a paleta das dez páginas em vez de inventar
+  // cor: `--orange` é o alerta do mockup e `--elevated` é o fundo de caixa. Os
+  // literais só valem se a página não definir a variável.
+  const ESTILO_DO_RECADO =
+    'margin:6px 0;padding:6px 9px;border-radius:6px;font-size:12px;'
+    + 'line-height:1.35;pointer-events:none;'
+    + 'color:var(--orange,#ffb86c);background:var(--elevated,#2b2d3a);'
+    + 'border:1px solid var(--orange,#ffb86c);';
+  //: A TARJA é o recado que não tem cartão a que pertencer — um gesto do
+  //: rodapé, uma aba sem coluna de controle (`09-sistema`, `10-perfis`), ou o
+  //: cartão daquele controle que não existe NESTA página.
+  const ESTILO_DA_TARJA =
+    'position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;margin:0;';
+  // O RECADO DA RECUSA — a frase do produto CHEGANDO AO CARTÃO.
+  //
+  // POR QUE ELE PRECISOU EXISTIR, medido em 02/09/2026 PELO CAMINHO DELA: o
+  // contrato desta casa diz que `RuntimeError` é *"o produto recusou, e a frase
+  // VAI PARA A TELA"*. Ela ia para a SAÍDA DE ERRO DO PROCESSO — `[gesto
+  // falhou] …` no terminal de quem lançou a janela. Quem clica não lê terminal:
+  // o botão respondia calado, e o segundo clique parecia o primeiro. Dois
+  // cliques no 🎙 da `02-controles`, com um dublê que faz o daemon recusar: os
+  // dois recusaram com a frase certa, o `desfechos` a guardou, e o DOM não tinha
+  // uma letra dela.
+  //
+  // ELE NÃO USA ENDEREÇO DE PÁGINA, e isso é decisão: nenhuma das dez tem
+  // `data-campo` de recado, e a `a04_iluminacao` já enterrou um justamente por
+  // ser emitido num endereço que NENHUMA página tinha. Publicar HTML é ato
+  // dela; o piloto é dono da JANELA e desenha o próprio aviso sem pedir campo a
+  // ninguém.
+  //
+  // E ELE NÃO GANHA `data-campo`/`data-papel`/`data-hef` DE PROPÓSITO: o
+  // `LER_CAMPOS` varre exatamente esses três, e um nó novo com um deles entraria
+  // na conta da régua do mockup como campo da página — a régua passaria a medir
+  // o próprio instrumento.
+  function pintar_recados(lista){
+    let n = 0;
+    const vivas = [];
+    for(const r of lista){
+      const chave = String(r.chave || '');
+      vivas.push(chave);
+      // O CARTÃO DAQUELE CONTROLE, quando ele existe NESTA página. Quando não
+      // existe, a frase vira tarja em vez de sumir: um recado depositado e não
+      // mostrado é o mesmo silêncio que esta função nasceu para curar.
+      const cartao = chave
+        ? document.querySelector('[data-controle="' + chave + '"],[data-uniq="' + chave + '"]')
+        : null;
+      const pai = cartao || document.body;
+      let el = document.querySelector('.hef-recado[data-hef-recado="' + chave + '"]');
+      // A PINTURA TROCA BLOCOS INTEIROS — a fita, a tabela de perfis, o mapa do
+      // gabinete. Um recado que perdeu o pai é recriado no pai de agora, com o
+      // estilo do lugar em que passou a morar.
+      if(el && el.parentNode !== pai){ el.remove(); el = null; }
+      if(!el){
+        el = document.createElement('div');
+        el.className = 'hef-recado';
+        el.setAttribute('data-hef-recado', chave);
+        // `role=status` é o que um leitor de tela anuncia sem roubar o foco.
+        el.setAttribute('role', 'status');
+        // SEM CLIQUE: o aviso mora DENTRO do cartão e o ouvinte é delegado —
+        // sem isto um clique nele subiria pelo `closest` e viraria gesto.
+        el.style.cssText = ESTILO_DO_RECADO + (cartao ? '' : ESTILO_DA_TARJA);
+        if(cartao){ pai.insertBefore(el, pai.firstChild); } else { pai.appendChild(el); }
+        n += 1;
+      }
+      if(el.textContent !== r.texto){ el.textContent = r.texto; n += 1; }
+    }
+    for(const el of document.querySelectorAll('.hef-recado')){
+      if(vivas.indexOf(el.getAttribute('data-hef-recado') || '') < 0){
+        el.remove(); n += 1;
+      }
+    }
+    return n;
+  }
   window.__hef.pintar = function(p){
     let n = 0;
     // A FITA SE TROCA INTEIRA, e não campo a campo: o número de chips muda com
@@ -340,6 +422,15 @@ BOOTSTRAP = r"""
         }
       }
     }
+    // 3. OS RECADOS DE RECUSA, e eles vêm por ÚLTIMO porque os passos acima
+    // trocam blocos inteiros — recriar antes seria pôr o aviso num cartão que a
+    // pintura estava prestes a substituir.
+    //
+    // `undefined` QUER DIZER "esta carga não fala de recado", e é diferente de
+    // uma lista vazia: a resposta de um gesto (`_deu_certo`) pinta o que trouxe
+    // e não pode apagar o aviso que acabou de nascer. Quem manda a lista —
+    // cheia ou vazia — é o tique, que é o dono do depósito.
+    if(p.recados !== undefined){ n += pintar_recados(p.recados || []); }
     return n;
   };
   // O OUVINTE DE CLIQUE, e ele é UM SÓ para a página inteira. Um
@@ -783,6 +874,21 @@ class Piloto:
         #: Em que bloco de controle cada clique caiu — ou se o alvo foi FORÇADO
         #: pela régua, que é defeito da PÁGINA e não sucesso do produto.
         self._onde_clicou: dict[str, str] = {}
+        #: A FRASE DE RECUSA DE CADA CARTÃO — `{pref: (frase, quando_monotônico)}`.
+        #:
+        #: ELA VIVE NO ESTADO, e não no instante do clique: a tela repinta a cada
+        #: 500 ms, e uma frase publicada só no tique da borda tem probabilidade
+        #: ~0 de coincidir com o tique em que ela olha — existiria e ninguém a
+        #: veria. É a mesma razão pela qual
+        #: `daemon/subsystems/recado_do_microfone.py` é um DEPÓSITO e não um
+        #: evento, e a chave segue a mesma ideia: uma por controle, porque na
+        #: mesa de quatro a recusa de um não pode aparecer no cartão do vizinho.
+        #: A chave vazia é o recado da MESA — o gesto que não age em controle
+        #: nenhum.
+        #:
+        #: SÓ O LAÇO DO GTK ESCREVE AQUI. O gesto corre em thread, e depositar de
+        #: lá deixaria o tique iterando um dicionário que outra thread muda.
+        self._recados: dict[str, tuple[str, float]] = {}
         self._fila: list[str] = []
         #: O `--prova-de-mockup`: o que o ARQUIVO crava, o que o DOM mostra
         #: ANTES de qualquer pintura, e o veredito de cada campo por aba.
@@ -923,8 +1029,11 @@ class Piloto:
                 # some com "não fez nada" mente sobre sete botões desta casa.
                 self.desfechos[f"{pagina}:{nome}"] = (
                     "recusou dizendo", f"{type(erro).__name__}: {erro}")
-                GLib.idle_add(lambda x=erro: (print(f"[gesto falhou] {pagina} · {nome}: {x}",
-                                                    file=sys.stderr), False)[1])
+                # A FRASE VAI PARA A TELA, e o `idle_add` é o que a leva ao
+                # único laço que pode tocar o DOM e o depósito. Até 02/09/2026
+                # esta linha só imprimia no `stderr` — ver `_recusou_dizendo`.
+                GLib.idle_add(
+                    lambda x=erro: self._recusou_dizendo(pagina, nome, pref, x))
                 return
             # OS DOIS DESFECHOS SÃO ANOTADOS NO MESMO LUGAR, e é aqui: o `except`
             # logo acima guarda a recusa, e esta linha guarda o "voltou sem
@@ -961,6 +1070,58 @@ class Piloto:
             return False
         print(f"[gesto] {pagina} · {nome} → aplicado")
         return False
+
+    def _recusou_dizendo(self, pagina: str, nome: str, pref: str,
+                         erro: BaseException) -> bool:
+        """A recusa do produto chegando ao CARTÃO — e não à saída de erro.
+
+        O CONTRATO É DE ANTES DESTA FUNÇÃO e é explícito: `RuntimeError` quer
+        dizer *"o produto recusou, e a frase VAI PARA A TELA"*, escrita para
+        quem está com o controle na mão. Até 02/09/2026 ela ia para o `stderr`
+        do processo, e quem clica na janela não lê o terminal de quem a lançou.
+
+        MEDIDO PELO CAMINHO DELA, e é a forma de defeito mais cara desta casa —
+        *alguém curou o caminho e provou a cura num caminho que ela não usa*:
+        dois cliques no 🎙 da `02-controles`, com um dublê que faz o `mic.set`
+        recusar, deram DUAS linhas no terminal, `desfechos` com a frase certa, e
+        um DOM sem uma letra dela. O segundo clique parecia o primeiro.
+
+        `ValueError` NÃO ENTRA, e a razão é o mesmo contrato: ele é *clique
+        inválido*, e as frases que os pacotes escrevem nele falam com quem
+        programa — uma delas cita `interface/aba06.py:OPCOES_TECLADO`. Pôr um
+        caminho de arquivo no cartão dela trocaria um silêncio por um ruído. O
+        que falta ali é uma frase que ela decida, e está no relato desta frente.
+        """
+        print(f"[gesto falhou] {pagina} · {nome}: {erro}", file=sys.stderr)
+        if not isinstance(erro, RuntimeError):
+            return False
+        self._recados[pref] = (str(erro), time.monotonic())
+        # NA HORA, e não no próximo tique. Meio segundo entre o clique e a
+        # resposta basta para ela clicar de novo achando que o primeiro não
+        # pegou — que é o defeito de origem, não um detalhe de acabamento.
+        self._js(f"window.__hef && window.__hef.pintar("
+                 f"{_json({'recados': self._recados_para_a_tela()})})")
+        return False
+
+    def _recados_para_a_tela(self) -> list[dict[str, str]]:
+        """As frases de recusa ainda vivas, e a poda das vencidas.
+
+        A PODA MORA NO LEITOR, e não num relógio próprio: um `timeout_add` por
+        recado seria um temporizador por clique recusado, e o que apaga a frase
+        passaria a ser um agendamento que a troca de aba não cancela. Aqui a
+        conta é feita quando alguém pergunta — que é a cada tique, e é o mesmo
+        instante em que a lista vai para a tela.
+
+        O RELÓGIO É MONOTÔNICO pelo mesmo motivo do
+        `recado_do_microfone.quando_s`: um acerto de hora do sistema não pode
+        fazer um aviso de agora parecer de ontem.
+        """
+        agora = time.monotonic()
+        for chave, (_frase, quando) in list(self._recados.items()):
+            if agora - quando >= SEGUNDOS_DO_RECADO:
+                del self._recados[chave]
+        return [{"chave": chave, "texto": frase}
+                for chave, (frase, _quando) in sorted(self._recados.items())]
 
     # O `_ipc` CRU MORREU em 01/09/2026. Ele abria o socket à mão e montava o
     # JSON-RPC — reescrevendo o que o `app/ipc_bridge.py` já faz há meses, com
@@ -1164,6 +1325,13 @@ class Piloto:
         # a cura morria inteira sem que os literais sumissem. Ver
         # `pacotes.apagar_os_lugares_sem_dono`.
         pacotes.apagar_os_lugares_sem_dono(carga)
+
+        # O RECADO DA RECUSA VIAJA EM TODO TIQUE, e é isto que o faz sobreviver
+        # à repintura: a lista CHEIA recria o aviso se a pintura de blocos tiver
+        # levado o cartão embora — e se ela trocou de aba, o aviso a acompanha,
+        # porque é dela e não da página. A lista VAZIA é o que apaga o que
+        # venceu; sem ela a frase ficaria na tela para sempre.
+        carga["recados"] = self._recados_para_a_tela()
 
         def contou(valor: Any, erro: Any) -> None:
             if erro is not None:
