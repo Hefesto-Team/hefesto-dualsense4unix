@@ -36,6 +36,7 @@ qual está falando.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from . import Contexto, perfil, registrar
@@ -50,6 +51,112 @@ SEM_DONO: dict[str, str] = {}
 #: desenho); o perfil usa `left`/`right`. Dois vocabulários, uma tradução, num
 #: lugar só — a regra da casa é que o que tem dono não se digita.
 LADOS = {"e": "left", "d": "right"}
+
+#: O TRAVESSÃO É DO PILOTO, e está aqui só para a régua poder cobrá-lo sem
+#: repetir a string: `hefesto_vivo.escrever()` troca `''` por `—` antes de
+#: escrever. Emitir `''` é dizer "esta casa não tem valor"; emitir `'—'` seria
+#: esta aba inventando a marca de vazio de outra camada.
+VAZIO = ""
+
+
+# ---------------------------------------------------------------------------
+# O QUE A PÁGINA TEM, LIDO DA PÁGINA — e é a cura do defeito D3.
+#
+# O DEFEITO, medido em 02/09/2026 com o perfil `meu_perfil` (`L2: mode='Off'
+# params=[]`, `R2: idem`) e a foto da aba aberta: a tela mostrava, na coluna do
+# P1, `Força 7 · Frequência 4 · Início do curso 25 · Fim do curso 230` — e, três
+# linhas acima, `Modo: Desligado`. Os quatro números eram do MOCKUP.
+#
+# A CAUSA NÃO É "o pacote não pinta os ajustes": ele pinta, e a régua
+# `test_o_perfil_chega_na_tela.py` prova que com `Rigid` no disco os valores
+# dela chegam. A causa é que ele pintava **só as casas que o modo tem**. Com
+# `Off` são ZERO casas, o laço não roda nenhuma volta, e as quatro barras que o
+# desenho deixou na página nunca são endereçadas — ficam com o que o gerador
+# escreveu. *Um endereço que ninguém escreve continua mostrando o desenho*, e é
+# assim que um mockup passa por produto.
+#
+# A CURA É ENDEREÇAR A CASA VAZIA. Quantas casas existem não se digita: elas
+# estão na página publicada, que é o que o `WebView` renderiza. Digitar `4` e
+# `2` aqui criaria a segunda cópia de um número que o gerador já decide —
+# e ela envelheceria calada no dia em que o desenho mudasse.
+# ---------------------------------------------------------------------------
+PAGINA = "03-gatilhos.html"
+
+_CASA = re.compile(r'data-campo="aj-nome-(?P<lado>[ed])-(?P<i>\d+)"')
+#: A barra de preenchimento e o alvo com que o piloto a pinta. `data-hef-alvo`
+#: pode vir antes ou depois do `data-campo` no elemento — a régua olha os dois
+#: sentidos porque o gerador é livre para escrever na ordem que quiser.
+_BARRA = re.compile(
+    r'<span[^>]*data-campo="aj-pct-[ed]-\d+"[^>]*>|<span[^>]*data-campo="aj-pct-[ed]-\d+"[^>]*/?>')
+
+_LIDO: tuple[dict[str, int], bool] | None = None
+_ENDERECOS: frozenset[str] | None = None
+
+
+def _pagina_publicada() -> str:
+    """O HTML que o produto renderiza AGORA, ou `''` se não der para ler.
+
+    `publicado=True` É DELIBERADO, e é a exceção que o `onde.pagina` prevê: o
+    padrão daquele módulo é a BANCADA, porque todo instrumento desta casa mede o
+    desenho de hoje. Aqui não — quem pinta pinta no que está no `WebView`, e
+    contar as casas da bancada faria o pacote endereçar barras que a página
+    publicada ainda não tem.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        return onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _casas_e_barras() -> tuple[dict[str, int], bool]:
+    """`({"e": N, "d": M}, a barra aceita largura?)` — lido da página publicada.
+
+    `N` é quantas casas de ajuste o desenho reservou naquele lado, contando a
+    coluna que tem mais: endereçar uma casa que uma coluna não tem é um
+    `querySelector` que não acha nada — inofensivo —, enquanto DEIXAR de
+    endereçar uma que existe é o defeito D3 de volta.
+
+    O SEGUNDO VALOR É UM DEFEITO DECLARADO, e ele não é do pacote. `escrever()`
+    do piloto só põe LARGURA em quem declara `data-hef-alvo="largura"`; sem
+    isso o alvo é `texto`, e a pintura escreve o número DENTRO da barra em vez
+    de encompridá-la. Medido na página publicada de 02/09/2026: **os 16
+    `<select>` declaram `valor` e nenhuma das 11 barras declara `largura`.**
+
+    O PACOTE PINTA A BARRA MESMO ASSIM, e a escolha é deliberada: calá-la
+    deixaria as 11 barras na largura do mockup ao lado de um valor que a pintura
+    já corrigiu — a tela AFIRMANDO 78% de uma força que não existe, que é
+    exatamente o defeito D3 pela metade. O conserto de forma é o
+    `data-hef-alvo` no gerador (`aba03.py`, feito nesta leva, na BANCADA), e
+    publicá-lo é ato dela. No dia em que a página vier com o alvo, esta função
+    devolve `True` e as barras acendem sem uma linha de código nova — é por
+    isso que ela LÊ em vez de digitar.
+    """
+    global _LIDO
+    if _LIDO is None:
+        texto = _pagina_publicada()
+        casas = {"e": 0, "d": 0}
+        for m in _CASA.finditer(texto):
+            lado, i = m.group("lado"), int(m.group("i"))
+            casas[lado] = max(casas[lado], i + 1)
+        barras = _BARRA.findall(texto)
+        largura = bool(barras) and all('data-hef-alvo="largura"' in b for b in barras)
+        _LIDO = (casas, largura)
+    return _LIDO
+
+
+def _enderecos_da_pagina() -> frozenset[str]:
+    """Todo `data-campo` que a página publicada tem. Vazio se ela não abrir.
+
+    É com ele que a `cobertura` para de contar pintura no vazio. Um conjunto
+    VAZIO faz a contagem cair a zero, e a régua do despachante reprova um
+    pacote que pinta 0 — o que é o desfecho certo se a página sumir do wheel.
+    """
+    global _ENDERECOS
+    if _ENDERECOS is None:
+        _ENDERECOS = frozenset(re.findall(r'data-campo="([^"]+)"', _pagina_publicada()))
+    return _ENDERECOS
 
 
 def _specs() -> Any:
@@ -114,12 +221,17 @@ def _pronto_da_curva(nome: str, curva: list[int]) -> str:
     return "custom"
 
 
-def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
+def _do_lado(cfg: dict[str, Any], specs: Any, casas: int = 0) -> dict[str, Any]:
     """Um lado do gatilho, do perfil para a tela.
 
     `cfg` é o `{"mode": "Rigid", "params": [0, 180]}` do disco. Sai o rótulo em
     português, o nome de cada ajuste e o valor que ela salvou — que é o que as
     três linhas da aba mostram: Modo, Efeito pronto e Ajustes.
+
+    `casas` é quantas barras o DESENHO reservou naquele lado, e serve a uma
+    coisa só: as que o modo não usa saem VAZIAS em vez de não saírem. Um modo
+    de zero ajustes com quatro barras na tela é o defeito D3 — a tela dizia
+    `Desligado` no campo de cima e `Força 7` três linhas abaixo.
     """
     nome = str((cfg or {}).get("mode") or "Off")
     valores = list((cfg or {}).get("params") or [])
@@ -144,7 +256,20 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
     # mesmo objeto, então o que se acrescenta aqui sai lá.
     ajustes: list[dict[str, Any]] = []
     fora["ajustes"] = ajustes
+
+    def encher() -> None:
+        """As casas que o modo não usa saem VAZIAS — nunca não saem.
+
+        `pct` fica `0` e não vazio: a barra é largura, e largura vazia vira
+        `width:—%`, que o navegador ignora — a barra ficaria com a do mockup. O
+        zero é a única largura que quer dizer "não há valor aqui".
+        """
+        while len(ajustes) < casas:
+            ajustes.append({"nome": VAZIO, "valor": VAZIO, "pct": 0,
+                            "min": 0, "max": 0, "vazia": True})
+
     if spec is None:
+        encher()
         return fora
 
     #: A CURVA, e ela é a segunda forma que o disco guarda. Medido nos 33
@@ -170,6 +295,12 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
         fora["curva-pct"] = [round(max(0, min(100, x / 8 * 100)))
                              for x in curva_da_tela]
         fora["pronto"] = _pronto_da_curva(nome, curva_da_tela)
+        # A CURVA NÃO OCUPA AS BARRAS DE AJUSTE — ela tem desenho próprio
+        # (`curva-<lado>`), e a página publicada ainda não o tem. As barras que
+        # o desenho reservou continuam existindo, então continuam tendo de sair
+        # vazias: sem isto, escolher "Curva de força" deixaria os quatro
+        # números do mockup na tela ao lado de uma curva de dez posições.
+        encher()
         return fora
 
     #: O EFEITO PRONTO NÃO É O MODO — corrigido em 01/09/2026. Estava escrito
@@ -194,6 +325,12 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
             "pct": round(max(0, min(100, (valor - p.min_value) / largura * 100))),
             "min": p.min_value, "max": p.max_value,
         })
+    # E AS QUE SOBRAM DA TELA SAEM VAZIAS. É esta linha que mata o D3: o
+    # `Off` tem spec (não cai no ramo de cima) e tem ZERO parâmetros, então o
+    # laço acima não roda nenhuma volta — sem ela, as quatro barras do desenho
+    # ficam com `Força 7 · Frequência 4 · Início do curso 25 · Fim do curso 230`
+    # debaixo de um campo que diz `Desligado`.
+    encher()
     return fora
 
 
@@ -206,13 +343,26 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     do schema permite gatilho por controle, e quando ele estiver preenchido esta
     função lê o override antes do perfil. Enquanto não estiver, repetir o valor
     é o que corresponde ao que o produto faz.
+
+    A COBERTURA CONTA O QUE A PÁGINA RECEBE, e não o que este dicionário tem —
+    mudado em 02/09/2026. Medido com a mesa dela (dois controles, `meu_perfil`,
+    gatilho `Off` nos dois lados): o pacote devolvia **20 chaves por tique** e o
+    piloto escrevia **8 valores**. As doze restantes são endereços que a página
+    publicada não tem — `l2-raw`, `l2-pct`, `r2-raw`, `r2-pct` e o rótulo
+    `modo-e`/`modo-d` (o campo de escolha casa pelo `value`, que é a CHAVE; o
+    rótulo continua saindo porque `test_o_perfil_chega_na_tela.py:133` o cobra,
+    mas nenhum elemento o lê). Contar as doze era esta aba dando-se nota por
+    escrever no vazio — a mesma forma do "77%" que a medição de 02/09 derrubou.
     """
     specs = _specs()
     p = perfil.ativo(ctx.state.get("active_profile"))
     trig = (p.get("triggers") or {}) if p else {}
     overrides = (p.get("controllers") or {}) if p else {}
+    casas, barra_por_largura = _casas_e_barras()
+    tem_endereco = _enderecos_da_pagina()
 
-    lados = {sig: _do_lado(trig.get(disco) or {}, specs) for sig, disco in LADOS.items()}
+    lados = {sig: _do_lado(trig.get(disco) or {}, specs, casas.get(sig, 0))
+             for sig, disco in LADOS.items()}
 
     colunas: dict[str, dict[str, Any]] = {}
     pintados = 0
@@ -225,7 +375,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: `ControllerOverrides.triggers` existe no schema desde antes desta aba.
         meu = overrides.get(uniq) or {}
         seus = (meu.get("triggers") or {}) if isinstance(meu, dict) else {}
-        deste = {sig: (_do_lado(seus[disco], specs) if seus.get(disco) else lados[sig])
+        deste = {sig: (_do_lado(seus[disco], specs, casas.get(sig, 0))
+                       if seus.get(disco) else lados[sig])
                  for sig, disco in LADOS.items()}
 
         col: dict[str, object] = {
@@ -249,13 +400,22 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 col[f"curva-{sig}"] = d["curva"]
                 col[f"curva-pct-{sig}"] = d["curva-pct"]
         colunas[uniq] = col
-        pintados += len(col)
+        pintados += sum(1 for k in col if k in tem_endereco)
 
     return {
         "colunas": colunas,
         "perfil": ctx.state.get("active_profile") or "",
         "sem_dono": {},
-        "cobertura": {"pintados": pintados, "sem_dono": len(SEM_DONO)},
+        "cobertura": {"pintados": pintados, "sem_dono": len(SEM_DONO),
+                      # O QUE SAI E NÃO TEM ONDE POUSAR, dito em voz alta. Não é
+                      # erro — `modo-e` tem régua que o cobra — mas contá-lo como
+                      # pintura era a aba dando-se nota por escrever no vazio.
+                      "sem_endereco": sum(1 for col in colunas.values()
+                                          for k in col if k not in tem_endereco),
+                      # A barra de preenchimento chega ao produto? Ver
+                      # `_casas_e_barras`. `False` aqui é trabalho de gerador
+                      # esperando a publicação dela, não pacote incompleto.
+                      "barra_por_largura": barra_por_largura},
     }
 
 
@@ -281,6 +441,34 @@ def _uniq(o: dict[str, Any]) -> str:
     'Desligar' zerava o gatilho dos QUATRO"*. Aqui ele não pode voltar.
     """
     return str(o.get("uniq") or "")
+
+
+def _exigir_controle(o: dict[str, Any], gesto_: str) -> str:
+    """O `uniq` da coluna, ou uma recusa que DIZ QUAL é o caso. Nunca inventa.
+
+    SÃO DOIS CASOS, e tratá-los pela mesma frase foi um defeito medido em
+    02/09/2026. O `hefesto_vivo._gesto` resolve `uniq` percorrendo a mesa por
+    `pref`; um clique numa coluna VAZIA não acha nada e chega aqui igualzinho a
+    um clique que não trouxe controle nenhum. A frase única — *"o clique não
+    disse em qual controle"* — culpa o instrumento quando quem está errado é a
+    tela: a página publicada deixa os quatro `<select>` e o "Guardar esse
+    efeito" das colunas P3 e P4 CLICÁVEIS, com `data-conectado="nao"` ao lado.
+
+    Fotografado no mesmo dia: as colunas P3 e P4 dizem `Desconectado` no
+    cabeçalho e mostram `Desligado` · `— Nenhum —` em campos que abrem. A cura
+    de forma é o `disabled` no gerador (`aba03.py`), e publicá-la é ato dela;
+    a cura de FUNDO é esta — o gesto recusa, e a frase vai para a tela.
+    """
+    uniq = _uniq(o)
+    if uniq:
+        return uniq
+    lugar = str(o.get("controle") or "").strip()
+    if lugar:
+        raise RuntimeError(
+            f"{gesto_}: não há controle no lugar {lugar.upper()} — esta coluna "
+            f"está vazia. Um gatilho é de um aparelho; sem aparelho não há onde "
+            f"aplicar. Ligue um controle neste lugar e ele pega o efeito.")
+    raise ValueError(f"{gesto_}: o clique não disse em qual controle")
 
 
 def _lado(o: dict[str, Any]) -> str:
@@ -401,9 +589,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     de uma resposta bem-sucedida (`_recusa_no_corpo`). Com a `_checked`, a
     segunda chegaria como sucesso.
     """
-    uniq, lado = _uniq(o), _lado(o)
-    if not uniq:
-        raise ValueError("modo: o clique não disse em qual controle")
+    uniq, lado = _exigir_controle(o, "modo"), _lado(o)
     chave = _escolhido(o)
     if not chave:
         raise ValueError(
@@ -442,9 +628,7 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     não há curva a mandar, e mandar o modo "de volta ao normal" seria confundir
     este campo com o "Desligado" do campo de cima.
     """
-    uniq, lado = _uniq(o), _lado(o)
-    if not uniq:
-        raise ValueError("efeito pronto: o clique não disse em qual controle")
+    uniq, lado = _exigir_controle(o, "efeito pronto"), _lado(o)
     chave = _escolhido(o)
     if chave in ("", "custom"):
         raise ValueError(
@@ -485,9 +669,7 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     PERFIL-01: override parcial nunca apaga a cor global no replug)"*. Por isso
     este gesto só toca `triggers` do controle clicado e devolve o resto intacto.
     """
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("guardar: o clique não disse em qual controle")
+    uniq = _exigir_controle(o, "guardar")
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError(
@@ -592,7 +774,7 @@ METODOS: set[str] = set()
 
 
 #: O PISO E AS PROVAS MORAM AQUI, e não no teste — território exclusivo.
-PAGINA = "03-gatilhos.html"
+#: O `PAGINA` é declarado lá em cima, junto de quem lê a página publicada.
 PISO_DA_ABA = 3
 #: O `uniq` da prova é a faixa sintética da casa: há dois portões de anonimato
 #: nesta árvore e eles não perdoam.

@@ -317,6 +317,26 @@ CSS = CSS_GLIFO + """
   .barra .num{flex:0 0 32px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .ajustes-vazio{grid-row:1 / span 2;font-size:11.5px;color:var(--comment);
                  font-style:italic;display:flex;align-items:center}
+  /* O LUGAR VAZIO NÃO SE CLICA — 02/09/2026, e a régua é a foto.
+     Fotografada a aba com a mesa dela (dois controles), as colunas P3 e P4
+     diziam `Desconectado` no cabeçalho e traziam os dois `<select>` e o
+     "Guardar esse efeito" ABERTOS. Escolher `Rígido` num lugar onde não há
+     aparelho é um clique que só pode terminar em recusa — e um botão que
+     convida para uma recusa é pior que um botão que não existe.
+
+     O SELETOR É O `data-conectado`, e não a classe `off`, porque ele é o que o
+     PILOTO mantém vivo: `hefesto_vivo.py:229-236` põe `data-conectado="nao"`
+     em todo lugar que a mesa não tem, a cada tique. Assim a inércia acompanha
+     a mesa DELA — um controle ligado no P3 devolve a coluna sem tocar em CSS —
+     em vez de congelar no estado que o gerador viu.
+
+     `pointer-events` PARA O RATO; o `disabled` teria de vir do piloto, que é de
+     outra frente. A segunda trava é do lado Python: os três gestos desta aba
+     recusam DIZENDO quando a coluna está vazia (`_exigir_controle` em
+     `pacotes/a03_gatilhos.py`), e essa alcança também o clique por JS. */
+  .duas-colunas .ctrl[data-conectado="nao"] select,
+  .duas-colunas .ctrl[data-conectado="nao"] .btn{pointer-events:none;cursor:default}
+
   /* O BOTÃO É UM POR CONTROLE, e da MESMA largura em todas as colunas. Era um
      só no pé do quadro, e com quatro controles um botão só não diz o que guarda:
      é a mesma ambiguidade que o recibo tinha antes de dizer em QUAL controle
@@ -488,12 +508,22 @@ def opcoes_pronto(escolhido):
 
 def bloco(lado, sigla, modo, pronto, ajustes):
     """`sigla` é "e" ou "d": a linha de ajustes do L2 e a do R2 têm
-    alturas diferentes, porque cada uma vale o maior modo que está NELA."""
+    alturas diferentes, porque cada uma vale o maior modo que está NELA.
+
+    A BARRA PINTA POR **LARGURA**, e sem esse alvo ela pinta errado — medido em
+    02/09/2026, na página publicada. O `escrever()` do piloto
+    (`hefesto_vivo.py:112`) só encomprida quem declara `data-hef-alvo="largura"`;
+    sem a declaração o alvo é `texto`, e a pintura escreve o NÚMERO dentro de um
+    `<span>` de 5px de altura, absoluto, enquanto a barra fica na largura que o
+    mockup desenhou. É o mesmo defeito que o `data-hef-alvo="valor"` dos
+    `<select>` curou em 01/09 — o desenho tem três alvos de pintura e cada
+    elemento tem de dizer o seu.
+    """
     if ajustes:
         aj = "\n".join(
             f'''            <div class="barra" data-ajuste="{sigla}-{i}">
               <span class="nome" data-campo="aj-nome-{sigla}-{i}">{n}</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-{sigla}-{i}" style="width:{p}%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-{sigla}-{i}" data-hef-alvo="largura" style="width:{p}%"></span></span>
               <span class="num" data-campo="aj-val-{sigla}-{i}">{v}</span>
             </div>''' for i, (n, p, v) in enumerate(ajustes))
     else:
@@ -952,6 +982,30 @@ def _conferir(doc):
     exigir(_por_valor == _campos,
            f"{_campos} campos de escolha e {_por_valor} pintando por valor — "
            f"o que sobra pinta por texto e perde as opções na primeira pintura")
+
+    # 8. TODA BARRA DE AJUSTE PINTA POR `largura` — 02/09/2026. É a irmã da
+    #    régua 7, e nasceu do mesmo jeito: lendo o `escrever()` do piloto contra
+    #    a página que ele renderiza. Sem o alvo, a pintura escreve o NÚMERO
+    #    dentro do trilho de 5px e a barra fica na largura do mockup — a tela
+    #    afirmando 78% de uma força que o perfil diz que não existe.
+    _barras = corpo.count('data-campo="aj-pct-')
+    _por_largura = corpo.count('data-hef-alvo="largura"')
+    exigir(_barras and _por_largura == _barras,
+           f"{_barras} barras de ajuste e {_por_largura} pintando por largura — "
+           f"o que sobra escreve o número DENTRO da barra e deixa a largura do "
+           f"desenho no lugar do valor dela")
+
+    # 9. O LUGAR VAZIO NÃO SE CLICA. A trava é de CSS e pende do
+    #    `data-conectado`, que o piloto mantém a cada tique — logo ela vale para
+    #    a mesa DELA, não para a cena que o gerador viu. Fotografado em 02/09:
+    #    P3 e P4 diziam `Desconectado` com os campos abertos e o "Guardar esse
+    #    efeito" clicável.
+    #    A RÉGUA OLHA O `doc`, e não o `corpo`: o `corpo` é só o MIOLO (do
+    #    `<div class="miolo">` até a nota), e a folha de estilo mora no
+    #    cabeçalho. Procurar CSS ali dá não-achado convincente.
+    exigir('.ctrl[data-conectado="nao"] select' in doc,  # (noqa-acento) valor
+           "a trava do lugar vazio sumiu do CSS — as colunas sem controle "
+           "voltam a aceitar clique que só pode terminar em recusa")
 
     if falhas:
         raise SystemExit("ERRO em 03-gatilhos — decisão dela desfeita:\n  "
