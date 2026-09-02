@@ -28,6 +28,21 @@ O QUE ELA COBRA, e cada item é um jeito diferente de o campo mentir:
 8. Uma política que o campo não sabe mostrar é DECLARADA, não pintada errada.
 9. A página publicada tem os DOIS endereços de pintura (o campo e o `?`).
 
+E A SEÇÃO 8, DE 01/09/2026, mede a palavra "GLOBAL" — que tinha DOIS donos, e a
+tela reportava o errado. Cada item ali é um jeito diferente de a frase mentir:
+
+10. A dica diz o que chega AO MOTOR, e não o degrau nominal do rótulo — a cadeia
+    inteira, do disco ao `_escalar_rumble`, para os três globais vivos.
+11. O global do PERFIL é DENOMINADOR; quem multiplica é o do DAEMON.
+12. O orçamento entra por CIMA da política viva, com `min`.
+13. O que não se sabe não vira a afirmação "Sem teto" — nos três casos.
+14. O orçamento sai da declaração já em cache, e sem arrastar GTK.
+15. A frase do orçamento passa pelo dono do número; o 0,667 é derivado.
+16. A chave que PINTA é a mesma que GRAVA (`_so_hex`).
+17. A recusa sem endereço fala do teto, e não da ponte do microfone.
+18. O piloto não escreve num `<select>` o que ele não oferece.
+19. Os `<option>` da página são os que a borda aceita.
+
 AS MORDIDAS ESTÃO NO DOCSTRING DE CADA CASO, uma a uma, com o que reprova.
 """
 from __future__ import annotations
@@ -1057,3 +1072,46 @@ def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
         "o caminho do teto da vibração puxou `gi.repository.Gtk` para o processo, "
         "e a linha 1 deste módulo promete `sem GTK` — com três consequências "
         f"medidas escritas logo abaixo dela. Saída: {saida.stdout!r}")
+
+
+def test_as_opcoes_que_ela_clica_sao_as_que_a_borda_aceita(tela) -> None:
+    """Os `<option>` da PÁGINA contra a lista do produto — as duas pontas do clique.
+
+    O RÓTULO QUE CHEGA AO DEDO DELA é o `<option>` do HTML publicado, que é
+    DIGITADO e só muda quando alguém regera. `test_o_rotulo_nao_e_digitado`
+    declara que "a frase é REPRODUZIDA do produto" e mede só o lado Python;
+    `check_o_desenho_aprovado` compara mockup↔publicado, que são as duas cópias
+    congeladas e por isso sempre iguais. Portão nenhum comparava gerador↔página.
+
+    O QUE ISSO DEIXAVA PASSAR, medido em 01/09/2026: com o degrau `economia`
+    mudado para 0,25, `opcoes_do_teto()` passa a oferecer "25% da força", a
+    página continua oferecendo "30% da força", `politica_do_rotulo` RECUSA a
+    própria opção que a tela mostra — e o campo morre em silêncio, porque a
+    recusa só existe no `stderr` de um terminal que ela não olha.
+
+    MORDIDA: troque um `<option>` da página publicada por outro texto — este
+    caso reprova nomeando a página, que é o que faz alguém regerar em vez de
+    consertar o teste.
+    """
+    doc = _pagina_publicada()
+    blocos = re.findall(
+        r"<select[^>]*data-gesto=\"teto-da-vibracao\"[^>]*>(.*?)</select>", doc, re.S)
+    assert blocos, "a página publicada não tem o `<select>` do teto da vibração"
+    do_produto = list(tela.opcoes_do_teto())
+    for bloco in blocos:
+        na_pagina = re.findall(r"<option[^>]*>([^<]+)</option>", bloco)
+        assert na_pagina == do_produto, (
+            f"a página publicada oferece {na_pagina} e o produto aceita "
+            f"{do_produto}. REGERE a aba — "
+            f"`python3 src/hefesto_dualsense4unix/interface/aba08.py` e "
+            f"`scripts/check_o_desenho_aprovado.py --publicar 08` — em vez de "
+            f"acertar este teste: o que ela clica é o `<option>`, e a borda "
+            f"recusa em SILÊNCIO o rótulo que não conhece.")
+        # E A BORDA ACEITA CADA UM, que é a outra metade: uma lista igual com uma
+        # opção sem tradução seria um campo que oferece o que não sabe gravar.
+        for rotulo in na_pagina:
+            try:
+                tela.politica_do_rotulo(rotulo)
+            except ValueError as recusa:
+                assert rotulo == do_produto[1], (
+                    f"a página oferece {rotulo!r} e a borda o recusa: {recusa}")
