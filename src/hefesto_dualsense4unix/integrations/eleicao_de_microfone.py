@@ -386,8 +386,19 @@ class EleitorDeMicrofone:
     def devolver_o_microfone(self) -> ResultadoDaEleicao:
         """O controle eleito saiu do ar: elege a melhor fonte que NÃO é ele.
 
-        Chamado quando o controle eleito passa a MUDO, cai do rádio/cabo, ou a
-        ponte de microfone dele cai.
+        **QUEM CHAMA, MEDIDO (02/09/2026):** um só — o ramo do botão do
+        microfone em `daemon/subsystems/hotkey._eleger_ou_devolver`, quando o
+        ELEITO vai a mudo. Este docstring dizia *"quando o controle eleito
+        passa a MUDO, cai do rádio/cabo, ou a ponte de microfone dele cai"*, e
+        as duas últimas eram falsas: `grep -rn "devolver_o_microfone" src/`
+        devolve esta definição e aquela única chamada, e as três escritas de
+        `self.eleito` neste módulo são todas caminhos de eleição — a da
+        eleição conferida e as duas deste método.
+        **Não há gancho de hotplug-out**, e a posse fica de pé quando o
+        controle cai. Enquanto ela ficar, quem publica o estado tem de dizer
+        que o dono saiu da mesa em vez de nomeá-lo — é o `eleito_na_mesa` de
+        `daemon/subsystems/recado_do_microfone.publicar`, que é remendo do
+        RELATO e não cura da posse.
 
         POR QUE ISTO NÃO É OPCIONAL. Hoje **ninguém devolve o microfone**: não
         há em `src/` observador da fonte padrão, restaurador, nem memória do que
