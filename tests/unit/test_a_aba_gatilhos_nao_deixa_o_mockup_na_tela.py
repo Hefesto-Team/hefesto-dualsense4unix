@@ -26,6 +26,8 @@ O QUE ELA MORDE, e os quatro já aconteceram:
 * deixar UM `data-campo` da página sem escritor → `test_nenhum_endereco_da_pagina_fica_sem_dono`
 * a barra de preenchimento pintar por texto     → `test_a_barra_diz_como_quer_ser_pintada`
 * a coluna vazia aceitar clique sem dizer nada  → `test_o_lugar_vazio_recusa_dizendo_que_esta_vazio`
+* a coluna VAZIA ficar com o efeito de quem saiu → `test_o_lugar_vazio_recebe_desligado_e_nenhum`
+* a recusa do daemon chegar CRUA na tela dela   → `test_a_recusa_do_daemon_chega_na_lingua_da_tela`
 """
 from __future__ import annotations
 
@@ -193,13 +195,17 @@ def test_a_cobertura_conta_o_que_a_pagina_recebe(a03, publicada):
     finally:
         perfil.ativo = guardado  # type: ignore[assignment]
 
-    col = next(iter(r["colunas"].values()))
+    # A CONTA É DE TODAS AS COLUNAS, e não da primeira — mudado em 02/09/2026,
+    # quando a coluna do LUGAR VAZIO passou a ser escrita também (o defeito D4).
+    # Ler só `next(iter(...))` faria esta régua reprovar a cura: ela compararia
+    # a nota da aba INTEIRA com os endereços de UM controle.
     na_pagina = set(re.findall(r'data-campo="([^"]+)"', publicada))
-    devia = sum(1 for k in col if k in na_pagina)
+    devia = sum(1 for col in r["colunas"].values() for k in col if k in na_pagina)
+    sobra = sum(1 for col in r["colunas"].values() for k in col if k not in na_pagina)
     assert r["cobertura"]["pintados"] == devia, (
         f"a cobertura diz {r['cobertura']['pintados']} e a página só tem "
         f"endereço para {devia}. Contar o que não pousa é a aba se dando nota.")
-    assert r["cobertura"]["sem_endereco"] == len(col) - devia, (
+    assert r["cobertura"]["sem_endereco"] == sobra, (
         "o que sai e não tem onde pousar tem de estar DITO, não escondido")
 
 
@@ -309,3 +315,197 @@ def test_a_contagem_de_casas_sai_da_pagina_e_nao_do_codigo(a03, publicada):
         assert quantas == (max(indices) + 1 if indices else 0), (
             f"o lado {sigla!r}: o pacote conta {quantas} casas e a página tem "
             f"{sorted(indices)}. Endereçar a menos deixa o desenho na tela.")
+
+
+# ---------------------------------------------------------------------------
+# O DEFEITO D4 — A COLUNA DO LUGAR VAZIO, e ele é o D3 numa coluna que ninguém
+# olhava. Medido em 02/09/2026 pela `--prova-de-mockup` com a mesa dela:
+#
+#     03-gatilhos.html (8):
+#         p3·modo-chave-e = 'Off'     <- ENDERECO MORTO
+#         p3·pronto-e     = 'custom'  <- ENDERECO MORTO   (e os seis irmãos)
+#
+# "ENDEREÇO MORTO" na régua quer dizer: **o pacote declara um valor e a tela
+# mostra outro**. O piloto preenche todo lugar que a mesa não tem com um
+# travessão (`hefesto_vivo.py:1006-1016`) e `escrever()` RECUSA pôr num
+# `<select>` um valor que ele não oferece (`:145-151`) — a recusa é certa, e o
+# desfecho é que a coluna vazia continua com o que o gerador escreveu.
+#
+# ENQUANTO O CRAVADO É `Off`/`custom` ISSO PASSA POR INOFENSIVO. Não é: no dia
+# em que um controle sair do P3 com `Rígido` aplicado, o `Rígido` FICA — a
+# coluna de um lugar sem aparelho afirmando um efeito.
+# ---------------------------------------------------------------------------
+
+#: A MESA DE DOIS, que é a dela. Os `uniq` são da faixa sintética da casa.
+MESA_DE_DOIS = [*MESA, {"pref": "p2", "jogador": 2, "uniq": "aa:bb:cc:00:00:02",
+                        "nome": "Régua", "via": "BT", "cor": "cosmic-red",
+                        "mascara": "DualSense", "alvo": False}]
+FALSO_2 = dict(FALSO, uniq="aa:bb:cc:00:00:02", player=2, transport="bt",
+               is_primary=False)
+
+
+def _com_a_mesa(a03, mesa, conectados, modo: str = "Rigid") -> dict:
+    """O pacote inteiro para aquela mesa, com o perfil injetado pela porta."""
+    from pacotes import Contexto, perfil
+
+    guardado = perfil.ativo
+    perfil.ativo = lambda _nome: {  # type: ignore[assignment]
+        "triggers": {"left": {"mode": modo, "params": []},
+                     "right": {"mode": modo, "params": []}},
+        "controllers": {}}
+    try:
+        return a03.pacote(Contexto(state={"active_profile": "régua"}, mesa=mesa,
+                                   conectados=conectados, estados={}))
+    finally:
+        perfil.ativo = guardado  # type: ignore[assignment]
+
+
+def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
+    """A coluna sem aparelho é ESCRITA, e com valor que o `<select>` aceita.
+
+    ARRANQUE o laço dos vazios em `pacote()` e esta régua reprova nomeando a
+    coluna: sem ele o pacote não devolve `p3` nenhum, e o único valor que chega
+    àqueles quatro campos é o travessão que o `<select>` recusa.
+
+    O VALOR TEM DE SER OFERECIDO PELA PÁGINA — não basta ser honesto. É a
+    segunda asserção, e é ela que separa esta cura de escrever `'—'` de novo.
+    """
+    r = _com_a_mesa(a03, MESA_DE_DOIS, [FALSO, FALSO_2])
+    vazios = sorted(a03._lugares_que_o_desenho_da_por_vazios())
+    assert vazios, "a página não marca lugar vazio nenhum — a régua ficou cega"
+    for pref in vazios:
+        col = r["colunas"].get(pref)
+        assert col, (
+            f'a coluna {pref} não foi escrita. A página a marca '
+            f'`data-conectado="nao"`, e o que o pacote não escreve continua '
+            f"mostrando o desenho — é o ENDEREÇO MORTO da régua do mockup.")
+        assert set(col) == {"modo-chave-e", "modo-chave-d", "pronto-e", "pronto-d"}, (
+            f"{pref} recebeu {sorted(col)}. A coluna vazia do desenho não tem "
+            f"barra de ajuste nenhuma — ela traz 'Este modo não tem o que "
+            f"ajustar.' —, e emitir `aj-*` ali é se dar nota por escrever no vazio.")
+        for campo, valor in col.items():
+            oferece = re.search(
+                rf'data-campo="{campo}"(.*?)</select>', publicada, re.S)
+            assert oferece, f"{pref}·{campo} não é um `<select>` da página"
+            assert f'value="{valor}"' in oferece.group(1), (
+                f"{pref}·{campo} = {valor!r}, e o `<select>` da página não "
+                f"oferece essa opção. `escrever()` do piloto devolve 0 sem "
+                f"escrever, e a coluna fica com o efeito de quem saiu dali.")
+
+
+def test_o_lugar_vazio_nao_rouba_a_marca_do_piloto(a03):
+    """O pacote NÃO escreve numa coluna que o desenho dá por conectada.
+
+    POR QUE ISTO É UMA RÉGUA E NÃO UM DETALHE: o piloto deduz "lugar vazio" de
+    "coluna que ninguém emitiu" (`hefesto_vivo.py:1006-1016`) e é essa dedução
+    que põe o `data-conectado="nao"` — o atributo de que pende o
+    `pointer-events:none` do lugar vazio (`03-gatilhos.html:899`). Emitir a
+    coluna do P2 com um controle só na mesa tiraria o P2 daquela conta, e a
+    trava do clique cairia CALADA.
+
+    O acoplamento é do piloto; enquanto ele existir, esta aba escreve só onde a
+    marca já está no arquivo.
+    """
+    r = _com_a_mesa(a03, MESA, [FALSO])
+    assert "p2" not in r["colunas"], (
+        'o pacote emitiu a coluna do P2 com um controle só na mesa. O piloto '
+        'deixaria de marcá-la `data-conectado="nao"` e o lugar vazio voltaria '
+        "a aceitar clique.")
+    assert "p3" in r["colunas"] and "p4" in r["colunas"]
+
+
+def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
+    """Com o controle na mesa, `Rigid`; sem ele, `Off`. É o D4 inteiro.
+
+    Esta é a asserção que dá o CUSTO do defeito em vez do nome dele: o mesmo
+    perfil, a mesma aba, o controle saindo do lugar — e o campo tem de mudar.
+    """
+    mesa_de_tres = [
+        *MESA_DE_DOIS,
+        {"pref": "p3", "jogador": 3, "uniq": "aa:bb:cc:00:00:03",
+         "nome": "Régua", "via": "BT", "cor": "cosmic-red",
+         "mascara": "DualSense", "alvo": False}]
+    tres = [FALSO, FALSO_2, dict(FALSO, uniq="aa:bb:cc:00:00:03", player=3)]
+
+    com_ele = _com_a_mesa(a03, mesa_de_tres, tres)["colunas"]["aa:bb:cc:00:00:03"]
+    assert com_ele["modo-chave-e"] == "Rigid"
+
+    sem_ele = _com_a_mesa(a03, MESA_DE_DOIS, [FALSO, FALSO_2])["colunas"]["p3"]
+    assert sem_ele["modo-chave-e"] == "Off", (
+        "o P3 esvaziou e o campo continuou dizendo `Rigid`. É a tela afirmando "
+        "um efeito num lugar onde não há aparelho.")
+
+
+# ---------------------------------------------------------------------------
+# A RECUSA DO DAEMON NA LÍNGUA DA TELA — LEI 0: a tradução já existia.
+# `app/actions/triggers_actions.humanizar_erro_gatilho` é a HARM-19, escrita e
+# testada para a aba Gatilhos da GUI estável. Conferido em 02/09/2026: ZERO
+# pacotes da interface nova a chamavam, e o daemon falava com ela na língua do
+# `core/trigger_effects`.
+# ---------------------------------------------------------------------------
+
+
+class _PonteQueRecusa:
+    """Uma ponte que diz não com a frase CRUA do daemon, e conta as chamadas."""
+
+    def __init__(self, motivo: str) -> None:
+        self.motivo = motivo
+        self.chamadas: list[str] = []
+
+    def __getattr__(self, nome: str):
+        def recusar(*_args, **_kwargs):
+            self.chamadas.append(nome)
+            return (False, self.motivo, {})
+
+        return recusar
+
+
+@pytest.mark.parametrize(
+    ("gesto_", "clique", "cru", "esperado"),
+    [
+        ("modo", {"lado": "d", "modo": "SemiAutoGun"},  # (noqa-acento) id
+         "end (3) deve ser > start (5)",
+         "Fim (3) precisa ser maior que Início (5)"),
+        ("pronto", {"lado": "e", "v": "stop_hard"},  # (noqa-acento) id
+         "pos_4 fora do range 0-8: 12",
+         "Posição 4 precisa estar entre 0 e 8 (você pediu 12)"),
+    ],
+)
+def test_a_recusa_do_daemon_chega_na_lingua_da_tela(a03, gesto_, clique, cru, esperado):
+    """A frase que vai para a tela dela é a humanizada, não a do `core`.
+
+    ARRANQUE o `_na_lingua_da_tela` das duas linhas de `raise` e esta régua
+    reprova mostrando a frase crua — que é exatamente o que ela via.
+    """
+    from pacotes import Contexto, gesto_da_pagina
+
+    fn = gesto_da_pagina(PAGINA, gesto_)
+    assert fn is not None, f"o gesto {gesto_!r} sumiu da aba"
+    ponte = _PonteQueRecusa(cru)
+    ctx = Contexto(state={"active_profile": "régua"}, mesa=MESA,
+                   conectados=[FALSO], estados={})
+    with pytest.raises(RuntimeError) as recusa:
+        fn(ctx, dict(clique, uniq=FALSO["uniq"]), ponte)
+    assert str(recusa.value) == esperado, (
+        f"a tela receberia {str(recusa.value)!r}. A tradução tem dono desde a "
+        f"HARM-19 — `triggers_actions.humanizar_erro_gatilho` — e ela usa os "
+        f"MESMOS rótulos que o `<select>` desta aba mostra.")
+    assert ponte.chamadas, "o gesto nem chegou ao daemon"
+
+
+def test_a_recusa_que_o_tradutor_nao_conhece_volta_inteira(a03):
+    """Sem tradução, o motivo CRU vai para a tela. Calar seria pior.
+
+    É o contrato do próprio `humanizar_erro_gatilho`, que devolve `None` para
+    todo formato que não conhece: *"aí o chamador mostra o texto cru do daemon,
+    que ainda diz mais que 'daemon offline?'"*.
+    """
+    from pacotes import Contexto, gesto_da_pagina
+
+    fn = gesto_da_pagina(PAGINA, "modo")
+    ponte = _PonteQueRecusa("o hidraw sumiu no meio do caminho")
+    ctx = Contexto(state={"active_profile": "régua"}, mesa=MESA,
+                   conectados=[FALSO], estados={})
+    with pytest.raises(RuntimeError) as recusa:
+        fn(ctx, {"lado": "e", "modo": "Rigid", "uniq": FALSO["uniq"]}, ponte)
+    assert str(recusa.value) == "o hidraw sumiu no meio do caminho"
