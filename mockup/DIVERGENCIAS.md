@@ -21,4 +21,11 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 10-perfis.html
+- **02/09/2026** — a barra da Prioridade ganhou `data-hef-alvo="largura"`. Nada
+  muda no DESENHO: é um atributo de pintura, invisível na tela. Sem ele o
+  pintor escrevia `"0%"` como TEXTO dentro de uma barra de 5px e deixava a
+  LARGURA nos 90% do mockup — uma barra quase cheia para um perfil em 1 de 200.
+  Enquanto esta página não for publicada, `a10_perfis.NAO_PINTAVEIS` segura a
+  emissão daquele endereço e quem diz a verdade é o número ao lado. A régua é
+  `tests/unit/test_a_guarda_do_perfil_nao_apaga_a_tabela.py`.
