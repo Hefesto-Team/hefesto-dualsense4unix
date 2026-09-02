@@ -10,16 +10,56 @@ com dois na mesa. Aqui ele sai de `conectados`, e a régua da aba o cobra.
 
 O QUE NÃO TEM: as versões, os plugins e o estado dos consertos automáticos —
 tudo isso é do `doctor` e do instalador, não do `state_full`.
+
+A MEIA LIGAÇÃO DE 01/09, MEDIDA E FECHADA EM 02/09/2026
+-------------------------------------------------------
+O `pacote()` delegava para `gui/aba_sistema.pacote` — mas o `_leitura()` que o
+alimentava preenchia TRÊS dos sete campos do `Leitura` (`status`, `autostart`,
+`state`). Os outros quatro chegavam `None`, e a camada do produto faz a coisa
+certa com `None`: devolve o traço. **Só que a página não é branca — ela é o
+desenho dela.** Onde o pacote não escreve, o que fica na tela é o literal do
+mockup, e ele é convincente:
+
+    o que a tela mostrava          o que a máquina dela dizia (02/09, 04:23)
+    ─────────────────────────────  ────────────────────────────────────────
+    Como ele enxerga a janela: —   Sem ver nada agora (sem_foco_x)
+    O que ele impõe:          —    Nada é limitado
+    Perfil ativo:             —    meu_perfil
+    8 linhas · nenhum aviso        6 linhas · nenhum aviso
+    "Steam Input estava ligado     Steam Input desligado para o DualSense
+     em 2 jogos — desliguei"       (e mais cinco, nenhuma igual às do desenho)
+    [23:41:02] daemon pronto …     não há registro nenhum sendo lido
+
+As quatro últimas eram o desenho FALANDO PELA MÁQUINA. É o defeito que o
+docstring de `gui/aba_sistema.py` nomeia como o mais caro possível nesta aba.
+
+O `Perfil ativo` era pior que falta: **este pacote o APAGAVA.** Ele emitia a
+chave `perfil` com o rótulo do PERFIL DE BATERIA, e `perfil` é o endereço do
+cabeçalho — o perfil de JOGO, que `pacotes.topo()` pinta nas dez abas com
+`setdefault`. Chegando primeiro, o rótulo de bateria (`None`, porque ninguém o
+lia) tomava o lugar e o cabeçalho inteiro virava travessão nesta aba.
 """
 from __future__ import annotations
 
+import html
+import time
 from typing import Any
 
-# O IMPORT É DE MÓDULO — o portão do `casa-sabe` segue o fecho de IMPORT a
+# OS IMPORTS SÃO DE MÓDULO — o portão do `casa-sabe` segue o fecho de IMPORT a
 # partir do piloto, e um `from … import` dentro de uma função não entra nele: a
 # camada do produto continuava contando como promessa sem caminho mesmo depois
 # de eu a ligar. O `sys.path` já tem o `src/` quando esta linha roda.
+#
+# OS QUATRO DE BAIXO SÃO O MOTOR DESTA ABA, e nenhum deles é novo: são as
+# mesmas quatro fontes que o piloto `interface/sistema_viva.py` já lia em
+# 31/08 e que o pacote não chamava. Reusar era a única saída honesta — escrever
+# aqui um segundo detector de janela, um segundo exame ou uma segunda leitura do
+# teto seria a regressão que esta rota existe para não repetir.
+from hefesto_dualsense4unix.app.actions import ambiente_na_tela as _ambiente
+from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
+from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcamento
 from hefesto_dualsense4unix.gui import aba_sistema as _tela
+from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 
 from . import Contexto, perfil, registrar
 
@@ -38,6 +78,97 @@ SEM_DONO: dict[str, str] = {
                "produto de hoje (medido em `gui/aba_sistema.py:95`)",
 }
 
+#: O QUE O PRODUTO RESPONDE E ESTA TELA AINDA NÃO SABE ESCREVER — e é OUTRA
+#: coisa que `SEM_DONO`. Ali o produto não tem quem atenda; aqui ele atende, e
+#: falta o CAMINHO até o pixel. Ficam declarados porque o silêncio sobre eles é
+#: o que faz alguém "ligar" duas vezes o que já está lido.
+#:
+#: Os três dependem de ESCRITA QUE NÃO É TEXTO — a pintura do piloto único
+#: (`hefesto_vivo.BOOTSTRAP`) sabe escrever texto, largura, fundo, `value` e
+#: `innerHTML`, e nenhum desses três se resolve com nenhum deles:
+NAO_CHEGA_NA_TELA: dict[str, str] = {
+    "hefesto-autostart": "o valor é a CLASSE `on` de um `<span class=\"chave\">`, "
+                         "e a pintura não tem alvo de classe. Escrever texto no "
+                         "`data-id` da linha apagaria o próprio interruptor.",
+    "bateria-perfil": "o valor é qual dos TRÊS `<button>` leva a classe `on`. "
+                      "Mesmo caso, e pior: o endereço é o `<div>` que os contém — "
+                      "escrever texto nele apagaria os três botões.",
+    "bateria-frase": "está em `aba_sistema.ENDERECOS` e NÃO EXISTE na página: o "
+                     "gerador nunca emitiu este endereço, e a frase de "
+                     "`frase_do_teto()` vive hoje dentro da dica do `?`.",
+}
+
+#: A FAIXA LENTA, e o período é o do `interface/sistema_viva.py` — o piloto de
+#: uma aba só que já tinha medido este custo em 31/08 e separado as duas
+#: cadências. Medido de novo aqui, em 02/09/2026, nesta máquina:
+#:
+#:     storm_report              2,374 ms
+#:     systemctl is-enabled      1,592 ms
+#:     perfil_na_tela            0,061 ms   (lê o `maquina.json` do disco)
+#:     descrever_deteccao…       0,001 ms   (só lê o `state` que já veio)
+#:     descrever_display_grafico 0,001 ms
+#:
+#: A 10 Hz as três primeiras seriam 40 ms por segundo de subprocesso e disco
+#: para escrever o que não muda entre dois piscares. E o `systemctl` JÁ RODAVA
+#: a cada tique antes desta mudança — a faixa lenta o tira de lá, então a aba
+#: fica MAIS BARATA depois de ganhar três leituras.
+LENTO_S = 2.0
+
+#: `{"quando": monotonic, "valor": (autostart, achados, perfil_da_bateria)}`.
+#: Vazio = nunca lido. As réguas o esvaziam para forçar a leitura — é o ponto
+#: de injeção, e é por isso que ele não é um `functools.lru_cache`: um cache com
+#: prazo que a régua não consegue zerar dá VERDE SOBRE O VALOR DE ANTES.
+_LENTO: dict[str, Any] = {}
+
+#: O ENDEREÇO DO PAINEL DE REGISTRO, e ele é o mesmo do gerador
+#: (`aba09.py`, `_id("registro-texto")`). Escrito UMA vez aqui porque três
+#: donos o usam; digitá-lo três vezes seria a segunda cópia de um fato.
+REGISTRO = "registro-texto"
+
+#: O QUE O ÚLTIMO "Ver …" PÔS NO PAINEL. `None` = ninguém pediu nada ainda.
+#:
+#: ELE PRECISOU EXISTIR NO DIA EM QUE A PINTURA ALCANÇOU O PAINEL, e a razão é
+#: de relógio: `ver-detalhes` e `ver-plugins` devolvem texto, o piloto o escreve
+#: na hora — e 500 ms depois o tique seguinte repintaria o valor de repouso por
+#: cima. As oitenta linhas do registro apareceriam e sumiriam antes de ela
+#: terminar de ler. Guardando o que foi pedido, a pintura passa a repintar **o
+#: mesmo texto**, e o painel para quieto até o próximo clique.
+#:
+#: Uma lista de um elemento porque quem escreve são os gestos, que rodam noutra
+#: thread; o que se troca é o conteúdo, nunca o nome.
+_PAINEL: list[str | None] = [None]
+
+
+def _no_painel(repouso: Any) -> str:
+    """O que vai ao painel AGORA: o último pedido, ou o repouso da camada.
+
+    O VALOR DE REPOUSO É DA CAMADA DO PRODUTO (`aba_sistema.pacote`, a chave
+    `registro`), e não uma frase minha. Ela decidiu ali que, sem ninguém ter
+    pedido, o painel mostra o traço — e o motivo vive em `SEM_FONTE`.
+
+    O QUE ISSO ARRANCA DA TELA, e é o ponto inteiro: enquanto ninguém escrevia
+    neste endereço, o painel continuava com as quatro linhas do mockup —
+    `[23:41:02] daemon pronto · 2 controles`, `perfil "Mortal Kombat" aplicado
+    aos 2`, `gatilho L2 escrito, sem leitura de volta`. Nenhuma delas aconteceu.
+    Um registro técnico inventado é a pior espécie de mentira desta aba: ele
+    parece a prova.
+    """
+    guardado = _PAINEL[0]
+    if guardado is not None:
+        return guardado
+    return "—" if repouso is None else str(repouso)
+
+
+def _para_o_painel(texto: str) -> dict[str, Any]:
+    """Guarda o texto E devolve a carga que o piloto escreve na hora.
+
+    AS DUAS COISAS JUNTAS, e por isso uma função em vez de dois passos: separá-las
+    é convidar o gesto a devolver sem guardar, e um gesto assim pisca na tela e
+    some no tique seguinte — o defeito exato que `_PAINEL` existe para matar.
+    """
+    _PAINEL[0] = texto
+    return {"mesa": {REGISTRO: texto}}
+
 
 def _versao() -> str:
     try:
@@ -49,36 +180,120 @@ def _versao() -> str:
         return ""
 
 
-def _leitura(ctx: Contexto) -> Any:
-    """O `Leitura` que a camada do produto espera.
+def _autostart() -> str | None:
+    """A saída crua de `systemctl --user is-enabled`. `None` = nem deu para perguntar.
 
-    Cada campo dele nomeia quem o produz, e o docstring de lá lista os seis. O
-    que esta função faz é buscá-los; nenhum é calculado aqui.
+    A UNIT NÃO SE DIGITA — ela tem dono, e digitá-la já mentiu. Medido em
+    01/09/2026: esta linha trazia a literal `hefesto-dev-dualsense4unix.service`,
+    sobrevivente da purga do `-dev`. A unit com esse nome NÃO EXISTE mais;
+    `systemctl --user is-enabled` devolvia `not-found` enquanto a verdade da
+    máquina dela era `enabled`. A linha "Ligar junto com o computador" da aba
+    Sistema afirmava o contrário do que estava valendo, e nenhuma régua via —
+    porque o valor lido era um `str` plausível, não um erro.
     """
     import subprocess
 
-    perfil._com_o_src()
-
-    # A UNIT NÃO SE DIGITA — ela tem dono, e digitá-la já mentiu. Medido em
-    # 01/09/2026: esta linha trazia a literal `hefesto-dev-dualsense4unix.service`,
-    # sobrevivente da purga do `-dev`. A unit com esse nome NÃO EXISTE mais;
-    # `systemctl --user is-enabled` devolvia `not-found` enquanto a verdade da
-    # máquina dela era `enabled`. A linha "Ligar junto com o computador" da aba
-    # Sistema afirmava o contrário do que estava valendo, e nenhuma régua via —
-    # porque o valor lido era um `str` plausível, não um erro.
     from hefesto_dualsense4unix.utils import identidade
 
     try:
-        auto = subprocess.run(
+        return subprocess.run(
             ["systemctl", "--user", "is-enabled", identidade.atual().unit_daemon],
             capture_output=True, text=True, timeout=3).stdout.strip()
     except Exception:
-        auto = None
+        return None
+
+
+def _achados(state: dict[str, Any] | None) -> list[tuple[str, str]] | None:
+    """O `storm_report`, que é READ-ONLY por contrato do próprio módulo.
+
+    `None` **não é** lista vazia, e a camada do produto trata os dois de forma
+    diferente: `None` vira *"O exame não respondeu"*, e `[]` vira *"O exame não
+    achou nada a relatar nesta máquina"*. Engolir a diferença aqui faria uma
+    falha de leitura passar por máquina limpa.
+
+    O DENOMINADOR HONESTO vem do `state`: `controles_no_cabo` diz quantos
+    controles estão no cabo AGORA, e é ele que decide se a frase do áudio fala
+    no singular ou no plural.
+    """
+    try:
+        return _exame.storm_report(controles_no_cabo=_exame.controles_no_cabo(state))
+    except Exception:
+        return None
+
+
+def _perfil_da_bateria() -> str | None:
+    """A chave do Perfil de Bateria GRAVADA no `maquina.json`, ou `None`.
+
+    O dono é `secao_orcamento.perfil_na_tela`, e ele é o mesmo que o botão da
+    janela antiga consulta. `None` quer dizer **ninguém escolheu** — e a nota de
+    `PERFIL_POR_TETO` já decidiu que a ausência NÃO afunda "Tudo ligado".
+    """
+    try:
+        return _orcamento.perfil_na_tela()
+    except Exception:
+        return None
+
+
+def _faixa_lenta(state: dict[str, Any] | None) -> tuple[Any, Any, Any]:
+    """As três leituras CARAS, uma vez a cada :data:`LENTO_S`.
+
+    Elas saem deste processo — subprocesso, disco — e nenhuma muda entre dois
+    piscares. O tique da pintura é de 500 ms; a faixa lenta é de 2 s, que é a
+    mesma separação que `interface/sistema_viva.py` já tinha medido e escolhido.
+    """
+    agora = time.monotonic()
+    if _LENTO and agora - float(_LENTO["quando"]) < LENTO_S:
+        return _LENTO["valor"]  # type: ignore[no-any-return]
+    valor = (_autostart(), _achados(state), _perfil_da_bateria())
+    _LENTO["quando"], _LENTO["valor"] = agora, valor
+    return valor
+
+
+def _leitura(ctx: Contexto) -> Any:
+    """O `Leitura` que a camada do produto espera — os SETE campos, não três.
+
+    Cada campo dele nomeia quem o produz, e o docstring de lá lista todos. O
+    que esta função faz é buscá-los; nenhum é calculado aqui.
+
+    ATÉ 02/09/2026 ELA PREENCHIA TRÊS, e os quatro que faltavam não davam erro:
+    a camada do produto devolve o traço honesto para `None`. Só que o traço
+    NUNCA CHEGAVA À TELA — o pacote não emitia aqueles endereços, e o que ficava
+    à vista era o literal do mockup. Um `None` calado aqui virava, três camadas
+    adiante, a tela afirmando o desenho.
+    """
+    perfil._com_o_src()
+
+    auto, achados, perfil_da_bateria = _faixa_lenta(ctx.state or None)
     # `online_systemd` porque o daemon respondeu: se `ctx.state` tem chave, ele
     # está no ar. O `daemon_actions._daemon_status()` distingue avulso de unit,
     # e essa distinção é da janela antiga — aqui o que importa é responder.
-    return _tela.Leitura(status="online_systemd" if ctx.state else "offline",
-                         autostart=auto, state=ctx.state or None)
+    return _tela.Leitura(
+        status="online_systemd" if ctx.state else "offline",
+        autostart=auto,
+        state=ctx.state or None,
+        achados=achados,
+        # AS DUAS FRASES DO PRODUTO SOBRE O DETECTOR DE JANELA, e elas são
+        # diferentes: a da PROMESSA (o perfil troca sozinho?) e a do MECANISMO
+        # (por onde ele enxerga). As duas são funções de MÓDULO — nenhuma exige
+        # a janela GTK —, e a segunda tinha ZERO chamadores no produto até o
+        # `sistema_viva.py`, que ninguém carrega.
+        deteccao=_frase(_daemon.descrever_deteccao_de_janela, ctx.state),
+        ambiente=_frase(_ambiente.descrever_display_grafico, ctx.state),
+        perfil=perfil_da_bateria,
+    )
+
+
+def _frase(fn: Any, state: Any) -> str | None:
+    """A frase daquela função do produto, ou `None` quando ela levantou.
+
+    `None` chega à camada de tela como *"ninguém respondeu"*, que é o que a
+    pessoa precisa ler. Uma frase inventada aqui seria pior: a tela afirmaria
+    um mecanismo que ninguém mediu.
+    """
+    try:
+        return str(fn(state))
+    except Exception:
+        return None
 
 
 @registrar("09-sistema.html")
@@ -94,6 +309,22 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     E SABE MAIS QUE O QUE EU TINHA ESCRITO: cada valor vem com `txt`, a classe
     do selo (`cls`), o glifo (`g`) e a dica. Meu pacote só tinha o texto — e as
     frases dele eram minhas, enquanto estas foram escritas com ela.
+
+    O QUE ELE EMITE É O ENDEREÇO DA PÁGINA, E NADA MAIS — 02/09/2026. Antes
+    saíam quatro chaves com o nome que a CAMADA usa (`frase`, `autostart`,
+    `perfil`, `registro`), e nenhuma delas é endereço desta tela. Três eram
+    órfãs inofensivas; a quarta era um estrago:
+
+        `perfil` É O CABEÇALHO DAS DEZ ABAS — o perfil de JOGO, que
+        `pacotes.topo()` pinta com `setdefault`. Este pacote o emitia com o
+        rótulo do PERFIL DE BATERIA, que ninguém lia e portanto era `None`.
+        Chegando primeiro, tomava o lugar, e o cabeçalho da aba Sistema virava
+        `Perfil ativo —` com o daemon publicando `active_profile: 'meu_perfil'`.
+        Fotografado em 02/09/2026 às 04:23.
+
+    A regra que fica: **um pacote de aba só emite endereço DAQUELA página.** O
+    que é de todas é do dono compartilhado, e um nome curto e genérico
+    (`perfil`, `conta`, `estado`) é do dono compartilhado até prova contrária.
     """
     perfil._com_o_src()
 
@@ -113,12 +344,89 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             fora[f"{chave}-cls"] = v.get("cls", "")
         else:
             fora[chave] = v
-    for chave in ("frase", "autostart", "perfil", "registro"):
-        if not isinstance(bruto.get(chave), (dict, list)):
-            fora[chave] = bruto.get(chave)
+    registro = bruto.get("registro")
+    fora[REGISTRO] = _no_painel(
+        registro.get("txt") if isinstance(registro, dict) else registro)
+    exame = bruto.get("exame")
+    if isinstance(exame, dict):
+        fora["exame-contagem"] = _html_da_contagem(exame.get("contagem"))
+        fora["exame-lista"] = _html_do_exame(exame)
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
     fora["cobertura"] = {"pintados": len(fora), "sem_dono": len(SEM_DONO)}
     return fora
+
+
+# ---------------------------------------------------------------------------
+# O EXAME — a lista inteira, e por que ela vai como HTML
+# ---------------------------------------------------------------------------
+# O NÚMERO DE LINHAS É DO DADO, e o desenho tem oito. `storm_report` devolveu
+# SEIS na máquina dela em 02/09/2026, e as duas condicionais dele devolvem
+# `None` quando não há o que dizer — logo o número varia. Não há como pintar
+# campo a campo o que não tem endereço fixo: não existe `data-campo` para uma
+# linha que ainda não existe.
+#
+# POR QUE NÃO O `blocos:`, QUE SERIA O CAMINHO ÓBVIO — e isto é um achado, não
+# uma escolha: `pacotes.normalizar()` DESCARTA todo valor `dict`, e `blocos` é
+# um `dict`. Medido em 02/09/2026:
+#
+#     >>> pacotes.normalizar({'blocos': {'.x': '<b>1</b>'}, 'a': 1})
+#     {'mesa': {'a': 1}, 'colunas': {}}
+#
+# O piloto tem o mecanismo (`hefesto_vivo.BOOTSTRAP`, o laço sobre `p.blocos`),
+# e a `a08_conexoes.py:763` já o usa para o mapa do gabinete — que portanto
+# TAMBÉM não chega à tela. O conserto é uma linha em `pacotes/__init__.py`, que
+# é território compartilhado e não é meu; está no relatório desta frente.
+#
+# O que sobra e FUNCIONA hoje é o alvo `html` da pintura por `data-campo`: uma
+# STRING atravessa o `normalizar` intacta, e `data-hef-alvo="html"` a escreve
+# como `innerHTML`. É o que o gerador desta aba passou a marcar.
+def _html_do_exame(exame: dict[str, Any]) -> str:
+    """As duas colunas de achados, prontas para o `innerHTML` de `.saude-cols`.
+
+    A FORMA É A DO PRODUTO, e não uma terceira: cada linha sai com o selo, o
+    glifo e a frase, na mesma marcação que `interface/sistema_viva.py` monta no
+    JS dele (`achado()`), e o corte em duas colunas é o mesmo `ceil(len/2)` que
+    o gerador usa. O que fica de fora é o `?` do desenho — as explicações longas
+    do mockup foram escritas à mão para os achados DE BANCADA, e `storm_report`
+    não devolve nenhuma. Inventá-las aqui seria escrever no lugar dela.
+    """
+    linhas = exame.get("linhas") or []
+    if not linhas:
+        # O VAZIO TAMBÉM É UM ACHADO, e a camada do produto já escreveu os dois
+        # textos possíveis — o "não respondeu" e o "não achou nada". Um painel
+        # em branco faria os dois parecerem a mesma coisa.
+        vazio = html.escape(str(exame.get("vazio") or ""))
+        return ('<div class="col-lista"><div class="saude" style="color:var(--texto-mudo)">'
+                f'<span class="txt"><span>{vazio}</span></span></div></div>'
+                '<div class="risco"></div><div class="col-lista"></div>')
+    meio = (len(linhas) + 1) // 2
+    return (f'<div class="col-lista">{"".join(_linha_do_exame(a) for a in linhas[:meio])}</div>'
+            '<div class="risco"></div>'
+            f'<div class="col-lista">{"".join(_linha_do_exame(a) for a in linhas[meio:])}</div>')
+
+
+def _linha_do_exame(achado: dict[str, Any]) -> str:
+    """Uma linha do exame. Tudo escapado: a frase vem do `doctor`, não daqui."""
+    cls = html.escape(str(achado.get("cls") or "nt"))
+    return (f'<div class="saude"><span class="selo {cls}">'
+            f'<span class="sg">{html.escape(str(achado.get("g") or ""))}</span>'
+            f'{html.escape(str(achado.get("selo") or ""))}</span>'
+            f'<span class="txt"><span>{html.escape(str(achado.get("txt") or ""))}</span>'
+            "</span></div>")
+
+
+def _html_da_contagem(texto: Any) -> str:
+    """`6 linhas · nenhum aviso` com o `·` de volta no `<span class="sep">`.
+
+    A FRASE É DA CAMADA DO PRODUTO (`aba_sistema.exame`), que a deriva da lista
+    — o "8" do desenho é literal de bancada e seria falso na primeira máquina
+    que não tivesse oito. O que se faz aqui é devolver ao separador a classe que
+    o desenho lhe deu; escrever a frase como texto puro apagaria o `<span>` e
+    mudaria a cor do `·` na tela dela.
+    """
+    if not texto:
+        return ""
+    return html.escape(str(texto)).replace(" · ", ' <span class="sep">·</span> ')
 
 
 
@@ -250,12 +558,6 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(motivo or "não consegui gravar o perfil da mesa")
 
 
-#: O ENDEREÇO DO PAINEL DE REGISTRO, e ele é o mesmo do gerador
-#: (`aba09.py`, `_id("registro-texto")`). Escrito UMA vez aqui porque dois
-#: gestos o usam; digitá-lo duas vezes seria a segunda cópia de um fato.
-REGISTRO = "registro-texto"
-
-
 @gesto("09-sistema.html", "ver-plugins")
 def ver_plugins(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """Relê os plugins do disco e ESCREVE a lista no painel de registro.
@@ -280,7 +582,7 @@ def ver_plugins(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     if not itens:
         motivo = ("os plugins estão ligados e não há nenhum no diretório"
                   if releu else "os plugins não estão habilitados neste daemon")
-        return {"mesa": {REGISTRO: f"Nenhum plugin carregado — {motivo}."}}
+        return _para_o_painel(f"Nenhum plugin carregado — {motivo}.")
     linhas = [f"{len(itens)} plugin(s) carregado(s)" + ("" if releu else " · a releitura falhou")]
     for it in itens:
         d = it if isinstance(it, dict) else {}
@@ -288,7 +590,7 @@ def ver_plugins(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         estado = "desligado" if d.get("disabled") else "ligado"
         casa = str(d.get("profile_match") or "todos os perfis")
         linhas.append(f"  {nome} · {estado} · {casa}")
-    return {"mesa": {REGISTRO: "\n".join(linhas)}}
+    return _para_o_painel("\n".join(linhas))
 
 
 @gesto("09-sistema.html", "ver-detalhes")
@@ -323,14 +625,14 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
              "--no-pager", "--output", "cat"],
             capture_output=True, text=True, timeout=8)
     except Exception as erro:  # a frase de tela precisa do motivo, e ele vem do erro
-        return {"mesa": {REGISTRO: f"Não consegui ler o registro de {unidade}: {erro}"}}
+        return _para_o_painel(f"Não consegui ler o registro de {unidade}: {erro}")
     texto = (saida.stdout or "").strip()
     if not texto:
         # O `stderr` É A FRASE, e não um "sem linhas" nosso: `journalctl` diz
         # por que não deu — unit inexistente, sem permissão, journal vazio — e
         # inventar um texto aqui apagaria a única pista de quem clicou.
         texto = (saida.stderr or "").strip() or f"O registro de {unidade} está vazio."
-    return {"mesa": {REGISTRO: texto}}
+    return _para_o_painel(texto)
 
 
 #: OS SETE QUE NÃO SÃO IPC, e por isso não estão aqui. Medidos no fonte em
