@@ -38,9 +38,24 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 #: pacote que parou de emitir, ou um gerador que parou de marcar — e as duas
 #: coisas são invisíveis na tela, que é o motivo de estarem escritas aqui.
 #:
-#: `07-lancadores.html` não está na lista porque não tem pacote, por decisão
-#: dela: *"a única que não faremos, só deixamos o botão levando pra ela, é a de
-#: lançadores."*
+#: `07-lancadores.html` NÃO está na lista, e a razão MUDOU em 02/09/2026.
+#:
+#: Era: ela não tinha pacote, por decisão dela em 01/09 (*"a única que não
+#: faremos, só deixamos o botão levando pra ela, é a de lançadores."*).
+#:
+#: É: ela TEM pacote (`a07_lancadores.py`, 26 endereços) desde que a decisão de
+#: 02/09 a reabriu (*"não daria para incluir G e F aqui? (…) temos um mapa
+#: funcional disso no gtk."*). O que falta é a PÁGINA: esta régua mede contra o
+#: **publicado**, e os endereços da 07 estão na BANCADA — publicar é ato dela,
+#: `scripts/check_o_desenho_aprovado.py --publicar 07`. Pôr um piso aqui antes
+#: disso faria a régua exigir um casamento contra a página de 31/08, que não tem
+#: um endereço sequer.
+#:
+#: **Quem publicar a 07 acrescenta a linha aqui**, com o número que
+#: `casamento.medir("07-lancadores.html")["casam"]` devolver — enquanto ela não
+#: estiver na lista, uma queda naquela aba é invisível para esta régua.
+#: A régua que cobre a 07 hoje é `test_a_aba_lancadores_diz_a_verdade.py`, que
+#: mede contra a BANCADA de propósito.
 PISO = {
     "01-jogar.html": 9,
     "02-controles.html": 9,
