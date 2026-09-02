@@ -78,10 +78,11 @@ PRIMEIRA = "01-jogar.html"
 #: por volta ficou em 0,9% do orçamento, com IPC de mediana 0,8 ms.
 TIQUE_MS = 500
 
-#: OS QUATRO LUGARES DA MESA DO DESENHO. O HTML nasce com eles todos — dois
-#: conectados e dois vazios, por decisão dela em 31/08 — e o produto tem de
-#: apagar o que a mesa de agora não preenche.
-TODOS_OS_LUGARES = {"p1", "p2", "p3", "p4"}
+#: OS QUATRO LUGARES DA MESA DO DESENHO mudaram de casa em 02/09/2026: vivem em
+#: `pacotes.TODOS_OS_LUGARES`, junto com a conta que os apaga
+#: (`pacotes.apagar_os_lugares_sem_dono`). O acoplamento entre o molde e quem o
+#: aplica tinha aqui uma régua que cobrava LITERAIS deste arquivo — e literal
+#: não é comportamento: a cura morria inteira com os três literais em pé.
 
 #: A aba que NÃO tem pacote, por decisão dela — só o botão que leva a ela.
 SEM_PACOTE = {"07-lancadores.html"}
@@ -564,6 +565,28 @@ CLIQUE_COM_ALVO = r"""
 })(%s, %s)
 """
 
+#: O PEDIDO DE PINTURA — a expressão exata que o tique manda ao WebView.
+#:
+#: A GUARDA `window.__hef` NÃO É ZELO: entre o tique começar e o JS rodar, a
+#: página pode ter trocado, e o `__hef` é do DOCUMENTO — morre com ele. Medido
+#: em 01/09/2026, passeando pelas dez: duas abas devolviam `TypeError:
+#: undefined is not an object` a cada travessia. O `-1` diz "a página trocou no
+#: meio", que é diferente de "pintei nada", e o relato conta os dois separados.
+#:
+#: E ELA É UM TERNÁRIO, NÃO UM `|| -1`. Em JavaScript `0 || -1` é `-1`: com o
+#: `||`, TODO tique que pintava zero voltava como "a página trocou", nunca
+#: entrava na conta, e o detector de aba muda do relato era **ramo morto** —
+#: justamente a linha escrita para pegar a `06-navegacao` publicando zero
+#: endereços em 01/09. Medido em 02/09/2026: 178 tiques na `02-controles` e a
+#: lista de pinturas com UM elemento só.
+#:
+#: ELA É CONSTANTE, e não uma f-string solta no tique, para que
+#: `test_um_tique_que_pinta_zero_nao_vira_pagina_trocada` possa RODÁ-LA no
+#: WebKit — a expressão que o produto manda, e não uma reescrita dela.
+PEDIR_A_PINTURA = r"""
+(window.__hef && window.__hef.pintar) ? window.__hef.pintar(CARGA) : -1
+"""
+
 #: O LEITOR DO DOM, e ele é O instrumento do `--prova-de-mockup`: devolve, em
 #: ordem de documento, o que a TELA está mostrando em cada endereço de pintura.
 #:
@@ -584,9 +607,14 @@ CLIQUE_COM_ALVO = r"""
 #:     '#fff'      → 'rgb(255, 255, 255)'    'transparent' → 'transparent'
 #:     'var(--x)'  → 'var(--x)'              'rgb(1,2,3)'  → 'rgb(1, 2, 3)'
 #:
-#: A normalização é FECHADA e pequena — hexadecimal e `rgb()` viram uma só
-#: forma, e todo o resto volta como foi escrito. `regua_do_mockup._cor_css`
-#: reproduz exatamente estas linhas, e por isso a régua pode ler o `color` de
+#: **A FRASE QUE ESTAVA AQUI CAIU NO MESMO DIA**: *"a normalização é FECHADA e
+#: pequena — hexadecimal e `rgb()` viram uma só forma, e todo o resto volta como
+#: foi escrito"*. Não é fechada. A sonda de 51 formas mostrou que o `hsl()`
+#: também vira `rgb()`, que o alfa é serializado CURTO, que o alfa cheio some, e
+#: que todo CSS inválido volta `''` em vez de voltar como foi escrito.
+#: `regua_do_mockup._cor_css` acompanha TODAS essas famílias, e quem confere não
+#: é uma transcrição: `test_a_cor_e_medida_no_webkit_e_nao_transcrita` refaz a
+#: sonda neste motor a cada execução. Por isso a régua pode ler o `color` de
 #: verdade em vez do texto visível. Um campo de cor lido pelo texto seria
 #: INDECIDÍVEL para sempre: pintar a cor não mexe numa letra.
 #:
@@ -718,10 +746,21 @@ class Piloto:
         self.relatou = False
         self.pagina = PRIMEIRA
         self.voltas = 0
-        #: Quantos valores cada aba pintou, na ordem em que foram visitadas. É o
-        #: relato do fim, e é o que distingue "a aba não tem dado" de "a aba tem
-        #: pacote e nenhum endereço casou".
+        #: Quantos valores cada aba pintou, na ordem em que foram visitadas —
+        #: só os tiques que escreveram ALGUMA coisa. É o que mede a quietude:
+        #: uma aba sadia pinta uma vez e sossega, e uma que soma pintura a cada
+        #: tique tem endereço que o navegador recusa.
         self.pinturas: dict[str, list[int]] = {}
+        #: Quantos tiques cada aba levou, PINTANDO OU NÃO. Sem este contador não
+        #: dá para dizer "a aba tem pacote e nenhum endereço casou": um tique de
+        #: zero valor não deixava rastro nenhum, e o detector de aba muda ficava
+        #: inalcançável. Medido em 02/09/2026 — 178 tiques na `02-controles` e um
+        #: só elemento em `pinturas`.
+        self.tiques: dict[str, int] = {}
+        #: Quantas vezes a página TROCOU no meio de um tique. É o `-1`, e ele é
+        #: um fato diferente de "pintei nada" — misturar os dois foi o que
+        #: engoliu o zero.
+        self.trocas: dict[str, int] = {}
         self.visitadas: list[str] = []
         self.custos: list[float] = []
         #: O que ESTE processo mandou ao daemon, e o que recusou por falta de
@@ -1119,18 +1158,12 @@ class Piloto:
         # É a sétima aparição do mesmo defeito nesta casa — *a tela afirmando um
         # controle que não está na mesa* — e a única cura que não depende de
         # cada aba lembrar-se dela é esta: quem pinta apaga o que sobra.
-        chaves = set()
-        for campos in carga["colunas"].values():
-            chaves |= set(campos)
-        vivos = set(carga["colunas"])
-        apagar = sorted(TODOS_OS_LUGARES - vivos)
-        for pref in apagar:
-            carga["colunas"][pref] = dict.fromkeys(chaves, "—")
-        # A MOLDURA TAMBÉM, e não só o texto: com os travessões escritos, o card
-        # do P2 continuava com a borda de CONECTADO e os botões de máscara
-        # acesos. Meio apagado é pior que aceso — quem olha lê a borda antes de
-        # ler o campo.
-        carga["vazios"] = apagar
+        #
+        # A CONTA MORA NO DESPACHANTE, e a mudança é de 02/09/2026: escrita
+        # aqui, ela só tinha uma régua que procurava LITERAIS neste arquivo — e
+        # a cura morria inteira sem que os literais sumissem. Ver
+        # `pacotes.apagar_os_lugares_sem_dono`.
+        pacotes.apagar_os_lugares_sem_dono(carga)
 
         def contou(valor: Any, erro: Any) -> None:
             if erro is not None:
@@ -1140,19 +1173,21 @@ class Piloto:
                 n = int(str(valor))
             except (TypeError, ValueError):
                 n = -1
-            # O `-1` (página trocada no meio) NÃO entra na conta: contá-lo
-            # como zero faria uma aba viva parecer muda na travessia.
-            if n >= 0:
+            # O `-1` (página trocada no meio) NÃO entra na conta de tiques:
+            # contá-lo como zero faria uma aba viva parecer muda na travessia.
+            if n < 0:
+                self.trocas[self.pagina] = self.trocas.get(self.pagina, 0) + 1
+                return
+            self.tiques[self.pagina] = self.tiques.get(self.pagina, 0) + 1
+            # O ZERO CONTA COMO TIQUE E NÃO COMO PINTURA, e é essa separação que
+            # faltava: `pinturas` mede a quietude (uma aba sadia pinta uma vez e
+            # para), `tiques` mede que a aba RODOU. Sem os dois, "pintou uma vez
+            # e sossegou" e "a página trocou 177 vezes" saíam iguais.
+            if n > 0:
                 self.pinturas.setdefault(self.pagina, []).append(n)
 
-        # A GUARDA `window.__hef &&` NÃO É ZELO: entre o tique começar e o JS
-        # rodar, a página pode ter trocado — e o `__hef` é do DOCUMENTO, morre
-        # com ele. Medido em 01/09/2026, passeando pelas dez: duas abas
-        # devolviam `TypeError: undefined is not an object` a cada travessia.
-        # O `-1` diz "a página trocou no meio", que é diferente de "pintei
-        # nada" — e o relato conta os dois separados.
-        self.ponte.perguntar(
-            f"(window.__hef && window.__hef.pintar({_json(carga)})) || -1", contou)
+        self.ponte.perguntar(PEDIR_A_PINTURA.replace("CARGA", _json(carga)),
+                             contou)
         # A CARGA DESTE TIQUE fica guardada: é ela — e não o código-fonte do
         # pacote — que diz o que o produto DECLAROU pintar nesta aba agora. Ler
         # daqui é o que separa esta régua das anteriores, que perguntavam se o
@@ -1628,14 +1663,26 @@ class Piloto:
             # e parecer que o relato rodava duas vezes. Não rodava.
             self.tela.fotografar(self.args.foto)
         print(f"\nvoltas: {self.voltas} · abas visitadas: {len(self.visitadas)}")
-        print(f"{'aba':22s} {'pinturas':>8s} {'valores':>8s}")
+        print(f"{'aba':22s} {'tiques':>7s} {'pinturas':>8s} {'valores':>8s}")
         mudas = []
         for pagina in sorted(pacotes.PACOTES):
             conta = self.pinturas.get(pagina) or []
             pico = max(conta) if conta else 0
-            print(f"{pagina:22s} {len(conta):8d} {pico:8d}")
-            if conta and pico == 0:
+            tiques = self.tiques.get(pagina, 0)
+            print(f"{pagina:22s} {tiques:7d} {len(conta):8d} {pico:8d}")
+            # A ABA MUDA É A QUE RODOU E NUNCA ESCREVEU UM VALOR. Antes esta
+            # linha perguntava `pico == 0` sobre uma lista em que o zero nunca
+            # entrava — era ramo morto. Agora `tiques` conta o tique e
+            # `pinturas` conta só quem escreveu, e a diferença entre os dois é o
+            # fato: pacote com endereço que não casa.
+            if tiques and not conta:
                 mudas.append(pagina)
+        # AS TROCAS SAEM NO RELATO, e não ficam num contador que ninguém lê: um
+        # `-1` é a página tendo trocado no meio do tique, e ver muitos deles é
+        # ver o passeio andando rápido demais para a pintura acompanhar.
+        if self.trocas:
+            print("página trocada no meio do tique: " + " · ".join(
+                f"{p} {n}" for p, n in sorted(self.trocas.items())))
         if self.provas:
             def classe(p: dict[str, Any]) -> str:
                 if p.get("desfecho") == "sem dono":
