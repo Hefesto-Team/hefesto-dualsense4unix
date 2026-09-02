@@ -812,9 +812,15 @@ desligado** e sem estar na **Conexão Nativa (Sony)**. Nos outros casos uma das
 duas coisas protegia, e por isso o defeito parecia intermitente.
 
 **Como confirmar em dez segundos:** abra a aba **Rumble**. Se a linha em cima
-dos quatro botões disser *"A intensidade acima não está chegando a jogo nenhum:
-não há gamepad virtual, e é por ele que ela passa"*, você está exatamente nesse
-estado.
+dos quatro botões disser que *"a intensidade não está chegando a jogo nenhum"*
+por falta de gamepad virtual, você está exatamente nesse estado.
+
+<!-- A CITAÇÃO É O PEDAÇO ESTÁVEL, e isso é de propósito — 02/09/2026. Ela era a
+     frase INTEIRA, de 211 caracteres, e caducou no dia em que a frase encurtou
+     (decisão dela; ver `rumble_actions.texto_do_alcance_da_intensidade`). O
+     fragmento acima é o mesmo em que as duas réguas se apoiam
+     (`test_politica_de_vibracao_o_alcance_na_tela.py`), então ele não envelhece
+     quando as palavras ao redor mudarem. -->
 
 **A causa, medida em 11/08/2026** com quatro DualSense na mesa, dois no cabo e
 dois no rádio: o Hefesto reconfirmava o estado do controle a cada meio segundo,

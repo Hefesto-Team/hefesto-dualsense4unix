@@ -38,28 +38,38 @@ seção daqui**: a aba deixou de estar em trabalho.
 
   A linha **some** quando não há nada a dizer (`.vib-estado:empty`).
 
-  **CORRIGIDO EM 02/09/2026 — o número anterior foi medido na cena errada.**
-  Esta seção dizia *"no estado normal ela cabe sem fazer a aba rolar — o miolo
-  tem 564 px e o quadro passou de 476 para 498"*. Isso é verdade sobre o
-  desenho CRAVADO, que tem UMA linha de propósito; é falso sobre a sua máquina.
-  Medido no WebKit da janela do produto (1180x757), com os seus dois controles:
+  **A FRASE ENCURTOU — 02/09/2026, e foi a sua decisão.** Ela tinha 211
+  caracteres e ocupava 1072 px numa caixa de 1072: quebrava em duas sublinhas, e
+  a segunda — *"que você fixar aqui embaixo."* — ficava **cortada** pela borda
+  de baixo do miolo. Para ler o aviso inteiro você tinha de arrastar. Medido no
+  WebKit da janela do produto (1180x757), com os seus dois controles e
+  `vpads == 0`, e fotografado:
 
-  | | quadro | a aba rola | a linha de estado |
+  | | a linha de estado | a aba rola | o aviso |
   | --- | --- | --- | --- |
-  | a cena do desenho | 528 px | 0 px | 1 linha, 18 px |
-  | **a sua mesa agora** | 570 px | **40 px** | 2 linhas, 60 px |
+  | a cena do desenho | 1 linha, 18 px | 0 px | não acende |
+  | a sua mesa, frase de 211 chars | 2 linhas, 60 px | 40 px | **cortado** |
+  | **a sua mesa, frase de hoje** | 2 linhas, 42 px | 22 px | **inteiro** |
 
-  O miolo tem 530 px de conteúdo: **dois px de folga**, e o seu estado custa 42.
-  Resultado fotografado: a segunda linha do alerta laranja — *"que você fixar
-  aqui embaixo."* — fica **cortada** pela borda de baixo, com barra de rolagem à
-  direita. Para ler o aviso inteiro você tem de arrastar.
+  A frase de hoje tem 162 caracteres e diz as mesmas quatro coisas: o que não
+  está acontecendo, por quê, o que fazer, e o que a intensidade ainda faz. Ela é
+  a **mesma** que a janela GTK usa, com um dono só
+  (`rumble_actions.texto_do_alcance_da_intensidade`) — encurtar ali encurtou as
+  duas telas, que é o certo: uma frase, um dono. Na GTK ela caiu de 3 linhas
+  para 2 numa janela de 600 px, e de 2 para 1 numa de 1100.
 
-  **O que espera o seu OK, e agora é uma escolha entre três:**
+  **SOBRAM 22 px DE ROLAGEM, e eles não são a frase.** São DUAS mensagens
+  acesas ao mesmo tempo — a dos pedidos do jogo e a do alcance — onde o desenho
+  reservou espaço para UMA: 42 px contra 20 de folga. Nada fica cortado, mas a
+  barra de rolagem aparece.
 
-  1. **deixar como está** — a aba rola 40 px quando há alerta, e você arrasta;
-  2. **o bloco no TOPO do quadro**, ao lado do título — o aviso fica sempre
-     inteiro à vista, e quem sai de vista é a linha "Testar agora" embaixo;
-  3. **encolher uma linha da tabela** em ~42 px — cabe tudo, mas mexe no
+  **O que espera o seu OK, e é uma escolha entre três:**
+
+  1. **deixar como está** — a aba rola 22 px quando os dois avisos acendem, e
+     nada fica cortado;
+  2. **o bloco no TOPO do quadro**, ao lado do título — quem sai de vista é a
+     linha "Testar agora" embaixo;
+  3. **encolher uma linha da tabela** em ~22 px — cabe tudo, mas mexe no
      desenho que você aprovou em 27/08.
 
   Não dá para caber sem escolher: o `.miolo` é do `topo.html`, comum às dez

@@ -37,8 +37,11 @@ AS MORDIDAS, e cada uma reprova um teste diferente:
   reprova;
 * **faça o ``auto`` responder ``None``** →
   ``test_o_teto_e_a_mesma_frase_que_a_janela_estavel_escreve`` reprova;
-* **tire o ``quote=False`` do ``html_do_estado``** →
+* **tire o ``quote=False`` da FRASE em ``html_do_estado``** →
   ``test_a_aspa_reta_nao_vira_entidade`` reprova;
+* **ponha ``quote=False`` no TOM** → ``test_o_tom_e_escapado_como_atributo``
+  reprova: ali o valor vai para dentro de ``class="…"``, e uma aspa reta fecha o
+  atributo;
 * tire o bloco do ``MIOLO`` do gerador → ``test_a_bancada_tem_o_bloco`` reprova
   (e o próprio ``_conferir`` do gerador recusa gerar).
 
@@ -313,12 +316,56 @@ def test_a_aspa_reta_nao_vira_entidade():
     conteúdo de TEXTO, nunca atributo — ``&``, ``<`` e ``>`` continuam
     escapados, e é o que o caso acima confere.
 
-    MORDIDA: tire o ``quote=False`` do ``html_do_estado`` e este caso reprova.
+    MORDIDA: tire o ``quote=False`` da FRASE em ``html_do_estado`` e este caso
+    reprova.
     """
     saiu = _tela.html_do_estado([(_tela.DIZ, 'clique "Testar"')])
     assert "&quot;" not in saiu, (
         f"a entidade voltou ao HTML — o bloco repintaria a cada tique: {saiu!r}")
     assert 'clique "Testar"' in saiu
+
+
+def test_o_tom_e_escapado_como_atributo(monkeypatch):
+    """O ``tom`` cai dentro de ``class="…"``, e ali a aspa reta QUEBRA a tela.
+
+    **O DEFEITO, achado em 02/09/2026 na auditoria da própria frente.** O
+    ``quote=False`` nasceu justificado — e a justificativa está certa para a
+    FRASE, que é conteúdo de texto. Ela foi aplicada também ao ``tom``, que é
+    atributo, e lá o argumento diz o contrário do que o código faz: uma ``"`` no
+    valor **fecha o atributo** e o resto vira markup. É a forma clássica de um
+    apóstrofo derrubar uma tela.
+
+    A régua não olha string: ela PARSEIA o HTML e conta os atributos da ``div``.
+    Um ``assert '&quot;' in saiu`` daria verde com o escape aplicado no lugar
+    errado — o que importa é que o navegador veja UM atributo, não dois.
+
+    HOJE NÃO MORDE: o ``tom`` só vale ``diz``/``alerta``/``info``, três
+    constantes deste módulo. O escape é o que segura o dia em que um tom vier de
+    dado — e o mesmo raciocínio do ``&`` já está escrito no ``html_do_estado``.
+
+    MORDIDA: ponha ``quote=False`` de volta no ``tom`` e este caso reprova
+    nomeando o atributo que nasceu do nada.
+    """
+    from html.parser import HTMLParser
+
+    veneno = 'diz" onmouseover="x'
+    saiu = _tela.html_do_estado([(veneno, "uma frase qualquer")])
+
+    achados: list[tuple[str, list]] = []
+
+    class Leitor(HTMLParser):
+        def handle_starttag(self, tag, attrs):
+            achados.append((tag, attrs))
+
+    Leitor().feed(saiu)
+    divs = [a for t, a in achados if t == "div"]
+    assert len(divs) == 1, f"o HTML deixou de ser uma div por linha: {saiu!r}"
+    nomes = sorted(nome for nome, _valor in divs[0])
+    assert nomes == ["class"], (
+        f"o tom escapou do atributo e criou {nomes} — uma aspa reta no tom "
+        f"fecha a `class` e o resto do valor vira markup: {saiu!r}")
+    assert dict(divs[0])["class"] == f"est {veneno}", (
+        "o valor do atributo chegou ao navegador diferente do tom emitido")
 
 
 def test_o_pacote_emite_o_bloco_do_estado():

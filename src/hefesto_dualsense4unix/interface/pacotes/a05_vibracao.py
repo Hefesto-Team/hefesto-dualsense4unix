@@ -39,24 +39,39 @@ from hefesto_dualsense4unix.app.telas import vibracao as _tela
 from . import Contexto, registrar
 
 #: O QUE ESTA ABA MOSTRA E ESTE PACOTE NÃO PINTA — com o motivo e o DONO da
-#: cura, que em três dos quatro casos não é este arquivo. Estava `{}` até
-#: 02/09/2026, e o vazio dizia "nada falta", que é a forma mais barata de mentir
-#: numa aba onde quatro coisas faltavam.
+#: cura. Estava `{}` até 02/09/2026, e o vazio dizia "nada falta", que é a forma
+#: mais barata de mentir numa aba onde quatro coisas faltavam.
+#:
+#: **DOIS DOS QUATRO MUDARAM DE DONO no mesmo dia**, quando o alvo `classe`
+#: nasceu no pintor: `degrau-aceso` e `mult-teto` deixaram de esperar por outro
+#: arquivo e passaram a esperar por ESTE mais o gerador da aba — e, no fim, pela
+#: publicação dela. Ver a nota logo abaixo.
 SEM_DONO: dict[str, str] = {
+    # FATO SUBSTITUÍDO — 02/09/2026. As duas linhas abaixo diziam "o pintor não
+    # sabe mexer em classe" e "mesma cura, mesmo dono: o pintor". **O PINTOR JÁ
+    # SABE**: `hefesto_vivo.py:217` tem o ramo `if(alvo === 'classe')`, e o
+    # comentário que o abre (`:187-191`) nomeia estes dois casos pelo nome —
+    # "qual dos quatro degraus da Vibração está aceso" e "o rótulo `Máx` do
+    # teto". O dono mudou de lado, e mantê-los como estavam faria a próxima
+    # pessoa esperar por uma cura que já chegou.
     "degrau-aceso": "QUAL dos quatro degraus está aceso é a classe `on` do "
-    "botão, e o pintor não sabe mexer em classe: `escrever()` só alcança "
-    "texto, largura, fundo, valor e html (`hefesto_vivo.py:110-155`). "
-    "Escrever o nome do degrau NO botão é o que apagava os quatro rótulos "
-    "até hoje. A cura é um alvo `classe` no pintor — território do "
-    "`hefesto_vivo.py`, não deste pacote. E quando ela existir, o degrau da "
-    "COLUNA não é sempre o da mesa: `profiles/schema.ControllerRumbleOverride` "
-    "guarda `policy` e `custom_mult` por peça desde POR-UNIDADE-01 "
-    "(10/08/2026), e `core/backend_pydualsense._escalar_rumble` os aplica.",
+    "botão, e ele continua saindo do DESENHO — a foto de 02/09 mostra o P1 com "
+    "'Máximo' aceso e o P2 com 'Balanceado', com `rumble_policy` igual para os "
+    "dois: pelo menos uma das colunas mente. O QUE FALTA NÃO É MAIS O PINTOR: "
+    "falta o ENDEREÇO no HTML (`data-campo=\"degrau\" data-hef-alvo=\"classe\" "
+    "data-hef-quando=<degrau>` nos quatro botões, em `aba05._coluna`) e a "
+    "emissão de `degrau` por coluna neste pacote. Muda o desenho, logo passa "
+    "pela bancada e pela publicação DELA. E o degrau da COLUNA não é sempre o "
+    "da mesa: `profiles/schema.ControllerRumbleOverride` guarda `policy` e "
+    "`custom_mult` por peça desde POR-UNIDADE-01 (10/08/2026), e "
+    "`core/backend_pydualsense._escalar_rumble` os aplica.",
     "mult-teto": "O rótulo `Máx` ao lado do multiplicador aparece SÓ quando a "
-    "coluna está no teto, e some quando não está. O pintor troca vazio por "
-    "travessão (`hefesto_vivo.py:112`), então um rótulo que às vezes não "
-    "existe não tem como ser apagado — pintá-lo poria `—` onde o desenho não "
-    "põe nada. Mesma cura, mesmo dono: o pintor.",
+    "coluna está no teto, e hoje é cravado: a foto de 02/09 mostra `70%` com "
+    "`Máx` ao lado, afirmando que 70% é o teto. Pintá-lo por TEXTO poria `—` "
+    "onde o desenho não põe nada (`hefesto_vivo.py:112` troca vazio por "
+    "travessão); o alvo certo é o `classe` SEM `data-hef-quando`, que é "
+    "booleano — o próprio comentário do pintor cita este rótulo. Mesma "
+    "pendência do `degrau-aceso`: endereço no HTML e emissão aqui.",
     "lado:ligado": "Os oito interruptores de punho são DESENHO, e o produto "
     "concorda por escrito: `app/telas/vibracao.SEM_FONTE['lado:ligado']` — não "
     "há campo em `profiles/schema.py`, nem método de IPC, nem chave no "

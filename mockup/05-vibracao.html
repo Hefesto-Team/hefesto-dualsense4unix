@@ -915,11 +915,12 @@
      nenhum. Eles não são decoração: um deles é o "a intensidade que você
      escolheu não chega a jogo nenhum", que ficou onze dias sem tela.
 
-     DOIS TONS, e o nome do tom vem do produto (`app/telas/vibracao.DIZ` e
-     `.ALERTA`), nunca um hex emitido pelo Python: `diz` conta o que está
-     acontecendo, `alerta` avisa que o que ela escolheu não chega. O laranja é
-     o `--orange` do tema, o MESMO `#ffb86c` que a janela estável usa nestas
-     linhas — um token, não uma segunda cópia da cor.
+     TRÊS TONS, e o nome do tom vem do produto (`app/telas/vibracao.DIZ`,
+     `.ALERTA` e `.INFO`), nunca um hex emitido pelo Python: `diz` conta o que
+     está acontecendo, `alerta` avisa que o que ela escolheu não chega, `info`
+     explica sem alarmar. O laranja é o `--orange` do tema, o MESMO `#ffb86c`
+     que a janela estável usa nestas linhas — um token, não uma segunda cópia
+     da cor.
 
      `:empty{display:none}` é o que deixa a linha SUMIR quando não há o que
      dizer. É a metade que o pintor não sabe fazer: `escrever()` troca vazio por
@@ -935,27 +936,34 @@
      "com aviso a aba rola, e isso é de propósito: os dois alertas só aparecem
      em ESTADO EXCEPCIONAL". As duas metades caíram na mesma medição.
 
-     MEDIDO no WebKit da janela do produto (1180x757), com a MESA DELA — dois
-     controles, um `usb` e um `bt` —, injetando o BOOTSTRAP do piloto e pintando
-     a carga do `a05_vibracao.pacote()`:
+     MEDIDO no WebKit da janela do produto (1180x757 — o `TAMANHO_NA_TELA`, e
+     não o `TAMANHO_OCULTA`, que é 143 px mais alto e responderia "não rola"
+     sempre), com a MESA DELA — dois controles, um `usb` e um `bt`, `vpads == 0`
+     —, injetando o BOOTSTRAP do piloto e pintando a carga do
+     `a05_vibracao.pacote()`. A régua está versionada:
+     `tests/unit/test_o_aviso_da_vibracao_cabe_na_aba.py`.
 
-       .miolo:  client 564 · padding 16 em cima e 18 embaixo -> 530 de conteúdo
-       ANTES da pintura (a cena CRAVADA, 1 linha):  quadro 528 · rola 0
-       DEPOIS da pintura (a mesa dela, 2 linhas):   quadro 570 · rola 40
+       .miolo: client 564 · fundo em 733 px
+       a cena CRAVADA (1 linha) ................ estado 18 px · rola 0
+       a mesa dela, com a frase de 211 chars ... estado 60 px · rola 40 · CORTADA
+       a mesa dela, com a frase de hoje ........ estado 42 px · rola 22 · inteira
 
-     São DOIS px de folga no desenho, e o estado dela custa 42. A segunda linha
-     do alerta — "que você fixar aqui embaixo." — fica CORTADA pela borda de
-     baixo do miolo, com a barra de rolagem à direita. Fotografado.
+     A FRASE ENCURTOU — decisão dela, 02/09, ciente do custo. A de 211
+     caracteres ocupava 1072 px de 1072: quebrava em duas sublinhas e a segunda
+     — "que você fixar aqui embaixo." — terminava em 740 px, SETE px abaixo do
+     fundo do miolo. Fotografado. A de hoje tem 162 caracteres, ocupa 942 px e
+     cabe numa sublinha; o aviso se lê inteiro sem arrastar.
 
-     E `vpads == 0` NÃO É EXCEPCIONAL: é o estado corrente da máquina dela, com
-     os dois controles na mesa. O aviso que esta linha existe para dar é
-     exatamente o que fica pela metade.
+     A frase é a MESMA da janela GTK e tem um dono só
+     (`rumble_actions.texto_do_alcance_da_intensidade`) — encurtar ali encurtou
+     as duas telas, de propósito.
 
-     O QUE FALTA É DECISÃO DELA, e não pixel: caber os 42 px exige encolher a
-     tabela que ela aprovou, e o `.miolo` (16px 3px 18px 18px) é do `topo.html`,
-     comum às dez abas. As três saídas — encolher uma linha da tabela, pôr o
-     bloco no TOPO do quadro (aí quem sai de vista é o "Parar"), ou aceitar a
-     rolagem — estão em `mockup/DIVERGENCIAS.md`, esperando o OK. */
+     SOBRAM 22 px DE ROLAGEM, e eles não são texto: são DUAS mensagens acesas ao
+     mesmo tempo (a dos pedidos e a do alcance) onde o desenho reservou UMA — 42
+     px contra 20 de folga. `vpads == 0` não é excepcional, é o estado corrente
+     da mesa dela. Caber os 22 exige encolher a tabela que ela aprovou, e o
+     `.miolo` (16px 3px 18px 18px) é do `topo.html`, comum às dez abas: é
+     DECISÃO DELA, não pixel. As saídas estão em `mockup/DIVERGENCIAS.md`. */
   .vib-estado{margin:4px 4px 0;display:flex;flex-direction:column;gap:6px}
   .vib-estado:empty{display:none}
   .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
