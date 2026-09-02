@@ -249,3 +249,167 @@ def test_o_toggle_global_de_mute_saiu_do_gesto() -> None:
     assert "toggle_default_source_mute" not in nomes
     assert "fonte_padrao_e_o_controle" not in nomes
     assert "set_mic_led" in nomes, "e o que ficou foi a LUZ, com endereço"
+
+
+# ---------------------------------------------------------------------------
+# 7 (o ATO). O botão elege o controle QUE APERTOU — medido, não digitado
+# ---------------------------------------------------------------------------
+#
+# AUDITORIA DE 02/09/2026. As duas réguas acima leem `co_names` e exigem que
+# certos NOMES estejam (ou não) no bytecode do laço. Isso é mais forte que
+# `inspect.getsource`, e ainda assim mede a PALAVRA e não o ATO: os nomes
+# sobrevivem à arrancada da cura. Provado com duas mordidas —
+#
+#   (a) o `continue` da recusa sem endereço virando queda no primário;
+#   (b) `_eleger_ou_devolver` elegendo SEMPRE `conectados[0]`, que é
+#       literalmente o defeito que a onda existe para impedir;
+#
+# — e nas duas as réguas de mic/áudio/hotkey/eleição desta casa ficaram verdes
+# (855 passaram com a mordida (b) em pé). Nenhuma ligava a borda à eleição ao
+# LED.
+#
+# As de cima FICAM: elas são boas nas asserções NEGATIVAS (o que saiu do laço),
+# que é o que sabem medir. O que falta é a cena, e é ela que vem aqui.
+
+
+class _Resultado:
+    """O que `eleger_o_controle`/`devolver_o_microfone` devolvem."""
+
+    def __init__(self, *, ok: bool, ativo: str, motivo: str) -> None:
+        self.ok = ok
+        self.ativo = ativo
+        self.motivo = motivo
+
+
+class _EleitorDublado:
+    """`EleitorDeMicrofone` de bancada: guarda o que lhe pediram."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[tuple[str, Any]] = []
+
+    def eleger_o_controle(self, uniq: str, conectados: list[str]) -> _Resultado:
+        self.chamadas.append(("eleger", uniq))
+        return _Resultado(ok=True, ativo=f"mic_de_{uniq}", motivo="")
+
+    def devolver_o_microfone(self) -> _Resultado:
+        self.chamadas.append(("devolver", None))
+        return _Resultado(ok=True, ativo="mic_da_placa_mae", motivo="")
+
+
+class _BackendDaMesa:
+    """Backend com dois controles na mesa e o LED de cada um."""
+
+    def __init__(self, uniqs: tuple[str, ...]) -> None:
+        self._uniqs = uniqs
+        self.leds: dict[str, bool] = {}
+
+    def describe_controllers(self) -> list[dict[str, Any]]:
+        return [{"uniq": u} for u in self._uniqs]
+
+    def set_mic_led(self, aceso: bool, *, uniq: str | None = None) -> None:
+        self.leds[uniq or "<sem endereço>"] = bool(aceso)
+
+
+class _ConfigDoGesto:
+    mic_button_toggles_system = True
+
+
+class _DaemonDoGesto:
+    def __init__(self, backend: _BackendDaMesa) -> None:
+        from hefesto_dualsense4unix.core.events import EventBus
+
+        self.bus = EventBus()
+        self.config = _ConfigDoGesto()
+        self.controller = backend
+        self._eleitor_de_microfone = _EleitorDublado()
+        self._parando = False
+
+    def _is_stopping(self) -> bool:
+        return self._parando
+
+    async def _run_blocking(self, fn: Any, *args: Any) -> Any:
+        await asyncio.sleep(0)
+        return fn(*args)
+
+
+_J1 = "aabbcc000011"
+_J2 = "aabbcc000022"
+
+
+async def _rodar_o_gesto(daemon: _DaemonDoGesto, bordas: list[dict[str, Any]]) -> None:
+    """Sobe o `mic_button_loop`, publica as bordas, drena e derruba."""
+    from hefesto_dualsense4unix.core.events import EventTopic
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    tarefa = asyncio.create_task(hotkey.mic_button_loop(daemon))  # type: ignore[arg-type]
+    try:
+        # O laço só existe depois do primeiro `await`: publicar antes disso
+        # entregaria a borda a ninguém, e a régua daria verde sobre o vazio.
+        for _ in range(10):
+            await asyncio.sleep(0.005)
+            if daemon.bus.subscriber_count(EventTopic.MIC_DA_MESA):
+                break
+        assert daemon.bus.subscriber_count(EventTopic.MIC_DA_MESA) == 1
+
+        for borda in bordas:
+            daemon.bus.publish(EventTopic.MIC_DA_MESA, borda)
+            for _ in range(20):
+                await asyncio.sleep(0.005)
+    finally:
+        daemon._parando = True
+        tarefa.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await tarefa
+
+
+@pytest.mark.asyncio
+async def test_o_botao_elege_o_controle_que_apertou_e_nao_o_primeiro_da_mesa() -> None:
+    """O CORAÇÃO DA ONDA, medido: o Jogador 2 aperta, o Jogador 2 é eleito.
+
+    A decisão dela: *"Se eu apertar o botão físico mic do controle e ele
+    acender, significa que eu quero que o canal de áudio do microfone seja o
+    controle."* Numa mesa de quatro, "o controle" é o que APERTOU — e a mesa
+    deste teste tem o Jogador 1 na frente, exatamente para que eleger o
+    primeiro passe despercebido se ninguém olhar o endereço.
+
+    CURA A ARRANCAR: em `_eleger_ou_devolver`, trocar o `uniq` recebido por
+    `conectados[0]`. As réguas de `co_names` ficam verdes (nome nenhum muda);
+    esta reprova, dizendo qual controle foi eleito no lugar de qual.
+    """
+    backend = _BackendDaMesa((_J1, _J2))
+    daemon = _DaemonDoGesto(backend)
+
+    await _rodar_o_gesto(daemon, [{"uniq": _J2, "mudo": False}])
+
+    eleitor = daemon._eleitor_de_microfone
+    assert eleitor.chamadas == [("eleger", _J2)], (
+        "o botão do Jogador 2 elegeu outro controle — é a mesa de quatro "
+        f"elegendo sempre o mesmo: {eleitor.chamadas}"
+    )
+    assert backend.leds == {_J2: True}, (
+        "o LED tem de acender no plástico de quem apertou, e só nele: "
+        f"{backend.leds}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_borda_sem_endereco_nao_elege_ninguem() -> None:
+    """A recusa é ATO: eleitor nenhum é chamado, LED nenhum acende.
+
+    A régua de `co_names` acima exige o log `mic_da_mesa_sem_endereco` no
+    bytecode. Ele sobrevive a arrancar o `continue` — medido em 02/09/2026, com
+    a recusa trocada por queda no primário e a régua verde. Esta olha o efeito.
+
+    CURA A ARRANCAR: trocar o `continue` do ramo sem `uniq` por
+    `uniq = (_uniqs_conectados(daemon) or [""])[0]` — esta régua reprova.
+    """
+    backend = _BackendDaMesa((_J1, _J2))
+    daemon = _DaemonDoGesto(backend)
+
+    await _rodar_o_gesto(daemon, [{"uniq": "", "mudo": False}, {"mudo": False}])
+
+    assert daemon._eleitor_de_microfone.chamadas == [], (
+        "uma borda sem endereço elegeu alguém — é o gesto de um jogador virando "
+        "eleição de outro"
+    )
+    assert backend.leds == {}, "e nenhum plástico pode acender por isso"
