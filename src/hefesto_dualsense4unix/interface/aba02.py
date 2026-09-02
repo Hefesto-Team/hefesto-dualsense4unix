@@ -3,6 +3,30 @@ import onde
 from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTADOS,
                    SEPARADOR, cor_da_zona, luzinhas, player_slot_color, tom_da_casa)
 
+# O TEXTO DE TELA DESTA ABA MORA NO PACOTE, e a seta aponta para cá — não daqui
+# para lá. O produto (`pacotes/a02_controles.py`) é quem ESCREVE estas palavras
+# na tela a cada tique; o gerador só as desenha uma vez, e desenhá-las de uma
+# segunda cópia é como o "Sem toque" já divergiu antes.
+#
+# A DIREÇÃO É OBRIGATÓRIA, e não gosto: o `portao_a_casa_sabe_e_o_produto_nao_faz`
+# PODA os `abaNN.py` da conta, porque são BANCADA (`_NAO_E_PROMESSA`:
+# *"rodam à mão, escrevem em `mockup/`, e o produto lê o HTML já pronto"*).
+# Importar o gerador DE DENTRO do pacote arrasta a bancada para o fecho de
+# produção — medido em 02/09/2026: três lápides de `interface/monta.py`
+# (`monta`, `luzinhas`, `tom_da_casa`) viraram alcançáveis e o portão reprovou
+# nomeando as três. Aqui, ao contrário, é bancada lendo produto, e a poda segue
+# valendo.
+#
+# E O IMPORT É O DO VIZINHO (`pacotes.…`), não o de pacote instalado
+# (`hefesto_dualsense4unix.interface.pacotes.…`): os dois caminhos carregam o
+# MESMO arquivo em DOIS módulos diferentes, com dois registros de gesto e duas
+# cópias de cada string. É por isso que a linha 1 deste arquivo põe a pasta no
+# `sys.path`, e é a forma que o `onde` e o `monta` logo acima já usam.
+# O `CLICADO` NÃO ENTRA: a cena fixa do mockup não tem analógico apertado, e
+# importá-lo sem uso é F401 no portão. Ele é do PACOTE — quem o escreve na
+# tela é o tique, não o desenho.
+from pacotes.a02_controles import COM_TOQUE, ROTULO_DO_CLIQUE, SEM_TOQUE
+
 # ---------------------------------------------------------------------------
 # D-A-LEITURA-DO-ACELERÔMETRO-SAI-DA-TELA (29/08/2026) — MUDANÇA DE ESPECIFICAÇÃO.
 #
@@ -778,8 +802,6 @@ def luz_do_jogador(c):
 # em 238 de 238 amostras, e um retângulo que nunca mostra nada lê como quebrado.
 # O rótulo é o do produto (`sensor_widgets`: "Sem toque" / "N toque"), no mesmo
 # canto onde a moldura de baixo já põe o hexadecimal.
-SEM_TOQUE = "Sem toque"
-COM_TOQUE = "Tocando"
 DICA_TOQUE = ("O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense "
               "só publica posição enquanto alguém encosta na superfície.")
 
@@ -1044,14 +1066,14 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
               <div>
                 <div class="stick-rot">Analógico<br>esquerdo</div>
                 <div class="stick" data-stick="l">
-                  <span class="rotl" data-campo="l3">L3</span>
+                  <span class="rotl" data-campo="l3">{ROTULO_DO_CLIQUE["l"]}</span>
                   <span class="p" style="left:{pos(sticks[0])}%;top:{pos(sticks[1])}%"></span></div>
                 <div class="xy" data-xy="l">X: {sticks[0]:>3}<br>Y: {sticks[1]:>3}</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
-                  <span class="rotl" data-campo="r3">R3</span>
+                  <span class="rotl" data-campo="r3">{ROTULO_DO_CLIQUE["r"]}</span>
                   <span class="p" style="left:{pos(sticks[2])}%;top:{pos(sticks[3])}%"></span></div>
                 <div class="xy" data-xy="r">X: {sticks[2]:>3}<br>Y: {sticks[3]:>3}</div>
               </div>
