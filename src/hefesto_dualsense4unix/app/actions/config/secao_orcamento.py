@@ -61,7 +61,7 @@ from hefesto_dualsense4unix.app.actions.config.moldura import (
     rotulo_de_apoio,
 )
 from hefesto_dualsense4unix.app.widgets.segmented_selector import SegmentedSelector
-from hefesto_dualsense4unix.core.rumble import teto_do_orcamento
+from hefesto_dualsense4unix.core.rumble import SEM_TETO, teto_do_orcamento
 from hefesto_dualsense4unix.integrations import plano_de_radio
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -163,10 +163,13 @@ PERFIL_POR_TETO: dict[str, str] = {
     "auto": PERFIL_TUDO_LIGADO,
 }
 
-#: O que a tela diz quando o perfil não impõe teto nenhum. Não é "100%": um
-#: percentual afirmaria um limite onde não há, e o "Máximo" da aba Rumble
-#: entrega 150% justamente por não ter limite.
-SEM_TETO = "Sem teto"
+# SEM_TETO MUDOU-SE DE CASA em 01/09/2026 — está em `core.rumble`, ao lado do
+# `teto_do_orcamento` cujo `None` ela traduz, e chega aqui pelo import da linha
+# 64. Este módulo puxa `gi`/`Gtk` (pelo `SegmentedSelector` da linha 63), e uma
+# camada de tela sem GTK que precisasse da palavra tinha de escolher entre
+# arrastar a janela inteira para o processo e digitar a frase de novo. O nome
+# continua respondendo por `secao_orcamento.SEM_TETO`, que é como três réguas e
+# a tabela desta seção o leem.
 
 #: A célula do "Eu escolho": não há teto de mesa, e a aba de origem decide.
 CADA_ABA_MANDA = "Cada aba manda"

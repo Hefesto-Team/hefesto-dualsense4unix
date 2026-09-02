@@ -119,10 +119,19 @@ SEM_FONTE: tuple[tuple[str, str, str], ...] = (
         "MIGRA-CONEXOES-06 — §0.7 do índice, e é palavra dela.",
     ),
     (
-        "controle.*.vibracao.teto",
-        "A tela oferece 'Segue o global / Sem teto / 30%' por controle. O "
-        "produto aplica `min` (`core/rumble.py`), e o `min` é o que impede um "
-        "'teto' de AUMENTAR a força — sobrepor mudaria o daemon, não a tela.",
+        "controle.*.vibracao.sem-teto",
+        "'Sem teto' é a única das TRÊS opções sem representação possível: "
+        "`ControllerRumbleOverride` (`profiles/schema.py:762`) só diz QUAL "
+        "política a peça usa, nunca 'esta peça ignora o teto do orçamento'; e o "
+        "`min` que imporia um teto de verdade vive em "
+        "`core.rumble._effective_mult`, que não conhece `uniq` e roda antes de a "
+        "peça ser endereçada. Traduzi-la por 'balanceado' deixaria a peça mais "
+        "FRACA que as outras sob um global 'max'; por 'max', mais FORTE que o "
+        "global sob 'balanceado' — um campo chamado teto AUMENTANDO a força. "
+        "A CONTA ESTÁ EM `politica_do_rotulo`, derivada do `RUMBLE_POLICY_MULT` "
+        "e não digitada: ela estava escrita à mão aqui e em mais dois lugares, e "
+        "os três diziam 0,667 com o degrau mordido para outra coisa. "
+        "As outras duas ganharam fonte em 01/09/2026.",
         "MIGRA-CONEXOES-11 — §0.5 do índice, e é palavra dela.",
     ),
     (
@@ -330,6 +339,280 @@ def html_das_linhas(controles: Sequence[Controle], mascara: str) -> str:
 #: primeiras e :func:`sobraram` diz quantas ficaram de fora, em voz alta.
 FATIAS_DO_ACORDEAO = 4
 
+#: A opção que NÃO grava nada. O merge do perfil é POR CAMPO
+#: (`profiles/manager._controllers_to_rumble_scales:1864-1866` pula quem não tem
+#: `policy` em `model_fields_set`), então "seguir o global" é a ausência da
+#: chave — não um valor a escrever.
+SEGUE_O_GLOBAL = "Segue o global"
+
+#: A CLÁUSULA DE QUANDO A FORÇA NÃO É CALCULÁVEL, e ela nunca é "Sem teto".
+#: Acontece em três casos, todos honestos: o serviço não publicou o
+#: `rumble_policy`, ele está em `auto` (degrau que muda com a bateria a cada
+#: tique), ou o `maquina.json` não deu para ler. Antes de 01/09/2026 os três
+#: viravam a afirmação em negrito **"Sem teto"** — a ausência de notícia lida
+#: como sucesso, no campo que ela clica.
+NAO_SEI_A_FORCA = "e não dá para dizer quanta força chega ao motor agora"
+
+
+def por_cento(fracao: float) -> str:
+    """`0.3` → `"30% da força"`. A ÚNICA grafia desta frase nesta casa.
+
+    Ela existia em QUATRO — `secao_orcamento.celula_do_teto:379`,
+    `secao_orcamento._dica_da_bateria_longa:240`, `gui.aba_sistema
+    .forca_do_perfil:417` e a que este arquivo digitou em 01/09/2026 —, e a
+    quarta era a única que não passava pelo dono do NÚMERO. Aqui só a FORMA é
+    própria; o número vem sempre de quem o calcula.
+    """
+    return f"{round(fracao * 100)}% da força"
+
+
+def fala_do_teto(chave: str | None) -> str:
+    """A frase de tela do teto que uma chave de ORÇAMENTO DA MESA impõe.
+
+    **ELA RESPONDE PELO ORÇAMENTO, E NÃO PELO "GLOBAL"** — a distinção custou os
+    quatro bloqueantes de 01/09/2026. O orçamento é o `maquina.json`, e o único
+    valor dele que impõe teto é o `economia`; a política de vibração que o
+    daemon está APLICANDO é outra coisa (`state['rumble_policy']`), e é ela que
+    multiplica o que chega ao motor. Chamar esta função de "o global" fez o `?`
+    da aba escrever *"o global vale Sem teto"* com o daemon cortando a 0,3.
+    Quem quer saber o que o global entrega hoje chama
+    :func:`~hefesto_dualsense4unix.core.rumble.forca_do_global`.
+
+    O NÚMERO NÃO SE CALCULA AQUI — 01/09/2026, segunda correção. Esta função
+    fazia `if chave != _ORCAMENTO_COM_TETO` e ia direto ao `RUMBLE_POLICY_MULT`,
+    que é a QUARTA grafia de um desvio que `core.rumble.teto_do_orcamento` já é
+    dono. Medido: com o dono mordido para 0,5, a aba Sistema dizia "50% da
+    força" e esta dizia "30%" — duas abas do mesmo produto, dois números para o
+    mesmo fato.
+
+    O IMPORT É TARDIO pela mesma razão dos outros dois desta casa
+    (:func:`_turnos` e o `ROTULO_SEM_FACE`): o topo deste arquivo é
+    `import html` e mais nada de produto. **Ele não puxa mais GTK**: o
+    `SEM_TETO` mudou-se para `core.rumble` justamente porque
+    `app.actions.config.secao_orcamento` arrasta `gi.repository.Gtk` no import,
+    e o docstring da linha 1 promete *"sem GTK"*.
+    """
+    from hefesto_dualsense4unix.core.rumble import SEM_TETO, teto_do_orcamento
+
+    teto = teto_do_orcamento(chave)
+    return str(SEM_TETO) if teto is None else por_cento(teto)
+
+
+def opcoes_do_teto() -> tuple[str, str, str]:
+    """As três opções do campo, NA ORDEM DA TELA — o desenho que ela aprovou.
+
+    A ordem é a do mockup (`mockup/08-conexoes.html`), e ela não é alfabética:
+    primeiro a que não grava nada, depois as duas que sobrepõem. Quem confere um
+    clique confere contra esta lista, nunca contra três literais soltos — foi
+    assim que o `mic-existe` se protegeu de um rótulo traduzido.
+    """
+    from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
+
+    return (SEGUE_O_GLOBAL, fala_do_teto(""), fala_do_teto(_ORCAMENTO_COM_TETO))
+
+
+#: ONDE O TETO GLOBAL SE MUDA — e não é nesta aba. Decisão dela, 28/08/2026:
+#: *"Teto da Vibração, que na verdade é Perfil de Bateria"*. O dropdown dos três
+#: perfis do produto (`app/actions/config/secao_orcamento.py`) mora na aba
+#: **Sistema**; esta aba é LEITORA do global e sobrepõe-no por controle.
+CASA_DO_TETO_GLOBAL = "Perfil de Bateria"
+ABA_DO_TETO_GLOBAL = "Sistema"
+
+
+def politica_do_rotulo(rotulo: str) -> str | None:
+    """A ``policy`` de disco que uma opção do campo grava. ``None`` = não grava.
+
+    DUAS DAS TRÊS TÊM TRADUÇÃO, e a terceira não tem — está em :data:`SEM_FONTE`,
+    linha ``controle.*.vibracao.sem-teto``. Esta função **levanta** para ela em
+    vez de escolher uma tradução: cada escolha possível faz o rótulo mentir num
+    dos casos, e a frase que falta é dela.
+
+    O 0,667 DA RECUSA É DERIVADO, e não digitado — corrigido em 01/09/2026. Ele
+    estava escrito à mão em TRÊS lugares (aqui, no :data:`SEM_FONTE` acima e num
+    ``assert`` da régua), e a régua guardava o número DIGITADO: com o degrau
+    ``max`` mordido para 2,0 — quando a conta verdadeira vira 0,5 — os 18 casos
+    ficavam verdes e a frase mentia na tela dela. É a mesma forma do defeito que
+    :func:`fala_do_teto` cita como lição.
+
+    :raises ValueError: para "Sem teto" e para qualquer coisa fora da lista.
+    """
+    from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+    segue, sem_teto, economia = opcoes_do_teto()
+    if rotulo == segue:
+        return None
+    if rotulo == economia:
+        return str(_ORCAMENTO_COM_TETO)
+    if rotulo == sem_teto:
+        base, alto = RUMBLE_POLICY_MULT["balanceado"], RUMBLE_POLICY_MULT["max"]
+        conta = f"{base:g}/{alto:g} = {base / alto:.3f}".replace(".", ",")
+        raise ValueError(
+            f"{sem_teto!r} é a única das três opções sem tradução para o "
+            f"perfil. `ControllerRumbleOverride` só diz QUAL política esta peça "
+            f"usa, nunca 'esta peça ignora o teto do orçamento': gravar "
+            f"'balanceado' a deixaria mais FRACA que as outras quando o global "
+            f"for 'max' ({conta}), e gravar 'max' a deixaria mais FORTE "
+            f"que o global quando ele for 'balanceado' — um campo chamado teto "
+            f"aumentando a força. A frase que falta é dela "
+            f"(MIGRA-CONEXOES-11).")
+    raise ValueError(f"{rotulo!r} não é resposta desta lista: {list(opcoes_do_teto())}")
+
+
+def rotulo_da_politica(policy: str | None) -> str | None:
+    """O que o CAMPO mostra para uma ``policy`` guardada. ``None`` = não sabe.
+
+    ``None`` de entrada é "sem override" e vira :data:`SEGUE_O_GLOBAL`. ``None``
+    de SAÍDA é outra coisa: o perfil guarda uma política que este campo não sabe
+    mostrar, e quem chama tem de DECLARAR isso em vez de escolher uma das três.
+
+    POR QUE NÃO SERVE A :func:`fala_do_teto` AQUI, e a diferença custou um
+    defeito nesta mesma leva: ela responde pelo ORÇAMENTO DA MESA, onde só o
+    `economia` impõe teto e todo o resto é "Sem teto". Aplicada a um override
+    por controle, ela traduziria `balanceado` e `max` — os dois — como "Sem
+    teto", que é justamente a opção sem tradução. Aqui a pergunta é outra: das
+    quatro políticas que `ControllerRumbleOverride` aceita
+    (`profiles/schema.py:795`), **uma só** tem opção no campo.
+    """
+    from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
+
+    if not policy:
+        return SEGUE_O_GLOBAL
+    if policy == _ORCAMENTO_COM_TETO:
+        return fala_do_teto(_ORCAMENTO_COM_TETO)
+    return None
+
+
+@dataclass(frozen=True)
+class Vibracao:
+    """AS QUATRO COISAS QUE DECIDEM A FORÇA NO MOTOR DE UM CONTROLE.
+
+    TRÊS DELAS SE CHAMAVAM "O GLOBAL" ATÉ 01/09/2026, e a tela reportava a
+    errada — foi o defeito que segurou esta leva. A conta inteira, do disco ao
+    motor, é::
+
+        no motor = forca_do_global(a_viva, orcamento) * MULT[do_controle]/MULT[do_perfil]
+                   └────── core.rumble ───────┘   └── profiles.manager.fator_da_unidade ──┘
+
+    :param do_controle: ``controllers[uniq].rumble.policy`` do perfil — o
+        override desta peça, ``None`` quando ela não sobrepõe nada.
+    :param do_perfil: ``Profile.rumble.policy`` — **o DENOMINADOR**. O fator por
+        peça é RELATIVO a ele (`profiles/manager.py:1857`), e não à política que
+        multiplica. Sem opinião, o produto assume ``balanceado``.
+    :param a_viva: ``state['rumble_policy']`` — **o que MULTIPLICA**, e é o único
+        "global" que o motor sente (`daemon/ipc_handlers.py:2864` publica o
+        ``DaemonConfig.rumble_policy`` que `core.rumble._effective_mult` lê).
+        ``None`` = o serviço não disse, e aí a tela não afirma número nenhum.
+    :param orcamento: a chave do ``maquina.json`` — o teto por CIMA da viva,
+        aplicado com ``min``. ``None`` = ninguém declarou, que não impõe teto.
+    :param a_mesa_respondeu: ``False`` quando não deu para LER o ``maquina.json``.
+        Sem isto, "não consegui ler" e "ninguém declarou" viravam o mesmo
+        ``None``, e a tela publicava a ausência de notícia como uma afirmação —
+        exatamente o que o dono da fonte proíbe (`secao_orcamento
+        .orcamento_em_vigor`: *"None aqui significa 'não sei', nunca 'sem teto'"*).
+
+    OS CAMPOS SÃO NOMEADOS E A CLASSE É CONGELADA de propósito: os quatro são
+    ``str | None`` e uma troca de posição entre ``do_perfil`` e ``a_viva`` é
+    silenciosa, verde em toda régua e errada no motor. Foi como o defeito
+    nasceu.
+    """
+
+    do_controle: str | None = None
+    do_perfil: str | None = None
+    a_viva: str | None = None
+    orcamento: str | None = None
+    a_mesa_respondeu: bool = True
+
+
+def forca_no_motor(v: Vibracao) -> float | None:
+    """A fração do que o JOGO pediu que chega ao motor DESTE controle.
+
+    ``None`` = não dá para afirmar, e a tela tem de dizer isso em vez de
+    escolher um número plausível.
+
+    **NENHUMA ARITMÉTICA NASCE AQUI.** Os dois fatores vêm dos donos que o
+    produto já usa — `core.rumble.forca_do_global` (o mesmo corpo que
+    `_effective_mult` roda no funil) e `profiles.manager.fator_da_unidade` (o
+    mesmo que `_controllers_to_rumble_scales` publica no backend). É o que faz a
+    régua da tela poder ser a régua do motor: morda um dos dois e as duas
+    reprovam juntas.
+    """
+    from hefesto_dualsense4unix.core.rumble import forca_do_global
+    from hefesto_dualsense4unix.profiles.manager import fator_da_unidade
+
+    if not v.a_mesa_respondeu:
+        return None
+    global_ = forca_do_global(v.a_viva, v.orcamento)
+    if global_ is None:
+        return None
+    if not v.do_controle:
+        return global_
+    fator = fator_da_unidade(v.do_controle, v.do_perfil)
+    return None if fator is None else global_ * fator
+
+
+def teto_que_vale(v: Vibracao) -> tuple[str | None, str]:
+    """``(o que o CAMPO mostra, a frase de quem manda neste controle)``.
+
+    O QUE ELA DIZ É O QUE CHEGA AO MOTOR, e não o degrau nominal do rótulo —
+    corrigido em 01/09/2026, e é a diferença inteira. Com um override
+    ``economia`` (rótulo "30% da força"), o motor recebe **9%** se a política
+    viva for ``economia`` e **45%** se for ``max``: o fator da peça é RELATIVO
+    ao global do perfil e o global VIVO multiplica por cima. Medido, com a
+    cadeia inteira até ``_escalar_rumble``. A frase que dizia só o rótulo era um
+    campo chamado teto entregando acima do teto que promete.
+
+    O PRIMEIRO ITEM É ``None`` quando o campo não sabe mostrar a política
+    guardada. Quem pinta NÃO escreve nada no ``<select>`` nesse caso, e a razão
+    é medida: escrever num ``<select>`` um valor que não é opção nenhuma deixa
+    ``selectedIndex = -1``, e o ``escrever()`` do piloto contaria uma pintura
+    NOVA a cada tique para sempre — um contador que mente é pior que um campo
+    parado. A frase do ``?``, essa, diz o que há.
+
+    UMA FRASE POR CASO, não três pedaços costurados. Costurada, o texto saía
+    *"vale Sem teto, do global, na aba Sistema. O global hoje é Sem teto…"* —
+    "Sem teto" duas vezes na mesma dica.
+    """
+    no_motor = forca_no_motor(v)
+    entrega = (NAO_SEI_A_FORCA if no_motor is None
+               else f"e o motor recebe <b>{por_cento(no_motor)}</b>")
+    if not v.do_controle:
+        return SEGUE_O_GLOBAL, f"este controle <b>segue o global</b>, {entrega}"
+    meu = rotulo_da_politica(v.do_controle)
+    if meu is None:
+        return None, (
+            f"o perfil guarda <code>{_e(v.do_controle)}</code> para este "
+            f"controle, e este campo não sabe mostrar essa política — o perfil "
+            f"manda, a caixa fica como está, {entrega}")
+    # O DEGRAU DA CAIXA SÓ APARECE QUANDO DIVERGE do que chega ao motor, e é aí
+    # que ele precisa ser explicado: repeti-lo quando os dois coincidem seria
+    # "30% da força" duas vezes na mesma frase, que é o defeito de costura que
+    # esta função já tinha corrigido uma vez.
+    if no_motor is not None and meu == por_cento(no_motor):
+        return meu, f"este controle <b>sobrepõe</b> o global, {entrega}"
+    return meu, (f"este controle <b>sobrepõe</b> o global com <b>{meu}</b>, que é "
+                 f"RELATIVO ao global — hoje {entrega.removeprefix('e ')}")
+
+
+def dica_do_teto(v: Vibracao) -> str:
+    """A frase inteira do ``?`` do campo, com marcação — dono único das duas telas.
+
+    Ela nasceu no gerador do mockup (`interface/aba08.teto_dica`) e mudou-se
+    para cá em 01/09/2026, quando o `?` ganhou endereço de pintura
+    (``data-campo="teto-explica"``). Enquanto a frase vivesse só lá, o pacote
+    da interface nova teria de escrevê-la de novo — e a segunda grafia é a que
+    fica para trás no dia em que a primeira mudar.
+
+    TRAZ `<b>` E `<code>`, de propósito: quem a pinta usa o alvo ``html`` do
+    `hefesto_vivo.BOOTSTRAP`, e não o ``texto`` padrão.
+    """
+    return (f"O teto da vibração <b>deste controle</b>. O global manda e o do controle "
+            f"sobrepõe: hoje {teto_que_vale(v)[1]}. Quem muda o global é o "
+            f"<b>{CASA_DO_TETO_GLOBAL}</b>, na aba <b>{ABA_DO_TETO_GLOBAL}</b> — ele decide "
+            f"o que custa bateria, e esta aba mede o rádio. O degrau vem de "
+            f"<code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único "
+            f"recurso com teto real hoje.")
+
 
 def _html_de_uma_linha(c: Controle, mascara: str, posicao: int) -> str:
     """Uma linha do acordeão. **A CLASSE É POSIÇÃO; O ENDEREÇO É IDENTIDADE.**
@@ -348,6 +631,14 @@ def _html_de_uma_linha(c: Controle, mascara: str, posicao: int) -> str:
     """
     borda = f"--plastico:{_e(c.plastico)}" if c.plastico else ""
     fatia = f"gc-p{posicao}"
+    # A PRIMEIRA É A ESCOLHIDA porque é a que não grava nada: sem override no
+    # perfil, este controle segue o global. Quem pinta o estado de disco por
+    # cima é o pacote da interface nova (`a08_conexoes.pacote`); esta janela
+    # ainda não lê o perfil aqui, e mostrar o padrão é o honesto até que leia.
+    opcoes_teto = "".join(
+        f'<option{" selected" if i == 0 else ""}>{_e(o)}</option>'
+        for i, o in enumerate(opcoes_do_teto())
+    )
     return (
         f'<div class="gc-item {fatia}" data-controle="{_e(c.uniq)}" style="{borda}">'
         f'<div class="gc-cabeca">'
@@ -375,9 +666,7 @@ def _html_de_uma_linha(c: Controle, mascara: str, posicao: int) -> str:
         f"<option>O computador inteiro</option></select></span>"
         f'<span class="gc-bloco barra">'
         f'<select class="pronto" data-g="{g("controle.vibracao.teto")}" '
-        f'data-alvo="{_e(c.uniq)}">'
-        f"<option selected>Segue o global</option><option>Sem teto</option>"
-        f"<option>30% da força</option></select></span>"
+        f'data-alvo="{_e(c.uniq)}">{opcoes_teto}</select></span>'
         f'<button class="btn apagado" data-g="{g("controle.luz.nao-acende")}" '
         f'data-trava="{v("controle", c.uniq, "luz")}" '
         f'data-alvo="{_e(c.uniq)}"{"" if c.pelo_radio else " disabled"}>'
