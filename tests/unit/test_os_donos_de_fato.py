@@ -246,7 +246,10 @@ EXCECOES_DATADAS: dict[str, str] = {
         "NÃO é controle: casa a entrada de `rumble_ff.per_vpad` pelo número do vpad"
     ),
     "a05_vibracao.py:376": "lê o `player` do controle para casar com o vpad acima; migra junto",
-    "a04_iluminacao.py:413": "lê o `player` do CLIQUE (`o`), não do controle — não é state_full",
+    # A LINHA ANDOU DE 413 PARA 638 em 02/09/2026 — o pacote ganhou `_tinta`,
+    # `TIRA_APAGADA`, `desenho_da_luz` e `_so_abriu_o_seletor`. A leitura
+    # continua sendo a mesma: o `player` do CLIQUE.
+    "a04_iluminacao.py:638": "lê o `player` do CLIQUE (`o`), não do controle — não é state_full",
 }
 
 #: A leitura crua a caçar. `player_slot` está de fora: ele é a chave que a GTK lê

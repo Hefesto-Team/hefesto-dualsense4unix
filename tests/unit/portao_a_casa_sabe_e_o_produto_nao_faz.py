@@ -800,12 +800,11 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
         "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
     ),
-    "interface/monta.py::luzinhas": (
-        "Auxiliar do gerador do mockup (interface/monta.py:571), chamado só pelos "
-        "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
-        "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
-        "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
-    ),
+    # `luzinhas` E `tom_da_casa` SAÍRAM DAQUI EM 02/09/2026, e o portão foi quem
+    # mandou: *"APAGUE a entrada. A cura chegou e a lápide ficou."* As duas
+    # deixaram de ser só da bancada quando `pacotes/a04_iluminacao.desenho_da_luz`
+    # passou a chamá-las a cada tique — as cinco lâmpadas do indicador e o tom da
+    # guia agora são PINTADOS no produto, e não só desenhados no mockup.
     "interface/monta.py::monta": (
         "O gerador do esqueleto das dez páginas. A página que ele escreve É o que o "
         "WebView renderiza, mas quem o chama são os dez `interface/abaNN.py`, que "
@@ -813,12 +812,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "pronto de `interface/paginas/`. A poda da bancada em "
         "`promessas_sem_caminho` tira os geradores da conta e, com eles, os "
         "chamadores desta função. MEDIDO em 01/09/2026."
-    ),
-    "interface/monta.py::tom_da_casa": (
-        "Auxiliar do gerador do mockup (interface/monta.py:340), chamado só pelos "
-        "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
-        "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
-        "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
     ),
     "interface/monta.py::troca": (
         "Auxiliar do gerador do mockup (interface/monta.py:809), chamado só pelos "

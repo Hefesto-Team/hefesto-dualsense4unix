@@ -17,7 +17,7 @@ ele existe: *"Existia uma cópia dessa regra em cada tela (…) Duas verdades na
 mesma janela sobre qual é o 'Controle 1'."* Esta aba tinha a terceira cópia no
 rótulo e a quarta no gesto ``auto`` (``player_slot or player or 1``).
 
-AS QUATRO RÉGUAS DAQUI, e cada uma nasceu de uma coisa que a tela fazia:
+AS RÉGUAS DAQUI, e cada uma nasceu de uma coisa que a tela fazia:
 
 1. o número do rótulo é o do MOTOR, e sobrevive a ``player=None``;
 2. o rótulo leva os TRÊS pedaços — o desenho escreve ``P1 • Cosmic Red • USB`` e
@@ -25,7 +25,15 @@ AS QUATRO RÉGUAS DAQUI, e cada uma nasceu de uma coisa que a tela fazia:
    o transporte da tela no primeiro tique;
 3. o brilho chega com o ``%``, porque a caixa ao lado da barra é de texto;
 4. a fileira dos quatro números é viva, e a dica não nomeia controle que não
-   está na mesa.
+   está na mesa;
+5. a célula LEDs é um DESENHO — a palavra ``Aceso`` escrita nela apagava as duas
+   tiras e as cinco lâmpadas, e foi fotografado na tela dela em 02/09/2026;
+6. a tira APAGADA não acende: um ``color:`` vazio deixava o halo
+   ``currentColor`` herdar o ``--fg`` e a barra desligada saía BRANCA, mais
+   forte que a acesa;
+7. ABRIR o seletor livre não é APLICAR: um ``<input type="color">`` dispara
+   ``click`` ao abrir, com o valor VELHO, e o gesto mandava essa cor ao
+   aparelho antes de ela escolher.
 """
 from __future__ import annotations
 
@@ -236,28 +244,203 @@ def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():
 
 
 def test_o_html_publicado_e_a_bancada_concordam_sobre_o_endereco():
-    """Onde o `data-campo` da fileira está, em cada lado — e por que difere.
+    """Onde cada `data-campo` está, nos DOIS lados — e o par que ainda difere.
 
-    A bancada JÁ TEM `data-campo="players"` no `.players`; o publicado ainda tem
-    `player-1..4` nos botões, porque publicar é ATO DELA. Enquanto for assim, o
-    produto simplesmente não acha o endereço e não escreve nada — o que é
-    inócuo. Esta régua guarda o par: no dia em que ela publicar, os quatro
-    endereços mortos têm de sumir junto.
+    FATO CORRIGIDO EM 02/09/2026: este teste dizia *"o publicado ainda tem
+    `player-1..4` nos botões"*, e olhava só a bancada. Não tem mais — a
+    publicação do commit `70b58116` levou `data-campo="players"` e o alvo
+    `largura` ao produto. Medido: `grep -c` no HTML publicado dá `2`, `2` e `0`.
+    Uma régua que olha um lado só não podia ver isso.
     """
     import onde
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    assert bancada.count('data-campo="players" data-hef-alvo="html"') == 2
-    assert 'data-campo="player-1"' not in bancada, (
-        "a bancada ficou com os dois endereços: o da fileira e os dos botões. "
-        "Dois donos para o mesmo lugar é o que este projeto persegue.")
-    assert bancada.count('data-campo="brilho-pct" data-hef-alvo="largura"') == 2, (
-        "sem o alvo `largura` o `100` é impresso DENTRO do trilho — é a outra "
-        "metade do D7 de 02/09/2026.")
+    publicado = onde.pagina("04-iluminacao.html", publicado=True).read_text(
+        encoding="utf-8")
+    for lado, texto in (("bancada", bancada), ("publicado", publicado)):
+        assert texto.count('data-campo="players" data-hef-alvo="html"') == 2, lado
+        assert 'data-campo="player-1"' not in texto, (
+            f"o {lado} ficou com os dois endereços: o da fileira e os dos "
+            f"botões. Dois donos para o mesmo lugar é o que este projeto "
+            f"persegue.")
+        assert texto.count('data-campo="brilho-pct" data-hef-alvo="largura"') == 2, (
+            f"sem o alvo `largura` o `100` é impresso DENTRO do trilho — é a "
+            f"outra metade do D7 de 02/09/2026 ({lado}).")
 
 
 # ---------------------------------------------------------------------------
-# 5. a frase da disputa — o motor, não uma segunda verdade
+# 5. o DESENHO da luz — e a palavra que o apagava
+# ---------------------------------------------------------------------------
+def test_a_luz_e_desenho_e_nao_palavra(colunas):
+    """O `.aceso` é um DESENHO; escrever nele uma palavra o APAGA.
+
+    FOTOGRAFADO na tela dela em 02/09/2026, com dois controles na mesa: a célula
+    LEDs das colunas P1 e P2 mostrando a palavra `Aceso`, sem as duas tiras de
+    luz e sem as cinco lâmpadas. A causa é uma linha do pacote — `"aceso":
+    "Aceso" if …` num `data-campo` de alvo `texto` —, e `escrever()` faz
+    `el.textContent = t`, que apaga os filhos. A régua do mockup contava isso
+    como PRODUTO, porque o valor MUDOU: é a mesma família do `balanceado`
+    escrito dentro dos quatro botões da Vibração.
+
+    A MORDIDA: devolva `"aceso": "Aceso"` ao pacote e a primeira linha reprova.
+    """
+    col = colunas()[DO_RADIO["uniq"]]
+    assert "aceso" not in col, (
+        "a palavra voltou ao lugar do desenho: `textContent` num `.aceso` "
+        "apaga as duas tiras e as cinco lâmpadas.")
+    assert col["luz"].count('class="tira-luz') == 2, col["luz"]
+    assert '<span class="pad"><span class="luzinhas">' in col["luz"], (
+        "as cinco lâmpadas do indicador não saíram no desenho vivo.")
+
+
+def test_o_endereco_da_luz_so_existe_na_bancada():
+    """`luz` na bancada, `aceso` no publicado — e o descasamento é a CURA.
+
+    Publicar é ato DELA. Enquanto o produto disser `data-campo="aceso"`, o
+    pacote NÃO PODE emitir `aceso`: qualquer valor que ele emita ali vira
+    `textContent` e apaga o desenho. Com o nome novo, o produto de hoje não acha
+    onde escrever e o desenho fica INTEIRO; no dia em que ela publicar, o mesmo
+    valor passa a pintar.
+    """
+    import onde
+
+    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    publicado = onde.pagina("04-iluminacao.html", publicado=True).read_text(
+        encoding="utf-8")
+    assert bancada.count('data-campo="luz" data-hef-alvo="html"') == 2
+    assert 'data-campo="aceso"' not in bancada
+    assert 'data-campo="luz"' not in publicado, (
+        "o produto ganhou o endereço novo: apague este par de asserções e o "
+        "`aceso` do publicado junto — a espera acabou.")
+
+
+def test_o_gerador_e_o_produto_desenham_a_mesma_luz():
+    """Um dono, dois chamadores — o mesmo par da fileira de players.
+
+    O gerador desenhava as três linhas do `.aceso` à mão; agora chama
+    `desenho_da_luz`. Enquanto fossem duas escritas, a tira do desenho e a do
+    produto podiam divergir sem ninguém ver — que é como a `novo-layout/`
+    divergiu 25 KB calada.
+    """
+    from pacotes import a04_iluminacao as pac
+
+    miolo = pac.desenho_da_luz("#7EB8D4", 0.82, 1)
+    assert 'class="tira-luz esq" style="background:#7EB8D4;color:#7EB8D4' in miolo
+    assert 'class="tira-luz dir" style="background:#7EB8D4;color:#7EB8D4' in miolo
+    assert "opacity:0.82" in miolo
+    assert "title=" not in miolo, (
+        "sem recado não há dica: aviso permanente vira paisagem.")
+
+
+def test_um_numero_que_a_bancada_nunca_teve_nao_congela_a_aba():
+    """`monta.luzinhas(9)` levanta `KeyError`, e agora quem a chama é o PRODUTO.
+
+    `core/led_control.player_led_pattern` — o dono — devolve padrão para
+    qualquer número, e o docstring dele diz que *"um DualSense pode
+    legitimamente cair no slot 5+"* e que *"≥9 cai no padrão de overflow"*. Mas
+    `monta.PADRAO_JOGADOR` só precomputa 1..8 e `monta.luzinhas` INDEXA o
+    dicionário: medido em 02/09/2026, `monta.luzinhas(9)` → `KeyError: 9`.
+
+    Enquanto só o gerador a chamava o número era 1..4 e ninguém via. Uma
+    exceção aqui não deixaria de pintar UM campo: ela derrubaria a pintura da
+    aba inteira. Sem padrão conhecido o indicador sai VAZIO, que é o honesto.
+    """
+    import monta
+    import pytest as _pytest
+
+    from pacotes import a04_iluminacao as pac
+
+    with _pytest.raises(KeyError):
+        monta.luzinhas(9)
+
+    miolo = pac.desenho_da_luz("#7EB8D4", 1.0, 9)
+    assert miolo.count('class="tira-luz') == 2, miolo
+    assert '<span class="pad"></span>' in miolo, (
+        f"o indicador inventou um padrão para o número 9: {miolo!r}. Mostrar o "
+        f"do Player 1 diria um número que não é o dele.")
+
+
+def test_a_tira_apagada_nao_acende_branco(colunas):
+    """A barra APAGADA não pode virar um halo BRANCO — e o halo é `currentColor`.
+
+    MEDIDO EM CHROME HEADLESS, dentro da página publicada, em 02/09/2026::
+
+        com `background:;color:;opacity:1.0`  box-shadow rgb(248,248,242) · opacity 1
+        a tira ACESA do P1, no mesmo arquivo  box-shadow rgb(126,184,212) · opacity 0.82
+
+    Um `color:` VAZIO não desliga cor nenhuma: ele deixa valer o HERDADO, que
+    nesta página é o `--fg` (`#f8f8f2`). A tira que o produto dizia estar
+    apagada acendia BRANCA — e mais forte que a acesa a 82%.
+
+    ESTA RÉGUA LÊ O CSS em vez de decorar a regra: se um dia o halo deixar de
+    ser `currentColor`, é a primeira linha que reprova, e não uma asserção
+    escrita à mão que continuaria verde sobre outra realidade.
+
+    A MORDIDA: devolva `""` ao lugar de `TIRA_APAGADA` e a asserção do
+    `color:transparent` reprova.
+    """
+    import onde
+
+    publicado = onde.pagina("04-iluminacao.html", publicado=True).read_text(
+        encoding="utf-8")
+    assert "box-shadow:-3px 0 12px 1px currentColor" in publicado, (
+        "o halo da tira deixou de ser `currentColor`: reescreva esta régua "
+        "contra o que o CSS faz agora.")
+
+    luz = colunas([dict(DO_RADIO, lightbar_on=False)])[DO_RADIO["uniq"]]["luz"]
+    assert "color:transparent" in luz, luz
+    assert "color:;" not in luz, (
+        "a tira apagada voltou a sair com `color` VAZIO — e vazio herda o "
+        "`--fg`, que é branco.")
+    assert "Apagado" not in luz, "a palavra voltou ao lugar do desenho."
+
+
+def test_a_luz_pergunta_ao_motor_se_ha_cor_a_afirmar(colunas):
+    """Quem decide "há cor?" é `rotulo_lightbar`, e não uma leitura daqui.
+
+    A linha era `c.get("lightbar_on", True)` — uma segunda verdade sobre a mesma
+    pergunta, e com o default AFIRMANDO aceso na ausência do campo, que é o
+    estado de partida de um controle no rádio antes do primeiro report.
+
+    O motor devolve base `None` em DOIS estados, e os dois têm de sair
+    apagados: "apagada" e "cor desconhecida".
+    """
+    sem_cor = dict(DO_RADIO, lightbar_rgb=None)
+    assert "color:transparent" in colunas([sem_cor])[DO_RADIO["uniq"]]["luz"]
+
+    #: Sem o campo `lightbar_on`, a leitura antiga dizia ACESA por default.
+    sem_campo = {k: v for k, v in DO_RADIO.items() if k != "lightbar_on"}
+    luz = colunas([sem_campo])[DO_RADIO["uniq"]]["luz"]
+    assert "color:transparent" in luz, (
+        f"a tira saiu {luz!r}: sem `lightbar_on` o motor diz 'apagada', e um "
+        f"default `True` escrito aqui afirmaria uma barra acesa que ninguém "
+        f"mediu.")
+
+
+def test_o_hex_e_o_do_dono_e_nao_um_guarda_copiado(colunas):
+    """`cor_do_swatch` é o dono da leitura crua do `lightbar_rgb`.
+
+    O guarda que estava em `_hex` (`len(rgb) < 3`) é o `_rgb3` do
+    `controller_card`, cujo docstring pede para não ser repetido: *"com duas
+    leituras do ``lightbar_rgb``, as duas abas divergiriam no primeiro caso de
+    borda"*. E divergiam: uma lista de QUATRO canais passava na cópia e é
+    recusada pelo dono.
+    """
+    from hefesto_dualsense4unix.app.widgets.controller_card import cor_do_swatch
+
+    quatro = dict(DO_RADIO, lightbar_rgb=[0, 0, 255, 7])
+    assert cor_do_swatch(quatro) is None
+    assert colunas([quatro])[DO_RADIO["uniq"]]["hex"] == "—", (
+        "a aba aceitou um `lightbar_rgb` fora do contrato do IPC e pintou uma "
+        "cor a partir dele.")
+    assert "rgb" not in colunas()[DO_RADIO["uniq"]], (
+        "o `rgb` voltou: ele é uma LISTA, e o pintor pula lista em coluna "
+        "(`if(v !== null && typeof v === 'object') continue`) — endereço morto "
+        "que nem o `casamento.py` enxerga, porque ele filtra list e dict.")
+
+
+# ---------------------------------------------------------------------------
+# 6. a frase da disputa — o motor, não uma segunda verdade
 # ---------------------------------------------------------------------------
 def test_a_frase_da_disputa_e_a_do_motor(colunas):
     """`recado` vem de `controller_card.rotulo_lightbar`, e não da mão.
@@ -273,53 +456,151 @@ def test_a_frase_da_disputa_e_a_do_motor(colunas):
 
     disputado = dict(DO_RADIO, lightbar_disputada=True)
     col = colunas([disputado])[DO_RADIO["uniq"]]
-    assert col["recado"] == ROTULO_LIGHTBAR_SEGURADA, col["recado"]
+    assert f'title="{ROTULO_LIGHTBAR_SEGURADA}"' in col["luz"], col["luz"]
 
 
 def test_o_recado_conhece_os_estados_que_a_mao_nao_conhecia(colunas):
-    """Quatro estados onde havia um: Nativo, disputa, desconhecida, apagada."""
-    apagado = dict(DO_RADIO, lightbar_on=False)
-    assert colunas([apagado])[DO_RADIO["uniq"]]["recado"] == "Lightbar: apagada"
+    """Quatro estados onde havia um: Nativo, disputa, desconhecida, apagada.
 
-    sem_fonte = dict(DO_RADIO, lightbar_source="desconhecida")
-    assert colunas([sem_fonte])[DO_RADIO["uniq"]]["recado"] == "Lightbar: cor desconhecida"
+    ONDE A FRASE MORA, desde 02/09/2026: no `title` das duas tiras, dentro do
+    `luz`. Ela era emitida num `data-campo="recado"` que NENHUMA das duas
+    páginas tem — o único órfão que o `casamento.py` acusava nesta aba, e
+    invisível à régua do mockup, que varre os endereços do ARQUIVO.
+    """
+    def dica(conectados=None, estado=None):
+        cols = colunas(conectados, estado) if estado is not None else colunas(conectados)
+        return cols[DO_RADIO["uniq"]]["luz"]
 
-    nativo = colunas([DO_RADIO], estado={"active_profile": "", "native_mode": True})
-    assert nativo[DO_RADIO["uniq"]]["recado"] == "Em Nativo o jogo é dono do LED"
-
-    assert colunas()[DO_RADIO["uniq"]]["recado"] == "", (
+    assert 'title="Lightbar: apagada"' in dica([dict(DO_RADIO, lightbar_on=False)])
+    assert 'title="Lightbar: cor desconhecida"' in dica(
+        [dict(DO_RADIO, lightbar_source="desconhecida")])
+    assert 'title="Em Nativo o jogo é dono do LED"' in dica(
+        [DO_RADIO], {"active_profile": "", "native_mode": True})
+    assert "title=" not in dica(), (
         "aviso permanente vira paisagem, e paisagem ninguém lê.")
 
 
 # ---------------------------------------------------------------------------
-# 6. o gesto `auto` — a quarta cópia da regra do número
+# 7. os gestos — a ponte com dublê, cobrando QUAL função e com quê
 # ---------------------------------------------------------------------------
+class PonteDeMentira:
+    """A ponte com dublê: guarda o que foi chamado e com quê."""
+
+    def __init__(self):
+        self.chamadas: list = []
+
+    def __getattr__(self, nome):
+        def guardar(*a, **kw):
+            self.chamadas.append((nome, a, kw))
+            return (True, "")
+        return guardar
+
+
+def _clicar(gesto, clique, conectados=None):
+    import pacotes
+
+    ctx = pacotes.Contexto(state={}, mesa=MESA,
+                          conectados=list(conectados or [DO_CABO]), estados={})
+    p = PonteDeMentira()
+    pacotes.gesto_da_pagina("04-iluminacao.html", gesto)(ctx, clique, p)
+    return p
+
+
 def test_o_automatico_pinta_a_cor_do_numero_do_motor():
     """Largar o claim e pintar a cor do slot — com o número que o motor dá.
 
     A linha era `player_slot or player or 1`: o `or 1` é a POSIÇÃO disfarçada de
     default, e um controle sem número nenhum ganharia a cor do P1.
     """
-    import pacotes
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
-    class PonteDeMentira:
-        def __init__(self):
-            self.chamadas = []
-
-        def __getattr__(self, nome):
-            def guardar(*a, **kw):
-                self.chamadas.append((nome, a, kw))
-                return (True, "")
-            return guardar
-
-    ctx = pacotes.Contexto(state={}, mesa=MESA, conectados=[DO_CABO], estados={})
-    p = PonteDeMentira()
-    pacotes.gesto_da_pagina("04-iluminacao.html", "auto")(
-        ctx, {"uniq": DO_CABO["uniq"]}, p)
-
+    p = _clicar("auto", {"uniq": DO_CABO["uniq"]})
     assert p.chamadas[0][0] == "chamar" and p.chamadas[0][1] == ("lightbar.reset",)
     assert p.chamadas[1] == ("led_set", (tuple(player_slot_color(2)),),
                              {"uniq": DO_CABO["uniq"]}), (
         f"o automático pintou {p.chamadas[1]!r}. O controle do cabo é o 2 pelo "
         f"`player_slot`; cair em 1 é a posição disfarçada de default.")
+
+
+def test_a_conversao_do_hex_e_a_do_motor():
+    """`core/led_control.hex_to_rgb` é o dono — a cópia daqui morreu em 02/09.
+
+    A linha era `tuple(int(hexa[i:i+2], 16) for i in (0, 2, 4))`, escrita neste
+    arquivo, que já importava o módulo dono ao lado (`player_slot_color`).
+    """
+    import inspect
+
+    from pacotes import a04_iluminacao as pac
+
+    p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#FF8000"})
+    assert p.chamadas == [("led_set", ((255, 128, 0),), {"uniq": DO_CABO["uniq"]})]
+    # SEM O DOCSTRING: ele CITA a linha morta, para quem ler saber o que caiu, e
+    # procurar no texto inteiro faria a régua reprovar quem documenta bem — o
+    # defeito de forma que esta casa já nomeou cinco vezes.
+    corpo = inspect.getsource(pac.cor).replace(pac.cor.__doc__ or "", "")
+    assert "int(hexa" not in corpo, (
+        "a conversão voltou a ser escrita à mão ao lado do dono que a faz.")
+    assert "hex_to_rgb" in corpo
+
+
+def test_o_hex_torto_recusa_com_a_razao_do_motor():
+    """Recusar DIZENDO, e a frase é a do dono — não uma reescrita mais pobre."""
+    with pytest.raises(ValueError) as caiu:
+        _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#F80"})
+    assert "hex_to_rgb" in str(caiu.value), str(caiu.value)
+
+    with pytest.raises(ValueError) as sem_dono:
+        _clicar("cor", {"hex": "#FF8000"})
+    assert "controle" in str(sem_dono.value)
+
+
+def test_o_seletor_livre_manda_a_cor_pelo_valor():
+    """O `<input type="color">` traz a cor em `value`, não em `data-hex`.
+
+    Ele estava na página desde o desenho SEM endereço de gesto nenhum: ela
+    escolhia uma cor fora da guia de oito e o clique nem chegava ao Python. O
+    endereço (`data-gesto="cor"`) é atributo invisível ao
+    `check_o_desenho_aprovado`, e o ouvinte do BOOTSTRAP já manda `valor`.
+    """
+    import onde
+
+    p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "", "valor": "#00ff80",
+                        "tipo": "input", "evento": "change"})
+    assert p.chamadas == [("led_set", ((0, 255, 128),), {"uniq": DO_CABO["uniq"]})]
+
+    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    assert bancada.count('class="livre" value="#0000ff" data-gesto="cor"') == 1
+
+
+def test_abrir_o_seletor_livre_nao_manda_cor_nenhuma():
+    """ABRIR não é APLICAR — e sem esta régua o gesto muda o aparelho dela.
+
+    MEDIDO em 02/09/2026 com o BOOTSTRAP REAL avaliado dentro de um Chrome, com
+    `window.webkit.messageHandlers` dublado::
+
+        ela ABRE     {gesto:'cor', hex:'', valor:'#0000ff', tipo:'input', evento:'click'}
+        ela ESCOLHE  {gesto:'cor', hex:'', valor:'#12ab34', tipo:'input', evento:'change'}
+
+    O ouvinte escuta `click` E `change`, e um `<input type="color">` dispara
+    `click` no instante da ABERTURA, carregando o valor VELHO — a cor cravada no
+    arquivo pelo gerador. Ler o `valor` nesse clique mandava a barra dela para
+    `#0000FF` antes de ela escolher; se ela cancelasse, a barra ficava numa cor
+    que ela nunca pediu.
+
+    E SAI CALADO, de propósito: recusar dizendo poria uma frase de erro na tela
+    dela só por ela ter aberto um seletor. O ato é o `change`, e ele age.
+
+    A MORDIDA: tire o `_so_abriu_o_seletor` do gesto e a primeira asserção
+    reprova com `led_set((0, 0, 255))`.
+    """
+    p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "", "valor": "#0000ff",
+                        "tipo": "input", "evento": "click"})
+    assert p.chamadas == [], (
+        f"abrir o seletor mandou {p.chamadas!r} ao aparelho. A cor é a CRAVADA "
+        f"no arquivo pelo gerador, e a tela não a mostra em lugar nenhum.")
+
+    # O BOTÃO DA GUIA NÃO É AFETADO: ele é um `<button>` com `data-hex`, e o
+    # `click` dele é o gesto inteiro.
+    p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#FF8000",
+                        "tipo": "button", "evento": "click"})
+    assert p.chamadas == [("led_set", ((255, 128, 0),), {"uniq": DO_CABO["uniq"]})]
