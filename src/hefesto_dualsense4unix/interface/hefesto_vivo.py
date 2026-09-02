@@ -33,6 +33,7 @@ from typing import Any
 
 import argparse
 import contextlib
+import dataclasses
 import pathlib
 import sys
 import threading
@@ -59,7 +60,12 @@ from gi.repository import GLib, Gtk  # noqa: E402
 # alcançados a partir das bocas do produto. O portão que existe para achar a
 # cura escrita e nunca ligada não enxergava a interface INTEIRA — e por isso
 # acusava de dívida as camadas que ela já chama.
-from hefesto_dualsense4unix.interface import mesa_viva, onde, pacotes  # noqa: E402
+from hefesto_dualsense4unix.interface import (  # noqa: E402
+    mesa_viva,
+    onde,
+    pacotes,
+    regua_do_mockup,
+)
 from hefesto_dualsense4unix.interface.pacotes import ponte  # noqa: E402
 
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
@@ -284,13 +290,49 @@ BOOTSTRAP = r"""
       // `jogar_vivo.py` — este é o quarto vocabulário, e é o último.
       const doRodape = (alvo.className.match(/\br-([a-z]+)\b/) || [])[1];
       const dono = alvo.closest('[data-controle],[data-uniq]');
-      manda({
+      // O DATASET INTEIRO VAI JUNTO, e ele vem PRIMEIRO para que a lista
+      // explícita abaixo continue mandando no que ela nomeia.
+      //
+      // POR QUE ISTO PRECISOU EXISTIR, medido em 02/09/2026: a lista explícita
+      // tinha catorze nomes, escritos à mão, e os gestos da aba Conexões leem
+      // `caminho`, `entrada` e `face` — NENHUM dos três estava nela. O botão
+      // "escolher aparelho" traz `data-caminho` (o pacote o gera em
+      // `a08_conexoes.py:541`), as entradas do gabinete trazem `data-entrada`
+      // no HTML publicado, e o clique chegava ao Python sem eles. Resultado:
+      // SEIS gestos recusavam dizendo *"o clique não disse qual aparelho"* — e
+      // recusavam para ELA também, não só para a régua. O diagnóstico que
+      // circulava era outro: que faltava dizer em qual CONTROLE agir. Não é o
+      // controle; é o argumento do próprio botão.
+      //
+      // UMA LISTA ESCRITA À MÃO DE ATRIBUTOS QUE A PÁGINA PODE TER É A MESMA
+      // FORMA DE DEFEITO QUE ESTA CASA JÁ NOMEOU: ela só cresce quando alguém
+      // se lembra, e o esquecimento é silencioso. O dataset inteiro não
+      // esquece — e o custo é uma cópia de meia dúzia de strings por clique.
+      const tudo = Object.assign({}, d);
+      manda(Object.assign(tudo, {
         gesto: d.gesto || d.hefGesto || d.papel || doRodape || 'clique',
         modo: d.modo || '', forca: d.forca || '', player: d.player || '',
         lado: d.lado || '', campo: d.campo || '', hef: d.hef || '',
         hex: d.hex || '', sensor: d.sensor || '', rota: d.rota || '',
         mudo: d.mudo || '', micModo: d.micModo || '', v: d.v || '',
-        controle: dono ? (dono.dataset.controle || dono.dataset.uniq || '') : '',
+        // O ALVO PADRÃO, e ele é da RÉGUA — no produto fica indefinido e esta
+        // linha vale exatamente o que valia antes: string vazia.
+        //
+        // ELE CURA A VIBRAÇÃO, e só ela. Medido com dublê em 02/09/2026:
+        // `testar` e `parar` recusam com *"o clique não disse em qual controle
+        // — e sem alvo a mesa inteira treme"*, e passam a chamar a ponte assim
+        // que o clique traz um `controle`. Os botões do gabinete da aba
+        // Conexões NÃO se curam com isto: o que falta a eles é o argumento do
+        // próprio botão (`caminho`, `entrada`, `face`), que o dataset acima
+        // agora carrega.
+        //
+        // POR QUE NÃO NO PRODUTO: escolher o primeiro controle conectado por
+        // conta própria é uma DECISÃO de produto — se o botão não diz em qual
+        // aparelho age, quem decide é ela, com a tela dizendo. A régua só o usa
+        // para conseguir medir, e o relato marca esses cliques como ALVO
+        // FORÇADO, para ninguém ler a ajuda dela como o produto funcionando.
+        controle: dono ? (dono.dataset.controle || dono.dataset.uniq || '')
+                       : (window.__hef.alvoPadrao || ''),
         // O VALOR, e ele é o que o `textContent` não alcança: num `<input>` o
         // texto é vazio, e num `<select>` é a lista INTEIRA de opções. Sem
         // isto, um campo digitado chega ao Python sem o que ela digitou.
@@ -336,7 +378,7 @@ BOOTSTRAP = r"""
           return fora;
         })(),
         texto: (alvo.textContent || '').trim().slice(0, 60),
-      });
+      }));
   }
   function manda(o){
     o.pagina = location.pathname.split('/').pop();
@@ -392,6 +434,76 @@ def _fita(mesa: list[dict[str, Any]]) -> str:
 #: Controles deu verde sobre dois botões mortos em 29/08.
 SELETOR = ("(document.querySelector('[data-gesto=\"%s\"],[data-hef-gesto=\"%s\"],"
            "[data-papel=\"%s\"],.r-%s')||{click(){}}).click()")
+
+#: O CLIQUE QUE SABE EM QUEM CLICAR — e ele nasceu de uma medição, em
+#: 02/09/2026: dos 48 gestos clicados, DEZESSEIS disseram "aplicado" sem mudar
+#: o estado do daemon, e SETE deles tinham recusado CORRETAMENTE, porque o
+#: clique automático não disse em qual controle agir.
+#:
+#: `document.querySelector` pega o PRIMEIRO nó da página, que na mesa de quatro
+#: colunas do desenho é o do P1 — e o P1 pode ser justamente o lugar VAZIO.
+#: Aqui a ordem é outra: primeiro os blocos dos controles CONECTADOS, na ordem
+#: da mesa; só então qualquer um.
+#:
+#: ELE DEVOLVE ONDE CLICOU, e isso é metade do valor: o relato passa a
+#: distinguir "cliquei no bloco do p1" de "cliquei num botão que não pertence a
+#: controle nenhum, com o alvo forçado pela régua" — que é um DEFEITO DA
+#: PÁGINA, não um sucesso do produto.
+CLIQUE_COM_ALVO = r"""
+(function(g, prefs){
+  const sel = '[data-gesto="' + g + '"],[data-hef-gesto="' + g + '"],'
+            + '[data-papel="' + g + '"],.r-' + g;
+  for(const p of prefs){
+    const bloco = document.querySelector('[data-controle="' + p + '"]');
+    const dentro = bloco && bloco.querySelector(sel);
+    if(dentro){ window.__hef.alvoPadrao = p; dentro.click(); return 'no bloco de ' + p; }
+  }
+  const el = document.querySelector(sel);
+  if(!el) return 'NAO ACHEI NA PAGINA';
+  const dono = el.closest('[data-controle],[data-uniq]');
+  if(dono){
+    const q = dono.dataset.controle || dono.dataset.uniq || '';
+    window.__hef.alvoPadrao = q;
+    el.click();
+    return 'no bloco de ' + q;
+  }
+  // FORA DE QUALQUER CONTROLE: o botão não diz em quem agir. A régua empresta
+  // o primeiro conectado só para conseguir medir, e o relato marca.
+  window.__hef.alvoPadrao = prefs[0] || '';
+  el.click();
+  return 'ALVO FORCADO ' + (prefs[0] || '(mesa vazia)');
+})(%s, %s)
+"""
+
+#: O LEITOR DO DOM, e ele é O instrumento do `--prova-de-mockup`: devolve, em
+#: ordem de documento, o que a TELA está mostrando em cada endereço de pintura.
+#:
+#: ELE LÊ O MESMO ALVO QUE O `escrever()` ESCREVE — a largura da barra, o
+#: `value` do campo, o texto. Ler sempre `textContent` diria que toda barra de
+#: bateria continua no mockup, porque a pintura dela nunca toca texto nenhum.
+#:
+#: `fundo` e `html` caem no texto de propósito: o WebKit devolve os dois
+#: NORMALIZADOS (a cor vira `rgb(…)`, as aspas dos atributos trocam) e comparar
+#: a forma do arquivo com a forma do navegador acusaria mudança onde não houve.
+#: `regua_do_mockup._campo` lê os mesmos dois pelo texto, e é isso que faz os
+#: dois lados casarem.
+LER_CAMPOS = r"""
+(function(){
+  const fora = [];
+  for(const el of document.querySelectorAll('[data-campo],[data-papel],[data-hef]')){
+    const chave = el.dataset.campo || el.dataset.papel || el.dataset.hef || '';
+    const bloco = el.closest('[data-controle],[data-uniq]');
+    const dono = bloco ? (bloco.dataset.controle || bloco.dataset.uniq || '') : '';
+    const alvo = el.dataset.hefAlvo || 'texto';
+    let v;
+    if(alvo === 'largura'){ v = el.style.width; }
+    else if(alvo === 'valor'){ v = ('value' in el) ? String(el.value ?? '') : ''; }
+    else { v = (el.textContent || '').replace(/\s+/g, ' ').trim(); }
+    fora.push([chave, dono, alvo, v]);
+  }
+  return JSON.stringify(fora);
+})()
+"""
 
 #: O MÉTODO LENTO DE CADA GESTO, para a prova esperar o tempo dele. Só os que
 #: passam do padrão precisam de linha aqui.
@@ -507,7 +619,27 @@ class Piloto:
         #: clique.
         #: O que a prova botão a botão mediu, um por gesto.
         self.provas: list[dict[str, Any]] = []
+        #: O DESFECHO DE CADA GESTO, por `página:nome`. Sem isto, um gesto que
+        #: RECUSOU DIZENDO e um gesto que aplicou e não fez nada saem do relato
+        #: iguais — foi assim que os sete "recusaram corretamente" de 02/09
+        #: entraram na conta dos dezesseis "aplicado e nada mudou".
+        self.desfechos: dict[str, tuple[str, str]] = {}
+        #: Em que bloco de controle cada clique caiu — ou se o alvo foi FORÇADO
+        #: pela régua, que é defeito da PÁGINA e não sucesso do produto.
+        self._onde_clicou: dict[str, str] = {}
         self._fila: list[str] = []
+        #: O `--prova-de-mockup`: o que o ARQUIVO crava, o que o DOM mostra
+        #: ANTES de qualquer pintura, e o veredito de cada campo por aba.
+        self.cravados: dict[str, list[regua_do_mockup._Campo]] = {}
+        self.pristino: dict[str, list[list[str]]] = {}
+        self.vereditos: dict[str, list[regua_do_mockup._Veredito]] = {}
+        #: Onde a régua não conseguiu ler o que prometeu ler. Uma linha aqui é
+        #: a régua confessando, e ela reprova por isso.
+        self.cegueiras: list[str] = []
+        self._fila_de_abas: list[str] = []
+        self._voltas_da_aba = 0
+        self._medindo = False
+        self._carga_de_agora: dict[str, Any] = {}
         self._mesa_de_agora: list[dict[str, Any]] = []
         self._ctx_de_agora = pacotes.Contexto(state={})
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
@@ -602,6 +734,7 @@ class Piloto:
         acao = pacotes.gesto_da_pagina(pagina, nome)
         if acao is None:
             self.recusados.append(f"{pagina}:{nome}")
+            self.desfechos[f"{pagina}:{nome}"] = ("sem dono", "")
             print(f"[gesto sem dono] {pagina} · {nome} · {o.get('texto', '')!r}")
             return
         # O `uniq` É RESOLVIDO AQUI, e não dentro do gesto: a tela endereça por
@@ -628,9 +761,20 @@ class Piloto:
                 # bloco, e o lambda roda DEPOIS, no laço do GTK. Sem a amarra é
                 # `NameError` na hora de relatar a falha — o erro comendo o
                 # relato do erro.
+                # A FRASE DA RECUSA É GUARDADA, e não só impressa. `ValueError`
+                # é clique inválido e `RuntimeError` é o produto recusando com
+                # o motivo — as duas coisas são DESFECHO, e um relato que as
+                # some com "não fez nada" mente sobre sete botões desta casa.
+                self.desfechos[f"{pagina}:{nome}"] = (
+                    "recusou dizendo", f"{type(erro).__name__}: {erro}")
                 GLib.idle_add(lambda x=erro: (print(f"[gesto falhou] {pagina} · {nome}: {x}",
                                                     file=sys.stderr), False)[1])
                 return
+            # OS DOIS DESFECHOS SÃO ANOTADOS NO MESMO LUGAR, e é aqui: o `except`
+            # logo acima guarda a recusa, e esta linha guarda o "voltou sem
+            # levantar". Anotar o sucesso lá no `_deu_certo` separaria os dois
+            # ramos do mesmo `try`, e quem lesse um não veria o outro.
+            self.desfechos[f"{pagina}:{nome}"] = ("aplicou", "")
             GLib.idle_add(lambda r=resposta: self._deu_certo(pagina, nome, r))
 
         threading.Thread(target=trabalhar, daemon=True).start()
@@ -687,10 +831,47 @@ class Piloto:
         # Reinstalar é obrigatório, e esquecer isso é como uma aba nova nasce
         # muda sem uma linha de erro.
         self.pronto = False
-        self.ponte.perguntar(BOOTSTRAP, self._instalado)
+        self._antes_de_instalar()
 
     def _instalar(self) -> None:
+        self._antes_de_instalar()
+
+    def _antes_de_instalar(self) -> None:
+        """O DOM VIRGEM é lido AQUI, e é o único instante em que ele existe.
+
+        A pintura começa no `_instalado`, logo abaixo. Depois dela, o que a
+        página mostra já é uma mistura do que o arquivo cravou com o que o
+        produto escreveu — e não há como desfazer a mistura olhando o resultado.
+        Por isso o retrato do virgem vem ANTES do bootstrap, e o `_tique()` se
+        recusa a pintar enquanto ele não voltou.
+
+        NO PRODUTO ISTO NÃO ACONTECE: sem `--prova-de-mockup` o `if` é falso e a
+        instalação segue exatamente como antes, sem um IPC a mais.
+        """
+        if self.args.prova_de_mockup and self.pagina not in self.pristino:
+            pagina = self.pagina
+
+            def retratou(valor: Any, erro: Any) -> None:
+                self._leu_virgem(pagina, valor, erro)
+
+            self.ponte.perguntar(LER_CAMPOS, retratou)
         self.ponte.perguntar(BOOTSTRAP, self._instalado)
+
+    def _leu_virgem(self, pagina: str, valor: Any, erro: Any) -> None:
+        import json
+
+        if erro is not None:
+            self.cegueiras.append(f"{pagina}: não li o DOM virgem — {erro}")
+            # A LISTA VAZIA DESTRAVA O TIQUE. Sem ela a aba ficaria presa para
+            # sempre esperando um retrato que não vem, e o passeio inteiro
+            # morreria calado na primeira falha de JS.
+            self.pristino[pagina] = []
+            return
+        try:
+            self.pristino[pagina] = json.loads(str(valor))
+        except ValueError as e:
+            self.cegueiras.append(f"{pagina}: o DOM virgem não veio em JSON — {e}")
+            self.pristino[pagina] = []
 
     def _instalado(self, _valor: Any, erro: Any) -> None:
         if erro is not None:
@@ -732,6 +913,26 @@ class Piloto:
     def _tique(self) -> bool:
         if not self.pronto:
             return True
+        if self.args.prova_de_mockup:
+            if self.pagina not in self.pristino:
+                # O RETRATO DO VIRGEM AINDA NÃO VOLTOU. Pintar antes dele
+                # apagaria a única testemunha do que o arquivo crava — e a
+                # régua passaria a medir a pintura contra ela mesma.
+                return True
+            self._voltas_da_aba += 1
+            # A CONTA SOBE AQUI, ANTES do `pacote is None` lá embaixo, e não é
+            # detalhe: a `07-lancadores` não tem pacote e sai daquele `return`
+            # sem contar volta nenhuma. Com a conta lá, o passeio ficava preso
+            # nela para sempre — a única aba que o `--passear` também nunca
+            # visitou, pela mesma razão.
+            if self._voltas_da_aba >= self.args.voltas_por_aba and not self._medindo:
+                self._medindo = True
+                pagina = self.pagina
+
+                def mediu(valor: Any, erro: Any, p: str = pagina) -> None:
+                    self._fechou_a_aba(p, valor, erro)
+
+                self.ponte.perguntar(LER_CAMPOS, mediu)
         t0 = time.perf_counter()
         try:
             st = mesa_viva.estado_do_daemon()
@@ -756,7 +957,19 @@ class Piloto:
             print(f"[{self.pagina}] o pacote levantou: {e}", file=sys.stderr)
             return True
         if pacote is None:
-            return True
+            # A ABA SEM PACOTE AINDA TEM CABEÇALHO, e ele é das DEZ. Antes desta
+            # linha ela saía daqui sem pintar nada — nem o topo, nem a fita — e
+            # a `07-lancadores` (a única sem pacote, por decisão dela) ficava
+            # mostrando o desenho inteiro. Medido pela `--prova-de-mockup` em
+            # 02/09/2026, com o daemon dela no ar:
+            #
+            #     perfil  = 'Mortal Kombat'   ← e o perfil ativo dela era outro
+            #
+            # É a oitava aparição do defeito que esta casa já nomeou — *a tela
+            # afirmando o que não é* —, e ela passa por aqui porque nenhuma aba
+            # é dona do topo. Um pacote VAZIO é o que ela é: nada de próprio a
+            # pintar, e tudo o que é de todas continua valendo.
+            pacote = {}
 
         # A FORMA CANÔNICA E A TRADUÇÃO `uniq → pref`, as duas no despachante.
         # Ele é quem conhece as três palavras que as abas usam para a mesma
@@ -823,6 +1036,11 @@ class Piloto:
         # nada" — e o relato conta os dois separados.
         self.ponte.perguntar(
             f"(window.__hef && window.__hef.pintar({_json(carga)})) || -1", contou)
+        # A CARGA DESTE TIQUE fica guardada: é ela — e não o código-fonte do
+        # pacote — que diz o que o produto DECLAROU pintar nesta aba agora. Ler
+        # daqui é o que separa esta régua das anteriores, que perguntavam se o
+        # nome do campo aparecia em algum lugar do arquivo .py.
+        self._carga_de_agora = carga
         self.voltas += 1
         self.custos.append((time.perf_counter() - t0) * 1000)
         return True
@@ -861,6 +1079,168 @@ class Piloto:
             return False
 
         GLib.timeout_add(total, fechar)
+
+    # -- a prova do mockup -------------------------------------------------
+    def _provar_mockup(self) -> bool:
+        """Passa pelas DEZ abas e mede, em cada uma, o que é dado e o que é desenho.
+
+        O ROTEIRO, por aba: abre → retrata o DOM VIRGEM → deixa a pintura correr
+        N tiques → lê a tela de novo → compara com o que o ARQUIVO crava.
+
+        POR QUE N TIQUES E NÃO UM: *uma régua que roda o tique uma vez mede um
+        INSTANTE, não um comportamento*. Em 29/08/2026 uma leva introduziu uma
+        regressão que só aparecia aos 181 segundos, com 67 testes verdes. Aqui o
+        padrão são oito voltas — quatro segundos por aba — porque a mesa demora
+        a chegar inteira: a cor do plástico é perguntada ao aparelho em thread e
+        a primeira volta pinta "Não sei".
+        """
+        self._fila_de_abas = [
+            p.name for p in onde.paginas(publicado=True) if p.name[:2].isdigit()]
+        print(f"[prova-de-mockup] {len(self._fila_de_abas)} abas · "
+              f"{self.args.voltas_por_aba} voltas de {TIQUE_MS} ms em cada uma")
+        return self._proxima_aba()
+
+    def _proxima_aba(self) -> bool:
+        if not self._fila_de_abas:
+            self._relatar_mockup()
+            Gtk.main_quit()
+            return False
+        self._voltas_da_aba = 0
+        self._medindo = False
+        # A CARGA DA ABA ANTERIOR NÃO PODE SOBREVIVER À TRAVESSIA: a
+        # `07-lancadores` não tem pacote e não produz carga nenhuma, e o que
+        # ficasse aqui seria lido como "o pacote da Lançadores declara isto" —
+        # os campos da aba anterior, atribuídos a uma aba que não tem dono.
+        self._carga_de_agora = {}
+        # O `pronto = False` É OBRIGATÓRIO, e a razão é uma armadilha do
+        # `_carregou`: quando a aba nova é a MESMA que está à vista (é o caso da
+        # primeira), ele volta cedo e não abaixa a bandeira. O tique seguinte
+        # pintaria num documento recém-carregado, sem ponte, e contaria a volta.
+        self.pronto = False
+        self._ir(self._fila_de_abas.pop(0))
+        return False
+
+    def _fechou_a_aba(self, pagina: str, valor: Any, erro: Any) -> None:
+        """A aba rodou o bastante. Classifica cada campo e segue para a próxima."""
+        import json
+
+        if erro is not None:
+            self.cegueiras.append(f"{pagina}: não li a tela ao fim — {erro}")
+            self._proxima_aba()
+            return
+        try:
+            vivos: list[list[str]] = json.loads(str(valor))
+        except ValueError as e:
+            self.cegueiras.append(f"{pagina}: a leitura final não veio em JSON — {e}")
+            self._proxima_aba()
+            return
+
+        arquivo = onde.pagina(pagina, publicado=True)
+        cravados = regua_do_mockup._campos_cravados(arquivo.read_text(encoding="utf-8"))
+        self.cravados[pagina] = cravados
+
+        # A GUARDA, E ELA É SOBRE O VIRGEM — não sobre a tela do fim. O DOM
+        # ANTES DE QUALQUER PINTURA tem de dizer exatamente o que o arquivo diz:
+        # é o parser de Python e o leitor de JS conferidos um contra o outro,
+        # endereço a endereço e valor a valor. Se discordarem, a régua está
+        # lendo uma coisa e comparando outra — e diria "PRODUTO" sobre um campo
+        # que ninguém tocou. Não há como conferir isto sem abrir a página, e é
+        # por isso que ela vive aqui e não no teste unitário.
+        #
+        # NA TELA DO FIM ESTA IGUALDADE NÃO VALE, e supor que valesse foi o
+        # primeiro erro desta régua: a pintura TROCA BLOCOS INTEIROS, e a
+        # `10-perfis` acabou o passeio com 55 endereços onde o arquivo tem 81.
+        # Aquilo não é cegueira — é o produto trabalhando. Quem casa os dois
+        # lados é o `_alinhar()`.
+        virgem = self.pristino.get(pagina) or []
+        if len(virgem) != len(cravados):
+            self.cegueiras.append(
+                f"{pagina}: o DOM virgem trouxe {len(virgem)} endereços e o "
+                f"arquivo {len(cravados)}")
+        else:
+            for c, (k, d, _, v) in zip(cravados, virgem, strict=True):
+                if (str(k), str(d)) != (c.chave, c.dono):
+                    self.cegueiras.append(
+                        f"{pagina}: o arquivo põe {c.endereco} onde a página "
+                        f"virgem põe {d}·{k} — as duas leituras estão fora de ordem")
+                elif str(v) != c.valor:
+                    self.cegueiras.append(
+                        f"{pagina}: a régua lê {c.endereco} como {c.valor!r} no "
+                        f"arquivo e a página virgem mostra {v!r} — o parser e o "
+                        f"leitor de tela discordam neste alvo ({c.alvo})")
+
+        alinhados, nasceram = regua_do_mockup._alinhar(
+            cravados, [(str(a), str(b), str(c), str(d)) for a, b, c, d in vivos])
+        if nasceram:
+            print(f"[prova-de-mockup] {pagina}: {len(nasceram)} endereço(s) "
+                  f"NASCERAM na tela (o produto trocou um bloco): "
+                  f"{', '.join(f'{d}·{k}' if d else k for k, d in nasceram[:8])}")
+
+        if self.args.sem_cravado:
+            # A MORDIDA, e ela mora aqui porque é aqui que a cura mora: se o
+            # valor cravado deixar de ser o do arquivo, TUDO parece pintado e a
+            # régua não acusa mais nada. Uma régua que continue acusando com
+            # isto ligado está acusando por outro motivo — e não é a que ela
+            # pediu. Vem DEPOIS das duas guardas de propósito: elas conferem a
+            # leitura, não a comparação.
+            cravados = [dataclasses.replace(c, valor="\x00cura arrancada")
+                        for c in cravados]
+        declarados = regua_do_mockup._declarados_do_pacote(self._carga_de_agora)
+        self.vereditos[pagina] = regua_do_mockup._classificar(
+            cravados, alinhados, declarados)
+        contas = regua_do_mockup._contar(self.vereditos[pagina])
+        print(f"[prova-de-mockup] {pagina:22s} "
+              f"produto {contas[regua_do_mockup.PRODUTO]:3d} · "
+              f"mockup {contas[regua_do_mockup.MOCKUP]:3d} · "
+              f"indecidível {contas[regua_do_mockup.INDECIDIVEL]:3d}")
+        self._proxima_aba()
+
+    def _relatar_mockup(self) -> None:
+        """A tabela das três contagens, e a lista NOMINAL do que ainda é desenho."""
+        r = regua_do_mockup
+        print("\n" + "=" * 74)
+        print("A RÉGUA DO MOCKUP — o que a tela mostra é dado, ou é o desenho?")
+        print("=" * 74)
+        print(f"{'aba':22s} {'campos':>7s} {'PRODUTO':>8s} {'MOCKUP':>7s} "
+              f"{'INDECID':>8s}")
+        soma = {r.PRODUTO: 0, r.MOCKUP: 0, r.INDECIDIVEL: 0}
+        for pagina in sorted(self.vereditos):
+            contas = r._contar(self.vereditos[pagina])
+            for classe, quantos in contas.items():
+                soma[classe] += quantos
+            print(f"{pagina:22s} {sum(contas.values()):7d} {contas[r.PRODUTO]:8d} "
+                  f"{contas[r.MOCKUP]:7d} {contas[r.INDECIDIVEL]:8d}")
+        total = sum(soma.values())
+        print(f"{'TODAS':22s} {total:7d} {soma[r.PRODUTO]:8d} "
+              f"{soma[r.MOCKUP]:7d} {soma[r.INDECIDIVEL]:8d}")
+
+        print("\nOS CAMPOS QUE AINDA MOSTRAM O DESENHO — é este número que tem de cair:")
+        for pagina in sorted(self.vereditos):
+            presos = [v for v in self.vereditos[pagina] if v.classe == r.MOCKUP]
+            if not presos:
+                print(f"  {pagina}: nenhum")
+                continue
+            print(f"  {pagina} ({len(presos)}):")
+            for preso in presos:
+                marca = " ← ENDEREÇO MORTO" if preso.declarado is not None else ""
+                print(f"      {preso.campo.endereco:28s} = {preso.vivo!r}{marca}")
+
+        if soma[r.INDECIDIVEL]:
+            print(f"\nOS {soma[r.INDECIDIVEL]} INDECIDÍVEIS não são um buraco: são campos em "
+                  "que o valor\nque o produto pinta COINCIDE com o que o desenho "
+                  "cravou. Ler a tela\nnão separa 'pintou igual' de 'não pintou' — "
+                  "e a régua prefere dizer\nquantos são a inventar certeza.")
+
+        if self.cegueiras:
+            print(f"\nA RÉGUA NÃO ENXERGOU {len(self.cegueiras)} coisa(s) — e isso reprova, "
+                  "porque\numa régua que não sabe o que está lendo mede o que quiser:")
+            for cegueira in self.cegueiras:
+                print(f"   · {cegueira}")
+            raise SystemExit(1)
+        if 0 <= self.args.teto_de_mockup < soma[r.MOCKUP]:
+            print(f"\nREPROVA: {soma[r.MOCKUP]} campos no desenho, e o teto pedido "
+                  f"era {self.args.teto_de_mockup}.")
+            raise SystemExit(1)
 
     def _provar_cliques(self) -> bool:
         """Cliques SINTÉTICOS nos gestos INÓCUOS, para provar o caminho.
@@ -912,9 +1292,47 @@ class Piloto:
         informação e não falha: pode ser um botão que já estava no valor pedido.
         O que ele nunca faz é passar por sucesso calado.
         """
-        alvos = [n for (p, n) in sorted(pacotes.GESTOS) if p == self.pagina]
-        if not self.args.incluir_perigosos:
-            alvos = [n for n in alvos if (self.pagina, n) not in PERIGOSOS]
+        arquivo = onde.pagina(self.pagina, publicado=True)
+        texto = arquivo.read_text(encoding="utf-8")
+        da_pagina = regua_do_mockup._gestos_cravados(texto)
+        # O `"*"` ENTRA, e sem ele o relato acusa mentira: os quatro botões do
+        # rodapé (Aplicar · Salvar · Importar · Exportar) moram no `topo.html`,
+        # o esqueleto das dez, e por isso se registram em `("*", nome)` — é o
+        # mesmo coringa que o `pacotes.gesto_da_pagina` consulta. Sem esta
+        # metade, a régua os listaria como "ninguém os ligou" em TODAS as dez
+        # abas, e a primeira execução deste bloco fez exatamente isso.
+        registrados = {n for (p, n) in pacotes.GESTOS if p in (self.pagina, "*")}
+        perigosos = set() if self.args.incluir_perigosos else PERIGOSOS
+        alvos, pulados = regua_do_mockup._alvos_a_clicar(
+            da_pagina, registrados, self.pagina, perigosos)
+        # A COBERTURA É CONFERIDA ANTES DO PRIMEIRO CLIQUE, e ela é o que faz
+        # esta prova deixar de mentir. Em 29/08/2026 o `--prova-gesto` da aba
+        # Controles deu VERDE sobre dois botões MORTOS: ele clicava o que o
+        # CÓDIGO registrava, e os dois botões novos existiam só na PÁGINA.
+        # *Uma validação de interface que não cobre o botão novo é uma validação
+        # que mente.*
+        faltou = regua_do_mockup._cobertura_dos_gestos(
+            da_pagina, registrados, alvos, pulados)
+        if faltou:
+            print(f"[prova] REPROVA: {len(faltou)} endereço(s) clicável(is) de "
+                  f"{self.pagina} ficaram de fora: {', '.join(faltou)}", file=sys.stderr)
+            raise SystemExit(1)
+        so_na_pagina = sorted({g.nome for g in da_pagina} - registrados)
+        so_no_codigo = sorted(registrados - {g.nome for g in da_pagina})
+        papeis = sorted({g.nome for g in regua_do_mockup._papeis_cravados(texto)}
+                        - registrados)
+        print(f"[prova] {self.pagina}: {len(da_pagina)} endereços na página · "
+              f"{len(registrados)} registrados no código")
+        if so_na_pagina:
+            print(f"[prova] SÓ NA PÁGINA (ninguém os ligou): {', '.join(so_na_pagina)}")
+        if so_no_codigo:
+            print(f"[prova] SÓ NO CÓDIGO (a página não tem `data-gesto`): "
+                  f"{', '.join(so_no_codigo)}")
+        if papeis:
+            print(f"[prova] `data-papel` que o ouvinte aceita como gesto e nenhum "
+                  f"pacote registra: {', '.join(papeis)}")
+        if pulados:
+            print(f"[prova] pulados por mexerem na máquina dela: {', '.join(pulados)}")
         if not alvos:
             print(f"[prova] {self.pagina} não tem gesto seguro a clicar")
             return False
@@ -946,7 +1364,7 @@ class Piloto:
         return False
 
     def _um_botao(self, nome: str) -> None:
-        """Um gesto: fotografa o daemon, clica, e mede o que mudou."""
+        """Um gesto: fotografa o daemon, clica NO ALVO CERTO, e mede o que mudou."""
         try:
             antes = _achatar(mesa_viva.estado_do_daemon())
         except Exception as e:
@@ -954,7 +1372,18 @@ class Piloto:
             self._proximo_da_fila()
             return
         self._antes_do_gesto = (nome, antes)
-        self._js(SELETOR % (nome, nome, nome, nome))
+        self.desfechos.pop(f"{self.pagina}:{nome}", None)
+        # OS CONECTADOS, NA ORDEM DA MESA — e é isto que faltava. Sem alvo, sete
+        # gestos da aba Conexões recusaram CORRETAMENTE em 02/09/2026 e o
+        # instrumento os contou entre os dezesseis "aplicado e nada mudou".
+        # O JS devolve ONDE clicou; o `_onde_clicou` guarda para o relato.
+        prefs = [c["pref"] for c in self._mesa_de_agora if c.get("pref")]
+
+        def anotou(valor: Any, erro: Any) -> None:
+            self._onde_clicou[nome] = (
+                f"o clique falhou: {erro}" if erro is not None else str(valor))
+
+        self.ponte.perguntar(CLIQUE_COM_ALVO % (_json(nome), _json(prefs)), anotou)
         # A ESPERA É OBRIGATÓRIA e não é folga: o daemon escreve no aparelho e
         # só então republica o estado. Medir na hora leria o valor VELHO e diria
         # "sem efeito" sobre um botão que funcionou.
@@ -993,16 +1422,34 @@ class Piloto:
         # é outra: o gesto usa a porta `_detalhado`, que levanta quando o daemon
         # recusa. Chegar a "aplicado" já é o daemon ter aceitado.
         sem_eco = nome in self._sem_eco_da_pagina()
-        self.provas.append({"gesto": nome, "mudou": mudou, "sem_eco": sem_eco})
-        if mudou:
-            print(f"[PROVA] {self.pagina} · {nome} → MUDOU {len(mudou)} campo(s):")
+        # OS TRÊS DESFECHOS, e antes de 02/09/2026 os três saíam iguais. O que
+        # o daemon publica não distingue *recusou dizendo* de *não fez nada* —
+        # nos dois casos o estado fica igual. Quem sabe a diferença é o próprio
+        # gesto, e agora ele deixa dito em `self.desfechos`.
+        desfecho, frase = self.desfechos.get(f"{self.pagina}:{nome}", ("aplicou", ""))
+        onde_ = self._onde_clicou.get(nome, "")
+        self.provas.append({"gesto": nome, "mudou": mudou, "sem_eco": sem_eco,
+                            "desfecho": desfecho, "frase": frase, "onde": onde_})
+        cabeca = f"[PROVA] {self.pagina} · {nome}"
+        if onde_:
+            cabeca += f" ({onde_})"
+        if desfecho == "sem dono":
+            print(f"{cabeca} → SEM DONO: nenhum pacote registra este gesto")
+        elif desfecho == "recusou dizendo":
+            # RECUSAR DIZENDO É O COMPORTAMENTO CERTO, e contá-lo como falha
+            # é o que fez a medição de 02/09 acusar sete botões que estavam
+            # certos. `ValueError` = clique inválido; `RuntimeError` = o
+            # produto recusou, e a frase vai para a tela.
+            print(f"{cabeca} → RECUSOU DIZENDO: {frase}")
+        elif mudou:
+            print(f"{cabeca} → MUDOU {len(mudou)} campo(s):")
             for k, (a, d) in sorted(mudou.items())[:6]:
                 print(f"          {k}: {a!r} → {d!r}")
         elif sem_eco:
-            print(f"[PROVA] {self.pagina} · {nome} → ACEITO, sem eco no state "
+            print(f"{cabeca} → ACEITO, sem eco no state "
                   f"(o daemon não publica este assunto)")
         else:
-            print(f"[PROVA] {self.pagina} · {nome} → SEM EFEITO no estado do daemon")
+            print(f"{cabeca} → DISSE APLICADO E NADA MUDOU no estado do daemon")
         return self._proximo_da_fila()
 
     def _sem_eco_da_pagina(self) -> set[str]:
@@ -1042,20 +1489,45 @@ class Piloto:
             if conta and pico == 0:
                 mudas.append(pagina)
         if self.provas:
-            mudaram = sum(1 for p in self.provas if p["mudou"])
-            aceitos = sum(1 for p in self.provas if not p["mudou"] and p["sem_eco"])
-            mudos = [p["gesto"] for p in self.provas
-                     if not p["mudou"] and not p["sem_eco"]]
-            print(f"\nPROVA NO APARELHO: {mudaram} mudaram o daemon · "
-                  f"{aceitos} aceitos sem eco · {len(mudos)} sem efeito")
+            def classe(p: dict[str, Any]) -> str:
+                if p.get("desfecho") == "sem dono":
+                    return "sem dono"
+                if p.get("desfecho") == "recusou dizendo":
+                    return "recusou dizendo"
+                if p["mudou"]:
+                    return "mudou o daemon"
+                if p["sem_eco"]:
+                    return "aceito sem eco"
+                return "disse aplicado e nada mudou"
+
+            marcas = {"mudou o daemon": "✓", "aceito sem eco": "·",
+                      "recusou dizendo": "!", "sem dono": "?",
+                      "disse aplicado e nada mudou": "—"}
+            contas: dict[str, int] = {}
             for p in self.provas:
-                marca = "✓" if p["mudou"] else ("·" if p["sem_eco"] else "—")
-                print(f"   {marca} {p['gesto']}")
+                contas[classe(p)] = contas.get(classe(p), 0) + 1
+            print("\nPROVA NO APARELHO: " + " · ".join(
+                f"{n} {k}" for k, n in sorted(contas.items())))
+            for p in self.provas:
+                k = classe(p)
+                extra = f" — {p['frase']}" if p.get("frase") else ""
+                onde_ = f" ({p['onde']})" if p.get("onde") else ""
+                print(f"   {marcas[k]} {p['gesto']}{onde_}{extra}")
+            mudos = [p["gesto"] for p in self.provas
+                     if classe(p) == "disse aplicado e nada mudou"]
             if mudos:
                 # UM GESTO MUDO E NÃO DECLARADO é o que esta régua persegue: ou
                 # ele não faz nada, ou faz algo que o daemon não conta e ninguém
                 # escreveu isso. As duas coisas precisam de alguém.
                 print(f"   sem efeito e sem `SEM_ECO`: {', '.join(mudos)}")
+            forcados = [p["gesto"] for p in self.provas
+                        if str(p.get("onde", "")).startswith("ALVO FORCADO")]
+            if forcados:
+                # O ALVO EMPRESTADO NÃO É O PRODUTO FUNCIONANDO: estes botões
+                # não dizem em qual aparelho agem, e sem a régua emprestando um
+                # eles só podem recusar. É defeito da PÁGINA, e está nomeado.
+                print(f"   alvo FORÇADO pela régua (a página não diz em quem "
+                      f"agir): {', '.join(forcados)}")
         if self.gestos:
             print(f"gestos: {len(self.gestos)} · aplicados: {len(self.aplicados)} · "
                   f"sem dono: {len(set(self.recusados))}")
@@ -1111,9 +1583,34 @@ def main() -> None:
                         "eles chegam ao daemon de verdade")
     p.add_argument("--sem-cor", action="store_true",
                    help="MORDIDA: sem o leitor de cor do plástico")
+    p.add_argument("--prova-de-mockup", action="store_true",
+                   help="passa pelas dez abas e diz, campo a campo, o que é DADO "
+                        "e o que ainda é o DESENHO cravado no arquivo")
+    p.add_argument("--voltas-por-aba", type=int, default=8,
+                   help="quantos tiques a pintura corre em cada aba antes da "
+                        "medição. Uma volta só mede um INSTANTE, não um "
+                        "comportamento — o padrão dá 4 s por aba")
+    p.add_argument("--teto-de-mockup", type=int, default=-1,
+                   help="reprova se mais de N campos ainda mostrarem o desenho. "
+                        "NEGATIVO (o padrão) só mede e relata — é assim que ele "
+                        "vira catraca quando o número começar a cair")
+    p.add_argument("--sem-cravado", action="store_true",
+                   help="MORDIDA: arranca a comparação com o arquivo publicado e "
+                        "compara a tela com ela mesma. A régua tem de parar de "
+                        "acusar — se continuar acusando, ela não mede o que diz")
     args = p.parse_args()
 
+    if args.prova_de_mockup and not args.oculta:
+        # ELA TEM UMA TELA. Uma régua que passeia por dez abas piscando na
+        # frente dela quebra o que ela está fazendo — e nenhum ganho de medição
+        # paga isso. Aqui a bandeira se acende sozinha, e diz que se acendeu.
+        print("[prova-de-mockup] ligando `--oculta`: esta régua abre dez abas e "
+              "ela tem UMA tela.")
+        args.oculta = True
+
     piloto = Piloto(args)
+    if args.prova_de_mockup:
+        GLib.timeout_add(900, piloto._provar_mockup)
     if args.prova_no_aparelho:
         GLib.timeout_add(2500, piloto._provar_no_aparelho)
     if args.prova_clique:
