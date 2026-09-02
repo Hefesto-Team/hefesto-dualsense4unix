@@ -4,11 +4,17 @@ O DEFEITO QUE ESTE ARQUIVO EXISTE PARA NÃO DEIXAR VOLTAR
 --------------------------------------------------------
 Medido em 22/08/2026, rodando o contador deste arquivo contra
 `docs/data/mapa-controles.csv`: **41 células dizem que a casa MEDIU e o produto
-NÃO ACIONA** — 20 no cabo, 21 no rádio, 13 linhas com as duas assim. (**São 39
-desde 29/08/2026**, e as duas que saíram saíram PELO MOTIVO CERTO: o
-acelerômetro do DualSense passou a ser lido nos dois transportes —
+NÃO ACIONA** — 20 no cabo, 21 no rádio, 13 linhas com as duas assim. (Foram
+**39 entre 29/08 e 02/09/2026**, e as duas que saíram saíram PELO MOTIVO CERTO:
+o acelerômetro do DualSense passou a ser lido nos dois transportes —
 ONDA-CONTROLES-04. O número desce quando a dívida é paga; é para isso que ele
-está aqui.) O
+está aqui. **Voltou a 41 em 02/09/2026, e a subida é de HONESTIDADE, não de
+dívida:** os dois lados de `movimento.imu.ligar@dualsense` subiram de
+`inferido-do-codigo` para `medido` porque o caderno tem dois ensaios de bancada
+para eles desde 15/08 — a casa passou a admitir que MEDIU, e o `aciona = não`
+não mudou. As duas células entraram com `nada-a-acionar`, que é DECISÃO: não há
+o que acionar porque não existe comando de ligar a IMU e o sensor emite sempre.
+O contador de dívida deste arquivo não se moveu.) O
 `scripts/gerar-mapa.py` já as pintava de laranja (`--color-lacuna`, "a casa sabe
 e o produto não faz") e já as contava no cartão de cada controle (`placar`,
 chave `lacuna`).
@@ -326,8 +332,8 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
-    assert len(antes) == 39, (
-        f"o recorte de 29/08/2026 tinha 39 células medidas e não acionadas, e "
+    assert len(antes) == 41, (
+        f"o recorte de 02/09/2026 tinha 41 células medidas e não acionadas, e "
         f"agora tem {len(antes)}. Não é reprovação de defeito: é aviso de que o "
         "retrato deste arquivo envelheceu e o texto precisa ser recontado"
     )
