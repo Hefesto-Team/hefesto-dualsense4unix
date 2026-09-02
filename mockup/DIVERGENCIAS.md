@@ -93,3 +93,49 @@ seção daqui**: a aba deixou de estar em trabalho.
   **O que espera o seu OK:** nada visual. A bancada e o publicado diferem por
   esta linha só; enquanto ela não publicar, o produto que ela usa continua
   igual.
+
+
+## 04-iluminacao.html
+- **02/09/2026** — **a dica da célula `LEDs` saiu do atributo da célula e entrou
+  no desenho**, e são as suas duas decisões de hoje na mesma frase. A que estava
+  cravada dizia:
+
+      title="O Cosmic Red aceso: as duas tiras na cor escolhida, e as cinco
+             lâmpadas no padrão do Player 1."
+
+  **O nome** era o do mockup: com o seu controle na mesa, a mesma coluna escreve
+  `P1 • White • USB` no rótulo e `Cosmic Red` na dica, dez pixels abaixo — *"a
+  interface mostra o que tá conectado e não o controle do mockup"*. **E a
+  palavra `aceso`** afirma um estado do aparelho que ninguém pode conferir:
+  você já tinha mandado tirá-la, a janela GTK obedeceu em 25/08
+  (`lightbar_actions._PREFIXO_DESENHO` passou a dizer *"Desenho que
+  mandamos"*), e o mockup a reintroduziu.
+
+  **Por que ela não podia ficar onde estava:** `title` é ATRIBUTO, e o piloto
+  não tem alvo de pintura para atributo — os alvos são `texto`, `largura`,
+  `fundo`, `valor`, `html`, `classe` e `cor`. Toda dica escrita na célula fica
+  congelada no que o gerador soube, e o gerador só sabe o mockup. Dentro do
+  desenho ela viaja pelo alvo `html`, que se troca a cada tique.
+
+  **A frase nova não tem uma palavra minha.** Ela é o nome vivo do controle mais
+  duas frases que já têm dono no motor: a ressalva da barra
+  (`controller_card.rotulo_lightbar`, que sabe os quatro estados em que a cor
+  publicada não é a que está no plástico) e o desenho das cinco lâmpadas
+  (`lightbar_actions.texto_do_desenho_aceso`). Na sua mesa de agora ela lê:
+
+      White (USB) · Desenho que mandamos: desenho do P1 — automático, do número
+      deste controle.
+
+  **O que espera o seu OK:** a frase acima, e nada mais. Nenhum pixel mudou —
+  a dica só aparece ao passar o mouse.
+
+  **E o que espera a PUBLICAÇÃO, que é ato seu:** a célula `LEDs` da sua tela
+  continua mostrando as duas tiras congeladas do desenho — azul a 82% na coluna
+  do P1, enquanto a linha `Brilho` da mesma coluna já diz `100%`. A aba discorda
+  de si mesma, e a causa é só o endereço: o publicado ainda diz
+  `data-campo="aceso"` e a bancada diz `data-campo="luz"`. Medido em 02/09: o
+  produto emite `opacity:1.0` (o brilho vivo) e a tela mostra `opacity:0.82` (o
+  do arquivo). **Não dá para curar sem publicar** — escrever no endereço velho
+  apagaria o desenho, porque ali o alvo é `texto` e `textContent` mata os filhos
+  (é a razão de `pacotes.enderecos_que_o_texto_apaga`, que protege esta célula
+  pelo nome). Publicando a 04, a célula passa a viver.

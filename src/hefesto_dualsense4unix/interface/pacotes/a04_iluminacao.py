@@ -47,7 +47,8 @@ régua nenhuma::
              tem. A régua do mockup varre os endereços do ARQUIVO, e um campo
              emitido sem lugar nenhum não sai em arquivo algum; quem o via era
              o `casamento.py`, que o acusava como o único órfão da aba. A frase
-             passou a viajar no `title` das duas tiras de `luz`.
+             passou a viajar no `title` das três peças de `luz`, dentro da
+             `dica_da_luz`.
     rgb      uma LISTA — e o pintor **pula lista em coluna**
              (`hefesto_vivo.py`, o laço das colunas: *"if(v !== null && typeof
              v === 'object') continue"*). Ele não podia ser pintado nem que a
@@ -140,6 +141,106 @@ def _tinta(rgb: Any) -> str:
 #: branca. O `color:transparent` é literal de propósito — é ele que mata o halo,
 #: e ele não pode depender de variável nenhuma.
 TIRA_APAGADA = "background:var(--panel);color:transparent;opacity:1"
+
+
+def o_coop_manda(state: dict[str, Any]) -> bool:
+    """O co-op está DE FATO numerando mais de um controle?
+
+    NÃO se lê `coop.enabled`, e a razão está MEDIDA no motor:
+    `app/actions/status_actions.texto_do_coop_derrubado` diz, com todas as
+    letras, que *"``CoopManager.disable()`` não zera ``coop_enabled``, então o
+    ``state_full`` segue publicando ``coop.enabled=True`` com ``coop.players=1``
+    — de fora, indistinguível de 'ela desligou o co-op'"*. Medido na mesa de
+    02/09/2026, com o co-op parado e dois controles ligados::
+
+        "coop": {"enabled": true, "players": 1, "mesa": [ … uma entrada … ]}
+
+    Quem manda nas cinco lâmpadas é a CAMADA de co-op do merge
+    (`core/backend_pydualsense._merged_desired_for_key`, a segunda de cinco), e
+    ela só tem opinião quando há mais de um jogador. Ler o booleano faria a dica
+    desta aba dizer *"quem manda é o co-op"* numa mesa em que ninguém está
+    jogando em co-op.
+    """
+    coop = state.get("coop")
+    if not isinstance(coop, dict):
+        return False
+    try:
+        return int(coop.get("players") or 0) > 1
+    except (TypeError, ValueError):
+        return False
+
+
+def dica_da_luz(nome: str, via: str, recado: str, jogador: int,
+                coop_manda: bool = False) -> str:
+    """A dica da célula LEDs: o controle VIVO, e as frases do MOTOR.
+
+    DUAS DECISÕES DELA, de 02/09/2026, e esta função é as duas::
+
+        7. "a palavra ACESO sai do texto"
+        8. "a interface mostra o que tá conectado e não o controle do mockup"
+
+    O que estava cravado no desenho — e portanto na tela dela — era::
+
+        title="O Cosmic Red aceso: as duas tiras na cor escolhida, e as cinco
+               lâmpadas no padrão do Player 1."
+
+    Duas afirmações, as duas erradas ao mesmo tempo. **O nome** era o do mockup:
+    com o controle de hoje na mesa, a MESMA coluna escreve `P1 • White • USB`
+    no rótulo e `Cosmic Red` na dica, dez pixels abaixo. **E a palavra `aceso`**
+    afirma um estado do aparelho que ninguém pode conferir: ela já tinha mandado
+    tirá-la, a GTK obedeceu em 25/08 (`lightbar_actions._PREFIXO_DESENHO`
+    passou a dizer *"Desenho que mandamos"*) e o mockup a reintroduziu.
+
+    NADA AQUI É PROSA NOVA. As duas frases têm dono no motor:
+
+    * a da BARRA é o primeiro retorno de `controller_card.rotulo_lightbar` — a
+      mesma que os cards da GTK usam, e que sabe os quatro estados em que a cor
+      publicada **não** é a que está no plástico. `""` quando não há ressalva;
+    * a das CINCO LÂMPADAS é `lightbar_actions.texto_do_desenho_aceso`, cujo
+      docstring diz por que não fala em "aceso": *"não existe canal de leitura
+      de LED de jogador, em transporte nenhum"* — `luz.led_jogador.leitura`
+      tem `cabo_aceita = não` e `radio_aceita = não` no mapa de canais.
+
+    O RASCUNHO VAI VAZIO DE PROPÓSITO, e isto é medição, não descuido. O
+    docstring do motor promete que *"qualquer desenho não-vazio no rascunho
+    vence a camada automática por campo (D5)"* — e para o PLAYER-LED isso
+    caducou na R-14 (23/07). O merge está em
+    `core/backend_pydualsense._merged_desired_for_key`::
+
+        default global do perfil  <  camada AUTOMÁTICA  <  override por-uniq
+                                                        <  co-op  <  jogo
+
+    O `leds.player_leds` do perfil é o **default global**, a camada mais baixa;
+    a automática (`identity.make_auto_output_provider` →
+    `player_led_pattern(slot)`) está ACIMA dele e nasce ligada — `auto_numbers`
+    *"sem campo no schema ainda, fica ``True`` até alguém pedir o contrário"*, e
+    `ProfileManager._configure_auto_player_colors` nunca passa `numbers=`. Logo,
+    para um DualSense com número, o desenho em vigor é SEMPRE o do número.
+
+    Medido no perfil dela em 02/09/2026: `meu_perfil` tem
+    `player_leds = [false, false, true, false, false]` — o padrão do P1. Passar
+    esses bits faria a dica da coluna do P2 dizer *"desenho do P1 — escolha
+    sua"* enquanto o produto acende o padrão do P2. Com o rascunho vazio a
+    função cai no ramo 3, que é o que o produto faz: *"automático, do número
+    deste controle"*.
+
+    :param nome: o modelo VIVO, o que a mesa sabe — nunca o do desenho.
+    :param via: `USB`/`BT` de agora. `—` ou vazio some da frase em vez de
+        virar `(—)`: um travessão entre parênteses não diz nada a ninguém.
+    :param recado: o primeiro retorno de `rotulo_lightbar`, ou `""`.
+    :param jogador: o número deste controle, que é o desenho em vigor.
+    :param coop_manda: `o_coop_manda(state)` — ver lá por que não é
+        `coop.enabled`.
+    """
+    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
+        texto_do_desenho_aceso,
+    )
+
+    #: O RASCUNHO VAZIO É O ESTADO EM VIGOR — ver o docstring acima.
+    frases = [f for f in (recado, texto_do_desenho_aceso(
+        (False,) * 5, jogador, coop_ligado=coop_manda)) if f]
+    quem = f"{nome} ({via})" if via and via != "—" else nome
+    return f"{quem} · " + " · ".join(frases)
 
 
 def _da_mesa(ctx: Contexto, uniq: str) -> dict[str, Any]:
@@ -255,7 +356,7 @@ def fileira_de_players(nome: str, meu: int, donos: dict[int, dict[str, Any]],
                      for n in NUMEROS)
 
 
-def desenho_da_luz(tinta: str, brilho: float, jogador: int, recado: str = "",
+def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
                    recuo: str = "") -> str:
     """O miolo do `.aceso`: as duas tiras e as cinco lâmpadas, VIVAS.
 
@@ -287,24 +388,32 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, recado: str = "",
       `core/led_control.player_led_pattern` (o MESMO padrão que o daemon acende);
     * a tinta é `_tinta`, isto é `monta.tom_da_casa` do hex vivo;
     * quem decide se HÁ cor a afirmar é `controller_card.rotulo_lightbar` — o
-      chamador passa `""` quando o motor devolveu base `None`;
-    * o `recado` é a frase do mesmo `rotulo_lightbar`, que sabe os quatro
-      estados em que a cor publicada **não** é a que está no plástico.
+      chamador passa `""` quando não há;
+    * a `dica` inteira é `dica_da_luz`, que só junta frases do motor.
+
+    A DICA VIAJA NAS TRÊS PEÇAS, e não na célula em volta. O `title` da célula
+    é um ATRIBUTO, e o piloto não tem alvo de pintura para atributo — os alvos
+    são `texto`, `largura`, `fundo`, `valor`, `html`, `classe` e `cor`
+    (`hefesto_vivo.escrever`). Um `title` na célula, portanto, fica CONGELADO no
+    que o gerador escreveu: era ele que dizia *"O Cosmic Red aceso…"* na coluna
+    de um controle branco. Posto nas peças, ele entra pelo mesmo alvo `html` que
+    troca o desenho, e muda com a mesa. **RELATO:** um alvo `titulo` no piloto
+    resolveria isto para as dezenove dicas congeladas desta aba de uma vez.
 
     :param tinta: o hex JÁ no tom da casa. `""` desenha a tira APAGADA
         (`TIRA_APAGADA`), e nunca uma tira sem estilo — ver a constante.
     :param brilho: de 0.0 a 1.0, a opacidade das duas tiras ACESAS. A apagada
         não tem brilho: uma barra desligada a 30% seria 30% de nada.
     :param jogador: o número deste controle, para o padrão das lâmpadas.
-    :param recado: o aviso da barra, ou `""`. Só vira `title` quando existe —
-        aviso permanente vira paisagem, e paisagem ninguém lê.
+    :param dica: a frase de `dica_da_luz`, ou `""`. Sem ela as peças saem sem
+        `title`, que é o que o desenho fazia antes de haver frase viva.
     """
     import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
 
     estilo = (f"background:{tinta};color:{tinta};opacity:{brilho}" if tinta
               else TIRA_APAGADA)
-    dica = f' title="{recado}"' if recado else ""
-    tira = f'<span class="tira-luz %s" style="{estilo}"{dica}></span>'
+    diz = f' title="{dica}"' if dica else ""
+    tira = f'<span class="tira-luz %s" style="{estilo}"{diz}></span>'
     try:
         lampadas = monta.luzinhas(jogador)
     except KeyError:
@@ -326,7 +435,7 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, recado: str = "",
         lampadas = ""
     return "\n".join(recuo + linha for linha in (
         tira % "esq",
-        f'<span class="pad">{lampadas}</span>',
+        f'<span class="pad"{diz}>{lampadas}</span>',
         tira % "dir",
     ))
 
@@ -385,7 +494,27 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         n = _numero(ctx, c)
         nome = str(casa.get("nome") or "—")
         via = str(casa.get("via") or (c.get("transport") or "").upper() or "—")
-        recado, acesa = rotulo_lightbar(c, ctx.state)
+        recado, base = rotulo_lightbar(c, ctx.state)
+        #: A TIRA PERGUNTA OUTRA COISA, e o segundo retorno não responde a ela.
+        #: `rotulo_lightbar` devolve `(ressalva, COR BASE DO ACCENT)`, e a base
+        #: é a ÚLTIMA COR CONHECIDA — devolvida também nos dois estados em que
+        #: o próprio motor avisa que ela pode não estar no plástico:
+        #:
+        #:     native_mode           → ("Em Nativo o jogo é dono do LED", rgb)
+        #:     lightbar_disputada    → ("a Steam tem este controle aberto", rgb)
+        #:
+        #: Nos DOIS a base volta preenchida **com `lightbar_on` falso**, porque
+        #: a pergunta que ela responde é *"de que cor pinto o traço do card?"* e
+        #: não *"a barra está acesa?"*. Este pacote lia a base como se fosse a
+        #: segunda pergunta — e a tira acendia sob Steam ou sob Nativo com a
+        #: barra apagada. Medido em 02/09/2026 com o dublê de estado.
+        #:
+        #: QUEM RESPONDE A PERGUNTA DA TIRA É O PRIMEIRO RETORNO: `rotulo_lightbar`
+        #: devolve `None` no rótulo em UM único ramo — o último, *"cor conhecida
+        #: e acesa"*. Nos outros quatro há ressalva, e ressalva é exatamente
+        #: "não afirme". É a regra dela de hoje, aplicada ao desenho: *"se não
+        #: tá mostrando agora, não tem info pra mostrar no produto"*.
+        acesa = base if recado is None else None
         colunas[uniq] = {
             #: A TELA MOSTRA PORCENTAGEM, e o `%` é DELA: o desenho escreve
             #: `82%` nesta caixa. Emitir o `0.82` cru — o que esta linha fazia
@@ -411,14 +540,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: escrever e o desenho fica INTEIRO — em vez de virar uma palavra.
             #: No dia em que ela publicar, o mesmo valor passa a pintar.
             #:
-            #: QUEM DECIDE SE HÁ COR É O MOTOR: `acesa` é o segundo retorno de
-            #: `rotulo_lightbar`, `None` em "apagada" e em "cor desconhecida".
-            #: A leitura que estava aqui (`c.get("lightbar_on", True)`) era uma
-            #: segunda verdade, e o default dela AFIRMAVA aceso na ausência do
-            #: campo — que é o estado de partida de um controle no rádio.
+            #: QUEM DECIDE SE HÁ COR É O MOTOR, e a leitura certa do que ele
+            #: devolve está anotada em `acesa`, acima. A leitura que estava aqui
+            #: antes de 02/09 (`c.get("lightbar_on", True)`) era uma segunda
+            #: verdade, e o default dela AFIRMAVA aceso na ausência do campo —
+            #: que é o estado de partida de um controle no rádio.
             "luz": desenho_da_luz(_tinta(acesa),
-                                  1.0 if b is None else float(b),
-                                  n, recado or ""),
+                                  1.0 if b is None else float(b), n,
+                                  dica_da_luz(nome, via, recado or "", n,
+                                              o_coop_manda(ctx.state))),
             #: O RÓTULO INTEIRO, e não só o número. O desenho escreve
             #: `P1 • Cosmic Red • USB`; emitir só o `P1` fazia o primeiro tique
             #: APAGAR o nome do controle e o transporte da tela dela — a
