@@ -169,11 +169,17 @@ def test_o_brilho_do_perfil_chega_em_porcentagem(ctx_com):
 
     r = pacote_da_pagina("04-iluminacao.html", ctx_com("régua"))
     col = next(iter(r["colunas"].values()))
-    assert col["brilho"] == 0.7, (
+    #: A RÉGUA COBRAVA O CONTRÁRIO DO QUE O NOME DELA PROMETE, e foi assim até
+    #: 02/09/2026: o título diz *"vira 70% na tela"* e a linha exigia `0.7`. A
+    #: tela obedeceu à linha e não ao título — a foto de 02/09 mostra `1` ao
+    #: lado da barra de brilho, nas duas colunas, que é o `1.0` do disco escrito
+    #: cru. O `%` é da TELA (o desenho escreve `82%` nesta caixa) e a conversão
+    #: mora no pacote, porque o JS não sabe se um número é porcentagem.
+    assert col["brilho"] == "70%", (
         f"o brilho saiu {col.get('brilho')!r}. `leds.lightbar_brightness` está "
         f"no schema com faixa declarada e preenchido nos 33 perfis dela; "
-        f"`None` aqui é o travessão de volta.")
-    assert col["brilho-pct"] == 70, "o disco guarda 0..1 e a tela mostra 0..100"
+        f"`—` aqui é o travessão de volta, e `0.7` é o disco cru na tela.")
+    assert col["brilho-pct"] == 70, "o disco guarda 0..1 e a barra pede 0..100"
 
     #: A COR CONTINUA VINDO DO DAEMON, não do perfil: o brilho é o que está
     #: SALVO, a cor é o que está ACESO, e quando discordam manda o vivo.
