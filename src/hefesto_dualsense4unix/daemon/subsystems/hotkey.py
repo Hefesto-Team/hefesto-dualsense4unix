@@ -1019,6 +1019,58 @@ def _acender(acender: Any, aceso: bool, uniq: str) -> None:
         acender(aceso)
 
 
+def devolver_a_luz_ao_kernel(daemon: DaemonProtocol) -> int:
+    """Devolve a POSSE do `common[8]` de todos os controles da mesa.
+
+    ACHADO DA AUDITORIA DE 02/09/2026, e ele é sobre uma frase que ficou falsa.
+    O comentário de `mic_button_toggles_system` em `daemon/lifecycle.py`
+    prometia: *"Desligado, não elegemos e não acendemos: o kernel segue dono do
+    mudo E da luz do próprio controle"*. A segunda metade era falsa depois da
+    primeira eleição, e o caminho é REENTRANTE em runtime —
+    `daemon/ipc_draft_applier.py` escreve o campo sem restart.
+
+    Medido nesta árvore, sobre o `_build_common` de verdade:
+
+        1. de fabrica                   : flag1&0x01=0  common[8]=0  -> kernel
+        2. depois de UMA eleicao ok     : flag1&0x01=1  common[8]=1  -> hefesto
+        3. perfil desliga o interruptor : flag1&0x01=1  common[8]=1  -> hefesto
+        4. so a devolucao de posse      : flag1&0x01=0  common[8]=0  -> kernel
+
+    Cena real: ela joga, aperta o mic (LED acende, posse nossa), depois carrega
+    um perfil de gravação com `mic.button_toggles_system: false`. Daí em diante
+    o botão físico não mexe mais na luz, e a luz fica CONGELADA no que a última
+    eleição deixou. Havia porta de emergência (`hefesto-dualsense4unix mic
+    led-release`), mas ela é comando de terminal e a prosa prometia que não
+    precisava dela.
+
+    Devolve quantos controles tiveram a posse devolvida. É idempotente: um
+    `set_microphone_led(None)` sobre quem já devolveu não muda nada.
+    """
+    devolver = getattr(daemon.controller, "set_microphone_led", None)
+    if not callable(devolver):
+        return 0
+    quantos = 0
+    for uniq in _uniqs_conectados(daemon) or [None]:  # type: ignore[list-item]
+        try:
+            if uniq is None:
+                devolver(None)
+            else:
+                devolver(None, uniq=uniq)
+        except TypeError:
+            # Backend (ou dublê) sem endereço: degradar é declarado, e o log
+            # diz qual foi — "degradou calado" é como esta casa fabrica o LED
+            # do controle errado.
+            logger.warning("mic_da_mesa_posse_sem_endereco", uniq=uniq)
+            with contextlib.suppress(Exception):
+                devolver(None)
+        except Exception as exc:  # pragma: no cover - defensivo
+            logger.warning("mic_da_mesa_posse_falhou", uniq=uniq, err=str(exc))
+            continue
+        quantos += 1
+    logger.info("mic_da_mesa_posse_devolvida", controles=quantos)
+    return quantos
+
+
 def _eleitor(daemon: DaemonProtocol) -> Any:
     """O eleitor da SESSÃO. Um só, porque ele guarda o microfone de antes.
 
@@ -1092,6 +1144,7 @@ __all__ = [
     "build_profile_cycle_callback",
     "build_ps_long_press_callback",
     "build_ps_solo_callback",
+    "devolver_a_luz_ao_kernel",
     "mic_button_loop",
     "modo_vigente",
     "ponte_atual",
