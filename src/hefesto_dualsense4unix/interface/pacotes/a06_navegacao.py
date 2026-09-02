@@ -18,6 +18,38 @@ os BOTÕES (options, create, l1, r1, l3, r3 e as três regiões do touchpad), e
 combo nenhum. A frase sobre as velocidades de cursor e rolagem, que estava na
 mesma linha, já tinha caído na primeira leva (ver o `SEM_DONO` logo abaixo).
 
+OS VINTE E OITO INDECIDÍVEIS DESTA ABA ESTÃO DECIDIDOS — 02/09/2026, à tarde.
+A `--prova-de-mockup` classificava 28 dos 29 campos como INDECIDÍVEL: o valor que
+o produto pinta COINCIDE com o que o desenho cravou, e ler a tela não separa
+"pintou igual" de "não pintou". Era a maior concentração da casa. A cura foi
+fazer o valor MUDAR — um DUBLÊ no lugar do daemon (três controles sintéticos,
+`speed=11`, `scroll_speed=4`, teclado desligado, e um `button_actions` que troca
+as 21 linhas) — e ver se a tela acompanha:
+
+    mesa dela (2 controles)   produto  1 · mockup 0 · indecidível 28
+    DUBLÊ                     produto 29 · mockup 0 · indecidível  0
+
+**Os 29 endereços desta aba estão vivos.** Nenhum é endereço morto, e nenhum
+campo depende do desenho. A régua que reproduz isso sem abrir janela é
+`tests/unit/test_a_06_o_duble_decide_o_indecidivel.py`.
+
+E A DECISÃO REVELOU UM DEFEITO NOVO, que é do PILOTO e está relatado: **a
+pintura das 21 linhas desfaz a escolha de quem clica.** Medido no mesmo dia, com
+o dublê, escolhendo uma opção como uma pessoa escolheria (evento `change`):
+
+    ANTES  (o que a pintura pôs) : Botão direito
+    CLIQUE (a escolha dela)      : F11
+    +100 ms                      : F11
+    +1500 ms (três tiques)       : Botão direito
+
+O `<select>` não casa com nenhum dos endereços clicáveis do ouvinte
+(`hefesto_vivo.py`, o `closest` de `manda_do_alvo`), então a escolha não chega ao
+Python; e o tique seguinte reescreve o valor do perfil por cima. **Enquanto isso
+valer, o "Guardar" nunca recebe uma forma diferente do perfil.** A cura é o
+`escrever()` não sobrepor campo que a pessoa está editando — e ela vale para
+TODA lista e TODO campo digitável das dez abas (o editor da Perfis, os
+`<select>` da Conexões), não só para esta aba. Por isso não se cura aqui.
+
 FATO SUBSTITUÍDO (02/09/2026): **"esta aba MENCIONA 7 campos e PINTA 3"** —
 escrito a partir do `--passear`, que imprime `06-navegacao.html  1  3`. Ela
 pinta os OITO elementos endereçados. O `3` é contagem de MUDANÇA: o `escrever()`
@@ -117,6 +149,32 @@ PONTO = " • "
 #: O PREFIXO DAS VINTE E UMA LINHAS de *o que cada botão faz*. Um por botão de
 #: `core/acoes_de_botao.BOTOES` — a lista é do produto, e não se digita aqui.
 PREFIXO_DA_ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
+
+
+def _nome_do_botao(botao: str) -> str:
+    """`"l2"` → `"L2 (gatilho esquerdo)"`. O nome que ELA lê, e é do MOTOR.
+
+    NÃO SE ESCREVE A TABELA AQUI. `app/actions/input_actions.humanize_button`
+    (`:181`) é dona dos vinte nomes desde o KBD-01, e a GTK que ela usa mostra
+    exatamente estes. As duas frases de recusa do "Guardar" mandavam o id cru
+    para a tela — ela lia *"estas linhas ficaram sem quem as atenda:
+    touchpad_left_press"*, que é jargão de kernel na cara de quem clicou.
+
+    O IMPORT É TARDIO, E É POR ISSO: `input_actions` puxa GTK no topo (e
+    `mouse_actions` junto). Os pacotes são puros de propósito — importáveis sem
+    janela, testáveis sem display —, e um import no topo deste arquivo faria a
+    aba inteira depender da camada da janela ANTIGA para escrever um rótulo.
+    Aqui ele custa uma vez, no caminho da recusa, que não é o do tique.
+
+    E ELE CAI DE PÉ: sem GTK no ambiente, o id cru volta. Um rótulo bonito não
+    vale derrubar a aba — o cru é feio e é honesto, que é a mesma escolha do
+    `acoes.rotulo()` para um token sem nome.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.input_actions import humanize_button
+    except Exception:
+        return botao
+    return humanize_button(botao)
 
 
 def _linha_do_cartao(c: dict[str, Any], primario: bool) -> str:
@@ -530,20 +588,25 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     faz nada".
 
     ELE ERA UM APAGADOR COM RÓTULO DE "GUARDAR", e isso foi medido em
-    02/09/2026, contra a página PUBLICADA: as 21 `<select>` da tela de pop-up
-    têm `data-linha` (que o Guardar LÊ) e nenhum `data-campo` (que a pintura
-    ESCREVERIA), então nada nunca as pintou com o perfil dela — elas mostram o
-    que o gerador cravou. Medido linha a linha: as 21 opções cravadas são
-    **exatamente** `acoes.padrao()`, logo `diferentes` saía `{}` e o gesto
-    gravava `button_actions = None` — apagando, em silêncio, qualquer escolha
-    que o perfil dela guardasse. O botão dizia "Guardar" e fazia o contrário.
+    02/09/2026: as 21 opções que a tela mostrava eram **exatamente**
+    `acoes.padrao()`, logo `diferentes` saía `{}` e o gesto gravava
+    `button_actions = None` — apagando, em silêncio, qualquer escolha que o
+    perfil dela guardasse. O botão dizia "Guardar" e fazia o contrário.
 
-    A CURA TEM DUAS METADES, e só a primeira é deste arquivo:
+    FATO SUBSTITUÍDO, e ele estava escrito AQUI: *"as 21 `<select>` têm
+    `data-linha` e nenhum `data-campo`, então nada nunca as pintou"*. Isso valia
+    contra a página publicada da manhã. **Ela mandou publicar** no mesmo dia
+    (commit `70b58116`), e a página publicada de agora traz `data-campo` e
+    `data-hef-alvo="valor"` nas 21 — medido com dublê: os 21 campos saem
+    PRODUTO, e o valor que a tela mostra é o do perfil.
 
-    * o pacote passa a EMITIR as 21 linhas (`_linhas_dos_botoes`), e o gerador a
-      marcá-las com `data-campo` — quando o desenho for publicado, a tela mostra
-      o perfil e o Guardar volta a ser verdade;
-    * até lá, o gesto RECUSA em vez de apagar (a trava logo abaixo).
+    O QUE SOBRA DA TRAVA, e por que ela FICA: a forma toda no de fábrica com o
+    perfil guardando escolhas deixou de ser o estado permanente e virou uma
+    JANELA — os 500 ms entre a página carregar e o primeiro tique pintar
+    (`hefesto_vivo.TIQUE_MS`). Um clique ali dentro ainda leria o desenho como
+    se fosse a escolha dela, e ainda apagaria. Enquanto o piloto não marcar o
+    que já foi pintado, esta trava é o que separa "ela zerou" de "a tela ainda
+    não falou".
 
     O QUE A TELA OFERECE E O PRODUTO NÃO ATENDE **é dito, não engolido**: os
     comandos "Abrir a Steam", "Sair do modo jogo" e "Escolher um programa…", os
@@ -567,7 +630,7 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             continue
         token = acoes.token_do_rotulo(str(rotulo))
         if token is None:
-            nao_reconhecidas.append(f"{botao}={rotulo!r}")
+            nao_reconhecidas.append(f"{_nome_do_botao(botao)}={rotulo!r}")
             continue
         escolhas[botao] = token
     if nao_reconhecidas:
@@ -586,11 +649,12 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     novo = diferentes or None
     if prof.button_actions == novo:
         return
-    # A TRAVA CONTRA O APAGADOR — 02/09/2026, e ela vale enquanto a tela não
-    # mostrar o perfil. "Nada diferente do de fábrica" só quer dizer "ela zerou
-    # as 21 linhas" se as 21 linhas tiverem chegado a MOSTRAR o que o perfil
-    # guarda; com a página publicada de hoje elas nunca mostram, e então esta
-    # forma quer dizer outra coisa: *o piloto releu o desenho*.
+    # A TRAVA CONTRA O APAGADOR — 02/09/2026. "Nada diferente do de fábrica" só
+    # quer dizer "ela zerou as 21 linhas" DEPOIS que as 21 linhas mostraram o
+    # que o perfil guarda. Elas mostram desde que a página foi publicada, mas
+    # não no primeiro instante: entre a carga e o primeiro tique há 500 ms
+    # (`hefesto_vivo.TIQUE_MS`) em que a tela ainda é o desenho, e nessa janela
+    # esta forma quer dizer outra coisa — *o piloto releu o desenho*.
     #
     # E ZERAR TEM BOTÃO PRÓPRIO, a dois centímetros: "Voltar ao padrão"
     # (`padrao-definicoes`), que zera dizendo e ainda pede confirmação. Um
@@ -601,18 +665,20 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "não guardei: as 21 linhas da tela estão todas no de fábrica, e o "
             f"perfil “{nome}” guarda "
             f"{len(prof.button_actions)} escolha(s) sua(s). Gravar isto as "
-            "apagaria. Enquanto a tela não mostrar o que o perfil guarda, o "
-            "Guardar não pode ler o desenho como se fosse a sua escolha — para "
-            "voltar tudo ao de fábrica de propósito, use o “Voltar ao padrão” "
-            "ao lado.")
+            "apagaria. A tela leva meio segundo para mostrar o que o perfil "
+            "guarda; se você clicou antes disso, o que estava na tela era o "
+            "desenho, e não a sua escolha. Espere a tabela se preencher e "
+            "clique de novo — para voltar tudo ao de fábrica de propósito, use "
+            "o “Voltar ao padrão” ao lado.")
     perfil.gravar_e_reaplicar(prof.model_copy(update={"button_actions": novo}), ctx, p)
 
     _, _, sem_dono = acoes.resolver(novo)
     if sem_dono:
         raise RuntimeError(
             "guardei o que o produto sabe fazer, e estas linhas ficaram sem "
-            "quem as atenda: " + ", ".join(sem_dono) + ". Elas estão no perfil e "
-            "não acendem nada hoje — é feature que falta, não erro seu.")
+            "quem as atenda: " + ", ".join(_nome_do_botao(b) for b in sem_dono)
+            + ". Elas estão no perfil e não acendem nada hoje — é feature que "
+              "falta, não erro seu.")
 
 
 @gesto("06-navegacao.html", "padrao-definicoes")
@@ -769,6 +835,45 @@ SEM_GESTO = {
                      "Perfis. O `point_and_click` que existe é um PERFIL em "
                      "disco, não um estilo, e gravar perfil não tem método",
 }
+
+
+#: OS DOIS QUE GRAVAM PERFIL E NÃO TÊM ECO — 02/09/2026, à tarde, medido com
+#: dublê da ponte e dublê do disco (`--prova-no-aparelho` NÃO foi usado: há
+#: controles na mesa dela e a leva inteira está proibida de tocar o aparelho).
+#:
+#: O `state_full` do daemon publica `active_profile` — o NOME — e mais nada do
+#: conteúdo do perfil. Nem `button_actions` nem `key_bindings` aparecem entre as
+#: chaves do payload (`daemon/ipc_handlers.py:2493`). Logo a régua que compara o
+#: estado do daemon antes e depois do clique não tem como ver o efeito destes
+#: dois, por mais que eles funcionem — e eles funcionam:
+#:
+#:     gesto                              desfecho   chamou             gravou
+#:     guardar-definicoes (linha trocada) ACEITOU    profile_switch     1 perfil
+#:     guardar-definicoes (forma de fábr.) RECUSA     NADA               0
+#:     padrao-definicoes                  ACEITOU    profile_switch     1 perfil
+#:     padrao-definicoes (já de fábrica)  ACEITOU    NADA               0
+#:
+#: A PROVA DELES É O ARQUIVO — mesma forma do `teto-da-vibracao` da aba Conexões
+#: (`a08_conexoes.SEM_ECO`), que também grava no perfil: efeito vivo pelo
+#: `profile.switch` do `gravar_e_reaplicar`, e nenhum eco. Quem cobra são
+#: `test_a_06_nao_manda_para_o_vazio.py` e
+#: `test_o_padrao_dos_atalhos_volta_de_fabrica.py`, contra o disco.
+#:
+#: A ÚLTIMA LINHA DA TABELA É O QUE OS PÔS AQUI: `padrao-definicoes` com o
+#: perfil já de fábrica sai pelo `return` de "nada a fazer" — sem gravar, sem
+#: chamar e sem levantar. Para a régua do aparelho isso é indistinguível de um
+#: botão que mentiu, e foi assim que ele entrou na lista dos dezesseis
+#: "aplicados que não aplicam" de 02/09.
+#:
+#: O `teclado` NÃO ENTRA, e a diferença é medida: ele chama
+#: `keyboard.emulation.set`, e `keyboard_emulation.enabled` VOLTA no
+#: `state_full` — é o que pinta o `teclado-estado`. Declará-lo aqui calaria a
+#: régua sobre um caminho que ela consegue medir.
+#:
+#: TUPLA, e não dicionário: o piloto faz `set(getattr(mod, "SEM_ECO", ()))` e as
+#: seis abas que declaram usam tupla. O motivo mora no comentário, que é onde
+#: ele cabe inteiro — `SEM_ECO` sem razão escrita é lápide para esconder defeito.
+SEM_ECO = ("guardar-definicoes", "padrao-definicoes")
 
 
 PONTE = {"chamar"}
