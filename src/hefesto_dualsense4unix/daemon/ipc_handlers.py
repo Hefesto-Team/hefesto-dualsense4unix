@@ -28,6 +28,7 @@ from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
     apply_rumble_policy,
     uniq_do_alvo_de_output,
 )
+from hefesto_dualsense4unix.daemon.subsystems import recado_do_microfone
 from hefesto_dualsense4unix.integrations import sinal_da_barra as _sinal_da_barra
 from hefesto_dualsense4unix.integrations.no_do_vpad import (
     NO_DESCONHECIDO,
@@ -3260,6 +3261,20 @@ class IpcHandlersMixin:
                 if rumble_active is not None
                 else None
             )
+
+        # MIC-RECUSA-NA-TELA-01 (02/09/2026): a frase da eleição do microfone.
+        #
+        # FORA do `if daemon_cfg is not None` de propósito — o shape é sempre o
+        # mesmo (`{"eleito": ..., "recados": {...}}`), inclusive com o daemon
+        # ausente. Chave que aparece e desaparece já custou uma mentira nesta
+        # casa: a `audio` sumia do `state_full` no hotplug-out e `bool(None)`
+        # pintava o selo como ATIVO sobre o controle que acabara de cair
+        # (`test_mic_da_mesa_o_ipc_a_tela_e_o_gesto`).
+        #
+        # É LEITURA PURA: `publicar` lê o eleitor da sessão sem criá-lo — este
+        # handler roda a 10 Hz e instanciar estado no caminho de leitura seria
+        # o relato mexendo no que ele relata.
+        result["mic_da_mesa"] = recado_do_microfone.publicar(self.daemon)
 
         return result
 
