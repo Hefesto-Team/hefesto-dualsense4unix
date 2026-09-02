@@ -1,5 +1,16 @@
 [Desktop Entry]
-# O .desktop do Hefesto de DESENVOLVIMENTO — o "outro app" que ela pediu em
+# O .desktop do Hefesto. ELE É O DO PRODUTO desde 01/09/2026, e não mais o de
+# um "outro app" de desenvolvimento — decisão dela: *"A versão antiga não segue
+# disponível vai gerar confusão nos agentes. Só a nova tá disponível e deve ser
+# integrada"*, e *"o -dev sai de tudo não quero mais essa confusão"*.
+#
+# O QUE ESTAVA ERRADO E ELA VIU NO MENU: o `Icon=` apontava para
+# `hefesto-dev-dualsense4unix`, e **esse ícone não existe** — os PNG instalados
+# chamam-se `hefesto-dualsense4unix.png`. Ícone que não resolve some do menu, e
+# o que sobra parece o app velho. Sobra da purga do `-dev`, como a unit digitada
+# e os dez geradores quebrados do mesmo dia.
+#
+# (o texto abaixo é de 29/08/2026, quando havia DOIS apps)
 # 29/08/2026: *"Ele é instalado como OUTRO APP com a logo alterada em dev"*.
 #
 # @RAIZ@ é substituído pelo caminho da árvore de dev por quem instala
@@ -18,10 +29,10 @@
 # ficaram com `app_id` errado desde que nasceram.
 Type=Application
 Name=Hefesto — DualSense4Unix
-GenericName=DualSense Controller — desenvolvimento
+GenericName=DualSense Controller
 Comment=Gerenciador de DualSense para Linux. As dez abas, com o dado do aparelho.
 Exec=@RAIZ@/interface.sh
-Icon=hefesto-dev-dualsense4unix
+Icon=hefesto-dualsense4unix
 Categories=Settings;HardwareSettings;
 Terminal=false
 StartupNotify=true
