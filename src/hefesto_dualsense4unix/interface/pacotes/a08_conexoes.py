@@ -25,7 +25,10 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses as _dataclasses
+import time
 from typing import TYPE_CHECKING, Any
+
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
 from . import Contexto, perfil, registrar
 
@@ -98,6 +101,11 @@ _EXTRAS: tuple[object, ...] = ()
 #: então o `ignorar` que os lê não passava no `mypy` — a anotação estava
 #: dizendo menos do que se sabe sobre o valor.
 _ORDENS_NA_TELA: tuple[Any | None, ...] = ()
+
+#: QUANDO O EXAME COMPLETO CORREU, em `time.monotonic()`, ou `None` enquanto o
+#: botão **Examinar Portas** não foi clicado nesta sessão. É o relógio do
+#: carimbo "Examinado …" do topo do Check-up — ver `_carimbo_do_exame`.
+_QUANDO_O_EXAME: float | None = None
 
 #: `{chave da regra: arranjo dispensado}` — o que a decisão dela está segurando.
 #: Sai do disco e é atualizado NA HORA pelo `ignorar`: sem isso a linha voltaria
@@ -288,8 +296,23 @@ def _mic_declarado(declaracao: Any, uniq: str) -> bool:
 
 
 def _so_hex(uniq: str) -> str:
-    """`d4:2f:…` → `d42f…` — a forma que o `maquina.json` exige por schema."""
-    return uniq.replace(":", "").replace("-", "").strip().lower()
+    """`d4:2f:…` → `d42f…` — a forma que o `maquina.json` exige por schema.
+
+    A CONTA É DO PRODUTO — `core.sysfs_leds.norm_mac`, o dono da chave —, e esta
+    função é só o embrulho que devolve `""` no lugar do `None` dele: as três
+    chamadas daqui usam o resultado como chave de dicionário e como pedaço de
+    texto, e um `None` viraria a chave `None` ou a palavra `"None"` numa frase.
+    A `a02_controles` já tinha migrado (`:305`); esta era a segunda grafia.
+
+    O QUE MUDA, MEDIDO em 02/09/2026 sobre oito entradas: **nada** no que esta
+    aba recebe. As duas versões dão o mesmo resultado nas quatro formas de MAC
+    (`d4:2f:…`, `D4-2F-…`, com espaço em volta, e já sem separador) e no vazio.
+    Elas só divergem sobre texto que não é MAC — `"usb-0000:00:14.0-3"` virava
+    `"usb00000014.03"` aqui e vira `"b0000001403"` no dono —, e nenhuma das
+    duas formas casa com uma chave do `maquina.json`: as duas erram, e errar de
+    um jeito só é o ponto.
+    """
+    return norm_mac(uniq) or ""
 
 
 def _dispensadas_do_disco(declaracao: Any) -> None:
@@ -368,6 +391,94 @@ def _itens_da_tela() -> list[Any]:
     return conferidas
 
 
+#: O QUE SOBRA QUANDO O ESTADO NÃO ESTÁ NO MAPA — a mesma reserva que
+#: `gui.aba_conexoes.html_do_exame` usa na sua linha (`("info", "NOTA")`).
+#: "NOTA" é a palavra que não afirma: um estado que esta tela não conhece não
+#: pode virar nem um verde nem um alarme.
+_SELO_DESCONHECIDO = ("info", "NOTA")
+
+
+def _selo_do_estado(estado: str) -> tuple[str, str]:
+    """``(a classe CSS, a palavra)`` do selo — do dono, `gui.aba_conexoes`.
+
+    O MAPA TEM UM DONO e ele já traduzia os quatro estados do `exame_da_mesa`
+    para as três palavras que o desenho dela crava. Ele mora na camada de tela
+    porque é vocabulário, e não máquina — o próprio módulo do exame diz que
+    "responde por máquina, não por vocabulário".
+
+    O IMPORT É TARDIO pela razão de sempre neste arquivo: `gui.aba_conexoes`
+    puxa a cadeia de tela, e o topo deste módulo tem de continuar importável
+    numa árvore sem `src/` no caminho.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui.aba_conexoes import SELO_DO_ESTADO
+
+    return SELO_DO_ESTADO.get(estado, _SELO_DESCONHECIDO)
+
+
+def _dica_da_linha(item: Any) -> str:
+    """O `?` de uma linha do Check-up, em HTML.
+
+    A MONTAGEM É DO PRODUTO — `secao_exame._dica_do_item`, que é o dono das três
+    metades e da ordem entre elas: a frase que diz **o que a linha significa**
+    (`DICAS_DAS_LINHAS`, por chave de regra), a **medição desta rodada**
+    (`Item.porque`) e a **cura** com o prefixo que tem dono
+    (`PREFIXO_DA_CURA`). Reescrever a costura aqui daria a quarta grafia da
+    mesma dica, e a razão de existir dela está escrita lá: sem a metade de
+    baixo, a dica continua afirmando o que a linha ao lado contradiz.
+
+    SÓ A QUEBRA DE LINHA É NOSSA. O dono junta com `\\n\\n` porque escreve num
+    `set_tooltip_text` do GTK; esta tela é HTML, onde `\\n` não quebra nada — o
+    `?` sairia com as três frases coladas. `<br><br>` é a tradução, e é o que o
+    desenho dela já usa nas dicas cravadas.
+
+    E O TEXTO É ESCAPADO ANTES: o alvo é `html`, então um `&` ou um `<` vindo do
+    exame viraria marcação. O escapador é o da camada de tela desta aba
+    (`gui.aba_conexoes._e`), o mesmo que o gerador do desenho usa.
+
+    O `except` LARGO É DE PROPÓSITO E DEVOLVE VAZIO: com `""` o `escrever()`
+    põe o travessão, que é "não tenho o que dizer aqui". A alternativa —
+    deixar levantar — derrubaria a pintura da aba INTEIRA por causa de uma
+    dica, e a alternativa silenciosa (não emitir a chave) deixaria a dica do
+    MOCKUP na tela ao lado do achado dela, que é o defeito que este endereço
+    nasceu para matar.
+    """
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_exame import _dica_do_item
+        from hefesto_dualsense4unix.gui.aba_conexoes import _e
+
+        return _e(_dica_do_item(item)).replace("\n\n", "<br><br>")
+    except Exception:
+        return ""
+
+
+def _carimbo_do_exame() -> str:
+    """O "Examinado …" do topo do Check-up.
+
+    A PALAVRA DA IDADE É DO PRODUTO — `secao_exame.frase_de_quando`, que já
+    arredonda grosso de propósito ("Há 3 minutos", e não "Há 187 segundos"). A
+    moldura *"Examinado …"* é deste desenho, e é por isso que ela fica aqui e
+    não lá.
+
+    ANTES DO PRIMEIRO **Examinar Portas** A RESPOSTA É "agora mesmo", e ela é
+    verdadeira: as três conferências que a tira mostra são refeitas a cada
+    tique (`_conferencias`), logo o que está na tela foi medido neste segundo.
+    O que envelhece é o exame COMPLETO — as cinco conferências e as ordens de
+    serviço —, e esse tem hora marcada pelo botão.
+
+    O CARIMBO NÃO SABIA NADA ATÉ HOJE: o `<span class="conta">` do desenho
+    dizia "Examinado há 3 minutos" desde que o mockup nasceu, sem endereço e
+    sem dono. Uma frase de tempo que nunca muda é a forma mais barata de a tela
+    afirmar o que não mediu.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_exame import frase_de_quando
+
+    idade = 0.0 if _QUANDO_O_EXAME is None else max(0.0, time.monotonic() - _QUANDO_O_EXAME)
+    return f"Examinado {frase_de_quando(idade).lower()}"
+
+
 def _linha(item: Any) -> dict[str, Any]:
     """Um `Item` do exame na forma que a tela consome.
 
@@ -380,6 +491,17 @@ def _linha(item: Any) -> dict[str, Any]:
 
     Um `getattr` com reserva é o disfarce perfeito para um campo que não existe:
     ele não levanta, e o que sai parece dado.
+
+    A PALAVRA DO SELO E A DICA SÃO DO PRODUTO — 02/09/2026. Antes, o pacote
+    montava as duas à mão, e as duas erravam:
+
+    * o selo saía de um `"AJUSTAR" if grave else "CERTO"`, e o `Item` tem
+      QUATRO estados. `gui.aba_conexoes.SELO_DO_ESTADO` os mapeia em TRÊS
+      palavras, e a que sumia era a **NOTA** do `nao_sei` — a mesma que o
+      desenho dela crava na quarta linha do Check-up. Um "não deu para olhar"
+      chegava à tela como "AJUSTAR", que é a tela afirmando um problema que
+      ninguém mediu;
+    * o `?` da linha não era montado de jeito nenhum — ver o `dica` abaixo.
     """
     estado = str(getattr(item, "estado", "") or "")
     ordem = getattr(item, "ordem", None)
@@ -388,6 +510,17 @@ def _linha(item: Any) -> dict[str, Any]:
         "titulo": str(getattr(item, "rotulo", "") or ""),
         "porque": str(getattr(item, "porque", "") or ""),
         "estado": estado,
+        # A PALAVRA E A CLASSE, do dono. A classe (`ok`/`warn`/`info`) viaja
+        # junto e ainda NÃO é pintada: o `escrever()` do piloto conhece cinco
+        # alvos (`texto`, `largura`, `fundo`, `valor`, `html`) e nenhum acende
+        # ou apaga uma classe CSS. Fotografado nesta bancada: com três achados
+        # `certo`, a segunda linha mostra a palavra **CERTO** dentro da pílula
+        # LARANJA do desenho, e as duas linhas que sobram mostram `—` numa
+        # pílula azul e noutra verde. Sai daqui pronto para o dia em que houver
+        # alvo — inventar um sexto caminho aqui seria a segunda verdade.
+        "selo": _selo_do_estado(estado)[1],
+        "classe": _selo_do_estado(estado)[0],
+        "dica": _dica_da_linha(item),
         # `certo` é o único estado que não pede nada — os outros
         # (`ajustar`, `atencao`) são achados de verdade.  # (noqa-acento) id
         "grave": estado.lower() not in {"certo", ""},
@@ -761,12 +894,39 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # isso que os seis botões do mapa não podiam ser ligados: clicar
         # declararia no disco DELA o desenho de um exemplo.
         "blocos": {".mm-faces": _html_do_mapa(), ".mm-lista": _html_dos_aparelhos()},
-        # AS DUAS LISTAS SÃO O QUE A TELA MOSTRA, uma por bloco de achado: o
-        # selo (CERTO/AJUSTAR) e a frase. Elas se distribuem pelos elementos de
-        # mesmo `data-campo`, na ordem — o gerador não precisa saber quantos
-        # achados o exame vai devolver.
-        "selo": ["AJUSTAR" if i["grave"] else "CERTO" for i in itens],
-        "achado": [i["titulo"] for i in itens],
+        # AS TRÊS LISTAS SÃO O QUE A TELA MOSTRA, uma por bloco de achado: o
+        # selo, a frase e o `?`. Elas se distribuem pelos elementos de mesmo
+        # `data-campo`, na ordem — o gerador não precisa saber quantos achados
+        # o exame vai devolver.
+        "selo": [i["selo"] for i in itens],
+        # O `porque`, E NÃO O `rotulo` — corrigido em 02/09/2026, e a regra é do
+        # produto: `gui.aba_conexoes.html_do_exame` diz, no docstring, *"O texto
+        # é o `porque` — a MEDIÇÃO em uma frase —, nunca o rótulo: a tela
+        # aprovada mostra o que se achou, não o nome do que se conferiu."*
+        #
+        # A tela desta aba estava mostrando o rótulo, e o rótulo é o NOME da
+        # conferência. Fotografado com dois controles na mesa: as três linhas
+        # diziam **"Economia de energia desligada"**, **"Energia das portas"** e
+        # **"Suporte ao controle"** — três títulos de exame — onde o desenho
+        # dela promete três achados. O `porque` dos mesmos três itens é
+        # *"O sistema está proibido de desligar o rádio dos controles."*,
+        # *"Conferido agora: nenhuma das 16 portas USB está em economia de
+        # energia."* e *"A parte do sistema que fala com o DualSense está
+        # carregada."*
+        #
+        # O `titulo` não se perdeu: ele é a primeira metade do `?`, que é onde a
+        # `secao_exame` já o punha (`DICAS_DAS_LINHAS`, por chave de regra).
+        "achado": [i["porque"] for i in itens],
+        # O `?` DE CADA LINHA — endereço novo, e ele espera a publicação dela.
+        # A página PUBLICADA ainda não tem `data-campo="achado-explica"`; a
+        # bancada tem (`mockup/08-conexoes.html`, declarada em
+        # `mockup/DIVERGENCIAS.md`). Emitir antes é o que faz a dica nascer
+        # certa no minuto em que ela publicar, e não custa nada até lá: o
+        # `achar()` do piloto não encontra o endereço e escreve zero.
+        "achado-explica": [i["dica"] for i in itens],
+        # O CARIMBO do topo do Check-up — endereço novo, na mesma condição do
+        # `achado-explica`: existe na bancada e espera a publicação dela.
+        "examinado": _carimbo_do_exame(),
         "vizinho-nome": vizinho_nome,
         "vizinho-tipo": vizinho_tipo,
         "exame": itens,
@@ -778,7 +938,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # política de vibração guardada no perfil que o `<select>` da tela não
         # sabe mostrar. Declarar é o oposto de pintar a opção errada.
         "sem_dono": sem_dono,
-        "cobertura": {"pintados": 4 + len(itens) + len(adap)
+        # O `+ len(itens) * 3` conta as TRÊS listas por achado (o selo, a frase
+        # e o `?`), e o `+ 1` é o carimbo. A conta anterior somava `len(itens)`
+        # uma vez só, com o selo e a frase já sendo duas listas — ela contava
+        # metade do que emitia.
+        "cobertura": {"pintados": 4 + len(itens) * 3 + 1 + len(adap)
                       + len(vizinho_nome) * 2
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO) + len(sem_dono)},
@@ -1422,7 +1586,7 @@ def examinar_portas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `secao_exame.reexaminar`, e pela mesma cicatriz: um `subprocess.run`
     síncrono na thread do GTK congelou a janela inteira por 10 s.
     """
-    global _EXTRAS
+    global _EXTRAS, _QUANDO_O_EXAME
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import exame_da_mesa
 
@@ -1447,6 +1611,13 @@ def examinar_portas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not itens:
         raise RuntimeError("não consegui examinar as entradas agora")
     _EXTRAS = tuple(itens)
+    # O RELÓGIO DO CARIMBO, e ele só anda AQUI. As três conferências do tique
+    # são refeitas duas vezes por segundo, então para elas a resposta honesta é
+    # sempre "agora mesmo"; o que envelhece é o exame COMPLETO, que é este
+    # botão. `monotonic` e não `time()`: o carimbo mede um INTERVALO, e um
+    # acerto de relógio do sistema faria "há 3 minutos" virar "há mais de uma
+    # hora" sem nada ter acontecido.
+    _QUANDO_O_EXAME = time.monotonic()
 
 
 @gesto("08-conexoes.html", "ignorar")
