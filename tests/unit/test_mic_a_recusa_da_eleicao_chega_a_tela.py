@@ -82,11 +82,20 @@ class _EleitorDublado:
     *"o portão não mordia porque o dublê trazia o mesmo default falso"*.
     """
 
-    def __init__(self, *, elege_ok: bool = True, motivo: str = "") -> None:
+    def __init__(
+        self,
+        *,
+        elege_ok: bool = True,
+        motivo: str = "",
+        devolve_ok: bool = True,
+        motivo_da_devolucao: str = "",
+    ) -> None:
         self.chamadas: list[tuple[str, Any]] = []
         self.eleito: str | None = None
         self._elege_ok = elege_ok
         self._motivo = motivo
+        self._devolve_ok = devolve_ok
+        self._motivo_da_devolucao = motivo_da_devolucao
 
     def eleger_o_controle(self, uniq: str, conectados: list[str]) -> _Resultado:
         self.chamadas.append(("eleger", uniq))
@@ -97,22 +106,37 @@ class _EleitorDublado:
 
     def devolver_o_microfone(self) -> _Resultado:
         self.chamadas.append(("devolver", None))
+        # A POSSE CAI MESMO SEM DESTINO — o contrato do módulo de verdade
+        # (`eleicao_de_microfone.devolver_o_microfone`), inclusive no ramo que
+        # NÃO conseguiu devolver. Um dublê que só zerasse no sucesso esconderia
+        # a quinta frase, que é justamente a que nasce do fracasso.
         self.eleito = None
-        return _Resultado(ok=True, ativo="mic_da_placa_mae")
+        if self._devolve_ok:
+            return _Resultado(ok=True, ativo="mic_da_placa_mae")
+        return _Resultado(ok=False, motivo=self._motivo_da_devolucao)
 
 
 class _Backend:
     """Backend com a mesa toda e o LED de cada plástico."""
 
     def __init__(self, uniqs: tuple[str, ...]) -> None:
-        self._uniqs = uniqs
+        self.uniqs = list(uniqs)
         self.leds: dict[str, bool] = {}
 
+    def sair_da_mesa(self, uniq: str) -> None:
+        """O hotplug-out: o controle deixa de aparecer no `describe_controllers`.
+
+        É exatamente o que o backend faz quando o cabo sai ou o rádio cai — e é
+        o único caminho por onde este defeito chega à tela, porque nenhuma
+        borda de botão acompanha um controle que sumiu.
+        """
+        self.uniqs = [u for u in self.uniqs if u != uniq]
+
     def is_connected(self) -> bool:
-        return bool(self._uniqs)
+        return bool(self.uniqs)
 
     def describe_controllers(self) -> list[dict[str, Any]]:
-        return [{"uniq": u, "connected": True} for u in self._uniqs]
+        return [{"uniq": u, "connected": True} for u in self.uniqs]
 
     def set_mic_led(self, aceso: bool, *, uniq: str | None = None) -> None:
         self.leds[uniq or "<sem endereço>"] = bool(aceso)
@@ -151,9 +175,16 @@ def _mesa(
     *,
     elege_ok: bool = True,
     motivo: str = "",
+    devolve_ok: bool = True,
+    motivo_da_devolucao: str = "",
 ) -> tuple[_Daemon, _Backend, _EleitorDublado]:
     backend = _Backend(uniqs)
-    eleitor = _EleitorDublado(elege_ok=elege_ok, motivo=motivo)
+    eleitor = _EleitorDublado(
+        elege_ok=elege_ok,
+        motivo=motivo,
+        devolve_ok=devolve_ok,
+        motivo_da_devolucao=motivo_da_devolucao,
+    )
     return _Daemon(backend, eleitor), backend, eleitor
 
 
@@ -181,6 +212,49 @@ async def _rodar_o_gesto(daemon: _Daemon, bordas: list[dict[str, Any]]) -> None:
         tarefa.cancel()
         with pytest.raises(asyncio.CancelledError):
             await tarefa
+
+
+async def _rodar_os_passos(
+    daemon: _Daemon, passos: list[Any]
+) -> list[dict[str, Any]]:
+    """Como `_rodar_o_gesto`, mas com um TIQUE lido depois de CADA passo.
+
+    Um passo é uma borda (`dict`) ou um efeito da bancada (`callable` sem
+    argumento) — tirar um controle da mesa, por exemplo.
+
+    Existe separado porque `_rodar_o_gesto` derruba o laço no `finally`:
+    chamá-lo duas vezes na mesma cena entregaria a segunda borda a ninguém, e a
+    régua daria verde sobre o vazio. Cenas que medem o ANTES e o DEPOIS de um
+    mesmo laço passam por aqui.
+
+    Devolve um bloco `mic_da_mesa` por passo, na ordem.
+    """
+    from hefesto_dualsense4unix.core.events import EventTopic
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    blocos: list[dict[str, Any]] = []
+    tarefa = asyncio.create_task(hotkey.mic_button_loop(daemon))  # type: ignore[arg-type]
+    try:
+        for _ in range(20):
+            await asyncio.sleep(0.005)
+            if daemon.bus.subscriber_count(EventTopic.MIC_DA_MESA):
+                break
+        assert daemon.bus.subscriber_count(EventTopic.MIC_DA_MESA) == 1
+
+        for passo in passos:
+            if callable(passo):
+                passo()
+            else:
+                daemon.bus.publish(EventTopic.MIC_DA_MESA, passo)
+                for _ in range(20):
+                    await asyncio.sleep(0.005)
+            blocos.append((await _tique_async(daemon))["mic_da_mesa"])
+    finally:
+        daemon._parando = True
+        tarefa.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await tarefa
+    return blocos
 
 
 async def _tique_async(daemon: _Daemon) -> dict[str, Any]:
@@ -271,10 +345,25 @@ async def test_o_mudo_de_quem_nao_elegeu_ganha_frase_na_tela() -> None:
     recado = bloco["recados"][_J2]
     assert recado["gesto"] == "recusa"
     assert recado["ok"] is False
-    assert recado["motivo"].strip(), "recusa sem frase é o defeito, não a cura"
+    assert recado["motivo"] == recusa_de_quem_nao_elegeu(_J1).motivo, (
+        "a frase da tela tem de ser a MESMA que `recusa_de_quem_nao_elegeu` "
+        "escreve — `motivo.strip()` deixava passar 'não rolou' escrito no "
+        "laço, que é a segunda verdade sobre a mesma recusa. MEDIDO: com "
+        "`motivo='não rolou'` no lugar de `recusa.motivo` os nove testes "
+        "passavam, e a função do módulo podia sair do caminho sem ninguém ver"
+    )
     assert recado["eleito"] == _J1, (
         "a tela precisa do DADO de quem está com o canal para dizer 'P1' em "
         "vez de repetir um endereço de rádio"
+    )
+    assert bloco["eleito"] == _J1, (
+        "o `eleito` do BLOCO é o único campo VIVO daqui e não tinha régua: "
+        "cravá-lo em `None` deixava os nove verdes, e o card pintaria "
+        "'ninguém está com o microfone' para sempre"
+    )
+    assert bloco["eleito_na_mesa"] is True, (
+        "a J1 está na mesa; dizer o contrário mandaria a tela apagar um canal "
+        "que está no ar"
     )
 
     # E as DUAS curas da auditoria de 02/09/2026 continuam de pé: quem não
@@ -349,6 +438,17 @@ async def test_cada_controle_guarda_o_proprio_recado() -> None:
         "eleição que deu certo não ganha frase inventada: o LED do plástico já "
         "diz que está no ar"
     )
+    # Os dois campos que VIAJAM para a tela e não tinham uma única asserção:
+    # apagar `ativo=` ou `eleito=` da chamada do produto deixava os nove
+    # verdes, e o payload passava a sair `None` sem ninguém acusar.
+    assert recados[_J1]["ativo"] == f"mic_de_{_J1}", (
+        "o canal que o produto ELEGEU tem de chegar à tela: sem ele o card "
+        f"não sabe dizer para onde a voz está indo — {recados[_J1]}"
+    )
+    assert recados[_J1]["eleito"] == _J1, (
+        "o retrato da mesa no instante da eleição também viaja, e é o par do "
+        f"que o recado de recusa carrega — {recados[_J1]}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -368,7 +468,11 @@ async def test_a_chave_existe_com_a_mesa_vazia_e_sem_ninguem_ter_apertado() -> N
 
     estado = await _tique_async(daemon)
 
-    assert estado["mic_da_mesa"] == {"eleito": None, "recados": {}}
+    assert estado["mic_da_mesa"] == {
+        "eleito": None,
+        "eleito_na_mesa": None,
+        "recados": {},
+    }
 
 
 def test_publicar_nao_cria_o_eleitor_da_sessao() -> None:
@@ -383,7 +487,11 @@ def test_publicar_nao_cria_o_eleitor_da_sessao() -> None:
         pass
 
     cru = _Cru()
-    assert recado_do_microfone.publicar(cru) == {"eleito": None, "recados": {}}
+    assert recado_do_microfone.publicar(cru) == {
+        "eleito": None,
+        "eleito_na_mesa": None,
+        "recados": {},
+    }
     assert not hasattr(cru, "_eleitor_de_microfone")
     assert not hasattr(cru, recado_do_microfone.ATRIBUTO)
 
@@ -445,6 +553,254 @@ def test_o_deposito_tem_teto_e_descarta_o_mais_velho() -> None:
     assert len(guardados) == recado_do_microfone.TETO
     assert "aabbcc000000" not in guardados, "o mais velho tinha de ter saído"
     assert f"aabbcc0000{quantos - 1:02d}" in guardados, "o mais novo tem de ficar"
+
+
+# ---------------------------------------------------------------------------
+# 8. O CAMINHO DE VOLTA — o gesto `devolver` era código morto para esta régua
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_o_gesto_devolver_chega_a_tela_com_a_frase_do_caminho_de_volta() -> None:
+    """A J1 elege e aperta de novo: o ramo `devolver` e a QUINTA frase.
+
+    ACHADO DA AUDITORIA (02/09/2026), reproduzido: uma bomba
+    (`raise AssertionError`) posta imediatamente antes do
+    `eleitor.devolver_o_microfone()` NÃO disparava — nenhuma borda tinha
+    `mudo=True` com `eleitor.eleito == uniq`. Consequências medidas: (a)
+    `GESTOS` declara três gestos e só dois eram vistos, então colapsar
+    `gesto="devolver" if mudo else "eleger"` em `"eleger"` deixava os nove
+    verdes; (b) a quinta das cinco frases que esta frente promete atravessar —
+    *"não há microfone para onde voltar"* — tinha ZERO cobertura no
+    `state_full`.
+
+    CURA A ARRANCAR: qualquer metade do ramo `devolver`.
+    """
+    sem_volta = (
+        "não há microfone para onde voltar: nenhuma fonte de captura com porta "
+        "usável nesta máquina"
+    )
+    daemon, _backend, eleitor = _mesa(
+        devolve_ok=False, motivo_da_devolucao=sem_volta
+    )
+
+    await _rodar_o_gesto(
+        daemon,
+        [
+            {"uniq": _J1, "mudo": False},  # a J1 elege
+            {"uniq": _J1, "mudo": True},  # e a J1 devolve
+        ],
+    )
+    bloco = (await _tique_async(daemon))["mic_da_mesa"]
+
+    assert eleitor.chamadas == [("eleger", _J1), ("devolver", None)], (
+        "o ramo de VOLTA não foi executado — quem elegeu tem de conseguir "
+        f"devolver: {eleitor.chamadas}"
+    )
+    recado = bloco["recados"][_J1]
+    assert recado["gesto"] == "devolver", (
+        "o gesto que a tela recebe tem de separar 'devolver' de 'eleger': são "
+        f"duas notícias diferentes para quem está com o controle — {recado}"
+    )
+    assert recado["ok"] is False
+    assert recado["motivo"] == sem_volta, (
+        "a frase do caminho de volta ficou no log: a pessoa apertou, o "
+        f"microfone não voltou para lugar nenhum, e a tela não disse nada — {recado}"
+    )
+    assert bloco["eleito"] is None, (
+        "a posse cai mesmo sem destino (contrato de `devolver_o_microfone`), e "
+        "a tela tem de ver isso"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 9. A FRASE ENVELHECE E VIRA MENTIRA — `vale_agora` é quem separa as duas
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_recusa_deixa_de_valer_quando_o_dono_devolve_o_microfone() -> None:
+    """O J2 é recusado, a J1 devolve, e o recado do J2 vira história.
+
+    ACHADO DA AUDITORIA (02/09/2026), reproduzido com o `mic_button_loop` e o
+    `_handle_daemon_state_full` do produto: depois da devolução da J1 o bloco
+    dizia `eleito: null` e o card do J2 seguia publicando *"o microfone da mesa
+    está com outro controle"* a 10 Hz, para sempre. A pessoa procuraria um dono
+    que não existe.
+
+    `idade_s` NÃO resolvia: envelhecimento não é falsidade — uma frase de
+    200 ms pode já estar errada. O que faltava era comparar o retrato
+    CONGELADO no recado com o dono de AGORA, e nada no payload permitia isso.
+
+    CURA A ARRANCAR: o `vale_agora` de `RecadoDoMicrofone.em_dicionario`, ou o
+    `dono_agora` que `publicar` calcula para ele.
+    """
+    daemon, _backend, _eleitor = _mesa()
+
+    blocos = await _rodar_os_passos(
+        daemon,
+        [
+            {"uniq": _J1, "mudo": False},  # a J1 elege
+            {"uniq": _J2, "mudo": True},  # o J2 é recusado
+            {"uniq": _J1, "mudo": True},  # e a J1 devolve
+        ],
+    )
+
+    assert blocos[1]["recados"][_J2]["vale_agora"] is True, (
+        "a recusa acabou de nascer e o mundo que ela descreve é este — marcá-la "
+        f"inválida aqui apagaria a única resposta que o J2 recebeu: {blocos[1]}"
+    )
+
+    # A J1 devolveu. Ninguém encostou no controle do J2, e a frase dele não
+    # muda — mas o mundo que ela descreve deixou de existir.
+    for volta in range(3):
+        bloco = (await _tique_async(daemon))["mic_da_mesa"]
+        recado = bloco["recados"][_J2]
+        assert bloco["eleito"] is None, "ninguém está com o microfone da mesa"
+        assert recado["motivo"] == recusa_de_quem_nao_elegeu(_J1).motivo, (
+            "o depósito guarda o que foi dito, não reescreve história"
+        )
+        assert recado["vale_agora"] is False, (
+            "a frase diz que o canal está com outro controle e NINGUÉM está "
+            "com ele; sem este campo a tela publica a mentira a cada 500 ms — "
+            f"volta {volta}, recado {recado}, bloco.eleito {bloco['eleito']!r}"
+        )
+        await asyncio.sleep(0.01)
+
+
+# ---------------------------------------------------------------------------
+# 10. O DONO QUE SAIU DA MESA — hotplug-out sem devolução
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_o_eleito_que_saiu_da_mesa_nao_e_publicado_como_dono_de_agora() -> None:
+    """A J1 elege e cai do cabo. Nada em `src/` limpa a posse no hotplug-out.
+
+    ACHADO DA AUDITORIA (02/09/2026), reproduzido: as TRÊS únicas escritas de
+    `EleitorDeMicrofone.eleito` são caminhos de eleição, e nenhuma roda quando
+    um controle cai. O bloco seguia publicando o `uniq` da J1 como dono do
+    microfone da mesa, e o botão do J2 recebia *"está com outro controle"* —
+    mandando a pessoa procurar quem não tem card na tela.
+
+    O `eleito` CRU continua saindo, e de propósito: a fonte padrão do sistema
+    ainda aponta para o canal morto dele, e apagar esse dado seria trocar uma
+    mentira por outra. Quem diz que ele não vale mais é o `eleito_na_mesa`.
+
+    CURA A ARRANCAR: o `eleito_na_mesa` de `publicar`, ou o `dono` que
+    `hotkey._eleger_ou_devolver` calcula contra os conectados.
+    """
+    daemon, backend, _eleitor = _mesa()
+
+    blocos = await _rodar_os_passos(
+        daemon,
+        [
+            {"uniq": _J1, "mudo": False},  # a J1 elege
+            lambda: backend.sair_da_mesa(_J1),  # e o cabo dela sai
+            {"uniq": _J2, "mudo": True},  # o J2 aperta o DELE
+        ],
+    )
+
+    bloco = blocos[1]
+    assert bloco["eleito"] == _J1, (
+        "o dado cru do eleitor não se apaga: a fonte padrão do sistema ainda "
+        "aponta para o canal do controle que caiu"
+    )
+    assert bloco["eleito_na_mesa"] is False, (
+        "o controle eleito saiu da mesa e a tela não tem como saber — pintar o "
+        f"nome dele seria nomear um controle sem card: {bloco}"
+    )
+    assert bloco["recados"][_J1]["vale_agora"] is False
+
+    # E o botão do J2 não pode receber a frase que nomeia um ausente.
+    recado = blocos[2]["recados"][_J2]
+
+    assert recado["motivo"] == recusa_de_quem_nao_elegeu(None).motivo, (
+        "com o dono fora da mesa a notícia certa é a que ela já escreveu para "
+        f"'ninguém está com o microfone' — e veio: {recado['motivo']!r}"
+    )
+    assert "outro controle" not in recado["motivo"], (
+        "não há outro controle: o que tinha o canal saiu da mesa"
+    )
+    assert recado["eleito"] is None, (
+        "o retrato da mesa não pode carregar o endereço de quem não está nela: "
+        "é dele que o card tira o `data-uniq` para apontar"
+    )
+    assert recado["vale_agora"] is True, (
+        "a frase acaba de nascer e descreve a mesa de agora"
+    )
+
+
+def test_o_handle_que_sobrou_desconectado_nao_conta_como_mesa() -> None:
+    """`uniq` sem `connected` não é presença — o backend real preenche os dois.
+
+    `core/backend_pydualsense.describe_controllers` devolve uma entrada por
+    HANDLE e escreve o `uniq` mesmo com `connected: False`. Ler só o `uniq` —
+    que é o que `hotkey._uniqs_conectados` faz, porque a lista dele vai para a
+    ELEIÇÃO — daria "está na mesa" ao handle que o controle já largou, e o
+    defeito voltaria inteiro pela porta de trás.
+    """
+
+    class _EleitorCru:
+        eleito = _J1
+
+    class _HandleFantasma:
+        def describe_controllers(self) -> list[dict[str, Any]]:
+            return [
+                {"uniq": _J1, "connected": False},  # o handle que sobrou
+                {"uniq": _J2, "connected": True},
+            ]
+
+    class _Cru:
+        controller = _HandleFantasma()
+        _eleitor_de_microfone = _EleitorCru()
+
+    bloco = recado_do_microfone.publicar(_Cru())
+
+    assert bloco["eleito"] == _J1
+    assert bloco["eleito_na_mesa"] is False, (
+        f"o handle está aberto e o controle não está nele: {bloco}"
+    )
+
+
+def test_nao_saber_quem_esta_na_mesa_nunca_vira_o_dono_saiu() -> None:
+    """Backend que não sabe listar devolve `None`, jamais `False`.
+
+    É a cicatriz de sempre: ausência de dado lida como negação. Um backend
+    legado (ou o `FakeController`) não tem `describe_controllers`; se isso
+    virasse `eleito_na_mesa=False`, a tela apagaria um canal que está no ar e
+    marcaria toda frase como história.
+    """
+
+    class _EleitorCru:
+        eleito = _J1
+
+    class _SemLista:
+        """Sabe acender LED, não sabe dizer quem está na mesa."""
+
+    class _Cru:
+        controller = _SemLista()
+        _eleitor_de_microfone = _EleitorCru()
+
+    cru = _Cru()
+    recado_do_microfone.anotar(
+        cru,  # type: ignore[arg-type]
+        _J2,
+        gesto="recusa",
+        ok=False,
+        motivo="o microfone da mesa está com outro controle",
+        eleito=_J1,
+    )
+    bloco = recado_do_microfone.publicar(cru)
+
+    assert bloco["eleito"] == _J1
+    assert bloco["eleito_na_mesa"] is None, (
+        f"'não perguntei a ninguém' não é 'ele saiu': {bloco}"
+    )
+    assert bloco["recados"][_J2]["vale_agora"] is True, (
+        "sem saber quem está na mesa, o dono fica de pé e a frase continua "
+        f"valendo: {bloco}"
+    )
 
 
 def test_gesto_desconhecido_sai_nomeado() -> None:
