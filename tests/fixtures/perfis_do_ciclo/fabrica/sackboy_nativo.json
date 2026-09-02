@@ -40,8 +40,7 @@
   },
   "mode": {
     "kind": "gamepad",
-    "gamepad_flavor": null,
-    "coop": true
+    "gamepad_flavor": null
   },
   "suppress_desktop_emulation": true
 }

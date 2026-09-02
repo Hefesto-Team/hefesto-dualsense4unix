@@ -32,7 +32,7 @@ def _perfil(flavor: str) -> Profile:
         name="sackboy_nativo",
         match=MatchCriteria(window_class=["steam_app_1599660"]),
         priority=80,
-        mode=ProfileModeConfig(kind="gamepad", gamepad_flavor=flavor, coop=True),
+        mode=ProfileModeConfig(kind="gamepad", gamepad_flavor=flavor),
     )
 
 

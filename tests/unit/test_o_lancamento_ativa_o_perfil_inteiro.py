@@ -65,7 +65,7 @@ def _perfil(nome: str = "Sackboy", *, kind: str = "gamepad") -> Profile:
         name=nome,
         match=MatchCriteria(window_class=[f"steam_app_{APPID}"]),
         priority=97,
-        mode=ProfileModeConfig(kind=kind, gamepad_flavor="dualsense", coop=True),
+        mode=ProfileModeConfig(kind=kind, gamepad_flavor="dualsense"),
     )
 
 

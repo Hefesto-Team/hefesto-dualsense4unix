@@ -327,49 +327,20 @@ class TestAAbaInicioEscreveNoRascunho:
 
         assert janela.draft.mode_dirty is False
 
-    def test_nenhum_gesto_da_janela_escreve_coop_no_perfil(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: era
-        ``test_preparar_coop_e_o_unico_gesto_que_liga_o_coop``.
-
-        Aquele gesto (o botão "Preparar co-op") era o ÚNICO que dizia ``coop``
-        na mão, e saiu com a decisão dela. Agora a janela não tem gesto nenhum
-        que escreva o campo — e a regra que sobra é mais forte: o que ela não
-        edita, ela não reescreve, nem para ligar. Um perfil que diz
-        ``coop: false`` continua dizendo ``coop: false`` no disco (o campo é
-        aceito e ignorado pelo daemon; reescrevê-lo seria mudar o arquivo dela
-        sem pedido).
-        """
-        janela = _Janela(
-            _perfil(
-                "Co-op",
-                com_regra=True,
-                mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox", coop=False),
-            )
-        )
-        _ipc_que_confirma(monkeypatch)
-
-        janela._home_mode_selector.set_active_id("gamepad")
-        janela._home_flavor_selector.set_active_id("dualsense")
-
-        salvo = janela.draft.to_profile("Co-op")
-        assert salvo.mode is not None and salvo.mode.coop is False
-
-    def test_trocar_a_mascara_nao_liga_o_coop_de_quem_dizia_nao(
+    def test_trocar_a_mascara_nao_mexe_no_resto_da_secao(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O que a janela não edita, ela não reescreve.
 
-        A aba não tem seletor de co-op. Carimbar o default do esquema
-        (``coop=True``) por causa de uma troca de MÁSCARA ligaria o co-op num
-        perfil que dizia ``coop: false`` — mudança que ela nunca pediu.
+        Trocar a MÁSCARA é um gesto sobre UM campo. Se ele devolvesse o resto
+        da seção `mode` ao default, mudaria o arquivo dela sem pedido — e é o
+        defeito que esta classe inteira persegue.
         """
         janela = _Janela(
             _perfil(
                 "Solo",
                 com_regra=True,
-                mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox", coop=False),
+                mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox"),
             )
         )
         _ipc_que_confirma(monkeypatch)
@@ -378,145 +349,11 @@ class TestAAbaInicioEscreveNoRascunho:
 
         salvo = janela.draft.to_profile("Solo")
         assert salvo.mode is not None
-        assert salvo.mode.gamepad_flavor == "dualsense"
-        assert salvo.mode.coop is False, "a troca de máscara ligou o co-op sozinha"
-
-
-# ---------------------------------------------------------------------------
-# O "modo jogo" — e a recusa que CAIU em 09/08
-# ---------------------------------------------------------------------------
-
-
-class TestOModoJogoEntraNoPerfilQuePodeReceber:
-    """MODO-JOGO-VONTADE-DELA-01 (09/08/2026): *"a vontade na GUI prevalece
-    sempre"*.
-
-    Esta classe travava a RECUSA: ligar o modo jogo num perfil catch-all não era
-    guardado. A recusa se justificava por escrito com a ausência de gate no ramo
-    ``if desired:`` de ``lifecycle.apply_profile_suppression`` — e essa premissa
-    caducou em 05/08, quando o gate nasceu (``PERFIL-REESCRITO-NA-PARTIDA-01``,
-    item 2), sem que ninguém voltasse aqui. Cinco dos perfis dela são catch-all,
-    então por quatro dias a janela lhe cobrou, para nada, a configuração que ela
-    pedia.
-
-    O que estes testes travam agora é a decisão dela E o preço dela: o gesto é
-    guardado em qualquer perfil, e num "vale sempre" a janela DIZ que o daemon
-    não vai ligá-lo sozinho depois. Que ele de fato não ligue — o alçapão — é
-    outro portão, headless, em ``test_modo_jogo_a_vontade_dela_prevalece.py``.
-    """
-
-    def test_perfil_com_regra_guarda_o_modo_jogo(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        janela = _Janela(_perfil("Sackboy", com_regra=True))
-        _ipc_que_confirma(monkeypatch)
-
-        janela.on_emulation_pause(None)
-
-        assert janela.draft.suppress_dirty is True
-        salvo = janela.draft.to_profile("Sackboy")
-        assert salvo.suppress_desktop_emulation is True
-        # A frase normal, e SEM a ressalva: este perfil tem regra, então o
-        # daemon liga o modo jogo de novo na próxima ativação.
-        assert janela.toasts[-1].startswith("Modo jogo ligado")
-        assert janela.toasts[-1] != ea.MODO_JOGO_GUARDADO_SEM_REGRA
-
-    def test_catch_all_agora_guarda_o_modo_jogo(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A MORDIDA da decisão dela: os cinco perfis "vale sempre".
-
-        Com a recusa de volta em ``rascunho_com_modo_jogo``, ``suppress_dirty``
-        fica ``False``, o arquivo nasce com ``suppress_desktop_emulation: false``
-        e a queixa dela volta inteira — *"liguei e não ficou salvo"*.
-        """
-        janela = _Janela(_perfil("Pragmata2", com_regra=False))
-        _ipc_que_confirma(monkeypatch)
-
-        janela.on_emulation_pause(None)
-
-        assert janela.draft.suppress_dirty is True
-        assert janela.draft.to_profile("Pragmata2").suppress_desktop_emulation is True
-
-    def test_o_catch_all_guarda_mas_a_janela_diz_o_preco(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A outra metade da mordida: guardar calado seria uma promessa falsa.
-
-        Num perfil que vale para qualquer janela o daemon NÃO liga o modo jogo
-        na ativação seguinte (é o gate que mantém o desktop com ponteiro). Se a
-        janela responder só "Modo jogo ligado", ela promete um retorno que não
-        vai acontecer — a mesma classe de mentira que a recusa antiga evitava,
-        agora pelo outro lado.
-        """
-        janela = _Janela(_perfil("Pragmata2", com_regra=False))
-        _ipc_que_confirma(monkeypatch)
-
-        janela.on_emulation_pause(None)
-
-        assert janela.toasts[-1] == ea.MODO_JOGO_GUARDADO_SEM_REGRA
-
-    def test_desligar_em_catch_all_nao_ganha_ressalva(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """DESLIGAR não tem preço a declarar — a ressalva é só do ramo de ligar.
-
-        ``suppress: false`` é o default do esquema e o applier o respeita em
-        qualquer perfil; avisar aqui seria assustar sem motivo.
-        """
-        janela = _Janela(_perfil("Pragmata2", com_regra=False, suppress=True))
-        _ipc_que_confirma(monkeypatch)
-
-        janela.on_emulation_resume(None)
-
-        assert janela.toasts[-1] != ea.MODO_JOGO_GUARDADO_SEM_REGRA
-        assert janela.toasts[-1].startswith("Modo jogo desligado")
-
-    def test_desligar_o_modo_jogo_e_guardado_ate_em_catch_all(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Desligar é seguro e é gesto dela.
-
-        Sem este ramo, salvar um perfil que dizia ``suppress: true`` (o
-        ``sackboy_nativo`` e o ``coop_local`` dela) ressuscitaria a supressão que
-        ela acabou de desligar.
-        """
-        janela = _Janela(_perfil("Coop Local", com_regra=False, suppress=True))
-        _ipc_que_confirma(monkeypatch)
-
-        janela.on_emulation_resume(None)
-
-        assert janela.draft.suppress_dirty is True
-        assert janela.draft.to_profile("Coop Local").suppress_desktop_emulation is False
-
-
-class TestAsQuatroCoisasNoMesmoSalvar:
-    def test_modo_mascara_coop_e_modo_jogo_saem_juntos_num_to_profile(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A queixa dela, ponta a ponta: mexer em várias abas e salvar UMA vez.
-
-        Antes desta entrega o arquivo nascia ``mode: null`` e
-        ``suppress_desktop_emulation: false``, com as quatro coisas de pé só no
-        daemon — o ``pragmata2.json`` do disco dela.
-        """
-        janela = _Janela(_perfil("Pragmata", com_regra=True, priority=100))
-        _ipc_que_confirma(monkeypatch)
-
-        # Aba Início: "Jogar pelo Hefesto".
-        janela._home_mode_selector.set_active_id("gamepad")
-        # Aba Emulação: máscara PlayStation e "Modo jogo".
-        janela.on_emulation_gamepad_dualsense(None)
-        janela.on_emulation_pause(None)
-
-        salvo = janela.draft.to_profile("Pragmata")
-        assert salvo.mode is not None
-        assert salvo.mode.kind == "gamepad"
-        assert salvo.mode.gamepad_flavor == "dualsense"
-        assert salvo.suppress_desktop_emulation is True
-        # E nada do que já funcionava se perdeu no caminho.
-        assert salvo.priority == 100
-        assert tuple(salvo.leds.lightbar) == ROXO
+        assert salvo.mode.gamepad_flavor == "dualsense", "a máscara não trocou"
+        assert salvo.mode.kind == "gamepad", (
+            "a troca de máscara mexeu no `kind` — um gesto sobre um campo "
+            "devolveu o vizinho ao default"
+        )
 
 
 # ---------------------------------------------------------------------------

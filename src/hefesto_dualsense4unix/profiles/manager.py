@@ -1610,8 +1610,8 @@ def alinhar_o_modo_com_a_ponte(
     caminhos do `tique_da_escada`), e é isso que a separa de *"trocar o modo de
     um jogo dela sem ela pedir"*: ela pediu, com o controle na mão.
 
-    Os campos que já estavam no `mode` são PRESERVADOS (hoje, o `coop`): a
-    troca de máscara não tem por que devolver o resto da seção ao default.
+    Os campos que já estavam no `mode` são PRESERVADOS: a troca de máscara não
+    tem por que devolver o resto da seção ao default.
     Perfil SEM `mode` ganha um — é o que impede a ponte que ela acabou de subir
     de evaporar no fechamento do jogo, e o `kind`/`flavor` vêm da ponte de pé,
     não de um palpite.

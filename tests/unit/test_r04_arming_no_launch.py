@@ -47,7 +47,7 @@ def _perfil(flavor: str = "dualsense", *, suprime: bool = False) -> Profile:
         name="sackboy_nativo",
         match=MatchCriteria(window_class=[f"steam_app_{APPID}"]),
         priority=80,
-        mode=ProfileModeConfig(kind="gamepad", gamepad_flavor=flavor, coop=True),
+        mode=ProfileModeConfig(kind="gamepad", gamepad_flavor=flavor),
         suppress_desktop_emulation=suprime,
     )
 

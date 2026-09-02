@@ -568,8 +568,9 @@ class ProfileModeConfig(BaseModel):
     - ``kind="native"`` — release total: o jogo usa os gatilhos adaptativos
       NATIVOS da Sony (Sackboy & cia); o hefesto solta o controle.
     - ``kind="gamepad"`` — gamepad virtual com a máscara `gamepad_flavor`
-      (prompts PlayStation ou Xbox). Cada controle físico vira um jogador
-      (``coop``, ligado por padrão — ver o campo).
+      (prompts PlayStation ou Xbox). **Cada controle físico é um jogador**, e
+      isso não é ajustável: quem liga dois controles quer dois jogadores, não
+      dois comandos para o mesmo personagem.
     - ``kind="desktop"`` — declaração explícita de app de desktop: desliga
       gamepad/nativo/co-op vindos de perfil (e também os expirados do lock).
 
@@ -583,22 +584,6 @@ class ProfileModeConfig(BaseModel):
 
     kind: Literal["desktop", "gamepad", "native"]
     gamepad_flavor: Literal["dualsense", "xbox"] | None = None
-    # LEIGO-01: default True. Ninguém pluga dois controles esperando que os dois
-    # movam o MESMO personagem — o default False fazia todo perfil salvo pela GUI
-    # carregar `coop: false` e desligar o co-op ao ativar, pelas costas de quem
-    # nunca pediu isso. Perfis já gravados são migrados em
-    # `loader.migrate_profiles_coop_default`.
-    #
-    # COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o campo passou a ser
-    # ACEITO E IGNORADO. Nenhum perfil liga nem desliga o co-op
-    # (`lifecycle._apply_profile_mode` só o LÊ, e loga quando um perfil antigo
-    # pede `false`). Ele NÃO sai do modelo de propósito: `model_config` acima é
-    # `extra="forbid"`, então tirá-lo faria **todo perfil dela que traz `"coop"`
-    # falhar na validação** — inclusive dois presets de fábrica
-    # (`assets/profiles_default/coop_local.json` e `sackboy_nativo.json`).
-    # Remover o campo seria trocar um interruptor inútil por um perfil que não
-    # abre; a lápide é mais barata que a migração.
-    coop: bool = True
 
 
 #: PONTE-CONFIRMADA-01 (19/08/2026) — COMO a ponte foi confirmada.
