@@ -109,7 +109,8 @@ def test_todo_endereco_da_pagina_tem_quem_o_pinte(a07, ctx):
     nada. As duas falhas são invisíveis na tela, que é por que estão aqui.
     """
     da_pagina = set(CAMPO.findall(_bancada())) - DO_CABECALHO
-    emite = {k for k in a07.pacote(ctx) if k not in ("sem_dono", "cobertura")}
+    emite = {k for k in a07.pacote(ctx)
+             if k not in ("sem_dono", "cobertura", "blocos")}
     assert da_pagina, "a página não tem um endereço sequer — a régua ficou cega"
     assert da_pagina - emite == set(), (
         f"a página tem estes endereços e o pacote não os manda: "
@@ -311,7 +312,14 @@ def test_a_pintura_nunca_grava_o_registro_de_wrapper_visto(a07, monkeypatch):
     monkeypatch.setattr(sw, "censo_do_wrapper", _espiao)
     monkeypatch.setattr(sw, "frase_do_aviso", lambda c: "")
     a07._ler_do_disco()
-    assert vistos == [False], (
+    # O QUE SE COBRA É A PROPRIEDADE, e não a contagem de chamadas: a `_Vigia`
+    # relê o disco numa THREAD (é o contrato dela — a pintura nunca bloqueia), e
+    # essa thread pode cair dentro da janela do espião. Cobrar `== [False]`
+    # fazia a régua reprovar por uma chamada A MAIS, que é o certo acontecendo —
+    # e uma régua que reprova o certo é desligada na primeira semana. Medido em
+    # 02/09/2026: `[False, False]`.
+    assert vistos, "ninguém chamou o censo — a régua mediria o vazio"
+    assert set(vistos) == {False}, (
         f"a leitura da tela pediu `anotar={vistos}`. Com `True` ela GRAVA o "
         f"`wrapper-visto.json` a cada tique, e todo jogo novo vira 'já visto' "
         f"antes de ela ver o aviso uma única vez.")
@@ -486,10 +494,15 @@ def test_o_produto_procura_os_cinco_pelas_pastas_do_motor(a07, monkeypatch,
     lados — o achado deixa de ser achado E o ausente deixa de dizer que
     procurou.
     """
-    _pastas_falsas(monkeypatch, tmp_path, "net.lutris.Lutris")
+    pasta = _pastas_falsas(monkeypatch, tmp_path, "net.lutris.Lutris")
     onde = dict(a07._onde_estao_os_lancadores())
-    assert onde["lutris"] == "net.lutris.Lutris.desktop", (
-        f"o produto não achou o atalho que está em disco: {onde}")
+    # O CAMINHO INTEIRO, e não o `stem`: é o que a frase `DIZ_ACHEI` promete
+    # ("dizer ONDE é o que deixa ela conferir a resposta sem acreditar em mim").
+    # Com o nome solto, uma máquina com o Heroic nativo E o Heroic por Flatpak
+    # não dizia qual dos dois o produto achou — e ela não podia `ls` a resposta.
+    assert onde["lutris"] == str(pasta / "net.lutris.Lutris.desktop"), (
+        f"o produto não achou o atalho que está em disco, ou jogou fora o "
+        f"caminho que torna a resposta conferível: {onde}")
     assert onde["heroic"] == "", (
         "o produto disse ter achado um lançador que não está na pasta")
     assert set(onde) == {"heroic", "lutris", "flatpak", "retroarch",
@@ -503,8 +516,8 @@ def test_o_produto_procura_os_cinco_pelas_pastas_do_motor(a07, monkeypatch,
     # régua que prova a função e não prova quem a chama dá verde sobre uma tela
     # que voltou ao desenho — é *"cura escrita, testada, e nunca ligada"*, que
     # esta casa já nomeou.
-    assert dict(a07._ler_do_disco().onde_estao)["lutris"] == (
-        "net.lutris.Lutris.desktop"), (
+    assert dict(a07._ler_do_disco().onde_estao)["lutris"] == str(
+        pasta / "net.lutris.Lutris.desktop"), (
         "a busca funciona e a LEITURA não a carrega — a tela volta ao `NÃO "
         "SEI` de constante com este teste verde")
 
@@ -580,6 +593,136 @@ def test_nenhuma_fileira_de_botoes_vira_travessao(desenho):
         "no pé do cartão, que estava lá desde 02/09 de manhã")
 
 
+def test_a_lista_da_steam_nunca_vira_travessao_em_estado_nenhum(desenho):
+    """Os TRÊS estados do cartão, e não só o que já estava curado.
+
+    A CURA ANTERIOR ALCANÇOU UM SÓ. `lista_de_jogos` ganhou `LISTA_VAZIA`, mas
+    os dois ramos de saída antecipada de `cartao_da_steam` — a primeira meia
+    volta e a Steam ilegível — devolviam `fora=""` com `tem_lista=True`. O
+    `escrever()` do bootstrap troca vazio por `—` **antes** de despachar o alvo
+    `html`, e o da Steam ilegível é PERMANENTE: justo a tela em que ela precisa
+    ler uma mensagem, com um traço mudo pendurado embaixo.
+
+    A MORDIDA: tire o `fora=SEM_LISTA` de qualquer um dos dois ramos e este
+    teste reprova nomeando o estado.
+    """
+    estados = {
+        "primeira meia volta": None,
+        "Steam ilegível": desenho.Leitura(erros=("o vdf ficou ilegível",)),
+        "leitura boa, lista vazia": desenho.Leitura(com_wrapper=("1",),
+                                                    instalados=1),
+    }
+    for nome, lida in estados.items():
+        cartao = desenho.cartao_da_steam(lida)
+        valor = desenho.valores_do_cartao(cartao)["steam-fora"]
+        assert valor != "", (
+            f"o cartão da Steam em '{nome}' emite `steam-fora` VAZIO — o "
+            f"bootstrap o troca por `—` e a tela ganha um traço solto no pé")
+
+    # E A LISTA NÃO PODE AFIRMAR O QUE NINGUÉM LEU: nos dois estados sem
+    # leitura, o que vai para a tela é NADA (um comentário HTML), e não a frase
+    # de "nenhum jogo com pendência" — que seria o resultado de uma leitura que
+    # não aconteceu.
+    for nome in ("primeira meia volta", "Steam ilegível"):
+        valor = desenho.valores_do_cartao(
+            desenho.cartao_da_steam(estados[nome]))["steam-fora"]
+        assert valor.strip().startswith("<!--"), (
+            f"o cartão em '{nome}' escreve texto na lista: {valor!r}")
+        assert "pendência" not in valor, (
+            f"o cartão em '{nome}' afirma o resultado de uma leitura que não "
+            f"aconteceu")
+
+
+def test_a_moldura_do_cartao_segue_o_selo_que_o_produto_mediu(a07, ctx, desenho,
+                                                              monkeypatch):
+    """A borda do cartão e o selo dentro dele não podem discordar.
+
+    FOTOGRAFADO EM 02/09/2026: a `MOLDURA` só era escrita por `um_cartao`, que é
+    o GERADOR. A página publicada nasceu com os seis cartões em `class="lanc
+    ausente"` (o estado `cartoes(None)`) e o pacote não emitia a classe do
+    contêiner — cinco endereços por cartão, nenhum deles a moldura. O cartão da
+    Steam mostrava o selo verde `CHEGAM` numa borda cinza de *ausente*: a mesma
+    tela dizendo duas coisas opostas.
+
+    A MORDIDA: tire o `blocos` de `_pintura` (ou aponte-o para um seletor que a
+    página não tem) e este teste reprova nos dois lados — a grade some da carga,
+    ou ela é escrita num lugar que `querySelector` não acha.
+    """
+    # 1. o seletor tem de EXISTIR na página, senão o bloco é escrito no nada
+    assert f'class="{desenho.CLASSE_DA_GRADE}"' in _bancada(), (
+        f"a página não tem a grade `{desenho.SELETOR_DA_GRADE}` — o `blocos` "
+        f"cairia no chão, e `querySelector` devolve `null` sem uma linha de erro")
+
+    # 2. a carga do tique traz a grade.
+    #    A VIGIA VAI DUBLADA: sem isso, `pacote()` dispara a thread que lê o
+    #    disco DELA, e essa leitura cai dentro da janela de outra régua deste
+    #    mesmo arquivo (medido em 02/09/2026 — o espião do `anotar=False` viu
+    #    duas chamadas). Uma régua que acorda o disco de outra é ruído.
+    monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
+    carga = a07.pacote(ctx)
+    grade = (carga.get("blocos") or {}).get(desenho.SELETOR_DA_GRADE)
+    assert grade, (
+        "o pacote não manda a grade — a classe do contêiner fica a do desenho "
+        "para sempre, e o cartão se pinta como outra coisa do que mede")
+
+    # 3. e a moldura de cada cartão é a que o SELO pede
+    lida = desenho.Leitura(com_wrapper=("1", "2"), instalados=23,
+                           reparaveis=(),
+                           onde_estao=(("heroic", ""), ("lutris", "")))
+    cartoes = desenho.cartoes(lida)
+    html = a07._pintura(cartoes)["blocos"][desenho.SELETOR_DA_GRADE]
+    assert cartoes[0].selo == "ok", "a Leitura da régua deixou de ser a `CHEGAM`"
+    assert f'class="lanc {desenho.MOLDURA["ok"]}" data-lancador="steam"' in html, (
+        "a Steam mede `CHEGAM` e a moldura dela continua a de `ausente` — é o "
+        "cartão dizendo duas coisas opostas na mesma tela")
+
+    quebrada = desenho.cartoes(desenho.Leitura(
+        com_wrapper=("1",), instalados=2,
+        reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),),
+        frase="alguma frase"))
+    html_warn = a07._pintura(quebrada)["blocos"][desenho.SELETOR_DA_GRADE]
+    assert f'class="lanc {desenho.MOLDURA["warn"]}" data-lancador="steam"' in (
+        html_warn), (
+        "a Steam mede `NÃO CHEGAM` e a borda não fica laranja — a única coisa "
+        "que esta aba mostra sem ler é a cor")
+
+
+def test_o_valor_pintado_e_o_valor_da_grade_sao_a_mesma_coisa(a07, desenho):
+    """As duas grafias do mesmo valor têm de ser UMA — senão a tela pinga-pongue.
+
+    O DEFEITO, MEDIDO NA TELA em 02/09/2026 com o piloto rodando 40 segundos: o
+    gerador escrevia a fileira de botões dentro de `<div class="acoes">` com
+    quebra de linha e recuo, e o pacote pintava o MESMO valor sem eles. Enquanto
+    a grade não era repintada ninguém via; com ela virando bloco, os dois lados
+    passaram a se corrigir mutuamente **em 81 de 81 voltas** — duas reescritas
+    por segundo, para sempre, matando o foco e o `:hover` de quem estivesse com
+    o mouse num botão.
+
+    O `escrever()` do piloto só escreve quando `innerHTML !== valor`; o `blocos`
+    só troca quando `innerHTML !== html`. As duas comparações são de TEXTO
+    LITERAL — então um espaço de diferença é uma reescrita eterna.
+
+    A MORDIDA: devolva a quebra de linha para `um_cartao` (ou tire-a de
+    `acoes_html`) e este teste reprova nomeando o campo.
+    """
+    lida = desenho.Leitura(
+        com_wrapper=("1",), instalados=3, frase="alguma frase",
+        reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),),
+        recusados=(("9", "Outro jogo"),),
+        onde_estao=(("heroic", "/x/h.desktop"), ("lutris", "")))
+    cartoes = desenho.cartoes(lida)
+    grade = a07._pintura(cartoes)["blocos"][desenho.SELETOR_DA_GRADE]
+    valores = desenho.Quadro(lancadores=cartoes).valores()
+
+    for chave, valor in valores.items():
+        if chave == "lanc-conta":  # mora no topo do quadro, fora da grade
+            continue
+        assert f">{valor}<" in grade, (
+            f"o campo {chave!r} é pintado com uma grafia e a grade traz outra. "
+            f"As duas se corrigem a cada tique, para sempre — foi assim que o "
+            f"piloto contou pintura em 81 de 81 voltas.")
+
+
 # --------------------------------------------------------------------------
 # 7. as duas leituras do disco que tela NENHUMA mostrava
 # --------------------------------------------------------------------------
@@ -622,6 +765,116 @@ def test_a_ponte_confirmada_volta_ao_carimbo(desenho):
         "assim que ele fica sem o atalho para sempre sem ninguém saber")
 
 
+def _disco_dublado(monkeypatch, *, dispensados=("4242",), pontes=3,
+                   instalados=7):
+    """Todo o disco que `_ler_do_disco` toca, dublado — e nada da máquina dela.
+
+    ELE EXISTE PORQUE AS DUAS RÉGUAS DE CIMA PROVAM O DESENHO, e não o
+    CHAMADOR: `test_os_jogos_dispensados_do_lembrete_aparecem_na_lista` e
+    `test_a_ponte_confirmada_volta_ao_carimbo` montam uma `Leitura` À MÃO.
+    Medido em 02/09/2026 pela auditoria desta aba: arrancar
+    `dispensados=_dispensados()` e `pontes=pontes` de `_ler_do_disco` deixava
+    as 25 réguas VERDES — e trocar `pontes_confirmadas()` por
+    `jogos_instalados()` também, com o carimbo voltando a mostrar um número sem
+    fonte (`◆ 23 jogos já sabem por onde entrar` onde a resposta é ZERO).
+
+    É *"cura escrita, testada, e nunca ligada"*, que esta casa já nomeou.
+
+    OS TRÊS NÚMEROS SÃO DIFERENTES DE PROPÓSITO (7 instalados, 3 pontes, 1
+    dispensado): com dois iguais, uma fonte trocada pela outra passaria.
+    """
+    import types
+
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+    from hefesto_dualsense4unix.integrations import prontuario_dos_jogos as pdj
+    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    censo = types.SimpleNamespace(com_wrapper=["1"], reparaveis=[],
+                                  intocaveis=[], recusados=[], erros=[])
+    monkeypatch.setattr(sw, "censo_do_wrapper", lambda **kw: censo)
+    monkeypatch.setattr(sw, "frase_do_aviso", lambda c: "")
+    monkeypatch.setattr(pdj, "jogos_instalados", lambda: list(range(instalados)))
+    monkeypatch.setattr(pdj, "pontes_confirmadas", lambda: list(range(pontes)))
+    monkeypatch.setattr(lwd, "load_dismissed_appids", lambda: set(dispensados))
+    monkeypatch.setattr(slo, "rotulo_do_jogo", lambda a: f"Jogo {a}")
+
+
+def test_a_leitura_carrega_os_dispensados_e_as_pontes_da_fonte_certa(
+        a07, monkeypatch, tmp_path):
+    """As duas leituras novas do motor, cobradas em QUEM AS CHAMA.
+
+    AS TRÊS MORDIDAS QUE ESTE TESTE MATA, e as três davam 25/25 verde antes
+    dele:
+
+    ==========================================  ===========================
+    `dispensados=_dispensados()` → `()`         a lista do cartão esvazia
+    `pontes=pontes` → `0`                       o carimbo some
+    `pontes_confirmadas()` → `jogos_instalados()`  o carimbo mente o número
+    ==========================================  ===========================
+
+    A terceira é a pior: ela REINTRODUZ o defeito que a aba nasceu para matar —
+    um número no carimbo que não responde à pergunta do carimbo.
+    """
+    _pastas_falsas(monkeypatch, tmp_path)
+    _disco_dublado(monkeypatch, dispensados=("4242",), pontes=3, instalados=7)
+
+    lida = a07._ler_do_disco()
+    assert lida.dispensados == (("4242", "Jogo 4242"),), (
+        f"a leitura do disco não carrega os jogos dispensados do lembrete: "
+        f"{lida.dispensados!r} — o `launch_dialog_dismissed.json` volta a ser "
+        f"um silêncio que tela nenhuma mostra")
+    assert lida.pontes == 3, (
+        f"a leitura do disco diz {lida.pontes} pontes e a fonte respondeu 3 — "
+        f"o carimbo `◆ N jogos já sabem por onde entrar` voltou a ter um "
+        f"número sem fonte, que é o defeito que esta aba nasceu para matar")
+    assert lida.instalados == 7, "a contagem de instalados trocou de fonte"
+
+    # E O QUE SAI DISSO CHEGA À TELA — sem esta metade, as três mordidas de
+    # cima morrem e uma quarta (a `Leitura` montada e jogada fora) passa.
+    valores = a07._valores(lida)
+    assert "3 jogos já sabem por onde entrar" in valores["steam-diz"] + (
+        valores["steam-acoes"]), (
+        "as pontes chegaram à leitura e não chegaram ao carimbo do cartão")
+    assert "Jogo 4242" in valores["steam-fora"], (
+        "o jogo dispensado chegou à leitura e não chegou à lista do cartão")
+
+
+def test_a_contagem_do_topo_nao_cai_depois_do_gesto(a07, monkeypatch, desenho):
+    """`_com_outra_frase` não pode devolver um cartão com campo perdido.
+
+    O SINTOMA, MEDIDO: com o construtor à mão dos nove campos no lugar do
+    `dataclasses.replace`, o décimo campo (`presente`) volta ao padrão e a
+    contagem do topo CAI de "2 encontrados" para "1 encontrado" **depois** de
+    ela clicar em "Detectar o jogo que está aberto" ou em "Ver o que impede" —
+    com os seis cartões inalterados, e nada acusando.
+
+    A cura estava escrita desde 02/09 e **não tinha régua**: a auditoria
+    reverteu a linha para o texto exato de antes e as 25 passaram.
+
+    A MORDIDA: troque o `dataclasses.replace` pelo construtor campo a campo e
+    este teste reprova comparando as duas contagens.
+    """
+    lida = desenho.Leitura(com_wrapper=("1",), instalados=1,
+                           onde_estao=(("heroic", "h.desktop"), ("lutris", "")))
+    monkeypatch.setattr(a07.VIGIA, "agora", lambda: lida)
+
+    do_tique = a07._valores(lida)["lanc-conta"]
+    do_gesto = a07._com_outra_frase("uma frase qualquer")["mesa"]["lanc-conta"]
+
+    assert "2 encontrados" in do_tique, (
+        f"a régua perdeu o pé: a pintura do tique já não conta 2 ({do_tique!r})")
+    assert do_gesto == do_tique, (
+        f"a contagem do topo MUDA depois do gesto — o tique diz {do_tique!r} e "
+        f"o gesto devolve {do_gesto!r}. A tela discorda de si mesma sem que "
+        f"nenhum cartão tenha mudado.")
+
+    # E O CARTÃO TROCADO CONTINUA SENDO O DA STEAM, com tudo o que ele tinha —
+    # um `replace` que perdesse `tem_lista` apagaria a lista de jogos inteira.
+    assert a07._com_outra_frase("outra")["mesa"]["steam-fora"], (
+        "o cartão trocado perdeu a lista de jogos")
+
+
 def test_a_steam_quebrada_nao_apaga_a_resposta_sobre_os_outros(a07, monkeypatch,
                                                                tmp_path):
     """Duas perguntas independentes não podem cair juntas.
@@ -632,7 +885,7 @@ def test_a_steam_quebrada_nao_apaga_a_resposta_sobre_os_outros(a07, monkeypatch,
     """
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 
-    _pastas_falsas(monkeypatch, tmp_path, "net.lutris.Lutris")
+    pasta = _pastas_falsas(monkeypatch, tmp_path, "net.lutris.Lutris")
 
     def explode(*a, **kw):
         raise OSError("o vdf sumiu")
@@ -640,5 +893,6 @@ def test_a_steam_quebrada_nao_apaga_a_resposta_sobre_os_outros(a07, monkeypatch,
     monkeypatch.setattr(sw, "censo_do_wrapper", explode)
     lida = a07._ler_do_disco()
     assert lida.erros, "o censo quebrou e a leitura não registrou o erro"
-    assert dict(lida.onde_estao)["lutris"] == "net.lutris.Lutris.desktop", (
+    assert dict(lida.onde_estao)["lutris"] == str(
+        pasta / "net.lutris.Lutris.desktop"), (
         "a Steam quebrada apagou a resposta sobre os outros lançadores")

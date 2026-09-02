@@ -203,7 +203,7 @@ MIOLO = f'''
           <button class="btn" data-gesto="procurar">Procurar de novo</button>
         </div>
 
-        <div class="lancadores">
+        <div class="{dl.CLASSE_DA_GRADE}">
 {CARTOES}
         </div>
 

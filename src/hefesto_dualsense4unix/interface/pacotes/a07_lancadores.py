@@ -50,7 +50,7 @@ delas de graça:**
 cravados). Medido nesta máquina em 02/09/2026, com 4 pastas de atalhos:
 
     heroic · lutris · retroarch · emuladores    NÃO ACHEI
-    flatpak                                     achado em `PATH/flatpak`
+    flatpak                                     achado em `/usr/bin/flatpak`
 
 O selo `off` (`NÃO ACHEI`) existia em `SELOS` desde que o desenho nasceu e
 **nenhum caminho o produzia**. Ele era a palavra que faltava para a tela dizer
@@ -243,6 +243,15 @@ def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
     NUNCA LEVANTA. Um `PATH` estranho ou uma pasta sem permissão devolve
     "não achei" para aquele lançador, que é o pior caso honesto — e degradar
     calado AQUI é requisito, o mesmo que `pastas_de_atalhos` já declara.
+
+    O `onde` É O CAMINHO INTEIRO, e isso é o que a frase promete. A docstring
+    de :data:`desenho.DIZ_ACHEI` diz, com todas as letras, que dizer ONDE *"é o
+    que deixa ela conferir a resposta sem acreditar em mim"* — e o código tinha
+    o caminho na mão e o jogava fora: `shutil.which` já devolve
+    `/usr/bin/flatpak` e a linha o trocava por `PATH/flatpak`, uma notação que
+    ela não pode `ls`. O mesmo no laço das pastas: ele sabe em QUAL das quatro
+    pastas o arquivo estava e guardava só o `stem`. Numa máquina com o Heroic
+    nativo **e** o Heroic por Flatpak, o cartão não dizia qual dos dois achou.
     """
     import shutil
 
@@ -259,8 +268,9 @@ def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
         for pasta in pastas:
             for stem in item.atalhos:
                 try:
-                    if (pasta / f"{stem}.desktop").is_file():
-                        onde = f"{stem}.desktop"
+                    caminho = pasta / f"{stem}.desktop"
+                    if caminho.is_file():
+                        onde = str(caminho)
                         break
                 except OSError:  # pragma: no cover - pasta sumiu no meio
                     continue
@@ -269,11 +279,12 @@ def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
         if not onde:
             for comando in item.comandos:
                 try:
-                    if shutil.which(comando):
-                        onde = f"PATH/{comando}"
-                        break
+                    achado = shutil.which(comando)
                 except Exception:  # pragma: no cover - PATH torto
                     continue
+                if achado:
+                    onde = achado
+                    break
         fora.append((item.chave, onde))
     return tuple(fora)
 
@@ -362,6 +373,47 @@ def _valores(lida: desenho.Leitura | None) -> dict[str, str]:
     return desenho.Quadro(lancadores=desenho.cartoes(lida)).valores()
 
 
+def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
+    """A carga da aba: os endereços **e a grade inteira**, com as molduras.
+
+    POR QUE A GRADE VAI JUNTO, e é o defeito que esta função existe para curar
+    (fotografado em 02/09/2026): a `MOLDURA` do cartão é uma CLASSE do
+    contêiner, e a pintura do piloto não escreve classe — escreve texto,
+    `innerHTML`, largura, fundo e `value`. Os cinco endereços por cartão
+    (`-selo`, `-jogos`, `-diz`, `-acoes`, `-fora`) não alcançam o `<div
+    class="lanc ...">`, e a página publicada nasce com os seis em `ausente`.
+    Resultado medido: o cartão da Steam com o selo verde `CHEGAM` dentro de uma
+    moldura cinza de *ausente* — a mesma tela dizendo duas coisas opostas.
+
+    O `blocos` É O MECANISMO QUE JÁ EXISTE para isto, e não um segundo
+    vocabulário: `a08_conexoes` troca o mapa do gabinete e a lista de aparelhos
+    pelo mesmo caminho, pela mesma razão (um bloco cujo conteúdo muda de FORMA,
+    e não só de valor). O piloto troca o `innerHTML` **só quando ele difere**,
+    então a grade não se reescreve a cada tique.
+
+    OS ENDEREÇOS CONTINUAM SENDO EMITIDOS, e isso não é redundância: eles são o
+    contrato que a régua da aba cobra nos dois sentidos (nada emitido cai no
+    chão, nada da página fica sem dono). O `blocos` corre ANTES da `mesa` no
+    piloto, de modo que os campos pousam na grade recém-trocada e escrevem o
+    mesmo valor — zero pintura, zero briga.
+    """
+    return {
+        "mesa": desenho.Quadro(lancadores=lancadores).valores(),
+        "blocos": {desenho.SELETOR_DA_GRADE: desenho.cartoes_html(lancadores)},
+    }
+
+
+def _resposta(lida: desenho.Leitura | None) -> dict[str, Any]:
+    """O que um gesto devolve para a tela — a mesma carga da pintura.
+
+    Um gesto que trocasse só os campos deixaria a moldura do tique anterior:
+    "Consertar" leva o cartão de `NÃO CHEGAM` a `CHEGAM` e a borda laranja
+    ficaria até o próximo tique. Meio segundo de tela mentindo continua sendo
+    tela mentindo.
+    """
+    return _pintura(desenho.cartoes(lida))
+
+
 @registrar("07-lancadores.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """A aba inteira, e ela NÃO depende de controle nenhum.
@@ -372,8 +424,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     que a fita desta aba nasce esmaecida (`fita_viva=False`) e por isso este
     pacote não devolve `colunas`: não há nada a dizer por controle.
     """
-    valores = _valores(VIGIA.agora())
+    carga = _resposta(VIGIA.agora())
+    valores = carga["mesa"]
     fora: dict[str, Any] = dict(valores)
+    fora["blocos"] = carga["blocos"]
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
     fora["cobertura"] = {"pintados": len(valores), "sem_dono": len(SEM_DONO)}
     return fora
@@ -401,7 +455,7 @@ def procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     que responde calado.
     """
     VIGIA.esquecer()
-    return {"mesa": _valores(VIGIA.ler())}
+    return _resposta(VIGIA.ler())
 
 
 @gesto("07-lancadores.html", "consertar")
@@ -426,7 +480,7 @@ def consertar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     if status in (sw.REPARO_ADIADO_JOGO, sw.REPARO_ADIADO_STEAM, sw.REPARO_ERRO):
         raise RuntimeError(sw.frase_do_aviso(censo) or
                            "não consegui repor o atalho de inicialização")
-    return {"mesa": _valores(VIGIA.ler())}
+    return _resposta(VIGIA.ler())
 
 
 @gesto("07-lancadores.html", "ver-o-que-impede")
@@ -446,10 +500,10 @@ def ver_o_que_impede(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     from hefesto_dualsense4unix.integrations import prontuario_dos_jogos as pdj
 
     censo = pdj.levantar_censo()
-    return {"mesa": _com_outra_frase(desenho._e(censo.frase()))}
+    return _com_outra_frase(desenho._e(censo.frase()))
 
 
-def _com_outra_frase(diz: str) -> dict[str, str]:
+def _com_outra_frase(diz: str) -> dict[str, Any]:
     """A aba de novo, com o corpo do cartão da Steam trocado.
 
     OS DOIS GESTOS QUE RESPONDEM COM TEXTO passam por aqui, e não montam o
@@ -467,7 +521,7 @@ def _com_outra_frase(diz: str) -> dict[str, str]:
     lida = VIGIA.agora()
     cartoes = desenho.cartoes(lida)
     cartoes[0] = dataclasses.replace(cartoes[0], diz=diz)
-    return desenho.Quadro(lancadores=cartoes).valores()
+    return _pintura(cartoes)
 
 
 @gesto("07-lancadores.html", "detectar")
@@ -491,11 +545,11 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             "volte aqui e clique de novo.")
     lida = VIGIA.agora()
     tem = lida is not None and str(appid) in lida.com_wrapper
-    return {"mesa": _com_outra_frase(
+    return _com_outra_frase(
         f"<b>{desenho._e(slo.rotulo_do_jogo(appid))}</b> está aberto agora e "
         + ("<b>abre pelo atalho do Hefesto</b>." if tem else
            "<b>não abre pelo atalho do Hefesto</b> — clique em Consertar com o "
-           "jogo e a Steam fechados."))}
+           "jogo e a Steam fechados."))
 
 
 def _appid_do_clique(o: dict[str, Any], nome: str) -> str:
@@ -522,7 +576,7 @@ def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     slo.marcar_jogo_sem_wrapper(_appid_do_clique(o, "tirar-daqui"))
     VIGIA.esquecer()
-    return {"mesa": _valores(VIGIA.ler())}
+    return _resposta(VIGIA.ler())
 
 
 @gesto("07-lancadores.html", "voltar-a-usar")
@@ -537,7 +591,7 @@ def voltar_a_usar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     slo.desmarcar_jogo_sem_wrapper(_appid_do_clique(o, "voltar-a-usar"))
     VIGIA.esquecer()
-    return {"mesa": _valores(VIGIA.ler())}
+    return _resposta(VIGIA.ler())
 
 
 #: VAZIOS, E É A MEDIÇÃO QUE OS DEIXA VAZIOS: nenhum gesto desta aba fala com o
