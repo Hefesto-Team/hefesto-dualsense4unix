@@ -1886,21 +1886,16 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "_nao_tem.py::TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade` trava a "
         "medição e reprova em quem consertar o nível sem escolher."
     ),
-    "app/actions/ambiente_na_tela.py::descrever_display_grafico": (
-        "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê "
-        "`window_detect_backend`/`window_detect_reason`, complementando (sem "
-        "substituir) `daemon_actions.descrever_deteccao_de_janela`. REMEDIDO "
-        "em 26/08/2026 (LEVA-3-D): ao contrário da irmã acima, esta função LÊ "
-        "as chaves certas — `daemon/ipc_handlers.py:_window_detect_payload` as "
-        "publica no TOPO do `state_full`, e contra os três fixtures reais ela "
-        "responde a verdade. ONDE O CAMINHO SE PERDE: só falta o chamador, e "
-        "ele mora fora do alcance de quem escreveu isto — o cartão é o "
-        "`storm_card` do `gui/main.glade:2823` ('Saúde do sistema'), pintado "
-        "por `app/actions/daemon_actions.py:1160 _refresh_window_detect_diag`, "
-        "e uma frase a mais ali pede um `GtkLabel` novo no Glade (recurso de "
-        "bancada, uma sprint por vez). O QUE FECHA: a Onda 11 · Sistema, com o "
-        "rótulo no Glade e a pintura ao lado do `window_detect_diag_label`."
-    ),
+    # A LÁPIDE DE `descrever_display_grafico` SAIU EM 02/09/2026, e foi o
+    # portão que a cobrou: ela dizia que "só falta o chamador, e ele mora fora
+    # do alcance de quem escreveu isto — o cartão é o `storm_card` do
+    # `gui/main.glade:2823`, e uma frase a mais ali pede um `GtkLabel` novo no
+    # Glade". O QUE ELA PREVIA ("O QUE FECHA: a Onda 11 · Sistema") aconteceu,
+    # e por outra porta que não o Glade: a aba 09 da interface NOVA tem a linha
+    # "Como ele enxerga a janela" desenhada, e
+    # `interface/pacotes/a09_sistema._leitura` passou a chamar a função para
+    # preencher `Leitura.ambiente`. O caminho é
+    # `hefesto_vivo` -> `pacotes` -> `a09_sistema` -> `ambiente_na_tela`.
     "app/actions/ambiente_na_tela.py::descrever_steam_encontrada": (
         "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `steam_layout_achado` — "
         "chave que NENHUMA frente desta sprint publica ainda em `state_full` "

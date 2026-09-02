@@ -650,7 +650,19 @@
      abaixo. Podemos mandar esses botões pra direita e ocupando o mesmo espaço
      vertical."
      --------------------------------------------------------------------- */
-  .bloco2{display:grid;grid-template-columns:1fr 1px 184px;gap:0 14px;align-items:stretch}
+  /* `minmax(0,1fr)` E NÃO `1fr` — 02/09/2026, e é a mesma cura da régua 5 lá
+     embaixo, numa faixa que a régua não cobria. O piso de `1fr` é o CONTEÚDO:
+     com os valores DE VERDADE a coluna de estado não encolhe, empurra a coluna
+     dos botões e ela atravessa o risco por cima do Perfil de Bateria.
+     MEDIDO no Chrome (1920x1080), a página PUBLICADA com os valores que o
+     pacote emite hoje — o vizinho começa em x=973:
+         valores do desenho ............ botões [748..932]  folga  41px
+         valores reais, `1fr` .......... botões [816..1000] ESTOURO 27px
+         valores reais, `minmax(0,1fr)`  botões [748..932]  folga  41px
+     O que revelou foi a aba parar de mentir: "Como ele enxerga a janela" era
+     `Wayland · COSMIC` no desenho e é `Sem ver nada agora (sem_foco_x)` na
+     máquina dela. Com o desenho curto, o defeito não aparecia. */
+  .bloco2{display:grid;grid-template-columns:minmax(0,1fr) 1px 184px;gap:0 14px;align-items:stretch}
   .col-acao{display:flex;flex-direction:column;gap:6px}
   /* Botão do mesmo grupo com a MESMA largura, e o grupo preenchendo a coluna:
      antes eram três larguras (138,2 / 141,3 / 80,7) numa fileira que deixava
@@ -819,7 +831,14 @@
      vão escuro ao lado dos botões, e a cura de um vão é na ALTURA: o cartão
      encolhe reflowando, não perdendo achado.
      --------------------------------------------------------------------- */
-  .saude-cols{display:grid;grid-template-columns:1fr 1px 1fr;gap:0 18px}
+  /* `minmax(0,1fr)` pelo mesmo motivo do `.bloco2`, e achado no mesmo dia: as
+     frases do `storm_report` são LONGAS ("regra áudio-off inativa — o mic e o
+     fone do controle estão liberados. O que fazer: nada."), e as do desenho são
+     curtas. Com `1fr` cru a coluna não encolhe, as reticências de
+     `.saude .txt span:last-child` nunca chegam a agir, e a segunda coluna passa
+     por cima de "Preparar os jogos". Fotografado na bancada em 02/09/2026, com
+     os seis achados desta máquina. */
+  .saude-cols{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 18px}
   .col-lista{display:flex;flex-direction:column}
   /* Os três botões do exame não levam vão entre si: quatro linhas de achado
      medem 102px, e 3 × 34 dá exatamente 102. As duas colunas acabam juntas. */
@@ -1112,12 +1131,12 @@
         <!-- ---------- SAÚDE DO SISTEMA + PREPARAR OS JOGOS ---------- -->
         <div class="sec-rot sr-exame sec-alta">
           <span>O exame de hoje <span class="ajuda">?<span class="dica">Um exame do que costuma brigar com os controles nesta máquina. Cada linha diz <b>o que está</b>; o <b>?</b> ao lado dela diz o que foi visto, por que importa e o que fazer.<br><br>O selo carrega <b>símbolo e cor</b> juntos, para quem não distingue verde de laranja ler o estado pelo desenho.<br><br>Os três botões à direita <b>já rodaram sozinhos neste exame</b> — é por isso que os achados falam no passado ("estava ligado em 2 jogos, desliguei"). O botão serve para <b>refazer</b>, quando você mexeu em alguma coisa e quer conferir de novo.</span></span>
-            <span class="conta" data-id="exame-contagem">8 linhas <span class="sep">·</span> nenhum aviso</span></span>
+            <span class="conta" data-id="exame-contagem" data-campo="exame-contagem" data-hef-alvo="html">8 linhas <span class="sep">·</span> nenhum aviso</span></span>
           <span></span>
           <span>Preparar os jogos</span>
         </div>
         <div class="exame">
-          <div class="saude-cols" data-id="exame-lista">
+          <div class="saude-cols" data-id="exame-lista" data-campo="exame-lista" data-hef-alvo="html">
             <div class="col-lista">
             <div class="saude">
               <span class="selo ok"><span class="sg">✓</span>OK</span>
