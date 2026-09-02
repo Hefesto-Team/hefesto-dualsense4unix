@@ -278,8 +278,26 @@ class DaemonConfig:
     # eleição é CONFERIDA. Não muta nada — o mudo do firmware continua sendo do
     # `hid-playstation`, que alterna na borda do botão físico.
     #
-    # Desligado, não elegemos e não acendemos: o kernel segue dono do mudo E da
-    # luz do próprio controle, que é o contrato de fábrica.
+    # Desligado, não elegemos e não acendemos.
+    #
+    # FRASE CORRIGIDA em 02/09/2026 (auditoria). Aqui se lia que, desligado,
+    # "o kernel segue dono do mudo E da luz do próprio controle, que é o
+    # contrato de fábrica". A segunda metade era FALSA depois da primeira
+    # eleição: a posse do `common[8]` é grudenta e só cai por
+    # `set_microphone_led(None)`. Medido sobre o `_build_common` desta árvore —
+    # depois de uma eleição, `flag1&0x01=1` e `common[8]=1`, e desligar o
+    # interruptor não mexia em nenhum dos dois.
+    #
+    # O caminho é reentrante em runtime (`daemon/ipc_draft_applier.py` escreve
+    # este campo sem restart), então a cena é real: ela joga, aperta o mic, e
+    # depois carrega um perfil de gravação com `mic.button_toggles_system:
+    # false` — a luz ficava congelada no que a última eleição deixou.
+    #
+    # HOJE A FRASE É VERDADE PORQUE O CÓDIGO A CUMPRE: o applier chama
+    # `hotkey.devolver_a_luz_ao_kernel` na transição ligado -> desligado, e aí
+    # sim o kernel volta a mandar no mudo E na luz. A porta de emergência
+    # (`hefesto-dualsense4unix mic led-release`) continua existindo para quem
+    # tomar a posse por outro caminho.
     mic_button_toggles_system: bool = True
     # BT-MIC-REGISTRY-01 + QUATRO-MICROFONES-01 (22/08/2026) — ponte de
     # microfone por Bluetooth (Opus tunelado em HID), POR CONTROLE. OPT-IN por
