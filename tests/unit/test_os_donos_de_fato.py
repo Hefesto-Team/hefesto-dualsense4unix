@@ -28,8 +28,8 @@ from hefesto_dualsense4unix.interface import pacotes
 #: Os dois da mesa dela, com a máscara da casa. O `AZUL` está no RÁDIO e é o
 #: primário; o `VERMELHO` está no CABO e NÃO é jogador do co-op — é a
 #: configuração exata que derrubou o fato "no rádio o player volta None".
-AZUL = "444600000203"
-VERMELHO = "d42f00000048"
+AZUL = "aabbcc000001"
+VERMELHO = "aabbcc000002"
 
 
 def _controle(
@@ -231,20 +231,22 @@ class TestDegradacaoDe:
 #: `jogador_de`: ali o dicionário não é um controle, é uma entrada de
 #: `rumble_ff.per_vpad`, cuja chave `player` é o número do GAMEPAD VIRTUAL.
 #: Trocá-la por `player_slot` casaria o vpad errado.
+#: ATUALIZADA NA INTEGRAÇÃO DE 02/09/2026, e a dívida CAIU de sete para três.
+#: As quatro que morreram (`a01_jogar.py:48`, `a04_iluminacao.py:89`, `:90` e
+#: `:221`) morreram porque as frentes das abas 01 e 04 migraram para os donos na
+#: MESMA leva — o `or 1` do `:221`, que era POSIÇÃO disfarçada de default, foi
+#: junto. As três que sobram mudaram só de LINHA, e as razões são as mesmas.
+#:
+#: A ÂNCORA POR `arquivo:linha` É FRÁGIL DE PROPÓSITO: uma exceção que se mexe
+#: tem de ser reconferida, e foi assim que esta lista revelou, no merge, que
+#: metade dela já não existia. O preço é reescrevê-la a cada leva que toca os
+#: pacotes; o ganho é que ela não guarda fantasma.
 EXCECOES_DATADAS: dict[str, str] = {
-    "a01_jogar.py:48": "escreve o campo `jogador`; migra para `jogador_de` na ONDA das abas",
-    "a04_iluminacao.py:89": "escreve o campo `identidade`; idem",
-    "a04_iluminacao.py:90": "publica o cru para o botão do player; idem",
-    "a05_vibracao.py:52": (
+    "a05_vibracao.py:82": (
         "NÃO é controle: casa a entrada de `rumble_ff.per_vpad` pelo número do vpad"
     ),
-    "a05_vibracao.py:306": "lê o `player` do controle para casar com o vpad acima; migra junto",
-    "a04_iluminacao.py:241": "lê o `player` do CLIQUE (`o`), não do controle — não é state_full",
-    "a04_iluminacao.py:221": (
-        "`player_slot or player or 1` — a ordem JÁ é a certa, feita à mão. "
-        "Migra para `jogador_de` para o `or 1` morrer junto: é POSIÇÃO "
-        "disfarçada de default"
-    ),
+    "a05_vibracao.py:376": "lê o `player` do controle para casar com o vpad acima; migra junto",
+    "a04_iluminacao.py:413": "lê o `player` do CLIQUE (`o`), não do controle — não é state_full",
 }
 
 #: A leitura crua a caçar. `player_slot` está de fora: ele é a chave que a GTK lê

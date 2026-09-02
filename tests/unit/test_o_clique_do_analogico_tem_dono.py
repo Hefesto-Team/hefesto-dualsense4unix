@@ -17,8 +17,8 @@ O QUE ELA COBRA, e o item 3 é o que dói:
    (`daemon/ipc_handlers.py:3379-3383`), e foi assim que a mesa dela estava
    medida em 02/09/2026 às 04:23:
 
-       uniq 444648e64203 · bt  · is_primary True  · inputs presente · buttons []
-       uniq d42f4b4846d8 · usb · is_primary False · inputs None
+       uniq aabbcc000001 · bt  · is_primary True  · inputs presente · buttons []
+       uniq aabbcc000002 · usb · is_primary False · inputs None
 
    Dizer "solto" sobre `None` é a tela afirmando uma leitura que ninguém fez —
    o mesmo defeito que `mesa_viva.SEM_LEITOR` nomeia: *"nunca o último valor

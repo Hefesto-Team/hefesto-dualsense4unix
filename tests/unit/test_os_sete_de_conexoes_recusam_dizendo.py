@@ -65,8 +65,8 @@ GABINETE = {
                "3": {"caminho": None}},
 }
 
-UNIQ_RADIO = "444648e64203"
-UNIQ_CABO = "d42f4b4846d8"
+UNIQ_RADIO = "aabbcc000001"
+UNIQ_CABO = "aabbcc000002"
 #: A mesa de 02/09, lida do daemon vivo. O do CABO é o não-primário, e é ele
 #: que volta `player: None` — a assinatura é `is_primary`, não o transporte.
 CONECTADOS = [

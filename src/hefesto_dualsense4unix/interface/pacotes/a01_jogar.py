@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import Contexto, registrar
+from . import Contexto, jogador_de, registrar
 
 
 @registrar("01-jogar.html")
@@ -45,7 +45,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         nome = casa.get("nome") or "—"
         via = casa.get("via") or (c.get("transport") or "").upper()
         cartoes[uniq] = {
-            "jogador": f"Player {c.get('player') or '—'}",
+            # `jogador_de` E NÃO `c.get("player")`: o daemon publica DUAS
+            # chaves, e o `player` volta `None` no controle que o co-op não
+            # numerou — medido em 02/09/2026 com o do CABO. Ler só ele escrevia
+            # "Player —" na tela para um controle que a Iluminação, três linhas
+            # abaixo, mostrava com o botão 2 ACESO. O dono lê `player_slot`
+            # antes, que é a ordem da GTK (`controller_card.py:1059-1067`).
+            "jogador": f"Player {jogador_de(c) or '—'}",
             "bateria": f"{c.get('battery_pct')}%" if c.get("battery_pct") is not None else "—",
             "identidade": f"{nome} · {via}",
         }

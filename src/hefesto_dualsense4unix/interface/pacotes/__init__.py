@@ -263,8 +263,8 @@ def jogador_de(c: dict[str, Any]) -> int | None:
     MAPA e a ROTA-C diziam *"no rádio o `player` volta None"*. **Não é o
     transporte.** O que se mediu foi:
 
-        uniq 444648e64203 · bt  · player 1    · player_slot 1 · is_primary TRUE
-        uniq d42f4b4846d8 · usb · player None · player_slot 2 · is_primary false
+        uniq 444648000003 · bt  · player 1    · player_slot 1 · is_primary TRUE
+        uniq d42f4b0000d8 · usb · player None · player_slot 2 · is_primary false
 
     O ``None`` está no controle do CABO. A condição real está escrita em
     ``daemon/subsystems/coop.CoopManager.player_indexes``: *"Só entra quem o

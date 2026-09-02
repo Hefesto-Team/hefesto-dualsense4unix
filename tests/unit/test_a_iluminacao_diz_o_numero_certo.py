@@ -7,8 +7,8 @@ dois lugares, duas respostas.
 
 A CAUSA, medida contra o daemon vivo::
 
-    uniq 444648e64203 · bt  · player 1    · player_slot 1 · is_primary True
-    uniq d42f4b4846d8 · usb · player None · player_slot 2 · is_primary False
+    uniq aabbcc000001 · bt  · player 1    · player_slot 1 · is_primary True
+    uniq aabbcc000002 · usb · player None · player_slot 2 · is_primary False
 
 ``a04_iluminacao.py:89`` lia só ``player``, que é ``None`` para quem não é
 jogador do co-op. E o motor tem UM dono para essa pergunta desde a COR-01/D6 —
