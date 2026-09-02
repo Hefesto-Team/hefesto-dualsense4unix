@@ -136,7 +136,8 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
     assert no_html <= com_dono, (
         f"a página tem gestos que ninguém atende: {sorted(no_html - com_dono)}")
     assert com_dono - no_html <= {"consertar", "ver-o-que-impede",
-                                  "tirar-daqui", "voltar-a-usar"}, (
+                                  "tirar-daqui", "voltar-a-usar",
+                                  "voltar-a-perguntar"}, (
         f"estes gestos têm dono e não aparecem em estado nenhum da página: "
         f"{sorted(com_dono - no_html)}")
 
@@ -355,9 +356,11 @@ def _gesto(nome):
     return fn
 
 
-@pytest.mark.parametrize("nome", ["tirar-daqui", "voltar-a-usar"])
+@pytest.mark.parametrize("nome", ["tirar-daqui", "voltar-a-usar",
+                                  "voltar-a-perguntar"])
 def test_o_gesto_sem_appid_recusa_e_nao_escreve(nome, ctx, monkeypatch):
     """Um clique sem `data-v` tiraria um jogo escolhido por acaso."""
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     def _nunca(*a, **kw):
@@ -365,6 +368,7 @@ def test_o_gesto_sem_appid_recusa_e_nao_escreve(nome, ctx, monkeypatch):
 
     monkeypatch.setattr(slo, "marcar_jogo_sem_wrapper", _nunca)
     monkeypatch.setattr(slo, "desmarcar_jogo_sem_wrapper", _nunca)
+    monkeypatch.setattr(lwd, "remove_dismissed_appid", _nunca)
     with pytest.raises(ValueError):
         _gesto(nome)(ctx, {"controle": "p1", "texto": "x"}, None)
 
@@ -448,12 +452,16 @@ def test_esta_regua_nao_alcanca_a_biblioteca_dela():
         "`conftest` caiu, e um teste desta aba passaria a ler a biblioteca dela")
 
 
-def test_o_piso_de_gestos_da_aba_e_seis(a07):
-    """Ele SÓ SOBE. Uma queda não aparece na tela: o clique não faz nada."""
+def test_o_piso_de_gestos_da_aba_e_sete(a07):
+    """Ele SÓ SOBE. Uma queda não aparece na tela: o clique não faz nada.
+
+    SUBIU DE SEIS PARA SETE em 02/09/2026, com o "Voltar a perguntar" que a
+    decisão dela mandou nascer.
+    """
     import pacotes
 
     quantos = sum(1 for (p, _) in pacotes.GESTOS if p == PAGINA)
-    assert quantos >= a07.PISO_DA_ABA == 6, (
+    assert quantos >= a07.PISO_DA_ABA == 7, (
         f"{PAGINA} tem {quantos} gestos com dono e o piso é {a07.PISO_DA_ABA}")
 
 
@@ -556,6 +564,29 @@ def test_o_cartao_achado_e_o_nao_achado_dizem_coisas_diferentes(desenho):
         "conferir a resposta sem acreditar em mim")
 
 
+def test_o_botao_de_abrir_fica_nos_cinco_cartoes_nos_tres_estados(desenho):
+    """DECISÃO DELA, 02/09/2026: o botão volta, e nos três estados.
+
+    A tarde de 02/09 tirou o "Abrir o lançador" do cartão `NÃO ACHEI` — pelo
+    argumento (bom) de que abrir um lançador ausente é botão que finge. **O
+    argumento não é o ponto:** o desenho que ela aprovou tem o botão nos cinco
+    cartões, e uma frente não tira um botão da tela dela por conta própria. Se
+    ele deve sumir, quem diz é ela.
+
+    A MORDIDA: volte `acoes=()` ao ramo `not onde` de `cartao_sem_censo` e este
+    teste reprova nomeando o estado.
+    """
+    item = next(x for x in desenho.SEM_FONTE if x.chave == "retroarch")
+    for estado, onde in (("ainda não procurei", None),
+                         ("procurei e não achei", ""),
+                         ("achei aqui", "/usr/bin/retroarch")):
+        cartao = desenho.cartao_sem_censo(item, onde)
+        html = desenho.acoes_html(cartao)
+        assert "Abrir o lançador" in html, (
+            f"o cartão em '{estado}' perdeu o botão que o desenho dela tem — "
+            f"ela não decidiu isso")
+
+
 def test_a_contagem_do_topo_conta_presenca_e_nao_selo(desenho):
     """`N encontrados` responde "quantos estão aqui", não "em quantos eu sei".
 
@@ -578,13 +609,19 @@ def test_nenhuma_fileira_de_botoes_vira_travessao(desenho):
     de valor, errado para um contêiner de HTML. Enquanto a raiz não é curada
     (`hefesto_vivo.py`, fora do território desta aba), o desenho não pode emitir
     string vazia num alvo `html`.
+
+    NENHUM CARTÃO CHEGA A ESTE ESTADO HOJE, e é por isso que a régua mede a
+    FUNÇÃO e não um cartão: desde a decisão dela de 02/09 os seis cartões têm
+    pelo menos um botão. A guarda fica porque `acoes_html` é pública e o dia em
+    que um cartão nascer sem fileira o traço volta calado — foi assim que ele
+    apareceu em quatro cartões de uma vez.
     """
-    item = next(x for x in desenho.SEM_FONTE if x.chave == "retroarch")
-    vazio = desenho.acoes_html(desenho.cartao_sem_censo(item, ""))
+    vazio = desenho.acoes_html(
+        desenho.Lancador(chave="x", nome="X", selo="off", jogos="—", diz=""))
     assert vazio, "a fileira vazia voltou a ser string vazia — a tela mostra `—`"
-    assert "<button" not in vazio, "um botão apareceu num cartão sem o que abrir"
-    assert desenho.valores_do_cartao(
-        desenho.cartao_sem_censo(item, ""))["retroarch-acoes"] == vazio
+    assert "<button" not in vazio, "a fileira sem ações inventou um botão"
+    assert vazio.strip().startswith("<!--"), (
+        f"a fileira vazia virou texto na tela: {vazio!r}")
 
     lida = desenho.Leitura(com_wrapper=("1",), instalados=1)
     steam = desenho.valores_do_cartao(desenho.cartao_da_steam(lida))
@@ -724,14 +761,168 @@ def test_o_valor_pintado_e_o_valor_da_grade_sao_a_mesma_coisa(a07, desenho):
 
 
 # --------------------------------------------------------------------------
+# 6b. O LAÇO INFINITO: a marcação tem de VOLTAR IGUAL do DOM
+#
+# O piloto só reescreve quando `innerHTML !== valor` (`hefesto_vivo.py:160` no
+# campo, `:303` no bloco). O lado esquerdo é o que o DOM **devolve**, não o que
+# se escreveu — então uma grafia que o DOM normaliza nunca casa, e a reescrita
+# não para NUNCA: 2 por segundo, para sempre, matando o foco e o `:hover` de
+# quem estiver com o mouse num botão.
+#
+# `test_o_valor_pintado_e_o_valor_da_grade_sao_a_mesma_coisa` NÃO ALCANÇA ISTO:
+# ele compara os dois lados PYTHON, e os dois estão igualmente errados. O que
+# falta é o terceiro lado — o DOM.
+# --------------------------------------------------------------------------
+#: AS TAGS QUE NÃO TÊM FECHAMENTO. Nenhuma aparece nos cartões hoje; a lista
+#: existe para o instrumento não inventar um `</br>` no dia em que uma aparecer.
+_VAZIAS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
+           "meta", "source", "track", "wbr"}
+
+
+def _como_o_dom_devolve(marcacao: str) -> str:
+    """Reserializa a marcação pelas regras que o WEBKIT DELA usa. É medida.
+
+    A TABELA NÃO FOI DEDUZIDA DA ESPECIFICAÇÃO — foi MEDIDA em 02/09/2026 no
+    WebKit da janela do produto, com um `<div>` solto recebendo `innerHTML` e
+    devolvendo `innerHTML`, para os seis caracteres nas duas grafias (28 casos):
+
+        ==========  ==================  ==================
+        caractere   em TEXTO            em ATRIBUTO
+        ==========  ==================  ==================
+        ``&``       ``&amp;``           ``&amp;``
+        ``<``       ``&lt;``            ``&lt;``
+        ``>``       ``&gt;``            ``&gt;``
+        U+00A0      ``&nbsp;``          ``&nbsp;``
+        ``"``       **cru**             ``&quot;``
+        ``'``       **cru**             **cru**
+        ==========  ==================  ==================
+
+    O `<` e o `>` no atributo surpreendem — a especificação de serialização não
+    os manda escapar, e o WebKit escapa. É exatamente por isso que a tabela é
+    medida e não lembrada: um instrumento que seguisse a especificação diria que
+    `data-v="a&lt;b"` pinga-pongue, e ele não pinga.
+    """
+    from html.parser import HTMLParser
+
+    def texto(s: str) -> str:
+        return (s.replace("&", "&amp;").replace("<", "&lt;")
+                 .replace(">", "&gt;").replace("\u00a0", "&nbsp;"))
+
+    def atributo(s: str) -> str:
+        return texto(s).replace('"', "&quot;")
+
+    class _Volta(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=True)
+            self.fora: list[str] = []
+
+        def handle_starttag(self, tag, attrs):
+            pedacos = "".join(
+                f" {n}" if v is None else f' {n}="{atributo(v)}"'
+                for n, v in attrs)
+            self.fora.append(f"<{tag}{pedacos}>")
+
+        handle_startendtag = handle_starttag
+
+        def handle_endtag(self, tag):
+            if tag not in _VAZIAS:
+                self.fora.append(f"</{tag}>")
+
+        def handle_data(self, data):
+            self.fora.append(texto(data))
+
+        def handle_comment(self, data):
+            self.fora.append(f"<!--{data}-->")
+
+    leitor = _Volta()
+    leitor.feed(marcacao)
+    leitor.close()
+    return "".join(leitor.fora)
+
+
+#: OS NOMES QUE QUEBRAM O ROUND-TRIP, e nenhum é inventado: o apóstrofo está em
+#: `Assassin's Creed` e em `Marvel's Spider-Man`; a aspa e o `&` aparecem em
+#: título de demo e de coletânea. A biblioteca dela tem 63 aplicativos com a
+#: linha de inicialização — basta UM.
+_NOMES_QUE_MORDEM = ("Assassin's Creed", 'O jogo "bom"', "Ratchet & Clank",
+                     "a < b > c", "espa\u00e7o\u00a0duro", "Tom Clancy's")
+
+
+@pytest.mark.parametrize("nome", _NOMES_QUE_MORDEM)
+def test_a_marcacao_volta_igual_do_dom(a07, desenho, nome):
+    """Um apóstrofo no nome de UM jogo reescrevia a GRADE INTEIRA, para sempre.
+
+    MEDIDO NA JANELA em 02/09/2026, com o piloto oculto e a MESMA carga pintada
+    seis vezes seguidas (uma pintura idempotente devolve 0 da segunda em
+    diante):
+
+        nome sem apóstrofo   →  2, 1, 1, 1, 1, 1
+        `Assassin's Creed`   →  2, 2, 2, 2, 2, 2
+
+    O `1` que sobra em todas as voltas é OUTRO defeito, do piloto, e está
+    relatado (`data-hef-visto`, `hefesto_vivo.py:150`). O `+1` do apóstrofo é
+    deste arquivo: `html.escape(quote=True)` emitia `&#x27;` e o DOM devolvia
+    `'`. As duas grafias se corrigiam eternamente.
+
+    A MORDIDA: devolva o `quote=True` ao `_e` (ou tire o `.replace('"', ...)`
+    do `_a`) e este teste reprova nomeando o trecho.
+    """
+    lida = desenho.Leitura(
+        com_wrapper=("1",), instalados=3, frase="alguma frase",
+        reparaveis=((f"2{nome}", nome, "nunca recebeu o atalho"),),
+        recusados=(("9", nome),),
+        dispensados=(("7", nome),),
+        onde_estao=(("heroic", f"/casa/{nome}/h.desktop"), ("lutris", "")))
+    cartoes = desenho.cartoes(lida)
+    carga = a07._pintura(cartoes)
+
+    alvos = {desenho.SELETOR_DA_GRADE: carga["blocos"][desenho.SELETOR_DA_GRADE]}
+    alvos.update({k: v for k, v in carga["mesa"].items()
+                  if k.endswith(("-selo", "-diz", "-acoes", "-fora"))})
+
+    for onde, marcacao in alvos.items():
+        volta = _como_o_dom_devolve(marcacao)
+        assert volta == marcacao, (
+            f"{onde} não volta igual do DOM com o nome {nome!r}. O piloto "
+            f"compara `innerHTML !== valor` como TEXTO, então ele reescreve "
+            f"este elemento a CADA TIQUE, para sempre — 2 por segundo, "
+            f"matando o foco e o `:hover` de quem estiver com o mouse num "
+            f"botão.\n  emitido: {marcacao[:160]!r}\n  do DOM:  {volta[:160]!r}")
+
+
+def test_o_instrumento_do_round_trip_morde(desenho):
+    """A régua acima só vale se ela souber reprovar. Aqui está a prova.
+
+    Um instrumento que devolvesse a entrada intacta daria VERDE sobre qualquer
+    grafia — e seria o quinto instrumento falso desta casa. Estas quatro linhas
+    são as quatro células medidas que separam texto de atributo.
+    """
+    assert _como_o_dom_devolve("<b>a&#x27;b</b>") == "<b>a'b</b>"
+    assert _como_o_dom_devolve("<b>a&quot;b</b>") == '<b>a"b</b>'
+    assert _como_o_dom_devolve('<b x="a&#x27;b"></b>') == '<b x="a\'b"></b>'
+    assert _como_o_dom_devolve('<b x="a&quot;b"></b>') == '<b x="a&quot;b"></b>'
+    assert _como_o_dom_devolve("<b>a\u00a0b</b>") == "<b>a&nbsp;b</b>"
+    # e o que JÁ estava certo continua certo — senão a régua acusaria a cura
+    assert _como_o_dom_devolve("<b>a&amp;b</b>") == "<b>a&amp;b</b>"
+    assert _como_o_dom_devolve('<b x="a&lt;b"></b>') == '<b x="a&lt;b"></b>'
+    assert _como_o_dom_devolve("<!-- nada -->") == "<!-- nada -->"
+
+
+# --------------------------------------------------------------------------
 # 7. as duas leituras do disco que tela NENHUMA mostrava
 # --------------------------------------------------------------------------
 def test_os_jogos_dispensados_do_lembrete_aparecem_na_lista(desenho):
-    """O `launch_dialog_dismissed.json` ganha a primeira tela da casa.
+    """O `launch_dialog_dismissed.json` ganha a primeira tela da casa — E A VOLTA.
 
     A escrita tinha dono (o botão "Não perguntar para este jogo" do lembrete da
     GTK) e a LEITURA não tinha nenhuma: clicar produzia um silêncio permanente
     que ninguém podia consultar depois.
+
+    A LINHA GANHOU BOTÃO EM 02/09/2026, por decisão dela — e ele só pôde nascer
+    porque `launch_wrapper_dialog` ganhou o `remove_dismissed_appid` que lhe
+    faltava. Esta régua guarda os dois lados: a linha tem de mostrar o botão, e
+    o botão tem de apontar para um gesto com dono. Um `data-gesto` que ninguém
+    atende some no clique.
     """
     lida = desenho.Leitura(com_wrapper=("1",), instalados=1,
                            dispensados=(("4242", "Jogo Dispensado"),))
@@ -739,9 +930,72 @@ def test_os_jogos_dispensados_do_lembrete_aparecem_na_lista(desenho):
         desenho.cartao_da_steam(lida))["steam-fora"]
     assert "Jogo Dispensado" in fora and "não perguntar mais" in fora, (
         "o jogo dispensado não aparece na lista do cartão da Steam")
-    assert 'data-v="4242"' not in fora, (
-        "a linha do dispensado ganhou botão — e `launch_wrapper_dialog` não "
-        "tem `remove_dismissed_appid`: o clique não teria o que chamar")
+    assert 'data-gesto="voltar-a-perguntar" data-v="4242"' in fora, (
+        "a linha do dispensado voltou a ser um beco sem saída — dispensar "
+        "é um gesto sem volta pela tela, e a única saída era editar o "
+        "`launch_dialog_dismissed.json` à mão")
+    assert "Voltar a perguntar" in fora, "o botão da linha ficou sem rótulo"
+    _gesto("voltar-a-perguntar")  # ele existe e tem dono, ou isto levanta
+
+
+def test_voltar_a_perguntar_escreve_no_arquivo_de_verdade(ctx):
+    """O par completo da dispensa, contra o JSON do lar de mentira.
+
+    O `conftest.py` desta casa desvia `HOME` e os quatro `XDG_*`, então este
+    teste escreve num arquivo temporário — nunca no dela. É a prova mais forte
+    que este botão pode ter: não *"a função foi chamada"*, mas **o arquivo
+    mudou**.
+
+    A MORDIDA: troque o corpo de `remove_dismissed_appid` por `return True` e
+    este teste reprova — o botão diria que desfez, e o jogo continuaria
+    dispensado para sempre.
+    """
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+
+    assert lwd.load_dismissed_appids() == set(), "o lar de mentira nasceu sujo"
+
+    lwd.add_dismissed_appid("1070560")
+    assert "1070560" in lwd.load_dismissed_appids()
+
+    _gesto("voltar-a-perguntar")(ctx, {"v": "1070560"}, None)
+    assert "1070560" not in lwd.load_dismissed_appids(), (
+        "o gesto disse que aplicou e o `launch_dialog_dismissed.json` continua "
+        "com o appid — o lembrete fica desligado para sempre")
+
+
+def test_voltar_a_perguntar_recusa_dizendo_quando_o_arquivo_nao_aceita(
+        ctx, monkeypatch):
+    """Um clique que falha calado é o defeito mais caro desta casa.
+
+    `add_dismissed_appid` engole a falha de propósito (roda no tique, e o pior
+    caso é o lembrete voltar uma vez). O `remove` roda no CLIQUE DELA: se ele
+    engolisse, a linha continuaria na tela e o segundo clique pareceria o
+    primeiro. Por isso ele devolve `bool` e o gesto levanta `RuntimeError`.
+
+    A MORDIDA: faça `remove_dismissed_appid` devolver `None` sempre e o gesto
+    parar de conferir — este teste reprova.
+    """
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+
+    monkeypatch.setattr(lwd, "remove_dismissed_appid", lambda a: False)
+    with pytest.raises(RuntimeError, match="dispensados"):
+        _gesto("voltar-a-perguntar")(ctx, {"v": "4242"}, None)
+
+
+def test_remover_um_appid_que_nao_estava_na_lista_devolve_falso():
+    """`False` também quando não havia o que remover — e é a mesma verdade.
+
+    Para quem clicou, *"o arquivo não aceitou"* e *"o appid já não estava lá"*
+    dizem a mesma coisa: **nada mudou por causa deste clique**. Devolver `True`
+    aqui faria a tela dizer que desfez algo que ela não desfez.
+    """
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+
+    assert lwd.remove_dismissed_appid("999999") is False
+    lwd.add_dismissed_appid("111")
+    assert lwd.remove_dismissed_appid("111") is True
+    assert lwd.remove_dismissed_appid("111") is False, (
+        "o segundo clique na mesma linha disse que desfez de novo")
 
 
 def test_a_ponte_confirmada_volta_ao_carimbo(desenho):
