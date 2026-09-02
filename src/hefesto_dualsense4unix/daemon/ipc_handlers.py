@@ -751,6 +751,19 @@ class IpcHandlersMixin:
     #: a task no meio do caminho; volta a None quando ela termina.
     _launch_arm_task: Any = None
 
+    #: ROTA-A (02/09/2026): a IDENTIDADE DE FÁBRICA por `uniq` — `{serial,
+    #: modelo}`, os dois `None` até o aparelho responder. **Cache de SESSÃO, sem
+    #: TTL**, e a ausência de TTL é o ponto: o serial está gravado no firmware e
+    #: não muda; reperguntar seria mandar um `SET_FEATURE` da família `0x80` de
+    #: novo, a mesma em que um par errado RESETA o controle.
+    #:
+    #: `_identidade_em_voo` é o guarda de reentrância: o `state_full` roda a
+    #: 10 Hz e sem ele a mesma pergunta sairia dez vezes por segundo enquanto a
+    #: primeira ainda não voltou. Mesmo padrão de class attribute dos caches
+    #: acima (o mixin não é dataclass), com shadow por instância no primeiro uso.
+    _identidade_de_fabrica_cache: dict[str, dict[str, str | None]] | None = None
+    _identidade_em_voo: set[str] | None = None
+
     #: S2 (sensores na aba Status): `SensorHub` lazy — os readers de
     #: giroscópio/touchpad só nascem quando alguém pede o `state_full` e
     #: morrem sozinhos quando param de ser pedidos. Mesmo padrão dos caches
@@ -3260,6 +3273,10 @@ class IpcHandlersMixin:
         Campos novos (sempre presentes — shape estável para GUI/CLI/applet;
         os campos PRÉ-existentes não mudam):
 
+        - ``serial``/``modelo``/``nome_declarado`` (ROTA-A, 02/09/2026): QUEM É
+          este aparelho, e nunca a posição dele na lista. Ver
+          :meth:`_identidade_publicada` — os três nascem ``None`` e só saem do
+          ``None`` com fonte.
         - ``player_slot``: número de sessão do CONTROLE (COR-01/D6), do
           `identity_registry` do daemon — consulta DEFENSIVA com
           ``assign=False`` (ler estado nunca aloca slot). O registry é
@@ -3366,6 +3383,10 @@ class IpcHandlersMixin:
 
             entry["player_slot"] = self._player_slot_for(uniq)
 
+            # ROTA-A: QUEM É ESTE APARELHO. Três chaves, sempre presentes,
+            # sempre `None` quando não se sabe — ver `_identidade_publicada`.
+            entry.update(self._identidade_publicada(entry, uniq))
+
             rgb, on, source = self._lightbar_for_uniq(
                 uniq, node_by_uniq, written_by_uniq
             )
@@ -3391,6 +3412,125 @@ class IpcHandlersMixin:
                 backend, motivo = vpad_by_uniq[uniq]
             entry["vpad_backend"] = backend
             entry["vpad_motivo"] = motivo
+
+    def _identidade_publicada(
+        self, entry: dict[str, Any], uniq: str | None
+    ) -> dict[str, str | None]:
+        """``{serial, modelo, nome_declarado}`` deste controle. ``None`` = não sei.
+
+        ROTA-A (02/09/2026). O defeito que ela viu: com UM controle o do cabo
+        chamava-se "Starlight Blue"; com DOIS, o MESMO cabo virou "Cosmic Red".
+        **O nome vinha da POSIÇÃO na lista**, porque o daemon publicava `uniq`,
+        `transport`, `battery_pct`, `player`, `player_slot`, `lightbar_*`,
+        `inputs`, `audio`, `speaker`, `vpad_*` — e NADA que identificasse o
+        aparelho. Quem desenha a tela não tinha alternativa senão inventar.
+
+        As três chaves, e cada uma tem fonte diferente:
+
+        * ``nome_declarado`` — **o que ELA nomeou**, de `maquina.json`
+          (`controles[<uniq>].cor`, texto livre, decisão C2). Zero I/O aqui: o
+          daemon já carrega o documento em `_maquina` no boot e o REBINDA no
+          "Aplicar" do `machine.declare`;
+        * ``modelo`` — o nome de fábrica decodificado dos caracteres 5 e 6 do
+          serial (`integrations/cor_do_plastico`);
+        * ``serial`` — o serial de fábrica de 17 caracteres, cru.
+
+        **A DISCIPLINA É `None`, e ela é o ponto inteiro desta onda.** Um
+        ``modelo=None`` honesto vira travessão na tela; um modelo inventado é
+        exatamente o defeito que se está curando. Não há default, não há queda
+        para "DualSense", não há tabela por VID/PID.
+
+        **POR QUE A LEITURA É DAQUI, e não de um instrumento paralelo:** ler o
+        serial é um `SET_FEATURE` da família `0x80`, e a armadilha nº 3 desta
+        casa é o instrumento que disputa o hidraw com o daemon e imprime
+        "aplicado" sem ter aplicado. O daemon é quem tem o aparelho.
+
+        **E POR QUE ELA NÃO ACONTECE NESTA FUNÇÃO:** este handler roda a 10 Hz.
+        A leitura sai numa thread de UMA VEZ por `uniq` (`_identidade_em_voo`
+        impede a segunda), o resultado fica em cache de sessão sem TTL — o
+        serial está no firmware e não muda — e o tique publica o que já se sabe.
+        Enquanto não voltar, sai ``None``, que é a verdade daquele instante.
+        """
+        declarado: str | None = None
+        maquina = getattr(self.daemon, "_maquina", None) if self.daemon else None
+        controles = getattr(maquina, "controles", None)
+        if uniq and isinstance(controles, dict):
+            declaracao = controles.get(uniq)
+            bruto = getattr(declaracao, "cor", None)
+            declarado = bruto.strip() if isinstance(bruto, str) and bruto.strip() else None
+
+        de_fabrica = self._identidade_de_fabrica(uniq, entry)
+        return {
+            "serial": de_fabrica["serial"],
+            "modelo": de_fabrica["modelo"],
+            "nome_declarado": declarado,
+        }
+
+    def _identidade_de_fabrica(
+        self, uniq: str | None, entry: dict[str, Any]
+    ) -> dict[str, str | None]:
+        """``{serial, modelo}`` do cache de sessão, disparando a leitura se faltar.
+
+        Nunca bloqueia e nunca levanta. Ver :meth:`_identidade_publicada` para o
+        contrato e para a razão de a leitura sair numa thread.
+        """
+        vazio: dict[str, str | None] = {"serial": None, "modelo": None}
+        if not uniq or not entry.get("connected"):
+            return dict(vazio)
+        cache = self._identidade_de_fabrica_cache
+        if cache is None:
+            cache = {}
+            self._identidade_de_fabrica_cache = cache
+        pronto = cache.get(uniq)
+        if pronto is not None:
+            return dict(pronto)
+        em_voo = self._identidade_em_voo
+        if em_voo is None:
+            em_voo = set()
+            self._identidade_em_voo = em_voo
+        if uniq in em_voo:
+            return dict(vazio)
+        em_voo.add(uniq)
+        with contextlib.suppress(Exception):
+            import threading
+
+            threading.Thread(
+                target=self._perguntar_identidade,
+                args=(uniq,),
+                name=f"identidade-{uniq[:6]}",
+                daemon=True,
+            ).start()
+        return dict(vazio)
+
+    def _perguntar_identidade(self, uniq: str) -> None:
+        """A leitura, fora do laço. Grava no cache MESMO quando não sabe.
+
+        Gravar o "não sei" é o que impede a pergunta de voltar a cada tique num
+        controle que não pode responder (o do rádio, hoje: o filtro de cabo mora
+        em `cor_do_plastico.no_do_controle`). Sem isto, o guarda de reentrância
+        soltaria uma thread nova a cada 100 ms para sempre.
+        """
+        serial: str | None = None
+        modelo: str | None = None
+        try:
+            from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+                ler_identidade_pelo_cabo,
+            )
+
+            achado = ler_identidade_pelo_cabo(uniq)
+            serial = achado.serial
+            modelo = None if achado.cor is None else achado.cor.nome
+        except Exception as erro:  # defensivo — jamais derruba o daemon
+            logger.debug("identidade_de_fabrica_falhou", uniq=uniq, erro=str(erro))
+        finally:
+            cache = self._identidade_de_fabrica_cache
+            if cache is None:
+                cache = {}
+                self._identidade_de_fabrica_cache = cache
+            cache[uniq] = {"serial": serial, "modelo": modelo}
+            em_voo = self._identidade_em_voo
+            if em_voo is not None:
+                em_voo.discard(uniq)
 
     def _merge_sensores(self, entry: dict[str, Any], uniq: str | None) -> None:
         """Acrescenta `gyro`/`touchpad` ao `inputs` deste controle (S2).
