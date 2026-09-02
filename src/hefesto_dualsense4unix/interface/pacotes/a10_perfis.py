@@ -38,6 +38,17 @@ A SEGUNDA LEVA SÓ FOI POSSÍVEL POR TRÊS CORREÇÕES, e nenhuma é do daemon:
 OS DOIS QUE CONTINUAM SEM DONO — `recarregar` e `editor.estilo` — estão com o
 motivo medido logo acima do `PONTE`, no fim deste arquivo.
 
+A LISTA PASSOU A CABER INTEIRA — 02/09/2026. O `<tbody>` publicado tem catorze
+linhas porque catorze cabiam na figura, e a pasta dela tem **33 perfis**: os
+outros dezenove não existiam na tela, e com eles nove dos dez botões desta aba,
+que agem sobre o perfil ESCOLHIDO. A lista virou um `blocos` — ver
+`_html_da_lista`, que também explica por que a régua do mockup não conta esta
+entrega.
+
+E A ABA PAROU DE PERGUNTAR SÓ AO DAEMON quem está valendo — ver `_valendo`. Com
+`active_profile: null`, que é o estado da máquina dela hoje, três guardas se
+desligavam ao mesmo tempo.
+
 O QUE ESTA ABA NÃO SABE FAZER, e é o teto de tudo o que está acima: **o daemon
 não tem `profile.save` nem `profile.delete`.** Os 39 métodos que ele atende
 trazem só `profile.switch`, `profile.list` e `profile.apply_draft` — gravar e
@@ -141,7 +152,6 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:     guarda.linhas            tbody            1       4  as 4 linhas, com 24 endereços
 #:     guarda.secao             span            16       2  o glifo SVG da seção
 #:     editor.prioridade.dica   span             1       2  o TRILHO e o número ao lado
-#:     editor.prioridade        span             1       0  (nada some — mas ver abaixo)
 #:
 #: **É ISTO QUE ELA FOTOGRAFOU.** A tabela `Controle / Ajuste próprio / ID da
 #: peça` mostrando um `2` sozinho é o `guarda.linhas` escrevendo `"2"` no
@@ -150,17 +160,20 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #: a frase dela, *"esse texto em perfis nem faz sentido mais"*, é sobre uma
 #: FRASE QUE ENGOLIU UM CONTROLE DESLIZANTE, não sobre o texto em si.
 #:
-#: `editor.prioridade` é o único que não apaga nada, e mesmo assim sai: ele é a
-#: LARGURA do trilho (`style="width:90%"`), e sem `data-hef-alvo="largura"` no
-#: HTML o pintor escreve `"0%"` como TEXTO dentro de uma barra de 5px, deixando
-#: a largura no 90% do desenho. Uma barra em 90% para um perfil que está em
-#: 1 de 200 é a tela afirmando o que não mediu. Quem diz a verdade hoje é o
-#: `editor.prioridade.n`, que é um `<span>` sem filhos e recebe o número certo.
+#: FATO DERRUBADO — 02/09/2026, e o enunciado desta frente o repetia. Aqui
+#: estava escrito que `editor.prioridade` também não sai, porque o
+#: `data-hef-alvo="largura"` estaria *"já escrito na BANCADA (`aba10.py`),
+#: esperando o ato de publicar DELA"*. **Ela já publicou.** O commit `70b58116`
+#: levou a aba inteira ao produto, e o atributo está na linha 1162 das DUAS
+#: páginas — a bancada e a publicada, que hoje são byte-idênticas
+#: (`diff mockup/10-perfis.html interface/paginas/10-perfis.html` é vazio, e
+#: `mockup/DIVERGENCIAS.md` não tem seção da aba 10). Enquanto este nome ficou
+#: na lista, a barra da prioridade continuou nos 90% do desenho para um perfil
+#: em 1 de 200 — a tela afirmando o que não mediu, com o conserto no disco há
+#: um commit. Ele SAI da lista, e o `escrever()` do piloto escreve a largura.
 #:
-#: **PARA DESTRAVAR**, e cada um tem um dono diferente:
+#: **PARA DESTRAVAR OS QUE FICAM**, e cada um tem um dono diferente:
 #:
-#:   editor.prioridade   `data-hef-alvo="largura"` no gerador — já escrito na
-#:                       BANCADA (`aba10.py`), esperando o ato de publicar DELA.
 #:   guarda.secao        o pintor precisa de um alvo que ligue/desligue CLASSE:
 #:                       aceso é `.gr.on`, apagado é `.gr`, e nenhum dos cinco
 #:                       alvos de hoje (texto·largura·fundo·valor·html) alcança
@@ -168,10 +181,11 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:                       frente; a peça está pedida ao orquestrador.
 #:   guarda.linhas       não tem conserto e não precisa: é o `<tbody>`, um
 #:                       CONTINENTE. Nunca houve valor para escrever nele.
+#:                       (A lista de perfis tinha o mesmo formato e ganhou
+#:                       conserto por OUTRA porta — ver `_html_da_lista`.)
 #:   editor.prioridade.dica  a frase já é o `title=` estático do desenho, e o
 #:                       texto novo é decisão DELA (ver a ROTA-G).
-NAO_PINTAVEIS = ("guarda.linhas", "guarda.secao",
-                 "editor.prioridade", "editor.prioridade.dica")
+NAO_PINTAVEIS = ("guarda.linhas", "guarda.secao", "editor.prioridade.dica")
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
@@ -270,6 +284,173 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{**c, "rotulo": _rotulo_curto(c)} for c in mesa]
 
 
+#: O SELETOR DO CORPO DA LISTA — CSS, e não `data-campo`: o `blocos` do piloto
+#: endereça por `document.querySelector` (`hefesto_vivo.py`, o laço
+#: `for(const [seletor, html] of Object.entries(p.blocos || {}))`).
+SELETOR_DA_LISTA = 'tbody[data-hef="perfis.lista"]'
+
+#: A INDENTAÇÃO DA LINHA no desenho: dezesseis espaços, os mesmos que
+#: `aba10.linha_do_perfil` emite. Ela não muda nada na tela — HTML come espaço
+#: em branco entre linhas de tabela —, e existe para que a régua de forma possa
+#: comparar as duas emissões CARACTERE A CARACTERE.
+_RECUO = " " * 16
+
+
+def _texto(v: Any) -> str:
+    """Um valor pronto para virar TEXTO dentro de uma célula.
+
+    ESCAPAR É OBRIGATÓRIO AQUI E NÃO ERA NO GERADOR, e a diferença é a fonte: o
+    gerador escreve os catorze nomes que ESTA CASA digitou no `PERFIS` do
+    desenho; esta função escreve os 33 que estão no disco DELA. Um perfil
+    chamado `Bail < Jail` viraria marcação no meio da linha.
+    """
+    s = str(v if v is not None else "")
+    return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+             .replace("\xa0", "&nbsp;"))
+
+
+def _atr(v: Any) -> str:
+    """Um valor pronto para virar VALOR DE ATRIBUTO — `title=`, `data-…=`.
+
+    **ESCAPA MENOS QUE O `html.escape` DO PYTHON, e isso é a cura de um defeito
+    medido, não um relaxamento.** O `blocos` do piloto só reescreve o miolo
+    quando `alvo.innerHTML !== html` — ou seja, ele compara a MINHA string com a
+    **serialização que o navegador devolve**. Escapar o que o serializador não
+    escapa faz as duas nunca baterem, e o bloco é reescrito a cada 500 ms para
+    sempre.
+
+    MEDIDO em 02/09/2026, com o piloto aberto na aba por dez segundos e com o
+    mesmo HTML injetado num Chrome de bancada (`_ferramentas` do desenho, sem
+    janela) para ler o `innerHTML` de volta:
+
+        `html.escape(quote=True)`  →  21 tiques, 17 escritas em CADA um
+        escapando como o serializador →  1 escrita, e silêncio depois
+
+    As duas divergências, e as duas são de escapar DEMAIS:
+
+        `'`   o Python manda `&#x27;`, o navegador devolve `'`   (`DON'T SCREAM`)
+        `\\n`  o Python (na minha primeira tentativa) mandava `&#10;`, o navegador
+              devolve a quebra CRUA — e a dica da disputa tem dois parágrafos
+
+    E NÃO É INSEGURO: dentro de aspas duplas, um `'` e um `<` não fecham nada —
+    quem fecha o atributo é a aspa dupla, e ela continua virando `&quot;`. É
+    exatamente o conjunto que o serializador de HTML escapa em atributo.
+
+    O CUSTO DE NÃO CURAR ISTO NÃO É SÓ O CONTADOR: reescrever o `<tbody>` a cada
+    meio segundo apaga o `:hover` da linha sob o mouse dela e desfaz qualquer
+    seleção de texto na lista — três vezes por segundo, enquanto ela procura um
+    perfil entre 33.
+    """
+    s = str(v if v is not None else "")
+    return s.replace("&", "&amp;").replace('"', "&quot;").replace("\xa0", "&nbsp;")
+
+
+def _linha_da_lista(nome: str, prioridade: str, quando: str,
+                    ativo: bool, dica: str = "") -> str:
+    """Uma linha da lista de perfis — a MESMA forma que o desenho crava.
+
+    O DONO DA FORMA CONTINUA SENDO O GERADOR, `aba10.linha_do_perfil`, cuja
+    docstring já dizia a que veio: *"a MESMA para o mockup e para a viva … a aba
+    viva precisa do desenho, não de uma cópia dele"*. Só que ele **não atravessa
+    para o produto**: `aba10.py` faz `sys.path.insert` e `from monta import …`,
+    e o `monta` lê seis arquivos do repositório no import — um gerador no
+    caminho do produto é uma janela que não abre onde não há repositório. É a
+    mesma razão pela qual o `SEPARADOR_EM_TEXTO` acima é uma constante e não um
+    import.
+
+    ENTÃO O QUE IMPEDE A SEGUNDA GRAMÁTICA É UMA RÉGUA, e não a boa vontade:
+    `test_a_lista_de_perfis_cabe_inteira.py::test_a_linha_viva_e_a_linha_do_desenho`
+    importa o gerador (no teste ele pode) e compara as duas saídas caractere a
+    caractere. Mexer no desenho da linha sem mexer aqui reprova ANTES de a tela
+    discordar de si mesma.
+
+    A ÚNICA DIVERGÊNCIA DECLARADA É O ESCAPE — ver `_texto` e `_atr`.
+    """
+    return (f'{_RECUO}<tr class="{"ativo" if ativo else ""}" '
+            f'data-hef-perfil="{_atr(nome)}" title="{_atr(dica)}">'
+            f'<td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">'
+            f'{_texto(nome)}</td>'
+            f'<td class="pri" data-hef="perfis.linha.prioridade">'
+            f'{_texto(prioridade)}</td>'
+            f'<td class="quando" data-hef="perfis.linha.quando">'
+            f'{_texto(quando)}</td></tr>')
+
+
+def _html_da_lista(lista: list[dict[str, Any]], vazia: str) -> str:
+    """As linhas da lista de perfis, TODAS — e é a maior mentira que esta aba
+    contava.
+
+    MEDIDO em 02/09/2026, na máquina dela: `load_all_profiles()` devolve **33**
+    perfis e o `<tbody>` publicado tem **14 linhas**. O contador ao lado do
+    título dizia "33 perfis" — e dizia a verdade — enquanto a tabela logo abaixo
+    mostrava catorze. **Dezenove perfis dela não tinham como ser clicados**, e
+    com eles nove dos dez botões desta aba: `ativar`, `remover`, `duplicar`,
+    `editor.nome`… todos agem sobre o perfil ESCOLHIDO, e escolher é clicar numa
+    linha que existe.
+
+    POR QUE NÃO SE PINTA CAMPO A CAMPO: é a mesma razão da fita de chips e do
+    mapa do gabinete — **um bloco cujo número de filhos muda com o dado não tem
+    endereço para o filho que ainda não existe**. A lista de perfis é o caso
+    mais puro: o desenho cravou catorze porque catorze cabiam na figura.
+
+    TRÊS COISAS CHEGAM À TELA POR AQUI E NÃO CHEGAVAM POR NENHUMA OUTRA PORTA:
+
+    1. **as linhas que faltavam** — as 19;
+    2. **a classe `ativo` na linha certa.** O desenho a crava na PRIMEIRA linha,
+       e até hoje ela ficava lá. Acertava por acidente — `ordem_de_exibicao`
+       põe o ativo em primeiro —, e mentia inteiro quando não há perfil ativo
+       nenhum: a tela realçava um perfil que não está valendo. Nenhum dos cinco
+       alvos do pintor liga uma CLASSE; o `blocos` traz a linha pronta, com a
+       classe dentro dela, e não precisa dele;
+    3. **o `title` da disputa.** `explicacao_da_disputa` existe em
+       `profiles_actions:403`, `perfis_web._linhas_da_lista` já a chamava a cada
+       tique, e o valor morria no dicionário: o `title=""` do desenho nasce
+       vazio *"porque a dica é a DISPUTA, e disputa é dado — o mockup não tem
+       nenhum"* (palavras do gerador). O dado existe desde então; faltava a
+       porta.
+
+    A LISTA VAZIA TAMBÉM É UM ESTADO, e a frase dela já estava escrita e nunca
+    tinha aparecido: `perfis_web.LISTA_VAZIA` diz o que fazer para ter o
+    primeiro perfil. Sem esta linha o `<tbody>` ficaria em branco — a tela
+    calada sobre um estado que ela sabe explicar.
+    """
+    if not lista:
+        return (f'{_RECUO}<tr class="vazia"><td colspan="3">'
+                f'{_texto(vazia)}</td></tr>')
+    return "\n".join(
+        _linha_da_lista(str(x.get("nome") or ""), str(x.get("prioridade") or ""),
+                        str(x.get("quando") or ""), bool(x.get("ativo")),
+                        str(x.get("dica") or ""))
+        for x in lista)
+
+
+def _valendo(ctx: Contexto) -> str:
+    """Qual perfil está valendo AGORA — pelo dono da pergunta, não pelo `state`.
+
+    `profiles_actions.perfil_que_esta_valendo` é o §P1 desta casa, e esta aba
+    era o lugar mais caro para não o chamar: ela lia
+    `ctx.state.get("active_profile")` cru, e a própria docstring de lá diz que o
+    daemon responder `active_profile: null` é *"o estado da máquina dela hoje"*.
+    Com o `null`, as três guardas desta aba se desligavam ao mesmo tempo:
+
+        ativar     deixava de recusar o perfil que JÁ está valendo
+        remover    deixava de recusar apagar o perfil que está valendo —
+                   e o daemon segue aplicando um arquivo que não existe mais
+        voltar…    deixava de reaplicar depois de restaurar, e o arquivo voltava
+                   ao que era com o controle no que estava
+
+    E a lista perdia o realce da linha certa. O dono consulta o daemon primeiro
+    e, só se ele calar, o marcador em disco — pelo mesmo caminho do boot
+    (`resolve_boot_profile`). Ele nunca levanta: qualquer falha de I/O vira
+    `nao_sei`, que aqui é o `""`.
+    """
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        perfil_que_esta_valendo,
+    )
+
+    return str(perfil_que_esta_valendo(ctx.state).nome or "")
+
+
 def _rotulo_do_remover() -> str:
     """"Remover", ou a PERGUNTA que a dica dela promete.
 
@@ -312,7 +493,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
     from hefesto_dualsense4unix.profiles.slug import find_by_slug
 
-    ativo = str(ctx.state.get("active_profile") or "")
+    ativo = _valendo(ctx)
     try:
         todos = load_all_profiles()
         # O `editado` FALTAVA, e o editor mostrava o perfil ERRADO — corrigido
@@ -349,13 +530,31 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # 77 `data-hef` desta aba usam ponto do começo ao fim.
     # O EDITOR TAMBÉM: sem perfil aberto, os campos vão a travessão em vez de
     # ficar com o texto do desenho.
-    for chave in ("nome", "jogo", "estilo", "ambiente", "prioridade"):
+    for chave in ("nome", "jogo", "estilo", "ambiente"):
         fora.setdefault(f"editor.{chave}", "—")
     fora.setdefault("editor.prioridade.n", "—")
     fora.setdefault("editor.prioridade.dica", "")
     for chave, valor in editor.items():
         if not isinstance(valor, (dict, list)):
             fora[f"editor.{chave.replace('_', '.')}"] = valor
+    # A BARRA NÃO RECEBE TRAVESSÃO NEM SINAL DE PORCENTO, e as duas coisas
+    # seriam o mesmo estrago — medidas ao tirar este nome de `NAO_PINTAVEIS`,
+    # em 02/09/2026. O `escrever()` do piloto faz
+    # `el.style.width = t + '%'` (`hefesto_vivo.py`, ramo `largura`) e só conta
+    # a pintura quando `el.style.width` MUDA. Um `'—'` vira `'—%'` e um `'45%'`
+    # vira `'45%%'`: as duas são CSS inválido, o navegador as recusa, a largura
+    # fica no 90% do desenho — e como `el.style.width` nunca volta igual ao que
+    # se escreveu, o contador soma +1 por tique, PARA SEMPRE. Um contador que
+    # mente é pior que uma barra parada: ele é O instrumento com que esta casa
+    # prova que um endereço existe.
+    #
+    # A CASA JÁ TINHA A CONVENÇÃO, e é número puro: `a03_gatilhos:394` manda
+    # `aj["pct"]`, que é um `round(...)` inteiro (`:325`). Quem destoa é o
+    # `perfis_web._pacote_do_editor:324`, que formata `f"{pct:.0f}%"` — e destoa
+    # sem custo desde 30/08 justamente porque este campo NUNCA foi pintado.
+    # O `%` fica lá: `prioridade` é valor do PRODUTO, e o produto o descreve com
+    # o sinal. Quem tira a casca é este achatamento, que é o que ele faz.
+    fora["editor.prioridade"] = str(editor.get("prioridade") or "0").rstrip("%")
 
     # OS TRÊS CAMPOS QUE SE PINTAM UMA VEZ SÓ — e a razão é medida, não gosto.
     # Ver `_uma_vez_so`: repintar um `<input>` a cada 500 ms apagaria o que ela
@@ -391,6 +590,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # esta lista, num lugar só, e não cada emissão espalhada pelo arquivo.
     for chave in NAO_PINTAVEIS:
         fora.pop(chave, None)
+
+    # A LISTA INTEIRA, TROCADA DE UMA VEZ — e é a maior entrega desta aba.
+    # A razão, a prova e o que chega à tela por aqui estão em `_html_da_lista`.
+    #
+    # AS TRÊS LISTAS ACIMA (`perfis.linha.*`) FICAM, e não são redundância: elas
+    # são o caminho de VOLTA. O `blocos` só pousa se `document.querySelector`
+    # achar o `<tbody>`; numa página que mude o seletor, a pintura campo a campo
+    # continua enchendo as catorze linhas do desenho. Duas portas para o mesmo
+    # dado não brigam — o `blocos` roda ANTES no laço do piloto, e a distribuição
+    # por endereço encontra os valores já no lugar e escreve zero.
+    fora["blocos"] = {SELETOR_DA_LISTA: _html_da_lista(
+        lista, str(bruto.get("lista_vazia") or ""))}
     fora["cobertura"] = {"pintados": len(fora) + len(lista) * 3, "sem_dono": 0}
     return fora
 
@@ -474,7 +685,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # (R-10, `profiles/slug.py:52`) — o mesmo cuidado do "Voltar à de ontem".
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
-    ativo = str(ctx.state.get("active_profile") or "")
+    ativo = _valendo(ctx)
     if ativo and mesmo_slug(ativo, nome):
         raise ValueError(
             f"“{nome}” já é o perfil que está valendo. Escolha outro na lista "
@@ -520,13 +731,13 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     from hefesto_dualsense4unix.profiles.loader import restaurar_do_historico
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
-    nome = _ESCOLHIDO or str(ctx.state.get("active_profile") or "")
+    nome = _ESCOLHIDO or _valendo(ctx)
     if not nome:
         raise ValueError("voltar à de ontem: escolha um perfil na lista primeiro")
     # Levanta `FileNotFoundError` quando não há versão guardada, e a frase dela
     # já diz o que houve — o histórico nasce na PRÓXIMA gravação daquele perfil.
     restaurar_do_historico(nome)
-    ativo = str(ctx.state.get("active_profile") or "")
+    ativo = _valendo(ctx)
     if ativo and mesmo_slug(ativo, nome):
         p.profile_switch(nome)
     p.chamar("launch_env.refresh")
@@ -557,7 +768,7 @@ def _perfil_do_editor(ctx: Contexto) -> str:
     É o mesmo alvo que `pacote()` manda pintar (`editado=`), e tem de ser: um
     gesto que agisse sobre outro perfil faria ela editar o que não está vendo.
     """
-    nome = _ESCOLHIDO or str(ctx.state.get("active_profile") or "")
+    nome = _ESCOLHIDO or _valendo(ctx)
     if not nome:
         raise ValueError("escolha um perfil na lista primeiro — a coluna da "
                          "esquerda; o editor abre na linha que você clicar.")
@@ -957,15 +1168,28 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     global _ARMADO, _ESCOLHIDO
     from hefesto_dualsense4unix.profiles.loader import delete_profile
-    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
     nome = _perfil_do_editor(ctx)
-    ativo = str(ctx.state.get("active_profile") or "")
-    if ativo and mesmo_slug(ativo, nome):
-        raise ValueError(
-            f"“{nome}” é o perfil que está valendo agora. Ative outro na lista "
-            f"antes de apagar este — senão o Hefesto fica aplicando um arquivo "
-            f"que não existe mais.")
+    # A FRASE É DO PRODUTO, e não desta tela — 02/09/2026, LEI 0.
+    # `frase_da_remocao_do_perfil_ativo` (`profiles_actions:633`) nasceu no §P7
+    # e é o aviso do diálogo de Remover da janela estável: três parágrafos que
+    # dizem o quê, por quê e o que fazer, na ordem que esta casa exige de toda
+    # frase de diagnóstico. Aqui havia uma SEGUNDA verdade, escrita à mão, que
+    # dizia menos — não contava que o controle segue com a cor, os gatilhos e a
+    # vibração aplicados depois de o arquivo sumir.
+    #
+    # E ELA DECIDE MELHOR QUE UM `mesmo_slug` LOCAL: recebe o `PerfilQueVale`
+    # inteiro e **cala quando a fonte é `nao_sei`** — "não sei qual está
+    # valendo" e "não há nenhum valendo" são fatos diferentes, e transformar o
+    # primeiro em recusa seria travar o Remover por ignorância nossa.
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        frase_da_remocao_do_perfil_ativo,
+        perfil_que_esta_valendo,
+    )
+
+    aviso = frase_da_remocao_do_perfil_ativo(nome, perfil_que_esta_valendo(ctx.state))
+    if aviso:
+        raise ValueError(aviso)
     agora = time.monotonic()
     armado = (_ARMADO and _ARMADO[0] == nome
               and (agora - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR)
