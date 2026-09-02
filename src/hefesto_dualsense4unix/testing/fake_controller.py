@@ -154,10 +154,14 @@ class FakeController(IController):
         self.last_player_leds = bits
         self.commands.append(FakeControllerCommand("set_player_leds", bits))
 
-    def set_mic_led(self, muted: bool) -> None:
-        """Grava histórico de chamadas para inspeção em testes (INFRA-SET-MIC-LED-01)."""
-        self.mic_led_history.append(bool(muted))
-        self.commands.append(FakeControllerCommand("set_mic_led", bool(muted)))
+    def set_mic_led(self, aceso: bool) -> None:
+        """Grava histórico de chamadas para inspeção em testes (INFRA-SET-MIC-LED-01).
+
+        `aceso` = o que a LUZ faz. Nesta casa, aceso = mic VIVO
+        (MIC-DA-MESA-ELEICAO-01) — ver `IController.set_mic_led`.
+        """
+        self.mic_led_history.append(bool(aceso))
+        self.commands.append(FakeControllerCommand("set_mic_led", bool(aceso)))
 
     def get_battery(self) -> int:
         if not self._states:

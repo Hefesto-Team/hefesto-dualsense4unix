@@ -30,6 +30,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     speaker.set          {volume?: 0-255, muted?: bool, release?: bool, uniq?}
                          -> {status, speaker}
     mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}
+    mic.led.set          {aceso: bool|null, uniq?} -> {status, aceso}
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
 
@@ -154,6 +155,12 @@ class IpcServer(IpcHandlersMixin):
             # WirePlumber e moram no `doctor --fix`; esta é a única do
             # controle, e até 25/07 só o botão físico a alcançava.
             "mic.set": self._handle_mic_set,
+            # MIC-DA-MESA-ELEICAO-01: o LED do botão de mudo, que é campo
+            # SEPARADO do mudo (`common[8]`, autorizado pelo
+            # `MIC_MUTE_LED_CONTROL_ENABLE`). `aceso: null` DEVOLVE a
+            # posse ao kernel — a única saída sem derrubar o controle, e
+            # até aqui ela não tinha um único chamador de produção.
+            "mic.led.set": self._handle_mic_led_set,
             # MIC-VOLUME-01: camada 1 (ganho da fonte no sistema),
             # separada do `mic.set`, que é camada 3 (mudo do firmware).
             "mic.volume.set": self._handle_mic_volume_set,

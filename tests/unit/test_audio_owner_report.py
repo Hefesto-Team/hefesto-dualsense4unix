@@ -131,17 +131,35 @@ def test_none_devolve_a_posse(handle: Any) -> None:
     assert common[0] & rep.VALID_FLAG0_AUDIO_MASK == 0
 
 
-def test_captura_do_byte_de_status_usa_o_indice_54(handle: Any) -> None:
-    """AUDIO-STATUS-01: índice 54 do `states` normalizado, USB e BT.
+def test_captura_do_byte_de_status_le_o_report_cru(handle: Any) -> None:
+    """AUDIO-STATUS-01, com a disciplina que faltava (MIC-DA-MESA-ELEICAO-01).
 
-    Validado ao vivo no report cru BT (offset 55, um a mais por causa do byte
-    de seq/flags que a pydualsense descarta) — 945 reports lidos do
-    `/dev/hidraw` do DualSense, byte estável em 0x00 (sem headset plugado).
+    ERA `test_captura_do_byte_de_status_usa_o_indice_54`, e o que ele exigia
+    era o índice fixo dentro do `states` normalizado da pydualsense. O FATO
+    sobre o aparelho não mudou — é o mesmo byte, `status[1]`, no mesmo lugar
+    (offset 53 da struct; 54 no `states`, 55 no report cru de BT), medido ao
+    vivo em 945 reports do `/dev/hidraw` com o byte estável em 0x00.
+
+    O que mudou é POR ONDE se chega nele. `self.states` é o report já digerido
+    pelo `readInput` da pydualsense 0.7.5, que não confere CRC, nem report id,
+    nem o `INPUT_FLAG_AUDIO` — e com a ponte de mic por BT de pé, o Opus ocupa
+    `raw[3:74]` e este byte cai DENTRO da janela (PS-PRESO-01). Agora quem lê é
+    `extract_jack_status`, que já era o dono do byte.
+
+    As réguas da disciplina (report de áudio, CRC ruim, id desconhecido) moram
+    em `test_mic_da_mesa_a_borda_com_endereco.py`. Esta guarda o FATO: o byte é
+    aquele, e ele continua sendo lido.
     """
+    from hefesto_dualsense4unix.core import physical_report_reader as prr
+
     handle._audio_status = None
-    handle.states = [0] * 60
-    handle.states[54] = 0x05  # fone plugado + mic MUDO
-    handle._captura_status_audio()
+    handle._mic_mudo = None
+    handle._mic_mudo_seq = 0
+    handle._mic_mudo_em = None
+    cru = bytearray(64)
+    cru[0] = prr.INPUT_REPORT_USB
+    cru[1 + prr.JACK_STATUS_OFFSET] = 0x05  # fone plugado + mic MUDO
+    handle._captura_status_audio(bytes(cru))
     assert handle._audio_status == 0x05
 
 

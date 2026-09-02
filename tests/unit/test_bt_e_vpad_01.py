@@ -97,41 +97,152 @@ def test_sem_backend_de_audio_a_resposta_e_nao_mexer() -> None:
     assert bancada.real.fonte_padrao_e_o_controle() is False
 
 
-def test_o_botao_do_mic_so_age_quando_a_fonte_e_o_controle() -> None:
-    """A fiação, e não só a função — o gate tem de estar NO LOOP.
+def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
+    """O DEFEITO 1 continua fechado — por CONSTRUÇÃO, e não mais pelo gate.
 
-    Das três saídas que a sprint desenhou, esta é a **(a)**: o botão só age
-    quando a fonte padrão é o controle. É a mais honesta e a mais barata.
+    Este teste exigia a saída **(a)** da sprint: o `mic_button_loop` só agia
+    quando `fonte_padrao_e_o_controle()` respondia sim. Ela caiu em 01/09/2026
+    (MIC-DA-MESA-ELEICAO-01), por decisão dela e por duas medições:
 
-    A **(b)** — mutar o registrador do firmware (`power_save_control` bit4),
-    que existe nos dois transportes — foi recusada porque TOMA A POSSE e faz
-    o botão físico parar de valer, que é o oposto do que se espera de um
-    botão físico.
+    1. **A guarda não separava CONTROLES.** Ela pergunta por SUBSTRING
+       "dualsense" (`integrations/audio_control.py`), logo responde *"a fonte
+       padrão é ALGUM DualSense"*, nunca *"é ESTE"*. Numa mesa de quatro os
+       quatro respondem `True` — e o gesto novo tem endereço.
+    2. **Ela estava escrita de costas para o gesto novo.** Só deixava agir
+       quando a fonte padrão JÁ era o controle, que é exatamente o caso em que
+       ELEGER não teria efeito nenhum.
 
-    Mordida: apagar o `if not pertence: continue` do `mic_button_loop`.
+    **O que ela protegia continua protegido, e agora sem gate: o gesto não muta
+    nada.** Ele ELEGE — troca qual fonte é o padrão do sistema. Não há caminho
+    por onde o botão do controle silencie o microfone de um terceiro, porque
+    não existe mais um `toggle_default_source_mute` no laço.
+
+    A saída **(b)** — mutar o registrador do firmware — continua RECUSADA pelas
+    três medições de 01/08, 03/08 e 19/08.
+
+    **FATO SUBSTITUÍDO em 02/09/2026** (recitação-da-frase-derrubada). Esta
+    docstring afirmava que escrever no
+    `common[9]` "faz o kernel parar de alternar na borda". É falso, e o fonte C
+    desta árvore diz o contrário: o kernel alterna `ds->mic_muted` a partir do
+    BIT DO BOTÃO no report de ENTRADA
+    (`assets/dkms/hid-playstation/hid-playstation.c:1630-1640`,
+    `ds_report->buttons[2] & DS_BUTTONS2_MIC_MUTE`) e não consulta nada que o
+    userspace escreva. Ele continua alternando.
+
+    O que se perde ao afirmar o byte é a LEGIBILIDADE da borda, e isso é
+    consequência de uma ESCOLHA desta casa: o detector lê o mudo do FIRMWARE
+    (`status[1]` BIT(2), `core/physical_report_reader.py:186`), não o botão.
+    Fixar o `common[9]` cegaria o NOSSO leitor — e nem por completo, porque o
+    keepalive é limitado à janela de confirmação de 2 s
+    (`core/backend_pydualsense.py:874-879`).
+
+    Mordida: repor `toggle_default_source_mute` no laço — esta régua reprova.
     """
-    import inspect
-
     from hefesto_dualsense4unix.daemon.subsystems import hotkey
 
-    fonte = inspect.getsource(hotkey.mic_button_loop)
+    nomes: set[str] = set()
+    for fn in (hotkey.mic_button_loop, hotkey._eleger_ou_devolver):
+        c = fn.__code__
+        nomes.update(c.co_names)
+        nomes.update(c.co_varnames)
+        for const in c.co_consts:
+            # O docstring fica de fora: ele CITA os nomes que saíram, com o
+            # motivo. Contá-lo faria a régua reprovar porque alguém explicou.
+            if const is fn.__doc__:
+                continue
+            if isinstance(const, str):
+                nomes.add(const)
+            elif hasattr(const, "co_names"):
+                nomes.update(const.co_names)
 
-    assert "fonte_padrao_e_o_controle" in fonte
-    pos_gate = fonte.index("fonte_padrao_e_o_controle")
-    pos_toggle = fonte.index("toggle_default_source_mute")
-    assert pos_gate < pos_toggle, (
-        "a pergunta 'a fonte é o controle?' tem de vir ANTES do toggle — "
-        "depois dele o microfone errado já foi mutado"
+    assert "toggle_default_source_mute" not in nomes, (
+        "o botão do controle voltou a mutar o microfone padrão do sistema — "
+        "que pode ser o aparelho de terceiro (BT-E-VPAD-01, defeito 1)"
     )
-    # E tem de haver um DESVIO entre as duas: perguntar e ignorar a resposta
-    # é o mesmo que não perguntar. A primeira versão deste teste travava só a
-    # ordem, e não mordia — apagar o `if not pertence: continue` deixava a
-    # chamada do gate no lugar e a asserção de ordem passava.
-    entre = fonte[pos_gate:pos_toggle]
-    assert "continue" in entre, (
-        "entre a pergunta e o toggle tem de haver um `continue`: sem ele a "
-        "resposta é lida e descartada, e o microfone errado é mutado do mesmo "
-        "jeito"
+    assert "set_microphone_mute" not in nomes, (
+        "o laço voltou a afirmar o mudo do FIRMWARE — a saída (b), recusada "
+        "pelas medições de 01/08, 03/08 e 19/08"
+    )
+
+
+# ---------------------------------------------------------------------------
+# A afirmação forte que a auditoria de 02/09 derrubou
+# ---------------------------------------------------------------------------
+
+
+def test_ninguem_afirma_que_o_common9_para_o_kernel_de_alternar() -> None:
+    """O kernel alterna na BORDA DO BOTÃO, e nada que escrevamos muda isso.
+
+    MIC-DA-MESA-ELEICAO-01 acrescentou às três recusas do `common[9]` um motivo
+    NOVO (recitação-da-frase-derrubada)
+    — *"escrever no `common[9]` faz o kernel parar de alternar na borda"* —
+    e chamou aquilo de impossibilidade construtiva. **A auditoria de 02/09/2026
+    derrubou a frase contra o fonte C desta árvore.**
+
+    O `hid-playstation` decide pelo BIT DO BOTÃO no report de ENTRADA
+    (`ds_report->buttons[2] & DS_BUTTONS2_MIC_MUTE`); nenhuma leitura ali
+    consulta o que o userspace escreveu no output report. Ele continua
+    alternando. O que se perderia é a legibilidade da borda **do nosso lado**,
+    porque quem lê aqui é o mudo do FIRMWARE (`status[1]` BIT(2)) — escolha de
+    implementação, não lei do aparelho.
+
+    Esta régua guarda as duas metades: que o fonte C continua sendo o que a
+    correção diz que é, e que a frase derrubada não voltou a nenhum arquivo.
+
+    Mordida: repor a frase em qualquer `.py`/`.md` de `src/`, `tests/` ou
+    `docs/` — esta régua reprova.
+    """
+    import pathlib
+    import re
+
+    raiz = pathlib.Path(__file__).resolve().parents[2]
+    marca_de_recitacao = "recitação-da-frase-derrubada"
+
+    # (a) o fato: a condição do toggle é o bit do botão no report de ENTRADA.
+    fonte_c = (raiz / "assets/dkms/hid-playstation/hid-playstation.c").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    trecho = re.search(
+        r"btn_mic_state\s*=.*?ds->last_btn_mic_state\s*=\s*btn_mic_state;",
+        fonte_c,
+        re.S,
+    )
+    assert trecho is not None, "o bloco do botão do mic sumiu do hid-playstation.c"
+    bloco = trecho.group(0)
+    assert "ds_report->buttons[2]" in bloco, (
+        "o kernel deixou de decidir pelo bit do botão no report de entrada — "
+        "reveja a correção de 02/09/2026 antes de reescrever a recusa"
+    )
+    assert "ds->mic_muted = !ds->mic_muted" in bloco, (
+        "o toggle de `ds->mic_muted` na borda sumiu do driver"
+    )
+
+    # (b) a frase derrubada não pode voltar a lugar nenhum.
+    proibidas = ("parar de alternar", "deixa de alternar", "para de alternar")
+    reincidentes: list[str] = []
+    for pasta in ("src", "tests", "docs"):
+        for arq in (raiz / pasta).rglob("*"):
+            if arq.suffix not in {".py", ".md"} or not arq.is_file():
+                continue
+            linhas = arq.read_text(encoding="utf-8", errors="replace").splitlines()
+            for n, linha in enumerate(linhas, 1):
+                if not any(p in linha for p in proibidas):
+                    continue
+                # A frase só é a frase derrubada quando fala do byte ou do
+                # kernel; a vizinhança cobre a quebra de linha do parágrafo.
+                janela = "\n".join(linhas[max(0, n - 8) : n + 8])
+                if marca_de_recitacao in janela:
+                    # Quem CITA a frase para dizer que ela é falsa carrega a
+                    # marca. Sem esta porta a régua reprovaria a própria
+                    # correção — o defeito das onze réguas de 26/08.
+                    continue
+                if "common[9]" in janela or "kernel" in janela:
+                    reincidentes.append(f"{arq.relative_to(raiz)}:{n}: {linha.strip()}")
+
+    assert not reincidentes, (  # recitação-da-frase-derrubada
+        "voltou a afirmação que a auditoria de 02/09/2026 derrubou — o kernel "
+        "NÃO para de alternar quando afirmamos o `common[9]`:\n"
+        + "\n".join(reincidentes)
     )
 
 

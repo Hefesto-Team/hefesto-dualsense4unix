@@ -589,8 +589,22 @@ class DraftApplier:
             raise ValueError("mic.button_toggles_system deve ser booleano")
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar o botão de mic")
+        antes = bool(getattr(self.daemon.config, "mic_button_toggles_system", True))
         self.daemon.config.mic_button_toggles_system = valor
         logger.info("mic_button_toggles_system_aplicado", enabled=valor)
+        # DESLIGAR TEM DE DEVOLVER A LUZ (auditoria de 02/09/2026). O comentário
+        # do campo em `daemon/lifecycle.py` promete que, desligado, "o kernel
+        # segue dono do mudo E da luz do próprio controle". Isso era falso
+        # depois da primeira eleição: a posse do `common[8]` só cai por
+        # `set_microphone_led(None)`, e este caminho é reentrante em runtime —
+        # ela carrega um perfil de gravação e a luz fica CONGELADA no que a
+        # última eleição deixou, com o botão físico já sem efeito sobre ela.
+        if antes and not valor:
+            from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
+                devolver_a_luz_ao_kernel,
+            )
+
+            devolver_a_luz_ao_kernel(self.daemon)
 
     def _apply_speaker(self, speaker_raw: Any) -> None:
         """Aplica a seção `speaker` do rascunho — O-VERDE-NAO-LEVAVA-O-SOM-01.
