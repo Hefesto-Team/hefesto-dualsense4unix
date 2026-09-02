@@ -912,8 +912,19 @@ def test_a_leitura_da_mesa_e_uma_so_e_ela_exige_o_connected() -> None:
     vezes, e foi assim que ele voltou aqui. A função pública
     `recado_do_microfone.mesa_de_agora` é a resposta.
 
-    CURA A ARRANCAR: qualquer segunda leitura de "quem está na mesa" dentro do
-    ramo de recusa do `hotkey`.
+    CURA A ARRANCAR: o `connected` de `mesa_de_agora` — trocar o filtro por
+    uma leitura só do `uniq` faz a primeira asserção reprovar.
+
+    **O QUE ESTE TESTE NÃO PEGA, e a promessa estava errada** (auditoria de
+    02/09/2026): ele chama as DUAS funções diretamente e nunca alcança o ponto
+    de chamada em `hotkey._eleger_ou_devolver`. O docstring prometia pegar
+    *"qualquer segunda leitura de 'quem está na mesa' dentro do ramo de recusa
+    do `hotkey`"*, e a mordida mediu o contrário: trocando aquela linha por
+    `mesa = conectados`, quem reprovou foi
+    `test_o_dono_que_caiu_do_cabo_com_o_handle_aberto_nao_e_nomeado`, e ESTE
+    passou verde. A linha continua com régua — pelo vizinho. Quem apagar o
+    vizinho fica sem nenhuma, e é por isso que a promessa foi corrigida em vez
+    de apagada: nesta casa a próxima pessoa acredita no docstring.
     """
     from hefesto_dualsense4unix.daemon.subsystems import hotkey
 
@@ -1136,4 +1147,322 @@ def test_o_prazo_filtra_e_nao_escreve_no_deposito() -> None:
     assert _J1 in deposito, (
         "a leitura apagou o depósito: quem publica o estado não pode escrever "
         f"nele — {deposito}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 15. O TERCEIRO DESFECHO DA VOLTA — a escrita PASSOU e o ativo é um TERCEIRO
+# ---------------------------------------------------------------------------
+#
+# ACHADO DA AUDITORIA DE 02/09/2026, e o buraco era da RÉGUA antes de ser do
+# produto: `_eleger_nome` tem QUATRO desfechos e TRÊS devolvem `ok=False`, mas
+# nem `_EleitorDublado` nem a seção 13 montavam o terceiro — aquele em que o
+# `pactl` ACEITA (`rc == 0`) e o ativo relido não é o alvo. A prova de que a
+# régua não o alcançava: o auditor trocou a cura por duas semânticas OPOSTAS
+# nesse ramo (`aceso` condicionado ao `ativo`, posse solta no `ativo`) e as 36
+# passaram nas duas.
+#
+# E é o desfecho que MAIS importa: é o `eleicao_mic_nao_pegou`, o defeito que o
+# módulo inteiro existe para pegar. Se a escrita pegou e o ativo virou um
+# terceiro, aquele controle NÃO está no ar — e a luz não pode continuar acesa
+# afirmando que está (contrato dela, 01/09: *"aceso = este mic está no ar"*).
+#
+# TODA esta seção usa o `EleitorDeMicrofone` DE VERDADE: o que se dubla são as
+# quatro portas externas do módulo (`_rodar`, `fonte_se_sustenta`,
+# `fonte_ativa`, `melhor_fonte_elegivel`) mais a resolução `uniq → canal`.
+# Nenhum `pactl` roda, nenhum aparelho é tocado, nenhuma janela nasce.
+
+_CANAL_DO_J1 = "alsa_input.o_canal_do_j1"
+_DA_PLACA = "mic_da_placa_mae"
+_DE_UM_TERCEIRO = "mic_de_um_terceiro"
+
+
+class _PipeWireDublado:
+    """As portas externas de `eleicao_de_microfone`, e só elas."""
+
+    def __init__(self, monkey: pytest.MonkeyPatch) -> None:
+        from hefesto_dualsense4unix.integrations import eleicao_de_microfone as ele
+
+        self.escritas: list[list[str]] = []
+        self.ativo: str | None = None
+        self.sustenta: bool | None = True
+        self.rc = 0
+        monkey.setattr(ele, "_rodar", self._rodar)
+        monkey.setattr(ele, "fonte_se_sustenta", lambda _nome: self.sustenta)
+        monkey.setattr(ele, "fonte_ativa", lambda: self.ativo)
+        monkey.setattr(ele, "melhor_fonte_elegivel", lambda: _DA_PLACA)
+        monkey.setattr(
+            ele, "fontes_de_captura_agora", lambda: [_CANAL_DO_J1, _DA_PLACA]
+        )
+        monkey.setattr(ele, "casamento_usb_agora", lambda _uniqs: None)
+        monkey.setattr(ele, "escolher_fonte", lambda _f, _u, _a, _usb: _CANAL_DO_J1)
+        # O assentamento é REAL, só que sem espera: zerar o passo mede o laço
+        # de `_assentar_e_reler` de verdade sem trocar o `time` do processo,
+        # que é global e pertence a quem rodar depois.
+        monkey.setattr(ele, "SETTLE_PASSOS", 2)
+        monkey.setattr(ele, "SETTLE_PASSO_S", 0.0)
+
+    def _rodar(self, argv: list[str]) -> tuple[int, str]:
+        self.escritas.append(list(argv))
+        return self.rc, ""
+
+
+def _eleitor_de_verdade(monkey: pytest.MonkeyPatch) -> tuple[Any, _PipeWireDublado]:
+    """Um `EleitorDeMicrofone` do produto com o PipeWire de mentira."""
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone as ele
+
+    return ele.EleitorDeMicrofone(), _PipeWireDublado(monkey)
+
+
+def _elege_a_j1(eleitor: Any, pipewire: _PipeWireDublado) -> None:
+    """A J1 elege PELA PORTA DO PRODUTO, e a eleição é CONFERIDA.
+
+    A posse tem de nascer como nasce em serviço: é a eleição conferida que
+    grava o NOME do canal (`fonte_do_eleito`), e sem ele o produto não tem com
+    o que comparar o ativo relido depois. Cravar `eleitor.eleito` na mão — como
+    a seção 13 faz de propósito, para medir OUTRA coisa — nunca alcançaria
+    este desfecho.
+    """
+    pipewire.ativo = _CANAL_DO_J1
+    resultado = eleitor.eleger_o_controle(_J1, [_J1])
+    assert resultado.ok is True, f"a eleição de partida não pegou: {resultado.motivo}"
+    assert eleitor.eleito == _J1
+    assert eleitor.fonte_do_eleito == _CANAL_DO_J1, (
+        "a eleição conferida tem de guardar o NOME do canal, senão a volta "
+        "não tem com o que comparar o ativo relido"
+    )
+    pipewire.escritas.clear()
+
+
+def test_a_posse_cai_quando_a_escrita_passou_e_o_ativo_relido_e_um_terceiro() -> None:
+    """Os QUATRO desfechos da volta, medidos um a um no eleitor do produto.
+
+    A régua da posse era `resultado.ok`, e ela confunde três recusas muito
+    diferentes. O que separa as três é a única pergunta que este módulo aceita:
+    **o ativo RELIDO ainda é o canal deste controle?**
+
+    CURA A ARRANCAR: `if self._o_eleito_saiu_do_ar(resultado):` de volta para
+    `if resultado.ok:` em `devolver_o_microfone`. O caso do terceiro reprova.
+    """
+    casos = (
+        # rótulo, rc, ativo depois, a posse cai?, escreveu?
+        ("o pactl RECUSOU: a escrita não pegou", 1, _CANAL_DO_J1, False, True),
+        ("o WirePlumber devolveu o canal à J1", 0, _CANAL_DO_J1, False, True),
+        ("o ativo relido é ILEGÍVEL", 0, None, False, True),
+        ("a escrita passou e o ativo é um TERCEIRO", 0, _DE_UM_TERCEIRO, True, True),
+        ("a devolução foi CONFERIDA", 0, _DA_PLACA, True, True),
+    )
+    for rotulo, rc, ativo, cai, escreveu in casos:
+        with pytest.MonkeyPatch.context() as monkey:
+            eleitor, pipewire = _eleitor_de_verdade(monkey)
+            _elege_a_j1(eleitor, pipewire)
+
+            pipewire.rc = rc
+            pipewire.ativo = ativo
+            resultado = eleitor.devolver_o_microfone()
+
+            assert bool(pipewire.escritas) is escreveu, (
+                f"{rotulo}: o `set-default-source` — {pipewire.escritas}"
+            )
+            if cai:
+                assert eleitor.eleito is None, (
+                    f"{rotulo}: o ativo relido diz que o canal não é mais da "
+                    f"J1, e a posse tinha de cair — {resultado.ativo!r}"
+                )
+                assert eleitor.fonte_do_eleito is None, (
+                    f"{rotulo}: a posse caiu e o nome do canal ficou pendurado"
+                )
+            else:
+                assert eleitor.eleito == _J1, (
+                    f"{rotulo}: o padrão do sistema continua sendo o canal da "
+                    f"J1, e a posse não podia cair — {resultado.ativo!r}"
+                )
+
+
+def test_o_ativo_ilegivel_nunca_vira_o_eleito_saiu_do_ar() -> None:
+    """"Não sei" nunca vira "saiu" — a mesma regra do `None` de `mesa_de_agora`.
+
+    Duas ignorâncias caem aqui: o ativo que não deu para ler, e a posse que
+    veio de fora sem o nome do canal (teste antigo que crava `eleito` na mão,
+    ou um eleitor que atravessou uma versão). Nas duas, soltar a posse seria
+    declarar que o microfone saiu do ar por não termos conseguido perguntar.
+
+    CURA A ARRANCAR: a linha
+    `if resultado.ativo is None or self.fonte_do_eleito is None: return False`.
+    """
+    from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+        EleitorDeMicrofone,
+        ResultadoDaEleicao,
+    )
+
+    sem_nome = EleitorDeMicrofone()
+    sem_nome.eleito = _J1  # posse cravada na mão, sem o nome do canal
+    assert (
+        sem_nome._o_eleito_saiu_do_ar(
+            ResultadoDaEleicao(ok=False, alvo=_DA_PLACA, ativo=_DE_UM_TERCEIRO)
+        )
+        is False
+    ), "sem o nome do canal dele, não dá para saber se o ativo é outro"
+
+    com_nome = EleitorDeMicrofone()
+    com_nome.eleito = _J1
+    com_nome.fonte_do_eleito = _CANAL_DO_J1
+    assert (
+        com_nome._o_eleito_saiu_do_ar(
+            ResultadoDaEleicao(ok=False, alvo=_DA_PLACA, ativo=None)
+        )
+        is False
+    ), "o ativo ilegível é ignorância, não notícia de que ele saiu do ar"
+    assert (
+        com_nome._o_eleito_saiu_do_ar(
+            ResultadoDaEleicao(ok=False, alvo=_DA_PLACA, ativo=_DE_UM_TERCEIRO)
+        )
+        is True
+    ), "o ativo relido é um terceiro: o canal deixou de ser dele"
+
+
+@pytest.mark.asyncio
+async def test_a_luz_apaga_quando_o_wireplumber_deu_o_canal_a_um_terceiro() -> None:
+    """O laço do produto + o eleitor do produto: a LUZ e o `state_full`.
+
+    É o par que a auditoria pediu: o MESMO payload dizia `eleito: …011` (o
+    canal é dele) e `ativo: mic_de_um_terceiro` (o canal não é dele), com o
+    plástico ACESO. Dois vereditos opostos no mesmo tique.
+
+    CURA A ARRANCAR: `aceso = eleitor.eleito == uniq` de volta para
+    `aceso = not bool(resultado.ok)` em `hotkey._eleger_ou_devolver`.
+    """
+    with pytest.MonkeyPatch.context() as monkey:
+        eleitor, pipewire = _eleitor_de_verdade(monkey)
+        backend = _Backend((_J1,))
+        daemon = _Daemon(backend, eleitor)
+
+        pipewire.ativo = _CANAL_DO_J1
+        pipewire.rc = 0
+        blocos = await _rodar_os_passos(
+            daemon,
+            [
+                {"uniq": _J1, "mudo": False},
+                lambda: setattr(pipewire, "ativo", _DE_UM_TERCEIRO),
+                {"uniq": _J1, "mudo": True},
+            ],
+        )
+
+    assert blocos[0]["eleito"] == _J1, (
+        f"a eleição de partida tinha de nomear a J1: {blocos[0]}"
+    )
+    depois = blocos[-1]
+    recado = depois["recados"][_J1]
+    assert recado["ok"] is False and recado["ativo"] == _DE_UM_TERCEIRO, (
+        f"a cena montada não é a do terceiro desfecho: {recado}"
+    )
+    assert depois["eleito"] is None, (
+        "o ativo relido é um terceiro: a J1 não está mais com o microfone da "
+        f"mesa, e o `state_full` não pode nomeá-la — {depois}"
+    )
+    assert backend.leds == {_J1: False}, (
+        "o plástico afirmava 'estou no ar' sobre um canal que a própria "
+        f"medição diz ser de um terceiro — {backend.leds}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_luz_fica_acesa_quando_o_wireplumber_devolveu_o_canal_a_ela() -> None:
+    """O contra-caso, e é ele que impede a cura preguiçosa.
+
+    `ok=False` com o ativo relido sendo o canal DELA quer dizer que o
+    WirePlumber recusou a volta e deixou o microfone onde estava: ela continua
+    no ar, logo a luz continua acesa. Uma cura que apagasse a luz em toda
+    recusa com `ativo` preenchido passaria o teste de cima e reprovaria aqui.
+    """
+    with pytest.MonkeyPatch.context() as monkey:
+        eleitor, pipewire = _eleitor_de_verdade(monkey)
+        backend = _Backend((_J1,))
+        daemon = _Daemon(backend, eleitor)
+
+        pipewire.ativo = _CANAL_DO_J1
+        blocos = await _rodar_os_passos(
+            daemon,
+            [{"uniq": _J1, "mudo": False}, {"uniq": _J1, "mudo": True}],
+        )
+
+    depois = blocos[-1]
+    recado = depois["recados"][_J1]
+    assert recado["ok"] is False and recado["ativo"] == _CANAL_DO_J1, (
+        f"a cena montada não é a da volta recusada com o canal dela: {recado}"
+    )
+    assert depois["eleito"] == _J1, (
+        f"o canal continua sendo dela, e a posse não podia cair — {depois}"
+    )
+    assert backend.leds == {_J1: True}, (
+        f"o microfone dela continua no ar, logo a luz fica acesa — {backend.leds}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 16. UMA LEITURA DA MESA POR TOQUE DE BOTÃO — não duas
+# ---------------------------------------------------------------------------
+
+
+class _BackendQueConta(_Backend):
+    """Um `_Backend` que anota quantas vezes lhe perguntaram a mesa."""
+
+    def __init__(self, uniqs: tuple[str, ...]) -> None:
+        super().__init__(uniqs)
+        self.perguntas = 0
+
+    def describe_controllers(self) -> list[dict[str, Any]]:
+        self.perguntas += 1
+        return super().describe_controllers()
+
+
+@pytest.mark.asyncio
+async def test_o_toque_do_botao_le_a_mesa_uma_vez_so() -> None:
+    """`conectados` era calculado ANTES do `if mudo:` e jogado fora no ramo mudo.
+
+    Achado de FORMA da auditoria de 02/09/2026, e ele é sobre o arquivo cuja
+    cura inteira se justifica por *"duas leituras do mesmo estado é o defeito
+    que esta casa já pagou onze vezes"*. Desde que a recusa passou a perguntar
+    a `recado_do_microfone.mesa_de_agora`, o ramo `mudo` não usava mais o
+    `conectados` — e todo toque de botão pagava DOIS `describe_controllers()`,
+    com duas aquisições do `_io_lock`, para descartar o primeiro.
+
+    Não é defeito de comportamento; é caminho de BORDA, não os 10 Hz. Mas a
+    régua existe porque a próxima pessoa vai reler o ramo e precisa saber se a
+    leitura extra voltou.
+
+    CURA A ARRANCAR: mover `conectados = _uniqs_conectados(daemon)` de volta
+    para antes do `if mudo:`.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    # a) A RECUSA de quem não elegeu: uma leitura, a de `mesa_de_agora`.
+    backend = _BackendQueConta((_J1, _J2))
+    eleitor = _EleitorDublado()
+    eleitor.eleito = _J1
+    daemon = _Daemon(backend, eleitor)
+    await hotkey._eleger_ou_devolver(daemon, _J2, True)  # type: ignore[arg-type]
+    assert backend.perguntas == 1, (
+        "o ramo da recusa precisa da mesa UMA vez — quem está na mesa AGORA. "
+        f"Perguntou {backend.perguntas}"
+    )
+
+    # b) A DEVOLUÇÃO do eleito: nenhuma. `devolver_o_microfone()` é global.
+    backend_b = _BackendQueConta((_J1,))
+    eleitor_b = _EleitorDublado()
+    eleitor_b.eleito = _J1
+    daemon_b = _Daemon(backend_b, eleitor_b)
+    await hotkey._eleger_ou_devolver(daemon_b, _J1, True)  # type: ignore[arg-type]
+    assert backend_b.perguntas == 0, (
+        "a devolução não pergunta a mesa a ninguém: `devolver_o_microfone()` "
+        f"não recebe `uniq`. Perguntou {backend_b.perguntas}"
+    )
+
+    # c) A ELEIÇÃO: uma, e é a lista de quem PODE ser eleito.
+    backend_c = _BackendQueConta((_J1, _J2))
+    daemon_c = _Daemon(backend_c, _EleitorDublado())
+    await hotkey._eleger_ou_devolver(daemon_c, _J1, False)  # type: ignore[arg-type]
+    assert backend_c.perguntas == 1, (
+        "a eleição precisa da lista de quem pode ser eleito, e de uma só vez. "
+        f"Perguntou {backend_c.perguntas}"
     )
