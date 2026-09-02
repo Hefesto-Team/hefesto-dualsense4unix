@@ -41,6 +41,7 @@ sem dono, e o `pacotes/mapa.py` recusa inventar.
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -183,9 +184,22 @@ def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict[str, Any] | None:
     o piloto o distingue de um pacote vazio — um diz "ninguém pinta isto ainda",
     o outro diz "pintei nada", e confundir os dois é como uma tela morta passa
     por tela sem novidade.
+
+    COM A MESA VAZIA ELE ACRESCENTA O MOLDE (ver `molde_do_lugar`), e é a única
+    coisa que este despachante põe num pacote que não é dele: sem controle
+    nenhum a aba não emite coluna nenhuma, e sem coluna a tela fica com o
+    desenho — "P1 · Cosmic Red · USB · 100%" com zero controles na mesa.
     """
     fn = PACOTES.get(pagina)
-    return fn(ctx) if fn else None
+    if fn is None:
+        return None
+    fora = fn(ctx)
+    molde = molde_do_lugar(pagina, ctx, fora)
+    if not molde:
+        return fora
+    colunas = dict(fora.get(POR_CONTROLE[0]) or {})
+    colunas[LUGAR_SEM_DONO] = molde
+    return {**fora, POR_CONTROLE[0]: colunas}
 
 
 #: AS TRÊS PALAVRAS PARA A MESMA COISA. Cada aba nasceu com a sua — `cartoes` na
@@ -200,6 +214,295 @@ POR_CONTROLE = ("colunas", "cartoes", "cards")
 #: O que NUNCA é valor de tela: a contagem da régua e a lista de órfãos. As duas
 #: são metadado do pacote e pintá-las escreveria "{'pintados': 25}" numa caixa.
 NAO_SAO_VALOR = {"cobertura", "sem_dono"}
+
+# ---------------------------------------------------------------------------
+# O ESTADO VAZIO — a tela mente quando a mesa esvazia
+# ---------------------------------------------------------------------------
+# FOTOGRAFADO em 02/09/2026, com um dublê de estado sem controle nenhum
+# (`mesa_viva.estado_do_daemon` devolvendo `controllers: []`, para não
+# desconectar o controle dela): o topo dizia `0 controles: 0 USB · 0 BT` e a
+# MESMA tela mostrava `P1 · Cosmic Red · USB` com bateria 100%, touchpad
+# "Tocando", barra de luz `#7EB8D4`, microfone `ATIVO` e um `P2 · Starlight
+# Blue · BT · 64%`. Nada disso existia. Medido pela régua do mockup, a mesma
+# árvore, só mudando a mesa (`--prova-de-mockup --voltas-por-aba 8`):
+#
+#     ANTES   mesa VAZIA (0 controles)  330: 114 PRODUTO · 179 MOCKUP · 37 IND
+#     DEPOIS  mesa VAZIA (0 controles)  330: 184 PRODUTO · 109 MOCKUP · 37 IND
+#     mesa CHEIA (2 controles)          330: 188 PRODUTO ·  68 MOCKUP · 74 IND
+#                                       (igual antes e depois — o molde se cala
+#                                        quando há dono)
+#
+# A CAUSA, e ela não é de nenhuma das dez abas: o piloto já apaga os lugares
+# sem dono (`hefesto_vivo.py:1005-1016`), mas as CHAVES que ele apaga são a
+# união do que as colunas VIVAS trouxeram — e com zero controles não há coluna
+# viva nenhuma. `set()` de chaves faz `dict.fromkeys(chaves, "—")` devolver
+# `{}`, e o desenho fica inteiro na tela.
+#
+# O QUE A GTK FAZIA, e é a razão de esta cura ser de MIGRAÇÃO e não de
+# invenção: lá o card só existe enquanto o controle existe —
+# `status_actions.py:1516` ("Remove todos os cards"). O HTML não tem essa
+# saída: o desenho publica QUATRO lugares fixos, por decisão dela em 31/08. O
+# equivalente aqui é o travessão, que é a palavra que o PRÓPRIO desenho usa nos
+# lugares vazios (`paginas/02-controles.html:2089-2096`, o P3 com
+# `<span class="leia">—</span>` e `<span class="bat">—</span>`). Nenhum texto
+# novo nasce nesta cura.
+
+#: A CHAVE RESERVADA DA COLUNA-MOLDE. Ela NÃO é um lugar: nenhuma página tem
+#: `data-controle="*"`, então o `querySelectorAll` do piloto devolve zero
+#: elementos e o molde não escreve nada por si.
+#:
+#: E É EXATAMENTE POR ISSO QUE ELE É `*` E NÃO `p1`/`p2`. Emitir o vazio
+#: direto nas colunas dos lugares sem dono APAGARIA A MOLDURA: o piloto calcula
+#: `apagar = TODOS_OS_LUGARES - set(carga["colunas"])` e só marca
+#: `data-conectado="nao"` / classe `off` no que sobra dessa conta
+#: (`hefesto_vivo.py:1008-1016`). Com `p1`…`p4` ocupados pelo molde, a conta dá
+#: lista vazia e os quatro lugares ficariam com a moldura de CONECTADO — meio
+#: apagado, que é pior que aceso. Sob `*` a conta continua dando os quatro, o
+#: piloto escreve o travessão em todos E acende a moldura de vazio.
+#:
+#: `*` é a mesma reserva que os gestos do rodapé já usam (`GESTOS[("*", nome)]`
+#: — "de todas as abas"), e não um segundo vocabulário.
+LUGAR_SEM_DONO = "*"
+
+#: O CONTROLE DE MENTIRA que a aba responde para dizer QUAIS campos um lugar
+#: tem. Ele traz o `uniq` e nada mais **de propósito**: o molde precisa dos
+#: NOMES dos campos, e um dublê com valores plausíveis faria a aba emitir a
+#: bateria de um controle que não existe. Sem valor nenhum, toda aba cai no
+#: caminho de "não sei" — que é o caminho certo para um lugar vazio.
+#:
+#: O `uniq` é da faixa SINTÉTICA da casa (`aabbcc`), nunca da bancada dela —
+#: há dois portões de anonimato nesta árvore.
+_CONTROLE_DE_MENTIRA: dict[str, Any] = {"uniq": "aa:bb:cc:00:00:00", "connected": True}
+
+#: O LUGAR DE MENTIRA na mesa, e ele precisou existir: a `05-vibracao` não
+#: percorre `ctx.conectados` — ela delega a `app/telas/vibracao.pacote_da_mesa`,
+#: que percorre a MESA. Sem esta entrada o molde dela saía vazio e os sete
+#: campos do lugar (`mult`, `motor-e`, `motor-d`, as três barras, `identidade`)
+#: continuavam mostrando o desenho. Medido em 02/09/2026, comparando o molde das
+#: dez abas com o `casamento.do_pacote`: nove batiam e só a Vibração dava zero.
+#:
+#: `jogador`, `nome` e `via` vêm em `None` — não é desleixo. São as três chaves
+#: que `app/telas/vibracao.pacote_da_coluna:223-224` lê por COLCHETE, e sem elas
+#: aquela função levanta `KeyError`. O valor tinha de ser algo que não se
+#: confunda com dado: `None` atravessa a `f-string`, o molde joga fora a
+#: identidade montada com ele, e se um dia vazar para a tela lerá "PNone" — que
+#: ninguém confunde com um controle de verdade.
+_LUGAR_DE_MENTIRA: dict[str, Any] = {
+    "uniq": _CONTROLE_DE_MENTIRA["uniq"], "pref": "p1",
+    "jogador": None, "nome": None, "via": None,
+}
+
+#: O molde já calculado, por página e por perfil ativo. O perfil entra na chave
+#: porque a Gatilhos nomeia os ajustes do PERFIL (`aj-nome-e-0`…): trocar de
+#: perfil com a mesa vazia troca os campos que o lugar tem, e um cache só por
+#: página serviria o molde do perfil anterior.
+_MOLDE: dict[tuple[str, str], dict[str, str]] = {}
+
+#: O que a tela escreve onde não há dado. TEXTO DE TELA É DELA, e este não é
+#: novo: é o mesmo caractere que o desenho já põe nos lugares P3/P4 e que o
+#: `escrever()` do piloto já escreve em `null`/`""`.
+#:
+#: Está aqui como literal, e não importado da `regua_do_mockup.TRAVESSAO`,
+#: porque o produto não depende de instrumento de medição. Quem impede as duas
+#: grafias de divergirem é `test_o_molde_escreve_o_travessao_do_desenho`, que
+#: procura este caractere DENTRO do lugar vazio da página publicada.
+TRAVESSAO = "—"
+
+
+#: OS DOIS ALVOS QUE O TRAVESSÃO NÃO ATENDE, e os dois foram medidos, não
+#: supostos (02/09/2026, com o dublê de mesa vazia sobre a `02-controles`):
+#:
+#: `largura` — o `escrever()` do piloto monta `el.style.width = "—%"`, que o
+#:   CSSOM RECUSA. A barra fica na largura do mockup e, como `el.style.width`
+#:   nunca volta igual ao que se escreveu, o contador de pintura soma +1 por
+#:   barra POR TIQUE, para sempre. Um contador que mente é pior que um campo
+#:   parado — é o mesmo defeito que fez o `<select>` ganhar guarda no piloto.
+#:   Com as barras no molde, a `02-controles` relatava 25 valores a cada um dos
+#:   13 tiques; sem elas, ela pinta uma vez e sossega.
+#: `html`  — o alvo escreve `innerHTML`, e um travessão APAGA a marcação: os
+#:   quatro botões de jogador da Iluminação (`players`) e a explicação do teto
+#:   da Conexões (`teto-explica`) viram um traço. O desenho não faz isso no
+#:   lugar vazio dele.
+#:
+#: `valor` FICA, e é de propósito: num `<select>` o piloto só escreve o que o
+#: campo oferece, então o travessão é no-op onde não há opção `—` e acerta onde
+#: houver. Nada quebra, e nada precisa ser lembrado no dia em que o desenho
+#: ganhar essa opção.
+ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE = {"largura", "html"}
+
+_ENDERECO_NO_HTML = re.compile(r'data-(?:campo|papel|hef)="([^"]+)"')
+_ALVO_NO_HTML = re.compile(r'data-hef-alvo="([^"]+)"')
+_ELEMENTO_NO_HTML = re.compile(r"<[A-Za-z][^>]*>")
+_LUGAR_NO_HTML = re.compile(r'data-controle="(p\d+)"')
+
+#: Os lugares de controle de cada página publicada, lidos uma vez.
+_LUGARES: dict[str, frozenset[str]] = {}
+
+
+def lugares_da_pagina(pagina: str) -> frozenset[str]:
+    """Os `data-controle="pN"` da página PUBLICADA — os lugares do desenho.
+
+    ELA É A TRAVA DE SEGURANÇA DO MOLDE, e a razão é medida. `molde_do_lugar`
+    roda a pintura da aba uma segunda vez, com um controle de mentira; o
+    despachante promete no alto deste arquivo que as pinturas são PURAS.
+    **Não são todas.** `a10_perfis._uma_vez_so:214` guarda `_PINTADO_PARA` e
+    `_ULTIMO_TIQUE` em módulo para não repintar os três campos que ELA DIGITA
+    (nome, jogo, estilo) enquanto ela digita. Uma segunda chamada no mesmo tique
+    troca o `_PINTADO_PARA`, e no tique seguinte o produto volta a escrever por
+    cima do que ela estava escrevendo — que é exatamente o defeito que aquela
+    função existe para impedir.
+
+    A `10-perfis` não tem lugar de controle nenhum, então não tem molde a fazer:
+    esta trava a poupa da segunda chamada. O mesmo vale para a `09-sistema` e a
+    `07-lancadores`.
+
+    Achado em 02/09/2026 por `test_o_casamento_das_dez`, que passava sozinho e
+    reprovava depois desta régua rodar — a marca de estado de módulo vazando
+    entre testes.
+    """
+    lembrado = _LUGARES.get(pagina)
+    if lembrado is not None:
+        return lembrado
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        doc = onde.pagina(pagina, publicado=True).read_text(encoding="utf-8")
+    except OSError:
+        return frozenset()
+    fora = frozenset(_LUGAR_NO_HTML.findall(doc))
+    _LUGARES[pagina] = fora
+    return fora
+
+#: `pagina` → `{endereço: os alvos daquele endereço}`.  # noqa-acento (nome do parametro)
+#: Lido uma vez por página.
+_ALVOS: dict[str, dict[str, set[str]]] = {}
+
+
+def alvos_da_pagina(pagina: str) -> dict[str, set[str]]:
+    """Com que alvo cada endereço da página PUBLICADA é escrito.
+
+    LER A PÁGINA AQUI NÃO É O MESMO que tirar dela a LISTA de campos — e a
+    diferença é o que separa esta cura da destruição que `molde_do_lugar`
+    descreve. A lista de campos sai da aba, que sabe o que é dado; a página só
+    responde **como** cada endereço é escrito, que é informação que só ela tem
+    (`data-hef-alvo` é atributo do desenho).
+
+    Vazio quando a página não abre — e aí `molde_do_lugar` desiste, porque sem
+    saber como a página escreve o molde escreveria travessão numa barra.
+    """
+    lembrado = _ALVOS.get(pagina)
+    if lembrado is not None:
+        return lembrado
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        doc = onde.pagina(pagina, publicado=True).read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    fora: dict[str, set[str]] = {}
+    for elemento in _ELEMENTO_NO_HTML.findall(doc):
+        endereco = _ENDERECO_NO_HTML.search(elemento)
+        if endereco is None:
+            continue
+        alvo = _ALVO_NO_HTML.search(elemento)
+        fora.setdefault(endereco.group(1), set()).add(
+            alvo.group(1) if alvo else "texto")
+    _ALVOS[pagina] = fora
+    return fora
+
+
+def chaves_por_controle(pacote: dict[str, Any]) -> set[str]:
+    """Os campos que este pacote emite POR CONTROLE, nas três palavras.
+
+    Só escalar entra: um `dict` ou uma `list` de dicionários é estrutura, e o
+    `normalizar` já os descarta antes da tela.
+    """
+    fora: set[str] = set()
+    for nome in POR_CONTROLE:
+        for campos in (pacote.get(nome) or {}).values():
+            if not isinstance(campos, dict):
+                continue
+            fora |= {str(k) for k, v in campos.items()
+                     if not isinstance(v, (dict, list))}
+    return fora
+
+
+def molde_do_lugar(
+    pagina: str, ctx: Contexto, pacote: dict[str, Any] | None = None
+) -> dict[str, str]:
+    """Quais campos um lugar de controle desta aba tem, todos no travessão.
+
+    Vazio (`{}`) quando não há o que fazer — que é o caso comum: **com pelo
+    menos UMA coluna viva o piloto já se vira**, porque a união das chaves
+    vivas é justamente o que ele apaga nos lugares sem dono.
+
+    DE ONDE SAI A LISTA DE CAMPOS, e a resposta ÓBVIA está errada. O caminho
+    natural seria ler os `data-campo` de dentro do `[data-controle="pN"]` da
+    página publicada — é o que `a03_gatilhos._casas_e_barras()` faz para contar
+    casas. **Medido nas dez páginas publicadas de 02/09/2026: isso destrói a
+    tela.** Dentro do lugar da `05-vibracao` há `data-papel="testar"` e
+    `data-papel="parar"` — os dois BOTÕES —, quatro `data-papel="forca"` que são
+    os rótulos `Economia`/`Balanceado`/`Máximo`/`Auto`, e um
+    `data-papel="desenho"` com 231 filhos, que é o SVG do controle. Escrever
+    travessão neles apagaria os botões e o desenho: é o mesmo defeito que a
+    Vibração cometeu em 01/09, quando escreveu `balanceado` dentro dos quatro
+    degraus.
+
+    Quem sabe separar DADO de DESENHO é a própria aba: ela emite exatamente os
+    campos que são dado. Então o molde pergunta a ela — roda a pintura com UM
+    controle de mentira e fica com os NOMES, jogando fora os valores. Por
+    construção, o molde nunca alcança um endereço que a aba não pinta.
+
+    A pintura é pura por contrato (nenhuma toca GTK, WebView ou IPC), então
+    rodá-la duas vezes não tem efeito nenhum além do custo — e o custo fica no
+    `_MOLDE`. Se ela levantar, o molde é `{}`: uma aba que não responde não
+    perde a pintura de verdade, que já aconteceu antes desta chamada.
+    """
+    if ctx.conectados:
+        return {}
+    pacote = pacote if pacote is not None else {}
+    if chaves_por_controle(pacote):
+        # A ABA JÁ EMITIU COLUNA sem controle nenhum (nenhuma faz isso hoje).
+        # Se um dia fizer, a união dela é melhor que o molde — é dado de
+        # verdade, e o piloto já a usa.
+        return {}
+    fn = PACOTES.get(pagina)
+    if fn is None:
+        return {}
+    if not lugares_da_pagina(pagina):
+        # PÁGINA SEM LUGAR DE CONTROLE não tem molde a fazer — e rodar a pintura
+        # dela de novo NÃO É INÓCUO. Ver `lugares_da_pagina`.
+        return {}
+    chave = (pagina, str(ctx.state.get("active_profile")))
+    lembrado = _MOLDE.get(chave)
+    if lembrado is not None:
+        return dict(lembrado)
+    alvos = alvos_da_pagina(pagina)
+    if not alvos:
+        # A PÁGINA NÃO ABRIU. Sem saber com que alvo cada endereço é escrito, o
+        # molde poria travessão numa barra — e uma barra com `width: "—%"` fica
+        # na largura do mockup somando pintura para sempre. Desistir devolve a
+        # tela ao estado de antes desta cura, que é ruim mas não é falso.
+        #
+        # ANTES de rodar o fantasma, e não depois: aqui não há o que guardar no
+        # `_MOLDE`, então a ordem inversa pagaria uma pintura inteira POR TIQUE
+        # numa página que não vai dar molde nenhum.
+        return {}
+    fantasma = Contexto(
+        state=ctx.state, mesa=[dict(_LUGAR_DE_MENTIRA)],
+        conectados=[dict(_CONTROLE_DE_MENTIRA)], estados=dict(ctx.estados))
+    try:
+        seria = fn(fantasma)
+    except Exception:
+        # UMA ABA QUE LEVANTA NÃO DERRUBA A PINTURA. A de verdade já rodou e já
+        # deu certo antes desta chamada; o que se perde aqui é só o molde dela.
+        seria = {}
+    molde = dict.fromkeys(
+        sorted(k for k in chaves_por_controle(seria)
+               if not (alvos.get(k, set()) & ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE)),
+        TRAVESSAO)
+    _MOLDE[chave] = molde
+    return dict(molde)
 
 
 def topo(ctx: Contexto) -> dict[str, Any]:
@@ -471,6 +774,13 @@ from . import (  # noqa: E402
     a04_iluminacao,  # noqa: F401
     a05_vibracao,  # noqa: F401
     a06_navegacao,  # noqa: F401
+    # A 07 FALTAVA AQUI, e a falta era exatamente o que este bloco existe para
+    # impedir. A casa diz em dois lugares que ela é a aba SEM pacote
+    # (`hefesto_vivo.SEM_PACOTE` e o comentário do `_tique`) — mas
+    # `a07_lancadores.py:236` traz `@registrar("07-lancadores.html")` desde que
+    # foi ligada, e `pacote_da_pagina` devolve 26 chaves para ela. Achado em
+    # 02/09/2026 por um teste que assumiu a frase da casa e reprovou.
+    a07_lancadores,  # noqa: F401
     a08_conexoes,  # noqa: F401
     a09_sistema,  # noqa: F401
     a10_perfis,  # noqa: F401
