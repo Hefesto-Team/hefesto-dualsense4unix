@@ -323,9 +323,17 @@ def _pacote_do_editor(profile: Any) -> dict[str, Any]:
         "nome": str(getattr(profile, "name", "") or ""),
         "prioridade": f"{pct:.0f}%",
         "prioridade_n": str(prioridade),
+        # A FRASE É DELA, aprovada em 02/09/2026 — antes disso ela estava
+        # marcada PROVISÓRIO na ROTA-G. A anterior era *"Prioridade {n} de 200.
+        # O maior vence a disputa quando dois perfis poderiam entrar."*, e a
+        # queixa dela foi literal: *"esse texto em perfis nem faz sentido
+        # mais"*. Com o trilho de volta, o número já está ao lado — a frase
+        # repetia o que se vê e ainda dizia "prioridade", que é o rótulo do
+        # campo. **Não é constante de módulo de propósito:** ela não depende de
+        # nada do perfil, e um `f""` sem campo enganaria quem lesse esperando
+        # ver o número aqui.
         "prioridade_dica": (
-            f"Prioridade {prioridade} de {PRIORIDADE_MAXIMA}. O maior vence a "
-            "disputa quando dois perfis poderiam entrar."
+            "Quando dois perfis servem ao mesmo tempo, o de número maior entra."
         ),
         "ambiente": ambiente,
         "ambiente_travado": ambiente is None,

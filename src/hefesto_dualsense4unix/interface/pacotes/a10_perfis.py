@@ -112,15 +112,18 @@ def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
     dos botões o `active_profile` é "regua" e nenhum perfil se chama assim,
     então nada é gravado e o estado do módulo continua limpo.
 
-    FATO SUBSTITUÍDO — 01/09/2026, segunda leva. Aqui estava escrito que "numa
-    árvore de teste a pasta de perfis é vazia", medido com `perfil.lista()`
-    devolvendo `[]`. A medição estava certa e a CONCLUSÃO, errada: `pacote()`
-    não chama `perfil.lista()`, chama `load_all_profiles()` — e essa SEMEIA os
-    presets de fábrica (`loader._maybe_seed_presets:485`, uma vez por processo).
-    Medido no mesmo lar de mentira do `conftest.py`: `perfil.lista()` → 0
-    itens, `load_all_profiles()` → **9 perfis** (Ação, Aventura, Corrida,
-    Esportes, FPS, Navegação, fallback, meu_perfil, point_and_click). Duas
-    funções, duas respostas, a mesma pasta.
+    FATO SUBSTITUÍDO — 02/09/2026, e é a segunda correção desta mesma linha.
+    Estava escrito que, *"no mesmo lar de mentira do `conftest.py`"*,
+    `load_all_profiles()` devolve **9 perfis** (os de fábrica, que ela semeia).
+    **Sob o `pytest` ele devolve `[]`**: a `conftest.py:2114` põe
+    `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1` em TODO teste, e é justamente
+    esse env que desliga o `_maybe_seed_presets`. Os nove eram reais — mas num
+    processo SEM o pytest, que é onde a medição de 01/09 rodou. Conferido em
+    02/09 com uma sonda dentro da suíte: `sorted(nomes) == []`.
+
+    O QUE ISSO NÃO MUDA: a guarda continua segura de repetir. Com a lista vazia
+    o `ativo` nunca está em `nomes`, então nada é gravado — que é o mesmo
+    desfecho que a razão original previa por outro caminho.
     """
     global _ESCOLHIDO
     nomes = {p["nome"] for p in todos}
@@ -185,7 +188,23 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:                       conserto por OUTRA porta — ver `_html_da_lista`.)
 #:   editor.prioridade.dica  a frase já é o `title=` estático do desenho, e o
 #:                       texto novo é decisão DELA (ver a ROTA-G).
-NAO_PINTAVEIS = ("guarda.linhas", "guarda.secao", "editor.prioridade.dica")
+#:   editor.estilo       **não há valor a escrever, e escrever apaga o `—` que
+#:                       ela pediu** — 02/09/2026. O perfil não tem campo de
+#:                       Estilo (`perfis_web` devolve `estilo: None`), então o
+#:                       que sairia daqui é o vazio. E o `escrever()` do piloto
+#:                       troca vazio por `'—'` ANTES do ramo `valor`
+#:                       (`hefesto_vivo.py`, `const t = vazio ? '—' : …`): num
+#:                       `<select>` cuja opção vazia tem `value=""`, escrever
+#:                       `'—'` passa a guarda pelo TEXTO da opção e depois
+#:                       deixa `selectedIndex = -1` — o campo renderiza EM
+#:                       BRANCO, e `el.value` nunca volta igual ao escrito, o
+#:                       que faz o contador somar +1 a cada visita. O desenho já
+#:                       nasce com a opção certa marcada; a tela só precisa não
+#:                       estragá-la. Quem lhe dá valor de verdade é a
+#:                       ONDA-PERFIS-04, e nesse dia o piloto precisa de um
+#:                       caminho para MARCAR uma opção de `value` vazio.
+NAO_PINTAVEIS = ("guarda.linhas", "guarda.secao", "editor.prioridade.dica",
+                 "editor.estilo")
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
@@ -195,11 +214,14 @@ _ARMADO: tuple[str, float] | None = None
 _PINTADO_PARA: str = ""
 _ULTIMO_TIQUE: float = 0.0
 
-#: OS TRÊS CAMPOS QUE NÃO SE REPINTAM. Os dois primeiros porque ela DIGITA
-#: neles; o terceiro porque o valor é sempre o mesmo (não existe campo de
-#: Estilo no perfil) e repintá-lo custava uma escrita por tique para sempre —
-#: medido no Chrome em 01/09/2026: "2º tique pintou 1", e o 1 era ele.
-CAMPOS_QUE_ELA_DIGITA = ("editor.nome", "editor.jogo", "editor.estilo")
+#: OS DOIS CAMPOS QUE NÃO SE REPINTAM, porque ela DIGITA neles.
+#:
+#: ERAM TRÊS até 02/09/2026: o `editor.estilo` estava aqui por outro motivo —
+#: *"o valor é sempre o mesmo e repintá-lo custava uma escrita por tique"*. Ele
+#: saiu porque a razão dele não é "não repintar", é **não pintar**: foi para
+#: `NAO_PINTAVEIS`, onde está a medição. Deixá-lo nos dois lugares faria duas
+#: listas decidirem o mesmo campo.
+CAMPOS_QUE_ELA_DIGITA = ("editor.nome", "editor.jogo")
 
 
 def _uma_vez_so(alvo: str) -> tuple[str, ...]:
@@ -413,6 +435,33 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str) -> str:
     tinha aparecido: `perfis_web.LISTA_VAZIA` diz o que fazer para ter o
     primeiro perfil. Sem esta linha o `<tbody>` ficaria em branco — a tela
     calada sobre um estado que ela sabe explicar.
+
+    **ESTE `<tbody>` AINDA É REESCRITO A CADA TIQUE, e a causa NÃO é o escape** —
+    medido em 02/09/2026 no WebKit da janela dela, com o daemon vivo e uma sonda
+    no laço do `blocos` do piloto. Em 20 tiques: `BLOCOS 20`, contra 1 de cada
+    um dos outros endereços da aba (eles assentam no primeiro tique). O primeiro
+    caractere divergente é o 594:
+
+        na TELA     …data-hef-gesto="selecionar" data-hef-visto="1">meu_perfil…
+        no PRODUTO  …data-hef-gesto="selecionar">meu_perfil…
+
+    O `escrever()` do piloto carimba `el.dataset.hefVisto = '1'` em TODO
+    elemento que visita — inclusive quando escreve zero, que é o ponto do selo.
+    O laço do `blocos` roda ANTES da distribuição por endereço e compara
+    `alvo.innerHTML !== html`: do segundo tique em diante a tela tem 99 selos
+    que o produto não tem (12.222 caracteres contra 10.341), e as duas strings
+    nunca mais batem. O custo é o que a nota do `_atr` já descreve — o `:hover`
+    da linha sob o mouse dela apagado duas vezes por segundo, enquanto ela
+    procura um perfil entre 33.
+
+    **A CURA MORA NO PILOTO, e não aqui** — carimbar o selo fora da serialização
+    (um `WeakSet` em JS) ou comparar sem ele. Emitir o selo daqui faria esta aba
+    conhecer um detalhe interno do pintor. Está relatado ao orquestrador.
+
+    HOJE SÓ ESTA LISTA PAGA, e conferi antes de acusar as irmãs: o defeito só
+    morde um `blocos` cujos FILHOS tenham endereço, e os dois da `08-conexoes`
+    (`.mm-faces` e `.mm-lista`) não emitem `data-campo` nenhum dentro. Quando
+    emitirem, entram no mesmo buraco.
     """
     if not lista:
         return (f'{_RECUO}<tr class="vazia"><td colspan="3">'
@@ -424,8 +473,8 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str) -> str:
         for x in lista)
 
 
-def _valendo(ctx: Contexto) -> str:
-    """Qual perfil está valendo AGORA — pelo dono da pergunta, não pelo `state`.
+def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
+    """Qual perfil está valendo AGORA, **com o nome que a LISTA mostra**.
 
     `profiles_actions.perfil_que_esta_valendo` é o §P1 desta casa, e esta aba
     era o lugar mais caro para não o chamar: ela lia
@@ -443,16 +492,76 @@ def _valendo(ctx: Contexto) -> str:
     e, só se ele calar, o marcador em disco — pelo mesmo caminho do boot
     (`resolve_boot_profile`). Ele nunca levanta: qualquer falha de I/O vira
     `nao_sei`, que aqui é o `""`.
+
+    **O `find_by_slug` NO FIM É A SEGUNDA METADE, e sem ele a mesma tela dava
+    DOIS vereditos** — 02/09/2026. O que vem do daemon ou do marcador é um NOME
+    DIGITADO, e daqui ele seguia cru para dois comparadores diferentes:
+
+        o realce da lista   `perfis_web._linhas_da_lista:358` faz `p.name == ativo`
+        as guardas dos gestos  `mesmo_slug` (R-10), em `ativar` e `voltar…`
+
+    MEDIDO com 33 perfis no disco e o daemon calado, marcador em `sackboy` e o
+    perfil chamado `Sackboy`:
+
+        realce -> []                     (nenhuma das 33 linhas se acende)
+        Ativar -> "já é o perfil que está valendo"   (a guarda por slug pega)
+
+    Duas guardas, dois vereditos, uma tela — e o marcador em caixa diferente é
+    exatamente o caso que `find_by_slug` existe para cobrir (a docstring dele
+    cita "Navegação"/"Navegacao"). **O dono passa a ser UM SÓ:** o nome é
+    resolvido aqui, contra os perfis do disco, e sai já sendo o `p.name` de uma
+    linha da lista. O `==` de lá não pode mais discordar do `mesmo_slug` daqui.
+
+    **E O MARCADOR ÓRFÃO CAI JUNTO** — perfil renomeado ou apagado por fora. O
+    `resolve_boot_profile` declara na própria docstring que *"só resolve NOMES —
+    não valida se o perfil carrega"*; o que ele devolve ia CRU para o chip
+    "Perfil ativo" e para o alvo dos gestos. Medido, com o marcador em "Perfil
+    Que Ela Apagou": o chip nomeava um perfil sem linha entre as 33 e sem
+    arquivo no disco, e ela ia procurá-lo na lista. Sem casar com ninguém, o
+    nome vira `""` — que aqui é "não há", e a tela mostra travessão.
+
+    **LISTA VAZIA NÃO É PROVA DE ÓRFÃO — é a AUSÊNCIA de prova**, e essa
+    distinção é a que impede a cura de desarmar o §P7. Só se rebaixa o nome a
+    `""` quando há uma lista contra a qual conferi-lo; sem lista, o nome cru
+    segue, e `ativar`/`remover` continuam recusando. Medido em 02/09/2026: sob
+    o `pytest` a `conftest.py:2114` põe
+    `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1` em TODO teste, e
+    `load_all_profiles()` devolve **[]** — sem esta guarda, todas as réguas
+    desta aba passariam a medir o ramo vazio e a guarda de apagar o perfil que
+    vale ficaria verde sem existir.
+
+    `todos` é para quem já leu o disco neste tique: `pacote()` roda a cada
+    500 ms e chama `load_all_profiles()` uma vez; ler 33 arquivos duas vezes por
+    tique seria pagar de novo o que já está na mão. Os gestos chamam sem ele —
+    são um clique, não um laço.
     """
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         perfil_que_esta_valendo,
     )
+    from hefesto_dualsense4unix.profiles.slug import find_by_slug
 
-    return str(perfil_que_esta_valendo(ctx.state).nome or "")
+    nome = str(perfil_que_esta_valendo(ctx.state).nome or "")
+    if not nome:
+        return ""
+    if todos is None:
+        from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+
+        try:
+            todos = list(load_all_profiles())
+        except Exception:
+            # DISCO ILEGÍVEL NÃO PODE DESARMAR AS GUARDAS. Sem a lista não dá
+            # para saber se o nome é órfão — e o erro seguro é o nome cru: ele
+            # mantém `ativar` e `remover` recusando. Devolver `""` aqui faria a
+            # falha de leitura ABRIR a porta de apagar o perfil que vale.
+            return nome
+    if not todos:
+        return nome
+    achado = find_by_slug(nome, todos)
+    return str(getattr(achado, "name", "") or "") if achado is not None else ""
 
 
-def _rotulo_do_remover() -> str:
-    """"Remover", ou a PERGUNTA que a dica dela promete.
+def _rotulo_do_remover(alvo: str) -> str:
+    """"Remover", ou a PERGUNTA que a dica dela promete — sobre o alvo de AGORA.
 
     A dica no desenho diz *"Apaga do disco. Pergunta antes."* — e esta janela
     não tem diálogo. O `on_profile_remove` da janela estável abre um
@@ -466,8 +575,26 @@ def _rotulo_do_remover() -> str:
     Então a pergunta é o PRÓPRIO RÓTULO do botão. É o único pedaço de tela que
     já existe, que ela está olhando no instante do clique, e que o piloto sabe
     pintar. O desenho não muda: o mockup continua escrevendo "Remover".
+
+    **O `alvo` É A CURA DE 02/09/2026, e sem ele o botão ANUNCIAVA UM PERFIL E
+    APAGAVA OUTRO.** O armamento sempre foi por perfil — `remover` exige
+    `_ARMADO[0] == nome` — mas este rótulo olhava só o RELÓGIO, e por isso
+    continuava perguntando pelo perfil armado depois de ela clicar noutra linha.
+    Reproduzido com 33 perfis no disco e dublê de ponte, sem nenhum valendo:
+
+        clique em Remover (Pragmata escolhido) -> rótulo: Remover “Pragmata”?
+        ela clica na linha do Sackboy          -> rótulo: Remover “Pragmata”?
+        clique em Remover                      -> arma o SACKBOY, calado
+        clique em Remover                      -> some do disco: ["Sackboy"]
+
+    Três cliques num botão que nunca deixou de dizer "Pragmata" apagam o
+    Sackboy. A frase de recusa que armaria o segundo perfil sai em `stderr`
+    (`hefesto_vivo.py`), então nada na tela contradiz o rótulo. Com o alvo, o
+    rótulo volta a "Remover" no instante em que ela troca de linha — que é a
+    verdade: o próximo clique naquele botão ARMA, não apaga.
     """
-    if _ARMADO and (time.monotonic() - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR:
+    if (_ARMADO and _ARMADO[0] == alvo
+            and (time.monotonic() - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR):
         return f"Remover “{_ARMADO[0]}”? Clique de novo"
     return "Remover"
 
@@ -493,9 +620,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
     from hefesto_dualsense4unix.profiles.slug import find_by_slug
 
-    ativo = _valendo(ctx)
     try:
         todos = load_all_profiles()
+        # O DISCO É LIDO UMA VEZ POR TIQUE, e `_valendo` recebe a lista em vez
+        # de relê-la: ele resolve o nome que vale contra os perfis que existem
+        # (ver a docstring dele), e são 33 arquivos a cada 500 ms.
+        ativo = _valendo(ctx, todos)
         # O `editado` FALTAVA, e o editor mostrava o perfil ERRADO — corrigido
         # em 01/09/2026, ao ligar os campos. Sem ele `pacote_da_aba` cai no
         # ativo (`perfis_web.py:426`), então clicar numa linha mudava o alvo dos
@@ -503,7 +633,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # nenhum campo tinha gesto isso era só uma tela desalinhada; com o Nome
         # e o Nome do Jogo ligados, seria ela renomear um perfil olhando para o
         # nome de outro.
-        alvo = find_by_slug(_escolhido([{"nome": x.name} for x in todos], ativo), todos)
+        escolhido = _escolhido([{"nome": x.name} for x in todos], ativo)
+        alvo = find_by_slug(escolhido, todos)
         bruto = _tela.pacote_da_aba(todos, ativo=ativo or None,
                                     mesa=_mesa_com_rotulo(ctx.mesa), editado=alvo)
     except Exception:
@@ -564,7 +695,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     # O RÓTULO DO REMOVER, e ele é a pergunta que a dica dela promete. Sai daqui
     # e não do JS porque o armamento vive no Python (ver o gesto `remover`).
-    fora["perfis.remover"] = _rotulo_do_remover()
+    #
+    # ELE RECEBE O ALVO, e o `escolhido` daqui é o MESMO nome que
+    # `_perfil_do_editor` devolve ao gesto: os dois são `_ESCOLHIDO or` o que
+    # está valendo, e `_escolhido()` acabou de sincronizar o primeiro. Sem o
+    # alvo, o rótulo perguntava por um perfil e o clique agia sobre outro —
+    # a medição está na docstring de `_rotulo_do_remover`.
+    fora["perfis.remover"] = _rotulo_do_remover(escolhido)
 
     # A GUARDA são os overrides por controle — o que cada um guarda de próprio
     # neste perfil. O produto já a monta; a tela a distribui por linha.
@@ -584,7 +721,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         fora["guarda.secao"] = [s for g in guarda for s in (g.get("secoes") or [])]
         fora["guarda.linhas"] = str(len(guarda))
 
-    # OS QUATRO QUE NÃO SAEM, e cada um tem a sua linha em `NAO_PINTAVEIS`.
+    # OS QUE NÃO SAEM — a lista é `NAO_PINTAVEIS`, e cada nome tem lá a sua
+    # linha com a medição. (Este comentário dizia "OS QUATRO" quando a lista
+    # tinha três: um número escrito em dois lugares diverge no primeiro dia.)
     # Este `pop` é o último ato de propósito: `pacote_da_aba` e o laço do editor
     # acima continuam produzindo tudo — quem decide o que a PÁGINA aguenta é
     # esta lista, num lugar só, e não cada emissão espalhada pelo arquivo.
@@ -631,8 +770,16 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     escreve `textContent` nele, que não aparece.
 
     `texto` é o nome VIVO porque a célula é a mesma que a pintura escreve
-    (`perfis.linha.nome`). Ler o `data-hef-perfil` da linha traria o nome do
-    MOCKUP: a pintura troca o texto e nunca reescreve o atributo.
+    (`perfis.linha.nome`).
+
+    FATO SUBSTITUÍDO — 02/09/2026. Aqui estava escrito que ler o
+    `data-hef-perfil` da linha *"traria o nome do MOCKUP: a pintura troca o
+    texto e nunca reescreve o atributo"*. **Passou a reescrever, no mesmo commit
+    que escreveu a frase:** `_linha_da_lista` emite `data-hef-perfil` com o nome
+    vivo e o `blocos` troca o `<tbody>` inteiro. A escolha do `texto` continua
+    certa por outra razão, e é a que vale: é o `texto` que o ouvinte do piloto
+    manda para TODO gesto (`hefesto_vivo.py`, `texto: alvo.textContent`) — ler
+    um atributo obrigaria o piloto a saber que esta aba é especial.
     """
     global _ESCOLHIDO
     nome = str(o.get("texto") or "").strip()
@@ -1182,6 +1329,14 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # inteiro e **cala quando a fonte é `nao_sei`** — "não sei qual está
     # valendo" e "não há nenhum valendo" são fatos diferentes, e transformar o
     # primeiro em recusa seria travar o Remover por ignorância nossa.
+    #
+    # O `nao_sei` É INALCANÇÁVEL DAQUI, e escrever isso é o honesto — 02/09/2026.
+    # `perfil_que_esta_valendo` só o devolve quando o `state` NÃO é dicionário
+    # (`houve_resposta = isinstance(state, dict)`), e `Contexto.state` é tipado
+    # `dict[str, Any]` e nasce dicionário nos dois lugares onde o piloto o monta.
+    # O ramo que esta aba alcança é o `nenhum`. A escolha pela função continua
+    # certa — ela é o dono da frase e cobre o caso na janela GTK, que a chama sem
+    # `state` —, mas ninguém deve ler isto como uma cobertura que esta aba tem.
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         frase_da_remocao_do_perfil_ativo,
         perfil_que_esta_valendo,
@@ -1239,18 +1394,16 @@ def _editor_de(prof: Any) -> dict[str, Any]:
 #:                 `profiles/schema.Profile`, não há chave em
 #:                 `SIMPLE_MATCH_PRESETS` e os quinze estilos do desenho não têm
 #:                 arquivo atrás. Quem lhe dá motor é a ONDA-PERFIS-04.
-#:                 FATO ERRADO, SUBSTITUÍDO — 02/09/2026. Aqui estava escrito
-#:                 que *"a tela não mente mais sobre ele: com
-#:                 `data-hef-alvo="valor"` e o valor vazio, o seletor abre em
-#:                 BRANCO"*. **Ela mente.** Fotografado hoje, com o daemon vivo:
-#:                 o campo diz "Luta" para TODO perfil. A causa é o ramo `valor`
-#:                 do `escrever()` — um `<select>` só aceita o que ele oferece, e
-#:                 o vazio vira `'—'`, que não é opção nenhuma; a escrita é
-#:                 recusada e a marca `<option selected>Luta</option>` do desenho
-#:                 fica. Para o campo abrir em branco falta uma opção VAZIA no
-#:                 `<select>`, que é desenho — bancada e ato de publicar DELA.
-#:                 Enquanto isso, quinze estilos e um deles escolhido: a tela
-#:                 afirmando um valor que ninguém guarda.
+#:                 A TELA MENTIA, e a cura é do DESENHO — 02/09/2026. O campo
+#:                 dizia "Luta" para TODO perfil, porque o desenho trazia
+#:                 `<option selected>Luta</option>` e a pintura não alcançava um
+#:                 `<select>` com valor vazio (ver `NAO_PINTAVEIS`). Decisão
+#:                 dela, hoje: o `<select>` ganha PRIMEIRA opção com `value=""`,
+#:                 texto `—`, marcada. Está feita no gerador (`aba10.py`) e mora
+#:                 na BANCADA — declarada em `mockup/DIVERGENCIAS.md`, esperando
+#:                 o ato de publicar DELA. Até lá, a página publicada continua
+#:                 abrindo em "Luta"; o pacote parou de escrever nela nos dois
+#:                 casos, que é o que impede a tela de piorar.
 PONTE = {"profile_switch", "chamar"}
 METODOS = {"launch_env.refresh"}
 
@@ -1261,14 +1414,14 @@ PISO_DA_ABA = 10
 #: preguiça: os outros nove agem sobre o perfil ESCOLHIDO, e o `ctx` desta
 #: régua é fixo — `active_profile="regua"`, sem `_ESCOLHIDO` (um gesto que
 #: dependesse do estado deixado por outro teste seria pior que não ter prova).
-#: MEDIDO em 01/09/2026, no mesmo lar de mentira que o `conftest.py` monta:
-#: `load_all_profiles()` devolve **9 perfis** — os de fábrica, que ela mesma
-#: semeia — e nenhum se chama "regua". Cada um dos nove levanta
-#: `FileNotFoundError` no `load_profile("regua")`, antes de tocar a ponte.
-#:
-#: NÃO É "a pasta de perfis é vazia", que foi o que a primeira leva escreveu
-#: aqui: essa medição usou `perfil.lista()`, que lê a pasta sem semear. A
-#: pasta que `pacote()` enxerga tem nove.
+#: FATO SUBSTITUÍDO — 02/09/2026. Aqui estava escrito que, "no mesmo lar de
+#: mentira que o `conftest.py` monta", `load_all_profiles()` devolve **9
+#: perfis** e que a pasta vista por `pacote()` "tem nove". **Sob o `pytest` ela
+#: tem ZERO**: a `conftest.py:2114` põe
+#: `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1` em todo teste, e é esse env que
+#: desliga a semeadura. A conclusão não muda — nenhum perfil se chama "regua",
+#: e os nove gestos levantam antes de tocar a ponte; o que muda é que eles
+#: levantam por a pasta estar VAZIA, não por o nome não estar entre nove.
 #:
 #: ELES FORAM PROVADOS, e não por leitura: com uma pasta de perfis DE VERDADE
 #: num diretório temporário, três perfis dela copiados, e um dublê de ponte

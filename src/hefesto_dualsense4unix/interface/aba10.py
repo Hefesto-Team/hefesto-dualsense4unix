@@ -379,9 +379,23 @@ PERFIS = [("Mortal Kombat", 90, "Jogo · mk1.exe", True),
           ("Navegação", 40, "Todos — 4 disputam", False),
           ("Universal", 0, "Todos — quando nenhum casa", False)]
 
-def opts(lista, escolhido):
-    return "\n".join(f'                <option{" selected" if o == escolhido else ""}>{o}</option>'
-                     for o in lista)
+def opts(lista, escolhido, vazio=False):
+    """As opções de um `<select>` do desenho.
+
+    `vazio=True` põe NA FRENTE a opção que ela decidiu em 02/09/2026:
+    `value=""`, texto travessão, marcada — e aí nenhuma das outras nasce
+    marcada. Sem ela o "Estilo de Jogo" abria em `Luta` para os 33 perfis dela,
+    um valor que ninguém escreveu: o perfil não tem campo de Estilo
+    (`perfis_web` devolve `estilo: None`), e a pintura não alcança um `<select>`
+    com valor vazio — ver `a10_perfis.NAO_PINTAVEIS`. É a regra dela dita no
+    mesmo dia, *"campo sem informação não mostra nada"*, aplicada ao desenho.
+    """
+    linhas = []
+    if vazio:
+        linhas.append('                <option value="" selected>—</option>')
+    linhas += [f'                <option{" selected" if (o == escolhido and not vazio) else ""}>{o}</option>'
+               for o in lista]
+    return "\n".join(linhas)
 
 
 def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
@@ -570,11 +584,14 @@ MIOLO = f'''
                        para um perfil que está em 1 de 200.
                        É a mesma cura que os quatro campos do editor logo
                        abaixo já tinham recebido com `alvo="valor"`.
-                       Enquanto esta página não for PUBLICADA por ela,
-                       `a10_perfis.NAO_PINTAVEIS` segura a emissão do
-                       `editor.prioridade` — quem diz a verdade é o número ao
-                       lado (`editor.prioridade.n`), que é um `<span>` sem
-                       filhos e recebe o valor certo. -->
+                       FATO SUBSTITUÍDO — 02/09/2026. Aqui estava escrito que,
+                       "enquanto esta página não for PUBLICADA por ela",
+                       `a10_perfis.NAO_PINTAVEIS` segurava a emissão do
+                       `editor.prioridade`. As duas metades caíram: a página FOI
+                       publicada (commit `70b58116`) e `editor.prioridade` saiu
+                       de `NAO_PINTAVEIS` no `1f6e356b`. A barra recebe a
+                       largura; o número ao lado (`editor.prioridade.n`) é um
+                       `<span>` sem filhos e recebe o valor pelo mesmo tique. -->
                   <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:90%"></span></span>
                   <span class="n" data-hef="editor.prioridade.n">90</span>
                 </span>
@@ -596,7 +613,7 @@ MIOLO = f'''
               <div class="campo">
                 <span title="Pré-aplica um perfil inteiro: escolhendo FPS, o gatilho, a luz, a vibração e a máscara já vêm resolvidos. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
-{opts(ESTILOS, "Luta")}
+{opts(ESTILOS, "", vazio=True)}
                 </select></span>
               </div>
 

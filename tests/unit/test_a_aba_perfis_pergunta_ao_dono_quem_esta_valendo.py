@@ -28,6 +28,13 @@ depois de o arquivo sumir.
 **O ``nao_sei`` CALA, e é o que separa esta cura de um alarme falso.** "Não sei
 qual está valendo" e "não há nenhum valendo" são fatos diferentes; transformar o
 primeiro em recusa travaria o Remover por ignorância nossa.
+
+FATO SUBSTITUÍDO — 02/09/2026. Esta última frase é verdadeira da FUNÇÃO e
+**vazia nesta aba**: ``perfil_que_esta_valendo`` só devolve ``nao_sei`` quando o
+``state`` não é dicionário, e ``Contexto.state`` é tipado ``dict[str, Any]`` e
+nasce dicionário nos dois únicos lugares onde o piloto o constrói. O ramo que
+esta aba alcança é o ``nenhum``. Quem cobre a distinção é
+``test_p7_remover_diz_que_esta_apagando_o_que_vale.py``, contra a função.
 """
 from __future__ import annotations
 
@@ -164,22 +171,36 @@ def test_a_recusa_do_remover_e_a_frase_inteira_do_produto(
     assert "ative outro perfil em seguida" in texto
 
 
-def test_quando_ninguem_sabe_quem_vale_o_remover_nao_trava(
+def test_com_ninguem_valendo_o_remover_nao_trava(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``nao_sei`` CALA — e o gesto segue para a pergunta do rótulo.
+    """Sem daemon e sem marcador em disco, o Remover SEGUE para a pergunta.
 
-    Sem daemon e sem marcador em disco, a tela não pode AFIRMAR que este é o
-    perfil que está valendo. A guarda que sobra é a pergunta no rótulo do botão,
-    que continua de pé: o primeiro clique arma e levanta.
+    A tela não pode AFIRMAR que este é o perfil que está valendo. A guarda que
+    sobra é a pergunta no rótulo do botão, que continua de pé: o primeiro clique
+    arma e levanta.
 
-    MORDIDA: faça a recusa disparar também no ``nao_sei`` e este teste reprova —
-    o Remover ficaria travado para sempre numa máquina com o daemon parado.
+    TÍTULO CORRIGIDO — 02/09/2026, achado de auditoria. Ele dizia
+    ``…quando_ninguem_sabe_quem_vale…`` e a docstring prometia cobrir o ramo
+    ``nao_sei``. **Ele nunca chega lá, e não é bug deste teste — é inalcançável
+    por esta aba:** ``perfil_que_esta_valendo`` só devolve ``nao_sei`` quando o
+    ``state`` NÃO é dicionário (``houve_resposta = isinstance(state, dict)``), e
+    ``Contexto.state`` é tipado ``dict[str, Any]`` e nasce dicionário nos dois
+    únicos lugares onde o piloto o constrói. O que esta régua exercita é o ramo
+    ``nenhum`` — daemon calado E disco calado —, que é um estado real da máquina
+    dela. A distinção ``nao_sei``/``nenhum`` continua sendo do produto, e quem a
+    cobre é ``test_p7_remover_diz_que_esta_apagando_o_que_vale.py``.
+
+    MORDIDA: faça a recusa disparar quando ``perfil_que_esta_valendo`` não sabe
+    de ninguém (``if aviso or not _vale.nome:``) e este teste reprova — o
+    Remover ficaria travado numa máquina com o daemon parado e sem marcador.
     """
     def _explode() -> str:
         raise OSError("o disco não respondeu")
 
     monkeypatch.setattr(profiles_actions, "perfil_que_ela_ativou", _explode)
+    # O ramo medido, escrito no próprio teste para não voltar a ser suposto.
+    assert profiles_actions.perfil_que_esta_valendo({}).fonte == "nenhum"
     _, erro = _remover("meu_perfil", {})
     assert isinstance(erro, RuntimeError), (
         f"esperava a pergunta do rótulo, veio {type(erro).__name__}: {erro}")
@@ -219,6 +240,21 @@ def test_a_aba_nao_le_mais_o_active_profile_cru() -> None:
     Cinco lugares liam ``ctx.state.get("active_profile")`` e todos passaram a
     chamar ``_valendo``. Uma cura em quatro dos cinco deixaria a aba respondendo
     diferente conforme o botão — que é pior que o defeito original.
+
+    **ELA MEDE TEXTO, E TEXTO SE REESCREVE** — achado de auditoria, 02/09/2026.
+    A reversão dos quatro sítios que não tinham régua de ATO, escrita por
+    concatenação (``state.get("act" "ive_profile")``), deixou 1080 testes
+    verdes: qualquer f-string, ``.format()`` ou constante de módulo produz o
+    mesmo efeito. Ela FICA — pega o descuido, que é o caso comum — mas quem
+    segura o defeito é a régua de comportamento, e agora existe para os cinco:
+
+        ativar               este arquivo, ``test_ativar_recusa_o_mesmo_perfil…``
+        remover              este arquivo, ``test_remover_recusa_o_perfil_que_vale…``
+        pacote               ``test_a_aba_perfis_nomeia_o_alvo_que_ela_vai_apagar``
+                             — ``…_o_marcador_que_existe_continua_valendo``
+        _perfil_do_editor    idem — ``…_o_editor_abre_no_perfil_que_o_disco_diz…``
+        voltar_a_de_ontem    idem — ``…_acha_o_perfil_e_manda_reaplicar`` (os dois
+                             sítios no mesmo clique)
 
     MORDIDA: escreva ``ctx.state.get("active_profile")`` em qualquer gesto desta
     aba e este teste reprova nomeando a linha.
