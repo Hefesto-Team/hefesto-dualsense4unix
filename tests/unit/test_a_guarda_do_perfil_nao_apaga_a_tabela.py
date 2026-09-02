@@ -244,10 +244,14 @@ def test_nenhuma_porcentagem_vai_para_um_elemento_sem_largura() -> None:
 
 
 @pytest.mark.parametrize("endereco", a10_perfis.NAO_PINTAVEIS)
-def test_os_quatro_que_nao_saem_continuam_na_pagina(endereco: str) -> None:
+def test_os_que_nao_saem_continuam_na_pagina(endereco: str) -> None:
     """Eles NÃO são endereços mortos: a página os tem, e o dia em que o HTML
     ganhar o ``data-hef-alvo`` certo eles voltam. Se um sumir do HTML, a lista
-    envelheceu calada — e é o defeito que esta casa persegue."""
+    envelheceu calada — e é o defeito que esta casa persegue.
+
+    O NOME PERDEU O NÚMERO em 02/09/2026: ele dizia "os quatro" enquanto a lista
+    tinha três, e voltou a ter quatro no mesmo dia. Contagem escrita fora do
+    lugar onde ela é decidida diverge no primeiro dia."""
     existe = {item["endereco"] for item in _pagina_publicada()}
     assert endereco in existe, (
         f"“{endereco}” saiu da página publicada e continua em "
