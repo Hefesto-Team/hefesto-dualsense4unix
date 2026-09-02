@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import Contexto, registrar
+from . import Contexto, jogador_de, registrar
 
 
 @registrar("01-jogar.html")
@@ -45,7 +45,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         nome = casa.get("nome") or "—"
         via = casa.get("via") or (c.get("transport") or "").upper()
         cartoes[uniq] = {
-            "jogador": f"Player {c.get('player') or '—'}",
+            # `jogador_de` E NÃO `c.get("player")`: o daemon publica DUAS
+            # chaves, e o `player` volta `None` no controle que o co-op não
+            # numerou — medido em 02/09/2026 com o do CABO. Ler só ele escrevia
+            # "Player —" na tela para um controle que a Iluminação, três linhas
+            # abaixo, mostrava com o botão 2 ACESO. O dono lê `player_slot`
+            # antes, que é a ordem da GTK (`controller_card.py:1059-1067`).
+            "jogador": f"Player {jogador_de(c) or '—'}",
             "bateria": f"{c.get('battery_pct')}%" if c.get("battery_pct") is not None else "—",
             "identidade": f"{nome} · {via}",
         }
@@ -56,10 +62,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     achados = _do_exame()
     grave = next((a for a in achados if a["grave"]), None) or (achados[0] if achados else None)
 
+    # A FAIXA LARANJA. Os dois endereços saem daqui SEMPRE — inclusive vazios —
+    # porque o que estava cravado na página é uma frase, e uma frase só se apaga
+    # escrevendo por cima. Ver `_faixa_do_pendente`.
+    frase, alvo = _faixa_do_pendente(ctx.state)
+
     fora = {
         "atencao-conta": f"{len(achados)} aviso" + ("s" if len(achados) != 1 else ""),
         "cartoes": cartoes,
-        "cobertura": {"pintados": 1 + len(cartoes) * 3 + (2 if grave else 0), "sem_dono": 0},
+        "pendente": frase,
+        "pendente-alvo": alvo,
+        "cobertura": {"pintados": 3 + len(cartoes) * 3 + (2 if grave else 0), "sem_dono": 0},
     }
     if grave:
         fora["aviso-selo"] = grave["selo"]
@@ -80,6 +93,167 @@ def _do_exame() -> list[dict[str, Any]]:
                 for i in a08_conexoes._exame()]
     except Exception:
         return []
+
+
+# ---------------------------------------------------------------------------
+# A FAIXA LARANJA — o que ela escolheu e o daemon ainda NÃO alcançou
+# ---------------------------------------------------------------------------
+#: O QUE A FAIXA DIZIA, E POR QUE ISSO ERA FALSO — medido em 02/09/2026, na foto
+#: da aba com os dois controles dela na mesa:
+#:
+#:     ● Vai mudar para **Sony DualSense** quando você clicar em **Aplicar**
+#:
+#: e, na MESMA foto, o chip **Sony DualSense** já estava aceso na fileira Modo.
+#: As duas metades da frase estão erradas, e cada uma por um motivo diferente:
+#:
+#: 1. **"Vai mudar para Sony DualSense"** é tautologia. O gerador deriva a
+#:    palavra de `aba01.MODO_ACESO` desde 31/08 — a cura que ela encomendou ao
+#:    ver a faixa anunciar "Modo Nativo" com o interruptor em Ligado. A cura
+#:    matou a CONTRADIÇÃO e deixou no lugar uma frase que só sabe prometer o que
+#:    já está valendo: cravada em `MODO_ACESO`, ela nunca poderá dizer outra
+#:    coisa.
+#: 2. **"quando você clicar em Aplicar"** é falso em TODO estado desta interface.
+#:    O Aplicar daqui é `pacotes/rodape.aplicar`, que manda
+#:    `profile.apply_draft` com o `to_ipc_dict()` do rascunho — e o contrato
+#:    desse payload, escrito no próprio produto (`app/draft_config.to_ipc_dict`,
+#:    PERFIL-SALVA-TUDO-01), é: *"`mode` e `suppress_desktop_emulation` … NÃO
+#:    viajam no 'Aplicar'"*. **Clicar em Aplicar não troca modo nem máscara.**
+#:    Na janela GTK a frase era verdadeira porque `footer_actions.on_apply_draft`
+#:    tem um SEGUNDO ramo (`_aplicar_escolha_pendente` → `apply_mode`); o rodapé
+#:    desta interface não tem, e a docstring dele já dizia isso com todas as
+#:    letras — *"a interface nova ainda não guarda"*.
+#:
+#: O QUE A FAIXA PASSA A DIZER, e é o que ela SEMPRE existiu para dizer
+#: (AGORA-E-DEPOIS-01, `relancar.texto_do_pendente`): *"esta é a única prova de
+#: que o clique registrou"*. Nesta interface o clique aplica na hora (decisão
+#: dela, 01/09), então uma pendência só nasce quando o daemon **não alcançou** o
+#: que ela pediu — e é justamente aí que a tela estava MUDA. `_aplicar` não
+#: levanta com o retorno de propósito (ver `ACHADO_DO_TIMEOUT`), então um clique
+#: que não pega hoje não deixa rastro nenhum na tela.
+_ESCOLHA: dict[str, str] = {}
+#: A PALAVRA QUE ELA LEU NA TELA, por campo pendente. Ela NÃO é digitada aqui e
+#: não sai de tabela nenhuma: chega no clique, em `o["texto"]` — o
+#: `textContent` do próprio botão que ela apertou (`hefesto_vivo.BOOTSTRAP`,
+#: `manda_do_alvo`). É a única fonte que não pode divergir do desenho, porque É
+#: o desenho. O `painel.CHIPS_DA_ESCADA` é a rede de segurança, e a chave crua é
+#: o último degrau — nunca um nome inventado.
+_ROTULO: dict[str, str] = {}
+
+
+def _lembrar(campo: str, valor: str, rotulo: str) -> None:
+    """Anota o que ela acabou de pedir. Escritor ÚNICO dos dois dicionários.
+
+    `campo` é `"modo"` ou `"mascara"`, que são as duas chaves de
+    `home_actions.reconciliar_pendente` — as mesmas da janela estável. Escrever
+    um terceiro nome aqui faria a reconciliação passar batido por ele.
+    """
+    if not valor:
+        return
+    _ESCOLHA[campo] = valor
+    _ROTULO[campo] = rotulo or _rotulo_de(campo, valor)
+
+
+def _rotulo_de(campo: str, valor: str) -> str:
+    """A palavra aprovada por ela para aquela chave, sem passar pela tela.
+
+    Rede de segurança para quando o clique não trouxe `texto` (um dublê de
+    régua, um botão que a pintura trocou no meio). Sai de
+    `painel.CHIPS_DA_ESCADA`, que é o dono dos rótulos da fileira — digitá-los
+    aqui seria a segunda cópia da palavra dela.
+    """
+    if campo == "mascara":
+        for chip in _painel().CHIPS_DA_ESCADA:
+            ponte = chip.ponte
+            if ponte is not None and ponte.mascara == valor:
+                return str(chip.rotulo)
+    return valor
+
+
+def _pendencia(state: dict[str, Any]) -> dict[str, str]:
+    """O que ela pediu MENOS o que o daemon já alcançou. Devolve o que sobra.
+
+    A REGRA NÃO SE REESCREVE: `home_actions.reconciliar_pendente` é a dona dela
+    desde a AGORA-E-DEPOIS-01, e a frase que a define está lá — *"uma pendência
+    só existe enquanto DIVERGE do vigente"*. Ela lê tudo por `getattr`, então
+    serve a qualquer objeto: aqui vai um `SimpleNamespace`, porque esta
+    interface não tem uma `janela` onde pendurar a escolha.
+
+    AS DUAS PONTAS TAMBÉM TÊM DONO: o modo vivo é `mode_transition.mode_of_state`
+    (o mesmo que acende o interruptor) e a máscara viva é
+    `home_actions.mascara_do_aparelho` — que sabe a diferença entre a máscara
+    EXPLÍCITA e a deduzida do `backend`, e devolve `None` quando não dá para
+    saber. Comparar contra um `None` não apaga pendência nenhuma, que é o
+    comportamento certo: não saber não é ter alcançado.
+
+    DAEMON CALADO NÃO RECONCILIA. É o ramo `visivel=False` do
+    `home_actions.render_pendente`: *"sem daemon não há como aplicar, mas o que
+    ela decidiu não pode evaporar por causa de um engasgo de IPC"*. Sem isto o
+    `mode_of_state({})` devolveria `desktop` — ele só devolve `None` para um
+    não-dicionário — e um pedido de Navegação seria dado por cumprido por um
+    tique sem resposta.
+    """
+    if not state:
+        return dict(_ESCOLHA)
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        mascara_do_aparelho,
+        reconciliar_pendente,
+    )
+    from hefesto_dualsense4unix.app.actions.mode_transition import mode_of_state
+
+    lembrete = SimpleNamespace(
+        _escolha_pendente=dict(_ESCOLHA) or None,
+        _modo_vigente_do_daemon=mode_of_state(state),
+        _mascara_vigente_do_daemon=mascara_do_aparelho(state),
+    )
+    sobra: dict[str, str] = dict(reconciliar_pendente(lembrete) or {})
+    _ESCOLHA.clear()
+    _ESCOLHA.update(sobra)
+    for campo in [c for c in _ROTULO if c not in sobra]:
+        del _ROTULO[campo]
+    return sobra
+
+
+def _faixa_do_pendente(state: dict[str, Any]) -> tuple[str, str]:
+    """`(frase, alvo)` da faixa laranja — `("", "")` quando não há pendência.
+
+    A FRASE É DO PRODUTO: `relancar.texto_do_pendente` é função pura (zero GTK,
+    zero import além do `typing`) e é a MESMA que a janela estável escreve na
+    linha do pendente. O marcador `●` vem de lá também
+    (`relancar.MARCADOR_PENDENTE`).
+
+    A MAIÚSCULA É REGRA DESTA LINHA, e é dela — 28/08/2026, e o comentário do
+    gerador a guarda: *"o `●` que vem antes é MARCADOR, não palavra: a frase
+    começa aqui"*. A janela estável escreve a mesma frase em minúscula porque lá
+    ela é um rótulo no meio de outros; aqui é a linha inteira, isolada na caixa
+    tracejada. É a única coisa que este arquivo faz com o texto do produto, e
+    fazê-la aqui é o que evita uma segunda cópia da frase.
+
+    O VAZIO É `""` DE PROPÓSITO: o piloto escreve `—` no lugar de um valor vazio
+    (`hefesto_vivo.BOOTSTRAP`, `escrever`), que é a palavra desta casa para *"não
+    há"* — a mesma de `painel.SEM_LEITOR`. Uma faixa com travessão diz "nada
+    pendente"; a frase cravada do desenho dizia uma mudança que não vem.
+    """
+    from hefesto_dualsense4unix.app.actions.relancar import (
+        MARCADOR_PENDENTE,
+        texto_do_pendente,
+    )
+
+    sobra = _pendencia(state)
+    if not sobra:
+        return "", ""
+    rotulos = [_ROTULO.get(c, sobra[c]) for c in ("modo", "mascara") if c in sobra]
+    frase = texto_do_pendente(
+        modo=_ROTULO.get("modo", sobra.get("modo")) if "modo" in sobra else None,
+        mascara=(_ROTULO.get("mascara", sobra.get("mascara"))
+                 if "mascara" in sobra else None),
+    )
+    marca = f"{MARCADOR_PENDENTE} "
+    if frase.startswith(marca):
+        resto = frase[len(marca):]
+        frase = marca + resto[:1].upper() + resto[1:]
+    return frase, ", ".join(rotulos)
 
 
 # ---------------------------------------------------------------------------
@@ -131,9 +305,21 @@ def _painel() -> Any:
     """`app/actions/jogar/painel` — o dono das perguntas desta aba.
 
     Importado DENTRO das funções, e não no topo: `painel` puxa `home_actions`,
-    que puxa GTK. As funções de pacote são puras por contrato
-    (`pacotes/__init__`), e um import de GTK no topo faria as dez abas o
-    carregarem para pintar um travessão.
+    que puxa GTK.
+
+    FATO ERRADO, SUBSTITUÍDO — 02/09/2026. Esta linha dizia que sem o import
+    tardio *"as dez abas carregariam GTK para pintar um travessão"*. **GTK já
+    chega antes de qualquer aba**, e a medição é de uma linha:
+
+        import pacotes            ->  38 módulos `gi` carregados
+        import pacotes.a01_jogar  ->  os mesmos 38, nenhum a mais
+
+    Quem o traz é o próprio despachante, por `app/actions/base.py:9`. O import
+    tardio segue valendo, e o motivo verdadeiro é OUTRO e menor: `painel` puxa a
+    escada, as pontes e o prontuário dos jogos (217 ms de import frio contra
+    166 ms do `mode_transition`, que não puxa GTK nenhum). É custo de partida,
+    não de pureza — as funções de pacote continuam sem TOCAR GTK, que é o que o
+    contrato do `pacotes/__init__` pede.
     """
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
@@ -232,6 +418,10 @@ def hefesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "hefesto: o clique não disse qual posição do interruptor — o "
             "`data-modo` do rótulo não chegou")
     _aplicar(p, _plano(chave))
+    # DEPOIS de despachar, nunca antes: `_plano` levanta para um botão sem
+    # escritor, e anotar uma pendência que não chegou a sair prometeria uma
+    # mudança que ninguém pediu ao daemon.
+    _lembrar("modo", chave, str(o.get("texto") or ""))
 
 
 def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
@@ -261,6 +451,30 @@ def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
     return _plano(MODE_GAMEPAD, ponte.mascara)
 
 
+def _lembrar_do_chip(chave: str, o: dict[str, Any]) -> None:
+    """Anota o que o chip clicado pediu, no EIXO dele — e só nele.
+
+    UM CHIP MEXE NUM EIXO SÓ, e é o que o `_plano_do_chip` já diz: a Navegação
+    **é** um modo (`chip.modo`), os outros são MÁSCARAS do mesmo modo `gamepad`
+    (`chip.ponte.mascara`). Anotar `modo=gamepad` junto com a máscara poria na
+    faixa a palavra do CHIP ("Xbox") sob o rótulo do INTERRUPTOR ("Ligado") —
+    duas coisas com nomes diferentes na tela dela, coladas numa linha só.
+
+    Qual eixo é de cada chip sai de `painel.CHIPS_DA_ESCADA`, e não de um `if`
+    por nome: é o mesmo lugar de onde `_plano_do_chip` tira a ponte.
+    """
+    chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == chave), None)
+    if chip is None:
+        return
+    rotulo = str(o.get("texto") or "")
+    if chip.modo:
+        _lembrar("modo", chip.modo, rotulo)
+        return
+    ponte = chip.ponte
+    if ponte is not None and ponte.mascara:
+        _lembrar("mascara", str(ponte.mascara), rotulo)
+
+
 @gesto("01-jogar.html", "modo-dualsense")
 def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Sony DualSense": o jogo desenha os botões do PlayStation.
@@ -277,6 +491,7 @@ def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `flavor`, não o modo. É por isso que o plano tem os mesmos dois passos.
     """
     _aplicar(p, _plano_do_chip("dualsense"))
+    _lembrar_do_chip("dualsense", o)
 
 
 @gesto("01-jogar.html", "modo-xbox")
@@ -294,6 +509,7 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (`docs/protocol/pilha-steam-input-xpad-sdl.md` §1.5).
     """
     _aplicar(p, _plano_do_chip("xbox"))
+    _lembrar_do_chip("xbox", o)
 
 
 @gesto("01-jogar.html", "modo-navegacao")
@@ -317,6 +533,7 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     recém-ligado. A ordem é do plano, não daqui.
     """
     _aplicar(p, _plano_do_chip("navegacao"))
+    _lembrar_do_chip("navegacao", o)
 
 
 @gesto("01-jogar.html", "reconectar")
@@ -356,6 +573,57 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     p.chamar("coop.sync")
     p.chamar("identity.renumber")
 
+
+#: OS DOIS DESTA ABA NA LISTA DOS DEZESSEIS, classificados um a um — 02/09/2026.
+#:
+#: A régua do `--prova-no-aparelho` os marcou como *"sem efeito e sem `SEM_ECO`"*
+#: (`docs/process/2026-09-02-O-MAPA-DA-INTERFACE-…` §2.3). **Nenhum dos dois é
+#: caso de `SEM_ECO`**, e por isso esta aba continua sem declarar um: `SEM_ECO`
+#: quer dizer *"o daemon não publica este assunto"* (é o caso do `trigger.set`,
+#: que o DualSense não devolve). Os dois daqui o daemon publica — os cinco
+#: métodos de `METODOS` mexem em `native_mode`, `gamepad_emulation`, `coop` e
+#: `controllers[].player`, e as quatro chaves estão no `state_full`. Declará-los
+#: `SEM_ECO` calaria a régua para sempre sobre um caminho que ela consegue medir.
+#:
+#: O QUE ELES SÃO, medido contra o estado vivo dela em 02/09 às 04:20
+#: (`native_mode false` · `gamepad_emulation.enabled true` · `flavor dualsense`
+#: · `coop.players 1` · dois controles, numeração já compacta):
+#:
+#:     hefesto      A prova clica o rótulo `data-modo="gamepad"`, que é a posição
+#:                  **Ligado** — e o daemon JÁ ESTAVA em `gamepad`. Os dois IPCs
+#:                  do plano são idempotentes: `native.mode.set{enabled:false}`
+#:                  sobre um nativo já desligado e `gamepad.emulation.set
+#:                  {enabled:true}` sobre uma emulação já ligada não mudam campo
+#:                  nenhum. O gesto NÃO mentiu: ele foi aceito e não havia o que
+#:                  mudar.
+#:     reconectar   `coop.sync` é um ciclo FORÇADO de reconciliação e
+#:                  `identity.renumber` compacta a numeração. Com a mesa já
+#:                  reconciliada e já compacta, os dois são no-ops — e quando há
+#:                  o que fazer, os dois aparecem em `coop` e em
+#:                  `controllers[].player`.
+#:
+#: LOGO A LISTA DOS DEZESSEIS PRECISA DE UMA QUARTA CAIXA, e é a que faltava no
+#: enunciado: além de *"recusou e o instrumento não leu"*, *"o daemon não ecoa"*
+#: e *"mentiu"*, existe **"aplicou e não havia o que mudar"**. A régua não sabe
+#: separá-la porque ela lê só o `state_full` ANTES e DEPOIS; separar exigiria
+#: comparar o estado de ANTES com o que o gesto PEDIU, e isso é do piloto.
+#:
+#: O QUE ESTA ABA PODE FAZER, E FAZ A PARTIR DE HOJE: **dizer na tela quando o
+#: pedido NÃO chegou.** É a faixa laranja (`_faixa_do_pendente`) — até agora um
+#: clique que não pegava não deixava rastro nenhum, porque `_aplicar` engole o
+#: retorno de propósito (`ACHADO_DO_TIMEOUT`).
+OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
+    "hefesto": (
+        "aplicou e não havia o que mudar: a prova clica a posição Ligado e o "
+        "daemon já estava em `gamepad` (`native_mode false`, "
+        "`gamepad_emulation.enabled true`). Os dois IPCs são idempotentes."
+    ),
+    "reconectar": (
+        "aplicou e não havia o que mudar: `coop.sync` reconcilia uma mesa já "
+        "reconciliada e `identity.renumber` compacta uma numeração já compacta. "
+        "Os dois ecoam em `coop` e em `controllers[].player` quando há o que fazer."
+    ),
+}
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. Uma só, e o `chamar` é o degrau 3: os
 #: quatro métodos abaixo não têm invólucro no `app/ipc_bridge.py` — conferido nas

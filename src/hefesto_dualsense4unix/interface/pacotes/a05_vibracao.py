@@ -38,7 +38,37 @@ from hefesto_dualsense4unix.app.telas import vibracao as _tela
 
 from . import Contexto, registrar
 
-SEM_DONO: dict[str, str] = {}
+#: O QUE ESTA ABA MOSTRA E ESTE PACOTE NÃO PINTA — com o motivo e o DONO da
+#: cura, que em três dos quatro casos não é este arquivo. Estava `{}` até
+#: 02/09/2026, e o vazio dizia "nada falta", que é a forma mais barata de mentir
+#: numa aba onde quatro coisas faltavam.
+SEM_DONO: dict[str, str] = {
+    "degrau-aceso": "QUAL dos quatro degraus está aceso é a classe `on` do "
+    "botão, e o pintor não sabe mexer em classe: `escrever()` só alcança "
+    "texto, largura, fundo, valor e html (`hefesto_vivo.py:110-155`). "
+    "Escrever o nome do degrau NO botão é o que apagava os quatro rótulos "
+    "até hoje. A cura é um alvo `classe` no pintor — território do "
+    "`hefesto_vivo.py`, não deste pacote. E quando ela existir, o degrau da "
+    "COLUNA não é sempre o da mesa: `profiles/schema.ControllerRumbleOverride` "
+    "guarda `policy` e `custom_mult` por peça desde POR-UNIDADE-01 "
+    "(10/08/2026), e `core/backend_pydualsense._escalar_rumble` os aplica.",
+    "mult-teto": "O rótulo `Máx` ao lado do multiplicador aparece SÓ quando a "
+    "coluna está no teto, e some quando não está. O pintor troca vazio por "
+    "travessão (`hefesto_vivo.py:112`), então um rótulo que às vezes não "
+    "existe não tem como ser apagado — pintá-lo poria `—` onde o desenho não "
+    "põe nada. Mesma cura, mesmo dono: o pintor.",
+    "lado:ligado": "Os oito interruptores de punho são DESENHO, e o produto "
+    "concorda por escrito: `app/telas/vibracao.SEM_FONTE['lado:ligado']` — não "
+    "há campo em `profiles/schema.py`, nem método de IPC, nem chave no "
+    "`state_full`. Fecha: MIGRA-VIBRACAO-06.",
+    "barra:motor": "Arrastar a barra de um motor mandaria `rumble.set`, e o "
+    "dono está escrito (`app/telas/vibracao.DONOS_DOS_GESTOS['barra:motor']`). "
+    "O que falta é o NÚMERO: a linha é um `<div>`, o ouvinte manda "
+    "`valor: alvo.value ?? ''` (`hefesto_vivo.py:299`) e um `<div>` não tem "
+    "`value`. Sem um `<input type=range>` no desenho, o clique chega sem "
+    "quantidade nenhuma — e é decisão dela trocar a barra por um controle "
+    "arrastável.",
+}
 
 
 def _do_vpad(ff: dict[str, Any], player: Any) -> dict[str, Any]:
@@ -75,6 +105,26 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     O QUE SOBRA AQUI é o ACHATAMENTO: o produto devolve `{"pct": {"w": "46.7%"}}`
     e a tela endereça `data-campo="forca-pct"`. Traduzir a forma é da interface;
     calcular o valor é do produto.
+
+    O NOME `forca` NÃO SAI MAIS DAQUI — 02/09/2026, e a razão está fotografada.
+    O pintor procura um valor por `[data-campo=X],[data-papel=X],[data-hef=X]`
+    (`hefesto_vivo.py:183`), e nesta página `forca` é **as duas coisas**: o
+    `data-campo` do número do multiplicador E o `data-papel` dos quatro degraus
+    mais o da linha inteira do "Personalizado". Emitir a chave `forca` escrevia
+    `"balanceado"` em DEZ elementos por tique:
+
+    * os quatro botões perdiam o rótulo — "Economia", "Balanceado", "Máximo" e
+      "Auto" viraram os quatro a mesma palavra, e ela deixa de poder escolher;
+    * a linha do "Personalizado" é um `<div>` com filhos, e `textContent`
+      **apaga os filhos**: o trilho, o número e o "Máx" sumiam da tela — junto
+      com os endereços `forca-pct` e `mult`, que a pintura seguinte já não
+      achava.
+
+    Medido em 02/09/2026 na foto `/tmp/antes-05.png`, com o daemon dela vivo.
+    O NÚMERO passou a se endereçar por `mult` (`aba05._barra`, `campo_num`);
+    o trilho continua `forca-pct`, que nunca esteve em colisão. A régua
+    `test_a_vibracao_nao_escreve_no_botao.py` reprova qualquer nome que volte a
+    ser valor e clique ao mesmo tempo.
     """
     import mesa_viva
 
@@ -86,7 +136,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         pct = col.get("pct") or {}
         plano = {
             "identidade": _sem_marcacao(col.get("identidade", "")),
-            "forca": col.get("forca", "—"),
+            # O NÚMERO DO MULTIPLICADOR, e não o nome do degrau: o desenho
+            # escreve `150%` nesta caixa, ao lado do trilho e do "Máx". Quem diz
+            # QUAL degrau está aceso é a classe `on` do botão — e ela não tem
+            # dono (ver :data:`SEM_DONO`).
+            "mult": pct.get("n", "—"),
             "forca-pct": str(pct.get("w", "")).rstrip("%"),
         }
         for lado, m in (col.get("motores") or {}).items():
@@ -95,11 +149,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         colunas[uniq] = plano
     return {
         "colunas": colunas,
-        "mesa": {"forca": ctx.state.get("rumble_policy") or "—",
-                 "passthrough": bool(ctx.state.get("rumble_passthrough"))},
-        "sem_dono": {},
-        "cobertura": {"pintados": sum(len(v) for v in colunas.values()) + 2,
-                      "sem_dono": 0},
+        # A MESA NÃO EMITE NADA, e é o que a página comporta. `rumble_policy`
+        # não tem `data-campo` nenhum — o degrau aceso é uma CLASSE, não um
+        # texto — e `rumble_passthrough` também não. Emiti-los custava dez
+        # elementos destruídos por tique e não pintava um valor sequer.
+        "mesa": {},
+        "sem_dono": dict(SEM_DONO),
+        "cobertura": {"pintados": sum(len(v) for v in colunas.values()),
+                      "sem_dono": len(SEM_DONO)},
     }
 
 
@@ -108,11 +165,24 @@ def _sem_marcacao(texto: str) -> str:
 
     A camada do produto monta `P1 <span class="pt">•</span> Não sei` porque a
     janela dela injeta como HTML. Escrever isso num `textContent` mostraria as
-    tags. O separador vira o `·` que o resto desta interface usa.
+    tags.
+
+    CORRIGIDO EM 02/09/2026. O que estava aqui trocava CADA TAG por um `·` e
+    dizia, no próprio docstring, que *"o separador vira o `·`"* — mas a tag de
+    abertura e a de fechamento são DUAS, com o `•` no meio, e o que saía era
+    `P1 ·•· Não sei ·•· BT`. Medido contra o daemon dela:
+
+        antes:  'P1 ·•· Não sei ·•· BT'
+        depois: 'P1 · Não sei · BT'
+
+    O `·` é o separador que os outros pacotes usam (`a01_jogar.py:50`); o `•` é
+    o do desenho, e ele vive dentro da tag que sai. Some com a marcação, e o
+    ponto que ela vê é um só.
     """
     import re as _re
 
-    return _re.sub(r"<[^>]+>", "·", texto).replace("··", "·").strip()
+    sem_tags = _re.sub(r"<[^>]+>", "", texto)
+    return _re.sub(r"\s*•\s*", " · ", sem_tags).strip()
 
 
 

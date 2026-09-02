@@ -879,6 +879,26 @@
   .barra .num{flex:0 0 32px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .ajustes-vazio{grid-row:1 / span 2;font-size:11.5px;color:var(--comment);
                  font-style:italic;display:flex;align-items:center}
+  /* O LUGAR VAZIO NÃO SE CLICA — 02/09/2026, e a régua é a foto.
+     Fotografada a aba com a mesa dela (dois controles), as colunas P3 e P4
+     diziam `Desconectado` no cabeçalho e traziam os dois `<select>` e o
+     "Guardar esse efeito" ABERTOS. Escolher `Rígido` num lugar onde não há
+     aparelho é um clique que só pode terminar em recusa — e um botão que
+     convida para uma recusa é pior que um botão que não existe.
+
+     O SELETOR É O `data-conectado`, e não a classe `off`, porque ele é o que o
+     PILOTO mantém vivo: `hefesto_vivo.py:229-236` põe `data-conectado="nao"`
+     em todo lugar que a mesa não tem, a cada tique. Assim a inércia acompanha
+     a mesa DELA — um controle ligado no P3 devolve a coluna sem tocar em CSS —
+     em vez de congelar no estado que o gerador viu.
+
+     `pointer-events` PARA O RATO; o `disabled` teria de vir do piloto, que é de
+     outra frente. A segunda trava é do lado Python: os três gestos desta aba
+     recusam DIZENDO quando a coluna está vazia (`_exigir_controle` em
+     `pacotes/a03_gatilhos.py`), e essa alcança também o clique por JS. */
+  .duas-colunas .ctrl[data-conectado="nao"] select,
+  .duas-colunas .ctrl[data-conectado="nao"] .btn{pointer-events:none;cursor:default}
+
   /* O BOTÃO É UM POR CONTROLE, e da MESMA largura em todas as colunas. Era um
      só no pé do quadro, e com quatro controles um botão só não diz o que guarda:
      é a mesma ambiguidade que o recibo tinha antes de dizer em QUAL controle
@@ -1178,22 +1198,22 @@
           <div class="ajustes e">
             <div class="barra" data-ajuste="e-0">
               <span class="nome" data-campo="aj-nome-e-0">Força</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" style="width:78%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" data-hef-alvo="largura" style="width:78%"></span></span>
               <span class="num" data-campo="aj-val-e-0">7</span>
             </div>
             <div class="barra" data-ajuste="e-1">
               <span class="nome" data-campo="aj-nome-e-1">Frequência</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" style="width:44%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" data-hef-alvo="largura" style="width:44%"></span></span>
               <span class="num" data-campo="aj-val-e-1">4</span>
             </div>
             <div class="barra" data-ajuste="e-2">
               <span class="nome" data-campo="aj-nome-e-2">Início do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" style="width:25%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" data-hef-alvo="largura" style="width:25%"></span></span>
               <span class="num" data-campo="aj-val-e-2">25</span>
             </div>
             <div class="barra" data-ajuste="e-3">
               <span class="nome" data-campo="aj-nome-e-3">Fim do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-3" style="width:90%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-3" data-hef-alvo="largura" style="width:90%"></span></span>
               <span class="num" data-campo="aj-val-e-3">230</span>
             </div>
           </div>
@@ -1249,12 +1269,12 @@
           <div class="ajustes d">
             <div class="barra" data-ajuste="d-0">
               <span class="nome" data-campo="aj-nome-d-0">Força no fim</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-0" style="width:66%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-0" data-hef-alvo="largura" style="width:66%"></span></span>
               <span class="num" data-campo="aj-val-d-0">6</span>
             </div>
             <div class="barra" data-ajuste="d-1">
               <span class="nome" data-campo="aj-nome-d-1">Início do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-1" style="width:15%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-1" data-hef-alvo="largura" style="width:15%"></span></span>
               <span class="num" data-campo="aj-val-d-1">15</span>
             </div>
           </div>
@@ -1306,17 +1326,17 @@
           <div class="ajustes e">
             <div class="barra" data-ajuste="e-0">
               <span class="nome" data-campo="aj-nome-e-0">Início do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" style="width:20%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-0" data-hef-alvo="largura" style="width:20%"></span></span>
               <span class="num" data-campo="aj-val-e-0">3</span>
             </div>
             <div class="barra" data-ajuste="e-1">
               <span class="nome" data-campo="aj-nome-e-1">Fim do curso</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" style="width:60%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-1" data-hef-alvo="largura" style="width:60%"></span></span>
               <span class="num" data-campo="aj-val-e-1">6</span>
             </div>
             <div class="barra" data-ajuste="e-2">
               <span class="nome" data-campo="aj-nome-e-2">Força</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" style="width:62%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-e-2" data-hef-alvo="largura" style="width:62%"></span></span>
               <span class="num" data-campo="aj-val-e-2">5</span>
             </div>
           </div>
@@ -1372,12 +1392,12 @@
           <div class="ajustes d">
             <div class="barra" data-ajuste="d-0">
               <span class="nome" data-campo="aj-nome-d-0">Posição</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-0" style="width:56%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-0" data-hef-alvo="largura" style="width:56%"></span></span>
               <span class="num" data-campo="aj-val-d-0">5</span>
             </div>
             <div class="barra" data-ajuste="d-1">
               <span class="nome" data-campo="aj-nome-d-1">Força</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-1" style="width:78%"></span></span>
+              <span class="trilho"><span class="cheio" data-campo="aj-pct-d-1" data-hef-alvo="largura" style="width:78%"></span></span>
               <span class="num" data-campo="aj-val-d-1">200</span>
             </div>
           </div>

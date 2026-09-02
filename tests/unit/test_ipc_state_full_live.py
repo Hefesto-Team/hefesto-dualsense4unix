@@ -250,10 +250,24 @@ class TestPlayerPorControle:
         # `None` aqui é "NÃO CARIMBEI", nunca "nasceu limpa" — o daemon é
         # dublê nesta bancada e não há cartório para consultar. Ler a ausência
         # como inocência é o defeito que a BARRA-MUDA-01 §5 nomeou.
+        #
+        # NOTA DATADA — 02/09/2026 (ROTA-A). Entraram `serial`, `modelo` e
+        # `nome_declarado`, e o `==` ficou vermelho de novo, pela mesma razão
+        # boa: campo por controle não aparece calado. Os três são a IDENTIDADE
+        # do aparelho, que o payload nunca teve — sem ela a tela nomeava o
+        # controle pela POSIÇÃO na lista, e o mesmo controle mudava de nome
+        # quando o segundo entrava na mesa.
+        #
+        # `None` nos três é a resposta honesta desta bancada: o `serial`/`modelo`
+        # só saem do `None` depois que a leitura em thread voltar do aparelho
+        # (aqui não há aparelho), e o `nome_declarado` depende de a usuária ter
+        # nomeado o controle no `maquina.json` (aqui o daemon é dublê).
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,
-             "player_slot": None, "lightbar_rgb": None, "lightbar_on": False,
+             "player_slot": None,
+             "serial": None, "modelo": None, "nome_declarado": None,
+             "lightbar_rgb": None, "lightbar_on": False,
              "lightbar_source": "desconhecida", "lightbar_disputada": False,
              "nascimento": None,
              "inputs": None, "vpad_backend": None, "vpad_motivo": None},

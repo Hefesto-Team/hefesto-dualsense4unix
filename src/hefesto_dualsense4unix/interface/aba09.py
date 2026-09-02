@@ -335,7 +335,19 @@ CSS = """
      abaixo. Podemos mandar esses botões pra direita e ocupando o mesmo espaço
      vertical."
      --------------------------------------------------------------------- */
-  .bloco2{display:grid;grid-template-columns:1fr 1px 184px;gap:0 14px;align-items:stretch}
+  /* `minmax(0,1fr)` E NÃO `1fr` — 02/09/2026, e é a mesma cura da régua 5 lá
+     embaixo, numa faixa que a régua não cobria. O piso de `1fr` é o CONTEÚDO:
+     com os valores DE VERDADE a coluna de estado não encolhe, empurra a coluna
+     dos botões e ela atravessa o risco por cima do Perfil de Bateria.
+     MEDIDO no Chrome (1920x1080), a página PUBLICADA com os valores que o
+     pacote emite hoje — o vizinho começa em x=973:
+         valores do desenho ............ botões [748..932]  folga  41px
+         valores reais, `1fr` .......... botões [816..1000] ESTOURO 27px
+         valores reais, `minmax(0,1fr)`  botões [748..932]  folga  41px
+     O que revelou foi a aba parar de mentir: "Como ele enxerga a janela" era
+     `Wayland · COSMIC` no desenho e é `Sem ver nada agora (sem_foco_x)` na
+     máquina dela. Com o desenho curto, o defeito não aparecia. */
+  .bloco2{display:grid;grid-template-columns:minmax(0,1fr) 1px 184px;gap:0 14px;align-items:stretch}
   .col-acao{display:flex;flex-direction:column;gap:6px}
   /* Botão do mesmo grupo com a MESMA largura, e o grupo preenchendo a coluna:
      antes eram três larguras (138,2 / 141,3 / 80,7) numa fileira que deixava
@@ -504,7 +516,14 @@ CSS = """
      vão escuro ao lado dos botões, e a cura de um vão é na ALTURA: o cartão
      encolhe reflowando, não perdendo achado.
      --------------------------------------------------------------------- */
-  .saude-cols{display:grid;grid-template-columns:1fr 1px 1fr;gap:0 18px}
+  /* `minmax(0,1fr)` pelo mesmo motivo do `.bloco2`, e achado no mesmo dia: as
+     frases do `storm_report` são LONGAS ("regra áudio-off inativa — o mic e o
+     fone do controle estão liberados. O que fazer: nada."), e as do desenho são
+     curtas. Com `1fr` cru a coluna não encolhe, as reticências de
+     `.saude .txt span:last-child` nunca chegam a agir, e a segunda coluna passa
+     por cima de "Preparar os jogos". Fotografado na bancada em 02/09/2026, com
+     os seis achados desta máquina. */
+  .saude-cols{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 18px}
   .col-lista{display:flex;flex-direction:column}
   /* Os três botões do exame não levam vão entre si: quatro linhas de achado
      medem 102px, e 3 × 34 dá exatamente 102. As duas colunas acabam juntas. */
@@ -711,6 +730,27 @@ ACHADOS = [
 
 MEIO = len(ACHADOS) // 2 + len(ACHADOS) % 2
 
+# OS DOIS ENDEREÇOS DO EXAME GANHARAM `data-campo` EM 02/09/2026, e com o alvo
+# `html` (procure `exame-contagem` e `exame-lista` no MIOLO, abaixo).
+#
+# POR QUE A LISTA INTEIRA, e não campo a campo: o número de achados é do DADO.
+# `storm_report` devolveu SEIS na máquina dela em 02/09 e a lista acima tem
+# OITO — e as duas condicionais dele devolvem `None` quando não há o que dizer,
+# então o número varia de máquina para máquina. Não existe `data-campo` para uma
+# linha que ainda não existe.
+#
+# O QUE ISSO ARRANCA DA TELA: enquanto o exame não tinha endereço, o que a
+# janela mostrava eram os OITO achados DESTE ARQUIVO — "Steam Input estava
+# ligado em 2 jogos — desliguei", "Proton fixado em 9.0-4 para 3 jogos",
+# "8 linhas · nenhum aviso". Nenhum deles aconteceu na máquina dela; são texto
+# de bancada, escrito aqui para o desenho ficar de pé.
+#
+# A EXPLICAÇÃO É COMENTÁRIO PYTHON, e não comentário HTML, e isso foi medido:
+# um `<!-- … -->` no miolo VAI PARA A PÁGINA e o
+# `scripts/check_o_desenho_aprovado.py` reprovou — a lista `INVISIVEIS` dele
+# isenta os atributos de endereço, não o texto do arquivo. Os dois `data-campo`
+# passam; a prosa, não.
+
 # A PALAVRA "HEFESTO" SAIU DAQUI, E É DECISÃO DELA — 31/08/2026.
 #
 # Duas abas diziam "Hefesto ligado/desligado" e significavam coisas DIFERENTES:
@@ -876,12 +916,12 @@ MIOLO = f'''
         <!-- ---------- SAÚDE DO SISTEMA + PREPARAR OS JOGOS ---------- -->
         <div class="sec-rot sr-exame sec-alta">
           <span>O exame de hoje {D_EXAME}
-            <span class="conta" data-id="{_id("exame-contagem")}">{len(ACHADOS)} linhas <span class="sep">·</span> nenhum aviso</span></span>
+            <span class="conta" data-id="{_id("exame-contagem")}" data-campo="{_id("exame-contagem")}" data-hef-alvo="html">{len(ACHADOS)} linhas <span class="sep">·</span> nenhum aviso</span></span>
           <span></span>
           <span>Preparar os jogos</span>
         </div>
         <div class="exame">
-          <div class="saude-cols" data-id="{_id("exame-lista")}">
+          <div class="saude-cols" data-id="{_id("exame-lista")}" data-campo="{_id("exame-lista")}" data-hef-alvo="html">
             <div class="col-lista">
 {chr(10).join(ACHADOS[:MEIO])}
             </div>
@@ -1309,7 +1349,14 @@ if not _R_VAL or "margin-left:auto" not in _R_VAL.group(0):
 #    do conteúdo; `minmax(0,1fr)` é o que deixa a coluna encolher. Sem isto, uma
 #    linha longa empurra o bloco inteiro para fora do limite — que é o que ela viu
 #    em 31/08, com o Perfil de Bateria vazando 25px.
-for _faixa in (".par2", ".exame", ".avancado"):
+#
+#    `.bloco2` ENTROU NA LISTA EM 02/09/2026, e a lição é sobre a régua e não
+#    sobre o CSS: ela nasceu cobrindo as três faixas EXTERNAS e a interna ficou
+#    de fora — com `1fr` cru, invisível, porque os valores do desenho são curtos
+#    demais para estourar. O defeito só apareceu quando a aba passou a mostrar o
+#    que a máquina dela diz, e aí eram 27px de botão por cima do bloco vizinho.
+#    Régua que cobre "as faixas que eu lembrei" mede o que já estava certo.
+for _faixa in (".par2", ".exame", ".avancado", ".bloco2", ".saude-cols"):
     _r = re.search(re.escape(_faixa) + r"\{[^}]*grid-template-columns:([^;]*);", CSS)
     if not _r:
         raise SystemExit(f"ERRO: a faixa `{_faixa}` sumiu ou deixou de declarar colunas — "
