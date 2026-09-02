@@ -672,14 +672,24 @@ ACOES_GESTO = [
 ]
 
 
-def drop(grupos, escolhido, classe="campo-linha", gesto="", linha=""):
+def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo=""):
     """Um <select> de verdade em TODA linha — nenhum travado (falas [55], [57], [91]).
 
     O `gesto` só NOMEIA o campo para o piloto (ver `simples`): `<select>` nenhum
-    liga por clique. As 49 listas das três telas de pop-up ficam SEM nome de
+    liga por clique. As listas das três telas de pop-up ficam SEM `data-gesto` de
     propósito — elas são os CAMPOS de um formulário cujo ponto de gravação é o
-    "Guardar", e é o Guardar que sai no inventário do que falta. Nomear as 49
-    encheria o relato de 49 linhas que dizem a mesma coisa.
+    "Guardar".
+
+    FATO SUBSTITUÍDO (02/09/2026): aqui estava escrito que as 49 listas ficam
+    "sem nome" porque só o Guardar importa. **Sem nome elas nunca são pintadas**,
+    e um formulário que não é pintado mostra o DESENHO, não o perfil dela —
+    enquanto o Guardar lê essas mesmas linhas e as grava. Medido contra a página
+    publicada: as 21 opções cravadas são exatamente `acoes_de_botao.padrao()`, e
+    o Guardar gravava `button_actions = None`, apagando em silêncio o que ela
+    tivesse escolhido. As 21 linhas de *o que cada botão faz* passaram a levar
+    `campo`; as duas outras telas continuam sem, porque os gestos delas
+    (`guardar-remapeamento`, `guardar-ponto`) não têm dono no produto — pintar
+    um formulário que ninguém grava seria a metade errada da cura.
     """
     partes = []
     for rot, ops in grupos:
@@ -691,7 +701,14 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha=""):
     # valor do elemento CLICADO, e o Guardar é outro elemento, a três telas de
     # distância. É o que faz o botão poder GRAVAR em vez de só recusar.
     ln = f' data-linha="{linha}"' if linha else ""
-    return f'<select class="{classe}"{g}{ln}>{"".join(partes)}</select>'
+    # O ENDEREÇO DA PINTURA — 02/09/2026, e ele é o par do de cima: aquele deixa
+    # LER, este deixa ESCREVER. `data-hef-alvo="valor"` é obrigatório junto —
+    # sem ele o piloto escreveria o texto DENTRO do `<select>` e comeria as
+    # opções (ver `simples`). O ouvinte da forma prefere o `data-linha`
+    # (`hefesto_vivo.py`: `el.dataset.linha || el.dataset.campo`), então os dois
+    # convivem sem disputa.
+    c = f' data-campo="{campo}" data-hef-alvo="valor"' if campo else ""
+    return f'<select class="{classe}"{g}{ln}{c}>{"".join(partes)}</select>'
 
 
 def simples(ops, classe="escolha-at", gesto="", campo=""):
@@ -1216,7 +1233,7 @@ TELA_DEFINICOES = tela_de_botoes(
     "O que ele faz",
     chr(10).join(
         f'          <tr><td class="b">{b}</td>'
-        f'<td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], linha=i)}</td></tr>'
+        f'<td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], linha=i, campo=f"acao-{i}")}</td></tr>'
         for b, i in BOTOES),
     f"Devolver ao de fábrica as {len(BOTOES)} linhas de <b>o que cada botão faz</b>? "
     "O <b>Remapeamento dos botões</b> não é tocado.",
