@@ -117,10 +117,24 @@ def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
     por onde o botão do controle silencie o microfone de um terceiro, porque
     não existe mais um `toggle_default_source_mute` no laço.
 
-    A saída **(b)** — mutar o registrador do firmware — continua RECUSADA, e
-    ganhou motivo novo: escrever no `common[9]` faz o kernel parar de alternar
-    na borda, e a borda é o que dá identidade a quem apertou. Tomar aquela
-    posse apagaria o sujeito do gesto dela.
+    A saída **(b)** — mutar o registrador do firmware — continua RECUSADA pelas
+    três medições de 01/08, 03/08 e 19/08.
+
+    **FATO SUBSTITUÍDO em 02/09/2026** (recitação-da-frase-derrubada). Esta
+    docstring afirmava que escrever no
+    `common[9]` "faz o kernel parar de alternar na borda". É falso, e o fonte C
+    desta árvore diz o contrário: o kernel alterna `ds->mic_muted` a partir do
+    BIT DO BOTÃO no report de ENTRADA
+    (`assets/dkms/hid-playstation/hid-playstation.c:1630-1640`,
+    `ds_report->buttons[2] & DS_BUTTONS2_MIC_MUTE`) e não consulta nada que o
+    userspace escreva. Ele continua alternando.
+
+    O que se perde ao afirmar o byte é a LEGIBILIDADE da borda, e isso é
+    consequência de uma ESCOLHA desta casa: o detector lê o mudo do FIRMWARE
+    (`status[1]` BIT(2), `core/physical_report_reader.py:186`), não o botão.
+    Fixar o `common[9]` cegaria o NOSSO leitor — e nem por completo, porque o
+    keepalive é limitado à janela de confirmação de 2 s
+    (`core/backend_pydualsense.py:874-879`).
 
     Mordida: repor `toggle_default_source_mute` no laço — esta régua reprova.
     """
@@ -146,8 +160,89 @@ def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
         "que pode ser o aparelho de terceiro (BT-E-VPAD-01, defeito 1)"
     )
     assert "set_microphone_mute" not in nomes, (
-        "o laço voltou a afirmar o mudo do FIRMWARE — a saída (b), recusada em "
-        "01/08, 03/08 e 19/08, e construtivamente impossível desde 01/09"
+        "o laço voltou a afirmar o mudo do FIRMWARE — a saída (b), recusada "
+        "pelas medições de 01/08, 03/08 e 19/08"
+    )
+
+
+# ---------------------------------------------------------------------------
+# A afirmação forte que a auditoria de 02/09 derrubou
+# ---------------------------------------------------------------------------
+
+
+def test_ninguem_afirma_que_o_common9_para_o_kernel_de_alternar() -> None:
+    """O kernel alterna na BORDA DO BOTÃO, e nada que escrevamos muda isso.
+
+    MIC-DA-MESA-ELEICAO-01 acrescentou às três recusas do `common[9]` um motivo
+    NOVO (recitação-da-frase-derrubada)
+    — *"escrever no `common[9]` faz o kernel parar de alternar na borda"* —
+    e chamou aquilo de impossibilidade construtiva. **A auditoria de 02/09/2026
+    derrubou a frase contra o fonte C desta árvore.**
+
+    O `hid-playstation` decide pelo BIT DO BOTÃO no report de ENTRADA
+    (`ds_report->buttons[2] & DS_BUTTONS2_MIC_MUTE`); nenhuma leitura ali
+    consulta o que o userspace escreveu no output report. Ele continua
+    alternando. O que se perderia é a legibilidade da borda **do nosso lado**,
+    porque quem lê aqui é o mudo do FIRMWARE (`status[1]` BIT(2)) — escolha de
+    implementação, não lei do aparelho.
+
+    Esta régua guarda as duas metades: que o fonte C continua sendo o que a
+    correção diz que é, e que a frase derrubada não voltou a nenhum arquivo.
+
+    Mordida: repor a frase em qualquer `.py`/`.md` de `src/`, `tests/` ou
+    `docs/` — esta régua reprova.
+    """
+    import pathlib
+    import re
+
+    raiz = pathlib.Path(__file__).resolve().parents[2]
+    MARCA_DE_RECITACAO = "recitação-da-frase-derrubada"
+
+    # (a) o fato: a condição do toggle é o bit do botão no report de ENTRADA.
+    fonte_c = (raiz / "assets/dkms/hid-playstation/hid-playstation.c").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    trecho = re.search(
+        r"btn_mic_state\s*=.*?ds->last_btn_mic_state\s*=\s*btn_mic_state;",
+        fonte_c,
+        re.S,
+    )
+    assert trecho is not None, "o bloco do botão do mic sumiu do hid-playstation.c"
+    bloco = trecho.group(0)
+    assert "ds_report->buttons[2]" in bloco, (
+        "o kernel deixou de decidir pelo bit do botão no report de entrada — "
+        "reveja a correção de 02/09/2026 antes de reescrever a recusa"
+    )
+    assert "ds->mic_muted = !ds->mic_muted" in bloco, (
+        "o toggle de `ds->mic_muted` na borda sumiu do driver"
+    )
+
+    # (b) a frase derrubada não pode voltar a lugar nenhum.
+    proibidas = ("parar de alternar", "deixa de alternar", "para de alternar")
+    reincidentes: list[str] = []
+    for pasta in ("src", "tests", "docs"):
+        for arq in (raiz / pasta).rglob("*"):
+            if arq.suffix not in {".py", ".md"} or not arq.is_file():
+                continue
+            linhas = arq.read_text(encoding="utf-8", errors="replace").splitlines()
+            for n, linha in enumerate(linhas, 1):
+                if not any(p in linha for p in proibidas):
+                    continue
+                # A frase só é a frase derrubada quando fala do byte ou do
+                # kernel; a vizinhança cobre a quebra de linha do parágrafo.
+                janela = "\n".join(linhas[max(0, n - 8) : n + 8])
+                if MARCA_DE_RECITACAO in janela:
+                    # Quem CITA a frase para dizer que ela é falsa carrega a
+                    # marca. Sem esta porta a régua reprovaria a própria
+                    # correção — o defeito das onze réguas de 26/08.
+                    continue
+                if "common[9]" in janela or "kernel" in janela:
+                    reincidentes.append(f"{arq.relative_to(raiz)}:{n}: {linha.strip()}")
+
+    assert not reincidentes, (  # recitação-da-frase-derrubada
+        "voltou a afirmação que a auditoria de 02/09/2026 derrubou — o kernel "
+        "NÃO para de alternar quando afirmamos o `common[9]`:\n"
+        + "\n".join(reincidentes)
     )
 
 
