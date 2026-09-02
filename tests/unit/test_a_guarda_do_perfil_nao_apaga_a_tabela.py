@@ -136,10 +136,10 @@ def _pagina_publicada() -> list[dict[str, Any]]:
 #: e 5 zerados, a máscara desta casa). Nenhum endereço real de rádio entra em
 #: arquivo versionado.
 MESA = [
-    {"pref": "p1", "uniq": "444648000003", "jogador": 1,
+    {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1,
      "cor": "cosmic-red", "nome": "Cosmic Red", "via": "BT",
      "transporte": "bt", "alvo": True, "mascara": "DualSense"},
-    {"pref": "p2", "uniq": "d42f4b0000d8", "jogador": 2,
+    {"pref": "p2", "uniq": "aabbcc000002", "jogador": 2,
      "cor": "starlight-blue", "nome": "Starlight Blue", "via": "USB",
      "transporte": "usb", "alvo": False, "mascara": "DualSense"},
 ]
