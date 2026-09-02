@@ -583,7 +583,7 @@ def coluna(c):
           <div class="cel-cor">
             <span class="guia">
 {tons}
-              <input type="color" class="livre" value="{cor.lower()}"
+              <input type="color" class="livre" value="{cor.lower()}" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
             <span class="hex" data-campo="hex">{cor}</span>
@@ -595,10 +595,8 @@ def coluna(c):
           <div class="players" data-campo="players" data-hef-alvo="html">
 {_pacote04.fileira_de_players(c["nome"], c["jogador"], DONOS_NA_MESA, "            ")}
           </div>
-          <div class="aceso" data-campo="aceso" title="O {c["nome"]} aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player {j}.">
-            <span class="tira-luz esq" style="background:{tinta};color:{tinta};opacity:{b / 100}"></span>
-            <span class="pad">{luzinhas(j)}</span>
-            <span class="tira-luz dir" style="background:{tinta};color:{tinta};opacity:{b / 100}"></span>
+          <div class="aceso" data-campo="luz" data-hef-alvo="html" title="O {c["nome"]} aceso: as duas tiras na cor escolhida, e as cinco lâmpadas no padrão do Player {j}.">
+{_pacote04.desenho_da_luz(tinta, b / 100, j, recuo="            ")}
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
