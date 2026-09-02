@@ -58,8 +58,7 @@
   },
   "mode": {
     "kind": "gamepad",
-    "gamepad_flavor": "xbox",
-    "coop": true
+    "gamepad_flavor": "xbox"
   },
   "suppress_desktop_emulation": false
 }

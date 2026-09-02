@@ -130,7 +130,6 @@ def test_a_semeadura_nao_reescreve_a_mascara_de_quem_ja_tem_perfil() -> None:
         )
 
     migracoes = [
-        loader.migrate_profiles_coop_default,
         loader.migrate_coop_local_match,
         loader.migrate_modo_jogo_nos_presets,
     ]

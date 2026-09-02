@@ -244,7 +244,6 @@ class TestOGestoDelaChegaAoPerfil:
         assert depois.leds == antes.leds
         assert depois.rumble == antes.rumble
         assert antes.mode is not None and depois.mode is not None
-        assert depois.mode.coop == antes.mode.coop, "o coop dela voltou ao default"
         assert depois.mode.kind == antes.mode.kind
 
     @pytest.mark.asyncio

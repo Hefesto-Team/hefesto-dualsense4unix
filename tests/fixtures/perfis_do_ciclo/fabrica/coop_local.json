@@ -7,15 +7,36 @@
   },
   "priority": 75,
   "triggers": {
-    "left":  {"mode": "Off", "params": []},
-    "right": {"mode": "Off", "params": []}
+    "left": {
+      "mode": "Off",
+      "params": []
+    },
+    "right": {
+      "mode": "Off",
+      "params": []
+    }
   },
   "leds": {
-    "lightbar": [0, 200, 120],
-    "player_leds": [true, false, false, false, true],
+    "lightbar": [
+      0,
+      200,
+      120
+    ],
+    "player_leds": [
+      true,
+      false,
+      false,
+      false,
+      true
+    ],
     "lightbar_brightness": 0.7
   },
-  "rumble": {"passthrough": true},
-  "mode": {"kind": "gamepad", "gamepad_flavor": null, "coop": true},
+  "rumble": {
+    "passthrough": true
+  },
+  "mode": {
+    "kind": "gamepad",
+    "gamepad_flavor": null
+  },
   "suppress_desktop_emulation": true
 }

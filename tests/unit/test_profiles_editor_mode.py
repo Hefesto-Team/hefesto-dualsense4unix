@@ -265,9 +265,6 @@ class TestBuildProfileMode:
         assert profile.mode is not None
         assert profile.mode.kind == "desktop"
         assert profile.mode.gamepad_flavor is None
-        # LEIGO-01: o editor não emite mais `coop` — o campo herda o default
-        # (True) e o kind "desktop" sequer o lê (não há gamepad, não há jogador).
-        assert profile.mode.coop is True
 
     def test_kind_native(self) -> None:
         stub = _EditorStub().com_secao_mode()
@@ -278,7 +275,6 @@ class TestBuildProfileMode:
         assert profile.mode is not None
         assert profile.mode.kind == "native"
         assert profile.mode.gamepad_flavor is None
-        assert profile.mode.coop is True
 
     def test_kind_gamepad_com_flavor(self) -> None:
         stub = _EditorStub().com_secao_mode()
@@ -291,8 +287,6 @@ class TestBuildProfileMode:
         assert profile.mode.kind == "gamepad"
         assert profile.mode.gamepad_flavor == "xbox"
         # LEIGO-01: salvar um perfil de jogo NUNCA desliga o co-op. Era este o
-        # caminho que o fazia — todo perfil saía do editor com `coop: false`.
-        assert profile.mode.coop is True
 
     def test_flavor_so_vale_com_gamepad(self) -> None:
         """Máscara escolhida mas kind != gamepad → gravada limpa."""
@@ -308,7 +302,7 @@ class TestBuildProfileMode:
     def test_none_remove_secao_de_perfil_existente(self) -> None:
         """Perfil que TINHA mode + editor em "none" → seção removida ao salvar."""
         existente = _profile_com_mode(
-            "meu_jogo", {"kind": "gamepad", "gamepad_flavor": "xbox", "coop": True}
+            "meu_jogo", {"kind": "gamepad", "gamepad_flavor": "xbox"}
         )
         stub = _EditorStub(name="meu_jogo").com_secao_mode()
         stub._profiles_cache = [existente]
@@ -339,7 +333,7 @@ class TestRoundTripMode:
     def test_round_trip_gamepad_coop(self) -> None:
         original = _profile_com_mode(
             "coop_local",
-            {"kind": "gamepad", "gamepad_flavor": "dualsense", "coop": True},
+            {"kind": "gamepad", "gamepad_flavor": "dualsense"},
         )
         stub = _EditorStub(name="coop_local").com_secao_mode()
         stub._profiles_cache = [original]
@@ -424,7 +418,7 @@ class TestModeOptionsVisibility:
         idempotente — não existe mais cascata a proteger com guard.
         """
         original = _profile_com_mode(
-            "meu_jogo", {"kind": "gamepad", "gamepad_flavor": "xbox", "coop": True}
+            "meu_jogo", {"kind": "gamepad", "gamepad_flavor": "xbox"}
         )
         stub = _EditorStub().com_secao_mode()
 

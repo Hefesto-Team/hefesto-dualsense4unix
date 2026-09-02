@@ -7,7 +7,6 @@ kinds e o respeito a gesto manual.
 """
 from __future__ import annotations
 
-import time
 from typing import Any
 
 import pytest
@@ -113,11 +112,10 @@ def daemon() -> Daemon:
 
 
 def test_schema_aceita_secao_mode() -> None:
-    p = _profile({"kind": "gamepad", "gamepad_flavor": "xbox", "coop": True})
+    p = _profile({"kind": "gamepad", "gamepad_flavor": "xbox"})
     assert isinstance(p.mode, ProfileModeConfig)
     assert p.mode.kind == "gamepad"
     assert p.mode.gamepad_flavor == "xbox"
-    assert p.mode.coop is True
     # Perfil sem a seção continua válido (aditivo ao v1).
     assert _profile(None).mode is None
 
@@ -182,7 +180,7 @@ def test_kind_gamepad_liga_o_flavor_e_nao_mexe_no_coop(
     calls.bind(monkeypatch)
 
     daemon.apply_profile_mode(
-        _profile({"kind": "gamepad", "gamepad_flavor": "dualsense", "coop": True}).mode
+        _profile({"kind": "gamepad", "gamepad_flavor": "dualsense"}).mode
     )
 
     assert calls.gamepad == [(True, "dualsense", "profile")]
@@ -193,166 +191,51 @@ def test_kind_gamepad_liga_o_flavor_e_nao_mexe_no_coop(
     # Re-ativação do MESMO perfil (tick do autoswitch) é idempotente.
     calls.gamepad.clear()
     daemon.apply_profile_mode(
-        _profile({"kind": "gamepad", "gamepad_flavor": "dualsense", "coop": True}).mode
+        _profile({"kind": "gamepad", "gamepad_flavor": "dualsense"}).mode
     )
     assert calls.gamepad == []
     assert calls.coop == []
 
 
-class TestCoopDefaultOn:
-    """LEIGO-01 — nenhum perfil desliga o co-op pelas costas da usuária.
+class TestOCoopNaoVemDoPerfil:
+    """Nenhum perfil liga nem desliga o co-op — cada controle é um jogador.
 
-    O checkbox saiu da tela: se um perfil ainda conseguisse zerar
-    `coop_enabled`, os dois controles viravam o mesmo jogador SEM caminho de
-    volta. Cada teste aqui é uma porta que precisa continuar fechada.
+    O dono do fato é `DaemonConfig.coop_enabled`, e ele nasce ligado. Se um
+    perfil conseguisse zerá-lo, os dois controles viravam o mesmo jogador sem
+    caminho de volta. Cada caso aqui é uma porta que precisa continuar fechada.
 
-    NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: a porta foi TAPADA, não
-    só fechada. O campo `mode.coop` continua sendo aceito e lido (tirá-lo do
-    esquema faria todo perfil dela que o traz falhar na validação — inclusive
-    dois presets de fábrica), mas nenhum perfil liga nem desliga o co-op.
+    A porta do ESQUEMA (não existe campo de co-op em perfil) é guardada por
+    `tests/unit/test_cada_controle_e_um_jogador.py`. Estas medem o RUNTIME.
     """
 
-    def test_perfil_com_coop_false_e_aceito_e_ignorado(
+    def test_ativar_um_perfil_nao_mexe_no_coop(
         self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O caso que a decisão dela existe para fechar, medido de ponta a ponta.
-
-        Um perfil antigo com ``"coop": false`` continua ABRINDO (o esquema é
-        `extra="forbid"`: recusá-lo seria trocar um interruptor inútil por um
-        perfil que não carrega) — e ativá-lo NÃO desliga mais o co-op dela.
-        """
-        calls = _Calls(daemon)
-        calls.bind(monkeypatch)
-
-        mode = _profile(
-            {"kind": "gamepad", "gamepad_flavor": "xbox", "coop": False}
-        ).mode
-        assert mode is not None and mode.coop is False  # aceito
-
-        daemon.apply_profile_mode(mode)
-
-        assert calls.coop == [], "o perfil ainda governa o co-op"
-        assert daemon.config.coop_enabled is True
-
-    def test_perfil_sem_campo_coop_nao_desliga_o_coop(
-        self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        # O default do esquema é True; e desde 06/08 nem o True governa.
+        """Medido de ponta a ponta: aplicar o modo não chama `set_coop_enabled`."""
         calls = _Calls(daemon)
         calls.bind(monkeypatch)
 
         mode = _profile({"kind": "gamepad", "gamepad_flavor": "xbox"}).mode
         assert mode is not None
-        assert mode.coop is True
 
         daemon.apply_profile_mode(mode)
-        assert calls.coop == []
+
+        assert calls.coop == [], (
+            f"aplicar um perfil mexeu no co-op: {calls.coop}. O perfil não tem "
+            f"opinião sobre isso, e o dono é `DaemonConfig.coop_enabled`."
+        )
         assert daemon.config.coop_enabled is True
 
-    def test_sair_do_gamepad_por_perfil_sem_opiniao_preserva_a_preferencia(
+    def test_perfil_sem_secao_mode_tambem_nao_mexe(
         self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls = _Calls(daemon)
         calls.bind(monkeypatch)
-        daemon.apply_profile_mode(
-            _profile({"kind": "gamepad", "gamepad_flavor": "xbox"}).mode
-        )
-        daemon.config.gamepad_emulation_enabled = True
-        daemon._gamepad_device = object()
-        calls.coop.clear()
 
-        # Perfil sem opinião entra em foco: desliga o gamepad que o perfil
-        # anterior ligou, mas a preferência de co-op tem de sobreviver.
-        daemon.apply_profile_mode(None, profile=_profile(None))
+        daemon.apply_profile_mode(None)
 
-        assert calls.gamepad[-1] == (False, None, "profile")
         assert calls.coop == []
         assert daemon.config.coop_enabled is True
-
-
-def test_transicao_native_para_gamepad_desliga_nativo_sem_reapply(
-    daemon: Daemon, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    calls = _Calls(daemon)
-    calls.bind(monkeypatch)
-
-    daemon.apply_profile_mode(_profile({"kind": "native"}).mode)
-    daemon.apply_profile_mode(_profile({"kind": "gamepad", "coop": False}).mode)
-
-    assert calls.native == [(True, "profile"), (False, "profile")]
-    assert calls.gamepad[-1][0] is True
-    assert daemon._mode_from_profile == "gamepad"
-
-
-def test_kind_desktop_limpa_modo_inclusive_manual_expirado(
-    daemon: Daemon, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    calls = _Calls(daemon)
-    calls.bind(monkeypatch)
-    # Estado manual ANTIGO (lock expirado): gamepad + co-op ligados na mão.
-    daemon.config.gamepad_emulation_enabled = True
-    daemon._gamepad_device = object()
-    daemon.config.coop_enabled = True
-    daemon._emu_manual_ts = float("-inf")
-
-    daemon.apply_profile_mode(_profile({"kind": "desktop"}).mode)
-
-    assert calls.gamepad == [(False, None, "profile")]
-    assert daemon._mode_from_profile is None
-    # LEIGO-01: o desktop limpa o MODO, não a preferência de co-op. Desligar o
-    # gamepad já desmonta os jogadores; zerar a flag aqui deixava o co-op morto
-    # pela sessão inteira — e, sem o checkbox na tela, sem caminho de volta.
-    assert calls.coop == []
-    assert daemon.config.coop_enabled is True
-
-
-def test_lock_manual_congela_o_perfil(
-    daemon: Daemon, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    calls = _Calls(daemon)
-    calls.bind(monkeypatch)
-    daemon._emu_manual_ts = time.monotonic()  # gesto manual AGORA
-
-    daemon.apply_profile_mode(_profile({"kind": "native"}).mode)
-    daemon.apply_profile_mode(None, profile=_profile(None))
-
-    assert calls.native == []
-    assert calls.gamepad == []
-    assert calls.coop == []
-
-
-def test_manager_repassa_mode_ao_applier() -> None:
-    from hefesto_dualsense4unix.daemon.state_store import StateStore
-    from hefesto_dualsense4unix.profiles.manager import ProfileManager
-
-    received: list[Any] = []
-    quem: list[Any] = []
-
-    origens: list[str] = []
-
-    def applier(mode: Any, *, profile: Any = None, origin: str = "autoswitch") -> None:
-        received.append(mode)
-        quem.append(profile)
-        origens.append(origin)
-
-    mgr = ProfileManager(
-        controller=FakeController(),
-        store=StateStore(),
-        mode_applier=applier,
-    )
-    mgr.apply_emulation(_profile({"kind": "native"}))
-    mgr.apply_emulation(_profile(None), origin="autoswitch")
-
-    assert len(received) == 2
-    assert received[0] is not None and received[0].kind == "native"
-    assert received[1] is None
-    # R-02: junto com a seção vai QUEM a mandou — sem isso o applier não
-    # distingue "o perfil do desktop mandou reverter" de "caiu num catch-all".
-    assert [getattr(p, "name", None) for p in quem] == ["teste_modo"] * 2
-    # R-03: e vai também de ONDE veio a ativação — é o que decide entre furar o
-    # lock de gesto manual (gesto dela) e adiar com pendência (autoswitch).
-    assert origens == ["manual", "autoswitch"]
-
 
 class TestR02CatchAllNaoReverte:
     """R-02 (auditoria 23/07) — "sem opinião" não é ordem de reverter.

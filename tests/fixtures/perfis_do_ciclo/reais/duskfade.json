@@ -59,8 +59,7 @@
   },
   "mode": {
     "kind": "gamepad",
-    "gamepad_flavor": "dualsense",
-    "coop": true
+    "gamepad_flavor": "dualsense"
   },
   "suppress_desktop_emulation": true,
   "ponte": {

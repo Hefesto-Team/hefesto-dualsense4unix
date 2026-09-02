@@ -57,10 +57,12 @@ class TestOsVinteEDoisSemModo:
             "segue aberta até a frase de tela existir."
         )
 
-    def test_perfil_sem_mode_nao_tem_opiniao_sobre_coop(self) -> None:
-        """`coop` mora dentro de `mode` (schema.py:601) — perfil sem `mode` é
-        perfil sem opinião sobre co-op, e é essa a consequência que fecha o
-        diagnóstico do co-op na sprint."""
+    def test_perfil_sem_mode_nao_tem_opiniao_sobre_o_modo(self) -> None:
+        """Perfil sem a seção `mode` não opina sobre modo nenhum.
+
+        É a consequência que importa: ativar um perfil assim libera só o modo
+        que outro PERFIL tinha ligado, e não desfaz gesto manual dela.
+        """
         dados = json.loads((FIXTURES_REAIS / "sackboy.json").read_text())
         perfil = Profile.model_validate(dados)
         assert perfil.mode is None

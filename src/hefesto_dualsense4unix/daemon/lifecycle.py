@@ -1714,7 +1714,7 @@ class Daemon:
         if origin == "manual":
             self._emu_manual_ts = time.monotonic()
             # R-02/C6: idem `set_gamepad_emulation` — o co-op é parte do mesmo
-            # eixo (`mode.coop`), então ligá-lo na mão também toma a posse.
+            # eixo do modo, então ligá-lo na mão também toma a posse.
             self._mode_from_profile = None
             # FEAT-COOP-DEFAULT-ON-01: só gesto MANUAL persiste a escolha —
             # perfil ligando/desligando co-op não pode virar opt-out da usuária.
@@ -2505,21 +2505,9 @@ class Daemon:
                 # máscara vigente apagaria o latch a tempo de a outra reabrir o
                 # mesmo pedido recusado na volta seguinte.
                 self._reavaliar_mascara_adiada(flavor_atual)
-            # COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o campo
-            # `mode.coop` do perfil deixou de GOVERNAR. Ele continua sendo LIDO
-            # (e o esquema continua aceitando-o — ver `profiles/schema.py`:
-            # tirá-lo do modelo faria todo perfil dela que traz `"coop"` falhar
-            # na validação, inclusive dois presets de fábrica), mas nenhum perfil
-            # liga nem desliga o co-op: cada controle é um jogador, sempre.
-            # Antes daqui saía `set_coop_enabled(want_coop, origin="profile")`,
-            # e um perfil antigo com `"coop": false` desligava o co-op dela ao
-            # ativar — pelas costas de quem nunca pediu isso.
-            _coop_do_perfil_ignorado = bool(getattr(mode, "coop", True))
-            if not _coop_do_perfil_ignorado:
-                logger.info(
-                    "perfil_pediu_coop_off_ignorado",
-                    motivo="coop_sempre_ligado",
-                )
+            # CADA CONTROLE É UM JOGADOR, e o perfil não opina sobre isso:
+            # quem liga dois controles quer dois jogadores. O co-op vive num
+            # dono só, `DaemonConfig.coop_enabled`.
             # A POSSE do eixo é do perfil mesmo com a máscara adiada — ele
             # opinou, e quem opina é dono. O que ficou em aberto é só a máscara.
             self._mode_from_profile = "gamepad"

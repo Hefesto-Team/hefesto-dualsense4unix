@@ -360,7 +360,7 @@ class TestDreno:
         daemon._emu_manual_ts = relogio.agora
         daemon.config.gamepad_emulation_enabled = True
         daemon._gamepad_device = SimpleNamespace(flavor="dualsense")
-        perfil = _perfil({"kind": "gamepad", "gamepad_flavor": "dualsense", "coop": True})
+        perfil = _perfil({"kind": "gamepad", "gamepad_flavor": "dualsense"})
         daemon.store.set_active_profile(perfil.name)
         daemon.apply_profile_mode(perfil.mode, profile=perfil, origin="autoswitch")
         daemon._game_signal = SimpleNamespace(authority="game")
