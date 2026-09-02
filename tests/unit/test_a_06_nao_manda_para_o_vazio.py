@@ -323,13 +323,13 @@ def test_o_guardar_continua_gravando_o_que_mudou(disco):
     assert gravados[0].button_actions == {"square": "KEY_ENTER"}
 
 
-def test_o_guardar_zera_quando_o_perfil_ja_esta_de_fabrica(disco):
-    """A trava só age quando há o que perder — sem escolha guardada, nada muda.
+def test_o_guardar_nao_grava_quando_nao_ha_o_que_gravar(disco):
+    """Nada a gravar não vira gravação — nem quando a trava não age.
 
-    Aqui `prof.button_actions` já é `None` e a forma é o de fábrica: o gesto sai
-    pelo `return` de "nada a fazer", sem gravar e sem levantar. Se a trava
-    passasse a recusar TAMBÉM neste caso, ela viraria um botão que reclama do
-    estado normal.
+    Aqui `prof.button_actions` já é `None` e a forma é o de fábrica: não há
+    escolha a perder, logo a trava contra o apagador não tem o que travar. O
+    disco continua intocado — se a trava passasse a recusar em bloco, ela
+    viraria um botão que reclama do estado normal, e este caso reprova.
     """
     import pacotes
     from pacotes import a06_navegacao
@@ -338,8 +338,59 @@ def test_o_guardar_zera_quando_o_perfil_ja_esta_de_fabrica(disco):
     estado["regua"] = _PerfilDeMentira("regua")
     ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
 
-    a06_navegacao.guardar_definicoes(ctx, {"forma": _forma_de_fabrica()}, _PonteMuda())
+    with pytest.raises(RuntimeError):
+        a06_navegacao.guardar_definicoes(ctx, {"forma": _forma_de_fabrica()},
+                                         _PonteMuda())
     assert not gravados
+
+
+@pytest.mark.parametrize(
+    ("guardado", "a_forma", "pedaco"),
+    [
+        # O SEGUNDO CLIQUE que a trava manda dar: a tabela já se preencheu e
+        # mostra o que o perfil guarda.
+        ({"square": "KEY_ENTER"}, {"square": "Enter"}, "1 escolha"),
+        # E o mesmo botão com o perfil de fábrica e a tela de fábrica.
+        (None, {}, "de fábrica"),
+    ],
+)
+def test_o_guardar_sem_o_que_guardar_recusa_dizendo(disco, guardado, a_forma, pedaco):
+    """O "Guardar" sem nada a gravar tem de DIZER que já está guardado.
+
+    O DEFEITO QUE ESTA LINHA FECHA, encenado em 02/09/2026 com dublê de disco e
+    ponte muda — e ele era cruel com quem estava usando:
+
+        1º clique (tabela ainda no desenho)   → RuntimeError, e a frase manda
+                                                 "espere a tabela se preencher
+                                                  e clique de novo"
+        2º clique (tabela cheia, = ao perfil) → voltou SEM levantar, devolveu
+                                                 None, gravou 0, chamou 0
+
+    Uma recusa que INSTRUI a repetir o gesto e depois não responde nada é pior
+    que uma recusa seca: ela promete que a segunda tentativa funciona. E um
+    gesto que devolve `None` não toca o DOM (`hefesto_vivo._deu_certo`), logo o
+    segundo clique era o botão que responde calado.
+
+    A MORDIDA: troque a recusa do `guardar_definicoes` de volta por um `return`
+    — os dois casos reprovam dizendo que o botão voltou a ficar mudo.
+    """
+    import pacotes
+    from pacotes import a06_navegacao
+
+    estado, gravados = disco
+    estado["regua"] = _PerfilDeMentira("regua", button_actions=guardado)
+    ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
+    ponte = _PonteMuda()
+
+    with pytest.raises(RuntimeError) as caiu:
+        a06_navegacao.guardar_definicoes(ctx, {"forma": _forma_de_fabrica(**a_forma)},
+                                         ponte)
+    frase = str(caiu.value)
+    assert "guardar" in frase.lower(), (
+        f"a recusa não diz que não havia o que guardar: {frase!r}")
+    assert pedaco in frase, (
+        f"a recusa não diz o que o perfil já tem ({pedaco!r}): {frase!r}")
+    assert not gravados, "recusou e ainda assim gravou"
 
 
 def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
@@ -347,11 +398,16 @@ def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
 
     Medido em 02/09/2026 com dublê: trocar o `cross` faz o `l2` divergir do seu
     espelho (`acoes.resolver` — o L2 é o cross por tabela), e a frase que ia
-    para a tela dizia *"ficaram sem quem as atenda: l2"*. `l2`,
-    `touchpad_left_press` e `r3_direcao` são jargão de kernel na cara de quem
-    clicou, e o produto já tem os vinte nomes em
-    `app/actions/input_actions.humanize_button` desde o KBD-01 — é o que a GTK
-    que ela usa mostra.
+    para a tela dizia *"ficaram sem quem as atenda: l2"*. `l2` e
+    `touchpad_left_press` são jargão de kernel na cara de quem clicou, e o
+    produto já tem os nomes em `app/actions/input_actions.humanize_button` desde
+    o KBD-01 — é o que a GTK que ela usa mostra.
+
+    FATO SUBSTITUÍDO — 02/09/2026, corretivo: este parágrafo citava `r3_direcao`
+    como curado junto com os outros dois. **Não está** — o motor tem 20 nomes
+    para 21 botões, e os que faltam são `l3_direcao` e `r3_direcao`. A cura é do
+    motor e está relatada; o teste abaixo é quem cobra que ninguém a escreva
+    aqui.
 
     A mordida: faça `_nome_do_botao` devolver o argumento — este teste reprova
     dizendo que a frase voltou a falar em `l2`.
@@ -374,19 +430,29 @@ def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
 
 
 def test_o_nome_do_botao_e_o_do_motor_e_nao_uma_segunda_tabela():
-    """Vinte nomes já existem no produto; escrevê-los de novo é o defeito.
+    """Os nomes já existem no produto; escrevê-los de novo é o defeito.
 
     LEI 0 desta migração, palavra dela: *"não temos que recriar nada, só
     aproveitar o que foi feito"*. Esta linha reprova no dia em que alguém
     copiar a tabela para dentro do pacote — as duas passariam a envelhecer
     separadas, e a tela e a GTK diriam nomes diferentes para o mesmo botão.
+
+    A CONFERÊNCIA É DAS VINTE E UMA, e não de quatro escolhidas — corrigido em
+    02/09/2026. Com quatro, a tentação de remendar no pacote justamente o que o
+    motor não tem (`l3_direcao` e `r3_direcao`) passaria sem reprovar nada: são
+    os dois botões que a amostra não olhava. O buraco é do motor
+    (`app/actions/input_actions.py:129` tem 20 nomes para 21 botões) e a cura é
+    lá; o que esta linha impede é a segunda tabela nascer AQUI.
     """
+    from hefesto_dualsense4unix.core import acoes_de_botao as acoes
     from hefesto_dualsense4unix.app.actions import input_actions
     from pacotes import a06_navegacao
 
-    for botao in ("l2", "touchpad_left_press", "create", "cross"):
+    for botao in acoes.BOTOES:
         assert a06_navegacao._nome_do_botao(botao) == \
-            input_actions.humanize_button(botao)
+            input_actions.humanize_button(botao), (
+            f"{botao}: o pacote respondeu um nome que o motor não deu — é a "
+            "segunda tabela nascendo.")
 
 
 def test_o_produto_nunca_esta_a_frente_do_desenho():

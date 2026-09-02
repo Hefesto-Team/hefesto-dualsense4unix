@@ -18,8 +18,11 @@ AS TRÊS COISAS QUE ELA COBRA, e cada uma é um jeito diferente de o botão ment
    botão dizendo "de fábrica" — o pior tipo de acerto aparente.
 2. **Reaplicar.** Gravar sem `profile.switch` deixa a tela dizendo uma coisa e o
    aparelho fazendo outra até a próxima troca de perfil.
-3. **Não fazer nada quando já está de fábrica.** Um `profile.switch` no meio de
-   uma partida não é de graça, e regravar um perfil idêntico é barulho.
+3. **Não fazer nada quando já está de fábrica — e DIZER que não fez.** Um
+   `profile.switch` no meio de uma partida não é de graça, e regravar um perfil
+   idêntico é barulho. Mas o `return` seco que segurava esse barulho era, para
+   a régua do aparelho, indistinguível de um botão que mentiu: em 02/09/2026
+   ele passou a recusar dizendo, sem gravar e sem chamar o daemon.
 
 A MORDIDA: troque o `None` por `{}` no gesto — o caso 1 reprova dizendo que o
 teclado ficaria mudo. Tire o `gravar_e_reaplicar` — o caso 2 reprova.
@@ -151,18 +154,37 @@ def test_reaplica_o_perfil_ativo_e_relê_o_ambiente(pac, gesto, disco) -> None:
         "jogo no próximo start do daemon.")
 
 
-def test_ja_de_fabrica_nao_mexe_em_nada(pac, gesto, disco) -> None:
-    """Regravar um perfil idêntico é barulho, e o `switch` não é de graça."""
+def test_ja_de_fabrica_nao_mexe_em_nada_e_diz(pac, gesto, disco) -> None:
+    """Regravar um perfil idêntico é barulho — e não fazer nada CALADO também.
+
+    Regravar um perfil idêntico trocaria a data do arquivo e faria o daemon
+    reaplicar o mesmo perfil; um `profile.switch` no meio de uma partida não é
+    de graça. Isto continua valendo, e as duas primeiras linhas o cobram.
+
+    O QUE MUDOU EM 02/09/2026 (corretivo): este ramo era um `return` seco, e
+    para a régua do aparelho isso é indistinguível de um botão que mentiu — foi
+    assim que ele entrou na lista dos dezesseis "aplicados que não aplicam".
+    Agora ele RECUSA DIZENDO, que é o desfecho verdadeiro. Nada é gravado, o
+    daemon continua sem ser incomodado, e quem clicou fica sabendo por quê.
+
+    A MORDIDA: troque a recusa de volta por um `return` — esta linha reprova
+    dizendo que o botão voltou a responder calado.
+    """
     estado, gravados = disco
     estado["Navegacao"] = PerfilDeMentira("Navegacao", None, None)
     p = PonteDeMentira()
 
-    gesto(_ctx(pac, "Navegacao"), {}, p)
+    with pytest.raises(RuntimeError) as erro:
+        gesto(_ctx(pac, "Navegacao"), {}, p)
 
     assert gravados == [], "gravou um perfil que já estava de fábrica"
     assert p.chamadas == [], (
         f"pediu {p.chamadas} ao daemon sem ter o que mudar — um "
         f"`profile.switch` no meio de uma partida não é de graça.")
+    frase = str(erro.value)
+    assert "de fábrica" in frase, (
+        f"a recusa não diz que o perfil já estava no de fábrica: {frase!r}")
+    assert "Navegacao" in frase, f"a recusa não nomeia o perfil: {frase!r}"
 
 
 def test_zera_tambem_quando_so_o_campo_novo_esta_preenchido(pac, gesto, disco) -> None:
