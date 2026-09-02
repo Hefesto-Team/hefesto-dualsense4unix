@@ -948,6 +948,35 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # ROTA-A + ROTA-C (02/09/2026) — OS TRÊS DONOS DE FATO. Eles nasceram sem
+    # chamador de propósito: quem os chama são os dez `interface/pacotes/aNN_*.py`,
+    # e dez frentes estavam dentro deles no mesmo instante. Ligar é a leva
+    # seguinte, e cada uma fecha uma linha desta lista.
+    "interface/pacotes/__init__.py::jogador_de": (
+        "O número do jogador lendo as DUAS chaves que o daemon publica — "
+        "`player_slot` e depois `player` —, na mesma ordem da GTK "
+        "(`app/actions/base.numero_do_controle`). Hoje `a01_jogar.py:48` e "
+        "`a04_iluminacao.py:89` leem só `player`, e por isso a Iluminação "
+        "escreve `P—` no rótulo com o botão 2 aceso logo abaixo. Fecha quando "
+        "esses pacotes chamarem esta função. MEDIDO em 02/09/2026."
+    ),
+    "interface/pacotes/__init__.py::identidade_de": (
+        "O nome do controle na tela, na ordem 'o que ELA nomeou > o modelo "
+        "decodificado > o transporte' — e NUNCA a posição. Hoje `Cosmic Red` e "
+        "`Starlight Blue` estão cravados 170 vezes no HTML publicado, e o nome "
+        "vinha da ordem da lista: com um controle o do cabo era 'Starlight "
+        "Blue'; com dois, o MESMO cabo virou 'Cosmic Red'. Fecha quando os "
+        "geradores `interface/abaNN.py` derem `data-campo` ao rótulo e os "
+        "pacotes o pintarem. MEDIDO em 02/09/2026."
+    ),
+    "interface/pacotes/__init__.py::degradacao_de": (
+        "A frase 'Emulação degradada (uinput): …', que delega para "
+        "`app/widgets/controller_card.texto_degradacao`. `vpad_motivo` é lido "
+        "UMA vez na GTK e ZERO em `interface/pacotes/` — a razão pela qual a "
+        "emulação caiu não chega à tela nova. Fecha quando a aba Controles, "
+        "que já lê `vpad_backend`, passar a mostrar o porquê. MEDIDO em "
+        "02/09/2026."
+    ),
     "app/actions/jogar/painel.py::chips_sem_degrau": (
         "Os chips que nomeiam uma ponte que a `ESCADA` não tem "
         "(app/actions/jogar/painel.py:534) — a tela prometendo o que o produto não "
