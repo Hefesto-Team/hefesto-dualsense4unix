@@ -558,7 +558,21 @@ MIOLO = f'''
               <div class="campo">
                 <span>Prioridade:</span>
                 <span class="val" data-hef="editor.prioridade.dica" title="Decide quem ganha quando dois perfis poderiam entrar: o maior vence. O Universal fica em zero, para nunca atropelar ninguém e nunca deixar o controle sem nada.">
-                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" style="width:90%"></span></span>
+                  <!-- `data-hef-alvo="largura"` — 02/09/2026, e sem ele a barra
+                       MENTIA de duas formas ao mesmo tempo. O pintor cai no
+                       ramo padrão (`el.textContent = t`, `hefesto_vivo.py:170`)
+                       quando o alvo não é declarado: o `"0%"` que o pacote
+                       manda vira TEXTO dentro de uma barra de 5px, e a
+                       LARGURA fica nos 90% do desenho — uma barra quase cheia
+                       para um perfil que está em 1 de 200.
+                       É a mesma cura que os quatro campos do editor logo
+                       abaixo já tinham recebido com `alvo="valor"`.
+                       Enquanto esta página não for PUBLICADA por ela,
+                       `a10_perfis.NAO_PINTAVEIS` segura a emissão do
+                       `editor.prioridade` — quem diz a verdade é o número ao
+                       lado (`editor.prioridade.n`), que é um `<span>` sem
+                       filhos e recebe o valor certo. -->
+                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:90%"></span></span>
                   <span class="n" data-hef="editor.prioridade.n">90</span>
                 </span>
               </div>

@@ -125,6 +125,54 @@ def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
 #: clica de novo e o perfil some sem que nada na tela tenha dito por quê.
 SEGUNDOS_PARA_CONFIRMAR = 8.0
 
+#: OS ENDEREÇOS QUE A PÁGINA PUBLICADA **NÃO SABE RECEBER** — e emiti-los não é
+#: um valor que não aparece: é a página se DESMONTANDO a cada meio segundo.
+#:
+#: A CAUSA, e ela é do pintor, não desta aba: `escrever()` termina em
+#: `el.textContent = t` (`hefesto_vivo.py:170`), e `textContent` num elemento que
+#: tem FILHOS-ELEMENTO apaga todos eles. O desvio existe — `data-hef-alvo` —, mas
+#: quem o escreve é o GERADOR, no HTML, e o HTML publicado só muda por ato dela.
+#:
+#: MEDIDO em 02/09/2026 sobre `interface/paginas/10-perfis.html`, contando os
+#: filhos-elemento de cada alvo (a régua está em
+#: `tests/unit/test_a_guarda_do_perfil_nao_apaga_a_tabela.py`):
+#:
+#:     endereço                 tag      elementos  filhos  o que some
+#:     guarda.linhas            tbody            1       4  as 4 linhas, com 24 endereços
+#:     guarda.secao             span            16       2  o glifo SVG da seção
+#:     editor.prioridade.dica   span             1       2  o TRILHO e o número ao lado
+#:     editor.prioridade        span             1       0  (nada some — mas ver abaixo)
+#:
+#: **É ISTO QUE ELA FOTOGRAFOU.** A tabela `Controle / Ajuste próprio / ID da
+#: peça` mostrando um `2` sozinho é o `guarda.linhas` escrevendo `"2"` no
+#: `<tbody>`; e o *"Prioridade 1 de 200. O maior vence a disputa…"* que ela leu
+#: no lugar do trilho é o `editor.prioridade.dica` comendo o trilho e o número —
+#: a frase dela, *"esse texto em perfis nem faz sentido mais"*, é sobre uma
+#: FRASE QUE ENGOLIU UM CONTROLE DESLIZANTE, não sobre o texto em si.
+#:
+#: `editor.prioridade` é o único que não apaga nada, e mesmo assim sai: ele é a
+#: LARGURA do trilho (`style="width:90%"`), e sem `data-hef-alvo="largura"` no
+#: HTML o pintor escreve `"0%"` como TEXTO dentro de uma barra de 5px, deixando
+#: a largura no 90% do desenho. Uma barra em 90% para um perfil que está em
+#: 1 de 200 é a tela afirmando o que não mediu. Quem diz a verdade hoje é o
+#: `editor.prioridade.n`, que é um `<span>` sem filhos e recebe o número certo.
+#:
+#: **PARA DESTRAVAR**, e cada um tem um dono diferente:
+#:
+#:   editor.prioridade   `data-hef-alvo="largura"` no gerador — já escrito na
+#:                       BANCADA (`aba10.py`), esperando o ato de publicar DELA.
+#:   guarda.secao        o pintor precisa de um alvo que ligue/desligue CLASSE:
+#:                       aceso é `.gr.on`, apagado é `.gr`, e nenhum dos cinco
+#:                       alvos de hoje (texto·largura·fundo·valor·html) alcança
+#:                       uma classe. `hefesto_vivo.py` não é território desta
+#:                       frente; a peça está pedida ao orquestrador.
+#:   guarda.linhas       não tem conserto e não precisa: é o `<tbody>`, um
+#:                       CONTINENTE. Nunca houve valor para escrever nele.
+#:   editor.prioridade.dica  a frase já é o `title=` estático do desenho, e o
+#:                       texto novo é decisão DELA (ver a ROTA-G).
+NAO_PINTAVEIS = ("guarda.linhas", "guarda.secao",
+                 "editor.prioridade", "editor.prioridade.dica")
+
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
 
@@ -171,6 +219,55 @@ def _uma_vez_so(alvo: str) -> tuple[str, ...]:
         _PINTADO_PARA = alvo
         return ()
     return CAMPOS_QUE_ELA_DIGITA
+
+
+#: O separador do rótulo, EM TEXTO PURO. O dono da forma continua sendo
+#: `interface/monta.SEPARADOR` — `' <span class="pt">•</span> '` —, que é
+#: MARCAÇÃO e não pode entrar num `textContent`: a célula mostraria os
+#: marcadores como letras. Aqui vai o mesmo caractere, sem a casca.
+#:
+#: NÃO IMPORTO O `monta`: ele é o GERADOR do desenho e faz leitura de disco no
+#: import (`topo.html`, `fim.html`, o SVG, a logo, dois CSV). Um gerador no
+#: caminho do produto é uma janela que não abre onde não há repositório. Quem
+#: impede a segunda gramática é a régua
+#: `test_o_rotulo_da_guarda_e_o_mesmo_do_monta`, que compara este rótulo com o
+#: do `monta.rotulo(c, "curta")` sem a marcação — se ela mudar a ordem
+#: (**marca • player • plástico • transporte**, decisão dela de 26/08), a régua
+#: reprova AQUI antes de a tela discordar de si mesma.
+SEPARADOR_EM_TEXTO = " • "
+
+
+def _rotulo_curto(controle: dict[str, Any]) -> str:
+    """`P1 • Cosmic Red • USB` — a forma `curta` do `monta.rotulo`, sem marcação.
+
+    `jogador`, `nome` e `via` são os três campos que `mesa_viva.mesa_do_estado`
+    devolve, e são exatamente os três que a forma `curta` junta.
+    """
+    return SEPARADOR_EM_TEXTO.join([
+        f"P{controle.get('jogador') or '—'}",
+        str(controle.get("nome") or "—"),
+        str(controle.get("via") or "—"),
+    ])
+
+
+def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A mesa no formato que `perfis_web.pacote_da_aba` DIZ esperar.
+
+    FATO ERRADO, SUBSTITUÍDO — 02/09/2026. A docstring de
+    `perfis_web.pacote_da_aba` afirma que a mesa vem *"no formato que
+    ``mesa_viva.mesa_do_estado`` devolve mais ``rotulo`` e ``plastico``"*, e o
+    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:397`).
+    **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
+    `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
+    `mascara` (`mesa_viva.py:320-332`). Medido: `guarda.nome` saía `["", ""]`
+    para os DOIS controles da mesa dela, e a tabela ficava sem nome nenhum.
+
+    QUEM JÁ FAZIA ISTO CERTO: `interface/perfis_vivos.mesa_de_agora:318` — o
+    visor da aba, que o piloto **não carrega**. É o padrão que a ONDA B1 mediu:
+    *o reuso aconteceu, no arquivo que o piloto não abre*. Aqui ele entra no
+    caminho do produto.
+    """
+    return [{**c, "rotulo": _rotulo_curto(c)} for c in mesa]
 
 
 def _rotulo_do_remover() -> str:
@@ -227,7 +324,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # nome de outro.
         alvo = find_by_slug(_escolhido([{"nome": x.name} for x in todos], ativo), todos)
         bruto = _tela.pacote_da_aba(todos, ativo=ativo or None,
-                                    mesa=ctx.mesa, editado=alvo)
+                                    mesa=_mesa_com_rotulo(ctx.mesa), editado=alvo)
     except Exception:
         return {"sem_dono": {}, "cobertura": {"pintados": 0, "sem_dono": 1}}
 
@@ -280,8 +377,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     if isinstance(guarda, list):
         fora["guarda.nome"] = [g.get("nome", "") for g in guarda]
         fora["guarda.id"] = [g.get("id", "") for g in guarda]
+        # OS DOIS ABAIXO CONTINUAM SENDO MONTADOS, e o `pop` do fim é quem os
+        # retira. Apagar as duas linhas daria o mesmo resultado hoje e deixaria
+        # `NAO_PINTAVEIS` sem mordida: uma lista que não segura nada fica verde
+        # para sempre e ninguém percebe quando o motivo dela caduca. Assim há
+        # UM lugar que decide, e arrancá-lo faz a régua reprovar.
         fora["guarda.secao"] = [s for g in guarda for s in (g.get("secoes") or [])]
         fora["guarda.linhas"] = str(len(guarda))
+
+    # OS QUATRO QUE NÃO SAEM, e cada um tem a sua linha em `NAO_PINTAVEIS`.
+    # Este `pop` é o último ato de propósito: `pacote_da_aba` e o laço do editor
+    # acima continuam produzindo tudo — quem decide o que a PÁGINA aguenta é
+    # esta lista, num lugar só, e não cada emissão espalhada pelo arquivo.
+    for chave in NAO_PINTAVEIS:
+        fora.pop(chave, None)
     fora["cobertura"] = {"pintados": len(fora) + len(lista) * 3, "sem_dono": 0}
     return fora
 
@@ -348,6 +457,29 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     nome = _ESCOLHIDO or str(o.get("texto") or "").strip()
     if not nome:
         raise ValueError("ativar: escolha um perfil na lista primeiro")
+    # A TERCEIRA GUARDA, e ela é POR QUE ESTE GESTO ESTAVA NA LISTA DOS
+    # DEZESSEIS — 02/09/2026. O mapa o acusa de *"clicou, respondeu `aplicado`,
+    # o estado do daemon não mudou"*, e a acusação está certa no FATO e errada
+    # na causa: ele trocava para o perfil que JÁ ESTAVA VALENDO.
+    #
+    # A CADEIA, medida: `pacote()` roda a cada 500 ms e chama `_escolhido()`,
+    # que grava `_ESCOLHIDO = ativo` quando ninguém clicou numa linha ainda
+    # (a sincronização inicial, escrita lá de propósito). A régua de cliques
+    # aciona os gestos SEM `selecionar` antes — então `ativar` sai com o nome
+    # do perfil ATIVO, o daemon reaplica o mesmo arquivo, e `active_profile`
+    # continua o mesmo. Nada mudou porque não havia nada a mudar.
+    #
+    # `mesmo_slug` e não `==`: com "Navegação" no disco e "Navegacao" no daemon
+    # um `==` cru diria que são perfis diferentes e a guarda nunca pegaria
+    # (R-10, `profiles/slug.py:52`) — o mesmo cuidado do "Voltar à de ontem".
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    ativo = str(ctx.state.get("active_profile") or "")
+    if ativo and mesmo_slug(ativo, nome):
+        raise ValueError(
+            f"“{nome}” já é o perfil que está valendo. Escolha outro na lista "
+            f"da esquerda e clique em Ativar — reativar o mesmo não muda nada, "
+            f"e dizer “aplicado” seria mentira.")
     # `profile_switch` é do `ipc_bridge` — a mesma função que a aba Perfis da
     # GUI estável usa. Nada aqui monta payload.
     if not p.profile_switch(nome):
