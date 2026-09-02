@@ -86,6 +86,13 @@ class Lancador:
     #: O cartão tem lugar para a lista? Se `False`, o gerador nem emite o
     #: contêiner — e um endereço que não existe na página é pintura perdida.
     tem_lista: bool = False
+    #: O produto ACHOU este lançador nesta máquina? É o que a contagem do topo
+    #: soma, e é um campo próprio de propósito: derivar "encontrado" do SELO
+    #: confunde duas perguntas diferentes — *"o lançador está aqui?"* e *"os
+    #: controles chegam nele?"*. Um lançador achado cujo interior o produto não
+    #: sabe ler é `presente=True` com selo `nao_sei`, e as duas coisas são
+    #: verdade ao mesmo tempo.
+    presente: bool = False
 
 
 def _e(txt: object) -> str:
@@ -139,6 +146,33 @@ def acao_html(a: Acao) -> str:
     return f'<button class="{classe}"{endereco}{valor}>{_e(a.rotulo)}</button>'
 
 
+#: O QUE VAI NO LUGAR DE UMA FILEIRA DE BOTÕES VAZIA — e ele não é enfeite.
+#:
+#: O `escrever()` do BOOTSTRAP troca o vazio pelo TRAVESSÃO, e para um campo de
+#: VALOR isso é o certo: "não há valor" se lê `—`. Para um contêiner de HTML é
+#: errado, e foi fotografado em 02/09/2026: os quatro cartões `NÃO ACHEI`
+#: nasceram com um traço solto pendurado onde os botões tinham estado, dizendo
+#: nada. O mesmo traço já estava, desde antes, no pé do cartão da Steam com a
+#: lista vazia.
+#:
+#: **O conserto de raiz é no `escrever()`**, que precisa separar alvo `html`
+#: (vazio = NADA) de alvo de texto (vazio = travessão) — está no relato desta
+#: frente, e mora em `hefesto_vivo.py`, que não é território desta aba.
+#:
+#: Um COMENTÁRIO HTML é o que o desenho pode fazer sozinho: o valor não é
+#: vazio (logo o travessão não entra), o navegador o renderiza como nada, e a
+#: fileira fica com a altura do seu próprio `padding-top` — que é o que ela
+#: teria se o produto pudesse escrever vazio de verdade.
+FILEIRA_VAZIA = "<!-- nada a oferecer neste cartão -->"
+
+#: A frase da lista de jogos VAZIA do cartão da Steam. Ela existe pela mesma
+#: razão do de cima, e diz o que o travessão não dizia: a lista tem QUATRO
+#: origens (falta o atalho · linha intocável · você tirou · você dispensou), e
+#: vazia significa que nenhuma delas tem item — não que ninguém olhou.
+LISTA_VAZIA = ("Nenhum jogo com pendência, e nenhum que você tenha tirado ou "
+               "dispensado.")
+
+
 def acoes_html(lanc: Lancador) -> str:
     """A fileira de botões DO CARTÃO, com o carimbo no fim dela.
 
@@ -155,6 +189,8 @@ def acoes_html(lanc: Lancador) -> str:
     """
     botoes = "\n".join(f"          {acao_html(a)}" for a in lanc.acoes)
     carimbo = carimbo_html(lanc.carimbo)
+    if not botoes and not carimbo:
+        return FILEIRA_VAZIA
     return f"{botoes}\n          {carimbo}" if carimbo else botoes
 
 
@@ -278,31 +314,96 @@ SUFIXO_DA_LISTA = "-fora"
 # É o que impede o número digitado de voltar: não há onde digitá-lo.
 # ---------------------------------------------------------------------------
 
-#: OS LANÇADORES QUE O PRODUTO NÃO OLHA. A lista é dado, e não `if`: no dia em
-#: que alguém escrever o censo do Heroic, ele SAI daqui e ganha cartão próprio.
+@dataclass(frozen=True)
+class SemCenso:
+    """Um lançador cujo INTERIOR o produto não sabe ler — e onde procurá-lo.
+
+    OS DOIS SABERES SÃO SEPARADOS, e confundi-los foi o defeito que este
+    arquivo nasceu para curar. *"Sei ler a biblioteca dele"* e *"ele está
+    instalado aqui"* são perguntas diferentes, e o produto responde a SEGUNDA
+    hoje, de graça: um lançador instalado publica um `.desktop` nas pastas que
+    a spec XDG declara, ou põe o executável no `PATH`.
+
+    Enquanto só a primeira existia, os cinco cartões diziam `NÃO SEI` por
+    CONSTANTE — o pacote escrevia sempre a mesma palavra, e a tela não tinha
+    como diferir *"o produto mediu e não sabe"* de *"ninguém pintou"*. É a
+    forma exata do defeito desta casa: **o desenho fingindo ser produto.**
+
+    :param atalhos: os `stem` de `.desktop` que denunciam o lançador. Sem
+        glob e sem casamento por prefixo: `dolphin-emu` é o emulador e
+        `dolphin` é o gerenciador de arquivos do KDE — casar por prefixo
+        acusaria o Dolphin em toda máquina com KDE instalado.
+    :param comandos: o que procurar no `PATH` quando não há `.desktop`. É o
+        caso do Flatpak, que é PACOTE e não aplicativo: ele não publica
+        atalho próprio, só o comando.
+    """
+
+    chave: str
+    nome: str
+    atalhos: tuple[str, ...] = ()
+    comandos: tuple[str, ...] = ()
+
+
+#: OS LANÇADORES CUJO INTERIOR O PRODUTO NÃO LÊ. A lista é dado, e não `if`: no
+#: dia em que alguém escrever o censo do Heroic, ele SAI daqui e ganha cartão
+#: próprio.
 #:
-#: A PROVA DE QUE NENHUM É OLHADO, medida em 02/09/2026:
+#: A PROVA DE QUE NENHUM É LIDO POR DENTRO, medida em 02/09/2026:
 #:     grep -rniE "heroic|lutris|retroarch|dolphin|mgba" src --include="*.py"
-#: devolve CINCO linhas, e as cinco são COMENTÁRIO
+#: devolve CINCO linhas fora desta aba, e as cinco são COMENTÁRIO
 #: (`daemon/subsystems/hotkey.py:56`, `daemon/lifecycle.py:2271`,
 #:  `daemon/subsystems/game_signal.py:97`, `daemon/lifecycle.py:4169`,
-#:  `profiles/schema.py:1336`). Zero função, zero chamada.
-SEM_FONTE: tuple[tuple[str, str], ...] = (
-    ("heroic", "Heroic (Epic · GOG)"),
-    ("lutris", "Lutris"),
-    ("flatpak", "Flatpak"),
-    ("retroarch", "RetroArch"),
-    ("emuladores", "Dolphin · mGBA"),
+#:  `profiles/schema.py:1336`). Zero função, zero chamada — e o
+#: `test_os_cinco_lancadores_sem_fonte_continuam_sem_fonte` é quem segura isso.
+#:
+#: OS IDENTIFICADORES SÃO OS DE VERDADE, e as duas formas de cada um entram: o
+#: `app-id` do Flatpak (que é como a máquina dela os teria, pelos 54 atalhos em
+#: `~/.local/share/flatpak/exports/share/applications`) e o nome nativo do
+#: pacote da distribuição.
+SEM_FONTE: tuple[SemCenso, ...] = (
+    SemCenso("heroic", "Heroic (Epic · GOG)",
+             ("com.heroicgameslauncher.hgl", "heroic"), ("heroic",)),
+    SemCenso("lutris", "Lutris", ("net.lutris.Lutris", "lutris"), ("lutris",)),
+    SemCenso("flatpak", "Flatpak", (), ("flatpak",)),
+    SemCenso("retroarch", "RetroArch",
+             ("org.libretro.RetroArch", "retroarch"), ("retroarch",)),
+    SemCenso("emuladores", "Dolphin · mGBA",
+             ("org.DolphinEmu.dolphin-emu", "dolphin-emu", "io.mgba.mGBA",
+              "mgba-qt", "mgba"),
+             ("dolphin-emu", "mgba-qt", "mgba")),
 )
 
-#: A frase dos cinco. Ela diz as TRÊS coisas que quem lê precisa: que o produto
-#: não olhou, que o perfil casa por processo e janela (logo um jogo aberto de lá
-#: pode funcionar), e o que falta para o cartão virar medição.
+#: A frase de quem AINDA NÃO PROCUROU — a primeira meia volta, antes de a
+#: leitura de disco voltar. Ela diz as TRÊS coisas que quem lê precisa: que o
+#: produto não olhou, que o perfil casa por processo e janela (logo um jogo
+#: aberto de lá pode funcionar), e o que falta para o cartão virar medição.
 DIZ_SEM_FONTE = (
     "<b>Ainda não sei olhar este lançador.</b> O Hefesto casa o perfil pelo "
     "nome do processo e pela janela, então um jogo aberto por aqui pode "
     "funcionar — o que falta é o produto <i>medir</i>, e nenhuma linha dele "
     "olha para cá hoje."
+)
+
+#: A frase de quem PROCUROU E ACHOU. O `{onde}` é o atalho ou o comando que
+#: denunciou o lançador — dizer ONDE é o que separa esta frase de um palpite,
+#: e é o que deixa ela conferir a resposta sem acreditar em mim.
+DIZ_ACHEI = (
+    "<b>Achei este lançador aqui</b> (<code>{onde}</code>), mas ainda não sei "
+    "olhar <i>dentro</i> dele: o produto não lê a biblioteca deste lançador. "
+    "O Hefesto casa o perfil pelo nome do processo e pela janela, então um "
+    "jogo aberto por aqui pode funcionar."
+)
+
+#: A frase de quem PROCUROU E NÃO ACHOU. Ela nomeia as duas buscas, porque uma
+#: instalação fora das duas (um AppImage solto, um script no `~/bin`) existe e
+#: esta frase não pode afirmar que o lançador não está na máquina — só que o
+#: produto não o achou por onde sabe procurar.
+DIZ_NAO_ACHEI = (
+    "<b>Não achei este lançador nesta máquina.</b> Procurei o atalho "
+    "<code>.desktop</code> nas pastas de aplicativos e o comando no "
+    "<code>PATH</code>. Instalado de outro jeito (um AppImage solto, por "
+    "exemplo) ele não aparece aqui — e o perfil continua casando pelo nome do "
+    "processo e pela janela."
 )
 
 #: O que o cartão da Steam mostra enquanto a primeira leitura não voltou.
@@ -331,8 +432,20 @@ class Leitura:
     intocaveis: tuple[tuple[str, str, str], ...] = ()
     #: os que ELA tirou, no `jogos_sem_wrapper.txt`: `(appid, rótulo)`.
     recusados: tuple[tuple[str, str], ...] = ()
+    #: os que ELA dispensou do LEMBRETE, no `launch_dialog_dismissed.json`:
+    #: `(appid, rótulo)`. É outra lista e outra pergunta — ver `lista_de_jogos`.
+    dispensados: tuple[tuple[str, str], ...] = ()
     #: quantos jogos estão INSTALADOS — o vdf guarda linha de jogo desinstalado.
     instalados: int = 0
+    #: quantos jogos já têm PONTE CONFIRMADA no perfil, de
+    #: `prontuario_dos_jogos.pontes_confirmadas`. É a fonte do carimbo que o
+    #: desenho prometia (`◆ 3 jogos já sabem por onde entrar`) e que nasceu
+    #: digitado — medido em 02/09/2026, o produto respondia ZERO.
+    pontes: int = 0
+    #: Onde cada lançador SEM CENSO foi achado: `(chave, local)`. Local vazio =
+    #: **procurei e não achei**; chave AUSENTE do mapa = **não procurei**. A
+    #: distinção é o ponto inteiro: as duas viram frases diferentes na tela.
+    onde_estao: tuple[tuple[str, str], ...] = ()
     #: a frase da sentinela, que já nomeia o jogo e já diz o que vai acontecer.
     frase: str = ""
     erros: tuple[str, ...] = ()
@@ -343,12 +456,26 @@ def _plural(n: int, um: str, muitos: str) -> str:
 
 
 def lista_de_jogos(lida: Leitura) -> str:
-    """As linhas dentro do cartão da Steam: quem falta, e quem ELA tirou.
+    """As linhas dentro do cartão da Steam: quem falta, quem ELA tirou, e quem
+    ELA mandou não perguntar mais.
 
     OS INTOCÁVEIS APARECEM SEM BOTÃO, de propósito: o produto não os repõe (o
     `apply_wrapper_vdf_text` os pula por construção) e "tirar daqui" um jogo que
     já está fora do reparo não mudaria nada — um botão que não muda nada é o que
     esta casa chama de botão que finge.
+
+    OS DISPENSADOS TAMBÉM, E POR OUTRA RAZÃO. Eles são o
+    `launch_dialog_dismissed.json`, escrito pelo botão *"Não perguntar para
+    este jogo"* do lembrete da GTK — e até hoje **nenhuma tela desta casa os
+    mostrava**. O efeito é um SILÊNCIO: o lembrete nunca mais aparece para
+    aquele jogo, e não havia onde ler por quê. Mostrar já cura o silêncio; o
+    botão de desfazer não existe porque `launch_wrapper_dialog` só tem
+    `add_dismissed_appid` — ver o relato desta frente.
+
+    A LISTA É OUTRA, e não a mesma dos recusados: `jogos_sem_wrapper.txt` diz
+    *"não ponha o atalho neste jogo"* e o dispensado diz *"não me lembre deste
+    jogo"*. Um jogo pode estar num, no outro, ou nos dois — juntá-las numa só
+    apagaria a diferença que faz a pessoa entender o que ela mesma pediu.
     """
     itens = [
         JogoNaLista(appid=a, rotulo=r, porque=p,
@@ -362,7 +489,12 @@ def lista_de_jogos(lida: Leitura) -> str:
                     gesto="voltar-a-usar", botao="Voltar a usar")
         for a, r in lida.recusados
     ]
-    return linhas_de_jogos(itens)
+    itens += [
+        JogoNaLista(appid=a, rotulo=r,
+                    porque="você mandou não perguntar mais por este jogo")
+        for a, r in lida.dispensados
+    ]
+    return linhas_de_jogos(itens, vazio=LISTA_VAZIA)
 
 
 def cartao_da_steam(lida: Leitura | None) -> Lancador:
@@ -416,25 +548,80 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         acoes = (abrir, criar)
         selo = "ok"
 
-    # O CARIMBO NÃO É SÓ BOA NOTÍCIA. Ele é o único lugar que sobra no cartão, e
-    # calar sobre um jogo que o produto DECIDIU não tocar é como ele fica sem o
-    # atalho para sempre sem ninguém saber.
-    carimbo = (f"{_plural(len(lida.intocaveis), 'jogo', 'jogos')} com a linha "
-               "intocável — só reparo manual") if lida.intocaveis else ""
     return Lancador(
         chave=STEAM, nome="Steam", selo=selo,
         jogos=_plural(lida.instalados, "jogo instalado", "jogos instalados"),
-        diz=diz, acoes=acoes, carimbo=carimbo,
-        fora=lista_de_jogos(lida), tem_lista=True)
+        diz=diz, acoes=acoes, carimbo=carimbo_da_steam(lida),
+        fora=lista_de_jogos(lida), tem_lista=True, presente=True)
+
+
+def carimbo_da_steam(lida: Leitura) -> str:
+    """As duas notícias do carimbo, na ordem em que ela precisa lê-las.
+
+    O CARIMBO NÃO É SÓ BOA NOTÍCIA. Ele é o único lugar que sobra no cartão, e
+    calar sobre um jogo que o produto DECIDIU não tocar é como ele fica sem o
+    atalho para sempre sem ninguém saber.
+
+    A PONTE CONFIRMADA VOLTA AO CARTÃO, e ela é a promessa que o desenho fazia
+    e o produto tinha largado: o HTML de 02/09 dizia ``◆ 3 jogos já sabem por
+    onde entrar`` com o número DIGITADO, e `prontuario_dos_jogos` já respondia a
+    mesma pergunta desde sempre, sem um chamador. Agora responde daqui — e no
+    dia em que ela confirmar a primeira ponte, o carimbo acende sozinho.
+
+    ZERO SOME, e é o mesmo critério que `carimbo_html` já aplicava: *"0 jogos
+    já sabem por onde entrar"* ocuparia a linha para não dizer nada.
+    """
+    partes: list[str] = []
+    if lida.pontes:
+        partes.append(f"{_plural(lida.pontes, 'jogo já sabe', 'jogos já sabem')} "
+                      "por onde entrar")
+    if lida.intocaveis:
+        partes.append(f"{_plural(len(lida.intocaveis), 'jogo', 'jogos')} com a "
+                      "linha intocável — só reparo manual")
+    return " · ".join(partes)
+
+
+def cartao_sem_censo(item: SemCenso, onde: str | None) -> Lancador:
+    """Um dos cinco cartões cujo INTERIOR o produto não lê — em três estados.
+
+    E OS TRÊS SÃO DIFERENTES, que é a razão de esta função existir:
+
+    ==============  ============  =========================================
+    ``onde``        selo          o que a tela passa a dizer
+    ==============  ============  =========================================
+    ``None``        ``nao_sei``   ainda não procurei (a primeira meia volta)
+    ``""``          ``off``       procurei e NÃO ACHEI nesta máquina
+    um caminho      ``nao_sei``   achei AQUI, e ainda não sei olhar dentro
+    ==============  ============  =========================================
+
+    O SELO ``off`` ESTAVA MORTO ATÉ HOJE. `SELOS["off"] = "NÃO ACHEI"` existia
+    no desenho desde que ele nasceu e NENHUM caminho o produzia — os seis
+    cartões saíam `ok`, `warn` ou `nao_sei`. Ele era a palavra que faltava para
+    a tela poder dizer o que o produto mediu.
+
+    O BOTÃO SOME QUANDO NÃO HÁ O QUE ABRIR. "Abrir o lançador" sobre um
+    lançador que o produto não achou é o botão que finge no seu pior formato —
+    ele já não tem dono (`SEM_DONO["abrir-lancador"]`), e sobre um lançador
+    ausente ele nem teria o que fazer se tivesse.
+    """
+    abrir = (Acao("Abrir o lançador", "", "", ""),)
+    if onde is None:
+        return Lancador(chave=item.chave, nome=item.nome, selo="nao_sei",
+                        jogos="—", diz=DIZ_SEM_FONTE, acoes=abrir)
+    if not onde:
+        return Lancador(chave=item.chave, nome=item.nome, selo="off",
+                        jogos="—", diz=DIZ_NAO_ACHEI, acoes=())
+    return Lancador(chave=item.chave, nome=item.nome, selo="nao_sei",
+                    jogos="—", diz=DIZ_ACHEI.format(onde=_e(onde)),
+                    acoes=abrir, presente=True)
 
 
 def cartoes(lida: Leitura | None) -> list[Lancador]:
-    """Os seis cartões: o que tem fonte, e os cinco que dizem que não têm."""
+    """Os seis cartões: o que tem censo, e os cinco que só têm presença."""
+    onde_estao = dict(lida.onde_estao) if lida is not None else {}
     fora = [cartao_da_steam(lida)]
-    for chave, nome in SEM_FONTE:
-        fora.append(Lancador(chave=chave, nome=nome, selo="nao_sei", jogos="—",
-                             diz=DIZ_SEM_FONTE,
-                             acoes=(Acao("Abrir o lançador", "", "", ""),)))
+    for item in SEM_FONTE:
+        fora.append(cartao_sem_censo(item, onde_estao.get(item.chave)))
     return fora
 
 
@@ -448,10 +635,18 @@ class Quadro:
     def achados(self) -> int:
         """Quantos lançadores o produto ACHOU nesta máquina.
 
-        `off` (não achei) e `nao_sei` (não sei olhar) ficam de fora pelo mesmo
-        motivo: nos dois casos a aba não pode afirmar que o lançador está aqui.
+        LIA O SELO, E O SELO É OUTRA PERGUNTA. Até 02/09 esta conta somava
+        `ok` e `warn` — o que respondia *"em quantos lançadores eu sei dizer se
+        os controles chegam?"*, e não *"quantos lançadores estão aqui?"*, que é
+        o que a palavra **encontrados** promete a quem lê a tela. Enquanto o
+        produto não olhava a presença, as duas contas davam o mesmo número e a
+        diferença ficou escondida; assim que ele passou a olhar, um lançador
+        instalado cujo interior ele não lê passaria a ser "não encontrado" com
+        o cartão dizendo *"achei este lançador aqui"*, na mesma tela.
+
+        Agora ela soma `presente`, que é a resposta da pergunta que o rótulo faz.
         """
-        return sum(1 for x in self.lancadores if x.selo in ("ok", "warn"))
+        return sum(1 for x in self.lancadores if x.presente)
 
     @property
     def impedidos(self) -> int:
@@ -467,6 +662,8 @@ class Quadro:
 
 __all__ = [
     "AINDA_LENDO",
+    "DIZ_ACHEI",
+    "DIZ_NAO_ACHEI",
     "DIZ_SEM_FONTE",
     "MOLDURA",
     "SELOS",
@@ -479,10 +676,13 @@ __all__ = [
     "Lancador",
     "Leitura",
     "Quadro",
+    "SemCenso",
     "acao_html",
     "acoes_html",
+    "carimbo_da_steam",
     "carimbo_html",
     "cartao_da_steam",
+    "cartao_sem_censo",
     "cartoes",
     "cartoes_html",
     "conta_html",

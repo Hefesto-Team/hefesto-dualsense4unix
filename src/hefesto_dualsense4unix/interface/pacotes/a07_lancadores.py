@@ -28,13 +28,33 @@ Medido em 02/09/2026 na máquina dela, com `censo_do_wrapper(anotar=False)` e
     Steam · 412 jogos                23 jogos INSTALADOS; 63 appids com o
                                      wrapper na linha do `localconfig.vdf`
     ◆ 3 jogos já sabem por onde      0 pontes confirmadas
-    5 encontrados · 1 impedimento    1 lançador medível, 0 impedidos
-    Heroic · 28 jogos · NÃO CHEGAM   o produto não tem UMA função que olhe o
-                                     Heroic — as menções são COMENTÁRIO
+    5 encontrados · 1 impedimento    2 lançadores achados, 0 impedidos
+    Heroic · 28 jogos · NÃO CHEGAM   não achei o Heroic nesta máquina
 
 Quatro afirmações, quatro contradições. **A cura não é apagar o desenho** — é
 dar-lhe fonte, e dizer `NÃO SEI` onde não há fonte. Um selo `CHEGAM` sobre um
 lançador que ninguém olhou é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na cor verde.
+
+O QUE MUDOU EM 02/09, À TARDE, e é a diferença entre duas perguntas
+-------------------------------------------------------------------
+Os cinco cartões sem censo diziam `NÃO SEI` por CONSTANTE: o pacote escrevia
+sempre a mesma palavra, e a tela não podia diferir *"o produto mediu e não
+sabe"* de *"ninguém pintou"*. **São duas perguntas, e o produto responde uma
+delas de graça:**
+
+    "sei ler a biblioteca deste lançador?"   não, em nenhum dos cinco
+    "este lançador está instalado aqui?"     SIM, e é um `stat` por candidato
+
+`_onde_estao_os_lancadores` responde a segunda pelas pastas de `.desktop` que
+`jogos_locais.pastas_de_atalhos()` já resolve (a spec XDG, não dois caminhos
+cravados). Medido nesta máquina em 02/09/2026, com 4 pastas de atalhos:
+
+    heroic · lutris · retroarch · emuladores    NÃO ACHEI
+    flatpak                                     achado em `PATH/flatpak`
+
+O selo `off` (`NÃO ACHEI`) existia em `SELOS` desde que o desenho nasceu e
+**nenhum caminho o produzia**. Ele era a palavra que faltava para a tela dizer
+o que o produto mediu.
 
 NADA SE REESCREVE — o que este arquivo NÃO faz
 ----------------------------------------------
@@ -50,6 +70,9 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     integrations/steam_launch_options.steam_game_running_appid   o jogo em foco
     integrations/prontuario_dos_jogos.levantar_censo     os cinco impedimentos
     integrations/prontuario_dos_jogos.jogos_instalados   os `appmanifest` do disco
+    integrations/prontuario_dos_jogos.pontes_confirmadas quem já sabe por onde entrar
+    integrations/jogos_locais.pastas_de_atalhos          onde moram os `.desktop`
+    app/actions/launch_wrapper_dialog.load_dismissed_appids  quem ela dispensou
 
 `carona_do_wrapper.passada()` responderia parte disto — mas ela ESCREVE no
 `localconfig.vdf` quando há o que repor, e uma PINTURA que escreve em disco a
@@ -77,6 +100,7 @@ prontuário só sai do lugar quando ela clica em "Ver o que impede".
 """
 from __future__ import annotations
 
+import dataclasses
 import threading
 import time
 from typing import Any
@@ -97,9 +121,12 @@ SEM_DONO: dict[str, str] = {
                       "responde calado é pior que um que recusa",
     "criar-perfil": "criar perfil é da aba Perfis (`a10_perfis`); dois caminhos "
                     "para o mesmo disco é como duas telas passam a discordar",
-    "heroic": "o produto não tem UMA função que olhe o Heroic, o Lutris, o "
-              "RetroArch, o Dolphin ou o mGBA — as cinco menções em `src/` são "
-              "comentário, e por isso os cartões deles dizem NÃO SEI",
+    "heroic": "o produto PROCURA os cinco (`_onde_estao_os_lancadores`, pelas "
+              "pastas de `.desktop` e pelo `PATH`) e sabe dizer se estão aqui, "
+              "mas não LÊ a biblioteca de nenhum deles — nenhuma função de "
+              "`src/` abre o catálogo do Heroic, do Lutris, do RetroArch, do "
+              "Dolphin ou do mGBA, e por isso o cartão do que foi achado "
+              "continua dizendo NÃO SEI",
 }
 
 
@@ -191,6 +218,90 @@ def _porque(motivo: str) -> str:
     }.get(motivo, motivo)
 
 
+def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
+    """PROCURA os cinco lançadores sem censo nesta máquina. Não lê dentro deles.
+
+    A PERGUNTA É ESTREITA DE PROPÓSITO, e é a única que o produto sabe
+    responder hoje sem inventar: *"este lançador está instalado aqui?"* — não
+    *"quais jogos ele tem"*, nem *"os controles chegam neles"*. Responder a
+    estreita com honestidade vale mais que calar as três.
+
+    AS PASTAS SÃO AS DO MOTOR, e não uma lista minha:
+    `jogos_locais.pastas_de_atalhos()` já resolve `XDG_DATA_HOME` e
+    `XDG_DATA_DIRS` pela spec, e já pagou o preço de não fazê-lo — em 23/08 o
+    produto olhava DOIS diretórios cravados e perdia os 54 atalhos de
+    `~/.local/share/flatpak/exports/share/applications`, que é onde um Heroic
+    ou um Lutris instalados por Flatpak apareceriam. Repetir a lista aqui seria
+    repetir aquele defeito num segundo lugar.
+
+    O CUSTO É UM `stat` POR CANDIDATO, e nenhum `glob`: são cinco lançadores,
+    treze `stem` no total e quatro pastas nesta máquina — 52 verificações de
+    existência, contra as centenas de arquivos que um `glob("*.desktop")`
+    abriria. Ainda assim ela roda pela :class:`_Vigia`, fora do tique: disco é
+    disco, e o orçamento do tique é de 500 ms para a janela inteira.
+
+    NUNCA LEVANTA. Um `PATH` estranho ou uma pasta sem permissão devolve
+    "não achei" para aquele lançador, que é o pior caso honesto — e degradar
+    calado AQUI é requisito, o mesmo que `pastas_de_atalhos` já declara.
+    """
+    import shutil
+
+    from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+    try:
+        pastas = jl.pastas_de_atalhos()
+    except Exception:
+        pastas = []
+
+    fora: list[tuple[str, str]] = []
+    for item in desenho.SEM_FONTE:
+        onde = ""
+        for pasta in pastas:
+            for stem in item.atalhos:
+                try:
+                    if (pasta / f"{stem}.desktop").is_file():
+                        onde = f"{stem}.desktop"
+                        break
+                except OSError:  # pragma: no cover - pasta sumiu no meio
+                    continue
+            if onde:
+                break
+        if not onde:
+            for comando in item.comandos:
+                try:
+                    if shutil.which(comando):
+                        onde = f"PATH/{comando}"
+                        break
+                except Exception:  # pragma: no cover - PATH torto
+                    continue
+        fora.append((item.chave, onde))
+    return tuple(fora)
+
+
+def _dispensados() -> tuple[tuple[str, str], ...]:
+    """Os jogos que ELA mandou não perguntar mais — e que tela nenhuma mostrava.
+
+    `launch_wrapper_dialog.load_dismissed_appids` guarda o "Não perguntar para
+    este jogo" do lembrete, no `launch_dialog_dismissed.json`. A escrita tinha
+    dono (o botão do diálogo da GTK) e a LEITURA não tinha nenhuma tela: o
+    efeito de clicar era um silêncio permanente que ninguém podia consultar
+    depois. Este é o primeiro chamador que devolve isso para os olhos dela.
+
+    O RÓTULO VEM DO MESMO LUGAR DOS OUTROS (`slo.rotulo_do_jogo`), e ele já cai
+    para `appid NNNN` quando o manifesto sumiu — um jogo dispensado e depois
+    desinstalado continua na lista, e mostrar o número cru é melhor que sumir
+    com a linha.
+    """
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    try:
+        appids = sorted(lwd.load_dismissed_appids())
+    except Exception:
+        return ()
+    return tuple((a, slo.rotulo_do_jogo(a)) for a in appids)
+
+
 def _ler_do_disco() -> desenho.Leitura:
     """Uma passada de leitura. **Nunca escreve** — nem no vdf, nem no registro.
 
@@ -199,20 +310,35 @@ def _ler_do_disco() -> desenho.Leitura:
     *"nunca teve"*. Uma PINTURA que anotasse transformaria todo jogo novo em
     "já visto" antes de ela ver o aviso uma única vez — e a regressão do
     Pragmata, que essa memória existe para nomear, ficaria muda para sempre.
+
+    A PRESENÇA DOS LANÇADORES FICA FORA DO `try` DO CENSO, e de propósito: a
+    Steam quebrada não pode apagar a resposta sobre o Heroic. Eram duas
+    perguntas independentes tratadas como uma só, e é assim que uma tela inteira
+    cai por causa de um arquivo.
     """
     from hefesto_dualsense4unix.integrations import prontuario_dos_jogos as pdj
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
+    onde_estao = _onde_estao_os_lancadores()
+
     try:
         censo = sw.censo_do_wrapper(anotar=False)
     except Exception as erro:  # o disco dela não pode derrubar a aba
-        return desenho.Leitura(erros=(str(erro),))
+        return desenho.Leitura(erros=(str(erro),), onde_estao=onde_estao)
 
     try:
         instalados = len(pdj.jogos_instalados())
     except Exception:
         instalados = 0
+
+    # A PONTE CONFIRMADA é o carimbo que o desenho prometia com o número
+    # DIGITADO (`◆ 3 jogos já sabem por onde entrar`). `pontes_confirmadas` lê
+    # os perfis do disco e responde a mesma pergunta — e não tinha chamador.
+    try:
+        pontes = len(pdj.pontes_confirmadas())
+    except Exception:
+        pontes = 0
 
     def trio(jogos: list[Any]) -> tuple[tuple[str, str, str], ...]:
         return tuple((j.appid, j.rotulo, _porque(j.motivo)) for j in jogos)
@@ -222,7 +348,10 @@ def _ler_do_disco() -> desenho.Leitura:
         reparaveis=trio(censo.reparaveis),
         intocaveis=trio(censo.intocaveis),
         recusados=tuple((a, slo.rotulo_do_jogo(a)) for a in censo.recusados),
+        dispensados=_dispensados(),
         instalados=instalados,
+        pontes=pontes,
+        onde_estao=onde_estao,
         frase=sw.frase_do_aviso(censo),
         erros=tuple(censo.erros),
     )
@@ -326,14 +455,18 @@ def _com_outra_frase(diz: str) -> dict[str, str]:
     OS DOIS GESTOS QUE RESPONDEM COM TEXTO passam por aqui, e não montam o
     cartão cada um do seu jeito: dois lugares escrevendo o mesmo cartão é como
     um deles esquece um endereço e a tela fica com metade do valor velho.
+
+    `dataclasses.replace` E NÃO UM CONSTRUTOR À MÃO, e a troca é uma cura: a
+    versão anterior listava os nove campos do `Lancador` um a um, e o décimo
+    campo (`presente`, nascido hoje) teria voltado ao PADRÃO em silêncio — a
+    contagem do topo cairia de "2 encontrados" para "1 encontrado" **só depois
+    de ela clicar em Detectar**, e nada acusaria. Copiar campo a campo é a
+    forma de defeito que só aparece quando alguém acrescenta um campo, meses
+    depois, sem saber que esta linha existe.
     """
     lida = VIGIA.agora()
     cartoes = desenho.cartoes(lida)
-    steam = cartoes[0]
-    cartoes[0] = desenho.Lancador(
-        chave=steam.chave, nome=steam.nome, selo=steam.selo, jogos=steam.jogos,
-        diz=diz, acoes=steam.acoes, carimbo=steam.carimbo, fora=steam.fora,
-        tem_lista=steam.tem_lista)
+    cartoes[0] = dataclasses.replace(cartoes[0], diz=diz)
     return desenho.Quadro(lancadores=cartoes).valores()
 
 
