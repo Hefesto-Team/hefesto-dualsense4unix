@@ -289,8 +289,10 @@ def test_a_luz_e_desenho_e_nao_palavra(colunas):
         "a palavra voltou ao lugar do desenho: `textContent` num `.aceso` "
         "apaga as duas tiras e as cinco lâmpadas.")
     assert col["luz"].count('class="tira-luz') == 2, col["luz"]
-    assert '<span class="pad"><span class="luzinhas">' in col["luz"], (
+    assert '<span class="luzinhas">' in col["luz"], (
         "as cinco lâmpadas do indicador não saíram no desenho vivo.")
+    assert '<span class="pad"' in col["luz"], (
+        "a moldura do touchpad sumiu do desenho vivo.")
 
 
 def test_o_endereco_da_luz_so_existe_na_bancada():
@@ -312,6 +314,70 @@ def test_o_endereco_da_luz_so_existe_na_bancada():
     assert 'data-campo="luz"' not in publicado, (
         "o produto ganhou o endereço novo: apague este par de asserções e o "
         "`aceso` do publicado junto — a espera acabou.")
+
+
+def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
+    """O `.tom.on` deixou de ser pintura cravada — o alvo `classe` existe.
+
+    O anel dizia qual dos oito tons está valendo, e o `on` era o que o GERADOR
+    soube: a cor do mockup. Quem escolhe uma cor fora da guia — o seletor livre
+    existe para isso — ou muda a cor pelo aparelho via o anel parado no tom
+    velho **para sempre**, porque a pintura da casa sabia texto, largura, fundo,
+    valor e HTML, e o estado desta guia é uma CLASSE. Estava parado como
+    `espera_o_pintor`; o alvo chegou.
+
+    O ENDEREÇO É `hex`, o MESMO da caixa `#RRGGBB` da mesma coluna, e isso é
+    deliberado: é UM valor em duas renderizações. Um endereço novo faria o
+    pacote emitir a mesma cor duas vezes, e duas emissões do mesmo valor é
+    exatamente por onde as duas metades de uma tela divergem.
+
+    A MORDIDA: tire o `data-campo="hex" data-hef-alvo="classe"` do gerador,
+    rode-o, e a primeira asserção reprova.
+    """
+    import onde
+    from pacotes import a04_iluminacao as pac
+
+    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    #: OITO TONS nos DOIS controles conectados da bancada.
+    assert bancada.count('data-campo="hex" data-hef-alvo="classe"') == 16, (
+        "os botões da guia de cores voltaram a não ter endereço de estado.")
+
+    #: O `data-hef-quando` LEVA O HEX DO PRODUTO, que é o que o pacote emite —
+    #: e não o tom da casa, que é só o que a tela desenha. Foi essa mesma
+    #: confusão que fez o `.tom.on` do desenho casar ZERO botões em 31/08.
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    for n in (1, 2):
+        assert f'data-hef-quando="{pac._hex(player_slot_color(n))}"' in bancada
+
+
+def test_a_bancada_perdeu_a_dica_congelada_da_celula_de_leds():
+    """A dica do `.aceso` saiu do ATRIBUTO da célula e entrou no desenho.
+
+    Ela dizia, cravada pelo gerador nos dois controles conectados::
+
+        title="O Cosmic Red aceso: as duas tiras na cor escolhida, e as cinco
+               lâmpadas no padrão do Player 1."
+
+    Um `title` na célula não tem como ser repintado: o piloto só sabe escrever
+    `texto`, `largura`, `fundo`, `valor`, `html`, `classe` e `cor` — atributo
+    não está na lista. Congelada, ela nomeava o controle do MOCKUP na coluna de
+    um controle que está na mesa (decisão 8 dela) e dizia `aceso` (decisão 7).
+
+    A MORDIDA: devolva o `title=` ao `<div class="aceso">` do gerador, rode-o, e
+    a primeira asserção reprova.
+    """
+    import onde
+
+    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    assert '<div class="aceso" data-campo="luz" data-hef-alvo="html">' in bancada, (
+        "a célula de LEDs voltou a carregar atributo cravado pelo gerador.")
+    assert " aceso:" not in bancada, (
+        "a palavra que ela mandou tirar voltou ao desenho.")
+    #: A DICA VIVA ESTÁ NAS TRÊS PEÇAS de cada coluna conectada: 2 tiras + o
+    #: `.pad`, vezes os dois controles da bancada.
+    assert bancada.count("Desenho que mandamos:") == 6, (
+        "as peças do desenho perderam a dica do motor.")
 
 
 def test_o_gerador_e_o_produto_desenham_a_mesma_luz():
@@ -417,6 +483,141 @@ def test_a_luz_pergunta_ao_motor_se_ha_cor_a_afirmar(colunas):
         f"mediu.")
 
 
+def test_a_tira_nao_acende_sob_steam_nem_sob_nativo(colunas):
+    """A pergunta da TIRA não é a que o segundo retorno do motor responde.
+
+    `rotulo_lightbar` devolve `(ressalva, COR BASE DO ACCENT)`, e a base é a
+    ÚLTIMA COR CONHECIDA — devolvida **também** nos dois estados em que o
+    próprio motor avisa que ela pode não estar no plástico::
+
+        native_mode         → ("Em Nativo o jogo é dono do LED", rgb)
+        lightbar_disputada  → ("a Steam tem este controle aberto", rgb)
+
+    Nos dois a base volta preenchida COM `lightbar_on` falso — o pacote lia
+    isso como "está acesa" e a tira acendia. Medido em 02/09/2026, com o dublê
+    de estado, ANTES da cura (saída literal da mesma sonda)::
+
+        NATIVO + lightbar_on falso   background:#7EB8D4;color:#7EB8D4;opacity:1.0
+        STEAM  + lightbar_on falso   background:#7EB8D4;color:#7EB8D4;opacity:1.0
+
+    A MORDIDA: troque `base if recado is None else None` por `base` e as duas
+    primeiras linhas reprovam — a tira volta a acender azul com a barra
+    apagada, sob os dois estados.
+    """
+    apagado = dict(DO_RADIO, lightbar_on=False)
+    sob_nativo = colunas([apagado], {"active_profile": "", "native_mode": True})
+    assert "color:transparent" in sob_nativo[DO_RADIO["uniq"]]["luz"], (
+        "em Nativo a tira acendeu com a barra apagada: o jogo é dono do LED e "
+        "a última cor NOSSA não diz o que está no plástico.")
+
+    sob_steam = colunas([dict(apagado, lightbar_disputada=True)])
+    assert "color:transparent" in sob_steam[DO_RADIO["uniq"]]["luz"], (
+        "com a Steam segurando o `fd` a tira acendeu com a barra apagada.")
+
+    #: E A RESSALVA CONTINUA SENDO DITA — apagar sem explicar seria trocar uma
+    #: afirmação falsa por um silêncio.
+    assert "Em Nativo" in sob_nativo[DO_RADIO["uniq"]]["luz"]
+
+    #: O CAMINHO QUE NÃO PODE FECHAR JUNTO: acesa, cor conhecida, sem ressalva.
+    acesa = colunas([DO_RADIO])[DO_RADIO["uniq"]]["luz"]
+    assert "color:transparent" not in acesa, (
+        "a cura apagou a tira que o motor diz estar ACESA — uma régua que "
+        "apaga tudo passa por qualquer defeito.")
+
+
+def test_a_dica_da_luz_nao_diz_aceso_e_nomeia_quem_esta_conectado(colunas):
+    """As duas decisões dela de 02/09/2026, na mesma frase.
+
+    7. *"a palavra ACESO sai do texto"* — ela já tinha mandado tirar, a GTK
+       obedeceu em 25/08 (`lightbar_actions._PREFIXO_DESENHO` diz *"Desenho que
+       mandamos"*) e o mockup a reintroduziu.
+    8. *"a interface mostra o que tá conectado e não o controle do mockup"*.
+
+    O QUE ESTAVA NA TELA DELA, cravado no `title` da célula::
+
+        "O Cosmic Red aceso: as duas tiras na cor escolhida, e as cinco
+         lâmpadas no padrão do Player 1."
+
+    A MORDIDA: devolva essa frase ao gerador e as duas primeiras linhas
+    reprovam.
+    """
+    luz = colunas()[DO_RADIO["uniq"]]["luz"]
+    assert "aceso" not in luz.lower(), (
+        f"a palavra voltou à dica: {luz!r}. Não há canal de leitura de LED de "
+        f"jogador em transporte nenhum — a frase afirma o que ninguém confere.")
+    assert "Cosmic Red" in luz and "Starlight Blue" not in luz, (
+        "a dica nomeia o controle do desenho, e não o que está na mesa.")
+
+    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
+        _PREFIXO_DESENHO,
+    )
+    assert _PREFIXO_DESENHO in luz, (
+        "a frase das cinco lâmpadas não é a do motor — escrever outra criaria "
+        "a segunda verdade que a GTK já matou.")
+
+
+def test_a_dica_manda_o_rascunho_vazio_porque_o_automatico_esta_acima(colunas):
+    """O desenho em vigor é o do NÚMERO, e isso é medição, não escolha.
+
+    `texto_do_desenho_aceso` promete no docstring que *"qualquer desenho
+    não-vazio no rascunho vence a camada automática por campo (D5)"*. Para o
+    PLAYER-LED isso caducou na R-14 (23/07): o merge de
+    `core/backend_pydualsense._merged_desired_for_key` é
+
+        default global do perfil < camada AUTOMÁTICA < override < co-op < jogo
+
+    e o `leds.player_leds` do perfil é o default global — a camada MAIS BAIXA.
+    A automática (`identity.make_auto_output_provider`) devolve
+    `player_led_pattern(slot)` e nasce ligada (`auto_numbers` *"sem campo no
+    schema ainda, fica True"*; `_configure_auto_player_colors` nunca passa
+    `numbers=`).
+
+    O PERFIL DELA TEM O CAMPO PREENCHIDO — medido em 02/09/2026, `meu_perfil`
+    traz `player_leds = [false, false, true, false, false]`, o padrão do P1.
+    Passar esses bits faria a coluna do P2 dizer *"desenho do P1 — escolha
+    sua"* com o produto acendendo o padrão do P2.
+    """
+    from hefesto_dualsense4unix.core.led_control import (
+        player_bitmask,
+        player_led_pattern,
+    )
+    import pacotes.a04_iluminacao as a04
+
+    #: O rascunho DELA, na forma exata do schema — e ele NÃO é vazio.
+    assert player_bitmask(tuple(player_led_pattern(1))) != 0
+
+    for numero in (1, 2):
+        dica = a04.dica_da_luz("Cosmic Red", "BT", "", numero)
+        assert f"desenho do P{numero}" in dica, dica
+        assert "automático, do número deste controle" in dica, dica
+
+
+def test_o_coop_so_manda_quando_ha_mais_de_um_jogador():
+    """`coop.enabled` NÃO responde "o co-op está ligado", e isso está medido.
+
+    `app/actions/status_actions.texto_do_coop_derrubado` diz: *"``CoopManager.
+    disable()`` não zera ``coop_enabled``, então o ``state_full`` segue
+    publicando ``coop.enabled=True`` com ``coop.players=1`` — de fora,
+    indistinguível de 'ela desligou o co-op'"*. É o estado da mesa dela HOJE.
+
+    A MORDIDA: troque a leitura por `bool(coop.get("enabled"))` e a primeira
+    linha reprova — a dica passaria a dizer, na mesa parada, que quem manda nas
+    cinco luzes é o co-op.
+    """
+    import pacotes.a04_iluminacao as a04
+
+    parado = {"coop": {"enabled": True, "players": 1, "mesa": [{"player": 1}]}}
+    assert a04.o_coop_manda(parado) is False, (
+        "`enabled=True` com um jogador é a mesa parada — ler o booleano faria "
+        "a dica afirmar um co-op que ninguém ligou.")
+    assert a04.o_coop_manda({"coop": {"enabled": True, "players": 3}}) is True
+    assert a04.o_coop_manda({}) is False
+    assert a04.o_coop_manda({"coop": None}) is False
+
+    dica = a04.dica_da_luz("Cosmic Red", "BT", "", 1, coop_manda=True)
+    assert "co-op" in dica, dica
+
+
 def test_o_hex_e_o_do_dono_e_nao_um_guarda_copiado(colunas):
     """`cor_do_swatch` é o dono da leitura crua do `lightbar_rgb`.
 
@@ -456,28 +657,33 @@ def test_a_frase_da_disputa_e_a_do_motor(colunas):
 
     disputado = dict(DO_RADIO, lightbar_disputada=True)
     col = colunas([disputado])[DO_RADIO["uniq"]]
-    assert f'title="{ROTULO_LIGHTBAR_SEGURADA}"' in col["luz"], col["luz"]
+    assert ROTULO_LIGHTBAR_SEGURADA in col["luz"], col["luz"]
 
 
 def test_o_recado_conhece_os_estados_que_a_mao_nao_conhecia(colunas):
     """Quatro estados onde havia um: Nativo, disputa, desconhecida, apagada.
 
-    ONDE A FRASE MORA, desde 02/09/2026: no `title` das duas tiras, dentro do
-    `luz`. Ela era emitida num `data-campo="recado"` que NENHUMA das duas
-    páginas tem — o único órfão que o `casamento.py` acusava nesta aba, e
+    ONDE A FRASE MORA, desde 02/09/2026: no `title` das TRÊS peças do desenho,
+    dentro do `luz`. Ela era emitida num `data-campo="recado"` que NENHUMA das
+    duas páginas tem — o único órfão que o `casamento.py` acusava nesta aba, e
     invisível à régua do mockup, que varre os endereços do ARQUIVO.
+
+    A RESSALVA SÓ APARECE QUANDO EXISTE, e é isso que a última linha cobra:
+    com a barra acesa numa cor conhecida o motor não tem o que ressalvar, e a
+    dica fica só com o nome vivo e o desenho das lâmpadas. Aviso permanente
+    vira paisagem, e paisagem ninguém lê.
     """
     def dica(conectados=None, estado=None):
         cols = colunas(conectados, estado) if estado is not None else colunas(conectados)
         return cols[DO_RADIO["uniq"]]["luz"]
 
-    assert 'title="Lightbar: apagada"' in dica([dict(DO_RADIO, lightbar_on=False)])
-    assert 'title="Lightbar: cor desconhecida"' in dica(
+    assert "Lightbar: apagada" in dica([dict(DO_RADIO, lightbar_on=False)])
+    assert "Lightbar: cor desconhecida" in dica(
         [dict(DO_RADIO, lightbar_source="desconhecida")])
-    assert 'title="Em Nativo o jogo é dono do LED"' in dica(
+    assert "Em Nativo o jogo é dono do LED" in dica(
         [DO_RADIO], {"active_profile": "", "native_mode": True})
-    assert "title=" not in dica(), (
-        "aviso permanente vira paisagem, e paisagem ninguém lê.")
+    limpa = dica()
+    assert "Lightbar:" not in limpa and "Nativo" not in limpa, limpa
 
 
 # ---------------------------------------------------------------------------
