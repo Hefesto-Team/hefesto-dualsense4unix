@@ -56,6 +56,28 @@ SELOS = {
 #: tom só acrescentaria uma cor para ela decodificar.
 MOLDURA = {"ok": "chega", "warn": "impede", "off": "ausente", "nao_sei": "ausente"}
 
+#: A GRADE QUE SEGURA OS SEIS CARTÕES — e ela é constante porque o PACOTE
+#: precisa dela, não só o gerador.
+#:
+#: MEDIDO EM 02/09/2026, e fotografado: a `MOLDURA` só aparecia em
+#: :func:`um_cartao`, que é o GERADOR. O pacote emitia cinco endereços por
+#: cartão (`-selo`, `-jogos`, `-diz`, `-acoes`, `-fora`) e **nenhum deles é a
+#: classe do contêiner** — a página publicada nasceu com os seis cartões em
+#: `class="lanc ausente"` (o estado `cartoes(None)`) e a classe ficava lá para
+#: sempre. O cartão da Steam mostrava o selo verde `CHEGAM` dentro de uma
+#: moldura cinza de *ausente*: **a mesma tela dizendo duas coisas opostas.**
+#:
+#: A pintura do piloto escreve texto, `innerHTML`, largura, fundo e `value` —
+#: não escreve CLASSE. O que ela sabe trocar inteiro é um BLOCO endereçado por
+#: seletor CSS (`p.blocos`), e é por isso que o pacote repinta a grade: a classe
+#: do contêiner só volta a ser dado junto com o contêiner.
+#:
+#: O DIA EM QUE O PILOTO GANHAR UM ALVO `classe`, isto vira uma linha por
+#: cartão e a grade para de se trocar inteira — está declarado no relato desta
+#: frente, em `espera_o_pintor`.
+CLASSE_DA_GRADE = "lancadores"
+SELETOR_DA_GRADE = f".{CLASSE_DA_GRADE}"
+
 
 @dataclass(frozen=True)
 class Acao:
@@ -165,6 +187,27 @@ def acao_html(a: Acao) -> str:
 #: teria se o produto pudesse escrever vazio de verdade.
 FILEIRA_VAZIA = "<!-- nada a oferecer neste cartão -->"
 
+#: O QUE VAI NUM CONTÊINER DE LISTA QUE AINDA NÃO TEM O QUE LISTAR — e ele NÃO
+#: É UMA FRASE, de propósito.
+#:
+#: FOTOGRAFADO EM 02/09/2026, e a cura anterior alcançou só um dos três estados:
+#: `lista_de_jogos` ganhou :data:`LISTA_VAZIA`, mas os DOIS ramos de saída
+#: antecipada de :func:`cartao_da_steam` — a primeira meia volta (`lida is
+#: None`) e a Steam ilegível (`lida.erros`) — devolviam o cartão com `fora` no
+#: padrão `""`. Como `tem_lista=True`, `valores_do_cartao` emitia
+#: `steam-fora=""`, e o `escrever()` do BOOTSTRAP troca vazio por travessão
+#: ANTES de despachar o alvo (`hefesto_vivo.py:118`), inclusive para
+#: `alvo === 'html'`. **O da Steam ilegível é permanente** — justo a tela em que
+#: ela precisa ler uma mensagem, com um traço mudo pendurado embaixo.
+#:
+#: POR QUE UM COMENTÁRIO E NÃO UMA FRASE: nos dois estados o produto **não sabe**
+#: o que há na lista. Escrever "nenhum jogo com pendência" ali seria afirmar o
+#: resultado de uma leitura que não aconteceu — a forma exata do defeito que
+#: esta aba nasceu para matar. O comentário não é vazio (logo o travessão não
+#: entra), o navegador o renderiza como NADA, e a tela fica igual ao desenho que
+#: ela aprovou, onde o contêiner nasce vazio.
+SEM_LISTA = "<!-- ainda não há lista para este cartão -->"
+
 #: A frase da lista de jogos VAZIA do cartão da Steam. Ela existe pela mesma
 #: razão do de cima, e diz o que o travessão não dizia: a lista tem QUATRO
 #: origens (falta o atalho · linha intocável · você tirou · você dispensou), e
@@ -186,12 +229,28 @@ def acoes_html(lanc: Lancador) -> str:
     O CARIMBO VAI AQUI DENTRO porque o desenho o pôs aqui: como linha própria
     ele custava 21px que SÓ o cartão da Steam pagava, e a fileira dele nascia
     21px abaixo da do cartão vizinho.
+
+    A QUEBRA DE LINHA E O RECUO SÃO PARTE DO VALOR, e isso é cura — medida na
+    tela em 02/09/2026, com o piloto rodando 40 segundos. O gerador escrevia
+    ``<div class="acoes">\\n{acoes_html}\\n        </div>`` e o pacote pintava
+    ``acoes_html`` **sem** a moldura de espaço; as duas grafias do MESMO valor
+    ficavam eternamente diferentes, e com a grade sendo repintada como bloco
+    isso virou um PING-PONG: o bloco reescrevia a fileira com o espaço, o campo
+    a reescrevia sem, e o piloto contava pintura em **81 de 81 voltas** — 2 por
+    segundo, para sempre, destruindo o foco e o `:hover` de quem estivesse com o
+    mouse em cima de um botão.
+
+    Com o espaço DENTRO do valor, a página sai byte a byte igual à de antes e as
+    duas grafias passam a ser uma só. Quem segura isto é
+    `test_o_valor_pintado_e_o_valor_da_grade_sao_a_mesma_coisa`.
     """
     botoes = "\n".join(f"          {acao_html(a)}" for a in lanc.acoes)
     carimbo = carimbo_html(lanc.carimbo)
     if not botoes and not carimbo:
-        return FILEIRA_VAZIA
-    return f"{botoes}\n          {carimbo}" if carimbo else botoes
+        miolo = FILEIRA_VAZIA
+    else:
+        miolo = f"{botoes}\n          {carimbo}" if carimbo else botoes
+    return f"\n{miolo}\n        "
 
 
 def um_cartao(lanc: Lancador) -> str:
@@ -203,6 +262,12 @@ def um_cartao(lanc: Lancador) -> str:
     lista do piloto faz de propósito, e que aqui seria acidente.
     """
     k = _e(lanc.chave)
+    # A FILEIRA SAI NUMA VARIÁVEL para a linha caber nos 100 caracteres do
+    # `ruff` — o HTML emitido é o mesmo caractere por caractere, e a moldura de
+    # espaço continua vindo de dentro de `acoes_html`, que é onde ela tem de
+    # estar para o valor pintado e o da grade serem UM só.
+    acoes = (f'<div class="acoes" data-campo="{k}-acoes" '
+             f'data-hef-alvo="html">{acoes_html(lanc)}</div>')
     lista = (
         f'\n        <div class="lanc-fora" data-campo="{k}-fora" '
         f'data-hef-alvo="html">{lanc.fora}</div>'
@@ -215,9 +280,7 @@ def um_cartao(lanc: Lancador) -> str:
           <span class="lanc-jogos" data-campo="{k}-jogos">{_e(lanc.jogos)}</span>
         </div>
         <div class="lanc-diz" data-campo="{k}-diz" data-hef-alvo="html">{lanc.diz}</div>
-        <div class="acoes" data-campo="{k}-acoes" data-hef-alvo="html">
-{acoes_html(lanc)}
-        </div>{lista}
+        {acoes}{lista}
       </div>'''
 
 
@@ -516,18 +579,21 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     # responde uma pergunta que o cartão fez.
     abrir = Acao("Abrir o lançador", "", "", "")
     criar = Acao("Criar perfil para um jogo", "", "", "")
+    # O `fora=SEM_LISTA` DOS DOIS RAMOS É CURA, e não enfeite: sem ele o
+    # `steam-fora` sai vazio, o `escrever()` do bootstrap o troca por `—` e a
+    # tela ganha um traço solto no pé do cartão. Ver :data:`SEM_LISTA`.
     if lida is None:
         return Lancador(
             chave=STEAM, nome="Steam", selo="nao_sei", jogos=AINDA_LENDO,
             diz="Estou lendo a sua biblioteca da Steam…",
-            acoes=(abrir, criar), tem_lista=True)
+            acoes=(abrir, criar), fora=SEM_LISTA, tem_lista=True)
     if lida.erros:
         return Lancador(
             chave=STEAM, nome="Steam", selo="nao_sei", jogos="—",
             diz=("<b>Não consegui ler a biblioteca da Steam</b> — "
                  f"{_e(lida.erros[0])}. Nada foi alterado."),
             acoes=(Acao("Procurar de novo", "", "procurar", STEAM), abrir, criar),
-            tem_lista=True)
+            fora=SEM_LISTA, tem_lista=True)
 
     falta = len(lida.reparaveis)
     if falta:
@@ -662,12 +728,15 @@ class Quadro:
 
 __all__ = [
     "AINDA_LENDO",
+    "CLASSE_DA_GRADE",
     "DIZ_ACHEI",
     "DIZ_NAO_ACHEI",
     "DIZ_SEM_FONTE",
     "MOLDURA",
+    "SELETOR_DA_GRADE",
     "SELOS",
     "SEM_FONTE",
+    "SEM_LISTA",
     "STEAM",
     "SUFIXOS",
     "SUFIXO_DA_LISTA",

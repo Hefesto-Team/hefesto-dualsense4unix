@@ -62,3 +62,25 @@ seção daqui**: a aba deixou de estar em trabalho.
   **O pacote já emite os dois** (`achado-explica` e `examinado`): no dia em que
   ela publicar, a tela nasce certa; até lá o piloto não acha o endereço e
   escreve zero — nada muda no produto que ela usa.
+
+## 07-lancadores.html
+- **02/09/2026** — **um comentário HTML dentro da lista do cartão da Steam, e
+  nenhum pixel mudou.** O `<div class="lanc-fora">` nascia VAZIO; ele passa a
+  nascer com `<!-- ainda não há lista para este cartão -->`, que o navegador
+  renderiza como nada.
+
+  **Por que ele existe:** o `escrever()` do piloto troca vazio por travessão
+  antes de despachar o alvo (`hefesto_vivo.py:118`), inclusive no alvo `html`.
+  Enquanto o produto emitia `steam-fora=""`, a tela ganhava um **`—` solto** no
+  pé do cartão — fotografado em 02/09 nos dois estados sem leitura, e no da
+  **Steam ilegível ele é permanente**: justo a tela em que ela precisa ler uma
+  mensagem, com um traço mudo pendurado embaixo.
+
+  O comentário não é vazio (logo o travessão não entra) e não é frase (logo não
+  afirma o resultado de uma leitura que não aconteceu). A raiz é uma linha no
+  piloto — separar `alvo === 'html'` do vazio genérico —, e está relatada como
+  trabalho do PINTOR.
+
+  **O que espera o seu OK:** nada visual. A bancada e o publicado diferem por
+  esta linha só; enquanto ela não publicar, o produto que ela usa continua
+  igual.
