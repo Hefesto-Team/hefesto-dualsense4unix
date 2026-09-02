@@ -1229,11 +1229,24 @@ def exame(classe, palavra, txt, dica, linha=0):
     `data-campo`, na ordem). Quem sabe QUAL achado caiu na posição 2 é quem
     pintou — `a08_conexoes.pacote()` —, e é lá que o número vira ordem de
     serviço.
+
+    O `?` GANHOU ENDEREÇO em 02/09/2026, e ele era a metade MENTIROSA da linha.
+    O selo e o `<span class="txt">` já eram repintados com o exame da mesa
+    dela; a dica ao lado continuava sendo a do DESENHO. Fotografado nesta
+    bancada, com dois controles na mesa: a linha 1 dizia **"Economia de energia
+    desligada"** (achado dela) e o `?` ao lado explicava *"as entradas em uso
+    entregam 500 mA ou mais"* — a medição de OUTRO achado. E nas posições que o
+    exame não preencheu, o texto ficava `—` com o `?` ainda contando os quatro
+    rádios vizinhos do mockup.
+
+    O ALVO É `html`, e pela mesma razão do `teto-explica`: a dica do produto
+    traz `<b>` e `<br>`, e o `textContent` do ramo padrão escreveria os
+    marcadores como texto literal.
     """
     return f'''          <div class="exame" data-campo="exame">
             <span class="selo {classe}" data-campo="selo">{palavra}</span>
             <span class="txt" data-campo="achado">{txt}</span>
-            <span class="ajuda">?<span class="dica">{dica}</span></span>
+            <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html">{dica}</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="{linha}" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>'''
 
@@ -2294,7 +2307,13 @@ MIOLO = f'''
           gente entre ele e o sofá — mudaram de lugar em 28/08: elas moram no
           <b>{MAPEAR_ENTRADAS}</b>, que é a janela onde você já declara a sala.
         </span></span>
-        <span class="conta">Examinado há 3 minutos</span>
+        <!-- O CARIMBO GANHOU ENDEREÇO em 02/09/2026. Ele dizia "há 3 minutos"
+             desde que o mockup nasceu, e nunca soube nada: nenhum pacote
+             escrevia aqui, então a frase era a mesma com o exame recém-corrido
+             e com a aba aberta desde ontem. A palavra da idade é do produto
+             (`secao_exame.frase_de_quando`), e a moldura "Examinado …" é a
+             deste desenho. -->
+        <span class="conta" data-campo="examinado">Examinado há 3 minutos</span>
       </div>
       <div class="quadro-corpo">
         <div class="duas-colunas">
