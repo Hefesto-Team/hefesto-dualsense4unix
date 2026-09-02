@@ -4987,6 +4987,58 @@ class IpcHandlersMixin:
             "mic_mudo_desejado": muted,
         }
 
+    async def _handle_mic_led_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`mic.led.set` — o LED do botão de mudo, e a DEVOLUÇÃO da posse dele.
+
+        Params: ``{aceso: bool|null, uniq?: str}``, no molde exato do
+        `mic.set`. `uniq` omitido = o primário.
+
+        MIC-DA-MESA-ELEICAO-01 (01/09/2026) — POR QUE ESTE MÉTODO EXISTE.
+
+        O `common[8]` (LED) e o `common[9]` (mudo) são campos SEPARADOS, com
+        bits de autorização diferentes (`MIC_MUTE_LED_CONTROL_ENABLE` 0x01 e
+        `POWER_SAVE_CONTROL_ENABLE` 0x02). Acender o LED **não muta nada** — é
+        por isso que a inversão que ela pediu (*"aceso = o mic está
+        funcionando"*) cabe sem escrever uma linha no byte do mudo, e por isso
+        as três recusas medidas (BT-E-VPAD-01, MIC-BT-DONO-01,
+        MIC-DOIS-DONOS-01) continuam inteiras: as três são sobre o `common[9]`.
+
+        OS TRÊS ESTADOS, e `false` NÃO é `null`:
+
+          - ``aceso: true``  — ACENDE, e a posse do byte passa a ser nossa;
+          - ``aceso: false`` — APAGA. É uma ORDEM, e enquanto ela vigorar o
+            kernel não manda mais na luz;
+          - ``aceso: null``  — DEVOLVE A POSSE ao `hid-playstation`, que
+            escreve `mute_button_led = ds->mic_muted` a cada borda do botão
+            (`hid-playstation.c:1538-1540`). O bit `0x01` do flag1 sai apagado
+            e `common[8]` viaja inerte.
+
+        Confundir o segundo com o terceiro é o defeito do commit `3d9bb7e`, no
+        byte vizinho: "apaga" mandado a 60 Hz por cima do kernel. Por isso
+        `aceso` é chave OBRIGATÓRIA — omiti-la levanta erro em vez de virar um
+        `False` silencioso.
+
+        Esta é a PORTA DE EMERGÊNCIA da inversão: sem ela, tomada a posse do
+        LED numa sessão, a única forma de o kernel voltar a mandar na luz seria
+        ela desligar o controle.
+        """
+        if "aceso" not in params:
+            raise ValueError(
+                "mic.led.set: 'aceso' é obrigatório — true acende, false apaga, "
+                "null devolve a posse ao kernel"
+            )
+        aceso = params.get("aceso")
+        uniq = params.get("uniq")
+        if aceso is not None and not isinstance(aceso, bool):
+            raise ValueError("mic.led.set: 'aceso' precisa ser boolean ou null")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("mic.led.set: 'uniq' precisa ser string ou omitido")
+        setter = getattr(self.controller, "set_microphone_led", None)
+        if not callable(setter):
+            raise ValueError("backend sem suporte a LED de microfone")
+        ok = bool(setter(aceso, uniq=uniq))
+        return {"status": "ok" if ok else "sem_controle", "aceso": aceso}
+
     async def _handle_mic_volume_set(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:

@@ -180,8 +180,9 @@ DSX_CUSTOM_VALUE_MODES: dict[int, int] = {
     8: 0x02 | 0x20 | 0x04,  # PulseAB
 }
 
-#: Enum `MicLEDMode` do DSX -> `muted` do `IController.set_mic_led`.
-#: `On=0` acende o LED (convenção do firmware: aceso = mic mudo), `Off=2` apaga.
+#: Enum `MicLEDMode` do DSX -> `aceso` do `IController.set_mic_led`.
+#: `On=0` acende o LED, `Off=2` apaga — o jogo manda a LUZ, e o que ela
+#: SIGNIFICA é assunto do produto (MIC-DA-MESA-ELEICAO-01: aceso = mic vivo).
 #: `Pulse=1` não existe no Hefesto e é DEGRADADO para aceso — com contador e
 #: log próprios, para não passar por implementado.
 DSX_MIC_LED_MODES: dict[int, bool] = {0: True, 1: True, 2: False}

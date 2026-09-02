@@ -116,7 +116,10 @@ def _handle(*, transporte: str, dono: bool = False) -> Any:
 def _rodar(inst: Any, monkeypatch: pytest.MonkeyPatch, ciclos: int = _CICLOS) -> None:
     """Gira o `sendReport` por N ciclos com relógio e sono falsos."""
     monkeypatch.setattr(inst, "readInput", lambda _r: None)
-    monkeypatch.setattr(inst, "_captura_status_audio", lambda: None)
+    # MIC-DA-MESA-ELEICAO-01: a captura passou a receber o report CRU
+    # (`extract_jack_status`, com CRC de BT e recusa do report de ÁUDIO)
+    # em vez de ler `self.states[54]` sem disciplina nenhuma.
+    monkeypatch.setattr(inst, "_captura_status_audio", lambda _report: None)
 
     agora = {"t": 1000.0}
     voltas = {"n": 0}

@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**39 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **18** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**40 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **18** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -72,20 +72,21 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `debug.player_leds` | `daemon/ipc_handlers.py:4336` (`_handle_debug_player_leds`) | Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação. | **não** |
 | `speaker.set` | `daemon/ipc_handlers.py:4743` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante (D4 + SOM-02). | sim |
 | `mic.set` | `daemon/ipc_handlers.py:4909` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle (MIC-USB-01). | sim |
-| `mic.volume.set` | `daemon/ipc_handlers.py:4990` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema (MIC-VOLUME-01). | **não** |
-| `mouse.emulation.set` | `daemon/ipc_handlers.py:5082` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01). | sim |
-| `mouse.emulation.restore` | `daemon/ipc_handlers.py:5157` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida (HARM-06). | **não** |
-| `keyboard.emulation.set` | `daemon/ipc_handlers.py:5178` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01). | **não** |
-| `gamepad.emulation.set` | `daemon/ipc_handlers.py:5214` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01). | **não** |
-| `coop.set` | `daemon/ipc_handlers.py:5290` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01). | sim |
-| `coop.sync` | `daemon/ipc_handlers.py:5344` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
-| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:5381` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
+| `mic.led.set` | `daemon/ipc_handlers.py:4990` (`_handle_mic_led_set`) | `mic.led.set` — o LED do botão de mudo, e a DEVOLUÇÃO da posse dele. | sim |
+| `mic.volume.set` | `daemon/ipc_handlers.py:5042` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema (MIC-VOLUME-01). | **não** |
+| `mouse.emulation.set` | `daemon/ipc_handlers.py:5134` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01). | sim |
+| `mouse.emulation.restore` | `daemon/ipc_handlers.py:5209` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida (HARM-06). | **não** |
+| `keyboard.emulation.set` | `daemon/ipc_handlers.py:5230` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01). | **não** |
+| `gamepad.emulation.set` | `daemon/ipc_handlers.py:5266` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01). | **não** |
+| `coop.set` | `daemon/ipc_handlers.py:5342` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01). | sim |
+| `coop.sync` | `daemon/ipc_handlers.py:5396` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
+| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:5433` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
 | `led.player_set` | `daemon/ipc_handlers.py:1396` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
 | `identity.renumber` | `daemon/ipc_handlers.py:1450` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos) — ONDA-U/NUM-01. | sim |
 | `identity.number.set` | `daemon/ipc_handlers.py:1603` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07). | sim |
-| `machine.declare` | `daemon/ipc_handlers.py:5398` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03). | sim |
-| `plugin.list` | `daemon/ipc_handlers.py:5503` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
-| `plugin.reload` | `daemon/ipc_handlers.py:5515` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
+| `machine.declare` | `daemon/ipc_handlers.py:5450` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03). | sim |
+| `plugin.list` | `daemon/ipc_handlers.py:5555` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
+| `plugin.reload` | `daemon/ipc_handlers.py:5567` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -166,6 +167,7 @@ um evento que pode nunca vir.
 | Método        | Parâmetros                                                       | Retorno                                        |
 |---------------|------------------------------------------------------------------|------------------------------------------------|
 | `mic.set`     | `{muted: bool\|null, uniq?: str}`                                | `{status, audio, mic_mudo_desejado}`           |
+| `mic.led.set` | `{aceso: bool\|null, uniq?: str}`                                | `{status, aceso}`                              |
 | `speaker.set` | `{volume?: 0-255, muted?: bool, release?: bool, uniq?: str}`     | `{status, speaker}`                            |
 
 Os dois escrevem no MESMO bloco do report de saída (`common[4..9]`,
@@ -183,6 +185,7 @@ efeito de disciplina isso está certo; para efeito de PREÇO, não:
 | volume do alto-falante   | `common[5]` | `flag0 0x20`      | `speaker.set` |
 | volume do microfone      | `common[6]` | `flag0 0x40`      | ninguém hoje  |
 | roteamento de áudio      | `common[7]` | `flag0 0x80`      | ninguém hoje  |
+| LED do botão de mudo     | `common[8]` | `flag1 0x01`      | `mic.led.set` |
 | mudo do microfone        | `common[9]` | `flag1 0x02`      | `mic.set`     |
 
 Fontes: `core/ds_output_report.py:74-101`, a aplicação por byte em
@@ -211,6 +214,25 @@ silencioso). Confundir `false` com `null` foi o defeito dos dois escritores do
 byte de mute (`3d9bb7e`): o keepalive do upstream mandava `common[9]=0x00` a
 60 Hz por cima do kernel, e o botão de microfone do controle parecia não
 funcionar.
+
+**`mic.led.set` é o BYTE VIZINHO, e acender NÃO muta** (MIC-DA-MESA-ELEICAO-01,
+01/09/2026). `common[8]` e `common[9]` têm bits de autorização diferentes, e é
+por isso que a inversão que ela pediu — *"as pessoas precisam ter um aviso
+visual que o mic tá funcionando"* — cabe sem escrever uma linha no byte do mudo.
+**Nesta casa, ACESO = este microfone está VIVO**, ao contrário da convenção da
+Sony; o contrato do byte não inverteu, quem decide o argumento é o chamador.
+
+Os três estados são os mesmos, com o mesmo cuidado:
+
+- `aceso: true` — acende, e a posse do `common[8]` passa a ser nossa;
+- `aceso: false` — apaga. É uma ORDEM, e o kernel deixa de mandar na luz;
+- `aceso: null` — **devolve a posse** ao `hid-playstation`, que escreve
+  `mute_button_led = ds->mic_muted` a cada borda do botão físico.
+
+A chave `aceso` é **obrigatória**, pela mesma cicatriz do `3d9bb7e`. E isto
+**não** é o `RELEASE_LEDS` (0x31): aquele só existe no rádio, apaga os
+player-LEDs sempre e trava a lightbar na janela pós-conexão. Aqui só o bit
+`0x01` do flag1 cai, nos dois transportes.
 
 `status` é `"ok"` quando algum controle recebeu o pedido e `"sem_controle"`
 quando não havia handle para o `uniq` (ou nenhum controle conectado). O campo

@@ -426,6 +426,34 @@ def _eixo_do_analogico(inputs: dict[str, Any], nome: str) -> int:
     return 128 if valor is None else int(valor)
 
 
+def selo_do_mic(mudo: bool, sabemos: bool) -> str:
+    """O selo do microfone no card: `MUDO`, `ATIVO`, ou `—` quando não se leu.
+
+    UM DONO PARA OS DOIS PINTORES (auditoria de 02/09/2026). O mesmo ternário
+    vivia escrito duas vezes — em `pacotes/a02_controles.py` e no
+    `Janela._pacote_do_card` de `interface/controles_vivos.py`. O commit da
+    MIC-DA-MESA-ELEICAO-01 diz com todas as letras que *"curar só um deixaria
+    as duas versões vivas, que é o defeito que a regra da casa existe para
+    matar"* — e curou os dois. O que ficou aberto é o outro lado da mesma
+    regra: **guardou um só**. A régua do segundo pintor era
+    `inspect.getsource` + `assert '<literal>' in fonte`, que mede o TEXTO:
+    medido em 02/09, trocar `mic_sabemos` por `True` deixa o controle caído
+    voltando a pintar ATIVO com a régua VERDE.
+
+    Com uma função só, a régua passa a ser sobre COMPORTAMENTO, e vale para os
+    dois pintores de uma vez.
+
+    O terceiro estado não é enfeite: `mic_sabemos` é falso quando o
+    `state_full` não trouxe a chave `audio` — o byte é atributo de INSTÂNCIA do
+    handle, e o handle novo do hotplug-out ainda não leu nada. Num contrato em
+    que aceso = "estou no ar", pintar ATIVO ali é o controle que acabou de cair
+    anunciando que está capturando, na frente de quatro pessoas.
+    """
+    if not sabemos:
+        return "—"
+    return "MUDO" if mudo else "ATIVO"
+
+
 def estado_do_card(
     entrada: dict[str, Any],
     *,
@@ -491,7 +519,21 @@ def estado_do_card(
     # especificação está no cabeçalho de `aba02.py`
     # (D-A-LEITURA-DO-ACELERÔMETRO-SAI-DA-TELA).
 
+    # A AUSÊNCIA DE LEITURA DEIXOU DE VIRAR MENTIRA (MIC-DA-MESA-ELEICAO-01).
+    #
+    # Aqui se lia `bool(audio.get("mic_mudo"))`, e `bool(None)` é `False`, que a
+    # tela pinta como **ATIVO**. Só que `None` ali não quer dizer "não está
+    # mudo": quer dizer que NINGUÉM LEU. O byte de estado de áudio é atributo
+    # de INSTÂNCIA do handle; o handle morre no hotplug-out, o novo nasce sem
+    # leitura, `audio_status_for` devolve `None` e a chave `audio` some inteira
+    # do `state_full`.
+    #
+    # Num contrato em que ACESO = "este microfone está no ar", isso faz o
+    # controle que acabou de cair anunciar que está no ar — o pior default
+    # possível numa mesa de quatro. `mic_sabemos=False` é o terceiro estado, e
+    # a tela pinta DESCONHECIDO em vez de escolher um dos dois.
     audio = entrada.get("audio") or {}
+    mic_sabemos = isinstance(audio.get("mic_mudo"), bool)
     mic_mudo = bool(audio.get("mic_mudo"))
     # QUEM MANDA NO MUDO DO MICROFONE — e é o que diz se há o que "Liberar".
     # `mic_mudo_desejado` é `None` enquanto a posse for do kernel
@@ -540,6 +582,7 @@ def estado_do_card(
         "giro": giro_linhas,
         "mic_v": onda[-QUADROS_DA_ONDA:],
         "mic_mudo": mic_mudo,
+        "mic_sabemos": mic_sabemos,
         "mic_posse": mic_posse,
         "alto_mudo": alto_mudo,
         "alto_pode": alto_pode,
