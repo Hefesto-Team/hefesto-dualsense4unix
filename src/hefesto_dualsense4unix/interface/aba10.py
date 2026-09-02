@@ -17,8 +17,11 @@ from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR
 # Tudo o mais do perfil — mouse, teclado, mic, modo, modo-jogo — é do perfil
 # INTEIRO, e a própria classe diz por quê, campo a campo (`:846-895`): o `mode`
 # é da SESSÃO e existe um só; `mouse` e `key_bindings` esbarram no
-# "INPUT vem SEMPRE do controle PRIMÁRIO"; o `mic` porque o `BUTTON_DOWN` não
-# carrega o `uniq` e o microfone alvo é o PADRÃO DO SISTEMA.
+# "INPUT vem SEMPRE do controle PRIMÁRIO"; o `mic` porque o interruptor
+# `mic_button_toggles_system` é UM por máquina (`daemon/lifecycle.py`) —
+# *"o botão do microfone é nosso"* vale para a mesa inteira, não por cadeira.
+# (MIC-DA-MESA-ELEICAO-01: o GESTO passou a ter endereço — a borda vem com
+# `uniq` pelo tópico `MIC_DA_MESA` —, mas o INTERRUPTOR continua um só.)
 #
 # Campo `None` = **sem opinião**: aquele controle herda a seção global do perfil
 # (merge POR CAMPO, PERFIL-01). É por isso que a coluna tem dois estados e não

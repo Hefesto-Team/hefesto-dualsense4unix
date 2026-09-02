@@ -247,7 +247,10 @@ def test_leitura_vazia_nao_mata_a_thread_e_a_saida_continua(
 
     inst.device = _DispositivoDeMentira()
     monkeypatch.setattr(inst, "readInput", _read_input_do_upstream)
-    monkeypatch.setattr(inst, "_captura_status_audio", lambda: None)
+    # MIC-DA-MESA-ELEICAO-01: a captura passou a receber o report CRU
+    # (`extract_jack_status`, com CRC de BT e recusa do report de ÁUDIO)
+    # em vez de ler `self.states[54]` sem disciplina nenhuma.
+    monkeypatch.setattr(inst, "_captura_status_audio", lambda _report: None)
     # Report SEMPRE diferente: cada ciclo é um write, então contar writes é
     # contar ciclos que chegaram à metade de saída.
     monkeypatch.setattr(
@@ -304,7 +307,10 @@ def test_o_silencio_da_entrada_deixa_rastro_no_journal(
 
     inst.device = _DispositivoDeMentira()
     monkeypatch.setattr(inst, "readInput", _read_input_do_upstream)
-    monkeypatch.setattr(inst, "_captura_status_audio", lambda: None)
+    # MIC-DA-MESA-ELEICAO-01: a captura passou a receber o report CRU
+    # (`extract_jack_status`, com CRC de BT e recusa do report de ÁUDIO)
+    # em vez de ler `self.states[54]` sem disciplina nenhuma.
+    monkeypatch.setattr(inst, "_captura_status_audio", lambda _report: None)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
     monkeypatch.setattr(inst, "writeReport", lambda _r: None)
     monkeypatch.setattr(bp.time, "monotonic", lambda: relogio["t"])
@@ -346,7 +352,10 @@ def test_silencio_curto_nao_polui_o_journal(monkeypatch: pytest.MonkeyPatch) -> 
 
     inst.device = _DispositivoDeMentira()
     monkeypatch.setattr(inst, "readInput", _read_input_do_upstream)
-    monkeypatch.setattr(inst, "_captura_status_audio", lambda: None)
+    # MIC-DA-MESA-ELEICAO-01: a captura passou a receber o report CRU
+    # (`extract_jack_status`, com CRC de BT e recusa do report de ÁUDIO)
+    # em vez de ler `self.states[54]` sem disciplina nenhuma.
+    monkeypatch.setattr(inst, "_captura_status_audio", lambda _report: None)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
     monkeypatch.setattr(inst, "writeReport", lambda _r: None)
     monkeypatch.setattr(bp.time, "monotonic", lambda: relogio["t"])

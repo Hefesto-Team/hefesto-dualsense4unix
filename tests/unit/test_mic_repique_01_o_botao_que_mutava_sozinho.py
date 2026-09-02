@@ -116,20 +116,14 @@ class _Daemon:
         return fn(*args)
 
 
-async def _tocar_botao(daemon: _Daemon, vezes: int) -> None:
-    """Publica `vezes` bordas de BUTTON_DOWN do mic_btn, uma atrás da outra."""
-    for _ in range(vezes):
-        daemon.bus.publish(EventTopic.BUTTON_DOWN, {"button": "mic_btn", "pressed": True})
-        await asyncio.sleep(0)
+async def _rodar_bordas(daemon: _Daemon, corpo: Any) -> None:
+    """Sobe o laço das BORDAS, roda `corpo`, deixa drenar e derruba o laço."""
+    from hefesto_dualsense4unix.daemon.subsystems import mic_da_mesa
 
-
-async def _rodar(daemon: _Daemon, corpo: Any) -> None:
-    """Sobe o laço, roda `corpo`, deixa assentar e derruba o laço."""
-    tarefa = asyncio.create_task(mod.mic_button_loop(daemon))
-    await asyncio.sleep(0)  # deixa o laço subscrever antes de publicar
+    tarefa = asyncio.create_task(mic_da_mesa.mic_da_mesa_loop(daemon))
     try:
         await corpo(daemon)
-        for _ in range(60):  # deixa o laço drenar tudo que ficou na fila
+        for _ in range(60):
             await asyncio.sleep(0.005)
     finally:
         daemon._parando = True
@@ -139,48 +133,113 @@ async def _rodar(daemon: _Daemon, corpo: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
-# (A) A rajada
+# (A) A rajada — agora COM ENDEREÇO (MIC-DA-MESA-ELEICAO-01)
 # ---------------------------------------------------------------------------
+#
+# O SOSSEGO MUDOU DE CASA, e o motivo é o eixo do gesto. Ele vivia no
+# `mic_button_loop`, que consumia `BUTTON_DOWN` e alternava o mudo do sistema.
+# Desde 01/09/2026 o botão ELEGE em vez de mutar, e a borda com endereço nasce
+# em `daemon/subsystems/mic_da_mesa.py` — que é onde a guarda tem de estar,
+# porque é lá que a borda existe. Duas réguas sobre o mesmo estado é o defeito
+# que esta casa já pagou onze vezes.
+#
+# O QUE NÃO MUDOU: N bordas em rajada continuam tendo de virar UMA. O preço de
+# engolir um toque de verdade é um gesto refeito em um segundo; o preço de um
+# falso gesto era a usuária muda no jogo sem saber, e passa a ser o microfone
+# do sistema trocando sozinho.
+
+
+class _BackendComBordas:
+    """Backend dublado: `bordas_do_mic()` com contador que o teste move."""
+
+    def __init__(self, uniqs: tuple[str, ...]) -> None:
+        self._seq = dict.fromkeys(uniqs, 0)
+        self._mudo = dict.fromkeys(uniqs, False)
+
+    def apertar(self, uniq: str) -> None:
+        self._seq[uniq] += 1
+        self._mudo[uniq] = not self._mudo[uniq]
+
+    def bordas_do_mic(self) -> dict[str, tuple[int, bool, float | None]]:
+        return {u: (self._seq[u], self._mudo[u], None) for u in self._seq}
+
+
+_P1 = "aabbcc000001"
+_P2 = "aabbcc000002"
 
 
 class TestARajadaDeBordas:
     @pytest.mark.asyncio
-    async def test_cinco_bordas_seguidas_viram_um_toggle_so(self) -> None:
-        """O defeito de 01:52:27: N bordas viravam N toggles do mudo do sistema.
+    async def test_cinco_bordas_seguidas_viram_uma_eleicao_so(self) -> None:
+        """O defeito de 01:52:27, no eixo novo: N bordas viravam N gestos.
 
-        ARRANQUE A CURA (a checagem de `MIC_SOSSEGO_S` em `mic_button_loop`) e
-        este teste reprova com `toggles == 5`: cada borda mexendo no mudo do
-        sistema inteiro, sem ninguém para ver.
+        ARRANQUE A CURA (a checagem de `MIC_SOSSEGO_S` em `mic_da_mesa_loop`) e
+        este teste reprova com cinco eventos — cinco eleições do microfone do
+        sistema numa rajada, sem ninguém para ver.
         """
-        daemon = _Daemon(controller=_Controle(), config=_Config())
+        backend = _BackendComBordas((_P1,))
+        daemon = _Daemon(controller=backend, config=_Config())
+        fila = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)
 
-        await _rodar(daemon, lambda d: _tocar_botao(d, 5))
+        async def corpo(d: _Daemon) -> None:
+            await asyncio.sleep(0.4)  # passa a carência pós-conexão (0,3 s)
+            for _ in range(5):
+                backend.apertar(_P1)
+                await asyncio.sleep(0.06)
 
-        assert daemon._audio.toggles == 1, (
-            "uma rajada de bordas tem de virar UM toggle — o mudo do sistema é "
-            "latched e invisível para quem está de controle na mão"
+        await _rodar_bordas(daemon, corpo)
+
+        assert fila.qsize() == 1, (
+            "uma rajada de bordas tem de virar UM gesto — o microfone padrão do "
+            "sistema é latched e invisível para quem está de controle na mão"
         )
-        assert daemon._audio.mudo is True
-        assert daemon.controller.leds == [True]
+        assert fila.get_nowait()["uniq"] == _P1
 
     @pytest.mark.asyncio
     async def test_o_botao_continua_funcionando_passada_a_janela(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A guarda não pode matar o botão: passado o sossego, ele alterna de novo."""
+        """A guarda não pode matar o botão: passado o sossego, ele age de novo."""
         monkeypatch.setattr(mod, "MIC_SOSSEGO_S", 0.02)
-        daemon = _Daemon(controller=_Controle(), config=_Config())
+        backend = _BackendComBordas((_P1,))
+        daemon = _Daemon(controller=backend, config=_Config())
+        fila = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)
 
         async def corpo(d: _Daemon) -> None:
-            await _tocar_botao(d, 1)
+            await asyncio.sleep(0.4)  # a carência pós-conexão (0,3 s)
+            backend.apertar(_P1)
+            await asyncio.sleep(0.15)
+            backend.apertar(_P1)
+
+        await _rodar_bordas(daemon, corpo)
+
+        assert fila.qsize() == 2
+        assert fila.get_nowait()["mudo"] is True
+        assert fila.get_nowait()["mudo"] is False
+
+    @pytest.mark.asyncio
+    async def test_o_sossego_e_por_controle_e_nao_da_mesa(self) -> None:
+        """Numa mesa de quatro, o Jogador 2 não engole o gesto do Jogador 1.
+
+        A guarda velha era um relógio SÓ, porque o gesto velho era um só (o mudo
+        do sistema). Com endereço, uma janela global faria dois jogadores que
+        apertam junto virarem um gesto — e o do segundo sumiria calado.
+        """
+        backend = _BackendComBordas((_P1, _P2))
+        daemon = _Daemon(controller=backend, config=_Config())
+        fila = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)
+
+        async def corpo(d: _Daemon) -> None:
+            await asyncio.sleep(0.4)  # a carência pós-conexão (0,3 s)
+            backend.apertar(_P1)
+            backend.apertar(_P2)
             await asyncio.sleep(0.1)
-            await _tocar_botao(d, 1)
 
-        await _rodar(daemon, corpo)
+        await _rodar_bordas(daemon, corpo)
 
-        assert daemon._audio.toggles == 2
-        assert daemon._audio.mudo is False, "mutou e desmutou — voltou ao aberto"
-        assert daemon.controller.leds == [True, False]
+        assert fila.qsize() == 2
+        vistos = {fila.get_nowait()["uniq"] for _ in range(2)}
+        assert vistos == {_P1, _P2}
 
 
 # ---------------------------------------------------------------------------

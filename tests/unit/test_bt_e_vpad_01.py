@@ -97,41 +97,57 @@ def test_sem_backend_de_audio_a_resposta_e_nao_mexer() -> None:
     assert bancada.real.fonte_padrao_e_o_controle() is False
 
 
-def test_o_botao_do_mic_so_age_quando_a_fonte_e_o_controle() -> None:
-    """A fiação, e não só a função — o gate tem de estar NO LOOP.
+def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
+    """O DEFEITO 1 continua fechado — por CONSTRUÇÃO, e não mais pelo gate.
 
-    Das três saídas que a sprint desenhou, esta é a **(a)**: o botão só age
-    quando a fonte padrão é o controle. É a mais honesta e a mais barata.
+    Este teste exigia a saída **(a)** da sprint: o `mic_button_loop` só agia
+    quando `fonte_padrao_e_o_controle()` respondia sim. Ela caiu em 01/09/2026
+    (MIC-DA-MESA-ELEICAO-01), por decisão dela e por duas medições:
 
-    A **(b)** — mutar o registrador do firmware (`power_save_control` bit4),
-    que existe nos dois transportes — foi recusada porque TOMA A POSSE e faz
-    o botão físico parar de valer, que é o oposto do que se espera de um
-    botão físico.
+    1. **A guarda não separava CONTROLES.** Ela pergunta por SUBSTRING
+       "dualsense" (`integrations/audio_control.py`), logo responde *"a fonte
+       padrão é ALGUM DualSense"*, nunca *"é ESTE"*. Numa mesa de quatro os
+       quatro respondem `True` — e o gesto novo tem endereço.
+    2. **Ela estava escrita de costas para o gesto novo.** Só deixava agir
+       quando a fonte padrão JÁ era o controle, que é exatamente o caso em que
+       ELEGER não teria efeito nenhum.
 
-    Mordida: apagar o `if not pertence: continue` do `mic_button_loop`.
+    **O que ela protegia continua protegido, e agora sem gate: o gesto não muta
+    nada.** Ele ELEGE — troca qual fonte é o padrão do sistema. Não há caminho
+    por onde o botão do controle silencie o microfone de um terceiro, porque
+    não existe mais um `toggle_default_source_mute` no laço.
+
+    A saída **(b)** — mutar o registrador do firmware — continua RECUSADA, e
+    ganhou motivo novo: escrever no `common[9]` faz o kernel parar de alternar
+    na borda, e a borda é o que dá identidade a quem apertou. Tomar aquela
+    posse apagaria o sujeito do gesto dela.
+
+    Mordida: repor `toggle_default_source_mute` no laço — esta régua reprova.
     """
-    import inspect
-
     from hefesto_dualsense4unix.daemon.subsystems import hotkey
 
-    fonte = inspect.getsource(hotkey.mic_button_loop)
+    nomes: set[str] = set()
+    for fn in (hotkey.mic_button_loop, hotkey._eleger_ou_devolver):
+        c = fn.__code__
+        nomes.update(c.co_names)
+        nomes.update(c.co_varnames)
+        for const in c.co_consts:
+            # O docstring fica de fora: ele CITA os nomes que saíram, com o
+            # motivo. Contá-lo faria a régua reprovar porque alguém explicou.
+            if const is fn.__doc__:
+                continue
+            if isinstance(const, str):
+                nomes.add(const)
+            elif hasattr(const, "co_names"):
+                nomes.update(const.co_names)
 
-    assert "fonte_padrao_e_o_controle" in fonte
-    pos_gate = fonte.index("fonte_padrao_e_o_controle")
-    pos_toggle = fonte.index("toggle_default_source_mute")
-    assert pos_gate < pos_toggle, (
-        "a pergunta 'a fonte é o controle?' tem de vir ANTES do toggle — "
-        "depois dele o microfone errado já foi mutado"
+    assert "toggle_default_source_mute" not in nomes, (
+        "o botão do controle voltou a mutar o microfone padrão do sistema — "
+        "que pode ser o aparelho de terceiro (BT-E-VPAD-01, defeito 1)"
     )
-    # E tem de haver um DESVIO entre as duas: perguntar e ignorar a resposta
-    # é o mesmo que não perguntar. A primeira versão deste teste travava só a
-    # ordem, e não mordia — apagar o `if not pertence: continue` deixava a
-    # chamada do gate no lugar e a asserção de ordem passava.
-    entre = fonte[pos_gate:pos_toggle]
-    assert "continue" in entre, (
-        "entre a pergunta e o toggle tem de haver um `continue`: sem ele a "
-        "resposta é lida e descartada, e o microfone errado é mutado do mesmo "
-        "jeito"
+    assert "set_microphone_mute" not in nomes, (
+        "o laço voltou a afirmar o mudo do FIRMWARE — a saída (b), recusada em "
+        "01/08, 03/08 e 19/08, e construtivamente impossível desde 01/09"
     )
 
 
