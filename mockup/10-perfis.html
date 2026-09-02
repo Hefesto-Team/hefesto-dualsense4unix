@@ -1154,11 +1154,14 @@
                        para um perfil que está em 1 de 200.
                        É a mesma cura que os quatro campos do editor logo
                        abaixo já tinham recebido com `alvo="valor"`.
-                       Enquanto esta página não for PUBLICADA por ela,
-                       `a10_perfis.NAO_PINTAVEIS` segura a emissão do
-                       `editor.prioridade` — quem diz a verdade é o número ao
-                       lado (`editor.prioridade.n`), que é um `<span>` sem
-                       filhos e recebe o valor certo. -->
+                       FATO SUBSTITUÍDO — 02/09/2026. Aqui estava escrito que,
+                       "enquanto esta página não for PUBLICADA por ela",
+                       `a10_perfis.NAO_PINTAVEIS` segurava a emissão do
+                       `editor.prioridade`. As duas metades caíram: a página FOI
+                       publicada (commit `70b58116`) e `editor.prioridade` saiu
+                       de `NAO_PINTAVEIS` no `1f6e356b`. A barra recebe a
+                       largura; o número ao lado (`editor.prioridade.n`) é um
+                       `<span>` sem filhos e recebe o valor pelo mesmo tique. -->
                   <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:90%"></span></span>
                   <span class="n" data-hef="editor.prioridade.n">90</span>
                 </span>
@@ -1184,6 +1187,7 @@
               <div class="campo">
                 <span title="Pré-aplica um perfil inteiro: escolhendo FPS, o gatilho, a luz, a vibração e a máscara já vêm resolvidos. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
+                <option value="" selected>—</option>
                 <option>FPS</option>
                 <option>Corrida</option>
                 <option>Ação</option>
@@ -1191,7 +1195,7 @@
                 <option>Esportes</option>
                 <option>Point-and-click</option>
                 <option>Terror</option>
-                <option selected>Luta</option>
+                <option>Luta</option>
                 <option>Co-op na mesa</option>
                 <option>Maratona</option>
                 <option>Plataforma</option>
