@@ -965,15 +965,14 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # frente dela, e `a01_jogar.py` foi ligado pela integração, com a medição
     # contra o daemon vivo (o do CABO dizia `Player —` e passou a dizer
     # `Player 2`). O portão pegou a lápide sobrevivente antes de mim.
-    "interface/pacotes/__init__.py::identidade_de": (
-        "O nome do controle na tela, na ordem 'o que ELA nomeou > o modelo "
-        "decodificado > o transporte' — e NUNCA a posição. Hoje `Cosmic Red` e "
-        "`Starlight Blue` estão cravados 170 vezes no HTML publicado, e o nome "
-        "vinha da ordem da lista: com um controle o do cabo era 'Starlight "
-        "Blue'; com dois, o MESMO cabo virou 'Cosmic Red'. Fecha quando os "
-        "geradores `interface/abaNN.py` derem `data-campo` ao rótulo e os "
-        "pacotes o pintarem. MEDIDO em 02/09/2026."
-    ),
+    # `identidade_de` SAIU DAQUI EM 03/09/2026, e pela porta que a própria
+    # lápide nomeava: *"fecha quando os geradores `interface/abaNN.py` derem
+    # `data-campo` ao rótulo e os pacotes o pintarem"*. A aba Gatilhos foi a
+    # primeira — `a03_gatilhos._identidade_viva` a chama, o chip de cada coluna
+    # ganhou `data-campo="chip-do-controle"` e o produto reescreve o cabeçalho a
+    # cada tique. Fotografado com os dois controles dela: a coluna que dizia
+    # `Cosmic Red` passou a dizer `White`, e a do rádio — sem cor lida — passou
+    # a dizer só `P2 • BT`, em vez de vestir o plástico de outro.
     "interface/pacotes/__init__.py::degradacao_de": (
         "A frase 'Emulação degradada (uinput): …', que delega para "
         "`app/widgets/controller_card.texto_degradacao`. `vpad_motivo` é lido "
