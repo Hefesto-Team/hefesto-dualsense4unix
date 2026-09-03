@@ -126,10 +126,12 @@ from . import Contexto, registrar
 #: precisa ser curto para a tela parecer viva.
 TTL_S = 20.0
 
+#: O `abrir-lancador` SAIU DAQUI em 03/09/2026 — decisão 17 dela, e o motivo
+#: escrito nesta linha era a pergunta errada: *"o daemon não tem método para
+#: isso"* é verdade pelo IPC e o produto sabia abrir a Steam por outro caminho
+#: desde 23/08 (`steam_launch_options.reopen_steam`). O botão tem dono agora;
+#: quem conta o que ele sabe e o que não sabe é :func:`abrir_lancador`.
 SEM_DONO: dict[str, str] = {
-    "abrir-lancador": "abrir a Steam (ou qualquer lançador) é `xdg-open`, não "
-                      "IPC — o daemon não tem método para isso, e um botão que "
-                      "responde calado é pior que um que recusa",
     "criar-perfil": "criar perfil é da aba Perfis (`a10_perfis`); dois caminhos "
                     "para o mesmo disco é como duas telas passam a discordar",
     "heroic": "o produto PROCURA os cinco (`_onde_estao_os_lancadores`, pelas "
@@ -748,6 +750,69 @@ def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     return _resposta(VIGIA.ler())
 
 
+@gesto("07-lancadores.html", desenho.ABRIR)
+def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Abrir o lançador": abre a Steam. Nos outros cinco, RECUSA dizendo.
+
+    DECISÃO 17 DELA, 03/09/2026: o botão LIGA, e o gesto entra em
+    `hefesto_vivo.PERIGOSOS` — as duas metades, e a segunda não é opcional. Sem
+    ela a `--prova-gesto` clicaria este botão e abriria a Steam na tela dela,
+    que é o oposto de toda janela desta casa nascer `--oculta`.
+
+    O FATO QUE CAIU, e ele estava escrito no próprio arquivo:
+    `SEM_DONO["abrir-lancador"]` dizia *"o daemon não tem método para isso"*.
+    É verdade e é a **pergunta errada**. Medido em 03/09/2026:
+    `pacotes.daemon.metodos()` tem **40 métodos**, e o único cujo nome sequer
+    sugere abrir algo é `launch_env.refresh` — que regrava o arquivo de
+    ambiente de inicialização e não abre janela nenhuma. O IPC de fato não sabe
+    abrir a Steam; **o produto sabe**, desde 23/08 e por outro caminho:
+    `steam_launch_options.reopen_steam`, função PÚBLICA, com os
+    dois caminhos já provados (o binário `steam` e o `xdg-open steam://open/main`
+    de quem a instalou por Flatpak ou Snap). Ela tinha **zero chamadores vindos
+    de `interface/`** — é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na forma mais
+    literal: a casa sabe, e o botão da tela não chamava.
+
+    OS CINCO QUE FICARAM DE FORA, e por quê. `reopen_steam` é da Steam e não
+    tem irmã: **não existe no produto uma função que abra o Heroic, o Lutris, o
+    RetroArch, o Dolphin ou o mGBA** — e o Flatpak nem aplicativo é (a
+    `SemCenso` dele o diz: *"ele não publica atalho próprio, só o comando"*;
+    rodar `/usr/bin/flatpak` sem argumento imprime ajuda num terminal que
+    ninguém vê). O produto sabe ONDE eles estão (`_onde_estao_os_lancadores`
+    devolve o caminho inteiro) e **não sabe abri-los**: lançar um `.desktop`
+    exige ler o `Exec=` com os códigos de campo, ou um `Gio.DesktopAppInfo`,
+    e isso é capacidade NOVA — não é ligar o que já existe. Está em
+    `espera_a_palavra_dela`.
+
+    RECUSAR É MELHOR QUE CALAR, e é a razão de o gesto valer nos SEIS. Até hoje
+    o botão dos cinco não tinha `data-gesto`: o ouvinte do piloto não o
+    reconhecia, o clique não chegava ao Python, e **nada acontecia** — nem na
+    tela, nem no terminal. É o *"botão que responde calado"* que o próprio
+    `SEM_DONO` chamava de pior que a recusa. Agora o clique chega, e a frase
+    diz o que o produto sabe e o que não sabe.
+    """
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    qual = str(o.get("v") or "").strip()
+    if not qual:
+        raise ValueError(
+            "abrir-lancador: o clique não disse qual lançador. Cada botão "
+            "manda `data-v` com a chave do cartão — sem ela o gesto abriria um "
+            "lançador escolhido por acaso.")
+    if qual != desenho.STEAM:
+        nomes = {x.chave: x.nome for x in desenho.SEM_FONTE}
+        raise RuntimeError(
+            f"Ainda não sei abrir o {nomes.get(qual, qual)}. O Hefesto só sabe "
+            "abrir a Steam por enquanto — abra este lançador como você já abre, "
+            "que o perfil casa pelo nome do processo e pela janela do mesmo "
+            "jeito.")
+    if not slo.reopen_steam():
+        raise RuntimeError(
+            "Não achei como abrir a Steam nesta máquina: nem o comando `steam` "
+            "nem o `xdg-open` estão no PATH. Abra-a pelo seu menu — nada aqui "
+            "foi alterado.")
+    return None
+
+
 #: VAZIOS, E É A MEDIÇÃO QUE OS DEIXA VAZIOS: nenhum gesto desta aba fala com o
 #: daemon. O wrapper vive em dois arquivos em disco, e `pacotes.daemon.metodos()`
 #: não traz um método sequer que os toque.
@@ -756,8 +821,9 @@ METODOS: set[str] = set()
 
 
 PAGINA = "07-lancadores.html"
-#: SUBIU DE 6 PARA 7 em 02/09/2026, com o "Voltar a perguntar" (decisão dela).
-PISO_DA_ABA = 7
+#: SUBIU DE 6 PARA 7 em 02/09/2026, com o "Voltar a perguntar" (decisão dela);
+#: e de 7 PARA 8 em 03/09/2026, com o "Abrir o lançador" (decisão 17 dela).
+PISO_DA_ABA = 8
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
 #: `PonteDeMentira` e cobra QUAL função da ponte o gesto chamou. Um gesto que
@@ -768,9 +834,12 @@ PISO_DA_ABA = 7
 #: o efeito cobrado NO ARQUIVO — que é a prova mais forte, não a mais fraca.
 PROVAS: list[dict[str, Any]] = []
 
-#: TODOS OS SETE, e não por preguiça: o `state_full` do daemon não tem UMA
+#: TODOS OS OITO, e não por preguiça: o `state_full` do daemon não tem UMA
 #: chave sobre a Steam, sobre o `localconfig.vdf`, sobre a lista de recusados ou
 #: sobre a de dispensados. O efeito destes botões é o DISCO e a TELA — e os dois
-#: têm régua.
+#: têm régua. O `abrir-lancador` entrou em 03/09/2026 pelo motivo mais forte de
+#: todos: o efeito dele é uma JANELA da Steam, que o daemon não vê nem por
+#: acidente.
 SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
-           "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar")
+           "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
+           "abrir-lancador")
