@@ -144,7 +144,7 @@ HID_ID_DUALSENSE_NO_CABO = "0003:0000054C:00000CE6"
 
 
 def sysfs_de_mentira(no: str = "hidraw9") -> dict[str, Any]:
-    """Os três argumentos que ``no_do_controle`` já aceita, prontos.
+    """Os três argumentos que ``alvo_do_controle`` já aceita, prontos.
 
     A costura é do produto e não minha (regra F4): ``raiz``, ``listar`` e
     ``ler`` entram por argumento justamente para que a bancada não encoste em
