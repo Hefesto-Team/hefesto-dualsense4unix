@@ -329,3 +329,78 @@ seção daqui**: a aba deixou de estar em trabalho.
   apagaria o desenho, porque ali o alvo é `texto` e `textContent` mata os filhos
   (é a razão de `pacotes.enderecos_que_o_texto_apaga`, que protege esta célula
   pelo nome). Publicando a 04, a célula passa a viver.
+
+---
+
+## 02-controles.html — a identidade vem da fita
+- **03/09/2026** — **os DEZ valores de identidade congelados desta aba foram a
+  ZERO**, e a lei é sua:
+
+  > *"se no topo tá mostrando controle white player 1, então cada aba vai usar
+  > os controles lá de cima. Não mistura com a info dos mockups. Cada feature faz
+  > referencia ao controle conectado. Por isso temos o mapa pra servir como <!-- noqa-acento: citação literal dela -->
+  > variável de identificação"*
+
+  **O QUE ESTAVA NA SUA TELA**, fotografado nesta árvore em 03/09 com os seus
+  dois controles ligados — um `White` no cabo, um por rádio:
+
+  | | o que a tela dizia |
+  | --- | --- |
+  | a fita do topo | `P1 · Cosmic Red · USB` · `P2 · Starlight Blue · BT` |
+  | o cabeçalho do card | `Cosmic Red · USB` |
+  | a linha fechada | `P2 · Starlight Blue · BT` |
+  | a borda das duas caixas | vermelha e azul — as cores do desenho |
+
+  **Nenhuma dessas quatro coisas é um controle seu.** A fita foi consertada e
+  ninguém percebeu que a aba abaixo dela continuava mostrando o desenho.
+
+  **O QUE MUDOU NO DESENHO: uma linha de texto, e é uma DICA.** O chip da fita
+  dizia, ao passar o mouse, `Cosmic Red — a borda é a cor do plástico`; agora diz
+  `Clique para abrir o card dele — a borda é a cor do plástico.` O nome saiu do
+  `title` porque ele era a **segunda cópia congelada** do mesmo fato, e uma dica
+  não tem como ser repintada pelo produto — ela sobreviveria ao conserto do texto
+  e continuaria dizendo `Cosmic Red` na sua mesa. **Nenhum pixel mudou** fora
+  disso: o card, o chip e a linha fechada continuam idênticos ao que você
+  aprovou.
+
+  **OS CINCO ENDEREÇOS NOVOS**, e nenhum deles muda o que a tela desenha:
+
+  | endereço | onde | o que era | o que passa a ser |
+  | --- | --- | --- | --- |
+  | `peca` | o nome no cabeçalho do card e na linha fechada | `Cosmic Red` cravado | o nome do plástico lido do aparelho |
+  | `via` | o `USB`/`BT` ao lado dele | cravado | o transporte vivo |
+  | `fita-peca` | o nome dentro do chip da fita | cravado | o mesmo nome, vivo |
+  | `fita-via` | o `USB`/`BT` do chip | cravado | o mesmo transporte |
+  | `plastico-css` | uma folha de estilo vazia no fim do `<head>` | não existia | a cor da borda de cada caixa, lida do mapa |
+
+  **A COR SAIU DO `style=` DE CADA CAIXA**, e isso foi obrigatório: estilo de
+  linha vence qualquer folha de estilo, então enquanto o `--plastico` morasse ali
+  o produto **não tinha como** trocar a cor da borda. Ela virou regra na folha do
+  desenho, e o produto escreve por cima na folha endereçada. A cor não é digitada
+  em lugar nenhum: sai de `docs/data/cores-do-dualsense.csv` pelo mesmo dono que
+  a janela GTK já usa (`cor_do_plastico.tom_para_a_borda`, que também é quem
+  impede o Midnight Black de virar *ausência* de borda sobre o fundo escuro).
+
+  **O QUE VOCÊ VÊ NA BANCADA:** exatamente o desenho de sempre — `Cosmic Red` e
+  `Starlight Blue`, com as bordas vermelha e azul. A folha nova nasce **vazia**
+  de propósito; quem a preenche é o produto, com o que leu.
+
+  **O QUE VOCÊ VAI VER DEPOIS DE PUBLICAR** (medido nesta árvore, com os seus
+  dois controles, publicando a bancada num teste e desfazendo em seguida):
+
+  | | antes | depois |
+  | --- | --- | --- |
+  | fita | `P1 · Cosmic Red · USB` · `P2 · Starlight Blue · BT` | `P1 · White · USB` · `P2 · — · BT` |
+  | cabeçalho do card | `Cosmic Red · USB` | `White · USB` |
+  | linha fechada | `P2 · Starlight Blue · BT` | `P2 · — · BT` |
+  | borda das caixas | vermelha e azul | branca e cinza-neutra |
+  | valores pintados | 14 | 24 |
+
+  **O TRAVESSÃO DO CONTROLE DE RÁDIO É A SUA REGRA**, e não uma falta: pelo rádio
+  a cor do plástico **não é lida** — o mapa de canais diz `radio_aciona = não`
+  para `identidade.cor_do_aparelho`. Campo sem informação não mostra nada, e a
+  borda dele fica no cinza neutro que o lugar vazio desta aba já usa. Quando a
+  leitura por rádio chegar, o nome e a cor aparecem sozinhos.
+
+  **NADA FOI PUBLICADO.** Publicar continua sendo ato seu:
+  `scripts/check_o_desenho_aprovado.py --publicar 02`.

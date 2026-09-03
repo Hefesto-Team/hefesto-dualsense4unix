@@ -1261,6 +1261,13 @@
     padding-left:9px;list-style:none;margin-left:-16px}
 
 </style>
+<style id="plastico-do-desenho">
+  .ctl[data-controle="p1"]{--plastico:#ae335a}
+  .ctl[data-controle="p2"]{--plastico:#7eb8d4}
+  .fita .chip[for="c-p1"]{--plastico:#ae335a}
+  .fita .chip[for="c-p2"]{--plastico:#7eb8d4}
+</style>
+<style data-campo="plastico-css"></style>
 </head>
 <body>
 
@@ -1394,8 +1401,8 @@
     <div class="fita" title="O que você mudar nesta aba vai para o controle escolhido aqui.">
       <span>Selecionar:</span>
       <label for="c-todos" class="chip" title="Abre os 4 cards de uma vez — e aí a caixa rola.">Todos</label>
-      <label for="c-p1" class="chip plastico" style="--plastico:#ae335a" title="Clique para abrir o card dele. Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</label>
-      <label for="c-p2" class="chip plastico" style="--plastico:#7eb8d4" title="Clique para abrir o card dele. Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</label>
+      <label for="c-p1" class="chip plastico" title="Clique para abrir o card dele — a borda é a cor do plástico.">P1 <span class="pt">•</span> <span data-campo="fita-peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="fita-via">USB</span></label>
+      <label for="c-p2" class="chip plastico" title="Clique para abrir o card dele — a borda é a cor do plástico.">P2 <span class="pt">•</span> <span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via">BT</span></label>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1459,10 +1466,10 @@
       </div>
       <div class="quadro-corpo">
         <input class="radio-mesa" type="radio" name="mesa" id="c-todos">
-    <div class="ctl card" style="--plastico:#ae335a" data-controle="p1">
+    <div class="ctl card" data-controle="p1">
       <input class="radio-mesa" type="radio" name="mesa" id="c-p1" checked>
       <label class="faixa" for="c-p1" title="Clique para abrir o card deste controle — os outros fecham. É o mesmo gesto de escolhê-lo na fita lá em cima.">
-          <span class="card-nome"><span class="so-fechado">P1 <span class="pt">•</span> </span>Cosmic Red <span class="pt">•</span> USB</span>
+          <span class="card-nome"><span class="so-fechado">P1 <span class="pt">•</span> </span><span data-campo="peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="via">USB</span></span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão dela,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -1793,10 +1800,10 @@
       </div>
       </div>
     </div>
-    <div class="ctl card" style="--plastico:#7eb8d4" data-controle="p2">
+    <div class="ctl card" data-controle="p2">
       <input class="radio-mesa" type="radio" name="mesa" id="c-p2">
       <label class="faixa" for="c-p2" title="Clique para abrir o card deste controle — os outros fecham. É o mesmo gesto de escolhê-lo na fita lá em cima.">
-          <span class="card-nome"><span class="so-fechado">P2 <span class="pt">•</span> </span>Starlight Blue <span class="pt">•</span> BT</span>
+          <span class="card-nome"><span class="so-fechado">P2 <span class="pt">•</span> </span><span data-campo="peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="via">BT</span></span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão dela,
                31/08/2026, em duas frases: *"remover o vê como de todos os

@@ -79,7 +79,13 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques, texto_volume
 from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
 
-from . import Contexto, registrar
+from . import (
+    NOME_SEM_LEITURA,
+    VIA_DO_TRANSPORTE,
+    Contexto,
+    identidade_de,
+    registrar,
+)
 
 # ---------------------------------------------------------------------------
 # O MOTOR ACIMA, e por que ele entrou — 02/09/2026
@@ -209,6 +215,82 @@ def toque_do_controle(inputs: Any) -> tuple[str, str]:
         return (str(mesa_viva.SEM_LEITOR), "")
     tocando = bool(lido[0])
     return (texto_toques(1 if tocando else 0), "sim" if tocando else "")
+
+
+# ---------------------------------------------------------------------------
+# A IDENTIDADE VEM DA FITA, NUNCA DO MOCKUP — 03/09/2026
+# ---------------------------------------------------------------------------
+# A LEI É DELA: *"se no topo tá mostrando controle white player 1, então cada aba
+# vai usar os controles lá de cima. Não mistura com a info dos mockups. (…) Por
+# isso temos o mapa pra servir como variável de identificação"* — e, sobre a cor:
+# *"se identificou o controle
+# como modelo White a cor do card em volta tem que ser branco. Temos isso no
+# mapa."*
+#
+# O QUE ELA VIU, com os dois controles dela na mesa e três centímetros entre uma
+# coisa e outra: a fita dizia `P1 · White · USB` e o cabeçalho do card logo
+# abaixo dizia `Cosmic Red · USB`. Nenhuma das cores do card era do aparelho
+# dela.
+#
+# O DONO DO HEXA É O PRODUTO, e não o gerador. `interface/monta.cor_da_zona()`
+# lê a cor do SVG do desenho e é o dono da BANCADA; importá-lo daqui arrastaria a
+# bancada para o fecho de produção — medido em 02/09/2026, com três lápides de
+# `interface/monta.py` virando alcançáveis e o `portao_a_casa_sabe_e_o_produto_
+# nao_faz` reprovando nomeando as três. Quem responde do lado do produto é
+# `integrations/cor_do_plastico`, que já traduz nome de fábrica → hexa
+# (`cor_do_nome`) e já sabe o que uma BORDA de 2px pode usar sobre o fundo do
+# card (`tom_para_a_borda`, com o piso de contraste de 2,2:1 e a mistura com
+# branco que impede o Midnight Black de virar ausência de borda).
+
+#: A BORDA DE QUEM NÃO TEM COR LIDA. É o token que o lugar VAZIO desta aba já
+#: usa (`aba02.py`, `.ctl.off{border:1px solid var(--border-forte)}`), e não uma
+#: cor nova: pelo rádio a cor do plástico não é lida — o mapa de canais diz
+#: `identidade.cor_do_aparelho`, `radio_aciona = não` — e a regra dela é que
+#: campo sem informação não mostra nada. Deixar o card na cor do DESENHO seria
+#: exatamente a mentira que esta seção veio matar.
+BORDA_SEM_COR = "var(--border-forte)"
+
+
+def cor_da_borda(nome: str) -> str:
+    """O hexa da borda daquele plástico, ou o neutro quando não se leu.
+
+    `nome` é o nome de fábrica que a mesa traz (`mesa_viva.mesa_do_estado`, que o
+    tira do `LeitorDeCor`). ``"Não sei"`` e o vazio caem no neutro pelo mesmo
+    caminho: `cor_do_nome` devolve `None` para todo nome que não está na tabela
+    de fábrica, de propósito — *"a Sony fabrica edições novas sem avisar
+    ninguém. Inventar um nome aqui poria…"*.
+    """
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+        cor_do_nome,
+        tom_para_a_borda,
+    )
+
+    achada = cor_do_nome(nome or "")
+    return tom_para_a_borda(achada.tom if achada else "") or BORDA_SEM_COR
+
+
+def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
+    """As regras de `--plastico` da mesa VIVA, para a folha endereçada da página.
+
+    POR QUE UMA FOLHA E NÃO UM CAMPO POR CARD: `--plastico` é propriedade
+    personalizada de CSS, e o `escrever` do piloto não tem alvo que a escreva —
+    os sete são texto · largura · fundo · valor · html · classe · cor
+    (`hefesto_vivo.py`). Enquanto ele não tiver, o canal honesto é o que o
+    gerador abriu: um `<style data-campo="plastico-css">` no fim do `<head>`,
+    depois da folha do desenho e com o MESMO seletor, que por isso vence sem
+    `!important`.
+
+    O ENDEREÇO É O `pref` (`p1`…), e não o `uniq`: é o que o `data-controle` das
+    páginas traz, e é a mesma tradução que o piloto faz para as colunas.
+    """
+    return "\n".join(
+        f'.ctl[data-controle="{c.get("pref")}"],'
+        f'.fita .chip[for="c-{c.get("pref")}"]'
+        f'{{--plastico:{cor_da_borda(str(c.get("nome") or ""))}}}'
+        for c in mesa
+        if c.get("pref")
+    )
+
 
 #: O CLIQUE DO ANALÓGICO — o rótulo dentro do círculo, e ele é ENDEREÇO, não
 #: enfeite: `data-campo="l3"` e `data-campo="r3"` estão na página desde o
@@ -474,6 +556,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # caído está no bloco `O TOUCHPAD` no topo deste arquivo, com as 60
         # leituras que a mediram.
         toque_txt, toque_ponto = toque_do_controle(e)
+        # A IDENTIDADE DO CABEÇALHO, pelos donos: a ordem das quatro fontes é de
+        # `identidade_de`, e a tradução do transporte é a MESMA que a mesa usa.
+        via_na_tela = VIA_DO_TRANSPORTE.get(str(c.get("transport") or "").lower(), "")
+        nome_na_tela = identidade_de(c, ctx.mesa)
         cards[uniq] = {
             "bateria": f"{pct}%" if pct is not None else "—",
             # A BARRA, e ela precisa do NÚMERO CRU: o `escrever` do piloto com
@@ -681,10 +767,51 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # todo campo sem informação. Os três "não sei" do `luz_hex`
                 # mandam vazio pela mesma razão que ele manda travessão.
                 "luz-cor": _cor_da_barra(rotulo_da_luz, base_da_luz),
+                # O CABEÇALHO DO CARD — o que ela viu mentindo em 03/09/2026.
+                #
+                # O `via` JÁ SAÍRA DAQUI em 02/09 por não ter onde pousar, e a
+                # linha que o tirou dizia: *"Dar-lhe endereço é partir aquele
+                # `<span>` em três, que é desenho — logo, decisão dela."* A
+                # decisão veio (`IDENTIDADE-VEM-DE-CIMA-01`), o gerador partiu o
+                # `<span>`, e ele volta pela mesma porta por onde saiu.
+                #
+                # O NOME É DE `identidade_de`, que é o dono da ordem das quatro
+                # fontes (o que ELA nomeou > o modelo decodificado > a mesa > o
+                # transporte). O ÚLTIMO RAMO DELE NÃO SERVE AQUI: ele cai no
+                # transporte quando não há nome, e o desenho já mostra o
+                # transporte ao lado — o cabeçalho leria `BT • BT`. Quando o que
+                # sobrou foi o transporte, esta aba manda VAZIO, e o piloto
+                # escreve o travessão: `P2 • — • BT` é a verdade da mesa dela
+                # hoje, com a cor do rádio ainda não lida.
+                "peca": "" if nome_na_tela == via_na_tela else nome_na_tela,
+                "via": via_na_tela,
             }),
         }
-    return {"cards": cards, "sem_dono": {},
-            "cobertura": {"pintados": sum(len(v) for v in cards.values()), "sem_dono": 0}}
+    # OS VALORES QUE VALEM PARA A PÁGINA INTEIRA, e não por card. Os três nasceram
+    # da mesma lei de 03/09 e todos passam pelo `_so_se_a_pagina_tiver`: a bancada
+    # já os tem, o publicado só no minuto em que ela mandar publicar.
+    #
+    # A FITA SE TROCA INTEIRA a cada tique (`hefesto_vivo._fita`) e, quando isso
+    # acontece, estes dois endereços nem existem no DOM — o `achar()` devolve zero
+    # elementos e ninguém escreve. ELES SÃO PARA QUANDO A TROCA NÃO ACONTECE:
+    # `_fita` devolve `""` se UM controle da mesa vier sem cor, e pelo rádio a cor
+    # não é lida. Com um controle no cabo e outro no rádio — a mesa dela — a fita
+    # FICAVA COM O DESENHO inteiro, `Cosmic Red` e `Starlight Blue`.
+    #
+    # SÃO LISTAS porque o número de chips é o da mesa, e o piloto já as distribui
+    # pelos elementos de mesmo `data-campo`, na ordem (`hefesto_vivo.BOOTSTRAP`,
+    # o ramo `Array.isArray`). Chip a mais recebe vazio e vira travessão.
+    da_pagina = _so_se_a_pagina_tiver({
+        "plastico-css": folha_do_plastico(ctx.mesa),
+        "fita-peca": [
+            "" if str(m.get("nome") or "") == NOME_SEM_LEITURA else str(m.get("nome") or "")
+            for m in ctx.mesa
+        ],
+        "fita-via": [str(m.get("via") or "") for m in ctx.mesa],
+    })
+    return {"cards": cards, "mesa": da_pagina, "sem_dono": {},
+            "cobertura": {"pintados": sum(len(v) for v in cards.values()) + len(da_pagina),
+                          "sem_dono": 0}}
 
 
 # ---------------------------------------------------------------------------
