@@ -5,22 +5,35 @@ disco (o número dela) e dublê de ponte — nada foi ao daemon.
 
 1. **O Remover anunciava um alvo e apagava outro.** O armamento sempre foi por
    perfil (``remover`` exige ``_ARMADO[0] == nome``), mas o RÓTULO olhava só o
-   relógio. Medido, sem ninguém valendo:
+   relógio. A sequência inteira, medida passo a passo, está na docstring de
+   ``a10_perfis._rotulo_do_remover``: **um único passo difere**, e é aquele em
+   que ela clica noutra linha — o botão continua prometendo apagar o Pragmata
+   enquanto o próximo clique arma o Sackboy.
 
-       clique em Remover (Pragmata escolhido) -> rótulo: Remover “Pragmata”?
-       ela clica na linha do Sackboy          -> rótulo: Remover “Pragmata”?
-       clique em Remover                      -> arma o SACKBOY, calado
-       clique em Remover                      -> some do disco: ["Sackboy"]
+   **FATO ERRADO, SUBSTITUÍDO — 02/09/2026.** Este parágrafo dizia *"três
+   cliques num botão que nunca deixou de dizer 'Pragmata' apagam o Sackboy"* e
+   que o segundo clique armava *"calado"*. Medido: um tique depois do segundo
+   clique — 500 ms — o rótulo **já diz "Sackboy"**, ainda sem cura nenhuma.
+   E o "calado" é o que menos se sustenta: desde que o piloto ganhou
+   ``_recusou_dizendo`` (``hefesto_vivo.py:1074``), todo ``RuntimeError`` de
+   gesto vira TARJA na tela por 30 s — o clique que arma o Sackboy FALA. O
+   defeito do passo 4 é real e é sério; o exagero em volta dele não era.
 
-   Três cliques num botão que nunca deixou de dizer "Pragmata" apagam o
-   Sackboy, e a recusa que armaria o segundo sai em ``stderr``
-   (``hefesto_vivo.py``), onde ela não está olhando.
+2. **O marcador ÓRFÃO virava o alvo dos gestos e matava o realce.**
+   ``resolve_boot_profile`` declara na própria docstring que *"só resolve NOMES
+   — não valida se o perfil carrega"*, e o que ele devolvia ia cru para o realce
+   da lista e para "Voltar à de ontem". Com o marcador em "Perfil Que Ela
+   Apagou", o gesto mirava um arquivo que não existe.
 
-2. **O marcador ÓRFÃO virava nome na tela.** ``resolve_boot_profile`` declara na
-   própria docstring que *"só resolve NOMES — não valida se o perfil carrega"*,
-   e o que ele devolvia ia cru para o chip "Perfil ativo" e para o alvo dos
-   gestos. Com o marcador em "Perfil Que Ela Apagou": o chip nomeava um perfil
-   sem linha entre as 33 e sem arquivo no disco.
+   **FATO ERRADO, SUBSTITUÍDO — 02/09/2026.** Este parágrafo dizia que o nome
+   órfão virava *"nome na tela"*, no chip "Perfil ativo", e havia aqui uma régua
+   chamada ``test_o_marcador_orfao_nao_vira_nome_no_chip`` que provava a cura
+   lendo ``fora["ativo"]``. **``ativo`` não é o chip e não tem endereço em
+   página nenhuma** — o chip é ``data-campo="perfil"``, do ``topo.html``, e quem
+   o pinta é ``pacotes.topo()`` com o ``active_profile`` CRU. A cura desta aba
+   nunca chegou a ele, e a régua ficava verde sem tocar o que ela vê. A dívida
+   tem régua própria e o ``ativo`` deixou de ser emitido — ver
+   ``test_a_aba_perfis_manda_para_um_endereco_que_existe.py``.
 
 3. **Duas comparações para a mesma pergunta, na mesma tela.** O realce da lista
    é ``p.name == ativo`` (``perfis_web._linhas_da_lista``) e as guardas dos
@@ -127,7 +140,8 @@ def test_o_rotulo_para_de_perguntar_quando_ela_troca_de_linha(
 
     É a verdade do estado — o próximo clique naquele botão ARMA o Sackboy, não
     apaga o Pragmata. Deixá-lo perguntando pelo Pragmata é o botão anunciar um
-    alvo e agir sobre outro, com a recusa intermediária indo para o ``stderr``.
+    alvo e agir sobre outro — e a tarja que avisa some em 30 s, enquanto o
+    armamento vive 8 e o rótulo continua prometendo o alvo errado.
 
     MORDIDA: tire o ``_ARMADO[0] == alvo`` de ``_rotulo_do_remover`` (que é como
     ele era até 02/09) e este teste reprova mostrando a pergunta pelo Pragmata.
@@ -178,23 +192,30 @@ def test_o_segundo_clique_so_apaga_o_perfil_que_o_rotulo_nomeou(
 # --------------------------------------------------------------------------
 # 2. O MARCADOR ÓRFÃO
 # --------------------------------------------------------------------------
-def test_o_marcador_orfao_nao_vira_nome_no_chip(
+def test_o_marcador_orfao_nao_acende_linha_nenhuma(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Perfil renomeado ou apagado por fora: o chip volta ao travessão.
+    """Perfil renomeado ou apagado por fora: nenhuma linha da lista se acende.
 
-    Antes, o chip do topo nomeava um perfil que não tem linha entre as 33 nem
-    arquivo no disco — e ela iria procurá-lo na lista. É o defeito que esta casa
-    nomeou em 31/08 ("nomear um controle que não está"), do outro lado da tela.
+    **ESTE TESTE SE CHAMAVA ``…_nao_vira_nome_no_chip`` e lia o
+    ``fora["ativo"]`` — 02/09/2026.** Aquele valor não tem endereço em página
+    nenhuma, então o
+    verde dele não dizia nada sobre a tela; o chip de verdade continua nomeando
+    o órfão, e a dívida está declarada em
+    ``test_a_aba_perfis_manda_para_um_endereco_que_existe.py``. O que a cura
+    desta aba REALMENTE entrega é isto: o realce da lista e o alvo dos gestos.
 
-    MORDIDA: tire o ``find_by_slug`` de ``_valendo`` e este teste reprova com o
-    nome fantasma no chip.
+    MORDIDA: tire o ``find_by_slug`` de ``_valendo`` e este teste reprova — a
+    linha do órfão não existe, mas ``_valendo`` devolve o nome fantasma e o
+    ``==`` de ``_linhas_da_lista`` passa a comparar contra ele.
     """
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, "Perfil Que Ela Apagou")
-    fora = a10_perfis.pacote(_ctx())
-    assert fora["ativo"] == "—"
-    assert _realcadas(fora) == []
+    ctx = _ctx()
+    assert a10_perfis._valendo(ctx) == "", (
+        "o nome órfão saiu de `_valendo` — ele não casa com nenhum dos perfis "
+        "do disco e não pode virar alvo de coisa nenhuma")
+    assert _realcadas(a10_perfis.pacote(ctx)) == []
 
 
 def test_o_marcador_orfao_nao_vira_alvo_de_gesto(
@@ -225,9 +246,9 @@ def test_o_marcador_que_existe_continua_valendo(
     """
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, "Sackboy")
-    fora = a10_perfis.pacote(_ctx())
-    assert fora["ativo"] == "Sackboy"
-    assert _realcadas(fora) == ["Sackboy"]
+    ctx = _ctx()
+    assert a10_perfis._valendo(ctx) == "Sackboy"
+    assert _realcadas(a10_perfis.pacote(ctx)) == ["Sackboy"]
 
 
 # --------------------------------------------------------------------------
@@ -256,7 +277,8 @@ def test_o_realce_e_a_guarda_do_ativar_dao_o_mesmo_veredito(
     fora = a10_perfis.pacote(ctx)
     assert _realcadas(fora) == ["Sackboy"], (
         f"marcador {marcador!r}: a lista não acendeu a linha do perfil que vale")
-    assert fora["ativo"] == "Sackboy", "o chip mostra o nome DIGITADO, não o da lista"
+    assert a10_perfis._valendo(ctx) == "Sackboy", (
+        "o dono devolveu o nome DIGITADO, e não o da linha da lista")
 
     a10_perfis.selecionar(ctx, {"texto": "Sackboy"}, ponte)
     with pytest.raises(ValueError, match="já é o perfil que está valendo"):
@@ -274,14 +296,27 @@ def test_lista_vazia_nao_desarma_a_guarda_do_perfil_que_vale(
     e ``load_all_profiles()`` devolve ``[]`` — desligaria o §P7: o Remover
     voltaria a apagar o perfil que está valendo.
 
-    MORDIDA: tire o ``if not todos: return nome`` e este teste reprova com o
-    Remover ARMANDO em vez de recusar.
+    **ESTA RÉGUA NÃO MORDIA — corrigido em 02/09/2026, e o defeito era duplo.**
+    Ela cravava ``_ESCOLHIDO = "meu_perfil"`` antes de chamar, e
+    ``_perfil_do_editor`` é ``_ESCOLHIDO or _valendo(ctx)``: o ``or``
+    curto-circuitava e ``_valendo`` **nem rodava**. Com a mordida declarada
+    aplicada, o arquivo inteiro dava ``13 passed``. Sem o ``_ESCOLHIDO``, o
+    caminho passa por ``_valendo`` e a mordida aparece: o nome vira ``""`` e o
+    Remover recusa por FALTA DE ALVO ("escolha um perfil na lista primeiro") em
+    vez de recusar por §P7 — a guarda de não apagar o que está valendo some, e
+    some dizendo outra coisa, que é a pior forma de sumir.
+
+    MORDIDA: tire o ``if not todos: return nome`` de ``_valendo`` e este teste
+    reprova — a mensagem deixa de ser a do §P7.
     """
     monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: [])
     _o_marcador_diz(monkeypatch, "meu_perfil")
-    a10_perfis._ESCOLHIDO = "meu_perfil"
+    ctx = _ctx()
+    assert a10_perfis._valendo(ctx) == "meu_perfil", (
+        "lista vazia rebaixou o nome que vale — ausência de prova virou prova "
+        "de órfão, e as três guardas do §P1 se desligam juntas")
     with pytest.raises(ValueError, match="está valendo agora"):
-        a10_perfis.remover(_ctx(), {}, PonteDeMentira())
+        a10_perfis.remover(ctx, {}, PonteDeMentira())
 
 
 # --------------------------------------------------------------------------
