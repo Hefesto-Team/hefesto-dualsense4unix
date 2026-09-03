@@ -26,8 +26,21 @@ preenchido**. Havia dono, em disco, o tempo todo — eu perguntei só ao
 
 A distinção que FICA, porque ela muda o que a tela diz: o brilho é o que está
 **salvo no perfil**, e a cor é o que está **aceso agora** (o daemon publica
-`lightbar_rgb`). Quando os dois discordam, quem manda na tela é o vivo — e é por
-isso que o `hex` continua vindo do daemon e só o brilho vem do disco.
+`lightbar_rgb`). Quando os dois discordam, quem manda na tela é o vivo.
+
+E O `lightbar_rgb` É **PÓS-ESCALA DE BRILHO** — 03/09/2026, e é fato do
+contrato do daemon, não interpretação. Estava escrito lá o tempo todo
+(`ipc_handlers._enrich_controllers_per_controller`, "Contrato de cor (D8)")::
+
+    expõe-se UMA cor, a efetiva conhecida (pós-escala de brilho — o
+    `_DesiredOutput.led` já é pós-escala; o manager pré-escala na borda)
+
+Esta aba o lia como PRÉ-escala, e a linha que estava aqui — *"é por isso que o
+`hex` continua vindo do daemon"* — descrevia o defeito. Com o brilho abaixo de
+100% a caixa mostrava uma cor que ela nunca pediu, a marca dos oito tons apagava
+em todos e a tira escurecia duas vezes. Quem separa as duas escalas agora é
+`cor_escolhida`; ver lá a medição e por que a inversão é uma varredura, não uma
+divisão.
 
 O PRODUTO ALCANÇOU A BANCADA no `players` e no `brilho`: a publicação de
 02/09/2026 (`70b58116`) levou ao HTML publicado o `data-hef-alvo="largura"` do
@@ -156,6 +169,117 @@ def _tinta(rgb: Any) -> str:
     import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
 
     return str(monta.tom_da_casa(_hex(rgb)))
+
+
+def brilho_do_controle(p: dict[str, Any] | None, uniq: str) -> float | None:
+    """O brilho da barra DAQUELE controle: o override, ou o do perfil.
+
+    UM DONO, TRÊS CHAMADORES — e é por isso que ele saiu de dentro do `pacote()`
+    em 03/09/2026. A conta estava escrita lá e em lugar nenhum mais, porque só a
+    PINTURA a fazia; os gestos que ESCREVEM a cor não passavam brilho nenhum, e
+    era exatamente esse o defeito (ver `_escrever_a_cor`). Curá-lo com uma
+    segunda leitura do mesmo par de campos criaria a divergência clássica: a
+    coluna mostrando um número e o fio levando outro, por dois códigos.
+
+    A ORDEM É A DO MERGE, e ela tem dono: `ControllerOverrides.leds` vence o
+    `LedsConfig` global — o mesmo que `profiles/schema.py` declara e que o
+    backend resolve. Aqui só se lê o que o disco diz; quem resolve as cinco
+    camadas é o daemon.
+
+    `None` QUER DIZER "NÃO SEI", e não 1.0. A tela mostra `—` nesse caso, e o
+    `led.set` recebe `brightness=None`, que o `_payload_led_set` OMITE do
+    payload — o daemon então assume 1.0, que é o retrocompatível. Mandar `1.0`
+    daqui diria "ela escolheu cheio" onde ninguém escolheu nada.
+    """
+    if not isinstance(p, dict):
+        return None
+    leds = p.get("leds")
+    global_ = leds.get("lightbar_brightness") if isinstance(leds, dict) else None
+    meu = (p.get("controllers") or {}).get(uniq)
+    seus = (meu.get("leds") or {}) if isinstance(meu, dict) else {}
+    b = seus.get("lightbar_brightness", global_) if isinstance(seus, dict) else global_
+    if b is None:
+        return None
+    try:
+        return max(0.0, min(1.0, float(b)))
+    except (TypeError, ValueError):
+        return None
+
+
+def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:
+    """`rgb` escalado pelo brilho — **pela função do produto**, nunca por conta.
+
+    `core/led_control.LedSettings.apply_brightness` é o dono, e a conta dele é
+    `max(0, min(255, int(c * level)))` por canal. Ela aparece em DOIS lugares do
+    produto com o mesmo corpo — o `_handle_led_set` do daemon
+    (`ipc_handlers.py`) e o provider da cor automática (D11) —, e é justamente
+    por ser a mesma que a varredura de `cor_escolhida` pode ser exata. Digitar a
+    multiplicação aqui seria a terceira cópia, e a que envelheceria calada no dia
+    em que o produto ganhasse a curva de resposta não-linear que o docstring do
+    dono já prevê.
+    """
+    from hefesto_dualsense4unix.core.led_control import LedSettings
+
+    return LedSettings(lightbar=rgb).apply_brightness(brilho).lightbar
+
+
+def tons_da_guia() -> tuple[tuple[int, int, int], ...]:
+    """Os OITO tons que a guia desta aba oferece, na ordem em que o desenho os põe.
+
+    NÃO SE DIGITA NENHUM: são `core/led_control.player_slot_color(1..8)`, a mesma
+    paleta que acende as cinco lâmpadas, que o gerador usa para pintar os oito
+    botões (`aba04.luz`) e que o daemon usa como cor automática de cada número.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    return tuple(player_slot_color(n) for n in range(1, 9))
+
+
+def cor_escolhida(efetiva: Any, brilho: float | None) -> Any:
+    """A cor que ela PEDIU, a partir da que está ACESA e do brilho.
+
+    O DEFEITO QUE ESTA FUNÇÃO MATA, e ele é do daemon para cima — está escrito
+    no contrato dele (`ipc_handlers._enrich_controllers_per_controller`, o
+    "Contrato de cor (D8)")::
+
+        expõe-se UMA cor, a efetiva conhecida (PÓS-ESCALA DE BRILHO — o
+        `_DesiredOutput.led` já é pós-escala; o manager pré-escala na borda)
+
+    Esta aba lia esse `lightbar_rgb` como se fosse a cor ESCOLHIDA, e com o
+    brilho abaixo de 100% isso quebra TRÊS coisas na mesma coluna, todas pela
+    mesma raiz — medido em 03/09/2026 com `brilho=0.5` e o azul do P1::
+
+        a caixa `#RRGGBB`   dizia `#00007F`, uma cor que ela nunca pediu
+        a marca dos 8 tons  APAGAVA em todos — `data-hef-quando` compara com
+                            `#0000FF`, e nenhum dos oito casa com `#00007F`
+        a tira              pintava o hex CRU (o `tom_da_casa` só conhece os
+                            oito CHEIOS) e ainda aplicava `opacity:0.5` por
+                            cima — o brilho escurecendo DUAS vezes
+
+    A CURA É A INVERSÃO PELA FÓRMULA DO PRODUTO, e não uma divisão: dividir
+    `127/0.5` dá 254, e a marca continuaria apagada por um. O que se faz é
+    aplicar a conta do dono (`_com_o_brilho`) nos OITO tons e ver qual produz a
+    cor que está acesa — o mesmo desenho de `lightbar_actions.nome_do_desenho`,
+    que varre os oito padrões canônicos para batizar um bitmask.
+
+    SEM CASAMENTO, A EFETIVA VOLTA INTEIRA. É o caso da cor livre do seletor —
+    `#12AB34` a 82% acende `#0E8C2A`, e não há como saber de qual pedido ele
+    veio. Aí a tela mostra o que está no plástico, que é o honesto; inventar um
+    pedido seria afirmar uma escolha que ninguém fez.
+
+    :param efetiva: o `lightbar_rgb` do daemon, ou `None`/vazio quando não há.
+    :param brilho: `brilho_do_controle`. `None` ou `1.0` devolvem a efetiva sem
+        varrer nada — a 100% as duas escalas são a mesma, e varrer só gastaria.
+    """
+    if not efetiva:
+        return efetiva
+    if brilho is None or brilho >= 1.0:
+        return efetiva
+    alvo = tuple(efetiva)[:3]
+    for tom in tons_da_guia():
+        if _com_o_brilho(tom, brilho) == alvo:
+            return tom
+    return efetiva
 
 
 #: A TIRA APAGADA — e ela é um ESTILO EXPLÍCITO, nunca a ausência de um.
@@ -725,13 +849,9 @@ def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
 @registrar("04-iluminacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo(ctx.state.get("active_profile"))
-    leds = (p.get("leds") or {}) if p else {}
-    #: O BRILHO É DO PERFIL, e é um só para a mesa — como o gatilho. O
-    #: `ControllerOverrides.leds` do schema permite por controle, e quando ele
-    #: estiver preenchido esta função o lê antes; enquanto não, repetir é o que
-    #: corresponde ao que o produto faz.
-    brilho = leds.get("lightbar_brightness")
-    overrides = (p.get("controllers") or {}) if p else {}
+    #: O BRILHO É DO PERFIL, e é um só para a mesa quando não há override — como
+    #: o gatilho. A leitura tem UM dono desde 03/09/2026 (`brilho_do_controle`),
+    #: porque os gestos que escrevem a cor passaram a precisar do mesmo número.
 
     # A FRASE DA DISPUTA É DO MOTOR, e não se reescreve.
     # `app/widgets/controller_card.rotulo_lightbar` é a mesma que os cards da
@@ -768,9 +888,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         crua = cor_do_swatch(c)
-        meu = overrides.get(uniq) or {}
-        seus = (meu.get("leds") or {}) if isinstance(meu, dict) else {}
-        b = seus.get("lightbar_brightness", brilho)
+        b = brilho_do_controle(p, uniq)
         pct = None if b is None else round(float(b) * 100)
         casa = _da_mesa(ctx, uniq)
         n = _numero(ctx, c)
@@ -797,6 +915,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: "não afirme". É a regra dela de hoje, aplicada ao desenho: *"se não
         #: tá mostrando agora, não tem info pra mostrar no produto"*.
         acesa = base if recado is None else None
+        #: A COR QUE ELA PEDIU, e não a que o daemon publica — ver
+        #: `cor_escolhida`. O `lightbar_rgb` é PÓS-ESCALA de brilho por
+        #: contrato do daemon, e esta aba o tratava como pré-escala: com o
+        #: brilho abaixo de 100% a caixa mostrava uma cor que ela nunca pediu,
+        #: a marca dos oito tons apagava e a tira escurecia duas vezes.
+        pedida = cor_escolhida(crua, b)
         #: QUAL DOS TRÊS ESTADOS A TIRA DESENHA — decisão 9 dela. Ele sai do
         #: MESMO primeiro retorno que decide `acesa`, e não de uma segunda
         #: leitura: "apagada" e "não sei" só se separam pela frase do motor.
@@ -811,10 +935,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: trazer `data-hef-alvo="largura"` — as abas 02 e 05 têm, esta não
             #: tinha, e por isso o `100` era impresso DENTRO do trilho.
             "brilho-pct": pct,
-            #: A COR CRUA, que é o que a caixa `#RRGGBB` mostra — e ela não
+            #: A COR ESCOLHIDA, que é o que a caixa `#RRGGBB` mostra — e ela não
             #: some quando a barra apaga: o hex diz QUAL cor está gravada, o
             #: desenho abaixo diz se ela está acesa.
-            "hex": _hex(crua),
+            #:
+            #: ELE ERA `_hex(crua)` ATÉ 03/09/2026, e a cor crua é a PÓS-ESCALA
+            #: de brilho do daemon. Este mesmo campo endereça DUAS coisas na
+            #: página: a caixa de texto e os OITO tons da guia, que acendem o
+            #: `on` por `data-hef-quando="#0000FF"` — os oito CHEIOS. Com o
+            #: brilho em 50% o daemon publica `#00007F`, e a marca apagava em
+            #: todos: a tela deixava de dizer qual cor está escolhida
+            #: exatamente quando ela mexia no brilho. Ver `cor_escolhida`.
+            "hex": _hex(pedida),
             #: A COR DO PLÁSTICO, e ela é a lei dela de 03/09/2026: *"se
             #: identificou o controle como modelo White a cor do card em volta
             #: tem que ser branco. Temos isso no mapa."*
@@ -853,7 +985,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: antes de 02/09 (`c.get("lightbar_on", True)`) era uma segunda
             #: verdade, e o default dela AFIRMAVA aceso na ausência do campo —
             #: que é o estado de partida de um controle no rádio.
-            "luz": desenho_da_luz(_tinta(acesa),
+            #: A TINTA SAI DA COR PEDIDA, e o brilho entra UMA VEZ SÓ, na
+            #: `opacity` — 03/09/2026. Ela saía de `_tinta(acesa)`, e `acesa` é
+            #: a pós-escala do daemon: a 50% o `tom_da_casa` não reconhecia
+            #: `#00007F` (a tabela tem os oito CHEIOS) e devolvia o hex CRU, que
+            #: é a cor que a guia não mostra em lugar nenhum — e a `opacity` a
+            #: escurecia de novo. Com a pedida, a tira volta ao modelo da GTK:
+            #: tom da casa vezes o brilho, que é o que `_on_lightbar_preview_draw`
+            #: desenha (o `rgb` do rascunho vezes o brilho).
+            "luz": desenho_da_luz(_tinta(cor_escolhida(acesa, b)),
                                   1.0 if b is None else float(b), n,
                                   dica_da_luz(nome, via, recado or "",
                                               o_coop_manda(ctx.state)),
@@ -983,6 +1123,172 @@ def _so_abriu_o_seletor(o: dict[str, Any]) -> bool:
             and str(o.get("evento") or "").lower() == "click")
 
 
+class _Janela:
+    """O "host" mínimo que `app/textos_de_aplicacao.py` sabe interrogar.
+
+    ELE NÃO É UMA JANELA E NÃO PRECISA SER. As três leituras que decidem a
+    frase de um desfecho — `alvo_fora_da_mesa`, `modo_nativo_manda_no_output` e
+    `mesa_vazia` — perguntam por `getattr` a um objeto qualquer; a GUI estável
+    passa a si mesma porque é ela quem tem os campos, e a aba Status é quem os
+    publica a cada tique do `state_full` (`status_actions.py`: o
+    `_target_uniq_by_index` em `_update_target_maps`, o `_modo_nativo_ligado` em
+    `_sync_modo_nativo_manda_no_output`, o `_coop_ligado` em
+    `_sync_coop_governa_luzes`).
+
+    Esta interface tem os MESMOS dados, da MESMA fonte — o `ctx.state` é o
+    `state_full` —, e o que faltava era o objeto que os apresenta com os nomes
+    que o dono da frase conhece. É a ponte inteira: nenhuma regra de texto se
+    reescreve deste lado.
+    """
+
+    #: OS SEIS CAMPOS ANOTADOS, e não só listados no `__slots__`: os quatro
+    #: primeiros são postos por `definir_alvo` (o dono do alvo de edição), e uma
+    #: classe com `__slots__` sem anotação faz o mypy recusar a escrita dos dois
+    #: últimos — que é o mesmo que dizer que este objeto não cumpre o contrato
+    #: que `textos_de_aplicacao` interroga.
+    _alvo_de_edicao: Any
+    _edit_target_uniq: str | None
+    _edit_target_label: str | None
+    _target_uniq_by_index: dict[int, str | None]
+    _modo_nativo_ligado: bool
+    _coop_ligado: bool
+
+    __slots__ = ("_alvo_de_edicao", "_coop_ligado", "_edit_target_label",
+                 "_edit_target_uniq", "_modo_nativo_ligado", "_target_uniq_by_index")
+
+
+def _janela_do_desfecho(ctx: Contexto, uniq: str, rotulo: str = "") -> Any:
+    """Um `_Janela` com o estado DESTA mesa, para a frase do desfecho.
+
+    O ALVO É POSTO PELO DONO, e não por atribuição: `alvo_de_edicao.definir_alvo`
+    é quem sabe que `uniq` preenchido quer dizer CONTROLE e vazio quer dizer
+    "Todos", e é quem espelha os dois atributos legados. Escrevê-los à mão aqui
+    seria a segunda cópia da regra que aquele módulo nasceu para ter sozinho —
+    e a aba nunca escreve sem `uniq`, então o ramo "Todos" não se alcança daqui.
+
+    O `_coop_ligado` SAI DE `o_coop_manda`, e não de `coop.enabled`. A GTK lê o
+    booleano e por isso diz *"quem manda é o co-op"* numa mesa com um jogador
+    só — está medido em `o_coop_manda`, com a saída do daemon dela. Repetir o
+    defeito para "ficar igual" seria portar a mentira junto com a frase. Na
+    prática ele nem é consultado pelos gestos de COR (`coop_aplica=False`: a
+    camada de co-op tem vocabulário de um campo só, `player_leds`), e está aqui
+    para o dia em que o desenho das cinco luzes chegar ao HTML.
+    """
+    from hefesto_dualsense4unix.app.alvo_de_edicao import definir_alvo
+
+    janela = _Janela()
+    definir_alvo(janela, uniq or None, rotulo or None)
+    janela._target_uniq_by_index = {
+        int(c.get("index") or i): (str(c.get("uniq") or "") or None)
+        for i, c in enumerate(ctx.conectados)}
+    janela._modo_nativo_ligado = bool(ctx.state.get("native_mode"))
+    janela._coop_ligado = o_coop_manda(ctx.state)
+    return janela
+
+
+def _nome_da_coluna(ctx: Contexto, uniq: str) -> str:
+    """O rótulo daquele controle para a frase de guardado — o nome VIVO da mesa.
+
+    `frase_de_guardado` diz *"vale quando o {alvo} voltar"*, e o {alvo} sai de
+    `nome_curto_do_alvo(host._edit_target_label)`. Sem rótulo ele cai em
+    `ALVO_SEM_NOME`, que é a frase genérica; com o nome da mesa a tela dela diz
+    qual controle. É a mesma porta que a coluna já usa (`_da_mesa`).
+    """
+    casa = _da_mesa(ctx, uniq)
+    return str(casa.get("nome") or "")
+
+
+def _textos_do_desfecho(brilho: float | None, apagando: bool) -> tuple[str, str]:
+    """O par (assunto, frase feliz) daquele gesto — e os quatro saem da GTK.
+
+    `_ASSUNTO_COR` / `_TOAST_COR_ENVIADA` para quem pinta, `_ASSUNTO_APAGAR` /
+    `_TOAST_LIGHTBAR_APAGADA` para quem desliga. Os dois pares vivem em
+    `app/actions/lightbar_actions.py` com a medição ao lado, e o `(N% de brilho)`
+    é decisão registrada lá: *"é o que ela usa para saber que o seletor viajou
+    junto"*. Digitar qualquer um deles aqui seria a segunda escrita da mesma
+    frase — o defeito que a RADAR-01 mediu, duas superfícies do mesmo produto
+    dizendo coisas diferentes sobre o mesmo evento.
+
+    O PERCENTUAL É O QUE FOI ENVIADO. Com o brilho desconhecido o produto manda
+    sem o campo e o daemon assume cheio; a tela diz 100%, que é o que saiu.
+
+    ELAS SÃO PRIVADAS POR CONVENÇÃO DE NOME, e não por contrato — do mesmo jeito
+    que `lightbar_actions` lê `footer_actions._lista_de_secoes`. Ver
+    `sem_resposta_do_daemon`, que já carrega o mesmo relato.
+    """
+    from hefesto_dualsense4unix.app.actions import lightbar_actions
+
+    if apagando:
+        return (str(lightbar_actions._ASSUNTO_APAGAR),
+                str(lightbar_actions._TOAST_LIGHTBAR_APAGADA))
+    pct = 100 if brilho is None else round(brilho * 100)
+    return (str(lightbar_actions._ASSUNTO_COR).format(pct=pct),
+            str(lightbar_actions._TOAST_COR_ENVIADA).format(pct=pct))
+
+
+def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
+                    rgb: tuple[int, int, int], *,
+                    apagando: bool = False) -> None:
+    """O CAMINHO ÚNICO de escrita de cor desta aba — com o brilho e com a frase.
+
+    ELE É O `_aplicar_cor_no_controle` DA GTK, no que esta tela pode ter
+    (`app/actions/lightbar_actions.py:881`). Duas coisas que faltavam, e as duas
+    estavam medidas:
+
+    **1. O BRILHO VIAJA JUNTO.** A linha era `p.led_set(rgb, uniq=uniq)`, sem o
+    argumento — e o `_payload_led_set` só põe o campo quando ele é passado, então
+    o `led.set` do daemon caía no default *"Ausente ou inválido -> assume 1.0"*
+    (`ipc_handlers._handle_led_set`). Consequência na tela dela: a mesma coluna
+    que mostra `50%` no trilho mandava a cor a 100%, e um clique num tom
+    DESFAZIA o brilho que ela tinha escolhido na janela GTK — sem uma palavra.
+    A GTK manda `brightness=self._current_brightness` em toda escrita
+    (`lightbar_actions.py:944`); aqui o número sai de `brilho_do_controle`, que
+    é o MESMO que a coluna imprime.
+
+    **2. O DESFECHO SE LÊ DO CORPO DO DAEMON.** A porta era `led_set` (`bool`), e
+    um `True` dele significa só *"o daemon respondeu"*. O corpo do `led.set`
+    publica `aplicado_em`/`guardado_em` desde a APLICAR-VERDADE-01, e
+    `led_set_detalhado` já os entregava — sem um chamador em `interface/` até
+    hoje. Sem eles, um clique com o Modo Nativo ligado (o backend muta toda
+    escrita de output) ou com o controle recém-saído da mesa saía **calado**: o
+    piloto anotava "aplicou", a barra não mudava, e o segundo clique parecia o
+    primeiro. É o defeito que esta casa nomeia como o mais caro.
+
+    QUEM DECIDE A FRASE É `textos_de_aplicacao.frase_do_desfecho`, e só ele —
+    `frase_do_envio` o chama e troca *"aplicado"* por *"enviada"* no ramo feliz,
+    porque por Bluetooth o firmware ACEITA E IGNORA escritas de cor (a medição
+    está em `_TOAST_COR_ENVIADA`, 330 mil escritas ignoradas com a barra
+    apagada). Nada de texto nasce deste lado.
+
+    POR QUE O `RuntimeError` NO RAMO DO GUARDADO, e ele não é "recusa": o único
+    canal que esta tela tem para falar com quem clicou é o cartão do
+    `hefesto_vivo._recusou_dizendo`, e ele só carrega `RuntimeError`. A GTK diz
+    a mesma frase num toast neutro. Entre a frase no cartão e o silêncio, o
+    silêncio é a mentira — quem clica conclui que a cor foi. **RELATO:** um
+    canal de AVISO (nem recusa nem silêncio) no piloto resolveria isto para as
+    dez abas; é `interface/hefesto_vivo.py`, fora do território deste arquivo.
+
+    A COMPARAÇÃO É COM A FRASE FELIZ, e não com `aplicado_em`: quem lê os dois
+    destinos é `frase_do_desfecho`, que conhece as QUATRO razões do daemon e a
+    ordem entre elas — recusa explicada, aplicado, guardado, nada aconteceu.
+    Reler `destinos_da_aplicacao` deste lado para decidir seria a segunda
+    verdade sobre o mesmo payload, e é exatamente o que a ELO-MUDO-01 inverteu:
+    *"antes a janela deduzia e o daemon era ignorado"*. Aqui a janela só
+    pergunta *"a frase que saiu é a do caminho feliz?"* — e cala quando é.
+    """
+    from hefesto_dualsense4unix.app.actions.lightbar_actions import frase_do_envio
+
+    brilho = brilho_do_controle(perfil.ativo(ctx.state.get("active_profile")), uniq)
+    corpo = p.led_set_detalhado(rgb, brightness=brilho, uniq=uniq)
+    if corpo is None:
+        raise RuntimeError(sem_resposta_do_daemon())
+    assunto, enviado = _textos_do_desfecho(brilho, apagando)
+    frase = frase_do_envio(assunto, enviado, corpo,
+                           _janela_do_desfecho(ctx, uniq, _nome_da_coluna(ctx, uniq)))
+    if frase != enviado:
+        raise RuntimeError(frase)
+
+
 @gesto("04-iluminacao.html", "cor")
 def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Ela clicou num tom. A cor vai AO CONTROLE NA HORA.
@@ -1032,6 +1338,9 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     E O DESFECHO SE LÊ — 02/09/2026. A linha era `p.led_set(...)` sem olhar o
     retorno; ver `sem_resposta_do_daemon` para o que isso custava.
+
+    E O BRILHO VIAJA JUNTO — 03/09/2026. Ver `_escrever_a_cor`: até aqui este
+    gesto DESFAZIA o brilho dela a cada clique num tom.
     """
     from hefesto_dualsense4unix.core.led_control import hex_to_rgb
 
@@ -1045,8 +1354,7 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         if _so_abriu_o_seletor(o):
             return
         pedido = str(o.get("valor") or "")
-    if not p.led_set(hex_to_rgb(pedido), uniq=uniq):
-        raise RuntimeError(sem_resposta_do_daemon())
+    _escrever_a_cor(ctx, p, uniq, hex_to_rgb(pedido))
 
 
 @gesto("04-iluminacao.html", "apagar")
@@ -1061,12 +1369,16 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `sem_resposta_do_daemon`. Aqui o silêncio enganava mais: "Desligar" sem
     resposta deixa a barra ACESA, que é exatamente a cara de "não cliquei
     direito".
+
+    O BRILHO VIAJA JUNTO E NÃO MUDA NADA AQUI — `int(0 * b)` é `0` para qualquer
+    `b`. Ele vai assim mesmo porque o caminho de escrita é UM só
+    (`_escrever_a_cor`); uma rota paralela "sem brilho" para o preto seria a
+    segunda escrita da mesma cor, que é como as duas divergiriam depois.
     """
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("apagar: o clique não disse em qual controle")
-    if not p.led_set((0, 0, 0), uniq=uniq):
-        raise RuntimeError(sem_resposta_do_daemon())
+    _escrever_a_cor(ctx, p, uniq, (0, 0, 0), apagando=True)
 
 
 @gesto("04-iluminacao.html", "auto")
@@ -1126,10 +1438,15 @@ def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # uma regra que tem dono (`app/actions/base.numero_do_controle`), e o `or 1`
     # dela era a POSIÇÃO disfarçada de default: um controle sem número nenhum
     # ganharia a cor do P1.
+    #    E O BRILHO VIAJA JUNTO — 03/09/2026. A cor do slot é a IDENTIDADE, e o
+    #    `core/led_control` diz isso com todas as letras: *"A cor daqui é a
+    #    IDENTIDADE (pré-brilho, D8); quem escala pelo `lightbar_brightness` do
+    #    perfil é o provider (D11)"*. Mandá-la sem o brilho fazia este botão
+    #    acender a barra CHEIA num perfil de brilho reduzido — e ficar mais forte
+    #    do que a cor automática que ele promete devolver.
     dele = ctx.por_uniq(uniq) or {}
-    if not p.led_set(tuple(player_slot_color(_numero(ctx, dele or {"uniq": uniq}))),
-                     uniq=uniq):
-        raise RuntimeError(sem_resposta_do_daemon())
+    _escrever_a_cor(ctx, p, uniq,
+                    player_slot_color(_numero(ctx, dele or {"uniq": uniq})))
 
 
 @gesto("04-iluminacao.html", "player")
@@ -1160,7 +1477,11 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
 #: inventado aparece aqui, e não na mão de quem clica.
-PONTE = {"led_set", "identity_number_set", "chamar"}
+#: A PORTA DA COR É A `_detalhado` DESDE 03/09/2026, e `led_set` saiu daqui: o
+#: `bool` dela não carrega `aplicado_em`/`guardado_em`, e sem eles os três
+#: gestos que escrevem cor diziam "aplicou" para um clique que não acendeu nada.
+#: Ver `_escrever_a_cor`.
+PONTE = {"led_set_detalhado", "identity_number_set", "chamar"}
 METODOS = {"lightbar.reset"}
 
 
@@ -1171,13 +1492,16 @@ PAGINA = "04-iluminacao.html"
 PISO_DA_ABA = 4
 PROVAS = [
     {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
-     "chama": [("led_set", [(255, 128, 0)], {"uniq": "aa:bb:cc:00:00:01"})]},
+     "chama": [("led_set_detalhado", [(255, 128, 0)],
+                {"uniq": "aa:bb:cc:00:00:01"})]},
     {"pagina": PAGINA, "gesto": "apagar", "clique": {},  # (noqa-acento) chave do contrato
-     "chama": [("led_set", [(0, 0, 0)], {"uniq": "aa:bb:cc:00:00:01"})]},
+     "chama": [("led_set_detalhado", [(0, 0, 0)],
+                {"uniq": "aa:bb:cc:00:00:01"})]},
     # DUAS chamadas, e a ordem importa: largar o claim e SÓ ENTÃO pintar.
     {"pagina": PAGINA, "gesto": "auto", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["lightbar.reset"], {"uniq": "aa:bb:cc:00:00:01"}),
-               ("led_set", [(0, 0, 255)], {"uniq": "aa:bb:cc:00:00:01"})]},
+               ("led_set_detalhado", [(0, 0, 255)],
+                {"uniq": "aa:bb:cc:00:00:01"})]},
     {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},  # (noqa-acento) id
      "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {})]},
 ]

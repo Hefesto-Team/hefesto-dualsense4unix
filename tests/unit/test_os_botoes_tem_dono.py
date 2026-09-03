@@ -268,8 +268,12 @@ def test_o_automatico_larga_o_claim_e_deixa_a_cor_padrao(pac, ctx):
     p = PonteDeMentira()
     fn(ctx, _clique(), p)
 
+    # A PORTA É A `_detalhado` DESDE 03/09/2026, e o nome muda aqui porque o
+    # que ela carrega mudou: o `bool` do `led_set` não traz
+    # `aplicado_em`/`guardado_em`, e sem eles este botão dizia "aplicou" para um
+    # clique que não acendeu nada. Ver `a04_iluminacao._escrever_a_cor`.
     nomes = [c[0] for c in p.chamadas]
-    assert nomes == ["chamar", "led_set"], (
+    assert nomes == ["chamar", "led_set_detalhado"], (
         f"o 'Automático' fez {nomes}, e devia largar o claim e então pintar. "
         f"Só o reset deixa a barra na última cor — preta, se a última foi um "
         f"Desligar.")
