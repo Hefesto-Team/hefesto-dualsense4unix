@@ -92,12 +92,12 @@ MARCADORES_DE_MIGRACAO = frozenset({
     ".flavor_xbox_migrated",
 })
 
-#: O conjunto FECHADO de nomes que os dois arquivos de teste de migração
-#: escrevem no diretório temporário deles. Conferido em 07/08/2026 contra
-#: `tests/unit/test_coop_default_on_migration.py` e
-#: `tests/unit/test_o_preset_nao_escolhe_a_mascara.py`. Se algum deles ganhar
-#: um nome novo, esta lista tem de ganhar junto — e até lá o diretório novo é
-#: RECUSADO, que é o lado seguro do erro.
+#: O conjunto FECHADO de nomes que a bancada de teste de migração escreve no
+#: diretório temporário dela. Conferido em 03/09/2026 contra
+#: `tests/unit/test_o_preset_nao_escolhe_a_mascara.py` — a ÚNICA viva que abre
+#: um `tmp<8>` com `tempfile.mkdtemp()` e roda as migrações de verdade dentro
+#: dele. Se ela ganhar um nome novo, esta lista tem de ganhar junto — e até lá
+#: o diretório novo é RECUSADO, que é o lado seguro do erro.
 #:
 #: NOTA DATADA — 23/08/2026, reconferido. A segunda bancada mudou de nome
 #: (`test_preset_flavor_migration.py` foi APAGADO em 22/08) e passou a rodar
@@ -107,9 +107,21 @@ MARCADORES_DE_MIGRACAO = frozenset({
 #: bancada — medido rodando o classificador contra o diretório que ela cria —
 #: e o diretório ficava em `/tmp` para sempre quando escapa do berço.
 #:
+#: NENHUM NOME SAI DAQUI QUANDO UMA BANCADA MORRE, e a razão é o que esta lista
+#: É: um retrato do LIXO QUE ESTÁ NO DISCO, não do código de hoje. Os 906
+#: diretórios medidos em 07/08 continuam lá com os nomes que as bancadas de
+#: então escreveram; apagar um nome daqui é ensinar a faxina a RECUSAR
+#: exatamente o resíduo que ela existe para varrer.
+#:
 #: `.flavor_xbox_migrated` FICA: a migração que o escrevia saiu do `loader.py`
 #: em 22/08, mas o marcador continua no disco de quem já rodou a versão velha,
 #: e a faxina tem de saber reconhecê-lo para poder limpá-lo.
+#:
+#: `.coop_default_on_migrated` e o `meu_jogo.json` FICAM pelo mesmo motivo, e a
+#: data é 03/09/2026: a bancada que os escrevia
+#: (`test_coop_default_on_migration.py`) foi apagada em 02/09 junto com a
+#: migração inteira — o commit `11fa3e8b`, "cada controle é um jogador" — e o
+#: resíduo dela é justamente o mais numeroso do `/tmp` dela.
 NOMES_DA_MIGRACAO = frozenset({
     ".coop_default_on_migrated",
     ".coop_default_on_migrated.lock",
