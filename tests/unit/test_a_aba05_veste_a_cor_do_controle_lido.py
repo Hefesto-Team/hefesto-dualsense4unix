@@ -221,19 +221,35 @@ def test_o_chip_da_fita_tem_dono_e_cala_a_cor_que_nao_veio() -> None:
 
     A MORDIDA: tirar o `data-campo` do chip faz o
     `check_identidade_vem_de_cima --bancada --aba 05` voltar de 0 para 8.
+
+    ELA ESCOLHIA OS CHIPS PELA CLASSE `plastico`, e a régua contradizia a si
+    mesma — 03/09/2026. A `fita()` que venceu a integração do dia (a da frente
+    do rádio, ver a nota dentro de `monta.fita`) só põe essa classe no chip que
+    TEM cor lida, o que é a regra dela: campo sem informação não mostra nada.
+    Então o filtro pedia dois chips com a classe e a última linha exigia que o
+    SEGUNDO não tivesse cor — duas coisas que não podem ser verdade juntas, e o
+    merge deixou esta função vermelha no `dev`.
+
+    O ENDEREÇO É QUE É O DONO DO CHIP, e por isso a escolha passa a ser por ele:
+    `data-campo="fita-chip"` está nos dois porque os dois são chip; a classe
+    `plastico` está só em quem veste cor, e agora ela é COBRADA — o que faz esta
+    régua medir uma coisa a mais do que antes de quebrar.
     """
     html = monta.fita(mesa=_mesa(LIDO, SEM_LEITURA))
-    chips = [a for t, a in _elementos_de(html)
-             if "plastico" in (a.get("class") or "").split()]
+    chips = [a for _t, a in _elementos_de(html)
+             if a.get("data-campo") == "fita-chip"]
 
     assert len(chips) == 2, f"a fita não emitiu os dois chips da mesa: {html}"
-    assert all(c.get("data-campo") == "fita-chip" for c in chips), (
-        f"há chip de fita sem endereço: {chips}")
     assert monta.cor_da_zona(LIDO) in chips[0].get("style", ""), (
         "o chip do controle lido não veste a cor dele")
+    assert "plastico" in (chips[0].get("class") or "").split(), (
+        f"o chip do controle lido perdeu a classe que pinta a borda: {chips[0]}")
     assert "--plastico" not in chips[1].get("style", ""), (
         "o chip do controle sem cor legível veste uma cor que ninguém leu: "
         f"{chips[1].get('style')!r}")
+    assert "plastico" not in (chips[1].get("class") or "").split(), (
+        "o chip sem cor lida ficou com a classe da borda colorida, e a borda "
+        f"cairia no tom da folha em vez de sumir: {chips[1]}")
 
 
 def test_a_fita_viva_nao_desiste_quando_a_cor_nao_veio() -> None:
