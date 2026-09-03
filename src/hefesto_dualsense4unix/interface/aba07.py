@@ -241,7 +241,8 @@ LEGENDA = f'''<div class="nota">
   <h2>Ainda aberto</h2>
   <ul>
     <li><b>Os cinco botões de Steam da Sistema vêm para cá?</b> <b>RESPONDIDA — ficam na Sistema</b> (D-A-ABA-LANCADORES-NASCE-PLACEHOLDER). Não reabrir.</li>
-    <li><b>"Abrir o lançador" e "Criar perfil para um jogo" continuam sem endereço</b>, e é decisão: abrir a Steam é <code>xdg-open</code>, não IPC, e criar perfil é da aba Perfis — dois caminhos para o mesmo disco é como duas telas passam a discordar.</li>
+    <li><b>"Abrir o lançador" LIGOU</b> — decisão dela, 03/09/2026. O cartão da Steam chama <code>steam_launch_options.reopen_steam</code>, que existia desde 23/08 com os dois caminhos (o binário <code>steam</code> e o <code>steam://open/main</code> de quem a instalou por Flatpak ou Snap) e <b>zero chamadores vindos da interface</b>. Nos outros cinco o botão <b>recusa dizendo</b>: o produto sabe ONDE eles estão e não sabe abri-los — não há função que abra o Heroic, o Lutris, o RetroArch ou os emuladores, e o Flatpak não é aplicativo. O gesto está em <code>hefesto_vivo.PERIGOSOS</code>, para que a prova automática nunca abra a Steam na tela dela.</li>
+    <li><b>"Criar perfil para um jogo" continua sem endereço</b>, e é decisão: criar perfil é da aba Perfis — dois caminhos para o mesmo disco é como duas telas passam a discordar.</li>
     <li><b>Quem mede Heroic, Lutris e os emuladores?</b> Ninguém, ainda. É varredura nova, não é ligar o que existe — e por isso os cinco cartões dizem <code>NÃO SEI</code> em vez de escolher um selo.</li>
   </ul>
 </div>

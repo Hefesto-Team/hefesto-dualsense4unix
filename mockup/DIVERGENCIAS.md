@@ -21,4 +21,16 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 07-lancadores.html
+- **03/09/2026** — o botão **"Abrir o lançador"** ganhou endereço (decisão 17
+  dela): `data-gesto="abrir-lancador"` e `data-v` com a chave do cartão, nos
+  seis. A legenda da aba trocou junto, porque a linha que dizia *"continua sem
+  endereço, e é decisão"* virou fato errado no mesmo minuto.
+- **O que ela vê na tela dela ENQUANTO espera o OK:** o botão **já funciona**, e
+  não é sorte — a fileira de botões é PINTADA (`{chave}-acoes`, alvo `html`), e
+  o pacote a reescreve com `desenho.acoes_html()` a cada tique. Medido no DOM
+  vivo da página publicada em 03/09: os seis botões carregam o `data-gesto` e o
+  `data-v` certos, e o clique no cartão do Lutris chegou ao Python e recusou
+  dizendo. O que a publicação muda é só a página ESTÁTICA — a primeira meia
+  volta, antes de a pintura chegar — e a legenda.
+- **Quem publica é quem coordena**, no fim da leva, junto com as outras abas.
