@@ -571,7 +571,7 @@ AUTOSTART_CLS = "ok" if AUTOSTART_LIGADO else "off"
 AUTOSTART_CHAVE = " on" if AUTOSTART_LIGADO else ""
 
 
-def est(rot, val, cls="", g="●", mono=False, dica="", ident="", inteiro=None):
+def est(rot, val, cls="", g="●", mono=False, dica="", ident="", inteiro=None, alvo=""):
     """Uma linha de estado: glifo, rótulo à esquerda, VALOR à direita.
 
     O `ident` vira `data-id` NA LINHA, não no `.val`: a pintura precisa de três
@@ -605,12 +605,35 @@ def est(rot, val, cls="", g="●", mono=False, dica="", ident="", inteiro=None):
     #: emitia oito valores e a página não tinha um lugar onde pô-los, e a
     #: pintura escrevia zero sem uma linha de erro. Medido em 01/09/2026.
     c = f' data-campo="{ident}"' if ident else ""
+    #: O TERCEIRO ENDEREÇO, e ele é DO GLIFO — 03/09/2026.
+    #:
+    #: O DEFEITO ESTAVA NA FOTO, e é o pior desta aba porque a linha se
+    #: contradiz DENTRO DE SI MESMA: fotografado às 04:26 com o daemon dela
+    #: vivo, "Pausado" mostrava o valor **Não** (pintado, certo) ao lado de um
+    #: `!` laranja (o literal do desenho, congelado), e "Trocar de perfil ao
+    #: abrir o jogo" mostrava **Sem ver a janela agora** ao lado de um `✓`
+    #: verde. Quem lê o glifo lê o contrário de quem lê o valor.
+    #:
+    #: E O GLIFO NÃO É ENFEITE: o próprio `?` desta aba diz que o selo carrega
+    #: símbolo E cor ao mesmo tempo *para quem não distingue verde de laranja
+    #: ler o estado pelo desenho*. Um glifo congelado é a leitura acessível
+    #: mentindo enquanto a visual acerta.
+    #:
+    #: `{ident}-g` É O NOME QUE A CAMADA JÁ USA: `aba_sistema.Linha` devolve
+    #: `txt`, `cls`, `g` e `dica`, e `a09_sistema` já achatava o `-cls` com
+    #: este mesmo sufixo. O endereço deriva do que `_id()` validou — a base
+    #: continua tendo de existir em `aba_sistema.ENDERECOS`.
+    gc = f' data-campo="{ident}-g"' if ident else ""
+    #: O ALVO DO VALOR. Vazio = texto, que é o de quase todas. `html` existe
+    #: para a linha que precisa levar um `title` PRÓPRIO dentro do valor — ver
+    #: a decisão 2 dela em `pacotes/a09_sistema.py:_curto_e_inteiro`.
+    a = f' data-hef-alvo="{alvo}"' if alvo else ""
     return (f'''            <div class="est {cls}{' vm' if mono else ''}"{t}{i}>'''
-            f'''<span class="g">{g}</span><span class="rot">{rot}</span>'''
+            f'''<span class="g"{gc}>{g}</span><span class="rot">{rot}</span>'''
             # o `title` no VALOR, e não na linha: se ele couber, o hover não
             # aparece atrapalhando; se ele cortar, é ali que a pessoa passa o
             # mouse para ler o resto.
-            f'''<span class="val"{c} title="{inteiro or val}">{val}</span></div>''')
+            f'''<span class="val"{c}{a} title="{inteiro or val}">{val}</span></div>''')
 
 
 def saude(selo, g, txt, dica, glifos=()):
@@ -657,10 +680,30 @@ def item(rotulo, diz, cls="btn", gesto=""):
 #: chega — que é exatamente o engano que custou este comentário. `data-v` é o
 #: nome que o piloto já capta (a aba Conexões o usa em `aba08.py:909`), e o
 #: guia manda usar o vocabulário que existe em vez de inventar um terceiro.
+#: O ENDEREÇO DO ACESO VAI NO BOTÃO, E NÃO NA CAIXA QUE OS CONTÉM — 03/09/2026.
+#:
+#: O `data-id="bateria-perfil"` da `<div class="seg bat-perfis">` era o endereço
+#: da CAIXA, e `a09_sistema.NAO_CHEGA_NA_TELA` já tinha escrito por que ele não
+#: servia: *"o valor é qual dos TRÊS `<button>` leva a classe `on`. O endereço é
+#: o `<div>` que os contém — escrever texto nele apagaria os três botões."*
+#:
+#: A CURA JÁ EXISTIA E ESTA ABA NÃO A USAVA: o alvo `classe` do piloto
+#: (`hefesto_vivo.escrever`) acende a classe no elemento cujo `data-hef-quando`
+#: casa com o valor pintado, e apaga nos irmãos porque os três compartilham o
+#: MESMO `data-campo` — cada um decide por si, e não há caminho em que dois
+#: casem. É a mesma gramática que a aba Vibração usa nos quatro degraus.
+#:
+#: `data-hef-quando` REPETE O `data-v` de propósito: o `data-v` é o que o CLIQUE
+#: manda ao Python e o `data-hef-quando` é o que a PINTURA compara. São as duas
+#: pontas do mesmo botão, e o teste `test_o_aceso_do_perfil_de_bateria_e_dado`
+#: cobra que sejam iguais — escritos separados sem régua, divergem no dia em que
+#: alguém renomear um perfil no produto.
 def _botoes_bateria():
     return "".join(
         f'<button class="{"on" if p == PERFIL_DA_MESA else ""}"'
         f' data-gesto="{_gesto("perfil-da-mesa")}" data-v="{p}"'
+        f' data-campo="{_id("bateria-perfil")}" data-hef-alvo="classe"'
+        f' data-hef-classe="on" data-hef-quando="{p}"'
         f' title="{ROT_PERFIL[p]}: {impoe(p).lower()}. Vale para os {N} controles —'
         f' cada um pode sobrepô-lo na linha dele.">{ROT_PERFIL[p]}</button>'
         for p in ORC["PERFIS"])
@@ -846,10 +889,10 @@ MIOLO = f'''
             <div class="col-est">
 {est("O serviço está", "Ligado", "ok", "✓", ident=_id("hefesto-estado"))}
 {est("Pausado", "Sim, e volta pausado", "warn", "!", dica="A pausa fica gravada em disco e sobrevive a desligar o computador. O botão Retomar, ao lado, é a saída — até 27/08/2026 só o terminal saía dela.", ident=_id("hefesto-pausa"))}
-{est("Trocar de perfil ao abrir o jogo", "Ligado", "ok", "✓", ident=_id("hefesto-troca-de-perfil"))}
+{est("Trocar de perfil ao abrir o jogo", "Ligado", "ok", "✓", ident=_id("hefesto-troca-de-perfil"), alvo="html")}
 {est("Como ele enxerga a janela", "Wayland · COSMIC", "info", "◆", ident=_id("hefesto-ambiente"))}
-              <div class="est {AUTOSTART_CLS}" data-id="{_id("hefesto-autostart")}"><span class="g">{AUTOSTART_G}</span><span class="rot">Ligar junto com o computador</span>
-                <span class="chave{AUTOSTART_CHAVE}" data-gesto="{_gesto("autostart")}"></span></div>
+              <div class="est {AUTOSTART_CLS}" data-id="{_id("hefesto-autostart")}"><span class="g" data-campo="{_id("hefesto-autostart")}-g">{AUTOSTART_G}</span><span class="rot">Ligar junto com o computador</span>
+                <span class="chave{AUTOSTART_CHAVE}" data-gesto="{_gesto("autostart")}" data-campo="{_id("hefesto-autostart")}" data-hef-alvo="classe" data-hef-classe="on"></span></div>
             </div>
             <div class="risco"></div>
             <div class="col-acao">
@@ -1280,7 +1323,12 @@ if _RECAIDA:
 #    autostart: o defeito foi uma linha montada à mão fora do `est()`, e a
 #    próxima linha montada à mão repetiria o vazio. Ela pega a CLASSE do defeito,
 #    não o caso.
-_SEM_GLIFO = re.findall(r'<div class="est[^"]*"[^>]*>\s*<span class="g">\s*</span>'
+#
+#    O `[^>]*` DEPOIS DE `class="g"` ENTROU EM 03/09/2026, com o endereço do
+#    glifo. Sem ele o seletor deixaria de casar com QUALQUER linha — inclusive
+#    com uma vazia — e a régua ficaria verde por cegueira, que é o defeito que
+#    esta casa nomeia como "seletor que casa zero é erro, não silêncio".
+_SEM_GLIFO = re.findall(r'<div class="est[^"]*"[^>]*>\s*<span class="g"[^>]*>\s*</span>'
                         r'\s*<span class="rot">([^<]*)</span>', MIOLO)
 if _SEM_GLIFO:
     raise SystemExit("ERRO: linha de estado sem glifo: "
@@ -1294,7 +1342,7 @@ if _SEM_GLIFO:
 #    defeito nasceu. Sem ela, a mordida "cravo o ✓ com a chave desligada" passa,
 #    e uma mordida que passa não mede nada.
 _LINHA_AUTO = re.search(r'<div class="est ([a-z]*)"[^>]*>'
-                        r'<span class="g">(.)</span><span class="rot">Ligar junto[^<]*</span>\s*'
+                        r'<span class="g"[^>]*>(.)</span><span class="rot">Ligar junto[^<]*</span>\s*'
                         r'<span class="chave( on)?"', MIOLO)
 if not _LINHA_AUTO:
     raise SystemExit("ERRO: a linha do autostart mudou de forma e a régua da coerência "
@@ -1427,14 +1475,28 @@ _NOVO = _BLOCO.replace(
     _ABRE.group(0),
     f'{_ABRE.group(0)[:-1]} data-campo="{CAMPO_DA_FITA}" data-hef-alvo="html">',
     1)
-# O CHIP `Todos` NÃO ENTRA: ele não é aparelho nenhum, não traz cor nem nome de
-# plástico. Endereçá-lo diria que o produto o reescreve por identidade, e
-# endereço morto é exatamente o defeito que esta leva existe para não repetir.
-_NOVO, _QUANTOS = re.subn(r'(<span class="chip plastico[^"]*")',
-                          rf'\1 data-campo="{CAMPO_DO_CHIP}"', _NOVO)
+# O ENDEREÇO DO CHIP É DO `monta.fita()`, E ESTE BLOCO SÓ CONFERE — 03/09/2026.
+#
+# ELE ESCREVIA O `data-campo` DO CHIP, E O ESQUELETO PASSOU A ESCREVÊ-LO
+# TAMBÉM (`interface/monta.py:582`). Como este arquivo não foi rodado depois
+# daquela mudança, o defeito ficou latente: a primeira regeração da aba saiu com
+# `data-campo="fita-chip" data-campo="fita-chip"` nos dois chips — atributo
+# repetido, que o navegador aceita calado ignorando o segundo. Medido aqui, na
+# primeira execução do gerador nesta frente.
+#
+# O CHIP `Todos` CONTINUA DE FORA, e agora é o `monta` quem o deixa de fora: ele
+# não é aparelho nenhum, não traz cor nem nome de plástico, e endereço morto é o
+# defeito que esta leva existe para não repetir.
+#
+# A CONTA FICA. Ela é a régua da forma da fita: se o esqueleto deixar de
+# endereçar os chips, ou passar a endereçar o `Todos`, o número deixa de casar
+# com a mesa e o gerador reprova em voz alta em vez de gravar uma fita muda.
+_QUANTOS = _NOVO.count(f'data-campo="{CAMPO_DO_CHIP}"')
 if len(CONECTADOS) != _QUANTOS:
-    raise SystemExit(f"ERRO: endereçei {_QUANTOS} chips e a mesa tem "
-                     f"{len(CONECTADOS)} conectados — a forma da fita mudou.")
+    raise SystemExit(f"ERRO: o esqueleto endereçou {_QUANTOS} chips e a mesa tem "
+                     f"{len(CONECTADOS)} conectados — a forma da fita mudou. "
+                     f"O dono do `data-campo=\"{CAMPO_DO_CHIP}\"` é "
+                     "`interface/monta.fita()`; esta aba só confere.")
 onde.gravar("09-sistema.html", s[:_ABRE.start()] + _NOVO + s[_FIM:])
 
 print(f"09-sistema: OK, {n} divs · a faixa do serviço: "
