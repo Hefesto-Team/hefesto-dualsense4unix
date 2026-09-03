@@ -84,6 +84,18 @@ rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
 rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
+# 03/09/2026 — O PORTÃO AUTORITATIVO DE MAC ENTRA AQUI, e a razão é medida: os
+# documentos da leva de cliques trouxeram 37 endereços CRUS da bancada, e este
+# teste os acusou — a lista dele já trazia os quatro OUIs. Ele não estava cego;
+# ele só não era rodado. Era teste da SUÍTE, e a suíte roda no FIM: entre o
+# commit que vazou e a reprovação havia um dia inteiro de trabalho.
+# Camada `completo` porque custa ~12 s — varre toda a árvore versionada, e
+# dentro dos `.gz` também.
+completo|mac-por-oui|pytest|tests/unit/test_docs_mac_anonimato.py
+# A TERCEIRA RÉGUA, e ela mede o que as outras duas não podem: fixture de teste
+# tem de usar faixa FORJADA (`aa:bb:cc`), não endereço real podado — a máscara
+# da casa preserva o OUI, e o OUI é identidade de fabricante do aparelho dela.
+completo|mac-de-fixture|pytest|tests/unit/test_anonimato_de_fixtures.py
 completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 # 25/08/2026: o portão que exige que TODO portão tenha quem o rode não era
 # rodado por esta lista — só pela camada `suite`, que é de quem coordena e
