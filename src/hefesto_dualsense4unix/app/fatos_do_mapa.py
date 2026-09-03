@@ -3857,7 +3857,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         },
     },
     'plataforma.camera_ir@dualsense': {
-        'existe': 'desconhecido',
+        'existe': 'nao-tem',
         'cabo': {
             'aceita': 'não',
             'aciona': 'não',
