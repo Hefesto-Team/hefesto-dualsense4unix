@@ -398,7 +398,7 @@ def _sem_marcacao(texto: str) -> str:
 # Quem escolhe o controle é o ALVO DE OUTPUT do daemon, e o handler o congela
 # junto do par: `daemon/ipc_handlers.py:4294` grava `rumble_active_uniq =
 # uniq_do_alvo_de_output(self.controller)`. Sem alvo escolhido o padrão é
-# BROADCAST (`ipc_handlers.py:4303`) — os quatro tremeriam, e a coluna, que é o
+# BROADCAST (`ipc_handlers.py:4368`) — os quatro tremeriam, e a coluna, que é o
 # endereço desta aba, estaria mentindo. Por isso `_mirar()` vem antes.
 #
 # A política é a exceção, e não é descuido meu: ela é DA MESA e o produto sabe
@@ -475,7 +475,7 @@ def _indice(ctx: Contexto, uniq: str) -> int:
 
     O RECURSO À POSIÇÃO NA MESA existe porque nem toda entrada publica `index`
     (backend falso, daemon legado); o próprio handler cai nesse recurso em
-    `_numero_de_exibicao` (`ipc_handlers.py:526`). E se o controle não estiver
+    `_numero_de_exibicao` (`ipc_handlers.py:559`). E se o controle não estiver
     na mesa, levanta: mirar um lugar vazio deixaria o alvo ANTERIOR de pé, e o
     tremor sairia na coluna errada, calado.
     """

@@ -57,7 +57,25 @@ PAGINA = "03-gatilhos.html"
 #: topo, que não é dele. **Não foi esta frente que abriu o vermelho** — ele já
 #: estava no `dev` no momento em que ela começou; foi consertado aqui porque o
 #: arquivo é desta aba.
-DO_CABECALHO = {"conta", "conta-b", "perfil", "fita-chip"}
+#: E ELE É PERGUNTADO, NUNCA DIGITADO — corrigido em 03/09/2026, e é a terceira
+#: régua da casa a cair na MESMA forma no mesmo dia. A lista literal envelheceu
+#: no instante em que o rodapé ganhou endereço: `pacotes.topo()` passou a emitir
+#: `rodape.salvar` e `rodape.exportar`, e esta régua os acusou de "sem dono"
+#: — reprovando a MELHORA em vez do defeito, que é o modo mais caro de errar
+#: que esta casa conhece.
+#:
+#: `topo()` é o dono do cabeçalho das dez páginas. Perguntar a ele é o que faz
+#: a lista acompanhar quem a escreve, em vez de precisar de alguém que se
+#: lembre de vir aqui.
+def _do_cabecalho() -> set[str]:
+    import pacotes  # noqa: F401  (registra os dez)
+    from pacotes import Contexto, topo
+
+    ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
+    # OS QUATRO À MÃO CONTINUAM, e não são redundância: `conta`, `conta-b`,
+    # `perfil` e `fita-chip` saem de `monta.fita()` e da troca do bloco `fita`
+    # no `hefesto_vivo.pintar` — não de `topo()`. Quem os escreve é o piloto.
+    return set(topo(ctx)) | {"conta", "conta-b", "perfil", "fita-chip"}
 
 
 @pytest.fixture(scope="module")
@@ -278,7 +296,7 @@ def test_nenhum_endereco_da_pagina_fica_sem_dono(a03, publicada):
                 f"a caixa de {pref}·{sigla} não tem bloco. Os endereços dela "
                 f"ficam com o que o gerador desenhou, e ninguém acusa.")
 
-    na_pagina = set(re.findall(r'data-campo="([^"]+)"', publicada)) - DO_CABECALHO
+    na_pagina = set(re.findall(r'data-campo="([^"]+)"', publicada)) - _do_cabecalho()
     sem_dono = sorted(na_pagina - set(col) - da_caixa)
     assert not sem_dono, (
         f"{len(sem_dono)} endereço(s) da página que ninguém escreve: {sem_dono}. "

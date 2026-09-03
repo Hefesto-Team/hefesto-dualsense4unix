@@ -220,7 +220,10 @@ def test_o_touchpad_deixou_de_ser_constante(pac, a02):
 #:
 #: O teste abaixo é o que impede esta linha de apodrecer: no dia da publicação
 #: ele reprova, e quem publicar esvazia a lista no mesmo commit.
-ESPERAM_A_PUBLICACAO = ("rodape.exportar", "rodape.salvar")
+#: VAZIA DESDE 03/09/2026 — ela mandou publicar as dez, o `fim.html` chegou às
+#: páginas que o produto renderiza, e os dois deixaram de estar órfãos. Este
+#: teste reprovou no mesmo minuto, que é o que ele foi feito para fazer.
+ESPERAM_A_PUBLICACAO: tuple[str, ...] = ()
 
 
 def test_a_aba_controles_nao_emite_para_endereco_que_a_pagina_nao_tem():
@@ -279,8 +282,23 @@ def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
     import casamento
 
     m = casamento.medir("02-controles.html")
-    assert sorted(m["vazios"]) == [], (
-        f"a página 02-controles.html tem {sorted(m['vazios'])} e ninguém os "
+    # O QUE O PILOTO PINTA NÃO É ÓRFÃO, e a lista é PERGUNTADA — 03/09/2026.
+    # A publicação das dez levou a fita nova à 02, e `fita-chip` apareceu aqui
+    # como "ninguém pinta". Ele tem dono: `monta.fita()` o emite e o piloto
+    # troca o bloco `fita` INTEIRO a cada tique (`hefesto_vivo._fita`), então o
+    # pacote da aba não tem — nem deve ter — opinião sobre ele.
+    #
+    # A LISTA SAI DO GERADOR, e não de nomes digitados: `monta.fita([])` devolve
+    # o HTML que o piloto escreve, e dele se leem os endereços. Digitá-los faria
+    # a quarta régua do dia a envelhecer por literal.
+    import re as _re
+
+    import monta
+
+    do_piloto = set(_re.findall(r'data-campo="([^"]+)"', monta.fita([])))
+    sobrando = sorted(set(m["vazios"]) - do_piloto)
+    assert sobrando == [], (
+        f"a página 02-controles.html tem {sobrando} e ninguém os "
         f"pinta — o rótulo do mockup fica na tela como se fosse leitura.")
 
 

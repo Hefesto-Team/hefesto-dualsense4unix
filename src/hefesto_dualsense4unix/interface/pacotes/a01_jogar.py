@@ -895,6 +895,69 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _lembrar_do_chip("xbox", o)
 
 
+@gesto("01-jogar.html", "mascara")
+def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A máscara de UM aparelho — os chips dentro do cartão de cada controle.
+
+    O PEDIDO É DELA, 03/09/2026: *"É uma máscara por controle. Mesmo caso do
+    anterior."* — e o "anterior" é a decisão dos quatro lugares, no mesmo dia.
+
+    ESTES SEIS CHIPS ESTAVAM MORTOS. A leva que clicou as dez abas mediu:
+    *"`mascara` (6 chips nos cartões) · máscara POR CONTROLE · **NADA. SEM
+    DONO**"*. Clicar não mudava um campo do daemon e não dizia uma palavra.
+
+    E A CASA JÁ TINHA A METADE DIFÍCIL FEITA. `external_mask` guarda a escolha
+    por APARELHO desde 15/08/2026 (MÁSCARA-POR-JOGADOR-01, decisão dela), e
+    `mascara_efetiva` é consultada na criação de todo gamepad virtual — os três
+    degraus do daemon fecharam em 29/08. Faltava só a rota de escrita, que o
+    próprio módulo nomeava: *"quem grava a escolha dela é a rota IPC, que ainda
+    só conhece a máscara da sessão."* Ela nasceu hoje: `gamepad.mask.set`.
+
+    DUAS MÁSCARAS EXISTEM, E TRÊS CHIPS ESTÃO DESENHADOS. `mascaras_validas()`
+    devolve `{dualsense, xbox}` — o "Nintendo Pro" é desenho sem motor, e aqui
+    ele RECUSA DIZENDO em vez de gravar um valor que o daemon não sabe montar.
+    Escolher o silêncio seria repetir o defeito que este gesto veio curar.
+
+    O ALCANCE É O CARTÃO. Sem `uniq` não há a quem aplicar, e "todos" seria a
+    máscara da sessão — que é outro botão, o de cima. A recusa separa os dois
+    casos como a `03-gatilhos` faz: coluna vazia é uma frase, clique sem
+    controle é outra.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+        mascaras_validas,
+        normalizar_mascara,
+    )
+    from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
+
+    uniq = str(o.get("uniq") or "").strip()
+    if not uniq:
+        lugar = str(o.get("controle") or "").strip()
+        if lugar:
+            raise RuntimeError(
+                f"Não há controle no lugar {lugar.upper()}. A máscara é de um "
+                "aparelho: ligue um controle aqui e ele recebe a escolha.")
+        raise ValueError("mascara: o clique não disse em qual controle")
+
+    rotulo = str(o.get("mascara") or o.get("rotulo") or "").strip()
+    if not rotulo:
+        raise ValueError("mascara: o chip não disse qual máscara")
+
+    # A TRADUÇÃO TEM DONO e é lida ao contrário: `NOME_DA_MASCARA` é
+    # `{flavor: rótulo}` e serve à pintura desde que a mesa viva nasceu.
+    # Digitar aqui um segundo mapa faria a tela e o gesto discordarem no dia em
+    # que um rótulo mudasse.
+    por_rotulo = {v: k for k, v in NOME_DA_MASCARA.items()}
+    flavor = por_rotulo.get(rotulo) or normalizar_mascara(rotulo)
+    if flavor is None or flavor not in mascaras_validas():
+        tem = ", ".join(NOME_DA_MASCARA[f] for f in sorted(mascaras_validas())
+                        if f in NOME_DA_MASCARA)
+        raise RuntimeError(
+            f"“{rotulo}” está desenhado na tela e o Hefesto não sabe montar "
+            f"essa máscara. As que existem: {tem}.")
+
+    p.chamar("gamepad.mask.set", {"uniq": uniq, "flavor": flavor})
+
+
 @gesto("01-jogar.html", "modo-navegacao")
 def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Navegação": o controle vira teclado e mouse do computador.

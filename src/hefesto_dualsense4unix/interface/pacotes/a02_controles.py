@@ -931,7 +931,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # DOIS DEFEITOS, e os dois medidos na mesa dela em 02/09/2026, 16h:
             #
             #   1. `speaker.volume` é **0-255**, o registrador do protocolo
-            #      (`ipc_handlers.py:3599`, `:4799`). Com o valor vivo de hoje —
+            #      (`ipc_handlers.py:3664`, `:4799`). Com o valor vivo de hoje —
             #      **102** — este pacote emitia **"102%"** (para o vão
             #      `hidden`, ver o cabeçalho: não chegou aos olhos dela). Uma
             #      porcentagem acima de cem, e ela subiria a "255%" no talo, no
