@@ -61,10 +61,25 @@ cravados). Medido nesta máquina em 02/09/2026, com 4 pastas de atalhos:
 
     heroic · lutris · retroarch · emuladores    NÃO ACHEI
     flatpak                                     achado em `/usr/bin/flatpak`
+    steam                     achada em `/usr/local/share/applications/steam.desktop`
 
 O selo `off` (`NÃO ACHEI`) existia em `SELOS` desde que o desenho nasceu e
 **nenhum caminho o produzia**. Ele era a palavra que faltava para a tela dizer
 o que o produto mediu.
+
+E A SEXTA ENTROU NA BUSCA À NOITE, porque a segunda pergunta não era só dos
+cinco. O cartão da Steam era o único cuja presença ninguém mediu — ele tinha
+CENSO, e ter censo do interior responde outra coisa. Medido com o `HOME` numa
+casa de mentira, `PATH` sem binário e `pastas_de_atalhos` numa pasta vazia:
+
+    ANTES   steam · selo 'ok' (CHEGAM) · presente True · topo "1 encontrado"
+            "Os controles chegam. O atalho de inicialização está no lugar em
+             0 jogos da sua biblioteca."
+    DEPOIS  steam · selo 'off' (NÃO ACHEI) · presente False · topo "0 encontrados"
+
+Uma máquina sem Steam recebia o selo VERDE, na mesma tela em que os outros
+cinco diziam `NÃO ACHEI`. **Na máquina dela nada muda** — a Steam está lá, e a
+busca a acha pelo `.desktop`.
 
 NADA SE REESCREVE — o que este arquivo NÃO faz
 ----------------------------------------------
@@ -132,7 +147,7 @@ SEM_DONO: dict[str, str] = {
                       "responde calado é pior que um que recusa",
     "criar-perfil": "criar perfil é da aba Perfis (`a10_perfis`); dois caminhos "
                     "para o mesmo disco é como duas telas passam a discordar",
-    "heroic": "o produto PROCURA os cinco (`_onde_estao_os_lancadores`, pelas "
+    "heroic": "o produto PROCURA os seis (`_onde_estao_os_lancadores`, pelas "
               "pastas de `.desktop` e pelo `PATH`) e sabe dizer se estão aqui, "
               "mas não LÊ a biblioteca de nenhum deles — nenhuma função de "
               "`src/` abre o catálogo do Heroic, do Lutris, do RetroArch, do "
@@ -230,12 +245,20 @@ def _porque(motivo: str) -> str:
 
 
 def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
-    """PROCURA os cinco lançadores sem censo nesta máquina. Não lê dentro deles.
+    """PROCURA os SEIS lançadores nesta máquina. Não lê dentro de nenhum.
 
     A PERGUNTA É ESTREITA DE PROPÓSITO, e é a única que o produto sabe
     responder hoje sem inventar: *"este lançador está instalado aqui?"* — não
     *"quais jogos ele tem"*, nem *"os controles chegam neles"*. Responder a
     estreita com honestidade vale mais que calar as três.
+
+    A STEAM ENTROU EM 02/09, e ela era a AUSÊNCIA que custava: a busca percorria
+    `SEM_FONTE`, que é a lista de *"não sei ler a biblioteca dele"* — e a Steam
+    não está nela porque o produto LÊ a biblioteca dela. Só que ter censo do
+    interior não responde se o lançador está aqui, e o cartão da Steam nascia
+    com `presente=True` cravado. Numa casa de mentira sem Steam nenhuma o topo
+    dizia **"1 encontrado"** e o cartão acendia o selo verde `CHEGAM`. Agora a
+    lista percorrida é :data:`desenho.PROCURADOS`, que são os SEIS.
 
     AS PASTAS SÃO AS DO MOTOR, e não uma lista minha:
     `jogos_locais.pastas_de_atalhos()` já resolve `XDG_DATA_HOME` e
@@ -245,8 +268,8 @@ def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
     ou um Lutris instalados por Flatpak apareceriam. Repetir a lista aqui seria
     repetir aquele defeito num segundo lugar.
 
-    O CUSTO É UM `stat` POR CANDIDATO, e nenhum `glob`: são cinco lançadores,
-    treze `stem` no total e quatro pastas nesta máquina — 52 verificações de
+    O CUSTO É UM `stat` POR CANDIDATO, e nenhum `glob`: são seis lançadores,
+    dezesseis `stem` no total e quatro pastas nesta máquina — 64 verificações de
     existência, contra as centenas de arquivos que um `glob("*.desktop")`
     abriria. Ainda assim ela roda pela :class:`_Vigia`, fora do tique: disco é
     disco, e o orçamento do tique é de 500 ms para a janela inteira.
@@ -274,7 +297,7 @@ def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
         pastas = []
 
     fora: list[tuple[str, str]] = []
-    for item in desenho.SEM_FONTE:
+    for item in desenho.PROCURADOS:
         onde = ""
         for pasta in pastas:
             for stem in item.atalhos:
@@ -337,6 +360,12 @@ def _ler_do_disco() -> desenho.Leitura:
     Steam quebrada não pode apagar a resposta sobre o Heroic. Eram duas
     perguntas independentes tratadas como uma só, e é assim que uma tela inteira
     cai por causa de um arquivo.
+
+    E DESDE QUE A STEAM ENTROU NA BUSCA, essa ordem passou a valer para ela
+    também: o ramo de erro devolve `onde_estao=onde_estao`, então o cartão da
+    Steam sabe dizer "não achei" mesmo com o vdf ilegível — e sabe **não** dizer
+    isso quando o erro prova que o arquivo existe (ver
+    :meth:`desenho.Leitura.viu_a_biblioteca`).
     """
     from hefesto_dualsense4unix.integrations import prontuario_dos_jogos as pdj
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
