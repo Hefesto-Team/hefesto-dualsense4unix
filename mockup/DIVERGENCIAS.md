@@ -445,3 +445,11 @@ seção daqui**: a aba deixou de estar em trabalho.
   dizendo. O que a publicação muda é só a página ESTÁTICA — a primeira meia
   volta, antes de a pintura chegar — e a legenda.
 - **Quem publica é quem coordena**, no fim da leva, junto com as outras abas.
+## 08-conexoes.html
+- **03/09/2026** — a cor da pílula do Check-up saiu do desenho. Cada linha do
+  exame ganhou um interruptor invisível por estado (`selo-certo`,
+  `selo-atencao`, `selo-nao-sei`; o `problema` já era a própria pílula), e a
+  folha de estilo passa a ler a cor do irmão. Sem isto, um achado `certo` na
+  segunda posição mostrava a palavra **CERTO** dentro da pílula **laranja** —
+  a palavra era do produto, a cor era do mockup.
+  Não publiquei: quem publica é quem integra a leva.

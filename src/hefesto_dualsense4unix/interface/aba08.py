@@ -607,6 +607,29 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .selo.ok{background:var(--green);color:var(--app-bg)}
   .selo.warn{background:var(--orange);color:var(--app-bg)}
   .selo.info{background:var(--comment);color:var(--app-bg)}
+  /* AS TRÊS DE CIMA VIRARAM RESERVA — 03/09/2026. Elas continuam cravadas na
+     pílula porque é o que o desenho ABERTO NO NAVEGADOR mostra (o mockup é
+     HTML estático e ninguém o pinta), e porque uma linha do exame que o
+     produto não preencheu tem de continuar parecendo o que ela parecia.
+
+     QUEM MANDA QUANDO O PRODUTO FALA são as três regras abaixo. O interruptor
+     é um `<i class="est">` invisível por estado, irmão da pílula, com
+     `data-campo` próprio (`a08_conexoes.ENDERECO_DO_ESTADO`) — e o combinador
+     `~` é o que deixa a cor do IRMÃO chegar à pílula sem que a pílula precise
+     de um segundo `data-campo`, que o vocabulário não permite.
+
+     POR QUE NÃO NA PRÓPRIA PÍLULA: o alvo `classe` acende UMA classe por
+     elemento. Com um endereço só, a pílula sabia dizer `problema` e mais nada
+     — e com os três achados `certo` da mesa dela a segunda linha mostrava a
+     palavra CERTO dentro da pílula LARANJA, que é a cor que o mockup cravou
+     naquela posição. A palavra era do produto; a cor, do desenho.
+
+     A ESPECIFICIDADE É O CONTRATO: `.exame .est-ok.on ~ .selo` tem quatro
+     classes e vence `.selo.ok`, que tem duas. */
+  .exame .est{display:none}
+  .exame .est-ok.on ~ .selo{background:var(--green);color:var(--app-bg)}
+  .exame .est-warn.on ~ .selo{background:var(--orange);color:var(--app-bg)}
+  .exame .est-info.on ~ .selo{background:var(--comment);color:var(--app-bg)}
   /* O QUARTO SELO — decisão dela, 02/09/2026: *"o que está quebrado agora não
      pode parecer igual ao que só podia estar melhor"*. O `Item` do exame tem
      QUATRO estados (`certo`, `atencao`, `problema`, `nao_sei`) e esta tela  (noqa-acento: chaves de máquina)
@@ -626,6 +649,14 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      (`gui/aba_conexoes.py`) manda os dois estados para a mesma palavra, e o
      texto do quarto selo ela ainda não disse. Esta leva entrega a cor. */
   .selo.grave{background:var(--red);color:var(--app-bg)}
+  /* O VERMELHO CONTINUA MANDANDO, e a regra abaixo é o que garante isso quando
+     um dos interruptores de estado estiver aceso. Ela não deveria correr nunca
+     — um achado tem UM estado, e o pacote emite o vazio nos outros três
+     endereços —, mas sem ela um instante com dois acesos deixaria o que está
+     QUEBRADO com a cor do que só podia estar melhor, que é exatamente a
+     confusão que ela mandou desfazer em 02/09. Cinco classes: vence as
+     quatro das regras de cima. */
+  .exame .est.on ~ .selo.grave{background:var(--red);color:var(--app-bg)}
   /* O `?` ENCOSTA NO TEXTO E SÓ O IGNORAR FICA ISOLADO — 01/09/2026, decisão
      dela: *"tem que alinhar as tooltip pra ficar do lado esquerdo encostando nas
      palavras e só deixar o ignorar isolado."*
@@ -1273,8 +1304,27 @@ RENOMEAR_DICA = ("Dê um duplo clique para dar um nome seu a este adaptador — 
                  "“Extra”. É por ele que o resto da tela passa a chamá-lo.")
 
 
-def exame(classe, palavra, txt, dica, linha=0):
+#: O ESTADO DA SEGUNDA LINHA DO EXAME, e ele é constante por um motivo de
+#: ferramenta: os `exame(...)` do desenho moram DENTRO do f-string que monta a
+#: aba, e o estado é chave de máquina do `exame_da_mesa.Item` — ASCII por
+#: contrato. O `validar-acentuacao.py` isenta a LINHA que traga `noqa-acento`, e
+#: uma linha de dentro do f-string não pode trazer comentário nenhum: ele sairia
+#: impresso no HTML. Aqui fora, a isenção cabe e diz por quê.
+#:
+#: Os outros três estados do mapa não precisam disto: dois deles não levam
+#: acento, e o terceiro vem colado num `_`, que é o que a régua de acentuação
+#: já não cobra.
+_ATENCAO = "atencao"  # noqa-acento (chave de máquina do exame, ASCII por contrato)
+
+
+def exame(estado, txt, dica, linha=0):
     """Uma linha do exame: o selo, o que ele achou, o `?` e o gesto de ignorar.
+
+    `estado` É O ESTADO DO EXAME, e não mais a classe CSS — 03/09/2026. A classe
+    e a palavra saem de `gui.aba_conexoes.SELO_DO_ESTADO`, que é o dono do mapa e
+    já era quem o produto consultava; digitá-las aqui era a segunda grafia, a que
+    fica para trás no dia em que a primeira mudar. O desenho passa a dizer o que
+    a linha É, e a folha de estilo diz como isso se parece.
 
     O IGNORAR SAIU DA FILEIRA E VIROU GLIFO NA LINHA — 31/08/2026, decisão dela:
     *"ignorar e ver ordens ignoradas … são referentes ao check-up, então colocar
@@ -1319,18 +1369,36 @@ def exame(classe, palavra, txt, dica, linha=0):
 
     `data-hef-quando="problema"` é o gatilho, e ele lê o ESTADO do exame, não a
     classe CSS: quem traduz estado em cor é esta folha de estilo (`.selo.grave`,
-    acima), e é aqui que essa decisão tem de morar. O pacote emite o estado cru
-    (`a08_conexoes.pacote`, chave `selo-estado`), e as cinco linhas se
-    distribuem pela lista como já fazem o selo, o achado e o `?`.
+    acima), e é aqui que essa decisão tem de morar.
 
-    O QUE ELE **NÃO** CURA, e é honesto dizer: as três classes do desenho
-    (`ok`/`warn`/`info`) continuam CRAVADAS por posição. Com três achados
-    `certo`, a segunda linha segue mostrando a palavra CERTO dentro da pílula
-    laranja — defeito antigo, e ele pede um endereço por estado, não um. O que
-    esta linha entrega é o que ela decidiu: `problema` deixa de se parecer
-    com o `atencao` do exame.  (noqa-acento: chave de máquina)
+    **O QUE ELE NÃO CURAVA, E AGORA CURA — 03/09/2026.** A frase que estava aqui
+    dizia que as três classes do desenho (`ok`/`warn`/`info`) continuavam
+    CRAVADAS por posição, e que isso *"pede um endereço por estado, não um"*. Ele
+    ganhou os endereços: os três `<i class="est">` invisíveis abaixo, um por
+    estado, com o `data-campo` que `a08_conexoes.ENDERECO_DO_ESTADO` nomeia. O
+    quarto continua na pílula, porque `problema` é ACRÉSCIMO de cor e não troca.
+
+    O DEFEITO QUE ELES FECHAM, fotografado na mesa dela: com os três achados
+    `certo` do exame de hoje, a segunda linha mostrava a palavra **CERTO** dentro
+    da pílula **laranja** — a cor que o mockup cravou naquela posição.
+
+    OS `<i>` NASCEM COM A COR DO DESENHO ACESA (`on` no que casa com `estado`),
+    e as classes cravadas da pílula FICAM: o mockup é HTML estático, ninguém o
+    pinta quando ela o abre no navegador, e uma linha que o produto não
+    preencheu tem de continuar parecendo o que parecia.
     """
+    classe, palavra = _aba_conexoes.SELO_DO_ESTADO[estado]
+    # UM INTERRUPTOR POR ESTADO, menos o `problema` — ele é a própria pílula.
+    # A ORDEM É A DO MAPA, e o `data-hef-quando` é a chave de máquina do exame:
+    # é ela que o `escrever()` compara com o que o pacote emite.
+    interruptores = "".join(
+        f'<i class="est est-{_aba_conexoes.SELO_DO_ESTADO[e][0]}'
+        f'{" on" if e == estado else ""}" data-campo="{endereco}" '
+        f'data-hef-alvo="classe" data-hef-quando="{e}"></i>'
+        for e, endereco in _pacote08.ENDERECO_DO_ESTADO.items()
+        if endereco != "selo-estado")
     return f'''          <div class="exame" data-campo="exame">
+            {interruptores}
             <span class="selo {classe}" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">{palavra}</span></span>
             <span class="txt" data-campo="achado">{txt}</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html">{dica}</span></span>
@@ -2402,22 +2470,22 @@ MIOLO = f'''
 
           <div class="lado-e">
             <div class="col-exame">
-{exame("ok", "CERTO",
+{exame("certo",
        f'As entradas dão energia para {"os" if len(NO_CABO) > 1 else "o"} {len(NO_CABO)} '
        f'{_plural(len(NO_CABO), "controle", "controles")} no cabo',
        "<b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que "
        "importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma "
        "parece defeito do controle.", linha=0)}
-{exame("warn", "AJUSTAR", "Dois rádios da bancada estão em entradas vizinhas",
+{exame(_ATENCAO, "Dois rádios da bancada estão em entradas vizinhas",
        "<b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na "
        "<b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de "
        "serviço ao lado, e o <b>?</b> dela diz por que isso importa.", linha=1)}
-{exame("ok", "CERTO",
+{exame("certo",
        (f'Os {len(NO_CABO)} controles no cabo têm uma entrada cada um' if len(NO_CABO) > 1
         else 'O controle no cabo tem uma entrada só para ele'),
        f'<b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das '
        f'entradas onde estão o {JOGADORES_NO_CABO}.', linha=2)}
-{exame("info", "NOTA",
+{exame("nao_sei",
        f'{len(RADIOS_VIZINHOS)} rádios vizinhos ativos na faixa de 2,4 GHz',
        f'<b>O que eu vi:</b> {len(RADIOS_VIZINHOS)} fontes de rádio perto. {len(JA_NOMEADOS)} você '
        f'já nomeou; {len(POR_NOMEAR)} continuam por nomear, na tabela de '
@@ -2425,7 +2493,7 @@ MIOLO = f'''
        f'<b>Por que importa:</b> {len(NO_RADIO)} dos seus {len(CONECTADOS)} controles falam nessa mesma '
        f'faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe '
        f'o que dá para desligar e o que não dá.', linha=3)}
-{exame("ok", "CERTO", "Nenhuma outra ordem de serviço pendente",
+{exame("certo", "Nenhuma outra ordem de serviço pendente",
        "<b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou "
        f"ignorar não contam aqui — elas voltam em <b>{VER_IGNORADAS}</b>.", linha=4)}
             </div>
@@ -2728,14 +2796,22 @@ x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
 # que sumiu é *"o bloco que continha este campo foi TROCADO pelo produto — o
 # desenho não sobreviveu, que é o que se queria"* (`regua_do_mockup:_classificar`).
 #
-# POR QUE AQUI E NÃO NO `monta.fita()`: a fita é das DEZ abas, e `monta.py` é
-# de todas. Esta leva conserta UMA aba por árvore, em paralelo — dez agentes
-# editando a mesma linha do `monta.py` é conflito de merge garantido. **O lugar
-# definitivo é `monta.fita()`**, e quem integrar as dez pode promovê-lo lá e
-# apagar este bloco das dez: o efeito é idêntico.
+# **O REMENDO MORREU — 03/09/2026, e a promoção já tinha acontecido.** Este
+# bloco escrevia o `data-campo` aqui porque `monta.py` é das DEZ abas e dez
+# agentes editando a mesma linha seria conflito garantido; ficou escrito que *"o
+# lugar definitivo é `monta.fita()`, e quem integrar as dez pode promovê-lo lá e
+# apagar este bloco"*. Promovido ele foi (`monta.py:536`) — e o `apagar` não.
+#
+# O PREÇO ERA SILENCIOSO E SÓ APARECIA A QUEM RODASSE O GERADOR: com o atributo
+# nos dois lugares, cada chip saía com `data-campo="fita-chip"` DUPLICADO. O
+# navegador fica com o primeiro e a tela não muda uma letra — mas a página
+# publicada e a que o gerador produz deixaram de ser a mesma, que é a divergência
+# que a `mockup/` existe para não deixar acontecer.
+#
+# A CONTAGEM FICA, e é ela que morde: um chip a mais ou a menos que a mesa
+# continua derrubando o gerador.
 _CHIP = '<span class="chip plastico'
 _quantos = x.count(_CHIP)
-x = x.replace(_CHIP, '<span data-campo="fita-chip" class="chip plastico')
 if _quantos != len(CONECTADOS):
     raise SystemExit(
         f"ERRO em 08-conexoes: a fita tem {_quantos} chips de plástico e a mesa "

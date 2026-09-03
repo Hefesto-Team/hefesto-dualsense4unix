@@ -397,6 +397,61 @@ def _itens_da_tela() -> list[Any]:
 #: pode virar nem um verde nem um alarme.
 _SELO_DESCONHECIDO = ("info", "NOTA")
 
+#: UM ENDEREÇO DE PINTURA POR ESTADO, e é o que a `aba08.exame` prometia por
+#: escrito desde 02/09/2026: *"as três classes do desenho (`ok`/`warn`/`info`)
+#: continuam CRAVADAS por posição … ele pede um endereço por estado, não um"*.
+#:
+#: O DEFEITO QUE ISTO FECHA, fotografado na mesa dela em 03/09: o exame devolveu
+#: TRÊS achados, os três `certo`, e a segunda linha mostrava a palavra **CERTO**
+#: dentro da pílula **laranja** — porque a cor vinha da posição no desenho, não
+#: do achado. A palavra era do produto; a cor, do mockup.
+#:
+#: POR QUE UM ENDEREÇO POR ESTADO E NÃO UM SÓ: o alvo `classe` do
+#: `hefesto_vivo.BOOTSTRAP` acende UMA classe por elemento
+#: (`data-hef-classe`/`data-hef-quando`), e o vocabulário de endereço é UM
+#: `data-campo` por nó. Um elemento só não tem como escolher entre quatro
+#: cores — precisa de um interruptor por estado. O desenho os põe como três
+#: `<i class="est">` invisíveis antes da pílula, e a folha de estilo os lê pelo
+#: irmão (`.est-ok.on ~ .selo`). O quarto continua sendo a própria pílula, que
+#: já tinha `data-campo="selo-estado"`.
+#:
+#: `problema` FICA NA PÍLULA de propósito: é o único estado cuja cor é um
+#: ACRÉSCIMO (`.selo.grave`, o vermelho de 02/09) e não uma substituição, e
+#: mudá-lo de endereço quebraria a única metade que já funcionava.
+ENDERECO_DO_ESTADO = {
+    "certo": "selo-certo",
+    "atencao": "selo-atencao",  # (noqa-acento) chave de máquina, ASCII por contrato
+    "problema": "selo-estado",
+    "nao_sei": "selo-nao-sei",
+}
+
+
+def _selos_por_estado(itens: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """Uma lista por estado, e cada uma só responde à SUA pergunta.
+
+    CADA ELEMENTO PERGUNTA UMA COISA SÓ. Um nó com
+    ``data-hef-quando="problema"`` pergunta *"o estado desta linha é
+    `problema`?"*, e as respostas possíveis são `problema` e o vazio — nunca
+    `certo`, que é a resposta de OUTRA pergunta.
+
+    ERA ISSO QUE ESTAVA ERRADO até 03/09/2026: o pacote emitia o estado CRU no
+    único endereço que havia, e com os três achados `certo` da mesa dela a régua
+    do mockup acusava três ENDEREÇOS MORTOS — *"o pacote declara 'certo' e a
+    tela continua em ''"*. A tela estava certa (a linha não é `problema`, logo o
+    vermelho não acende); quem falava a língua errada era o pacote.
+
+    O VAZIO NÃO É "NÃO SEI": é o `não` desta pergunta. O `escrever()` do piloto
+    o traduz em travessão e o alvo `classe` trata travessão como apagado
+    (`hefesto_vivo.BOOTSTRAP`, a função `ligado`), que é exatamente o que se
+    quer — apagar a cor daquele estado.
+    """
+    return {
+        endereco: [
+            (i["estado"] if i["estado"] == estado else "") for i in itens
+        ]
+        for estado, endereco in ENDERECO_DO_ESTADO.items()
+    }
+
 
 def _selo_do_estado(estado: str) -> tuple[str, str]:
     """``(a classe CSS, a palavra)`` do selo — do dono, `gui.aba_conexoes`.
@@ -1323,12 +1378,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # Esta leva entrega a COR; o texto do quarto selo é decisão dela, e
         # escolhê-lo aqui seria escolher no lugar dela.
         #
-        # O ENDEREÇO ESPERA A PUBLICAÇÃO: `selo-estado` existe na bancada
-        # (`mockup/08-conexoes.html`, declarado em `mockup/DIVERGENCIAS.md`) e
-        # ainda não na página publicada. Emitir antes não custa nada — o
-        # `achar()` do piloto não encontra o endereço e escreve zero — e é o
-        # que faz a cor nascer certa no minuto em que ela publicar.
-        "selo-estado": [i["estado"] for i in itens],
+        # SÃO QUATRO ENDEREÇOS, UM POR ESTADO — 03/09/2026. Ver
+        # :func:`_selos_por_estado`: emitir o estado CRU num elemento que
+        # pergunta *"é `problema`?"* era o pacote respondendo a outra pergunta,
+        # e a régua do mockup acusava três endereços mortos por isso.
+        #
+        # OS TRÊS NOVOS SÓ ALCANÇAM A TELA DELA DEPOIS DA PUBLICAÇÃO: eles
+        # existem na bancada (`mockup/08-conexoes.html`) e ainda não na página
+        # publicada. Emitir antes não custa nada — o `achar()` do piloto não
+        # encontra o endereço e escreve zero — e é o que faz a cor nascer certa
+        # no minuto em que ela publicar.
+        **_selos_por_estado(itens),
         # O `porque`, E NÃO O `rotulo` — corrigido em 02/09/2026, e a regra é do
         # produto: `gui.aba_conexoes.html_do_exame` diz, no docstring, *"O texto
         # é o `porque` — a MEDIÇÃO em uma frase —, nunca o rótulo: a tela

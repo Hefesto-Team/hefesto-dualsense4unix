@@ -787,6 +787,29 @@
   .selo.ok{background:var(--green);color:var(--app-bg)}
   .selo.warn{background:var(--orange);color:var(--app-bg)}
   .selo.info{background:var(--comment);color:var(--app-bg)}
+  /* AS TRÊS DE CIMA VIRARAM RESERVA — 03/09/2026. Elas continuam cravadas na
+     pílula porque é o que o desenho ABERTO NO NAVEGADOR mostra (o mockup é
+     HTML estático e ninguém o pinta), e porque uma linha do exame que o
+     produto não preencheu tem de continuar parecendo o que ela parecia.
+
+     QUEM MANDA QUANDO O PRODUTO FALA são as três regras abaixo. O interruptor
+     é um `<i class="est">` invisível por estado, irmão da pílula, com
+     `data-campo` próprio (`a08_conexoes.ENDERECO_DO_ESTADO`) — e o combinador
+     `~` é o que deixa a cor do IRMÃO chegar à pílula sem que a pílula precise
+     de um segundo `data-campo`, que o vocabulário não permite.
+
+     POR QUE NÃO NA PRÓPRIA PÍLULA: o alvo `classe` acende UMA classe por
+     elemento. Com um endereço só, a pílula sabia dizer `problema` e mais nada
+     — e com os três achados `certo` da mesa dela a segunda linha mostrava a
+     palavra CERTO dentro da pílula LARANJA, que é a cor que o mockup cravou
+     naquela posição. A palavra era do produto; a cor, do desenho.
+
+     A ESPECIFICIDADE É O CONTRATO: `.exame .est-ok.on ~ .selo` tem quatro
+     classes e vence `.selo.ok`, que tem duas. */
+  .exame .est{display:none}
+  .exame .est-ok.on ~ .selo{background:var(--green);color:var(--app-bg)}
+  .exame .est-warn.on ~ .selo{background:var(--orange);color:var(--app-bg)}
+  .exame .est-info.on ~ .selo{background:var(--comment);color:var(--app-bg)}
   /* O QUARTO SELO — decisão dela, 02/09/2026: *"o que está quebrado agora não
      pode parecer igual ao que só podia estar melhor"*. O `Item` do exame tem
      QUATRO estados (`certo`, `atencao`, `problema`, `nao_sei`) e esta tela  (noqa-acento: chaves de máquina)
@@ -806,6 +829,14 @@
      (`gui/aba_conexoes.py`) manda os dois estados para a mesma palavra, e o
      texto do quarto selo ela ainda não disse. Esta leva entrega a cor. */
   .selo.grave{background:var(--red);color:var(--app-bg)}
+  /* O VERMELHO CONTINUA MANDANDO, e a regra abaixo é o que garante isso quando
+     um dos interruptores de estado estiver aceso. Ela não deveria correr nunca
+     — um achado tem UM estado, e o pacote emite o vazio nos outros três
+     endereços —, mas sem ela um instante com dois acesos deixaria o que está
+     QUEBRADO com a cor do que só podia estar melhor, que é exatamente a
+     confusão que ela mandou desfazer em 02/09. Cinco classes: vence as
+     quatro das regras de cima. */
+  .exame .est.on ~ .selo.grave{background:var(--red);color:var(--app-bg)}
   /* O `?` ENCOSTA NO TEXTO E SÓ O IGNORAR FICA ISOLADO — 01/09/2026, decisão
      dela: *"tem que alinhar as tooltip pra ficar do lado esquerdo encostando nas
      palavras e só deixar o ignorar isolado."*
@@ -1481,8 +1512,8 @@
     <div class="fita" title="O que você mudar nesta aba vai para o controle escolhido aqui.">
       <span>Selecionar:</span>
       <span class="chip">Todos</span>
-      <span data-campo="fita-chip" class="chip plastico on" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
-      <span data-campo="fita-chip" class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
+      <span class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
+      <span class="chip plastico" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1571,30 +1602,35 @@
           <div class="lado-e">
             <div class="col-exame">
           <div class="exame" data-campo="exame">
+            <i class="est est-ok on" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
             <span class="txt" data-campo="achado">As entradas dão energia para o 1 controle no cabo</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma parece defeito do controle.</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="0" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
+            <i class="est est-ok" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn on" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo warn" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">AJUSTAR</span></span>
             <span class="txt" data-campo="achado">Dois rádios da bancada estão em entradas vizinhas</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na <b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de serviço ao lado, e o <b>?</b> dela diz por que isso importa.</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="1" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
+            <i class="est est-ok on" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
             <span class="txt" data-campo="achado">O controle no cabo tem uma entrada só para ele</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das entradas onde estão o Player 1.</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="2" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
+            <i class="est est-ok" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info on" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo info" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">NOTA</span></span>
             <span class="txt" data-campo="achado">4 rádios vizinhos ativos na faixa de 2,4 GHz</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> 4 fontes de rádio perto. 2 você já nomeou; 2 continuam por nomear, na tabela de <b>Rádio e adaptadores</b>.<br><br><b>Por que importa:</b> 1 dos seus 2 controles falam nessa mesma faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe o que dá para desligar e o que não dá.</span></span>
             <button class="ignora" data-gesto="ignorar" data-v="3" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
+            <i class="est est-ok on" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
             <span class="txt" data-campo="achado">Nenhuma outra ordem de serviço pendente</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou ignorar não contam aqui — elas voltam em <b>Ver as ordens ignoradas</b>.</span></span>
