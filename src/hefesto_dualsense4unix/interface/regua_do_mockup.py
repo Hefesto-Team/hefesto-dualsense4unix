@@ -146,6 +146,32 @@ def _espremer(texto: str) -> str:
     return " ".join(texto.split())
 
 
+class _SoOTexto(html.parser.HTMLParser):
+    """O texto de um trecho de HTML, sem as tags. Ver :func:`_so_o_texto`."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.pedacos: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self.pedacos.append(data)
+
+
+def _so_o_texto(marcado: str) -> str:
+    """``"hoje <b>segue o global</b>"`` → ``"hoje segue o global"``.
+
+    O QUE ELA MOSTRARIA se este HTML fosse escrito no ``innerHTML``, lido do
+    jeito que esta régua lê o alvo ``html``: pelo TEXTO. Nenhuma tag acrescenta
+    espaço — ``textContent`` cola ``<b>a</b>b`` como ``"ab"``, e o ``<br>`` não
+    vira branco nenhum —, então concatenar os dados do parser reproduz o
+    navegador. As entidades vêm resolvidas (``convert_charrefs``), como no DOM.
+    """
+    p = _SoOTexto()
+    p.feed(marcado)
+    p.close()
+    return _espremer("".join(p.pedacos))
+
+
 @dataclasses.dataclass(frozen=True)
 class _Campo:
     """Um endereço de pintura, com o que o ARQUIVO crava nele.
@@ -796,6 +822,25 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
         # que emite o número `80` via `el.value = 80` deixa `"80"` na tela, e
         # comparar `80` com `"80"` acusa o produto que acertou.
         return "" if declarado is None else str(declarado)
+    if campo.alvo == "html":
+        # O TERCEIRO ALVO DA DECISÃO 15 DELA — 03/09/2026, e ele faltava: *"a
+        # régua aprende os alvos que faltam (`largura`, `valor`, `html`), como
+        # já traduz `classe` e `cor`"*. Os dois primeiros entraram; este não.
+        #
+        # A TRADUÇÃO É A MESMA IDEIA DAS OUTRAS: entre o que o pacote EMITE e o
+        # que a régua LÊ há uma conversão, e comparar cru com cru acusa endereço
+        # morto sobre o produto que acertou. Aqui a conversão é a mais grosseira
+        # de todas — o pacote emite `<b>segue o global</b>` e esta régua lê o
+        # alvo `html` pelo TEXTO, de propósito (ver `_campo` e o `LER_CAMPOS` do
+        # piloto: o WebKit devolve o `innerHTML` normalizado, e a forma do
+        # arquivo nunca casaria com a do navegador).
+        #
+        # MEDIDO em 03/09/2026, na aba Conexões: `p1·teto-explica` e
+        # `p2·teto-explica` saíam como ENDEREÇO MORTO com o produto pintando os
+        # dois a cada tique, e o texto na tela byte a byte igual ao emitido. A
+        # única diferença eram as seis tags que a régua não tirava — dois campos
+        # cobrados de uma pintura que estava certa.
+        return _so_o_texto("" if declarado is None else str(declarado))
     if campo.alvo == "cor":
         # O VAZIO APAGA A COR DE LINHA — o `escrever()` põe `''` no
         # `style.color`, e não o travessão, que não é cor nenhuma.
