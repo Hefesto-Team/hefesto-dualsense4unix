@@ -231,13 +231,13 @@ def test_o_token_que_nenhum_degrau_conhece_e_endereco_morto():
     cravados = regua._campos_cravados(DEGRAUS)
     apagada = ["", "", "", ""]
     vereditos = regua._classificar(cravados, apagada,
-                                   {("p1", "degrau"): "maximo"}, [True] * 4)  # noqa-acento
+                                   {("p1", "degrau"): "maximo"}, [True] * 4)  # noqa-acento: valor
     conta = regua._contar(vereditos)
     assert conta[regua.MOCKUP] == 3, (
         "os três degraus que a tela mostra apagados E o arquivo cravou apagados "
         f"têm de acusar o token que ninguém conhece: {conta}")
     mortos = [v for v in vereditos if "ENDEREÇO MORTO" in v.nota]
-    assert len(mortos) == 3 and "'maximo'" in mortos[0].nota, (  # noqa-acento
+    assert len(mortos) == 3 and "'maximo'" in mortos[0].nota, (  # (noqa-acento): valor citado
         "a nota tem de NOMEAR o token que o pacote emitiu — senão quem lê o "
         "relato não sabe o que procurar no código")
 

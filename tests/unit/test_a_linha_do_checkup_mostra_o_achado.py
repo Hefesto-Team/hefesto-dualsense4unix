@@ -159,7 +159,7 @@ def test_um_estado_que_a_tela_nao_conhece_nao_vira_verde():
     assert linha["classe"] == "info"
 
 
-# --- o QUARTO selo: `problema` deixa de parecer `atencao` ---  # (noqa-acento)
+# --- o QUARTO selo: `problema` deixa de parecer `atencao` ---  # (noqa-acento): nome de estado
 
 
 def test_o_problema_e_o_atencao_chegam_a_tela_como_estados_diferentes():
@@ -245,7 +245,7 @@ def test_a_dica_da_linha_traz_as_duas_metades_do_produto():
         PREFIXO_DA_CURA,
     )
 
-    it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento)
+    it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento): nome de estado
     dica = a08._linha(it)["dica"]
     assert DICAS_DAS_LINHAS["energia_das_portas"] in dica
     assert PREFIXO_DA_CURA + it.cura in dica
