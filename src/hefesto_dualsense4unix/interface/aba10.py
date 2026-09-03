@@ -517,8 +517,6 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
         gs = "".join(glifo(p, ativo=on, tam=15) for p in pecas)
         grupos.append(f'<span class="gr{" on" if on else ""}" data-hef="guarda.secao"'
                       f' data-hef-alvo="classe" data-hef-secao="{campo}">{gs}</span>')
-    quantos = (f'{len(tem)} de {len(SECOES)} ajustes só deste controle'
-               if tem else f"nada só dele — herda os {QUANTAS_SECOES} ajustes do perfil")
     # O LUGAR DE QUEM NÃO ESTÁ NA MESA — 31/08/2026, decisão dela, e ela vale para
     # TODA página que eu tocar: *"o espaço fica, mas o nome do canto muda: agora o
     # p3 e o p4 será P3 bolinha Desconectado, igual página gatilhos"*.
@@ -543,13 +541,42 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
     # trazia o aparelho — a fita dizia `P1 · White · USB` e a barra continuava
     # vermelha. Quem escreve `guarda.plastico` é `pacotes/a10_perfis.py`; o valor
     # daqui é só o desenho, e o produto o cobre no primeiro tique.
+    # A DICA DA LINHA NÃO NOMEIA MAIS O APARELHO — 03/09/2026, e é a MESMA lei
+    # da barra logo acima, aplicada ao único lugar desta aba que ela ainda não
+    # tinha alcançado.
+    #
+    # O QUE ESTAVA NA TELA DELA, medido em 03/09 com P1 White no cabo e P2
+    # Galactic Purple no rádio: a primeira célula da linha dizia
+    # `P1 • White • USB` — viva, pelo `guarda.nome` — e o `title` da MESMA linha
+    # respondia `Cosmic Red — 4 de 5 ajustes só deste controle.` As duas metades
+    # da frase eram do desenho, e as duas estavam erradas: o perfil dela guarda
+    # ZERO ajustes por controle, e o painel ao lado já dizia `0 de 2`.
+    #
+    # POR QUE NÃO SE PINTA, e é estrutural: o `escrever()` do piloto e o
+    # `LER_CAMPOS` conhecem os alvos `texto`, `largura`, `valor`, `cor` e
+    # `classe`, e nenhum deles escreve ATRIBUTO. O alvo `atributo` que nasceu
+    # nesta leva também não alcança: a guarda `atributo_escrevivel` só aceita
+    # nome `data-*`/`aria-*`, e `title` fica de fora por construção — a razão
+    # dela é o selo `data-hef-visto`, que decide medição desta casa. Um `title`
+    # emitido pelo gerador é, portanto, congelado no arquivo para sempre.
+    #
+    # TIRAR É A CURA, E NÃO PERDE NADA: o modelo está na PRÓPRIA célula que o
+    # cursor toca (`guarda.nome`, vivo) e a conta está na coluna ao lado
+    # (`guarda.secao`, alvo `classe`, vivo, uma célula por seção). A dica só
+    # repetia — errado — o que a linha já mostra certo. É a decisão nº4 dela
+    # deste mesmo dia, sobre esta mesma tabela: *"Meu Deus melhor nenhuma assim.
+    # Auto falante é auto falante, gatilho é gatilho."*
+    #
+    # A DICA DO LUGAR VAZIO FICA, e a assimetria é o ponto: `P3` é um LUGAR, não
+    # uma peça. Aquela frase não afirma nada sobre aparelho nenhum, então não
+    # envelhece quando a mesa muda — é o oposto exato do que saiu daqui.
     nome = rotulo(c, "curta") if na_mesa else f'P{c["jogador"]}{SEPARADOR}Desconectado'
     plastico = cor_da_zona(c['cor']) if na_mesa else "transparent"
-    dica = (f"{c['nome']} — {quantos}." if na_mesa else
-            f"Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: "
-            f"quando o P{c['jogador']} voltar, ele encontra o que você deixou.")
-    return f'''                  <tr data-hef-uniq="{endereco}"{'' if na_mesa else ' class="fora"'}
-                      title="{dica}">
+    dica = ("" if na_mesa else
+            f'\n                      title="Nenhum controle neste lugar. O perfil '
+            f"guarda o que está aqui pelo ID da peça: quando o P{c['jogador']} "
+            f'voltar, ele encontra o que você deixou."')
+    return f'''                  <tr data-hef-uniq="{endereco}"{'' if na_mesa else ' class="fora"'}{dica}>
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:{plastico}"></span>
@@ -948,6 +975,28 @@ def _conferir(html: str) -> None:
            "a barra do plástico perdeu o alvo `cor` — o `fundo` soma uma pintura por tique")
     exigir("--plastico:" not in html.split('class="miolo"')[-1],
            "voltou um `--plastico` cravado no miolo — identidade de aparelho sem endereço")
+
+    # E A DICA DA LINHA NÃO PODE NOMEAR O APARELHO. Um `title` no `<tr>` é
+    # congelado no arquivo — alvo nenhum do piloto escreve atributo —, então o
+    # nome do modelo ali fica sendo o do MOCKUP enquanto a célula ao lado já
+    # traz o do aparelho. A régua olha o ELEMENTO, e não a frase: proibir os
+    # nomes um a um deixaria o 29º modelo do CSV entrar livre.
+    linhas = re.findall(r"<tr data-hef-uniq=\"[^\"]+\"[^>]*>", html)
+    exigir(len(linhas) == len(MESA),
+           f"não são {len(MESA)} linhas na tabela por controle, e sim {len(linhas)}")
+    na_mesa_com_dica = [t for c, t in zip(MESA, linhas, strict=True)
+                        if c.get("conectado", True) and "title=" in t]
+    exigir(not na_mesa_com_dica,
+           f"{len(na_mesa_com_dica)} linha(s) de controle NA MESA voltaram a ter "
+           f"dica — ela congela o nome do modelo do desenho por cima de um "
+           f"aparelho que é outro")
+    # E a do lugar VAZIO fica: ela fala de um LUGAR, não de uma peça, e some com
+    # a mesma facilidade com que a outra voltaria.
+    fora_sem_dica = [c["pref"] for c, t in zip(MESA, linhas, strict=True)
+                     if not c.get("conectado", True) and "title=" not in t]
+    exigir(not fora_sem_dica,
+           f"o lugar vazio {fora_sem_dica} perdeu a dica que explica por que ele "
+           f"continua na tabela — ela não fala de aparelho nenhum")
 
     # A DIVISÓRIA HORIZONTAL, que ela mandou remover DESTE trecho.
     exigir(".campos > .campo::after" not in html,
