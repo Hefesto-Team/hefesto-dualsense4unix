@@ -150,6 +150,91 @@ NUMEROS = (1, 2, 3, 4)
 #: `<i>` que repetisse `players` receberia a fileira INTEIRA como `innerHTML`.
 ANEL_DO_DONO = "players.dono"
 
+#: O ENDEREÇO DO DESENHO DO CONTROLE, e o alvo que ele exige.
+#:
+#: A LEI DELA, 03/09/2026: *"os svgs do dualsense (…) mudam de acordo com o
+#: controle identificado no canto superior. é white no p1, mas (…) os svgs não
+#: são os que o meu mapa cataloga. isso tá errado"*.
+#:
+#: O QUE MUDA NO DESENHO É UM ATRIBUTO — `data-colorway` —, e é ele que escolhe,
+#: na folha das cores, qual dos vinte e oito modelos pinta as dez zonas. O valor
+#: que este pacote emite é o `colorway` do aparelho, que `mesa_viva.CORES` já
+#: traduziu do código de fábrica lido pelo broker.
+CAMPO_DO_DESENHO = "desenho"
+
+#: O alvo que o `escrever()` do piloto precisa ter para este campo NÃO virar
+#: desastre. Sem o ramo `atributo`, o pintor cai no padrão e faz
+#: `el.textContent = "white"` — num `<svg>`, isso apaga o desenho inteiro e
+#: deixa a palavra no lugar dele. É a regra da casa, escrita pela frente que
+#: nasceu o alvo: *endereço com o alvo errado é pior que sem endereço*.
+ALVO_DO_DESENHO = "atributo"
+
+#: O que o desenho precisa dizer para receber o colorway. Os três andam juntos:
+#: o endereço, o alvo, e o NOME do atributo a escrever.
+_PEDE_O_DESENHO = (
+    f'data-campo="{CAMPO_DO_DESENHO}"',
+    f'data-hef-alvo="{ALVO_DO_DESENHO}"',
+    'data-hef-atributo="data-colorway"',
+)
+
+_PINTA_O_DESENHO: bool | None = None
+
+
+def a_pintura_alcanca_o_desenho() -> bool:
+    """Dá para pintar o colorway do desenho HOJE, nesta árvore?
+
+    DUAS PERGUNTAS, e as duas têm de responder sim — porque o desenho e o pacote
+    chegam ao produto em tempos diferentes (é a régua
+    `test_o_pacote_cabe_na_pagina_publicada`, e as três frentes devolvidas que a
+    fizeram nascer):
+
+    1. **a página PUBLICADA tem onde pôr?** Enquanto ela não mandar publicar a
+       04, o produto renderiza o desenho de ontem, sem o endereço — e o valor
+       seria órfão. É o mesmo `_so_se_a_pagina_tiver` da `a02_controles`, e
+       `publicado=True` é deliberado: o piloto abre SEMPRE o publicado.
+    2. **o PINTOR sabe escrever atributo?** O alvo `atributo` nasceu numa frente
+       irmã. Sem ele, `escrever()` cai no ramo padrão e escreve o colorway como
+       TEXTO dentro do `<svg>` — o desenho do controle some da tela dela e vira
+       a palavra `white`. Esta metade FALHA FECHADA de propósito: qualquer coisa
+       que ela não reconheça no fonte do piloto vira "não emita".
+
+    LER O FONTE DO PILOTO É O CAMINHO CURTO, e é o mesmo que a régua da 05 já
+    faz (`test_todo_alvo_que_a_pagina_pede_o_pintor_sabe_escrever`). Importá-lo
+    traria GTK e WebKit para dentro de um pacote que roda a cada tique.
+    """
+    global _PINTA_O_DESENHO
+    if _PINTA_O_DESENHO is None:
+        from hefesto_dualsense4unix.interface import onde
+
+        try:
+            pagina = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+        except OSError:
+            pagina = ""
+        try:
+            piloto = (onde.AQUI / "hefesto_vivo.py").read_text(encoding="utf-8")
+        except OSError:
+            piloto = ""
+        _PINTA_O_DESENHO = (all(p in pagina for p in _PEDE_O_DESENHO)
+                            and f"alvo === '{ALVO_DO_DESENHO}'" in piloto)
+    return _PINTA_O_DESENHO
+
+
+def colorway_do_aparelho(casa: dict[str, Any]) -> str:
+    """O `colorway` daquele controle, ou `""` quando ninguém o leu.
+
+    O `""` É METADE DA REGRA, e é dela: *campo sem informação não mostra nada*.
+    O alvo `atributo` APAGA o `data-colorway` num valor vazio, e o desenho cai
+    nos `fill` crus do `ds_limpo.svg` — um DualSense sem identidade, que é o
+    honesto quando o mapa de canais responde que a cor não se lê naquele
+    transporte. Deixar o atributo faria o contrário: manteria o colorway do
+    MOCKUP na tela sobre um aparelho que é outro, que é o defeito que esta
+    entrega existe para matar.
+
+    NÃO HÁ TABELA NOVA AQUI. `mesa_viva.CORES` já traduziu o código de fábrica
+    do broker para o slug do desenho, e a mesa o carrega em `cor`.
+    """
+    return str(casa.get("cor") or "")
+
 
 def _tinta(rgb: Any) -> str:
     """A cor da tira NO TOM DESTA JANELA — ou `""`, que quer dizer APAGADA.
@@ -969,6 +1054,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: moldura fica cinza, e nunca com a cor de um controle que não é o
             #: dela.
             "plastico": _cor_do_plastico(str(casa.get("cor") or "")),
+            #: O DESENHO DO CONTROLE, e ele é o maior objeto desta tela: 146 px
+            #: de altura por coluna. A moldura já vestia o aparelho desde hoje
+            #: de manhã, e o que ficava dentro dela era o mockup — fotografado
+            #: nesta árvore com a mesa dela: rótulo `P1 • White • USB` e um
+            #: DualSense Cosmic Red desenhado a três centímetros dele.
+            #:
+            #: ELE SÓ SAI SE HOUVER ONDE PÔR E QUEM PINTE — ver
+            #: `a_pintura_alcanca_o_desenho`. Enquanto a 04 não for publicada, o
+            #: produto renderiza o desenho de ontem, que não tem este endereço;
+            #: e sem o alvo `atributo` no piloto, escrever aqui APAGARIA o
+            #: desenho em vez de vesti-lo.
+            **({CAMPO_DO_DESENHO: colorway_do_aparelho(casa)}
+               if a_pintura_alcanca_o_desenho() else {}),
             #: O DESENHO DA LUZ, e não a PALAVRA. Até 02/09/2026 esta linha era
             #: `"aceso": "Aceso" if …`, escrita num `data-campo` de alvo
             #: `texto` — e `el.textContent = "Aceso"` **apagava** as duas tiras
