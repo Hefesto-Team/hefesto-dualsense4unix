@@ -758,3 +758,74 @@ mesmo depois de a 09 ser publicada.
   piloto com a mesa viva — mas só quando **todos** os controles têm cor lida; com
   um controle no rádio sem cor, ela fica com os dois chips do desenho. Está no
   relato da frente, com a linha exata.
+## 03-gatilhos.html
+- **03/09/2026** — **o cabeçalho de cada coluna deixa de ser o controle do
+  desenho.** É a sua lei do dia: *"se no topo tá mostrando controle white player
+  1, então cada aba vai usar os controles lá de cima. Não mistura com a info dos
+  mockups."*
+
+  **O que você viu, e é o que originou isto** — com os seus dois controles na
+  mesa, na mesma tela:
+
+  | | P1 | P2 |
+  | --- | --- | --- |
+  | fita do topo (lida do APARELHO) | `White · USB` | `BT` |
+  | cabeçalho da coluna (do MOCKUP) | `Cosmic Red · USB` | `Starlight Blue · BT` |
+
+  **Nenhum pixel do desenho mudou.** A bancada continua mostrando `Cosmic Red` e
+  `Starlight Blue` com as mesmas duas bordas — o `diff` da página são quatro
+  linhas e só de atributo invisível. O que mudou é que os quatro chips passaram
+  a ter dono:
+
+  | o que entrou | onde | o que faz |
+  | --- | --- | --- |
+  | `data-hef="chip.plastico"` | no `<span>` de cada um dos quatro chips | o endereço que a régua da identidade exige **no elemento que carrega o `--plastico`**: um pai endereçado não dá ao filho o direito de trazer cor congelada |
+  | `class="cabeca" data-campo="chip-do-controle" data-hef-alvo="html"` | no `<div>` que embrulha o chip | é por aqui que o produto ESCREVE: trocando o miolo, o `<span>` sai inteiro — borda, dica e nome. O piloto **não tem alvo que escreva uma propriedade CSS de autor**, e a cor do plástico é `--plastico` no `style` do próprio `<span>` |
+
+  **Por que o endereço que RECEBE fica no embrulho e não no chip** — foi medido
+  e trocado no meio do trabalho: o piloto carimba `data-hef-visto="1"` no
+  elemento que visita, e um endereço DENTRO do HTML comparado faz a comparação
+  nunca mais bater. Com ele no `<span>`, a coluna repintava **a cada tique** (17
+  de 17); com ele no embrulho, 2 de 17 — que é o desenho pintando quando a cor
+  chega. Não muda um pixel, mas o contador de pinturas é o instrumento com que
+  esta casa prova que um endereço existe.
+
+  **O QUE VOCÊ VÊ DEPOIS DE PUBLICAR, medido com o piloto e os seus dois
+  controles em 03/09 à 01h:**
+
+  | coluna | antes | depois |
+  | --- | --- | --- |
+  | P1 (no cabo) | `P1 • Cosmic Red • USB`, borda vermelha | `P1 • White • USB`, **borda branca** |
+  | P2 (no rádio) | `P2 • Starlight Blue • BT`, borda azul | `P2 • BT`, borda neutra |
+  | P3 · P4 | `Desconectado` | `Desconectado` (sem mudança) |
+
+  **O P2 não ganha nome nem cor, e isso é a sua regra, não uma falta.** A leitura
+  da cor do plástico ainda não chega pelo rádio — a mesa nasce com a cor vazia e
+  o nome em `Não sei`. *Campo sem informação não mostra nada*: o chip mostra a
+  posição e o transporte, que são fatos, e cala sobre o plástico. Inventar ali
+  seria vestir aquele controle com o plástico de outro, que é o defeito de
+  origem. **No dia em que a leitura por rádio chegar, o nome e a borda aparecem
+  sozinhos** — nada aqui precisa ser mexido de novo.
+
+  **A borda não some quando não há cor:** o `topo.html` já declara
+  `.chip.plastico{border-color:var(--plastico, var(--border-forte))}`, com a
+  queda escrita.
+
+  **O QUE CONTINUA MENTINDO, e não é desta aba:** a **fita do topo** ainda
+  mostra `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT` na mesma foto em
+  que as colunas já dizem `White` e `BT`. Os chips dela saem de `monta.fita()`,
+  o esqueleto das **dez** páginas, e o piloto só a repinta quando **todos** os
+  controles da mesa têm cor lida (`hefesto_vivo.py:598`) — com um controle no
+  rádio, ela fica inteira no desenho. São 6 achados em cada uma das dez abas, 60
+  na bancada inteira, e a cura é uma linha num arquivo que é de todas. **Não
+  cabia a esta frente:** dez pessoas editando a mesma linha é o que a divisão
+  por arquivo existe para não fazer.
+
+  **O QUE VOCÊ VÊ ENQUANTO ESPERA, e é nada de novo:** a página publicada não
+  tem os três atributos acima, então o piloto não acha onde escrever e o pacote
+  escreve zero neles — `blocos` pousa por seletor CSS e `[data-controle="p1"]
+  .cabeca` não existe lá. **Até você publicar a 03, as colunas continuam
+  dizendo `Cosmic Red` e `Starlight Blue`**, exatamente como hoje; nada piora e
+  nada quebra. Fotografado com o piloto, com a página publicada de agora, para
+  não ser afirmação de leitura de código. **Os quatro chips nascem certos no
+  minuto do `--publicar 03`**, sem ninguém tocar em código.
