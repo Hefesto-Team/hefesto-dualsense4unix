@@ -40,24 +40,44 @@ que saíram daqui e voltaram para o motor.
 primeira redação desta linha errava.** O `alto-estado` é
 `<span class="mudo" data-campo="alto-estado" hidden>` na página publicada
 (`paginas/02-controles.html:1678` e `:2009`), e o `hidden` é LITERAL no gerador
-(`aba02.py:1170`), sem condição; o `escrever` do piloto tem cinco alvos —
-texto, largura, fundo, `value` e `html` — e NENHUM toca o atributo `hidden`
-(zero ocorrências em `hefesto_vivo.py`). O "102%" ia para um vão invisível. O
-que ela VÊ no bloco do alto-falante é o `<span class="n">100</span>` e a
-`.cheio` de `width:100%` do desenho, e **nenhum dos dois tem endereço** — o
-volume na tela dela é 100 cravado, para todo controle, e esta cura não o
-alcança.
+(`aba02.py:1170`), sem condição; o `escrever` do piloto não toca o atributo
+`hidden` em nenhum dos seus alvos. O "102%" ia para um vão invisível.
+
+**O QUE ELA VÊ NO BLOCO DO ALTO-FALANTE JÁ TEM ENDEREÇO — 02/09/2026, decisão
+dela (item 16).** Eram o `<span class="n">100</span>` e a `.cheio` de
+`width:100%` do desenho, sem `data-campo` nenhum: o volume na tela dela era
+**100 cravado, para todo controle**. O gerador passou a endereçá-los
+(`alto-num` e `alto-barra`), e o pacote os emite quando a página publicada os
+tiver — a bancada é dela, e publicar também.
+
+**E O DESENHO AO LADO DO CAMPO CONTRADIZIA O CAMPO, em dois lugares.**
+Fotografado nesta aba em 02/09/2026 às 19h, com os dois controles dela na mesa:
+
+    o campo dizia          o desenho ao lado mostrava
+    luz-hex  = #0000FF     um retângulo #7EB8D4 (a cor do mockup)
+    touch-estado = Sem toque   o pontinho ciano ACESO, em left:62%;top:44%
+
+**A régua do mockup é estruturalmente cega aos dois**: ela conta `data-campo`, e
+nem o retângulo nem o pontinho tinham um — `02-controles` dava `23 campos · 23
+PRODUTO · 0 MOCKUP` nas duas fotos. Só o olho pega, e é por isso que a foto é
+obrigatória nesta casa. Os dois ganharam endereço no gerador (`luz-cor` e
+`touch-ponto`) e dono aqui.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
 from hefesto_dualsense4unix.app.widgets.controller_card import (
+    acao_mic,
+    acao_speaker_mudo,
     rotulo_lightbar,
     speaker_do_entry,
+    touchpad_do_inputs,
 )
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques, texto_volume
+from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
 
 from . import Contexto, registrar
 
@@ -84,9 +104,19 @@ from . import Contexto, registrar
 #   `rotulo_lightbar`    cor de fonte DESCONHECIDA não é `#000000`.
 #   `mascara_viva`       `uhid` é BACKEND, e a tabela de nomes é de MÁSCARA.
 #
-# E UM SEXTO FOI MEDIDO E RECUSADO: `touchpad_do_inputs`. O enunciado desta
-# frente o dava como o dono do "toque", e ele é o dono da POSIÇÃO — a razão
-# está no ponto de uso, e ela é uma medição, não uma opinião.
+# E EM 02/09/2026 À NOITE ENTRARAM MAIS QUATRO, com o que cada um curou:
+#
+#   `touchpad_do_inputs` os TRÊS estados do touchpad numa função só, e a
+#                        POSIÇÃO do dedo, que esta aba nunca pediu a ninguém.
+#                        Ele tinha sido RECUSADO aqui, e a recusa caiu: ela era
+#                        sobre um bloco que o daemon não publica. Ver o bloco
+#                        `O TOUCHPAD`, com as 60 leituras.
+#   `percentual_do_volume`  a curva medida no hardware, para o número e a barra
+#                        do volume — os mesmos 0-100 que `texto_volume` usa.
+#   `acao_mic`           sem leitura de `audio` o botão do 🎙 CHUTAVA:
+#                        `bool(None)` → `False` → `mic_set(True)`.
+#   `acao_speaker_mudo`  o ♪ sem volume conhecido travava no daemon, e não
+#                        aqui. Recusa de longe depende do outro lado recusar.
 #
 # O IMPORT É POR SÍMBOLO, e isso importa para o `portao_a_casa_sabe_e_o_produto_
 # nao_faz`: ele resolve o nome ao MÓDULO DE ORIGEM (`from x.y import f` conta
@@ -110,23 +140,75 @@ from . import Contexto, registrar
 # três lápides de `interface/monta.py` (`monta`, `luzinhas`, `tom_da_casa`)
 # viraram alcançáveis e o portão reprovou nomeando as três.
 
-#: O TOUCHPAD PRECISA DIZER ALGO QUANDO NINGUÉM ESTÁ TOCANDO. Medido em 29/08:
-#: 238 leituras dos dois controles dela, `touching` verdadeiro em ZERO delas — a
-#: superfície de 148x83 mostrava um ponto invisível em 238 de 238 amostras, e um
-#: retângulo que nunca mostra nada lê como quebrado.
-#:
-#: O RÓTULO DEIXOU DE SER DIGITADO EM 02/09/2026. Ele já dizia, em texto, que
-#: era "o do produto (`app/widgets/sensor_widgets.py`)" — e ainda assim era uma
-#: SEGUNDA CÓPIA das mesmas cinco letras. `texto_toques(0)` é o dono; agora ele
-#: é chamado. Se o produto trocar a palavra, esta tela troca junto, que é a
-#: coisa inteira que a LEI 0 pede.
-SEM_TOQUE = texto_toques(0)
-#: O OUTRO LADO NÃO VEM DO MOTOR, e a diferença é de DADO, não de preguiça: o
-#: produto conta DEDOS (`texto_toques(1)` = "1 toque"), e o `state_full` publica
-#: `touchpad.touching`, que é um booleano — não há contagem para passar. "Tocando"
-#: é a palavra do desenho aprovado (`mockup/02-controles.html`, o card do P1), e
-#: trocá-la por "1 toque" seria mudar TEXTO DE TELA, que é decisão dela.
-COM_TOQUE = "Tocando"
+# ---------------------------------------------------------------------------
+# O TOUCHPAD — UM DONO SÓ, e ele é o do produto
+# ---------------------------------------------------------------------------
+# A GTK PINTA O TOUCHPAD EM QUATRO LINHAS, e elas são o contrato inteiro
+# (`app/widgets/controller_card.py:5068-5080`):
+#
+#     dados = touchpad_do_inputs(inputs)
+#     if dados is None: ...esconde o bloco...
+#     tocando, fx, fy = dados
+#     self._touch_view.set_toque((fx, fy) if tocando else None)   ← O PONTO
+#     self._touch_label.set_text(texto_toques(1 if tocando else 0))  ← A PALAVRA
+#
+# ESTA ABA RECUSOU O DONO EM 02/09/2026, E A RECUSA CAIU. O argumento escrito
+# aqui era que `touchpad_do_inputs` *"exige `bloco['x']` e `bloco['y']`: um
+# bloco com `{"touching": True}` e sem coordenada cai no `except KeyError` e
+# volta `None`"* — e que trocá-lo faria a tela dizer "não sei" sobre um dedo que
+# o daemon ESTÁ vendo.
+#
+# **O DAEMON NÃO PUBLICA ESSE BLOCO.** Quem monta a chave `touchpad` é
+# `daemon/sensor_hub.py:155-161`, e ela é UM literal com as CINCO chaves juntas
+# (`touching`, `x`, `y`, `width`, `height`) — não há caminho no código que
+# escreva `touching` sem escrever `x`. Medido em 02/09/2026 às 19h, com os dois
+# controles dela na mesa (um `usb`, um `bt`), 60 leituras de `daemon.state_full`
+# de LEITURA pura:
+#
+#     touchpad presente ......... 36 amostras
+#     chaves de cada bloco ...... "height,touching,width,x,y"  em 36 de 36
+#     `touching` verdadeiro ..... 0 de 36
+#     `inputs` SEM a chave ...... 24 (o aquecimento: o reader do touchpad nasce
+#                                    sob demanda, `sensor_hub.leitura:113`)
+#     `inputs` não-dict ......... 60 (o controle que não é `is_primary`)
+#
+# O ESTADO QUE A RECUSA PROTEGIA NÃO EXISTE, E O QUE ELA CUSTOU É MAIOR: o
+# `touchpad_do_inputs` é o dono de `fx`/`fy` — a POSIÇÃO do dedo, normalizada
+# pelos limites que o próprio payload declara —, e sem ele esta aba nunca pediu
+# a posição a ninguém. Fotografado em 02/09/2026: com `touching` FALSO nos dois
+# controles, o ponto ciano estava aceso no card do P1, parado em `left:62%;
+# top:44%`, que é onde o mockup o cravou. A dica do próprio campo promete o
+# contrário — *"Sem toque não há ponto"*.
+#
+# DECISÃO DELA, 02/09/2026 (item 15): *"o touchpad usa a palavra do produto:
+# '1 toque', '2 toques', 'Sem toque' (…) E o pontinho do touchpad só aparece
+# quando há toque"*. As duas metades são as duas linhas da GTK acima.
+#
+# "2 TOQUES" NÃO SE INVENTA AQUI: `texto_toques` conta DEDOS e o `state_full`
+# publica UM booleano, então a conta que esta aba pode passar é `1 if tocando
+# else 0` — a MESMA da GTK, na mesma linha. No dia em que o daemon publicar o
+# segundo dedo, a palavra sai daqui sem ninguém tocar nesta aba.
+
+
+def toque_do_controle(inputs: Any) -> tuple[str, str]:
+    """`(palavra, ponto)` do touchpad — as duas linhas da GTK, num par.
+
+    `palavra` é o `touch-estado`; `ponto` é o `touch-ponto`, que o desenho lê
+    como CLASSE (`data-hef-alvo="classe"`): `""` apaga o pontinho e qualquer
+    outra coisa o acende (`hefesto_vivo.BOOTSTRAP::ligado`).
+
+    Sem leitura, os DOIS dizem "não sei": a palavra vira o travessão e o ponto
+    apaga. Apagar aqui não é afirmar "ninguém está tocando" — é a mesma recusa
+    que a GTK faz escondendo o bloco inteiro, e é a única coisa que esta tela
+    pode fazer sem inventar uma posição.
+    """
+    lido = touchpad_do_inputs(inputs)
+    if lido is None:
+        import mesa_viva
+
+        return (str(mesa_viva.SEM_LEITOR), "")
+    tocando = bool(lido[0])
+    return (texto_toques(1 if tocando else 0), "sim" if tocando else "")
 
 #: O CLIQUE DO ANALÓGICO — o rótulo dentro do círculo, e ele é ENDEREÇO, não
 #: enfeite: `data-campo="l3"` e `data-campo="r3"` estão na página desde o
@@ -141,11 +223,19 @@ COM_TOQUE = "Tocando"
 #: POR QUE NÃO A COR, que é o que o produto faz: o dono na GTK
 #: (`app/widgets/controller_card.py:5453-5461`) e o piloto antigo desta aba
 #: (`interface/controles_vivos.py:388`) mostram o clique MUDANDO A COR do
-#: rótulo. O piloto único não sabe: o `escrever` do `hefesto_vivo.py:110-153`
-#: tem cinco alvos — `texto`, `largura`, `fundo`, `valor` e `html` — e nenhum é
-#: `color`. Emitir uma cor daqui escreveria `var(--plastico)` DENTRO do círculo,
-#: por `textContent`. Enquanto o piloto não tiver o alvo, o texto é o canal
-#: honesto.
+#: rótulo.
+#:
+#: **FATO SUBSTITUÍDO — O PILOTO PASSOU A SABER.** Aqui estava escrito que *"o
+#: `escrever` tem cinco alvos — texto, largura, fundo, valor e html — e nenhum
+#: é `color`"*. São SETE desde 02/09/2026: `classe` e `cor` entraram
+#: (`hefesto_vivo.py:217` e `:246`), e o comentário do `cor` cita exatamente
+#: esta linha como a dívida que ele veio pagar. Guardar a frase antiga ao lado
+#: da certa obrigaria a próxima pessoa a escolher entre duas afirmações.
+#:
+#: O QUE FALTA AGORA NÃO É O ALVO, É A PALAVRA DELA: trocar `[L3]` por uma
+#: mudança de cor é mudar o que a tela DIZ, e texto de tela é decisão dela. O
+#: caminho está aberto e custa duas linhas — o `data-hef-alvo="cor"` no
+#: `.rotl` do gerador e a cor emitida aqui.
 ROTULO_DO_CLIQUE = {"l": "L3", "r": "R3"}
 CLICADO = "[%s]"
 
@@ -222,6 +312,79 @@ def luz_hex(rotulo: str | None, base: tuple[int, ...] | None) -> str:
     # sem tipagem, então tudo o que vem dele é `Any` — devolver `Any` de uma
     # função declarada `str` reprova com `no-any-return`.
     return str(mesa_viva.SEM_LEITOR)
+
+
+def _cor_da_barra(rotulo: str | None, base: tuple[int, ...] | None) -> str:
+    """A cor do RETÂNGULO, do mesmo par que decide o `luz_hex`. `""` = apague.
+
+    O CAMPO E O DESENHO PASSAM A DIZER A MESMA COISA, e é por isso que os dois
+    saem da mesma resposta do motor: enquanto o retângulo era pintura do
+    gerador, ele afirmava a cor do mockup enquanto o campo ao lado dizia a cor
+    viva — ou o travessão.
+
+    "Apagada" mostra PRETO, que é o que uma barra sem corrente emite; os três
+    "não sei" mandam vazio, e o vazio devolve o retângulo à folha de estilo em
+    vez de inventar uma cor.
+    """
+    hex_ = luz_hex(rotulo, base)
+    return hex_ if hex_.startswith("#") else ""
+
+
+# ---------------------------------------------------------------------------
+# O QUE A PÁGINA PUBLICADA TEM — e por que o pacote precisa perguntar
+# ---------------------------------------------------------------------------
+# QUATRO ENDEREÇOS DESTA ABA NASCERAM NA BANCADA, e a bancada é dela: o gerador
+# (`interface/aba02.py`) escreve em `mockup/`, e o produto só recebe pelo
+# `scripts/check_o_desenho_aprovado.py --publicar 02`, que é ATO DELA.
+#
+# EMITIR ANTES DE ELA PUBLICAR NÃO É INOFENSIVO, e o preço está medido: o
+# `casamento.medir("02-controles.html")` compara o que o pacote emite com os
+# `data-campo` da página PUBLICADA, e toda chave a mais entra em `orfaos`.
+# **QUEM REPROVA É `test_o_clique_do_analogico_tem_dono::test_a_aba_controles_
+# nao_emite_para_endereco_que_a_pagina_nao_tem`** — medido na mordida de
+# 02/09/2026, e a primeira redação desta linha dizia `test_o_casamento_das_dez`,
+# que é FALSO: aquele só cobra `casam >= piso` e `casam != 0`, e passou verde
+# com os quatro órfãos na mesa. Pior que a régua: o pacote contaria os quatro em
+# `cobertura.pintados` e se reportaria pintando o que não pinta, que é
+# exatamente o defeito que o casamento nasceu para pegar (13 relatados, 10
+# pintados, em 01/09/2026).
+#
+# ENTÃO ELE PERGUNTA À PÁGINA, uma vez, e o dia em que ela publicar liga os quatro
+# sem ninguém tocar em código. É o mesmo padrão que a `03-gatilhos` já usa
+# (`a03_gatilhos._enderecos_da_pagina`), e `publicado=True` é deliberado: o
+# piloto abre SEMPRE o publicado (`hefesto_vivo.py:1290`, `:1478`, `:1650`), e
+# contar as casas da bancada endereçaria o que o `WebView` não tem.
+#: O NOME DA PÁGINA, e ele é UM só neste arquivo: a régua dos gestos o lê lá
+#: embaixo, o `_enderecos_da_pagina` o lê aqui, e o `@registrar` o repete porque
+#: o decorador roda antes de qualquer coisa que este módulo defina.
+PAGINA = "02-controles.html"
+
+_ENDERECOS: frozenset[str] | None = None
+
+
+def _enderecos_da_pagina() -> frozenset[str]:
+    """Todo `data-campo` da página PUBLICADA. Vazio quando ela não abre."""
+    global _ENDERECOS
+    if _ENDERECOS is None:
+        from hefesto_dualsense4unix.interface import onde
+
+        try:
+            doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+        except OSError:
+            doc = ""
+        _ENDERECOS = frozenset(re.findall(r'data-campo="([^"]+)"', doc))
+    return _ENDERECOS
+
+
+def _so_se_a_pagina_tiver(campos: dict[str, Any]) -> dict[str, Any]:
+    """Dos `campos`, só os que a página publicada tem onde pôr.
+
+    MORDE: devolver `campos` inteiro põe os quatro endereços da bancada em
+    `casamento.medir(...)["orfaos"]` e reprova
+    `test_a_aba_controles_nao_emite_para_endereco_que_a_pagina_nao_tem`.
+    """
+    tem = _enderecos_da_pagina()
+    return {k: v for k, v in campos.items() if k in tem}
 
 
 @registrar("02-controles.html")
@@ -305,25 +468,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # que ninguém estava encostando no touchpad. Um dedo na superfície não
         # mudava um pixel.
         #
-        # E O `or {}` QUE VEIO DEPOIS DEIXOU O TERCEIRO ESTADO DE FORA. A cura
-        # de 02/09 pela manhã lia `e.get("touchpad") or {}` e decidia por
-        # `tem_leitor`, que é `isinstance(inputs, dict)` — mas `inputs` pode
-        # chegar SEM a chave `touchpad`, e aí a tela voltava a dizer "Sem toque"
-        # sobre uma leitura que não existe. É o MESMO `or {}` que já tinha
-        # apagado a diferença entre `None` e `{}` um degrau acima.
-        #
-        # `controller_card.touchpad_do_inputs` NÃO SERVE AQUI, e a medição é de
-        # 02/09/2026 — o enunciado desta frente mandava usá-lo para "o toque", e
-        # ele responde OUTRA pergunta. Ele devolve `(tocando, fx, fy)` e exige
-        # `bloco["x"]` e `bloco["y"]` para normalizar a POSIÇÃO: um bloco com
-        # `{"touching": True}` e sem coordenada cai no `except KeyError` e volta
-        # `None`. Trocado aqui, ele fazia a tela dizer "não sei" sobre um dedo
-        # que o daemon ESTÁ vendo — reprovado por
-        # `test_o_touchpad_deixou_de_ser_constante`, que monta exatamente esse
-        # bloco. Ele é o dono de ONDE está o dedo, não de SE há dedo; o dono do
-        # "se há" na GTK é `sensor_widgets.texto_toques`, que conta DEDOS, e o
-        # `state_full` publica um booleano. Ver o `COM_TOQUE` lá em cima.
-        toque = e.get("touchpad")
+        # HOJE ELE TEM UM DONO SÓ, e é o do produto. A conta dos três estados
+        # (`inputs` ausente · `inputs` sem a chave · o bloco lido) mora inteira
+        # dentro de `touchpad_do_inputs`, e a razão de a recusa anterior ter
+        # caído está no bloco `O TOUCHPAD` no topo deste arquivo, com as 60
+        # leituras que a mediram.
+        toque_txt, toque_ponto = toque_do_controle(e)
         cards[uniq] = {
             "bateria": f"{pct}%" if pct is not None else "—",
             # A BARRA, e ela precisa do NÚMERO CRU: o `escrever` do piloto com
@@ -453,14 +603,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "alto-estado": (
                 texto_volume(*sp_lido) if sp_lido is not None else mesa_viva.SEM_LEITOR
             ),
-            # SEM BLOCO `touchpad` NÃO É "SEM TOQUE". `tem_leitor` separa
-            # `inputs: None` de `inputs: {}` (`ipc_handlers.py:3379-3383`); o
-            # `isinstance` abaixo separa `inputs` COM leitura de `inputs` sem a
-            # chave do touchpad — que é o mesmo travessão, pela mesma razão.
-            "touch-estado": (
-                (COM_TOQUE if toque.get("touching") else SEM_TOQUE)
-                if tem_leitor and isinstance(toque, dict) else mesa_viva.SEM_LEITOR
-            ),
+            # SEM BLOCO `touchpad` NÃO É "SEM TOQUE" — e quem separa os três
+            # estados é o dono, não um `isinstance` escrito aqui.
+            "touch-estado": toque_txt,
             # O CLIQUE DOS DOIS ANALÓGICOS — os dois endereços que a página tinha
             # e ninguém pintava. O rótulo e a marca do clicado são do GERADOR
             # (`ROTULO_DO_CLIQUE` e `CLICADO`, no topo deste arquivo), e o
@@ -474,6 +619,69 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 for campo, rot in (("l3", ROTULO_DO_CLIQUE["l"]),
                                    ("r3", ROTULO_DO_CLIQUE["r"]))
             },
+            # OS TRÊS DA BANCADA. Eles só entram quando a página publicada tem
+            # onde pô-los — ver `_so_se_a_pagina_tiver`, logo acima.
+            **_so_se_a_pagina_tiver({
+                # O PONTINHO DO TOUCHPAD, decisão dela de 02/09 (item 15): *"o
+                # pontinho do touchpad só aparece quando há toque — hoje ele
+                # aparece com `touching` falso, contra o que a própria dica
+                # promete"*. É o `set_toque((fx, fy) if tocando else None)` da
+                # GTK, sem o `(fx, fy)`: o piloto único não tem alvo de POSIÇÃO
+                # (os sete são texto·largura·fundo·valor·html·classe·cor), então
+                # o que esta aba alcança é acender e apagar. Ver
+                # `espera_o_pintor` — a posição já está calculada e sem
+                # endereço.
+                "touch-ponto": toque_ponto,
+                # O VOLUME DO ALTO-FALANTE GANHA ENDEREÇO, decisão dela de
+                # 02/09 (item 16): *"o número E a barra. Hoje os dois estão
+                # congelados no desenho: com o volume em 40, a tela continua
+                # mostrando 100"*. Medido na foto de 02/09 às 19h: o bloco
+                # mostra `100` e a barra cheia para os DOIS controles, e nem o
+                # `<span class="n">` nem o `.cheio` tinham `data-campo`.
+                #
+                # A CONTA É DO MOTOR: `percentual_do_volume` é a curva MEDIDA no
+                # hardware (`core/speaker_scale.py`), a mesma que
+                # `texto_volume` usa para o `alto-estado` — dois campos do mesmo
+                # bloco divergirem por causa de dois arredondamentos é o defeito
+                # que aquele módulo existe para não cometer.
+                "alto-num": (
+                    percentual_do_volume(sp_lido[0]) if sp_lido is not None
+                    else mesa_viva.SEM_LEITOR
+                ),
+                # A BARRA VAI A ZERO QUANDO NÃO SE SABE, e é o mesmo desfecho
+                # que a `bateria-barra` já tem duas dúzias de linhas acima, pela
+                # mesma razão: `largura` é um dos ALVOS_QUE_O_TRAVESSAO_NAO_
+                # ATENDE (`pacotes/__init__.py:391`) — `width: "—%"` o CSSOM
+                # recusa e o contador de pintura soma +1 por tique para sempre.
+                # Deixá-la na largura do desenho seria a tela afirmando um
+                # volume que ninguém mediu; o número ao lado diz `—`, que é o
+                # que separa "zero" de "não sei".
+                "alto-barra": (
+                    percentual_do_volume(sp_lido[0]) if sp_lido is not None else 0
+                ),
+                # O RETÂNGULO DA BARRA DE LUZ — o desenho que CONTRADIZ o campo
+                # ao lado dele. Fotografado em 02/09/2026 às 19h: o `luz-hex`
+                # dizia `#0000FF` (a cor viva do P1) e o retângulo logo abaixo
+                # estava no `#7EB8D4` que o mockup cravou. A régua do mockup é
+                # cega a isso — ela conta `data-campo`, e o retângulo não tinha
+                # nenhum —, então só o olho pega.
+                #
+                # O ALVO É `cor`, E NÃO `fundo`, e a escolha é medida: o ramo do
+                # `fundo` no piloto é `if(el.style.background !== t){ ...
+                # return 1 }`, e o CSSOM NORMALIZA na atribuição (`#0000FF`
+                # volta `rgb(0, 0, 255)`) — a comparação nunca casa e o contador
+                # soma +1 por tique, para sempre. O ramo do `cor` ESCREVE e
+                # depois COMPARA (`hefesto_vivo.py:246-250`), então é idempotente
+                # por construção. O gerador pinta o retângulo com
+                # `background:currentColor`, e escrever a cor de linha muda o
+                # fundo.
+                #
+                # VAZIO APAGA A COR DE LINHA e o retângulo volta ao `--panel` da
+                # folha de estilo — que é "nada", e é o que ela decidiu para
+                # todo campo sem informação. Os três "não sei" do `luz_hex`
+                # mandam vazio pela mesma razão que ele manda travessão.
+                "luz-cor": _cor_da_barra(rotulo_da_luz, base_da_luz),
+            }),
         }
     return {"cards": cards, "sem_dono": {},
             "cobertura": {"pintados": sum(len(v) for v in cards.values()), "sem_dono": 0}}
@@ -635,6 +843,17 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `mic_set(None)`, que era o botão "Liberar" que ela mandou tirar em 30/08
     (*"o botão do Controle sempre controla a interface"*). Aqui só se alterna
     entre calado e ativo, que é o que os dois estados do selo dizem.
+
+    ONDE AS RECUSAS DESTE GESTO POUSAM, e a resposta mudou em 02/09/2026: no
+    CARTÃO daquele controle, por `Piloto._recusou_dizendo`, que deposita todo
+    `RuntimeError` em `_recados` e o repinta na hora; a frase vence em 30 s
+    (decisão dela: *"é aviso, não estado"*). Até esse dia ela saía no `stderr`
+    do processo, e quem clica na janela não lê o terminal de quem a lançou —
+    então "recusar dizendo" era verdade no código e mentira na tela. Medido
+    aqui com o P1 SEM a chave `audio`: o clique no 🎙 não chamou `mic.set`, e a
+    frase de `acao_mic` apareceu dentro do card do `p1` e sobreviveu à
+    repintura. A régua da casa é `tests/unit/test_a_recusa_chega_ao_cartao.py`,
+    e ela usa justamente este gesto.
     """
     uniq, qual = _uniq(o), str(o.get("mudo") or "")
     if not uniq:
@@ -642,6 +861,24 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     dele = ctx.por_uniq(uniq)
 
     if qual == "microfone":
+        # SEM LEITURA, O BOTÃO NÃO CHUTA — e a regra é do motor, palavra por
+        # palavra: *"mandar um pedido sem saber o estado atual seria chutar
+        # qual é o oposto"* (`controller_card.acao_mic`). Sem a chave `audio`
+        # (o instante seguinte a um hotplug-out, quando o handle novo ainda não
+        # leu um report íntegro) a linha abaixo fazia `bool(None)` → `False` →
+        # `mic_set(True)`: o clique CALAVA um microfone que ninguém sabia se
+        # estava calado, e a tela acendia como se soubesse.
+        #
+        # A FRASE É A DO PRODUTO, e a condição também: `acao_mic(...)` é o dono
+        # dos quatro estados deste botão, e `sensivel=False` é exatamente o
+        # estado em que a GTK deixa o botão CINZA. Só o `valor` dele não serve
+        # aqui — ele inclui a devolução da posse (`None`, o botão "Liberar"),
+        # que ela mandou tirar em 30/08 (*"o botão do Controle sempre controla
+        # a interface"*). Reusar a regra e não a ação é deliberado, e está
+        # escrito para não parecer descuido.
+        acao = acao_mic(dele)
+        if not acao.sensivel:
+            raise RuntimeError(acao.dica)
         # A LEITURA DO FIRMWARE, não o desejo: `mic_mudo` é o que está valendo
         # no plástico agora, e é o que o selo ATIVO/MUDO mostra ao lado.
         agora = bool((dele.get("audio") or {}).get("mic_mudo"))
@@ -652,6 +889,31 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         return
 
     if qual == "alto-falante":
+        # A MESMA TRAVA, DO MESMO DONO. `acao_speaker_mudo` devolve
+        # `sensivel=False` quando não há volume conhecido, e a razão dele é
+        # dura: *"um `muted=True` faria o backend assumir a posse com
+        # preferência ZERO, e o `muted=False` seguinte 'restauraria' essa
+        # preferência — o par tranca o alto-falante em `{'volume': 0, 'muted':
+        # True}` e o próprio botão não tem como soltá-lo (armadilha 2 da
+        # SOM-02, executada contra o backend real)"*.
+        #
+        # ISTO ERA DELEGADO AO DAEMON, e delegar não é travar: a linha abaixo
+        # mandava `muted=True` sem volume e contava com a recusa do
+        # `ipc_handlers.py:4682` para não estragar nada. Recusa de longe é
+        # recusa que depende do outro lado continuar recusando.
+        #
+        # A FRASE NÃO É A DO MOTOR, e a diferença está medida: `DICA_SPEAKER_
+        # SEM_DADO` manda *"use o controle deslizante primeiro"*, e nesta
+        # janela ele NÃO EXISTE — `type="range"` aparece zero vez nas dez
+        # páginas publicadas (medido em 01/09/2026, e o desenho põe uma barra
+        # de pintura no lugar). Mandar alguém a um controle que não está na
+        # tela é pior que não dizer nada.
+        if not acao_speaker_mudo(dele).sensivel:
+            raise RuntimeError(
+                "o volume deste alto-falante ainda é desconhecido, e calar "
+                "antes de saber o volume tranca-o em zero — nem o próprio "
+                "botão o solta depois. O daemon só publica o volume depois de "
+                "o Hefesto escrever um.")
         # O MUDO DE AGORA, pelo mesmo dono que a pintura usa. Esta linha era
         # `alto = dele.get("speaker") or {}` seguida de `alto.get("muted")`, e
         # ela era cega à segunda posição do bloco (`entry.inputs.speaker`) —
@@ -868,10 +1130,19 @@ METODOS: set[str] = set()
 #: exatamente por que o gesto levanta com o motivo em vez de voltar calado.
 #:
 #: CONSEQUÊNCIA NA TELA, e ela é dívida DECLARADA: o botão aceso continua sendo
-#: o que o gerador desenhou, porque a pintura do piloto só sabe escrever texto,
-#: largura, fundo e `value` (`hefesto_vivo.py:100-116`) — não sabe acender uma
-#: classe. Depois de clicar "Nativo", o "Virtual" segue aceso até o gerador
-#: rodar de novo. Ligar isso é do PILOTO, que não é território desta aba.
+#: o que o gerador desenhou. **A RAZÃO ESCRITA AQUI CAIU** — dizia que *"a
+#: pintura do piloto só sabe escrever texto, largura, fundo e `value` — não
+#: sabe acender uma classe"*, e o piloto ganhou o alvo `classe` em 02/09/2026
+#: (`hefesto_vivo.py:217-224`), com `data-hef-quando` para escolher qual do
+#: grupo acende. O que falta agora é do GERADOR e da publicação dela: os dois
+#: botões precisam de `data-campo`/`data-hef-alvo="classe"`/`data-hef-quando`,
+#: e a página publicada precisa recebê-los. Depois de clicar "Nativo", o
+#: "Virtual" segue aceso até o gerador rodar de novo.
+#:
+#: NÃO FOI FEITO NESTA LEVA de propósito: `mic-modo` é o laço do microfone, e o
+#: `data-campo` naquele container já APAGOU os dois botões uma vez (01/09/2026,
+#: `[data-mic-modo]` de 4 para 0, medido no Chrome) — endereçá-lo nas pressas é
+#: repetir o defeito que o comentário do `mic-modo` lá em cima guarda.
 #: TUPLA, e não dicionário com o motivo: as outras cinco abas ligadas declaram
 #: assim (`a03`, `a05`, `a08`, `a09`, `a10`) e o piloto faz
 #: `set(getattr(mod, "SEM_ECO", ()))` — um dicionário passaria, e seria a sexta
@@ -882,23 +1153,38 @@ SEM_ECO = ("mic-modo",)
 
 #: O QUE ESTA ABA DECLARA À RÉGUA. O piso e as provas moram AQUI, e não no
 #: arquivo de teste, para que ligar uma aba não exija editar um arquivo que oito
-#: pessoas editariam ao mesmo tempo.
-PAGINA = "02-controles.html"
+#: pessoas editariam ao mesmo tempo. O `PAGINA` que elas leem é o do topo — ele
+#: era redigitado aqui, e duas cópias do mesmo nome de arquivo é a segunda
+#: verdade que esta casa não guarda.
 #: TRÊS GESTOS, CINCO BOTÕES: o `mudo` atende o 🎙 e o ♪ (mesmo `data-mudo`) e o
 #: `mic-modo` atende o Virtual e o Nativo (mesmo `data-mic-modo`). O piso conta
 #: GESTOS porque é o que o despachante registra — a cobertura por botão está nas
 #: PROVAS abaixo, que são quatro.
 PISO_DA_ABA = 3
+#: OS DOIS BOTÕES DE CALAR SAÍRAM DESTA LISTA EM 02/09/2026, e a razão é da
+#: FIXTURE, não deles. O controle da régua compartilhada é
+#: `test_os_botoes_tem_dono.FALSO`, e ele traz `audio: {}` e `speaker: {}` — um
+#: controle cujo mudo do microfone e cujo volume são DESCONHECIDOS. Nesse
+#: estado o motor manda o botão ficar INSENSÍVEL (`acao_mic`,
+#: `acao_speaker_mudo`), e as duas provas cobravam a chamada — isto é, cobravam
+#: o CHUTE como comportamento esperado:
+#:
+#:     mic_set(not bool(None))    → mic_set(True)   calava sem saber se calado
+#:     speaker_set(muted=True)    sem volume        o par tranca o alto-falante
+#:                                                  em zero, e nem ele o solta
+#:
+#: A COBERTURA NÃO SUMIU, ela MUDOU DE CASA e DOBROU:
+#: `tests/unit/test_a_aba_controles_reusa_o_motor.py` prova os dois botões nas
+#: DUAS pernas — a recusa (com a frase do produto) e a ação (com a leitura no
+#: payload, `mic_set(True)` e `speaker_set(muted=True, volume=102)`). É mais do
+#: que esta lista alcançava, porque lá o controle da régua pode ter estado.
+#:
+#: O QUE FALTA, e é de outro território: o `FALSO` da régua compartilhada
+#: precisa crescer (`"audio": {"mic_mudo": False}` e `"speaker": {"volume":
+#: 102, "muted": False}`). Enquanto ele descrever um controle sem leitura
+#: nenhuma, aba alguma pode provar ali um botão que recusa com honestidade — e
+#: o arquivo é de todas as dez, editado por oito frentes em paralelo.
 PROVAS = [
-    # O 🎙 — e o `True` é o ALTERNAR: o controle da régua vem com `audio: {}`,
-    # logo não está mudo, logo o clique manda calar.
-    {"pagina": PAGINA, "gesto": "mudo", "clique": {"mudo": "microfone"},  # (noqa-acento) id
-     "chama": [("mic_set", [True], {"uniq": "aa:bb:cc:00:00:01"})]},
-    # O ♪ — SEM `volume` no payload, e isso é o contrato: o controle da régua
-    # vem com `speaker: {}`, que é o estado real de quem nunca recebeu um
-    # `speaker.set`. Inventar um número aqui esconderia a recusa do daemon.
-    {"pagina": PAGINA, "gesto": "mudo", "clique": {"mudo": "alto-falante"},  # (noqa-acento) id
-     "chama": [("speaker_set", [], {"muted": True, "uniq": "aa:bb:cc:00:00:01"})]},
     # "Sons do jogo" — a rota sai da constante, nunca do número digitado.
     {"pagina": PAGINA, "gesto": "rota", "clique": {"rota": "jogo"},  # (noqa-acento) id
      "chama": [("speaker_set", [],

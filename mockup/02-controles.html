@@ -1027,9 +1027,44 @@
      148px de superfície são 2,7% do curso, e no fim do curso (100%) o ponto
      saía inteiro para fora do pad. O produto centra: `ctx.arc(px, py, 3.5)`
      em `app/widgets/sensor_widgets.TouchpadView._on_draw`. */
+  /* O PONTO NASCE APAGADO E A CLASSE `on` O ACENDE — decisão dela de
+     02/09/2026: *"o pontinho do touchpad só aparece quando há toque — hoje ele
+     aparece com `touching` falso, contra o que a própria dica promete"*. Ele
+     era pintado pelo `style` do gerador (`opacity:0` só no card que o desenho
+     queria vazio), e por isso ficava aceso na tela dela com o dedo fora do pad
+     — fotografado em 02/09 às 19h, `touch-estado` dizendo "Sem toque" com o
+     ponto ciano no lugar. A CLASSE é o único alvo do piloto que serve: os sete
+     são texto·largura·fundo·valor·html·classe·cor, e `classe` é o único
+     idempotente que liga e desliga (`hefesto_vivo.py:217-224`). */
   .touch .ponto{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--cyan);
-                box-shadow:0 0 8px var(--cyan);transform:translate(-50%,-50%)}
-  .barra-luz{height:20px;border-radius:4px}
+                box-shadow:0 0 8px var(--cyan);transform:translate(-50%,-50%);opacity:0}
+  .touch .ponto.on{opacity:1}
+  /* A COR DA BARRA DE LUZ É `currentColor`, e isso é o que a torna PINTÁVEL.
+     Ela era `style="background:#7EB8D4"` do gerador — desenho cravado ao lado
+     de um campo que já dizia a cor viva, e os dois se contradiziam na mesma
+     moldura. O alvo `fundo` do piloto não serve, e isto está MEDIDO no
+     WebKitGTK — o motor da janela dela —, numa `Gtk.OffscreenWindow` sobre
+     esta página, em 02/09/2026. Os dois ramos, TRÊS escritas do mesmo
+     `#0000FF`, o valor que o P1 dela publica:
+
+         cor    [1, 0, 0]   e `el.style.color` volta `rgb(0, 0, 255)`
+         fundo  [1, 1, 1]   e `el.style.background` volta `rgb(0, 0, 255)`
+
+     O ramo `fundo` compara `el.style.background` com o que VAI escrever, e o
+     CSSOM normaliza na atribuição: a comparação nunca casa e o contador de
+     pintura soma +1 por tique, para sempre. O ramo `cor` escreve e DEPOIS
+     compara, e é idempotente por construção. Daí o desvio: o produto escreve
+     `color` e o `background` o segue — `getComputedStyle(..).backgroundColor`
+     deu `rgb(0, 0, 255)` depois da escrita e `rgb(40, 42, 54)` (o `--panel`)
+     depois do vazio, na mesma medição.
+
+     FATO QUE ISTO DERRUBA: `pacotes/__init__.py:375-382` explica o `fundo`
+     dizendo que o problema é o TRAVESSÃO (`background: "—"` é inválido). É
+     verdade, e é MENOR que o defeito: uma cor perfeitamente VÁLIDA infla o
+     contador do mesmo jeito.
+     SEM COR DE LINHA o retângulo fica `--panel`, que é o "nada" que ela
+     decidiu para todo campo sem informação. */
+  .barra-luz{height:20px;border-radius:4px;background:currentColor;color:var(--panel)}
   /* os analógicos: grandes e SEM moldura, com a cruz de eixos dentro */
   .sticks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   /* o título do analógico é o único sem moldura, e por isso nascia 8px ACIMA dos
@@ -1472,14 +1507,16 @@
         <div>
           <div class="moldura touchp">
             <div class="rot rot-linha">Touchpad
-              <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense só publica posição enquanto alguém encosta na superfície.">Tocando</span></div>
+              <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense só publica posição enquanto alguém encosta na superfície.">1 toque</span></div>
             <div class="touch">
-              <span class="ponto" style="left:62%;top:44%"></span></div>
+              <span class="ponto on" data-campo="touch-ponto" data-hef-alvo="classe"
+                style="left:62%;top:44%"></span></div>
           </div>
           <div class="moldura luz" style="margin-top:9px">
             <div class="rot rot-linha">Barra de luz
               <span class="de-quem" data-campo="luz-hex" title="Este é o código da cor do JOGADOR, não a do plástico — quem escolhe é o produto, pela mesma tabela que acende as cinco lâmpadas (core/led_control.py::player_slot_color). Ele não é digitado aqui: sai da tabela, e muda no dia em que ela mudar.">#7EB8D4</span></div>
-            <div class="barra-luz" style="background:#7EB8D4"></div>
+            <div class="barra-luz" data-campo="luz-cor" data-hef-alvo="cor"
+              style="color:#7EB8D4"></div>
           </div>
           <div class="moldura led" style="margin-top:9px" title="As cinco lâmpadas do controle, no padrão do jogador (1 no meio para o P1, as das pontas para o P2, e assim por diante). É DERIVADO do número do jogador, não lido do aparelho — o daemon publica o número, não o que está aceso.">
             <div class="rot rot-linha">LED do jogador</div>
@@ -1683,8 +1720,9 @@
             </div>
             <span class="onda"><i style="height:100%"></i><i style="height:88%"></i><i style="height:64%"></i><i style="height:92%"></i><i style="height:76%"></i><i style="height:54%"></i><i style="height:82%"></i><i style="height:96%"></i><i style="height:70%"></i><i style="height:48%"></i><i style="height:86%"></i><i style="height:60%"></i><i style="height:74%"></i><i style="height:90%"></i></span>
             <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:100%"></span></span>
-              <span class="n">100</span>
+              <span class="trilho"><span class="cheio" data-campo="alto-barra"
+                data-hef-alvo="largura" style="width:100%"></span></span>
+              <span class="n" data-campo="alto-num">100</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
             </div>
             <div class="rota">
@@ -1805,12 +1843,14 @@
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense só publica posição enquanto alguém encosta na superfície.">Sem toque</span></div>
             <div class="touch">
-              <span class="ponto" style="left:50%;top:50%;opacity:0"></span></div>
+              <span class="ponto" data-campo="touch-ponto" data-hef-alvo="classe"
+                style="left:50%;top:50%"></span></div>
           </div>
           <div class="moldura luz" style="margin-top:9px">
             <div class="rot rot-linha">Barra de luz
               <span class="de-quem" data-campo="luz-hex" title="Este é o código da cor do JOGADOR, não a do plástico — quem escolhe é o produto, pela mesma tabela que acende as cinco lâmpadas (core/led_control.py::player_slot_color). Ele não é digitado aqui: sai da tabela, e muda no dia em que ela mudar.">#FF5555</span></div>
-            <div class="barra-luz" style="background:#FF5555"></div>
+            <div class="barra-luz" data-campo="luz-cor" data-hef-alvo="cor"
+              style="color:#FF5555"></div>
           </div>
           <div class="moldura led" style="margin-top:9px" title="As cinco lâmpadas do controle, no padrão do jogador (1 no meio para o P1, as das pontas para o P2, e assim por diante). É DERIVADO do número do jogador, não lido do aparelho — o daemon publica o número, não o que está aceso.">
             <div class="rot rot-linha">LED do jogador</div>
@@ -2014,8 +2054,9 @@
             </div>
             <span class="onda"><i style="height:70%"></i><i style="height:52%"></i><i style="height:66%"></i><i style="height:44%"></i><i style="height:72%"></i><i style="height:58%"></i><i style="height:48%"></i><i style="height:64%"></i><i style="height:54%"></i><i style="height:70%"></i><i style="height:46%"></i><i style="height:60%"></i><i style="height:50%"></i><i style="height:68%"></i></span>
             <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:70%"></span></span>
-              <span class="n">70</span>
+              <span class="trilho"><span class="cheio" data-campo="alto-barra"
+                data-hef-alvo="largura" style="width:70%"></span></span>
+              <span class="n" data-campo="alto-num">70</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
             </div>
             <div class="rota">
@@ -2168,7 +2209,7 @@
     <li><b>A dica do 🎙 estava errada, e a correção ficou.</b> Ela dizia que o 🎙 <i>"é o mesmo que apertar o botão do controle"</i>, e não é: clicar ali faz o Hefesto <b>tomar</b> o comando do mudo, e o botão do aparelho para de valer. A dica de hoje diz esse preço — é a informação que a antiga escondia.</li>
     <li><b>Os analógicos estavam mentindo de dois jeitos.</b> (1) No fim do curso — analógico todo à esquerda ou todo para cima — o valor <b>0</b> era trocado por <b>128</b>, o centro: a bolinha <b>pulava de volta ao meio</b> no talo. (2) A bolinha era posicionada pelo <b>canto</b> e não pelo <b>centro</b>, então em repouso ela nascia <b>4,7 px</b> abaixo e à direita da cruz — como se cada eixo tivesse 12,5 unidades presas. Agora o desvio em repouso é <b>0,19 px</b> e os dois extremos são simétricos.</li>
     <li><b>O motivo que eu te dei para o acelerômetro não estar na tela era falso.</b> Eu escrevi aqui que <b>"o aparelho não entrega esse dado"</b>. Ele entrega. Medido nos seus dois controles: o mesmo nó de sensor publica os três eixos do acelerômetro a <b>250 leituras por segundo</b>, calibrados, e a conta fecha na gravidade — <b>0,996 g</b> num controle e <b>0,993 g</b> no outro, contra 1 g de referência. Os dois estavam em <b>poses diferentes</b> na sua mesa (25° de diferença), então não é número decorado, é leitura. Quem não lia era o <b>Hefesto</b>: o dado chegava até a linha que o descarta. A pergunta que ficou — <i>vale ler?</i> — foi respondida no dia seguinte, e o campo está na tela desde 30/08.</li>
-    <li><b>O touchpad passou a dizer alguma coisa.</b> Ele é um retângulo que só mostra um ponto <b>enquanto o dedo está lá</b> — e medindo 238 leituras dos seus dois controles, o dedo estava lá em <b>zero</b> delas. Ele nunca mostrava nada. Agora o canto diz <b>Sem toque</b> ou <b>Tocando</b>, como na janela de hoje. E a superfície ganhou a <b>proporção do sensor de verdade</b> (16:9, que é o 1920×1080 do touchpad): ela estava 41% esticada na vertical, e com ela a posição do dedo.</li>
+    <li><b>O touchpad passou a dizer alguma coisa.</b> Ele é um retângulo que só mostra um ponto <b>enquanto o dedo está lá</b> — e medindo 238 leituras dos seus dois controles, o dedo estava lá em <b>zero</b> delas. Ele nunca mostrava nada. Agora o canto diz <b>Sem toque</b> ou <b>1 toque</b> — a palavra do produto, a mesma que a janela de hoje escreve (<code>sensor_widgets.texto_toques</code>), por decisão sua de 02/09. E a superfície ganhou a <b>proporção do sensor de verdade</b> (16:9, que é o 1920×1080 do touchpad): ela estava 41% esticada na vertical, e com ela a posição do dedo.</li>
     <li><b>O LED do jogador virou campo</b>, com rótulo e moldura próprios, embaixo da Barra de luz — as cinco lâmpadas no padrão do controle. Ele nasceu ontem como uma <b>linha espremida</b> dentro da moldura da Barra de luz (13 px num campo de 75) e agora é o <b>terceiro campo</b> da coluna. Com ele ali, <b>o número do jogador saiu do título do card</b>, como você pediu. Ele <b>continua nas linhas fechadas</b>, e isso é de propósito: linha fechada não tem lâmpada, e sem o número não sobraria quem aquele controle é.</li>
     <li><b>O touchpad tinha voltado a esticar, e agora ele não estica mais.</b> Ontem a superfície ganhou a proporção do sensor como <b>piso</b>, não como regra — e com um piso ela virou a esponja da coluna: medido hoje na sua mesa, <b>148 × 203</b>, que são <b>2,4 vezes</b> a altura que 148 px de largura pedem num sensor 16:9. A correção de anteontem tinha derrubado 41% de esticada e o piso devolveu 145%. Agora a superfície é <b>148 × 83</b> em qualquer mesa, e quem cresce são a <b>cor</b> da barra e o <b>campo</b> do LED, que não têm proporção a respeitar.</li>
     <li><b>O maior buraco da tela fechou: eram 181 px.</b> Entre o eixo Z do giroscópio e o L2 havia um vazio do tamanho de meio card, e ele não era desenho — era <b>resto</b>: o L2/R2 morava dentro da moldura do giroscópio, colado no pé, e a sobra da coluna inteira empoçava no meio. Ele até mudava de tamanho com a mesa (181 px com os seus dois controles, 95 com quatro). Agora a coluna são <b>dois campos</b>, cada um com rótulo — <b>Sensores</b> e <b>Gatilhos</b> —, e a sobra entra por dentro dos dois abrindo as linhas. Maior vão da coluna: <b>5 px</b>. As cinco colunas continuam terminando na mesma linha.</li>
