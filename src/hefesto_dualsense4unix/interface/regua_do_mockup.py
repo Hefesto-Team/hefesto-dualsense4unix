@@ -82,6 +82,7 @@ from __future__ import annotations
 
 import colorsys
 import dataclasses
+import contextlib
 import html.parser
 import math
 import re
@@ -135,6 +136,30 @@ INDECIDIVEL = "INDECIDIVEL"
 #: régua para de cobrá-lo e passa a EXIGIR a marca"* —, e é o que impede a
 #: categoria de virar o esconderijo onde dívida real vai morar.
 ROTULO = "ROTULO"
+
+
+class _SoTexto(html.parser.HTMLParser):
+    """Tira as tags e devolve só o texto — o que o `textContent` do DOM daria."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.pedacos: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self.pedacos.append(data)
+
+
+def _so_o_texto(marcacao: str) -> str:
+    """A marcação como TEXTO, para comparar com o que o parser leu do arquivo.
+
+    Um `<style>` dentro da marcação entra no `textContent` do DOM — é por isso
+    que o CSS dos colorways aparece no valor do campo `desenho`. Não filtramos:
+    o objetivo é reproduzir o que a tela devolve, e ela devolve isso.
+    """
+    leitor = _SoTexto()
+    with contextlib.suppress(Exception):
+        leitor.feed(marcacao)
+    return "".join(leitor.pedacos)
 
 
 def _espremer(texto: str) -> str:
@@ -803,6 +828,24 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
 
     Para todo outro alvo a declaração vale como veio.
     """
+    if campo.alvo == "html":
+        # O ALVO `html` COMPARAVA MARCAÇÃO COM TEXTO, e por isso nunca casava.
+        # Achado pela frente da aba 03 em 03/09/2026, com a prova mais dura que
+        # se pode ter: a régua chamava de ENDEREÇO MORTO um elemento em que o
+        # piloto TINHA CARIMBADO O SELO. Uma régua que diz "o pacote escreve num
+        # lugar que a página não tem" sobre um lugar que ela mesma viu ser
+        # visitado está se contradizendo.
+        #
+        # A causa é de forma: o lado do ARQUIVO lê este alvo pelo TEXTO (é o
+        # ramo `alvo in ("fundo", "html")` do `_Leitor`, que o documenta), e o
+        # pacote emite MARCAÇÃO. Passar a declaração pelo mesmo espremedor de
+        # texto põe os dois na mesma língua — é a cura do alvo `cor`, aplicada
+        # ao alvo que faltava.
+        #
+        # A frente que achou isto mediu o efeito e NÃO aplicou, porque a régua
+        # não era arquivo dela: fecharia treze campos. Ela tinha razão nas duas
+        # coisas — no achado e em não tocar.
+        return _espremer(_so_o_texto(declarado or ""))
     if campo.alvo == "largura":
         # A LARGURA TAMBÉM É NORMALIZADA NA ATRIBUIÇÃO, e ignorar isso acusava
         # endereço morto sobre o produto que ACERTOU — medido em 02/09/2026, na
