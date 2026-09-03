@@ -152,21 +152,51 @@ def emitidos():
 # 1. o valor não entra no botão
 # --------------------------------------------------------------------------
 def test_nenhuma_chave_do_pacote_escreve_num_botao(arvore, emitidos):
-    """Escrever um valor num `<button>` APAGA o rótulo dele.
+    """Escrever um valor num `<button>` pelo alvo `texto` APAGA o rótulo dele.
 
     Foi assim que "Economia", "Balanceado", "Máximo" e "Auto" viraram os quatro
     a palavra "balanceado", e ela deixou de poder escolher o degrau.
+
+    A RÉGUA PASSOU A PERGUNTAR PELO ALVO — 03/09/2026, e a distinção é o ponto
+    inteiro: quem destrói o rótulo é o `el.textContent = t` do ramo PADRÃO
+    (`hefesto_vivo.py:284`). Um botão com `data-hef-alvo="classe"` recebe um
+    `classList.toggle` e o texto dele não é tocado — é assim que os quatro
+    degraus passaram a dizer QUAL está aceso sem perder o nome.
+
+    Sem esta distinção a régua reprovaria a cura em vez do defeito, que é a
+    forma de instrumento falso que mais custou nesta casa.
     """
     _, chaves = emitidos
     culpados = {
         chave: [n["attrs"].get("data-forca") or n["attrs"].get("data-lado") or "?"
-                for n in _achar(arvore, chave) if n["tag"] == "button"]
+                for n in _achar(arvore, chave)
+                if n["tag"] == "button"
+                and (n["attrs"].get("data-hef-alvo") or "texto") == "texto"]
         for chave in sorted(chaves)
     }
     culpados = {k: v for k, v in culpados.items() if v}
     assert not culpados, (
-        f"o pacote emite chave que cai DENTRO de um botão: {culpados}. "
-        f"O pintor escreve `textContent`, então o rótulo do botão some.")
+        f"o pacote emite chave que cai DENTRO de um botão pelo alvo `texto`: "
+        f"{culpados}. O pintor escreve `textContent`, então o rótulo some.")
+
+
+def test_o_degrau_cai_nos_quatro_botoes_pelo_alvo_classe(arvore, emitidos):
+    """E o contrário: `degrau` TEM de alcançar os quatro botões — pela classe.
+
+    Sem isto o teste acima passaria por vacuidade no dia em que alguém tirasse
+    o `data-campo="degrau"` do desenho: nenhuma chave cairia em botão nenhum, e
+    a régua daria verde sobre a tela que voltou a mostrar o degrau do mockup.
+    """
+    _, chaves = emitidos
+    assert "degrau" in chaves, "o pacote parou de emitir `degrau`"
+    botoes = [n for n in _achar(arvore, "degrau") if n["tag"] == "button"]
+    assert len(botoes) == 8, (
+        f"são quatro degraus em duas colunas vivas, e achei {len(botoes)}")
+    for n in botoes:
+        assert n["attrs"].get("data-hef-alvo") == "classe", n["attrs"]
+        assert n["attrs"].get("data-hef-quando"), (
+            "um degrau sem `data-hef-quando` acenderia por 'não vazio' — os "
+            "quatro ficariam acesos ao mesmo tempo")
 
 
 def test_nenhuma_chave_do_pacote_apaga_outra(arvore, emitidos):
@@ -285,9 +315,22 @@ def test_o_que_falta_esta_declarado(emitidos):
 
     `SEM_DONO` estava `{}` — o vazio dizia "nada falta" numa aba onde quatro
     coisas faltavam, e é a forma mais barata de mentir.
+
+    ERAM QUATRO E HOJE SÃO DOIS — 03/09/2026. `degrau-aceso` e `mult-teto`
+    fecharam, e ficar na lista depois de pintados seria a mentira SIMÉTRICA:
+    dívida fantasma, que faz a próxima pessoa esperar por uma cura que já
+    chegou. Os dois que sobram esperam por coisa que não é desta camada —
+    `lado:ligado` não existe em linha nenhuma do produto e `barra:motor` pede
+    um controle arrastável no desenho, que é decisão dela.
     """
     pacote, _ = emitidos
-    assert set(pacote["sem_dono"]) == {"degrau-aceso", "mult-teto",
-                                       "lado:ligado", "barra:motor"}
+    assert set(pacote["sem_dono"]) == {"lado:ligado", "barra:motor"}
     for chave, razao in pacote["sem_dono"].items():
         assert len(razao) > 80, f"{chave} declara sem dizer por quê"
+    # E OS DOIS QUE FECHARAM SÃO PINTADOS — sem isto, apagá-los da lista seria
+    # indistinguível de esconder a dívida debaixo do tapete.
+    col = next(iter(pacote["colunas"].values()))
+    assert col["degrau"] == "balanceado", (
+        f"o degrau aceso saiu {col.get('degrau')!r} — ele é a `rumble_policy` "
+        "do daemon, e é o que separa a tela do desenho")
+    assert "mult-teto" in col, "o `Máx` voltou a ser texto cravado no desenho"
