@@ -66,6 +66,15 @@ import monta  # noqa: E402
 # tem `data-campo` próprio — que é o que `rotulo()` não sabe fazer.
 from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
 
+# QUANTAS LINHAS A COLUNA ATENÇÃO PUBLICA — e o dono do número é o PACOTE, não
+# este arquivo. A direção do import é essa e não a inversa: o produto pinta sem
+# gerador nenhum, e o gerador roda uma vez por mudança de desenho. Digitar o
+# número aqui abriria a porta para a página ter seis linhas e o pacote emitir
+# oito — que é a divergência silenciosa que este projeto persegue.
+from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
+    AVISOS_VIVOS,
+)
+
 # ---------------------------------------------------------------------------
 # A CENA
 # ---------------------------------------------------------------------------
@@ -354,15 +363,24 @@ CSS = """
      `test_o_botao_de_ligar_funciona_e_se_lembra` lê os endereços do HTML por
      EXPRESSÃO REGULAR, e um exemplo citado dentro de um comentário entra na
      conta como se fosse botão. É a mesma armadilha que pôs o logotipo inteiro
-     dentro de um comentário de CSS em 30/08 — o `replace` casou com a citação. */
-  #hef-ligado:checked ~ .hef-linha .hef-pos.ligado,
-  #hef-desligado:checked ~ .hef-linha .hef-pos.desligado,
+     dentro de um comentário de CSS em 30/08 — o `replace` casou com a citação.
+
+     O `:not(:has(.hef-pos.on))` É DE 03/09/2026, e ele existe porque os dois
+     caminhos podiam acender AO MESMO TEMPO. O `:checked` leva um `#id` e vence
+     o `.on` por especificidade (1,4,0 contra 0,2,0), então com o rádio em
+     Ligado e o daemon em Nativo a tela mostrava as DUAS posições acesas — o
+     desenho brigando com o estado, e o desenho ganhando. A guarda diz o que se
+     quer: **enquanto o produto não falou, o desenho manda; quando ele fala, ele
+     manda.** Com a página aberta sozinha (o mockup, sem daemon) nada tem `.on`
+     e a regra do rádio segue valendo, byte a byte como ela aprovou. */
+  .hef-topo:not(:has(.hef-pos.on)) #hef-ligado:checked ~ .hef-linha .hef-pos.ligado,
+  .hef-topo:not(:has(.hef-pos.on)) #hef-desligado:checked ~ .hef-linha .hef-pos.desligado,
   .hef-pos.on{border-color:var(--purple);background:var(--sel-bg);
               color:var(--fg);font-weight:600}
-  #hef-ligado:checked ~ .hef-linha .hef-pos.ligado .pino,
+  .hef-topo:not(:has(.hef-pos.on)) #hef-ligado:checked ~ .hef-linha .hef-pos.ligado .pino,
   .hef-pos.ligado.on .pino{background:var(--green);border-color:var(--green);
                            box-shadow:0 0 7px var(--green)}
-  #hef-desligado:checked ~ .hef-linha .hef-pos.desligado .pino,
+  .hef-topo:not(:has(.hef-pos.on)) #hef-desligado:checked ~ .hef-linha .hef-pos.desligado .pino,
   .hef-pos.desligado.on .pino{background:var(--texto-mudo);
                               border-color:var(--texto-mudo)}
 
@@ -386,11 +404,21 @@ CSS = """
           é 2.52.3 — `:has()` entrou no WebKit em 2.38.
 
      A ESPECIFICIDADE FECHA: `:has()` vale o do argumento mais específico, então
-     a regra que MOSTRA leva um `#id` e vence a que esconde, que é só classe. */
+     a regra que MOSTRA leva um `#id` e vence a que esconde, que é só classe.
+
+     E A SEÇÃO SEGUE O ESTADO, NÃO O ÚLTIMO CLIQUE — 03/09/2026. Estas duas
+     regras enxergavam só o rádio, e o rádio só muda pelo `for=` do `<label>`:
+     trocar de aba recarrega o documento e ele volta ao `checked` do arquivo. Com
+     o daemon em Nativo, a 01 abria mostrando a fileira de modos do lado LIGADO.
+     A guarda `:not(:has(.hef-pos.on))` é a mesma de cima e diz a mesma coisa —
+     enquanto o produto não falou, o desenho manda —, e as duas regras novas
+     abaixo leem a posição que o produto acendeu. */
   .hef-topo ~ .quadro .so-ligado,
   .hef-topo ~ .quadro .so-desligado{display:none}
-  .hef-topo:has(#hef-ligado:checked) ~ .quadro .so-ligado{display:block}
-  .hef-topo:has(#hef-desligado:checked) ~ .quadro .so-desligado{display:block}
+  .hef-topo:not(:has(.hef-pos.on)):has(#hef-ligado:checked) ~ .quadro .so-ligado{display:block}
+  .hef-topo:not(:has(.hef-pos.on)):has(#hef-desligado:checked) ~ .quadro .so-desligado{display:block}
+  .hef-topo:has(.hef-pos.ligado.on) ~ .quadro .so-ligado{display:block}
+  .hef-topo:has(.hef-pos.desligado.on) ~ .quadro .so-desligado{display:block}
   /* E ELAS ABREM NO MESMO y E FECHAM NO MESMO y — 180 contra 176 foi o que se
      mediu quando divergiram, e "muda tudo ao clicar" é a queixa dela que fixou a
      altura única das dez abas; ela vale dentro de uma aba também.
@@ -657,10 +685,32 @@ CSS = """
      pedia 556 de 542 e nascia barra de rolagem por dentro. Aqui cada pixel é
      disputado — ver o comentário do `--alt-janela` no `topo.html`. */
   .col-atencao{border-top:1px solid var(--rot-linha);margin-top:8px;padding-top:6px;
-               display:flex;align-items:center;gap:12px}
+               display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .col-atencao .cab-col{margin-bottom:0;flex:0 0 auto}
   .col-atencao .aviso-item{flex:1;min-width:0}
   .col-atencao .conta-avisos{margin-left:auto;flex:0 0 auto}
+  /* A COLUNA DE ZERO A N — 03/09/2026. A página publica
+     `pacotes.a01_jogar.AVISOS_VIVOS` linhas e o produto acende as que tiver; as
+     apagadas saem do fluxo com `display:none`, e por isso a cena de UM aviso
+     que ela aprovou fica idêntica. O `flex-wrap` acima e a regra do irmão
+     abaixo são o que faz a segunda linha CRESCER PARA BAIXO em vez de espremer
+     a primeira — é o que o comentário do P8 já prometia ("o espaço que a faixa
+     ganha ao receber o segundo aviso"), e o `display:flex` sozinho fazia o
+     contrário.
+     A CONTA DESCE PARA A ÚLTIMA LINHA, alinhada à direita — fotografado em
+     03/09/2026 com dois avisos na máquina dela. Ela é o último item do `flex`,
+     então a quebra a leva junto; o `margin-left:auto` continua encostando-a na
+     borda. Com UM aviso (a cena dela) nada quebra e a linha é a mesma de
+     sempre. */
+  .col-atencao .aviso-item:not(.mostra){display:none}
+  .col-atencao .aviso-item.mostra ~ .aviso-item.mostra{flex:1 1 100%}
+  /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
+     "muda tudo ao clicar" é queixa dela, e a legenda desta aba promete que o
+     espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
+     ficava com um travessão solto — o piloto escreve `—` no lugar de um valor
+     vazio, e um traço laranja dentro de uma moldura de alerta lê-se como
+     "faltou alguma coisa", não como "nada pendente". */
+  .faixa-final:not(.ha) .pendente{visibility:hidden}
 """
 
 
@@ -796,9 +846,26 @@ def cartao(c, bateria=None):
     # recusa dizendo o nome; sem ele o clique sumia calado — e a mesma tela
     # continuava desenhando três máscaras escolhíveis. O chip do LUGAR VAZIO
     # segue sem endereço, de propósito: sem controle não há sequer o que pedir.
+    # O CHIP ACESO PASSA A SER LIDO — 03/09/2026, e era a mentira mais visível
+    # desta aba: o `on` saía de `c["mascara"]`, que é a MESA DO DESENHO, e o
+    # cartão do P2 mostrava **Xbox 360** aceso com o daemon em
+    # `flavor=dualsense`. Não é atraso de tique: nada o repintava.
+    #
+    # O ENDEREÇO É DA MESA, E NÃO DO CARTÃO, e a diferença é o fato: a máscara é
+    # UMA para a máquina — `gamepad.emulation.set` recebe `flavor` e não recebe
+    # `uniq` (`daemon/ipc_handlers.py:5060`). Um valor por cartão prometeria
+    # quatro escolhas onde há uma. O pacote emite `mascara-cartao` uma vez, e os
+    # doze chips da fileira decidem por si pelo `data-hef-quando`.
+    #
+    # O CLIQUE CONTINUA SEM DONO, e isso não muda: `data-gesto="mascara"` sem
+    # `@gesto` faz o piloto recusar DIZENDO o nome. Ler não é escrever — o chip
+    # passa a mostrar a verdade sobre o que vale, e continua dizendo que não sabe
+    # mudá-la por controle.
     chips = "\n".join(
         f'                  <span class="chip{" on" if m == c["mascara"] else ""}"'
-        f' data-gesto="mascara" data-mascara="{m}">{m}</span>'
+        f' data-gesto="mascara" data-mascara="{m}"'
+        f' data-campo="mascara-cartao" data-hef-alvo="classe"'
+        f' data-hef-quando="{m}">{m}</span>'
         for m in MASCARAS)
     return f'''              <div class="cartao{" alvo" if c["alvo"] else ""}"
                    data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim">
@@ -851,9 +918,23 @@ CARTOES = "\n".join(cartao(c) for c in MESA)
 # chave do modo, e a sequência de IPC de cada um já é de
 # `mode_transition.plan_mode_transition`. Dois gestos escreveriam duas vezes a
 # mesma delegação.
+#
+# E DESDE 03/09/2026 SÃO CINCO, porque o quinto é o que faz a posição dizer o
+# ESTADO e não o último clique. `data-campo="hef-posicao"` com alvo `classe` e
+# `data-hef-quando` é o mecanismo que o piloto já tem (`hefesto_vivo.escrever`):
+# o Python manda a POSIÇÃO viva — "ligado", "desligado" ou vazio — e cada rótulo
+# decide por si se acende. O comentário do CSS acima já prometia este `.on`
+# desde 31/08; o que faltava era o endereço por onde ele chega.
+#
+# MEDIDO ANTES DE ESCREVER: com o daemon dela em `native_mode false` e
+# `gamepad_emulation.enabled false` — logo `mode_of_state` = **desktop** —, esta
+# página mostrava **Ligado** aceso porque o `<input>` do arquivo nasce
+# `checked`. Não era atraso de tique: não havia quem repintasse.
 _INTERRUPTOR = "\n".join(
     f'        <label class="hef-pos {lado}" for="hef-{lado}"'
     f' data-gesto="hefesto" data-modo="{modo}"\n'
+    f'               data-campo="hef-posicao" data-hef-alvo="classe"'
+    f' data-hef-quando="{lado}"\n'
     f'               title="{dica}"><span class="pino"></span>{rot}</label>'
     for lado, modo, rot, dica in INTERRUPTOR)
 
@@ -898,29 +979,62 @@ def _chip_do_modo(m):
               + (" sem-dono" if m["sem_dono"] else ""))
     modo = f' data-modo="{m["modo"]}"' if m["modo"] else ""
     # SEM `<i>`: os algarismos saíram em 31/08 (ver o comentário do `MODOS`).
+    #
+    # O QUINTO ENDEREÇO — 03/09/2026, e é o que tira o chip aceso das mãos do
+    # gerador. `data-campo="modo-aceso"` com alvo `classe` e `data-hef-quando`
+    # igual à chave do chip: o pacote manda QUAL chip está vivo e cada um decide
+    # por si. Um segundo clique não pode deixar dois acesos porque não há
+    # caminho em que duas chaves casem — os cinco compartilham o mesmo campo.
+    #
+    # POR QUE ELE FALTAVA E O QUE CUSTOU: o chip aceso era `MODO_ACESO`, cravado
+    # na geração. Ele coincidia com o `flavor` vivo por acaso do desenho, e
+    # nenhuma troca — pela CLI, pelo applet, por um perfil que entra sozinho — o
+    # movia. Medido em 03/09 contra o daemon dela: `mode_of_state` = `desktop`,
+    # logo o chip vivo é **Navegação**, e a tela mostrava **Sony DualSense**.
     return (f'            <span class="{classe}" data-degrau="{m["chave"]}"'
             f' data-gesto="modo-{m["chave"]}"{modo}\n'
+            f'                  data-campo="modo-aceso" data-hef-alvo="classe"'
+            f' data-hef-quando="{m["chave"]}"\n'
             f'                  title="{m["dica"]}">{m["rot"]}</span>')
 
 
 _MODOS = "\n".join(_chip_do_modo(m) for m in MODOS)
 
 
-def aviso(selo, texto):
+def aviso(selo, texto, mostra=True):
     """Uma linha da coluna Atenção.
 
     Ela vira FUNÇÃO em 29/08/2026 porque a coluna viva monta de zero a N: no
     mockup a cena tem um aviso, e na máquina dela o número muda a cada tique.
     O piloto chama esta mesma função, e por isso não há um segundo HTML de
     aviso escrito à mão em lugar nenhum.
+
+    O `mostra` É DE 03/09/2026, e resolve o "de zero a N" sem trocar bloco:
+    a página publica :data:`pacotes.a01_jogar.AVISOS_VIVOS` linhas e o produto
+    acende as que tiver. O piloto DISTRIBUI uma lista pelos elementos de mesmo
+    `data-campo`, na ordem (`hefesto_vivo.pintar`, o ramo `Array.isArray`) —
+    então três avisos escrevem nas três primeiras e as outras recebem vazio.
+    O `aviso-vivo` é o que apaga essas: alvo `classe` **sem**
+    `data-hef-quando` é booleano, e o travessão que o piloto escreve num valor
+    vazio conta como desligado.
+
+    NO DESENHO SÓ A PRIMEIRA NASCE ACESA, e por isso a cena continua a mesma
+    que ela aprovou: um aviso na coluna. As outras cinco são endereço, e
+    endereço não move pixel.
     """
-    return f'''            <div class="aviso-item" data-aviso>
+    return f'''            <div class="aviso-item{" mostra" if mostra else ""}" data-aviso
+                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
               <span class="selo alerta" data-campo="aviso-selo">{selo}</span>
               <span data-campo="aviso-texto">{texto}</span>
             </div>'''
 
 
-_AVISOS = "\n".join(aviso(selo, texto) for selo, texto in AVISOS)
+#: AS LINHAS DA COLUNA. As da cena (`AVISOS`) nascem acesas; as que faltam para
+#: chegar a `AVISOS_VIVOS` nascem apagadas e existem só para o produto ter onde
+#: escrever quando a máquina dela tiver mais de um aviso.
+_AVISOS = "\n".join(
+    [aviso(selo, texto) for selo, texto in AVISOS]
+    + [aviso("", "", mostra=False) for _ in range(AVISOS_VIVOS - len(AVISOS))])
 _CONTA = f"{len(AVISOS)} aviso" + ("s" if len(AVISOS) != 1 else "")
 
 
@@ -1032,7 +1146,12 @@ MIOLO = f'''
           <span class="conta-avisos" data-campo="atencao-conta">{_CONTA}</span>
         </div>
 
-        <div class="faixa-final">
+        <!-- O `pendente-ha` MORA AQUI, e não na `.pendente` — 03/09/2026. A
+             caixa da pendência já tem `data-campo="pendente"` (a frase), e um
+             elemento carrega UM endereço: o interruptor de existência dela
+             sobe um nível. A classe `ha` nasce escrita porque a cena que ela
+             aprovou TEM pendência; o produto a apaga quando não há. -->
+        <div class="faixa-final ha" data-campo="pendente-ha" data-hef-alvo="classe" data-hef-classe="ha">
           <!-- MAIÚSCULA NO COMEÇO — 28/08/2026. A frase é uma linha inteira,
                isolada na caixa tracejada, e o `●` que vem antes é MARCADOR, não
                palavra: a frase começa aqui. Era o mesmo defeito que ela apontou
@@ -1396,6 +1515,40 @@ def _conferir(doc):
            "a faixa de pendência não diz o modo marcado")
     exigir(PENDENTE != "Modo Nativo",
            "a pendência voltou a ser Modo Nativo com o interruptor em Ligado")
+
+    # 7. O QUE A TELA MOSTRA TEM DE SER LIDO, E NÃO CRAVADO — 03/09/2026.
+    #    Cada uma destas linhas é um valor que a página afirmava sozinha,
+    #    fotografado mentindo contra o daemon dela. A régua cobra o ENDEREÇO,
+    #    que é o que separa "a tela concorda por acaso" de "a tela leu".
+    #
+    #    ELA MORDE PELO NÚMERO, e não pela presença: `hef-posicao` tem de
+    #    aparecer nas DUAS posições do interruptor (uma só deixaria a outra
+    #    acesa para sempre), `modo-aceso` nos CINCO chips da fileira, e
+    #    `mascara-cartao` em três chips por controle CONECTADO — o lugar vazio
+    #    não tem máscara escolhida e não pode ganhar endereço.
+    for campo, quantos, oque in (
+        ("hef-posicao", len(INTERRUPTOR), "as posições do interruptor"),
+        ("modo-aceso", len(MODOS), "os chips da fileira de modos"),
+        ("mascara-cartao", len(MASCARAS) * len(monta.CONECTADOS),
+         "os chips de máscara dos cartões conectados"),
+    ):
+        achei = corpo.count(f'data-campo="{campo}" data-hef-alvo="classe"')
+        exigir(achei == quantos,
+               f"{oque}: esperava {quantos} endereços `{campo}` com alvo "
+               f"`classe`, achei {achei}")
+    #    E A COLUNA ATENÇÃO PUBLICA AS SEIS LINHAS, com uma só acesa: a cena que
+    #    ela aprovou tem UM aviso, e as outras cinco são endereço para quando a
+    #    máquina dela tiver mais. Cobrar as duas coisas juntas é o que impede
+    #    tanto a coluna de encolher quanto o desenho de crescer sozinho.
+    exigir(corpo.count('class="aviso-item mostra"') == len(AVISOS),
+           f"a cena da coluna Atenção deixou de ter {len(AVISOS)} aviso aceso")
+    exigir(corpo.count('data-campo="aviso-vivo"') == AVISOS_VIVOS,
+           f"a coluna Atenção não publica as {AVISOS_VIVOS} linhas que o pacote promete")
+    #    E A FAIXA LARANJA TEM O INTERRUPTOR DE EXISTÊNCIA. Sem ele, a caixa
+    #    tracejada fica com um travessão solto quando não há pendência.
+    exigir(corpo.count('data-campo="pendente-ha" data-hef-alvo="classe"') == 1,
+           "a faixa da pendência perdeu o `pendente-ha` — ela volta a mostrar um "
+           "travessão solto quando não há o que anunciar")
 
     if falhas:
         raise SystemExit("ERRO em 01-jogar — decisão dela desfeita:\n  "
