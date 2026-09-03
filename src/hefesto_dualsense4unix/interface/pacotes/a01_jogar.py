@@ -45,6 +45,21 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         nome = casa.get("nome") or "—"
         via = casa.get("via") or (c.get("transport") or "").upper()
         cartoes[uniq] = {
+            # A COR DO PLÁSTICO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA-01. Ela é a
+            # borda do cartão, e até hoje vinha cravada do desenho: com o
+            # controle DELA no cabo (White) a borda continuava Cosmic Red, três
+            # centímetros abaixo de uma fita que já dizia White. A lei é dela:
+            # *"se no topo tá mostrando controle white player 1, então cada aba
+            # vai usar os controles lá de cima. Não mistura com a info dos
+            # mockups."*
+            #
+            # `""` QUANDO NÃO SE SABE, e não é desistência: a cor chega pelo
+            # broker, uma vez por endereço e em thread, então o primeiro tique
+            # de uma sessão tem a mesa sem cor — e o controle por RÁDIO pode não
+            # ter cor nenhuma enquanto a ONDA-CONEXOES-11 não entrar. O alvo
+            # `cor` apaga o `style.color` no vazio e a pele volta ao neutro do
+            # CSS. Regra dela: campo sem informação não mostra nada.
+            "plastico": _cor_do_plastico(str(casa.get("cor") or "")),
             # `jogador_de` E NÃO `c.get("player")`: o daemon publica DUAS
             # chaves, e o `player` volta `None` no controle que o co-op não
             # numerou — medido em 02/09/2026 com o do CABO. Ler só ele escrevia
@@ -72,7 +87,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "cartoes": cartoes,
         "pendente": frase,
         "pendente-alvo": alvo,
-        "cobertura": {"pintados": 3 + len(cartoes) * 3 + (2 if grave else 0), "sem_dono": 0},
+        # QUATRO POR CARTÃO desde 03/09/2026 — eram três, e o quarto é o
+        # `plastico`. Este número é a promessa que a aba faz; deixá-lo em três
+        # depois de acrescentar um campo é o começo de um contador que mente, e
+        # ele é O instrumento com que esta casa prova que um endereço existe.
+        "cobertura": {"pintados": 3 + len(cartoes) * 4 + (2 if grave else 0), "sem_dono": 0},
     }
     if grave:
         fora["aviso-selo"] = grave["selo"]
@@ -82,6 +101,41 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # segundo dono — e foi assim que `conta_b` (com underscore) conviveu com o
     # `conta-b` da página sem nunca casar.
     return fora
+
+
+def _cor_do_plastico(slug: str) -> str:
+    """O hex da casca daquele modelo, ou `""` quando ninguém sabe ainda.
+
+    O DONO DO HEX É `monta.cor_da_zona`, e ele não se digita: ele LÊ a folha que
+    pinta o desenho (`scripts/gerar_cores_do_dualsense.py`), que por sua vez sai
+    do `docs/data/cores-do-dualsense.csv` — 28 modelos e 10 zonas. É a mesma
+    fonte que o chip da fita usa, e é o que faz a borda do cartão não poder
+    discordar do chip três linhas acima.
+
+    POR QUE ESTA GUARDA EXISTE EM VEZ DE CHAMAR `cor_da_zona` DIRETO:
+    `cor_da_zona` levanta `SystemExit` para colorway que o SVG não tem, e um
+    modelo novo derrubaria a pintura da aba INTEIRA — trocaríamos uma borda que
+    falta por uma tela congelada. O `""` é o caminho honesto: sem hex, sem cor.
+
+    ELA É GÊMEA DA `a04_iluminacao._cor_do_plastico`, e a cópia é deliberada.
+    Importar a privada de outra aba acopla esta aba ao arquivo que outra frente
+    está editando no mesmo dia; o que NÃO se duplica é o dado — o hex continua
+    tendo um dono só, e é o `cor_da_zona` que as duas chamam.
+
+    O `except` PEGA `BaseException` DE PROPÓSITO, e não é descuido: `SystemExit`
+    **não** herda de `Exception`, então um `except Exception` aqui deixaria
+    passar exatamente o caso que esta guarda existe para segurar. A gêmea da
+    `a04` escreve `except Exception` e por isso não segura nada — está anotado
+    para quem cuidar daquela aba.
+    """
+    if not slug:
+        return ""
+    try:
+        import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
+        return str(monta.cor_da_zona(slug))
+    except BaseException:
+        return ""
 
 
 def _do_exame() -> list[dict[str, Any]]:
