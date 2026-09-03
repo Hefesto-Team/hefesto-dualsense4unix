@@ -680,11 +680,28 @@ class _GerenciadorFalso:
         self._evt.set()
 
 
-def test_subsystem_nasce_desligado() -> None:
-    """Microfone que liga sozinho no boot do daemon é inaceitável."""
-    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+def test_subsystem_nasce_sem_capturar_nada() -> None:
+    """Microfone que liga sozinho no boot do daemon é inaceitável.
 
-    assert BtMicSubsystem().is_enabled(_ConfigFalsa()) is False
+    CONTRATO SUBSTITUÍDO — CANAL-POR-CONTROLE-01, 03/09/2026. A régua era
+    `is_enabled`, e era ela que trancava o rádio: sem declaração o subsystem
+    não existia, então não havia a quem PEDIR canal. Agora o supervisor fica de
+    pé — e **a promessa desta linha é a mesma**, medida onde ela mora de fato:
+    sem pedido e sem declaração `alvos()` devolve `[]`, e sem ponte não há
+    `0x32`, não há libopus e não há microfone.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
+        BtMicSubsystem,
+        RegistroDePedidosDeCanal,
+    )
+
+    class _No:
+        uniq = "aabbcc000001"
+        caminho = "/dev/hidraw9"
+
+    subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
+    subsystem._config = _ConfigFalsa()
+    assert subsystem.alvos([_No()]) == []
 
 
 def test_subsystem_liga_por_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -698,15 +715,31 @@ def test_subsystem_liga_por_campo_de_config() -> None:
     """O gate é um CONJUNTO de `uniq`, não um `bool` (QUATRO-MICROFONES-01).
 
     O `bool` só sabia dizer "todos" ou "nenhum", e a decisão dela de 22/08/2026
-    é literal: *"por controle"*. Um `uniq` na fonte já basta para o subsystem
-    subir; conjunto vazio continua sendo desligado.
-    """
-    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+    é literal: *"por controle"*. Conjunto vazio não sobe ponte nenhuma; um
+    `uniq` na fonte sobe a DELE, e só a dele.
 
-    vazio = _ConfigFalsa(bt_mic_uniqs=frozenset)
-    assert BtMicSubsystem().is_enabled(vazio) is False
-    um = _ConfigFalsa(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"}))
-    assert BtMicSubsystem().is_enabled(um) is True
+    CONTRATO SUBSTITUÍDO — CANAL-POR-CONTROLE-01, 03/09/2026: a régua era
+    `is_enabled` e passou a ser `alvos()`, que é onde o "por controle" mora.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
+        BtMicSubsystem,
+        RegistroDePedidosDeCanal,
+    )
+
+    class _No:
+        def __init__(self, uniq: str) -> None:
+            self.uniq = uniq
+            self.caminho = f"/dev/{uniq}"
+
+    nos = [_No("aabbcc000001"), _No("aabbcc000002")]
+
+    vazio = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
+    vazio._config = _ConfigFalsa(bt_mic_uniqs=frozenset)
+    assert vazio.alvos(nos) == []
+
+    um = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
+    um._config = _ConfigFalsa(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"}))
+    assert [no.uniq for no in um.alvos(nos)] == ["aabbcc000001"]
 
 
 def test_habilitado_por_env_aceita_as_grafias_usuais() -> None:
