@@ -964,6 +964,127 @@ CSS += """
 """
 
 
+# ---------------------------------------------------------------------------
+# A FOLHA DOS 28 MODELOS, PUBLICADA UMA VEZ — 03/09/2026, A-COR-VEM-DO-APARELHO
+#
+# A LEI É DELA: *"imagina que cada pessoa tenha um dualsense diferente. eu
+# mapeei as cores, glifos, controles, id e tudo mais. É pro projeto usar esse
+# meu trabalho (…) nada hardcoded."*  (noqa-acento: citação literal dela)
+#
+# O QUE ESTAVA ERRADO NESTA ABA: o `monta._so_o_colorway` PODA a folha embutida
+# em cada SVG e guarda só as regras do modelo pedido — 3.082 bytes dos 45.452
+# dos 28. Cada um dos quatro cartões carregava, portanto, UM modelo: o do
+# desenho. Um SVG assim não tem como virar outro aparelho, e escrever nele o
+# colorway lido do controle dela daria o cinza cru do `ds_limpo.svg`
+# (`rgb(58, 63, 75)`), não a cor dela.
+#
+# A CURA É PUBLICAR A TABELA, e é o que o `mapa-do-controle.html` já faz: a
+# folha inteira UMA vez na página, e os quatro SVGs escolhem por seletor. Aí o
+# `data-colorway` de cada desenho pode ser QUALQUER um dos 28 — que é a lei.
+#
+# NÃO É TABELA NOVA: o texto sai do `<style id="cores-do-dualsense-folha">` que
+# `scripts/gerar_cores_do_dualsense.py` escreveu dentro do `ds_limpo.svg`, a
+# partir de `docs/data/cores-do-dualsense.csv`. Digitar um hex aqui seria a
+# segunda verdade que o `check_cores_do_dualsense.py` existe para matar.
+#
+# O PREÇO, MEDIDO: a página troca 4 cópias podadas (12,3 KB) por uma folha
+# completa (45,5 KB) — +33 KB numa página de 400 KB, e o CSS das cores passa a
+# existir em UM lugar só em vez de quatro.
+_FOLHA_NO_SVG = re.compile(
+    r'<style id="[^"]*cores-do-dualsense-folha">.*?</style>', re.S)
+
+
+def folha_das_cores():
+    """As 28 cores do mapa, tiradas do SVG que o gerador de cores pinta."""
+    m = _FOLHA_NO_SVG.search(DS)
+    if not m:
+        raise SystemExit(
+            "ERRO em 06-navegacao: o `<style id=\"cores-do-dualsense-folha\">` "
+            "sumiu do ds_limpo.svg — rode scripts/gerar_cores_do_dualsense.py")
+    return m.group(0)
+
+
+CSS += "\n  /* ---- as 28 cores do mapa, publicadas UMA vez ---- */\n"
+CSS += re.sub(r"</?style[^>]*>", "", folha_das_cores())
+
+
+def zonas_do_desenho():
+    """As classes de zona, LIDAS da folha do mapa — nunca digitadas aqui."""
+    zonas = sorted(set(re.findall(
+        r'svg\[data-colorway="[^"]+"\] (\.z-[a-z0-9_]+)', DS)))
+    if not zonas:
+        raise SystemExit("ERRO em 06-navegacao: a folha do mapa não declara "
+                         "mais zona nenhuma — veja ds_limpo.svg")
+    return zonas
+
+
+# ---------------------------------------------------------------------------
+# SEM COLORWAY, SEM COR DE APARELHO — e sem esta regra a ausência de leitura
+# mostrava VERMELHO. Medido em 03/09/2026 com `hefesto_vivo --sem-cor`:
+# apagado o `data-colorway`, nenhuma regra da folha casa e o desenho cai nos
+# `fill` crus do `ds_limpo.svg` — que incluem DOIS `#b11f54`, o Cosmic Red
+# VELHO e errado (a amostragem de 27/08 devolveu `#A51C48`; ver a nota em
+# `monta.monta` sobre as variáveis do esqueleto). O Share, o Options e as duas
+# bolas dos analógicos ficavam carmim num controle que ninguém identificou —
+# exatamente a queixa dela: *"os svgs não são os que o meu mapa cataloga"*.
+#
+# A REGRA É POR AUSÊNCIA DE ATRIBUTO, e não por classe do cartão: quem decide é
+# o mesmo fato que decide a cor — o produto leu, ou não leu. `.nav-ctl.vazia`
+# continua valendo para o lugar VAZIO na bancada, que nasce com o colorway do
+# desenho e só o perde no primeiro tique.
+#
+# SÓ AS ZONAS, e elas vêm do mapa (`zonas_do_desenho`): zona é o que muda de um
+# modelo para outro, logo é o que carrega identidade. O contorno, os glifos e a
+# barra de luz do jogador ficam — apagá-los transformaria o desenho num vulto,
+# e a luz do jogador nem é cor de plástico (a folha do mapa a exclui de
+# propósito: *"a cor de plástico nunca pinta a LUZ"*).
+CSS += "\n  /* ---- desenho sem identidade: as zonas ficam no neutro ---- */\n"
+CSS += "".join(
+    f'  .nav-ctl .ds-svg:not([data-colorway]) {z}'
+    f' :is(path,rect,circle,ellipse,polygon):not([fill="none"])'
+    f"{{fill:var(--border-forte) !important}}\n"
+    for z in zonas_do_desenho())
+
+
+#: OS TRÊS ATRIBUTOS QUE FAZEM O DESENHO SEGUIR O APARELHO — o contrato do alvo
+#: `atributo` do piloto (`hefesto_vivo.escrever`, ramo `atributo`). O nome do
+#: atributo vai em `data-hef-atributo`, SEPARADO do alvo: `regua_do_mockup`, o
+#: `LER_CAMPOS` e cada `campo.alvo == "…"` comparam o alvo por IGUALDADE, e um
+#: alvo composto (`atributo:data-colorway`) viraria uma palavra diferente por
+#: atributo. É a mesma forma que o alvo `classe` já usa com `data-hef-classe`.
+ENDERECO_DO_DESENHO = ('data-campo="desenho" data-hef-alvo="atributo"'
+                       ' data-hef-atributo="data-colorway"')
+
+
+def desenho(c, **kw):
+    """O DualSense do cartão, ENDEREÇADO e sem a folha podada dentro.
+
+    Duas coisas, e as duas são a mesma cura vista de lados opostos:
+
+    * a folha embutida SAI. Ela traz um modelo só, e a página já publica os 28
+      (ver `folha_das_cores`). Mantê-la seria a mesma tabela quatro vezes, e a
+      podada é justamente a que impede o desenho de virar outro aparelho;
+    * o `<svg>` ganha `ENDERECO_DO_DESENHO`. Sem ele o `data-colorway` fica
+      sendo o do MOCKUP para sempre — era o defeito que ela nomeou: *"é white
+      no p1, mas (…) os svgs não são os que o meu mapa cataloga"*.
+
+    AS DUAS ÂNCORAS PARAM A GERAÇÃO se sumirem. Uma `str.replace` que não casa
+    devolve o texto intacto e não avisa — foi assim que a fita viva morreu em
+    silêncio nesta casa, e é o que esta função recusa repetir.
+    """
+    x = svg(c["pref"], c["cor"], classes="ds-svg", lampadas=False, **kw)
+    if not _FOLHA_NO_SVG.search(x):
+        raise SystemExit(
+            f"ERRO em 06-navegacao: o svg({c['pref']!r}) não traz mais a folha "
+            f"podada — quem a tirou tem de conferir se a página ainda publica "
+            f"os 28 modelos")
+    x = _FOLHA_NO_SVG.sub("", x, count=1)
+    if "<svg " not in x:
+        raise SystemExit(f"ERRO em 06-navegacao: svg({c['pref']!r}) não abre "
+                         f"com `<svg ` — o endereço não tem onde entrar")
+    return x.replace("<svg ", f"<svg {ENDERECO_DO_DESENHO} ", 1)
+
+
 #: O marcador de campo vazio — o mesmo travessão das outras cinco abas.
 VAZIO = "—"
 
@@ -977,13 +1098,20 @@ def controle_vazio(c):
     tem quatro lugares e dois vazios, não que ela tem dois. O que sai é o estado
     — a cor do plástico, o transporte e o "Só a janela", porque nenhum deles tem
     aparelho para valer.
+
+    O DESENHO DAQUI TAMBÉM É ENDEREÇADO, e não é enfeite: o piloto distribui uma
+    LISTA pelos elementos de mesmo `data-campo`, NA ORDEM do HTML
+    (`hefesto_vivo`, `alvos.forEach(…, i)`). Um lugar vazio sem endereço tiraria
+    uma casa da fila e o P4 receberia a cor do P3. O valor que ele recebe é `""`,
+    que APAGA o `data-colorway` — e o desenho cai no neutro que as regras
+    `.nav-ctl.vazia .ds-svg` já pintam.
     """
     n = c["jogador"]
     return (
         f'              <div class="nav-ctl vazia" data-conectado="nao"'
         f' data-campo="plastico" data-hef-alvo="cor"'
         f' title="Nenhum controle neste lugar.">\n'
-        f'                {svg(c["pref"], c["cor"], classes="ds-svg", lampadas=False)}\n'
+        f'                {desenho(c)}\n'
         f'                <div class="nav-rot">P{n} <span class="pt">•</span> Desconectado</div>\n'
         f'                <div class="nav-est">{VAZIO}</div>\n'
         f'              </div>')
@@ -1008,6 +1136,20 @@ def controle(c):
       escreve com `pacotes.identidade_de` — o dono do nome desde a ROTA-A. O
       `P{n}` fica FORA do span de propósito: o número do jogador é ESTRUTURA
       (a posição na mesa), e a lei do dia diz para não tocá-lo.
+
+    E O DESENHO SEGUIU — 03/09/2026, A-COR-VEM-DO-APARELHO. O `<svg>` ganhou o
+    `ENDERECO_DO_DESENHO` e perdeu a folha podada de um modelo só (ver
+    `desenho`). Era a última coisa deste cartão que ainda nomeava o controle do
+    mockup: com o P1 dela em White, o `<svg>` dizia `cosmic-red`.
+
+    O PIXEL JÁ ESTAVA CERTO, E O MECANISMO NÃO — medido no WebKit em 03/09, com
+    os dois controles dela na mesa: o casco do P1 saía `rgb(228, 224, 216)`,
+    que é o White do mapa, porque a `a06_navegacao.folha_do_plastico`
+    sobrescrevia as variáveis. Só que as REGRAS que leem essas variáveis são
+    `svg[data-colorway="cosmic-red"] …`: elas casavam **porque o atributo do
+    mockup tinha ficado**. Ligar o atributo — que é o que a lei dela pede —
+    teria apagado a cor em vez de acertá-la, e é por isso que a página passou a
+    publicar os 28 modelos no mesmo movimento.
     """
     n = c["jogador"]
     navega = n == NAVEGA
@@ -1017,7 +1159,7 @@ def controle(c):
         f' style="color:{cor_da_zona(c["cor"])}"'
         f' data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim"'
         f' data-campo="plastico" data-hef-alvo="cor">\n'
-        f'                {svg(c["pref"], c["cor"], classes="ds-svg", lampadas=False, luz=_hex(player_slot_color(n)))}\n'
+        f'                {desenho(c, luz=_hex(player_slot_color(n)))}\n'
         f'                <div class="nav-rot">P{n} <span class="pt">•</span> '
         f'<span data-campo="identidade">{c["nome"]}</span></div>\n'
         f'                <div class="nav-est" data-campo="navega">{ponto}{c["via"]} <span class="pt">•</span> '
@@ -1967,6 +2109,30 @@ def _conferir(doc):
         exigir(f'title="Player {c["jogador"]}' not in doc,
                f"o `title` do cartão do P{c['jogador']} voltou — ele nomeia o "
                f"controle e não tem alvo de pintura")
+
+    # 3-ter. O DESENHO SEGUE O APARELHO — 03/09/2026, A-COR-VEM-DO-APARELHO.
+    #    As três linhas abaixo são a MESMA cura vista de três lados, e cada uma
+    #    sozinha a desfaz:
+    #      · sem o endereço, o `data-colorway` fica o do mockup para sempre;
+    #      · com a folha PODADA de volta dentro do SVG, escrever um colorway que
+    #        ela não traz dá o cinza cru do desenho (`rgb(58, 63, 75)`) — a
+    #        armadilha que o alvo de atributo documenta com todas as letras;
+    #      · sem a folha dos 28 na página, idem para 27 dos 28 modelos dela.
+    exigir(corpo.count(ENDERECO_DO_DESENHO) == len(MESA),
+           f"os {len(MESA)} desenhos perderam o `{ENDERECO_DO_DESENHO}` — o "
+           f"`data-colorway` volta a ser o do mockup, e nada o reescreve")
+    exigir(corpo.count("data-colorway=") == len(MESA),
+           f"há `data-colorway` no miolo fora dos {len(MESA)} desenhos "
+           f"endereçados — cor de aparelho cravada onde o produto não alcança")
+    exigir("cores-do-dualsense-folha" not in corpo,
+           "a folha podada voltou para dentro de um SVG do miolo: ela traz UM "
+           "modelo, e um SVG assim não tem como virar outro aparelho")
+    _no_mapa = set(_re.findall(r'svg\[data-colorway="([^"]+)"\]', DS))
+    _na_pagina = set(_re.findall(r'svg\[data-colorway="([^"]+)"\]', doc))
+    exigir(_no_mapa and _no_mapa <= _na_pagina,
+           f"a página publica {len(_na_pagina)} dos {len(_no_mapa)} modelos do "
+           f"mapa — faltam {sorted(_no_mapa - _na_pagina)}; quem tiver um "
+           f"desses vê o desenho no cinza cru")
 
     # 4. AS VINTE E UMA LINHAS DIZEM AO PYTHON QUE ELA ESTÁ MEXENDO — decisão
     #    dela, 02/09/2026. O `data-gesto` é o ÚNICO atributo destes `<select>`
