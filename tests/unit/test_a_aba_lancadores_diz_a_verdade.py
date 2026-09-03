@@ -1343,3 +1343,98 @@ def test_o_cartao_da_steam_nao_achada_mantem_os_enderecos_da_pagina(desenho):
     assert campos["steam-fora"] == desenho.SEM_LISTA, (
         "a lista vazia voltou a ser string vazia — o `escrever()` a troca por "
         "um travessão solto no pé do cartão")
+
+
+# --------------------------------------------------------------------------
+# 6. o "?" também contava controle — e a régua dos cartões não o alcançava
+# --------------------------------------------------------------------------
+#: O trecho da página onde o "?" mora. A régua dos CARTÕES
+#: (`test_nenhum_cartao_promete_um_numero_de_controles`) fatia a grade
+#: `<div class="lancadores">`, e por construção o texto de ajuda fica FORA da
+#: janela dela — foi por essa fresta que a última contagem de controle desta
+#: aba sobreviveu à cura de 02/09/2026.
+#:
+#: E ELE É ANCORADO NO QUADRO DESTA ABA, não no primeiro `?` do arquivo —
+#: medido ao morder a cura em 03/09/2026: com a `.dica` do quadro envenenada de
+#: propósito, esta régua passou VERDE. O primeiro `<span class="ajuda">` da
+#: página é o do **topo** (`topo.html:846`, o "?" do perfil ativo), que é das
+#: DEZ abas e não tem número nenhum. *Seletor que casa o elemento errado dá
+#: não-achado convincente* — e por isso a fatia começa no título do quadro.
+_O_QUADRO = re.compile(
+    r"De onde os seus jogos vêm.*?"
+    r'<span class="ajuda">(?P<dica>.*?)</span></span>', re.S)
+
+
+def _dica_da_pagina() -> str:
+    achado = _O_QUADRO.search(_bancada())
+    assert achado, (
+        'a régua não achou o `?` do quadro "De onde os seus jogos vêm" — '
+        "seletor que casa ZERO é erro, não silêncio")
+    return achado.group("dica")
+
+
+def test_o_texto_de_ajuda_nao_conta_controle_por_conta_propria():
+    """Nenhum número solto no "?": quem conta a mesa tem de ter ENDEREÇO.
+
+    O QUE ESTA RÉGUA MEDE, e por que ela não repete a dos cartões: a fatia é o
+    `<span class="ajuda">`, e o que ela cobra é que todo DÍGITO ali dentro
+    esteja dentro de um `data-campo` — quer dizer, que o produto possa
+    reescrevê-lo no tique. Um número fora de endereço é o número do DESENHO,
+    congelado no HTML pelo `monta.CONECTADOS` do gerador.
+
+    MEDIDO NA JANELA DELA EM 03/09/2026, com um DualSense no cabo, antes da
+    cura:
+
+        cabeçalho   ``● 1 controle: 1 USB · 0 BT``   (lido do aparelho)
+        o "?"       ``…vale igual para os 2 (1 no cabo, 1 no rádio)…``
+
+    A MORDIDA: tire o `<span data-campo="lanc-quantos">` do `aba07.py`, regere
+    a bancada, e este teste nomeia os dígitos que sobraram nus.
+    """
+    dica = _dica_da_pagina()
+    # Fora os trechos ENDEREÇADOS — esses o produto reescreve a cada tique.
+    nus = re.sub(r'<span data-campo="[^"]+"[^>]*>.*?</span>', " ", dica,
+                 flags=re.S)
+    # E FORA AS MARCAS: o que a régua mede é o que ela LÊ na tela. Um `22px`
+    # de `style=` não está na tela e contá-lo faria a régua reprovar o CSS —
+    # que é a forma de régua que esta casa mais paga (*a régua reprovando o
+    # que não é o defeito*).
+    texto = re.sub(r"<[^>]+>", " ", nus)
+    sobrou = sorted({" ".join(t.split())
+                     for t in re.findall(r"[^.;!?]*\d[^.;!?]*", texto)})
+    assert not sobrou, (
+        f"o texto de ajuda tem número que o produto não reescreve: {sobrou}. "
+        f"Ele vem do `monta.CONECTADOS`, a mesa do DESENHO, e fica na tela "
+        f"dela ao lado de um cabeçalho que lê o aparelho.")
+
+
+def test_o_quantos_do_ajuda_sai_da_mesa_viva_e_nao_do_mockup(a07, desenho):
+    """Mesas diferentes, frases diferentes — e a do mockup não é privilegiada.
+
+    UMA CONSTANTE PASSARIA no teste de cima (ela também não tem dígito nu, se
+    alguém a puser dentro do span). O que a desmascara é VARIAR a mesa: o valor
+    emitido tem de mudar com ela, e tem de fechar com o que o cabeçalho diz.
+    """
+    import pacotes
+
+    def frase(mesa):
+        contexto = pacotes.Contexto(state={"active_profile": "regua"},
+                                    mesa=mesa, conectados=[], estados={})
+        return a07.pacote(contexto)[desenho.QUANTOS]
+
+    um_no_cabo = [{"pref": "p1", "jogador": 1, "via": "USB"}]
+    dois = [{"pref": "p1", "jogador": 1, "via": "USB"},
+            {"pref": "p2", "jogador": 2, "via": "BT"}]
+
+    assert frase(um_no_cabo) == "o <b>1</b> (1 no cabo, 0 no rádio)", (
+        f"com UM controle no cabo o '?' diz {frase(um_no_cabo)!r} — e o "
+        f"cabeçalho, na mesma tela, diz '1 controle: 1 USB · 0 BT'")
+    assert frase(dois) == "os <b>2</b> (1 no cabo, 1 no rádio)"
+    assert frase(um_no_cabo) != frase(dois), (
+        "a frase não mudou com a mesa — ela é constante, e uma constante aqui "
+        "é a mesa do mockup com outro nome")
+    # A CONTA FECHA SEMPRE: cabo + rádio = o total que a frase anuncia.
+    for mesa in (um_no_cabo, dois, []):
+        n, usb, bt = (int(x) for x in re.findall(r"\d+", frase(mesa)))
+        assert usb + bt == n == len(mesa), (
+            f"a frase não fecha para {len(mesa)} controle(s): {frase(mesa)!r}")
