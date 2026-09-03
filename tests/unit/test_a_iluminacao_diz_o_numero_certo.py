@@ -299,25 +299,38 @@ def test_a_luz_e_desenho_e_nao_palavra(colunas):
         "a moldura do touchpad sumiu do desenho vivo.")
 
 
-def test_o_endereco_da_luz_so_existe_na_bancada():
-    """`luz` na bancada, `aceso` no publicado — e o descasamento é a CURA.
+def test_o_endereco_da_luz_esta_nas_duas_paginas():
+    """`luz` na bancada E no publicado — **a espera acabou em 02/09/2026**.
 
-    Publicar é ato DELA. Enquanto o produto disser `data-campo="aceso"`, o
-    pacote NÃO PODE emitir `aceso`: qualquer valor que ele emita ali vira
-    `textContent` e apaga o desenho. Com o nome novo, o produto de hoje não acha
-    onde escrever e o desenho fica INTEIRO; no dia em que ela publicar, o mesmo
-    valor passa a pintar.
+    O QUE ESTE TESTE COBRAVA, e o próprio texto dele mandava apagar no dia em
+    que acontecesse: enquanto o produto dissesse `data-campo="aceso"`, o pacote
+    não podia emitir `aceso` — qualquer valor ali vira `textContent` e apaga o
+    desenho. Ele exigia, com todas as letras, `'data-campo="luz"' not in
+    publicado`.
+
+    **ELA PUBLICOU** (`70b58116`, *"ela mandou publicar as sete"*), e o
+    publicado passou a ter o endereço novo. A asserção da espera ficou VERMELHA
+    no `dev` desde então — medido em 03/09/2026, antes de qualquer mudança
+    desta frente: `grep -c 'data-campo="luz"' paginas/04-iluminacao.html` = 2.
+
+    O que sobra é o que sempre importou, e agora dos DOIS lados: o endereço
+    existe, e o nome velho não voltou.
+
+    A MORDIDA: devolva `data-campo="aceso"` ao `coluna()` do `aba04.py`, rode
+    o gerador, e a primeira asserção reprova.
     """
     import onde
 
-    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    publicado = onde.pagina("04-iluminacao.html", publicado=True).read_text(
-        encoding="utf-8")
-    assert bancada.count('data-campo="luz" data-hef-alvo="html"') == 2
-    assert 'data-campo="aceso"' not in bancada
-    assert 'data-campo="luz"' not in publicado, (
-        "o produto ganhou o endereço novo: apague este par de asserções e o "
-        "`aceso` do publicado junto — a espera acabou.")
+    for onde_esta, doc in (
+            ("a bancada", onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")),
+            ("o publicado", onde.pagina("04-iluminacao.html", publicado=True)
+             .read_text(encoding="utf-8"))):
+        assert doc.count('data-campo="luz" data-hef-alvo="html"') == 2, (
+            f"{onde_esta} não tem o endereço da luz nas duas colunas "
+            f"conectadas.")
+        assert 'data-campo="aceso"' not in doc, (
+            f"{onde_esta} voltou ao nome velho — e nele todo valor emitido "
+            f"vira `textContent` e APAGA as duas tiras e as cinco lâmpadas.")
 
 
 def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
