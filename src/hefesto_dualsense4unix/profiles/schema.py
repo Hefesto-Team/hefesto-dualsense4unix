@@ -855,15 +855,21 @@ class ControllerMicOverride(BaseModel):
 
     O QUE FICA DE FORA, e cada um por uma MEDIÇÃO
     ----------------------------------------------
-    - ``volume``. A primitiva por peça existe
-      (``audio_control.fonte_de_captura_do_uniq``, MIC-DA-MESA-CHEIA-01,
-      20/08/2026), e o applier **não a chama**: ``Daemon.apply_profile_mic``
-      resolve a fonte com ``fonte_de_captura_do_controle()``, que devolve a
-      PRIMEIRA fonte da lista. Com dois DualSense no cabo há DUAS placas de
-      som, então um volume por peça iria para o microfone do VIZINHO na mesa
-      cheia — errado em silêncio, que é pior que ausente. A costura é de uma
-      linha e mora em ``daemon/lifecycle.py``; quando ela existir, este campo
-      entra.
+    - ``volume``. **FATO SUBSTITUÍDO EM 03/09/2026** — esta linha dizia que o
+      applier *"não chama"* a primitiva por peça, e isso deixou de ser verdade
+      no mesmo dia. ``Daemon.apply_profile_mic`` resolve a fonte com
+      ``audio_control.fonte_de_captura_do_uniq(uniq)`` quando há ``uniq``, e
+      **não cai** para a rota global quando ele não resolve — sem fonte daquele
+      controle ninguém escreve e ninguém diz "aplicado".
+      ``fonte_de_captura_do_controle()``, que devolve a PRIMEIRA fonte da
+      lista, ficou sendo o que a seção GLOBAL usa, e ali está certo: o global
+      não tem dono.
+
+      **O QUE SEGURA O CAMPO HOJE NÃO É MEDIÇÃO, É DECISÃO.** Abrir a borda
+      muda o que o perfil dela aceita no disco, e com dois DualSense no cabo há
+      DUAS placas de som (MIC-DA-MESA-CHEIA-01, 20/08/2026) — quem decide se
+      cada peça passa a guardar o seu ganho é ela. Enquanto não disser, a
+      recusa fica, e a razão na mensagem é esta.
     - ``button_toggles_system``. O interruptor é UM por máquina:
       ``hotkey.mic_button_loop`` lê ``daemon.config.mic_button_toggles_system``
       (``daemon/subsystems/hotkey.py:938``) e não consulta ``uniq`` nenhum.
@@ -898,13 +904,15 @@ class ControllerMicOverride(BaseModel):
         if "volume" in data:
             raise ValueError(
                 "controllers[...].mic: 'volume' ainda não vale por unidade — "
-                "`Daemon.apply_profile_mic` resolve a fonte de captura com "
-                "`fonte_de_captura_do_controle()`, que devolve a PRIMEIRA "
-                "fonte da lista, e com dois DualSense no cabo há DUAS placas "
-                "de som (MIC-DA-MESA-CHEIA-01): o volume iria para o "
-                "microfone do vizinho. Use o 'volume' da seção GLOBAL `mic` "
-                "do perfil; quando o applier passar a chamar "
-                "`fonte_de_captura_do_uniq`, o campo entra aqui."
+                "e o que falta agora é a PALAVRA DELA, não o caminho. A "
+                "costura existe desde 03/09/2026: `Daemon.apply_profile_mic` "
+                "resolve a fonte com `fonte_de_captura_do_uniq(uniq)` quando "
+                "há `uniq`, e só usa `fonte_de_captura_do_controle()` — a "
+                "PRIMEIRA fonte da lista — na seção GLOBAL, que não tem dono. "
+                "Abrir o campo aqui muda o que o perfil aceita no disco, e com "
+                "dois DualSense no cabo há DUAS placas de som "
+                "(MIC-DA-MESA-CHEIA-01): é decisão dela, não de quem gera o "
+                "esquema. Use o 'volume' da seção GLOBAL `mic` do perfil."
             )
         if "button_toggles_system" in data:
             raise ValueError(
