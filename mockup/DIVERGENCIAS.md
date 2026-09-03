@@ -53,6 +53,14 @@ seção daqui**: a aba deixou de estar em trabalho.
   passa a dizer **`Sem toque` / `1 toque`** em vez de `Sem toque` / `Tocando`.
   `Tocando` era palavra do desenho; `1 toque` é a do produto
   (`app/widgets/sensor_widgets.texto_toques`), a mesma que a janela GTK escreve.
+
+  **O QUE VOCÊ VÊ ENQUANTO ESPERA:** nada muda, e nada piora. Os quatro
+  endereços não existem na página publicada, então o piloto não os acha e
+  o pacote escreve zero neles — a régua de endereço órfão cobra exatamente
+  isso. Até você publicar a 02, o número do alto-falante continua em `100`,
+  a barra continua cheia, o retângulo da Barra de luz continua no azul do
+  desenho e o pontinho do touchpad continua aceso. **Os quatro nascem
+  certos no minuto do `--publicar 02`**, sem ninguém tocar em código.
   **`2 toques` a tela ainda não pode dizer**: o daemon publica UM booleano
   (`touchpad.touching`), não uma contagem de dedos — no dia em que publicar, a
   palavra sai sozinha, sem ninguém tocar nesta aba.
@@ -155,164 +163,6 @@ seção daqui**: a aba deixou de estar em trabalho.
   em um lugar só (`core/acoes_de_botao.ACOES`) e as 21 listas acompanham.
 
   Publicar: `scripts/check_o_desenho_aprovado.py --publicar 06`.
-## 03-gatilhos.html
-- **02/09/2026** — **as suas três decisões da tarde sobre esta aba.** Nenhuma
-  delas inventa nada: as duas primeiras mudam o que a tela DIZ, e a terceira dá
-  dono a uma seção que já estava desenhada.
-
-  **1. A caixa de ajustes acompanha o modo** (sua decisão 2). Ela reservava
-  quatro casas à esquerda e duas à direita, e cinco dos 19 modos do produto
-  pedem mais: `Galope` 5, `Metralhadora` 6, `Montar do zero` 8, `Curva de
-  força` 10 e `Vibração por posição` 11. O que sobrava **não aparecia** — a
-  tela calava sobre números que estão no seu disco. Agora a caixa é uma lista
-  do tamanho do modo, e as cinco colunas continuam acabando no mesmo y porque
-  a grade passou a ser uma só (`subgrid`).
-
-  **Medido nos seus 33 perfis, um por um:** CINCO têm gatilho configurado
-  (`acao`, `aventura`, `corrida`, `esportes`, `fps`). Destes, **`aventura` tem
-  `Curva de força` nos dois gatilhos e `corrida` tem `Vibração por posição` no
-  R2** — dois perfis, e os dois mostravam quatro barras EM BRANCO (travessão no
-  nome e no valor) sobre dez e onze intensidades gravadas no seu disco. Agora
-  mostram o nome e o número de cada posição.
-
-  | | a caixa do L2 | a aba rola |
-  | --- | --- | --- |
-  | a cena deste desenho | 92 px (4 barras) | 0 px |
-  | `Vibração por posição` nos dois lados | 253 px (11 barras) | **230 px** |
-
-  Você aceitou a rolagem com todas as letras — *"a aba passa a rolar nos modos
-  grandes, e isso é aceito"*. **O que ainda pode ser escolhido:** hoje a caixa
-  nunca fica MENOR que o que este desenho reserva (92 px no L2, 46 no R2),
-  mesmo com o gatilho desligado nas quatro colunas. Deixá-la encolher devolveria
-  92 px de altura quando não há o que ajustar — e mudaria a proporção que você
-  aprovou em 27/08. Fica como está até você dizer.
-
-  **2. O lugar vazio mostra `—`** (sua decisão 13). Os dois campos de escolha
-  ganharam a opção, e o P3 e o P4 do desenho passaram a mostrá-la no lugar de
-  `Desligado` e `— Nenhum —`. É a sua razão: *"`Desligado` é uma escolha
-  legítima de um controle conectado"*. A opção nasce `disabled` — o produto a
-  escreve, ninguém a escolhe com o rato.
-
-  Isto **revoga a metade da sua decisão de 31/08** que dizia *"tudo com
-  Desligado e Nenhum"*; o resto dela (a coluna fica, a borda de cor sai) segue
-  valendo, e a régua do gerador continua cobrando as duas metades.
-
-  **3. Nasceu o campo do nome do efeito** (sua decisão 17). *"Isso é pra quando
-  o user salva algum efeito. (…) O nome que o user deixar lá. Ali é só
-  exemplo."* Cada coluna ganhou um campo `Nome` ao lado do "Guardar esse
-  efeito": com um nome, o par L2+R2 daquela coluna entra em **Meus efeitos** e
-  passa a aparecer no campo de escolha das quatro colunas; em branco, o botão
-  faz exatamente o que sempre fez.
-
-  **Custo de altura: ZERO** — o campo divide a linha do botão, que já tinha
-  34 px. O campo mede 74 px, e é pouco: cabe o nome inteiro (ele rola por
-  dentro), mas o texto de exemplo teve de encurtar de "Nome do efeito" para
-  "Nome". **Se você quiser um campo confortável**, o preço é uma linha nova de
-  48 px na coluna — a grade tem 24 px de folga sobre o teto medido, então ela
-  sairia dos 24 e de mais 24 de outro lugar. É sua a escolha.
-
-  **Os dois exemplos do desenho ficam** — `Recuo do MK` e `Freio do carro` —,
-  e é o que você mandou. O que o PRODUTO mostra é a sua biblioteca: enquanto
-  ela estiver vazia, o separador "Meus efeitos" não aparece na tela, porque
-  *"se não tá mostrando agora, não tem info pra mostrar no produto"*.
-
-  **Onde os efeitos moram:** `~/.config/hefesto-dualsense4unix/gui_preferences.json`,
-  a caixa de preferências que a interface já tinha. **Não** no perfil, de
-  propósito: um efeito seu é da sua biblioteca, e guardado no perfil ele
-  existiria só naquele jogo e sumiria nos outros 32.
-
-  **O que espera o seu OK:** as três acima, e o texto novo — o `Nome` do campo,
-  a dica dele e o aviso da caixa cheia (abaixo).
-
-  ### O QUE VOCÊ VÊ HOJE, ANTES DE PUBLICAR — e por que vale a pena publicar
-
-  **CORREÇÃO DE FATO, 02/09/2026.** Este parágrafo dizia que *"o produto que
-  você usa mostra as caixas certas, isso já vale hoje"*. **Não valia, e o
-  contrário era pior:** a decisão tem duas metades e elas caíram em lados
-  diferentes desta fronteira. A que ENCHE a caixa é o produto e valia mesmo; a
-  que a faz CRESCER é o desenho, e desenho só chega à sua tela quando você
-  publica. Medido no navegador, sobre o arquivo que o produto renderiza agora,
-  com os seus perfis:
-
-  | | o que acontecia |
-  | --- | --- |
-  | `aventura` (Curva de força nos dois) | 10 barras numa caixa de 92 px → **58 px por cima da linha de baixo** à esquerda, **104 px** à direita |
-  | `corrida` (Vibração por posição no R2) | 11 barras em 46 px → **119 px** |
-
-  As `Posição 7/8/9` caíam em cima do campo **Modo** do R2 e as barras do R2 em
-  cima do **Guardar esse efeito**, saindo da moldura do quadro.
-
-  **Curado antes de chegar em você.** O produto agora **pergunta à página** de
-  quantas barras ela dá conta, e se limita a isso — e a última casa passa a
-  dizer quantos ajustes ficaram de fora: *"+7 não cabem nesta caixa ainda"*.
-  Nada vaza, nada é destruído (o "Guardar esse efeito" continua lendo os dez
-  valores, mesmo os que a caixa não mostra) e nada é calado.
-
-  **O preço, e ele é seu para aceitar:** na página de hoje a última barra vira
-  o aviso. Nos três perfis de três ajustes num lado de duas casas (`acao`,
-  `esportes`, `fps`), você passa a ver **um** número em vez de dois, com o aviso
-  ao lado. Se preferir ver os dois e ficar sem o aviso, é uma linha — diga.
-
-  **No dia em que você publicar, o teto some sozinho:** o produto lê a
-  declaração nova, a caixa passa a ter o tamanho do modo e o aviso deixa de
-  existir. Ninguém precisa mexer em código para isso acontecer.
-
-  E, enquanto você não publicar, o lugar vazio continua dizendo `Desligado`,
-  porque a página publicada ainda não oferece o `—`. O dia da publicação troca a
-  palavra sozinho, pelo mesmo mecanismo.
-
-- **02/09/2026** — **a "Função do teclado" ganhou as três palavras que você
-  escolheu**, e é a única mudança que se vê: `Só dentro do jogo` · `Só fora do
-  jogo` · `Desativado`. A lista **nasce marcada em `Só fora do jogo`**, que é o
-  padrão que você pediu.
-
-  **A opção que saiu foi "Ligada — atalhos e teclado na tela", e ela estava
-  mentindo.** O Hefesto já cala o teclado emulado quando um jogo assume o
-  controle — é a cura da sua queixa de 29/07 (*"aperto r1 e ele muda de app ao
-  invés de funcionar no jogo"*), em `daemon/lifecycle.py:2263`. Logo o teclado
-  ligado **já era** "só fora do jogo": a etiqueta é que prometia mais.
-
-  **Uma das três recusa dizendo, e é a `Só dentro do jogo`.** Ela é o inverso do
-  que o produto faz, e precisa de um campo novo no perfil (o portão com o sinal
-  trocado). Enquanto ele não existir, escolhê-la não faz nada e a lista volta
-  sozinha para o que está valendo — em vez de fingir que mudou.
-
-  **A LINHA DIZ A VERDADE NOS DOIS ESTADOS, hoje e depois de publicar.** A
-  pintura de um `<select>` só entra quando o texto casa com uma `<option>`
-  (`hefesto_vivo.py`, ramo `alvo === 'valor'`), e a sua lista publicada oferece
-  `Ligada — atalhos e teclado na tela` · `Só fora do jogo` · `Desligada`. Então
-  o produto passou a **falar a língua da página que está na sua tela**: com o
-  teclado ligado ele diz `Só fora do jogo` (que já existe nas duas listas), e
-  com ele desligado diz `Desligada` hoje e `Desativado` no dia em que você
-  publicar — sem ninguém mexer em nada. E clicar em qualquer uma das três
-  opções que você vê hoje funciona: as duas do desenho antigo são entendidas
-  como sinônimos até a publicação, e o teste que as guarda avisa quando elas
-  puderem ser apagadas.
-
-- **02/09/2026** — **as 21 listas de "o que cada botão faz" param de desfazer a
-  sua escolha, e isto ESPERA A SUA PUBLICAÇÃO.** É a decisão que você tomou
-  junto com o "Guardar FICA". Nenhum pixel muda: o que entrou foram endereços
-  invisíveis (`data-gesto="linha-de-botao"` nas 21, e
-  `data-gesto="fechar-definicoes"` no `×` e no `Cancelar` da tela de
-  definições).
-
-  **O que eles curam, medido:** trocar uma linha nunca chegava ao Python — o
-  ouvinte da janela não reconhece `data-campo` nem `data-linha` como algo
-  clicável — e o tique de meio segundo reescrevia a sua escolha por cima em até
-  1,5 s. Com isso, o "Guardar" ao lado **nunca recebia** uma tabela diferente do
-  perfil: ele caía sempre no "não havia o que guardar", e a recusa ainda mandava
-  *"troque a linha antes de clicar"*, um caminho que não existia.
-
-  Depois de publicar, a tabela para de ser repintada enquanto você mexe, e volta
-  a acompanhar o perfil quando você **guarda**, quando **volta ao padrão**,
-  quando **fecha a tela** (o `×` ou o `Cancelar`) ou quando **sai da aba**.
-
-  **Por que só depois:** os endereços são atributos do DESENHO, e o produto lê a
-  página publicada. Medido em 02/09 — `data-gesto="linha-de-botao"` aparece **21
-  vezes na bancada e ZERO na página que o produto renderiza**. Até você
-  publicar, a tabela continua se comportando como hoje.
-
-
 ## 07-lancadores.html
 - **02/09/2026** — **um comentário HTML dentro da lista do cartão da Steam, e
   nenhum pixel mudou.** O `<div class="lanc-fora">` nascia VAZIO; ele passa a

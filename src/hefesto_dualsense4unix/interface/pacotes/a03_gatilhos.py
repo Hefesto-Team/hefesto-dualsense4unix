@@ -696,10 +696,22 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
 SEM_AJUSTE = "Este modo não tem o que ajustar."
 
 
-#: O AVISO DO QUE NÃO COUBE, e ele só existe ENQUANTO ELA NÃO PUBLICA. `{n}` é
-#: quantos ajustes ficaram fora da vista; o dia em que a trilha crescer, esta
-#: frase deixa de ser emitida sozinha (ver `_a_caixa_cresce`).
-NAO_COUBE = "+{n} não cabem nesta caixa ainda"
+#: O AVISO DO QUE NÃO COUBE SAIU — decisão dela, 02/09/2026, e ela publicou a
+#: 03 no mesmo minuto.
+#:
+#: Ele dizia `+N não cabem nesta caixa ainda` na última casa reservada. Era
+#: texto de tela que ela não tinha visto, e texto de tela é dela: perguntei, e a
+#: resposta foi tirar.
+#:
+#: TIRAR CUSTOU ZERO E RENDEU UMA BARRA: o aviso ocupava uma casa, então o teto
+#: mostrava `cabem - 1` ajustes para caber a frase. Sem ele, cabem `cabem`.
+#:
+#: E COM A 03 PUBLICADA O TETO NEM AGE: `_a_caixa_cresce` acha a trilha
+#: `minmax(var(--r-aj-<lado>),auto)` na página e devolve `None`, então nada é
+#: cortado. O teto fica de pé para o caso de uma página futura voltar a ter
+#: trilha fixa — e nesse dia o corte é CALADO. Quem reintroduzir trilha fixa
+#: tem de dizer o custo na seção da aba em `mockup/DIVERGENCIAS.md`, que é o
+#: que o portão do desenho passou a cobrar em 02/09.
 
 
 def html_dos_ajustes(sigla: str, ajustes: list[dict[str, Any]],
@@ -753,20 +765,12 @@ def html_dos_ajustes(sigla: str, ajustes: list[dict[str, Any]],
     if not ajustes:
         return f'            <div class="ajustes-vazio">{SEM_AJUSTE}</div>'
 
-    #: QUANTAS APARECEM. Sem teto, todas. Com teto e sobra, a última casa é o
-    #: aviso — daí o `- 1`.
-    a_vista = len(ajustes) if cabem is None or len(ajustes) <= cabem else cabem - 1
+    #: QUANTAS APARECEM. Sem teto, todas — e é o caso de hoje, com a 03
+    #: publicada. Com teto, exatamente as que cabem: o aviso saiu por decisão
+    #: dela e a casa que ele ocupava voltou a ser uma barra.
+    a_vista = len(ajustes) if cabem is None else min(len(ajustes), cabem)
     linhas = [_html_de_uma_barra(sigla, i, a, escondida=i >= a_vista)
               for i, a in enumerate(ajustes)]
-    if a_vista < len(ajustes):
-        #: O `grid-row` INLINE É OBRIGATÓRIO: a página publicada crava
-        #: `.ajustes-vazio{grid-row:1 / span 2}`, feito para a frase que ocupa a
-        #: caixa inteira. Sem o inline, o aviso pousaria em cima das barras.
-        #: A classe fica porque é ela que dá o tom e o itálico — e ela existe nas
-        #: duas páginas, a publicada e a bancada.
-        linhas.insert(a_vista, (
-            f'            <div class="ajustes-vazio" style="grid-row:{cabem}">'
-            f'{NAO_COUBE.format(n=len(ajustes) - a_vista)}</div>'))
     return "\n".join(linhas)
 
 
