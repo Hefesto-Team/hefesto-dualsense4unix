@@ -57,8 +57,10 @@ backend (``aabbcc…``) — nunca o OUI de um aparelho real.
 """
 from __future__ import annotations
 
+import ast
 import inspect
 import re
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -352,31 +354,72 @@ def test_o_microfone_ja_tem_endereco_por_peca() -> None:
 
 
 def test_o_volume_do_mic_por_peca_ainda_nao_esta_ligado_na_ativacao() -> None:
-    """``apply_profile_mic`` recebe ``uniq`` e resolve a fonte SEM ele.
+    """O caminho NASCEU; o que falta agora é a palavra dela — e só ela.
 
-    A rota global devolve a PRIMEIRA fonte de captura da lista; com dois
-    controles no cabo há DUAS placas de som (MIC-DA-MESA-CHEIA-01, 20/08/2026).
-    Enquanto esta linha for a global, um ``volume`` por peça no perfil mandaria
-    o número para o microfone do vizinho — e é por isso que
-    ``ControllerMicOverride`` recusa o campo na BORDA, com a razão escrita na
-    mensagem.
+    **O FIO DE GATILHO QUEIMOU E FOI REARMADO — 03/09/2026.** Ele afirmava, como
+    MEDIÇÃO, que ``apply_profile_mic`` recebia ``uniq`` e resolvia a fonte SEM
+    ele — ``assert "fonte_de_captura_do_uniq" not in fonte``. Era verdade quando
+    foi escrito e deixou de ser no mesmo dia: a costura foi feita, e o applier
+    resolve a fonte daquele controle quando há ``uniq``. Manter a afirmação
+    velha era a régua reprovando a melhora em vez do defeito.
 
-    **NOTA DATADA — 03/09/2026.** Este teste segurava a SEÇÃO inteira. Ele
-    passou a segurar só o ``volume``: o ``muted`` entrou com a decisão dela
-    (MIC-QUINTO-AJUSTE-01), porque a escada dele —
-    ``apply_controller_mics`` → ``apply_mic(uniq=…)`` →
-    ``apply_profile_mic(uniq=…)`` → ``set_microphone_mute(uniq=…)`` — carrega o
-    endereço em todo degrau.
+    **E O QUE MUDOU NÃO FOI SÓ O ALVO — FOI A NATUREZA DO QUE SEGURA O CAMPO.**
+    Até 03/09 o que impedia o ``volume`` por peça era uma MEDIÇÃO: a rota global
+    devolve a PRIMEIRA fonte de captura da lista, e com dois DualSense no cabo há
+    DUAS placas de som (MIC-DA-MESA-CHEIA-01, 20/08/2026), então o número iria
+    para o microfone do vizinho. Essa medição caiu. O que segura o campo hoje é
+    uma DECISÃO — abrir a borda muda o que o perfil dela aceita no disco, e isso
+    é dela —, e por isso este caso deixou de vigiar a fiação e passou a vigiar a
+    porta.
 
-    VERMELHO AQUI É BOA NOTÍCIA: a costura foi feita. Tire a recusa do
-    ``volume`` em ``ControllerMicOverride`` e apague este teste.
+    A ESCADA INTEIRA, medida agora e sem buraco: ``apply_controller_mics`` →
+    ``apply_mic(uniq=…)`` → ``apply_profile_mic(uniq=…)`` →
+    ``fonte_de_captura_do_uniq(uniq)``. **A metade que importa é não haver queda
+    para a rota global** — cair na primeira fonte da lista quando o ``uniq`` não
+    resolve reintroduziria o defeito inteiro com o agravante de parecer curado,
+    e é o erro fácil de cometer escrevendo um ``or``. Quem prova o
+    comportamento é ``tests/unit/test_o_volume_do_mic_segue_o_controle.py``;
+    aqui se prova que a FILA está contada certo.
+
+    VERMELHO AQUI CONTINUA SENDO BOA NOTÍCIA, e agora com outro sentido: ela
+    disse a palavra. Traga ``volume`` para ``ControllerMicOverride``, confira que
+    ``apply_mic`` o repassa, e apague este teste.
     """
-    fonte = inspect.getsource(Daemon.apply_profile_mic)
-    assert "fonte_de_captura_do_controle" in fonte
-    assert "fonte_de_captura_do_uniq" not in fonte
-    # E o esquema tem de estar de acordo com a medição acima — senão o campo
-    # entra por um lado enquanto o fio de gatilho continua verde do outro.
-    with pytest.raises(ValueError, match="fonte_de_captura_do_controle"):
+    # LÊ-SE A ÁRVORE, NÃO O TEXTO — e esta linha custou uma mordida para nascer.
+    # A primeira versão desta régua fazia `"fonte_de_captura_do_uniq" in
+    # inspect.getsource(...)`, e passou VERDE com a costura inteiramente
+    # arrancada: o nome aparece no comentário de doze linhas que explica a
+    # escolha, então a régua lia a PROSA e dizia que era fiação. É a forma
+    # exata que esta casa mais pegou — *a régua confunde a PALAVRA com o ATO*.
+    arvore = ast.parse(textwrap.dedent(inspect.getsource(Daemon.apply_profile_mic)))
+    chamadas = [n for n in ast.walk(arvore)
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
+    assert any(c.func.id == "fonte_de_captura_do_uniq" for c in chamadas), (
+        "o applier deixou de CHAMAR `fonte_de_captura_do_uniq` — sem isso o "
+        "volume por peça volta a poder cair no microfone do vizinho, e a fila "
+        "desta régua está contando um caminho que não existe mais"
+    )
+    # A QUEDA PARA A ROTA GLOBAL É O QUE NÃO PODE VOLTAR. O `or` a
+    # reintroduziria em silêncio; o `if uniq else` é o que separa os dois — e a
+    # diferença só existe na árvore, porque as duas formas dizem os mesmos nomes.
+    for no in ast.walk(arvore):
+        if not (isinstance(no, ast.BoolOp) and isinstance(no.op, ast.Or)):
+            continue
+        nomes = {c.func.id for c in ast.walk(no)
+                 if isinstance(c, ast.Call) and isinstance(c.func, ast.Name)}
+        assert "fonte_de_captura_do_uniq" not in nomes, (
+            "o applier caiu para a rota global com um `or` — sem fonte daquele "
+            "controle ninguém escreve, que é o contrário de escrever na "
+            "primeira da lista"
+        )
+    # A BORDA CONTINUA FECHADA, e é isto que este fio vigia agora. O campo não
+    # entra por decurso de prazo: entra quando ela disser.
+    assert "volume" not in ControllerMicOverride.model_fields, (
+        "o `volume` entrou no override por peça — se foi a palavra dela, "
+        "apague este teste; se não foi, o campo grava e a coluna 'Ajuste "
+        "próprio' acende sobre um valor que ninguém pediu"
+    )
+    with pytest.raises(ValueError, match="ainda não vale por unidade"):
         ControllerMicOverride.model_validate({"volume": 50})
 
 

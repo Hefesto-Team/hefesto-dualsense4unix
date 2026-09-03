@@ -206,6 +206,23 @@ def test_o_touchpad_deixou_de_ser_constante(pac, a02):
 # --------------------------------------------------------------------------
 # 5. o espelho: nada emitido cai fora da página
 # --------------------------------------------------------------------------
+#: OS ÓRFÃOS QUE ESPERAM O `--publicar`, e não são desta aba: o `topo()` emite
+#: `rodape.salvar` e `rodape.exportar` para as DEZ páginas, porque o `fim.html`
+#: é um só para todas. A cura de 03/09/2026 fez a dica parar de nomear um perfil
+#: que não é o dela — o desenho congelara o EXEMPLO do pedido dela (*"Salvar
+#: Perfil grava no Mortal Kombat"*) em vez do nome, e as dez abas diziam "Grava
+#: no perfil Mortal Kombat" com `meu_perfil` ativo.
+#:
+#: OS DOIS ENDEREÇOS ESTÃO NAS DEZ PÁGINAS DA BANCADA E EM NENHUMA PUBLICADA,
+#: e a `mockup/DIVERGENCIAS.md` diz isso com todas as letras: *"o valor certo é
+#: emitido e fica órfão até você publicar"*. Emitir antes não custa nada — o
+#: `achar()` do piloto não encontra o endereço e escreve zero, calado.
+#:
+#: O teste abaixo é o que impede esta linha de apodrecer: no dia da publicação
+#: ele reprova, e quem publicar esvazia a lista no mesmo commit.
+ESPERAM_A_PUBLICACAO = ("rodape.exportar", "rodape.salvar")
+
+
 def test_a_aba_controles_nao_emite_para_endereco_que_a_pagina_nao_tem():
     """Órfão é valor calculado a cada tique e jogado fora — e conta cobertura falsa.
 
@@ -215,15 +232,42 @@ def test_a_aba_controles_nao_emite_para_endereco_que_a_pagina_nao_tem():
     e medido às 04:23 os dois cabeçalhos diziam o contrário da mesa viva
     (`p1 → BT`, `p2 → USB`, e a tela dizia USB e BT).
 
-    MORDE: devolver `"via": (c.get("transport") or "").upper()` ao pacote faz
-    este teste reprovar nomeando `via`.
+    **A RÉGUA ENVELHECEU EM 03/09/2026 e ganhou a distinção que lhe faltava.**
+    Ela exigia lista vazia, e ficou vermelha sobre os dois `rodape.*` — que não
+    são desta aba nem são desperdício: são a cura do rodapé, emitida para as dez
+    páginas e esperando o `--publicar` dela, DECLARADA em
+    `mockup/DIVERGENCIAS.md`. Reprovar ali é reprovar a melhora em vez do
+    defeito.
+
+    A DIFERENÇA QUE ELA PASSOU A FAZER, e é a única que importa aqui: órfão
+    **por descuido** (o pacote calcula e ninguém pintará nunca) contra órfão
+    **por espera** (a bancada já tem o endereço, a publicada ainda não). O
+    primeiro continua proibido; o segundo tem de estar NOMEADO em
+    `ESPERAM_A_PUBLICACAO`, e some no dia da publicação.
+
+    MORDE (três, e cada uma tem a sua frase): devolver
+    `"via": (c.get("transport") or "").upper()` ao pacote reprova nomeando
+    `via`; publicar a 02 sem esvaziar `ESPERAM_A_PUBLICACAO` reprova dizendo que
+    a espera acabou; esvaziá-la antes de publicar reprova nomeando os dois.
     """
     import casamento
 
     m = casamento.medir("02-controles.html")
-    assert sorted(m["orfaos"]) == [], (
-        f"a aba Controles emite {sorted(m['orfaos'])} e a página publicada não "
+    orfaos = sorted(m["orfaos"])
+    de_descuido = [k for k in orfaos if k not in ESPERAM_A_PUBLICACAO]
+    assert de_descuido == [], (
+        f"a aba Controles emite {de_descuido} e a página publicada não "
         f"tem endereço para eles — valor calculado a cada tique e jogado fora.")
+    # O OUTRO LADO, e é ele que impede a declaração de apodrecer: quem está na
+    # lista tem de estar REALMENTE órfão. No dia em que a 02 for publicada, os
+    # dois endereços passam a existir na página, saem de `orfaos`, e esta
+    # igualdade reprova pedindo que a lista seja esvaziada.
+    ainda_esperando = tuple(k for k in ESPERAM_A_PUBLICACAO if k in orfaos)
+    assert ainda_esperando == ESPERAM_A_PUBLICACAO, (
+        f"a declaração diz que {list(ESPERAM_A_PUBLICACAO)} esperam o "
+        f"`--publicar`, e hoje só {list(ainda_esperando)} estão órfãos. Ou a "
+        f"publicação aconteceu e a lista ficou para trás, ou ela foi escrita "
+        f"antes da hora — nos dois casos a declaração parou de dizer a verdade.")
 
 
 def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
