@@ -720,6 +720,287 @@ def _html_dos_aparelhos() -> str:
 
 
 # ---------------------------------------------------------------------------
+# A IDENTIDADE DO CONTROLE — `IDENTIDADE-VEM-DE-CIMA-01`, 03/09/2026
+#
+# A LEI É DELA: *"se no topo tá mostrando controle white player 1, então cada
+# aba vai usar os controles lá de cima. Não mistura com a info dos mockups."*
+#
+# AS TRÊS FUNÇÕES ABAIXO TÊM DOIS CHAMADORES E UM DONO, e é o molde que a
+# `a04_iluminacao.um_botao_de_player` já provou: o gerador `aba08.py` as chama
+# com a mesa da BANCADA para desenhar o mockup, e este pacote as chama a cada
+# tique com a mesa VIVA. Enquanto eram duas escritas — uma no gerador, outra
+# nenhuma —, o desenho mandava na tela do produto: com o White dela no cabo, a
+# Gestão de Controles continuava dizendo `Cosmic Red`.
+# ---------------------------------------------------------------------------
+#: O que a mesa põe no lugar do nome do plástico quando ninguém leu a cor.
+#: `mesa_viva.COR_DESCONHECIDA` é o dono; repetir a string aqui criaria uma
+#: segunda cópia que envelhece sozinha.
+def _cor_desconhecida() -> str:
+    from hefesto_dualsense4unix.interface import mesa_viva
+
+    return mesa_viva.COR_DESCONHECIDA
+
+
+def rotulo_do_controle(c: Any, completo: bool = True) -> str:
+    """A ordem dela, 26/08: marca • player • plástico • transporte.
+
+    O PLÁSTICO SOME QUANDO NINGUÉM O LEU, e é a regra dela — *campo sem
+    informação não mostra nada*. Pelo rádio o Hefesto ainda não pergunta a cor
+    (`ONDA-CONEXOES-11`), e ali a mesa devolve `COR_DESCONHECIDA`: escrever
+    "Não sei" no meio do rótulo seria uma palavra a mais para ler e nenhuma
+    informação a mais; escrever a cor do desenho seria a mentira que esta
+    sprint existe para matar.
+    """
+    marca = 'Sony <span class="pt">•</span> ' if completo else ""
+    jogador = f'Player {c["jogador"]}' if completo else f'P{c["jogador"]}'
+    nome = str(c.get("nome") or "")
+    plastico = (f'{nome} <span class="pt">•</span> '
+                if nome and nome != _cor_desconhecida() else "")
+    return f'{marca}{jogador} <span class="pt">•</span> {plastico}{c["via"]}'
+
+
+#: `--fg` e `--app-bg` do esqueleto. São cor de TEMA, não de plástico: o número
+#: dentro do bloco precisa ser lido sobre qualquer um dos 28 modelos, e nenhum
+#: dos dois candidatos serve para todos — `--fg` some no Starlight Blue,
+#: `--app-bg` some no Galactic Purple.
+_TINTAS_DE_TEXTO = (("var(--fg)", (0xF8, 0xF8, 0xF2)),
+                    ("var(--app-bg)", (0x21, 0x22, 0x2C)))
+
+
+def tinta_legivel(fundo_hex: str) -> str:
+    """A tinta de texto que se lê sobre aquele plástico, pela conta da casa."""
+    from hefesto_dualsense4unix.utils.color_contrast import razao_contraste
+
+    rgb = tuple(int(fundo_hex.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+    return max(_TINTAS_DE_TEXTO, key=lambda t: razao_contraste(rgb, t[1]))[0]
+
+
+def _hex_do_plastico(slug: str) -> str:
+    """O hex da casca daquele modelo, ou `""` quando ninguém leu a cor.
+
+    `monta.cor_da_zona` é o dono — ele LÊ a folha que pinta o desenho
+    (`scripts/gerar_cores_do_dualsense.py`) em vez de digitar o hex.
+
+    O `""` NÃO é desistência: a cor chega pelo broker, uma vez por endereço e em
+    thread, então o primeiro tique de uma sessão sempre tem a mesa sem cor — e
+    pelo RÁDIO o Hefesto ainda não pergunta (`ONDA-CONEXOES-11`). Sem hex, quem
+    chama mostra a neutra. Inventar aqui seria a mentira que esta sprint mata.
+    """
+    if not slug:
+        return ""
+    try:
+        import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
+        return str(monta.cor_da_zona(slug))
+    except Exception:
+        # `cor_da_zona` levanta `SystemExit` para colorway que o SVG não tem.
+        # Derrubar a pintura da aba por causa de um modelo novo seria trocar uma
+        # barra que falta por uma tela congelada.
+        return ""
+
+
+# O DESENHO PEQUENO DA LINHA CONTINUA NO PLÁSTICO DO MOCKUP, e a razão está
+# MEDIDA no CSS do `.ds-mini` em `aba08.py`: a cor dele mora num ATRIBUTO
+# (`data-colorway`), o `escrever()` do piloto não tem alvo de atributo, e trocar
+# o `<svg>` inteiro pelo alvo `html` custou 31 pinturas em 31 tiques e triplicou
+# o tique (4,24 → 13,56 ms). A cura certa é um alvo de ATRIBUTO no piloto, que é
+# arquivo de outro dono — e ela vale para as cinco abas que desenham controle.
+
+
+def _da_mesa_para_a_regua(m: dict[str, Any], com_mic: set[str]) -> dict[str, Any]:
+    """Um controle da mesa VIVA na língua da régua do rádio.
+
+    O `"Não sei"` DA MESA VIRA VAZIO AQUI, e foi um vazamento medido em
+    03/09/2026 com os dois controles dela: o `title` da fatia do rádio saía
+    *"Não sei — 260,4 turnos de entrada"*. `COR_DESCONHECIDA` é o que a mesa
+    responde quando ninguém leu a cor, e ele é para o Python decidir — não para
+    a tela mostrar. Vazio faz quem lê cair no `Player N`, que é um fato.
+    """
+    nome = str(m.get("nome") or "")
+    return {
+        "jogador": m.get("jogador"),
+        "nome": "" if nome == _cor_desconhecida() else nome,
+        "via": str(m.get("via") or ""),
+        "plastico": _hex_do_plastico(str(m.get("cor") or "")),
+        # A PONTE QUE SUBIU, e não a que se pediu. É a mesma fonte que o
+        # `radio_da_mesa.ocupacao_por_adaptador` usa (`bt_mic.uniqs`), com a
+        # razão escrita lá: *"uma ponte pedida que não subiu não ocupa fatia de
+        # rádio nenhuma"*. O desenho mostra a fatia laranja porque na bancada a
+        # ponte está de pé; aqui ela só aparece quando está mesmo.
+        "mic": (norm_mac(str(m.get("uniq") or "")) or "") in com_mic,
+    }
+
+
+def _regua_do_radio(ctx: Contexto) -> str:
+    """A régua de Desempenho com a mesa DELA — pistas, eixo e legenda.
+
+    O QUE O PRODUTO SABE, e é só isto: quem está no rádio (a mesa), em qual
+    adaptador cada um está (`radio_da_mesa.adaptador_por_uniq`, que lê o
+    `HID_PHYS` do sysfs) e quanto cada fatia custa (`radio_da_mesa`, os mesmos
+    quatro números que o desenho já lia).
+
+    O QUE ELE NÃO SABE É O NOME DO ADAPTADOR. O apelido mora na declaração dela,
+    endereçado por CAMINHO de barramento, e aqui a chave é o endereço de rádio —
+    as duas não casam hoje. Então a coluna diz **Sem nome**, que é a palavra que
+    o próprio produto usa quando não há apelido
+    (`gui/aba_conexoes.html_das_pistas`), e a dica fica VAZIA em vez de repetir
+    o "TP-Link UB500 — Entrada 3" do desenho. Nenhuma palavra nova nasce aqui.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import radio_da_mesa as rm
+
+    com_mic = {c for c in (norm_mac(str(u)) for u in
+                           ((ctx.state.get("bt_mic") or {}).get("uniqs") or [])) if c}
+    todos = [_da_mesa_para_a_regua(m, com_mic) for m in ctx.mesa]
+    no_radio = [c for c in todos if c["via"] == "BT"]
+    no_cabo = [c for c in todos if c["via"] != "BT"]
+
+    onde: dict[str, str] = {}
+    if no_radio:
+        with contextlib.suppress(Exception):
+            onde = rm.adaptador_por_uniq(
+                [str(m.get("uniq") or "") for m in ctx.mesa if m.get("via") == "BT"])
+
+    # UM GRUPO POR ADAPTADOR, e o SEM_ADAPTADOR por último. `adaptador_por_uniq`
+    # devolve `""` para quem o sysfs não soube dizer, e a regra de honestidade é
+    # dele: *"nunca empresta o adaptador do vizinho"*. Aqui isso vira uma pista
+    # à parte, sem nome — e não uma fatia enfiada na pista de outro.
+    grupos: dict[str, list[dict[str, Any]]] = {}
+    for m, c in zip(ctx.mesa, todos, strict=True):
+        if c["via"] != "BT":
+            continue
+        grupos.setdefault(onde.get(str(m.get("uniq") or ""), ""), []).append(c)
+
+    pistas = [
+        {"nome": "Sem nome", "dica": "", "dentro": grupos[chave], "vagas": no_cabo}
+        for chave in sorted(grupos, key=lambda k: (k == "", k))
+    ]
+    return html_da_regua_do_radio(
+        pistas, no_radio,
+        teto=rm.SLOTS_POR_SEGUNDO,
+        sem_mic=rm.HZ_INPUT_SEM_MIC * rm.SLOTS_POR_RELATORIO,
+        com_mic=(rm.HZ_INPUT_COM_MIC + rm.HZ_AUDIO_COM_MIC) * rm.SLOTS_POR_RELATORIO,
+        num=_num_da_tela, palavra=rm.palavra_da_ocupacao)
+
+
+def _num_da_tela(valor: float) -> str:
+    """`1600` → `1.600`; `260.4` → `260,4`. A vírgula tem dono único."""
+    from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
+
+    inteiro, _, decimal = formata_pt_br(valor).partition(",")
+    milhar = f"{int(inteiro):,}".replace(",", ".")
+    return milhar if decimal == "0" and float(valor).is_integer() else f"{milhar},{decimal}"
+
+
+def html_da_regua_do_radio(
+    pistas: list[dict[str, Any]],
+    no_radio: list[dict[str, Any]],
+    *,
+    teto: float,
+    sem_mic: float,
+    com_mic: float,
+    num: Any,
+    palavra: Any,
+) -> str:
+    """A régua de Desempenho inteira: as pistas, o eixo e a legenda.
+
+    ELA SE TROCA INTEIRA e não campo a campo, pela razão que o piloto já
+    escreve sobre a fita: *"um bloco cujo NÚMERO DE FILHOS muda com o dado não
+    tem como ser pintado campo a campo — não há endereço para um filho que
+    ainda não existe"*. Quantos adaptadores, quantos controles em cada um e
+    quantas vagas mudam com a mesa dela.
+
+    E ELA NÃO PODIA FICAR NO GERADOR: o `title` de cada bloco nomeia o plástico
+    (*"Starlight Blue — 260,4 turnos de entrada"*), e `title` é texto que a tela
+    mostra. Não há alvo de atributo no `escrever()` do piloto — a única forma
+    honesta de curar um `title` congelado é o bloco inteiro nascer do produto.
+
+    :param pistas: uma por adaptador — ``nome``, ``dica`` (o `title` da coluna
+        da esquerda, vazio quando ninguém sabe), ``dentro`` e ``vagas``.
+    :param no_radio: os controles no rádio, para a legenda.
+    :param num: o formatador de número da tela (a vírgula tem dono único).
+    :param palavra: a palavra da ocupação, do `radio_da_mesa`.
+    """
+    linhas = []
+    for p in pistas:
+        dica = f' title="{p["dica"]}"' if p.get("dica") else ""
+        dentro = list(p.get("dentro") or [])
+        if not dentro:
+            linhas.append(
+                f'        <div class="pista">\n'
+                f'          <span class="quem"{dica}>{p["nome"]}</span>\n'
+                f'          <span class="trilho"><span class="vazio">Nenhum controle '
+                f'neste rádio</span></span>\n'
+                f'          <span class="num">0 <i>de {num(teto)}</i></span>\n'
+                f'        </div>')
+            continue
+        blocos, usado = [], 0.0
+        for c in dentro:
+            # SEM COR LIDA A FATIA FICA NEUTRA, e o texto volta para a tinta de
+            # tema: pintar o bloco com a cor do desenho seria a mesma mentira,
+            # um andar abaixo.
+            plastico = str(c.get("plastico") or "")
+            pinta = (f";background:{plastico};color:{tinta_legivel(plastico)}"
+                     if plastico else "")
+            nome = str(c.get("nome") or "") or f'Player {c["jogador"]}'
+            blocos.append(
+                f'<span class="bloco usa" style="width:{sem_mic / teto * 100:.2f}%{pinta}"'
+                f' title="{nome} — {num(sem_mic)} turnos de entrada">'
+                f'P{c["jogador"]} · {num(sem_mic)}</span>')
+            usado += sem_mic
+            if c.get("mic"):
+                blocos.append(
+                    f'<span class="bloco mic" style="width:{(com_mic - sem_mic) / teto * 100:.2f}%"'
+                    f' title="Microfone do Player {c["jogador"]} pelo rádio — '
+                    f'+{num(com_mic - sem_mic)} turnos"></span>')
+                usado += com_mic - sem_mic
+        for c in list(p.get("vagas") or []):
+            if usado + com_mic > teto:
+                break
+            usado += com_mic
+            quem = str(c.get("nome") or "") or f'Player {c["jogador"]}'
+            blocos.append(
+                f'<span class="bloco vaga" style="width:{com_mic / teto * 100:.2f}%"'
+                f' title="Se o {quem} do Player {c["jogador"]} — hoje no {c["via"]} — viesse '
+                f'para este rádio com o microfone ligado: +{num(com_mic)} turnos.">'
+                f'+1 · {num(usado)}</span>')
+        total = sum(com_mic if c.get("mic") else sem_mic for c in dentro)
+        fracao = total / teto
+        linhas.append(
+            f'        <div class="pista">\n'
+            f'          <span class="quem"{dica}>{p["nome"]}</span>\n'
+            f'          <span class="trilho" title="{palavra(fracao)} — {num(total)} das '
+            f'{num(teto)} turnos ({fracao * 100:.0f}%). As três palavras são do produto '
+            f'(integrations/radio_da_mesa.py) e falam só de OCUPAÇÃO: rádio cheio tem volta, '
+            f'basta tirar um controle daqui.">\n'
+            f'            {"".join(blocos)}\n'
+            f'          </span>\n'
+            f'          <span class="num">{num(total)} <i>de {num(teto)}</i></span>\n'
+            f'        </div>')
+    legenda = [
+        f'            <span><i style="background:{c["plastico"]}"></i>'
+        f'{rotulo_do_controle(c, completo=False)} — {num(sem_mic)}</span>'
+        for c in no_radio if c.get("plastico")
+    ]
+    return (
+        "\n".join(linhas) + "\n"
+        '          <div class="eixo">\n'
+        '            <span class="quem"></span>\n'
+        '            <span class="regua"><i>0</i><span>400</span><span>800</span>'
+        f'<span>1.200</span><span>{num(teto)}</span></span>\n'
+        '            <span class="num"></span>\n'
+        '          </div>\n'
+        '\n'
+        '          <div class="leg">\n'
+        + ("\n".join(legenda) + "\n" if legenda else "")
+        + f'            <span><i style="background:var(--orange)"></i>O microfone de cada um '
+          f'— +{num(com_mic - sem_mic)}</span>\n'
+          f'            <span><i class="vaga"></i>Cada controle do cabo, se viesse '
+          f'— +{num(com_mic)}</span>\n'
+          '          </div>')
+
+
+# ---------------------------------------------------------------------------
 # O TETO DA VIBRAÇÃO POR CONTROLE — MIGRA-CONEXOES-11, 01/09/2026
 # ---------------------------------------------------------------------------
 # A CADEIA JÁ EXISTIA INTEIRA, e nada dela é desta leva. O que faltava era a
@@ -901,13 +1182,31 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     )
     sem_dono: dict[str, str] = {}
 
+    # A MESA POR `uniq` — a identidade de cada controle, lida do aparelho. É de
+    # onde saem o rótulo da linha e a cor da barra; o `ctx.conectados` traz o cru
+    # do daemon e não sabe o nome do plástico.
+    da_mesa = {str(m.get("uniq") or ""): m for m in ctx.mesa}
+
     colunas = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         teto_campo, teto_frase = _teto_do_controle(overrides, uniq, vibracao, sem_dono)
+        eu = da_mesa.get(uniq) or {}
         colunas[uniq] = {
             "via": (c.get("transport") or "").upper(),
             "bateria": c.get("battery_pct"),
+            # O NOME DA LINHA — `IDENTIDADE-VEM-DE-CIMA-01`, 03/09/2026. A
+            # `.gc-nome` mostrava o rótulo do MOCKUP: com o White dela no cabo,
+            # a Gestão de Controles dizia `Sony · Player 1 · Cosmic Red · USB`.
+            # O alvo é `html` porque o rótulo traz os `<span class="pt">•</span>`
+            # que separam os campos — em `texto` eles apareceriam escritos.
+            "nome": rotulo_do_controle(eu) if eu else "",
+            # A COR DA BARRA DA ESQUERDA, no alvo `cor` (ver o CSS do `.gc-cor`).
+            # VAZIO APAGA, e é o alvo que garante: `el.style.color = ''` devolve
+            # o elemento à folha de estilo, que o pinta `transparent`. Sem cor
+            # lida — o rádio, enquanto a `ONDA-CONEXOES-11` não chegar — a barra
+            # some e a borda neutra fica. Nenhuma cor é inventada.
+            "plastico": _hex_do_plastico(str(eu.get("cor") or "")),
             "ponte": bool(c.get("uniq") in (st.get("pontes_confirmadas") or {})),
             "fragil": bool(c.get("uniq") in (st.get("native_bt_fragil_controles") or [])),
             # O QUE ESTÁ DECLARADO, e não o que o desenho traz. O `<select>`
@@ -935,7 +1234,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # nem existe. A aba mostrava um gabinete que não é o dela — e era por
         # isso que os seis botões do mapa não podiam ser ligados: clicar
         # declararia no disco DELA o desenho de um exemplo.
-        "blocos": {".mm-faces": _html_do_mapa(), ".mm-lista": _html_dos_aparelhos()},
+        # A `.mm-lista` SAIU DAQUI e virou campo com endereço — 03/09/2026. Ela
+        # já era trocada inteira desde 01/09, mas por SELETOR, e um bloco sem
+        # `data-campo` é invisível para as duas réguas: os `title` dos botões
+        # nomeiam o plástico ("o P1 Cosmic Red, no cabo") e passavam por
+        # congelados. A troca é a mesma — `data-hef-alvo="html"` também escreve
+        # `innerHTML` —, e agora as réguas a enxergam.
+        "blocos": {".mm-faces": _html_do_mapa()},
+        "aparelhos": _html_dos_aparelhos(),
+        # A RÉGUA DO RÁDIO INTEIRA, pelo dono único. Ver
+        # `html_da_regua_do_radio`: o `title` de cada fatia nomeia o plástico, e
+        # `title` não tem alvo no piloto — o bloco tem de nascer do produto.
+        "regua-do-radio": _regua_do_radio(ctx),
         # AS TRÊS LISTAS SÃO O QUE A TELA MOSTRA, uma por bloco de achado: o
         # selo, a frase e o `?`. Elas se distribuem pelos elementos de mesmo
         # `data-campo`, na ordem — o gerador não precisa saber quantos achados
