@@ -181,6 +181,71 @@ def _tinta(rgb: Any) -> str:
 #: e ele não pode depender de variável nenhuma.
 TIRA_APAGADA = "background:var(--panel);color:transparent;opacity:1"
 
+#: OS TRÊS ESTADOS DA TIRA — decisão 9 dela, 03/09/2026:
+#:
+#:     "Tira da luz: tracejado para 'não sei'; lisa e vazia para 'apagada'."
+#:
+#: O DEFEITO QUE ELA VIU, e ele estava na tela: `"a barra está APAGADA"` e
+#: `"não sei se está acesa"` pintavam a MESMA tira, byte por byte — as duas
+#: caíam no `TIRA_APAGADA`, porque a única pergunta que esta função fazia era
+#: *"há tinta?"*, e nos dois casos não há. A ressalva que separa os dois viajava
+#: só no `title`: quem não passa o mouse não vê.
+#:
+#: SÃO TRÊS COISAS DIFERENTES, e o motor já as separava:
+#:
+#:     acesa     a barra está acesa e a cor é conhecida     tira na cor, com halo
+#:     apagada   fonte NOSSA, e ela está desligada          tira lisa e vazia
+#:     incerta   Nativo · Steam segurando · cor desconhecida  tira TRACEJADA
+#:
+#: O tracejado é CONTORNO, não cor — de propósito. Nesta aba tudo o que é CHEIO
+#: de cor é LUZ (as tiras, as lâmpadas, os oito tons da guia); uma cor nova para
+#: "não sei" seria lida como uma luz que ninguém mediu.
+ACESA, APAGADA, INCERTA = "acesa", "apagada", "incerta"
+
+#: O ENDEREÇO DO ESTADO DESCONHECIDO, e ele é `classe` porque o que muda na tela
+#: é uma CLASSE, não uma palavra. Sem ele o tracejado viajaria só dentro do bloco
+#: `luz` (alvo `html`), e régua nenhuma o veria: os alvos `html` e `fundo` são
+#: lidos pelo TEXTO visível, e um desenho não tem texto.
+ENDERECO_DA_INCERTA = "luz-incerta"
+
+#: A CLASSE QUE DESENHA O TRACEJADO. A folha desta aba é dona do traço
+#: (`aba04.CSS`, `.tira-luz.incerta`); aqui mora só o nome, para que o gerador e
+#: o pintor não o escrevam em dois lugares.
+CLASSE_DA_INCERTA = "incerta"
+
+
+def estado_da_tira(recado: str | None) -> str:
+    """Qual dos três estados a tira desenha — **perguntado ao motor**.
+
+    O DISCRIMINADOR É O PRIMEIRO RETORNO de
+    `app/widgets/controller_card.rotulo_lightbar`, e não o segundo: a docstring
+    dele diz que a cor devolvida é *"a BASE do accent"*, e ela vem PREENCHIDA
+    nos dois ramos em que o próprio motor avisa que a cor pode não estar no
+    plástico (Nativo e Steam). Ler a base como "há luz?" colapsa dois estados —
+    é o mesmo defeito que a `a02_controles` mediu com sonda em 02/09/2026.
+
+    ONDE CAI CADA UM DOS CINCO RAMOS do motor (`controller_card.py:1181-1191`)::
+
+        (None, rgb)                        cor conhecida e acesa      → acesa
+        "Lightbar: apagada"                fonte NOSSA, desligada     → apagada
+        "Em Nativo o jogo é dono do LED"   o jogo escreve por hidraw  → incerta
+        "A Steam tem este controle aberto" quem segura o `fd`         → incerta
+        "Lightbar: cor desconhecida"       sem fonte, ou sem rgb      → incerta
+
+    A FRASE DA APAGADA NÃO SE DIGITA — ela se PERGUNTA. Das quatro que
+    `rotulo_lightbar` devolve só uma é constante exportada
+    (`ROTULO_LIGHTBAR_SEGURADA`), e `a02_controles.ROTULO_DA_LUZ_APAGADA` já
+    resolveu isto para a aba irmã: perguntar ao motor com a entrada mínima que
+    só o ramo "apagada" atende. **Reusar é o contrário de copiar** — uma segunda
+    derivação aqui envelheceria calada no dia em que o motor trocasse a frase, e
+    esta aba voltaria a colapsar "apagada" com "não sei" sem régua reprovar.
+    """
+    from .a02_controles import ROTULO_DA_LUZ_APAGADA
+
+    if recado is None:
+        return ACESA
+    return APAGADA if recado == ROTULO_DA_LUZ_APAGADA else INCERTA
+
 
 def o_coop_manda(state: dict[str, Any]) -> bool:
     """O co-op está DE FATO numerando mais de um controle?
@@ -408,7 +473,7 @@ def fileira_de_players(nome: str, meu: int, donos: dict[int, dict[str, Any]],
 
 
 def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
-                   recuo: str = "") -> str:
+                   recuo: str = "", estado: str = "") -> str:
     """O miolo do `.aceso`: as duas tiras e as cinco lâmpadas, VIVAS.
 
     O DEFEITO QUE ESTA FUNÇÃO MATA está fotografado na tela dela em
@@ -453,19 +518,52 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
     resolveria isto para as dezenove dicas congeladas desta aba de uma vez.
 
     :param tinta: o hex JÁ no tom da casa. `""` desenha a tira APAGADA
-        (`TIRA_APAGADA`), e nunca uma tira sem estilo — ver a constante.
+        (`TIRA_APAGADA`), e nunca uma tira sem estilo — ver a constante. Com
+        `estado=INCERTA` a tinta não é olhada: quem não sabe não pinta.
     :param brilho: de 0.0 a 1.0, a opacidade das duas tiras ACESAS. A apagada
         não tem brilho: uma barra desligada a 30% seria 30% de nada.
     :param jogador: o número deste controle, para o padrão das lâmpadas.
     :param dica: a frase de `dica_da_luz`, ou `""`. Sem ela as peças saem sem
         `title`, que é o que o desenho fazia antes de haver frase viva.
+    :param estado: `ACESA`, `APAGADA` ou `INCERTA` — o que `estado_da_tira`
+        respondeu. `""` quer dizer **sem estado declarado**, e aí a tinta
+        decide: é o que a BANCADA sabe, porque o gerador não tem motor a
+        perguntar. Nunca vale `INCERTA` por omissão — inventar "não sei" onde
+        ninguém perguntou seria a tela afirmando uma dúvida que não existe.
     """
     import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
 
-    estilo = (f"background:{tinta};color:{tinta};opacity:{brilho}" if tinta
-              else TIRA_APAGADA)
+    # A TIRA TRACEJADA — decisão 9 dela. Ver `ACESA/APAGADA/INCERTA`.
+    #
+    # O TRACEJADO É DA FOLHA (`aba04.CSS`, `.tira-luz.incerta`), e o que sai
+    # daqui é só a CLASSE — o nome do estado, uma vez. O contorno escrito inline
+    # seria um segundo dono do traço, e inline vence folha: no dia em que o
+    # desenho do contorno mudasse, o produto ficaria com o antigo, calado.
+    #
+    # MAS O ESTILO DE LINHA NÃO SOME, e isto é o PISO, não decoração. Uma página
+    # cuja folha ainda não conhece `.tira-luz.incerta` — o publicado de hoje, até
+    # ela mandar publicar a 04 — deixaria a tira sem `background` E sem `color`:
+    # o halo é `box-shadow: … currentColor` (`.tira-luz.esq`/`.dir`), e `color`
+    # herdado nesta página é o `--fg`, `#f8f8f2`. A tira do "não sei" ACENDERIA
+    # BRANCA. É o mesmo defeito que `TIRA_APAGADA` já aprendeu na foto, e por
+    # isso o piso é o DELA, literalmente a mesma constante: sem halo, sem cor
+    # herdada. Onde a folha é a nova, ela ACRESCENTA o contorno tracejado — não
+    # disputa nada com o estilo de linha; onde é a velha, a tira fica como está
+    # hoje, e nada se perde enquanto a publicação não vem.
+    incerta = estado == INCERTA
+    estilo = (TIRA_APAGADA if (incerta or estado == APAGADA or not tinta)
+              else f"background:{tinta};color:{tinta};opacity:{brilho}")
+    veste = f' style="{estilo}"'
+    # O ENDEREÇO DO ESTADO VIAJA NA TIRA, e não na célula em volta: a célula é o
+    # bloco de alvo `html` que se troca inteiro, e um segundo `data-campo` nela
+    # não cabe. Aqui ele é a marca que o pintor confirma a cada tique e que a
+    # régua do mockup consegue LER — um desenho não tem texto, e `html` é lido
+    # pelo texto.
+    marca = (f' data-campo="{ENDERECO_DA_INCERTA}" data-hef-alvo="classe"'
+             f' data-hef-classe="{CLASSE_DA_INCERTA}"')
+    aviso = f" {CLASSE_DA_INCERTA}" if incerta else ""
     diz = f' title="{dica}"' if dica else ""
-    tira = f'<span class="tira-luz %s" style="{estilo}"{diz}></span>'
+    tira = f'<span class="tira-luz %s{aviso}"{veste}{marca}{diz}></span>'
     try:
         lampadas = monta.luzinhas(jogador)
     except KeyError:
@@ -699,6 +797,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: "não afirme". É a regra dela de hoje, aplicada ao desenho: *"se não
         #: tá mostrando agora, não tem info pra mostrar no produto"*.
         acesa = base if recado is None else None
+        #: QUAL DOS TRÊS ESTADOS A TIRA DESENHA — decisão 9 dela. Ele sai do
+        #: MESMO primeiro retorno que decide `acesa`, e não de uma segunda
+        #: leitura: "apagada" e "não sei" só se separam pela frase do motor.
+        estado = estado_da_tira(recado)
         colunas[uniq] = {
             #: A TELA MOSTRA PORCENTAGEM, e o `%` é DELA: o desenho escreve
             #: `82%` nesta caixa. Emitir o `0.82` cru — o que esta linha fazia
@@ -754,7 +856,25 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "luz": desenho_da_luz(_tinta(acesa),
                                   1.0 if b is None else float(b), n,
                                   dica_da_luz(nome, via, recado or "",
-                                              o_coop_manda(ctx.state))),
+                                              o_coop_manda(ctx.state)),
+                                  estado=estado),
+            #: O TRACEJADO, COM ENDEREÇO PRÓPRIO — e ele vem DEPOIS do `luz` de
+            #: propósito. O `luz` troca o miolo do `.aceso` inteiro (alvo
+            #: `html`) e recria as duas tiras; o pintor percorre os campos na
+            #: ordem em que este dicionário os declara, então escrever a classe
+            #: antes seria escrevê-la num elemento que a linha de cima está
+            #: prestes a substituir.
+            #:
+            #: O HTML EMITIDO JÁ TRAZ A CLASSE — este campo não a acrescenta,
+            #: ele a CONFIRMA. E confirmar é o que faltava: sem um endereço que
+            #: a régua saiba ler, o único sinal do estado morava dentro de um
+            #: bloco `html`, que é lido pelo TEXTO visível — e um desenho não
+            #: tem texto.
+            #:
+            #: `"sim"`/`""` E NUNCA UM BOOLEANO: `str(True)` é `"True"` e o JS
+            #: escreveria `"true"`; as duas réguas desta casa que traduzem o
+            #: declarado dizem, por escrito, que erram nesse par.
+            ENDERECO_DA_INCERTA: "sim" if estado == INCERTA else "",
             #: O RÓTULO INTEIRO, e não só o número. O desenho escreve
             #: `P1 • Cosmic Red • USB`; emitir só o `P1` fazia o primeiro tique
             #: APAGAR o nome do controle e o transporte da tela dela — a
