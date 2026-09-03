@@ -819,6 +819,105 @@ class ControllerRumbleOverride(BaseModel):
         return self
 
 
+class ControllerMicOverride(BaseModel):
+    """O MICROFONE de UMA unidade física (MIC-QUINTO-AJUSTE-01, 03/09/2026).
+
+    Decisão dela, 03/09/2026 — o microfone vira o QUINTO ajuste por controle:
+    é o `Virtual` que faz o mic soar igual no cabo e no rádio, ou seja, é o
+    ajuste que faz o CANAL daquele controle funcionar; e com
+    ``CANAL-POR-CONTROLE-01`` — *"4 controles os 4 tem que ter canais de
+    entrada unico pra cada qual"* (noqa-acento: citação literal dela) —
+    um controle no cabo e outro no rádio precisam poder ter tratamentos
+    diferentes.
+
+    Subconjunto DELIBERADO de ``ProfileMicConfig``, no molde exato do
+    ``ControllerRumbleOverride``: entra o campo cujo caminho por unidade EXISTE
+    HOJE, e os outros dois ficam de fora com a medição escrita. A ordem não se
+    inverte — **campo que grava e ninguém lê é pior que campo nenhum**: ele faz
+    a coluna "Ajuste próprio" da aba Perfis acender sobre um valor que nada
+    aplica. Há régua exaustiva nos dois sentidos
+    (``tests/unit/test_perfil_por_controle_o_campo_espera_o_caminho.py``).
+
+    O QUE ENTRA — ``muted``, e a escada inteira já carrega o endereço
+    -----------------------------------------------------------------
+    ``manager.apply_controller_mics`` → ``apply_mic(uniq=…)`` →
+    ``lifecycle.apply_profile_mic(uniq=…)`` →
+    ``set_microphone_mute(muted, uniq=…)`` → ``_handle_for(uniq)``, que casa o
+    MAC normalizado com o handle daquela peça
+    (``core/backend_pydualsense.py:4611``). O alvo está no parâmetro em todo
+    degrau, e é o que separa *"guardei"* de *"chegou ao aparelho"*.
+
+    Vale para ele a MESMA exceção MIC-GRAVACAO-01 do campo global: o ``muted``
+    é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho, e por isso só
+    atravessa a troca EXPLÍCITA de perfil (``origin="manual"``). Quem aplica a
+    guarda é ``ProfileManager.apply_mic``, reusado VERBATIM — não há segunda
+    cópia da regra aqui.
+
+    O QUE FICA DE FORA, e cada um por uma MEDIÇÃO
+    ----------------------------------------------
+    - ``volume``. A primitiva por peça existe
+      (``audio_control.fonte_de_captura_do_uniq``, MIC-DA-MESA-CHEIA-01,
+      20/08/2026), e o applier **não a chama**: ``Daemon.apply_profile_mic``
+      resolve a fonte com ``fonte_de_captura_do_controle()``, que devolve a
+      PRIMEIRA fonte da lista. Com dois DualSense no cabo há DUAS placas de
+      som, então um volume por peça iria para o microfone do VIZINHO na mesa
+      cheia — errado em silêncio, que é pior que ausente. A costura é de uma
+      linha e mora em ``daemon/lifecycle.py``; quando ela existir, este campo
+      entra.
+    - ``button_toggles_system``. O interruptor é UM por máquina:
+      ``hotkey.mic_button_loop`` lê ``daemon.config.mic_button_toggles_system``
+      (``daemon/subsystems/hotkey.py:938``) e não consulta ``uniq`` nenhum.
+      Guardá-lo por peça faria quatro controles gravarem quatro opiniões sobre
+      um interruptor só.
+
+    A recusa é na BORDA do esquema, e não no applier, pela mesma razão do
+    ``custom_mult`` do rumble e do ``auto`` por unidade: o arquivo inválido
+    morre no load, com mensagem que EXPLICA, em vez de virar comportamento
+    errado silencioso meses depois. ``extra="forbid"`` faz a recusa; os dois
+    validadores abaixo trocam o ``extra_forbidden`` cru pela razão.
+
+    Campo não escrito = sem opinião: o merge POR CAMPO herda o global do
+    perfil, exatamente como em ``leds``/``triggers``/``rumble``/``speaker``.
+    ``None`` continua sendo silêncio, e perfil antigo sem a seção carrega e
+    vale.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: Mudo do microfone DESTA peça. `None` = sem opinião. Só atravessa a troca
+    #: EXPLÍCITA de perfil (MIC-GRAVACAO-01) — a guarda mora em
+    #: `ProfileManager.apply_mic`.
+    muted: bool | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _o_que_ainda_nao_tem_caminho_por_peca(cls, data: Any) -> Any:
+        """Mensagem que EXPLICA a recusa em vez do ``extra_forbidden`` cru."""
+        if not isinstance(data, dict):
+            return data
+        if "volume" in data:
+            raise ValueError(
+                "controllers[...].mic: 'volume' ainda não vale por unidade — "
+                "`Daemon.apply_profile_mic` resolve a fonte de captura com "
+                "`fonte_de_captura_do_controle()`, que devolve a PRIMEIRA "
+                "fonte da lista, e com dois DualSense no cabo há DUAS placas "
+                "de som (MIC-DA-MESA-CHEIA-01): o volume iria para o "
+                "microfone do vizinho. Use o 'volume' da seção GLOBAL `mic` "
+                "do perfil; quando o applier passar a chamar "
+                "`fonte_de_captura_do_uniq`, o campo entra aqui."
+            )
+        if "button_toggles_system" in data:
+            raise ValueError(
+                "controllers[...].mic: 'button_toggles_system' é UM por "
+                "MÁQUINA — quem o lê é `hotkey.mic_button_loop`, em "
+                "`daemon.config.mic_button_toggles_system`, sem consultar "
+                "`uniq` nenhum. Guardá-lo por peça faria quatro controles "
+                "gravarem quatro opiniões sobre um interruptor só. Ele "
+                "continua valendo na seção GLOBAL `mic` do perfil."
+            )
+        return data
+
+
 class ControllerOverrides(BaseModel):
     """Overrides POR CONTROLE dentro do perfil (PERFIL-02, 2026-07-16).
 
@@ -858,7 +957,12 @@ class ControllerOverrides(BaseModel):
     - ``speaker``, da mesma sprint: ``manager.apply_controller_speakers`` chama
       ``apply_speaker(uniq=...)`` → ``apply_profile_speaker(uniq=...)`` →
       ``set_speaker_volume(uniq=...)``, com o alvo no parâmetro em toda a
-      escada.
+      escada;
+    - ``mic``, desde MIC-QUINTO-AJUSTE-01 (03/09/2026, decisão dela):
+      ``manager.apply_controller_mics`` chama ``apply_mic(uniq=...)`` →
+      ``apply_profile_mic(uniq=...)`` → ``set_microphone_mute(uniq=...)``. É um
+      subconjunto — só o ``muted`` —, e ``ControllerMicOverride`` diz por
+      medição o que ficou de fora e o que cada um espera.
 
     Fora por decisão, e não por falta de caminho:
     - ``label`` — identidade visível é outra frente (4P-03);
@@ -867,21 +971,19 @@ class ControllerOverrides(BaseModel):
 
     A FILA DO QUE FALTA, ORDENADA POR CUSTO — medida em 02/09/2026
     ---------------------------------------------------------------
-    1. ``mic``. **O caminho por peça já existe inteiro; falta ligá-lo.** As três
-       primitivas estão de pé: ``EventTopic.MIC_DA_MESA`` publica a borda do
-       botão COM ``uniq`` (MIC-DA-MESA-ELEICAO-01, 01/09/2026),
-       ``audio_control.fonte_de_captura_do_uniq(uniq)`` resolve a placa de som
-       daquela peça (MIC-DA-MESA-CHEIA-01, 20/08) e
-       ``set_microphone_mute(muted, uniq=...)`` fala com o firmware dela.
-       Faltam três costuras, todas FORA deste arquivo: um
-       ``apply_controller_mics`` no gerente, irmão do de alto-falante;
-       ``lifecycle.apply_profile_mic`` usar ``fonte_de_captura_do_uniq`` quando
-       recebe ``uniq`` — hoje ele chama a rota GLOBAL
-       ``fonte_de_captura_do_controle()``, que devolve a PRIMEIRA fonte da
-       lista, então um volume por peça iria para o microfone do vizinho na mesa
-       cheia; e ``hotkey.mic_button_loop`` consultar o override daquele ``uniq``
-       antes de ``daemon.config.mic_button_toggles_system``, que é um por
-       máquina.
+    1. O que sobrou do ``mic``, e são os DOIS campos que
+       ``ControllerMicOverride`` recusa na borda com a razão escrita. O
+       ``muted`` entrou em 03/09/2026 (MIC-QUINTO-AJUSTE-01); faltam:
+
+       - ``volume`` — ``lifecycle.apply_profile_mic`` precisa chamar
+         ``audio_control.fonte_de_captura_do_uniq(uniq)`` quando recebe
+         ``uniq``. Hoje ele usa a rota GLOBAL
+         ``fonte_de_captura_do_controle()``, que devolve a PRIMEIRA fonte da
+         lista, então um volume por peça iria para o microfone do vizinho na
+         mesa cheia. Costura de uma linha, em ``daemon/lifecycle.py``;
+       - ``button_toggles_system`` — ``hotkey.mic_button_loop`` precisa
+         consultar o override daquele ``uniq`` antes de
+         ``daemon.config.mic_button_toggles_system``, que é um por máquina.
 
        **NOTA DATADA — 02/09/2026.** Esta docstring dizia que o ``mic`` não
        cabia aqui porque *"o ``EventTopic.BUTTON_DOWN`` publica ``{"button",
@@ -955,13 +1057,16 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO QUATRO, e a tela oferece nove. O que falta, e o CAMINHO que cada um
+    # SÃO CINCO, e a tela oferece nove. O que falta, e o CAMINHO que cada um
     # espera antes de poder entrar, está na fila da docstring acima — ordenada
-    # por custo, do mic (três costuras) à entrada por unidade (o pipeline).
+    # por custo, dos sensores (o interruptor inteiro) à entrada por unidade (o
+    # pipeline). O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
+    # cuja escada carrega o `uniq` em todo degrau.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
     speaker: ProfileSpeakerConfig | None = None
+    mic: ControllerMicOverride | None = None
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
@@ -1434,6 +1539,7 @@ __all__ = [
     "CONFIRMADA_POR_SILENCIO",
     "PRIORIDADE_MAXIMA",
     "PRIORIDADE_MINIMA",
+    "ControllerMicOverride",
     "ControllerOverrides",
     "ControllerRumbleOverride",
     "LedsConfig",

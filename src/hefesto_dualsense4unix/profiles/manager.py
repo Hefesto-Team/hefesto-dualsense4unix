@@ -848,6 +848,9 @@ class ProfileManager:
         # contrato do alto-falante — perfil sem a seção não chama applier
         # nenhum (ver `apply_mic`).
         self.apply_mic(profile, origin=origin, relatorio=resultado)
+        # MIC-QUINTO-AJUSTE-01 (03/09/2026): e DEPOIS do global, a peça que
+        # discorda dele — o mesmo par que o alto-falante já formava.
+        self.apply_controller_mics(profile, origin=origin, relatorio=resultado)
         return resultado
 
     def apply_controller_speakers(
@@ -868,10 +871,22 @@ class ProfileManager:
         ``set_speaker_volume(uniq=...)``. Faltava o perfil ter ONDE guardar
         quem é quem — agora tem (``ControllerOverrides.speaker``).
 
-        DEPOIS do global, e é a ordem que importa: o global já escreveu em
-        todo mundo (``uniq=None`` = broadcast), e cada override reescreve
-        apenas a SUA peça por cima. Unidade sem override fica com o global,
-        que é o que "sem opinião" quer dizer aqui como em toda seção.
+        DEPOIS do global, e é a ordem que importa: o global já escreveu, e cada
+        override reescreve apenas a SUA peça por cima. Unidade sem override
+        fica com o global, que é o que "sem opinião" quer dizer aqui como em
+        toda seção.
+
+        **FATO ERRADO, SUBSTITUÍDO — 03/09/2026.** Esta linha dizia que o
+        global *"escreveu em todo mundo (``uniq=None`` = broadcast)"*. Medido:
+        ``set_speaker_volume(uniq=None)`` chama ``_handle_for(None)``
+        (``core/backend_pydualsense.py:4148``), que devolve **o handle
+        PRIMÁRIO** (``:4611-4623``) — um só, nunca todos. A família de áudio
+        inteira compartilha esse ``_handle_for``, e por isso ela não se
+        comporta como a barra de luz ou a vibração, que têm broadcast de
+        verdade. **Consequência, e ela não é desta frente:** numa mesa de dois,
+        um perfil com ``speaker`` global e SEM override não alcança o segundo
+        controle. Quem consertar mexe no applier ou no backend; aqui fica a
+        medição para ninguém reaprender que "o global cobre todo mundo".
 
         A seção do alto-falante NÃO é parcial por construção (``volume`` é
         obrigatório no esquema — SOM-02, armadilhas 1 e 2), então não há
@@ -898,6 +913,69 @@ class ProfileManager:
             estado = self.apply_speaker(vista, origin=origin, uniq=str(uniq))
             if estado is not None:
                 resultado[f"speaker:{uniq}"] = estado
+        return resultado
+
+    def apply_controller_mics(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+    ) -> dict[str, str]:
+        """Aplica o microfone das UNIDADES que discordam do global (03/09/2026).
+
+        MIC-QUINTO-AJUSTE-01, decisão dela: o microfone vira o QUINTO ajuste por
+        controle, porque é ele que faz o CANAL daquele controle funcionar — e
+        com ``CANAL-POR-CONTROLE-01`` — *"4 controles os 4 tem que ter canais
+        de entrada unico pra cada qual"* (noqa-acento: citação literal dela) —
+        um controle no cabo e outro no rádio precisam poder ter tratamentos
+        diferentes.
+
+        IRMÃO EXATO de ``apply_controller_speakers``, e o paralelo é a entrega:
+        a fiação por-``uniq`` já existia inteira e nunca fora ligada.
+        ``apply_mic`` aceita ``uniq`` desde PERFIL-GUARDA-O-MIC-01 e
+        ``lifecycle.apply_profile_mic`` o repassa a
+        ``set_microphone_mute(uniq=...)``, que casa o MAC com o handle daquela
+        peça (``_handle_for``). Faltava o perfil ter ONDE guardar quem é quem —
+        agora tem (``ControllerOverrides.mic``).
+
+        DEPOIS do global, pela mesma razão da ordem no alto-falante: o global
+        escreve primeiro e cada override reescreve apenas a SUA peça por cima.
+        Aqui a diferença medida importa e está escrita no irmão: o global de
+        áudio (``uniq=None``) alcança **só o handle PRIMÁRIO**, não a mesa
+        inteira — então, na prática, quem não é primário só é atendido pelo
+        override.
+
+        REUSA ``apply_mic`` VERBATIM através de uma vista do perfil
+        (``model_copy``) para não duplicar as três guardas dela: a trava manual
+        de áudio, o silêncio de quem não pediu nada e — a que mais custaria
+        perder — a exceção MIC-GRAVACAO-01, que só deixa o ``muted`` atravessar
+        a troca EXPLÍCITA de perfil. Uma segunda cópia dessa regra é como o
+        perfil de um jogo voltaria a roubar o mudo dela no meio de uma gravação.
+
+        A VISTA CARREGA UM ``ControllerMicOverride`` ONDE O ESQUEMA DECLARA UM
+        ``ProfileMicConfig``, e isso é deliberado: ``apply_mic`` lê a seção
+        SÓ por ``getattr(secao, "volume"/"muted", None)``, e o override é um
+        subconjunto estrito do global por construção — há régua que compara os
+        dois conjuntos de campos, então o dia em que ``apply_mic`` passar a ler
+        um campo novo, ela acusa em vez de o valor sumir calado.
+
+        Relatório: ``mic:<uniq>`` → estado, uma chave por unidade. Chave
+        distinta da ``mic`` global de propósito, para a GUI conseguir dizer QUAL
+        peça foi ignorada pela trava manual em vez de fundir tudo num rótulo só.
+        """
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        controllers = getattr(profile, "controllers", None)
+        if not controllers:
+            return resultado
+        for uniq, cfg in controllers.items():
+            secao = getattr(cfg, "mic", None)
+            if secao is None:
+                continue
+            vista = profile.model_copy(update={"mic": secao})
+            estado = self.apply_mic(vista, origin=origin, uniq=str(uniq))
+            if estado is not None:
+                resultado[f"mic:{uniq}"] = estado
         return resultado
 
     def apply_speaker(
@@ -1041,6 +1119,12 @@ class ProfileManager:
         O LED do mic continua FORA de `LedSettings`/`ControllerOverrides`: nada
         aqui o escreve por conta própria — quem o move é o firmware, ao receber
         o mudo que ELA pediu e salvou.
+
+        **REUSADO POR PEÇA DESDE 03/09/2026** (MIC-QUINTO-AJUSTE-01): quem
+        aplica o `ControllerOverrides.mic` é `apply_controller_mics`, e ele
+        chama ESTE método com o `uniq` da peça em vez de repetir as guardas.
+        Se você mexer aqui, mexeu nos dois — e é essa a intenção: a exceção
+        MIC-GRAVACAO-01 não pode existir em duas cópias que divergem.
 
         Best-effort como os irmãos: falha do applier loga warning e não aborta
         a ativação. `relatorio` recebe `"mic" → estado`.
