@@ -39,6 +39,31 @@ que ele tem aqui: o LED do controle passaria a mentir sobre o microfone dela.
 E **guardar o anterior é obrigatório**, porque eleger PERSISTE: o valor de
 antes é empurrado pilha abaixo, e numa mesa em turnos quatro eleições empurram
 o microfone real dela quatro degraus para baixo, caladas.
+
+A ELEIÇÃO ENCOLHEU — CANAL-POR-CONTROLE-01, 03/09/2026
+-------------------------------------------------------
+Decisão dela, com as palavras dela e sem corrigi-las:
+*"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
+
+Duas coisas que este módulo tratava como uma passam a ser duas:
+
+* **TER CANAL** não é escasso. Cada DualSense pode publicar o canal de captura
+  DELE, e ninguém precisa tirá-lo de ninguém;
+* **SER O PADRÃO DO SISTEMA** é o único recurso genuinamente único, porque
+  `pactl get-default-source` devolve UM nome. **É só isto que a eleição
+  decide**, e é o que ela sempre fez de fato.
+
+O que muda no código: quando o canal do controle não está no ar, este módulo
+para de recusar de saída e **PEDE o canal** pelo gancho
+:func:`registrar_pedidor_de_canal`, espera o PipeWire publicá-lo, e então
+elege. O gancho existe para que o sentido do import continue certo — quem o
+instala é `daemon/subsystems/bt_mic.py`, que é o dono da ponte; este módulo só
+conhece um chamável.
+
+**Nenhuma frase nova.** As recusas continuam sendo as que já existiam, palavra
+por palavra: quando o pedido não é atendido no orçamento, a resposta é a mesma
+de antes. Ela recusou a PREMISSA de um recado de tela sobre "perder o
+microfone", e nenhuma foi escrita.
 """
 
 from __future__ import annotations
@@ -47,6 +72,7 @@ import os
 import shutil
 import subprocess
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -73,6 +99,52 @@ SETTLE_PASSO_S = 0.25
 #: Não é microfone e não é monitor — é "ainda não sei", e por isso não conta
 #: como resposta. Mesmo critério de `e_o_nada_do_pipewire` no shell.
 _NADA_DO_PIPEWIRE = "auto_null"
+
+#: Quanto esperar o canal PEDIDO aparecer no PipeWire. A ponte tem de abrir o
+#: hidraw, carregar o `module-pipe-source` e o servidor tem de publicar o nó —
+#: três passos que não são instantâneos e também não levam segundos. Orçamento
+#: menor que o do assentamento (`SETTLE_*`) de propósito: aqui a espera é ANTES
+#: da escrita, e somar os dois num toque de botão é o que a pessoa sente.
+ESPERA_DO_CANAL_PASSOS = 12
+ESPERA_DO_CANAL_PASSO_S = 0.25
+
+#: Quem sabe SUBIR o canal de captura de um controle. `None` = ninguém está
+#: atendendo (subsystem no chão, ou processo que não é o daemon), e aí pedir é
+#: um `False` honesto em vez de uma espera que não vai dar em nada.
+_PEDIDOR_DE_CANAL: Callable[[str], bool] | None = None
+
+
+def registrar_pedidor_de_canal(
+    pedidor: Callable[[str], bool] | None,
+) -> Callable[[str], bool] | None:
+    """Instala quem atende pedido de canal. Devolve o anterior, para restaurar.
+
+    Quem chama é `daemon/subsystems/bt_mic.BtMicSubsystem.start`, e o sentido
+    importa: **daemon importando `integrations`**. Se este módulo importasse o
+    subsystem, uma integração passaria a depender do daemon — a camada errada,
+    e um ciclo esperando acontecer.
+    """
+    global _PEDIDOR_DE_CANAL
+    anterior = _PEDIDOR_DE_CANAL
+    _PEDIDOR_DE_CANAL = pedidor
+    return anterior
+
+
+def pedir_canal(uniq: str) -> bool:
+    """Pede o canal de captura do controle `uniq`. False = ninguém atendeu.
+
+    Nunca levanta: um pedidor que exploda vale como *"não atendeu"*, e o
+    caminho segue para a recusa de sempre. O lado inseguro seria o contrário —
+    o toque no botão do microfone dela virando um traceback no laço do daemon.
+    """
+    pedidor = _PEDIDOR_DE_CANAL
+    if pedidor is None:
+        return False
+    try:
+        return bool(pedidor(uniq))
+    except Exception:  # best-effort: o gesto dela não vira traceback
+        logger.debug("eleicao_mic_pedido_de_canal_falhou", exc_info=True)
+        return False
 
 
 def _ambiente_c() -> dict[str, str]:
@@ -424,8 +496,14 @@ class EleitorDeMicrofone:
         `uniq` e mais nada, e quem monta o casamento por dispositivo USB é
         aqui — do lado do daemon, e não do lado da janela, porque foi
         exatamente essa a razão de `escolher_fonte` ter mudado de camada.
+
+        **E é aqui que o canal PASSOU A SER PEDIDO** (CANAL-POR-CONTROLE-01):
+        o controle no rádio não publica fonte nenhuma até a ponte subir, e até
+        03/09/2026 este método recusava por causa disso — a pessoa apertava o
+        botão e o produto respondia que não havia canal, sem nada que ela
+        pudesse fazer a respeito de dentro do produto.
         """
-        fontes = fontes_de_captura_agora()
+        fontes, usb = self._canal_no_ar(uniq, list(uniqs_conectados))
         if not fontes:
             return ResultadoDaEleicao(
                 ok=False,
@@ -438,8 +516,43 @@ class EleitorDeMicrofone:
             uniq,
             fontes=fontes,
             uniqs_com_audio=list(uniqs_conectados),
-            usb=casamento_usb_agora(uniqs_conectados),
+            usb=usb,
         )
+
+    def _canal_no_ar(
+        self, uniq: str, conectados: list[str]
+    ) -> tuple[list[str], CasamentoUSB | None]:
+        """As fontes de agora, PEDINDO o canal deste controle se ele faltar.
+
+        A pergunta é feita pelo dono dela — `escolher_fonte` —, e não por uma
+        segunda régua escrita aqui: já existe canal atribuível a este controle?
+        Se existe (o caso do CABO, que publica sozinho), nada é pedido e nada é
+        esperado; o toque no botão custa o mesmo de sempre.
+
+        Se não existe, pede uma vez e espera o PipeWire publicar. A espera olha
+        só as regras que não dependem do casamento USB (`uniqs_com_audio` vazio
+        e `usb=None`), porque o que vai nascer é a source da ponte de BT, cujo
+        nome carrega o rabo do MAC — e assim cada volta custa UM `pactl list
+        sources short`, e não o `pactl list sources` inteiro mais o sysfs.
+
+        **Nenhuma frase nova sai daqui.** Quando o pedido não é atendido no
+        orçamento, devolve-se o que o PipeWire tem, e quem escreve a recusa é o
+        caminho de sempre — com o texto de sempre.
+        """
+        fontes = fontes_de_captura_agora()
+        usb = casamento_usb_agora(conectados) if fontes else None
+        if escolher_fonte(fontes, uniq, conectados, usb) is not None:
+            return fontes, usb
+        if not pedir_canal(uniq):
+            return fontes, usb
+        for _ in range(ESPERA_DO_CANAL_PASSOS):
+            time.sleep(ESPERA_DO_CANAL_PASSO_S)
+            novas = fontes_de_captura_agora()
+            if escolher_fonte(novas, uniq, [], None) is not None:
+                logger.info("eleicao_mic_canal_no_ar", uniq=uniq)
+                return novas, casamento_usb_agora(conectados)
+        logger.warning("eleicao_mic_canal_nao_subiu", uniq=uniq)
+        return fontes, usb
 
     # -- o caminho de volta (item 6 dela) ---------------------------------
 
@@ -613,6 +726,8 @@ def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:
 
 
 __all__ = [
+    "ESPERA_DO_CANAL_PASSOS",
+    "ESPERA_DO_CANAL_PASSO_S",
     "EleitorDeMicrofone",
     "ResultadoDaEleicao",
     "_script_conhece",
@@ -621,5 +736,7 @@ __all__ = [
     "fonte_se_sustenta",
     "fontes_de_captura_agora",
     "melhor_fonte_elegivel",
+    "pedir_canal",
     "recusa_de_quem_nao_elegeu",
+    "registrar_pedidor_de_canal",
 ]
