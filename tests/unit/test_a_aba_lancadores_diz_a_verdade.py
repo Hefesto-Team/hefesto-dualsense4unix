@@ -513,7 +513,11 @@ def test_o_produto_procura_os_cinco_pelas_pastas_do_motor(a07, monkeypatch,
         f"caminho que torna a resposta conferível: {onde}")
     assert onde["heroic"] == "", (
         "o produto disse ter achado um lançador que não está na pasta")
-    assert set(onde) == {"heroic", "lutris", "flatpak", "retroarch",
+    # OS SEIS, e a Steam entrou em 02/09 à noite: enquanto a busca percorria
+    # `SEM_FONTE` (os CINCO cujo interior o produto não lê), o cartão da Steam
+    # era o único cuja PRESENÇA ninguém mediu — e nascia `presente=True`
+    # cravado. Ver `test_a_steam_ausente_nao_afirma_que_os_controles_chegam`.
+    assert set(onde) == {"steam", "heroic", "lutris", "flatpak", "retroarch",
                          "emuladores"}, (
         "a busca pulou um lançador — o cartão dele voltaria ao `NÃO SEI` de "
         "constante sem ninguém ver")
@@ -1150,3 +1154,168 @@ def test_a_steam_quebrada_nao_apaga_a_resposta_sobre_os_outros(a07, monkeypatch,
     assert dict(lida.onde_estao)["lutris"] == str(
         pasta / "net.lutris.Lutris.desktop"), (
         "a Steam quebrada apagou a resposta sobre os outros lançadores")
+
+
+# --------------------------------------------------------------------------
+# 10. a PRESENÇA da Steam — o sexto cartão entra na medição
+#
+# NASCEU EM 02/09/2026, À NOITE, de uma acusação provada antes de curada. A
+# busca por `.desktop` + `PATH` nasceu à tarde percorrendo `SEM_FONTE`, que é a
+# lista de *"não sei ler a biblioteca dele"* — e a Steam não está nela porque o
+# produto LÊ a biblioteca dela. Só que ter censo do INTERIOR não responde se o
+# lançador está AQUI, e o cartão da Steam nascia com `presente=True` cravado.
+#
+# Medido antes da cura, com o `HOME` numa casa de mentira, `PATH` sem binário e
+# `pastas_de_atalhos` numa pasta vazia:
+#
+#     conta do topo   "1 encontrado · 0 com impedimentos"
+#     steam           selo 'ok' (CHEGAM) · presente True
+#                     "Os controles chegam. O atalho de inicialização está no
+#                      lugar em 0 jogos da sua biblioteca."
+#     os outros cinco selo 'off' (NÃO ACHEI)
+#
+# O selo VERDE sobre uma máquina sem Steam nenhuma, na mesma tela em que os
+# cinco vizinhos diziam NÃO ACHEI — a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na cor
+# verde, que é a frase com que esta aba nasceu.
+# --------------------------------------------------------------------------
+def test_a_steam_ausente_nao_afirma_que_os_controles_chegam(a07, desenho,
+                                                            monkeypatch,
+                                                            tmp_path):
+    """O CAMINHO INTEIRO: busca vazia → leitura → cartão → conta do topo.
+
+    A MORDIDA: volte `_onde_estao_os_lancadores` a percorrer `desenho.SEM_FONTE`
+    (ou devolva `presente=True` cravado no fim de `cartao_da_steam`) e este
+    teste reprova nomeando o selo verde.
+
+    ELE MEDE O CHAMADOR, e não só a função: arrancar a cura no `_ler_do_disco`
+    deixaria uma régua que só chamasse `cartao_da_steam` à mão VERDE sobre uma
+    tela que voltou a mentir — *"cura escrita, testada, e nunca ligada"*.
+    """
+    from hefesto_dualsense4unix.integrations import prontuario_dos_jogos as pdj
+    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
+
+    _pastas_falsas(monkeypatch, tmp_path)  # pasta VAZIA, `PATH` sem binário
+
+    # Nenhuma biblioteca: é o par honesto de "não achei o lançador". Sem isto o
+    # teste dependeria do `HOME` de quem o roda — e na máquina dela há 63
+    # appids com o wrapper, que fariam a régua medir a bancada, não a cura.
+    monkeypatch.setattr(sw, "censo_do_wrapper", lambda **kw: sw.Censo())
+    monkeypatch.setattr(pdj, "jogos_instalados", lambda *a, **kw: [])
+    monkeypatch.setattr(pdj, "pontes_confirmadas", lambda *a, **kw: [])
+
+    lida = a07._ler_do_disco()
+    assert dict(lida.onde_estao).get("steam") == "", (
+        f"a busca não procurou a Steam: {dict(lida.onde_estao)}. O cartão dela "
+        f"volta a afirmar por constante.")
+    assert not lida.viu_a_biblioteca, (
+        "o dublê deixou passar uma biblioteca — a régua mediria a bancada")
+
+    cartao = desenho.cartao_da_steam(lida)
+    assert desenho.SELOS[cartao.selo] == "NÃO ACHEI", (
+        f"sem Steam nenhuma nesta máquina o cartão diz "
+        f"{desenho.SELOS[cartao.selo]!r} — o selo verde sobre o vazio é a "
+        f"mentira que esta aba existe para não contar")
+    assert not cartao.presente, "a Steam que não está aqui conta como encontrada"
+    assert "chegam" not in cartao.diz.lower(), (
+        f"o corpo do cartão promete que os controles chegam: {cartao.diz!r}")
+
+    quadro = desenho.Quadro(lancadores=desenho.cartoes(lida))
+    assert quadro.achados == 0, (
+        f"o topo diz {quadro.achados} encontrado(s) numa máquina sem lançador "
+        f"nenhum")
+    assert "0 encontrados" in a07._valores(lida)["lanc-conta"], (
+        "a conta chegou certa ao quadro e errada à tela")
+
+
+def test_a_steam_sem_procura_e_sem_biblioteca_nao_conta_como_encontrada(desenho):
+    """O CONTRATO do `presente`, e esta régua nasceu de uma mordida que FALHOU.
+
+    Trocar o `presente=bool(...) or ...` do fim de `cartao_da_steam` de volta
+    pelo `presente=True` cravado deixou as 46 VERDES — porque o ramo do `NÃO
+    ACHEI` já intercepta o caso que a tela alcança, e a constante só sobrevive
+    onde nada a contradiz. Uma cura sem régua é uma cura que volta atrás calada,
+    e foi assim que o `presente` virou constante da primeira vez.
+
+    O ESTADO QUE ELA COBRE: uma `Leitura` que **não procurou** (a `steam` fora
+    do mapa) e **não leu nada**. A tela não chega nele — `_ler_do_disco` sempre
+    preenche o mapa —, mas `cartao_da_steam` é público e a régua desta aba monta
+    `Leitura` à mão o tempo todo. Uma constante aqui responde *"encontrada"*
+    sobre uma leitura que não mediu nem leu coisa alguma.
+    """
+    cartao = desenho.cartao_da_steam(desenho.Leitura())
+    assert not cartao.presente, (
+        "o `presente` do cartão da Steam voltou a ser constante: uma leitura "
+        "que não procurou nada e não leu nada conta como lançador encontrado")
+
+
+def test_a_steam_que_esta_aqui_continua_respondendo_pelo_censo(a07, desenho,
+                                                               monkeypatch,
+                                                               tmp_path):
+    """A MESA DELA não pode mudar: achada, o cartão volta a ser o de sempre.
+
+    A Steam está em `/usr/local/share/applications/steam.desktop` na bancada
+    dela — a cura tem de ser invisível ali. Uma régua que só provasse o NÃO
+    ACHEI daria verde sobre uma cura que apagou o cartão dela.
+    """
+    _pastas_falsas(monkeypatch, tmp_path, "steam")
+    lida = desenho.Leitura(
+        com_wrapper=("1", "2"), instalados=2,
+        onde_estao=tuple(a07._onde_estao_os_lancadores()))
+    cartao = desenho.cartao_da_steam(lida)
+    assert desenho.SELOS[cartao.selo] == "CHEGAM" and cartao.presente, (
+        f"a Steam ACHADA e com a biblioteca lida perdeu o cartão de sempre: "
+        f"{desenho.SELOS[cartao.selo]!r}")
+    assert "2 jogos instalados" in cartao.jogos
+
+
+def test_a_steam_fora_das_tres_buscas_nao_apaga_a_biblioteca_lida(desenho):
+    """As DUAS perguntas discordando: não achei o lançador, mas li a biblioteca.
+
+    Uma Steam instalada por um caminho que os três `.desktop` conhecidos não
+    cobrem (um AppImage, um script no `~/bin`) não aparece na procura — e o
+    `localconfig.vdf` dela está lá, com a biblioteca inteira. Dizer `NÃO ACHEI`
+    sobre uma biblioteca recém-lida seria trocar um erro por outro.
+
+    A MORDIDA: tire o `and not lida.viu_a_biblioteca` do ramo novo de
+    `cartao_da_steam` e este teste reprova.
+    """
+    lida = desenho.Leitura(com_wrapper=("1",), instalados=1,
+                           onde_estao=(("steam", ""),))
+    cartao = desenho.cartao_da_steam(lida)
+    assert desenho.SELOS[cartao.selo] == "CHEGAM", (
+        "o produto leu 1 jogo da biblioteca e o cartão diz que não achou a "
+        "Steam — a tela discorda de si mesma")
+    assert cartao.presente, (
+        "a biblioteca foi lida e o topo não conta a Steam como encontrada")
+
+    # E O VDF ILEGÍVEL TAMBÉM É PROVA DE QUE ELA EXISTE — um erro de leitura
+    # não pode virar "não achei", que é a resposta de quem não tem o arquivo.
+    quebrada = desenho.Leitura(erros=("o vdf sumiu",), onde_estao=(("steam", ""),))
+    assert "Não consegui ler a biblioteca da Steam" in (
+        desenho.cartao_da_steam(quebrada).diz), (
+        "um vdf ilegível virou 'não achei este lançador' — some a mensagem que "
+        "ela precisa ler")
+
+
+def test_o_cartao_da_steam_nao_achada_mantem_os_enderecos_da_pagina(desenho):
+    """O estado novo não pode tirar um endereço da página publicada.
+
+    O PORTÃO DOS DOIS MUNDOS em miniatura: `steam-fora` existe no HTML dela e é
+    pintado sempre. Um cartão novo com `tem_lista=False` deixaria o `<div>` com
+    o desenho para sempre — e a régua da aba (`test_todo_endereco_da_pagina_tem
+    _quem_o_pinte`) só olha o estado `cartoes(None)`.
+    """
+    lida = desenho.Leitura(onde_estao=(("steam", ""),))
+    cartao = desenho.cartao_da_steam(lida)
+    assert cartao.tem_lista, (
+        "o cartão da Steam não achada deixou de emitir `steam-fora` — o `<div>` "
+        "da página fica com o desenho e ninguém vê")
+    campos = desenho.valores_do_cartao(cartao)
+    esperados = {f"steam{s}" for s in desenho.SUFIXOS} | {
+        f"steam{desenho.SUFIXO_DA_LISTA}"}
+    assert set(campos) == esperados, (
+        f"o estado novo emite {sorted(campos)} e a página tem "
+        f"{sorted(esperados)}")
+    assert campos["steam-fora"] == desenho.SEM_LISTA, (
+        "a lista vazia voltou a ser string vazia — o `escrever()` a troca por "
+        "um travessão solto no pé do cartão")
