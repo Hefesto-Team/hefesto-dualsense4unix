@@ -52,6 +52,15 @@ class PonteDeMentira:
         self.chamadas.append((metodo, args))
         return True
 
+    # `resultado` ENTROU EM 03/09/2026 com o ELO-MUDO-01: o `ativar` passou a
+    # ler o CORPO da resposta do daemon (`secoes`) em vez do booleano, que é a
+    # diferença entre "ativado" e "ativado, menos o que o lock manual
+    # descartou". O dublê devolve `{}` — corpo sem relatório, que é o caso do
+    # daemon antigo e faz `mensagem_de_ativacao` cair na frase de sempre.
+    def resultado(self, metodo: str, *args: Any, **kw: Any) -> Any:
+        self.chamadas.append((metodo, tuple(kw.values())))
+        return {}
+
 
 @pytest.fixture(autouse=True)
 def _sem_escolha_herdada(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -100,7 +109,7 @@ def test_ativar_outro_perfil_continua_passando() -> None:
     """A guarda não pode fechar o gesto: trocar de perfil é o trabalho dele."""
     ponte, erro = _clicar(ativo="meu_perfil", escolhido="Ação")
     assert erro is None, f"ativar outro perfil foi recusado: {erro}"
-    assert ponte.chamadas == [("profile_switch", ("Ação",))]
+    assert ponte.chamadas == [("profile.switch", ("Ação",))]
 
 
 def test_sem_perfil_ativo_o_gesto_nao_e_travado() -> None:
@@ -108,4 +117,4 @@ def test_sem_perfil_ativo_o_gesto_nao_e_travado() -> None:
     guarda não pode confundir "nenhum" com "este mesmo"."""
     ponte, erro = _clicar(ativo="", escolhido="Ação")
     assert erro is None, f"a guarda travou com o daemon sem perfil ativo: {erro}"
-    assert ponte.chamadas == [("profile_switch", ("Ação",))]
+    assert ponte.chamadas == [("profile.switch", ("Ação",))]

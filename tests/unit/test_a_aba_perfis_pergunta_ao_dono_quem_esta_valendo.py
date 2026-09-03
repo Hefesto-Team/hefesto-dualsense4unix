@@ -60,6 +60,15 @@ class PonteDeMentira:
         self.chamadas.append((metodo, args))
         return True
 
+    # `resultado` ENTROU EM 03/09/2026 com o ELO-MUDO-01: o `ativar` passou a
+    # ler o CORPO da resposta do daemon (`secoes`) em vez do booleano, que é a
+    # diferença entre "ativado" e "ativado, menos o que o lock manual
+    # descartou". O dublê devolve `{}` — corpo sem relatório, que é o caso do
+    # daemon antigo e faz `mensagem_de_ativacao` cair na frase de sempre.
+    def resultado(self, metodo: str, *args: Any, **kw: Any) -> Any:
+        self.chamadas.append((metodo, tuple(kw.values())))
+        return {}
+
 
 @pytest.fixture(autouse=True)
 def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -118,7 +127,7 @@ def test_o_daemon_vence_o_disco_quando_os_dois_falam(
     ponte = PonteDeMentira()
     a10_perfis.ativar(Contexto(state={"active_profile": "Ação"}),  # noqa-acento: id
                       {"texto": "Ativar"}, ponte)
-    assert ponte.chamadas == [("profile_switch", ("meu_perfil",))]
+    assert ponte.chamadas == [("profile.switch", ("meu_perfil",))]
 
 
 # --------------------------------------------------------------------------
