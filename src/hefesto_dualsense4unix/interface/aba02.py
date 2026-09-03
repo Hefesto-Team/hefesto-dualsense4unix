@@ -948,7 +948,29 @@ def identidade(c, *, bat, meio=""):
          vazar **4,3px** e a régua reprovar. Com a curta sobram ~101px, que é o
          que aguenta um plástico de nome mais comprido — e o CSV tem 28.
     """
-    return f'''          <span class="card-nome"><span class="so-fechado">P{c["jogador"]}{SEPARADOR}</span>{rotulo(c, "peca")}</span>
+    # O NOME DO PLÁSTICO E O TRANSPORTE GANHARAM ENDEREÇO — 03/09/2026, e a lei é
+    # dela: *"se no topo tá mostrando controle white player 1, então cada aba vai
+    # usar os controles lá de cima. Não mistura com a info dos mockups."*
+    #
+    # O QUE ESTAVA ERRADO NA TELA, e ela viu com três centímetros entre uma coisa
+    # e outra: a fita do topo dizia `P1 · White · USB` e este cabeçalho dizia
+    # `Cosmic Red · USB` — o desenho, congelado, num `<span>` sem endereço nenhum.
+    # O pacote desta aba já tinha o transporte na mão e o JOGOU FORA por não ter
+    # onde pô-lo (`a02_controles.py`, o bloco do `via`: *"Dar-lhe endereço é
+    # partir aquele `<span>` em três, que é desenho — logo, decisão dela"*). A
+    # decisão veio, e é a lei acima.
+    #
+    # A ORDEM CONTINUA SENDO DE `monta.rotulo`, e é por isso que os dois
+    # endereços entram DENTRO do `c` em vez de a junção ser refeita aqui: o
+    # separador e a sequência têm um dono só, e escrevê-los de novo neste arquivo
+    # seria a sexta gramática da mesma janela — a cicatriz que `rotulo()` existe
+    # para não repetir.
+    com_endereco = {
+        **c,
+        "nome": f'<span data-campo="peca">{c["nome"]}</span>',
+        "via": f'<span data-campo="via">{c["via"]}</span>',
+    }
+    return f'''          <span class="card-nome"><span class="so-fechado">P{c["jogador"]}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}</span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão dela,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -1810,10 +1832,47 @@ def fita_clicavel(doc, mesa=None):
             raise SystemExit(f"ERRO na fita: o chip {rid} mudou de forma —\n  {s[:120]}")
         classe = m.group(1).replace(" on", "")
         resto, dentro = m.group(2), m.group(3)
+        # O NOME DO PLÁSTICO E O TRANSPORTE GANHAM ENDEREÇO NO CHIP — 03/09/2026.
+        #
+        # A FITA JÁ SE TROCA INTEIRA a cada tique (`hefesto_vivo.py`,
+        # `carga["fita"] = _fita(ctx.mesa)`), e enquanto ela se troca estes dois
+        # `<span>` nem existem — o `achar()` não encontra nada e ninguém escreve.
+        # ELES SÃO PARA QUANDO A TROCA NÃO ACONTECE, e ela deixa de acontecer o
+        # tempo todo: `_fita` devolve `""` se UM controle da mesa vier sem cor
+        # (`if not mesa or any(not c.get("cor") for c in mesa)`), e pelo rádio a
+        # cor não é lida — o mapa de canais diz `identidade.cor_do_aparelho`,
+        # `radio_aciona = não`. Com um controle no cabo e outro no rádio, que é a
+        # mesa dela, a fita FICA COM O DESENHO: `Cosmic Red` e `Starlight Blue`.
+        # Com o endereço, o pacote pinta o nome certo mesmo quando o bloco não
+        # pôde ser trocado — que é exatamente o buraco que ela viu.
+        #
+        # A DIVISÃO É A DE `monta.fita()` e é asserida: `P<n> • <nome> • <via>`.
+        # Se ela mudar, o gerador PARA aqui em vez de entregar um chip sem
+        # endereço, calado — a mesma cicatriz de 27/08 que este arquivo já carrega.
+        if classe.strip():          # o "Todos" não tem plástico nem nome de peça
+            partes = dentro.split(SEPARADOR)
+            if len(partes) != 3:
+                raise SystemExit(
+                    f"ERRO na fita: o chip {rid} não é `P<n> • <nome> • <via>` —\n  {dentro[:120]}")
+            dentro = SEPARADOR.join([
+                partes[0],
+                f'<span data-campo="fita-peca">{partes[1]}</span>',
+                f'<span data-campo="fita-via">{partes[2]}</span>',
+            ])
         # o `title` do chip ganha o que ele passou a fazer; o "Todos", que não
         # tinha nenhum, ganha o seu.
+        #
+        # E O NOME DA COR SAI DO `title`. Ele era a SEGUNDA cópia congelada do
+        # mesmo fato — `monta.fita()` escreve `title="{nome} — a borda é a cor do
+        # plástico"` —, e um `title` não tem alvo de pintura no piloto (os sete
+        # são texto·largura·fundo·valor·html·classe·cor). Duas cópias de um dado
+        # em que só uma é alcançável é a forma exata de a dica sobreviver ao
+        # conserto do texto e continuar dizendo `Cosmic Red` na mesa dela.
         if 'title="' in resto:
-            resto = resto.replace('title="', 'title="Clique para abrir o card dele. ', 1)
+            resto = re.sub(
+                r'title="[^"]*"',
+                'title="Clique para abrir o card dele — a borda é a cor do plástico."',
+                resto, count=1)
         else:
             resto += f' title="Abre os {len(MESA)} cards de uma vez — e aí a caixa rola."'
         novo = f'<label for="{rid}" class="chip{classe}"{resto}>{dentro}</label>'
@@ -1821,6 +1880,74 @@ def fita_clicavel(doc, mesa=None):
     if achados != len(ids):
         raise SystemExit(f"ERRO na fita: {achados} chips para {len(ids)} rádios")
     return "\n".join(linhas)
+
+
+# ---------------------------------------------------------------------------
+# A COR DO PLÁSTICO SAI DO `style=` E VIRA REGRA — 03/09/2026
+# ---------------------------------------------------------------------------
+# A LEI É DELA: *"se identificou o controle como modelo White a cor do card em
+# volta tem que ser branco. Temos isso no mapa."*
+#
+# O QUE ESTAVA NO CAMINHO, e é CSS e não opinião: `--plastico` morava no
+# `style=` de cada caixa e de cada chip. **Estilo de linha vence qualquer folha
+# de estilo**, então o produto não tinha como reescrever a cor da borda sem
+# reescrever o atributo — e ele não tem alvo para isso: os sete do piloto são
+# texto · largura · fundo · valor · html · classe · cor, e nenhum escreve
+# propriedade personalizada (`hefesto_vivo.py`, a função `escrever`).
+#
+# ENTÃO A COR DO DESENHO VIRA REGRA e ganha um lugar onde o produto escreve por
+# cima: duas folhas, nesta ordem, no fim do `<head>`.
+#
+#     <style id="plastico-do-desenho">   o que ELA aprovou. Sai da MESA.
+#     <style data-campo="plastico-css">  o que o produto LEU. Nasce vazia.
+#
+# A segunda vem depois e usa o MESMO seletor, então ela vence sem `!important`.
+# Vazia, o desenho fica de pé — que é o que a bancada tem de mostrar.
+#
+# ISTO NÃO É EDITAR O HTML À MÃO: é o gerador terminando a própria saída, com
+# âncora asserida, exatamente como o `fita_clicavel` acima. E ele roda só no
+# `__main__`: `controles_vivos.py` chama `bloco()` direto para montar a mesa
+# VIVA, e ali o `style=` de linha é o valor LIDO — tirá-lo de lá apagaria a cor
+# de um piloto que não é meu.
+CAIXA_COM_COR = re.compile(
+    r'(<div class="ctl card") style="--plastico:(#[0-9a-fA-F]{3,8})"( data-controle="([^"]+)")')
+CHIP_COM_COR = re.compile(
+    r'(<label for="(c-[^"]+)" class="chip plastico") style="--plastico:(#[0-9a-fA-F]{3,8})"')
+
+
+def cor_do_plastico_por_regra(doc):
+    """Tira o `--plastico` cravado do `style=` e o devolve como folha de estilo."""
+    regras = []
+
+    def _caixa(m):
+        regras.append(f'  .ctl[data-controle="{m.group(4)}"]{{--plastico:{m.group(2)}}}')
+        return m.group(1) + m.group(3)
+
+    def _chip(m):
+        regras.append(f'  .fita .chip[for="{m.group(2)}"]{{--plastico:{m.group(3)}}}')
+        return m.group(1)
+
+    doc, caixas = CAIXA_COM_COR.subn(_caixa, doc)
+    doc, chips = CHIP_COM_COR.subn(_chip, doc)
+    # A ÂNCORA. Uma caixa ou um chip que mude de forma faz a troca casar ZERO
+    # vezes — e o resultado seria uma página com a cor congelada de volta, verde
+    # em todo portão. Régua que acha zero é ERRO, não silêncio.
+    if caixas != len(CONECTADOS) or chips != len(CONECTADOS):
+        raise SystemExit(
+            f"ERRO no plástico: {caixas} caixa(s) e {chips} chip(s) com cor cravada, "
+            f"e a mesa tem {len(CONECTADOS)} conectado(s) — a forma mudou.")
+    if "--plastico:#" in doc.split("</head>", 1)[-1]:
+        raise SystemExit("ERRO no plástico: sobrou cor cravada no corpo da página")
+    folhas = ('<style id="plastico-do-desenho">\n'
+              + "\n".join(regras)
+              + "\n</style>\n"
+              # NASCE VAZIA de propósito: um valor aqui seria uma TERCEIRA cópia
+              # do desenho, e a régua `check_identidade_vem_de_cima` não olha
+              # dentro de `<style>` — congelar aqui seria esconder, não curar.
+              + '<style data-campo="plastico-css"></style>\n')
+    if "</head>" not in doc:
+        raise SystemExit("ERRO no plástico: a página não tem `</head>`")
+    return doc.replace("</head>", folhas + "</head>", 1)
 
 
 # ESCREVER O ARQUIVO É O `__main__`, E NÃO O IMPORT (29/08/2026).
@@ -1966,6 +2093,30 @@ def _conferir(doc):
     exigir(corpo.count('data-campo="mascara"') == len(CONECTADOS),
            "a máscara sumiu com o texto — ela FICA, e é o dado")
 
+    # 9. A IDENTIDADE VEM DA FITA, E NÃO DO MOCKUP — 03/09/2026, lei dela.
+    #    As quatro exigências são as quatro portas por onde o desenho voltava a
+    #    mandar na tela: o nome e o transporte do cabeçalho, os mesmos dois no
+    #    chip, e a cor de linha que folha de estilo nenhuma consegue vencer.
+    for campo in ("peca", "via"):
+        exigir(corpo.count(f'data-campo="{campo}"') == len(CONECTADOS),
+               f"o `{campo}` do cabeçalho do card perdeu o endereço — "
+               "a tela volta a mostrar o controle do desenho")
+    # O CHIP MORA NO CABEÇALHO, ACIMA DO MIOLO — então ele se confere no `doc`,
+    # e não no `corpo`. Conferi-lo no miolo daria VERDE sobre uma fita que
+    # ninguém mediu, que é a armadilha desta própria função.
+    for campo in ("fita-peca", "fita-via"):
+        exigir(doc.count(f'data-campo="{campo}"') == len(CONECTADOS),
+               f"o `{campo}` do chip da fita perdeu o endereço")
+    exigir("--plastico:#" not in doc.split("</head>", 1)[-1],
+           "a cor do plástico voltou para o `style=` — estilo de linha vence "
+           "folha de estilo, e o produto não tem como reescrevê-la")
+    exigir('<style data-campo="plastico-css">' in doc,
+           "a folha endereçada do plástico sumiu — o produto perde onde escrever "
+           "a cor que leu")
+    for nome in {str(c["nome"]) for c in CONECTADOS}:
+        exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>'),
+               f"o nome de plástico `{nome}` aparece no miolo sem endereço")
+
     if falhas:
         raise SystemExit("ERRO em 02-controles — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
@@ -1982,7 +2133,7 @@ if __name__ == "__main__":
     # reprovou com `0 chips para 5 rádios` — ela lia o arquivo VELHO, já com os
     # `<label>` da execução anterior. Régua que acha zero é ERRO, não silêncio.
     SAIDA = onde.pagina("02-controles.html")
-    SAIDA.write_text(fita_clicavel(SAIDA.read_text()))
+    SAIDA.write_text(cor_do_plastico_por_regra(fita_clicavel(SAIDA.read_text())))
     _conferir(SAIDA.read_text())
     print(f"02-controles: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
           f"+ {VAZIOS} lugar(es) vazio(s) — 1 card de {PARA_O_CARD}px, "
