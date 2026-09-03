@@ -400,6 +400,70 @@ def cor_da_zona(colorway: str, zona: str = "casca-solida") -> str:
     raise SystemExit(f"ERRO: zona '{zona}' não existe em '{colorway}'")
 
 
+def o_desenho_conhece(colorway: str) -> bool:
+    """A folha das cores tem regra para este modelo?
+
+    É OUTRA PERGUNTA QUE `cor_de_css`, e a distinção nasceu de um defeito real:
+    até 03/09/2026 o `data-colorway` do desenho era emitido só quando havia HEX
+    (`slug if _cor_do_plastico(slug) else ""`), com a razão escrita de que *"os
+    dois calam juntos: sem cor, sem desenho colorido"*.
+
+    Esse acoplamento estava certo enquanto "sem hex" quisesse dizer "a folha não
+    conhece". **Não quer.** Oito dos vinte e oito modelos dela pintam com
+    `<pattern>` ou gradiente em vez de hexa — a folha os conhece muito bem, e o
+    SVG os veste. Calá-los junto com a pele trocava um defeito por outro maior:
+    o controle ficaria SEM IDENTIDADE NENHUMA na tela, quando o aparelho tem
+    identidade e o mapa dela a cataloga.
+
+    A pergunta certa é esta: **a folha publica uma regra para este slug?**
+    """
+    return bool(re.search(rf'svg\[data-colorway="{re.escape(colorway)}"\]', DS))
+
+
+def cor_de_css(colorway: str, zona: str = "casca-solida") -> str:
+    """A cor daquele modelo QUE UM CAMPO DE COR CSS ACEITA — ou `""`.
+
+    O DEFEITO QUE ELA CURA, achado pelos DOIS auditores da leva de 03/09/2026 e
+    medido no WebKit desta máquina: **oito dos vinte e oito modelos dela**
+    (Grey Camouflage, Chroma Teal, Chroma Indigo, Chroma Pearl, Ghost of Yōtei,
+    Marathon, Genshin Impact e 007 First Light) não têm hexa amostrado, e
+    :func:`cor_da_zona` devolve para eles ``url(#hachura-sem-hex)`` — uma
+    referência a `<pattern>`, que pinta um `fill` de SVG e **não é uma cor**.
+
+    Esse valor viajava até a PELE do cartão, onde o alvo `cor` do piloto faz
+    ``el.style.color = v``. O CSSOM **recusa em silêncio** o que não é cor, e o
+    que ficava na tela era o que já estava lá: o ``#ae335a`` do MOCKUP, cravado
+    no HTML congelado. Resultado: com um Grey Camouflage na mesa, o desenho
+    dizia `grey-camouflage` e a pele três centímetros ao lado dizia Cosmic Red.
+
+    **É a queixa dela literal, com os donos trocados** — *"os svgs mudam de
+    acordo com o controle identificado (…) isso tá errado"* —, e é pior do que
+    não pintar: não pintar é uma lacuna, pintar OUTRO MODELO é uma afirmação
+    falsa. São 8 de 28, 29% do mapa dela.
+
+    O `""` É A REGRA DELA, e não zelo: *campo sem informação não mostra nada*. O
+    alvo `cor` com valor vazio APAGA a declaração em linha, e a pele cai no
+    neutro da folha — um controle sem cor de plástico, que é o honesto quando a
+    amostragem não existe. O DESENHO continua certo: o `data-colorway` recebe o
+    slug pelo alvo `atributo`, e o `<pattern>` pinta a hachura no SVG, que é o
+    contexto em que ele VALE.
+
+    NÃO HÁ TABELA NOVA AQUI: a lista dos oito não se digita. O discriminador é
+    a FORMA do valor — quem não começa por `#` não é cor —, e por isso ele
+    continua certo no dia em que ela amostrar mais um modelo ou em que nascer
+    um gradiente novo.
+    """
+    try:
+        valor = str(cor_da_zona(colorway, zona)).strip()
+    except BaseException:
+        # `cor_da_zona` levanta `SystemExit` para colorway que o SVG não tem, e
+        # `SystemExit` NÃO herda de `Exception` — um `except Exception` aqui
+        # deixaria passar exatamente o caso que esta guarda existe para segurar,
+        # e um modelo novo derrubaria a pintura da aba inteira.
+        return ""
+    return valor if valor.startswith("#") else ""
+
+
 # ---------------------------------------------------------------------------
 # AS MEDIDAS QUE VALEM EM MAIS DE UMA ABA — vieram do `medidas.py`, que nasceu
 # em 31/08 só porque este arquivo estava CONGELADO (dois agentes na mesma

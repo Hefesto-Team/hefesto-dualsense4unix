@@ -681,7 +681,12 @@ def _cor_do_plastico(slug: str) -> str:
     try:
         import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
 
-        return str(monta.cor_da_zona(slug))
+        # `cor_de_css` E NÃO `cor_da_zona` — 03/09/2026. Oito dos 28 modelos
+        # dela não têm hexa amostrado e devolvem `url(#hachura-sem-hex)`, que
+        # o CSSOM RECUSA EM SILÊNCIO num campo de cor — e o que ficava na
+        # tela era o Cosmic Red do MOCKUP, sob um desenho que dizia outro
+        # modelo. Ver a razão inteira em `monta.cor_de_css`.
+        return str(monta.cor_de_css(slug))
     except Exception:
         # `cor_da_zona` levanta `SystemExit` para colorway que o SVG não tem.
         # Derrubar a pintura da aba por causa de um modelo novo seria trocar um

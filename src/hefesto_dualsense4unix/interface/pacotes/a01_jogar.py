@@ -219,9 +219,21 @@ def _cor_do_plastico(slug: str) -> str:
     try:
         import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
 
-        return str(monta.cor_da_zona(slug))
+        # `cor_de_css` E NÃO `cor_da_zona` — 03/09/2026. Oito dos 28 modelos
+        # dela não têm hexa amostrado e devolvem `url(#hachura-sem-hex)`, que
+        # o CSSOM RECUSA EM SILÊNCIO num campo de cor — e o que ficava na
+        # tela era o Cosmic Red do MOCKUP, sob um desenho que dizia outro
+        # modelo. Ver a razão inteira em `monta.cor_de_css`.
+        return str(monta.cor_de_css(slug))
     except BaseException:
         return ""
+
+
+def _monta() -> Any:
+    """O `monta`, importado tarde — o `pacotes/__init__` põe `interface/` no path."""
+    import monta
+
+    return monta
 
 
 def _colorway_do_desenho(slug: str) -> str:
@@ -234,12 +246,20 @@ def _colorway_do_desenho(slug: str) -> str:
 
     A AMARRAÇÃO É O PONTO. Um slug que o SVG não conhece — modelo novo no CSV,
     ou colorway que o gerador ainda não emitiu — casaria regra nenhuma na folha
-    e deixaria o desenho no cinza cru (`rgb(58, 63, 75)`), enquanto a borda ao
-    lado ficaria sem cor. Perguntando ao mesmo dono, os dois calam juntos: sem
-    cor, sem desenho colorido — que é a regra dela, campo sem informação não
-    mostra nada.
+    e deixaria o desenho no cinza cru (`rgb(58, 63, 75)`).
+
+    MAS A PERGUNTA MUDOU EM 03/09/2026, e a razão é medida. Aqui estava escrito
+    `slug if _cor_do_plastico(slug) else ""`, com o argumento de que *"os dois
+    calam juntos: sem cor, sem desenho colorido"*. Isso valia enquanto **sem
+    hex** quisesse dizer **a folha não conhece**. Não quer: OITO dos vinte e
+    oito modelos dela pintam com `<pattern>` ou gradiente, a folha os conhece, e
+    o SVG os veste sem problema — é só a PELE que não pode receber um `url(…)`.
+
+    Calá-los junto com a pele trocaria um defeito por outro maior: o controle
+    ficaria SEM IDENTIDADE NENHUMA na tela, quando o aparelho tem identidade e o
+    mapa dela a cataloga. A pergunta certa é `monta.o_desenho_conhece`.
     """
-    return slug if _cor_do_plastico(slug) else ""
+    return slug if slug and _monta().o_desenho_conhece(slug) else ""
 
 
 def _do_exame() -> list[dict[str, Any]]:
