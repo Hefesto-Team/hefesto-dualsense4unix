@@ -58,6 +58,32 @@ def _bloco_passo(marcador: str) -> str:
 BLOCO_7A = _bloco_passo('step "7a/11"')
 
 
+def _constantes_do_install() -> str:
+    """As constantes literais de coluna 0 do install.sh, LIDAS do install.sh.
+
+    O install.sh escreve o contrato destas réguas com todas as letras (na régua
+    do `--dry-run`): *"dezenas de testes desta casa EXTRAEM um bloco deste
+    arquivo (do `step "N/11"` até a régua seguinte) e o EXECUTAM num bash com
+    preâmbulo mínimo"*. Preâmbulo mínimo, sob `set -u`, é um shell que só tem o
+    que a régua injetou — e em 01/09/2026 o passo 7a passou a ler a chave do
+    Hefesto (`${XDG_CONFIG_HOME}/${APP_ID}/DESLIGADO-pela-chave.flag`, commit
+    76195576) sem que este preâmbulo fosse junto. O bloco morria com
+    `APP_ID: variável não associada` e os três cenários reprovavam A CURA, não
+    o defeito que eles existem para pegar.
+
+    O valor é LIDO, nunca digitado: cravar `hefesto-dualsense4unix` aqui criaria
+    um segundo dono para o nome do aplicativo. E lê TODAS as constantes desse
+    formato, não só a que faltou hoje — assim a próxima constante que um passo
+    usar não derruba a régua de novo.
+
+    Sai sem `readonly` de propósito: o preâmbulo do harness vem depois e precisa
+    poder sobrescrever o que descreve o cenário sob teste.
+    """
+    achados = re.findall(r'^readonly ([A-Z_][A-Z0-9_]*)="([^"$`]*)"$', INSTALL, re.MULTILINE)
+    assert achados, "nenhuma constante literal em coluna 0 no install.sh"
+    return "".join(f"{nome}='{valor}'\n" for nome, valor in achados)
+
+
 def _roda_passo_7a(
     tmp_path: Path, skip_systemd: int, enable_daemon: int, daemon_ativo: bool
 ) -> subprocess.CompletedProcess[str]:
@@ -84,6 +110,7 @@ def _roda_passo_7a(
         "set -euo pipefail\n"
         'step() { printf "STEP %s | %s\\n" "$1" "$2"; }\n'
         'warn() { printf "WARN: %s\\n" "$*"; }\n'
+        f"{_constantes_do_install()}"
         f"SKIP_SYSTEMD={skip_systemd}\n"
         f"enable_daemon={enable_daemon}\n"
         f"ROOT_DIR='{REPO_ROOT}'\n"
@@ -92,6 +119,12 @@ def _roda_passo_7a(
     env = dict(os.environ)
     env["PATH"] = f"{stubs}:{env.get('PATH', '/usr/bin:/bin')}"
     env["HOME"] = str(casa)
+    # O XDG_CONFIG_HOME vai para dentro do tmp junto com o HOME: desde 01/09 o
+    # passo 7a procura a chave do Hefesto em `${XDG_CONFIG_HOME}/${APP_ID}/`, e
+    # sem esta linha o cenário dependeria do que houvesse na config de quem roda
+    # a suíte — uma chave posta lá zeraria `enable_daemon` e faria o cenário
+    # default reprovar por motivo nenhum.
+    env["XDG_CONFIG_HOME"] = str(casa / ".config")
     resultado = subprocess.run(
         [BASH, "-c", script],
         capture_output=True,
