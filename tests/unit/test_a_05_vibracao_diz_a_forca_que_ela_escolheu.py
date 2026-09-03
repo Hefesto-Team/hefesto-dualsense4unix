@@ -1,0 +1,526 @@
+#!/usr/bin/env python3
+"""A ABA VIBRAÇÃO: o número da força é o que ela ESCOLHEU, e o punho aceso é o
+que TREME de verdade.
+
+TRÊS COISAS, e as três foram medidas em 03/09/2026 contra o daemon dela, com
+dois controles na mesa (um no cabo, um por rádio).
+
+1. **O NÚMERO DO MULTIPLICADOR ESTAVA MORTO.** A aba montava a barra
+   "Personalizado" com ``state_full.rumble_mult_applied``. Cliquei os QUATRO
+   degraus pela mesma porta que o botão da coluna usa
+   (``rumble_policy_set_checked``) e reli o estado a cada um:
+
+       policy_set(max       ) → policy='max'        applied=0.7
+       policy_set(economia  ) → policy='economia'   applied=0.7
+       policy_set(auto      ) → policy='auto'       applied=0.7
+       policy_set(balanceado) → policy='balanceado' applied=0.7
+
+   O daemon obedeceu as quatro vezes. O número que a tela mostra **não se moveu
+   uma vez** — ficou em ``70%``, com a coluna acendendo "Balanceado", cujo
+   multiplicador é ``1,0``. A dica dela, duas linhas acima na mesma tela,
+   promete *"Balanceado 100%, como o jogo pediu"*. A tela se contradizia sozinha,
+   e o ``Máx`` nunca acendia nem no "Máximo".
+
+   O produto já sabia por escrito: ``daemon/lifecycle.py:3459-3468`` conta que
+   ``_last_auto_mult`` fica **preso no default 0.7** em passthrough ocioso e que
+   isso *"parecia atenuação real do rumble do jogo"*. A aba publicava
+   exatamente essa aparência.
+
+   A CURA É PONTE, e não conta nova: ``app/telas/vibracao._pedido_da_politica``
+   é a MESMA linha da janela estável (``rumble_actions._pintar_a_linha_do_
+   teto:537``), e ``_barra`` é o mesmo formatador das duas barras de motor.
+
+2. **O PUNHO ACESO ERA O DA CENA DO MOCKUP.** O ``svg(acesos=…)`` funde a classe
+   ``acesa`` na geração, e a página nasce com o motor DIREITO do P1 e o
+   ESQUERDO do P2 acesos — para sempre, com a mesa parada e ``vpads == 0``. E o
+   dado existia: ``pacote_da_coluna`` devolve ``treme`` por lado desde que
+   nasceu, e o CSS que acende também. O valor era jogado fora entre um e outro.
+
+3. **TRÊS FRASES DA JANELA ESTÁVEL NÃO TINHAM ATRAVESSADO** — o teto da mesa
+   (nos quatro tooltips de degrau), os 5 segundos do Modo Auto e a nota do card
+   "Testar motores". Elas são LIDAS do ``gui/main.glade``, nunca redigitadas:
+   uma segunda cópia de texto de tela diverge na primeira edição.
+
+AS MORDIDAS, todas com ``cp`` para devolver:
+
+* volte ``pct = col.get("pct")`` em ``a05_vibracao.pacote`` →
+  ``test_o_multiplicador_e_o_pedido_do_degrau`` reprova nos quatro degraus, e
+  ``test_o_max_acende_so_no_teto`` reprova dizendo que o "Máximo" não acende;
+* apague a chamada de ``_endereca_o_tremor`` em ``aba05._coluna`` e rode o
+  gerador → o próprio ``_conferir`` para a geração, e
+  ``test_o_desenho_tem_endereco_para_os_dois_punhos`` reprova;
+* apague o laço do ``treme`` no pacote →
+  ``test_o_pacote_emite_o_tremor_que_o_produto_calculou`` reprova;
+* tire ``{DICA_DO_TETO_DA_MESA}`` da dica e regere →
+  ``test_as_tres_frases_da_janela_estavel_estao_na_aba`` reprova nomeando qual;
+* tire a guarda ``if vez != _VEZ[0]`` do gesto ``testar`` →
+  ``test_um_segundo_testar_cancela_o_primeiro`` reprova.
+
+ONDE ELA MEDE: na **BANCADA**, que é onde o gerador escreve e onde os endereços
+existem. A página publicada só os recebe no ``--publicar 05``, que é ato dela.
+"""
+from __future__ import annotations
+
+import html
+import json
+import pathlib
+import re
+import sys
+
+import pytest
+
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(RAIZ / "src"))
+sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
+
+from hefesto_dualsense4unix.app.telas import vibracao as _tela
+
+PAGINA = "05-vibracao.html"
+
+#: MAC da faixa SINTÉTICA da casa — há dois portões de anonimato nesta árvore, e
+#: um endereço mascarado ainda carrega o OUI do aparelho dela.
+UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
+
+#: O NÚMERO PRESO que o daemon dela publica em passthrough ocioso. Ele entra em
+#: todo estado de mentira desta régua **de propósito**: é ele que a tela mostrava
+#: no lugar da escolha dela, e uma régua que o omitisse ficaria verde sobre a
+#: volta do defeito.
+APLICADO_PRESO = 0.7
+
+#: O par que o jogo mandou aos motores, e a ordem é a armadilha deste assunto:
+#: ``rumble_no_fisico`` é ``(weak, strong)`` e
+#: ``app/telas/vibracao.LADO_PARA_MOTOR`` diz que ``strong`` é o motor
+#: ESQUERDO. Logo este par acende o esquerdo e apaga o direito.
+PAR_NO_FISICO = (0, 200)
+
+
+def _estado(policy: str = "balanceado", *, per_vpad: list | None = None) -> dict:
+    """Um ``state_full`` de mentira com o multiplicador PRESO, como o dela."""
+    return {
+        "rumble_policy": policy,
+        "rumble_mult_applied": APLICADO_PRESO,
+        "active_profile": "regua",
+        "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": len(per_vpad or []),
+                      "per_vpad": per_vpad or []},
+    }
+
+
+def _ctx(policy: str = "balanceado", *, per_vpad: list | None = None):
+    """Um tique de mentira com dois controles — o pacote não toca o aparelho."""
+    import pacotes
+
+    conectados = [
+        {"uniq": u, "player": i, "connected": True, "index": i - 1,
+         "is_primary": i == 1, "transport": "usb" if i == 1 else "bt",
+         "battery_pct": 90, "inputs": {}}
+        for i, u in enumerate(UNIQS, start=1)
+    ]
+    mesa = [{"pref": f"p{i}", "jogador": i, "uniq": u, "nome": "Régua",
+             "via": "USB" if i == 1 else "BT", "cor": "starlight-blue",
+             "plastico": "#123456", "conectado": True}
+            for i, u in enumerate(UNIQS, start=1)]
+    return pacotes.Contexto(state=_estado(policy, per_vpad=per_vpad),
+                            mesa=mesa, conectados=conectados, estados={})
+
+
+def _pacote(policy: str = "balanceado", *, per_vpad: list | None = None) -> dict:
+    import pacotes
+
+    return pacotes.pacote_da_pagina(PAGINA, _ctx(policy, per_vpad=per_vpad)) or {}
+
+
+@pytest.fixture(scope="module")
+def bancada() -> str:
+    import onde
+
+    arq = onde.pagina(PAGINA)
+    assert arq.exists(), f"a bancada não tem {PAGINA} — rode `python3 aba05.py`"
+    return arq.read_text(encoding="utf-8")
+
+
+# --------------------------------------------------------------------------
+# 1. o número é o PEDIDO, e não o campo preso
+# --------------------------------------------------------------------------
+def test_o_multiplicador_e_o_pedido_do_degrau() -> None:
+    """O que a tela escreve é o multiplicador do degrau ACESO.
+
+    O ESPERADO NÃO É DIGITADO: sai de ``app/telas/vibracao._escada()``, que é a
+    única cópia autorizada em ``app/`` (``rumble_actions._POLICY_MULT``).
+    Digitar ``100`` aqui seria a terceira tabela de degraus, e a régua ficaria
+    verde no dia em que o produto mudasse o Balanceado.
+    """
+    escada = _tela._escada()
+    for degrau in _tela.degraus_da_forca():
+        esperado = f"{round(escada[degrau] * 100)}%"
+        for uniq, col in _pacote(degrau)["colunas"].items():
+            assert col["mult"] == esperado, (
+                f"com o degrau {degrau!r} a coluna {uniq} escreveu "
+                f"{col['mult']!r} — o produto pede {esperado}")
+
+
+def test_o_multiplicador_nao_e_o_campo_preso() -> None:
+    """A régua que separa a cura do defeito, e ela é uma só linha.
+
+    ``rumble_mult_applied`` vale ``0.7`` nos quatro estados desta régua, como
+    no daemon dela. Se a aba voltar a lê-lo, os quatro degraus escrevem ``70%``
+    — que é exatamente a foto de antes.
+    """
+    preso = f"{round(APLICADO_PRESO * 100)}%"
+    escritos = {
+        degrau: {col["mult"] for col in _pacote(degrau)["colunas"].values()}
+        for degrau in _tela.degraus_da_forca()
+    }
+    assert all(v != {preso} for v in escritos.values()), (
+        f"a aba voltou a mostrar o multiplicador PRESO ({preso}) — {escritos}")
+    assert len({tuple(v) for v in escritos.values()}) > 1, (
+        "os quatro degraus escreveram o MESMO número: o valor não acompanha a "
+        f"escolha dela — {escritos}")
+
+
+def test_a_largura_do_trilho_acompanha_o_pedido() -> None:
+    """O trilho e o número contam a mesma história, e a largura sai SEM `%`.
+
+    O alvo ``largura`` do ``escrever()`` faz ``el.style.width = valor + '%'``
+    (``hefesto_vivo.py``): quem emite escreve o número pelado. Um ``%`` aqui
+    viraria ``width:66.7%%``, que o CSS descarta em silêncio.
+    """
+    teto = _tela.teto_da_barra()
+    for degrau, mult in _tela._escada().items():
+        esperado = f"{round(min(100.0, 100.0 * round(mult * 100) / teto), 1)}"
+        for col in _pacote(degrau)["colunas"].values():
+            assert col["forca-pct"] == esperado, (
+                f"o trilho do degrau {degrau!r} saiu em {col['forca-pct']!r}")
+            assert "%" not in col["forca-pct"], "a largura voltou a levar `%`"
+
+
+def test_o_max_acende_so_no_teto() -> None:
+    """O ``Máx`` é booleano e diz UMA coisa: este número é o topo da barra.
+
+    Com o campo preso em 0,7 ele **nunca** acendia — nem no "Máximo", que é o
+    teto por definição (``teto_da_barra()`` deriva de ``_escada()['max']``).
+    """
+    teto = _tela.teto_da_barra()
+    for degrau, mult in _tela._escada().items():
+        no_teto = round(mult * 100) >= teto
+        for col in _pacote(degrau)["colunas"].values():
+            aceso = bool(col["mult-teto"])
+            assert aceso is no_teto, (
+                f"o degrau {degrau!r} vale {round(mult * 100)}% e o teto é "
+                f"{teto}%: o `Máx` saiu {'aceso' if aceso else 'apagado'}")
+
+
+def test_degrau_que_o_produto_nao_conhece_nao_afirma_numero() -> None:
+    """Daemon velho, chave nova: a tela diz `—`, nunca um número plausível.
+
+    ``_pedido_da_politica`` devolve ``None`` fora dos quatro, e ``_barra(None…)``
+    devolve o travessão com ``sabe = ""`` — campo sem informação não acende o
+    ``Máx`` nem afirma largura.
+    """
+    for col in _pacote("")["colunas"].values():
+        assert col["mult"] == "—", f"a tela inventou {col['mult']!r}"
+        assert col["mult-teto"] == "", "o `Máx` acendeu sobre um não-sei"
+
+
+# --------------------------------------------------------------------------
+# 2. o punho que treme
+# --------------------------------------------------------------------------
+def test_o_desenho_tem_endereco_para_os_dois_punhos(bancada) -> None:
+    """Os dois grupos de motor do SVG são endereçáveis, e a classe é a do desenho.
+
+    ``data-hef-classe="acesa"`` porque quem escolheu o nome foi o SVG
+    compartilhado, e não esta aba: o alvo ``classe`` do pintor usa ``on`` por
+    omissão, e sem o atributo ele acenderia uma classe que o CSS não conhece —
+    pintura contada, tela igual.
+    """
+    vivas = bancada.count('<div class="ctrl" data-controle=')
+    assert vivas >= 1, "a bancada não tem coluna viva — não há o que medir"
+    for sigla in ("e", "d"):
+        alvo = (f'data-campo="treme-{sigla}" data-hef-alvo="classe"'
+                f' data-hef-classe="acesa"')
+        assert bancada.count(alvo) == vivas, (
+            f"o punho {sigla!r} não tem endereço em cada uma das {vivas} "
+            f"colunas vivas")
+
+
+def test_o_lugar_vazio_nao_afirma_tremor(bancada) -> None:
+    """Um lugar sem controle não acende punho nenhum, nem por engano."""
+    for pedaco in bancada.split('class="ctrl vazia"')[1:]:
+        bloco = pedaco.split('<div class="ctrl', 1)[0]
+        assert 'data-campo="treme-' not in bloco, (
+            "um lugar vazio ganhou endereço de tremor")
+
+
+def test_o_pacote_emite_o_tremor_que_o_produto_calculou() -> None:
+    """O lado que recebeu força acende; o outro APAGA — e o produto é quem diz.
+
+    O par vem de ``rumble_no_fisico`` pelo dono único
+    (``controller_card.motores_no_fisico``), e a tradução lado→motor é do
+    ``app/telas/vibracao.LADO_PARA_MOTOR``: ``strong`` é o ESQUERDO. Esta régua
+    não refaz nenhuma das duas — ela pergunta ao produto qual lado deveria
+    acender e confere que foi esse que saiu.
+    """
+    vpad = {"player": 1, "rumble_no_fisico": list(PAR_NO_FISICO),
+            "rumble_no_fisico_ha_s": 0.1, "last_weak": PAR_NO_FISICO[0],
+            "last_strong": PAR_NO_FISICO[1]}
+    pac = _pacote(per_vpad=[vpad])
+    col = pac["colunas"][UNIQS[0]]
+
+    por_motor = dict(zip(("weak", "strong"), PAR_NO_FISICO, strict=True))
+    for lado, motor in _tela.LADO_PARA_MOTOR.items():
+        deveria = "1" if por_motor[motor] else ""
+        assert col[f"treme-{lado}"] == deveria, (
+            f"o lado {lado!r} é o motor {motor!r} = {por_motor[motor]} e a aba "
+            f"emitiu {col[f'treme-{lado}']!r}")
+
+    # O CONTROLE SEM VPAD NÃO TREME. Ele não tem por onde receber força, e
+    # acender ali seria a mesma mentira noutra coluna.
+    outra = pac["colunas"][UNIQS[1]]
+    assert outra["treme-e"] == "" and outra["treme-d"] == "", (
+        f"a coluna sem gamepad virtual afirmou tremor: {outra}")
+
+
+def test_a_mesa_parada_nao_acende_punho_nenhum() -> None:
+    """``vpads == 0`` é o estado corrente da mesa dela, e nele nada treme."""
+    for uniq, col in _pacote()["colunas"].items():
+        assert col["treme-e"] == "" and col["treme-d"] == "", (
+            f"a coluna {uniq} acendeu um punho com a mesa parada: {col}")
+
+
+# --------------------------------------------------------------------------
+# 3. as três frases que a janela estável tem
+# --------------------------------------------------------------------------
+#: ONDE CADA FRASE MORA NO GLADE. A régua as lê do MESMO lugar que o gerador,
+#: de propósito: se alguém mudar a frase na janela estável e não regerar a aba,
+#: as duas telas divergem — e é essa divergência que esta régua pega.
+NO_GLADE = {
+    "o teto da mesa (os quatro tooltips de degrau)":
+        r'id="rumble_policy_economia".*?tooltip-text[^>]*>[^<]*?'
+        r'(A mesa pode ter um teto[^<]*?)</property>',
+    "os 5 segundos do Modo Auto":
+        r'id="rumble_policy_auto_label".*?\n\s*(Espera 5 segundos[^<]*?)</property>',
+    "a nota do card Testar motores":
+        r'id="rumble_info".*?<property name="label"[^>]*>&lt;i&gt;'
+        r'(.*?)&lt;/i&gt;</property>',
+}
+
+
+def test_as_tres_frases_da_janela_estavel_estao_na_aba(bancada) -> None:
+    """A aba nova diz as três coisas que a estável ensina, com as MESMAS palavras.
+
+    Não é preciosismo de texto: cada uma responde a uma pergunta que a aba nova
+    deixava sem resposta — que o teto da mesa existe ANTES de ele morder, que o
+    Auto espera 5 segundos (o que explica um número mudando sozinho), e que o
+    "Testar" passa pelo degrau antes de chegar ao controle.
+    """
+    glade = (RAIZ / "src/hefesto_dualsense4unix/gui/main.glade").read_text()
+    for nome, padrao in NO_GLADE.items():
+        achado = re.search(padrao, glade, re.S)
+        assert achado, f"{nome} saiu do glade — a âncora do gerador também cai"
+        frase = html.unescape(achado.group(1)).strip()
+        assert frase in bancada, (
+            f"a aba perdeu {nome}: {frase!r}. Regere com `python3 aba05.py`")
+
+
+# --------------------------------------------------------------------------
+# 4. o teste que se cancela
+# --------------------------------------------------------------------------
+class _PonteDeMentira:
+    """Anota o que foi chamado, na ordem. Não fala com daemon nenhum."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[str] = []
+
+    def chamar(self, metodo, **_kw):
+        self.chamadas.append(metodo)
+        return True
+
+    def rumble_set_checked(self, *_a, **_kw):
+        self.chamadas.append("rumble.set")
+        return (True, None)
+
+    def rumble_stop(self, *_a, **_kw):
+        self.chamadas.append("rumble.stop")
+        return True
+
+    def rumble_passthrough(self, *_a, **_kw):
+        self.chamadas.append("rumble.passthrough")
+        return True
+
+
+def test_um_segundo_testar_cancela_o_primeiro(monkeypatch) -> None:
+    """Dois "Testar" seguidos: o primeiro CALA, e quem para é o segundo.
+
+    O DEFEITO QUE ISTO FECHA é de endereço, não de contagem. ``rumble.stop``
+    não leva parâmetro de controle — ele cai no alvo de output DE AGORA
+    (``daemon/ipc_handlers.py``, ``uniq_do_alvo_de_output``). Sem a guarda, a
+    thread do primeiro teste acorda depois de o segundo já ter mirado a OUTRA
+    coluna, e o "Testar" do P2 morre meio segundo antes da hora — apagado pelo
+    clique do P1. É o M6 da janela estável (``_cancel_rumble_test_timer``),
+    que aqui não existia.
+
+    O ``sleep`` é substituído por um portão: o teste do meio-tempo acontece
+    DENTRO do meio segundo do primeiro, que é a única janela em que o defeito
+    existe. Sem isso a régua mediria dois gestos em sequência, que nunca se
+    atropelam.
+    """
+    import pacotes
+    from pacotes import a05_vibracao as a05
+
+    ctx = _ctx()
+    clique = {"uniq": UNIQS[0], "controle": "p1"}
+    primeira = _PonteDeMentira()
+    segunda = _PonteDeMentira()
+
+    # UMA VEZ SÓ: o segundo gesto também dorme, e sem esta trava ele chamaria o
+    # substituto de novo, sem fim. O que a régua mede é o ATROPELO, e um basta.
+    entrou: list[int] = []
+
+    def dorme_e_deixa_o_outro_passar(_s):
+        entrou.append(1)
+        if len(entrou) == 1:
+            # O SEGUNDO CLIQUE, no instante exato em que o primeiro dorme.
+            pacotes.gesto_da_pagina(PAGINA, "testar")(ctx, clique, segunda)
+
+    monkeypatch.setattr(a05.time, "sleep", dorme_e_deixa_o_outro_passar)
+    pacotes.gesto_da_pagina(PAGINA, "testar")(ctx, clique, primeira)
+
+    assert "rumble.stop" not in primeira.chamadas, (
+        f"o primeiro teste parou a vibração do segundo: {primeira.chamadas}")
+    assert primeira.chamadas.count("rumble.set") == 1, (
+        f"o primeiro teste não chegou a vibrar: {primeira.chamadas}")
+    assert segunda.chamadas[-2:] == ["rumble.stop", "rumble.passthrough"], (
+        f"quem tomou a vez não devolveu a mão ao jogo: {segunda.chamadas}")
+
+
+def test_um_testar_sozinho_para_e_devolve_ao_jogo(monkeypatch) -> None:
+    """A guarda NÃO pode deixar estado morto: sem atropelo, o teste fecha inteiro.
+
+    É a metade que impede a cura de virar defeito — um "Testar" que não solta o
+    passthrough deixa o jogo mudo, que é a queixa de origem desta aba
+    (*"testei os motores e aí o jogo não vibra mais"*, SPRINT-GAME-RUMBLE-01).
+    """
+    import pacotes
+    from pacotes import a05_vibracao as a05
+
+    monkeypatch.setattr(a05.time, "sleep", lambda _s: None)
+    p = _PonteDeMentira()
+    pacotes.gesto_da_pagina(PAGINA, "testar")(_ctx(), {"uniq": UNIQS[0]}, p)
+    assert p.chamadas == ["controller.target.set", "rumble.set",
+                          "rumble.stop", "rumble.passthrough"], p.chamadas
+
+
+# --------------------------------------------------------------------------
+# 5. A PROVA NO MOTOR QUE ELA VAI USAR — o punho acende e apaga no DOM
+# --------------------------------------------------------------------------
+#: O que perguntar ao DOM depois de pintar: a classe de cada grupo de motor.
+MEDIDA = """
+(function(){
+  function estado(sel){
+    var g = document.querySelector(sel);
+    return g ? g.classList.contains('acesa') : null;
+  }
+  return JSON.stringify({
+    esq: estado('[data-campo="treme-e"]'),
+    dir: estado('[data-campo="treme-d"]')
+  });
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def no_webkit() -> dict:
+    """Abre a BANCADA num WebKit offscreen, pinta ``treme`` e lê as classes.
+
+    POR QUE NO WEBKIT, e não em `assert` sobre a string: o que decide se o punho
+    acende é o alvo ``classe`` do ``BOOTSTRAP``, que é JavaScript. Uma régua que
+    só olhasse o HTML gerado provaria o endereço e **não** a pintura — e é
+    exatamente esse o par que já deu verde sobre botão morto nesta casa.
+
+    NA BANCADA, e não no publicado: é lá que o endereço existe até ela publicar.
+    """
+    gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import GLib, Gtk, WebKit2
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica — o WebKit não abre")
+
+    from hefesto_dualsense4unix.interface import hefesto_vivo, onde
+
+    # A CARGA É A DO PACOTE, nunca um dicionário digitado aqui: o que tem de
+    # pintar é o que o produto emite.
+    #
+    # E ELA PASSA PELO `normalizar`, com a tradução `uniq → pref`, porque é o
+    # caminho do produto: o daemon endereça por MAC e o desenho por `p1`. Sem
+    # ela o `querySelector` procura um MAC numa página que só conhece `p1` e
+    # devolve `null` — zero escrito, zero erro. Pular este degrau daria uma
+    # régua verde sobre uma pintura que a janela dela nunca faria.
+    import pacotes
+
+    vpad = {"player": 1, "rumble_no_fisico": list(PAR_NO_FISICO),
+            "rumble_no_fisico_ha_s": 0.1}
+    carga = pacotes.normalizar(_pacote(per_vpad=[vpad]),
+                               {UNIQS[0]: "p1", UNIQS[1]: "p2"})
+    pintar = hefesto_vivo.PEDIR_A_PINTURA.replace(
+        "CARGA", json.dumps(carga, ensure_ascii=False))
+
+    saiu: list[str] = []
+    janela = Gtk.OffscreenWindow()
+    janela.set_default_size(1180, 900)
+    view = WebKit2.WebView()
+    janela.add(view)
+    janela.show_all()
+
+    def mediu(v, res):
+        try:
+            saiu.append(v.evaluate_javascript_finish(res).to_string())
+        except Exception as e:  # a falha vira mensagem de régua, não traço
+            saiu.append(f"ERRO na medida: {e}")
+        Gtk.main_quit()
+
+    def pintou(v, res):
+        try:
+            v.evaluate_javascript_finish(res)
+        except Exception as e:
+            saiu.append(f"ERRO na pintura: {e}")
+            Gtk.main_quit()
+            return
+        v.evaluate_javascript(MEDIDA, -1, None, None, None, mediu)
+
+    def instalou(v, res):
+        try:
+            v.evaluate_javascript_finish(res)
+        except Exception as e:
+            saiu.append(f"ERRO no bootstrap: {e}")
+            Gtk.main_quit()
+            return
+        v.evaluate_javascript(pintar, -1, None, None, None, pintou)
+
+    def carregou(v, evento):
+        if evento == WebKit2.LoadEvent.FINISHED:
+            v.evaluate_javascript(hefesto_vivo.BOOTSTRAP, -1, None, None,
+                                  None, instalou)
+
+    view.connect("load-changed", carregou)
+    view.load_uri(onde.pagina(PAGINA).as_uri())
+    GLib.timeout_add(20000, Gtk.main_quit)
+    Gtk.main()
+    assert saiu, "o WebKit não respondeu em 20 s"
+    assert not saiu[0].startswith("ERRO"), saiu[0]
+    return json.loads(saiu[0])
+
+
+def test_o_punho_que_treme_acende_no_dom(no_webkit) -> None:
+    """O esquerdo acende porque ``strong`` = 200; o direito apaga porque ``weak``
+    = 0 — e a página nasce com o DIREITO do P1 aceso, da cena do mockup.
+
+    Esta é a prova que separa "o endereço existe" de "a tela mudou": o direito
+    tinha de ser APAGADO pela pintura, e é a única metade que o HTML sozinho não
+    demonstra.
+    """
+    assert no_webkit["esq"] is True, (
+        "o punho esquerdo não acendeu com 200 no motor `strong`")
+    assert no_webkit["dir"] is False, (
+        "o punho direito continuou aceso da CENA do mockup com `weak` = 0 — a "
+        "pintura não apagou o que o desenho cravou")

@@ -131,6 +131,68 @@ if set(RUMBLE_POLICY_MULT) != _COM_MULT:
 
 TETO = 150  # a barra para no Máximo — "não passa dele", pedido dela
 
+# ---------------------------------------------------------------------------
+# AS FRASES QUE A JANELA ESTÁVEL TEM E ESTA ABA NÃO TINHA — 03/09/2026.
+#
+# Três textos de tela existem no `gui/main.glade` há semanas e não atravessaram
+# para o desenho novo. Eles não são enfeite: cada um ensina uma coisa que a aba
+# nova deixa a usuária descobrir batendo com a cara.
+#
+# ELAS SÃO LIDAS DO GLADE, NÃO REDIGITADAS. É a mesma disciplina dos motores (do
+# CSV), dos degraus (do `RUMBLE_POLICY_MULT`) e da linha de estado (do
+# `app/telas/vibracao`): o que tem dono não se digita. Uma segunda cópia de um
+# texto de tela diverge na primeira edição — e esta casa já pagou por isso, com
+# o nome do botão "Devolver ao jogo" que não existia
+# (`rumble_actions.BTN_GIVE_BACK_TO_GAME`, RUM-01).
+#
+# E ELAS RECUSAM quando a âncora some: um `str.replace`/`re.search` que não casa
+# devolve o texto intacto e não avisa — foi assim que `svg(jogador=N)` nunca
+# acendeu uma lâmpada em aba nenhuma.
+# ---------------------------------------------------------------------------
+_GLADE = (DADOS_DO_REPO.parent.parent / "src/hefesto_dualsense4unix/gui/main.glade").read_text()
+
+
+def _do_glade(padrao, oque):
+    """O primeiro grupo da busca no glade, com as entidades XML desfeitas."""
+    import html as _html
+    import re as _re
+
+    achado = _re.search(padrao, _GLADE, _re.S)
+    if not achado:
+        raise SystemExit(
+            f"ERRO em 05-vibracao: {oque} não está mais no `gui/main.glade` "
+            f"onde esta aba a lê. Ou ela mudou de lugar (e o padrão precisa "
+            f"acompanhar), ou saiu da janela estável — e aí sai daqui também, "
+            f"em vez de virar a segunda cópia de um texto que já não existe.")
+    return _html.unescape(achado.group(1)).strip()
+
+
+#: O TETO DA MESA, e ele é a oração que os QUATRO tooltips dos degraus repetem
+#: na janela estável (RUM-7, 25/08). A linha que avisa quando o teto MORDE já
+#: existe nas duas telas — é a mesma função, `texto_do_teto_do_orcamento`. O que
+#: faltava aqui era o ENSINO PREVENTIVO: aquela linha só aparece quando o teto
+#: já cortou, e por isso nunca ensinou que o teto existe.
+DICA_DO_TETO_DA_MESA = _do_glade(
+    r'id="rumble_policy_economia".*?tooltip-text[^>]*>[^<]*?'
+    r'(A mesa pode ter um teto[^<]*?)</property>',
+    "a oração do teto da mesa, dos quatro tooltips de degrau")
+
+#: A OSCILAÇÃO DO AUTO. A dica desta aba já dava a escada da bateria
+#: (100/70/30); o que ela não dizia é que o Auto **espera** para trocar de
+#: faixa — que é justamente o que explica um número mudando sozinho na tela.
+DICA_DA_ESPERA_DO_AUTO = _do_glade(
+    r'id="rumble_policy_auto_label".*?\n\s*(Espera 5 segundos[^<]*?)</property>',
+    "a linha dos 5 segundos do Modo Auto")
+
+#: A ÚNICA FRASE DA JANELA ESTÁVEL QUE LIGA OS DOIS CARDS: explica por que um
+#: "Testar" com 220 pode sair fraco (o degrau em Economia corta para 30%). Na
+#: aba nova os dois blocos estão na MESMA tabela, mais perto ainda, e a relação
+#: entre eles não estava dita em lugar nenhum.
+DICA_DOS_VALORES_QUE_PASSAM = _do_glade(
+    r'id="rumble_info".*?<property name="label"[^>]*>&lt;i&gt;'
+    r'(.*?)&lt;/i&gt;</property>',
+    "a nota do card Testar motores")
+
 ESTADO = {
     "p1": {"forca": "max",        "pct": 150, "esq": (False, 0),   "dir": (True, 60)},
     "p2": {"forca": "balanceado", "pct": 100, "esq": (True, 120),  "dir": (True, 120)},
@@ -655,6 +717,48 @@ LADOS = (("e", ESQ, "esq"), ("d", DIR, "dir"))
 VAZIO = "—"
 
 
+def _endereca_o_tremor(desenho, pref):
+    """Dá endereço de pintura aos dois grupos de motor do SVG — 03/09/2026.
+
+    O PUNHO ACESO ERA DA CENA, e ficava aceso para sempre. O `svg(acesos=…)`
+    funde a classe `acesa` na geração, e a página publicada nasce com o motor
+    DIREITO do P1 e o ESQUERDO do P2 acesos — a mesa parada, `vpads == 0`, e a
+    tela mostrando dois punhos tremendo. Não é desenho esperando dado: é a tela
+    afirmando um tremor que ninguém mediu.
+
+    E O DADO JÁ EXISTIA. `app/telas/vibracao.pacote_da_coluna` devolve `treme`
+    por lado desde que nasceu, com a nota certa — *"`None` (nada a dizer) apaga;
+    nunca acende"*. O CSS que acende também (`.vib .ds-svg .oculta.acesa`). O
+    valor era jogado fora entre um e outro; o que faltava eram estes dois
+    atributos e a emissão no pacote (`a05_vibracao`, chaves `treme-e`/`treme-d`).
+
+    BOOLEANO, como o `Máx`: alvo `classe` SEM `data-hef-quando` acende por si. E
+    `data-hef-classe="acesa"` porque a classe do desenho não é `on` — quem
+    escolheu o nome foi o SVG compartilhado, não esta aba.
+
+    RECUSA QUANDO A ÂNCORA SOME, e é a lição do `str.replace` que não casava:
+    em 27/08 a fusão da classe das lâmpadas deixou de casar por causa de seis
+    atributos entre o `id` e o `fill`, devolveu o texto intacto e **não avisou**
+    — `svg(jogador=N)` nunca acendeu uma lâmpada em aba nenhuma. Um endereço que
+    não entra no HTML é uma pintura que não acontece, e ela é silenciosa dos
+    dois lados: o pacote emite, o `achar()` devolve zero elementos, e a foto
+    continua igual.
+    """
+    for sigla, m, _k in LADOS:
+        ancora = f'id="{pref}-{m["id"]}"'
+        if ancora not in desenho:
+            raise SystemExit(
+                f"ERRO em _endereca_o_tremor({pref!r}): o desenho não tem "
+                f"{ancora} — o motor {sigla!r} sai do mapa "
+                f"(docs/data/pecas-do-dualsense.csv, coluna `no_svg`), e sem a "
+                f"âncora o punho que treme volta a ser o da cena, calado.")
+        desenho = desenho.replace(
+            ancora,
+            f'{ancora} data-campo="treme-{sigla}"'
+            f' data-hef-alvo="classe" data-hef-classe="acesa"', 1)
+    return desenho
+
+
 def _coluna_vazia(c):
     """O LUGAR de um controle que não está na mesa — ordem dela, 31/08/2026:
 
@@ -703,7 +807,9 @@ def _coluna(c, e=None):
     # `lampadas=False`: o grupo das cinco sai do desenho (ver o bloco das
     # lâmpadas, acima). Quem reprova quando a âncora some é o `_tira_grupo()`,
     # dentro do `svg()` — uma régua só, no lugar onde o corte acontece.
-    desenho = svg(f'vb-{c["pref"]}', c["cor"], acesos=acesos, lampadas=False)
+    desenho = _endereca_o_tremor(
+        svg(f'vb-{c["pref"]}', c["cor"], acesos=acesos, lampadas=False),
+        f'vb-{c["pref"]}')
 
     # QUAL DEGRAU ESTÁ ACESO É DADO, e o endereço é o `classe` — 03/09/2026.
     # Até hoje os quatro botões só tinham `data-papel="forca"`, que é o endereço
@@ -868,7 +974,9 @@ MIOLO = f'''
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
                 <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
                 <b>Máximo</b> 150%, mais forte do que ele pediu · <b>Auto</b>, o Hefesto
-                escolhe pela bateria (100/70/30%) e nunca amplifica.
+                escolhe pela bateria (100/70/30%) e nunca amplifica.<br><br>
+                {DICA_DA_ESPERA_DO_AUTO}<br><br>
+                {DICA_DO_TETO_DA_MESA}
               </span></span></span></div>
             <div><span class="sec-rot">Personalizado</span></div>
             <div><span class="sec-rot">{ESQ["rot"]}
@@ -887,7 +995,8 @@ MIOLO = f'''
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
                 <b>Testar</b> faz aquele controle tremer meio segundo com os valores das
                 barras daquela coluna; <b>Parar</b> corta a vibração dele agora e devolve
-                a mão ao jogo.
+                a mão ao jogo.<br><br>
+                {DICA_DOS_VALORES_QUE_PASSAM}
               </span></span></span></div>
           </div>
 {"".join(_coluna(c) if c.get("conectado", True) else _coluna_vazia(c) for c in MESA)}
@@ -1038,6 +1147,28 @@ def _conferir(doc):
            "ninguém que abrisse o mockup saberia que ela existe")
     exigir(html_do_estado(cena) in corpo,
            "o texto da linha do estado não é o que o produto monta")
+    # 9. O PUNHO QUE TREME TEM ENDEREÇO — 03/09/2026.
+    #    Sem ele o `acesa` do SVG é a CENA, e ela fica acesa para sempre: a
+    #    página publicada nasce com o motor direito do P1 e o esquerdo do P2
+    #    tremendo, com a mesa parada. É o mesmo defeito do degrau, um andar
+    #    abaixo — a tela AFIRMANDO um tremor que ninguém mediu.
+    for sigla, _m, _k in LADOS:
+        exigir(corpo.count(f'data-campo="treme-{sigla}"') == len(CONECTADOS),
+               f"o motor {sigla!r} não tem endereço em cada coluna viva")
+    exigir(corpo.count('data-hef-classe="acesa"') == len(LADOS) * len(CONECTADOS),
+           "a classe do tremor não é a `acesa` do desenho compartilhado")
+    for pedaco in corpo.split('class="ctrl vazia"')[1:]:
+        bloco = pedaco.split('<div class="ctrl', 1)[0]
+        exigir("data-campo=\"treme-" not in bloco,
+               "um lugar vazio ganhou endereço de tremor")
+    # 10. AS TRÊS FRASES DA JANELA ESTÁVEL ESTÃO NA TELA — 03/09/2026, e a
+    #     comparação é com o que o glade diz AGORA (elas são lidas de lá, não
+    #     redigitadas). Uma dica que perde a frase volta a deixar a usuária
+    #     descobrir o teto da mesa quando ele já mordeu.
+    for frase, nome in ((DICA_DO_TETO_DA_MESA, "o teto da mesa"),
+                        (DICA_DA_ESPERA_DO_AUTO, "os 5 segundos do Auto"),
+                        (DICA_DOS_VALORES_QUE_PASSAM, "os valores que passam pela intensidade")):
+        exigir(frase in corpo, f"a dica perdeu a frase da janela estável: {nome}")
 
     if falhas:
         raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "
