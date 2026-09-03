@@ -1008,6 +1008,90 @@ CSS += "\n  /* ---- as 28 cores do mapa, publicadas UMA vez ---- */\n"
 CSS += re.sub(r"</?style[^>]*>", "", folha_das_cores())
 
 
+# ---------------------------------------------------------------------------
+# A TINTA QUE A FOLHA REFERENCIA — e sem ela DOZE dos 28 modelos dela somem
+#
+# DEFEITO MEDIDO NA TELA em 03/09/2026, nesta aba e só nesta: publicar a folha
+# na página curou 27 modelos e QUEBROU doze. Doze dos 28 não pintam com hex —
+# pintam com servidor de pintura (`url(#…)`): a hachura dos modelos que ela não
+# amostrou, e os dois gradientes de casca do God of War 20th e do Spider-Man 2.
+#
+#   007-first-light · 30th-anniversary · chroma-indigo · chroma-pearl ·
+#   chroma-teal · fortnite · genshin-impact · ghost-of-yotei ·
+#   god-of-war-20th · grey-camouflage · marathon · spider-man-2
+#
+# Esses três `id` moram no `<defs>` do desenho, e `monta.svg()` PREFIXA todo id
+# por controle — na página saíram `p1-hachura-sem-hex` … `p4-hachura-sem-hex`.
+# A folha da página continuou dizendo `url(#hachura-sem-hex)`, que já não existe
+# em lugar nenhum: `document.getElementById('hachura-sem-hex')` devolvia **null**
+# nos três, medido no WebKit desta máquina.
+#
+# E REFERÊNCIA MORTA NÃO CAI NO CINZA — ela APAGA A PEÇA. Medido com
+# `chroma-teal` escrito no cartão do P2: sobraram os dois gatilhos e as bolas
+# dos analógicos, e o corpo do controle SUMIU da tela. Não é a cor do aparelho
+# nem o neutro do "não sei": é um terceiro estado que não quer dizer nada, e é
+# pior do que o congelado que esta onda veio matar.
+#
+# A CURA É A DA `aba05`: o `<defs>` sai UMA vez na página, SEM prefixo, e os
+# quatro desenhos o consultam pelo id. As outras abas que publicaram a folha
+# (01, 04, 05, 08) já o traziam; a 06 era a única que publicava a folha sem a
+# tinta — `grep 'id="hachura-sem-hex"' mockup/*.html` mostra o buraco.
+_ABRE_A_TINTA = '<defs id="cores-do-dualsense">'
+if _ABRE_A_TINTA not in DS or DS.index(_ABRE_A_TINTA) > DS.index(
+        '<style id="cores-do-dualsense-folha">'):
+    raise SystemExit(
+        "ERRO em 06-navegacao: o `<defs id=\"cores-do-dualsense\">` sumiu do "
+        "ds_limpo.svg (ou passou a vir DEPOIS da folha) — os doze modelos que "
+        "pintam por `url(#…)` ficariam sem tinta, e o desenho deles some da "
+        "tela. Rode scripts/gerar_cores_do_dualsense.py")
+
+#: Só os servidores de pintura, sem a folha: ela já foi para o `<style>` da
+#: página, e repeti-la aqui daria duas cópias dos 45 KB.
+TINTA_DOS_28 = (DS[DS.index(_ABRE_A_TINTA):
+                   DS.index('<style id="cores-do-dualsense-folha">')] + "</defs>")
+
+#: O BLOCO DA TINTA, invisível e fora do fluxo. `position:absolute` com 0×0, e
+#: NÃO `display:none`: um `<defs>` em ramo escondido é caminho que já falhou em
+#: motor de SVG, e aqui não há o que ganhar arriscando — este `<svg>` não
+#: desenha nada, só empresta os três `id`.
+#:
+#: ELE VAI NO FIM DO MIOLO, E O LUGAR CUSTOU 8 PIXELS. Fora do fluxo não quer
+#: dizer fora da CONTAGEM: posto no COMEÇO, ele vira o primeiro filho de
+#: `.miolo`, e a regra
+#:
+#:     .miolo > .quadro:first-child > .quadro-corpo{padding-bottom:6px}
+#:
+#: deixa de casar. Medido no WebKit desta máquina, com foto antes e depois: o
+#: primeiro quadro engordou de 282 para 290 px (o `padding-bottom` voltou aos
+#: 14px do padrão) e **a metade de baixo da aba desceu 8 px** — 97.857 pixels
+#: diferentes entre as duas fotos, com a renderização provada determinística
+#: (duas corridas da MESMA página dão zero).
+#:
+#: A REGRA QUE ISSO DEIXA, e ela vale para toda aba que publicar a tinta:
+#: `position:absolute` tira do FLUXO, não da lista de irmãos — `:first-child`,
+#: `:nth-child` e `+` continuam contando o elemento. No fim do `.miolo` não há
+#: o que quebrar: a página não tem uma só regra `:last-child` sobre `.quadro`
+#: (são treze regras estruturais, e só a de cima olha para os filhos do miolo).
+BLOCO_DA_TINTA = (
+    '\n        <!-- A TINTA DOS 28 — os servidores de pintura que a folha das\n'
+    '             cores pede por `url(#…)`. Sem eles, doze modelos dela viram\n'
+    '             endereço morto e o desenho SOME. Ver `TINTA_DOS_28`.\n'
+    '             FICA NO FIM: no começo ele quebra o `.quadro:first-child`. -->\n'
+    '        <svg class="cores-do-dualsense" aria-hidden="true" focusable="false"\n'
+    '             width="0" height="0" style="position:absolute;overflow:hidden">'
+    f'{TINTA_DOS_28}</svg>\n')
+
+
+def tinta_referenciada():
+    """Os `id` que a folha dos 28 pede por `url(#…)` — lidos, nunca digitados.
+
+    É a lista contra a qual a página se confere no fim da geração. Digitá-la
+    aqui faria a régua envelhecer sozinha no dia em que ela mandar amostrar mais
+    um modelo e um gradiente novo nascer.
+    """
+    return sorted(set(re.findall(r"url\(#([^)]+)\)", folha_das_cores())))
+
+
 def zonas_do_desenho():
     """As classes de zona, LIDAS da folha do mapa — nunca digitadas aqui."""
     zonas = sorted(set(re.findall(
@@ -1798,7 +1882,7 @@ MIOLO = f'''
 
       </div>
     </div>
-'''
+{BLOCO_DA_TINTA}'''
 
 LEGENDA = f'''<div class="nota">
   <h2>Um botão virou dois, e uma pop-up virou duas</h2>
@@ -2133,6 +2217,17 @@ def _conferir(doc):
            f"a página publica {len(_na_pagina)} dos {len(_no_mapa)} modelos do "
            f"mapa — faltam {sorted(_no_mapa - _na_pagina)}; quem tiver um "
            f"desses vê o desenho no cinza cru")
+    #    E A TINTA JUNTO. Doze dos 28 pintam por `url(#…)`, e `monta.svg()`
+    #    prefixa todo id do desenho: sem o `BLOCO_DA_TINTA` a referência morre e
+    #    a peça SOME da tela — medido no WebKit com `chroma-teal`, e é o pior
+    #    dos três estados possíveis, porque não parece defeito, parece desenho.
+    _ids = set(_re.findall(r'\sid="([^"]+)"', doc))
+    _mortas = [i for i in tinta_referenciada() if i not in _ids]
+    exigir(not _mortas,
+           f"a folha das cores pede {_mortas} e a página não publica esse "
+           f"`id` — os doze modelos que pintam por `url(#…)` ficam com "
+           f"referência morta, e o desenho deles SOME (não fica cinza). Falta o "
+           f"`BLOCO_DA_TINTA` no miolo")
 
     # 4. AS VINTE E UMA LINHAS DIZEM AO PYTHON QUE ELA ESTÁ MEXENDO — decisão
     #    dela, 02/09/2026. O `data-gesto` é o ÚNICO atributo destes `<select>`
