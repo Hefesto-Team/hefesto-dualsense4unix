@@ -8,8 +8,12 @@ import re
 
 import onde
 # `MESA` SAIU DO IMPORT em 02/09/2026, e a razão é a mesma que mudou a régua da
-# promessa: os cartões deixaram de contar controle. `CONECTADOS` fica — ele
-# ainda responde pelo texto do "?" ("a resposta vale igual para os N").
+# promessa: os cartões deixaram de contar controle. `CONECTADOS` FICA, e agora
+# só como ESTADO DE PARTIDA: o texto do "?" ("a resposta vale igual para os N")
+# ganhou endereço em 03/09/2026 e o pacote o repinta com a mesa VIVA a cada
+# tique — ver `dl.quantos_html`. Enquanto o número saía daqui e ficava, a tela
+# dela dizia "os 2 (1 no cabo, 1 no rádio)" a dois centímetros de um cabeçalho
+# que dizia "1 controle: 1 USB · 0 BT".
 #
 # `cor_da_zona` entrou em 03/09/2026 e serve à RÉGUA, não ao desenho: é ele que
 # transforma a isenção das cinco variáveis do esqueleto numa MEDIÇÃO. Ver
@@ -359,8 +363,8 @@ MIOLO = f'''
           Esta aba procura os lançadores e emuladores instalados, diz <b>se os controles chegam
           lá</b>, o que impede quando não chegam, e conserta o que dá para consertar sozinho.<br><br>
           O que impede é do <b>lançador</b>, nunca do controle — é a linha de inicialização, a
-          exceção do Steam Input, a permissão de aparelho. Por isso a resposta vale igual para os
-          <b>{N_CTRL}</b> ({N_USB} no cabo, {N_BT} no rádio), e por isso a fita lá em cima está
+          exceção do Steam Input, a permissão de aparelho. Por isso a resposta vale igual para
+          <span data-campo="{dl.QUANTOS}" data-hef-alvo="html">{dl.quantos_html(N_CTRL, N_USB, N_BT)}</span>, e por isso a fita lá em cima está
           esmaecida aqui: não há o que escolher por controle.<br><br>
           <b>Detectar o jogo que está aberto</b> é o caminho curto: abra o jogo de onde for,
           volte aqui e clique — o perfil nasce com a regra certa, sem digitar nada.

@@ -719,6 +719,24 @@ def _texto(x: object) -> str:
     return str(x).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def quantos_da_mesa(mesa: list[dict[str, Any]]) -> str:
+    """O trecho do "?" que conta controle, com a mesa VIVA em vez do mockup.
+
+    A MESMA FONTE DO CABEÇALHO, e é o ponto inteiro: `ctx.mesa` é a leitura que
+    `pacotes.topo` usa para escrever `1 controle: 1 USB · 0 BT`. Enquanto o "?"
+    lia `monta.CONECTADOS` — a mesa do DESENHO, derivada no import do gerador —
+    os dois números viviam no mesmo quadro dizendo coisas diferentes.
+
+    O `BT` SAI POR SUBTRAÇÃO, e não por uma segunda contagem: `n - usb` não pode
+    somar diferente do total, e uma via nova (ou um `via` vazio) cai no lado do
+    rádio em vez de sumir da conta. Duas somas independentes é como a tela ganha
+    um "2 controles: 1 USB · 0 BT" que não fecha.
+    """
+    n = len(mesa)
+    usb = sum(1 for c in mesa if str(c.get("via") or "").strip().upper() == "USB")
+    return desenho.quantos_html(n, usb, n - usb)
+
+
 def fita_html(mesa: list[dict[str, Any]]) -> str:
     """O miolo da `.fita` desta aba: `Selecionar:`, `Todos` e a mesa VIVA.
 
@@ -815,6 +833,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """
     carga = _resposta(VIGIA.agora(), ctx.state)
     valores = carga["mesa"]
+    # O "?" TAMBÉM CONTAVA CONTROLE, e ninguém tinha olhado para ele: a cura de
+    # 02/09 tirou o número dos CARTÕES e deixou o do texto de ajuda, que saía de
+    # `monta.CONECTADOS` — a mesa do desenho, congelada no HTML. Ver
+    # :func:`quantos_da_mesa`.
+    valores[desenho.QUANTOS] = quantos_da_mesa(ctx.mesa)
     fora: dict[str, Any] = dict(valores)
     fora["blocos"] = {**carga["blocos"], SELETOR_DA_FITA: fita_html(ctx.mesa)}
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
