@@ -295,6 +295,32 @@ seção daqui**: a aba deixou de estar em trabalho.
   **O que espera o seu OK:** só a linha do travessão é visível. Enquanto você
   não publicar, o campo continua abrindo em `Luta` no produto que você usa.
 
+- **02/09/2026** — **a coluna "Ajuste próprio" ganhou endereço, e nenhum pixel
+  mudou.** Os dezesseis `<span class="gr">` da tabela `Controle / Ajuste próprio
+  / ID da peça` passaram a declarar `data-hef-alvo="classe"` — um atributo de
+  ENDEREÇO, invisível, que diz ao produto *"aqui o estado é a classe `on`, não
+  uma palavra"*. O desenho é o mesmo byte a byte.
+
+  **O que você vê HOJE, medido na sua máquina com os dois controles na mesa e o
+  `meu_perfil` valendo:** a tabela mostra SEIS células acesas — a luz, os
+  gatilhos e a vibração do P1, e a luz do P2 —, e duas linhas acima, na mesma
+  caixa, está escrito *"0 de 2 controles com ajuste próprio neste perfil"*. As
+  seis acesas são do desenho: o perfil não guarda nada só de um controle. A
+  mesma tela dá duas respostas para a mesma pergunta.
+
+  **Por que não dava para consertar sem você:** escrever nessas células sem o
+  atributo apagaria o glifo de dentro de cada uma, dezesseis vezes, duas vezes
+  por segundo — é o mesmo estrago que você fotografou nesta tabela. Enquanto o
+  atributo não chegar ao produto, o pacote **cala** (ele pergunta à página
+  publicada antes de escrever), e a coluna continua mostrando as seis do
+  desenho.
+
+  **No tique seguinte ao seu `--publicar 10` as dezesseis passam a dizer a
+  verdade**, sem ninguém tocar em código. Medido com a publicação simulada e
+  desfeita: a aba sai de **64 campos de produto e 17 de desenho** para **80 e
+  1** — e o único que sobra é o `Estilo de Jogo`, que é o `—` que você decidiu
+  logo acima.
+
 ## 04-iluminacao.html
 - **02/09/2026** — **a dica da célula `LEDs` saiu do atributo da célula e entrou
   no desenho**, e são as suas duas decisões de hoje na mesma frase. A que estava
