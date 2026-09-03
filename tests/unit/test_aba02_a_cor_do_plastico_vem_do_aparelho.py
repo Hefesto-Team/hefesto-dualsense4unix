@@ -40,6 +40,33 @@ var(--plastico)}` e uma `var()` sem valor **invalida a declaração inteira**: s
 o piso, o assento que a mesa viva não nomeia perderia a borda em vez de ficar
 neutro (a lição está medida no comentário do `.ctl.off`, em `aba02.py`).
 
+A CHAVE VIROU O SLUG — 03/09/2026, e é a segunda metade da mesma lei. Até esta
+data ``cor_da_borda`` recebia o NOME de tela e o procurava em
+``integrations/cor_do_plastico.NOMES_DE_FABRICA`` (21 linhas) para chegar a
+``TONS`` (21 hexas, **vinte deles aproximados**). Duas coisas caíram com isso:
+
+* **o chip da fita e a borda do card discordavam nos 28 de 28 modelos dela** — o
+  chip lê o mapa (``monta.cor_da_zona``, que sai do CSV) e a borda lia ``TONS``:
+  White ``#e4e0d8`` contra ``#edeef0``, Cosmic Red ``#ae335a`` contra ``#da244b``,
+  três centímetros um do outro na tela;
+* **três modelos não ganhavam borda nenhuma**, e a causa é a grafia. O
+  ``nome`` que ``mesa_viva.mesa_do_estado`` entrega sai do **CSV dela**
+  (``mesa_viva.CORES``), não de ``NOMES_DE_FABRICA``.
+
+**FATO SUBSTITUÍDO:** o comentário de ``GRAFIA_DIVERGENTE``, mais abaixo, dizia
+*"A TELA NÃO SOFRE COM ISSO HOJE (…) o nome vivo sai de NOMES_DE_FABRICA pelo
+CÓDIGO que o aparelho publica, então a borda sai certa"*. **Ela sofria.** Medido
+nesta árvore rodando ``mesa_do_estado`` + ``folha_do_plastico`` com um controle
+de cada código no cabo::
+
+    código  mesa['nome'] (do CSV dela)      borda ANTES          borda DEPOIS
+    Z1      God of War Ragnarök             var(--border-forte)  #56618b
+    Z2      Marvel's Spider-Man 2           var(--border-forte)  #5f5f60
+    ZB      Icon Blue Special Edition       var(--border-forte)  #40659d
+
+Agora a folha casa por ``cor`` — o ``id`` da linha dela —, e nome de tela deixou
+de decidir cor.
+
 O RESOLVEDOR ABAIXO É HONESTO PORQUE A PÁGINA É SIMPLES: depois da cura há **uma
 única** fonte de `--plastico` no documento, e dentro dela todas as regras têm a
 mesma especificidade — `.ctl[data-controle]` e `.ctl[data-controle="p1"]` valem
@@ -177,7 +204,7 @@ def test_os_dois_pisos_gemeos_nao_divergiram(aba02, a02):
 
 def test_o_seletor_do_assento_e_o_mesmo_dos_dois_lados(aba02, a02):
     """Bancada e produto têm de escrever o MESMO seletor, ou a troca não cobre."""
-    do_produto = a02.folha_do_plastico([{"pref": "p1", "nome": "White"}])
+    do_produto = a02.folha_do_plastico([{"pref": "p1", "cor": "white"}])
     seletor = do_produto.splitlines()[1].split("{", 1)[0]
     assert seletor == aba02.seletor_do_plastico("p1")
 
@@ -192,15 +219,20 @@ def test_a_bancada_mostra_o_desenho_que_ela_aprovou(doc):
 
 
 def test_com_um_controle_so_o_assento_vazio_perde_a_cor_do_desenho(doc, a02):
-    """O DEFEITO, medido: o p2 ficava Starlight Blue com o P1 sozinho na mesa."""
-    troca = a02.folha_do_plastico([{"pref": "p1", "nome": "White"}])
-    assert _cor_do_assento(doc, "p1", troca) == "#edeef0"
+    """O DEFEITO, medido: o p2 ficava Starlight Blue com o P1 sozinho na mesa.
+
+    O `#e4e0d8` é o White DO MAPA DELA (`casca_esq` do modelo `00`), o mesmo
+    hexa que o chip da fita mostra — e não o `#edeef0` da tabela aproximada que
+    esta borda usava até 03/09.
+    """
+    troca = a02.folha_do_plastico([{"pref": "p1", "cor": "white"}])
+    assert _cor_do_assento(doc, "p1", troca) == "#e4e0d8"
     assert _cor_do_assento(doc, "p2", troca) == a02.BORDA_SEM_COR
 
 
 def test_nenhum_assento_fica_sem_cor_definida(doc, a02):
     """`var()` sem valor não deixa a borda cinza — ela SOME. Por isso o piso."""
-    troca = a02.folha_do_plastico([{"pref": "p1", "nome": "White"}])
+    troca = a02.folha_do_plastico([{"pref": "p1", "cor": "white"}])
     for pref in ("p1", "p2", "p3", "p4"):
         assert _cor_do_assento(doc, pref, troca) is not None, (
             f"o assento {pref} ficou sem `--plastico`, e a borda dele deixa de existir")
@@ -209,46 +241,70 @@ def test_nenhum_assento_fica_sem_cor_definida(doc, a02):
 def test_a_mesa_dela_de_hoje_chega_inteira_a_tela(doc, a02):
     """P1 White no cabo, P2 Galactic Purple no rádio — os dois aparelhos dela."""
     troca = a02.folha_do_plastico([
-        {"pref": "p1", "nome": "White"},
-        {"pref": "p2", "nome": "Galactic Purple"},
+        {"pref": "p1", "cor": "white", "nome": "White"},
+        {"pref": "p2", "cor": "galactic-purple", "nome": "Galactic Purple"},
     ])
-    assert _cor_do_assento(doc, "p1", troca) == a02.cor_da_borda("White")
-    assert _cor_do_assento(doc, "p2", troca) == a02.cor_da_borda("Galactic Purple")
+    assert _cor_do_assento(doc, "p1", troca) == a02.cor_da_borda("white")
+    assert _cor_do_assento(doc, "p2", troca) == a02.cor_da_borda("galactic-purple")
     for hexa in DO_DESENHO:
         assert hexa not in troca, f"o pacote emitiu `{hexa}`, que é do desenho"
 
 
 def test_nenhum_hexa_do_desenho_sobrevive_a_troca(doc, a02):
     """A varredura final, e ela é sobre a TELA: em nenhum dos quatro assentos, em
-    nenhuma das mesas plausíveis, pode restar a cor do mockup."""
+    nenhuma das mesas plausíveis, pode restar a cor do mockup.
+
+    As mesas de baixo NÃO trazem `cosmic-red` nem `starlight-blue` de propósito:
+    são os dois modelos do desenho, e um deles na mesa VIVA faria o assento sair
+    legitimamente naquele hexa — a régua acusaria a verdade.
+    """
     mesas = [
         [],
-        [{"pref": "p1", "nome": "White"}],
-        [{"pref": "p2", "nome": "Nova Pink"}],
-        [{"pref": "p1", "nome": "Midnight Black"}, {"pref": "p2", "nome": "Não sei"}],
-        [{"pref": f"p{n}", "nome": "Chroma Teal"} for n in range(1, 5)],
+        [{"pref": "p1", "cor": "white"}],
+        [{"pref": "p2", "cor": "nova-pink"}],
+        [{"pref": "p1", "cor": "midnight-black"}, {"pref": "p2", "cor": ""}],
+        [{"pref": f"p{n}", "cor": "chroma-teal"} for n in range(1, 5)],
     ]
     for mesa in mesas:
         troca = a02.folha_do_plastico(mesa)
         for pref in ("p1", "p2", "p3", "p4"):
             cor = _cor_do_assento(doc, pref, troca)
             assert cor not in DO_DESENHO, (
-                f"com a mesa {[c['nome'] for c in mesa]} o assento {pref} "
+                f"com a mesa {[c['cor'] for c in mesa]} o assento {pref} "
                 f"continuou em `{cor}`, que é a cor do desenho")
 
 
 # ---------------------------------------------------------------------------
 # 3. O DADO VEM DO MAPA DELA — os 28 modelos, e os que o produto ainda não sabe
 # ---------------------------------------------------------------------------
-def _modelos_do_mapa() -> dict[str, str]:
-    """`código de fábrica -> nome`, lido do CSV que é dono deles."""
+def _linhas_do_mapa() -> list[dict[str, str]]:
+    """As 233 linhas de `docs/data/cores-do-dualsense.csv`, sem comentário."""
     import csv
 
     caminho = RAIZ / "docs/data/cores-do-dualsense.csv"
     linhas = [linha for linha in caminho.read_text(encoding="utf-8").splitlines()
               if linha.strip() and not linha.lstrip().startswith("#")]
-    return {x["codigo_da_cor"]: x["nome"] for x in csv.DictReader(linhas)
-            if x.get("codigo_da_cor")}
+    return [x for x in csv.DictReader(linhas) if x.get("codigo_da_cor")]
+
+
+def _modelos_do_mapa() -> dict[str, str]:
+    """`código de fábrica -> nome`, lido do CSV que é dono deles."""
+    return {x["codigo_da_cor"]: x["nome"] for x in _linhas_do_mapa()}
+
+
+def _casca_do_mapa() -> dict[str, str]:
+    """`slug -> hexa da casca esquerda`, ou `""` quando ela não amostrou o modelo.
+
+    É A MESMA COLUNA QUE PINTA O DESENHO: `gerar_cores_do_dualsense.py` põe o
+    `casca_esq` cru em `--z-casca-solida`, e é ele que `monta.cor_da_zona`
+    devolve. Ler daqui é o que faz este teste medir o MAPA, e não a memória de
+    quem o escreveu.
+    """
+    fora: dict[str, str] = {}
+    for x in _linhas_do_mapa():
+        if x.get("zona") == "casca_esq":
+            fora[x["id"]] = (x.get("hex") or "").strip()
+    return fora
 
 
 def test_o_mapa_dela_tem_vinte_e_oito_modelos():
@@ -256,34 +312,66 @@ def test_o_mapa_dela_tem_vinte_e_oito_modelos():
     assert len(_modelos_do_mapa()) == 28
 
 
-@pytest.mark.parametrize("codigo_de_fabrica", sorted(_modelos_do_mapa()))
-def test_todo_modelo_que_o_produto_reconhece_vira_borda(a02, codigo_de_fabrica):
-    """Os 21 códigos que o produto conhece viram hexa; os sete que não, viram neutro.
+@pytest.mark.parametrize("slug", sorted(_casca_do_mapa()))
+def test_todo_modelo_do_mapa_dela_vira_borda(a02, slug):
+    """A LEI DELA, medida modelo a modelo: *"nada hardcoded"*.
 
-    O NOME PEDIDO É O DO PRODUTO, e a distinção importa: `cor_da_borda` recebe um
-    NOME, e o nome que chega vivo sai de `NOMES_DE_FABRICA` — o aparelho publica
-    um CÓDIGO, e quem o traduz é essa tabela. Perguntar com o nome do CSV mediria
-    a grafia dos dois arquivos, que é outro fato e tem teste próprio logo abaixo.
+    A pergunta é feita com o SLUG — o `id` da linha dela, que é o que
+    `mesa_viva.mesa_do_estado` põe em `cor` —, e não com o nome de tela. Perguntar
+    por nome era o defeito: a grafia do CSV e a de `NOMES_DE_FABRICA` divergem em
+    três modelos, e os três saíam sem borda nenhuma.
+
+    OS OITO SEM AMOSTRA NÃO SÃO FALHA: ela não mediu a casca de Grey Camouflage,
+    dos três Chroma, de Ghost of Yōtei, Marathon, Genshin Impact e 007 First
+    Light. A folha os pinta com `url(#hachura-sem-hex)`, que numa **borda** não é
+    hachura — é declaração inválida, e a borda SOME. O neutro é o que a regra
+    dela manda: campo sem informação não mostra nada.
     """
-    from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
-
-    if codigo_de_fabrica in NOMES_DE_FABRICA:
-        borda = a02.cor_da_borda(NOMES_DE_FABRICA[codigo_de_fabrica])
+    medida = _casca_do_mapa()[slug]
+    borda = a02.cor_da_borda(slug)
+    if medida:
         assert re.fullmatch(r"#[0-9a-fA-F]{6}", borda), (
-            f"o código `{codigo_de_fabrica}` está no mapa do produto e não virou hexa")
+            f"`{slug}` tem casca medida (`{medida}`) no mapa dela e não virou hexa")
     else:
-        alheio = _modelos_do_mapa()[codigo_de_fabrica]
-        assert a02.cor_da_borda(alheio) == a02.BORDA_SEM_COR
+        assert borda == a02.BORDA_SEM_COR, (
+            f"`{slug}` não tem casca amostrada e mesmo assim saiu `{borda}` — "
+            "um `url()` numa borda apaga a borda inteira")
+
+
+def test_a_borda_e_o_chip_da_fita_nunca_discordam(a02):
+    """O defeito que ELA viu: dois valores da mesma cor, três centímetros um do
+    outro. O chip lê `monta.cor_da_zona`; a borda tem de ler o MESMO dono.
+
+    Até 03/09/2026 a borda lia `cor_do_plastico.TONS` — 21 hexas, vinte deles
+    aproximados — e os dois discordavam em **28 de 28** modelos dela.
+    """
+    import monta
+
+    for slug, medida in sorted(_casca_do_mapa().items()):
+        if not medida:
+            continue
+        assert a02.cor_da_borda(slug).lower() == str(monta.cor_da_zona(slug)).lower(), (
+            f"a borda do card e o chip da fita discordam em `{slug}`")
 
 
 #: OS TRÊS QUE SÃO O MESMO MODELO ESCRITO DE DOIS JEITOS — medido em 03/09/2026.
 #: ``código -> (nome no CSV dela, nome no mapa do produto)``.
 #:
-#: A TELA NÃO SOFRE COM ISSO HOJE, e é importante dizer por quê: o nome vivo sai
-#: de `NOMES_DE_FABRICA` pelo CÓDIGO que o aparelho publica, então a borda sai
-#: certa. O que quebra é quem for de NOME — e é o caminho que
-#: `check_a_cor_vem_do_aparelho.colorways_do_mapa` e o `mapa-do-controle.html`
-#: usam, porque leem o CSV.
+#: **FATO SUBSTITUÍDO, no mesmo dia.** Aqui estava escrito que *"a tela não sofre
+#: com isso hoje (…) o nome vivo sai de `NOMES_DE_FABRICA` pelo CÓDIGO que o
+#: aparelho publica, então a borda sai certa"*. **Sofria.** O nome vivo NÃO sai
+#: de `NOMES_DE_FABRICA`: `mesa_viva.mesa_do_estado` o tira de `mesa_viva.CORES`,
+#: que lê o CSV **dela** — então a mesa entrega `God of War Ragnarök` com trema,
+#: `Marvel's Spider-Man 2` com o `Marvel's`, e `Icon Blue Special Edition`. Os
+#: três não casavam com a tabela do produto, e os três saíam
+#: `var(--border-forte)` — sem borda de identidade nenhuma, medido rodando
+#: `mesa_do_estado` + `folha_do_plastico` com um controle de cada código no cabo.
+#:
+#: A CURA FOI TROCAR A CHAVE: a folha casa por `cor` (o `id` da linha dela) e não
+#: por nome de tela, então esta divergência deixou de alcançar a cor. Ela
+#: continua declarada porque ainda alcança o TEXTO — o cabeçalho do card e o
+#: chip da fita escrevem o nome, e dois arquivos com grafias diferentes é
+#: divergência silenciosa esperando a próxima pessoa.
 GRAFIA_DIVERGENTE = {
     "Z1": ("God of War Ragnarök", "God of War Ragnarok"),
     "Z2": ("Marvel's Spider-Man 2", "Spider-Man 2"),
@@ -313,6 +401,15 @@ def test_as_grafias_divergentes_estao_declaradas():
 #: `integrations/cor_do_plastico.NOMES_DE_FABRICA` conhece 21. Quem tiver um
 #: destes sete vê a borda NEUTRA: honesto (o produto não inventa cor), mas não é
 #: *"o app se adaptou ao controle dele"*, que é o que ela pediu.
+#:
+#: **E A LACUNA MUDOU DE LUGAR EM 03/09/2026, sem mudar de tamanho.** Desde que
+#: `cor_da_borda` passou a ler o mapa dela, TRÊS destes sete já têm hexa do lado
+#: da aba — HyperPop Techno Red `#e11d2e`, Remix Green `#8fbf3a`, Rhythm Blue
+#: `#3aa0e8` —, e mesmo assim continuam sem chegar à tela. O que os barra agora
+#: é UM degrau acima: `LeitorDeCor` → `cor_do_serial` → `cor_do_codigo` devolve
+#: `None` para um código fora das 21, então a mesa nasce **sem cor nenhuma** e o
+#: slug nunca é escrito. Os outros quatro (Ghost of Yōtei, Marathon, Genshin,
+#: 007) ficariam neutros de qualquer jeito: ela não amostrou a casca deles.
 #:
 #: NÃO É DEFEITO DESTA ABA, e por isso não se conserta aqui: o dono é
 #: `integrations/cor_do_plastico.py`, e a cura é ele LER o CSV em vez de repetir
