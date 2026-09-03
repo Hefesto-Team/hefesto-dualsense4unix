@@ -58,6 +58,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
     BtMicSubsystem,
+    RegistroDePedidosDeCanal,
     uniqs_declarados,
     uniqs_pedidos,
 )
@@ -178,17 +179,40 @@ class TestADeclaracaoDaMesa:
 
 
 class TestOGate:
-    def test_conjunto_vazio_e_desligado(self) -> None:
-        assert BtMicSubsystem().is_enabled(_config(bt_mic_uniqs=frozenset)) is False
+    """CONTRATO SUBSTITUÍDO — CANAL-POR-CONTROLE-01, 03/09/2026.
+
+    Estes três mediam `is_enabled` como *"alguém declarou um `uniq`?"*, e era
+    essa resposta que trancava o rádio: sem declaração o subsystem não existia,
+    então não havia a quem PEDIR canal, e o primeiro toque no botão do
+    microfone caía no vazio. Agora `is_enabled` é sempre `True` — o supervisor
+    tem de estar de pé para atender o pedido.
+
+    **O que eles mediam continua medido, e no lugar certo:** quem responde
+    "ninguém pediu, então nada sobe" é `alvos()`, e é ele que estas linhas
+    checam agora. O `is_enabled` verdadeiro sem `alvos()` vazio seria o
+    microfone ligando sozinho — é essa a dupla que a privacidade exige.
+    """
+
+    def test_conjunto_vazio_nao_sobe_ponte_nenhuma(self) -> None:
+        subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
+        config = _config(bt_mic_uniqs=frozenset)
+        assert subsystem.is_enabled(config) is True
+        subsystem._config = config
+        assert subsystem.alvos([_No(UM), _No(DOIS)]) == []
 
     def test_um_uniq_basta_para_subir_o_subsystem(self) -> None:
         config = _config(bt_mic_uniqs=lambda: frozenset({UM}))
         assert BtMicSubsystem().is_enabled(config) is True
 
-    def test_sem_fonte_nenhuma_e_desligado(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_sem_fonte_nenhuma_nao_sobe_ponte_nenhuma(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """`None` é o contrato de "não há fonte", e vale como ninguém pediu."""
         monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
-        assert BtMicSubsystem().is_enabled(_config()) is False
+        subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
+        assert subsystem.is_enabled(_config()) is True
+        subsystem._config = _config()
+        assert subsystem.alvos([_No(UM), _No(DOIS)]) == []
 
 
 # ===========================================================================
@@ -417,13 +441,18 @@ class TestAlguemEscreve:
 
 class TestOAplicarValeAgora:
     @pytest.mark.asyncio
-    async def test_reconciliar_sobe_no_primeiro_e_desce_no_ultimo(self) -> None:
-        """Os dois casos que o laço do subsystem sozinho NÃO cobre.
+    async def test_reconciliar_sobe_uma_vez_e_o_laco_cuida_do_resto(self) -> None:
+        """CONTRATO SUBSTITUÍDO — CANAL-POR-CONTROLE-01, 03/09/2026.
 
-        O laço relê a fonte a cada varredura, então trocar QUAL controle já
-        funciona sem ninguém fazer nada. O que não funciona é ligar o PRIMEIRO
-        com o subsystem no chão e desligar o ÚLTIMO com ele de pé: aí alguém tem
-        de subir e descer o subsystem, e esse alguém é este método.
+        Este método cobrava *"sobe no primeiro, desce no último"*, e o "desce" só
+        existia porque `is_enabled` era a declaração. Com o canal subindo por
+        PROCURA, o supervisor fica de pé para atender o próximo pedido e quem
+        derruba o microfone de quem ela desmarcou é `alvos()`, na varredura
+        seguinte — o que DESLIGA o microfone do mesmo jeito, porque
+        `PonteMicBluetooth.parar()` sempre escreve o `0x32` de desligar.
+
+        **A garantia não se perdeu, ela mudou de dono**, e o dono novo é medido
+        em `TestOPedidoDeCanal.test_desmarcar_no_aplicar_vence_o_pedido`.
         """
         ligados: set[str] = set()
         daemon = Daemon.__new__(Daemon)
@@ -442,24 +471,23 @@ class TestOAplicarValeAgora:
         daemon._start_bt_mic = _sobe  # type: ignore[method-assign]
         daemon._stop_bt_mic = _desce  # type: ignore[method-assign]
 
-        # Nada pedido: nada acontece.
-        await daemon.reconciliar_bt_mic()
-        assert subidas == []
-
-        # Ela liga o primeiro.
-        ligados.add(UM)
+        # O supervisor sobe já — é o que faz o primeiro toque no botão ter a
+        # quem pedir canal.
         await daemon.reconciliar_bt_mic()
         assert subidas == ["start"]
 
-        # Ela liga o segundo: o subsystem já está de pé, e o laço cuida do resto.
+        # Ela liga o primeiro e o segundo: já está de pé, e o laço cuida.
+        ligados.add(UM)
+        await daemon.reconciliar_bt_mic()
         ligados.add(DOIS)
         await daemon.reconciliar_bt_mic()
         assert subidas == ["start"]
 
-        # Ela desliga os dois: a ponte tem de DESCER, o que desliga o microfone.
+        # Ela desliga os dois: o supervisor FICA, e quem derruba as pontes é o
+        # `alvos()` da varredura seguinte.
         ligados.clear()
         await daemon.reconciliar_bt_mic()
-        assert subidas == ["start", "stop"]
+        assert subidas == ["start"]
 
     @pytest.mark.asyncio
     async def test_uma_ponte_que_falha_nao_vira_nao_consegui_gravar(self) -> None:
