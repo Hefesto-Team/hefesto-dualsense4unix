@@ -32,19 +32,13 @@ DA_PAGINA: tuple[str, ...] = (
     "aviso-texto",
     "aviso-vivo",
     "hef-posicao",
-    "mascara-cartao",
     "modo-aceso",
     "pendente",
     "pendente-alvo",
     "pendente-ha",
 )
 
-#: OS ENDEREÇOS DE DENTRO DE CADA CARTÃO. A máscara NÃO está aqui de propósito:
-#: `gamepad.emulation.set` recebe `flavor` e **não** recebe `uniq`
-#: (`daemon/ipc_handlers.py:5060`), logo a máscara é UMA para a máquina — e um
-#: valor da máquina emitido por cartão seria a tela prometendo quatro escolhas
-#: onde há uma. Ela sai por `mascara-cartao`, na mesa, e cada chip decide por si
-#: pelo `data-hef-quando`.
+#: OS ENDEREÇOS DE DENTRO DE CADA CARTÃO.
 #:
 #: `desenho` É O SVG DO CONTROLE — 03/09/2026, e ele fecha a outra metade da
 #: queixa dela: *"os svgs do dualsense (…) não são os que o meu mapa cataloga"*.
@@ -52,8 +46,23 @@ DA_PAGINA: tuple[str, ...] = (
 #: próprio desenho, que é o seletor com que a folha das 28 cores escolhe o
 #: modelo. Sem ela a borda ficava White e o controle desenhado continuava
 #: Cosmic Red, um centímetro abaixo.
+#:
+#: `mascara-cartao` MUDOU DE LADO EM 03/09/2026 — estava em `DA_PAGINA`, e o
+#: comentário que a prendia lá dizia *"`gamepad.emulation.set` recebe `flavor` e
+#: não recebe `uniq`, logo a máscara é UMA para a máquina"*. **Isso deixou de
+#: ser verdade no mesmo dia:** `gamepad.mask.set` nasceu recebendo `uniq`, o
+#: registro `external_mask` guarda a escolha por APARELHO desde 15/08, e o
+#: daemon publica `gamepad_emulation.por_aparelho`.
+#:
+#: O QUE O LADO ERRADO CUSTAVA, e não era teórico: o piloto pinta os valores de
+#: página em TODO elemento com aquele `data-campo` (`hefesto_vivo`, passo 1),
+#: então a máscara da SESSÃO era escrita nos três chips de todos os cartões. Com
+#: o P1 em `dualsense` e o P2 em `xbox` — que é o que o registro sabe guardar e
+#: o que o desenho dela mostra — os dois cartões acendiam o MESMO chip. A
+#: bancada já fazia certo (`jogar_vivo` pinta `[data-mascara]` dentro de cada
+#: cartão, com o valor daquele `uniq`); quem discordava era o produto.
 POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "bateria",
-                               "identidade")
+                               "identidade", "mascara-cartao")
 
 #: QUANTOS `aviso-item` A COLUNA TEM. **Este é o dono do número**, e o gerador o
 #: lê daqui (`aba01.py` importa esta constante) — a direção é essa e não a
@@ -81,6 +90,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     `src/hefesto_dualsense4unix/interface/casamento.py` é a régua que passou a medir isso.
     """
+    # A MÁSCARA DA SESSÃO, uma vez: ela é a HERANÇA de quem não escolheu, e não
+    # o valor. Quem sabe a diferença é `mascara_efetiva`, no daemon; aqui ela só
+    # entra como último recurso, quando a mesa chega sem a chave — uma régua com
+    # mesa de mentira, ou um daemon velho, anterior ao `por_aparelho`.
+    da_sessao = _rotulo_da_mascara(_mascara_da_sessao(ctx.state))
     cartoes = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
@@ -128,6 +142,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "jogador": f"Player {jogador_de(c) or '—'}",
             "bateria": f"{c.get('battery_pct')}%" if c.get("battery_pct") is not None else "—",
             "identidade": f"{nome} · {via}",
+            # A MÁSCARA DESTE APARELHO — ver `_mascara_do_cartao` e a nota do
+            # `POR_CARTAO`. Ela é a decisão dela de 03/09: *"É uma máscara por
+            # controle."*
+            "mascara-cartao": _mascara_do_cartao(casa, da_sessao),
         }
 
     # A COLUNA ATENÇÃO — as fontes do PRODUTO, não uma segunda leitura. Ver
@@ -397,7 +415,7 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     pela mesma razão.
     """
     if not state:
-        return {"hef-posicao": "", "modo-aceso": "", "mascara-cartao": ""}
+        return {"hef-posicao": "", "modo-aceso": ""}
 
     from hefesto_dualsense4unix.app.actions.home_actions import mascara_do_aparelho
     from hefesto_dualsense4unix.integrations import ponte_escada
@@ -421,18 +439,76 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
             aceso = str(chip.chave)
             break
 
+    # A MÁSCARA DOS CARTÕES SAIU DAQUI — 03/09/2026. Ela era emitida como valor
+    # DE PÁGINA, e o piloto escreve valor de página em TODO elemento com aquele
+    # `data-campo`: a máscara da SESSÃO ia para os três chips dos quatro
+    # cartões, e dois controles com escolhas diferentes acendiam o mesmo chip.
+    # Agora ela sai por cartão (ver `_mascara_do_cartao`); o que fica aqui é o
+    # que de fato é da máquina — a posição do interruptor e o chip da fileira.
+    # A `mascara` acima continua sendo lida: é ela que decide o `modo-aceso`.
     return {
         # AS PALAVRAS SÃO AS DO DESENHO (`aba01.INTERRUPTOR`), e é o `data-hef-
         # quando` de cada rótulo que decide qual acende — o Python manda o
         # ESTADO, não a classe.
         "hef-posicao": "" if ligado is None else ("ligado" if ligado else "desligado"),
         "modo-aceso": aceso,
-        # A MÁSCARA DOS CARTÕES é a da MÁQUINA, e por isso vai na mesa e não por
-        # cartão: `gamepad.emulation.set` não recebe `uniq`. O rótulo é o do
-        # desenho (`monta.MASCARAS`), e a tradução é a única coisa digitada aqui
-        # — o produto não tem a palavra "Xbox 360", que é da tela dela.
-        "mascara-cartao": _rotulo_da_mascara(mascara),
     }
+
+
+def _mascara_da_sessao(state: dict[str, Any] | None) -> str | None:
+    """A máscara do PROCESSO — a herança de quem não escolheu, e nada mais.
+
+    Um degrau só, e ele existe para que `pacote()` não importe `home_actions`
+    no meio do laço dos cartões. O leitor continua sendo o do produto; esta
+    função não decide nada.
+    """
+    if not state:
+        return None
+    from hefesto_dualsense4unix.app.actions.home_actions import mascara_do_aparelho
+
+    return mascara_do_aparelho(state)
+
+
+def _mascara_do_cartao(casa: dict[str, Any], da_sessao: str) -> str:
+    """A máscara DAQUELE aparelho, na palavra do desenho — ``""`` quando não há.
+
+    O DONO DO VALOR É A MESA, e ela já o resolveu: `mesa_viva.mesa_do_estado` lê
+    `gamepad_emulation.por_aparelho` (o `{uniq: máscara efetiva}` que o daemon
+    publica desde 03/09) e cai na máscara da sessão para quem não escolheu —
+    que é a regra de herança do `external_mask`, escrita uma vez, lá. Reler o
+    ``state`` aqui seria a segunda cópia dessa regra, e a de cá envelheceria no
+    dia em que a herança mudasse.
+
+    O FILTRO É `NOME_DA_MASCARA`, e não uma lista digitada: só passa o que a
+    tela sabe nomear. É o que mantém o **Nintendo Pro** apagado — ele está
+    desenhado e o produto não sabe montá-lo — e o que impede o travessão da mesa
+    vazia de virar um rótulo. Sem correspondência a resposta é ``""``, e o alvo
+    `classe` apaga os três chips: campo sem informação não mostra nada.
+    """
+    from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
+
+    rotulo = str(casa.get("mascara") or "")
+    if rotulo in set(NOME_DA_MASCARA.values()):
+        return rotulo
+    # A MESA NÃO TROUXE MÁSCARA NOMEÁVEL. Duas causas, e as duas caem aqui de
+    # propósito: a mesa de uma régua (sem a chave) e o daemon velho (sem o
+    # `por_aparelho`, quando `mesa_viva` já devolveu a da sessão). O caminho da
+    # sessão é o comportamento ANTERIOR a este campo existir — meia cura que
+    # muda comportamento é pior que nenhuma.
+    return da_sessao if not rotulo or rotulo not in _MASCARAS_DESENHADAS() else ""
+
+
+def _MASCARAS_DESENHADAS() -> set[str]:  # noqa: N802  (é uma constante lida tarde)
+    """Os rótulos que o DESENHO tem, do dono deles (`monta.MASCARAS`).
+
+    Existe para separar duas ausências que se pareciam: um rótulo que ESTÁ na
+    tela e o produto não sabe montar (o **Nintendo Pro** — resposta ``""``, o
+    chip fica apagado e isso é a verdade) de uma mesa que simplesmente não falou
+    de máscara (resposta: a da sessão, que é o que valia antes).
+    """
+    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
+    return set(monta.MASCARAS)
 
 
 def _rotulo_da_mascara(mascara: str | None) -> str:
