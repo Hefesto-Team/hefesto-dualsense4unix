@@ -65,6 +65,26 @@ CHAVES = (
     "combinacao.tres_na_mesa",
 )
 
+#: Os graus que declaram que NINGUÉM tocou o aparelho. É contra este conjunto
+#: que `test_nada_desta_frente_afirma_ter_ido_ao_aparelho` mede, e não contra um
+#: literal — o que sobrou de uma régua que envelheceu em 03/09/2026.
+#:
+#: A RÉGUA CRAVAVA `afirmado-no-doc`, E ISSO A PÔS EM GUERRA COM OUTRA. A mesma
+#: célula (`combinacao.slot_jogador.estabilidade@dualsense · radio_de_onde_sei`)
+#: é cobrada por `test_a_mesa_e_cega_ao_transporte.py:206`, que exige
+#: `inferido-do-codigo` — o lado dela leu `daemon/subsystems/coop.py` e provou,
+#: por AST, que não há gate de transporte em ponto nenhum. **Nenhum valor
+#: deixava as duas verdes**, e trocar a célula para agradar esta régua
+#: derrubava a outra: as duas frentes escreveram na mesma coluna escalar, e
+#: uma coluna escalar não carrega dois graus.
+#:
+#: QUEM CEDE É ESTA, e a razão está no próprio nome dela: o contrato é *nada
+#: desta frente afirma ter ido ao APARELHO*. `inferido-do-codigo` também não foi
+#: ao aparelho. Cravar um literal era pedir mais do que o contrato — e o que o
+#: contrato proíbe (`medido`) continua proibido, porque ele está de fora deste
+#: conjunto. A régua não afrouxou: ela passou a medir o que promete.
+GRAUS_SEM_APARELHO = frozenset({"afirmado-no-doc", "inferido-do-codigo"})
+
 #: `common[N] = report[M]` — a forma que esta casa usa para escrever offset.
 PAR_COMMON_REPORT = re.compile(r"common\[(\d+)\]\s*=\s*report\[(\d+)\]")
 
@@ -226,9 +246,10 @@ def test_nada_desta_frente_afirma_ter_ido_ao_aparelho() -> None:
     proíbe é a frente da busca externa se promover a bancada.
     """
     linha = MAPA_DA_FRENTE["combinacao.slot_jogador.estabilidade"]
-    assert linha["radio_de_onde_sei"] == "afirmado-no-doc", (
-        "o lado rádio do número de jogador foi LIDO em fonte de terceiro, "
-        "nunca medido: o grau honesto é `afirmado-no-doc`"
+    assert linha["radio_de_onde_sei"] in GRAUS_SEM_APARELHO, (
+        "o lado rádio do número de jogador nunca foi ao aparelho; o grau tem de "
+        f"ser um dos que dizem isso ({sorted(GRAUS_SEM_APARELHO)}), e está "
+        f"{linha['radio_de_onde_sei']!r}"
     )
     assert not (linha["radio_ate_onde_foi"] or "").strip(), (
         "nada desta frente foi ao aparelho; `radio_ate_onde_foi` tem de ficar "

@@ -17,6 +17,7 @@ que reprovam.
 
 from __future__ import annotations
 
+import ast
 import pathlib
 import re
 from typing import Any
@@ -237,28 +238,37 @@ class TestDegradacaoDe:
 #: MESMA leva — o `or 1` do `:221`, que era POSIÇÃO disfarçada de default, foi
 #: junto. As três que sobram mudaram só de LINHA, e as razões são as mesmas.
 #:
-#: A ÂNCORA POR `arquivo:linha` É FRÁGIL DE PROPÓSITO: uma exceção que se mexe
-#: tem de ser reconferida, e foi assim que esta lista revelou, no merge, que
-#: metade dela já não existia. O preço é reescrevê-la a cada leva que toca os
-#: pacotes; o ganho é que ela não guarda fantasma.
+#: A ÂNCORA DEIXOU DE SER `arquivo:linha` EM 03/09/2026, e a razão está medida.
+#: A âncora por número de linha cobrava ALUGUEL: ela reprovava toda vez que um
+#: pacote CRESCIA, sem que uma leitura crua nova tivesse nascido. A linha do
+#: `a04_iluminacao.py` andou CINCO vezes — 413, 638, 768, 780 e 1656 — e nenhuma
+#: dessas mudanças foi um defeito; era docstring e função nova empurrando o
+#: mesmo `o.get("player")` para baixo. O relato pedindo âncora por NOME DE
+#: FUNÇÃO estava escrito aqui mesmo, e é o que esta versão faz.
+#:
+#: A ÂNCORA DE HOJE É `função: <o texto da linha>`. Ela não tem menos precisão
+#: que a antiga — tem mais: o número de linha dizia ONDE, e o texto diz O QUÊ.
+#: Uma leitura crua nova na mesma função continua reprovando, porque o texto
+#: dela não vai casar com nenhuma chave da lista; e uma exceção que morre
+#: continua sendo pega pelo teste do fantasma.
+#:
+#: O QUE ELA CUSTA, escrito para quem vier: duas leituras cruas IDÊNTICAS na
+#: MESMA função colapsam numa âncora só, e a segunda passaria de graça. É um
+#: caso estreito — a mesma linha, letra por letra, duas vezes no mesmo corpo —
+#: e o preço de fechá-lo seria trazer de volta o número de linha e o aluguel.
 EXCECOES_DATADAS: dict[str, str] = {
-    "a05_vibracao.py:82": (
-        "NÃO é controle: casa a entrada de `rumble_ff.per_vpad` pelo número do vpad"
+    '_do_vpad: if v.get("player") == player:': (
+        "a05_vibracao.py — NÃO é controle: casa a entrada de `rumble_ff.per_vpad` "
+        "pelo número do vpad"
     ),
-    "a05_vibracao.py:376": "lê o `player` do controle para casar com o vpad acima; migra junto",
-    # A LINHA ANDOU QUATRO VEZES EM 02/09/2026 — 413, 638, 768 e agora 780 — e
-    # nenhuma delas foi uma leitura crua nova. O pacote ganhou `_tinta`,
-    # `TIRA_APAGADA`, `desenho_da_luz`, `_so_abriu_o_seletor`, `o_coop_manda` e
-    # `dica_da_luz`; as últimas mexidas só reescreveram docstring e comentário.
-    # A leitura continua sendo a mesma: o `player` do CLIQUE.
-    #
-    # ESTA LISTA COBRA ARQUIVO:LINHA, e por isso ela reprova toda vez que um
-    # pacote CRESCE — sem que uma linha de leitura crua tenha nascido. É o preço
-    # do endereço exato, e o endereço exato é o que impede a lista de virar uma
-    # contagem que ninguém confere. RELATO para quem coordena: uma âncora por
-    # NOME DE FUNÇÃO em vez de número de linha custaria a mesma precisão sem o
-    # aluguel — hoje ela cai em toda leva que toca um pacote.
-    "a04_iluminacao.py:780": "lê o `player` do CLIQUE (`o`), não do controle — não é state_full",
+    'testar: v = _do_vpad(ctx.state.get("rumble_ff") or {}, ctx.por_uniq(uniq).get("player"))': (
+        "a05_vibracao.py — lê o `player` do controle para casar com o vpad acima; "
+        "migra junto"
+    ),
+    'player: n = int(str(o.get("player") or "0"))': (
+        "a04_iluminacao.py — lê o `player` do CLIQUE (`o`), não do controle — "
+        "não é state_full"
+    ),
 }
 
 #: A leitura crua a caçar. `player_slot` está de fora: ele é a chave que a GTK lê
@@ -270,19 +280,49 @@ def _pacotes() -> list[pathlib.Path]:
     return sorted((pathlib.Path(pacotes.__file__).parent).glob("*.py"))
 
 
-def test_nenhum_pacote_le_player_cru_fora_da_lista_datada() -> None:
-    """RÉGUA 4, e ela NOMEIA arquivo e linha — uma contagem não serviria.
+def _dono_de_cada_linha(fonte: str) -> dict[int, str]:
+    """Para cada linha do arquivo, o nome da função que a contém.
 
-    Quando a lista datada esvaziar, apague-a e este teste passa a ser absoluto.
+    Percorre a árvore de sintaxe em vez de contar `def` no texto, para que uma
+    função aninhada responda pelo próprio nome e não pelo do pai. Linha fora de
+    qualquer função responde `<módulo>`.
     """
+    dono: dict[int, str] = {}
+    try:
+        arvore = ast.parse(fonte)
+    except SyntaxError:  # pragma: no cover — pacote quebrado é outro portão
+        return dono
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        fim = no.end_lineno or no.lineno
+        for n in range(no.lineno, fim + 1):
+            # A mais INTERNA vence: `ast.walk` visita o pai antes do filho, e o
+            # filho sobrescreve as linhas que são dele.
+            dono[n] = no.name
+    return dono
+
+
+def _leituras_cruas() -> list[str]:
+    """As âncoras de toda leitura crua de `player` nos pacotes, hoje."""
     achados: list[str] = []
     for arquivo in _pacotes():
-        for n, linha in enumerate(arquivo.read_text(encoding="utf-8").splitlines(), 1):
+        fonte = arquivo.read_text(encoding="utf-8")
+        dono = _dono_de_cada_linha(fonte)
+        for n, linha in enumerate(fonte.splitlines(), 1):
             if linha.lstrip().startswith("#"):
                 continue
             if _CRU.search(linha):
-                achados.append(f"{arquivo.name}:{n}")
-    novos = [a for a in achados if a not in EXCECOES_DATADAS]
+                achados.append(f"{dono.get(n, '<módulo>')}: {linha.strip()}")
+    return achados
+
+
+def test_nenhum_pacote_le_player_cru_fora_da_lista_datada() -> None:
+    """RÉGUA 4, e ela NOMEIA função e texto — uma contagem não serviria.
+
+    Quando a lista datada esvaziar, apague-a e este teste passa a ser absoluto.
+    """
+    novos = [a for a in _leituras_cruas() if a not in EXCECOES_DATADAS]
     assert not novos, (
         f"leitura crua de `player` sem dono: {novos}. Use `pacotes.jogador_de`, "
         "que lê `player_slot` antes — a mesma ordem da GTK"
@@ -291,12 +331,7 @@ def test_nenhum_pacote_le_player_cru_fora_da_lista_datada() -> None:
 
 def test_a_lista_datada_nao_guarda_fantasma() -> None:
     """Exceção que já não existe é lista que mente sobre o tamanho da dívida."""
-    achados = set()
-    for arquivo in _pacotes():
-        for n, linha in enumerate(arquivo.read_text(encoding="utf-8").splitlines(), 1):
-            if not linha.lstrip().startswith("#") and _CRU.search(linha):
-                achados.add(f"{arquivo.name}:{n}")
-    mortas = sorted(set(EXCECOES_DATADAS) - achados)
+    mortas = sorted(set(EXCECOES_DATADAS) - set(_leituras_cruas()))
     assert not mortas, (
         f"a lista datada guarda exceção que já morreu: {mortas}. Apague a linha "
         "— a dívida é menor do que ela diz"
