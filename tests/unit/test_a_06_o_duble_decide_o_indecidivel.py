@@ -108,9 +108,8 @@ PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions(),
           "key_bindings": {"l1": ["KEY_F11"]}}
 
 
-@pytest.fixture
-def sob_o_duble(monkeypatch):
-    """`(cravados, declarados)` — o que o arquivo crava e o que o pacote emite.
+def _no_mundo_de(monkeypatch, publicado: bool):
+    """`(cravados, declarados)` NA PÁGINA QUE ESTIVER CARREGADA.
 
     Os dois lados saem de quem já é dono deles: os cravados de
     `regua_do_mockup._campos_cravados` (o mesmo parser que a `--prova-de-mockup`
@@ -118,6 +117,12 @@ def sob_o_duble(monkeypatch):
     carga NORMALIZADA — isto é, exatamente o que iria para a tela naquele tique,
     cabeçalho incluído. Ler o código-fonte do pacote em vez da carga seria
     perguntar se o NOME do campo aparece, que é o erro que produziu o "77%".
+
+    `publicado` É O MUNDO — 02/09/2026, corretivo. `True` é a página que o
+    piloto carrega hoje; `False` é a bancada, que vira a tela dela no dia em que
+    ela publicar. A "Função do teclado" fala a língua da página carregada
+    (`a06_navegacao.PALAVRAS_DO_TECLADO`), então medir num mundo só deixaria o
+    outro quebrar calado — que foi exatamente o que aconteceu.
     """
     import pacotes
     from pacotes import a06_navegacao, perfil
@@ -125,6 +130,9 @@ def sob_o_duble(monkeypatch):
     from hefesto_dualsense4unix.interface import mesa_viva, onde, regua_do_mockup
 
     monkeypatch.setattr(perfil, "ativo", lambda nome: dict(PERFIL) if nome else {})
+    monkeypatch.setattr(
+        a06_navegacao, "_o_que_a_pagina_oferece",
+        lambda: frozenset(_opcoes_da_pagina(publicado, "teclado-estado") or ()))
 
     mesa = mesa_viva.mesa_do_estado(ESTADO, {})
     ctx = pacotes.Contexto(state=ESTADO, mesa=mesa, conectados=CONTROLES, estados={})
@@ -133,9 +141,15 @@ def sob_o_duble(monkeypatch):
     for chave, valor in pacotes.topo(ctx).items():
         carga["mesa"].setdefault(chave, valor)
 
-    texto = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    texto = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
     return regua_do_mockup._campos_cravados(texto), \
         regua_do_mockup._declarados_do_pacote(carga)
+
+
+@pytest.fixture
+def sob_o_duble(monkeypatch):
+    """O mundo de HOJE: a página que o piloto carrega (`publicado=True`)."""
+    return _no_mundo_de(monkeypatch, publicado=True)
 
 
 def test_o_duble_nao_deixa_um_campo_indecidivel(sob_o_duble):
@@ -229,34 +243,29 @@ def test_quando_a_tela_acompanha_tudo_vira_produto(sob_o_duble):
 #: linha de erro em lugar nenhum.
 _SELECT = r'<select[^>]*data-campo="{}"[^>]*>(.*?)</select>'
 
-#: OS CAMPOS QUE ESPERAM A PUBLICAÇÃO DELA, com a razão — 02/09/2026.
+#: OS DOIS MUNDOS QUE ESTA RÉGUA ATRAVESSA — 02/09/2026, corretivo.
 #:
-#: POR QUE ESTA LISTA PRECISOU EXISTIR: o desenho anda na BANCADA e o produto só
-#: recebe quando ela publica (`scripts/check_o_desenho_aprovado.py --publicar`),
-#: e nesse intervalo o pacote fala uma língua que a página publicada ainda não
-#: entende. Para um `<select>`, isso não dá erro nenhum: o `escrever()` do
-#: piloto devolve `0` **em silêncio** quando o texto não casa com nenhuma
-#: `<option>` — o campo simplesmente para, e nada acusa.
+#: O desenho anda na BANCADA e o produto só recebe quando ela publica
+#: (`scripts/check_o_desenho_aprovado.py --publicar`). Nesse intervalo há DUAS
+#: telas possíveis, e a régua tem de valer nas duas — a de hoje, que é a que ela
+#: clica, e a de depois, que é a que a publicação entrega.
 #:
-#: Então a régua não pode nem reprovar (o desenho novo é decisão dela, e a
-#: publicação também) nem calar (parar de pintar um campo é exatamente o
-#: defeito que ela existe para pegar). Ela COBRA A DECLARAÇÃO: contra a bancada
-#: o casamento é obrigatório e sem exceção; contra o publicado, todo campo que
-#: deixar de casar tem de estar aqui, com o que se perde enquanto isso durar.
+#: A VERSÃO ANTERIOR DESTA LINHA ERA UMA DECLARAÇÃO — `ESPERANDO_A_PUBLICACAO =
+#: {"teclado-estado"}` — e ela olhava para a coisa errada. Declarava que o campo
+#: PARARIA de ser pintado até a publicação, e o que aconteceu foi pior: o campo
+#: continuou sendo pintado **com a palavra errada**, e a tela passou a afirmar
+#: `Ligada — atalhos e teclado na tela` com o teclado DESLIGADO. Uma declaração
+#: não conserta tela; ela só documenta o estrago.
 #:
-#: `teclado-estado` — as três palavras da "Função do teclado" mudaram por
-#: decisão dela de 02/09 (`Só dentro do jogo` · `Só fora do jogo` ·
-#: `Desativado`), e a página publicada ainda oferece as antigas: `Ligada —
-#: atalhos e teclado na tela` · `Só fora do jogo` · `Desligada`.
-#:
-#: A TRAVESSIA É PELA METADE, e é bom que a régua diga qual metade: **`Só fora
-#: do jogo` já existe nas duas páginas**, então o teclado LIGADO continua sendo
-#: pintado no produto de hoje — e passa a ser pintado com a palavra certa, no
-#: lugar do "Ligada…" que o desenho publicado crava. Quem espera a publicação é
-#: só o estado DESLIGADO: `Desativado` não existe na lista publicada, e é
-#: exatamente o estado do dublê. Enquanto ela não publicar, desligar o teclado
-#: deixa esta linha da tela parada no que estiver.
-ESPERANDO_A_PUBLICACAO = {"teclado-estado"}
+#: O QUE FICOU NO LUGAR: o pacote fala a língua da página CARREGADA
+#: (`a06_navegacao.PALAVRAS_DO_TECLADO`), e a régua roda nos dois mundos
+#: cobrando casamento OBRIGATÓRIO em cada um. Não há mais nada a declarar —
+#: publicar deixou de ser uma dívida da tela e voltou a ser só a troca do
+#: desenho.
+OS_DOIS_MUNDOS = [
+    pytest.param(True, id="a-pagina-publicada-de-hoje"),
+    pytest.param(False, id="a-bancada-do-dia-da-publicacao"),
+]
 
 
 def _opcoes_da_pagina(publicado: bool, chave: str) -> set[str] | None:
@@ -270,7 +279,8 @@ def _opcoes_da_pagina(publicado: bool, chave: str) -> set[str] | None:
     return set(re.findall(r"<option[^>]*>(.*?)</option>", bloco.group(1)))
 
 
-def test_todo_valor_do_duble_existe_como_opcao(sob_o_duble):
+@pytest.mark.parametrize("publicado", OS_DOIS_MUNDOS)
+def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
     """As 22 escolhas do dublê têm de ser oferecidas pela lista daquela linha.
 
     O teste irmão (`test_a_06_nao_manda_para_o_vazio`) cobre isto para o
@@ -278,44 +288,41 @@ def test_todo_valor_do_duble_existe_como_opcao(sob_o_duble):
     dela diverge — que é justamente o caso que nunca foi exercitado, e o que
     faria um campo ficar parado para sempre sem ninguém ver.
 
-    DUAS PÁGINAS, E O QUE CADA UMA COBRA — 02/09/2026. Contra a **bancada** (o
-    desenho de hoje) o casamento é obrigatório: um valor sem `<option>` ali é
-    defeito do pacote, sem atenuante. Contra o **publicado** ele é o que mede a
-    travessia: enquanto ela não publicar, um campo cujo desenho mudou para de
-    ser pintado no produto, e isso tem de estar DECLARADO em
-    `ESPERANDO_A_PUBLICACAO` com o preço escrito — nunca calado.
+    NOS DOIS MUNDOS, E OBRIGATÓRIO NOS DOIS — 02/09/2026, corretivo. Cada volta
+    carrega uma das duas páginas e cobra o mesmo: todo valor que o pacote
+    escreveria naquela tela existe como `<option>` DELA. A página publicada é a
+    que ela clica hoje; a bancada é a que a publicação entrega. Um pacote que só
+    soubesse falar com uma delas quebraria a outra em silêncio — e foi assim
+    que a tela passou a dizer `Ligada — atalhos e teclado na tela` com o teclado
+    desligado.
 
-    A MORDIDA: tire `teclado-estado` da declaração — esta régua acusa que o
-    campo parou de casar com a página que ela usa hoje.
+    A MORDIDA: crave a palavra da bancada na pintura (`mesa["teclado-estado"] =
+    TECLADO_SO_FORA if … else TECLADO_DESATIVADO`) — a volta
+    `a-pagina-publicada-de-hoje` reprova nomeando o valor que a lista dela não
+    oferece.
     """
-    cravados, declarados = sob_o_duble
-    conferidos, parados = 0, set()
+    cravados, declarados = _no_mundo_de(monkeypatch, publicado)
+    onde_estou = "publicada" if publicado else "da bancada"
+    conferidos = 0
     for campo in cravados:
         if campo.alvo != "valor":
             continue
         valor = str(declarados.get((campo.dono, campo.chave),
                                    declarados.get(("", campo.chave))))
-        na_bancada = _opcoes_da_pagina(False, campo.chave)
-        assert na_bancada is not None, (
-            f"{campo.endereco}: a bancada não tem `<select>` com esse endereço")
-        assert valor in na_bancada, (
-            f"{campo.endereco}: o dublê manda {valor!r} e a lista do desenho de "
-            "hoje não oferece essa opção — a pintura se calaria e o campo "
-            "ficaria parado para sempre.")
-        no_produto = _opcoes_da_pagina(True, campo.chave)
-        if no_produto is None or valor not in no_produto:
-            parados.add(campo.chave)
+        oferece = _opcoes_da_pagina(publicado, campo.chave)
+        assert oferece is not None, (
+            f"{campo.endereco}: a página {onde_estou} não tem `<select>` com "
+            "esse endereço")
+        assert valor in oferece, (
+            f"{campo.endereco}: na página {onde_estou} o dublê manda {valor!r} "
+            f"e a lista oferece {sorted(oferece)} — o `escrever()` devolveria 0 "
+            "em silêncio, e o que ficaria na tela é a `<option selected>` que o "
+            "desenho crava. O campo não para: ele passa a AFIRMAR o contrário.")
         conferidos += 1
     assert conferidos == 22, (
-        f"conferi {conferidos} listas e a aba tem 22 (as 21 linhas de botão "
-        "mais a 'Função do teclado') — se o número caiu, um `<select>` perdeu "
-        "o endereço e saiu da conferência sem reprovar nada.")
-    assert parados == ESPERANDO_A_PUBLICACAO, (
-        f"os campos que a página PUBLICADA já não sabe receber são {sorted(parados)}, "
-        f"e a declaração diz {sorted(ESPERANDO_A_PUBLICACAO)}.\n"
-        "Um campo a mais é uma linha da tela dela que parou de ser pintada sem "
-        "ninguém dizer; um a menos é declaração que envelheceu — e declaração "
-        "velha é a régua se desligando sozinha.")
+        f"conferi {conferidos} listas na página {onde_estou} e a aba tem 22 (as "
+        "21 linhas de botão mais a 'Função do teclado') — se o número caiu, um "
+        "`<select>` perdeu o endereço e saiu da conferência sem reprovar nada.")
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):

@@ -61,15 +61,19 @@ para TODA lista e TODO campo digitável das outras abas (o editor da Perfis, os
 pessoa está editando; a daqui resolve esta aba com o vocabulário que o piloto já
 tem, sem tocar arquivo de fora.
 
-E O SEGUNDO DEFEITO DO PILOTO, medido em 02/09/2026 e também relatado: **a frase
-de recusa NÃO CHEGA À TELA DELA.** O `except` de `trabalhar()`
-(`hefesto_vivo.py:758-771`) faz duas coisas e volta — grava `self.desfechos`,
-que só a régua do aparelho lê, e imprime no `stderr`. Não chama `_js`, não chama
-`window.__hef`, e `pintar()` não tem canal para mensagem: varre `fita`,
-`blocos`, `mesa`, `vazios` e `colunas`, e nada mais. **Toda frase de recusa
-deste arquivo é escrita para o dia em que o piloto ganhar onde mostrá-la** — o
-que ela muda HOJE é o DESFECHO que a régua do aparelho lê, e essa é a diferença
-entre "recusou dizendo" e "disse aplicado e nada mudou".
+FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
+recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
+um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
+`_recusou_dizendo` (`hefesto_vivo.py:1074`), e o `except` de `trabalhar()` põe a
+frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
+
+O QUE CONTINUA VALENDO, e é o que separa os dois erros: **só o `RuntimeError`
+fala com ela.** `_recusou_dizendo` devolve `False` para tudo o que não for
+`RuntimeError`, e a razão é do contrato — `ValueError` é *clique inválido*, e as
+frases que os pacotes escrevem nele citam nome de arquivo e de constante, que é
+ruído no cartão de quem está com o controle na mão. Logo uma opção de VERDADE
+que caia em `ValueError` é clique morto **e mudo**, e é exatamente o defeito que
+este corretivo fechou.
 
 OS DOIS `return` MUDOS MORRERAM — 02/09/2026, corretivo. O "Guardar" e o "Voltar
 ao padrão" saíam sem gravar, sem chamar e **sem uma palavra** quando não havia o
@@ -87,6 +91,28 @@ está invertido em tudo o que esta casa escreveu até hoje**, e a medição est�
 corpo de `teclado()`. O padrão de PERFIL NOVO não é desta aba — é do esquema, e
 está no relato.
 
+E ELA FALA A LÍNGUA DA PÁGINA CARREGADA — 02/09/2026, corretivo, e é a
+armadilha que esta casa paga toda vez que mexe na bancada. **Os geradores
+escrevem em `mockup/`; o produto lê `interface/paginas/`, e só recebe quando ela
+publica.** Trocar as três palavras na bancada e falar só elas fez duas coisas ao
+mesmo tempo, medidas contra a página que o produto renderiza:
+
+* das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
+  delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:1074`) leva à tela a
+  frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
+  com quem programa. Transformar uma opção de verdade em clique-inválido é
+  justamente pedir esse silêncio para o clique dela;
+* com o teclado desligado, a linha passou a AFIRMAR `Ligada — atalhos e teclado
+  na tela`, porque o `escrever()` descarta em silêncio o texto que não casa com
+  nenhuma `<option>` e o que fica é a que o desenho crava.
+
+A cura são duas linhas de vocabulário, e as duas se apagam sozinhas na
+publicação: `PALAVRAS_DO_TECLADO` (a pintura escolhe a palavra que a página
+CARREGADA oferece) e `SINONIMOS_ATE_A_PUBLICACAO` (o gesto entende também os
+rótulos do desenho de ontem). **A regra que fica: mudar rótulo, opção ou número
+de casas na bancada obriga a perguntar o que acontece na tela dela HOJE.**
+
 FATO SUBSTITUÍDO (02/09/2026): **"esta aba MENCIONA 7 campos e PINTA 3"** —
 escrito a partir do `--passear`, que imprime `06-navegacao.html  1  3`. Ela
 pinta os OITO elementos endereçados. O `3` é contagem de MUDANÇA: o `escrever()`
@@ -101,6 +127,7 @@ emitidas para o vazio (`SEM_ENDERECO`) e um "Guardar" que apagava o perfil
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Any
 
@@ -189,6 +216,49 @@ TECLADO_SO_FORA = "Só fora do jogo"
 TECLADO_DESATIVADO = "Desativado"
 TECLADO_SO_DENTRO = "Só dentro do jogo"
 
+#: AS DUAS PALAVRAS QUE A PÁGINA PUBLICADA AINDA USA — 02/09/2026, corretivo.
+#:
+#: A decisão dela mudou a lista na BANCADA; publicar é ato dela, e até lá o
+#: `WebView` renderiza estas três: `Ligada — atalhos e teclado na tela` · `Só
+#: fora do jogo` · `Desligada`. **`Só fora do jogo` está nas duas listas** — é
+#: por isso que o estado LIGADO já chega à tela dela hoje.
+#:
+#: O QUE ISTO CUSTOU QUANDO NÃO EXISTIA, e é a razão desta cura (medido contra
+#: `interface/paginas/06-navegacao.html`, a página que o piloto carrega):
+#:
+#: * o GESTO passou a levantar `ValueError` em DUAS das três opções que a
+#:   página oferece — inclusive a `Desligada`, a única forma de desligar o
+#:   teclado por esta aba. Clique morto, e calado POR CONTRATO: só a frase do
+#:   `RuntimeError` chega ao cartão dela (`hefesto_vivo._recusou_dizendo`, que
+#:   devolve `False` para tudo o que não for `RuntimeError`), porque a do
+#:   `ValueError` fala com quem programa;
+#: * a PINTURA passou a emitir `Desativado`, que a lista publicada não tem. O
+#:   `escrever()` (ramo `alvo === 'valor'`) descarta a escrita EM SILÊNCIO
+#:   quando o texto não casa com nenhuma `<option>`, e o que sobra na tela é a
+#:   `<option selected>` do desenho — literalmente `Ligada — atalhos e teclado
+#:   na tela`. Com o teclado DESLIGADO a tela afirmava o CONTRÁRIO, que é pior
+#:   que não dizer nada e é o lado que a decisão dela de 02/09 fecha.
+#:
+#: AS DUAS SAEM SOZINHAS NO DIA DA PUBLICAÇÃO. `_o_teclado_em_palavras` escolhe
+#: a primeira candidata que a página CARREGADA oferece, então publicar troca a
+#: palavra sem ninguém mexer aqui; e
+#: `test_a_06_a_funcao_do_teclado_tem_tres.py` reprova quando um sinônimo deixa
+#: de existir no publicado — declaração velha é a régua se desligando sozinha.
+TECLADO_LIGADA_HOJE = "Ligada — atalhos e teclado na tela"
+TECLADO_DESLIGADA_HOJE = "Desligada"
+
+#: O ESTADO DO DAEMON → as palavras que o dizem, EM ORDEM DE PREFERÊNCIA: a
+#: dela primeiro, o rótulo que a página publicada ainda oferece depois.
+#:
+#: A regra dela do mesmo dia — *"se não tá mostrando agora, não tem info pra
+#: mostrar no produto; mas quando tiver, aparece a info correta"* — aplicada à
+#: travessia: o campo não fica cravado numa palavra que a tela não sabe
+#: receber, e não espera ninguém vir consertá-lo depois da publicação.
+PALAVRAS_DO_TECLADO: dict[bool, tuple[str, ...]] = {
+    True: (TECLADO_SO_FORA, TECLADO_LIGADA_HOJE),
+    False: (TECLADO_DESATIVADO, TECLADO_DESLIGADA_HOJE),
+}
+
 #: O SEPARADOR DO CARTÃO — o mesmo `•` que o desenho põe entre o transporte e o
 #: papel (`aba06.controle`: `{via} <span class="pt">•</span> {papel}`). Ele é
 #: texto porque o endereço `data-campo="navega"` cobre a LINHA INTEIRA: o piloto
@@ -198,6 +268,81 @@ PONTO = " • "
 #: O PREFIXO DAS VINTE E UMA LINHAS de *o que cada botão faz*. Um por botão de
 #: `core/acoes_de_botao.BOTOES` — a lista é do produto, e não se digita aqui.
 PREFIXO_DA_ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
+
+#: O `<select>` da "Função do teclado" e as suas `<option>`, lidos do HTML.
+#: Duas expressões e não uma: recortar o bloco primeiro é o que impede casar
+#: com as `<option>` das outras 21 listas da mesma página.
+_SELECT_DO_TECLADO = re.compile(
+    r'<select[^>]*data-campo="teclado-estado"[^>]*>(.*?)</select>', re.S)
+_OPCAO = re.compile(r"<option[^>]*>(.*?)</option>", re.S)
+
+#: O selo do arquivo lido e o que ele oferecia. O caminho é fixo; o que muda é
+#: o arquivo, no dia em que ela publicar.
+_OFERTAS: tuple[tuple[int, int], frozenset[str]] | None = None
+
+
+def _o_que_a_pagina_oferece() -> frozenset[str]:
+    """As `<option>` da "Função do teclado" NA PÁGINA QUE O PILOTO CARREGA.
+
+    `publicado=True` É DELIBERADO, e é a mesma exceção que
+    `a03_gatilhos._pagina_publicada` documenta: o padrão de `onde.pagina` é a
+    BANCADA porque todo instrumento desta casa mede o desenho de hoje. Aqui
+    não — quem pinta pinta no que está no `WebView`, e o piloto abre SEMPRE o
+    publicado (`hefesto_vivo.py:913, 1418, 1458, 1646, 1818`).
+
+    LÊ UMA VEZ POR VERSÃO DO ARQUIVO, e o selo é `(mtime_ns, tamanho)`: a
+    página tem 385 KB e a pintura roda a cada 500 ms — reler a cada tique seria
+    750 KB/s por uma resposta que só muda quando ela publica.
+
+    `frozenset()` quando o arquivo não abre. Aí `_o_teclado_em_palavras` cai na
+    profissão de fé — a palavra DELA —, que é o destino: um produto instalado
+    sem a página é um produto que não tem tela nenhuma para mentir.
+
+    A JANELA QUE ISTO NÃO FECHA, e ela é estreita: publicar com o aplicativo
+    ABERTO e sem trocar de aba. O arquivo muda, o selo muda, o pacote passa a
+    emitir a palavra nova — e o DOM carregado ainda é o antigo, então a escrita
+    volta a ser descartada até o próximo carregamento. Trocar de aba já
+    recarrega (`hefesto_vivo.py:1818`), e reabrir também. Ler o DOM em vez do
+    arquivo exigiria uma pergunta ao piloto que o `Contexto` não tem.
+    """
+    global _OFERTAS
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        arquivo = onde.pagina(PAGINA, publicado=True)
+        st = arquivo.stat()
+        selo = (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return frozenset()
+    if _OFERTAS is not None and _OFERTAS[0] == selo:
+        return _OFERTAS[1]
+    try:
+        doc = arquivo.read_text(encoding="utf-8")
+    except OSError:
+        return frozenset()
+    bloco = _SELECT_DO_TECLADO.search(doc)
+    ofertas = frozenset(_OPCAO.findall(bloco.group(1))) if bloco else frozenset()
+    _OFERTAS = (selo, ofertas)
+    return ofertas
+
+
+def _o_teclado_em_palavras(ligado: bool) -> str:
+    """A palavra daquele estado que a página CARREGADA sabe receber.
+
+    A primeira candidata de `PALAVRAS_DO_TECLADO` é a decisão dela; a segunda é
+    o rótulo que a página publicada ainda oferece. Escolher a primeira que
+    EXISTE é o que faz a linha dizer a verdade nos dois mundos — e o que faz a
+    publicação bastar, sem ninguém voltar aqui.
+
+    Nenhuma das duas na página é o caso em que não há nada a acertar: devolve a
+    palavra dela, o `escrever()` se cala, e a régua do dublê acusa.
+    """
+    candidatas = PALAVRAS_DO_TECLADO[ligado]
+    ofertas = _o_que_a_pagina_oferece()
+    for palavra in candidatas:
+        if palavra in ofertas:
+            return palavra
+    return candidatas[0]
 
 
 def _nome_do_botao(botao: str) -> str:
@@ -423,15 +568,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # OMITE o bloco nesse caso) escrever "Desligada" afirmaria um estado que
     # ninguém mediu. Chave ausente = a pintura não toca no `<select>`.
     #
-    # E ela é o ÚNICO canal de recusa VISÍVEL desta aba: um gesto que levanta só
-    # grava o desfecho e imprime no **stderr** do piloto
-    # (`hefesto_vivo.py:768-771`) — o `except` de `trabalhar()` não chama `_js`
-    # nem `window.__hef`, e `pintar()` não tem campo para mensagem. Escolher
-    # "Só dentro do jogo", que não tem dono, deixa a lista parada na opção
-    # errada até o tique seguinte reescrevê-la com o que o daemon diz.
+    # E ela ACOMPANHA a recusa: desde 02/09/2026 a frase de um `RuntimeError`
+    # chega ao cartão dela na hora (`hefesto_vivo._recusou_dizendo`, pelo
+    # `idle_add`). Escolher "Só dentro do jogo", que não tem dono, mostra o
+    # motivo E deixa a lista voltar sozinha para o que está valendo no tique
+    # seguinte. A frase do `ValueError` continua sem chegar, por contrato — e é
+    # por isso que uma opção que a tela OFERECE nunca pode cair nele.
+    #
+    # E A PALAVRA É A QUE A PÁGINA CARREGADA SABE RECEBER — 02/09/2026,
+    # corretivo. Emitir a palavra da BANCADA numa lista que só tem as antigas é
+    # escrita descartada em silêncio, e o que fica na tela é a `<option
+    # selected>` do desenho: com o teclado DESLIGADO a linha afirmava `Ligada —
+    # atalhos e teclado na tela`. Ver `PALAVRAS_DO_TECLADO`.
     if "keyboard_emulation" in st:
-        mesa["teclado-estado"] = (
-            TECLADO_SO_FORA if tecla.get("enabled") else TECLADO_DESATIVADO)
+        mesa["teclado-estado"] = _o_teclado_em_palavras(bool(tecla.get("enabled")))
     return {
         "colunas": cards,
         "mesa": mesa,
@@ -596,7 +746,27 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #:
 #: `None` é a opção que a tela oferece e o produto NÃO tem. Ela não vira `False`
 #: nem `True` por conveniência: ver `teclado()`.
-_ESCOLHA: dict[str, bool | None] = {"fora": True, "desativado": False, "dentro": None}
+_ESCOLHA_DELA: dict[str, bool | None] = {
+    "fora": True, "desativado": False, "dentro": None}
+
+#: AS PALAVRAS DA PÁGINA QUE O PRODUTO RENDERIZA HOJE — 02/09/2026, corretivo.
+#:
+#: Publicar é ato dela, e até lá o `<select>` que ela clica oferece `Ligada —
+#: atalhos e teclado na tela` · `Só fora do jogo` · `Desligada`. Sem estas duas
+#: entradas, DUAS das três opções da tela dela viravam clique morto: `ligada` e
+#: `desligada` não estão em `_ESCOLHA_DELA`, o gesto levantava `ValueError`
+#: (clique-inválido) e a frase de um `ValueError` não chega ao cartão dela —
+#: `hefesto_vivo._recusou_dizendo` leva só a do `RuntimeError`. A opção que
+#: sumia era a única forma de DESLIGAR o teclado por esta aba.
+#:
+#: ELAS NÃO SÃO SEGUNDA VERDADE: são o mesmo bit, dito pelo desenho de ontem.
+#: O sentido de cada uma foi conferido no HTML publicado, e não deduzido do
+#: nome. E elas TÊM PRAZO — `test_a_06_a_funcao_do_teclado_tem_tres.py` exige
+#: que cada sinônimo ainda exista na página publicada, então no dia em que ela
+#: publicar a régua manda apagá-los.
+SINONIMOS_ATE_A_PUBLICACAO: dict[str, bool] = {"ligada": True, "desligada": False}
+
+_ESCOLHA: dict[str, bool | None] = {**_ESCOLHA_DELA, **SINONIMOS_ATE_A_PUBLICACAO}
 
 
 @gesto("06-navegacao.html", "teclado")
@@ -667,6 +837,12 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     teclado na tela do L3/R3 e as três regiões do touchpad (o handler manda a
     interface repassar isso). O piloto não tem canal de aviso — um gesto só
     imprime no terminal —, então o recado não tem onde aparecer.
+
+    ELE ENTENDE AS CINCO PALAVRAS, E NÃO AS TRÊS — 02/09/2026, corretivo. As
+    três são a decisão dela, na bancada; as outras duas são o desenho que a
+    tela dela renderiza ATÉ A PUBLICAÇÃO (`SINONIMOS_ATE_A_PUBLICACAO`).
+    Aceitar só as três transformou duas das três opções da tela em clique
+    morto — o defeito mais caro desta casa, e agravado por ser calado.
     """
     escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
     palavras = {x.strip(".,;:—-").lower() for x in escolhido.split()}
