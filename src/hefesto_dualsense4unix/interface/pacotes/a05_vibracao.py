@@ -42,38 +42,13 @@ from . import Contexto, registrar
 #: cura. Estava `{}` até 02/09/2026, e o vazio dizia "nada falta", que é a forma
 #: mais barata de mentir numa aba onde quatro coisas faltavam.
 #:
-#: **DOIS DOS QUATRO MUDARAM DE DONO no mesmo dia**, quando o alvo `classe`
-#: nasceu no pintor: `degrau-aceso` e `mult-teto` deixaram de esperar por outro
-#: arquivo e passaram a esperar por ESTE mais o gerador da aba — e, no fim, pela
-#: publicação dela. Ver a nota logo abaixo.
+#: **ERAM QUATRO E HOJE SÃO DOIS — 03/09/2026.** `degrau-aceso` e `mult-teto`
+#: fecharam: o alvo `classe` já existia no pintor desde 02/09, e o que faltava
+#: era o ENDEREÇO no desenho mais a EMISSÃO aqui. As duas metades entraram
+#: juntas (`aba05._coluna` e `aba05._teto_do_multiplicador`; as chaves `degrau` e
+#: `mult-teto` da :func:`pacote`). Mantê-los depois de pintados seria dívida
+#: fantasma — a próxima pessoa esperaria por uma cura que já chegou.
 SEM_DONO: dict[str, str] = {
-    # FATO SUBSTITUÍDO — 02/09/2026. As duas linhas abaixo diziam "o pintor não
-    # sabe mexer em classe" e "mesma cura, mesmo dono: o pintor". **O PINTOR JÁ
-    # SABE**: `hefesto_vivo.py:217` tem o ramo `if(alvo === 'classe')`, e o
-    # comentário que o abre (`:187-191`) nomeia estes dois casos pelo nome —
-    # "qual dos quatro degraus da Vibração está aceso" e "o rótulo `Máx` do
-    # teto". O dono mudou de lado, e mantê-los como estavam faria a próxima
-    # pessoa esperar por uma cura que já chegou.
-    "degrau-aceso": "O ENDEREÇO NASCEU E A EMISSÃO TAMBÉM — 02/09/2026. Os "
-    "quatro botões levam `data-campo=\"degrau\" data-hef-alvo=\"classe\" "
-    "data-hef-quando=<degrau>` (`aba05._coluna`) e este pacote emite `degrau` "
-    "por coluna. O QUE FALTA É SÓ A PUBLICAÇÃO DELA: na página que o produto "
-    "renderiza HOJE o endereço não existe, então o `achar()` do piloto devolve "
-    "lista vazia e nada é pintado — a tela dela não piora e não melhora até o "
-    "`--publicar 05`. Enquanto isso o desenho continua cravando 'Máximo' na "
-    "coluna do P1 com `rumble_policy = 'balanceado'` no daemon, que é a tela "
-    "afirmando o contrário do disco. E o degrau da COLUNA não é sempre o da "
-    "mesa: `profiles/schema.ControllerRumbleOverride` guarda `policy` e "
-    "`custom_mult` por peça desde POR-UNIDADE-01 (10/08/2026), e "
-    "`core/backend_pydualsense._escalar_rumble` os aplica — quando essa fonte "
-    "chegar, ela muda dentro do `pacote_da_coluna` e a emissão daqui não muda.",
-    "mult-teto": "O rótulo `Máx` ao lado do multiplicador aparece SÓ quando a "
-    "coluna está no teto, e hoje é cravado: a foto de 02/09 mostra `70%` com "
-    "`Máx` ao lado, afirmando que 70% é o teto. Pintá-lo por TEXTO poria `—` "
-    "onde o desenho não põe nada (`hefesto_vivo.py:112` troca vazio por "
-    "travessão); o alvo certo é o `classe` SEM `data-hef-quando`, que é "
-    "booleano — o próprio comentário do pintor cita este rótulo. Mesma "
-    "pendência do `degrau-aceso`: endereço no HTML e emissão aqui.",
     "lado:ligado": "Os oito interruptores de punho são DESENHO, e o produto "
     "concorda por escrito: `app/telas/vibracao.SEM_FONTE['lado:ligado']` — não "
     "há campo em `profiles/schema.py`, nem método de IPC, nem chave no "
@@ -116,6 +91,29 @@ def _plastico_do_item(controle: dict[str, Any]) -> str:
         return str(monta.cor_da_zona(slug))
     except (Exception, SystemExit):
         return ""
+
+
+def _no_teto(pct: dict[str, Any]) -> str:
+    """`"1"` quando o multiplicador desta coluna bateu no teto da barra; `""` não.
+
+    É o que acende o `Máx` (decisão 11 dela, 03/09/2026). O TETO NÃO SE DIGITA:
+    sai de `app/telas/vibracao.teto_da_barra()`, que é quem o calcula a partir do
+    `RUMBLE_POLICY_MULT` do daemon. Um `150` escrito aqui seria a segunda tabela
+    de degraus, e o dia em que o produto mudasse o Máximo a tela mentiria.
+
+    NÃO SEI NÃO É TETO, e é o único caso que engana: `_barra` devolve `n = "—"`
+    com `sabe = ""` quando o daemon não respondeu o multiplicador. Sem a guarda
+    do `sabe`, um travessão não numérico cairia no `except` e devolveria `""` —
+    o mesmo resultado, por acaso. Com ela, a razão fica escrita: campo sem
+    informação não acende nada.
+    """
+    if not pct.get("sabe"):
+        return ""
+    try:
+        valor = int(str(pct.get("n") or "").rstrip("%"))
+    except ValueError:
+        return ""
+    return "1" if valor >= _tela.teto_da_barra() else ""
 
 
 def _do_vpad(ff: dict[str, Any], player: Any) -> dict[str, Any]:
@@ -199,24 +197,30 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # variável em vez de inventar um tom.
             "plastico": str(col.get("plastico") or ""),
             # O NÚMERO DO MULTIPLICADOR, e não o nome do degrau: o desenho
-            # escreve `150%` nesta caixa, ao lado do trilho e do "Máx". Quem diz
-            # QUAL degrau está aceso é a classe `on` do botão — e ela não tem
-            # dono (ver :data:`SEM_DONO`).
+            # escreve `150%` nesta caixa, ao lado do trilho e do "Máx".
             "mult": pct.get("n", "—"),
             "forca-pct": str(pct.get("w", "")).rstrip("%"),
-            # QUAL DOS QUATRO DEGRAUS ESTÁ ACESO — 02/09/2026. O valor é a
-            # CHAVE do produto (`economia`/`balanceado`/`max`/`auto`), e é ela
-            # que o `data-hef-quando` de cada botão carrega; o alvo `classe` do
-            # `escrever()` acende quem casar e apaga as irmãs. O rótulo NUNCA
-            # sai daqui: escrever texto nestes botões apagaria a escolha dela,
-            # que é o defeito de 02/09 pela manhã.
+            # QUAL DEGRAU ESTÁ ACESO — 03/09/2026, e é o campo que fechou a
+            # maior dívida desta aba. O valor é a CHAVE do produto
+            # (`economia`/`balanceado`/`max`/`auto`), a mesma que o
+            # `data-hef-quando` de cada botão carrega; o alvo `classe` do pintor
+            # acende quem casar e apaga o resto, sem lista de irmãos.
             #
-            # A POLÍTICA É DA MESA, e emiti-la por coluna não é contradição: o
-            # `pacote_da_coluna` já a monta assim (`app/telas/vibracao.py:270`)
-            # porque o desenho tem quatro colunas e a resposta é uma só. Quando
-            # `ControllerRumbleOverride.policy` chegar à tela, a fonte muda ali
-            # dentro e esta linha não se mexe.
-            "degrau": col.get("forca", ""),
+            # O NOME É `degrau`, NUNCA `forca`: `forca` é `data-papel` dos quatro
+            # botões E da linha do "Personalizado", e emiti-lo escrevia
+            # `balanceado` DENTRO de dez elementos por tique — o defeito
+            # fotografado em 02/09. A régua 6 do `aba05._conferir` reprova o dia
+            # em que um nome voltar a ser valor e clique ao mesmo tempo.
+            #
+            # É O MESMO PARA AS QUATRO COLUNAS, e não é descuido: a política é da
+            # MESA (`app/telas/vibracao.SEM_FONTE["forca:por-controle"]` —
+            # `daemon.config.rumble_policy` é um campo só). O que esta linha
+            # conserta é a tela AFIRMAR degraus diferentes por coluna quando o
+            # daemon tem um valor só.
+            "degrau": str(col.get("forca") or ""),
+            # O `Máx` AO LADO DO NÚMERO — decisão 11 dela. Booleano: o alvo
+            # `classe` sem `data-hef-quando` acende por si.
+            "mult-teto": _no_teto(pct),
         }
         for lado, m in (col.get("motores") or {}).items():
             plano[f"motor-{lado}"] = m.get("n", "—")

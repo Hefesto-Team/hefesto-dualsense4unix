@@ -413,6 +413,13 @@ CSS = """
      (`CORRECOES-DELA.md:39`). O irmão "/255" fica como está — barra e dígito não
      têm caixa. */
   .motor .teto{font-size:10.5px;color:var(--comment);font-family:'JetBrains Mono',monospace}
+  /* O `Máx` SOME RESERVANDO O ESPAÇO — decisão 11 dela, 03/09/2026.
+     `visibility:hidden`, nunca `display:none`: nada se mexe quando ele acende ou
+     apaga, e esta aba é para olhar enquanto o jogo treme. A palavra fica SEMPRE
+     no HTML e quem a acende é a classe `on`, que o produto escreve pelo alvo
+     `classe` (`data-campo="mult-teto"`). */
+  .motor .teto.mx{visibility:hidden}
+  .motor .teto.mx.on{visibility:visible}
   /* o lado desligado não finge que tem força: o trilho fica apagado */
   .motor.off .cheio{background:var(--border-forte)}
   .motor.off .num{color:var(--comment)}
@@ -556,7 +563,7 @@ CSS = """
 # ---------------------------------------------------------------------------
 
 def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
-           campo_num=""):
+           campo_num="", sufixo_html=""):
     """Uma linha de barra: interruptor · trilho · número · sufixo.
 
     `papel`/`lado` são o ENDEREÇO DO CLIQUE, e sem eles a pintura só alcança as
@@ -583,6 +590,12 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     Quando não se diz nada, o número herda o nome do papel — que é o que as
     barras dos motores querem (`motor-e`, `motor-d`), porque ali o papel é
     `motor` e o campo leva o lado junto.
+
+    `sufixo_html` TROCA A ÚLTIMA CÉLULA INTEIRA, e existe para um caso só: o
+    `Máx` do multiplicador, que deixou de ser texto e virou ESTADO (decisão 11
+    dela, 03/09/2026 — ver :func:`_teto_do_multiplicador`). O `sufixo` de texto
+    continua sendo o que as duas barras de motor querem, e ali `/255` é uma
+    unidade, não um estado.
     """
     pct = round(100 * valor / teto, 1)
     endereco = f' data-papel="{papel}"' + (f' data-lado="{lado}"' if lado else "")
@@ -598,13 +611,35 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     #: linha de erro. Os dois vocabulários convivem: um par para quem já o
     #: usava, uma chave para quem chegou depois.
     campo = f"{papel}-{lado}" if lado else papel
+    cauda = sufixo_html or f'<span class="teto">{sufixo}</span>'
     return (f'<div class="motor{"" if ligado else " off"}"{endereco}>'
             f'{botao or "<span></span>"}'
             f'<span class="trilho"><span class="cheio" data-campo="{campo}-pct"'
             f' data-hef-alvo="largura" style="width:{pct}%"></span></span>'
             f'<span class="num" data-campo="{campo_num or campo}">'
             f'{valor}{"%" if teto == TETO else ""}</span>'
-            f'<span class="teto">{sufixo}</span></div>')
+            f'{cauda}</div>')
+
+
+def _teto_do_multiplicador(no_teto):
+    """A célula do `Máx` — a palavra SEMPRE no HTML, acesa por classe.
+
+    DECISÃO 11 DELA, 03/09/2026: esconder **reservando o espaço**
+    (`visibility:hidden`), nunca `display:none`. A razão é o uso — nada se mexe
+    quando ela acende ou apaga, e esta aba é para olhar enquanto o jogo treme.
+
+    ANTES ELA ERA TEXTO CRAVADO, e mentia: o gerador escrevia `Máx` só quando a
+    CENA do mockup estava no teto, e a foto de 02/09 mostra a coluna do P1 com
+    `70%` e `Máx` ao lado — a tela afirmando que 70% é o teto. O
+    `a05_vibracao.SEM_DONO["mult-teto"]` nomeava a pendência e apontava a cura:
+    *"o alvo certo é o `classe` SEM `data-hef-quando`, que é booleano"*.
+
+    POR QUE NÃO O ALVO `texto`: o `escrever()` do piloto troca vazio por
+    travessão (`hefesto_vivo.py:112`), e um `—` nesta célula afirmaria "não sei"
+    onde a resposta é "não está no teto".
+    """
+    return (f'<span class="teto mx{" on" if no_teto else ""}"'
+            f' data-campo="mult-teto" data-hef-alvo="classe">Máx</span>')
 
 
 #: A tradução `lado da tela` → `lado do desenho`, num lugar só. `e`/`d` é a
@@ -670,44 +705,47 @@ def _coluna(c, e=None):
     # dentro do `svg()` — uma régua só, no lugar onde o corte acontece.
     desenho = svg(f'vb-{c["pref"]}', c["cor"], acesos=acesos, lampadas=False)
 
-    # O ENDEREÇO DO DEGRAU ACESO — 02/09/2026, e ele fecha uma tela que MENTIA.
+    # QUAL DEGRAU ESTÁ ACESO É DADO, e o endereço é o `classe` — 03/09/2026.
+    # Até hoje os quatro botões só tinham `data-papel="forca"`, que é o endereço
+    # do CLIQUE, e a classe `on` saía da CENA do mockup: a foto de 02/09 mostra
+    # o P1 em "Máximo" e o P2 em "Balanceado" com o `rumble_policy` do daemon
+    # igual para os dois — pelo menos uma das colunas mentia. A pendência estava
+    # escrita em `a05_vibracao.SEM_DONO["degrau-aceso"]`, com esta cura pelo
+    # nome: `data-campo="degrau" data-hef-alvo="classe" data-hef-quando=<chave>`.
     #
-    # A política de vibração é UMA, da mesa (`state_full.rumble_policy`), e o
-    # desenho crava um degrau aceso por coluna: o P1 nasce em "Máximo" e o P2 em
-    # "Balanceado". Medido contra o daemon dela hoje, com dois controles na
-    # mesa, `rumble_policy = 'balanceado'` — logo a coluna do P1 afirmava
-    # "Máximo" sobre uma mesa que está em "Balanceado". Não era o desenho
-    # esperando dado: era a tela dizendo o contrário do disco.
+    # O `data-campo` NÃO COLIDE com o `data-papel`: são nomes diferentes de
+    # propósito (`degrau` × `forca`), e a régua 6 do `_conferir` reprova o dia em
+    # que alguém os igualar — foi assim que a pintura escreveu `balanceado`
+    # DENTRO dos quatro botões em 01/09.
     #
-    # O ALVO É `classe`, e não texto — QUAL dos quatro está aceso não é uma
-    # palavra na tela, é a classe `on` do botão. Escrever texto aqui foi o
-    # defeito de 02/09 pela manhã: a palavra `balanceado` entrou DENTRO dos
-    # quatro rótulos e ela perdeu a escolha. O ramo `classe` do `escrever()`
-    # (`hefesto_vivo.py:227`) acende quem casa com o `data-hef-quando` e apaga
-    # as irmãs — sem lista de irmãs, porque os quatro dividem um `data-campo` só.
-    #
-    # `data-campo="degrau"` E `data-papel="forca"` NO MESMO BOTÃO, e não é
-    # descuido: o `data-papel` é o endereço do CLIQUE (o gesto `forca` lê o
-    # `data-forca` deste botão) e o `data-campo` é o endereço da PINTURA. Os
-    # dois nomes são diferentes justamente porque o autoexame nº 6 desta aba
-    # reprova um nome que seja valor e clique ao mesmo tempo.
-    #
-    # NENHUM PIXEL MUDA: são três atributos num botão que já existia. Só que
-    # `data-hef-quando` NÃO está na lista `INVISIVEIS` do
-    # `scripts/check_o_desenho_aprovado.py`, então o `--publicar-enderecos` não
-    # consegue levar este endereço sozinho — está no relato desta frente.
+    # E O RÓTULO NÃO PRECISA DE MARCA: com o alvo `classe`, o que a régua do
+    # mockup mede neste elemento é o ESTADO, não o texto. Marcá-lo
+    # `data-hef-rotulo` esconderia justamente o dado que ele passou a mostrar.
     degraus = "".join(
         f'<button class="{"on" if chave == e["forca"] else ""}" '
-        f'data-papel="forca" data-forca="{chave}" '
-        f'data-campo="degrau" data-hef-alvo="classe" '
-        f'data-hef-quando="{chave}">{rot}</button>'
+        f'data-campo="degrau" data-hef-alvo="classe" data-hef-quando="{chave}" '
+        f'data-papel="forca" data-forca="{chave}">{rot}</button>'
         for rot, chave in FORCA)
 
     linhas = []
     for sigla, m, k in LADOS:
         ligado, valor = e[k]
+        # `data-hef-rotulo` NO INTERRUPTOR DE LADO — a categoria dela de
+        # 03/09/2026. O que a régua lê aqui é o `<title>` do glifo, que é o NOME
+        # DA PEÇA (`docs/data/pecas-do-dualsense.csv`): "Motor de vibração
+        # esquerdo" não muda em estado nenhum do produto, e cobrá-lo como dívida
+        # era acusar um nome de peça de ser desenho.
+        #
+        # O QUE A MARCA NÃO ESCONDE, e é o cuidado que a decisão dela exige: a
+        # dívida deste botão é a classe `on` — se o lado está ligado —, e ela
+        # continua declarada NOS DOIS LADOS, com sprint: `SEM_FONTE["lado:ligado"]`
+        # do produto ("NÃO EXISTE EM LINHA NENHUMA … Fecha: MIGRA-VIBRACAO-06")
+        # e `a05_vibracao.SEM_DONO["lado:ligado"]`. Quando ela ganhar fonte, o
+        # elemento troca a marca pelo alvo `classe` — como os degraus acabaram
+        # de fazer.
         botao = (f'<button class="lado{" on" if ligado else ""}" '
                  f'data-papel="lado" data-lado="{sigla}" '
+                 f'data-hef-rotulo="o nome do motor" '
                  f'title="{m["nome"]} — {m["nota"]}">'
                  f'{glifo(m["glifo"], ativo=ligado, tam=18)}</button>')
         linhas.append(_barra(valor, 255, "/255", ligado=ligado, botao=botao,
@@ -762,8 +800,8 @@ def _coluna(c, e=None):
             <div class="rot-ctrl" data-papel="identidade">P{c["jogador"]} <span class="pt">•</span> {c["nome"]}
               <span class="pt">•</span> {c["via"]}</div>
             <div class="seg">{degraus}</div>
-            {_barra(e["pct"], TETO, "Máx" if e["pct"] == TETO else "", papel="forca",
-                    campo_num="mult")}
+            {_barra(e["pct"], TETO, "", papel="forca", campo_num="mult",
+                    sufixo_html=_teto_do_multiplicador(e["pct"] == TETO))}
             {linhas[0]}
             {linhas[1]}
             <div class="acoes-col">
@@ -772,8 +810,16 @@ def _coluna(c, e=None):
                    O par Testar/Parar já diz a duração pelo próprio par: quem começa
                    escolhe quando termina. O meio segundo continua sendo o que o
                    gesto manda ao daemon; o que sai é a PROMESSA na tela. -->
-              <button class="btn" data-papel="testar">Testar</button>
-              <button class="btn vermelho" data-papel="parar">Parar</button>
+              <!-- `data-hef-rotulo` NOS DOIS: o texto de um botão é RÓTULO
+                   (categoria dela, 03/09/2026), e este par foi decidido por ela
+                   justamente para NÃO mudar — quem começa escolhe quando termina.
+                   O que estes botões fazem é gesto, e o gesto tem dono escrito
+                   (`app/telas/vibracao.DONOS_DOS_GESTOS`), com desfecho relatado
+                   pelo piloto. Nada de dado passa pelo texto deles. -->
+              <button class="btn" data-papel="testar"
+                      data-hef-rotulo="o texto do botão">Testar</button>
+              <button class="btn vermelho" data-papel="parar"
+                      data-hef-rotulo="o texto do botão">Parar</button>
             </div>
           </div>'''
 
@@ -985,16 +1031,6 @@ def _conferir(doc):
     #    que `app/telas/vibracao` monta. É esta comparação que impede alguém de
     #    "melhorar" a frase aqui e criar a segunda versão de um texto de tela —
     #    o defeito que a regra de duas cópias existe para matar.
-    # 9. OS QUATRO DEGRAUS TÊM ENDEREÇO DE PINTURA — 02/09/2026.
-    #    Sem ele o degrau aceso sai do DESENHO, e o desenho crava um por coluna:
-    #    o P1 em "Máximo" e o P2 em "Balanceado", com uma política só no daemon.
-    #    Pelo menos uma das colunas mentia, e portão nenhum via.
-    for _, chave in FORCA:
-        exigir(f'data-campo="degrau" data-hef-alvo="classe" '
-               f'data-hef-quando="{chave}"' in corpo,
-               f"o degrau {chave!r} perdeu o endereço da classe")
-    exigir(corpo.count('data-hef-quando="') == len(FORCA) * len(CONECTADOS),
-           f"os degraus endereçados não são {len(FORCA) * len(CONECTADOS)}")
     exigir('id="vib-estado"' in corpo, "a linha do estado sumiu da aba")
     cena = textos_do_estado(CENA_DO_ESTADO)
     exigir(len(cena) >= 1,
