@@ -14,13 +14,6 @@ FILHOS-ELEMENTO apaga todos eles::
     guarda.secao           <span>   16 vezes 2   o glifo SVG de cada seção
     editor.prioridade.dica <span>    2 filhos   o TRILHO e o número ao lado
 
-O ``guarda.secao`` SAIU DA LISTA em 02/09/2026, e não por deixar de ter filhos:
-o gerador passou a declarar ``data-hef-alvo="classe"`` nos dezesseis ``<span>``,
-e esse alvo não escreve ``textContent``. Quem decide se o valor sai é
-``a10_perfis._a_pagina_acende_a_secao_por_classe()``, que **pergunta à página
-publicada** — enquanto o atributo não chegar ao produto (``--publicar 10`` é ato
-dela), o pacote cala e os glifos vivem.
-
 A régua é geral e mecânica, e é o que a torna útil fora desta aba: **todo
 endereço que o pacote emite tem de ser pintável na página PUBLICADA** — sem
 ESTRUTURA dentro, ou então com um ``data-hef-alvo`` que não escreva
@@ -55,17 +48,21 @@ VAZIAS = frozenset({
 })
 
 #: OS ALVOS QUE NÃO ESCREVEM ``textContent``. São os do ``escrever()`` do piloto
-#: (``hefesto_vivo.py``, o bloco ``BOOTSTRAP``): a largura de uma barra, uma cor
-#: de fundo, o ``value`` de um campo, a marcação de um bloco, uma CLASSE e a cor
-#: da letra. Só o alvo padrão — o texto — apaga filhos.
+#: (``hefesto_vivo.py``): a largura de uma barra, uma cor de fundo, o ``value``
+#: de um campo, a marcação de um bloco, uma CLASSE, o ``color`` do elemento e a
+#: variável ``--plastico``. Só o alvo padrão — o texto — apaga filhos.
 #:
-#: ``classe`` E ``cor`` ENTRARAM EM 02/09/2026, com os dois ramos que nasceram
-#: nesse dia. Nenhum dos dois toca o conteúdo do elemento: ``classe`` faz
-#: ``el.classList.toggle(c, aceso)`` e ``cor`` faz ``el.style.color = t``. É o
-#: que destrava a coluna "Ajuste próprio" desta aba — dezesseis ``<span
-#: class="gr">`` cujo estado na tela é a classe ``on``, e cujo glifo SVG o ramo
-#: padrão apagaria.
-ALVOS_SEGUROS = frozenset({"largura", "fundo", "valor", "html", "classe", "cor"})
+#: ERAM QUATRO ATÉ 03/09/2026, e a lista tinha envelhecido calada: o piloto
+#: ganhou ``classe``, ``cor`` e ``plastico``, e nenhum dos três toca em
+#: ``textContent`` — ``classe`` chama ``classList.toggle``, ``cor`` escreve
+#: ``style.color`` e ``plastico`` escreve uma propriedade personalizada. Faltando
+#: os três aqui, esta régua reprovava justamente quem tinha CURADO o defeito que
+#: ela existe para pegar: pôr ``data-hef-alvo="classe"`` num ``<span>`` com glifo
+#: dentro passou a ser acusado de apagar o glifo. É a armadilha desta casa —
+#: *a régua confunde a PALAVRA com o ATO* — e ela desliga exatamente quando
+#: alguém acerta.
+ALVOS_SEGUROS = frozenset({"largura", "fundo", "valor", "html",
+                           "classe", "cor", "plastico"})
 
 
 class _Leitor(HTMLParser):

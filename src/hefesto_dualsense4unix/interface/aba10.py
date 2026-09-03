@@ -9,19 +9,33 @@ from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR
 # O QUE O PERFIL GUARDA DE CADA CONTROLE — e isto NÃO é escolha de desenho.
 #
 # `Profile.controllers` é um mapa `{ID da peça: ControllerOverrides}`
-# (`profiles/schema.py:1008`), e `ControllerOverrides` tem QUATRO campos, nem um
-# a mais (`profiles/schema.py:900-903`):
+# (`profiles/schema.py:1008`), e a classe tem QUATRO campos HOJE
+# (`profiles/schema.py:961-964`):
 #
 #     leds  ·  triggers  ·  rumble  ·  speaker
 #
-# Tudo o mais do perfil — mouse, teclado, mic, modo, modo-jogo — é do perfil
-# INTEIRO, e a própria classe diz por quê, campo a campo (`:846-895`): o `mode`
-# é da SESSÃO e existe um só; `mouse` e `key_bindings` esbarram no
-# "INPUT vem SEMPRE do controle PRIMÁRIO"; o `mic` porque o interruptor
-# `mic_button_toggles_system` é UM por máquina (`daemon/lifecycle.py`) —
-# *"o botão do microfone é nosso"* vale para a mesa inteira, não por cadeira.
-# (MIC-DA-MESA-ELEICAO-01: o GESTO passou a ter endereço — a borda vem com
-# `uniq` pelo tópico `MIC_DA_MESA` —, mas o INTERRUPTOR continua um só.)
+# E A TELA MOSTRA CINCO — decisão dela, 03/09/2026, decisão nº20:
+# **o microfone vira o quinto ajuste por controle.** A razão é dela e é o canal:
+# é o `Virtual` que faz o mic soar igual no cabo e no rádio, ou seja, é o ajuste
+# que faz o CANAL daquele controle funcionar — e com "4 controles, 4 canais"
+# (`2026-09-03-CANAL-POR-CONTROLE-01`) ele vira por-controle por necessidade,
+# porque um controle no cabo e outro no rádio precisam de tratamentos
+# diferentes.
+#
+# FATO SUBSTITUÍDO. Aqui estava escrito que o `mic` era do perfil INTEIRO
+# *"porque o interruptor `mic_button_toggles_system` é UM por máquina"*. O
+# interruptor continua um só e a frase morreu assim mesmo: o que a coluna mostra
+# não é o interruptor da mesa, é o que o PERFIL guarda daquela peça. A própria
+# `ControllerOverrides` já põe o `mic` em primeiro lugar na fila do que falta, e
+# diz que o caminho por peça **já existe inteiro** — as três primitivas de pé
+# (`EventTopic.MIC_DA_MESA` com `uniq`, `fonte_de_captura_do_uniq`,
+# `set_microphone_mute(uniq=…)`), faltando três costuras. *"O item mais caro da
+# lista virou o mais barato."*
+#
+# O QUINTO NASCE APAGADO EM TODO PERFIL REAL, e isso não é defeito: enquanto
+# `ControllerOverrides.mic` não existir, `perfis_web._secoes_do_controle` não
+# devolve a chave, o pacote lê `None` e a coluna fica no estado "herda" — que é
+# a verdade. A tela está pronta para o campo; ela não o inventa.
 #
 # Campo `None` = **sem opinião**: aquele controle herda a seção global do perfil
 # (merge POR CAMPO, PERFIL-01). É por isso que a coluna tem dois estados e não
@@ -29,26 +43,43 @@ from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR
 # "ele usa o do perfil, igual aos outros" — e apagado é a resposta certa para a
 # maioria dos controles na maioria dos perfis.
 #
-# A lista abaixo é uma TRADUÇÃO da classe, não uma segunda verdade: se um campo
-# entrar ou sair de `ControllerOverrides`, esta lista fica errada e a linha de
-# comentário acima é o que aponta para onde conferir.
+# A lista abaixo é uma TRADUÇÃO da classe mais a decisão nº20, não uma segunda
+# verdade: quem a compara com o esquema é
+# `tests/unit/test_a_coluna_de_ajuste_proprio_da_aba10_e_dado.py`, que exige que
+# toda seção desenhada exista em `perfis_web.SECOES_POR_CONTROLE` — com o `mic`
+# isento ENQUANTO o esquema não o tiver, e cobrado no dia em que tiver.
+#
+# NÃO HÁ MAIS DICA POR CÉLULA — decisão dela, 03/09/2026, decisão nº4:
+# *"Meu Deus melhor nenhuma assim. Auto falante é auto falante, gatilho é
+# gatilho."* Eram oito frases (quatro pares, uma por estado), e as oito saíram:
+# a dica do CABEÇALHO já explica o conceito uma vez, e o glifo já diz o nome da
+# peça. Por isso esta lista tem DOIS termos, e não três — o terceiro era o texto
+# que saiu, e deixá-lo aqui sem uso o faria voltar no primeiro descuido.
 SECOES = [
-    ("leds", ("lightbar", "led-jogador"),
-     "Luz: a cor da barra e o número do jogador deste controle."),
-    ("triggers", ("l2", "r2"),
-     "Gatilhos: o efeito de L2 e R2 deste controle."),
-    ("rumble", ("rumble_esquerdo", "rumble_direito"),
-     "Vibração: a força dos dois motores deste controle."),
-    ("speaker", ("alto-falante",),
-     "Alto-falante: o volume e o mudo do alto-falante deste controle."),
+    ("leds", ("lightbar", "led-jogador")),
+    ("triggers", ("l2", "r2")),
+    ("rumble", ("rumble_esquerdo", "rumble_direito")),
+    ("speaker", ("alto-falante",)),
+    ("mic", ("mic",)),
 ]
 
-# O ESTADO DESTE PERFIL, controle a controle. Um mockup que acende as quatro
+#: O NÚMERO POR EXTENSO, para a tela nunca discordar da lista. As frases da aba
+#: dizem "os cinco ajustes"; escrever a palavra à mão em três lugares é como a
+#: contagem de `NAO_PINTAVEIS` divergiu no primeiro dia. Sai daqui, de
+#: `len(SECOES)`, e muda sozinha quando a lista mudar.
+_EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis"}
+QUANTAS_SECOES = _EXTENSO[len(SECOES)]
+
+# O ESTADO DESTE PERFIL, controle a controle. Um mockup que acende TODAS as
 # seções nos quatro controles ensina que o normal é cada peça ter tudo próprio —
-# e o normal é o contrário: quem não tem opinião herda. Aqui aparecem as quatro
+# e o normal é o contrário: quem não tem opinião herda. Aqui aparecem quatro
 # gradações, inclusive a de baixo, que é a mais comum.
+#
+# O `mic` ENTRA ACESO NUM SÓ, e é de propósito: uma coluna nova apagada nas
+# quatro linhas leria como "esta coluna nunca acende", que é o oposto da decisão
+# nº20. Aceso em um, apagado em três, é a mesma pedagogia dos outros quatro.
 GUARDA = {
-    "p1": {"leds", "triggers", "rumble"},
+    "p1": {"leds", "triggers", "rumble", "mic"},
     "p2": {"leds", "rumble"},
     "p3": {"leds"},
     "p4": set(),
@@ -451,37 +482,17 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
     id_visivel = ID_DA_PECA[c["pref"]] if id_da_peca is None else id_da_peca
     endereco = uniq if uniq is not None else c["pref"]
     grupos = []
-    for campo, pecas, dica in SECOES:
+    # SEM `title=` NA CÉLULA — decisão dela nº4, 03/09/2026. Ver o bloco do
+    # `SECOES`. O `data-hef-alvo="classe"` é o que deixa o PRODUTO acender e
+    # apagar esta célula: sem ele o pintor cai no ramo do texto e o
+    # `textContent` apaga o glifo SVG que mora dentro do `<span>`.
+    for campo, pecas in SECOES:
         on = campo in tem
-        titulo = (dica if on else
-                  dica.split(":")[0] + ": usa o do perfil, igual aos outros controles.")
         gs = "".join(glifo(p, ativo=on, tam=15) for p in pecas)
-        # `data-hef-alvo="classe"` — 02/09/2026, e ele é o que faz esta coluna
-        # PARAR DE MENTIR. O estado desta célula na tela é uma CLASSE
-        # (`.gr.on`), não uma palavra; sem alvo o pintor cai no ramo padrão e
-        # `el.textContent = t` apagaria os glifos SVG de dentro do `<span>`. Foi
-        # por isso que `a10_perfis.NAO_PINTAVEIS` segurou este endereço, e por
-        # isso a coluna "Ajuste próprio" mostrava o desenho para todo perfil.
-        #
-        # É BOOLEANO — SEM `data-hef-quando`: cada `<span>` acende por si, e o
-        # pacote manda um `True`/`False` por célula, na ordem. O `quando` é para
-        # grupo que divide UM endereço e elege um só (os quatro degraus da
-        # Vibração); aqui as quatro seções são INDEPENDENTES — um controle pode
-        # ter as quatro próprias, ou nenhuma.
-        #
-        # O GLIFO NÃO PRECISA MUDAR, e isto foi MEDIDO, não suposto:
-        # `monta.glifo(p, ativo=True)` e `monta.glifo(p, ativo=False)` devolvem
-        # bytes IDÊNTICOS para as sete peças destas quatro seções — os arquivos
-        # `X.svg` e `X_active.svg` só diferem no traço (`#f8f8f2` × `#bd93f9`), e
-        # `glifo` troca os dois por `currentColor`. Logo a diferença visível
-        # inteira entre aceso e apagado é o `color` que `.gr.on` dá ao `<span>`
-        # — e trocar a classe é a cura COMPLETA, não a metade dela.
-        # (Régua: `test_a_coluna_do_ajuste_proprio_acende_pela_classe.py`.)
         grupos.append(f'<span class="gr{" on" if on else ""}" data-hef="guarda.secao"'
-                      f' data-hef-alvo="classe"'
-                      f' data-hef-secao="{campo}" title="{titulo}">{gs}</span>')
+                      f' data-hef-alvo="classe" data-hef-secao="{campo}">{gs}</span>')
     quantos = (f'{len(tem)} de {len(SECOES)} ajustes só deste controle'
-               if tem else "nada só dele — herda os quatro ajustes do perfil")
+               if tem else f"nada só dele — herda os {QUANTAS_SECOES} ajustes do perfil")
     # O LUGAR DE QUEM NÃO ESTÁ NA MESA — 31/08/2026, decisão dela, e ela vale para
     # TODA página que eu tocar: *"o espaço fica, mas o nome do canto muda: agora o
     # p3 e o p4 será P3 bolinha Desconectado, igual página gatilhos"*.
@@ -679,7 +690,7 @@ MIOLO = f'''
                 <table class="tab miuda">
                   <thead><tr>
                     <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada um da mesa, quais ajustes ele tem só para si e quais usa do perfil.">Controle</th>
-                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os quatro ajustes que o perfil sabe guardar por controle — luz, gatilhos, vibração e alto-falante.">Ajuste próprio</th>
+                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os {QUANTAS_SECOES} ajustes que o perfil sabe guardar por controle — luz, gatilhos, vibração, alto-falante e microfone.">Ajuste próprio</th>
                     <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
@@ -736,9 +747,13 @@ LEGENDA = f'''<div class="nota">
       resto: <span class="marca">"cada controle guarda a sua configuração aqui dentro, pelo
       ID da peça"</span> era uma promessa que só existia na dica do <b>Perfil ativo</b>. Agora
       ela está desenhada, e são <b>{len(MESA)} configurações dentro do mesmo perfil</b>.</li>
-    <li><b>Os quatro ajustes da linha não são escolha minha.</b> São os quatro campos de
-      <code>ControllerOverrides</code> (<code>profiles/schema.py:900</code>) — luz, gatilhos,
-      vibração e alto-falante —, e mais nenhum: modo, mouse, teclado e microfone são do
+    <li><b>Os {QUANTAS_SECOES} ajustes da linha não são escolha minha.</b> Quatro são os campos de
+      <code>ControllerOverrides</code> (<code>profiles/schema.py:961</code>) — luz, gatilhos,
+      vibração e alto-falante. O quinto é o <b>microfone</b>, e ele entrou por decisão dela
+      em 03/09: é o <code>Virtual</code> que faz o mic soar igual no cabo e no rádio, então
+      ele é o ajuste que faz o <b>canal daquele controle</b> funcionar. Enquanto o campo não
+      existir no esquema, a coluna do microfone fica apagada em todo perfil real — a tela
+      está pronta para o dado, e não o inventa. Modo, mouse e teclado continuam sendo do
       perfil inteiro, e a classe escreve o motivo de cada um.</li>
     <li><b>Apagado não é falta, é herança.</b> Campo vazio quer dizer "sem opinião": aquele
       controle usa a seção global do perfil. O <b>P4</b> está assim de propósito —
@@ -898,6 +913,34 @@ def _conferir(html: str) -> None:
     # A DIVISÓRIA HORIZONTAL, que ela mandou remover DESTE trecho.
     exigir(".campos > .campo::after" not in html,
            "as linhas horizontais voltaram ao editor de perfil")
+
+    # AS OITO DICAS DAS CÉLULAS — decisão dela nº4, 03/09/2026. A régua olha o
+    # ELEMENTO inteiro, e não a frase: proibir os textos um a um deixaria a nona
+    # dica entrar livre. Um `<span class="gr…" data-hef="guarda.secao">` com
+    # `title=` é o defeito, escreva ele o que escrever.
+    celulas = re.findall(r'<span class="gr[^"]*" data-hef="guarda\.secao"[^>]*>', html)
+    exigir(len(celulas) == len(MESA) * len(SECOES),
+           f"não são {len(MESA) * len(SECOES)} células de `guarda.secao` "
+           f"({len(MESA)} controles x {len(SECOES)} seções), e sim {len(celulas)}")
+    com_dica = [c for c in celulas if "title=" in c]
+    exigir(not com_dica,
+           f"{len(com_dica)} célula(s) de `Ajuste próprio` voltaram a ter dica — "
+           f'ela mandou as oito saírem: "Auto falante é auto falante, gatilho é gatilho"')
+
+    # O ALVO QUE DEIXA O PRODUTO ACENDER A CÉLULA. Sem ele o pintor escreve
+    # `textContent` e apaga o glifo SVG de dentro do `<span>` — é o defeito que
+    # ela fotografou em 02/09 na coluna ao lado, e que `NAO_PINTAVEIS` segurava.
+    sem_alvo = [c for c in celulas if 'data-hef-alvo="classe"' not in c]
+    exigir(not sem_alvo,
+           f"{len(sem_alvo)} célula(s) de `guarda.secao` sem "
+           f'`data-hef-alvo="classe"` — pintá-las apagaria o glifo')
+
+    # O QUINTO AJUSTE — decisão dela nº20. A coluna do microfone existe na tela
+    # ANTES de o campo existir no esquema, e é a decisão que manda.
+    exigir('data-hef-secao="mic"' in html,
+           "a coluna do microfone sumiu da linha `Ajuste próprio` (decisão nº20)")
+    exigir(f"São os {QUANTAS_SECOES} ajustes" in html,
+           f"a dica do cabeçalho não diz mais `{QUANTAS_SECOES}` ajustes por controle")
 
     # A COLUNA JUSTA. O `104px` é o valor antigo, e o vão morto de 22px é ele.
     exigir("--rot-p:86px" in html,
