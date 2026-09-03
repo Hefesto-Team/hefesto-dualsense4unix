@@ -728,6 +728,62 @@ CSS = """
 _BATERIA_GLIFO = glifo("bateria", tam=13).replace("<title>Bateria</title>", "")
 
 
+#: O BLOCO DAS CORES DELA dentro do `ds_limpo.svg`: o `<pattern>`, os dois
+#: gradientes e a folha com os 28 modelos. Ele é AUTOCONTIDO — medido em
+#: 03/09/2026: 46.236 dos 94.505 bytes do arquivo, e **nada fora dele cita um
+#: id de dentro dele**. É isso que permite tirá-lo dos quatro desenhos e
+#: publicá-lo uma vez para a página inteira.
+_BLOCO_DAS_CORES = re.compile(r'<defs id="[^"]*cores-do-dualsense">.*?</defs>', re.S)
+
+
+def _tabela_das_cores():
+    """As 28 cores dela, publicadas UMA vez — 03/09/2026, e é a lei dela.
+
+        *"imagina que cada pessoa tenha um dualsense diferente. eu mapeei as
+        cores, glifos, controles, id e tudo mais. é pro projeto usar esse meu  # noqa-acento: citação literal dela
+        trabalho entende? nada hardcoded."*
+
+    O ALVO DE ATRIBUTO NÃO BASTA SOZINHO, e este é o fato que obrigou esta
+    função a existir. `monta._so_o_colorway` guarda, na folha de CADA desenho,
+    só as regras do modelo pedido — 3.082 bytes dos 45.452 dos 28. Escrever
+    `galactic-purple` num SVG cuja folha só traz `cosmic-red` não pinta roxo:
+    **nenhuma regra casa**, e o desenho cai nos `fill` crus do `ds_limpo.svg`
+    (`rgb(58, 63, 75)`). Ligar o endereço sem isto trocaria uma cor errada por
+    um cinza.
+
+    A SAÍDA ESCOLHIDA É A DA PÁGINA, e não a de `monta.svg()` deixar de podar:
+    a poda existe porque quatro cópias dos 28 dariam ~180 KB de CSS repetido
+    quatro vezes. Publicada uma vez, a tabela custa **uma** cópia e serve os
+    quatro — as regras são `svg[data-colorway="…"] .z-casca …`, que valem para
+    o documento inteiro, e não para o SVG em que a folha está escrita.
+
+    ISTO NÃO É CRAVAR COR: é a TABELA dela publicada, que é o mecanismo que o
+    `mapa-do-controle.html` já usa para ela ver os 28 clicando. O que a lei
+    proíbe é a página ESCOLHER um modelo; aqui ela publica os 28 e deixa o
+    aparelho escolher.
+    """
+    achou = _BLOCO_DAS_CORES.search(monta.DS)
+    if not achou:
+        raise SystemExit(
+            'ERRO em 01-jogar: o <defs id="cores-do-dualsense"> sumiu do '
+            "ds_limpo.svg. Sem ele os quatro desenhos ficam sem regra nenhuma "
+            "e caem no cinza cru — rode scripts/gerar_cores_do_dualsense.py.")
+    return achou.group(0)
+
+
+#: A tabela na página, fora do fluxo e fora do leitor de tela. `width/height` a
+#: zero e `position:absolute` porque ela não desenha nada: é só o `<defs>` e a
+#: folha, que os quatro cartões consultam pelo atributo.
+TABELA_DAS_CORES = f'''    <!-- AS 28 CORES DELA, PUBLICADAS UMA VEZ — ver `_tabela_das_cores`.
+         Sem esta tabela o alvo de atributo escreve um colorway que regra
+         nenhuma casa, e o desenho fica cinza. -->
+    <svg class="cores-do-dualsense" aria-hidden="true" focusable="false"
+         width="0" height="0" style="position:absolute">
+{_tabela_das_cores()}
+    </svg>
+'''
+
+
 def _desenho(c):
     """O desenho de um controle da MESA, pronto para o cartão.
 
@@ -737,9 +793,36 @@ def _desenho(c):
 
     **E O CARTÃO NÃO TEM AS CINCO LÂMPADAS DO JOGADOR** — decisão dela, 28/08,
     com o número no CSS acima.
+
+    O DESENHO SEGUE O APARELHO — 03/09/2026, e é a queixa dela em uma linha:
+    *"é white no p1, mas a borda de tudo é cosmic red e os svgs não são os que
+    o meu mapa cataloga. isso tá errado"*. Três coisas mudam aqui:
+
+    1. **a folha podada SAI** — quem a publica agora é a página, com os 28
+       (`_tabela_das_cores`). Sem isso o endereço abaixo escreveria um modelo
+       que regra nenhuma casa;
+    2. **o `<svg>` ganha ENDEREÇO com o alvo `atributo`**, que é o que o piloto
+       usa para escrever o `data-colorway` do controle daquela coluna. Vazio e
+       travessão APAGAM o atributo — e é o certo: sem cor lida o desenho vai ao
+       neutro, em vez de manter na tela o modelo do mockup sobre um aparelho
+       que é outro. Vale também para os dois lugares vazios, que recebem
+       travessão de `pacotes.apagar_os_lugares_sem_dono`;
+    3. **o `data-controle="dualsense"` do arquivo SAI.** Ele diz o tipo do
+       desenho, não o controle da coluna — e é ancestral de si mesmo para o
+       `el.closest('[data-controle],[data-uniq]')` que o piloto e a
+       `regua_do_mockup` usam para achar o dono de um campo. Com ele, o campo
+       `desenho` sairia das duas leituras com dono `"dualsense"`, que não é
+       coluna nenhuma da carga: o endereço nasceria morto na régua. Quem diz de
+       quem é o cartão é o `<div class="cartao" data-controle="…">` em volta.
     """
-    return re.sub(r"<\?xml[^>]*\?>\s*", "",
-                  svg(f'jg-{c["pref"]}', c["cor"], lampadas=False))
+    x = re.sub(r"<\?xml[^>]*\?>\s*", "",
+               svg(f'jg-{c["pref"]}', c["cor"], lampadas=False))
+    x = _BLOCO_DAS_CORES.sub("", x, count=1)
+    x = x.replace(' data-controle="dualsense"', "", 1)
+    return x.replace(
+        "<svg ",
+        '<svg data-campo="desenho" data-hef-alvo="atributo"'
+        ' data-hef-atributo="data-colorway" ', 1)
 
 
 #: O MARCADOR DE CAMPO VAZIO, num lugar só. É o travessão, não o hífen: ela
@@ -1039,6 +1122,7 @@ _CONTA = f"{len(AVISOS)} aviso" + ("s" if len(AVISOS) != 1 else "")
 
 
 MIOLO = f'''
+{TABELA_DAS_CORES}
     <!-- ---------- O INTERRUPTOR DO HEFESTO — FORA DE TUDO ----------
          DOIS NÍVEIS desde 31/08/2026 (manhã), decisão dela: em cima o
          interruptor do Hefesto, e o que ele abre embaixo. A pergunta que o
@@ -1501,6 +1585,35 @@ def _conferir(doc):
         for c in monta.CONECTADOS:
             exigir(c["nome"] not in dica,
                    f"uma dica do cartão voltou a nomear o plástico: {dica!r}")
+
+    # 5-ter. E O DESENHO TAMBÉM VEM DE CIMA — 03/09/2026. A borda já era lida
+    #    desde a régua acima; o CONTROLE DESENHADO continuava Cosmic Red um
+    #    centímetro abaixo dela. Ela, com todas as letras: *"os svgs do
+    #    dualsense (…) não são os que o meu mapa cataloga. isso tá errado"*.
+    #
+    #    SÃO TRÊS EXIGÊNCIAS, e nenhuma sozinha basta:
+    exigir(fileira.count('data-campo="desenho" data-hef-alvo="atributo"'
+                         ' data-hef-atributo="data-colorway"') == len(MESA),
+           f"esperava {len(MESA)} desenhos endereçados com o alvo `atributo` "
+           "e o atributo NOMEADO — sem os três juntos o piloto escreve o hex "
+           "como texto por cima do controle")
+    #    2. A FOLHA SAIU DE DENTRO DOS DESENHOS. Enquanto cada SVG carregar só
+    #       as regras do SEU modelo, escrever outro colorway não pinta nada —
+    #       cai no `fill` cru do arquivo, medido em `rgb(58, 63, 75)`.
+    exigir("cores-do-dualsense-folha" not in fileira,
+           "um desenho voltou a carregar a folha podada: o endereço acima "
+           "passaria a escrever um modelo que regra nenhuma casa")
+    #    3. E A PÁGINA PUBLICA OS 28 — UMA VEZ. O número não se digita: sai do
+    #       `monta.DS`, que é a folha que o gerador de cores escreveu do
+    #       `docs/data/cores-do-dualsense.csv`. Cravar `28` aqui seria a segunda
+    #       lista que esta casa derruba desde que a cor virou dado.
+    dela = set(re.findall(r'svg\[data-colorway="([^"]+)"\]', monta.DS))
+    tela = set(re.findall(r'svg\[data-colorway="([^"]+)"\]', corpo))
+    exigir(corpo.count('<style id="cores-do-dualsense-folha">') == 1,
+           "a tabela das cores não está publicada exatamente uma vez na página")
+    exigir(tela == dela,
+           f"a página publica {len(tela)} modelos e o mapa dela tem "
+           f"{len(dela)} — faltam {sorted(dela - tela)[:4]}")
 
     # 6-bis. NENHUM ALARME SEM MEDIÇÃO. Ela, 31/08: *"qualquer coisa fora isso
     #    tá incorreta"* — a regra do Nativo é só "Desligado põe o Nativo online".
