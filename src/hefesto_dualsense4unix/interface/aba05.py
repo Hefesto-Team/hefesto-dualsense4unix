@@ -615,7 +615,7 @@ CSS = """
   .vib-estado .est.alerta .sinal{color:var(--orange)}
   /* O TERCEIRO TOM, e ele é o da janela estável: `#8be9fd` é o token de INFO da
      casa, o que ela usa na frase "grava aqui, manda ali"
-     (`rumble_actions.py:608`, com o comentário "a frase explica, não alarma").
+     (`rumble_actions.py:628`, com o comentário "a frase explica, não alarma").
      Ela saía como `diz` — o cinza — e o erro só apareceria na tela no dia em
      que a MIGRA-VIBRACAO-04 ligasse o alvo por controle. `--cyan` é o mesmo
      hexadecimal, já declarado no `topo.html`. */
@@ -723,7 +723,7 @@ def _teto_do_multiplicador(no_teto):
     *"o alvo certo é o `classe` SEM `data-hef-quando`, que é booleano"*.
 
     POR QUE NÃO O ALVO `texto`: o `escrever()` do piloto troca vazio por
-    travessão (`hefesto_vivo.py:112`), e um `—` nesta célula afirmaria "não sei"
+    travessão (`hefesto_vivo.py:171`), e um `—` nesta célula afirmaria "não sei"
     onde a resposta é "não está no teto".
     """
     return (f'<span class="teto mx{" on" if no_teto else ""}"'

@@ -1986,7 +1986,7 @@ def ajuda(txt, largura=""):
 # são o enunciado. A cena é o que TEM de ser verdade para as duas valerem.
 #
 # O RÓTULO DE UM APARELHO É `espécie · nome do kernel`, e o caminho fica à
-# vista de propósito — `mapa_da_mesa.py:410-428`: os dois adaptadores desta
+# vista de propósito — `mapa_da_mesa.py:434-442`: os dois adaptadores desta
 # bancada são o mesmo 2357:0604, e a espécie sozinha ofereceria dois itens
 # idênticos. A cena repete a lição com DOIS teclados (`3-4` e `1-4`).
 #

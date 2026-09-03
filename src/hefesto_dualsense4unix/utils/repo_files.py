@@ -23,7 +23,7 @@ clique achava o script num formato de instalação e falhava no outro:
 | `daemon_actions.py:495` (`BASES_DE_INSTALACAO`) | 4 | `sys.prefix` e o `share/` do usuário |
 | `emulation_actions.py:1200` (`_mic_script`) | 3 | as duas acima **e `/app/share`** |
 | `emulation_actions.py:1763` (`_steam_input_script`) | 3 | as mesmas três |
-| `cli/cmd_mic.py:92` (`_find_script`) | 3 | as mesmas três |
+| `cli/cmd_mic.py:102` (`_find_script`) | 3 | as mesmas três |
 
 `sys.prefix/share/…` é AppImage, venv e Nix; `/app/share` é o Flatpak; o
 `share/` do usuário é o `pip install --user`.

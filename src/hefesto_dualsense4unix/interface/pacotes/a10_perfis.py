@@ -613,7 +613,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     FATO ERRADO, SUBSTITUÍDO — 02/09/2026. A docstring de
     `perfis_web.pacote_da_aba` afirma que a mesa vem *"no formato que
     ``mesa_viva.mesa_do_estado`` devolve mais ``rotulo`` e ``plastico``"*, e o
-    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:397`).
+    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:446`).
     **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
     `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
     `mascara` (`mesa_viva.py:320-332`). Medido: `guarda.nome` saía `["", ""]`
@@ -625,7 +625,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     caminho do produto.
 
     O `plastico` ENTROU EM 03/09/2026, e o fato acima valia para ele também:
-    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:404`) e
+    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:418`) e
     recebia `""` para todo controle, porque ninguém o punha aqui. Ver `_plastico`.
     """
     return [{**c, "rotulo": _rotulo_curto(c), "plastico": _plastico(c)}
@@ -917,7 +917,7 @@ def _rotulo_do_remover(alvo: str) -> str:
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:1074`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:1309`): todo `RuntimeError` de gesto
     vira TARJA na tela — no cartão do controle quando a página tem um, e no
     `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
     `SEGUNDOS_DO_RECADO = 30.0`.
@@ -1002,7 +1002,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         ativo = _valendo(ctx, todos)
         # O `editado` FALTAVA, e o editor mostrava o perfil ERRADO — corrigido
         # em 01/09/2026, ao ligar os campos. Sem ele `pacote_da_aba` cai no
-        # ativo (`perfis_web.py:426`), então clicar numa linha mudava o alvo dos
+        # ativo (`perfis_web.py:446`), então clicar numa linha mudava o alvo dos
         # botões e o editor ao lado continuava pintando OUTRO perfil. Enquanto
         # nenhum campo tinha gesto isso era só uma tela desalinhada; com o Nome
         # e o Nome do Jogo ligados, seria ela renomear um perfil olhando para o

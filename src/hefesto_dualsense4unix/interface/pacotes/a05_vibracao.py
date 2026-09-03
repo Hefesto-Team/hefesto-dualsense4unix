@@ -398,7 +398,7 @@ def _sem_marcacao(texto: str) -> str:
 # Quem escolhe o controle é o ALVO DE OUTPUT do daemon, e o handler o congela
 # junto do par: `daemon/ipc_handlers.py:4294` grava `rumble_active_uniq =
 # uniq_do_alvo_de_output(self.controller)`. Sem alvo escolhido o padrão é
-# BROADCAST (`ipc_handlers.py:4133`) — os quatro tremeriam, e a coluna, que é o
+# BROADCAST (`ipc_handlers.py:4303`) — os quatro tremeriam, e a coluna, que é o
 # endereço desta aba, estaria mentindo. Por isso `_mirar()` vem antes.
 #
 # A política é a exceção, e não é descuido meu: ela é DA MESA e o produto sabe
@@ -424,7 +424,7 @@ SEGUNDOS_DO_TESTE = 0.5
 #: O TESTE EM CURSO, para que o seguinte o CANCELE — 03/09/2026.
 #:
 #: A janela estável tem isto e a aba nova não tinha: `_cancel_rumble_test_timer`
-#: (`app/actions/rumble_actions.py:985-994`) remove a fonte GLib pendente e é
+#: (`app/actions/rumble_actions.py:999-1008`) remove a fonte GLib pendente e é
 #: chamado no começo do "Testar", do "Aplicar", do "Parar" e do "Devolver" —
 #: *"senão o `_rumble_test_stop` pendente desfaria a ação seguinte"*, que é o
 #: defeito M6, nomeado lá.
@@ -577,12 +577,12 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     1. `controller.target.set` — sem ele o par iria para os quatro (`_mirar`);
     2. `rumble_set_checked` — a mesma função do `on_rumble_test_500ms`
-       (`app/actions/rumble_actions.py:1019`). A CHECADA, e não a crua: a
+       (`app/actions/rumble_actions.py:1032`). A CHECADA, e não a crua: a
        recusa do Modo Nativo vem no CORPO da resposta, não como erro JSON-RPC
        (`app/ipc_bridge.py:597`), e foi por não a ler que a aba anunciou
        "vibração travada" com o motor parado — NATIVO-RUMBLE-01;
     3. `rumble_stop` e 4. `rumble_passthrough(True)` — os dois passos exatos do
-       `_rumble_test_stop` (`rumble_actions.py:1214-1215`). Parar sozinho fixa
+       `_rumble_test_stop` (`rumble_actions.py:1226-1227`). Parar sozinho fixa
        `(0, 0)` e o laço do daemon re-afirma o silêncio: o jogo ficaria mudo
        depois de um teste, que é a queixa "testei os motores e o jogo não vibra
        mais" (SPRINT-GAME-RUMBLE-01). O passthrough é a segunda metade.
