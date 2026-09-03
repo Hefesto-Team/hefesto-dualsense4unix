@@ -694,8 +694,28 @@ def _cor_do_plastico(slug: str) -> str:
         return ""
 
 
+def fora_da_mesa() -> str:
+    """A frase com que o produto RECUSA um número acima da mesa.
+
+    DONO ÚNICO, e é por isso que ela é importada em vez de digitada:
+    `app/ipc_bridge._MOTIVOS_NUMERO["numero_fora_da_mesa"]` já é a frase que a
+    janela mostra quando `identity_number_set` recusa. Digitá-la aqui seria a
+    segunda cópia de um texto de tela — e texto de tela é DELA; duas cópias são
+    duas frases que podem divergir sem ninguém ver.
+
+    O NOME É PRIVADO NO OUTRO MÓDULO e mesmo assim é ele que se lê: a
+    alternativa era CLICAR para saber o motivo, que é exatamente o defeito que
+    esta leitura existe para fechar. O import é TARDIO pela mesma razão que o
+    do `hex_to_rgb` nos gestos — o pacote é carregado pelo gerador, que não
+    tem daemon nem ponte.
+    """
+    from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
+
+    return _MOTIVOS_NUMERO["numero_fora_da_mesa"]
+
+
 def um_botao_de_player(nome: str, meu: int, n: int,
-                       dono: dict[str, Any] | None) -> str:
+                       dono: dict[str, Any] | None, *, quantos: int) -> str:
     """Um número, na coluna de UM controle: dá-lo a este troca-o com o dono.
 
     ESTA FUNÇÃO TEM DOIS CHAMADORES E UM DONO. O gerador `aba04.py` a chama para
@@ -706,16 +726,32 @@ def um_botao_de_player(nome: str, meu: int, n: int,
 
     O DONO SÓ EXISTE SE ELE ESTIVER NA MESA — 31/08/2026. O `title` dizia *"o
     Galactic Purple, que tem o 3 hoje"* com o Galactic Purple DESCONECTADO. Ele
-    não tem o 3 hoje; ele não tem nada hoje. Um número sem dono na mesa é um
-    número **livre**, e é isso que a dica diz.
+    não tem o 3 hoje; ele não tem nada hoje.
 
-    SÃO TRÊS ESTADOS, E A TELA MOSTRAVA DOIS — 03/09/2026, e ver `ANEL_INCERTO`:
+    SÃO QUATRO ESTADOS, E A TELA MOSTRAVA DOIS — ver `ANEL_INCERTO`:
 
         livre          ninguém tem este número      sem anel
         tomado         e eu sei a cor do dono       anel cheio, na cor do plástico
         tomado, sem cor  o dono está aqui, a cor não chegou  anel TRACEJADO
+        fora da mesa   não há controles bastante    apagado, e a dica diz por quê
 
     O terceiro caía no primeiro, e a diferença viajava só no `title`.
+
+    O QUARTO NASCEU DE UM CLIQUE — 03/09/2026, medido no produto instalado com
+    UM controle no cabo. A dica dizia **"Player 3 — livre."**, o botão era
+    idêntico ao 1 (`disabled:false`, `cursor:pointer`, mesma borda), e clicar
+    devolvia `RuntimeError: Esse número é maior do que a quantidade de controles
+    ligados`. *Livre* quer dizer disponível; o número não estava disponível. A
+    tela AFIRMAVA o contrário do que o produto faria — e com `quantos=1` isso
+    valia para TRÊS dos quatro botões da fileira.
+
+    `quantos` É A MESA, NÃO OS DONOS, e a distinção é o que faz a conta bater
+    com a do daemon: quem recusa compara o número com **quantos controles estão
+    ligados**, e `donos` só tem os que têm item de mesa. Contar `donos` diria
+    "fora da mesa" a um número que o produto aceitaria.
+
+    É KEYWORD-ONLY e SEM PADRÃO de propósito: um padrão faria o chamador que
+    esquecesse voltar calado ao estado que este parágrafo descreve.
     """
     cor = _cor_do_plastico(str(dono.get("cor") or "")) if dono else ""
     #: O ENDEREÇO E O ALVO ANDAM JUNTOS — endereço sem alvo é meia fechadura, e
@@ -728,20 +764,35 @@ def um_botao_de_player(nome: str, meu: int, n: int,
         anel = f'<i class="dono" {onde} style="--plastico:{cor}"></i>'
     else:
         anel = f'<i class="dono incerta" {onde} style="{ANEL_INCERTO}"></i>'
+    #: FORA DA MESA é o número que o daemon recusaria, e ele NÃO é "livre": um
+    #: número tomado continua sendo o que a dica de troca descreve, mesmo acima
+    #: da conta, porque quem tem dono está ligado.
+    fora = dono is None and n > quantos
     if n == meu:
         dica = f"O {nome} É o Player {n} — é o número dele hoje."
+    elif fora:
+        dica = f"Player {n} — {fora_da_mesa()}."
     elif dono is None:
         dica = f"Player {n} — livre."
     else:
         dica = (f"Dar o Player {n} ao {nome}: o {dono['nome']} ({dono['via']}), "
                 f"que tem o {n} hoje, fica com o {meu}. Os dois trocam de "
                 f"lugar — ninguém repete número e ninguém fica sem.")
-    return (f'<button class="{"on" if n == meu else ""}" '
+    #: O BOTÃO CONTINUA CLICÁVEL, e isso é escolha. `disabled` calaria a recusa:
+    #: quem clicar mesmo assim tem de ouvir o motivo, que é a regra desta casa
+    #: (*"vira botão que recusa dizendo"*). `aria-disabled` diz o estado a quem
+    #: lê a tela por leitor, e a classe `fora` é o que os olhos leem.
+    marca = " ".join(x for x in ("on" if n == meu else "", "fora" if fora else "") if x)
+    #: MONTADO FORA DA `f-string`, e não por gosto: `f'{"a\"b" if x else ""}'`
+    #: é SyntaxError em 3.10 e 3.11, e o `pyproject` pede `>=3.10`. A venv desta
+    #: bancada é 3.12 e engoliu a primeira escrita calada.
+    aria = ' aria-disabled="true"' if fora else ""
+    return (f'<button class="{marca}"{aria} '
             f'data-gesto="player" data-player="{n}" title="{dica}">{anel}{n}</button>')
 
 
 def fileira_de_players(nome: str, meu: int, donos: dict[int, dict[str, Any]],
-                       recuo: str = "") -> str:
+                       recuo: str = "", *, quantos: int) -> str:
     """Os quatro botões de uma coluna, em HTML — o miolo de `.players`.
 
     POR QUE A FILEIRA INTEIRA, e não um endereço por botão: o que muda com o
@@ -753,8 +804,11 @@ def fileira_de_players(nome: str, meu: int, donos: dict[int, dict[str, Any]],
     mapa do gabinete já usam: um bloco cujo conteúdo muda com a mesa se troca
     inteiro. O ouvinte de clique é delegado no documento, então trocar o HTML
     não desliga botão nenhum.
+
+    `quantos` ATRAVESSA — ver `um_botao_de_player`, onde está a medição.
     """
-    return "\n".join(recuo + um_botao_de_player(nome, meu, n, donos.get(n))
+    return "\n".join(recuo + um_botao_de_player(nome, meu, n, donos.get(n),
+                                                quantos=quantos)
                      for n in NUMEROS)
 
 
@@ -1272,7 +1326,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: A FILEIRA DOS QUATRO NÚMEROS, viva. O `on` sai daqui, e as dicas
             #: também: as do HTML publicado estão CONGELADAS do desenho e
             #: nomeiam controle por transporte que já mudou.
-            "players": fileira_de_players(nome, n, donos),
+            #: `quantos` É `ctx.conectados`, a mesma conta que o daemon faz para
+            #: recusar — ver `um_botao_de_player`. Não é `len(donos)`: quem não
+            #: tem item de mesa fica fora dos donos e continua ligado.
+            "players": fileira_de_players(nome, n, donos,
+                                          quantos=len(ctx.conectados)),
             #: O ANEL DE CADA NÚMERO, e ele vem DEPOIS do `players` de propósito
             #: — a mesma lição que `ENDERECO_DA_INCERTA` pagou uma linha acima.
             #: O `players` troca o miolo da fileira inteira (alvo `html`) e

@@ -708,3 +708,43 @@ seção daqui**: a aba deixou de estar em trabalho.
   páginas, com o mesmo Nova Pink na mesa: `rgb(227, 91, 140)` nas duas. A ponte
   **se aposenta sozinha** no dia da publicação, e
   `tests/unit/test_aba03_o_plastico_de_qualquer_modelo.py` cobra os dois lados.
+
+## 04-iluminacao.html
+
+- **03/09/2026** — **dois estados que a tela lia errado**, achados clicando a
+  aba como usuária no produto INSTALADO, com UM DualSense White no cabo e o
+  daemon vivo. Nenhum desenho novo: os dois são o desenho que ela já aprovou,
+  aplicado a um estado que não o recebia.
+
+  **1. O NÚMERO QUE DIZIA "livre" E ERA RECUSADO.** Os botões 2, 3 e 4 da
+  fileira "Jogador" eram indistinguíveis do 1 — medido no DOM vivo:
+  `disabled:false`, `aria-disabled:null`, `cursor:pointer`, a mesma borda — e a
+  dica dizia **"Player 3 — livre."**. Clicar devolvia
+  `RuntimeError: Esse número é maior do que a quantidade de controles ligados`.
+  *Livre* quer dizer disponível; com um controle na mesa, TRÊS dos quatro
+  botões prometiam o que o produto recusa. Agora o número acima da mesa se lê
+  apagado (`class="fora"`, `aria-disabled`, cursor normal) e a dica é a **frase
+  do próprio produto** — importada de `ipc_bridge._MOTIVOS_NUMERO`, não uma
+  segunda cópia. O botão continua clicável de propósito: quem insistir ouve a
+  recusa, que é a regra desta casa.
+
+  **2. A COLUNA QUE ESVAZIA NÃO LIA COMO A QUE NASCE VAZIA.** `.vazia` é o
+  lugar que nasce sem controle; `.off` é o mesmo lugar depois que o controle
+  saiu. Esta folha não tinha **uma** regra `.off` — zero ocorrências, contra 11
+  na Jogar e 10 na Controles — e a coluna do P2 ficava meio apagada, que o
+  `pacotes/__init__.py` já chama de *"pior que aceso"*. Medido no WebKit vivo:
+  a moldura ainda em `rgb(126,184,212)` (o **Starlight Blue do mockup**, de um
+  controle que não estava lá), os oito tons na saturação da coluna viva com
+  `cursor:pointer`, a barra de brilho **cheia** ao lado de um "—", e
+  "Automático"/"Desligar" acesos. A régua do mockup já nomeava dois deles —
+  `p2·plastico` e `p2·brilho-pct`, **ENDEREÇO MORTO**: o travessão que o molde
+  escreve é recusado pelo CSSOM em `color:` e em `width:`, e o valor do desenho
+  fica na tela para sempre. E os dez endereços daquela coluna levantavam
+  `ValueError`, que `_recusou_dizendo` **não leva à tela** — dez botões que
+  engoliam o toque sem uma letra. Agora a coluna que esvazia lê exatamente como
+  o P3/P4: mesma moldura cinza (medido byte a byte), o mesmo travessão, na
+  mesma fonte e na mesma tinta.
+
+  **O QUE ELA VÊ HOJE, enquanto o produto não recebe:** a página publicada
+  continua com a segunda coluna meio acesa e com os três números prometendo
+  "livre". **O produto recebe no `--publicar 04`**, que é ato de quem coordena.
