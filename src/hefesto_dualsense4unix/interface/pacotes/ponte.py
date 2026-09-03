@@ -100,7 +100,7 @@ daemon_status_basic = _b.daemon_status_basic
 #:
 #:     `_safe_call` sem timeout usa **250 ms**, e desde o
 #:     BUG-IPC-READ-NO-TIMEOUT-01 esse teto cobre também a LEITURA da resposta
-#:     (`app/ipc_bridge.py:63-83`). Mas trocar de modo CRIA uinput e faz grab: o
+#:     (`app/ipc_bridge.py:85-105`). Mas trocar de modo CRIA uinput e faz grab: o
 #:     produto declara **2,0 s** para isso (`app/actions/mode_transition.py:37`,
 #:     `MODE_IPC_TIMEOUT_S`), e o comentário de lá diz por quê — *"sem folga o
 #:     toast dizia 'Falha' com o modo JÁ aplicado"*. O `profile.switch` teve a

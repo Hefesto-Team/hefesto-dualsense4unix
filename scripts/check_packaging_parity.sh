@@ -220,73 +220,84 @@ echo "== Icon pedido pelo CÓDIGO (janela + bandeja) × nome instalado =="
 # Agora ela lê o literal de onde ele passou a viver, e continua sendo texto
 # puro (sem depender do venv, que este script não tem).
 echo "       (o nome vem de utils/identidade.py:HEFESTO — ver o comentário aqui)"
-IDENTIDADE_PY=src/hefesto_dualsense4unix/utils/identidade.py
-code_icons=()
-if [[ -f "${IDENTIDADE_PY}" ]]; then
-    icone_do_app="$(awk '/^HEFESTO = Identidade\(/,/^\)/' "${IDENTIDADE_PY}" \
-        | sed -n 's/^[[:space:]]*icone="\([^"]*\)".*/\1/p' | head -1)"
-    if [[ -n "${icone_do_app}" ]]; then
-        code_icons+=("${icone_do_app}")
-        # A BANDEJA pede o mesmo nome com `-symbolic` (app/tray.py:
-        # TRAY_ICON_NAME). O sufixo é contrato — APPLET-MONOCROMÁTICO-01 —,
-        # então a régua só o deriva se o código ainda o construir assim.
-        if grep -q 'TRAY_ICON_NAME[[:space:]]*=.*-symbolic' \
-            src/hefesto_dualsense4unix/app/tray.py 2>/dev/null; then
-            code_icons+=("${icone_do_app}-symbolic")
-        else
-            echo "[FAIL] app/tray.py não constrói mais um nome terminado em -symbolic"
-            echo "       APPLET-MONOCROMÁTICO-01: sem o sufixo, o painel não recolore"
-            echo "       e o ícone dela volta a ser o único cromático da barra."
-            rc=1
+# TOLERÂNCIA DE CHECKOUT — a convenção deste script, que ESTA seção tinha
+# quebrado (curado em 03/09/2026). Toda irmã aqui se cala quando o arquivo que
+# ela lê não existe (`— nada a checar`); esta reprovava. O efeito medido: os 24
+# testes que montam um repositório MÍNIMO em /tmp para exercitar as OUTRAS
+# seções levavam [FAIL] de ícone e reprovavam sem ter nada a ver com ícone.
+# O defeito que a seção nasceu para pegar continua pego: com `src/` na árvore,
+# nome de ícone sumido ou literal cravado reprova igual.
+if [[ ! -d src/hefesto_dualsense4unix ]]; then
+    echo "[ OK ] ícone pedido pelo código: sem src/ neste checkout — nada a checar"
+else
+    IDENTIDADE_PY=src/hefesto_dualsense4unix/utils/identidade.py
+    code_icons=()
+    if [[ -f "${IDENTIDADE_PY}" ]]; then
+        icone_do_app="$(awk '/^HEFESTO = Identidade\(/,/^\)/' "${IDENTIDADE_PY}" \
+            | sed -n 's/^[[:space:]]*icone="\([^"]*\)".*/\1/p' | head -1)"
+        if [[ -n "${icone_do_app}" ]]; then
+            code_icons+=("${icone_do_app}")
+            # A BANDEJA pede o mesmo nome com `-symbolic` (app/tray.py:
+            # TRAY_ICON_NAME). O sufixo é contrato — APPLET-MONOCROMÁTICO-01 —,
+            # então a régua só o deriva se o código ainda o construir assim.
+            if grep -q 'TRAY_ICON_NAME[[:space:]]*=.*-symbolic' \
+                src/hefesto_dualsense4unix/app/tray.py 2>/dev/null; then
+                code_icons+=("${icone_do_app}-symbolic")
+            else
+                echo "[FAIL] app/tray.py não constrói mais um nome terminado em -symbolic"
+                echo "       APPLET-MONOCROMÁTICO-01: sem o sufixo, o painel não recolore"
+                echo "       e o ícone dela volta a ser o único cromático da barra."
+                rc=1
+            fi
         fi
     fi
-fi
-# A janela tem de pedir o ícone pelo nome da identidade, não por um literal solto.
-if ! grep -q 'set_default_icon_name(.*\.icone)' \
-    src/hefesto_dualsense4unix/app/main.py 2>/dev/null; then
-    echo "[FAIL] app/main.py não pede mais o ícone por identidade.icone"
-    echo "       o nome do ícone voltou a estar cravado, e um literal que"
-    echo "       diverge do resto do produto some do menu sem avisar."
-    rc=1
-fi
-if [[ "${#code_icons[@]}" -eq 0 ]]; then
-    echo "[FAIL] não achei nome de ícone em ${IDENTIDADE_PY} (bloco HEFESTO)"
-    echo "       sem isso a JANELA e a BANDEJA caem no ícone genérico e"
-    echo "       ninguém é avisado — por isso é FAIL, e não mais WARN."
-    rc=1
-else
-    # Ordena e deduplica sem depender de associative array (bash 4.0+ basta).
-    #
-    # A EXCEÇÃO DO `-symbolic` — APPLET-MONOCROMÁTICO-01, 07/08/2026.
-    # Nome terminado em `-symbolic` NÃO se satisfaz com PNG, e cobrar
-    # `apps/<nome>.png` dele seria o gate exigindo exatamente o arquivo que não
-    # se deve criar: PNG nunca é recolorido pelo tema (o desvio do libcosmic
-    # manda `Data::Image` por um caminho sem cor), e foi por isso que o ícone
-    # dela era o único cromático da barra. Para esses nomes o contrato é outro
-    # arquivo, não nenhum arquivo: `symbolic/apps/<nome>.svg`.
-    # O caso que este gate nasceu para pegar continua pego — nome pedido pelo
-    # código sem arquivo instalado reprova igual, só muda QUAL arquivo se cobra.
-    while IFS= read -r icon; do
-        [[ -n "${icon}" ]] || continue
-        if [[ "${icon}" == *-symbolic ]]; then
-            esperado="symbolic/apps/${icon}.svg"
-        else
-            esperado="apps/${icon}.png"
-        fi
-        missing=()
-        for inst in "${ICON_INSTALLERS[@]}"; do
-            [[ -f "${inst}" ]] || continue
-            grep -qF "${esperado}" "${inst}" 2>/dev/null || missing+=("${inst}")
-        done
-        if [[ "${#missing[@]}" -eq 0 ]]; then
-            echo "[ OK ] código pede ${icon} e todos os formatos instalam ${esperado}"
-        else
-            echo "[FAIL] código pede ${icon} e falta ${esperado} em: ${missing[*]}"
-            echo "       a JANELA e a BANDEJA caem no fallback genérico nesses formatos."
-            echo "       Instale os DOIS nomes (o do .desktop e o do código)."
-            rc=1
-        fi
-    done < <(printf '%s\n' "${code_icons[@]}" | sort -u)
+    # A janela tem de pedir o ícone pelo nome da identidade, não por um literal solto.
+    if ! grep -q 'set_default_icon_name(.*\.icone)' \
+        src/hefesto_dualsense4unix/app/main.py 2>/dev/null; then
+        echo "[FAIL] app/main.py não pede mais o ícone por identidade.icone"
+        echo "       o nome do ícone voltou a estar cravado, e um literal que"
+        echo "       diverge do resto do produto some do menu sem avisar."
+        rc=1
+    fi
+    if [[ "${#code_icons[@]}" -eq 0 ]]; then
+        echo "[FAIL] não achei nome de ícone em ${IDENTIDADE_PY} (bloco HEFESTO)"
+        echo "       sem isso a JANELA e a BANDEJA caem no ícone genérico e"
+        echo "       ninguém é avisado — por isso é FAIL, e não mais WARN."
+        rc=1
+    else
+        # Ordena e deduplica sem depender de associative array (bash 4.0+ basta).
+        #
+        # A EXCEÇÃO DO `-symbolic` — APPLET-MONOCROMÁTICO-01, 07/08/2026.
+        # Nome terminado em `-symbolic` NÃO se satisfaz com PNG, e cobrar
+        # `apps/<nome>.png` dele seria o gate exigindo exatamente o arquivo que não
+        # se deve criar: PNG nunca é recolorido pelo tema (o desvio do libcosmic
+        # manda `Data::Image` por um caminho sem cor), e foi por isso que o ícone
+        # dela era o único cromático da barra. Para esses nomes o contrato é outro
+        # arquivo, não nenhum arquivo: `symbolic/apps/<nome>.svg`.
+        # O caso que este gate nasceu para pegar continua pego — nome pedido pelo
+        # código sem arquivo instalado reprova igual, só muda QUAL arquivo se cobra.
+        while IFS= read -r icon; do
+            [[ -n "${icon}" ]] || continue
+            if [[ "${icon}" == *-symbolic ]]; then
+                esperado="symbolic/apps/${icon}.svg"
+            else
+                esperado="apps/${icon}.png"
+            fi
+            missing=()
+            for inst in "${ICON_INSTALLERS[@]}"; do
+                [[ -f "${inst}" ]] || continue
+                grep -qF "${esperado}" "${inst}" 2>/dev/null || missing+=("${inst}")
+            done
+            if [[ "${#missing[@]}" -eq 0 ]]; then
+                echo "[ OK ] código pede ${icon} e todos os formatos instalam ${esperado}"
+            else
+                echo "[FAIL] código pede ${icon} e falta ${esperado} em: ${missing[*]}"
+                echo "       a JANELA e a BANDEJA caem no fallback genérico nesses formatos."
+                echo "       Instale os DOIS nomes (o do .desktop e o do código)."
+                rc=1
+            fi
+        done < <(printf '%s\n' "${code_icons[@]}" | sort -u)
+    fi
 fi
 
 # APPLET-MONOCROMÁTICO-01: o simbólico pedido pelo código tem de EXISTIR nesta

@@ -401,7 +401,7 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
     aberto, e a casa já decidiu por escrito que "trocar de máscara com o jogo
     aberto é uma escolha legítima dela; a última palavra é sempre da usuária".
     O kwarg é chamado por `getattr` porque o `DaemonProtocol` ainda não o
-    declara (existe no Daemon real — `lifecycle.py:1190`) e o Protocol é
+    declara (existe no Daemon real — `lifecycle.py:1572`) e o Protocol é
     arquivo de outra frente nesta leva.
     """
     setter = getattr(daemon, "set_gamepad_emulation", None)

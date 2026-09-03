@@ -331,7 +331,7 @@ def ocupacao_por_adaptador(
     """``{endereço do adaptador: Ocupacao}`` a partir do estado do daemon.
 
     ``controles`` é a lista ``state["controllers"]`` como ela já chega
-    (``core/backend_pydualsense.py:4627``): cada item traz ``transport``,
+    (``core/backend_pydualsense.py:5413``): cada item traz ``transport``,
     ``connected`` e ``uniq`` — este último com 12 hex sem separador, **ou
     ``None``** quando a chave do backend era um caminho e não um MAC
     (``:4664-4679``, a guarda que impediu o pseudo-MAC ``deda4``).
