@@ -133,7 +133,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
-from . import Contexto, perfil, registrar
+from . import NOME_SEM_LEITURA, Contexto, identidade_de, jogador_de, perfil, registrar
 
 #: CORRIGIDO EM 01/09/2026. Aqui estava escrito que a velocidade do cursor e da
 #: rolagem "mora no perfil, não no state_full". **O daemon publica as duas**, em
@@ -393,6 +393,200 @@ def _nome_do_botao(botao: str) -> str:
     return humanize_button(botao)
 
 
+# ---------------------------------------------------------------------------
+# A IDENTIDADE VEM DE CIMA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA-01
+#
+# A lei é dela: *"se no topo tá mostrando controle white player 1, então cada
+# aba vai usar os controles lá de cima. Não mistura com a info dos mockups."*
+#
+# Esta aba tinha DEZESSEIS valores de identidade cravados no HTML — dois nomes
+# de plástico no cartão, dois no `title`, dois em cada uma das duas dicas das
+# telas de botões, os dois `--plastico` das bordas e os chips da fita. Todos
+# nomeavam o controle do DESENHO enquanto a mesa dela tinha outros dois.
+#
+# AS TRÊS FUNÇÕES ABAIXO TÊM DOIS CHAMADORES E UM DONO — o mesmo arranjo de
+# `a04_iluminacao.um_botao_de_player`: o gerador `aba06.py` as chama para
+# desenhar a bancada, e o pacote as chama a cada tique para pintar a tela viva.
+# Enquanto fossem duas escritas, o desenho e o produto podiam divergir sem
+# ninguém ver — a cicatriz de 25 KB da `novo-layout/`.
+# ---------------------------------------------------------------------------
+
+#: O que a tela escreve quando a leitura não veio. VAZIO, e é a regra dela:
+#: *campo sem informação não mostra nada*. Nunca a cor do mockup — cair de volta
+#: no desenho é o defeito que esta onda inteira existe para matar.
+SEM_LEITURA = ""
+
+
+def _monta() -> Any:
+    """O `monta`, importado tarde. O `pacotes/__init__` põe `interface/` no path.
+
+    TARDE E NÃO NO TOPO: `monta` lê o `topo.html`, o `fim.html` e o SVG de
+    28 modelos no import. Um pacote é importado por teste sem janela nenhuma, e
+    pagar 4,7 MB de leitura para responder "qual é o hex do plástico" seria o
+    mesmo desperdício que `a04_iluminacao` já evita pelo mesmo caminho.
+    """
+    import monta
+
+    return monta
+
+
+def cor_do_plastico(slug: str) -> str:
+    """O hex da casca daquele modelo, LIDO do mapa — ou `""` sem leitura.
+
+    `monta.cor_da_zona` é o dono: ele lê a folha que
+    `scripts/gerar_cores_do_dualsense.py` escreveu no SVG, em vez de digitar o
+    hex. Digitá-lo aqui seria a segunda verdade que o portão
+    `check_cores_do_dualsense.py` existe para matar.
+
+    O `""` NÃO É DESISTÊNCIA: pelo rádio o mapa de canais diz que a cor **não**
+    se lê (`identidade.cor_do_aparelho`, `radio_aciona = não`), e a mesa nasce
+    sem cor até o leitor responder pelo cabo. Sem hex, o cartão fica no neutro
+    do CSS — que é exatamente o que ela pediu para um campo sem informação.
+    """
+    if not slug:
+        return SEM_LEITURA
+    try:
+        return str(_monta().cor_da_zona(slug))
+    except Exception:
+        # `cor_da_zona` levanta `SystemExit` (que não é `Exception`) para um
+        # colorway que o SVG não tem — e `SystemExit` derrubaria a aba inteira
+        # por causa de um modelo novo. `BaseException` seria largo demais; o
+        # `SystemExit` entra pelo nome logo abaixo.
+        return SEM_LEITURA
+    except SystemExit:
+        return SEM_LEITURA
+
+
+#: As zonas do desenho que CARREGAM IDENTIDADE, calculadas do mapa e não
+#: digitadas: uma zona é identidade quando o valor dela MUDA de um modelo para
+#: outro. As que não mudam — o painel, o touchpad, os analógicos, os símbolos —
+#: são pretas nos 28 e apagá-las transformaria o desenho num vulto.
+_ZONAS_DE_IDENTIDADE: frozenset[str] | None = None
+#: `colorway -> {zona: hex}`, lido uma vez da folha do SVG.
+_FOLHA: dict[str, dict[str, str]] | None = None
+
+
+def _ler_a_folha() -> dict[str, dict[str, str]]:
+    """As zonas de cada modelo, lidas do `ds_limpo.svg` que o gerador pinta."""
+    global _FOLHA, _ZONAS_DE_IDENTIDADE
+    if _FOLHA is not None:
+        return _FOLHA
+    folha: dict[str, dict[str, str]] = {}
+    for slug, corpo in re.findall(
+            r'svg\[data-colorway="([^"]+)"\]\{([^}]*)\}', _monta().DS):
+        zonas = {}
+        for par in corpo.split(";"):
+            chave, _, valor = par.partition(":")
+            if chave.strip().startswith("--z-"):
+                zonas[chave.strip()] = valor.strip()
+        folha[slug] = zonas
+    vistos: dict[str, set[str]] = {}
+    for zonas in folha.values():
+        for chave, valor in zonas.items():
+            vistos.setdefault(chave, set()).add(valor)
+    _ZONAS_DE_IDENTIDADE = frozenset(k for k, v in vistos.items() if len(v) > 1)
+    _FOLHA = folha
+    return folha
+
+
+def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
+    """A folha de estilo VIVA que pinta o casco de cada lugar da mesa.
+
+    POR QUE UMA FOLHA, e não um campo: o casco do desenho não é `style` de
+    elemento — as peças do SVG leem `var(--z-casca)`, escrita por uma regra
+    `svg[data-colorway="…"]` que o `monta.svg()` embute no próprio SVG. O
+    piloto escreve texto, valor, classe, cor, largura, fundo e `innerHTML`, e
+    **nenhum deles alcança uma variável CSS de um elemento**. Reescrever o SVG
+    inteiro pelo `innerHTML` custaria 370 linhas por cartão a cada meio segundo
+    — e nunca sossegaria: o navegador NORMALIZA marcação, então a comparação do
+    `escrever()` acusaria mudança em todo tique, para sempre. O `innerHTML` de
+    um `<style>` é TEXTO, e texto volta como foi escrito.
+
+    A especificidade é o que faz esta folha vencer a de dentro do SVG:
+    `.nav-ctl[data-controle="p1"] .ds-svg` (0,3,0) contra
+    `svg[data-colorway="cosmic-red"]` (0,1,1).
+
+    SEM LEITURA, O CASCO FICA NEUTRO — e é a regra dela. Um controle no rádio
+    hoje não entrega a cor; deixá-lo com o casco do mockup seria a tela
+    afirmando um aparelho que não está na mesa. As zonas que não são identidade
+    ficam como estão: pintá-las apagaria o desenho em vez de calar a cor.
+    """
+    folha = _ler_a_folha()
+    identidade = _ZONAS_DE_IDENTIDADE or frozenset()
+    regras = []
+    for lugar in mesa:
+        pref = str(lugar.get("pref") or "")
+        if not pref:
+            continue
+        zonas = folha.get(str(lugar.get("cor") or ""))
+        if zonas:
+            corpo = ";".join(f"{k}:{v}" for k, v in zonas.items())
+        else:
+            corpo = ";".join(f"{k}:var(--border-forte)" for k in sorted(identidade))
+        if corpo:
+            regras.append(f'.nav-ctl[data-controle="{pref}"] .ds-svg{{{corpo}}}')
+    return "".join(regras)
+
+
+def rotulo_de_quem_navega(numero: int | None, nome: str, via: str) -> str:
+    """`"P1 White USB"` — quem navega o PC, como as duas dicas o dizem.
+
+    É SÓ A FORMA, e é de propósito: quem responde *"qual número"* é
+    `pacotes.jogador_de` e quem responde *"qual nome"* é
+    `pacotes.identidade_de`, os dois donos que a ROTA-A deixou prontos. O
+    gerador chama esta função com a mesa do desenho e o pacote com a mesa viva
+    — uma escrita só para as duas, que é o que impede o desenho e o produto de
+    divergirem calados.
+
+    Cada pedaço que não se sabe simplesmente NÃO ENTRA: sem primário na mesa a
+    frase da dica termina em "o **.**", que é feio e é verdadeiro. Inventar um
+    número aqui seria repetir o defeito que a ROTA-A mediu — o mesmo controle
+    mudando de nome quando o segundo entra na mesa.
+    """
+    if nome == NOME_SEM_LEITURA:
+        nome = SEM_LEITURA
+    partes = [f"P{numero}" if numero else "", nome, via]
+    return " ".join(p for p in partes if p)
+
+
+def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
+    """Os chips da fita do topo, para a `06`, com os controles da MESA.
+
+    POR QUE ESTA ABA TEM OS SEUS, e não os de `monta.fita()`: a fita é de todas
+    as dez e o piloto a troca INTEIRA (`hefesto_vivo._fita`) — mas `_fita`
+    **desiste** quando um controle da mesa não tem cor (`if not mesa or any(not
+    c.get("cor") …): return ""`), e pelo rádio a cor não se lê. Medido em
+    03/09/2026, com os dois controles dela na mesa e o daemon no ar: a fita da
+    `06` mostrava `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT`, os dois
+    do mockup, ao lado de um cabeçalho que já contava certo. Treze tiques, uma
+    pintura.
+
+    Este endereço é o que salva a fita **no caso em que o dono dela desiste**.
+    Quando `_fita` responde, ele troca o bloco antes desta escrita (a fita é o
+    primeiro passo do `pintar`), e o que fica na tela é o dele — que também é
+    lido do aparelho. Os dois dizem a mesma coisa; um deles diz sempre.
+
+    SEM `--plastico`, e o desenho não muda: nesta aba a fita nasce `inerte`
+    (`fita_viva=False`), e `.fita.inerte .chip.plastico` já sobrepõe a borda com
+    `var(--border-sutil)`. O hex do plástico ali nunca pintou um pixel — era só
+    identidade congelada esperando alguém acreditar nela.
+    """
+    monta = _monta()
+    chips = [f"<span>{monta.ROTULO_DA_FITA}</span>",
+             '<span class="chip on">Todos</span>']
+    for lugar in mesa:
+        nome = str(lugar.get("nome") or "")
+        if nome == NOME_SEM_LEITURA:
+            nome = SEM_LEITURA
+        partes = [f'P{lugar["jogador"]}' if lugar.get("jogador") else "",
+                  nome, str(lugar.get("via") or "")]
+        rotulo = monta.SEPARADOR.join(p for p in partes if p)
+        chips.append('<span class="chip plastico"'
+                     ' title="a borda é a cor do plástico">'
+                     f"{rotulo}</span>")
+    return "".join(chips)
+
+
 def _linha_do_cartao(c: dict[str, Any], primario: bool) -> str:
     """A linha inteira do cartão: `"BT • Navega o PC"`.
 
@@ -540,8 +734,40 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # entre a montagem da mesa e este tique), a linha sai só com o papel —
         # meia verdade, nunca um transporte inventado.
         na_mesa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
-        cards[uniq] = {"navega": _linha_do_cartao(na_mesa, bool(c.get("is_primary")))}
+        cards[uniq] = {
+            "navega": _linha_do_cartao(na_mesa, bool(c.get("is_primary"))),
+            # O NOME DO APARELHO, do dono que a ROTA-A deixou pronto. Ele lê,
+            # nesta ordem, o que ELA nomeou > o modelo decodificado > o nome da
+            # mesa > o transporte sozinho — e NUNCA a posição, que foi o que
+            # fazia o mesmo controle mudar de nome quando o segundo entrava.
+            "identidade": identidade_de(c, ctx.mesa),
+        }
+    # A COR DA BORDA DE CADA LUGAR, na ORDEM DA MESA DO DESENHO. Vai em `mesa`
+    # e não em `colunas` porque o elemento que a recebe É o `[data-controle]`:
+    # o `achar()` do piloto varre os DESCENDENTES de um cartão, nunca o próprio
+    # cartão. Uma lista se distribui pelos elementos de mesmo endereço, na
+    # ordem — que aqui é a ordem dos quatro lugares no HTML.
+    #
+    # QUATRO ENTRADAS, SEMPRE: os dois lugares vazios recebem `""`, e `""`
+    # apaga a cor de linha e devolve a borda ao neutro do CSS. Sem as duas
+    # últimas, um lugar que ficasse vazio guardaria a cor do controle que saiu.
+    plastico = [cor_do_plastico(str(m.get("cor") or "")) for m in ctx.mesa]
+    # QUEM NAVEGA O PC É O PRIMÁRIO, e quem o marca é o daemon (`is_primary`).
+    # O gerador tirava o MENOR número da mesa, que acerta por coincidência
+    # enquanto o P1 estiver na frente.
+    chefe = next((c for c in ctx.conectados if c.get("is_primary")), None)
+    do_chefe = next((m for m in ctx.mesa
+                     if str(m.get("uniq") or "") == str((chefe or {}).get("uniq") or "")),
+                    {}) if chefe else {}
     mesa = {
+        # A FITA DO TOPO, quando o dono dela desiste — ver `chips_da_fita`.
+        "fita-chips": chips_da_fita(ctx.mesa),
+        "plastico": plastico + [""] * max(0, 4 - len(plastico)),
+        # QUEM NAVEGA O PC, nas duas dicas das telas de botões.
+        "quem-navega": rotulo_de_quem_navega(
+            jogador_de(chefe) if chefe else None,
+            identidade_de(chefe, ctx.mesa) if chefe else "",
+            str(do_chefe.get("via") or "")),
         # AS DUAS VELOCIDADES, do daemon — não do perfil. O perfil guarda o
         # que ela SALVOU; o daemon diz o que está VALENDO agora, e é o
         # segundo que a tela mostra.
@@ -585,6 +811,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "colunas": cards,
         "mesa": mesa,
+        # A FOLHA VIVA DO PLÁSTICO. Ela vai por `blocos` e não por campo porque
+        # o casco do desenho é `var(--z-…)` dentro do SVG, e o piloto não tem
+        # alvo que escreva variável CSS — ver `folha_do_plastico`.
+        #
+        # SEMPRE PRESENTE, mesmo vazia: `normalizar` só deixa o `blocos`
+        # atravessar quando o dicionário não é vazio, e uma folha que somisse
+        # deixaria na tela a última cor escrita. Com a mesa vazia o valor é `""`
+        # e o `innerHTML` do `<style>` é apagado.
+        "blocos": {"#plastico-vivo": folha_do_plastico(ctx.mesa)},
         "sem_dono": {},
         # O NÚMERO SAI DOS DICIONÁRIOS, e não de uma constante escrita à mão:
         # foi uma soma digitada (`len(cards) * 2 + 9`) que deixou a curva da aba

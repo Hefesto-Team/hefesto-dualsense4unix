@@ -329,3 +329,56 @@ seção daqui**: a aba deixou de estar em trabalho.
   apagaria o desenho, porque ali o alvo é `texto` e `textContent` mata os filhos
   (é a razão de `pacotes.enderecos_que_o_texto_apaga`, que protege esta célula
   pelo nome). Publicando a 04, a célula passa a viver.
+
+---
+
+## 06 · Navegação — a identidade do controle saiu do desenho (03/09/2026)
+
+**A lei é sua, e é desta manhã:** *"se no topo tá mostrando controle white
+player 1, então cada aba vai usar os controles lá de cima. Não mistura com a
+info dos mockups. (…) Por isso temos o mapa pra servir como variável de
+identificação"*.
+
+**O que a sua tela estava mostrando**, medido com os seus dois controles na
+mesa e o daemon no ar, três centímetros entre uma coisa e outra:
+
+```
+a mesa VIVA           P1 · White · USB        P2 · (a cor não se lê no rádio) · BT
+a fita da 06          P1 · Cosmic Red · USB   P2 · Starlight Blue · BT
+os dois cartões       P1 • Cosmic Red         P2 • Starlight Blue
+as duas dicas         "Valem para … o P1 Cosmic Red USB"
+```
+
+`scripts/check_identidade_vem_de_cima.py --bancada --aba 06` contava **16**
+valores de identidade congelados nesta aba. Hoje conta **zero**.
+
+**O QUE MUDOU DE PIXEL, e é só isto:**
+
+1. **A borda do cartão e o casco do desenho passam a ser do controle de
+   verdade.** O seu controle do cabo é White, e o cartão dele agora é branco.
+2. **O controle do rádio fica SEM COR — de propósito.** Pelo rádio o aparelho
+   não entrega o código do plástico (o mapa de canais responde
+   `identidade.cor_do_aparelho` · `radio_aciona = não`), e a sua regra é
+   *campo sem informação não mostra nada*. Ele fica com a borda e o casco no
+   cinza neutro da casa, e o rótulo diz `P2 • BT` — sem nome de plástico. Não
+   inventei cor, e não caí de volta no desenho.
+3. **A fita do topo desta aba passa a dizer os seus dois controles.**
+4. **O `title` do cartão saiu.** Ele repetia em dica o que o cartão já diz em
+   texto (`Player 1 • Cosmic Red • USB`), e `title` é atributo: o piloto não
+   tem alvo de pintura para atributo, então ele ficaria nomeando o controle do
+   desenho para sempre, por cima de um rótulo já vivo.
+
+**O que NÃO mudou:** o número do jogador (`P1`…`P4`) continua igual. Ele é a
+posição na mesa, não a identidade do aparelho — a sua frase: *"O p1 ou p2
+reflete o player do jogador."*
+
+**O que ESPERA A PUBLICAÇÃO, que é ato seu:** tudo acima está na bancada. A sua
+tela de hoje continua com o controle do mockup até você mandar publicar a 06.
+
+**E um defeito que este trabalho ACHOU e não pôde curar aqui:** a fita do topo
+é de todas as dez abas, e quem a repinta é `hefesto_vivo._fita`. Ele **desiste
+inteiro** quando UM controle da mesa não tem cor lida — que é o caso do seu
+controle no rádio. Por isso a fita das dez abas está mostrando os controles do
+mockup na sua tela agora. A 06 passou a ter dono próprio para os chips dela e
+sai curada; **as outras nove seguem com o defeito** até alguém mexer no arquivo
+compartilhado, que não é território de uma aba só.
