@@ -18,7 +18,7 @@ cravar — o NOME do modelo no texto (`Cosmic Red`) e o `--plastico:` no `style`
 
 O QUE ELAS NÃO ENXERGAM. Medido nesta árvore em 03/09/2026, envenenando a
 `mockup/07-lancadores.html` com uma forma de cada vez e rodando as duas réguas
-sobre a página envenenada (saída em `/tmp/claude-1000/aba07/cegueira.out`)::
+sobre a página envenenada — a tabela abaixo é a saída daquela corrida::
 
     página envenenada com          check_identidade_vem_de_cima   a régua irmã
     ---------------------------    ----------------------------   ------------
@@ -44,7 +44,7 @@ roda a cada `python3 aba07.py`. O teste a morde pela porta `--conferir`, que lê
 um HTML qualquer e não gera nada — assim a regra tem UMA escrita só. Duas
 escritas da mesma regra é como o `novo-layout/` divergiu 25 KB calado.
 
-A MORDIDA, e as seis saídas estão em `/tmp/claude-1000/aba07/morde.out`:
+A MORDIDA, e ela é de seis formas — uma por `test_a_regua_morde_*`:
 cada `test_a_regua_morde_*` abaixo envenena a página com uma forma e exige
 `rc=1`; `test_a_pagina_de_hoje_esta_limpa` exige `rc=0` sobre a página real, e
 `test_a_regua_nao_acusa_o_svg_ja_endereçado` exige `rc=0` sobre um SVG ligado
@@ -148,7 +148,8 @@ def test_a_pagina_publicada_tambem_esta_limpa() -> None:
     As duas páginas são a mesma até ela mandar publicar de novo; medir só a
     bancada deixaria de fora exatamente a tela dela.
     """
-    r = _conferir(INTERFACE / "paginas" / PAGINA)
+    # O nome abaixo é o da pasta em disco, não prosa.
+    r = _conferir(INTERFACE / "paginas" / PAGINA)  # (noqa-acento)
     assert r.returncode == 0, (
         f"a página PUBLICADA tem cor de aparelho cravada:\n{r.stderr}")
 
