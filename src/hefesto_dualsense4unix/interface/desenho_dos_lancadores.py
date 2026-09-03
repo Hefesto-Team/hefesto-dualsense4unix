@@ -492,6 +492,41 @@ SEM_FONTE: tuple[SemCenso, ...] = (
              ("dolphin-emu", "mgba-qt", "mgba")),
 )
 
+#: A STEAM TAMBÉM SE PROCURA — 02/09/2026, e ela nasceu de uma acusação provada.
+#:
+#: O cartão da Steam era o único com CENSO, e por isso o único cuja PRESENÇA
+#: ninguém mediu: `presente=True` era constante. Medido com o `HOME` desviado
+#: para uma casa de mentira, sem Steam nenhuma e com o `PATH` vazio:
+#:
+#:     conta_do_topo = '1 encontrado · 0 com impedimentos'
+#:     steam: selo 'ok' (CHEGAM), presente True,
+#:            'Os controles chegam. O atalho de inicialização está no lugar em
+#:             0 jogos da sua biblioteca.'
+#:
+#: Uma máquina SEM Steam recebia o selo VERDE e a promessa de que os controles
+#: chegam — a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na cor verde, que é a frase com
+#: que esta aba nasceu. Os outros cinco cartões diziam `NÃO ACHEI` na mesma tela.
+#:
+#: A CURA É A MEDIÇÃO QUE JÁ EXISTIA, aplicada ao sexto: as mesmas pastas de
+#: `.desktop` e o mesmo `PATH` que respondem pelos cinco respondem por esta.
+#: Ela NÃO entra em :data:`SEM_FONTE` — o interior da Steam o produto LÊ, e é
+#: essa a pergunta daquela lista. São duas perguntas, e continuam separadas.
+#:
+#: OS IDENTIFICADORES: `steam.desktop` é o do pacote da distribuição (medido
+#: nesta bancada, em `/usr/share/applications`), `com.valvesoftware.Steam` é o
+#: da Flathub e `steam-native` é o da instalação sem o runtime. O comando entra
+#: pelo mesmo motivo dos outros — nesta bancada ele é `/usr/games/steam`, que
+#: nem sequer está no `/usr/bin`.
+A_STEAM = SemCenso("steam", "Steam",
+                   ("steam", "com.valvesoftware.Steam", "steam-native"),
+                   ("steam", "steam-native"))
+
+#: OS SEIS QUE O PRODUTO PROCURA em disco. É esta lista que o pacote percorre —
+#: :data:`SEM_FONTE` responde outra coisa (*"sei ler a biblioteca dele?"*) e
+#: percorrê-la para procurar deixava a Steam de fora da única pergunta que o
+#: produto sabe responder sobre os seis sem inventar.
+PROCURADOS: tuple[SemCenso, ...] = (A_STEAM, *SEM_FONTE)
+
 #: A frase de quem AINDA NÃO PROCUROU — a primeira meia volta, antes de a
 #: leitura de disco voltar. Ela diz as TRÊS coisas que quem lê precisa: que o
 #: produto não olhou, que o perfil casa por processo e janela (logo um jogo
@@ -561,13 +596,43 @@ class Leitura:
     #: desenho prometia (`◆ 3 jogos já sabem por onde entrar`) e que nasceu
     #: digitado — medido em 02/09/2026, o produto respondia ZERO.
     pontes: int = 0
-    #: Onde cada lançador SEM CENSO foi achado: `(chave, local)`. Local vazio =
+    #: Onde cada lançador PROCURADO foi achado: `(chave, local)`. Local vazio =
     #: **procurei e não achei**; chave AUSENTE do mapa = **não procurei**. A
     #: distinção é o ponto inteiro: as duas viram frases diferentes na tela.
+    #: A `steam` entrou no mapa em 02/09 — ver :data:`A_STEAM`.
     onde_estao: tuple[tuple[str, str], ...] = ()
     #: a frase da sentinela, que já nomeia o jogo e já diz o que vai acontecer.
     frase: str = ""
     erros: tuple[str, ...] = ()
+
+    @property
+    def onde_esta_a_steam(self) -> str | None:
+        """Onde a Steam foi achada; `''` = procurei e não achei; `None` = não procurei.
+
+        A TERCEIRA RESPOSTA É A QUE IMPORTA. Uma `Leitura` montada à mão (a
+        régua desta aba monta várias) não tem a `steam` no mapa, e ali `None`
+        quer dizer *"esta leitura não fala de presença"* — o cartão então segue
+        só o censo, que era todo o comportamento anterior. Colapsar `None` em
+        `''` faria toda régua antiga passar a ver `NÃO ACHEI`.
+        """
+        return dict(self.onde_estao).get(STEAM)
+
+    @property
+    def viu_a_biblioteca(self) -> bool:
+        """A leitura ALCANÇOU a biblioteca da Steam de algum jeito?
+
+        POR QUE ELA EXISTE, e não basta olhar `onde_esta_a_steam`: as duas
+        buscas respondem coisas diferentes e podem discordar sem que nenhuma
+        esteja errada. Uma Steam instalada por um caminho que os três `.desktop`
+        conhecidos não cobrem (um AppImage, um script no `~/bin`) não aparece na
+        procura — e ainda assim o `localconfig.vdf` dela está lá, com a
+        biblioteca inteira. Dizer `NÃO ACHEI` sobre uma biblioteca que o produto
+        acabou de ler seria trocar um erro por outro.
+
+        O `erros` ENTRA na conta: um vdf ilegível é um vdf que EXISTE.
+        """
+        return bool(self.erros or self.com_wrapper or self.reparaveis
+                    or self.intocaveis or self.recusados or self.instalados)
 
 
 def _plural(n: int, um: str, muitos: str) -> str:
@@ -630,6 +695,25 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     remover só o trecho do Hefesto deixaria um fragmento-comando que impede o
     jogo de abrir. Contá-lo como "não chega" acenderia um `Consertar` que não
     conserta aquele jogo.
+
+    A PRESENÇA DEIXOU DE SER CONSTANTE — 02/09/2026, e a acusação foi provada
+    antes de curada. Com o `HOME` desviado para uma casa de mentira e o `PATH`
+    vazio (nenhuma Steam, nenhum vdf, nenhum jogo), este cartão respondia:
+
+        selo 'ok' (**CHEGAM**) · presente True · "1 encontrado" no topo
+        "Os controles chegam. O atalho de inicialização está no lugar em 0
+         jogos da sua biblioteca."
+
+    Uma máquina sem Steam recebia o selo VERDE e a promessa — enquanto os cinco
+    cartões vizinhos, na mesma tela, diziam `NÃO ACHEI`. Era o único cartão cuja
+    presença ninguém mediu, porque era o único com censo: ter fonte para o
+    INTERIOR não responde se o lançador está aqui.
+
+    AS DUAS PERGUNTAS CONTINUAM SEPARADAS, e é por isso que o `NÃO ACHEI` exige
+    as DUAS respostas negativas (:meth:`Leitura.viu_a_biblioteca`): uma Steam
+    instalada por um caminho que os três `.desktop` conhecidos não cobrem não
+    aparece na procura, e ainda assim a biblioteca dela foi lida. Dizer "não
+    achei" sobre uma biblioteca recém-lida seria trocar um erro por outro.
     """
     # A FILEIRA É A QUE ELA APROVOU, botão por botão: o cartão `CHEGAM` do
     # desenho tem `Abrir o lançador` + `Criar perfil para um jogo`, e o
@@ -649,6 +733,16 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
             chave=STEAM, nome="Steam", selo="nao_sei", jogos=AINDA_LENDO,
             diz="Estou lendo a sua biblioteca da Steam…",
             acoes=(abrir, criar), fora=SEM_LISTA, tem_lista=True)
+    if lida.onde_esta_a_steam == "" and not lida.viu_a_biblioteca:
+        # PROCUREI E NÃO ACHEI, e a frase é a MESMA dos outros cinco
+        # (:data:`DIZ_NAO_ACHEI`) de propósito: ela já nomeia as duas buscas e
+        # já ressalva a instalação fora delas. Uma segunda redação para o mesmo
+        # fato seria texto de tela que ela não decidiu, e duas frases que
+        # envelhecem separadas — o defeito que a decisão 14 dela nomeou
+        # ("uma frase, um dono").
+        return Lancador(
+            chave=STEAM, nome="Steam", selo="off", jogos="—",
+            diz=DIZ_NAO_ACHEI, acoes=(abrir,), fora=SEM_LISTA, tem_lista=True)
     if lida.erros:
         return Lancador(
             chave=STEAM, nome="Steam", selo="nao_sei", jogos="—",
@@ -680,7 +774,14 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         chave=STEAM, nome="Steam", selo=selo,
         jogos=_plural(lida.instalados, "jogo instalado", "jogos instalados"),
         diz=diz, acoes=acoes, carimbo=carimbo_da_steam(lida),
-        fora=lista_de_jogos(lida), tem_lista=True, presente=True)
+        fora=lista_de_jogos(lida), tem_lista=True,
+        # ERA `True` CRAVADO, e o `True` cravado é o que fazia a conta do topo
+        # dizer "1 encontrado" numa máquina sem Steam nenhuma. As duas respostas
+        # entram porque **ou uma ou outra** basta: achei o lançador em disco, ou
+        # li a biblioteca dele. O ramo de cima já devolveu quando as duas são
+        # negativas, então aqui pelo menos uma é verdadeira — escrever a conta
+        # mesmo assim é o que impede a constante de voltar por descuido.
+        presente=bool(lida.onde_esta_a_steam) or lida.viu_a_biblioteca)
 
 
 def carimbo_da_steam(lida: Leitura) -> str:
@@ -798,11 +899,13 @@ class Quadro:
 
 __all__ = [
     "AINDA_LENDO",
+    "A_STEAM",
     "CLASSE_DA_GRADE",
     "DIZ_ACHEI",
     "DIZ_NAO_ACHEI",
     "DIZ_SEM_FONTE",
     "MOLDURA",
+    "PROCURADOS",
     "SELETOR_DA_GRADE",
     "SELOS",
     "SEM_FONTE",
