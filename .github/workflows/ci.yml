@@ -291,6 +291,12 @@ jobs:
       # 0 calada) — é o `contra-nao-resolve` do próprio script.
       - name: O id do mapa não sumiu em silêncio
         run: python3 scripts/check_paridade_transporte.py --exigir-id-estavel --contra "${{ steps.contra.outputs.ref }}"
+      # O TERCEIRO NÚMERO (03/09/2026): a paridade da interface em HTML com a
+      # janela GTK, 396 features com endereço dos dois lados. Ele não confere o
+      # CSV contra o CSV — cada linha carrega um SINAL que a régua procura no
+      # FONTE, e uma dívida FECHADA reprova para o dado ser reescrito.
+      - name: O terceiro número (paridade GTK × HTML)
+        run: python3 scripts/check_paridade_gtk_html.py
 
   shellcheck:
     name: Shellcheck (severidade error)
