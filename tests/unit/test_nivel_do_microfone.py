@@ -433,7 +433,7 @@ def test_o_argv_liga_o_modo_de_pico_do_servidor() -> None:
     max = 0,013550 — o mesmo pico do fluxo de 25 Hz, com 960 vezes mais
     tráfego. O modo de pico não aproxima o pico: ele entrega o pico.
     """
-    argv = argv_do_medidor("alsa_input.exemplo", "143a9a0000ab")
+    argv = argv_do_medidor("alsa_input.exemplo", "aabbcc0000ab")
     assert f"--property={CHAVE_DO_PICO}={VALOR_DO_PICO}" in argv
 
     # A prova de que a ausência mataria a peça: a maior amostra medida SEM o
@@ -455,14 +455,14 @@ def test_o_argv_pede_a_latencia_que_a_medicao_exigiu() -> None:
 
 def test_o_argv_se_identifica_para_a_peca_a() -> None:
     """As propriedades do argv, lidas de volta, satisfazem o próprio crivo."""
-    argv = argv_do_medidor("alsa_input.exemplo", "143a9a0000ab")
+    argv = argv_do_medidor("alsa_input.exemplo", "aabbcc0000ab")
     props = {}
     for arg in argv:
         if arg.startswith("--property="):
             chave, _, valor = arg[len("--property=") :].partition("=")
             props[chave] = valor
     assert e_stream_do_medidor(props) is True
-    assert props[CHAVE_DO_UNIQ] == "143a9a0000ab"
+    assert props[CHAVE_DO_UNIQ] == "aabbcc0000ab"
     assert f"--client-name={NOME_DO_MEDIDOR}" in argv
 
 
@@ -471,7 +471,7 @@ def test_o_argv_nao_pede_media_role() -> None:
     restauração com todo fluxo de papel produção — mexer no nosso volume
     mexeria no de estranhos.
     """
-    argv = argv_do_medidor("alsa_input.exemplo", "143a9a0000ab")
+    argv = argv_do_medidor("alsa_input.exemplo", "aabbcc0000ab")
     assert not any("media.role" in arg for arg in argv)
 
 
@@ -521,7 +521,7 @@ def test_o_parec_nasce_com_cano_na_saida_e_isso_e_a_trava_de_morte(
 
     monkeypatch.setattr(mod.shutil, "which", lambda _nome: "/usr/bin/parec")
     monkeypatch.setattr(mod.subprocess, "Popen", _popen_espiao)
-    mod.abrir_fluxo("alsa_input.exemplo", "143a9a0000ab")
+    mod.abrir_fluxo("alsa_input.exemplo", "aabbcc0000ab")
 
     assert vistos["stdout"] is sp.PIPE, (
         "o `parec` nasceu SEM cano na saída: quando o daemon morrer ele fica "
