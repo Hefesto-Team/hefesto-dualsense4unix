@@ -217,9 +217,17 @@ def test_o_anel_do_dono_declara_de_quem_e():
         "um dono SEM cor lida não pode desenhar anel — seria inventar a casca.")
     com_cor = pac.um_botao_de_player(
         "Não sei", 2, 1, {"nome": "White", "via": "USB", "cor": "white"})
-    assert f'data-hef="{pac.ANEL_DO_DONO}"' in com_cor, (
+    # O ENDEREÇO É POR JOGADOR, e quem o monta é `endereco_do_anel` — 03/09.
+    # Esta linha digitava a CONSTANTE `ANEL_DO_DONO`, que é só o prefixo; o
+    # produto emite `players.dono.<n>`, um por botão, porque a pintura precisa
+    # alcançar cada anel sozinha. Perguntar ao dono é o que faz a régua
+    # sobreviver à próxima mudança de forma do endereço.
+    assert f'data-hef="{pac.endereco_do_anel(1)}"' in com_cor, (
         "o anel perdeu o endereço: a régua da identidade volta a contá-lo como "
         "cor congelada, em todas as colunas.")
+    assert f'data-hef-alvo="{pac.ALVO_DO_PLASTICO}"' in com_cor, (
+        "o anel tem endereço e não diz o ALVO — o pintor cairia no padrão e "
+        "escreveria a cor como TEXTO dentro do `<i>`.")
     assert BRANCO in com_cor, "o anel do dono perdeu a cor da casca dele."
 
 

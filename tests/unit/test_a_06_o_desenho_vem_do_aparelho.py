@@ -202,13 +202,36 @@ def test_os_quatro_desenhos_tem_o_endereco_do_colorway(miolo):
 
 
 def test_o_alvo_nomeia_o_atributo_certo(miolo):
-    """`data-hef-alvo="atributo"` sem `data-hef-atributo="data-colorway"` é
-    pior que endereço nenhum: o `escrever()` recusa o nome e a tela fica com o
-    colorway do desenho, agora com uma régua verde por cima."""
-    assert miolo.count('data-hef-alvo="atributo"') == miolo.count(
-        'data-hef-atributo="data-colorway"'), (
-        "há alvo `atributo` sem dizer QUAL atributo — o piloto recusa o nome "
-        "vazio e não pinta nada")
+    """Todo `data-hef-alvo="atributo"` diz QUAL atributo escrever.
+
+    Sem o nome, o `escrever()` recusa e a tela fica com o valor do desenho —
+    agora com uma régua verde por cima, que é pior que endereço nenhum.
+
+    A RÉGUA CONTAVA `data-colorway` E SÓ, e isso valia enquanto o alvo
+    `atributo` tivesse um uso só. **Não tem mais** — 03/09/2026: o rodapé das
+    dez abas passou a escrever o `title` dos botões "Salvar Perfil" e
+    "Exportar" pelo mesmo alvo, para dizer o nome do perfil ATIVO em vez do
+    exemplo congelado. Contar por um nome de atributo fazia a régua reprovar a
+    MELHORA em vez do defeito, que é o erro mais caro desta casa.
+
+    O que ela mede agora é a REGRA, e não um valor: cada alvo `atributo` tem um
+    `data-hef-atributo` ao lado, seja qual for o nome.
+    """
+    import re
+
+    alvos = miolo.count('data-hef-alvo="atributo"')
+    nomes = len(re.findall(r'data-hef-atributo="[^"]+"', miolo))
+    assert alvos == nomes, (
+        f"há alvo `atributo` sem dizer QUAL atributo ({alvos} alvos, {nomes} "
+        "nomes) — o piloto recusa o nome vazio e não pinta nada")
+
+    # E O DESENHO CONTINUA SENDO O QUE ESTA ABA PROMETE: os `<svg>` da mesa
+    # pedem `data-colorway`, um por assento. Sem esta metade, apagar o
+    # `data-colorway` de todos e pôr `title` no lugar passaria.
+    import monta
+
+    assert miolo.count('data-hef-atributo="data-colorway"') == len(monta.MESA), (
+        "os desenhos da mesa deixaram de pedir o `data-colorway`")
 
 
 def test_nao_ha_colorway_cravado_fora_dos_desenhos(miolo):
