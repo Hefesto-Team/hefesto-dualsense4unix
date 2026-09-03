@@ -21,4 +21,15 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 08-conexoes.html
+- **03/09/2026** — a linha fechada da Gestão de Controles e a confissão do mapa
+  ganharam ENDEREÇO, para o produto poder reescrever o que era do desenho:
+  `mic-existe` no `<b>` do resumo, `mic-caminho`, `luz-trava` (a classe
+  `apagado` do botão da luz) e os três da `.mm-conf-linha`. Nenhum texto novo e
+  nenhuma caixa nova — o que muda é quem escreve.
+  **Até publicar, a tela dela continua com os quatro valores do desenho:**
+  "Microfone **Ligado**" (a ponte deste controle está DESLIGADA no
+  `maquina.json`), o caminho e a trava do botão da luz decididos pela posição no
+  mockup, e a confissão do mapa dizendo "**três coisas**" onde a bancada dela
+  tem uma. O pacote já emite os cinco campos e o `achar()` do piloto não os
+  encontra — escreve zero, sem custo e sem estrago.

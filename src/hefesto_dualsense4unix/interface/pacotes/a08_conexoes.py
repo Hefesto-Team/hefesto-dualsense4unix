@@ -1051,6 +1051,101 @@ def _bancada() -> Any:
     return None
 
 
+#: A CONTA DA CONFISSÃO POR EXTENSO. **ESTE DICIONÁRIO É O DONO DOS DOIS
+#: LADOS** — o gerador o importa daqui, e por isso a palavra da bancada e a
+#: palavra da mesa dela não podem divergir.
+#:
+#: É dado DERIVADO (`len(lacunas)`), não frase de tela: a abertura, os itens e a
+#: ordem continuam saindo de `mapa_da_mesa.CONFISSAO`, que é o dono do texto.
+PALAVRA_DA_CONTA = {0: "nada", 1: "uma coisa", 2: "duas coisas", 3: "três coisas",
+                    4: "quatro coisas", 5: "cinco coisas"}
+
+
+def palavra_da_conta(quantas: int) -> str:
+    """`3` → "três coisas". Fora da tabela, o número cru — nunca uma palavra errada.
+
+    A RESERVA NÃO É DESLEIXO: a cena pode acender uma sexta lacuna no dia em que
+    `mapa_da_mesa.CONFISSAO` crescer, e escrever "cinco coisas" sobre seis seria
+    a tela afirmando uma contagem que ela não fez. O gerador tem um `raise` para
+    o mesmo caso — ele PARA a geração; aqui, no tique de 500 ms da mesa dela,
+    parar não é opção e o número por extenso vira número.
+    """
+    return PALAVRA_DA_CONTA.get(int(quantas), str(int(quantas)))
+
+
+def _confissao_do_mapa() -> dict[str, str]:
+    """Os campos da confissão — o que o desenho DELA não consegue conferir.
+
+    O DONO DAS FRASES É `mapa_da_mesa.confissao_do_desenho`, o mesmo que a
+    janela do desenho redesenha a cada mudança. Aqui elas só ganham a moldura do
+    HTML: a conta por extenso na linha e os itens no `title`.
+
+    O DEFEITO QUE ISTO FECHA, medido nesta bancada em 03/09/2026: a
+    `.mm-conf-linha` está FORA do bloco `.mm-faces` que o pacote troca, então
+    ninguém nunca a repintava. Ela dizia **"três coisas"** — a conta da cena do
+    mockup — e o `title` listava as três; a mesa dela tem **UMA** lacuna
+    (`especie`). Uma confissão que confessa a mais é tão falsa quanto uma que
+    cala: manda ela procurar duas coisas que o produto já sabe.
+
+    `confissao-nada` É O INTERRUPTOR DO SUMIÇO, e a regra é da GTK: lá a linha
+    SOME quando o desenho responde por tudo (`confissao_do_desenho` devolve
+    vazio e o `_desenhar` não escreve nada). Sem ele, zero lacuna viraria *"O
+    que eu não consegui conferir neste desenho: nada."* — uma frase que ocupa
+    espaço para não dizer nada.
+
+    O DICIONÁRIO VAZIO É RESPOSTA, e é por isso que esta função não devolve
+    tupla: sem censo o pacote não sabe quantas lacunas há, e emitir `""` seria
+    PIOR que não emitir — o `escrever()` do piloto troca vazio por travessão, e
+    a tela diria *"O que eu não consegui conferir neste desenho: —."*. Não
+    emitir deixa a linha como o desenho a escreveu, que é o único estado
+    honesto quando a leitura do barramento falhou.
+    """
+    bancada = _bancada()
+    if bancada is None:
+        return {}
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import (
+            confissao_do_desenho,
+        )
+
+        itens = tuple(confissao_do_desenho(bancada))
+    except Exception:
+        return {}
+    if not itens:
+        # A LINHA SOME, e a conta vai junto: se a folha de estilo desta página
+        # ainda não tiver a regra do `sumido`, o que ela lê é "nada" — que é
+        # verdade — em vez de um travessão.
+        return {"confissao-nada": "sim", "confissao-conta": palavra_da_conta(0)}
+    # O `\n` DE VERDADE, e não o `&#10;` do gerador: aquele é uma entidade HTML,
+    # e o gerador a escreve porque o texto dele entra CRU dentro de `title="…"`
+    # no arquivo. Aqui o valor viaja como JSON e o piloto o põe por
+    # `setAttribute`, onde entidade nenhuma é interpretada — um `&#10;` chegaria
+    # à dica dela escrito com todas as letras.
+    abertura = _abertura_da_confissao()
+    return {"confissao-nada": "",
+            "confissao-conta": palavra_da_conta(len(itens)),
+            "confissao-dica": "\n".join([abertura, *(f"· {t}" for t in itens)])}
+
+
+def _abertura_da_confissao() -> str:
+    """*"O que eu não consegui conferir neste desenho:"* — a frase do produto.
+
+    Ela é de `mapa_da_mesa.CONFISSAO_ABERTURA`, a mesma constante que a janela
+    do desenho escreve em cima da lista e que o gerador lê para o `title` do
+    mockup. Digitá-la aqui seria a segunda grafia da abertura, e a primeira
+    coisa que uma segunda grafia perde é a revisão dela.
+    """
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import (
+            CONFISSAO_ABERTURA,
+        )
+
+        return str(CONFISSAO_ABERTURA)
+    return ""
+
+
 def _html_do_mapa() -> str:
     """As faces do gabinete DELA, desenhadas pelo produto.
 
@@ -1198,6 +1293,80 @@ def html_da_conta(frase: str) -> str:
     :func:`rotulo_do_controle` e :func:`tinta_legivel` deste módulo.
     """
     return frase.replace(" • ", _PONTO)
+
+
+#: POR ONDE O MICROFONE DESTE CONTROLE CHEGA — as duas metades da frase, e elas
+#: são as do desenho dela. A regra é o ponto final dela de 28/08: *"se tiver em
+#: modo rádio, então o mic é modo rádio"* — não há chavinha, o caminho é
+#: DERIVADO do transporte. Pelo CABO o DualSense expõe placa USB Audio própria e
+#: o PipeWire a publica sozinho; pelo RÁDIO não existe placa nenhuma e o áudio
+#: vem em Opus dentro do HID 0x31, trazido pela ponte do Hefesto.
+_CAMINHO_DO_MIC = {"bt": ("pelo rádio", "Pela ponte"),
+                   "usb": ("pelo cabo", "Placa do controle")}
+
+
+def caminho_do_microfone(via: str) -> str:
+    """*"pelo rádio • Pela ponte"* ou *"pelo cabo • Placa do controle"*.
+
+    **UM DONO SÓ PARA OS DOIS LADOS**, mesmo molde de :func:`rotulo_do_controle`
+    e :func:`html_da_conta`: o gerador chama isto com a mesa da BANCADA, o
+    pacote chama a cada tique com o transporte VIVO. Enquanto a frase morava só
+    no `aba08.caminho_do_mic`, a linha fechada dizia *"pelo cabo · Placa do
+    controle"* no P1 e *"pelo rádio · Pela ponte"* no P2 porque foi assim que o
+    desenho os desenhou — não porque o daemon tenha dito.
+
+    O TRANSPORTE DESCONHECIDO CAI NO CABO, e é a escolha conservadora: a ponte
+    de rádio é o que CUSTA turno, e afirmá-la sem leitura poria na tela um preço
+    que ninguém mediu. O gerador já fazia o mesmo (`via != "BT"` → cabo).
+    """
+    chave = (via or "").strip().lower()
+    rota, quem = _CAMINHO_DO_MIC.get(chave, _CAMINHO_DO_MIC["usb"])
+    return f"{rota}{_PONTO}{quem}"
+
+
+#: O VALOR DO `data-hef-quando` DO BOTÃO "A luz não acende" — 03/09/2026.
+#:
+#: A CURA É DO RÁDIO, e o botão do desenho já nascia apagado no cabo. O que ele
+#: não tinha era ENDEREÇO: a classe `apagado` do P1 vinha do mockup, e o P2
+#: nascia aceso pela mesma razão. Com um controle só na mesa, e no cabo, a tela
+#: dela mostrava um botão ACESO para o lugar vazio e um apagado para o cheio —
+#: a decisão de acender vinha da posição no desenho, nunca do transporte.
+#:
+#: A PALAVRA É A DO GESTO: `luz_nao_acende` recusa quando o transporte não é
+#: `bt`, com a frase do cabo. Este campo é a mesma regra um instante ANTES do
+#: clique, que é onde a janela estável a põe (`secao_controles.pode_derrubar`).
+LUZ_TRAVADA = "cabo"
+LUZ_LIVRE = "radio"  # (noqa-acento) valor de atributo, ASCII por contrato
+
+
+def trava_da_luz(via: str) -> str:
+    """`"cabo"` quando o botão da luz não tem o que fazer; `"radio"` quando tem.
+
+    O DONO DA REGRA É O GESTO (:func:`luz_nao_acende`), que levanta com a frase
+    do produto para todo transporte que não seja `bt`. Ler a mesma condição aqui
+    é o que faz a tela DIZER ANTES o que o gesto diria depois — a metade que a
+    GTK tem desde sempre e que o HTML devolvia só como tarja pós-clique.
+
+    TRANSPORTE VAZIO É TRAVA, e pela mesma razão do gesto: `Disconnect` sobre um
+    controle cujo transporte ninguém leu é um pedido no escuro.
+
+    O LUGAR VAZIO NÃO É ALCANÇADO POR AQUI, E ISSO É DÍVIDA — medida no DOM vivo
+    em 03/09/2026 com um controle só na mesa. As `colunas` só existem para quem
+    está conectado; o lugar que sobra recebe `dict.fromkeys(chaves, TRAVESSAO)`
+    (`pacotes/__init__.py:323`), e no alvo `classe` o travessão não casa com
+    `data-hef-quando` nenhum — logo ele APAGA a classe que o desenho pôs. O
+    botão do lugar vazio fica ACESO.
+
+    **NÃO SE CURA INVERTENDO ISTO.** Emitir o travessão como valor de "travado"
+    faria a ausência de dado e o cabo dizerem a mesma coisa, que é a confusão
+    que esta casa mais pagou. A cura é uma das duas, e nenhuma cabe neste
+    arquivo: `classe` entrar em `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE` (um alvo de
+    classe não tem o que fazer com um traço — ele só apaga o que o desenho
+    afirmou), ou o desenho dela ganhar o estado do lugar vazio. A tela de HOJE
+    já mostrava esse botão aceso pelo mesmo pixel — era a classe do mockup —,
+    então não há regressão; o que muda é que agora há um dono a quem cobrar.
+    """
+    return LUZ_LIVRE if (via or "").strip().lower() == "bt" else LUZ_TRAVADA
 
 
 def _tela_da_aba() -> Any:
@@ -1777,6 +1946,21 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # gravava no disco e a tela continuava dizendo "Ligado" — e o
             # segundo clique dela pareceria o primeiro.
             "mic-existe": "Ligado" if _mic_declarado(declaracao, uniq) else "Desligado",
+            # POR ONDE O MICROFONE CHEGA — ver :func:`caminho_do_microfone`. A
+            # linha fechada dizia "pelo cabo · Placa do controle" no primeiro
+            # lugar e "pelo rádio · Pela ponte" no segundo, os dois do desenho:
+            # com um controle só na mesa, o que ela lia era a cena do mockup.
+            # E o `<b>Ligado</b>` ao lado dele era pior — com a ponte
+            # DESLIGADA no `maquina.json` dela (medido em 03/09), a tela
+            # afirmava "Ligado" sobre um microfone que nenhum programa enxerga.
+            # O `mic-existe` acima já resolve o segundo: o desenho ganhou o
+            # mesmo endereço no `<b>`, e o piloto distribui por `data-campo`.
+            "mic-caminho": caminho_do_microfone(str(c.get("transport") or "")),
+            # A TRAVA DO "A luz não acende" — ver :func:`trava_da_luz`. O botão
+            # nascia apagado no P1 e aceso no P2 porque foi assim que o mockup
+            # os desenhou; agora ele apaga no CABO e acende no RÁDIO, que é a
+            # mesma condição que o gesto usa para recusar depois do clique.
+            "luz-trava": trava_da_luz(str(c.get("transport") or "")),
             # O `?` DO TETO VAI SEMPRE, e o campo só quando há o que escolher.
             # Pintar só a caixa deixaria a tela dizendo "30% da força" no campo
             # e "este controle segue o global" na dica — uma contradição NOVA,
@@ -1785,6 +1969,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         }
         if teto_campo is not None:
             colunas[uniq]["teto-da-vibracao"] = teto_campo
+    # UMA LEITURA SÓ, e ela é a razão de esta linha não estar dentro do
+    # dicionário: a `cobertura` conta os campos da confissão, e chamar a função
+    # duas vezes releria o barramento no mesmo tique.
+    confissao = _confissao_do_mapa()
     return {
         "colunas": colunas,
         # O MAPA DO GABINETE, trocado INTEIRO — 01/09/2026. Ele não se pinta
@@ -1805,6 +1993,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `innerHTML` —, e agora as réguas a enxergam.
         "blocos": {".mm-faces": _html_do_mapa()},
         "aparelhos": _html_dos_aparelhos(),
+        # A CONFISSÃO DO DESENHO, e ela é a da MESA DELA — ver
+        # :func:`_confissao_do_mapa`. A `.mm-conf-linha` mora FORA do
+        # `.mm-faces` que a linha acima troca, e por isso nunca era repintada:
+        # dizia "três coisas" com os três itens cravados no `title`, sobre uma
+        # bancada que tem UMA lacuna. Confessar a mais manda ela procurar o que
+        # o produto já sabe.
+        **confissao,
         # A ORDEM DE SERVIÇO DA MÁQUINA DELA — 03/09/2026, `MIGRA-08-01`. Ver
         # `_html_da_ordem`: o card era HTML cravado no mockup mandando mover o
         # adaptador da Entrada 3 para a Entrada 9, com de→para e ganho, sobre
@@ -1915,7 +2110,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # cobertura desta aba é a `--prova-de-mockup`, que lê a TELA. Fica dito
         # porque um número que se chama cobertura e não é foi o defeito que
         # esta casa mais pagou.
-        "cobertura": {"pintados": 4 + len(itens) * 4 + 1 + len(adap)
+        #
+        # O `len(confissao)` DE 03/09/2026 são os campos da confissão do
+        # desenho, e ele é LIDO em vez de digitado de propósito: são três com
+        # lacuna, dois sem nada a confessar e ZERO sem censo. Um `+ 3` cravado
+        # contaria pintura que não aconteceu nos dois últimos casos.
+        # Os dois novos POR CONTROLE (`mic-caminho`, `luz-trava`) não precisam
+        # de termo: eles entram pelo `sum(len(v) …)` das colunas.
+        "cobertura": {"pintados": 4 + len(confissao) + len(itens) * 4 + 1 + len(adap)
                       + len(vizinho_nome) * 2
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO) + len(sem_dono)},
