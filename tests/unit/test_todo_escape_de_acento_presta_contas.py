@@ -105,7 +105,9 @@ SEM_RAZAO_PINADOS: dict[str, int] = {
     "src/hefesto_dualsense4unix/profiles/manager.py": 1,
     "src/hefesto_dualsense4unix/profiles/sanidade.py": 1,
     "tests/unit/test_cli_profile_historico.py": 3,
-    "tests/unit/test_coop_default_on_migration.py": 1,
+    # test_coop_default_on_migration.py saiu em 03/09/2026: o escape mudo que ele
+    # tinha não existe mais no arquivo, e a régua da IGUALDADE cobra a linha de
+    # volta — número pinado acima do real é licença em branco para o próximo.
     "tests/unit/test_hidraw_broker_open_fd.py": 1,
     "tests/unit/test_ipc_server.py": 1,
     "tests/unit/test_modo01_o_modo_jogo_liga_sozinho.py": 1,

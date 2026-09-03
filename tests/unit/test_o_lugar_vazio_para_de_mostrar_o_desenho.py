@@ -471,8 +471,9 @@ def test_o_molde_escreve_o_travessao_do_desenho(pacotes_mod):
 # ---------------------------------------------------------------------------
 # 3. a carga inteira: os quatro lugares apagados E a moldura de vazio
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("pagina", ["01-jogar.html", "02-controles.html",  # (noqa-acento)
-                                    "04-iluminacao.html", "05-vibracao.html"])
+@pytest.mark.parametrize("pagina",  # (noqa-acento): nome do argumento
+                         ["01-jogar.html", "02-controles.html",
+                          "04-iluminacao.html", "05-vibracao.html"])
 def test_os_quatro_lugares_ficam_no_travessao_e_marcados(pacotes_mod, pagina):
     """O desfecho que a foto cobra: nada de dado, e a moldura de vazio acesa.
 

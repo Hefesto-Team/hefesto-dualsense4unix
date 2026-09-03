@@ -149,7 +149,7 @@ def test_a_pagina_publicada_tambem_esta_limpa() -> None:
     bancada deixaria de fora exatamente a tela dela.
     """
     # O nome abaixo é o da pasta em disco, não prosa.
-    r = _conferir(INTERFACE / "paginas" / PAGINA)  # (noqa-acento)
+    r = _conferir(INTERFACE / "paginas" / PAGINA)  # (noqa-acento): nome de pasta
     assert r.returncode == 0, (
         f"a página PUBLICADA tem cor de aparelho cravada:\n{r.stderr}")
 

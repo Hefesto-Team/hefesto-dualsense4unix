@@ -86,8 +86,11 @@ def do_html(pagina: str) -> tuple[set[str], set[str]]:
 #: O estado que a régua usa. Um teste que monte um perfil de mentira o troca —
 #: sem perfil o pacote da Gatilhos emite `Desligado` e o da Perfis lista zero,
 #: e o piso cairia por falta de DADO, não por regressão.
-#: `acao` é o nome do arquivo de perfil.  # (noqa-acento)
-ESTADO_DA_REGUA = {"active_profile": "acao", "rumble_policy": "balanceado"}  # (noqa-acento)
+#: `acao` é o nome do arquivo de perfil.  # (noqa-acento): slug de arquivo
+ESTADO_DA_REGUA = {
+    "active_profile": "acao",  # (noqa-acento): valor ASCII, é nome de arquivo
+    "rumble_policy": "balanceado",
+}
 
 
 def do_pacote(pagina: str, estado: dict | None = None) -> tuple[set[str], set[str]]:
