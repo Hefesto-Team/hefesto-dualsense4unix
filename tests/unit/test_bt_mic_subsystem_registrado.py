@@ -176,18 +176,41 @@ async def test_falha_do_bt_mic_nao_derruba_o_boot(
     assert store.counter("poll.tick") >= 1
 
 
-def test_gate_por_env_var_continua_valendo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`is_enabled` aceita a env var documentada OU a fonte por controle.
+def test_o_supervisor_fica_de_pe_e_quem_filtra_e_o_alvos(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CONTRATO SUBSTITUÍDO — CANAL-POR-CONTROLE-01, 03/09/2026.
 
-    A env continua sendo o caminho à mão e vale por TODOS os controles; a fonte
-    é a declaração dela, e um `uniq` nela já basta. Conjunto VAZIO é desligado —
-    é o "nasce desligado" que a privacidade exige, e vem de graça da ausência.
+    Este teste tratava `is_enabled` como o gate da privacidade: sem declaração e
+    sem env, `False`. Era essa resposta que trancava o rádio — sem subsystem
+    não havia a quem PEDIR canal, e o primeiro toque no botão do microfone caía
+    no vazio.
+
+    **O "nasce desligado" continua inteiro, e mudou de método:** o supervisor
+    fica de pé e não captura nada, porque `alvos()` devolve `[]` enquanto
+    ninguém pedir, ninguém declarar e a env estiver fora. Sem ponte não há
+    `0x32`, não há libopus e não há microfone.
     """
-    subsystem = BtMicSubsystem()
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
+        RegistroDePedidosDeCanal,
+    )
+
+    # Registro PRÓPRIO: o singleton do processo é compartilhado, e um pedido
+    # deixado por outro teste faria esta régua medir a sujeira dele.
+    subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
-    assert subsystem.is_enabled(_config()) is False
-    assert subsystem.is_enabled(_config(bt_mic_uniqs=frozenset)) is False
-    um = _config(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"}))
-    assert subsystem.is_enabled(um) is True
-    monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", "1")
     assert subsystem.is_enabled(_config()) is True
+    assert subsystem.is_enabled(_config(bt_mic_uniqs=frozenset)) is True
+
+    class _No:
+        uniq = "aabbcc000001"
+        caminho = "/dev/hidraw9"
+
+    subsystem._config = _config()
+    assert subsystem.alvos([_No()]) == []
+    subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"}))
+    assert [no.uniq for no in subsystem.alvos([_No()])] == ["aabbcc000001"]
+    # A env continua sendo o caminho à mão e vale por TODOS os controles.
+    subsystem._config = _config()
+    monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", "1")
+    assert len(subsystem.alvos([_No()])) == 1
