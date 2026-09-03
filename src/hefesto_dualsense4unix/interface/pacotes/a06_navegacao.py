@@ -107,11 +107,13 @@ mesmo tempo, medidas contra a página que o produto renderiza:
   na tela`, porque o `escrever()` descarta em silêncio o texto que não casa com
   nenhuma `<option>` e o que fica é a que o desenho crava.
 
-A cura são duas linhas de vocabulário, e as duas se apagam sozinhas na
-publicação: `PALAVRAS_DO_TECLADO` (a pintura escolhe a palavra que a página
-CARREGADA oferece) e `SINONIMOS_ATE_A_PUBLICACAO` (o gesto entende também os
-rótulos do desenho de ontem). **A regra que fica: mudar rótulo, opção ou número
-de casas na bancada obriga a perguntar o que acontece na tela dela HOJE.**
+A cura foram duas linhas de vocabulário, e as duas tinham prazo: **ela publicou
+a 06, e em 03/09/2026 os sinônimos saíram** — a régua da travessia
+(`test_os_sinonimos_da_travessia_tem_prazo`) ficou vermelha nomeando o que
+apagar, que é o único trabalho que ela tinha. Ficou `PALAVRAS_DO_TECLADO`, que
+continua conferindo a palavra contra a página CARREGADA. **A regra que fica:
+mudar rótulo, opção ou número de casas na bancada obriga a perguntar o que
+acontece na tela dela HOJE.**
 
 FATO SUBSTITUÍDO (02/09/2026): **"esta aba MENCIONA 7 campos e PINTA 3"** —
 escrito a partir do `--passear`, que imprime `06-navegacao.html  1  3`. Ela
@@ -162,27 +164,31 @@ SEM_DONO: dict[str, str] = {}
 #:
 #: `via` SAIU: virou parte do `navega` (ver `_linha_do_cartao`).
 #: `teclado-ligado` SAIU: era o mesmo bit de `teclado-estado`, que tem endereço.
+#:
+#: QUATRO SAÍRAM EM 03/09/2026, e as quatro pelo mesmo motivo — **o desenho
+#: ganhou o lugar que faltava**, e o que cai nele é a frase do PRODUTO, não uma
+#: frase nova:
+#:
+#:   · `rato-ligado`   o "Status do Modo" perdeu o `<input checkbox>` e a
+#:                     palavra de `content:` de CSS; agora é a classe `ligado`
+#:                     (alvo `classe`) mais um nó de texto. Era a maior mentira
+#:                     desta aba: com `mouse_emulation.enabled=false` a tela
+#:                     dizia **Ligado**;
+#:   · `rato-bloqueio` virou `rato-estado`, a linha de estado do mouse virtual,
+#:                     traduzida por `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`;
+#:   · `teclado-osk`   ganhou linha, com a frase de
+#:                     `input_actions.frase_do_teclado_na_tela`;
+#:   · e nasceu `teclado-bloqueio`, de
+#:                     `emulation_actions.descrever_teclado_emulado`.
 SEM_ENDERECO: dict[str, str] = {
-    # OS TRÊS DO MOUSE — o desenho TEM onde: o interruptor "Status do Modo". O
-    # que falta é o piloto poder escrevê-lo. O widget é um
-    # `<input type="checkbox" checked>` cujo estado a CSS lê (`.tog-in:checked
-    # + .tog`), e a palavra "Ligado"/"Desligado" sai de um `content:` — não há
-    # nó de texto para pintar, e `escrever()` não sabe marcar uma caixa nem pôr
-    # uma classe. Medido em 02/09: o daemon dela tinha `mouse_emulation.enabled
-    # = False` e a tela dizia **Ligado**. É a maior mentira desta aba, e a cura
-    # é no piloto (um alvo que escreva atributo/classe), não aqui.
-    "rato-ligado": "o 'Status do Modo' é um <input checkbox> e o piloto não sabe "
-                   "marcar caixa nem trocar classe — hoje ele diz 'Ligado' com a "
-                   "emulação desligada",
-    "rato-bloqueio": "o motivo do bloqueio não tem linha no desenho; a frase do "
-                     "produto é `app/actions/mouse_actions.frase_da_recusa_do_mouse`",
-    "rato-despachando": "idem — quem despacha o cursor não aparece no desenho",
-    # O TECLADO NA TELA: o produto TEM a frase pronta e humana em
-    # `app/actions/input_actions.frase_do_teclado_na_tela(osk_disponivel)`, que a
-    # GTK mostra. O desenho desta aba não tem onde pô-la.
-    "teclado-osk": "o desenho não tem linha para 'há teclado na tela nesta "
-                   "máquina'; a frase existe em "
-                   "`app/actions/input_actions.frase_do_teclado_na_tela`",
+    # QUEM DESPACHA O CURSOR CONTINUA SEM LINHA, e agora por decisão e não por
+    # falta de lugar: a GTK não tem frase para `despachando` — as quatro do
+    # rótulo dela falam do DEVICE (`device_ativo`/`bloqueio`), que é o que a
+    # linha `rato-estado` já leva. Escrever uma frase nova aqui seria inventar
+    # texto de tela, e texto de tela é palavra dela.
+    "rato-despachando": "a GTK não tem frase para 'o daemon está despachando' — "
+                        "as quatro dela falam do device, que `rato-estado` já "
+                        "diz. Inventar a frase é decisão dela",
     # OS ATALHOS DO PERFIL: a tabela da tela é a dos cinco COMBOS (PS+Options…),
     # que não são `key_bindings`. Não há onde mostrar a contagem, e mostrá-la na
     # tabela dos combos seria pôr um número ao lado de outra coisa.
@@ -219,47 +225,30 @@ TECLADO_SO_FORA = "Só fora do jogo"
 TECLADO_DESATIVADO = "Desativado"
 TECLADO_SO_DENTRO = "Só dentro do jogo"
 
-#: AS DUAS PALAVRAS QUE A PÁGINA PUBLICADA AINDA USA — 02/09/2026, corretivo.
+#: A TRAVESSIA ACABOU — 03/09/2026, e quem mandou apagar foi a régua.
 #:
-#: A decisão dela mudou a lista na BANCADA; publicar é ato dela, e até lá o
-#: `WebView` renderiza estas três: `Ligada — atalhos e teclado na tela` · `Só
-#: fora do jogo` · `Desligada`. **`Só fora do jogo` está nas duas listas** — é
-#: por isso que o estado LIGADO já chega à tela dela hoje.
+#: Entre 02/09 e a publicação, a bancada tinha as três palavras dela e a página
+#: que o produto renderiza ainda tinha as antigas (`Ligada — atalhos e teclado
+#: na tela` · `Desligada`). Duas constantes e um dicionário de sinônimos
+#: seguravam os dois mundos ao mesmo tempo, e o custo de não tê-los estava
+#: medido: DUAS das três opções da tela viravam clique morto — inclusive a única
+#: forma de desligar o teclado por esta aba — e a pintura emitia uma palavra que
+#: a lista publicada não tinha, deixando na tela a `<option selected>` do
+#: desenho: com o teclado DESLIGADO a linha afirmava o contrário.
 #:
-#: O QUE ISTO CUSTOU QUANDO NÃO EXISTIA, e é a razão desta cura (medido contra
-#: `interface/paginas/06-navegacao.html`, a página que o piloto carrega):
+#: A 06 FOI PUBLICADA, `mockup/` e `interface/paginas/` voltaram a bater, e
+#: `test_a_06_a_funcao_do_teclado_tem_tres.py::test_os_sinonimos_da_travessia_
+#: tem_prazo` ficou VERMELHO nomeando o que apagar — que é o único trabalho que
+#: aquela régua tinha. Declaração velha é a régua se desligando sozinha.
 #:
-#: * o GESTO passou a levantar `ValueError` em DUAS das três opções que a
-#:   página oferece — inclusive a `Desligada`, a única forma de desligar o
-#:   teclado por esta aba. Clique morto, e calado POR CONTRATO: só a frase do
-#:   `RuntimeError` chega ao cartão dela (`hefesto_vivo._recusou_dizendo`, que
-#:   devolve `False` para tudo o que não for `RuntimeError`), porque a do
-#:   `ValueError` fala com quem programa;
-#: * a PINTURA passou a emitir `Desativado`, que a lista publicada não tem. O
-#:   `escrever()` (ramo `alvo === 'valor'`) descarta a escrita EM SILÊNCIO
-#:   quando o texto não casa com nenhuma `<option>`, e o que sobra na tela é a
-#:   `<option selected>` do desenho — literalmente `Ligada — atalhos e teclado
-#:   na tela`. Com o teclado DESLIGADO a tela afirmava o CONTRÁRIO, que é pior
-#:   que não dizer nada e é o lado que a decisão dela de 02/09 fecha.
-#:
-#: AS DUAS SAEM SOZINHAS NO DIA DA PUBLICAÇÃO. `_o_teclado_em_palavras` escolhe
-#: a primeira candidata que a página CARREGADA oferece, então publicar troca a
-#: palavra sem ninguém mexer aqui; e
-#: `test_a_06_a_funcao_do_teclado_tem_tres.py` reprova quando um sinônimo deixa
-#: de existir no publicado — declaração velha é a régua se desligando sozinha.
-TECLADO_LIGADA_HOJE = "Ligada — atalhos e teclado na tela"
-TECLADO_DESLIGADA_HOJE = "Desligada"
-
-#: O ESTADO DO DAEMON → as palavras que o dizem, EM ORDEM DE PREFERÊNCIA: a
-#: dela primeiro, o rótulo que a página publicada ainda oferece depois.
-#:
-#: A regra dela do mesmo dia — *"se não tá mostrando agora, não tem info pra
-#: mostrar no produto; mas quando tiver, aparece a info correta"* — aplicada à
-#: travessia: o campo não fica cravado numa palavra que a tela não sabe
-#: receber, e não espera ninguém vir consertá-lo depois da publicação.
+#: O QUE FICA: `PALAVRAS_DO_TECLADO` continua sendo uma TUPLA de candidatas, e
+#: não uma palavra só, porque é o que faz a próxima travessia custar uma linha
+#: em vez de um defeito calado — e porque `_o_teclado_em_palavras` continua
+#: conferindo contra a página CARREGADA, que é a regra que sobrou do episódio:
+#: *mudar rótulo na bancada obriga a perguntar o que acontece na tela dela hoje*.
 PALAVRAS_DO_TECLADO: dict[bool, tuple[str, ...]] = {
-    True: (TECLADO_SO_FORA, TECLADO_LIGADA_HOJE),
-    False: (TECLADO_DESATIVADO, TECLADO_DESLIGADA_HOJE),
+    True: (TECLADO_SO_FORA,),
+    False: (TECLADO_DESATIVADO,),
 }
 
 #: O SEPARADOR DO CARTÃO — o mesmo `•` que o desenho põe entre o transporte e o
@@ -346,6 +335,125 @@ def _o_teclado_em_palavras(ligado: bool) -> str:
         if palavra in ofertas:
             return palavra
     return candidatas[0]
+
+
+#: A PALAVRA DO INTERRUPTOR "Status do Modo", e ela é DUAS coisas ao mesmo
+#: tempo: o texto que o `.txt` mostra e o gatilho da classe verde
+#: (`data-hef-quando="Ligado"` no rótulo — ver `aba06.STATUS_MODO`). Por isso
+#: elas são constantes e não literais espalhados: trocar uma sem a outra
+#: acenderia a cor sem a palavra, ou o contrário.
+LIGADO = "Ligado"
+DESLIGADO = "Desligado"
+
+#: "NÃO HÁ O QUE DIZER", dito de um jeito que a tela sabe APAGAR.
+#:
+#: Ele existe por um detalhe do piloto que custou uma foto: `escrever()` troca
+#: valor vazio por um travessão (`hefesto_vivo.py:141`), de propósito — um lugar
+#: VAZIO da mesa tem de apagar o que estava lá. Numa linha de estado isso vira
+#: um `—` solto embaixo do interruptor, que é ruído com cara de dado.
+#:
+#: Então a linha sem conteúdo manda ESTE marcador, e o desenho a esconde inteira
+#: (`.estado:has(.nada){display:none}`). A chave continua sendo emitida em todo
+#: tique — é o que faz a linha SUMIR quando o bloqueio acaba. Omiti-la deixaria
+#: a frase velha na tela para sempre, que é o defeito oposto e pior.
+NADA_A_DIZER = '<i class="nada"></i>'
+
+#: A ÚNICA FRASE DESTA ABA COPIADA DA GTK EM VEZ DE IMPORTADA, e a duplicação é
+#: declarada porque não há como evitá-la sem tocar arquivo de outra frente: ela
+#: é um literal DENTRO de `_refresh_mouse_view`
+#: (`app/actions/mouse_actions.py:611`), que é método de mixin GTK e escreve num
+#: widget. Extraí-la para uma constante é o certo, e é edição naquele arquivo.
+#:
+#: ELA NÃO PODE DIVERGIR CALADA: `test_a_06_as_frases_do_mouse_sao_as_da_gtk.py`
+#: lê o fonte da GTK e reprova no dia em que a frase de lá mudar.
+PRONTO_PARA_MOUSE = "Pronto para usar como mouse"
+
+
+def _o_mouse_virtual_em_uma_linha(rato: dict[str, Any]) -> str:
+    """A linha "o mouse virtual está pronto?" — a MESMA hierarquia da GTK.
+
+    O DONO É `app/actions/mouse_actions._refresh_mouse_view`, e o que se copia
+    dele é a ORDEM, não a frase: a frase do bloqueio vem inteira da tabela
+    `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`, que é importada. A hierarquia da GTK, no
+    corpo dela, é: *device no ar segundo o daemon → pronto; senão, o motivo*.
+
+    **A SONDA LOCAL NÃO VEM JUNTO, e é decisão medida.** A GTK ainda faz
+    `import uinput` + `os.access("/dev/uinput")` dentro do processo da JANELA, e
+    o próprio docstring dela diz que isso *"erra nos dois sentidos"* — num
+    Flatpak a janela olha o sandbox e grita "sem permissão" sobre um nó que o
+    daemon abre sem dificuldade. O primeiro ramo dela, o que o `_anotar_mouse_
+    virtual` criou em 25/08, é justamente o que dispensa a sonda: **quem abre o
+    device é o daemon, e a resposta vem de quem executa.** Aqui só existe esse
+    ramo, o que torna esta linha mais confiável que a da GTK, não menos.
+
+    Vazia quando o daemon não respondeu, ou quando ele diz `desligada` — que é
+    escolha dela, não defeito, e é o que o `_anotar_mouse_virtual` classifica
+    como "não sei" para não mandá-la consertar um interruptor que ela baixou.
+    """
+    from hefesto_dualsense4unix.app.actions.mouse_actions import (
+        BLOQUEIO_DO_MOUSE_EM_PORTUGUES,
+    )
+    from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
+
+    if not rato:
+        return NADA_A_DIZER
+    if rato.get("device_ativo") is True:
+        return f'<span class="verde">{PRONTO_PARA_MOUSE}</span>'
+    bloqueio = rato.get("bloqueio")
+    if not isinstance(bloqueio, str) or not bloqueio or bloqueio == "desligada":
+        return NADA_A_DIZER
+    motivo = BLOQUEIO_DO_MOUSE_EM_PORTUGUES.get(bloqueio)
+    if motivo is None:
+        # Motivo NOVO, de um daemon mais novo que esta tela: dizer o código cru
+        # é feio e é honesto — a GTK faz o mesmo em `frase_da_recusa_do_mouse`.
+        motivo = f"o Hefesto está bloqueando o mouse (motivo: {bloqueio})"
+    motivo = motivo.replace("{gesto}", como_atualizar_esta_instalacao())
+    return f'<span class="laranja">O cursor não anda: {motivo}.</span>'
+
+
+def _o_teclado_em_uma_linha(tecla: dict[str, Any]) -> str:
+    """"Ligado, em pausa agora: …" — o ESTADO do teclado, e ele é do produto.
+
+    Chamada direta de `app/actions/emulation_actions.descrever_teclado_emulado`,
+    que é pura *"de propósito: é o miolo que decide o que ela vê"*. Ela devolve
+    `(posição, frase)`; a posição já está na lista "Função do teclado", e o que
+    faltava nesta tela era a FRASE.
+
+    O que ela responde e a lista sozinha não: a diferença entre *desligado por
+    você* e *ligado e calado agora porque um jogo assumiu*. Sem ela, com o
+    teclado suspenso pelo modo jogo, a tela continua dizendo "Só fora do jogo" —
+    verdade sobre a configuração, e não sobre o que está acontecendo.
+
+    Sem o bloco a frase é a de "não sei" da própria GTK, e é a coisa certa a
+    dizer: `TECLADO_SEM_ESTADO` fala do Hefesto, não do teclado.
+    """
+    from hefesto_dualsense4unix.app.actions.emulation_actions import (
+        descrever_teclado_emulado,
+    )
+
+    _posicao, frase = descrever_teclado_emulado(tecla or None)
+    return f'<span class="laranja">{frase}</span>' if frase else NADA_A_DIZER
+
+
+def _o_teclado_na_tela_em_uma_linha(tecla: dict[str, Any]) -> str:
+    """"Neste computador: o teclado na tela está instalado — o L3 abre."
+
+    Chamada direta de `app/actions/input_actions.frase_do_teclado_na_tela`, que
+    já é TRI-ESTADO: `None` devolve `""` — não afirma sobre uma máquina que
+    ninguém olhou. É a frase que decide se existe ALGUM caminho para escrever
+    texto com o controle, porque nenhum atalho de fábrica digita letra.
+
+    A dica desta aba manda abrir o teclado na tela com o L3 e nunca disse se há
+    um instalado; numa máquina sem `wvkbd-mobintl`/`onboard` a tela prometia o
+    que não entrega, e a GTK avisava.
+    """
+    from hefesto_dualsense4unix.app.actions.input_actions import (
+        frase_do_teclado_na_tela,
+    )
+
+    bruto = (tecla or {}).get("osk_disponivel")
+    return frase_do_teclado_na_tela(
+        bruto if isinstance(bruto, bool) else None) or NADA_A_DIZER
 
 
 def _nome_do_botao(botao: str) -> str:
@@ -776,13 +884,29 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # segundo que a tela mostra.
         "vel-cursor": rato.get("speed"),
         "vel-rolagem": rato.get("scroll_speed"),
-        "rato-ligado": bool(rato.get("enabled")),
-        "rato-bloqueio": rato.get("bloqueio") or "",
         "rato-despachando": bool(rato.get("despachando")),
-        "teclado-osk": bool(tecla.get("osk_disponivel")),
         "gestos": len(atalhos),
         "gestos-lista": {k: v for k, v in list(atalhos.items())[:12]},
     }
+    # O "STATUS DO MODO" SÓ FALA QUANDO O DAEMON FALOU — 03/09/2026, e é a mesma
+    # trava da lista "Função do teclado" logo abaixo. Sem o bloco
+    # `mouse_emulation` a chave não é emitida, o `—` do desenho fica, e a tela
+    # não afirma lado nenhum. Emitir `Desligado` porque ninguém respondeu
+    # trocaria a mentira antiga ("Ligado" sempre) por outra.
+    #
+    # A PALAVRA SERVE AOS DOIS ELEMENTOS: o `.txt` a escreve como texto, e o
+    # rótulo acende a classe `ligado` quando ela casa com o `data-hef-quando`.
+    # É a mesma semântica dos quatro degraus da Vibração — um `data-campo`, cada
+    # elemento decidindo por si.
+    if isinstance(rato.get("enabled"), bool):
+        mesa["rato-ligado"] = LIGADO if rato["enabled"] else DESLIGADO
+    # AS TRÊS LINHAS DE ESTADO, e as três frases são do PRODUTO. Elas respondem
+    # o que esta aba calava e a GTK responde: *por que o cursor não anda*, *o
+    # teclado está ligado e calado agora?* e *há teclado na tela nesta máquina?*
+    # Vazias quando não há o que dizer — o `:empty` do desenho as apaga.
+    mesa["rato-estado"] = _o_mouse_virtual_em_uma_linha(rato)
+    mesa["teclado-bloqueio"] = _o_teclado_em_uma_linha(tecla)
+    mesa["teclado-osk"] = _o_teclado_na_tela_em_uma_linha(tecla)
     # AS VINTE E UMA LINHAS DE *O QUE CADA BOTÃO FAZ*, do perfil dela — e elas
     # não existiam aqui até 02/09/2026. O botão "Guardar" LIA essas linhas
     # (`data-hef-forma`) e nada as ESCREVIA, então a tela mostrava para sempre o
@@ -850,11 +974,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 # e `keyboard.emulation.set` valem para a MÁQUINA.
 #
 # DE ONDE VEM O NÚMERO QUE O GESTO SOMA: do `ctx`, que é o estado do ÚLTIMO
-# TIQUE (500 ms, `hefesto_vivo.TIQUE_MS`). Dois cliques dentro do mesmo tique
-# leem o mesmo `atual` e mandam o mesmo alvo — o segundo não anda. Ler o daemon
-# a cada clique custaria um `daemon.state_full` por clique (57 ms medidos, e
-# HARM-15 já registra que ele passa dos 0,25 s sob carga), e ainda assim a tela
-# só repinta no tique. Fica declarado aqui porque é o que alguém vai medir.
+# TIQUE (500 ms, `hefesto_vivo.TIQUE_MS`). Ler o daemon a cada clique custaria um
+# `daemon.state_full` por clique (57 ms medidos, e HARM-15 já registra que ele
+# passa dos 0,25 s sob carga), e ainda assim a tela só repinta no tique.
+#
+# O SEGUNDO CLIQUE DENTRO DO MESMO TIQUE PARAVA DE ANDAR — CURADO em 03/09/2026.
+# Dois cliques em menos de 500 ms liam o mesmo `atual` e mandavam o mesmo alvo:
+# o segundo não movia nada, e era o defeito que quem clica rápido no `+` sente
+# primeiro. A cura é `_de_onde_partir`, e ela é do tamanho do problema — a
+# memória do último alvo pedido, largada assim que o daemon fala.
 # ---------------------------------------------------------------------------
 from hefesto_dualsense4unix.app.actions.mode_transition import (  # noqa: E402
     MODE_DESKTOP,
@@ -863,6 +991,10 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (  # noqa: E402
 from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
     DEFAULT_MOUSE_SPEED,
     DEFAULT_SCROLL_SPEED,
+    MOUSE_SPEED_MAX,
+    MOUSE_SPEED_MIN,
+    SCROLL_SPEED_MAX,
+    SCROLL_SPEED_MIN,
 )
 
 from . import gesto  # noqa: E402
@@ -903,18 +1035,124 @@ def _passo(o: dict[str, Any]) -> int:
     raise ValueError(f"velocidade: o clique não disse a direção (veio {nome!r})")
 
 
-def _mandar(p: Any, **params: Any) -> None:
-    """`mouse.emulation.set`, e RECLAMA quando ninguém respondeu.
+def _recusa_do_mouse(resposta: Any) -> str:
+    """A frase da recusa, TRADUZIDA — ou `""` quando o daemon aceitou.
 
-    `p.chamar` devolve `False` só em falha de TRANSPORTE — o `_safe_call`
-    (`app/ipc_bridge.py:103`) não olha o corpo. Um `{"status": "failed",
-    "bloqueio": "sem_device"}` volta como `True` daqui, e o gesto **não tem como
-    saber**: a ponte não expõe o `_call_checked_detalhado`, que é o único que
-    entrega o corpo. Está no relato como achado; enquanto isso, o que dá para
-    dizer com verdade é "ninguém respondeu", e é o que se diz.
+    A tradução é do produto: `app/actions/mouse_actions.frase_da_recusa_do_mouse`
+    lê o `bloqueio` do corpo e cobre cinco motivos, com fallback honesto para
+    motivo novo e para recusa sem motivo. Ela existe desde 25/08 e nunca tinha
+    sido chamada por esta aba.
+
+    FATO SUBSTITUÍDO — 03/09/2026. Aqui estava escrito que *"a ponte não expõe o
+    `_call_checked_detalhado`, que é o único que entrega o corpo"*, e por isso
+    um `{"status": "failed", "bloqueio": "sem_device"}` voltava como sucesso e a
+    tela dela ficava sem uma palavra. A ponte entrega o corpo desde 01/09:
+    `ponte.resultado` (`interface/pacotes/ponte.py:152`) devolve o `result` do
+    daemon e levanta quando ninguém responde. Era um caminho que já existia e
+    esta aba não chamava.
+
+    `status` AUSENTE conta como aceito: o `set_mouse_speed` responde
+    `{"status": "ok", "enabled": …}` e nenhum outro campo, e tratar a ausência
+    como recusa faria toda troca de velocidade acusar um "não" que não houve.
     """
-    if not p.chamar("mouse.emulation.set", **params):
-        raise RuntimeError("o Hefesto não respondeu — a velocidade não mudou")
+    from hefesto_dualsense4unix.app.actions.mouse_actions import (
+        frase_da_recusa_do_mouse,
+    )
+
+    if not isinstance(resposta, dict) or resposta.get("status") != "failed":
+        return ""
+    return frase_da_recusa_do_mouse(resposta)
+
+
+def _recusa_do_teclado(resposta: Any) -> str:
+    """O motivo de o teclado não ter ligado, do bloco que o próprio daemon devolve.
+
+    `keyboard.emulation.set` responde com o bloco `keyboard_emulation` inteiro —
+    *"para a janela não precisar de uma segunda chamada só para saber se o
+    device subiu"* (`daemon/ipc_handlers.py:5279`). Quem o traduz é
+    `emulation_actions.descrever_teclado_emulado`, o mesmo dono da linha de
+    estado desta aba.
+
+    Sem bloco e sem frase, o que sobra de verdadeiro é que ele recusou — e é o
+    que se diz, em vez de inventar um motivo. A frase de "não sei" da GTK
+    (`TECLADO_SEM_ESTADO`, *"o Hefesto pode estar desligado"*) NÃO serve aqui e
+    é por isso que o bloco é conferido antes: o Hefesto respondeu, ele é que
+    disse não.
+    """
+    from hefesto_dualsense4unix.app.actions.emulation_actions import (
+        descrever_teclado_emulado,
+    )
+
+    bloco = resposta.get("keyboard_emulation") if isinstance(resposta, dict) else None
+    if isinstance(bloco, dict) and isinstance(bloco.get("enabled"), bool):
+        _posicao, frase = descrever_teclado_emulado(bloco)
+        if frase:
+            return frase
+    return "o Hefesto recusou e não disse por quê"
+
+
+#: O QUE ESTA ABA JÁ PEDIU E O DAEMON AINDA NÃO CONFIRMOU, por parâmetro:
+#: `{"speed": (o número que o tique mostrava, o alvo pedido, o passo)}`.
+#:
+#: Ele existe por UM defeito medido, e some sozinho: o `ctx` é o estado do
+#: último tique (500 ms), então dois cliques dentro do mesmo tique partiam do
+#: MESMO número e pediam o MESMO alvo — o segundo clique não andava. Ver
+#: `_de_onde_partir`.
+_PEDIDO: dict[str, tuple[int, int, int]] = {}
+
+
+def _de_onde_partir(chave: str, atual: int, passo: int,
+                    minimo: int, maximo: int) -> int:
+    """O alvo do clique — partindo do que já se pediu quando o tique não chegou.
+
+    DUAS CONDIÇÕES, e as duas desligam a memória sozinhas:
+
+    1. **o daemon ainda diz o mesmo número.** Se ele já publica outro — porque
+       aplicou, porque aparou, ou porque ela mexeu pela janela GTK —, a memória
+       é largada e a partida volta a ser ele. Não há caminho em que ela
+       sobreviva a uma discordância;
+    2. **o clique vai para o mesmo lado.** Dois `+` seguidos somam de verdade;
+       um `+` seguido de um `-` parte do DAEMON, não do alvo pendente. A razão é
+       que os dois gestos querem coisas diferentes: repetir é *ande mais*, e
+       inverter dentro de meio segundo é ambíguo — a leitura conservadora é a de
+       sempre, e é a que o `PROVAS` desta aba já cobrava.
+
+    A FAIXA VEM DO DONO, e isto NÃO é a "segunda verdade" que o docstring de
+    `vel_cursor` proíbe: `MOUSE_SPEED_MIN`/`MAX` são LIDOS de
+    `integrations/uinput_mouse.py:78`, o mesmo módulo que o `set_speed` usa para
+    aparar. Digitar `1..12` aqui seria a segunda verdade; importá-la é ler a
+    primeira. E ela é necessária: sem apará-la, a memória guardaria um `13` que
+    o daemon vira `12`, e o `+` seguinte partiria de `13` — o clique ficaria
+    preso no teto, que é um defeito PIOR que o que esta função cura.
+
+    O daemon continua aparando: esta função não decide nada sozinha, só evita
+    guardar um número que ele nunca vai confirmar.
+    """
+    pendente = _PEDIDO.get(chave)
+    partida = atual
+    if pendente is not None and pendente[0] == atual and pendente[2] == passo:
+        partida = pendente[1]
+    novo = max(minimo, min(maximo, partida + passo))
+    _PEDIDO[chave] = (atual, novo, passo)
+    return novo
+
+
+def _mandar(p: Any, **params: Any) -> None:
+    """`mouse.emulation.set`, e diz POR QUE quando o daemon recusa.
+
+    `p.chamar` devolve `bool` e joga fora o corpo — é ele que trazia a recusa de
+    volta como sucesso. `p.resultado` traz o corpo e levanta quando ninguém
+    responde, que são exatamente os dois desfechos que esta função precisa
+    separar: *o Hefesto não falou* e *o Hefesto disse não, por isto*.
+    """
+    try:
+        resposta = p.resultado("mouse.emulation.set", **params)
+    except RuntimeError as erro:
+        raise RuntimeError(
+            "o Hefesto não respondeu — a velocidade não mudou") from erro
+    recusa = _recusa_do_mouse(resposta)
+    if recusa:
+        raise RuntimeError(recusa)
 
 
 @gesto("06-navegacao.html", "modo")
@@ -966,10 +1204,27 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "troca na aba Jogar.")
 
     novo = not bool(_rato(ctx).get("enabled"))
-    if not p.chamar("mouse.emulation.set", enabled=novo, origin=MANUAL):
-        raise RuntimeError("o Hefesto não respondeu — o mouse ficou como estava")
-    if not p.chamar("keyboard.emulation.set", enabled=novo):
-        raise RuntimeError("o mouse mudou e o teclado não — o Hefesto não respondeu")
+    try:
+        resposta = p.resultado("mouse.emulation.set", enabled=novo, origin=MANUAL)
+    except RuntimeError as erro:
+        raise RuntimeError(
+            "o Hefesto não respondeu — o mouse ficou como estava") from erro
+    # O MOTIVO DA RECUSA CHEGA À TELA — 03/09/2026. Este `if` não existia: o
+    # `chamar` devolvia `True` para um `{"status": "failed", "bloqueio":
+    # "sem_device"}` e o gesto seguia adiante, mandando ligar o teclado como se
+    # o mouse tivesse ligado. Agora ele PARA e diz o motivo, com a tabela do
+    # produto — e o interruptor da tela não mente, porque desde hoje é o daemon
+    # quem o acende (ver `pacote()`).
+    recusa = _recusa_do_mouse(resposta)
+    if recusa:
+        raise RuntimeError(recusa)
+    try:
+        resposta = p.resultado("keyboard.emulation.set", enabled=novo)
+    except RuntimeError as erro:
+        raise RuntimeError(
+            "o mouse mudou e o teclado não — o Hefesto não respondeu") from erro
+    if isinstance(resposta, dict) and resposta.get("status") == "failed":
+        raise RuntimeError(f"o mouse mudou e o teclado não: {_recusa_do_teclado(resposta)}")
 
 
 #: O QUE CADA OPÇÃO DA LISTA MANDA FAZER. A chave é a palavra que DISTINGUE uma
@@ -987,24 +1242,14 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 _ESCOLHA_DELA: dict[str, bool | None] = {
     "fora": True, "desativado": False, "dentro": None}
 
-#: AS PALAVRAS DA PÁGINA QUE O PRODUTO RENDERIZA HOJE — 02/09/2026, corretivo.
+#: OS SINÔNIMOS DA TRAVESSIA SAÍRAM — 03/09/2026, e foi a régua que mandou.
 #:
-#: Publicar é ato dela, e até lá o `<select>` que ela clica oferece `Ligada —
-#: atalhos e teclado na tela` · `Só fora do jogo` · `Desligada`. Sem estas duas
-#: entradas, DUAS das três opções da tela dela viravam clique morto: `ligada` e
-#: `desligada` não estão em `_ESCOLHA_DELA`, o gesto levantava `ValueError`
-#: (clique-inválido) e a frase de um `ValueError` não chega ao cartão dela —
-#: `hefesto_vivo._recusou_dizendo` leva só a do `RuntimeError`. A opção que
-#: sumia era a única forma de DESLIGAR o teclado por esta aba.
-#:
-#: ELAS NÃO SÃO SEGUNDA VERDADE: são o mesmo bit, dito pelo desenho de ontem.
-#: O sentido de cada uma foi conferido no HTML publicado, e não deduzido do
-#: nome. E elas TÊM PRAZO — `test_a_06_a_funcao_do_teclado_tem_tres.py` exige
-#: que cada sinônimo ainda exista na página publicada, então no dia em que ela
-#: publicar a régua manda apagá-los.
-SINONIMOS_ATE_A_PUBLICACAO: dict[str, bool] = {"ligada": True, "desligada": False}
-
-_ESCOLHA: dict[str, bool | None] = {**_ESCOLHA_DELA, **SINONIMOS_ATE_A_PUBLICACAO}
+#: Enquanto a bancada tinha as três palavras dela e a página publicada tinha as
+#: antigas, este mapa acrescentava `ligada`/`desligada` ao `_ESCOLHA_DELA` para
+#: as opções da tela DELA continuarem clicáveis. A 06 foi publicada, o
+#: `test_os_sinonimos_da_travessia_tem_prazo` ficou vermelho nomeando o que
+#: apagar, e é isto: `_ESCOLHA` volta a ser a decisão dela, sem tradução.
+_ESCOLHA: dict[str, bool | None] = _ESCOLHA_DELA
 
 
 @gesto("06-navegacao.html", "teclado")
@@ -1076,11 +1321,16 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     interface repassar isso). O piloto não tem canal de aviso — um gesto só
     imprime no terminal —, então o recado não tem onde aparecer.
 
-    ELE ENTENDE AS CINCO PALAVRAS, E NÃO AS TRÊS — 02/09/2026, corretivo. As
-    três são a decisão dela, na bancada; as outras duas são o desenho que a
-    tela dela renderiza ATÉ A PUBLICAÇÃO (`SINONIMOS_ATE_A_PUBLICACAO`).
-    Aceitar só as três transformou duas das três opções da tela em clique
-    morto — o defeito mais caro desta casa, e agravado por ser calado.
+    ELE ENTENDE AS TRÊS PALAVRAS DELA, E VOLTOU A ENTENDER SÓ ELAS — 03/09/2026.
+    Entre 02/09 e a publicação foram CINCO: as três da bancada mais os dois
+    rótulos que a página publicada ainda oferecia, porque aceitar só as três
+    transformou duas das três opções da tela dela em clique morto — e calado, por
+    contrato. A 06 foi publicada, os dois rótulos velhos não existem mais em
+    `<option>` nenhuma, e a régua da travessia mandou apagar os sinônimos.
+
+    E DIZ POR QUE NÃO DEU, desde o mesmo dia: a chamada passou a ser
+    `p.resultado`, que traz o corpo — o `p.chamar` devolvia `True` para um
+    `{"status": "failed"}` e a lista voltava sozinha sem uma palavra.
     """
     escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
     palavras = {x.strip(".,;:—-").lower() for x in escolhido.split()}
@@ -1100,8 +1350,17 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"{TECLADO_SO_FORA}”. Um teclado que valha SÓ dentro do jogo pede um "
             "campo novo no perfil — o portão com o sinal trocado —, e ele ainda "
             "não existe. A lista volta sozinha para o que está valendo.")
-    if not p.chamar("keyboard.emulation.set", enabled=ligar):
-        raise RuntimeError("o Hefesto não respondeu — o teclado ficou como estava")
+    try:
+        resposta = p.resultado("keyboard.emulation.set", enabled=ligar)
+    except RuntimeError as erro:
+        raise RuntimeError(
+            "o Hefesto não respondeu — o teclado ficou como estava") from erro
+    # O MOTIVO CHEGA À TELA — 03/09/2026. O `chamar` devolvia `True` para um
+    # `{"status": "failed"}` e a lista voltava sozinha no tique seguinte, sem
+    # uma palavra: ela lia "não pegou" e não sabia por quê.
+    if isinstance(resposta, dict) and resposta.get("status") == "failed":
+        raise RuntimeError(
+            f"o teclado ficou como estava: {_recusa_do_teclado(resposta)}")
 
 
 @gesto("06-navegacao.html", "vel-cursor-mais")
@@ -1117,20 +1376,21 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     BUG-MOUSE-GUI-SYNC-01 (A4) fechou. O `_send_mouse_param_async` da GUI
     estável (`app/actions/mouse_actions.py:559`) manda exatamente este payload.
 
-    NÃO SE APARA O NÚMERO AQUI. O teto e o piso têm dono e é o daemon:
-    A faixa tem dono desde 01/09/2026 —
-    `MOUSE_SPEED_MIN`/`MAX` em `integrations/uinput_mouse.py:78`, lidos
-    pelo `set_speed` (`integrations/uinput_mouse.py:279`). Repetir
-    `1..12` neste arquivo seria a segunda verdade que esta casa persegue — e ela
-    envelheceria calada no dia em que a faixa mudasse. Um `13` chega, vira 12, e
-    o tique seguinte repinta 12 na tela.
+    O NÚMERO NÃO É DIGITADO AQUI. A faixa tem dono desde 01/09/2026 —
+    `MOUSE_SPEED_MIN`/`MAX` em `integrations/uinput_mouse.py:78`, lidos pelo
+    `set_speed` (`:279`) — e é ele que a `_de_onde_partir` IMPORTA. Digitar
+    `1..12` neste arquivo seria a segunda verdade que esta casa persegue; ler a
+    constante do dono é o contrário disso. O daemon continua aparando: nada aqui
+    decide sozinho.
 
     O CHÃO É O DO PRODUTO: sem `speed` no estado (daemon sem responder ainda), o
     passo parte de `DEFAULT_MOUSE_SPEED`, que é o mesmo 6 que o desenho mostra.
     """
     atual = _rato(ctx).get("speed")
     atual = DEFAULT_MOUSE_SPEED if atual is None else int(atual)
-    _mandar(p, speed=atual + _passo(o), origin=MANUAL)
+    alvo = _de_onde_partir("speed", atual, _passo(o),
+                           MOUSE_SPEED_MIN, MOUSE_SPEED_MAX)
+    _mandar(p, speed=alvo, origin=MANUAL)
 
 
 @gesto("06-navegacao.html", "rolagem-mais")
@@ -1148,7 +1408,9 @@ def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     atual = _rato(ctx).get("scroll_speed")
     atual = DEFAULT_SCROLL_SPEED if atual is None else int(atual)
-    _mandar(p, scroll_speed=atual + _passo(o), origin=MANUAL)
+    alvo = _de_onde_partir("scroll_speed", atual, _passo(o),
+                           SCROLL_SPEED_MIN, SCROLL_SPEED_MAX)
+    _mandar(p, scroll_speed=alvo, origin=MANUAL)
 
 
 @gesto("06-navegacao.html", "linha-de-botao")
@@ -1770,22 +2032,31 @@ def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any
 #: do produto: 6 no cursor e 1 na rolagem. É de propósito — é o mesmo chão que a
 #: tela mostra enquanto o daemon ainda não falou.
 #:
-#: O `rolagem-menos` manda `0`, e não `1`: a faixa tem UM dono e é o daemon
-#: (`max(1, min(5, …))`, `daemon/lifecycle.py:1431`). Apará-la aqui seria a
-#: segunda verdade, e é ela que envelhece calada no dia em que a faixa mudar.
+#: DECISÃO REVISTA — 03/09/2026. Aqui estava escrito que o `rolagem-menos` manda
+#: `0` e não `1`, *"a faixa tem UM dono e é o daemon; apará-la aqui seria a
+#: segunda verdade"*. O princípio continua valendo e o número mudou por uma
+#: razão medida: com a memória do último alvo (`_de_onde_partir`), guardar um
+#: `0` que o daemon vira `1` deixaria o clique preso no piso — o `+` seguinte
+#: partiria de `0` e pediria `1`, que é onde já se está. A faixa continua com um
+#: dono só: `SCROLL_SPEED_MIN`/`MAX` são IMPORTADOS de
+#: `integrations/uinput_mouse.py:79`, não digitados, e o daemon continua
+#: aparando. Ler a constante do dono é o contrário de escrever a segunda verdade.
+#:
+#: AS CHAMADAS VIRARAM `resultado` — mesmo dia, e é o que faz a recusa do daemon
+#: chegar à tela: `chamar` devolve `bool` e joga fora o corpo com o `bloqueio`.
 _MOUSE = "mouse.emulation.set"
 PROVAS = [
     _prova("modo", {},
-           [("chamar", [_MOUSE], {"enabled": True, "origin": "manual"}),
-            ("chamar", ["keyboard.emulation.set"], {"enabled": True})]),
+           [("resultado", [_MOUSE], {"enabled": True, "origin": "manual"}),
+            ("resultado", ["keyboard.emulation.set"], {"enabled": True})]),
     _prova("vel-cursor-mais", {"gesto": "vel-cursor-mais"},
-           [("chamar", [_MOUSE], {"speed": 7, "origin": "manual"})]),
+           [("resultado", [_MOUSE], {"speed": 7, "origin": "manual"})]),
     _prova("vel-cursor-menos", {"gesto": "vel-cursor-menos"},
-           [("chamar", [_MOUSE], {"speed": 5, "origin": "manual"})]),
+           [("resultado", [_MOUSE], {"speed": 5, "origin": "manual"})]),
     _prova("rolagem-mais", {"gesto": "rolagem-mais"},
-           [("chamar", [_MOUSE], {"scroll_speed": 2, "origin": "manual"})]),
+           [("resultado", [_MOUSE], {"scroll_speed": 2, "origin": "manual"})]),
     _prova("rolagem-menos", {"gesto": "rolagem-menos"},
-           [("chamar", [_MOUSE], {"scroll_speed": 0, "origin": "manual"})]),
+           [("resultado", [_MOUSE], {"scroll_speed": 1, "origin": "manual"})]),
     # AS DUAS PONTAS DA LISTA DO TECLADO, e as duas provam a mesma coisa por
     # lados opostos: que o `valor` do `<select>` decide o bool. O `clique` traz
     # `valor` porque é ele que o piloto manda desde 01/09 — `texto`, num
@@ -1796,7 +2067,7 @@ PROVAS = [
     # chamada, e o certo para "Só dentro do jogo" é NÃO chamar nada. Ela é
     # provada pela mordida, no relato, e pelo teste da recusa.
     _prova("teclado", {"valor": TECLADO_SO_FORA},
-           [("chamar", ["keyboard.emulation.set"], {"enabled": True})]),
+           [("resultado", ["keyboard.emulation.set"], {"enabled": True})]),
     _prova("teclado", {"valor": TECLADO_DESATIVADO},
-           [("chamar", ["keyboard.emulation.set"], {"enabled": False})]),
+           [("resultado", ["keyboard.emulation.set"], {"enabled": False})]),
 ]

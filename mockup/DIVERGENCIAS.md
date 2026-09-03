@@ -21,4 +21,35 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 06-navegacao.html
+- **03/09/2026** — a aba ganhou **as três leituras vivas que a GTK tem e ela
+  não**, e todas as frases são do produto (nada foi escrito aqui):
+  - o **"Status do Modo"** perdeu o `<input type="checkbox" checked>` e a
+    palavra de `content:` de CSS. Ele nasce em `—` e passa a ser pintado pelo
+    daemon (classe `ligado` + nó de texto). **Era a maior mentira desta aba:**
+    a tela dizia *Ligado* com `mouse_emulation.enabled=false`, e clicar virava
+    a caixa no DOM mesmo quando o gesto RECUSAVA;
+  - **três linhas de estado** sob as opções de ativação, na mesma fileira: *por
+    que o cursor não anda* (`mouse_actions`), *o teclado está ligado e calado?*
+    (`emulation_actions.descrever_teclado_emulado`) e *há teclado na tela nesta
+    máquina?* (`input_actions.frase_do_teclado_na_tela`). A dica do quadro
+    Navegação já citava "a linha de estado abaixo" desde 27/08, para uma linha
+    que não existia. Cada uma some quando não há o que dizer.
+
+  **O que ela vê de diferente depois de publicar:** o interruptor pode passar a
+  dizer *Desligado* (é o que o Hefesto dela responder), e nascem uma ou duas
+  frases curtas entre as opções de ativação e a fileira dos botões. Nada mais
+  mudou de lugar — medido na foto: a fileira dos botões continua dentro da
+  janela.
+
+  **O QUE O PRODUTO FAZ ATÉ ELA PUBLICAR, e é nada — de propósito:** a página
+  que o `WebView` renderiza hoje não tem os quatro endereços novos, e o
+  `escrever()` do piloto não acha elemento nenhum para eles. Logo **a tela dela
+  hoje continua exatamente como estava**, inclusive dizendo *Ligado* sempre —
+  a mentira só morre na publicação. Nenhum clique muda de comportamento por
+  causa disso: o desenho velho não tem `data-campo` novo, e valor emitido sem
+  destino é descartado sem erro. **O que JÁ chega a ela sem publicar** são as
+  duas curas que vivem só no Python: a recusa do daemon passa a dizer o motivo
+  no cartão (antes voltava como sucesso), e o segundo clique no `−`/`+` das
+  velocidades dentro do mesmo tique passa a andar.
+
