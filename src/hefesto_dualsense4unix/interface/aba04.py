@@ -324,6 +324,85 @@ CSS = """
      linhas continuarem legíveis como linhas. */
   .luz-grade .ctrl.vazia > *{display:flex;align-items:center;justify-content:center}
   .luz-grade .ctrl.vazia .moldura{display:block}
+
+  /* ---------- O LUGAR QUE ESVAZIA NA FRENTE DELA ---------- */
+  /* `.vazia` é o lugar que NASCE sem controle; `.off` é o mesmo lugar depois que
+     o controle SAIU — quem escreve a classe é `pacotes.apagar_os_lugares_sem_dono`.
+     São o mesmo fato, e até 03/09/2026 tinham duas leituras: esta folha não
+     tinha UMA regra `.off`, medido (zero ocorrências de `.off` em
+     `04-iluminacao.html`, contra 11 na Jogar e 10 na Controles).
+
+     O QUE ELA VIA, com UM controle no cabo e a régua do produto instalado: a
+     coluna do P2 com a moldura ainda no plástico do MOCKUP (medido:
+     `borderColor rgb(126,184,212)` = Starlight Blue, contra `rgb(68,71,90)` na
+     coluna vazia), os oito tons na mesma saturação da coluna viva
+     (`rgb(126,184,212)`, `cursor:pointer`), a barra de brilho CHEIA
+     (`width:100%`) ao lado de um "—", e "Automático"/"Desligar" acesos. A régua
+     do mockup chama os dois últimos pelo nome: `p2·plastico` e `p2·brilho-pct`,
+     **ENDEREÇO MORTO** — o travessão que o molde escreve é recusado pelo CSSOM
+     em `color:` e em `width:`, e o valor do desenho fica na tela para sempre.
+
+     E OS BOTÕES ACEITAVAM O CLIQUE. Os dez endereços dessa coluna levantam
+     `ValueError: … o clique não disse em qual controle`, e
+     `hefesto_vivo._recusou_dizendo` só leva `RuntimeError` à tela: dez botões
+     que engoliam o toque sem uma letra. Escondê-los é o que fecha isso — o que
+     não existe não pode aceitar clique, e não precisa de frase nova.
+
+     `!important` NÃO É ÊNFASE: a cor do plástico e a largura da barra são
+     `style=` INLINE, escritos pelo gerador, e regra externa não os vence sem
+     isto — a mesma razão pela qual o bloco `.vazia` acima já o usa no SVG. */
+  .luz-grade .ctrl.off .moldura{color:var(--linha) !important;
+                                border-color:var(--border-forte) !important}
+  .luz-grade .ctrl.off .ctrl-rot{color:var(--linha)}
+  .luz-grade .ctrl.off .ds-svg .peca,
+  .luz-grade .ctrl.off .ds-svg .corpo,
+  .luz-grade .ctrl.off .ds-svg .miolo *{fill:var(--linha) !important}
+  .luz-grade .ctrl.off .ds-svg .corpo{stroke:var(--border-forte) !important}
+  .luz-grade .ctrl.off .ds-svg text{fill:var(--linha) !important}
+  .luz-grade .ctrl.off .ds-svg line{stroke:var(--linha) !important}
+  .luz-grade .ctrl.off .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+                                                           stroke:var(--linha) !important}
+  .luz-grade .ctrl.off .ds-svg rect:not([fill="none"]),
+  .luz-grade .ctrl.off .ds-svg circle:not([fill="none"]),
+  .luz-grade .ctrl.off .ds-svg polygon:not([fill="none"]),
+  .luz-grade .ctrl.off .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  .luz-grade .ctrl.off .ds-svg rect,
+  .luz-grade .ctrl.off .ds-svg circle,
+  .luz-grade .ctrl.off .ds-svg polygon,
+  .luz-grade .ctrl.off .ds-svg ellipse{stroke:var(--border-forte) !important}
+  /* OS WIDGETS SAEM, E O TRAVESSÃO FICA. Seis das sete células já têm o "—"
+     escrito pelo molde; o que sobrava ao lado dele era o widget da coluna VIVA.
+     Sem a guia e sem o trilho, `.cel-cor` e `.cel-brilho` passam a ler o que a
+     coluna vazia lê: um traço, e nada mais. */
+  .luz-grade .ctrl.off .guia,
+  .luz-grade .ctrl.off .trilho,
+  .luz-grade .ctrl.off .cel-acoes .btn{display:none}
+  /* A SÉTIMA CÉLULA É A ÚNICA QUE PRECISA DO TRAVESSÃO DE VOLTA — ver o
+     `<span class="nada">` que o gerador emite em `cel-acoes`. Ele nasce
+     escondido na coluna viva, para não pôr um traço debaixo de dois botões.
+     `:not(.vazia)` NÃO É ZELO: sem ele esta regra apaga o travessão que a
+     coluna NASCIDA vazia já tinha, e o P3/P4 perdem a linha "Opções". Foi o
+     que a primeira foto desta cura mostrou — a régua sou eu olhando, e ela
+     pegou a regressão que eu mesmo tinha acabado de escrever. */
+  .luz-grade .ctrl:not(.vazia):not(.off) .cel-acoes .nada{display:none}
+  .luz-grade .ctrl.off .cel-acoes .nada{display:flex;align-items:center;
+                                        justify-content:center;color:var(--linha)}
+  .luz-grade .ctrl.off .cel-cor,
+  .luz-grade .ctrl.off .cel-brilho,
+  .luz-grade .ctrl.off .cel-acoes{justify-content:center;color:var(--linha)}
+  /* O TRAVESSÃO DESTAS DUAS CÉLULAS NÃO É O `.nada` — é o `.hex` e o `.num`, os
+     mesmos elementos que mostram `#0000FF` e `100%` na coluna viva, com o traço
+     que o molde escreveu dentro. Eles trazem a fonte e a cor do DADO, e sem
+     esta regra os três lugares vazios da mesa mostravam o mesmo caractere em
+     duas tintas: medido, `rgb(248,248,242)` em JetBrains Mono na coluna que
+     esvaziou contra `rgb(83,87,111)` em Space Grotesk nas que nasceram vazias.
+     Branco é a cor do dado nesta aba — um traço branco lê-se como valor.
+     O `flex`/`text-align` do `.num` também caem: com o trilho escondido, um
+     traço encostado à direita de uma caixa de 38px não fica onde os outros
+     dois ficam. */
+  .luz-grade .ctrl.off .cel-cor .hex,
+  .luz-grade .ctrl.off .cel-brilho .num{font-family:inherit;color:var(--linha);
+                                        flex:1;text-align:center}
   /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
@@ -540,7 +619,20 @@ CSS = """
     cursor:pointer;font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
   }
   .players button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg)}
-  .players button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
+  .players button:hover:not(.on):not(.fora){border-color:var(--comment);color:var(--texto-suave)}
+  /* O NÚMERO QUE O PRODUTO RECUSARIA — 03/09/2026, medido com UM controle no
+     cabo. Os botões 2, 3 e 4 eram pixel a pixel iguais ao 1 e a dica dizia
+     "livre"; clicar devolvia *"Esse número é maior do que a quantidade de
+     controles ligados"*. A conta e a frase moram em
+     `a04_iluminacao.um_botao_de_player`; aqui fica só o que os olhos leem.
+     AS CORES SÃO AS QUE A COLUNA VAZIA JÁ USA (`--linha`, `--border-forte`) —
+     "não há controle para isto" já tem um cinza nesta aba, e um segundo cinza
+     seria um segundo vocabulário para o mesmo fato.
+     O CURSOR CAI PARA `default` porque `pointer` é uma promessa: ele diz "isto
+     responde ao clique" antes de qualquer dica ser lida. O botão CONTINUA
+     clicável de propósito — quem insistir ouve a recusa em vez de nada. */
+  .players button.fora{border-color:var(--border-forte);color:var(--linha);
+                       cursor:default}
   /* O ANEL É O DONO DO NÚMERO, na cor do plástico dele — e é ele que diz com
      QUEM a troca acontece. Ele é o mesmo em todas as colunas, porque o dono de
      um número é um só; o que muda de coluna para coluna é qual botão está `on`.
@@ -805,7 +897,7 @@ def coluna(c):
             <span class="num" data-campo="brilho">{b}%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
-{_pacote04.fileira_de_players(c["nome"], c["jogador"], DONOS_NA_MESA, "            ")}
+{_pacote04.fileira_de_players(c["nome"], c["jogador"], DONOS_NA_MESA, "            ", quantos=len(monta_.CONECTADOS))}
           </div>
           <div class="aceso" data-campo="luz" data-hef-alvo="html">
 {_pacote04.desenho_da_luz(tinta, b / 100, j, dica=_pacote04.dica_da_luz(c["nome"], c["via"], ""), recuo="            ")}
@@ -813,6 +905,15 @@ def coluna(c):
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
+            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido, e é o único das
+                 sete que precisava nascer: as outras seis têm `data-campo`, e o
+                 molde do lugar sem dono já escreve o traço nelas. Esta não tem —
+                 dois botões não são um valor —, então sem este `<span>` a
+                 coluna que ESVAZIA na frente dela ficaria com a linha "Opções"
+                 em branco, quando a coluna que nasce vazia mostra "—".
+                 É o MESMO `<span class="nada">` da `coluna_vazia`, e o mesmo
+                 caractere: um lugar sem controle tem uma leitura só. -->
+            <span class="nada">{VAZIO}</span>
           </div>
         </div>'''
 

@@ -210,16 +210,89 @@ def test_a_fileira_marca_o_numero_de_quem_e(colunas):
 
 
 def test_a_dica_nao_nomeia_controle_que_nao_esta_na_mesa(colunas):
-    """Número sem dono na mesa é número LIVRE.
+    """A dica não pode nomear quem não está na mesa.
 
     31/08/2026: o `title` dizia *"o Galactic Purple, que tem o 3 hoje"* com o
-    Galactic Purple desconectado. Com um controle só, os outros TRÊS números
-    ficam livres.
+    Galactic Purple desconectado.
+
+    FATO CORRIGIDO EM 03/09/2026: esta régua exigia `count("— livre.") == 3`
+    com UM controle na mesa, e era a régua que sustentava o defeito — com um
+    controle só, os números 2, 3 e 4 não estão livres, estão FORA DA MESA. Ver
+    `test_um_numero_acima_da_mesa_nao_se_diz_livre`, onde está a medição. O que
+    esta régua guarda continua sendo o dela: nenhum nome inventado.
     """
     fileira = colunas([DO_RADIO])[DO_RADIO["uniq"]]["players"]
-    assert fileira.count("— livre.") == 3, fileira
     assert "Starlight Blue" not in fileira, (
         "a dica nomeou um controle que não está na mesa.")
+    assert "— livre." not in fileira, (
+        "com UM controle na mesa nenhum outro número está livre — os três "
+        "seriam recusados pelo daemon.")
+
+
+def test_um_numero_acima_da_mesa_nao_se_diz_livre(colunas):
+    """O DEFEITO DE 03/09/2026, na forma em que foi clicado.
+
+    Medido no produto INSTALADO, com UM DualSense no cabo e o daemon vivo. Os
+    botões 2, 3 e 4 da fileira eram indistinguíveis do 1 — `disabled:false`,
+    `aria-disabled:null`, `cursor:pointer` — e a dica dizia **"Player 3 —
+    livre."**. O clique, medido::
+
+        [data-controle="p1"] [data-gesto="player"][data-player="3"]
+        desfecho: recusou dizendo RuntimeError: Esse número é maior do que a
+                  quantidade de controles ligados
+
+    *Livre* quer dizer disponível. A tela AFIRMAVA o contrário do que o produto
+    faria, e com um controle na mesa isso valia para TRÊS dos quatro botões.
+
+    A MORDIDA: troque `n > quantos` por `False` em `um_botao_de_player` e as
+    três linhas abaixo reprovam com a dica "— livre." de volta.
+    """
+    from pacotes import a04_iluminacao as pac
+
+    fileira = colunas([DO_RADIO])[DO_RADIO["uniq"]]["players"]
+    motivo = pac.fora_da_mesa()
+    for n in (2, 3, 4):
+        assert f'data-player="{n}" title="Player {n} — {motivo}."' in fileira, (
+            f"o botão {n} não diz por que o produto o recusaria: {fileira}")
+    assert fileira.count('class="fora" aria-disabled="true"') == 3, (
+        "os três botões fora da mesa têm de se LER apagados, e não só na dica: "
+        "até 03/09 eles eram pixel a pixel iguais ao número aceso.")
+    assert 'class="on" data-gesto="player" data-player="1"' in fileira, (
+        "o número DESTE controle continua aceso e clicável.")
+
+
+def test_com_a_mesa_cheia_nenhum_numero_fica_fora(colunas):
+    """A GUARDA da cura acima — sem ela, apagar botões seria a correção EXCESSIVA.
+
+    Com dois controles na mesa o número 2 é alcançável (é de alguém) e o 1
+    também; só o 3 e o 4 passam da conta. Uma cura que apagasse os quatro
+    tiraria dela a troca de números, que é o que esta aba existe para fazer.
+    """
+    from pacotes import a04_iluminacao as pac
+
+    fileira = colunas()[DO_RADIO["uniq"]]["players"]
+    assert 'data-player="2" title="Dar o Player 2' in fileira, (
+        "com DOIS na mesa o número 2 tem dono e a dica é a da troca.")
+    assert fileira.count("fora") == 2, (
+        f"só o 3 e o 4 passam de uma mesa de dois: {fileira}")
+    assert pac.fora_da_mesa() not in fileira.split('data-player="3"')[0], (
+        "os números 1 e 2 não podem carregar a frase da recusa.")
+
+
+def test_a_frase_da_recusa_tem_um_dono_so(colunas):
+    """A dica CITA o produto — não é uma segunda cópia de um texto de tela.
+
+    Texto de tela é dela. Duas cópias da mesma frase são duas frases que podem
+    divergir, e a de baixo é a que o `identity_number_set` já devolve quando
+    recusa. Se alguém digitar a frase à mão aqui, esta régua não acusa — mas
+    quem mudar a frase no `ipc_bridge` faz a dica mudar junto, que é o ponto.
+    """
+    from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
+    from pacotes import a04_iluminacao as pac
+
+    assert pac.fora_da_mesa() == _MOTIVOS_NUMERO["numero_fora_da_mesa"]
+    fileira = colunas([DO_RADIO])[DO_RADIO["uniq"]]["players"]
+    assert _MOTIVOS_NUMERO["numero_fora_da_mesa"] in fileira
 
 
 def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():
@@ -233,7 +306,7 @@ def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():
     from pacotes import a04_iluminacao as pac
 
     dono = {"nome": "Cosmic Red", "via": "USB", "cor": "cosmic-red"}
-    botao = pac.um_botao_de_player("Cosmic Red", 1, 1, dono)
+    botao = pac.um_botao_de_player("Cosmic Red", 1, 1, dono, quantos=2)
     assert botao.startswith('<button class="on" data-gesto="player" data-player="1"')
     # O `data-hef` do anel entrou em 03/09/2026 (IDENTIDADE-VEM-DE-CIMA-01): sem
     # ele a régua da identidade acusa o `--plastico` do `<i>`, porque ela julga
@@ -1095,3 +1168,58 @@ def test_o_automatico_nao_pinta_a_cor_se_o_claim_nao_foi_largado():
     assert [c[0] for c in p.chamadas] == ["chamar"], (
         f"o automático seguiu para a segunda chamada depois de a primeira "
         f"falhar: {p.chamadas!r}")
+
+
+# ---------------------------------------------------------------------------
+# 8. o lugar que ESVAZIA na frente dela — 03/09/2026
+# ---------------------------------------------------------------------------
+def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
+    """`.vazia` e `.off` são o mesmo fato, e tinham duas leituras.
+
+    `.vazia` é o lugar que NASCE sem controle; `.off` é o mesmo lugar depois que
+    o controle SAIU — quem escreve a classe é
+    `pacotes.apagar_os_lugares_sem_dono`. Medido em 03/09/2026 na página
+    publicada, com UM controle no cabo: esta folha não tinha **uma** regra
+    `.off` (zero ocorrências, contra 11 na Jogar e 10 na Controles), e a coluna
+    do P2 ficava meio apagada — que o próprio `pacotes/__init__.py` chama de
+    *"pior que aceso"*.
+
+    O QUE FOI MEDIDO NO WEBKIT VIVO, na coluna que esvaziou:
+
+        moldura   borderColor rgb(126,184,212)  ← Starlight Blue, do MOCKUP
+        os 8 tons backgroundColor rgb(126,184,212), cursor pointer
+        trilho    width 100% ao lado de um "—"
+        Desligar / Automático acesos, e os dez endereços daquela coluna
+                  levantam `ValueError`, que `_recusou_dizendo` NÃO leva à tela
+
+    A MORDIDA: apague o bloco `.ctrl.off` do `CSS` da `aba04.py`, regere, e as
+    quatro asserções abaixo reprovam.
+    """
+    import onde
+
+    doc = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    assert ".ctrl.off" in doc, (
+        "a folha desta aba voltou a não ter regra nenhuma para o lugar que "
+        "esvazia — era o estado do defeito de 03/09/2026.")
+    # O QUE OS OLHOS LEEM: a moldura perde a cor do plástico do mockup.
+    assert ".luz-grade .ctrl.off .moldura{color:var(--linha) !important" in doc, (
+        "sem `!important` a regra não vence o `style=` INLINE do gerador, e a "
+        "coluna vazia continua com a cor de um controle que não está lá.")
+    # O QUE NÃO PODE ACEITAR CLIQUE: guia, trilho e os dois botões.
+    for peca in (".luz-grade .ctrl.off .guia",
+                 ".luz-grade .ctrl.off .trilho",
+                 ".luz-grade .ctrl.off .cel-acoes .btn"):
+        assert peca in doc, (
+            f"{peca} voltou à tela num lugar sem controle: dez botões que "
+            f"engolem o toque sem uma letra.")
+    # O TRAVESSÃO DA SÉTIMA CÉLULA — a única sem `data-campo`, logo a única que
+    # o molde do lugar sem dono não alcança.
+    assert doc.count('<span class="nada">—</span>\n          </div>') >= 2, (
+        "a célula `Opções` da coluna viva perdeu o travessão escondido: quando "
+        "ela esvaziar, a linha fica em BRANCO enquanto o P3 e o P4 mostram —.")
+    # E A COLUNA QUE NASCE VAZIA NÃO PODE PERDER O DELA. Foi a regressão que a
+    # primeira foto desta cura pegou: `.ctrl .cel-acoes .nada{display:none}`
+    # apagava o travessão do P3 e do P4 junto.
+    assert ".luz-grade .ctrl:not(.vazia):not(.off) .cel-acoes .nada{display:none}" in doc, (
+        "a regra que esconde o travessão da coluna VIVA perdeu a ressalva e "
+        "apagou o do P3/P4 — regressão medida em 03/09/2026.")
