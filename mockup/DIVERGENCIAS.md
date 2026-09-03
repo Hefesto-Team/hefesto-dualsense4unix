@@ -412,3 +412,40 @@ seção daqui**: a aba deixou de estar em trabalho.
   **parar de pintar por inteiro**, sem uma barra na tela e sem erro que
   dissesse por quê. A hachura continua valendo para o desenho; para a barra e
   para a régua do rádio ela é ausência de leitura, que é a regra dela.
+- **03/09/2026** — **a DICA da linha por controle SAIU**, nas duas linhas de
+  quem está na mesa. Ela dizia `Cosmic Red — 4 de 5 ajustes só deste controle.`
+  e `Starlight Blue — 2 de 5 ajustes só deste controle.` — o modelo e a conta do
+  DESENHO, congelados no arquivo.
+
+  **MEDIDO NO WEBKIT VIVO, na mesa dela** (P1 White no cabo, P2 Galactic Purple
+  no rádio), lendo o `<tr>` e a célula ao lado no mesmo instante:
+
+  ```
+    uniq  title do <tr> (congelado)                          guarda.nome (vivo)
+      p1  Cosmic Red — 4 de 5 ajustes só deste controle.     P1 • White • USB
+      p2  Starlight Blue — 2 de 5 ajustes só deste controle. P2 • Galactic Purple • BT
+  ```
+
+  A MESMA linha nomeava dois controles diferentes, e o perfil dela guarda ZERO
+  ajustes por controle — o painel acima já dizia `0 de 2`. As duas metades da
+  frase estavam erradas.
+
+  **POR QUE SAIU EM VEZ DE VIRAR DADO:** não há canal. O `escrever()` do piloto
+  conhece sete alvos e **nenhum escreve atributo**; o alvo `atributo` desta leva
+  aceita só nome `data-*`/`aria-*`, para ninguém poder forjar o selo
+  `data-hef-visto`. Um `title` do gerador fica congelado para sempre.
+
+  **NADA SE PERDEU:** o modelo está na PRÓPRIA célula que o cursor toca
+  (`guarda.nome`, vivo) e a conta está na coluna ao lado (`guarda.secao`, alvo
+  `classe`, vivo). É a decisão nº4 dela deste mesmo dia, sobre esta mesma
+  tabela: *"Meu Deus melhor nenhuma assim. Auto falante é auto falante, gatilho
+  é gatilho."*
+
+  **A DICA DO LUGAR VAZIO FICA**, e a assimetria é decisão: `P3` é um LUGAR, não
+  uma peça. Aquela frase não afirma nada sobre aparelho nenhum, então não
+  envelhece quando a mesa muda.
+
+  **O QUE ELA VÊ HOJE, sem publicar:** a publicada ainda tem as duas dicas
+  erradas. `tests/unit/test_aba10_a_dica_da_linha_nao_e_do_mockup.py` declara
+  essa espera em `ESPERA_A_PUBLICACAO` e reprova no dia da publicação, para a
+  declaração não apodrecer.
