@@ -3,6 +3,7 @@
 # abas vinham de um montador e de um esqueleto de ontem, e nenhuma correção
 # no topo.html desta pasta as alcançava. Achado em 27/08.
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import onde
 # `MESA` SAIU DO IMPORT em 02/09/2026, e a razão é a mesma que mudou a régua da
 # promessa: os cartões deixaram de contar controle. `CONECTADOS` fica — ele
 # ainda responde pelo texto do "?" ("a resposta vale igual para os N").
@@ -298,6 +299,88 @@ if _FALTAM:
         "zero, e zero passa por 'nada mudou'.")
 
 n = monta("07-lancadores", "Lançadores", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
+
+# ---------------------------------------------------------------------------
+# A FITA NÃO NOMEIA UM CONTROLE QUE NÃO ESTÁ NA MESA — 03/09/2026
+#
+# A LEI, e ela é dela:
+#
+#     "se no topo tá mostrando controle white player 1, então cada aba vai usar
+#     os controles lá de cima. Não mistura com a info dos mockups."
+#
+# O QUE ESTAVA NA TELA, medido nesta máquina com os dois controles dela na mesa
+# (foto em `docs/process/`), na `07-lancadores`:
+#
+#     cabeçalho   2 controles: 1 USB · 1 BT      ← certo, lido do aparelho
+#     fita        P1 · Cosmic Red · USB          ← o MOCKUP; ela não tem esse
+#                 P2 · Starlight Blue · BT       ← o MOCKUP
+#
+# `monta()` injeta a fita com `fita(inerte=True)` e SEM `mesa`, e nesse caminho
+# ela cai nos `CONECTADOS` do desenho. Os seis valores que a
+# `scripts/check_identidade_vem_de_cima.py --bancada --aba 07` acusava eram
+# esses dois chips inteiros: dois `--plastico`, dois nomes de colorway no texto
+# e dois no `title`.
+#
+# POR QUE OS CHIPS SAEM DAQUI EM VEZ DE GANHAREM ENDEREÇO: a página estática não
+# sabe NADA dos controles dela, e a regra é a dela — *campo sem informação não
+# mostra nada*. Um `data-campo` no chip do desenho zeraria a régua e deixaria a
+# tela dizendo a mesma coisa errada até o produto chegar; e o produto pode nem
+# chegar a este endereço, porque `hefesto_vivo.pintar` troca `.fita` INTEIRA
+# (`p.fita`) antes de visitar campo nenhum — quando essa troca acontece, todo
+# `data-campo` que estivesse dentro da fita deixa de existir no DOM.
+#
+# QUEM ESCREVE OS CHIPS, e sem ele isto seria maquiagem: o pacote da aba,
+# `pacotes/a07_lancadores.fita_html()`, emitido em `blocos[".fita"]`. O
+# `blocos` corre DEPOIS do `p.fita` e reconsulta o documento pela classe, então
+# ele acerta o alvo com ou sem a troca do bloco inteiro.
+#
+# O QUE FICA: o `Selecionar:` e o chip `Todos`, que são ESTRUTURA — não nomeiam
+# aparelho nenhum e o `Todos` é o alvo desta aba (`fita_viva=False`).
+# ---------------------------------------------------------------------------
+_CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<span class="chip plastico"[^\n]*\n', re.M)
+_PAG = onde.pagina("07-lancadores.html")
+_DOC = _PAG.read_text()
+_CONGELADOS = _CHIP_DE_CONTROLE.findall(_DOC)
+if not _CONGELADOS:
+    raise SystemExit(
+        "ERRO: não achei um único `<span class=\"chip plastico\">` na página "
+        "recém-gerada. Ou `monta.fita()` mudou de forma, ou a fita saiu vazia — "
+        "e nos dois casos esta troca ficaria VERDE sem fazer nada, que é como a "
+        "fita viva morreu calada em 27/08.")
+onde.gravar("07-lancadores.html", _CHIP_DE_CONTROLE.sub("", _DOC))
+
+# ---------------------------------------------------------------------------
+# A RÉGUA DA IDENTIDADE — ela lê o HTML JÁ GRAVADO, que é a última coisa que a
+# página é. Ler o `MIOLO` deixaria de fora justamente a fita, que vem do
+# esqueleto e é onde o defeito morava.
+#
+# OS NOMES SAEM DO MAPA, e não daqui: `docs/data/cores-do-dualsense.csv` é o
+# dono dos 28 colorways. Digitar "Cosmic Red" nesta régua criaria a segunda
+# lista que o CSV existe para não ter, e ela envelheceria calada no dia em que
+# o desenho trocasse de controle de exemplo.
+# ---------------------------------------------------------------------------
+import csv  # noqa: E402
+
+_FINAL = onde.pagina("07-lancadores.html").read_text()
+_SEM_PROSA = re.sub(r"<!--.*?-->|/\*.*?\*/", " ", _FINAL, flags=re.S)
+_LINHAS_DO_MAPA = [ln for ln in (onde.RAIZ / "docs/data/cores-do-dualsense.csv")
+                   .read_text(encoding="utf-8").splitlines()
+                   if ln.strip() and not ln.lstrip().startswith("#")]
+_COLORWAYS = sorted({(ln.get("nome") or "").strip()
+                     for ln in csv.DictReader(_LINHAS_DO_MAPA)} - {""})
+_ACHADOS = [c for c in _COLORWAYS if len(c) >= 4 and c in _SEM_PROSA]
+if _ACHADOS:
+    raise SystemExit(
+        f"ERRO: {len(_ACHADOS)} nome(s) de colorway na página — {_ACHADOS}. A "
+        "identidade do controle vem da FITA, que lê do APARELHO; um nome de "
+        "modelo escrito na página é o desenho mandando na tela do produto.")
+if "--plastico:" in _SEM_PROSA:
+    raise SystemExit(
+        "ERRO: voltou um `--plastico:` cravado à página. A cor do plástico é "
+        "leitura de aparelho — quem a escreve é o pacote, nunca o gerador.")
+
 print(f"07-lancadores: OK, {n} divs · mesa {N_CTRL} ({N_USB} USB/{N_BT} BT) · "
       f"{QUADRO.achados} encontrados, {QUADRO.impedidos} com impedimento · "
-      f"{len(_ESPERADOS) * len(dl.SUFIXOS)} endereços em {len(_ESPERADOS)} cartões")
+      f"{len(_ESPERADOS) * len(dl.SUFIXOS)} endereços em {len(_ESPERADOS)} cartões · "
+      f"{len(_CONGELADOS)} chip(s) do desenho fora da fita, "
+      f"0 dos {len(_COLORWAYS)} colorways do mapa na página")
