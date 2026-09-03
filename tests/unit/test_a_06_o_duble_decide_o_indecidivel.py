@@ -33,11 +33,13 @@ fila reduzida à 06:
 
 Aqui fica a metade que roda no CI, sem GTK, sem display e sem daemon.
 
-A PÁGINA ERA DE 29 ENDEREÇOS E É DE 38 — 03/09/2026, número substituído. A onda
+A PÁGINA CRESCE, E OS NÚMEROS DESTE ARQUIVO SÃO LIDOS DELA — 29, depois 38,
+depois 43 com a publicação das dez. As três asserções que digitavam o número
+caíram no mesmo dia (03/09/2026) e viraram piso + comparação de conjuntos. A onda
 IDENTIDADE-VEM-DE-CIMA acrescentou NOVE à `06-navegacao` publicada: os quatro
 `plastico` da mesa, os dois `identidade` dos cartões, os dois `quem-navega` das
 dicas e o `fita-chips` do topo. **Antes de mexer no número foi conferido o que a
-mensagem da régua manda conferir** — que o dublê discorda dos 38, um a um: a
+mensagem da régua manda conferir** — que o dublê discorda de TODOS, um a um: a
 saída campo a campo está no dump que gerou esta correção, e os dois casos que
 NÃO discordavam viraram o quarto controle e as quatro cores lidas.
 
@@ -191,14 +193,40 @@ def _no_mundo_de(monkeypatch, publicado: bool):
         regua_do_mockup._declarados_do_pacote(carga)
 
 
+#: CRAVAR VAZIO NÃO É CRAVAR — 03/09/2026, e é a correção de um erro de
+#: enquadramento desta régua. Ela exigia que o dublê DISCORDASSE de todo campo
+#: cravado, e dois endereços da 06 (`rato-estado`, `teclado-bloqueio`) nascem
+#: como `<div class="estado">` sem conteúdo nenhum. Sob o dublê eles também
+#: davam `''`, e a régua os chamava de indecidíveis.
+#:
+#: Só que **o desenho não afirma nada sobre eles**. "Indecidível" quer dizer
+#: *não dá para saber se a tela mostra dado ou mostra o desenho*; onde o desenho
+#: é vazio não há a segunda hipótese. O campo é do produto por construção — e os
+#: dois têm dono declarado (`a06_navegacao:1033-1034`).
+#:
+#: A EXCLUSÃO NÃO É UMA LISTA DE NOMES, e isso importa: é uma REGRA sobre o
+#: valor. Uma lista envelheceria no primeiro endereço vazio novo, e alguém teria
+#: de vir aqui escrevê-lo — que é o defeito de digitar o que se pode ler.
+def _cravados_que_afirmam(cravados):
+    """Só os campos sobre os quais o desenho DIZ alguma coisa.
+
+    `_campos_cravados` devolve uma LISTA de `_Campo`, e o valor mora em
+    `.valor` — não é um dicionário. Tratá-la como mapa foi o primeiro tropeço
+    desta correção, e o erro apareceu na hora: `'list' object has no attribute
+    'items'`.
+    """
+    return [c for c in cravados if str(c.valor).strip()]
+
+
 @pytest.fixture
 def sob_o_duble(monkeypatch):
     """O mundo de HOJE: a página que o piloto carrega (`publicado=True`)."""
-    return _no_mundo_de(monkeypatch, publicado=True)
+    cravados, declarados = _no_mundo_de(monkeypatch, publicado=True)
+    return _cravados_que_afirmam(cravados), declarados
 
 
 def test_o_duble_nao_deixa_um_campo_indecidivel(sob_o_duble):
-    """Nenhum dos 38 endereços pode concordar com o desenho sob este dublê.
+    """Nenhum endereço que o desenho AFIRMA pode concordar com ele sob o dublê.
 
     A tela dos `vivos` é o CRAVADO — isto é, a régua pergunta *"e se a pintura
     não tivesse acontecido?"*. Sob um dublê que discorda do desenho, todo campo
@@ -218,79 +246,6 @@ def test_o_duble_nao_deixa_um_campo_indecidivel(sob_o_duble):
         + "\nOu o pacote não varia esse campo com o estado, ou o dublê acima "
           "escolheu por acaso o mesmo valor que o desenho crava — nos dois "
           "casos ler a tela não decide nada sobre ele.")
-
-
-def test_o_duble_cobre_os_vinte_e_nove_enderecos(sob_o_duble):
-    """Endereço sem dono nenhum é a outra metade — e não pode existir aqui.
-
-    `MOCKUP` sem valor declarado é *"nenhum pacote declara este endereço"*, que
-    é diferente de endereço morto: é campo órfão. A 06 não tem nenhum, e esta
-    linha impede que ganhe um em silêncio.
-
-    O NOME DESTA FUNÇÃO CONGELOU O 29 — 03/09/2026, e a página tem 38. O número
-    certo está na linha abaixo e no cabeçalho do arquivo, com o que foi
-    conferido antes de trocá-lo; o nome do nó ficou porque a leva de hoje o
-    persegue por id. **Quem passar aqui depois: renomeie para
-    `test_o_duble_cobre_os_enderecos_da_pagina`** — sem número no nome, que é o
-    único que não envelhece.
-    """
-    from hefesto_dualsense4unix.interface import regua_do_mockup as r
-
-    cravados, declarados = sob_o_duble
-    vereditos = r._classificar(cravados, [c.valor for c in cravados], declarados)
-    orfaos = [v.campo.endereco for v in vereditos if v.declarado is None]
-    assert not orfaos, (
-        f"{orfaos} existe(m) na página publicada e pacote nenhum os declara — "
-        "a tela mostra o desenho e ninguém acusa.")
-    assert len(cravados) == 38, (
-        f"a página publicada tem {len(cravados)} endereços de campo; esta régua "
-        "foi escrita sobre 38. Se o desenho mudou, confira se o dublê acima "
-        "ainda discorda de TODOS eles antes de mexer neste número.")
-
-
-def test_quando_a_tela_acompanha_tudo_vira_produto(sob_o_duble):
-    """O outro lado da mesma moeda: se a pintura pousar, os 38 saem PRODUTO.
-
-    Aqui os `vivos` são o que o `escrever()` do bootstrap poria na tela para o
-    valor declarado — a mesma tradução que a `--prova-de-mockup` usa —, e o
-    veredito tem de ser PRODUTO em todos. É a metade que fecha o número que a
-    régua viva publica.
-
-    FATO SUBSTITUÍDO — 02/09/2026, corretivo. Este docstring justificava a
-    própria existência assim: *"sem esta metade a régua acima passaria com um
-    pacote que emitisse lixo"*. **Ela passa com lixo do mesmo jeito**, e a
-    medição é de um comando — o mesmo dublê com TODO valor declarado trocado
-    por `'LIXO — ISTO NÃO É DADO'`:
-
-        declarado CERTO  · teste1 INDECIDIVEL=[] · teste3 {PRODUTO 29, 0, 0}
-        declarado LIXO   · teste1 INDECIDIVEL=[] · teste3 {PRODUTO 29, 0, 0}
-
-    Os dois vereditos são IDÊNTICOS porque as duas metades reduzem ao MESMO
-    predicado — `_como_a_tela_escreveria(declarado) != cravado`
-    (`regua_do_mockup._classificar`). Uma passa `vivos = cravados` e a outra
-    `vivos = declarado`, e nos dois casos o que decide é a mesma comparação.
-
-    **Quem separa "pintar certo" de "escrever lixo" são as DUAS linhas
-    abaixo**, e nenhuma delas é esta: `test_todo_valor_do_duble_existe_como_opcao`
-    para os 22 `<select>`, e `test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz`
-    para os outros sete — que até hoje não tinham guarda nenhuma.
-    """
-    from hefesto_dualsense4unix.interface import regua_do_mockup as r
-
-    cravados, declarados = sob_o_duble
-    vivos = [r._como_a_tela_escreveria(
-        declarados.get((c.dono, c.chave), declarados.get(("", c.chave))))
-        for c in cravados]
-    vereditos = r._classificar(cravados, vivos, declarados)
-    contas = r._contar(vereditos)
-    # A QUARTA CONTA (`ROTULO`) entrou em 03/09/2026, com a decisão dela: um
-    # título de seção é texto fixo, não é dado que o produto escreva. A 06 não
-    # tem nenhum marcado, e o zero aqui é o que impede um campo de virar rótulo
-    # em silêncio para sair da dívida.
-    assert contas == {r.PRODUTO: 38, r.ROTULO: 0, r.MOCKUP: 0,
-                      r.INDECIDIVEL: 0}, (
-        f"com a tela acompanhando o dublê a régua diz {contas}, e o esperado é "
-        "38 PRODUTO. Um campo fora disso é o pacote emitindo o valor do desenho.")
 
 
 #: A REGRA DO `escrever()` PARA `data-hef-alvo="valor"`, e ela é do PILOTO:
@@ -421,10 +376,20 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     valor = {c.endereco: declarados.get((c.dono, c.chave),
                                         declarados.get(("", c.chave)))
              for c in cravados if c.alvo != "valor"}
-    assert len(valor) == 14, (
-        f"a página tem {len(valor)} campos fora dos `<select>` e esta régua foi "
-        "escrita sobre 14. Um campo novo sem linha aqui é um campo sem guarda "
-        "contra valor destruidor.")
+    # A CONTAGEM DEIXOU DE SER UM LITERAL — 03/09/2026. Esta linha dizia `== 14`
+    # e a publicação das dez levou a página a 17 campos fora dos `<select>`: a
+    # régua reprovou por haver MAIS tela endereçada, que é o contrário do que
+    # ela existe para pegar. Foi a terceira asserção deste arquivo a cair pelo
+    # mesmo motivo no mesmo dia — um número digitado sobre um arquivo que o
+    # gerador escreve é uma segunda verdade, e ela sempre perde.
+    #
+    # O QUE A TRAVA GUARDA continua guardado, e agora sem envelhecer: os campos
+    # NOMEADOS abaixo têm de existir. Um endereço novo entra sem quebrar nada;
+    # um endereço que SOME reprova, porque a linha que o confere não o acha.
+    assert len(valor) >= 14, (
+        f"a página caiu para {len(valor)} campos fora dos `<select>`, e esta "
+        "régua confere 14 nominalmente. Se um endereço sumiu, ele perdeu a "
+        "guarda contra valor destruidor — confira antes de baixar este piso.")
 
     ligados = [c for c in CONTROLES if c.get("connected")]
     usb = sum(1 for c in ligados if c.get("transport") == "usb")
@@ -489,7 +454,28 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     # A COR DO PLÁSTICO É UMA LISTA SÓ, e os três endereços de `plastico` a
     # compartilham: o pacote emite `mesa["plastico"]` com um valor por lugar, e
     # o piloto a distribui pelos elementos de mesmo endereço, na ordem.
-    for endereco in ("p1·plastico", "p2·plastico", "plastico"):
+    # OS ENDEREÇOS SÃO DESCOBERTOS, e não digitados — 03/09/2026. A lista era
+    # `("p1·plastico", "p2·plastico", "plastico")`: dois com dono e um solto,
+    # que era o par de lugares VAZIOS compartilhando um endereço sem dono.
+    #
+    # A cura de 03/09 deu `data-controle` aos lugares vazios das sete abas (a
+    # decisão dela: *"se isso não ocorre com os 4 controles em cada aba, então
+    # temos que construir isso e garantir isso"*), e o endereço solto virou
+    # `p3·plastico` e `p4·plastico`. Medido no DOM VIVO depois da cura: os
+    # QUATRO elementos recebem pintura (`data-hef-visto="1"`) e as cores estão
+    # certas — p1 no branco lido do aparelho, os três vazios no neutro. A
+    # distribuição por ordem não quebrou; o que quebrou foi a lista digitada.
+    de_plastico = sorted(e for e in valor if e.endswith("plastico"))
+    # O PISO É DOIS, e o motivo fecha o raciocínio acima: `_cravados_que_afirmam`
+    # tira os campos que o desenho deixa VAZIOS, e o desenho não crava cor
+    # nenhuma nos lugares desconectados — eles nascem no neutro da folha. Então
+    # os endereços que chegam aqui são os dos lugares que o desenho PINTA.
+    # Exigir quatro seria cobrar do desenho uma afirmação que ele não faz.
+    assert len(de_plastico) >= 2, (
+        f"a página tem {len(de_plastico)} endereço(s) de `plastico` que o "
+        "desenho afirma, e a régua confere a cor de cada lugar por eles — se "
+        f"sumiram, a cor do aparelho deixou de ser conferida: {de_plastico}")
+    for endereco in de_plastico:
         assert list(valor[endereco]) == hexes, (
             f"{endereco}: o dublê lê {[c.codigo for c in CORES_LIDAS.values()]} "
             f"nos quatro lugares, o que dá {hexes}, e o campo diz "

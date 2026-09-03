@@ -120,7 +120,10 @@ def test_a_linha_de_controle_na_mesa_nao_tem_dica() -> None:
 #: O teste abaixo é o que impede esta linha de apodrecer: no dia em que a
 #: publicação acontecer ele reprova, e quem publicar troca o `True` por `False`
 #: no mesmo commit — a partir daí a régua cobra a publicada para sempre.
-ESPERA_A_PUBLICACAO = True
+#: FALSO DESDE 03/09/2026 — ela mandou publicar as dez, e este teste reprovou
+#: no mesmo minuto, que é exatamente o que ele foi feito para fazer. A partir
+#: daqui a régua cobra a PUBLICADA para sempre.
+ESPERA_A_PUBLICACAO = False
 
 
 def test_a_publicada_nao_fica_curada_em_silencio() -> None:

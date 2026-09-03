@@ -89,7 +89,15 @@ def test_o_desenho_crava_um_aparelho_no_lugar_do_p2(publicado: str) -> None:
     assert 'id="p2-lightbar" style="--luz:#ff0000"' in publicado, (
         "o `--luz` cravado do P2 mudou de forma; a régua aferia o vermelho "
         "do mockup num lugar vazio e passou a medir outra coisa")
-    assert re.search(r'<svg data-colorway="starlight-blue"[^>]*class="ds-svg"',
+    # A ÂNCORA NÃO PODE EXIGIR A POSIÇÃO DO ATRIBUTO — corrigido em 03/09/2026,
+    # e o defeito nasceu de um MERGE. Esta régua veio de uma frente que ancorava
+    # em `<svg data-colorway="…"`; outra frente, no mesmo dia, endereçou o
+    # desenho e inseriu três atributos ANTES dele
+    # (`data-campo`, `data-hef-alvo`, `data-hef-atributo`). As duas verdes na
+    # própria árvore, vermelhas juntas — o par de olhos que falta é sempre o do
+    # merge. O que a régua quer saber é se o desenho do P2 CRAVA o Starlight
+    # Blue, não em que ordem o gerador escreve os atributos.
+    assert re.search(r'<svg [^>]*data-colorway="starlight-blue"[^>]*class="ds-svg"',
                      publicado), (
         "o `data-colorway` do desenho do P2 mudou — era o Starlight Blue do "
         "mockup, que é o que a cura existe para apagar")

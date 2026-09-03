@@ -38,6 +38,54 @@ from hefesto_dualsense4unix.integrations.no_do_vpad import (
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
+
+def _mascaras_por_aparelho(handlers: object) -> dict[str, str]:
+    """`{uniq: máscara efetiva}` para cada controle conectado agora.
+
+    MASCARA-NA-TELA-01, 03/09/2026 — o pedido é dela: *"é uma máscara por
+    controle. Mesmo caso do anterior."*
+
+    O REGISTRO JÁ EXISTIA. `external_mask.mascara_efetiva` decide desde
+    15/08/2026 (MÁSCARA-POR-JOGADOR-01, decisão dela) e é consultada na criação
+    de todo gamepad virtual; os três degraus do daemon que faltavam —
+    `virtual_pad`, `coop` e `gamepad` — fecharam em 29/08. **O que nunca
+    chegou foi a TELA:** `mesa_viva` lia o `flavor` da SESSÃO e escrevia o
+    mesmo valor nos quatro cartões, então a escolha por aparelho vivia no disco
+    e não aparecia em lugar nenhum.
+
+    A HERANÇA NÃO SE REESCREVE AQUI: quem não tem escolha registrada recebe a
+    máscara da sessão, e é `mascara_efetiva` quem diz isso. Repetir a regra
+    neste arquivo faria duas verdades sobre o mesmo fato — e a daqui
+    envelheceria no dia em que a herança mudasse.
+
+    NUNCA LEVANTA. Um registro que não abre não pode derrubar o `state_full`
+    inteiro: sem ele a tela mostra a máscara da sessão, que é o comportamento
+    de antes deste campo existir.
+    """
+    fora: dict[str, str] = {}
+    try:
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            mascara_efetiva,
+        )
+
+        daemon_cfg = getattr(getattr(handlers, "daemon", None), "config", None)
+        da_sessao = str(getattr(daemon_cfg, "gamepad_flavor", "dualsense"))
+        describe = getattr(getattr(handlers, "controller", None),
+                           "describe_controllers", None)
+        if not callable(describe):
+            return fora
+        for entrada in describe() or ():
+            if not isinstance(entrada, dict) or not entrada.get("connected"):
+                continue
+            uniq = str(entrada.get("uniq") or "")
+            if not uniq:
+                continue
+            fora[uniq] = str(mascara_efetiva(uniq, da_sessao))
+    except Exception:  # pragma: no cover - defesa; ver a docstring
+        return fora
+    return fora
+
+
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.core.controller import IController
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
@@ -2676,9 +2724,26 @@ class IpcHandlersMixin:
         if daemon_cfg is not None:
             result["mouse_emulation"] = self._mouse_emulation_payload()
             # FEAT-DSX-GAMEPAD-FLAVOR-01: estado do gamepad virtual p/ GUI/applet.
+            _flavor_da_sessao = str(getattr(daemon_cfg, "gamepad_flavor", "dualsense"))
             result["gamepad_emulation"] = {
                 "enabled": bool(getattr(daemon_cfg, "gamepad_emulation_enabled", False)),
-                "flavor": str(getattr(daemon_cfg, "gamepad_flavor", "dualsense")),
+                "flavor": _flavor_da_sessao,
+                # A MÁSCARA EFETIVA DE CADA APARELHO — MASCARA-NA-TELA-01,
+                # 03/09/2026, e o pedido é dela: *"é uma máscara por controle.
+                # Mesmo caso do anterior."*
+                #
+                # O REGISTRO POR APARELHO EXISTE DESDE 15/08 (a decisão dela,
+                # MÁSCARA-POR-JOGADOR-01) e `mascara_efetiva` já é consultada na
+                # criação de todo vpad — os três degraus do daemon foram
+                # fechados em 29/08 (`virtual_pad`, `coop`, `gamepad`). O que
+                # faltava era a TELA: `mesa_viva` lia o `flavor` da SESSÃO e
+                # repetia o mesmo valor nos quatro cartões, então a escolha por
+                # aparelho existia no disco e não aparecia em lugar nenhum.
+                #
+                # `flavor` continua sendo o da sessão, e é ele que vale para
+                # quem não escolheu — a herança é a semântica do registro, não
+                # uma segunda regra escrita aqui.
+                "por_aparelho": _mascaras_por_aparelho(self),
             }
             # UHID-04: backend do vpad primário VIVO ("uhid" = DualSense Edge real
             # 0x0df2, "uinput" = Xbox/fallback). O botão de Launch Options escolhe a
@@ -5298,6 +5363,64 @@ class IpcHandlersMixin:
             "enabled": bool(enabled and ok),
             "keyboard_emulation": self._keyboard_emulation_payload(),
         }
+
+    async def _handle_gamepad_mask_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`.
+
+        MASCARA-NA-TELA-01, 03/09/2026 — o pedido é dela: *"é uma máscara por
+        controle. Mesmo caso do anterior."*
+
+        ESTE ERA O ÚNICO DEGRAU QUE FALTAVA, e o próprio `external_mask` o
+        nomeava desde 15/08/2026: *"Falta também o lado da escrita: quem grava a
+        escolha dela é a rota IPC, que ainda só conhece a máscara da sessão."*
+        Os outros três — `virtual_pad`, `coop` e `gamepad` — fecharam em 29/08.
+        `set_mask` e `clear_mask` existiam no registro e não tinham UM chamador
+        em `src/`.
+
+        `flavor` VAZIO LIMPA a escolha, e o aparelho volta a herdar a da sessão.
+        É a mesma semântica de `ControllerOverrides`: campo em branco = sem
+        opinião. Sem isso não haveria como desfazer uma escolha pela tela — e
+        um registro em que só se entra é uma armadilha.
+
+        A RECUSA É EM VOZ ALTA, pela mesma razão do irmão de baixo: a
+        `normalizar_mascara` do `external_mask` é estrita, e o que ela não
+        reconhece devolve `None` — que aqui vira erro, não `xbox` calado.
+
+        O QUE ESTE MÉTODO NÃO PROMETE, e está medido no `external_mask`:
+        **ninguém verificou** se um jogo aceita dois vpads com máscaras
+        diferentes ao mesmo tempo. O registro guarda a escolha; se o jogo
+        embaralha os jogadores, isso é um aviso na tela, não um defeito nosso.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            mascaras_validas,
+            normalizar_mascara,
+            registro_de_mascaras,
+        )
+
+        uniq = str(params.get("uniq") or "").strip()
+        if not uniq:
+            raise ValueError(
+                "gamepad.mask.set exige 'uniq' — a máscara é de UM aparelho, e "
+                "sem o endereço dele a escrita iria para o registro errado")
+
+        bruto = params.get("flavor")
+        if bruto is None or str(bruto).strip() == "":
+            limpou = registro_de_mascaras().clear_mask(uniq)
+            return {"status": "ok", "uniq": uniq, "flavor": None,
+                    "mudou": bool(limpou)}
+
+        flavor = normalizar_mascara(bruto)
+        if flavor is None:
+            aceitos = ", ".join(sorted(mascaras_validas()))
+            raise ValueError(
+                f"gamepad.mask.set: máscara desconhecida {bruto!r} — "
+                f"aceito: {aceitos}, ou vazio para herdar a da sessão")
+
+        mudou = registro_de_mascaras().set_mask(uniq, flavor)
+        return {"status": "ok", "uniq": uniq, "flavor": flavor,
+                "mudou": bool(mudou)}
 
     async def _handle_gamepad_emulation_set(
         self, params: dict[str, Any]

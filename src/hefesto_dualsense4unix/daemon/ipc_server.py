@@ -171,6 +171,10 @@ class IpcServer(IpcHandlersMixin):
             # mouse e o R1 seguia trocando de aplicativo dentro do jogo.
             "keyboard.emulation.set": self._handle_keyboard_emulation_set,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,
+            # A MÁSCARA DE UM APARELHO (MASCARA-NA-TELA-01, 03/09/2026):
+            # `emulation.set` é a da SESSÃO e vale para quem não escolheu;
+            # esta grava a escolha daquele controle no `external_mask`.
+            "gamepad.mask.set": self._handle_gamepad_mask_set,
             "coop.set": self._handle_coop_set,
             # COOP-SEM-INTERRUPTOR-01 (06/08): o ciclo cheio de reconciliação
             # ganhou dono próprio — é o gesto de recuperação do jogador que

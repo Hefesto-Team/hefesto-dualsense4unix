@@ -503,9 +503,17 @@ SEM_ENDERECO = {
 #: isto é decisão dela"*, que é exatamente o certo. Ela está declarada em
 #: `mockup/DIVERGENCIAS.md` com o que ela vê enquanto espera: nada muda, e os
 #: nove gestos que gravam no disco continuam mudos no sucesso.
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {
-    "perfis.desfecho": "a tira do desfecho muda pixel — espera o `--publicar 10` dela",
-}
+#: VAZIA DESDE 03/09/2026 — ela mandou publicar as dez, e a `perfis.desfecho`
+#: chegou à página que o produto renderiza. A régua
+#: `test_o_que_espera_publicacao_sai_da_lista_quando_ela_publicar` é quem
+#: cobrou: um nome que já está no publicado e continua declarado como à espera
+#: vira ponto cego, porque a lista deixa de ser lida como fila e passa a ser
+#: lida como decoração.
+#:
+#: O DICIONÁRIO FICA, e vazio: ele é o lugar combinado de quem escrever um
+#: endereço novo na bancada antes de ela aprovar. Apagá-lo obrigaria a próxima
+#: pessoa a reinventá-lo.
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
@@ -941,7 +949,7 @@ def _rotulo_do_remover(alvo: str) -> str:
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:1330`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:1413`): todo `RuntimeError` de gesto
     vira TARJA na tela — no cartão do controle quando a página tem um, e no
     `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
     `SEGUNDOS_DO_RECADO = 30.0`.

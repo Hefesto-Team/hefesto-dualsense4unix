@@ -314,6 +314,15 @@ def mesa_do_estado(
     emulacao = state.get("gamepad_emulation") or {}
     sabor = str(emulacao.get("flavor") or "")
     mascara = NOME_DA_MASCARA.get(sabor, sabor or "—")
+    # A MÁSCARA É DE CADA APARELHO — MASCARA-NA-TELA-01, 03/09/2026, e o pedido
+    # é dela: *"é uma máscara por controle. Mesmo caso do anterior."*
+    #
+    # Esta linha escrevia a máscara da SESSÃO nos quatro cartões. O registro por
+    # aparelho existe desde 15/08 (`external_mask`, decisão dela) e o daemon já
+    # o consulta ao criar cada vpad — a tela era o único lugar que não sabia.
+    # `por_aparelho` traz `{uniq: máscara efetiva}`, e o `sabor` da sessão fica
+    # como o que vale para quem não escolheu, que é a herança do registro.
+    por_aparelho = emulacao.get("por_aparelho") or {}
 
     fora: list[dict[str, Any]] = []
     for posicao, entrada in enumerate(conectados, start=1):
@@ -334,7 +343,12 @@ def mesa_do_estado(
                 "via": "USB" if transporte == "usb" else "BT",
                 "transporte": transporte,
                 "alvo": (uniq == alvo) if alvo else (posicao == 1),
-                "mascara": mascara,
+                # O `mascara` da sessão é o FALLBACK, e não o valor: um daemon
+                # velho (sem `por_aparelho`) devolve exatamente o que devolvia
+                # antes deste campo existir.
+                "mascara": NOME_DA_MASCARA.get(
+                    str(por_aparelho.get(uniq) or ""),
+                    str(por_aparelho.get(uniq) or "") or mascara),
             }
         )
     return fora
