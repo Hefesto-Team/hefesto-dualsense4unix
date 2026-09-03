@@ -67,8 +67,12 @@ def test_a_arvore_local_vence_o_relogio() -> None:
     escolhida = regua.candidatas_da_aba("04")[0]
     assert escolhida.is_relative_to(RAIZ), (
         f"a régua escolheu uma cópia de fora desta árvore: {escolhida}")
-    assert ".claude/worktrees" not in str(escolhida), (
-        f"a régua escolheu uma worktree de agente: {escolhida}")
+    # E A PASTA É UMA DAS DUAS CASAS, exatamente. Esta metade é mais forte que
+    # listar onde a cópia NÃO pode estar: as worktrees de agente vivem dentro
+    # desta raiz, num porão cujo nome o portão de anonimato não deixa escrever,
+    # e qualquer uma delas teria a página numa pasta que não é nenhuma destas.
+    assert escolhida.parent in {RAIZ / pasta for pasta in regua.PASTAS_DAS_ABAS}, (
+        f"a régua escolheu uma cópia fora das duas casas: {escolhida}")
 
 
 def test_as_duas_casas_de_hoje_existem() -> None:

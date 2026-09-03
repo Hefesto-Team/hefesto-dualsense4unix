@@ -98,7 +98,7 @@ def test_o_desenho_congelado_nao_nomeia_perfil() -> None:
     assert "no perfil ativo" in marcacao
 
 
-@pytest.mark.parametrize("pagina", PAGINAS)
+@pytest.mark.parametrize("pagina", PAGINAS)  # (noqa-acento)
 def test_nenhuma_pagina_da_bancada_promete_o_perfil_errado(pagina: str) -> None:
     """A régua olha a BANCADA — o desenho de HOJE, que é o que tem dono aqui.
 

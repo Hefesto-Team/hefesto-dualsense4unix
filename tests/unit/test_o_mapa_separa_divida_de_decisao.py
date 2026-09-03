@@ -176,7 +176,8 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: para 47 —, e vinte dessas respostas foram `não, e a razão é dívida NOSSA`.
 #:
 #: A dívida existia antes e não tinha nome. Uma célula muda não é uma casa sem
-#: dívida: é uma casa que não sabe. O teto de 3 media o que estava ESCRITO, não
+#: dívida: é uma casa que não sabe. O teto de 3 aferia o que estava ESCRITO,
+#: não
 #: o que era verdade — e é por isso que subi-lo aqui é o gesto honesto, e
 #: mantê-lo em 3 apagando as respostas seria o desonesto.
 #:
@@ -338,7 +339,8 @@ def test_a_decisao_pode_crescer_sem_reprovar() -> None:
 
     with tempfile.TemporaryDirectory() as pasta:
         # A POPULAÇÃO **E** AS DÍVIDAS DE FORA DELA — corrigido em 03/09/2026.
-        # Este teste trocava só a `populacao()` e exigia zero dívida no fim,
+        # Este teste trocava só a lista da função de população e exigia zero
+        # dívida no fim,
         # o que só valia enquanto toda dívida estivesse dentro dela. A leva das
         # células mudas escreveu `divida` em vinte células cujo `de_onde_sei`
         # não é `medido`, e o `conta_dividas` DECLARA que isso é legítimo:
