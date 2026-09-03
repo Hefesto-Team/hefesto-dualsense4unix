@@ -608,3 +608,52 @@ seção daqui**: a aba deixou de estar em trabalho.
   **O que o produto faz hoje:** o mesmo que na 07 — a dica ainda diz *"Grava no
   perfil Mortal Kombat"*, porque a página publicada não tem os dois endereços
   novos. O valor certo é emitido e fica órfão até você publicar.
+## 03-gatilhos.html
+- **03/09/2026 · A COR DO PLÁSTICO GANHOU ENDEREÇO PRÓPRIO** — a lei dela:
+  *"imagina que cada pessoa tenha um dualsense diferente. (…) eu quero que cada
+  um, ao usar seu controle, se toque disso — que o app se adaptou ao controle
+  dele"*.
+
+  **O que mudou no desenho é MARCAÇÃO, e a cena continua a que ela aprovou.** O
+  cabeçalho de cada coluna era um `<div class="cabeca">` com o chip dentro; hoje
+  são dois níveis, e cada um tem um trabalho:
+
+  ```
+  .cabeca   data-campo="plastico"          alvo `plastico`  → a COR do aparelho
+    span    data-campo="chip-do-controle"  alvo `html`      → o CHIP inteiro
+  ```
+
+  **POR QUE PRECISOU DE DOIS NÍVEIS.** O `--plastico` morava no `style` do
+  `<span class="chip …">`, isto é, DENTRO do `innerHTML` que o alvo `html`
+  compara. Ali ele não podia ganhar alvo próprio: `escrever()` carimba
+  `data-hef-visto` no elemento que visita, e um selo dentro do HTML comparado
+  faz a comparação nunca mais bater — a coluna repintaria a cada tique, para
+  sempre (medido nesta casa: 17 tiques, 17 pinturas). No embrulho, que fica
+  fora da comparação, as duas escritas convivem.
+
+  **A CONTA DA RÉGUA**, `scripts/check_a_cor_vem_do_aparelho.py --bancada
+  --aba 03`: **2 → 0**.
+
+  **MEDIDO NO WEBKIT, com uma mesa de dois modelos que o mockup NUNCA mostrou:**
+
+  | coluna | texto | `border-color` computada |
+  | --- | --- | --- |
+  | P1 | `P1 • Nova Pink • USB` | `rgb(227, 91, 140)` = `#e35b8c` |
+  | P2 | `P2 • Astro Bot • BT` | `rgb(232, 228, 220)` = `#e8e4dc` |
+  | P3 e P4 | `Desconectado` | `rgb(68, 71, 90)` — a variável APAGADA |
+
+  Nenhuma das duas primeiras é cor do desenho, e é esse o ponto: trocar o Cosmic
+  Red por outro hexadecimal escrito à mão teria sido trocar um cravado por
+  outro. O hexadecimal sai de `monta.cor_da_zona`, que LÊ a folha dos 28 modelos
+  do `docs/data/cores-do-dualsense.csv` — no dia em que ela acrescentar um
+  modelo, a aba o veste sem uma linha de Python a mais.
+
+  **NADA MUDA NA TELA DELA ANTES DO `--publicar 03`, e isso foi conferido, não
+  suposto.** A página publicada não tem o endereço da cor; se o pacote
+  escrevesse só nele, as duas colunas dela ficariam com a borda neutra
+  (`rgb(68, 71, 90)`) até a publicação. Por isso o pacote **pergunta à página**
+  (`a_pagina_recebe_a_cor_por_endereco`) e, enquanto ela não tiver o endereço,
+  continua mandando a cor dentro do chip — como sempre mandou. Medido nas duas
+  páginas, com o mesmo Nova Pink na mesa: `rgb(227, 91, 140)` nas duas. A ponte
+  **se aposenta sozinha** no dia da publicação, e
+  `tests/unit/test_aba03_o_plastico_de_qualquer_modelo.py` cobra os dois lados.
