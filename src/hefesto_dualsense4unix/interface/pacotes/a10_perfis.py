@@ -84,12 +84,17 @@ SEM_DONO: dict[str, str] = {}
 #: A ORDEM DAS CÉLULAS DA COLUNA "AJUSTE PRÓPRIO", da esquerda para a direita.
 #:
 #: POR QUE ELA MORA AQUI, e não sai de `perfis_web.SECOES_POR_CONTROLE`: aquela
-#: é a lista do ESQUEMA — o que o perfil sabe guardar hoje, quatro campos. Esta
-#: é a lista do DESENHO, que tem CINCO desde a decisão nº20 dela (03/09/2026,
-#: *"o microfone vira o quinto ajuste por controle"*). As duas são verdades
-#: diferentes e vão convergir; enquanto não convergem, confundi-las faria a
-#: distribuição casar célula com vizinha — a coluna do P2 mostrando o estado do
-#: P1, que é pior que a coluna apagada.
+#: é a lista do ESQUEMA — o que o perfil sabe guardar. Esta é a lista do
+#: DESENHO, e as duas podem legitimamente divergir por um tempo quando ela
+#: aprova uma coluna antes de o campo existir. Confundi-las faria a distribuição
+#: casar célula com vizinha — a coluna do P2 mostrando o estado do P1, que é
+#: pior que a coluna apagada.
+#:
+#: **AS DUAS CONVERGIRAM — 03/09/2026.** Este comentário dizia *"aquela é a
+#: lista do ESQUEMA … quatro campos"* e o `mic` estava fora dela. Estava errado
+#: por seis minutos de diferença entre duas worktrees: `3f757b77` (02:50) pôs o
+#: campo no esquema e `7e64c2e3` (02:56) desenhou a coluna afirmando que ele
+#: *"ainda não existe"*. As cinco de cá e as cinco de lá são hoje a mesma lista.
 #:
 #: E ELA NÃO PODE SAIR DO GERADOR. `interface/aba10.py` é um script: ele insere
 #: o próprio diretório no `sys.path` e importa `monta`, que LÊ O REPOSITÓRIO no
@@ -109,12 +114,19 @@ SECOES_DA_COLUNA: tuple[str, ...] = (
 #: `None` e a célula fica apagada em todo perfil real — a tela pronta para o
 #: dado, sem inventá-lo.
 #:
-#: O `mic` está aqui por decisão dela nº20 (03/09/2026). Ele sai desta lista
-#: sozinho, sem ninguém precisar lembrar: no dia em que `ControllerOverrides`
-#: ganhar o campo, ele passa a estar em `SECOES_POR_CONTROLE` e a régua para de
-#: precisar da isenção. Quem cobra é
-#: `tests/unit/test_a_coluna_de_ajuste_proprio_da_aba10_e_dado.py`.
-ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset({"mic"})
+#: **ESTÁ VAZIA, e o `mic` saiu daqui em 03/09/2026 — sem sair sozinho.** Esta
+#: nota prometia que ele sairia *"sozinho, sem ninguém precisar lembrar: no dia
+#: em que `ControllerOverrides` ganhar o campo"*. Esse dia era o MESMO dia, seis
+#: minutos antes (`3f757b77`), e nada saiu: uma isenção só some quando alguém a
+#: relê, e a régua que a guardava — `test_toda_coluna_sem_campo_esta_declarada`
+#: — é de uma direção só, de propósito (*"ela não reprova quando o campo
+#: chega"*). Uma isenção que não reprova quando caduca é uma isenção eterna, e
+#: por um dia ela cobriu a coluna do microfone apagada à força.
+#:
+#: A cura é a régua NOVA que fecha a outra direção:
+#: `test_nenhuma_isencao_desta_lista_ja_caducou` reprova todo nome daqui que já
+#: esteja no esquema, e diz para apagá-lo. Agora sai sozinho de verdade.
+ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset()
 
 
 #: COMO A TELA CHAMA O QUE O PERFIL GUARDA — `match.type` no disco, uma frase
@@ -1129,8 +1141,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # documento (`hefesto_vivo.py`, `alvos.forEach(… i < v.length ? v[i] …)`):
         # uma linha da tabela é um bloco de `len(SECOES_DA_COLUNA)` valores. Ler
         # por nome, e não pela ordem do dicionário, é o que deixa o desenho ter
-        # CINCO colunas enquanto o esquema tem quatro campos — a que falta lê
-        # `None` e fica apagada, que é a verdade.
+        # uma coluna a mais que o esquema sem casar célula com vizinha: a que
+        # falta lê `None` e fica apagada, que é a verdade.
+        #
+        # FATO SUBSTITUÍDO: estas linhas diziam "o desenho ter CINCO colunas
+        # enquanto o esquema tem quatro campos". O esquema tem cinco desde
+        # `3f757b77`, e as duas listas são hoje a mesma — ver
+        # `ESPERANDO_O_ESQUEMA`, que está vazia.
         #
         # SOBRA DE LINHA APAGA: a mesa dela tem dois controles e o desenho tem
         # quatro linhas. O `forEach` escreve `''` no que sobra, o alvo `classe`

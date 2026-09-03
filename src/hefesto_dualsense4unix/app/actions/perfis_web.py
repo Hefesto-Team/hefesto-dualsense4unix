@@ -57,6 +57,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.profiles.schema import (
     PRIORIDADE_MAXIMA,
+    ControllerOverrides,
     MatchCriteria,
 )
 
@@ -216,11 +217,28 @@ GUARDA_SEM_DAEMON = (
     "mesa; o que o perfil guarda para cada peça continua no disco, intacto."
 )
 
-#: As QUATRO seções que o perfil guarda por controle, na ordem do desenho. Não é
-#: escolha de tela: são os quatro campos de ``ControllerOverrides``
-#: (``profiles/schema.py:830``), nem um a mais. Campo ``None`` = sem opinião —
-#: aquele controle herda a seção global do perfil (merge por campo, PERFIL-01).
-SECOES_POR_CONTROLE: tuple[str, ...] = ("leds", "triggers", "rumble", "speaker")
+#: As seções que o perfil guarda por controle, na ordem do desenho. Não é
+#: escolha de tela: são os campos de ``ControllerOverrides``, nem um a mais.
+#: Campo ``None`` = sem opinião — aquele controle herda a seção global do perfil
+#: (merge por campo, PERFIL-01).
+#:
+#: **SAI DO ESQUEMA, E NÃO DA MÃO — 03/09/2026.** Esta linha foi durante um dia
+#: a tupla ``("leds", "triggers", "rumble", "speaker")``, digitada, com a
+#: docstring prometendo *"são os quatro campos de `ControllerOverrides`, nem um
+#: a mais"*. A promessa caiu por SEIS MINUTOS: `3f757b77` (02:50) pôs o ``mic``
+#: em ``ControllerOverrides`` e `7e64c2e3` (02:56), em outra worktree, desenhou
+#: a quinta coluna escrevendo no commit *"`ControllerOverrides.mic` ainda não
+#: existe"*. O merge levou os dois, e o que sobrou foi a pior das combinações:
+#: o daemon aplicando o mudo só daquele controle (``apply_controller_mics``), a
+#: coluna com cinco glifos na tela, e o quinto APAGADO À FORÇA em todo perfil —
+#: ``pintaGuarda`` faz ``!!linha.secoes['mic']``, e a chave não saía daqui.
+#:
+#: Derivar do esquema é o que impede a terceira vez. ``model_fields`` preserva a
+#: ordem de declaração, que é a ordem do desenho (``aba10.SECOES``), e o dia em
+#: que um campo novo entrar em ``ControllerOverrides`` ele aparece aqui sozinho
+#: — sem ninguém precisar lembrar. Quem cobra a ordem contra o desenho é
+#: ``tests/unit/test_a_coluna_do_ajuste_proprio_acende_pela_classe.py``.
+SECOES_POR_CONTROLE: tuple[str, ...] = tuple(ControllerOverrides.model_fields)
 
 
 def _texto_da_conta(quantos: int) -> str:
@@ -370,8 +388,22 @@ def _linhas_da_lista(
     ]
 
 
+#: O NÚMERO POR EXTENSO, para a frase da linha nunca discordar da lista. Ela
+#: dizia *"herda os quatro ajustes do perfil"* com a palavra digitada, e por um
+#: dia a tela mostrou cinco glifos ao lado da palavra "quatro". Sai de
+#: ``len(SECOES_POR_CONTROLE)``, como o ``QUANTAS_SECOES`` do gerador.
+_EXTENSO: dict[int, str] = {
+    1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis",
+}
+
+
+def _quantos_ajustes_por_extenso() -> str:
+    """``"cinco"`` — e o número cru quando a lista passar do que se escreve."""
+    return _EXTENSO.get(len(SECOES_POR_CONTROLE), str(len(SECOES_POR_CONTROLE)))
+
+
 def _secoes_do_controle(overrides: Any) -> dict[str, bool]:
-    """Quais dos quatro ajustes este perfil guarda SÓ deste controle.
+    """Quais ajustes este perfil guarda SÓ deste controle.
 
     ``None`` no campo = sem opinião: o controle herda a seção global. Apagado é
     a resposta certa para a maioria dos controles na maioria dos perfis, e uma
@@ -395,7 +427,8 @@ def _linhas_da_guarda(mesa: list[dict[str, Any]], profile: Any) -> list[dict[str
         quanto = (
             f"{quantos} de {total} ajustes só deste controle"
             if quantos
-            else "nada só dele — herda os quatro ajustes do perfil"
+            else f"nada só dele — herda os {_quantos_ajustes_por_extenso()} "
+            f"ajustes do perfil"
         )
         linhas.append(
             {
