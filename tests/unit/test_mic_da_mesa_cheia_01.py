@@ -47,16 +47,48 @@ _MONITOR = (
     "-00.analog-surround-40.monitor"
 )
 
+#: A source que a PONTE de microfone por Bluetooth publica. Os seis hex do fim
+#: são os três últimos octetos do MAC daquele controle — é ali que mora a
+#: identidade que o controle no rádio tem e o dispositivo USB não dá.
+_PONTE_BT = "hefesto_dualsense_bt_070809"
+
 _USB_P1 = "usb-0000:0c:00.3-3"
 _USB_P2 = "usb-0000:0c:00.3-4"
 
 _UNIQ_P1 = "aabbcc010203"
 _UNIQ_P2 = "aabbcc040506"
+_UNIQ_BT = "aabbcc070809"
+
+#: A saída LONGA não é lida por ninguém aqui: quem a interpreta é o
+#: `nos_e_sysfs`, que está dublado. A CURTA é lida de verdade — é dela que sai
+#: a lista de fontes de DualSense.
+_LONGA = "(a saída longa; quem a lê é o `nos_e_sysfs`, que está dublado)"
+
+
+def _curta(*nomes: str) -> str:
+    """`pactl list sources short`: `índice\\tnome\\tdriver\\tformato\\testado`."""
+    return "\n".join(
+        f"{600 + i}\t{nome}\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED"
+        for i, nome in enumerate(nomes)
+    )
+
+
+def _dublar_pactl(monkeypatch: pytest.MonkeyPatch, curta: str) -> None:
+    """Responde à CURTA e à LONGA com textos diferentes, como o `pactl` faz."""
+
+    class _Saida:
+        def __init__(self, stdout: str) -> None:
+            self.stdout = stdout
+
+    def run(argv: Any, *_a: Any, **_k: Any) -> Any:
+        return _Saida(curta if "short" in list(argv) else _LONGA)
+
+    monkeypatch.setattr(audio_control.subprocess, "run", run)
 
 
 @pytest.fixture
 def mesa_de_dois(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Duas placas, dois controles, o casamento por USB resolvido."""
+    """Duas placas, dois controles NO CABO, o casamento por USB resolvido."""
 
     def fake_por_uniq(uniqs: Any, **_kw: Any) -> dict[str, str]:
         mapa = {_UNIQ_P1: _USB_P1, _UNIQ_P2: _USB_P2}
@@ -70,13 +102,30 @@ def mesa_de_dois(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(usb_pai, "usb_pai_por_uniq", fake_por_uniq)
     monkeypatch.setattr(usb_pai, "usb_pai_por_no", fake_por_no)
     monkeypatch.setattr(usb_pai, "nos_e_sysfs", lambda _s: {})
+    _dublar_pactl(monkeypatch, _curta(_P1, _P2, _MONITOR))
 
-    class _Saida:
-        stdout = "(a saída longa; quem a lê é o `nos_e_sysfs`, que está dublado)"
 
-    monkeypatch.setattr(
-        audio_control.subprocess, "run", lambda *_a, **_k: _Saida()
-    )
+@pytest.fixture
+def mesa_de_cabo_e_radio(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Um controle no FIO e um no AR, com a ponte de microfone de pé.
+
+    O do rádio **não tem dispositivo USB nenhum** — a placa segue o transporte,
+    medido em 15/08/2026 —, e por isso ele não aparece em `usb_pai_por_uniq`
+    nem em `usb_pai_por_no`. A identidade dele está no NOME da source da ponte.
+    """
+
+    def fake_por_uniq(uniqs: Any, **_kw: Any) -> dict[str, str]:
+        return {u: _USB_P1 for u in uniqs if u == _UNIQ_P1}
+
+    def fake_por_no(_nos: Any) -> dict[str, str]:
+        return {_P1: _USB_P1, _MONITOR: _USB_P1}
+
+    from hefesto_dualsense4unix.integrations import usb_pai
+
+    monkeypatch.setattr(usb_pai, "usb_pai_por_uniq", fake_por_uniq)
+    monkeypatch.setattr(usb_pai, "usb_pai_por_no", fake_por_no)
+    monkeypatch.setattr(usb_pai, "nos_e_sysfs", lambda _s: {})
+    _dublar_pactl(monkeypatch, _curta(_P1, _PONTE_BT, _MONITOR))
 
 
 class TestAFonteSaiDoAparelhoCerto:
@@ -135,3 +184,58 @@ class TestOHandlerHonraOAlvo:
             "é a mesa cheia mexendo no microfone da pessoa errada"
         )
         assert fonte != audio_control.fonte_de_captura_do_controle()
+
+
+class TestOControleNoRadioTambemTemDono:
+    """O MESMO defeito, do lado do rádio — CANAL-POR-CONTROLE (03/09/2026).
+
+    `fonte_de_captura_do_uniq` resolvia por UMA regra, o dispositivo USB, e
+    saía com `None` na primeira linha quando o controle não tinha nenhum. **Um
+    controle no rádio nunca tem** (a placa segue o transporte, medido em
+    15/08/2026), então a resposta por rádio era `None` SEMPRE — inclusive com a
+    ponte de microfone de pé, publicando uma source cujo nome carrega os três
+    últimos octetos do MAC daquele controle.
+
+    O estrago não era o `None`: o `mic.volume.set` cai na rota GLOBAL quando
+    esta função não resolve, e a rota global devolve a PRIMEIRA fonte de
+    DualSense da lista. Numa mesa com um no fio e um no ar, o controle
+    deslizante do card de quem está no RÁDIO mexia no microfone de quem está no
+    CABO.
+
+    **COMO ESTES TESTES MORDEM:** devolva `fonte_de_captura_do_uniq` à régua
+    própria — ``do_controle = usb_pai_por_uniq([uniq]).get(uniq, ""); if not
+    do_controle: return None`` — e o primeiro reprova, porque o controle do
+    rádio volta a não ter fonte nenhuma.
+    """
+
+    def test_o_controle_do_radio_acha_a_source_da_ponte(
+        self, mesa_de_cabo_e_radio: None
+    ) -> None:
+        assert audio_control.fonte_de_captura_do_uniq(_UNIQ_BT) == _PONTE_BT
+
+    def test_o_gesto_do_radio_nao_cai_no_microfone_de_quem_esta_no_cabo(
+        self, mesa_de_cabo_e_radio: None
+    ) -> None:
+        """A resposta tem de existir E ser de outra pessoa que não a do fio."""
+        fonte = audio_control.fonte_de_captura_do_uniq(_UNIQ_BT)
+        assert fonte is not None, (
+            "sem fonte para o controle do rádio o handler cai na rota global, "
+            "que devolve a PRIMEIRA da lista — o microfone de quem está no cabo"
+        )
+        assert fonte != _P1
+
+    def test_o_cabo_continua_achando_a_placa_dele(
+        self, mesa_de_cabo_e_radio: None
+    ) -> None:
+        """A cura é um ACRÉSCIMO: a regra do dispositivo USB fica inteira."""
+        assert audio_control.fonte_de_captura_do_uniq(_UNIQ_P1) == _P1
+
+    def test_a_ponte_de_outro_controle_nao_serve(
+        self, mesa_de_cabo_e_radio: None
+    ) -> None:
+        """O rabo do MAC é identidade: quem não casa não leva.
+
+        Sem esta guarda, "achou uma source virtual" viraria "é sua" — que é o
+        chute que o `None` desta função existe para não dar.
+        """
+        assert audio_control.fonte_de_captura_do_uniq("aabbccfefdfc") is None
