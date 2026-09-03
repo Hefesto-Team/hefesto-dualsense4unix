@@ -814,9 +814,30 @@
 
   /* O DESENHO: a borda tem a cor do plástico, sempre — é como ela sabe de quem
      é a luz que está vendo (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). O desenho ocupa
-     a coluna inteira: nesta aba ele é o instrumento, não a ilustração. */
-  .luz-grade .moldura{border:1px solid var(--plastico);border-radius:8px;
-                      background:var(--app-bg);overflow:hidden}
+     a coluna inteira: nesta aba ele é o instrumento, não a ilustração.
+
+     A BORDA SAI DE `currentColor`, E NÃO DE `--plastico` — 03/09/2026, e é o
+     que faz a cor do plástico ser LIDA DO APARELHO em vez de cravada aqui.
+     Nenhum alvo do pintor escreve uma variável CSS (`hefesto_vivo.escrever`
+     sabe `texto`, `largura`, `fundo`, `valor`, `html`, `classe` e `cor`), e o
+     alvo `cor` escreve `style.color`. Com a borda em `currentColor` o pacote
+     passa a mandar a cor da casca a cada tique, pelo `data-campo="plastico"`.
+
+     O PADRÃO É NEUTRO de propósito: sem leitura do broker — o primeiro tique de
+     toda sessão, e o rádio enquanto a cor não chega — `style.color` volta a
+     vazio e a borda cai em `var(--linha)`. Regra dela: campo sem informação não
+     mostra nada. Uma borda colorida ali afirmaria um modelo que ninguém leu.
+
+     E O DESENHO NÃO HERDA A COR DA MOLDURA. Medido em 03/09 no Chrome, dentro
+     desta página: `#il-p1-glifo-ps` e `#il-p1-glifo-share` desenham com
+     `stroke="currentColor"` e SEM classe, então herdavam `--fg` do documento.
+     Sem a linha abaixo, a cor que vai à borda tingiria os glifos do PS, do
+     share, do options, do mic e dos analógicos. Os quatro glifos de face
+     (`.z-simbolos`) já têm cor própria com `!important`, e não estavam em
+     risco — os outros cinco estavam. */
+  .luz-grade .moldura{color:var(--linha);border:1px solid currentColor;
+                      border-radius:8px;background:var(--app-bg);overflow:hidden}
+  .luz-grade .moldura .ds-svg{color:var(--fg)}
   .ctrl-rot{font-size:11px;color:var(--texto-mudo);text-align:center;white-space:nowrap;
             display:flex;align-items:center;justify-content:center}
 
@@ -1218,11 +1239,18 @@
                   <b>Isto não escolhe o que você está vendo</b> — os 4 estão na tela. Isto
                   <b>dá</b> um número ao controle da coluna. O <b>anelzinho</b> de cada botão é
                   a cor do plástico de quem tem aquele número hoje.<br><br>
+                  <!-- A FRASE PAROU DE NOMEAR CONTROLE — 03/09/2026, a lei dela.
+                       Ela dizia *"pôr o Starlight Blue no 1 faz o Cosmic Red virar
+                       2"*: os dois nomes do MOCKUP, numa coluna de RÓTULOS que é
+                       uma só para as quatro colunas — não há "este controle" aqui
+                       a que endereçar, e por isso a cura não é endereço, é dizer a
+                       regra em vez do exemplo. Quem nomeia os dois de verdade é a
+                       dica de cada botão da fileira (`um_botao_de_player`), que o
+                       pacote reescreve a cada tique com a mesa viva. -->
                   Dar a este controle um número que já é de outro faz <b>os dois trocarem de
-                  lugar</b>: pôr o Starlight Blue no 1 faz o
-                  Cosmic Red virar 2. Nunca fica um número
-                  repetido, nunca fica um controle sem número — por isso a fileira oferece
-                  os números que existem na mesa, e não os oito.<br><br>
+                  lugar</b>: quem tem aquele número hoje fica com o deste. Nunca fica um
+                  número repetido, nunca fica um controle sem número — por isso a fileira
+                  oferece os números que existem na mesa, e não os oito.<br><br>
                   Um jogo em co-op pode mandar o seu próprio número por cima — e aí quem
                   manda nas luzinhas é o jogo, não esta escolha.
                 </span></span>
@@ -1233,7 +1261,7 @@
           </div>
 
         <div class="ctrl" data-controle="p1" data-conectado="sim">
-          <div class="moldura" style="--plastico:#ae335a" title="O Cosmic Red agora: a barra na cor do Player 1, e as cinco lâmpadas no padrão dele.">
+          <div class="moldura" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a" title="A borda é a cor do plástico deste controle, quando o produto a conhece. A barra acende a cor do número, e as cinco lâmpadas dizem qual é.">
             <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -1631,14 +1659,14 @@
           <div class="ctrl-rot" data-campo="identidade">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
           <div class="cel-cor">
             <span class="guia">
-            <button class="tom on" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF79C6" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0080" data-gesto="cor" data-hex="#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#F1FA8C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFF00" data-gesto="cor" data-hex="#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
-            <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra do Cosmic Red, e não muda o número dele."></button>
+            <button class="tom on" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0080" data-gesto="cor" data-hex="#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFF00" data-gesto="cor" data-hex="#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
               <input type="color" class="livre" value="#0000ff" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -1649,8 +1677,8 @@
             <span class="num" data-campo="brilho">82%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
-            <button class="on" data-gesto="player" data-player="1" title="O Cosmic Red É o Player 1 — é o número dele hoje."><i class="dono" style="--plastico:#ae335a"></i>1</button>
-            <button class="" data-gesto="player" data-player="2" title="Dar o Player 2 ao Cosmic Red: o Starlight Blue (BT), que tem o 2 hoje, fica com o 1. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
+            <button class="on" data-gesto="player" data-player="1" title="O Cosmic Red É o Player 1 — é o número dele hoje."><i class="dono" data-hef="players.dono" style="--plastico:#ae335a"></i>1</button>
+            <button class="" data-gesto="player" data-player="2" title="Dar o Player 2 ao Cosmic Red: o Starlight Blue (BT), que tem o 2 hoje, fica com o 1. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" data-hef="players.dono" style="--plastico:#7eb8d4"></i>2</button>
             <button class="" data-gesto="player" data-player="3" title="Player 3 — livre.">3</button>
             <button class="" data-gesto="player" data-player="4" title="Player 4 — livre.">4</button>
           </div>
@@ -1661,11 +1689,11 @@
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
-            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz do Cosmic Red.">Desligar</button>
+            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
           </div>
         </div>
         <div class="ctrl" data-controle="p2" data-conectado="sim">
-          <div class="moldura" style="--plastico:#7eb8d4" title="O Starlight Blue agora: a barra na cor do Player 2, e as cinco lâmpadas no padrão dele.">
+          <div class="moldura" data-campo="plastico" data-hef-alvo="cor" style="color:#7eb8d4" title="A borda é a cor do plástico deste controle, quando o produto a conhece. A barra acende a cor do número, e as cinco lâmpadas dizem qual é.">
             <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2063,14 +2091,14 @@
           <div class="ctrl-rot" data-campo="identidade">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</div>
           <div class="cel-cor">
             <span class="guia">
-            <button class="tom" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom on" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#FF79C6" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0080" data-gesto="cor" data-hex="#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#F1FA8C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFF00" data-gesto="cor" data-hex="#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
-            <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra do Starlight Blue, e não muda o número dele."></button>
+            <button class="tom" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom on" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0080" data-gesto="cor" data-hex="#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFF00" data-gesto="cor" data-hex="#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
               <input type="color" class="livre" value="#ff0000" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -2081,8 +2109,8 @@
             <span class="num" data-campo="brilho">100%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
-            <button class="" data-gesto="player" data-player="1" title="Dar o Player 1 ao Starlight Blue: o Cosmic Red (USB), que tem o 1 hoje, fica com o 2. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" style="--plastico:#ae335a"></i>1</button>
-            <button class="on" data-gesto="player" data-player="2" title="O Starlight Blue É o Player 2 — é o número dele hoje."><i class="dono" style="--plastico:#7eb8d4"></i>2</button>
+            <button class="" data-gesto="player" data-player="1" title="Dar o Player 1 ao Starlight Blue: o Cosmic Red (USB), que tem o 1 hoje, fica com o 2. Os dois trocam de lugar — ninguém repete número e ninguém fica sem."><i class="dono" data-hef="players.dono" style="--plastico:#ae335a"></i>1</button>
+            <button class="on" data-gesto="player" data-player="2" title="O Starlight Blue É o Player 2 — é o número dele hoje."><i class="dono" data-hef="players.dono" style="--plastico:#7eb8d4"></i>2</button>
             <button class="" data-gesto="player" data-player="3" title="Player 3 — livre.">3</button>
             <button class="" data-gesto="player" data-player="4" title="Player 4 — livre.">4</button>
           </div>
@@ -2093,7 +2121,7 @@
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
-            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz do Starlight Blue.">Desligar</button>
+            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
           </div>
         </div>
         <div class="ctrl vazia" data-conectado="nao"
@@ -2919,43 +2947,45 @@
 
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
-  <h2>Trocar o número: o antes e o depois</h2>
-  <p>O caso é o seu, de 26/08 — <i>"o meu controle azul é o player 2 e antes de irmos pro
-  jogo ele tem que ser o player 1"</i>. Na coluna do <b>Starlight Blue</b>, clique no
-  <b>1</b>:</p>
+  <div class="nota-troca" data-hef="troca">
+    <h2>Trocar o número: o antes e o depois</h2>
+    <p>O caso é o seu, de 26/08 — <i>"o meu controle azul é o player 2 e antes de irmos pro
+    jogo ele tem que ser o player 1"</i>. Na coluna do <b>Starlight Blue</b>, clique no
+    <b>1</b>:</p>
 
-  <div class="troca">
-    <div class="troca-linha"><span class="troca-rot">Antes</span>
-      <span class="troca-item" style="--plastico:#ae335a"><i class="dono"></i><span class="np">P1</span><span>Cosmic Red</span><span class="luzinhas"><i></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i></i></span></span>
-      <span class="troca-item mexeu" style="--plastico:#7eb8d4"><i class="dono"></i><span class="np">P2</span><span>Starlight Blue</span><span class="luzinhas"><i></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i></i></span></span>
-      <span class="troca-item" style="--plastico:#74588e"><i class="dono"></i><span class="np">P3</span><span>Galactic Purple</span><span class="luzinhas"><i class="on"></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i class="on"></i></span></span>
-      <span class="troca-item" style="--plastico:#e4e0d8"><i class="dono"></i><span class="np">P4</span><span>White</span><span class="luzinhas"><i class="on"></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i class="on"></i></span></span>
+    <div class="troca">
+      <div class="troca-linha"><span class="troca-rot">Antes</span>
+        <span class="troca-item" data-hef="troca.item" style="--plastico:#ae335a"><i class="dono"></i><span class="np">P1</span><span>Cosmic Red</span><span class="luzinhas"><i></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i></i></span></span>
+        <span class="troca-item mexeu" data-hef="troca.item" style="--plastico:#7eb8d4"><i class="dono"></i><span class="np">P2</span><span>Starlight Blue</span><span class="luzinhas"><i></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i></i></span></span>
+        <span class="troca-item" data-hef="troca.item" style="--plastico:#74588e"><i class="dono"></i><span class="np">P3</span><span>Galactic Purple</span><span class="luzinhas"><i class="on"></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i class="on"></i></span></span>
+        <span class="troca-item" data-hef="troca.item" style="--plastico:#e4e0d8"><i class="dono"></i><span class="np">P4</span><span>White</span><span class="luzinhas"><i class="on"></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i class="on"></i></span></span>
+      </div>
+      <div class="troca-gesto">↓ clique no <b>1</b> na coluna do
+        <b>Starlight Blue</b></div>
+      <div class="troca-linha"><span class="troca-rot">Depois</span>
+        <span class="troca-item mexeu" data-hef="troca.item" style="--plastico:#ae335a"><i class="dono"></i><span class="np">P2</span><span>Cosmic Red</span><span class="luzinhas"><i></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i></i></span></span>
+        <span class="troca-item mexeu" data-hef="troca.item" style="--plastico:#7eb8d4"><i class="dono"></i><span class="np">P1</span><span>Starlight Blue</span><span class="luzinhas"><i></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i></i></span></span>
+        <span class="troca-item" data-hef="troca.item" style="--plastico:#74588e"><i class="dono"></i><span class="np">P3</span><span>Galactic Purple</span><span class="luzinhas"><i class="on"></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i class="on"></i></span></span>
+        <span class="troca-item" data-hef="troca.item" style="--plastico:#e4e0d8"><i class="dono"></i><span class="np">P4</span><span>White</span><span class="luzinhas"><i class="on"></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i class="on"></i></span></span>
+      </div>
     </div>
-    <div class="troca-gesto">↓ clique no <b>1</b> na coluna do
-      <b>Starlight Blue</b></div>
-    <div class="troca-linha"><span class="troca-rot">Depois</span>
-      <span class="troca-item mexeu" style="--plastico:#ae335a"><i class="dono"></i><span class="np">P2</span><span>Cosmic Red</span><span class="luzinhas"><i></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i></i></span></span>
-      <span class="troca-item mexeu" style="--plastico:#7eb8d4"><i class="dono"></i><span class="np">P1</span><span>Starlight Blue</span><span class="luzinhas"><i></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i></i></span></span>
-      <span class="troca-item" style="--plastico:#74588e"><i class="dono"></i><span class="np">P3</span><span>Galactic Purple</span><span class="luzinhas"><i class="on"></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i class="on"></i></span></span>
-      <span class="troca-item" style="--plastico:#e4e0d8"><i class="dono"></i><span class="np">P4</span><span>White</span><span class="luzinhas"><i class="on"></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i class="on"></i></span></span>
-    </div>
+
+    <ul>
+      <li><b>Os dois trocam, os outros não se mexem.</b> É uma permutação: ninguém repete
+          número e ninguém fica sem. Por isso a fileira oferece
+          <span class="marca">1 · 2 · 3 · 4</span> — os números que
+          existem na mesa. Um número livre não teria com quem trocar, e dá-lo deixaria um
+          controle sem número.</li>
+      <li><b>As luzinhas seguem o número</b>, no padrão do produto: 1 é a do <b>meio</b>,
+          2 são as duas de dentro, 3 são as pontas e o meio, 4 são quatro sem a do meio
+          (<code>core/led_control.py::player_led_pattern</code>).</li>
+      <li><b>E a cor da barra segue junto</b>, porque sem escolha à mão ela é a cor do
+          <i>número</i>: depois da troca o Starlight Blue acende
+          <span class="marca">#0000FF</span> e o Cosmic Red acende
+          <span class="marca">#FF0000</span>
+          (<code>core/led_control.py::player_slot_color</code>).</li>
+    </ul>
   </div>
-
-  <ul>
-    <li><b>Os dois trocam, os outros não se mexem.</b> É uma permutação: ninguém repete
-        número e ninguém fica sem. Por isso a fileira oferece
-        <span class="marca">1 · 2 · 3 · 4</span> — os números que
-        existem na mesa. Um número livre não teria com quem trocar, e dá-lo deixaria um
-        controle sem número.</li>
-    <li><b>As luzinhas seguem o número</b>, no padrão do produto: 1 é a do <b>meio</b>,
-        2 são as duas de dentro, 3 são as pontas e o meio, 4 são quatro sem a do meio
-        (<code>core/led_control.py::player_led_pattern</code>).</li>
-    <li><b>E a cor da barra segue junto</b>, porque sem escolha à mão ela é a cor do
-        <i>número</i>: depois da troca o Starlight Blue acende
-        <span class="marca">#0000FF</span> e o Cosmic Red acende
-        <span class="marca">#FF0000</span>
-        (<code>core/led_control.py::player_slot_color</code>).</li>
-  </ul>
 
   <h2>O que mudou hoje</h2>
   <ul>
@@ -2976,10 +3006,10 @@
         desenhos pequenos das outras abas.</li>
     <li><b>Saiu o "Sony" do rótulo</b>, que ainda estava aqui. Decisão sua de 27/08 — "tira o
         Sony das outras abas também", porque a marca se repetia em cada card sem separar um
-        controle do outro. Agora ele lê <span class="marca">P1 • Cosmic Red • USB</span>,
+        controle do outro. Agora ele lê <span class="marca">P1 • Modelo • USB</span>,
         que é exatamente o que os chips da fita dizem 100 px acima, na mesma tela.
         <b>Aviso:</b> Controles e Conexões ainda escrevem a forma longa
-        (<i>Sony • Player 1 • Cosmic Red • USB</i>), citando a sua ordem de 26/08 — a que
+        (<i>Sony • Player 1 • Modelo • USB</i>), citando a sua ordem de 26/08 — a que
         você trocou no dia seguinte. Não é falta de espaço: medida aqui, a forma longa dá
         196 px numa coluna de 208. É uma escolha, e ela precisa valer para as três.</li>
     <li><b>O hexadecimal fica</b>, por decisão sua de 28/08 — e agora há um por controle,
