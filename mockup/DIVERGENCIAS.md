@@ -162,6 +162,15 @@ seção daqui**: a aba deixou de estar em trabalho.
   ou fechar o teclado na tela"*, *"Teclado na tela (abre e fecha)"* — ele muda
   em um lugar só (`core/acoes_de_botao.ACOES`) e as 21 listas acompanham.
 
+  **A ESPERA DEIXOU DE TER PREÇO — 02/09/2026, à noite.** A tela estava
+  desatualizada e o **disco não**: o "Guardar" recolhia o rótulo congelado e
+  gravava `l3 = __OPEN_OSK__` no perfil ATIVO — **o L3 parava de alternar
+  naquele perfil**, em silêncio, e bastava um clique para mudar qualquer OUTRA
+  linha. Agora ele NÃO grava essa linha e diz por quê; se você escolher *"Abrir
+  o teclado na tela"* com o dedo, aí é escolha sua e ele grava.
+  (`interface/pacotes/a06_navegacao._o_desenho_congelado`, com régua em
+  `tests/unit/test_a_06_o_desenho_congelado_nao_e_escolha_dela.py`.)
+
   Publicar: `scripts/check_o_desenho_aprovado.py --publicar 06`.
 ## 07-lancadores.html
 - **02/09/2026** — **um comentário HTML dentro da lista do cartão da Steam, e

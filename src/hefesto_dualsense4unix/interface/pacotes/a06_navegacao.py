@@ -132,6 +132,9 @@ import time
 from typing import Any
 
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+from hefesto_dualsense4unix.core.keyboard_mappings import (
+    PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ,
+)
 
 from . import Contexto, perfil, registrar
 
@@ -996,6 +999,74 @@ def fechar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         perfil.ativo((ctx.state or {}).get("active_profile")))}
 
 
+def _o_desenho_congelado(diferentes: dict[str, str]) -> dict[str, tuple[str, str]]:
+    """As linhas de `diferentes` que são o DESENHO CONGELADO, e não escolha dela.
+
+    O DEFEITO QUE ELA CURA, medido em 02/09/2026 e declarado em
+    `core/keyboard_mappings.PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ`: o L3 nasceu
+    ALTERNADOR (`__TOGGLE_OSK__`, decisão 6 dela — *"aperta abre o teclado
+    virtual, aperta de novo fecha"*), a página que o produto RENDERIZA foi
+    congelada antes disso e não tem a `<option>` do rótulo novo, e por isso a
+    pintura do `acao-l3` é RECUSADA EM SILÊNCIO (`hefesto_vivo.escrever`, alvo
+    `valor`: um `<select>` só aceita o texto exato de uma opção que ele
+    oferece). A linha fica mostrando *"Abrir o teclado na tela"*, que é
+    `__OPEN_OSK__` — e o "Guardar" recolhia isso como se fosse escolha dela.
+
+    O CUSTO, medido pelo fio do daemon (`acoes_de_botao.resolver` →
+    `profiles.manager.resolve_key_bindings`): sem override o device recebe
+    `['__TOGGLE_OSK__']`; com o que o "Guardar" gravava ele recebe
+    `['__OPEN_OSK__']` — **o L3 para de alternar naquele perfil**, e no tique
+    seguinte a pintura volta a casar e não sobra rastro em lugar nenhum.
+    Bastava um clique para mudar qualquer OUTRA linha.
+
+    O QUE SEPARA O CONGELADO DA ESCOLHA DELA É `_MEXENDO`, e não um literal:
+    ele só tem linha que ELA trocou, pelo gesto `linha-de-botao`. Se o `acao-l3`
+    está lá, ela escolheu *"Abrir o teclado na tela"* com o dedo dela — e isso
+    o "Guardar" grava, como grava qualquer outra escolha. É a mesma distinção
+    que a trava contra o apagador já usa logo abaixo.
+
+    ELA MORRE SOZINHA NO DIA DA PUBLICAÇÃO: a tabela que a alimenta é a
+    declaração, e `test_o_padrao_de_fabrica_cabe_na_tela_publicada` reprova a
+    declaração que caducou. Publicada a `06`, a linha do L3 sai da tabela, esta
+    função devolve `{}` e o "Guardar" volta a gravar as 21 sem exceção — sem
+    ninguém precisar lembrar de apagar nada daqui.
+
+    :returns: `{botão: (o token de fábrica, o token que a tela pôs no lugar)}`.
+    """
+    fora: dict[str, tuple[str, str]] = {}
+    for botao, (de_fabrica, da_tela) in PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ.items():
+        if diferentes.get(botao) != da_tela:
+            continue
+        if f"{PREFIXO_DA_ACAO}{botao}" in _MEXENDO:
+            continue
+        fora[botao] = (de_fabrica, da_tela)
+    return fora
+
+
+def _frase_do_congelado(congelado: dict[str, tuple[str, str]]) -> str:
+    """O que NÃO foi gravado e por quê — a frase vai para a tela dela.
+
+    RECUSAR DIZENDO É OBRIGATÓRIO nesta casa, e aqui a recusa é PARCIAL: o resto
+    da forma foi gravado. Engolir a linha em silêncio trocaria um defeito por
+    outro — o produto deixaria de estragar o perfil e passaria a não contar o
+    que ignorou.
+    """
+    partes = []
+    for botao, (de_fabrica, da_tela) in sorted(congelado.items()):
+        rotulo_certo = acoes.ACOES.get(de_fabrica, ("", de_fabrica))[1]
+        rotulo_tela = acoes.ACOES.get(da_tela, ("", da_tela))[1]
+        partes.append(
+            f"{_nome_do_botao(botao)} (a tela mostra “{rotulo_tela}”; de fábrica "
+            f"ele faz “{rotulo_certo}”)")
+    return (
+        "não guardei estas linhas, porque o que a tela mostra nelas não é a sua "
+        "escolha: " + ", ".join(partes) + ". A lista desta versão da página não "
+        "tem a opção do que o produto faz de fábrica, então ela abre no rótulo "
+        "mais próximo — gravar isso trocaria o comportamento do controle sem "
+        "você pedir. Se você QUER essa opção, escolha-a na linha e clique aqui "
+        "de novo: aí é escolha sua e eu gravo.")
+
+
 def _perfil_ativo_ou_recusa(ctx: Contexto) -> str:
     """O nome do perfil ativo, ou a recusa com o motivo.
 
@@ -1067,6 +1138,13 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     do cross e do triangle (`uinput_mouse._resolve_emulated_set`). O gesto GRAVA
     o resto e LEVANTA nomeando o que não pousou — quem clicou fica sabendo, em
     vez de descobrir pelo botão que não responde.
+
+    E O QUE A TELA **NÃO SABE** OFERECER TAMBÉM É DITO, e deixou de ser gravado
+    — 02/09/2026. Ver `_o_desenho_congelado`: o L3 nasceu ALTERNADOR e a página
+    publicada não tem a `<option>` desse rótulo, então a linha abre mostrando
+    "Abrir o teclado na tela". Recolher isso gravava `{'l3': '__OPEN_OSK__'}` no
+    perfil ATIVO — **o L3 parava de alternar** — em silêncio, bastando um clique
+    para mudar qualquer OUTRA linha.
     """
     nome = _perfil_ativo_ou_recusa(ctx)
     forma = o.get("forma")
@@ -1096,6 +1174,17 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     de_fabrica = acoes.padrao()
     diferentes = {b: a for b, a in escolhas.items() if de_fabrica.get(b) != a}
+    # O DESENHO CONGELADO NÃO É ESCOLHA DELA — 02/09/2026. Ver
+    # `_o_desenho_congelado`: a linha cuja opção de fábrica a página PUBLICADA
+    # não sabe dizer abre no rótulo mais próximo, e recolhê-la aqui gravava no
+    # perfil ATIVO uma troca de comportamento que ela não pediu.
+    congelado = _o_desenho_congelado(diferentes)
+    for botao in congelado:
+        del diferentes[botao]
+    # A FRASE VIAJA COM TODOS OS DESFECHOS, e não só com o que grava: os dois
+    # ramos de recusa abaixo também precisam dizê-la, senão a linha some do
+    # relato exatamente nos casos em que nada mais é dito.
+    aviso = _frase_do_congelado(congelado) if congelado else ""
 
     loader = perfil._com_o_src()
     prof = loader.load_profile(nome)
@@ -1126,7 +1215,8 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"não havia o que guardar — o perfil “{nome}” já tem exatamente o "
             f"que a tabela mostra ({guardadas}). Está guardado. Para mudar "
             "alguma coisa, troque a linha e clique aqui de novo; para voltar "
-            "tudo ao de fábrica, use o “Voltar ao padrão” ao lado.")
+            "tudo ao de fábrica, use o “Voltar ao padrão” ao lado."
+            + (f" E {aviso}" if aviso else ""))
     # A TRAVA CONTRA O APAGADOR — 02/09/2026. "Nada diferente do de fábrica" só
     # quer dizer "ela zerou as 21 linhas" DEPOIS que as 21 linhas mostraram o
     # que o perfil guarda. Elas mostram desde que a página foi publicada, mas
@@ -1151,15 +1241,23 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # *"espere a tabela se preencher e clique de novo"*, e trocar a linha nunca
     # chegava ao Guardar: o tique reescrevia a escolha em ≤1,5 s. Agora chega.
     if novo is None and prof.button_actions and not _MEXENDO:
+        # A CONTA DIZ QUANTAS SOBRARAM, e não "as 21", quando o desenho
+        # congelado tirou alguma da forma: dizer "as 21 estão no de fábrica"
+        # logo ao lado de "não guardei a linha do L3" seria a mesma tela
+        # afirmando duas coisas que não cabem juntas.
+        quantas = (f"as {len(acoes.BOTOES) - len(congelado)} linhas restantes "
+                   "da tela estão" if congelado
+                   else f"as {len(acoes.BOTOES)} linhas da tela estão todas")
         raise RuntimeError(
-            "não guardei: as 21 linhas da tela estão todas no de fábrica, e o "
+            f"não guardei: {quantas} no de fábrica, e o "
             f"perfil “{nome}” guarda "
             f"{len(prof.button_actions)} escolha(s) sua(s). Gravar isto as "
             "apagaria. A tela leva meio segundo para mostrar o que o perfil "
             "guarda; se você clicou antes disso, o que estava na tela era o "
             "desenho, e não a sua escolha. Espere a tabela se preencher — para "
             "voltar tudo ao de fábrica de propósito, use o “Voltar ao padrão” "
-            "ao lado.")
+            "ao lado."
+            + (f" E {aviso}" if aviso else ""))
     perfil.gravar_e_reaplicar(prof.model_copy(update={"button_actions": novo}), ctx, p)
     # GUARDADO É O FIM DA EDIÇÃO. A partir daqui o perfil diz o que a tela diz,
     # e o tique volta a mandar na tabela — que é a outra metade de *"até guardar
@@ -1167,12 +1265,17 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _largar_o_que_ela_mexeu()
 
     _, _, sem_dono = acoes.resolver(novo)
+    recados = []
     if sem_dono:
-        raise RuntimeError(
+        recados.append(
             "guardei o que o produto sabe fazer, e estas linhas ficaram sem "
             "quem as atenda: " + ", ".join(_nome_do_botao(b) for b in sem_dono)
             + ". Elas estão no perfil e não acendem nada hoje — é feature que "
               "falta, não erro seu.")
+    if aviso:
+        recados.append(aviso)
+    if recados:
+        raise RuntimeError(" ".join(recados))
 
 
 @gesto("06-navegacao.html", "padrao-definicoes")

@@ -459,6 +459,40 @@ def _dica_da_linha(item: Any) -> str:
     exame viraria marcação. O escapador é o da camada de tela desta aba
     (`gui.aba_conexoes._e`), o mesmo que o gerador do desenho usa.
 
+    UMA ORDEM DA MESA NÃO TEM VERBETE, E TINHA DE TER O DELA — 02/09/2026, e
+    este era o achado de pé desta aba: *"o `?` de uma linha sem verbete e sem
+    cura abre uma caixa VAZIA de 330px"*.
+
+    A CAUSA, e ela é do dia anterior: `DICAS_DAS_LINHAS` é indexada por chave de
+    REGRA, e são cinco (`energia_do_radio`, `energia_das_portas`, `pareamentos`,
+    `suporte_ao_controle`, `vizinhanca_das_portas`). Um item vindo do catálogo
+    de ORDENS traz `chave=ordem.chave` — o slug do arranjo, que não é nenhuma
+    delas — e `cura=ordem.acao or None`, que pode ser vazio. Sem verbete e sem
+    cura, `partes` ficava só com `""` e o `?` abria mostrando o travessão. A
+    decisão 9 dela (*"o `?` para de repetir a linha"*) tirou a metade do meio, e
+    quem não tinha as outras duas ficou sem nada.
+
+    A CURA É REUSO, e as frases já existiam: uma `Ordem` traz TRÊS linhas
+    (`ordens_da_mesa.Ordem.linhas`) com os rótulos de
+    `exame_da_mesa.ROTULOS_DA_ORDEM` — *"O que eu vi aqui"*, *"Por que importa"*
+    e *"Ganho esperado"*. **A primeira é a que a linha já mostra** (é o
+    `Item.porque`), então ela fica de fora e a decisão 9 continua valendo; as
+    outras duas são exatamente o que o `?` promete. É o mesmo par que o card do
+    GTK escreve (`secao_exame._linha_da_ordem`) e que o `--exame` imprime no
+    terminal (`exame_da_mesa._imprimir_relatorio`); esta tela era a única das
+    três que as jogava fora.
+
+    O `<b>` DO RÓTULO É O MESMO DA JANELA ESTÁVEL, e por isso ele é composto
+    DEPOIS do escape: o rótulo e o texto passam por `_e` separadamente, e a
+    marcação entra fora deles. Escapar a frase já montada mostraria `<b>` na
+    tela.
+
+    O SELO DE PROCEDÊNCIA (`Linha.selo`) NÃO VEM, e a ausência é da mesma
+    natureza da `fonte` em `secao_exame._linha_da_ordem`: ali ele cabe porque o
+    card tem uma linha inteira por frase; aqui as duas frases dividem uma dica
+    de 330px, e um `[medido]` em cinza no fim de cada uma competiria com o texto
+    que ela foi ler. Fica escrito para quem desenhar a dica maior.
+
     O `except` LARGO É DE PROPÓSITO E DEVOLVE VAZIO: com `""` o `escrever()`
     põe o travessão, que é "não tenho o que dizer aqui". A alternativa —
     deixar levantar — derrubaria a pintura da aba INTEIRA por causa de uma
@@ -473,16 +507,35 @@ def _dica_da_linha(item: Any) -> str:
             PREFIXO_DA_CURA,
         )
         from hefesto_dualsense4unix.gui.aba_conexoes import _e
+        from hefesto_dualsense4unix.integrations.exame_da_mesa import (
+            ROTULOS_DA_ORDEM,
+        )
         from hefesto_dualsense4unix.utils.i18n import _
 
         # O `_()` É O MESMO DO DONO (`secao_exame` importa este). Sem ele, as
         # duas dicas da mesma linha sairiam por caminhos de tradução
         # diferentes na hora em que esta casa tiver um segundo idioma.
-        partes = [_(str(DICAS_DAS_LINHAS.get(str(getattr(item, "chave", "")), "")))]
+        #
+        # CADA PARTE É `(rótulo, texto)`, e o rótulo vazio quer dizer "frase
+        # solta". Só as linhas da ordem são rotuladas — o verbete e a cura já
+        # trazem o próprio começo.
+        partes: list[tuple[str, str]] = [
+            ("", _(str(DICAS_DAS_LINHAS.get(str(getattr(item, "chave", "")), ""))))]
+        ordem = getattr(item, "ordem", None)
+        if ordem is not None:
+            # AS DUAS ÚLTIMAS DAS TRÊS. A primeira (`O que eu vi aqui`) é o
+            # `Item.porque`, que a linha já mostra — repeti-la aqui desfaria a
+            # decisão 9 dela.
+            for rotulo, linha in zip(ROTULOS_DA_ORDEM[1:], ordem.linhas[1:],
+                                     strict=True):
+                partes.append((_(str(rotulo)),
+                               _(str(getattr(linha, "texto", "") or ""))))
         cura = str(getattr(item, "cura", "") or "")
         if cura:
-            partes.append(_(PREFIXO_DA_CURA) + _(cura))
-        return "<br><br>".join(_e(p) for p in partes if p)
+            partes.append(("", _(PREFIXO_DA_CURA) + _(cura)))
+        return "<br><br>".join(
+            (f"<b>{_e(r)}:</b> {_e(t)}" if r else _e(t))
+            for r, t in partes if t)
     except Exception:
         return ""
 
