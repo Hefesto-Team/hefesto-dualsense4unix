@@ -180,16 +180,34 @@ def _modulos_que_escrevem_portugues_cru(diretorio: Path) -> dict[str, int]:
     """Os módulos com prosa acentuada e SEM a função de tradução.
 
     É a medida de "o encanamento não está ligado nas telas", e é o que decide se
-    o convite pode existir. Devolve nome do arquivo -> quantidade de literais.
+    o convite pode existir. Devolve caminho relativo -> quantidade de literais.
+
+    RECURSIVO desde 03/09/2026, e a razão é que o defeito de 22/08 tinha sido
+    curado só de UM lado. Naquele dia o DENOMINADOR (`_modulos_de_acoes`) passou
+    de `glob` para `rglob` porque o pacote `config/` sumira inteiro do mapa; o
+    NUMERADOR aqui ficou em `glob("*.py")`. O resultado é que a proporção
+    publicada — "19 de 31" nas três páginas — media numerador de um nível contra
+    denominador de todos: nunca foram a mesma população.
+
+    O que isso escondia, medido hoje: `jogar/painel.py` nasceu em 30/08 com 37
+    literais de português cru e não aparecia no numerador, junto com
+    `config/mixin.py` (6), `config/__init__.py` (1), `config/secoes.py` (1) e
+    `jogar/__init__.py` (1). São CINCO módulos e 46 literais fora da conta. Com
+    as duas pontas recursivas a proporção honesta é **25 de 34**.
+
+    A chave passou de `fonte.name` para o caminho relativo porque, recursivo,
+    três arquivos se chamam `__init__.py` e um sobrescreveria o outro.
     """
     fora: dict[str, int] = {}
-    for fonte in sorted(diretorio.glob("*.py")):
+    for fonte in sorted(diretorio.rglob("*.py")):
+        if "__pycache__" in fonte.parts:
+            continue
         arvore = ast.parse(fonte.read_text(encoding="utf-8"))
         if _importa_a_funcao_de_traducao(arvore):
             continue
         prosa = _literais_de_prosa(arvore)
         if prosa:
-            fora[fonte.name] = prosa
+            fora[fonte.relative_to(diretorio).as_posix()] = prosa
     return fora
 
 
@@ -307,14 +325,34 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     # entre "texto que a pessoa lê na janela" e "texto que o próximo dev lê no
     # fonte" não está no dado, e afirmar que está seria pintar o número.
     # O 19 é honesto; a proporção 19 de 31 é o que a árvore tem.
-    assert total == 31, (
-        f"`app/actions/` tem {total} módulos, não 31. A contagem citada em "
+    #
+    # AS DUAS PONTAS RECURSIVAS (03/09/2026): 31 viraram 34 e 19 viraram 25, e
+    # os dois números mudam por motivos DIFERENTES — que é justamente o que esta
+    # nota precisa separar.
+    #
+    # O denominador subiu por trabalho novo: `perfis_web.py` e o pacote
+    # `jogar/` (`__init__.py` e `painel.py`) nasceram em 30/08/2026. Nenhum
+    # deles importa a função de tradução, então a piora é real e não de medição.
+    #
+    # O numerador subiu por CORREÇÃO DE MEDIÇÃO, e ela é a lição do dia: a cura
+    # de 22/08 — trocar `glob` por `rglob` porque o pacote `config/` sumira do
+    # mapa — foi aplicada só ao denominador. O numerador continuou lendo um
+    # nível só, então mediu-se por doze dias uma população contra outra. Os
+    # cinco que faltavam somam 46 literais, e o maior deles, `jogar/painel.py`,
+    # tem 37 sozinho: um pacote inteiro nasceu escrevendo português cru e não
+    # apareceu no número que decide se o convite pode voltar.
+    #
+    # Portanto: dos 19 para os 25, SEIS entram, e um só (`perfis_web.py`) é
+    # regressão de hoje; os outros cinco sempre estiveram lá, invisíveis. As
+    # três páginas passam a publicar 25 de 34.
+    assert total == 34, (
+        f"`app/actions/` tem {total} módulos, não 34. A contagem citada em "
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
         "`docs/usage/troubleshooting.md` precisa mudar junto."
     )
-    assert len(fora) == 19, (
+    assert len(fora) == 25, (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
-        f"tradução, não 18: {', '.join(sorted(fora))}. Se o número CAIU, é "
+        f"tradução, não 25: {', '.join(sorted(fora))}. Se o número CAIU, é "
         "trabalho bom — atualize as três páginas que o citam. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )

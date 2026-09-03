@@ -1799,7 +1799,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "selo": [i["selo"] for i in itens],
         # O QUARTO SELO — decisão dela, 02/09/2026: *"o que está quebrado agora
         # não pode parecer igual ao que só podia estar melhor"*. O `Item` tem
-        # QUATRO estados e a tela tinha TRÊS cores: `atencao` e  # (noqa-acento)
+        # QUATRO estados e a tela tinha TRÊS cores: `atencao` e  # (noqa-acento): nome de estado
         # `problema`
         # caíam os dois na pílula laranja, pela mesma palavra do dono
         # (`SELO_DO_ESTADO`).

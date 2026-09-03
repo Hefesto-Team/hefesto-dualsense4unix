@@ -773,7 +773,7 @@ def coluna(c):
     # O VALOR SAI DA F-STRING, e a razão é que ele VAZAVA PARA A TELA. A palavra
     # do atributo faz o portão de acentuação reprovar, e o marcador que a isenta
     # tem de ficar na MESMA linha física — que, aqui, era DENTRO da f-string.
-    # Resultado: as quatro colunas da aba Gatilhos nasciam com `  # noqa-acento`
+    # Resultado: as colunas da aba Gatilhos nasciam com `  # noqa-acento` (citação; nada a isentar)
     # como TEXTO, logo depois da `<div class="ctrl">`, visível para quem abrisse
     # a aba. Medido em 01/09/2026, no dia em que os dez geradores voltaram a
     # rodar; ninguém tinha visto porque ninguém os rodava.
