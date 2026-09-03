@@ -231,3 +231,55 @@ seção daqui**: a aba deixou de estar em trabalho.
   com a da bancada, os 28 vestem a cor que ela mapeou.
 
   **O produto recebe no `--publicar 01`**, que é ato de quem coordena.
+## 04-iluminacao.html
+
+- **03/09/2026** — **o DESENHO DO CONTROLE passou a vestir o aparelho**, e com
+  ele a página inteira aprendeu os **vinte e oito modelos** do mapa dela em vez
+  dos quatro do desenho. É a lei dela deste dia:
+
+  > *"os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
+  > players com cada controle — tudo isso muda de acordo com o controle
+  > identificado no canto superior. é white no p1, mas a borda de tudo é cosmic
+  > red e os svgs não são os que o meu mapa cataloga. isso tá errado"*
+  <!-- noqa-acento: citação literal dela -->
+
+  **O DEFEITO ESTAVA FOTOGRAFADO nesta árvore**, com a mesa dela — um White no
+  cabo e um Galactic Purple no rádio. A moldura e a fileira de números já
+  vestiam o aparelho; dentro delas, o maior objeto da tela continuava do mockup:
+
+  | | o que a coluna dizia | o que ela desenhava |
+  | --- | --- | --- |
+  | P1 | `P1 • White • USB` | um DualSense **cosmic-red** |
+  | P2 | `P2 • Galactic Purple • BT` | um DualSense **starlight-blue** |
+
+  **O QUE MUDA NO DESENHO**, e é só andaime — a cena que ela aprovou fica
+  idêntica byte a byte enquanto a mesa for a do mockup:
+
+  1. os dois `<svg>` das colunas conectadas ganham
+     `data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway"`;
+  2. as **cores do mapa** (`<defs id="cores-do-dualsense">`: a folha dos 28 e os
+     três fundos `url(#…)` que ela usa) saem de dentro dos quatro SVGs e passam
+     a existir **uma vez** na página, num `<svg>` fora do fluxo. Sem isto o alvo
+     não pinta nada: `monta._so_o_colorway` guarda em cada SVG só as regras do
+     modelo pedido — 3.127 bytes dos 45.497 —, e escrever `galactic-purple` num
+     desenho que nasceu `starlight-blue` cai no cinza neutro de um controle sem
+     identidade. A página vai de 310 KB para 343 KB e passa a saber pintar 28
+     modelos em vez de 4;
+  3. os dois lugares **vazios** perdem o `data-colorway`. Não há aparelho ali, e
+     a folha já os pinta de `var(--linha)` — o que sai é identidade do mockup
+     parada num lugar que diz "Desconectado".
+
+  **O QUE ELA VÊ HOJE, enquanto o produto não recebe:** nada muda. A página
+  publicada não tem o endereço, e o pacote **não emite** o campo para uma página
+  que não sabe recebê-lo (`a04_iluminacao.a_pintura_alcanca_o_desenho`) — os
+  dois desenhos continuam Cosmic Red e Starlight Blue, exatamente como hoje.
+  Medido: **13 valores** pintados com a página publicada, **15** com a da
+  bancada.
+
+  **ESPERA DUAS COISAS, e as duas são de quem integra:**
+
+  * o alvo **`atributo`** do `escrever()` do piloto, que nasce numa frente irmã
+    (`worktree-wf_88fbb9c0-f51-1`). Sem ele, `escrever()` cai no ramo padrão e
+    faz `el.textContent = "white"` num `<svg>` — o desenho de 146 px some e vira
+    a palavra. A guarda desta aba **falha fechada** e barra isso;
+  * o **`--publicar 04`**, que é ato dela.
