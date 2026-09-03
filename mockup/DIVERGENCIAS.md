@@ -535,3 +535,52 @@ seção daqui**: a aba deixou de estar em trabalho.
   produto já os reescreve por `document.querySelector('.fita')`, mas eles não
   têm endereço no HTML, e por isso toda régua os lê como congelados. A cura é
   uma linha no dono comum, e não dez cópias dela.
+
+## 07-lancadores.html
+<!-- SEGUNDA SEÇÃO DESTA ABA, e é de propósito: a de 02/09 continua valendo (o
+     comentário HTML no `lanc-fora`), e escrever aqui em vez de lá é o que
+     permitiu dez frentes mexerem neste arquivo no mesmo dia sem conflito. -->
+- **03/09/2026** — **a fita desta aba deixou de nomear dois controles que você
+  não tem.** Esta é a única mudança, e ela é do que se VÊ.
+
+  **O que estava na sua tela**, medido com os seus dois controles na mesa (um no
+  cabo, um no rádio), na `07-lancadores`:
+
+  | | o que a tela dizia |
+  | --- | --- |
+  | cabeçalho | `2 controles: 1 USB · 1 BT` — certo, lido do aparelho |
+  | fita | `P1 · Cosmic Red · USB` — **o mockup** |
+  | fita | `P2 · Starlight Blue · BT` — **o mockup** |
+
+  Nenhuma das duas cores é de um controle seu. É a sua lei de hoje ao contrário:
+  *"se no topo tá mostrando controle white player 1, então cada aba vai usar os
+  controles lá de cima. Não mistura com a info dos mockups."*
+
+  **O que a bancada passa a ter:** a fita nasce só com `Selecionar:` e o chip
+  `Todos`. **Os dois chips de controle saíram do desenho** — a página estática
+  não sabe nada dos seus controles, e a regra é a sua: *campo sem informação não
+  mostra nada*. Quem põe os chips é o produto, no tique, com quem estiver na
+  mesa naquele instante.
+
+  **O que a sua tela passa a mostrar** (fotografado hoje, com o daemon no ar):
+
+      Selecionar:   [ Todos ]   [ P1 • White • USB ]   [ P2 • BT ]
+
+  O `White` é o seu controle do cabo, lido do aparelho. O do rádio aparece com o
+  jogador e o transporte e **cala sobre a cor**, porque o leitor de plástico
+  ainda não conhece essa peça — inventar um nome ali seria o mesmo defeito de
+  novo, com outra roupa.
+
+  **O que NÃO mudou:** a fita continua esmaecida (nada nesta aba se ajusta por
+  controle — sua decisão de 28/08), o chip continua sem a borda de plástico (a
+  folha de estilo a apaga na fita inerte, de propósito), e o número do jogador
+  continua sendo a POSIÇÃO na mesa, como você disse.
+
+  **O que você vê enquanto espera:** a página publicada continua com os dois
+  chips do mockup. Enquanto a 07 não for publicada, a sua tela segue mostrando
+  `Cosmic Red` e `Starlight Blue` na fita desta aba.
+
+  **O que fica de fora desta aba, e está relatado:** a fita é das dez páginas.
+  `hefesto_vivo._fita` desiste de repintá-la INTEIRA quando qualquer controle
+  está sem cor, e é por isso que o desenho sobrevivia — as outras nove abas têm
+  o mesmo defeito, e curá-lo aqui seria mexer no arquivo de todo mundo.
