@@ -52,6 +52,14 @@ SEM_DONO: dict[str, str] = {}
 #: lugar só — a regra da casa é que o que tem dono não se digita.
 LADOS = {"e": "left", "d": "right"}
 
+#: COMO A GTK CHAMA CADA GATILHO NUMA FRASE PARA ELA, copiado letra por letra de
+#: `triggers_actions._toast_trigger`. Ele existe lá por uma cura com nome — a
+#: TRG-01: a barra de status dizia `"LEFT -> Off"`, trocando a fala dela (o
+#: gatilho que ela clicou) por id interno mais o lado em inglês. Escrever `"L2"`
+#: aqui seria a segunda verdade sobre a mesma peça, e a tela nova
+#: reintroduziria o defeito por outro atalho.
+NOME_DO_LADO = {"left": "Gatilho esquerdo (L2)", "right": "Gatilho direito (R2)"}
+
 #: O TRAVESSÃO É DO PILOTO, e está aqui só para a régua poder cobrá-lo sem
 #: repetir a string: `hefesto_vivo.escrever()` troca `''` por `—` antes de
 #: escrever. Emitir `''` é dizer "esta casa não tem valor"; emitir `'—'` seria
@@ -407,12 +415,44 @@ def _prontos() -> Any:
         return None
 
 
-#: O MODO QUE UMA CURVA PRONTA É. Uma curva de dez posições só existe como
-#: `MultiPositionFeedback` — é o único modo cujos ajustes são `pos_0..pos_9`
-#: (`app/actions/trigger_specs.py`), e é o que a GUI estável exige para sequer
-#: MOSTRAR a linha de preset (`triggers_actions._update_preset_row_visibility`,
-#: que a esconde nos outros 17 modos).
+#: O MODO QUE UMA CURVA DE FEEDBACK É. Uma curva de dez posições existe em DOIS
+#: modos, e este é o de força: `pos_0..pos_9` (`app/actions/trigger_specs.py`).
+#: O outro é o `MODO_DA_VIBRACAO`, logo abaixo — a GUI estável repovoa o mesmo
+#: campo com uma tabela ou com a outra conforme o modo em que o gatilho está
+#: (`triggers_actions._populate_preset_combo`).
 MODO_DA_CURVA = "MultiPositionFeedback"
+
+#: O SEGUNDO MODO POR POSIÇÃO, e ele estava fora do alcance desta tela até
+#: 03/09/2026. `VIBRATION_POSITION_PRESETS` tem CINCO curvas — pulso crescente,
+#: machine gun, galope, senoide, vibração final — que a GUI estável oferece e o
+#: HTML não alcançava de jeito nenhum: o campo só carregava as de feedback e o
+#: gesto mandava sempre `MultiPositionFeedback`.
+MODO_DA_VIBRACAO = "MultiPositionVibration"
+
+#: OS DOIS MODOS QUE TÊM CURVA PRONTA, na ordem em que o produto os nomeia.
+#: É o `_MODES_COM_PRESET` da GUI estável, com o mesmo conteúdo e o mesmo dono
+#: de tabela — quem decide qual das duas listas o campo mostra é o MODO.
+MODOS_COM_CURVA = (MODO_DA_CURVA, MODO_DA_VIBRACAO)
+
+
+def _tabela_da_curva(modo: str) -> tuple[dict[str, list[int]], dict[str, str]]:
+    """`(presets, rótulos)` do modo por posição, ou dois vazios nos outros 17.
+
+    ESTA É A REGRA DA GUI ESTÁVEL, palavra por palavra
+    (`triggers_actions._populate_preset_combo`): `MultiPositionFeedback` lê
+    `FEEDBACK_POSITION_*`, `MultiPositionVibration` lê `VIBRATION_POSITION_*`,
+    e nenhum outro modo tem curva. Escrever a escolha em dois lugares — na
+    lista que a tela mostra e no gesto que aplica — era como a tela passaria a
+    oferecer uma curva que o gesto não sabe resolver.
+    """
+    tp = _prontos()
+    if tp is None:
+        return {}, {}
+    if modo == MODO_DA_VIBRACAO:
+        return dict(tp.VIBRATION_POSITION_PRESETS), dict(tp.VIBRATION_POSITION_LABELS)
+    if modo == MODO_DA_CURVA:
+        return dict(tp.FEEDBACK_POSITION_PRESETS), dict(tp.FEEDBACK_POSITION_LABELS)
+    return {}, {}
 
 
 def _pronto_da_curva(nome: str, curva: list[int]) -> str:
@@ -423,17 +463,112 @@ def _pronto_da_curva(nome: str, curva: list[int]) -> str:
     adivinha e não se digita. Sem isto a tela mostraria "— Nenhum —" para uma
     curva que é exatamente a "Stop hard" que ela escolheu.
 
+    A TABELA É A DO MODO — 03/09/2026. Esta função só olhava a de feedback, e
+    por isso um `MultiPositionVibration` gravado com a `galope` do produto
+    aparecia como "— Nenhum —": a tela desistia de nomear uma curva que ela
+    mesma tem. As duas tabelas não compartilham chave nenhuma, mas quem escolhe
+    é o modo, e não a coincidência.
+
     `custom` é o token do próprio produto para "nenhuma pronta"
     (`FEEDBACK_POSITION_LABELS["custom"]`), e é o `value` que a opção
     "— Nenhum —" carrega no desenho — a tela e o disco falam a mesma palavra.
     """
-    tp = _prontos()
-    if tp is None or nome != MODO_DA_CURVA or len(curva) != 10:
+    presets, _ = _tabela_da_curva(nome)
+    if not presets or len(curva) != 10:
         return "custom"
-    for chave, valores in tp.FEEDBACK_POSITION_PRESETS.items():
+    for chave, valores in presets.items():
         if list(valores) == list(curva):
             return str(chave)
     return "custom"
+
+
+# ---------------------------------------------------------------------------
+# O RASCUNHO DESTA ABA — a escolha dela FICA na tela até o disco alcançá-la.
+#
+# O DEFEITO, e ele é o que mais se parece com a frase dela (*"o produto via html
+# não funcionou igual o gtk"*): clicar `Rígido` aplicava no aparelho — ela sente
+# na mão — e, em no máximo meio segundo, o campo voltava para o modo SALVO. O
+# tique repinta `modo-chave-<lado>` com o perfil DO DISCO, e aplicar não grava
+# (a docstring do `guardar` já dizia: *"o efeito vale até a próxima troca de
+# perfil, e o disco continua com o que estava lá"*).
+#
+# ISSO NÃO É TELA VAZIA — É TELA QUE MENTE, e ela contaminava o botão: o
+# "Guardar esse efeito" lê a COLUNA, e passado meio segundo a coluna já não
+# tinha a escolha dela. Um clique em `Rígido` seguido de `Guardar` gravava o que
+# já estava no disco.
+#
+# A CURA É A DA GTK, e ela tem nome lá: `_persist_params_to_draft`
+# (`app/actions/triggers_actions.py:342-391`), chamado antes de todo envio, e
+# `_refresh_triggers_from_draft` (:168-203), que repinta do RASCUNHO e não do
+# perfil. Aqui o rascunho é este dicionário, com a MESMA forma que o disco usa
+# (`{"mode": ..., "params": [...]}`) — logo `_do_lado` o traduz para a tela sem
+# uma linha nova, e o `guardar` continua lendo a tela.
+#
+# ELE VIVE SÓ ENQUANTO O PERFIL VIVE, e as duas podas são medidas, não zelo:
+#
+# * TROCA DE PERFIL — o daemon REAPLICA o perfil no `profile.switch`, então o
+#   que estava aplicado deixou de estar. Guardar o rascunho por perfil e
+#   ressuscitá-lo na volta faria a tela afirmar um efeito que o daemon já
+#   desfez. A GTK paga o mesmo preço: o draft é remontado do perfil.
+# * O CONTROLE SAI DA MESA — no replug o daemon aplica o perfil de novo. Um
+#   rascunho sobrevivente diria, sobre um aparelho que acabou de chegar, o
+#   efeito de antes de ele sair.
+#
+# QUEM ESCREVE É A THREAD DO GESTO e quem lê é o laço do GTK. Não há trava:
+# cada entrada é SUBSTITUÍDA inteira (nunca mutada por dentro), e uma leitura
+# concorrente devolve a de antes ou a de depois — nunca meia. O tique seguinte
+# corrige em 500 ms.
+# ---------------------------------------------------------------------------
+_PERFIL_DO_RASCUNHO: str = ""
+_RASCUNHO: dict[tuple[str, str], dict[str, Any]] = {}
+
+
+def _chave_do_rascunho(uniq: str, disco: str) -> tuple[str, str]:
+    """O endereço de uma metade do rascunho: `uniq` NORMALIZADO e o lado.
+
+    O `uniq` do clique vem da mesa (`d4:2f:…`) e o do perfil vem do disco
+    (`d42f…`). Normalizar aqui é o que impede o mesmo controle de ter duas
+    entradas — a mesma razão que `_com_os_gatilhos` já escreve.
+    """
+    return (uniq.replace(":", "").lower(), disco)
+
+
+def esquecer_o_rascunho() -> None:
+    """Joga fora o que esta sessão lembrava de ter aplicado.
+
+    PÚBLICA de propósito: é por ela que a régua arranca a cura e vê a tela
+    voltar a mentir, e é ela que a troca de perfil chama.
+    """
+    _RASCUNHO.clear()
+
+
+def _o_rascunho_e_deste_perfil(perfil: str) -> None:
+    """Poda o rascunho quando o perfil ativo mudou. Ver a nota da seção."""
+    global _PERFIL_DO_RASCUNHO
+    if perfil != _PERFIL_DO_RASCUNHO:
+        _PERFIL_DO_RASCUNHO = perfil
+        esquecer_o_rascunho()
+
+
+def _o_rascunho_e_de_quem_esta_na_mesa(uniqs: set[str]) -> None:
+    """Poda o rascunho dos controles que saíram. Ver a nota da seção."""
+    for chave in [k for k in _RASCUNHO if k[0] not in uniqs]:
+        _RASCUNHO.pop(chave, None)
+
+
+def _lembrar_o_aplicado(perfil: str, uniq: str, disco: str,
+                        cfg: dict[str, Any]) -> None:
+    """Grava no rascunho o que acabou de ir para o aparelho."""
+    _o_rascunho_e_deste_perfil(perfil)
+    _RASCUNHO[_chave_do_rascunho(uniq, disco)] = {
+        "mode": str(cfg.get("mode") or "Off"),
+        "params": [int(v) for v in (cfg.get("params") or [])],
+    }
+
+
+def _do_rascunho(uniq: str, disco: str) -> dict[str, Any] | None:
+    """O que esta sessão aplicou naquele gatilho, ou `None` se não aplicou nada."""
+    return _RASCUNHO.get(_chave_do_rascunho(uniq, disco))
 
 
 # ---------------------------------------------------------------------------
@@ -715,12 +850,27 @@ SEM_AJUSTE = "Este modo não tem o que ajustar."
 
 
 def html_dos_ajustes(sigla: str, ajustes: list[dict[str, Any]],
-                     cabem: int | None = None) -> str:
+                     cabem: int | None = None, editavel: bool = False) -> str:
     """A caixa de ajustes daquele lado, em HTML — a lista do MODO.
 
     Uma linha por parâmetro do modo, com o rótulo, a barra na porcentagem da
     FAIXA daquele parâmetro e o número. Zero parâmetros devolvem a frase, que é
     o que as colunas vazias do desenho já diziam.
+
+    `editavel` É QUEM PODE ARRASTAR — 03/09/2026, e ele tem DOIS donos de razão,
+    não um:
+
+    * o PRODUTO passa `True` só nas colunas que têm aparelho. Um ajuste é de um
+      gatilho; arrastar num lugar vazio só pode terminar em recusa, e o botão
+      que convida para uma recusa é pior que o botão que não existe — é a mesma
+      regra que o `pointer-events:none` do CSS já aplica aos `<select>`;
+    * o DESENHO fica no padrão `False`, e isto está esperando a palavra dela.
+      A alavanca é invisível — o desenho não muda um pixel —, mas o que ela
+      aprovou em 27/08 foi uma barra de LEITURA, e transformar leitura em
+      controle é decisão de produto. O gerador escreve a bancada e a bancada é
+      o que ela olha; enquanto ela não disser, o desenho segue mostrando o que
+      ela aprovou e o produto segue tendo a paridade com a GTK que a Lei 0
+      manda ter.
 
     `cabem` É O TETO DA PÁGINA QUE O PRODUTO RENDERIZA HOJE, e `None` quer dizer
     "não há teto". Ele é a metade que faltava da decisão dela: a caixa acompanha
@@ -769,25 +919,82 @@ def html_dos_ajustes(sigla: str, ajustes: list[dict[str, Any]],
     #: publicada. Com teto, exatamente as que cabem: o aviso saiu por decisão
     #: dela e a casa que ele ocupava voltou a ser uma barra.
     a_vista = len(ajustes) if cabem is None else min(len(ajustes), cabem)
-    linhas = [_html_de_uma_barra(sigla, i, a, escondida=i >= a_vista)
+    linhas = [_html_de_uma_barra(sigla, i, a, escondida=i >= a_vista,
+                                 editavel=editavel)
               for i, a in enumerate(ajustes)]
     return "\n".join(linhas)
 
 
+#: O ESTILO DA ALAVANCA INVISÍVEL, e ele é INLINE porque tem de valer na página
+#: que o produto renderiza HOJE. A folha de estilo mora no cabeçalho do arquivo
+#: publicado, e publicar é ato dela (`--publicar 03`); uma classe nova ficaria
+#: sem regra até lá, e a alavanca nasceria do tamanho do texto, por cima da
+#: barra vizinha.
+#:
+#: A CONTA DA CAIXA DE TOQUE: a linha da barra mede `--h-barra` = 23px e o
+#: trilho tem 5px, centrado — sobram 9px acima. `top:-9px;height:23px` devolve à
+#: alavanca a linha INTEIRA, que é a área que o `Gtk.Scale` da GTK também tem.
+#: Menos que isso e ela pega só o fio de 5px, que ninguém acerta arrastando.
+_ALAVANCA = ("position:absolute;left:0;top:-9px;width:100%;height:23px;"
+             "margin:0;padding:0;opacity:0;cursor:ew-resize;"
+             "-webkit-appearance:none;background:transparent")
+
+
 def _html_de_uma_barra(sigla: str, i: int, a: dict[str, Any],
-                       escondida: bool = False) -> str:
-    """Uma linha da caixa de ajustes. `escondida` guarda o valor sem mostrá-lo."""
+                       escondida: bool = False, editavel: bool = False) -> str:
+    """Uma linha da caixa de ajustes. `escondida` guarda o valor sem mostrá-lo.
+
+    `editavel` PÕE A ALAVANCA — 03/09/2026, e é a maior dívida desta aba.
+    Medido: 17 dos 19 modos têm ajuste, somando 73 parâmetros (Rigid 2,
+    Machine 6, MultiPositionFeedback 10, MultiPositionVibration 11). Na GTK
+    cada um é um `Gtk.Scale` que ela arrasta, com faixa e padrão vindos do
+    `trigger_specs`; no HTML **nenhum** era tocável, e escolher um modo
+    aplicava os PADRÕES dele e acabava.
+
+    O DESENHO NÃO MUDA UM PIXEL: a alavanca é um `<input type="range">`
+    transparente POR CIMA do trilho que ela aprovou. Quem desenha continua
+    sendo o `.cheio` que o pacote pinta; o `<input>` só recebe o arrasto. Uma
+    barra visível nova seria desenho, e desenho é dela.
+
+    A FAIXA É A DO PARÂMETRO, e sai do produto: `spec.params[i].min_value` e
+    `.max_value`, os mesmos números que o `Gtk.Scale` usa. Digitar `0..255`
+    aqui poria a posição do curso (0..9) numa régua trinta vezes maior.
+
+    ELE PEDE A FORMA E NÃO ENTRA NELA. `data-hef-forma="@controle"` é o que faz
+    o arrasto chegar ao Python com a coluna inteira — o modo e os outros
+    ajustes —, porque o daemon lê a lista posicional INTEIRA e um número solto
+    trocaria os vizinhos pelos padrões. Mas a alavanca não tem `data-linha` nem
+    `data-campo`, e a varredura do piloto recolhe só esses dois: quem carrega o
+    valor daquela casa continua sendo o `.num`. Dois endereços para o mesmo
+    número seriam duas verdades no mesmo clique.
+
+    E ELE NÃO FAZ O BLOCO PISCAR: o `value` viaja no ATRIBUTO, e arrastar muda
+    a *propriedade*. O `innerHTML` continua igual ao emitido enquanto ela
+    arrasta, então o piloto não troca a caixa debaixo da mão dela.
+    """
     #: INLINE, e não a classe: `.barra{display:flex}` é regra de autor e ganha do
     #: `[hidden]{display:none}` da folha do navegador. O atributo sozinho não
     #: esconderia nada.
     oculta = ' style="display:none"' if escondida else ""
+    alavanca = ""
+    if editavel and not escondida:
+        alavanca = (
+            f'<input type="range" min="{int(a.get("min", 0))}" '
+            f'max="{int(a.get("max", 255))}" step="1" '
+            f'value="{int(a["valor"])}" data-gesto="ajuste" '
+            f'data-lado="{sigla}" data-i="{i}" data-hef-forma="@controle" '
+            # O NOME PARA QUEM NÃO VÊ. A alavanca é transparente de propósito, e
+            # sem isto um leitor de tela anunciaria uma barra sem nome. O texto
+            # é o rótulo do próprio parâmetro — nada inventado.
+            f'aria-label="{_escapar(str(a["nome"]))}" '
+            f'style="{_ALAVANCA}">')
     return (
         f'            <div class="barra" data-ajuste="{sigla}-{i}"{oculta}>\n'
         f'              <span class="nome" data-campo="aj-nome-{sigla}-{i}">'
         f'{_escapar(str(a["nome"]))}</span>\n'
         f'              <span class="trilho"><span class="cheio" '
         f'data-campo="aj-pct-{sigla}-{i}" data-hef-alvo="largura" '
-        f'style="width:{a["pct"]}%"></span></span>\n'
+        f'style="width:{a["pct"]}%"></span>{alavanca}</span>\n'
         f'              <span class="num" data-campo="aj-val-{sigla}-{i}">'
         f'{_escapar(str(a["valor"]))}</span>\n'
         f'            </div>')
@@ -839,8 +1046,58 @@ def _opcoes_cravadas_do_pronto() -> str:
     return _OPCOES_DO_PRONTO
 
 
-def html_das_opcoes_de_pronto() -> str:
-    """As opções do campo "Efeito pronto": o desenho + os efeitos DELA.
+def _valores_cravados_do_pronto() -> frozenset[str]:
+    """Os `value` que o DESENHO já oferece no campo "Efeito pronto"."""
+    return frozenset(re.findall(r'<option value="([^"]*)"',
+                                _opcoes_cravadas_do_pronto()))
+
+
+def _curvas_que_a_pagina_esqueceu(modo: str) -> list[str]:
+    """As curvas que o PRODUTO tem naquele modo e a página não oferece.
+
+    A DÍVIDA QUE ISTO PAGA, medida em 03/09/2026 lendo os dois lados:
+
+    * `linear_medio` ("Linear médio", `[4]` dez vezes, a firmeza constante) existe em
+      `FEEDBACK_POSITION_PRESETS` desde antes desta aba, a GUI estável a
+      oferece, e a lista `PRONTOS` do gerador — digitada à mão — a esqueceu;
+    * as CINCO de `VIBRATION_POSITION_PRESETS` (pulso crescente, machine gun,
+      galope, senoide, vibração final) nunca chegaram à tela nova: o campo só
+      carregava as de feedback.
+
+    Seis curvas do produto fora do alcance de quem clica, e nenhuma régua
+    acusava — o gerador reprova um rótulo que o produto NÃO tem, e nunca um que
+    o produto tem e a tela esqueceu.
+
+    O RÓTULO É O DO PRODUTO, letra por letra (`FEEDBACK_POSITION_LABELS` /
+    `VIBRATION_POSITION_LABELS`). Não invento texto de tela: estas palavras já
+    são as que a aba Gatilhos da GUI estável mostra a ela.
+
+    `custom` FICA DE FORA porque a página já o tem, com o nome que ELA aprovou
+    ("— Nenhum —", contra o "Personalizar" do motor). Acrescentá-lo daria duas
+    opções para a mesma chave, com dois nomes.
+    """
+    _, rotulos = _tabela_da_curva(modo)
+    if not rotulos:
+        return []
+    ja_tem = _valores_cravados_do_pronto()
+    return [chave for chave in rotulos
+            if chave != "custom" and chave not in ja_tem]
+
+
+def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
+    """As opções do campo "Efeito pronto": o desenho + o produto + os efeitos DELA.
+
+    A LISTA É DO MODO — 03/09/2026, e é a regra da GUI estável
+    (`_populate_preset_combo`): com o gatilho em `MultiPositionVibration` o
+    campo mostra as CINCO curvas de vibração; nos outros, as de feedback.
+    Escolher uma curva de vibração num campo que só oferece feedback era
+    impossível, e é o que fazia as cinco não existirem na tela nova.
+
+    O QUE NÃO MUDOU, e é decisão dela: o campo continua VISÍVEL nos 19 modos. A
+    GTK esconde a linha nos outros 17; o desenho dela a mostra sempre, e a
+    escolha de produto que isso abre — uma curva escolhida fora dos dois modos
+    por posição TROCA o modo — continua na tela como estava, esperando a
+    palavra dela.
 
     É AQUI QUE OS "MEUS EFEITOS" DEIXAM DE SER EXEMPLO. O desenho traz dois
     nomes de exemplo debaixo do separador; o produto traz os que ela salvou —
@@ -848,15 +1105,28 @@ def html_das_opcoes_de_pronto() -> str:
     princípio geral dela de hoje: *"se não tá mostrando agora, não tem info pra
     mostrar no produto"*. Um separador com nada embaixo é uma promessa vazia.
     """
-    fora = _opcoes_cravadas_do_pronto()
+    _, rotulos = _tabela_da_curva(modo)
+    linhas = [_opcoes_cravadas_do_pronto()]
+    # AS DE VIBRAÇÃO SUBSTITUEM, AS DE FEEDBACK COMPLETAM. No modo de vibração
+    # as cinco cravadas do desenho são de OUTRA tabela — deixá-las na lista
+    # ofereceria a "Stop hard" a um gatilho que não a sabe aplicar. Mas o corte
+    # tem de preservar o que a página cravou e não é curva: o travessão e o
+    # "— Nenhum —", que são as duas formas de "não há efeito" desta tela.
+    if modo == MODO_DA_VIBRACAO:
+        cravadas = _opcoes_cravadas_do_pronto().split("\n")
+        de_feedback, _ = _tabela_da_curva(MODO_DA_CURVA)
+        linhas = [uma for uma in cravadas
+                  if not any(f'value="{c}"' in uma for c in de_feedback)]
+    for chave in _curvas_que_a_pagina_esqueceu(modo):
+        linhas.append(f'                <option value="{chave}">'
+                      f'{_escapar(str(rotulos[chave]))}</option>')
     meus = meus_efeitos()
-    if not meus:
-        return fora
-    linhas = [fora, '                <option disabled>──── Meus efeitos ────</option>']
-    for nome in sorted(meus):
-        linhas.append(
-            f'                <option value="{PREFIXO_DO_MEU}{_escapar(nome)}">'
-            f'{_escapar(nome)}</option>')
+    if meus:
+        linhas.append('                <option disabled>──── Meus efeitos ────</option>')
+        for nome in sorted(meus):
+            linhas.append(
+                f'                <option value="{PREFIXO_DO_MEU}{_escapar(nome)}">'
+                f'{_escapar(nome)}</option>')
     return "\n".join(linhas)
 
 
@@ -1132,7 +1402,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     trig = (p.get("triggers") or {}) if p else {}
     overrides = (p.get("controllers") or {}) if p else {}
     tem_endereco = _enderecos_da_pagina()
-    opcoes = html_das_opcoes_de_pronto()
+
+    # AS DUAS PODAS DO RASCUNHO, e elas rodam ANTES de qualquer leitura dele:
+    # trocar de perfil e sair da mesa desfazem o que foi aplicado, porque o
+    # daemon reaplica o perfil nos dois casos. Ver a seção do rascunho.
+    _o_rascunho_e_deste_perfil(str(ctx.state.get("active_profile") or ""))
+    _o_rascunho_e_de_quem_esta_na_mesa(
+        {_chave_do_rascunho(str(c.get("uniq") or ""), "")[0] for c in ctx.conectados})
 
     lados = {sig: _do_lado(trig.get(disco) or {}, specs) for sig, disco in LADOS.items()}
     #: O `pref` DE CADA CONTROLE, e ele é obrigatório para o `blocos`: a chave
@@ -1151,12 +1427,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
         #: O OVERRIDE POR CONTROLE VENCE O PERFIL, e é o que o produto faz —
         #: `ControllerOverrides.triggers` existe no schema desde antes desta aba.
+        #:
+        #: E O RASCUNHO VENCE OS DOIS, que é a cura de 03/09/2026: o que ela
+        #: acabou de aplicar é mais novo do que o que está gravado, e a tela tem
+        #: de mostrar o gatilho de AGORA. É a ordem da GTK —
+        #: `_refresh_triggers_from_draft` repinta do draft, não do perfil.
         meu = overrides.get(uniq) or {}
         seus = (meu.get("triggers") or {}) if isinstance(meu, dict) else {}
-        deste = {sig: (_do_lado(seus[disco], specs) if seus.get(disco) else lados[sig])
-                 for sig, disco in LADOS.items()}
-        cfgs = {sig: (seus.get(disco) or trig.get(disco) or {})
+        cfgs = {sig: (_do_rascunho(uniq, disco)
+                      or seus.get(disco) or trig.get(disco) or {})
                 for sig, disco in LADOS.items()}
+        deste = {sig: (_do_lado(cfgs[sig], specs) if cfgs[sig] else lados[sig])
+                 for sig in LADOS}
 
         col: dict[str, object] = {
             # O CABEÇALHO DA COLUNA, e ele é IDENTIDADE — vem da mesa, que é a
@@ -1190,7 +1472,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 col[f"curva-pct-{sig}"] = d["curva-pct"]
         colunas[uniq] = col
         pintados += sum(1 for k in col if k in tem_endereco)
-        blocos.update(_blocos_da_coluna(pref_de.get(uniq) or uniq, deste, opcoes))
+        blocos.update(_blocos_da_coluna(pref_de.get(uniq) or uniq, deste,
+                                        editavel=True))
 
     # O LUGAR VAZIO TAMBÉM É ESCRITO — a cura do D4, ver
     # `_lugares_que_o_desenho_da_por_vazios`. A chave é o `pref` cru: o
@@ -1239,7 +1522,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # que é o defeito D3 numa coluna que ninguém olha.
     for pref in sorted(_todos_os_lugares_da_pagina() - ocupados):
         blocos.update(_blocos_da_coluna(
-            pref, dict.fromkeys(LADOS, sem_ninguem), opcoes))
+            pref, dict.fromkeys(LADOS, sem_ninguem)))
         # E O CABEÇALHO DELE, pela mesma razão e com o mesmo alcance LARGO: com
         # um controle só na mesa, o P2 é um lugar que a PÁGINA dá por conectado.
         # Sem esta linha ele continuaria com o `Starlight Blue` do desenho — um
@@ -1300,7 +1583,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
 
 def _blocos_da_coluna(pref: str, deste: dict[str, dict[str, Any]],
-                      opcoes: str) -> dict[str, str]:
+                      editavel: bool = False) -> dict[str, str]:
     """Os quatro blocos de uma coluna: as duas caixas de ajuste e as duas listas.
 
     O SELETOR É CSS, e ele tem de achar UM elemento só: o piloto usa
@@ -1308,9 +1591,11 @@ def _blocos_da_coluna(pref: str, deste: dict[str, dict[str, Any]],
     .ajustes.e` é único na página; `.ajustes.e` sozinho acharia o do P1 e
     escreveria a caixa do P3 nele.
 
-    A LISTA DO "EFEITO PRONTO" VAI PARA AS QUATRO COLUNAS com o mesmo conteúdo —
-    a biblioteca de efeitos é dela, não do controle. Emitir por coluna é o que
-    permite ao piloto trocar cada `<select>` sem inventar um endereço novo.
+    A LISTA DO "EFEITO PRONTO" É DO LADO, e não da coluna — 03/09/2026. Ela era
+    uma só para os oito campos; agora ela depende do MODO daquele gatilho,
+    porque as curvas de vibração só existem em `MultiPositionVibration` (ver
+    `html_das_opcoes_de_pronto`). A biblioteca dela continua igual nos oito: o
+    que muda é a metade que vem do motor.
     """
     fora: dict[str, str] = {}
     if not pref:
@@ -1319,8 +1604,10 @@ def _blocos_da_coluna(pref: str, deste: dict[str, dict[str, Any]],
         # O TETO VEM DA PÁGINA QUE O PRODUTO RENDERIZA, e é `None` no dia em que
         # ela publicar a bancada. Ver `_a_caixa_cresce`.
         fora[f'[data-controle="{pref}"] .ajustes.{sig}'] = html_dos_ajustes(
-            sig, list(d.get("ajustes") or []), _cabem_no_desenho(sig))
-        fora[f'[data-controle="{pref}"] select.pronto[data-lado="{sig}"]'] = opcoes
+            sig, list(d.get("ajustes") or []), _cabem_no_desenho(sig),
+            editavel=editavel)
+        fora[f'[data-controle="{pref}"] select.pronto[data-lado="{sig}"]'] = (
+            html_das_opcoes_de_pronto(str(d.get("modo-chave") or MODO_DA_CURVA)))
     return fora
 
 
@@ -1412,19 +1699,36 @@ def _escolhido(o: dict[str, Any]) -> str:
     return str(o.get("modo") or o.get("v") or o.get("valor") or "").strip()
 
 
-def _desfecho(resposta: Any) -> tuple[bool, str]:
-    """`(ok, motivo)` de uma resposta da ponte, que tem TRÊS formas.
+def _desfecho(resposta: Any) -> tuple[bool, str, dict[str, Any] | None]:
+    """`(ok, motivo, corpo)` de uma resposta da ponte, que tem TRÊS formas.
 
     `trigger_set` devolve `bool`, `trigger_set_checked` devolve `(ok, motivo)` e
     `trigger_set_detalhado` devolve `(ok, motivo, corpo)`. Normalizar aqui é o
     que permite o gesto RECUSAR DIZENDO sem depender de qual das três a ponte
     entregou — e um `ok, motivo = ...` rígido rebentaria com um `TypeError` na
     primeira troca de porta, que é erro sobre erro.
+
+    O CORPO DEIXOU DE SER JOGADO FORA — 03/09/2026, e era a terceira mentira
+    desta aba. Esta função reduzia a resposta a `(ok, motivo)`, e com isso três
+    desfechos diferentes chegavam à tela como o mesmo silêncio de sucesso:
+
+    * `{status: ok, aplicado_em: [], guardado_em: []}` — **nada aconteceu**, e é
+      a rota que a bancada mediu em 23/08 com a aba dizendo "aplicado";
+    * `guardado_em` com alguém — a intenção ficou guardada e o gatilho dela
+      **não mudou**;
+    * `status: ok` COM `motivo` — a recusa que vem dentro de uma resposta
+      bem-sucedida (`ipc_bridge._recusa_no_corpo`), que `trigger_set_detalhado`
+      entrega com `ok=True`.
+
+    `None` quer dizer *"não há corpo a ler"* — a ponte antiga, ou o dublê da
+    régua. Nesse caso quem decide continua sendo o `ok`, exatamente como antes.
     """
     if isinstance(resposta, tuple):
         motivo = resposta[1] if len(resposta) > 1 else ""
-        return bool(resposta[0]), str(motivo or "")
-    return bool(resposta), ""
+        corpo = resposta[2] if len(resposta) > 2 else None
+        return (bool(resposta[0]), str(motivo or ""),
+                corpo if isinstance(corpo, dict) else None)
+    return bool(resposta), "", None
 
 
 def _na_lingua_da_tela(motivo: str, modo: str) -> str:
@@ -1499,22 +1803,57 @@ def _padroes(nome: str) -> list[int]:
     return list(specs.preset_to_positional_params(spec, {}))
 
 
-def _curva(chave: str) -> list[int]:
-    """As dez intensidades daquele efeito pronto, lidas do produto."""
+def _curva(chave: str) -> tuple[list[int], str]:
+    """`(as dez intensidades, o modo em que elas existem)` daquele efeito pronto.
+
+    O MODO SAI DA TABELA EM QUE A CURVA MORA, e não de uma constante: as duas
+    tabelas do produto não compartilham chave nenhuma
+    (`rampa_crescente`… contra `pulso_crescente`…), então saber DE ONDE a curva veio
+    é saber em que modo ela existe. Antes desta linha o gesto mandava sempre
+    `MultiPositionFeedback`, e as cinco curvas de vibração não tinham como ser
+    aplicadas nem que a lista as oferecesse.
+    """
     tp = _prontos()
     if tp is None:
         raise RuntimeError(
             "efeito pronto: não consegui abrir `profiles/trigger_presets.py`.")
-    valores = tp.resolve_feedback_preset(chave)
-    if not valores:
-        raise ValueError(
-            f"efeito pronto: {chave!r} não é uma curva do produto "
-            f"(`profiles/trigger_presets.FEEDBACK_POSITION_PRESETS`).")
-    return list(valores)
+    for modo_, resolver in ((MODO_DA_CURVA, tp.resolve_feedback_preset),
+                            (MODO_DA_VIBRACAO, tp.resolve_vibration_preset)):
+        valores = resolver(chave)
+        if valores:
+            return list(valores), modo_
+    raise ValueError(
+        f"efeito pronto: {chave!r} não é uma curva do produto "
+        f"(`profiles/trigger_presets.FEEDBACK_POSITION_PRESETS` nem "
+        f"`VIBRATION_POSITION_PRESETS`).")
+
+
+def _params_da_curva(modo_: str, curva: list[int]) -> list[int]:
+    """As dez posições postas nos parâmetros `pos_*` do modo, o resto no padrão.
+
+    É O QUE A GTK FAZ, e por que ela precisa fazer: em
+    `MultiPositionVibration` o spec tem ONZE parâmetros — `frequency` mais
+    `pos_0..pos_9` — e a curva tem DEZ. `_on_preset_changed` pula o slider de
+    frequência por nome (`if nome == "frequency": continue`) e escreve só os
+    `pos_N`. Alinhar por índice poria a posição 0 debaixo da frequência: um
+    número certo com o nome errado, e o efeito errado no fio.
+
+    A frequência (e qualquer outro parâmetro que não seja posição) fica no
+    PADRÃO do modo, que é o que o `preset_to_positional_params` devolve.
+    """
+    specs = _specs()
+    fora = _padroes(modo_)
+    if specs is None:
+        return fora
+    spec = specs.get_spec(modo_)
+    posicoes = [i for i, q in enumerate(spec.params) if q.name.startswith("pos_")]
+    for i, valor in zip(posicoes, curva, strict=False):
+        fora[i] = int(valor)
+    return fora
 
 
 def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
-             uniq: str) -> tuple[bool, str]:
+             uniq: str, ctx: Contexto | None = None) -> tuple[bool, str]:
     """Manda o efeito ao daemon pela porta CERTA, e a certa depende do modo.
 
     "DESLIGADO" É `trigger.reset`, E NÃO `trigger.set` COM `Off` — a R-19. O
@@ -1528,10 +1867,180 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     A FUNÇÃO EXISTE PORQUE HÁ TRÊS CHAMADORES — o `modo`, o `pronto` quando
     aplica um efeito dela, e a régua. Escrito três vezes, o `if chave == "Off"`
     some num deles no dia em que alguém mexer, e a trava volta calada.
+
+    E ELA É O CHOKE POINT DO RASCUNHO — 03/09/2026. Toda escrita no gatilho
+    passa por aqui, então é aqui que a tela aprende o que foi aplicado. É o
+    lugar da GTK: `_persist_params_to_draft` é chamado ANTES de todo envio
+    (`triggers_actions.py:597`), pela mesma razão — quatro chamadores gravando
+    o draft por conta própria seria o quarto que esquece.
+
+    O RASCUNHO SÓ RECEBE O QUE O DAEMON ACEITOU. Guardar antes faria a tela
+    afirmar um efeito que o aparelho recusou — trocaria a mentira de hoje (a
+    escolha some) por uma pior (a escolha fica, e é falsa).
     """
     if modo_ == "Off":
-        return _desfecho(p.trigger_reset_detalhado(lado, uniq=uniq))
-    return _desfecho(p.trigger_set_detalhado(lado, modo_, params, uniq=uniq))
+        ok, motivo, corpo = _desfecho(p.trigger_reset_detalhado(lado, uniq=uniq))
+        params = []
+    else:
+        ok, motivo, corpo = _desfecho(
+            p.trigger_set_detalhado(lado, modo_, params, uniq=uniq))
+    if ok and _chegou_ao_aparelho(corpo):
+        _lembrar_o_aplicado(str((ctx.state if ctx else {}).get("active_profile") or ""),
+                            uniq, lado, {"mode": modo_, "params": params})
+    return _conferir_o_desfecho(lado, modo_, ok, motivo, corpo, ctx, uniq)
+
+
+#: OS DOIS CAMPOS EM QUE O DAEMON DIZ ONDE A ESCRITA FOI PARAR. O vocabulário é
+#: dele (`_destinos_por_uniq`, MESA-CHEIA-09) e quem os LÊ é
+#: `ipc_bridge.destinos_da_aplicacao`; aqui eles servem só para uma pergunta
+#: anterior, que aquela função não pode responder — ver `_fala_de_destino`.
+_CAMPOS_DE_DESTINO = ("aplicado_em", "guardado_em")
+
+
+def _fala_de_destino(corpo: dict[str, Any] | None) -> bool:
+    """O corpo diz alguma coisa sobre ONDE a escrita foi parar?
+
+    ESTA PERGUNTA VEM ANTES DE `destinos_da_aplicacao`, e a distinção não é
+    firula: aquela função devolve `([], [])` tanto para *"o daemon disse que
+    nenhum controle recebeu"* quanto para *"este corpo não fala disso"*. As
+    duas coisas são diferentes, e tratá-las igual faria a tela afirmar um
+    diagnóstico que ninguém mediu — que é exatamente o defeito que a própria
+    `NADA_ACONTECEU` documenta do outro lado (*"olhei e não sei por quê" é uma
+    resposta, e disfarçá-la de diagnóstico é o defeito de forma*).
+
+    É A MESMA DISTINÇÃO QUE `_corpo_do_daemon` já faz um nível acima, entre
+    `None` ("não houve resposta utilizável") e `dict` ("o daemon falou"): aqui
+    ela desce um degrau e pergunta se ele falou DISTO.
+
+    MEDIDO: o dublê da régua devolve `(True, "", {})`. Sem esta guarda, todo
+    gesto provado por dublê passava a levantar *"nenhum controle recebeu"* —
+    a régua reprovando a cura em vez do defeito, que é a forma de erro mais
+    repetida desta casa.
+    """
+    return isinstance(corpo, dict) and any(c in corpo for c in _CAMPOS_DE_DESTINO)
+
+
+def _chegou_ao_aparelho(corpo: dict[str, Any] | None) -> bool:
+    """O byte SAIU no fio para alguém — a pergunta que decide o rascunho.
+
+    Sem corpo — ou com um corpo que não fala de destino — a resposta é SIM, e é
+    a de sempre: a ponte antiga e o dublê da régua não dizem onde a escrita
+    parou, e o `ok` é tudo o que existe para ler. Com corpo que fala, quem
+    responde é `ipc_bridge.destinos_da_aplicacao` — dono único da leitura de
+    `aplicado_em`/`guardado_em`, para nenhuma aba ler esses dois campos por
+    conta própria.
+
+    GUARDADO NÃO CONTA. Um efeito que ficou registrado sem sair do fio não é o
+    que está no gatilho dela agora; pintá-lo na tela seria a tela afirmando um
+    estado que o aparelho não tem — o defeito que o rascunho veio matar, do
+    outro lado.
+    """
+    if not _fala_de_destino(corpo):
+        return True
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.ipc_bridge import destinos_da_aplicacao
+    except Exception:
+        return True
+    aplicado, _ = destinos_da_aplicacao(corpo)
+    return bool(aplicado)
+
+
+def _como_a_janela_pergunta(ctx: Contexto | None, uniq: str) -> Any:
+    """O `host` que `frase_do_desfecho` interroga, com o que ESTA aba sabe.
+
+    A GTK lê três coisas do objeto da janela para explicar um "guardado": o
+    alvo de edição, o mapa de conectados e o Modo Nativo. Esta aba SABE as três,
+    e melhor do que a GTK — ela não tem alvo de edição, tem uma COLUNA POR
+    CONTROLE, e a coluna clicada é o alvo sem ambiguidade nenhuma.
+
+    POR QUE UM DUBLÊ E NÃO UMA SEGUNDA FRASE: `app/textos_de_aplicacao.py` é o
+    dono único do vocabulário de aplicado/guardado/nada-aconteceu, e a D-9 diz
+    com todas as letras por que ele é um só — *"para que trocá-lo seja uma
+    linha, e não uma caçada por strings"*. Escrever aqui "guardado, vai valer
+    quando…" seria a sexta cópia.
+
+    OS TRÊS ATRIBUTOS SÃO OS DO CONTRATO, e não inventados:
+    `_alvo_de_edicao` (o canônico de `app/alvo_de_edicao.py`),
+    `_target_uniq_by_index` (o mapa que a aba Status recalcula do `state_full`)
+    e `_modo_nativo_ligado` (o `native_mode` do mesmo `state_full`).
+    """
+    from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, EstadoDoAlvo
+
+    conectados = list((ctx.conectados if ctx else []) or [])
+    rotulo = ""
+    for c in conectados:
+        if str(c.get("uniq") or "") == uniq:
+            rotulo = f"Controle {c.get('player') or '?'}"
+            break
+
+    class _Janela:
+        def __init__(self) -> None:
+            self._alvo_de_edicao = AlvoDeEdicao(EstadoDoAlvo.CONTROLE, uniq=uniq,
+                                                label=rotulo or None)
+            self._target_uniq_by_index = {i: str(c.get("uniq") or "")
+                                          for i, c in enumerate(conectados)}
+            self._modo_nativo_ligado = bool(
+                (ctx.state if ctx else {}).get("native_mode"))
+
+    return _Janela()
+
+
+def _conferir_o_desfecho(lado: str, modo_: str, ok: bool, motivo: str,
+                         corpo: dict[str, Any] | None,
+                         ctx: Contexto | None, uniq: str) -> tuple[bool, str]:
+    """Levanta quando o gatilho dela NÃO mudou, com a frase do dono do assunto.
+
+    A DÍVIDA QUE ISTO PAGA, e ela é a feature 19 da medição de 03/09: *"dizer
+    na tela o desfecho — aplicado, guardado para depois, nada aconteceu"*. A
+    GTK escreve na barra de status a cada Aplicar, lendo o CORPO do daemon
+    (`_toast_trigger` → `frase_do_desfecho`, ELO-MUDO-01/T3). O HTML jogava o
+    corpo fora, e três desfechos diferentes viravam o mesmo nada.
+
+    O CANAL É O `RuntimeError`, e é o único que esta tela tem: o piloto leva a
+    frase de um `RuntimeError` ao CARTÃO daquele controle
+    (`hefesto_vivo._recusou_dizendo`) e não tem por onde levar a de um sucesso.
+    Então a regra é a honesta: **cala quando o byte saiu, fala quando não
+    saiu.** O "aplicado" na tela — a outra metade da feature 19 — precisa de um
+    lugar na página, e lugar na página é dela.
+
+    SÃO DOIS OS CASOS QUE FALAM, e o segundo é o mais fino:
+
+    * nada saiu no fio (as duas listas vazias, ou só `guardado_em`);
+    * o corpo traz `motivo` COM `status: ok` — sucesso PARCIAL
+      (`ipc_bridge._recusa_no_corpo`). O `ok` continua `True` e o byte pode até
+      ter saído, mas o daemon disse alguma coisa e essa coisa é dela.
+
+    A RECUSA SECA (`ok=False`) NÃO PASSA POR AQUI: quem a trata é o chamador,
+    que sabe nomear o que tentou aplicar ("o seu efeito 'Recuo do MK'", "a curva
+    'stop_hard'"). Repetir a decisão aqui daria duas frases para a mesma recusa.
+
+    SEM CORPO NÃO HÁ O QUE CONFERIR: a ponte antiga e o dublê da régua não
+    devolvem corpo, e nesse caso o `ok` decide, palavra por palavra como antes.
+
+    O ASSUNTO É A FRASE DA GTK, e não uma escrita aqui: `_toast_trigger` monta
+    `"Gatilho esquerdo (L2): <modo>"` — a cura TRG-01, que existe porque a barra
+    dizia `"LEFT -> Off"`, trocando a fala dela por id interno mais o lado em
+    inglês. A tela nova não vai reintroduzir o defeito com outro atalho.
+    """
+    assunto = f"{NOME_DO_LADO.get(lado, lado)}: {modo_}"
+    if not ok or corpo is None:
+        return ok, motivo
+    calado = ((not _fala_de_destino(corpo) or _chegou_ao_aparelho(corpo))
+              and not str(corpo.get("motivo") or ""))
+    if calado:
+        return ok, motivo
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.textos_de_aplicacao import frase_do_desfecho
+
+        frase = frase_do_desfecho(assunto, corpo, _como_a_janela_pergunta(ctx, uniq))
+    except Exception:
+        # O TRADUTOR NÃO PODE DERRUBAR O GESTO nem calar o defeito. Sem ele a
+        # frase é crua, e crua ainda diz mais que silêncio — é a mesma escolha
+        # que `_na_lingua_da_tela` já faz com o motivo do daemon.
+        frase = f"{assunto} — o daemon respondeu, e nenhum controle recebeu."
+    raise RuntimeError(frase)
 
 
 @gesto("03-gatilhos.html", "modo")
@@ -1577,7 +2086,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(
             "modo: `—` é como esta tela diz que não há controle neste lugar, e "
             "não um efeito a aplicar. Escolha `Desligado` para soltar o gatilho.")
-    ok, motivo = _aplicar(p, lado, chave, _padroes(chave), uniq)
+    ok, motivo = _aplicar(p, lado, chave, _padroes(chave), uniq, ctx)
     if not ok:
         raise RuntimeError(_na_lingua_da_tela(motivo, chave)
                            or f"o daemon não aplicou o modo {chave!r}")
@@ -1587,19 +2096,29 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Escolher um efeito pronto põe aquela CURVA no gatilho, na hora.
 
-    O EFEITO PRONTO TEM DONO, e o dono é `profiles/trigger_presets.py`: os cinco
-    nomes que o desenho oferece são cinco dos seis `FEEDBACK_POSITION_LABELS`, e
-    cada um resolve para dez intensidades de 0 a 8.
+    O EFEITO PRONTO TEM DONO, e o dono é `profiles/trigger_presets.py`. São
+    ONZE curvas em DUAS tabelas: seis em `FEEDBACK_POSITION_PRESETS` (as cinco
+    do desenho mais `linear_medio`) e cinco em `VIBRATION_POSITION_PRESETS`.
+    Cada uma resolve para dez intensidades de 0 a 8.
 
-    E ELE TROCA O MODO — está dito aqui porque é a única coisa deste gesto que
-    não é dedução direta do produto. Uma curva de dez posições SÓ existe como
-    `MultiPositionFeedback`; na GUI estável a linha de preset nem aparece nos
-    outros 17 modos (`_update_preset_row_visibility`). No desenho ela aparece
-    sempre, para os 19 — então escolher "Stop hard" com o modo em "Metralhadora"
-    só pode querer dizer *"põe este gatilho na curva Stop hard"*. **Isto é
-    escolha de produto e é dela**; está no relato para ela decidir. O que não
-    faço é a alternativa calada: aplicar dez intensidades num modo que não tem
-    posições, que o `build_from_name` recusaria e a tela não explicaria.
+    FATO SUBSTITUÍDO — 03/09/2026. Esta docstring dizia, e a nota do
+    `MODO_DA_CURVA` repetia: *"Uma curva de dez posições SÓ existe como
+    `MultiPositionFeedback`"*. **É falso**, e o produto o desmente em duas
+    linhas: `MultiPositionVibration` tem `frequency, pos_0..pos_9` no
+    `trigger_specs`, e o `_MODES_COM_PRESET` da GUI estável lista os DOIS. Foi
+    essa afirmação que manteve as cinco curvas de vibração fora do alcance
+    desta tela — o gesto mandava sempre o modo de força. Agora o modo sai da
+    TABELA em que a curva mora (ver `_curva`).
+
+    E ELE TROCA O MODO NOS OUTROS 17 — está dito aqui porque é a única coisa
+    deste gesto que não é dedução direta do produto. Na GUI estável a linha de
+    preset nem aparece fora dos dois modos por posição
+    (`_update_preset_row_visibility`). No desenho ela aparece sempre, para os
+    19 — então escolher "Stop hard" com o modo em "Metralhadora" só pode querer
+    dizer *"põe este gatilho na curva Stop hard"*. **Isto é escolha de produto
+    e é dela**; está no relato para ela decidir. O que não faço é a alternativa
+    calada: aplicar dez intensidades num modo que não tem posições, que o
+    `build_from_name` recusaria e a tela não explicaria.
 
     "— Nenhum —" NÃO APLICA NADA, e recusa dizendo. O `value` dele é `custom`,
     que é o token do próprio produto para "os valores são os que estão aí" —
@@ -1625,7 +2144,7 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 f"dois ajustados.")
         modo_salvo = str(meia.get("mode") or "Off")
         params = [int(v) for v in (meia.get("params") or [])]
-        ok, motivo = _aplicar(p, lado, modo_salvo, params, uniq)
+        ok, motivo = _aplicar(p, lado, modo_salvo, params, uniq, ctx)
         if not ok:
             raise RuntimeError(_na_lingua_da_tela(motivo, modo_salvo)
                                or f"o daemon não aplicou o seu efeito {nome!r}")
@@ -1636,14 +2155,99 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "de escolha, e `—` é como esta tela diz que o lugar está vazio. "
             "Para guardar um efeito seu, dê um nome a ele e use "
             "'Guardar esse efeito'.")
-    ok, motivo = _desfecho(
-        p.trigger_set_detalhado(lado, MODO_DA_CURVA, _curva(chave), uniq=uniq))
+    # O MODO É O DA TABELA EM QUE A CURVA MORA — 03/09/2026. Era `MODO_DA_CURVA`
+    # cravado, e por isso as cinco curvas de VIBRAÇÃO do produto não podiam ser
+    # aplicadas: mandá-las como `MultiPositionFeedback` poria uma curva de
+    # vibração num modo de força — o número certo no efeito errado.
+    curva, modo_da_curva = _curva(chave)
+    ok, motivo = _aplicar(p, lado, modo_da_curva,
+                          _params_da_curva(modo_da_curva, curva), uniq, ctx)
     if not ok:
-        # O SPEC DA TRADUÇÃO É O DA CURVA, e não o do preset: quem recusa é o
-        # `MultiPositionFeedback`, e é dele que saem os rótulos `Posição 0..9`
-        # que a recusa vai nomear.
-        raise RuntimeError(_na_lingua_da_tela(motivo, MODO_DA_CURVA)
+        # O SPEC DA TRADUÇÃO É O DO MODO POR POSIÇÃO, e não o do preset: quem
+        # recusa é ele, e é dele que saem os rótulos `Posição 0..9` que a recusa
+        # vai nomear.
+        raise RuntimeError(_na_lingua_da_tela(motivo, modo_da_curva)
                            or f"o daemon não aplicou a curva {chave!r}")
+
+
+@gesto("03-gatilhos.html", "ajuste")
+def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Arrastar uma barra muda AQUELE parâmetro e reaplica o efeito na hora.
+
+    A MAIOR DÍVIDA DESTA ABA, e o nome dela já estava reservado: o `SEM_ECO`
+    listava um gesto `ajuste` que não existia. São **73 parâmetros em 17 dos 19
+    modos** que a GTK deixa mexer e o HTML só mostrava — Rigid 2, Machine 6,
+    MultiPositionFeedback 10, MultiPositionVibration 11. Sem eles, escolher um
+    modo aplicava os PADRÕES dele e não havia como sair de lá; e "Montar do
+    zero" (`Custom`), cujos oito padrões são ZERO, era um modo que não faz nada
+    — um item de menu que responde "aplicado" com o gatilho intacto.
+
+    NADA DE LÓGICA NOVA. A ordem dos parâmetros é a do produto
+    (`preset_to_positional_params`, ver `_padroes`), quem lê a coluna é o
+    `_ajustes_da_coluna` que o "Guardar esse efeito" já usava, e quem manda ao
+    daemon é o `_aplicar`. Este gesto só troca UM número no meio da lista.
+
+    O MODO VEM DA COLUNA, e não do servidor: é a mesma `forma` que o Guardar
+    recolhe (`data-hef-forma`), e ela traz o `modo-chave-<lado>` que está na
+    tela. Perguntar ao perfil daria o modo do DISCO, e o rascunho existe
+    justamente porque os dois podem divergir.
+
+    O `click` NÃO REPETE O `change`, e a guarda é a IGUALDADE, não o nome do
+    evento. Uma alavanca dispara os dois no mesmo gesto — `change` ao soltar,
+    `click` logo depois, com o mesmo valor —, e sem guarda cada arrasto viraria
+    dois pedidos idênticos ao daemon. É o que o debounce de 300 ms da GTK
+    (`_schedule_live_preview`) resolve do outro lado; aqui não há arrasto
+    contínuo a conter, só a repetição do próprio evento.
+
+    POR QUE PELA IGUALDADE E NÃO POR `evento == "click"`, e a diferença foi
+    medida: o clique sintético desta casa (`--prova-clique`, `CLIQUE_COM_ALVO`)
+    chama `el.click()` — se o gesto recusasse todo `click`, a régua da tela
+    nunca alcançaria a alavanca e daria verde sobre um controle que ela nunca
+    tocou. É o defeito do `--prova-gesto` que dava verde sobre dois botões
+    mortos, com o sinal trocado. Comparar com o RASCUNHO cala a repetição sem
+    calar a prova: o primeiro pedido passa, o segundo é o mesmo pedido.
+    """
+    uniq, lado = _exigir_controle(o, "ajuste"), _lado(o)
+    sigla = str(o.get("lado") or "").strip()
+    forma = o.get("forma")
+    if not isinstance(forma, dict) or not forma:
+        raise RuntimeError(
+            "não consegui ler a coluna deste controle. A barra precisa do "
+            "`data-hef-forma` para o piloto recolher os campos — sem ele não sei "
+            "em que modo o gatilho está, e o daemon lê a lista de ajustes "
+            "INTEIRA: mandar um número solto trocaria os outros pelos padrões.")
+    modo_ = str(forma.get(f"modo-chave-{sigla}") or "").strip()
+    if not modo_ or modo_ == TRAVESSAO:
+        raise RuntimeError(
+            "este gatilho não tem modo escolhido, e um ajuste é de um modo — é "
+            "ele que diz quantos parâmetros existem e o que cada um significa. "
+            "Escolha um modo primeiro.")
+    params = _ajustes_da_coluna(forma, sigla, modo_)
+    try:
+        i = int(str(o.get("i") or "").strip())
+    except ValueError:
+        raise ValueError(
+            "ajuste: o clique não disse QUAL barra. É o `data-i` da alavanca, "
+            "e ele é o índice do parâmetro na ordem do spec.") from None
+    if not 0 <= i < len(params):
+        raise ValueError(
+            f"ajuste: a barra {i} não existe no modo {modo_!r}, que tem "
+            f"{len(params)} ajuste(s). O índice é posicional — se a caixa e o "
+            f"modo saíram de sincronia, aplicar aqui escreveria no parâmetro "
+            f"errado.")
+    try:
+        params[i] = int(float(str(o.get("valor") or "").strip()))
+    except ValueError:
+        raise ValueError(
+            f"ajuste: a barra devolveu {o.get('valor')!r}, que não é número. "
+            f"Zero é uma medida; o que a tela não soube dizer não vira zero.") from None
+    ja = _do_rascunho(uniq, lado)
+    if ja and ja.get("mode") == modo_ and list(ja.get("params") or []) == params:
+        return
+    ok, motivo = _aplicar(p, lado, modo_, params, uniq, ctx)
+    if not ok:
+        raise RuntimeError(_na_lingua_da_tela(motivo, modo_)
+                           or f"o daemon não aplicou o ajuste no modo {modo_!r}")
 
 
 @gesto("03-gatilhos.html", "guardar")
@@ -1765,16 +2369,42 @@ def _salvar_o_meu(apelido: str, dos_lados: dict[str, dict[str, Any]]) -> None:
 
 
 def _blocos_do_pronto(ctx: Contexto) -> dict[str, str]:
-    """As listas de "Efeito pronto" das quatro colunas, com a biblioteca de agora."""
-    opcoes = html_das_opcoes_de_pronto()
+    """As listas de "Efeito pronto" das quatro colunas, com a biblioteca de agora.
+
+    O MODO DE CADA LADO ENTRA NA CONTA — 03/09/2026: a lista depende dele desde
+    que as curvas de vibração passaram a existir na tela. Ler o modo do
+    RASCUNHO e, na falta dele, do perfil é a mesma ordem que a pintura usa —
+    montar aqui uma lista de feedback por cima de um gatilho que está em
+    `MultiPositionVibration` faria o recibo do "Guardar" desfazer a lista certa
+    até o tique seguinte.
+    """
     fora: dict[str, str] = {}
     for m in ctx.mesa:
         pref = str(m.get("pref") or "")
         if not pref:
             continue
-        for sig in LADOS:
-            fora[f'[data-controle="{pref}"] select.pronto[data-lado="{sig}"]'] = opcoes
+        uniq = str(m.get("uniq") or "")
+        for sig, disco in LADOS.items():
+            fora[f'[data-controle="{pref}"] select.pronto[data-lado="{sig}"]'] = (
+                html_das_opcoes_de_pronto(_modo_de_agora(ctx, uniq, disco)))
     return fora
+
+
+def _modo_de_agora(ctx: Contexto, uniq: str, disco: str) -> str:
+    """O modo em que aquele gatilho está, na MESMA ordem que a tela pinta.
+
+    Rascunho (o que esta sessão aplicou) → override do controle → seção global
+    do perfil → `Off`. Uma quinta cópia dessa ordem seria a quinta chance de ela
+    divergir da pintura; esta é a única que os gestos consultam.
+    """
+    seu = _do_rascunho(uniq, disco)
+    if seu:
+        return str(seu.get("mode") or "Off")
+    p = perfil.ativo(ctx.state.get("active_profile")) or {}
+    meu = (p.get("controllers") or {}).get(uniq) or {}
+    seus = (meu.get("triggers") or {}) if isinstance(meu, dict) else {}
+    cfg = seus.get(disco) or (p.get("triggers") or {}).get(disco) or {}
+    return str(cfg.get("mode") or "Off")
 
 
 def _ajustes_da_coluna(forma: dict[str, Any], sigla: str, modo: str) -> list[int]:
@@ -1849,10 +2479,30 @@ METODOS: set[str] = set()
 
 #: O PISO E AS PROVAS MORAM AQUI, e não no teste — território exclusivo.
 #: O `PAGINA` é declarado lá em cima, junto de quem lê a página publicada.
-PISO_DA_ABA = 3
+#: 3 → 4 EM 03/09/2026: o `ajuste` nasceu, e com ele os 73 parâmetros dos 17
+#: modos que a GTK deixa mexer. O piso SÓ SOBE, e uma queda não aparece na tela
+#: — o clique simplesmente deixa de fazer alguma coisa.
+PISO_DA_ABA = 4
 #: O `uniq` da prova é a faixa sintética da casa: há dois portões de anonimato
 #: nesta árvore e eles não perdoam.
 _UNIQ = "aa:bb:cc:00:00:01"
+#: A CURVA E O MODO DELA, resolvidos uma vez para as provas abaixo lerem os dois
+#: sem repetir a chamada. `stop_hard` é de feedback; `galope`, de vibração.
+_STOP_HARD, _MODO_STOP_HARD = _curva("stop_hard")
+_GALOPE, _MODO_GALOPE = _curva("galope")
+
+
+def _forma_de_prova(sigla: str, modo_: str) -> dict[str, str]:
+    """A coluna que o piloto recolheria, montada pelo endereço que a pintura usa.
+
+    Escrever `{"modo-chave-e": "Rigid"}` à mão aqui digitaria duas coisas que
+    já têm dono — o endereço, que sai do `pacote()`, e o contrato de disco do
+    modo, que sai do `trigger_specs` — e ainda faria o portão dos dois mundos
+    (`test_o_pacote_cabe_na_pagina_publicada`) ler um `value` como se fosse
+    rótulo de tela: ele compara texto de `<option>`, e `Rigid` é o `value` da
+    opção cujo texto é `Rígido`.
+    """
+    return {f"modo-chave-{sigla}": modo_}
 PROVAS = [
     # Um modo comum: os ajustes saem do produto, e é por isso que a prova os
     # BUSCA em vez de digitar `[5, 200]`. Digitados, eles ficariam errados
@@ -1873,11 +2523,33 @@ PROVAS = [
      "chama": [("trigger_set_detalhado", ["left", "Vibration", _padroes("Vibration")],
                 {"uniq": _UNIQ})]},
     # O efeito pronto: a curva sai de `profiles/trigger_presets.py`, e o modo é
-    # o único em que dez posições existem.
+    # o da TABELA em que ela mora — aqui, o de força.
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
      "gesto": "pronto", "clique": {"lado": "d", "v": "stop_hard"},
      "chama": [("trigger_set_detalhado",
-                ["right", MODO_DA_CURVA, _curva("stop_hard")], {"uniq": _UNIQ})]},
+                ["right", _MODO_STOP_HARD,
+                 _params_da_curva(_MODO_STOP_HARD, _STOP_HARD)],
+                {"uniq": _UNIQ})]},
+    # E A CURVA DE VIBRAÇÃO, que até 03/09/2026 não tinha como ser aplicada por
+    # esta tela. Ela prova as DUAS metades da cura: o modo tem de ser
+    # `MultiPositionVibration` (e não o de força, que era o cravado) e as dez
+    # posições têm de cair nos `pos_*`, com a frequência no padrão do modo — se
+    # alguém alinhar por índice, o primeiro número vai para a frequência e esta
+    # linha reprova.
+    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
+     "gesto": "pronto", "clique": {"lado": "e", "v": "galope"},
+     "chama": [("trigger_set_detalhado",
+                ["left", _MODO_GALOPE, _params_da_curva(_MODO_GALOPE, _GALOPE)],
+                {"uniq": _UNIQ})]},
+    # O AJUSTE: uma barra arrastada troca UM parâmetro e reaplica o modo com a
+    # lista inteira. A prova manda `Rigid` com a força em 200 e espera os
+    # padrões do modo com o índice 1 trocado — se alguém passar a mandar só o
+    # número mexido, os outros viram padrão calados e esta linha reprova.
+    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
+     "gesto": "ajuste", "clique": {"lado": "e", "i": "1", "valor": "200",
+                                   "forma": _forma_de_prova("e", "Rigid")},
+     "chama": [("trigger_set_detalhado",
+                ["left", "Rigid", [_padroes("Rigid")[0], 200]], {"uniq": _UNIQ})]},
 ]
 
 #: OS GESTOS QUE O DAEMON ACEITA E NÃO PUBLICA. O `state_full` não traz
