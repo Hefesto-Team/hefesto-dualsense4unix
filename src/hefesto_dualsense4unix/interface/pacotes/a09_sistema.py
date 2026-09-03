@@ -62,7 +62,15 @@ from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcame
 from hefesto_dualsense4unix.gui import aba_sistema as _tela
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 
-from . import Contexto, perfil, registrar
+from . import (
+    TRAVESSAO,
+    VIA_DO_TRANSPORTE,
+    Contexto,
+    identidade_de,
+    jogador_de,
+    perfil,
+    registrar,
+)
 
 #: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # (noqa-acento) id
 #: pintura. **"plugins" continua sem dono NA TELA, e a razão não é minha** — a
@@ -168,9 +176,26 @@ CAMPO_DA_FITA = "fita-chips"
 CAMPO_DO_CHIP = "fita-chip"
 
 #: O TÍTULO DO CHIP SEM COR LIDA. Ele não nomeia tom nenhum — é a regra dela:
-#: *campo sem informação não mostra nada*. Pelo rádio a cor do plástico NÃO
-#: CHEGA, e quem diz isso é o mapa de canais (`identidade.cor_do_aparelho`,
-#: `radio_aciona = não`), não um `if` decorado aqui.
+#: *campo sem informação não mostra nada*.
+#:
+#: FATO ERRADO, SUBSTITUÍDO (03/09/2026). Esta nota dizia *"pelo rádio a cor do
+#: plástico NÃO CHEGA, e quem diz isso é o mapa de canais
+#: (`identidade.cor_do_aparelho`, `radio_aciona = não`)"*. **O mapa diz o
+#: contrário**, e desde 02/09: `mesa_viva.aciona("identidade.cor_do_aparelho",
+#: …)` devolve `("sim", "sim")` — o par é cabo e rádio. A linha 111 do
+#: `docs/data/mapa-controles.csv` foi corrigida naquele dia pelo próprio
+#: produto, que leu `04` = Galactic Purple **por rádio** em 13,6 ms; o que muda
+#: no rádio é o CRC do pedido, não a resposta.
+#:
+#: O QUE NÃO CHEGA PELO RÁDIO É O SERIAL PUBLICADO NO `state_full` — ver
+#: :data:`SEM_SERIAL_LIDO` —, e com ele o `modelo` que o daemon decodifica. Os
+#: dois fatos vinham sendo tratados como um só, e é por isso que um controle de
+#: rádio ANÔNIMO parecia correto a quem olhasse. Ele não é: a cor é legível, e a
+#: mesa a lê.
+#:
+#: A ausência que este título cobre continua existindo (o leitor ainda não
+#: respondeu, ou respondeu `None`) — o que ela NÃO é mais é uma sentença do
+#: transporte.
 SEM_COR_LIDA = "A cor do plástico deste controle não foi lida."
 
 #: O QUE O ÚLTIMO "Ver …" PÔS NO PAINEL. `None` = ninguém pediu nada ainda.
@@ -409,16 +434,55 @@ def _perguntar_o_prontuario() -> None:
 #: nos dois lugares criaria o segundo dono da mesma palavra.
 ROTULO_DA_IDENTIDADE = "Identidade de fábrica"
 
-#: O QUE SE ESCREVE NO LUGAR DE UM SERIAL QUE O APARELHO NÃO DEU. É a regra dela
-#: — *campo sem informação não mostra nada* —, e o motivo é do mapa de canais,
-#: não um `if` decorado aqui: ler o serial é um `SET_FEATURE` da família `0x80`,
-#: e pelo rádio ele não volta. Medido na mesa dela em 03/09/2026: o do cabo
-#: responde os 17 caracteres, o do rádio responde `None`.
+#: O QUE SE ESCREVE NO LUGAR DE UM SERIAL QUE O `state_full` NÃO TROUXE. É a
+#: regra dela — *campo sem informação não mostra nada*.
+#:
+#: ATENÇÃO — ESTA FRASE ESTÁ NA TELA DELA E ELA É IMPRECISA — medido em 03/09/2026, e
+#: fica declarado aqui porque trocar texto de tela é decisão dela, e a cura de
+#: verdade não é neste arquivo. O que se mediu, com os dois controles na mesa:
+#:
+#:     transporte  state_full.serial  lido DO APARELHO (`ler_identidade_pelo_cabo`)
+#:     cabo        os 17 caracteres   17 caracteres · fatia da cor `00`
+#:     rádio       `None`             17 caracteres · fatia da cor `04`
+#:
+#: O APARELHO RESPONDE NOS DOIS. O `0x80`/`0x81` funciona por rádio desde
+#: 02/09 — é a linha 111 do `docs/data/mapa-controles.csv`, e é o mesmo caminho
+#: que devolve a cor do plástico (a cor É `serial[4:6]`). Quem não publica é o
+#: DAEMON: o `state_full` traz `serial: None` para quem está no rádio.
+#:
+#: LOGO A FRASE CERTA NÃO É SOBRE O CABO — é sobre o publicador. A cura tem duas
+#: metades e nenhuma é desta aba: `ipc_handlers._identidade_publicada` passar a
+#: publicar o serial do rádio, ou o `mesa_viva.LeitorDeCor` guardar a identidade
+#: inteira em vez de só a cor (ele JÁ faz a leitura que traz os 17 caracteres,
+#: uma vez por endereço, e joga fora tudo menos o tom). A segunda não custa uma
+#: leitura nova. Enquanto nenhuma acontecer, esta linha diz ao suporte que o
+#: aparelho não deu o número — e ele deu.
 SEM_SERIAL_LIDO = "o serial só é lido no cabo"
 
 
-def _linha_de_identidade(c: dict[str, Any]) -> str:
-    """`P1 · White · <serial>` — a identidade de fábrica de UM controle.
+#: OS DOIS ÚLTIMOS DEGRAUS DE `identidade_de`, que aqui NÃO servem como nome.
+#: Ele nunca devolve vazio: sem nome nenhum cai no transporte (`"USB"`/`"BT"`) e,
+#: sem nem isso, no travessão. Nesta linha o transporte já está escrito ao lado,
+#: em palavra — `P2 · BT · rádio` afirmaria a mesma coisa duas vezes, e o
+#: travessão leria como defeito onde o que há é ausência de leitura.
+_NAO_E_NOME = frozenset({TRAVESSAO, *VIA_DO_TRANSPORTE.values()})
+
+
+def _nome_do_plastico(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
+    """O nome DESTE controle, pelo dono compartilhado — ou `""`.
+
+    O dono é `pacotes.identidade_de`, e ele já sabe a ordem das quatro fontes
+    (*o que ELA nomeou > o modelo decodificado > o nome da MESA > o transporte
+    só*), já descarta o `"Não sei"` da mesa e já casa por `uniq` em vez de por
+    posição. Escrever aqui uma quinta leitura seria a segunda verdade que a lei
+    dela de 03/09 proíbe — e as abas 02 e 06 já o chamam com `ctx.mesa`.
+    """
+    nome = str(identidade_de(c, mesa) or "").strip()
+    return "" if nome in _NAO_E_NOME else nome
+
+
+def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
+    """`P1 · White · cabo · <serial>` — a identidade de fábrica de UM controle.
 
     DECISÃO 10 DELA, 03/09/2026: *"Serial de fábrica: inteiro, e SÓ na aba
     Sistema (a de diagnóstico)."* Ele é identificador único como um MAC, o daemon
@@ -431,19 +495,53 @@ def _linha_de_identidade(c: dict[str, Any]) -> str:
     30px numa coluna que o gerador engenha para acabar no mesmo y da irmã — e
     seria mudança de DESENHO, que é decisão dela e não minha.
 
-    NADA AQUI É INVENTADO: `modelo` é o nome de fábrica que o daemon decodifica
-    do serial, `serial` é o serial cru, e a ausência dos dois vira a frase de
-    :data:`SEM_SERIAL_LIDO` em vez de um travessão que leria como defeito.
+    O NOME E O NÚMERO VÊM DE CIMA — 03/09/2026, e é a lei dela:
+
+        "se no topo tá mostrando controle white player 1, então cada aba vai
+         usar os controles lá de cima. Não mistura com a info dos mockups."
+
+    ESTA LINHA LIA SÓ O `modelo` DO `state_full`, e o `modelo` sai do serial —
+    que o daemon **não publica para quem está no rádio** (ver
+    :data:`SEM_SERIAL_LIDO`: o aparelho responde, o publicador é que cala).
+    Fotografado na mesa dela em 03/09/2026, com o P1 no cabo e o P2 no rádio:
+
+        a fita, no topo      P1 · White · USB
+                             P2 · Galactic Purple · BT
+        este painel, abaixo  P1 · White · cabo · <os 17 caracteres>
+                             P2 · rádio · o serial só é lido no cabo
+
+    O MESMO APARELHO, NA MESMA TELA, com a identidade presente num lugar e
+    ausente no outro — e o dado existia: `mesa_viva.LeitorDeCor` já o lê pelo
+    broker e traduz o código de fábrica pelo mapa DELA
+    (`docs/data/cores-do-dualsense.csv`, 28 modelos). Quem sabe juntar as duas
+    portas é `pacotes.identidade_de`; ver :func:`_nome_do_plastico`.
+
+    O NÚMERO SAI DE `pacotes.jogador_de` pela mesma razão. A conta daqui lia o
+    `player` do daemon ANTES do `player_slot` — a ordem INVERTIDA da que a GTK
+    usa (`actions/base.numero_do_controle` lê o slot na frente), e o `player` é
+    `None` para quem o co-op não enxerga, em qualquer transporte. Duas cópias da
+    mesma regra é o defeito que fez o mesmo controle ser "Controle 1" numa tela
+    e "Sony 3" na outra.
+
+    A PROSA ACIMA NÃO CITA A CHAMADA VELHA DE PROPÓSITO: a `RÉGUA 4` do
+    `test_os_donos_de_fato.py` caça a leitura crua por LINHA e só pula o que
+    começa com `#` — uma docstring que a transcrevesse reprovaria a cura que a
+    apagou.
+
+    NADA AQUI É INVENTADO: sem nome lido a linha não escreve nome nenhum, e sem
+    serial ela diz :data:`SEM_SERIAL_LIDO` em vez de um travessão que leria como
+    defeito. É a regra dela — *campo sem informação não mostra nada*.
     """
-    jogador = str(c.get("player") or c.get("player_slot") or "") or "?"
+    numero = jogador_de(c)
     serial = str(c.get("serial") or "")
-    modelo = str(c.get("modelo") or "")
     via = "cabo" if str(c.get("transport") or "") == "usb" else "rádio"
-    quem = " · ".join(p for p in (f"P{jogador}", modelo, via) if p)
+    quem = " · ".join(p for p in (f"P{numero}" if numero else "",
+                                 _nome_do_plastico(c, mesa), via) if p)
     return f"{quem} · {serial or SEM_SERIAL_LIDO}"
 
 
-def _repouso_do_painel(state: dict[str, Any] | None) -> str:
+def _repouso_do_painel(state: dict[str, Any] | None,
+                       mesa: list[dict[str, Any]] | None = None) -> str:
     """O painel "Detalhes técnicos" SEM ninguém clicar — e ele deixa de ser um traço.
 
     A GTK NUNCA TEVE UM TRAÇO AQUI: o `Gtk.TextView` dela fica sempre com a saída
@@ -468,6 +566,12 @@ def _repouso_do_painel(state: dict[str, Any] | None) -> str:
     às 04:41 mostrou seis linhas de journal e nenhuma da identidade: o dado que a
     decisão 10 mandou aparecer estava no painel e fora da vista. Invertida, o
     fim é a identidade, e o `systemctl status` fica a uma rolada acima.
+
+    A `mesa` É A FITA DO TOPO, e ela entra por aqui só para atravessar até
+    :func:`_linha_de_identidade` — nada nesta função a lê. Tem valor padrão
+    porque a faixa lenta a repassa e as réguas chamam as duas de um argumento
+    só; sem mesa o painel escreve o que o `state_full` sozinho sabe, que é
+    menos, e nunca o nome do desenho.
     """
     partes: list[str] = []
     try:
@@ -481,7 +585,7 @@ def _repouso_do_painel(state: dict[str, Any] | None) -> str:
     if vivos:
         partes.append("")
         partes.append(ROTULO_DA_IDENTIDADE)
-        partes += [f"  {_linha_de_identidade(c)}" for c in vivos]
+        partes += [f"  {_linha_de_identidade(c, mesa or [])}" for c in vivos]
     return "\n".join(partes).strip()
 
 
@@ -566,22 +670,27 @@ _LENTO_EM_VOO: list[bool] = [False]
 
 
 def _ler_a_faixa_lenta(state: dict[str, Any] | None,
-                       pode_perguntar: bool = True) -> tuple[Any, Any, Any, Any, Any]:
+                       pode_perguntar: bool = True,
+                       mesa: list[dict[str, Any]] | None = None,
+                       ) -> tuple[Any, Any, Any, Any, Any]:
     """As cinco leituras caras, de verdade. Não se chama do tique — ver abaixo."""
     return (_autostart(), _achados(state, pode_perguntar), _perfil_da_bateria(),
-            _status_do_daemon(state), _repouso_do_painel(state))
+            _status_do_daemon(state), _repouso_do_painel(state, mesa))
 
 
-def _guardar_a_faixa_lenta(state: dict[str, Any] | None) -> None:
+def _guardar_a_faixa_lenta(state: dict[str, Any] | None,
+                           mesa: list[dict[str, Any]] | None = None) -> None:
     """A releitura, fora do laço do GTK. O `finally` é o que destrava o voo."""
     try:
-        _LENTO["valor"] = _ler_a_faixa_lenta(state)
+        _LENTO["valor"] = _ler_a_faixa_lenta(state, mesa=mesa)
     finally:
         _LENTO["quando"] = time.monotonic()
         _LENTO_EM_VOO[0] = False
 
 
-def _faixa_lenta(state: dict[str, Any] | None) -> tuple[Any, Any, Any, Any, Any]:
+def _faixa_lenta(state: dict[str, Any] | None,
+                 mesa: list[dict[str, Any]] | None = None,
+                 ) -> tuple[Any, Any, Any, Any, Any]:
     """As leituras CARAS: SÍNCRONA na primeira, EM THREAD nas releituras.
 
     Elas saem deste processo — subprocesso, disco — e nenhuma muda entre dois
@@ -612,17 +721,22 @@ def _faixa_lenta(state: dict[str, Any] | None) -> tuple[Any, Any, Any, Any, Any]
     * **`_LENTO` é o ponto de injeção das réguas.** O docstring dele diz que as
       réguas o esvaziam para forçar a leitura; se esvaziar passasse a devolver
       `None` até uma thread voltar, toda régua desta aba viraria uma corrida.
+
+    A `mesa` ATRAVESSA POR AQUI, e ela é a única entrada que MUDA dentro da
+    janela de 2 s: a cor do plástico é perguntada em thread e chega depois do
+    primeiro tique. O painel técnico ganha o nome do controle na releitura
+    seguinte, e é a mesma espera que a fita do topo já tem — não uma nova.
     """
     agora = time.monotonic()
     if not _LENTO:
         # `pode_perguntar=False`: a varredura de 7 s do prontuário fica para a
         # primeira RELEITURA, que já é thread. Ver `_prontuario`.
-        _LENTO["valor"] = _ler_a_faixa_lenta(state, pode_perguntar=False)
+        _LENTO["valor"] = _ler_a_faixa_lenta(state, pode_perguntar=False, mesa=mesa)
         _LENTO["quando"] = agora
         return _LENTO["valor"]  # type: ignore[no-any-return]
     if agora - float(_LENTO["quando"]) >= LENTO_S and not _LENTO_EM_VOO[0]:
         _LENTO_EM_VOO[0] = True
-        threading.Thread(target=_guardar_a_faixa_lenta, args=(state,),
+        threading.Thread(target=_guardar_a_faixa_lenta, args=(state, mesa),
                          daemon=True).start()
     return _LENTO["valor"]  # type: ignore[no-any-return]
 
@@ -641,7 +755,8 @@ def _leitura(ctx: Contexto) -> Any:
     """
     perfil._com_o_src()
 
-    auto, achados, perfil_da_bateria, status, _repouso = _faixa_lenta(ctx.state or None)
+    auto, achados, perfil_da_bateria, status, _repouso = _faixa_lenta(
+        ctx.state or None, ctx.mesa)
     # O ESTADO VEM DA MATRIZ DE TRÊS FONTES DA JANELA ANTIGA — ver
     # `_status_do_daemon`. Até 03/09/2026 esta linha era
     # `"online_systemd" if ctx.state else "offline"`, e o comentário que a
@@ -690,11 +805,16 @@ def _frase(fn: Any, state: Any) -> str | None:
 #                    `P2 · Starlight Blue · BT`    <- OS DOIS DO MOCKUP
 #
 # A CAUSA MEDIDA: `hefesto_vivo._fita` — o repintor que vale para as dez abas —
-# desiste com `any(not c.get("cor") for c in mesa)`. No cabo isso é a espera de
-# poucos tiques até a leitura voltar; **pelo rádio a cor NUNCA chega**, e quem
-# diz isso é o mapa de canais (`identidade.cor_do_aparelho`, `radio_aciona =
-# não`). Com um controle no rádio a guarda é permanente: a fita das dez páginas
-# não repinta nunca, e o desenho fala pela máquina para sempre.
+# desistia com `any(not c.get("cor") for c in mesa)`, e bastava UM controle sem
+# cor no dicionário do leitor para a fita das dez páginas não repintar.
+#
+# FATO ERRADO, SUBSTITUÍDO (03/09/2026): este parágrafo atribuía a guarda
+# permanente ao TRANSPORTE — *"pelo rádio a cor NUNCA chega, e quem diz isso é
+# o mapa de canais (`identidade.cor_do_aparelho`, `radio_aciona = não`)"*. O
+# mapa diz `("sim", "sim")`; ver a nota de `SEM_COR_LIDA`. O que segura a cor
+# não é o rádio: é a THREAD — `LeitorDeCor.perguntar` bloqueia, e até ela voltar
+# o item de mesa nasce sem `cor`. É espera, não sentença, e é por isso que a
+# guarda tinha de olhar a MESA VAZIA e não a cor ausente.
 #
 # ESTA ABA PASSA A ESCREVER A SUA. `hefesto_vivo._fita` é território de todas as
 # dez e não é meu; o que é meu é o `data-campo` que o `aba09.py` põe na `.fita`
@@ -963,7 +1083,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # responde. Ler o `maquina.json` e o `systemctl status` uma segunda vez por
     # tique seria desfazer, dentro desta função, o que a faixa lenta existe para
     # fazer.
-    _, _, perfil_da_bateria, _, repouso = _faixa_lenta(ctx.state or None)
+    _, _, perfil_da_bateria, _, repouso = _faixa_lenta(ctx.state or None, ctx.mesa)
     fora["bateria-perfil"] = perfil_da_bateria
     fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
