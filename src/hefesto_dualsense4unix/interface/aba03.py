@@ -25,6 +25,22 @@ from hefesto_dualsense4unix.profiles.trigger_presets import (
 
 SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 
+# A CAIXA DE AJUSTES TEM UM DONO SÓ, e ele é o PACOTE. O desenho e o produto
+# escrevem a MESMA marcação: `html_dos_ajustes` monta a lista de barras aqui, na
+# cena, e monta a lista de barras lá, no tique — com o modo que estiver no
+# perfil. Escrita nos dois, ela divergiria no primeiro dia em que alguém mexesse
+# num só, e o produto passaria a trocar o desenho por outro desenho.
+#
+# O `TRAVESSAO` VEM JUNTO pela mesma regra: é ele que o `<select>` tem de
+# OFERECER para o lugar vazio poder mostrá-lo (decisão 13 dela), e é ele que o
+# pacote pergunta antes de emitir. Um `"—"` digitado aqui e outro lá seriam duas
+# verdades sobre a mesma opção.
+from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E402
+    TRAVESSAO,
+    html_dos_ajustes,
+    sem_comentarios_de_css,
+)
+
 # O GLIFO DO GATILHO TEM UM TAMANHO MEDIDO, e não um escolhido no olho.
 # Achado em 27/08 numa foto: a 22px o L2 e o R2 liam como quadradinhos azuis.
 # A conta é do próprio arquivo — `assets/glyphs/l2.svg` desenha "L2" com
@@ -68,7 +84,46 @@ CSS = CSS_GLIFO + """
   /* `--gl` é o tamanho do glifo que titula a seção, e ele é o MESMO número que
      o Python usa em `glifo(tam=GL)`. Escrito duas vezes, ele diverge no dia em
      que alguém mudar um dos dois — é a cicatriz das cores do plástico. */
-  .duas-colunas{display:grid;grid-template-columns:var(--larg-rot) repeat(4,1fr);gap:0 var(--gap-col)}
+  /* ---------- A GRADE É UMA SÓ, E AS COLUNAS SÃO `subgrid` ----------
+     DECISÃO DELA, 02/09/2026: *"os ajustes viram lista e a caixa acompanha o
+     modo. A aba passa a rolar nos modos grandes, e isso é aceito. A tela nunca
+     esconde o que está gravado no disco."*
+
+     O QUE ISSO QUEBRAVA: as nove trilhas eram px FIXOS, repetidos em cada uma
+     das cinco colunas — e era a igualdade dos números que fazia as cinco
+     acabarem no mesmo y. A linha de ajustes valia 4 barras à esquerda e 2 à
+     direita. `Machine` tem SEIS parâmetros e `MultiPositionVibration` tem ONZE:
+     numa trilha de 92px, as sete que sobram vazam para fora da célula e caem
+     por cima da linha de baixo.
+
+     A CURA É `grid-template-rows:subgrid`: as trilhas passam a ser da GRADE
+     GRANDE, e as cinco colunas as compartilham de verdade em vez de coincidirem
+     por acaso. A trilha de ajustes vira `minmax(<o que o desenho reservou>,
+     auto)` — ela cresce até o maior modo que estiver NELA, em qualquer coluna,
+     e as cinco continuam acabando no mesmo y. É a mesma regra que a legenda
+     desta aba já enunciava ("a caixa vale o maior modo que está na LINHA"), com
+     a diferença de que agora quem a calcula é o navegador, com o dado VIVO, e
+     não o Python com a cena do desenho.
+
+     `subgrid` JÁ ERA USADO AQUI (`.rotulos > *:has(.gl)`), então o motor da
+     janela o suporta — não é aposta.
+
+     A COLUNA DE CADA FILHO É EXPLÍCITA, e não por auto-posicionamento: com
+     `grid-row:1/-1` em todos, a colocação automática depende de detalhe de
+     algoritmo, e uma coluna que caia na trilha errada só aparece na foto. */
+  /* `minmax(0,1fr)` E NÃO `1fr`, e a diferença custou uma foto: `1fr` é
+     `minmax(auto,1fr)`, e esse `auto` é o MIN-CONTENT da coluna — qualquer
+     conteúdo que se recuse a encolher empurra a coluna inteira. Medido em
+     02/09/2026, quando o campo do nome do efeito entrou: as colunas foram de
+     220px para 302 e a aba nasceu com **275px de rolagem LATERAL**, com o P4
+     fora da tela. Com o mínimo em zero, quem tem de cede r é o conteúdo, e a
+     grade nunca passa da caixa. */
+  .duas-colunas{display:grid;grid-template-columns:var(--larg-rot) repeat(N_COLS,minmax(0,1fr));
+    column-gap:var(--gap-col);row-gap:var(--r-passo);
+    grid-template-rows:var(--r-nome) var(--r-modo) var(--r-pronto)
+                       minmax(var(--r-aj-e),auto) var(--r-sep)
+                       var(--r-modo) var(--r-pronto)
+                       minmax(var(--r-aj-d),auto) var(--r-acao)}
 
   /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
      *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
@@ -119,12 +174,7 @@ CSS = CSS_GLIFO + """
   /* o `.sep-linha` (um elemento de 1px entre os blocos L2 e R2) SAIU: com a borda
      de célula acima ele desenhava a SEGUNDA linha, 10px abaixo da primeira. */
 
-  .duas-colunas > div{
-    display:grid;row-gap:var(--r-passo);
-    grid-template-rows:var(--r-nome) var(--r-modo) var(--r-pronto) var(--r-aj-e)
-                       var(--r-sep) var(--r-modo) var(--r-pronto) var(--r-aj-d)
-                       var(--r-acao);
-  }
+  .duas-colunas > div{display:grid;grid-row:1/-1;grid-template-rows:subgrid}
   /* a barra vertical entre blocos irmãos — pedido dela. Ela mora na COLUNA do
      controle, e não na de rótulos: é o rótulo que serve as quatro. */
   .duas-colunas .ctrl{border-left:1px solid var(--linha);padding:0 12px 0 13px}
@@ -307,7 +357,18 @@ CSS = CSS_GLIFO + """
      barras ocupa as duas primeiras, e a primeira barra de toda coluna começa no
      mesmo y. O rótulo é o token `--rot` (92px), o mesmo de toda aba que tem
      campo; sobram 80px de trilho, que é o que a coluna de 220px permite. */
-  .ajustes{display:grid}
+  /* A CAIXA CRESCE COM O MODO, e por isso as linhas dela são AUTOMÁTICAS.
+     Ela era `grid-template-rows:repeat(N,1fr)` — N trilhas iguais, com N vindo
+     da cena do desenho. Com o produto trocando a caixa inteira (o `blocos:` do
+     pacote), o número de barras é o do MODO: zero no `Desligado`, seis na
+     Metralhadora, onze na Vibração por posição. `grid-auto-rows` dá a mesma
+     altura a cada barra e deixa a caixa medir o que ela tem.
+     O DESENHO NÃO MUDA DE PIXEL: `--r-aj-e` é `N_ESQ * --h-barra` por
+     construção, então quatro barras de `--h-barra` enchem a trilha exatamente
+     como as quatro trilhas de `1fr` enchiam. `align-content:start` é o que
+     mantém a primeira barra de toda coluna no mesmo y quando o modo tem menos
+     barras do que a linha reserva. */
+  .ajustes{display:grid;grid-auto-rows:var(--h-barra);align-content:start}
   .barra{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--texto-mudo)}
   .barra .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);
                  position:relative}
@@ -342,6 +403,42 @@ CSS = CSS_GLIFO + """
      é a mesma ambiguidade que o recibo tinha antes de dizer em QUAL controle
      escreveu. Aqui ele fica na coluna de quem ele guarda. */
   .duas-colunas .ctrl .btn{width:100%;font-size:11.5px;padding:0 6px}
+
+  /* ---------- O NOME DO EFEITO — decisão 17 dela, 02/09/2026 ----------
+     *"Isso é pra quando o user salva algum efeito. É assim que tem que
+     aparecer. O nome que o user deixar lá. Ali é só exemplo."*
+
+     "Meus efeitos" existia no campo de escolha com dois nomes de exemplo e sem
+     dono nenhum — não havia, em todo o `src/`, onde guardar um efeito com nome.
+     O que faltava era ONDE ESCREVER O NOME, e é este campo: o "Guardar esse
+     efeito" ao lado já recolhe a coluna inteira (`data-hef-forma="@controle"`),
+     então o nome viaja junto sem endereço novo.
+
+     ELE DIVIDE A LINHA DO BOTÃO, e não ganha linha própria: a grade tem 24px de
+     folga sobre o teto medido (477px) e uma linha nova custaria 48. Lado a
+     lado, custa ZERO — a linha `--r-acao` já tinha 34px de altura para um botão
+     que ocupa 34.
+
+     O CAMPO ENCOLHE E O BOTÃO NÃO, e as TRÊS declarações do campo são
+     necessárias — medido em 02/09/2026, com a foto: só `min-width:0` NÃO basta.
+     Um `<input>` tem largura intrínseca (o `size` implícito, ~147px aqui), e com
+     `flex-basis:auto` ela vira a contribuição mínima do campo: a linha pediu
+     276px numa coluna de 220 e a aba nasceu com 275px de rolagem lateral, o P4
+     fora da tela. `flex:1 1 0` mais `width:0` zeram a base; o campo passa a
+     CRESCER a partir do nada, em vez de encolher a partir do intrínseco. */
+  .duas-colunas .ctrl .guardar{display:flex;align-items:center;gap:6px;min-width:0}
+  .duas-colunas .ctrl .guardar .btn{width:auto;flex:0 0 auto;white-space:nowrap}
+  .duas-colunas .ctrl .nome-efeito{
+    flex:1 1 0;width:0;min-width:0;height:24px;padding:0 7px;border-radius:6px;
+    font-family:inherit;font-size:11px;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--fg)}
+  .duas-colunas .ctrl .nome-efeito::placeholder{color:var(--comment)}
+  .duas-colunas .ctrl .nome-efeito:focus{outline:none;border-color:var(--purple)}
+  /* O LUGAR VAZIO NÃO SE DIGITA, pela mesma razão que ele não se clica: um
+     efeito é de um aparelho, e nomear um que não está aqui só pode terminar em
+     recusa. Ver a trava dos `select` acima. */
+  .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito{
+    pointer-events:none;opacity:.55}
 """
 
 MODOS = [
@@ -406,10 +503,18 @@ CENA = {
     # do R2 valia o MAIOR modo que estivesse nela, e o maior era a Vibração do
     # P3, com três barras. Sem ela, o R2 passa a valer duas — 23px de volta para
     # o respiro que ela pediu, sem tirar nada de quem está conectado.
-    "p3": {"esq": ("Desligado", PRONTOS[0], []),
-           "dir": ("Desligado", PRONTOS[0], [])},
-    "p4": {"esq": ("Desligado", PRONTOS[0], []),
-           "dir": ("Desligado", PRONTOS[0], [])},
+    #
+    # A PALAVRA MUDOU EM 02/09/2026, e é ELA quem a trocou — decisão 13:
+    # *"o lugar vazio mostra travessão"*. O "Desligado e Nenhum" de 31/08 valia
+    # enquanto não havia como distinguir *"não há aparelho"* de *"há um aparelho
+    # e o gatilho está solto"*: as duas coisas diziam a mesma palavra. A decisão
+    # de hoje separa as duas, e é a de hoje que vale. O resto da frase de 31/08
+    # — a coluna fica, a borda de cor sai — continua de pé, e a régua abaixo
+    # continua cobrando as duas metades.
+    "p3": {"esq": (TRAVESSAO, TRAVESSAO, []),
+           "dir": (TRAVESSAO, TRAVESSAO, [])},
+    "p4": {"esq": (TRAVESSAO, TRAVESSAO, []),
+           "dir": (TRAVESSAO, TRAVESSAO, [])},
 }
 
 
@@ -487,11 +592,32 @@ for _rot in MEUS:
     CHAVE_DO_PRONTO[_rot] = ""
 
 
+# O TRAVESSÃO É A PRIMEIRA OPÇÃO DOS DOIS CAMPOS — decisão 13 dela, 02/09/2026:
+# *"o lugar vazio mostra travessão"*, e a razão é dela: **`Desligado` é uma
+# escolha legítima de um controle conectado**, e usar a mesma palavra para as
+# duas coisas confunde as duas. `— Nenhum —` tem exatamente o mesmo problema no
+# campo de baixo — é a ausência de curva num controle que ESTÁ aqui —, então os
+# dois campos ganham a opção pela mesma razão dela.
+#
+# ELA NASCE `disabled`, e isso não a impede de ser PINTADA: `select.value = '—'`
+# escolhe a opção pelo `value` sem olhar o `disabled` (é o que o `escrever()` do
+# piloto faz). O que o `disabled` impede é o contrário — que alguém a escolha com
+# o rato e mande "nada" ao daemon como se fosse um efeito.
+#
+# O `value` É O PRÓPRIO TRAVESSÃO, e não `""`: o piloto troca vazio por `—`
+# ANTES de escolher, e uma opção com `value=""` não seria achada — o campo
+# nasceria em branco somando uma pintura por tique, para sempre.
+def _op_vazio(escolhido):
+    return (f'                <option value="{TRAVESSAO}"'
+            f'{" selected" if escolhido == TRAVESSAO else ""} disabled>'
+            f'{TRAVESSAO}</option>')
+
+
 def opcoes_modo(escolhido):
-    return "\n".join(
+    return "\n".join([_op_vazio(escolhido)] + [
         f'                <option value="{CHAVE_DO_MODO[n]}"'
         f'{" selected" if n == escolhido else ""} title="{d}">{n}</option>'
-        for n, d in MODOS)
+        for n, d in MODOS])
 
 
 def _op_pronto(n, escolhido):
@@ -500,7 +626,7 @@ def _op_pronto(n, escolhido):
 
 
 def opcoes_pronto(escolhido):
-    fora = [_op_pronto(n, escolhido) for n in PRONTOS]
+    fora = [_op_vazio(escolhido)] + [_op_pronto(n, escolhido) for n in PRONTOS]
     dentro = [_op_pronto(n, escolhido) for n in MEUS]
     return ("\n".join(fora) + '\n                <option disabled>──── Meus efeitos ────</option>\n'
             + "\n".join(dentro))
@@ -510,24 +636,21 @@ def bloco(lado, sigla, modo, pronto, ajustes):
     """`sigla` é "e" ou "d": a linha de ajustes do L2 e a do R2 têm
     alturas diferentes, porque cada uma vale o maior modo que está NELA.
 
-    A BARRA PINTA POR **LARGURA**, e sem esse alvo ela pinta errado — medido em
-    02/09/2026, na página publicada. O `escrever()` do piloto
-    (`hefesto_vivo.py:112`) só encomprida quem declara `data-hef-alvo="largura"`;
-    sem a declaração o alvo é `texto`, e a pintura escreve o NÚMERO dentro de um
-    `<span>` de 5px de altura, absoluto, enquanto a barra fica na largura que o
-    mockup desenhou. É o mesmo defeito que o `data-hef-alvo="valor"` dos
-    `<select>` curou em 01/09 — o desenho tem três alvos de pintura e cada
-    elemento tem de dizer o seu.
+    A CAIXA DE AJUSTES É MONTADA PELO PACOTE, e não aqui — 02/09/2026. Ela era
+    escrita nesta função e outra vez do lado do produto; com a decisão dela de
+    que *"a caixa acompanha o modo"*, o produto passou a trocá-la INTEIRA a cada
+    tique, e duas marcações para o mesmo desenho seriam duas verdades. O dono é
+    `pacotes.a03_gatilhos.html_dos_ajustes`; esta linha só entrega a cena.
+
+    A MARCAÇÃO NÃO MUDOU UM BYTE — `data-campo` e `data-hef-alvo="largura"`
+    inclusive. O que mudou é QUEM a escreve: era esta função, agora é o pacote,
+    e o desenho pede a mesma coisa que o produto vai renderizar. O que o pacote
+    NÃO faz é pintar dentro dela: nenhum `aj-*` sai em `colunas`, logo o
+    `escrever()` do piloto não visita estes elementos e o bloco não é trocado a
+    cada tique por causa do próprio carimbo de visita.
     """
-    if ajustes:
-        aj = "\n".join(
-            f'''            <div class="barra" data-ajuste="{sigla}-{i}">
-              <span class="nome" data-campo="aj-nome-{sigla}-{i}">{n}</span>
-              <span class="trilho"><span class="cheio" data-campo="aj-pct-{sigla}-{i}" data-hef-alvo="largura" style="width:{p}%"></span></span>
-              <span class="num" data-campo="aj-val-{sigla}-{i}">{v}</span>
-            </div>''' for i, (n, p, v) in enumerate(ajustes))
-    else:
-        aj = '            <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>'
+    aj = html_dos_ajustes(sigla, [{"nome": n, "pct": p, "valor": v}
+                                  for n, p, v in ajustes])
     # O ENDEREÇO DE PINTURA DO MODO É A **CHAVE**, e não o rótulo — e junto vem o
     # `data-hef-alvo="valor"`. Os dois consertam o mesmo defeito, medido em
     # 01/09/2026 lendo o `escrever()` do piloto (`hefesto_vivo.py:100-115`): sem
@@ -612,7 +735,12 @@ def coluna(c):
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
 {dire}
-          <div><button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button></div>
+          <div class="guardar">
+            <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
+                   maxlength="60" placeholder="Nome"
+                   title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+          </div>
         </div>'''
 
 
@@ -714,6 +842,7 @@ CSS_DA_CENA = f"""
   .duas-colunas{{
     --r-nome:{R_NOME}px;--r-modo:{R_MODO}px;--r-pronto:{R_PRONTO}px;
     --r-aj-e:{R_AJ_E}px;--r-sep:{R_SEP}px;--r-aj-d:{R_AJ_D}px;
+    --h-barra:{ALT_BARRA}px;
     --r-acao:{R_ACAO}px;--r-ar:{R_AR}px;--r-passo:calc(var(--r-ar) * 2);
     /* O TAMANHO DO GLIFO E A LARGURA DA COLUNA DE RÓTULOS saem do Python, do
        mesmo lugar que o `glifo(tam=GL)` lê. Digitados no CSS, os dois divergem
@@ -721,9 +850,17 @@ CSS_DA_CENA = f"""
        do padrão das lâmpadas. */
     --gl:{GL}px; --larg-rot:{LARG_ROT}px; --gap-col:{monta_.GAP_DAS_COLUNAS}px; --vao-gl:{monta_.VAO_DO_GLIFO}px;
   }}
-  .ajustes.e{{grid-template-rows:repeat({N_ESQ},1fr)}}
-  .ajustes.d{{grid-template-rows:repeat({N_DIR},1fr)}}
-"""
+""" + "".join(
+    #: A COLUNA DE CADA FILHO, ESCRITA. A primeira é a de rótulos; as outras são
+    #: os controles da `MESA`, na ordem. A palavra "quatro" continua fora de
+    #: laço nenhum — quem conta é a mesa.
+    f"  .duas-colunas > div:nth-child({i}){{grid-column:{i}}}\n"
+    for i in range(1, len(MESA) + 2))
+
+#: O NÚMERO DE COLUNAS NÃO CABE NUMA `var()`: `repeat()` exige um inteiro na
+#: contagem, e uma variável CSS ali não é aceita por nenhum motor. A troca é de
+#: texto, e o `MESA` continua sendo o único que conta.
+CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
 
 # O GLIFO ANTES DA PALAVRA, e é a gramática das vizinhas: a `aba08` escreve
 # `{glifo("mic", tam=16)} Microfone e botões`, a `aba06` monta `glifo + nome` no
@@ -852,16 +989,15 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O que ficou apertado, e está dito</h2>
   <ul>
-    <li><b>A caixa de ajustes cabe {N_ESQ} barras.</b> O produto
-        (<code>app/actions/trigger_specs.py</code>) diz que cinco dos 19 modos pedem mais:
-        <span class="marca">Galope</span> 5, <span class="marca">Metralhadora</span> 6,
+    <li><b>A caixa de ajustes acompanha o modo, e a aba rola nos grandes</b> — sua decisão de
+        02/09. A caixa reserva {N_ESQ} barras no L2 e {N_DIR} no R2 (é o que esta cena pede), e
+        <b>cresce</b> quando o modo pede mais: o produto (<code>app/actions/trigger_specs.py</code>)
+        diz que <span class="marca">Galope</span> tem 5, <span class="marca">Metralhadora</span> 6,
         <span class="marca">Montar do zero</span> 8, <span class="marca">Curva de força</span> 10 e
-        <span class="marca">Vibração por posição</span> 10. Dez barras pedem {10 * ALT_BARRA}px
-        numa linha, e as duas somariam <b>{20 * ALT_BARRA}px</b> — mais do que a coluna inteira tem
-        ({ALT_COLUNA}px, com o chip, os campos e o botão dentro). <b>Não cortei nada</b>: os cinco modos
-        continuam na lista. O que falta decidir é onde as dez posições se desenham —
-        provavelmente uma janela própria, que é o que o nome <span class="marca">Montar do zero</span>
-        já promete.</li>
+        <span class="marca">Vibração por posição</span> 11. Onze barras pedem {11 * ALT_BARRA}px numa
+        linha — mais do que a coluna inteira tem hoje ({ALT_COLUNA}px) —, então a aba passa a rolar
+        por dentro. <b>Era isso ou esconder</b>: até 02/09 a caixa mostrava as quatro primeiras e
+        calava sobre as outras sete, com os números no disco.</li>
     <li><b>Divergência real, e ela é mais velha que esta aba:</b> o P1 mostra
         <span class="marca">Metralhadora</span> com quatro barras (Força, Frequência, Início do
         curso, Fim do curso) e o produto lista <b>seis</b> com outros nomes (Início, Fim, Amplitude
@@ -923,9 +1059,12 @@ def _conferir(doc):
     exigir(corpo.count('class="chip plastico"') == len(MESA) - len(vazios),
            "a borda de cor saiu de quem ESTÁ na mesa, ou ficou em quem não está")
     for c in vazios:
-        exigir(CENA[c["pref"]]["esq"][0] == "Desligado"
-               and CENA[c["pref"]]["dir"][0] == "Desligado",
-               f"o {c['pref'].upper()} tem modo de gatilho e é lugar vazio")
+        # O TRAVESSÃO SUBSTITUIU O "DESLIGADO" AQUI — decisão 13 dela, 02/09.
+        # A régua muda com ela: cobrar `Desligado` agora reprovaria a decisão.
+        exigir(CENA[c["pref"]]["esq"][0] == TRAVESSAO
+               and CENA[c["pref"]]["dir"][0] == TRAVESSAO,
+               f"o {c['pref'].upper()} é lugar vazio e não mostra o travessão — "
+               f"volta a dizer a mesma palavra que um controle conectado diria")
 
     # 2-bis. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO, nunca o nome de um plástico
     #    que não está na mesa — *"na parte do nome do P3 e do P4 colocar algo como
@@ -983,17 +1122,69 @@ def _conferir(doc):
            f"{_campos} campos de escolha e {_por_valor} pintando por valor — "
            f"o que sobra pinta por texto e perde as opções na primeira pintura")
 
-    # 8. TODA BARRA DE AJUSTE PINTA POR `largura` — 02/09/2026. É a irmã da
-    #    régua 7, e nasceu do mesmo jeito: lendo o `escrever()` do piloto contra
-    #    a página que ele renderiza. Sem o alvo, a pintura escreve o NÚMERO
-    #    dentro do trilho de 5px e a barra fica na largura do mockup — a tela
-    #    afirmando 78% de uma força que o perfil diz que não existe.
+    # 8. A CAIXA DE AJUSTES CRESCE COM O MODO — decisão dela, 02/09/2026.
+    #    A régua olha as DUAS metades da cura, porque uma sem a outra é pior que
+    #    nenhuma: sem o `subgrid` as cinco colunas deixam de partilhar as
+    #    trilhas e saem de registro; sem o `minmax(...,auto)` a trilha continua
+    #    fixa e as barras que sobram vazam por cima da linha de baixo.
+    #
+    #    A RÉGUA OLHA O DOCUMENTO SEM OS COMENTÁRIOS, e isso não é higiene: era
+    #    um instrumento falso. Medido em 02/09/2026 — arrancada a declaração
+    #    `grid-template-rows:subgrid` de `.duas-colunas > div` (e SÓ ela), o
+    #    gerador continuou dizendo `OK`, porque o comentário CSS que EXPLICA a
+    #    cura escreve a declaração por extenso e comentário vai para dentro do
+    #    `<style>`. A régua lia a própria prosa. Com a foto do estrago que ela
+    #    deixava passar: as cinco colunas saíam de registro e o miolo rolava
+    #    185px. É a nona vez que esta casa pega uma régua medindo a PALAVRA.
+    _css = sem_comentarios_de_css(doc)
+    exigir("grid-template-rows:subgrid" in _css,
+           "as colunas deixaram de partilhar as trilhas da grade — cada uma "
+           "volta a medir por si e elas saem de registro quando um modo cresce")
+    for _v in ("--r-aj-e", "--r-aj-d"):
+        exigir(f"minmax(var({_v}),auto)" in _css,
+               f"a trilha {_v} voltou a ser fixa — um modo de 6 ou 11 ajustes "
+               f"vaza por cima da linha de baixo em vez de fazer a aba rolar")
+    exigir("grid-auto-rows:var(--h-barra)" in _css,
+           "a caixa de ajustes voltou a ter um número FIXO de trilhas — ela "
+           "tem de medir o que o modo tem, e o modo vai de 0 a 11")
+
+    # 8-bis. A MARCAÇÃO DA CAIXA TEM UM DONO SÓ. O produto troca a caixa
+    #    inteira a cada tique (o `blocos:` do pacote); se o desenho escrever a
+    #    sua própria versão, as duas divergem e o produto passa a substituir um
+    #    desenho por outro. A régua compara a cena com o que o dono devolve.
+    exigir(html_dos_ajustes("x", []).strip() in corpo,
+           "a caixa do modo sem ajuste não é mais a que o pacote monta — o "
+           "desenho e o produto voltaram a escrever a mesma coisa duas vezes")
     _barras = corpo.count('data-campo="aj-pct-')
-    _por_largura = corpo.count('data-hef-alvo="largura"')
-    exigir(_barras and _por_largura == _barras,
-           f"{_barras} barras de ajuste e {_por_largura} pintando por largura — "
-           f"o que sobra escreve o número DENTRO da barra e deixa a largura do "
-           f"desenho no lugar do valor dela")
+    _largura = corpo.count('data-hef-alvo="largura"')
+    exigir(_barras and _largura == _barras,
+           f"{_barras} barras de ajuste e {_largura} declarando `largura` — "
+           f"sem o alvo, a régua do mockup lê a barra como TEXTO e deixa de "
+           f"enxergar a largura que o produto escreveu")
+    exigir(corpo.count('data-campo="aj-val-') == _barras,
+           "o número da barra perdeu o `data-campo` — o 'Guardar esse efeito' "
+           "recolhe a coluna por endereço e passaria a gravar os PADRÕES do "
+           "modo por cima do que ela salvou")
+
+    # 8-ter. O LUGAR VAZIO MOSTRA TRAVESSÃO — decisão 13 dela, 02/09/2026.
+    #    Os DOIS campos de escolha o oferecem: `Desligado` e `— Nenhum —` são
+    #    escolhas legítimas de um controle CONECTADO, e usar as mesmas palavras
+    #    para "não há aparelho aqui" confunde as duas coisas.
+    _com_travessao = len(re.findall(
+        rf'<option value="{TRAVESSAO}"[^>]*\bdisabled\b', corpo))
+    exigir(_com_travessao == corpo.count("<select"),
+           f"{_com_travessao} campos oferecem `—` e há {corpo.count('<select')} "
+           f"campos de escolha. O que não oferece não pode receber o vazio: o "
+           f"`escrever()` do piloto recusa em silêncio e a coluna do lugar vazio "
+           f"fica com o efeito de quem saiu dali")
+
+    # 8-quater. O NOME DO EFEITO TEM ONDE SER ESCRITO — decisão 17 dela.
+    #    "Meus efeitos" existia no campo de escolha com dois exemplos e sem
+    #    dono. Sem este campo, não há como a pessoa dar o nome — e a seção
+    #    continuaria sendo desenho.
+    exigir(corpo.count('data-linha="nome-do-efeito"') == len(MESA),
+           f"o campo do nome do efeito não está nas {len(MESA)} colunas — "
+           f"'Meus efeitos' volta a ser promessa sem dono")
 
     # 9. O LUGAR VAZIO NÃO SE CLICA. A trava é de CSS e pende do
     #    `data-conectado`, que o piloto mantém a cada tique — logo ela vale para

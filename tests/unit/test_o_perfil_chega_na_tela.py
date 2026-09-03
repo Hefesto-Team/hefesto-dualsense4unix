@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import sys
 
 import pytest
@@ -139,15 +140,28 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
     assert col["modo-d"] == "Vibração"
 
     # OS AJUSTES, com os valores DELA — não os padrões do preset.
-    assert col["aj-val-e-1"] == 180, (
-        f"a Força do L2 saiu {col.get('aj-val-e-1')!r} e o perfil guarda 180. "
-        f"Um padrão do preset aqui é o pacote lendo a tabela e não o disco.")
-    assert col["aj-nome-e-1"] == "Força"
-    assert [col[f"aj-val-d-{i}"] for i in range(3)] == [3, 8, 20]
+    #
+    # ELES CHEGAM DENTRO DE UM BLOCO desde 02/09/2026, e a mudança é a decisão
+    # 2 dela: *"os ajustes viram lista e a caixa acompanha o modo"*. O número de
+    # barras é o do MODO — de zero (`Off`) a onze (`MultiPositionVibration`) — e
+    # não há endereço de pintura para um filho que ainda não existe, então a
+    # caixa é trocada inteira. Cobrar `col["aj-val-e-1"]` aqui reprovaria a cura.
+    caixa_e = r["blocos"]['[data-controle="p1"] .ajustes.e']
+    assert '<span class="num" data-campo="aj-val-e-1">180</span>' in caixa_e, (
+        f"a Força do L2 não chegou com o 180 que o perfil guarda. Um padrão do "
+        f"preset aqui é o pacote lendo a tabela e não o disco:\n{caixa_e}")
+    assert '"aj-nome-e-1">Força<' in caixa_e
+    caixa_d = r["blocos"]['[data-controle="p1"] .ajustes.d']
+    valores_d = re.findall(r'data-campo="aj-val-d-\d+">(\d+)<', caixa_d)
+    assert valores_d == ["3", "8", "20"], (
+        f"o R2 do perfil guarda [3, 8, 20] e a caixa trouxe {valores_d}")
 
     #: A PORCENTAGEM É DA FAIXA DAQUELE AJUSTE. `force` vai a 255 e `position`
     #: a 9; dividir os dois por 255 pintaria a barra da posição sempre no chão.
-    assert col["aj-pct-e-1"] == round(180 / 255 * 100)
+    #: Ela viaja no `style` do próprio bloco: a caixa é trocada inteira, então a
+    #: largura chega com ela em vez de esperar uma segunda pintura.
+    assert f'style="width:{round(180 / 255 * 100)}%"' in caixa_e, (
+        f"a barra da Força não veio na porcentagem da FAIXA dela:\n{caixa_e}")
 
 
 def test_a_curva_de_dez_posicoes_nao_derruba_a_aba(ctx_com):

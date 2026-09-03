@@ -243,7 +243,18 @@ def test_o_molde_e_o_que_a_aba_pinta_menos_barra_e_html(pacotes_mod):
 PISO_DO_MOLDE = {
     "01-jogar.html": 3,
     "02-controles.html": 8,
-    "03-gatilhos.html": 22,
+    # 22 ATÉ 02/09/2026, E A QUEDA É A CURA — não uma regressão. Doze dos 22
+    # eram as `aj-*` da caixa de ajustes, e o molde as apagava uma a uma com
+    # travessão. A decisão 2 dela (*"os ajustes viram lista e a caixa acompanha
+    # o modo"*) tirou a caixa da pintura campo a campo: ela virou um BLOCO, e o
+    # pacote troca a caixa inteira de TODO lugar sem aparelho — inclusive o P2,
+    # que a página dá por conectado e o molde nunca alcançava com um controle
+    # só na mesa. A garantia ficou mais forte e o número, menor.
+    #
+    # A régua que cobra a caixa vazia agora é
+    # `test_a_caixa_do_lugar_sem_aparelho_tambem_e_trocada`, em
+    # `test_a_aba_gatilhos_nao_deixa_o_mockup_na_tela.py`.
+    "03-gatilhos.html": 10,
     "04-iluminacao.html": 4,
     "05-vibracao.html": 4,
     "06-navegacao.html": 0,
