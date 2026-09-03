@@ -21,4 +21,23 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 08-conexoes.html
+- **03/09/2026** — `MIGRA-08-01`. **NÃO HÁ DESENHO NOVO AQUI: são DEZ endereços
+  de pintura em elementos que já existiam**, e nenhum move um pixel. O
+  `so_mudou_endereco()` deste portão confirma: apagados os trinta atributos que
+  ele conhece, a única diferença que sobra são os seis `data-hef-quando` dos
+  botões da sala — e `data-hef-quando` **não está na lista `INVISIVEIS`**, que é
+  defeito do portão, não da página (a `08-conexoes.html` PUBLICADA já usa esse
+  atributo, nas cinco pílulas do Check-up).
+
+  Os dez: `ordem` (a coluna da ordem de serviço), `conta-gestao` (a contagem da
+  seção), `sala-altura` e `sala-visada` (três botões cada) e `bateria` (um por
+  controle). Sem eles o pacote emite e o `achar()` do piloto escreve ZERO,
+  calado — a tela dela continua mostrando *"Mova o adaptador Bluetooth da
+  Entrada 3 para a Entrada 9"*, que é o desenho apresentado como diagnóstico da
+  máquina dela.
+
+  **O caminho barato é `--publicar-enderecos 08`**, e ele só passa a existir
+  quando alguém puser `data-hef-quando` (e `data-hef-classe`) na `INVISIVEIS`
+  do `scripts/check_o_desenho_aprovado.py` — arquivo de outro dono. Enquanto
+  isso, quem integra decide entre fazer aquilo ou `--publicar 08`.
