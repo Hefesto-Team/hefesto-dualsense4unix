@@ -458,6 +458,46 @@ NO_CABO = [c for c in CONECTADOS if c["via"] == "USB"]
 NO_RADIO = [c for c in CONECTADOS if c["via"] == "BT"]
 POR_PREF = {c["pref"]: c for c in MESA}
 
+#: O ENDEREÇO DA ORDEM DE SERVIÇO — 03/09/2026, `MIGRA-08-01`, e ele mata a
+#: mentira mais cara desta aba.
+#:
+#: O que a coluna da direita do Check-up desenha é uma ORDEM DE SERVIÇO — uma
+#: instrução para ela mexer no gabinete: *"Mova o adaptador Bluetooth da Entrada
+#: 3 para a Entrada 9"*, com de→para, ganho e um `?` de duas frases. Tudo
+#: escrito à mão neste arquivo, tudo apresentado como diagnóstico da máquina
+#: dela. Fotografado no produto vivo em 03/09, com o exame dizendo CERTO nas
+#: três linhas que corriam.
+#:
+#: O DONO DO CARD JÁ EXISTIA: `gui.aba_conexoes.html_da_ordem`, com estas MESMAS
+#: classes — foi deste desenho que ele foi extraído. O que faltava era o produto
+#: chamá-lo; ver `pacotes.a08_conexoes._html_da_ordem`.
+#:
+#: O ALVO É `html` porque o card muda de FORMA: sem ordem pendente ele é uma
+#: linha só (*"Nenhuma mudança recomendada agora."*, texto do dono), e com ordem
+#: são quatro blocos. Não há endereço para um filho que ainda não existe — é a
+#: mesma razão da fita e do mapa do gabinete.
+#:
+#: O NOME É CONSTANTE PORQUE O PACOTE O EMITE COM ESTA GRAFIA. Um endereço
+#: escrito duas vezes é um endereço que diverge sem sintoma: o `achar()` não o
+#: encontra e escreve zero, calado.
+CAMPO_DA_ORDEM = "ordem"
+
+#: A CONTAGEM DA SEÇÃO GESTÃO DE CONTROLES, e ela tem UM dono: o
+#: `gui.aba_conexoes.texto_da_contagem`, que escreve *"2 na mesa • 1 no cabo • 1
+#: no rádio"* — a frase inteira, com os três números. Este arquivo a digitava,
+#: e era a segunda grafia: com um controle só na mesa, o produto continuava
+#: mostrando 2/1/1 porque o `<span>` não tinha endereço nem dono.
+#:
+#: O `Controle` DA BANCADA É MONTADO AQUI porque o dono conta por
+#: `Controle.pelo_radio`, e ele lê `via` em MINÚSCULA (`"usb"`/`"bt"`); a mesa
+#: do desenho guarda `"USB"`/`"BT"`, que é o que o chip da fita mostra. O
+#: `.lower()` é a tradução, e ela fica visível de propósito: sem ele os dois
+#: controles do desenho contariam como dois no rádio, calados.
+CONTA_DA_GESTAO = _pacote08.html_da_conta(_aba_conexoes.texto_da_contagem([
+    _aba_conexoes.Controle(uniq=str(c["pref"]), jogador=int(c["jogador"]),
+                           via=str(c["via"]).lower(), bateria=None)
+    for c in CONECTADOS]))
+
 #: O microfone segue o TRANSPORTE — ponto final dela, 28/08: *"se tiver em modo
 #: rádio, então o mic é modo rádio"*. Não há chavinha e não há heurística de
 #: orçamento: os turnos do rádio viraram CONSEQUÊNCIA, e a consequência aparece
@@ -1581,7 +1621,7 @@ def linha_do_controle(c):
               <span class="gc-resumo">
                 <span title="{"A borda deste controle é a cor lida do aparelho." if not no_radio else "A cor deste controle não foi lida — a borda fica neutra."}">Vê como <b>{c["mascara"]}</b></span>
                 <span title="{mic_dica}">Microfone <b>Ligado</b>, {caminho_do_mic(c)}</span>
-                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b>{da_controles["bat"]}%</b></span>
+                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">{da_controles["bat"]}%</b></span>
               </span>
               </label>
               <label class="gc-seta abre" for="gc-{c["pref"]}" data-gesto="alvo"
@@ -2185,10 +2225,25 @@ def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
     desta dica, porque a seção dele não tem onde mais dizê-la. Aqui a frase já
     está na tela, por extenso, três linhas abaixo (`ESPERA_O_APLICAR`) — repeti-la
     no hover seria a mesma frase duas vezes na mesma caixa.
+
+    O ENDEREÇO DA PINTURA CHEGOU EM 03/09/2026 (`MIGRA-08-01`), e ele cura uma
+    tela que MENTIA: o `maquina.json` desta bancada diz
+    `linha_de_visada='com_gente'`, e os TRÊS botões da visada estavam apagados —
+    a tela dizendo que ninguém respondeu uma pergunta respondida. O "Sim" da
+    ALTURA acertava por coincidência do mockup, que é pior: um acerto que não
+    vem de leitura erra no primeiro clique dela.
+
+    SÃO DOIS ATRIBUTOS COM DOIS VOCABULÁRIOS, e os dois são do produto —
+    `data-modo` é o que o GESTO manda (onde `""` vira `None` no
+    `machine_declare`), `data-hef-quando` é o que a PINTURA compara (onde `""`
+    quer dizer "alvo booleano" e acenderia os três juntos). A razão inteira está
+    em `pacotes.a08_conexoes._ID_NAO_SEI`, que é o dono do `"nao_sei"` daqui.
     """
     botoes = "".join(
         f'<button class="{"on" if nome == marcada else ""}" '
-        f'data-gesto="{gesto}" data-modo="{ident}">{nome}</button>'
+        f'data-gesto="{gesto}" data-modo="{ident}" '
+        f'data-campo="{gesto}" data-hef-alvo="classe" '
+        f'data-hef-quando="{ident or _pacote08._ID_NAO_SEI}">{nome}</button>'
         for ident, nome in respostas)
     return f'''              <div class="mm-perg">
                 <span class="mm-q" title="{dica}">{texto}</span>
@@ -2500,7 +2555,7 @@ MIOLO = f'''
           </div>
 
           <div class="lado-d">
-            <div class="col-ordem">
+            <div class="col-ordem" data-campo="{CAMPO_DA_ORDEM}" data-hef-alvo="html">
             <div class="ordem">
               <div class="faca">Mova o adaptador Bluetooth da Entrada 3 para a Entrada 9
                 <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
@@ -2567,7 +2622,7 @@ MIOLO = f'''
           {num(CUSTO_DO_MIC)} turnos que ele custa no rádio são <b>consequência</b>, e aparecem
           na régua de Desempenho.
         </span></span>
-        <span class="conta">{len(CONECTADOS)} na mesa <span class="pt">•</span> {len(NO_CABO)} no cabo <span class="pt">•</span> {len(NO_RADIO)} no rádio</span>
+        <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">{CONTA_DA_GESTAO}</span>
       </div>
       <div class="quadro-corpo">
         <input type="radio" name="gc" id="gc-todos" class="gc-r">
