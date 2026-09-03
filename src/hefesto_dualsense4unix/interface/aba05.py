@@ -669,9 +669,37 @@ def _coluna(c, e=None):
     # dentro do `svg()` — uma régua só, no lugar onde o corte acontece.
     desenho = svg(f'vb-{c["pref"]}', c["cor"], acesos=acesos, lampadas=False)
 
+    # O ENDEREÇO DO DEGRAU ACESO — 02/09/2026, e ele fecha uma tela que MENTIA.
+    #
+    # A política de vibração é UMA, da mesa (`state_full.rumble_policy`), e o
+    # desenho crava um degrau aceso por coluna: o P1 nasce em "Máximo" e o P2 em
+    # "Balanceado". Medido contra o daemon dela hoje, com dois controles na
+    # mesa, `rumble_policy = 'balanceado'` — logo a coluna do P1 afirmava
+    # "Máximo" sobre uma mesa que está em "Balanceado". Não era o desenho
+    # esperando dado: era a tela dizendo o contrário do disco.
+    #
+    # O ALVO É `classe`, e não texto — QUAL dos quatro está aceso não é uma
+    # palavra na tela, é a classe `on` do botão. Escrever texto aqui foi o
+    # defeito de 02/09 pela manhã: a palavra `balanceado` entrou DENTRO dos
+    # quatro rótulos e ela perdeu a escolha. O ramo `classe` do `escrever()`
+    # (`hefesto_vivo.py:227`) acende quem casa com o `data-hef-quando` e apaga
+    # as irmãs — sem lista de irmãs, porque os quatro dividem um `data-campo` só.
+    #
+    # `data-campo="degrau"` E `data-papel="forca"` NO MESMO BOTÃO, e não é
+    # descuido: o `data-papel` é o endereço do CLIQUE (o gesto `forca` lê o
+    # `data-forca` deste botão) e o `data-campo` é o endereço da PINTURA. Os
+    # dois nomes são diferentes justamente porque o autoexame nº 6 desta aba
+    # reprova um nome que seja valor e clique ao mesmo tempo.
+    #
+    # NENHUM PIXEL MUDA: são três atributos num botão que já existia. Só que
+    # `data-hef-quando` NÃO está na lista `INVISIVEIS` do
+    # `scripts/check_o_desenho_aprovado.py`, então o `--publicar-enderecos` não
+    # consegue levar este endereço sozinho — está no relato desta frente.
     degraus = "".join(
         f'<button class="{"on" if chave == e["forca"] else ""}" '
-        f'data-papel="forca" data-forca="{chave}">{rot}</button>'
+        f'data-papel="forca" data-forca="{chave}" '
+        f'data-campo="degrau" data-hef-alvo="classe" '
+        f'data-hef-quando="{chave}">{rot}</button>'
         for rot, chave in FORCA)
 
     linhas = []
@@ -941,6 +969,16 @@ def _conferir(doc):
     #    que `app/telas/vibracao` monta. É esta comparação que impede alguém de
     #    "melhorar" a frase aqui e criar a segunda versão de um texto de tela —
     #    o defeito que a regra de duas cópias existe para matar.
+    # 9. OS QUATRO DEGRAUS TÊM ENDEREÇO DE PINTURA — 02/09/2026.
+    #    Sem ele o degrau aceso sai do DESENHO, e o desenho crava um por coluna:
+    #    o P1 em "Máximo" e o P2 em "Balanceado", com uma política só no daemon.
+    #    Pelo menos uma das colunas mentia, e portão nenhum via.
+    for _, chave in FORCA:
+        exigir(f'data-campo="degrau" data-hef-alvo="classe" '
+               f'data-hef-quando="{chave}"' in corpo,
+               f"o degrau {chave!r} perdeu o endereço da classe")
+    exigir(corpo.count('data-hef-quando="') == len(FORCA) * len(CONECTADOS),
+           f"os degraus endereçados não são {len(FORCA) * len(CONECTADOS)}")
     exigir('id="vib-estado"' in corpo, "a linha do estado sumiu da aba")
     cena = textos_do_estado(CENA_DO_ESTADO)
     exigir(len(cena) >= 1,
