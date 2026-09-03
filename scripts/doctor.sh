@@ -2373,12 +2373,19 @@ PYEOF
 # cego e o perfil-por-jogo vira letra morta — esta seção torna o estado visível.
 # Cobre: DISPLAY/WAYLAND_DISPLAY do shell atual E do systemd --user (o daemon
 # importa de lá quando sobe sem display — _ensure_display_env), o backend xlib
-# (X11/XWayland: inclui jogos Proton/Steam), o portal XDG (GetActiveWindow) e o
-# wlrctl. Caso COSMIC validado ao vivo: o cosmic-comp NÃO expõe
-# wlr-foreign-toplevel-management ("Foreign Toplevel Management interface not
-# found") — wlrctl instalado NÃO ajuda; suporte nativo exigiria o protocolo
-# próprio zcosmic_toplevel_info_v1. Veredito: OK / DEGRADADO (só XWayland) /
-# CEGO.
+# (X11/XWayland: inclui jogos Proton/Steam), o portal XDG (GetActiveWindow), o
+# wlrctl e o zcosmic_toplevel_info_v1. Veredito: OK / DEGRADADO / CEGO.
+#
+# A FRASE QUE CAIU — 02/09/2026. Esta seção dizia, no veredito DEGRADADO, que
+# apps Wayland nativos aparecerem como 'unknown' era "limitação do compositor
+# (COSMIC exigiria zcosmic_toplevel_info_v1), não do hefesto". A desculpa
+# nomeava a cura: medido com `wayland-info`, dos 58 globais do cosmic-comp 0.1
+# desta máquina o `zcosmic_toplevel_info_v1` ESTÁ publicado (versão 3) — quem
+# não o usava era o produto. Usa agora, pelo `window_backends/cosmic_toplevel.py`,
+# e este bloco pergunta ao MESMO código, em vez de reescrever o protocolo aqui.
+# O que continua verdade sobre o COSMIC é o outro protocolo: o
+# `zwlr_foreign_toplevel_manager_v1` não está entre os 58, e é por isso que o
+# wlrctl responde "Foreign Toplevel Management interface not found".
 check_window_detect() {
     local env_display="${DISPLAY:-}" env_wayland="${WAYLAND_DISPLAY:-}"
     local sysd_env="" sysd_display="" sysd_wayland=""
@@ -2432,7 +2439,40 @@ check_window_detect() {
         fi
     fi
 
-    # wlrctl (wlr-foreign-toplevel-management), interpretando o caso COSMIC.
+    # zcosmic_toplevel_info_v1 — o caminho do COSMIC. Perguntado ao PRÓPRIO
+    # backend do produto (mesmo código que o daemon roda); se o pacote
+    # instalado for velho demais para tê-lo, cai no `wayland-info`, que
+    # responde a mesma pergunta com outra régua.
+    local cosmic_ok=0 cosmic_linha="" py_produto=""
+    py_produto="$(_python_do_produto)"
+    if [[ -z "${eff_wayland}" ]]; then
+        info "sem WAYLAND_DISPLAY — não há compositor Wayland a quem perguntar"
+    else
+        if [[ -n "${py_produto}" ]]; then
+            cosmic_linha="$(WAYLAND_DISPLAY="${eff_wayland}" timeout 5 "${py_produto}" -m \
+                hefesto_dualsense4unix.integrations.window_backends.cosmic_toplevel \
+                2>/dev/null || true)"
+        fi
+        if [[ "${cosmic_linha}" == protocolo=sim* ]]; then
+            cosmic_ok=1
+            pass "compositor responde zcosmic_toplevel_info_v1 — apps Wayland nativos detectáveis (${cosmic_linha})"
+        elif [[ "${cosmic_linha}" == protocolo=nao* ]]; then
+            info "compositor sem zcosmic_toplevel_info_v1 (não é COSMIC) — backend cosmic fora"
+        elif command -v wayland-info >/dev/null 2>&1; then
+            # O pacote instalado não tem o backend (instalação anterior a
+            # 02/09/2026). A pergunta continua respondível.
+            if WAYLAND_DISPLAY="${eff_wayland}" timeout 3 wayland-info 2>/dev/null \
+                 | grep -q 'zcosmic_toplevel_info_v1'; then
+                warn "o compositor PUBLICA zcosmic_toplevel_info_v1, mas o hefesto instalado não sabe usá-lo — atualize: $(conselho_de_instalacao)"
+            else
+                info "compositor sem zcosmic_toplevel_info_v1 (wayland-info) — backend cosmic fora"
+            fi
+        else
+            info "não deu para perguntar pelo zcosmic_toplevel_info_v1 (sem python do produto e sem wayland-info)"
+        fi
+    fi
+
+    # wlrctl (wlr-foreign-toplevel-management), que cobre o bloco wlroots.
     local wlrctl_ok=0 wlrctl_out="" wlrctl_rc=0
     if ! command -v wlrctl >/dev/null 2>&1; then
         info "wlrctl não instalado — backend wlrctl indisponível (irrelevante se o veredito abaixo for OK)"
@@ -2442,7 +2482,7 @@ check_window_detect() {
         wlrctl_out="$(WAYLAND_DISPLAY="${eff_wayland}" timeout 3 wlrctl toplevel list 2>&1)"
         wlrctl_rc=$?
         if printf '%s' "${wlrctl_out}" | grep -qi 'toplevel management interface not found'; then
-            info "compositor SEM wlr-foreign-toplevel-management (caso do cosmic-comp) — wlrctl instalado não ajuda aqui; jogos XWayland/Proton continuam detectáveis via xlib. Suporte nativo ao COSMIC exigiria zcosmic_toplevel_info_v1."
+            info "compositor SEM wlr-foreign-toplevel-management (caso do cosmic-comp) — wlrctl instalado não ajuda aqui; quem cobre o COSMIC é o zcosmic_toplevel_info_v1, conferido acima"
         elif [[ "${wlrctl_rc}" -eq 0 ]]; then
             wlrctl_ok=1
             pass "wlrctl responde (wlr-foreign-toplevel-management OK)"
@@ -2451,21 +2491,23 @@ check_window_detect() {
         fi
     fi
 
-    # Veredito.
+    # Veredito. O backend Wayland é qualquer um dos três: cosmic, portal ou wlrctl.
+    local wayland_ok=0
+    if [[ "${cosmic_ok}" -eq 1 || "${portal_ok}" -eq 1 || "${wlrctl_ok}" -eq 1 ]]; then
+        wayland_ok=1
+    fi
     if [[ "${xlib_ok}" -eq 1 && -z "${eff_wayland}" ]]; then
         pass "veredito: OK via xlib (sessão X11 pura — todas as janelas detectáveis)"
-    elif [[ "${xlib_ok}" -eq 1 && ( "${portal_ok}" -eq 1 || "${wlrctl_ok}" -eq 1 ) ]]; then
-        pass "veredito: OK via xlib + backend Wayland disponível (cobertura total)"
+    elif [[ "${xlib_ok}" -eq 1 && "${wayland_ok}" -eq 1 ]]; then
+        pass "veredito: OK via xlib + backend Wayland (cobertura total: jogos XWayland/Proton pelo xlib, apps Wayland nativos pelo compositor)"
     elif [[ "${xlib_ok}" -eq 1 ]]; then
-        warn "veredito: DEGRADADO — só XWayland: jogos Proton/Steam e apps X11 são detectados (xlib), mas apps Wayland nativos aparecem como 'unknown'. Limitação do compositor (COSMIC exigiria zcosmic_toplevel_info_v1), não do hefesto."
-    elif [[ "${portal_ok}" -eq 1 ]]; then
-        pass "veredito: OK via portal XDG (Wayland puro)"
-    elif [[ "${wlrctl_ok}" -eq 1 ]]; then
-        pass "veredito: OK via wlrctl (Wayland puro)"
+        warn "veredito: DEGRADADO — só XWayland: jogos Proton/Steam e apps X11 são detectados (xlib), mas apps Wayland nativos aparecem como 'unknown'. Este compositor não publica nenhum dos três caminhos Wayland (zcosmic_toplevel_info_v1, portal XDG, wlr-foreign-toplevel-management)."
+    elif [[ "${wayland_ok}" -eq 1 ]]; then
+        pass "veredito: OK via backend Wayland (sessão Wayland pura — sem o nome do processo, que só o xlib resolve)"
     elif [[ -z "${eff_display}" && -z "${eff_wayland}" ]]; then
         fail "veredito: CEGO — sem DISPLAY e sem WAYLAND_DISPLAY (nem no systemd --user). Se o daemon subiu antes do login gráfico, reinicie: systemctl --user restart ${APP_ID}.service"
     else
-        fail "veredito: CEGO — há display no ambiente mas nenhum backend funciona (X inacessível, portal sem GetActiveWindow, wlrctl sem protocolo); o autoswitch ficará no fallback e perfil-por-jogo não muda sozinho"
+        fail "veredito: CEGO — há display no ambiente mas nenhum backend funciona (X inacessível, compositor sem zcosmic_toplevel_info_v1, portal sem GetActiveWindow, wlrctl sem protocolo); o autoswitch ficará no fallback e perfil-por-jogo não muda sozinho"
     fi
 }
 
