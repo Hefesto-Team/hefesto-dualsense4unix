@@ -235,8 +235,12 @@ def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():
     dono = {"nome": "Cosmic Red", "via": "USB", "cor": "cosmic-red"}
     botao = pac.um_botao_de_player("Cosmic Red", 1, 1, dono)
     assert botao.startswith('<button class="on" data-gesto="player" data-player="1"')
-    assert '<i class="dono" style="--plastico:#ae335a"></i>1</button>' in botao, (
-        f"o anel perdeu a cor do plástico: {botao!r}. O hex sai de "
+    # O `data-hef` do anel entrou em 03/09/2026 (IDENTIDADE-VEM-DE-CIMA-01): sem
+    # ele a régua da identidade acusa o `--plastico` do `<i>`, porque ela julga
+    # a cor no elemento que a carrega. Ver `a04_iluminacao.ANEL_DO_DONO`.
+    assert (f'<i class="dono" data-hef="{pac.ANEL_DO_DONO}"'
+            f' style="--plastico:#ae335a"></i>1</button>') in botao, (
+        f"o anel perdeu a cor do plástico ou o endereço: {botao!r}. O hex sai de "
         f"`monta.cor_da_zona`, que LÊ a folha que pinta o desenho.")
     assert 'data-campo=' not in botao, (
         "o botão voltou a ter endereço próprio — a fileira inteira é que tem, "

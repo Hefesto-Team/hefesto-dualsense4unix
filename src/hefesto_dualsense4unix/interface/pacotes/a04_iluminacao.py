@@ -98,6 +98,25 @@ def _hex(rgb: Any) -> str:
 #: Os quatro números que a página oferece, e o gerador desenha.
 NUMEROS = (1, 2, 3, 4)
 
+#: O ENDEREÇO DO ANELZINHO do dono, dentro de um botão da fileira.
+#:
+#: ELE NÃO É UM CAMPO QUE ALGUÉM PINTA, e é por isso que o nome tem ponto — a
+#: gramática que a `10-perfis` já usa para um pedaço que mora DENTRO de um bloco
+#: trocado inteiro (`perfis.linha.nome`). O que o `<i>` declara aqui é de quem
+#: ele é: o pai é `data-campo="players" data-hef-alvo="html"`, e o produto
+#: reescreve a fileira toda a cada tique, com `_cor_do_plastico` da mesa VIVA.
+#:
+#: SEM ELE A RÉGUA DA IDENTIDADE ACUSA O ANEL, e acusa com razão pela letra
+#: dela: `--plastico:#hex` é julgado no elemento que o carrega, porque *"um pai
+#: endereçado não dá ao filho o direito de trazer cor congelada"*. A exceção é
+#: exatamente esta — o pai não "dá direito", ele REESCREVE o filho —, e um
+#: endereço é a única forma de dizer isso no HTML.
+#:
+#: UM NOME PRÓPRIO, e nunca `players`: o pintor acha por
+#: `[data-campo=X],[data-papel=X],[data-hef=X]` com `querySelectorAll`, então um
+#: `<i>` que repetisse `players` receberia a fileira INTEIRA como `innerHTML`.
+ANEL_DO_DONO = "players.dono"
+
 
 def _tinta(rgb: Any) -> str:
     """A cor da tira NO TOM DESTA JANELA — ou `""`, que quer dizer APAGADA.
@@ -336,7 +355,8 @@ def um_botao_de_player(nome: str, meu: int, n: int,
     número **livre**, e é isso que a dica diz.
     """
     cor = _cor_do_plastico(str(dono.get("cor") or "")) if dono else ""
-    anel = f'<i class="dono" style="--plastico:{cor}"></i>' if dono is not None and cor else ""
+    anel = (f'<i class="dono" data-hef="{ANEL_DO_DONO}" style="--plastico:{cor}"></i>'
+            if dono is not None and cor else "")
     if n == meu:
         dica = f"O {nome} É o Player {n} — é o número dele hoje."
     elif dono is None:
@@ -452,6 +472,138 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
     ))
 
 
+#: O SELETOR DO ANTES/DEPOIS do rodapé — CSS, e não `data-campo`, porque é um
+#: `blocos:` (`hefesto_vivo`, o laço `for(const [seletor, html] of
+#: Object.entries(p.blocos || {}))`). É a mesma escolha do `SELETOR_DA_LISTA` da
+#: `10-perfis`: o número de filhos muda com a mesa, e não há endereço para um
+#: filho que ainda não existe.
+SECAO_DA_TROCA = ".nota-troca"
+
+#: O título da seção, num lugar só: ele sai do gerador E do pacote.
+TITULO_DA_TROCA = "Trocar o número: o antes e o depois"
+
+
+def _luzinhas(numero: int) -> str:
+    """As cinco lâmpadas daquele número, ou `""` quando ninguém sabe o padrão.
+
+    O guarda é o mesmo de `desenho_da_luz`, e pela mesma razão medida:
+    `monta.PADRAO_JOGADOR` só precomputa 1..8 e `monta.luzinhas(9)` levanta
+    `KeyError`, enquanto `core/led_control.player_led_pattern` responde a
+    qualquer número. Enquanto só o gerador chamava, o número era 1..4.
+    """
+    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
+    try:
+        return str(monta.luzinhas(int(numero)))
+    except (KeyError, TypeError, ValueError):
+        return ""
+
+
+def item_da_troca(nome: str, numero: int, plastico: str,
+                  mexeu: bool = False) -> str:
+    """Um controle com um número, no antes/depois do rodapé.
+
+    `data-hef` PELA MESMA RAZÃO DO ANEL DA FILEIRA: o `--plastico` mora no
+    `style` DESTE elemento, e a régua da identidade julga o `--plastico` no
+    elemento que o carrega. Aqui ele não é congelado — a seção inteira é um
+    `blocos:` que o produto reescreve com a mesa viva —, e o endereço é o que
+    diz isso.
+
+    :param plastico: o hex da casca, ou `""` — e sem hex o item sai SEM anel,
+        que é o que o desenho já faz com um número cujo dono não está aqui.
+    """
+    anel = f' style="--plastico:{plastico}"' if plastico else ""
+    return (f'<span class="troca-item{" mexeu" if mexeu else ""}"'
+            f' data-hef="troca.item"{anel}>'
+            f'<i class="dono"></i><span class="np">P{numero}</span>'
+            f'<span>{nome}</span>{_luzinhas(numero)}</span>')
+
+
+def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
+    """A seção "Trocar o número" inteira, com a mesa que lhe derem.
+
+    POR QUE ELA DEIXOU DE SER TEXTO FIXO — 03/09/2026, a lei dela: *"se no topo
+    tá mostrando controle white player 1, então cada aba vai usar os controles
+    lá de cima. Não mistura com a info dos mockups."* Esta seção é o exemplo do
+    caso REAL dela, de 26/08 (*"o meu controle azul é o player 2 e antes de
+    irmos pro jogo ele tem que ser o player 1"*) — e o exemplo estava escrito
+    com os dois controles do DESENHO, num rodapé que o produto renderiza.
+
+    UM DONO, DOIS CHAMADORES, como a fileira de players e o desenho da luz: o
+    gerador desenha a bancada com esta função e o pacote a manda a cada tique
+    por `blocos:`. Enquanto fossem duas escritas, as duas podiam divergir.
+
+    A TROCA PRECISA DE DOIS. Com menos de dois controles na mesa não há exemplo
+    a contar, e a seção diz isso em vez de inventar um segundo controle — é a
+    regra dela: campo sem informação não mostra nada.
+    """
+    r = recuo
+    ordenada = sorted(mesa, key=lambda c: int(c.get("jogador") or 0))
+    cabeca = f"{r}<h2>{TITULO_DA_TROCA}</h2>"
+    if len(ordenada) < 2:
+        quantos = "nenhum controle" if not ordenada else "um controle só"
+        return (f"{cabeca}\n"
+                f"{r}<p>A troca acontece entre <b>dois</b> controles, e a mesa tem "
+                f"{quantos} agora. Com dois ligados, esta seção mostra o antes e "
+                f"o depois com eles.</p>")
+
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    tem, quer = ordenada[0], ordenada[1]
+    #: O DEPOIS é uma PERMUTAÇÃO, e é o que a frase dela exige: *"nunca fica um
+    #: número repetido nem um controle sem número"*. Os dois trocam, os outros
+    #: ficam onde estão.
+    depois = {c["pref"]: int(c["jogador"] or 0) for c in ordenada}
+    depois[quer["pref"]] = int(tem["jogador"] or 0)
+    depois[tem["pref"]] = int(quer["jogador"] or 0)
+
+    def _linha(rotulo: str, numero_de: Any, mexeu_de: Any) -> str:
+        itens = "\n".join(
+            f"{r}    " + item_da_troca(str(c.get("nome") or "—"), numero_de(c),
+                                       _cor_do_plastico(str(c.get("cor") or "")),
+                                       mexeu_de(c))
+            for c in ordenada)
+        return (f'{r}  <div class="troca-linha">'
+                f'<span class="troca-rot">{rotulo}</span>\n{itens}\n{r}  </div>')
+
+    numeros = " · ".join(str(int(c["jogador"] or 0)) for c in ordenada)
+    return "\n".join([
+        cabeca,
+        f'{r}<p>O caso é o seu, de 26/08 — <i>"o meu controle azul é o player 2 e '
+        f"antes de irmos pro\n{r}jogo ele tem que ser o player 1\"</i>. Na coluna "
+        f'do <b>{quer["nome"]}</b>, clique no\n{r}<b>{tem["jogador"]}</b>:</p>',
+        "",
+        f'{r}<div class="troca">',
+        _linha("Antes", lambda c: int(c["jogador"] or 0), lambda c: c is quer),
+        f'{r}  <div class="troca-gesto">↓ clique no <b>{tem["jogador"]}</b> na '
+        f'coluna do\n{r}    <b>{quer["nome"]}</b></div>',
+        _linha("Depois", lambda c: depois[c["pref"]],
+               lambda c: depois[c["pref"]] != int(c["jogador"] or 0)),
+        f"{r}</div>",
+        "",
+        f"{r}<ul>",
+        f"{r}  <li><b>Os dois trocam, os outros não se mexem.</b> É uma permutação: "
+        f"ninguém repete\n{r}      número e ninguém fica sem. Por isso a fileira "
+        f'oferece\n{r}      <span class="marca">{numeros}</span> — os números que'
+        f"\n{r}      existem na mesa. Um número livre não teria com quem trocar, e "
+        f"dá-lo deixaria um\n{r}      controle sem número.</li>",
+        f"{r}  <li><b>As luzinhas seguem o número</b>, no padrão do produto: 1 é a "
+        f"do <b>meio</b>,\n{r}      2 são as duas de dentro, 3 são as pontas e o "
+        f"meio, 4 são quatro sem a do meio\n{r}      "
+        f"(<code>core/led_control.py::player_led_pattern</code>).</li>",
+        f"{r}  <li><b>E a cor da barra segue junto</b>, porque sem escolha à mão "
+        f"ela é a cor do\n{r}      <i>número</i>: depois da troca o "
+        f'{quer["nome"]} acende\n{r}      <span class="marca">'
+        # `_hex` É O DONO DA FORMA `#RRGGBB` neste arquivo, e usá-lo aqui evita a
+        # segunda escrita da mesma conversão — a que já divergiu uma vez.
+        f'{_hex(player_slot_color(int(tem["jogador"] or 0)))}</span> e o '
+        f'{tem["nome"]} acende\n{r}      <span class="marca">'
+        f'{_hex(player_slot_color(int(quer["jogador"] or 0)))}</span>'
+        f"\n{r}      (<code>core/led_control.py::player_slot_color</code>).</li>",
+        f"{r}</ul>",
+    ])
+
+
 @registrar("04-iluminacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo(ctx.state.get("active_profile"))
@@ -541,6 +693,28 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: some quando a barra apaga: o hex diz QUAL cor está gravada, o
             #: desenho abaixo diz se ela está acesa.
             "hex": _hex(crua),
+            #: A COR DO PLÁSTICO, e ela é a lei dela de 03/09/2026: *"se
+            #: identificou o controle como modelo White a cor do card em volta
+            #: tem que ser branco. Temos isso no mapa."*
+            #:
+            #: A BORDA DA MOLDURA ERA A DO DESENHO, e isso está FOTOGRAFADO em
+            #: 03/09: a fita e o rótulo diziam `P1 • White • USB` e a moldura
+            #: logo abaixo estava vermelha — o Cosmic Red do mockup. Não é uma
+            #: palavra errada: é a cor, que é como esta aba diz de quem é a luz
+            #: (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`).
+            #:
+            #: O ALVO É `cor`, e não um alvo de variável CSS: o pintor sabe
+            #: `texto`, `largura`, `fundo`, `valor`, `html`, `classe` e `cor`, e
+            #: nenhum deles escreve um `--plastico`. A folha desta aba passou a
+            #: ler a borda de `currentColor`, que é o que o alvo `cor` escreve.
+            #:
+            #: VAZIO APAGA, e é a regra dela: campo sem informação não mostra
+            #: nada. `escrever` devolve `el.style.color = ''` e a borda cai para
+            #: `var(--linha)` da folha — neutra. Sem cor do broker (o primeiro
+            #: tique de toda sessão, e o rádio enquanto a leitura não chega) a
+            #: moldura fica cinza, e nunca com a cor de um controle que não é o
+            #: dela.
+            "plastico": _cor_do_plastico(str(casa.get("cor") or "")),
             #: O DESENHO DA LUZ, e não a PALAVRA. Até 02/09/2026 esta linha era
             #: `"aceso": "Aceso" if …`, escrita num `data-campo` de alvo
             #: `texto` — e `el.textContent = "Aceso"` **apagava** as duas tiras
@@ -575,6 +749,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "colunas": colunas,
         "perfil": ctx.state.get("active_profile") or "",
         "sem_dono": {},
+        #: O ANTES/DEPOIS DO RODAPÉ, com a mesa VIVA — ver `secao_da_troca`.
+        #: Ele pousa por `document.querySelector`, então numa página que ainda
+        #: não tem a seção (o publicado de hoje, enquanto ela não publicar) o
+        #: laço não acha nada e não escreve — calado e correto.
+        "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa)},
         #: O NÚMERO SAI DO DICIONÁRIO, nunca de uma constante escrita à mão —
         #: foi assim que a curva da aba Gatilhos ficou fora da cobertura.
         #: `player`, `fonte`, `recado` e `rgb` saíram em 02/09/2026: os quatro
