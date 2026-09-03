@@ -577,3 +577,34 @@ seção daqui**: a aba deixou de estar em trabalho.
   erradas. `tests/unit/test_aba10_a_dica_da_linha_nao_e_do_mockup.py` declara
   essa espera em `ESPERA_A_PUBLICACAO` e reprova no dia da publicação, para a
   declaração não apodrecer.
+
+## 07-lancadores.html
+- **03/09/2026 · a dica do rodapé parou de nomear um perfil que não é o dela.**
+  O `title` dos botões "Salvar Perfil" e "Exportar" dizia *"Grava no perfil
+  Mortal Kombat"* — o nome veio do seu próprio pedido, e era um EXEMPLO
+  (*"'Aplicar vale agora • Salvar Perfil grava no Mortal Kombat' isso deveria em
+  formato de tooltip"*); o `fim.html` congelou o exemplo em vez do nome.
+
+  **O que você vê ao publicar:** a dica passa a dizer o nome do perfil que está
+  ativo de verdade — hoje, `meu_perfil`. Sem perfil ativo ela diz *"no perfil
+  ativo"*, que é o mesmo texto congelado, para nunca inventar um nome.
+
+  **O rodapé é UM para as dez abas** (`fim.html`), então esta mesma linha vale
+  para todas — as outras oito já estavam declaradas aqui por outros pontos.
+
+  **O QUE O PRODUTO FAZ HOJE, até você publicar, e é preciso dizer:** a dica
+  continua mostrando *"Grava no perfil Mortal Kombat"*. O produto já MANDA o
+  nome certo — `topo()` emite `rodape.salvar` e `rodape.exportar` a cada tique
+  —, mas a página publicada **não tem esses dois endereços**, então o valor
+  chega e não encontra onde pousar; o `title` congelado da página de ontem é o
+  que fica na tela. Nada quebra e nada muda: é o mesmo texto de sempre, e a
+  correção só aparece no dia do `--publicar`.
+
+## 09-sistema.html
+- **03/09/2026 · a mesma dica do rodapé.** Ver a razão em `07-lancadores.html`,
+  logo acima: o `fim.html` é um só para as dez páginas, e a correção chega às
+  dez de uma vez.
+
+  **O que o produto faz hoje:** o mesmo que na 07 — a dica ainda diz *"Grava no
+  perfil Mortal Kombat"*, porque a página publicada não tem os dois endereços
+  novos. O valor certo é emitido e fica órfão até você publicar.
