@@ -61,9 +61,14 @@ _DOM = """
 function Elemento(controle, fechado){
   this.dataset = {controle: controle};
   this._cls = new Set();
-  // noqa-acento: valor de atributo
-  if(fechado){ this.dataset.conectado = 'nao';  // noqa-acento: atributo
+  // O LUGAR CHEIO NASCE `sim`, como no HTML das abas 01, 03, 04 e 06 — e a
+  // string `nada` é o TERCEIRO estado, o das abas 02, 05 e 08, cujo lugar
+  // cheio nasce SEM o atributo. Os três precisam ser distinguíveis aqui,
+  // senão a régua nunca vê o caso que o DOM vivo mostrou.
+  if(fechado === 'nada'){ /* sem data-conectado, como nas abas 02/05/08 */ }
+  else if(fechado){ this.dataset.conectado = 'nao';  // noqa-acento: atributo
     this._cls.add('off'); }
+  else { this.dataset.conectado = 'sim'; }
   const cls = this._cls;
   this.classList = {
     contains: function(c){ return cls.has(c); },
@@ -146,6 +151,23 @@ def test_o_cartao_ja_aberto_nao_conta_pintura() -> None:
         f"reabrir um cartão já aberto somou {fora['pintados']} ao contador")
 
 
+def test_o_lugar_cheio_sem_o_atributo_ganha_a_marca() -> None:
+    """O TERCEIRO ESTADO, medido no DOM vivo em 03/09/2026.
+
+    Nas abas `02-controles`, `05-vibracao` e `08-conexoes` o lugar CHEIO nasce
+    sem `data-conectado` nenhum. A primeira versão do passo `1c` só trocava um
+    valor pelo outro, e os três ficavam em `null` para sempre — a folha não tem
+    como vestir de conectado um lugar sobre o qual a tela não afirma nada.
+
+    O ensaio que pegou isto imprimia `?` nas três colunas, e o `?` era a
+    ausência do atributo, não um erro de leitura.
+    """
+    fora = _rodar({"p1": "nada"}, {"vazios": [], "ocupados": ["p1"]})
+    assert fora["lugares"]["p1"]["conectado"] == "sim", (
+        "o lugar cheio sem o atributo não ganhou a marca: "
+        f"{fora['lugares']['p1']}")
+
+
 def test_sem_ocupados_nada_reabre() -> None:
     """Uma carga velha, sem a chave nova, não pode explodir nem reabrir sozinha.
 
@@ -159,16 +181,90 @@ def test_sem_ocupados_nada_reabre() -> None:
 def test_o_pacote_diz_quem_tem_dono() -> None:
     """A outra metade: `apagar_os_lugares_sem_dono` emite `ocupados`.
 
-    Ela é lida ANTES do preenchimento, e essa é a única janela em que dá para
-    lê-la — logo depois `colunas` passa a ter os quatro lugares e a diferença
-    entre "tem dono" e "recebeu travessão" some.
+    E ELE VEM DA MESA, não das colunas. O `com_dono` é a lista de `pN` que têm
+    aparelho agora, perguntada a `hefesto_vivo._com_dono(ctx)`.
     """
     from hefesto_dualsense4unix.interface.pacotes import apagar_os_lugares_sem_dono
 
     carga = apagar_os_lugares_sem_dono(
-        {"colunas": {"p1": {"bateria": "88%"}, "*": {"bateria": ""}}})
+        {"colunas": {"p1": {"bateria": "88%"}, "*": {"bateria": ""}}},
+        com_dono=["p1"])
     assert carga["ocupados"] == ["p1"], carga.get("ocupados")
     assert carga["vazios"] == ["p2", "p3", "p4"]
+
+
+def test_ter_coluna_nao_e_ter_dono() -> None:
+    """A REGRESSÃO DE 03/09/2026, e ela é a razão de o `com_dono` existir.
+
+    A primeira versão fazia `ocupados = set(colunas)`. Medido no DOM VIVO com
+    UM controle na bancada: a `03-gatilhos` emite coluna para os QUATRO lugares
+    — as vazias levam travessão de propósito, para as barras de ajuste nascerem
+    no lugar —, e p3 e p4 entraram em `ocupados`. O passo `1c` os REABRIU, e a
+    tela passou a dizer `data-conectado="sim"` em dois lugares vazios.
+
+    É a oitava aparição do defeito que esta casa já nomeou — *a tela afirmando
+    um controle que não está na mesa* — e desta vez quem a introduziu foi a
+    cura do defeito anterior.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import apagar_os_lugares_sem_dono
+
+    # a carga EXATA da `03-gatilhos`: coluna para os quatro, dono só do p1
+    carga = apagar_os_lugares_sem_dono(
+        {"colunas": {"p1": {"modo": "Off"}, "p2": {"modo": "—"},
+                     "p3": {"modo": "—"}, "p4": {"modo": "—"},
+                     "*": {"modo": ""}}},
+        com_dono=["p1"])
+    assert carga["ocupados"] == ["p1"], (
+        "um lugar que só recebeu COLUNA entrou em `ocupados` — o piloto vai "
+        f"reabrir cartão vazio: {carga['ocupados']}")
+
+
+def test_sem_a_mesa_nada_reabre() -> None:
+    """Sem `com_dono`, o caminho antigo — e ele é o SEGURO.
+
+    Nenhum lugar reabre, que é o comportamento anterior à cura. A tela pode
+    ficar atrasada; nunca mentindo a mais. Um `com_dono` opcional que
+    ADIVINHASSE a mesa seria a porta pela qual a regressão voltaria.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import apagar_os_lugares_sem_dono
+
+    carga = apagar_os_lugares_sem_dono(
+        {"colunas": {"p1": {"x": "1"}, "p3": {"x": "—"}, "*": {"x": ""}}})
+    assert carga["ocupados"] == []
+
+
+def test_o_com_dono_do_piloto_le_a_mesa() -> None:
+    """`_com_dono(ctx)` traduz os conectados em `pN` pela mesa.
+
+    Sem esta prova a função poderia devolver `uniq` cru — e o piloto procuraria
+    `[data-controle="14:3a:…"]`, que não casa com elemento nenhum. Falha
+    CALADA: nada reabre, e a régua do pacote continua verde.
+    """
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+    from hefesto_dualsense4unix.interface import pacotes
+
+    ctx = pacotes.Contexto(
+        state={},
+        mesa=[{"uniq": "aa", "pref": "p1"}, {"uniq": "bb", "pref": "p2"},
+              {"uniq": "cc", "pref": "p3"}],
+        conectados=[{"uniq": "aa"}, {"uniq": "cc"}],
+        estados={})
+    assert hefesto_vivo._com_dono(ctx) == ["p1", "p3"]
+
+
+def test_o_com_dono_ignora_quem_a_mesa_nao_conhece() -> None:
+    """Um conectado sem lugar na mesa não inventa endereço.
+
+    Acontece de verdade na janela entre o controle chegar e a mesa remontar. O
+    certo é ficar de fora — reabrir um `pN` adivinhado abriria o cartão errado.
+    """
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+    from hefesto_dualsense4unix.interface import pacotes
+
+    ctx = pacotes.Contexto(state={}, mesa=[{"uniq": "aa", "pref": "p1"}],
+                           conectados=[{"uniq": "aa"}, {"uniq": "zz"}],
+                           estados={})
+    assert hefesto_vivo._com_dono(ctx) == ["p1"]
 
 
 def test_ocupados_e_vazios_nunca_se_cruzam() -> None:
@@ -181,8 +277,8 @@ def test_ocupados_e_vazios_nunca_se_cruzam() -> None:
 
     for vivas in ([], ["p1"], ["p1", "p3"], ["p1", "p2", "p3", "p4"]):
         carga = apagar_os_lugares_sem_dono(
-            {"colunas": {p: {"x": "1"} for p in vivas} | {"*": {"x": ""}}})
+            {"colunas": {p: {"x": "1"} for p in vivas} | {"*": {"x": ""}}},
+            com_dono=vivas)
         assert not set(carga["ocupados"]) & set(carga["vazios"]), (
             f"com {vivas} vivas, um lugar caiu nas duas listas: {carga}")
-        assert sorted(carga["ocupados"] + carga["vazios"]) == [
-            "p1", "p2", "p3", "p4"], f"com {vivas}: {carga}"
+        assert carga["ocupados"] == sorted(vivas), f"com {vivas}: {carga}"

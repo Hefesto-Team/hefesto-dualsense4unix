@@ -44,7 +44,7 @@ import html.parser
 import pathlib
 import re
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -278,7 +278,9 @@ LUGAR_SEM_DONO = "*"
 TODOS_OS_LUGARES = frozenset({"p1", "p2", "p3", "p4"})
 
 
-def apagar_os_lugares_sem_dono(carga: dict[str, Any]) -> dict[str, Any]:
+def apagar_os_lugares_sem_dono(
+        carga: dict[str, Any],
+        com_dono: Iterable[str] | None = None) -> dict[str, Any]:
     """Escreve travessão em todo lugar do desenho que a mesa de agora não tem.
 
     ELA MORA AQUI, e não no piloto, POR CAUSA DA RÉGUA. O molde do despachante
@@ -303,10 +305,19 @@ def apagar_os_lugares_sem_dono(carga: dict[str, Any]) -> dict[str, Any]:
     chaves: set[str] = set()
     for campos in colunas.values():
         chaves |= set(campos)
-    # OS OCUPADOS SÃO LIDOS ANTES DO PREENCHIMENTO, e é a única janela em que
-    # dá para lê-los: três linhas abaixo `colunas` passa a ter os quatro
-    # lugares, e a diferença entre "tem dono" e "recebeu travessão" some.
-    ocupados = sorted(set(colunas) & TODOS_OS_LUGARES)
+    # QUEM TEM DONO É A MESA QUE DIZ, e não a lista de colunas que a aba
+    # emitiu. A primeira versão desta conta fez `set(colunas)`, e ela estava
+    # ERRADA — medido no DOM vivo em 03/09/2026, com UM controle na bancada: a
+    # `03-gatilhos` emite coluna para os QUATRO lugares (as vazias levam
+    # travessão de propósito, para as barras de ajuste nascerem no lugar), e o
+    # p3 e o p4 entraram em `ocupados`. O passo `1c` do piloto os REABRIU, e a
+    # tela passou a dizer `data-conectado="sim"` em dois lugares vazios.
+    #
+    # TER COLUNA NÃO É TER DONO. Uma aba manda coluna para desenhar; a mesa diz
+    # quem está aqui. Quando `com_dono` não vem, o caminho antigo continua —
+    # nenhum lugar reabre, que é o comportamento anterior a esta cura e é
+    # seguro: a tela pode ficar atrasada, nunca mentindo a mais.
+    ocupados = sorted(set(com_dono or ()) & TODOS_OS_LUGARES)
     apagar = sorted(TODOS_OS_LUGARES - set(colunas))
     for pref in apagar:
         colunas[pref] = dict.fromkeys(chaves, TRAVESSAO)

@@ -1686,8 +1686,18 @@ def linha_do_controle(c):
     # E NADA DO RESUMO SOBRA: máscara, microfone e bateria são leituras do
     # aparelho, e não há aparelho. Um travessão em cada uma diria que a leitura
     # falhou; a ausência diz que o controle não está.
+    # O `data-controle` FICA AQUI TAMBÉM — decisão dela, 03/09/2026: *"tem que
+    # aparecer desligado enquanto não tem nenhum controle. A partir do momento
+    # que tiver, ele aparece o controle devidamente conectado. Se isso não
+    # ocorre com os 4 controles em cada aba, então temos que construir isso e
+    # garantir isso."*
+    #
+    # SEM O ENDEREÇO, O LUGAR VAZIO É VAZIO SÓ PORQUE O DESENHO O DESENHOU
+    # VAZIO. Medido no DOM vivo em 03/09: `[data-controle="p3"]` devolvia ZERO
+    # elementos nesta aba, e o produto não tinha por onde escrever no cartão
+    # quando o terceiro controle chegasse.
     if not c.get("conectado", True):
-        return f'''          <div class="gc-item gc-{c["pref"]} fora">
+        return f'''          <div class="gc-item gc-{c["pref"]} fora" data-controle="{c["pref"]}">
             <div class="gc-cabeca">
               <span class="gc-nome" title="Nenhum controle neste lugar.">Player {c["jogador"]} <span class="pt">•</span> Desconectado</span>
             </div>

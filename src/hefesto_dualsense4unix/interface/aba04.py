@@ -767,9 +767,24 @@ def coluna_vazia(c):
 
     O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe um
     controle; um desenho cinza diz.
+
+    O `data-controle` FICA AQUI TAMBÉM — decisão dela, 03/09/2026, e ela a
+    enunciou assim: *"tem que aparecer desligado enquanto não tem nenhum
+    controle. A partir do momento que tiver, ele aparece o controle devidamente
+    conectado. Se isso não ocorre com os 4 controles em cada aba, então temos
+    que construir isso e garantir isso."*
+
+    SEM O ENDEREÇO O LUGAR VAZIO É VAZIO SÓ PORQUE O DESENHO O DESENHOU VAZIO.
+    Medido no DOM vivo desta aba em 03/09, antes desta linha:
+    ``[data-controle="p3"]`` devolvia **zero elementos** — a coluna estava na
+    tela, com o desenho e o rótulo "P3 · Desconectado", e o produto não tinha
+    por onde escrever nela quando o terceiro controle chegasse.
+
+    A ``05-vibracao`` já fazia certo, e o comentário dela dizia a mesma coisa.
+    Esta linha é a cópia daquela decisão para as abas que ficaram para trás.
     """
     j = c["jogador"]
-    return f'''        <div class="ctrl vazia" data-conectado="nao"
+    return f'''        <div class="ctrl vazia" data-controle="{c["pref"]}" data-conectado="nao"
              title="Nenhum controle neste lugar.">
           <div class="moldura">
             {desenho(f"il-{c['pref']}", c["cor"], False, lampadas=False)}

@@ -599,7 +599,12 @@ BOOTSTRAP = r"""
     // chegando invisível. Só recarregar a página desfazia.
     for(const pref of (p.ocupados || [])){
       for(const el of document.querySelectorAll('[data-controle="' + pref + '"]')){
-        if(el.dataset.conectado === 'nao'){  // (noqa-acento) valor do atributo
+        // COMPARA COM `sim`, e não com o valor de desconectado — a diferença
+        // foi medida no DOM vivo em 03/09/2026: nas abas 02, 05 e 08 o lugar
+        // CHEIO nasce SEM o atributo, e a versão anterior, que só trocava um
+        // valor pelo outro, deixava os três em `null`. A folha não tem como vestir de conectado
+        // um lugar sobre o qual a tela não afirma nada.
+        if(el.dataset.conectado !== 'sim'){
           el.dataset.conectado = 'sim'; n += 1;
         }
         el.classList.remove('off');
@@ -768,6 +773,33 @@ BOOTSTRAP = r"""
 #: `@gesto(...)`, no próprio arquivo — território exclusivo, zero merge.
 #:
 #: Os dois que moravam aqui foram para `a09_sistema.py` e `a10_perfis.py`.
+
+
+def _com_dono(ctx: pacotes.Contexto) -> list[str]:
+    """Os `pN` que têm controle DE VERDADE agora — QUEM-TEM-DONO-01, 03/09/2026.
+
+    NASCEU DE UMA REGRESSÃO MINHA, no mesmo dia. O passo `1c` do piloto (o que
+    REABRE o cartão de um controle que chega) lia `carga["ocupados"]`, e a
+    primeira versão daquela conta era `set(colunas)` — as colunas que a aba
+    emitiu. Medido no DOM vivo, com UM controle na bancada: a `03-gatilhos`
+    manda coluna para os QUATRO lugares, porque as vazias levam travessão de
+    propósito, e o piloto passou a escrever `data-conectado="sim"` em dois
+    lugares onde não há aparelho nenhum.
+
+    **TER COLUNA NÃO É TER DONO.** A aba manda coluna para desenhar; quem diz
+    quem está aqui é a MESA. Esta função é essa pergunta, e ela tem um dono só.
+
+    A DECISÃO QUE ELA SUSTENTA é de 03/09/2026: *"tem que aparecer desligado
+    enquanto não tem nenhum controle. A partir do momento que tiver, ele aparece
+    o controle devidamente conectado."*
+    """
+    prefs: list[str] = []
+    por_uniq = {str(c.get("uniq") or ""): c.get("pref") for c in ctx.mesa}
+    for c in ctx.conectados:
+        pref = por_uniq.get(str(c.get("uniq") or ""))
+        if pref:
+            prefs.append(str(pref))
+    return prefs
 
 
 def _fita(mesa: list[dict[str, Any]]) -> str:
@@ -1657,7 +1689,11 @@ class Piloto:
         # aqui, ela só tinha uma régua que procurava LITERAIS neste arquivo — e
         # a cura morria inteira sem que os literais sumissem. Ver
         # `pacotes.apagar_os_lugares_sem_dono`.
-        pacotes.apagar_os_lugares_sem_dono(carga)
+        # A MESA VAI JUNTO — QUEM-TEM-DONO-01, 03/09/2026. Sem ela a conta
+        # confundiria "a aba mandou coluna" com "há controle aqui", e o passo
+        # `1c` reabriria lugar vazio. O `pref` de cada conectado é o `pN` da
+        # posição de jogador, que é o mesmo endereço que a página desenha.
+        pacotes.apagar_os_lugares_sem_dono(carga, _com_dono(ctx))
 
         # O RECADO DA RECUSA VIAJA EM TODO TIQUE, e é isto que o faz sobreviver
         # à repintura: a lista CHEIA recria o aviso se a pintura de blocos tiver
