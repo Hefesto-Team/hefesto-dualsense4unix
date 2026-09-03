@@ -954,6 +954,40 @@
   .tira-luz{width:6px;height:20px;border-radius:3px}
   .tira-luz.esq{box-shadow:-3px 0 12px 1px currentColor}
   .tira-luz.dir{box-shadow:3px 0 12px 1px currentColor}
+  /* A TIRA DO "NÃO SEI" — decisão 9 dela, 03/09/2026:
+     *"tracejado para 'não sei'; lisa e vazia para 'apagada'"*.
+
+     O DEFEITO QUE ELA VIU: as duas eram a MESMA tira, byte por byte
+     (`background:var(--panel);color:transparent;opacity:1`), e a ressalva que
+     as separa viajava só no `title` — quem não passa o mouse não vê. São três
+     coisas que o motor já distinguia e a tela mostrava como duas:
+
+       acesa     a cor conhecida, com halo        `background:{tinta}`
+       apagada   fonte NOSSA, barra desligada     `TIRA_APAGADA` — lisa e vazia
+       incerta   Nativo · Steam · cor ignorada    ESTA REGRA — tracejada
+
+     CONTORNO, E NUNCA COR NOVA — ordem dela. Nesta aba tudo o que é CHEIO de
+     cor é LUZ (as duas tiras, as cinco lâmpadas, os oito tons da guia): uma
+     cor inventada para "não sei" seria lida como uma luz que ninguém mediu.
+
+     ESTA REGRA É SÓ O CONTORNO, e ela ficou assim depois da mordida. Fundo,
+     halo e opacidade já vêm do PISO: a tira do "não sei" sai com o mesmo
+     `style=` de linha da apagada (`a04_iluminacao.TIRA_APAGADA`), que é o que
+     protege a página cuja folha ainda não conhece esta regra — o publicado, até
+     ela mandar publicar a 04. Sem estilo de linha a tira ficaria sem `color`,
+     herdaria o `--fg` e o halo `box-shadow: … currentColor` a acenderia BRANCA,
+     que é o defeito fotografado em 02/09.
+
+     FATO ERRADO, DERRUBADO PELA PRÓPRIA MORDIDA (03/09/2026): esta regra dizia
+     `background:transparent !important` e o comentário afirmava que sem o
+     `!important` *"o contorno nunca aparece"*. Arranquei o `!important`,
+     regerei e FOTOGRAFEI: o tracejado continua lá, idêntico. Ele nunca foi o
+     que mostra o traço — quem mostra é a `border`, e o fundo que ele disputava
+     é o `var(--panel)`, indistinguível do `--app-bg` atrás dele. As três
+     declarações que sobravam saíram junto (`color`, `box-shadow`, `opacity`):
+     o estilo de linha já as põe, e regra que não morde é regra que mente sobre
+     quem manda. */
+  .tira-luz.incerta{border:1px dashed var(--comment)}
   .pad{width:56px;height:20px;border-radius:5px;border:1px solid var(--linha);
        background:var(--panel);display:flex;align-items:flex-end;justify-content:center;
        padding-bottom:3px}
@@ -1683,9 +1717,9 @@
             <button class="" data-gesto="player" data-player="4" title="Player 4 — livre.">4</button>
           </div>
           <div class="aceso" data-campo="luz" data-hef-alvo="html">
-            <span class="tira-luz esq" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82" title="Cosmic Red (USB)"></span>
+            <span class="tira-luz esq" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Cosmic Red (USB)"></span>
             <span class="pad" title="Cosmic Red (USB)"><span class="luzinhas"><i></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i></i></span></span>
-            <span class="tira-luz dir" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82" title="Cosmic Red (USB)"></span>
+            <span class="tira-luz dir" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Cosmic Red (USB)"></span>
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
@@ -2115,9 +2149,9 @@
             <button class="" data-gesto="player" data-player="4" title="Player 4 — livre.">4</button>
           </div>
           <div class="aceso" data-campo="luz" data-hef-alvo="html">
-            <span class="tira-luz esq" style="background:#FF5555;color:#FF5555;opacity:1.0" title="Starlight Blue (BT)"></span>
+            <span class="tira-luz esq" style="background:#FF5555;color:#FF5555;opacity:1.0" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Starlight Blue (BT)"></span>
             <span class="pad" title="Starlight Blue (BT)"><span class="luzinhas"><i></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i></i></span></span>
-            <span class="tira-luz dir" style="background:#FF5555;color:#FF5555;opacity:1.0" title="Starlight Blue (BT)"></span>
+            <span class="tira-luz dir" style="background:#FF5555;color:#FF5555;opacity:1.0" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Starlight Blue (BT)"></span>
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
