@@ -401,6 +401,28 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
             "mesma linha"
         ),
     ),
+    # ------------------------------------------------------------------
+    # TERCEIRA RODADA — 03/09/2026, a leva que varreu o código atrás de
+    # filtro NOSSO de transporte (*"o que no código tá setado pra funcionar
+    # só via cabo e não BT"*). A área da MESA achou o defeito na forma que
+    # esta casa mais paga: a correção PELA METADE. O endereço certo entrou
+    # numa célula em 02/09 e as três irmãs ficaram com o velho.
+    # ------------------------------------------------------------------
+    Derrubado(
+        nome="o `slot_for` mora em `identity.py:543`",
+        padrao=re.compile(r"identity\.py:543"),
+        caiu_em="02/09/2026, e só metade saiu",
+        quem_derrubou=(
+            "`:543` é o comentário de `self._external_present` (presença de "
+            "controle EXTERNO, que é outro eixo); o `slot_for` é "
+            "src/hefesto_dualsense4unix/daemon/subsystems/identity.py:668. A "
+            "troca entrou em 02/09 só na `nota` de "
+            "`combinacao.slot_jogador.estabilidade@dualsense` e deixou vivas as "
+            "duas irmãs (@pro, @sn30) e as DUAS células de código de "
+            "`plataforma.slot_jogador@dualsense` — que é o endereço que o "
+            "`specs.html` publica para quem for procurar o slot no código"
+        ),
+    ),
 )
 
 
