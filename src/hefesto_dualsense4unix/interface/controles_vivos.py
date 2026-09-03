@@ -1372,7 +1372,13 @@ class Janela:
                 "left": f'{e["touch"][0]}%',
                 "top": f'{e["touch"][1]}%',
                 "vis": e["tocando"],
-                "estado": aba02.COM_TOQUE if e["tocando"] else aba02.SEM_TOQUE,
+                # A PALAVRA DO TOUCHPAD MUDOU DE DONO em 02/09/2026, por decisão
+                # dela (item 15): era `aba02.COM_TOQUE`/`SEM_TOQUE`, duas
+                # constantes do pacote, e passou a ser `sensor_widgets.texto_toques`
+                # — a mesma conta que a GTK faz (`controller_card.py:5079`). Lida
+                # do `aba02`, como `pos` e `cor_da_zona` logo abaixo: este piloto
+                # já lê tudo o mais de lá.
+                "estado": aba02.texto_toques(1 if e["tocando"] else 0),
             },
             "sticks": {
                 "l": {

@@ -168,19 +168,38 @@ def test_dicionario_de_inputs_vazio_nao_e_falta_de_leitor(pac, a02, desenho):
 # --------------------------------------------------------------------------
 # 4. o touchpad, que era uma constante
 # --------------------------------------------------------------------------
-def test_o_touchpad_deixou_de_ser_constante(pac, a02, desenho):
+#: O bloco `touchpad` COMO O DAEMON O PUBLICA — as cinco chaves saem de UM
+#: literal (`daemon/sensor_hub.py:155-161`). Esta régua montava
+#: `{"touching": True}` sozinho, e **esse estado não existe**: medido em
+#: 02/09/2026 às 19h, 60 leituras de `daemon.state_full` com os dois controles
+#: dela, 36 blocos publicados, os 36 com `height,touching,width,x,y`. Medir um
+#: estado que o produto não produz foi o que sustentou a recusa de
+#: `touchpad_do_inputs` nesta aba — e a recusa custou a POSIÇÃO do dedo.
+TOUCHPAD_PUBLICADO = {
+    "touching": False, "x": 960, "y": 540, "width": 1920, "height": 1080,
+}
+
+
+def test_o_touchpad_deixou_de_ser_constante(pac, a02):
     """"Sem toque" era literal no código: um dedo não mudava um pixel.
+
+    A PALAVRA É A DO PRODUTO desde 02/09/2026 (decisão dela, item 15):
+    `texto_toques(1 if tocando else 0)`, a MESMA linha que a GTK escreve
+    (`controller_card.py:5079`). Era `COM_TOQUE = "Tocando"`, palavra do
+    desenho redigitada no pacote.
 
     MORDE: devolver a constante (`"touch-estado": "Sem toque"`) faz o caso do
     dedo reprovar — e era exatamente esse o estado do produto até 02/09/2026.
     """
     import mesa_viva
+    from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
 
-    tocando = _card(pac, a02, {**BASE, "inputs": {"touchpad": {"touching": True}}})
-    solto = _card(pac, a02, {**BASE, "inputs": {"touchpad": {"touching": False}}})
+    tocando = _card(pac, a02, {**BASE, "inputs": {
+        "touchpad": {**TOUCHPAD_PUBLICADO, "touching": True}}})
+    solto = _card(pac, a02, {**BASE, "inputs": {"touchpad": TOUCHPAD_PUBLICADO}})
     cego = _card(pac, a02, {**BASE, "is_primary": False, "inputs": None})
-    assert tocando["touch-estado"] == desenho.COM_TOQUE
-    assert solto["touch-estado"] == desenho.SEM_TOQUE
+    assert tocando["touch-estado"] == texto_toques(1) == "1 toque"
+    assert solto["touch-estado"] == texto_toques(0) == "Sem toque"
     assert cego["touch-estado"] == mesa_viva.SEM_LEITOR
 
 
@@ -233,14 +252,27 @@ def test_o_gerador_le_o_texto_de_tela_do_pacote(a02):
     vezes nesta aba.
     """
     import aba02
+    from hefesto_dualsense4unix.app.widgets import sensor_widgets
 
-    achados = [n for n in ("SEM_TOQUE", "COM_TOQUE", "ROTULO_DO_CLIQUE", "CLICADO")
-               if hasattr(aba02, n)]
-    assert len(achados) >= 3, (
+    #: ONDE MORA CADA PALAVRA DE TELA DESTA ABA. `SEM_TOQUE`/`COM_TOQUE` saíram
+    #: da lista em 02/09/2026 e não é regressão: a palavra do touchpad passou a
+    #: ser a do MOTOR (`texto_toques`), por decisão dela, e o gerador a lê de
+    #: lá. O dono mudou de casa; a régua vai atrás dele em vez de cravar a
+    #: casa antiga.
+    donos = {"ROTULO_DO_CLIQUE": a02, "CLICADO": a02, "texto_toques": sensor_widgets}
+    achados = [n for n in donos if hasattr(aba02, n)]
+    #: O PISO CAIU DE TRÊS PARA DOIS, e é medição, não afrouxamento: o gerador
+    #: importa `ROTULO_DO_CLIQUE` e `texto_toques`, e nunca importou `CLICADO`
+    #: (ele monta a marca do clicado sozinho? não — quem a monta é o pacote, e
+    #: o gerador não precisa dela). Eram TRÊS enquanto `SEM_TOQUE` e
+    #: `COM_TOQUE` existiam; hoje a palavra do touchpad é UMA e vem do motor.
+    #: Deixar o piso em três reprovaria a entrega, que é a forma exata do
+    #: defeito que esta casa chama de "régua que cimenta o que existia".
+    assert len(achados) >= 2, (
         f"o gerador só conhece {achados} — se ele parou de importar o texto de "
-        f"tela do pacote, esta régua ficou vazia e não mede mais nada.")
+        f"tela do dono, esta régua ficou vazia e não mede mais nada.")
     for nome in achados:
-        assert getattr(aba02, nome) is getattr(a02, nome), (
+        assert getattr(aba02, nome) is getattr(donos[nome], nome), (
             f"o gerador tem uma cópia própria de {nome} — duas verdades sobre "
             f"a mesma palavra de tela.")
 
