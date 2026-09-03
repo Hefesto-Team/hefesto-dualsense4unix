@@ -45,13 +45,51 @@ Desde `retratar_abas.py` desligar as animações do GTK
 idênticas** nas dez abas. O portão continua sendo de procedência mesmo assim,
 pelo motivo do parágrafo acima.
 
+O ESTADO SEM SAÍDA, e a segunda porta — 03/09/2026
+---------------------------------------------------
+
+O portão pede um COMMIT em `docs/usage/assets/` como prova de um GESTO ("alguém
+rodou o retratista"). Quando o gesto não produz bytes, não há o que commitar, e
+o portão fica vermelho **para sempre**: é a régua confundindo a PALAVRA com o
+ATO, que é o defeito mais caro desta casa.
+
+Ele apareceu com o commit `2899ef0d` (03/09, "as celulas mudas caem de 148 para
+47"), cujo único arquivo sob `app/` é `fatos_do_mapa.py` — a tabela de fatos do
+mapa, que a aba Emulação e a seção Controles LEEM. Suspeito com razão, então.
+Medido, e este é o número que decide:
+
+* retratista rodado com o `fatos_do_mapa.py` ANTES e DEPOIS de `2899ef0d`,
+  mesma máquina, mesma mesa, um minuto de intervalo: **as 14 fotos byte a byte
+  IDÊNTICAS**. O commit acusado moveu ZERO pixel.
+
+E "refotografar e commitar assim mesmo" não é saída inocente — é a segunda coisa
+medida no mesmo dia: **a foto carrega estado VIVO da máquina de quem a tira**.
+Comparadas com as commitadas, 10 das 14 saíram byte a byte idênticas (o render é
+reprodutível) e as 4 restantes diferiam só onde o aparelho fala — a linha
+"Controles detectados" (2 controles físicos na mesa dela, 1 na minha) e a cor do
+plástico LIDA de cada controle. Commitar a minha teria trocado a mesa dela pela
+minha, calado, para satisfazer um portão.
+
+Então o portão ganhou uma SEGUNDA PORTA, e ela não afrouxa a primeira: uma
+declaração em `docs/usage/assets/CONFERIDO-EM.txt` nomeando o SHA do commit de
+tela que foi conferido. Rodou e as imagens mudaram? Commite as imagens, como
+sempre. Rodou e não mudou nada? Declare o commit. Qualquer outra mexida na tela
+gera um SHA novo, a declaração fica velha sozinha e o portão reabre — que é
+exatamente a propriedade que se quer.
+
 A MORDIDA
 ---------
 
-Está no `test_o_portao_acusa_foto_atrasada`, que constrói um repositório de
-mentira em `tmp_path` com a ordem errada e exige que o comparador o reprove.
-Arrancando a comparação (fazendo-a devolver sempre "em dia"), esse teste
-reprova — e as fotos voltam a defasar em silêncio, que é como chegaram aqui.
+São quatro, e todas em repositório de mentira em `tmp_path`:
+
+* `test_o_portao_acusa_foto_atrasada` — a ordem errada tem de reprovar.
+  Arrancando a comparação (fazendo-a devolver sempre "em dia"), reprova.
+* `test_o_portao_acusa_retrato_mexido_depois_da_foto` — o INSTRUMENTO conta.
+* `test_a_declaracao_so_vale_para_o_commit_que_ela_nomeia` — a segunda porta com
+  o SHA de OUTRO commit não abre nada. É a mordida da porta nova: sem ela,
+  bastaria criar o arquivo com qualquer conteúdo para calar o portão.
+* `test_a_declaracao_fecha_o_portao_quando_a_foto_nao_muda` — e o outro lado,
+  senão "recusar sempre" satisfaria a de cima.
 """
 
 from __future__ import annotations
@@ -80,6 +118,14 @@ CODIGO_DA_TELA = (
     "src/hefesto_dualsense4unix/gui",
     "scripts/gui-captura",
 )
+
+#: A DECLARAÇÃO DE CONFERÊNCIA — a segunda porta, 03/09/2026. Uma linha por
+#: conferência, o primeiro campo é o SHA completo do commit de `CODIGO_DA_TELA`
+#: contra o qual o retratista foi rodado; `#` começa comentário. Ela mora
+#: DENTRO de `FOTOS` de propósito: quem a escreve mexe na pasta das fotos, e a
+#: topologia da primeira porta enxerga o commit sem precisar saber que ela
+#: existe. Ver a seção "O ESTADO SEM SAÍDA" no cabeçalho.
+CONFERIDO = f"{FOTOS}/CONFERIDO-EM.txt"
 
 
 def _git(raiz: Path, *args: str) -> str:
@@ -145,6 +191,47 @@ def fotos_sendo_refeitas_agora(raiz: Path, fotos: str) -> bool:
     return bool(_git(raiz, "status", "--porcelain", "--", fotos))
 
 
+def conferencia_declarada(raiz: Path, conferido: str) -> set[str]:
+    """Os commits de tela que alguém declarou ter conferido, lidos do arquivo.
+
+    Devolve o conjunto de SHAs completos. Linha em branco e linha que só tem
+    comentário não contam; um campo que não seja SHA de 40 hexadecimais é
+    ignorado, de modo que prosa no arquivo não vira declaração por acidente.
+    """
+    try:
+        texto = (raiz / conferido).read_text(encoding="utf-8")
+    except OSError:
+        return set()
+
+    achados: set[str] = set()
+    for linha in texto.splitlines():
+        campos = linha.split("#", 1)[0].split()
+        if not campos:
+            continue
+        primeiro = campos[0].lower()
+        if len(primeiro) == 40 and all(c in "0123456789abcdef" for c in primeiro):
+            achados.add(primeiro)
+    return achados
+
+
+def portao_fechado(
+    raiz: Path, fotos: str, codigo: tuple[str, ...], conferido: str
+) -> bool | None:
+    """As DUAS portas, na ordem: a topologia primeiro, a declaração depois.
+
+    `None` continua querendo dizer "não dá para medir aqui" — a segunda porta
+    não inventa veredito onde a primeira se cala.
+    """
+    veredito = fotos_em_dia(raiz, fotos, codigo)
+    if veredito is not False:
+        return veredito
+
+    commit_do_codigo = _ultimo_commit(raiz, *codigo)
+    return bool(commit_do_codigo) and commit_do_codigo in conferencia_declarada(
+        raiz, conferido
+    )
+
+
 def _sem_historico(raiz: Path) -> bool:
     """Clone raso ou pasta sem git: aqui não há o que medir, e não há defeito."""
     if not (raiz / ".git").exists():
@@ -162,23 +249,28 @@ def test_as_fotos_nao_ficam_atras_do_codigo_da_tela() -> None:
     if fotos_sendo_refeitas_agora(RAIZ, FOTOS):
         return  # a cura está em curso: as imagens novas ainda não têm commit
 
-    veredito = fotos_em_dia(RAIZ, FOTOS, CODIGO_DA_TELA)
+    veredito = portao_fechado(RAIZ, FOTOS, CODIGO_DA_TELA, CONFERIDO)
     if veredito is None:
         pytest.skip("as fotos ou o código da tela ainda não têm commit próprio")
 
     commit_das_fotos = _ultimo_commit(RAIZ, FOTOS)[:7]
-    commit_do_codigo = _ultimo_commit(RAIZ, *CODIGO_DA_TELA)[:7]
+    commit_do_codigo = _ultimo_commit(RAIZ, *CODIGO_DA_TELA)
 
     assert veredito, (
-        f"a interface mudou em {commit_do_codigo} e as fotos de `{FOTOS}` são "
-        f"de {commit_das_fotos}, que veio ANTES. As imagens do `README.md` e do "
-        "`docs/usage/interface.md` documentam uma tela que pode não existir "
-        "mais.\n\n"
+        f"a interface mudou em {commit_do_codigo[:7]} e as fotos de `{FOTOS}` "
+        f"são de {commit_das_fotos}, que veio ANTES. As imagens do `README.md` "
+        "e do `docs/usage/interface.md` documentam uma tela que pode não "
+        "existir mais.\n\n"
         "    scripts/gui-captura/retratar_abas.py\n\n"
-        "Uma execução, nenhum clique. Se as imagens saírem iguais, ótimo — "
-        "custou dez segundos e agora está PROVADO. Se saírem diferentes, "
-        "olhe-as antes de commitar: mudança de DESENHO é palavra dela "
-        "(PROVA-DE-TELA-01), não de quem tirou a foto."
+        "Uma execução, nenhum clique. Se as imagens saírem DIFERENTES, olhe-as "
+        "antes de commitar: mudança de DESENHO é palavra dela "
+        "(PROVA-DE-TELA-01), não de quem tirou a foto.\n\n"
+        "Se saírem IGUAIS não há o que commitar, e aí é a segunda porta — "
+        f"acrescente a `{CONFERIDO}` a linha\n\n"
+        f"    {commit_do_codigo}  <data>  <o que você mediu>\n\n"
+        "NÃO refotografe só para gerar bytes: a foto carrega o estado VIVO da "
+        "máquina de quem a tira (quantos controles na mesa, a cor lida de cada "
+        "um), e commitar a sua troca a mesa dela pela sua, calada."
     )
 
 
@@ -310,6 +402,64 @@ def test_o_portao_aprova_foto_em_dia(tmp_path: Path) -> None:
     assert fotos_em_dia(raiz, FOTOS, CODIGO_DA_TELA) is True, (
         "o comparador reprovou um repositório em que a foto veio DEPOIS da "
         "mudança de tela, que é o caminho bom."
+    )
+
+
+def _declarar(raiz: Path, texto: str) -> None:
+    """Escreve a declaração de conferência, sem commitar.
+
+    Não precisa de commit: a segunda porta lê o arquivo do DISCO, e é assim que
+    ela tem de funcionar — quem acabou de rodar o retratista está escrevendo a
+    linha agora, antes de commitar, exatamente como `fotos_sendo_refeitas_agora`
+    já trata a foto suja.
+    """
+    (raiz / CONFERIDO).write_text(texto, encoding="utf-8")
+
+
+def test_a_declaracao_so_vale_para_o_commit_que_ela_nomeia(tmp_path: Path) -> None:
+    """A MORDIDA da segunda porta: SHA de outro commit não abre nada.
+
+    Sem esta, bastaria CRIAR `CONFERIDO-EM.txt` com qualquer conteúdo para calar
+    o portão para sempre — que é o defeito que a porta nova poderia introduzir.
+    """
+    raiz = _repo_de_mentira(tmp_path, fotos_por_ultimo=False)
+
+    # Prosa, comentário e um SHA que não é o do commit de tela deste repositório.
+    _declarar(
+        raiz,
+        "# conferido por ninguém\n"
+        "0123456789abcdef0123456789abcdef01234567  03/09/2026  outro commit\n"
+        "rodei o retratista, juro\n",
+    )
+
+    assert portao_fechado(raiz, FOTOS, CODIGO_DA_TELA, CONFERIDO) is False, (
+        "a segunda porta abriu com uma declaração que NÃO nomeia o commit de "
+        "tela deste repositório. Assim ela deixaria de ser a prova de um gesto "
+        "e viraria um arquivo que, uma vez criado, cala o portão para sempre."
+    )
+
+
+def test_a_declaracao_fecha_o_portao_quando_a_foto_nao_muda(tmp_path: Path) -> None:
+    """E o outro lado: declarando o commit CERTO, o portão fecha.
+
+    É o caso medido em 03/09/2026 — o commit `2899ef0d` mexeu em `app/` e as 14
+    fotos saíram byte a byte idênticas, de modo que não havia imagem para
+    commitar. Sem este teste, "recusar sempre" satisfaria a mordida de cima e a
+    porta nasceria emperrada.
+    """
+    raiz = _repo_de_mentira(tmp_path, fotos_por_ultimo=False)
+    commit_do_codigo = _ultimo_commit(raiz, *CODIGO_DA_TELA)
+
+    _declarar(
+        raiz,
+        f"{commit_do_codigo}  03/09/2026  rodei o retratista, 14 fotos idênticas\n",
+    )
+
+    assert portao_fechado(raiz, FOTOS, CODIGO_DA_TELA, CONFERIDO) is True, (
+        "o portão recusou uma declaração que nomeia exatamente o commit de tela "
+        "atual. Nesse estado ele fica vermelho para sempre quando a mudança de "
+        "tela não move pixel — e a única saída vira refotografar por bytes, "
+        "que escreve o estado da máquina de quem rodou dentro da documentação."
     )
 
 

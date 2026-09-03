@@ -324,7 +324,7 @@ def test_o_conjunto_fechado_bate_com_os_testes_de_migracao() -> None:
     dois arquivos de teste, a regra passa a recusar diretórios legítimos (lado
     seguro) OU, pior, a aceitar nome que não é nosso.
 
-    Este teste lê os dois arquivos e exige que todo `<nome>.json` que eles
+    Este teste lê as bancadas VIVAS e exige que todo `<nome>.json` que elas
     escrevem esteja declarado.
 
     NOTA DATADA — 23/08/2026. O segundo arquivo era
@@ -338,12 +338,27 @@ def test_o_conjunto_fechado_bate_com_os_testes_de_migracao() -> None:
     régua lia o arquivo novo e extraía ZERO nomes — verde por cegueira, que é
     pior que o vermelho que ela substituiu: era o `assert escritos` de baixo,
     alimentado só pela outra bancada, que segurava o teste de pé.
+
+    NOTA DATADA — 03/09/2026. Aconteceu de novo, do outro lado: em 02/09 o
+    commit `11fa3e8b` ("cada controle é um jogador") arrancou o interruptor de
+    co-op de perfil, e com ele a migração inteira e a bancada
+    `test_coop_default_on_migration.py`. A lista continuou apontando para ela e
+    o portão reprovou — desta vez com a MENSAGEM CERTA em vez de um
+    `FileNotFoundError`, porque a nota de 23/08 tinha deixado o `exists()` aqui.
+    A régua fez o trabalho dela: nomeou o arquivo e nomeou a cura.
+
+    A bancada morta NÃO tem sucessor — a migração não foi substituída, foi
+    removida —, então a lista fica com uma. E os nomes que ela escrevia
+    CONTINUAM no conjunto fechado do script: ver a nota do
+    `NOMES_DA_MIGRACAO`, que é um retrato do lixo no disco, não do código.
     """
     import re
 
     raiz_repo = Path(__file__).resolve().parents[2]
+    # As bancadas VIVAS que abrem um `tmp<8>` com `tempfile.mkdtemp()` e rodam
+    # as migrações de verdade dentro dele. Levantadas em 03/09/2026 procurando
+    # `mkdtemp` em `tests/`: das nove que o usam, só esta escreve perfil.
     arquivos = [
-        raiz_repo / "tests" / "unit" / "test_coop_default_on_migration.py",
         raiz_repo / "tests" / "unit" / "test_o_preset_nao_escolhe_a_mascara.py",
     ]
     for arquivo in arquivos:
@@ -362,7 +377,7 @@ def test_o_conjunto_fechado_bate_com_os_testes_de_migracao() -> None:
         # o teste depois percorre escrevendo `(d / arquivo)`.
         escritos |= set(re.findall(r'^\s*"([a-z_]+\.json)":', texto, re.MULTILINE))
 
-    assert escritos, "as duas bancadas de migração mudaram de forma"
+    assert escritos, "a bancada de migração mudou de forma"
     faltando = sorted(escritos - set(FAXINA.NOMES_DA_MIGRACAO))
     assert faltando == [], (
         "nomes escritos pelos testes de migração e AUSENTES do conjunto "

@@ -1,0 +1,24 @@
+# CONFERIDO-EM — a segunda porta do portão FOTOS-DA-VERSAO-01.
+#
+# A régua é `tests/unit/test_as_fotos_acompanham_a_versao.py`, e a primeira
+# porta dela é a topologia: as fotos desta pasta têm de vir DEPOIS da última
+# mexida em `src/…/app`, `src/…/gui` ou `scripts/gui-captura`.
+#
+# Só que a primeira porta pede um COMMIT de foto como prova de um GESTO. Quando
+# o gesto não produz bytes — mudou-se código de tela e nenhuma imagem mudou —
+# não há o que commitar, e o portão fica vermelho para sempre. Este arquivo é a
+# saída, e ela não afrouxa nada:
+#
+#     rodou o retratista e as imagens MUDARAM   -> commite as imagens
+#     rodou o retratista e nada mudou           -> declare aqui o commit
+#
+# Uma linha por conferência. O primeiro campo é o SHA COMPLETO (40) do commit de
+# tela conferido; o resto da linha é para quem for auditar. `#` é comentário.
+# A declaração envelhece sozinha: qualquer mexida nova na tela gera outro SHA,
+# nenhuma linha daqui o nomeia, e o portão reabre.
+#
+# NÃO REFOTOGRAFE SÓ PARA GERAR BYTES. A foto carrega o estado VIVO da máquina
+# de quem a tira — a linha "Controles detectados" e a cor do plástico lida de
+# cada controle. Commitar a sua troca a mesa dela pela sua, calada.
+
+2899ef0d97497b9eb3b353cd8515d61d4812c344  03/09/2026  retratista rodado com o `fatos_do_mapa.py` de antes e de depois deste commit, mesma máquina e mesma mesa: as 14 fotos byte a byte IDÊNTICAS. O commit mexeu em `app/fatos_do_mapa.py` (a tabela que a aba Emulação e a seção Controles leem), e moveu ZERO pixel.
