@@ -1281,13 +1281,11 @@
     padding-left:9px;list-style:none;margin-left:-16px}
 
 </style>
-<style id="plastico-do-desenho">
-  .ctl[data-controle="p1"]{--plastico:#ae335a}
-  .ctl[data-controle="p2"]{--plastico:#7eb8d4}
-  .fita .chip[for="c-p1"]{--plastico:#ae335a}
-  .fita .chip[for="c-p2"]{--plastico:#7eb8d4}
+<style data-campo="plastico-css" data-hef-alvo="html">
+  .ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}
+  .ctl[data-controle="p1"],.fita .chip[for="c-p1"]{--plastico:#ae335a}
+  .ctl[data-controle="p2"],.fita .chip[for="c-p2"]{--plastico:#7eb8d4}
 </style>
-<style data-campo="plastico-css"></style>
 </head>
 <body>
 
