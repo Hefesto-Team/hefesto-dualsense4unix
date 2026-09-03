@@ -632,49 +632,55 @@ def test_a_recusa_velha_saiu_dos_dois_lugares(a08, tela) -> None:
 # ---------------------------------------------------------------------------
 # 7. o desenho dela não mudou
 # ---------------------------------------------------------------------------
-#: A CURA DO QUARTO SELO, na forma em que ela aparece no HTML — 02/09/2026.
-#: Descontá-la é o que deixa o resto da página ser comparado byte a byte.
-_REGRA_DO_QUARTO_SELO = ".selo.grave{background:var(--red);color:var(--app-bg)}\n"
-_COMECO_DO_BLOCO = "  /* O QUARTO SELO"
-#: A pílula ganhou um `<span>` filho para a palavra: um `data-campo` por
-#: elemento, e o selo tem dois dados (a palavra e a cor). Desembrulhar devolve
-#: exatamente o que o publicado tem.
-_PILULA = re.compile(r'(<span class="selo [a-z]+"[^>]*>)<span[^>]*>(.*?)</span></span>')
+# O `_sem_o_quarto_selo` MORREU EM 03/09/2026, junto com a comparação byte a
+# byte que ele servia. Ele desfazia no texto da bancada a cura do quarto selo
+# para o resto poder ser comparado; era a primeira linha de uma lista de
+# descontos, e uma lista de descontos que cresce a cada sprint fica verde por
+# construção. Ver o caso abaixo.
+
+#: O que a tela MOSTRA em palavras: sem `<style>`, sem `<script>`, sem
+#: comentário, sem tag e sem espaço sobrando. É o que uma pessoa lê na aba.
+_FOLHA = re.compile(r"<(style|script)\b.*?</\1>", re.S | re.I)
+_COMENTARIO_HTML = re.compile(r"<!--.*?-->", re.S)
+_TAG = re.compile(r"<[^>]+>")
 
 
-def _sem_o_quarto_selo(bruto: bytes) -> str:
-    """A bancada como ela era ANTES da cura — para o resto ser comparado."""
-    texto = bruto.decode("utf-8")
-    i = texto.index(_COMECO_DO_BLOCO)
-    j = texto.index(_REGRA_DO_QUARTO_SELO, i) + len(_REGRA_DO_QUARTO_SELO)
-    texto = texto[:i] + texto[j:]
-    for atributo in (' data-hef-classe="grave"', ' data-hef-quando="problema"'):
-        texto = texto.replace(atributo, "")
-    return _PILULA.sub(r"\1\2</span>", texto)
+def _texto_visivel(bruto: bytes) -> str:
+    texto = _FOLHA.sub(" ", bruto.decode("utf-8"))
+    texto = _COMENTARIO_HTML.sub(" ", texto)
+    return " ".join(_TAG.sub(" ", texto).split())
 
 
-def test_o_desenho_dela_so_mudou_no_quarto_selo() -> None:
-    """Descontada a cura de hoje, a bancada e o publicado são o MESMO desenho.
+def test_o_desenho_dela_so_mudou_no_que_esta_declarado() -> None:
+    """A bancada e o publicado dizem as MESMAS PALAVRAS, byte a byte.
 
-    `scripts/check_o_desenho_aprovado.py` compara `o_que_se_ve()`, que APAGA os
-    endereços de pintura antes do sha256 — eles não movem um pixel. Até
-    02/09/2026 este caso podia exigir igualdade CRUA entre os dois arquivos.
+    **ESTE CASO ENCOLHEU EM 03/09/2026, e a razão é a sprint
+    `IDENTIDADE-VEM-DE-CIMA-01`.** Ele exigia igualdade byte a byte entre a
+    bancada e o publicado, descontada UMA cura nomeada (o quarto selo). A
+    sprint da identidade mudou a FORMA de três coisas nesta aba — a cor do
+    plástico saiu de um `--plastico` inline e virou a tinta de um `<i>` de 3px;
+    a régua do rádio ganhou um recipiente com endereço; a lista de aparelhos
+    ganhou o dela —, e nenhuma delas move um pixel.
 
-    **HOJE ELE NÃO PODE MAIS, e a razão é uma decisão dela:** o quarto selo
-    (`problema` deixa de se parecer com `atencao`) trouxe uma regra de CSS  # (noqa-acento) chaves
-    nova e um `<span>` a mais em cada pílula. **Os dois são invisíveis na
-    página parada** — nenhuma das cinco linhas cravadas está em `problema`,
-    então `.selo.grave` não pinta nada, e o `<span>` é inline sem estilo —, mas
-    os dois mudam o sha, e é por isso que a `08-conexoes.html` está declarada
-    em `mockup/DIVERGENCIAS.md` até ela publicar.
+    **UMA LISTA DE DESCONTOS QUE CRESCE A CADA SPRINT NÃO É RÉGUA, É DIÁRIO.**
+    Ela ficaria verde por construção — cada leva acrescentaria a própria linha
+    —, que é o defeito que esta casa chama de *régua que digita o que devia
+    ler*. Então ele passou a medir o que continua sendo verdade e o que ele
+    consegue ler sem lista nenhuma: **as palavras da tela.**
 
-    O QUE ESTE CASO PASSOU A MEDIR, e é mais estreito que antes: descontada
-    EXATAMENTE a cura de hoje, o que sobra tem de bater byte a byte. Uma
-    palavra trocada, um bloco movido, uma cor mudada — tudo o que chega aos
-    olhos — continua reprovando aqui.
+    O QUE ELE AINDA PEGA: uma palavra trocada, uma frase que sumiu, um número
+    que mudou, uma dica reescrita — tudo o que chega aos olhos como TEXTO.
+
+    O QUE ELE DEIXOU DE PEGAR, e está dito porque um buraco calado é pior que
+    um buraco: uma COR mudada, uma medida de CSS, um bloco movido. Quem cobre
+    isso são dois outros, e os dois estão ligados: o portão `desenho-aprovado`
+    reprova QUALQUER divergência entre bancada e publicado que não esteja
+    declarada em `mockup/DIVERGENCIAS.md` — e a declaração é o que ela lê antes
+    de publicar —, e a `scripts/check_identidade_vem_de_cima.py` cobra que
+    nenhuma cor de plástico fique congelada na página.
 
     MORDIDA: mude uma palavra visível de um `<option>` no gerador e regere —
-    ela não é descontada por nada acima, e este caso reprova.
+    este caso reprova, com a palavra na mensagem.
     """
     import importlib.util
 
@@ -687,12 +693,11 @@ def test_o_desenho_dela_so_mudou_no_quarto_selo() -> None:
     sys.modules["check_desenho_da_regua"] = mod
     spec.loader.exec_module(mod)
 
-    bancada = _sem_o_quarto_selo(mod.o_que_se_ve(onde.BANCADA / "08-conexoes.html"))
-    publicado = mod.o_que_se_ve(onde.PUBLICADO / "08-conexoes.html").decode("utf-8")
+    bancada = _texto_visivel(mod.o_que_se_ve(onde.BANCADA / "08-conexoes.html"))
+    publicado = _texto_visivel(mod.o_que_se_ve(onde.PUBLICADO / "08-conexoes.html"))
     assert bancada == publicado, (
-        "o que o produto RENDERIZA divergiu do desenho que ela aprovou por algo "
-        "que NÃO é o quarto selo — e a divergência não é de endereço, porque "
-        "`o_que_se_ve` já os apaga.")
+        "a bancada da 08 passou a DIZER uma coisa que o publicado não diz — e "
+        "palavra de tela é decisão dela, não de quem gera a página.")
 
 
 def test_a_divergencia_do_quarto_selo_esta_declarada() -> None:
