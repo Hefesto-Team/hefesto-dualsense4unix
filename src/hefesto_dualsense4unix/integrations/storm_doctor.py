@@ -642,10 +642,17 @@ def controles_no_cabo(state: object) -> int | None:
 
     MESA-CHEIA-11/E3 — este é o denominador honesto, e ele NÃO é "quantos
     controles há". Medido na mesa dela em 14/08/2026 com quatro controles (dois
-    USB e dois BT): o `/proc/asound/cards` trazia DUAS placas DualSense. O
-    áudio USB do controle só existe no cabo — no rádio o mic e o fone não
-    passam por placa ALSA. Cobrar quatro placas de uma mesa com dois no rádio
-    seria alarme falso permanente.
+    USB e dois BT): o `/proc/asound/cards` trazia DUAS placas DualSense. A
+    PLACA de áudio USB do controle só existe no cabo — por rádio o aparelho não
+    anuncia A2DP/HFP/HSP e não há placa ALSA nenhuma a contar. Cobrar quatro
+    placas de uma mesa com dois no rádio seria alarme falso permanente.
+
+    "SEM PLACA" NÃO É "SEM MICROFONE", e a diferença é a cura de 03/09/2026: o
+    microfone por rádio chega por FORA do ALSA, tunelado em Opus dentro do
+    relatório HID (`integrations/dualsense_bt_audio.py`, BT-MIC-01, medido ao
+    vivo em 25/07/2026). O denominador continua CERTO — ele conta placas, e
+    ponte não é placa —, mas o conselho que saía daqui mandava a pessoa pegar
+    o cabo para ter um microfone que o rádio já lhe dava.
 
     ``None`` (state ausente, daemon offline, payload sem `controllers`) é
     diferente de ``0``: sem denominador o check volta a responder só
@@ -712,7 +719,8 @@ def check_snd_audio_healthy(
         return INFO, (
             "áudio do controle ausente (controle desconectado? — ou "
             f"áudio-off). {PREFIXO_DA_CURA}conecte o controle pelo cabo — no "
-            "rádio o mic e o fone não passam."
+            "rádio não há placa de som; o microfone ainda chega pela ponte do "
+            "Hefesto, o fone é que não."
         )
     if esperados == 0:
         if placas:
@@ -723,9 +731,9 @@ def check_snd_audio_healthy(
         return (
             INFO,
             "nenhum controle no cabo — o áudio USB não se aplica (no rádio o "
-            f"mic e o fone não passam por placa de som). {PREFIXO_DA_CURA}"
-            "nada; conecte pelo cabo se quiser usar o mic e o fone do "
-            "controle.",
+            f"controle não publica placa de som). {PREFIXO_DA_CURA}"
+            "nada; no rádio o microfone chega pela ponte do Hefesto — só o "
+            "fone é que pede o cabo.",
         )
     if placas >= esperados:
         return (
