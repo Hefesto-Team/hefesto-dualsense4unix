@@ -54,17 +54,19 @@ SEM_DONO: dict[str, str] = {
     # "qual dos quatro degraus da Vibração está aceso" e "o rótulo `Máx` do
     # teto". O dono mudou de lado, e mantê-los como estavam faria a próxima
     # pessoa esperar por uma cura que já chegou.
-    "degrau-aceso": "QUAL dos quatro degraus está aceso é a classe `on` do "
-    "botão, e ele continua saindo do DESENHO — a foto de 02/09 mostra o P1 com "
-    "'Máximo' aceso e o P2 com 'Balanceado', com `rumble_policy` igual para os "
-    "dois: pelo menos uma das colunas mente. O QUE FALTA NÃO É MAIS O PINTOR: "
-    "falta o ENDEREÇO no HTML (`data-campo=\"degrau\" data-hef-alvo=\"classe\" "
-    "data-hef-quando=<degrau>` nos quatro botões, em `aba05._coluna`) e a "
-    "emissão de `degrau` por coluna neste pacote. Muda o desenho, logo passa "
-    "pela bancada e pela publicação DELA. E o degrau da COLUNA não é sempre o "
-    "da mesa: `profiles/schema.ControllerRumbleOverride` guarda `policy` e "
+    "degrau-aceso": "O ENDEREÇO NASCEU E A EMISSÃO TAMBÉM — 02/09/2026. Os "
+    "quatro botões levam `data-campo=\"degrau\" data-hef-alvo=\"classe\" "
+    "data-hef-quando=<degrau>` (`aba05._coluna`) e este pacote emite `degrau` "
+    "por coluna. O QUE FALTA É SÓ A PUBLICAÇÃO DELA: na página que o produto "
+    "renderiza HOJE o endereço não existe, então o `achar()` do piloto devolve "
+    "lista vazia e nada é pintado — a tela dela não piora e não melhora até o "
+    "`--publicar 05`. Enquanto isso o desenho continua cravando 'Máximo' na "
+    "coluna do P1 com `rumble_policy = 'balanceado'` no daemon, que é a tela "
+    "afirmando o contrário do disco. E o degrau da COLUNA não é sempre o da "
+    "mesa: `profiles/schema.ControllerRumbleOverride` guarda `policy` e "
     "`custom_mult` por peça desde POR-UNIDADE-01 (10/08/2026), e "
-    "`core/backend_pydualsense._escalar_rumble` os aplica.",
+    "`core/backend_pydualsense._escalar_rumble` os aplica — quando essa fonte "
+    "chegar, ela muda dentro do `pacote_da_coluna` e a emissão daqui não muda.",
     "mult-teto": "O rótulo `Máx` ao lado do multiplicador aparece SÓ quando a "
     "coluna está no teto, e hoje é cravado: a foto de 02/09 mostra `70%` com "
     "`Máx` ao lado, afirmando que 70% é o teto. Pintá-lo por TEXTO poria `—` "
@@ -202,6 +204,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # dono (ver :data:`SEM_DONO`).
             "mult": pct.get("n", "—"),
             "forca-pct": str(pct.get("w", "")).rstrip("%"),
+            # QUAL DOS QUATRO DEGRAUS ESTÁ ACESO — 02/09/2026. O valor é a
+            # CHAVE do produto (`economia`/`balanceado`/`max`/`auto`), e é ela
+            # que o `data-hef-quando` de cada botão carrega; o alvo `classe` do
+            # `escrever()` acende quem casar e apaga as irmãs. O rótulo NUNCA
+            # sai daqui: escrever texto nestes botões apagaria a escolha dela,
+            # que é o defeito de 02/09 pela manhã.
+            #
+            # A POLÍTICA É DA MESA, e emiti-la por coluna não é contradição: o
+            # `pacote_da_coluna` já a monta assim (`app/telas/vibracao.py:270`)
+            # porque o desenho tem quatro colunas e a resposta é uma só. Quando
+            # `ControllerRumbleOverride.policy` chegar à tela, a fonte muda ali
+            # dentro e esta linha não se mexe.
+            "degrau": col.get("forca", ""),
         }
         for lado, m in (col.get("motores") or {}).items():
             plano[f"motor-{lado}"] = m.get("n", "—")

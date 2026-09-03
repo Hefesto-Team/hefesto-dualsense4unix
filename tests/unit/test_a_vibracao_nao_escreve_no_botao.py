@@ -151,6 +151,20 @@ def emitidos():
 # --------------------------------------------------------------------------
 # 1. o valor não entra no botão
 # --------------------------------------------------------------------------
+#: OS ALVOS QUE NÃO ENCOSTAM NO TEXTO. `texto` (o padrão) e `html` reescrevem o
+#: conteúdo do elemento; `classe`, `largura`, `fundo`, `valor` e `cor` mexem numa
+#: classe, num estilo ou no `value`, e o rótulo do botão sobrevive intacto.
+#:
+#: A DISTINÇÃO ENTROU EM 02/09/2026, com o endereço do degrau aceso. Sem ela
+#: esta régua reprovava a cura: os quatro degraus passaram a levar
+#: `data-campo="degrau" data-hef-alvo="classe"`, que é justamente o alvo que
+#: NÃO apaga "Economia"/"Balanceado"/"Máximo"/"Auto" — a prova está no
+#: `test_o_degrau_aceso_nao_apaga_o_rotulo`, que roda o `escrever()` de verdade.
+#: Medir "tem endereço num botão" em vez de "escreve TEXTO num botão" seria a
+#: régua confundindo o endereço com o ato, que é o vício desta casa.
+ALVOS_QUE_ESCREVEM_TEXTO = ("texto", "html")
+
+
 def test_nenhuma_chave_do_pacote_escreve_num_botao(arvore, emitidos):
     """Escrever um valor num `<button>` APAGA o rótulo dele.
 
@@ -160,7 +174,10 @@ def test_nenhuma_chave_do_pacote_escreve_num_botao(arvore, emitidos):
     _, chaves = emitidos
     culpados = {
         chave: [n["attrs"].get("data-forca") or n["attrs"].get("data-lado") or "?"
-                for n in _achar(arvore, chave) if n["tag"] == "button"]
+                for n in _achar(arvore, chave)
+                if n["tag"] == "button"
+                and (n["attrs"].get("data-hef-alvo") or "texto")
+                in ALVOS_QUE_ESCREVEM_TEXTO]
         for chave in sorted(chaves)
     }
     culpados = {k: v for k, v in culpados.items() if v}

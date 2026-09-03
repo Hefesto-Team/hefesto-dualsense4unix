@@ -136,6 +136,33 @@ seção daqui**: a aba deixou de estar em trabalho.
   aparece nesta aba (a fita do topo é inerte, decisão sua de 28/08); nasce no
   tom certo quando a força ganhar endereço por controle.
 
+- **02/09/2026** — **o degrau aceso ganhou endereço, e o desenho estava
+  MENTINDO.** A "Força da vibração" é UMA, da mesa, e o desenho crava um degrau
+  aceso por coluna: o P1 nasce em **Máximo** e o P2 em **Balanceado**. Medido
+  agora, com os seus dois controles e o daemon vivo, `rumble_policy` é
+  `balanceado` — a coluna do P1 afirmava o contrário do que está no disco.
+
+  Os quatro botões passaram a levar `data-campo="degrau"
+  data-hef-alvo="classe" data-hef-quando=<degrau>`. **Não muda um pixel:** são
+  três atributos num botão que já existia, e o alvo `classe` mexe na classe
+  `on`, nunca no texto — os rótulos "Economia", "Balanceado", "Máximo" e "Auto"
+  ficam intactos. Fotografado antes e depois no WebKit da janela.
+
+  **O QUE VOCÊ VÊ ENQUANTO ESPERA:** nada muda. Na página que o produto
+  renderiza hoje o endereço não existe, então o `achar()` do piloto devolve
+  lista vazia — medido: **15 valores pintados com e sem a emissão, os mesmos
+  dois tiques**. A coluna do P1 continua dizendo "Máximo" até o `--publicar 05`.
+
+  Ele **não** pôde ir pelo `--publicar-enderecos 05`, e por duas razões: esta
+  aba já tem desenho seu esperando (o bloco de estado, acima), e o
+  `data-hef-quando` não está na lista `INVISIVEIS` do
+  `scripts/check_o_desenho_aprovado.py` — está no relato da frente.
+
+  Continua esperando: o rótulo **`Máx`** ao lado do multiplicador, que aparece
+  cravado com `70%` na coluna do P1 (70 não é o teto de 150). Pintá-lo exige a
+  palavra sempre no HTML com o CSS escondendo — isso mexe no desenho, e é
+  decisão sua.
+
 
 ## 06-navegacao.html
 - **02/09/2026** — **o L3 passou a ALTERNAR o teclado na tela, e as 21 listas
