@@ -194,6 +194,14 @@ ao autostart do ambiente gráfico.
 > então a proporção passou a **19 de 31** — o quadro piora pela primeira vez
 > desde 21/08. As três frases dele ainda não estão penduradas em tela nenhuma;
 > o `_()` entra junto com a fiação, na Onda 10 e na Onda 11.
+>
+> **Nota datada — 03/09/2026:** são **34** módulos, e a proporção é **25 de
+> 34**. Dois motivos, e eles são diferentes. O denominador subiu por trabalho
+> novo: `perfis_web.py` e o pacote `jogar/` nasceram em 30/08 sem importar a
+> função de tradução. O numerador subiu por **correção de medição**: a cura de
+> 22/08, que fez o censo contar subpasta, tinha sido aplicada só ao
+> denominador — o numerador leu um nível só por doze dias. Os cinco módulos que
+> faltavam somam 46 literais, e `jogar/painel.py` tem 37 sozinho.
 
 A partir da v3.4.0 o bundle Flatpak embarca **EN baseline** + **PT-BR
 identidade** em `/app/share/hefesto-dualsense4unix/locale/{en,pt_BR}/

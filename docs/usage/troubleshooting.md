@@ -387,6 +387,14 @@ Se já está em v3.2.0+ e o problema persiste, abra issue com o output de
 > desde 21/08. As três frases dele ainda não estão penduradas em tela nenhuma;
 > o `_()` entra junto com a fiação, na Onda 10 e na Onda 11.
 >
+> **Nota datada — 03/09/2026:** são **34** módulos, e a proporção é **25 de
+> 34**. Dois motivos, e eles são diferentes. O denominador subiu por trabalho
+> novo: `perfis_web.py` e o pacote `jogar/` nasceram em 30/08 sem importar a
+> função de tradução. O numerador subiu por **correção de medição**: a cura de
+> 22/08, que fez o censo contar subpasta, tinha sido aplicada só ao
+> denominador — o numerador leu um nível só por doze dias. Os cinco módulos que
+> faltavam somam 46 literais, e `jogar/painel.py` tem 37 sozinho.
+>
 > Se você chegou aqui esperando uma janela inteiramente em inglês, o problema
 > não é a sua instalação — é a promessa antiga, e ela foi retirada. Registro em
 > `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.

@@ -75,9 +75,8 @@ PUBLICADO = AQUI / "paginas"  # noqa-acento (`paginas` e o nome da PASTA; caminh
 
 #: O DESVIO DA ESCRITA, e ele existe para UMA coisa: deixar um portão rodar os
 #: dez geradores sem tocar na bancada dela. Com `HEFESTO_BANCADA` apontando para
-#: um diretório temporário, `pagina()` e `gravar()` passam a escrever lá — e o # (noqa-acento)
-#: (`pagina()` é a função)  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
-#: portão compara o que SAIU com o que está no disco.
+#: um diretório temporário, `pagina()` e `gravar()` passam a escrever lá  # (noqa-acento): função
+#: — e o portão compara o que SAIU com o que está no disco.
 #:
 #: POR QUE ISSO PRECISOU EXISTIR, medido em 01/09/2026: `aba06.py` estava
 #: marcada com os endereços da pintura e o `mockup/06-navegacao.html` NÃO — o

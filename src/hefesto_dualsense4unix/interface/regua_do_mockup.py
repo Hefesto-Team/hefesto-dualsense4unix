@@ -626,7 +626,7 @@ def _ligado(texto: str) -> bool:
     b = texto.strip().lower()
     # (noqa-acento) `nao` sem til é VALOR de máquina, e não prosa: é o que um
     # pacote pode emitir. O `escrever()` do JS lê a mesma lista, nas duas grafias.
-    return b not in ("", TRAVESSAO, "0", "false", "nao", "não", "off",  # (noqa-acento)
+    return b not in ("", TRAVESSAO, "0", "false", "nao", "não", "off",  # (noqa-acento): valor
                      "none", "null")
 
 

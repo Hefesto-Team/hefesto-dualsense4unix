@@ -497,7 +497,7 @@ def lugares_da_pagina(pagina: str) -> frozenset[str]:
     _LUGARES[pagina] = fora
     return fora
 
-#: `pagina` → o olho já passado por ela. Lido uma vez por página.  # noqa-acento
+#: `pagina` → o olho já passado por ela. Lido uma vez por página.  # (noqa-acento): nome de campo
 _ALVOS: dict[str, _OlhoNaPagina] = {}
 
 
