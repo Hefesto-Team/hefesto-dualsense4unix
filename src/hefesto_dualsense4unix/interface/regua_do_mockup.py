@@ -125,6 +125,16 @@ TRAVESSAO = "—"
 PRODUTO = "PRODUTO"
 MOCKUP = "MOCKUP"
 INDECIDIVEL = "INDECIDIVEL"
+#: O QUARTO VEREDITO, e ele é dela (03/09/2026). Um título de seção, o texto de
+#: um botão e o nome de uma opção NÃO são dívida — são RÓTULO, e rótulo não muda.
+#: Contá-los como ``MOCKUP`` fazia 100% ser inalcançável por construção: medido
+#: em 02/09, 38 dos 53 "pendentes" eram rótulos, e o teto aritmético era ~89%.
+#:
+#: A marca é ``data-hef-rotulo`` no elemento, e ela é DECLARAÇÃO, nunca
+#: inferência: quem não a puser continua acusado. Foi assim que ela pediu — *"a
+#: régua para de cobrá-lo e passa a EXIGIR a marca"* —, e é o que impede a
+#: categoria de virar o esconderijo onde dívida real vai morar.
+ROTULO = "ROTULO"
 
 
 def _espremer(texto: str) -> str:
@@ -148,6 +158,8 @@ class _Campo:
     :param alvo: o mesmo ``data-hef-alvo`` que o bootstrap lê — o que na tela
         recebe o valor: o texto, a largura da barra, o ``value`` do campo.
     :param valor: o que está CRAVADO no arquivo publicado.
+    :param rotulo: o ``data-hef-rotulo`` — a DECLARAÇÃO de que este campo é
+        texto fixo, e não dado que o produto deveria escrever. Ver :data:`ROTULO`.
     :param quando: só para o alvo ``classe`` — o ``data-hef-quando``, que é
         QUEM ESTE ELEMENTO É dentro do grupo. Os quatro degraus da Vibração
         compartilham um endereço só, e sem isto a régua não saberia que uma
@@ -160,6 +172,7 @@ class _Campo:
     alvo: str
     valor: str
     quando: str = ""
+    rotulo: bool = False
 
     @property
     def endereco(self) -> str:
@@ -344,7 +357,8 @@ class _Leitor(html.parser.HTMLParser):
             # está lendo dado ou desenho?
             valor = texto
         return _Campo(chave=quadro["chave"], dono=quadro["dono"], alvo=alvo,
-                      valor=valor, quando=d.get("data-hef-quando") or "")
+                      valor=valor, quando=d.get("data-hef-quando") or "",
+                      rotulo="data-hef-rotulo" in d)
 
 
 #: Um comprimento CSS: o número e a unidade. Serve para reproduzir, do lado
@@ -763,6 +777,25 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
 
     Para todo outro alvo a declaração vale como veio.
     """
+    if campo.alvo == "largura":
+        # A LARGURA TAMBÉM É NORMALIZADA NA ATRIBUIÇÃO, e ignorar isso acusava
+        # endereço morto sobre o produto que ACERTOU — medido em 02/09/2026, na
+        # aba Iluminação: a barra do P1 saiu de `width:82%` para `100%` e a régua
+        # chamou de MOCKUP, porque o pacote emite `100` (número) e a tela devolve
+        # `100%` (a unidade que o CSSOM acrescenta).
+        #
+        # É o mesmo defeito de forma do alvo `cor`, uma linha acima, e a cura é a
+        # mesma: passar a declaração pela tradução que o bootstrap faz ao
+        # escrever, em vez de comparar cru com cru.
+        bruto = declarado.strip() if declarado else declarado
+        if bruto and not bruto.endswith(("%", "px", "em", "rem", "vw", "vh")):
+            return f"{bruto}%"
+        return bruto
+    if campo.alvo == "valor":
+        # O `value` de um `<input>` volta do DOM como TEXTO, sempre. Um pacote
+        # que emite o número `80` via `el.value = 80` deixa `"80"` na tela, e
+        # comparar `80` com `"80"` acusa o produto que acertou.
+        return "" if declarado is None else str(declarado)
     if campo.alvo == "cor":
         # O VAZIO APAGA A COR DE LINHA — o `escrever()` põe `''` no
         # `style.color`, e não o travessão, que não é cor nenhuma.
@@ -790,7 +823,7 @@ def _classificar(
     declarados: dict[tuple[str, str], Any] | None = None,
     selos: list[bool] | None = None,
 ) -> list[_Veredito]:
-    """O veredito de cada campo: PRODUTO, MOCKUP ou INDECIDIVEL.
+    """O veredito de cada campo: PRODUTO, ROTULO, MOCKUP ou INDECIDIVEL.
 
     :param cravados: os campos do arquivo publicado, em ordem de documento.
     :param vivos: o que a TELA mostra em cada um deles, na mesma ordem.
@@ -841,7 +874,20 @@ def _classificar(
             campo, _como_a_tela_escreveria(bruto),
             frozenset(quandos.get(endereco, ()))))
 
-        if vivo == SUMIU:
+        if campo.rotulo:
+            # RÓTULO DECLARADO SAI DA CONTA — decisão dela, 03/09/2026. Ele vem
+            # ANTES de todos os outros ramos de propósito: um título de seção
+            # que por acaso mudasse de texto viraria PRODUTO nos ramos abaixo, e
+            # isso seria pior que contá-lo como dívida — daria por escrito pelo
+            # produto uma coisa que ninguém escreve.
+            #
+            # E a marca é EXIGIDA, não inferida: quem não puser `data-hef-rotulo`
+            # continua caindo nos ramos de baixo e sendo cobrado. É a diferença
+            # entre uma categoria e um esconderijo.
+            fora.append(_Veredito(
+                campo, vivo, ROTULO, None,
+                "rótulo declarado: texto fixo, não é dado que o produto escreva"))
+        elif vivo == SUMIU:
             fora.append(_Veredito(
                 campo, vivo, PRODUTO, declarado,
                 "o bloco que continha este campo foi TROCADO pelo produto — "
@@ -881,8 +927,13 @@ def _classificar(
 
 
 def _contar(vereditos: list[_Veredito]) -> dict[str, int]:
-    """As três contagens de uma aba, sempre com as três chaves presentes."""
-    fora = {PRODUTO: 0, MOCKUP: 0, INDECIDIVEL: 0}
+    """As QUATRO contagens de uma aba, sempre com as quatro chaves presentes.
+
+    Eram três até 03/09/2026; a `ROTULO` entrou com a decisão dela. As chaves
+    nascem todas em zero de propósito — quem lê `contas[MOCKUP]` numa aba sem
+    nenhum não pode receber `KeyError`.
+    """
+    fora = {PRODUTO: 0, ROTULO: 0, MOCKUP: 0, INDECIDIVEL: 0}
     for v in vereditos:
         fora[v.classe] += 1
     return fora

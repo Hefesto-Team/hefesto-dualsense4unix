@@ -1674,18 +1674,27 @@ class Piloto:
         print("\n" + "=" * 74)
         print("A RÉGUA DO MOCKUP — o que a tela mostra é dado, ou é o desenho?")
         print("=" * 74)
-        print(f"{'aba':22s} {'campos':>7s} {'PRODUTO':>8s} {'MOCKUP':>7s} "
-              f"{'INDECID':>8s}")
-        soma = {r.PRODUTO: 0, r.MOCKUP: 0, r.INDECIDIVEL: 0}
+        print(f"{'aba':22s} {'campos':>7s} {'PRODUTO':>8s} {'RÓTULO':>7s} "
+              f"{'MOCKUP':>7s} {'INDECID':>8s} {'pronto':>7s}")
+        soma = {r.PRODUTO: 0, r.ROTULO: 0, r.MOCKUP: 0, r.INDECIDIVEL: 0}
         for pagina in sorted(self.vereditos):
             contas = r._contar(self.vereditos[pagina])
             for classe, quantos in contas.items():
-                soma[classe] += quantos
-            print(f"{pagina:22s} {sum(contas.values()):7d} {contas[r.PRODUTO]:8d} "
-                  f"{contas[r.MOCKUP]:7d} {contas[r.INDECIDIVEL]:8d}")
+                soma[classe] = soma.get(classe, 0) + quantos
+            n = sum(contas.values())
+            # PRONTO = PRODUTO + RÓTULO, e a soma é o ponto da categoria nova:
+            # rótulo não é dívida, então uma aba com 20 campos escritos e 5
+            # rótulos está 100% pronta — não 80%. Sem isto, 100% era
+            # inalcançável por construção (decisão dela, 03/09/2026).
+            pronto = contas[r.PRODUTO] + contas.get(r.ROTULO, 0)
+            print(f"{pagina:22s} {n:7d} {contas[r.PRODUTO]:8d} "
+                  f"{contas.get(r.ROTULO, 0):7d} {contas[r.MOCKUP]:7d} "
+                  f"{contas[r.INDECIDIVEL]:8d} {(100 * pronto // n) if n else 100:6d}%")
         total = sum(soma.values())
+        pronto = soma[r.PRODUTO] + soma[r.ROTULO]
         print(f"{'TODAS':22s} {total:7d} {soma[r.PRODUTO]:8d} "
-              f"{soma[r.MOCKUP]:7d} {soma[r.INDECIDIVEL]:8d}")
+              f"{soma[r.ROTULO]:7d} {soma[r.MOCKUP]:7d} "
+              f"{soma[r.INDECIDIVEL]:8d} {(100 * pronto // total) if total else 100:6d}%")
 
         print("\nOS CAMPOS QUE AINDA MOSTRAM O DESENHO — é este número que tem de cair:")
         for pagina in sorted(self.vereditos):
