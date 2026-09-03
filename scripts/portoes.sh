@@ -73,6 +73,14 @@ rapido|curvas|py|scripts/gerar-tabela-de-curvas.py --check
 # ela abre para decidir passaria a mostrar uma lista que já não é a do disco.
 rapido|frases-de-tela|py|scripts/gerar-frases-de-tela.py --check
 rapido|paridade-transporte|py|scripts/check_paridade_transporte.py
+# 03/09/2026: O TERCEIRO NÚMERO. Os dois outros medem a interface nova contra
+# ela mesma (campos escritos; publicado × mockup) e nenhum responde "o que a GTK
+# faz e o HTML não faz" -- que é de onde sai a fila. Este confere as 396
+# features de `docs/data/paridade-gtk-html.csv` contra o CÓDIGO, e a metade que
+# importa é a regra `divida-fechada`: quando alguém FECHAR uma dívida, ele
+# reprova para o dado ser atualizado. Sem isso o número vira propaganda no dia
+# seguinte à primeira cura. Camada rápida porque custa 0,4 s.
+rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
 rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
