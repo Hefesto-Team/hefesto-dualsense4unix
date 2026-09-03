@@ -452,16 +452,17 @@ def test_esta_regua_nao_alcanca_a_biblioteca_dela():
         "`conftest` caiu, e um teste desta aba passaria a ler a biblioteca dela")
 
 
-def test_o_piso_de_gestos_da_aba_e_sete(a07):
+def test_o_piso_de_gestos_da_aba_e_oito(a07):
     """Ele SÓ SOBE. Uma queda não aparece na tela: o clique não faz nada.
 
     SUBIU DE SEIS PARA SETE em 02/09/2026, com o "Voltar a perguntar" que a
-    decisão dela mandou nascer.
+    decisão dela mandou nascer; e DE SETE PARA OITO em 03/09/2026, com o
+    "Abrir o lançador" da decisão 17 dela.
     """
     import pacotes
 
     quantos = sum(1 for (p, _) in pacotes.GESTOS if p == PAGINA)
-    assert quantos >= a07.PISO_DA_ABA == 7, (
+    assert quantos >= a07.PISO_DA_ABA == 8, (
         f"{PAGINA} tem {quantos} gestos com dono e o piso é {a07.PISO_DA_ABA}")
 
 
