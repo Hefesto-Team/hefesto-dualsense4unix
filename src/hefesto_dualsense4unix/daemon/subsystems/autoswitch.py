@@ -72,7 +72,10 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
 
       window_detect_backend    -- backend efetivamente ativo, re-lido a cada
                                   leitura (a cascata Wayland pode migrar
-                                  portal -> wlrctl -> null em runtime);
+                                  cosmic -> portal -> wlrctl -> null em
+                                  runtime, e em XWayland o composto alterna
+                                  entre "xlib" e o da cascata leitura a
+                                  leitura — JANELA-WAYLAND-CEGA-01);
       window_detect_healthy    -- saudável = >= 1 leitura útil desde o boot
                                   OU PROVA de conexão do backend xlib (T-01,
                                   ONDA0-Z7: sonda uma vez antes de semear —
@@ -160,9 +163,21 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
         # null" e passou a ser a PERGUNTA do leitor (`precisa_de_resgate`),
         # que conhece o segundo caso cego — `xlib` com a conexão provada
         # morta numa sessão Wayland. Sem isto, a máquina dela ficava presa
-        # num XWayland recusando conexão com a cascata `wlrctl` (que o COSMIC
-        # atende) ao lado, nunca tentada. O `== "null"` fica como retaguarda
-        # para reader substituto que não expõe a pergunta nova.
+        # num XWayland recusando conexão com a cascata Wayland ao lado,
+        # nunca tentada. O `== "null"` fica como retaguarda para reader
+        # substituto que não expõe a pergunta nova.
+        #
+        # FATO SUBSTITUÍDO (02/09/2026): esta linha dizia "a cascata `wlrctl`
+        # (que o COSMIC atende)". O cosmic-comp NÃO atende o wlrctl — não
+        # publica `zwlr_foreign_toplevel_manager_v1`, medido com
+        # `wayland-info`. Quem o atende é o `zcosmic_toplevel_info_v1`, e é
+        # ele o primeiro da cascata desde então.
+        #
+        # E o resgate quase não dispara mais: com DISPLAY e WAYLAND_DISPLAY,
+        # `detect_window_backend()` devolve o composto, que já cai para a
+        # cascata a cada leitura que o X perder. O que sobra para o resgate é
+        # o `xlib` PURO que ganha WAYLAND_DISPLAY depois — que é justamente o
+        # que o `_ensure_display_env()` abaixo pode fazer aparecer.
         recover = getattr(reader, "maybe_recover", None)
         precisa = getattr(reader, "precisa_de_resgate", None)
         cego = precisa() if callable(precisa) else (_backend_name() == "null")

@@ -394,7 +394,15 @@ def test_reader_com_backend_sem_campo_ainda_diz_alguma_coisa() -> None:
 
 
 def test_cascata_wayland_nomeia_a_propria_cegueira() -> None:
+    """Os TRÊS calados, e a cascata diz que foi ela quem não leu.
+
+    O `cosmic` entra aqui desde 02/09/2026, e emudecê-lo não é formalidade:
+    sem isso este teste falaria com o compositor de VERDADE da máquina onde
+    ele roda — verde no CI, e na máquina dela devolvendo a janela que estiver
+    na frente.
+    """
     cascata = window_detect._WaylandCascadeBackend()
+    cascata._cosmic.get_active_window_info = lambda: None  # type: ignore[method-assign]
     cascata._portal.get_active_window_info = lambda: None  # type: ignore[method-assign]
     cascata._wlrctl.get_active_window_info = lambda: None  # type: ignore[method-assign]
 

@@ -4,8 +4,15 @@ Cobre os 4 cenários de seleção de backend conforme variáveis de ambiente:
   1. X11 puro (DISPLAY sem WAYLAND_DISPLAY) → XlibBackend.
   2. Wayland puro (WAYLAND_DISPLAY sem DISPLAY) → _WaylandCascadeBackend
      (BUG-COSMIC-WLR-BACKEND-REGRESSION-01, v3.1.0).
-  3. XWayland (ambas presentes) → XlibBackend (preferido).
+  3. XWayland (ambas presentes) → `_XlibComCosmicBackend`, com o xlib DENTRO.
   4. Nenhum display → NullBackend.
+
+MUDANÇA DE 02/09/2026 no cenário 3, e a razão é medida: era `XlibBackend`
+sozinho, e numa sessão COSMIC isso deixava o único backend que enxerga app
+Wayland nativo do lado de fora — com o Chrome/Wayland em foco, o produto lia
+`unknown` e o `zcosmic_toplevel_info_v1` lia `google-chrome` no mesmo instante
+(JANELA-WAYLAND-CEGA-01). O xlib continua sendo o primeiro a ser perguntado; o
+que mudou é que agora existe um segundo.
 """
 from __future__ import annotations
 
@@ -121,13 +128,26 @@ class TestDetectWindowBackendWayland:
 
 
 class TestDetectWindowBackendXWayland:
-    """Ambas variáveis presentes (XWayland) → XlibBackend (preferido)."""
+    """Ambas presentes (XWayland) → o composto, com o xlib na frente."""
 
-    def test_retorna_xlib_em_xwayland(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_retorna_o_composto_em_xwayland(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """MORDIDA: devolver `XlibBackend()` sozinho aqui e este teste reprova."""
         monkeypatch.setenv("DISPLAY", ":0")
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         backend = detect_window_backend()
-        assert isinstance(backend, XlibBackend)
+        assert type(backend).__name__ == "_XlibComCosmicBackend"
+
+    def test_o_xlib_continua_sendo_o_de_dentro(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """O composto PREFERE o xlib — é o único que resolve o `exe_basename`.
+
+        MORDIDA: inverter a ordem dentro do composto (Wayland primeiro) e o
+        `backend_name` inicial deixa de ser "xlib".
+        """
+        monkeypatch.setenv("DISPLAY", ":0")
+        monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+        backend = detect_window_backend()
+        assert isinstance(backend.xlib, XlibBackend)  # type: ignore[union-attr]
+        assert backend.backend_name == "xlib"  # type: ignore[union-attr]
 
     def test_nao_usa_wayland_portal_em_xwayland(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("DISPLAY", ":1")
