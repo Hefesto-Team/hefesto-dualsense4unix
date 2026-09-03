@@ -257,8 +257,21 @@ def test_a_cobertura_conta_o_campo_novo() -> None:
     fora = aba.pacote(_ctx("white", "White"))
     por_cartao = {len(c) for c in fora["cartoes"].values()}
     assert por_cartao == {4}, f"o cartão passou a ter {por_cartao} campos"
-    esperado = 3 + len(fora["cartoes"]) * 4
-    assert fora["cobertura"]["pintados"] in (esperado, esperado + 2), (
-        f"a cobertura diz {fora['cobertura']['pintados']} e o cartão tem "
-        f"quatro campos — o contador e o pacote discordam"
+    # A CONTA SAI DA FORMA DO PACOTE, E NÃO DE UM NÚMERO DIGITADO — 03/09/2026.
+    # Ela era `3 + cartoes * 4`, e o 3 era a quantidade de endereços de PÁGINA
+    # daquele dia. A aba ganhou os endereços que faltavam (a posição do
+    # interruptor, o chip aceso, a máscara viva, as linhas da coluna Atenção) e
+    # a régua reprovou a ENTREGA em vez do defeito — é a forma exata que esta
+    # casa já pagou onze vezes numa tarde só.
+    #
+    # ELA CONTINUA MORDENDO, e agora pela pergunta certa: o contador tem de
+    # bater com o que o pacote EMITE. Emitir uma chave e esquecê-la em
+    # `DA_PAGINA` deixa o número menor que o dicionário, e é aqui que aparece.
+    da_pagina = [k for k in fora if k not in {"cartoes", "cobertura", "sem_dono", "blocos"}]
+    esperado = len(da_pagina) + sum(len(c) for c in fora["cartoes"].values())
+    assert fora["cobertura"]["pintados"] == esperado, (
+        f"a cobertura diz {fora['cobertura']['pintados']} e o pacote emite "
+        f"{len(da_pagina)} endereços de página + "
+        f"{sum(len(c) for c in fora['cartoes'].values())} de cartão — "
+        f"o contador e o pacote discordam"
     )
