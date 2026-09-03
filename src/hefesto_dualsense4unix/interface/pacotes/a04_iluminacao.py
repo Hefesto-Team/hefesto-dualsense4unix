@@ -40,6 +40,26 @@ O QUE AINDA ESPERA A PUBLICAÇÃO é UM par, e é o do `.aceso`: a bancada diz
 `data-campo="luz" data-hef-alvo="html"`, o publicado ainda diz
 `data-campo="aceso"`. Ver `desenho_da_luz`.
 
+`players` E `brilho-pct` NÃO SÃO ENDEREÇO MORTO — e a régua do mockup diz que
+são. Medido em 02/09/2026, com dois controles na mesa e foto lida::
+
+    p1·players     '1 2 3 4' ← ENDEREÇO MORTO      a fileira É pintada: o anel
+                                                   do dono trocou do rosa do
+                                                   mockup (cosmic-red) para o
+                                                   plástico VIVO, na foto
+    p2·brilho-pct  '100%'    ← ENDEREÇO MORTO      a largura É escrita; ela
+                                                   coincide com o desenho
+
+Nos DOIS o defeito é da régua, e é a mesma família que `_declarado_neste_elemento`
+já documenta para os alvos `classe` e `cor`: entre o que o pacote EMITE e o que a
+tela MOSTRA há uma tradução, e comparar os dois crus acusa endereço morto sobre o
+produto que acertou. No alvo `largura` o `escrever()` faz `el.style.width = t +
+'%'` e a régua compara o `100` declarado com o `'100%'` lido; no alvo `html` o
+`LER_CAMPOS` cai no ramo padrão e lê `textContent`, então a fileira inteira é
+comparada com `'1 2 3 4'`. **RELATADO** — a cura é em `interface/regua_do_mockup.py`
+e `interface/hefesto_vivo.py`, fora do território deste arquivo. Emitir `"100%"`
+daqui para "curar" o número poria `width:100%%` na tela.
+
 DOIS ENDEREÇOS MORTOS MORRERAM AQUI — 02/09/2026, e o segundo não aparecia em
 régua nenhuma::
 
@@ -794,6 +814,39 @@ def _uniq(o: dict[str, Any]) -> str:
     return str(o.get("uniq") or "")
 
 
+def sem_resposta_do_daemon() -> str:
+    """A frase de "o Hefesto não respondeu" — e ela é do MOTOR, não daqui.
+
+    OS TRÊS BOTÕES QUE ESCREVEM NO APARELHO SAÍAM CALADOS até 02/09/2026:
+    `cor`, `apagar` e `auto` chamavam `p.led_set(...)` e `p.chamar(...)` e
+    **jogavam fora o booleano**. `ipc_bridge._safe_call` devolve `(False, None)`
+    para daemon offline, socket ausente, timeout de conexão e erro JSON-RPC —
+    e nesses casos o clique dela sumia: a barra não mudava, a tela não dizia
+    nada, e o segundo clique parecia o primeiro. É o defeito que o BRIEFING
+    desta casa nomeia como o mais caro, e o quarto gesto desta MESMA aba
+    (`player`) já o evitava lendo `(ok, motivo)`.
+
+    A FRASE NÃO SE ESCREVE AQUI. `lightbar_actions._AVISO_HEFESTO_DESLIGADO` é
+    a que a janela GTK mostra neste mesmo evento — o ramo em que o `led.set`
+    por `uniq` volta sem corpo (`lightbar_actions.py:950-951`). Duas telas do
+    mesmo produto dizendo coisas diferentes sobre o mesmo daemon desligado é a
+    segunda verdade que esta casa persegue.
+
+    ELA É PRIVADA POR CONVENÇÃO DE NOME, e não por contrato — do mesmo jeito
+    que o próprio `lightbar_actions` lê `footer_actions._lista_de_secoes` e
+    `._mensagem_de_aplicacao`. **RELATADO:** ela merece nome público, e isso é
+    `app/actions/lightbar_actions.py`, fora do território deste arquivo.
+
+    E ELA JÁ VEM HEDGED, o que é o ponto: *"o Hefesto **pode** estar
+    desligado"*. O `bool` do bridge colapsa quatro causas numa só (offline,
+    socket, timeout e erro do servidor), então afirmar a causa seria inventar
+    um diagnóstico — a frase aponta a mais provável e diz onde olhar.
+    """
+    from hefesto_dualsense4unix.app.actions import lightbar_actions
+
+    return str(lightbar_actions._AVISO_HEFESTO_DESLIGADO)
+
+
 def _so_abriu_o_seletor(o: dict[str, Any]) -> bool:
     """O clique é a ABERTURA de um `<input>`, e não uma escolha dela.
 
@@ -856,6 +909,9 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     não age, e MUDA O APARELHO. O ato é o `change`; a abertura não é gesto
     nenhum, e por isso o gesto sai calado — recusar dizendo poria uma frase de
     erro na tela dela só por ela ter aberto um seletor.
+
+    E O DESFECHO SE LÊ — 02/09/2026. A linha era `p.led_set(...)` sem olhar o
+    retorno; ver `sem_resposta_do_daemon` para o que isso custava.
     """
     from hefesto_dualsense4unix.core.led_control import hex_to_rgb
 
@@ -869,7 +925,8 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         if _so_abriu_o_seletor(o):
             return
         pedido = str(o.get("valor") or "")
-    p.led_set(hex_to_rgb(pedido), uniq=uniq)
+    if not p.led_set(hex_to_rgb(pedido), uniq=uniq):
+        raise RuntimeError(sem_resposta_do_daemon())
 
 
 @gesto("04-iluminacao.html", "apagar")
@@ -879,11 +936,17 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     NÃO é `lightbar.reset` — esse devolve a cor AUTOMÁTICA, que é o outro botão.
     Apagar e voltar ao automático são coisas diferentes, e o desenho dela as
     separa em dois botões de cores diferentes.
+
+    E O DESFECHO SE LÊ, pelo mesmo motivo do `cor` — ver
+    `sem_resposta_do_daemon`. Aqui o silêncio enganava mais: "Desligar" sem
+    resposta deixa a barra ACESA, que é exatamente a cara de "não cliquei
+    direito".
     """
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("apagar: o clique não disse em qual controle")
-    p.led_set((0, 0, 0), uniq=uniq)
+    if not p.led_set((0, 0, 0), uniq=uniq):
+        raise RuntimeError(sem_resposta_do_daemon())
 
 
 @gesto("04-iluminacao.html", "auto")
@@ -919,7 +982,14 @@ def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError("auto: o clique não disse em qual controle")
 
     # 1. LARGA O CLAIM — daí em diante quem manda na barra é o jogo.
-    p.chamar("lightbar.reset", uniq=uniq)
+    #
+    #    E SE ELE NÃO FOR LARGADO, A SEGUNDA CHAMADA NÃO CORRE — 02/09/2026.
+    #    O gesto seguia para o `led_set` mesmo com o `chamar` devolvendo
+    #    `False`: a barra ganhava uma cor nova com o claim ainda no Hefesto, que
+    #    é o OPOSTO do que este botão promete (*"deixar o jogo escolher"*), e
+    #    sem uma palavra na tela. Medido com o dublê de ponte muda.
+    if not p.chamar("lightbar.reset", uniq=uniq):
+        raise RuntimeError(sem_resposta_do_daemon())
 
     # 2. E DEIXA A COR PADRÃO, para não ficar PRETO quando ninguém escreve.
     #    Ordem dela, 01/09/2026: *"deixa em uma das cores default se o jogo não
@@ -937,7 +1007,9 @@ def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # dela era a POSIÇÃO disfarçada de default: um controle sem número nenhum
     # ganharia a cor do P1.
     dele = ctx.por_uniq(uniq) or {}
-    p.led_set(tuple(player_slot_color(_numero(ctx, dele or {"uniq": uniq}))), uniq=uniq)
+    if not p.led_set(tuple(player_slot_color(_numero(ctx, dele or {"uniq": uniq}))),
+                     uniq=uniq):
+        raise RuntimeError(sem_resposta_do_daemon())
 
 
 @gesto("04-iluminacao.html", "player")

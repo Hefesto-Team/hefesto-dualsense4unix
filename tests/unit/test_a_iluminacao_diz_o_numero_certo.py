@@ -940,3 +940,128 @@ def test_abrir_o_seletor_livre_nao_manda_cor_nenhuma():
     p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#FF8000",
                         "tipo": "button", "evento": "click"})
     assert p.chamadas == [("led_set", ((255, 128, 0),), {"uniq": DO_CABO["uniq"]})]
+
+
+# ---------------------------------------------------------------------------
+# 10. o botão que aceita o clique, não faz nada — e não diz
+# ---------------------------------------------------------------------------
+class PonteMuda:
+    """A ponte com o daemon SEM RESPONDER: tudo devolve o `False` do bridge.
+
+    `ipc_bridge._safe_call` devolve `(False, None)` para daemon offline, socket
+    ausente, timeout de conexão e erro JSON-RPC do servidor — e `led_set` e
+    `ponte.chamar` traduzem isso no `False` que este dublê imita. É o estado da
+    máquina dela toda vez que o Hefesto não está de pé.
+    """
+
+    def __init__(self) -> None:
+        self.chamadas: list = []
+
+    def __getattr__(self, nome):
+        def guardar(*a, **kw):
+            self.chamadas.append((nome, a, kw))
+            return False
+        return guardar
+
+
+def _clicar_mudo(gesto, clique, conectados=None):
+    """O mesmo clique, com o daemon calado — e a ponte volta mesmo se levantar.
+
+    Ela volta SEMPRE porque a metade que importa em dois destes testes é o que
+    o gesto deixou de chamar depois da recusa; um `pytest.raises` em volta
+    engoliria o objeto junto com a exceção.
+    """
+    import pacotes
+
+    ctx = pacotes.Contexto(state={}, mesa=MESA,
+                           conectados=list(conectados or [DO_CABO]), estados={})
+    p = PonteMuda()
+    p.erro = None
+    try:
+        pacotes.gesto_da_pagina("04-iluminacao.html", gesto)(ctx, clique, p)
+    except RuntimeError as e:
+        p.erro = e
+    return p
+
+
+#: OS TRÊS QUE ESCREVEM NO APARELHO. O quarto (`player`) já lia a resposta.
+QUE_ESCREVEM = [("cor", {"hex": "#FF8000"}),  # (noqa-acento) chave do contrato
+                ("apagar", {}), ("auto", {})]  # (noqa-acento) idem
+
+
+@pytest.mark.parametrize("gesto,clique", QUE_ESCREVEM)
+def test_o_botao_da_luz_recusa_dizendo_quando_o_daemon_nao_responde(gesto, clique):
+    """Os três botões que ESCREVEM no aparelho leem a resposta — e falam.
+
+    O DEFEITO, medido em 02/09/2026 com este mesmo dublê: `cor`, `apagar` e
+    `auto` chamavam `p.led_set(...)` e `p.chamar(...)` **jogando fora o
+    booleano**. Com o Hefesto desligado, o clique dela sumia: a barra não
+    mudava, a tela não dizia nada, e o segundo clique parecia o primeiro.
+
+    O contrato desta casa é explícito — *"o que o produto não faz não vira botão
+    que finge: vira botão que RECUSA DIZENDO"* —, e o quarto gesto desta mesma
+    aba (`player`) já o cumpria: ele lê `(ok, motivo)` e levanta `RuntimeError`.
+    Os outros três eram os únicos calados.
+
+    A MORDIDA: tire o `if not ok: raise` de qualquer um dos três e o caso dele
+    reprova aqui, porque o gesto volta a sair sem exceção nenhuma.
+    """
+    p = _clicar_mudo(gesto, {"uniq": DO_CABO["uniq"], **clique})
+    assert isinstance(p.erro, RuntimeError), (
+        f"o gesto {gesto!r} saiu calado com o daemon mudo — chamou "
+        f"{[c[0] for c in p.chamadas]!r} e não disse nada.")
+    assert str(p.erro), "recusou com frase VAZIA, que é o mesmo silêncio"
+
+
+def test_a_frase_da_recusa_e_a_do_motor_e_nao_uma_reescrita(monkeypatch):
+    """A frase é `lightbar_actions._AVISO_HEFESTO_DESLIGADO`, LIDA do motor.
+
+    LEI 0 desta casa: *"não temos que recriar nada"*. A janela GTK diz esta
+    frase neste MESMO evento (`lightbar_actions.py:950-951` —
+    `mensagem_de_secao_fora(resposta) or _AVISO_HEFESTO_DESLIGADO`, no ramo em
+    que o `led.set` por `uniq` volta sem corpo). Escrever outra aqui criaria a
+    segunda verdade que esta casa persegue: as duas telas diriam coisas
+    diferentes sobre o mesmo daemon desligado.
+
+    ESTA RÉGUA NASCEU MEDINDO A PALAVRA, e eu a peguei com a minha própria
+    mordida em 02/09/2026. Ela era `assert do_motor in str(p.erro)` com
+    `do_motor` lido do motor — o que parece reuso e não é: copiei a frase à mão
+    para dentro do pacote, palavra por palavra, e os **38 testes ficaram
+    verdes**. É o defeito exato que a auditoria deste mesmo dia nomeou noutro
+    ponto desta aba: *a régua confunde a PALAVRA com o ATO*.
+
+    O QUE MEDE O ATO é trocar o valor NO MOTOR e cobrar que a tela acompanhe:
+    uma cópia à mão continua dizendo a frase velha, e aí a régua acusa.
+    """
+    from hefesto_dualsense4unix.app.actions import lightbar_actions
+
+    do_motor = lightbar_actions._AVISO_HEFESTO_DESLIGADO
+    for gesto, clique in QUE_ESCREVEM:
+        p = _clicar_mudo(gesto, {"uniq": DO_CABO["uniq"], **clique})
+        assert do_motor in str(p.erro), (
+            f"o gesto {gesto!r} recusou com {str(p.erro)!r}, e a frase do "
+            f"motor para este evento é {do_motor!r}.")
+
+    #: A MEDIDA DO ATO: o motor troca a frase, e a tela tem de trocar junto.
+    outra = "\x00o motor mudou de frase"
+    monkeypatch.setattr(lightbar_actions, "_AVISO_HEFESTO_DESLIGADO", outra)
+    for gesto, clique in QUE_ESCREVEM:
+        p = _clicar_mudo(gesto, {"uniq": DO_CABO["uniq"], **clique})
+        assert outra in str(p.erro), (
+            f"o gesto {gesto!r} disse {str(p.erro)!r} com o motor dizendo "
+            f"outra coisa — a frase foi COPIADA para dentro do pacote, e no "
+            f"dia em que a GTK mudar a dela as duas telas divergem.")
+
+
+def test_o_automatico_nao_pinta_a_cor_se_o_claim_nao_foi_largado():
+    """Duas chamadas, dois desfechos — e a segunda não corre no escuro.
+
+    O gesto `auto` é composto: LARGA o claim (`lightbar.reset`) e SÓ ENTÃO pinta
+    a cor do slot. Se a primeira não passou, pintar depois deixaria a barra numa
+    cor nova com o claim ainda no Hefesto — o oposto do que o botão promete
+    (*"deixar o jogo escolher"*), e sem ninguém saber.
+    """
+    p = _clicar_mudo("auto", {"uniq": DO_CABO["uniq"]})
+    assert [c[0] for c in p.chamadas] == ["chamar"], (
+        f"o automático seguiu para a segunda chamada depois de a primeira "
+        f"falhar: {p.chamadas!r}")
