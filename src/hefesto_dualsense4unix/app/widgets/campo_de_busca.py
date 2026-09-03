@@ -25,7 +25,7 @@ ela.
 
 A ALTURA É LIMITADA, e o limite não é estética: sem teto, digitar uma letra que
 casa com vinte nomes empurraria o card inteiro para baixo e a fileira de cards
-junto com ele (``Gtk.Grid`` com ``row_homogeneous``, ``secao_controles.py:945``,
+junto com ele (``Gtk.Grid`` com ``row_homogeneous``, ``secao_controles.py:1056``,
 iguala as fileiras — um card alto encarece a fileira toda). Seis linhas é o teto,
 e o rolador aparece só quando ele é atingido.
 
@@ -196,7 +196,7 @@ if _GTK_DISPONIVEL:
             self._rolador.add(self._lista)
             # `no_show_all` para o `show_all()` da aba não revelar a lista de
             # todo card — é a mesma costura do campo livre da cor
-            # (`external_card.py:348`), e pela mesma razão: um `show_all` numa
+            # (`external_card.py:448`), e pela mesma razão: um `show_all` numa
             # aba com quatro cards abriria quatro listas vazias de uma vez.
             self._rolador.set_no_show_all(True)
             self._rolador.set_visible(False)

@@ -937,7 +937,7 @@ def mensagem_do_salvar(
 #
 #     $ grep -rn "pontes_confirmadas" src/hefesto_dualsense4unix/app/
 #     app/draft_config.py:445:    # `manager.pontes_confirmadas()` …  <- comentário
-#     app/actions/profiles_actions.py:3771: # carimbo viaja junto …    <- comentário
+#     app/actions/profiles_actions.py:4409: # carimbo viaja junto …    <- comentário
 #
 # Dois hits, os dois em COMENTÁRIO. Zero leitores. A aba PRESERVA o carimbo no
 # Salvar e nunca o mostrou — é a cura escrita, o dado publicado, e a tela muda.

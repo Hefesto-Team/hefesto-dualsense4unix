@@ -264,7 +264,7 @@ BOOTSTRAP = r"""
     }
     // O ALVO `cor` — o `color` do elemento, e ele é o par que faltava do
     // `fundo`. O clique do analógico é COR na GTK
-    // (`app/widgets/controller_card.py:5461`, "accent do CONTROLE quando
+    // (`app/widgets/controller_card.py:5462`, "accent do CONTROLE quando
     // pressionados") e era cor no piloto velho desta aba
     // (`interface/controles_vivos.py:388`,
     // `{color: s.on ? 'var(--plastico)' : ''}`). Sem este alvo, o pacote da

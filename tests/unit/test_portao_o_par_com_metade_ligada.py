@@ -847,22 +847,17 @@ _JANELA = 3
 #:    escrever: o conserto é a prosa dizer que o endereço é de antes da cura.
 _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "app/actions/config/moldura.py::test_config_a_janela_na_tela.py:262",
-    "app/actions/config/secao_exame.py::app/app.py:993",
     "app/actions/config/secao_janela.py::desktop_notifications.py:33",
     "app/actions/config/secao_janela.py::home_actions.py:1523",
     "app/actions/config/secao_mesa.py::home_actions.py:1523",
     "app/actions/footer_actions.py::home_actions.py:1050-1054",
     "app/actions/footer_actions.py::home_actions.py:1337-1341",
     "app/actions/home_actions.py::daemon/lifecycle.py:84",
-    "app/actions/lightbar_actions.py::status_actions.py:1998",
     "app/actions/trigger_specs.py::app/widgets/segmented_selector.py:168-180",
     "app/actions/trigger_specs.py::profiles/schema.py:161",
     "app/app.py::status_actions.py:548-551",
     "cli/cmd_test.py::app/ipc_bridge.py:341",
-    "core/ds_output_report.py::core/backend_pydualsense.py:786-790",
     "core/led_control.py::core/backend_pydualsense.py:2801",
-    "core/led_control.py::profiles/manager.py:392",
-    "core/rumble.py::profiles/manager.py:1541-1546",
     "daemon/ipc_handlers.py::app/actions/lightbar_actions.py:828",
     "daemon/ipc_handlers.py::core/backend_pydualsense.py:1222",
     "daemon/ipc_handlers.py::core/backend_pydualsense.py:1335",
@@ -872,7 +867,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "daemon/subsystems/hotkey.py::profiles/manager.py:384-387",
     "integrations/exame_da_mesa.py::sentinela_do_wrapper.py:524",
     "integrations/mesa_de_radio.py::tests/conftest.py:338",
-    "integrations/prontuario_dos_jogos.py::hotkey.py:447",
     "profiles/loader.py::schema.py:52",
     "utils/repo_files.py::cli/cmd_doctor.py:23",
     "utils/repo_files.py::emulation_actions.py:1200",
@@ -975,29 +969,85 @@ def _ancoras_candidatas(modulo: Path, numero: int) -> list[str]:
     return nomes
 
 
+def _blocos_definidos(linhas: list[str], nome: str) -> list[tuple[int, int, bool]]:
+    """Todo `def`/`class` chamado `nome`: `(primeira, derradeira, aninhada)`.
+
+    Pelo `ast`, e não pelo recuo — DUAS coisas que a contagem de colunas errava,
+    as duas medidas em 03/09/2026:
+
+    * **Onde o bloco ACABA.** O laço de recuo parava na primeira linha de
+      coluna zero, e numa assinatura de várias linhas isso é o `)` do
+      cabeçalho: o `from_simple_choice` (`profiles/simple_match.py:203`) virava
+      *"bloco 203-206"* com corpo até a 248, e a régua reprovava quem citasse a
+      linha exata do comportamento — que é o que a prosa faz o tempo todo.
+    * **Se é helper LOCAL.** Método de classe também é recuado e é endereço
+      legítimo; `def` dentro de outra função não é. Sete comentários citavam o
+      alvo `classe` do piloto (uma string do JS em `hefesto_vivo.py`) e a régua
+      os mandava para um `def classe` enterrado dentro de outro método, 1.900
+      linhas adiante — sem número que a calasse sem mentir.
+
+    Módulo que não parseia devolve lista vazia: quem cobra sintaxe é outro
+    portão, e acusar por causa dele seria acusar duas vezes o mesmo defeito.
+    """
+    try:
+        arvore = ast.parse("\n".join(linhas))
+    except SyntaxError:
+        return []
+    achadas: list[tuple[int, int, bool]] = []
+
+    def anda(no: ast.AST, dentro_de_funcao: bool) -> None:
+        for filho in ast.iter_child_nodes(no):
+            eh_funcao = isinstance(filho, (ast.FunctionDef, ast.AsyncFunctionDef))
+            eh_definicao = eh_funcao or isinstance(filho, ast.ClassDef)
+            if eh_definicao and filho.name == nome:  # type: ignore[attr-defined]
+                fim = getattr(filho, "end_lineno", None) or filho.lineno  # type: ignore[attr-defined]
+                achadas.append((filho.lineno, fim, dentro_de_funcao))  # type: ignore[attr-defined]
+            anda(filho, dentro_de_funcao or eh_funcao)
+
+    anda(arvore, False)
+    return achadas
+
+
 def _definicao_unica(linhas: list[str], nome: str) -> tuple[int, int] | None:
     """`(primeira, derradeira)` do bloco de `def`/`class` chamado `nome`.
 
     Só `def` e `class`, e só quando há UMA. Atribuição simples fica de fora de
     propósito: `address = ...` casaria com meia árvore e a régua acusaria quem
     está certo — a pior coisa que um portão faz.
+
+    E `def` ANINHADO DENTRO DE OUTRA FUNÇÃO também fica de fora, pela mesma
+    razão. O porquê de cada exclusão, com o caso medido, está em
+    `_blocos_definidos` — que é quem lê a árvore.
     """
-    padroes = (
-        re.compile(rf"^\s*(?:async\s+)?def\s+{re.escape(nome)}\s*\("),
-        re.compile(rf"^\s*class\s+{re.escape(nome)}\s*[(:]"),
-    )
-    onde = [i + 1 for i, ln in enumerate(linhas) for p in padroes if p.match(ln)]
-    if len(onde) != 1:
+    achadas = _blocos_definidos(linhas, nome)
+    if len(achadas) != 1:
         return None
-    inicio = onde[0]
-    recuo = len(linhas[inicio - 1]) - len(linhas[inicio - 1].lstrip())
-    fim = inicio
-    while fim < len(linhas):
-        atual = linhas[fim]
-        if atual.strip() and (len(atual) - len(atual.lstrip())) <= recuo:
-            break
-        fim += 1
-    return inicio, fim
+    inicio, fim, aninhada = achadas[0]
+    return None if aninhada else (inicio, fim)
+
+
+def _endereco_corroborado(linhas: list[str], cit: CitacaoDeLinha, nomes: list[str]) -> bool:
+    """O trecho citado MOSTRA algum dos nomes da prosa em volta?
+
+    Se mostra, o endereço confere e a régua se cala — mesmo que o `def` daquele
+    nome more noutro lugar. Curado em 03/09/2026, e os dois casos que forçaram a
+    cura estavam CERTOS e eram acusados:
+
+    * `app/telas/vibracao.py:204` cita `controller_card.py:1511-1541` dizendo
+      *"li o corpo"* do `motores_no_fisico` — e ele começa exatamente na 1511. A
+      régua pegou da mesma frase o `pedido_de_vibracao_fresco`, que é o assunto
+      do parágrafo, e mandou o endereço para 1554.
+    * `interface/pacotes/a03_gatilhos.py:1947` cita `triggers_actions.py:597`
+      dizendo *"é chamado ANTES de todo envio"* — 597 é a CHAMADA, e é o que a
+      frase promete. A régua exigia a definição, na 342.
+
+    A suposição que caiu: *toda citação aponta para o `def`*. Prosa cita o ponto
+    de USO tanto quanto o de definição, e cita o símbolo que interessa, não o
+    último que apareceu entre crases. Endereço envelhecido continua pego — a
+    linha velha não tem traço do nome, que é o que a mordida planta.
+    """
+    trecho = "\n".join(linhas[cit.ini - 1 : cit.fim])
+    return any(re.search(rf"\b{re.escape(nome)}\b", trecho) for nome in nomes)
 
 
 def enderecos_envelhecidos(raiz: Path | None = None) -> dict[str, str]:
@@ -1019,7 +1069,10 @@ def enderecos_envelhecidos(raiz: Path | None = None) -> dict[str, str]:
                 "âncora em linha vazia não ancora nada"
             )
             continue
-        for nome in _ancoras_candidatas(raiz / cit.citante, cit.linha_da_citacao):
+        candidatas = _ancoras_candidatas(raiz / cit.citante, cit.linha_da_citacao)
+        if _endereco_corroborado(linhas, cit, candidatas):
+            continue
+        for nome in candidatas:
             bloco = _definicao_unica(linhas, nome)
             if bloco is None:
                 continue
