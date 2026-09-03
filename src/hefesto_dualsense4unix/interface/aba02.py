@@ -25,7 +25,8 @@ from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTAD
 # O `CLICADO` NÃO ENTRA: a cena fixa do mockup não tem analógico apertado, e
 # importá-lo sem uso é F401 no portão. Ele é do PACOTE — quem o escreve na
 # tela é o tique, não o desenho.
-from pacotes.a02_controles import COM_TOQUE, ROTULO_DO_CLIQUE, SEM_TOQUE
+from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
+from pacotes.a02_controles import ROTULO_DO_CLIQUE
 
 # ---------------------------------------------------------------------------
 # D-A-LEITURA-DO-ACELERÔMETRO-SAI-DA-TELA (29/08/2026) — MUDANÇA DE ESPECIFICAÇÃO.
@@ -507,9 +508,44 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      148px de superfície são 2,7% do curso, e no fim do curso (100%) o ponto
      saía inteiro para fora do pad. O produto centra: `ctx.arc(px, py, 3.5)`
      em `app/widgets/sensor_widgets.TouchpadView._on_draw`. */
+  /* O PONTO NASCE APAGADO E A CLASSE `on` O ACENDE — decisão dela de
+     02/09/2026: *"o pontinho do touchpad só aparece quando há toque — hoje ele
+     aparece com `touching` falso, contra o que a própria dica promete"*. Ele
+     era pintado pelo `style` do gerador (`opacity:0` só no card que o desenho
+     queria vazio), e por isso ficava aceso na tela dela com o dedo fora do pad
+     — fotografado em 02/09 às 19h, `touch-estado` dizendo "Sem toque" com o
+     ponto ciano no lugar. A CLASSE é o único alvo do piloto que serve: os sete
+     são texto·largura·fundo·valor·html·classe·cor, e `classe` é o único
+     idempotente que liga e desliga (`hefesto_vivo.py:217-224`). */
   .touch .ponto{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--cyan);
-                box-shadow:0 0 8px var(--cyan);transform:translate(-50%,-50%)}
-  .barra-luz{height:20px;border-radius:4px}
+                box-shadow:0 0 8px var(--cyan);transform:translate(-50%,-50%);opacity:0}
+  .touch .ponto.on{opacity:1}
+  /* A COR DA BARRA DE LUZ É `currentColor`, e isso é o que a torna PINTÁVEL.
+     Ela era `style="background:#7EB8D4"` do gerador — desenho cravado ao lado
+     de um campo que já dizia a cor viva, e os dois se contradiziam na mesma
+     moldura. O alvo `fundo` do piloto não serve, e isto está MEDIDO no
+     WebKitGTK — o motor da janela dela —, numa `Gtk.OffscreenWindow` sobre
+     esta página, em 02/09/2026. Os dois ramos, TRÊS escritas do mesmo
+     `#0000FF`, o valor que o P1 dela publica:
+
+         cor    [1, 0, 0]   e `el.style.color` volta `rgb(0, 0, 255)`
+         fundo  [1, 1, 1]   e `el.style.background` volta `rgb(0, 0, 255)`
+
+     O ramo `fundo` compara `el.style.background` com o que VAI escrever, e o
+     CSSOM normaliza na atribuição: a comparação nunca casa e o contador de
+     pintura soma +1 por tique, para sempre. O ramo `cor` escreve e DEPOIS
+     compara, e é idempotente por construção. Daí o desvio: o produto escreve
+     `color` e o `background` o segue — `getComputedStyle(..).backgroundColor`
+     deu `rgb(0, 0, 255)` depois da escrita e `rgb(40, 42, 54)` (o `--panel`)
+     depois do vazio, na mesma medição.
+
+     FATO QUE ISTO DERRUBA: `pacotes/__init__.py:375-382` explica o `fundo`
+     dizendo que o problema é o TRAVESSÃO (`background: "—"` é inválido). É
+     verdade, e é MENOR que o defeito: uma cor perfeitamente VÁLIDA infla o
+     contador do mesmo jeito.
+     SEM COR DE LINHA o retângulo fica `--panel`, que é o "nada" que ela
+     decidiu para todo campo sem informação. */
+  .barra-luz{height:20px;border-radius:4px;background:currentColor;color:var(--panel)}
   /* os analógicos: grandes e SEM moldura, com a cruz de eixos dentro */
   .sticks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   /* o título do analógico é o único sem moldura, e por isso nascia 8px ACIMA dos
@@ -1019,11 +1055,19 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
     # — a que `--sem-ponte` mostra — não muda de forma nesta leva, e quem pinta
     # o valor de verdade é a ponte viva.
     alto_on = " on" if alto_mudo else ""
-    toque_txt = COM_TOQUE if tocando else SEM_TOQUE
+    # A PALAVRA É A DO PRODUTO, e o dono é `sensor_widgets.texto_toques` — o
+    # mesmo que a GTK chama na mesma conta (`controller_card.py:5079`,
+    # `texto_toques(1 if tocando else 0)`). Ela era `COM_TOQUE`/`SEM_TOQUE`,
+    # duas constantes do pacote, e o "Tocando" era palavra do desenho: ela
+    # decidiu em 02/09/2026 (item 15) que o touchpad usa a do produto.
+    toque_txt = texto_toques(1 if tocando else 0)
     # os três botões de som: a trava e a dica saem do MESMO booleano, senão um
     # botão apagado poderia carregar a dica de quem está clicável.
     alto_trava, alto_dica = ("", DICA_ALTO_MUDO) if alto_pode else (" disabled", DICA_ALTO_SEM_POSSE)
-    sumir = "" if tocando else ";opacity:0"
+    # O PONTO ACENDE POR CLASSE, e não por `style`: é o que o produto
+    # alcança (`data-hef-alvo="classe"`) e o que faz o desenho parar de
+    # contradizer o campo ao lado dele.
+    ponto_on = " on" if tocando else ""
     def gx(fam, e, v, cor):
         return (f'''            <div class="eixo" data-eixo="{fam}-{e.lower()}"><span>{e}</span><span>{v}</span>
               <span class="g"><span class="v" style="{cor}"></span></span></div>''')
@@ -1047,12 +1091,14 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="{DICA_TOQUE}">{toque_txt}</span></div>
             <div class="touch">
-              <span class="ponto" style="left:{touch[0]}%;top:{touch[1]}%{sumir}"></span></div>
+              <span class="ponto{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"
+                style="left:{touch[0]}%;top:{touch[1]}%"></span></div>
           </div>
           <div class="moldura luz" style="margin-top:9px">
             <div class="rot rot-linha">Barra de luz
               <span class="de-quem" data-campo="luz-hex" title="{DE_QUEM_E_A_LUZ}">{luz.upper()}</span></div>
-            <div class="barra-luz" style="background:{luz}"></div>
+            <div class="barra-luz" data-campo="luz-cor" data-hef-alvo="cor"
+              style="color:{luz}"></div>
           </div>
           <div class="moldura led" style="margin-top:9px" title="{DICA_LED_JOGADOR}">
             <div class="rot rot-linha">LED do jogador</div>
@@ -1175,8 +1221,9 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
             </div>
             {onda(alto_v)}
             <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:{alto_v[0]}%"></span></span>
-              <span class="n">{alto_v[0]}</span>
+              <span class="trilho"><span class="cheio" data-campo="alto-barra"
+                data-hef-alvo="largura" style="width:{alto_v[0]}%"></span></span>
+              <span class="n" data-campo="alto-num">{alto_v[0]}</span>
               <button class="mudo-i{alto_on}" data-gesto="mudo" data-mudo="alto-falante"{alto_trava} title="{alto_dica}">♪</button>
             </div>
             <div class="rota">
@@ -1573,7 +1620,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>A dica do 🎙 estava errada, e a correção ficou.</b> Ela dizia que o 🎙 <i>"é o mesmo que apertar o botão do controle"</i>, e não é: clicar ali faz o Hefesto <b>tomar</b> o comando do mudo, e o botão do aparelho para de valer. A dica de hoje diz esse preço — é a informação que a antiga escondia.</li>
     <li><b>Os analógicos estavam mentindo de dois jeitos.</b> (1) No fim do curso — analógico todo à esquerda ou todo para cima — o valor <b>0</b> era trocado por <b>128</b>, o centro: a bolinha <b>pulava de volta ao meio</b> no talo. (2) A bolinha era posicionada pelo <b>canto</b> e não pelo <b>centro</b>, então em repouso ela nascia <b>4,7 px</b> abaixo e à direita da cruz — como se cada eixo tivesse 12,5 unidades presas. Agora o desvio em repouso é <b>0,19 px</b> e os dois extremos são simétricos.</li>
     <li><b>O motivo que eu te dei para o acelerômetro não estar na tela era falso.</b> Eu escrevi aqui que <b>"o aparelho não entrega esse dado"</b>. Ele entrega. Medido nos seus dois controles: o mesmo nó de sensor publica os três eixos do acelerômetro a <b>250 leituras por segundo</b>, calibrados, e a conta fecha na gravidade — <b>0,996 g</b> num controle e <b>0,993 g</b> no outro, contra 1 g de referência. Os dois estavam em <b>poses diferentes</b> na sua mesa (25° de diferença), então não é número decorado, é leitura. Quem não lia era o <b>Hefesto</b>: o dado chegava até a linha que o descarta. A pergunta que ficou — <i>vale ler?</i> — foi respondida no dia seguinte, e o campo está na tela desde 30/08.</li>
-    <li><b>O touchpad passou a dizer alguma coisa.</b> Ele é um retângulo que só mostra um ponto <b>enquanto o dedo está lá</b> — e medindo 238 leituras dos seus dois controles, o dedo estava lá em <b>zero</b> delas. Ele nunca mostrava nada. Agora o canto diz <b>Sem toque</b> ou <b>Tocando</b>, como na janela de hoje. E a superfície ganhou a <b>proporção do sensor de verdade</b> (16:9, que é o 1920×1080 do touchpad): ela estava 41% esticada na vertical, e com ela a posição do dedo.</li>
+    <li><b>O touchpad passou a dizer alguma coisa.</b> Ele é um retângulo que só mostra um ponto <b>enquanto o dedo está lá</b> — e medindo 238 leituras dos seus dois controles, o dedo estava lá em <b>zero</b> delas. Ele nunca mostrava nada. Agora o canto diz <b>Sem toque</b> ou <b>1 toque</b> — a palavra do produto, a mesma que a janela de hoje escreve (<code>sensor_widgets.texto_toques</code>), por decisão sua de 02/09. E a superfície ganhou a <b>proporção do sensor de verdade</b> (16:9, que é o 1920×1080 do touchpad): ela estava 41% esticada na vertical, e com ela a posição do dedo.</li>
     <li><b>O LED do jogador virou campo</b>, com rótulo e moldura próprios, embaixo da Barra de luz — as cinco lâmpadas no padrão do controle. Ele nasceu ontem como uma <b>linha espremida</b> dentro da moldura da Barra de luz (13 px num campo de 75) e agora é o <b>terceiro campo</b> da coluna. Com ele ali, <b>o número do jogador saiu do título do card</b>, como você pediu. Ele <b>continua nas linhas fechadas</b>, e isso é de propósito: linha fechada não tem lâmpada, e sem o número não sobraria quem aquele controle é.</li>
     <li><b>O touchpad tinha voltado a esticar, e agora ele não estica mais.</b> Ontem a superfície ganhou a proporção do sensor como <b>piso</b>, não como regra — e com um piso ela virou a esponja da coluna: medido hoje na sua mesa, <b>148 × 203</b>, que são <b>2,4 vezes</b> a altura que 148 px de largura pedem num sensor 16:9. A correção de anteontem tinha derrubado 41% de esticada e o piso devolveu 145%. Agora a superfície é <b>148 × 83</b> em qualquer mesa, e quem cresce são a <b>cor</b> da barra e o <b>campo</b> do LED, que não têm proporção a respeitar.</li>
     <li><b>O maior buraco da tela fechou: eram 181 px.</b> Entre o eixo Z do giroscópio e o L2 havia um vazio do tamanho de meio card, e ele não era desenho — era <b>resto</b>: o L2/R2 morava dentro da moldura do giroscópio, colado no pé, e a sobra da coluna inteira empoçava no meio. Ele até mudava de tamanho com a mesa (181 px com os seus dois controles, 95 com quatro). Agora a coluna são <b>dois campos</b>, cada um com rótulo — <b>Sensores</b> e <b>Gatilhos</b> —, e a sobra entra por dentro dos dois abrindo as linhas. Maior vão da coluna: <b>5 px</b>. As cinco colunas continuam terminando na mesma linha.</li>
@@ -1835,9 +1882,30 @@ def _conferir(doc):
         exigir(corpo.count(f'data-campo="{campo}"') == len(CONECTADOS),
                f"a bateria perdeu o endereço `{campo}` — o número volta a ser "
                f"o do desenho")
-    exigir(corpo.count('data-hef-alvo="largura"') == len(CONECTADOS),
-           "a barra da bateria perdeu o `data-hef-alvo=largura`: a pintura vai "
-           "escrever o número DENTRO da barra, em vez de dar-lhe a largura")
+
+    # 2d. CADA BARRA COM O SEU ALVO, e a régua deixou de contar por atacado.
+    #     Ela era `corpo.count('data-hef-alvo="largura"') == len(CONECTADOS)`,
+    #     e isso não olhava a barra da BATERIA: olhava se existiam N larguras
+    #     no documento inteiro. Endereçar a barra do VOLUME (decisão dela de
+    #     02/09, item 16) fez a conta dar o dobro e a régua reprovou uma
+    #     ENTREGA — que é a forma exata do defeito que esta casa chama de
+    #     "régua que cimenta o que existia".
+    #
+    #     Agora ela olha o ELEMENTO: todo `data-campo` desta lista tem de
+    #     carregar o seu alvo, e nenhum outro. MORDE de verdade — tirar o
+    #     `data-hef-alvo` de UMA das barras reprova nomeando qual, o que a
+    #     contagem global não fazia (ela passaria com a largura no lugar
+    #     errado, desde que o total batesse).
+    for campo, alvo in (("bateria-barra", "largura"), ("alto-barra", "largura"),
+                        ("luz-cor", "cor"), ("touch-ponto", "classe")):
+        tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
+        exigir(len(tags) == len(CONECTADOS),
+               f"o endereço `{campo}` não está nos {len(CONECTADOS)} cards")
+        errados = [t for t in tags if f'data-hef-alvo="{alvo}"' not in t]
+        exigir(not errados,
+               f"`{campo}` perdeu o `data-hef-alvo={alvo}` em {len(errados)} "
+               f"card(s): a pintura vai escrever o valor como TEXTO dentro do "
+               f"elemento, em vez de mexer no que ele desenha")
 
     # 3. O "· 100 % · Acordado" saiu do rótulo do alto-falante.
     exigir("Acordado" not in corpo, "o estado do alto-falante voltou ao rótulo")

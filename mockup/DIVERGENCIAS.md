@@ -23,6 +23,46 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 <!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
 
+## 02-controles.html
+- **02/09/2026** — **QUATRO endereços novos**, e três deles são decisão sua deste
+  dia. Nenhum muda o que a tela DESENHA: o card continua idêntico ao aprovado.
+  O que muda é que quatro pedaços que eram desenho cravado passam a ter dono.
+
+  | endereço | onde | o que era | o que passa a ser |
+  | --- | --- | --- | --- |
+  | `alto-num` | o `100` ao lado da barra do alto-falante | **cravado**, igual em todo controle | a porcentagem viva, pela curva medida no hardware |
+  | `alto-barra` | a barra do alto-falante | cravada em `width:100%` | a mesma porcentagem, como largura |
+  | `luz-cor` | o retângulo da Barra de luz | `background:#7EB8D4` do mockup | a cor viva do LED, ou nada quando não se sabe |
+  | `touch-ponto` | o pontinho do touchpad | aceso pelo `style` do desenho | **só aparece quando há toque** |
+
+  **Item 16 da sua lista, palavra por palavra:** *"o volume do alto-falante ganha
+  endereço. O número E a barra. Hoje os dois estão congelados: com o volume em
+  40, a tela mostra 100."*
+
+  **Item 15:** *"o pontinho do touchpad só aparece quando há toque — hoje ele
+  aparece com `touching` falso, contra o que a própria dica promete."*
+
+  **O `luz-cor` não estava na sua lista, e é um defeito que a foto pegou.**
+  Fotografada a aba em 02/09 às 19h, com os seus dois controles: o campo dizia
+  `#0000FF` (a cor viva do P1) e o retângulo logo abaixo dele estava no
+  `#7EB8D4` do mockup. **O campo e o desenho ao lado dele diziam cores
+  diferentes, na mesma moldura.** A régua do mockup não vê isso — ela conta
+  `data-campo`, e o retângulo não tinha nenhum.
+
+  **DUAS MUDANÇAS DE PALAVRA, e as duas são o item 15:** o canto do touchpad
+  passa a dizer **`Sem toque` / `1 toque`** em vez de `Sem toque` / `Tocando`.
+  `Tocando` era palavra do desenho; `1 toque` é a do produto
+  (`app/widgets/sensor_widgets.texto_toques`), a mesma que a janela GTK escreve.
+  **`2 toques` a tela ainda não pode dizer**: o daemon publica UM booleano
+  (`touchpad.touching`), não uma contagem de dedos — no dia em que publicar, a
+  palavra sai sozinha, sem ninguém tocar nesta aba.
+
+  **O que o produto ainda NÃO alcança, e espera outro trabalho:** a POSIÇÃO do
+  ponto. O `left`/`top` dele continua o do desenho (`62%`/`44%` no P1), porque o
+  piloto não tem alvo de posição — os sete são
+  texto·largura·fundo·valor·html·classe·cor. O dado existe e já está calculado
+  (`controller_card.touchpad_do_inputs` devolve a fração x/y); falta o alvo.
+
 ## 05-vibracao.html
 - **02/09/2026** — **a linha do estado da vibração**, que a janela GTK tem e esta
   aba não tinha. Ela nasce no rodapé do quadro e diz, com as palavras que já
