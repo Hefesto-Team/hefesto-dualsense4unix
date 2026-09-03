@@ -411,6 +411,26 @@ def leitura_viva(entrada: dict[str, Any]) -> dict[str, Any]:
 #: exatamente a mentira que esta seção veio matar.
 BORDA_SEM_COR = "var(--border-forte)"
 
+#: O PISO DA FOLHA — a cor do assento que a mesa VIVA não nomeia, e ele é o que
+#: torna a troca inteira honesta.
+#:
+#: A PÁGINA TEM QUATRO ASSENTOS e a mesa viva tem os controles que estiverem
+#: ligados AGORA. Sem este piso, o assento sem controle ficava com a cor que o
+#: DESENHO deixou na folha: com um White no cabo e mais nada, o `p2` seguia
+#: `#7eb8d4` — Starlight Blue num lugar vazio, medido no WebKitGTK em
+#: 03/09/2026 (`borderTopColor` → `rgb(126, 184, 212)`).
+#:
+#: E ELE NÃO PODE SER AUSÊNCIA: `.ctl{border:2px solid var(--plastico)}`, e uma
+#: `var()` sem valor invalida a declaração inteira — a borda não fica neutra,
+#: ela some. A lição está medida no `.ctl.off` do `aba02.py`.
+#:
+#: A CÓPIA É DELIBERADA. O gêmeo deste texto é `aba02.PISO_DO_PLASTICO`, e os
+#: dois não podem se importar: o gerador é dono da BANCADA e o pacote é dono do
+#: PRODUTO — importar um do outro arrastaria a bancada para o fecho de produção
+#: (medido em 02/09, três lápides de `monta.py` virando alcançáveis). Quem
+#: impede a divergência é o teste, que compara os dois byte a byte.
+PISO_DA_FOLHA = ".ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}"
+
 
 def cor_da_borda(nome: str) -> str:
     """O hexa da borda daquele plástico, ou o neutro quando não se leu.
@@ -431,26 +451,31 @@ def cor_da_borda(nome: str) -> str:
 
 
 def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
-    """As regras de `--plastico` da mesa VIVA, para a folha endereçada da página.
+    """A folha de `--plastico` INTEIRA, montada da mesa VIVA.
 
     POR QUE UMA FOLHA E NÃO UM CAMPO POR CARD: `--plastico` é propriedade
     personalizada de CSS, e o `escrever` do piloto não tem alvo que a escreva —
-    os sete são texto · largura · fundo · valor · html · classe · cor
-    (`hefesto_vivo.py`). Enquanto ele não tiver, o canal honesto é o que o
-    gerador abriu: um `<style data-campo="plastico-css">` no fim do `<head>`,
-    depois da folha do desenho e com o MESMO seletor, que por isso vence sem
-    `!important`.
+    os oito são texto · largura · fundo · valor · html · classe · cor ·
+    plástico (`hefesto_vivo.py`), e o `plastico` escreve estilo de LINHA, num
+    elemento. Aqui a cor precisa alcançar a caixa E o chip do mesmo assento, que
+    é o que um seletor faz e um estilo de linha não.
+
+    ELA SUBSTITUI A FOLHA, não se soma a ela: o `<style data-campo="plastico-css"
+    data-hef-alvo="html">` da página nasce com o desenho e o produto troca o
+    `innerHTML` inteiro. Por isso o :data:`PISO_DA_FOLHA` vem PRIMEIRO — o
+    assento que esta mesa não nomeia tem de cair no neutro, e não sobrar com a
+    cor que o desenho deixou ali.
 
     O ENDEREÇO É O `pref` (`p1`…), e não o `uniq`: é o que o `data-controle` das
     páginas traz, e é a mesma tradução que o piloto faz para as colunas.
     """
-    return "\n".join(
+    return "\n".join([PISO_DA_FOLHA] + [
         f'.ctl[data-controle="{c.get("pref")}"],'
         f'.fita .chip[for="c-{c.get("pref")}"]'
         f'{{--plastico:{cor_da_borda(str(c.get("nome") or ""))}}}'
         for c in mesa
         if c.get("pref")
-    )
+    ])
 
 
 #: O CLIQUE DO ANALÓGICO — o rótulo dentro do círculo, e ele é ENDEREÇO, não
