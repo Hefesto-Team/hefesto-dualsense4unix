@@ -212,9 +212,38 @@ EXTERNAL_PLAYER_LED_ENABLED = False
 #: quantificação que estava escrita em cima dela.
 NINTENDO_REAL_OUI = OUI_PRO_DESTA_BANCADA
 
-#: FASE 1 (GYRO-02): só USB. BT é o MESMO território de subcomando que matou
-#: o 8BitDo (`joycon_enforce_subcmd_rate`) — falta medição de campo com o
-#: kernel-watch `[JOYCON]` limpo antes de liberar por rádio.
+#: Só USB — e o porteiro é NOSSO, não do aparelho.
+#:
+#: **FATO ERRADO, SUBSTITUÍDO em 03/09/2026 (ONDA-TRANSPORTE-IDENTIDADE).**
+#: Esta nota dizia *"FASE 1 (GYRO-02): só USB. BT é o MESMO território de
+#: subcomando que matou o 8BitDo — falta medição de campo com o kernel-watch
+#: `[JOYCON]` limpo antes de liberar por rádio"*, e isso lia como *território
+#: não medido*: quem chegasse aqui procurando o que falta iria medir o rádio.
+#: A leitura do fonte derrubou a premissa, e o que falta é OUTRA coisa.
+#:
+#: **O QUE O FONTE DIZ, e o endereço está aqui para ser conferido:** o
+#: `ENABLE_IMU` (subcomando `0x40`) é disparado pelo PRÓPRIO `hid-nintendo`
+#: dentro do `joycon_init`, **em todo barramento**. O único porteiro daquela
+#: chamada é `joycon_has_imu()`, que olha o TIPO do controle e nunca o
+#: `hdev->bus` (`assets/dkms/hid-nintendo/hid-nintendo.c:144` o define,
+#: `:839-844` é o porteiro, `:1568-1579` é quem monta, `:2924-2937` é a
+#: chamada). **O aparelho aceita pelos DOIS transportes** — não é ele que
+#: recusa aqui, é este `if`.
+#:
+#: **O GATE FICA, COM A RAZÃO TROCADA — e são três, nenhuma delas "não sei":**
+#:
+#: 1. **por rádio não há o que ganhar**: o kernel já mandou o MESMO pacote lá,
+#:    e a canônica classifica o nosso envio como *provável código morto*;
+#: 2. **o rádio custa 3x**: `JC_SUBCMD_RATE_LIMITER_BT_MS` são 60 ms entre
+#:    subcomandos contra 20 ms no cabo (`hid-nintendo.c:978-980`);
+#: 3. **é o território do EXT-04**, o bombardeio de subcomando por rádio que
+#:    fez o `hid-nintendo` DESREGISTRAR o 8BitDo — ver o topo deste módulo.
+#:
+#: **A DÍVIDA QUE SOBRA, escrita para quem for pagá-la:** ninguém mediu se
+#: algum Pro genuíno fica em STANDBY **depois** do `joycon_init` — que é a
+#: única hipótese em que o nosso envio deixaria de ser redundante. Enquanto
+#: essa medição não existir, economizar subcomando no lado frágil é o
+#: comportamento certo, e liberar o rádio seria comprar risco por nada.
 _IMU_ENABLE_ALLOWED_BUS = "usb"
 
 #: Nunca loop: no máximo 2 tentativas por adoção, espaçadas ≥2s (mesmo
@@ -860,9 +889,11 @@ class ExternalImuEnabler:
     - gatilho por NEGATIVA:
       :func:`~hefesto_dualsense4unix.core.linhagem_nintendo.e_pro_genuino` —
       cara de Pro **e** OUI fora das faixas de clone conhecidas (nunca o
-      8BitDo, que mente VID/PID mas nunca o MAC) **E** ``bus == "usb"``
-      (fase 1 — BT bloqueado até haver medição de campo com o kernel-watch
-      ``[JOYCON]`` limpo).
+      8BitDo, que mente VID/PID mas nunca o MAC) **E** ``bus == "usb"``.
+      **A razão do ``bus`` mudou em 03/09/2026** e está inteira em
+      :data:`_IMU_ENABLE_ALLOWED_BUS`: não é que o rádio seja território
+      desconhecido — é que lá o kernel já mandou o MESMO subcomando, e o
+      nosso custaria 3x mais no lado que já derrubou o 8BitDo.
       **UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026):** até esta data o
       gatilho era a igualdade com UMA faixa OUI, a desta bancada, e por isso
       o giroscópio de todo Pro de outra safra ficava em STANDBY para sempre.
@@ -929,7 +960,10 @@ class ExternalImuEnabler:
                     continue
                 bus = str(entry.get("bus") or "").lower()
                 if bus != _IMU_ENABLE_ALLOWED_BUS:
-                    continue  # FASE 1: BT bloqueado
+                    # O PORTEIRO É NOSSO, e o aparelho aceita nos dois — a
+                    # razão de ele ficar está em `_IMU_ENABLE_ALLOWED_BUS`,
+                    # e não é mais "o rádio não foi medido".
+                    continue
                 tentativas = self._attempts.get(key, 0)
                 if tentativas >= IMU_ENABLE_MAX_ATTEMPTS:
                     continue  # esgotado nesta adoção — nunca loop
