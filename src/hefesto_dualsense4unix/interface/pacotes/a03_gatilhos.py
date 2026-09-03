@@ -860,6 +860,225 @@ def html_das_opcoes_de_pronto() -> str:
     return "\n".join(linhas)
 
 
+# ---------------------------------------------------------------------------
+# O CHIP DA COLUNA — a identidade do controle, e ela VEM DE CIMA.
+#
+# A LEI, e ela é dela (03/09/2026): *"se no topo tá mostrando controle white
+# player 1, então cada aba vai usar os controles lá de cima. Não mistura com a
+# info dos mockups."*
+#
+# O QUE ELA VIU, com os dois controles na mesa e três centímetros entre uma
+# coisa e outra: a fita dizendo `P1 · White · USB` e o cabeçalho da coluna logo
+# abaixo dizendo `Cosmic Red · USB`. A cor do card não era de controle nenhum
+# dela — a fita lia do aparelho e as dez abas abaixo continuavam mostrando o
+# controle do desenho.
+#
+# A FITA NEM SEMPRE LÊ, e isso é fato medido em 03/09/2026, não ressalva:
+# `hefesto_vivo._fita` devolve `""` — deixando a fita INTEIRA no desenho —
+# quando QUALQUER controle da mesa está sem cor lida (`hefesto_vivo.py:598`).
+# Com um controle no rádio, que é a mesa dela agora, a fita fica no mockup. Esta
+# aba não depende disso: ela lê a MESA, controle a controle, e cala sobre quem
+# não disse a cor em vez de calar sobre todos.
+#
+# UM DONO, DOIS CHAMADORES — é a forma que a `fileira_de_players` da aba
+# Iluminação já usa. `aba03.py` chama estas funções para desenhar a bancada e o
+# `pacote()` as chama a cada tique para pintar o produto. Enquanto eram duas
+# escritas, o desenho e o produto podiam divergir sem ninguém ver.
+# ---------------------------------------------------------------------------
+
+#: A CLASSE DO EMBRULHO DO CHIP. Ela é o alvo do `blocos` (um seletor CSS) para
+#: as colunas SEM aparelho, e o lugar do `data-campo` para as que têm.
+CLASSE_DO_CHIP = "cabeca"
+
+#: O ENDEREÇO DO CHIP — e ele mora no EMBRULHO, não no `<span>`.
+#:
+#: POR QUE O EMBRULHO E NÃO O CHIP: o piloto **não sabe reescrever o estilo de
+#: um elemento**. Os alvos são texto·largura·fundo·valor·html·classe·cor, e
+#: nenhum deles escreve uma propriedade CSS de autor — e a cor do plástico é
+#: `--plastico` no `style` do próprio `<span>`. Trocando o MIOLO do embrulho, o
+#: `<span>` inteiro é refeito: borda, dica e texto de uma vez.
+#:
+#: E POR QUE ELE NÃO PODE MORAR NO `<span>`, que era onde ele estava até a
+#: medição de 03/09/2026 desfazer a escolha: `escrever()` carimba
+#: `data-hef-visto="1"` no elemento que visita, e um selo posto DENTRO do HTML
+#: comparado faz a comparação nunca mais bater. Medido com o piloto e os dois
+#: controles dela, 17 tiques:
+#:
+#:     selo dentro do miolo comparado ... 17 tiques pintaram
+#:     selo no embrulho (agora) .........  2 tiques pintaram
+#:
+#: Repintar o mesmo HTML a cada tique não muda um pixel, mas **infla o contador
+#: de pinturas** — que é O instrumento com que esta casa prova que um endereço
+#: existe. `hefesto_vivo.escrever` diz a mesma frase sobre o `<select>` que
+#: recusa um valor: *um contador que mente é pior que um campo parado*.
+CAMPO_DO_CHIP = "chip-do-controle"
+
+#: O ENDEREÇO NO PRÓPRIO `<span>`, e ele existe por UMA razão: a régua
+#: `check_identidade_vem_de_cima.py` julga o `--plastico` pelo endereço do
+#: ELEMENTO QUE O CARREGA — um pai endereçado não dá ao filho o direito de
+#: trazer cor congelada, e está certa nisso. Sem ele, os quatro chips
+#: continuariam acusados com o produto já os reescrevendo.
+#:
+#: ELE É `data-hef`, E O NOME NÃO CASA COM CHAVE NENHUMA, de propósito. O
+#: `achar()` do piloto varre os três vocabulários pela MESMA chave: dar ao
+#: `<span>` o nome do embrulho faria a pintura escrever um chip DENTRO do chip.
+#: Quem reescreve este elemento é o pai, pelo alvo `html` — o `<span>` é
+#: refeito inteiro a cada tique, e por isso não precisa (nem pode) receber
+#: escrita própria.
+HEF_DO_CHIP = "chip.plastico"
+
+#: O separador dos pedaços do rótulo. É o mesmo `monta.SEPARADOR`, e está aqui
+#: como literal pela razão que o `NOME_SEM_LEITURA` do `pacotes/__init__` já
+#: documenta: importar `monta` num pacote puxa a árvore inteira do desenho só
+#: para ler uma string. A régua nova confere que as duas são a MESMA.
+PONTO = ' <span class="pt">•</span> '
+
+
+def miolo_do_chip(jogador: int, nome: str, via: str,
+                  conectado: bool = True) -> str:
+    """O texto do chip: `P1 • White • USB`, e cada pedaço só entra se existir.
+
+    O NÚMERO DO JOGADOR É ESTRUTURA, e por isso ele entra sempre: `P1`…`P4` são
+    a posição na mesa, não a identidade do aparelho. Ela: *"O p1 ou p2 reflete
+    o player do jogador."*
+
+    O NOME E O TRANSPORTE SÃO IDENTIDADE, e por isso eles só entram quando
+    foram LIDOS. É a regra dela — *"se não tá mostrando agora, não tem info pra
+    mostrar no produto"* —, e ela morde aqui de verdade: a cor por rádio ainda
+    não chega, e o chip do controle no rádio sai `P2 • BT` em vez de inventar um
+    plástico. Um nome de cor escrito sem leitura é exatamente o defeito que ela
+    viu na tela.
+    """
+    if not conectado:
+        return f"P{jogador}{PONTO}Desconectado"
+    pedacos = [f"P{jogador}"]
+    if nome:
+        pedacos.append(nome)
+    if via:
+        pedacos.append(via)
+    return PONTO.join(pedacos)
+
+
+def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
+                     conectado: bool = True) -> str:
+    """O `<span>` do cabeçalho da coluna, com endereço e sem cor inventada.
+
+    `plastico` é o HEX JÁ RESOLVIDO, e não o *slug*, de propósito: o gerador
+    resolve por `monta.cor_da_zona`, que **levanta** num colorway que o desenho
+    não tem (é portão, e está certo em levantar); o pacote resolve por
+    `_cor_do_plastico`, que devolve `""` — derrubar a pintura da aba por causa
+    de um modelo novo seria trocar uma borda que falta por uma tela congelada.
+    A política de resolução é de quem chama; a MARCAÇÃO é daqui, e é ela que não
+    pode divergir.
+
+    SEM HEX, SEM `style`. A borda não some: `topo.html` declara
+    `.chip.plastico{border-color:var(--plastico, var(--border-forte))}`, com a
+    queda já escrita. Cravar um hex de mockup aqui seria dizer que se sabe a cor
+    do plástico de um controle que ainda não a disse.
+    """
+    classe = "chip plastico" if conectado else "chip vazio"
+    if not conectado:
+        dica = "Nenhum controle neste lugar."
+    elif nome:
+        dica = f"{nome} — a borda é a cor do plástico"
+    else:
+        dica = "A borda é a cor do plástico deste controle."
+    estilo = f' style="--plastico:{plastico}"' if conectado and plastico else ""
+    return (f'<span class="{classe}" data-hef="{HEF_DO_CHIP}"{estilo}'
+            f' title="{dica}">'
+            f"{miolo_do_chip(jogador, nome, via, conectado)}</span>")
+
+
+def _cor_do_plastico(slug: str) -> str:
+    """O hex da casca daquele modelo, ou `""` quando ninguém sabe ainda.
+
+    `monta.cor_da_zona` é o dono — ele LÊ a folha que pinta o desenho, em vez de
+    digitar hex. O `""` não é desistência: a cor chega pelo broker, uma vez por
+    endereço e em thread, então o primeiro tique de uma sessão sempre tem a mesa
+    sem cor. **E pelo rádio ela pode não chegar nunca**, hoje: sem hex o chip
+    sai com a borda neutra em vez de vestir o plástico de outro controle.
+    """
+    if not slug:
+        return ""
+    try:
+        import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
+        return str(monta.cor_da_zona(slug))
+    except (Exception, SystemExit):
+        # `cor_da_zona` levanta `SystemExit` para colorway que o SVG não tem, e
+        # `SystemExit` não é `Exception` — herda de `BaseException`. Um
+        # `except Exception` sozinho passaria ao lado e derrubaria a janela.
+        return ""
+
+
+def _casa_na_mesa(ctx: Contexto, uniq: str) -> dict[str, Any]:
+    """A entrada da MESA daquele controle — a mesma que a FITA DO TOPO desenha.
+
+    É esta função que faz a lei valer: a fita sai de `monta.fita(mesa=ctx.mesa)`
+    e o chip da coluna sai da MESMA lista. Ler o daemon por outra porta daria
+    duas verdades sobre o mesmo controle, que é o defeito de origem.
+    """
+    for m in ctx.mesa:
+        if str(m.get("uniq") or "") == uniq:
+            return m
+    return {}
+
+
+def seletor_do_chip(pref: str) -> str:
+    """O endereço de bloco do cabeçalho daquela coluna.
+
+    O SELETOR TEM DE ACHAR UM ELEMENTO SÓ — o piloto usa `querySelector`, o
+    primeiro que casar. `.cabeca` sozinho acharia o do P1 e escreveria o chip do
+    P3 nele; é a mesma armadilha que `_blocos_da_coluna` já documenta.
+    """
+    return f'[data-controle="{pref}"] .{CLASSE_DO_CHIP}'
+
+
+def _numero_da_posicao(pref: str) -> int:
+    """`p3` → 3. O número do lugar VAZIO, que é posição e não identidade."""
+    digitos = "".join(ch for ch in pref if ch.isdigit())
+    return int(digitos) if digitos else 0
+
+
+def _identidade_viva(ctx: Contexto, c: dict[str, Any]) -> tuple[int, str, str, str]:
+    """`(jogador, nome, via, plástico)` de um controle que está na mesa AGORA.
+
+    UMA LEITURA SÓ, dois usos: o chip inteiro (`blocos`) e o texto dele
+    (`colunas`) saem daqui. Lida duas vezes, ela podia dar duas respostas no
+    mesmo tique — e a tela mostraria uma borda de um controle com o nome de
+    outro, que é a família de defeito desta frente.
+    """
+    from . import VIA_DO_TRANSPORTE, identidade_de
+
+    casa = _casa_na_mesa(ctx, str(c.get("uniq") or ""))
+    via = str(casa.get("via")
+              or VIA_DO_TRANSPORTE.get(str(c.get("transport") or "").lower(), ""))
+    # `identidade_de` É O DONO DO NOME NA TELA, e ele já sabe que `"Não sei"`
+    # não é nome. O que ele faz e este chip não quer é a ÚLTIMA queda: sem nome
+    # nenhum ele devolve o transporte, e o chip escreveria `P2 • BT • BT`. Aqui
+    # o transporte já tem lugar próprio, então a queda vira ausência.
+    nome = identidade_de(c, ctx.mesa)
+    if nome in ("—", via):
+        nome = ""
+    jogador = casa.get("jogador")
+    if not isinstance(jogador, int) or isinstance(jogador, bool):
+        jogador = _numero_da_posicao(str(casa.get("pref") or ""))
+    return jogador, nome, via, _cor_do_plastico(str(casa.get("cor") or ""))
+
+
+def _chip_vivo(ctx: Contexto, c: dict[str, Any]) -> str:
+    """O `<span>` inteiro de um controle que está na mesa AGORA."""
+    return chip_do_controle(*_identidade_viva(ctx, c))
+
+
+def _chip_do_lugar_vazio(pref: str) -> str:
+    """O chip de um lugar sem aparelho: a posição e o estado, e mais nada.
+
+    Decisão dela, 31/08/2026: *"na parte do nome do P3 e do P4 colocar algo como
+    Desconectado e não os controles mockados."*
+    """
+    return chip_do_controle(_numero_da_posicao(pref), "", "", "", conectado=False)
+
 
 @registrar("03-gatilhos.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
@@ -917,6 +1136,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 for sig, disco in LADOS.items()}
 
         col: dict[str, object] = {
+            # O CABEÇALHO DA COLUNA, e ele é IDENTIDADE — vem da mesa, que é a
+            # MESMA lista que a fita do topo desenha. Ver `chip_do_controle`.
+            #
+            # O CHIP INTEIRO, e não só o texto: borda, dica e nome saem juntos
+            # pelo alvo `html` do embrulho. E ele sai por CAMPO — não por bloco
+            # — porque só o campo carimba o selo `data-hef-visto`: sem o selo,
+            # um controle que por acaso SEJA o Cosmic Red do desenho ficaria
+            # classificado como mockup para sempre pela régua do mockup.
+            CAMPO_DO_CHIP: _chip_vivo(ctx, c),
             "l2-raw": l2, "r2-raw": r2,
             "l2-pct": round((l2 or 0) / 255 * 100),
             "r2-pct": round((r2 or 0) / 255 * 100),
@@ -971,6 +1199,21 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     for pref in sorted(_todos_os_lugares_da_pagina() - ocupados):
         blocos.update(_blocos_da_coluna(
             pref, dict.fromkeys(LADOS, sem_ninguem), opcoes))
+        # E O CABEÇALHO DELE, pela mesma razão e com o mesmo alcance LARGO: com
+        # um controle só na mesa, o P2 é um lugar que a PÁGINA dá por conectado.
+        # Sem esta linha ele continuaria com o `Starlight Blue` do desenho — um
+        # cabeçalho nomeando um controle que não está aqui, que é o defeito de
+        # forma que esta casa já nomeou quatro vezes.
+        #
+        # AQUI É BLOCO E NA COLUNA CHEIA É CAMPO, e a diferença não é gosto: a
+        # `colunas` de um lugar vazio tem régua de conteúdo EXATO
+        # (`test_o_lugar_vazio_recebe_desligado_e_nenhum` exige as quatro
+        # chaves de escolha e nenhuma outra), e ela está certa — a coluna vazia
+        # não tem barra de ajuste, e emitir mais ali seria a aba se dar nota
+        # por escrever no vazio. O bloco pousa por seletor CSS e não entra
+        # nessa conta. O que se perde é o selo, e não faz falta: um lugar sem
+        # aparelho não tem valor que possa COINCIDIR com o do desenho.
+        blocos[seletor_do_chip(pref)] = _chip_do_lugar_vazio(pref)
 
     return {
         "colunas": colunas,

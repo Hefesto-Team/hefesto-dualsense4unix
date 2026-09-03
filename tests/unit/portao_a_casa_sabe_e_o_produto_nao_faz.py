@@ -965,14 +965,24 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # frente dela, e `a01_jogar.py` foi ligado pela integração, com a medição
     # contra o daemon vivo (o do CABO dizia `Player —` e passou a dizer
     # `Player 2`). O portão pegou a lápide sobrevivente antes de mim.
-    # `identidade_de` SAIU DAQUI EM 03/09/2026, e fechou exatamente pela
-    # condição que a própria lápide escrevia: *"fecha quando os geradores
-    # `interface/abaNN.py` derem `data-campo` ao rótulo e os pacotes o
-    # pintarem"*. Foi a `IDENTIDADE-VEM-DE-CIMA-01` na aba 02: `aba02.py`
-    # partiu o `<span class="card-nome">` em `data-campo="peca"` +
-    # `data-campo="via"`, e `a02_controles.pacote()` os escreve com
-    # `identidade_de(c, ctx.mesa)`. Medido com os dois controles dela na mesa:
-    # o cabeçalho dizia `Cosmic Red · USB` e passou a dizer `White · USB`.
+    # `identidade_de` SAIU DAQUI EM 03/09/2026, e fechou pela porta que a própria
+    # lápide nomeava: *"fecha quando os geradores `interface/abaNN.py` derem
+    # `data-campo` ao rótulo e os pacotes o pintarem"*. Foi a
+    # IDENTIDADE-VEM-DE-CIMA-01, e DUAS abas a fecharam no mesmo dia, cada uma
+    # pelo seu caminho — as duas medições ficam porque medem coisas diferentes:
+    #
+    #   aba 02 — `aba02.py` partiu o `<span class="card-nome">` em
+    #     `data-campo="peca"` + `data-campo="via"`, e `a02_controles.pacote()`
+    #     os escreve com `identidade_de(c, ctx.mesa)`. Com os dois controles
+    #     dela na mesa: o cabeçalho dizia `Cosmic Red · USB` e passou a dizer
+    #     `White · USB`.
+    #
+    #   aba 03 — `a03_gatilhos._identidade_viva` a chama, o chip de cada coluna
+    #     ganhou `data-campo="chip-do-controle"`, e o produto reescreve o
+    #     cabeçalho a cada tique. Fotografado: a coluna que dizia `Cosmic Red`
+    #     passou a dizer `White`, e a do rádio — SEM cor lida — passou a dizer
+    #     só `P2 • BT`, em vez de vestir o plástico de outro. Este segundo caso é
+    #     o que prova a regra dela: campo sem informação não mostra nada.
     "interface/pacotes/__init__.py::degradacao_de": (
         "A frase 'Emulação degradada (uinput): …', que delega para "
         "`app/widgets/controller_card.texto_degradacao`. `vpad_motivo` é lido "
