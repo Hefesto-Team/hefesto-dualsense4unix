@@ -509,8 +509,24 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     chips = [f'<span class="chip{" on" if ativo == "todos" else ""}">Todos</span>']
     for c in (CONECTADOS if mesa is None else mesa):
         on = " on" if ativo == c["pref"] else ""
+        # `data-campo` NO CHIP — 03/09/2026, e ele não é enfeite de régua. A
+        # identidade do controle vem da FITA, e a fita é escrita pelo produto
+        # (`hefesto_vivo._fita`, que troca o `.fita` inteiro a cada tique). Sem
+        # um endereço aqui, um leitor não tinha como distinguir este chip de um
+        # nome de cor CONGELADO no desenho: o `check_identidade_vem_de_cima`
+        # acusava os três valores de cada chip nas dez páginas — 60 dos 134 da
+        # bancada. O endereço diz o que é verdade: aqui não mora desenho.
+        #
+        # SEM COR LIDA, SEM COR NA TELA. `cor_da_zona("")` levanta, e cair fora
+        # da fita inteira era o que deixava o mockup na tela pelo rádio (ver a
+        # guarda de `hefesto_vivo._fita`). O chip nasce sem `--plastico` e o
+        # `.chip.plastico{border-color:var(--plastico, var(--border-forte))}` do
+        # esqueleto já tem o recurso neutro — regra dela: campo sem informação
+        # não mostra nada.
+        slug = str(c.get("cor") or "")
+        estilo = f' style="--plastico:{cor_da_zona(slug)}"' if slug else ""
         chips.append(
-            f'<span class="chip plastico{on}" style="--plastico:{cor_da_zona(str(c["cor"]))}"'
+            f'<span class="chip plastico{on}" data-campo="fita-chip"{estilo}'
             f' title="{c["nome"]} — a borda é a cor do plástico">'
             f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}'
             f' <span class="pt">•</span> {c["via"]}</span>')
