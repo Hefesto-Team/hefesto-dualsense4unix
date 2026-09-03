@@ -234,6 +234,33 @@ def colorway_do_aparelho(casa: dict[str, Any]) -> str:
     do broker para o slug do desenho, e a mesa o carrega em `cor`.
     """
     return str(casa.get("cor") or "")
+#: O ANEL DO "NÃO SEI" — a decisão 9 dela aplicada ao vizinho de cima.
+#:
+#: O DEFEITO, provado em 03/09/2026 com a própria função::
+#:
+#:     LIVRE   : <button … title="Player 3 — livre.">3</button>
+#:     SEM COR : <button … title="Dar o Player 3 ao White: o Galactic Purple…">3</button>
+#:     iguais SEM o title? True
+#:
+#: *"o Player 3 está LIVRE"* e *"o Player 3 é de um controle cuja cor eu ainda
+#: não sei"* saíam byte a byte iguais na tela, e a ressalva viajava só no
+#: `title` — quem não passa o mouse não vê, e quem navega pelo controle nunca
+#: passa. É a MESMA forma da tira da luz (ver `ACESA/APAGADA/INCERTA`), uma
+#: linha acima na mesma aba, e a cura é o MESMO idioma dela: *"tracejado para
+#: 'não sei'"*, contorno e nunca cor nova.
+#:
+#: QUANDO ACONTECE DE VERDADE, e não é raro: a cor do plástico chega pelo broker
+#: em thread, então o **primeiro tique de toda sessão** tem a mesa sem cor; e um
+#: colorway que o SVG não conhece cai no `except` de `_cor_do_plastico` e fica
+#: sem cor **para sempre**.
+#:
+#: O ESTILO É DE LINHA, e isso é o PISO — não decoração. A folha publicada diz
+#: `.players .dono{…border:2px solid var(--plastico)}`; sem `--plastico` a
+#: declaração inteira fica inválida no tempo de computar e o `border-style` cai
+#: para `none` — o anel some outra vez, agora com a classe posta. Escrito na
+#: linha, ele vale também na página que ela ainda não mandou publicar. É a mesma
+#: lição que `TIRA_APAGADA` pagou na foto.
+ANEL_INCERTO = "border:2px dashed var(--comment)"
 
 
 def _tinta(rgb: Any) -> str:
@@ -617,8 +644,14 @@ def _cor_do_plastico(slug: str) -> str:
 
     O `""` NÃO é desistência: a cor do plástico chega pelo broker, uma vez por
     endereço e em thread, então o primeiro tique de uma sessão sempre tem a mesa
-    sem cor. Sem hex, o botão sai SEM anel — que é exatamente o que o desenho
-    faz com um número cujo dono não está aqui.
+    sem cor.
+
+    FATO ERRADO, SUBSTITUÍDO (03/09/2026): esta linha dizia que sem hex *"o
+    botão sai SEM anel — que é exatamente o que o desenho faz com um número cujo
+    dono não está aqui"*, e descrevia o defeito como se fosse o desenho. Não é:
+    um número TOMADO por um controle sem cor conhecida pintava igual a um número
+    LIVRE, e só o `title` os separava. Hoje ele sai com o anel TRACEJADO —
+    ver `ANEL_INCERTO`.
     """
     if not slug:
         return ""
@@ -647,10 +680,24 @@ def um_botao_de_player(nome: str, meu: int, n: int,
     Galactic Purple, que tem o 3 hoje"* com o Galactic Purple DESCONECTADO. Ele
     não tem o 3 hoje; ele não tem nada hoje. Um número sem dono na mesa é um
     número **livre**, e é isso que a dica diz.
+
+    SÃO TRÊS ESTADOS, E A TELA MOSTRAVA DOIS — 03/09/2026, e ver `ANEL_INCERTO`:
+
+        livre          ninguém tem este número      sem anel
+        tomado         e eu sei a cor do dono       anel cheio, na cor do plástico
+        tomado, sem cor  o dono está aqui, a cor não chegou  anel TRACEJADO
+
+    O terceiro caía no primeiro, e a diferença viajava só no `title`.
     """
     cor = _cor_do_plastico(str(dono.get("cor") or "")) if dono else ""
-    anel = (f'<i class="dono" data-hef="{ANEL_DO_DONO}" style="--plastico:{cor}"></i>'
-            if dono is not None and cor else "")
+    if dono is None:
+        anel = ""
+    elif cor:
+        anel = (f'<i class="dono" data-hef="{ANEL_DO_DONO}" '
+                f'style="--plastico:{cor}"></i>')
+    else:
+        anel = (f'<i class="dono incerta" data-hef="{ANEL_DO_DONO}" '
+                f'style="{ANEL_INCERTO}"></i>')
     if n == meu:
         dica = f"O {nome} É o Player {n} — é o número dele hoje."
     elif dono is None:
@@ -809,6 +856,29 @@ SECAO_DA_TROCA = ".nota-troca"
 #: O título da seção, num lugar só: ele sai do gerador E do pacote.
 TITULO_DA_TROCA = "Trocar o número: o antes e o depois"
 
+#: A CAIXA DE UM LUGAR DA MESA nesta aba — o que a 06 chama de `.nav-ctl`. Ela
+#: entra na folha viva do plástico (`folha_do_plastico`), e o par
+#: `.ctrl[data-controle="p1"] .ds-svg` vale (0,3,0), que vence o
+#: `svg[data-colorway="…"]` (0,1,1) embutido no próprio SVG.
+CAIXA_DA_COLUNA = ".ctrl"
+
+
+def _folha_do_plastico(mesa: list[dict[str, Any]], caixa: str) -> str:
+    """A folha viva do casco, com o dono que a aba Navegação já tem.
+
+    IMPORTA TARDE de propósito, como o `import monta` das outras funções deste
+    módulo: os pacotes das dez abas se registram no import, e uma dependência no
+    topo entre dois deles amarraria a ordem de carga a um detalhe de quem
+    escreveu primeiro.
+
+    UM DONO, DOIS CHAMADORES — a mesma disciplina da `fileira_de_players` e do
+    `desenho_da_luz`. Copiar a função para cá daria duas leituras do
+    `ds_limpo.svg` que divergem no primeiro modelo novo.
+    """
+    from . import a06_navegacao
+
+    return a06_navegacao.folha_do_plastico(mesa, caixa)
+
 
 def _luzinhas(numero: int) -> str:
     """As cinco lâmpadas daquele número, ou `""` quando ninguém sabe o padrão.
@@ -836,13 +906,25 @@ def item_da_troca(nome: str, numero: int, plastico: str,
     `blocos:` que o produto reescreve com a mesa viva —, e o endereço é o que
     diz isso.
 
-    :param plastico: o hex da casca, ou `""` — e sem hex o item sai SEM anel,
-        que é o que o desenho já faz com um número cujo dono não está aqui.
+    O ANEL TRACEJADO CHEGA AQUI TAMBÉM — 03/09/2026, e pela mesma razão do
+    vizinho (`ANEL_INCERTO`). Todo item desta seção É um controle na mesa, então
+    aqui não há "livre" a confundir; o que havia era o anel SUMINDO. Sem
+    `--plastico`, a folha (`border:2px solid var(--plastico)`) fica inválida no
+    tempo de computar, o `border-style` cai para `none` e a linha perde a marca
+    de identidade que as vizinhas têm — sem nada dizer que a diferença é *"não
+    sei a cor"*, e não *"este é de outro tipo"*.
+
+    :param plastico: o hex da casca, ou `""` — e sem hex o item sai com o anel
+        TRACEJADO, que é como esta aba diz "não sei" desde a decisão 9 dela.
     """
-    anel = f' style="--plastico:{plastico}"' if plastico else ""
+    veste = f' style="--plastico:{plastico}"' if plastico else ""
+    # O ESTILO VAI NO `<i>`, e nunca no pai: a folha pinta `.troca-item .dono`,
+    # e um `style=` no pai não alcança a `border` do filho.
+    anel = ('<i class="dono"></i>' if plastico
+            else f'<i class="dono incerta" style="{ANEL_INCERTO}"></i>')
     return (f'<span class="troca-item{" mexeu" if mexeu else ""}"'
-            f' data-hef="troca.item"{anel}>'
-            f'<i class="dono"></i><span class="np">P{numero}</span>'
+            f' data-hef="troca.item"{veste}>'
+            f'{anel}<span class="np">P{numero}</span>'
             f'<span>{nome}</span>{_luzinhas(numero)}</span>')
 
 
@@ -1131,7 +1213,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: Ele pousa por `document.querySelector`, então numa página que ainda
         #: não tem a seção (o publicado de hoje, enquanto ela não publicar) o
         #: laço não acha nada e não escreve — calado e correto.
-        "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa)},
+        #:
+        #: E O CASCO DO DESENHO GRANDE, pelo mesmo caminho — 03/09/2026. Era a
+        #: maior identidade congelada desta aba, e a cura de hoje tinha parado na
+        #: MOLDURA: medido nos pixels da tela dela, a borda da célula do P1 saía
+        #: `rgb(228,224,216)` (o White, vivo) em volta de um controle desenhado
+        #: em `rgb(174,51,90)` — o Cosmic Red do mockup. A mesma célula dizendo
+        #: duas coisas, com o rótulo certo logo abaixo. Ver `folha_do_plastico`.
+        "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa),
+                   "#plastico-vivo": _folha_do_plastico(ctx.mesa, CAIXA_DA_COLUNA)},
         #: O NÚMERO SAI DO DICIONÁRIO, nunca de uma constante escrita à mão —
         #: foi assim que a curva da aba Gatilhos ficou fora da cobertura.
         #: `player`, `fonte`, `recado` e `rgb` saíram em 02/09/2026: os quatro

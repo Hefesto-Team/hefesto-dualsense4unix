@@ -977,8 +977,33 @@
   .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
                    font-size:12px;line-height:1.5}
   .vib-estado .est .sinal{flex:0 0 auto;font-size:9px;line-height:1.9}
+  /* O MARCADOR DO `diz` NÃO É MAIS VERDE — 03/09/2026, e é defeito de
+     significado, não de gosto.
+
+     O QUE ESTAVA NA TELA DELA, fotografado com os dois controles na mesa:
+
+       ● (verde)  não há gamepad virtual — nenhum jogo tem onde pedir vibração
+       ▲ (laranja) A intensidade não está chegando a jogo nenhum: falta o
+                   gamepad virtual…
+
+     Duas linhas coladas, o MESMO fato, e marcadores de sentido oposto. Nesta
+     casa o verde quer dizer CERTO em todas as abas — o `● 2 controles` do
+     cabeçalho, o selo `CERTO` da Conexões, o `✓ OK` da Sistema, o `Ligado` da
+     Navegação, o `CHEGAM` da Lançadores. Aqui ele estava por cima de uma má
+     notícia.
+
+     E O TOM NÃO PODE CARREGAR VALOR, porque as frases dele não têm uma valência
+     só: `rumble_actions.texto_dos_pedidos_de_vibracao` devolve, pelo mesmo
+     `diz`, tanto *"o jogo pediu vibração 12x"* quanto *"não há gamepad virtual"*
+     e *"pediu força zero em todas"*. Um marcador que afirma "bom" sobre um tom
+     de valência mista afirma errado metade das vezes.
+
+     A REGRA QUE SOBRA É A DOS OUTROS DOIS TONS: o marcador tem a cor do texto
+     dele (`alerta` laranja/laranja, `info` ciano/ciano). O `diz` era o único
+     que separava os dois, e agora HERDA — por isso não há linha nenhuma no
+     lugar desta. O contrato do tom já dizia isso desde 02/09
+     (`app/telas/vibracao.DIZ`: *"a cor normal do rótulo"*). */
   .vib-estado .est.diz{color:var(--texto-suave)}
-  .vib-estado .est.diz .sinal{color:var(--green)}
   .vib-estado .est.alerta{color:var(--orange)}
   .vib-estado .est.alerta .sinal{color:var(--orange)}
   /* O TERCEIRO TOM, e ele é o da janela estável: `#8be9fd` é o token de INFO da

@@ -944,6 +944,45 @@
   .duas-colunas .ctrl[data-conectado="nao"] select,
   .duas-colunas .ctrl[data-conectado="nao"] .btn{pointer-events:none;cursor:default}
 
+  /* E ELE TAMBÉM TEM DE PARECER QUE NÃO SE CLICA — 03/09/2026. A trava acima
+     era só `pointer-events`, que é INVISÍVEL: fotografada a aba com a mesa dela
+     (dois controles), as colunas P3 e P4 saíam **byte a byte iguais** às duas
+     que funcionam. Medido nos pixels da foto do produto:
+
+         o texto de "Guardar esse efeito"   P1 e P2  rgb(186,145,246)
+                                            P3 e P4  rgb(186,145,246)
+         a borda da caixa "Modo"            P1       rgb(189,147,249)
+                                            P3 e P4  rgb(189,147,249)
+
+     Quatro botões idênticos, e dois deles mortos. Para quem usa este produto é
+     o pior arranjo possível: *"um botão que responde às vezes é pior que um que
+     recusa sempre"* — aqui ele não responde NUNCA e não diz isso em lugar
+     nenhum. O comentário da regra acima já sabia a lei (*"um botão que convida
+     para uma recusa é pior que um botão que não existe"*) e parou no rato.
+
+     A GRAMÁTICA É A DAS OUTRAS ABAS, e nada aqui é invenção: texto em
+     `var(--linha)`, contorno em `var(--border-forte)`, fundo do quadro, e
+     **nenhum `opacity`** — a lição medida da `.fita.inerte`. É o mesmo que
+     `.nav-ctl.vazia` (06), `.luz-grade .ctrl.vazia` (04) e `.vib .ctrl.vazia`
+     (05) já fazem com um lugar sem aparelho.
+
+     E ELA ACOMPANHA A MESA porque pende do mesmo `data-conectado` que o piloto
+     reescreve a cada tique: ligar um controle no P3 devolve a coluna inteira
+     sem tocar em CSS nenhum. */
+  .duas-colunas .ctrl[data-conectado="nao"] select.modo,
+  .duas-colunas .ctrl[data-conectado="nao"] select.pronto,
+  .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito,
+  .duas-colunas .ctrl[data-conectado="nao"] .btn{
+    border-color:var(--border-forte);background:var(--app-bg);color:var(--linha)}
+  .duas-colunas .ctrl[data-conectado="nao"] select.modo:hover,
+  .duas-colunas .ctrl[data-conectado="nao"] select.pronto:hover,
+  .duas-colunas .ctrl[data-conectado="nao"] .btn:hover{
+    border-color:var(--border-forte);color:var(--linha)}
+  /* A FRASE DOS AJUSTES CAI JUNTO, senão ela vira a coisa mais clara da coluna
+     morta: `--comment` (#8896c4) é mais claro que `--linha`, e apagar tudo em
+     volta a promoveria sozinha. */
+  .duas-colunas .ctrl[data-conectado="nao"] .ajustes-vazio{color:var(--linha)}
+
   /* O BOTÃO É UM POR CONTROLE, e da MESMA largura em todas as colunas. Era um
      só no pé do quadro, e com quatro controles um botão só não diz o que guarda:
      é a mesma ambiguidade que o recibo tinha antes de dizer em QUAL controle

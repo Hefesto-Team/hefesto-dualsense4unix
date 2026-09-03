@@ -775,6 +775,19 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
             Acao("Ver o que impede", "", "ver-o-que-impede", STEAM), abrir)
         selo = "warn"
     else:
+        # DOIS NÚMEROS QUE SE CONTRADIZEM A UMA LINHA DE DISTÂNCIA — achado em
+        # 03/09/2026, na foto do produto, e é DECISÃO DELA como resolver:
+        #
+        #     canto do cartão   22 jogos instalados       (`lida.instalados`)
+        #     corpo do cartão   …está no lugar em 63 jogos da sua biblioteca.
+        #                                               (`len(lida.com_wrapper)`)
+        #
+        # As duas afirmações são VERDADEIRAS — "biblioteca" inclui o que não
+        # está instalado, "instalados" não —, e a tela não dá como saber disso.
+        # Quem lê vê 63 > 22 e conclui que um dos dois está errado. Não mexi na
+        # frase: texto de tela é dela, e as duas palavras que separam os
+        # conjuntos já estão escritas. O que falta é dizer que são conjuntos
+        # diferentes.
         diz = ("Os controles chegam. O atalho de inicialização está no lugar em "
                f"{_plural(len(lida.com_wrapper), 'jogo', 'jogos')} da sua "
                "biblioteca.")

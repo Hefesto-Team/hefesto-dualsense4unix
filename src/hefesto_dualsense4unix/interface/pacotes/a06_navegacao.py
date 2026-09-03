@@ -620,7 +620,7 @@ def colorway_do_aparelho(slug: str) -> str:
     return slug if slug in _ler_a_folha() else SEM_LEITURA
 
 
-def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
+def folha_do_plastico(mesa: list[dict[str, Any]], caixa: str = ".nav-ctl") -> str:
     """A folha de estilo VIVA que pinta o casco de cada lugar da mesa.
 
     ELA É O CINTO, E O ALVO `atributo` É O SUSPENSÓRIO — 03/09/2026. Desde que
@@ -648,6 +648,19 @@ def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
     hoje não entrega a cor; deixá-lo com o casco do mockup seria a tela
     afirmando um aparelho que não está na mesa. As zonas que não são identidade
     ficam como estão: pintá-las apagaria o desenho em vez de calar a cor.
+
+    :param caixa: o seletor da CAIXA de um lugar da mesa, que muda de aba para
+        aba — `.nav-ctl` aqui, `.ctrl` na Iluminação. Ele ganhou parâmetro em
+        03/09/2026, quando a aba 04 precisou da mesma folha: o desenho GRANDE
+        dela continuava com o Cosmic Red e o Starlight Blue do mockup embaixo de
+        um rótulo que já dizia `P1 • White • USB` — medido nos pixels da tela
+        dela, `rgb(174,51,90)` no corpo contra `rgb(228,224,216)` na moldura da
+        MESMA célula. Duas cópias desta função divergiriam no primeiro modelo
+        novo; um parâmetro não.
+
+        **O seletor precisa vencer o `svg[data-colorway="…"]` de dentro do
+        SVG** (0,1,1). `.nav-ctl[data-controle="p1"] .ds-svg` e
+        `.ctrl[data-controle="p1"] .ds-svg` valem os dois (0,3,0).
     """
     folha = _ler_a_folha()
     identidade = _ZONAS_DE_IDENTIDADE or frozenset()
@@ -662,7 +675,7 @@ def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
         else:
             corpo = ";".join(f"{k}:var(--border-forte)" for k in sorted(identidade))
         if corpo:
-            regras.append(f'.nav-ctl[data-controle="{pref}"] .ds-svg{{{corpo}}}')
+            regras.append(f'{caixa}[data-controle="{pref}"] .ds-svg{{{corpo}}}')
     return "".join(regras)
 
 
