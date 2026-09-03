@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 #: `nao_sei` NASCEU DA MEDIÇÃO, e não do desenho: o produto tem `zero` função
 #: que examine Heroic, Lutris, RetroArch, Dolphin ou mGBA — as cinco só aparecem
 #: em COMENTÁRIO (`daemon/subsystems/hotkey.py:56`, `daemon/lifecycle.py:2271`,
-#: `profiles/schema.py:1336`). Sem este selo, o cartão do Heroic teria de
+#: `profiles/schema.py:1495`). Sem este selo, o cartão do Heroic teria de
 #: escolher entre `CHEGAM` e `NÃO CHEGAM`, e as duas seriam afirmação sobre um
 #: lançador que o produto nunca olhou. **"Não sei" é resposta; palpite não é.**
 SELOS = {
@@ -472,7 +472,7 @@ class SemCenso:
 #: devolve CINCO linhas fora desta aba, e as cinco são COMENTÁRIO
 #: (`daemon/subsystems/hotkey.py:56`, `daemon/lifecycle.py:2271`,
 #:  `daemon/subsystems/game_signal.py:97`, `daemon/lifecycle.py:4169`,
-#:  `profiles/schema.py:1336`). Zero função, zero chamada — e o
+#:  `profiles/schema.py:1495`). Zero função, zero chamada — e o
 #: `test_os_cinco_lancadores_sem_fonte_continuam_sem_fonte` é quem segura isso.
 #:
 #: OS IDENTIFICADORES SÃO OS DE VERDADE, e as duas formas de cada um entram: o

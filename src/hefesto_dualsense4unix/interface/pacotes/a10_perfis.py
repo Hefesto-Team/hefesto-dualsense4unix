@@ -917,7 +917,7 @@ def _rotulo_do_remover(alvo: str) -> str:
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:1309`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:1330`): todo `RuntimeError` de gesto
     vira TARJA na tela — no cartão do controle quando a página tem um, e no
     `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
     `SEGUNDOS_DO_RECADO = 30.0`.

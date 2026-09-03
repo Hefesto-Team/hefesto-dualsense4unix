@@ -983,12 +983,19 @@ class ControllerOverrides(BaseModel):
        ``ControllerMicOverride`` recusa na borda com a razão escrita. O
        ``muted`` entrou em 03/09/2026 (MIC-QUINTO-AJUSTE-01); faltam:
 
-       - ``volume`` — ``lifecycle.apply_profile_mic`` precisa chamar
-         ``audio_control.fonte_de_captura_do_uniq(uniq)`` quando recebe
-         ``uniq``. Hoje ele usa a rota GLOBAL
-         ``fonte_de_captura_do_controle()``, que devolve a PRIMEIRA fonte da
-         lista, então um volume por peça iria para o microfone do vizinho na
-         mesa cheia. Costura de uma linha, em ``daemon/lifecycle.py``;
+       - ``volume`` — **A COSTURA DO APPLIER FOI FEITA EM 03/09/2026**, e o que
+         falta agora é OUTRA metade. Esta linha dizia que
+         ``lifecycle.apply_profile_mic`` "hoje usa a rota GLOBAL
+         ``fonte_de_captura_do_controle()``"; **FATO SUBSTITUÍDO**: ele passou
+         a chamar ``fonte_de_captura_do_uniq(uniq)`` quando recebe ``uniq``, e
+         **não cai** para a rota global quando o ``uniq`` não resolve — cair
+         seria escrever no microfone do vizinho, que é o estrago inteiro.
+         ``tests/unit/test_o_volume_do_mic_segue_o_controle.py`` morde as duas
+         formas.
+
+         O QUE FALTA É ABRIR O CAMPO AQUI, e é decisão à parte: abrir muda o
+         que o perfil dela aceita no disco. Há teste que reprova no dia em que
+         alguém o abrir, para que esse dia seja DELIBERADO;
        - ``button_toggles_system`` — ``hotkey.mic_button_loop`` precisa
          consultar o override daquele ``uniq`` antes de
          ``daemon.config.mic_button_toggles_system``, que é um por máquina.

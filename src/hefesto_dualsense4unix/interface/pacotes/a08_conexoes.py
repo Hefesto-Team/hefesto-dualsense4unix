@@ -2400,7 +2400,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     e este gesto não grava nada — a frase que falta é dela.
 
     É DO PERFIL, NÃO DA MÁQUINA. Sem perfil ativo não há onde guardar a força
-    de um controle (`profiles/schema.py:1068`), e a recusa diz em que aba
+    de um controle (`profiles/schema.py:754`), e a recusa diz em que aba
     escolher um.
 
     FATO ERRADO, SUBSTITUÍDO no mesmo dia: esta linha dizia *"medido no daemon
