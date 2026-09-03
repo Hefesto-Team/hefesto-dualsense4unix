@@ -29,12 +29,16 @@ from monta import (MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, cor_da_zona, glifo,  
 # O contador de níveis é o defeito que o `onde.py` existe para não repetir.
 from onde import RAIZ as R  # noqa: E402
 
-# `monta` já pôs `src/` no caminho — é de lá que ele traz o padrão das lâmpadas.
-from hefesto_dualsense4unix.utils.color_contrast import razao_contraste  # noqa: E402
-
 # A CAMADA DE TELA DESTA ABA, que já existe no produto e nunca foi ligada.
 # Daqui sai a lista de respostas do "— O que é? —": ver `VIZINHOS`, abaixo.
 from hefesto_dualsense4unix.gui import aba_conexoes as _aba_conexoes  # noqa: E402
+
+# O PACOTE DESTA ABA — e ele é DONO de três coisas que os dois lados desenham:
+# o rótulo do controle, a tinta legível sobre o plástico e a régua do rádio.
+# Mesma dependência que o `aba04.py` já tem do `pacotes.a04_iluminacao`, e pela
+# mesma razão: enquanto o desenho e o produto escreverem a mesma frase duas
+# vezes, elas divergem sem que ninguém veja.
+from pacotes import a08_conexoes as _pacote08  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # OS NÚMEROS DO PRODUTO VÊM DO PRODUTO, LIDOS POR AST.
@@ -484,27 +488,15 @@ def custo(c):
     return CUSTO_COM_MIC if tem_mic_pelo_radio(c) else CUSTO_SEM_MIC
 
 
-def rotulo(c, completo=True):
-    """A ordem dela, 26/08: marca • player • plástico • transporte."""
-    marca = 'Sony <span class="pt">•</span> ' if completo else ""
-    jogador = f'Player {c["jogador"]}' if completo else f'P{c["jogador"]}'
-    return (f'{marca}{jogador} <span class="pt">•</span> {c["nome"]}'
-            f' <span class="pt">•</span> {c["via"]}')
-
-
-#: `--fg` e `--app-bg` do esqueleto. São cor de TEMA, não de plástico: o número
-#: dentro do bloco precisa ser lido sobre qualquer um dos 28 modelos, e nenhum
-#: dos dois candidatos serve para todos — `--fg` some no Starlight Blue,
-#: `--app-bg` some no Galactic Purple. Quem escolhe é a conta de contraste da
-#: casa (`utils/color_contrast.razao_contraste`), a mesma que
-#: `cor_do_plastico.tom_para_a_borda` usa para a borda do card.
-TINTAS_DE_TEXTO = (("var(--fg)", (0xF8, 0xF8, 0xF2)),
-                   ("var(--app-bg)", (0x21, 0x22, 0x2C)))
-
-
-def tinta_legivel(fundo_hex):
-    rgb = tuple(int(fundo_hex.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
-    return max(TINTAS_DE_TEXTO, key=lambda t: razao_contraste(rgb, t[1]))[0]
+# O RÓTULO E A TINTA MUDARAM-SE PARA O PACOTE — 03/09/2026,
+# `IDENTIDADE-VEM-DE-CIMA-01`. Eles nomeiam o PLÁSTICO do controle, e o plástico
+# é identidade de aparelho: escrito só aqui, o produto não tinha como reescrevê-lo
+# e a Gestão de Controles mostrava o `Cosmic Red` do desenho com o White dela no
+# cabo. Agora há um dono só, e ele é chamado pelos dois — este gerador com a mesa
+# da bancada, o pacote a cada tique com a mesa viva. Mesmo molde da
+# `a04_iluminacao.um_botao_de_player`.
+rotulo = _pacote08.rotulo_do_controle
+tinta_legivel = _pacote08.tinta_legivel
 
 
 CSS = CSS_GLIFO + CSS_POPUP + """
@@ -708,10 +700,37 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      mostra; quem ele não lê fica com borda NEUTRA, e está dito. Pelo cabo ele
      pergunta e o valor vem de lá; pelo rádio ele AINDA NÃO PERGUNTA
      (`ONDA-CONEXOES-11`) — e uma borda colorida ali seria uma cor que ninguém
-     leu. O `--plastico` só é escrito na linha de quem foi lido. */
-  .gc-item{border-left:3px solid var(--plastico,var(--border-forte));
+     leu.
+
+     A COR VIROU ELEMENTO — 03/09/2026, `IDENTIDADE-VEM-DE-CIMA-01`. Ela era um
+     `--plastico:#hex` INLINE no `.gc-item`, e um `#hex` inline é o mockup
+     mandando na tela: com o controle White dela no cabo, a linha continuava com
+     a borda do Cosmic Red do desenho. O `escrever()` do piloto **não tem alvo de
+     variável de CSS** — não há como um pacote escrever um `--plastico`. Então a
+     cor lida passa a ser a tinta de um elemento, sobreposta aos mesmos 3px da
+     borda: o desenho não muda um pixel e o pacote passa a pintá-la.
+
+     O ALVO É `cor` E NÃO `fundo`, e a diferença é MEDIDA, não de gosto: o
+     `fundo` compara antes de escrever, e o CSSOM normaliza na atribuição
+     (`#ae335a` volta `rgb(174, 51, 90)`). Um hex por ali nunca volta igual ao
+     que se escreveu e soma UMA pintura por tique, para sempre — o contador de
+     pinturas é O instrumento com que esta casa prova que um endereço existe, e
+     um contador que infla é pior que um campo parado. O alvo `cor` escreve e
+     SÓ ENTÃO compara, exatamente por causa disso. Daí o `background:currentColor`.
+
+     VAZIO NÃO INVENTA: sem cor lida o pacote manda vazio, o alvo `cor` devolve
+     o elemento à folha de estilo (`color:transparent`) e a borda neutra
+     reaparece — regra dela, campo sem informação não mostra nada. */
+  .gc-item{position:relative;
+           border-left:3px solid var(--border-forte);
            border-top:1px solid var(--border-sutil)}
   .gc-item:first-child{border-top:none}
+  /* `left:-3px` é medido do lado de DENTRO da borda (o bloco que contém um
+     absoluto é a caixa de padding), logo a tinta cai exatamente sobre os 3px da
+     borda esquerda. `top:-1px` cobre também a linha de 1px que separa uma linha
+     da outra — sem ele a barra nasceria 1px abaixo em todas menos a primeira. */
+  .gc-cor{position:absolute;left:-3px;top:-1px;bottom:0;width:3px;display:block;
+          color:transparent;background:currentColor}
   .gc-cabeca{display:flex;align-items:center;gap:11px;
              height:30px;padding:0 12px;font-size:12px;color:var(--texto-mudo)}
   /* O ALVO DO CLIQUE ENVOLVE O TEXTO, e não o cobre. Uma capa `position:absolute`
@@ -777,7 +796,32 @@ CSS = CSS_GLIFO + CSS_POPUP + """
             height:0;overflow:hidden}
   /* 48px e não 58: nesta largura o desenho mede 33,1px de altura e cabe DENTRO
      da linha de 36 do campo, sem crescer o corpo da linha. A proporção é a do
-     `viewBox` (116,684 × 80,472), e não uma altura digitada. */
+     `viewBox` (116,684 × 80,472), e não uma altura digitada.
+
+     ESTE DESENHO AINDA MOSTRA O PLÁSTICO DO MOCKUP, e está MEDIDO — 03/09/2026,
+     `IDENTIDADE-VEM-DE-CIMA-01`. A cor dele viaja num ATRIBUTO
+     (`data-colorway` do `<svg>`), e o `escrever()` do piloto não tem alvo de
+     atributo: texto, html, valor, largura, fundo, cor e classe, e mais nada. A
+     régua `check_identidade_vem_de_cima` também não o vê — ela procura
+     `--plastico` e NOME de colorway, e um `data-colorway="cosmic-red"` não é
+     nem um nem outro.
+
+     A ROTA ÓBVIA FOI TENTADA E REPROVOU NA MEDIÇÃO: envolver o `<svg>` num
+     `data-campo` com alvo `html` e o pacote emitir o desenho na cor lida. Com
+     os dois controles dela, 31 tiques:
+
+         sem o desenho    2 pinturas / 31 tiques    tique mediano  4,24 ms
+         com o desenho   31 pinturas / 31 tiques    tique mediano 13,56 ms
+
+     Uma pintura POR TIQUE, para sempre: o `innerHTML` que o navegador devolve
+     de um `<svg>` nunca volta igual ao que se escreveu, então a comparação do
+     `escrever()` acusa mudança em todo tique — o mesmo tropeço que o alvo `cor`
+     documenta para o CSSOM. E o desenho tem 50 KB; dois deles atravessam a
+     ponte a cada meio segundo.
+
+     A CURA CERTA É UM ALVO DE ATRIBUTO no piloto (escrever `data-colorway`):
+     vinte bytes por tique em vez de cem mil. Ela é do dono do `hefesto_vivo.py`,
+     não desta aba — e vale para as CINCO abas que desenham um controle. */
   .gc-corpo .ds-mini{flex:0 0 48px;width:48px}
   /* cada bloco do corpo é uma dupla rótulo+campo, e a barra vertical separa
      irmãos — a mesma gramática das colunas dos outros dois quadros */
@@ -865,8 +909,11 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .bloco{display:flex;align-items:center;justify-content:center;
          font-family:'JetBrains Mono',monospace;font-size:9.5px;overflow:hidden;white-space:nowrap}
   /* a cor do bloco é a do PLÁSTICO de quem gastou, e a do número é a que se lê
-     em cima dela — nenhuma das duas digitada aqui */
-  .bloco.usa{background:var(--plastico);font-weight:500}
+     em cima dela — nenhuma das duas digitada aqui.
+     O FUNDO VEM INLINE, do dono da régua (`a08_conexoes.html_da_regua_do_radio`),
+     e não de um `--plastico` cravado na página: quem não teve a cor lida fica
+     com a neutra abaixo, que é a mesma promessa da borda da linha do controle. */
+  .bloco.usa{background:var(--border-forte);font-weight:500}
   .bloco.mic{background:var(--orange);box-shadow:inset 1px 0 0 var(--app-bg)}
   /* a vaga é o que UM controle a mais custaria. Ela precisa fechar dos dois lados. */
   .bloco.vaga{border-left:1px dashed var(--border-forte);color:var(--texto-mudo);
@@ -1439,7 +1486,11 @@ def linha_do_controle(c):
     no_radio = c["via"] == "BT"
     luz = "#%02x%02x%02x" % player_slot_color(c["jogador"])
     # a borda só é pintada de quem foi LIDO — o resto fica com a neutra do CSS
-    estilo = "" if no_radio else f' style="--plastico:{cor_da_zona(c["cor"])}"'
+    # A TINTA DA BARRA, e ela é do ELEMENTO — ver o comentário do `.gc-cor` no
+    # CSS. Quem não foi lido nasce sem tinta nenhuma, e é a barra que o pacote
+    # apaga com `transparent` quando a leitura não vier.
+    tinta = "" if no_radio else f' style="color:{cor_da_zona(c["cor"])}"'
+    barra = f'<i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"{tinta}></i>'
     da_controles = DA_CONTROLES[c["pref"]]
     # só o CAMPO sai daqui: o "Vale …, do global" que ficava ao lado saiu da tela
     # (`D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`) e vive agora no `?` do campo.
@@ -1453,11 +1504,12 @@ def linha_do_controle(c):
              f'title="{LUZ_NO_RADIO}">A luz não acende</button>' if no_radio
              else f'<button class="btn apagado" data-gesto="luz-nao-acende" '
                   f'title="{LUZ_NO_CABO}">A luz não acende</button>')
-    return f'''          <div class="gc-item gc-{c["pref"]}" data-controle="{c["pref"]}"{estilo}>
+    return f'''          <div class="gc-item gc-{c["pref"]}" data-controle="{c["pref"]}">
+            {barra}
             <div class="gc-cabeca">
               <label class="gc-abre" for="gc-{c["pref"]}" data-gesto="alvo"
                      title="{SO_ESTE_DICA} A fita do topo passa a apontar para ele.">
-              <span class="gc-nome">{rotulo(c)}</span>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">{rotulo(c)}</span>
               <span class="gc-resumo">
                 <span title="{"A borda deste controle é a cor lida do aparelho." if not no_radio else "A cor deste controle não foi lida — a borda fica neutra."}">Vê como <b>{c["mascara"]}</b></span>
                 <span title="{mic_dica}">Microfone <b>Ligado</b>, {caminho_do_mic(c)}</span>
@@ -1490,60 +1542,43 @@ def linha_do_controle(c):
 
 
 # ---------------------------------------------------------------------------
-# A PISTA DE UM ADAPTADOR — os blocos em uso e as vagas, todos contados.
+# A RÉGUA DO RÁDIO — o desenho dela, com a mesa da BANCADA.
+#
+# O HTML sai de `pacotes.a08_conexoes.html_da_regua_do_radio`, que é o dono das
+# duas versões: esta e a que o produto pinta a cada tique. Aqui só se monta a
+# mesa da bancada na língua que ele lê — e é essa a fronteira que a
+# `IDENTIDADE-VEM-DE-CIMA-01` desenha: a FORMA é de quem desenha, o DADO é de
+# quem lê o aparelho.
+#
+# POR QUE A RÉGUA INTEIRA E NÃO CAMPO A CAMPO: o `title` de cada fatia nomeia o
+# plástico ("Starlight Blue — 260,4 turnos de entrada"), e não há alvo de
+# atributo no `escrever()` do piloto. Um `title` congelado só se cura com o
+# bloco nascendo do produto.
 # ---------------------------------------------------------------------------
-def pista(a):
-    # SÓ QUEM ESTÁ NA MESA OCUPA BANDA: um controle desconectado não gasta
-    # turno de rádio, e desenhá-lo na pista afirmaria uma disputa que não existe.
-    dentro = [POR_PREF[p] for p in a["prefs"] if POR_PREF[p].get("conectado", True)]
-    if not dentro:
-        return f'''        <div class="pista">
-          <span class="quem" title="{a["modelo"]} — {a["onde"]}">{a["nome"]}</span>
-          <span class="trilho"><span class="vazio">Nenhum controle neste rádio</span></span>
-          <span class="num">0 <i>de {num(TETO)}</i></span>
-        </div>'''
-    blocos, usado = [], 0.0
-    for c in dentro:
-        plastico = cor_da_zona(c["cor"])
-        blocos.append(
-            f'<span class="bloco usa" style="--plastico:{plastico};color:{tinta_legivel(plastico)}"'
-            f' title="{c["nome"]} — {num(CUSTO_SEM_MIC)} turnos de entrada">'
-            f'P{c["jogador"]} · {num(CUSTO_SEM_MIC)}</span>')
-        usado += CUSTO_SEM_MIC
-        if tem_mic_pelo_radio(c):
-            blocos.append(
-                f'<span class="bloco mic" style="width:{CUSTO_DO_MIC / TETO * 100:.2f}%"'
-                f' title="Microfone do Player {c["jogador"]} pelo rádio — '
-                f'+{num(CUSTO_DO_MIC)} turnos"></span>')
-            usado += CUSTO_DO_MIC
-    # Cada bloco de entrada tem a MESMA largura; o `style` do primeiro laço não a
-    # escreveu para não repetir a conta em duas linhas de f-string.
-    blocos = [b.replace('class="bloco usa" style="',
-                        f'class="bloco usa" style="width:{CUSTO_SEM_MIC / TETO * 100:.2f}%;')
-              for b in blocos]
-    # AS VAGAS SÃO OS CONTROLES DA MESA QUE HOJE ESTÃO NO CABO — não um "+1"
-    # imaginário. A pergunta que a régua responde deixou de ser "quantos
-    # caberiam" e passou a ser "e se os meus quatro viessem para o rádio".
-    for c in [x for x in CONECTADOS if x["pref"] not in a["prefs"]]:
-        if usado + CUSTO_COM_MIC > TETO:
-            break
-        usado += CUSTO_COM_MIC
-        blocos.append(
-            f'<span class="bloco vaga" style="width:{CUSTO_COM_MIC / TETO * 100:.2f}%"'
-            f' title="Se o {c["nome"]} do Player {c["jogador"]} — hoje no {c["via"]} — viesse '
-            f'para este rádio com o microfone ligado: +{num(CUSTO_COM_MIC)} turnos.">'
-            f'+1 · {num(usado)}</span>')
-    total = sum(custo(c) for c in dentro)
-    fracao = total / TETO
-    return f'''        <div class="pista">
-          <span class="quem" title="{a["modelo"]} — {a["onde"]}">{a["nome"]}</span>
-          <span class="trilho" title="{palavra_da_ocupacao(fracao)} — {num(total)} das {num(TETO)} \
-turnos ({fracao * 100:.0f}%). As três palavras são do produto (integrations/radio_da_mesa.py) e \
-falam só de OCUPAÇÃO: rádio cheio tem volta, basta tirar um controle daqui.">
-            {"".join(blocos)}
-          </span>
-          <span class="num">{num(total)} <i>de {num(TETO)}</i></span>
-        </div>'''
+def _do_desenho(c):
+    """Um controle da bancada na língua da régua: a cor já resolvida em hex."""
+    return {"jogador": c["jogador"], "nome": c["nome"], "via": c["via"],
+            "plastico": cor_da_zona(c["cor"]), "mic": tem_mic_pelo_radio(c)}
+
+
+def regua_do_radio():
+    pistas = []
+    for a in ADAPTADORES:
+        # SÓ QUEM ESTÁ NA MESA OCUPA BANDA: um controle desconectado não gasta
+        # turno de rádio, e desenhá-lo na pista afirmaria uma disputa que não
+        # existe.
+        dentro = [POR_PREF[p] for p in a["prefs"] if POR_PREF[p].get("conectado", True)]
+        # AS VAGAS SÃO OS CONTROLES DA MESA QUE HOJE ESTÃO NO CABO — não um "+1"
+        # imaginário. A pergunta que a régua responde deixou de ser "quantos
+        # caberiam" e passou a ser "e se os meus quatro viessem para o rádio".
+        vagas = [x for x in CONECTADOS if x["pref"] not in a["prefs"]]
+        pistas.append({"nome": a["nome"], "dica": f'{a["modelo"]} — {a["onde"]}',
+                       "dentro": [_do_desenho(c) for c in dentro],
+                       "vagas": [_do_desenho(c) for c in vagas]})
+    return _pacote08.html_da_regua_do_radio(
+        pistas, [_do_desenho(c) for c in NO_RADIO],
+        teto=TETO, sem_mic=CUSTO_SEM_MIC, com_mic=CUSTO_COM_MIC,
+        num=num, palavra=palavra_da_ocupacao)
 
 
 # ---------------------------------------------------------------------------
@@ -2114,7 +2149,14 @@ TELA_MAPEAR = f'''
       <div class="tn-frase">{MAPA["EXPLICACAO"]}</div>
       <div class="moldura">
         <div class="mm-rot-linha"><span class="mm-rot" title="Tudo que o censo do barramento achou, menos os hubs-raiz. O hub de bancada FICA: o cabo dele ocupa uma entrada da traseira. O que já tem lugar continua na lista e continua clicável — é assim que você o move de uma entrada para outra.">{MAPA["ROTULO_APARELHOS"]}</span></div>
-        <div class="mm-lista">
+        <!-- O ENDEREÇO CHEGOU EM 03/09/2026 (`IDENTIDADE-VEM-DE-CIMA-01`). O
+             pacote já trocava esta lista inteira desde 01/09, mas por SELETOR
+             CSS, pela chave `blocos` — e um bloco sem `data-campo` é invisível
+             para as duas réguas desta casa: os `title` do desenho ("o P1 Cosmic
+             Red, no cabo") passavam por congelados sem que nada visse que o
+             produto já os reescrevia. Com o endereço, a troca é a MESMA e as
+             réguas a enxergam. -->
+        <div class="mm-lista" data-campo="aparelhos" data-hef-alvo="html">
 {chr(10).join("          " + ap_botao(*a) for a in CENSO)}
         </div>
         <!-- O RECIPIENTE DO MAPA — 01/09/2026. Ele existe para o piloto poder
@@ -2545,19 +2587,16 @@ MIOLO = f'''
             </span></span>
           </div>
 
-{chr(10).join(pista(a) for a in ADAPTADORES)}
-          <div class="eixo">
-            <span class="quem"></span>
-            <span class="regua"><i>0</i><span>400</span><span>800</span><span>1.200</span><span>{num(TETO)}</span></span>
-            <span class="num"></span>
-          </div>
-
-          <div class="leg">
-{chr(10).join(f'            <span><i style="background:{cor_da_zona(c["cor"])}"></i>{rotulo(c, completo=False)} — {num(CUSTO_SEM_MIC)}</span>'
-              for c in NO_RADIO)}
-            <span><i style="background:var(--orange)"></i>O microfone de cada um — +{num(CUSTO_DO_MIC)}</span>
-            <span><i class="vaga"></i>Cada controle do cabo, se viesse — +{num(CUSTO_COM_MIC)}</span>
-          </div>
+        <!-- A RÉGUA INTEIRA TEM ENDEREÇO — 03/09/2026, `IDENTIDADE-VEM-DE-CIMA-01`.
+             O `title` de cada fatia nomeia o plástico ("Starlight Blue — 260,4
+             turnos de entrada") e não há alvo de ATRIBUTO no `escrever()` do
+             piloto: um `title` congelado só se cura com o bloco nascendo do
+             produto. Quantos adaptadores, quantos controles em cada um e
+             quantas vagas mudam com a mesa dela — é a mesma razão da fita e do
+             mapa do gabinete. -->
+        <div class="regua-do-radio" data-campo="regua-do-radio" data-hef-alvo="html">
+{regua_do_radio()}
+        </div>
         </div>
       </div>
     </div>
@@ -2672,6 +2711,37 @@ if MARCA not in x:
     raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
 TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR, TELA_SENTADA, TELA_FIM, TELA_EM_PE))
 x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
+
+# ---------------------------------------------------------------------------
+# O ENDEREÇO DOS CHIPS DA FITA — `IDENTIDADE-VEM-DE-CIMA-01`, 03/09/2026.
+#
+# O PRODUTO JÁ ESCREVE A FITA INTEIRA, e há mais de um dia:
+# `hefesto_vivo.py` monta `carga["fita"] = _fita(ctx.mesa)` a cada tique e o
+# `pintar()` faz `f.outerHTML = p.fita` — com a mesa VIVA, pelo mesmo
+# `monta.fita()` que desenhou o mockup. O que faltava era a página DIZER isso:
+# sem `data-campo`, os dois chips do desenho ("P1 · Cosmic Red · USB",
+# "P2 · Starlight Blue · BT") contam como identidade congelada em toda régua
+# desta casa — seis dos quinze achados desta aba eram só isto.
+#
+# COM O ENDEREÇO, A `regua_do_mockup` os julga PRODUTO pelo caminho que ela já
+# tem: o chip endereçado SOME do DOM quando a fita se troca inteira, e um campo
+# que sumiu é *"o bloco que continha este campo foi TROCADO pelo produto — o
+# desenho não sobreviveu, que é o que se queria"* (`regua_do_mockup:_classificar`).
+#
+# POR QUE AQUI E NÃO NO `monta.fita()`: a fita é das DEZ abas, e `monta.py` é
+# de todas. Esta leva conserta UMA aba por árvore, em paralelo — dez agentes
+# editando a mesma linha do `monta.py` é conflito de merge garantido. **O lugar
+# definitivo é `monta.fita()`**, e quem integrar as dez pode promovê-lo lá e
+# apagar este bloco das dez: o efeito é idêntico.
+_CHIP = '<span class="chip plastico'
+_quantos = x.count(_CHIP)
+x = x.replace(_CHIP, '<span data-campo="fita-chip" class="chip plastico')
+if _quantos != len(CONECTADOS):
+    raise SystemExit(
+        f"ERRO em 08-conexoes: a fita tem {_quantos} chips de plástico e a mesa "
+        f"tem {len(CONECTADOS)} conectados. O endereço da identidade não pode "
+        f"cair em cima de um chip que não existe — nem faltar num que existe.")
+
 onde.gravar("08-conexoes.html", x)
 
 
