@@ -125,6 +125,26 @@ _LENTO: dict[str, Any] = {}
 #: donos o usam; digitá-lo três vezes seria a segunda cópia de um fato.
 REGISTRO = "registro-texto"
 
+#: OS DOIS ENDEREÇOS DA FITA, e eles têm gêmeos em `aba09.py` — o gerador os
+#: escreve na página, este arquivo escreve NELES. `test_aba09_a_fita_vem_de_cima`
+#: compara os dois pares e reprova na divergência: escrito duas vezes sem régua,
+#: os dois se afastam no dia em que alguém mudar um, e foi assim que a fita viva
+#: morreu em silêncio em 27/08.
+#:
+#: POR QUE O CONJUNTO E NÃO O CHIP: o número de chips é o número de controles na
+#: mesa, e não há `data-campo` para um chip que ainda não existe. O `-chips` leva
+#: `data-hef-alvo="html"` e recebe o miolo inteiro da `.fita`; o `-chip` de cada
+#: um existe porque a régua da identidade julga o `--plastico` pelo endereço do
+#: PRÓPRIO elemento — e ela está certa em julgar assim.
+CAMPO_DA_FITA = "fita-chips"
+CAMPO_DO_CHIP = "fita-chip"
+
+#: O TÍTULO DO CHIP SEM COR LIDA. Ele não nomeia tom nenhum — é a regra dela:
+#: *campo sem informação não mostra nada*. Pelo rádio a cor do plástico NÃO
+#: CHEGA, e quem diz isso é o mapa de canais (`identidade.cor_do_aparelho`,
+#: `radio_aciona = não`), não um `if` decorado aqui.
+SEM_COR_LIDA = "A cor do plástico deste controle não foi lida."
+
 #: O QUE O ÚLTIMO "Ver …" PÔS NO PAINEL. `None` = ninguém pediu nada ainda.
 #:
 #: ELE PRECISOU EXISTIR NO DIA EM QUE A PINTURA ALCANÇOU O PAINEL, e a razão é
@@ -296,6 +316,134 @@ def _frase(fn: Any, state: Any) -> str | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# A FITA — a identidade vem de CIMA, e é a lei dela de 03/09/2026:
+#
+#     "se no topo tá mostrando controle white player 1, então cada aba vai usar
+#      os controles lá de cima. Não mistura com a info dos mockups."
+#
+# O QUE ELA VIU, e foi medido nesta aba com os dois controles dela na mesa:
+#
+#     o cabeçalho    `2 controles: 1 USB · 1 BT`   <- vivo, certo
+#     a fita         `P1 · Cosmic Red · USB`
+#                    `P2 · Starlight Blue · BT`    <- OS DOIS DO MOCKUP
+#
+# A CAUSA MEDIDA: `hefesto_vivo._fita` — o repintor que vale para as dez abas —
+# desiste com `any(not c.get("cor") for c in mesa)`. No cabo isso é a espera de
+# poucos tiques até a leitura voltar; **pelo rádio a cor NUNCA chega**, e quem
+# diz isso é o mapa de canais (`identidade.cor_do_aparelho`, `radio_aciona =
+# não`). Com um controle no rádio a guarda é permanente: a fita das dez páginas
+# não repinta nunca, e o desenho fala pela máquina para sempre.
+#
+# ESTA ABA PASSA A ESCREVER A SUA. `hefesto_vivo._fita` é território de todas as
+# dez e não é meu; o que é meu é o `data-campo` que o `aba09.py` põe na `.fita`
+# desta página e o valor que sai daqui. Quando o repintor comum voltar a
+# funcionar, os dois escrevem a MESMA coisa a partir da MESMA mesa — não há
+# terceira verdade a divergir.
+# ---------------------------------------------------------------------------
+def _monta() -> Any:
+    """O módulo `interface/monta.py`, importável de dentro do pacote.
+
+    ELE PRECISA DE UM APELIDO, e não é capricho: `monta.py` faz `import onde`
+    CRU — nasceu como script de gerador, e naquele contexto a pasta `interface/`
+    é o `sys.path[0]`. Importado como módulo de pacote ele levanta
+    `ModuleNotFoundError: No module named 'onde'`, medido em 03/09/2026. O
+    `hefesto_vivo._fita` só escapa disso porque roda COMO script, de dentro
+    daquela pasta.
+
+    O APELIDO É EM `sys.modules`, NUNCA UM `sys.path.insert`. Pôr a pasta
+    `interface/` no caminho de busca deixaria `casamento`, `mapa`, `regua`,
+    `ver` e mais vinte nomes curtos visíveis como módulos de topo para todo o
+    processo — e contaminação entre testes é o defeito mais caro de diagnosticar
+    que existe. O apelido alcança UM nome, que é o único que falta.
+    """
+    import sys
+
+    from hefesto_dualsense4unix.interface import onde as _onde
+
+    sys.modules.setdefault("onde", _onde)
+    from hefesto_dualsense4unix.interface import monta
+
+    return monta
+
+
+def _cor_da_zona(colorway: str) -> str:
+    """O hex do plástico daquele modelo, LIDO de quem é dono dele.
+
+    O dono é `interface/monta.cor_da_zona`, que por sua vez lê a folha que
+    PINTA o desenho (`assets/ds_limpo.svg`, escrita por
+    `scripts/gerar_cores_do_dualsense.py`). Digitar um hex aqui seria a segunda
+    verdade que o portão `check_cores_do_dualsense.py` existe para matar — e foi
+    assim que o Cosmic Red do mockup ficou `#b11f54` enquanto a amostragem dizia
+    `#A51C48`.
+    """
+    return str(_monta().cor_da_zona(colorway))
+
+
+def _rotulo_da_fita() -> str:
+    """`Selecionar:` — o rótulo, lido de `monta.ROTULO_DA_FITA`.
+
+    Decisão dela, 31/08/2026: *"aqui pode alterar pra colocar o **Selecionar:**
+    em todas as abas."* Ele mora no `monta` porque é `monta.fita()` que emite a
+    tira nas dez páginas; escrevê-lo de novo aqui faria as duas divergirem no dia
+    em que ela mudar a palavra.
+    """
+    try:
+        return str(_monta().ROTULO_DA_FITA)
+    except Exception:
+        # O RÓTULO NÃO PODE DERRUBAR A FITA. Se o `monta` não importar, o que se
+        # perde é uma palavra de enfeite; o que NÃO se pode perder é a
+        # identidade dos controles, que é o ponto inteiro desta função vizinha.
+        return ""
+
+
+def _um_chip(c: dict[str, Any]) -> str:
+    """Um chip da fita, com o que se LEU daquele controle — e nada mais.
+
+    A COR SÓ APARECE SE ALGUÉM A LEU. Sem leitura o chip perde a classe
+    `plastico` (e com ela a borda colorida), perde o `--plastico` e perde o nome:
+    é a regra dela, *campo sem informação não mostra nada*. Inventar um tom para
+    preencher seria repetir o defeito que esta frente veio matar, só que com
+    outra cor.
+
+    E O QUE SAI NÃO É `Não sei` NEM `—`: os dois são a AUSÊNCIA de leitura
+    escrita como se fosse um nome. O chip termina no transporte.
+    """
+    nome = str(c.get("nome") or "")
+    cor = str(c.get("cor") or "")
+    via = html.escape(str(c.get("via") or ""))
+    jogador = html.escape(str(c.get("jogador") or ""))
+    ponto = ' <span class="pt">•</span> '
+    if not cor:
+        return (f'<span class="chip" data-campo="{CAMPO_DO_CHIP}"'
+                f' title="{html.escape(SEM_COR_LIDA)}">'
+                f"P{jogador}{ponto}{via}</span>")
+    return (f'<span class="chip plastico" data-campo="{CAMPO_DO_CHIP}"'
+            f' style="--plastico:{html.escape(_cor_da_zona(cor))}"'
+            f' title="{html.escape(nome)} — a borda é a cor do plástico">'
+            f"P{jogador}{ponto}{html.escape(nome)}{ponto}{via}</span>")
+
+
+def _html_da_fita(mesa: list[dict[str, Any]]) -> str:
+    """O miolo da `.fita` desta aba, montado com a mesa VIVA.
+
+    Devolve `""` com a mesa vazia, e o `pacote()` então NÃO emite a chave — o
+    alvo `html` da pintura escreve `—` quando recebe vazio (`hefesto_vivo`, o
+    `const t = vazio ? '—' : String(v)`), e isso apagaria a tira inteira entre
+    uma reconexão e outra.
+
+    O CHIP `Todos` FICA E NÃO GANHA ENDEREÇO: ele não é aparelho nenhum, não traz
+    cor nem nome de plástico. Nesta aba a fita é INERTE — o `title` do desenho já
+    diz que aqui os cards são leitura —, então `Todos` continua sendo o escolhido.
+    """
+    if not mesa:
+        return ""
+    partes = [f"<span>{html.escape(_rotulo_da_fita())}</span>",
+              '<span class="chip on">Todos</span>']
+    partes += [_um_chip(c) for c in mesa]
+    return "\n      ".join(partes)
+
+
 @registrar("09-sistema.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `gui/aba_sistema.pacote` — a camada do PRODUTO.
@@ -351,6 +499,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     if isinstance(exame, dict):
         fora["exame-contagem"] = _html_da_contagem(exame.get("contagem"))
         fora["exame-lista"] = _html_do_exame(exame)
+    # A FITA DESTA ABA, e ela sai da MESA — nunca do desenho. Só entra quando há
+    # o que escrever: uma string vazia vira `—` no alvo `html` e apagaria a tira.
+    tira = _html_da_fita(ctx.mesa)
+    if tira:
+        fora[CAMPO_DA_FITA] = tira
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
     fora["cobertura"] = {"pintados": len(fora), "sem_dono": len(SEM_DONO)}
     return fora
