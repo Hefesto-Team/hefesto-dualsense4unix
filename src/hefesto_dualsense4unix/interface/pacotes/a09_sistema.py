@@ -1169,12 +1169,45 @@ def _html_do_exame(exame: dict[str, Any]) -> str:
 
 
 def _linha_do_exame(achado: dict[str, Any]) -> str:
-    """Uma linha do exame. Tudo escapado: a frase vem do `doctor`, não daqui."""
+    """Uma linha do exame. Tudo escapado: a frase vem do `doctor`, não daqui.
+
+    A FRASE INTEIRA VAI NO `title`, e é a cura de 03/09/2026. A linha do exame é
+    UMA linha e o desenho a corta: `09-sistema.html:825` diz
+    `overflow:hidden;text-overflow:ellipsis;white-space:nowrap`. Medido na mesa
+    dela, na foto do produto instalado, com um controle no cabo — **CINCO das
+    seis linhas cortavam**, e sem `title` não havia como ler o resto:
+
+        cura do travamento do USB ATIVA (mic e fone do co…      68 car, ~22 escondidos
+        áudio presente no único controle no cabo (mic+fon…      71 car, ~23 escondidos
+        quirk anti-storm ativo (054c:0ce6 — áudio USB esp…      55 car,  ~6 escondidos
+        WirePlumber configurado (51-hefesto-dualsense-n…        69 car, ~22 escondidos
+        regra áudio-off inativa — o mic e o fone do controle…   88 car, ~37 escondidos
+
+    **A ÚLTIMA É A QUE DECIDE, e ela não corta informação: INVERTE.** O texto
+    inteiro é *"regra áudio-off inativa — o mic e o fone do controle estão
+    liberados. O que fazer: nada."* O que sobra na tela ao lado de um selo
+    `NOTA` é *"o mic e o fone do controle…"*, que se lê como problema. As duas
+    metades escondidas são justamente **estão liberados** e **O que fazer:
+    nada** — a resposta.
+
+    E O PORTÃO NÃO PEGAVA, porque ele mede a PALAVRA e não o PIXEL:
+    `test_a_saude_do_sistema_diz_o_que_fazer.test_toda_frase_de_alarme_tem_o_que_fazer`
+    exige `"O que fazer:"` DENTRO da string, e a string sempre teve. Verde sobre
+    uma frase que a tela cortava antes do "O que fazer".
+
+    O `title` É A CURA DESTA CASA E NÃO UM DESENHO NOVO: `aba09.py` já a usa nos
+    valores que encurta (ver `APELIDO_NA_TELA` e o `inteiro=` do `est()`), e a
+    nota de lá diz o mesmo — *"a frase INTEIRA continua no `title` do valor (…)
+    é ele que segura a informação"*. Quebrar a linha em duas mudaria a altura do
+    quadro, que é desenho, e desenho é decisão dela.
+    """
     cls = html.escape(str(achado.get("cls") or "nt"))
+    txt = str(achado.get("txt") or "")
     return (f'<div class="saude"><span class="selo {cls}">'
             f'<span class="sg">{html.escape(str(achado.get("g") or ""))}</span>'
             f'{html.escape(str(achado.get("selo") or ""))}</span>'
-            f'<span class="txt"><span>{html.escape(str(achado.get("txt") or ""))}</span>'
+            f'<span class="txt" title="{html.escape(txt, quote=True)}">'
+            f'<span>{html.escape(txt)}</span>'
             "</span></div>")
 
 
