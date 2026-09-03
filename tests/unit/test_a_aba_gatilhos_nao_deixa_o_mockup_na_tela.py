@@ -549,7 +549,7 @@ def test_o_lugar_vazio_nao_rouba_a_marca_do_piloto(a03):
 
 
 def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
-    """Com o controle na mesa, `Rigid`; sem ele, `Off`. É o D4 inteiro.
+    """Com o controle na mesa, `Rigid`; sem ele, o travessão. É o D4 inteiro.
 
     Esta é a asserção que dá o CUSTO do defeito em vez do nome dele: o mesmo
     perfil, a mesma aba, o controle saindo do lugar — e o campo tem de mudar.
@@ -565,9 +565,15 @@ def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
     assert com_ele["modo-chave-e"] == "Rigid"
 
     sem_ele = _com_a_mesa(a03, MESA_DE_DOIS, [FALSO, FALSO_2])["colunas"]["p3"]
-    assert sem_ele["modo-chave-e"] == "Off", (
+    # DECISÃO DELA, 02/09/2026: o lugar vazio mostra o travessão, e não `Off`.
+    # A razão é que `Desligado` é também uma escolha legítima de um controle
+    # CONECTADO — a mesma palavra para duas coisas, e só o cabeçalho as separa.
+    assert sem_ele["modo-chave-e"] != "Rigid", (
         "o P3 esvaziou e o campo continuou dizendo `Rigid`. É a tela afirmando "
         "um efeito num lugar onde não há aparelho.")
+    assert sem_ele["modo-chave-e"] in ("", "—"), (
+        f"o lugar vazio devolveu {sem_ele['modo-chave-e']!r}. Ele mostra o "
+        "travessão desde a decisão dela de 02/09")
 
 
 # ---------------------------------------------------------------------------
@@ -832,16 +838,27 @@ def test_a_caixa_nao_vaza_na_pagina_que_o_produto_renderiza_hoje(a03):
     e some sozinho no dia em que ela publicar a bancada — ver
     `test_a_caixa_cresce_no_dia_em_que_ela_publicar`.
     """
-    casas = a03._casas_cravadas()
-    cresce = a03._a_caixa_cresce()
-    assert not any(cresce.values()), (
-        "a página publicada já deixa a caixa crescer — esta régua mede o mundo "
-        "de ANTES da publicação e precisa ser reescrita, não apagada")
+    # ELA PUBLICOU A 03 EM 02/09/2026, e a página passou a comportar. Esta
+    # régua deixou de poder ler o teto da página — mas o que ela guarda não é a
+    # página, é a REGRA: com teto, nenhum modo põe mais barras do que cabe.
+    # Então o teto vira dublê, e a régua sobrevive à publicação em vez de virar
+    # paisagem. O caso "sem teto" é o `test_a_caixa_cresce_no_dia_em_que_ela_
+    # publicar", que mede a página de verdade.
+    casas = {"e": 4, "d": 2}
     grandes = 0
     for nome in _GRANDES:
-        r = _pacote_com(a03, modo_esq=nome, modo_dir=nome)
+        # Quantos ajustes o modo tem, pelo dono do dado — `_padroes` devolve os
+        # parâmetros posicionais do preset, que é o que a caixa desenha.
+        quantos = len(a03._padroes(nome))
+        assert quantos > 2, (
+            f"{nome} devolveu {quantos} parâmetros e esta régua existe para os "
+            "modos GRANDES, que são os que estouram a caixa")
         for sigla in ("e", "d"):
-            html = _bloco(a03, r, "p1", sigla)
+            html = a03.html_dos_ajustes(
+                sigla,
+                [{"nome": f"P{i}", "valor": str(i), "pct": 10 * i}
+                 for i in range(quantos)],
+                cabem=casas[sigla])
             assert _visiveis(html) <= casas[sigla], (
                 f"{nome}·{sigla}: a caixa põe {_visiveis(html)} barras à vista "
                 f"onde a página publicada reserva {casas[sigla]}. O que sobra "
@@ -850,27 +867,32 @@ def test_a_caixa_nao_vaza_na_pagina_que_o_produto_renderiza_hoje(a03):
     assert grandes >= 8, "a régua deixou de exercitar os modos que estouram"
 
 
-def test_o_que_nao_coube_e_dito_na_tela(a03):
-    """Calar sobre o que não cabe é o defeito que esta aba existe para matar.
+def test_o_aviso_do_que_nao_coube_saiu_por_decisao_dela(a03):
+    """Ela mandou tirar o aviso, e a casa que ele ocupava voltou a ser barra.
 
-    Hoje, na página publicada, um `Curva de força` mostra quatro barras EM
-    BRANCO sobre dez intensidades gravadas — e nada na tela conta que há dez.
-    Com o teto, a última casa passa a dizer quantas ficaram de fora.
+    O aviso dizia `+N não cabem nesta caixa ainda` na última casa reservada.
+    Era texto de tela que ela não tinha visto, e texto de tela é dela:
+    perguntado em 02/09/2026, a resposta foi tirar. Ela publicou a 03 no mesmo
+    minuto, então o teto nem age — mas a régua guarda as duas coisas.
+
+    O QUE ISTO MEDE, e é o oposto de medir a ausência de uma frase: com teto, o
+    número de barras à vista é EXATAMENTE o que a página reserva. Antes era
+    `cabem - 1`, porque uma casa ia para o aviso.
     """
-    casas = a03._casas_cravadas()
-    r = _pacote_com(a03, modo_esq="MultiPositionFeedback",
-                    modo_dir="MultiPositionFeedback")
-    for sigla in ("e", "d"):
-        html = _bloco(a03, r, "p1", sigla)
-        fora = html.count('class="barra"') - _visiveis(html)
-        assert a03.NAO_COUBE.format(n=fora) in html, (
-            f"o lado {sigla!r} escondeu {fora} ajustes e não disse. O que a "
-            f"caixa cheia NÃO conta é justamente quantos não estão nela:\n{html}")
-        assert f"grid-row:{casas[sigla]}" in html, (
-            "o aviso não declarou a linha da grade. A página publicada crava "
-            "`.ajustes-vazio{grid-row:1 / span 2}` para a frase que ocupa a "
-            "caixa inteira — sem o inline, o aviso pousa em cima das barras")
+    assert not hasattr(a03, "NAO_COUBE"), (
+        "a constante do aviso voltou. Ela saiu por decisão dela em 02/09/2026, "
+        "e uma frase de tela não volta sem a palavra dela")
 
+    for teto in (2, 4):
+        html = a03.html_dos_ajustes("e", [
+            {"nome": f"P{i}", "valor": str(i), "pct": 10 * i} for i in range(11)
+        ], cabem=teto)
+        assert _visiveis(html) == teto, (
+            f"com teto {teto} a caixa mostrou {_visiveis(html)} barras. Sem o "
+            "aviso, a casa que ele ocupava é uma barra — o teto é o número de "
+            "barras à vista, não ele menos um")
+        assert "não cabem" not in html, (
+            f"o aviso voltou ao HTML com teto {teto}:\n{html}")
 
 def test_o_que_nao_coube_continua_no_dom_para_o_guardar_nao_destruir(a03):
     """O que a tela não mostra o "Guardar" ainda tem de LER.
@@ -884,10 +906,16 @@ def test_o_que_nao_coube_continua_no_dom_para_o_guardar_nao_destruir(a03):
     A MORDIDA: tire o `escondida=` de `html_dos_ajustes` (emita só as visíveis)
     e a segunda asserção reprova com os índices que sumiram.
     """
-    postos = list(range(10))
-    r = _pacote_com(a03, modo_esq="MultiPositionFeedback",
-                    ps_esq=[[p] for p in postos])
-    html = _bloco(a03, r, "p1", "e")
+    # TETO POR DUBLÊ, e não pela página: ela publicou a 03 em 02/09/2026 e a
+    # página passou a comportar, então o caminho real não corta mais nada. O
+    # que esta régua guarda não é o corte — é que o CORTADO continue no DOM
+    # para o "Guardar" ler. A regra sobrevive à publicação; a página, não.
+    html = a03.html_dos_ajustes(
+        "e",
+        [{"nome": f"Posição {i}", "valor": str(i), "pct": 10 * i}
+         for i in range(10)],
+        cabem=4,
+    )
     assert _visiveis(html) < 10, "esta régua supõe a caixa com teto"
     forma = {m.group(1): m.group(2) for m in re.finditer(
         r'data-campo="(aj-val-e-\d+)"[^>]*>([^<]*)<', html)}
@@ -933,8 +961,8 @@ def test_a_caixa_cresce_no_dia_em_que_ela_publicar(a03, monkeypatch):
         assert "display:none" not in html, (
             f"o lado {sigla!r} continuou escondendo barra numa página que "
             f"deixa a caixa crescer")
-        assert a03.NAO_COUBE[:3] not in html, (
-            f"o lado {sigla!r} continuou avisando que algo não coube, e coube")
+        assert "não cabem" not in html, (
+            f"o lado {sigla!r} avisou que algo não coube, e coube")
         assert _visiveis(html) == 11, (
             f"o lado {sigla!r} mostrou {_visiveis(html)} das 11 barras do modo")
 
