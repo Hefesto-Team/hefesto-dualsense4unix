@@ -63,6 +63,23 @@ seção daqui**: a aba deixou de estar em trabalho.
   texto·largura·fundo·valor·html·classe·cor. O dado existe e já está calculado
   (`controller_card.touchpad_do_inputs` devolve a fração x/y); falta o alvo.
 
+  **O QUE VOCÊ VÊ NA TELA ENQUANTO NÃO PUBLICA, medido em 02/09/2026 com os seus
+  dois controles (1 USB · 1 BT, perfil `meu_perfil`) e a página que o produto
+  renderiza hoje:** a página publicada tem **12 endereços** e a bancada tem
+  **16**. O pacote pergunta à página antes de emitir
+  (`a02_controles._so_se_a_pagina_tiver`) e se limita aos 12 — medido,
+  `16 casam · 0 órfãos · 0 vazios` na bancada e `12 casam · 0 órfãos · 0 vazios`
+  na publicada. **Nada morre calado e nada vaza**: os quatro endereços novos
+  simplesmente não são escritos até você publicar.
+
+  **Até lá, três coisas continuam como estavam, e as três são o motivo desta
+  seção:** o pontinho do touchpad segue **aceso com "Sem toque"**; o retângulo da
+  Barra de luz segue no `#7EB8D4` do desenho ao lado de um campo que já diz a cor
+  viva; e o alto-falante segue mostrando `100` com a barra cheia. **A única
+  mudança que chega hoje é a palavra** — `touch-estado` já tem endereço na página
+  publicada, então o canto do touchpad passa a dizer `1 toque` no lugar de
+  `Tocando` assim que este trabalho entrar, sem você publicar nada.
+
 ## 05-vibracao.html
 - **02/09/2026** — **a linha do estado da vibração**, que a janela GTK tem e esta
   aba não tinha. Ela nasce no rodapé do quadro e diz, com as palavras que já
