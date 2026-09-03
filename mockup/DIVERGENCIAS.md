@@ -329,3 +329,83 @@ seção daqui**: a aba deixou de estar em trabalho.
   apagaria o desenho, porque ali o alvo é `texto` e `textContent` mata os filhos
   (é a razão de `pacotes.enderecos_que_o_texto_apaga`, que protege esta célula
   pelo nome). Publicando a 04, a célula passa a viver.
+
+## 01-jogar.html
+- **03/09/2026** — **a borda do cartão passou a ser a cor do SEU controle**, e é
+  a sua lei de hoje: *"se no topo tá mostrando controle white player 1, então
+  cada aba vai usar os controles lá de cima. Não mistura com a info dos
+  mockups."*
+
+  **O que estava na tela, fotografado com os seus dois controles na mesa:**
+
+  | | o rótulo do cartão | a BORDA do cartão |
+  | --- | --- | --- |
+  | P1 (no cabo) | `White · USB` | **Cosmic Red** |
+  | P2 (no rádio) | `Não sei · BT` | **Starlight Blue** |
+
+  O cartão discordava de si mesmo com quatro pixels entre uma coisa e outra: o
+  rótulo já era leitura do aparelho e a borda ainda era o desenho. E a do P2 era
+  pior que velha — era **inventada**: ninguém leu a cor daquele controle.
+
+  **O que mudou no desenho, e são três coisas:**
+
+  | | o que era | o que passa a ser |
+  | --- | --- | --- |
+  | a cor da borda | `style="--plastico:#ae335a"` no cartão | uma **pele** endereçada (`data-campo="plastico"`, alvo `cor`), que o pacote escreve com o hex do mapa |
+  | a dica do cartão | `title="Sony • Player 1 • Cosmic Red • USB"` | **saiu** — ela repetia o rótulo palavra por palavra, e `title` é atributo: o piloto não tem alvo para atributo, então ela só podia dizer o que o mockup sabia |
+  | a citação da fita na legenda | `"Ajustes vão para: [Todos] [P1 · Cosmic Red · USB]…"` | `"Selecionar: [Todos] [P1 · o plástico · USB]…"`, com o rótulo lido de `monta.ROTULO_DA_FITA` |
+
+  **POR QUE UMA PELE, E NÃO A COR NO PRÓPRIO CARTÃO:** o `escrever()` do piloto
+  tem sete alvos — texto, largura, fundo, valor, html, classe e cor — e **nenhum
+  escreve uma custom property do CSS**. Um `--plastico` cravado é, por
+  construção, cor que o produto nunca alcança. O alvo `cor` escreve
+  `style.color`, e `color` **herda**: posto no cartão, ele desceria até o
+  desenho grande, que tem 16 traços em `currentColor` — o controle inteiro
+  mudaria de cor junto. A pele é um elemento vazio deitado exatamente sobre a
+  borda (2px, mesmo raio, `pointer-events:none`), e é o que permite trocar a
+  moldura sem tocar no desenho.
+
+  **NENHUM PIXEL A MAIS MUDOU, e está medido nas duas direções.** As duas fotos
+  do produto — antes e depois, com os seus dois controles vivos — foram
+  comparadas pixel a pixel:
+
+  | o que foi comparado | pixels diferentes |
+  | --- | --- |
+  | a tela toda, fora da fileira de cartões | **0** |
+  | o miolo do cartão do P1 (dentro da moldura) | **0** |
+  | o miolo do cartão do P2 (dentro da moldura) | **0** |
+
+  O que muda são as duas molduras de 2 px, e só elas: nada moveu, nada
+  reposicionou, nenhuma letra andou um pixel.
+
+  **O P2 FICA SEM COR, E É DE PROPÓSITO.** A cor do plástico só se lê **pelo
+  cabo** (o mapa diz isso: `identidade.cor_do_aparelho`, `radio_aciona = não`),
+  então o controle no rádio não tem cor a mostrar. O pacote manda vazio, o alvo
+  `cor` apaga o `style.color` e a moldura volta ao cinza neutro que o cartão já
+  usava quando faltava plástico. **É a sua regra:** campo sem informação não
+  mostra nada. No dia em que a leitura por rádio chegar, a moldura dele acende
+  sozinha, sem ninguém tocar nesta aba.
+
+  **O QUE VOCÊ VÊ ENQUANTO ESPERA:** nada muda, e nada piora. A pele não existe
+  na página publicada, então o piloto não a acha e o pacote escreve nela zero
+  vezes — a moldura do produto que você usa continua no Cosmic Red e no
+  Starlight Blue do desenho, exatamente como está hoje. **As duas nascem certas
+  no minuto do `--publicar 01`**, sem ninguém tocar em código.
+
+  **O QUE ESTA FRENTE NÃO ALCANÇOU, e é honesto dizer, porque está na mesma
+  foto:**
+
+  1. **A FITA DO TOPO CONTINUA DIZENDO `Cosmic Red` E `Starlight Blue`** —
+     inclusive na sua tela de agora. Os chips dela saem de `monta.fita()`, que é
+     das dez abas, e o piloto os repinta em bloco; mas ele desiste da fita
+     INTEIRA quando **um** controle da mesa está sem cor
+     (`hefesto_vivo._fita`, `any(not c.get("cor") …)`), e é exatamente o seu
+     caso: um no cabo com cor, um no rádio sem. Com dois controles na mesa, um
+     deles no rádio, a fita nunca é repintada.
+  2. **O DESENHO PEQUENO dentro do cartão continua na cor do mockup.** Ele é o
+     SVG, pintado no arquivo; trocá-lo pede que o pacote emita o desenho
+     inteiro a cada tique, e isso é outro trabalho.
+
+  As duas moram em arquivos que esta aba não possui (`monta.py` e
+  `hefesto_vivo.py`) e valem para as **dez** abas — estão relatadas para quem
+  cuidar da camada compartilhada.
