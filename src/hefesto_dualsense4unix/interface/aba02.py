@@ -26,7 +26,8 @@ from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTAD
 # importá-lo sem uso é F401 no portão. Ele é do PACOTE — quem o escreve na
 # tela é o tique, não o desenho.
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
-from pacotes.a02_controles import ROTULO_DO_CLIQUE
+from pacotes.a02_controles import ROTULO_DO_CLIQUE, meias_da_barra as _meias_da_barra
+from pacotes.a02_controles import texto_do_xy as _texto_do_xy
 
 # ---------------------------------------------------------------------------
 # D-A-LEITURA-DO-ACELERÔMETRO-SAI-DA-TELA (29/08/2026) — MUDANÇA DE ESPECIFICAÇÃO.
@@ -583,7 +584,27 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .eixo{display:grid;grid-template-columns:11px 52px 1fr;align-items:center;gap:8px;
         font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave);height:18px}
   .eixo .g{height:6px;border-radius:3px;background:var(--panel);position:relative}
-  .eixo .v{position:absolute;top:0;bottom:0;border-radius:3px}
+  /* A BARRA BIPOLAR SÃO DUAS METADES, e a razão é o que o produto ALCANÇA.
+     Ela era UM `<span class="v" style="left:L%;width:W%;background:C">`, e os
+     três valores mudam com a leitura: o `escrever` do piloto sabe escrever
+     `width` (alvo `largura`) e `color` (alvo `cor`), e NÃO tem alvo de
+     POSIÇÃO. Com um elemento só, dar-lhe endereço pintaria a largura sobre um
+     `left` congelado — a barra de um eixo NEGATIVO cresceria para o lado
+     errado, que é pior que a barra parada.
+
+     A GEOMETRIA É A MESMA, e isso é conta, não gosto: `mesa_viva._barra_bipolar`
+     devolve `esquerda = 50 - largura` para todo valor negativo, ou seja a barra
+     negativa SEMPRE termina no centro. Uma metade ancorada em `right:50%` e
+     outra em `left:50%` desenham exatamente os mesmos pixels, e só uma delas
+     tem largura por vez.
+
+     A COR SOBE PARA O TRILHO (`.g`) e desce por `currentColor`: assim o cinza
+     do repouso, o verde e o vermelho continuam sendo a resposta de
+     `_barra_bipolar` — um valor só, num elemento só, em vez de repetido nas
+     duas metades. */
+  .eixo .v{position:absolute;top:0;bottom:0;border-radius:3px;background:currentColor}
+  .eixo .v.neg{right:50%}
+  .eixo .v.pos{left:50%}
   /* AS ONDAS SONORAS — o medidor de nível que a minha primeira versão comeu */
   .onda{height:22px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
@@ -806,7 +827,22 @@ def grade(apertados):
         # 38x38, então sobrava um anel de 2px de lado onde o tooltip do span
         # aparecia — e ele dizia `cross`, `dpad_up`, em inglês minúsculo.
         # Medido em 28/08: 64 glifos, 64 tooltips ingleses no anel.
-        return (f'            <span class="gb{c}" data-glifo="{n}">'
+        # O ENDEREÇO DO GLIFO — 03/09/2026, e ele é o maior buraco desta aba.
+        # `data-glifo` é o vocabulário do DESENHO (o CSS e a régua de peças o
+        # leem) e o piloto único não o lê: ele procura `data-campo`,
+        # `data-papel` e `data-hef` (`hefesto_vivo.BOOTSTRAP::achar`). Sem um
+        # `data-campo` aqui, os dezesseis glifos ficam com a classe `on` que
+        # ESTA função escreveu — e no card do P1 do desenho são três
+        # (`cross`, `dpad_up`, `l2`). A tela afirmava três botões apertados
+        # para sempre, com o controle parado na mesa.
+        #
+        # O ALVO É `classe`, que é o que o glifo aceso É: `.gb.on` já existe no
+        # CSS desta página, e o `escrever` acende/apaga a classe pelo valor
+        # (`hefesto_vivo.py`, ramo `classe`). Sem `data-hef-quando` ele é
+        # BOOLEANO — cada glifo decide por si, que é exatamente o contrato do
+        # `_refresh_glyphs` da GTK (`efetivos[nome] = nome in buttons_pressed`).
+        return (f'            <span class="gb{c}" data-glifo="{n}"'
+                f' data-campo="glifo-{n}" data-hef-alvo="classe">'
                 f'{glifo(n, ativo=False, tam=38)}</span>')
     return "\n".join(um(n) for n, _ in GL16)
 
@@ -1091,8 +1127,22 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
     # contradizer o campo ao lado dele.
     ponto_on = " on" if tocando else ""
     def gx(fam, e, v, cor):
-        return (f'''            <div class="eixo" data-eixo="{fam}-{e.lower()}"><span>{e}</span><span>{v}</span>
-              <span class="g"><span class="v" style="{cor}"></span></span></div>''')
+        # OS TRÊS ENDEREÇOS DE UM EIXO — 03/09/2026. Antes daqui a linha inteira
+        # era desenho: `data-eixo` é vocabulário do CSS e o piloto não o lê, e
+        # os números do mockup ficavam na tela para sempre. Fotografado com os
+        # dois controles dela na mesa: o giroscópio do P1 dizia +143.2 / −412.0
+        # / +22.8 com o aparelho parado, e o acelerômetro +0.105 / +0.976 /
+        # +0.170 — que são os valores que ESTE arquivo mediu uma vez, no dia em
+        # que foi escrito.
+        #
+        # SÃO TRÊS PORQUE UM ELEMENTO SÓ ACEITA UM ALVO: o número é texto, cada
+        # metade da barra é largura, e a cor sobe para o trilho. Ver o bloco da
+        # `.eixo .v` no CSS, que tem a conta da equivalência de pixels.
+        chave, meias = f"{fam}-{e.lower()}", _meias_da_barra(cor)
+        return (f'''            <div class="eixo" data-eixo="{chave}"><span>{e}</span><span data-campo="{chave}">{v}</span>
+              <span class="g" data-campo="{chave}-cor" data-hef-alvo="cor" style="color:{meias[2]}"><span
+                class="v neg" data-campo="{chave}-neg" data-hef-alvo="largura" style="width:{meias[0]}%"></span><span
+                class="v pos" data-campo="{chave}-pos" data-hef-alvo="largura" style="width:{meias[1]}%"></span></span></div>''')
     giro_html = chr(10).join(gx("giro", e, v, cor) for e, v, cor in giro)
     # O ACELERÔMETRO SAI DA MESMA FUNÇÃO QUE O GIRO — mesma forma, mesma
     # linha, mesma barra. O que muda é a UNIDADE (g, não graus/s) e a
@@ -1136,14 +1186,14 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">{ROTULO_DO_CLIQUE["l"]}</span>
                   <span class="p" style="left:{pos(sticks[0])}%;top:{pos(sticks[1])}%"></span></div>
-                <div class="xy" data-xy="l">X: {sticks[0]:>3}<br>Y: {sticks[1]:>3}</div>
+                <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">{_texto_do_xy(sticks[0], sticks[1])}</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">{ROTULO_DO_CLIQUE["r"]}</span>
                   <span class="p" style="left:{pos(sticks[2])}%;top:{pos(sticks[3])}%"></span></div>
-                <div class="xy" data-xy="r">X: {sticks[2]:>3}<br>Y: {sticks[3]:>3}</div>
+                <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">{_texto_do_xy(sticks[2], sticks[3])}</div>
               </div>
             </div>
           </div>
@@ -1294,11 +1344,13 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
             <div class="rot">Gatilhos</div>
             <div class="gat">
               <div class="gat-linha" data-gatilho="l2"><span>L2</span>
-                <span class="trilho"><span class="cheio" style="width:{l2*100//255}%"></span>
-                  <span class="n">{l2} / 255</span></span></div>
+                <span class="trilho"><span class="cheio" data-campo="l2-barra"
+                  data-hef-alvo="largura" style="width:{l2*100//255}%"></span>
+                  <span class="n" data-campo="l2-num">{l2} / 255</span></span></div>
               <div class="gat-linha" data-gatilho="r2"><span>R2</span>
-                <span class="trilho"><span class="cheio" style="width:{r2*100//255}%"></span>
-                  <span class="n">{r2} / 255</span></span></div>
+                <span class="trilho"><span class="cheio" data-campo="r2-barra"
+                  data-hef-alvo="largura" style="width:{r2*100//255}%"></span>
+                  <span class="n" data-campo="r2-num">{r2} / 255</span></span></div>
             </div>
           </div>
         </div>
@@ -1911,8 +1963,28 @@ def fita_clicavel(doc, mesa=None):
 # de um piloto que não é meu.
 CAIXA_COM_COR = re.compile(
     r'(<div class="ctl card") style="--plastico:(#[0-9a-fA-F]{3,8})"( data-controle="([^"]+)")')
+# O `style` NÃO ESTÁ MAIS COLADO NO `class`, e por isso esta âncora tinha de
+# afrouxar — 03/09/2026. Ela era `class="chip plastico") style="--plastico:…`,
+# com os dois atributos vizinhos, e `monta.fita()` passou a escrever
+# `data-campo="fita-chip"` ENTRE eles (a versão da frente do rádio, integrada
+# hoje). Resultado medido nesta árvore, na ponta de `dev`: `python3 aba02.py`
+# morria com `ERRO no plástico: 2 caixa(s) e 0 chip(s)` e **a bancada não podia
+# mais ser reproduzida pelo próprio gerador** — o `mockup/02-controles.html` no
+# disco veio de uma execução ANTERIOR à mudança da fita.
+#
+# E O PREÇO DE UMA ÂNCORA QUE MORRE NO MEIO É MAIOR QUE O ERRO: `monta()` GRAVA
+# o arquivo, e só depois este pós-processamento o relê e o regrava. Quem
+# rodasse o gerador ficava com a bancada dela **meio pronta no disco** — sem as
+# duas folhas de plástico e com a fita ainda em `<span>` —, e o erro no
+# terminal não dizia isso.
+#
+# `[^>]*?` É PREGUIÇOSO DE PROPÓSITO: ele para no PRIMEIRO ` style="--plastico:`
+# da tag, e não engole o `>`. A âncora continua exigindo o `<label for="c-…"
+# class="chip plastico"`, que é a forma que `fita_clicavel` garante uma linha
+# acima — afrouxar o meio não afrouxa o que ela mede.
 CHIP_COM_COR = re.compile(
-    r'(<label for="(c-[^"]+)" class="chip plastico") style="--plastico:(#[0-9a-fA-F]{3,8})"')
+    r'(<label for="(c-[^"]+)" class="chip plastico"[^>]*?)'
+    r' style="--plastico:(#[0-9a-fA-F]{3,8})"')
 
 
 def cor_do_plastico_por_regra(doc):
