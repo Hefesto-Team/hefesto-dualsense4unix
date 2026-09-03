@@ -150,26 +150,42 @@ def _chips(a03, r, mesa) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 def test_todo_chip_da_bancada_tem_endereco(a03, bancada):
-    """Os dois endereços do chip estão nas quatro colunas, e cada um tem um trabalho.
+    """Os dois endereços do chip, e cada um tem um trabalho — e um alcance.
 
-    O DO `<span>` É O QUE A RÉGUA EXIGE: `check_identidade_vem_de_cima.py` julga
-    o `--plastico` pelo endereço do ELEMENTO QUE O CARREGA — um pai endereçado
-    não dá ao filho o direito de trazer cor congelada. MEDIDO em 03/09/2026,
-    arrancando este endereço e deixando só o do embrulho: a conta desta aba
-    volta de 6 para **8** — o texto e a dica ficam cobertos pelo pai, e os dois
-    `--plastico` das colunas voltam a ser acusados, um por chip.
+    O DO `<span>` É O QUE A RÉGUA EXIGE, E ELE ACOMPANHA A COR:
+    `check_identidade_vem_de_cima.py` julga o `--plastico` pelo endereço do
+    ELEMENTO QUE O CARREGA — um pai endereçado não dá ao filho o direito de
+    trazer cor congelada. MEDIDO em 03/09/2026, arrancando este endereço dos
+    chips COM cor: a conta desta aba sobe, um achado por chip descoberto.
 
-    O DO EMBRULHO É O QUE O PRODUTO ESCREVE: trocando o miolo, o `<span>` sai
-    inteiro — borda, dica e nome. O piloto não tem alvo que escreva uma
-    propriedade CSS de autor, então a cor só se troca assim.
+    E ONDE NÃO HÁ COR ELE SAI — 03/09/2026, e a razão é a outra régua. Um
+    `<span>` dentro de um pai que se troca inteiro (alvo `html`) **nunca pode
+    receber o selo da visita**: carimbá-lo poria `data-hef-visto="1"` dentro do
+    `innerHTML` que o pai compara, e a coluna repintaria a cada tique. Sem selo,
+    a régua do mockup só dá por PRODUTO um campo cujo valor MUDE — e o do lugar
+    vazio nunca muda (`P3 • Desconectado` é o mesmo no desenho e no produto,
+    porque saem da mesma função). Eram dois campos cobrados para sempre por um
+    endereço que não defendia cor nenhuma. Endereço que ninguém pode pintar não
+    é cobertura: é dívida que não se paga.
+
+    O DO EMBRULHO É O QUE O PRODUTO ESCREVE, e ele está nas QUATRO colunas:
+    trocando o miolo, o `<span>` sai inteiro — borda, dica e nome. O piloto não
+    tem alvo que escreva uma propriedade CSS de autor, então a cor só se troca
+    assim.
 
     ARRANQUE qualquer um dos dois, rode o gerador, e esta régua reprova aqui.
     """
     quantos = bancada.count(f'data-hef="{a03.HEF_DO_CHIP}"')
-    assert quantos == 4, (
-        f"a bancada tem {quantos} chips endereçados e as colunas são 4. Um chip "
-        f"sem endereço é o mockup mandando na tela: a régua da identidade volta "
-        f"a acusar a cor congelada que o produto já reescreve.")
+    com_cor = bancada[_depois_da_fita(bancada):].count("--plastico:")
+    assert quantos == com_cor, (
+        f"a bancada tem {quantos} chips endereçados para {com_cor} com cor "
+        f"cravada. Um a MENOS e a régua da identidade acusa a cor sem dono; um "
+        f"a MAIS e a régua do mockup cobra um campo que o produto não tem como "
+        f"selar — o `<span>` é filho de um pai que se troca inteiro.")
+    assert quantos, (
+        "nenhum chip da bancada tem endereço. Ou a `MESA` do desenho ficou sem "
+        "controle com cor, ou o endereço caiu de todos — e aí a régua da "
+        "identidade volta a acusar a cor congelada que o produto já reescreve.")
 
     embrulhos = bancada.count(
         f'<div class="{a03.CLASSE_DO_CHIP}" data-campo="{a03.CAMPO_DO_CHIP}"'
