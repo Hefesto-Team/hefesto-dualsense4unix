@@ -391,3 +391,65 @@ def test_a_casca_partida_sai_em_gradiente_de_duas_metades() -> None:
         abre = f'<linearGradient id="casca-{ident}"'
         assert abre not in html.replace(abre, "<linearGradient id=\"morto\""), (
             "a régua não distingue o gradiente presente do arrancado")
+
+
+def test_a_variavel_que_pinta_sai_da_crua_pela_conta_do_dono() -> None:
+    """As variáveis que pintam também são conferidas — não só as `-crua`.
+
+    A REPROVAÇÃO QUE FEZ ESTE TESTE NASCER, e ela é de um auditor da leva de
+    03/09/2026, sobre esta mesma frente::
+
+        "Troquei as NOVE variáveis QUE PINTAM do Nova Pink por `#00ff00` e
+         rodei os dois arquivos de teste da frente: 13 passed. Com a mordida
+         viva, a sonda na tela devolve 30 peças em rgb(0, 255, 0) — o controle
+         inteiro verde-limão."
+
+    **A régua aferia o dado e não a tinta.** Toda asserção olhava
+    ``--z-<zona>-crua``, que é o CSV intocado; quem chega ao pixel é
+    ``--z-<zona>``, e ninguém a comparava com coisa nenhuma. Uma régua que dá
+    verde com o controle verde-limão na tela não mede a tela.
+
+    A CONTA NÃO SE REESCREVE AQUI — e era esse o receio que deixou a metade de
+    fora. O dono é :func:`gerar_cores_do_dualsense.legivel`, que sobe o piso de
+    contraste das cores escuras demais e deixa as outras INTACTAS. A régua o
+    IMPORTA e aplica ao valor cru publicado: se as duas variáveis da mesma zona
+    deixarem de ser `cru` e `legivel(cru)`, ela reprova nomeando a zona.
+
+    ISSO ALCANÇA OS DOIS DEFEITOS que a metade anterior não alcançava: a tinta
+    trocada à mão (a mordida do auditor) e a tinta que envelhece quando alguém
+    mexer na conta do contraste sem regerar a folha.
+    """
+    import sys
+
+    sys.path.insert(0, str(RAIZ / "scripts"))
+    from gerar_cores_do_dualsense import legivel
+
+    folha = _folha(_pagina())
+    assert folha, "a página não publica folha nenhuma"
+
+    divergem: list[str] = []
+    conferidas = 0
+    for ident, variaveis in sorted(folha.items()):
+        for nome, cru in sorted(variaveis.items()):
+            if not nome.endswith("-crua"):
+                continue
+            zona = nome[: -len("-crua")]
+            pinta = variaveis.get(zona)
+            if pinta is None:
+                divergem.append(f"{ident}.{zona}: há `-crua` e não há a que pinta")
+                continue
+            conferidas += 1
+            # O `\#` é do CSS de dentro do SVG, onde a cerquilha vai escapada.
+            limpo = cru.replace("\\#", "#")
+            esperado = legivel(limpo)
+            if pinta.replace("\\#", "#").lower() != esperado.lower():
+                divergem.append(
+                    f"{ident}.{zona}: pinta {pinta!r} e a conta do dono sobre "
+                    f"{limpo!r} dá {esperado!r}")
+
+    assert conferidas >= 200, (
+        f"a régua conferiu só {conferidas} variáveis de tinta — ela deixou de "
+        "medir o que promete, que é pior que reprovar")
+    assert not divergem, (
+        f"{len(divergem)} variável(is) que PINTAM não saem da crua pela conta "
+        "do dono:\n  " + "\n  ".join(divergem[:20]))
