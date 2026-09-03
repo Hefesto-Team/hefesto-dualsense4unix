@@ -212,11 +212,11 @@ def test_o_anel_do_dono_declara_de_quem_e():
     from pacotes import a04_iluminacao as pac
 
     botao = pac.um_botao_de_player(
-        "White", 1, 2, {"nome": "Não sei", "via": "BT", "cor": ""})
+        "White", 1, 2, {"nome": "Não sei", "via": "BT", "cor": ""}, quantos=2)
     assert 'class="dono"' not in botao, (
         "um dono SEM cor lida não pode desenhar anel — seria inventar a casca.")
     com_cor = pac.um_botao_de_player(
-        "Não sei", 2, 1, {"nome": "White", "via": "USB", "cor": "white"})
+        "Não sei", 2, 1, {"nome": "White", "via": "USB", "cor": "white"}, quantos=2)
     # O ENDEREÇO É POR JOGADOR, e quem o monta é `endereco_do_anel` — 03/09.
     # Esta linha digitava a CONSTANTE `ANEL_DO_DONO`, que é só o prefixo; o
     # produto emite `players.dono.<n>`, um por botão, porque a pintura precisa
