@@ -1016,6 +1016,29 @@ PERIGOSOS = {
     # A CHAVE É CORINGA de propósito: o gesto é um só nas dez páginas, e
     # `_alvos_a_clicar` casa `("*", nome)` além de `(página, nome)`.
     ("*", "salvar"),
+    # O ⊘ DA CONEXÕES DISPENSA UMA ORDEM DE SERVIÇO DELA, E NÃO VOLTA SOZINHO.
+    #
+    # MEDIDO EM 03/09/2026, com o journal dos dois lados. Às 16:11:53, ANTES da
+    # prova, o daemon tinha `MesaDeclarada(… ordens_dispensadas={})`; depois da
+    # volta, o `maquina.json` dela trazia
+    # `ordens_dispensadas={'dongle_atras_de_hub': {'arranjo': '3-1.2 3-1.4',
+    # 'quando': '2026-09-03'}}` — e o Check-up dela tinha perdido a linha
+    # *"2 de 3 adaptadores Bluetooth chegam ao computador por dentro de um
+    # hub"*, uma das DUAS únicas que acusam nesta máquina.
+    #
+    # POR QUE SÓ ESTE, e não os outros onze gestos desta aba que também chamam
+    # `machine.declare`: os outros clicam o valor que a PÁGINA mostra, e a
+    # página mostra o que a declaração já dizia — re-declarar é idempotente. Foi
+    # o que a medição do mesmo dia mostrou: `sala-altura`, `sala-visada` e
+    # `mic-existe` gravaram exatamente o que já estava lá, e o ÚNICO campo que
+    # mudou no arquivo foi `ordens_dispensadas`. O ⊘ é diferente porque o que
+    # ele grava não vem da declaração: vem do EXAME.
+    #
+    # DISPENSAR NÃO É RECUPERÁVEL PELA TELA: `ordens_da_mesa.ordens_novas`
+    # compara o arranjo guardado com o de agora, e enquanto os cabos não
+    # mudarem a linha fica calada. Uma régua não cala um achado da máquina dela
+    # para provar que sabe clicar.
+    ("08-conexoes.html", "ignorar"),
 }
 
 
