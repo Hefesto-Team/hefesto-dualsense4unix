@@ -68,8 +68,11 @@ def _do_topo() -> set[str]:
     import pacotes
 
     class _Vazio:
-        state: dict = {}
-        mesa: list = []
+        """Um `Contexto` sem nada — o `topo()` só precisa das duas chaves."""
+
+        def __init__(self) -> None:
+            self.state: dict = {}
+            self.mesa: list = []
 
     return set(pacotes.topo(_Vazio()))
 
