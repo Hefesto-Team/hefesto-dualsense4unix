@@ -35,8 +35,9 @@ A SEGUNDA LEVA SÓ FOI POSSÍVEL POR TRÊS CORREÇÕES, e nenhuma é do daemon:
    pintava o perfil ATIVO enquanto os botões agiam sobre o ESCOLHIDO — e ligar
    o campo Nome seria ela renomear um perfil olhando o nome de outro.
 
-OS DOIS QUE CONTINUAM SEM DONO — `recarregar` e `editor.estilo` — estão com o
-motivo medido logo acima do `PONTE`, no fim deste arquivo.
+O ÚNICO QUE CONTINUA SEM DONO — `editor.estilo` — está com o motivo medido logo
+acima do `PONTE`, no fim deste arquivo. O `recarregar` ganhou dono em
+03/09/2026, e a razão de ele ter ficado dez dias morto está no gesto.
 
 A LISTA PASSOU A CABER INTEIRA — 02/09/2026. O `<tbody>` publicado tem catorze
 linhas porque catorze cabiam na figura, e a pasta dela tem **33 perfis**: os
@@ -174,6 +175,135 @@ def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
 #: sem prazo é uma armadilha — ela clica, se distrai, volta meia hora depois,
 #: clica de novo e o perfil some sem que nada na tela tenha dito por quê.
 SEGUNDOS_PARA_CONFIRMAR = 8.0
+
+#: O QUE ACABOU DE ACONTECER — o toast do rodapé da janela estável, aqui.
+#:
+#: POR QUE ELE PRECISOU EXISTIR, e é defeito de PARIDADE, não de desenho: na
+#: janela GTK **todo** gesto desta aba termina num `_toast_profile`
+#: (`profiles_actions.py:4579`) — "Perfil removido: X", "Lista recarregada",
+#: `mensagem_do_salvar`, `mensagem_de_ativacao`. Aqui só a RECUSA falava:
+#: `RuntimeError` vira tarja (`hefesto_vivo._recusou_dizendo`) e o SUCESSO era
+#: SILÊNCIO — o piloto anota `("aplicou", "")` e não escreve uma letra na tela.
+#: Para os NOVE gestos desta aba que ESCREVEM NO DISCO DELA, silêncio no
+#: sucesso é a mesma classe de defeito que o toast existe para curar: ela
+#: renomeia, o campo volta ao normal, e nada diz que gravou.
+#:
+#: O RELÓGIO É MONOTÔNICO pela mesma razão do `_recados` do piloto: um acerto
+#: de hora do sistema não pode fazer um desfecho de agora parecer de ontem.
+_DESFECHO: tuple[str, float] | None = None
+
+#: Quanto tempo o desfecho fica na tela. É o MESMO prazo da tarja de recusa do
+#: piloto (`hefesto_vivo.SEGUNDOS_DO_RECADO = 30.0`): dois avisos da mesma
+#: janela que sumissem em tempos diferentes seriam dois contratos para quem
+#: olha, e ela olha os dois no mesmo canto.
+SEGUNDOS_DO_DESFECHO = 30.0
+
+
+def _com_a_carona(frase: str) -> str:
+    """Repõe o wrapper que a Steam comeu, e junta a notícia à frase do gesto.
+
+    CARONA-DO-WRAPPER-01 (16/08/2026), e **o desenho é dela**: *"nem precisa ter
+    um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar ou salvar
+    o perfil seja dentro ou fora da guia de perfis."*
+
+    O QUE ELA CURA: a Steam guarda UMA linha de `LaunchOptions` por jogo, e
+    qualquer coisa escrita nela substitui a chamada do `hefesto-launch` em
+    silêncio. Sem o wrapper, o `launch_env` que o daemon materializa nunca é
+    lido — o jogo é instruído a ignorar o vpad que nós criamos para ele. Nas
+    palavras dela: *"parou de ser reconhecido no jogo, mas o perfil segue ativo
+    no controle com tudo funcionando"*.
+
+    POR QUE A FUNÇÃO DE MÓDULO E NÃO O `pegar_carona_no_gesto`: aquele é método
+    do `CaronaDoWrapperMixin` e despacha uma thread própria para devolver no
+    laço do GTK (`despachar` → `GLib.idle_add`). **O gesto já está em thread**
+    (`hefesto_vivo._gesto`, `trabalhar()`), que é exatamente onde `passada()`
+    declara ter de rodar — *"Só em thread worker: lê disco e o `/proc`"*. Chamar
+    `passada()` daqui é o mesmo trabalho sem a segunda troca de thread.
+
+    `ligada()` É O PORTÃO E NÃO UM `if` MEU: ele é o mesmo que a janela estável
+    consulta, e é o que desliga a carona na suíte (a `conftest.py:2159` põe
+    `HEFESTO_CARONA_WRAPPER=0`). Uma régua desta aba não vai ao `/proc` dela.
+
+    NUNCA LEVANTA. Ela é efeito colateral de um gesto que já deu certo: uma
+    exceção aqui transformaria uma ativação bem-sucedida em tarja de recusa.
+
+    O QUE NÃO VEIO JUNTO, e fica escrito para não sumir: a **vigia**. A janela
+    estável arma um tique de 45 s (`_carona_armar_vigia`) que repergunta "a
+    Steam já fechou?" até o reparo caber, e a memória do episódio
+    (`_carona_ja_avisado`) que impede o mesmo aviso a cada gesto. As duas moram
+    no mixin, dependem do `GLib.timeout_add` da janela, e são território do
+    piloto — não deste pacote.
+    """
+    from hefesto_dualsense4unix.app.actions import carona_do_wrapper as carona
+
+    if not carona.ligada():
+        return frase
+    try:
+        resultado = carona.passada(completa=True)
+    except Exception:
+        # Nem o log: um pacote de aba não tem logger, e o gesto já deu certo.
+        return frase
+    return f"{frase} · {resultado.frase}" if resultado.frase else frase
+
+
+def _dizer(frase: str) -> dict[str, Any]:
+    """Anota o desfecho E o devolve para a tela AGORA, sem esperar o tique.
+
+    O CAMINHO DE VOLTA JÁ EXISTIA e ninguém desta aba o usava: um gesto que
+    devolve um dicionário tem a carga pintada na hora (`hefesto_vivo._deu_certo`
+    → `window.__hef.pintar`), no mesmo vocabulário `endereço → valor` da
+    pintura — logo o tique seguinte não briga, sobrescreve com o mesmo valor.
+
+    POR QUE NA HORA E NÃO NO TIQUE, e o argumento é o do piloto, palavra por
+    palavra: *"Meio segundo entre o clique e a resposta basta para ela clicar de
+    novo achando que o primeiro não pegou"*. Meio segundo é o tique desta aba.
+
+    **O `mesa:` NÃO É ENFEITE.** O `_deu_certo` entrega a carga CRUA ao
+    `window.__hef.pintar`, que lê `p.blocos`, `p.mesa`, `p.colunas` e
+    `p.vazios` — e mais nada. Um dicionário achatado (`{"perfis.desfecho": …}`)
+    passa por todos os laços sem casar com nenhum: **zero escrito, zero erro**,
+    que é a forma exata do defeito que esta casa chama de *ausência de notícia
+    lida como sucesso*, e que já custou dois dias ao `blocos` do `normalizar`.
+    O `pacote()` chega ao JS com esse embrulho porque `pacotes.normalizar` o
+    põe; um gesto não passa por lá, e põe o seu.
+    """
+    _anotar(frase)
+    return {"mesa": {"perfis.desfecho": frase}}
+
+
+def _anotar(frase: str) -> None:
+    """Guarda o desfecho do gesto, para o tique seguinte levá-lo à tela.
+
+    ELE NÃO ESCREVE NO DOM, e não pode: os gestos rodam em thread
+    (`hefesto_vivo._gesto`, `trabalhar()`), e só o laço do GTK toca a página. O
+    caminho é o mesmo do `_rotulo_do_remover` — o estado mora no Python e a
+    pintura o busca a cada 500 ms.
+
+    FRASE VAZIA APAGA. É o que faz um gesto que não tem notícia limpar a notícia
+    do anterior, em vez de deixar a tela afirmando um desfecho velho.
+    """
+    global _DESFECHO
+    _DESFECHO = (frase, time.monotonic()) if frase else None
+
+
+def _desfecho_para_a_tela() -> str:
+    """O desfecho ainda vivo, ou vazio — e a PODA mora aqui, no leitor.
+
+    Igual ao `_recados_para_a_tela` do piloto, e pela razão de lá: um
+    `timeout_add` por desfecho seria um temporizador por clique, e o que apaga a
+    frase passaria a ser um agendamento que a troca de aba não cancela. Aqui a
+    conta é feita quando alguém pergunta — que é a cada tique, e é o mesmo
+    instante em que o valor vai para a tela.
+    """
+    global _DESFECHO
+    if _DESFECHO is None:
+        return ""
+    frase, quando = _DESFECHO
+    if time.monotonic() - quando >= SEGUNDOS_DO_DESFECHO:
+        _DESFECHO = None
+        return ""
+    return frase
+
 
 #: OS ENDEREÇOS QUE A PÁGINA PUBLICADA **NÃO SABE RECEBER** — e emiti-los não é
 #: um valor que não aparece: é a página se DESMONTANDO a cada meio segundo.
@@ -331,9 +461,15 @@ SEM_ENDERECO = {
 #: inalcançável (ver o comentário em `publicar_enderecos`). Com ele vivo, um
 #: endereço novo deixa de esperar por ela.
 #:
-#: A LISTA FICA, vazia, porque o mecanismo continua valendo: o dia em que um
-#: campo novo do gerador mudar um PIXEL, ele entra aqui e espera o ato dela.
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
+#: **E ELE CHEGOU NO MESMO DIA.** A tira do DESFECHO (`aba10.py`, sob o
+#: cabeçalho do quadro) muda pixel: 15px de altura mais 7px de vão, tirados da
+#: altura da lista. `--publicar-enderecos` a RECUSA dizendo *"o DESENHO mudou —
+#: isto é decisão dela"*, que é exatamente o certo. Ela está declarada em
+#: `mockup/DIVERGENCIAS.md` com o que ela vê enquanto espera: nada muda, e os
+#: nove gestos que gravam no disco continuam mudos no sucesso.
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {
+    "perfis.desfecho": "a tira do desfecho muda pixel — espera o `--publicar 10` dela",
+}
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
@@ -941,6 +1077,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # a medição está na docstring de `_rotulo_do_remover`.
     fora["perfis.remover"] = _rotulo_do_remover(escolhido)
 
+    # O DESFECHO DO ÚLTIMO GESTO — a paridade com o toast da janela estável.
+    # Sai daqui pela mesma razão do rótulo acima: o estado vive no Python
+    # (os gestos rodam em thread e não tocam o DOM), e a pintura o busca.
+    fora["perfis.desfecho"] = _desfecho_para_a_tela()
+
     # A GUARDA são os overrides por controle — o que cada um guarda de próprio
     # neste perfil. O produto já a monta; a tela a distribui por linha.
     # AS CHAVES SAEM MESMO VAZIAS, e é o que faz a tela APAGAR a lista do
@@ -1070,7 +1211,7 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("10-perfis.html", "ativar")
-def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """Ativar o perfil selecionado na tabela. `profile.switch`.
 
     O NOME VEM DO TEXTO DA LINHA, e não de um `data-` novo: a tabela já mostra o
@@ -1119,10 +1260,42 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"“{nome}” já é o perfil que está valendo. Escolha outro na lista "
             f"da esquerda e clique em Ativar — reativar o mesmo não muda nada, "
             f"e dizer “aplicado” seria mentira.")
-    # `profile_switch` é do `ipc_bridge` — a mesma função que a aba Perfis da
-    # GUI estável usa. Nada aqui monta payload.
-    if not p.profile_switch(nome):
-        raise RuntimeError(f"o Hefesto não confirmou a troca para {nome!r}")
+    # O CORPO, E NÃO SÓ O BOOLEANO — ELO-MUDO-01, 03/09/2026.
+    #
+    # `ipc_bridge.profile_switch` devolve `bool` e joga fora o `secoes` que o
+    # daemon montou com cuidado: a diferença entre "ativado" e "ativado, menos o
+    # que o lock manual descartou" (ATIVAR-NAO-MENTE-01). A janela estável lê
+    # esse corpo desde sempre — `mensagem_de_ativacao(name, result)`
+    # (`profiles_actions.py:862`) —, e aqui ele estava sendo descartado: ela
+    # trocava de perfil e não ficava sabendo que metade não entrou.
+    #
+    # `ponte.resultado` é o degrau que entrega o corpo, com o MESMO teto de 3 s
+    # (`ponte.TETOS["profile.switch"]` == `ipc_bridge.PROFILE_SWITCH_TIMEOUT_S`,
+    # a cicatriz do handler de ~1,2 s). A frase da recusa continua sendo a
+    # daqui, e não a genérica do `resultado`: ela nomeia o perfil.
+    try:
+        corpo = p.resultado("profile.switch", name=nome)
+    except RuntimeError as erro:
+        raise RuntimeError(
+            f"o Hefesto não confirmou a troca para {nome!r}") from erro
+    # A FRASE É DO PRODUTO. `mensagem_de_ativacao` cai na frase de sempre
+    # ("Perfil ativado: X") quando tudo entrou ou quando o daemon não relatou, e
+    # acrescenta o que NÃO entrou reusando `_mensagem_de_aplicacao` do rodapé —
+    # a mesma função, as mesmas palavras. Escrever outra aqui seria o terceiro
+    # dono da mesma frase.
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        mensagem_de_ativacao,
+    )
+
+    frase = mensagem_de_ativacao(nome, corpo)
+    # A CARONA DO WRAPPER — CARONA-DO-WRAPPER-01, e é metade de um pedido dela:
+    # *"ao clicarmos em aplicar ou salvar o perfil seja DENTRO ou fora da guia
+    # de perfis"*. A janela estável a pega neste mesmo botão
+    # (`profiles_actions.py:3232`). Sem ela, o `launch_env.refresh` que esta aba
+    # já manda escreve um bilhete que a Steam não vai abrir: as Opções de
+    # Inicialização ficam sem o `hefesto-launch`, e o jogo é instruído a ignorar
+    # o vpad que nós criamos para ele — foi o defeito do Pragmata em 16/08.
+    return _dizer(_com_a_carona(frase))
 
 
 @gesto("10-perfis.html", "voltar-a-de-ontem")
@@ -1249,6 +1422,64 @@ def _nome_livre(base: str, todos: Any) -> str:
     return f"{base} {n}"
 
 
+#: O ARMAMENTO DO REBAIXAMENTO DE REGRA — `(perfil, quando)`, como o `_ARMADO`
+#: do Remover e pelo mesmo motivo: esta janela não tem diálogo modal, e a
+#: pergunta tem de caber no gesto.
+_ARMADO_REBAIXAR: tuple[str, float] | None = None
+
+
+def _pergunta_antes_de_rebaixar(prof: Any, chave: str) -> None:
+    """Trocar "Funciona em" para "Todos" APAGA a regra. Pergunta antes.
+
+    COR-A + SALVAR-NAO-REBAIXA-02, trazidas para esta tela em 03/09/2026. A
+    janela estável tem CINCO perguntas no Salvar; a forma dos gestos daqui —
+    um campo por vez, sem rascunho — dispensa três delas, e esta continuava
+    aberta e alcançável em UM clique: **escolher "Todos" num perfil de jogo
+    gravava o catch-all calado.** O perfil que valia só no Elden Ring passava a
+    valer para tudo, sem aviso e sem volta pela tela.
+
+    A GUARDA É A DA JANELA ESTÁVEL, condição por condição
+    (`profiles_actions.py:3400`): a regra NOVA é `MatchAny` e a ANTIGA não é. O
+    `MatchManual` e o `criteria` vazio entram junto — virar "vale para TUDO" é,
+    nesses dois, a mudança mais violenta que a aba sabe fazer, e era a única que
+    passava calada (é a razão de a guarda de lá não ser `isinstance(...,
+    MatchCriteria)`).
+
+    O RÓTULO DO QUE ELE É HOJE SAI DE `_match_label`, a mesma função pura que
+    alimenta a coluna "Quando usar" — pelo argumento escrito no diálogo de lá:
+    *"o diálogo não pode chamar de «programas específicos» um perfil que a lista
+    chama de «Só manual»"*.
+
+    AS DUAS PRIMEIRAS FRASES SÃO AS DO PRODUTO, palavra por palavra
+    (`gui_dialogs.confirm_downgrade_match_to_any`); só o verbo da confirmação
+    muda, porque lá quem confirma é um botão de diálogo e aqui é o segundo
+    gesto. É a mesma adaptação que `remover` já fez com o diálogo de apagar.
+
+    **A RECUSA SE DESFAZ SOZINHA NA TELA**, e isso é parte da cura: o
+    `<select>` não está em `_uma_vez_so`, então o tique seguinte o repinta com
+    o ambiente REAL do perfil. Ela vê o campo voltar — que é a verdade — e a
+    tarja explicando por quê, por trinta segundos.
+    """
+    global _ARMADO_REBAIXAR
+    from hefesto_dualsense4unix.app.actions.profiles_actions import _match_label
+    from hefesto_dualsense4unix.profiles.schema import MatchAny
+
+    if chave != "any" or isinstance(prof.match, MatchAny):
+        _ARMADO_REBAIXAR = None
+        return
+    agora = time.monotonic()
+    if (_ARMADO_REBAIXAR and _ARMADO_REBAIXAR[0] == prof.name
+            and (agora - _ARMADO_REBAIXAR[1]) < SEGUNDOS_PARA_CONFIRMAR):
+        _ARMADO_REBAIXAR = None
+        return
+    _ARMADO_REBAIXAR = (prof.name, agora)
+    raise RuntimeError(
+        f"O perfil “{prof.name}” não vale para tudo hoje — hoje ele é: "
+        f"{_match_label(prof.match)}. Trocar para “Todos” faz ele valer para "
+        f"TUDO (Quando usar: Sempre) e apaga os programas em que ele valia. "
+        f"Escolha “Todos” de novo para confirmar — o campo espera oito segundos.")
+
+
 def _so_mudou(o: dict[str, Any]) -> bool:
     """`False` quando o clique foi só um clique — e aí o campo não age.
 
@@ -1339,7 +1570,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("10-perfis.html", "editor.ambiente")
-def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Funciona em": trocar a REGRA que faz o perfil entrar. `from_simple_choice`.
 
     QUEM MONTA A REGRA É O PRODUTO, e não este arquivo:
@@ -1369,7 +1600,7 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
 
     if not _so_mudou(o):
-        return
+        return None
     rotulo = str(o.get("valor") or o.get("rotulo") or "").strip()
     nome = _perfil_do_editor(ctx)
     chave = PRESET_DO_ROTULO.get(rotulo)
@@ -1382,12 +1613,14 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     editor = _editor_de(prof)
     if editor.get("ambiente_travado"):
         raise ValueError(str(editor.get("ambiente_recado") or ""))
+    _pergunta_antes_de_rebaixar(prof, chave)
     # O NOME DO JOGO VEM DO DISCO, e não do campo ao lado: o `<input>` pode ter
     # texto que ela digitou e ainda não confirmou (o `change` só dispara quando
     # o foco sai). Ler o disco é ler o que o perfil de fato tem.
     prof.match = from_simple_choice(chave, editor.get("jogo") or "",
                                     regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
+    return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
 
 
 @gesto("10-perfis.html", "editor.jogo")
@@ -1498,7 +1731,7 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("10-perfis.html", "novo")
-def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Novo": um perfil em branco no disco, já com a regra do jogo em foco.
 
     NASCE NO DISCO, e não num rascunho, porque esta aba não tem "Salvar"
@@ -1512,13 +1745,38 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     faz — com jogo da Steam em foco nasce mirando aquele jogo, sem ele nasce
     catch-all, "que é o certo para um perfil de desktop" (palavras de lá).
 
-    O QUE ELE NÃO CARREGA, e é dívida honesta: a janela estável ainda sobe a
-    prioridade acima dos catch-all (`_prioridade_acima_dos_catch_all`), e essa
-    conta mora num mixin GTK que depende de widget. Este perfil nasce com a
-    prioridade padrão do esquema. Ele NÃO é ativado: nascer não é passar a
-    valer.
+    **A PRIORIDADE DEIXOU DE NASCER EM ZERO** — 03/09/2026,
+    PERFIL-NASCE-CERTO-01. Aqui estava escrito que a conta *"mora num mixin GTK
+    que depende de widget"*. **Não depende.** O corpo de
+    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:4172`) lê UM
+    atributo — `self._profiles_cache`, a lista de perfis — e mais nada: sem
+    `Gtk`, sem `self._get`, sem widget. O que faltava era alguém lhe entregar a
+    lista, e esta aba já a tem na mão.
+
+    O DEFEITO QUE ISSO FECHA foi medido em 26/07 com ela jogando: o perfil que
+    ela criou para o Pragmata nasceu prioridade 0 e NUNCA valia no jogo, porque
+    o catch-all dela (prioridade 100) vencia em todo o resto. **Ela não errou a
+    configuração — a janela não tinha saída**, e um perfil novo desta tela caía
+    no mesmo buraco. Medido no disco dela hoje: os catch-all são `meu_perfil`
+    (1) e `fallback` (0), então a folga sai **11** — e os perfis de jogo dela
+    estão em 80, o que continua sendo o certo: a conta promete vencer os
+    "vale sempre", não vencer todo mundo.
+
+    A CHAMADA É À FUNÇÃO DA JANELA, e não a uma segunda conta: o mixin é uma
+    classe, e um método que só lê `getattr(self, "_profiles_cache", None)` roda
+    com qualquer objeto que tenha esse atributo. Copiar `max(catch-all) + 10`
+    para cá seria a segunda verdade sobre quem vence a disputa — e o teto
+    (`PRIORIDADE_MAXIMA`), a folga (`_FOLGA_ACIMA_DO_CATCH_ALL`) e a regra do
+    que É catch-all (`Profile.e_catch_all`) ficariam com dois donos.
+
+    Ele NÃO é ativado: nascer não é passar a valer.
     """
     global _ESCOLHIDO
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        ProfilesActionsMixin,
+    )
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
@@ -1529,13 +1787,21 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     appid = steam_appid_from_wm_class(classe) if classe else None
     regra = (from_simple_choice("steam_game", str(appid)) if appid is not None
              else MatchAny())
-    nome = _nome_livre("Novo perfil", load_all_profiles())
-    _gravar(Profile(name=nome, match=regra), ctx, p)
+    todos = list(load_all_profiles())
+    nome = _nome_livre("Novo perfil", todos)
+    # `Any` E NÃO UM `cast` PARA O MIXIN: o objeto NÃO é um mixin, e dizer que é
+    # seria mentir para quem ler. O que ele é está no nome — só o cache, que é o
+    # único atributo que o método lê (`getattr(self, "_profiles_cache", None)`).
+    so_o_cache: Any = SimpleNamespace(_profiles_cache=todos)
+    prioridade = ProfilesActionsMixin._prioridade_acima_dos_catch_all(so_o_cache)
+    _gravar(Profile(name=nome, match=regra, priority=prioridade), ctx, p)
     _ESCOLHIDO = nome
+    return _dizer(f"Perfil criado: {nome} · prioridade {prioridade}, acima dos "
+                  f"que valem sempre")
 
 
 @gesto("10-perfis.html", "duplicar")
-def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Duplicar": o perfil inteiro numa cópia, e o editor abre nela.
 
     A DICA DELA DIZ *"Copia o perfil inteiro para o editor, com «(cópia)» no
@@ -1556,15 +1822,43 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O NÚMERO NO FIM ("(cópia) 2") NÃO É ENFEITE: sem ele, duplicar duas vezes o
     mesmo perfil gravaria a segunda cópia POR CIMA da primeira — `save_profile`
     escreve por slug.
+
+    **"O PERFIL INTEIRO" TEM UMA EXCEÇÃO, E ELA É O CARIMBO DE PONTE** —
+    03/09/2026, e era um defeito de comportamento. O `model_copy` levava o
+    `ponte` junto, e a janela estável o CORTA de propósito: em
+    `_build_profile_from_editor` o duplicar entra como estreia
+    (`estreia = _new_profile or _duplicate_source is not None`,
+    `profiles_actions.py:4438`), o degrau 2 de `carimbo_que_o_save_leva` é
+    cortado, e o degrau 1 — o disco, pelo nome NOVO — devolve `None`.
+
+    POR QUE ISSO IMPORTA, e o cenário é o gesto seguinte ao duplicar: repontar a
+    cópia para OUTRO jogo. Com o carimbo herdado, `pontes_confirmadas()` publica
+    uma ponte que ninguém provou naquele appid, a escada de
+    `integrations/ponte_escada.py` para num jogo nunca testado, e o produto jura
+    saber o que não sabe. **O carimbo é REGISTRO de uma confirmação, não
+    configuração que se copia.**
+
+    A REGRA NÃO É REESCRITA AQUI: quem decide é `carimbo_que_o_save_leva`, o
+    mesmo dono que a aba Perfis e o rodapé já consultam
+    (`profile_writer.py:57`). Os argumentos são os do caso: `existente` é quem
+    ocupa o nome novo em disco (ninguém — `_nome_livre` acabou de garantir), e
+    não há rascunho. Se a escada mudar, esta linha muda com ela.
     """
     global _ESCOLHIDO
+    from hefesto_dualsense4unix.app.actions.profile_writer import (
+        carimbo_que_o_save_leva,
+    )
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles, load_profile
+    from hefesto_dualsense4unix.profiles.slug import find_by_slug
 
     era = _perfil_do_editor(ctx)
+    todos = list(load_all_profiles())
     prof = load_profile(era)
-    copia = _nome_livre(f"{prof.name} (cópia)", load_all_profiles())
-    _gravar(prof.model_copy(update={"name": copia}), ctx, p)
+    copia = _nome_livre(f"{prof.name} (cópia)", todos)
+    carimbo = carimbo_que_o_save_leva(find_by_slug(copia, todos), None)
+    _gravar(prof.model_copy(update={"name": copia, "ponte": carimbo}), ctx, p)
     _ESCOLHIDO = copia
+    return _dizer(f"Cópia criada: {copia}")
 
 
 @gesto("10-perfis.html", "remover")
@@ -1637,11 +1931,67 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _ARMADO = None
     delete_profile(nome)
     _ESCOLHIDO = ""
+    # A FRASE É A DA JANELA ESTÁVEL, palavra por palavra: `_toast_profile(
+    # f"Perfil removido: {name}")` (`profiles_actions.py:3197`).
+    _anotar(f"Perfil removido: {nome}")
     # SEM `profile.switch` AQUI, de propósito: o perfil apagado não é o ativo
     # (a guarda 2 garante), então não há o que reaplicar. O `launch_env`
     # precisa saber assim mesmo — o `steam_app_<id>.env` do perfil que morreu
     # fica rançoso se ninguém avisar (DEDUP-04, `profiles_actions.py:3199`).
     p.chamar("launch_env.refresh")
+
+
+@gesto("10-perfis.html", "recarregar")
+def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Recarregar": reler a lista do disco AGORA, e dizer que releu.
+
+    **ELE ERA UM BOTÃO MORTO COM APARÊNCIA DE VIVO** — 03/09/2026. O
+    `data-hef-gesto="recarregar"` está na página desde 31/08 e não havia
+    `@gesto`: o piloto caía no ramo do gesto SEM DONO, anotava `("sem dono", "")` e
+    imprimia `[gesto sem dono] 10-perfis.html · recarregar` **no stdout de quem
+    lançou a janela**. Ela clicava, nada acontecia, e nada dizia por quê — nem a
+    tarja, porque `_recusou_dizendo` só pinta para exceção de HANDLER, e um
+    gesto sem handler não chega lá.
+
+    **O MOTIVO DE ELE TER FICADO SEM DONO CAIU, E CAIU PELA METADE QUE FALTAVA.**
+    Estava escrito aqui que *"não há o que chamar: a lista já é relida do disco
+    a cada 500 ms, então ligá-lo a um `load_all` extra seria fingir trabalho já
+    feito"*. A premissa está certa e a conclusão não segue — a janela estável
+    tem o MESMO botão, sobre uma lista que ela também mantém em cache
+    (`on_profile_reload` → `_reload_profiles_store` + toast "Lista recarregada",
+    `profiles_actions.py:3319`). O trabalho que ele faz não é a leitura: é
+    **dizer que leu**. Um botão cuja promessa é tranquilizar não fica mudo
+    porque o produto já estava certo.
+
+    O QUE ELE FAZ, e é o `_reload_profiles_store` desta tela: chama `pacote()`,
+    que relê o disco, e devolve a carga INTEIRA — o `blocos` da lista, a
+    contagem, o editor. A pintura acontece no ato (`_deu_certo` →
+    `window.__hef.pintar`), não no tique seguinte, que é a diferença entre um
+    botão que responde e um botão que parece não ter pego.
+
+    NÃO FALA COM O DAEMON, e por isso não está em `PROVAS`: o disco é a fonte da
+    lista, e o `state` que decide quem está ativo já chegou pelo tique. É o
+    segundo gesto desta aba sem chamada de ponte — o outro é o `selecionar`.
+
+    A FRASE É A DA JANELA ESTÁVEL, palavra por palavra: `"Lista recarregada"`
+    (`profiles_actions.py:3321`). O número de perfis vai junto porque é o que
+    faz o clique VALER: ela relê para conferir que o perfil novo apareceu.
+    """
+    carga = pacote(ctx)
+    quantos = len(carga.get("perfis.linha.nome") or [])
+    frase = f"Lista recarregada · {quantos} perfis"
+    # A ORDEM IMPORTA: `pacote()` LÊ o desfecho para pintá-lo, então a carga que
+    # ele acabou de montar carrega o desfecho ANTERIOR. Anotar antes de chamar
+    # não resolve (o valor entraria certo, mas a contagem sai da carga); a
+    # correção é sobrescrever a chave depois — um dono, um valor, e o tique
+    # seguinte encontra o mesmo.
+    _anotar(frase)
+    carga["perfis.desfecho"] = frase
+    # A CARGA VAI NO EMBRULHO DA PINTURA — ver `_dizer`. O `blocos` é chave de
+    # contrato e fica na RAIZ (o `pintar` o lê de `p.blocos`); o resto é `mesa`.
+    return {"blocos": carga.get("blocos") or {},
+            "mesa": {k: v for k, v in carga.items()
+                     if k != "blocos" and not isinstance(v, dict)}}
 
 
 def _editor_de(prof: Any) -> dict[str, Any]:
@@ -1660,14 +2010,18 @@ def _editor_de(prof: Any) -> dict[str, Any]:
     return editor
 
 
-#: OS DOIS QUE CONTINUAM SEM DONO, e o motivo de cada um é MEDIDO.
+#: O ÚNICO QUE CONTINUA SEM DONO, e o motivo é MEDIDO.
 #:
-#:   recarregar    NÃO HÁ O QUE CHAMAR. A dica dela diz "Relê a lista do disco.
-#:                 Não descarta o que está no editor ao lado" — e a lista já é
-#:                 relida do disco a cada tique de 500 ms, em `pacote()`, por
-#:                 `load_all_profiles()`. Ligar este botão a um `load_all` extra
-#:                 seria um botão que finge trabalho que já está feito. O que
-#:                 falta não é motor: é o botão sair do desenho, e isso é dela.
+#: **`recarregar` GANHOU DONO — 03/09/2026.** Aqui estava escrito que *"não há o
+#: que chamar: a lista já é relida do disco a cada tique de 500 ms, então ligar
+#: este botão a um `load_all` extra seria fingir trabalho que já está feito; o
+#: que falta não é motor, é o botão sair do desenho"*. A premissa continua
+#: certa e **a conclusão não seguia**: a janela estável tem o MESMO botão sobre
+#: um cache que ela também mantém (`on_profile_reload`, `:3319`), e o trabalho
+#: dele nunca foi a leitura — é DIZER que leu. Enquanto isso não foi visto, o
+#: botão ficou vivo na tela e morto no código, imprimindo `[gesto sem dono]`
+#: num terminal que ela não olha. Ver o gesto `recarregar`.
+#:
 #:   editor.estilo NÃO EXISTE EM LUGAR NENHUM, e o produto já o declara assim:
 #:                 `perfis_web.GESTOS_SEM_MOTOR["editor.estilo"]` diz *"não
 #:                 existe campo de Estilo de Jogo no perfil, nem preset que o
@@ -1685,14 +2039,22 @@ def _editor_de(prof: Any) -> dict[str, Any]:
 #:                 o ato de publicar DELA. Até lá, a página publicada continua
 #:                 abrindo em "Luta"; o pacote parou de escrever nela nos dois
 #:                 casos, que é o que impede a tela de piorar.
-PONTE = {"profile_switch", "chamar"}
-METODOS = {"launch_env.refresh"}
+#: `resultado` ENTROU EM 03/09/2026, e o `profile_switch` FICA: o `ativar`
+#: passou a ler o CORPO da resposta em vez do booleano (ELO-MUDO-01), mas o
+#: `voltar-a-de-ontem` e o `gravar_e_reaplicar` continuam usando o invólucro —
+#: para eles o booleano basta, porque a pergunta é "o daemon aceitou?" e não
+#: "o que entrou?".
+PONTE = {"profile_switch", "chamar", "resultado"}
+#: `profile.switch` ENTROU com o `resultado`: quem chama por nome de método
+#: declara o método. O `test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende`
+#: confere os dois contra o `ipc_server.py`.
+METODOS = {"launch_env.refresh", "profile.switch"}
 
 
 PAGINA = "10-perfis.html"
-PISO_DA_ABA = 10
-#: SÓ UMA PROVA DECLARADA PARA DEZ GESTOS, e a razão é estrutural, não
-#: preguiça: os outros nove agem sobre o perfil ESCOLHIDO, e o `ctx` desta
+PISO_DA_ABA = 11
+#: SÓ UMA PROVA DECLARADA PARA ONZE GESTOS, e a razão é estrutural, não
+#: preguiça: nove dos outros dez agem sobre o perfil ESCOLHIDO, e o `ctx` desta
 #: régua é fixo — `active_profile="regua"`, sem `_ESCOLHIDO` (um gesto que
 #: dependesse do estado deixado por outro teste seria pior que não ter prova).
 #: FATO SUBSTITUÍDO — 02/09/2026. Aqui estava escrito que, "no mesmo lar de
@@ -1708,12 +2070,21 @@ PISO_DA_ABA = 10
 #: num diretório temporário, três perfis dela copiados, e um dublê de ponte
 #: igual ao desta régua — os números estão no relato desta leva, gesto a gesto,
 #: com a mordida de cada um.
+#: E O DÉCIMO PRIMEIRO — `recarregar` — NÃO CHAMA A PONTE de propósito: a fonte
+#: da lista é o DISCO. Uma prova declarada aqui reprovaria por não chamar nada,
+#: que é o contrato certo desta régua e a razão errada para este botão. Quem o
+#: morde é `test_o_recarregar_da_aba_perfis_tem_dono.py`, que exige a carga.
 PROVAS: list[dict[str, Any]] = [
+    # `resultado` E NÃO `profile_switch` — 03/09/2026, o ELO-MUDO-01. O
+    # `ativar` passou a ler o CORPO da resposta (`secoes`), que é a diferença
+    # entre "ativado" e "ativado, menos o que o lock manual descartou". Os
+    # argumentos são os do `_safe_call`: o método por posição, o `name` por
+    # nome — é assim que a ponte recebe o nome do método e os parâmetros.
     {"pagina": PAGINA, "gesto": "ativar", "clique": {"texto": "Ação"},  # (noqa-acento) id
-     "chama": [("profile_switch", ["Ação"], {})]},
+     "chama": [("resultado", ["profile.switch"], {"name": "Ação"})]},
 ]
 
-#: O QUE NÃO ECOA NO `state_full`, e são NOVE dos dez. A razão é uma só e está
+#: O QUE NÃO ECOA NO `state_full`, e são DEZ dos onze. A razão é uma só e está
 #: no alto deste arquivo: **o daemon não guarda perfil, o disco guarda**. Ele
 #: publica `active_profile` (um nome) e mais nada sobre o conteúdo — renomear,
 #: duplicar, apagar, trocar a regra do jogo, restaurar a versão de ontem: nada
@@ -1728,4 +2099,5 @@ PROVAS: list[dict[str, Any]] = [
 #: uma régua que os clicasse em ordem alfabética — sem `selecionar` antes —
 #: veria nove recusas em vez de nove gestos.
 SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
-           "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem")
+           "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem",
+           "recarregar")
