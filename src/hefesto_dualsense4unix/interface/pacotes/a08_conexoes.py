@@ -113,6 +113,13 @@ _QUANDO_O_EXAME: float | None = None
 #: pacote mediu em 01/09 como razão para NÃO ligá-lo.
 _DISPENSADAS: dict[str, str] = {}
 
+#: O EXAME DE ENTRADA JÁ FOI PEDIDO NESTA SESSÃO? — 03/09/2026, `MIGRA-08-01`.
+#: Ele é UMA VEZ SÓ e não se re-arma: o que o rearmaria é o botão **Examinar
+#: Portas**, que é gesto dela. Sem esta trava, um exame que falha viraria um
+#: `busctl` novo a cada 500 ms — a tela pediria ao sistema duas vezes por
+#: segundo o que ele acabou de recusar.
+_EXAME_PEDIDO: bool = False
+
 
 def _declaracao(recarregar: bool = False) -> Any:
     """O `maquina.json` já validado, ou `None` se não deu para ler.
@@ -270,6 +277,59 @@ def _mesa_declarada(declaracao: Any) -> dict[str, Any]:
         return {}
 
 
+#: O ID DO "NÃO SEI" NO DESENHO, e ele é o do produto: o `SegmentedSelector` da
+#: janela estável tem `("nao_sei", "Não sei")` nas duas perguntas
+#: (`secao_mesa.py:602` e `:618`), e é ele que o `set_active_id` acende.
+#:
+#: POR QUE ELE NÃO É O `data-modo` DO BOTÃO, e a diferença tem razão medida: o
+#: `data-modo` é o que o GESTO manda ao daemon, e ali `""` é o que vira `None`
+#: no `machine_declare` — a string `"nao_sei"` faria o pydantic recusar o
+#: documento INTEIRO (ver :func:`sala_altura`). Já o `data-hef-quando` é o que o
+#: `escrever()` do piloto COMPARA, e ali `""` quer dizer outra coisa: alvo
+#: booleano, sem grupo (`hefesto_vivo.py:229`). Um botão marcado com `""` acende
+#: por "o valor é verdadeiro", não por "o valor é este" — e os três da fileira
+#: acenderiam juntos. São dois vocabulários, e os dois são do produto.
+_ID_NAO_SEI = "nao_sei"
+
+
+def _sala_na_tela(declaracao: Any) -> dict[str, str]:
+    """O que ela JÁ RESPONDEU sobre a sala, na língua do `data-hef-quando`.
+
+    **A GTK MOSTRA ISSO DESDE SEMPRE** — `secao_mesa._linha_declarada:671` lê
+    `_mesa_em_vigor()` e pré-seleciona o botão gravado ANTES de ligar o sinal.
+    Esta tela não mostrava, e o sintoma foi medido nesta bancada em 03/09/2026:
+    o `maquina.json` dela diz `altura_da_antena='acima'` e
+    `linha_de_visada='com_gente'`, e na página os TRÊS botões da VISADA estavam
+    apagados — a tela dizendo que ela não respondeu uma pergunta que ela
+    respondeu. O "Sim" da ALTURA estava aceso por coincidência do mockup, que é
+    pior: um acerto que não vem de leitura nenhuma erra no primeiro clique dela.
+
+    E ELA CLICA DE NOVO, que é o custo real: sem eco, o segundo clique parece o
+    primeiro, e um gesto que grava sem dizer que gravou é indistinguível de um
+    gesto que não fez nada.
+
+    O `None` NÃO ACENDE NADA, e a regra é do dono: `secao_mesa:672` só chama
+    `set_active_id` quando `gravado is not None`. E tem de ser assim porque o
+    produto **não distingue** "nunca respondeu" de "respondeu Não sei" — as duas
+    gravam `None` (`sala_altura`: `escolha or None`;
+    `secao_mesa._valor_do_seletor:1498` faz a mesma conversão). Acender o "Não
+    sei" no `None` poria na boca dela uma resposta que ela pode não ter dado;
+    deixar os três apagados é o que as duas telas fazem hoje.
+
+    Por isso :data:`_ID_NAO_SEI` existe no DESENHO e nunca é emitido aqui: ele é
+    o que tira o terceiro botão do modo booleano do `escrever()`, e nada mais.
+    """
+    mesa = _mesa_declarada(declaracao)
+    fora: dict[str, str] = {}
+    for campo, chave in (("sala-altura", "altura_da_antena"),
+                         ("sala-visada", "linha_de_visada")):
+        if chave not in mesa:
+            continue
+        valor = mesa.get(chave)
+        fora[campo] = "" if valor is None else str(valor)
+    return fora
+
+
 def _radios_declarados(declaracao: Any) -> dict[str, str]:
     """`{vid:pid: tipo}` — o que ela já respondeu sobre cada rádio vizinho."""
     try:
@@ -369,6 +429,53 @@ def _conferencias() -> list[Any]:
         return []
 
 
+def _pedir_o_exame_de_entrada() -> None:
+    """O exame COMPLETO uma vez, ao entrar na aba — como a janela estável faz.
+
+    **A GTK JÁ FAZIA ISSO**, e é o degrau que faltava aqui: `app.py:1180` chama
+    `_refresh_saude_da_mesa` ao trocar para a aba Configurações, e
+    `secao_exame.reexaminar` corre as CINCO conferências mais as ordens numa
+    thread. Ao entrar na aba, lá as cinco linhas estão desenhadas.
+
+    AQUI ELAS NÃO ESTAVAM, e o sintoma foi fotografado nesta bancada em
+    03/09/2026: o `_conferencias()` do tique devolve TRÊS itens e o desenho tem
+    CINCO blocos `data-campo="exame"`. O piloto distribui a lista por ordem e
+    escreve `''` no que sobra (`hefesto_vivo.py:407`), então **duas das cinco
+    linhas do Check-up nasciam vazias** — com o ⊘ e o `?` ainda desenhados ao
+    lado de um travessão. E a coluna da direita, sem ordem nenhuma para pintar,
+    continuava mostrando a ordem de serviço do MOCKUP: *"Mova o adaptador
+    Bluetooth da Entrada 3 para a Entrada 9"* — uma instrução para ela mexer no
+    gabinete, cravada no arquivo, sobre uma máquina que ninguém examinou.
+
+    UMA VEZ SÓ, E EM THREAD. O exame forka `busctl` com teto de 5 s; correr isso
+    no tique de 500 ms seria a janela pedindo ao sistema duas vezes por segundo
+    o que ele acabou de responder. `_EXAME_PEDIDO` não se re-arma nem quando o
+    exame FALHA — quem rearma é o botão **Examinar Portas**, que é gesto dela.
+
+    A THREAD É `daemon=True` porque ela não guarda nada que precise sobreviver
+    ao fechamento da janela: o resultado vive em `_EXTRAS`, que morre com o
+    processo. Uma thread não-daemon aqui seguraria o fechamento por até 5 s
+    esperando um `busctl` que não interessa mais a ninguém.
+
+    O `except` LARGO É O CONTRATO DA THREAD: uma exceção aqui não tem quem a
+    receba — a thread morre calada e o traceback vai para o `stderr` de ninguém.
+    Engolir e deixar `_EXTRAS` vazio devolve a tela ao estado de antes desta
+    função (três linhas), que é degradação, não quebra.
+    """
+    global _EXAME_PEDIDO
+    if _EXAME_PEDIDO:
+        return
+    _EXAME_PEDIDO = True
+    import threading
+
+    def correr() -> None:
+        with contextlib.suppress(Exception):
+            _correr_o_exame_completo()
+
+    threading.Thread(target=correr, name="hefesto-exame-de-entrada",
+                     daemon=True).start()
+
+
 def _itens_da_tela() -> list[Any]:
     """As linhas do Check-up: as três do tique mais o que o exame completo trouxe.
 
@@ -388,7 +495,30 @@ def _itens_da_tela() -> list[Any]:
         if ordem is not None and _DISPENSADAS.get(ordem.chave) == ordem.arranjo:
             continue
         conferidas.append(item)
-    return conferidas
+    # AS ORDENS VÊM ANTES, E A REGRA É DO PRODUTO — 03/09/2026, `MIGRA-08-01`.
+    # `secao_exame._desenhar_o_que_fazer` a escreve com estas palavras: *"As
+    # ordens vêm antes das curas de conferência: uma ordem sabe de onde veio
+    # cada frase dela, e uma cura de conferência não. O que afirma mais vem
+    # primeiro."*
+    #
+    # AQUI ELA DECIDE O QUE ELA VÊ, e não só a ordem: o desenho tem CINCO blocos
+    # de exame, e o exame completo desta máquina devolve SETE itens — as cinco
+    # conferências mais duas ordens. Sem esta linha, as duas que sobram são
+    # justamente as DUAS ÚNICAS que acusam (`dongle_atras_de_hub` e
+    # `teclado_so_no_hub`, ambas `atencao`, medidas nesta  # (noqa-acento) id
+    # bancada em 03/09), e a
+    # tira fica com cinco CERTO — a tela dizendo "está tudo bem" com dois
+    # achados abertos escondidos no fim da lista.
+    #
+    # O `+N` CONTINUA FALTANDO, e é o mesmo buraco que `gui.aba_conexoes.
+    # sobraram` mede na janela estável: o desenho não tem onde dizer "e mais 2".
+    # O que esta ordenação garante é que o que sobra seja sempre o mais barato
+    # de perder.
+    #
+    # `sorted` É ESTÁVEL, então dentro de cada grupo a ordem de chegada fica —
+    # as conferências continuam saindo na ordem em que `_conferencias` as roda,
+    # que é a ordem dos cinco rótulos da janela estável.
+    return sorted(conferidas, key=lambda i: getattr(i, "ordem", None) is None)
 
 
 #: O QUE SOBRA QUANDO O ESTADO NÃO ESTÁ NO MAPA — a mesma reserva que
@@ -593,6 +723,185 @@ def _dica_da_linha(item: Any) -> str:
             for r, t in partes if t)
     except Exception:
         return ""
+
+
+def _dica_da_ordem(ordem: Any) -> str:
+    """O `?` do card da ordem: *O que eu vi aqui* e *Por que importa*.
+
+    AS DUAS FRASES SÃO DA ORDEM, e os rótulos são de
+    `exame_da_mesa.ROTULOS_DA_ORDEM` — os MESMOS que o card do GTK escreve
+    (`secao_exame._card_da_ordem:715`) e os mesmos que o `?` de cada linha desta
+    tela já usa (:func:`_dica_da_linha`). Nenhuma palavra nasce aqui.
+
+    A TERCEIRA FICA DE FORA porque o card já a mostra por extenso, na linha
+    `Ganho esperado:` que `html_da_ordem` emite. Repeti-la no `?` seria a mesma
+    frase duas vezes no mesmo cartão — a decisão 9 dela, aplicada ao card.
+
+    O SELO DE PROCEDÊNCIA CONTINUA FORA, pela razão já medida em
+    :func:`_dica_da_linha`: as duas frases dividem uma dica estreita, e um
+    `[medido]` em cinza no fim de cada uma competiria com o texto que ela foi
+    ler. Fica escrito para quem desenhar a dica maior.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+    from hefesto_dualsense4unix.integrations.exame_da_mesa import ROTULOS_DA_ORDEM
+    from hefesto_dualsense4unix.utils.i18n import _
+
+    partes = [
+        f"<b>{_e(_(str(rotulo)))}:</b> {_e(_(str(getattr(linha, 'texto', '') or '')))}"
+        for rotulo, linha in zip(ROTULOS_DA_ORDEM[:2], ordem.linhas[:2], strict=True)
+        if getattr(linha, "texto", "")]
+    if not partes:
+        return ""
+    # O `style` É O DO DESENHO, e não um enfeite: esta dica mora na coluna da
+    # DIREITA, e sem ele a caixa de 330px nasce para fora da janela. É o mesmo
+    # `left:auto;right:22px` que o gerador crava no `?` deste card.
+    return ('<span class="ajuda">?<span class="dica" style="left:auto;right:22px">'
+            + "<br><br>".join(partes) + "</span></span>")
+
+
+def _ordem_na_tela() -> Any:
+    """A ordem de serviço que a coluna da direita mostra, ou `None`.
+
+    UMA, E É A PRIMEIRA. O desenho tem UM card, e `ordens_da_mesa` pode devolver
+    várias — a GTK desenha um card por ordem numa zona que cresce
+    (`secao_exame._desenhar_o_que_fazer`), e aqui não há para onde crescer.
+    Mostrar a primeira da tira é o que o `_ORDENS_NA_TELA` já endereça: é a
+    mesma ordem que o ⊘ da linha dela dispensa.
+
+    O QUE SOBRA NÃO É MENTIRA, MAS ESCONDE, e é o mesmo buraco que
+    `gui.aba_conexoes.sobraram` mede na janela estável. Fica escrito para quem
+    desenhar o "+N" desta coluna.
+    """
+    return next((o for o in _ORDENS_NA_TELA if o is not None), None)
+
+
+def _dono_sabe_desenhar_a_ordem() -> bool:
+    """O `gui.aba_conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade?
+
+    **HOJE NÃO, E O DEFEITO É DELE** — medido nesta bancada em 03/09/2026, com
+    as DUAS ordens abertas na máquina dela (`dongle_atras_de_hub` e
+    `teclado_so_no_hub`)::
+
+        AttributeError: 'Identidade' object has no attribute 'onde'
+        gui/aba_conexoes.py:733   {_e(ordem.alvo.onde or TRACO)}
+
+    `ordens_da_mesa.Identidade` tem `vid`, `pid`, `caminho` e `ambigua` — e
+    nunca teve `onde`. A função **jamais correu com uma ordem**: o único
+    chamador era `aba_conexoes.pintura:935`, e `pintura(ordem=None)` é o padrão,
+    então todas as chamadas caíam no ramo do `None`, que funciona. É a forma de
+    defeito que esta casa chama de *ramo morto por construção* — e ela só
+    apareceu quando alguém foi usar a função para o que ela existe.
+
+    ESTA FUNÇÃO É A CATRACA. `gui/aba_conexoes.py` é de outro dono, e enquanto
+    ele não fechar, :func:`_card_da_ordem` desenha aqui. No dia em que fechar,
+    esta função devolve `True`, o teste
+    `test_o_dono_ainda_nao_desenha_a_ordem_da_mesa_08` fica VERMELHO, e quem o
+    ler apaga a segunda grafia e volta a chamar o dono. Uma duplicação que sabe
+    a data da própria morte é o preço aceitável; uma que não sabe é dívida.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui import aba_conexoes as _tela
+    from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
+        DERIVADO_DA_CONTA,
+        Linha,
+        Ordem,
+    )
+
+    frase = Linha(texto="x", selo=DERIVADO_DA_CONTA)
+    prova = Ordem(chave="prova", acao="x", o_que_eu_vi=frase,
+                  por_que_importa=frase, ganho_esperado=frase)
+    try:
+        _tela.html_da_ordem(prova)
+    except AttributeError:
+        return False
+    return True
+
+
+def _card_da_ordem(ordem: Any) -> str:
+    """O card de UMA ordem: o imperativo, o `?`, o de→para e o ganho.
+
+    SEGUNDA GRAFIA COM DATA DE MORTE — ver :func:`_dono_sabe_desenhar_a_ordem`.
+    As classes são as do desenho dela (`.ordem`, `.faca`, `.receita`, `.caixa`,
+    `.seta`, `.ganho`), as mesmas que o dono emite; o que muda é que aqui a
+    `Ordem` é lida pelos campos que ela TEM.
+
+    A RECEITA SÓ APARECE COM DESTINO, e é o que o dono não faz: ele emite as
+    duas caixas sempre, e com `destino` vazio a tela mostraria `—  →  —`. Nas
+    DUAS ordens desta máquina o `destino` é `''` — a regra achou o problema e
+    não achou entrada livre nomeável para onde mandar (`SEM_DESTINO`). Um
+    de→para de travessão para travessão é ruído com cara de diagnóstico.
+
+    O QUE VAI NA CAIXA DA ESQUERDA é o `alvo.caminho` — o endereço de barramento
+    (`3-1.2`), que é *"a palavra comum entre este módulo, o censo e o mapa"*
+    (`gui.aba_conexoes.html_dos_adaptadores`). A "Entrada 3" do desenho é o
+    número do MAPA DELA, e só existe depois que ela desenhar as entradas — o que
+    a própria `acao` desta ordem diz com todas as letras.  (noqa-acento: campo)
+
+    O GANHO VAI SEMPRE, inclusive quando ele confessa que não foi medido: *"AS
+    TRÊS, SEMPRE — inclusive a que confessa que o ganho não foi medido"*
+    (`secao_exame._card_da_ordem`). Esconder a terceira linha custaria uma linha
+    de tela e a confiança inteira.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui.aba_conexoes import TRACO, _e
+    from hefesto_dualsense4unix.utils.i18n import _
+
+    partes = [f'<div class="faca">{_e(_(str(ordem.acao)))}{_dica_da_ordem(ordem)}</div>']
+    destino = str(getattr(ordem, "destino", "") or "")
+    if destino:
+        de = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or TRACO)
+        partes.append(
+            f'<div class="receita"><span class="caixa">{_e(de)}</span>'
+            f'<span class="seta">→</span>'
+            f'<span class="caixa alvo">{_e(destino)}</span></div>')
+    ganho = str(getattr(ordem.ganho_esperado, "texto", "") or "")
+    if ganho:
+        # O RÓTULO É O TERCEIRO DE `ROTULOS_DA_ORDEM` — "Ganho esperado" —, o
+        # mesmo que o card do GTK e o `--exame` do terminal escrevem. Ele está
+        # digitado no desenho desta aba, e digitá-lo aqui de novo seria a
+        # terceira grafia da mesma palavra.
+        from hefesto_dualsense4unix.integrations.exame_da_mesa import ROTULOS_DA_ORDEM
+
+        partes.append(
+            f'<div class="ganho"><span>{_e(_(str(ROTULOS_DA_ORDEM[2])))}:</span> '
+            f"{_e(_(ganho))}</div>")
+    return f'<div class="ordem">{"".join(partes)}</div>'
+
+
+def _html_da_ordem() -> str:
+    """O card da ordem de serviço, desenhado pelo produto — nunca pelo mockup.
+
+    O QUE ESTAVA NA TELA DELA NO LUGAR, fotografado nesta bancada em 03/09/2026:
+    um card cravado no arquivo mandando **mover o adaptador Bluetooth da Entrada
+    3 para a Entrada 9**, com de→para, ganho e um `?` de duas frases — tudo
+    escrito à mão no mockup, tudo apresentado como diagnóstico da máquina dela.
+    É a forma mais cara de mentira que uma tela sabe cometer: não um número
+    errado, mas uma INSTRUÇÃO para mexer no gabinete.
+
+    O QUE A MÁQUINA DELA DIZ DE VERDADE, medido no mesmo dia: DUAS ordens
+    abertas, e nenhuma delas fala de Entrada 3 nem de Entrada 9 —
+    `dongle_atras_de_hub` (*"2 de 3 adaptadores Bluetooth chegam ao computador
+    por dentro de um hub"*) e `teclado_so_no_hub` (*"Se o hub sair da tomada,
+    você fica sem teclado antes de o Linux abrir."*).
+
+    `None` TEM TEXTO PRÓPRIO, E ELE É DO DONO: *"Nenhuma mudança recomendada
+    agora."* (`gui.aba_conexoes.html_da_ordem`, o ramo que funciona). Ele só é
+    honesto porque o exame COMPLETO corre ao entrar na aba
+    (:func:`_pedir_o_exame_de_entrada`) — sem aquilo, este cartão diria "nada a
+    fazer" sobre uma máquina que ninguém tinha examinado, que é a mesma
+    ausência-lida-como-sucesso com outra roupa.
+
+    COM ORDEM, QUEM DESENHA É :func:`_card_da_ordem`, e a razão é um defeito do
+    dono, não uma escolha: ver :func:`_dono_sabe_desenhar_a_ordem`.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui import aba_conexoes as _tela
+
+    ordem = _ordem_na_tela()
+    if ordem is None:
+        return _tela.html_da_ordem(None)
+    return _card_da_ordem(ordem)
 
 
 def _carimbo_do_exame() -> str:
@@ -865,6 +1174,62 @@ def rotulo_do_controle(c: Any, completo: bool = True) -> str:
     plastico = (f'{nome} <span class="pt">•</span> '
                 if nome and nome != _cor_desconhecida() else "")
     return f'{marca}{jogador} <span class="pt">•</span> {plastico}{c["via"]}'
+
+
+#: O SEPARADOR DO DESENHO. Ele é um `<span>` com classe, e não um `•` solto,
+#: porque a folha dela pinta o ponto mais apagado que o texto em volta. As duas
+#: funções que compõem frase para esta tela usam este mesmo — ver
+#: :func:`rotulo_do_controle`, que já o escrevia.
+_PONTO = ' <span class="pt">•</span> '
+
+
+def html_da_conta(frase: str) -> str:
+    """A frase da contagem, com o separador que o desenho dela usa.
+
+    O DONO DA FRASE É `gui.aba_conexoes.texto_da_contagem` — *"2 na mesa • 1 no
+    cabo • 1 no rádio"* —, e ele escreve o `•` cru porque nasceu para um rótulo
+    do GTK. Esta função é só a tradução para o HTML dela; nenhuma palavra e
+    nenhum número nascem aqui.
+
+    POR QUE O GERADOR TAMBÉM CHAMA ISTO (`aba08.py`): enquanto o desenho e o
+    produto escreverem a mesma frase duas vezes, elas divergem sem que ninguém
+    veja. É a mesma razão pela qual o gerador já importava
+    :func:`rotulo_do_controle` e :func:`tinta_legivel` deste módulo.
+    """
+    return frase.replace(" • ", _PONTO)
+
+
+def _tela_da_aba() -> Any:
+    """`gui.aba_conexoes` — a camada de tela desta aba, do lado do produto.
+
+    Um atalho e não um import de topo: este módulo é importado pelo despachante
+    antes de o `src/` estar no caminho, e `perfil._com_o_src()` é o que o põe lá
+    (mesma razão escrita em `_html_do_mapa` e em `_dica_da_linha`).
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui import aba_conexoes
+
+    return aba_conexoes
+
+
+def _texto_da_bateria(bruto: Any) -> str:
+    """`100%`, ou o travessão do produto quando ninguém leu.
+
+    O DONO É `gui.aba_conexoes.Controle.texto_da_bateria`, e é ele que decide
+    que a ausência vira **travessão** e não zero: *"sem fonte, escreve `— %` em
+    vez de um número herdado"* é a regra que a janela estável já segue
+    (`status_actions._set_battery_text`).
+
+    O `Controle` É CONSTRUÍDO SÓ PARA ISSO, com os outros campos no valor
+    neutro, e é de propósito: a alternativa era escrever `f"{n}%"` aqui, que é a
+    segunda grafia da mesma regra — e a primeira coisa que se perde numa segunda
+    grafia é justamente o caso do `None`.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui.aba_conexoes import Controle
+
+    n = int(bruto) if isinstance(bruto, int | float) else None
+    return Controle(uniq="", jogador=0, via="", bateria=n).texto_da_bateria
 
 
 #: `--fg` e `--app-bg` do esqueleto. São cor de TEMA, não de plástico: o número
@@ -1224,6 +1589,12 @@ def _teto_do_controle(
 def pacote(ctx: Contexto) -> dict[str, Any]:
     global _ORDENS_NA_TELA, _VIZINHOS
     st = ctx.state
+    # O EXAME COMPLETO PEDIDO UMA VEZ, ANTES DE LER A TIRA. Ele corre em thread
+    # e não bloqueia este tique — o que ele traz aparece no tique seguinte, que
+    # é a mesma latência que a janela estável tem. Ver
+    # `_pedir_o_exame_de_entrada`: sem isto, duas das cinco linhas do Check-up
+    # nasciam vazias e a ordem de serviço da tela era a do mockup.
+    _pedir_o_exame_de_entrada()
     vivos = _itens_da_tela()
     itens = [_linha(i) for i in vivos]
     # A PONTE ENTRE O CLIQUE E A ORDEM, e ela se refaz a cada pintura: o ⊘ da
@@ -1302,7 +1673,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         eu = da_mesa.get(uniq) or {}
         colunas[uniq] = {
             "via": (c.get("transport") or "").upper(),
-            "bateria": c.get("battery_pct"),
+            # A BATERIA COMO A TELA A ESCREVE — `Controle.texto_da_bateria`, o
+            # dono (`gui/aba_conexoes.py:245`), que põe o TRAVESSÃO quando
+            # ninguém leu em vez de um número herdado. Ela era o `battery_pct`
+            # CRU, e um inteiro num endereço de texto escreveria `100` onde o
+            # desenho promete `100%` — e `null` onde ele promete `—`.
+            #
+            # ATÉ 03/09/2026 ISSO NÃO APARECIA porque a página não tinha
+            # endereço para `bateria`: a linha fechada dizia "Bateria 100%" e
+            # "Bateria 64%" — os dois números do mockup — acontecesse o que
+            # acontecesse. A dica desta aba manda ler na aba Controles, onde ela
+            # É pintada; o número errado continuava aqui do mesmo jeito.
+            "bateria": _texto_da_bateria(c.get("battery_pct")),
             # O NOME DA LINHA — `IDENTIDADE-VEM-DE-CIMA-01`, 03/09/2026. A
             # `.gc-nome` mostrava o rótulo do MOCKUP: com o White dela no cabo,
             # a Gestão de Controles dizia `Sony · Player 1 · Cosmic Red · USB`.
@@ -1350,6 +1732,22 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `innerHTML` —, e agora as réguas a enxergam.
         "blocos": {".mm-faces": _html_do_mapa()},
         "aparelhos": _html_dos_aparelhos(),
+        # A ORDEM DE SERVIÇO DA MÁQUINA DELA — 03/09/2026, `MIGRA-08-01`. Ver
+        # `_html_da_ordem`: o card era HTML cravado no mockup mandando mover o
+        # adaptador da Entrada 3 para a Entrada 9, com de→para e ganho, sobre
+        # uma máquina que ninguém tinha examinado.
+        "ordem": _html_da_ordem(),
+        # A CONTAGEM DA SEÇÃO, pelo dono da frase
+        # (`gui.aba_conexoes.texto_da_contagem`). Ela era `2 na mesa • 1 no cabo
+        # • 1 no rádio` cravado — com um controle só na mesa, a seção continuava
+        # dizendo 2/1/1. É o mesmo defeito que o `topo()` já curou no cabeçalho.
+        "conta-gestao": html_da_conta(
+            _tela_da_aba().texto_da_contagem(
+                _tela_da_aba().controles_do_estado(st))),
+        # AS DUAS RESPOSTAS DELA SOBRE A SALA — ver `_sala_na_tela`. A tela
+        # dizia que ela não tinha respondido a visada; o `maquina.json` dela diz
+        # que respondeu.
+        **_sala_na_tela(declaracao),
         # A RÉGUA DO RÁDIO INTEIRA, pelo dono único. Ver
         # `html_da_regua_do_radio`: o `title` de cada fatia nomeia o plástico, e
         # `title` não tem alvo no piloto — o bloco tem de nascer do produto.
@@ -2087,6 +2485,25 @@ def examinar_portas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     cada gesto num `threading.Thread`). É a mesma disciplina do
     `secao_exame.reexaminar`, e pela mesma cicatriz: um `subprocess.run`
     síncrono na thread do GTK congelou a janela inteira por 10 s.
+
+    O CORPO SAIU DAQUI — 03/09/2026, `MIGRA-08-01`. Ele agora é
+    :func:`_correr_o_exame_completo`, porque a ENTRADA na aba corre o mesmo
+    exame (ver :func:`_pedir_o_exame_de_entrada`) e duas grafias do mesmo exame
+    divergiriam no primeiro argumento novo.
+    """
+    _correr_o_exame_completo()
+
+
+def _correr_o_exame_completo() -> None:
+    """As CINCO conferências mais as ordens de serviço, sobre a máquina dela.
+
+    **NÃO CABE NUM TIQUE**, e é a razão de existir separado do
+    :func:`_conferencias`: `pareamentos` forka `busctl` (teto de 5 s) e
+    `ler_a_mesa` proíbe tique no próprio docstring. Quem chama põe numa thread.
+
+    Levanta quando o exame volta vazio: um exame que não achou nem uma linha
+    não é "está tudo bem", é "não consegui olhar", e a diferença entre os dois
+    é o que esta casa chama de *ausência de notícia lida como sucesso*.
     """
     global _EXTRAS, _QUANDO_O_EXAME
     perfil._com_o_src()

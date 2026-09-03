@@ -1640,7 +1640,7 @@
           </div>
 
           <div class="lado-d">
-            <div class="col-ordem">
+            <div class="col-ordem" data-campo="ordem" data-hef-alvo="html">
             <div class="ordem">
               <div class="faca">Mova o adaptador Bluetooth da Entrada 3 para a Entrada 9
                 <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
@@ -1706,7 +1706,7 @@
           16,3 turnos que ele custa no rádio são <b>consequência</b>, e aparecem
           na régua de Desempenho.
         </span></span>
-        <span class="conta">2 na mesa <span class="pt">•</span> 1 no cabo <span class="pt">•</span> 1 no rádio</span>
+        <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">2 na mesa <span class="pt">•</span> 1 no cabo <span class="pt">•</span> 1 no rádio</span>
       </div>
       <div class="quadro-corpo">
         <input type="radio" name="gc" id="gc-todos" class="gc-r">
@@ -1724,7 +1724,7 @@
               <span class="gc-resumo">
                 <span title="A borda deste controle é a cor lida do aparelho.">Vê como <b>DualSense</b></span>
                 <span title="O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio USB do próprio aparelho — o PipeWire a publica sozinho (medido em 15/08/2026). Pelo cabo ele não custa turno de rádio nenhum.">Microfone <b>Ligado</b>, pelo cabo <span class="pt">•</span> Placa do controle</span>
-                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b>100%</b></span>
+                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">100%</b></span>
               </span>
               </label>
               <label class="gc-seta abre" for="gc-p1" data-gesto="alvo"
@@ -2146,7 +2146,7 @@
               <span class="gc-resumo">
                 <span title="A cor deste controle não foi lida — a borda fica neutra.">Vê como <b>Xbox 360</b></span>
                 <span title="O microfone deste controle chega <b>pelo rádio</b>: o DualSense não tem A2DP nem HFP, então o áudio vem em Opus dentro do relatório HID e o Hefesto publica uma fonte de captura do PipeWire com ele. Custa +16,3 turnos de rádio — o preço está na régua de Desempenho, e é <b>consequência</b>, não escolha: o microfone segue o transporte.">Microfone <b>Ligado</b>, pelo rádio <span class="pt">•</span> Pela ponte</span>
-                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b>64%</b></span>
+                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">64%</b></span>
               </span>
               </label>
               <label class="gc-seta abre" for="gc-p2" data-gesto="alvo"
@@ -2788,11 +2788,11 @@
           <div class="mm-rot-linha"><span class="mm-rot" title="Estas duas mudaram-se da aba para cá em 28/08, e aqui elas preenchem um vazio real: a janela do desenho não guardava um único fato que só você tem. Sem resposta não é o mesmo que “Não sei”: enquanto você não responder, o Hefesto sabe que ninguém disse; “Não sei” é você dizendo que olhou e não sabe.">O que só você sabe</span></div>
               <div class="mm-perg">
                 <span class="mm-q" title="Corpo humano absorve 2,4 GHz. Um dongle acima da linha das cabeças rende mais que um dongle perto. Isto nenhum sistema sabe — só você.">O dongle fica acima da cabeça de quem joga sentado?</span>
-                <div class="seg"><button class="on" data-gesto="sala-altura" data-modo="acima">Sim</button><button class="" data-gesto="sala-altura" data-modo="abaixo">Não</button><button class="" data-gesto="sala-altura" data-modo="">Não sei</button></div>
+                <div class="seg"><button class="on" data-gesto="sala-altura" data-modo="acima" data-campo="sala-altura" data-hef-alvo="classe" data-hef-quando="acima">Sim</button><button class="" data-gesto="sala-altura" data-modo="abaixo" data-campo="sala-altura" data-hef-alvo="classe" data-hef-quando="abaixo">Não</button><button class="" data-gesto="sala-altura" data-modo="" data-campo="sala-altura" data-hef-alvo="classe" data-hef-quando="nao_sei">Não sei</button></div>
               </div>
               <div class="mm-perg">
                 <span class="mm-q" title="Gente no caminho entre o dongle e quem joga custa alcance, e também não há como medir daqui.">Tem gente sentada entre o dongle e o sofá?</span>
-                <div class="seg"><button class="" data-gesto="sala-visada" data-modo="com_gente">Sim</button><button class="" data-gesto="sala-visada" data-modo="livre">Não</button><button class="" data-gesto="sala-visada" data-modo="">Não sei</button></div>
+                <div class="seg"><button class="" data-gesto="sala-visada" data-modo="com_gente" data-campo="sala-visada" data-hef-alvo="classe" data-hef-quando="com_gente">Sim</button><button class="" data-gesto="sala-visada" data-modo="livre" data-campo="sala-visada" data-hef-alvo="classe" data-hef-quando="livre">Não</button><button class="" data-gesto="sala-visada" data-modo="" data-campo="sala-visada" data-hef-alvo="classe" data-hef-quando="nao_sei">Não sei</button></div>
               </div>
         </div>
       </div>
