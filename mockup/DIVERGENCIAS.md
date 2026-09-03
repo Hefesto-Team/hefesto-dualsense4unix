@@ -283,3 +283,54 @@ seção daqui**: a aba deixou de estar em trabalho.
     faz `el.textContent = "white"` num `<svg>` — o desenho de 146 px some e vira
     a palavra. A guarda desta aba **falha fechada** e barra isso;
   * o **`--publicar 04`**, que é ato dela.
+## 05-vibracao.html
+
+- **03/09/2026 · O DESENHO DO CONTROLE PASSOU A SER O DELA.** A lei: *"os svgs
+  do dualsense (…) mudam de acordo com o controle identificado no canto
+  superior. é white no p1, mas a borda de tudo é cosmic red e os svgs não são
+  os que o meu mapa cataloga. isso tá errado"*. <!-- noqa-acento: citação literal dela -->
+
+  **O QUE MUDA NO ARQUIVO, e nenhuma das três muda um pixel do que ela
+  aprovou:**
+  1. os quatro `<svg>` ganharam `data-campo="colorway"` mais
+     `data-hef-alvo="atributo"` / `data-hef-atributo="data-colorway"`;
+  2. a página publica **a folha das dez zonas dos 28 modelos** dela uma vez, e
+     cada `<svg>` deixou de carregar a folha de um modelo só. Sem esta metade o
+     endereço trocaria a cor errada por um **cinza**: `monta._so_o_colorway`
+     poda a folha para o modelo pedido, e escrever `white` num desenho que só
+     embute `cosmic-red` não casa regra nenhuma;
+  3. os DOIS LUGARES VAZIOS saíram **sem `data-colorway`** — um lugar sem
+     aparelho não tem modelo, e afirmar "Galactic Purple" ali é o desenho
+     falando por um controle que não existe. O endereço fica, para o dia em que
+     um terceiro controle entrar na mesa.
+
+  **MEDIDO ANTES DE ESCRITO, no Chrome, com a página de antes e a de agora:** a
+  casca, o painel e a borda das quatro colunas computam **os mesmos rgb** —
+  inclusive nos dois lugares vazios, que o `.ctrl.vazia` já pintava com
+  `var(--linha)` e `!important` (a especificidade dele, 0,5,1, ganha da regra de
+  zona, 0,2,2). O `conferir05.py` sai **byte a byte igual** ao de antes.
+
+- **03/09/2026 · O QUE ELA VÊ HOJE, com a página publicada de agora** —
+  fotografado com a mesa dela (P1 White no cabo, P2 Galactic Purple no rádio),
+  as duas páginas abertas no mesmo daemon:
+  - **na publicada, o P1 é desenhado em Cosmic Red e o P2 em Starlight Blue**,
+    com a fita do topo e a linha "Modelo" logo abaixo dizendo `P1 · White · USB`
+    e `P2 · Galactic Purple · BT`. É o defeito que a lei nomeia, na tela, com
+    três centímetros entre uma coisa e a outra;
+  - **na bancada, os dois desenhos vestem o modelo lido** — o P1 branco, o P2
+    roxo. 24 valores pintados contra 22 na publicada, e os dois a mais são
+    exatamente o `colorway` de cada coluna.
+
+- **03/09/2026 · O QUE ESTA ABA ESPERA, e não é a palavra dela:** o alvo
+  `atributo` do `hefesto_vivo.escrever` nasceu numa frente irmã do mesmo dia e
+  chega pelo merge. Enquanto ele não estiver no `dev`, os quatro desenhos têm
+  endereço e **nenhum troca de modelo** — a página fica como está e nada quebra.
+  O relógio dessa espera é
+  `tests/unit/test_a_aba05_desenha_o_modelo_do_aparelho.py::test_o_pintor_sabe_escrever_atributo`,
+  que reprova dizendo isso.
+
+- **03/09/2026 · para quem for publicar:** `data-hef-atributo` **não está** na
+  lista `INVISIVEIS` do `scripts/check_o_desenho_aprovado.py` (arquivo de outro
+  dono), então o `--publicar-enderecos 05` não alcança esta leva — é
+  `--publicar 05`, que é ato dela. O atributo é endereço puro: não há uma regra
+  de CSS que o leia em nenhuma das dez páginas.
