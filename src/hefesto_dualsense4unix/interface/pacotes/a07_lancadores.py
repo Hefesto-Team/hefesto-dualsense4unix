@@ -384,6 +384,102 @@ def _valores(lida: desenho.Leitura | None) -> dict[str, str]:
     return desenho.Quadro(lancadores=desenho.cartoes(lida)).valores()
 
 
+# ---------------------------------------------------------------------------
+# A FITA DESTA ABA — quem está na mesa AGORA, e só isso
+#
+# A LEI, e ela é dela (03/09/2026): *"se no topo tá mostrando controle white
+# player 1, então cada aba vai usar os controles lá de cima. Não mistura com a
+# info dos mockups."*
+#
+# O QUE ESTAVA NA TELA, medido nesta máquina com os dois controles dela na mesa:
+# o cabeçalho dizia `2 controles: 1 USB · 1 BT` (certo, lido do aparelho) e a
+# fita logo abaixo dizia `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT` —
+# os dois do DESENHO, e ela não tem nenhum dos dois.
+#
+# POR QUE A FITA CHEGOU AQUI, sendo ela de todas as abas: `hefesto_vivo._fita`
+# desiste da fita INTEIRA quando UM controle estiver sem cor
+# (`any(not c.get("cor") for c in mesa)` → `return ""`), e o JS só troca o bloco
+# `if(p.fita)`. Nesta máquina o `LeitorDeCor` não conhece o controle de rádio,
+# então a fita NUNCA era repintada — e "deixar a fita como está" é deixar a
+# fita do MOCKUP. Está relatado como trabalho de fora desta aba; o que esta aba
+# pode fazer sozinha é escrever a SUA.
+#
+# POR QUE `blocos` E NÃO `data-campo`: o número de chips muda com a mesa, e não
+# há endereço para um chip que ainda não existe — é a mesma razão pela qual a
+# grade dos cartões viaja por aqui. E há uma segunda, que é de robustez: o
+# `p.fita` troca `.fita` INTEIRA antes de a pintura visitar campo nenhum, então
+# um `data-campo` dentro da fita pode simplesmente não existir mais no DOM na
+# hora de escrever. O `blocos` corre DEPOIS e reconsulta o documento pela
+# classe: ele acerta o alvo com ou sem a troca do bloco inteiro.
+# ---------------------------------------------------------------------------
+#: O bloco que esta aba reescreve no topo. É a CLASSE do esqueleto
+#: (`interface/topo.html`), a mesma âncora que `monta.MARCA_DA_FITA` usa — o
+#: texto do chip já mudou duas vezes nesta casa e a classe não.
+SELETOR_DA_FITA = ".fita"
+
+#: O texto que `mesa_viva.mesa_do_estado` põe em `nome` quando o leitor de cor
+#: não conhece a peça. Ele é a AUSÊNCIA de leitura, não uma leitura — e a regra
+#: dela é clara: *campo sem informação não mostra nada*.
+SEM_LEITURA_DE_COR = "Não sei"
+
+
+def _chip(controle: dict[str, Any]) -> str:
+    """Um chip da fita, com o que a leitura TROUXE — e calado sobre o resto.
+
+    O QUE ENTRA: o número do jogador e o transporte, sempre (os dois vêm do
+    daemon, nunca faltam), e o nome do modelo **só quando o plástico foi lido**.
+    Um controle sem cor lida sai `P2 • BT`, e não `P2 • Não sei • BT` nem — muito
+    pior — o nome do controle do desenho.
+
+    O QUE NÃO ENTRA, E É DECISÃO DESTA ABA: o `--plastico` e o `title` do chip.
+    A fita daqui nasce ESMAECIDA (`fita_viva=False`, decisão dela de 28/08:
+    nada nesta aba ajusta por controle), e `topo.html:207` apaga a borda de
+    plástico justamente aí — *"a borda de 2px na cor do plástico é a marca da
+    peça VIVA — some com a fita"*. Escrever uma cor que a folha de estilo
+    descarta é um valor sem efeito na tela; e o `title` do desenho dizia *"a
+    borda é a cor do plástico"*, uma frase que nesta aba é falsa. Quem explica a
+    fita apagada aqui é o `title` da `<div class="fita inerte">`, que o
+    `blocos` não toca.
+    """
+    nome = str(controle.get("nome") or "")
+    lido = bool(controle.get("cor")) and nome and nome != SEM_LEITURA_DE_COR
+    partes = [f"P{controle.get('jogador') or '?'}"]
+    if lido:
+        partes.append(_texto(nome))
+    partes.append(_texto(controle.get("via") or ""))
+    return ('<span class="chip plastico">'
+            + ' <span class="pt">•</span> '.join(partes)
+            + "</span>")
+
+
+def _texto(x: object) -> str:
+    """Escapa para posição de TEXTO, com a aspa CRUA — como o desenho faz.
+
+    A razão é a do `desenho_dos_lancadores._e`, e ela é de laço infinito: o
+    piloto só reescreve quando `innerHTML !== valor`, e o lado esquerdo é o que
+    o DOM **devolve**. Uma grafia que o DOM normaliza de volta nunca casa, e a
+    reescrita não para nunca.
+    """
+    return str(x).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def fita_html(mesa: list[dict[str, Any]]) -> str:
+    """O miolo da `.fita` desta aba: `Selecionar:`, `Todos` e a mesa VIVA.
+
+    `Todos` nasce aceso porque é o alvo desta aba — ela não ajusta por controle,
+    e por isso a fita é inerte. Uma mesa vazia devolve só o rótulo e o `Todos`:
+    sem controle na mesa não há chip, que é o que a fita já fazia por decisão
+    dela em 31/08 (*"ele só fica ativo se surgir controle naquela área"*).
+
+    NÃO DEVOLVE VAZIO NUNCA, e isso é de propósito: `hefesto_vivo` troca o
+    bloco por `innerHTML`, e um bloco vazio apagaria o rótulo `Selecionar:` da
+    tela dela.
+    """
+    return ('<span>Selecionar:</span>'
+            '<span class="chip on">Todos</span>'
+            + "".join(_chip(c) for c in mesa))
+
+
 def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
     """A carga da aba: os endereços **e a grade inteira**, com as molduras.
 
@@ -449,11 +545,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     cinco impedimentos e as duas curas são fatos do JOGO EM DISCO. É por isso
     que a fita desta aba nasce esmaecida (`fita_viva=False`) e por isso este
     pacote não devolve `colunas`: não há nada a dizer por controle.
+
+    NÃO DEPENDER DE CONTROLE NÃO É PODER MENTIR SOBRE ELE — 03/09/2026. A fita
+    continua na tela, e enquanto ela vinha do desenho esta aba afirmava dois
+    controles que não estão na mesa dela. `ctx.mesa` é a mesma leitura que o
+    cabeçalho usa; daqui em diante a fita sai dela. Ver :func:`fita_html`.
     """
     carga = _resposta(VIGIA.agora())
     valores = carga["mesa"]
     fora: dict[str, Any] = dict(valores)
-    fora["blocos"] = carga["blocos"]
+    fora["blocos"] = {**carga["blocos"], SELETOR_DA_FITA: fita_html(ctx.mesa)}
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
     fora["cobertura"] = {"pintados": len(valores), "sem_dono": len(SEM_DONO)}
     return fora
