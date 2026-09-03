@@ -1,15 +1,20 @@
 """Backend wlr-foreign-toplevel-management via `wlrctl` CLI.
 
-Cobre compositors wlroots-like e compatíveis:
-  - COSMIC (cosmic-comp, smithay).
-  - Sway, Hyprland, niri, river.
+Cobre o bloco wlroots: Sway, Hyprland, niri, river.
+
+**NÃO cobre o COSMIC, e a linha que dizia o contrário caiu em 02/09/2026.**
+Este cabeçalho listava *"COSMIC (cosmic-comp, smithay)"* como coberto. Medido
+com `wayland-info` na sessão dela: dos 58 globais que o cosmic-comp 0.1
+publica, o `zwlr_foreign_toplevel_manager_v1` **não está lá** — e é por isso
+que o `wlrctl`, instalado nesta máquina, responde *"Foreign Toplevel Management
+interface not found"*. Quem cobre o COSMIC é o `cosmic_toplevel.py`, falando
+`zcosmic_toplevel_info_v1` (esse sim publicado, na versão 3).
 
 O protocolo `wlr-foreign-toplevel-management-unstable-v1` é suportado pelos
-compositors acima mesmo quando `org.freedesktop.portal.Window::GetActiveWindow`
-não está implementado ainda (caso do COSMIC alpha histórico e ainda parcial
-no COSMIC 1.0). `wlrctl` é um CLI pequeno que conversa com o compositor
-via esse protocolo e emite JSON — mais simples que embutir `pywayland` e
-resolve o problema hoje.
+compositors wlroots mesmo quando
+`org.freedesktop.portal.Window::GetActiveWindow` não está implementado.
+`wlrctl` é um CLI pequeno que conversa com o compositor via esse protocolo e
+emite JSON — mais simples que embutir `pywayland` e resolve o problema hoje.
 
 Disponibilidade do `wlrctl`:
   - Arch:          `pacman -S wlrctl`.
@@ -22,8 +27,10 @@ retorna `None` e o caller (autoswitch via cascade) degrada silenciosamente.
 
 BUG-COSMIC-WLR-BACKEND-REGRESSION-01 (v3.1.0) — re-portado do v2.4.1 após o
 rebrand Hefesto → Hefesto - Dualsense4Unix ter removido o arquivo no commit
-de massa-rename. Sem este backend o autoswitch fica inoperante em COSMIC
-puro (sem XWayland).
+de massa-rename. A justificativa de então dizia que sem este backend o
+autoswitch ficava inoperante em COSMIC puro; a medição de 02/09/2026 mostra
+que ele já estava inoperante ali — o compositor nunca respondeu a este
+protocolo. O backend segue de pé pelos compositors que respondem.
 """
 from __future__ import annotations
 
