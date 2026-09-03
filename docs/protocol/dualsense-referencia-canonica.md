@@ -229,7 +229,7 @@ campo a campo.
 | 5 | `speaker_volume` | 0x00–0xFF | flag0 bit5 |
 | 6 | `mic_volume` | **0x00–0x40** | flag0 bit6 |
 | 7 | `audio_control` | ver §3 | flag0 bit7 |
-| 8 | `mute_button_led` | — | flag1 bit0 |
+| 8 | `mute_button_led` | **0–3, e SÓ** (ver §8.1) | flag1 bit0 |
 | 9 | `power_save_control` | bit4 = mic mute | flag1 bit1 |
 | 10 | `right_trigger_motor_mode` | ver §4 | flag0 0x04 |
 | 11–20 | `right_trigger_param[10]` | — | idem |
@@ -244,6 +244,48 @@ campo a campo.
 | 42 | `led_brightness` | 0-2 | flag2 bit0 |
 | 43 | `player_leds` | `& 0x1F`; 0x20 = sem fade | flag1 bit4 |
 | 44–46 | lightbar R, G, B | — | flag1 bit2 |
+
+### §8.1 — `mute_button_led` é um ENUM DE QUATRO ESTADOS, não um brilho
+
+**Medido no aparelho em 02/09/2026, com o olho dela, NOS DOIS TRANSPORTES.** Esta coluna
+esteve em branco desde que a tabela existe: ninguém nesta casa jamais tinha
+escrito neste byte nada além de 0 e 1, porque o driver só escreve
+`ds->mic_muted`, que é `bool` (`hid-playstation.c:1540`).
+
+| valor | a luz do botão do microfone |
+| --- | --- |
+| `0` | apagada |
+| `1` | acesa, fixa |
+| `2` | **piscando** |
+| `3` | **piscando, mais lento que o `2`** |
+| `4` | apagada |
+| `64` | apagada |
+| `255` | apagada |
+
+**A faixa válida é `0..3`, e o `4` já está fora.** O `255` é o que decide a
+forma: `255 & 0x03 = 3`, que deveria piscar lento — e apaga. Logo o firmware
+**valida a faixa**, não mascara bits. Um campo que mascarasse teria acendido.
+
+**Não existe controle de brilho por este byte** — era a hipótese que motivou a
+medição, e ela caiu. Mas o PWM EXISTE no aparelho: o pisca rampa em vez de
+ligar e desligar seco (observação dela, ao vivo). O brilho intermediário é
+fisicamente possível; o que não se sabe é se algum campo o expõe. **Isso é
+pergunta em aberto, não fato.**
+
+Em aberto também: repetido o `2` depois de outros valores, ele volta a piscar —
+mas não se conseguiu cravar se a CADÊNCIA é a mesma. Resolver pede instrumento
+(câmera lenta ou medição de período), não olho.
+
+**O RÁDIO É O MESMO CANAL, e isto foi medido, não deduzido.** Os quatro
+estados saem idênticos por Bluetooth (`docs/data/ensaios.csv`:
+`led-mic-nivel-radio-1`). O envelope muda — report e CRC do rádio —, o campo
+não. A suspeita contrária era razoável e caiu: a lightbar por rádio é ignorada
+por alguns controles desta bancada, e o mapa registra isso desde 15/08/2026.
+
+Como se mede de novo: `scripts/ensaios/nivel_do_led_do_mic.py`. Ele fala pelo
+daemon vivo (`mic.led.set`), porque escrita crua no hidraw é sobrescrita pelo
+report seguinte — e devolve a posse no `finally`, sem o quê o botão físico dela
+para de mandar na luz.
 
 **Nota de proveniência que muda o que estava escrito nesta árvore:** o
 `core/ds_output_report.py` marcava `common[4..7]` como *"PROVÁVEL, não medido"*,
@@ -660,8 +702,8 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 >
 > | campo | onde é escrito | grau |
 > |---|---|---|
-> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:1273-1275` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1276-1283`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1280`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
+> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:1280-1282` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1283-1290`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1287`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 01/09/2026: MIC-DA-MESA-ELEICAO-01 acrescentou
      a leitura disciplinada do byte de áudio e o contador de bordas ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~59 linhas.

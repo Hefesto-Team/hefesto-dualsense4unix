@@ -780,6 +780,7 @@ class Daemon:
             start_hotkey_manager,
             start_mic_hotkey,
         )
+        from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import start_luz_do_mic
 
         loop = asyncio.get_running_loop()
         self.bus.bind_loop(loop)
@@ -913,6 +914,12 @@ class Daemon:
             await self._safe_start("hotkey", lambda: start_hotkey_manager(self))
             if self.config.mic_button_toggles_system:
                 await self._safe_start("mic_hotkey", lambda: start_mic_hotkey(self))
+            # LUZ-DO-MIC-01 (PEÇA C): a luz do botão de microfone diz QUEM TE
+            # ESCUTA. SEM GATE de propósito — a sprint exige que um `install.sh`
+            # limpo entregue a luz funcionando, "sem passo manual e sem flag"
+            # (§5.3b e PEÇA E item 4). O laço degrada sozinho quando as peças
+            # irmãs não estão no ar (ver o docstring do módulo).
+            await self._safe_start("luz_do_mic", lambda: start_luz_do_mic(self))
             # BT-MIC-REGISTRY-01: ponte de microfone por Bluetooth. O gate de
             # opt-in vive DENTRO do starter (`is_enabled`) — desligado, ele
             # devolve sem instanciar nada. Sobe aqui, ao lado do resto do

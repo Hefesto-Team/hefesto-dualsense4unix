@@ -54,15 +54,15 @@ CAMPOS = (
 #: aqui de propósito: a cura fácil seria somar 59 a tudo, e somar nelas
 #: QUEBRARIA duas referências que estavam certas.
 ANCORAS: tuple[tuple[str, str], ...] = (
-    (":1252-1253", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
-    (":1286-1287", "common[8] = 1 if mic_led else 0"),
-    (":1095-1115", "def set_microphone_led"),
-    (":3943", "def set_mic_led"),
-    (":3949-3950", "report[11] no rádio"),
-    (":3952-3956", "CORRIGIDO em 15/08/2026"),
-    (":1346-1347", "build_bt_report"),
-    (":1402-1409", "self.device.write"),
-    (":2462-2475", "should_reclaim_on_wake"),
+    (":1259-1260", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
+    (":1294-1300", "common[8] = int(mic_led) & 0xFF"),
+    (":1095-1122", "def set_microphone_led"),
+    (":3956", "def set_mic_led"),
+    (":3962-3963", "report[11] no rádio"),
+    (":3965-3969", "CORRIGIDO em 15/08/2026"),
+    (":1359-1360", "build_bt_report"),
+    (":1415-1422", "self.device.write"),
+    (":2475-2488", "should_reclaim_on_wake"),
     (":361-374", "def _escrever_led_do_mic"),
     (":751", "_audio_status"),
 )
@@ -70,6 +70,15 @@ ANCORAS: tuple[tuple[str, str], ...] = (
 #: Os endereços que a auditoria aposentou. Se um deles voltar à célula, ou a
 #: deriva voltou, ou alguém somou 59 no lugar errado.
 APOSENTADOS = (
+    ":1252-1253",
+    ":1286-1287",
+    ":1095-1115",
+    ":1346-1347",
+    ":1402-1409",
+    ":2462-2475",
+    ":3949-3950",
+    ":3952-3956",
+    ":3943",
     ":1193-1194",
     ":1227-1228",
     ":1036-1056",

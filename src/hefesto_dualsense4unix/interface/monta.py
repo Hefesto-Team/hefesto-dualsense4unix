@@ -510,7 +510,13 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     for c in (CONECTADOS if mesa is None else mesa):
         on = " on" if ativo == c["pref"] else ""
         chips.append(
-            f'<span class="chip plastico{on}" style="--plastico:{cor_da_zona(str(c["cor"]))}"'
+            # O `data-campo` NÃO é enfeite: sem ele os seis chips da fita são
+            # cor congelada em CADA uma das dez páginas — 60 dos 134 congelados
+            # que a leva de 03/09 mediu, e a `09-sistema` e a `07-lancadores`
+            # eram SÓ isso. Como `hefesto_vivo._fita()` chama esta mesma função,
+            # o endereço nasce também na fita VIVA, de graça.
+            f'<span class="chip plastico{on}" data-campo="chip-do-controle"'
+            f' style="--plastico:{cor_da_zona(str(c["cor"]))}"'
             f' title="{c["nome"]} — a borda é a cor do plástico">'
             f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}'
             f' <span class="pt">•</span> {c["via"]}</span>')

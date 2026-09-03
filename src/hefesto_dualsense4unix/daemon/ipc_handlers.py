@@ -5026,7 +5026,16 @@ class IpcHandlersMixin:
           - ``aceso: null``  — DEVOLVE A POSSE ao `hid-playstation`, que
             escreve `mute_button_led = ds->mic_muted` a cada borda do botão
             (`hid-playstation.c:1538-1540`). O bit `0x01` do flag1 sai apagado
-            e `common[8]` viaja inerte.
+            e `common[8]` viaja inerte. **Antes de soltar, a luz é REPINTADA
+            com o mudo de fato** (LUZ-DO-MIC-01 §2): o kernel não repinta em
+            regime, só na borda do botão, então largar o byte deixava a luz
+            presa no último valor que escrevemos — *"ambos tão ligados. e
+            ficaram."* Quem repinta é o backend
+            (`core/backend_pydualsense.py`, `_repintar_antes_de_soltar`), e é
+            de propósito que seja lá: assim os três caminhos da devolução (este
+            IPC, o `mic led-release` da CLI e o desligamento do daemon) ganham
+            a repintura por um só lugar, e este handler continua fazendo UMA
+            chamada ao backend.
 
         Confundir o segundo com o terceiro é o defeito do commit `3d9bb7e`, no
         byte vizinho: "apaga" mandado a 60 Hz por cima do kernel. Por isso
@@ -5044,8 +5053,20 @@ class IpcHandlersMixin:
             )
         aceso = params.get("aceso")
         uniq = params.get("uniq")
-        if aceso is not None and not isinstance(aceso, bool):
-            raise ValueError("mic.led.set: 'aceso' precisa ser boolean ou null")
+        # O NÍVEL entra por aqui (02/09/2026). Um `int` 0..255 é aceito além do
+        # boolean porque a decisão dela pede DUAS informações na mesma luz —
+        # aceso fraco = canal vivo, aceso forte = microfone padrão do sistema —
+        # e `bool` não sabe carregar isso. Para `true`/`false`/`null` nada muda:
+        # `bool` é subclasse de `int` e o caminho é o mesmo de antes.
+        # QUANTOS níveis o aparelho de fato distingue ainda é medição em aberto
+        # (`scripts/ensaios/nivel_do_led_do_mic.py`); esta porta só deixa de
+        # esmagar o valor no caminho.
+        if aceso is not None and not isinstance(aceso, int):
+            raise ValueError(
+                "mic.led.set: 'aceso' precisa ser boolean, int 0-255 ou null"
+            )
+        if isinstance(aceso, int) and not isinstance(aceso, bool) and not 0 <= aceso <= 255:
+            raise ValueError("mic.led.set: 'aceso' como nível vai de 0 a 255")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("mic.led.set: 'uniq' precisa ser string ou omitido")
         setter = getattr(self.controller, "set_microphone_led", None)

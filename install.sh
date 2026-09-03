@@ -642,6 +642,37 @@ _DEPS_DE_SISTEMA=(
     "webkit2gtk|importante|webkit|a rota WebKit (o mockup HTML dentro de um Gtk.Window) não abre nesta máquina; a interface GTK 3.0 de hoje continua inteira, e é só por isso que esta linha ainda não é obrigatória"
     "desktop-utils|importante|cmd:desktop-file-validate,update-desktop-database,gtk-update-icon-cache|o atalho e o ícone podem não aparecer no menu do sistema"
     "imagemagick|importante|cmd:convert|o ícone fica só no 256x256, sem as resoluções menores"
+    # LUZ-DO-MIC-01 (03/09/2026). A luz do botão de mudo deixou de espelhar o
+    # mudo e passou a dizer QUEM TE ESCUTA: apagada é ninguém, acesa é um app
+    # com o microfone DESTE controle aberto, piscando é som entrando agora. A
+    # resposta tem duas metades, e cada uma sai de um binário:
+    #     `pactl list source-outputs`  -> quem está gravando a fonte do controle
+    #     `parec` com `resample.peaks` -> se está entrando som, com o pico já
+    #                                     calculado PELO SERVIDOR (100 bytes/s
+    #                                     por canal; 0,121% de um núcleo, e
+    #                                     ~0,59% com os quatro controles da mesa)
+    #
+    # OS DOIS SAEM DO MESMO PACOTE, e é isso que faz esta linha não custar nome
+    # novo: MEDIDO em 03/09/2026 nesta bancada, `/usr/bin/parec` é um link para
+    # `/usr/bin/pacat` e o `dpkg -S` dos dois devolve `pulseaudio-utils` — o
+    # mesmo pacote do `pactl`, que a tabela `_pkg_nome` já traduz nas três
+    # famílias (apt/dnf `pulseaudio-utils`, pacman `libpulse`). Também não há
+    # dependência PYTHON nova: o leitor do pico é `struct.unpack` da stdlib, e
+    # o numpy foi recusado de propósito — ele não está no `pyproject.toml`, e
+    # importá-lo repetiria a dívida do `playwright`, que faz toda árvore nova
+    # nascer com portão vermelho.
+    #
+    # POR QUE A CHECAGEM PEDE OS DOIS NOMES, e não só o `pactl`: a luz precisa
+    # dos dois binários, e se algum dia uma família separá-los é ESTA linha que
+    # grita. É a mesma disciplina da linha do `bluez` logo abaixo, que ficou
+    # anos cega ao `btmgmt` por pedir só o `bluetoothctl`.
+    #
+    # POR QUE `importante` e não `obrigatoria`: sem estes binários o Hefesto
+    # inteiro continua de pé — gatilhos, perfis, vibração, emulação, rádio. O
+    # que morre é UMA função, e ela morre calada: a luz simplesmente fica
+    # apagada, que é um estado válido do contrato. Morrer o install por causa
+    # disso cobraria o preço errado.
+    "pactl|importante|cmd:pactl,parec|a luz do microfone do controle fica apagada para sempre: sem o pactl ninguém sabe QUEM está ouvindo, sem o parec ninguém sabe se está entrando som (LUZ-DO-MIC-01) — e o microfone por Bluetooth também não sobe"
     # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026): a régua pedia SÓ o
     # `bluetoothctl`, e desde a migração o produto também chama o `btmgmt`
     # (`bt_active_mode.sh`, `doctor.sh`, `uninstall.sh`). Os dois entram, e a
@@ -1457,6 +1488,12 @@ _garantir_deps_de_sistema
 # aqui devolvia 141 sob `pipefail` (SIGPIPE do ldconfig quando o grep sai no
 # primeiro acerto), então este bloco chamava o gerenciador de pacotes para
 # instalar a libopus JÁ INSTALADA a cada execução do install. Barulho é defeito.
+#
+# O `pactl` DAQUI NÃO É DUPLICATA — 03/09/2026. Desde a LUZ-DO-MIC-01 ele
+# também vive no censo `_DEPS_DE_SISTEMA`, que roda logo acima. Quem aceitou lá
+# chega aqui com o binário presente e este bloco fica calado; quem recusou lá
+# ganha uma segunda chance, agora com o motivo do rádio na tela. As duas linhas
+# pedem o MESMO canônico, então nenhuma instala coisa diferente da outra.
 _btmic_faltando=()
 _dep_presente "lib:libopus.so.0" || _btmic_faltando+=(opus)
 _dep_presente "cmd:pactl" || _btmic_faltando+=(pactl)
