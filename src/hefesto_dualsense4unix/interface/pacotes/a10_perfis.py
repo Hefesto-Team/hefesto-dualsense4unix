@@ -1369,7 +1369,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 
 @gesto("10-perfis.html", "voltar-a-de-ontem")
-def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """Desfazer a última gravação do perfil aberto. `profiles/loader.py`.
 
     O QUE ELE DESFAZ, e o produto já sabia fazer isto pelo terminal:
@@ -1398,6 +1398,24 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     A COMPARAÇÃO É POR SLUG, não por string: com "Navegação" no disco e
     "Navegacao" no daemon, um `==` cru diria que são perfis diferentes e o
     reaplicar não aconteceria (R-10, `profiles/slug.py:52`).
+
+    E ELE PASSOU A DIZER QUAL VERSÃO VOLTOU — 03/09/2026. **É o gesto em que o
+    silêncio era mais caro desta aba**: o arquivo inteiro dela é substituído por
+    outro, e a tela não mudava nada que ela pudesse ver (o editor mostra nome e
+    regra; o que volta é gatilho, luz, vibração, máscara). Um desfazer mudo é
+    indistinguível de um desfazer que não pegou.
+
+    A FRASE É A DA CLI, que era o único chamador antes desta tela: *"perfil
+    restaurado: X (versão …)"* (`cli/cmd_profile.py:295`). O carimbo da versão
+    entra porque é ele que o `profile historico` lista  (noqa-acento: nome do
+    subcomando da CLI, ASCII em `cmd_profile.py:233`) — é o que ela digita para
+    voltar a outra, e sem ele a frase não diz de onde veio.
+
+    O NOME, E NÃO O CAMINHO: a CLI imprime o `Path` que `restaurar_do_historico`
+    devolve, porque quem lê está no terminal. A tira mostra o nome do perfil,
+    que é como a lista ao lado o chama. E o carimbo vai sem o `.json` — é a
+    forma que o `--em` do `profile restore` aceita (`loader.py:1478` casa as
+    duas), então a frase é copiável para o comando que volta a outra versão.
     """
     from hefesto_dualsense4unix.profiles.loader import restaurar_do_historico
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
@@ -1407,11 +1425,12 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError("voltar à de ontem: escolha um perfil na lista primeiro")
     # Levanta `FileNotFoundError` quando não há versão guardada, e a frase dela
     # já diz o que houve — o histórico nasce na PRÓXIMA gravação daquele perfil.
-    restaurar_do_historico(nome)
+    _, versao = restaurar_do_historico(nome)
     ativo = _valendo(ctx)
     if ativo and mesmo_slug(ativo, nome):
         p.profile_switch(nome)
     p.chamar("launch_env.refresh")
+    return _dizer(f"Perfil restaurado: {nome} · versão {versao.stem}")
 
 
 # ---------------------------------------------------------------------------
@@ -1550,6 +1569,60 @@ def _pergunta_antes_de_rebaixar(prof: Any, chave: str) -> None:
         f"Escolha “Todos” de novo para confirmar — o campo espera oito segundos.")
 
 
+def _jogo_reconhecido(texto: str) -> str:
+    """O NOME do jogo daquele número, ou `""` — a decisão da janela estável.
+
+    JOGO-QUE-SE-DIZ-01. `851100` sozinho não diz nada a ninguém, nem a ela daqui
+    a um mês: a janela estável põe o nome do jogo ao lado do campo
+    (`profile_jogo_reconhecido`, `profiles_actions._atualizar_frase_do_jogo`), e
+    esta aba não tem esse rótulo no desenho. Enquanto ela não o tiver, o nome
+    chega pelo DESFECHO do gesto que gravou a regra — que é o instante em que a
+    pergunta "é esse jogo mesmo?" existe.
+
+    A DECISÃO É DA FUNÇÃO PURA DO PRODUTO, e não desta tela:
+    `jogos_locais.frase_do_campo_do_jogo(texto, nomes)` é a MESMA que alimenta o
+    rótulo de lá, com as MESMAS quatro respostas — nome do jogo, "não instalado
+    aqui (o número vale)", "não reconheci este endereço" e o silêncio de quem
+    ainda está digitando. Escrever um `if` aqui seria a segunda verdade sobre o
+    que é um jogo reconhecido.
+
+    NUNCA LEVANTA, e é o mesmo contrato de `_com_a_carona`: ela é acabamento de
+    um gesto que JÁ GRAVOU. Uma exceção lendo a biblioteca dela (33 `.acf` em
+    duas pastas mais os `.desktop`) transformaria uma gravação bem-sucedida em
+    tarja de recusa — e o perfil já está no disco.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import (
+            catalogo_de_jogos,
+            frase_do_campo_do_jogo,
+            nomes_por_appid,
+        )
+
+        decisao = frase_do_campo_do_jogo(texto, nomes_por_appid(catalogo_de_jogos()))
+    except Exception:
+        return ""
+    return "" if decisao is None else str(decisao[0])
+
+
+def _agora_vale_em(prof: Any, texto: str = "") -> str:
+    """A frase de desfecho de quem trocou a REGRA do perfil. Um dono, três gestos.
+
+    O RÓTULO SAI DE `_match_label`, a mesma função pura que alimenta a coluna
+    "Quando usar" — pelo argumento que `_pergunta_antes_de_rebaixar` já usa
+    logo acima: *o desfecho não pode chamar de outra coisa um perfil que a
+    lista chama de "Só manual"*.
+
+    `texto` É O QUE ELA DIGITOU (ou o appid que o Detectar achou), e serve só
+    para o nome do jogo. Vazio, a frase termina no rótulo — que é o certo para
+    "Todos" e "Steam", onde jogo nenhum entra na regra.
+    """
+    from hefesto_dualsense4unix.app.actions.profiles_actions import _match_label
+
+    frase = f"“{prof.name}” agora vale em: {_match_label(prof.match)}"
+    jogo = _jogo_reconhecido(texto) if texto else ""
+    return f"{frase} · {jogo}" if jogo else frase
+
+
 def _so_mudou(o: dict[str, Any]) -> bool:
     """`False` quando o clique foi só um clique — e aí o campo não age.
 
@@ -1576,7 +1649,7 @@ def _so_mudou(o: dict[str, Any]) -> bool:
 
 
 @gesto("10-perfis.html", "editor.nome")
-def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Renomear o perfil aberto no editor. `save_profile` + `delete_profile`.
 
     O VALOR VEM DE `valor`, E NÃO DE `texto` — foi a causa nomeada na primeira
@@ -1608,8 +1681,24 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     * nome que já é de OUTRO perfil — o `save_profile` grava por SLUG, então
       renomear "Elden Ring" para "Pragmata" gravaria por cima do Pragmata dela,
       calado. É o mesmo estrago que o `_nome_livre` evita no Duplicar.
+
+    E ELE PASSOU A DIZER QUE RENOMEOU — 03/09/2026, ver `_dizer`. O campo
+    voltava ao normal e mais nada: um gesto que APAGA um `.json` e cria outro
+    terminava mudo, e o único jeito de saber que pegou era esperar a lista
+    repintar. A frase é a do produto, `mensagem_do_salvar(nome, renomeado_de=…)`
+    (`profiles_actions.py:913`) — a MESMA que o rodapé da janela estável
+    escreve, "Perfil renomeado: era → novo".
+
+    SEM `reaplicou=`, e é o honesto: quem reaplica é `gravar_e_reaplicar`, que
+    devolve `None` (`pacotes/perfil.py:153`). Deduzir aqui se o daemon recebeu
+    seria a segunda verdade sobre uma coisa que este gesto não mediu — e a
+    frase de três estados de `mensagem_do_salvar` existe exatamente para não
+    prometer o controle quando ninguém olhou para ele.
     """
     global _ESCOLHIDO
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        mensagem_do_salvar,
+    )
     from hefesto_dualsense4unix.profiles.loader import (
         delete_profile,
         load_all_profiles,
@@ -1618,14 +1707,14 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     from hefesto_dualsense4unix.profiles.slug import slugify
 
     if not _so_mudou(o):
-        return
+        return None
     novo = str(o.get("valor") or "").strip()
     era = _perfil_do_editor(ctx)
     if not novo:
         raise RuntimeError("o perfil precisa de um nome — o campo ficou vazio.")
     prof = load_profile(era)
     if prof.name == novo:
-        return
+        return None
     troca_de_arquivo = slugify(novo) != slugify(prof.name)
     if troca_de_arquivo:
         for outro in load_all_profiles():
@@ -1637,6 +1726,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if troca_de_arquivo:
         delete_profile(era)
     _ESCOLHIDO = novo
+    return _dizer(mensagem_do_salvar(novo, renomeado_de=prof.name))
 
 
 @gesto("10-perfis.html", "editor.ambiente")
@@ -1789,7 +1879,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("10-perfis.html", "editor.jogo")
-def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Nome do Jogo": o programa (ou o número da Steam) que faz o perfil entrar.
 
     ELE SÓ TEM EFEITO EM DUAS DAS CINCO OPÇÕES do "Funciona em":
@@ -1820,6 +1910,13 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     R-12: o nome do programa vai **como ela digitar**, sem `.lower()` — o
     matcher compara com o basename cru de `/proc/PID/exe`, e
     `Cyberpunk2077.exe` nunca casaria com `cyberpunk2077.exe`.
+
+    E ELE PASSOU A DIZER O QUE GRAVOU — 03/09/2026. Ele **reescreve a regra
+    INTEIRA** do perfil e movia o seletor junto, calado: ela digitava um número,
+    o campo aceitava, e o único sinal era o `<select>` mudar no tique seguinte.
+    O desfecho nomeia as duas coisas que mudaram — o rótulo novo do "Quando
+    usar" e, quando o número é de um jogo que esta máquina conhece, o NOME dele.
+    É o degrau que faltava para ela conferir o que digitou (JOGO-QUE-SE-DIZ-01).
     """
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from hefesto_dualsense4unix.profiles.simple_match import (
@@ -1828,7 +1925,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     )
 
     if not _so_mudou(o):
-        return
+        return None
     texto = str(o.get("valor") or "").strip()
     nome = _perfil_do_editor(ctx)
     prof = load_profile(nome)
@@ -1840,10 +1937,11 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         chave = "steam_game" if normalize_appid(texto) is not None else "game"
     prof.match = from_simple_choice(chave, texto, regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
+    return _dizer(_agora_vale_em(prof, texto))
 
 
 @gesto("10-perfis.html", "detectar")
-def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Detectar": pegar o jogo em foco e montar a regra com ele.
 
     A AFIRMAÇÃO QUE ESTAVA NO PRODUTO ESTÁ ERRADA PELA METADE, e é o que
@@ -1873,6 +1971,13 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `last_class` ANTES de `current_class`: a primeira é a última classe ÚTIL
     vista (`launch_wrapper_dialog.py:81`) e sobrevive ao foco ir para a janela
     do Hefesto — que é exatamente o que acontece quando ela clica neste botão.
+
+    E ELE PASSOU A DIZER O QUE ACHOU — 03/09/2026. A recusa já nomeava a classe
+    que o detector estava vendo; o SUCESSO não dizia nada, e é o caso em que
+    dizer vale mais: o botão grava um appid que ela não digitou, vindo de uma
+    janela que ela não está mais olhando. O desfecho devolve o NOME do jogo
+    (`_jogo_reconhecido`), que é a única forma de ela conferir que o detector
+    pegou o jogo certo e não o launcher que estava por cima.
     """
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
@@ -1893,6 +1998,7 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     prof.match = from_simple_choice("steam_game", str(appid),
                                     regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
+    return _dizer(_agora_vale_em(prof, str(appid)))
 
 
 @gesto("10-perfis.html", "novo")
@@ -2027,7 +2133,7 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 
 @gesto("10-perfis.html", "remover")
-def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Remover": apagar o perfil do disco. PERGUNTA ANTES, no rótulo do botão.
 
     É O GESTO MAIS DESTRUTIVO DESTA ABA, e tem TRÊS guardas, nesta ordem:
@@ -2096,14 +2202,21 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _ARMADO = None
     delete_profile(nome)
     _ESCOLHIDO = ""
-    # A FRASE É A DA JANELA ESTÁVEL, palavra por palavra: `_toast_profile(
-    # f"Perfil removido: {name}")` (`profiles_actions.py:3197`).
-    _anotar(f"Perfil removido: {nome}")
     # SEM `profile.switch` AQUI, de propósito: o perfil apagado não é o ativo
     # (a guarda 2 garante), então não há o que reaplicar. O `launch_env`
     # precisa saber assim mesmo — o `steam_app_<id>.env` do perfil que morreu
     # fica rançoso se ninguém avisar (DEDUP-04, `profiles_actions.py:3199`).
     p.chamar("launch_env.refresh")
+    # A FRASE É A DA JANELA ESTÁVEL, palavra por palavra: `_toast_profile(
+    # f"Perfil removido: {name}")` (`profiles_actions.py:3197`).
+    #
+    # `_dizer` E NÃO `_anotar` — 03/09/2026. Os dois guardam a frase; só o
+    # primeiro a DEVOLVE para o `_deu_certo` pintar no ato. Com o `_anotar` a
+    # tira só acendia no tique seguinte (até 500 ms), e o argumento é o do
+    # piloto, palavra por palavra: *"Meio segundo entre o clique e a resposta
+    # basta para ela clicar de novo achando que o primeiro não pegou"* — e no
+    # gesto mais destrutivo da aba, o segundo clique acerta a linha seguinte.
+    return _dizer(f"Perfil removido: {nome}")
 
 
 @gesto("10-perfis.html", "recarregar")
