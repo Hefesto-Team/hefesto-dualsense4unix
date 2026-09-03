@@ -3,8 +3,8 @@
 `detect_window_backend()` escolhe o backend adequado conforme as variáveis
 de ambiente do compositor:
 
-  WAYLAND_DISPLAY + DISPLAY  → XlibBackend     (XWayland, preferido)
-  WAYLAND_DISPLAY sem DISPLAY → _WaylandCascadeBackend (portal XDG → wlrctl → None)
+  WAYLAND_DISPLAY + DISPLAY  → _XlibComCosmicBackend (XWayland + Wayland nativo)
+  WAYLAND_DISPLAY sem DISPLAY → _WaylandCascadeBackend (cosmic → portal → wlrctl)
   DISPLAY sem WAYLAND_DISPLAY → XlibBackend
   Nenhum                      → NullBackend    (loga autoswitch_compositor_unsupported)
 
@@ -14,11 +14,25 @@ Função `get_active_window_info()` mantém compatibilidade com a API legada de
 
 BUG-COSMIC-WLR-BACKEND-REGRESSION-01 (v3.1.0): re-introduz o cascade
 portal → wlrctl perdido no rebrand Hefesto → Hefesto - Dualsense4Unix.
-O portal XDG é tentado primeiro (canônico, GNOME 46+); se falhar acima
-do threshold do `WaylandPortalBackend._UNSUPPORTED_THRESHOLD`, o cascade
-passa a tentar `WlrctlBackend` (funciona em COSMIC, Sway, Hyprland,
-niri, river via `wlr-foreign-toplevel-management-unstable-v1`). Se nem
-`wlrctl` responde, degrada para None e o caller usa o `fallback.json`.
+O portal XDG é canônico onde existe (GNOME 46+); o `WlrctlBackend` cobre o
+bloco wlroots (Sway, Hyprland, niri, river) via
+`wlr-foreign-toplevel-management-unstable-v1`.
+
+FATO SUBSTITUÍDO — 02/09/2026, e ele estava escrito aqui e no `wlr_toplevel.py`:
+este cabeçalho dizia que o `wlrctl` *"funciona em COSMIC"*, e mais abaixo que a
+cascata Wayland *"funciona no COSMIC via wlrctl"*. **É falso, e a medição é
+direta:** dos 58 globais que o cosmic-comp 0.1 desta máquina publica, o
+`zwlr_foreign_toplevel_manager_v1` **não está entre eles** — por isso o wlrctl
+instalado responde *"Foreign Toplevel Management interface not found"*. O que
+está entre eles é o `zcosmic_toplevel_info_v1` (versão 3), e é dele que fala o
+`CosmicToplevelBackend`, primeiro da cascata.
+
+JANELA-WAYLAND-CEGA-01 (02/09/2026): em XWayland, o backend deixa de ser só o
+`xlib`. Ele continua PREFERIDO — é o único que resolve `exe_basename` —, mas
+quando ele não enxerga (um app Wayland nativo em foco: `sem_foco_x`), a leitura
+passa para o `cosmic`, em vez de virar `unknown`. Medido na sessão dela: com o
+Chrome/Wayland em foco, o produto lia `wm_class="unknown"` e o
+`zcosmic_toplevel_info_v1` lia `google-chrome`, no mesmo instante.
 """
 from __future__ import annotations
 
@@ -56,11 +70,12 @@ MOTIVO_BACKEND_SEM_MOTIVO = "backend_sem_motivo"
 #: `test_o_nome_do_processo_que_nao_casa` confere linha a linha contra eles.
 #: Só `window_backends/xlib.py` resolve o executável, em
 #: `_exe_basename_from_pid` (`os.readlink("/proc/<pid>/exe")`).
-#: `wayland_portal.py` e `wlr_toplevel.py` constroem o `WindowInfo` com
-#: `exe_basename=""` LITERAL — o portal até recebe o `pid`, e mesmo assim não
-#: resolve o executável —, e `null.py` não devolve janela nenhuma.
+#: `wayland_portal.py`, `wlr_toplevel.py` e `cosmic_toplevel.py` constroem o
+#: `WindowInfo` com `exe_basename=""` LITERAL — o portal até recebe o `pid`, e
+#: mesmo assim não resolve o executável; o `zcosmic_toplevel_info_v1` não manda
+#: PID nenhum, nem na versão 3 —, e `null.py` não devolve janela nenhuma.
 BACKENDS_QUE_VEEM_O_PROCESSO = frozenset({"xlib"})
-BACKENDS_CEGOS_AO_PROCESSO = frozenset({"portal", "wlrctl", "null"})
+BACKENDS_CEGOS_AO_PROCESSO = frozenset({"portal", "wlrctl", "cosmic", "null"})
 
 
 def backend_ve_nome_do_processo(backend: str | None) -> bool | None:
@@ -100,20 +115,25 @@ def backend_ve_nome_do_processo(backend: str | None) -> bool | None:
 
 
 class _WaylandCascadeBackend:
-    """Cascade: portal XDG → wlrctl → None.
+    """Cascade: cosmic → portal XDG → wlrctl → None.
 
-    Mantém o portal como backend primário porque em compositors onde ele
-    funciona (GNOME 46+, COSMIC com `xdg-desktop-portal-cosmic` atualizado),
-    o caminho é oficial, mais rápido e não depende de binário externo. Se o
-    portal falha repetidamente (o próprio `WaylandPortalBackend` detecta e
-    retorna None permanentemente após `_UNSUPPORTED_THRESHOLD` falhas),
-    caímos para `wlrctl` que cobre o bloco wlroots-like.
+    **A ordem mudou em 02/09/2026, e a razão é medida.** O portal era o
+    primeiro por ser o caminho oficial; na máquina dela ele não tem
+    `GetActiveWindow` e o wlrctl não acha o protocolo do wlroots, então a
+    cascata inteira era cega numa sessão COSMIC. O `CosmicToplevelBackend`
+    passa à frente porque é o que responde ali — e onde ele não serve, ele se
+    desliga sozinho depois de UM aperto de mão: num compositor que não publica
+    `zcosmic_toplevel_info_v1`, o custo de tê-lo primeiro é uma ida ao soquete,
+    uma vez na vida do processo.
 
     Esta classe vive em `window_detect.py` em vez de `window_backends/`
     porque é puramente composicional (escolhe entre backends existentes).
     """
 
     def __init__(self) -> None:
+        from hefesto_dualsense4unix.integrations.window_backends.cosmic_toplevel import (
+            CosmicToplevelBackend,
+        )
         from hefesto_dualsense4unix.integrations.window_backends.wayland_portal import (
             WaylandPortalBackend,
         )
@@ -121,32 +141,38 @@ class _WaylandCascadeBackend:
             WlrctlBackend,
         )
 
+        self._cosmic = CosmicToplevelBackend()
         self._portal = WaylandPortalBackend()
         self._wlrctl = WlrctlBackend()
         self._fallback_announced: bool = False
         # JANELA-CEGA-01: motivo da última leitura cega da cascata. Um só,
-        # porque a cascata só falha de um jeito — os dois backends já
-        # desistiram; qual deles desistiu está em `backend_name`.
+        # porque a cascata só falha de um jeito — os backends já desistiram;
+        # qual deles desistiu está em `backend_name`.
         self.last_failure_reason: str | None = None
         # FEAT-WINDOW-DETECT-DIAG-01: fonte da última leitura ÚTIL da cascata
-        # ("portal" | "wlrctl" | None). Alimenta `backend_name`.
+        # ("cosmic" | "portal" | "wlrctl" | None). Alimenta `backend_name`.
         self._last_source: str | None = None
 
     @property
     def backend_name(self) -> str:
-        """Backend efetivamente ativo na cascata: "portal" | "wlrctl" | "null".
+        """Backend ativo na cascata: "cosmic" | "portal" | "wlrctl" | "null".
 
         FEAT-WINDOW-DETECT-DIAG-01. Dinâmico de propósito: a cascata pode
-        migrar em runtime (portal desiste após o threshold de falhas; wlrctl
-        descobre que o compositor não expõe o protocolo — caso COSMIC).
-        Prioridade: fonte da última leitura útil, se ainda viável; senão o
-        primeiro backend da fila que ainda se declara disponível; senão
-        "null" (cascata cega — o autoswitch fica no fallback).
+        migrar em runtime (o cosmic descobre que o compositor não é COSMIC; o
+        portal desiste após o threshold de falhas; o wlrctl descobre que o
+        compositor não expõe o protocolo do wlroots). Prioridade: fonte da
+        última leitura útil, se ainda viável; senão o primeiro backend da fila
+        que ainda se declara disponível; senão "null" (cascata cega — o
+        autoswitch fica no fallback).
         """
+        if self._last_source == "cosmic" and self._cosmic.available:
+            return "cosmic"
         if self._last_source == "portal" and not self._portal.unsupported:
             return "portal"
         if self._last_source == "wlrctl" and self._wlrctl.available:
             return "wlrctl"
+        if self._cosmic.available:
+            return "cosmic"
         if not self._portal.unsupported:
             return "portal"
         if self._wlrctl.available:
@@ -154,6 +180,12 @@ class _WaylandCascadeBackend:
         return "null"
 
     def get_active_window_info(self) -> WindowInfo | None:
+        info = self._cosmic.get_active_window_info()
+        if info is not None:
+            self._last_source = "cosmic"
+            self.last_failure_reason = None
+            return info
+
         info = self._portal.get_active_window_info()
         if info is not None:
             self._last_source = "portal"
@@ -179,20 +211,132 @@ class _WaylandCascadeBackend:
         return None
 
 
+class _XlibComCosmicBackend:
+    """XWayland: o `xlib` na frente, e o Wayland nativo atrás dele.
+
+    JANELA-WAYLAND-CEGA-01 (02/09/2026). Numa sessão COSMIC o `DISPLAY` existe
+    (XWayland), então `detect_window_backend` escolhia `xlib` e pronto — a
+    cascata Wayland, com o único backend que enxerga app nativo, ficava do lado
+    de fora e nunca era tentada. O resultado, medido ao vivo na sessão dela às
+    23h02 de 02/09: com o Chrome/Wayland em foco, o produto lia
+    `wm_class="unknown"` (motivo `sem_foco_x`) enquanto o
+    `zcosmic_toplevel_info_v1` lia `google-chrome` no mesmo instante. Perfil
+    por jogo não casa com `unknown`.
+
+    **O xlib continua PREFERIDO, e não é hierarquia: é o que ele entrega a
+    mais.** Só ele resolve o `exe_basename` (`BACKENDS_QUE_VEEM_O_PROCESSO`) e
+    só ele traz o PID; um jogo Proton lido pelo `cosmic` perderia o
+    `process_name` do perfil. Então o segundo backend só é consultado quando o
+    primeiro NÃO devolveu janela — o caminho de quem joga por XWayland fica
+    byte-por-byte o de antes.
+
+    **Isto não substitui o resgate do `WindowReaderDiag`, e sim o torna
+    desnecessário nesta configuração.** `maybe_recover` trocava o backend de
+    uma vez por todas quando o XWayland morria; aqui a queda é por leitura, e
+    volta sozinha se o XWayland voltar.
+
+    **O CUSTO, dito em vez de escondido.** O `AutoSwitcher` lê a 2 Hz, e agora
+    toda leitura cega do X consulta a cascata. No COSMIC isso é barato — o
+    `CosmicToplevelBackend` mantém a conexão aberta e uma leitura sem novidade
+    é um `recv` que devolve `EAGAIN`. Em compositor **wlroots com XWayland**,
+    porém, quem responde é o `WlrctlBackend`, que gasta um `subprocess` por
+    leitura: com um app Wayland nativo em foco, isso vira duas execuções de
+    `wlrctl` por segundo. Não é custo novo em espécie — é exatamente o que a
+    cascata já fazia nesses compositors em sessão Wayland pura, desde a
+    v3.1.0 —, mas é custo novo de LUGAR, e quem for medir consumo de CPU do
+    daemon numa dessas máquinas precisa saber onde olhar.
+    """
+
+    def __init__(self, xlib: WindowBackend, wayland: WindowBackend) -> None:
+        self._xlib = xlib
+        self._wayland = wayland
+        self.last_failure_reason: str | None = None
+        self._ultima_fonte: str | None = None
+        self._anunciado: bool = False
+
+    @property
+    def backend_name(self) -> str:
+        """De onde veio a última leitura ÚTIL — "xlib" ou o nome da cascata.
+
+        Enquanto ninguém leu nada, responde "xlib": é o backend que vai ser
+        tentado primeiro, e mentir "cosmic" antes da primeira leitura faria a
+        tela prometer um nome de processo que este caminho nunca dá
+        (`backend_ve_nome_do_processo` lê exatamente este campo).
+        """
+        if self._ultima_fonte == "wayland":
+            nome = getattr(self._wayland, "backend_name", None)
+            if isinstance(nome, str) and nome:
+                return nome
+            return "null"
+        return getattr(self._xlib, "backend_name", "xlib")
+
+    @property
+    def xlib(self) -> WindowBackend:
+        """O backend X11 de dentro — o `WindowReaderDiag` pergunta a saúde a ele."""
+        return self._xlib
+
+    def conexao_provada(self) -> bool | None:
+        """Delega ao `xlib`: é dele que a pergunta fala (T-01, ONDA0-Z7)."""
+        fn = getattr(self._xlib, "conexao_provada", None)
+        return fn() if callable(fn) else None
+
+    def get_active_window_info(self) -> WindowInfo | None:
+        info = self._xlib.get_active_window_info()
+        if info is not None:
+            self._ultima_fonte = "xlib"
+            self.last_failure_reason = None
+            return info
+
+        motivo_do_x = getattr(self._xlib, "last_failure_reason", None)
+        info = self._wayland.get_active_window_info()
+        if info is not None:
+            self._ultima_fonte = "wayland"
+            self.last_failure_reason = None
+            if not self._anunciado:
+                logger.info(
+                    "janela_lida_pelo_wayland_nativo",
+                    motivo_do_x=motivo_do_x,
+                    hint=(
+                        "o X não enxergou a janela em foco (app Wayland "
+                        "nativo) e a leitura veio do compositor; o nome do "
+                        "processo não vem por este caminho."
+                    ),
+                )
+                self._anunciado = True
+            return info
+
+        self._ultima_fonte = None
+        # JANELA-CEGA-01: os dois calaram. O motivo do X é o mais informativo
+        # (ele distingue "XWayland morto" de "app nativo em foco"); o da
+        # cascata entra quando o X não soube dizer.
+        self.last_failure_reason = (
+            motivo_do_x
+            or getattr(self._wayland, "last_failure_reason", None)
+            or MOTIVO_CASCATA_SEM_LEITURA
+        )
+        return None
+
+
 def detect_window_backend() -> WindowBackend:
     """Detecta e retorna o backend mais adequado para o ambiente atual.
 
     Lógica de seleção:
-    - XWayland (ambas variáveis presentes): XlibBackend.
-    - Wayland puro (apenas WAYLAND_DISPLAY): cascade portal → wlrctl → null.
-    - X11 puro (apenas DISPLAY): XlibBackend.
+    - XWayland (ambas variáveis presentes): `_XlibComCosmicBackend` — o xlib na
+      frente (é quem vê o processo), a cascata Wayland atrás, para o app nativo
+      que o X não enxerga (JANELA-WAYLAND-CEGA-01).
+    - Wayland puro (apenas WAYLAND_DISPLAY): cascade cosmic → portal → wlrctl.
+    - X11 puro (apenas DISPLAY): XlibBackend — não há Wayland atrás para cair.
     - Sem display: NullBackend (com log de advertência).
     """
     has_wayland = bool(os.environ.get("WAYLAND_DISPLAY"))
     has_x11 = bool(os.environ.get("DISPLAY"))
 
+    if has_x11 and has_wayland:
+        logger.debug("window_backend_selected", backend="xlib+wayland", xwayland=True)
+        return _XlibComCosmicBackend(XlibBackend(), _WaylandCascadeBackend())
+
     if has_x11:
-        logger.debug("window_backend_selected", backend="xlib", xwayland=has_wayland)
+        logger.debug("window_backend_selected", backend="xlib", xwayland=False)
         return XlibBackend()
 
     if has_wayland:
@@ -318,17 +462,29 @@ class WindowReaderDiag:
         return fn() if callable(fn) else None
 
     def _xwayland_morto_com_wayland_vivo(self) -> bool:
-        """O backend é `xlib`, a conexão está PROVADA morta, e há Wayland?
+        """O backend é `xlib` PURO, a conexão está PROVADA morta, e há Wayland?
 
         D-TROCA-DE-PERFIL-CEGA (25/08/2026). As três condições juntas, e só
         elas, descrevem a máquina dela na medição de 23/08 às 22h21: 60
         `x11_connect_failed` em 30 min, `err=Can't connect to display :1`,
-        sessão COSMIC/Wayland. `detect_window_backend` escolhe `xlib` sempre
-        que `DISPLAY` existe (é o único backend que resolve `exe_basename` —
-        ver `BACKENDS_QUE_VEEM_O_PROCESSO`), e essa preferência estava certa
-        enquanto o XWayland estivesse vivo. Com ele morto, o produto ficava
-        preso a um backend cego tendo a cascata Wayland — que funciona no
-        COSMIC via `wlrctl` — ao lado, nunca tentada.
+        sessão COSMIC/Wayland. O produto ficava preso a um backend cego tendo
+        a cascata Wayland ao lado, nunca tentada.
+
+        **O QUE MUDOU EM 02/09/2026, e por que este ramo quase não roda mais:**
+        com `DISPLAY` E `WAYLAND_DISPLAY` no ambiente,
+        `detect_window_backend()` já devolve o `_XlibComCosmicBackend`, que
+        tenta a cascata Wayland a CADA leitura em que o X não enxergou —
+        inclusive quando ele não enxergou por estar morto. O resgate deixa de
+        ser necessário nessa configuração, e deixa de disparar: o `isinstance`
+        abaixo é `XlibBackend`, não o composto. Isso é escolha, não descuido —
+        a queda por leitura é reversível (o XWayland volta e o `exe_basename`
+        volta com ele) e o resgate era de mão única dentro do episódio.
+
+        O ramo continua vivo para o `xlib` PURO, que é o que
+        `detect_window_backend()` devolve quando só há `DISPLAY`: aí um
+        `WAYLAND_DISPLAY` que apareça DEPOIS (o `_ensure_display_env()`
+        importa o ambiente do systemd `--user` no meio da vida do daemon) é
+        exatamente o caso que este método existe para pegar.
 
         `conexao_provada() is False` é PROVA, não presunção: só devolve False
         depois de uma tentativa de conexão real que o servidor recusou
@@ -375,18 +531,20 @@ class WindowReaderDiag:
         D-TROCA-DE-PERFIL-CEGA (25/08/2026): o segundo caso é o XWayland
         MORTO numa sessão Wayland (ver `_xwayland_morto_com_wayland_vivo`).
         Aqui NÃO se chama `detect_window_backend()` — ela devolveria `xlib` de
-        novo, porque `DISPLAY` continua no ambiente; o resgate constrói a
-        cascata Wayland direto.
+        novo se o env ainda não tiver o `WAYLAND_DISPLAY` que este método
+        acabou de ver; o resgate monta o composto direto.
 
-        **A troca é de mão única dentro do episódio, e é escolha declarada.**
-        A cascata é CEGA ao nome do processo (`BACKENDS_CEGOS_AO_PROCESSO`),
-        então perfis que casam por `process_name` seguem sem casar — mas eles
-        já não casavam com o xlib morto, que não devolvia janela nenhuma.
-        Enxergar `wm_class` e `wm_name` é estritamente mais do que enxergar
-        nada, e o `window_detect_backend` publicado no `state_full` continua
-        dizendo qual backend está valendo (é o que
-        `backend_ve_nome_do_processo` lê para a tela). Se o XWayland voltar, o
-        backend certo volta no próximo start do daemon.
+        **A troca DEIXOU de ser de mão única — 02/09/2026.** Ela trocava o
+        `xlib` pela cascata Wayland e pronto: quem casava perfil por
+        `process_name` perdia o casamento até o próximo start do daemon, mesmo
+        que o XWayland ressuscitasse no minuto seguinte. Agora o resgate
+        monta o `_XlibComCosmicBackend` com o MESMO `xlib` dentro — ele volta a
+        ser o preferido no instante em que voltar a responder, e o
+        `exe_basename` volta junto. O que se perde enquanto o X está morto é o
+        mesmo de antes (a cascata é cega ao processo), e o
+        `window_detect_backend` publicado no `state_full` continua dizendo por
+        onde a leitura veio — é o que `backend_ve_nome_do_processo` lê para a
+        tela.
         """
         if isinstance(self._backend, NullBackend):
             novo = detect_window_backend()
@@ -395,15 +553,17 @@ class WindowReaderDiag:
             self._backend = novo
             return True
         if self._xwayland_morto_com_wayland_vivo():
-            self._backend = _WaylandCascadeBackend()
+            self._backend = _XlibComCosmicBackend(self._backend, _WaylandCascadeBackend())
             logger.warning(
                 "window_backend_xwayland_morto_resgate_wayland",
                 hint=(
                     "o servidor X recusou conexão e a sessão é Wayland; "
-                    "a detecção de janela passa para a cascata "
-                    "portal/wlrctl. O nome do processo deixa de ser "
-                    "visível (perfis que casam por process_name não "
-                    "entram); wm_class e título continuam."
+                    "a detecção de janela passa a cair para a cascata "
+                    "cosmic/portal/wlrctl a cada leitura que o X perder. O "
+                    "nome do processo não vem por esse caminho (perfis que "
+                    "casam por process_name não entram enquanto durar); "
+                    "wm_class e título continuam, e o xlib volta a ser o "
+                    "preferido assim que voltar a responder."
                 ),
             )
             return True

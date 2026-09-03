@@ -92,6 +92,7 @@ _install_gi_stubs()
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.integrations.window_backends import (
     wayland_portal,
+    cosmic_toplevel,
     wlr_toplevel,
     xlib,
 )
@@ -151,6 +152,34 @@ class TestATabelaBateComOsBackends:
         assert info.wm_class == "steam_app_3357650"
         assert info.exe_basename == ""
         nome = wlr_toplevel.WlrctlBackend.backend_name
+        assert backend_ve_nome_do_processo(nome) is False
+
+    def test_o_cosmic_devolve_exe_vazio_e_pid_zero(self) -> None:
+        """O `zcosmic_toplevel_info_v1` não manda PID — nem na versão 3.
+
+        Este backend é o que passou a enxergar app Wayland nativo em 02/09,
+        e é onde a promessa era mais tentadora: ele SABE o nome do app
+        (`app_id`), então parece que saberia o processo. Não sabe. O protocolo
+        não carrega PID, e inventar um seria a mentira que o
+        `BACKENDS_CEGOS_AO_PROCESSO` existe para impedir.
+
+        Morde em `BACKENDS_CEGOS_AO_PROCESSO`. Arranque: mover ``"cosmic"``
+        para `BACKENDS_QUE_VEEM_O_PROCESSO` e o `assert` do predicado reprova.
+        """
+        janela = cosmic_toplevel._Janela()
+        janela.app_id = "com.system76.CosmicTerm"
+        janela.titulo = "Terminal"
+        janela.ativada = True
+        backend = cosmic_toplevel.CosmicToplevelBackend()
+        backend._janelas = {1: janela}
+        backend._soquete = object()  # type: ignore[assignment]
+        backend._esvaziar = lambda: True  # type: ignore[method-assign]
+        info = backend.get_active_window_info()
+        assert info is not None
+        assert info.wm_class == "com.system76.CosmicTerm"
+        assert info.pid == 0
+        assert info.exe_basename == ""
+        nome = cosmic_toplevel.CosmicToplevelBackend.backend_name
         assert backend_ve_nome_do_processo(nome) is False
 
     def test_o_xlib_resolve_o_executavel_de_verdade(self) -> None:

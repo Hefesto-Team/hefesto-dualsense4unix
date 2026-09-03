@@ -4,8 +4,10 @@ Cobre:
   - `build_window_reader()` retorna `WindowReaderDiag` com `backend_name`
     correto por cenário de ambiente (X11, XWayland, Wayland puro, headless),
     mantendo retrocompatibilidade com a API legada (callable de dict).
-  - `backend_name` dinâmico da cascata Wayland: migra portal -> wlrctl ->
-    null conforme os backends desistem/ficam indisponíveis.
+  - `backend_name` dinâmico da cascata Wayland: migra cosmic -> portal ->
+    wlrctl -> null conforme os backends desistem/ficam indisponíveis.
+    (O `cosmic` entrou na frente em 02/09/2026 — JANELA-WAYLAND-CEGA-01 —
+    porque é o único que responde no compositor dela.)
   - Metadados por leitura: `last_read_useful`, `useful_reads`,
     `last_useful_class` ("unknown" e vazio NÃO contam como útil).
   - `StateStore`: `set_window_detect_backend` / `record_window_detect_read`
@@ -66,13 +68,21 @@ class TestBackendNamePorCenarioDeEnv:
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         assert build_window_reader().backend_name == "xlib"
 
-    def test_wayland_puro_comeca_em_portal(
+    def test_wayland_puro_comeca_em_cosmic(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Sem leitura ainda, a cascata reporta o primeiro da fila (portal)."""
+        """Sem leitura ainda, a cascata reporta o primeiro da fila.
+
+        O primeiro passou a ser o `cosmic` em 02/09/2026. Ele só sai da frente
+        depois de o compositor DIZER que não publica o protocolo — e enquanto
+        ninguém perguntou, ninguém sabe.
+
+        MORDIDA: pôr o portal de volta na frente de `_WaylandCascadeBackend.
+        backend_name` e este teste reprova.
+        """
         monkeypatch.delenv("DISPLAY", raising=False)
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
-        assert build_window_reader().backend_name == "portal"
+        assert build_window_reader().backend_name == "cosmic"
 
     def test_headless_reporta_null(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DISPLAY", raising=False)
@@ -85,12 +95,67 @@ class TestBackendNamePorCenarioDeEnv:
 
 
 class TestCascataBackendNameDinamico:
-    """A cascata Wayland migra portal -> wlrctl -> null conforme desistem."""
+    """A cascata migra cosmic -> portal -> wlrctl -> null conforme desistem.
+
+    **Os testes desligam o `cosmic` À MÃO, e isso é o ponto.** Ele é o
+    primeiro da fila, e sem desligá-lo a suíte iria falar com o compositor
+    DE VERDADE da máquina onde ela roda — passaria no CI (sem Wayland) e
+    mediria outra coisa na máquina dela. Régua que muda de resposta conforme
+    a máquina não é régua.
+    """
 
     def _make_cascade(self, monkeypatch: pytest.MonkeyPatch) -> Any:
         monkeypatch.delenv("DISPLAY", raising=False)
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
-        return window_detect.detect_window_backend()
+        cascade = window_detect.detect_window_backend()
+        # O compositor deste teste não publica o protocolo do COSMIC.
+        cascade._cosmic._desligado_de_vez = True
+        return cascade
+
+    def test_cosmic_e_o_primeiro_da_fila(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Enquanto ele não desistiu, é dele o nome.
+
+        MORDIDA: tirar o ramo `if self._cosmic.available: return "cosmic"` de
+        `backend_name` e a asserção reprova.
+        """
+        monkeypatch.delenv("DISPLAY", raising=False)
+        monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+        cascade = window_detect.detect_window_backend()
+        assert cascade.backend_name == "cosmic"
+
+    def test_leitura_util_do_cosmic_muda_o_nome(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A cascata pergunta ao cosmic ANTES do portal.
+
+        MORDIDA: mover a chamada do cosmic para depois do portal em
+        `get_active_window_info` e o nome passa a ser "portal".
+        """
+        from unittest.mock import MagicMock
+
+        cascade = self._make_cascade(monkeypatch)
+        cascade._cosmic._desligado_de_vez = False
+        cascade._cosmic.get_active_window_info = MagicMock(
+            return_value=WindowInfo(wm_class="spotify", app_id="spotify")
+        )
+        cascade._portal.get_active_window_info = MagicMock(
+            return_value=WindowInfo(wm_class="nao-devia-ser-perguntado")
+        )
+        info = cascade.get_active_window_info()
+        assert info is not None
+        assert info.wm_class == "spotify"
+        assert cascade.backend_name == "cosmic"
+        cascade._portal.get_active_window_info.assert_not_called()
+
+    def test_cosmic_desiste_e_o_portal_assume(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Num compositor que não é COSMIC, a fila anda sozinha.
+
+        MORDIDA: fazer `available` do backend cosmic devolver sempre True.
+        """
+        cascade = self._make_cascade(monkeypatch)
+        assert cascade.backend_name == "portal"
 
     def test_leitura_util_do_wlrctl_muda_o_nome(
         self, monkeypatch: pytest.MonkeyPatch
@@ -120,7 +185,7 @@ class TestCascataBackendNameDinamico:
         cascade._wlrctl._available = True
         assert cascade.backend_name == "wlrctl"
 
-    def test_ambos_indisponiveis_reporta_null(
+    def test_todos_indisponiveis_reporta_null(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         cascade = self._make_cascade(monkeypatch)
