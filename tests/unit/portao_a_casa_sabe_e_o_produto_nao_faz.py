@@ -965,15 +965,15 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # frente dela, e `a01_jogar.py` foi ligado pela integração, com a medição
     # contra o daemon vivo (o do CABO dizia `Player —` e passou a dizer
     # `Player 2`). O portão pegou a lápide sobrevivente antes de mim.
-    "interface/pacotes/__init__.py::identidade_de": (
-        "O nome do controle na tela, na ordem 'o que ELA nomeou > o modelo "
-        "decodificado > o transporte' — e NUNCA a posição. Hoje `Cosmic Red` e "
-        "`Starlight Blue` estão cravados 170 vezes no HTML publicado, e o nome "
-        "vinha da ordem da lista: com um controle o do cabo era 'Starlight "
-        "Blue'; com dois, o MESMO cabo virou 'Cosmic Red'. Fecha quando os "
-        "geradores `interface/abaNN.py` derem `data-campo` ao rótulo e os "
-        "pacotes o pintarem. MEDIDO em 02/09/2026."
-    ),
+    # `identidade_de` SAIU DAQUI EM 02/09/2026, e o caminho não foi o que a
+    # lápide previa. Ela dizia "fecha quando os geradores derem `data-campo` ao
+    # rótulo e os pacotes o pintarem" — e a FITA do topo não se pinta campo a
+    # campo: ela se troca INTEIRA (`hefesto_vivo.py:377`), porque o número de
+    # chips muda com a mesa e não há endereço para um chip que ainda não existe.
+    # Quem passou a chamar foi `monta.identidade_do_chip`, o dono da fita nas
+    # dez abas. Medido com os dois controles dela na mesa: a fita dizia
+    # `P1 • Cosmic Red • USB` sobre um controle branco, e passou a dizer
+    # `P1 • White • USB`.
     "interface/pacotes/__init__.py::degradacao_de": (
         "A frase 'Emulação degradada (uinput): …', que delega para "
         "`app/widgets/controller_card.texto_degradacao`. `vpad_motivo` é lido "
