@@ -334,3 +334,37 @@ seção daqui**: a aba deixou de estar em trabalho.
   dono), então o `--publicar-enderecos 05` não alcança esta leva — é
   `--publicar 05`, que é ato dela. O atributo é endereço puro: não há uma regra
   de CSS que o leia em nenhuma das dez páginas.
+## 06-navegacao.html
+
+- **03/09/2026** — **A-COR-VEM-DO-APARELHO.** O desenho do controle em cada um
+  dos quatro cartões deixou de ser o do mockup e passou a ser o do aparelho.
+  A lei é dela: *"os svgs do dualsense (…) mudam de acordo com o controle
+  identificado no canto superior (…) os svgs nao sao os que o meu mapa cataloga. isso ta errado"*. <!-- noqa-acento: citação literal dela -->
+
+  Três coisas, e as três são a mesma cura:
+
+  - o `<svg>` de cada lugar ganhou `data-campo="desenho"`,
+    `data-hef-alvo="atributo"` e `data-hef-atributo="data-colorway"`;
+  - a folha das cores PODADA saiu de dentro dos quatro SVGs, e a página passa a
+    publicar **os 28 modelos do mapa dela, uma vez** — sem isso o atributo
+    escreveria um colorway que nenhuma regra casa;
+  - uma zona sem `data-colorway` cai no neutro, porque o `ds_limpo.svg` guarda
+    dois `fill="#b11f54"` crus (o Cosmic Red velho) que apareciam num controle
+    que ninguém identificou.
+
+  **O QUE ELA VÊ DE DIFERENTE DEPOIS DE PUBLICAR:** nos dois controles da mesa
+  de hoje, **nada** — o casco já saía White e Galactic Purple, porque a
+  `folha_do_plastico` sobrescrevia as variáveis. O que muda é quem tiver
+  qualquer um dos outros 26 modelos, e o que some é a cor de aparelho num
+  controle sem leitura. A página engorda 33 KB (401 → 434), que é o preço de a
+  tabela dela estar inteira na tela em vez de recortada em quatro.
+
+  **O QUE O PRODUTO FAZ ATÉ ELA PUBLICAR, e é nada:** a página que o `WebView`
+  renderiza hoje não tem os quatro endereços novos, e valor emitido sem destino
+  é descartado sem erro.
+
+  **ATENÇÃO — ESTA PÁGINA NÃO PODE SER PUBLICADA ANTES DO ALVO `atributo` DO PILOTO.**
+  Medido na tela em 03/09 com o `hefesto_vivo` sem o alvo: o `escrever()` cai no
+  ramo padrão e faz `el.textContent` no `<svg>` — **os quatro desenhos SOMEM**.
+  `tests/unit/test_a_06_o_desenho_vem_do_aparelho.py::test_o_piloto_tem_o_alvo_de_atributo`
+  é o alarme: vermelho enquanto o degrau não estiver no lugar.
