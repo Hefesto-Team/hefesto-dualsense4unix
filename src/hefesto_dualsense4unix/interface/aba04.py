@@ -48,6 +48,113 @@ def luz(jogador):
     return "#%02X%02X%02X" % player_slot_color(jogador)
 
 
+# ---------------------------------------------------------------------------
+# O DESENHO DO CONTROLE VESTE O APARELHO — 03/09/2026, e é a lei dela:
+#
+#     "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
+#      players com cada controle — tudo isso muda de acordo com o controle
+#      identificado no canto superior. é white no p1, mas a borda de tudo é
+#      cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
+#
+# ESTA ABA JÁ TINHA VESTIDO A MOLDURA (`data-campo="plastico"`, alvo `cor`) e a
+# FILEIRA de números (o anel do dono, pelo alvo `html`). O que continuava do
+# MOCKUP era o maior objeto da tela: o próprio DualSense desenhado, 146 px de
+# altura por coluna. Fotografado nesta árvore, com a mesa dela:
+#
+#     rótulo da coluna (lido do aparelho)   P1 • White • USB
+#     desenho dentro da moldura (do MOCKUP) cosmic-red
+#     rótulo da coluna (lido do aparelho)   P2 • Galactic Purple • BT
+#     desenho dentro da moldura (do MOCKUP) starlight-blue
+#
+# SÃO DUAS METADES, e uma sem a outra não pinta nada:
+#
+# 1. O ENDEREÇO. O que muda no desenho é o ATRIBUTO `data-colorway` — é ele que
+#    escolhe, na folha de cores, qual dos modelos pinta as dez zonas. O alvo
+#    `atributo` do pintor é quem escreve atributo, e o nome do atributo viaja
+#    num `data-hef-atributo` SEPARADO (o par é a mesma gramática de
+#    `data-hef-classe`/`data-hef-quando`).
+#
+# 2. A FOLHA. `monta._so_o_colorway` guarda dentro de CADA SVG só as regras do
+#    modelo pedido — 3.127 bytes dos 45.497 dos vinte e oito. Escrever
+#    `galactic-purple` num SVG cuja folha só conhece `starlight-blue` não pinta
+#    roxo: cai nos `fill` crus do `ds_limpo.svg` e dá o mesmo cinza neutro de um
+#    desenho sem identidade. Trocaria uma cor errada por um cinza.
+#
+#    A CURA É PUBLICAR A FOLHA INTEIRA UMA VEZ, na página, e tirar as quatro
+#    cópias podadas de dentro dos SVGs. Ela é o mapa DELA — vinte e oito
+#    modelos, do White ao Ghost of Yōtei —, e a partir daqui qualquer um deles
+#    pinta qualquer uma das quatro colunas. A conta: a página perde 4 × 3.127 e
+#    ganha 45.497 uma vez, e passa a saber pintar 28 modelos em vez de 4.
+# ---------------------------------------------------------------------------
+
+#: OS TRÊS ATRIBUTOS QUE LIGAM UM DESENHO, e eles andam juntos: sem o
+#: `data-hef-alvo` o pintor cai no ramo padrão e escreve o nome do colorway como
+#: TEXTO dentro do `<svg>` — o que apaga o desenho inteiro.
+ENDERECO_DO_DESENHO = ('data-campo="desenho" data-hef-alvo="atributo" '
+                       'data-hef-atributo="data-colorway"')
+
+#: O BLOCO DAS CORES dentro do SVG — a folha E os fundos que ela usa.
+#:
+#: O `id` VEM PREFIXADO, e é por isso que a âncora não é o nome cru: `monta.svg`
+#: renomeia TODO `id` do desenho para `{pref}-{id}`, senão os quatro SVGs da
+#: mesma página compartilhariam filtro e degradê.
+#:
+#: E A FOLHA NÃO VIAJA SOZINHA — este defeito foi MEDIDO, não previsto. A
+#: primeira volta desta entrega subiu só o `<style>`, e o Chrome mostrou três
+#: modelos pintando com `url(#…)`: `hachura-sem-hex` (a trama de "zona sem hex
+#: no catálogo", usada 64 vezes), `casca-god-of-war-20th` e `casca-spider-man-2`.
+#: Os três são `<pattern>`/`<linearGradient>` que moram no MESMO
+#: `<defs id="cores-do-dualsense">` — e, prefixados dentro de cada SVG, o
+#: `url(#casca-spider-man-2)` da folha subida deixava de achar o alvo. Três dos
+#: vinte e oito pintariam NADA. A folha e os fundos dela são UMA peça, e sobem
+#: juntos, como o gerador de cores os emite.
+_BLOCO_DAS_CORES = re.compile(
+    r'[ \t]*<defs id="[^"]*cores-do-dualsense">.*?</defs>\n?', re.S)
+
+
+def _cores_do_mapa(x, quem):
+    """O `<defs>` das cores como o gerador o deixou — para a página emiti-lo uma vez.
+
+    Sai de `monta.DS`, que é o `ds_limpo.svg` escrito por
+    `scripts/gerar_cores_do_dualsense.py` — o mesmo lugar de onde
+    `monta.cor_da_zona` lê o hexadecimal de cada zona. Digitar cor aqui seria a
+    segunda verdade que o `docs/data/cores-do-dualsense.csv` existe para não ter.
+    """
+    m = _BLOCO_DAS_CORES.search(x)
+    if m is None:
+        raise SystemExit(f"ERRO em {quem}: o `<defs>` das cores sumiu do "
+                         f"desenho — rode scripts/gerar_cores_do_dualsense.py")
+    return m.group(0)
+
+
+#: AS CORES DOS VINTE E OITO, uma vez por página, num SVG fora do fluxo. Os
+#: quatro desenhos leem daqui — é isto que faz o alvo do `data-colorway` valer
+#: para o mapa inteiro dela, e não só para os quatro modelos do desenho.
+CORES_DO_MAPA = f'''    <svg class="cores-do-mapa" aria-hidden="true"
+         style="position:absolute;width:0;height:0;overflow:hidden">
+{_cores_do_mapa(monta_.DS, "04-iluminacao")}    </svg>
+'''
+
+
+def desenho(pref, colorway, endereco, **resto):
+    """O DualSense de uma coluna: sem as cores dentro, e com (ou sem) endereço.
+
+    `endereco=False` é o LUGAR VAZIO, e ele sai SEM `data-colorway` nenhum: não
+    há aparelho ali, e a regra dela é que campo sem informação não mostra nada.
+    Um colorway cravado num lugar que diz "Desconectado" é identidade do mockup
+    parada na tela — invisível hoje (a folha desta aba pinta o lugar vazio de
+    `var(--linha)`), e uma cor errada no dia em que essa regra mudar.
+    """
+    x, n = _BLOCO_DAS_CORES.subn("", svg(pref, colorway, **resto), count=1)
+    if n != 1:
+        raise SystemExit(f"ERRO em 04-iluminacao: o SVG de {pref!r} não trazia o "
+                         f"`<defs>` das cores — a poda de `monta.svg` mudou de forma")
+    marca = f'<svg data-colorway="{colorway}" class="ds-svg" '
+    return monta_.troca(
+        x, f"04-iluminacao/{pref}", marca,
+        f"{marca}{ENDERECO_DO_DESENHO} " if endereco else '<svg class="ds-svg" ')
+
+
 #: Quem tem cada número HOJE. É o que faz cada botão de número dizer com quem a
 #: troca acontece — o anelzinho dele é a cor do plástico do dono.
 DONO = {c["jogador"]: c for c in MESA}
@@ -564,7 +671,7 @@ def coluna_vazia(c):
     return f'''        <div class="ctrl vazia" data-conectado="nao"
              title="Nenhum controle neste lugar.">
           <div class="moldura">
-            {svg(f"il-{c['pref']}", c["cor"], lampadas=False)}
+            {desenho(f"il-{c['pref']}", c["cor"], False, lampadas=False)}
           </div>
           <div class="ctrl-rot">P{j} <span class="pt">•</span> Desconectado</div>
           <div class="cel-cor"><span class="nada">{VAZIO}</span></div>
@@ -673,7 +780,7 @@ def coluna(c):
     # passa nem o número: `dica_da_luz` não precisa mais dele.
     return f'''        <div class="ctrl" data-controle="{c.get("uniq") or p}" data-conectado="sim">
           <div class="moldura" data-campo="plastico" data-hef-alvo="cor" style="color:{cor_da_zona(c["cor"])}" title="A borda é a cor do plástico deste controle, quando o produto a conhece. A barra acende a cor do número, e as cinco lâmpadas dizem qual é.">
-            {svg(f"il-{p}", c["cor"], jogador=j, luz=tinta)}
+            {desenho(f"il-{p}", c["cor"], True, jogador=j, luz=tinta)}
           </div>
           <div class="ctrl-rot" data-campo="identidade">P{j} <span class="pt">•</span> {c["nome"]} <span class="pt">•</span> {c["via"]}</div>
           <div class="cel-cor">
@@ -702,6 +809,7 @@ def coluna(c):
 
 
 MIOLO = f'''
+{CORES_DO_MAPA}
     <div class="quadro luzes">
       <div class="quadro-topo">
         <span class="quadro-titulo">Iluminação</span>
@@ -975,6 +1083,37 @@ def _conferir(doc):
             exigir(f'class="tira-luz {lado}" style="background:{tinta};color:{tinta}' in corpo,
                    f"a tira {lado} do P{c['jogador']} não acende a tinta da guia ({tinta})")
 
+    # 8. O DESENHO VESTE O APARELHO, e as quatro metades vão conferidas na SAÍDA.
+    #    Esta régua olha o `doc` inteiro para o que é da PÁGINA e o `corpo` para
+    #    o que é das COLUNAS — as cores do mapa são uma peça só da página.
+    exigir(doc.count('id="cores-do-dualsense"') == 1,
+           "as cores do mapa não estão UMA vez na página — ou voltaram para "
+           "dentro dos SVGs (cada desenho sabendo pintar um modelo só), ou "
+           "saíram de vez")
+    modelos = len(set(re.findall(r'svg\[data-colorway="([a-z0-9-]+)"\]', doc)))
+    do_mapa = len(set(re.findall(r'svg\[data-colorway="([a-z0-9-]+)"\]',
+                                 monta_.DS)))
+    exigir(modelos == do_mapa,
+           f"a página conhece {modelos} modelos e o mapa dela tem {do_mapa}")
+    #    OS FUNDOS TÊM DE SER ALCANÇÁVEIS. Três modelos pintam com `url(#…)` —
+    #    prefixados dentro de um SVG, o `url()` da folha subida não os acha, e
+    #    eles pintam NADA. Foi medido no Chrome antes de virar régua.
+    for alvo in sorted(set(re.findall(r"url\(#([a-zA-Z0-9_-]+)\)", doc))):
+        exigir(f'id="{alvo}"' in doc,
+               f"a folha aponta para `url(#{alvo})` e a página não tem esse id "
+               f"— o modelo que usa esse fundo pinta nada")
+    exigir(corpo.count(ENDERECO_DO_DESENHO) == len(monta_.CONECTADOS),
+           "os desenhos das colunas conectadas não pedem todos o alvo do "
+           "atributo — sem ele o pintor escreve o colorway como TEXTO e apaga "
+           "o desenho")
+    #    E O LUGAR VAZIO NÃO CARREGA COLORWAY NENHUM: o único `data-colorway`
+    #    que sobra nas colunas é o das conectadas, e ele é o valor de PARTIDA
+    #    que o primeiro tique substitui.
+    colunas = corpo.split('<div class="luz-grade">', 1)[-1]
+    exigir(colunas.count("data-colorway=") == len(monta_.CONECTADOS),
+           "há `data-colorway` fora das colunas conectadas — identidade do "
+           "mockup parada num lugar sem aparelho")
+
     if falhas:
         raise SystemExit("ERRO em 04-iluminacao — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
@@ -991,7 +1130,8 @@ CSS_DAS_MEDIDAS = f"""
   }}
 """
 
-n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS, fita_viva=False, legenda=LEGENDA)
+n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS,
+          fita_viva=False, legenda=LEGENDA)
 _conferir(onde.pagina("04-iluminacao.html").read_text())
 print(f"04-iluminacao: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
       f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
