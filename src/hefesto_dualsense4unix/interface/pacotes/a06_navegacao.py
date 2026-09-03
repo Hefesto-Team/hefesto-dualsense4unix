@@ -600,18 +600,45 @@ def _ler_a_folha() -> dict[str, dict[str, str]]:
     return folha
 
 
+def colorway_do_aparelho(slug: str) -> str:
+    """O `data-colorway` daquele lugar da mesa — o id do modelo, ou `""`.
+
+    É O MESMO DADO DE `cor_do_plastico`, PELA OUTRA PORTA, e as duas portas
+    existem porque a tela precisa das duas coisas: o cartão precisa do HEX (a
+    borda é `currentColor`) e o desenho precisa do NOME (o SVG escolhe a cor por
+    `svg[data-colorway="…"]`, e não por hex). Traduzir uma na outra aqui seria
+    escrever a tabela dela de novo; ambas leem a folha que
+    `scripts/gerar_cores_do_dualsense.py` pintou no SVG.
+
+    O SLUG QUE O MAPA NÃO CONHECE VIRA `""`, e isso é a regra dela e não zelo:
+    escrever um colorway sem regra na folha deixaria o desenho no cinza cru do
+    `ds_limpo.svg` **parecendo** cor lida. `""` apaga o atributo, o que dá o
+    mesmo cinza — mas dizendo a verdade: não há informação.
+    """
+    if not slug:
+        return SEM_LEITURA
+    return slug if slug in _ler_a_folha() else SEM_LEITURA
+
+
 def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
     """A folha de estilo VIVA que pinta o casco de cada lugar da mesa.
 
+    ELA É O CINTO, E O ALVO `atributo` É O SUSPENSÓRIO — 03/09/2026. Desde que
+    o piloto ganhou o alvo `atributo`, o `data-colorway` de cada `<svg>` é um
+    campo (ver `colorway_do_aparelho`) e a página publica os 28 modelos: com o
+    alvo em voo, esta folha escreve as MESMAS variáveis que a regra já traz.
+    Ela fica porque é o que pinta o casco numa árvore em que o alvo ainda não
+    chegou — e sai no dia em que ele estiver no `dev` e provado na tela.
+
     POR QUE UMA FOLHA, e não um campo: o casco do desenho não é `style` de
     elemento — as peças do SVG leem `var(--z-casca)`, escrita por uma regra
-    `svg[data-colorway="…"]` que o `monta.svg()` embute no próprio SVG. O
-    piloto escreve texto, valor, classe, cor, largura, fundo e `innerHTML`, e
-    **nenhum deles alcança uma variável CSS de um elemento**. Reescrever o SVG
-    inteiro pelo `innerHTML` custaria 370 linhas por cartão a cada meio segundo
-    — e nunca sossegaria: o navegador NORMALIZA marcação, então a comparação do
-    `escrever()` acusaria mudança em todo tique, para sempre. O `innerHTML` de
-    um `<style>` é TEXTO, e texto volta como foi escrito.
+    `svg[data-colorway="…"]`. O piloto escreve texto, valor, classe, cor,
+    largura, fundo, `innerHTML` e atributo, e **nenhum deles alcança uma
+    variável CSS de um elemento**. Reescrever o SVG inteiro pelo `innerHTML`
+    custaria 370 linhas por cartão a cada meio segundo — e nunca sossegaria: o
+    navegador NORMALIZA marcação, então a comparação do `escrever()` acusaria
+    mudança em todo tique, para sempre. O `innerHTML` de um `<style>` é TEXTO,
+    e texto volta como foi escrito.
 
     A especificidade é o que faz esta folha vencer a de dentro do SVG:
     `.nav-ctl[data-controle="p1"] .ds-svg` (0,3,0) contra
@@ -863,6 +890,24 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # apaga a cor de linha e devolve a borda ao neutro do CSS. Sem as duas
     # últimas, um lugar que ficasse vazio guardaria a cor do controle que saiu.
     plastico = [cor_do_plastico(str(m.get("cor") or "")) for m in ctx.mesa]
+    # O DESENHO DE CADA LUGAR, PELO MESMO CAMINHO E PELA MESMA ORDEM —
+    # 03/09/2026, A-COR-VEM-DO-APARELHO. O `<svg>` escolhe o modelo por
+    # `data-colorway`, e até hoje esse atributo era o do MOCKUP: com o P1 dela
+    # em White, o `<svg>` do cartão dizia `cosmic-red`.
+    #
+    # A TELA JÁ MOSTRAVA A COR CERTA, e é o fato que mais importa aqui: a
+    # `folha_do_plastico` sobrescrevia as VARIÁVEIS do modelo e o casco saía
+    # White (medido no WebKit em 03/09: `rgb(228, 224, 216)`). O que estava
+    # errado não era o pixel — era o mecanismo: as REGRAS que leem essas
+    # variáveis são `svg[data-colorway="cosmic-red"] …`, e só casavam porque o
+    # atributo do mockup tinha ficado. Ligar o atributo, que é o que a lei
+    # pede, teria QUEBRADO o desenho — e foi por isso que a página passou a
+    # publicar os 28 modelos no mesmo movimento.
+    #
+    # OS QUATRO LUGARES, SEMPRE, e a razão é a mesma da linha de cima: o piloto
+    # distribui a lista pelos elementos de mesmo `data-campo` NA ORDEM do HTML.
+    # Uma lista mais curta deixaria o lugar vazio com o colorway do desenho.
+    desenho = [colorway_do_aparelho(str(m.get("cor") or "")) for m in ctx.mesa]
     # QUEM NAVEGA O PC É O PRIMÁRIO, e quem o marca é o daemon (`is_primary`).
     # O gerador tirava o MENOR número da mesa, que acerta por coincidência
     # enquanto o P1 estiver na frente.
@@ -874,6 +919,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # A FITA DO TOPO, quando o dono dela desiste — ver `chips_da_fita`.
         "fita-chips": chips_da_fita(ctx.mesa),
         "plastico": plastico + [""] * max(0, 4 - len(plastico)),
+        "desenho": desenho + [""] * max(0, 4 - len(desenho)),
         # QUEM NAVEGA O PC, nas duas dicas das telas de botões.
         "quem-navega": rotulo_de_quem_navega(
             jogador_de(chefe) if chefe else None,
