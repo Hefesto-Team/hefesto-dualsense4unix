@@ -39,8 +39,12 @@ import pytest
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic as mod
 
-UM = "143a9a13ebab"
-OUTRO = "a0fa9c22f0f0"
+#: OS DOIS CONTROLES DA MESA, na faixa FORJADA `aa:bb:cc` — a do
+#: `test_anonimato_de_fixtures`. Aqui não vale a máscara da casa (octetos 4 e 5
+#: zerados): ela preserva o OUI, e o OUI é identidade de fabricante do aparelho
+#: dela. Fixture quer endereço que nunca existiu, não endereço real podado.
+UM = "aabbcc0000f1"
+OUTRO = "aabbcc0000f2"
 
 
 # ---------------------------------------------------------------------------
