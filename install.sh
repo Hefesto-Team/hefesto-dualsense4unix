@@ -3258,8 +3258,20 @@ elif [[ ! -f "${PROTON_PIN_PY}" ]] || ! command -v python3 >/dev/null 2>&1; then
 elif [[ ! -f "${ROOT_DIR}/assets/proton-pin.conf" ]]; then
     warn "assets/proton-pin.conf ausente — pin do Proton pulado (reinstale o repo)"
 else
+    # CONSELHO-QUE-NAO-CURA-01 (02/09/2026): a saída do `--ensure` é CAPTURADA
+    # (e reimpressa inteira) porque um dos desfechos de sucesso precisa ser dito
+    # em voz alta. Quando o Proton pinado já está lá SEM o nosso manifesto —
+    # instalado por ProtonUp ou à mão —, o `ensure_pinned_proton` devolve
+    # `already` e MANTÉM o diretório de propósito: é dado da dona da máquina.
+    # A consequência é que o doctor passa a dizer, para sempre, que o manifesto
+    # não confere; e o conselho que ele dava era "rode ./install.sh", que é
+    # exatamente o que acabou de rodar sem mudar nada. Medido na máquina dela
+    # em 02/09: install com rc=0 e o mesmo aviso de volta.
     _pp_rc=0
-    python3 "${PROTON_PIN_PY}" --ensure || _pp_rc=$?
+    _pp_saida="$(python3 "${PROTON_PIN_PY}" --ensure 2>&1)" || _pp_rc=$?
+    # `[[ ]] && printf` seria uma lista que devolve 1 com a saída vazia, e o
+    # `set -e` desta casa mataria o instalador aqui. Vai de `if`, de propósito.
+    if [[ -n "${_pp_saida}" ]]; then printf '%s\n' "${_pp_saida}"; fi
     if [[ "${_pp_rc}" -eq 1 ]]; then
         warn "checksum do Proton NÃO bateu — passo ABORTADO (nunca instalo binário não verificado)"
     elif [[ "${_pp_rc}" -eq 2 ]]; then
@@ -3267,6 +3279,14 @@ else
     elif [[ "${_pp_rc}" -ne 0 ]]; then
         warn "garantia da versão pinada falhou (rc=${_pp_rc}) — rode: python3 ${PROTON_PIN_PY} --ensure"
     else
+        # O marcador vem do detalhe do `EnsureResult`; se ele mudar de texto,
+        # `tests/unit/test_conselho_que_nao_cura_01_o_proton_e_a_sobra_inerte.py`
+        # reprova — a frase é contrato entre os dois arquivos, não coincidência.
+        if [[ "${_pp_saida}" == *"instalação pré-existente sem manifesto"* ]]; then
+            printf '      o Proton pinado JÁ estava aí, instalado por FORA (ProtonUp ou à mão), e foi MANTIDO — não sobrescrevo o que você instalou.\n'
+            printf '      Por isso não dá para conferir o SHA256 do release, e o doctor vai apontar isso toda vez. Rodar este instalador de novo NÃO muda.\n'
+            printf '      Para ficar com a cópia que nós verificamos: tire o diretório do compatibilitytools.d do caminho e rode o instalador outra vez.\n'
+        fi
         _pl_rc=0
         python3 "${PROTON_PIN_PY}" --lock || _pl_rc=$?
         if [[ "${_pl_rc}" -eq 0 ]]; then
