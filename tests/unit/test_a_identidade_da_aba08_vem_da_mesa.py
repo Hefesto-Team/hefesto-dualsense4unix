@@ -37,6 +37,7 @@ precisam.
 from __future__ import annotations
 
 import pathlib
+import re
 import subprocess
 import sys
 from typing import Any
@@ -96,12 +97,30 @@ def test_os_chips_da_fita_tem_endereco() -> None:
     `f.outerHTML = p.fita`), com a mesa viva. O endereço é o que faz as duas
     réguas desta casa enxergarem isso: um campo que SOME da tela porque o bloco
     foi trocado é PRODUTO por definição na `regua_do_mockup`.
+
+    ELE MEDE A TAG, E NÃO A ORDEM DOS ATRIBUTOS — corrigido em 03/09/2026, e é
+    a forma de defeito que esta casa já nomeou onze vezes: *a régua digita o
+    que devia LER*. A versão anterior procurava a fatia literal
+    `data-campo="fita-chip" class="chip plastico`, que só casa se o endereço
+    vier ANTES da classe. Nesse dia o `aba08.py` deixou de remendar o atributo
+    (o `monta.fita()` já o emitia, e os dois juntos duplicavam o `data-campo`),
+    a ordem passou a ser `class` → `data-campo`, e este teste reprovou a fita
+    que estava CERTA. Para o HTML as duas ordens são o mesmo elemento.
     """
     html = BANCADA.read_text(encoding="utf-8")
-    chips = html.count('class="chip plastico')
-    endereçados = html.count('data-campo="fita-chip" class="chip plastico')
-    assert chips and chips == endereçados, (
-        f"a fita da 08 tem {chips} chips de plástico e {endereçados} com endereço")
+    # As tags de abertura de cada chip de plástico, inteiras.
+    tags = re.findall(r"<span[^>]*\bclass=\"chip plastico[^>]*>", html)
+    endereçados = [t for t in tags if 'data-campo="fita-chip"' in t]
+    assert tags and len(tags) == len(endereçados), (
+        f"a fita da 08 tem {len(tags)} chips de plástico e "
+        f"{len(endereçados)} com endereço")
+    # E NENHUM COM O ENDEREÇO DUAS VEZES: com o remendo do gerador vivo ao lado
+    # do `monta.fita()`, cada chip saía com `data-campo` duplicado. O navegador
+    # fica com o primeiro e a tela não muda — mas o arquivo gerado deixa de ser
+    # o arquivo publicado, calado.
+    for t in tags:
+        assert t.count('data-campo="fita-chip"') == 1, (
+            f"um chip da fita traz o endereço mais de uma vez: {t}")
 
 
 # ---------------------------------------------------------------------------
