@@ -39,7 +39,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from . import Contexto, perfil, registrar
+from . import Contexto, jogador_de, perfil, registrar
 
 #: Nada. E a lista vazia é uma AFIRMAÇÃO, não um esquecimento: cada valor desta
 #: aba tem dono medido, e a régua de cobertura conta este zero junto com os
@@ -2044,7 +2044,12 @@ def _como_a_janela_pergunta(ctx: Contexto | None, uniq: str) -> Any:
     rotulo = ""
     for c in conectados:
         if str(c.get("uniq") or "") == uniq:
-            rotulo = f"Controle {c.get('player') or '?'}"
+            # `jogador_de` E NÃO `c.get("player")`: o daemon publica DUAS
+            # chaves, e quem NÃO é jogador do co-op tem `player: None` com
+            # `player_slot` preenchido. Lendo cru, o secundário do co-op vinha
+            # à tela como "Controle ?" — o mesmo defeito que a `jogador_de`
+            # nasceu para matar, aqui de novo pelo caminho do rótulo.
+            rotulo = f"Controle {jogador_de(c) or '?'}"
             break
 
     class _Janela:
