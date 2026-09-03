@@ -42,7 +42,8 @@ class _Gesto:
         self.nome = nome
 
 
-@pytest.mark.parametrize("pagina", PAGINAS)
+# O nome do parâmetro abaixo é o de `_alvos_a_clicar`, não prosa.
+@pytest.mark.parametrize("pagina", PAGINAS)  # (noqa-acento)
 def test_o_salvar_fica_de_fora_em_toda_aba(pagina: str) -> None:
     """Em qualquer das dez, a prova pula o ``salvar`` em vez de clicá-lo."""
     vistos, pulados = regua_do_mockup._alvos_a_clicar(
