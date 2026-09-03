@@ -30,7 +30,6 @@ reprova.
 
 from __future__ import annotations
 
-import pathlib
 import re
 from typing import Any
 
