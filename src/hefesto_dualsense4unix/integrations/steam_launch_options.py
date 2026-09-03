@@ -275,27 +275,89 @@ def migrate_value(value: str) -> str:
 
 
 def transform_vdf_text(text: str, mode: str) -> tuple[str, int]:
-    """Aplica `migrate`/`strip` a TODAS as linhas LaunchOptions de um vdf.
+    """Aplica `migrate`/`strip` às linhas LaunchOptions de um vdf.
 
     Retorna (texto novo, nº de linhas alteradas). Só toca linhas que contêm
     o nosso trecho — `migrate` exige a assinatura do veneno OU uma chamada
     de wrapper já presente; `strip` idem. O resto do arquivo passa intacto
-    byte a byte (o parse é por LINHA, com o escaping de KeyValues).
+    byte a byte (o escaping de KeyValues é respeitado na reescrita).
+
+    ARVORE-ERRADA-02 (02/09/2026) — **`migrate` NUNCA escreve fora da árvore
+    canônica; `strip` limpa em todas.** A assimetria é o ponto:
+
+    - escrever a chamada do wrapper onde a Steam não lê é plantar uma linha
+      que não faz nada e que depois é confundida com cobertura;
+    - apagar a nossa chamada onde quer que ela esteja é o único jeito de
+      recolher o que já foi plantado.
+
+    O parse era por LINHA e não sabia em que bloco estava, então `migrate`
+    envenenava/embrulhava linha das três árvores `apps` do arquivo dela
+    (ver `e_a_arvore_canonica`). Fora da canônica o modo `migrate` passa a
+    agir como `strip`: tira o nosso pedaço e devolve o resto do valor à
+    dona da máquina, sem prepend nenhum.
+
+    MEDIDO na máquina dela em 02/09/2026: `UserLocalConfigStore/apps` tem
+    **10** blocos com LaunchOptions e `UserLocalConfigStore/WebStorage/apps`
+    tem **3** — nascidos da aplicação em massa de 21/07, quando o escritor
+    também não ancorava. O escritor (`apply_wrapper_vdf_text`) foi ancorado
+    em 16/08; esta função ficou para trás.
+
+    O TERCEIRO MODO, ``recolher``, é o caminho de volta desses treze: apaga a
+    linha `LaunchOptions` INTEIRA, e **só fora da árvore canônica**. Ele não
+    olha o valor de propósito — a Steam escreve `LaunchOptions` só na
+    canônica, então toda linha fora dela foi posta por nós, mesmo quando o
+    texto que sobrou é da dona da máquina (o `strip` de alguma leva anterior
+    comeu a nossa parte e deixou a dela). É o único modo que APAGA, nunca
+    roda sozinho, e vive atrás da flag `--recolher-fora-da-arvore-viva`.
     """
-    if mode not in ("migrate", "strip"):
+    if mode not in ("migrate", "strip", "recolher"):
         raise ValueError(f"modo desconhecido: {mode}")
     changed = 0
     lines = text.splitlines(keepends=True)
+    pilha: list[str] = []
+    pendente: str | None = None
     for i, line in enumerate(lines):
         body = line.rstrip("\r\n")
         eol = line[len(body):]
+        enxuta = body.strip()
+        if enxuta == "{":
+            pilha.append(pendente if pendente is not None else "")
+            pendente = None
+            continue
+        if enxuta == "}":
+            if pilha:
+                pilha.pop()
+            pendente = None
+            continue
         m = _LAUNCH_OPTIONS_RE.match(body)
         if m is None:
+            so_chave = _VDF_KEY_ONLY_RE.match(enxuta)
+            pendente = (
+                _vdf_unescape(so_chave.group("key")) if so_chave is not None else None
+            )
+            continue
+        pendente = None
+        na_canonica = (
+            bool(pilha) and pilha[-1].isdigit() and e_a_arvore_canonica(pilha[:-1])
+        )
+        if mode == "recolher":
+            # A linha INTEIRA sai, e só fora da árvore viva. Não olha o valor:
+            # a Steam escreve `LaunchOptions` SÓ na canônica (medido em 16/08,
+            # vendo o que mudou quando ela digitou pela janela da Steam), então
+            # toda `LaunchOptions` fora dela foi posta por nós — mesmo quando o
+            # texto que sobrou é dela, copiado por um escritor que não ancorava.
+            if na_canonica:
+                continue
+            lines[i] = ""
+            changed += 1
             continue
         value = _vdf_unescape(m.group("value"))
         if not (has_poison(value) or WRAPPER_PREFIX in value):
             continue
-        new_value = migrate_value(value) if mode == "migrate" else strip_value(value)
+        modo_aqui = mode if na_canonica else "strip"
+        new_value = (
+            migrate_value(value) if modo_aqui == "migrate" else strip_value(value)
+        )
         if new_value == value:
             continue
         lines[i] = (
@@ -1754,6 +1816,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="remove o nosso trecho — wrapper E veneno legado (uninstall; exige Steam fechada)",
     )
+    group.add_argument(
+        "--recolher-fora-da-arvore-viva",
+        dest="recolher",
+        action="store_true",
+        help=(
+            "APAGA as linhas LaunchOptions que estão fora de "
+            "Software/Valve/Steam/apps — a Steam nunca as leu, e foi um "
+            "escritor nosso sem âncora que as pôs lá (exige Steam fechada)"
+        ),
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -1783,6 +1855,8 @@ def main(argv: list[str] | None = None) -> int:
         mode = "migrate"
     elif args.strip:
         mode = "strip"
+    elif args.recolher:
+        mode = "recolher"
     elif args.apply:
         mode = "apply"
     else:
@@ -1886,6 +1960,8 @@ def main(argv: list[str] | None = None) -> int:
         verb = "migraria" if args.dry_run else "migrado"
         if effective_mode == "strip":
             verb = "limparia" if args.dry_run else "limpo"
+        elif effective_mode == "recolher":
+            verb = "apagaria" if args.dry_run else "apagado"
         print(f"[launch-options] {verb}: {changed} LaunchOptions em {vdf}")
         if args.dry_run and diff:
             print(diff, end="")
