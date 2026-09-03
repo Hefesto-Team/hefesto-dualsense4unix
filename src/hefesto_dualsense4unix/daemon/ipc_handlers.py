@@ -3520,10 +3520,10 @@ class IpcHandlersMixin:
     def _perguntar_identidade(self, uniq: str) -> None:
         """A leitura, fora do laço. Grava no cache MESMO quando não sabe.
 
-        Gravar o "não sei" é o que impede a pergunta de voltar a cada tique num
-        controle que não pode responder (o do rádio, hoje: o filtro de cabo mora
-        em `cor_do_plastico.no_do_controle`). Sem isto, o guarda de reentrância
-        soltaria uma thread nova a cada 100 ms para sempre.
+        Gravar o "não sei" impede a pergunta de voltar a cada tique num controle
+        que não RESPONDEU — SUBSTITUÍDO em 03/09 o *"não pode responder (o do
+        rádio: o filtro de cabo mora em `no_do_controle`)"*: na ONDA-CONEXOES-11
+        o filtro saiu e a função morreu. Sem isto, uma thread a cada 100 ms.
         """
         serial: str | None = None
         modelo: str | None = None
