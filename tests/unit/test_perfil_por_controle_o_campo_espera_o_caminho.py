@@ -38,6 +38,16 @@ O QUE CADA TESTE VIGIA
    afirmado como medição, não como opinião. Quando um deles ficar vermelho, a
    notícia é boa — o caminho nasceu, e a mensagem diz qual campo trazer.
 
+**O PRIMEIRO FIO QUEIMOU EM 03/09/2026, e é assim que se lê esta régua
+funcionando.** O ``mic`` era o item 1 da fila; a decisão dela
+(MIC-QUINTO-AJUSTE-01) mandou o microfone virar o quinto ajuste por controle, a
+costura do gerente foi feita (``apply_controller_mics``) e o ``muted`` entrou.
+Os outros dois campos do microfone continuam FORA, cada um com o seu fio de
+gatilho abaixo — e a recusa deles agora mora na BORDA de
+``ControllerMicOverride``, com a razão na mensagem em vez do ``extra_forbidden``
+cru. **A granularidade da fila desceu de SEÇÃO para CAMPO**, e isso é o
+esperado: o caminho por unidade não nasce inteiro de uma vez.
+
 MORDIDA (o que arrancar para ver reprovar): acrescente ``sensors: bool | None =
 None`` a ``ControllerOverrides`` sem tocar em mais nada. O teste 1 aponta o
 campo pelo nome e diz que ele não tem quem o leia por peça.
@@ -67,6 +77,7 @@ from hefesto_dualsense4unix.profiles.manager import (
     _controllers_to_specs,
 )
 from hefesto_dualsense4unix.profiles.schema import (
+    ControllerMicOverride,
     ControllerOverrides,
     ControllerRumbleOverride,
     LedsConfig,
@@ -114,6 +125,10 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
         funcao="apply_controller_speakers",
         chega_em="apply_speaker(uniq=...) → set_speaker_volume(uniq=...)",
     ),
+    "mic": ConsumidorPorUnidade(
+        funcao="apply_controller_mics",
+        chega_em="apply_mic(uniq=...) → set_microphone_mute(uniq=...)",
+    ),
 }
 
 
@@ -160,6 +175,7 @@ def test_a_regua_sabe_recusar() -> None:
     sintetico = {"leds", "sensors"}
     assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["sensors"]
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
+        "mic",
         "rumble",
         "speaker",
         "triggers",
@@ -247,11 +263,35 @@ def _prova_speaker(uniq: str) -> object:
     return alvos == [uniq] or None
 
 
+def _prova_mic(uniq: str) -> object:
+    alvos: list[str | None] = []
+
+    def applier(
+        volume: int | None = None, muted: bool | None = None, **kw: Any
+    ) -> str:
+        alvos.append(kw.get("uniq"))
+        return "aplicado"
+
+    gerente = ProfileManager(
+        controller=object(),  # type: ignore[arg-type]
+        store=_StoreSemTrava(),  # type: ignore[arg-type]
+        mic_applier=applier,
+    )
+    perfil = Profile(
+        name="uma_peca_so",
+        match=MatchAny(),
+        controllers={uniq: ControllerOverrides(mic=ControllerMicOverride(muted=True))},
+    )
+    gerente.apply_controller_mics(perfil)
+    return alvos == [uniq] or None
+
+
 _PROVAS = {
     "leds": _prova_leds,
     "triggers": _prova_triggers,
     "rumble": _prova_rumble,
     "speaker": _prova_speaker,
+    "mic": _prova_mic,
 }
 
 
@@ -287,7 +327,7 @@ def test_o_valor_da_peca_sai_com_o_endereco_dela(campo: str) -> None:
 
 
 def test_o_microfone_ja_tem_endereco_por_peca() -> None:
-    """As três primitivas do mic por unidade existem — e é o item mais barato.
+    """As três primitivas do mic por unidade existem — e o ``muted`` já entrou.
 
     Isto DERRUBA a frase que morava na docstring do esquema: *"o
     ``EventTopic.BUTTON_DOWN`` não carrega uniq, então o laço do mic não sabe
@@ -295,9 +335,11 @@ def test_o_microfone_ja_tem_endereco_por_peca() -> None:
     gesto do microfone não passa mais pelo ``BUTTON_DOWN``: ele tem tópico
     próprio, e o tópico carrega o endereço.
 
-    O que falta são três costuras, todas fora de ``profiles/schema.py``, e
-    estão nomeadas na fila da docstring. Este teste fixa o que JÁ existe para
-    que não se reaprenda de novo que "não dá".
+    A costura do gerente foi feita em 03/09/2026 (MIC-QUINTO-AJUSTE-01,
+    ``apply_controller_mics``) e o ``muted`` é campo de
+    ``ControllerMicOverride``. As duas que sobram estão nomeadas na fila da
+    docstring do esquema e cada uma tem o seu fio de gatilho abaixo. Este teste
+    fixa o que JÁ existe para que não se reaprenda de novo que "não dá".
     """
     assert hasattr(EventTopic, "MIC_DA_MESA"), (
         "a borda do botão de mic COM endereço sumiu — sem ela o mic volta a "
@@ -314,17 +356,55 @@ def test_o_volume_do_mic_por_peca_ainda_nao_esta_ligado_na_ativacao() -> None:
 
     A rota global devolve a PRIMEIRA fonte de captura da lista; com dois
     controles no cabo há DUAS placas de som (MIC-DA-MESA-CHEIA-01, 20/08/2026).
-    Enquanto esta linha for a global, um ``mic`` por peça no perfil mandaria o
-    volume para o microfone do vizinho — e é por isso que o campo ainda não
-    entrou.
+    Enquanto esta linha for a global, um ``volume`` por peça no perfil mandaria
+    o número para o microfone do vizinho — e é por isso que
+    ``ControllerMicOverride`` recusa o campo na BORDA, com a razão escrita na
+    mensagem.
 
-    VERMELHO AQUI É BOA NOTÍCIA: a costura foi feita. Traga ``mic`` para
-    ``ControllerOverrides`` (com o ``apply_controller_mics`` no gerente) e
-    apague este teste.
+    **NOTA DATADA — 03/09/2026.** Este teste segurava a SEÇÃO inteira. Ele
+    passou a segurar só o ``volume``: o ``muted`` entrou com a decisão dela
+    (MIC-QUINTO-AJUSTE-01), porque a escada dele —
+    ``apply_controller_mics`` → ``apply_mic(uniq=…)`` →
+    ``apply_profile_mic(uniq=…)`` → ``set_microphone_mute(uniq=…)`` — carrega o
+    endereço em todo degrau.
+
+    VERMELHO AQUI É BOA NOTÍCIA: a costura foi feita. Tire a recusa do
+    ``volume`` em ``ControllerMicOverride`` e apague este teste.
     """
     fonte = inspect.getsource(Daemon.apply_profile_mic)
     assert "fonte_de_captura_do_controle" in fonte
     assert "fonte_de_captura_do_uniq" not in fonte
+    # E o esquema tem de estar de acordo com a medição acima — senão o campo
+    # entra por um lado enquanto o fio de gatilho continua verde do outro.
+    with pytest.raises(ValueError, match="fonte_de_captura_do_controle"):
+        ControllerMicOverride.model_validate({"volume": 50})
+
+
+def test_o_interruptor_do_botao_de_mic_continua_um_por_maquina() -> None:
+    """``mic_button_toggles_system`` não consulta ``uniq`` nenhum.
+
+    Quem o lê é ``hotkey.mic_button_loop``, em ``daemon.config``, que é um por
+    máquina. Guardá-lo por peça faria quatro controles gravarem quatro opiniões
+    sobre um interruptor só — por isso ``ControllerMicOverride`` o recusa na
+    borda, e a mensagem diz onde ele continua valendo.
+
+    VERMELHO AQUI É BOA NOTÍCIA: o laço passou a consultar o override daquele
+    ``uniq``. Traga ``button_toggles_system`` para ``ControllerMicOverride`` e
+    apague este teste.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey as hotkey_module
+
+    fonte = inspect.getsource(hotkey_module.mic_button_loop)
+    assert "mic_button_toggles_system" in fonte, (
+        "o laço do botão de mic deixou de ler o interruptor — confira se ele "
+        "virou por peça antes de acreditar que este fio ainda mede algo"
+    )
+    assert not re.search(
+        r"mic_button_toggles_system[^\n]*uniq|uniq[^\n]*mic_button_toggles_system",
+        fonte,
+    ), "o interruptor passou a ser consultado por peça"
+    with pytest.raises(ValueError, match="MÁQUINA"):
+        ControllerMicOverride.model_validate({"button_toggles_system": True})
 
 
 def test_os_sensores_nao_tem_por_onde_ser_desligados() -> None:
