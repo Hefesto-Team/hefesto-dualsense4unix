@@ -35,8 +35,17 @@ SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 # OFERECER para o lugar vazio poder mostrá-lo (decisão 13 dela), e é ele que o
 # pacote pergunta antes de emitir. Um `"—"` digitado aqui e outro lá seriam duas
 # verdades sobre a mesma opção.
+#
+# O CHIP DA COLUNA veio junto em 03/09/2026, e pela MESMA regra: a identidade do
+# controle vem da fita do topo, que lê do aparelho, e o produto reescreve o chip
+# a cada tique. Se o desenho o montasse à mão, a bancada e o produto teriam duas
+# marcações — e a régua `check_identidade_vem_de_cima` só enxerga a bancada.
 from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E402
+    CAMPO_DO_CHIP,
+    CLASSE_DO_CHIP,
+    HEF_DO_CHIP,
     TRAVESSAO,
+    chip_do_controle,
     html_dos_ajustes,
     sem_comentarios_de_css,
 )
@@ -681,7 +690,7 @@ def bloco(lado, sigla, modo, pronto, ajustes):
           </div>'''
 
 
-def _chip(c, rot):
+def _chip(c):
     """O cabeçalho da coluna. A BORDA DE COR SÓ SAI PARA QUEM ESTÁ NA MESA.
 
     Decisão dela, 31/08/2026: *"os demais 3 e o 4 ficam lá com os espaços mas
@@ -689,21 +698,27 @@ def _chip(c, rot):
 
     A borda desta aba é o `D-A-BORDA-E-A-IDENTIDADE-DA-PECA`: ela é como se sabe
     de quem é a coluna. Num lugar vazio não há de quem — e pintar a cor de um
-    plástico que não está na mesa é dizer que ele está.
+    plástico que não está na mesa é dizer que ele está. O `chip_do_controle` já
+    trata os dois casos, inclusive o do P3/P4 sem nome de plástico.
+
+    A MARCAÇÃO TEM UM DONO SÓ, e ele é o PACOTE — 03/09/2026. Este gerador
+    desenha a bancada com a mesma função que o produto usa a cada tique, pelo
+    mesmo motivo da caixa de ajustes (`html_dos_ajustes`) e da fileira de
+    players da aba Iluminação: escrita nos dois, ela divergiria no primeiro dia
+    em que alguém mexesse num só — e o produto passaria a trocar o desenho por
+    outro desenho.
+
+    A COR SE RESOLVE AQUI, e com a régua ESTRITA: `cor_da_zona` LEVANTA num
+    colorway que o desenho não tem, e está certo em levantar — a bancada nasce
+    de uma `MESA` escrita à mão e um modelo errado nela tem de reprovar o
+    gerador. O pacote resolve pela porta macia, que devolve `""`.
     """
-    if not c.get("conectado", True):
-        # O NOME DO PLÁSTICO NÃO VAI PARA A TELA — decisão dela, 31/08/2026: *"na
-        # parte do nome do P3 e do P4 colocar algo como Desconectado e não os
-        # controles mockados."*
-        #
-        # A `MESA` sabe que o P3 é um Galactic Purple, e ELA não deve saber: o
-        # lugar está vazio, e escrever ali o nome de um controle que não está na
-        # mesa é a mesma mentira que a borda de cor era. O que a tela precisa
-        # dizer é a POSIÇÃO (P3, P4) e o ESTADO — e é só isso que sobra.
-        return (f'<span class="chip vazio" title="Nenhum controle neste lugar.">'
-                f'P{c["jogador"]} <span class="pt">•</span> Desconectado</span>')
-    return (f'<span class="chip plastico" style="--plastico:{cor_da_zona(c["cor"])}"'
-            f' title="{c["nome"]} — a borda é a cor do plástico">{rot}</span>')
+    return chip_do_controle(
+        c["jogador"],
+        c["nome"] if c.get("conectado", True) else "",
+        c["via"] if c.get("conectado", True) else "",
+        cor_da_zona(c["cor"]) if c.get("conectado", True) else "",
+        conectado=bool(c.get("conectado", True)))
 
 
 def coluna(c):
@@ -711,8 +726,6 @@ def coluna(c):
     cena = CENA[c["pref"]]
     esq = bloco("esquerdo", "e", *cena["esq"][:2], barras(*cena["esq"][::2]))
     dire = bloco("direito", "d", *cena["dir"][:2], barras(*cena["dir"][::2]))
-    rot = (f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}'
-           f' <span class="pt">•</span> {c["via"]}')
     # O VALOR SAI DA F-STRING, e a razão é que ele VAZAVA PARA A TELA. A palavra
     # do atributo faz o portão de acentuação reprovar, e o marcador que a isenta
     # tem de ficar na MESMA linha física — que, aqui, era DENTRO da f-string.
@@ -723,7 +736,7 @@ def coluna(c):
     conectado = "sim" if c.get("conectado", True) else "nao"  # (noqa-acento) valor
     return f'''        <div class="ctrl" data-controle="{c.get("uniq") or c["pref"]}"
              data-conectado="{conectado}">
-          <div>{_chip(c, rot)}</div>
+          <div class="{CLASSE_DO_CHIP}" data-campo="{CAMPO_DO_CHIP}" data-hef-alvo="html">{_chip(c)}</div>
 {esq}
 <!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
                1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
@@ -1058,6 +1071,31 @@ def _conferir(doc):
            f"os chips sem cor do plástico não são {len(vazios)}")
     exigir(corpo.count('class="chip plastico"') == len(MESA) - len(vazios),
            "a borda de cor saiu de quem ESTÁ na mesa, ou ficou em quem não está")
+    # 2-bis. TODO CHIP TEM ENDEREÇO, e nenhum deles guarda cor sem dono —
+    #    03/09/2026, a lei dela: *"cada aba vai usar os controles lá de cima.
+    #    Não mistura com a info dos mockups."*
+    #
+    #    SÃO DOIS ENDEREÇOS, e cada um tem um trabalho:
+    #
+    #    * o do EMBRULHO (`data-campo` + alvo `html`) é quem o produto ESCREVE:
+    #      trocando o miolo, o `<span>` inteiro é refeito — borda, dica e nome.
+    #    * o do `<span>` (`data-hef`) é o que a régua EXIGE: ela julga o
+    #      `--plastico` pelo endereço do elemento que o carrega, e um pai
+    #      endereçado não dá ao filho o direito de trazer cor congelada.
+    #
+    #    Arranque qualquer um dos dois e é aqui que o gerador para.
+    exigir(corpo.count(f'data-campo="{CAMPO_DO_CHIP}"') == len(MESA),
+           f"os {len(MESA)} embrulhos de chip não têm endereço — o produto "
+           f"perde onde escrever a identidade que a fita do topo já leu")
+    exigir(corpo.count(f'data-hef="{HEF_DO_CHIP}"') == len(MESA),
+           f"os {len(MESA)} chips das colunas não têm endereço — a identidade "
+           f"do controle volta a vir do mockup, e não da fita do topo")
+    exigir(corpo.count(f'<div class="{CLASSE_DO_CHIP}" ') == len(MESA),
+           f"o embrulho `.{CLASSE_DO_CHIP}` sumiu de alguma coluna — é ele que "
+           f"o produto troca inteiro para reescrever a borda do plástico")
+    exigir(corpo.count("--plastico:") == len(MESA) - len(vazios),
+           "há cor de plástico cravada fora dos chips de quem está na mesa")
+
     for c in vazios:
         # O TRAVESSÃO SUBSTITUIU O "DESLIGADO" AQUI — decisão 13 dela, 02/09.
         # A régua muda com ela: cobrar `Desligado` agora reprovaria a decisão.
