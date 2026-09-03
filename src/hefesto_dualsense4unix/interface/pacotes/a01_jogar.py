@@ -45,7 +45,15 @@ DA_PAGINA: tuple[str, ...] = (
 #: valor da máquina emitido por cartão seria a tela prometendo quatro escolhas
 #: onde há uma. Ela sai por `mascara-cartao`, na mesa, e cada chip decide por si
 #: pelo `data-hef-quando`.
-POR_CARTAO: tuple[str, ...] = ("plastico", "jogador", "bateria", "identidade")
+#:
+#: `desenho` É O SVG DO CONTROLE — 03/09/2026, e ele fecha a outra metade da
+#: queixa dela: *"os svgs do dualsense (…) não são os que o meu mapa cataloga"*.
+#: A `plastico` pinta a BORDA do cartão; esta escreve o `data-colorway` do
+#: próprio desenho, que é o seletor com que a folha das 28 cores escolhe o
+#: modelo. Sem ela a borda ficava White e o controle desenhado continuava
+#: Cosmic Red, um centímetro abaixo.
+POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "bateria",
+                               "identidade")
 
 #: QUANTOS `aviso-item` A COLUNA TEM. **Este é o dono do número**, e o gerador o
 #: lê daqui (`aba01.py` importa esta constante) — a direção é essa e não a
@@ -98,6 +106,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # `cor` apaga o `style.color` no vazio e a pele volta ao neutro do
             # CSS. Regra dela: campo sem informação não mostra nada.
             "plastico": _cor_do_plastico(str(casa.get("cor") or "")),
+            # O DESENHO — 03/09/2026, e ele é a outra metade da mesma queixa:
+            # *"os svgs do dualsense (…) não são os que o meu mapa cataloga"*.
+            # O valor é o SLUG do colorway (`white`, `galactic-purple`), que é
+            # o que o `svg[data-colorway="…"]` da folha das 28 casa — e não o
+            # hex, que é o que a `plastico` acima escreve.
+            #
+            # `""` QUANDO A COR NÃO É PINTÁVEL, pela mesma régua da borda: o
+            # `_cor_do_plastico` já devolve `""` para slug vazio e para modelo
+            # que o SVG não conhece, e amarrar as duas aqui é o que impede a
+            # tela de afirmar um modelo cuja cor ela não consegue mostrar. Sem
+            # atributo, nenhuma regra casa e o desenho vai ao neutro — que é a
+            # regra dela: campo sem informação não mostra nada.
+            "desenho": _colorway_do_desenho(str(casa.get("cor") or "")),
             # `jogador_de` E NÃO `c.get("player")`: o daemon publica DUAS
             # chaves, e o `player` volta `None` no controle que o co-op não
             # numerou — medido em 02/09/2026 com o do CABO. Ler só ele escrevia
@@ -201,6 +222,24 @@ def _cor_do_plastico(slug: str) -> str:
         return str(monta.cor_da_zona(slug))
     except BaseException:
         return ""
+
+
+def _colorway_do_desenho(slug: str) -> str:
+    """O slug que o `data-colorway` do SVG recebe, ou `""` quando não dá.
+
+    ELA NÃO É UMA SEGUNDA TABELA — é a mesma pergunta de `_cor_do_plastico`,
+    feita ao mesmo dono (`monta.cor_da_zona`, que lê a folha gerada do
+    `docs/data/cores-do-dualsense.csv`), e o que muda é só o que se devolve: lá
+    o HEX da borda, aqui o SLUG com que o desenho se pinta.
+
+    A AMARRAÇÃO É O PONTO. Um slug que o SVG não conhece — modelo novo no CSV,
+    ou colorway que o gerador ainda não emitiu — casaria regra nenhuma na folha
+    e deixaria o desenho no cinza cru (`rgb(58, 63, 75)`), enquanto a borda ao
+    lado ficaria sem cor. Perguntando ao mesmo dono, os dois calam juntos: sem
+    cor, sem desenho colorido — que é a regra dela, campo sem informação não
+    mostra nada.
+    """
+    return slug if _cor_do_plastico(slug) else ""
 
 
 def _do_exame() -> list[dict[str, Any]]:

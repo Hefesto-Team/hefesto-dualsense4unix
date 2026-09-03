@@ -187,3 +187,30 @@ seção daqui**: a aba deixou de estar em trabalho.
   dos que valem sempre, a cópia do "Duplicar" não herda mais o carimbo de ponte,
   o "Ativar" lê o relatório de seções do daemon e pega a carona do wrapper, e
   trocar "Funciona em" para "Todos" num perfil de jogo pergunta antes.
+
+## 01-jogar.html
+- **03/09/2026** — **o DESENHO do controle passou a vestir o aparelho.** Era a
+  queixa dela, com todas as letras: *"é white no p1, mas a borda de tudo é
+  cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"*.
+  Fotografado no pixel, com os dois controles na mesa: o cartão dizia
+  `White · USB` sobre um DualSense **Cosmic Red** (`#ae335a`), e
+  `Galactic Purple · BT` sobre um **Starlight Blue** (`#7eb8d4`).
+
+  **O QUE MUDOU NO DESENHO, e não é cena nova:** os quatro `<svg>` ganharam
+  endereço (`data-campo="desenho"`, alvo `atributo`), e a folha das cores saiu
+  de dentro deles para a página, uma vez, com os **28 modelos** do
+  `docs/data/cores-do-dualsense.csv`. Aberta sozinha, a bancada mostra
+  exatamente os mesmos quatro controles de antes — a folha compartilhada
+  reproduz o que as quatro podadas já diziam. O arquivo cresceu 37 KB, que é o
+  preço de uma tabela em vez de quatro escolhas.
+
+  **O QUE ELA VÊ HOJE, enquanto o produto não recebe:** a página publicada
+  continua com a folha PODADA dentro de cada desenho — cada SVG só conhece o
+  próprio modelo. Então, até publicar, o controle desenhado no cartão continua
+  Cosmic Red no P1 e Starlight Blue no P2, discordando do rótulo quatro pixels
+  ao lado; e um Nova Pink, um Midnight Black ou qualquer um dos outros 24
+  modelos dela não teria como aparecer. Medido no WebKit desta máquina: com a
+  folha podada, **24 dos 28 modelos caem no cinza cru** (`rgb(58, 63, 75)`);
+  com a da bancada, os 28 vestem a cor que ela mapeou.
+
+  **O produto recebe no `--publicar 01`**, que é ato de quem coordena.
