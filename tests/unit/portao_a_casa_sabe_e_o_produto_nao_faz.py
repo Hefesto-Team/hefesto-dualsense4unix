@@ -963,46 +963,130 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `except Exception` no import existe para que uma peça irmã quebrada não
     # derrube a luz inteira.
     "integrations/quem_ouve_o_microfone.py::e_stream_do_hefesto": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/quem_ouve_o_microfone.py::ler_quem_ouve": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/quem_ouve_o_microfone.py::nomes_de_fonte_por_indice": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/quem_ouve_o_microfone.py::ouvintes_por_fonte": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/quem_ouve_o_microfone.py::streams_de_captura": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/quem_ouve_o_microfone.py::LeituraDeOuvintes": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/quem_ouve_o_microfone.py::StreamDeCaptura": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/quem_ouve_o_microfone.py::descende_do_hefesto": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/nivel_do_microfone.py::Fluxo": (
-        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/nivel_do_microfone.py::Histerese": (
-        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/nivel_do_microfone.py::abrir_fluxo": (
-        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/nivel_do_microfone.py::argv_do_medidor": (
-        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/nivel_do_microfone.py::e_stream_do_medidor": (
-        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     "integrations/nivel_do_microfone.py::propriedades_do_medidor": (
-        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o `daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém provar que o import estático é seguro aqui — e essa prova exige medir o que acontece com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
+        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
+        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
+        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
+        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
+        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
+        "com o daemon se o `pactl` sumir da máquina."
     ),
     # ROTA-A + ROTA-C (02/09/2026) — OS TRÊS DONOS DE FATO. Eles nasceram sem
     # chamador de propósito: quem os chama são os dez `interface/pacotes/aNN_*.py`,
