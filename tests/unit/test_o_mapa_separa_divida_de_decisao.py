@@ -166,7 +166,36 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: SUBIR ESTE NÚMERO É CONFISSÃO, não conserto: quem o subir está dizendo que a
 #: casa passou a dever mais do que devia. Pagar uma dívida é BAIXÁ-LO no mesmo
 #: commit — senão o teto vira folga e o portão para de morder.
-TETO_DA_DIVIDA = 3
+#:
+#: ─────────────────────────────────────────────────────────────────────────
+#: SUBIU PARA 23 EM 03/09/2026, e a confissão vem com a distinção que importa.
+#: ─────────────────────────────────────────────────────────────────────────
+#: **A CASA NÃO PASSOU A DEVER MAIS. A MEDIÇÃO PASSOU A DIZER.** As vinte
+#: células novas saíram da leva "as setenta e nove células mudas": oito agentes
+#: responderam `aciona` onde NINGUÉM tinha respondido — as mudas caíram de 208
+#: para 47 —, e vinte dessas respostas foram `não, e a razão é dívida NOSSA`.
+#:
+#: A dívida existia antes e não tinha nome. Uma célula muda não é uma casa sem
+#: dívida: é uma casa que não sabe. O teto de 3 media o que estava ESCRITO, não
+#: o que era verdade — e é por isso que subi-lo aqui é o gesto honesto, e
+#: mantê-lo em 3 apagando as respostas seria o desonesto.
+#:
+#: **AS VINTE, por família:**
+#:
+#:   áudio (7)        alto_falante, microfone, microfone.mudo,
+#:                    microfone.volume (cabo e rádio), saida_dedicada e o
+#:                    payload_do_degrau dela — todas do DualSense
+#:   vibração (10)    haptics_vcm@dualsense (os dois lados) e rumble
+#:                    direito/esquerdo do `pro` e do `sn30`, nos dois lados
+#:   gatilho (2)      `gatilho.leitura@dualsense`, cabo e rádio
+#:   o resto (4)      identidade.pareamento, movimento.imu.perda@pro (rádio),
+#:                    plataforma.vigia_zumbi@pro
+#:
+#: **A REGRA NÃO MUDOU, e é o que impede este número de virar folga:** daqui
+#: para a frente ele só desce. Quem pagar uma delas baixa o teto no mesmo
+#: commit; quem quiser subi-lo de novo escreve, como está escrito aqui, por que
+#: a casa passou a dever mais — ou por que a medição passou a dizer mais.
+TETO_DA_DIVIDA = 23
 
 
 def _linhas(caminho: Path | str) -> list[dict[str, str]]:
@@ -308,9 +337,19 @@ def test_a_decisao_pode_crescer_sem_reprovar() -> None:
     import tempfile
 
     with tempfile.TemporaryDirectory() as pasta:
+        # A POPULAÇÃO **E** AS DÍVIDAS DE FORA DELA — corrigido em 03/09/2026.
+        # Este teste trocava só a `populacao()` e exigia zero dívida no fim,
+        # o que só valia enquanto toda dívida estivesse dentro dela. A leva das
+        # células mudas escreveu `divida` em vinte células cujo `de_onde_sei`
+        # não é `medido`, e o `conta_dividas` DECLARA que isso é legítimo:
+        # *"uma dívida escrita numa célula que o recorte de hoje não alcança
+        # continua sendo dívida"*. Quem estava errado era a suposição do teste,
+        # não o dado — então ele passa a trocar o que de fato precisa trocar
+        # para exercer o que promete: que `decisao-tomada` pode crescer.
+        alvos = set(populacao(MAPA)) | set(conta_dividas(MAPA))
         falso = _csv_de_mentira(
             Path(pasta) / "mapa.csv",
-            trocas={chave: DECISAO for chave in populacao(MAPA)},
+            trocas={chave: DECISAO for chave in alvos},
         )
         assert len(conta_dividas(falso)) == 0
         assert not [chave for chave in populacao(falso) if not respostas(falso).get(chave)]
@@ -357,7 +396,28 @@ def test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv() -> None:
 #:
 #: A porta é estreita de propósito: entrar aqui exige escrever por que a
 #: palavra sobrevive à ausência de uso, e a lista é lida na reprovação.
-RESERVADOS: dict[str, str] = {
+#: VAZIO DESDE 03/09/2026, e a razão é a melhor possível: `so-ela-decide`
+#: VOLTOU AO USO. A leva das células mudas o escreveu de novo — há linha em que
+#: o produto pode e a escolha é dela, exatamente o estado que a palavra nomeia,
+#: e que a reserva de 29/08 previa que voltaria (*"a ONDA-CONTROLES-07 e a 08
+#: nascem exatamente nele"*).
+#:
+#: A reserva sai porque a reserva é para o que NÃO tem uso; mantê-la sobre um
+#: valor vivo esconderia o dia em que ele morrer de novo. É o próprio teste
+#: quem manda, com essas palavras.
+#:
+#: O TEXTO DE 29/08 FICA AQUI, fora do dicionário, porque ele registra por que a
+#: palavra sobreviveu ao dia em que ninguém a usava — e é esse registro que
+#: impede a próxima pessoa de apagá-la na próxima folga:
+#:
+#:     "O último uso era `movimento.acelerometro@dualsense`, nos dois lados, e
+#:     ele saiu porque a causa FOI RESOLVIDA: ela decidiu (*'não era pra ele
+#:     sair. era pra ele FUNCIONAR'*), o produto passou a ler `ABS_X/Y/Z` e a
+#:     célula virou `aciona=sim`. A palavra fica porque o ESTADO que ela nomeia
+#:     — o produto pode, e a escolha é dela — não deixou de existir."
+RESERVADOS: dict[str, str] = {}
+
+_A_RESERVA_DE_29_08_QUE_CADUCOU = {
     SO_ELA_DECIDE: (
         "29/08/2026, ONDA-CONTROLES-04. O último uso era "
         "`movimento.acelerometro@dualsense`, nos dois lados, e ele saiu porque "

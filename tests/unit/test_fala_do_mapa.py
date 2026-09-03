@@ -166,6 +166,25 @@ _COPIAS_DECLARADAS: dict[str, str] = {
         "`_virgula`, dono do texto OS_DOIS_RELOGIOS. Fora da posse da L3-F "
         "(26/08/2026); relatado em docs/process/agentes/2026-08-26/LEVA-3-F.md"
     ),
+    "gui/aba_conexoes.py": (
+        "03/09/2026 — NÃO É A MESMA CONTA. A linha monta a razão "
+        "`balanceado/max` com TRÊS casas (`:.3f`) e dois `:g`, dentro da "
+        "mensagem de um `ValueError` que explica por que a opção sem teto não "
+        "tem tradução. `formata_pt_br` é de UMA casa e não sabe formatar a "
+        "fração; chamá-lo aqui mudaria o texto do erro para dizer outro "
+        "número. Fica declarada em vez de curada — e é a diferença entre "
+        "cópia da regra e outra regra que só usa a mesma vírgula."
+    ),
+    "interface/aba02.py": (
+        "03/09/2026 — a conta é a mesma, o CONTRATO não. Esta devolve "
+        "`f\"{v:.1f}\".replace(\".\", \",\").removesuffix(\",0\")`: ela "
+        "APAGA a casa decimal quando é zero, porque a aba Controles põe o "
+        "número dentro de uma frase (\"2 controles\", e não \"2,0\"). "
+        "`formata_pt_br` promete SEMPRE uma casa, e é essa promessa que o "
+        "portão do mapa e a legenda compartilham. Envolvê-lo aqui daria a "
+        "mesma saída hoje e quebraria no dia em que o dono mudar de casas — "
+        "que é exatamente o dia para o qual o dono único existe."
+    ),
 }
 
 
