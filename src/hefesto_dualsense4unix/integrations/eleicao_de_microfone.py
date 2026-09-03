@@ -299,7 +299,28 @@ class EleitorDeMicrofone:
            preferência dela por lixo que o WirePlumber desfaz sozinho;
         4. escreve com `pactl set-default-source`;
         5. ESPERA o grafo assentar e **relê o ATIVO**;
-        6. só devolve `ok=True` se o ativo relido for o alvo.
+        6. só devolve `ok=True` se o ativo relido for o alvo;
+        7. e o passo que faltava: **a eleição que FRACASSA também é uma
+           medição do ativo**, e ela pode provar que o canal de quem estava
+           com o microfone deixou de ser o padrão. Aí a posse DELE cai.
+
+        **O PASSO 7 É O ACHADO DA AUDITORIA DE 02/09/2026**, e ele é o mesmo
+        `eleicao_mic_nao_pegou` que este módulo existe para pegar, deixado de
+        fora do caminho de IDA. O caminho de VOLTA já o tratava
+        (`_o_eleito_saiu_do_ar`); a ida só sabia dizer "não foi você" e nunca
+        perguntava se ainda era do outro. Reproduzido com o eleitor de verdade
+        e o `pactl` dublado:
+
+            J1 elege  → eleito=…011, fonte_do_eleito=bluez_input.…_11, ativo=…_11
+            J2 aperta → set-default-source …_22 ACEITO (rc=0), ativo relido =
+                        alsa_input.pci-0000_00_1f.3.analog-stereo (um TERCEIRO)
+            depois    → eleito=…011 e o ativo do sistema NÃO é mais o canal dela
+
+        O `state_full` publicava `eleito: …011` com o canal em um terceiro, e o
+        plástico da J1 seguia ACESO afirmando *"estou no ar"*. A escrita passou
+        — o padrão do sistema saiu do canal dela — e ninguém tinha o que ela
+        perdeu. É a mentira de segunda geração no caminho de IDA, com o
+        agravante de que a J1 não tocou em nada.
         """
         alvo = escolher_fonte(fontes, uniq, uniqs_com_audio, usb)
         if alvo is None:
@@ -318,16 +339,47 @@ class EleitorDeMicrofone:
         if resultado.ok:
             self.eleito = uniq
             self.fonte_do_eleito = alvo
+        elif self._o_eleito_saiu_do_ar(resultado):
+            # E A ELEIÇÃO QUE FALHOU AINDA MEDIU O ATIVO. Os três desfechos de
+            # recusa de `_eleger_nome` NÃO são iguais aqui, exatamente como não
+            # são no caminho de volta: dois não escreveram nada (a fonte não se
+            # sustenta, o `pactl` recusou) e deixam o canal onde estava; o
+            # TERCEIRO escreveu, o WirePlumber reelegeu por cima, e o ativo
+            # relido não é o canal de NINGUÉM que a gente conheça — nem do alvo
+            # nem do eleito. Quem separa os três é `_o_eleito_saiu_do_ar`, que
+            # compara o ativo relido com o NOME do canal do eleito.
+            #
+            # Soltar a posse aqui não é "declarar fracasso": é a mesma régua do
+            # módulo inteiro — a pós-condição canônica é o ATIVO RELIDO — lida
+            # sobre quem ela de fato descreve. Manter a posse seria o produto
+            # afirmando que o microfone da J1 está no ar depois de ele mesmo ter
+            # tirado o canal dela, num gesto que ela não fez.
+            logger.warning(
+                "eleicao_mic_tirou_o_canal_de_quem_o_tinha",
+                ex_dono=self.eleito,
+                fonte_do_ex_dono=self.fonte_do_eleito,
+                ativo=resultado.ativo,
+                alvo=resultado.alvo,
+            )
+            self.eleito = None
+            self.fonte_do_eleito = None
         return resultado
 
     def _o_eleito_saiu_do_ar(self, resultado: ResultadoDaEleicao) -> bool:
         """A releitura do ATIVO prova que o canal do eleito deixou de ser o padrão?
 
         É a MESMA régua do resto do módulo — a pós-condição canônica é o ATIVO
-        RELIDO (ADR-019) — aplicada à posse no caminho de VOLTA, onde ela
-        faltava. `_eleger_nome` tem QUATRO desfechos e três devolvem
-        ``ok=False``; tratá-los como um é o que deixava a luz acesa sobre um
-        canal que a própria medição dizia não ser mais dele.
+        RELIDO (ADR-019) — aplicada à posse. `_eleger_nome` tem QUATRO
+        desfechos e três devolvem ``ok=False``; tratá-los como um é o que
+        deixava a luz acesa sobre um canal que a própria medição dizia não ser
+        mais dele.
+
+        **VALE NOS DOIS CAMINHOS, e a segunda metade é de 02/09/2026.** Ela
+        nasceu na VOLTA (`devolver_o_microfone`) e faltava na IDA
+        (`eleger_por_uniq`) — onde o desfecho é o mesmo e o sujeito é outro:
+        quem perde o canal não é quem apertou o botão, é o dono anterior. A
+        pergunta que esta função responde não depende de qual gesto a
+        provocou; ela é sempre *"o ativo relido ainda é o canal do eleito?"*.
 
         ==================================  ====================  ============
         desfecho de `_eleger_nome`          o que o ativo diz      saiu do ar?
@@ -451,14 +503,16 @@ class EleitorDeMicrofone:
         ELEITO vai a mudo. Este docstring dizia *"quando o controle eleito
         passa a MUDO, cai do rádio/cabo, ou a ponte de microfone dele cai"*, e
         as duas últimas eram falsas: `grep -rn "devolver_o_microfone" src/`
-        devolve esta definição e aquela única chamada, e as DUAS escritas de
-        `self.eleito` neste módulo saem da MESMA releitura do ATIVO — a de
-        `eleger_por_uniq`, que só anota o dono quando o ativo relido é o canal
-        dele, e a deste método, que só tira o dono quando o ativo relido prova
-        que o canal deixou de ser dele (`_o_eleito_saiu_do_ar`). (Eram três até
-        02/09, quando as duas incondicionais daqui viraram uma; e a condição
-        era `resultado.ok`, que confundia os três desfechos de recusa, até a
-        auditoria do mesmo dia separar o `eleicao_mic_nao_pegou`.)
+        devolve esta definição e aquela única chamada, e as TRÊS escritas de
+        `self.eleito` neste módulo saem da MESMA releitura do ATIVO — duas em
+        `eleger_por_uniq` (anota o dono quando o ativo relido é o canal dele;
+        SOLTA o dono anterior quando o ativo relido prova que o canal deixou de
+        ser dele) e uma neste método, pela mesma prova. As três passam por
+        `_o_eleito_saiu_do_ar` ou pelo `ok` que ele já cobre. (Eram duas até a
+        segunda auditoria de 02/09, que achou o caminho de IDA sem a pergunta;
+        e antes disso a condição daqui era `resultado.ok`, que confundia os
+        três desfechos de recusa, até a auditoria da manhã separar o
+        `eleicao_mic_nao_pegou`.)
         **Não há gancho de hotplug-out**, e a posse fica de pé quando o
         controle cai. Enquanto ela ficar, quem publica o estado tem de dizer
         que o dono saiu da mesa em vez de nomeá-lo — é o `eleito_na_mesa` de
