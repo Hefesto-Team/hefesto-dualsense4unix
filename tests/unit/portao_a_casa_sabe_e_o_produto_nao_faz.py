@@ -965,6 +965,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # frente dela, e `a01_jogar.py` foi ligado pela integração, com a medição
     # contra o daemon vivo (o do CABO dizia `Player —` e passou a dizer
     # `Player 2`). O portão pegou a lápide sobrevivente antes de mim.
+<<<<<<< HEAD
     # `identidade_de` SAIU DAQUI EM 03/09/2026, e fechou pela porta que a própria
     # lápide nomeava: *"fecha quando os geradores `interface/abaNN.py` derem
     # `data-campo` ao rótulo e os pacotes o pintarem"*. Foi a
@@ -983,6 +984,15 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     #     passou a dizer `White`, e a do rádio — SEM cor lida — passou a dizer
     #     só `P2 • BT`, em vez de vestir o plástico de outro. Este segundo caso é
     #     o que prova a regra dela: campo sem informação não mostra nada.
+=======
+    # `identidade_de` SAIU DAQUI EM 03/09/2026, pela onda IDENTIDADE-VEM-DE-CIMA.
+    # A lápide dizia "fecha quando os geradores `interface/abaNN.py` derem
+    # `data-campo` ao rótulo e os pacotes o pintarem", e foi o que aconteceu:
+    # `aba06.py` deu `data-campo="identidade"` ao nome do cartão e
+    # `a06_navegacao.pacote` passou a escrevê-lo com o que leu do daemon —
+    # medido com os dois controles dela na mesa, `P1 • Cosmic Red` virou
+    # `P1 • White`.
+>>>>>>> worktree-wf_f40503da-236-6
     "interface/pacotes/__init__.py::degradacao_de": (
         "A frase 'Emulação degradada (uinput): …', que delega para "
         "`app/widgets/controller_card.texto_degradacao`. `vpad_motivo` é lido "

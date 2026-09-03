@@ -653,19 +653,37 @@
      `stretch` + `justify-content:center`: as duas colunas do bloco terminam no
      MESMO y sem `space-between`, que é o que ela reprovou com todas as letras.
      A borda é a cor do plástico (P2 do redesenho — a borda diz QUAL peça é), e
-     ela vem do desenho, não de uma classe por modelo. */
+     ela vem do desenho, não de uma classe por modelo.
+
+     A BORDA É `currentColor`, E NÃO `var(--plastico)` — 03/09/2026,
+     IDENTIDADE-VEM-DE-CIMA. A cor do plástico é IDENTIDADE DE APARELHO, e
+     identidade vem da leitura, nunca do desenho. O piloto tem um alvo que
+     escreve `style.color` (`data-hef-alvo="cor"`) e **nenhum** que escreva uma
+     variável CSS: enquanto a borda lesse `--plastico`, o hex ficava cravado no
+     HTML e o produto não tinha por onde trocá-lo. Com `currentColor` a borda
+     passa a ser um campo que o pacote pinta a cada tique.
+
+     O PADRÃO É O NEUTRO, e é a regra dela — *campo sem informação não mostra
+     nada*: sem leitura, `color` fica em `var(--border-forte)` e a caixa é
+     cinza. Nunca a cor do mockup.
+
+     OS FILHOS NÃO HERDAM: `.nav-rot` e `.nav-est` declaram a própria cor logo
+     abaixo, e é por isso que pintar o cartão não tinge o texto dele. */
   .nav-mesa{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   .nav-ctl{display:flex;flex-direction:column;justify-content:center;gap:4px;
-           border:2px solid var(--plastico,var(--border-forte));border-radius:8px;
+           color:var(--border-forte);
+           border:2px solid currentColor;border-radius:8px;
            background:var(--app-bg);padding:6px 5px}
 
   /* ---------- O LUGAR VAZIO ----------
      A mesma gramática das outras cinco abas: cor explícita e NADA de `opacity`
      (a lição medida da `.fita.inerte`). A borda se declara INTEIRA aqui, e não
-     só a cor: o `.nav-ctl` usa `var(--plastico)`, e uma `var()` sem valor
-     invalida a declaração toda — a borda não fica cinza, ela deixa de existir.
-     Medido na aba Controles no mesmo dia, com a foto mostrando dois lugares
-     soltos, sem caixa nenhuma.
+     só a cor — a cicatriz é de 31/08, quando o `.nav-ctl` lia `var(--plastico)`
+     e uma `var()` sem valor invalidava a declaração toda: a borda não ficava
+     cinza, ela DEIXAVA DE EXISTIR. Medido na aba Controles no mesmo dia, com a
+     foto mostrando dois lugares soltos, sem caixa nenhuma. Hoje o `.nav-ctl`
+     lê `currentColor`, que nunca invalida — mas a declaração inteira FICA,
+     porque é ela que impede o lugar vazio de receber a cor de um aparelho.
      OS DETALHES CLAROS DO DESENHO CAEM JUNTO — `text`, `line` e os `path` sem
      classe são os glifos L/R/PS, e eles só aparecem em desenho GRANDE: aqui ele
      tem 111px, contra os 62 da aba Jogar. O que muda com o TAMANHO tem de ser
@@ -1257,12 +1275,7 @@
        O PERFIL ATIVO fica à direita, e é IGUAL nas dez abas: em cada tela ele diz
        em qual perfil aquela mudança vai cair. -->
   <div class="fita-linha">
-    <div class="fita inerte" title="Não se aplica: mouse, teclado e gestos saem de um controle só — o do Player 1 — e o que eles fazem é do perfil.">
-      <span>Selecionar:</span>
-      <span class="chip on">Todos</span>
-      <span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
-      <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
-    </div>
+    <div class="fita inerte" title="Não se aplica: mouse, teclado e gestos saem de um controle só — o do Player 1 — e o que eles fazem é do perfil." data-campo="fita-chips" data-hef-alvo="html"><span>Selecionar:</span><span class="chip on">Todos</span><span class="chip plastico" title="a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span><span class="chip plastico" title="a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span></div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">Mortal Kombat</span>
@@ -1308,8 +1321,21 @@
         <div class="moldura">
         <div class="gestos">
           <div class="previa">
+            <!-- A FOLHA VIVA DO PLÁSTICO — nasce VAZIA, e é o pacote que a
+                 escreve (`a06_navegacao.folha_do_plastico`, pelo `blocos`).
+                 Ela existe porque o CASCO do desenho não é `style` de
+                 elemento: as peças do SVG leem `var(--z-…)`, escritas por uma
+                 regra `svg[data-colorway="…"]` que o `monta.svg()` embute. O
+                 piloto não escreve atributo nem variável — só texto, valor,
+                 classe, cor, largura, fundo e `innerHTML`. O `innerHTML` de um
+                 `<style>` É texto, e não sofre a normalização que o navegador
+                 faz em marcação: é o único canal que troca o casco sem
+                 reescrever 370 linhas de SVG a cada meio segundo.
+                 VAZIA na bancada de propósito: o desenho continua sendo o
+                 desenho, e quem manda na tela é a leitura. -->
+            <style id="plastico-vivo"></style>
             <div class="nav-mesa">
-              <div class="nav-ctl navega" style="--plastico:#ae335a" data-controle="p1" data-conectado="sim" title="Player 1 • Cosmic Red • USB">
+              <div class="nav-ctl navega" style="color:#ae335a" data-controle="p1" data-conectado="sim" data-campo="plastico" data-hef-alvo="cor">
                 <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -1686,10 +1712,10 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <div class="nav-rot">P1 <span class="pt">•</span> Cosmic Red</div>
+                <div class="nav-rot">P1 <span class="pt">•</span> <span data-campo="identidade">Cosmic Red</span></div>
                 <div class="nav-est" data-campo="navega"><span class="bolinha"></span>USB <span class="pt">•</span> Navega o PC</div>
               </div>
-              <div class="nav-ctl" style="--plastico:#7eb8d4" data-controle="p2" data-conectado="sim" title="Player 2 • Starlight Blue • BT">
+              <div class="nav-ctl" style="color:#7eb8d4" data-controle="p2" data-conectado="sim" data-campo="plastico" data-hef-alvo="cor">
                 <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2066,10 +2092,10 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <div class="nav-rot">P2 <span class="pt">•</span> Starlight Blue</div>
+                <div class="nav-rot">P2 <span class="pt">•</span> <span data-campo="identidade">Starlight Blue</span></div>
                 <div class="nav-est" data-campo="navega">BT <span class="pt">•</span> Só a janela</div>
               </div>
-              <div class="nav-ctl vazia" data-conectado="nao" title="Nenhum controle neste lugar.">
+              <div class="nav-ctl vazia" data-conectado="nao" data-campo="plastico" data-hef-alvo="cor" title="Nenhum controle neste lugar.">
                 <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2449,7 +2475,7 @@
                 <div class="nav-rot">P3 <span class="pt">•</span> Desconectado</div>
                 <div class="nav-est">—</div>
               </div>
-              <div class="nav-ctl vazia" data-conectado="nao" title="Nenhum controle neste lugar.">
+              <div class="nav-ctl vazia" data-conectado="nao" data-campo="plastico" data-hef-alvo="cor" title="Nenhum controle neste lugar.">
                 <?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2998,7 +3024,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Definições Controle e Mouse</span>
-      <span class="ajuda">?<span class="dica">As <b>21 linhas</b> de cada botão do controle: <b>o que ele faz</b> — mouse, tecla ou programa, tudo na mesma lista.<br><br>A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa que nomeia as peças do desenho.<br><br>Valem para o controle que navega o PC: o <b>P1 Cosmic Red USB</b>.</span></span>
+      <span class="ajuda">?<span class="dica">As <b>21 linhas</b> de cada botão do controle: <b>o que ele faz</b> — mouse, tecla ou programa, tudo na mesma lista.<br><br>A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa que nomeia as peças do desenho.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-definicoes">×</a>
     </div>
     <div class="tn-corpo">
@@ -3143,7 +3169,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Remapeamento dos botões</span>
-      <span class="ajuda">?<span class="dica">As mesmas <b>21 linhas</b>, na mesma ordem, dizendo outra coisa: <b>para qual outro botão</b> cada um passa a valer.<br><br>É troca de botão por botão, e ela vale antes de o jogo ver. O que cada botão <b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>, ao lado.<br><br>Valem para o controle que navega o PC: o <b>P1 Cosmic Red USB</b>.</span></span>
+      <span class="ajuda">?<span class="dica">As mesmas <b>21 linhas</b>, na mesma ordem, dizendo outra coisa: <b>para qual outro botão</b> cada um passa a valer.<br><br>É troca de botão por botão, e ela vale antes de o jogo ver. O que cada botão <b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>, ao lado.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
@@ -3416,8 +3442,8 @@
   <h2>A rodada dos quatro controles</h2>
   <ul>
     <li><b>A coluna do desenho virou a mesa.</b> Onde havia <b>um</b> DualSense
-    Cosmic Red há agora os <b>4</b> da <code>MESA</code> do
-    <code>monta.py</code> — Cosmic Red, Starlight Blue, Galactic Purple, White —, cada um com a
+    há agora os <b>4</b> da <code>MESA</code> do
+    <code>monta.py</code>, cada um com a
     borda e o casco na cor do seu plástico e a barra de luz na cor automática do
     número dele. Nada disso é digitado: o plástico vem de
     <code>cor_da_zona()</code> (que lê o que
@@ -3425,6 +3451,13 @@
     <code>player_slot_color</code>. <b>As cinco lâmpadas do jogador não estão
     aqui</b> — decisão dela, 28/08: elas saem dos desenhos pequenos e ficam só
     nos grandes, da Iluminação. Neste cartão mediam 1,90 × 0,64 px.</li>
+    <li><b>A identidade vem de cima, e o desenho parou de nomeá-la.</b> Os
+    nomes de plástico que estavam escritos nesta legenda e no cartão saíram —
+    <code>03/09/2026</code>, IDENTIDADE-VEM-DE-CIMA. Quem diz o nome é
+    <code>pacotes.identidade_de</code>, quem diz o número é
+    <code>pacotes.jogador_de</code>, e a cor da borda é
+    <code>style.color</code> escrito pelo pacote. O que sobra aqui é a
+    <b>forma</b> do cartão; o <b>aparelho</b> é sempre o que está na mesa.</li>
     <li><b>O <code>#ff2d6f</code> saiu — e ele nunca tinha pintado nada.</b> O
     <code>luz=</code> desta aba escrevia uma variável CSS que <b>nenhuma regra
     lia</b>: a barra de luz ficava cinza nas dez abas. Agora a regra existe

@@ -28,6 +28,21 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA, CONECTADOS,
                    cor_da_zona, player_slot_color, DS)
 
+# O DESENHO E O PRODUTO ESCREVEM A IDENTIDADE PELA MESMA FUNÇÃO — 03/09/2026,
+# IDENTIDADE-VEM-DE-CIMA. É o mesmo arranjo de `aba04.py` com
+# `pacotes/a04_iluminacao.um_botao_de_player`: o dono mora no PACOTE, porque é
+# ele que roda a cada tique, e o gerador o chama para desenhar a bancada. Duas
+# escritas do mesmo rótulo é como o desenho e o produto divergem calados.
+from pacotes.a06_navegacao import (  # noqa: E402
+    chips_da_fita,
+    rotulo_de_quem_navega,
+)
+
+#: OS CONTROLES QUE A FITA MOSTRA. Só quem está na mesa — 31/08/2026, decisão
+#: dela: um controle desconectado não se escolhe, e pôr o chip dele ali seria
+#: oferecer um destino que não existe.
+MESA_DA_FITA = CONECTADOS
+
 # ---------------------------------------------------------------------------
 # O MAPA É O DONO. Pedido dela, 27/08/2026: "cada vez que o svg ou do controle
 # ou de um glifo aparecerem tem que considerar os do nosso mapa".
@@ -198,19 +213,37 @@ CSS = CSS_GLIFO + """
      `stretch` + `justify-content:center`: as duas colunas do bloco terminam no
      MESMO y sem `space-between`, que é o que ela reprovou com todas as letras.
      A borda é a cor do plástico (P2 do redesenho — a borda diz QUAL peça é), e
-     ela vem do desenho, não de uma classe por modelo. */
+     ela vem do desenho, não de uma classe por modelo.
+
+     A BORDA É `currentColor`, E NÃO `var(--plastico)` — 03/09/2026,
+     IDENTIDADE-VEM-DE-CIMA. A cor do plástico é IDENTIDADE DE APARELHO, e
+     identidade vem da leitura, nunca do desenho. O piloto tem um alvo que
+     escreve `style.color` (`data-hef-alvo="cor"`) e **nenhum** que escreva uma
+     variável CSS: enquanto a borda lesse `--plastico`, o hex ficava cravado no
+     HTML e o produto não tinha por onde trocá-lo. Com `currentColor` a borda
+     passa a ser um campo que o pacote pinta a cada tique.
+
+     O PADRÃO É O NEUTRO, e é a regra dela — *campo sem informação não mostra
+     nada*: sem leitura, `color` fica em `var(--border-forte)` e a caixa é
+     cinza. Nunca a cor do mockup.
+
+     OS FILHOS NÃO HERDAM: `.nav-rot` e `.nav-est` declaram a própria cor logo
+     abaixo, e é por isso que pintar o cartão não tinge o texto dele. */
   .nav-mesa{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   .nav-ctl{display:flex;flex-direction:column;justify-content:center;gap:4px;
-           border:2px solid var(--plastico,var(--border-forte));border-radius:8px;
+           color:var(--border-forte);
+           border:2px solid currentColor;border-radius:8px;
            background:var(--app-bg);padding:6px 5px}
 
   /* ---------- O LUGAR VAZIO ----------
      A mesma gramática das outras cinco abas: cor explícita e NADA de `opacity`
      (a lição medida da `.fita.inerte`). A borda se declara INTEIRA aqui, e não
-     só a cor: o `.nav-ctl` usa `var(--plastico)`, e uma `var()` sem valor
-     invalida a declaração toda — a borda não fica cinza, ela deixa de existir.
-     Medido na aba Controles no mesmo dia, com a foto mostrando dois lugares
-     soltos, sem caixa nenhuma.
+     só a cor — a cicatriz é de 31/08, quando o `.nav-ctl` lia `var(--plastico)`
+     e uma `var()` sem valor invalidava a declaração toda: a borda não ficava
+     cinza, ela DEIXAVA DE EXISTIR. Medido na aba Controles no mesmo dia, com a
+     foto mostrando dois lugares soltos, sem caixa nenhuma. Hoje o `.nav-ctl`
+     lê `currentColor`, que nunca invalida — mas a declaração inteira FICA,
+     porque é ela que impede o lugar vazio de receber a cor de um aparelho.
      OS DETALHES CLAROS DO DESENHO CAEM JUNTO — `text`, `line` e os `path` sem
      classe são os glifos L/R/PS, e eles só aparecem em desenho GRANDE: aqui ele
      tem 111px, contra os 62 da aba Jogar. O que muda com o TAMANHO tem de ser
@@ -909,6 +942,7 @@ def controle_vazio(c):
     n = c["jogador"]
     return (
         f'              <div class="nav-ctl vazia" data-conectado="nao"'
+        f' data-campo="plastico" data-hef-alvo="cor"'
         f' title="Nenhum controle neste lugar.">\n'
         f'                {svg(c["pref"], c["cor"], classes="ds-svg", lampadas=False)}\n'
         f'                <div class="nav-rot">P{n} <span class="pt">•</span> Desconectado</div>\n'
@@ -918,17 +952,35 @@ def controle_vazio(c):
 
 def controle(c):
     """Um dos quatro da mesa: o desenho na cor do plástico, o rótulo na ordem
-    dela (player • plástico • transporte) e o que ele navega agora."""
+    dela (player • plástico • transporte) e o que ele navega agora.
+
+    A IDENTIDADE DESTE CARTÃO VEM DE CIMA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
+    Três coisas mudaram aqui, e as três eram o desenho mandando na tela:
+
+    * a cor do plástico saiu do `style="--plastico:#hex"` e virou
+      `style="color:#hex"` com `data-campo="plastico" data-hef-alvo="cor"`. É o
+      ÚNICO canal de cor que o piloto tem (`hefesto_vivo.escrever`, ramo
+      `cor`), e ele escreve `style.color` — que a borda passou a ler por
+      `currentColor`. Sem leitura, a cor volta ao neutro do CSS;
+    * o `title` que dizia `Player 1 • Cosmic Red • USB` SAIU. Ele repetia o que
+      o cartão já mostra em texto, e um `title` não tem alvo de pintura: ficaria
+      nomeando o controle do mockup para sempre, por cima do rótulo já vivo;
+    * o nome do plástico virou `<span data-campo="identidade">`, que o pacote
+      escreve com `pacotes.identidade_de` — o dono do nome desde a ROTA-A. O
+      `P{n}` fica FORA do span de propósito: o número do jogador é ESTRUTURA
+      (a posição na mesa), e a lei do dia diz para não tocá-lo.
+    """
     n = c["jogador"]
     navega = n == NAVEGA
     ponto = '<span class="bolinha"></span>' if navega else ""
     return (
         f'              <div class="nav-ctl{" navega" if navega else ""}"'
-        f' style="--plastico:{cor_da_zona(c["cor"])}"'
+        f' style="color:{cor_da_zona(c["cor"])}"'
         f' data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim"'
-        f' title="Player {n} • {c["nome"]} • {c["via"]}">\n'
+        f' data-campo="plastico" data-hef-alvo="cor">\n'
         f'                {svg(c["pref"], c["cor"], classes="ds-svg", lampadas=False, luz=_hex(player_slot_color(n)))}\n'
-        f'                <div class="nav-rot">P{n} <span class="pt">•</span> {c["nome"]}</div>\n'
+        f'                <div class="nav-rot">P{n} <span class="pt">•</span> '
+        f'<span data-campo="identidade">{c["nome"]}</span></div>\n'
         f'                <div class="nav-est" data-campo="navega">{ponto}{c["via"]} <span class="pt">•</span> '
         f'{"Navega o PC" if navega else "Só a janela"}</div>\n'
         f'              </div>')
@@ -1070,20 +1122,36 @@ STATUS_MODO = ('<input type="checkbox" id="st-modo" class="tog-in" checked>'
 # `D_PADRAO` dizia ("o que este botão apaga") passou a viver onde ele morde, na
 # frase de confirmação de cada "Voltar ao padrão".
 # ---------------------------------------------------------------------------
+#: QUEM NAVEGA, DITO NAS DUAS DICAS — e o rótulo é um CAMPO, não uma frase.
+#:
+#: Ele dizia `P1 Cosmic Red USB` cravado, nas duas telas. É identidade de
+#: aparelho no meio de um texto de ajuda, e por isso continuava nomeando o
+#: controle do desenho enquanto a fita do topo já lia o dela
+#: (IDENTIDADE-VEM-DE-CIMA, 03/09/2026). O endereço é `quem-navega`, e o pacote
+#: o escreve com `pacotes.identidade_de` + `pacotes.jogador_de` do PRIMÁRIO —
+#: os dois donos que a ROTA-A deixou prontos.
+#:
+#: `data-campo` no `<b>`, e não na dica inteira: o piloto escreve
+#: `textContent`, e o endereço na dica apagaria os quatro `<br>` e os `<b>` que
+#: ela tem. O `<b>` é uma folha de texto puro — é o que o alvo padrão sabe
+#: escrever sem destruir marcação.
+VALEM_PARA = (
+    'Valem para o controle que navega o PC: o <b data-campo="quem-navega">'
+    + rotulo_de_quem_navega(NAVEGA, QUEM_NAVEGA["nome"], QUEM_NAVEGA["via"])
+    + "</b>.")
+
 D_DEFINICOES = ajuda(
     f"As <b>{len(BOTOES)} linhas</b> de cada botão do controle: <b>o que ele faz</b> "
     "— mouse, tecla ou programa, tudo na mesma lista.<br><br>"
     "A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa "
     "que nomeia as peças do desenho.<br><br>"
-    f"Valem para o controle que navega o PC: o <b>P{NAVEGA} "
-    f"{QUEM_NAVEGA['nome']} {QUEM_NAVEGA['via']}</b>.")
+    + VALEM_PARA)
 D_REMAPEAMENTO = ajuda(
     f"As mesmas <b>{len(BOTOES)} linhas</b>, na mesma ordem, dizendo outra coisa: "
     "<b>para qual outro botão</b> cada um passa a valer.<br><br>"
     "É troca de botão por botão, e ela vale antes de o jogo ver. O que cada botão "
     "<b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>, ao lado.<br><br>"
-    f"Valem para o controle que navega o PC: o <b>P{NAVEGA} "
-    f"{QUEM_NAVEGA['nome']} {QUEM_NAVEGA['via']}</b>.")
+    + VALEM_PARA)
 
 #: AS TRÊS PALAVRAS DA "Função do teclado", e elas são o CONTRATO do gesto.
 #:
@@ -1421,6 +1489,19 @@ MIOLO = f'''
         <div class="moldura">
         <div class="gestos">
           <div class="previa">
+            <!-- A FOLHA VIVA DO PLÁSTICO — nasce VAZIA, e é o pacote que a
+                 escreve (`a06_navegacao.folha_do_plastico`, pelo `blocos`).
+                 Ela existe porque o CASCO do desenho não é `style` de
+                 elemento: as peças do SVG leem `var(--z-…)`, escritas por uma
+                 regra `svg[data-colorway="…"]` que o `monta.svg()` embute. O
+                 piloto não escreve atributo nem variável — só texto, valor,
+                 classe, cor, largura, fundo e `innerHTML`. O `innerHTML` de um
+                 `<style>` É texto, e não sofre a normalização que o navegador
+                 faz em marcação: é o único canal que troca o casco sem
+                 reescrever 370 linhas de SVG a cada meio segundo.
+                 VAZIA na bancada de propósito: o desenho continua sendo o
+                 desenho, e quem manda na tela é a leitura. -->
+            <style id="plastico-vivo"></style>
             <div class="nav-mesa">
 {chr(10).join(controle(c) if c.get('conectado', True) else controle_vazio(c) for c in MESA)}
             </div>
@@ -1528,8 +1609,8 @@ LEGENDA = f'''<div class="nota">
   <h2>A rodada dos quatro controles</h2>
   <ul>
     <li><b>A coluna do desenho virou a mesa.</b> Onde havia <b>um</b> DualSense
-    Cosmic Red há agora os <b>{len(MESA)}</b> da <code>MESA</code> do
-    <code>monta.py</code> — {", ".join(c["nome"] for c in MESA)} —, cada um com a
+    há agora os <b>{len(MESA)}</b> da <code>MESA</code> do
+    <code>monta.py</code>, cada um com a
     borda e o casco na cor do seu plástico e a barra de luz na cor automática do
     número dele. Nada disso é digitado: o plástico vem de
     <code>cor_da_zona()</code> (que lê o que
@@ -1537,6 +1618,13 @@ LEGENDA = f'''<div class="nota">
     <code>player_slot_color</code>. <b>As cinco lâmpadas do jogador não estão
     aqui</b> — decisão dela, 28/08: elas saem dos desenhos pequenos e ficam só
     nos grandes, da Iluminação. Neste cartão mediam 1,90 × 0,64 px.</li>
+    <li><b>A identidade vem de cima, e o desenho parou de nomeá-la.</b> Os
+    nomes de plástico que estavam escritos nesta legenda e no cartão saíram —
+    <code>03/09/2026</code>, IDENTIDADE-VEM-DE-CIMA. Quem diz o nome é
+    <code>pacotes.identidade_de</code>, quem diz o número é
+    <code>pacotes.jogador_de</code>, e a cor da borda é
+    <code>style.color</code> escrito pelo pacote. O que sobra aqui é a
+    <b>forma</b> do cartão; o <b>aparelho</b> é sempre o que está na mesa.</li>
     <li><b>O <code>#ff2d6f</code> saiu — e ele nunca tinha pintado nada.</b> O
     <code>luz=</code> desta aba escrevia uma variável CSS que <b>nenhuma regra
     lia</b>: a barra de luz ficava cinza nas dez abas. Agora a regra existe
@@ -1655,6 +1743,30 @@ if ANTES not in s:
     raise SystemExit("ERRO: o title da fita mudou no topo.html — refaça a troca")
 s = s.replace(ANTES, DEPOIS)
 
+# A FITA DESTA ABA GANHA ENDEREÇO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
+#
+# Os dois chips nomeavam o controle do MOCKUP (`P1 · Cosmic Red · USB`,
+# `P2 · Starlight Blue · BT`) e o `title` de cada um repetia o nome. Seis dos
+# dezesseis valores congelados desta aba estavam aqui.
+#
+# O DONO DA FITA É COMPARTILHADO (`monta.fita` desenha, `hefesto_vivo._fita`
+# repinta), e por isso a troca é feita AQUI, na saída — a mesma razão pela qual
+# o `title` acima é trocado neste arquivo: o bloco mora no esqueleto e esta aba
+# só pode mexer no arquivo dela.
+#
+# E ELA PRECISOU EXISTIR, medido em 03/09/2026 com os dois controles dela na
+# mesa: `_fita` **desiste** quando um controle não tem cor lida (`any(not
+# c.get("cor") …) -> return ""`), e pelo rádio a cor não se lê. Treze tiques
+# depois, a fita da `06` ainda dizia Cosmic Red e Starlight Blue ao lado de um
+# cabeçalho que já contava certo. Com o endereço, quem escreve é o pacote.
+FITA = re.compile(r'(<div class="fita inerte"[^>]*)(>)(.*?)(</div>)', re.S)
+if not FITA.search(s):
+    raise SystemExit("ERRO: a fita inerte mudou de forma — refaça o endereço")
+s = FITA.sub(
+    lambda m: (m.group(1) + ' data-campo="fita-chips" data-hef-alvo="html"'
+               + m.group(2) + chips_da_fita(MESA_DA_FITA) + m.group(4)),
+    s, count=1)
+
 # a tela nova entra IRMÃ da janela, fora do miolo (ver o comentário no MIOLO)
 MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
 if MARCA not in s:
@@ -1719,8 +1831,42 @@ def _conferir(doc):
     #    aqui é a mesma mentira que o nome do plástico num lugar vazio.
     exigir(QUEM_NAVEGA.get("conectado", True),
            f"quem navega (P{NAVEGA}) não está conectado")
-    exigir(f'>P{NAVEGA} <span class="pt">•</span> {QUEM_NAVEGA["nome"]}</div>' in corpo,
+    exigir(f'>P{NAVEGA} <span class="pt">•</span> '
+           f'<span data-campo="identidade">{QUEM_NAVEGA["nome"]}</span></div>' in corpo,
            "o card de quem navega não é o do controle certo")
+
+    # 3-bis. A IDENTIDADE TEM ENDEREÇO EM TODA PARTE ONDE ELA É DITA —
+    #    03/09/2026, IDENTIDADE-VEM-DE-CIMA. Cada `exigir` daqui vale UM dos
+    #    dezesseis valores que a régua `check_identidade_vem_de_cima.py`
+    #    contava nesta aba. Tirar um endereço volta a congelar o controle do
+    #    desenho na tela dela, e a régua da onda o acusa de novo — mas ela roda
+    #    sobre a bancada INTEIRA, e esta roda sobre a saída deste gerador.
+    conectados = [c for c in MESA if c.get("conectado", True)]
+    exigir(corpo.count('data-campo="identidade"') == len(conectados),
+           f"os {len(conectados)} cartões conectados perderam o "
+           f'`data-campo="identidade"` — o nome do plástico volta a ser o do '
+           f"mockup, e nada o reescreve")
+    exigir(corpo.count('data-campo="plastico" data-hef-alvo="cor"') == len(MESA),
+           f"os {len(MESA)} lugares perderam o `data-campo=\"plastico\"` — a "
+           f"borda volta a ser a cor cravada do desenho")
+    exigir("--plastico" not in corpo,
+           "voltou um `--plastico` cravado ao miolo: ele não tem alvo de "
+           "pintura, e o piloto não escreve variável CSS — a cor ficaria a do "
+           "mockup para sempre")
+    exigir('<style id="plastico-vivo"></style>' in doc,
+           "a folha viva do plástico sumiu — sem ela o casco do desenho fica "
+           "no colorway do mockup, que nenhum campo alcança")
+    exigir(doc.count('data-campo="quem-navega"') == 2,
+           "as duas dicas das telas de botões perderam o "
+           '`data-campo="quem-navega"` — elas voltam a nomear o controle do '
+           "desenho no meio do texto")
+    exigir('data-campo="fita-chips" data-hef-alvo="html"' in doc,
+           "a fita perdeu o endereço — e `hefesto_vivo._fita` DESISTE quando um "
+           "controle da mesa não tem cor lida, que é o caso do rádio hoje")
+    for c in conectados:
+        exigir(f'title="Player {c["jogador"]}' not in doc,
+               f"o `title` do cartão do P{c['jogador']} voltou — ele nomeia o "
+               f"controle e não tem alvo de pintura")
 
     # 4. AS VINTE E UMA LINHAS DIZEM AO PYTHON QUE ELA ESTÁ MEXENDO — decisão
     #    dela, 02/09/2026. O `data-gesto` é o ÚNICO atributo destes `<select>`
