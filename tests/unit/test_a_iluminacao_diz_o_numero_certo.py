@@ -375,9 +375,23 @@ def test_a_bancada_perdeu_a_dica_congelada_da_celula_de_leds():
     assert " aceso:" not in bancada, (
         "a palavra que ela mandou tirar voltou ao desenho.")
     #: A DICA VIVA ESTÁ NAS TRÊS PEÇAS de cada coluna conectada: 2 tiras + o
-    #: `.pad`, vezes os dois controles da bancada.
-    assert bancada.count("Desenho que mandamos:") == 6, (
-        "as peças do desenho perderam a dica do motor.")
+    #: `.pad`. A frase esperada NÃO é digitada aqui — sai do mesmo dono que o
+    #: gerador chama, senão a régua mediria a palavra e não o ato.
+    #:
+    #: ELA CONTAVA `"Desenho que mandamos:" == 6` ATÉ 02/09/2026, e isso cravava
+    #: uma afirmação que esta aba não pode fazer — ver
+    #: `test_a_dica_nao_afirma_o_desenho_das_cinco_luzes_que_o_pacote_nao_ve`.
+    import monta
+    from pacotes import a04_iluminacao as pac
+
+    for c in monta.CONECTADOS:
+        esperada = pac.dica_da_luz(c["nome"], c["via"], "")
+        assert bancada.count(f'title="{esperada}"') == 3, (
+            f"as três peças da coluna de {c['nome']} perderam a dica viva "
+            f"({esperada!r}).")
+    assert "Desenho que mandamos" not in bancada, (
+        "a afirmação sobre o desenho das 5 luzes voltou ao desenho: este pacote "
+        "não vê o override por-uniq que decide qual desenho está em vigor.")
 
 
 def test_o_gerador_e_o_produto_desenham_a_mesma_luz():
@@ -548,48 +562,93 @@ def test_a_dica_da_luz_nao_diz_aceso_e_nomeia_quem_esta_conectado(colunas):
     assert "Cosmic Red" in luz and "Starlight Blue" not in luz, (
         "a dica nomeia o controle do desenho, e não o que está na mesa.")
 
-    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
-        _PREFIXO_DESENHO,
-    )
-    assert _PREFIXO_DESENHO in luz, (
-        "a frase das cinco lâmpadas não é a do motor — escrever outra criaria "
-        "a segunda verdade que a GTK já matou.")
 
+def test_a_dica_nao_afirma_o_desenho_das_cinco_luzes_que_o_pacote_nao_ve(
+    colunas,
+):
+    """A tela não afirma sobre uma camada do merge que este pacote não enxerga.
 
-def test_a_dica_manda_o_rascunho_vazio_porque_o_automatico_esta_acima(colunas):
-    """O desenho em vigor é o do NÚMERO, e isso é medição, não escolha.
+    ESTE TESTE SUBSTITUI UM QUE CRAVAVA O DEFEITO. O antecessor —
+    `test_a_dica_manda_o_rascunho_vazio_porque_o_automatico_esta_acima` — exigia
+    `"automático, do número deste controle" in dica`, isto é, gravava a
+    afirmação como se fosse o certo. Um teste assim impede a próxima pessoa de
+    consertar.
 
-    `texto_do_desenho_aceso` promete no docstring que *"qualquer desenho
-    não-vazio no rascunho vence a camada automática por campo (D5)"*. Para o
-    PLAYER-LED isso caducou na R-14 (23/07): o merge de
-    `core/backend_pydualsense._merged_desired_for_key` é
+    A ACUSAÇÃO, REPRODUZIDA AQUI COM O MERGE REAL DO BACKEND (e nenhum
+    aparelho): a precedência de `_merged_desired_for_key` é
 
-        default global do perfil < camada AUTOMÁTICA < override < co-op < jogo
+        default global do perfil < camada AUTOMÁTICA < override por-uniq
+                                                     < co-op < jogo
 
-    e o `leds.player_leds` do perfil é o default global — a camada MAIS BAIXA.
-    A automática (`identity.make_auto_output_provider`) devolve
-    `player_led_pattern(slot)` e nasce ligada (`auto_numbers` *"sem campo no
-    schema ainda, fica True"*; `_configure_auto_player_colors` nunca passa
-    `numbers=`).
+    e o override por-uniq é onde a janela GTK escreve quando ela aplica um
+    desenho (`lightbar_actions._enviar_player_leds` → `player_leds_set_
+    detalhado(…, uniq=…)` → `ipc_handlers._apply_por_uniq` → `apply_output_for`,
+    *"que registra o override por-uniq"*). Com ele preenchido, o produto manda
+    um desenho e a frase antiga anunciava outro.
 
-    O PERFIL DELA TEM O CAMPO PREENCHIDO — medido em 02/09/2026, `meu_perfil`
-    traz `player_leds = [false, false, true, false, false]`, o padrão do P1.
-    Passar esses bits faria a coluna do P2 dizer *"desenho do P1 — escolha
-    sua"* com o produto acendendo o padrão do P2.
+    E O PACOTE NÃO PODE SABER: `_enrich_controllers_per_controller` não publica
+    nenhum campo do desejado por controle — `interface/aba02.py:809` já dizia
+    *"publica o ``player_slot`` e NÃO publica ``player_leds``"*.
+
+    A REGRA DELA, 02/09/2026: *"se não tá mostrando agora, não tem info pra
+    mostrar no produto"*. Campo sem informação não mostra nada.
     """
-    from hefesto_dualsense4unix.core.led_control import (
-        player_bitmask,
-        player_led_pattern,
+    from hefesto_dualsense4unix.core.backend_pydualsense import (
+        PyDualSenseController,
+        _DesiredOutput,
     )
+    from hefesto_dualsense4unix.core.led_control import player_led_pattern
     import pacotes.a04_iluminacao as a04
 
-    #: O rascunho DELA, na forma exata do schema — e ele NÃO é vazio.
-    assert player_bitmask(tuple(player_led_pattern(1))) != 0
+    uniq = "aabbcc000002"
+    escolha_dela = (True, False, False, False, True)
 
-    for numero in (1, 2):
-        dica = a04.dica_da_luz("Cosmic Red", "BT", "", numero)
-        assert f"desenho do P{numero}" in dica, dica
-        assert "automático, do número deste controle" in dica, dica
+    #: O MERGE REAL, com os colaboradores dublados — o mesmo arranjo de
+    #: `tests/unit/test_troca_de_player_01_a_escolha_sobrepoe.py:534`.
+    backend = object.__new__(PyDualSenseController)
+    backend._key_to_uniq = lambda k: k
+    backend._desired_default = _DesiredOutput(
+        player_leds=tuple(player_led_pattern(1)))   # o default global do perfil
+    backend._assentar_mesa_locked = lambda: None
+    backend._auto_output_provider = lambda u: _DesiredOutput(
+        player_leds=tuple(player_led_pattern(2)))   # a camada AUTOMÁTICA
+    backend._desired_coop_by_uniq = {}
+    backend._scaled_led = lambda u, resolvido: resolvido
+    backend._game_output_by_uniq = {}
+    backend._game_wins = lambda: False
+    backend._desired_by_uniq = {uniq: _DesiredOutput(player_leds=escolha_dela)}
+
+    em_vigor = backend._merged_desired_for_key(uniq).player_leds
+    assert em_vigor == escolha_dela, (
+        "o override por-uniq deixou de vencer a camada automática — se o merge "
+        "mudou, esta aba precisa saber antes de decidir o que pode afirmar.")
+    assert em_vigor != tuple(player_led_pattern(2)), (
+        "o dublê não separa as duas camadas: escolha um desenho diferente do "
+        "automático, senão o teste passa sem medir nada.")
+
+    #: E A TELA NÃO DIZ NADA SOBRE ISSO — nem o certo, nem o errado. As frases
+    #: proibidas NÃO são digitadas aqui: são os três ramos SEM co-op do próprio
+    #: motor, para a régua acompanhar se ele reescrever o texto.
+    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
+        texto_do_desenho_aceso,
+    )
+    dica = a04.dica_da_luz("Cosmic Red", "BT", "")
+    proibidas = [
+        texto_do_desenho_aceso((False,) * 5, 1),            # automático com nº
+        texto_do_desenho_aceso((False,) * 5, None),         # automático sem nº
+        texto_do_desenho_aceso(tuple(player_led_pattern(2)), 1),  # escolha dela
+    ]
+    for afirmacao in proibidas:
+        assert afirmacao not in dica, (
+            f"a dica afirma {afirmacao!r} sobre o desenho em vigor, e o pacote "
+            f"não vê o override por-uniq que o decide: {dica!r}")
+
+    assert dica == "Cosmic Red (BT)", (
+        f"sobrou algo além do que o pacote mede: {dica!r}")
+
+    #: NEM PELO CAMINHO DE VERDADE — a coluna inteira, com a mesa de 02/09.
+    luz = colunas()[DO_RADIO["uniq"]]["luz"]
+    assert "automático" not in luz and "escolha sua" not in luz, luz
 
 
 def test_o_coop_so_manda_quando_ha_mais_de_um_jogador():
@@ -614,8 +673,75 @@ def test_o_coop_so_manda_quando_ha_mais_de_um_jogador():
     assert a04.o_coop_manda({}) is False
     assert a04.o_coop_manda({"coop": None}) is False
 
-    dica = a04.dica_da_luz("Cosmic Red", "BT", "", 1, coop_manda=True)
+    dica = a04.dica_da_luz("Cosmic Red", "BT", "", coop_manda=True)
     assert "co-op" in dica, dica
+
+
+def test_a_frase_do_coop_e_a_do_motor_chamada_e_nao_uma_copia(monkeypatch):
+    """A régua do reuso mede o ATO, e não a palavra.
+
+    O DEFEITO QUE ELA FECHA, achado pela auditoria de 02/09/2026: a régua
+    anterior era `assert _PREFIXO_DESENHO in luz` mais comparações contra
+    strings digitadas no próprio teste. Arrancar a chamada ao motor e escrever
+    a frase À MÃO no pacote deixava **os 31 testes verdes** — e a LEI 0 da casa
+    (*"não temos que recriar nada"*) é justamente o que essa régua deveria
+    proteger.
+
+    Duas medições, e nenhuma é uma string digitada aqui:
+
+    1. a frase que o pacote emite é, literalmente, o retorno de
+       `texto_do_desenho_aceso`;
+    2. o pacote CHAMOU a função — um espião no módulo do motor. Como
+       `dica_da_luz` importa dentro do corpo, trocar o atributo do módulo pega
+       a chamada de verdade.
+    """
+    from hefesto_dualsense4unix.app.actions import lightbar_actions
+    import pacotes.a04_iluminacao as a04
+
+    do_motor = lightbar_actions.texto_do_desenho_aceso((False,) * 5, None,
+                                                       coop_ligado=True)
+    assert do_motor in a04.dica_da_luz("Cosmic Red", "BT", "",
+                                       coop_manda=True), (
+        "a frase do co-op não é a do motor — escrever outra criaria a segunda "
+        "verdade que a GTK já matou.")
+
+    chamadas: list[tuple] = []
+
+    def espiao(*args, **kw):
+        chamadas.append((args, kw))
+        return "ESPIÃO"
+
+    monkeypatch.setattr(lightbar_actions, "texto_do_desenho_aceso", espiao)
+    dica = a04.dica_da_luz("Cosmic Red", "BT", "", coop_manda=True)
+    assert chamadas, (
+        "o pacote não chamou `texto_do_desenho_aceso` — a frase foi copiada à "
+        "mão, e é o defeito que esta régua existe para pegar.")
+    assert "ESPIÃO" in dica, dica
+
+
+def test_o_ramo_do_coop_do_motor_ignora_o_rascunho_e_o_numero():
+    """Por que `dica_da_luz` pode passar sentinelas nos dois primeiros args.
+
+    O pacote não sabe o rascunho (não vê o override por-uniq) nem precisa do
+    número neste ramo, e passa `(False,) * 5` e `None`. Isso só é honesto
+    enquanto o ramo 1 de `texto_do_desenho_aceso` devolver ANTES de olhar
+    qualquer um dos dois.
+
+    SE O MOTOR MUDAR, ESTE TESTE ACUSA — e o chamador em
+    `a04_iluminacao.dica_da_luz` passa a estar mentindo sobre um rascunho
+    vazio que ele nunca mediu.
+    """
+    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
+        texto_do_desenho_aceso,
+    )
+
+    sentinela = texto_do_desenho_aceso((False,) * 5, None, coop_ligado=True)
+    for rascunho in ((False,) * 5, (True, False, True, False, True)):
+        for slot in (None, 1, 4):
+            assert texto_do_desenho_aceso(
+                rascunho, slot, coop_ligado=True) == sentinela, (
+                "o ramo do co-op passou a ler o rascunho ou o número — a aba "
+                "04 não sabe nenhum dos dois e precisa parar de passá-los.")
 
 
 def test_o_hex_e_o_do_dono_e_nao_um_guarda_copiado(colunas):

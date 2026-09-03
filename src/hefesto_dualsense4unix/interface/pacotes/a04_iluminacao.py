@@ -170,9 +170,9 @@ def o_coop_manda(state: dict[str, Any]) -> bool:
         return False
 
 
-def dica_da_luz(nome: str, via: str, recado: str, jogador: int,
+def dica_da_luz(nome: str, via: str, recado: str,
                 coop_manda: bool = False) -> str:
-    """A dica da célula LEDs: o controle VIVO, e as frases do MOTOR.
+    """A dica da célula LEDs: o controle VIVO, e só o que este pacote MEDE.
 
     DUAS DECISÕES DELA, de 02/09/2026, e esta função é as duas::
 
@@ -191,44 +191,52 @@ def dica_da_luz(nome: str, via: str, recado: str, jogador: int,
     tirá-la, a GTK obedeceu em 25/08 (`lightbar_actions._PREFIXO_DESENHO`
     passou a dizer *"Desenho que mandamos"*) e o mockup a reintroduziu.
 
-    NADA AQUI É PROSA NOVA. As duas frases têm dono no motor:
-
-    * a da BARRA é o primeiro retorno de `controller_card.rotulo_lightbar` — a
-      mesma que os cards da GTK usam, e que sabe os quatro estados em que a cor
-      publicada **não** é a que está no plástico. `""` quando não há ressalva;
-    * a das CINCO LÂMPADAS é `lightbar_actions.texto_do_desenho_aceso`, cujo
-      docstring diz por que não fala em "aceso": *"não existe canal de leitura
-      de LED de jogador, em transporte nenhum"* — `luz.led_jogador.leitura`
-      tem `cabo_aceita = não` e `radio_aceita = não` no mapa de canais.
-
-    O RASCUNHO VAI VAZIO DE PROPÓSITO, e isto é medição, não descuido. O
-    docstring do motor promete que *"qualquer desenho não-vazio no rascunho
-    vence a camada automática por campo (D5)"* — e para o PLAYER-LED isso
-    caducou na R-14 (23/07). O merge está em
-    `core/backend_pydualsense._merged_desired_for_key`::
+    A FRASE DO DESENHO DAS 5 LUZES SAIU JUNTO — 02/09/2026, e é o mesmo defeito
+    uma camada adiante. Ela dizia *"Desenho que mandamos: desenho do PN —
+    automático, do número deste controle"*, e isso é uma afirmação sobre o MERGE
+    do backend (`core/backend_pydualsense._merged_desired_for_key`)::
 
         default global do perfil  <  camada AUTOMÁTICA  <  override por-uniq
                                                         <  co-op  <  jogo
 
-    O `leds.player_leds` do perfil é o **default global**, a camada mais baixa;
-    a automática (`identity.make_auto_output_provider` →
-    `player_led_pattern(slot)`) está ACIMA dele e nasce ligada — `auto_numbers`
-    *"sem campo no schema ainda, fica ``True`` até alguém pedir o contrário"*, e
-    `ProfileManager._configure_auto_player_colors` nunca passa `numbers=`. Logo,
-    para um DualSense com número, o desenho em vigor é SEMPRE o do número.
+    **Este pacote não vê o override por-uniq.** O `state_full` publica, por
+    controle, exatamente as chaves de
+    `daemon/ipc_handlers._enrich_controllers_per_controller` — `lightbar_rgb`,
+    `lightbar_on`, `lightbar_source`, `player_slot`, `inputs`… — e nenhum campo
+    do desejado; `interface/aba02.py:809` já dizia isso com todas as letras
+    (*"publica o ``player_slot`` e NÃO publica ``player_leds``"*). E o override
+    é justamente onde a janela GTK escreve quando ela aplica um desenho:
+    `lightbar_actions._enviar_player_leds` manda `player_leds_set_detalhado(…,
+    uniq=…)` → `ipc_handlers._apply_por_uniq` → `apply_output_for`, *"que
+    registra o override por-uniq"*.
 
-    Medido no perfil dela em 02/09/2026: `meu_perfil` tem
-    `player_leds = [false, false, true, false, false]` — o padrão do P1. Passar
-    esses bits faria a dica da coluna do P2 dizer *"desenho do P1 — escolha
-    sua"* enquanto o produto acende o padrão do P2. Com o rascunho vazio a
-    função cai no ramo 3, que é o que o produto faz: *"automático, do número
-    deste controle"*.
+    REPRODUZIDO em 02/09/2026, com o merge REAL do backend e nenhum aparelho
+    (o dublê é o de `test_troca_de_player_01_a_escolha_sobrepoe.py`)::
+
+        override por-uniq   o produto MANDA          a tela DIZIA
+        nenhum              [F,T,F,T,F] (o do P2)    desenho do P2 — automático
+        [T,F,F,F,T]         [T,F,F,F,T]              desenho do P2 — automático
+
+    A segunda linha é a tela afirmando o contrário do que sai no fio. Vale a
+    regra dela: *"se não tá mostrando agora, não tem info pra mostrar no
+    produto"* — campo sem informação **não mostra nada**.
+
+    O QUE SOBRA É O QUE SE MEDE, e as duas frases continuam tendo dono no motor:
+
+    * a da BARRA é o primeiro retorno de `controller_card.rotulo_lightbar` — a
+      mesma que os cards da GTK usam, e que sabe os quatro estados em que a cor
+      publicada **não** é a que está no plástico. `""` quando não há ressalva;
+    * a do CO-OP é `lightbar_actions.texto_do_desenho_aceso` no ramo 1, e essa
+      camada o pacote VÊ: `o_coop_manda` a lê de `coop.players`, e ela está
+      acima do override no merge — ligado o co-op, é ele que numera, tenha ela
+      escolhido desenho ou não. Os dois primeiros argumentos vão nos sentinelas
+      de "não sei" (`(False,) * 5` e `None`) porque o ramo devolve ANTES de
+      olhar qualquer um dos dois; há teste que morde se o motor mudar isso.
 
     :param nome: o modelo VIVO, o que a mesa sabe — nunca o do desenho.
     :param via: `USB`/`BT` de agora. `—` ou vazio some da frase em vez de
         virar `(—)`: um travessão entre parênteses não diz nada a ninguém.
     :param recado: o primeiro retorno de `rotulo_lightbar`, ou `""`.
-    :param jogador: o número deste controle, que é o desenho em vigor.
     :param coop_manda: `o_coop_manda(state)` — ver lá por que não é
         `coop.enabled`.
     """
@@ -236,11 +244,14 @@ def dica_da_luz(nome: str, via: str, recado: str, jogador: int,
         texto_do_desenho_aceso,
     )
 
-    #: O RASCUNHO VAZIO É O ESTADO EM VIGOR — ver o docstring acima.
-    frases = [f for f in (recado, texto_do_desenho_aceso(
-        (False,) * 5, jogador, coop_ligado=coop_manda)) if f]
+    frases = [recado] if recado else []
+    if coop_manda:
+        #: O ÚNICO RAMO QUE ESTE PACOTE PODE AFIRMAR — ver o docstring.
+        frases.append(texto_do_desenho_aceso(
+            (False,) * 5, None, coop_ligado=True))
     quem = f"{nome} ({via})" if via and via != "—" else nome
-    return f"{quem} · " + " · ".join(frases)
+    #: SEM FRASE, SÓ O NOME — e nunca `"Nome · "` com o separador órfão.
+    return (f"{quem} · " + " · ".join(frases)) if frases else quem
 
 
 def _da_mesa(ctx: Contexto, uniq: str) -> dict[str, Any]:
@@ -389,7 +400,8 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
     * a tinta é `_tinta`, isto é `monta.tom_da_casa` do hex vivo;
     * quem decide se HÁ cor a afirmar é `controller_card.rotulo_lightbar` — o
       chamador passa `""` quando não há;
-    * a `dica` inteira é `dica_da_luz`, que só junta frases do motor.
+    * a `dica` inteira é `dica_da_luz` — o nome VIVO mais as frases do motor
+      que este pacote pode conferir, e nada além delas (ver lá).
 
     A DICA VIAJA NAS TRÊS PEÇAS, e não na célula em volta. O `title` da célula
     é um ATRIBUTO, e o piloto não tem alvo de pintura para atributo — os alvos
@@ -547,7 +559,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: que é o estado de partida de um controle no rádio.
             "luz": desenho_da_luz(_tinta(acesa),
                                   1.0 if b is None else float(b), n,
-                                  dica_da_luz(nome, via, recado or "", n,
+                                  dica_da_luz(nome, via, recado or "",
                                               o_coop_manda(ctx.state))),
             #: O RÓTULO INTEIRO, e não só o número. O desenho escreve
             #: `P1 • Cosmic Red • USB`; emitir só o `P1` fazia o primeiro tique

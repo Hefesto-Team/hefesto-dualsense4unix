@@ -432,16 +432,42 @@ seção daqui**: a aba deixou de estar em trabalho.
   desenho ela viaja pelo alvo `html`, que se troca a cada tique.
 
   **A frase nova não tem uma palavra minha.** Ela é o nome vivo do controle mais
-  duas frases que já têm dono no motor: a ressalva da barra
-  (`controller_card.rotulo_lightbar`, que sabe os quatro estados em que a cor
-  publicada não é a que está no plástico) e o desenho das cinco lâmpadas
-  (`lightbar_actions.texto_do_desenho_aceso`). Na sua mesa de agora ela lê:
+  a ressalva da barra, que já tem dono no motor
+  (`controller_card.rotulo_lightbar`, e ela sabe os quatro estados em que a cor
+  publicada não é a que está no plástico). Na sua mesa de agora, com a barra sem
+  ressalva a dizer, ela lê só:
 
-      White (USB) · Desenho que mandamos: desenho do P1 — automático, do número
-      deste controle.
+      White (USB)
 
-  **O que espera o seu OK:** a frase acima, e nada mais. Nenhum pixel mudou —
-  a dica só aparece ao passar o mouse.
+  **E ela ficou nisso porque uma segunda frase CAIU no mesmo dia.** A dica também
+  dizia *"Desenho que mandamos: desenho do P1 — automático, do número deste
+  controle"*, e essa era uma afirmação que esta aba não pode fazer. O desenho das
+  5 luzes é resolvido por um merge de cinco camadas no daemon, e a que decide
+  quando você aplica um desenho na janela GTK — o *override* por controle — fica
+  ACIMA da automática. **A aba não recebe essa camada:** o `state_full` publica
+  o número do controle e não publica `player_leds`. Reproduzido com o merge de
+  verdade, sem tocar o aparelho: com o override preenchido, o produto manda
+  `[T,F,F,F,T]` e a tela dizia *"desenho do P2 — automático"*. É a sua regra de
+  hoje — *"se não tá mostrando agora, não tem info pra mostrar no produto"* —,
+  então a frase saiu. **Ela volta sozinha, correta, no dia em que o daemon
+  publicar o desenho em vigor**; nada aqui precisa ser mexido de novo.
+
+  Sobra UM caso em que a aba pode afirmar, e ele continua sendo a frase do motor:
+  com o **co-op numerando mais de um jogador**, a camada de co-op está acima do
+  override, e a dica diz que é ele que manda nas 5 luzes.
+
+  **O que espera o seu OK:** as duas coisas acima — a dica que passa a nomear
+  quem está conectado, e a frase do desenho das 5 luzes que saiu. **Nenhum pixel
+  mudou:** a dica só aparece ao passar o mouse.
+
+  **E mais uma coisa que estava por declarar** (achada na auditoria do mesmo
+  dia): os oito botões da guia de cores de cada coluna conectada ganharam
+  endereço — `data-campo="hex" data-hef-alvo="classe"`, dezesseis atributos ao
+  todo. Isso NÃO muda pixel no desenho, mas muda o produto depois da publicação:
+  o anel que marca a cor escolhida deixa de ficar cravado no tom do mockup e
+  passa a acender na cor viva. Sem isso, escolher uma cor fora da guia de oito
+  (o seletor livre existe para isso) deixava o anel parado no tom velho para
+  sempre.
 
   **E o que espera a PUBLICAÇÃO, que é ato seu:** a célula `LEDs` da sua tela
   continua mostrando as duas tiras congeladas do desenho — azul a 82% na coluna
