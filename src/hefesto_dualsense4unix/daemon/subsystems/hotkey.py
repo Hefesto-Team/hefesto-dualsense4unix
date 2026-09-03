@@ -963,7 +963,6 @@ async def _eleger_ou_devolver(
     ar". Quem não é o eleito e vai a mudo apaga só a própria luz.
     """
     eleitor = _eleitor(daemon)
-    conectados = _uniqs_conectados(daemon)
     if mudo:
         # SÓ QUEM ESTÁ COM O MICROFONE PODE DEVOLVÊ-LO (auditoria 02/09/2026).
         #
@@ -1064,8 +1063,34 @@ async def _eleger_ou_devolver(
         # E é a MESMA regra dos dois lados — a luz segue a leitura CONFERIDA,
         # nunca o que mandamos. `eleger` acende quando o ativo relido é o
         # controle; `devolver` só apaga quando o ativo relido deixou de ser.
-        aceso = not bool(resultado.ok)
+        #
+        # E AGORA A LUZ SEGUE A POSSE, que é a mesma frase escrita uma vez só
+        # (auditoria de 02/09/2026). Aqui estava `aceso = not bool(resultado.
+        # ok)`, e o comentário acima prometia o que o código não fazia: ele
+        # lia `resultado.ok`, e `ok=False` na volta significa *"o OUTRO destino
+        # não virou o ativo"*, que NÃO implica *"o canal ainda é deste
+        # controle"*. Os três desfechos de recusa de `_eleger_nome` ficavam
+        # iguais, e no terceiro — a escrita ACEITA com o ativo relido virando
+        # um TERCEIRO, que é o `eleicao_mic_nao_pegou` que o módulo existe para
+        # pegar — o plástico continuava aceso sobre um canal que a própria
+        # medição dizia não ser mais dele.
+        #
+        # `eleitor.eleito` já é essa resposta, e é a ÚNICA: quem a escreve é
+        # `_o_eleito_saiu_do_ar`, comparando o ativo relido com o NOME do canal
+        # do eleito. Este ramo só é alcançado com `eleitor.eleito == uniq` (a
+        # guarda acima), então a posse de pé é a luz acesa, e a posse caída é a
+        # luz apagada — e o `state_full` não pode mais dizer `eleito: …011` com
+        # `ativo: mic_de_um_terceiro` e o LED aceso ao mesmo tempo.
+        aceso = eleitor.eleito == uniq
     else:
+        # A LISTA DA ELEIÇÃO É CALCULADA AQUI, e não antes do `if` (auditoria
+        # de 02/09/2026). Ela era, e o ramo `mudo` não a usava mais desde que a
+        # recusa passou a perguntar a `recado_do_microfone.mesa_de_agora` —
+        # então todo toque de botão pagava DOIS `describe_controllers()`, com
+        # duas aquisições do `_io_lock`, para jogar o primeiro fora. É caminho
+        # de BORDA e não os 10 Hz, mas duas leituras do mesmo estado é o que
+        # este arquivo acabou de gastar uma cura inteira para deixar de fazer.
+        conectados = _uniqs_conectados(daemon)
         resultado = await daemon._run_blocking(
             eleitor.eleger_o_controle, uniq, conectados
         )
