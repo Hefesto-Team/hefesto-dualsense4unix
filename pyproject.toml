@@ -55,6 +55,26 @@ dev = [
     # portão que não roda no caminho do commit só avisa tarde.
     "PyYAML>=6.0",
     "types-PyYAML",
+    # DIVIDA-DO-PLAYWRIGHT-01 (03/09/2026) — paga, e a dívida tinha nome desde
+    # 29/08. DOIS PORTÕES o importam, `scripts/check_pecas_do_dualsense.py` e
+    # `scripts/check_cores_do_dualsense.py`, e ele não estava declarado em
+    # extra nenhum: vivia na bancada de quem escreveu, por instalação à mão.
+    # O efeito medido é sempre o mesmo — toda árvore nova criada com
+    # `pip install -e ".[dev,emulation,cosmic]"` NASCE com dois portões
+    # vermelhos, e quem chega perde a manhã descobrindo que não é culpa dele.
+    #
+    # Vive no `[dev]`, e não numa dependência de runtime, porque é ferramenta
+    # de PORTÃO — o produto não a importa em lugar nenhum. E o `[dev]` é o que
+    # o `install.sh` instala por padrão (BUG-INSTALL-VENV-NO-DEV-01), então a
+    # dívida se paga sozinha na próxima instalação; `--no-dev` continua sendo a
+    # saída para máquina enxuta.
+    #
+    # NÃO PRECISA DE `playwright install`, e isto é o que impede alguém de
+    # acrescentar um download de 300 MB ao instalador: os dois portões abrem o
+    # navegador do SISTEMA, com `executable_path="/usr/bin/google-chrome"`. O
+    # pacote pip sozinho basta — o que falta numa máquina sem Chrome é o
+    # Chrome, e isso está anotado no cabeçalho dos dois portões, não aqui.
+    "playwright>=1.62",
 ]
 emulation = [
     "python-uinput>=0.11",
