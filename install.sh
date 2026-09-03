@@ -9,6 +9,22 @@
 # Atalhos equivalentes: --flatpak, --appimage, --deb, --native.
 #
 # Flags:
+#   --dry-run, -n         ENSAIO. Imprime CADA mudança que este script faria —
+#                         arquivo por arquivo, unit por unit, pacote por pacote —
+#                         e NÃO ESCREVE NADA: nenhum arquivo copiado, nenhum
+#                         pacote instalado, nenhum serviço reiniciado, nenhum
+#                         módulo DKMS compilado, nenhum `localconfig.vdf` da
+#                         Steam tocado. Nem sequer pergunta a senha do sudo.
+#                         Existe porque este arquivo mexe em udev, DKMS,
+#                         systemd, no cmdline do kernel e nos arquivos da Steam
+#                         de quem instala, e ninguém tinha como VER antes.
+#                         O ensaio respeita todas as outras flags: o plano que
+#                         ele imprime é o plano DAQUELA linha de comando, nesta
+#                         máquina, agora.
+#                         SEM CREDENCIAL SUDO EM CACHE os passos de root
+#                         aparecem como "PULARIA (sudo)", porque é isso que
+#                         aconteceria de verdade. Para ver o plano inteiro:
+#                             sudo -v && ./install.sh --dry-run
 #   --format=FMT          escolhe o formato (native|flatpak|appimage|deb).
 #   --no-udev             pula udev rules (sudo) — útil em CI sem hardware.
 #                         POR DEFAULT, as regras canônicas + modules-load (uinput, uhid)
@@ -242,6 +258,12 @@ FORCE_XWAYLAND=0
 # nasce desligada; só vira default quando a medição do medir_w2_lps.sh provar.
 WIFI_POWERSAVE_OFF=0
 AUTO_YES=0
+# ENSAIO-DO-INSTALL-01 (03/09/2026). Pedido dela ao rever o instalador antes de
+# rodá-lo: *"antes revisa o install. não roda agora."* São 3.4 mil linhas que
+# mexem em udev, DKMS, systemd, no cmdline do kernel e nos arquivos da Steam
+# DELA, e até hoje não havia forma de ver o que fariam sem deixá-las fazer.
+# `--dry-run` é essa forma: imprime o plano e não escreve nada.
+DRY_RUN=0
 FORMAT=""
 
 for arg in "$@"; do
@@ -275,6 +297,7 @@ for arg in "$@"; do
         --appimage)           FORMAT="appimage" ;;
         --deb)                FORMAT="deb" ;;
         --yes|-y)             AUTO_YES=1 ;;
+        --dry-run|-n)         DRY_RUN=1 ;;
         -h|--help)
             # BUG-INSTALL-HELP-TRUNCADO-01 (29/07): era `sed -n '2,128p'` — uma
             # faixa FIXA que envelheceu junto com o cabeçalho. Quando o bloco de
@@ -325,9 +348,67 @@ ok()    { printf '      ok\n'; }
 warn()  { printf '      aviso: %s\n' "$*"; }
 die()   { printf '\nERRO: %s\n' "$*" >&2; exit 1; }
 
+# ---------------------------------------------------------------------------
+# ENSAIO-DO-INSTALL-01 — as três palavras do `--dry-run`
+# ---------------------------------------------------------------------------
+# A CONDIÇÃO É SEMPRE ESCRITA À MÃO nos passos, como
+# `[[ "${DRY_RUN:-0}" -eq 1 ]]`, e nunca como uma função `_ensaio`. A razão é
+# medida, não estética: dezenas de testes desta casa EXTRAEM um bloco deste
+# arquivo (do `step "N/11"` até a régua seguinte) e o EXECUTAM num bash com
+# preâmbulo mínimo — só `step`, `warn` e duas ou três variáveis. Um `_ensaio`
+# no meio do bloco viraria "command not found" ali dentro; o `${DRY_RUN:-0}`
+# resolve para 0 num shell que nunca ouviu falar da flag, o `else` roda o
+# código de sempre, e a régua continua medindo o que sempre mediu.
+#
+# Pela mesma razão as três funções abaixo SÓ são chamadas dentro do ramo do
+# ensaio: num bloco extraído elas nunca são alcançadas.
+_ENSAIO_MUDANCAS=0
+_ENSAIO_ROOT=0
+
+# Uma mudança que o install faria no HOME/na sessão de quem instala.
+_faria() {
+    _ENSAIO_MUDANCAS=$((_ENSAIO_MUDANCAS + 1))
+    printf '      FARIA        %s\n' "$*"
+}
+
+# Uma mudança que exige root — a que mais importa ver antes.
+_faria_root() {
+    _ENSAIO_MUDANCAS=$((_ENSAIO_MUDANCAS + 1))
+    _ENSAIO_ROOT=$((_ENSAIO_ROOT + 1))
+    printf '      FARIA (root) %s\n' "$*"
+}
+
+# O que o ensaio NÃO faria, e por quê — um passo pulado é informação tanto
+# quanto um passo aplicado (foi a lição do 3d sem `else`, em 06/08/2026).
+_nao_faria() { printf '      não faria:   %s\n' "$*"; }
+
+# O fecho do ensaio. Repete a promessa no FIM, e não só no começo: quem rola
+# quarenta passos de tela não se lembra do cabeçalho, e a pergunta que fica é
+# "isto já mexeu na minha máquina?".
+_ensaio_resumo() {
+    printf '\n'
+    printf '═════════════════════════════════════════════════════════════════\n'
+    printf ' FIM DO ENSAIO — NADA foi escrito, instalado, habilitado ou reiniciado\n'
+    printf '═════════════════════════════════════════════════════════════════\n'
+    printf ' %d mudanças planejadas, %d delas com root.\n' \
+        "${_ENSAIO_MUDANCAS}" "${_ENSAIO_ROOT}"
+    printf ' Para fazer de verdade, é a MESMA linha de comando sem o --dry-run.\n'
+    printf ' Para desfazer depois:  ./uninstall.sh\n'
+    printf '═════════════════════════════════════════════════════════════════\n\n'
+}
+
 ask_yn() {
     # ask_yn "pergunta" auto_yes_var [default=y] → seta $REPLY como "y" ou "n"
     local prompt="$1" auto="$2" default="${3:-y}"
+    # No ensaio nada é perguntado: uma pergunta é um passo que ESPERA, e quem
+    # roda `--dry-run` quer o plano, não uma conversa. Assumimos o mesmo default
+    # que o `--yes` assumiria e DIZEMOS o que assumimos — senão o plano seria o
+    # de uma resposta que ela não deu, sem nada na tela indicando isso.
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        REPLY="$default"
+        printf '      perguntaria: "%s" — no ensaio assumo "%s"\n' "${prompt}" "${default}"
+        return
+    fi
     if [[ "$auto" -eq 1 ]]; then
         REPLY="$default"; return
     fi
@@ -580,6 +661,14 @@ run_pkg() {
         for _parte in ${_nome}; do _nomes+=("${_parte}"); done
     done
     (( ${#_nomes[@]} )) || return 1
+    # O ensaio devolve 0 de propósito: o plano tem de mostrar o caminho em que a
+    # instalação DÁ CERTO, senão cada `run_pkg` falso arrastaria o resto do
+    # roteiro para o ramo de erro e o plano descreveria uma instalação que
+    # ninguém vai ter.
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria_root "instalar pacote(s) com ${_familia}: ${_nomes[*]}"
+        return 0
+    fi
     if ! command -v sudo >/dev/null 2>&1; then
         warn "sudo ausente — não consigo instalar ${_nomes[*]}"
         return 1
@@ -849,6 +938,17 @@ _garantir_deps_de_sistema() {
         fi
         # Reconfere pelo EFEITO: morre só quem continuou faltando. Um nome de
         # pacote errado nesta tabela não pode passar por instalado.
+        #
+        # NO ENSAIO A RECONFERÊNCIA NÃO VALE, e deixá-la valer seria o pior
+        # tipo de instrumento falso: nada foi instalado (é o ponto do ensaio),
+        # então TODA obrigatória ausente continuaria ausente e o `die` abaixo
+        # mataria o plano no meio — dizendo "faltam dependências obrigatórias"
+        # sobre um instalador que teria acabado de instalá-las.
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+            printf '      (ensaio: depois de instaladas, as obrigatórias seriam RECONFERIDAS pelo\n'
+            printf '       efeito — a biblioteca abre? o gdk-pixbuf lê SVG? — e o install morreria\n'
+            printf '       aqui se alguma continuasse faltando)\n'
+        else
         for _linha in "${_DEPS_DE_SISTEMA[@]}"; do
             IFS='|' read -r _canon _crit _checagem _razao <<< "${_linha}"
             [[ "${_crit}" == "obrigatoria" ]] || continue
@@ -859,6 +959,7 @@ _garantir_deps_de_sistema() {
             die "faltam dependências obrigatórias (${_ainda[*]}) — instale e reexecute ./install.sh"
         fi
         printf '      obrigatórias ok\n'
+        fi
     fi
 
     if (( ${#_import[@]} )); then
@@ -885,6 +986,10 @@ require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
 readonly CMDLINE_OWNERS_FILE="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
 _register_cmdline_owner() {
     local key="$1" value="$2" prev=""
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "gravar o dono do parâmetro de cmdline em ${CMDLINE_OWNERS_FILE}: ${key}=${value}"
+        return 0
+    fi
     mkdir -p "$(dirname "${CMDLINE_OWNERS_FILE}")"
     if [[ -f "${CMDLINE_OWNERS_FILE}" ]]; then
         prev="$(sed -n "s/^${key}=//p" "${CMDLINE_OWNERS_FILE}" | head -1)"
@@ -926,6 +1031,23 @@ _start_sudo_keepalive() {
 acquire_sudo() {
     [[ "${EUID:-$(id -u)}" -eq 0 ]] && return 0          # já é root
     command -v sudo >/dev/null 2>&1 || return 0          # sem sudo — cada passo avisa
+    # O ENSAIO NUNCA PEDE SENHA. Um modo que promete "não escrevo nada" e abre
+    # um prompt de senha já quebrou a promessa antes da primeira linha do plano.
+    # O preço é que os passos de root vão dizer "sudo recusado" — e é a verdade
+    # do que aconteceria agora, com esta sessão. Dizemos como ver o plano
+    # inteiro, em vez de fingir que ele existe.
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        if sudo -n true 2>/dev/null; then
+            printf '\n>>> ENSAIO: há credencial sudo em cache — o plano abaixo é o COMPLETO.\n'
+        else
+            printf '\n>>> ENSAIO: SEM credencial sudo em cache, e o ensaio não pede senha.\n'
+            printf '    Os passos que precisam de root aparecem abaixo como PULADOS — é o que\n'
+            printf '    aconteceria AGORA. Num install de verdade você digita a senha uma vez\n'
+            printf '    e eles acontecem. Para ver o plano inteiro, sem instalar nada:\n'
+            printf '        sudo -v && ./install.sh --dry-run\n'
+        fi
+        return 0
+    fi
     if sudo -n true 2>/dev/null; then                    # credencial já em cache
         _start_sudo_keepalive
         return 0
@@ -961,8 +1083,25 @@ trap _cleanup_sudo_keepalive EXIT
 # para run.sh). flatpak/appimage/deb reusam os build scripts e instalam o
 # pacote real. udev é sempre aplicado no host (o controle não funciona sem as
 # regras, em qualquer formato).
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    printf '\n'
+    printf '═════════════════════════════════════════════════════════════════\n'
+    printf ' ENSAIO (--dry-run) — NADA vai ser escrito, instalado ou reiniciado\n'
+    printf '═════════════════════════════════════════════════════════════════\n'
+    printf ' Cada linha "FARIA" abaixo é uma mudança que um install de verdade\n'
+    printf ' faria nesta máquina, com ESTA linha de comando. As marcadas (root)\n'
+    printf ' pedem senha. Nenhuma acontece agora.\n'
+    printf ' O plano depende das flags: rode com as mesmas que vai usar de verdade.\n'
+    printf '═════════════════════════════════════════════════════════════════\n'
+fi
+
 if [[ -z "${FORMAT}" ]]; then
-    if [[ "${AUTO_YES}" -eq 1 ]]; then
+    # O ensaio não pode PARAR num `read`: quem pede o plano quer o plano.
+    # Assumimos o mesmo default do menu (native) e dizemos que assumimos.
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        FORMAT="native"
+        printf '\n      perguntaria o formato (1-4) — no ensaio assumo "native" (o default do menu)\n'
+    elif [[ "${AUTO_YES}" -eq 1 ]]; then
         FORMAT="native"
     else
         printf '\nFormato de instalação:\n'
@@ -1018,8 +1157,146 @@ acquire_sudo
 # shellcheck source=scripts/lib/camada_de_maquina.sh
 source "${ROOT_DIR}/scripts/lib/camada_de_maquina.sh"
 
+# ---------------------------------------------------------------------------
+# O ENSAIO DAS CURAS DE HOST — o que cada `*_host` escreveria
+# ---------------------------------------------------------------------------
+# As onze curas moram na lib acima, e o ensaio NÃO PODE CHAMÁ-LAS: elas
+# escrevem em `/etc`, compilam módulo de kernel e sobem serviço de sistema.
+# Então elas são DESCRITAS aqui, e a descrição é uma cópia de conhecimento —
+# exatamente o tipo de coisa que envelhece calada.
+#
+# O QUE IMPEDE A DIVERGÊNCIA: `tests/unit/test_o_ensaio_do_install_nao_escreve.py`
+# lê cada caminho absoluto citado abaixo e exige que ele apareça no corpo da
+# função correspondente em `scripts/lib/camada_de_maquina.sh`. Alguém que mude o
+# alvo lá e esqueça daqui reprova, com o caminho na mensagem — é a mordida.
+_ensaio_camada() {
+    case "$1" in
+        udev)
+            _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh)"
+            ;;
+        osk)
+            _faria "instalar o teclado na tela do L3 pelo gerenciador de pacotes: wvkbd em Wayland, onboard em X11 (scripts/install_osk.sh)"
+            _faria "gravar o que aconteceu em ${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf"
+            ;;
+        broker)
+            _faria_root "instalar o broker em /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
+            _faria_root "instalar /etc/systemd/system/hefesto-hidraw-broker.service e .socket (renderizados com o seu uid e grupo)"
+            _faria_root "systemctl daemon-reload e enable --now hefesto-hidraw-broker.socket"
+            _faria "gravar o registro de posse em ${HOME}/.local/state/hefesto-dualsense4unix/broker-owner.conf"
+            ;;
+        bt-res)
+            _faria_root "instalar oito roteiros de Bluetooth em /usr/local/lib/hefesto-dualsense4unix/ (snapshot e restauro de bonds, watchdog, modo ativo)"
+            _faria_root "rodar bt_active_mode.sh AGORA (tira o Pro Controller do modo sniff — não reinicia o bluetoothd)"
+            _faria_root "instalar /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf (Restart + WatchdogSec=0 + snapshot na parada)"
+            _faria_root "instalar os timers hefesto-bt-bonds-snapshot e hefesto-bt-health-watchdog em /etc/systemd/system/ e habilitá-los"
+            _faria_root "criar /var/lib/hefesto-dualsense4unix/bt-bonds (modo 700) para os snapshots"
+            ;;
+        bt-agent)
+            _faria_root "instalar /etc/systemd/system/hefesto-bt-agent.service e habilitá-lo (agente de pareamento persistente; instala bluez-tools se faltar)"
+            ;;
+        bt-ponte)
+            _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
+            _faria_root "gravar /etc/sudoers.d/49-hefesto-bt-ponte (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
+            ;;
+        gabinete)
+            _faria_root "ler a tabela SMBIOS 8 com dmidecode (leitura pura, nada é escrito no firmware)"
+            _faria "gravar o censo em ${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
+            ;;
+        dkms-nintendo)
+            _faria_root "compilar e instalar o módulo DKMS hefesto-hid-nintendo (substitui o hid-nintendo in-tree por precedência; o in-tree NUNCA é removido)"
+            _faria_root "instalar /etc/modprobe.d/hefesto-hid-nintendo.conf (bt_probe_retries=3 + skip_tx_on_rate_exceeded=1)"
+            ;;
+        dkms-rtw88)
+            _faria_root "compilar e instalar o módulo DKMS hefesto-rtw88-usb (cura do fantasma USB do dongle WiFi; sem conf em /etc/modprobe.d)"
+            ;;
+        dkms-playstation)
+            _faria_root "compilar e instalar o módulo DKMS hefesto-hid-playstation (retry de feature report na contenção BT)"
+            _faria_root "instalar /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=2 + ds4_* do clone no cabo)"
+            ;;
+        initramfs)
+            _faria_root "regenerar o initramfs UMA vez, e só se algum módulo DKMS acima tiver mudado (update-initramfs)"
+            ;;
+    esac
+}
+
+# NO ENSAIO, AS ONZE CURAS VIRAM DESCRIÇÃO — e a troca é feita AQUI, num lugar
+# só, trocando o corpo das funções que a lib acabou de definir.
+#
+# POR QUE TROCAR O NOME, e não pôr um `if` em cada chamada: elas são VINTE, e
+# estão espalhadas pelos dois lados da cerca dos formatos. Bastaria alguém
+# acrescentar uma chamada nova sem o `if` para o ensaio ESCREVER no /etc de
+# quem só queria ver o plano — um modo que promete não tocar em nada e toca é o
+# instrumento falso mais caro que esta casa poderia produzir. Trocando o corpo,
+# nenhuma chamada escapa, nem a que ainda não existe.
+#
+# POR QUE PELO `eval`, E NÃO ESCREVENDO `nome_host() { … }` À MÃO: medido em
+# 03/09/2026, e é um defeito que este arquivo produziu e uma régua pegou. Seis
+# testes desta casa acham o CORPO de uma cura procurando o texto
+# `install_..._host() {` no `install.sh` — é assim que
+# `test_a_ponte_privilegiada_entra_e_sai_do_install` confere que a regra do
+# sudoers passa pelo `visudo` antes de ser gravada. Um segundo `nome_host() {`
+# escrito aqui vira o corpo que essas réguas leem, e elas passam a medir a
+# descrição do ensaio em vez da cura: as seis reprovaram de uma vez, dizendo
+# que o install tinha parado de conferir o sudoers. Não tinha. A régua estava
+# certa e o texto é que ficou ambíguo.
+#
+# Com a tabela abaixo, o `install.sh` não contém nenhuma linha que se pareça
+# com a definição de uma cura, e o efeito em tempo de execução é idêntico.
+# Quem guarda a tabela é `tests/unit/test_o_ensaio_do_install_nao_escreve.py`:
+# ela tem de cobrir TODA função `*_host` da lib, inclusive a de amanhã.
+_ENSAIO_CURAS_DE_HOST=(
+    "install_udev_host:udev"
+    "install_osk_host:osk"
+    "install_broker_host:broker"
+    "install_bt_resilience_host:bt-res"
+    "install_bt_agent_host:bt-agent"
+    "install_bt_ponte_privilegiada_host:bt-ponte"
+    "install_censo_do_gabinete_host:gabinete"
+    "install_dkms_hid_nintendo_host:dkms-nintendo"
+    "install_dkms_rtw88_usb_host:dkms-rtw88"
+    "install_dkms_hid_playstation_host:dkms-playstation"
+    "flush_initramfs_host:initramfs"
+)
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    for _ensaio_par in "${_ENSAIO_CURAS_DE_HOST[@]}"; do
+        eval "${_ensaio_par%%:*}() { _ensaio_camada ${_ensaio_par##*:}; }"
+    done
+    unset _ensaio_par
+fi
+
+# Os OUTROS roteiros de `scripts/` que o install executa, descritos uma vez só —
+# os dois lados da cerca chamam os mesmos, e uma descrição por lado divergiria.
+# Mesma guarda do `_ensaio_camada`: o teste confere cada caminho absoluto daqui
+# contra o roteiro que o escreve.
+_ensaio_snd_quirk() {
+    _faria_root "gravar /etc/modprobe.d/hefesto-dualsense-storm.conf (quirk_flags do snd_usb_audio — cura do storm -71 preservando mic e fone)"
+    _faria_root "ativar o quirk a quente em /sys/module/snd_usb_audio/parameters/quirk_flags (sem reboot; sem isto, vale no próximo boot)"
+}
+_ensaio_wireplumber() {
+    case "$1" in
+        nunca-dorme)
+            _faria "instalar o drop-in 54-hefesto-dualsense-alto-falante-nunca-dorme.conf em ${HOME}/.config/wireplumber/wireplumber.conf.d/"
+            ;;
+        install)
+            _faria "instalar o drop-in 51-hefesto-dualsense-no-default-source.conf em ${HOME}/.config/wireplumber/wireplumber.conf.d/ (rebaixa o microfone do controle)"
+            _faria "eleger outra fonte de captura como padrão do sistema, se houver uma de verdade"
+            ;;
+        disable-source)
+            _faria "instalar os drop-ins 52- e 53- em ${HOME}/.config/wireplumber/wireplumber.conf.d/ (desabilitam a entrada e a saída do controle — ele vira só-HID)"
+            ;;
+        marcar-gesto)
+            _faria "gravar a marca do gesto em ${HOME}/.local/state/hefesto-dualsense4unix/mic-do-dualsense-pedido.conf"
+            ;;
+    esac
+}
+
 format_flatpak() {
     step "flatpak" "build + flatpak install --user (GNOME//47)"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "rodar scripts/build_flatpak.sh --install (compila o bundle e o instala com flatpak --user)"
+        _faria_root "aplicar as regras udev no host (scripts/install_udev.sh)"
+        return 0
+    fi
     require flatpak
     command -v flatpak-builder >/dev/null 2>&1 \
         || die "flatpak-builder ausente. Instale: sudo apt install flatpak-builder (ou flatpak install flathub org.flatpak.Builder)"
@@ -1031,6 +1308,15 @@ format_flatpak() {
 
 format_appimage() {
     step "appimage" "build do .AppImage GUI + atalho"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "rodar scripts/build_appimage_gui.sh (constrói o .AppImage em dist/appimage/)"
+        _faria "copiar o .AppImage para ${BIN_DIR}/Hefesto-Dualsense4Unix.AppImage"
+        _faria "copiar o ícone para ${ICON_TARGET}"
+        _faria "escrever o atalho ${DESKTOP_TARGET}"
+        _faria_root "aplicar as regras udev no host (scripts/install_udev.sh)"
+        _faria "instalar os perfis de fábrica (scripts/install_profiles.sh)"
+        return 0
+    fi
     bash "${ROOT_DIR}/scripts/build_appimage_gui.sh" \
         || die "build_appimage_gui.sh falhou (veja pré-requisitos no cabeçalho do script)"
     local appimage
@@ -1065,6 +1351,11 @@ DESKTOP
 
 format_deb() {
     step "deb" "build do .deb + sudo apt install"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "rodar scripts/build_deb.sh (constrói o pacote em dist/)"
+        _faria_root "instalar o .deb com apt-get install (o postinst dele aplica udev e o .desktop)"
+        return 0
+    fi
     bash "${ROOT_DIR}/scripts/build_deb.sh" \
         || die "build_deb.sh falhou"
     local deb
@@ -1234,7 +1525,9 @@ if [[ "${FORMAT}" != "native" ]]; then
     # mic+fone. --no-snd-quirk pula.
     if [[ "${SKIP_SND_QUIRK}" -eq 0 ]]; then
         step "cura" "cura de raiz do storm (snd_usb_audio quirk — preserva mic+fone)"
-        if bash "${ROOT_DIR}/scripts/install_snd_quirk.sh"; then
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _ensaio_snd_quirk
+        elif bash "${ROOT_DIR}/scripts/install_snd_quirk.sh"; then
             # A ATIVAÇÃO A QUENTE É CONFERIDA, e não declarada: ela estava num
             # `|| true` e a linha seguinte anunciava "instalada E ATIVADA" sem
             # ter olhado. Instalar é gravar o `.conf` (vale no próximo boot);
@@ -1334,12 +1627,20 @@ if [[ "${FORMAT}" != "native" ]]; then
     # (`--keep-dualsense-mic`, `--with-wireplumber-disable-mic`) diz nada sobre o
     # sono do ALTO-FALANTE, então nenhuma delas pode decidir isto.
     step "som" "áudio: o alto-falante do controle nunca dorme (SOM-QUE-NAO-DORME-01)"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _ensaio_wireplumber nunca-dorme
+    else
     bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --nunca-dorme \
         || warn "nunca-dorme falhou — rode: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme"
+    fi
     if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
         step "mic" "áudio: desabilitar o microfone do DualSense (--with-wireplumber-disable-mic)"
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _ensaio_wireplumber disable-source
+        else
         bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source \
             || warn "disable-source falhou — rode: bash scripts/fix_wireplumber_default_source.sh --disable-source"
+        fi
     elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
         step "mic" "áudio: a voz do controle acima do eco da saída (MIC-EM-TODO-FORMATO-01)"
         # O `-ne 1` e não o `||`: rc 2 (o DualSense é a única fonte) e rc 3 (a
@@ -1347,10 +1648,16 @@ if [[ "${FORMAT}" != "native" ]]; then
         # estado da máquina, e o script já os explica na tela. Tratá-los como
         # falha mandaria ela rodar de novo um comando que faria exatamente o
         # mesmo, que é o laço que 01/09 curou.
-        if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; rc=$?; \
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _ensaio_wireplumber install
+        elif bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; rc=$?; \
            [[ "${rc:-0}" -eq 1 ]]; then
             warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
         fi
+    fi
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _ensaio_resumo
+        exit 0
     fi
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
@@ -1375,6 +1682,19 @@ ok
 # upgrade major) podem causar imports stale ou metadata divergente.
 # Always clean caches; venv é tratado dentro do passo 2/7 conforme o
 # Python que criou.
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    # O ensaio nomeia os diretórios que EXISTEM: "apagaria dist/" só interessa
+    # a quem tem um `dist/` com um pacote recém-construído dentro.
+    _ensaio_caches=()
+    for cache in .pytest_cache .ruff_cache .mypy_cache flatpak-build-dir .flatpak-builder dist build; do
+        [[ -d "${ROOT_DIR}/${cache}" ]] && _ensaio_caches+=("${cache}")
+    done
+    if (( ${#_ensaio_caches[@]} )); then
+        _faria "apagar da árvore do projeto: ${_ensaio_caches[*]} (caches de build; nada de configuração sua)"
+    fi
+    _faria "apagar os __pycache__ e os .pyc da árvore, fora de .git e de .venv"
+    unset _ensaio_caches
+else
 for cache in .pytest_cache .ruff_cache .mypy_cache flatpak-build-dir .flatpak-builder dist build; do
     if [[ -d "${ROOT_DIR}/${cache}" ]]; then
         rm -rf "${ROOT_DIR}/${cache}"
@@ -1388,6 +1708,7 @@ find "${ROOT_DIR}" -type f -name "*.pyc" \
     -not -path "*/\.git/*" \
     -not -path "*/\.venv/*" \
     -delete 2>/dev/null || true
+fi
 
 # ---------------------------------------------------------------------------
 # 2. venv + GTK3 + pacote Python
@@ -1407,7 +1728,11 @@ if [[ -d "${VENV_DIR}" ]]; then
     _venv_home=$(grep "^home = " "${VENV_DIR}/pyvenv.cfg" 2>/dev/null | awk '{print $3}')
     if [[ -n "${_venv_home}" ]] && [[ "${_venv_home}" != "/usr/bin" ]] && [[ -x /usr/bin/python3 ]]; then
         printf '      venv criado com Python não-sistema (%s) — recriando...\n' "${_venv_home}"
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "APAGAR e recriar ${VENV_DIR} (o venv de hoje foi criado com um Python que não é o do sistema)"
+        else
         rm -rf "${VENV_DIR}"
+        fi
     fi
 fi
 
@@ -1422,15 +1747,25 @@ if [[ -d "${VENV_DIR}" ]]; then
     _venv_ver=$("${VENV_DIR}/bin/python" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null)
     if [[ -z "${_venv_ver}" ]]; then
         printf '      venv com Python inexecutável (provável dist upgrade) — recriando...\n'
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "APAGAR e recriar ${VENV_DIR} (o Python dele não executa — provável dist upgrade)"
+        else
         rm -rf "${VENV_DIR}"
+        fi
     elif [[ -n "${_sys_ver}" ]] && [[ "${_venv_ver}" != "${_sys_ver}" ]]; then
         printf '      venv em Python %s, sistema agora em %s — recriando...\n' \
             "${_venv_ver}" "${_sys_ver}"
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "APAGAR e recriar ${VENV_DIR} (Python ${_venv_ver} no venv, ${_sys_ver} no sistema)"
+        else
         rm -rf "${VENV_DIR}"
+        fi
     fi
 fi
 
-if [[ ! -d "${VENV_DIR}" ]]; then
+if [[ "${DRY_RUN:-0}" -eq 1 ]] && [[ ! -d "${VENV_DIR}" ]]; then
+    _faria "criar o venv em ${VENV_DIR} com ${_VENV_PYTHON} (--system-site-packages, para enxergar o PyGObject do sistema)"
+elif [[ ! -d "${VENV_DIR}" ]]; then
     printf '      criando venv...\n'
     # DEPS-UNIVERSAIS-01: o `2>/dev/null` sem checagem de retorno escondia o
     # caso mais banal de máquina Debian limpa — `python3-venv` não instalado.
@@ -1514,8 +1849,10 @@ fi
 unset _btmic_faltando
 
 printf '      instalando pacote Python...\n'
+if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
 "${VENV_DIR}/bin/python" -m pip install \
     --quiet --disable-pip-version-check --upgrade pip packaging 2>/dev/null
+fi
 
 # Extras instalados sempre: emulation (uinput) + cosmic (jeepney para portal Wayland).
 # `jeepney` é puro Python, sem deps nativas; vale habilitar mesmo em DE não-Wayland
@@ -1529,7 +1866,10 @@ printf '      instalando pacote Python...\n'
 # só o essencial e avisa, em vez de abortar o install inteiro.
 _extras="emulation,cosmic"
 [[ "${NO_DEV}" -eq 0 ]] && _extras="${_extras},dev"
-if ! "${VENV_DIR}/bin/pip" install \
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "atualizar pip e packaging dentro de ${VENV_DIR}"
+    _faria "instalar o pacote em modo editável no venv: pip install -e '${ROOT_DIR}[${_extras}]'"
+elif ! "${VENV_DIR}/bin/pip" install \
         --quiet --disable-pip-version-check -e "${ROOT_DIR}[${_extras}]" 2>/dev/null; then
     if [[ "${NO_DEV}" -eq 0 ]]; then
         warn "pip install com [dev] falhou — tentando só o essencial (ruff/mypy/pytest ficam de fora)"
@@ -1603,7 +1943,10 @@ else
     # funciona de verdade.
     printf '      (75 áudio-off é opt-in: sudo bash scripts/install_udev.sh --disable-usb-audio)\n'
 
-    if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _ensaio_camada udev
+        _faria_root "gravar /etc/modules-load.d/ para o uinput e o uhid subirem no boot, e recarregar o udev"
+    elif bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
         printf '      regras aplicadas + udev recarregado + uinput carregado\n'
     else
         warn "install_udev.sh falhou — rode manualmente: sudo bash scripts/install_udev.sh"
@@ -1616,9 +1959,13 @@ else
     if command -v flatpak >/dev/null 2>&1 \
        && flatpak info io.github.hefesto_team.hefesto_dualsense4unix >/dev/null 2>&1; then
         printf '      Flatpak Hefesto detectado — sincronizando regras via bundle\n'
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria_root "repassar as regras udev pelo bundle Flatpak (flatpak run --command=install-host-udev.sh) — no-op se já estiverem lá"
+        else
         flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix \
             >/dev/null 2>&1 \
             || warn "flatpak install-host-udev.sh falhou (regras já vieram via install_udev.sh)"
+        fi
     fi
 fi
 
@@ -1634,7 +1981,9 @@ fi
 # Idempotente (o script não duplica token). FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
 if [[ "${WITH_USB_QUIRK}" -eq 1 ]]; then
     step "3b" "quirk de boot usbcore.quirks (preserva o áudio do DualSense)"
-    if bash "${ROOT_DIR}/scripts/install_usb_quirk.sh"; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria_root "acrescentar usbcore.quirks=054c:0ce6:gn,054c:0df2:gn ao cmdline do kernel (kernelstub ou grub) — vale no PRÓXIMO boot"
+    elif bash "${ROOT_DIR}/scripts/install_usb_quirk.sh"; then
         printf '      quirk aplicado (vale no próximo boot) — confira: scripts/install_usb_quirk.sh --status\n'
     else
         warn "install_usb_quirk.sh falhou — rode: sudo bash scripts/install_usb_quirk.sh"
@@ -1654,7 +2003,9 @@ fi
 if [[ "${SKIP_SND_QUIRK}" -eq 0 && "${SKIP_UDEV}" -eq 0 ]]; then
     step "3c" "cura de raiz do storm (snd_usb_audio quirk — preserva mic+fone)"
     SND_QUIRK_CONF="/etc/modprobe.d/hefesto-dualsense-storm.conf"
-    if bash "${ROOT_DIR}/scripts/install_snd_quirk.sh"; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _ensaio_snd_quirk
+    elif bash "${ROOT_DIR}/scripts/install_snd_quirk.sh"; then
         bash "${ROOT_DIR}/scripts/install_snd_quirk.sh" --runtime >/dev/null 2>&1 || true
     else
         warn "install_snd_quirk.sh retornou erro — rode: sudo bash scripts/install_snd_quirk.sh"
@@ -1663,7 +2014,10 @@ if [[ "${SKIP_SND_QUIRK}" -eq 0 && "${SKIP_UDEV}" -eq 0 ]]; then
     # cacheado (install não-interativo), o `as_root install` interno falhava e o
     # passo seguia como se tivesse aplicado — deixando só o runtime, que some no
     # reboot. Agora avisamos explicitamente se o .conf não existe.
-    if [[ -f "${SND_QUIRK_CONF}" ]]; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        : # o ensaio não gravou nada; conferir a existência do .conf aqui só
+          # produziria um "cura NÃO persistiu" sobre uma cura que ninguém tentou
+    elif [[ -f "${SND_QUIRK_CONF}" ]]; then
         printf '      cura persistente OK em %s + ativada (replug do controle p/ valer já)\n' "${SND_QUIRK_CONF}"
     else
         warn "cura NÃO persistiu — ${SND_QUIRK_CONF} ausente (sudo recusado?)"
@@ -1755,7 +2109,11 @@ if [[ "${SKIP_UDEV}" -eq 1 ]]; then
     unset _bt_estado
 elif command -v sudo >/dev/null 2>&1; then
     step "3d" "Bluetooth no máximo (btusb sem autosuspend + reconexão rápida)"
-    if ! sudo -n true 2>/dev/null; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria_root "gravar /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf (o adaptador Bluetooth nunca dorme)"
+        _faria_root "zerar /sys/module/btusb/parameters/enable_autosuspend agora (a quente, sem reboot)"
+        _faria_root "normalizar /etc/bluetooth/main.conf: FastConnectable ligado e JustWorksRepairing=confirm (backup ao lado; o bluetoothd NÃO é reiniciado)"
+    elif ! sudo -n true 2>/dev/null; then
         warn "sudo recusado — passos de BT no máximo pulados (re-execute ./install.sh)"
     else
         # btusb: conf persistente + runtime p/ probes futuros (best-effort).
@@ -1819,7 +2177,13 @@ fi
 # "se instalado, some") ou sudo rm do conf. doctor.sh reporta o estado.
 if [[ "${WIFI_POWERSAVE_OFF}" -eq 1 ]]; then
     step "3d-bis" "powersave do WiFi OFF (conf.d do NetworkManager — opt-in W2)"
-    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+            _nao_faria "nada aqui: --no-udev pula os passos que tocam /etc"
+        else
+            _faria_root "gravar /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf (wifi.powersave=2) — vale na próxima reconexão; nada é tocado no rádio agora"
+        fi
+    elif [[ "${SKIP_UDEV}" -eq 1 ]]; then
         warn "--no-udev ativo — passo de /etc pulado (rode sem --no-udev para aplicar)"
     elif ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
         warn "sudo indisponível/recusado — conf de powersave NÃO instalado; re-execute:"
@@ -1911,14 +2275,41 @@ PYEOF
             case "${_op}" in
                 none)
                     _register_cmdline_owner "cmdline.${_param}" "${_owner}"
+                    # O `sed` LÊ o arquivo que a linha de cima acabou de
+                    # escrever. No ensaio ninguém o escreveu (é o ponto do
+                    # ensaio), e ler um arquivo inexistente cuspia um erro do
+                    # `sed` no meio do plano e imprimia "dono registrado: "
+                    # vazio — dois defeitos de tela criados pelo próprio modo
+                    # que existe para não criar nada.
+                    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+                        printf '      %s: já garantido nesta máquina (dono que eu registraria: %s) — não toco no cmdline\n' \
+                            "${_param}" "${_owner}"
+                    else
                     printf '      %s: já garantido (dono registrado: %s) — não toco\n' \
                         "${_param}" \
                         "$(sed -n "s/^cmdline.${_param}=//p" "${CMDLINE_OWNERS_FILE}" | head -1)"
+                    fi
                     ;;
                 add|replace)
                     if [[ "${_cmdline_backend}" != "kernelstub" ]]; then
                         warn "${_param}: bootloader é grub — aplique manualmente em GRUB_CMDLINE_LINUX_DEFAULT: ${_token}"
                         [[ -n "${_removes}" ]] && warn "  (removendo antes o(s) token(s): ${_removes} — o kernel respeita SÓ UM usbcore.quirks=)"
+                        continue
+                    fi
+                    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+                        # O PLANO DO CMDLINE JÁ FOI CALCULADO ACIMA, e sem
+                        # escrever nada: quem decide é o módulo puro
+                        # `integrations/kernel_cmdline.py`, lendo o bootloader.
+                        # Então este é o passo em que o ensaio mostra o TOKEN
+                        # EXATO que entraria na linha de comando do kernel dela.
+                        # `if`, e não `[[ ]] && cmd`: com `_removes` vazio a
+                        # lista devolveria 1 e o `set -e` mataria o ensaio aqui.
+                        # É a armadilha que o passo 11c já documenta neste
+                        # arquivo, e ela pega igual dentro do ensaio.
+                        if [[ -n "${_removes}" ]]; then
+                            _faria_root "tirar do cmdline do kernel, antes de fundir (o kernel respeita SÓ UM usbcore.quirks=): ${_removes}"
+                        fi
+                        _faria_root "pôr no cmdline do kernel (kernelstub): ${_token} — vale no PRÓXIMO boot"
                         continue
                     fi
                     if ! sudo -n true 2>/dev/null; then
@@ -2089,7 +2480,10 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                     printf '          no DualSense). É a ÚNICA exceção à regra de nunca reiniciar o\n'
                     printf '          serviço: quem reinicia é o postinst do PRÓPRIO pacote bluez.\n\n'
                     ask_yn "aplicar o backport agora?" "${AUTO_YES}" "y"
-                    if [[ "${REPLY,,}" =~ ^y ]]; then
+                    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+                        _faria "gravar ${_bz_dir}/VERSOES-ANTERIORES.txt (o manifesto que o uninstall usa para devolver o BlueZ de origem)"
+                        _faria_root "instalar os .debs do backport do BlueZ (libbluetooth3, bluez, bluez-cups) — o postinst do PRÓPRIO pacote REINICIA o bluetoothd e a migração DESCARTA os bonds atuais"
+                    elif [[ "${REPLY,,}" =~ ^y ]]; then
                         # (b) grava a versão anterior ANTES de trocar, SE ainda não
                         # registrada (idempotente — não sobrescreve um registro que
                         # já exista de uma execução anterior do install).
@@ -2258,8 +2652,23 @@ ICON_HICOLOR_BASE="${HOME}/.local/share/icons/hicolor"
 ICON_SIZES="16 22 24 32 48 64 96 128 192 256 512"
 
 # Sempre garante o 256x256 PNG (path legacy)
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "copiar o ícone para ${ICON_TARGET}"
+    if command -v convert >/dev/null 2>&1; then
+        _faria "gerar o ícone em ${ICON_SIZES} px sob ${ICON_HICOLOR_BASE}/, e o pixmap legado em ${HOME}/.local/share/pixmaps/"
+        _faria "apagar ${ICON_HICOLOR_BASE}/scalable/apps/${APP_ID}.svg, se houver (o SVG placeholder de instalações antigas — o simbólico, que tem outro nome, NÃO é tocado)"
+    else
+        _nao_faria "gerar os tamanhos menores do ícone: falta o ImageMagick (convert) nesta máquina"
+    fi
+else
 mkdir -p "${ICON_TARGET_DIR}"
-cp -f "${ICON_SRC}" "${ICON_TARGET}"
+# O `cp` ERA NU, e o próprio comentário acima conta que este caminho já esteve
+# quebrado uma vez (o `ICON_SRC` apontava para um PNG que não existia na
+# árvore). Com o arquivo ausente o `cp` sai 1 e o `set -e` mata a instalação no
+# passo 4 — depois do udev, do DKMS e do broker, e ANTES do daemon, da Steam e
+# da conferência. Ícone é acabamento: ele avisa e o resto continua.
+cp -f "${ICON_SRC}" "${ICON_TARGET}" \
+    || warn "ícone não copiado (${ICON_SRC} ausente?) — o menu pode mostrar um ícone genérico"
 mkdir -p "$(dirname "${DESKTOP_TARGET}")"
 
 if command -v convert >/dev/null 2>&1; then
@@ -2287,6 +2696,7 @@ else
     printf '      aviso: ImageMagick (convert) ausente — so 256x256 PNG\n'
     printf '             instale: sudo apt install imagemagick\n'
 fi
+fi
 
 # ICONE SIMBOLICO DA BANDEJA — APPLET-MONOCROMATICO-01 (07/08/2026)
 # ------------------------------------------------------------------
@@ -2311,7 +2721,9 @@ fi
 # ele existir, para o joystick genérico `input-gaming`.
 ICON_SIMBOLICO_SRC="${ROOT_DIR}/assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
 ICON_SIMBOLICO_DIR="${ICON_HICOLOR_BASE}/symbolic/apps"
-if [[ -r "${ICON_SIMBOLICO_SRC}" ]]; then
+if [[ "${DRY_RUN:-0}" -eq 1 && -r "${ICON_SIMBOLICO_SRC}" ]]; then
+    _faria "copiar o ícone simbólico da bandeja para ${ICON_SIMBOLICO_DIR}/${APP_ID}-symbolic.svg"
+elif [[ -r "${ICON_SIMBOLICO_SRC}" ]]; then
     mkdir -p "${ICON_SIMBOLICO_DIR}"
     cp -f "${ICON_SIMBOLICO_SRC}" "${ICON_SIMBOLICO_DIR}/${APP_ID}-symbolic.svg"
     printf '      ícone simbólico da bandeja instalado (%s-symbolic.svg)\n' "${APP_ID}"
@@ -2403,7 +2815,11 @@ fi
 # havia um `.desktop` inteiro escrito à mão neste script, e ele já divergiu do
 # versionado — foi assim que o `GenericName` existiu num e não no outro.
 _DESKTOP_FONTE="${ROOT_DIR}/packaging/${APP_ID}.desktop"
-if [[ -r "${_DESKTOP_FONTE}" ]]; then
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "escrever o atalho ${DESKTOP_TARGET} com Exec=${_EXEC_LINE}"
+    _faria "escrever o lançador ${LAUNCHER} (abre a interface desprendida do terminal)"
+    _faria "atualizar o cache de ícones e o banco de atalhos do sistema (gtk-update-icon-cache, update-desktop-database)"
+elif [[ -r "${_DESKTOP_FONTE}" ]]; then
     sed -e "s|@RAIZ@|${ROOT_DIR}|g" \
         -e "s|^Exec=.*|Exec=${_EXEC_LINE}|" \
         "${_DESKTOP_FONTE}" > "${DESKTOP_TARGET}"
@@ -2424,6 +2840,7 @@ StartupWMClass=Hefesto-Dualsense4Unix
 DESKTOP
 fi
 
+if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
 command -v desktop-file-validate >/dev/null 2>&1 \
     && desktop-file-validate "${DESKTOP_TARGET}" >/dev/null 2>&1 || true
 command -v gtk-update-icon-cache >/dev/null 2>&1 \
@@ -2442,6 +2859,7 @@ setsid nohup "${ROOT_DIR}/interface.sh" "\$@" </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 LAUNCH
 chmod +x "${LAUNCHER}"
+fi
 ok
 
 # ---------------------------------------------------------------------------
@@ -2450,9 +2868,17 @@ ok
 readonly GLYPHS_SRC="${ROOT_DIR}/assets/glyphs"
 readonly GLYPHS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/glyphs"
 
-if [[ -d "${GLYPHS_SRC}" ]]; then
+if [[ "${DRY_RUN:-0}" -eq 1 && -d "${GLYPHS_SRC}" ]]; then
+    _faria "copiar os glifos dos botões (assets/glyphs/*.svg) para ${GLYPHS_TARGET}/"
+elif [[ -d "${GLYPHS_SRC}" ]]; then
     mkdir -p "${GLYPHS_TARGET}"
-    cp -f "${GLYPHS_SRC}"/*.svg "${GLYPHS_TARGET}/"
+    # O `|| true` não é descuido: um `assets/glyphs/` sem nenhum `.svg` faz o
+    # glob não casar, o `cp` sair 1 e o `set -e` matar a instalação AQUI —
+    # depois do udev, do DKMS e do broker, e antes do daemon. Glifo é
+    # acabamento; derrubar o install por causa dele trocaria um problema
+    # cosmético por um real (a mesma disciplina do bloco das fontes, no 4e).
+    cp -f "${GLYPHS_SRC}"/*.svg "${GLYPHS_TARGET}/" 2>/dev/null || \
+        warn "nenhum glifo copiado de ${GLYPHS_SRC} — a interface cai no desenho embutido"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2465,7 +2891,9 @@ fi
 # sem sudo e simétrico no uninstall (que limpa o vdf ANTES de apagar isto).
 readonly LAUNCH_WRAPPER_SRC="${ROOT_DIR}/assets/hefesto-launch.sh"
 readonly LAUNCH_WRAPPER_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-launch"
-if [[ -f "${LAUNCH_WRAPPER_SRC}" ]]; then
+if [[ "${DRY_RUN:-0}" -eq 1 && -f "${LAUNCH_WRAPPER_SRC}" ]]; then
+    _faria "instalar o wrapper de launch da Steam em ${LAUNCH_WRAPPER_TARGET}"
+elif [[ -f "${LAUNCH_WRAPPER_SRC}" ]]; then
     install -Dm755 "${LAUNCH_WRAPPER_SRC}" "${LAUNCH_WRAPPER_TARGET}"
     # Diretório da materialização (o daemon regrava a cada transição; criar
     # aqui garante que o wrapper nunca falha por diretório ausente).
@@ -2488,7 +2916,9 @@ fi
 # o python3 do SISTEMA, sem o pacote no `sys.path`. Reinstalar atualiza a cópia.
 readonly CAMADAS_SRC="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
 readonly CAMADAS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas"
-if [[ -f "${CAMADAS_SRC}" ]]; then
+if [[ "${DRY_RUN:-0}" -eq 1 && -f "${CAMADAS_SRC}" ]]; then
+    _faria "instalar o curador de camadas Vulkan em ${CAMADAS_TARGET}"
+elif [[ -f "${CAMADAS_SRC}" ]]; then
     install -Dm755 "${CAMADAS_SRC}" "${CAMADAS_TARGET}"
 else
     warn "camadas_vulkan.py ausente — cura do engasgo por camada Vulkan não instalada"
@@ -2497,8 +2927,23 @@ fi
 # ---------------------------------------------------------------------------
 # 4c. Perfis default (primeira instalação copia; reinstalação preserva)
 # ---------------------------------------------------------------------------
-if [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
-    bash "${ROOT_DIR}/scripts/install_profiles.sh" "${ROOT_DIR}"
+if [[ "${DRY_RUN:-0}" -eq 1 && -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
+    _faria "instalar os perfis de fábrica em ${HOME}/.config/hefesto-dualsense4unix/profiles/ (scripts/install_profiles.sh — os SEUS perfis são preservados)"
+elif [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
+    # A CHAMADA ERA NUA, e este passo é o 4c de quarenta e poucos. O
+    # `install_profiles.sh` tem `set -euo pipefail` e um `exit 1` explícito
+    # quando `assets/profiles_default/` não existe — então uma árvore
+    # incompleta matava o instalador AQUI, levando junto o daemon (6 e 7a), o
+    # kernel-watch (7b), o applet (9), o áudio (10), TODOS os passos da Steam
+    # (11 a 11c) e a conferência final. É o mesmo estrago do
+    # BUG-INSTALL-READONLY-USER-UNIT-DIR-01, por outra porta.
+    #
+    # Perfil de fábrica é acabamento: sem ele o produto abre e a pessoa cria os
+    # próprios. Derrubar a instalação por causa disso troca um problema pequeno
+    # por um grande — a disciplina que os vizinhos 4e (fontes) e 4f (teclado)
+    # já seguem.
+    bash "${ROOT_DIR}/scripts/install_profiles.sh" "${ROOT_DIR}" \
+        || warn "perfis de fábrica não instalados — rode: bash scripts/install_profiles.sh"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2509,7 +2954,9 @@ fi
 # pulamos silenciosamente e o gettext faz fallback para PT-BR hardcoded.
 readonly LOCALE_SRC="${ROOT_DIR}/locale"
 readonly LOCALE_TARGET="${HOME}/.local/share/locale"
-if [[ -d "${LOCALE_SRC}" ]]; then
+if [[ "${DRY_RUN:-0}" -eq 1 && -d "${LOCALE_SRC}" ]]; then
+    _faria "copiar os catálogos de tradução (.mo) de locale/ para ${LOCALE_TARGET}/"
+elif [[ -d "${LOCALE_SRC}" ]]; then
     for lang_dir in "${LOCALE_SRC}"/*/; do
         [[ -d "${lang_dir}" ]] || continue
         lang="$(basename "${lang_dir}")"
@@ -2539,7 +2986,13 @@ fi
 # trocaria um problema cosmético por um problema real. `--yes` só quando ela já
 # disse sim a tudo; nunca forçamos `--no-download` aqui (o download é pinado num
 # commit e conferido por SHA-256, e é o único caminho em distro sem o pacote).
-if [[ "${NO_FONTS}" -eq 1 ]]; then
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    if [[ "${NO_FONTS}" -eq 1 ]]; then
+        _nao_faria "instalar as fontes da identidade visual (--no-fonts) — a interface usa o fallback do CSS"
+    else
+        _faria "instalar as fontes Space Grotesk e JetBrains Mono (pacote da distro primeiro; só se não houver, download PINADO e conferido por SHA-256) — scripts/install_fonts.sh"
+    fi
+elif [[ "${NO_FONTS}" -eq 1 ]]; then
     printf '      fontes: pulado (--no-fonts) — a interface usa o fallback do CSS\n'
 elif [[ ! -r "${ROOT_DIR}/scripts/install_fonts.sh" ]]; then
     warn "scripts/install_fonts.sh ausente — fontes da identidade visual puladas"
@@ -2581,6 +3034,11 @@ install_osk_host
 # 5. Symlink ~/.local/bin/hefesto-dualsense4unix
 # ---------------------------------------------------------------------------
 step "5/11" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "criar o link ${BIN_DIR}/hefesto-dualsense4unix -> ${VENV_DIR}/bin/hefesto-dualsense4unix"
+    _faria "criar o link ${BIN_DIR}/hefesto-launch -> ${LAUNCH_WRAPPER_TARGET}"
+    _faria "copiar a chave de desligar tudo para ${BIN_DIR}/hefesto-chave"
+else
 ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4unix"
 # PATH-06: o wrapper de launch também entra no PATH — `which hefesto-launch`
 # passa a funcionar e a Launch Option pode ser digitada à mão como
@@ -2601,6 +3059,7 @@ fi
 # mesmo que a árvore de desenvolvimento saia do disco.
 if [[ -f "${ROOT_DIR}/scripts/hefesto-chave.sh" ]]; then
     install -m 755 "${ROOT_DIR}/scripts/hefesto-chave.sh" "${BIN_DIR}/hefesto-chave"
+fi
 fi
 ok
 
@@ -2634,7 +3093,14 @@ else
     cli_args=("install-service")
     [[ "${enable_daemon}" -eq 1 ]] && cli_args+=("--enable")
 
-    if "${VENV_DIR}/bin/hefesto-dualsense4unix" daemon "${cli_args[@]}" >/dev/null 2>&1; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "instalar a unit do daemon pelo CLI (hefesto-dualsense4unix daemon ${cli_args[*]})"
+        if [[ "${enable_daemon}" -eq 1 ]]; then
+            _faria "habilitar o daemon no boot"
+        else
+            _nao_faria "habilitar o daemon no boot (você respondeu que não)"
+        fi
+    elif "${VENV_DIR}/bin/hefesto-dualsense4unix" daemon "${cli_args[@]}" >/dev/null 2>&1; then
         if [[ "${enable_daemon}" -eq 1 ]]; then
             printf '      unit instalada + auto-start habilitado\n'
         else
@@ -2676,7 +3142,9 @@ else
         USER_UNIT_DIR="${HOME}/.config/systemd/user"
         readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-dualsense4unix-gui-hotplug.service"
 
-        if [[ ! -f "${HOTPLUG_UNIT_SRC}" ]]; then
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+            _faria "copiar ${HOTPLUG_UNIT_TARGET} e habilitá-lo (a janela abre sozinha quando o DualSense é plugado)"
+        elif [[ ! -f "${HOTPLUG_UNIT_SRC}" ]]; then
             warn "${HOTPLUG_UNIT_SRC} ausente — reinstale o repo"
         else
             mkdir -p "${USER_UNIT_DIR}"
@@ -2736,6 +3204,25 @@ elif [[ ! -f "${DAEMON_UNIT_SRC}" ]]; then
     warn "unit do daemon ausente em assets/ — reinstale o repo"
 elif ! command -v systemctl >/dev/null 2>&1; then
     warn "systemctl ausente — daemon não habilitado (inicie com: hefesto-dualsense4unix daemon start)"
+elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    # ESTE É O PASSO QUE MEXE NO PRODUTO QUE ELA ESTÁ USANDO AGORA, e por isso
+    # o ensaio o descreve com todas as letras: um `restart` derruba o daemon
+    # vivo e, com ele, os controles conectados, por alguns segundos.
+    if [[ -L "${DAEMON_UNIT_TARGET}" ]] \
+       && [[ "$(readlink -f "${DAEMON_UNIT_TARGET}" 2>/dev/null)" == "/dev/null" ]]; then
+        _faria "tirar a MÁSCARA da unit do daemon (ela está mascarada por 'hefesto-chave off') antes de gravá-la — sem isto o cp escreveria dentro de /dev/null e a unit sumiria no próximo 'hefesto-chave on'"
+    fi
+    _faria "copiar ${DAEMON_UNIT_TARGET} e recarregar o systemd do usuário"
+    _CHAVE_POSTA="${XDG_CONFIG_HOME:-${HOME}/.config}/${APP_ID}/DESLIGADO-pela-chave.flag"
+    if [[ -f "${_CHAVE_POSTA}" ]]; then
+        _nao_faria "subir o daemon: o Hefesto está DESLIGADO pela chave (${_CHAVE_POSTA}); a decisão é sua e o ensaio não a desfaz"
+    elif [[ "${enable_daemon}" -eq 1 ]]; then
+        _faria "habilitar o daemon no boot e REINICIÁ-LO agora — o daemon em execução CAI e volta, e os controles conectados piscam nesse instante"
+    elif systemctl --user is-active --quiet "${DAEMON_UNIT_NAME}"; then
+        _faria "REINICIAR o daemon que já está no ar (para não ficar rodando o binário antigo); NÃO habilitar o auto-start"
+    else
+        _nao_faria "habilitar nem subir o daemon (você respondeu que não, e ele não está no ar)"
+    fi
 else
     mkdir -p "${DAEMON_USER_UNIT_DIR}"
 
@@ -2820,7 +3307,10 @@ else
     readonly STORM_USER_UNIT_DIR="${HOME}/.config/systemd/user"
     readonly STORM_UNIT_TARGET="${STORM_USER_UNIT_DIR}/hefesto-dualsense4unix-storm-watch.service"
 
-    if [[ ! -f "${STORM_SCRIPT_SRC}" || ! -f "${STORM_UNIT_SRC}" ]]; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "instalar o vigia do kernel em ${STORM_SCRIPT_TARGET}"
+        _faria "copiar ${STORM_UNIT_TARGET} e habilitá-lo (log em ${HOME}/.local/state/hefesto-dualsense4unix/kernel.log)"
+    elif [[ ! -f "${STORM_SCRIPT_SRC}" || ! -f "${STORM_UNIT_SRC}" ]]; then
         warn "kernel-watch: arquivos-fonte ausentes — reinstale o repo"
     else
         mkdir -p "${STORM_SCRIPT_DIR}" "${STORM_USER_UNIT_DIR}"
@@ -2873,7 +3363,9 @@ else
         printf '      extension %s está instalada mas desabilitada\n' "${_ext_id}"
         printf '      sem ela o ícone do Hefesto não aparece na barra superior do GNOME\n'
         ask_yn "habilitar agora?" "${AUTO_YES}"
-        if [[ "${REPLY,,}" =~ ^y ]]; then
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+            _faria "habilitar a extensão do GNOME ${_ext_id} (sem ela o ícone do Hefesto não aparece na barra)"
+        elif [[ "${REPLY,,}" =~ ^y ]]; then
             if gnome-extensions enable "${_ext_id}" 2>/dev/null; then
                 printf '      habilitada (pode exigir log out/in se for a primeira ativação)\n'
             else
@@ -2898,6 +3390,15 @@ readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
 step "9/11" "applet COSMIC nativo (padrão em COSMIC; --no-cosmic-applet desativa)"
 install_cosmic_applet() {
     local applet_dir="${ROOT_DIR}/packaging/cosmic-applet"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        if ! command -v cargo >/dev/null 2>&1 || ! command -v just >/dev/null 2>&1; then
+            _nao_faria "compilar o applet COSMIC: faltam cargo e/ou just nesta máquina (o install segue normal sem ele)"
+        else
+            _faria "COMPILAR o applet COSMIC em Rust — a primeira build do libcosmic passa de 10 minutos"
+            _faria_root "instalar o applet em ${APPLET_BIN} e o .desktop dele (o 'just install' usa sudo)"
+        fi
+        return 0
+    fi
     if ! command -v cargo >/dev/null 2>&1 || ! command -v just >/dev/null 2>&1; then
         warn "cargo/just ausentes — applet COSMIC pulado (o install segue normal)"
         printf '        instale rustup (https://rustup.rs) + just e os -dev, depois:\n'
@@ -2950,14 +3451,33 @@ fi
 # 10/08). Separado também mantém o bloco do 10/11 do tamanho que o portão
 # `test_o_instalador_que_aprovou_o_monitor` lê.
 step "som" "áudio: o alto-falante do controle nunca dorme (SOM-QUE-NAO-DORME-01)"
+# O `if bash …` de baixo fica INTEIRO, e o ensaio entra por fora, e não por um
+# `elif`. A razão é medida: `test_o_alto_falante_nunca_dorme_01` procura a
+# chamada com `^\s*(?:if\s+)?bash …` e um `elif` a esconde — o portão passou a
+# dizer que o caminho NATIVO tinha perdido a cura do alto-falante. Não tinha; a
+# forma da linha é que mudou. Régua que lê texto não tem como desempatar, e
+# quem tem de ceder é quem chegou depois.
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _ensaio_wireplumber nunca-dorme
+else
 if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --nunca-dorme; then
     : # a mensagem do próprio script já diz se instalou ou se já valia
 else
     warn "nunca-dorme falhou — rode: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme"
 fi
+fi
 
 step "10/11" "audio: impedir o DualSense de virar o microfone padrão"
-if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
+        _ensaio_wireplumber disable-source
+    elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
+        _ensaio_wireplumber install
+    else
+        _nao_faria "rebaixar o microfone do controle (--keep-dualsense-mic) — ele pode virar o microfone padrão do sistema"
+        _ensaio_wireplumber marcar-gesto
+    fi
+elif [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
     [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]] && warn "--with-wireplumber-disable-mic vence --with-wireplumber-fix"
     # exit 2 (DualSense é a única fonte) não é falha de instalação — só aviso.
     # exit 3 (a fonte padrão é um MONITOR) não fala do DualSense: quem dá esse
@@ -3030,7 +3550,9 @@ fi
 # da instalação (sem controle o doctor só emite linhas informativas). FAIL e
 # WARN continuam saindo — o silêncio é do sucesso, não do problema.
 if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -ne 1 ]]; then
-    if [[ ! -r "${ROOT_DIR}/scripts/doctor.sh" ]]; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "curar o microfone pelo doctor (--fix-mic): pôr o perfil da placa na entrada ANALÓGICA e tirar o mudo persistido por rota de captura"
+    elif [[ ! -r "${ROOT_DIR}/scripts/doctor.sh" ]]; then
         warn "scripts/doctor.sh ausente — cura do microfone pulada"
     elif bash "${ROOT_DIR}/scripts/doctor.sh" --fix-mic --quiet; then
         printf '      microfone: camadas 1 e 2 conferidas (doctor.sh --fix-mic)\n'
@@ -3092,6 +3614,15 @@ fi
 step "11/11" "Steam: desligar PSSupport do PlayStation Controller"
 if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then
     printf '      pulado (--keep-steam-input) — Steam Input pode conflitar com o daemon\n'
+elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    # A CONTA STEAM É DELA, e este é o passo que escreve dentro dela — por isso
+    # o ensaio diz onde fica o backup e como se volta atrás, sem que ninguém
+    # tenha de procurar.
+    _faria "editar TODOS os localconfig.vdf de todos os usuários Steam (deb, Flatpak e Snap): zerar SteamController_PSSupport e UseSteamControllerConfig"
+    _faria "guardar um backup .bak.steam-input-<carimbo> AO LADO de cada vdf tocado, ANTES de escrever (e só quando há mudança de verdade)"
+    _faria "  (para desfazer: bash scripts/disable_steam_input.sh --restore)"
+    _faria "  (para ver o estado de hoje sem mudar nada: bash scripts/disable_steam_input.sh --status)"
+    _faria "instalar o vigia do vdf em ${HOME}/.config/systemd/user/hefesto-steam-input-guard.{path,timer,service} e habilitá-lo (repõe o que a Steam reescrever ao sair)"
 elif [[ ! -x "${ROOT_DIR}/scripts/disable_steam_input.sh" ]]; then
     warn "scripts/disable_steam_input.sh ausente ou não-executável — pulado"
 else
@@ -3110,12 +3641,48 @@ else
     # sozinhos se a Steam estiver viva. Units --user, sem sudo.
     USER_UNIT_DIR="${HOME}/.config/systemd/user"
     mkdir -p "${USER_UNIT_DIR}"
-    install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.path"  "${USER_UNIT_DIR}/hefesto-steam-input-guard.path"
-    install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.timer" "${USER_UNIT_DIR}/hefesto-steam-input-guard.timer"
+    # ASSET AUSENTE NÃO PODE MATAR O INSTALL AQUI, e não podia desde sempre —
+    # este passo é o 11 de 11, e um `set -e` disparado nele levaria junto a
+    # migração das Launch Options (11b), o wrapper em todos os jogos (11b-bis),
+    # a sentinela (11b-ter), o pino do Proton (11c) e a conferência final. É o
+    # MESMO estrago que o BUG-INSTALL-READONLY-USER-UNIT-DIR-01 causou em 25/07,
+    # por outra porta: lá era a variável `readonly`, aqui é o `install -Dm644`
+    # sem guarda.
+    #
+    # E O `sed >` ERA PIOR QUE OS DOIS `install`: o redirecionamento CRIA o
+    # arquivo de destino ANTES de o `sed` rodar. Com o asset ausente, a unit
+    # ficava no disco VAZIA — e uma unit vazia é aceita pelo systemd e não faz
+    # nada, que é o vigia do Steam Input existindo e não vigiando. Agora o
+    # arquivo final só nasce se o `sed` tiver dado certo.
+    #
+    # OS DOIS NOMES FICAM ESCRITOS POR EXTENSO, e não num laço com
+    # `${_guard_u}`: `test_a_doc_nomeia_as_unidades_que_o_install_instala` lê as
+    # unidades `--user` que este arquivo escreve procurando
+    # `${USER_UNIT_DIR}/<nome>` — um laço esconde os dois nomes dela, e a régua
+    # passa a dizer que a documentação não precisa mais citá-los. Medido em
+    # 03/09/2026: com o laço, o portão reprovou dizendo "esperava o par .path +
+    # .timer do vigia no install.sh, achei []".
+    _guard_ok=1
+    install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.path" \
+        "${USER_UNIT_DIR}/hefesto-steam-input-guard.path" 2>/dev/null || _guard_ok=0
+    install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.timer" \
+        "${USER_UNIT_DIR}/hefesto-steam-input-guard.timer" 2>/dev/null || _guard_ok=0
     SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
-    sed -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
+    _guard_tmp="$(mktemp)"
+    if sed -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
         -e "s#__SENTINELA__#${SENTINELA_PY}#g" \
-        "${ROOT_DIR}/assets/hefesto-steam-input-guard.service" > "${USER_UNIT_DIR}/hefesto-steam-input-guard.service"
+        "${ROOT_DIR}/assets/hefesto-steam-input-guard.service" > "${_guard_tmp}" 2>/dev/null \
+       && [[ -s "${_guard_tmp}" ]]; then
+        install -Dm644 "${_guard_tmp}" "${USER_UNIT_DIR}/hefesto-steam-input-guard.service" \
+            2>/dev/null || _guard_ok=0
+    else
+        _guard_ok=0
+    fi
+    rm -f "${_guard_tmp}"
+    if [[ "${_guard_ok}" -eq 0 ]]; then
+        warn "vigia do Steam Input NÃO instalado (asset ausente em assets/) — o que a Steam reescrever ao sair não será reposto sozinho"
+    fi
+    unset _guard_ok _guard_tmp
     if systemctl --user daemon-reload 2>/dev/null \
        && systemctl --user enable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer 2>/dev/null; then
         printf '      guard do Steam Input + wrapper habilitado (path + timer 30min)\n'
@@ -3145,7 +3712,11 @@ if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     printf '      se a Steam estiver aberta, ela será fechada e reaberta só para\n'
     printf '      concluir a migração — pause downloads antes de seguir.\n'
     printf '      (com um jogo aberto, a migração é adiada e nada é fechado.)\n'
-    if python3 "${LAUNCH_MIGRATE_PY}" --migrate --stop-steam; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "trocar as Opções de Inicialização VENENOSAS de ondas antigas (IGNORE_DEVICES fixo) pela chamada do wrapper, jogo por jogo — o que VOCÊ escreveu na linha é preservado"
+        _faria "guardar um backup .bak.hefesto-launch-<carimbo> ao lado de cada vdf tocado"
+        _faria "FECHAR a Steam, se ela estiver aberta, e reabri-la ao terminar (ela regrava o vdf ao sair, e sem isso a edição seria engolida). Com um JOGO aberto, nada é fechado e a migração é adiada."
+    elif python3 "${LAUNCH_MIGRATE_PY}" --migrate --stop-steam; then
         printf '      Launch Options antigas do Hefesto migradas para o wrapper hefesto-launch\n'
     else
         warn "migração das Launch Options adiada — rode com a Steam fechada (e sem jogo aberto): python3 ${LAUNCH_MIGRATE_PY} --migrate"
@@ -3189,7 +3760,11 @@ step "11b-bis" "Steam: aplicar o wrapper hefesto-launch a todos os jogos"
 if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     printf '      sem isto, as opções de inicialização ficam vazias e o jogo\n'
     printf '      enxerga dois DualSense (jogos que já têm o wrapper são pulados).\n'
-    if python3 "${LAUNCH_MIGRATE_PY}" --apply --stop-steam; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "pôr a chamada do wrapper hefesto-launch nas Opções de Inicialização de TODOS os jogos da Steam (quem já tem é pulado; Steam Flatpak/Snap fica inteira de fora)"
+        _faria "guardar um backup .bak.hefesto-launch-<carimbo> ao lado de cada vdf tocado"
+        _faria "FECHAR e reabrir a Steam, se preciso; com um jogo aberto, nada é tocado"
+    elif python3 "${LAUNCH_MIGRATE_PY}" --apply --stop-steam; then
         printf '      wrapper hefesto-launch nas Launch Options de todos os jogos\n'
     else
         warn "aplicação do wrapper adiada — rode com a Steam fechada (e sem jogo aberto): python3 ${LAUNCH_MIGRATE_PY} --apply"
@@ -3252,7 +3827,10 @@ fi
 # do dono de `steam_launch_options.py`.
 step "11b-ter" "Steam: repor o wrapper onde a Steam o apagou (sentinela)"
 LAUNCH_SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
-if [[ -f "${LAUNCH_SENTINELA_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+if [[ "${DRY_RUN:-0}" -eq 1 ]] && [[ -f "${LAUNCH_SENTINELA_PY}" ]]; then
+    _faria "REPOR a chamada do wrapper nos jogos de que a Steam a apagou (preservando o resto da linha), e anotar quem tem o wrapper em ${HOME}/.local/state/hefesto-dualsense4unix/wrapper-visto.json"
+    _faria "  (com a Steam ou um jogo aberto, o reparo é ADIADO e nada é tocado)"
+elif [[ -f "${LAUNCH_SENTINELA_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     _sw_rc=0
     python3 "${LAUNCH_SENTINELA_PY}" --reparar || _sw_rc=$?
     case "${_sw_rc}" in
@@ -3294,6 +3872,11 @@ elif [[ ! -f "${PROTON_PIN_PY}" ]] || ! command -v python3 >/dev/null 2>&1; then
     warn "proton_pin.py ausente ou sem python3 — pin do Proton pulado"
 elif [[ ! -f "${ROOT_DIR}/assets/proton-pin.conf" ]]; then
     warn "assets/proton-pin.conf ausente — pin do Proton pulado (reinstale o repo)"
+elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "garantir a versão de Proton VALIDADA em compatibilitytools.d (cache em ${HOME}/.cache/hefesto-dualsense4unix/proton; SHA256 obrigatório — checksum errado e NADA é extraído)"
+    _faria "TRAVAR nessa versão o Proton padrão e o dos jogos já instalados nela (CompatToolMapping do config.vdf), com backup config.vdf.bak.hefesto-proton-<carimbo> ao lado"
+    _faria "  (com a Steam ou um jogo aberto, a trava é ADIADA; desfazer: ./uninstall.sh, que roda o --unlock)"
+    _nao_faria "sobrescrever um Proton pinado que VOCÊ já tenha instalado por fora (ProtonUp ou à mão): ele é mantido"
 else
     # CONSELHO-QUE-NAO-CURA-01 (02/09/2026): a saída do `--ensure` é CAPTURADA
     # (e reimpressa inteira) porque um dos desfechos de sucesso precisa ser dito
@@ -3370,7 +3953,14 @@ if [[ "${RUN_DOCTOR}" -eq 1 ]]; then
     printf '─────────────────────────────────────────\n'
     printf ' Conferência final (doctor)\n'
     printf '─────────────────────────────────────────\n'
-    if [[ ! -r "${ROOT_DIR}/scripts/doctor.sh" ]]; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        # O doctor é conferência, não cura — mas o ensaio não executa NENHUM
+        # roteiro de fora, e a promessa vale mais inteira do que quase inteira.
+        # Quem quiser o retrato de hoje tem o comando na linha de baixo, e ele
+        # é o mesmo em qualquer momento.
+        printf '      no ensaio o doctor não roda. Para o retrato da máquina agora:\n'
+        printf '        bash scripts/doctor.sh\n'
+    elif [[ ! -r "${ROOT_DIR}/scripts/doctor.sh" ]]; then
         warn "scripts/doctor.sh ausente — conferência final pulada"
     else
         doctor_saida="$(bash "${ROOT_DIR}/scripts/doctor.sh" 2>&1 || true)"
@@ -3390,6 +3980,10 @@ fi
 # ---------------------------------------------------------------------------
 # Pronto
 # ---------------------------------------------------------------------------
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _ensaio_resumo
+    exit 0
+fi
 printf '\n'
 printf '─────────────────────────────────────────\n'
 printf ' Hefesto - Dualsense4Unix instalado\n'
