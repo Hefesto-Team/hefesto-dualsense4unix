@@ -329,3 +329,59 @@ seção daqui**: a aba deixou de estar em trabalho.
   apagaria o desenho, porque ali o alvo é `texto` e `textContent` mata os filhos
   (é a razão de `pacotes.enderecos_que_o_texto_apaga`, que protege esta célula
   pelo nome). Publicando a 04, a célula passa a viver.
+
+## Nota — a 09-sistema NÃO entra na lista acima (03/09/2026)
+
+**Esta seção não é uma declaração, e o título não casa com o formato de
+propósito:** o portão lê `## <arquivo>.html` e reprovaria uma declaração sem
+trabalho aberto (`orfas`). A 09 não tem trabalho aberto de DESENHO — e é isso
+que esta nota registra.
+
+**O que mudou na bancada:** a fita do topo da `09-sistema.html` ganhou dois
+endereços, e **nenhum pixel mudou**. `so_mudou_endereco("09-sistema.html")`
+devolve `True`: apagados os atributos de endereçamento, a bancada e o produto
+são o mesmo arquivo.
+
+| endereço | onde | o que era | o que passa a ser |
+| --- | --- | --- | --- |
+| `fita-chips` | a `<div class="fita">` inteira, com `data-hef-alvo="html"` | o miolo cravado do desenho | o miolo escrito a cada tique com a mesa VIVA |
+| `fita-chip` | cada chip de controle | `--plastico` e nome do mockup, sem dono | o chip que o produto reescreve |
+
+**O que a sua tela mostrava até hoje, e é a razão disto tudo** — medido com os
+seus dois controles ligados, o cabeçalho e o perfil já corretos ao lado:
+
+```
+o cabeçalho    2 controles: 1 USB · 1 BT      <- vivo, certo
+a fita         P1 · Cosmic Red · USB
+               P2 · Starlight Blue · BT       <- OS DOIS DO MOCKUP
+```
+
+**A causa, medida:** `hefesto_vivo._fita` — o repintor que vale para as dez
+abas — desiste quando QUALQUER controle da mesa está sem cor lida. No cabo isso
+é a espera de poucos tiques; **pelo rádio a cor nunca chega**, e quem diz isso é
+o mapa de canais (`identidade.cor_do_aparelho`, `radio_aciona = não`). Com um
+controle no rádio a desistência é permanente.
+
+**Como está agora, na foto de 03/09:**
+
+```
+a fita         Todos · P1 · White · USB · P2 · BT
+```
+
+O `White` é o seu controle do cabo, com a cor que foi LIDA dele. O do rádio
+mostra só `P2 · BT` — sem cor e sem nome, porque ninguém os leu. É a sua regra:
+*campo sem informação não mostra nada*. Nenhum tom foi inventado para preencher.
+
+**O que espera a sua palavra:** enquanto a 09 não for publicada, o produto
+continua abrindo a página publicada, que **não tem estes dois endereços** — e a
+sua fita na aba Sistema continua dizendo `Cosmic Red` e `Starlight Blue`. Como a
+mudança não move um pixel, o comando é o que existe para exatamente este caso:
+
+```
+scripts/check_o_desenho_aprovado.py --publicar-enderecos 09
+```
+
+**E fica um ponto que não é desta aba:** a desistência de `hefesto_vivo._fita`
+vale para as DEZ páginas, e ela é território compartilhado. Enquanto ela estiver
+de pé, as outras nove continuam mostrando os dois controles do desenho na fita —
+mesmo depois de a 09 ser publicada.
