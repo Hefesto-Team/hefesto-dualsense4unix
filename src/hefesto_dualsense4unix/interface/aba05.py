@@ -19,6 +19,7 @@ Aqui isso quer dizer quatro coisas, e nenhuma é digitada:
 """
 import csv
 import pathlib
+import re
 import sys
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
 import onde  # noqa: E402
@@ -759,6 +760,139 @@ def _endereca_o_tremor(desenho, pref):
     return desenho
 
 
+# ---------------------------------------------------------------------------
+# A COR DO DESENHO VEM DO APARELHO — 03/09/2026
+# ---------------------------------------------------------------------------
+# A LEI, e ela é dela:
+#
+#     "eu mapeei as cores, glifos, controles, id e tudo mais. é pro projeto usar  # noqa-acento: citação literal dela
+#      esse meu trabalho (…) eu quero que cada user ao usar seu controle se toque
+#      disso que o app se adaptou ao controle dele"
+#
+#     "os svgs do dualsense (…) mudam de acordo com o controle identificado no
+#      canto superior. é white no p1, mas a borda de tudo é cosmic red e os svgs  # noqa-acento: citação literal dela
+#      não são os que o meu mapa cataloga. isso tá errado"
+#
+# A borda da moldura já obedecia desde a manhã (o alvo `plastico`). O DESENHO
+# não: cada `<svg>` nascia com o `data-colorway` da `monta.MESA` e não havia
+# como reescrevê-lo — dos alvos do `escrever()` do piloto, nenhum tocava
+# atributo. O alvo `atributo` existe desde 03/09; aqui entram as DUAS metades
+# que faltavam nesta aba, e uma sem a outra não pinta um pixel.
+#
+# 1. O ENDEREÇO, no `<svg>`: `data-campo="colorway"` mais o par
+#    `data-hef-alvo="atributo"` / `data-hef-atributo="data-colorway"`.
+# 2. A FOLHA DOS 28, publicada UMA VEZ na página. Esta é a metade que se
+#    esquece, e sem ela o endereço TROCA UMA COR ERRADA POR UM CINZA:
+#    `monta._so_o_colorway` guarda dentro de cada SVG só as regras do modelo
+#    pedido — 3.082 bytes dos 45.452 dos 28 —, então escrever `white` num
+#    desenho que só embute `cosmic-red` não casa regra nenhuma e o controle cai
+#    nos `fill` crus do `ds_limpo.svg`.
+#
+# POR QUE UMA VEZ NA PÁGINA, e não os 28 dentro de cada SVG: são quatro
+# desenhos, e quatro cópias da folha inteira somariam ~180 KB de CSS que
+# ninguém lê — a razão que o próprio `_so_o_colorway` escreve. Um `<style>` de
+# SVG embutido em HTML vale para o DOCUMENTO, não para aquele `<svg>`: as
+# regras já eram globais, e cada desenho continua escolhendo a sua pelo
+# `svg[data-colorway="…"]`. Publicar a folha completa não muda o que ela
+# aprovou — muda quantos modelos existem para escolher, de um para 28.
+#
+# NÃO HÁ TABELA DE COR AQUI. A folha é a que
+# `scripts/gerar_cores_do_dualsense.py` escreveu no desenho a partir do
+# `docs/data/cores-do-dualsense.csv`, lida de volta — o mesmo caminho que
+# `cor_da_zona()` já usa para a moldura.
+_ACHOU_A_FOLHA = re.search(
+    r'<style id="cores-do-dualsense-folha">(.*?)</style>', monta_.DS, re.S)
+if _ACHOU_A_FOLHA is None:
+    raise SystemExit(
+        "ERRO em aba05: o desenho compartilhado não traz mais a folha "
+        "`cores-do-dualsense-folha` — sem ela não há os 28 modelos dela para "
+        "publicar, e o desenho voltaria a ter uma cor só. Rode "
+        "scripts/gerar_cores_do_dualsense.py")
+
+#: A TABELA DELA, em CSS: as dez zonas dos 28 modelos. Entra no `<style>` da
+#: página, ao lado do CSS da aba.
+FOLHA_DOS_28 = _ACHOU_A_FOLHA.group(1)
+
+#: A TINTA QUE A FOLHA REFERENCIA. Doze dos 28 modelos pintam com `url(#…)` — a
+#: hachura dos que ela não amostrou e os dois gradientes de casca (God of War
+#: 20th e Spider-Man 2). Esses três `id` moram no `<defs>` do desenho, e
+#: `monta.svg()` PREFIXA todo id por controle (`vb-p1-hachura-sem-hex`): uma
+#: folha de página que diga `url(#hachura-sem-hex)` não acharia nada, e os doze
+#: modelos ficariam sem casca. Por isso o `<defs>` sai uma vez, sem prefixo.
+#:
+#: MEDIDO, e é o que faz esta linha existir: sem ele, escrever `ghost-of-yotei`
+#: no `data-colorway` deixa a casca com uma referência morta — que não é a cor
+#: do aparelho nem o cinza neutro do "não sei", é um terceiro estado que não
+#: quer dizer nada.
+_ABRE_A_TINTA = '<defs id="cores-do-dualsense">'
+if _ABRE_A_TINTA not in monta_.DS:
+    raise SystemExit(
+        "ERRO em aba05: o desenho não tem mais o `<defs id=\"cores-do-"
+        "dualsense\">` — os doze modelos que pintam por `url(#…)` ficariam sem "
+        "tinta na página.")
+TINTA_DOS_28 = (
+    monta_.DS[monta_.DS.index(_ABRE_A_TINTA):
+              monta_.DS.index('<style id="cores-do-dualsense-folha">')]
+    + "</defs>")
+
+#: O BLOCO DA TINTA, invisível e fora do fluxo. `position:absolute` com 0×0, e
+#: NÃO `display:none`: um `<defs>` num ramo escondido é caminho que já falhou em
+#: motor de SVG, e aqui não há o que ganhar arriscando — este `<svg>` não
+#: desenha nada, só empresta os três `id`.
+BLOCO_DA_TINTA = (
+    f'          <svg width="0" height="0" aria-hidden="true"\n'
+    f'               style="position:absolute;overflow:hidden">'
+    f'{TINTA_DOS_28}</svg>\n')
+
+#: O ENDEREÇO COM QUE O PRODUTO TROCA O MODELO DO DESENHO.
+#:
+#: O nome do atributo vem SEPARADO (`data-hef-atributo`), e não colado no alvo:
+#: a régua do mockup, o `LER_CAMPOS` do piloto e cada `campo.alvo == "…"`
+#: comparam o alvo por IGUALDADE, e um `atributo:data-colorway` viraria uma
+#: palavra nova por atributo escrito. É a mesma forma que o alvo `classe` já
+#: usa com `data-hef-classe`/`data-hef-quando`.
+ENDERECO_DA_COR = ('data-campo="colorway" data-hef-alvo="atributo"'
+                   ' data-hef-atributo="data-colorway"')
+
+#: A folha PODADA que `monta.svg()` embute em cada desenho — a que sai daqui,
+#: porque a página passou a publicar as 28. O `id` vem prefixado pelo controle.
+_FOLHA_PODADA = re.compile(
+    r'\s*<style id="[^"]*cores-do-dualsense-folha">.*?</style>', re.S)
+
+
+def _endereca_a_cor(desenho, pref, cor, com_dono=True):
+    """Dá ao `<svg>` o endereço da COR e tira dele a folha de um modelo só.
+
+    `com_dono=False` é o LUGAR VAZIO da mesa, e ele sai daqui **sem**
+    `data-colorway`. Não é economia: é a regra dela — campo sem informação não
+    mostra nada. Um lugar sem controle não tem modelo, e afirmar "Galactic
+    Purple" ali seria o desenho falando por um aparelho que não existe. Sem o
+    atributo, nenhuma regra da folha casa e o desenho cai no cinza neutro, que é
+    o que o `.ctrl.vazia` já pinta por cima com `var(--linha)` — a tela não muda
+    um pixel, e o arquivo deixa de afirmar o que não sabe.
+
+    O ENDEREÇO FICA NOS QUATRO, inclusive nos vazios: no dia em que um terceiro
+    controle entrar na mesa, o pintor tem onde escrever o modelo dele.
+
+    RECUSA QUANDO A ÂNCORA SOME, pelas duas vias — `monta.troca` para o `<svg>`
+    e a contagem para a folha. É a lição do `str.replace` que não casava: um
+    endereço que não entra no HTML é uma pintura que não acontece, e ela é
+    silenciosa dos dois lados.
+    """
+    quem = f"aba05 · _endereca_a_cor({pref!r})"
+    desenho = monta_.troca(
+        desenho, quem, f'<svg data-colorway="{cor}" ',
+        f'<svg {ENDERECO_DA_COR} data-colorway="{cor}" ' if com_dono
+        else f'<svg {ENDERECO_DA_COR} ')
+    achadas = _FOLHA_PODADA.findall(desenho)
+    if len(achadas) != 1:
+        raise SystemExit(
+            f"ERRO em {quem}: esperava UMA folha podada dentro do desenho e "
+            f"achei {len(achadas)}. A página publica as 28 de uma vez; deixar "
+            f"a podada aqui dentro devolveria a este controle uma cor só.")
+    return _FOLHA_PODADA.sub("", desenho, count=1)
+
+
 def _coluna_vazia(c):
     """O LUGAR de um controle que não está na mesa — ordem dela, 31/08/2026:
 
@@ -782,7 +916,7 @@ def _coluna_vazia(c):
     return f'''
           <div class="ctrl vazia" data-controle="{c["pref"]}" data-conectado="nao"
                title="Nenhum controle neste lugar.">
-            <div class="moldura" data-papel="desenho">{svg(f'vb-{c["pref"]}', c["cor"], lampadas=False)}</div>
+            <div class="moldura" data-papel="desenho">{_endereca_a_cor(svg(f'vb-{c["pref"]}', c["cor"], lampadas=False), f'vb-{c["pref"]}', c["cor"], com_dono=False)}</div>
             <div class="rot-ctrl">P{j} <span class="pt">•</span> Desconectado</div>
             <div class="seg"><span class="nada">{VAZIO}</span></div>
             <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
@@ -807,9 +941,15 @@ def _coluna(c, e=None):
     # `lampadas=False`: o grupo das cinco sai do desenho (ver o bloco das
     # lâmpadas, acima). Quem reprova quando a âncora some é o `_tira_grupo()`,
     # dentro do `svg()` — uma régua só, no lugar onde o corte acontece.
-    desenho = _endereca_o_tremor(
-        svg(f'vb-{c["pref"]}', c["cor"], acesos=acesos, lampadas=False),
-        f'vb-{c["pref"]}')
+    # O ENDEREÇO DA COR ENTRA AQUI, e não dentro do `svg()`: o desenho
+    # compartilhado é das dez abas, e cada uma decide o que endereça. Ver
+    # `_endereca_a_cor` — ele também tira a folha de um modelo só, porque a
+    # página passou a publicar as 28.
+    desenho = _endereca_a_cor(
+        _endereca_o_tremor(
+            svg(f'vb-{c["pref"]}', c["cor"], acesos=acesos, lampadas=False),
+            f'vb-{c["pref"]}'),
+        f'vb-{c["pref"]}', c["cor"])
 
     # QUAL DEGRAU ESTÁ ACESO É DADO, e o endereço é o `classe` — 03/09/2026.
     # Até hoje os quatro botões só tinham `data-papel="forca"`, que é o endereço
@@ -931,6 +1071,7 @@ def _coluna(c, e=None):
 
 
 MIOLO = f'''
+{BLOCO_DA_TINTA}
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">Vibração</span>
@@ -1175,7 +1316,15 @@ def _conferir(doc):
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
-n = monta("05-vibracao", "Vibração", MIOLO, CSS + CSS_DAS_MEDIDAS, fita_viva=False, legenda=LEGENDA)
+# A FOLHA DOS 28 VAI POR ÚLTIMO, e a ordem é medida, não gosto: enquanto ela
+# morava dentro de cada `<svg>` (no corpo), as regras dela vinham DEPOIS das
+# desta aba na cascata. Mantê-la no fim do `<style>` preserva essa ordem, e o
+# que decide de fato continua sendo a especificidade — `.vib .ctrl.vazia
+# .ds-svg rect` (0,5,1) ganha de `svg[data-colorway] .z-casca :is(…)` (0,2,2)
+# nos dois arranjos, que é o que mantém o lugar vazio cinza.
+n = monta("05-vibracao", "Vibração", MIOLO,
+          CSS + CSS_DAS_MEDIDAS + FOLHA_DOS_28,
+          fita_viva=False, legenda=LEGENDA)
 _conferir(onde.pagina("05-vibracao.html").read_text())
 print(f"05-vibracao: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
       f"+ {len(MESA) - len(CONECTADOS)} lugar(es) vazio(s) · motores do mapa: "
