@@ -20,10 +20,10 @@ graváveis pelo daemon (sudo-zero). Sem a regra, a escrita falha em SILÊNCIO
 
 GYRO-02 (2026-07-19): `enable_imu` é a ÚNICA exceção que sai do sysfs e
 escreve um output report CRU no hidraw — o subcomando Enable-IMU (0x40/0x01)
-do protocolo Switch, para ligar a IMU do Nintendo Pro REAL (que o hid-nintendo
-declara mas não ativa, ver estudo 2026-07-19-estudo-gyro-universal-vpad.md
-§Parte 2). Ainda é I/O pura e best-effort; a decisão de QUANDO enviar (OUI,
-bus, uma vez por adoção, backoff) mora em `ExternalImuEnabler`.
+do protocolo Switch, mandado ao Nintendo Pro REAL. Ainda é I/O pura e best-effort; a decisão
+de QUANDO enviar (OUI, bus, uma vez por adoção, backoff) mora em `ExternalImuEnabler`.
+FATO SUBSTITUÍDO em 03/09/2026: dizia-se aqui que o hid-nintendo «declara mas não ativa» a
+IMU. É FALSO — prova e mordida em `tests/unit/test_o_caminho_do_radio_do_nintendo_no_mapa.py`.
 """
 from __future__ import annotations
 
