@@ -303,6 +303,13 @@ CONECTADOS = [c for c in MESA if c.get("conectado", True)]
 #: um pedaço à parte, escondível, no título do card da Controles.
 SEPARADOR = ' <span class="pt">•</span> '
 
+#: O TRAVESSÃO, que é como esta casa escreve "não há dado". Repetido aqui como
+#: literal para não importar `pacotes` — `pacotes/a04_iluminacao.py` importa
+#: `monta`, e um import no topo fecharia o ciclo. A régua
+#: `test_a_fita_diz_o_controle_que_esta_na_mesa.py` confere que os dois são o
+#: MESMO caractere.
+TRAVESSAO = "—"
+
 
 def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     """O rótulo de um controle, e ele tem UMA ordem só.
@@ -321,7 +328,13 @@ def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     tira da pessoa a chance de copiar o nome do plástico.
     """
     if forma == "curta":
-        return SEPARADOR.join([f'P{c["jogador"]}', c["nome"], c["via"]])
+        # O PEDAÇO VAZIO NÃO VIRA SEPARADOR SOLTO — regra dela, 02/09/2026:
+        # *"se não tá mostrando agora, não tem info pra mostrar no produto"*.
+        # Quem passa `nome=""` é a fita, quando tudo o que se sabe do controle é
+        # o transporte, e o chip já termina nele: `P2 • BT • BT` diz o mesmo
+        # fato duas vezes. Nenhum chamador do mockup passa vazio, então as dez
+        # páginas saem byte a byte iguais.
+        return SEPARADOR.join(p for p in [f'P{c["jogador"]}', c["nome"], c["via"]] if p)
     if forma == "peca":
         # A `curta` SEM o número do jogador. Ela existe porque o card aberto da
         # Controles deixou de dizer o número no título — decisão dela, 29/08:
@@ -499,6 +512,35 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     forma: **uma frase que nomeia um controle que não está na mesa**. As outras
     três foram o botão de jogador da Iluminação, o primário da Navegação e o
     censo da Conexões.
+
+    **E ELE VOLTOU EM 02/09/2026, por defeitos que moram AQUI.** Ela viu e
+    disse: *"o controle identificado em todas ta completamente errado"*. Medido
+    com os dois controles dela na mesa (um `usb`, um `bt`), o daemon
+    respondendo em 1 ms:
+
+        identidade_de()  →  "White"  ·  "BT"     ← certo, e o card já mostrava
+        a FITA mostrava  →  "P1 • Cosmic Red • USB"  ·  "P2 • Starlight Blue • BT"
+
+    Os dois defeitos de CONTEÚDO, e os dois são desta função (o terceiro, que é
+    de REPINTURA, está na nota do `return` lá embaixo):
+
+    1. **O NOME VINHA DE `c["nome"]`**, que na mesa viva é o nome do PLÁSTICO
+       (`mesa_viva.mesa_do_estado`) — e vale `"Não sei"` quando a cor não foi
+       lida. Quem sabe nomear um controle é `pacotes.identidade_de`, e a ordem
+       dele é *o que ELA nomeou > o modelo decodificado > o transporte só*,
+       NUNCA a posição. Agora é ele quem responde.
+    2. **A COR NÃO LIDA DERRUBAVA A FITA INTEIRA.** `cor_da_zona("")` levanta
+       `SystemExit` — e no rádio a cor do plástico NUNCA chega (o mapa diz:
+       `identidade.cor_do_aparelho`, `radio_aciona = não`). Com um controle no
+       BT, a fita viva morria a cada tique e a tela ficava com os dois chips do
+       mockup para sempre. Sem cor lida o chip perde a borda colorida e o
+       `title` diz por quê — é a regra dela: *"se não tá mostrando agora, não
+       tem info pra mostrar no produto"*.
+
+    O TEXTO DO CHIP SAI DE `rotulo(c, "curta")`, e não de um f-string próprio:
+    a gramática do rótulo já tinha dono, e ter uma segunda cópia aqui é
+    exatamente a cicatriz das *"cinco gramáticas na mesma janela"* que aquela
+    função nasceu para fechar.
     """
     t = titulo or ("Esta aba não usa o controle escolhido aqui — os cards são leitura."
                    if inerte else "O que você mudar nesta aba vai para o controle escolhido aqui.")
@@ -509,37 +551,74 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     chips = [f'<span class="chip{" on" if ativo == "todos" else ""}">Todos</span>']
     for c in (CONECTADOS if mesa is None else mesa):
         on = " on" if ativo == c["pref"] else ""
-        # `data-campo` NO CHIP — 03/09/2026, e ele não é enfeite de régua. A
-        # identidade do controle vem da FITA, e a fita é escrita pelo produto
-        # (`hefesto_vivo._fita`, que troca o `.fita` inteiro a cada tique). Sem
-        # um endereço aqui, um leitor não tinha como distinguir este chip de um
-        # nome de cor CONGELADO no desenho: o `check_identidade_vem_de_cima`
-        # acusava os três valores de cada chip nas dez páginas — 60 dos 134 da
-        # bancada. O endereço diz o que é verdade: aqui não mora desenho.
+        # A VERSÃO DESTA FITA É DA FRENTE DO RÁDIO, e ela venceu a minha na
+        # integração de 03/09/2026 por três coisas que a minha não tinha: o
+        # `identidade_do_chip` (que evita o `P2 • BT • BT`), a dica que DIZ que a
+        # cor não foi lida, e a queda do recuo da primeira linha — esta última é
+        # medida, não estilo: com o recuo, a fita se repintava dez vezes por
+        # segundo sem nada ter mudado.
         #
-        # SEM COR LIDA, SEM COR NA TELA. `cor_da_zona("")` levanta, e cair fora
-        # da fita inteira era o que deixava o mockup na tela pelo rádio (ver a
-        # guarda de `hefesto_vivo._fita`). O chip nasce sem `--plastico` e o
-        # `.chip.plastico{border-color:var(--plastico, var(--border-forte))}` do
-        # esqueleto já tem o recurso neutro — regra dela: campo sem informação
-        # não mostra nada.
+        # O QUE EU TROUXE DA MINHA foi só o `data-campo`, e ele é obrigatório: sem
+        # um endereço aqui, o `check_identidade_vem_de_cima` não distingue este
+        # chip de um nome de cor CONGELADO no desenho — eram 60 dos 134 da bancada,
+        # seis em cada uma das dez páginas.
+        nome = c["nome"] if mesa is None else identidade_do_chip(c, mesa)
+        # O NOME QUE NÃO ACRESCENTA NADA SAI. O último degrau de
+        # `identidade_de` é *"o transporte sozinho"* — honesto num card, que só
+        # mostra o nome, e mudo aqui: o chip TERMINA no transporte, e
+        # `P2 • BT • BT` afirma o mesmo fato duas vezes. Sem nome o chip fica
+        # `P2 • BT`, que é o que se sabe.
+        if mesa is not None and nome in (c["via"], TRAVESSAO):
+            nome = ""
+        # A COR DO PLÁSTICO, quando ela foi lida. O `slug` vazio é a mesa viva
+        # dizendo "não perguntei" (rádio) ou "ainda não voltou" (cabo, primeiros
+        # tiques) — e não existe colorway `""` no SVG.
         slug = str(c.get("cor") or "")
-        estilo = f' style="--plastico:{cor_da_zona(slug)}"' if slug else ""
+        pintado = f' style="--plastico:{cor_da_zona(slug)}"' if slug else ""
+        porque = ("a borda é a cor do plástico" if slug else
+                  "a cor do plástico deste controle não foi lida")
+        dica = f"{nome} — {porque}" if nome else porque
         chips.append(
-            # A VERSÃO DESTA LINHA É DA FRENTE DA ABA 05, e ela venceu a minha na
-            # integração por UM motivo medido: a minha chamava
-            # `cor_da_zona(str(c["cor"]))` sem guarda, e `cor_da_zona("")` LEVANTA —
-            # com um controle no rádio sem cor lida (a mesa dela de hoje), a fita
-            # inteira morria de novo, que é exatamente o defeito que as duas
-            # tentavam curar. A dela nasce sem `--plastico` e o esqueleto já tem o
-            # recurso neutro no `var(--plastico, var(--border-forte))`.
-            f'<span class="chip plastico{on}" data-campo="fita-chip"{estilo}'
-            f' title="{c["nome"]} — a borda é a cor do plástico">'
-            f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}'
-            f' <span class="pt">•</span> {c["via"]}</span>')
-    return (f'    <div class="fita{" inerte" if inerte else ""}" title="{t}">\n'
+            f'<span class="chip{" plastico" if slug else ""}{on}" data-campo="fita-chip"{pintado}'
+            f' title="{dica}">'
+            + rotulo({**c, "nome": nome}, "curta") + "</span>")
+    # SEM O RECUO DA PRIMEIRA LINHA, e isto é medição, não estilo. Quem monta a
+    # página põe o recuo (`RECUO_DA_FITA`); quem pinta a tela viva joga esta
+    # string num `outerHTML`, e o navegador devolve o nó SEM recuo nenhum. Com o
+    # recuo aqui, `f.outerHTML !== p.fita` era VERDADE PARA SEMPRE
+    # (`hefesto_vivo.py:379`): a fita se trocava inteira dez vezes por segundo,
+    # e cada troca deixava para trás o nó de texto dos quatro espaços.
+    # Medido em 02/09/2026, com a trava de `_fita` solta numa bancada:
+    # **29 tiques, 29 pinturas** — uma por tique, sem nada ter mudado.
+    return (f'<div class="fita{" inerte" if inerte else ""}" title="{t}">\n'
             f'      <span>{ROTULO_DA_FITA}</span>\n      ' + "\n      ".join(chips)
             + "\n    </div>")
+
+
+def identidade_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
+    """Como este controle se chama no chip — pelo DONO, nunca por leitura nova.
+
+    Delega a `pacotes.identidade_de`, que é o dono desde a ROTA-A (02/09/2026) e
+    já acerta: *o que ELA nomeou > o modelo decodificado > o transporte só*, e
+    NUNCA a posição — a posição foi o que fez o mesmo controle mudar de nome
+    quando o segundo entrou na mesa.
+
+    **A TRADUÇÃO DE UMA CHAVE, e ela é a única lógica daqui:** `identidade_de`
+    lê `transport` (o nome CRU do daemon) e o item da mesa guarda o mesmo fato
+    como `transporte` (`mesa_viva.mesa_do_estado:328`). Sem esta linha o último
+    degrau da ordem — *"o transporte sozinho"* — cai no travessão, e o controle
+    do rádio aparece como `P2 • — • BT` quando podia dizer `P2 • BT • BT`.
+    O certo é `identidade_de` aprender as duas grafias, ou a mesa publicar a do
+    daemon; enquanto isso não acontece, a tradução mora aqui, à vista.
+
+    O IMPORT É TARDIO de propósito: `pacotes/a04_iluminacao.py` importa `monta`,
+    e um import no topo fecharia o ciclo. Ele só acontece quando há mesa VIVA —
+    os dez geradores passam `mesa=None` e nunca chegam aqui.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import identidade_de
+
+    return identidade_de({**c, "transport": c.get("transporte", "")}, mesa)
+
 
 def glifo(nome: str, ativo: bool = False, tam: int = 24) -> str:
     """Os mesmos SVGs de glifo que a aba Status usa — 27 peças, com versão acesa.
@@ -883,6 +962,10 @@ PLASTICOS_DO_ESQUELETO = {
 #: silêncio, com a régua verde.
 MARCA_DA_FITA = '    <div class="fita'
 
+#: O RECUO DA FITA NO ARQUIVO. Ele é o começo da `MARCA_DA_FITA` e existe à
+#: parte porque `fita()` já NÃO o emite — quem indenta é quem monta a página.
+RECUO_DA_FITA = "    "
+
 
 def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
           fita_viva: bool = False, legenda: str = "") -> int:
@@ -943,9 +1026,14 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     # foi assim que a fita viva morreu sem sintoma quando o texto do chip mudou.
     # Com QUATRO controles na mesa (pedido dela, 27/08) o remendo não escala:
     # a fita inteira sai de `fita()`, que lê a `MESA` e a cor do desenho.
+    #
+    # O RECUO É DAQUI, e não de `fita()`: quem monta o ARQUIVO indenta; quem
+    # pinta a TELA VIVA não pode (o `outerHTML` do navegador não tem recuo, e a
+    # comparação nunca casaria). Ver a nota no fim de `fita()`.
     i = t.index(MARCA_DA_FITA)
     j = t.index("</div>", t.index('class="fita', i)) + len("</div>")
-    t = t[:i] + fita(ativo=("p1" if fita_viva else "todos"), inerte=not fita_viva) + t[j:]
+    t = (t[:i] + RECUO_DA_FITA
+         + fita(ativo=("p1" if fita_viva else "todos"), inerte=not fita_viva) + t[j:])
     # a tira: marca a aba ativa
     tira = ['  <div class="tira">']
     for nome, a in ABAS:
