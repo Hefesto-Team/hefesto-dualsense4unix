@@ -261,11 +261,40 @@ def raizes_candidatas() -> list[pathlib.Path]:
     return fora
 
 
+#: ONDE AS PÁGINAS MORAM HOJE, e a ordem importa: a BANCADA primeiro.
+#:
+#: MEDIDO EM 03/09/2026, e o resultado era o pior estado de um instrumento:
+#: `abas_conhecidas()` devolvia **ZERO** abas. Esta biblioteca é aquela com que
+#: se ESCREVE régua de tela nesta casa — uma régua nova escrita sobre ela
+#: passaria por VACUIDADE, medindo nada e dizendo verde.
+#:
+#: A causa é a mesma que `check_regua_de_tela.py` e `test_arranjo_invariantes`
+#: pagaram no mesmo dia: as pastas mudaram de nome e as réguas não foram junto.
+#: `layout/` e `novo-layout/` **não existem** nesta árvore.
+#:
+#: A BANCADA VEM PRIMEIRO por decisão desta casa, escrita em `onde.pagina`:
+#: *"todo instrumento desta casa existe para medir o desenho de HOJE, e
+#: apontá-lo para o publicado o faria dar verde sobre a página congelada"*. O
+#: publicado fica na lista porque é o que o produto RENDERIZA, e há régua que
+#: precisa dos dois.
+PASTAS_DAS_ABAS = ("mockup", "src/hefesto_dualsense4unix/interface/paginas")
+
+
+def _paginas_da_raiz(raiz: pathlib.Path) -> list[pathlib.Path]:
+    """As páginas de aba de uma raiz, em todas as casas que ela tiver."""
+    fora: list[pathlib.Path] = []
+    for pasta in PASTAS_DAS_ABAS:
+        alvo = raiz / pasta
+        if alvo.is_dir():
+            fora.extend(sorted(alvo.glob("[0-9][0-9]-*.html")))
+    return fora
+
+
 def abas_conhecidas() -> list[pathlib.Path]:
     """Uma linha por aba — a cópia mais nova de cada uma, venha de onde vier."""
     nomes: set[str] = set()
     for raiz in raizes_candidatas():
-        for pagina in (raiz / "layout").glob("[0-9][0-9]-*.html"):
+        for pagina in _paginas_da_raiz(raiz):
             nomes.add(pagina.stem)
     return [achar_a_aba(nome, avisar=False) for nome in sorted(nomes)]
 
@@ -273,16 +302,26 @@ def abas_conhecidas() -> list[pathlib.Path]:
 def candidatas_da_aba(nome: str) -> list[pathlib.Path]:
     """TODA cópia da aba, em todas as raízes, da mais nova para a mais velha."""
     pedido = nome.removesuffix(".html").strip().lower()
-    achadas: list[pathlib.Path] = []
-    for raiz in raizes_candidatas():
-        pasta = raiz / "layout"
-        if not pasta.is_dir():
-            continue
-        for pagina in sorted(pasta.glob("[0-9][0-9]-*.html")):
+    achadas: list[tuple[int, float, pathlib.Path]] = []
+    for ordem, raiz in enumerate(raizes_candidatas()):
+        for pagina in _paginas_da_raiz(raiz):
             miolo = pagina.stem.lower()
             if pedido in (miolo, miolo.split("-", 1)[0], miolo.split("-", 1)[1]):
-                achadas.append(pagina)
-    return sorted(achadas, key=lambda p: p.stat().st_mtime, reverse=True)
+                achadas.append((ordem, -pagina.stat().st_mtime, pagina))
+    # A RAIZ VENCE O RELÓGIO, e isto é a armadilha nº 1 desta casa: *medir
+    # contra a biblioteca errada produz alarme convincente e falso*.
+    #
+    # MEDIDO EM 03/09/2026, no minuto em que esta biblioteca voltou a achar
+    # arquivo: ordenando só por `mtime`, a cópia mais nova da aba 04 era
+    # `/tmp/…/audit-cor/wt/…` — a worktree de OUTRO agente, escrita segundos
+    # antes. A régua leria a árvore dele e relataria sobre a nossa.
+    #
+    # `raizes_candidatas()` já põe ESTA árvore em primeiro e as worktrees
+    # depois; o `sorted` por relógio jogava essa ordem fora. Agora a raiz é a
+    # chave primária e o relógio só desempata DENTRO dela — a worktree continua
+    # servindo de reserva para quem não tem o arquivo em casa, que é para o que
+    # ela entrou.
+    return [p for _, _, p in sorted(achadas)]
 
 
 def achar_a_aba(nome: str, *, avisar: bool = True) -> pathlib.Path:

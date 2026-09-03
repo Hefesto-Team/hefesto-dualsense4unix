@@ -543,13 +543,26 @@ def test_a_regua_da_copia_sabe_recusar() -> None:
 #:   ``fumaca.js`` — a régua que RODA o miolo em 29 estados — só existe nesta
 #:   pasta. Último commit dela: ``79759cd5``, 25/08. É a única casa sem irmãs
 #:   ao lado: abre com duplo clique e não tem para onde navegar.
-#: * ``layout/mapa-das-portas.html`` — **a cópia do produto**, versionada e
-#:   viva. É para ela que ``src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html:3188``
-#:   aponta, e é a que a
-#:   GUI carrega no ``WebKit2.WebView``. Não é gerada: ninguém em
-#:   ``src/hefesto_dualsense4unix/interface/`` a escreve, então a igualdade abaixo é mantível.
-#: * ``novo-layout/mapa-das-portas.html`` — **a referência do desenho**,
-#:   ``.gitignore:108``. Não existe em árvore de agente e ninguém escreve nela.
+#: * ``src/hefesto_dualsense4unix/interface/paginas/mapa-das-portas.html`` — **a
+#:   cópia do produto**, versionada e viva. É para ela que a ``08-conexoes.html``
+#:   publicada aponta, e é a que a GUI carrega no ``WebKit2.WebView``. Não é
+#:   gerada: ninguém em ``src/hefesto_dualsense4unix/interface/`` a escreve,
+#:   então a igualdade abaixo é mantível.
+#: * ``mockup/mapa-das-portas.html`` — **a referência do desenho**, a bancada.
+#:
+#: OS DOIS ENDEREÇOS MUDARAM, e a régua não tinha ido junto — corrigido em
+#: 03/09/2026, junto com o mesmo defeito em `check_regua_de_tela.py`. Ela
+#: apontava para ``layout/`` e ``novo-layout/``, e NENHUMA DAS DUAS EXISTE nesta
+#: árvore: as páginas publicadas moraram para ``interface/paginas/`` e a bancada
+#: para ``mockup/``. O sintoma era o pior que um portão tem — ele reprovava
+#: dizendo *"o arquivo versionado não está aqui"*, que se lê como "alguém
+#: apagou o produto" quando o que houve foi a régua perguntar no lugar errado.
+#:
+#: A BANCADA AGORA É VERSIONADA, e isto derruba metade da razão antiga (*"não
+#: existe em árvore de agente"*). O que NÃO mudou é a razão que importa: ela
+#: anda À FRENTE do produto por decisão dela, e cobrar igualdade contra ela
+#: seria portão gritando falso no dia seguinte. Fica nos NÚMEROS, fora da
+#: IGUALDADE — que é onde já estava, agora pela razão certa.
 #:
 #: O QUE A RÉGUA MEDE, E POR QUE ELA NÃO EXIGE MAIS QUE AS TRÊS SEJAM IGUAIS: os
 #: NÚMEROS são cobrados de toda casa que exista no disco — custo zero, e é
@@ -559,8 +572,8 @@ def test_a_regua_da_copia_sabe_recusar() -> None:
 #: gritando falso já no dia seguinte — ela não acompanha o ``layout/``, por
 #: decisão dela —, e portão que grita falso é portão que se desliga.
 _ORIGEM_CONGELADA = "docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html"
-_COPIA_DO_PRODUTO = "layout/mapa-das-portas.html"
-_REFERENCIA_DO_DESENHO = "novo-layout/mapa-das-portas.html"
+_COPIA_DO_PRODUTO = ("src/hefesto_dualsense4unix/interface/paginas/mapa-das-portas.html")
+_REFERENCIA_DO_DESENHO = "mockup/mapa-das-portas.html"
 
 #: Toda casa onde o mockup pode estar. Os NÚMEROS são cobrados de todas.
 _CAMINHOS_DO_MOCKUP_DO_ARRANJO = (
