@@ -128,7 +128,7 @@ MAC_DO_OUTRO_NO = "aa:bb:cc:dd:ee:09"
 #: cor nos caracteres 5 e 6. Aqui o código é `02`, que a tabela do instrumento
 #: chama de Cosmic Red. Nenhum controle da bancada tem este serial — e é
 #: exatamente por isso que ele está num arquivo versionado.
-SERIAL_FORJADO = "ZZ9Y02Q0000000000"
+SERIAL_FORJADO = "ZZ9Y02Q0000000000"  # serial-de-mentira: prefixo forjado
 COR_DO_SERIAL_FORJADO = "Cosmic Red"
 
 #: A impressão digital de firmware que o `0x20` devolve na bancada de mentira.

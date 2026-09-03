@@ -125,7 +125,7 @@ from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
 #: 6 são ``02`` = Cosmic Red. É o mesmo forjado que
 #: ``test_docs_mac_anonimato.py:759`` já reconhece como ruído legítimo — nenhum
 #: serial de aparelho desta bancada entra em arquivo versionado.
-SERIAL_FORJADO = "ZZ9Y02Q0000000000"
+SERIAL_FORJADO = "ZZ9Y02Q0000000000"  # serial-de-mentira: prefixo forjado
 
 #: O que o card mostra quando a leitura não responde (``mesa_viva.py:163``).
 NAO_SEI = "Não sei"

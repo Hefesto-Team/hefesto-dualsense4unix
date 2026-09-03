@@ -533,8 +533,8 @@ def test_o_regex_nao_confunde_pedaco_de_hexadecimal_maior() -> None:
 #       `hid-ids.h` do DKMS), `INDEPENDENTEMENTE` (mapa-controles.csv e
 #       specs.html), `PROGRAMATICAMENTE` (transcrito de agente),
 #       `REDIMENSIONAMENTO` x3 (retratar_abas.py), mais os DOIS forjados
-#       legítimos — `AB1C05D1234567890` (o exemplo da docstring de
-#       `mascarar_serial`) e `ZZ9Y02Q0000000000`
+#       legítimos, os dois com prefixo forjado — o exemplo da docstring  # serial-de-mentira
+#       de `mascarar_serial` e o de  # serial-de-mentira
 #       (test_cor_do_plastico_recusa_o_alvo_errado.py).
 #   o regex desta seção ..................................... ZERO reprovações
 #
@@ -755,8 +755,8 @@ def test_o_portao_de_serial_nao_reprova_palavra_comprida_nem_forjado() -> None:
         "INDEPENDENTEMENTE",  # docs/data/mapa-controles.csv, specs.html
         "PROGRAMATICAMENTE",  # transcrito de agente
         "REDIMENSIONAMENTO",  # scripts/gui-captura/retratar_abas.py
-        "AB1C05D1234567890",  # forjado da docstring de mascarar_serial()
-        "ZZ9Y02Q0000000000",  # forjado de test_cor_do_plastico_recusa_o_alvo_errado
+        "AB1C05D1234567890",  # serial-de-mentira: da docstring de mascarar_serial
+        "ZZ9Y02Q0000000000",  # serial-de-mentira: de test_cor_do_plastico_recusa
     )
     for palavra in ruido:
         assert len(palavra) == 17, palavra

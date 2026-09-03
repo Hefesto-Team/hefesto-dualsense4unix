@@ -83,6 +83,21 @@ rapido|paridade-transporte|py|scripts/check_paridade_transporte.py
 rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
+# O IRMÃO DO DE CIMA, PARA O SERIAL — 03/09/2026, e o pedido é dela: *"sim, faz
+# o portão pro número de série"*. O serial de fábrica identifica a unidade dela
+# tão bem quanto o MAC, e a regra desta casa é sobre ARQUIVO VERSIONADO, não
+# sobre a palavra "MAC".
+# NÃO É A PRIMEIRA RÉGUA DE SERIAL, e isso foi medido escrevendo esta: o
+# `test_nenhum_serial_de_fabrica_real_no_repo`, dentro do `mac-por-oui`, existe
+# desde 15/08 e acusou o forjado que este portão acabara de criar. Ele é o
+# AUTORITATIVO — pega a forma exata de um DualSense em texto, em hexdump e em
+# corrida hexadecimal colada.
+# O QUE ESTA ACRESCENTA são duas coisas: a CAMADA (1,2 s contra 12 s, logo roda
+# antes do commit em vez de no fim da suíte) e a LARGURA (15 a 20 caracteres,
+# que alcança serial de 8BitDo e de Pro Controller, não só de DualSense).
+# A camada é a lição de HOJE: o `mac-por-oui` acusava os 37 endereços crus da
+# manhã, mas era teste da SUÍTE, e a suíte roda no FIM.
+rapido|serial-de-aparelho|py|scripts/check_numero_de_serie.py
 rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
 # 03/09/2026 — O PORTÃO AUTORITATIVO DE MAC ENTRA AQUI, e a razão é medida: os
 # documentos da leva de cliques trouxeram 37 endereços CRUS da bancada, e este
