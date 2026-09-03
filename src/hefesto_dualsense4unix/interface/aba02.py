@@ -1120,6 +1120,52 @@ DICA_ALTO_MUDO = "Manda zero ao alto-falante do controle, sem perder o volume gu
 DICA_ALTO_SEM_POSSE = ("Apagado porque o volume deste alto-falante ainda é desconhecido: "
                        "o DualSense não o publica, e o daemon recusa calar sem ele.")
 
+# ---------------------------------------------------------------------------
+# OS QUATRO BOTÕES QUE DIZIAM "ESTE É O ESCOLHIDO" SEM LER NADA — 03/09/2026
+# ---------------------------------------------------------------------------
+# São os dois da rota do alto-falante (`Sons do jogo` / `Todo o som do PC`) e os
+# dois do modo do microfone (`Virtual` / `Nativo`). Até hoje o aceso era a
+# classe `on` que ESTE arquivo escreveu, uma vez, e valia para sempre. Medido na
+# mesa dela em 03/09/2026: o card 2 mostrava `Todo o som do PC` aceso com
+# `speaker.rota = 2` no daemon, e o card 1 mostrava `Virtual` aceso sem uma
+# linha de `microfone` no `maquina.json`.
+#
+# OS TRÊS ATRIBUTOS QUE ELES GANHARAM, e nenhum move um pixel (os três estão em
+# `check_o_desenho_aprovado.INVISIVEIS`):
+#
+#   data-campo         o endereço, IGUAL nos dois botões do par
+#   data-hef-alvo      `classe` — o alvo que acende, e não escreve texto
+#   data-hef-quando    quem é ESTE botão; acende o que casar com o valor pintado
+#
+# O ENDEREÇO VAI NO BOTÃO, NUNCA NO CONTAINER. A razão está medida no bloco do
+# `.mic-modo` abaixo: `data-campo` no `<span>` que ENVOLVE os dois faz o piloto
+# trocá-los por um travessão — `[data-mic-modo]` de 4 para 0, no Chrome, em
+# 01/09/2026. Foi por isso que aquele endereço saiu, e é por isso que este entra
+# num lugar diferente.
+#
+# LIGAR UM DESLIGA O OUTRO SEM LISTA DE IRMÃOS: os dois compartilham o mesmo
+# `data-campo`, o `achar()` os visita com o mesmo valor e cada um decide por si
+# — não há caminho no código em que os dois casem (`hefesto_vivo.escrever`,
+# ramo `classe`).
+#
+# QUEM PINTA, e os donos são diferentes de propósito:
+#
+#   alto-rota        `a02_controles.rota_na_tela`, do `speaker.rota` que o
+#                    daemon publica a cada tique. Rota 0 e 1 (tudo no fone,
+#                    mono no fone) apagam os DOIS em vez de arredondar para o
+#                    botão mais parecido.
+#   mic-modo-aceso   `a02_controles.modo_do_mic`, do `maquina.json` — o
+#                    `machine.declare` fica FORA do `state_full` de propósito
+#                    (`a02_controles.SEM_ECO`), então o dono deste aceso é o
+#                    DISCO, e o gesto invalida a leitura em cache ao gravar.
+#
+# E A PROSA FICA AQUI, EM PYTHON, e não num `<!-- -->` no HTML gerado: o
+# `o_que_se_ve` do portão do desenho apaga os atributos de endereço e mais nada
+# — um comentário novo no HTML conta como DESENHO MUDADO e tranca o
+# `--publicar-enderecos`. Medido nesta leva: a primeira redação destes dois
+# blocos vivia dentro da `f-string`, e `so_mudou_endereco('02-controles.html')`
+# devolvia `False`.
+
 
 def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_pc, estado_alto,
@@ -1311,9 +1357,9 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
                    CSS: endereçá-lo trocava os dois botões por um travessão. -->
               <span class="rota mic-modo">
-                <button class="{'on' if mic_modo == 'virtual' else ''}" data-gesto="mic-modo" data-mic-modo="virtual"
+                <button class="{'on' if mic_modo == 'virtual' else ''}" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
                   title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="{'on' if mic_modo == 'nativo' else ''}" data-gesto="mic-modo" data-mic-modo="nativo"
+                <button class="{'on' if mic_modo == 'nativo' else ''}" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
                   title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
               </span>
 
@@ -1333,8 +1379,8 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
               <button class="mudo-i{alto_on}" data-gesto="mudo" data-mudo="alto-falante"{alto_trava} title="{alto_dica}">♪</button>
             </div>
             <div class="rota">
-              <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo">Sons do jogo</button>
-              <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc">Todo o som do PC</button>
+              <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
+              <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
             </div>
           </div>
         </div>
