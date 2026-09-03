@@ -21,4 +21,11 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 08-conexoes.html
+- **03/09/2026** — a cor da pílula do Check-up saiu do desenho. Cada linha do
+  exame ganhou um interruptor invisível por estado (`selo-certo`,
+  `selo-atencao`, `selo-nao-sei`; o `problema` já era a própria pílula), e a
+  folha de estilo passa a ler a cor do irmão. Sem isto, um achado `certo` na
+  segunda posição mostrava a palavra **CERTO** dentro da pílula **laranja** —
+  a palavra era do produto, a cor era do mockup.
+  Não publiquei: quem publica é quem integra a leva.
