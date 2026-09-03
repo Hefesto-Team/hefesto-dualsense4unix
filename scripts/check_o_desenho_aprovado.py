@@ -291,7 +291,22 @@ def publicar_enderecos(argv: list[str]) -> int:
     for nome in alvos:
         if not (PUBLICADO / nome).exists():
             recusadas.append((nome, "a página não existe no produto — é desenho novo"))
-        elif soma(BANCADA / nome) == soma(PUBLICADO / nome):
+        # "JÁ IGUAL" É BYTE A BYTE, e não pelo que se VÊ — 03/09/2026.
+        #
+        # Estava `soma(BANCADA) == soma(PUBLICADO)`, e `soma` é o sha256 do
+        # `o_que_se_ve`, que APAGA os trinta atributos de endereço antes de
+        # comparar. Duas páginas que diferem SÓ num `data-hef-alvo` têm a mesma
+        # `soma` — então caíam aqui, em "já igual", e o `shutil.copy2` do ramo
+        # de baixo nunca rodava. Pior: o ramo era INALCANÇÁVEL por construção,
+        # porque `so_mudou_endereco` é exatamente `soma igual`, e o `elif`
+        # acima já tinha levado esse caso embora. **Esta função nunca carregou
+        # uma página**, e o que ela existe para carregar é precisamente o
+        # endereço que não muda um pixel.
+        #
+        # Medido no `10-perfis.html` com o `data-hef-alvo="classe"` novo:
+        # bytes iguais = False, `soma()` igual = True, `so_mudou_endereco` =
+        # True — e a saída dizia "0 levada(s) · 1 já igual(is)".
+        elif (BANCADA / nome).read_bytes() == (PUBLICADO / nome).read_bytes():
             ja_iguais.append(nome)
         elif so_mudou_endereco(nome):
             shutil.copy2(BANCADA / nome, PUBLICADO / nome)
