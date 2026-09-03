@@ -961,8 +961,18 @@ async def _eleger_ou_devolver(
     mesa de quatro isso é o defeito inteiro: a J1 elege, o J2 aperta o botão
     DELE, e o microfone sai da J1, que fica com o LED aceso dizendo "estou no
     ar". Quem não é o eleito e vai a mudo apaga só a própria luz.
+
+    **E A LUZ DE QUEM PERDEU O CANAL TAMBÉM É DESTE LAÇO** (segunda auditoria
+    de 02/09/2026). Este método escrevia o LED de `uniq` e de mais ninguém — e
+    a posse pode sair de OUTRO controle no mesmo gesto, seja porque o novo
+    eleito ganhou o canal, seja porque o WirePlumber deu o canal a um terceiro.
+    Ver `_apagar_a_luz_de_quem_perdeu_o_canal`.
     """
     eleitor = _eleitor(daemon)
+    # QUEM ESTAVA COM O CANAL ANTES DESTE TOQUE. Ele é lido AQUI porque o
+    # gesto de um controle pode tirar o microfone de OUTRO, e depois da
+    # chamada não há mais como saber quem era. Ver o bloco da luz no fim.
+    dono_antes = eleitor.eleito
     if mudo:
         # SÓ QUEM ESTÁ COM O MICROFONE PODE DEVOLVÊ-LO (auditoria 02/09/2026).
         #
@@ -1122,6 +1132,54 @@ async def _eleger_ou_devolver(
     acender = getattr(daemon.controller, "set_mic_led", None)
     if callable(acender):
         await daemon._run_blocking(_acender, acender, aceso, uniq)
+        await _apagar_a_luz_de_quem_perdeu_o_canal(
+            daemon, acender, dono_antes=dono_antes, quem_tocou=uniq, eleitor=eleitor
+        )
+
+
+async def _apagar_a_luz_de_quem_perdeu_o_canal(
+    daemon: DaemonProtocol,
+    acender: Any,
+    *,
+    dono_antes: str | None,
+    quem_tocou: str,
+    eleitor: Any,
+) -> None:
+    """O plástico de quem perdeu o microfone SEM TER TOCADO EM NADA.
+
+    ACHADO DA AUDITORIA DE 02/09/2026, e é a outra metade do defeito que
+    `EleitorDeMicrofone.eleger_por_uniq` acabou de fechar do lado da posse. O
+    contrato do LED é dela, de 01/09: *"aceso = este mic está no ar"*. Este
+    laço acendia e apagava a luz de **quem apertou o botão**, e só dele — o
+    ex-dono do canal nunca era tocado. Nas duas cenas em que a posse muda por
+    gesto alheio, o plástico dele continuava afirmando o que a posse já negava:
+
+    * o J2 elege e DÁ CERTO — o canal é do J2, e a J1 seguia acesa;
+    * o J2 elege, a escrita PASSA e o WirePlumber reelege um TERCEIRO — o canal
+      não é de ninguém, e a J1 seguia acesa.
+
+    Só apaga, nunca acende: quem ganha o canal é `quem_tocou`, e a luz dele já
+    foi escrita acima. E só quando a posse REALMENTE saiu do ex-dono — se ela
+    continuar com ele (a escrita nem aconteceu, ou o WirePlumber devolveu o
+    canal a ele), a luz dele está certa e mexer nela seria fabricar a mentira
+    ao contrário.
+
+    **NÃO NASCE FRASE DE TELA AQUI.** O que o card da J1 deveria dizer quando
+    ela perde o canal num gesto de outra pessoa é texto novo, e texto de tela é
+    decisão dela — está no relato desta frente. O LED, não: ele já tem
+    contrato escrito, e obedecê-lo é o trabalho.
+    """
+    if dono_antes is None or dono_antes == quem_tocou:
+        return
+    if eleitor.eleito == dono_antes:
+        return
+    logger.info(
+        "mic_da_mesa_luz_do_ex_dono_apagada",
+        ex_dono=dono_antes,
+        por=quem_tocou,
+        eleito_agora=eleitor.eleito,
+    )
+    await daemon._run_blocking(_acender, acender, False, dono_antes)
 
 
 def _acender(acender: Any, aceso: bool, uniq: str) -> None:

@@ -1466,3 +1466,207 @@ async def test_o_toque_do_botao_le_a_mesa_uma_vez_so() -> None:
         "a eleição precisa da lista de quem pode ser eleito, e de uma só vez. "
         f"Perguntou {backend_c.perguntas}"
     )
+
+
+# ---------------------------------------------------------------------------
+# 17. O CAMINHO DE IDA TAMBÉM MEDE O ATIVO — e quem perde o canal é OUTRO
+# ---------------------------------------------------------------------------
+#
+# ACHADO DA SEGUNDA AUDITORIA DE 02/09/2026. A seção 15 fechou o
+# `eleicao_mic_nao_pegou` no caminho de VOLTA: a devolução que escreve e vê o
+# ativo virar um terceiro solta a posse e apaga a luz. O caminho de IDA ficou
+# com a metade velha da régua — `eleger_por_uniq` só sabia dizer *"não foi
+# você"*, e nunca perguntava se ainda era do OUTRO.
+#
+# O sujeito é o que muda, e é o que torna este defeito pior que o da volta:
+# quem perde o microfone não é quem apertou o botão. A J1 está jogando, não
+# tocou em nada, e o gesto do J2 tira o canal dela — o produto escreveu
+# `set-default-source` para o J2, o WirePlumber reelegeu um terceiro por cima e
+# ninguém ficou com o canal. O `state_full` seguia publicando `eleito: …011` e
+# o plástico da J1 seguia ACESO, os dois afirmando *"estou no ar"*.
+#
+# Reproduzido com o eleitor DO PRODUTO e o `pactl` dublado, antes da cura:
+#
+#     eleito_DEPOIS ......... aabbcc000011
+#     ativo_do_sistema_agora  alsa_input.pci-0000_00_1f.3.analog-stereo
+#     MENTIRA ............... true
+
+_CANAL_DO_J2 = "alsa_input.o_canal_do_j2"
+
+
+def _eleitor_de_verdade_com_dois(
+    monkey: pytest.MonkeyPatch,
+) -> tuple[Any, _PipeWireDublado]:
+    """Como `_eleitor_de_verdade`, mas com DOIS canais atribuíveis.
+
+    O `_PipeWireDublado` crava `escolher_fonte` no canal da J1 — basta para as
+    cenas de um controle só, e é cegueira nas de dois: sem esta troca o J2
+    elegeria o canal DELA, que é outro defeito e não o que se mede aqui.
+    """
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone as ele
+
+    eleitor, pipewire = _eleitor_de_verdade(monkey)
+    canais = {_J1: _CANAL_DO_J1, _J2: _CANAL_DO_J2}
+    monkey.setattr(ele, "escolher_fonte", lambda _f, u, _a, _usb: canais.get(u))
+    monkey.setattr(
+        ele, "fontes_de_captura_agora", lambda: [_CANAL_DO_J1, _CANAL_DO_J2]
+    )
+    return eleitor, pipewire
+
+
+def test_a_posse_do_dono_cai_quando_o_gesto_de_outro_tira_o_canal_dele() -> None:
+    """Os SEIS desfechos da IDA, medidos um a um no eleitor do produto.
+
+    A pergunta é sempre a mesma — **o ativo RELIDO ainda é o canal do
+    eleito?** — e ela não depende de qual gesto a provocou. Tratar toda eleição
+    fracassada como "nada mudou" é o que deixava a posse da J1 de pé depois de
+    o próprio produto ter tirado o canal dela.
+
+    CURA A ARRANCAR: o ramo `elif self._o_eleito_saiu_do_ar(resultado):` de
+    `eleger_por_uniq`. Só a linha do TERCEIRO reprova — as outras cinco existem
+    para impedir a cura preguiçosa que solta a posse em toda recusa.
+    """
+    casos = (
+        # rótulo, sustenta, rc, ativo depois, dono no fim
+        (
+            "a fonte do J2 não se sustenta: nada foi escrito",
+            False,
+            0,
+            _CANAL_DO_J1,
+            _J1,
+        ),
+        ("o pactl RECUSOU: a escrita não pegou", True, 1, _CANAL_DO_J1, _J1),
+        ("o WirePlumber devolveu o canal à J1", True, 0, _CANAL_DO_J1, _J1),
+        ("o ativo relido é ILEGÍVEL", True, 0, None, _J1),
+        ("a escrita passou e o ativo é um TERCEIRO", True, 0, _DE_UM_TERCEIRO, None),
+        ("a eleição do J2 foi CONFERIDA", True, 0, _CANAL_DO_J2, _J2),
+    )
+    for rotulo, sustenta, rc, ativo, dono in casos:
+        with pytest.MonkeyPatch.context() as monkey:
+            eleitor, pipewire = _eleitor_de_verdade_com_dois(monkey)
+            _elege_a_j1(eleitor, pipewire)
+
+            pipewire.sustenta = sustenta
+            pipewire.rc = rc
+            pipewire.ativo = ativo
+            resultado = eleitor.eleger_o_controle(_J2, [_J1, _J2])
+
+            assert eleitor.eleito == dono, (
+                f"{rotulo}: o dono do microfone tinha de ser {dono!r} e é "
+                f"{eleitor.eleito!r} — ativo relido {resultado.ativo!r}"
+            )
+            if dono is None:
+                assert eleitor.fonte_do_eleito is None, (
+                    f"{rotulo}: a posse caiu e o nome do canal ficou pendurado"
+                )
+
+
+@pytest.mark.asyncio
+async def test_a_luz_da_j1_apaga_quando_o_gesto_do_j2_tira_o_canal_dela() -> None:
+    """O laço do produto + o eleitor do produto, com DOIS controles na mesa.
+
+    É a cena inteira: a J1 no ar, o J2 aperta, a escrita PASSA e o WirePlumber
+    reelege um terceiro. Ninguém ficou com o canal — e as três superfícies têm
+    de dizer a mesma coisa: o `state_full` sem dono, o plástico do J2 apagado
+    (ele não ganhou nada) e o plástico da J1 apagado (ela perdeu o que tinha).
+
+    CURA A ARRANCAR: qualquer metade. Sem o ramo de `eleger_por_uniq` o
+    `eleito` volta a ser a J1; sem a chamada a
+    `_apagar_a_luz_de_quem_perdeu_o_canal` a luz dela fica acesa.
+    """
+    with pytest.MonkeyPatch.context() as monkey:
+        eleitor, pipewire = _eleitor_de_verdade_com_dois(monkey)
+        backend = _Backend((_J1, _J2))
+        daemon = _Daemon(backend, eleitor)
+
+        pipewire.ativo = _CANAL_DO_J1
+        blocos = await _rodar_os_passos(
+            daemon,
+            [
+                {"uniq": _J1, "mudo": False},
+                lambda: setattr(pipewire, "ativo", _DE_UM_TERCEIRO),
+                {"uniq": _J2, "mudo": False},
+            ],
+        )
+
+    assert blocos[0]["eleito"] == _J1, (
+        f"a eleição de partida tinha de nomear a J1: {blocos[0]}"
+    )
+    depois = blocos[-1]
+    recado = depois["recados"][_J2]
+    assert recado["ok"] is False and recado["ativo"] == _DE_UM_TERCEIRO, (
+        f"a cena montada não é a do terceiro desfecho: {recado}"
+    )
+    assert depois["eleito"] is None, (
+        "o produto escreveu e o ativo relido é um terceiro: o canal não é mais "
+        f"da J1, e o `state_full` não pode nomeá-la — {depois}"
+    )
+    assert backend.leds == {_J1: False, _J2: False}, (
+        "a J1 não tocou em nada e perdeu o canal; o plástico dela não pode "
+        f"continuar afirmando 'estou no ar' — {backend.leds}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_luz_da_j1_apaga_quando_o_j2_ganha_o_canal_de_verdade() -> None:
+    """A troca de turno que FUNCIONA — e ela tinha o mesmo defeito de luz.
+
+    O J2 elege e a eleição é CONFERIDA: o canal é dele, e o contrato dela diz
+    *"aceso = este mic está no ar"*. A J1 não está mais no ar. Este laço
+    acendia e apagava só a luz de quem apertou o botão, então o plástico dela
+    ficava aceso ao lado do dele, os dois dizendo a mesma coisa sobre um canal
+    que é de um só.
+    """
+    with pytest.MonkeyPatch.context() as monkey:
+        eleitor, pipewire = _eleitor_de_verdade_com_dois(monkey)
+        backend = _Backend((_J1, _J2))
+        daemon = _Daemon(backend, eleitor)
+
+        pipewire.ativo = _CANAL_DO_J1
+        blocos = await _rodar_os_passos(
+            daemon,
+            [
+                {"uniq": _J1, "mudo": False},
+                lambda: setattr(pipewire, "ativo", _CANAL_DO_J2),
+                {"uniq": _J2, "mudo": False},
+            ],
+        )
+
+    assert blocos[-1]["eleito"] == _J2, (
+        f"a eleição do J2 foi conferida e ele é o dono: {blocos[-1]}"
+    )
+    assert backend.leds == {_J1: False, _J2: True}, (
+        f"o canal é do J2; só o plástico dele pode estar aceso — {backend.leds}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_luz_da_j1_fica_acesa_quando_o_wireplumber_devolveu_o_canal_a_ela() -> (
+    None
+):
+    """O contra-caso que impede a cura preguiçosa — e ele é o mais comum.
+
+    O J2 aperta, a escrita passa, e o WirePlumber devolve o canal à J1 (é o que
+    ele faz quando o nó do J2 não se sustenta). Ela continua no ar: a posse
+    fica, a luz dela fica acesa, e só a do J2 apaga. Uma cura que apagasse a
+    luz do dono anterior em toda eleição fracassada passaria os dois testes de
+    cima e reprovaria aqui.
+    """
+    with pytest.MonkeyPatch.context() as monkey:
+        eleitor, pipewire = _eleitor_de_verdade_com_dois(monkey)
+        backend = _Backend((_J1, _J2))
+        daemon = _Daemon(backend, eleitor)
+
+        pipewire.ativo = _CANAL_DO_J1
+        blocos = await _rodar_os_passos(
+            daemon,
+            [{"uniq": _J1, "mudo": False}, {"uniq": _J2, "mudo": False}],
+        )
+
+    assert blocos[-1]["eleito"] == _J1, (
+        f"o canal continua sendo dela, e a posse não podia cair — {blocos[-1]}"
+    )
+    assert backend.leds == {_J1: True, _J2: False}, (
+        "o microfone dela continua no ar, logo a luz dela fica acesa; e o J2 "
+        f"não ganhou nada, logo a dele apaga — {backend.leds}"
+    )
