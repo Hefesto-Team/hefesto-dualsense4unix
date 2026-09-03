@@ -113,6 +113,18 @@ INVISIVEIS = re.compile(
     # divergência de desenho onde só há endereço.
     r'|data-hef-gesto|data-hef|data-ajuste|data-player'
         r'|data-hex|data-v|data-hef-alvo|data-hef-rolar'
+    # `data-hef-quando` e `data-hef-classe` SÃO O RESTO DO ALVO `classe`, e a
+    # falta deles aqui era um buraco de ESTRUTURA — 03/09/2026. O alvo `classe`
+    # do piloto (`hefesto_vivo.escrever`) precisa de três atributos no mesmo
+    # elemento: `data-campo` (o endereço), `data-hef-alvo="classe"` (o alvo) e
+    # `data-hef-quando` (qual valor acende) / `data-hef-classe` (que classe).
+    # Os dois primeiros estavam nesta lista e os dois últimos não — logo TODO
+    # endereço de estado por classe caía como "o DESENHO mudou" no
+    # `--publicar-enderecos`, e a única saída era o `--publicar`, que é ato
+    # dela. Nenhum dos dois chega aos olhos: medido por grep, não há uma regra
+    # de CSS `[data-hef-quando]` nem `[data-hef-classe]` em nenhuma das dez
+    # páginas — eles são endereço puro, como os trinta acima.
+    r'|data-hef-quando|data-hef-classe'
     r'|data-linha|data-hef-forma|data-face'
     r')="[^"]*"'
 )

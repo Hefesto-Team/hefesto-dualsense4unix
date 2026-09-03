@@ -348,11 +348,20 @@ def test_o_endereco_do_exame_existe_na_bancada(a09, ctx):
 # 4. O painel de registro não pisca
 # ---------------------------------------------------------------------------
 def test_o_repouso_do_painel_e_o_da_camada_e_nao_o_do_mockup(a09, ctx):
-    """Sem ninguém ter clicado, o painel mostra o que a camada decidiu.
+    """Sem ninguém ter clicado, o painel mostra o que o PRODUTO responde.
 
     O QUE ISSO ARRANCA: enquanto ninguém escrevia neste endereço, o painel
     ficava com as quatro linhas do mockup — `[23:41:02] daemon pronto · 2
     controles`, `perfil "Mortal Kombat" aplicado aos 2`. Nenhuma aconteceu.
+
+    **FATO SUBSTITUÍDO — 03/09/2026.** Este teste exigia o travessão
+    (`p[REGISTRO] == "—"`), e o travessão era o repouso de então: a nota de
+    `aba_sistema.SEM_FONTE` dizia que não havia método de IPC que devolvesse o
+    registro. **A GTK nunca teve um traço aqui:** o `Gtk.TextView` dela fica
+    sempre com a saída de `systemctl status <unit>` (`daemon_actions.py:1970` e
+    `:2549`). O repouso passou a ser o mesmo dela, mais a identidade de fábrica
+    (decisão 10). O que este teste guarda continua sendo o mesmo: **o repouso é
+    do PRODUTO, e nunca as quatro linhas inventadas do mockup.**
 
     **A MORDIDA:** tire `fora[REGISTRO] = _no_painel(...)` do `pacote()` e este
     teste reprova. Executada:
@@ -360,10 +369,10 @@ def test_o_repouso_do_painel_e_o_da_camada_e_nao_o_do_mockup(a09, ctx):
         KeyError: 'registro-texto'
     """
     p = a09.pacote(ctx)
-    assert p[a09.REGISTRO] == "—", (
-        f"o repouso do painel virou {p[a09.REGISTRO]!r} — ele é o valor que "
-        f"`gui/aba_sistema.pacote` decidiu, não uma frase deste arquivo.")
-    assert "23:41" not in p[a09.REGISTRO]
+    assert p[a09.REGISTRO], "o painel voltou a não ser escrito por ninguém"
+    assert "23:41" not in p[a09.REGISTRO], (
+        "as quatro linhas inventadas do mockup voltaram ao painel.")
+    assert "Mortal Kombat" not in p[a09.REGISTRO]
 
 
 def test_o_que_o_gesto_escreve_no_painel_sobrevive_ao_tique(a09, ctx):
