@@ -630,7 +630,46 @@
   /* `--gl` é o tamanho do glifo que titula a seção, e ele é o MESMO número que
      o Python usa em `glifo(tam=GL)`. Escrito duas vezes, ele diverge no dia em
      que alguém mudar um dos dois — é a cicatriz das cores do plástico. */
-  .duas-colunas{display:grid;grid-template-columns:var(--larg-rot) repeat(4,1fr);gap:0 var(--gap-col)}
+  /* ---------- A GRADE É UMA SÓ, E AS COLUNAS SÃO `subgrid` ----------
+     DECISÃO DELA, 02/09/2026: *"os ajustes viram lista e a caixa acompanha o
+     modo. A aba passa a rolar nos modos grandes, e isso é aceito. A tela nunca
+     esconde o que está gravado no disco."*
+
+     O QUE ISSO QUEBRAVA: as nove trilhas eram px FIXOS, repetidos em cada uma
+     das cinco colunas — e era a igualdade dos números que fazia as cinco
+     acabarem no mesmo y. A linha de ajustes valia 4 barras à esquerda e 2 à
+     direita. `Machine` tem SEIS parâmetros e `MultiPositionVibration` tem ONZE:
+     numa trilha de 92px, as sete que sobram vazam para fora da célula e caem
+     por cima da linha de baixo.
+
+     A CURA É `grid-template-rows:subgrid`: as trilhas passam a ser da GRADE
+     GRANDE, e as cinco colunas as compartilham de verdade em vez de coincidirem
+     por acaso. A trilha de ajustes vira `minmax(<o que o desenho reservou>,
+     auto)` — ela cresce até o maior modo que estiver NELA, em qualquer coluna,
+     e as cinco continuam acabando no mesmo y. É a mesma regra que a legenda
+     desta aba já enunciava ("a caixa vale o maior modo que está na LINHA"), com
+     a diferença de que agora quem a calcula é o navegador, com o dado VIVO, e
+     não o Python com a cena do desenho.
+
+     `subgrid` JÁ ERA USADO AQUI (`.rotulos > *:has(.gl)`), então o motor da
+     janela o suporta — não é aposta.
+
+     A COLUNA DE CADA FILHO É EXPLÍCITA, e não por auto-posicionamento: com
+     `grid-row:1/-1` em todos, a colocação automática depende de detalhe de
+     algoritmo, e uma coluna que caia na trilha errada só aparece na foto. */
+  /* `minmax(0,1fr)` E NÃO `1fr`, e a diferença custou uma foto: `1fr` é
+     `minmax(auto,1fr)`, e esse `auto` é o MIN-CONTENT da coluna — qualquer
+     conteúdo que se recuse a encolher empurra a coluna inteira. Medido em
+     02/09/2026, quando o campo do nome do efeito entrou: as colunas foram de
+     220px para 302 e a aba nasceu com **275px de rolagem LATERAL**, com o P4
+     fora da tela. Com o mínimo em zero, quem tem de cede r é o conteúdo, e a
+     grade nunca passa da caixa. */
+  .duas-colunas{display:grid;grid-template-columns:var(--larg-rot) repeat(4,minmax(0,1fr));
+    column-gap:var(--gap-col);row-gap:var(--r-passo);
+    grid-template-rows:var(--r-nome) var(--r-modo) var(--r-pronto)
+                       minmax(var(--r-aj-e),auto) var(--r-sep)
+                       var(--r-modo) var(--r-pronto)
+                       minmax(var(--r-aj-d),auto) var(--r-acao)}
 
   /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
      *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
@@ -681,12 +720,7 @@
   /* o `.sep-linha` (um elemento de 1px entre os blocos L2 e R2) SAIU: com a borda
      de célula acima ele desenhava a SEGUNDA linha, 10px abaixo da primeira. */
 
-  .duas-colunas > div{
-    display:grid;row-gap:var(--r-passo);
-    grid-template-rows:var(--r-nome) var(--r-modo) var(--r-pronto) var(--r-aj-e)
-                       var(--r-sep) var(--r-modo) var(--r-pronto) var(--r-aj-d)
-                       var(--r-acao);
-  }
+  .duas-colunas > div{display:grid;grid-row:1/-1;grid-template-rows:subgrid}
   /* a barra vertical entre blocos irmãos — pedido dela. Ela mora na COLUNA do
      controle, e não na de rótulos: é o rótulo que serve as quatro. */
   .duas-colunas .ctrl{border-left:1px solid var(--linha);padding:0 12px 0 13px}
@@ -869,7 +903,18 @@
      barras ocupa as duas primeiras, e a primeira barra de toda coluna começa no
      mesmo y. O rótulo é o token `--rot` (92px), o mesmo de toda aba que tem
      campo; sobram 80px de trilho, que é o que a coluna de 220px permite. */
-  .ajustes{display:grid}
+  /* A CAIXA CRESCE COM O MODO, e por isso as linhas dela são AUTOMÁTICAS.
+     Ela era `grid-template-rows:repeat(N,1fr)` — N trilhas iguais, com N vindo
+     da cena do desenho. Com o produto trocando a caixa inteira (o `blocos:` do
+     pacote), o número de barras é o do MODO: zero no `Desligado`, seis na
+     Metralhadora, onze na Vibração por posição. `grid-auto-rows` dá a mesma
+     altura a cada barra e deixa a caixa medir o que ela tem.
+     O DESENHO NÃO MUDA DE PIXEL: `--r-aj-e` é `N_ESQ * --h-barra` por
+     construção, então quatro barras de `--h-barra` enchem a trilha exatamente
+     como as quatro trilhas de `1fr` enchiam. `align-content:start` é o que
+     mantém a primeira barra de toda coluna no mesmo y quando o modo tem menos
+     barras do que a linha reserva. */
+  .ajustes{display:grid;grid-auto-rows:var(--h-barra);align-content:start}
   .barra{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--texto-mudo)}
   .barra .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);
                  position:relative}
@@ -905,9 +950,46 @@
      escreveu. Aqui ele fica na coluna de quem ele guarda. */
   .duas-colunas .ctrl .btn{width:100%;font-size:11.5px;padding:0 6px}
 
+  /* ---------- O NOME DO EFEITO — decisão 17 dela, 02/09/2026 ----------
+     *"Isso é pra quando o user salva algum efeito. É assim que tem que
+     aparecer. O nome que o user deixar lá. Ali é só exemplo."*
+
+     "Meus efeitos" existia no campo de escolha com dois nomes de exemplo e sem
+     dono nenhum — não havia, em todo o `src/`, onde guardar um efeito com nome.
+     O que faltava era ONDE ESCREVER O NOME, e é este campo: o "Guardar esse
+     efeito" ao lado já recolhe a coluna inteira (`data-hef-forma="@controle"`),
+     então o nome viaja junto sem endereço novo.
+
+     ELE DIVIDE A LINHA DO BOTÃO, e não ganha linha própria: a grade tem 24px de
+     folga sobre o teto medido (477px) e uma linha nova custaria 48. Lado a
+     lado, custa ZERO — a linha `--r-acao` já tinha 34px de altura para um botão
+     que ocupa 34.
+
+     O CAMPO ENCOLHE E O BOTÃO NÃO, e as TRÊS declarações do campo são
+     necessárias — medido em 02/09/2026, com a foto: só `min-width:0` NÃO basta.
+     Um `<input>` tem largura intrínseca (o `size` implícito, ~147px aqui), e com
+     `flex-basis:auto` ela vira a contribuição mínima do campo: a linha pediu
+     276px numa coluna de 220 e a aba nasceu com 275px de rolagem lateral, o P4
+     fora da tela. `flex:1 1 0` mais `width:0` zeram a base; o campo passa a
+     CRESCER a partir do nada, em vez de encolher a partir do intrínseco. */
+  .duas-colunas .ctrl .guardar{display:flex;align-items:center;gap:6px;min-width:0}
+  .duas-colunas .ctrl .guardar .btn{width:auto;flex:0 0 auto;white-space:nowrap}
+  .duas-colunas .ctrl .nome-efeito{
+    flex:1 1 0;width:0;min-width:0;height:24px;padding:0 7px;border-radius:6px;
+    font-family:inherit;font-size:11px;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--fg)}
+  .duas-colunas .ctrl .nome-efeito::placeholder{color:var(--comment)}
+  .duas-colunas .ctrl .nome-efeito:focus{outline:none;border-color:var(--purple)}
+  /* O LUGAR VAZIO NÃO SE DIGITA, pela mesma razão que ele não se clica: um
+     efeito é de um aparelho, e nomear um que não está aqui só pode terminar em
+     recusa. Ver a trava dos `select` acima. */
+  .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito{
+    pointer-events:none;opacity:.55}
+
   .duas-colunas{
     --r-nome:24px;--r-modo:36px;--r-pronto:36px;
     --r-aj-e:92px;--r-sep:1px;--r-aj-d:46px;
+    --h-barra:23px;
     --r-acao:34px;--r-ar:7px;--r-passo:calc(var(--r-ar) * 2);
     /* O TAMANHO DO GLIFO E A LARGURA DA COLUNA DE RÓTULOS saem do Python, do
        mesmo lugar que o `glifo(tam=GL)` lê. Digitados no CSS, os dois divergem
@@ -915,8 +997,11 @@
        do padrão das lâmpadas. */
     --gl:36px; --larg-rot:135px; --gap-col:16px; --vao-gl:10px;
   }
-  .ajustes.e{grid-template-rows:repeat(4,1fr)}
-  .ajustes.d{grid-template-rows:repeat(2,1fr)}
+  .duas-colunas > div:nth-child(1){grid-column:1}
+  .duas-colunas > div:nth-child(2){grid-column:2}
+  .duas-colunas > div:nth-child(3){grid-column:3}
+  .duas-colunas > div:nth-child(4){grid-column:4}
+  .duas-colunas > div:nth-child(5){grid-column:5}
 
 </style>
 </head>
@@ -1159,6 +1244,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e"
                     title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+                <option value="—" disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1184,6 +1270,7 @@
             <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
                     data-hef-alvo="valor" data-lado="e"
                     title="Efeito pronto do gatilho esquerdo">
+                <option value="—" disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
                 <option value="rampa_decrescente">Rampa decrescente</option>
@@ -1230,6 +1317,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
                     data-hef-alvo="valor" data-lado="d"
                     title="Gatilho direito — os 19 modos, com a descrição de cada um">
+                <option value="—" disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1255,6 +1343,7 @@
             <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
                     data-hef-alvo="valor" data-lado="d"
                     title="Efeito pronto do gatilho direito">
+                <option value="—" disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
                 <option value="rampa_decrescente">Rampa decrescente</option>
@@ -1278,7 +1367,12 @@
               <span class="num" data-campo="aj-val-d-1">15</span>
             </div>
           </div>
-          <div><button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button></div>
+          <div class="guardar">
+            <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
+                   maxlength="60" placeholder="Nome"
+                   title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+          </div>
         </div>
         <div class="ctrl" data-controle="p2"
              data-conectado="sim">
@@ -1287,6 +1381,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e"
                     title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+                <option value="—" disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1312,6 +1407,7 @@
             <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
                     data-hef-alvo="valor" data-lado="e"
                     title="Efeito pronto do gatilho esquerdo">
+                <option value="—" disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
                 <option value="rampa_decrescente">Rampa decrescente</option>
@@ -1353,6 +1449,7 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
                     data-hef-alvo="valor" data-lado="d"
                     title="Gatilho direito — os 19 modos, com a descrição de cada um">
+                <option value="—" disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" selected title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
@@ -1378,6 +1475,7 @@
             <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
                     data-hef-alvo="valor" data-lado="d"
                     title="Efeito pronto do gatilho direito">
+                <option value="—" disabled>—</option>
                 <option value="custom" selected>— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
                 <option value="rampa_decrescente">Rampa decrescente</option>
@@ -1401,7 +1499,12 @@
               <span class="num" data-campo="aj-val-d-1">200</span>
             </div>
           </div>
-          <div><button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button></div>
+          <div class="guardar">
+            <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
+                   maxlength="60" placeholder="Nome"
+                   title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+          </div>
         </div>
         <div class="ctrl" data-controle="p3"
              data-conectado="nao">
@@ -1410,7 +1513,8 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e"
                     title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
-                <option value="Off" selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="—" selected disabled>—</option>
+                <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -1435,7 +1539,8 @@
             <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
                     data-hef-alvo="valor" data-lado="e"
                     title="Efeito pronto do gatilho esquerdo">
-                <option value="custom" selected>— Nenhum —</option>
+                <option value="—" selected disabled>—</option>
+                <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
                 <option value="rampa_decrescente">Rampa decrescente</option>
                 <option value="plateau_central">Plateau central</option>
@@ -1462,7 +1567,8 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
                     data-hef-alvo="valor" data-lado="d"
                     title="Gatilho direito — os 19 modos, com a descrição de cada um">
-                <option value="Off" selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="—" selected disabled>—</option>
+                <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -1487,7 +1593,8 @@
             <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
                     data-hef-alvo="valor" data-lado="d"
                     title="Efeito pronto do gatilho direito">
-                <option value="custom" selected>— Nenhum —</option>
+                <option value="—" selected disabled>—</option>
+                <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
                 <option value="rampa_decrescente">Rampa decrescente</option>
                 <option value="plateau_central">Plateau central</option>
@@ -1501,7 +1608,12 @@
           <div class="ajustes d">
             <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>
           </div>
-          <div><button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button></div>
+          <div class="guardar">
+            <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
+                   maxlength="60" placeholder="Nome"
+                   title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+          </div>
         </div>
         <div class="ctrl" data-controle="p4"
              data-conectado="nao">
@@ -1510,7 +1622,8 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e"
                     title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
-                <option value="Off" selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="—" selected disabled>—</option>
+                <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -1535,7 +1648,8 @@
             <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
                     data-hef-alvo="valor" data-lado="e"
                     title="Efeito pronto do gatilho esquerdo">
-                <option value="custom" selected>— Nenhum —</option>
+                <option value="—" selected disabled>—</option>
+                <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
                 <option value="rampa_decrescente">Rampa decrescente</option>
                 <option value="plateau_central">Plateau central</option>
@@ -1562,7 +1676,8 @@
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
                     data-hef-alvo="valor" data-lado="d"
                     title="Gatilho direito — os 19 modos, com a descrição de cada um">
-                <option value="Off" selected title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
+                <option value="—" selected disabled>—</option>
+                <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
                 <option value="SimpleRigid" title="A mesma trava dura, com um só ponto de ajuste em vez de dez.">Rígido simples</option>
                 <option value="Pulse" title="Um solavanco num ponto do curso e depois solta — o coice de um tiro único.">Pulso</option>
@@ -1587,7 +1702,8 @@
             <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
                     data-hef-alvo="valor" data-lado="d"
                     title="Efeito pronto do gatilho direito">
-                <option value="custom" selected>— Nenhum —</option>
+                <option value="—" selected disabled>—</option>
+                <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
                 <option value="rampa_decrescente">Rampa decrescente</option>
                 <option value="plateau_central">Plateau central</option>
@@ -1601,7 +1717,12 @@
           <div class="ajustes d">
             <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>
           </div>
-          <div><button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button></div>
+          <div class="guardar">
+            <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
+                   maxlength="60" placeholder="Nome"
+                   title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+          </div>
         </div>
         </div>
       </div>
@@ -1690,16 +1811,15 @@
 
   <h2>O que ficou apertado, e está dito</h2>
   <ul>
-    <li><b>A caixa de ajustes cabe 4 barras.</b> O produto
-        (<code>app/actions/trigger_specs.py</code>) diz que cinco dos 19 modos pedem mais:
-        <span class="marca">Galope</span> 5, <span class="marca">Metralhadora</span> 6,
+    <li><b>A caixa de ajustes acompanha o modo, e a aba rola nos grandes</b> — sua decisão de
+        02/09. A caixa reserva 4 barras no L2 e 2 no R2 (é o que esta cena pede), e
+        <b>cresce</b> quando o modo pede mais: o produto (<code>app/actions/trigger_specs.py</code>)
+        diz que <span class="marca">Galope</span> tem 5, <span class="marca">Metralhadora</span> 6,
         <span class="marca">Montar do zero</span> 8, <span class="marca">Curva de força</span> 10 e
-        <span class="marca">Vibração por posição</span> 10. Dez barras pedem 230px
-        numa linha, e as duas somariam <b>460px</b> — mais do que a coluna inteira tem
-        (453px, com o chip, os campos e o botão dentro). <b>Não cortei nada</b>: os cinco modos
-        continuam na lista. O que falta decidir é onde as dez posições se desenham —
-        provavelmente uma janela própria, que é o que o nome <span class="marca">Montar do zero</span>
-        já promete.</li>
+        <span class="marca">Vibração por posição</span> 11. Onze barras pedem 253px numa
+        linha — mais do que a coluna inteira tem hoje (453px) —, então a aba passa a rolar
+        por dentro. <b>Era isso ou esconder</b>: até 02/09 a caixa mostrava as quatro primeiras e
+        calava sobre as outras sete, com os números no disco.</li>
     <li><b>Divergência real, e ela é mais velha que esta aba:</b> o P1 mostra
         <span class="marca">Metralhadora</span> com quatro barras (Força, Frequência, Início do
         curso, Fim do curso) e o produto lista <b>seis</b> com outros nomes (Início, Fim, Amplitude

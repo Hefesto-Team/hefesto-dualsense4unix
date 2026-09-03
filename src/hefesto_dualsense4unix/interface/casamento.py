@@ -110,6 +110,22 @@ def do_pacote(pagina: str, estado: dict | None = None) -> tuple[set[str], set[st
     por_controle: set[str] = set()
     for campos in pronto["colunas"].values():
         por_controle |= {k for k, v in campos.items() if not isinstance(v, (dict, list))}
+    # OS ENDEREÇOS QUE CHEGAM DENTRO DE UM BLOCO CONTAM, e sem esta linha esta
+    # régua acusa a cura — 02/09/2026. Um bloco cujo número de filhos muda com o
+    # dado não tem como ser pintado campo a campo (é o que o BOOTSTRAP do piloto
+    # diz com todas as letras), então o pacote manda HTML pronto por SELETOR
+    # CSS. Os `data-campo` que vêm nesse HTML existem na tela e carregam valor
+    # do produto — a régua do mockup já os trata como PRODUTO, pelo mesmo
+    # motivo.
+    #
+    # MEDIDO na aba Gatilhos, quando a caixa de ajustes virou bloco: o
+    # casamento caiu de 19 para 7 e as doze `aj-*` apareceram como *"a tela tem
+    # onde e ninguém manda"* — sobre doze endereços que o produto passa a
+    # escrever com o modo VIVO em vez dos quatro que o desenho cravava. A
+    # `08-conexoes` e a `10-perfis` já usavam blocos e tinham o mesmo ponto
+    # cego; ele só não aparecia porque o piso delas foi medido depois.
+    for html in (pronto.get("blocos") or {}).values():
+        por_controle |= set(CAMPO.findall(str(html)))
     return set(pronto["mesa"]), por_controle
 
 
