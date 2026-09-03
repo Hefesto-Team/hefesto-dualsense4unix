@@ -62,13 +62,13 @@ identidade: ver :data:`_SYNTHESIZED_MAC_FIRST_OCTET` e
 :meth:`ExternalIdentityRegistry._prune_volatile_locked`.
 
 GYRO-02 (2026-07-19, FASEADO): :class:`ExternalImuEnabler` reusa o MESMO
-tick/inventário para ligar a IMU do Nintendo Pro genuíno
-(:func:`~hefesto_dualsense4unix.core.linhagem_nintendo.e_pro_genuino`), que o
-hid-nintendo deixa em STANDBY. Mesmo
+tick/inventário para mandar o Enable-IMU ao Nintendo Pro genuíno
+(:func:`~hefesto_dualsense4unix.core.linhagem_nintendo.e_pro_genuino`). Mesmo
 território de subcomando do incidente acima — por isso a disciplina é
 ainda mais estrita: só ``bus == "usb"`` (fase 1), envio único por adoção,
 backoff de :data:`IMU_ENABLE_MAX_ATTEMPTS` tentativas ≥
-:data:`IMU_ENABLE_BACKOFF_SEC` segundos, nunca loop.
+:data:`IMU_ENABLE_BACKOFF_SEC` segundos, nunca loop. Dizia-se aqui que o
+hid-nintendo «deixa em STANDBY» a IMU: fato substituído em 03/09/2026 — ver `core/external_leds`.
 """
 from __future__ import annotations
 
