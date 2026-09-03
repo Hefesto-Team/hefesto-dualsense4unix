@@ -226,6 +226,40 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .ctl.off .leia,
   .ctl.off .bat{color:var(--linha)}
 
+  /* ---------- UM LUGAR SEM CONTROLE NÃO TEM BATERIA, NEM LUZ, NEM SENSOR ----
+     03/09/2026, medido clicando no produto instalado com UM controle no cabo.
+
+     O QUE A TELA MOSTRAVA: a linha do P2 — com o cabeçalho dizendo `1 controle`
+     e TODOS os campos de texto no travessão — trazia uma barra de bateria
+     PINTADA a 89,9 px de 140,5 (`style="width:64%"`, o literal deste gerador) e
+     os dois chips de sensor em `rgb(80, 250, 123)`, o mesmo verde do controle
+     que está mesmo na mesa. Quem olha lê "o P2 tem 64% e o giroscópio ligado".
+
+     POR QUE O TRAVESSÃO NÃO ALCANÇOU ESTES: o molde do lugar vazio
+     (`pacotes.apagar_os_lugares_sem_dono`) escreve `—` em TODA chave, e o
+     `escrever()` do piloto leva o travessão a `style.width = '—%'` — CSS
+     inválido, que o CSSOM DESCARTA CALADO. O número virou travessão; o pixel
+     ficou com o desenho. Medido: escrever `'—%'` na barra deixa `style.width`
+     em `64%`, byte por byte. Os chips não têm `data-campo` nenhum — não há
+     endereço por onde o produto os alcance.
+
+     A CURA AQUI É DA FOLHA, e é a que sobrevive ao pixel do mockup: uma regra
+     de estilo vence o `style=` inline com `!important`, e não depende de o
+     produto lembrar de apagar. Ela pende do `data-conectado`, que é o que o
+     piloto MANTÉM a cada tique (`hefesto_vivo.py`, laço dos `vazios`) — o mesmo
+     seletor que a aba Gatilhos já usa, e não um terceiro estado inventado.
+
+     E O CINZA NÃO É NOVO: `.sensores-peca .sw.off` já é o desligado que ESTE
+     desenho tem. O lugar vazio passa a usá-lo, em vez de ganhar cor própria. */
+  .ctl[data-conectado="nao"] .bat .cheio,
+  .ctl[data-conectado="nao"] .vol .cheio{width:0 !important}
+  .ctl[data-conectado="nao"] .vol .cheio::after{display:none}
+  .ctl[data-conectado="nao"] .barra-luz{color:var(--panel) !important}
+  .ctl[data-conectado="nao"] .sensores-peca .sw{
+    border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .ctl[data-conectado="nao"] .sensores-peca .sw .p{
+    background:var(--border-forte);box-shadow:none}
+
   /* ---------- OS DOIS BOTÕES DO FIM ----------
      Ela, 31/08: *"Temos que ter dois botões no final."* Eles são `<a>`, e não
      `<button>`, porque abrem PÁGINA — o `.btn` desta casa já é usado nas duas
@@ -2094,11 +2128,35 @@ def _conferir(doc):
     if len(corpo) < 2000:
         raise SystemExit("ERRO: a régua não achou o miolo — régua que mede 0 "
                          "caractere passa com qualquer desenho.")
+    # A FOLHA É LIDA À PARTE, e de propósito: o `corpo` acima é o MIOLO, e as
+    # regras de estilo moram no `<style>` do cabeçalho. Uma régua de CSS que
+    # procurasse no miolo daria verde sobre folha nenhuma — que é a família de
+    # régua cega que esta casa já pagou. O casamento é do SELETOR INTEIRO, não
+    # de um token solto.
+    folha = doc.split("<style", 1)[-1].split("</style>", 1)[0]
+    if len(folha) < 2000:
+        raise SystemExit("ERRO: a régua não achou a folha de estilo — régua que "
+                         "mede 0 caractere passa com qualquer desenho.")
     falhas = []
 
     def exigir(cond, oque):
         if not cond:
             falhas.append(oque)
+
+    # 0. O LUGAR VAZIO NÃO PODE MOSTRAR O DESENHO. As três regras que apagam a
+    #    bateria, a luz e os sensores de um assento sem controle. Sem elas a
+    #    linha do P2 volta a exibir 64% de bateria e dois chips VERDES com o
+    #    cabeçalho dizendo `1 controle` — medido em 03/09/2026, 89,9 px de
+    #    140,5. Elas pendem do `data-conectado`, que é o que o piloto mantém.
+    exigir('.ctl[data-conectado="nao"] .bat .cheio' in folha
+           and "width:0 !important" in folha,
+           "a barra de bateria do lugar vazio voltou a mostrar o pixel do "
+           "mockup — um assento sem controle não tem bateria")
+    exigir('.ctl[data-conectado="nao"] .sensores-peca .sw{' in folha,
+           "os chips de sensor do lugar vazio voltaram ao verde de ligado — "
+           "um assento sem controle não tem giroscópio")
+    exigir('.ctl[data-conectado="nao"] .barra-luz' in folha,
+           "a barra de luz do lugar vazio voltou a acender com a cor do mockup")
 
     # 1. "Conectados" virou "Dispositivos Conectados".
     exigir(">Dispositivos Conectados</span>" in corpo, "o título novo sumiu")
