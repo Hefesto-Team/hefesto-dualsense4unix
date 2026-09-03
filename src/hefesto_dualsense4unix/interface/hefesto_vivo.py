@@ -977,6 +977,18 @@ PERIGOSOS = {
     # duas metades são uma decisão só: ligar sem o isento seria ligar contra
     # ela.
     ("07-lancadores.html", "abrir-lancador"),
+    # O SALVAR GRAVA NO PERFIL DELA, SEM PERGUNTAR. O rodapé o registra como
+    # `@gesto("*", "salvar")`, então ele vive nas DEZ abas — e a prova botão a
+    # botão, rodando aba por aba, escrevia dez vezes no disco dela por volta.
+    # MEDIDO EM 03/09/2026: dez gravações em `meu_perfil.json` entre 07:14 e
+    # 07:47, uma por aba provada. Nada dela se perdeu desta vez — as dez foram
+    # re-salvamentos do mesmo conteúdo —, mas o caminho para perder existe e
+    # está nomeado: desligar a barra de luz e salvar copia a cor apagada por
+    # cima da que ela escolheu, e isso não se desfaz.
+    #
+    # A CHAVE É CORINGA de propósito: o gesto é um só nas dez páginas, e
+    # `_alvos_a_clicar` casa `("*", nome)` além de `(página, nome)`.
+    ("*", "salvar"),
 }
 
 
