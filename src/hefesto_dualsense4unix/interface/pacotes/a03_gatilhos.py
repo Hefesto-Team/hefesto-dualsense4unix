@@ -916,7 +916,7 @@ CAMPO_DO_CHIP = "chip-do-controle"
 #: O ENDEREÇO NO PRÓPRIO `<span>`, e ele existe por UMA razão: a régua
 #: `check_identidade_vem_de_cima.py` julga o `--plastico` pelo endereço do
 #: ELEMENTO QUE O CARREGA — um pai endereçado não dá ao filho o direito de
-#: trazer cor congelada, e está certa nisso. Sem ele, os quatro chips
+#: trazer cor congelada, e está certa nisso. Sem ele, os chips com cor
 #: continuariam acusados com o produto já os reescrevendo.
 #:
 #: ELE É `data-hef`, E O NOME NÃO CASA COM CHAVE NENHUMA, de propósito. O
@@ -925,6 +925,23 @@ CAMPO_DO_CHIP = "chip-do-controle"
 #: Quem reescreve este elemento é o pai, pelo alvo `html` — o `<span>` é
 #: refeito inteiro a cada tique, e por isso não precisa (nem pode) receber
 #: escrita própria.
+#:
+#: **O ENDEREÇO ACOMPANHA A COR — 03/09/2026, e a razão é medida.** Ele sai
+#: onde não há `--plastico` no `style`, e o motivo é que ali ele é LASTRO: não
+#: há cor congelada para o produto reescrever, e a régua da identidade não olha
+#: um elemento que não carrega cor (ela julga o `style` do PRÓPRIO elemento; o
+#: texto e a dica já ficam cobertos pelo embrulho endereçado).
+#:
+#: O QUE O LASTRO CUSTAVA, e é a dívida desta frente: um `<span>` DENTRO de um
+#: pai que se troca inteiro **nunca pode receber o selo da visita** — carimbá-lo
+#: poria `data-hef-visto="1"` dentro do `innerHTML` que o pai compara, e a
+#: coluna repintaria a cada tique, para sempre (é o mesmo defeito que o
+#: `CAMPO_DO_CHIP` acima já mediu: 17 tiques, 17 pinturas). Sem selo, um campo
+#: só é PRODUTO quando o seu valor MUDA — e o do lugar vazio nunca muda:
+#: `P3 • Desconectado` é o mesmo no desenho e no produto, por construção. O
+#: desfecho eram DOIS campos eternamente contados como mockup, sem que houvesse
+#: o que consertar. Endereço que ninguém pode pintar não é cobertura: é dívida
+#: que não se paga.
 HEF_DO_CHIP = "chip.plastico"
 
 #: O separador dos pedaços do rótulo. É o mesmo `monta.SEPARADOR`, e está aqui
@@ -975,6 +992,11 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     `.chip.plastico{border-color:var(--plastico, var(--border-forte))}`, com a
     queda já escrita. Cravar um hex de mockup aqui seria dizer que se sabe a cor
     do plástico de um controle que ainda não a disse.
+
+    E SEM HEX, SEM ENDEREÇO NO `<span>` — ver :data:`HEF_DO_CHIP`. Os dois
+    andam juntos porque o endereço existe para defender a cor: onde não há cor
+    congelada não há o que defender, e o endereço vira lastro que a régua do
+    mockup cobra sem que ninguém possa pagar.
     """
     classe = "chip plastico" if conectado else "chip vazio"
     if not conectado:
@@ -984,7 +1006,8 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     else:
         dica = "A borda é a cor do plástico deste controle."
     estilo = f' style="--plastico:{plastico}"' if conectado and plastico else ""
-    return (f'<span class="{classe}" data-hef="{HEF_DO_CHIP}"{estilo}'
+    endereco = f' data-hef="{HEF_DO_CHIP}"' if estilo else ""
+    return (f'<span class="{classe}"{endereco}{estilo}'
             f' title="{dica}">'
             f"{miolo_do_chip(jogador, nome, via, conectado)}</span>")
 
@@ -1186,6 +1209,24 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                  for sig in LADOS}
         vazia.update({f"pronto-{sig}": _sem_nada("pronto", str(sem_ninguem["pronto"]))
                       for sig in LADOS})
+        # O CABEÇALHO DO LUGAR VAZIO É CAMPO, E NÃO BLOCO — 03/09/2026, e é a
+        # dívida que esta frente veio pagar. Ele SEMPRE foi escrito (pelo
+        # `blocos` mais abaixo), mas bloco pousa por seletor CSS e **não carimba
+        # o selo da visita**. Sem selo, a régua do mockup só consegue dar por
+        # PRODUTO um campo cujo valor MUDE — e o do lugar vazio não muda nunca:
+        # `P3 • Desconectado` é o mesmo no desenho e no produto, por construção.
+        # Eram dois campos acusados com o produto já os escrevendo, e o comentário
+        # que dizia "o que se perde é o selo, e não faz falta" estava errado: era
+        # exatamente o selo que faltava.
+        #
+        # AQUI PODE E NO P2 NÃO PODE, e a diferença é a de sempre nesta função:
+        # emitir uma coluna tira aquele lugar da conta `TODOS_OS_LUGARES -
+        # colunas` do piloto, e com ela some o `data-conectado="nao"` que segura
+        # o `pointer-events:none`. Nos lugares que a PÁGINA já dá por vazios a
+        # marca está no arquivo e isso não custa nada; num que ela dá por
+        # conectado, custaria a trava. Por isso o bloco continua existindo, para
+        # os lugares que este laço não alcança.
+        vazia[CAMPO_DO_CHIP] = _chip_do_lugar_vazio(pref)
         colunas[pref] = vazia
         pintados += sum(1 for k in vazia if k in tem_endereco)
 
@@ -1205,15 +1246,29 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # cabeçalho nomeando um controle que não está aqui, que é o defeito de
         # forma que esta casa já nomeou quatro vezes.
         #
-        # AQUI É BLOCO E NA COLUNA CHEIA É CAMPO, e a diferença não é gosto: a
-        # `colunas` de um lugar vazio tem régua de conteúdo EXATO
-        # (`test_o_lugar_vazio_recebe_desligado_e_nenhum` exige as quatro
-        # chaves de escolha e nenhuma outra), e ela está certa — a coluna vazia
-        # não tem barra de ajuste, e emitir mais ali seria a aba se dar nota
-        # por escrever no vazio. O bloco pousa por seletor CSS e não entra
-        # nessa conta. O que se perde é o selo, e não faz falta: um lugar sem
-        # aparelho não tem valor que possa COINCIDIR com o do desenho.
-        blocos[seletor_do_chip(pref)] = _chip_do_lugar_vazio(pref)
+        # AQUI É BLOCO PORQUE NÃO DÁ PARA SER CAMPO, e não porque bloco baste:
+        # o campo é melhor — ele carimba o selo da visita, e sem selo a régua do
+        # mockup não consegue dar por PRODUTO um valor que coincide com o
+        # desenho. Quem PODE ser campo já foi, no laço acima; aqui sobra o lugar
+        # que a PÁGINA dá por conectado (o P2 com um controle só na mesa), onde
+        # emitir uma coluna custaria o `data-conectado="nao"` que segura o
+        # `pointer-events:none`.
+        #
+        # A FRASE QUE ESTAVA AQUI CAIU — 03/09/2026. Ela dizia: *"o que se perde
+        # é o selo, e não faz falta: um lugar sem aparelho não tem valor que
+        # possa COINCIDIR com o do desenho"*. Faz falta, e coincide: o desenho
+        # crava `P3 • Desconectado` nas duas colunas vazias — é o mesmo texto
+        # que o produto escreve, palavra por palavra, porque as duas saem desta
+        # mesma função. Sem selo, a régua contava as duas como mockup.
+        #
+        # A GUARDA PERGUNTA PELO CHIP, e não pela COLUNA. Medido na mordida
+        # desta frente: com `pref not in colunas`, arrancar o campo do laço de
+        # cima fazia o P3 ficar com cabeçalho NENHUM — a coluna existia (as
+        # quatro escolhas), o bloco era pulado, e o desenho ficava na tela sem
+        # que nada acusasse. Perguntar pelo que se quer escrever é o que impede
+        # uma cura de virar buraco quando a outra sai.
+        if CAMPO_DO_CHIP not in (colunas.get(pref) or {}):
+            blocos[seletor_do_chip(pref)] = _chip_do_lugar_vazio(pref)
 
     return {
         "colunas": colunas,

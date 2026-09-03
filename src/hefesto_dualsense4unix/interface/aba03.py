@@ -1079,17 +1079,27 @@ def _conferir(doc):
     #
     #    * o do EMBRULHO (`data-campo` + alvo `html`) é quem o produto ESCREVE:
     #      trocando o miolo, o `<span>` inteiro é refeito — borda, dica e nome.
-    #    * o do `<span>` (`data-hef`) é o que a régua EXIGE: ela julga o
-    #      `--plastico` pelo endereço do elemento que o carrega, e um pai
-    #      endereçado não dá ao filho o direito de trazer cor congelada.
+    #      Ele está nas QUATRO colunas, cheias e vazias.
+    #    * o do `<span>` (`data-hef`) é o que a régua EXIGE, e ele ACOMPANHA A
+    #      COR: `check_identidade_vem_de_cima.py` julga o `--plastico` pelo
+    #      endereço do elemento que o carrega, e um pai endereçado não dá ao
+    #      filho o direito de trazer cor congelada. Onde não há cor não há o que
+    #      defender — e o endereço a mais era LASTRO que a régua do mockup
+    #      cobrava sem que ninguém pudesse pagar: um `<span>` dentro de um pai
+    #      que se troca inteiro nunca recebe o selo da visita, e sem selo um
+    #      campo só é PRODUTO quando o valor MUDA. O do lugar vazio não muda.
     #
     #    Arranque qualquer um dos dois e é aqui que o gerador para.
     exigir(corpo.count(f'data-campo="{CAMPO_DO_CHIP}"') == len(MESA),
            f"os {len(MESA)} embrulhos de chip não têm endereço — o produto "
            f"perde onde escrever a identidade que a fita do topo já leu")
-    exigir(corpo.count(f'data-hef="{HEF_DO_CHIP}"') == len(MESA),
-           f"os {len(MESA)} chips das colunas não têm endereço — a identidade "
-           f"do controle volta a vir do mockup, e não da fita do topo")
+    enderecados = corpo.count(f'data-hef="{HEF_DO_CHIP}"')
+    com_cor = corpo.count("--plastico:")
+    exigir(enderecados == com_cor,
+           f"o endereço do `<span>` deixou de acompanhar a cor: {enderecados} "
+           f"endereços para {com_cor} cores cravadas. Um a menos e a régua da "
+           f"identidade acusa a cor sem dono; um a mais e a régua do mockup "
+           f"cobra um campo que o produto não tem como selar")
     exigir(corpo.count(f'<div class="{CLASSE_DO_CHIP}" ') == len(MESA),
            f"o embrulho `.{CLASSE_DO_CHIP}` sumiu de alguma coluna — é ele que "
            f"o produto troca inteiro para reescrever a borda do plástico")
