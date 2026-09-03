@@ -603,6 +603,11 @@ def coluna(c):
     # tem alvo de pintura para atributo. Toda dica escrita aqui fica CONGELADA
     # no que o gerador soube — e o gerador só sabe o mockup. Dentro do desenho
     # ela viaja pelo alvo `html` do `luz`, que se troca a cada tique.
+    #
+    # E ELA ENCOLHEU no mesmo dia: a frase *"Desenho que mandamos: desenho do
+    # PN — automático…"* saiu, porque o pacote não vê a camada do merge que
+    # decide qual desenho está em vigor. Aqui, sem mesa viva, o gerador não
+    # passa nem o número: `dica_da_luz` não precisa mais dele.
     return f'''        <div class="ctrl" data-controle="{c.get("uniq") or p}" data-conectado="sim">
           <div class="moldura" style="--plastico:{cor_da_zona(c["cor"])}" title="O {c["nome"]} agora: a barra na cor do Player {j}, e as cinco lâmpadas no padrão dele.">
             {svg(f"il-{p}", c["cor"], jogador=j, luz=tinta)}
@@ -624,7 +629,7 @@ def coluna(c):
 {_pacote04.fileira_de_players(c["nome"], c["jogador"], DONOS_NA_MESA, "            ")}
           </div>
           <div class="aceso" data-campo="luz" data-hef-alvo="html">
-{_pacote04.desenho_da_luz(tinta, b / 100, j, dica=_pacote04.dica_da_luz(c["nome"], c["via"], "", j), recuo="            ")}
+{_pacote04.desenho_da_luz(tinta, b / 100, j, dica=_pacote04.dica_da_luz(c["nome"], c["via"], ""), recuo="            ")}
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>

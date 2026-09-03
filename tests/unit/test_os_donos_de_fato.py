@@ -246,10 +246,11 @@ EXCECOES_DATADAS: dict[str, str] = {
         "NÃO é controle: casa a entrada de `rumble_ff.per_vpad` pelo número do vpad"
     ),
     "a05_vibracao.py:376": "lê o `player` do controle para casar com o vpad acima; migra junto",
-    # A LINHA ANDOU DE 413 PARA 638 e DE 638 PARA 768 em 02/09/2026 — o pacote
-    # ganhou `_tinta`, `TIRA_APAGADA`, `desenho_da_luz`, `_so_abriu_o_seletor`,
-    # `o_coop_manda` e `dica_da_luz`. A leitura continua sendo a mesma: o
-    # `player` do CLIQUE.
+    # A LINHA ANDOU QUATRO VEZES EM 02/09/2026 — 413, 638, 768 e agora 780 — e
+    # nenhuma delas foi uma leitura crua nova. O pacote ganhou `_tinta`,
+    # `TIRA_APAGADA`, `desenho_da_luz`, `_so_abriu_o_seletor`, `o_coop_manda` e
+    # `dica_da_luz`; as últimas mexidas só reescreveram docstring e comentário.
+    # A leitura continua sendo a mesma: o `player` do CLIQUE.
     #
     # ESTA LISTA COBRA ARQUIVO:LINHA, e por isso ela reprova toda vez que um
     # pacote CRESCE — sem que uma linha de leitura crua tenha nascido. É o preço
@@ -257,7 +258,7 @@ EXCECOES_DATADAS: dict[str, str] = {
     # contagem que ninguém confere. RELATO para quem coordena: uma âncora por
     # NOME DE FUNÇÃO em vez de número de linha custaria a mesma precisão sem o
     # aluguel — hoje ela cai em toda leva que toca um pacote.
-    "a04_iluminacao.py:768": "lê o `player` do CLIQUE (`o`), não do controle — não é state_full",
+    "a04_iluminacao.py:780": "lê o `player` do CLIQUE (`o`), não do controle — não é state_full",
 }
 
 #: A leitura crua a caçar. `player_slot` está de fora: ele é a chave que a GTK lê
