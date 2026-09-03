@@ -865,8 +865,8 @@ def test_o_automatico_pinta_a_cor_do_numero_do_motor():
 
     p = _clicar("auto", {"uniq": DO_CABO["uniq"]})
     assert p.chamadas[0][0] == "chamar" and p.chamadas[0][1] == ("lightbar.reset",)
-    assert p.chamadas[1] == ("led_set", (tuple(player_slot_color(2)),),
-                             {"uniq": DO_CABO["uniq"]}), (
+    assert p.chamadas[1] == ("led_set_detalhado", (tuple(player_slot_color(2)),),
+                             {"brightness": None, "uniq": DO_CABO["uniq"]}), (
         f"o automático pintou {p.chamadas[1]!r}. O controle do cabo é o 2 pelo "
         f"`player_slot`; cair em 1 é a posição disfarçada de default.")
 
@@ -882,7 +882,8 @@ def test_a_conversao_do_hex_e_a_do_motor():
     from pacotes import a04_iluminacao as pac
 
     p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#FF8000"})
-    assert p.chamadas == [("led_set", ((255, 128, 0),), {"uniq": DO_CABO["uniq"]})]
+    assert p.chamadas == [("led_set_detalhado", ((255, 128, 0),),
+                          {"brightness": None, "uniq": DO_CABO["uniq"]})]
     # SEM O DOCSTRING: ele CITA a linha morta, para quem ler saber o que caiu, e
     # procurar no texto inteiro faria a régua reprovar quem documenta bem — o
     # defeito de forma que esta casa já nomeou cinco vezes.
@@ -915,7 +916,8 @@ def test_o_seletor_livre_manda_a_cor_pelo_valor():
 
     p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "", "valor": "#00ff80",
                         "tipo": "input", "evento": "change"})
-    assert p.chamadas == [("led_set", ((0, 255, 128),), {"uniq": DO_CABO["uniq"]})]
+    assert p.chamadas == [("led_set_detalhado", ((0, 255, 128),),
+                          {"brightness": None, "uniq": DO_CABO["uniq"]})]
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
     assert bancada.count('class="livre" value="#0000ff" data-gesto="cor"') == 1
@@ -952,19 +954,30 @@ def test_abrir_o_seletor_livre_nao_manda_cor_nenhuma():
     # `click` dele é o gesto inteiro.
     p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#FF8000",
                         "tipo": "button", "evento": "click"})
-    assert p.chamadas == [("led_set", ((255, 128, 0),), {"uniq": DO_CABO["uniq"]})]
+    assert p.chamadas == [("led_set_detalhado", ((255, 128, 0),),
+                          {"brightness": None, "uniq": DO_CABO["uniq"]})]
 
 
 # ---------------------------------------------------------------------------
 # 10. o botão que aceita o clique, não faz nada — e não diz
 # ---------------------------------------------------------------------------
 class PonteMuda:
-    """A ponte com o daemon SEM RESPONDER: tudo devolve o `False` do bridge.
+    """A ponte com o daemon SEM RESPONDER — e o "não respondeu" tem DUAS formas.
 
     `ipc_bridge._safe_call` devolve `(False, None)` para daemon offline, socket
-    ausente, timeout de conexão e erro JSON-RPC do servidor — e `led_set` e
-    `ponte.chamar` traduzem isso no `False` que este dublê imita. É o estado da
-    máquina dela toda vez que o Hefesto não está de pé.
+    ausente, timeout de conexão e erro JSON-RPC do servidor. Quem traduz isso
+    para o chamador são duas funções com contratos diferentes, e o dublê tem de
+    imitar as duas — senão ele deixa de medir o silêncio que existe para medir:
+
+        `led_set` / `ponte.chamar`   `bool` → `False`
+        `led_set_detalhado`          `dict | None` → `None` (`_corpo_do_daemon`)
+
+    ELE DEVOLVIA `False` PARA TUDO até 03/09/2026, e isso era certo enquanto a
+    aba escrevia pela porta booleana. Com a `_detalhado`, um `False` não é
+    "não respondeu": é um corpo que não é dicionário, e `frase_do_desfecho` o
+    lê como *"não há resposta do daemon a ler"* e cai na heurística — que sem
+    pendência nenhuma devolve a frase do APLICADO. O dublê passaria a provar o
+    contrário do que promete.
     """
 
     def __init__(self) -> None:
@@ -973,7 +986,7 @@ class PonteMuda:
     def __getattr__(self, nome):
         def guardar(*a, **kw):
             self.chamadas.append((nome, a, kw))
-            return False
+            return None if nome.endswith("_detalhado") else False
         return guardar
 
 
