@@ -743,14 +743,52 @@
      A BORDA É A COR DO PLÁSTICO, E ELA VEM DO DESENHO
      (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). Eram duas classes, `.c-red` e
      `.c-blue`, lendo dois hexadecimais do `:root`. Com quatro controles na mesa
-     faltariam duas; com os 28 do CSV de cores, vinte e seis. O `--plastico` é o
-     mesmo mecanismo do chip da fita, e o valor sai de `monta.cor_da_zona`, que
-     lê o `<style>` que o gerador escreveu no SVG. */
+     faltariam duas; com os 28 do CSV de cores, vinte e seis.
+
+     E ELA PASSOU A TER DONO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA-01. A cor
+     vinha de `--plastico`, escrito no `style=` do cartão pelo gerador, e o
+     gerador só conhece o mockup: com o controle DELA no cabo (White), a borda
+     continuava Cosmic Red. A lei é dela: *"se no topo tá mostrando controle
+     white player 1, então cada aba vai usar os controles lá de cima."*
+
+     POR QUE UMA VARIÁVEL DE CSS NÃO SERVIA, e é o que decidiu a forma: o
+     `escrever()` do piloto tem SETE alvos — texto, largura, fundo, valor, html,
+     classe e cor — e **nenhum escreve uma custom property**. Um `--plastico`
+     cravado é, por construção, cor que o produto não alcança.
+
+     A COR ENTRA PELO ALVO `cor`, que escreve `style.color`, e quem a veste é
+     esta pele: um elemento vazio, deitado exatamente sobre a borda do cartão
+     (`inset:-2px` põe a margem dele no bordo externo dos 2px), com
+     `border-color:currentColor`. Ele NÃO pode ser o `.cartao`: o desenho grande
+     tem 16 traços em `currentColor` (`ds_limpo.svg`), e pintar a cor no cartão
+     repintaria o controle inteiro.
+
+     `pointer-events:none` porque a pele cobre o cartão todo, e sem isso ela
+     comeria o clique dos chips de máscara logo abaixo.
+
+     SEM LEITURA, SEM COR: o `color` da pele nasce em `--border-forte`, que é
+     exatamente a borda que o cartão já tinha quando `--plastico` faltava. O
+     pacote manda `""` enquanto a cor do plástico não chegou (ela vem do broker,
+     em thread, e o primeiro tique de uma sessão nunca a tem), o `escrever`
+     devolve `style.color = ''` e a pele volta ao neutro. É a regra dela: campo
+     sem informação não mostra nada. */
   .cartao{
+    position:relative;
     display:flex;flex-direction:column;align-items:stretch;gap:7px;
     padding:5px 6px 6px;
-    border-color:var(--plastico, var(--border-forte));
+    border-color:var(--border-forte);
   }
+  .cartao > .pele{
+    position:absolute;inset:-2px;pointer-events:none;
+    border:2px solid currentColor;border-radius:7px;
+    color:var(--border-forte);
+  }
+  /* O LUGAR VAZIO NÃO TEM PELE — sem controle não há plástico a mostrar, e a
+     borda dele é a do `.cartao.off` (`--border-sutil`), trinta linhas abaixo.
+     A regra existe porque o cartão vira `off` EM TEMPO DE EXECUÇÃO: quem sai da
+     mesa ganha a classe pelo `apagar_os_lugares_sem_dono`, e sem isto a pele
+     ficaria acesa na cor de quem já foi embora. */
+  .cartao.off > .pele{display:none}
   .peca-topo{display:flex;align-items:center;gap:6px}
   /* A ENTRELINHA É A CURA DO VÃO, e ela é na ALTURA — encolher o mais alto.
      Com `1.45` o cartão media 67,5px e a coluna de avisos ao lado, 55: doze e  # (noqa-acento)  (`media` é o verbo medir)
@@ -1203,9 +1241,9 @@
 
         <div>
             <div class="pecas" data-lista="cartoes">
-              <div class="cartao alvo" style="--plastico:#ae335a"
-                   data-controle="p1" data-conectado="sim"
-                   title="Sony • Player 1 • Cosmic Red • USB">
+              <div class="cartao alvo"
+                   data-controle="p1" data-conectado="sim">
+                <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a"></i>
                 <div class="peca-topo">
                 <svg data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -1597,9 +1635,9 @@
                   <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
-              <div class="cartao" style="--plastico:#7eb8d4"
-                   data-controle="p2" data-conectado="sim"
-                   title="Sony • Player 2 • Starlight Blue • BT">
+              <div class="cartao"
+                   data-controle="p2" data-conectado="sim">
+                <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:#7eb8d4"></i>
                 <div class="peca-topo">
                 <svg data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2867,8 +2905,8 @@
       <b>escopo</b>. Ali ele lia como <i>"ligar o Hefesto quando um jogo abrir"</i>, e não é isso:
       <b>ligado ou desligado vale sempre</b>, com jogo aberto ou sem nenhum. O que o lançamento
       decide de verdade é o <b>modo</b>, e é só ele que fica no quadro.
-      <br>A gramática é a da <b>fita</b> do topo da janela (<span class="marca">"Ajustes vão para:
-      [Todos] [P1 · Cosmic Red · USB]…"</span>): rótulo deitado, a fileira do que se escolhe, sem
+      <br>A gramática é a da <b>fita</b> do topo da janela (<span class="marca">"Selecionar:
+      [Todos] [P1 · o plástico · USB]…"</span>): rótulo deitado, a fileira do que se escolhe, sem
       moldura, acima do que ela governa. O "Hefesto" nasce no <b>mesmo x</b> de "Quando o jogo
       abrir" e "Conectado agora" — os três títulos da aba numa coluna só.
       <br><b>E ela DEVOLVEU altura em vez de custar</b>, que era o risco: o quadro perdeu a linha

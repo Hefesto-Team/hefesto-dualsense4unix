@@ -60,7 +60,11 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import onde  # noqa: E402
 import monta  # noqa: E402
-from monta import MASCARAS, MESA, glifo, monta as montar, rotulo, svg  # noqa: E402
+# `rotulo` SAIU DA LISTA em 03/09/2026: o único uso desta aba era o `title` do
+# cartão, que era identidade cravada e foi removido (ver `cartao`). O rótulo
+# VISÍVEL continua montado à mão aqui, campo a campo, porque cada pedaço dele
+# tem `data-campo` próprio — que é o que `rotulo()` não sabe fazer.
+from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # A CENA
@@ -431,14 +435,52 @@ CSS = """
      A BORDA É A COR DO PLÁSTICO, E ELA VEM DO DESENHO
      (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). Eram duas classes, `.c-red` e
      `.c-blue`, lendo dois hexadecimais do `:root`. Com quatro controles na mesa
-     faltariam duas; com os 28 do CSV de cores, vinte e seis. O `--plastico` é o
-     mesmo mecanismo do chip da fita, e o valor sai de `monta.cor_da_zona`, que
-     lê o `<style>` que o gerador escreveu no SVG. */
+     faltariam duas; com os 28 do CSV de cores, vinte e seis.
+
+     E ELA PASSOU A TER DONO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA-01. A cor
+     vinha de `--plastico`, escrito no `style=` do cartão pelo gerador, e o
+     gerador só conhece o mockup: com o controle DELA no cabo (White), a borda
+     continuava Cosmic Red. A lei é dela: *"se no topo tá mostrando controle
+     white player 1, então cada aba vai usar os controles lá de cima."*
+
+     POR QUE UMA VARIÁVEL DE CSS NÃO SERVIA, e é o que decidiu a forma: o
+     `escrever()` do piloto tem SETE alvos — texto, largura, fundo, valor, html,
+     classe e cor — e **nenhum escreve uma custom property**. Um `--plastico`
+     cravado é, por construção, cor que o produto não alcança.
+
+     A COR ENTRA PELO ALVO `cor`, que escreve `style.color`, e quem a veste é
+     esta pele: um elemento vazio, deitado exatamente sobre a borda do cartão
+     (`inset:-2px` põe a margem dele no bordo externo dos 2px), com
+     `border-color:currentColor`. Ele NÃO pode ser o `.cartao`: o desenho grande
+     tem 16 traços em `currentColor` (`ds_limpo.svg`), e pintar a cor no cartão
+     repintaria o controle inteiro.
+
+     `pointer-events:none` porque a pele cobre o cartão todo, e sem isso ela
+     comeria o clique dos chips de máscara logo abaixo.
+
+     SEM LEITURA, SEM COR: o `color` da pele nasce em `--border-forte`, que é
+     exatamente a borda que o cartão já tinha quando `--plastico` faltava. O
+     pacote manda `""` enquanto a cor do plástico não chegou (ela vem do broker,
+     em thread, e o primeiro tique de uma sessão nunca a tem), o `escrever`
+     devolve `style.color = ''` e a pele volta ao neutro. É a regra dela: campo
+     sem informação não mostra nada. */
   .cartao{
+    position:relative;
     display:flex;flex-direction:column;align-items:stretch;gap:7px;
     padding:5px 6px 6px;
-    border-color:var(--plastico, var(--border-forte));
+    border-color:var(--border-forte);
   }
+  .cartao > .pele{
+    position:absolute;inset:-2px;pointer-events:none;
+    border:2px solid currentColor;border-radius:7px;
+    color:var(--border-forte);
+  }
+  /* O LUGAR VAZIO NÃO TEM PELE — sem controle não há plástico a mostrar, e a
+     borda dele é a do `.cartao.off` (`--border-sutil`), trinta linhas abaixo.
+     A regra existe porque o cartão vira `off` EM TEMPO DE EXECUÇÃO: quem sai da
+     mesa ganha a classe pelo `apagar_os_lugares_sem_dono`, e sem isto a pele
+     ficaria acesa na cor de quem já foi embora. */
+  .cartao.off > .pele{display:none}
   .peca-topo{display:flex;align-items:center;gap:6px}
   /* A ENTRELINHA É A CURA DO VÃO, e ela é na ALTURA — encolher o mais alto.
      Com `1.45` o cartão media 67,5px e a coluna de avisos ao lado, 55: doze e  # (noqa-acento)  (`media` é o verbo medir)
@@ -684,6 +726,33 @@ def cartao(c, bateria=None):
     de segundo a segundo ganha aqui a sua própria FOLHA, e a folha é um `<span>`
     inline sem estilo — que é o que permite endereçar sem mover um pixel, que é
     a promessa desta mudança.
+
+    A PELE, E O `title` QUE SAIU (03/09/2026, IDENTIDADE-VEM-DE-CIMA-01)
+    --------------------------------------------------------------------
+    O cartão trazia DUAS identidades cravadas, e as duas nomeavam o controle do
+    desenho enquanto a fita do topo já nomeava o dela:
+
+        style="--plastico:#ae335a"                        → a borda Cosmic Red
+        title="Sony • Player 1 • Cosmic Red • USB"        → a dica Cosmic Red
+
+    A **borda** virou a `<i class="pele">`, que tem endereço e alvo `cor` — o
+    porquê da forma está no CSS, junto da regra.
+
+    O **`title` SAIU, e não foi substituído por outro.** Três razões, e a
+    terceira é a que decide:
+
+    1. ele REPETIA o rótulo palavra por palavra, quatro pixels ao lado —
+       `rotulo(c, "completa")` é `Sony • Player 1 • Cosmic Red • USB`, e o
+       rótulo visível escreve as mesmas quatro coisas em três linhas. É a mesma
+       conta que tirou o `<title>Bateria</title>` do glifo, vinte linhas acima;
+    2. `title` é ATRIBUTO, e o piloto **não tem alvo de pintura para atributo**
+       — a razão já estava escrita na `aba04.py`, na dica que saiu de lá pelo
+       mesmo motivo. Toda dica escrita aqui fica congelada no que o gerador
+       soube, e o gerador só sabe o mockup;
+    3. logo, mantê-lo era escolher entre uma dica que MENTE (a de 02/09, que
+       sussurrava "Cosmic Red" sob o cursor com o White na mão) e um endereço
+       que não pinta nada — e a segunda é pior, porque zera a régua deixando a
+       tela igualmente errada.
     """
     # O LUGAR VAZIO — decisão dela, 31/08/2026: *"Vamos deixar os outros dois
     # controles desconectados, só colocamos algo como `-` nos campos que deveriam
@@ -731,9 +800,9 @@ def cartao(c, bateria=None):
         f'                  <span class="chip{" on" if m == c["mascara"] else ""}"'
         f' data-gesto="mascara" data-mascara="{m}">{m}</span>'
         for m in MASCARAS)
-    return f'''              <div class="cartao{" alvo" if c["alvo"] else ""}" style="--plastico:{monta.cor_da_zona(c["cor"])}"
-                   data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim"
-                   title="{rotulo(c, "completa").replace('<span class="pt">•</span>', '•')}">
+    return f'''              <div class="cartao{" alvo" if c["alvo"] else ""}"
+                   data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim">
+                <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:{monta.cor_da_zona(c["cor"])}"></i>
                 <div class="peca-topo">
                 {_desenho(c)}
                 <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player {c["jogador"]}</b><br><span data-campo="identidade">{c["nome"]} <span class="pt">•</span> {c["via"]}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%</span></span></span>
@@ -1001,8 +1070,8 @@ LEGENDA = f'''<div class="nota">
       <b>escopo</b>. Ali ele lia como <i>"ligar o Hefesto quando um jogo abrir"</i>, e não é isso:
       <b>ligado ou desligado vale sempre</b>, com jogo aberto ou sem nenhum. O que o lançamento
       decide de verdade é o <b>modo</b>, e é só ele que fica no quadro.
-      <br>A gramática é a da <b>fita</b> do topo da janela (<span class="marca">"Ajustes vão para:
-      [Todos] [P1 · Cosmic Red · USB]…"</span>): rótulo deitado, a fileira do que se escolhe, sem
+      <br>A gramática é a da <b>fita</b> do topo da janela (<span class="marca">"{monta.ROTULO_DA_FITA}
+      [Todos] [P1 · o plástico · USB]…"</span>): rótulo deitado, a fileira do que se escolhe, sem
       moldura, acima do que ela governa. O "Hefesto" nasce no <b>mesmo x</b> de "Quando o jogo
       abrir" e "Conectado agora" — os três títulos da aba numa coluna só.
       <br><b>E ela DEVOLVEU altura em vez de custar</b>, que era o risco: o quadro perdeu a linha
@@ -1287,6 +1356,32 @@ def _conferir(doc):
     for pedaco in corpo.split('class="cartao off"')[1:]:
         exigir('class="chip on"' not in pedaco.split("</div>\n              </div>")[0],
                "um lugar vazio tem máscara marcada")
+
+    # 5-bis. A IDENTIDADE VEM DA FITA, NÃO DO DESENHO — 03/09/2026, e é a lei
+    #    dela: *"se no topo tá mostrando controle white player 1, então cada aba
+    #    vai usar os controles lá de cima."* O cartão trazia a cor do plástico
+    #    numa custom property e o nome dele num `title`, e o piloto não tem alvo
+    #    de pintura para nenhum dos dois — logo os dois só sabiam dizer o mockup.
+    #
+    #    A RÉGUA OLHA SÓ A FILEIRA DE CARTÕES, e não o `corpo`: a FITA também
+    #    traz `--plastico`, e ela é do `monta.py` — das dez abas. Acusá-la aqui
+    #    mandaria consertar o que esta aba não pode.
+    fileira = corpo.split('data-lista="cartoes"', 1)[-1].split('class="col-atencao"', 1)[0]
+    exigir(len(fileira) > 2000, "a régua não achou a fileira de cartões")
+    exigir("--plastico" not in fileira, "o cartão voltou a cravar a cor do plástico")
+    exigir(fileira.count('data-campo="plastico" data-hef-alvo="cor"')
+           == len(monta.CONECTADOS),
+           "não há uma pele endereçada por controle na mesa")
+    #    O NOME DO PLÁSTICO NO RÓTULO CONTINUA, e tem de continuar: ele mora em
+    #    `<span data-campo="identidade">`, e o pacote o reescreve todo tique —
+    #    fotografado em 03/09 dizendo `White · USB` com o controle no cabo. O que
+    #    NÃO pode voltar é o nome num ATRIBUTO, que congela no que o gerador
+    #    soube. Cobrar o nome em qualquer lugar da fileira mandaria apagar o
+    #    rótulo que está certo — a armadilha nomeada trinta linhas acima.
+    for dica in re.findall(r'title="([^"]*)"', fileira):
+        for c in monta.CONECTADOS:
+            exigir(c["nome"] not in dica,
+                   f"uma dica do cartão voltou a nomear o plástico: {dica!r}")
 
     # 6-bis. NENHUM ALARME SEM MEDIÇÃO. Ela, 31/08: *"qualquer coisa fora isso
     #    tá incorreta"* — a regra do Nativo é só "Desligado põe o Nativo online".
