@@ -80,6 +80,42 @@ from . import Contexto, perfil, registrar
 SEM_DONO: dict[str, str] = {}
 
 
+#: A ORDEM DAS CÉLULAS DA COLUNA "AJUSTE PRÓPRIO", da esquerda para a direita.
+#:
+#: POR QUE ELA MORA AQUI, e não sai de `perfis_web.SECOES_POR_CONTROLE`: aquela
+#: é a lista do ESQUEMA — o que o perfil sabe guardar hoje, quatro campos. Esta
+#: é a lista do DESENHO, que tem CINCO desde a decisão nº20 dela (03/09/2026,
+#: *"o microfone vira o quinto ajuste por controle"*). As duas são verdades
+#: diferentes e vão convergir; enquanto não convergem, confundi-las faria a
+#: distribuição casar célula com vizinha — a coluna do P2 mostrando o estado do
+#: P1, que é pior que a coluna apagada.
+#:
+#: E ELA NÃO PODE SAIR DO GERADOR. `interface/aba10.py` é um script: ele insere
+#: o próprio diretório no `sys.path` e importa `monta`, que LÊ O REPOSITÓRIO no
+#: import — num pacote instalado não há repositório, e todo consumidor deste
+#: módulo passaria a exigir um. A segunda declaração é o preço; quem impede que
+#: as duas divirjam é
+#: `tests/unit/test_a_coluna_de_ajuste_proprio_da_aba10_e_dado.py`, que compara
+#: esta lista com a `SECOES` do gerador, nome a nome e na ordem.
+SECOES_DA_COLUNA: tuple[str, ...] = (
+    "leds", "triggers", "rumble", "speaker", "mic")
+
+#: AS COLUNAS QUE A TELA JÁ MOSTRA E O ESQUEMA AINDA NÃO GUARDA.
+#:
+#: Uma coluna aqui é uma DECLARAÇÃO com prazo, não uma licença: ela diz *"esta
+#: coluna existe por decisão dela, e o campo está a caminho"*. Enquanto o campo
+#: não chega, `perfis_web._secoes_do_controle` não devolve a chave, o pacote lê
+#: `None` e a célula fica apagada em todo perfil real — a tela pronta para o
+#: dado, sem inventá-lo.
+#:
+#: O `mic` está aqui por decisão dela nº20 (03/09/2026). Ele sai desta lista
+#: sozinho, sem ninguém precisar lembrar: no dia em que `ControllerOverrides`
+#: ganhar o campo, ele passa a estar em `SECOES_POR_CONTROLE` e a régua para de
+#: precisar da isenção. Quem cobra é
+#: `tests/unit/test_a_coluna_de_ajuste_proprio_da_aba10_e_dado.py`.
+ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset({"mic"})
+
+
 #: COMO A TELA CHAMA O QUE O PERFIL GUARDA — `match.type` no disco, uma frase
 #: na coluna "Quando usar". A tradução mora aqui e não no JS: é vocabulário do
 #: produto, e o desenho dela já fixou as palavras.
@@ -177,11 +213,6 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:
 #: **PARA DESTRAVAR OS QUE FICAM**, e cada um tem um dono diferente:
 #:
-#:   guarda.secao        o pintor precisa de um alvo que ligue/desligue CLASSE:
-#:                       aceso é `.gr.on`, apagado é `.gr`, e nenhum dos cinco
-#:                       alvos de hoje (texto·largura·fundo·valor·html) alcança
-#:                       uma classe. `hefesto_vivo.py` não é território desta
-#:                       frente; a peça está pedida ao orquestrador.
 #:   guarda.linhas       não tem conserto e não precisa: é o `<tbody>`, um
 #:                       CONTINENTE. Nunca houve valor para escrever nele.
 #:                       (A lista de perfis tinha o mesmo formato e ganhou
@@ -215,7 +246,21 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:                       estragá-la. Quem lhe dá valor de verdade é a
 #:                       ONDA-PERFIS-04, e nesse dia o piloto precisa de um
 #:                       caminho para MARCAR uma opção de `value` vazio.
-NAO_PINTAVEIS = ("guarda.linhas", "guarda.secao", "editor.prioridade.dica",
+#: **`guarda.secao` SAIU DESTA LISTA — 03/09/2026**, e o motivo dela caducou por
+#: inteiro. Estava escrito aqui que *"nenhum dos cinco alvos de hoje
+#: (texto·largura·fundo·valor·html) alcança uma classe"*. O piloto ganhou o alvo
+#: `classe` (`hefesto_vivo.py`), e o comentário dele já nomeava este caso entre
+#: os cinco que o alvo destrava: *"a coluna 'Ajuste próprio' da Perfis"*. As
+#: vinte células do desenho e as dezesseis da página publicada carregam
+#: `data-hef-alvo="classe"`, e o produto passou a acender e apagar cada uma.
+#:
+#: O ENDEREÇO CHEGOU AO PRODUTO SEM PASSAR POR ELA, e isso é regra, não atalho:
+#: `data-hef-alvo` está em `check_o_desenho_aprovado.INVISIVEIS`, então
+#: `--publicar-enderecos 10` o levou com o desenho intacto — *"um `data-campo`
+#: novo num elemento que já existia não muda nada do que ela vê: não há o que
+#: aprovar"*. O DESENHO desta aba (a coluna do microfone e as oito dicas que
+#: saíram) continua na bancada, esperando o `--publicar` dela.
+NAO_PINTAVEIS = ("guarda.linhas", "editor.prioridade.dica",
                  "editor.estilo")
 
 #: AS CHAVES QUE SAEM DAQUI E A PÁGINA NÃO TEM ONDE PÔR — o inventário, com a
@@ -271,12 +316,24 @@ SEM_ENDERECO = {
 #: de EXISTIR na bancada — senão não está esperando, está faltando — e tem de NÃO
 #: existir ainda na publicada, senão a declaração envelheceu e é a régua se
 #: desligando sozinha no dia em que ela publicar.
-ESPERANDO_A_PUBLICACAO = {
-    "guarda.plastico": (
-        "a barra da cor do plástico ganhou endereço em 03/09/2026 "
-        "(IDENTIDADE-VEM-DE-CIMA); a página publicada é de 02/09"
-    ),
-}
+#: **ELA ESVAZIOU EM 03/09/2026, e não por decreto — por publicação.** O único
+#: nome aqui era `guarda.plastico`, a barra da cor do plástico da
+#: IDENTIDADE-VEM-DE-CIMA, e ele chegou ao produto pelo
+#: `--publicar-enderecos 10`: `data-hef-alvo` e `data-hef` estão em
+#: `check_o_desenho_aprovado.INVISIVEIS`, então a página foi copiada com o
+#: DESENHO intacto — *"um `data-campo` novo num elemento que já existia não muda
+#: nada do que ela vê: não há o que aprovar"*.
+#:
+#: FATO DERRUBADO no mesmo ato, e ele estava no comentário acima: *"nenhuma
+#: frente o faz"* valia para o `--publicar`, que é dela, e foi lido como valendo
+#: para publicação nenhuma. `--publicar-enderecos` existe exatamente para a
+#: metade que NUNCA foi decisão dela, e estava inerte — o ramo que copia era
+#: inalcançável (ver o comentário em `publicar_enderecos`). Com ele vivo, um
+#: endereço novo deixa de esperar por ela.
+#:
+#: A LISTA FICA, vazia, porque o mecanismo continua valendo: o dia em que um
+#: campo novo do gerador mudar um PIXEL, ele entra aqui e espera o ato dela.
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
@@ -909,7 +966,40 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `NAO_PINTAVEIS` sem mordida: uma lista que não segura nada fica verde
         # para sempre e ninguém percebe quando o motivo dela caduca. Assim há
         # UM lugar que decide, e arrancá-lo faz a régua reprovar.
-        fora["guarda.secao"] = [s for g in guarda for s in (g.get("secoes") or [])]
+        # A COLUNA "AJUSTE PRÓPRIO", ACESA PELO PRODUTO — 03/09/2026.
+        #
+        # FATO DERRUBADO, e ele estava aqui: a linha era
+        # `[s for g in guarda for s in (g.get("secoes") or [])]`. `secoes` é um
+        # **dicionário** (`perfis_web._secoes_do_controle` devolve
+        # `{secao: bool}`), e iterar um dicionário devolve as CHAVES — então
+        # esta linha emitia `['leds','triggers','rumble','speaker']` para TODO
+        # controle, quatro palavras todas verdadeiras, independentemente do que
+        # o perfil guardasse. Ficou invisível porque `NAO_PINTAVEIS` a
+        # segurava; no dia em que a coluna fosse pintada, ela acenderia tudo
+        # para todo mundo — exatamente a mentira que a legenda desta aba avisa
+        # ser pior que a tela apagada (*"uma tela que acende tudo nos quatro
+        # ensinaria o contrário"*). Medido: com um perfil que guarda só
+        # `rumble` do P1, o dicionário é
+        # `{'leds': False, 'triggers': False, 'rumble': True, 'speaker': False}`
+        # e a emissão mandava as quatro chaves.
+        #
+        # A ORDEM É A DO DESENHO, e a leitura é POR NOME. As células compartilham
+        # um endereço só, e o bootstrap distribui a lista pela ordem do
+        # documento (`hefesto_vivo.py`, `alvos.forEach(… i < v.length ? v[i] …)`):
+        # uma linha da tabela é um bloco de `len(SECOES_DA_COLUNA)` valores. Ler
+        # por nome, e não pela ordem do dicionário, é o que deixa o desenho ter
+        # CINCO colunas enquanto o esquema tem quatro campos — a que falta lê
+        # `None` e fica apagada, que é a verdade.
+        #
+        # SOBRA DE LINHA APAGA: a mesa dela tem dois controles e o desenho tem
+        # quatro linhas. O `forEach` escreve `''` no que sobra, o alvo `classe`
+        # lê isso como apagado, e a linha vazia deixa de exibir o que o MOCKUP
+        # guardava. É o mesmo tratamento que `guarda.nome` e `guarda.id` já dão.
+        fora["guarda.secao"] = [
+            "sim" if (g.get("secoes") or {}).get(secao) else ""
+            for g in guarda
+            for secao in SECOES_DA_COLUNA
+        ]
         fora["guarda.linhas"] = str(len(guarda))
 
     # OS QUE NÃO SAEM — a lista é `NAO_PINTAVEIS`, e cada nome tem lá a sua
