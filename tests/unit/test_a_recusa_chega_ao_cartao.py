@@ -16,7 +16,7 @@ um dublê que faz o `mic.set` recusar: os dois recusaram com a frase certa, o
 `desfechos` do piloto a guardou, e o DOM não tinha uma letra dela. O segundo
 clique parecia o primeiro.
 
-AS CINCO COISAS QUE ESTA RÉGUA COBRA, e cada uma é um jeito diferente de o
+AS OITO COISAS QUE ESTA RÉGUA COBRA, e cada uma é um jeito diferente de o
 canal mentir:
 
 1. **A FRASE CHEGA AO DOM.** Não ao `desfechos`, não ao `stderr` — ao documento
@@ -29,27 +29,54 @@ canal mentir:
    `daemon/subsystems/recado_do_microfone.py` é um DEPÓSITO e não um evento.
 4. **O SEGUNDO CLIQUE TAMBÉM RESPONDE**, que é o enunciado desta frente em uma
    linha.
-5. **ELA VENCE.** Decisão dela: *"a frase de recusa SOME depois de um tempo —
-   ~30 s e desaparece. É aviso, não estado."*
+5. **ELA APARECE NO CLIQUE, e não no próximo tique.** Meio segundo de silêncio
+   basta para ela clicar de novo achando que o primeiro não pegou.
+6. **ELA É DO CONTROLE, E NÃO DA COLUNA** — o item de 02/09/2026, e o único que
+   só existe no TEMPO. Ver abaixo.
+7. **ELA VENCE**, e vence no prazo QUE ELA DECIDIU: *"a frase de recusa SOME
+   depois de um tempo — ~30 s e desaparece. É aviso, não estado."*
 
-E A SEXTA, que é sobre o instrumento e não sobre o produto: **o aviso não pode
+E A OITAVA, que é sobre o instrumento e não sobre o produto: **o aviso não pode
 entrar na conta da régua do mockup.** Ele é um nó que o piloto desenha, e se
 ganhasse `data-campo`/`data-papel`/`data-hef` o `LER_CAMPOS` passaria a contá-lo
 como campo da página — a régua mediria o próprio instrumento.
 
-A MORDIDA, e são três, cada uma reprovando um item diferente. **Devolva por
-CÓPIA (`cp`), nunca por `git checkout --`** — isso já custou trabalho quatro
-vezes nesta casa:
+O ITEM 6, e por que ele precisou de um roteiro no TEMPO: o depósito nasceu
+`{pref: frase}`, e `pref` é a POSIÇÃO — `mesa_viva.mesa_do_estado` enumera os
+conectados de 1 a cada tique (*"o `pref` continua sendo a POSIÇÃO … e `jogador`
+continua sendo a IDENTIDADE"*, `mesa_viva.py`). Com dois controles na mesa,
+recusa no 🎙 do `p1` (o do cabo) e o do cabo saindo, o cartão de QUEM FICOU
+passava a mostrar, por até 30 s, uma frase que termina em *"ou este controle
+saiu da mesa"* — sobre outro controle. É o item 2 um nível acima: num INSTANTE
+a coluna ainda é de quem foi clicado, e por isso o item 2 dava verde sobre o
+defeito. A cura é reuso: a chave passou a ser o `uniq` normalizado
+(`core/sysfs_leds.norm_mac`, o dono que esta casa já tinha do endereço) e a
+coluna é resolvida no instante da pintura, contra a mesa daquele tique.
 
-* apague o `self._recados[pref] = …` de `Piloto._recusou_dizendo` → reprovam 4
-  (a frase não chega a lugar nenhum);
+A MORDIDA, e são SETE — uma por item. **Devolva por CÓPIA (`cp`), nunca por
+`git checkout --`** — isso já custou trabalho quatro vezes nesta casa. Os
+números são os MEDIDOS em 02/09/2026, com o arquivo de DOZE testes:
+
+* apague o `self._recados[uniq] = …` de `Piloto._recusou_dizendo`
+  → **8 reprovam** (a frase não chega a lugar nenhum);
 * troque `pai.insertBefore(el, pai.firstChild)` do BOOTSTRAP por
-  `document.body.appendChild(el)` → reprova 1 (a frase não está no cartão);
-* apague o `carga["recados"] = self._recados_para_a_tela()` de `Piloto._tique` →
-  reprovam 2 (o aviso não volta depois de o bloco ser trocado, e não vence
-  nunca).
+  `document.body.appendChild(el)` → **2 reprovam** (a frase não está no cartão);
+* apague o `carga["recados"] = self._recados_para_a_tela()` de `Piloto._tique`
+  → **3 reprovam** (o aviso não volta depois de o bloco ser trocado, não
+  sobrevive à saída de um controle, e não vence nunca);
+* troque `alvo = norm_mac(…)` por `alvo = pref` em `_gesto` **e** `"cartao":
+  onde_esta.get(chave, "")` por `"cartao": chave` — que é a base de 02/09 de
+  volta → **3 reprovam**, e uma delas é o item 6;
+* apague o `self._js(…)` de `_recusou_dizendo` (a pintura na hora)
+  → **1 reprova**;
+* troque `SEGUNDOS_DO_RECADO = 30.0` por `3.0` → **1 reprova**;
+* dê `data-campo` ao aviso no BOOTSTRAP → **1 reprova**.
 
-Os três números acima são os MEDIDOS em 02/09/2026, e não uma previsão.
+**E O NÚMERO ANTERIOR ESTAVA ERRADO, o que é o motivo de ele estar aqui de novo
+com a data:** este bloco dizia "reprovam 4 / 1 / 2", que soma SETE num arquivo
+que já tinha OITO testes. Os números tinham sido medidos numa versão de sete e
+não foram remedidos quando o oitavo nasceu. Quem conferisse a mordida no dia
+seguinte concluiria que introduziu um teste a mais reprovando.
 
 POR QUE ELA ABRE UM WEBKIT DE VERDADE: porque foi a leitura do fonte que se
 enganou da primeira vez. `Gtk.OffscreenWindow` — sob Xvfb não há gerenciador de
@@ -75,16 +102,36 @@ UNIQ_P2 = "aa:bb:cc:00:00:02"
 #: O ESTADO DUBLÊ. Ele é o mínimo que `mesa_viva.mesa_do_estado` precisa para
 #: montar `p1` e `p2` — a régua não fala com o daemon dela, e em máquina sem
 #: daemon o `_tique` sairia calado pelo `[daemon mudo]` e a janela nunca pintaria.
+def _ctl(uniq: str, transporte: str, jogador: int) -> dict:
+    return {"uniq": uniq, "connected": True, "transport": transporte,
+            "player": jogador, "audio": {"mic_mudo": False}}
+
+
 ESTADO = {
     "active_profile": "regua",
     "gamepad_emulation": {"flavor": "dualsense"},
-    "controllers": [
-        {"uniq": UNIQ_P1, "connected": True, "transport": "usb", "player": 1,
-         "audio": {"mic_mudo": False}},
-        {"uniq": UNIQ_P2, "connected": True, "transport": "bt", "player": 2,
-         "audio": {"mic_mudo": False}},
-    ],
+    "controllers": [_ctl(UNIQ_P1, "usb", 1), _ctl(UNIQ_P2, "bt", 2)],
 }
+
+#: A MESMA MESA COM UM CONTROLE A MENOS — o do CABO saiu, e quem ficou (o do
+#: rádio) HERDA A POSIÇÃO 1: `mesa_viva.mesa_do_estado` enumera os conectados de
+#: 1 a cada tique. É o estado que revela o defeito de identidade de 02/09/2026,
+#: e ele só existe no TEMPO: num instante só, `p1` é sempre quem foi clicado.
+SEM_O_DO_CABO = {
+    "active_profile": "regua",
+    "gamepad_emulation": {"flavor": "dualsense"},
+    "controllers": [_ctl(UNIQ_P2, "bt", 2)],
+}
+
+#: O `uniq` NORMALIZADO é a chave do depósito — `core/sysfs_leds.norm_mac`, o
+#: dono que esta casa já tinha do endereço. Escrito aqui à mão de propósito: a
+#: régua confere o VALOR que o produto usa, e importar a mesma função dos dois
+#: lados faria os dois errarem juntos em silêncio.
+CHAVE_P1 = "aabbcc000001"
+
+#: A MESA VIVA DA MEDIÇÃO. O dublê lê daqui a cada tique, e o roteiro troca o
+#: conteúdo para o controle sair da mesa e voltar.
+MESA = {"estado": ESTADO}
 
 #: QUANTO O AVISO VIVE NESTA MEDIÇÃO. O produto usa 30 s (decisão dela); aqui a
 #: constante encolhe para a régua poder ver a frase VENCER sem ficar meio minuto
@@ -148,6 +195,18 @@ MATAR_O_CARTAO = r"""
 })()
 """
 
+#: A TELA LIMPA COM O TIQUE PARADO — é o que dá dente à PINTURA NA HORA. Sem
+#: parar o tique, a repintura de 500 ms recoloca a frase e a régua fica verde
+#: com ou sem a cura: a leitura aos 700 ms mede o TIQUE, não o clique. Foi assim
+#: que a entrega "deposita a frase E pinta na hora" atravessou a auditoria sem
+#: régua nenhuma — arrancar a pintura imediata deixava os oito testes verdes.
+APAGAR_OS_RECADOS = r"""
+(function(){
+  for(const el of document.querySelectorAll('.hef-recado')) el.remove();
+  return String(document.querySelectorAll('.hef-recado').length);
+})()
+"""
+
 
 @pytest.fixture(scope="module")
 def medido() -> dict:
@@ -167,7 +226,24 @@ def medido() -> dict:
     # OS DOIS DUBLÊS. O primeiro tira o daemon do caminho; o segundo faz o
     # `mic.set` recusar, que é o caminho do `RuntimeError` em
     # `a02_controles.mudo`. Nada sai para aparelho nenhum.
-    hv.mesa_viva.estado_do_daemon = lambda *a, **k: ESTADO  # type: ignore[assignment]
+    #
+    # E ELES SÃO DEVOLVIDOS NO FIM, o que esta fixture NÃO fazia. `mesa_viva` e
+    # `pacotes.ponte` são módulos COMPARTILHADOS do produto: escrever neles sem
+    # devolver deixa, no mesmo processo, uma mesa de mentira com dois controles
+    # e um `mic.set` que sempre recusa para todo vizinho que abrir um `Piloto`
+    # depois. Na lista ordenada dos arquivos que citam `hefesto_vivo` este corre
+    # em 9º, à frente de quatro medições de GUI. Não houve vítima — mas um
+    # vizinho verde sobre um dublê que ele não escreveu é a forma exata do
+    # defeito que esta casa persegue, e o relatório dele diria "medido".
+    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_set,
+                hv.SEGUNDOS_DO_RECADO)
+    #: O VALOR DO PRODUTO, lido ANTES de a régua o encolher. É o que dá dono à
+    #: decisão 19 dela (*"~30 s e desaparece"*): sem ele, trocar `30.0` por
+    #: `3.0` ou por `300.0` deixaria os testes todos verdes, porque a fixture
+    #: sobrescreve a constante antes de qualquer medição.
+    fora_do_produto = float(hv.SEGUNDOS_DO_RECADO)
+    MESA["estado"] = ESTADO
+    hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
     hv.ponte.mic_set = lambda *a, **k: False  # type: ignore[assignment]
     hv.SEGUNDOS_DO_RECADO = VENCE_EM_S
 
@@ -231,6 +307,42 @@ def medido() -> dict:
 
     def depois_do_segundo() -> bool:
         piloto.ponte.perguntar(LER_A_TELA, ler("depois-do-segundo-clique"))
+        GLib.timeout_add(120, com_o_tique_parado)
+        return False
+
+    def com_o_tique_parado() -> bool:
+        # O TIQUE PARA, e é o que separa o clique da repintura. Com ele vivo, a
+        # frase volta à tela em até 500 ms com ou sem a pintura imediata — e a
+        # leitura aos 700 ms de `logo_depois` não distingue as duas. Parado, só
+        # o `_recusou_dizendo` pode repor a frase.
+        piloto.pronto = False
+        piloto.ponte.perguntar(APAGAR_OS_RECADOS, anotar("apaguei-os-recados"))
+        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("terceiro-clique"))
+        GLib.timeout_add(600, mediu_a_pintura_na_hora)
+        return False
+
+    def mediu_a_pintura_na_hora() -> bool:
+        piloto.ponte.perguntar(LER_A_TELA, ler("sem-tique-depois-do-clique"))
+        piloto.pronto = True
+        # E AGORA O CONTROLE QUE RECUSOU SAI DA MESA. Quem fica herda a coluna 1.
+        MESA["estado"] = SEM_O_DO_CABO
+        GLib.timeout_add(2300, um_saiu)
+        return False
+
+    def um_saiu() -> bool:
+        # ~4 tiques depois da troca: a mesa do piloto já refez as posições.
+        piloto.ponte.perguntar(LER_A_TELA, ler("depois-de-um-sair"))
+        fora["mesa-de-um-so"] = [f"{c['pref']}:{c['uniq']}"
+                                 for c in piloto._mesa_de_agora]
+        fora["chaves-do-deposito"] = sorted(piloto._recados)
+        MESA["estado"] = ESTADO
+        GLib.timeout_add(1300, voltou_a_mesa)
+        return False
+
+    def voltou_a_mesa() -> bool:
+        # O CONTROLE VOLTA. O aviso é dele, e volta ao cartão dele — o depósito
+        # nunca perdeu o endereço, só a coluna a que ele correspondia.
+        piloto.ponte.perguntar(LER_A_TELA, ler("depois-de-o-controle-voltar"))
         GLib.timeout_add(int(VENCE_EM_S * 1000), venceu)
         return False
 
@@ -256,19 +368,40 @@ def medido() -> dict:
     # 20 s. Aos pares os dois passavam, porque a bomba só chega ao vizinho
     # quando há trabalho suficiente entre os dois.
     #
-    # E A CULPA É DESTA LINHA, e não das duas abaixo: com as três curas no lugar
-    # a leva dá 333 verdes; arrancando SÓ o `source_remove` ela volta a 322 com
-    # os mesmos 11 erros. Não foi diagnóstico por eliminação de gosto — foi
-    # medido, e as duas linhas abaixo ficam por serem certas, não por serem a
-    # cura.
+    # A LINHA FICA, e o NÚMERO que estava aqui NÃO SE SUSTENTA. O comentário
+    # afirmava, como medição, que arrancar só o `source_remove` fazia a leva
+    # "voltar a 322 com os mesmos 11 erros". Arrancada exatamente esta linha e
+    # nada mais, e rodada a mesma leva (os arquivos que citam `hefesto_vivo`),
+    # o resultado foi **330 passed** — o mesmo do arquivo íntegro — com ZERO
+    # ocorrências de *"o WebKit não respondeu"*. Medido em 02/09/2026 sobre
+    # `onda/abas-0209`, e a auditoria da véspera mediu o mesmo em 2 de 2 voltas.
+    #
+    # O QUE O NÚMERO DESCREVIA É UMA COINCIDÊNCIA DE FASE: a bomba só alcança o
+    # vizinho se cair DENTRO de um `Gtk.main()` alheio, e a leva inteira fecha
+    # hoje em ~30 s — menos que os 38 s do relógio. Escrito como comportamento
+    # determinístico, ele ensina o contrário do que quer: quem tentar reproduzir
+    # conclui que a linha é supérflua e a apaga. Ela não é — um `timeout_add` de
+    # 38 s pendente depois da fixture é bomba real, e desarmá-lo é higiene certa
+    # por si só, com número ou sem.
+    #
+    # E ELA MUDOU DE LUGAR: agora mora num `finally`, com o `destroy()` da
+    # janela e a devolução dos dublês. Se o roteiro levantar dentro do
+    # `Gtk.main()`, era exatamente a limpeza que não acontecia.
     guarda = GLib.timeout_add(int(30000 + VENCE_EM_S * 1000), Gtk.main_quit)
-    Gtk.main()
-    GLib.source_remove(guarda)
-    # E O PILOTO TAMBÉM PARA. O tique dele é um `timeout_add` de 500 ms que se
-    # reagenda para sempre; deixá-lo vivo faria esta janela pintar por cima de
-    # todo laço GTK que vier depois, no mesmo processo.
-    piloto.pronto = False
-    piloto.tela.janela.destroy()
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        # E O PILOTO TAMBÉM PARA. O tique dele é um `timeout_add` de 500 ms que
+        # se reagenda para sempre; deixá-lo vivo faria esta janela pintar por
+        # cima de todo laço GTK que vier depois, no mesmo processo.
+        piloto.pronto = False
+        piloto.tela.janela.destroy()
+        # E OS TRÊS SÍMBOLOS DE MÓDULO VOLTAM. Ver a nota na instalação deles.
+        (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_set,
+         hv.SEGUNDOS_DO_RECADO) = guardado
+        MESA["estado"] = ESTADO
+    fora["segundos-do-produto"] = fora_do_produto
     assert "depois-de-vencer" in fora, (
         f"o roteiro não chegou ao fim — o que voltou foi {sorted(fora)}")
     return fora
@@ -315,8 +448,9 @@ def test_a_frase_pousa_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
     leitura = medido["logo-depois"]
     assert isinstance(leitura, dict)
     recado = leitura["recados"][0]
-    assert recado["chave"] == "p1", (
-        f"o recado foi endereçado a {recado['chave']!r}; o clique foi no p1")
+    assert recado["chave"] == CHAVE_P1, (
+        f"o recado foi endereçado a {recado['chave']!r}; o clique foi no "
+        f"controle {CHAVE_P1} (o `uniq` normalizado, e não a coluna `p1`)")
     assert recado["dentro_de"] == "p1", (
         f"a frase está dentro de {recado['dentro_de']!r} — na mesa de quatro, a "
         f"recusa de um controle no cartão do vizinho é pior que recusa nenhuma")
@@ -360,6 +494,81 @@ def test_o_segundo_clique_tambem_responde_na_tela(medido: dict) -> None:
 
 
 # --------------------------------------------------------------------------
+# 4b. A PINTURA É NA HORA — com o tique parado, só o clique pode repor a frase
+# --------------------------------------------------------------------------
+def test_a_frase_aparece_no_clique_e_nao_no_proximo_tique(medido: dict) -> None:
+    """O meio segundo até o próximo tique basta para ela clicar de novo.
+
+    POR QUE A MEDIÇÃO PARA O TIQUE: porque sem parar ela não mede nada. A
+    entrega "deposita a frase E pinta na hora" foi vendida como item próprio e
+    atravessou a auditoria de 02/09 SEM RÉGUA — arrancar o `self._js(...)` de
+    `_recusou_dizendo` deixava os oito testes verdes, porque a leitura aos
+    700 ms já pegava a repintura de 500 ms. Medido dentro da página com
+    `MutationObserver`, a diferença é real: **2 ms com a pintura imediata, ~300
+    ms sem ela**. Aqui a régua a torna binária: com o tique parado, a única
+    coisa que pode repor a frase é o clique.
+    """
+    assert medido["terceiro-clique"] == "cliquei", medido["terceiro-clique"]
+    assert medido["apaguei-os-recados"] == "0", (
+        f"a tela não foi zerada antes do clique ({medido['apaguei-os-recados']!r})"
+        f" — sem isso esta régua passa sobre uma frase que já estava lá")
+    frases = _frases(medido["sem-tique-depois-do-clique"])
+    assert len(frases) == 1 and "microfone" in frases[0], (
+        f"com o tique parado a tela ficou em {frases!r}. A recusa só apareceria "
+        f"na próxima repintura — e meio segundo de silêncio basta para ela "
+        f"clicar de novo achando que o primeiro clique não pegou, que é o "
+        f"defeito de origem deste canal e não um detalhe de acabamento.")
+
+
+# --------------------------------------------------------------------------
+# 4c. O RECADO É DO CONTROLE, E NÃO DA COLUNA — e isso só aparece no TEMPO
+# --------------------------------------------------------------------------
+def test_o_recado_e_do_endereco_e_nao_da_posicao(medido: dict) -> None:
+    """O controle que recusou SAI da mesa e o vizinho herda a coluna 1.
+
+    O DEFEITO QUE ESTA RÉGUA IMPEDE, medido em 02/09/2026 na base: o depósito
+    era `{pref: frase}` e `mesa_viva.mesa_do_estado` enumera os conectados de 1
+    A CADA TIQUE (*"o `pref` continua sendo a POSIÇÃO … e `jogador` continua
+    sendo a IDENTIDADE"*). Com dois controles na mesa, recusa no 🎙 do `p1` (o
+    do cabo), o do cabo saindo: o cartão de quem FICOU passava a mostrar, por
+    até 30 s, uma frase que termina em *"ou este controle saiu da mesa"* —
+    sobre outro controle. É o `test_a_frase_pousa_no_cartao_de_quem_foi_clicado`
+    um nível acima: ali o endereçamento é conferido num INSTANTE, e num instante
+    a coluna ainda é de quem foi clicado.
+    """
+    assert medido["mesa-de-um-so"] == [f"p1:{UNIQ_P2}"], (
+        f"a mesa do piloto não trocou de dono ({medido['mesa-de-um-so']!r}) — "
+        f"sem a troca esta régua passa sobre nada")
+    assert medido["chaves-do-deposito"] == [CHAVE_P1], (
+        f"o depósito guardou {medido['chaves-do-deposito']!r}; a chave tem de "
+        f"ser o endereço do controle que recusou, e ele não mudou")
+    leitura = medido["depois-de-um-sair"]
+    assert isinstance(leitura, dict)
+    frases = _frases(leitura)
+    assert len(frases) == 1 and "microfone" in frases[0], (
+        f"o aviso sumiu quando a mesa mudou: {frases!r}. Ele é dela e vence "
+        f"pelo relógio — não pela ida e volta de um controle.")
+    recado = leitura["recados"][0]
+    assert recado["dentro_de"] == "", (
+        f"a frase ficou dentro do cartão {recado['dentro_de']!r}, que agora é de "
+        f"{UNIQ_P2} — o controle que recusou já saiu da mesa. A recusa de um "
+        f"controle no cartão de outro é a tela AFIRMANDO o que não é, e é pior "
+        f"que recusa nenhuma: ela acusa quem não fez nada.")
+
+
+def test_o_aviso_volta_ao_cartao_quando_o_controle_volta(medido: dict) -> None:
+    """E o endereço é o que o traz de volta ao lugar certo."""
+    leitura = medido["depois-de-o-controle-voltar"]
+    assert isinstance(leitura, dict)
+    recado = leitura["recados"][0]
+    assert recado["chave"] == CHAVE_P1, recado
+    assert recado["dentro_de"] == "p1", (
+        f"o controle voltou à mesa e o aviso dele ficou em {recado['dentro_de']!r}. "
+        f"O depósito guarda o endereço; quem resolve a coluna é a mesa do tique, "
+        f"e por isso o aviso reencontra o cartão sem ninguém reendereçá-lo.")
+
+
+# --------------------------------------------------------------------------
 # 5. e vence — é aviso, não estado
 # --------------------------------------------------------------------------
 def test_o_aviso_vence_e_some(medido: dict) -> None:
@@ -373,6 +582,24 @@ def test_o_aviso_vence_e_some(medido: dict) -> None:
     assert frases == [], (
         f"passados {VENCE_EM_S:.0f} s a tela ainda mostra {frases!r}. Aviso que "
         f"não vence virou estado, e a tela passa a afirmar uma recusa velha.")
+
+
+def test_o_prazo_do_produto_e_o_que_ela_decidiu(medido: dict) -> None:
+    """E o PRAZO tem dono — não só o mecanismo.
+
+    O MECANISMO estava guardado e o VALOR não: a fixture encolhe
+    `SEGUNDOS_DO_RECADO` para poder ver a frase vencer sem ficar meio minuto
+    parada, e com isso trocar `30.0` por `3.0` ou por `300.0` deixava a régua
+    inteira verde. Era a única coisa deste canal que veio direto de uma decisão
+    dela — *"a frase de recusa SOME depois de um tempo — ~30 s e desaparece. É
+    aviso, não estado."* (02/09/2026) — e a única sem ninguém a cobrar.
+
+    O valor abaixo é lido do módulo ANTES de a fixture o encolher.
+    """
+    assert medido["segundos-do-produto"] == 30.0, (
+        f"o produto faz a recusa viver {medido['segundos-do-produto']} s; ela "
+        f"decidiu ~30 s. Este número não é de acabamento — é o que separa um "
+        f"aviso de um estado, e mudá-lo é decisão dela, não de quem passa aqui.")
 
 
 # --------------------------------------------------------------------------
