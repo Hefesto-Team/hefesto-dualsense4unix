@@ -45,7 +45,7 @@ também neste arquivo criaria dois donos do mesmo valor — a classe de defeito 
 ABAS-01 curou:
 
 * **número de jogador** → ``controllers.json``, pelo ``identity.number.set``
-  (``daemon/ipc_handlers.py:1590``);
+  (``daemon/ipc_handlers.py:1604``);
 * **máscara por aparelho** → ``controller_masks.json``
   (``daemon/subsystems/external_mask.py:175``);
 * **tamanho do texto** → ``gui_preferences.json`` (``app/theme.py:39-40``).
@@ -120,7 +120,7 @@ VERSION_FIELD = "version"
 MAQUINA_FILE_LOCK = threading.Lock()
 
 #: A chave de ``controles`` é a SAÍDA de ``ExternalIdentityRegistry._canonical``
-#: (``daemon/subsystems/external_identity.py:429``): doze hex MINÚSCULOS, sem
+#: (``daemon/subsystems/external_identity.py:457``): doze hex MINÚSCULOS, sem
 #: separador. Casar com a entrada ``_MAC_RE`` (``:106-108``, que aceita
 #: ``aa:bb:cc:...`` também) faria o daemon gravar ``aabbcc001122`` e o schema
 #: exigir outra coisa.

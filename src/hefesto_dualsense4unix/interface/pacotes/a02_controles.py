@@ -931,7 +931,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # DOIS DEFEITOS, e os dois medidos na mesa dela em 02/09/2026, 16h:
             #
             #   1. `speaker.volume` é **0-255**, o registrador do protocolo
-            #      (`ipc_handlers.py:3584`, `:4799`). Com o valor vivo de hoje —
+            #      (`ipc_handlers.py:3599`, `:4799`). Com o valor vivo de hoje —
             #      **102** — este pacote emitia **"102%"** (para o vão
             #      `hidden`, ver o cabeçalho: não chegou aos olhos dela). Uma
             #      porcentagem acima de cem, e ela subiria a "255%" no talo, no
@@ -1345,10 +1345,10 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
     `rota` (`ipc_handlers.py:4626`) e a GUI estável manda exatamente isto
-    (`controller_card.py:4271`).
+    (`controller_card.py:4273`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
-    `profiles/schema.py:516` já escreve o limite com todas as letras:
+    `profiles/schema.py:523` já escreve o limite com todas as letras:
 
         LIMITE DECLARADO: a rota é a CAMADA 2 (o firmware). O estado "Todo o
         som do PC" da janela também mexe na CAMADA 1 (o *default sink* do
@@ -1521,7 +1521,7 @@ METODOS: set[str] = set()
 #: sozinha que o gesto pegou.
 #:
 #: O `machine.declare` está **fora do `daemon.state_full` de propósito**, e o
-#: handler diz a razão (`ipc_handlers.py:5301`): *"aquilo é o tique de 20 Hz, e
+#: handler diz a razão (`ipc_handlers.py:5529`): *"aquilo é o tique de 20 Hz, e
 #: a declaração muda por gesto dela, não por quadro"*. Ele grava em disco
 #: (`maquina.json`), e a única confirmação é o `(ok, motivo)` da chamada — que é
 #: exatamente por que o gesto levanta com o motivo em vez de voltar calado.

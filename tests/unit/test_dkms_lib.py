@@ -101,11 +101,35 @@ class TestContratoDeTexto:
         )
 
     def test_build_e_install_tolerantes_a_reexecucao(self) -> None:
-        assert re.search(r"grep -qE 'built\|installed'", LIB), (
-            "dkms build só roda se ainda não construído (idempotente)"
-        )
-        assert re.search(r"grep -q 'installed'", LIB), (
-            "dkms install só roda se ainda não instalado (idempotente)"
+        """Idempotência lida SEM cano — a régua envelheceu em 01/09/2026.
+
+        Ela cobrava os literais `grep -qE 'built|installed'` e `grep -q
+        'installed'`, e a lib os ABANDONOU DE PROPÓSITO no mesmo dia
+        (`dkms_lib.sh`, comentário "LER O `dkms status` SEM MORRER DE
+        SIGPIPE"): com o `set -o pipefail` de quem a sourceia, o `grep -q` sai
+        no primeiro acerto, o `dkms` morre de SIGPIPE e o pipeline devolve
+        **141 exatamente quando ACHA** — a guarda `if ! …` vira sempre
+        verdadeira e o passo protegido roda sempre. Medido na máquina dela: o
+        instalador anunciava *"in-tree continua"* sobre módulos instalados e em
+        uso.
+
+        Cobrar o literal aqui era reprovar a melhora em vez do defeito. A régua
+        passa a ler o que a lib faz agora — guarda por VARIÁVEL — e ganha a
+        parte que faltava: proibir a volta da forma que sangrou.
+        """
+        assert re.search(
+            r'\[\[\s*!\s*"\$\(_dkms_status_texto[^)]*\)"\s*=~\s*\(built\|installed\)', LIB
+        ), "dkms build só roda se ainda não construído, e lido sem cano (idempotente)"
+        assert re.search(
+            r'\[\[\s*"\$\(_dkms_status_texto[^)]*\)"\s*!=\s*\*installed\*', LIB
+        ), "dkms install só roda se ainda não instalado, e lido sem cano (idempotente)"
+        # SOBRE `_sem_comentarios` AQUI: a forma proibida está ESCRITA na lib,
+        # no comentário que explica por que ela saiu. Cobrá-la sobre o texto
+        # cru é a régua confundindo a PALAVRA com o ATO — o defeito que esta
+        # casa já pagou onze vezes numa leva só. Só o código conta.
+        assert not re.search(r"dkms status[^\n|]*\|\s*grep", _sem_comentarios(LIB)), (
+            "SIGPIPE: `dkms status | grep` devolve 141 quando ACHA, sob pipefail — "
+            "leia para variável (_dkms_status_texto) e pergunte à variável"
         )
 
     def test_validacao_por_caminho_updates_nunca_srcversion(self) -> None:

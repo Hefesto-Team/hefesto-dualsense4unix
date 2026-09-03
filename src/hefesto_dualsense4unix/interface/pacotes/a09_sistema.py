@@ -1136,7 +1136,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #     {'mesa': {'a': 1}, 'colunas': {}}
 #
 # O piloto tem o mecanismo (`hefesto_vivo.BOOTSTRAP`, o laço sobre `p.blocos`),
-# e a `a08_conexoes.py:763` já o usa para o mapa do gabinete — que portanto
+# e a `a08_conexoes.py:1773` já o usa para o mapa do gabinete — que portanto
 # TAMBÉM não chega à tela. O conserto é uma linha em `pacotes/__init__.py`, que
 # é território compartilhado e não é meu; está no relatório desta frente.
 #
@@ -1323,7 +1323,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     POR QUE `machine.declare` E NÃO `rumble.policy_set`, que seria o palpite: o
     teto da MESA e a política de vibração são dois donos diferentes. O
-    `_effective_mult` (`core/rumble.py:185`) lê os dois e aplica `min` entre
+    `_effective_mult` (`core/rumble.py:191`) lê os dois e aplica `min` entre
     eles — `_sob_o_teto`, nunca produto —, então gravar a escolha dela como
     política apagaria a política por controle que as outras abas escrevem. Quem
     é dono desta escolha é o `orcamento.teto` do `maquina.json`, e o contrato do
@@ -1338,8 +1338,8 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:5324`) relê o `maquina.json` e **rebinda**
-    `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:105`) lê a
+    (`daemon/ipc_handlers.py:5486`) relê o `maquina.json` e **rebinda**
+    `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:167`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no
     instante em que ela acabou de escolher"*.

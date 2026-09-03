@@ -2073,7 +2073,7 @@ def cor_do_plastico_por_regra(doc):
 
 # ESCREVER O ARQUIVO É O `__main__`, E NÃO O IMPORT (29/08/2026).
 #
-# `regerar.py:152` chama este arquivo por `subprocess` — o portão continua o
+# `regerar.py:31` chama este arquivo por `subprocess` — o portão continua o
 # mesmo. O que muda é que `bloco()`, `identidade()` e `grade()` passam a poder
 # ser IMPORTADOS por quem monta a mesa VIVA a partir do daemon: sem esta linha,
 # um `import aba02` regeraria o `02-controles.html` da mesa fixa de quatro no

@@ -709,7 +709,7 @@ def bloco(lado, sigla, modo, pronto, ajustes):
     # Com `valor`, o piloto faz `select.value = t` — e é por isso que o endereço
     # tem de ser `modo-chave-*` (`Rigid`), que é o que o `value` das opções
     # carrega. O `modo-*` (o rótulo "Rígido") continua saindo do pacote porque
-    # `tests/unit/test_o_perfil_chega_na_tela.py:125` o cobra, mas nenhum
+    # `tests/unit/test_o_perfil_chega_na_tela.py:134` o cobra, mas nenhum
     # elemento o lê: o que casa com a opção é a chave.
     return f'''          <div>
             <select class="modo" data-gesto="modo" data-campo="modo-chave-{sigla}"

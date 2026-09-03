@@ -566,7 +566,7 @@ def dica_da_luz(nome: str, via: str, recado: str,
     controle, exatamente as chaves de
     `daemon/ipc_handlers._enrich_controllers_per_controller` — `lightbar_rgb`,
     `lightbar_on`, `lightbar_source`, `player_slot`, `inputs`… — e nenhum campo
-    do desejado; `interface/aba02.py:809` já dizia isso com todas as letras
+    do desejado; `interface/aba02.py:881` já dizia isso com todas as letras
     (*"publica o ``player_slot`` e NÃO publica ``player_leds``"*). E o override
     é justamente onde a janela GTK escreve quando ela aplica um desenho:
     `lightbar_actions._enviar_player_leds` manda `player_leds_set_detalhado(…,

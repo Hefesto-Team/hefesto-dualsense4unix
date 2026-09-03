@@ -64,7 +64,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:1074`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:1309`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE CONTINUA VALENDO, e é o que separa os dois erros: **só o `RuntimeError`
@@ -99,7 +99,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:1074`) leva à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:1309`) leva à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -217,7 +217,7 @@ SEM_ENDERECO: dict[str, str] = {
 #: DUAS TÊM DONO E UMA NÃO, e qual é qual foi MEDIDO — ver o `fato_derrubado`
 #: no corpo de `teclado()`. O que o teclado emulado faz hoje **já é** "só fora
 #: do jogo": o daemon cala a emulação de desktop quando um jogo assume
-#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:2263`, e o
+#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:2270`, e o
 #: `gamepad_dispatched` do laço em `:4780`), e o `suppress_desktop_emulation`
 #: do perfil é a versão explícita e por perfil da MESMA coisa. Quem não tem
 #: dono é o INVERSO — "só dentro do jogo".
@@ -1064,7 +1064,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 from . import gesto  # noqa: E402
 
 #: A ORIGEM É `manual` PORQUE É A MÃO DELA. `origem_do_pedido`
-#: (`daemon/ipc_handlers.py:46`) lê a AUSÊNCIA como `"profile"`, e a assimetria é
+#: (`daemon/ipc_handlers.py:47`) lê a AUSÊNCIA como `"profile"`, e a assimetria é
 #: de propósito — foi um cliente que só reconciliava estado, promovido a gesto
 #: humano, que devolveu o gamepad virtual com o grab pulado e pôs um "Jogador 3"
 #: fantasma na tela dela (JOGADOR-3-FANTASMA-01). Aqui é clique, logo é manual.
@@ -1345,7 +1345,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"'Só dentro do jogo' já existe, e é o `suppress_desktop_emulation`"*. **Os
     dois estão invertidos**, e a medição é de três leituras:
 
-    1. `Profile.suppress_desktop_emulation` (`profiles/schema.py:1036`) diz, no
+    1. `Profile.suppress_desktop_emulation` (`profiles/schema.py:1176`) diz, no
        próprio comentário: *"True = ativar o perfil suprime a emulação de
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
@@ -1367,11 +1367,11 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
-    `set_mouse_emulation` (`daemon/lifecycle.py:1336`).
+    `set_mouse_emulation` (`daemon/lifecycle.py:1372`).
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:1469`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:1505`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
@@ -1467,7 +1467,7 @@ def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (`integrations/uinput_mouse.py:466`) e nada mais — o touchpad não rola.
 
     A FAIXA DELE É OUTRA, e o daemon é quem a impõe: `max(1, min(5, …))`
-    (`daemon/lifecycle.py:1449` e `:1452`), contra os 12 do cursor. A dica da tela
+    (`daemon/lifecycle.py:1404` e `:1452`), contra os 12 do cursor. A dica da tela
     1 a 10" nas duas linhas, e nas duas está errada — está no relato.
     """
     atual = _rato(ctx).get("scroll_speed")
@@ -1938,7 +1938,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;
 #: 3. **ele LIGA o mouse.** `restore_mouse_preference`
-#:    (`daemon/lifecycle.py:1402`) chama `set_mouse_emulation(pref, …)` e, com a
+#:    (`daemon/lifecycle.py:1438`) chama `set_mouse_emulation(pref, …)` e, com a
 #:    preferência nunca gravada, `pref` vira `True` por default (`:1403`) — o
 #:    cursor DELA passa a andar pelo controle, e o gamepad virtual cai junto
 #:    (`:1359`). Isso o põe na mesma prateleira do gesto `modo`, que já está em
