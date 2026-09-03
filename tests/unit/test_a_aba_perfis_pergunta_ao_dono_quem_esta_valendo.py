@@ -107,7 +107,7 @@ def test_ativar_recusa_o_mesmo_perfil_mesmo_com_o_daemon_calado(
     _o_disco_diz(monkeypatch, "meu_perfil")
     a10_perfis._ESCOLHIDO = "meu_perfil"
     ponte = PonteDeMentira()
-    with pytest.raises(ValueError, match="já é o perfil que está valendo"):
+    with pytest.raises(RuntimeError, match="já é o perfil que está valendo"):
         a10_perfis.ativar(Contexto(state={"active_profile": None}),
                           {"texto": "Ativar"}, ponte)
     assert ponte.chamadas == [], (
@@ -159,7 +159,7 @@ def test_remover_recusa_o_perfil_que_vale_pelo_disco(
     """
     _o_disco_diz(monkeypatch, "meu_perfil")
     ponte, erro = _remover("meu_perfil", {"active_profile": None})
-    assert isinstance(erro, ValueError), "o Remover armou sobre o perfil que vale"
+    assert isinstance(erro, RuntimeError), "o Remover armou sobre o perfil que vale"
     assert str(erro) == profiles_actions._AVISO_DA_REMOCAO_DO_ATIVO, (
         "a recusa não é a frase do produto — há uma segunda verdade escrita à mão")
     assert ponte.chamadas == []
