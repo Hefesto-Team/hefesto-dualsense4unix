@@ -68,6 +68,7 @@ from hefesto_dualsense4unix.interface import (  # noqa: E402
 )
 from hefesto_dualsense4unix.interface.pacotes import ponte  # noqa: E402
 
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
 
 #: A PRIMEIRA PÁGINA é a Jogar, que é a primeira da tira. Não é escolha de
@@ -325,13 +326,22 @@ BOOTSTRAP = r"""
     let n = 0;
     const vivas = [];
     for(const r of lista){
+      // DOIS ENDEREÇOS, E ELES NÃO SÃO O MESMO. `chave` é a IDENTIDADE do
+      // aviso — o `uniq` normalizado do controle que recusou —, e é por ela
+      // que este nó se reencontra entre um tique e outro. `cartao` é a COLUNA
+      // em que ele pousa AGORA, resolvida contra a mesa deste tique lá no
+      // Python. Endereçar o nó pela coluna foi o defeito de 02/09/2026: a
+      // coluna troca de dono quando um controle sai da mesa, e a recusa de quem
+      // saiu passava a aparecer no cartão de quem ficou.
       const chave = String(r.chave || '');
+      const onde = String(r.cartao || '');
       vivas.push(chave);
       // O CARTÃO DAQUELE CONTROLE, quando ele existe NESTA página. Quando não
-      // existe, a frase vira tarja em vez de sumir: um recado depositado e não
-      // mostrado é o mesmo silêncio que esta função nasceu para curar.
-      const cartao = chave
-        ? document.querySelector('[data-controle="' + chave + '"],[data-uniq="' + chave + '"]')
+      // existe — outra aba, ou o controle já fora da mesa —, a frase vira tarja
+      // em vez de sumir: um recado depositado e não mostrado é o mesmo silêncio
+      // que esta função nasceu para curar.
+      const cartao = onde
+        ? document.querySelector('[data-controle="' + onde + '"],[data-uniq="' + onde + '"]')
         : null;
       const pai = cartao || document.body;
       let el = document.querySelector('.hef-recado[data-hef-recado="' + chave + '"]');
@@ -874,7 +884,8 @@ class Piloto:
         #: Em que bloco de controle cada clique caiu — ou se o alvo foi FORÇADO
         #: pela régua, que é defeito da PÁGINA e não sucesso do produto.
         self._onde_clicou: dict[str, str] = {}
-        #: A FRASE DE RECUSA DE CADA CARTÃO — `{pref: (frase, quando_monotônico)}`.
+        #: A FRASE DE RECUSA DE CADA CONTROLE —
+        #: `{uniq_normalizado: (frase, quando_monotônico)}`.
         #:
         #: ELA VIVE NO ESTADO, e não no instante do clique: a tela repinta a cada
         #: 500 ms, e uma frase publicada só no tique da borda tem probabilidade
@@ -885,6 +896,17 @@ class Piloto:
         #: mesa de quatro a recusa de um não pode aparecer no cartão do vizinho.
         #: A chave vazia é o recado da MESA — o gesto que não age em controle
         #: nenhum.
+        #:
+        #: A CHAVE É O ENDEREÇO, E NÃO A POSIÇÃO, e a mudança é de 02/09/2026.
+        #: Guardada por `pref` a frase ficava colada à COLUNA, e a coluna troca
+        #: de dono: `mesa_viva.mesa_do_estado` enumera os conectados de 1 a cada
+        #: tique (*"o `pref` continua sendo a POSIÇÃO … e `jogador` continua
+        #: sendo a IDENTIDADE"*). MEDIDO com dublê de dois controles: recusa no
+        #: 🎙 do `p1` (o do cabo), o do cabo SAI da mesa, o do rádio vira `p1` —
+        #: e o cartão dele passava a mostrar, por até 30 s, uma frase que
+        #: termina em *"ou este controle saiu da mesa"*, sobre OUTRO controle.
+        #: É o defeito de identidade que esta casa já pagou várias vezes, e o
+        #: dono certo do endereço já existia: `core/sysfs_leds.norm_mac`.
         #:
         #: SÓ O LAÇO DO GTK ESCREVE AQUI. O gesto corre em thread, e depositar de
         #: lá deixaria o tique iterando um dicionário que outra thread muda.
@@ -1008,6 +1030,12 @@ class Piloto:
             if c.get("pref") == pref or str(c.get("uniq") or "") == pref:
                 o = {**o, "uniq": str(c.get("uniq") or "")}
                 break
+        # O RECADO É ENDEREÇADO AQUI, PELO MESMO `uniq` que o gesto recebe, e
+        # não pelo `pref`: a coluna troca de dono entre o clique e o tique
+        # seguinte. Ver `self._recados`. Sem `uniq` resolvido (gesto de mesa, ou
+        # clique sobre uma coluna que já esvaziou) a chave é vazia, e o aviso
+        # vira tarja de rodapé — que é honesto: não há cartão de quem dizer.
+        alvo = norm_mac(str(o.get("uniq") or "")) or ""
 
         # EM THREAD, e não no laço do GTK. MEDIDO em 01/09/2026, com o daemon
         # dela: `daemon.reload` leva **9,5 segundos** — `daemon.resume` leva 1
@@ -1033,7 +1061,7 @@ class Piloto:
                 # único laço que pode tocar o DOM e o depósito. Até 02/09/2026
                 # esta linha só imprimia no `stderr` — ver `_recusou_dizendo`.
                 GLib.idle_add(
-                    lambda x=erro: self._recusou_dizendo(pagina, nome, pref, x))
+                    lambda x=erro: self._recusou_dizendo(pagina, nome, alvo, x))
                 return
             # OS DOIS DESFECHOS SÃO ANOTADOS NO MESMO LUGAR, e é aqui: o `except`
             # logo acima guarda a recusa, e esta linha guarda o "voltou sem
@@ -1071,7 +1099,7 @@ class Piloto:
         print(f"[gesto] {pagina} · {nome} → aplicado")
         return False
 
-    def _recusou_dizendo(self, pagina: str, nome: str, pref: str,
+    def _recusou_dizendo(self, pagina: str, nome: str, uniq: str,
                          erro: BaseException) -> bool:
         """A recusa do produto chegando ao CARTÃO — e não à saída de erro.
 
@@ -1091,11 +1119,15 @@ class Piloto:
         programa — uma delas cita `interface/aba06.py:OPCOES_TECLADO`. Pôr um
         caminho de arquivo no cartão dela trocaria um silêncio por um ruído. O
         que falta ali é uma frase que ela decida, e está no relato desta frente.
+
+        O `uniq` CHEGA NORMALIZADO, e é a chave do depósito. Ele não é o `pref`
+        do clique: quem endereça pela coluna endereça um lugar que troca de
+        dono. Ver `self._recados`.
         """
         print(f"[gesto falhou] {pagina} · {nome}: {erro}", file=sys.stderr)
         if not isinstance(erro, RuntimeError):
             return False
-        self._recados[pref] = (str(erro), time.monotonic())
+        self._recados[uniq] = (str(erro), time.monotonic())
         # NA HORA, e não no próximo tique. Meio segundo entre o clique e a
         # resposta basta para ela clicar de novo achando que o primeiro não
         # pegou — que é o defeito de origem, não um detalhe de acabamento.
@@ -1104,7 +1136,8 @@ class Piloto:
         return False
 
     def _recados_para_a_tela(self) -> list[dict[str, str]]:
-        """As frases de recusa ainda vivas, e a poda das vencidas.
+        """As frases de recusa ainda vivas, a poda das vencidas, e o CARTÃO de
+        cada uma resolvido contra a mesa DE AGORA.
 
         A PODA MORA NO LEITOR, e não num relógio próprio: um `timeout_add` por
         recado seria um temporizador por clique recusado, e o que apaga a frase
@@ -1115,12 +1148,33 @@ class Piloto:
         O RELÓGIO É MONOTÔNICO pelo mesmo motivo do
         `recado_do_microfone.quando_s`: um acerto de hora do sistema não pode
         fazer um aviso de agora parecer de ontem.
+
+        A TRADUÇÃO `uniq → pref` É FEITA AQUI, NO INSTANTE DA PINTURA, e é o que
+        fecha o defeito de identidade: o depósito guarda o ENDEREÇO, e quem
+        pergunta a que coluna ele corresponde é a mesa deste tique. Quando o
+        controle SAIU da mesa não há coluna, e o `cartao` sai vazio: o aviso vira
+        tarja de rodapé em vez de pousar no cartão de quem ficou. Deixá-lo
+        pousar ali seria a tela afirmando, sobre um controle, uma recusa de
+        outro — a forma exata do defeito que o
+        `test_a_frase_pousa_no_cartao_de_quem_foi_clicado` já impede no INSTANTE
+        e que só aparece no TEMPO.
+
+        SÃO DOIS ENDEREÇOS E NÃO UM: `chave` é a IDENTIDADE do aviso (o `uniq`
+        normalizado, e é por ela que o BOOTSTRAP reencontra o próprio nó), e
+        `cartao` é ONDE ELE POUSA AGORA. Somar os dois num campo só faria dois
+        controles fora da mesa colidirem no mesmo `data-hef-recado` vazio — e a
+        segunda frase sumiria calada, que é o silêncio que este canal existe
+        para curar.
         """
         agora = time.monotonic()
         for chave, (_frase, quando) in list(self._recados.items()):
             if agora - quando >= SEGUNDOS_DO_RECADO:
                 del self._recados[chave]
-        return [{"chave": chave, "texto": frase}
+        onde_esta = {norm_mac(str(c.get("uniq") or "")) or "": str(c.get("pref") or "")
+                     for c in self._mesa_de_agora}
+        return [{"chave": chave,
+                 "cartao": onde_esta.get(chave, "") if chave else "",
+                 "texto": frase}
                 for chave, (frase, _quando) in sorted(self._recados.items())]
 
     # O `_ipc` CRU MORREU em 01/09/2026. Ele abria o socket à mão e montava o
