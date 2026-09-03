@@ -854,8 +854,8 @@
      layout; é um desenho que esta linha não comporta.
 
      Quem identifica a peça agora são as duas coisas que JÁ funcionavam e foram
-     medidas: a barra de 3px de `--plastico` na primeira célula (cor cheia, sem
-     antisserrilhado) e o rótulo `P1 • Cosmic Red • USB`. Se ela quiser o
+     medidas: a barra de 3px na primeira célula (cor cheia, sem
+     antisserrilhado) e o rótulo curto do controle. Se ela quiser o
      desenho de volta, é esta regra e a linha do `svg()` em `linha_do_controle`.
 
      Foi junto o que o desenho carregava e ninguém via: as cinco lâmpadas do
@@ -884,8 +884,35 @@
      desenho de 32px o modelo mal se distingue, e é a cor que identifica a peça.
      A cor vem de `cor_da_zona()` — do `<style>` que o gerador escreveu no SVG —,
      nunca de um hexadecimal digitado. É a mesma gramática do `tr.ativo` da tabela
-     ao lado: uma barra fina à esquerda diz de quem é a linha. */
-  .tab.miuda td:first-child{box-shadow:inset 3px 0 0 var(--plastico,transparent)}
+     ao lado: uma barra fina à esquerda diz de quem é a linha.
+
+     ELA DEIXOU DE SER `box-shadow` NA CÉLULA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
+     O `--plastico` morava no `<tr>`, **sem endereço nenhum**, e por isso ficava com
+     a cor do DESENHO enquanto o nome ao lado já vinha do aparelho: a linha dizia
+     `P1 • White • USB` com a barra do controle do mockup. Agora a barra é um
+     elemento PRÓPRIO e endereçado por `guarda.plastico`, e quem escreve a cor é
+     o pacote `a10_perfis`, com o que leu da mesa.
+
+     O ENDEREÇO NÃO SE ESCREVE NESTE COMENTÁRIO: a régua do gerador conta as
+     ocorrências do atributo na página, e um comentário que o soletra some com a
+     conta. (Custou uma reprovação, e ela estava certa.)
+
+     O ALVO É `cor`, E NÃO `fundo`, e a escolha é medida: o `escrever()` do piloto
+     guarda `#ae335a` em `style.background` e lê `rgb(174, 51, 90)` de volta —
+     a comparação nunca casa e o contador soma uma pintura por tique, para sempre
+     (é o defeito que já tirou a `largura` do travessão). O ramo `cor` ESCREVE e
+     depois COMPARA, então é o único idempotente para hexadecimal.
+
+     `background:currentColor` COM `color:transparent` NO PADRÃO: sem cor lida, o
+     piloto escreve `''`, o inline cai, o `transparent` da classe volta e a barra
+     SOME. Campo sem informação não mostra nada — regra dela.
+
+     A CAIXA É A MESMA: `inset 3px 0 0` pinta os 3px da esquerda da caixa de borda
+     da célula, e é exatamente o que `position:absolute;left:0;top:0;bottom:0` dá
+     num `<td>` posicionado, que não tem borda. Zero pixel de diferença. */
+  .tab.miuda td:first-child{position:relative}
+  .gd-nome .pl{position:absolute;left:0;top:0;bottom:0;width:3px;
+               background:currentColor;color:transparent}
   /* O LUGAR SEM CONTROLE — a cor é a do `.vazio` da Gatilhos (`--comment`), que é
      a página que ela mandou copiar. O contraste está medido no comentário da
      régua: aqui o fundo é `--panel`, não o `--app-bg` da Jogar, e foi por olhar
@@ -1027,8 +1054,8 @@
     <div class="fita inerte" title="Esta aba não usa o controle escolhido aqui — os cards são leitura.">
       <span>Selecionar:</span>
       <span class="chip on">Todos</span>
-      <span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
-      <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
+      <span class="chip plastico" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
+      <span class="chip plastico" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1154,11 +1181,14 @@
                        para um perfil que está em 1 de 200.
                        É a mesma cura que os quatro campos do editor logo
                        abaixo já tinham recebido com `alvo="valor"`.
-                       Enquanto esta página não for PUBLICADA por ela,
-                       `a10_perfis.NAO_PINTAVEIS` segura a emissão do
-                       `editor.prioridade` — quem diz a verdade é o número ao
-                       lado (`editor.prioridade.n`), que é um `<span>` sem
-                       filhos e recebe o valor certo. -->
+                       FATO SUBSTITUÍDO — 02/09/2026. Aqui estava escrito que,
+                       "enquanto esta página não for PUBLICADA por ela",
+                       `a10_perfis.NAO_PINTAVEIS` segurava a emissão do
+                       `editor.prioridade`. As duas metades caíram: a página FOI
+                       publicada (commit `70b58116`) e `editor.prioridade` saiu
+                       de `NAO_PINTAVEIS` no `1f6e356b`. A barra recebe a
+                       largura; o número ao lado (`editor.prioridade.n`) é um
+                       `<span>` sem filhos e recebe o valor pelo mesmo tique. -->
                   <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:90%"></span></span>
                   <span class="n" data-hef="editor.prioridade.n">90</span>
                 </span>
@@ -1184,6 +1214,7 @@
               <div class="campo">
                 <span title="Pré-aplica um perfil inteiro: escolhendo FPS, o gatilho, a luz, a vibração e a máscara já vêm resolvidos. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
+                <option value="" selected>—</option>
                 <option>FPS</option>
                 <option>Corrida</option>
                 <option>Ação</option>
@@ -1191,7 +1222,7 @@
                 <option>Esportes</option>
                 <option>Point-and-click</option>
                 <option>Terror</option>
-                <option selected>Luta</option>
+                <option>Luta</option>
                 <option>Co-op na mesa</option>
                 <option>Maratona</option>
                 <option>Plataforma</option>
@@ -1211,8 +1242,10 @@
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
                   <tr data-hef-uniq="p1"
-                      style="--plastico:#ae335a" title="Cosmic Red — 3 de 4 ajustes só deste controle.">
+                      title="Cosmic Red — 3 de 4 ajustes só deste controle.">
                     <td class="gd-nome">
+                      <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
+                            style="color:#ae335a"></span>
                       <span data-hef="guarda.nome">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
                     </td>
                     <td class="gd-pecas"><span class="gls"><span class="gr on" data-hef="guarda.secao" data-hef-secao="leds" title="Luz: a cor da barra e o número do jogador deste controle."><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
@@ -1261,8 +1294,10 @@
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:01</td>
                   </tr>
                   <tr data-hef-uniq="p2"
-                      style="--plastico:#7eb8d4" title="Starlight Blue — 2 de 4 ajustes só deste controle.">
+                      title="Starlight Blue — 2 de 4 ajustes só deste controle.">
                     <td class="gd-nome">
+                      <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
+                            style="color:#7eb8d4"></span>
                       <span data-hef="guarda.nome">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
                     </td>
                     <td class="gd-pecas"><span class="gls"><span class="gr on" data-hef="guarda.secao" data-hef-secao="leds" title="Luz: a cor da barra e o número do jogador deste controle."><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
@@ -1311,8 +1346,10 @@
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:02</td>
                   </tr>
                   <tr data-hef-uniq="p3" class="fora"
-                      style="--plastico:transparent" title="Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: quando o P3 voltar, ele encontra o que você deixou.">
+                      title="Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: quando o P3 voltar, ele encontra o que você deixou.">
                     <td class="gd-nome">
+                      <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
+                            style="color:transparent"></span>
                       <span data-hef="guarda.nome">P3 <span class="pt">•</span> Desconectado</span>
                     </td>
                     <td class="gd-pecas"><span class="gls"><span class="gr on" data-hef="guarda.secao" data-hef-secao="leds" title="Luz: a cor da barra e o número do jogador deste controle."><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
@@ -1361,8 +1398,10 @@
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:03</td>
                   </tr>
                   <tr data-hef-uniq="p4" class="fora"
-                      style="--plastico:transparent" title="Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: quando o P4 voltar, ele encontra o que você deixou.">
+                      title="Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: quando o P4 voltar, ele encontra o que você deixou.">
                     <td class="gd-nome">
+                      <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
+                            style="color:transparent"></span>
                       <span data-hef="guarda.nome">P4 <span class="pt">•</span> Desconectado</span>
                     </td>
                     <td class="gd-pecas"><span class="gls"><span class="gr" data-hef="guarda.secao" data-hef-secao="leds" title="Luz: usa o do perfil, igual aos outros controles."><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Lightbar</title>
@@ -1481,19 +1520,23 @@
       vibração e alto-falante —, e mais nenhum: modo, mouse, teclado e microfone são do
       perfil inteiro, e a classe escreve o motivo de cada um.</li>
     <li><b>Apagado não é falta, é herança.</b> Campo vazio quer dizer "sem opinião": aquele
-      controle usa a seção global do perfil. O <b>White</b> está assim de propósito —
+      controle usa a seção global do perfil. O <b>P4</b> está assim de propósito —
       é o caso mais comum, e uma tela que acende tudo nos quatro ensinaria o contrário.</li>
     <li><b>O desenho do controle saiu da linha, e a cor ficou.</b> Ele tinha 32px e
       <span class="marca">os quatro liam como quatro cinzas</span>: medido no 1x desta tela,
-      o par mais próximo — Cosmic Red e Galactic Purple — se distinguia em <b>33 pixels de
+      o par de cores mais próximo se distinguia em <b>33 pixels de
       736</b>. A cor do plástico aqui é um traço fino, e a 32px o traço vale um terço de
       pixel. Crescer não cabia: no tamanho em que a cor se lê, as quatro linhas pedem 209px
       de altura e a tabela tem 132px. Quem diz de quem é a linha agora é a <b>barra de 3px
-      na cor do plástico</b> e o rótulo <b>P1 • Cosmic Red • USB</b> — os dois já estavam lá.
+      na cor do plástico</b> e o <b>rótulo curto</b> do controle — os dois já estavam lá.
       A cor continua saindo do <code>&lt;style&gt;</code> que o
       <code>gerar_cores_do_dualsense.py</code> escreveu, por <code>cor_da_zona()</code>:
       <b>nenhum hexadecimal digitado aqui</b>. Os glifos são os mesmos
       <code>assets/glyphs/</code> das outras abas.</li>
+    <li><b>A barra e o rótulo dizem o controle DELA, não o do desenho.</b> A barra virou um
+      elemento endereçado (<code>guarda.plastico</code>) e quem escreve a cor é
+      <code>a10_perfis</code>, com o que leu da mesa — a mesma leitura da fita do topo.
+      Sem cor lida, a barra <b>some</b>: campo sem informação não mostra nada.</li>
     <li><b>O cabeçalho conta a mesa</b>: 14 perfis e
       3 de 4 controles com ajuste próprio neste perfil.</li>
   </ul>

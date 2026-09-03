@@ -832,7 +832,8 @@
      na CAIXA, não na coluna: `border-top` na coluna empurraria as sete linhas
      2px para baixo e o rótulo deixaria de casar com o das vizinhas. */
   .vib .moldura{
-    border:1px solid var(--plastico);border-radius:8px;background:var(--app-bg);
+    border:1px solid var(--plastico, var(--border-forte));border-radius:8px;
+    background:var(--app-bg);
     display:flex;align-items:center;justify-content:center;padding:5px;
   }
   /* ALTURA e não largura: a linha tem altura fixa e o desenho tem de caber nela.
@@ -908,34 +909,62 @@
      `ds_limpo.svg`/`importar.py`, que não são desta aba. */
   .vib .ds-svg .oculta{opacity:0 !important}
   .vib .ds-svg .oculta.acesa{opacity:.95 !important;
-                             filter:drop-shadow(0 0 1.8px var(--plastico))}
+                             filter:drop-shadow(0 0 1.8px var(--plastico, var(--border-forte)))}
 
   /* ---------- A LINHA DO ESTADO — 02/09/2026 ----------
      A janela estável tem QUATRO avisos nesta aba e a interface nova não tinha
      nenhum. Eles não são decoração: um deles é o "a intensidade que você
      escolheu não chega a jogo nenhum", que ficou onze dias sem tela.
 
-     DOIS TONS, e o nome do tom vem do produto (`app/telas/vibracao.DIZ` e
-     `.ALERTA`), nunca um hex emitido pelo Python: `diz` conta o que está
-     acontecendo, `alerta` avisa que o que ela escolheu não chega. O laranja é
-     o `--orange` do tema, o MESMO `#ffb86c` que a janela estável usa nestas
-     linhas — um token, não uma segunda cópia da cor.
+     TRÊS TONS, e o nome do tom vem do produto (`app/telas/vibracao.DIZ`,
+     `.ALERTA` e `.INFO`), nunca um hex emitido pelo Python: `diz` conta o que
+     está acontecendo, `alerta` avisa que o que ela escolheu não chega, `info`
+     explica sem alarmar. O laranja é o `--orange` do tema, o MESMO `#ffb86c`
+     que a janela estável usa nestas linhas — um token, não uma segunda cópia
+     da cor.
 
      `:empty{display:none}` é o que deixa a linha SUMIR quando não há o que
      dizer. É a metade que o pintor não sabe fazer: `escrever()` troca vazio por
      travessão, e um `—` numa linha de alerta afirmaria "não sei" onde a
      resposta certa é "não há nada a avisar". Por isso o bloco inteiro é
      trocado (`p.blocos`) em vez de pintado campo a campo. */
-  /* AS MARGENS SÃO MEDIDAS, não gosto — 02/09/2026, no Chrome, nesta aba. O
-     miolo tem 564 px e o quadro tinha 476: sobravam **24 px**. Uma linha de
-     estado custa 18 px de texto, e `12px 4px 2px` de margem punha o total em 32
-     — a aba passava a ROLAR por dentro, e ela teria de arrastar para ver o
-     "Testar" que sempre esteve à vista. Com `4px 4px 0` o total é 22 e a aba
-     continua inteira na tela.
-     COM AVISO A ABA ROLA, e isso é de propósito: os dois alertas
-     (`alcance`, `teto`) só aparecem em estado excepcional, e um estado
-     excepcional merece empurrar a tela — o que não pode é o estado NORMAL
-     custar uma barra de rolagem. */
+  /* A CONTA DA MARGEM, e ela é apertada por CONSTRUÇÃO. `4px 4px 0` em vez do
+     `12px 4px 2px` que a linha nasceu tendo — os 10 px que sobram são o que
+     mantém o estado NORMAL sem barra de rolagem.
+
+     FATO SUBSTITUÍDO — 02/09/2026, e o número anterior foi medido na cena
+     errada. Este comentário dizia "o quadro tinha 476: sobravam 24 px" e
+     "com aviso a aba rola, e isso é de propósito: os dois alertas só aparecem
+     em ESTADO EXCEPCIONAL". As duas metades caíram na mesma medição.
+
+     MEDIDO no WebKit da janela do produto (1180x757 — o `TAMANHO_NA_TELA`, e
+     não o `TAMANHO_OCULTA`, que é 143 px mais alto e responderia "não rola"
+     sempre), com a MESA DELA — dois controles, um `usb` e um `bt`, `vpads == 0`
+     —, injetando o BOOTSTRAP do piloto e pintando a carga do
+     `a05_vibracao.pacote()`. A régua está versionada:
+     `tests/unit/test_o_aviso_da_vibracao_cabe_na_aba.py`.
+
+       .miolo: client 564 · fundo em 733 px
+       a cena CRAVADA (1 linha) ................ estado 18 px · rola 0
+       a mesa dela, com a frase de 211 chars ... estado 60 px · rola 40 · CORTADA
+       a mesa dela, com a frase de hoje ........ estado 42 px · rola 22 · inteira
+
+     A FRASE ENCURTOU — decisão dela, 02/09, ciente do custo. A de 211
+     caracteres ocupava 1072 px de 1072: quebrava em duas sublinhas e a segunda
+     — "que você fixar aqui embaixo." — terminava em 740 px, SETE px abaixo do
+     fundo do miolo. Fotografado. A de hoje tem 162 caracteres, ocupa 942 px e
+     cabe numa sublinha; o aviso se lê inteiro sem arrastar.
+
+     A frase é a MESMA da janela GTK e tem um dono só
+     (`rumble_actions.texto_do_alcance_da_intensidade`) — encurtar ali encurtou
+     as duas telas, de propósito.
+
+     SOBRAM 22 px DE ROLAGEM, e eles não são texto: são DUAS mensagens acesas ao
+     mesmo tempo (a dos pedidos e a do alcance) onde o desenho reservou UMA — 42
+     px contra 20 de folga. `vpads == 0` não é excepcional, é o estado corrente
+     da mesa dela. Caber os 22 exige encolher a tabela que ela aprovou, e o
+     `.miolo` (16px 3px 18px 18px) é do `topo.html`, comum às dez abas: é
+     DECISÃO DELA, não pixel. As saídas estão em `mockup/DIVERGENCIAS.md`. */
   .vib-estado{margin:4px 4px 0;display:flex;flex-direction:column;gap:6px}
   .vib-estado:empty{display:none}
   .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
@@ -945,6 +974,14 @@
   .vib-estado .est.diz .sinal{color:var(--green)}
   .vib-estado .est.alerta{color:var(--orange)}
   .vib-estado .est.alerta .sinal{color:var(--orange)}
+  /* O TERCEIRO TOM, e ele é o da janela estável: `#8be9fd` é o token de INFO da
+     casa, o que ela usa na frase "grava aqui, manda ali"
+     (`rumble_actions.py:608`, com o comentário "a frase explica, não alarma").
+     Ela saía como `diz` — o cinza — e o erro só apareceria na tela no dia em
+     que a MIGRA-VIBRACAO-04 ligasse o alvo por controle. `--cyan` é o mesmo
+     hexadecimal, já declarado no `topo.html`. */
+  .vib-estado .est.info{color:var(--cyan)}
+  .vib-estado .est.info .sinal{color:var(--cyan)}
 
   .vib{
     --larg-rot:138px;
@@ -1085,8 +1122,8 @@
     <div class="fita inerte" title="Esta aba não usa o controle escolhido aqui — os cards são leitura.">
       <span>Selecionar:</span>
       <span class="chip on">Todos</span>
-      <span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
-      <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
+      <span class="chip plastico" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
+      <span class="chip plastico" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1183,9 +1220,9 @@
               </span></span></span></div>
           </div>
 
-          <div class="ctrl" data-controle="p1" data-uniq=""
-               style="--plastico:#ae335a">
-            <div class="moldura" data-papel="desenho"><?xml version="1.0" encoding="utf-8"?>
+          <div class="ctrl" data-controle="p1" data-uniq="">
+            <div class="moldura" data-papel="desenho" data-campo="plastico"
+                 data-hef-alvo="plastico" style="--plastico:#ae335a"><?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p1-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
@@ -1589,9 +1626,9 @@
               <button class="btn vermelho" data-papel="parar">Parar</button>
             </div>
           </div>
-          <div class="ctrl" data-controle="p2" data-uniq=""
-               style="--plastico:#7eb8d4">
-            <div class="moldura" data-papel="desenho"><?xml version="1.0" encoding="utf-8"?>
+          <div class="ctrl" data-controle="p2" data-uniq="">
+            <div class="moldura" data-papel="desenho" data-campo="plastico"
+                 data-hef-alvo="plastico" style="--plastico:#7eb8d4"><?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p2-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
