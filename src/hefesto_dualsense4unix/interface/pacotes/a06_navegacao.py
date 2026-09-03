@@ -670,10 +670,12 @@ def folha_do_plastico(mesa: list[dict[str, Any]], caixa: str = ".nav-ctl") -> st
     folha = _ler_a_folha()
     identidade = _ZONAS_DE_IDENTIDADE or frozenset()
     regras = []
+    ocupados: set[str] = set()
     for lugar in mesa:
         pref = str(lugar.get("pref") or "")
         if not pref:
             continue
+        ocupados.add(pref)
         zonas = folha.get(str(lugar.get("cor") or ""))
         if zonas:
             corpo = ";".join(f"{k}:{v}" for k, v in zonas.items())
@@ -681,7 +683,67 @@ def folha_do_plastico(mesa: list[dict[str, Any]], caixa: str = ".nav-ctl") -> st
             corpo = ";".join(f"{k}:var(--border-forte)" for k in sorted(identidade))
         if corpo:
             regras.append(f'{caixa}[data-controle="{pref}"] .ds-svg{{{corpo}}}')
+    regras.extend(_apagar_os_lugares_sem_dono(caixa, ocupados, identidade))
     return "".join(regras)
+
+
+#: OS LUGARES QUE O DESENHO TEM. As duas páginas que chamam a
+#: `folha_do_plastico` nomeiam `p1` e `p2` (medido em 03/09/2026:
+#: `grep -o 'data-controle="p[0-9]"'` devolve os mesmos dois em
+#: `06-navegacao.html` e em `04-iluminacao.html`). Vai até `p4` porque a mesa do
+#: desenho tem quatro lugares e um dia os quatro podem ganhar nome — uma regra
+#: para um `pref` que a página não tem não casa com nada e não custa nada.
+LUGARES_DO_DESENHO = 4
+
+
+def _apagar_os_lugares_sem_dono(
+    caixa: str, ocupados: set[str], identidade: frozenset[str],
+) -> list[str]:
+    """As regras que APAGAM o aparelho do mockup nos lugares que ficaram vazios.
+
+    O DEFEITO, MEDIDO NO PRODUTO EM 03/09/2026, com UM controle no cabo e a aba
+    Navegação aberta no WebKit — os quatro cartões, lidos pelo DOM vivo::
+
+        P1 • White         casco rgb(68, 71, 90)     lightbar rgb(0, 0, 255)
+        P2 • —             casco rgb(126, 184, 212)  lightbar rgb(255, 0, 0)
+        P3 • Desconectado  casco rgb(83, 87, 111)    lightbar rgb(83, 87, 111)
+        P4 • Desconectado  casco rgb(83, 87, 111)    lightbar rgb(83, 87, 111)
+
+    `rgb(126, 184, 212)` é `#7eb8d4`, o **Starlight Blue do mockup**, e
+    `rgb(255, 0, 0)` é o `style="--luz:#ff0000"` que o `monta.svg()` cravou no
+    `<g id="p2-lightbar">`. Num lugar onde NÃO HÁ CONTROLE, o cartão saía mais
+    colorido — e mais aceso — que o do único controle de verdade na mesa.
+
+    POR QUE O P3 E O P4 ESCAPARAM, e é o que nomeia a causa: eles nascem
+    `class="nav-ctl vazia"` no HTML, e a folha do desenho já sabe desenhar um
+    lugar vazio (`.nav-ctl.vazia .ds-svg …{fill:var(--linha)!important}`). O P2
+    nasce OCUPADO e fica vazio em tempo de execução — e quem o esvazia
+    (`pacotes.apagar_os_lugares_sem_dono` + o passo `vazios` do piloto) escreve
+    a classe **`off`**, que folha de estilo nenhuma menciona. As duas palavras
+    para o mesmo estado nunca se encontraram, e o desenho do mockup ficou.
+
+    É A MESMA LEI DA `folha_do_plastico`, aplicada onde ela estava calada: um
+    lugar SEM DONO é, com mais razão que um lugar sem leitura de cor, um lugar
+    sobre o qual a tela não tem o que afirmar. O neutro é o `var(--linha)` do
+    próprio desenho — o mesmo que o `.vazia` usa —, e não um cinza digitado
+    aqui.
+
+    O `!important` NÃO É ZELO: a `--luz` chega como `style="--luz:#ff0000"` no
+    próprio elemento (`monta.py:1000`), e estilo de linha vence qualquer regra
+    de folha que não o traga.
+    """
+    if not identidade:
+        return []
+    zonas = ";".join(f"{k}:var(--linha)" for k in sorted(identidade))
+    regras = []
+    for n in range(1, LUGARES_DO_DESENHO + 1):
+        pref = f"p{n}"
+        if pref in ocupados:
+            continue
+        regras.append(f'{caixa}[data-controle="{pref}"] .ds-svg{{{zonas}}}')
+        regras.append(f'{caixa}[data-controle="{pref}"] [id$="-lightbar"]'
+                      f'{{--luz:var(--linha) !important}}')
+    return regras
 
 
 def rotulo_de_quem_navega(numero: int | None, nome: str, via: str) -> str:
