@@ -241,6 +241,31 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     mesa = [dict(c, plastico=_plastico_do_item(c)) for c in ctx.mesa]
     bruto = _tela.pacote_da_mesa(ctx.state, mesa, ctx.conectados,
                                  contagem=mesa_viva.texto_da_contagem(ctx.mesa))
+    # O MODELO DO DESENHO, POR COLUNA — 03/09/2026, e é a outra metade da lei da
+    # identidade. A moldura já vinha do aparelho desde a manhã (o `plastico`); o
+    # CONTROLE DESENHADO dentro dela continuava sendo o do mockup.
+    #
+    # O SLUG É O DO MAPA DELA, e ele já vem pronto: `mesa_viva.CORES` traduz o
+    # código de fábrica que o aparelho respondeu no `id` do
+    # `docs/data/cores-do-dualsense.csv` (`white`, `galactic-purple`…), que é o
+    # mesmo `id` com que o `gerar_cores_do_dualsense.py` escreve
+    # `svg[data-colorway="…"]`. Não há tradução nova aqui — só o achatamento, que
+    # é o trabalho desta camada.
+    #
+    # A CHAVE VEM DE `ctx.mesa` E NÃO DE `col`: `pacote_da_coluna` devolve a cor
+    # já RESOLVIDA em `#hex` (para a moldura) e joga o slug fora. Repescá-lo aqui
+    # custa uma linha; pedi-lo ao produto seria mexer em `app/telas/vibracao`,
+    # que é de outro dono e não sabe nada de desenho.
+    #
+    # VAZIO É RESPOSTA, e é a mais comum na mesa dela: pelo rádio o mapa de
+    # canais diz `identidade.cor_do_aparelho = não`, o `LeitorDeCor` guarda
+    # `None` e o item chega com `cor = ""`. O alvo `atributo` do pintor APAGA o
+    # `data-colorway` nesse caso, e o desenho cai no cinza neutro — o controle
+    # sem identidade, que é o que a regra dela pede. Deixar o atributo manteria o
+    # Cosmic Red do mockup sobre um aparelho que é outro.
+    modelo_por_uniq = {
+        str(c.get("uniq") or ""): str(c.get("cor") or "") for c in ctx.mesa
+    }
     colunas: dict[str, dict[str, Any]] = {}
     # O MULTIPLICADOR É O PEDIDO, e não o `rumble_mult_applied` — 03/09/2026.
     # A razão inteira, com as quatro medições que a decidiram, está em
@@ -256,6 +281,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # que a cor não se lê —, e o alvo `plastico` do pintor apaga a
             # variável em vez de inventar um tom.
             "plastico": str(col.get("plastico") or ""),
+            # O MODELO DO CONTROLE DESENHADO — o par do `plastico`, e o que
+            # fecha a lei da identidade nesta aba. O alvo é `atributo`
+            # (`aba05.ENDERECO_DA_COR`), e ele troca o `data-colorway` do
+            # `<svg>`; a página publica as dez zonas dos 28 modelos dela, então
+            # qualquer um dos 28 pinta. Ver `modelo_por_uniq`, acima.
+            "colorway": modelo_por_uniq.get(uniq, ""),
             # O NÚMERO DO MULTIPLICADOR, e não o nome do degrau: o desenho
             # escreve `150%` nesta caixa, ao lado do trilho e do "Máx".
             "mult": pct.get("n", "—"),
