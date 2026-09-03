@@ -1016,6 +1016,20 @@ PERIGOSOS = {
     # A CHAVE É CORINGA de propósito: o gesto é um só nas dez páginas, e
     # `_alvos_a_clicar` casa `("*", nome)` além de `(página, nome)`.
     ("*", "salvar"),
+    # E O `salvar` NÃO ERA O ÚNICO QUE ESCREVE — medido em 03/09/2026, rodando
+    # o `--prova-no-aparelho` na aba Gatilhos com o produto instalado. O
+    # `rodape.salvar` diz na docstring *"é o único gesto desta leva que
+    # escreve"*, e a lista acima foi montada sobre essa frase. Ela é FALSA:
+    # `a03_gatilhos.guardar` também grava em `meu_perfil.json`. A prova é o log
+    # da própria régua, que anunciou `pulados por mexerem na máquina dela:
+    # salvar` e mesmo assim deixou para trás
+    # `profile_salvo arquivo=meu_perfil.json origem=interface-nova`, com backup
+    # novo em `.historico/` e um bloco `triggers` a mais no perfil dela.
+    #
+    # O GESTO É LEGÍTIMO — "Guardar esse efeito" existe para gravar, e gravar é
+    # o que ela pediu dele. O que não é legítimo é uma RÉGUA escrever no perfil
+    # dela para provar que sabe clicar; é a mesma razão do `salvar` acima.
+    ("03-gatilhos.html", "guardar"),
 }
 
 
