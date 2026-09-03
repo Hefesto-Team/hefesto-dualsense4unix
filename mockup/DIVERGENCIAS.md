@@ -81,6 +81,23 @@ seção daqui**: a aba deixou de estar em trabalho.
   **quatro cores** (ciano, verde, laranja, cinza) e a leitura viva usa **três**
   (`mesa_viva._barra_bipolar`: verde para positivo, vermelho para negativo,
   cinza para o repouso). Quando o produto pintar, o ciano e o laranja somem.
+- **03/09/2026 · a cor do plástico virou UMA folha, e nenhum pixel do desenho
+  mudou.** As duas folhas do fim do `<head>` — a do desenho e a vazia por cima —
+  viraram **uma**, endereçada e com `data-hef-alvo="html"`, que o produto troca
+  INTEIRA. Ela nasce com as suas duas cores (Cosmic Red no P1, Starlight Blue no
+  P2), então **a bancada continua exatamente a cena que você aprovou**.
+
+  **O buraco que isso fecha só aparece com MENOS controles na mesa do que o
+  desenho tem**, e está medido no WebKit desta máquina: com duas folhas e um
+  controle só ligado (o White no cabo), o assento do P2 continuava com a borda
+  `rgb(126, 184, 212)` — **Starlight Blue num lugar onde não há controle
+  nenhum**. Agora ele cai no cinza neutro, que é a sua regra: campo sem
+  informação não mostra nada.
+
+  **O que você vê hoje, sem publicar:** nada mudou. Com os seus DOIS controles
+  na mesa o produto já nomeia os dois assentos, e a tela sai igual — fotografada
+  com o daemon vivo: P1 com a borda branca do White, P2 com a roxa do Galactic
+  Purple. A diferença nasce no dia em que você desligar um deles.
 ## 05-vibracao.html
 - **03/09/2026** — o desenho ganhou DUAS coisas que a página publicada ainda não
   tem, e nenhuma muda um pixel do que ela aprovou:
