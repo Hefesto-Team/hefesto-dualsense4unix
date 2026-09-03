@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses as _dataclasses
+import re
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -1258,26 +1259,61 @@ def _hex_do_plastico(slug: str) -> str:
     thread, então o primeiro tique de uma sessão sempre tem a mesa sem cor — e
     pelo RÁDIO o Hefesto ainda não pergunta (`ONDA-CONEXOES-11`). Sem hex, quem
     chama mostra a neutra. Inventar aqui seria a mentira que esta sprint mata.
+
+    OITO DOS 28 MODELOS NÃO TÊM HEX, e ignorar isso derrubava a aba INTEIRA —
+    achado em 03/09/2026 ao passar os 28 pelo pacote, um a um. Chroma Teal,
+    Chroma Indigo, Chroma Pearl, Grey Camouflage, Ghost of Yōtei, Marathon,
+    Genshin Impact e 007 First Light são pintados no mapa dela com uma HACHURA
+    (`url(#hachura-sem-hex)`), que é como ela escreve *"esta cor eu não medi"*.
+    O valor atravessava até `tinta_legivel`, e ali
+    `int("ur", 16)` levanta `ValueError` **fora** do `try` deste bloco: quem
+    ligasse um Chroma Teal via a `08-conexoes` parar de pintar por completo, sem
+    uma barra na tela e sem um erro que dissesse por quê.
+
+    A hachura é uma resposta legítima e vale para o DESENHO — ele a mostra, e é
+    a informação certa. O que ela não é é uma COR: não dá para pintar com ela
+    uma barra de 3px nem calcular a tinta que se lê por cima. Aqui, então, ela é
+    ausência de leitura — a mesma regra dela, pela mesma razão.
     """
     if not slug:
         return ""
     try:
         import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
 
-        return str(monta.cor_da_zona(slug))
+        cor = str(monta.cor_da_zona(slug))
     except Exception:
         # `cor_da_zona` levanta `SystemExit` para colorway que o SVG não tem.
         # Derrubar a pintura da aba por causa de um modelo novo seria trocar uma
         # barra que falta por uma tela congelada.
         return ""
+    # SÓ HEXADECIMAL SAI DAQUI. A guarda é por FORMA e não por lista de modelos:
+    # uma lista de oito nomes envelheceria no dia em que ela medir um deles.
+    return cor if re.fullmatch(r"#[0-9a-fA-F]{6}", cor) else ""
 
 
-# O DESENHO PEQUENO DA LINHA CONTINUA NO PLÁSTICO DO MOCKUP, e a razão está
-# MEDIDA no CSS do `.ds-mini` em `aba08.py`: a cor dele mora num ATRIBUTO
-# (`data-colorway`), o `escrever()` do piloto não tem alvo de atributo, e trocar
-# o `<svg>` inteiro pelo alvo `html` custou 31 pinturas em 31 tiques e triplicou
-# o tique (4,24 → 13,56 ms). A cura certa é um alvo de ATRIBUTO no piloto, que é
-# arquivo de outro dono — e ela vale para as cinco abas que desenham controle.
+def colorway_do_controle(m: Any) -> str:
+    """O modelo do mapa dela para aquele controle, ou `""` quando ninguém leu.
+
+    É o SLUG (`white`, `galactic-purple`), e não o hex: o `<svg>` do desenho
+    escolhe a cor por `data-colorway`, e a folha das 28 que a página publica
+    pinta as dez zonas dele. Quem traduz código de fábrica → slug é
+    `mesa_viva.CORES`, que lê `docs/data/cores-do-dualsense.csv`; a mesa já
+    entrega o slug pronto em `cor`, e é só isso que sai daqui.
+
+    O `""` É A REGRA DELA, e não uma falta: sem cor lida o alvo `atributo` faz
+    `removeAttribute`, nenhuma regra da folha casa e o desenho cai no cinza cru
+    do `ds_limpo.svg` — o controle SEM identidade. Deixar o `data-colorway` do
+    mockup faria o contrário: mostraria o Cosmic Red do desenho sobre um
+    aparelho que é outro, que é o defeito que esta leva existe para matar.
+    Pelo RÁDIO isso é o caso normal — o mapa de canais responde
+    `identidade.cor_do_aparelho = não`, e a resposta nunca vem.
+
+    POR QUE NÃO REUSAR `_hex_do_plastico`: são línguas diferentes no mesmo dado.
+    A barra da esquerda é pintada com um hex (alvo `cor`); o desenho é escolhido
+    por nome de modelo (alvo `atributo`). Traduzir um no outro obrigaria a tela
+    a procurar o slug de volta a partir da cor, que é a conta ao contrário.
+    """
+    return str(m.get("cor") or "")
 
 
 def _da_mesa_para_a_regua(m: dict[str, Any], com_mic: set[str]) -> dict[str, Any]:
@@ -1697,6 +1733,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # lida — o rádio, enquanto a `ONDA-CONEXOES-11` não chegar — a barra
             # some e a borda neutra fica. Nenhuma cor é inventada.
             "plastico": _hex_do_plastico(str(eu.get("cor") or "")),
+            # O DESENHO PEQUENO DA LINHA — `IDENTIDADE-VEM-DE-CIMA`, 03/09/2026.
+            # Ver :func:`colorway_do_controle`: vai o SLUG do modelo, que é o
+            # que o `data-colorway` do `<svg>` fala, e não o hex.
+            "desenho": colorway_do_controle(eu),
             "ponte": bool(c.get("uniq") in (st.get("pontes_confirmadas") or {})),
             "fragil": bool(c.get("uniq") in (st.get("native_bt_fragil_controles") or [])),
             # O QUE ESTÁ DECLARADO, e não o que o desenho traz. O `<select>`
