@@ -165,7 +165,7 @@ def test_o_pacote_escreve_a_cor_do_plastico_como_folha(a02, ctx):
     """A borda do card do `White` é branca, e a do que não se leu é o neutro."""
     folha = a02.pacote(ctx)["mesa"]["plastico-css"]
     assert '.ctl[data-controle="p1"]' in folha
-    assert a02.cor_da_borda("White") in folha
+    assert a02.cor_da_borda("white") in folha
     assert f'{{--plastico:{a02.BORDA_SEM_COR}}}' in folha
 
 
@@ -194,25 +194,37 @@ def test_nada_do_mockup_sai_deste_pacote(a02, ctx):
 # ---------------------------------------------------------------------------
 # 3. O HEXA VEM DO MAPA, e o "não sei" não vira cor
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("nome", ["White", "Galactic Purple", "Midnight Black"])
-def test_a_cor_da_borda_sai_do_mapa(a02, nome):
+#: A CHAVE É O SLUG — o `id` da linha dela em `docs/data/cores-do-dualsense.csv`,
+#: que é o que `mesa_viva.mesa_do_estado` põe no campo `cor` do item da mesa.
+#: Era o NOME DE TELA até 03/09/2026, e a troca é a cura: a grafia do CSV dela e
+#: a de `NOMES_DE_FABRICA` divergem em três modelos, e os três saíam sem borda.
+@pytest.mark.parametrize("slug", ["white", "galactic-purple", "midnight-black"])
+def test_a_cor_da_borda_sai_do_mapa(a02, slug):
     """Um hexa de verdade, e nunca o token neutro, para plástico conhecido."""
-    cor = a02.cor_da_borda(nome)
-    assert re.fullmatch(r"#[0-9a-fA-F]{6}", cor), f"`{nome}` não devolveu hexa"
+    cor = a02.cor_da_borda(slug)
+    assert re.fullmatch(r"#[0-9a-fA-F]{6}", cor), f"`{slug}` não devolveu hexa"
 
 
 def test_o_midnight_black_nao_vira_ausencia_de_borda(a02):
-    """`#00040d` cru sobre `#282a36` não é borda preta — é borda nenhuma.
+    """`#1C1C1E` cru sobre `#282a36` não é borda preta — é borda nenhuma.
 
     Quem sabe disso é `cor_do_plastico.tom_para_a_borda`, com o piso de 2,2:1 e
-    a mistura com branco. Esta aba NÃO reescreve a conta: ela a chama.
+    a mistura com branco. Esta aba NÃO reescreve a conta: ela a chama — e o
+    gerador de cores já a aplicou sobre o mesmo dado (`legivel()`), o que faz a
+    borda do card e o casco do desenho subirem juntos.
+
+    O CRU É O DELA, e a comparação é com ELE: `#1C1C1E` é o `casca_esq` do
+    modelo `01` no mapa dela. Comparar com `TONS["05"]`, como esta linha fazia
+    até 03/09, era medir a tabela aproximada que saiu do caminho.
     """
-    from hefesto_dualsense4unix.integrations.cor_do_plastico import TONS
-
-    assert a02.cor_da_borda("Midnight Black").lower() != TONS["05"].lower()
+    assert a02.cor_da_borda("midnight-black").lower() != "#1c1c1e"
 
 
-@pytest.mark.parametrize("nome", ["", "Não sei", "Verde Abacate"])
-def test_sem_leitura_a_borda_e_o_neutro(a02, nome):
-    """E o neutro é o token que o lugar VAZIO desta aba já usa — não uma cor nova."""
-    assert a02.cor_da_borda(nome) == a02.BORDA_SEM_COR
+@pytest.mark.parametrize("slug", ["", "nao-sei", "verde-abacate", "White"])
+def test_sem_leitura_a_borda_e_o_neutro(a02, slug):
+    """E o neutro é o token que o lugar VAZIO desta aba já usa — não uma cor nova.
+
+    O `"White"` está aqui de propósito: é o NOME de tela, e nome não é chave
+    desde 03/09. Se alguém devolver a busca por nome, esta linha reprova.
+    """
+    assert a02.cor_da_borda(slug) == a02.BORDA_SEM_COR

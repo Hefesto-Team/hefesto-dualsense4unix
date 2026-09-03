@@ -393,15 +393,48 @@ def leitura_viva(entrada: dict[str, Any]) -> dict[str, Any]:
 # abaixo dizia `Cosmic Red · USB`. Nenhuma das cores do card era do aparelho
 # dela.
 #
-# O DONO DO HEXA É O PRODUTO, e não o gerador. `interface/monta.cor_da_zona()`
-# lê a cor do SVG do desenho e é o dono da BANCADA; importá-lo daqui arrastaria a
-# bancada para o fecho de produção — medido em 02/09/2026, com três lápides de
-# `interface/monta.py` virando alcançáveis e o `portao_a_casa_sabe_e_o_produto_
-# nao_faz` reprovando nomeando as três. Quem responde do lado do produto é
-# `integrations/cor_do_plastico`, que já traduz nome de fábrica → hexa
-# (`cor_do_nome`) e já sabe o que uma BORDA de 2px pode usar sobre o fundo do
-# card (`tom_para_a_borda`, com o piso de contraste de 2,2:1 e a mistura com
-# branco que impede o Midnight Black de virar ausência de borda).
+# O DONO DO HEXA É O MAPA DELA — `docs/data/cores-do-dualsense.csv`, 28 modelos
+# e 10 zonas —, e quem o lê é `interface/monta.cor_da_zona()`, que tira a cor da
+# folha que `scripts/gerar_cores_do_dualsense.py` pintou dentro do SVG. É a MESMA
+# porta que a `a01_jogar._cor_do_plastico` e a `a06_navegacao.cor_do_plastico`
+# usam, e é o que faz o chip da fita e a borda do card três centímetros abaixo
+# não poderem discordar.
+#
+# FATO SUBSTITUÍDO — 03/09/2026. Aqui estava escrito que importar `monta` daqui
+# *"arrastaria a bancada para o fecho de produção — três lápides de monta.py
+# virando alcançáveis"*, e que o dono do hexa era
+# `integrations/cor_do_plastico.cor_do_nome` + `TONS`. As duas metades caíram no
+# mesmo dia:
+#
+# * a lápide: a `a01_jogar` importa `monta` por dentro de função desde 03/09 e o
+#   `portao_a_casa_sabe_e_o_produto_nao_faz` fecha VERDE (42 passed) — medido
+#   nesta árvore antes e depois desta cura;
+# * a tabela: `TONS` tem VINTE E UMA linhas contra as 28 dela, e **vinte das
+#   vinte e uma são aproximadas** (o próprio cabeçalho daquele módulo o diz; só
+#   a `05` foi medida). O mapa dela é amostragem do aparelho.
+#
+# O QUE ISSO CUSTAVA, MEDIDO NOS 28 MODELOS DELA (03/09/2026): o chip da fita
+# (`monta.cor_da_zona`, mapa dela) e a borda do card (`TONS`) devolviam cores
+# DIFERENTES em **28 de 28** — Cosmic Red `#ae335a` contra `#da244b`, White
+# `#e4e0d8` contra `#edeef0` —, e em **DEZ dos 28** a borda não saía cor
+# nenhuma. Sete porque o código de fábrica não está nas 21 linhas
+# (HyperPop Techno Red, Remix Green, Rhythm Blue, Ghost of Yōtei, Marathon,
+# Genshin Impact, 007 First Light) e TRÊS porque o nome que a mesa entrega vem
+# do CSV dela e não bate com o digitado: `God of War Ragnarök` (com trema),
+# `Marvel's Spider-Man 2` e `Icon Blue Special Edition`.
+#
+# A CHAVE PASSA A SER O SLUG, e não o nome. `mesa_viva.mesa_do_estado` já põe
+# `cor` no item da mesa — o `id` da linha dela (`white`, `nova-pink`) —, e casar
+# por identificador em vez de por texto de tela mata as três divergências de
+# nome de uma vez. O `nome` continua sendo o que se ESCREVE; o `cor` é o que se
+# PINTA.
+#
+# O QUE `integrations/cor_do_plastico` continua respondendo, e é a metade que
+# não caiu: `tom_para_a_borda` — o piso de contraste de 2,2:1 sobre o fundo do
+# card, com a mistura com branco que impede o Midnight Black de virar ausência
+# de borda. Ele é o MESMO que o `legivel()` do gerador de cores já aplica, então
+# reaplicá-lo aqui passa as 22 cores medidas INTACTAS (conferido nos 28) e ainda
+# serve de peneira: um `url(#hachura-sem-hex)` sai como `""`.
 
 #: A BORDA DE QUEM NÃO TEM COR LIDA. É o token que o lugar VAZIO desta aba já
 #: usa (`aba02.py`, `.ctl.off{border:1px solid var(--border-forte)}`), e não uma
@@ -432,22 +465,63 @@ BORDA_SEM_COR = "var(--border-forte)"
 PISO_DA_FOLHA = ".ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}"
 
 
-def cor_da_borda(nome: str) -> str:
+def _monta() -> Any:
+    """O `monta`, importado TARDE. O `pacotes/__init__` põe `interface/` no path.
+
+    Tarde e não no topo pela razão que a `a06_navegacao._monta` já mediu: `monta`
+    lê o `topo.html`, o `fim.html` e o SVG dos 28 modelos no import, e um pacote
+    é importado por teste sem janela nenhuma. Pagar 4,7 MB de leitura para
+    responder *"qual é o hexa do plástico"* é o desperdício que o import tardio
+    evita — e é o mesmo caminho da `a01_jogar._cor_do_plastico`.
+    """
+    import monta
+
+    return monta
+
+
+def cor_da_borda(slug: str) -> str:
     """O hexa da borda daquele plástico, ou o neutro quando não se leu.
 
-    `nome` é o nome de fábrica que a mesa traz (`mesa_viva.mesa_do_estado`, que o
-    tira do `LeitorDeCor`). ``"Não sei"`` e o vazio caem no neutro pelo mesmo
-    caminho: `cor_do_nome` devolve `None` para todo nome que não está na tabela
-    de fábrica, de propósito — *"a Sony fabrica edições novas sem avisar
-    ninguém. Inventar um nome aqui poria…"*.
-    """
-    from hefesto_dualsense4unix.integrations.cor_do_plastico import (
-        cor_do_nome,
-        tom_para_a_borda,
-    )
+    `slug` é o `id` da linha dela em `docs/data/cores-do-dualsense.csv` —
+    `white`, `nova-pink`, `astro-bot` —, e é o campo `cor` que
+    `mesa_viva.mesa_do_estado` já põe no item da mesa. **Não é o nome de tela**:
+    o nome é o que se escreve, o slug é o que se pinta, e casar por
+    identificador em vez de por texto foi o que matou as três divergências de
+    nome que o bloco acima lista.
 
-    achada = cor_do_nome(nome or "")
-    return tom_para_a_borda(achada.tom if achada else "") or BORDA_SEM_COR
+    O DONO DO HEXA É `monta.cor_da_zona`, e ele não se digita: ele lê a folha
+    que `scripts/gerar_cores_do_dualsense.py` escreveu no SVG a partir do mapa
+    dela. Digitar aqui uma tabela de cor seria a segunda verdade que o
+    `check_cores_do_dualsense.py` existe para matar — e foi exatamente o que
+    esta função fazia até 03/09/2026.
+
+    OS TRÊS CAMINHOS PARA O NEUTRO, e os três são a regra dela (*campo sem
+    informação não mostra nada*):
+
+    * **slug vazio** — a cor não foi lida (o leitor não respondeu, ou o código
+      de fábrica está fora da tabela de 21 do produto);
+    * **slug que o SVG não tem** — modelo que o mapa ganhou e o gerador de cores
+      ainda não emitiu. `cor_da_zona` levanta `SystemExit`, que **não** herda de
+      `Exception`: por isso o `except` nomeia os dois. A gêmea da `a04` escreve
+      só `except Exception` e por isso não segura nada — está anotado lá;
+    * **casca sem hexa medido** — OITO dos 28 modelos dela não têm amostra da
+      casca (Grey Camouflage, os três Chroma, Ghost of Yōtei, Marathon, Genshin
+      Impact e 007 First Light), e a folha os pinta com o pattern
+      `url(#hachura-sem-hex)`. **Um `url()` numa borda não é uma cor
+      hachurada: é uma declaração INVÁLIDA, e a borda inteira some** — a mesma
+      lição que o `.ctl.off` do `aba02.py` já carrega para a `var()` sem valor.
+      Quem o peneira é o `tom_para_a_borda`, que devolve `""` para tudo que não
+      começa em `#`.
+    """
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
+
+    if not slug:
+        return BORDA_SEM_COR
+    try:
+        do_mapa = str(_monta().cor_da_zona(slug))
+    except (Exception, SystemExit):
+        return BORDA_SEM_COR
+    return tom_para_a_borda(do_mapa) or BORDA_SEM_COR
 
 
 def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
@@ -468,11 +542,16 @@ def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
 
     O ENDEREÇO É O `pref` (`p1`…), e não o `uniq`: é o que o `data-controle` das
     páginas traz, e é a mesma tradução que o piloto faz para as colunas.
+
+    A COR SAI DE `cor`, E NÃO DE `nome` — 03/09/2026. O `cor` é o `id` da linha
+    dela (`white`, `galactic-purple`), o mesmo que o chip da fita usa três
+    centímetros acima; o `nome` é texto de tela, e casar por texto deixava dez
+    dos 28 modelos dela sem borda nenhuma. Ver :func:`cor_da_borda`.
     """
     return "\n".join([PISO_DA_FOLHA] + [
         f'.ctl[data-controle="{c.get("pref")}"],'
         f'.fita .chip[for="c-{c.get("pref")}"]'
-        f'{{--plastico:{cor_da_borda(str(c.get("nome") or ""))}}}'
+        f'{{--plastico:{cor_da_borda(str(c.get("cor") or ""))}}}'
         for c in mesa
         if c.get("pref")
     ])
