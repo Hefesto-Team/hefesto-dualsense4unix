@@ -1098,26 +1098,65 @@
   .abre-conf:checked ~ .veu{display:block}
   .abre-conf:checked ~ .confirma{display:flex}
 
-  /* as duas linhas de estado ficam no MESMO y: altura fixa e fundo da coluna */
+  /* as linhas de estado ficam no MESMO y: altura fixa e fundo da coluna */
   .estado{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--texto-mudo)}
   .estado .verde{color:var(--green)} .estado .laranja{color:var(--orange)}
   .estado .valor{color:var(--fg);font-weight:600}
 
+  /* AS TRÊS LINHAS DE ESTADO NASCEM VAZIAS, E É REGRA DELA — 30/08/2026:
+     *"se não tá mostrando agora, não tem info pra mostrar no produto; mas
+     quando tiver, aparece a info correta"*. Elas são o que a GTK mostra e esta
+     aba calava — a dica do quadro Navegação já cita "a linha de estado abaixo"
+     desde 27/08, e até hoje a linha que ela cita não existia.
+
+     NA MESMA FILEIRA, e a razão é medida: a aba já ocupa quase toda a altura da
+     janela (757px), e três linhas empilhadas empurraram a fileira dos botões
+     para FORA da tela — visto na foto de 03/09, com o "Definições Controle e
+     Mouse" cortado pelo rodapé. Em fileira com `wrap` elas custam uma linha
+     quando cabem, e só quebram quando a frase é longa (a de "não há teclado na
+     tela instalado", que é justamente a que precisa de espaço).
+
+     O `.nada` É COMO UMA LINHA SOME, e não o `:empty`: o `escrever()` do piloto
+     troca valor vazio por `—` (`hefesto_vivo.py:141`), então uma frase vazia
+     viraria um travessão solto na tela dela — foi o que a primeira foto
+     mostrou. O pacote manda o marcador, e o `:has()` apaga a linha inteira.
+     Emitir a chave sempre (em vez de omiti-la quando não há o que dizer) é o
+     que faz a linha SUMIR quando o bloqueio acaba; chave ausente deixaria a
+     frase velha na tela para sempre. O `:has()` já é usado nesta folha
+     (`.at-linha:has(.btn)`), então não é aposta nova sobre o WebKit dela. */
+  .estados{display:flex;flex-wrap:wrap;align-items:center;gap:3px 22px;padding:2px 0 0}
+  .estados:empty{display:none}
+  .estado:empty{display:none}
+  .estado:has(.nada){display:none}
+  /* `<tt>` vem das frases do produto (`frase_do_teclado_na_tela` nomeia os dois
+     pacotes de teclado na tela dentro de um). A fonte é a MESMA que o resto da
+     página usa para código — não uma segunda escolha inventada aqui. */
+  .estado tt{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
+
   /* ---- O STATUS DO MODO (27/08, ela: "Status do Modo: ao clicar no botão
-          Ligado. Ao clicar nele de novo desligado.") — um interruptor de
-          verdade, sem uma linha de script: o `:checked` do input faz o resto.
-          Ele é o dono do que os dois botões suspensos faziam embaixo. ---- */
-  .tog-in{display:none}
+          Ligado. Ao clicar nele de novo desligado.") — o dono do que os dois
+          botões suspensos faziam embaixo.
+
+          A COR SAI DE UMA CLASSE, e não mais do `:checked` de um input —
+          03/09/2026. O desenho nascia `<input checked>`, a palavra saía de um
+          `content:` de CSS, e o produto não tinha por onde escrever nenhum dos
+          dois: a tela dizia **Ligado** com `mouse_emulation.enabled=false` no
+          daemon dela. Pior, clicar no `<label>` virava a caixa no DOM mesmo
+          quando o gesto RECUSAVA — a tela trocava de lado sozinha e nada a
+          devolvia.
+
+          O piloto ganhou o alvo `classe` em 02/09 (`hefesto_vivo.py:227`), e é
+          ele quem acende agora; a palavra virou nó de texto, que o alvo padrão
+          escreve. Nasce em `—` de propósito: antes do primeiro tique ninguém
+          perguntou ao Hefesto, e "Desligado" seria uma afirmação. ---- */
   .tog{display:flex;align-items:center;gap:9px;width:100%;height:var(--h-escolha);border-radius:7px;
        font-size:12px;padding:0 12px;border:1px solid var(--border-forte);
        background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;user-select:none}
   .tog:hover{border-color:var(--comment)}
   .tog .pino{width:9px;height:9px;border-radius:50%;background:var(--border-forte);flex:0 0 9px}
-  .tog .txt::after{content:'Desligado'}
-  .tog-in:checked + .tog{border-color:var(--green);background:rgba(80,250,123,.1);
+  .tog.ligado{border-color:var(--green);background:rgba(80,250,123,.1);
        color:var(--fg);font-weight:600}
-  .tog-in:checked + .tog .pino{background:var(--green);box-shadow:0 0 7px var(--green)}
-  .tog-in:checked + .tog .txt::after{content:'Ligado'}
+  .tog.ligado .pino{background:var(--green);box-shadow:0 0 7px var(--green)}
 
   /* A DENSIDADE DE 22px FICA SÓ DENTRO DAS TELAS DE CIMA, e o número diz por quê.
      Cada uma das duas telas de botões tem 21 listas em 21 linhas, e mede 660px
@@ -1143,6 +1182,333 @@
   .porta{margin-left:auto;font-size:11px;line-height:17px;height:17px;
     color:var(--texto-mudo);text-decoration:none;white-space:nowrap}
   .porta:hover{color:var(--cyan);text-decoration:underline}
+
+  /* ---- as 28 cores do mapa, publicadas UMA vez ---- */
+
+    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
+       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
+
+       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
+       do indicador de jogador ficam de fora, e é por isso que eles não
+       somem sobre a borda do touchpad. */
+
+    /* White · código 00 */
+    svg[data-colorway="white"]{--z-casca-crua:#E4E0D8;--z-casca:#e4e0d8;--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="white"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="white"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="white"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="white"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="white"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="white"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="white"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="white"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Midnight Black · código 01 */
+    svg[data-colorway="midnight-black"]{--z-casca-crua:#1C1C1E;--z-casca:#606062;--z-casca-solida-crua:#1C1C1E;--z-casca-solida:#606062;--z-painel-crua:#121214;--z-painel:#656566;--z-touch-crua:#121214;--z-touch:#656566;--z-gatilhos-crua:#1C1C1E;--z-gatilhos:#606062;--z-dpad-crua:#1C1C1E;--z-dpad:#606062;--z-analogicos-crua:#121214;--z-analogicos:#656566;--z-botoes_face-crua:#1C1C1E;--z-botoes_face:#606062;--z-simbolos-crua:#C8C8C4;--z-simbolos:#c8c8c4}
+    svg[data-colorway="midnight-black"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="midnight-black"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="midnight-black"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="midnight-black"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="midnight-black"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="midnight-black"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="midnight-black"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="midnight-black"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Cosmic Red · código 02 */
+    svg[data-colorway="cosmic-red"]{--z-casca-crua:#A51C48;--z-casca:#ae335a;--z-casca-solida-crua:#A51C48;--z-casca-solida:#ae335a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#A51C48;--z-gatilhos:#ae335a;--z-dpad-crua:#A51C48;--z-dpad:#ae335a;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#A51C48;--z-botoes_face:#ae335a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="cosmic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="cosmic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="cosmic-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="cosmic-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="cosmic-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="cosmic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="cosmic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="cosmic-red"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Nova Pink · código 03 */
+    svg[data-colorway="nova-pink"]{--z-casca-crua:#E35B8C;--z-casca:#e35b8c;--z-casca-solida-crua:#E35B8C;--z-casca-solida:#e35b8c;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E35B8C;--z-gatilhos:#e35b8c;--z-dpad-crua:#E35B8C;--z-dpad:#e35b8c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E35B8C;--z-botoes_face:#e35b8c;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="nova-pink"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="nova-pink"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="nova-pink"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="nova-pink"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="nova-pink"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="nova-pink"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="nova-pink"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="nova-pink"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Galactic Purple · código 04 */
+    svg[data-colorway="galactic-purple"]{--z-casca-crua:#5B3A7A;--z-casca:#74588e;--z-casca-solida-crua:#5B3A7A;--z-casca-solida:#74588e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#5B3A7A;--z-gatilhos:#74588e;--z-dpad-crua:#5B3A7A;--z-dpad:#74588e;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#5B3A7A;--z-botoes_face:#74588e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="galactic-purple"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="galactic-purple"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="galactic-purple"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="galactic-purple"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="galactic-purple"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="galactic-purple"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="galactic-purple"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="galactic-purple"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Starlight Blue · código 05 */
+    svg[data-colorway="starlight-blue"]{--z-casca-crua:#7EB8D4;--z-casca:#7eb8d4;--z-casca-solida-crua:#7EB8D4;--z-casca-solida:#7eb8d4;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#7EB8D4;--z-gatilhos:#7eb8d4;--z-dpad-crua:#7EB8D4;--z-dpad:#7eb8d4;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#7EB8D4;--z-botoes_face:#7eb8d4;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="starlight-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="starlight-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="starlight-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="starlight-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="starlight-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="starlight-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="starlight-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="starlight-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Grey Camouflage · código 06 */
+    svg[data-colorway="grey-camouflage"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:url(#hachura-sem-hex);--z-gatilhos:url(#hachura-sem-hex);--z-dpad-crua:#6B6E72;--z-dpad:#6b6e72;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#6B6E72;--z-botoes_face:#6b6e72;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="grey-camouflage"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="grey-camouflage"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="grey-camouflage"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="grey-camouflage"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="grey-camouflage"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="grey-camouflage"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="grey-camouflage"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="grey-camouflage"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Volcanic Red · código 07 */
+    svg[data-colorway="volcanic-red"]{--z-casca-crua:#8B1A1A;--z-casca:#a24848;--z-casca-solida-crua:#8B1A1A;--z-casca-solida:#a24848;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#8B1A1A;--z-gatilhos:#a24848;--z-dpad-crua:#8B1A1A;--z-dpad:#a24848;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#8B1A1A;--z-botoes_face:#a24848;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="volcanic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="volcanic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="volcanic-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="volcanic-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="volcanic-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="volcanic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="volcanic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="volcanic-red"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Sterling Silver · código 08 */
+    svg[data-colorway="sterling-silver"]{--z-casca-crua:#C5C8CC;--z-casca:#c5c8cc;--z-casca-solida-crua:#C5C8CC;--z-casca-solida:#c5c8cc;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#C5C8CC;--z-gatilhos:#c5c8cc;--z-dpad-crua:#C5C8CC;--z-dpad:#c5c8cc;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#C5C8CC;--z-botoes_face:#c5c8cc;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="sterling-silver"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="sterling-silver"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="sterling-silver"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="sterling-silver"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="sterling-silver"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="sterling-silver"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="sterling-silver"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="sterling-silver"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Cobalt Blue · código 09 */
+    svg[data-colorway="cobalt-blue"]{--z-casca-crua:#1E4B8C;--z-casca:#40669d;--z-casca-solida-crua:#1E4B8C;--z-casca-solida:#40669d;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1E4B8C;--z-gatilhos:#40669d;--z-dpad-crua:#1E4B8C;--z-dpad:#40669d;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1E4B8C;--z-botoes_face:#40669d;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="cobalt-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="cobalt-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="cobalt-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="cobalt-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="cobalt-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="cobalt-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="cobalt-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="cobalt-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Chroma Teal · código 10 */
+    svg[data-colorway="chroma-teal"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:url(#hachura-sem-hex);--z-gatilhos:url(#hachura-sem-hex);--z-dpad-crua:url(#hachura-sem-hex);--z-dpad:url(#hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#hachura-sem-hex);--z-botoes_face:url(#hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="chroma-teal"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="chroma-teal"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="chroma-teal"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="chroma-teal"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="chroma-teal"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="chroma-teal"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="chroma-teal"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="chroma-teal"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Chroma Indigo · código 11 */
+    svg[data-colorway="chroma-indigo"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:url(#hachura-sem-hex);--z-gatilhos:url(#hachura-sem-hex);--z-dpad-crua:url(#hachura-sem-hex);--z-dpad:url(#hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#hachura-sem-hex);--z-botoes_face:url(#hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="chroma-indigo"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="chroma-indigo"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="chroma-indigo"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="chroma-indigo"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="chroma-indigo"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="chroma-indigo"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="chroma-indigo"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="chroma-indigo"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Chroma Pearl · código 12 */
+    svg[data-colorway="chroma-pearl"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:url(#hachura-sem-hex);--z-gatilhos:url(#hachura-sem-hex);--z-dpad-crua:url(#hachura-sem-hex);--z-dpad:url(#hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#hachura-sem-hex);--z-botoes_face:url(#hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="chroma-pearl"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="chroma-pearl"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="chroma-pearl"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="chroma-pearl"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="chroma-pearl"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="chroma-pearl"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="chroma-pearl"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="chroma-pearl"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* HyperPop Techno Red · código 13 */
+    svg[data-colorway="hyperpop-techno-red"]{--z-casca-crua:#E11D2E;--z-casca:#e11d2e;--z-casca-solida-crua:#E11D2E;--z-casca-solida:#e11d2e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#E11D2E;--z-dpad:#e11d2e;--z-analogicos-crua:#E11D2E;--z-analogicos:#e11d2e;--z-botoes_face-crua:#E11D2E;--z-botoes_face:#e11d2e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="hyperpop-techno-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* HyperPop Remix Green · código 14 */
+    svg[data-colorway="hyperpop-remix-green"]{--z-casca-crua:#8FBF3A;--z-casca:#8fbf3a;--z-casca-solida-crua:#8FBF3A;--z-casca-solida:#8fbf3a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#8FBF3A;--z-dpad:#8fbf3a;--z-analogicos-crua:#8FBF3A;--z-analogicos:#8fbf3a;--z-botoes_face-crua:#8FBF3A;--z-botoes_face:#8fbf3a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="hyperpop-remix-green"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* HyperPop Rhythm Blue · código 15 */
+    svg[data-colorway="hyperpop-rhythm-blue"]{--z-casca-crua:#3AA0E8;--z-casca:#3aa0e8;--z-casca-solida-crua:#3AA0E8;--z-casca-solida:#3aa0e8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#3AA0E8;--z-dpad:#3aa0e8;--z-analogicos-crua:#3AA0E8;--z-analogicos:#3aa0e8;--z-botoes_face-crua:#3AA0E8;--z-botoes_face:#3aa0e8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* 30th Anniversary · código 30 */
+    svg[data-colorway="30th-anniversary"]{--z-casca-crua:#A8A8B0;--z-casca:#a8a8b0;--z-casca-solida-crua:#A8A8B0;--z-casca-solida:#a8a8b0;--z-painel-crua:#A8A8B0;--z-painel:#a8a8b0;--z-touch-crua:#A8A8B0;--z-touch:#a8a8b0;--z-gatilhos-crua:#A8A8B0;--z-gatilhos:#a8a8b0;--z-dpad-crua:#3A3A40;--z-dpad:#616166;--z-analogicos-crua:#2A2A2E;--z-analogicos:#5f5f62;--z-botoes_face-crua:#3A3A40;--z-botoes_face:#616166;--z-simbolos-crua:url(#hachura-sem-hex);--z-simbolos:url(#hachura-sem-hex)}
+    svg[data-colorway="30th-anniversary"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="30th-anniversary"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="30th-anniversary"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="30th-anniversary"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="30th-anniversary"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="30th-anniversary"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="30th-anniversary"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="30th-anniversary"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* God of War Ragnarök · código Z1 */
+    svg[data-colorway="god-of-war-ragnarok"]{--z-casca-crua:#2C3A6E;--z-casca:#56618b;--z-casca-solida-crua:#2C3A6E;--z-casca-solida:#56618b;--z-painel-crua:#E8E4DC;--z-painel:#e8e4dc;--z-touch-crua:#E8E4DC;--z-touch:#e8e4dc;--z-gatilhos-crua:#2C3A6E;--z-gatilhos:#56618b;--z-dpad-crua:#2C3A6E;--z-dpad:#56618b;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#2C3A6E;--z-botoes_face:#56618b;--z-simbolos-crua:#E8E4DC;--z-simbolos:#e8e4dc}
+    svg[data-colorway="god-of-war-ragnarok"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Marvel's Spider-Man 2 · código Z2 */
+    svg[data-colorway="spider-man-2"]{--z-casca-crua:url(#casca-spider-man-2);--z-casca:url(#casca-spider-man-2);--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#D0D0D0;--z-simbolos:#d0d0d0}
+    svg[data-colorway="spider-man-2"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="spider-man-2"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="spider-man-2"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="spider-man-2"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="spider-man-2"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="spider-man-2"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="spider-man-2"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="spider-man-2"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Astro Bot · código Z3 */
+    svg[data-colorway="astro-bot"]{--z-casca-crua:#E8E4DC;--z-casca:#e8e4dc;--z-casca-solida-crua:#E8E4DC;--z-casca-solida:#e8e4dc;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E8E4DC;--z-gatilhos:#e8e4dc;--z-dpad-crua:#E8E4DC;--z-dpad:#e8e4dc;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E8E4DC;--z-botoes_face:#e8e4dc;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="astro-bot"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="astro-bot"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="astro-bot"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="astro-bot"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="astro-bot"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="astro-bot"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="astro-bot"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="astro-bot"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Fortnite · código Z4 */
+    svg[data-colorway="fortnite"]{--z-casca-crua:#1A1A1C;--z-casca:#5f5f60;--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#F2C200;--z-simbolos:#f2c200}
+    svg[data-colorway="fortnite"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="fortnite"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="fortnite"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="fortnite"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="fortnite"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="fortnite"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="fortnite"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="fortnite"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* The Last of Us · código Z6 */
+    svg[data-colorway="the-last-of-us"]{--z-casca-crua:#1A1A1C;--z-casca:#5f5f60;--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#E4E0D8;--z-painel:#e4e0d8;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#E4E0D8;--z-analogicos:#e4e0d8;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#E4E0D8;--z-simbolos:#e4e0d8}
+    svg[data-colorway="the-last-of-us"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="the-last-of-us"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="the-last-of-us"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="the-last-of-us"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="the-last-of-us"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="the-last-of-us"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="the-last-of-us"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="the-last-of-us"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* God of War 20th Anniversary · código ZA */
+    svg[data-colorway="god-of-war-20th"]{--z-casca-crua:url(#casca-god-of-war-20th);--z-casca:url(#casca-god-of-war-20th);--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#E4E0D8;--z-painel:#e4e0d8;--z-touch-crua:#E4E0D8;--z-touch:#e4e0d8;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#C41E3A;--z-simbolos:#c41e3a}
+    svg[data-colorway="god-of-war-20th"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="god-of-war-20th"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="god-of-war-20th"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="god-of-war-20th"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="god-of-war-20th"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="god-of-war-20th"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="god-of-war-20th"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="god-of-war-20th"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Icon Blue Special Edition · código ZB */
+    svg[data-colorway="icon-blue"]{--z-casca-crua:#1E4A8C;--z-casca:#40659d;--z-casca-solida-crua:#1E4A8C;--z-casca-solida:#40659d;--z-painel-crua:#1E4A8C;--z-painel:#40659d;--z-touch-crua:#163A72;--z-touch:#45618e;--z-gatilhos-crua:#163A72;--z-gatilhos:#45618e;--z-dpad-crua:#1E4A8C;--z-dpad:#40659d;--z-analogicos-crua:#1E4A8C;--z-analogicos:#40659d;--z-botoes_face-crua:#1E4A8C;--z-botoes_face:#40659d;--z-simbolos-crua:#9EC0E8;--z-simbolos:#9ec0e8}
+    svg[data-colorway="icon-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="icon-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="icon-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="icon-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="icon-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="icon-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="icon-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="icon-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
+    svg[data-colorway="ghost-of-yotei"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="ghost-of-yotei"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
+    svg[data-colorway="marathon"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="marathon"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="marathon"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="marathon"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="marathon"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="marathon"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="marathon"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="marathon"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="marathon"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
+    svg[data-colorway="genshin-impact"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="genshin-impact"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="genshin-impact"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="genshin-impact"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="genshin-impact"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="genshin-impact"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="genshin-impact"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="genshin-impact"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="genshin-impact"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
+    svg[data-colorway="007-first-light"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#4A4A52;--z-analogicos:#65656c;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="007-first-light"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="007-first-light"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="007-first-light"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="007-first-light"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="007-first-light"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="007-first-light"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="007-first-light"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="007-first-light"] .z-simbolos{color:var(--z-simbolos) !important}
+
+  /* ---- desenho sem identidade: as zonas ficam no neutro ---- */
+  .nav-ctl .ds-svg:not([data-colorway]) .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--border-forte) !important}
+  .nav-ctl .ds-svg:not([data-colorway]) .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--border-forte) !important}
+  .nav-ctl .ds-svg:not([data-colorway]) .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--border-forte) !important}
+  .nav-ctl .ds-svg:not([data-colorway]) .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--border-forte) !important}
+  .nav-ctl .ds-svg:not([data-colorway]) .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--border-forte) !important}
+  .nav-ctl .ds-svg:not([data-colorway]) .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--border-forte) !important}
+  .nav-ctl .ds-svg:not([data-colorway]) .z-simbolos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--border-forte) !important}
+  .nav-ctl .ds-svg:not([data-colorway]) .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--border-forte) !important}
 
 </style>
 </head>
@@ -1337,7 +1703,7 @@
             <div class="nav-mesa">
               <div class="nav-ctl navega" style="color:#ae335a" data-controle="p1" data-conectado="sim" data-campo="plastico" data-hef-alvo="cor">
                 <?xml version="1.0" encoding="utf-8"?>
-<svg data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+<svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="p1-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -1384,79 +1750,7 @@
       <stop offset="50%" stop-color="#5f5f60"/>
       <stop offset="50%" stop-color="#a24046"/>
     </linearGradient>
-  <style id="p1-cores-do-dualsense-folha">
-    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
-       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
 
-       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
-       do indicador de jogador ficam de fora, e é por isso que eles não
-       somem sobre a borda do touchpad. */
-
-    /* White · código 00 */
-
-    /* Midnight Black · código 01 */
-
-    /* Cosmic Red · código 02 */
-    svg[data-colorway="cosmic-red"]{--z-casca-crua:#A51C48;--z-casca:#ae335a;--z-casca-solida-crua:#A51C48;--z-casca-solida:#ae335a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#A51C48;--z-gatilhos:#ae335a;--z-dpad-crua:#A51C48;--z-dpad:#ae335a;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#A51C48;--z-botoes_face:#ae335a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
-    svg[data-colorway="cosmic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
-    svg[data-colorway="cosmic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
-    svg[data-colorway="cosmic-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
-    svg[data-colorway="cosmic-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
-    svg[data-colorway="cosmic-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
-    svg[data-colorway="cosmic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
-    svg[data-colorway="cosmic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
-    svg[data-colorway="cosmic-red"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Nova Pink · código 03 */
-
-    /* Galactic Purple · código 04 */
-
-    /* Starlight Blue · código 05 */
-
-    /* Grey Camouflage · código 06 */
-
-    /* Volcanic Red · código 07 */
-
-    /* Sterling Silver · código 08 */
-
-    /* Cobalt Blue · código 09 */
-
-    /* Chroma Teal · código 10 */
-
-    /* Chroma Indigo · código 11 */
-
-    /* Chroma Pearl · código 12 */
-
-    /* HyperPop Techno Red · código 13 */
-
-    /* HyperPop Remix Green · código 14 */
-
-    /* HyperPop Rhythm Blue · código 15 */
-
-    /* 30th Anniversary · código 30 */
-
-    /* God of War Ragnarök · código Z1 */
-
-    /* Marvel's Spider-Man 2 · código Z2 */
-
-    /* Astro Bot · código Z3 */
-
-    /* Fortnite · código Z4 */
-
-    /* The Last of Us · código Z6 */
-
-    /* God of War 20th Anniversary · código ZA */
-
-    /* Icon Blue Special Edition · código ZB */
-
-    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
-
-    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
-  </style>
   </defs>
   <title>DualSense — mapa de peças, para editar</title>
   <g id="p1-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
@@ -1717,7 +2011,7 @@
               </div>
               <div class="nav-ctl" style="color:#7eb8d4" data-controle="p2" data-conectado="sim" data-campo="plastico" data-hef-alvo="cor">
                 <?xml version="1.0" encoding="utf-8"?>
-<svg data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+<svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="p2-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -1764,79 +2058,7 @@
       <stop offset="50%" stop-color="#5f5f60"/>
       <stop offset="50%" stop-color="#a24046"/>
     </linearGradient>
-  <style id="p2-cores-do-dualsense-folha">
-    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
-       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
 
-       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
-       do indicador de jogador ficam de fora, e é por isso que eles não
-       somem sobre a borda do touchpad. */
-
-    /* White · código 00 */
-
-    /* Midnight Black · código 01 */
-
-    /* Cosmic Red · código 02 */
-
-    /* Nova Pink · código 03 */
-
-    /* Galactic Purple · código 04 */
-
-    /* Starlight Blue · código 05 */
-    svg[data-colorway="starlight-blue"]{--z-casca-crua:#7EB8D4;--z-casca:#7eb8d4;--z-casca-solida-crua:#7EB8D4;--z-casca-solida:#7eb8d4;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#7EB8D4;--z-gatilhos:#7eb8d4;--z-dpad-crua:#7EB8D4;--z-dpad:#7eb8d4;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#7EB8D4;--z-botoes_face:#7eb8d4;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
-    svg[data-colorway="starlight-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
-    svg[data-colorway="starlight-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
-    svg[data-colorway="starlight-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
-    svg[data-colorway="starlight-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
-    svg[data-colorway="starlight-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
-    svg[data-colorway="starlight-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
-    svg[data-colorway="starlight-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
-    svg[data-colorway="starlight-blue"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Grey Camouflage · código 06 */
-
-    /* Volcanic Red · código 07 */
-
-    /* Sterling Silver · código 08 */
-
-    /* Cobalt Blue · código 09 */
-
-    /* Chroma Teal · código 10 */
-
-    /* Chroma Indigo · código 11 */
-
-    /* Chroma Pearl · código 12 */
-
-    /* HyperPop Techno Red · código 13 */
-
-    /* HyperPop Remix Green · código 14 */
-
-    /* HyperPop Rhythm Blue · código 15 */
-
-    /* 30th Anniversary · código 30 */
-
-    /* God of War Ragnarök · código Z1 */
-
-    /* Marvel's Spider-Man 2 · código Z2 */
-
-    /* Astro Bot · código Z3 */
-
-    /* Fortnite · código Z4 */
-
-    /* The Last of Us · código Z6 */
-
-    /* God of War 20th Anniversary · código ZA */
-
-    /* Icon Blue Special Edition · código ZB */
-
-    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
-
-    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
-  </style>
   </defs>
   <title>DualSense — mapa de peças, para editar</title>
   <g id="p2-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
@@ -2097,7 +2319,7 @@
               </div>
               <div class="nav-ctl vazia" data-conectado="nao" data-campo="plastico" data-hef-alvo="cor" title="Nenhum controle neste lugar.">
                 <?xml version="1.0" encoding="utf-8"?>
-<svg data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+<svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="p3-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -2144,79 +2366,7 @@
       <stop offset="50%" stop-color="#5f5f60"/>
       <stop offset="50%" stop-color="#a24046"/>
     </linearGradient>
-  <style id="p3-cores-do-dualsense-folha">
-    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
-       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
 
-       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
-       do indicador de jogador ficam de fora, e é por isso que eles não
-       somem sobre a borda do touchpad. */
-
-    /* White · código 00 */
-
-    /* Midnight Black · código 01 */
-
-    /* Cosmic Red · código 02 */
-
-    /* Nova Pink · código 03 */
-
-    /* Galactic Purple · código 04 */
-    svg[data-colorway="galactic-purple"]{--z-casca-crua:#5B3A7A;--z-casca:#74588e;--z-casca-solida-crua:#5B3A7A;--z-casca-solida:#74588e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#5B3A7A;--z-gatilhos:#74588e;--z-dpad-crua:#5B3A7A;--z-dpad:#74588e;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#5B3A7A;--z-botoes_face:#74588e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
-    svg[data-colorway="galactic-purple"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
-    svg[data-colorway="galactic-purple"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
-    svg[data-colorway="galactic-purple"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
-    svg[data-colorway="galactic-purple"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
-    svg[data-colorway="galactic-purple"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
-    svg[data-colorway="galactic-purple"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
-    svg[data-colorway="galactic-purple"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
-    svg[data-colorway="galactic-purple"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Starlight Blue · código 05 */
-
-    /* Grey Camouflage · código 06 */
-
-    /* Volcanic Red · código 07 */
-
-    /* Sterling Silver · código 08 */
-
-    /* Cobalt Blue · código 09 */
-
-    /* Chroma Teal · código 10 */
-
-    /* Chroma Indigo · código 11 */
-
-    /* Chroma Pearl · código 12 */
-
-    /* HyperPop Techno Red · código 13 */
-
-    /* HyperPop Remix Green · código 14 */
-
-    /* HyperPop Rhythm Blue · código 15 */
-
-    /* 30th Anniversary · código 30 */
-
-    /* God of War Ragnarök · código Z1 */
-
-    /* Marvel's Spider-Man 2 · código Z2 */
-
-    /* Astro Bot · código Z3 */
-
-    /* Fortnite · código Z4 */
-
-    /* The Last of Us · código Z6 */
-
-    /* God of War 20th Anniversary · código ZA */
-
-    /* Icon Blue Special Edition · código ZB */
-
-    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
-
-    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
-  </style>
   </defs>
   <title>DualSense — mapa de peças, para editar</title>
   <g id="p3-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
@@ -2477,7 +2627,7 @@
               </div>
               <div class="nav-ctl vazia" data-conectado="nao" data-campo="plastico" data-hef-alvo="cor" title="Nenhum controle neste lugar.">
                 <?xml version="1.0" encoding="utf-8"?>
-<svg data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+<svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="p4-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -2524,79 +2674,7 @@
       <stop offset="50%" stop-color="#5f5f60"/>
       <stop offset="50%" stop-color="#a24046"/>
     </linearGradient>
-  <style id="p4-cores-do-dualsense-folha">
-    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
-       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
 
-       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
-       do indicador de jogador ficam de fora, e é por isso que eles não
-       somem sobre a borda do touchpad. */
-
-    /* White · código 00 */
-    svg[data-colorway="white"]{--z-casca-crua:#E4E0D8;--z-casca:#e4e0d8;--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
-    svg[data-colorway="white"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
-    svg[data-colorway="white"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
-    svg[data-colorway="white"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
-    svg[data-colorway="white"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
-    svg[data-colorway="white"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
-    svg[data-colorway="white"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
-    svg[data-colorway="white"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
-    svg[data-colorway="white"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Midnight Black · código 01 */
-
-    /* Cosmic Red · código 02 */
-
-    /* Nova Pink · código 03 */
-
-    /* Galactic Purple · código 04 */
-
-    /* Starlight Blue · código 05 */
-
-    /* Grey Camouflage · código 06 */
-
-    /* Volcanic Red · código 07 */
-
-    /* Sterling Silver · código 08 */
-
-    /* Cobalt Blue · código 09 */
-
-    /* Chroma Teal · código 10 */
-
-    /* Chroma Indigo · código 11 */
-
-    /* Chroma Pearl · código 12 */
-
-    /* HyperPop Techno Red · código 13 */
-
-    /* HyperPop Remix Green · código 14 */
-
-    /* HyperPop Rhythm Blue · código 15 */
-
-    /* 30th Anniversary · código 30 */
-
-    /* God of War Ragnarök · código Z1 */
-
-    /* Marvel's Spider-Man 2 · código Z2 */
-
-    /* Astro Bot · código Z3 */
-
-    /* Fortnite · código Z4 */
-
-    /* The Last of Us · código Z6 */
-
-    /* God of War 20th Anniversary · código ZA */
-
-    /* Icon Blue Special Edition · código ZB */
-
-    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
-
-    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
-  </style>
   </defs>
   <title>DualSense — mapa de peças, para editar</title>
   <g id="p4-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
@@ -2933,7 +3011,7 @@
         <div class="moldura">
           <div class="ativacao">
             <div class="at-col">
-              <div class="at-linha"><span class="at-rot">Status do Modo<span class="ajuda">?<span class="dica">Vale para <b>este perfil</b>. Enquanto estiver em <b>Nunca</b>, o controle é só gamepad e nada desta aba chega ao PC.</span></span></span><input type="checkbox" id="st-modo" class="tog-in" checked><label class="tog" for="st-modo" data-gesto="modo"><span class="pino"></span><span class="txt"></span></label></div>
+              <div class="at-linha"><span class="at-rot">Status do Modo<span class="ajuda">?<span class="dica">Vale para <b>este perfil</b>. Enquanto estiver em <b>Nunca</b>, o controle é só gamepad e nada desta aba chega ao PC.</span></span></span><label class="tog" data-gesto="modo" data-campo="rato-ligado" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-quando="Ligado"><span class="pino"></span><span class="txt" data-campo="rato-ligado">—</span></label></div>
               <div class="at-linha"><span class="at-rot">Função do teclado<span class="ajuda">?<span class="dica">Liga o que o controle <b>digita</b>: os atalhos da tabela à direita, o teclado na tela e as três regiões do touchpad.<br><br>Passou a viajar no <b>perfil</b>, como o mouse vizinho já viajava.</span></span></span><select class="escolha-at" data-gesto="teclado" data-campo="teclado-estado" data-hef-alvo="valor"><option>Só dentro do jogo</option><option selected>Só fora do jogo</option><option>Desativado</option></select></div>
               <div class="at-linha"><span class="at-rot">Navegação Interna<span class="ajuda">?<span class="dica">Navegar <b>a janela do Hefesto</b> com o controle — abas, botões e listas.<br><br>Com os 4 controles na mesa, cada jogador anda no seu próprio card e o <b>X de cada um grava no controle dele</b> — sem disputar o card do vizinho.<br><br>É outra coisa que o cursor do PC: esse é <b>um só</b>, e sai do controle do Player 1.</span></span></span><select class="escolha-at" data-gesto="navegacao-interna"><option selected>Ligada — cada controle navega o Hefesto</option><option>Só o Player 1 navega</option><option>Desligada</option></select></div>
             </div>
@@ -2943,6 +3021,12 @@
               <div class="at-linha"><span class="at-rot">Modo Steam<span class="ajuda">?<span class="dica">O controle passa a navegar a <b>Steam</b> do jeito que navega num Steam Deck: o Modo Jogo responde ao d-pad e aos botões, sem mouse.<br><br>O terceiro degrau grava a escolha para a <b>próxima vez</b> — a Steam abre direto em Modo Jogo, sem ninguém clicar. Esse degrau vale para a máquina, não só para este perfil.</span></span></span><select class="escolha-at" data-gesto="modo-steam"><option selected>Desligado</option><option>Ligado — o controle navega a Steam como num Steam Deck</option><option>Ligado, e a Steam abre em Modo Jogo na próxima vez</option></select></div>
             </div>
           </div>
+        </div>
+
+        <div class="estados">
+          <div class="estado" data-campo="rato-estado" data-hef-alvo="html"></div>
+          <div class="estado" data-campo="teclado-bloqueio" data-hef-alvo="html"></div>
+          <div class="estado" data-campo="teclado-osk" data-hef-alvo="html"></div>
         </div>
 
         <!-- ---------- O TERCEIRO BLOCO: os três botões, sozinhos ----------
@@ -2979,6 +3063,27 @@
       </div>
     </div>
 
+        <!-- A TINTA DOS 28 — os servidores de pintura que a folha das
+             cores pede por `url(#…)`. Sem eles, doze modelos dela viram
+             endereço morto e o desenho SOME. Ver `TINTA_DOS_28`.
+             FICA NO FIM: no começo ele quebra o `.quadro:first-child`. -->
+        <svg class="cores-do-dualsense" aria-hidden="true" focusable="false"
+             width="0" height="0" style="position:absolute;overflow:hidden"><defs id="cores-do-dualsense">
+    <!-- GERADO por scripts/gerar_cores_do_dualsense.py — não editar à mão. -->
+    <pattern id="hachura-sem-hex" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="4" height="4" fill="#5A5A64"/>
+      <rect width="2" height="4" fill="#8A8A96"/>
+    </pattern>
+    <linearGradient id="casca-god-of-war-20th" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="50%" stop-color="#e4e0d8"/>
+      <stop offset="50%" stop-color="#c41e3a"/>
+    </linearGradient>
+    <linearGradient id="casca-spider-man-2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="50%" stop-color="#5f5f60"/>
+      <stop offset="50%" stop-color="#a24046"/>
+    </linearGradient>
+  </defs></svg>
+
   </div>
 
   <!-- ================= RODAPÉ ================= -->
@@ -3011,11 +3116,29 @@
          `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
          num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
-         (`aba09.py`). -->
+         (`aba09.py`).
+
+         O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
+         pela régua do mockup e nomeado pelo juiz da leva. O pedido dela trazia um
+         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
+         "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
+         em cima já dizia o que importava — *o NOME do perfil, "a informação que
+         faltava e lhe custou semanas"* — e era exatamente essa informação que a
+         dica estava errando.
+
+         AGORA O TEXTO CONGELADO É HONESTO SOZINHO ("no perfil ativo") e o produto
+         o troca pelo nome de verdade, com o alvo `atributo` que nasceu em 03/09.
+         As duas metades importam: sem a primeira, quem abre a página antes de o
+         produto pintar lê uma mentira; sem a segunda, ninguém lê o nome. -->
     <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
-    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-salvar" data-campo="rodape.salvar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Grava no perfil ativo. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
-    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
+    <button class="r-exportar" data-campo="rodape.exportar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Escreve o perfil ativo num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>

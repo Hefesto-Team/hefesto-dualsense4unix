@@ -944,6 +944,45 @@
   .duas-colunas .ctrl[data-conectado="nao"] select,
   .duas-colunas .ctrl[data-conectado="nao"] .btn{pointer-events:none;cursor:default}
 
+  /* E ELE TAMBÉM TEM DE PARECER QUE NÃO SE CLICA — 03/09/2026. A trava acima
+     era só `pointer-events`, que é INVISÍVEL: fotografada a aba com a mesa dela
+     (dois controles), as colunas P3 e P4 saíam **byte a byte iguais** às duas
+     que funcionam. Medido nos pixels da foto do produto:
+
+         o texto de "Guardar esse efeito"   P1 e P2  rgb(186,145,246)
+                                            P3 e P4  rgb(186,145,246)
+         a borda da caixa "Modo"            P1       rgb(189,147,249)
+                                            P3 e P4  rgb(189,147,249)
+
+     Quatro botões idênticos, e dois deles mortos. Para quem usa este produto é
+     o pior arranjo possível: *"um botão que responde às vezes é pior que um que
+     recusa sempre"* — aqui ele não responde NUNCA e não diz isso em lugar
+     nenhum. O comentário da regra acima já sabia a lei (*"um botão que convida
+     para uma recusa é pior que um botão que não existe"*) e parou no rato.
+
+     A GRAMÁTICA É A DAS OUTRAS ABAS, e nada aqui é invenção: texto em
+     `var(--linha)`, contorno em `var(--border-forte)`, fundo do quadro, e
+     **nenhum `opacity`** — a lição medida da `.fita.inerte`. É o mesmo que
+     `.nav-ctl.vazia` (06), `.luz-grade .ctrl.vazia` (04) e `.vib .ctrl.vazia`
+     (05) já fazem com um lugar sem aparelho.
+
+     E ELA ACOMPANHA A MESA porque pende do mesmo `data-conectado` que o piloto
+     reescreve a cada tique: ligar um controle no P3 devolve a coluna inteira
+     sem tocar em CSS nenhum. */
+  .duas-colunas .ctrl[data-conectado="nao"] select.modo,
+  .duas-colunas .ctrl[data-conectado="nao"] select.pronto,
+  .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito,
+  .duas-colunas .ctrl[data-conectado="nao"] .btn{
+    border-color:var(--border-forte);background:var(--app-bg);color:var(--linha)}
+  .duas-colunas .ctrl[data-conectado="nao"] select.modo:hover,
+  .duas-colunas .ctrl[data-conectado="nao"] select.pronto:hover,
+  .duas-colunas .ctrl[data-conectado="nao"] .btn:hover{
+    border-color:var(--border-forte);color:var(--linha)}
+  /* A FRASE DOS AJUSTES CAI JUNTO, senão ela vira a coisa mais clara da coluna
+     morta: `--comment` (#8896c4) é mais claro que `--linha`, e apagar tudo em
+     volta a promoveria sozinha. */
+  .duas-colunas .ctrl[data-conectado="nao"] .ajustes-vazio{color:var(--linha)}
+
   /* O BOTÃO É UM POR CONTROLE, e da MESMA largura em todas as colunas. Era um
      só no pé do quadro, e com quatro controles um botão só não diz o que guarda:
      é a mesma ambiguidade que o recibo tinha antes de dizer em QUAL controle
@@ -1239,7 +1278,7 @@
         </div>
         <div class="ctrl" data-controle="p1"
              data-conectado="sim">
-          <div class="cabeca" data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" data-hef="chip.plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span></div>
+          <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#ae335a"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span></span></div>
           <div>
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e"
@@ -1376,7 +1415,7 @@
         </div>
         <div class="ctrl" data-controle="p2"
              data-conectado="sim">
-          <div class="cabeca" data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" data-hef="chip.plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span></div>
+          <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#7eb8d4"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span></span></div>
           <div>
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e"
@@ -1508,7 +1547,7 @@
         </div>
         <div class="ctrl" data-controle="p3"
              data-conectado="nao">
-          <div class="cabeca" data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P3 <span class="pt">•</span> Desconectado</span></div>
+          <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P3 <span class="pt">•</span> Desconectado</span></span></div>
           <div>
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e"
@@ -1617,7 +1656,7 @@
         </div>
         <div class="ctrl" data-controle="p4"
              data-conectado="nao">
-          <div class="cabeca" data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P4 <span class="pt">•</span> Desconectado</span></div>
+          <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P4 <span class="pt">•</span> Desconectado</span></span></div>
           <div>
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
                     data-hef-alvo="valor" data-lado="e"
@@ -1760,11 +1799,29 @@
          `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
          num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
-         (`aba09.py`). -->
+         (`aba09.py`).
+
+         O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
+         pela régua do mockup e nomeado pelo juiz da leva. O pedido dela trazia um
+         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
+         "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
+         em cima já dizia o que importava — *o NOME do perfil, "a informação que
+         faltava e lhe custou semanas"* — e era exatamente essa informação que a
+         dica estava errando.
+
+         AGORA O TEXTO CONGELADO É HONESTO SOZINHO ("no perfil ativo") e o produto
+         o troca pelo nome de verdade, com o alvo `atributo` que nasceu em 03/09.
+         As duas metades importam: sem a primeira, quem abre a página antes de o
+         produto pintar lê uma mentira; sem a segunda, ninguém lê o nome. -->
     <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
-    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-salvar" data-campo="rodape.salvar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Grava no perfil ativo. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
-    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
+    <button class="r-exportar" data-campo="rodape.exportar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Escreve o perfil ativo num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>

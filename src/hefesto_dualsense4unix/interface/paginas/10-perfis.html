@@ -792,6 +792,32 @@
      texto de um rótulo tem de remedir no Chrome e trazer o número para cá. */
   :root{--rot-p:86px}
 
+  /* ---------- A TIRA DO DESFECHO — o toast que esta janela não tinha ----------
+     PARIDADE COM A JANELA ESTÁVEL, 03/09/2026. Lá, TODO gesto desta aba termina
+     num `_toast_profile` no rodapé (`profiles_actions.py:4579`): "Perfil
+     removido: X", "Lista recarregada", `mensagem_de_ativacao`. Aqui só a
+     RECUSA falava — `RuntimeError` vira tarja no piloto — e o SUCESSO era
+     silêncio. Para os NOVE gestos desta aba que ESCREVEM NO DISCO DELA,
+     silêncio no sucesso é o botão que responde calado.
+
+     O ESPAÇO É RESERVADO, e `visibility` em vez de `display`: uma tira que
+     nasce e some empurraria a lista de 33 perfis para cima e para baixo a cada
+     clique. É a mesma escolha que a linha laranja tracejada da aba Jogar já
+     fez — *"o espaço dela é reservado, para a tela não pular"*.
+
+     VERDE porque é desfecho BOM: a recusa já tem cor e lugar próprios (a tarja
+     do piloto). Dois canais, duas cores, nenhuma dúvida sobre qual é qual.
+
+     UMA LINHA SÓ, com reticências: a frase mais longa que o produto emite aqui
+     é a `mensagem_de_ativacao` com seções de fora, e ela pode passar de 120
+     caracteres. Deixá-la quebrar em duas linhas devolveria o pulo que o
+     `height` fixo acabou de tirar. */
+  .desfecho{padding:0 14px;margin-top:7px;height:15px;line-height:15px;
+            font-size:11px;color:var(--green);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+            visibility:hidden}
+  .desfecho.on{visibility:visible}
+
   /* ---------- as QUATRO configurações que cabem dentro deste perfil ----------
      O editor mostrava CINCO campos e gravava vinte, e a única frase que dizia
      isso vivia escondida na dica do "Perfil ativo": *"cada controle guarda a sua
@@ -1103,6 +1129,19 @@
         <span class="conta"><span data-hef="perfis.conta">14 perfis</span> <span class="sep">·</span>
           <span data-hef="perfis.com-ajuste">3 de 4 controles com ajuste próprio neste perfil</span></span>
       </div>
+      <!-- O DESFECHO DO ÚLTIMO GESTO — ver `.desfecho` no CSS para a razão.
+           SÃO DOIS ENDEREÇOS PARA UM VALOR, e não é redundância: a CAIXA usa o
+           alvo `classe` (acende a tira quando há notícia — o `ligado()` do
+           piloto lê o travessão do campo vazio como APAGADO) e o TEXTO de
+           dentro escreve a frase. É o mesmo par que a coluna "Ajuste próprio"
+           já usa, e é o que faz a tira sumir sozinha quando o desfecho vence os
+           trinta segundos, em vez de deixar um "—" pendurado na tela dela.
+
+           E NÃO SE ESCREVE A TAG DE CAIXA POR EXTENSO NESTE COMENTÁRIO: o
+           balanço do `monta` conta SUBSTRING no documento inteiro, comentário
+           incluído, e uma abertura solta aqui derruba o gerador com
+           "desbalanceado". Custou duas execuções; fica escrito. -->
+      <div class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe"><span data-hef="perfis.desfecho"></span></div>
       <div class="quadro-corpo">
         <div class="perfis">
 
@@ -1241,8 +1280,7 @@
                     <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
-                  <tr data-hef-uniq="p1"
-                      title="Cosmic Red — 4 de 5 ajustes só deste controle.">
+                  <tr data-hef-uniq="p1">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:#ae335a"></span>
@@ -1299,8 +1337,7 @@
 </svg></span></span></td>
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:01</td>
                   </tr>
-                  <tr data-hef-uniq="p2"
-                      title="Starlight Blue — 2 de 5 ajustes só deste controle.">
+                  <tr data-hef-uniq="p2">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:#7eb8d4"></span>
@@ -1522,11 +1559,29 @@
          `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
          num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
-         (`aba09.py`). -->
+         (`aba09.py`).
+
+         O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
+         pela régua do mockup e nomeado pelo juiz da leva. O pedido dela trazia um
+         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
+         "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
+         em cima já dizia o que importava — *o NOME do perfil, "a informação que
+         faltava e lhe custou semanas"* — e era exatamente essa informação que a
+         dica estava errando.
+
+         AGORA O TEXTO CONGELADO É HONESTO SOZINHO ("no perfil ativo") e o produto
+         o troca pelo nome de verdade, com o alvo `atributo` que nasceu em 03/09.
+         As duas metades importam: sem a primeira, quem abre a página antes de o
+         produto pintar lê uma mentira; sem a segunda, ninguém lê o nome. -->
     <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
-    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-salvar" data-campo="rodape.salvar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Grava no perfil ativo. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
-    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
+    <button class="r-exportar" data-campo="rodape.exportar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Escreve o perfil ativo num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>

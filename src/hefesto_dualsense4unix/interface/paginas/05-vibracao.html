@@ -977,13 +977,38 @@
   .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
                    font-size:12px;line-height:1.5}
   .vib-estado .est .sinal{flex:0 0 auto;font-size:9px;line-height:1.9}
+  /* O MARCADOR DO `diz` NÃO É MAIS VERDE — 03/09/2026, e é defeito de
+     significado, não de gosto.
+
+     O QUE ESTAVA NA TELA DELA, fotografado com os dois controles na mesa:
+
+       ● (verde)  não há gamepad virtual — nenhum jogo tem onde pedir vibração
+       ▲ (laranja) A intensidade não está chegando a jogo nenhum: falta o
+                   gamepad virtual…
+
+     Duas linhas coladas, o MESMO fato, e marcadores de sentido oposto. Nesta
+     casa o verde quer dizer CERTO em todas as abas — o `● 2 controles` do
+     cabeçalho, o selo `CERTO` da Conexões, o `✓ OK` da Sistema, o `Ligado` da
+     Navegação, o `CHEGAM` da Lançadores. Aqui ele estava por cima de uma má
+     notícia.
+
+     E O TOM NÃO PODE CARREGAR VALOR, porque as frases dele não têm uma valência
+     só: `rumble_actions.texto_dos_pedidos_de_vibracao` devolve, pelo mesmo
+     `diz`, tanto *"o jogo pediu vibração 12x"* quanto *"não há gamepad virtual"*
+     e *"pediu força zero em todas"*. Um marcador que afirma "bom" sobre um tom
+     de valência mista afirma errado metade das vezes.
+
+     A REGRA QUE SOBRA É A DOS OUTROS DOIS TONS: o marcador tem a cor do texto
+     dele (`alerta` laranja/laranja, `info` ciano/ciano). O `diz` era o único
+     que separava os dois, e agora HERDA — por isso não há linha nenhuma no
+     lugar desta. O contrato do tom já dizia isso desde 02/09
+     (`app/telas/vibracao.DIZ`: *"a cor normal do rótulo"*). */
   .vib-estado .est.diz{color:var(--texto-suave)}
-  .vib-estado .est.diz .sinal{color:var(--green)}
   .vib-estado .est.alerta{color:var(--orange)}
   .vib-estado .est.alerta .sinal{color:var(--orange)}
   /* O TERCEIRO TOM, e ele é o da janela estável: `#8be9fd` é o token de INFO da
      casa, o que ela usa na frase "grava aqui, manda ali"
-     (`rumble_actions.py:608`, com o comentário "a frase explica, não alarma").
+     (`rumble_actions.py:628`, com o comentário "a frase explica, não alarma").
      Ela saía como `diz` — o cinza — e o erro só apareceria na tela no dia em
      que a MIGRA-VIBRACAO-04 ligasse o alvo por controle. `--cyan` é o mesmo
      hexadecimal, já declarado no `topo.html`. */
@@ -994,6 +1019,321 @@
     --larg-rot:138px;
     --gap-col:16px;
   }
+
+    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
+       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
+
+       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
+       do indicador de jogador ficam de fora, e é por isso que eles não
+       somem sobre a borda do touchpad. */
+
+    /* White · código 00 */
+    svg[data-colorway="white"]{--z-casca-crua:#E4E0D8;--z-casca:#e4e0d8;--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="white"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="white"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="white"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="white"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="white"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="white"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="white"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="white"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Midnight Black · código 01 */
+    svg[data-colorway="midnight-black"]{--z-casca-crua:#1C1C1E;--z-casca:#606062;--z-casca-solida-crua:#1C1C1E;--z-casca-solida:#606062;--z-painel-crua:#121214;--z-painel:#656566;--z-touch-crua:#121214;--z-touch:#656566;--z-gatilhos-crua:#1C1C1E;--z-gatilhos:#606062;--z-dpad-crua:#1C1C1E;--z-dpad:#606062;--z-analogicos-crua:#121214;--z-analogicos:#656566;--z-botoes_face-crua:#1C1C1E;--z-botoes_face:#606062;--z-simbolos-crua:#C8C8C4;--z-simbolos:#c8c8c4}
+    svg[data-colorway="midnight-black"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="midnight-black"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="midnight-black"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="midnight-black"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="midnight-black"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="midnight-black"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="midnight-black"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="midnight-black"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Cosmic Red · código 02 */
+    svg[data-colorway="cosmic-red"]{--z-casca-crua:#A51C48;--z-casca:#ae335a;--z-casca-solida-crua:#A51C48;--z-casca-solida:#ae335a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#A51C48;--z-gatilhos:#ae335a;--z-dpad-crua:#A51C48;--z-dpad:#ae335a;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#A51C48;--z-botoes_face:#ae335a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="cosmic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="cosmic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="cosmic-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="cosmic-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="cosmic-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="cosmic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="cosmic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="cosmic-red"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Nova Pink · código 03 */
+    svg[data-colorway="nova-pink"]{--z-casca-crua:#E35B8C;--z-casca:#e35b8c;--z-casca-solida-crua:#E35B8C;--z-casca-solida:#e35b8c;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E35B8C;--z-gatilhos:#e35b8c;--z-dpad-crua:#E35B8C;--z-dpad:#e35b8c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E35B8C;--z-botoes_face:#e35b8c;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="nova-pink"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="nova-pink"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="nova-pink"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="nova-pink"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="nova-pink"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="nova-pink"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="nova-pink"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="nova-pink"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Galactic Purple · código 04 */
+    svg[data-colorway="galactic-purple"]{--z-casca-crua:#5B3A7A;--z-casca:#74588e;--z-casca-solida-crua:#5B3A7A;--z-casca-solida:#74588e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#5B3A7A;--z-gatilhos:#74588e;--z-dpad-crua:#5B3A7A;--z-dpad:#74588e;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#5B3A7A;--z-botoes_face:#74588e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="galactic-purple"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="galactic-purple"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="galactic-purple"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="galactic-purple"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="galactic-purple"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="galactic-purple"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="galactic-purple"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="galactic-purple"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Starlight Blue · código 05 */
+    svg[data-colorway="starlight-blue"]{--z-casca-crua:#7EB8D4;--z-casca:#7eb8d4;--z-casca-solida-crua:#7EB8D4;--z-casca-solida:#7eb8d4;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#7EB8D4;--z-gatilhos:#7eb8d4;--z-dpad-crua:#7EB8D4;--z-dpad:#7eb8d4;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#7EB8D4;--z-botoes_face:#7eb8d4;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="starlight-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="starlight-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="starlight-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="starlight-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="starlight-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="starlight-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="starlight-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="starlight-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Grey Camouflage · código 06 */
+    svg[data-colorway="grey-camouflage"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:url(#hachura-sem-hex);--z-gatilhos:url(#hachura-sem-hex);--z-dpad-crua:#6B6E72;--z-dpad:#6b6e72;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#6B6E72;--z-botoes_face:#6b6e72;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="grey-camouflage"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="grey-camouflage"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="grey-camouflage"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="grey-camouflage"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="grey-camouflage"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="grey-camouflage"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="grey-camouflage"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="grey-camouflage"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Volcanic Red · código 07 */
+    svg[data-colorway="volcanic-red"]{--z-casca-crua:#8B1A1A;--z-casca:#a24848;--z-casca-solida-crua:#8B1A1A;--z-casca-solida:#a24848;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#8B1A1A;--z-gatilhos:#a24848;--z-dpad-crua:#8B1A1A;--z-dpad:#a24848;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#8B1A1A;--z-botoes_face:#a24848;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="volcanic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="volcanic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="volcanic-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="volcanic-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="volcanic-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="volcanic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="volcanic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="volcanic-red"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Sterling Silver · código 08 */
+    svg[data-colorway="sterling-silver"]{--z-casca-crua:#C5C8CC;--z-casca:#c5c8cc;--z-casca-solida-crua:#C5C8CC;--z-casca-solida:#c5c8cc;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#C5C8CC;--z-gatilhos:#c5c8cc;--z-dpad-crua:#C5C8CC;--z-dpad:#c5c8cc;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#C5C8CC;--z-botoes_face:#c5c8cc;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="sterling-silver"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="sterling-silver"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="sterling-silver"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="sterling-silver"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="sterling-silver"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="sterling-silver"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="sterling-silver"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="sterling-silver"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Cobalt Blue · código 09 */
+    svg[data-colorway="cobalt-blue"]{--z-casca-crua:#1E4B8C;--z-casca:#40669d;--z-casca-solida-crua:#1E4B8C;--z-casca-solida:#40669d;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1E4B8C;--z-gatilhos:#40669d;--z-dpad-crua:#1E4B8C;--z-dpad:#40669d;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1E4B8C;--z-botoes_face:#40669d;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="cobalt-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="cobalt-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="cobalt-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="cobalt-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="cobalt-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="cobalt-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="cobalt-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="cobalt-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Chroma Teal · código 10 */
+    svg[data-colorway="chroma-teal"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:url(#hachura-sem-hex);--z-gatilhos:url(#hachura-sem-hex);--z-dpad-crua:url(#hachura-sem-hex);--z-dpad:url(#hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#hachura-sem-hex);--z-botoes_face:url(#hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="chroma-teal"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="chroma-teal"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="chroma-teal"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="chroma-teal"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="chroma-teal"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="chroma-teal"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="chroma-teal"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="chroma-teal"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Chroma Indigo · código 11 */
+    svg[data-colorway="chroma-indigo"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:url(#hachura-sem-hex);--z-gatilhos:url(#hachura-sem-hex);--z-dpad-crua:url(#hachura-sem-hex);--z-dpad:url(#hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#hachura-sem-hex);--z-botoes_face:url(#hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="chroma-indigo"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="chroma-indigo"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="chroma-indigo"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="chroma-indigo"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="chroma-indigo"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="chroma-indigo"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="chroma-indigo"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="chroma-indigo"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Chroma Pearl · código 12 */
+    svg[data-colorway="chroma-pearl"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:url(#hachura-sem-hex);--z-gatilhos:url(#hachura-sem-hex);--z-dpad-crua:url(#hachura-sem-hex);--z-dpad:url(#hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#hachura-sem-hex);--z-botoes_face:url(#hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="chroma-pearl"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="chroma-pearl"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="chroma-pearl"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="chroma-pearl"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="chroma-pearl"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="chroma-pearl"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="chroma-pearl"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="chroma-pearl"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* HyperPop Techno Red · código 13 */
+    svg[data-colorway="hyperpop-techno-red"]{--z-casca-crua:#E11D2E;--z-casca:#e11d2e;--z-casca-solida-crua:#E11D2E;--z-casca-solida:#e11d2e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#E11D2E;--z-dpad:#e11d2e;--z-analogicos-crua:#E11D2E;--z-analogicos:#e11d2e;--z-botoes_face-crua:#E11D2E;--z-botoes_face:#e11d2e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="hyperpop-techno-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="hyperpop-techno-red"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* HyperPop Remix Green · código 14 */
+    svg[data-colorway="hyperpop-remix-green"]{--z-casca-crua:#8FBF3A;--z-casca:#8fbf3a;--z-casca-solida-crua:#8FBF3A;--z-casca-solida:#8fbf3a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#8FBF3A;--z-dpad:#8fbf3a;--z-analogicos-crua:#8FBF3A;--z-analogicos:#8fbf3a;--z-botoes_face-crua:#8FBF3A;--z-botoes_face:#8fbf3a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="hyperpop-remix-green"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="hyperpop-remix-green"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* HyperPop Rhythm Blue · código 15 */
+    svg[data-colorway="hyperpop-rhythm-blue"]{--z-casca-crua:#3AA0E8;--z-casca:#3aa0e8;--z-casca-solida-crua:#3AA0E8;--z-casca-solida:#3aa0e8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#3AA0E8;--z-dpad:#3aa0e8;--z-analogicos-crua:#3AA0E8;--z-analogicos:#3aa0e8;--z-botoes_face-crua:#3AA0E8;--z-botoes_face:#3aa0e8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="hyperpop-rhythm-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* 30th Anniversary · código 30 */
+    svg[data-colorway="30th-anniversary"]{--z-casca-crua:#A8A8B0;--z-casca:#a8a8b0;--z-casca-solida-crua:#A8A8B0;--z-casca-solida:#a8a8b0;--z-painel-crua:#A8A8B0;--z-painel:#a8a8b0;--z-touch-crua:#A8A8B0;--z-touch:#a8a8b0;--z-gatilhos-crua:#A8A8B0;--z-gatilhos:#a8a8b0;--z-dpad-crua:#3A3A40;--z-dpad:#616166;--z-analogicos-crua:#2A2A2E;--z-analogicos:#5f5f62;--z-botoes_face-crua:#3A3A40;--z-botoes_face:#616166;--z-simbolos-crua:url(#hachura-sem-hex);--z-simbolos:url(#hachura-sem-hex)}
+    svg[data-colorway="30th-anniversary"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="30th-anniversary"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="30th-anniversary"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="30th-anniversary"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="30th-anniversary"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="30th-anniversary"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="30th-anniversary"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="30th-anniversary"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* God of War Ragnarök · código Z1 */
+    svg[data-colorway="god-of-war-ragnarok"]{--z-casca-crua:#2C3A6E;--z-casca:#56618b;--z-casca-solida-crua:#2C3A6E;--z-casca-solida:#56618b;--z-painel-crua:#E8E4DC;--z-painel:#e8e4dc;--z-touch-crua:#E8E4DC;--z-touch:#e8e4dc;--z-gatilhos-crua:#2C3A6E;--z-gatilhos:#56618b;--z-dpad-crua:#2C3A6E;--z-dpad:#56618b;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#2C3A6E;--z-botoes_face:#56618b;--z-simbolos-crua:#E8E4DC;--z-simbolos:#e8e4dc}
+    svg[data-colorway="god-of-war-ragnarok"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="god-of-war-ragnarok"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Marvel's Spider-Man 2 · código Z2 */
+    svg[data-colorway="spider-man-2"]{--z-casca-crua:url(#casca-spider-man-2);--z-casca:url(#casca-spider-man-2);--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#D0D0D0;--z-simbolos:#d0d0d0}
+    svg[data-colorway="spider-man-2"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="spider-man-2"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="spider-man-2"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="spider-man-2"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="spider-man-2"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="spider-man-2"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="spider-man-2"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="spider-man-2"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Astro Bot · código Z3 */
+    svg[data-colorway="astro-bot"]{--z-casca-crua:#E8E4DC;--z-casca:#e8e4dc;--z-casca-solida-crua:#E8E4DC;--z-casca-solida:#e8e4dc;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E8E4DC;--z-gatilhos:#e8e4dc;--z-dpad-crua:#E8E4DC;--z-dpad:#e8e4dc;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E8E4DC;--z-botoes_face:#e8e4dc;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
+    svg[data-colorway="astro-bot"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="astro-bot"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="astro-bot"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="astro-bot"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="astro-bot"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="astro-bot"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="astro-bot"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="astro-bot"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Fortnite · código Z4 */
+    svg[data-colorway="fortnite"]{--z-casca-crua:#1A1A1C;--z-casca:#5f5f60;--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#hachura-sem-hex);--z-touch:url(#hachura-sem-hex);--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#F2C200;--z-simbolos:#f2c200}
+    svg[data-colorway="fortnite"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="fortnite"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="fortnite"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="fortnite"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="fortnite"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="fortnite"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="fortnite"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="fortnite"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* The Last of Us · código Z6 */
+    svg[data-colorway="the-last-of-us"]{--z-casca-crua:#1A1A1C;--z-casca:#5f5f60;--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#E4E0D8;--z-painel:#e4e0d8;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#E4E0D8;--z-analogicos:#e4e0d8;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#E4E0D8;--z-simbolos:#e4e0d8}
+    svg[data-colorway="the-last-of-us"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="the-last-of-us"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="the-last-of-us"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="the-last-of-us"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="the-last-of-us"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="the-last-of-us"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="the-last-of-us"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="the-last-of-us"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* God of War 20th Anniversary · código ZA */
+    svg[data-colorway="god-of-war-20th"]{--z-casca-crua:url(#casca-god-of-war-20th);--z-casca:url(#casca-god-of-war-20th);--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#E4E0D8;--z-painel:#e4e0d8;--z-touch-crua:#E4E0D8;--z-touch:#e4e0d8;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#C41E3A;--z-simbolos:#c41e3a}
+    svg[data-colorway="god-of-war-20th"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="god-of-war-20th"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="god-of-war-20th"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="god-of-war-20th"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="god-of-war-20th"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="god-of-war-20th"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="god-of-war-20th"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="god-of-war-20th"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Icon Blue Special Edition · código ZB */
+    svg[data-colorway="icon-blue"]{--z-casca-crua:#1E4A8C;--z-casca:#40659d;--z-casca-solida-crua:#1E4A8C;--z-casca-solida:#40659d;--z-painel-crua:#1E4A8C;--z-painel:#40659d;--z-touch-crua:#163A72;--z-touch:#45618e;--z-gatilhos-crua:#163A72;--z-gatilhos:#45618e;--z-dpad-crua:#1E4A8C;--z-dpad:#40659d;--z-analogicos-crua:#1E4A8C;--z-analogicos:#40659d;--z-botoes_face-crua:#1E4A8C;--z-botoes_face:#40659d;--z-simbolos-crua:#9EC0E8;--z-simbolos:#9ec0e8}
+    svg[data-colorway="icon-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="icon-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="icon-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="icon-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="icon-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="icon-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="icon-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="icon-blue"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
+    svg[data-colorway="ghost-of-yotei"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="ghost-of-yotei"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="ghost-of-yotei"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
+    svg[data-colorway="marathon"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="marathon"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="marathon"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="marathon"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="marathon"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="marathon"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="marathon"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="marathon"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="marathon"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
+    svg[data-colorway="genshin-impact"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="genshin-impact"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="genshin-impact"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="genshin-impact"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="genshin-impact"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="genshin-impact"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="genshin-impact"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="genshin-impact"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="genshin-impact"] .z-simbolos{color:var(--z-simbolos) !important}
+
+    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
+    svg[data-colorway="007-first-light"]{--z-casca-crua:url(#hachura-sem-hex);--z-casca:url(#hachura-sem-hex);--z-casca-solida-crua:url(#hachura-sem-hex);--z-casca-solida:url(#hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#4A4A52;--z-analogicos:#65656c;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
+    svg[data-colorway="007-first-light"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
+    svg[data-colorway="007-first-light"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
+    svg[data-colorway="007-first-light"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
+    svg[data-colorway="007-first-light"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
+    svg[data-colorway="007-first-light"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
+    svg[data-colorway="007-first-light"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
+    svg[data-colorway="007-first-light"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
+    svg[data-colorway="007-first-light"] .z-simbolos{color:var(--z-simbolos) !important}
 
 </style>
 </head>
@@ -1161,6 +1501,23 @@
   <!-- ================= MIOLO ================= -->
   <div class="miolo">
 
+          <svg width="0" height="0" aria-hidden="true"
+               style="position:absolute;overflow:hidden"><defs id="cores-do-dualsense">
+    <!-- GERADO por scripts/gerar_cores_do_dualsense.py — não editar à mão. -->
+    <pattern id="hachura-sem-hex" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="4" height="4" fill="#5A5A64"/>
+      <rect width="2" height="4" fill="#8A8A96"/>
+    </pattern>
+    <linearGradient id="casca-god-of-war-20th" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="50%" stop-color="#e4e0d8"/>
+      <stop offset="50%" stop-color="#c41e3a"/>
+    </linearGradient>
+    <linearGradient id="casca-spider-man-2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="50%" stop-color="#5f5f60"/>
+      <stop offset="50%" stop-color="#a24046"/>
+    </linearGradient>
+  </defs></svg>
+
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">Vibração</span>
@@ -1204,7 +1561,9 @@
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
                 <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
                 <b>Máximo</b> 150%, mais forte do que ele pediu · <b>Auto</b>, o Hefesto
-                escolhe pela bateria (100/70/30%) e nunca amplifica.
+                escolhe pela bateria (100/70/30%) e nunca amplifica.<br><br>
+                Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.<br><br>
+                A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.
               </span></span></span></div>
             <div><span class="sec-rot">Personalizado</span></div>
             <div><span class="sec-rot">Motor esquerdo
@@ -1223,14 +1582,15 @@
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
                 <b>Testar</b> faz aquele controle tremer meio segundo com os valores das
                 barras daquela coluna; <b>Parar</b> corta a vibração dele agora e devolve
-                a mão ao jogo.
+                a mão ao jogo.<br><br>
+                Os valores acima ainda passam pela intensidade escolhida ali em cima antes de chegar ao controle.
               </span></span></span></div>
           </div>
 
           <div class="ctrl" data-controle="p1" data-uniq="">
-            <div class="moldura" data-papel="desenho" data-campo="plastico"
+            <div class="moldura" data-hef="desenho" data-campo="plastico"
                  data-hef-alvo="plastico" style="--plastico:#ae335a"><?xml version="1.0" encoding="utf-8"?>
-<svg data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+<svg data-campo="colorway" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p1-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -1277,79 +1637,6 @@
       <stop offset="50%" stop-color="#5f5f60"/>
       <stop offset="50%" stop-color="#a24046"/>
     </linearGradient>
-  <style id="vb-p1-cores-do-dualsense-folha">
-    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
-       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
-
-       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
-       do indicador de jogador ficam de fora, e é por isso que eles não
-       somem sobre a borda do touchpad. */
-
-    /* White · código 00 */
-
-    /* Midnight Black · código 01 */
-
-    /* Cosmic Red · código 02 */
-    svg[data-colorway="cosmic-red"]{--z-casca-crua:#A51C48;--z-casca:#ae335a;--z-casca-solida-crua:#A51C48;--z-casca-solida:#ae335a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#A51C48;--z-gatilhos:#ae335a;--z-dpad-crua:#A51C48;--z-dpad:#ae335a;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#A51C48;--z-botoes_face:#ae335a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
-    svg[data-colorway="cosmic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
-    svg[data-colorway="cosmic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
-    svg[data-colorway="cosmic-red"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
-    svg[data-colorway="cosmic-red"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
-    svg[data-colorway="cosmic-red"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
-    svg[data-colorway="cosmic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
-    svg[data-colorway="cosmic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
-    svg[data-colorway="cosmic-red"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Nova Pink · código 03 */
-
-    /* Galactic Purple · código 04 */
-
-    /* Starlight Blue · código 05 */
-
-    /* Grey Camouflage · código 06 */
-
-    /* Volcanic Red · código 07 */
-
-    /* Sterling Silver · código 08 */
-
-    /* Cobalt Blue · código 09 */
-
-    /* Chroma Teal · código 10 */
-
-    /* Chroma Indigo · código 11 */
-
-    /* Chroma Pearl · código 12 */
-
-    /* HyperPop Techno Red · código 13 */
-
-    /* HyperPop Remix Green · código 14 */
-
-    /* HyperPop Rhythm Blue · código 15 */
-
-    /* 30th Anniversary · código 30 */
-
-    /* God of War Ragnarök · código Z1 */
-
-    /* Marvel's Spider-Man 2 · código Z2 */
-
-    /* Astro Bot · código Z3 */
-
-    /* Fortnite · código Z4 */
-
-    /* The Last of Us · código Z6 */
-
-    /* God of War 20th Anniversary · código ZA */
-
-    /* Icon Blue Special Edition · código ZB */
-
-    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
-
-    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
-  </style>
   </defs>
   <title>DualSense — mapa de peças, para editar</title>
   <g id="vb-p1-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
@@ -1495,11 +1782,11 @@
         <title>Bateria — peça 2</title>
       </path>
     </g>
-    <g id="vb-p1-feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
+    <g id="vb-p1-feat-rumble-esquerdo" data-campo="treme-e" data-hef-alvo="classe" data-hef-classe="acesa" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
       <title>Motor de vibração esquerdo (contrapeso maior — soa grosso)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975 M 20.164 33.834 C 17.509 38.843 11.748 52.364 9.406 67.515 C 7.927 77.083 8.055 84.531 9.154 89.873 C 10.257 95.241 12.313 98.371 14.579 99.498 C 16.229 100.319 17.028 100.234 17.44 100.013 C 17.844 99.799 18.043 99.397 18.281 98.916 L 18.361 98.756 C 18.602 98.154 18.953 97.261 19.39 96.146 C 20.749 92.688 22.948 87.087 25.365 81.341 C 28.562 73.742 32.172 65.801 34.748 62.214 C 37.247 58.732 39.04 56.947 40.742 55.255 C 41.79 54.211 43.84 50.792 43.074 45.839 C 42.489 42.044 41.828 38.262 41.092 34.494 C 41.005 33.8 40.976 32.729 41.186 31.761 C 41.281 31.326 41.433 30.869 41.679 30.475 C 39.209 30.457 35.761 30.576 32.161 30.98 C 27.886 31.459 23.442 32.335 20.164 33.834" style=""/>
     </g>
-    <g id="vb-p1-feat-rumble-direito" class="oculta acesa" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
+    <g id="vb-p1-feat-rumble-direito" data-campo="treme-d" data-hef-alvo="classe" data-hef-classe="acesa" class="oculta acesa" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
       <title>Motor de vibração direito (contrapeso menor — soa fino)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895 M 107.64 33.763 C 110.298 38.786 116.063 52.343 118.407 67.535 C 119.888 77.129 119.759 84.596 118.659 89.952 C 117.554 95.334 115.498 98.473 113.229 99.603 C 111.577 100.426 110.778 100.34 110.365 100.119 C 109.961 99.905 109.762 99.502 109.524 99.02 L 109.446 98.858 C 109.203 98.255 108.852 97.36 108.414 96.242 C 107.054 92.775 104.853 87.159 102.433 81.397 C 99.234 73.778 95.62 65.817 93.043 62.22 C 90.541 58.729 88.746 56.939 87.043 55.242 C 85.994 54.195 83.941 50.766 84.708 45.801 C 85.294 41.996 85.956 38.203 86.692 34.426 C 86.78 33.729 86.808 32.656 86.598 31.685 C 86.503 31.249 86.351 30.791 86.105 30.396 C 88.577 30.377 92.028 30.497 95.631 30.902 C 99.91 31.382 104.358 32.261 107.64 33.763" style=""/>
     </g>
@@ -1605,18 +1892,18 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-papel="identidade">P1 <span class="pt">•</span> Cosmic Red
+            <div class="rot-ctrl" data-hef="identidade">P1 <span class="pt">•</span> Cosmic Red
               <span class="pt">•</span> USB</div>
             <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="auto" data-papel="forca" data-forca="auto">Auto</button></div>
             <div class="motor" data-papel="forca"><span></span><span class="trilho"><span class="cheio" data-campo="forca-pct" data-hef-alvo="largura" style="width:100.0%"></span></span><span class="num" data-campo="mult">150%</span><span class="teto mx on" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
-            <div class="motor off" data-papel="motor" data-lado="e"><button class="lado" data-papel="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor off" data-hef="motor" data-lado="e"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><span class="trilho"><span class="cheio" data-campo="motor-e-pct" data-hef-alvo="largura" style="width:0.0%"></span></span><span class="num" data-campo="motor-e">0</span><span class="teto">/255</span></div>
-            <div class="motor" data-papel="motor" data-lado="d"><button class="lado on" data-papel="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+            <div class="motor" data-hef="motor" data-lado="d"><button class="lado on" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -1642,9 +1929,9 @@
             </div>
           </div>
           <div class="ctrl" data-controle="p2" data-uniq="">
-            <div class="moldura" data-papel="desenho" data-campo="plastico"
+            <div class="moldura" data-hef="desenho" data-campo="plastico"
                  data-hef-alvo="plastico" style="--plastico:#7eb8d4"><?xml version="1.0" encoding="utf-8"?>
-<svg data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+<svg data-campo="colorway" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p2-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -1691,79 +1978,6 @@
       <stop offset="50%" stop-color="#5f5f60"/>
       <stop offset="50%" stop-color="#a24046"/>
     </linearGradient>
-  <style id="vb-p2-cores-do-dualsense-folha">
-    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
-       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
-
-       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
-       do indicador de jogador ficam de fora, e é por isso que eles não
-       somem sobre a borda do touchpad. */
-
-    /* White · código 00 */
-
-    /* Midnight Black · código 01 */
-
-    /* Cosmic Red · código 02 */
-
-    /* Nova Pink · código 03 */
-
-    /* Galactic Purple · código 04 */
-
-    /* Starlight Blue · código 05 */
-    svg[data-colorway="starlight-blue"]{--z-casca-crua:#7EB8D4;--z-casca:#7eb8d4;--z-casca-solida-crua:#7EB8D4;--z-casca-solida:#7eb8d4;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#7EB8D4;--z-gatilhos:#7eb8d4;--z-dpad-crua:#7EB8D4;--z-dpad:#7eb8d4;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#7EB8D4;--z-botoes_face:#7eb8d4;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
-    svg[data-colorway="starlight-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
-    svg[data-colorway="starlight-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
-    svg[data-colorway="starlight-blue"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
-    svg[data-colorway="starlight-blue"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
-    svg[data-colorway="starlight-blue"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
-    svg[data-colorway="starlight-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
-    svg[data-colorway="starlight-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
-    svg[data-colorway="starlight-blue"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Grey Camouflage · código 06 */
-
-    /* Volcanic Red · código 07 */
-
-    /* Sterling Silver · código 08 */
-
-    /* Cobalt Blue · código 09 */
-
-    /* Chroma Teal · código 10 */
-
-    /* Chroma Indigo · código 11 */
-
-    /* Chroma Pearl · código 12 */
-
-    /* HyperPop Techno Red · código 13 */
-
-    /* HyperPop Remix Green · código 14 */
-
-    /* HyperPop Rhythm Blue · código 15 */
-
-    /* 30th Anniversary · código 30 */
-
-    /* God of War Ragnarök · código Z1 */
-
-    /* Marvel's Spider-Man 2 · código Z2 */
-
-    /* Astro Bot · código Z3 */
-
-    /* Fortnite · código Z4 */
-
-    /* The Last of Us · código Z6 */
-
-    /* God of War 20th Anniversary · código ZA */
-
-    /* Icon Blue Special Edition · código ZB */
-
-    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
-
-    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
-  </style>
   </defs>
   <title>DualSense — mapa de peças, para editar</title>
   <g id="vb-p2-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
@@ -1909,11 +2123,11 @@
         <title>Bateria — peça 2</title>
       </path>
     </g>
-    <g id="vb-p2-feat-rumble-esquerdo" class="oculta acesa" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
+    <g id="vb-p2-feat-rumble-esquerdo" data-campo="treme-e" data-hef-alvo="classe" data-hef-classe="acesa" class="oculta acesa" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
       <title>Motor de vibração esquerdo (contrapeso maior — soa grosso)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975 M 20.164 33.834 C 17.509 38.843 11.748 52.364 9.406 67.515 C 7.927 77.083 8.055 84.531 9.154 89.873 C 10.257 95.241 12.313 98.371 14.579 99.498 C 16.229 100.319 17.028 100.234 17.44 100.013 C 17.844 99.799 18.043 99.397 18.281 98.916 L 18.361 98.756 C 18.602 98.154 18.953 97.261 19.39 96.146 C 20.749 92.688 22.948 87.087 25.365 81.341 C 28.562 73.742 32.172 65.801 34.748 62.214 C 37.247 58.732 39.04 56.947 40.742 55.255 C 41.79 54.211 43.84 50.792 43.074 45.839 C 42.489 42.044 41.828 38.262 41.092 34.494 C 41.005 33.8 40.976 32.729 41.186 31.761 C 41.281 31.326 41.433 30.869 41.679 30.475 C 39.209 30.457 35.761 30.576 32.161 30.98 C 27.886 31.459 23.442 32.335 20.164 33.834" style=""/>
     </g>
-    <g id="vb-p2-feat-rumble-direito" class="oculta acesa" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
+    <g id="vb-p2-feat-rumble-direito" data-campo="treme-d" data-hef-alvo="classe" data-hef-classe="acesa" class="oculta acesa" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
       <title>Motor de vibração direito (contrapeso menor — soa fino)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895 M 107.64 33.763 C 110.298 38.786 116.063 52.343 118.407 67.535 C 119.888 77.129 119.759 84.596 118.659 89.952 C 117.554 95.334 115.498 98.473 113.229 99.603 C 111.577 100.426 110.778 100.34 110.365 100.119 C 109.961 99.905 109.762 99.502 109.524 99.02 L 109.446 98.858 C 109.203 98.255 108.852 97.36 108.414 96.242 C 107.054 92.775 104.853 87.159 102.433 81.397 C 99.234 73.778 95.62 65.817 93.043 62.22 C 90.541 58.729 88.746 56.939 87.043 55.242 C 85.994 54.195 83.941 50.766 84.708 45.801 C 85.294 41.996 85.956 38.203 86.692 34.426 C 86.78 33.729 86.808 32.656 86.598 31.685 C 86.503 31.249 86.351 30.791 86.105 30.396 C 88.577 30.377 92.028 30.497 95.631 30.902 C 99.91 31.382 104.358 32.261 107.64 33.763" style=""/>
     </g>
@@ -2019,18 +2233,18 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl" data-papel="identidade">P2 <span class="pt">•</span> Starlight Blue
+            <div class="rot-ctrl" data-hef="identidade">P2 <span class="pt">•</span> Starlight Blue
               <span class="pt">•</span> BT</div>
             <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="auto" data-papel="forca" data-forca="auto">Auto</button></div>
             <div class="motor" data-papel="forca"><span></span><span class="trilho"><span class="cheio" data-campo="forca-pct" data-hef-alvo="largura" style="width:66.7%"></span></span><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
-            <div class="motor" data-papel="motor" data-lado="e"><button class="lado on" data-papel="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor" data-hef="motor" data-lado="e"><button class="lado on" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><span class="trilho"><span class="cheio" data-campo="motor-e-pct" data-hef-alvo="largura" style="width:47.1%"></span></span><span class="num" data-campo="motor-e">120</span><span class="teto">/255</span></div>
-            <div class="motor" data-papel="motor" data-lado="d"><button class="lado on" data-papel="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+            <div class="motor" data-hef="motor" data-lado="d"><button class="lado on" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -2057,8 +2271,8 @@
           </div>
           <div class="ctrl vazia" data-controle="p3" data-conectado="nao"
                title="Nenhum controle neste lugar.">
-            <div class="moldura" data-papel="desenho"><?xml version="1.0" encoding="utf-8"?>
-<svg data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+            <div class="moldura" data-hef="desenho"><?xml version="1.0" encoding="utf-8"?>
+<svg data-campo="colorway" data-hef-alvo="atributo" data-hef-atributo="data-colorway" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p3-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -2105,79 +2319,6 @@
       <stop offset="50%" stop-color="#5f5f60"/>
       <stop offset="50%" stop-color="#a24046"/>
     </linearGradient>
-  <style id="vb-p3-cores-do-dualsense-folha">
-    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
-       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
-
-       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
-       do indicador de jogador ficam de fora, e é por isso que eles não
-       somem sobre a borda do touchpad. */
-
-    /* White · código 00 */
-
-    /* Midnight Black · código 01 */
-
-    /* Cosmic Red · código 02 */
-
-    /* Nova Pink · código 03 */
-
-    /* Galactic Purple · código 04 */
-    svg[data-colorway="galactic-purple"]{--z-casca-crua:#5B3A7A;--z-casca:#74588e;--z-casca-solida-crua:#5B3A7A;--z-casca-solida:#74588e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#5B3A7A;--z-gatilhos:#74588e;--z-dpad-crua:#5B3A7A;--z-dpad:#74588e;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#5B3A7A;--z-botoes_face:#74588e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
-    svg[data-colorway="galactic-purple"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
-    svg[data-colorway="galactic-purple"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
-    svg[data-colorway="galactic-purple"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
-    svg[data-colorway="galactic-purple"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
-    svg[data-colorway="galactic-purple"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
-    svg[data-colorway="galactic-purple"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
-    svg[data-colorway="galactic-purple"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
-    svg[data-colorway="galactic-purple"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Starlight Blue · código 05 */
-
-    /* Grey Camouflage · código 06 */
-
-    /* Volcanic Red · código 07 */
-
-    /* Sterling Silver · código 08 */
-
-    /* Cobalt Blue · código 09 */
-
-    /* Chroma Teal · código 10 */
-
-    /* Chroma Indigo · código 11 */
-
-    /* Chroma Pearl · código 12 */
-
-    /* HyperPop Techno Red · código 13 */
-
-    /* HyperPop Remix Green · código 14 */
-
-    /* HyperPop Rhythm Blue · código 15 */
-
-    /* 30th Anniversary · código 30 */
-
-    /* God of War Ragnarök · código Z1 */
-
-    /* Marvel's Spider-Man 2 · código Z2 */
-
-    /* Astro Bot · código Z3 */
-
-    /* Fortnite · código Z4 */
-
-    /* The Last of Us · código Z6 */
-
-    /* God of War 20th Anniversary · código ZA */
-
-    /* Icon Blue Special Edition · código ZB */
-
-    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
-
-    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
-  </style>
   </defs>
   <title>DualSense — mapa de peças, para editar</title>
   <g id="vb-p3-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
@@ -2442,8 +2583,8 @@
           </div>
           <div class="ctrl vazia" data-controle="p4" data-conectado="nao"
                title="Nenhum controle neste lugar.">
-            <div class="moldura" data-papel="desenho"><?xml version="1.0" encoding="utf-8"?>
-<svg data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+            <div class="moldura" data-hef="desenho"><?xml version="1.0" encoding="utf-8"?>
+<svg data-campo="colorway" data-hef-alvo="atributo" data-hef-atributo="data-colorway" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p4-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -2490,79 +2631,6 @@
       <stop offset="50%" stop-color="#5f5f60"/>
       <stop offset="50%" stop-color="#a24046"/>
     </linearGradient>
-  <style id="vb-p4-cores-do-dualsense-folha">
-    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
-       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
-
-       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
-       do indicador de jogador ficam de fora, e é por isso que eles não
-       somem sobre a borda do touchpad. */
-
-    /* White · código 00 */
-    svg[data-colorway="white"]{--z-casca-crua:#E4E0D8;--z-casca:#e4e0d8;--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
-    svg[data-colorway="white"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
-    svg[data-colorway="white"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
-    svg[data-colorway="white"] .z-touch :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-touch) !important}
-    svg[data-colorway="white"] .z-gatilhos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-gatilhos) !important}
-    svg[data-colorway="white"] .z-dpad :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-dpad) !important}
-    svg[data-colorway="white"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
-    svg[data-colorway="white"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
-    svg[data-colorway="white"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Midnight Black · código 01 */
-
-    /* Cosmic Red · código 02 */
-
-    /* Nova Pink · código 03 */
-
-    /* Galactic Purple · código 04 */
-
-    /* Starlight Blue · código 05 */
-
-    /* Grey Camouflage · código 06 */
-
-    /* Volcanic Red · código 07 */
-
-    /* Sterling Silver · código 08 */
-
-    /* Cobalt Blue · código 09 */
-
-    /* Chroma Teal · código 10 */
-
-    /* Chroma Indigo · código 11 */
-
-    /* Chroma Pearl · código 12 */
-
-    /* HyperPop Techno Red · código 13 */
-
-    /* HyperPop Remix Green · código 14 */
-
-    /* HyperPop Rhythm Blue · código 15 */
-
-    /* 30th Anniversary · código 30 */
-
-    /* God of War Ragnarök · código Z1 */
-
-    /* Marvel's Spider-Man 2 · código Z2 */
-
-    /* Astro Bot · código Z3 */
-
-    /* Fortnite · código Z4 */
-
-    /* The Last of Us · código Z6 */
-
-    /* God of War 20th Anniversary · código ZA */
-
-    /* Icon Blue Special Edition · código ZB */
-
-    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
-
-    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
-
-    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
-  </style>
   </defs>
   <title>DualSense — mapa de peças, para editar</title>
   <g id="vb-p4-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
@@ -2878,11 +2946,29 @@
          `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
          num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
-         (`aba09.py`). -->
+         (`aba09.py`).
+
+         O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
+         pela régua do mockup e nomeado pelo juiz da leva. O pedido dela trazia um
+         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
+         "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
+         em cima já dizia o que importava — *o NOME do perfil, "a informação que
+         faltava e lhe custou semanas"* — e era exatamente essa informação que a
+         dica estava errando.
+
+         AGORA O TEXTO CONGELADO É HONESTO SOZINHO ("no perfil ativo") e o produto
+         o troca pelo nome de verdade, com o alvo `atributo` que nasceu em 03/09.
+         As duas metades importam: sem a primeira, quem abre a página antes de o
+         produto pintar lê uma mentira; sem a segunda, ninguém lê o nome. -->
     <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
-    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-salvar" data-campo="rodape.salvar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Grava no perfil ativo. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
-    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
+    <button class="r-exportar" data-campo="rodape.exportar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Escreve o perfil ativo num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>
