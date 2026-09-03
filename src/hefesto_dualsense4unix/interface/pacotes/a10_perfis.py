@@ -1090,6 +1090,26 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # mentira dos lugares vazios da mesa, que já custou sete reincidências.
     guarda = bruto.get("guarda") or []
     if isinstance(guarda, list):
+        # O QUE A LINHA QUE SOBRA MOSTRA HOJE, e é achado de 03/09/2026 na foto
+        # do produto (mesa com dois controles): as duas linhas de baixo saem com
+        # `—` no nome E `—` no ID, e a fileira de OITO glifos de "Ajuste próprio"
+        # sai IDÊNTICA à das duas linhas de cima — medido nos pixels,
+        # `rgb(130,144,189)` nas quatro.
+        #
+        # O DESENHO DECIDE OUTRA COISA: `aba10.linha_do_controle` escreve
+        # `P3 <bolinha> Desconectado` num `<tr class="fora">`, com a dica
+        # *"Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID
+        # da peça"* — decisão dela de 31/08 (*"o espaço fica, mas o nome do canto
+        # muda"*). A lista curta cai aqui em `''`, o `escrever()` do piloto troca
+        # vazio por `—` (`hefesto_vivo.py`), e o rótulo que ela pediu é APAGADO
+        # pelo travessão. Nesta casa `—` quer dizer *"não sei"*; o que a linha
+        # tem a dizer é *"não há controle aqui"*, que são coisas diferentes.
+        #
+        # NÃO CUREI, e a razão é que o conserto é ESCOLHA, não digitação: ou o
+        # pacote passa a mandar o rótulo do lugar vazio (e aí quem o escreve
+        # deixa de ser o desenho), ou o piloto ganha um jeito de NÃO escrever num
+        # endereço cujo valor é vazio — que é território das dez abas. Está no
+        # relatório da frente da consistência.
         fora["guarda.nome"] = [g.get("nome", "") for g in guarda]
         fora["guarda.id"] = [g.get("id", "") for g in guarda]
         # A COR DO PLÁSTICO DA LINHA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA. É a

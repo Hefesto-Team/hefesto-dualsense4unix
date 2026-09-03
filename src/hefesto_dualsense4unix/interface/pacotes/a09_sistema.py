@@ -115,10 +115,29 @@ NAO_CHEGA_NA_TELA: dict[str, str] = {
 #: passou a ser pintado hoje (`-g`), então a leitura por SÍMBOLO já está certa;
 #: o que sobra é a cor.
 #:
+#: O PREÇO MEDIDO, e ele é MAIOR do que a linha acima diz — 03/09/2026, nos
+#: pixels da foto do produto com os dois controles na mesa:
+#:
+#:     linha                            glifo                    valor
+#:     O serviço está                   ✓  verde                 Ligado   verde
+#:     Pausado                          ✓  LARANJA (255,184,108) Não      laranja
+#:     Trocar de perfil ao abrir o jogo  !  VERDE   (78,244,120)  Sem ver… verde
+#:     Como ele enxerga a janela        ◆  ciano                  …        branco
+#:
+#: Um **`✓` em cor de alarme** e um **`!` em cor de OK** — duas linhas que se
+#: contradizem DENTRO DE SI MESMAS. E o `?` desta aba promete que o selo carrega
+#: símbolo E cor ao mesmo tempo *para quem não distingue verde de laranja ler o
+#: estado pelo desenho*: hoje as duas leituras que ele oferece se desmentem.
+#: A cura de 03/09 (o `-g`) MUDOU A MENTIRA DE LUGAR — antes o glifo mentia e a
+#: cor acertava; agora é o contrário —, e é por isso que a metade que falta não
+#: é um acabamento.
+#:
 #: A CURA TEM DOIS CAMINHOS E OS DOIS SÃO DE FORA DESTA ABA: ou o piloto ganha um
-#: alvo que troque uma classe DENTRO DE UM CONJUNTO (`data-hef-classes="ok warn
-#: info"`, território das dez abas), ou o desenho para de pintar a cor pela
-#: classe da linha — e esse é decisão dela.
+#: alvo que troque uma classe DENTRO DE UM CONJUNTO — `data-hef-classe="ok warn
+#: info"` sem `data-hef-quando`, e o valor pintado É o nome da classe que fica;
+#: `data-hef-classe` já está em `check_o_desenho_aprovado.INVISIVEIS`, logo o
+#: `--publicar-enderecos 09` levaria os seis sem tocar no desenho dela —, ou o
+#: desenho para de pintar a cor pela classe da linha, e esse é decisão dela.
 SEM_ALVO_NA_PAGINA: dict[str, str] = {
     f"{linha}-cls": "a linha tem TRÊS classes exclusivas (`ok`/`warn`/`info`) e "
                     "o alvo `classe` do piloto acende UMA."

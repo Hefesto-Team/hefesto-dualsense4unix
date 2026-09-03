@@ -81,6 +81,103 @@ seção daqui**: a aba deixou de estar em trabalho.
   **quatro cores** (ciano, verde, laranja, cinza) e a leitura viva usa **três**
   (`mesa_viva._barra_bipolar`: verde para positivo, vermelho para negativo,
   cinza para o repouso). Quando o produto pintar, o ciano e o laranja somem.
+## 03-gatilhos.html
+- **03/09/2026 · A COLUNA MORTA PASSA A PARECER MORTA** — só CSS, e ele pende do
+  `data-conectado` que o piloto já reescreve a cada tique.
+
+  **O defeito, medido nos pixels da foto do produto** com a mesa dela (dois
+  controles, P3 e P4 vazios):
+
+  ```
+  o texto de "Guardar esse efeito"   P1 e P2  rgb(186,145,246)
+                                     P3 e P4  rgb(186,145,246)
+  a borda da caixa "Modo"            P1       rgb(189,147,249)
+                                     P3 e P4  rgb(189,147,249)
+  ```
+
+  **Quatro botões byte a byte iguais, e dois deles mortos.** A trava de 02/09
+  parou no `pointer-events:none`, que é INVISÍVEL — o comentário dela já dizia a
+  lei (*"um botão que convida para uma recusa é pior que um botão que não
+  existe"*) e curou só o rato. Para quem usa este produto é o pior arranjo que
+  existe: o botão não responde nunca e não diz isso em lugar nenhum.
+
+  **A gramática é a das outras abas**, e nada aqui é invenção: texto em
+  `var(--linha)`, contorno em `var(--border-forte)`, fundo do quadro, **sem
+  `opacity`** (a lição medida da `.fita.inerte`). É o que `.nav-ctl.vazia` (06),
+  `.luz-grade .ctrl.vazia` (04) e a coluna vazia da 05 já fazem.
+
+  Medido nas duas páginas, com o Chrome:
+
+  | página | P1/P2 (na mesa) | P3/P4 (desconectados) |
+  | --- | --- | --- |
+  | publicada | `rgb(189,147,249)` | `rgb(189,147,249)` — igual |
+  | bancada | `rgb(189,147,249)` | `rgb(83,87,111)` — apagado |
+
+  **ESPERA O `--publicar 03`**: a cura mora na FOLHA, e a página publicada não a
+  tem. Até lá as quatro colunas continuam idênticas na tela dela — as duas
+  travas que já existem (o `pointer-events` e o `_exigir_controle` do Python)
+  seguem valendo, e o clique continua não fazendo nada.
+## 04-iluminacao.html
+- **03/09/2026** — **DUAS LINHAS DE CSS, e zero pixel a mais no que ela
+  aprovou.** O desenho ganhou `.players .dono.incerta` e
+  `.troca-item .dono.incerta` — o anel TRACEJADO, que é a decisão 9 dela
+  (*"tracejado para 'não sei'; lisa e vazia para 'apagada'"*) aplicada ao
+  vizinho de cima da tira da luz.
+
+  **O defeito que elas fecham, provado antes de curado:** um número da linha
+  **Jogador** que está TOMADO por um controle cuja cor de plástico ainda não
+  chegou saía **byte a byte igual** a um número LIVRE — a ressalva viajava só
+  no `title`, e quem navega pelo controle nunca passa o mouse. Acontece no
+  primeiro tique de toda sessão (a cor vem do broker em thread) e **para
+  sempre** num colorway que o SVG não conhece. A prova está em
+  `a04_iluminacao.ANEL_INCERTO`.
+
+  **A tela do mockup não muda**: os dois controles da bancada têm cor
+  conhecida, então nenhum elemento desta página carrega a classe nova. As duas
+  regras são a folha alcançando o que o pacote já escreve.
+
+  **O QUE ELA JÁ TEM SEM PUBLICAR, e é a cura inteira:** o anel do "não sei"
+  sai com `style="border:2px dashed var(--comment)"` escrito na linha pelo
+  pacote — é o mesmo piso que `TIRA_APAGADA` pagou na foto, e ele vence a folha
+  publicada de hoje (`border:2px solid var(--plastico)`, que sem a variável fica
+  inválida e apaga o anel). **O `--publicar 04` só acrescenta a regra da
+  folha**, para quem ler o CSS achar o estado escrito onde os outros dois moram.
+- **03/09/2026 · O DESENHO GRANDE PASSA A SER O CONTROLE DELA** — um
+  `<style id="plastico-vivo">` vazio, e é a maior identidade congelada que
+  sobrava nesta aba. A lei é dela, do mesmo dia: *"se no topo tá mostrando
+  controle white player 1, então cada aba vai usar os controles lá de cima.
+  **Não mistura com a info dos mockups.**"* <!-- noqa-acento: citação literal dela -->
+
+  **A cura de hoje tinha parado na MOLDURA.** Medido nos pixels da foto do
+  produto, com os dois controles na mesa:
+
+  | célula | moldura (viva, curada hoje) | corpo desenhado dentro dela |
+  | --- | --- | --- |
+  | P1 · **White** | `rgb(228,224,216)` = White ✓ | `rgb(174,51,90)` = **Cosmic Red** |
+  | P2 · **Galactic Purple** | `rgb(116,88,142)` = G. Purple ✓ | `rgb(126,184,212)` = **Starlight Blue** |
+
+  A borda certa em volta do controle errado, na MESMA célula, com o rótulo certo
+  logo abaixo. E a aba **Navegação** desenha os MESMOS dois controles nas cores
+  certas no mesmo instante (`rgb(212,209,202)` e `rgb(108,82,132)`) — duas abas,
+  duas cores para o mesmo aparelho.
+
+  **O dono é o que a 06 já tem:** `a06_navegacao.folha_do_plastico` ganhou o
+  parâmetro `caixa` (`.nav-ctl` lá, `.ctrl` aqui) em vez de uma segunda cópia,
+  que divergiria no primeiro modelo novo. Medido no Chrome, com a mesa dela
+  injetada no `#plastico-vivo` da bancada:
+
+  ```
+         antes (o mockup)   depois (a mesa dela)
+  p1     #ae335a            #e4e0d8   (White)
+  p2     #7eb8d4            #74588e   (Galactic Purple)
+  MORDIDA — antes != depois nos dois? True
+  ```
+
+  **ESTA CURA ESPERA O `--publicar 04`**: o `<style>` é um ELEMENTO novo, e
+  elemento não está em `check_o_desenho_aprovado.INVISIVEIS`. Até lá o
+  `document.querySelector('#plastico-vivo')` devolve `null` na página publicada
+  e o laço do `blocos` não escreve nada — calado e correto, como o rodapé da
+  troca já faz.
 ## 05-vibracao.html
 - **03/09/2026** — o desenho ganhou DUAS coisas que a página publicada ainda não
   tem, e nenhuma muda um pixel do que ela aprovou:
@@ -110,6 +207,37 @@ seção daqui**: a aba deixou de estar em trabalho.
   valor vivo exige um campo que o daemon não publica com honestidade:
   `rumble_mult_applied` ficou em `0.7` nos QUATRO degraus clicados em 03/09, com
   a política mudando a cada clique.
+- **03/09/2026 · O MARCADOR DO TOM `diz` DEIXOU DE SER VERDE** — uma linha de
+  CSS a menos, e é defeito de significado. Fotografado na tela dela com a mesa
+  parada, duas linhas coladas:
+
+  ```
+  ● (verde)   não há gamepad virtual — nenhum jogo tem onde pedir vibração
+  ▲ (laranja) A intensidade não está chegando a jogo nenhum: falta o gamepad…
+  ```
+
+  O MESMO fato, com marcadores de sentido oposto — e nesta casa o verde quer
+  dizer CERTO em todas as abas (`● 2 controles` do cabeçalho, `CERTO` da
+  Conexões, `✓ OK` da Sistema, `Ligado` da Navegação, `CHEGAM` da Lançadores).
+  O tom `diz` **não pode carregar valor**: pela mesma função
+  (`rumble_actions.texto_dos_pedidos_de_vibracao`) saem *"o jogo pediu vibração
+  12x"*, *"pediu força zero em todas"* e *"não há gamepad virtual"*. A regra que
+  fica é a dos outros dois tons — o marcador tem a cor do texto dele —, e o
+  contrato de `app/telas/vibracao.DIZ` já dizia isso desde 02/09 (*"a cor normal
+  do rótulo"*).
+
+  **Medido nas duas páginas**, com as duas linhas da mesa dela injetadas no
+  `#vib-estado`:
+
+  | página | marcador do `diz` | texto do `diz` |
+  | --- | --- | --- |
+  | publicada | `rgb(80,250,123)` — verde | `rgb(200,204,218)` |
+  | bancada | `rgb(200,204,218)` | `rgb(200,204,218)` |
+
+  **ESTA CURA NÃO CHEGA A ELA SEM PUBLICAR**, e é a diferença para a da aba 04:
+  a cor mora na FOLHA, e o pacote não escreve estilo de linha aqui de propósito
+  (*"viaja o NOME, e a cor mora no CSS da aba"*). Até o `--publicar 05`, a
+  bolinha verde continua na frente da má notícia.
 ## 06-navegacao.html
 - **03/09/2026** — a aba ganhou **as três leituras vivas que a GTK tem e ela
   não**, e todas as frases são do produto (nada foi escrito aqui):
