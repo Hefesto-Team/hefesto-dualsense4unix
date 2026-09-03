@@ -1058,7 +1058,12 @@ def _alvos_a_clicar(
     for nome in [g.nome for g in da_pagina] + sorted(registrados):
         if nome in vistos or nome in pulados:
             continue
-        (pulados if (pagina, nome) in perigosos else vistos).append(nome)
+        # O CORINGA `("*", nome)` EXISTE PORQUE O GESTO EXISTE ASSIM: o rodapé
+        # registra `@gesto("*", "salvar")` — um gesto só, vivo nas dez páginas.
+        # Sem o coringa aqui, isentá-lo pediria dez linhas na lista e a décima
+        # primeira aba nasceria desprotegida sem ninguém notar.
+        perigoso = (pagina, nome) in perigosos or ("*", nome) in perigosos
+        (pulados if perigoso else vistos).append(nome)
     return vistos, pulados
 
 
