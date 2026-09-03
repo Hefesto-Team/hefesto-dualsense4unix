@@ -689,12 +689,53 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     from hefesto_dualsense4unix.interface import mesa_viva
 
     conta, conta_b = mesa_viva.texto_da_contagem(ctx.mesa)
+    ativo = str(ctx.state.get("active_profile") or "")
     return {
         # O `●` é do desenho e já está na página; o texto começa depois dele.
         "conta": conta.replace("● ", "").strip(),
         "conta-b": conta_b,
-        "perfil": ctx.state.get("active_profile") or "—",
+        "perfil": ativo or "—",
+        # AS DUAS DICAS DO RODAPÉ, e elas são do topo pela MESMA razão que o
+        # resto daqui: o `fim.html` é um só para as dez páginas, logo não
+        # pertence a pacote de aba nenhuma.
+        #
+        # O DEFEITO QUE ISTO CURA, medido em 03/09/2026: o desenho congelou o
+        # EXEMPLO do pedido dela — *"Salvar Perfil grava no Mortal Kombat"* — em
+        # vez do nome, e as dez abas diziam "Grava no perfil Mortal Kombat" com
+        # `meu_perfil` ativo. Uma dica que nomeia com confiança o perfil errado,
+        # sobre o botão que GRAVA NO DISCO, é o pior arranjo possível.
+        #
+        # SEM PERFIL ATIVO NÃO SE INVENTA NOME: o texto cai para "no perfil
+        # ativo", que é o mesmo que o desenho já traz congelado — dizer "no
+        # perfil —" seria pior do que não dizer.
+        "rodape.salvar": _dica_do_salvar(ativo),
+        "rodape.exportar": _dica_do_exportar(ativo),
     }
+
+
+#: O QUE A DICA DIZ QUANDO NÃO HÁ PERFIL ATIVO. É a mesma palavra que o
+#: `fim.html` congela, para que a tela antes e depois da pintura diga a mesma
+#: coisa — e nunca um nome que não existe.
+_SEM_PERFIL = "no perfil ativo"
+
+
+def _dica_do_salvar(ativo: str) -> str:
+    """A dica do botão que GRAVA, com o nome do perfil que vai receber.
+
+    O texto é o do desenho, palavra por palavra; o que muda é o nome. Reescrevê-lo
+    aqui faria duas versões da mesma frase, e a do desenho envelheceria calada —
+    então esta função só troca a metade que é dado.
+    """
+    onde = f"no perfil {ativo}" if ativo else _SEM_PERFIL
+    return (f"Grava {onde}. É onde a mudança vai cair: o que você salvar aqui "
+            "volta sozinho toda vez que este jogo abrir.")
+
+
+def _dica_do_exportar(ativo: str) -> str:
+    """A dica do botão que leva o perfil para um arquivo, com o nome certo."""
+    qual = f"o perfil {ativo}" if ativo else "o perfil ativo"
+    return (f"Escreve {qual} num arquivo .json, para guardar ou levar para "
+            "outra máquina.")
 
 
 # ---------------------------------------------------------------------------
