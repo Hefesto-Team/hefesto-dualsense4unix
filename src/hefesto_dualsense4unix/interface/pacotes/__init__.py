@@ -564,9 +564,17 @@ def enderecos_que_o_texto_apaga(pagina: str) -> frozenset[str]:
     UMA CURA QUE APAGA E NÃO DEVOLVE É PIOR QUE A DOENÇA: a mesa dela conecta e
     desconecta o tempo todo, e o dano dura enquanto ela ficar naquela aba.
 
-    OS DOIS ENDEREÇOS QUE ISTO POUPA HOJE, medidos nas dez publicadas:
-    `06-navegacao·navega` (o ponto) e `04-iluminacao·aceso` (um `<div>` de texto
-    vazio com três `<span>` mudos, que são o DESENHO da barra de luz).
+    OS SEIS ENDEREÇOS QUE ISTO POUPA HOJE, medidos nas dez publicadas em
+    03/09/2026: `06-navegacao·navega` (o ponto), `04-iluminacao·troca.item`,
+    `05-vibracao·forca`, `05-vibracao·motor`, `08-conexoes·exame` e
+    `10-perfis·editor.prioridade.dica`.
+
+    FATO SUBSTITUÍDO — 03/09/2026: esta linha dizia *"os DOIS endereços…
+    `04-iluminacao·aceso`"*. O `aceso` saiu da página publicada: a cura de 02/09
+    renomeou o endereço para `luz` com alvo `html` (ver a nota do campo `luz` em
+    `a04_iluminacao`), e o `html` já é poupado por
+    `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`. O desenho da barra de luz continua
+    inteiro — por outra porta.
 
     O QUE ISTO NÃO PODE PARECER: uma desculpa para o desenho ficar na tela. Os
     `identidade` da Jogar, da Iluminação e da Vibração TÊM filho — mas o filho é

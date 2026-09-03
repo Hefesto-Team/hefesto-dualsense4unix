@@ -76,9 +76,18 @@ def recolhido() -> dict:
             pg.eval_on_selector('[data-gesto="guardar-definicoes"]', "el => el.click()")
             crus = pg.evaluate("window.__recebido")
             assert crus, "o clique não saiu da página — ninguém postou nada"
+            # QUEM A PÁGINA CHAMA DE LINHA, lido do DOM que acabou de ser
+            # varrido. Não vem do bootstrap: é o outro lado da conta, e a chave
+            # abaixo diz isso no nome. Ver
+            # `test_a_forma_traz_as_vinte_e_uma_linhas_com_o_endereco_do_produto`.
+            linhas = pg.evaluate(
+                "Array.from(document.querySelectorAll("
+                "'#definicoes-mouse [data-linha]')).map(el => el.dataset.linha)")
             # O BOOTSTRAP MANDA TEXTO (`JSON.stringify(o)`), como o WebView
             # exige. Desfazer aqui é o que o piloto faz do lado Python.
-            return json.loads(crus[-1])
+            o = json.loads(crus[-1])
+            o["_linhas_da_pagina"] = list(linhas)
+            return o
         finally:
             navegador.close()
 
@@ -94,18 +103,47 @@ def test_o_guardar_manda_a_forma(recolhido: dict) -> None:
 def test_a_forma_traz_as_vinte_e_uma_linhas_com_o_endereco_do_produto(
     recolhido: dict,
 ) -> None:
-    """Cada chave é um botão que o produto conhece, e as 21 estão lá.
+    """Cada LINHA é um botão que o produto conhece, e as 21 estão lá.
 
     O ENDEREÇO É O DO PRODUTO, e não um nome da tela: `core/acoes_de_botao.BOTOES`.
-    Uma chave a mais ou a menos aqui é a tela e o produto falando línguas
+    Uma linha a mais ou a menos aqui é a tela e o produto falando línguas
     diferentes — e o gesto descartaria a linha em silêncio.
+
+    A CONTA É CONTRA AS LINHAS, E NÃO CONTRA A VARREDURA — 03/09/2026,
+    corretivo. Esta régua cobrava `set(forma) == set(BOTOES)`, e isso valia
+    enquanto o único conteúdo endereçado dentro de `#definicoes-mouse` eram as
+    21 linhas. **Não é mais**: a onda IDENTIDADE-VEM-DE-CIMA pôs
+    `<b data-campo="quem-navega">` na dica do cabeçalho daquela tela, para ela
+    ler QUAL controle navega o PC, e o coletor do piloto varre
+    `[data-linha],[data-campo]` no container inteiro — de propósito, porque a
+    aba Gatilhos endereça a coluna dela só por `data-campo`
+    (`hefesto_vivo`, o ramo `forma`).
+
+    Não é defeito do produto: `guardar_definicoes` percorre a forma e pula o que
+    não está em `BOTOES`, por escrito. O que estava errado era a régua, que
+    tratava tudo o que a varredura traz como se fosse linha.
+
+    O QUE FICOU NO LUGAR são as duas metades que importam, e nenhuma delas
+    afrouxa: **toda linha chega** (`BOTOES ⊆ forma`), e **o que a página CHAMA
+    de linha é exatamente `BOTOES`** — que é onde um `data-linha` mal digitado
+    aparece, com nome, em vez de sumir na diferença de conjuntos.
     """
     from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES
 
     forma = recolhido["forma"]
-    assert set(forma) == set(BOTOES), (
-        f"a tela mandou {sorted(set(forma) - set(BOTOES))} a mais e "
-        f"{sorted(set(BOTOES) - set(forma))} a menos")
+    faltam = set(BOTOES) - set(forma)
+    assert not faltam, (
+        f"a varredura do Guardar não trouxe {sorted(faltam)} — o gesto "
+        "gravaria sem elas, em silêncio")
+
+    linhas = recolhido["_linhas_da_pagina"]
+    assert len(linhas) == len(set(linhas)), (
+        f"há `data-linha` repetido em `#definicoes-mouse`: {sorted(linhas)} — "
+        "duas linhas com o mesmo endereço, e a segunda apaga a primeira na "
+        "varredura")
+    assert set(linhas) == set(BOTOES), (
+        f"a página chama de linha {sorted(set(linhas) - set(BOTOES))} a mais e "
+        f"{sorted(set(BOTOES) - set(linhas))} a menos")
 
 
 def test_o_valor_de_cada_linha_e_um_rotulo_que_o_produto_traduz(
@@ -116,11 +154,16 @@ def test_o_valor_de_cada_linha_e_um_rotulo_que_o_produto_traduz(
     É este caso que pega a divergência que motivou o módulo — se alguém
     reescrever um rótulo no gerador sem mexer no `ACOES`, a tradução devolve
     `None` e o "Guardar" passaria a levantar em cima da linha reescrita.
+
+    SÓ AS LINHAS, e é o mesmo recorte de `guardar_definicoes` — 03/09/2026. A
+    varredura traz também os campos de MOSTRA daquela tela (hoje o
+    `quem-navega`, que diz qual controle navega o PC), e cobrar tradução deles
+    seria exigir que `P1 • White • USB` fosse um token de ação.
     """
-    from hefesto_dualsense4unix.core.acoes_de_botao import token_do_rotulo
+    from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES, token_do_rotulo
 
     sem_traducao = {b: v for b, v in recolhido["forma"].items()
-                    if token_do_rotulo(str(v)) is None}
+                    if b in BOTOES and token_do_rotulo(str(v)) is None}
     assert not sem_traducao, (
         f"estas linhas trazem um texto que `acoes_de_botao` não traduz: "
         f"{sem_traducao}\nA lista da tela e a do produto saem do mesmo lugar — "
@@ -134,14 +177,27 @@ def test_o_que_a_tela_mostra_e_o_que_o_produto_faz(recolhido: dict) -> None:
     a tela dizia que as três regiões do touchpad fazem *Botão esquerdo · Botão
     direito · F11*, e o produto faz *Backspace · Enter · Delete*. Ninguém
     comparava — e este caso é a comparação.
+
+    A VOLTA É POR `BOTOES`, e não pela forma inteira — 03/09/2026. Percorrer a
+    varredura levantava `KeyError: 'quem-navega'` no `de_fabrica[botao]` desde
+    que a dica daquela tela ganhou o campo de mostra: a régua morria antes de
+    comparar uma linha sequer.
     """
-    from hefesto_dualsense4unix.core.acoes_de_botao import padrao, token_do_rotulo
+    from hefesto_dualsense4unix.core.acoes_de_botao import (
+        BOTOES,
+        padrao,
+        token_do_rotulo,
+    )
 
     de_fabrica = padrao()
+    # `.get` E NÃO `[…]`: uma linha que a varredura não trouxe é defeito da
+    # régua acima, e aqui ela tem de aparecer NOMEADA (`None -> o padrão`) em
+    # vez de derrubar a função com um `KeyError` sem endereço.
+    forma = recolhido["forma"]
     divergem = {
-        botao: (token_do_rotulo(str(texto)), de_fabrica[botao])
-        for botao, texto in recolhido["forma"].items()
-        if token_do_rotulo(str(texto)) != de_fabrica[botao]
+        botao: (token_do_rotulo(str(forma.get(botao, ""))), de_fabrica[botao])
+        for botao in BOTOES
+        if token_do_rotulo(str(forma.get(botao, ""))) != de_fabrica[botao]
     }
     assert not divergem, (
         "a tela abre mostrando uma coisa e o produto faz outra "

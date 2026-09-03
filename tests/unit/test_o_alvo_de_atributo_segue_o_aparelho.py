@@ -107,6 +107,8 @@ PAGINA = """<html><head><title>Hefesto — aba DE PROVA</title></head><body>
      data-hef-atributo="style" style="--plastico:#ae335a"></i>
   <i id="mau-endereco" data-campo="mau-endereco" data-hef-alvo="atributo"
      data-hef-atributo="data-campo"></i>
+  <i id="bom-title" data-campo="bom-title" data-hef-alvo="atributo"
+     data-hef-atributo="title" title="o que o desenho congelou"></i>
 </div>
 </body></html>"""
 
@@ -140,6 +142,10 @@ ROTEIRO = """
   fora.n5 = pinta('—');
   fora.n6 = pinta('galactic-purple');
   fora.fill_nao_embutido = getComputedStyle(casca).fill;
+  // O `title` NUM TIQUE PRÓPRIO, para não mexer no `n1`: os números acima medem
+  // que só o `desenho` pinta entre os quatro endereços daquele pacote.
+  fora.n7 = window.__hef.pintar({colunas: {p1: {'bom-title': 'Mortal Kombat'}}});
+  fora.bom_title = document.getElementById('bom-title').getAttribute('title');
   return JSON.stringify(fora);
 })()
 """
@@ -266,6 +272,30 @@ def test_a_contagem_de_pinturas_nao_mente(medido: dict) -> None:
     assert medido["n5"] == 0, (
         "o travessão apaga como o vazio — sobre um atributo já ausente ele "
         "não pode contar pintura")
+
+
+def test_o_title_e_canal_de_pintura_e_nao_so_uma_lista(medido: dict) -> None:
+    """O `title` do rodapé pinta DE VERDADE, medido neste WebKit.
+
+    A guarda `atributo_escrevivel` recusava `title` até 03/09/2026, e o
+    `fim.html` — um só para as dez páginas — pedia exatamente isso nos botões
+    Salvar e Exportar, para a dica dizer o NOME do perfil ativo em vez de
+    congelar um exemplo. Vinte páginas com um endereço que nunca pintava, e a
+    recusa era **calada** (`return 0`).
+
+    Abrir a lista não bastaria como prova: uma lista é uma palavra, e o que
+    conta é o ato. Aqui o pacote manda `Mortal Kombat` no endereço e o atributo
+    do elemento é lido de volta do motor que ela usa.
+
+    A MORDIDA: tire `'title'` de `ATRIBUTO_A_MAIS` no piloto — esta linha
+    reprova com `n7 == 0`, e o portão das páginas nomeia as vinte.
+    """
+    assert medido["n7"] == 1, (
+        f"o pacote escreveu no `title` e o piloto contou {medido['n7']} "
+        "pintura(s) — a guarda voltou a recusar o nome em silêncio")
+    assert medido["bom_title"] == "Mortal Kombat", (
+        f"a dica ficou em {medido['bom_title']!r} — o produto não trocou o "
+        "texto que o desenho congelou")
 
 
 # ---------------------------------------------------------------------------
@@ -467,7 +497,30 @@ def test_todo_data_hef_atributo_publicado_e_escrevivel() -> None:
     A guarda devolve ``0`` calado, e um endereço que nunca pinta é exatamente o
     defeito que esta casa mais paga. O barulho tem de vir daqui, do portão, e
     não da tela dela.
+
+    ELA JÁ COBROU — 03/09/2026, e foi este o barulho. O ``fim.html`` (um só para
+    as dez páginas) passou a pedir ``data-hef-atributo="title"`` nos botões
+    Salvar e Exportar, para a dica dizer o NOME do perfil ativo em vez de
+    congelar um exemplo (``7db1e0e6``). O commit dava por certo que o alvo
+    "sabe escrever num ``title``" — e ``atributo_escrevivel`` o recusava CALADA,
+    nas vinte páginas. **A cura foi abrir o canal**, com o nome na lista curta e
+    a razão escrita no piloto: ``title`` não é ``data-hef`` (não forja o selo),
+    não é vocabulário de endereço e não desfaz o que outro alvo pintou.
+
+    A LISTA A MAIS É LIDA DO PILOTO, e não digitada aqui: duas cópias da mesma
+    regra divergem, e a que diverge é sempre a da régua — é a forma de
+    instrumento falso que esta casa mais achou.
     """
+    fonte = PILOTO.read_text(encoding="utf-8")
+    crua = r"/^(data|aria)-[a-z0-9]+(-[a-z0-9]+)*$/.test(n)"
+    assert crua in fonte, (
+        "a forma da guarda `atributo_escrevivel` mudou no piloto e esta régua "
+        "ficou medindo a regra de ontem — releia `hefesto_vivo` antes de mexer "
+        "no que está escrito aqui")
+    a_mais = re.search(r"const ATRIBUTO_A_MAIS = \[([^\]]*)\];", fonte)
+    assert a_mais, "não achei `ATRIBUTO_A_MAIS` no piloto"
+    permitidos_a_mais = {n.strip().strip("'\"")
+                         for n in a_mais.group(1).split(",") if n.strip()}
     permitido = re.compile(r"^(data|aria)-[a-z0-9]+(-[a-z0-9]+)*$")
     proibidos = {"data-campo", "data-papel", "data-controle", "data-uniq",
                  "data-gesto"}
@@ -478,6 +531,8 @@ def test_todo_data_hef_atributo_publicado_e_escrevivel() -> None:
             texto = caminho.read_text(encoding="utf-8", errors="replace")
             for nome in re.findall(r'data-hef-atributo="([^"]*)"', texto):
                 n = nome.strip().lower()
+                if n in permitidos_a_mais:
+                    continue
                 if (not permitido.match(n) or n.startswith("data-hef")
                         or n in proibidos):
                     maus.append(f"{caminho.name}: {nome!r}")
