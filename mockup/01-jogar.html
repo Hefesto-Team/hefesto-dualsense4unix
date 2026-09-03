@@ -662,15 +662,24 @@
      `test_o_botao_de_ligar_funciona_e_se_lembra` lê os endereços do HTML por
      EXPRESSÃO REGULAR, e um exemplo citado dentro de um comentário entra na
      conta como se fosse botão. É a mesma armadilha que pôs o logotipo inteiro
-     dentro de um comentário de CSS em 30/08 — o `replace` casou com a citação. */
-  #hef-ligado:checked ~ .hef-linha .hef-pos.ligado,
-  #hef-desligado:checked ~ .hef-linha .hef-pos.desligado,
+     dentro de um comentário de CSS em 30/08 — o `replace` casou com a citação.
+
+     O `:not(:has(.hef-pos.on))` É DE 03/09/2026, e ele existe porque os dois
+     caminhos podiam acender AO MESMO TEMPO. O `:checked` leva um `#id` e vence
+     o `.on` por especificidade (1,4,0 contra 0,2,0), então com o rádio em
+     Ligado e o daemon em Nativo a tela mostrava as DUAS posições acesas — o
+     desenho brigando com o estado, e o desenho ganhando. A guarda diz o que se
+     quer: **enquanto o produto não falou, o desenho manda; quando ele fala, ele
+     manda.** Com a página aberta sozinha (o mockup, sem daemon) nada tem `.on`
+     e a regra do rádio segue valendo, byte a byte como ela aprovou. */
+  .hef-topo:not(:has(.hef-pos.on)) #hef-ligado:checked ~ .hef-linha .hef-pos.ligado,
+  .hef-topo:not(:has(.hef-pos.on)) #hef-desligado:checked ~ .hef-linha .hef-pos.desligado,
   .hef-pos.on{border-color:var(--purple);background:var(--sel-bg);
               color:var(--fg);font-weight:600}
-  #hef-ligado:checked ~ .hef-linha .hef-pos.ligado .pino,
+  .hef-topo:not(:has(.hef-pos.on)) #hef-ligado:checked ~ .hef-linha .hef-pos.ligado .pino,
   .hef-pos.ligado.on .pino{background:var(--green);border-color:var(--green);
                            box-shadow:0 0 7px var(--green)}
-  #hef-desligado:checked ~ .hef-linha .hef-pos.desligado .pino,
+  .hef-topo:not(:has(.hef-pos.on)) #hef-desligado:checked ~ .hef-linha .hef-pos.desligado .pino,
   .hef-pos.desligado.on .pino{background:var(--texto-mudo);
                               border-color:var(--texto-mudo)}
 
@@ -694,11 +703,21 @@
           é 2.52.3 — `:has()` entrou no WebKit em 2.38.
 
      A ESPECIFICIDADE FECHA: `:has()` vale o do argumento mais específico, então
-     a regra que MOSTRA leva um `#id` e vence a que esconde, que é só classe. */
+     a regra que MOSTRA leva um `#id` e vence a que esconde, que é só classe.
+
+     E A SEÇÃO SEGUE O ESTADO, NÃO O ÚLTIMO CLIQUE — 03/09/2026. Estas duas
+     regras enxergavam só o rádio, e o rádio só muda pelo `for=` do `<label>`:
+     trocar de aba recarrega o documento e ele volta ao `checked` do arquivo. Com
+     o daemon em Nativo, a 01 abria mostrando a fileira de modos do lado LIGADO.
+     A guarda `:not(:has(.hef-pos.on))` é a mesma de cima e diz a mesma coisa —
+     enquanto o produto não falou, o desenho manda —, e as duas regras novas
+     abaixo leem a posição que o produto acendeu. */
   .hef-topo ~ .quadro .so-ligado,
   .hef-topo ~ .quadro .so-desligado{display:none}
-  .hef-topo:has(#hef-ligado:checked) ~ .quadro .so-ligado{display:block}
-  .hef-topo:has(#hef-desligado:checked) ~ .quadro .so-desligado{display:block}
+  .hef-topo:not(:has(.hef-pos.on)):has(#hef-ligado:checked) ~ .quadro .so-ligado{display:block}
+  .hef-topo:not(:has(.hef-pos.on)):has(#hef-desligado:checked) ~ .quadro .so-desligado{display:block}
+  .hef-topo:has(.hef-pos.ligado.on) ~ .quadro .so-ligado{display:block}
+  .hef-topo:has(.hef-pos.desligado.on) ~ .quadro .so-desligado{display:block}
   /* E ELAS ABREM NO MESMO y E FECHAM NO MESMO y — 180 contra 176 foi o que se
      mediu quando divergiram, e "muda tudo ao clicar" é a queixa dela que fixou a
      altura única das dez abas; ela vale dentro de uma aba também.
@@ -965,10 +984,32 @@
      pedia 556 de 542 e nascia barra de rolagem por dentro. Aqui cada pixel é
      disputado — ver o comentário do `--alt-janela` no `topo.html`. */
   .col-atencao{border-top:1px solid var(--rot-linha);margin-top:8px;padding-top:6px;
-               display:flex;align-items:center;gap:12px}
+               display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .col-atencao .cab-col{margin-bottom:0;flex:0 0 auto}
   .col-atencao .aviso-item{flex:1;min-width:0}
   .col-atencao .conta-avisos{margin-left:auto;flex:0 0 auto}
+  /* A COLUNA DE ZERO A N — 03/09/2026. A página publica
+     `pacotes.a01_jogar.AVISOS_VIVOS` linhas e o produto acende as que tiver; as
+     apagadas saem do fluxo com `display:none`, e por isso a cena de UM aviso
+     que ela aprovou fica idêntica. O `flex-wrap` acima e a regra do irmão
+     abaixo são o que faz a segunda linha CRESCER PARA BAIXO em vez de espremer
+     a primeira — é o que o comentário do P8 já prometia ("o espaço que a faixa
+     ganha ao receber o segundo aviso"), e o `display:flex` sozinho fazia o
+     contrário.
+     A CONTA DESCE PARA A ÚLTIMA LINHA, alinhada à direita — fotografado em
+     03/09/2026 com dois avisos na máquina dela. Ela é o último item do `flex`,
+     então a quebra a leva junto; o `margin-left:auto` continua encostando-a na
+     borda. Com UM aviso (a cena dela) nada quebra e a linha é a mesma de
+     sempre. */
+  .col-atencao .aviso-item:not(.mostra){display:none}
+  .col-atencao .aviso-item.mostra ~ .aviso-item.mostra{flex:1 1 100%}
+  /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
+     "muda tudo ao clicar" é queixa dela, e a legenda desta aba promete que o
+     espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
+     ficava com um travessão solto — o piloto escreve `—` no lugar de um valor
+     vazio, e um traço laranja dentro de uma moldura de alerta lê-se como
+     "faltou alguma coisa", não como "nada pendente". */
+  .faixa-final:not(.ha) .pendente{visibility:hidden}
 
 </style>
 </head>
@@ -1162,8 +1203,10 @@
       <div class="hef-linha">
         <span class="linha-rot">Status</span>
         <label class="hef-pos ligado" for="hef-ligado" data-gesto="hefesto" data-modo="gamepad"
+               data-campo="hef-posicao" data-hef-alvo="classe" data-hef-quando="ligado"
                title="O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho."><span class="pino"></span>Ligado</label>
         <label class="hef-pos desligado" for="hef-desligado" data-gesto="hefesto" data-modo="native"
+               data-campo="hef-posicao" data-hef-alvo="classe" data-hef-quando="desligado"
                title="Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle."><span class="pino"></span>Desligado</label>
         <span class="ajuda">?<span class="dica">
           <b>Ligado</b> — o Hefesto fica no meio: luz, vibração, gatilho e o número do jogador são por conta dele.<br><br>
@@ -1200,12 +1243,16 @@
         <div class="hef-modo so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
           <div class="escada">
             <span class="degrau on" data-degrau="dualsense" data-gesto="modo-dualsense"
+                  data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="dualsense"
                   title="O jogo desenha os botões do PlayStation. É o primeiro que o Hefesto tenta.">Sony DualSense</span>
             <span class="degrau" data-degrau="xbox" data-gesto="modo-xbox"
+                  data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="xbox"
                   title="O jogo desenha os botões do Xbox — o formato que todo jogo entende. É o segundo que o Hefesto tenta.">Xbox</span>
             <span class="degrau" data-degrau="steam" data-gesto="modo-steam"
+                  data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="steam"
                   title="A Steam entrega a entrada, e os seus ajustes vencem os do jogo. Trocar para cá exige reabrir a Steam e o jogo — por isso é o último que o Hefesto tenta.">Steam Input</span>
             <span class="degrau" data-degrau="navegacao" data-gesto="modo-navegacao" data-modo="desktop"
+                  data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="navegacao"
                   title="O controle vira teclado e mouse do computador. O PS+R3 ainda não para aqui.">Navegação</span>
           </div>
         </div>
@@ -1630,9 +1677,9 @@
 </svg> <span data-campo="bateria">100%</span></span></span>
                 </div>
                 <div class="mascara">
-                  <span class="chip on" data-gesto="mascara" data-mascara="DualSense">DualSense</span>
-                  <span class="chip" data-gesto="mascara" data-mascara="Xbox 360">Xbox 360</span>
-                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro">Nintendo Pro</span>
+                  <span class="chip on" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
               <div class="cartao"
@@ -2024,9 +2071,9 @@
 </svg> <span data-campo="bateria">64%</span></span></span>
                 </div>
                 <div class="mascara">
-                  <span class="chip" data-gesto="mascara" data-mascara="DualSense">DualSense</span>
-                  <span class="chip on" data-gesto="mascara" data-mascara="Xbox 360">Xbox 360</span>
-                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro">Nintendo Pro</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
+                  <span class="chip on" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
               <div class="cartao off"
@@ -2824,14 +2871,45 @@
           <div class="linha-rot cab-col">
             <b style="color:var(--orange)">Atenção</b>
           </div>
-            <div class="aviso-item" data-aviso>
+            <div class="aviso-item mostra" data-aviso
+                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
               <span class="selo alerta" data-campo="aviso-selo">RÁDIO</span>
               <span data-campo="aviso-texto">Dois rádios da bancada estão em portas vizinhas.</span>
+            </div>
+            <div class="aviso-item" data-aviso
+                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
+              <span class="selo alerta" data-campo="aviso-selo"></span>
+              <span data-campo="aviso-texto"></span>
+            </div>
+            <div class="aviso-item" data-aviso
+                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
+              <span class="selo alerta" data-campo="aviso-selo"></span>
+              <span data-campo="aviso-texto"></span>
+            </div>
+            <div class="aviso-item" data-aviso
+                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
+              <span class="selo alerta" data-campo="aviso-selo"></span>
+              <span data-campo="aviso-texto"></span>
+            </div>
+            <div class="aviso-item" data-aviso
+                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
+              <span class="selo alerta" data-campo="aviso-selo"></span>
+              <span data-campo="aviso-texto"></span>
+            </div>
+            <div class="aviso-item" data-aviso
+                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
+              <span class="selo alerta" data-campo="aviso-selo"></span>
+              <span data-campo="aviso-texto"></span>
             </div>
           <span class="conta-avisos" data-campo="atencao-conta">1 aviso</span>
         </div>
 
-        <div class="faixa-final">
+        <!-- O `pendente-ha` MORA AQUI, e não na `.pendente` — 03/09/2026. A
+             caixa da pendência já tem `data-campo="pendente"` (a frase), e um
+             elemento carrega UM endereço: o interruptor de existência dela
+             sobe um nível. A classe `ha` nasce escrita porque a cena que ela
+             aprovou TEM pendência; o produto a apaga quando não há. -->
+        <div class="faixa-final ha" data-campo="pendente-ha" data-hef-alvo="classe" data-hef-classe="ha">
           <!-- MAIÚSCULA NO COMEÇO — 28/08/2026. A frase é uma linha inteira,
                isolada na caixa tracejada, e o `●` que vem antes é MARCADOR, não
                palavra: a frase começa aqui. Era o mesmo defeito que ela apontou

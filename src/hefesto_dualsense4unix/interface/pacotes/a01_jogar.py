@@ -21,6 +21,44 @@ from typing import Any
 
 from . import Contexto, jogador_de, registrar
 
+#: OS ENDEREÇOS DA PÁGINA que esta aba promete pintar — os que valem para a tela
+#: inteira. Eles existem como TUPLA, e não soltos no `return`, porque o
+#: `cobertura` é a promessa que a régua confere: uma chave nova que não entre
+#: aqui vira um contador que mente, e ele é O instrumento com que esta casa
+#: prova que um endereço existe.
+DA_PAGINA: tuple[str, ...] = (
+    "atencao-conta",
+    "aviso-selo",
+    "aviso-texto",
+    "aviso-vivo",
+    "hef-posicao",
+    "mascara-cartao",
+    "modo-aceso",
+    "pendente",
+    "pendente-alvo",
+    "pendente-ha",
+)
+
+#: OS ENDEREÇOS DE DENTRO DE CADA CARTÃO. A máscara NÃO está aqui de propósito:
+#: `gamepad.emulation.set` recebe `flavor` e **não** recebe `uniq`
+#: (`daemon/ipc_handlers.py:5060`), logo a máscara é UMA para a máquina — e um
+#: valor da máquina emitido por cartão seria a tela prometendo quatro escolhas
+#: onde há uma. Ela sai por `mascara-cartao`, na mesa, e cada chip decide por si
+#: pelo `data-hef-quando`.
+POR_CARTAO: tuple[str, ...] = ("plastico", "jogador", "bateria", "identidade")
+
+#: QUANTOS `aviso-item` A COLUNA TEM. **Este é o dono do número**, e o gerador o
+#: lê daqui (`aba01.py` importa esta constante) — a direção é essa e não a
+#: inversa: o produto não pode depender do gerador, que puxa os SVGs e a folha
+#: de estilo para montar uma página que ele nunca vai abrir.
+#:
+#: SÃO SEIS PORQUE SEIS É O QUE O PRODUTO SABE DIZER: `painel.AVISOS_DA_TELA`
+#: tem seis fontes puras. O opt-out antigo e os achados graves do exame entram
+#: por cima disso, e é por isso que a conta ao lado (`atencao-conta`) diz o
+#: TOTAL e não o que coube — uma coluna que mostra 6 de 8 e escreve "6 avisos"
+#: esconderia dois sem dizer que os escondeu.
+AVISOS_VIVOS = 6
+
 
 @registrar("01-jogar.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
@@ -71,31 +109,58 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "identidade": f"{nome} · {via}",
         }
 
-    # O AVISO SAI DO MESMO EXAME DA ABA CONEXÕES, e não de uma segunda leitura:
-    # `integrations/exame_da_mesa` é o dono, e duas contagens do mesmo fato
-    # divergiriam no primeiro achado novo.
-    achados = _do_exame()
-    grave = next((a for a in achados if a["grave"]), None) or (achados[0] if achados else None)
+    # A COLUNA ATENÇÃO — as fontes do PRODUTO, não uma segunda leitura. Ver
+    # `_avisos`: das oito fontes possíveis, sete já estavam escritas em
+    # `app/actions/` e nenhuma frase nasce aqui.
+    avisos = _avisos(ctx)
+    selos = [a["selo"] for a in avisos][:AVISOS_VIVOS]
+    textos = [a["texto"] for a in avisos][:AVISOS_VIVOS]
 
     # A FAIXA LARANJA. Os dois endereços saem daqui SEMPRE — inclusive vazios —
     # porque o que estava cravado na página é uma frase, e uma frase só se apaga
     # escrevendo por cima. Ver `_faixa_do_pendente`.
     frase, alvo = _faixa_do_pendente(ctx.state)
 
-    fora = {
-        "atencao-conta": f"{len(achados)} aviso" + ("s" if len(achados) != 1 else ""),
+    fora: dict[str, Any] = {
+        # A CONTA É DO PRODUTO — `painel.texto_da_conta`, o mesmo que a bancada
+        # já chamava. Ela sabe dizer "nenhum aviso", que o desenho não tem
+        # (o mockup crava "1 aviso") e que é o estado normal de uma máquina
+        # saudável.
+        #
+        # ELA CONTAVA ERRADO ATÉ 03/09/2026: era `len(achados)` do exame da
+        # mesa INTEIRO, incluindo os `certo` — a tela dizia "3 avisos" sob o
+        # cabeçalho laranja **Atenção** com três linhas em que duas eram boas
+        # notícias. Agora conta o que a coluna mostra.
+        "atencao-conta": _painel().texto_da_conta(len(avisos)),
+        "aviso-selo": selos,
+        "aviso-texto": textos,
+        # O ACENDEDOR DAS LINHAS. Um `aviso-item` sem aviso não pode ficar com o
+        # travessão à mostra: a coluna teria seis linhas de `— —` numa máquina
+        # sem nada a dizer. O alvo `classe` sem `data-hef-quando` é BOOLEANO
+        # (`hefesto_vivo.escrever`), e o travessão que o piloto escreve num
+        # valor vazio conta como desligado — então a lista de `"1"` acende
+        # exatamente as que têm texto.
+        "aviso-vivo": ["1"] * len(selos),
         "cartoes": cartoes,
+        # O INTERRUPTOR E A FILEIRA, VIVOS — 03/09/2026. Ver `_estado_da_tela`.
+        **_estado_da_tela(ctx.state),
         "pendente": frase,
         "pendente-alvo": alvo,
-        # QUATRO POR CARTÃO desde 03/09/2026 — eram três, e o quarto é o
-        # `plastico`. Este número é a promessa que a aba faz; deixá-lo em três
-        # depois de acrescentar um campo é o começo de um contador que mente, e
-        # ele é O instrumento com que esta casa prova que um endereço existe.
-        "cobertura": {"pintados": 3 + len(cartoes) * 4 + (2 if grave else 0), "sem_dono": 0},
+        # A FAIXA SÓ EXISTE COM PENDÊNCIA. Sem isto ela virava um travessão
+        # solto na caixa tracejada, porque o piloto escreve `—` no lugar de um
+        # valor vazio — medido em 02/09/2026. O espaço continua reservado
+        # (`visibility`, não `display`): "muda tudo ao clicar" é queixa dela, e
+        # a legenda desta aba promete que a tela não pula.
+        "pendente-ha": "1" if frase else "",
     }
-    if grave:
-        fora["aviso-selo"] = grave["selo"]
-        fora["aviso-texto"] = grave["titulo"]
+    fora["cobertura"] = {
+        # A PROMESSA, e ela se conta sozinha: `DA_PAGINA` e `POR_CARTAO` são as
+        # listas de endereço, e emitir uma chave sem pô-la lá deixa o contador
+        # menor que o pacote — que é o defeito que este número existe para
+        # denunciar.
+        "pintados": len(DA_PAGINA) + len(cartoes) * len(POR_CARTAO),
+        "sem_dono": 0,
+    }
     # `perfil`, `conta` e `conta-b` NÃO saem daqui: são do cabeçalho, que é das
     # dez abas, e o dono deles é `pacotes.topo()`. Emiti-los aqui criava um
     # segundo dono — e foi assim que `conta_b` (com underscore) conviveu com o
@@ -139,14 +204,198 @@ def _cor_do_plastico(slug: str) -> str:
 
 
 def _do_exame() -> list[dict[str, Any]]:
-    """Os achados do exame da mesa, ou lista vazia. Nunca levanta."""
-    try:
-        from . import a08_conexoes
+    """Os achados do exame da mesa, ou lista vazia. Nunca levanta.
 
-        return [{"selo": "RÁDIO" if i["grave"] else "AVISO", **i}
-                for i in a08_conexoes._exame()]
-    except Exception:
-        return []
+    O SELO É DO PRODUTO, e esta função já mentiu — medido em 03/09/2026. Ela
+    montava::
+
+        {"selo": "RÁDIO" if i["grave"] else "AVISO", **i}
+
+    e o ``**i`` que vem DEPOIS sobrescreve a chave que a linha acabou de
+    escrever: `a08_conexoes._linha` já emite ``selo``, tirado de
+    `gui.aba_conexoes.SELO_DO_ESTADO`, que é o dono da palavra. As duas palavras
+    digitadas aqui — "RÁDIO" e "AVISO" — **nunca chegaram a uma tela**; o que
+    chegava era o selo do exame, que tem quatro estados e inclui o **CERTO**.
+    Fotografado na 01 em 02/09: o selo `CERTO` sob o cabeçalho laranja
+    **Atenção**, com o texto "Economia de energia desligada" — uma boa notícia
+    vestida de alarme.
+
+    A CURA NÃO É REPOR AS DUAS PALAVRAS. Elas eram uma segunda tradução de um
+    estado que já tem dono, e repô-las devolveria a divergência no primeiro
+    estado novo do exame. O que sai daqui é o que o exame diz; quem escolhe o
+    que vai para a coluna **Atenção** é :func:`_avisos`, e ele só leva o que é
+    ``grave`` — um "CERTO" não é um aviso.
+
+    O `except` LARGO CONTINUA, e o preço dele está escrito no dono
+    (`a08_conexoes._exame`): um `AttributeError` já virou lista vazia aqui e
+    apagou meia coluna sem uma linha de erro. O que mudou é que o silêncio
+    acabou — :func:`_avisos` transforma a falha num aviso com o selo ``ERRO``,
+    que é a mesma política de `painel.avisos_do_estado`.
+    """
+    from . import a08_conexoes
+
+    return list(a08_conexoes._exame())
+
+
+def _avisos(ctx: Contexto) -> list[dict[str, str]]:
+    """A coluna **Atenção**: ``[{"selo", "texto", "fonte"}, …]``, das fontes do produto.
+
+    **NADA SE ESCREVE AQUI.** As oito fontes já existiam, e sete delas em
+    `app/actions/` — o que faltava era o produto novo CHAMÁ-LAS. Medido em
+    03/09/2026: quem consumia `painel.AVISOS_DA_TELA` era `interface/jogar_vivo.
+    py`, que é BANCADA; a aba publicada mostrava, no lugar delas, o Check-up da
+    aba Conexões — dois conjuntos DISJUNTOS, e o da GTK era o que respondia
+    pelas perguntas desta tela.
+
+    O QUE ENTRA, e em que ordem:
+
+    1. **as seis de `painel.AVISOS_DA_TELA`** — pausa, vpad degradado, rádio
+       frágil, jogo sem wrapper, o cadeado da troca automática e o detector
+       cego. São funções puras de `home_actions`, e `painel.avisos_do_estado` já
+       trata a que levanta (vira selo ``ERRO`` em vez de derrubar a coluna);
+    2. **o opt-out antigo** (`home_actions.aviso_de_opt_out_antigo`). Ele não
+       está em `AVISOS_DA_TELA` porque pede dois argumentos que só a tela sabe —
+       se a escolha de disco está DESLIGADA e quantos controles há na mesa — e
+       os dois têm dono: `painel.modo_lembrado()` lê o
+       ``gamepad_disabled.flag`` e `ctx.conectados` é a mesa. É a pergunta
+       literal dela de 31/08 (*"não sei se segue desativado"*), e na máquina
+       dela ela está QUENTE agora;
+    3. **os achados GRAVES do exame da mesa** (`a08_conexoes._exame`), que era o
+       único que esta coluna já mostrava. Os ``certo`` ficam de fora: a coluna
+       chama-se Atenção.
+
+    O SELO DO OPT-OUT É ``GAMEPAD``, e não uma palavra nova: é o mesmo que
+    `AVISOS_DA_TELA` dá ao vpad degradado, e os dois falam do mesmo assunto — o
+    gamepad virtual que o jogo vê. Inventar um sétimo selo poria uma palavra de
+    tela num arquivo que não é o dono de nenhuma.
+    """
+    painel = _painel()
+    fora: list[dict[str, str]] = list(painel.avisos_do_estado(ctx.state))
+
+    try:
+        from hefesto_dualsense4unix.app.actions import home_actions
+
+        texto = home_actions.aviso_de_opt_out_antigo(
+            ctx.state,
+            opt_out=painel.modo_lembrado().ligado is False,
+            conectados=len(ctx.conectados),
+        )
+        if texto:
+            fora.append({"selo": "GAMEPAD", "texto": str(texto),
+                         "fonte": "home_actions.aviso_de_opt_out_antigo"})
+    except Exception as erro:
+        fora.append({"selo": "ERRO",
+                     "texto": f"o opt-out antigo não respondeu ({type(erro).__name__}).",
+                     "fonte": "home_actions.aviso_de_opt_out_antigo"})
+
+    try:
+        fora += [{"selo": str(i["selo"]), "texto": str(i["titulo"]),
+                  "fonte": "a08_conexoes._exame"}
+                 for i in _do_exame() if i.get("grave")]
+    except Exception as erro:
+        fora.append({"selo": "ERRO",
+                     "texto": f"o exame da mesa não respondeu ({type(erro).__name__}).",
+                     "fonte": "a08_conexoes._exame"})
+    return fora
+
+
+def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
+    """A POSIÇÃO DO INTERRUPTOR e o CHIP ACESO — os dois lidos, nunca cravados.
+
+    É o defeito de maior alcance desta aba, e ele foi fotografado: com o daemon
+    dela em ``native_mode false`` e ``gamepad_emulation.enabled false`` — logo
+    `mode_of_state` = **desktop** — a página mostrava o interruptor em
+    **Ligado** e o chip **Sony DualSense** aceso, porque nem o rótulo do
+    interruptor nem os chips da fileira tinham endereço: o que estava na tela
+    era o que o gerador cravou em 31/08 e mais nada o repintava.
+
+    OS DOIS LEITORES SÃO DO PRODUTO e não se reescrevem:
+
+    * `painel.hefesto_ligado` — ``True`` Ligado · ``False`` Desligado · ``None``
+      não se sabe. Ele é DERIVADO de propósito (Ligado é ``gamepad`` **ou**
+      ``desktop``): comparar um botão só deixaria a tela muda na Navegação, e
+      mudo é pior que errado porque parece defeito;
+    * `home_actions.mascara_do_aparelho` — a máscara que o JOGO vê agora, com a
+      diferença entre a explícita e a deduzida do ``backend``, e ``None`` quando
+      não dá para saber.
+
+    O CHIP ACESO É O INVERSO DO `_plano_do_chip`, e sai da MESMA tabela
+    (`painel.CHIPS_DA_ESCADA`): um chip com ``modo`` é um modo do produto (a
+    **Navegação**), os outros são MÁSCARAS do modo ``gamepad``. Escrever aqui um
+    ``if chave == "dualsense"`` seria a segunda cópia de uma tradução que já tem
+    dono — a mesma que o gesto usa para o caminho de ida.
+
+    O STEAM INPUT NUNCA ACENDE, e é a mesma guarda do gesto: ele nomeia a ponte
+    do DualSense com ``steam_input=True``, e sem a guarda ele empataria com o
+    chip **Sony DualSense** pela máscara. Quem fixa um degrau é o PS+R3, e não
+    há IPC que o diga — acendê-lo por dedução seria a tela afirmando uma escolha
+    que ninguém fez.
+
+    DAEMON CALADO NÃO PINTA NADA, e esta é a armadilha desta função: `mode_of_
+    state({})` devolve **desktop** — ele só devolve ``None`` para um
+    não-dicionário —, então pintar sem esta guarda acenderia **Ligado** sobre um
+    estado que ninguém leu. É a mesma guarda que `_pendencia` já tinha de ter, e
+    pela mesma razão.
+    """
+    if not state:
+        return {"hef-posicao": "", "modo-aceso": "", "mascara-cartao": ""}
+
+    from hefesto_dualsense4unix.app.actions.home_actions import mascara_do_aparelho
+    from hefesto_dualsense4unix.integrations import ponte_escada
+
+    painel = _painel()
+    ligado = painel.hefesto_ligado(state)
+    modo = painel.modo_vivo(state)
+    mascara = mascara_do_aparelho(state)
+
+    aceso = ""
+    for chip in painel.CHIPS_DA_ESCADA:
+        if chip.modo:
+            if chip.modo == modo:
+                aceso = str(chip.chave)
+                break
+            continue
+        ponte = chip.ponte
+        if ponte is None or ponte.steam_input or ponte.kind != ponte_escada.KIND_GAMEPAD:
+            continue
+        if modo == "gamepad" and mascara and ponte.mascara == mascara:
+            aceso = str(chip.chave)
+            break
+
+    return {
+        # AS PALAVRAS SÃO AS DO DESENHO (`aba01.INTERRUPTOR`), e é o `data-hef-
+        # quando` de cada rótulo que decide qual acende — o Python manda o
+        # ESTADO, não a classe.
+        "hef-posicao": "" if ligado is None else ("ligado" if ligado else "desligado"),
+        "modo-aceso": aceso,
+        # A MÁSCARA DOS CARTÕES é a da MÁQUINA, e por isso vai na mesa e não por
+        # cartão: `gamepad.emulation.set` não recebe `uniq`. O rótulo é o do
+        # desenho (`monta.MASCARAS`), e a tradução é a única coisa digitada aqui
+        # — o produto não tem a palavra "Xbox 360", que é da tela dela.
+        "mascara-cartao": _rotulo_da_mascara(mascara),
+    }
+
+
+def _rotulo_da_mascara(mascara: str | None) -> str:
+    """A máscara do produto na palavra do DESENHO — ``""`` quando não há.
+
+    São dois vocabulários, e as CHAVES não se digitam: `ponte_escada.MASCARA_*`
+    é o dono delas, e uma renomeação lá apaga a linha aqui em vez de deixar duas
+    verdades vivas. Os VALORES são os rótulos dos chips do cartão
+    (`monta.MASCARAS`), que é tela — e tela é dela.
+
+    **"Nintendo Pro" não tem entrada, e nunca terá enquanto o daemon recusar em
+    voz alta tudo o que não for `dualsense`/`xbox`** (`ipc_handlers.py:5090`).
+    O chip continua no cartão por ordem dela; apagado é a verdade sobre ele — e
+    era exatamente o chip **Xbox 360** aceso no cartão do P2, com o daemon em
+    `flavor=dualsense`, que esta função existe para apagar.
+    """
+    from hefesto_dualsense4unix.integrations import ponte_escada
+
+    return {
+        ponte_escada.MASCARA_DUALSENSE: "DualSense",
+        ponte_escada.MASCARA_XBOX: "Xbox 360",
+    }.get(str(mascara or ""), "")
 
 
 # ---------------------------------------------------------------------------
@@ -286,8 +535,21 @@ def _faixa_do_pendente(state: dict[str, Any]) -> tuple[str, str]:
 
     O VAZIO É `""` DE PROPÓSITO: o piloto escreve `—` no lugar de um valor vazio
     (`hefesto_vivo.BOOTSTRAP`, `escrever`), que é a palavra desta casa para *"não
-    há"* — a mesma de `painel.SEM_LEITOR`. Uma faixa com travessão diz "nada
-    pendente"; a frase cravada do desenho dizia uma mudança que não vem.
+    há"* — a mesma de `painel.SEM_LEITOR`. Só que uma faixa tracejada com um
+    travessão solto não diz "nada pendente": diz que alguma coisa faltou, e foi
+    o que se fotografou em 02/09. Por isso, desde 03/09, quem some é a CAIXA
+    inteira, por `pendente-ha` (alvo `classe`, na `.faixa-final`) — e some por
+    `visibility`, não por `display`: o espaço dela é reservado para a tela não
+    pular, que é queixa dela e é promessa escrita na legenda desta aba.
+
+    O `pendente-alvo` MORRE NA PRIMEIRA PINTURA, e isto fica escrito porque é
+    medido: o `<b>` dele está DENTRO do `<div data-campo="pendente">`, e o alvo
+    padrão do piloto é `textContent` — escrever a frase apaga os filhos. A TELA
+    NÃO MENTE POR ISSO: a frase inteira já nomeia o alvo, e é a mesma função do
+    produto que a escreve. O que se perde é o ENDEREÇO, que deixa de existir no
+    DOM depois do primeiro tique. Curá-lo pede uma de duas coisas, e nenhuma é
+    desta aba sozinha: um alvo de pintura que escreva TRECHO de um nó (é do
+    piloto), ou o desenho parar de repetir o alvo dentro da frase (é dela).
     """
     from hefesto_dualsense4unix.app.actions.relancar import (
         MARCADOR_PENDENTE,
@@ -413,27 +675,35 @@ def _aplicar(p: Any, plano: list[tuple[str, dict[str, Any]]]) -> None:
         p.chamar(metodo, **params)
 
 
-#: ACHADO, 01/09/2026 — e ele fica escrito porque muda o que este arquivo pode
-#: prometer: **`pacotes/ponte.chamar` não tem folga de tempo.** Ele chama
-#: `_safe_call(metodo, params)` com o default de **250 ms**, que é o timeout de  # (noqa-acento) id
-#: LEITURA da ponte, e desde o BUG-IPC-READ-NO-TIMEOUT-01 esse prazo cobre
-#: também a resposta (`ipc_bridge._run_call`).
+#: FATO CADUCO, SUBSTITUÍDO — 03/09/2026. Este bloco afirmava que
+#: **`pacotes/ponte.chamar` não tem folga de tempo** e que ele chamava
+#: `_safe_call` com o default de 250 ms, o teto de LEITURA da ponte; e mandava
+#: quem lesse construir a cura em `ponte.py`, *"que não é território desta aba"*.
 #:
-#: Só que trocar de modo não é leitura: cria uinput e faz grab, e o produto
-#: declara **2,0 s** para isso (`mode_transition.MODE_IPC_TIMEOUT_S`, cujo
-#: comentário diz com todas as letras: *"sem folga o toast dizia 'Falha' com o
-#: modo JÁ aplicado"*). O `profile.switch` teve a mesma cicatriz e ganhou 3,0 s
-#: (`ipc_bridge.PROFILE_SWITCH_TIMEOUT_S`).
+#: **A CURA JÁ ESTÁ LÁ, e a medição é de uma linha:** `ponte.TETOS`
+#: (`pacotes/ponte.py`) declara **2,0 s** para os CINCO métodos desta aba —
+#: `native.mode.set`, `gamepad.emulation.set`, `mouse.emulation.restore`,
+#: `coop.sync` e `identity.renumber` —, que é o mesmo valor de
+#: `mode_transition.MODE_IPC_TIMEOUT_S`, e `ponte.teto()` só cai nos 250 ms para
+#: método que não esteja na tabela. Conferido método a método contra
+#: `a01_jogar.METODOS`: os cinco estão lá.
 #:
-#: CONSEQUÊNCIA PARA ESTES GESTOS: um `p.chamar("gamepad.emulation.set", …)`
-#: pode voltar `False` com o modo aplicado. Por isso `_aplicar` **não** levanta
-#: com o retorno — levantar aqui reintroduziria exatamente o defeito que o
-#: `MODE_IPC_TIMEOUT_S` curou, e a tela diria "não deu" sobre um gesto que deu.
-#: A cura de verdade é `chamar` aceitar `timeout=`, e ela mora em `ponte.py`,
-#: que não é território desta aba.
+#: POR QUE ISTO NÃO É NOTA DE RODAPÉ: quem lesse o texto antigo iria construir
+#: uma cura já construída, e a regra desta casa é que fato errado se SUBSTITUI —
+#: mantê-lo ao lado do certo obriga a próxima pessoa a escolher entre duas
+#: afirmações.
+#:
+#: O QUE CONTINUA VALENDO, e é o motivo de `_aplicar` não levantar com o retorno:
+#: a folga é 2,0 s, não infinito. Um `p.chamar("gamepad.emulation.set", …)` ainda
+#: pode voltar `False` com o modo aplicado se o daemon passar do prazo, e
+#: levantar aí reintroduziria o defeito que o `MODE_IPC_TIMEOUT_S` curou — a tela
+#: dizendo "não deu" sobre um gesto que deu. Quem responde por isso é a FAIXA
+#: LARANJA: uma pendência só nasce quando o daemon não alcançou o pedido, e ela
+#: some sozinha quando alcança.
 ACHADO_DO_TIMEOUT = (
-    "ponte.chamar() chama _safe_call com o timeout de LEITURA (250 ms); "
-    "mode_transition.MODE_IPC_TIMEOUT_S declara 2,0 s para trocar de modo."
+    "ponte.TETOS dá 2,0 s aos cinco métodos desta aba, o mesmo valor de "
+    "mode_transition.MODE_IPC_TIMEOUT_S; o teto de 250 ms é só o dos métodos "
+    "fora da tabela."
 )
 
 
