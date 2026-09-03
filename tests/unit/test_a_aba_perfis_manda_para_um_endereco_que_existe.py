@@ -130,10 +130,17 @@ def test_toda_chave_emitida_tem_endereco_ou_esta_declarada(
     ``a10_perfis.pacote`` — é a chave que provocou esta régua — e os dois casos
     reprovam nomeando-a.
     """
+    # O QUE ESPERA O ATO DELA SÓ VALE NA PUBLICADA — 03/09/2026. Um campo que o
+    # gerador acabou de marcar existe na BANCADA e não na publicada, porque
+    # publicar é ato dela. Sem esta linha, marcar campo novo reprovava sempre, e
+    # a única forma de ficar verde era publicar — que é o que uma frente não faz.
+    # Na bancada a lista NÃO desconta nada: lá o endereço tem de estar mesmo.
+    espera = set(a10_perfis.ESPERANDO_A_PUBLICACAO) if publicado else set()
     orfaos = (_emitidas(_como_o_piloto_pinta(_ctx()))
               - _enderecos(publicado)
               - set(pacotes.topo(_ctx()))
-              - set(a10_perfis.SEM_ENDERECO))
+              - set(a10_perfis.SEM_ENDERECO)
+              - espera)
     assert not orfaos, (
         f"o pacote da 10 manda {sorted(orfaos)} e a página "
         f"{'publicada' if publicado else 'da bancada'} não tem onde pôr.\n"

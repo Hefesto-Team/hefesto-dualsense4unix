@@ -320,8 +320,8 @@ CSS = CSS_GLIFO + """
      layout; é um desenho que esta linha não comporta.
 
      Quem identifica a peça agora são as duas coisas que JÁ funcionavam e foram
-     medidas: a barra de 3px de `--plastico` na primeira célula (cor cheia, sem
-     antisserrilhado) e o rótulo `P1 • Cosmic Red • USB`. Se ela quiser o
+     medidas: a barra de 3px na primeira célula (cor cheia, sem
+     antisserrilhado) e o rótulo curto do controle. Se ela quiser o
      desenho de volta, é esta regra e a linha do `svg()` em `linha_do_controle`.
 
      Foi junto o que o desenho carregava e ninguém via: as cinco lâmpadas do
@@ -350,8 +350,35 @@ CSS = CSS_GLIFO + """
      desenho de 32px o modelo mal se distingue, e é a cor que identifica a peça.
      A cor vem de `cor_da_zona()` — do `<style>` que o gerador escreveu no SVG —,
      nunca de um hexadecimal digitado. É a mesma gramática do `tr.ativo` da tabela
-     ao lado: uma barra fina à esquerda diz de quem é a linha. */
-  .tab.miuda td:first-child{box-shadow:inset 3px 0 0 var(--plastico,transparent)}
+     ao lado: uma barra fina à esquerda diz de quem é a linha.
+
+     ELA DEIXOU DE SER `box-shadow` NA CÉLULA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
+     O `--plastico` morava no `<tr>`, **sem endereço nenhum**, e por isso ficava com
+     a cor do DESENHO enquanto o nome ao lado já vinha do aparelho: a linha dizia
+     `P1 • White • USB` com a barra do controle do mockup. Agora a barra é um
+     elemento PRÓPRIO e endereçado por `guarda.plastico`, e quem escreve a cor é
+     o pacote `a10_perfis`, com o que leu da mesa.
+
+     O ENDEREÇO NÃO SE ESCREVE NESTE COMENTÁRIO: a régua do gerador conta as
+     ocorrências do atributo na página, e um comentário que o soletra some com a
+     conta. (Custou uma reprovação, e ela estava certa.)
+
+     O ALVO É `cor`, E NÃO `fundo`, e a escolha é medida: o `escrever()` do piloto
+     guarda `#ae335a` em `style.background` e lê `rgb(174, 51, 90)` de volta —
+     a comparação nunca casa e o contador soma uma pintura por tique, para sempre
+     (é o defeito que já tirou a `largura` do travessão). O ramo `cor` ESCREVE e
+     depois COMPARA, então é o único idempotente para hexadecimal.
+
+     `background:currentColor` COM `color:transparent` NO PADRÃO: sem cor lida, o
+     piloto escreve `''`, o inline cai, o `transparent` da classe volta e a barra
+     SOME. Campo sem informação não mostra nada — regra dela.
+
+     A CAIXA É A MESMA: `inset 3px 0 0` pinta os 3px da esquerda da caixa de borda
+     da célula, e é exatamente o que `position:absolute;left:0;top:0;bottom:0` dá
+     num `<td>` posicionado, que não tem borda. Zero pixel de diferença. */
+  .tab.miuda td:first-child{position:relative}
+  .gd-nome .pl{position:absolute;left:0;top:0;bottom:0;width:3px;
+               background:currentColor;color:transparent}
   /* O LUGAR SEM CONTROLE — a cor é a do `.vazio` da Gatilhos (`--comment`), que é
      a página que ela mandou copiar. O contraste está medido no comentário da
      régua: aqui o fundo é `--panel`, não o `--app-bg` da Jogar, e foi por olhar
@@ -450,14 +477,23 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
     #
     # A BARRA DA COR DO PLÁSTICO SAI. Ela identifica a peça que está ali; sem
     # peça, ela afirmaria uma cor que ninguém pode conferir na tela.
+    #
+    # ELA MORA NUM ELEMENTO PRÓPRIO E ENDEREÇADO desde 03/09/2026
+    # (IDENTIDADE-VEM-DE-CIMA): o `--plastico` estava no `<tr>`, sem endereço, e
+    # a linha ficava com a cor do DESENHO enquanto o `guarda.nome` ao lado já
+    # trazia o aparelho — a fita dizia `P1 · White · USB` e a barra continuava
+    # vermelha. Quem escreve `guarda.plastico` é `pacotes/a10_perfis.py`; o valor
+    # daqui é só o desenho, e o produto o cobre no primeiro tique.
     nome = rotulo(c, "curta") if na_mesa else f'P{c["jogador"]}{SEPARADOR}Desconectado'
     plastico = cor_da_zona(c['cor']) if na_mesa else "transparent"
     dica = (f"{c['nome']} — {quantos}." if na_mesa else
             f"Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: "
             f"quando o P{c['jogador']} voltar, ele encontra o que você deixou.")
     return f'''                  <tr data-hef-uniq="{endereco}"{'' if na_mesa else ' class="fora"'}
-                      style="--plastico:{plastico}" title="{dica}">
+                      title="{dica}">
                     <td class="gd-nome">
+                      <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
+                            style="color:{plastico}"></span>
                       <span data-hef="guarda.nome">{nome}</span>
                     </td>
                     <td class="gd-pecas"><span class="gls">{"".join(grupos)}</span></td>
@@ -683,19 +719,23 @@ LEGENDA = f'''<div class="nota">
       vibração e alto-falante —, e mais nenhum: modo, mouse, teclado e microfone são do
       perfil inteiro, e a classe escreve o motivo de cada um.</li>
     <li><b>Apagado não é falta, é herança.</b> Campo vazio quer dizer "sem opinião": aquele
-      controle usa a seção global do perfil. O <b>White</b> está assim de propósito —
+      controle usa a seção global do perfil. O <b>P4</b> está assim de propósito —
       é o caso mais comum, e uma tela que acende tudo nos quatro ensinaria o contrário.</li>
     <li><b>O desenho do controle saiu da linha, e a cor ficou.</b> Ele tinha 32px e
       <span class="marca">os quatro liam como quatro cinzas</span>: medido no 1x desta tela,
-      o par mais próximo — Cosmic Red e Galactic Purple — se distinguia em <b>33 pixels de
+      o par de cores mais próximo se distinguia em <b>33 pixels de
       736</b>. A cor do plástico aqui é um traço fino, e a 32px o traço vale um terço de
       pixel. Crescer não cabia: no tamanho em que a cor se lê, as quatro linhas pedem 209px
       de altura e a tabela tem 132px. Quem diz de quem é a linha agora é a <b>barra de 3px
-      na cor do plástico</b> e o rótulo <b>P1 • Cosmic Red • USB</b> — os dois já estavam lá.
+      na cor do plástico</b> e o <b>rótulo curto</b> do controle — os dois já estavam lá.
       A cor continua saindo do <code>&lt;style&gt;</code> que o
       <code>gerar_cores_do_dualsense.py</code> escreveu, por <code>cor_da_zona()</code>:
       <b>nenhum hexadecimal digitado aqui</b>. Os glifos são os mesmos
       <code>assets/glyphs/</code> das outras abas.</li>
+    <li><b>A barra e o rótulo dizem o controle DELA, não o do desenho.</b> A barra virou um
+      elemento endereçado (<code>guarda.plastico</code>) e quem escreve a cor é
+      <code>a10_perfis</code>, com o que leu da mesa — a mesma leitura da fita do topo.
+      Sem cor lida, a barra <b>some</b>: campo sem informação não mostra nada.</li>
     <li><b>O cabeçalho conta a mesa</b>: {len(PERFIS)} perfis e
       {COM_AJUSTE} de {len(MESA)} controles com ajuste próprio neste perfil.</li>
   </ul>
@@ -820,6 +860,18 @@ def _conferir(html: str) -> None:
                f"o rótulo de mesa do P{c['jogador']} continua na tela — ele não está na mesa")
     exigir(html.count('class="fora"') == len(fora),
            "os lugares desconectados perderam a classe que os apaga")
+
+    # A IDENTIDADE VEM DE CIMA — 03/09/2026. A cor do plástico da linha tem de
+    # ter ENDEREÇO: sem ele a barra fica com a cor do DESENHO enquanto o
+    # `guarda.nome` ao lado já traz o aparelho, e a linha passa a dizer duas
+    # coisas ao mesmo tempo. A régua cobra as três metades — o endereço existe,
+    # o alvo é o idempotente, e nenhum `--plastico` cravado voltou ao miolo.
+    exigir(html.count('data-hef="guarda.plastico"') == len(MESA),
+           f"não são {len(MESA)} barras com endereço `guarda.plastico` na tabela por controle")
+    exigir(html.count('data-hef-alvo="cor"') == len(MESA),
+           "a barra do plástico perdeu o alvo `cor` — o `fundo` soma uma pintura por tique")
+    exigir("--plastico:" not in html.split('class="miolo"')[-1],
+           "voltou um `--plastico` cravado no miolo — identidade de aparelho sem endereço")
 
     # A DIVISÓRIA HORIZONTAL, que ela mandou remover DESTE trecho.
     exigir(".campos > .campo::after" not in html,
