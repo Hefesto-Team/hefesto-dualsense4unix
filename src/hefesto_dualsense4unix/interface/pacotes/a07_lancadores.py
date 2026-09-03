@@ -97,8 +97,23 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     integrations/prontuario_dos_jogos.jogos_instalados   os `appmanifest` do disco
     integrations/prontuario_dos_jogos.pontes_confirmadas quem já sabe por onde entrar
     integrations/jogos_locais.pastas_de_atalhos          onde moram os `.desktop`
+    integrations/steam_launch_options.with_steam_closed  fechar · aplicar · reabrir
     app/actions/launch_wrapper_dialog.load_dismissed_appids  quem ela dispensou
+    app/actions/launch_wrapper_dialog.add_dismissed_appid    o "não perguntar"
     app/actions/launch_wrapper_dialog.remove_dismissed_appid o "voltar a perguntar"
+    app/actions/launch_wrapper_dialog.extract_steam_appid    o jogo em foco
+    app/actions/home_actions.wrapper_banner_text         o aviso do jogo aberto
+    app/actions/daemon_actions.format_steam_janela_recusa a recusa de fechar
+    daemon/launch_env.launch_session_appid               1º degrau da escada
+    daemon/launch_env.read_last_run_marker               3º degrau da escada
+
+O QUE ENTROU EM 03/09/2026, e é PONTE e não código novo: a interface nova
+jogava fora `gamepad_emulation.wrapper_used` — a chave que o daemon publica a
+cada tique e que a GTK vira banner em DUAS abas, sem clique nenhum. `grep -rn
+wrapper_used src/hefesto_dualsense4unix/interface/` só achava o dublê de
+perfis. Junto vieram as duas metades que faltavam do mesmo assunto: o botão que
+DISPENSA o aviso (a lista existia e só a GTK a escrevia) e o caminho para
+`with_steam_closed`, sem o qual o `Consertar` recusa sempre na mesa dela.
 
 `carona_do_wrapper.passada()` responderia parte disto — mas ela ESCREVE no
 `localconfig.vdf` quando há o que repor, e uma PINTURA que escreve em disco a
@@ -140,6 +155,11 @@ from . import Contexto, registrar
 #: ela clica em Consertar — e o gesto invalida o cache na hora, então o TTL não
 #: precisa ser curto para a tela parecer viva.
 TTL_S = 20.0
+
+#: Quanto tempo o "posso fechar a Steam?" fica ARMADO depois do primeiro
+#: clique. Ver :func:`fechar_a_steam_e_repor` — é o consentimento que
+#: `with_steam_closed` EXIGE de quem a chama, na forma que uma página tem.
+SEGUNDOS_PARA_CONFIRMAR = 20.0
 
 #: O `abrir-lancador` SAIU DAQUI em 03/09/2026 — decisão 17 dela, e o motivo
 #: escrito nesta linha era a pergunta errada: *"o daemon não tem método para
@@ -228,6 +248,36 @@ class _Vigia:
 #: um cache dentro dele releria o disco duas vezes por segundo — que é
 #: exatamente o que esta classe existe para impedir.
 VIGIA = _Vigia()
+
+
+@dataclasses.dataclass(frozen=True)
+class _Portoes:
+    """Os DOIS portões do reparo, lidos na MESMA passada do censo.
+
+    POR QUE ELES NÃO ENTRAM NA `Leitura`, e a razão é de território: a
+    `desenho_dos_lancadores.Leitura` é do DESENHO — ela é fria de propósito,
+    para o gerador rodar sem o produto, e o desenho não é arquivo desta frente.
+    Aqui eles são de outra natureza: não vão para a tela como texto, decidem
+    QUAL BOTÃO o cartão da Steam oferece.
+
+    POR QUE NÃO SE MEDE NA HORA DE DESENHAR O BOTÃO: `steam_running()` e
+    `steam_game_running()` varrem `/proc`, e o orçamento do tique é de 500 ms
+    para a janela inteira — é a mesma razão que pôs o resto do disco na
+    :class:`_Vigia`. O `censo_do_wrapper` já os mede a cada leitura, então o
+    dado sai de graça: o que faltava era guardá-lo.
+
+    QUEM ESCREVE É `_ler_do_disco`, e só ele — na thread da vigia. Quem lê é a
+    pintura, na thread da janela. Dois bools trocados entre threads não pedem
+    trava: a escrita é de um objeto inteiro, e ler o de antes por meio tique
+    mostra um botão a mais ou a menos por 500 ms, nunca um estado inventado.
+    """
+
+    jogo_aberto: bool = False
+    steam_aberta: bool = False
+
+
+#: O que a última leitura viu dos dois portões. Ver :class:`_Portoes`.
+PORTOES = _Portoes()
 
 
 def _porque(motivo: str) -> str:
@@ -373,12 +423,29 @@ def _ler_do_disco() -> desenho.Leitura:
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
+    global PORTOES
+
     onde_estao = _onde_estao_os_lancadores()
 
     try:
         censo = sw.censo_do_wrapper(anotar=False)
     except Exception as erro:  # o disco dela não pode derrubar a aba
+        # OS PORTÕES VOLTAM AO PADRÃO, e não ficam com o valor de antes: sem
+        # censo não há resposta sobre a Steam, e um `steam_aberta=True` velho
+        # acenderia o botão que fecha a Steam dela com base numa leitura que
+        # falhou. O padrão não oferece o botão, que é a recusa honesta.
+        PORTOES = _Portoes()
         return desenho.Leitura(erros=(str(erro),), onde_estao=onde_estao)
+
+    # O `getattr` É TOLERÂNCIA A DUBLÊ, e não a um motor que mudou de nome: as
+    # réguas desta casa montam censos de mentira com os campos que cada uma
+    # precisa, e um censo sem os dois portões é um censo que não respondeu —
+    # o padrão `False` não oferece o botão que fecha a Steam, que é a recusa
+    # honesta. Quem impede que um RENOME morra em silêncio aqui é
+    # `test_o_censo_de_verdade_responde_pelos_dois_portoes`, contra a `Censo`
+    # de verdade: sem ele o botão sumiria para sempre sem nada acusar.
+    PORTOES = _Portoes(jogo_aberto=bool(getattr(censo, "jogo_aberto", False)),
+                       steam_aberta=bool(getattr(censo, "steam_aberta", False)))
 
     try:
         instalados = len(pdj.jogos_instalados())
@@ -413,6 +480,164 @@ def _ler_do_disco() -> desenho.Leitura:
 def _valores(lida: desenho.Leitura | None) -> dict[str, str]:
     """Os endereços da aba inteira, montados pelo desenho."""
     return desenho.Quadro(lancadores=desenho.cartoes(lida)).valores()
+
+
+# ---------------------------------------------------------------------------
+# O QUE O DAEMON JÁ DIZ, E A INTERFACE NOVA JOGAVA FORA
+#
+# A LEI 0, e ela é dela: *"no gtk eu já deixei praticamente tudo pronto…
+# não temos que recriar nada. só aproveitar o que foi feito e integrar ao novo
+# desenho."*
+#
+# O QUE FALTAVA, medido em 03/09/2026: o daemon publica
+# `gamepad_emulation.wrapper_used` a cada tique — *"há jogo aberto AGORA e ele
+# não passou pelo wrapper"* — e a GTK acende um banner com isso em DUAS abas,
+# sem clique nenhum (`home_actions.wrapper_banner_text`, consumido pela Início
+# e pela Status). Em `interface/` a chave não tinha um leitor: `grep -rn
+# wrapper_used` só achava o dublê de perfis. A mesma pergunta, no HTML, exigia
+# que ela suspeitasse do problema, saísse do jogo, abrisse esta aba e clicasse
+# em Detectar.
+#
+# NADA DISTO É REGRA NOVA. A decisão é a função pura da GTK, a dispensa é a
+# lista que a GTK escreve, e o appid sai do mesmo `extract_steam_appid` que o
+# lembrete da GTK usa. O que esta aba acrescenta é a TELA.
+# ---------------------------------------------------------------------------
+def _o_jogo_em_foco(state: dict[str, Any] | None) -> str:
+    """O appid do jogo Steam em foco AGORA, ou `""`. **Não toca o disco.**
+
+    `window_detect_last_class` já vem no `state` que a pintura recebe, e quem o
+    traduz é `launch_wrapper_dialog.extract_steam_appid` — a MESMA função que
+    decide o lembrete da GTK, com a conversão `int`→`str` que ela documenta (um
+    `==` entre `int` e `str` seria sempre falso, em silêncio).
+
+    ESTA É A SEGUNDA EVIDÊNCIA da escada de :func:`detectar`, e aqui ela é a
+    ÚNICA de propósito: as outras duas leem marker em disco, e a pintura roda
+    duas vezes por segundo. Quem paga disco é o gesto, que roda em thread.
+    """
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+
+    if not isinstance(state, dict):
+        return ""
+    return lwd.extract_steam_appid(state.get("window_detect_last_class")) or ""
+
+
+def aviso_do_jogo_aberto(
+    state: dict[str, Any] | None, lida: desenho.Leitura | None
+) -> tuple[str, str]:
+    """`(html do aviso, appid)` — ou `("", "")` quando não há o que avisar.
+
+    A DECISÃO É DA GTK, INTEIRA: `home_actions.wrapper_banner_text` só acende
+    no ``False`` LITERAL de `wrapper_used` (``None``/ausente = sem jogo aberto,
+    ou daemon antigo sem o campo → **nunca** alarme falso por payload
+    incompleto). Reescrever esse teste aqui seria a segunda cópia de uma regra
+    que já tem dono — e a cópia envelheceria calada no dia em que o daemon
+    ganhasse um quarto valor.
+
+    O TEXTO É O DELA, VERBATIM (`home_actions.WRAPPER_MISSING_TEXT`), e sai da
+    própria função. Ver `espera_a_palavra_dela`: a última frase dele manda
+    copiar as opções *"na aba Sistema"*, e no desenho novo não há esse botão em
+    aba nenhuma — quem decide o texto é ela, não esta frente.
+
+    A DISPENSA DELA É RESPEITADA, e é a metade que faz o par existir: se ela
+    clicou em *"Não perguntar para este jogo"*, o aviso não volta para aquele
+    appid. A lista sai da `Leitura` que a vigia já leu (`lida.dispensados`) —
+    reler o JSON a cada tique seria disco na thread da janela, que é o que a
+    :class:`_Vigia` existe para impedir.
+
+    SEM O APPID O AVISO CONTINUA, e é decisão: `wrapper_used is False` é o
+    daemon afirmando que HÁ jogo aberto sem o wrapper. Calar porque a
+    `window_detect_last_class` ainda não casou trocaria um aviso verdadeiro por
+    silêncio — o que some é só o botão de dispensar, que sem appid não teria
+    sobre o que agir.
+    """
+    from hefesto_dualsense4unix.app.actions import home_actions as ha
+
+    texto = ha.wrapper_banner_text(state)
+    if not texto:
+        return "", ""
+    appid = _o_jogo_em_foco(state)
+    if appid and lida is not None and appid in {a for a, _ in lida.dispensados}:
+        return "", ""
+    return f"<b>{_texto(texto)}</b><br>", appid
+
+
+#: O rótulo do botão que dispensa o aviso. É o do diálogo da GTK, palavra por
+#: palavra (`launch_wrapper_dialog.py:435`) — a mesma lista, o mesmo gesto, o
+#: mesmo texto.
+DISPENSAR = "Não perguntar para este jogo"
+
+#: O nome do gesto que fecha a Steam, e o `data-v` que ARMA a segunda metade.
+#: Ver :func:`fechar_a_steam_e_repor`.
+FECHAR = "consertar-fechando-a-steam"
+CONFIRMO = "steam:confirmo"
+
+#: OS DOIS RÓTULOS SAEM DO DIÁLOGO DA GTK, e não de mim: o título do
+#: consentimento (`daemon_actions._pedir_para_fechar_a_steam`, o `titulo`
+#: padrão) vira o primeiro botão, e o `rotulo_ok` dele vira o segundo. O
+#: diálogo que a janela velha mostra é, aqui, um botão que muda de rótulo.
+PERGUNTA_DA_STEAM = "Posso fechar a Steam por uns 20 segundos?"
+CONFIRMA_A_STEAM = "Fechar e continuar"
+
+#: Até quando o "posso fechar a Steam?" está armado (`time.monotonic`). Zero =
+#: desarmado. Ver :func:`fechar_a_steam_e_repor`.
+_ARMADO_ATE = 0.0
+
+
+def _armado() -> bool:
+    return time.monotonic() < _ARMADO_ATE
+
+
+def com_o_que_o_daemon_diz(
+    lancadores: list[desenho.Lancador],
+    state: dict[str, Any] | None,
+    lida: desenho.Leitura | None,
+) -> list[desenho.Lancador]:
+    """O cartão da Steam com o AVISO VIVO e os botões que o estado permite.
+
+    TRÊS COISAS ENTRAM AQUI, e nenhuma delas é regra nova:
+
+    1. **o aviso do jogo aberto sem o wrapper** — a decisão e o texto são de
+       `home_actions.wrapper_banner_text` (ver :func:`aviso_do_jogo_aberto`);
+    2. **"Não perguntar para este jogo"** — o botão que escreve na lista que a
+       GTK já lia e que a interface nova só sabia DESFAZER. Até hoje o par
+       estava pela metade aqui: `voltar-a-perguntar` existia desde 02/09 e
+       nada nesta casa punha um appid na lista pela tela nova;
+    3. **"Posso fechar a Steam por uns 20 segundos?"** — a parede que a GTK
+       derrubou em HONESTIDADE-STEAM-01 e que o HTML tinha reerguido. Na mesa
+       dela o caso comum é a Steam ABERTA, e nesse estado o `Consertar` recusa
+       sempre; este botão é o caminho que a janela velha tem e esta não tinha.
+
+    POR QUE AQUI E NÃO NO DESENHO: `dataclasses.replace` sobre o cartão que o
+    desenho montou mantém UM dono para a forma do cartão. O desenho decide o
+    que o cartão É; esta função acrescenta o que só o produto vivo sabe — e o
+    dia em que `desenho_dos_lancadores` ganhar campo para isto, o que sai daqui
+    é uma linha.
+
+    O BOTÃO DE FECHAR A STEAM SÓ APARECE ONDE ELE FUNCIONA: há o que repor, a
+    Steam está aberta e **nenhum jogo** está aberto. Com jogo aberto o produto
+    não fecha a Steam por nada (`stop_steam` mataria o jogo e o progresso não
+    salvo), então oferecer o botão ali seria oferecer uma recusa.
+    """
+    if not lancadores:
+        return lancadores
+    steam = lancadores[0]
+    aviso, appid = aviso_do_jogo_aberto(state, lida)
+    acoes = steam.acoes
+    if aviso and appid:
+        acoes = (*acoes, desenho.Acao(DISPENSAR, "", "nao-perguntar", appid))
+    if (lida is not None and lida.reparaveis
+            and PORTOES.steam_aberta and not PORTOES.jogo_aberto):
+        acoes = (
+            *acoes,
+            desenho.Acao(CONFIRMA_A_STEAM, "verde", FECHAR, CONFIRMO)
+            if _armado()
+            else desenho.Acao(PERGUNTA_DA_STEAM, "", FECHAR, desenho.STEAM),
+        )
+    if aviso == "" and acoes is steam.acoes:
+        return lancadores
+    fora = list(lancadores)
+    fora[0] = dataclasses.replace(steam, diz=aviso + steam.diz, acoes=acoes)
+    return fora
 
 
 # ---------------------------------------------------------------------------
@@ -556,15 +781,21 @@ def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
     }
 
 
-def _resposta(lida: desenho.Leitura | None) -> dict[str, Any]:
+def _resposta(lida: desenho.Leitura | None,
+              state: dict[str, Any] | None = None) -> dict[str, Any]:
     """O que um gesto devolve para a tela — a mesma carga da pintura.
 
     Um gesto que trocasse só os campos deixaria a moldura do tique anterior:
     "Consertar" leva o cartão de `NÃO CHEGAM` a `CHEGAM` e a borda laranja
     ficaria até o próximo tique. Meio segundo de tela mentindo continua sendo
     tela mentindo.
+
+    O `state` É OPCIONAL E ELE IMPORTA: sem ele o aviso vivo do jogo aberto
+    sumiria da tela pelo tempo entre o gesto e o tique seguinte, e o botão
+    "Não perguntar para este jogo" sumiria junto — o clique dela apagaria por
+    meio segundo justamente o aviso sobre o qual ela está agindo.
     """
-    return _pintura(desenho.cartoes(lida))
+    return _pintura(com_o_que_o_daemon_diz(desenho.cartoes(lida), state, lida))
 
 
 @registrar("07-lancadores.html")
@@ -582,7 +813,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     controles que não estão na mesa dela. `ctx.mesa` é a mesma leitura que o
     cabeçalho usa; daqui em diante a fita sai dela. Ver :func:`fita_html`.
     """
-    carga = _resposta(VIGIA.agora())
+    carga = _resposta(VIGIA.agora(), ctx.state)
     valores = carga["mesa"]
     fora: dict[str, Any] = dict(valores)
     fora["blocos"] = {**carga["blocos"], SELETOR_DA_FITA: fita_html(ctx.mesa)}
@@ -613,7 +844,7 @@ def procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     que responde calado.
     """
     VIGIA.esquecer()
-    return _resposta(VIGIA.ler())
+    return _resposta(VIGIA.ler(), ctx.state)
 
 
 @gesto("07-lancadores.html", "consertar")
@@ -638,7 +869,7 @@ def consertar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     if status in (sw.REPARO_ADIADO_JOGO, sw.REPARO_ADIADO_STEAM, sw.REPARO_ERRO):
         raise RuntimeError(sw.frase_do_aviso(censo) or
                            "não consegui repor o atalho de inicialização")
-    return _resposta(VIGIA.ler())
+    return _resposta(VIGIA.ler(), ctx.state)
 
 
 @gesto("07-lancadores.html", "ver-o-que-impede")
@@ -658,10 +889,11 @@ def ver_o_que_impede(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     from hefesto_dualsense4unix.integrations import prontuario_dos_jogos as pdj
 
     censo = pdj.levantar_censo()
-    return _com_outra_frase(desenho._e(censo.frase()))
+    return _com_outra_frase(desenho._e(censo.frase()), ctx.state)
 
 
-def _com_outra_frase(diz: str) -> dict[str, Any]:
+def _com_outra_frase(diz: str,
+                     state: dict[str, Any] | None = None) -> dict[str, Any]:
     """A aba de novo, com o corpo do cartão da Steam trocado.
 
     OS DOIS GESTOS QUE RESPONDEM COM TEXTO passam por aqui, e não montam o
@@ -677,37 +909,110 @@ def _com_outra_frase(diz: str) -> dict[str, Any]:
     depois, sem saber que esta linha existe.
     """
     lida = VIGIA.agora()
-    cartoes = desenho.cartoes(lida)
+    cartoes = com_o_que_o_daemon_diz(desenho.cartoes(lida), state, lida)
     cartoes[0] = dataclasses.replace(cartoes[0], diz=diz)
     return _pintura(cartoes)
+
+
+#: A TERCEIRA EVIDÊNCIA responde por um jogo que **já fechou**, e por isso ela
+#: tem frase própria: dizer "está aberto agora" sobre um jogo fechado seria a
+#: tela afirmando o que o produto não mediu. Ver :func:`a_escada_do_jogo`.
+FECHADO = "fechado"
+ABERTO = "aberto"
+
+
+def a_escada_do_jogo(state: dict[str, Any] | None) -> tuple[int | None, str]:
+    """`(appid, "aberto"|"fechado")` — as TRÊS evidências da GTK, nesta ordem.
+
+    ELA É A DA JANELA VELHA, e a ordem não é minha: `daemon_actions`
+    (`_appid_do_jogo_ativo`) já respondia esta pergunta com as três, da mais
+    forte para a mais tolerante, e a interface nova usava UMA.
+
+    1. `launch_env.launch_session_appid()` — jogo lançado PELO wrapper e ainda
+       vivo (marker no disco + pid vivo). Autoritativa e imune a alt-tab, que é
+       exatamente o que acontece aqui: para clicar nesta aba ela SAI do jogo;
+    2. `window_detect_last_class` do estado do daemon, traduzida pelo
+       `extract_steam_appid` do lembrete. Cobre o jogo aberto SEM o wrapper —
+       o que a primeira, por construção, não alcança;
+    3. o marker `last_run` cru — o ÚLTIMO jogo lançado pelo wrapper, **mesmo já
+       fechado**. É o caso que a GTK documenta com todas as letras: *"o jogo
+       não funcionou, ela fechou, e só então veio reclamar"*.
+
+    O QUE ISTO CURA, medido em 03/09/2026: o `detectar` usava só
+    `steam_game_running_appid()`, que exige o jogo RODANDO enquanto ela clica na
+    janela do Hefesto — justamente o momento em que ela saiu do jogo. Não era
+    que ele não detectasse: ele detectava pior, e falhava no caso comum.
+
+    A ESCADA É DAQUI E O ESTADO VEM DE FORA: a GTK faz uma chamada de IPC no
+    degrau 2 (`daemon_state_full()`); aqui o `state` já chegou pelo `Contexto`,
+    então o degrau sai de graça. Um IPC dentro de um gesto de tela seria uma
+    segunda ida ao daemon para saber o que a janela acabou de receber.
+
+    NUNCA LEVANTA — os três degraus leem disco, e disco falha. Um degrau que
+    explode não pode comer os outros dois: cada um vai no seu `try`, como a GTK
+    faz com o `contextlib.suppress`.
+    """
+    from hefesto_dualsense4unix.daemon.launch_env import (
+        launch_session_appid,
+        read_last_run_marker,
+    )
+
+    try:
+        vivo = launch_session_appid()
+        if vivo is not None:
+            return vivo, ABERTO
+    except Exception:  # pragma: no cover - marker ilegível
+        pass
+    foco = _o_jogo_em_foco(state)
+    if foco:
+        try:
+            return int(foco), ABERTO
+        except ValueError:  # pragma: no cover - `extract_steam_appid` já filtra
+            pass
+    try:
+        marker = read_last_run_marker()
+        if marker is not None:
+            return marker[0], FECHADO
+    except Exception:  # pragma: no cover - marker ilegível
+        pass
+    return None, FECHADO
 
 
 @gesto("07-lancadores.html", "detectar")
 def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Detectar o jogo que está aberto": diz QUAL é, ou recusa dizendo.
 
-    `steam_game_running_appid` lê a `/proc` procurando a linha
-    `SteamLaunch AppId=` — a mesma fonte que o `launch_wrapper_dialog` usa para
-    decidir se mostra o lembrete, e a única do produto que responde "que jogo
-    está rodando agora".
+    A ESCADA É A DA GTK, e ela substituiu a evidência única — ver
+    :func:`a_escada_do_jogo`, que traz a ordem e o que cada degrau alcança.
+    Aqui fica só o que a tela diz de cada resposta.
+
+    A FRASE DO JOGO FECHADO É DIFERENTE, e tinha de ser: o terceiro degrau
+    responde por um jogo que **já não está rodando**, e reaproveitar o "está
+    aberto agora" faria a tela afirmar o que o produto não mediu — que é o
+    defeito que esta aba inteira existe para matar. Ela está em
+    `espera_a_palavra_dela`: é texto novo, e texto de tela é dela.
 
     O QUE ELE NÃO FAZ: criar o perfil. Isso é da aba Perfis (`a10_perfis`), e
     ter dois caminhos para o mesmo disco é como duas telas passam a discordar.
     """
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
-    appid = slo.steam_game_running_appid()
+    appid, quando = a_escada_do_jogo(ctx.state)
     if appid is None:
         raise RuntimeError(
             "Não achei jogo nenhum aberto agora. Abra o jogo de onde for, "
             "volte aqui e clique de novo.")
     lida = VIGIA.agora()
     tem = lida is not None and str(appid) in lida.com_wrapper
+    nome = f"<b>{desenho._e(slo.rotulo_do_jogo(appid))}</b>"
+    abertura = (f"{nome} está aberto agora e " if quando == ABERTO else
+                f"{nome} foi o último jogo que passou pelo atalho do Hefesto, e "
+                "já fechou. Ele ")
     return _com_outra_frase(
-        f"<b>{desenho._e(slo.rotulo_do_jogo(appid))}</b> está aberto agora e "
+        abertura
         + ("<b>abre pelo atalho do Hefesto</b>." if tem else
            "<b>não abre pelo atalho do Hefesto</b> — clique em Consertar com o "
-           "jogo e a Steam fechados."))
+           "jogo e a Steam fechados."), ctx.state)
 
 
 def _appid_do_clique(o: dict[str, Any], nome: str) -> str:
@@ -734,7 +1039,7 @@ def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     slo.marcar_jogo_sem_wrapper(_appid_do_clique(o, "tirar-daqui"))
     VIGIA.esquecer()
-    return _resposta(VIGIA.ler())
+    return _resposta(VIGIA.ler(), ctx.state)
 
 
 @gesto("07-lancadores.html", "voltar-a-usar")
@@ -749,7 +1054,7 @@ def voltar_a_usar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     slo.desmarcar_jogo_sem_wrapper(_appid_do_clique(o, "voltar-a-usar"))
     VIGIA.esquecer()
-    return _resposta(VIGIA.ler())
+    return _resposta(VIGIA.ler(), ctx.state)
 
 
 @gesto("07-lancadores.html", "voltar-a-perguntar")
@@ -776,7 +1081,113 @@ def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
             "`launch_dialog_dismissed.json` não aceitou a escrita — o lembrete "
             "continua desligado para ele.")
     VIGIA.esquecer()
-    return _resposta(VIGIA.ler())
+    return _resposta(VIGIA.ler(), ctx.state)
+
+
+@gesto("07-lancadores.html", "nao-perguntar")
+def nao_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Não perguntar para este jogo": põe o appid no `launch_dialog_dismissed.json`.
+
+    A METADE DE IDA DO PAR, e ela estava faltando AQUI — não no motor.
+    `launch_wrapper_dialog.add_dismissed_appid` existe desde que o lembrete da
+    GTK nasceu, e o `voltar-a-perguntar` desta aba (02/09) desfazia uma lista
+    que **só a janela velha sabia escrever**. Enquanto isso valesse, a lista de
+    dispensados da interface nova ficava CONGELADA no que a GTK tivesse posto,
+    e no dia em que a GTK saísse de cena a metade de ida morreria junto.
+
+    ELE SÓ APARECE COM O AVISO VIVO ACESO, que é o mesmo gatilho do botão da
+    GTK: o diálogo dela nasce quando há jogo aberto sem o wrapper, e é ali que
+    "não perguntar para ESTE jogo" tem sobre o que agir. Ver
+    :func:`com_o_que_o_daemon_diz`.
+
+    A CONFIRMAÇÃO É LIDA DE VOLTA, e não é zelo: `add_dismissed_appid` **engole
+    a exceção** de propósito (ele roda no tique da GTK, onde derrubar a janela
+    por um disco cheio seria pior que o defeito). Aqui ele roda no CLIQUE DELA,
+    e um clique que falha calado é o defeito mais caro desta casa — o aviso
+    voltaria no tique seguinte e o segundo clique pareceria o primeiro. É a
+    mesma razão pela qual o `remove_dismissed_appid` devolve `bool`; como o
+    `add` não devolve, quem confere é esta releitura.
+    """
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+
+    appid = _appid_do_clique(o, "nao-perguntar")
+    lwd.add_dismissed_appid(appid)
+    if appid not in lwd.load_dismissed_appids():
+        raise RuntimeError(
+            "Não consegui guardar este jogo na lista de dispensados. O arquivo "
+            "`launch_dialog_dismissed.json` não aceitou a escrita — o aviso vai "
+            "voltar no próximo jogo aberto sem o atalho.")
+    VIGIA.esquecer()
+    return _resposta(VIGIA.ler(), ctx.state)
+
+
+@gesto("07-lancadores.html", FECHAR)
+def fechar_a_steam_e_repor(ctx: Contexto, o: dict[str, Any],
+                           p: Any) -> dict[str, Any]:
+    """A parede que a GTK derrubou, e que o HTML tinha reerguido.
+
+    O QUE ELE FAZ: pede a Steam fechada, repõe o atalho, e reabre a Steam —
+    UMA vez cada, por `steam_launch_options.with_steam_closed`, que é o MESMO
+    fluxo provado que os três botões da janela velha usam desde
+    HONESTIDADE-STEAM-01. Nenhuma linha daqui fecha, aplica ou reabre nada:
+    quem faz é o motor, e a ordem dos portões dele não é negociável (jogo
+    aberto antes de tudo — `steam -shutdown` com jogo aberto MATA o jogo).
+
+    POR QUE ELE PRECISOU EXISTIR, medido em 03/09/2026: com a Steam aberta o
+    `consertar` desta aba recusa **sempre** (`reparar_ou_adiar` devolve
+    `REPARO_ADIADO_STEAM`), e a mesa dela quase sempre tem a Steam aberta —
+    ela clica no Hefesto justamente enquanto joga. O produto sabia fechar a
+    Steam desde 25/07 e a interface nova não tinha um caminho para
+    `with_steam_closed`; era a mesma parede, de novo, com outra tela.
+
+    O CONSENTIMENTO EM DOIS CLIQUES, e ele é EXIGÊNCIA do motor, não desenho
+    meu: a docstring do `with_steam_closed` diz que *"o consentimento NÃO mora
+    aqui: quem chama tem de ter perguntado antes"*, porque o `stop_steam()`
+    escala para `pkill -TERM` e depois `-KILL` depois de 30 s. A janela velha
+    pergunta num diálogo; uma página pergunta com o botão. O primeiro clique
+    ARMA e devolve o cartão com o botão trocado — o título do diálogo da GTK
+    vira o primeiro rótulo, o `rotulo_ok` dela vira o segundo.
+
+    E OS DOIS GUARDAS SÃO INDEPENDENTES DE PROPÓSITO. O segundo clique só vale
+    se trouxer o `data-v` :data:`CONFIRMO`, que **só existe no cartão já
+    armado**, e só dentro de :data:`SEGUNDOS_PARA_CONFIRMAR`. É o que impede a
+    régua automática (`--prova-gesto`) de fechar a Steam DELA para provar que
+    sabe clicar: ela clica o que o DOM tinha, e o DOM tinha a pergunta. Um
+    guarda só bastaria hoje; dois é o que sobrevive a uma régua que releia o
+    DOM entre cliques.
+
+    A RECUSA É A FRASE DA GTK, palavra por palavra
+    (`daemon_actions.format_steam_janela_recusa`) — ela já cobre os três
+    desfechos do contrato e já diz, nos dois primeiros, que **nada foi mudado**.
+    """
+    global _ARMADO_ATE
+
+    from hefesto_dualsense4unix.app.actions.daemon_actions import (
+        format_steam_janela_recusa,
+    )
+    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    if str(o.get("v") or "").strip() != CONFIRMO:
+        _ARMADO_ATE = time.monotonic() + SEGUNDOS_PARA_CONFIRMAR
+        return _resposta(VIGIA.agora(), ctx.state)
+    if not _armado():
+        _ARMADO_ATE = 0.0
+        raise RuntimeError(
+            f"Passaram-se mais de {int(SEGUNDOS_PARA_CONFIRMAR)} segundos desde "
+            "a pergunta — não fechei nada. Clique de novo para começar.")
+    _ARMADO_ATE = 0.0
+
+    janela, resultado = slo.with_steam_closed(sw.reparar_ou_adiar)
+    VIGIA.esquecer()
+    recusa = format_steam_janela_recusa(janela)
+    if recusa is not None:
+        raise RuntimeError(recusa)
+    status, censo, _ = resultado
+    if status in (sw.REPARO_ADIADO_JOGO, sw.REPARO_ADIADO_STEAM, sw.REPARO_ERRO):
+        raise RuntimeError(sw.frase_do_aviso(censo) or
+                           "não consegui repor o atalho de inicialização")
+    return _resposta(VIGIA.ler(), ctx.state)
 
 
 @gesto("07-lancadores.html", desenho.ABRIR)
@@ -851,8 +1262,12 @@ METODOS: set[str] = set()
 
 PAGINA = "07-lancadores.html"
 #: SUBIU DE 6 PARA 7 em 02/09/2026, com o "Voltar a perguntar" (decisão dela);
-#: e de 7 PARA 8 em 03/09/2026, com o "Abrir o lançador" (decisão 17 dela).
-PISO_DA_ABA = 8
+#: de 7 PARA 8 em 03/09/2026, com o "Abrir o lançador" (decisão 17 dela); e de
+#: 8 PARA 10 no mesmo dia, com as duas faltas de paridade que a medição das dez
+#: abas nomeou — o "Não perguntar para este jogo" (a metade de ida do par, que
+#: só a GTK sabia escrever) e o "Posso fechar a Steam por uns 20 segundos?" (o
+#: caminho para `with_steam_closed`, que a interface nova não tinha).
+PISO_DA_ABA = 10
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
 #: `PonteDeMentira` e cobra QUAL função da ponte o gesto chamou. Um gesto que
@@ -863,12 +1278,18 @@ PISO_DA_ABA = 8
 #: o efeito cobrado NO ARQUIVO — que é a prova mais forte, não a mais fraca.
 PROVAS: list[dict[str, Any]] = []
 
-#: TODOS OS OITO, e não por preguiça: o `state_full` do daemon não tem UMA
+#: TODOS OS DEZ, e não por preguiça: o `state_full` do daemon não tem UMA
 #: chave sobre a Steam, sobre o `localconfig.vdf`, sobre a lista de recusados ou
 #: sobre a de dispensados. O efeito destes botões é o DISCO e a TELA — e os dois
 #: têm régua. O `abrir-lancador` entrou em 03/09/2026 pelo motivo mais forte de
 #: todos: o efeito dele é uma JANELA da Steam, que o daemon não vê nem por
 #: acidente.
+#:
+#: O `consertar-fechando-a-steam` PARECE a exceção e não é: ele muda
+#: `gamepad_emulation.wrapper_used` — mas só no próximo jogo que ela abrir, e
+#: nunca no eco de um gesto. Um `state_full` lido logo depois responde o mesmo
+#: que respondia antes, e uma régua que cobrasse eco dele reprovaria o botão
+#: por estar CERTO.
 SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
            "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
-           "abrir-lancador")
+           "abrir-lancador", "nao-perguntar", FECHAR)
