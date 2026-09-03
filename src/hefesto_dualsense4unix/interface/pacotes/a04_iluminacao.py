@@ -131,24 +131,47 @@ def _hex(rgb: Any) -> str:
 #: Os quatro números que a página oferece, e o gerador desenha.
 NUMEROS = (1, 2, 3, 4)
 
-#: O ENDEREÇO DO ANELZINHO do dono, dentro de um botão da fileira.
-#:
-#: ELE NÃO É UM CAMPO QUE ALGUÉM PINTA, e é por isso que o nome tem ponto — a
-#: gramática que a `10-perfis` já usa para um pedaço que mora DENTRO de um bloco
-#: trocado inteiro (`perfis.linha.nome`). O que o `<i>` declara aqui é de quem
-#: ele é: o pai é `data-campo="players" data-hef-alvo="html"`, e o produto
-#: reescreve a fileira toda a cada tique, com `_cor_do_plastico` da mesa VIVA.
-#:
-#: SEM ELE A RÉGUA DA IDENTIDADE ACUSA O ANEL, e acusa com razão pela letra
-#: dela: `--plastico:#hex` é julgado no elemento que o carrega, porque *"um pai
-#: endereçado não dá ao filho o direito de trazer cor congelada"*. A exceção é
-#: exatamente esta — o pai não "dá direito", ele REESCREVE o filho —, e um
-#: endereço é a única forma de dizer isso no HTML.
+#: A RAIZ DO ENDEREÇO DO ANELZINHO do dono, dentro de um botão da fileira.
 #:
 #: UM NOME PRÓPRIO, e nunca `players`: o pintor acha por
 #: `[data-campo=X],[data-papel=X],[data-hef=X]` com `querySelectorAll`, então um
 #: `<i>` que repetisse `players` receberia a fileira INTEIRA como `innerHTML`.
 ANEL_DO_DONO = "players.dono"
+
+#: O ALVO QUE ALCANÇA A COR DO PLÁSTICO — o mesmo que a moldura da `05-vibracao`
+#: usa desde 03/09/2026. `escrever()` faz `el.style.setProperty('--plastico', …)`
+#: e APAGA a variável no vazio, que é a regra dela: campo sem informação não
+#: mostra nada.
+ALVO_DO_PLASTICO = "plastico"
+
+
+def endereco_do_anel(n: int) -> str:
+    """O endereço do anel do dono do número ``n``, dentro de UMA coluna.
+
+    POR QUE O NÚMERO ENTRA NO ENDEREÇO — 03/09/2026, e é o que fez este anel
+    deixar de ser cor congelada. Os quatro anéis de uma coluna repetiam
+    `players.dono`, e o pintor escreve por `querySelectorAll`: um valor só
+    pintaria os quatro com a MESMA cor, quando cada um é de um dono diferente.
+    Com o número no nome, o campo por controle (`colunas[uniq]`) endereça cada
+    anel sozinho — e o `data-hef-alvo="plastico"` é o que o alcança.
+
+    ERA ENDEREÇO SEM ALVO, E ISSO É METADE DE UMA FECHADURA. O `<i>` declarava
+    `data-hef` e mais nada, contando com o pai (`data-campo="players"`, alvo
+    `html`) para reescrevê-lo; a régua da identidade acusava, e acusava com
+    razão pela letra dela — *"um pai endereçado não dá ao filho o direito de
+    trazer cor congelada"*, porque `escrever()` escreve no elemento que ACHOU.
+    Agora o anel tem os dois, e a régua do mockup vê o selo da visita nele.
+    """
+    return f"{ANEL_DO_DONO}.{int(n)}"
+
+
+#: O ENDEREÇO DE UM ITEM DO ANTES/DEPOIS do rodapé — ver `item_da_troca`.
+#:
+#: ELE É UMA LISTA, e é o único jeito honesto: a seção desenha DOIS por controle
+#: (a linha do ANTES e a do DEPOIS) e N muda com a mesa. O pintor distribui uma
+#: lista pelos elementos de mesmo endereço, na ordem do documento — a mesma
+#: forma com que a `08-conexoes` mostra os achados do exame.
+ITEM_DA_TROCA = "troca.item"
 
 #: O ENDEREÇO DO DESENHO DO CONTROLE, e o alvo que ele exige.
 #:
@@ -690,14 +713,16 @@ def um_botao_de_player(nome: str, meu: int, n: int,
     O terceiro caía no primeiro, e a diferença viajava só no `title`.
     """
     cor = _cor_do_plastico(str(dono.get("cor") or "")) if dono else ""
+    #: O ENDEREÇO E O ALVO ANDAM JUNTOS — endereço sem alvo é meia fechadura, e
+    #: era o que este anel tinha. Ver `endereco_do_anel`.
+    onde = (f'data-hef="{endereco_do_anel(n)}" '
+            f'data-hef-alvo="{ALVO_DO_PLASTICO}"')
     if dono is None:
         anel = ""
     elif cor:
-        anel = (f'<i class="dono" data-hef="{ANEL_DO_DONO}" '
-                f'style="--plastico:{cor}"></i>')
+        anel = f'<i class="dono" {onde} style="--plastico:{cor}"></i>'
     else:
-        anel = (f'<i class="dono incerta" data-hef="{ANEL_DO_DONO}" '
-                f'style="{ANEL_INCERTO}"></i>')
+        anel = f'<i class="dono incerta" {onde} style="{ANEL_INCERTO}"></i>'
     if n == meu:
         dica = f"O {nome} É o Player {n} — é o número dele hoje."
     elif dono is None:
@@ -906,6 +931,14 @@ def item_da_troca(nome: str, numero: int, plastico: str,
     `blocos:` que o produto reescreve com a mesa viva —, e o endereço é o que
     diz isso.
 
+    E O ENDEREÇO GANHOU O ALVO EM 03/09/2026, porque só ele NÃO bastava. O
+    `blocos:` reescreve o miolo por `document.querySelector`, e nem a régua da
+    identidade nem a do mockup têm como saber disso lendo o HTML — a troca mora
+    no JavaScript, não na marcação. Com `data-hef-alvo="plastico"` o pintor
+    escreve a variável no PRÓPRIO item (`cores_da_troca` manda a lista, na
+    ordem do documento), e o que era invisível às duas réguas passa a deixar o
+    selo da visita.
+
     O ANEL TRACEJADO CHEGA AQUI TAMBÉM — 03/09/2026, e pela mesma razão do
     vizinho (`ANEL_INCERTO`). Todo item desta seção É um controle na mesa, então
     aqui não há "livre" a confundir; o que havia era o anel SUMINDO. Sem
@@ -923,9 +956,40 @@ def item_da_troca(nome: str, numero: int, plastico: str,
     anel = ('<i class="dono"></i>' if plastico
             else f'<i class="dono incerta" style="{ANEL_INCERTO}"></i>')
     return (f'<span class="troca-item{" mexeu" if mexeu else ""}"'
-            f' data-hef="troca.item"{veste}>'
+            f' data-hef="{ITEM_DA_TROCA}"'
+            f' data-hef-alvo="{ALVO_DO_PLASTICO}"{veste}>'
             f'{anel}<span class="np">P{numero}</span>'
             f'<span>{nome}</span>{_luzinhas(numero)}</span>')
+
+
+def _ordem_da_troca(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A ordem em que a seção da troca desenha os controles.
+
+    UM DONO PARA A ORDEM, e ele existe porque duas coisas dependem dela: o HTML
+    que `secao_da_troca` monta e a LISTA que `cores_da_troca` manda ao pintor.
+    O pintor distribui a lista pelos itens na ordem do DOCUMENTO — se as duas
+    ordens divergissem, cada controle receberia a cor do vizinho, calado.
+    """
+    return sorted(mesa, key=lambda c: int(c.get("jogador") or 0))
+
+
+def cores_da_troca(mesa: list[dict[str, Any]]) -> list[str]:
+    """A cor do plástico de cada `.troca-item`, na ordem do documento.
+
+    SÃO DUAS LINHAS COM OS MESMOS CONTROLES — o ANTES e o DEPOIS —, e o que
+    muda entre elas é o número, nunca a casca: a troca dá um número a outro
+    aparelho, não repinta plástico nenhum. Por isso a lista é a mesma sequência
+    duas vezes.
+
+    VAZIA QUANDO NÃO HÁ TROCA A CONTAR: com menos de dois controles a seção não
+    desenha item nenhum (ver `secao_da_troca`), e uma lista com valor a mais
+    escreveria num item que não existe.
+    """
+    ordenada = _ordem_da_troca(mesa)
+    if len(ordenada) < 2:
+        return []
+    cores = [_cor_do_plastico(str(c.get("cor") or "")) for c in ordenada]
+    return cores + cores
 
 
 def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
@@ -947,7 +1011,7 @@ def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
     regra dela: campo sem informação não mostra nada.
     """
     r = recuo
-    ordenada = sorted(mesa, key=lambda c: int(c.get("jogador") or 0))
+    ordenada = _ordem_da_troca(mesa)
     cabeca = f"{r}<h2>{TITULO_DA_TROCA}</h2>"
     if len(ordenada) < 2:
         quantos = "nenhum controle" if not ordenada else "um controle só"
@@ -1204,9 +1268,29 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: também: as do HTML publicado estão CONGELADAS do desenho e
             #: nomeiam controle por transporte que já mudou.
             "players": fileira_de_players(nome, n, donos),
+            #: O ANEL DE CADA NÚMERO, e ele vem DEPOIS do `players` de propósito
+            #: — a mesma lição que `ENDERECO_DA_INCERTA` pagou uma linha acima.
+            #: O `players` troca o miolo da fileira inteira (alvo `html`) e
+            #: RECRIA os quatro `<i>`; escrever a cor antes seria escrevê-la em
+            #: elementos que a linha de cima está prestes a destruir — e com
+            #: eles iria o selo da visita, que é o que prova à régua do mockup
+            #: que este endereço não é morto.
+            #:
+            #: A COR É A DO DONO DO NÚMERO, nunca a da coluna: o anel diz de
+            #: QUEM é o número que este botão oferece. Um número livre não tem
+            #: `<i>` nenhum, e o `""` não acha onde pousar — calado e correto.
+            **{endereco_do_anel(k):
+               _cor_do_plastico(str((donos.get(k) or {}).get("cor") or ""))
+               for k in NUMEROS},
         }
     return {
         "colunas": colunas,
+        #: A COR DE CADA ITEM DO ANTES/DEPOIS, na ordem em que a seção os
+        #: desenha. Ela vem por CAMPO e não só pelo `blocos:` abaixo porque o
+        #: `blocos:` é invisível às duas réguas desta casa — a troca mora no
+        #: JavaScript, e o que se lê no HTML é um `--plastico` com endereço sem
+        #: alvo, que é a forma exata da cor congelada. Ver `cores_da_troca`.
+        ITEM_DA_TROCA: cores_da_troca(ctx.mesa),
         "perfil": ctx.state.get("active_profile") or "",
         "sem_dono": {},
         #: O ANTES/DEPOIS DO RODAPÉ, com a mesa VIVA — ver `secao_da_troca`.

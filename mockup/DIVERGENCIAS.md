@@ -411,6 +411,57 @@ seção daqui**: a aba deixou de estar em trabalho.
     faz `el.textContent = "white"` num `<svg>` — o desenho de 146 px some e vira
     a palavra. A guarda desta aba **falha fechada** e barra isso;
   * o **`--publicar 04`**, que é ato dela.
+- **03/09/2026 · AS ÚLTIMAS DOZE CORES CRAVADAS DESTA ABA, e nenhuma delas
+  mudou um pixel do que ela aprovou.** O portão da cor acusava doze
+  `--plastico:#hex` na `04-iluminacao`, todos em dois lugares:
+
+  | quantos | onde | o que é |
+  | --- | --- | --- |
+  | 4 | `.players .dono` | o anelzinho do dono, dentro de um botão de número |
+  | 8 | `.troca-item` | os itens do "Trocar o número: o antes e o depois" |
+
+  **OS DOIS TINHAM ENDEREÇO E NENHUM TINHA ALVO — meia fechadura.** O `achar()`
+  do piloto encontra pelo endereço; o `data-hef-alvo` é o que diz o que escrever
+  quando ele chega lá. Os dois contavam com o PAI: a fileira é reescrita inteira
+  pelo alvo `html`, e a seção da troca pelo `blocos:`. **Nenhuma das duas coisas
+  se lê no HTML** — a primeira é do pai, a segunda mora no JavaScript —, então
+  para as réguas aquilo era cor congelada, e era acusado com razão pela letra
+  dela: *"um pai endereçado não dá ao filho o direito de trazer cor congelada"*.
+
+  **A cura é o par completo**, e ela não muda a cena: cada anel ganhou endereço
+  PRÓPRIO (`players.dono.N`, um por número — quatro anéis com um endereço só
+  receberiam a MESMA cor, e cada um é de um dono diferente), o item da troca
+  ficou com `troca.item`, e os dois pedem `data-hef-alvo="plastico"`. O pacote
+  emite os valores: os anéis por coluna, **depois** do `players` que os recria,
+  e a troca como LISTA, na ordem em que a seção desenha os itens.
+
+  **MEDIDO NO WEBKIT DESTA MÁQUINA**, com a mesa forçada a **Nova Pink** e
+  **Astro Bot** — dois modelos que o desenho desta aba não tem:
+
+  ```
+    players.dono.1  --plastico #e35b8c  borda computada rgb(227, 91, 140)  selo 1
+    players.dono.2  --plastico #e8e4dc  borda computada rgb(232, 228, 220)  selo 1
+    troca.item x4   #e35b8c / #e8e4dc                                       selo 1
+  ```
+
+  **O QUE ELA VÊ HOJE, sem publicar:** nada muda. A página publicada não tem os
+  alvos, e o portão continua contando os doze lá — a bancada da 04 está em
+  **zero**. O produto recebe no `--publicar 04`, junto com o resto desta aba.
+
+  **UMA COISA A SABER SOBRE O ANTES/DEPOIS:** a `.nota` inteira é escondida
+  dentro da janela (`gui/ponte_da_tela.FOLHA_DA_CASA` põe
+  `.nota{display:none !important}`) — ela é a legenda que ela lê ao abrir o
+  `mockup/04-iluminacao.html` no navegador. A cura vale para o arquivo, que é o
+  que ela olha e o que o portão mede; dentro do app, o campo pinta um bloco que
+  ninguém vê. Não é motivo para deixar a cor do mockup ali: o arquivo é um só.
+- **03/09/2026 · A ARMADILHA QUE QUASE DEU MORDIDA VERDE**, e ela pega qualquer
+  frente: uma mordida que só TROCA A ORDEM de duas linhas deixa o arquivo com o
+  **mesmo tamanho**, e o Python valida o `.pyc` por `(mtime, tamanho)`. Caindo
+  no mesmo segundo da escrita anterior, ele roda o bytecode **CURADO** e a
+  mordida passa verde sem ter sido desfeita. Medido nesta frente: a terceira
+  mordida deu 15 verdes; com `PYTHONDONTWRITEBYTECODE=1` e o `__pycache__`
+  apagado, reprovou na hora. **Toda mordida apaga o `__pycache__` antes de
+  medir.**
 ## 05-vibracao.html
 
 - **03/09/2026 · O DESENHO DO CONTROLE PASSOU A SER O DELA.** A lei: *"os svgs
