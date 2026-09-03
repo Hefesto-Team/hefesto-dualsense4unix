@@ -1763,9 +1763,9 @@
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
                    CSS: endereçá-lo trocava os dois botões por um travessão. -->
               <span class="rota mic-modo">
-                <button class="on" data-gesto="mic-modo" data-mic-modo="virtual"
+                <button class="on" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
                   title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="" data-gesto="mic-modo" data-mic-modo="nativo"
+                <button class="" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
                   title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
               </span>
 
@@ -1785,8 +1785,8 @@
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
             </div>
             <div class="rota">
-              <button class="on" data-gesto="rota" data-rota="jogo">Sons do jogo</button>
-              <button class="" data-gesto="rota" data-rota="pc">Todo o som do PC</button>
+              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
+              <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
             </div>
           </div>
         </div>
@@ -2111,9 +2111,9 @@
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
                    CSS: endereçá-lo trocava os dois botões por um travessão. -->
               <span class="rota mic-modo">
-                <button class="" data-gesto="mic-modo" data-mic-modo="virtual"
+                <button class="" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
                   title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
-                <button class="" data-gesto="mic-modo" data-mic-modo="nativo"
+                <button class="" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
                   title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
               </span>
 
@@ -2133,8 +2133,8 @@
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
             </div>
             <div class="rota">
-              <button class="" data-gesto="rota" data-rota="jogo">Sons do jogo</button>
-              <button class="on" data-gesto="rota" data-rota="pc">Todo o som do PC</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
+              <button class="on" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
             </div>
           </div>
         </div>
