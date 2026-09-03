@@ -250,8 +250,8 @@ import math
 import os
 import selectors
 import shutil
-import struct
 import signal
+import struct
 import subprocess
 import threading
 import time
@@ -591,7 +591,7 @@ def abrir_fluxo(fonte: str, uniq: str = "") -> Fluxo | None:
             stderr=subprocess.DEVNULL,
             env=_ambiente_c(),
             bufsize=0,
-            preexec_fn=_morrer_com_o_pai,  # noqa: PLW1509 - ver a nota abaixo
+            preexec_fn=_morrer_com_o_pai,
         )
     except (OSError, ValueError) as exc:
         logger.warning("nivel_do_mic_nao_abriu", fonte=fonte, err=str(exc))
