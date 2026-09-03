@@ -705,7 +705,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 for campo, rot in (("l3", ROTULO_DO_CLIQUE["l"]),
                                    ("r3", ROTULO_DO_CLIQUE["r"]))
             },
-            # OS TRÊS DA BANCADA. Eles só entram quando a página publicada tem
+            # OS QUATRO DA BANCADA. Eles só entram quando a página publicada tem
             # onde pô-los — ver `_so_se_a_pagina_tiver`, logo acima.
             **_so_se_a_pagina_tiver({
                 # O PONTINHO DO TOUCHPAD, decisão dela de 02/09 (item 15): *"o
