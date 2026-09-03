@@ -679,8 +679,29 @@ def test_o_desenho_dela_so_mudou_no_que_esta_declarado() -> None:
     de publicar —, e a `scripts/check_identidade_vem_de_cima.py` cobra que
     nenhuma cor de plástico fique congelada na página.
 
-    MORDIDA: mude uma palavra visível de um `<option>` no gerador e regere —
-    este caso reprova, com a palavra na mensagem.
+    **O NOME PROMETIA O QUE O CORPO NÃO FAZIA — corrigido em 03/09/2026.** Ele
+    se chama *"só mudou no que está DECLARADO"* e nunca abriu a declaração:
+    exigia igualdade de texto sempre, e por isso ficava vermelho no instante em
+    que alguém fazia a coisa certa — adiantar a bancada e declarar a divergência
+    em `mockup/DIVERGENCIAS.md`, que é o processo desta casa. Reprovava o
+    processo, não o defeito.
+
+    Em 03/09 a `08-conexoes` foi declarada duas vezes (o `MIGRA-08-01`, com dez
+    endereços de pintura, e o desenho do controle que passou a vestir o
+    aparelho), e a declaração diz o que ela vê hoje sem publicar. A régua passou
+    a ler a MESMA fonte que o portão `desenho-aprovado` lê — `declaradas()`, do
+    próprio script —, e a cobrar cada caso no seu estado:
+
+    * **não declarada** → as palavras têm de bater. É a mordida original, e é a
+      que pega a palavra trocada de fininho;
+    * **declarada** → a bancada pode estar à frente, e o que se cobra é que a
+      declaração exista de verdade. Some no dia do `--publicar`, e a igualdade
+      volta a ser exigida sozinha.
+
+    MORDIDAS (duas): mude uma palavra visível de um `<option>` no gerador,
+    regere e tire a seção da `DIVERGENCIAS.md` — reprova com a palavra na
+    mensagem; ou deixe a seção lá com o corpo vazio — reprova dizendo que
+    declaração sem razão não é declaração.
     """
     import importlib.util
 
@@ -695,9 +716,26 @@ def test_o_desenho_dela_so_mudou_no_que_esta_declarado() -> None:
 
     bancada = _texto_visivel(mod.o_que_se_ve(onde.BANCADA / "08-conexoes.html"))
     publicado = _texto_visivel(mod.o_que_se_ve(onde.PUBLICADO / "08-conexoes.html"))
-    assert bancada == publicado, (
-        "a bancada da 08 passou a DIZER uma coisa que o publicado não diz — e "
-        "palavra de tela é decisão dela, não de quem gera a página.")
+
+    if "08-conexoes.html" not in mod.declaradas():
+        assert bancada == publicado, (
+            "a bancada da 08 passou a DIZER uma coisa que o publicado não diz — "
+            "e palavra de tela é decisão dela, não de quem gera a página. Se "
+            "isso é adiantamento com razão, declare em `mockup/DIVERGENCIAS.md`.")
+        return
+
+    # DECLARADA: a bancada pode estar à frente, e é a razão escrita que faz a
+    # diferença entre adiantar com método e adiantar por descuido. Cobrar o
+    # FORMATO da razão faria a régua brigar com quem escreve bem (a lição do
+    # `SERVE_UM_LADO_SO`), então cobra-se que exista corpo — não como ele é.
+    texto = (RAIZ / "mockup/DIVERGENCIAS.md").read_text(encoding="utf-8")
+    corpo = texto.split("\n---\n", 1)[-1]
+    secao = corpo.split("## 08-conexoes.html", 1)[-1].split("\n## ", 1)[0]
+    assert secao.strip(), (
+        "a `08-conexoes.html` está declarada em `mockup/DIVERGENCIAS.md` com a "
+        "seção VAZIA. Um título sem razão isenta a aba do portão sem contar a "
+        "ninguém o que mudou — que é o oposto do que a declaração existe para "
+        "fazer.")
 
 
 def test_a_divergencia_do_quarto_selo_esta_declarada() -> None:
