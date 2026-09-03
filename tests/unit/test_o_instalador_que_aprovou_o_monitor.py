@@ -54,6 +54,7 @@ Nenhum teste deste arquivo toca o áudio da máquina.
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -311,13 +312,94 @@ def test_o_wp_fix_documenta_o_exit_3() -> None:
     assert "3 = a fonte padrão é um MONITOR" in cabecalho
 
 
-def test_install_trata_o_exit_3_sem_declarar_reeleicao() -> None:
-    """rc 3 não é falha do drop-in — mas também não é "fonte padrão reeleita"."""
+#: O passo do install que decide o microfone padrão do sistema.
+MARCADOR_DO_PASSO_10 = 'step "10/11"'
+
+
+def _bloco_do_passo(marcador: str) -> str:
+    """Do `step "N/11"` até a régua (`# ---…`) que abre o passo seguinte.
+
+    Substitui a fatia de 2000 caracteres que esta régua usava: um comprimento
+    cravado é um fato que envelhece sozinho — bastava o passo 10 crescer para a
+    régua passar a medir meio passo, sem avisar ninguém.
+    """
     texto = _texto_do_install()
-    inicio = texto.find('step "10/11"')
-    bloco = texto[inicio : inicio + 2000]
-    assert '"${rc:-0}" -eq 3' in bloco
-    assert "a fonte padrão ainda não é um microfone" in bloco
+    inicio = texto.index(marcador)
+    fim = re.search(r"^# -{10,}", texto[inicio:], re.MULTILINE)
+    assert fim is not None, f"fim do bloco {marcador} não encontrado"
+    return texto[inicio : inicio + fim.start()]
+
+
+def _roda_o_passo_10(
+    tmp_path: Path, *, rc_do_wp_fix: int, padrao: str = ONBOARD_DELA
+) -> subprocess.CompletedProcess[str]:
+    """Executa o passo 10 REAL do install, com o wp-fix e o doctor dublados.
+
+    O `ROOT_DIR` aponta para uma raiz de mentira em `tmp`, então os dois scripts
+    que o passo chama são os dublês — o único papel deles aqui é devolver o
+    código de saída do cenário. O `pactl` é o dublê do arquivo, e por isso a
+    conferência final do microfone também roda sem tocar o áudio da máquina.
+    """
+    raiz = tmp_path / "raiz"
+    (raiz / "scripts").mkdir(parents=True, exist_ok=True)
+    wp = raiz / "scripts" / "fix_wireplumber_default_source.sh"
+    wp.write_text(f"#!/bin/sh\nexit {rc_do_wp_fix}\n", encoding="utf-8")
+    wp.chmod(0o755)
+    doctor = raiz / "scripts" / "doctor.sh"
+    doctor.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    doctor.chmod(0o755)
+
+    bloco = _bloco_do_passo(MARCADOR_DO_PASSO_10)
+    script = (
+        "set -euo pipefail\n"
+        'step() { printf "STEP %s | %s\\n" "$1" "$2"; }\n'
+        'warn() { printf "WARN: %s\\n" "$*"; }\n'
+        "WITH_WIREPLUMBER_DISABLE_MIC=0\n"
+        "WITH_WIREPLUMBER_FIX=1\n"
+        f"ROOT_DIR='{raiz}'\n"
+        f"{bloco}\n"
+    )
+    return subprocess.run(
+        ["bash", "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env=_dubla_pactl(tmp_path, padrao=padrao),
+    )
+
+
+def test_install_trata_o_exit_3_sem_declarar_reeleicao(tmp_path: Path) -> None:
+    """rc 3 não é falha do drop-in — mas também não é "fonte padrão reeleita".
+
+    A RÉGUA ANTERIOR CRAVAVA A FORMA, e por isso reprovou a melhora: ela exigia
+    o literal `"${rc:-0}" -eq 3` no texto do install. Em 01/09/2026 (d405d0d0)
+    nasceu um terceiro desfecho — o `2`, "o DualSense é a ÚNICA fonte de captura
+    com porta usável" —, o `if [[ … -eq 3 ]]` virou `case "${rc:-0}" in`, e a
+    régua passou a reprovar um install que trata o rc 3 melhor do que antes.
+
+    Agora ela EXECUTA o passo com o wp-fix dublado em cada código de saída e lê
+    o que foi para a tela. Que forma o shell usa para despachar deixou de ser
+    assunto da régua; o que ela mede é o que ela promete no nome.
+    """
+    monitor = _roda_o_passo_10(tmp_path / "rc3", rc_do_wp_fix=3)
+    assert monitor.returncode == 0, monitor.stderr
+    # não é falha do drop-in:
+    assert "drop-in do WirePlumber instalado" in monitor.stdout, monitor.stdout
+    assert "falhou" not in monitor.stdout, monitor.stdout
+    # e não é reeleição:
+    assert "a fonte padrão ainda não é um microfone" in monitor.stdout, monitor.stdout
+    assert "reeleita" not in monitor.stdout, (
+        "o rc 3 voltou a cair no desfecho genérico e declarou uma eleição que "
+        f"não houve: {monitor.stdout}"
+    )
+
+    # O contraste que impede o teste de passar por ausência: com rc 0 a frase da
+    # reeleição TEM de aparecer. Sem isto, apagar o texto do install deixaria o
+    # `not in` acima verde para sempre.
+    eleicao = _roda_o_passo_10(tmp_path / "rc0", rc_do_wp_fix=0)
+    assert eleicao.returncode == 0, eleicao.stderr
+    assert "fonte padrão reeleita" in eleicao.stdout, eleicao.stdout
 
 
 def test_nenhum_teste_daqui_toca_o_audio_da_maquina() -> None:
