@@ -1951,7 +1951,12 @@ _confere_no_produto(_JULGAR, [
 #: é f-string e por isso vive aqui, com o portão acima guardando as duas pontas
 #: dela contra uma reescrita silenciosa.
 def _virgula(n):
-    return f"{n:.1f}".replace(".", ",")
+    # O DONO ÚNICO É `app.fala_do_mapa.formata_pt_br` — 26/08/2026. Aqui havia
+    # a conta reescrita, byte a byte igual à dele. A saída não muda; o que muda
+    # é que no dia em que o arredondamento mudar, esta linha não fica para trás.
+    from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
+
+    return formata_pt_br(n)
 
 
 OS_DOIS_RELOGIOS = (
