@@ -2525,11 +2525,44 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     prof = loader.load_profile(nome)
     novo = _com_os_gatilhos(prof, uniq, dos_lados)
     if novo is not None:
-        perfil.gravar_e_reaplicar(novo, ctx, p)
+        _gravar_so_o_gatilho(novo, p)
     # O RECIBO É A LISTA NOVA. O tique seguinte a traria de qualquer jeito, mas
     # meio segundo entre salvar e ver o nome aparecer é meio segundo em que ela
     # não sabe se o botão fez algo.
     return {"blocos": _blocos_do_pronto(ctx)} if apelido else None
+
+
+def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
+    """Grava o perfil no disco — e NÃO reaplica o perfil inteiro no aparelho.
+
+    ELE NÃO PODE SER O `perfil.gravar_e_reaplicar`, e o motivo foi MEDIDO em
+    03/09/2026, clicando este botão no produto instalado com um DualSense no
+    cabo. `gravar_e_reaplicar` termina em `p.profile_switch(...)`, que manda o
+    daemon aplicar o perfil INTEIRO — barra de luz, LEDs de jogador, tudo. A
+    prova, com um gesto só (`--prova-clique guardar`) e a barra apagada antes:
+
+        antes   lightbar_on: false · lightbar_rgb: [0, 0, 0]
+        depois  lightbar_on: true  · lightbar_rgb: [0, 0, 255]
+
+    Ou seja: ela desliga a barra na aba Iluminação, vai aos Gatilhos, clica
+    "Guardar esse efeito" — e a barra ACENDE de novo, sem nada na tela dizendo
+    que isso ia acontecer. É *a tela afirmando o que não é*, na forma mais cara:
+    um botão de escopo estreito ("esse efeito") desfazendo escolha viva dela em
+    OUTRA aba.
+
+    E A REAPLICAÇÃO NÃO ERA NECESSÁRIA PARA NADA. Esta aba aplica NA HORA — é a
+    decisão dela de 01/09, *"clicar já aplica"*: quando ela chega a este botão,
+    `modo` e `pronto` já mandaram o efeito ao aparelho por `_aplicar`. O
+    `profile_switch` reaplicava por cima um gatilho que já estava lá, e levava
+    junto nove seções que ninguém pediu.
+
+    O `launch_env.refresh` FICA, e é a metade que tem de sobreviver: sem ele o
+    perfil novo só chega ao jogo no próximo start do daemon. Ele relê o que os
+    jogos vão receber e não escreve no aparelho.
+    """
+    loader = perfil._com_o_src()
+    loader.save_profile(novo, origem="interface-nova")
+    p.chamar("launch_env.refresh")
 
 
 def _salvar_o_meu(apelido: str, dos_lados: dict[str, dict[str, Any]]) -> None:
