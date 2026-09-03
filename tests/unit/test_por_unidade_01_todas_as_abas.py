@@ -250,9 +250,17 @@ class _StoreSemTrava:
 def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
     """Duas unidades, dois volumes, um perfil só — o pedido dela, literal.
 
-    O global escreve em todo mundo (``uniq=None`` = broadcast) e cada override
-    reescreve apenas a SUA peça POR CIMA. A ordem é a entrega: invertê-la faria
-    o global apagar a peça.
+    O global escreve primeiro e cada override reescreve apenas a SUA peça POR
+    CIMA. A ordem é a entrega: invertê-la faria o global apagar a peça.
+
+    **FATO ERRADO, SUBSTITUÍDO — 03/09/2026.** Esta linha dizia que o global
+    escrevia *"em todo mundo (``uniq=None`` = broadcast)"*. Medido:
+    ``set_speaker_volume(uniq=None)`` chama ``_handle_for(None)``
+    (``core/backend_pydualsense.py:4148``), que devolve **o handle PRIMÁRIO**
+    (``:4611-4623``) — um só. A família de áudio inteira compartilha esse
+    ``_handle_for`` e não tem broadcast, ao contrário da luz e da vibração. A
+    lista abaixo não muda: ela sempre mediu as CHAMADAS, e é o applier que
+    escolhe o handle.
 
     MORDIDA: apagar a linha ``self.apply_controller_speakers(...)`` de
     ``_apply_appliers`` (``profiles/manager.py``) — sobra só a chamada global e
@@ -291,7 +299,7 @@ def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
     manager.apply_controller_speakers(profile, relatorio=relatorio)
 
     assert chamadas == [
-        (120, False, None),  # o global, em todo mundo
+        (120, False, None),  # o global, sem endereço — cai no handle primário
         (40, False, BRANCO),
         (220, False, PRETO),
     ]
@@ -422,11 +430,20 @@ def test_o_rascunho_intocado_nao_semeia_campo_novo(
 
 @pytest.mark.parametrize(
     "secao",
-    ["mode", "mouse", "key_bindings", "mic", "suppress_desktop_emulation"],
-    ids=["modo", "mouse", "teclado", "microfone", "modo_jogo"],
+    ["mode", "mouse", "key_bindings", "suppress_desktop_emulation"],
+    ids=["modo", "mouse", "teclado", "modo_jogo"],
 )
 def test_o_que_ainda_nao_tem_caminho_nao_entra_no_mapa_por_peca(secao: str) -> None:
-    """Os cinco esperam um caminho de aplicação por unidade — e até lá, recusa.
+    """Os quatro esperam um caminho de aplicação por unidade — e até lá, recusa.
+
+    **NOTA DATADA — 03/09/2026.** Eram CINCO: o ``mic`` saiu desta lista porque
+    ele ENTROU no esquema (MIC-QUINTO-AJUSTE-01, decisão dela — o microfone é o
+    quinto ajuste por controle). A recusa não sumiu, ela desceu de seção para
+    CAMPO: ``ControllerMicOverride`` aceita o ``muted``, cuja escada carrega o
+    ``uniq`` em todo degrau, e recusa na borda o ``volume`` e o
+    ``button_toggles_system``, com a medição de cada um na mensagem. Quem cobre
+    os dois é
+    ``tests/unit/test_perfil_o_microfone_e_o_quinto_ajuste_por_controle.py``.
 
     **NOTA DATADA — 02/09/2026.** Esta docstring dizia que os cinco *"não são
     da peça de plástico"*, e ela derrubou a frase: o perfil por controle é
