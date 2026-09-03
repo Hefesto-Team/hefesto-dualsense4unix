@@ -360,6 +360,16 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     # tela só tem quantos gamepads virtuais existem. Ele pergunta "há algum?".
     backends = ("vpad",) * max(0, vpads)
     if sem_dono_do_rumble(native=native, backends=backends):
+        # "NA ABA INÍCIO" MANDA A UM LUGAR QUE A INTERFACE NOVA NÃO TEM — achado
+        # em 03/09/2026, na foto da aba Vibração do produto. As abas de lá são
+        # Jogar · Controles · Gatilhos · Iluminação · Vibração · Navegação ·
+        # Lançadores · Conexões · Sistema · Perfis: não existe "Início", e o
+        # interruptor que a frase pede chama-se "Status" na aba **Jogar**.
+        # A frase está CERTA na janela GTK, que tem a aba Início — é UMA string
+        # com DUAS telas, e o dia em que a segunda renomeou a aba, ela ficou meio
+        # verdadeira. Não a reescrevi: texto de tela é decisão dela, e o conserto
+        # certo (uma frase que sirva às duas, ou o nome vindo de quem desenha a
+        # aba) é escolha, não digitação.
         return (
             "A intensidade não está chegando a jogo nenhum: falta o gamepad "
             "virtual, por onde ela passa. Ligue “Jogar pelo Hefesto” na aba "
