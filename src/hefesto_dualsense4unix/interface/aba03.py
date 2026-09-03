@@ -490,30 +490,94 @@ CSS = CSS_GLIFO + """
     pointer-events:none;opacity:.55}
 """
 
-MODOS = [
- ("Desligado", "Sem resistência nenhuma — o gatilho fica solto, como num controle comum."),
- ("Rígido", "Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada."),
- ("Rígido simples", "A mesma trava dura, com um só ponto de ajuste em vez de dez."),
- ("Pulso", "Um solavanco num ponto do curso e depois solta — o coice de um tiro único."),
- ("Pulso (curva A)", "Pulso com a subida mais suave: a força cresce antes do estalo."),
- ("Pulso (curva B)", "Pulso com a descida mais suave: o estalo vem e a força cai devagar."),
- ("Resistência", "Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado."),
- ("Arco de flecha", "Fica cada vez mais pesado até o fim do curso, e então solta de uma vez."),
- ("Galope", "Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando."),
- ("Arma semi-automática", "Uma trava, um estalo, e o gatilho volta. Um tiro por aperto."),
- ("Arma automática", "Vibra continuamente enquanto está apertado — rajada."),
- ("Metralhadora", "Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS."),
- ("Ponto duro", "Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável."),
- ("Disparo", "Trava, solta no estalo e fica leve até o fim — espingarda."),
- ("Vibração", "Treme o gatilho na frequência escolhida, sem opor força."),
- ("Rampa de força", "A força sobe em linha reta do início ao fim do curso."),
- ("Curva de força", "Você desenha a força em dez posições do curso, uma por uma."),
- ("Vibração por posição", "Treme só na faixa do curso que você marcar."),
- ("Montar do zero", "As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir."),
-]
+# ---------------------------------------------------------------------------
+# O RÓTULO DE CADA MODO NÃO SE DIGITA AQUI — ele é do produto.
+#
+# Esta lista era um par `(rótulo, dica)` com os 19 rótulos escritos à mão, e ela
+# era a SEGUNDA CÓPIA de um texto que já tem dono: `trigger_specs.PRESETS`, onde
+# o `GATILHO-PALAVRA-01` separa os dois campos com todas as letras — o `name` é
+# contrato (está no perfil dela, no IPC e no DSX) e o `label` é texto de tela.
+#
+# DUAS CÓPIAS DIVERGIRAM, e a medição é de 03/09/2026, no DOM vivo: os oito
+# `<select>` desta aba mostravam `Arco de flecha` e `Disparo` onde o produto diz
+# `Arco de flecha (Bow)` e `Disparo (Weapon)` — as duas desambiguações que ELA
+# pediu em 07/08/2026 e que esta página nunca acompanhou. **16 divergências**,
+# duas por campo, e nenhuma régua as via: o gerador reprovava se o TAMANHO das
+# duas listas mudasse, e nunca se um rótulo mudasse.
+#
+# A DICA CONTINUA DESTA TELA, e é a metade que fica. A descrição do produto (o
+# terceiro campo do preset) diz "Barreira rígida numa posição fixa."; esta aba
+# diz "Trava dura do começo ao fim do curso. Serve para freio de carro e para
+# arma travada." — a frase mais concreta é a que ela leu e aprovou aqui, e
+# trocá-la para fechar a dívida do rótulo seria pagar uma dívida abrindo outra.
+#
+# ESCRITO SEM O NOME DO SÍMBOLO DE PROPÓSITO, e a razão é uma régua: o
+# `check_paridade_gtk_html.py` procura o símbolo daquele campo NO TEXTO dos
+# arquivos do lado HTML, e não distingue código de comentário. Citá-lo aqui
+# fecharia, calada, a linha "Descrição visível do modo ESCOLHIDO", que continua
+# aberta — a página não tem elemento de descrição, só o `title` da opção.
+#
+# A CHAVE É O `name`, E NÃO A ORDEM. O casamento por posição continuaria certo
+# hoje e erraria calado no dia em que alguém reordenasse `PRESETS`: cada dica
+# desceria um modo, e o portão de tamanho não veria nada. Com o `name` como
+# chave, um modo novo no produto reprova ALTO na hora — a guarda logo abaixo.
+# ---------------------------------------------------------------------------
+DICA_DO_MODO = {
+ "Off": "Sem resistência nenhuma — o gatilho fica solto, como num controle comum.",
+ "Rigid": "Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.",
+ "SimpleRigid": "A mesma trava dura, com um só ponto de ajuste em vez de dez.",
+ "Pulse": "Um solavanco num ponto do curso e depois solta — o coice de um tiro único.",
+ "PulseA": "Pulso com a subida mais suave: a força cresce antes do estalo.",
+ "PulseB": "Pulso com a descida mais suave: o estalo vem e a força cai devagar.",
+ "Resistance": "Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.",
+ "Bow": "Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.",
+ "Galloping": "Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.",
+ "SemiAutoGun": "Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.",
+ "AutoGun": "Vibra continuamente enquanto está apertado — rajada.",
+ "Machine": "Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.",
+ "Feedback": "Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.",
+ "Weapon": "Trava, solta no estalo e fica leve até o fim — espingarda.",
+ "Vibration": "Treme o gatilho na frequência escolhida, sem opor força.",
+ "SlopeFeedback": "A força sobe em linha reta do início ao fim do curso.",
+ "MultiPositionFeedback": "Você desenha a força em dez posições do curso, uma por uma.",
+ "MultiPositionVibration": "Treme só na faixa do curso que você marcar.",
+ "Custom": "As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.",
+}
 
-PRONTOS = ["— Nenhum —", "Rampa crescente", "Rampa decrescente", "Plateau central",
-           "Stop hard", "Stop macio"]
+_SEM_DICA = [p.name for p in PRESETS if p.name not in DICA_DO_MODO]
+_DICA_ORFA = [n for n in DICA_DO_MODO if n not in {p.name for p in PRESETS}]
+if _SEM_DICA or _DICA_ORFA:
+    raise SystemExit(
+        f"ERRO: `DICA_DO_MODO` e `app/actions/trigger_specs.PRESETS` não falam dos\n"
+        f"mesmos modos. Sem dica: {_SEM_DICA or 'nenhum'} · dica órfã: "
+        f"{_DICA_ORFA or 'nenhuma'}.\n"
+        f"Um modo novo no produto precisa da frase que ESTA tela mostra; uma dica\n"
+        f"órfã é texto de um modo que o produto não tem mais.")
+
+#: O RÓTULO PELO `name`, para a cena não digitar rótulo nenhum. Mudar o texto de
+#: um modo no produto passa a mudar o desenho junto, em vez de deixar as duas
+#: verdades vivas.
+ROT = {p.name: p.label for p in PRESETS}
+
+#: `(rótulo do produto, dica desta tela)`, na ordem em que o produto os nomeia.
+MODOS = [(p.label, DICA_DO_MODO[p.name]) for p in PRESETS]
+
+# AS CURVAS PRONTAS TAMBÉM TÊM DONO, e é `profiles/trigger_presets.py`. Esta
+# lista era digitada e trazia CINCO das seis de `FEEDBACK_POSITION_LABELS` —
+# faltava `Linear médio` (`[4]` dez vezes, a firmeza constante), que existe no
+# motor desde antes desta aba e que a GUI estável oferece. Medido no DOM vivo em
+# 03/09/2026: os oito campos ofereciam cinco curvas e não a sexta.
+#
+# O GERADOR JÁ REPROVAVA UM RÓTULO QUE O PRODUTO NÃO TEM (a guarda de
+# `CHAVE_DO_PRONTO`, mais abaixo) e NUNCA um que o produto tem e a tela
+# esqueceu. Perguntando a lista, as duas metades ficam cobertas de graça: não há
+# como esquecer o que não se digita.
+#
+# `— Nenhum —` É DELA e fica: o produto chama o `custom` de "Personalizar", e o
+# nome desta tela é o que ela aprovou. Por isso a primeira posição é literal e o
+# resto vem do motor, na ordem do motor.
+PRONTOS = ["— Nenhum —"] + [rot for chave, rot in FEEDBACK_POSITION_LABELS.items()
+                            if chave != "custom"]
 MEUS = ["Recuo do MK — pesado no fim", "Freio do carro — trava tardia"]
 
 # ---------------------------------------------------------------------------
@@ -532,17 +596,26 @@ MEUS = ["Recuo do MK — pesado no fim", "Freio do carro — trava tardia"]
 # porcentagem do trilho é DERIVADA da faixa. Se o produto mudar um nome, esta
 # aba reprova alto em vez de desenhar um trilho com a régua errada.
 # ---------------------------------------------------------------------------
+#
+# E A CENA NOMEIA OS MODOS PELO `ROT[name]`, nunca pelo rótulo escrito — as
+# quatro linhas abaixo diziam "Metralhadora", "Arco de flecha", "Arma
+# semi-automática" e "Rígido" à mão, e um rótulo digitado numa cena é a mesma
+# segunda cópia que a `MODOS` era: no dia em que o produto acrescentar uma
+# desambiguação (o `(Bow)` de 07/08 é exatamente isso), a chave para de casar e
+# a cena reprova por um motivo que não é o dela.
+# ---------------------------------------------------------------------------
 LITERAL_P1 = {
-    "Metralhadora": [("Força", 78, "7"), ("Frequência", 44, "4"),
+    ROT["Machine"]: [("Força", 78, "7"), ("Frequência", 44, "4"),
                      ("Início do curso", 25, "25"), ("Fim do curso", 90, "230")],
-    "Arco de flecha": [("Força no fim", 66, "6"), ("Início do curso", 15, "15")],
+    ROT["Bow"]: [("Força no fim", 66, "6"), ("Início do curso", 15, "15")],
 }
 
 CENA = {
-    "p1": {"esq": ("Metralhadora", MEUS[0], None),
-           "dir": ("Arco de flecha", MEUS[0], None)},
-    "p2": {"esq": ("Arma semi-automática", "Stop hard", [("Início", 3), ("Fim", 6), ("Força", 5)]),
-           "dir": ("Rígido", PRONTOS[0], [("Posição", 5), ("Força", 200)])},
+    "p1": {"esq": (ROT["Machine"], MEUS[0], None),
+           "dir": (ROT["Bow"], MEUS[0], None)},
+    "p2": {"esq": (ROT["SemiAutoGun"], "Stop hard",
+                   [("Início", 3), ("Fim", 6), ("Força", 5)]),
+           "dir": (ROT["Rigid"], PRONTOS[0], [("Posição", 5), ("Força", 200)])},
     # O P3 E O P4 SÃO LUGAR VAZIO — decisão dela, 31/08/2026: *"os demais 3 e o 4
     # ficam lá com os espaços mas tudo com Desligado e Nenhum, fora a borda do P1
     # e P2."* A coluna continua na tela (é o "ficam lá com os espaços"); o que
@@ -598,26 +671,30 @@ def barras(modo, escolha):
 # ATÉ HOJE ESTA PÁGINA SÓ TINHA O RÓTULO, e por isso o clique não tinha o que
 # mandar ao daemon: `trigger.set` quer `Rigid`, e a opção dizia `Rígido`.
 #
-# E O `value` NÃO SE DIGITA — ele sai do `PRESETS`, PELA ORDEM. As duas listas
-# têm 19 entradas na mesma sequência (Desligado=Off … Montar do zero=Custom), e
-# casá-las por RÓTULO seria casar por um campo que já divergiu: `MODOS` diz
-# "Arco de flecha" e o produto diz "Arco de flecha (Bow)"; `MODOS` diz "Disparo"
-# e o produto diz "Disparo (Weapon)" — as duas decisões dela de 07/08 que esta
-# página não acompanhou. A ordem é o que as duas listas têm em comum, e a guarda
-# abaixo reprova alto no dia em que uma delas mudar de tamanho.
-if len(MODOS) != len(PRESETS):
-    raise SystemExit(
-        f"ERRO: a aba desenha {len(MODOS)} modos e o produto tem {len(PRESETS)} "
-        f"(`app/actions/trigger_specs.PRESETS`). O casamento é PELA ORDEM — com "
-        f"tamanhos diferentes, o `value` de cada opção sairia trocado, e o clique "
-        f"mandaria ao daemon o modo errado sem nada na tela dizendo.")
-CHAVE_DO_MODO = {rot: spec.name for (rot, _), spec in zip(MODOS, PRESETS, strict=True)}
+# E NEM O `value` NEM O RÓTULO SE DIGITAM — os dois saem do `PRESETS`.
+#
+# ATÉ HOJE ESTA PÁGINA CASAVA AS DUAS LISTAS PELA ORDEM, e a razão escrita aqui
+# era esta: *"casá-las por RÓTULO seria casar por um campo que já divergiu"* —
+# `MODOS` dizia `Arco de flecha` e o produto diz `Arco de flecha (Bow)`.
+#
+# O CAMPO PAROU DE DIVERGIR PORQUE PAROU DE SER DIGITADO — 03/09/2026: `MODOS`
+# agora É `PRESETS`, rótulo por rótulo (ver `DICA_DO_MODO`). Com uma lista só,
+# não há casamento a fazer nem tamanho a conferir: `CHAVE_DO_MODO` sai direto do
+# produto, e a guarda que sobra é a de `DICA_DO_MODO`, lá em cima — ela cobra o
+# CONJUNTO de modos nos dois sentidos, que é mais do que o tamanho cobrava.
+CHAVE_DO_MODO = {p.label: p.name for p in PRESETS}
 
 # O "EFEITO PRONTO" TEM DONO NO PRODUTO, e o dono é `profiles/trigger_presets.py`:
-# os cinco nomes desta lista são, letra por letra, cinco dos seis
-# `FEEDBACK_POSITION_LABELS`. Eles não são enfeite de mockup — cada um resolve
-# para dez intensidades de 0 a 8, que é o que o modo "Curva de força"
-# (`MultiPositionFeedback`) manda ao controle.
+# os seis nomes desta lista SÃO os seis `FEEDBACK_POSITION_LABELS`, porque desde
+# 03/09/2026 eles vêm de lá em vez de serem digitados. Eles não são enfeite de
+# mockup — cada um resolve para dez intensidades de 0 a 8, que é o que o modo
+# "Curva de força" (`MultiPositionFeedback`) manda ao controle.
+#
+# A GUARDA ABAIXO SOBREVIVE À MUDANÇA, e vale a pena dizer por quê: ela nunca
+# poderá acusar enquanto a lista vier do próprio dicionário — e é exatamente
+# isso que se quer de uma trava depois que a causa morre. Ela fica porque
+# `PRONTOS[0]` continua sendo texto DELA e porque a lista pode voltar a receber
+# um nome à mão amanhã; o custo é uma volta de laço.
 #
 # `— Nenhum —` VIRA `custom`, e não uma palavra inventada: `custom` é o token do
 # próprio produto para "nenhuma curva pronta, os valores são os que estão aí"

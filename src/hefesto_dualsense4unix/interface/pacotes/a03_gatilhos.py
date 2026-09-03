@@ -774,6 +774,41 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
         alvos = posicoes if len(posicoes) == len(curva_da_tela) else list(
             range(len(curva_da_tela)))
         por_indice = dict(zip(alvos, curva_da_tela, strict=False))
+    elif nome in MODOS_COM_CURVA:
+        # A CURVA TAMBÉM CHEGA DEITADA, e é assim que ela chega do RASCUNHO —
+        # 03/09/2026, medido CLICANDO no controle vivo.
+        #
+        # O DISCO guarda dez listas de um (`[[0], [1], …]`); o RASCUNHO guarda o
+        # que foi ao daemon, que é a lista POSICIONAL do modo, plana
+        # (`preset_to_positional_params`). O ramo de cima só reconhecia a
+        # primeira forma — então, no instante seguinte a ela escolher uma curva,
+        # o campo "Efeito pronto" voltava a `— Nenhum —` sobre um gatilho que
+        # ESTAVA com a curva aplicada.
+        #
+        # MEDIDO, e vale para as ONZE: apliquei `linear_medio` no L2 do
+        # controle na mesa e li o DOM — modo `MultiPositionFeedback`, dez barras
+        # em 4 (a curva certa, no aparelho), e o campo de baixo dizendo
+        # "— Nenhum —". Fora da tela, `_do_lado` devolvia `custom` para
+        # `rampa_crescente`, `stop_hard`, `linear_medio`, `galope` e
+        # `machine_gun` — as cinco que provei, das onze do produto.
+        #
+        # É A MESMA FAMÍLIA DA TELA QUE MENTE que o rascunho veio curar: ali era
+        # o MODO que voltava para o disco, aqui é o NOME DA CURVA que some. E
+        # tem o mesmo efeito colateral, porque o "Guardar esse efeito" lê a
+        # coluna: guardar logo depois de escolher uma curva gravava um efeito
+        # que a tela dizia não ter curva nenhuma.
+        #
+        # A LEITURA É PELO NOME DO PARÂMETRO (`pos_*`), nunca pelo índice — a
+        # mesma regra de `_params_da_curva`: em `MultiPositionVibration` o spec
+        # tem ONZE parâmetros e a curva tem DEZ, e alinhar por índice leria a
+        # frequência como a posição 0.
+        posicoes = [i for i, q in enumerate(spec.params) if q.name.startswith("pos_")]
+        deitada = [int(valores[i] or 0) for i in posicoes if i < len(valores)]
+        if posicoes and len(deitada) == len(posicoes):
+            fora["curva"] = deitada
+            fora["curva-pct"] = [round(max(0, min(100, x / 8 * 100)))
+                                 for x in deitada]
+            fora["pronto"] = _pronto_da_curva(nome, deitada)
 
     #: O EFEITO PRONTO NÃO É O MODO — corrigido em 01/09/2026. Estava escrito
     #: aqui que *"até existir um segundo eixo, o pronto É o modo"*, e o campo
@@ -1000,6 +1035,81 @@ def _html_de_uma_barra(sigla: str, i: int, a: dict[str, Any],
         f'            </div>')
 
 
+#: UMA OPÇÃO DE `<select>`, partida na CABEÇA e no TEXTO. O `value` é o
+#: contrato (o `name` do preset, que está serializado no perfil dela); o texto
+#: é o rótulo, e é só ele que `html_das_opcoes_de_modo` troca. Tudo o mais da
+#: cabeça — o `title` com a frase que ELA aprovou, a ordem, o `disabled` do
+#: travessão — atravessa intacto.
+_OPCAO = re.compile(
+    r'(?P<cabeca><option value="(?P<valor>[^"]*)"[^>]*>)(?P<texto>[^<]*)</option>')
+
+_OPCOES_DO_MODO: str | None = None
+
+
+def _opcoes_cravadas_do_modo() -> str:
+    """As opções do campo "Modo" que a página publicada traz, como o DOM as escreve.
+
+    A MESMA COZINHA DE `_opcoes_cravadas_do_pronto`, e pelas mesmas duas razões:
+    o `selected` sai (quem escolhe é a pintura do `modo-chave-<lado>`, e um
+    `selected` no bloco emitido carregaria a escolha da coluna do desenho para as
+    quatro colunas da mesa dela), e o `disabled` vira `disabled=""`, que é como o
+    navegador serializa o atributo booleano de volta no `innerHTML`. Sem essa
+    segunda troca o piloto reescreveria os oito `<select>` a cada tique, para
+    sempre — ver a medição no docstring do irmão.
+    """
+    global _OPCOES_DO_MODO
+    if _OPCOES_DO_MODO is None:
+        dentro = ""
+        for m in _SELECT.finditer(_pagina_publicada()):
+            if m.group("classe") == "modo":
+                dentro = m.group("dentro")
+                break
+        _OPCOES_DO_MODO = _COMO_O_DOM_ESCREVE.sub(
+            r' \1=""', dentro.replace(" selected", "")).rstrip()
+    return _OPCOES_DO_MODO
+
+
+def html_das_opcoes_de_modo() -> str:
+    """As opções do campo "Modo", com o RÓTULO perguntado ao dono.
+
+    O DONO DO RÓTULO É `app/actions/trigger_specs.PRESETS`, e está escrito lá
+    com todas as letras (GATILHO-PALAVRA-01): o `name` é contrato — está
+    serializado no perfil dela (`triggers.left.mode`), no IPC (`trigger.set`) e
+    no protocolo DSX —, e o `label` é texto de tela. A página carregava uma
+    SEGUNDA CÓPIA dos 19 rótulos, digitada à mão no gerador, e duas cópias de um
+    texto divergem: MEDIDO no DOM vivo em 03/09/2026, com um controle na mesa,
+    **dois rótulos em cada um dos oito `<select>` — 16 divergências**.
+
+    Os dois são decisão DELA, de 07/08/2026, para desambiguar: o produto diz
+    ``Arco de flecha (Bow)`` e ``Disparo (Weapon)``; a tela nova dizia ``Arco de
+    flecha`` e ``Disparo``. Não é opinião nova sobre o desenho — é a palavra
+    dela que esta página não acompanhou.
+
+    O QUE ESTA FUNÇÃO **NÃO** TOCA, e é de propósito: a ordem, o travessão da
+    decisão 13 e o `title` de cada modo. A frase da dica é a que ELA aprovou
+    nesta tela ("Trava dura do começo ao fim do curso…"), mais concreta que a do
+    motor ("Barreira rígida numa posição fixa."), e trocá-la seria pagar a
+    dívida do rótulo criando outra. O que se troca é o nó de texto, e só.
+
+    A TROCA É PELO `value`, NUNCA PELA ORDEM. O gerador casava as duas listas
+    por posição — e casar por posição é o que faz um `PRESETS` reordenado pôr o
+    rótulo de um modo em cima de outro sem nada acusar. Aqui a chave é o
+    contrato: a opção `value="Bow"` recebe o rótulo de `Bow`, e uma opção cujo
+    `value` o produto não conhece atravessa intacta, porque não é o rótulo dela
+    que esta função sabe corrigir (é o caso do `—`).
+    """
+    specs = _specs()
+    if specs is None:
+        return _opcoes_cravadas_do_modo()
+    do_produto = {p.name: p.label for p in specs.PRESETS}
+
+    def rotular(m: re.Match[str]) -> str:
+        rot = do_produto.get(m.group("valor"))
+        return m.group(0) if rot is None else f'{m.group("cabeca")}{_escapar(rot)}</option>'
+
+    return _OPCAO.sub(rotular, _opcoes_cravadas_do_modo())
+
+
 def _opcoes_cravadas_do_pronto() -> str:
     """As opções de "Efeito pronto" que O DESENHO oferece, lidas da página.
 
@@ -1052,6 +1162,35 @@ def _valores_cravados_do_pronto() -> frozenset[str]:
                                 _opcoes_cravadas_do_pronto()))
 
 
+def _tabela_que_o_campo_mostra(modo: str) -> tuple[dict[str, list[int]], dict[str, str]]:
+    """A tabela que o campo "Efeito pronto" OFERECE naquele modo.
+
+    NÃO É `_tabela_da_curva`, e a diferença é uma decisão dela. A GUI estável
+    ESCONDE a linha de preset fora dos dois modos por posição
+    (`_update_preset_row_visibility`); o desenho dela a mostra nos DEZENOVE. Nos
+    outros 17 a página crava as curvas de FEEDBACK — logo é a tabela de feedback
+    que o campo mostra ali, e o gesto `pronto` já sabe aplicá-las: ele tira o
+    modo da TABELA em que a curva mora (ver `_curva`), não do modo de agora.
+
+    O BURACO QUE ISTO TAPA, medido no DOM VIVO em 03/09/2026 com o gatilho em
+    `Desligado` e um controle na mesa: os oito campos ofereciam CINCO curvas de
+    feedback e não a sexta — `linear_medio`, a firmeza constante. As cinco vêm
+    cravadas da página; a sexta só era acrescentada quando `_tabela_da_curva`
+    devolvia a tabela de feedback, isto é, **só com o gatilho já em "Curva de
+    força"**. Oferecer cinco das seis irmãs é um buraco arbitrário: para
+    alcançar a sexta ela teria de trocar o modo antes, e nada na tela dizia.
+
+    `_tabela_da_curva` CONTINUA COMO ESTÁ, e tem de continuar: quem a chama para
+    RECONHECER uma curva salva (`_pronto_da_curva`) precisa da tabela do modo
+    gravado, e cair no feedback ali nomearia uma curva de vibração com o nome de
+    outra tabela.
+    """
+    presets, rotulos = _tabela_da_curva(modo)
+    if rotulos:
+        return presets, rotulos
+    return _tabela_da_curva(MODO_DA_CURVA)
+
+
 def _curvas_que_a_pagina_esqueceu(modo: str) -> list[str]:
     """As curvas que o PRODUTO tem naquele modo e a página não oferece.
 
@@ -1075,8 +1214,13 @@ def _curvas_que_a_pagina_esqueceu(modo: str) -> list[str]:
     `custom` FICA DE FORA porque a página já o tem, com o nome que ELA aprovou
     ("— Nenhum —", contra o "Personalizar" do motor). Acrescentá-lo daria duas
     opções para a mesma chave, com dois nomes.
+
+    A TABELA É A QUE O CAMPO MOSTRA, e não a do modo — 03/09/2026. Ver
+    `_tabela_que_o_campo_mostra`: com o gatilho em `Desligado` esta função
+    devolvia lista vazia, e a sexta curva de feedback ficava fora dos oito
+    campos até alguém trocar o modo primeiro.
     """
-    _, rotulos = _tabela_da_curva(modo)
+    _, rotulos = _tabela_que_o_campo_mostra(modo)
     if not rotulos:
         return []
     ja_tem = _valores_cravados_do_pronto()
@@ -1105,7 +1249,7 @@ def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
     princípio geral dela de hoje: *"se não tá mostrando agora, não tem info pra
     mostrar no produto"*. Um separador com nada embaixo é uma promessa vazia.
     """
-    _, rotulos = _tabela_da_curva(modo)
+    _, rotulos = _tabela_que_o_campo_mostra(modo)
     linhas = [_opcoes_cravadas_do_pronto()]
     # AS DE VIBRAÇÃO SUBSTITUEM, AS DE FEEDBACK COMPLETAM. No modo de vibração
     # as cinco cravadas do desenho são de OUTRA tabela — deixá-las na lista
@@ -1778,11 +1922,24 @@ def _blocos_da_coluna(pref: str, deste: dict[str, dict[str, Any]],
     porque as curvas de vibração só existem em `MultiPositionVibration` (ver
     `html_das_opcoes_de_pronto`). A biblioteca dela continua igual nos oito: o
     que muda é a metade que vem do motor.
+
+    E A LISTA DE "MODO" ENTROU — 03/09/2026, e ela é IGUAL nos oito: os 19
+    rótulos não dependem de coluna nem de lado. Ela vem em bloco pela mesma
+    razão que a de cima: o rótulo tem dono no produto, e enquanto a página
+    publicada carregar a cópia digitada, é o bloco que põe a palavra dela na
+    tela sem esperar publicação. Ver `html_das_opcoes_de_modo`.
+
+    O BLOCO NÃO DESFAZ A ESCOLHA, e a ordem é o que garante: o piloto pinta os
+    BLOCOS antes dos CAMPOS (`hefesto_vivo`, passo 0 contra passo 2), então o
+    `modo-chave-<lado>` reescolhe a opção depois de a lista ser trocada. É o
+    mesmo caminho que o `select.pronto` já percorre desde 02/09.
     """
     fora: dict[str, str] = {}
     if not pref:
         return fora
     for sig, d in deste.items():
+        fora[f'[data-controle="{pref}"] select.modo[data-lado="{sig}"]'] = (
+            html_das_opcoes_de_modo())
         # O TETO VEM DA PÁGINA QUE O PRODUTO RENDERIZA, e é `None` no dia em que
         # ela publicar a bancada. Ver `_a_caixa_cresce`.
         fora[f'[data-controle="{pref}"] .ajustes.{sig}'] = html_dos_ajustes(
