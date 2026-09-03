@@ -29,6 +29,33 @@ A procedência do par ``[1, 19]`` está no ensaio, conferida contra o fonte de
 ``dualshock-tools.github.io`` (``js/controllers/ds5-controller.js``,
 ``getSystemInfo(1, 19, 17)``), em 15/08/2026.
 
+DOIS TRANSPORTES, DOIS ENVELOPES — E O COMANDO É O MESMO
+--------------------------------------------------------
+
+O par ``[1, 19]`` não muda com o transporte; o ENVELOPE muda. Pelo cabo o
+``ioctl`` não leva assinatura nenhuma. Pelo rádio o feature report é assinado
+com um CRC-32 nos quatro últimos bytes, e a semente é o **byte de cabeçalho da
+transação HIDP** — há uma por sentido, e a de quem ESCREVE feature é
+``SET_REPORT|FEATURE`` (``0x53``). Ver :data:`SEMENTE_SET_FEATURE_BT`.
+
+**MEDIDO EM 02/09/2026, com o controle dela no rádio** (``hidraw5``, o mesmo
+comando três vezes, mudando só o envelope):
+
+===================  ==========  ============================================
+envelope             resposta    o que voltou
+===================  ==========  ============================================
+CRC semente ``0x53``  13,6 ms    64 bytes, eco ``[1, 19, 2]``, código ``04``
+``0xA3`` (o de 23/08)  7,0 ms    ``errno 5``
+sem CRC nenhum         7,0 ms    ``errno 5``
+===================  ==========  ============================================
+
+Duas coisas que essa tabela fecha e estavam abertas: **o CRC não é opcional no
+rádio** (a "dúvida honesta" que o ``--sem-crc`` do ensaio existia para responder
+— sem assinatura o firmware recusa igual), e **a amostra por rádio passou de UMA
+para DUAS unidades** (``hidraw8``, código ``02``, em 27/08/2026; ``hidraw5``,
+código ``04``, hoje). Duas unidades não são universalidade, e este arquivo não
+escreve que são.
+
 DUAS TABELAS, DUAS PROCEDÊNCIAS DIFERENTES
 ------------------------------------------
 
@@ -72,6 +99,26 @@ FATIA_DA_COR = slice(4, 6)
 
 #: O byte que o firmware devolve em ``buf[3]`` quando a resposta é boa.
 MARCA_DE_RESPOSTA_BOA = 2
+
+#: Quantos bytes do FIM do pedido são assinatura, e não comando, no rádio.
+TAMANHO_DO_CRC = 4
+
+#: A semente do CRC-32 no sentido de ESCRITA de feature por Bluetooth.
+#:
+#: As sementes deste CRC são o **byte de cabeçalho da transação HIDP**, e há uma
+#: por sentido::
+#:
+#:     0xA1 = HIDP_TRANS_DATA       (0xA0) | RTYPE_INPUT   (0x01)
+#:     0xA2 = HIDP_TRANS_DATA       (0xA0) | RTYPE_OUTPUT  (0x02)
+#:     0xA3 = HIDP_TRANS_DATA       (0xA0) | RTYPE_FEATURE (0x03)
+#:     0x53 = HIDP_TRANS_SET_REPORT (0x50) | RTYPE_FEATURE (0x03)   <-- esta
+#:
+#: As TRÊS primeiras têm dono em ``core/ds_output_report.py``
+#: (``BT_CRC_SEED``, ``BT_INPUT_CRC_SEED``, ``BT_FEATURE_CRC_SEED``) e a conta é
+#: reusada dali (``bt_crc32``). A quarta mora aqui porque este é o ÚNICO lugar
+#: do produto que ESCREVE feature report — e o lugar certo dela é ao lado das
+#: outras três, o que é mudança em arquivo de outra frente.
+SEMENTE_SET_FEATURE_BT = 0x53
 
 #: Tamanho do buffer do feature ``0x80`` nos quatro controles desta casa,
 #: conferido pelo parser de descritor de ``scripts/ensaios/comum.py`` em
@@ -158,11 +205,18 @@ RAZAO_DA_BORDA = 2.2
 #: é abaixo do que o olho separa numa borda fina.
 PASSOS_DA_MISTURA = 20
 
-#: ``HID_ID`` é ``BARRAMENTO:VENDOR:PRODUCT`` em hexa; ``0003`` é USB. Topologia
-#: de sysfs NÃO serve para decidir transporte — com BlueZ >= 5.73 os controles de
-#: rádio moram sob ``/devices/virtual/misc/uhid/``, junto do nosso vpad, e essa
-#: armadilha já foi paga em 11/08/2026.
+#: ``HID_ID`` é ``BARRAMENTO:VENDOR:PRODUCT`` em hexa; ``0003`` é USB e ``0005``
+#: é Bluetooth. Topologia de sysfs NÃO serve para decidir transporte — com BlueZ
+#: >= 5.73 os controles de rádio moram sob ``/devices/virtual/misc/uhid/``, junto
+#: do nosso vpad, e essa armadilha já foi paga em 11/08/2026.
 _BUS_USB = 0x0003
+_BUS_BLUETOOTH = 0x0005
+
+#: As duas palavras de transporte deste módulo, iguais às de
+#: ``scripts/ensaios/comum.py``. Não são as da mesa (``usb``/``bt``): aqui o
+#: transporte sai do ``HID_ID`` do ``uevent``, não do daemon.
+CABO = "cabo"
+RADIO = "rádio"
 
 #: VID e PID do DualSense. Um par errado aqui faria o módulo mandar o comando de
 #: fábrica da Sony para o aparelho de outro fabricante.
@@ -206,6 +260,20 @@ class IdentidadeDeFabrica:
 
     serial: str | None = None
     cor: CorDoPlastico | None = None
+
+
+@dataclass(frozen=True)
+class AlvoDoControle:
+    """O nó a que perguntar, e por qual transporte a pergunta sai.
+
+    Os dois viajam juntos porque o ENVELOPE do pedido depende do transporte: no
+    cabo o ``ioctl`` não leva assinatura, no rádio leva CRC-32. Devolver só o
+    caminho obrigava quem manda a redescobrir o transporte lendo o ``uevent``
+    outra vez — duas leituras da mesma verdade é como elas se afastam.
+    """
+
+    caminho: str
+    transporte: str = CABO
 
 
 class _Pedidor(Protocol):
@@ -322,10 +390,59 @@ def montar_pedido(tamanho: int = TAMANHO_DO_FEATURE) -> bytes:
     return bytes(buffer)
 
 
+def crc_do_pedido(comando: bytes) -> int:
+    """A assinatura do rádio para ``comando``, no sentido de ESCRITA.
+
+    A conta é a do ``hid-playstation`` e o dono dela é ``core/ds_output_report``
+    (``bt_crc32``): uma casa, uma conta. O que muda aqui é só a semente —
+    :data:`SEMENTE_SET_FEATURE_BT`, e não a ``BT_FEATURE_CRC_SEED``, que é a do
+    feature que CHEGA.
+    """
+    from hefesto_dualsense4unix.core.ds_output_report import bt_crc32
+
+    return bt_crc32(comando, seed=SEMENTE_SET_FEATURE_BT)
+
+
+def envelope_de_radio(pedido: bytes) -> bytes:
+    """O MESMO pedido, assinado para sair pelo rádio.
+
+    Não toca no comando: escreve o CRC-32 nos quatro últimos bytes, que
+    :func:`montar_pedido` já deixou zerados. Sem parâmetro de conteúdo pela
+    mesma razão do :func:`montar_pedido` — o que se escolhe aqui é o envelope,
+    nunca o que vai dentro dele.
+    """
+    if len(pedido) < 3 + TAMANHO_DO_CRC:
+        raise PedidoRecusadoError(
+            f"pedido curto demais para levar assinatura: {len(pedido)} bytes"
+        )
+    envelope = bytearray(pedido)
+    corte = len(envelope) - TAMANHO_DO_CRC
+    envelope[corte:] = crc_do_pedido(bytes(envelope[:corte])).to_bytes(4, "little")
+    return bytes(envelope)
+
+
 def conferir_pedido(buffer: bytes) -> None:
     """Confere byte a byte e levanta se qualquer um estiver fora do lugar.
 
     Chamada imediatamente antes do ``ioctl``, nunca antes disso.
+
+    **DUAS FORMAS SÃO AUTORIZADAS, e nenhuma delas afrouxa a trava** — o comando
+    é conferido byte a byte nas duas, e o que muda é o que se exige do RABO:
+
+    * o pedido nu (cabo): tudo depois do byte 2 tem de estar ZERADO;
+    * o pedido assinado (rádio): tudo depois do byte 2 zerado **exceto** os
+      quatro últimos, que têm de ser exatamente o CRC recalculado aqui.
+
+    A segunda forma é mais APERTADA que a primeira, não menos: o rabo deixou de
+    ser "quatro bytes que ninguém olha" e passou a ter um único valor admitido —
+    a assinatura de um comando todo zerado, que não carrega parâmetro nenhum.
+    Cada tamanho de buffer tem, portanto, exatamente DOIS pedidos aceitáveis.
+
+    A trava mordeu o próprio envelope antes disto existir (15/08/2026, no
+    ensaio): os quatro bytes de assinatura caíram no teste de "tem de estar
+    zerado" e a escrita foi recusada — corretamente, porque a trava não sabia
+    deles. **Nenhum byte chegou ao aparelho**, que é o que se quer de uma trava
+    que erra.
     """
     if buffer and buffer[0] in FAMILIA_DO_FIRMWARE:
         raise PedidoRecusadoError(
@@ -346,10 +463,21 @@ def conferir_pedido(buffer: bytes) -> None:
             f"o par ({buffer[1]}, {buffer[2]}) não é o do serial "
             f"({BASE_DO_SERIAL}, {NUM_DO_SERIAL})"
         )
-    sujos = [i for i, valor in enumerate(buffer[3:], start=3) if valor]
+    assinado = len(buffer) >= 3 + TAMANHO_DO_CRC and any(buffer[-TAMANHO_DO_CRC:])
+    corte = len(buffer) - TAMANHO_DO_CRC if assinado else len(buffer)
+    sujos = [i for i, valor in enumerate(buffer[3:corte], start=3) if valor]
     if sujos:
         raise PedidoRecusadoError(
             f"bytes que tinham de estar zerados vieram sujos: {sujos[:8]}"
+        )
+    if not assinado:
+        return
+    esperado = crc_do_pedido(bytes(buffer[:corte]))
+    veio = int.from_bytes(buffer[corte:], "little")
+    if veio != esperado:
+        raise PedidoRecusadoError(
+            f"a assinatura do rádio não confere: veio 0x{veio:08x}, "
+            f"recalculada 0x{esperado:08x} (semente 0x{SEMENTE_SET_FEATURE_BT:02x})"
         )
 
 
@@ -397,30 +525,38 @@ def _campos_do_uevent(texto: str) -> dict[str, str]:
     return campos
 
 
-def _e_dualsense_no_cabo(hid_id: str) -> bool:
+def _transporte_do_dualsense(hid_id: str) -> str | None:
+    """``"cabo"``, ``"rádio"``, ou ``None`` se não é um DualSense.
+
+    Era ``_e_dualsense_no_cabo`` e devolvia ``bool``, com o barramento USB
+    embutido na resposta — o primeiro dos três portões que recusavam o rádio. O
+    filtro que FICA é o de VID:PID: o comando é da família de fábrica da Sony, e
+    mandá-lo para o aparelho de outro fabricante é escrever às cegas.
+    """
     partes = hid_id.split(":")
     if len(partes) != 3:
-        return False
+        return None
     try:
         barramento, vendor, product = (int(parte, 16) for parte in partes)
     except ValueError:
-        return False
-    return (
-        barramento == _BUS_USB and vendor == _VID_SONY and product == _PID_DUALSENSE
-    )
+        return None
+    if vendor != _VID_SONY or product != _PID_DUALSENSE:
+        return None
+    if barramento == _BUS_USB:
+        return CABO
+    if barramento == _BUS_BLUETOOTH:
+        return RADIO
+    return None
 
 
-def no_do_controle(
+def alvo_do_controle(
     uniq: str,
     *,
     raiz: str = "/sys/class/hidraw",
     listar: Any = os.listdir,
     ler: Any = None,
-) -> str | None:
-    """``/dev/hidrawN`` do DualSense cujo endereço é ``uniq`` — hoje, só no cabo.
-
-    O "só no cabo" é o estado de HOJE, não uma propriedade do aparelho: ver o
-    primeiro filtro abaixo, e a ``ONDA-CONEXOES-11``, que o tira.
+) -> AlvoDoControle | None:
+    """O nó do DualSense cujo endereço é ``uniq``, **e por qual transporte**.
 
     ``raiz``, ``listar`` e ``ler`` entram por argumento com o default do sistema
     real (regra F4 de ``DECISOES-DA-EXECUCAO.md``, e o ``CANARIO-FS-01`` pega
@@ -428,34 +564,27 @@ def no_do_controle(
     encostar em ``/sys``.
 
     ``None`` — que é a resposta comum — quando não há aparelho com aquele
-    endereço, quando ele está no rádio, ou quando o que casou é o nosso próprio
-    vpad. Três filtros, e nenhum é zelo:
+    endereço, quando ele não é um DualSense, ou quando o que casou é o nosso
+    próprio vpad. **DOIS filtros, e eram TRÊS até 02/09/2026:**
 
-    * **cabo** — e este filtro é NOSSO, não do aparelho. **FATO ERRADO,
-      SUBSTITUÍDO (27/08/2026).** Estas linhas diziam: *"por rádio o firmware do
-      controle RECUSA o 0x80 (…) Não é o BlueZ, não é o uhid, não é o kernel,
-      não é o daemon — é o aparelho."* **Não era o aparelho: era o nosso CRC.**
-      As sementes desse CRC são o byte de cabeçalho da transação HIDP, e há uma
-      por sentido; o ensaio de 23/08 assinou um ``SET_REPORT`` com a de
-      ``DATA|FEATURE`` (``0xA3``), quando a que sai é ``SET_REPORT|FEATURE``
-      (``0x53``). Medido em 27/08/2026 no mesmo controle e no mesmo comando,
-      mudando só a semente: ``0xA3`` e ``0xA2`` devolvem ``errno 5``; ``0x53``
-      é aceito. **O TAMANHO DA AMOSTRA POR RÁDIO É UMA UNIDADE** — esta
-      linha já disse "os quatro DualSense desta bancada responderam pelo
-      rádio", e a tabela da canônica não sustenta o número: das duas
-      medições de 27/08, uma foi por CABO (``hidraw7``) e só ``hidraw8``
-      respondeu pelo rádio. Uma unidade prova que o APARELHO faz; não prova
-      universalidade, que é o que a régua desta casa cobra.
-      Ver ``docs/protocol/dualsense-referencia-canonica.md``, seção "O caminho
-      da cor do plástico". **O filtro continua aqui porque ninguém o tirou
-      ainda** — tirá-lo é a ``ONDA-CONEXOES-11``, junto com os outros dois
-      portões que recusam o rádio (a trava de bytes zerados em
-      ``conferir_pedido`` e o ``transporte != "usb"`` da janela). Não pare aqui
-      achando que o aparelho recusa: ele não recusa;
     * **VID:PID de DualSense**: o comando é da família de fábrica da Sony, e
       mandá-lo para o aparelho de outro fabricante é escrever às cegas;
     * **vpad**: ele forja VID/PID/bus de DualSense no cabo, então sem o filtro o
       módulo pediria o serial à saída do próprio produto.
+
+    **O FILTRO DE CABO SAIU — ``ONDA-CONEXOES-11``, 02/09/2026.** Ele exigia
+    barramento USB e era NOSSO, não do aparelho. A razão dele já tinha caído em
+    27/08/2026 (não era o firmware recusando o ``0x80``: era a semente do nosso
+    CRC), e o que faltava era medir com o controle DELA no rádio. Medido hoje,
+    em ``hidraw5``: **64 bytes, eco ``[1, 19, 2]``, código ``04`` — Galactic
+    Purple — em 13,6 ms**, com o mesmo comando que sai pelo cabo, só assinado
+    com a semente ``0x53``. Ver a tabela no cabeçalho do módulo.
+
+    A amostra por rádio é de **DUAS unidades** (``hidraw8`` em 27/08, ``hidraw5``
+    hoje), e este arquivo não escreve que são quatro: duas provam que o APARELHO
+    faz, não que toda unidade faz. Se um terceiro controle recusar por rádio, o
+    achado é a ASSINATURA, não o filtro — e a leitura já devolve ``None`` sem
+    levantar, que é "Não sei" na tela.
     """
     procurado = (uniq or "").replace(":", "").strip().lower()
     if not procurado:
@@ -478,10 +607,19 @@ def no_do_controle(
             _VPAD_UNIQ_PREFIX
         ):
             return None
-        if not _e_dualsense_no_cabo(campos.get("HID_ID", "")):
+        transporte = _transporte_do_dualsense(campos.get("HID_ID", ""))
+        if transporte is None:
             return None
-        return f"/dev/{no}"
+        return AlvoDoControle(caminho=f"/dev/{no}", transporte=transporte)
     return None
+
+
+# `no_do_controle` MORREU em 02/09/2026, e quem a matou foi o portão
+# `casa-sabe`. Ela sobreviveu meia hora como embrulho de `alvo_do_controle` que
+# devolvia só o caminho — e o portão a acusou de promessa pública sem chamador
+# em produção, que é exatamente o que ela era: todo caminho do produto passou a
+# precisar do TRANSPORTE junto, porque é ele que decide o envelope. Dois nomes
+# para a mesma pergunta é como eles se afastam.
 
 
 def _ler_texto(caminho: str) -> str:
@@ -626,20 +764,40 @@ def ler_identidade_pelo_cabo(
     **O serial vem CRU, e é de propósito**: quem o publica decide se ele cabe na
     tela. Ele identifica o aparelho de forma única, como um MAC — a régua de
     anonimato desta casa vale para ele do mesmo jeito.
+
+    **O NOME DIZ "PELO CABO" E ELA LÊ PELOS DOIS** desde 02/09/2026
+    (``ONDA-CONEXOES-11``): o comando é o mesmo, só o envelope muda. Renomeá-la
+    mexeria em ``interface/mesa_viva.py``, ``daemon/ipc_handlers.py`` e
+    ``app/actions/config/secao_controles.py``, que são de outras frentes.
     """
-    caminho = no_do_controle(uniq, raiz=raiz, listar=listar, ler=ler)
-    if caminho is None:
+    alvo = alvo_do_controle(uniq, raiz=raiz, listar=listar, ler=ler)
+    if alvo is None:
         return IdentidadeDeFabrica()
-    transporte = perguntar if perguntar is not None else _perguntar_ao_hidraw
+    pedido = montar_pedido()
+    if alvo.transporte == RADIO:
+        # Pelo rádio o feature report vai assinado, e o CRC NÃO É OPCIONAL:
+        # medido em 02/09/2026, sem assinatura o firmware devolve `errno 5`, o
+        # mesmo que a semente errada de 23/08 devolvia.
+        pedido = envelope_de_radio(pedido)
+    conversa = perguntar if perguntar is not None else _perguntar_ao_hidraw
     try:
-        resposta = transporte(caminho, montar_pedido())
+        resposta = conversa(alvo.caminho, pedido)
     except PedidoRecusadoError:
         # A trava mordeu. Isso é sucesso da trava, não da leitura: NENHUM byte
         # chegou ao aparelho, e é exatamente o que se quer de uma trava que erra.
-        logger.warning("cor_do_plastico_pedido_recusado", caminho=caminho)
+        logger.warning(
+            "cor_do_plastico_pedido_recusado",
+            caminho=alvo.caminho,
+            transporte=alvo.transporte,
+        )
         return IdentidadeDeFabrica()
     except Exception as erro:  # defensivo — a leitura jamais derruba a janela
-        logger.debug("cor_do_plastico_falhou", caminho=caminho, erro=str(erro))
+        logger.debug(
+            "cor_do_plastico_falhou",
+            caminho=alvo.caminho,
+            transporte=alvo.transporte,
+            erro=str(erro),
+        )
         return IdentidadeDeFabrica()
     if not resposta:
         return IdentidadeDeFabrica()
