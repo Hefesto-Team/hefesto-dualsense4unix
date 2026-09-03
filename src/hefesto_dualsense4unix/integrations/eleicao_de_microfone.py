@@ -249,6 +249,26 @@ class EleitorDeMicrofone:
     #: É exatamente a mentira que esta onda existe para matar.
     eleito: str | None = None
 
+    #: O NOME DO CANAL do controle eleito, CONFERIDO — o `alvo` que a releitura
+    #: do ativo confirmou no momento da eleição. `None` = ninguém elegeu, ou a
+    #: posse veio de fora (teste antigo que crava `eleito` na mão).
+    #:
+    #: Ele existe para responder UMA pergunta que `eleito` sozinho não responde:
+    #: *"o microfone deste controle ainda é o padrão do sistema?"*. Sem o nome,
+    #: a releitura do ativo devolve uma string que não dá para comparar com
+    #: nada, e os TRÊS desfechos de recusa de `_eleger_nome` viram um só.
+    #:
+    #: ACHADO DA AUDITORIA DE 02/09/2026, e é o `eleicao_mic_nao_pegou` — o
+    #: defeito que este módulo inteiro existe para pegar — reintroduzido no
+    #: caminho de VOLTA. Medido com o eleitor de verdade e o `pactl` dublado:
+    #: a J1 elege, aperta o botão de novo, o `set-default-source` é ACEITO
+    #: (`rc == 0`) e o ativo relido é um TERCEIRO. O canal deixou de ser dela,
+    #: e o `state_full` publicava `eleito: …011` com `ativo: mic_de_um_terceiro`
+    #: e o plástico ACESO. Com o nome guardado, `_o_eleito_saiu_do_ar` separa
+    #: esse desfecho do caso em que o WirePlumber devolveu o canal ao PRÓPRIO
+    #: controle — em que a luz tem de continuar acesa.
+    fonte_do_eleito: str | None = None
+
     def guardar_anterior(self) -> str | None:
         """Guarda o `get-default-source` de antes — UMA vez por sessão."""
         if self._guardou:
@@ -297,7 +317,41 @@ class EleitorDeMicrofone:
         # como dono quem o WirePlumber já reelegeu por cima.
         if resultado.ok:
             self.eleito = uniq
+            self.fonte_do_eleito = alvo
         return resultado
+
+    def _o_eleito_saiu_do_ar(self, resultado: ResultadoDaEleicao) -> bool:
+        """A releitura do ATIVO prova que o canal do eleito deixou de ser o padrão?
+
+        É a MESMA régua do resto do módulo — a pós-condição canônica é o ATIVO
+        RELIDO (ADR-019) — aplicada à posse no caminho de VOLTA, onde ela
+        faltava. `_eleger_nome` tem QUATRO desfechos e três devolvem
+        ``ok=False``; tratá-los como um é o que deixava a luz acesa sobre um
+        canal que a própria medição dizia não ser mais dele.
+
+        ==================================  ====================  ============
+        desfecho de `_eleger_nome`          o que o ativo diz      saiu do ar?
+        ==================================  ====================  ============
+        ``ok=True``                         é o destino da volta   **sim**
+        a fonte não se sustenta             nada foi escrito       não
+        o `pactl` recusou (``rc != 0``)     a escrita não pegou    não
+        escreveu e o ativo é o canal DELE   o WirePlumber voltou   não
+        escreveu e o ativo é um TERCEIRO    o canal não é dele     **sim**
+        escreveu e o ativo é ilegível       não deu para ler       não
+        ==================================  ====================  ============
+
+        **"NÃO SEI" NUNCA VIRA "SAIU"**, e é a mesma regra que
+        `daemon/subsystems/recado_do_microfone.mesa_de_agora` aplica ao `None`
+        do backend: ativo ilegível, ou posse que veio de fora sem o nome do
+        canal, deixam o dono de pé. Soltar a posse ali seria declarar que o
+        microfone saiu do ar por não termos conseguido perguntar — o
+        *"silêncio não é sucesso"* com o sinal trocado.
+        """
+        if resultado.ok:
+            return True
+        if resultado.ativo is None or self.fonte_do_eleito is None:
+            return False
+        return resultado.ativo != self.fonte_do_eleito
 
     def _eleger_nome(self, alvo: str) -> ResultadoDaEleicao:
         # A memória é guardada AQUI, e não só em `eleger_por_uniq`: toda
@@ -398,9 +452,13 @@ class EleitorDeMicrofone:
         passa a MUDO, cai do rádio/cabo, ou a ponte de microfone dele cai"*, e
         as duas últimas eram falsas: `grep -rn "devolver_o_microfone" src/`
         devolve esta definição e aquela única chamada, e as DUAS escritas de
-        `self.eleito` neste módulo são caminhos de eleição CONFERIDA — a de
-        `eleger_por_uniq` e a deste método. (Eram três até 02/09, quando as
-        duas incondicionais daqui viraram uma condicionada ao `ok`.)
+        `self.eleito` neste módulo saem da MESMA releitura do ATIVO — a de
+        `eleger_por_uniq`, que só anota o dono quando o ativo relido é o canal
+        dele, e a deste método, que só tira o dono quando o ativo relido prova
+        que o canal deixou de ser dele (`_o_eleito_saiu_do_ar`). (Eram três até
+        02/09, quando as duas incondicionais daqui viraram uma; e a condição
+        era `resultado.ok`, que confundia os três desfechos de recusa, até a
+        auditoria do mesmo dia separar o `eleicao_mic_nao_pegou`.)
         **Não há gancho de hotplug-out**, e a posse fica de pé quando o
         controle cai. Enquanto ela ficar, quem publica o estado tem de dizer
         que o dono saiu da mesa em vez de nomeá-lo — é o `eleito_na_mesa` de
@@ -459,8 +517,18 @@ class EleitorDeMicrofone:
         # novo" é o comportamento correto — ele ainda tem o canal e está
         # tentando outra vez; e a borda de outro jogador SER recusa também é,
         # porque o canal de fato não é dele.
-        if resultado.ok:
+        #
+        # E A RECUSA NÃO É UMA SÓ — auditoria de 02/09/2026. Esta linha era
+        # `if resultado.ok`, e com ela os TRÊS desfechos de `ok=False` ficavam
+        # iguais. Dois estão certos (nada foi escrito, o canal continua dele);
+        # o TERCEIRO é o `eleicao_mic_nao_pegou`: a escrita foi ACEITA e o
+        # ativo relido é um terceiro. Aí o canal não é mais dele, e manter a
+        # posse é a mentira de segunda geração no caminho de volta. Quem separa
+        # os três é `_o_eleito_saiu_do_ar`, que compara o ativo relido com o
+        # NOME do canal dele — e é por isso que `fonte_do_eleito` existe.
+        if self._o_eleito_saiu_do_ar(resultado):
             self.eleito = None
+            self.fonte_do_eleito = None
         return resultado
 
 
