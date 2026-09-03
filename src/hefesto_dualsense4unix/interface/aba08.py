@@ -11,8 +11,8 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde  # noqa: E402
-from monta import (MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, cor_da_zona, glifo,  # noqa: E402
-                   monta, player_slot_color, svg)
+from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, cor_da_zona,  # noqa: E402
+                   glifo, monta, player_slot_color, svg)
 
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
 # arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
@@ -869,17 +869,14 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      da linha de 36 do campo, sem crescer o corpo da linha. A proporção é a do
      `viewBox` (116,684 × 80,472), e não uma altura digitada.
 
-     ESTE DESENHO AINDA MOSTRA O PLÁSTICO DO MOCKUP, e está MEDIDO — 03/09/2026,
-     `IDENTIDADE-VEM-DE-CIMA-01`. A cor dele viaja num ATRIBUTO
-     (`data-colorway` do `<svg>`), e o `escrever()` do piloto não tem alvo de
-     atributo: texto, html, valor, largura, fundo, cor e classe, e mais nada. A
-     régua `check_identidade_vem_de_cima` também não o vê — ela procura
-     `--plastico` e NOME de colorway, e um `data-colorway="cosmic-red"` não é
-     nem um nem outro.
+     ESTE DESENHO SEGUE O APARELHO desde 03/09/2026 — ver `desenho_do_controle`,
+     que é quem lhe dá o endereço. A cor dele viaja num ATRIBUTO
+     (`data-colorway` do `<svg>`), e o alvo `atributo` do piloto é quem o
+     escreve: vinte bytes por tique.
 
-     A ROTA ÓBVIA FOI TENTADA E REPROVOU NA MEDIÇÃO: envolver o `<svg>` num
-     `data-campo` com alvo `html` e o pacote emitir o desenho na cor lida. Com
-     os dois controles dela, 31 tiques:
+     A ROTA ÓBVIA FOI TENTADA E REPROVOU NA MEDIÇÃO, e é por isso que o alvo não
+     é `html`: envolver o `<svg>` num `data-campo` com alvo `html` e o pacote
+     emitir o desenho na cor lida custa, com os dois controles dela, 31 tiques:
 
          sem o desenho    2 pinturas / 31 tiques    tique mediano  4,24 ms
          com o desenho   31 pinturas / 31 tiques    tique mediano 13,56 ms
@@ -888,11 +885,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      de um `<svg>` nunca volta igual ao que se escreveu, então a comparação do
      `escrever()` acusa mudança em todo tique — o mesmo tropeço que o alvo `cor`
      documenta para o CSSOM. E o desenho tem 50 KB; dois deles atravessam a
-     ponte a cada meio segundo.
-
-     A CURA CERTA É UM ALVO DE ATRIBUTO no piloto (escrever `data-colorway`):
-     vinte bytes por tique em vez de cem mil. Ela é do dono do `hefesto_vivo.py`,
-     não desta aba — e vale para as CINCO abas que desenham um controle. */
+     ponte a cada meio segundo. */
   .gc-corpo .ds-mini{flex:0 0 48px;width:48px}
   /* cada bloco do corpo é uma dupla rótulo+campo, e a barra vertical separa
      irmãos — a mesma gramática das colunas dos outros dois quadros */
@@ -1565,6 +1558,115 @@ def teto_dica(c):
     return _aba_conexoes.dica_do_teto(_vibracao_da_bancada(c))
 
 
+# ---------------------------------------------------------------------------
+# O DESENHO DO CONTROLE SEGUE O APARELHO — a lei dela, 03/09/2026:
+#
+#     "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
+#      players com cada controle — tudo isso muda de acordo com o controle
+#      identificado no canto superior. é white no p1, mas a borda de tudo é
+#      cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
+#
+# O CSS do `.ds-mini` guardava a dívida e a receita: *"a cura certa é um alvo de
+# ATRIBUTO no piloto"*. Ele existe desde 03/09 (`data-hef-alvo="atributo"` mais
+# `data-hef-atributo`), e são estas duas funções que o alcançam.
+#
+# SÃO DUAS METADES, E UMA SÓ NÃO CURA NADA — está medido pela frente que fez o
+# alvo: `monta._so_o_colorway` guarda na folha de CADA `<svg>` só as regras do
+# modelo pedido (3.082 bytes dos 45.452 dos 28). Escrever `white` num desenho
+# cuja folha só traz `cosmic-red` dá o MESMO cinza neutro (`rgb(58, 63, 75)`) de
+# um desenho sem atributo nenhum — troca-se uma cor errada por um cinza.
+#
+# A SAÍDA ESCOLHIDA É A TABELA COMPARTILHADA, e não podar menos: o bloco das
+# cores sai de dentro dos desenhos e vai UMA vez para a página. A aritmética que
+# `_so_o_colorway` documenta continua de pé — ela existe para uma aba não
+# carregar QUATRO cópias dos 28 modelos; uma cópia só é o que ela pede.
+#
+# E O QUE VIAJA É O `<defs id="cores-do-dualsense">` INTEIRO, não só o `<style>`.
+# Isto foi MEDIDO e quase passou: OITO dos 28 modelos não têm hex nenhum no mapa
+# dela — Chroma Teal, Ghost of Yōtei, Grey Camouflage… — e a folha os pinta com
+# `url(#hachura-sem-hex)`, uma hachura; outros dois usam gradiente
+# (`casca-god-of-war-20th`, `casca-spider-man-2`). São 68 referências a TRÊS
+# `id`, e o `monta.svg()` prefixa todo `id` por controle. Uma folha solta,
+# unprefixada, apontaria para `#hachura-sem-hex` enquanto os desenhos definiriam
+# `#p1-hachura-sem-hex`: oito modelos ficariam SEM TINTA, e só na máquina de
+# quem tivesse um deles. O `<defs>` é a unidade que o
+# `scripts/gerar_cores_do_dualsense.py` escreve, e é a unidade que se move.
+#
+# ELE VAI DENTRO DE UM `<svg>` DE ZERO PIXEL porque `<pattern>` e
+# `<linearGradient>` só existem dentro de um fragmento SVG. O `url(#…)` de um SVG
+# inline resolve contra o DOCUMENTO, então os dois desenhos o alcançam de lá.
+# ---------------------------------------------------------------------------
+_CORES_NO_DESENHO = re.compile(
+    r'\n?[ \t]*<defs id="[^"]*cores-do-dualsense">.*?</defs>', re.S)
+
+#: A ÂNCORA do endereço. `monta.svg()` reescreve a tag de abertura para
+#: `<svg data-colorway="…" class="…" …`, e é nela que os três atributos entram.
+_ABRE_O_DESENHO = '<svg data-colorway="'
+
+
+def _a_tabela_dos_28() -> str:
+    """As 28 cores dela, lidas do desenho — a TABELA, publicada uma vez.
+
+    Ela não é digitada aqui e não pode ser: o dono é
+    `scripts/gerar_cores_do_dualsense.py`, que a escreve no `ds_limpo.svg` a
+    partir de `docs/data/cores-do-dualsense.csv`. Uma segunda cópia envelheceria
+    sozinha no dia em que ela mapear o vigésimo nono modelo.
+    """
+    achado = _CORES_NO_DESENHO.search(DS)
+    if not achado:
+        raise SystemExit(
+            "ERRO em 08-conexoes: o `<defs id=\"cores-do-dualsense\">` sumiu do "
+            "`ds_limpo.svg` — sem ele o desenho não tem como virar outro modelo, "
+            "e o alvo de atributo escreveria um colorway que nada casa.")
+    return achado.group(0).strip()
+
+
+TABELA_DAS_CORES = (
+    '  <svg width="0" height="0" aria-hidden="true" focusable="false"\n'
+    '       style="position:absolute;width:0;height:0;overflow:hidden">\n'
+    f'  {_a_tabela_dos_28()}\n'
+    '  </svg>')
+
+
+def desenho_do_controle(c, luz):
+    """O desenho pequeno da linha, com ENDEREÇO e sem a folha podada.
+
+    Os três atributos são o contrato do alvo novo, e o par alvo/parâmetro vem
+    separado de propósito — é o que o alvo `classe` já faz com `data-hef-classe`
+    e `data-hef-quando`; um `data-hef-alvo` composto quebraria toda comparação
+    por igualdade que lê o alvo.
+
+    O ALVO É `atributo` E NÃO `html`: trocar o `<svg>` inteiro foi tentado e
+    reprovou na medição (31 pinturas em 31 tiques, tique de 4,24 para 13,56 ms,
+    e 50 KB atravessando a ponte a cada meio segundo), porque o `innerHTML` que o
+    navegador devolve de um SVG nunca volta igual ao que se escreveu. O atributo
+    são vinte bytes e a comparação casa.
+    """
+    x = svg(c["pref"], c["cor"], classes="ds-svg ds-mini", luz=luz, lampadas=False)
+    if _ABRE_O_DESENHO not in x:
+        raise SystemExit(
+            f"ERRO em 08-conexoes: o desenho do {c['pref']} não abre com "
+            f"`{_ABRE_O_DESENHO}` — sem essa âncora o endereço da cor cairia no "
+            "lugar errado, que é pior que não existir.")
+    x = x.replace(_ABRE_O_DESENHO,
+                  '<svg data-campo="desenho" data-hef-alvo="atributo" '
+                  'data-hef-atributo="data-colorway" data-colorway="', 1)
+    # A TABELA PODADA SAI. Ela é a escolha de UM modelo cravada no arquivo; a
+    # dos 28 já vai na página, uma vez, por `TABELA_DAS_CORES`.
+    #
+    # E A AUSÊNCIA PARA A GERAÇÃO, como o `_tira_grupo` do `monta.py`: um `sub`
+    # que não casa devolve o texto intacto e não avisa — a página sairia com as
+    # DUAS tabelas, a podada por dentro e a dos 28 por fora, e a de dentro
+    # venceria por vir depois. É a cicatriz da fita que morreu em silêncio.
+    limpo, quantas = _CORES_NO_DESENHO.subn("", x)
+    if quantas != 1:
+        raise SystemExit(
+            f"ERRO em 08-conexoes: o desenho do {c['pref']} trouxe {quantas} "
+            f"tabelas de cor onde devia trazer uma — o `<defs>` das cores mudou "
+            f"de forma, e a podada ficaria na página vencendo a dos 28.")
+    return limpo
+
+
 def linha_do_controle(c):
     """Um controle do acordeão: a linha fechada e o corpo que ela abre.
 
@@ -1632,7 +1734,7 @@ def linha_do_controle(c):
                      title="Fecha — a fita volta para “Todos”, e os {len(CONECTADOS)} controles abrem juntos.">▴</label>
             </div>
             <div class="gc-corpo">
-              {svg(c["pref"], c["cor"], classes="ds-svg ds-mini", luz=luz, lampadas=False)}
+              {desenho_do_controle(c, luz)}
               <span class="gc-bloco">
                 <span class="rot">{glifo("mic", ativo=True, tam=16)} Microfone e botões
                   <span class="ajuda">?<span class="dica">{MIC_LIGADO_DICA}<br><br>{BOTAO_DICA}</span></span></span>
@@ -2468,6 +2570,19 @@ TELA_EM_PE = cerimonia(
 
 
 MIOLO = f'''
+    <!-- ======== A TABELA DAS CORES DELA, uma vez para a página inteira ========
+         Os 28 modelos e as 10 zonas de `docs/data/cores-do-dualsense.csv`, com a
+         hachura e os dois gradientes que oito deles usam — o
+         `<defs id="cores-do-dualsense">` inteiro, lido do `ds_limpo.svg` por
+         `_a_tabela_dos_28`. Ele morava DENTRO de cada desenho e vinha PODADO
+         (só o modelo que o mockup escolheu), e uma tabela podada não tem como
+         virar outro modelo: o alvo de atributo escreveria `white` e a casca
+         continuaria caindo no cinza cru do desenho.
+         O `<svg>` mede ZERO e não desenha nada — ele existe porque `<pattern>` e
+         `<linearGradient>` só valem dentro de um fragmento SVG. Não muda um
+         pixel do que ela aprovou. ======== -->
+{TABELA_DAS_CORES}
+
     <!-- ======== 1. CHECK-UP — juízo à esquerda, conserto à direita ========
          SUBIU PARA PRIMEIRO E MUDOU DE NOME — 30/08/2026, pedido dela:
          *"a parte 'Está tudo certo' aparece como primeiro bloco na página e
@@ -2613,9 +2728,9 @@ MIOLO = f'''
           <b>bateria</b>. Máscara e bateria são leitura aqui — quem as governa é outra aba.<br><br>
           <b>A borda</b> é a cor do plástico que o Hefesto <b>leu do aparelho</b>. Quando a
           leitura não aconteceu, a borda fica <b>neutra</b> — porque uma borda colorida seria
-          uma cor que ninguém leu. O <b>desenho</b> continua na
-          cor que o resto do Hefesto já conhece: quem responde pela leitura é a borda, e é só
-          ela que fica cinza. <b>A barra de luz</b> não é a cor do plástico: é a cor canônica do
+          uma cor que ninguém leu. <b>O desenho segue a mesma leitura</b>: ele é o modelo que
+          o mapa dela cataloga para aquele controle, e sem leitura fica cinza junto com a
+          borda. <b>A barra de luz</b> não é a cor do plástico: é a cor canônica do
           <i>jogador</i> (<code>core/led_control.player_slot_color</code>).<br><br>
           <b>O microfone segue o transporte</b>, e isso não é escolha: pelo cabo ele vem pela
           placa de áudio do próprio aparelho; pelo rádio, pela ponte do Hefesto. As

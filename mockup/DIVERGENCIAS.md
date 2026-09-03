@@ -187,3 +187,48 @@ seção daqui**: a aba deixou de estar em trabalho.
   dos que valem sempre, a cópia do "Duplicar" não herda mais o carimbo de ponte,
   o "Ativar" lê o relatório de seções do daemon e pega a carona do wrapper, e
   trocar "Funciona em" para "Todos" num perfil de jogo pergunta antes.
+
+## 08-conexoes.html
+
+- **03/09/2026** — **o desenho do controle deixou de ser o do mockup.** A lei é
+  dela: *"os svgs do dualsense (…) mudam de acordo com o controle identificado
+  no canto superior. é white no p1, mas a borda de tudo é cosmic red e os svgs
+  não são os que o meu mapa cataloga. isso tá errado"*.
+
+  Medido no motor antes desta cura, com os dois controles na mesa: o rótulo já
+  dizia `Sony · Player 1 · White · USB` e o desenho ao lado era **Cosmic Red**
+  (`rgb(174, 51, 90)`); o do P2 dizia `Galactic Purple` e era **Starlight Blue**
+  (`rgb(126, 184, 212)`). Depois: `rgb(228, 224, 216)` e `rgb(116, 88, 142)` —
+  o `--z-casca` que o mapa dela dá a cada um.
+
+  **O QUE MUDA NO DESENHO, e é só isto:** os dois `<svg>` da Gestão de Controles
+  ganharam três atributos invisíveis (`data-campo="desenho"`,
+  `data-hef-alvo="atributo"`, `data-hef-atributo="data-colorway"`), e o
+  `<defs id="cores-do-dualsense">` — a tabela dos 28 modelos, a hachura e os dois
+  gradientes — saiu de dentro de cada desenho e passou a ir **uma vez** na
+  página, num `<svg>` de zero pixel. Dentro dos desenhos ele vinha **podado**
+  para um modelo só, e uma tabela podada não tem como virar outro modelo: o
+  produto escreveria `white` e a casca cairia no cinza cru. Com a tabela
+  compartilhada, **os 28 pintam** — medido no motor, um a um, nenhum sem tinta.
+  Nenhuma cor, medida ou posição do que ela aprovou mudou; a página cresceu
+  40 KB de CSS que ninguém lê.
+
+  **Uma frase de tela mudou**, porque a antiga passou a ser falsa: a dica do `?`
+  da Gestão dizia *"o desenho continua na cor que o resto do Hefesto já
+  conhece"*. Agora diz que o desenho segue a mesma leitura da borda, e fica
+  cinza junto com ela quando não há leitura.
+
+  **O QUE ELA VÊ HOJE, enquanto o produto não recebe:** nada muda. A página
+  publicada não tem os três atributos, o `achar()` do piloto não encontra o
+  endereço e a pintura escreve zero — os dois desenhos continuam Cosmic Red e
+  Starlight Blue na tela dela. **O produto recebe no `--publicar 08`**, que é
+  ato de quem coordena, depois do OK dela.
+
+  **O que NÃO espera por ela** (já está no produto, sem tocar no desenho): oito
+  dos 28 modelos do mapa dela — Chroma Teal, Chroma Indigo, Chroma Pearl, Grey
+  Camouflage, Ghost of Yōtei, Marathon, Genshin Impact e 007 First Light — são
+  pintados com uma **hachura**, e o valor chegava a `tinta_legivel`, onde
+  `int("ur", 16)` levanta `ValueError`. Quem ligasse um deles via a aba
+  **parar de pintar por inteiro**, sem uma barra na tela e sem erro que
+  dissesse por quê. A hachura continua valendo para o desenho; para a barra e
+  para a régua do rádio ela é ausência de leitura, que é a regra dela.
