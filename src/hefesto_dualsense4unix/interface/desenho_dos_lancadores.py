@@ -401,6 +401,45 @@ def linhas_de_jogos(itens: list[JogoNaLista], vazio: str = "") -> str:
     return "".join(linhas)
 
 
+#: O ENDEREÇO DA FRASE DO "?" QUE CONTA CONTROLE. Ele mora aqui pela mesma
+#: razão de :data:`ABRIR`: o gerador o escreve no `data-campo` e o pacote o
+#: emite na carga — digitá-lo duas vezes é como um endereço fica órfão.
+QUANTOS = "lanc-quantos"
+
+
+def quantos_html(n_ctrl: int, n_usb: int, n_bt: int) -> str:
+    """*"os **2** (1 no cabo, 1 no rádio)"* — o trecho do "?" que conta controle.
+
+    POR QUE ELE EXISTE, e é a última bolsa de mockup desta aba. Os CARTÕES
+    pararam de contar controle em 02/09/2026 (*"Contar controle aqui era
+    responder com um número que a pergunta não tem"*), e a régua do gerador
+    passou a reprovar um cartão que prometesse para um número. **O texto do
+    `?` ficou de fora da cura** — e o próprio `aba07.py` deixou dito, no
+    import: *"`CONECTADOS` fica — ele ainda responde pelo texto do '?'"*.
+
+    O QUE ISSO PÔS NA TELA DELA, medido em 03/09/2026 no WebKit da janela, com
+    UM DualSense no cabo:
+
+        cabeçalho (lido do aparelho)   ``● 1 controle: 1 USB · 0 BT``
+        o "?" logo abaixo, no mesmo quadro
+                                       ``…vale igual para os 2 (1 no cabo,
+                                         1 no rádio)…``
+
+    O `2` não vinha do aparelho: vinha de `monta.CONECTADOS`, a mesa do
+    DESENHO, derivada no import do gerador e congelada no HTML. É a mesma forma
+    da fita que dizia `P1 · Cosmic Red · USB` sobre um White — e a lei dela é a
+    mesma: *"se no topo tá mostrando controle white player 1, então cada aba
+    vai usar os controles lá de cima. Não mistura com a info dos mockups."*
+
+    AS PALAVRAS SÃO AS DELA, e só o ARTIGO se dobra ao número: com um controle
+    na mesa, *"para os 1"* seria trocar uma mentira por um erro de português.
+    Nada mais mudou de redação — o que mudou é de onde saem os três números.
+    """
+    artigo = "o" if n_ctrl == 1 else "os"
+    return (f"{artigo} <b>{n_ctrl}</b> ({n_usb} no cabo, "
+            f"{n_bt} no rádio)")
+
+
 def conta_html(achados: int, impedidos: int) -> str:
     """A contagem do quadro: `N encontrados · M com impedimento`.
 
@@ -935,6 +974,7 @@ __all__ = [
     "DIZ_SEM_FONTE",
     "MOLDURA",
     "PROCURADOS",
+    "QUANTOS",
     "SELETOR_DA_GRADE",
     "SELOS",
     "SEM_FONTE",
@@ -959,6 +999,7 @@ __all__ = [
     "conta_html",
     "linhas_de_jogos",
     "lista_de_jogos",
+    "quantos_html",
     "selo_html",
     "um_cartao",
     "valores_do_cartao",
