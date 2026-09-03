@@ -3386,13 +3386,28 @@ class Daemon:
                 from hefesto_dualsense4unix.integrations.audio_control import (
                     definir_volume_da_captura,
                     fonte_de_captura_do_controle,
+                    fonte_de_captura_do_uniq,
                 )
 
-                fonte = fonte_de_captura_do_controle()
+                # QUANDO HÁ `uniq`, A FONTE É DAQUELE CONTROLE — e não a
+                # primeira da lista. É a costura que o próprio esquema pede em
+                # `ControllerMicOverride._o_que_ainda_nao_tem_caminho_por_peca`,
+                # que hoje RECUSA o `volume` por peça na borda com esta razão:
+                # com dois DualSense no cabo há DUAS placas de som
+                # (MIC-DA-MESA-CHEIA-01), e a rota global mandaria o volume ao
+                # microfone do vizinho.
+                #
+                # NÃO HÁ QUEDA PARA A ROTA GLOBAL quando o `uniq` não resolve, e
+                # isso é a metade que importa: cair para a primeira fonte da
+                # lista seria escrever no controle errado — exatamente o
+                # estrago que esta linha existe para impedir. Sem fonte daquele
+                # controle, ninguém escreve e ninguém diz "aplicado".
+                fonte = (fonte_de_captura_do_uniq(uniq) if uniq
+                         else fonte_de_captura_do_controle())
                 if not fonte:
                     # Rádio sem a ponte de áudio: não há onde escrever. Não é
                     # falha, é a ausência da fonte — dita com esse nome.
-                    logger.debug("profile_mic_sem_fonte", origin=origin)
+                    logger.debug("profile_mic_sem_fonte", origin=origin, uniq=uniq)
                 elif definir_volume_da_captura(int(volume), fonte=fonte):
                     escreveu = True
                     logger.info(
