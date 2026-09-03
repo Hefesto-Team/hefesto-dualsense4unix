@@ -965,15 +965,14 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # frente dela, e `a01_jogar.py` foi ligado pela integração, com a medição
     # contra o daemon vivo (o do CABO dizia `Player —` e passou a dizer
     # `Player 2`). O portão pegou a lápide sobrevivente antes de mim.
-    "interface/pacotes/__init__.py::identidade_de": (
-        "O nome do controle na tela, na ordem 'o que ELA nomeou > o modelo "
-        "decodificado > o transporte' — e NUNCA a posição. Hoje `Cosmic Red` e "
-        "`Starlight Blue` estão cravados 170 vezes no HTML publicado, e o nome "
-        "vinha da ordem da lista: com um controle o do cabo era 'Starlight "
-        "Blue'; com dois, o MESMO cabo virou 'Cosmic Red'. Fecha quando os "
-        "geradores `interface/abaNN.py` derem `data-campo` ao rótulo e os "
-        "pacotes o pintarem. MEDIDO em 02/09/2026."
-    ),
+    # `identidade_de` SAIU DAQUI EM 03/09/2026, e fechou exatamente pela
+    # condição que a própria lápide escrevia: *"fecha quando os geradores
+    # `interface/abaNN.py` derem `data-campo` ao rótulo e os pacotes o
+    # pintarem"*. Foi a `IDENTIDADE-VEM-DE-CIMA-01` na aba 02: `aba02.py`
+    # partiu o `<span class="card-nome">` em `data-campo="peca"` +
+    # `data-campo="via"`, e `a02_controles.pacote()` os escreve com
+    # `identidade_de(c, ctx.mesa)`. Medido com os dois controles dela na mesa:
+    # o cabeçalho dizia `Cosmic Red · USB` e passou a dizer `White · USB`.
     "interface/pacotes/__init__.py::degradacao_de": (
         "A frase 'Emulação degradada (uinput): …', que delega para "
         "`app/widgets/controller_card.texto_degradacao`. `vpad_motivo` é lido "
