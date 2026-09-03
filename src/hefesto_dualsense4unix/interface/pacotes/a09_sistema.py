@@ -42,6 +42,7 @@ lia) tomava o lugar e o cabeçalho inteiro virava travessão nesta aba.
 from __future__ import annotations
 
 import html
+import threading
 import time
 from typing import Any
 
@@ -86,16 +87,43 @@ SEM_DONO: dict[str, str] = {
 #: Os três dependem de ESCRITA QUE NÃO É TEXTO — a pintura do piloto único
 #: (`hefesto_vivo.BOOTSTRAP`) sabe escrever texto, largura, fundo, `value` e
 #: `innerHTML`, e nenhum desses três se resolve com nenhum deles:
+#: OS DOIS PRIMEIROS SAÍRAM EM 03/09/2026, e a nota que os segurava estava
+#: CADUCA — não errada quando foi escrita, caduca. Ela dizia *"a pintura não tem
+#: alvo de classe"*, e o piloto único ganhou o alvo `classe` em 02/09
+#: (`hefesto_vivo.escrever`, o ramo `if(alvo === 'classe')`). O que faltava
+#: passou a ser só o endereço na página e a emissão aqui — as duas metades
+#: entram juntas neste commit.
 NAO_CHEGA_NA_TELA: dict[str, str] = {
-    "hefesto-autostart": "o valor é a CLASSE `on` de um `<span class=\"chave\">`, "
-                         "e a pintura não tem alvo de classe. Escrever texto no "
-                         "`data-id` da linha apagaria o próprio interruptor.",
-    "bateria-perfil": "o valor é qual dos TRÊS `<button>` leva a classe `on`. "
-                      "Mesmo caso, e pior: o endereço é o `<div>` que os contém — "
-                      "escrever texto nele apagaria os três botões.",
     "bateria-frase": "está em `aba_sistema.ENDERECOS` e NÃO EXISTE na página: o "
                      "gerador nunca emitiu este endereço, e a frase de "
                      "`frase_do_teto()` vive hoje dentro da dica do `?`.",
+}
+
+#: O QUE O PACOTE EMITE E A PÁGINA NÃO TEM ONDE RECEBER — e é OUTRA espécie que
+#: `NAO_CHEGA_NA_TELA`. Ali o valor NÃO PODE ser emitido (escrevê-lo apagaria o
+#: widget que mora no endereço); aqui ele é emitido e cai no vazio, sem estrago:
+#: o `achar()` do piloto devolve zero elementos e a pintura não conta nada.
+#:
+#: A CLASSE DA LINHA (`est ok` / `est warn` / `est info`) é o caso, e a razão é
+#: de mecanismo: o alvo `classe` do piloto acende UMA classe por elemento, e a
+#: linha de estado tem TRÊS, mutuamente exclusivas, no mesmo `<div>`. Não há
+#: caminho no piloto de hoje que apague `ok` e acenda `warn` na mesma travessia.
+#:
+#: O QUE ISSO CUSTA NA TELA DELA, fotografado em 03/09/2026 às 04:26: a linha
+#: "Trocar de perfil ao abrir o jogo" mostra o valor **Sem ver a janela agora**
+#: em VERDE, porque a cor vem da classe congelada do desenho. O glifo ao lado
+#: passou a ser pintado hoje (`-g`), então a leitura por SÍMBOLO já está certa;
+#: o que sobra é a cor.
+#:
+#: A CURA TEM DOIS CAMINHOS E OS DOIS SÃO DE FORA DESTA ABA: ou o piloto ganha um
+#: alvo que troque uma classe DENTRO DE UM CONJUNTO (`data-hef-classes="ok warn
+#: info"`, território das dez abas), ou o desenho para de pintar a cor pela
+#: classe da linha — e esse é decisão dela.
+SEM_ALVO_NA_PAGINA: dict[str, str] = {
+    f"{linha}-cls": "a linha tem TRÊS classes exclusivas (`ok`/`warn`/`info`) e "
+                    "o alvo `classe` do piloto acende UMA."
+    for linha in ("hefesto-estado", "hefesto-pausa", "hefesto-troca-de-perfil",
+                  "hefesto-ambiente", "bateria-impoe", "bateria-vale-para")
 }
 
 #: A FAIXA LENTA, e o período é o do `interface/sistema_viva.py` — o piloto de
@@ -179,6 +207,8 @@ def _no_painel(repouso: Any) -> str:
     return "—" if repouso is None else str(repouso)
 
 
+
+
 def _para_o_painel(texto: str) -> dict[str, Any]:
     """Guarda o texto E devolve a carga que o piloto escreve na hora.
 
@@ -198,6 +228,26 @@ def _versao() -> str:
         return str(getattr(h, "__version__", "") or "")
     except Exception:
         return ""
+
+
+def _unidade() -> str:
+    """O nome da unit do daemon, do DONO dela — nunca digitado.
+
+    O dono é `daemon/service_install.SERVICE_NORMAL`, que por sua vez sai de
+    `utils.identidade`. Pedi-lo a `daemon_actions` (que só o importa) funciona em
+    execução e o `mypy` recusa, com razão:
+
+        error: Module "…daemon_actions" does not explicitly export attribute
+        "SERVICE_NORMAL"  [attr-defined]
+
+    E a razão dele é a mesma desta casa: um nome tem UM dono, e pedir a quem só
+    reexporta é o começo de duas verdades. A literal do `-dev` que sobreviveu à
+    purga e fez esta aba afirmar `not-found` sobre uma unit `enabled` já cobrou
+    essa lição em 01/09.
+    """
+    from hefesto_dualsense4unix.daemon.service_install import SERVICE_NORMAL
+
+    return str(SERVICE_NORMAL)
 
 
 def _autostart() -> str | None:
@@ -223,8 +273,9 @@ def _autostart() -> str | None:
         return None
 
 
-def _achados(state: dict[str, Any] | None) -> list[tuple[str, str]] | None:
-    """O `storm_report`, que é READ-ONLY por contrato do próprio módulo.
+def _achados(state: dict[str, Any] | None,
+             pode_perguntar: bool = True) -> list[tuple[str, str]] | None:
+    """O `storm_report` MAIS os dois achados condicionais da janela antiga.
 
     `None` **não é** lista vazia, e a camada do produto trata os dois de forma
     diferente: `None` vira *"O exame não respondeu"*, e `[]` vira *"O exame não
@@ -234,11 +285,204 @@ def _achados(state: dict[str, Any] | None) -> list[tuple[str, str]] | None:
     O DENOMINADOR HONESTO vem do `state`: `controles_no_cabo` diz quantos
     controles estão no cabo AGORA, e é ele que decide se a frase do áudio fala
     no singular ou no plural.
+
+    OS DOIS QUE FALTAVAM — 03/09/2026, e por isso o exame desta tela era 6/8 do
+    exame da GTK. `_refresh_storm_diag` (`daemon_actions.py:1136` e `:1145`)
+    acrescenta ao `storm_report` mais dois achados, e os dois só FALAM QUANDO HÁ
+    PROBLEMA (devolvem `None` quando está tudo bem — decisão dela de 22/08/2026
+    para o vigia do Steam Input):
+
+    * `medir_guarda_do_steam_input()` — o vigia morto. **2,8 ms**, entra aqui;
+    * `medir_prontuario_dos_jogos()` — divergência entre os manifestos da Steam
+      e os perfis do disco. **7,1 s**, e por isso NÃO entra aqui — ver
+      :func:`_prontuario`.
+
+    Medido por grep antes de ligar: as duas funções tinham UM chamador em toda a
+    árvore, e era a GTK. São funções de MÓDULO — não pedem janela, não pedem
+    `self` — então isto é ponte, não código novo. Na mesa dela, agora, as duas
+    devolvem `None`: o exame continua com seis linhas, e é assim que a GTK
+    também se comporta hoje. A diferença aparece no dia do problema, que é
+    justamente o dia em que ela precisa ver.
     """
     try:
-        return _exame.storm_report(controles_no_cabo=_exame.controles_no_cabo(state))
+        linhas = _exame.storm_report(controles_no_cabo=_exame.controles_no_cabo(state))
     except Exception:
         return None
+    # UM ACHADO CONDICIONAL QUE LEVANTA NÃO PODE COMER O EXAME INTEIRO: ele entra
+    # sob o seu próprio `try`, e uma Steam meio instalada não apaga as seis
+    # linhas que já estavam prontas.
+    try:
+        vigia = _daemon.medir_guarda_do_steam_input()
+    except Exception:
+        vigia = None
+    if vigia:
+        linhas.append(vigia)
+    prontuario = _prontuario(pode_perguntar)
+    if prontuario:
+        linhas.append(prontuario)
+    return linhas
+
+
+#: O PRONTUÁRIO DOS JOGOS LEVA 7,1 SEGUNDOS — medido na máquina dela em
+#: 03/09/2026, com `time.monotonic` em volta da chamada:
+#:
+#:     _autostart                 3,9 ms      storm_report            3,3 ms
+#:     _status_do_daemon          3,0 ms      guarda_do_steam_input   2,8 ms
+#:     _systemctl_status_text     5,6 ms      perfil_na_tela          0,2 ms
+#:     medir_prontuario_dos_jogos      7.148,8 ms
+#:
+#: **FATO DERRUBADO:** o comentário que o chama na janela antiga
+#: (`daemon_actions.py:1145`) diz *"Roda dentro do worker porque leva ~1 s"*. Na
+#: mesa dela ele leva SETE, e a ordem de grandeza é o que decide o desenho desta
+#: função: 1 s numa faixa lenta de 2 s seria caro; 7 s é impossível.
+#:
+#: O QUE ACONTECEU QUANDO ELE ENTROU NA FAIXA LENTA, e está fotografado no relato
+#: desta frente: a janela abriu, o tique custou **13.676 ms de mediana** e a aba
+#: pintou **zero valores em 8 segundos**. A faixa lenta roda DENTRO do laço do
+#: GTK; a janela antiga o chamava de dentro de um worker, e essa diferença não
+#: estava escrita em lugar nenhum.
+#:
+#: A CURA É A DA JANELA ANTIGA, com o mecanismo do piloto: uma thread, uma de
+#: cada vez, e o tique publica o que já se sabe. É o mesmo molde do leitor de cor
+#: (`hefesto_vivo._contexto`) e do serial de fábrica
+#: (`ipc_handlers._identidade_em_voo`) — perguntar é caro, então pergunta-se
+#: fora do caminho e mostra-se a última resposta.
+#:
+#: `{"achado": (veredito, frase) | None, "quando": monotonic}`. Vazio = nunca
+#: perguntado, e aí a primeira visita só DISPARA a pergunta.
+_PRONTUARIO: dict[str, Any] = {}
+
+#: A pergunta está em voo? Uma lista de um elemento porque quem a zera é a
+#: thread, e o que se troca é o conteúdo, nunca o nome.
+_PRONTUARIO_EM_VOO: list[bool] = [False]
+
+#: De quanto em quanto tempo vale a pena repetir uma pergunta de 7 s. Cinco
+#: minutos: o prontuário compara os manifestos da Steam com os perfis do disco, e
+#: os dois só mudam quando ela instala um jogo ou salva um perfil.
+PRONTUARIO_S = 300.0
+
+
+def _prontuario(pode_perguntar: bool = True) -> tuple[str, str] | None:
+    """O achado do prontuário JÁ SABIDO, e dispara a próxima pergunta se venceu.
+
+    NUNCA BLOQUEIA. Devolve `None` na primeira visita — o exame sai com as seis
+    ou sete linhas que já tem — e a linha aparece sozinha no tique seguinte à
+    volta da thread. É a mesma honestidade do `_identidade_de_fabrica` do daemon:
+    enquanto não voltar, a resposta é "ainda não sei", e não uma invenção.
+
+    `pode_perguntar=False` NA PRIMEIRA LEITURA DA FAIXA LENTA, e a razão é o
+    relógio: aquela é a única que roda DENTRO do laço do GTK (ver
+    `_faixa_lenta`), e disparar ali a varredura de 7 s faz as quatro leituras
+    seguintes disputarem o disco com ela. Medido em 03/09/2026: o primeiro tique
+    da janela custou **1.271 ms** com a pergunta solta, e a mediana dos outros
+    dezenove foi **4,7 ms**. Adiando-a para a primeira RELEITURA — que já é
+    thread — o pico sai do caminho e a linha do prontuário chega dois segundos
+    depois, que é quando ela chegaria de qualquer jeito.
+    """
+    agora = time.monotonic()
+    venceu = (not _PRONTUARIO
+              or agora - float(_PRONTUARIO.get("quando") or 0.0) > PRONTUARIO_S)
+    if venceu and pode_perguntar and not _PRONTUARIO_EM_VOO[0]:
+        _PRONTUARIO_EM_VOO[0] = True
+        threading.Thread(target=_perguntar_o_prontuario, daemon=True).start()
+    achado = _PRONTUARIO.get("achado")
+    return achado if isinstance(achado, tuple) else None
+
+
+def _perguntar_o_prontuario() -> None:
+    """A pergunta de 7 s, fora do laço do GTK. Guarda o resultado e sai.
+
+    O `finally` é o que impede a thread de ficar presa "em voo" para sempre
+    quando a medição levanta — sem ele, um erro numa Steam meio instalada
+    calaria o prontuário até o fim da sessão.
+    """
+    try:
+        achado = _daemon.medir_prontuario_dos_jogos()
+    except Exception:
+        achado = None
+    _PRONTUARIO["achado"], _PRONTUARIO["quando"] = achado, time.monotonic()
+    _PRONTUARIO_EM_VOO[0] = False
+
+
+#: O RÓTULO DA LINHA DE IDENTIDADE do painel técnico. Fica aqui, e não solto na
+#: `f-string`, porque a régua desta frente o LÊ para achar o bloco — digitá-lo
+#: nos dois lugares criaria o segundo dono da mesma palavra.
+ROTULO_DA_IDENTIDADE = "Identidade de fábrica"
+
+#: O QUE SE ESCREVE NO LUGAR DE UM SERIAL QUE O APARELHO NÃO DEU. É a regra dela
+#: — *campo sem informação não mostra nada* —, e o motivo é do mapa de canais,
+#: não um `if` decorado aqui: ler o serial é um `SET_FEATURE` da família `0x80`,
+#: e pelo rádio ele não volta. Medido na mesa dela em 03/09/2026: o do cabo
+#: responde os 17 caracteres, o do rádio responde `None`.
+SEM_SERIAL_LIDO = "o serial só é lido no cabo"
+
+
+def _linha_de_identidade(c: dict[str, Any]) -> str:
+    """`P1 · White · <serial>` — a identidade de fábrica de UM controle.
+
+    DECISÃO 10 DELA, 03/09/2026: *"Serial de fábrica: inteiro, e SÓ na aba
+    Sistema (a de diagnóstico)."* Ele é identificador único como um MAC, o daemon
+    já o publica (`ipc_handlers._identidade_publicada`, ROTA-A de 02/09) e até
+    hoje NENHUMA tela do produto o mostrava — nem esta, nem a GTK.
+
+    O LUGAR É O PAINEL "Detalhes técnicos", e a escolha é de sobriedade: é a
+    caixa de diagnóstico desta aba, ela já existe, já tem endereço
+    (`registro-texto`) e já está publicada. Uma linha de estado nova custaria
+    30px numa coluna que o gerador engenha para acabar no mesmo y da irmã — e
+    seria mudança de DESENHO, que é decisão dela e não minha.
+
+    NADA AQUI É INVENTADO: `modelo` é o nome de fábrica que o daemon decodifica
+    do serial, `serial` é o serial cru, e a ausência dos dois vira a frase de
+    :data:`SEM_SERIAL_LIDO` em vez de um travessão que leria como defeito.
+    """
+    jogador = str(c.get("player") or c.get("player_slot") or "") or "?"
+    serial = str(c.get("serial") or "")
+    modelo = str(c.get("modelo") or "")
+    via = "cabo" if str(c.get("transport") or "") == "usb" else "rádio"
+    quem = " · ".join(p for p in (f"P{jogador}", modelo, via) if p)
+    return f"{quem} · {serial or SEM_SERIAL_LIDO}"
+
+
+def _repouso_do_painel(state: dict[str, Any] | None) -> str:
+    """O painel "Detalhes técnicos" SEM ninguém clicar — e ele deixa de ser um traço.
+
+    A GTK NUNCA TEVE UM TRAÇO AQUI: o `Gtk.TextView` dela fica sempre com a saída
+    de `systemctl status <unit>` (`daemon_actions.py:1970` e `:2549`), reescrita
+    a cada refresh — quem abre a aba já lê "está ativo? desde quando? falhou?".
+    Esta tela mostrava `—` até alguém clicar em "Ver detalhes", e a nota de
+    `aba_sistema.SEM_FONTE` que explicava o traço falava de OUTRA coisa (as 80
+    linhas do registro, que o `ver-detalhes` passou a entregar em 01/09).
+
+    O TEXTO DO `systemctl status` É DA JANELA ANTIGA, chamado e não copiado:
+    `_matriz()._systemctl_status_text`. A unit vem de `_unidade()`, que a pede ao
+    dono dela — nunca digitada, pela razão que `_autostart()` já pagou.
+
+    E A IDENTIDADE DE FÁBRICA VEM POR ÚLTIMO, que é a decisão 10 dela. As duas
+    coisas cabem no mesmo painel porque as duas respondem à mesma pergunta —
+    *"o que eu digo ao suporte?"*.
+
+    A ORDEM FOI MEDIDA, NÃO ESCOLHIDA. O painel tem 110 px (seis linhas) e leva
+    `data-hef-rolar="fim"`: ele SEMPRE mostra o fim do texto. E
+    `systemctl status --no-pager` não acaba nas propriedades — ele emenda as
+    últimas linhas do journal. Com a identidade no começo, a foto de 03/09/2026
+    às 04:41 mostrou seis linhas de journal e nenhuma da identidade: o dado que a
+    decisão 10 mandou aparecer estava no painel e fora da vista. Invertida, o
+    fim é a identidade, e o `systemctl status` fica a uma rolada acima.
+    """
+    partes: list[str] = []
+    try:
+        status = _matriz()._systemctl_status_text(_unidade())
+    except Exception as erro:  # a frase precisa do motivo, e ele vem do erro
+        status = f"Não consegui perguntar ao systemd: {erro}"
+    partes.append(str(status).strip())
+    controles = (state or {}).get("controllers") if isinstance(state, dict) else None
+    vivos = [c for c in (controles or [])
+             if isinstance(c, dict) and c.get("connected") is not False]
+    if vivos:
+        partes.append("")
+        partes.append(ROTULO_DA_IDENTIDADE)
+        partes += [f"  {_linha_de_identidade(c)}" for c in vivos]
+    return "\n".join(partes).strip()
 
 
 def _perfil_da_bateria() -> str | None:
@@ -254,19 +498,133 @@ def _perfil_da_bateria() -> str | None:
         return None
 
 
-def _faixa_lenta(state: dict[str, Any] | None) -> tuple[Any, Any, Any]:
-    """As três leituras CARAS, uma vez a cada :data:`LENTO_S`.
+#: A JANELA ANTIGA, INSTANCIADA SEM JANELA NENHUMA — e é o achado de reuso desta
+#: frente, 03/09/2026.
+#:
+#: `DaemonActionsMixin` é a classe de onde saem TRÊS coisas que esta aba devia à
+#: GTK e reescrever seria a regressão que esta rota existe para não repetir:
+#:
+#:     `_daemon_status()`        a matriz de TRÊS fontes, com os quatro estados
+#:     `_systemctl_status_text()` o que a GTK põe no painel técnico em repouso
+#:     `_journalctl_tail()`      as 80 linhas do registro
+#:
+#: **Ela é um MIXIN, e um mixin não precisa da janela para ser instanciado.**
+#: Medido em 03/09/2026: `DaemonActionsMixin()` constrói sem argumento nenhum, e
+#: os três métodos acima só tocam `subprocess` e o arquivo de pid — nenhum toca
+#: um widget. O que se ganha é a REGRA com um dono só: enquanto isto não
+#: existia, `interface/sistema_viva.py:116` carregava uma cópia da matriz e o
+#: próprio docstring dela se declarava *"um segundo leitor da mesma regra"* —
+#: e a cópia estava ERRADA num ponto que ninguém tinha medido: ela procura o pid
+#: em `…/hefesto-dualsense4unix.pid` e o produto o grava em `…/daemon.pid`
+#: (`daemon_actions._read_daemon_pid`, via `xdg_paths.runtime_dir`). Conferido no
+#: disco desta máquina: o arquivo que existe é `daemon.pid`. O segundo leitor
+#: respondia `offline` a todo daemon avulso.
+#:
+#: UMA INSTÂNCIA SÓ, e criada na primeira vez que alguém precisa: construí-la a
+#: cada tique não custaria nada mensurável, mas guardá-la deixa explícito que
+#: **não há estado nenhum aqui dentro** — se houvesse, esta linha seria o bug.
+_JANELA_ANTIGA: list[Any] = []
+
+
+def _matriz() -> Any:
+    """A instância de `DaemonActionsMixin` desta sessão. Ver :data:`_JANELA_ANTIGA`."""
+    if not _JANELA_ANTIGA:
+        _JANELA_ANTIGA.append(_daemon.DaemonActionsMixin())
+    return _JANELA_ANTIGA[0]
+
+
+def _status_do_daemon(state: dict[str, Any] | None) -> str:
+    """Um dos QUATRO estados da janela antiga — não os dois que esta aba tinha.
+
+    ATÉ 03/09/2026 ESTA ABA COLAPSAVA A MATRIZ EM DOIS: `"online_systemd" if
+    ctx.state else "offline"`. A camada de tela sabe os quatro
+    (`aba_sistema._ESTADO_DO_HEFESTO`) e nunca recebia os outros dois, então:
+
+    * com o daemon rodando FORA do systemd, a tela escrevia "Ligado" com selo
+      verde e a dica *"Se travar, ele volta sozinho"* — que é FALSO nesse
+      estado. A GTK escreve "Ligado, em modo improvisado", em laranja;
+    * enquanto a unit sobe, `iniciando` virava "Desligado".
+
+    O `state` CONTINUA VALENDO COMO PISO. `_daemon_status()` fala com o systemd e
+    com o arquivo de pid, não com o daemon: se ele levantar, ou responder
+    `offline` enquanto o IPC acabou de devolver um `state_full`, quem tem razão é
+    o `state` — o daemon respondeu, logo está de pé. Nesse desempate sai
+    `online_avulso`, que é exatamente o que a matriz chama de "vivo e não pelo
+    systemd", e não `online_systemd`, que afirmaria uma unit que ninguém viu.
+    """
+    try:
+        status = str(_matriz()._daemon_status())
+    except Exception:
+        status = "offline"
+    if state and status == "offline":
+        return "online_avulso"
+    return status
+
+
+#: A releitura está em voo? Ver :func:`_faixa_lenta`.
+_LENTO_EM_VOO: list[bool] = [False]
+
+
+def _ler_a_faixa_lenta(state: dict[str, Any] | None,
+                       pode_perguntar: bool = True) -> tuple[Any, Any, Any, Any, Any]:
+    """As cinco leituras caras, de verdade. Não se chama do tique — ver abaixo."""
+    return (_autostart(), _achados(state, pode_perguntar), _perfil_da_bateria(),
+            _status_do_daemon(state), _repouso_do_painel(state))
+
+
+def _guardar_a_faixa_lenta(state: dict[str, Any] | None) -> None:
+    """A releitura, fora do laço do GTK. O `finally` é o que destrava o voo."""
+    try:
+        _LENTO["valor"] = _ler_a_faixa_lenta(state)
+    finally:
+        _LENTO["quando"] = time.monotonic()
+        _LENTO_EM_VOO[0] = False
+
+
+def _faixa_lenta(state: dict[str, Any] | None) -> tuple[Any, Any, Any, Any, Any]:
+    """As leituras CARAS: SÍNCRONA na primeira, EM THREAD nas releituras.
 
     Elas saem deste processo — subprocesso, disco — e nenhuma muda entre dois
     piscares. O tique da pintura é de 500 ms; a faixa lenta é de 2 s, que é a
     mesma separação que `interface/sistema_viva.py` já tinha medido e escolhido.
+
+    ERAM TRÊS E VIRARAM CINCO em 03/09/2026 — o estado do serviço (dois
+    `systemctl` e um `stat`) e o repouso do painel técnico (mais um `systemctl`).
+
+    POR QUE A RELEITURA SAIU DO LAÇO, e é medição, não precaução: o `_prontuario`
+    ronda em thread própria a cada 5 minutos e varre os manifestos da Steam por
+    7 segundos. Enquanto ele varre, o disco fica disputado e as CINCO leituras
+    daqui — que custam 18 ms com a máquina calma — passaram a custar **1.840 ms**
+    e **302 ms** em duas voltas medidas em 03/09/2026. A faixa lenta roda dentro
+    do laço do GTK: isso é a janela dela travada por quase dois segundos, uma vez
+    a cada cinco minutos, sem nada na tela dizendo por quê.
+
+    A JANELA ANTIGA JÁ FAZIA ASSIM, e é dela o molde: `_refresh_daemon_view_async`
+    e `_refresh_storm_diag` submetem tudo a um worker e devolvem por
+    `GLib.idle_add`. O que faltava aqui era o mesmo cuidado.
+
+    A PRIMEIRA CONTINUA SÍNCRONA, e as duas razões são de comportamento:
+
+    * **a primeira pintura tem de ser verdadeira.** Com tudo assíncrono, o
+      primeiro tique escreveria travessão em cinco lugares e a tela piscaria de
+      "não sei" para o valor — o oposto do que esta aba está curando. Medida
+      com a máquina calma, a primeira leva 18 ms;
+    * **`_LENTO` é o ponto de injeção das réguas.** O docstring dele diz que as
+      réguas o esvaziam para forçar a leitura; se esvaziar passasse a devolver
+      `None` até uma thread voltar, toda régua desta aba viraria uma corrida.
     """
     agora = time.monotonic()
-    if _LENTO and agora - float(_LENTO["quando"]) < LENTO_S:
+    if not _LENTO:
+        # `pode_perguntar=False`: a varredura de 7 s do prontuário fica para a
+        # primeira RELEITURA, que já é thread. Ver `_prontuario`.
+        _LENTO["valor"] = _ler_a_faixa_lenta(state, pode_perguntar=False)
+        _LENTO["quando"] = agora
         return _LENTO["valor"]  # type: ignore[no-any-return]
-    valor = (_autostart(), _achados(state), _perfil_da_bateria())
-    _LENTO["quando"], _LENTO["valor"] = agora, valor
-    return valor
+    if agora - float(_LENTO["quando"]) >= LENTO_S and not _LENTO_EM_VOO[0]:
+        _LENTO_EM_VOO[0] = True
+        threading.Thread(target=_guardar_a_faixa_lenta, args=(state,),
+                         daemon=True).start()
+    return _LENTO["valor"]  # type: ignore[no-any-return]
 
 
 def _leitura(ctx: Contexto) -> Any:
@@ -283,12 +641,15 @@ def _leitura(ctx: Contexto) -> Any:
     """
     perfil._com_o_src()
 
-    auto, achados, perfil_da_bateria = _faixa_lenta(ctx.state or None)
-    # `online_systemd` porque o daemon respondeu: se `ctx.state` tem chave, ele
-    # está no ar. O `daemon_actions._daemon_status()` distingue avulso de unit,
-    # e essa distinção é da janela antiga — aqui o que importa é responder.
+    auto, achados, perfil_da_bateria, status, _repouso = _faixa_lenta(ctx.state or None)
+    # O ESTADO VEM DA MATRIZ DE TRÊS FONTES DA JANELA ANTIGA — ver
+    # `_status_do_daemon`. Até 03/09/2026 esta linha era
+    # `"online_systemd" if ctx.state else "offline"`, e o comentário que a
+    # defendia dizia que a distinção "é da janela antiga". Ela é da TELA: a
+    # camada de estado (`aba_sistema._ESTADO_DO_HEFESTO`) tem os quatro textos
+    # escritos, com cor e dica próprias, e recebia dois.
     return _tela.Leitura(
-        status="online_systemd" if ctx.state else "offline",
+        status=status,
         autostart=auto,
         state=ctx.state or None,
         achados=achados,
@@ -444,6 +805,82 @@ def _html_da_fita(mesa: list[dict[str, Any]]) -> str:
     return "\n      ".join(partes)
 
 
+# ---------------------------------------------------------------------------
+# A DECISÃO 2 DELA — 03/09/2026:
+#
+#     "Aba Sistema, nome do compositor: o CURTO na tela (`CosmicTerm`), o
+#      INTEIRO na dica (`com.system76.CosmicTerm`)."
+#
+# O NOME É O DA JANELA QUE ESTÁ NA FRENTE, publicado em
+# `window_detect_current_class`, e é o mesmo dado que a GTK já mostra na linha
+# dela: `descrever_deteccao_de_janela` escreve *"funcionando (na frente agora:
+# com.system76.CosmicTerm)"*. Nesta tela a frase longa ia inteira para a dica da
+# LINHA e o valor da coluna dizia só "Ligado" — o nome não aparecia em lugar
+# nenhum, nem curto nem inteiro.
+#
+# POR QUE O ALVO É `html` E NÃO UM ALVO DE `title`: o piloto sabe escrever
+# texto, largura, `value`, classe, cor, fundo, `--plastico` e `innerHTML`, e não
+# sabe escrever atributo. O `innerHTML` leva o `title` DENTRO do valor, que é o
+# hover em cima da própria palavra — e é onde a pessoa passa o mouse. Um alvo
+# `title` novo no piloto seria mudança em arquivo de todas as dez abas por uma
+# linha de uma.
+# ---------------------------------------------------------------------------
+def _curto(classe: str) -> str:
+    """`com.system76.CosmicTerm` -> `CosmicTerm`. O último pedaço, e nada mais.
+
+    A REGRA É A DO NOME REVERSO DE DOMÍNIO, que é o que um `app_id` de Wayland é
+    — e ela degrada sozinha: uma classe SEM ponto (`Hefesto-Dualsense4Unix`,
+    medida na mesa dela) volta inteira, que é o certo. Um ponto no fim devolveria
+    vazio, e aí o inteiro é a resposta honesta.
+    """
+    pedaco = classe.rsplit(".", 1)[-1].strip()
+    return pedaco or classe
+
+
+def _quem_esta_na_frente(state: Any) -> str:
+    """A classe da janela em foco AGORA, ou `""` — a MESMA regra da GTK.
+
+    `descrever_deteccao_de_janela` só nomeia a janela **dentro do ramo
+    `vendo`**, e a queda de `window_detect_current_class` para
+    `window_detect_last_class` acontece lá dentro. As duas metades vêm juntas de
+    propósito, e a primeira é a que importa: `last_class` é STICKY — ela guarda
+    a última janela que se conseguiu ler e não decai. Fora do ramo `vendo`, o
+    nome que ela devolve é de horas atrás.
+
+    MEDIDO na mesa dela em 03/09/2026: `seeing=False`, `current=unknown`,
+    `last=Hefesto-Dualsense4Unix`, `useful_age_sec=5861` — uma hora e meia. Ler o
+    `last` fora do `vendo` faria a linha dizer "Sem ver a janela agora ·
+    Hefesto" e nomear uma janela que não está na frente há uma hora e meia.
+    """
+    if not isinstance(state, dict) or not state.get("window_detect_seeing"):
+        return ""
+    for chave in ("window_detect_current_class", "window_detect_last_class"):
+        valor = state.get(chave)
+        if isinstance(valor, str) and valor and valor != "unknown":
+            return valor
+    return ""
+
+
+def _com_quem_esta_na_frente(valor: Any, state: Any) -> str | None:
+    """O valor da linha com o nome CURTO ao lado, e o INTEIRO no `title` dele.
+
+    Devolve `None` quando não há nome a acrescentar — e aí o `pacote()` não
+    reescreve nada, e a linha continua com o texto que a camada do produto
+    formou. Acrescentar um separador solto seria pior que não acrescentar.
+
+    TUDO ESCAPADO: a classe da janela vem de fora do produto (é o nome que o
+    programa em foco declarou), e ela entra num `innerHTML`. É a mesma escapada
+    que `descrever_deteccao_de_janela` faz para o markup do Pango.
+    """
+    if not isinstance(valor, str) or not valor or valor == _tela.NAO_DEU:
+        return None
+    classe = _quem_esta_na_frente(state)
+    if not classe:
+        return None
+    return (f"{html.escape(valor)} <span class=\"pt\">·</span> "
+            f'<span title="{html.escape(classe)}">{html.escape(_curto(classe))}</span>')
+
+
 @registrar("09-sistema.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `gui/aba_sistema.pacote` — a camada do PRODUTO.
@@ -484,17 +921,51 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     fora: dict[str, object] = {}
     for chave, v in (bruto.get("valores") or {}).items():
-        # O ACHATAMENTO: a camada devolve `{"txt": …, "cls": …}` e a tela
-        # endereça o texto. A classe e o glifo são pintura de estado, e ficam
-        # para quem os quiser — o `-cls` e o `-g` são endereços novos.
+        # O ACHATAMENTO: a camada devolve `{"txt": …, "cls": …, "g": …}` e a
+        # tela endereça as três coisas separadas. O `-cls` continua sem alvo na
+        # página (ver `NAO_CHEGA_NA_TELA`); o `-g` ganhou o dele em 03/09.
         if isinstance(v, dict):
             fora[chave] = v.get("txt", "—")
             fora[f"{chave}-cls"] = v.get("cls", "")
+            # O GLIFO, e ele é a metade ACESSÍVEL do selo. Ver o comentário do
+            # `est()` em `interface/aba09.py`: fotografado em 03/09 às 04:26, a
+            # linha "Pausado" mostrava o valor `Não` ao lado de um `!` laranja
+            # do desenho, e "Trocar de perfil ao abrir o jogo" mostrava "Sem ver
+            # a janela agora" ao lado de um `✓` verde. Quem lê o símbolo lia o
+            # contrário de quem lê o valor.
+            fora[f"{chave}-g"] = v.get("g", "")
         else:
             fora[chave] = v
-    registro = bruto.get("registro")
-    fora[REGISTRO] = _no_painel(
-        registro.get("txt") if isinstance(registro, dict) else registro)
+    # A DECISÃO 2 DELA entra DEPOIS do achatamento, porque ela reescreve um dos
+    # valores que a camada já formou. Ver `_curto_e_inteiro`.
+    troca = _com_quem_esta_na_frente(fora.get("hefesto-troca-de-perfil"), ctx.state)
+    if troca is not None:
+        fora["hefesto-troca-de-perfil"] = troca
+    # O INTERRUPTOR E O BOTÃO ACESO — os dois valores que `NAO_CHEGA_NA_TELA`
+    # segurava até 03/09/2026, e os dois são CLASSE, não texto.
+    #
+    # `autostart` chega da camada como `True` / `False` / `None`, e os três
+    # significam coisas diferentes: o alvo `classe` acende no `True`, apaga no
+    # `False` e apaga também no `None` — que é o certo, porque "não consegui
+    # perguntar ao systemd" não é "ligado". O glifo ao lado diz qual dos dois.
+    auto = bruto.get("autostart")
+    fora["hefesto-autostart"] = auto
+    fora["hefesto-autostart-g"] = _tela.GLIFO_OK if auto is True else (
+        "○" if auto is False else _tela.GLIFO_INFO)
+    # O PERFIL DE BATERIA É A CHAVE DO PRODUTO (`tudo_ligado`, `bateria_longa`,
+    # `eu_escolho`) e não o rótulo: quem compara é o `data-hef-quando` de cada
+    # botão, que o gerador escreve a partir do mesmo `PERFIS`. `None` — ninguém
+    # escolheu — apaga os três, e é o que `secao_orcamento.perfil_na_tela` já
+    # decidira: a ausência NÃO afunda "Tudo ligado".
+    #
+    # OS DOIS SAEM DA FAIXA LENTA, e chamá-la de novo aqui NÃO custa leitura
+    # nenhuma: `_leitura()` acabou de rodar no mesmo tique e o cache de 2 s
+    # responde. Ler o `maquina.json` e o `systemctl status` uma segunda vez por
+    # tique seria desfazer, dentro desta função, o que a faixa lenta existe para
+    # fazer.
+    _, _, perfil_da_bateria, _, repouso = _faixa_lenta(ctx.state or None)
+    fora["bateria-perfil"] = perfil_da_bateria
+    fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
     if isinstance(exame, dict):
         fora["exame-contagem"] = _html_da_contagem(exame.get("contagem"))
@@ -590,15 +1061,59 @@ def _html_da_contagem(texto: Any) -> str:
 from . import gesto  # noqa: E402
 
 
+def _trava(ctx: Contexto, nome: str) -> str | None:
+    """O motivo pelo qual aquele gesto estaria CINZA agora, ou `None`.
+
+    A CONTA É DA CAMADA DO PRODUTO — `aba_sistema.travas(leitura)` — e ela já
+    estava escrita, medida e ligada até a penúltima camada quando esta frente
+    começou: cobre `retomar`, `desligar`, `reiniciar`, `ver-plugins` e
+    `ver-detalhes`, com o motivo em português pronto para o tooltip. O que
+    faltava era alguém chamá-la.
+
+    ELA NÃO PINTA O BOTÃO DE CINZA, E ISSO ESTÁ DECLARADO. O desenho não tem
+    estado apagado para `.btn` (medido: a folha desta página tem
+    `.seg button:disabled`, e nada para `.btn`), e inventá-lo mudaria o que ela
+    aprovou. O que esta função destrava é a metade que NÃO é desenho: o clique
+    inútil passa a RECUSAR DIZENDO o motivo, em vez de disparar um no-op que se
+    apresenta como ação. Era o defeito exato que
+    `_aplicar_sensibilidade_ligar_desligar` curou na janela antiga:
+    *"o clique inútil dispara `systemctl` de verdade, volta `rc=0`, e a tela
+    confirma um trabalho que não houve."*
+    """
+    if nome == "retomar" and not (
+            isinstance(ctx.state, dict) and "paused" in ctx.state):
+        # A TRAVA DO `retomar` SÓ VALE COM A PAUSA LEGÍVEL, e a distinção é da
+        # própria camada: `linha_da_pausa` separa "Não" de "não deu para saber
+        # se está pausado", e `travas()` não — ela lê `bool(state.get("paused"))`
+        # e trata a chave AUSENTE como "não pausado". Recusar aí seria afirmar
+        # um estado que ninguém leu, e o preço do contrário é zero: um
+        # `daemon.resume` num daemon não pausado é no-op.
+        return None
+    try:
+        return _tela.travas(_leitura(ctx)).get(nome)
+    except Exception:
+        # UMA TRAVA QUE LEVANTA NÃO PODE TRANCAR O BOTÃO. Sem leitura não há
+        # motivo para recusar, e recusar sem motivo é pior que deixar clicar.
+        return None
+
+
 @gesto("09-sistema.html", "retomar")
 def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Sair da pausa. `daemon.resume`.
+    """Sair da pausa. `daemon.resume` — e só quando HÁ pausa de que sair.
 
     ELE TINHA UM CHAMADOR EM TODO O `src/` — o terminal (`cli/app.py:421`), como
     a `gui/aba_sistema.py:77` já tinha medido: *"a pausa fica gravada em disco e
     sobrevive a desligar o computador; até hoje só o terminal saía dela."* Este
     é o segundo, e é uma tela.
+
+    A RECUSA ENTROU EM 03/09/2026, e o defeito estava na foto: com `paused:
+    False` — medido na mesa dela — o botão ficava verde e clicável, e o clique
+    mandava `daemon.resume` a um daemon que não está pausado. Um no-op que se
+    apresenta como ação.
     """
+    motivo = _trava(ctx, "retomar")
+    if motivo:
+        raise RuntimeError(motivo)
     # `daemon.resume` não tem função no `ipc_bridge` — é o degrau 3 da ponte, e
     # passa pelo mesmo `_safe_call`, com o mesmo timeout do resto do produto.
     p.chamar("daemon.resume")
@@ -711,6 +1226,136 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(motivo or "não consegui gravar o perfil da mesa")
 
 
+# ---------------------------------------------------------------------------
+# OS DOIS QUE ERAM `systemctl` E NADA MAIS — 03/09/2026.
+#
+# Dos SETE gestos desta página sem dono, dois eram só uma chamada de systemd na
+# janela antiga, sem diálogo, sem widget e sem estado de janela:
+#
+#     autostart   `on_daemon_autostart_toggled:2398` -> `enable` / `disable`
+#     reiniciar   `on_daemon_service_restart:2277`   -> `reset-failed` + `restart`
+#
+# OS OUTROS CINCO CONTINUAM SEM DONO, E DE PROPÓSITO — ver `SEM_CONFIRMACAO`.
+#
+# NADA AQUI É LÓGICA NOVA: quem executa é `_invoke_systemctl` da janela antiga,
+# e as frases de sucesso e de falha são as dela (`_SYSTEMCTL_OK_MSG` e
+# `_SYSTEMCTL_FAIL_MSG`, escritas em 26/08 pela LEIGO-03 justamente para o toast
+# não dizer `rc=0`). Escrever outras aqui daria à mesma ação duas vozes.
+# ---------------------------------------------------------------------------
+def _systemctl(verbo: str) -> None:
+    """Roda `systemctl --user <verbo>` pela janela antiga, e LEVANTA se não pegou.
+
+    O `reset-failed` ANTES de `restart` é da janela antiga e não é zelo: sem ele
+    o `StartLimitBurst` do systemd recusa o restart de quem clicou duas vezes, e
+    a tela receberia "não consegui" sobre uma unit perfeitamente sã.
+
+    A UNIT NÃO SE DIGITA — vem de `_unidade()`. É a mesma lição que `_autostart()`
+    pagou em 01/09, quando uma literal do `-dev` sobreviveu à purga e fez a tela
+    afirmar `not-found` sobre uma unit `enabled`.
+
+    A FALHA VIRA `RuntimeError` COM O `stderr` JUNTO. Um gesto que engolisse o
+    `rc != 0` deixaria o interruptor parado sem uma palavra — que é o silêncio
+    que este arquivo inteiro existe para acabar.
+    """
+    janela = _matriz()
+    if verbo in ("start", "restart"):
+        janela._invoke_systemctl(["reset-failed", _unidade()], check=False)
+    r = janela._invoke_systemctl([verbo, _unidade()], capture=True)
+    rc = getattr(r, "returncode", -1) if r is not None else -1
+    if rc != 0:
+        detalhe = str(getattr(r, "stderr", "") or "").strip() if r is not None else ""
+        recusa = _daemon._SYSTEMCTL_FAIL_MSG.get(verbo, "Não consegui falar com o systemd")
+        raise RuntimeError(f"{recusa}{f': {detalhe}' if detalhe else '.'}")
+    # O CACHE DE 2s SAI DO CAMINHO. Sem isto o interruptor só se mexeria no tique
+    # seguinte à expiração da faixa lenta — até dois segundos depois do clique —,
+    # e quem clicou concluiria que não pegou. Zerar aqui faz a próxima pintura
+    # reler `is-enabled` e o estado do serviço na hora, e ela é síncrona
+    # justamente porque `_LENTO` ficou vazio (ver `_faixa_lenta`).
+    _LENTO.clear()
+
+
+@gesto("09-sistema.html", "autostart")
+def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O interruptor "Ligar junto com o computador". `systemctl --user enable|disable`.
+
+    ELE ERA UM INTERRUPTOR MORTO, e essa é a pior espécie de botão morto: parece
+    ter dois estados, o clique não muda nem a aparência (não há um `<script>` na
+    página que troque a classe localmente), e quem clica não tem como saber que
+    não pegou. Medido em execução em 02/09: `autostart` estava entre os SETE
+    gestos desta página sem dono — o clique caía em `hefesto_vivo.py:1018`,
+    imprimia `[gesto sem dono]` no stdout do processo e voltava.
+
+    O QUE ELE MANDA É O CONTRÁRIO DO QUE ESTÁ LIDO, e a leitura é a mesma que
+    pinta a chave: `_autostart()` devolve a saída crua de `is-enabled` e
+    `aba_sistema.autostart_ligado` a traduz. A tela e o gesto não têm como
+    discordar porque leem o mesmo lugar.
+
+    E O ESTADO NÃO SE INVERTE ÀS CEGAS. Com `is-enabled` ilegível
+    (`autostart_ligado` devolve `None`), o gesto RECUSA em vez de adivinhar: um
+    `enable` disparado sobre "não sei" tem 50% de chance de desfazer a escolha
+    dela sem que ninguém tenha pedido.
+
+    ELE ESTÁ EM `hefesto_vivo.PERIGOSOS` — já estava, antes de ter dono — e por
+    isso a prova automática desta casa NUNCA o clica. Ligar um gesto que mexe na
+    configuração de boot dela sem esse isento seria a régua estragando a máquina
+    para provar que sabe clicar.
+    """
+    ligado = _tela.autostart_ligado(_autostart())
+    if ligado is None:
+        raise RuntimeError(
+            "Não consegui perguntar ao systemd se o serviço liga sozinho — e "
+            "sem saber o estado de agora, o interruptor não adivinha.")
+    _systemctl("disable" if ligado else "enable")
+
+
+@gesto("09-sistema.html", "reiniciar")
+def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Reiniciar o serviço". `systemctl --user restart`, com o `reset-failed`.
+
+    A TRAVA VEM DA CAMADA DO PRODUTO: com o serviço desligado, `travas()`
+    responde *"O serviço está desligado — não há o que reiniciar."* — e é essa a
+    frase que chega à tela, não uma minha.
+
+    ELE TAMBÉM JÁ ESTAVA EM `hefesto_vivo.PERIGOSOS`: reiniciar o daemon derruba
+    a sessão dele no meio do trabalho dela, e a régua não o clica.
+    """
+    motivo = _trava(ctx, "reiniciar")
+    if motivo:
+        raise RuntimeError(motivo)
+    _systemctl("restart")
+
+
+#: OS CINCO QUE CONTINUAM SEM DONO, E A RAZÃO É A MESMA PARA OS CINCO: eles
+#: PROMETEM PERGUNTAR ANTES, e a infraestrutura para perguntar não existe.
+#:
+#: A ponte dos gestos oferece `chamar`, `chamar_detalhado`, `resultado`,
+#: `escolher_arquivo` e `salvar_arquivo` (`pacotes/ponte.py`), e o piloto só sabe
+#: abrir um seletor de arquivo (`hefesto_vivo.py`, os diálogos). **Não há
+#: primitiva de confirmação.** Na janela antiga os cinco abrem diálogo temado e
+#: não-bloqueante antes de agir (`daemon_actions.py:1806`, `:1373`, `:1590`,
+#: `emulation_actions.py:2114`, `gui_dialogs.py:696`).
+#:
+#: HOJE ISSO NÃO FAZ ESTRAGO PORQUE ELES ESTÃO MORTOS. No dia em que forem
+#: ligados sem esta peça, a promessa vira o oposto: quatro `title` desta página
+#: dizem "Pergunta antes, dizendo o que se perde", e a ação aconteceria sem
+#: perguntar. **Ligar sem a confirmação seria pior que o botão morto.**
+#:
+#: `procurar-camadas` tem um risco a mais, e a `gui/aba_sistema.py:89` já o
+#: escreveu: o handler dele mora na aba que MORRE (Emulação).
+SEM_CONFIRMACAO: dict[str, str] = {
+    "desligar": "`daemon_actions.on_daemon_stop:2234`, e o `title` promete "
+                "\"Pergunta antes, dizendo o que se perde\".",
+    "restaurar-de-fabrica": "`footer_actions.on_restore_default:1477`, com "
+                            "`gui_dialogs.confirm_restore_default:696`.",
+    "refazer-consertos": "`daemon_actions.on_storm_fix_safe:1218` — roda dois "
+                         "scripts e pode FECHAR a Steam dela.",
+    "refazer-proton": "`daemon_actions.on_proton_lock:1793` — escreve no "
+                      "`config.vdf`, que é arquivo global da Steam.",
+    "procurar-camadas": "`emulation_actions.on_camadas_engasgo:2075` — e o "
+                        "diálogo dele MOSTRA o que achou antes de mexer.",
+}
+
+
 @gesto("09-sistema.html", "ver-plugins")
 def ver_plugins(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """Relê os plugins do disco e ESCREVE a lista no painel de registro.
@@ -788,29 +1433,47 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _para_o_painel(texto)
 
 
-#: OS SETE QUE NÃO SÃO IPC, e por isso não estão aqui. Medidos no fonte em
+#: OS CINCO QUE NÃO SÃO IPC, e por isso não estão aqui. Medidos no fonte em
 #: 01/09/2026, um a um — a linha de cada um está no relato da leva:
 #:
-#:   `reiniciar`            `systemctl --user restart` (daemon_actions.py:2277)
 #:   `desligar`             `_run_systemctl_async("stop")` (daemon_actions.py:2234)
-#:   `autostart`            `systemctl --user enable/disable` (…:2398)
 #:   `refazer-consertos`    `bash scripts/*.sh` (…:1218)
 #:   `refazer-proton`       diálogo GTK + `config.vdf` da Steam (…:1793)
 #:   `procurar-camadas`     censo do `system.reg` em disco (emulation_actions.py:2075)
 #:   `restaurar-de-fabrica` cópia do asset + `DraftConfig` (footer_actions.py:1477)
 #:
-#: ERAM OITO. `ver-detalhes` saiu desta lista em 01/09/2026, e a nota que o
-#: mantinha aqui estava errada: ela dizia que ligá-lo *"exige o helper
-#: privilegiado ou um método de log que o daemon não tem"*. O registro do daemon
-#: é o journal de uma unit do USUÁRIO — `journalctl --user` o lê sem sudo.
-#: `ver-plugins` saiu junto, pelo caminho de volta que nasceu no mesmo dia.
+#: ERAM OITO, DEPOIS SETE, E AGORA SÃO CINCO. `ver-detalhes` e `ver-plugins`
+#: saíram em 01/09/2026 — a nota que os mantinha aqui dizia que ligá-los *"exige
+#: o helper privilegiado ou um método de log que o daemon não tem"*, e o registro
+#: do daemon é o journal de uma unit do USUÁRIO: `journalctl --user` o lê sem
+#: sudo. `reiniciar` e `autostart` saíram em 03/09/2026, pela mesma espécie de
+#: descoberta: `systemctl` não é IPC, mas também não é GTK — é subprocesso, e a
+#: janela antiga o dispara por um método (`_invoke_systemctl`) que não toca
+#: widget nenhum. **Não ser IPC nunca quis dizer não ter caminho.**
+#:
+#: OS CINCO QUE FICAM TÊM O MOTIVO EM `SEM_CONFIRMACAO`, e ele não é de
+#: mecanismo: os cinco PROMETEM perguntar antes, e não há primitiva de
+#: confirmação nesta interface.
 PONTE = {"chamar", "machine_declare", "resultado"}
 METODOS = {"daemon.resume", "daemon.reload", "machine.declare",
            "plugin.reload", "plugin.list"}
 
 
 PAGINA = "09-sistema.html"
-PISO_DA_ABA = 5
+#: ERAM CINCO E VIRARAM SETE em 03/09/2026 — `autostart` e `reiniciar`.
+#:
+#: OS DOIS NOVOS NÃO ENTRAM EM `PROVAS`, e a razão é a régua, não a preguiça: a
+#: prova de `test_os_botoes_tem_dono` clica o gesto DE VERDADE contra uma
+#: `PonteDeMentira` e confere as chamadas que chegaram À PONTE. Estes dois não
+#: passam pela ponte — eles chamam `systemctl` pela janela antiga —, então a
+#: prova não veria chamada nenhuma e, pior, o clique RODARIA `systemctl --user
+#: restart` e `enable/disable` na máquina de quem rodasse a suíte. Uma régua que
+#: reinicia o daemon de quem a executa não é régua.
+#:
+#: QUEM OS MEDE É `tests/unit/test_a_09_sistema_sai_do_desenho.py`, com o
+#: `_invoke_systemctl` da janela antiga dublado — o clique inteiro roda, e o que
+#: se confere é o comando que teria ido ao systemd.
+PISO_DA_ABA = 7
 PROVAS = [
     {"pagina": PAGINA, "gesto": "retomar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["daemon.resume"], {})]},
@@ -851,4 +1514,12 @@ PROVAS = [
 #: MUDAM o daemon, LEEM. `state_full` não teria o que ecoar mesmo que tudo
 #: funcionasse — o efeito deles é a tela, e quem os mede é
 #: `test_o_gesto_devolve_para_a_tela.py`.
-SEM_ECO = ("atualizar", "perfil-da-mesa", "retomar", "ver-plugins", "ver-detalhes")
+#:
+#: `autostart` e `reiniciar` ENTRARAM EM 03/09/2026, e o motivo é de fonte: o
+#: efeito deles está no SYSTEMD, não no `state_full`. O `enable` muda o que
+#: `is-enabled` responde — que a tela lê, e por isso o interruptor se mexe —, e o
+#: `restart` derruba e sobe a mesma unit, deixando o `state_full` igual ao que
+#: era. Nenhum dos dois é clicado pela prova automática: os dois estão em
+#: `hefesto_vivo.PERIGOSOS`.
+SEM_ECO = ("atualizar", "autostart", "perfil-da-mesa", "reiniciar", "retomar",
+           "ver-plugins", "ver-detalhes")
