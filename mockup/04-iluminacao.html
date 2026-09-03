@@ -941,6 +941,13 @@
      plástico — a mesma gramática do chip da fita. */
   .players .dono{width:9px;height:9px;border-radius:50%;display:block;flex:0 0 9px;
                  background:none;border:2px solid var(--plastico)}
+  /* O ANEL DO "NÃO SEI" — decisão 9 dela, aplicada ao vizinho de cima
+     (`a04_iluminacao.ANEL_INCERTO`, onde está a prova). Um número TOMADO por um
+     controle cuja cor ainda não chegou saía SEM anel, isto é, igualzinho a um
+     número LIVRE; a ressalva viajava só no `title`. Tracejado, e nunca cor
+     nova: quem manda de verdade é o estilo de linha que o pacote escreve, para
+     a página publicada valer também. */
+  .players .dono.incerta{border:2px dashed var(--comment)}
 
   /* ---------- DISPOSIÇÃO DE LEDS ---------- */
   /* A CAIXA DA DISPOSIÇÃO PERDEU A MOLDURA — 31/08/2026. Ela era uma borda
@@ -1017,6 +1024,8 @@
   .troca-item.mexeu{border-color:var(--purple);background:var(--sel-bg)}
   .troca-item .dono{width:9px;height:9px;border-radius:50%;display:block;flex:0 0 9px;
                     background:none;border:2px solid var(--plastico)}
+  /* O mesmo "não sei" da fileira de players — ver `.players .dono.incerta`. */
+  .troca-item .dono.incerta{border:2px dashed var(--comment)}
   .troca-item .np{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--fg)}
   .troca-gesto{margin:6px 0 6px 62px;color:var(--texto-mudo)}
 
@@ -2934,6 +2943,39 @@
         </div>
 
         </div>
+
+        <!-- A FOLHA VIVA DO PLÁSTICO — 03/09/2026, e ela fecha a maior
+               identidade congelada desta aba: o DESENHO GRANDE.
+
+               O QUE ESTAVA NA TELA DELA, medido nos pixels da foto (com dois
+               controles na mesa, `P1 · White · USB` e `P2 · Galactic Purple · BT`):
+
+                                  moldura (viva)        corpo desenhado
+                   P1 · White     rgb(228,224,216) ✓    rgb(174,51,90)  = Cosmic Red
+                   P2 · G.Purple  rgb(116,88,142)  ✓    rgb(126,184,212)= Starlight Blue
+
+               A cura de 03/09 alcançou a MOLDURA e parou nela: a borda ficou da
+               cor certa em volta de um controle da cor errada, na MESMA célula,
+               com o rótulo logo abaixo dizendo o nome certo. E a aba Navegação
+               desenha os MESMOS dois controles nas cores certas, no mesmo
+               instante — duas abas, duas cores para o mesmo aparelho.
+
+               POR QUE UM `<style>` E NÃO UM CAMPO: o casco lê `var(--z-casca)`,
+               escrita por `svg[data-colorway="…"]` DENTRO do SVG, e o pintor não
+               tem alvo que escreva variável CSS. O dono é
+               `a06_navegacao.folha_do_plastico`, que a aba 06 já usa; o
+               parâmetro `caixa` é o que deixa as duas compartilharem uma escrita
+               só. A especificidade de `.ctrl[data-controle="p1"] .ds-svg`
+               (0,3,0) vence a de dentro do SVG (0,1,1).
+
+               VAZIO É RESPOSTA: sem leitura de cor o casco vai para
+               `var(--border-forte)` — neutro —, nunca para a cor do mockup.
+
+               FORA DA GRADE, e não dentro: `.luz-grade` é um grid de cinco
+               colunas. Um `<style>` é `display:none` pela folha do navegador e
+               não vira item de grade, mas pôr um elemento que não é coluna
+               DENTRO da grade é convidar a próxima regra `> *` a contá-lo. -->
+        <style id="plastico-vivo"></style>
 
       </div>
     </div>
