@@ -713,3 +713,48 @@ scripts/check_o_desenho_aprovado.py --publicar-enderecos 09
 vale para as DEZ páginas, e ela é território compartilhado. Enquanto ela estiver
 de pé, as outras nove continuam mostrando os dois controles do desenho na fita —
 mesmo depois de a 09 ser publicada.
+## 10-perfis.html
+- **03/09/2026** — **a barra da cor do plástico deixou de ser o controle do
+  desenho e passou a ser o seu.** É a sua lei deste dia: *"se no topo tá
+  mostrando controle white player 1, então cada aba vai usar os controles lá de
+  cima. Não mistura com a info dos mockups."*
+
+  **O defeito, fotografado com os seus dois controles na mesa:** na tabela
+  `Controle / Ajuste próprio / ID da peça`, o nome da linha já vinha do aparelho
+  (`P1 • White • USB`) e a barrinha de 3px ao lado dele continuava **vermelha** —
+  o `Cosmic Red` do mockup. A mesma linha dizia duas coisas ao mesmo tempo. A
+  causa tinha endereço: o `--plastico` morava no `<tr>`, **sem nenhum
+  `data-hef`**, então o produto não tinha por onde reescrevê-lo.
+
+  **O que mudou no desenho, e é a única mudança de marcação:** a barra saiu do
+  `box-shadow` da célula e virou um elemento próprio dentro dela —
+  `<span class="pl">`, com endereço `guarda.plastico`. A caixa é a mesma: os 3px
+  da esquerda, altura cheia. **Zero pixel de diferença** no desenho aprovado.
+
+  | linha da tabela | hoje, no produto | com o conserto, medido na bancada |
+  | --- | --- | --- |
+  | `P1 • White • USB` | `#AE335A` — o Cosmic Red do mockup | `#E4E0D8` — o **White** que o mapa dá |
+  | `P2 • Não sei • BT` | `#7EB8D4` — o Starlight Blue do mockup | **sem barra nenhuma** |
+
+  **O P2 fica sem barra de propósito**, e é a sua regra: *campo sem informação
+  não mostra nada*. A cor do plástico não é legível pelo rádio — o mapa de canais
+  diz `identidade.cor_do_aparelho = não` —, então a aba não tem cor para mostrar
+  ali. Inventar um cinza, ou deixar a do desenho, seria a tela afirmando um
+  modelo que ninguém pode conferir.
+
+  **Três frases da legenda ao pé da página** deixaram de nomear cores de
+  controles do mockup (`White`, `Cosmic Red`, `Galactic Purple`): elas descreviam
+  a mesa do desenho, que não é a sua. A medição que elas guardam — os 33 pixels
+  de 736 entre o par mais próximo — continua escrita, sem os nomes.
+
+  **O QUE VOCÊ VÊ ENQUANTO ESPERA:** nada muda na sua tela. O endereço novo não
+  existe na página publicada, então o produto não o acha e escreve zero nele —
+  a barra continua na cor do mockup até você publicar a 10. Depois de publicar,
+  ela passa a dizer o controle que está na sua mesa.
+
+  **O que NÃO fica curado nesta aba, e não é território dela:** a fita de chips
+  do topo (`P1 • Cosmic Red • USB`, `P2 • Starlight Blue • BT`) sai do
+  `interface/monta.fita()`, que é das **dez** abas. Ela é trocada inteira pelo
+  piloto com a mesa viva — mas só quando **todos** os controles têm cor lida; com
+  um controle no rádio sem cor, ela fica com os dois chips do desenho. Está no
+  relato da frente, com a linha exata.

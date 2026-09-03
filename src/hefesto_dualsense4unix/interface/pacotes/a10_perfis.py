@@ -253,6 +253,31 @@ SEM_ENDERECO = {
     "travado": "a trava da troca automática não é desenhada nesta aba",
 }
 
+#: OS ENDEREÇOS QUE JÁ ESTÃO NA BANCADA E ESPERAM O ATO DELA — 03/09/2026.
+#:
+#: NÃO É UM `SEM_ENDERECO` MAIS FROUXO, e a diferença é o que cada lista afirma:
+#: ali estão os valores que a PÁGINA NÃO TEM onde pôr — nem hoje, nem depois de
+#: publicar; aqui estão os que o gerador JÁ marcou em `mockup/` e que só chegam a
+#: `interface/paginas/` quando ela mandar. **Publicar é ato dela**
+#: (`check_o_desenho_aprovado.py --publicar NN`), e nenhuma frente o faz.
+#:
+#: ELA PRECISOU EXISTIR, e o buraco era estrutural: a régua cobrava endereço nas
+#: DUAS páginas, então marcar um campo novo no gerador reprovava sempre — a única
+#: forma de ficar verde era publicar, que é justamente o que uma frente não pode
+#: fazer. Sem esta lista, "dar endereço" e "publicar" viravam o mesmo ato.
+#:
+#: A RÉGUA CONTINUA MORDENDO NOS DOIS SENTIDOS
+#: (`test_a_aba_perfis_manda_para_um_endereco_que_existe.py`): um nome daqui tem
+#: de EXISTIR na bancada — senão não está esperando, está faltando — e tem de NÃO
+#: existir ainda na publicada, senão a declaração envelheceu e é a régua se
+#: desligando sozinha no dia em que ela publicar.
+ESPERANDO_A_PUBLICACAO = {
+    "guarda.plastico": (
+        "a barra da cor do plástico ganhou endereço em 03/09/2026 "
+        "(IDENTIDADE-VEM-DE-CIMA); a página publicada é de 02/09"
+    ),
+}
+
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
 
@@ -333,6 +358,50 @@ def _rotulo_curto(controle: dict[str, Any]) -> str:
     ])
 
 
+def _plastico(controle: dict[str, Any]) -> str:
+    """O hexadecimal da casca daquele controle, **pelo dono da cor**.
+
+    A LEI É DELA, 03/09/2026: *"se no topo tá mostrando controle white player 1,
+    então cada aba vai usar os controles lá de cima. Não mistura com a info dos
+    mockups."* A barra de 3px da linha era `--plastico` cravado no `<tr>` pelo
+    gerador — a cor do controle do DESENHO —, e ficava lá enquanto o
+    `guarda.nome` ao lado já vinha do aparelho: a linha dizia `P1 • White • USB`
+    com a barra vermelha do mockup.
+
+    `monta.cor_da_zona` lê o `<style>` que `scripts/gerar_cores_do_dualsense.py`
+    escreveu no `ds_limpo.svg` — o MESMO lugar de onde a fita do topo tira a cor
+    do chip. Reescrever a leitura aqui criaria a segunda verdade sobre a cor, que
+    é o que o portão `check_cores_do_dualsense.py` existe para matar.
+
+    O IMPORT É TARDIO E GUARDADO, e não uma exceção que eu abri: é exatamente o
+    que `hefesto_vivo._fita` faz para esta mesma leitura, pela mesma razão. O
+    `monta` lê disco no import (o esqueleto, o SVG e dois CSV de `docs/`), então
+    um `import` no topo derrubaria a janela onde não há repositório. E não é um
+    caminho novo: sem repositório a fita do topo também não repinta.
+
+    `SystemExit` NO `except`, e ele não é `Exception`: `cor_da_zona` ergue
+    justamente essa para um colorway que o SVG não tem, e um `except Exception`
+    passaria ao lado — foi como o piloto morreu na primeira execução da fita viva.
+
+    SEM COR LIDA, DEVOLVE VAZIO. Pelo rádio a cor não vem (o mapa de canais diz
+    `identidade.cor_do_aparelho = não`) e `mesa_do_estado` entrega `cor: ""`.
+    Inventar um cinza, ou cair na cor do mockup, seria a tela afirmando um modelo
+    que ninguém pode conferir — o defeito que esta frente veio desfazer. Com o
+    vazio o piloto escreve `''` no alvo `cor`, o `style` de linha cai, o
+    `color:transparent` da classe volta e a barra SOME: campo sem informação não
+    mostra nada, regra dela.
+    """
+    slug = str(controle.get("cor") or "")
+    if not slug:
+        return ""
+    try:
+        from hefesto_dualsense4unix.interface import monta
+
+        return str(monta.cor_da_zona(slug))
+    except (Exception, SystemExit):
+        return ""
+
+
 def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """A mesa no formato que `perfis_web.pacote_da_aba` DIZ esperar.
 
@@ -349,8 +418,13 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     visor da aba, que o piloto **não carrega**. É o padrão que a ONDA B1 mediu:
     *o reuso aconteceu, no arquivo que o piloto não abre*. Aqui ele entra no
     caminho do produto.
+
+    O `plastico` ENTROU EM 03/09/2026, e o fato acima valia para ele também:
+    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:404`) e
+    recebia `""` para todo controle, porque ninguém o punha aqui. Ver `_plastico`.
     """
-    return [{**c, "rotulo": _rotulo_curto(c)} for c in mesa]
+    return [{**c, "rotulo": _rotulo_curto(c), "plastico": _plastico(c)}
+            for c in mesa]
 
 
 #: O SELETOR DO CORPO DA LISTA — CSS, e não `data-campo`: o `blocos` do piloto
@@ -820,6 +894,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     if isinstance(guarda, list):
         fora["guarda.nome"] = [g.get("nome", "") for g in guarda]
         fora["guarda.id"] = [g.get("id", "") for g in guarda]
+        # A COR DO PLÁSTICO DA LINHA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA. É a
+        # barra de 3px que diz de quem é a linha, e ela era o `--plastico` do
+        # DESENHO cravado no `<tr>`: enquanto o nome ao lado já vinha do
+        # aparelho, a barra continuava na cor do controle do mockup.
+        #
+        # A LISTA SE DISTRIBUI pelas barras na ordem, e uma mesa menor que o
+        # desenho deixa as barras que sobram com `''` — que APAGA a cor de
+        # linha e devolve a barra ao `transparent` da classe. É o lugar vazio
+        # não mostrando cor nenhuma, em vez de guardar a do mockup.
+        fora["guarda.plastico"] = [g.get("plastico", "") for g in guarda]
         # OS DOIS ABAIXO CONTINUAM SENDO MONTADOS, e o `pop` do fim é quem os
         # retira. Apagar as duas linhas daria o mesmo resultado hoje e deixaria
         # `NAO_PINTAVEIS` sem mordida: uma lista que não segura nada fica verde
