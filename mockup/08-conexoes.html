@@ -880,10 +880,37 @@
      mostra; quem ele não lê fica com borda NEUTRA, e está dito. Pelo cabo ele
      pergunta e o valor vem de lá; pelo rádio ele AINDA NÃO PERGUNTA
      (`ONDA-CONEXOES-11`) — e uma borda colorida ali seria uma cor que ninguém
-     leu. O `--plastico` só é escrito na linha de quem foi lido. */
-  .gc-item{border-left:3px solid var(--plastico,var(--border-forte));
+     leu.
+
+     A COR VIROU ELEMENTO — 03/09/2026, `IDENTIDADE-VEM-DE-CIMA-01`. Ela era um
+     `--plastico:#hex` INLINE no `.gc-item`, e um `#hex` inline é o mockup
+     mandando na tela: com o controle White dela no cabo, a linha continuava com
+     a borda do Cosmic Red do desenho. O `escrever()` do piloto **não tem alvo de
+     variável de CSS** — não há como um pacote escrever um `--plastico`. Então a
+     cor lida passa a ser a tinta de um elemento, sobreposta aos mesmos 3px da
+     borda: o desenho não muda um pixel e o pacote passa a pintá-la.
+
+     O ALVO É `cor` E NÃO `fundo`, e a diferença é MEDIDA, não de gosto: o
+     `fundo` compara antes de escrever, e o CSSOM normaliza na atribuição
+     (`#ae335a` volta `rgb(174, 51, 90)`). Um hex por ali nunca volta igual ao
+     que se escreveu e soma UMA pintura por tique, para sempre — o contador de
+     pinturas é O instrumento com que esta casa prova que um endereço existe, e
+     um contador que infla é pior que um campo parado. O alvo `cor` escreve e
+     SÓ ENTÃO compara, exatamente por causa disso. Daí o `background:currentColor`.
+
+     VAZIO NÃO INVENTA: sem cor lida o pacote manda vazio, o alvo `cor` devolve
+     o elemento à folha de estilo (`color:transparent`) e a borda neutra
+     reaparece — regra dela, campo sem informação não mostra nada. */
+  .gc-item{position:relative;
+           border-left:3px solid var(--border-forte);
            border-top:1px solid var(--border-sutil)}
   .gc-item:first-child{border-top:none}
+  /* `left:-3px` é medido do lado de DENTRO da borda (o bloco que contém um
+     absoluto é a caixa de padding), logo a tinta cai exatamente sobre os 3px da
+     borda esquerda. `top:-1px` cobre também a linha de 1px que separa uma linha
+     da outra — sem ele a barra nasceria 1px abaixo em todas menos a primeira. */
+  .gc-cor{position:absolute;left:-3px;top:-1px;bottom:0;width:3px;display:block;
+          color:transparent;background:currentColor}
   .gc-cabeca{display:flex;align-items:center;gap:11px;
              height:30px;padding:0 12px;font-size:12px;color:var(--texto-mudo)}
   /* O ALVO DO CLIQUE ENVOLVE O TEXTO, e não o cobre. Uma capa `position:absolute`
@@ -949,7 +976,32 @@
             height:0;overflow:hidden}
   /* 48px e não 58: nesta largura o desenho mede 33,1px de altura e cabe DENTRO
      da linha de 36 do campo, sem crescer o corpo da linha. A proporção é a do
-     `viewBox` (116,684 × 80,472), e não uma altura digitada. */
+     `viewBox` (116,684 × 80,472), e não uma altura digitada.
+
+     ESTE DESENHO AINDA MOSTRA O PLÁSTICO DO MOCKUP, e está MEDIDO — 03/09/2026,
+     `IDENTIDADE-VEM-DE-CIMA-01`. A cor dele viaja num ATRIBUTO
+     (`data-colorway` do `<svg>`), e o `escrever()` do piloto não tem alvo de
+     atributo: texto, html, valor, largura, fundo, cor e classe, e mais nada. A
+     régua `check_identidade_vem_de_cima` também não o vê — ela procura
+     `--plastico` e NOME de colorway, e um `data-colorway="cosmic-red"` não é
+     nem um nem outro.
+
+     A ROTA ÓBVIA FOI TENTADA E REPROVOU NA MEDIÇÃO: envolver o `<svg>` num
+     `data-campo` com alvo `html` e o pacote emitir o desenho na cor lida. Com
+     os dois controles dela, 31 tiques:
+
+         sem o desenho    2 pinturas / 31 tiques    tique mediano  4,24 ms
+         com o desenho   31 pinturas / 31 tiques    tique mediano 13,56 ms
+
+     Uma pintura POR TIQUE, para sempre: o `innerHTML` que o navegador devolve
+     de um `<svg>` nunca volta igual ao que se escreveu, então a comparação do
+     `escrever()` acusa mudança em todo tique — o mesmo tropeço que o alvo `cor`
+     documenta para o CSSOM. E o desenho tem 50 KB; dois deles atravessam a
+     ponte a cada meio segundo.
+
+     A CURA CERTA É UM ALVO DE ATRIBUTO no piloto (escrever `data-colorway`):
+     vinte bytes por tique em vez de cem mil. Ela é do dono do `hefesto_vivo.py`,
+     não desta aba — e vale para as CINCO abas que desenham um controle. */
   .gc-corpo .ds-mini{flex:0 0 48px;width:48px}
   /* cada bloco do corpo é uma dupla rótulo+campo, e a barra vertical separa
      irmãos — a mesma gramática das colunas dos outros dois quadros */
@@ -1037,8 +1089,11 @@
   .bloco{display:flex;align-items:center;justify-content:center;
          font-family:'JetBrains Mono',monospace;font-size:9.5px;overflow:hidden;white-space:nowrap}
   /* a cor do bloco é a do PLÁSTICO de quem gastou, e a do número é a que se lê
-     em cima dela — nenhuma das duas digitada aqui */
-  .bloco.usa{background:var(--plastico);font-weight:500}
+     em cima dela — nenhuma das duas digitada aqui.
+     O FUNDO VEM INLINE, do dono da régua (`a08_conexoes.html_da_regua_do_radio`),
+     e não de um `--plastico` cravado na página: quem não teve a cor lida fica
+     com a neutra abaixo, que é a mesma promessa da borda da linha do controle. */
+  .bloco.usa{background:var(--border-forte);font-weight:500}
   .bloco.mic{background:var(--orange);box-shadow:inset 1px 0 0 var(--app-bg)}
   /* a vaga é o que UM controle a mais custaria. Ela precisa fechar dos dois lados. */
   .bloco.vaga{border-left:1px dashed var(--border-forte);color:var(--texto-mudo);
@@ -1426,8 +1481,8 @@
     <div class="fita" title="O que você mudar nesta aba vai para o controle escolhido aqui.">
       <span>Selecionar:</span>
       <span class="chip">Todos</span>
-      <span class="chip plastico on" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
-      <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
+      <span data-campo="fita-chip" class="chip plastico on" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
+      <span data-campo="fita-chip" class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1624,11 +1679,12 @@
         <input type="radio" name="gc" id="gc-p3" class="gc-r">
         <input type="radio" name="gc" id="gc-p4" class="gc-r">
         <div class="gc">
-          <div class="gc-item gc-p1" data-controle="p1" style="--plastico:#ae335a">
+          <div class="gc-item gc-p1" data-controle="p1">
+            <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a"></i>
             <div class="gc-cabeca">
               <label class="gc-abre" for="gc-p1" data-gesto="alvo"
                      title="Deixa só este controle aberto — os outros fecham. A fita do topo passa a apontar para ele.">
-              <span class="gc-nome">Sony <span class="pt">•</span> Player 1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Sony <span class="pt">•</span> Player 1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
               <span class="gc-resumo">
                 <span title="A borda deste controle é a cor lida do aparelho.">Vê como <b>DualSense</b></span>
                 <span title="O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio USB do próprio aparelho — o PipeWire a publica sozinho (medido em 15/08/2026). Pelo cabo ele não custa turno de rádio nenhum.">Microfone <b>Ligado</b>, pelo cabo <span class="pt">•</span> Placa do controle</span>
@@ -2046,10 +2102,11 @@
             </div>
           </div>
           <div class="gc-item gc-p2" data-controle="p2">
+            <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
               <label class="gc-abre" for="gc-p2" data-gesto="alvo"
                      title="Deixa só este controle aberto — os outros fecham. A fita do topo passa a apontar para ele.">
-              <span class="gc-nome">Sony <span class="pt">•</span> Player 2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Sony <span class="pt">•</span> Player 2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
               <span class="gc-resumo">
                 <span title="A cor deste controle não foi lida — a borda fica neutra.">Vê como <b>Xbox 360</b></span>
                 <span title="O microfone deste controle chega <b>pelo rádio</b>: o DualSense não tem A2DP nem HFP, então o áudio vem em Opus dentro do relatório HID e o Hefesto publica uma fonte de captura do PipeWire com ele. Custa +16,3 turnos de rádio — o preço está na régua de Desempenho, e é <b>consequência</b>, não escolha: o microfone segue o transporte.">Microfone <b>Ligado</b>, pelo rádio <span class="pt">•</span> Pela ponte</span>
@@ -2561,10 +2618,18 @@
             </span></span>
           </div>
 
+        <!-- A RÉGUA INTEIRA TEM ENDEREÇO — 03/09/2026, `IDENTIDADE-VEM-DE-CIMA-01`.
+             O `title` de cada fatia nomeia o plástico ("Starlight Blue — 260,4
+             turnos de entrada") e não há alvo de ATRIBUTO no `escrever()` do
+             piloto: um `title` congelado só se cura com o bloco nascendo do
+             produto. Quantos adaptadores, quantos controles em cada um e
+             quantas vagas mudam com a mesa dela — é a mesma razão da fita e do
+             mapa do gabinete. -->
+        <div class="regua-do-radio" data-campo="regua-do-radio" data-hef-alvo="html">
         <div class="pista">
           <span class="quem" title="TP-Link UB500 — Entrada 3">Sala</span>
           <span class="trilho" title="Folgada — 276,7 das 1.600 turnos (17%). As três palavras são do produto (integrations/radio_da_mesa.py) e falam só de OCUPAÇÃO: rádio cheio tem volta, basta tirar um controle daqui.">
-            <span class="bloco usa" style="width:16.27%;--plastico:#7eb8d4;color:var(--app-bg)" title="Starlight Blue — 260,4 turnos de entrada">P2 · 260,4</span><span class="bloco mic" style="width:1.02%" title="Microfone do Player 2 pelo rádio — +16,3 turnos"></span><span class="bloco vaga" style="width:17.29%" title="Se o Cosmic Red do Player 1 — hoje no USB — viesse para este rádio com o microfone ligado: +276,7 turnos.">+1 · 553,4</span>
+            <span class="bloco usa" style="width:16.27%;background:#7eb8d4;color:var(--app-bg)" title="Starlight Blue — 260,4 turnos de entrada">P2 · 260,4</span><span class="bloco mic" style="width:1.02%" title="Microfone do Player 2 pelo rádio — +16,3 turnos"></span><span class="bloco vaga" style="width:17.29%" title="Se o Cosmic Red do Player 1 — hoje no USB — viesse para este rádio com o microfone ligado: +276,7 turnos.">+1 · 553,4</span>
           </span>
           <span class="num">276,7 <i>de 1.600</i></span>
         </div>
@@ -2584,6 +2649,7 @@
             <span><i style="background:var(--orange)"></i>O microfone de cada um — +16,3</span>
             <span><i class="vaga"></i>Cada controle do cabo, se viesse — +276,7</span>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -2640,7 +2706,14 @@
       <div class="tn-frase">Clique no aparelho, depois na entrada em que ele está. O Hefesto passa a chamar cada aparelho pelo número que você escreveu no gabinete.</div>
       <div class="moldura">
         <div class="mm-rot-linha"><span class="mm-rot" title="Tudo que o censo do barramento achou, menos os hubs-raiz. O hub de bancada FICA: o cabo dele ocupa uma entrada da traseira. O que já tem lugar continua na lista e continua clicável — é assim que você o move de uma entrada para outra.">O que o Hefesto encontrou</span></div>
-        <div class="mm-lista">
+        <!-- O ENDEREÇO CHEGOU EM 03/09/2026 (`IDENTIDADE-VEM-DE-CIMA-01`). O
+             pacote já trocava esta lista inteira desde 01/09, mas por SELETOR
+             CSS, pela chave `blocos` — e um bloco sem `data-campo` é invisível
+             para as duas réguas desta casa: os `title` do desenho ("o P1 Cosmic
+             Red, no cabo") passavam por congelados sem que nada visse que o
+             produto já os reescrevia. Com o endereço, a troca é a MESMA e as
+             réguas a enxergam. -->
+        <div class="mm-lista" data-campo="aparelhos" data-hef-alvo="html">
           <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na entrada 1. · Na mesa: o P1 Cosmic Red, no cabo.">Aparelho de entrada<span class="pt">·</span><code>1-2</code></button>
           <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na entrada 7. · Na mesa: o receptor do mouse.">Mouse<span class="pt">·</span><code>1-3</code></button>
           <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na entrada 2. · Na mesa: o P2 Starlight Blue, no rádio.">Aparelho de entrada<span class="pt">·</span><code>1-5</code></button>

@@ -584,3 +584,77 @@ seção daqui**: a aba deixou de estar em trabalho.
   `hefesto_vivo._fita` desiste de repintá-la INTEIRA quando qualquer controle
   está sem cor, e é por isso que o desenho sobrevivia — as outras nove abas têm
   o mesmo defeito, e curá-lo aqui seria mexer no arquivo de todo mundo.
+---
+
+## 08-conexoes.html
+
+**A identidade do controle passou a vir da FITA — 03/09/2026.**
+
+**Sprint:** `IDENTIDADE-VEM-DE-CIMA-01`. **Lei sua, 03/09:** *"se no topo tá
+mostrando controle white player 1, então cada aba vai usar os controles lá de
+cima. Não mistura com a info dos mockups."*
+
+**A régua `scripts/check_identidade_vem_de_cima.py --bancada --aba 08` foi de
+15 para ZERO.** Os quinze eram nomes de plástico e `--plastico:#hex` escritos
+na página, em quatro lugares: a fita do topo, as linhas da Gestão de Controles,
+a régua de Desempenho e a lista de aparelhos da tela "Mapear entrada a entrada".
+
+**NENHUM PIXEL DO SEU DESENHO MUDOU.** A bancada continua mostrando as mesmas
+cores, os mesmos rótulos e os mesmos números — o `git diff` do HTML é só
+endereço e comentário, mais UMA troca de forma: a cor da barra da linha do
+controle saiu de `--plastico:#hex` no `.gc-item` e virou a tinta de um `<i>` de
+3 px sobreposto à mesma borda. **O motivo é medido:** o piloto sabe escrever
+`background` e `color`, e **não sabe escrever uma variável de CSS** — não há
+alvo de custom property no `hefesto_vivo.escrever()`. Sem essa troca, a cor da
+sua linha continuaria cravada no vermelho do desenho.
+
+**O QUE MUDA NO PRODUTO, com os seus dois controles na mesa** (medido com o
+piloto, janela oculta, a bancada encenada na pasta do publicado e devolvida por
+cópia logo depois — a página publicada não foi tocada):
+
+| a linha do controle | antes | depois |
+| --- | --- | --- |
+| P1 (o do cabo) | `Sony · Player 1 · Cosmic Red · USB` | `Sony · Player 1 · White · USB` |
+| P2 (o do rádio) | `Sony · Player 2 · Starlight Blue · BT` | `Sony · Player 2 · BT` |
+| a barra da esquerda | vermelha, do desenho | a cor lida — e VAZIA quando não houve leitura |
+
+**O P2 perde o pedaço do plástico de propósito, e é a sua regra:** *campo sem
+informação não mostra nada*. Pelo rádio o Hefesto ainda não pergunta a cor
+(`ONDA-CONEXOES-11`), a mesa responde `Não sei`, e nem o `Não sei` nem a cor do
+mockup entram na tela. **No dia em que a leitura por rádio chegar, o pedaço
+volta sozinho** — nada aqui precisa ser mexido de novo.
+
+**A régua de Desempenho (os turnos do rádio) virou bloco do produto.** Ela
+nasce do que a máquina sabe: quem está no rádio, em qual adaptador
+(`radio_da_mesa.adaptador_por_uniq`) e quanto cada fatia custa. **Uma coisa
+piora à vista e é honesta:** o nome do adaptador passa a ser **Sem nome**, e a
+dica `TP-Link UB500 — Entrada 3` some. O apelido mora na sua declaração,
+endereçado por caminho de barramento, e a chave aqui é o endereço de rádio — as
+duas não casam hoje. **Sem nome** é a palavra que o próprio produto já usa
+(`gui/aba_conexoes.html_das_pistas`); nenhuma palavra nova nasceu.
+
+**O QUE AINDA MOSTRA O DESENHO NESTA ABA, e não é meu de consertar:**
+
+1. **A fita do topo continua dizendo `P1 · Cosmic Red · USB` e
+   `P2 · Starlight Blue · BT`.** O piloto a reescreve inteira a cada tique — mas
+   `hefesto_vivo._fita` **desiste quando UM controle da mesa está sem cor**, e o
+   seu do rádio está. Um controle sem cor cala a fita inteira, e o desenho fica.
+   O arquivo é das dez abas; o conserto é de quem for dono dele.
+2. **O desenho pequeno do DualSense dentro da linha aberta continua no plástico
+   do mockup.** A cor dele viaja num ATRIBUTO (`data-colorway`) e o piloto não
+   tem alvo de atributo. **Tentei a rota óbvia e ela reprovou na medição:**
+   trocar o `<svg>` inteiro custou **31 pinturas em 31 tiques** (uma por tique,
+   para sempre) e triplicou o tique — **4,24 ms → 13,56 ms**. A cura certa é um
+   alvo de atributo no piloto, e vale para as cinco abas que desenham controle.
+
+**O QUE O PRODUTO FAZ ENQUANTO ESPERA O SEU OK, e é o custo desta espera:** a
+página publicada não tem nenhum dos quatro endereços, então **na tela dela hoje
+a Gestão de Controles continua dizendo `Cosmic Red` e `Starlight Blue`**, com a
+borda vermelha do desenho. Nada quebra: o pacote emite os quatro campos, o
+`achar()` do piloto não encontra onde escrever e devolve zero — **medido em
+03/09 com os dois controles na mesa: 24 valores por tique com a página
+publicada, 29 com a bancada no lugar dela.** Os cinco de diferença são
+exatamente esta cura, e eles só chegam à sua tela quando você publicar.
+
+**NÃO FOI PUBLICADO.** Publicar é ato seu:
+`scripts/check_o_desenho_aprovado.py --publicar 08`.
