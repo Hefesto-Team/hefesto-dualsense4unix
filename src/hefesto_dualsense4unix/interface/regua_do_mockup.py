@@ -82,7 +82,6 @@ from __future__ import annotations
 
 import colorsys
 import dataclasses
-import contextlib
 import html.parser
 import math
 import re
@@ -136,30 +135,6 @@ INDECIDIVEL = "INDECIDIVEL"
 #: régua para de cobrá-lo e passa a EXIGIR a marca"* —, e é o que impede a
 #: categoria de virar o esconderijo onde dívida real vai morar.
 ROTULO = "ROTULO"
-
-
-class _SoTexto(html.parser.HTMLParser):
-    """Tira as tags e devolve só o texto — o que o `textContent` do DOM daria."""
-
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.pedacos: list[str] = []
-
-    def handle_data(self, data: str) -> None:
-        self.pedacos.append(data)
-
-
-def _so_o_texto(marcacao: str) -> str:
-    """A marcação como TEXTO, para comparar com o que o parser leu do arquivo.
-
-    Um `<style>` dentro da marcação entra no `textContent` do DOM — é por isso
-    que o CSS dos colorways aparece no valor do campo `desenho`. Não filtramos:
-    o objetivo é reproduzir o que a tela devolve, e ela devolve isso.
-    """
-    leitor = _SoTexto()
-    with contextlib.suppress(Exception):
-        leitor.feed(marcacao)
-    return "".join(leitor.pedacos)
 
 
 def _espremer(texto: str) -> str:
@@ -845,7 +820,11 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
         # A frente que achou isto mediu o efeito e NÃO aplicou, porque a régua
         # não era arquivo dela: fecharia treze campos. Ela tinha razão nas duas
         # coisas — no achado e em não tocar.
-        return _espremer(_so_o_texto(declarado or ""))
+        # A função é a da frente da aba 03 (`_so_o_texto`, que já espreme por
+        # dentro) — eu tinha escrito uma segunda sem ver a dela, e o `mypy`
+        # pegou o `no-redef`. Uma casa com duas implementações da mesma regra
+        # é o defeito que esta leva inteira existe para não repetir.
+        return _so_o_texto(declarado or "")
     if campo.alvo == "largura":
         # A LARGURA TAMBÉM É NORMALIZADA NA ATRIBUIÇÃO, e ignorar isso acusava
         # endereço morto sobre o produto que ACERTOU — medido em 02/09/2026, na

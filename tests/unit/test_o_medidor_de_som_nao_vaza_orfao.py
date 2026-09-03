@@ -41,7 +41,7 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 #: E ele chama `abrir_fluxo` — O CAMINHO DO PRODUTO —, nunca a função da cura
 #: diretamente. A primeira versão deste teste chamava
 #: `Popen(..., preexec_fn=m._morrer_com_o_pai)` com as próprias mãos, e por isso
-#: PASSAVA COM A CURA ARRANCADA: ela MEDIA se a FUNÇÃO funciona, não se o  # noqa-acento: verbo medir, imperfeito
+#: PASSAVA COM A CURA ARRANCADA: ela conferia se a FUNÇÃO funciona, não se o
 #: produto A USA. É a família de defeito que esta casa mais paga — *a régua
 #: confunde a PALAVRA com o ATO* —, e foi pega na própria mordida, em 03/09/2026.
 #:
