@@ -14,10 +14,11 @@ instrumento que lê a TELA. Se o desenho cravou `6` e o daemon dela diz `6`,
 olhar a tela não separa *"pintou o valor certo"* de *"nunca pintou"*.
 
 **A cura é fazer o valor MUDAR.** Esta régua troca o daemon por um DUBLÊ que
-discorda do desenho em TODOS os 29 endereços — três controles em vez de dois, o
-primário no segundo lugar, a velocidade do cursor em 11, o teclado desligado e
-um `button_actions` que troca as vinte e uma linhas — e então pergunta ao
-classificador da casa, sem abrir janela:
+discorda do desenho em TODOS os endereços — quatro controles em vez de dois,
+cada um com uma cor de plástico que não é a do desenho, o primário no segundo
+lugar, a velocidade do cursor em 11, o teclado desligado e um `button_actions`
+que troca as vinte e uma linhas — e então pergunta ao classificador da casa, sem
+abrir janela:
 
     sob este dublê, algum campo ainda cai em INDECIDIVEL?
 
@@ -25,17 +26,24 @@ Um `INDECIDIVEL` aqui é a régua confessando que aquele endereço continua sem
 decisão — e nomeia qual. Zero é a única saída aceitável.
 
 O QUE ESTA RÉGUA **NÃO** PROVA, e ela diz: que a tela acompanhou. Isso é do
-piloto, e foi medido no mesmo dia com o mesmo dublê, pela
-`--prova-de-mockup` com a fila reduzida à 06:
+piloto, e foi medido em 02/09 com o mesmo dublê, pela `--prova-de-mockup` com a
+fila reduzida à 06:
 
     mesa dela (2 controles)   produto  1 · mockup 0 · indecidível 28
-    DUBLÊ (3 sintéticos)      produto 29 · mockup 0 · indecidível  0
 
 Aqui fica a metade que roda no CI, sem GTK, sem display e sem daemon.
 
+A PÁGINA ERA DE 29 ENDEREÇOS E É DE 38 — 03/09/2026, número substituído. A onda
+IDENTIDADE-VEM-DE-CIMA acrescentou NOVE à `06-navegacao` publicada: os quatro
+`plastico` da mesa, os dois `identidade` dos cartões, os dois `quem-navega` das
+dicas e o `fita-chips` do topo. **Antes de mexer no número foi conferido o que a
+mensagem da régua manda conferir** — que o dublê discorda dos 38, um a um: a
+saída campo a campo está no dump que gerou esta correção, e os dois casos que
+NÃO discordavam viraram o quarto controle e as quatro cores lidas.
+
 A MORDIDA: faça o dublê concordar com o desenho em qualquer campo — troque
-`speed` para 6, ou tire o `button_actions` — e a régua nomeia o endereço que
-voltou a ser indecidível.
+`speed` para 6, tire o `button_actions`, ou esvazie `CORES_LIDAS` — e a régua
+nomeia o endereço que voltou a ser indecidível.
 """
 from __future__ import annotations
 
@@ -50,7 +58,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
-#: TRÊS CONTROLES SINTÉTICOS, na faixa da casa — há dois portões de anonimato
+#: QUATRO CONTROLES SINTÉTICOS, na faixa da casa — há dois portões de anonimato
 #: nesta árvore e um endereço mascarado ainda carrega o OUI do aparelho dela.
 #:
 #: O `player_slot` NÃO É ENFEITE: é ele que ordena a mesa
@@ -60,9 +68,16 @@ PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 #: ninguém tivesse mexido no pacote.
 #:
 #: A MESA DO DUBLÊ DISCORDA DO DESENHO DE PROPÓSITO, campo a campo:
-#:   · são TRÊS (o desenho crava "2 controles:" e "1 USB · 1 BT");
+#:   · são QUATRO (o desenho crava "2 controles:" e "1 USB · 1 BT");
 #:   · o `p1` está no RÁDIO e NÃO navega (o desenho crava "USB • Navega o PC");
 #:   · o `p2` está no CABO e NAVEGA (o desenho crava "BT • Só a janela").
+#:
+#: ELES ERAM TRÊS ATÉ 03/09/2026, e o quarto entrou por medição. A onda
+#: IDENTIDADE-VEM-DE-CIMA deu endereço aos QUATRO lugares da mesa
+#: (`a06_navegacao`, o campo `plastico`, uma lista de 4), e o desenho tem dois
+#: lugares VAZIOS. Com três controles, o quarto lugar recebia `""` e o desenho
+#: também crava `""` — INDECIDIVEL para sempre, num endereço que ninguém pode
+#: fazer variar de fora. O quarto controle é o que ocupa aquele lugar.
 CONTROLES = [
     {"uniq": "aa:bb:cc:00:00:01", "connected": True, "transport": "bt",
      "player_slot": 1, "is_primary": False},
@@ -70,7 +85,37 @@ CONTROLES = [
      "player_slot": 2, "is_primary": True},
     {"uniq": "e8:47:3a:00:00:03", "connected": True, "transport": "usb",
      "player_slot": 3, "is_primary": False},
+    {"uniq": "aa:bb:cc:00:00:04", "connected": True, "transport": "usb",
+     "player_slot": 4, "is_primary": False},
 ]
+
+
+class _CorLida:
+    """O que `integrations.cor_do_plastico` devolve: um código e um nome.
+
+    `mesa_viva.mesa_do_estado` lê os dois por `getattr`, e é do CÓDIGO que sai o
+    `colorway` — a tradução é do CSV dela (`mesa_viva.CORES`), nunca digitada
+    aqui. Por isso o dublê declara o código, e não o slug.
+    """
+
+    def __init__(self, codigo: str, nome: str) -> None:
+        self.codigo = codigo  # (noqa-acento) nome de atributo do produto
+        self.nome = nome
+
+
+#: A COR DO PLÁSTICO QUE CADA UM RESPONDE — 03/09/2026, e ela é o que DECIDE os
+#: quatro `plastico` da mesa. Nenhum destes quatro modelos é o do desenho: a
+#: `06-navegacao` publicada crava Cosmic Red no `p1` e Starlight Blue no `p2`.
+#:
+#: SEM ISTO O DUBLÊ NÃO DISCORDA: um controle sem cor lida emite `""`, e `""` é
+#: o que o desenho crava nos dois lugares vazios. Um dublê que cala onde o
+#: desenho cala não decide nada — que é a definição de INDECIDIVEL desta régua.
+CORES_LIDAS = {
+    "aa:bb:cc:00:00:01": _CorLida("00", "White"),
+    "02:fe:00:00:00:02": _CorLida("04", "Galactic Purple"),
+    "e8:47:3a:00:00:03": _CorLida("09", "Cobalt Blue"),
+    "aa:bb:cc:00:00:04": _CorLida("07", "Volcanic Red"),
+}
 
 #: O estado do daemon, escolhido para DISCORDAR do desenho em cada número:
 #: o cursor vai a 11 (o desenho crava 6), a rolagem a 4 (crava 1) e o teclado
@@ -134,7 +179,7 @@ def _no_mundo_de(monkeypatch, publicado: bool):
         a06_navegacao, "_o_que_a_pagina_oferece",
         lambda: frozenset(_opcoes_da_pagina(publicado, "teclado-estado") or ()))
 
-    mesa = mesa_viva.mesa_do_estado(ESTADO, {})
+    mesa = mesa_viva.mesa_do_estado(ESTADO, CORES_LIDAS)
     ctx = pacotes.Contexto(state=ESTADO, mesa=mesa, conectados=CONTROLES, estados={})
     carga = pacotes.normalizar(a06_navegacao.pacote(ctx),
                                {str(c["uniq"]): c["pref"] for c in mesa})
@@ -153,7 +198,7 @@ def sob_o_duble(monkeypatch):
 
 
 def test_o_duble_nao_deixa_um_campo_indecidivel(sob_o_duble):
-    """Nenhum dos 29 endereços pode concordar com o desenho sob este dublê.
+    """Nenhum dos 38 endereços pode concordar com o desenho sob este dublê.
 
     A tela dos `vivos` é o CRAVADO — isto é, a régua pergunta *"e se a pintura
     não tivesse acontecido?"*. Sob um dublê que discorda do desenho, todo campo
@@ -181,6 +226,13 @@ def test_o_duble_cobre_os_vinte_e_nove_enderecos(sob_o_duble):
     `MOCKUP` sem valor declarado é *"nenhum pacote declara este endereço"*, que
     é diferente de endereço morto: é campo órfão. A 06 não tem nenhum, e esta
     linha impede que ganhe um em silêncio.
+
+    O NOME DESTA FUNÇÃO CONGELOU O 29 — 03/09/2026, e a página tem 38. O número
+    certo está na linha abaixo e no cabeçalho do arquivo, com o que foi
+    conferido antes de trocá-lo; o nome do nó ficou porque a leva de hoje o
+    persegue por id. **Quem passar aqui depois: renomeie para
+    `test_o_duble_cobre_os_enderecos_da_pagina`** — sem número no nome, que é o
+    único que não envelhece.
     """
     from hefesto_dualsense4unix.interface import regua_do_mockup as r
 
@@ -190,14 +242,14 @@ def test_o_duble_cobre_os_vinte_e_nove_enderecos(sob_o_duble):
     assert not orfaos, (
         f"{orfaos} existe(m) na página publicada e pacote nenhum os declara — "
         "a tela mostra o desenho e ninguém acusa.")
-    assert len(cravados) == 29, (
+    assert len(cravados) == 38, (
         f"a página publicada tem {len(cravados)} endereços de campo; esta régua "
-        "foi escrita sobre 29. Se o desenho mudou, confira se o dublê acima "
+        "foi escrita sobre 38. Se o desenho mudou, confira se o dublê acima "
         "ainda discorda de TODOS eles antes de mexer neste número.")
 
 
 def test_quando_a_tela_acompanha_tudo_vira_produto(sob_o_duble):
-    """O outro lado da mesma moeda: se a pintura pousar, os 29 saem PRODUTO.
+    """O outro lado da mesma moeda: se a pintura pousar, os 38 saem PRODUTO.
 
     Aqui os `vivos` são o que o `escrever()` do bootstrap poria na tela para o
     valor declarado — a mesma tradução que a `--prova-de-mockup` usa —, e o
@@ -231,9 +283,14 @@ def test_quando_a_tela_acompanha_tudo_vira_produto(sob_o_duble):
         for c in cravados]
     vereditos = r._classificar(cravados, vivos, declarados)
     contas = r._contar(vereditos)
-    assert contas == {r.PRODUTO: 29, r.MOCKUP: 0, r.INDECIDIVEL: 0}, (
+    # A QUARTA CONTA (`ROTULO`) entrou em 03/09/2026, com a decisão dela: um
+    # título de seção é texto fixo, não é dado que o produto escreva. A 06 não
+    # tem nenhum marcado, e o zero aqui é o que impede um campo de virar rótulo
+    # em silêncio para sair da dívida.
+    assert contas == {r.PRODUTO: 38, r.ROTULO: 0, r.MOCKUP: 0,
+                      r.INDECIDIVEL: 0}, (
         f"com a tela acompanhando o dublê a régua diz {contas}, e o esperado é "
-        "29 PRODUTO. Um campo fora disso é o pacote emitindo o valor do desenho.")
+        "38 PRODUTO. Um campo fora disso é o pacote emitindo o valor do desenho.")
 
 
 #: A REGRA DO `escrever()` PARA `data-hef-alvo="valor"`, e ela é do PILOTO:
@@ -326,7 +383,7 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
-    """Os 7 campos que NÃO são `<select>` têm de dizer o que o dublê mandou.
+    """Os 14 campos que NÃO são `<select>` têm de dizer o que o dublê mandou.
 
     O BURACO QUE ELA FECHA, medido em 02/09/2026 (corretivo). As duas metades
     acima reduzem ao mesmo predicado — *o declarado é diferente do cravado* — e
@@ -334,30 +391,39 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     duas passam, com o mesmo veredito de sempre. Quem pegava lixo era só
     `test_todo_valor_do_duble_existe_como_opcao`, e só para os 22 `<select>`.
 
-    DOS SETE QUE SOBRAVAM, o que existia antes desta linha era UM: o
-    `test_a_linha_do_cartao_leva_o_transporte` do arquivo irmão, sobre um cartão
-    só e com a mesa montada à mão. `vel-cursor` e `vel-rolagem` não apareciam em
-    teste nenhum desta árvore — grepados pelo endereço, em 02/09/2026.
+    ERAM SETE E SÃO CATORZE — 03/09/2026, número substituído, e o NOME desta
+    função congelou o sete. Os outros sete chegaram com a onda
+    IDENTIDADE-VEM-DE-CIMA e **todos ganharam linha aqui**, que é o que esta
+    régua existe para exigir: `fita-chips`, `p1·identidade`, `p2·identidade`,
+    `quem-navega` e os três endereços de `plastico` (os dois cartões e os dois
+    lugares vazios compartilham a mesma lista de quatro cores). Subir o número
+    sem escrever a guarda teria deixado sete campos sem defesa contra valor
+    destruidor — o oposto do que a linha do número diz.
 
     O QUE ELA COBRA, e a distinção é a razão de ela existir: **o esperado sai do
     DUBLÊ, não do pacote**. Nada aqui chama `a06_navegacao` para descobrir a
-    resposta — a contagem sai de `CONTROLES`, os números saem de `ESTADO`, e o
-    par via/papel de cada cartão sai do `transport`/`is_primary` do controle que
-    a mesa pôs naquele lugar. Uma régua que perguntasse ao pacote o que esperar
-    do pacote é a forma de instrumento falso que esta casa mais achou.
+    resposta — a contagem sai de `CONTROLES`, os números saem de `ESTADO`, o par
+    via/papel de cada cartão sai do `transport`/`is_primary`, e a cor e o nome de
+    cada modelo saem de `CORES_LIDAS` traduzidas pelos donos do dado
+    (`mesa_viva.CORES`, que é o CSV dela, e `monta.cor_da_zona`, que lê o SVG).
+    Uma régua que perguntasse ao pacote o que esperar do pacote é a forma de
+    instrumento falso que esta casa mais achou.
 
-    A MORDIDA: troque `speed` do dublê para 6, ou faça o pacote emitir qualquer
-    outra coisa em `vel-cursor` — esta linha reprova nomeando o endereço.
+    A MORDIDA: troque `speed` do dublê para 6, faça o pacote emitir qualquer
+    outra coisa em `vel-cursor`, ou devolva a cor do mockup ao `plastico` — esta
+    linha reprova nomeando o endereço.
     """
+    import monta
+
     from hefesto_dualsense4unix.interface import mesa_viva
 
     cravados, declarados = sob_o_duble
     valor = {c.endereco: declarados.get((c.dono, c.chave),
                                         declarados.get(("", c.chave)))
              for c in cravados if c.alvo != "valor"}
-    assert len(valor) == 7, (
+    assert len(valor) == 14, (
         f"a página tem {len(valor)} campos fora dos `<select>` e esta régua foi "
-        "escrita sobre 7. Um campo novo sem linha aqui é um campo sem guarda "
+        "escrita sobre 14. Um campo novo sem linha aqui é um campo sem guarda "
         "contra valor destruidor.")
 
     ligados = [c for c in CONTROLES if c.get("connected")]
@@ -386,8 +452,9 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     # (`mesa_viva`, dona da ordem); o que ele É — cabo ou rádio, primário ou não
     # — sai do dublê, e é contra isso que a linha do cartão é conferida.
     por_uniq = {str(c["uniq"]): c for c in CONTROLES}
+    mesa = mesa_viva.mesa_do_estado(ESTADO, CORES_LIDAS)
     conferidos = 0
-    for lugar in mesa_viva.mesa_do_estado(ESTADO, {}):
+    for lugar in mesa:
         endereco = f"{lugar['pref']}·navega"
         if endereco not in valor:
             continue  # o desenho só tem dois cartões; o terceiro não aparece
@@ -402,3 +469,68 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     assert conferidos == 2, (
         f"conferi {conferidos} cartões e o desenho tem 2 — se o número caiu, um "
         "cartão perdeu o endereço e saiu da conferência sem reprovar nada.")
+
+    # -----------------------------------------------------------------------
+    # OS SETE QUE A ONDA IDENTIDADE-VEM-DE-CIMA TROUXE
+    #
+    # O ESPERADO DE CADA UM SAI DO DUBLÊ, traduzido pelos donos do dado: o
+    # código de fábrica de `CORES_LIDAS` vira slug e nome em `mesa_viva.CORES`
+    # (o CSV dela), e o slug vira hexadecimal em `monta.cor_da_zona` (que lê o
+    # `<style>` do SVG). Digitar `#e4e0d8` aqui seria a segunda verdade que o
+    # portão `check_cores_do_dualsense.py` existe para matar.
+    # -----------------------------------------------------------------------
+    modelo = {}   # pref -> nome do modelo que aquele lugar tem de anunciar
+    hexes = []    # a cor de cada lugar, na ordem da mesa
+    for lugar in mesa:
+        slug, nome = mesa_viva.CORES[CORES_LIDAS[str(lugar["uniq"])].codigo]
+        modelo[str(lugar["pref"])] = nome
+        hexes.append(monta.cor_da_zona(slug))
+
+    # A COR DO PLÁSTICO É UMA LISTA SÓ, e os três endereços de `plastico` a
+    # compartilham: o pacote emite `mesa["plastico"]` com um valor por lugar, e
+    # o piloto a distribui pelos elementos de mesmo endereço, na ordem.
+    for endereco in ("p1·plastico", "p2·plastico", "plastico"):
+        assert list(valor[endereco]) == hexes, (
+            f"{endereco}: o dublê lê {[c.codigo for c in CORES_LIDAS.values()]} "
+            f"nos quatro lugares, o que dá {hexes}, e o campo diz "
+            f"{valor[endereco]!r}")
+
+    # O NOME DO MODELO, no cartão de cada um dos dois lugares que o desenho tem.
+    for pref, nome in modelo.items():
+        endereco = f"{pref}·identidade"
+        if endereco not in valor:
+            continue
+        assert str(valor[endereco]) == nome, (
+            f"{endereco}: o aparelho daquele lugar é um {nome} e o cartão diz "
+            f"{valor[endereco]!r} — a identidade voltou a vir do desenho")
+
+    # QUEM NAVEGA O PC é o primário, e a dica das duas telas de botão o nomeia.
+    # É o campo que diz para quem valem as 21 linhas: errar aqui é oferecer o
+    # ajuste de um controle e aplicá-lo noutro.
+    primario = [lugar for lugar in mesa
+                if por_uniq[str(lugar["uniq"])].get("is_primary")]
+    assert len(primario) == 1, f"o dublê tem {len(primario)} primários"
+    lugar = primario[0]
+    c = por_uniq[str(lugar["uniq"])]
+    dica = str(valor["quem-navega"])
+    for pedaco in (str(lugar["pref"]).upper(), modelo[str(lugar["pref"])],
+                   "USB" if c.get("transport") == "usb" else "BT"):
+        assert pedaco in dica, (
+            f"quem-navega: o primário do dublê é o {lugar['pref']} "
+            f"({modelo[str(lugar['pref'])]}), e a dica diz {dica!r} — falta "
+            f"{pedaco!r}")
+
+    # A FITA DO TOPO — um chip por controle DA MESA, mais o "Todos". Ela é o que
+    # ela olha para saber quem está ligado; mostrar o controle do desenho aqui é
+    # o defeito que já apareceu quatro vezes nesta casa.
+    fita = str(valor["fita-chips"])
+    quantos = fita.count('class="chip')
+    assert quantos == len(mesa) + 1, (
+        f"a mesa do dublê tem {len(mesa)} controles e a fita traz {quantos} "
+        f"chips (contando o 'Todos'): {fita!r}")
+    for lugar in mesa:
+        assert str(lugar["pref"]).upper() in fita, (
+            f"a fita não traz o chip do {lugar['pref']}: {fita!r}")
+        assert modelo[str(lugar["pref"])] in fita, (
+            f"a fita não nomeia o {modelo[str(lugar['pref'])]} do "
+            f"{lugar['pref']}: {fita!r}")

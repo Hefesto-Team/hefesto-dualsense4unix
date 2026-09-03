@@ -221,14 +221,31 @@ def test_o_chip_da_fita_tem_dono_e_cala_a_cor_que_nao_veio() -> None:
 
     A MORDIDA: tirar o `data-campo` do chip faz o
     `check_identidade_vem_de_cima --bancada --aba 05` voltar de 0 para 8.
+
+    O RECORTE É O ENDEREÇO, E NÃO A CLASSE — 03/09/2026, corretivo. Esta função
+    escolhia os chips por `class="… plastico"`, e isso valia enquanto
+    `monta.fita` a escrevia em TODO chip (o commit `80f8c859`, que trouxe esta
+    régua). O `c6adb2d8` a tornou condicional, e com razão: `.chip.plastico`
+    desenha a borda com `var(--plastico)`, e vesti-la num chip sem cor lida
+    pintaria uma borda que ninguém leu — que é o defeito desta onda inteira.
+
+    Com o recorte velho a própria régua se contradizia: ela exigia dois chips
+    **e** que o segundo não tivesse cor, e o segundo era justamente o que a
+    classe deixava de fora. `data-campo="fita-chip"` é o endereço, está nos dois,
+    e é o que estas linhas medem.
     """
     html = monta.fita(mesa=_mesa(LIDO, SEM_LEITURA))
-    chips = [a for t, a in _elementos_de(html)
-             if "plastico" in (a.get("class") or "").split()]
+    # TODOS os chips da fita, e não só os endereçados: é a diferença entre eles
+    # que faz a mordida do `data-campo` reprovar em vez de sumir do recorte.
+    na_fita = [a for t, a in _elementos_de(html)
+               if "chip" in (a.get("class") or "").split()]
+    chips = [a for a in na_fita if a.get("data-campo") == "fita-chip"]
 
-    assert len(chips) == 2, f"a fita não emitiu os dois chips da mesa: {html}"
-    assert all(c.get("data-campo") == "fita-chip" for c in chips), (
-        f"há chip de fita sem endereço: {chips}")
+    assert len(na_fita) == 3, (
+        f"a fita não emitiu o 'Todos' mais os dois chips da mesa: {html}")
+    assert len(chips) == 2, (
+        f"há chip de fita sem endereço — o `data-campo` saiu de "
+        f"{len(na_fita) - 1 - len(chips)} deles: {html}")
     assert monta.cor_da_zona(LIDO) in chips[0].get("style", ""), (
         "o chip do controle lido não veste a cor dele")
     assert "--plastico" not in chips[1].get("style", ""), (
