@@ -1380,10 +1380,43 @@ def _regua_do_radio(ctx: Contexto) -> str:
             continue
         grupos.setdefault(onde.get(str(m.get("uniq") or ""), ""), []).append(c)
 
-    pistas = [
+    pistas: list[dict[str, Any]] = [
         {"nome": "Sem nome", "dica": "", "dentro": grupos[chave], "vagas": no_cabo}
         for chave in sorted(grupos, key=lambda k: (k == "", k))
     ]
+    if not pistas:
+        # NINGUÉM NO RÁDIO — E ISSO NÃO PODE VIRAR UM EIXO SOZINHO.
+        #
+        # O DEFEITO, fotografado na mesa dela em 03/09/2026 com o White no cabo
+        # e nada no rádio: `grupos` nasce dos controles que estão NO RÁDIO, e
+        # sem nenhum ele fica vazio, `pistas` fica vazia e o bloco inteiro sai
+        # com uma `.eixo` e uma `.leg` e MAIS NADA. A seção "Desempenho · o
+        # rádio de cada adaptador, em turnos" renderizava a escala 0…1.600 e a
+        # legenda anunciando `+16,3` e `+276,7` sobre ZERO barra — números com
+        # cara de medição e sem nada a que pertencer. Medido no WebKit:
+        # `querySelectorAll('.bloco')` devolveu 0 e `.pista` devolveu 0.
+        #
+        # O DONO FAZ O CONTRÁRIO, e é dele a regra: `gui.aba_conexoes
+        # .html_das_pistas` percorre os ADAPTADORES, não os controles — um
+        # adaptador sem ninguém vira uma pista com `Nenhum controle neste
+        # rádio` e `0 de 1.600`. A `08-conexoes` publicada tem essa pista vazia
+        # DESENHADA (a segunda do bloco), então esta é a forma que ela aprovou.
+        #
+        # NENHUMA PALAVRA NOVA NASCE AQUI: a frase e o `0 de …` já são do ramo
+        # `if not dentro` de :func:`html_da_regua_do_radio`, logo abaixo.
+        #
+        # O NOME FICA VAZIO DE PROPÓSITO. Sem ninguém no rádio não há `uniq`
+        # para perguntar ao sysfs, então não se sabe QUAL adaptador é — e ela
+        # tem três (o próprio Check-up desta aba diz *"2 de 3 adaptadores
+        # Bluetooth chegam ao computador por dentro de um hub"*). Escrever
+        # `Sem nome` aqui afirmaria "existe UM adaptador, e ele não tem
+        # apelido"; a coluna vazia não afirma nada, e os 96 px do
+        # `.pista .quem` seguram o alinhamento com o eixo do mesmo jeito.
+        #
+        # UMA PISTA POR ADAPTADOR DELA é o passo seguinte, e ele espera uma
+        # fonte: `radio_da_mesa` só sabe mapear `uniq` → adaptador
+        # (`adaptador_por_uniq`), e não sabe ENUMERAR os adaptadores.
+        pistas = [{"nome": "", "dica": "", "dentro": [], "vagas": []}]
     return html_da_regua_do_radio(
         pistas, no_radio,
         teto=rm.SLOTS_POR_SEGUNDO,
