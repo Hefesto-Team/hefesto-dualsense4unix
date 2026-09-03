@@ -1156,63 +1156,64 @@ def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
 # escritas, o desenho e o produto podiam divergir sem ninguém ver.
 # ---------------------------------------------------------------------------
 
-#: A CLASSE DO EMBRULHO DO CHIP. Ela é o alvo do `blocos` (um seletor CSS) para
-#: as colunas SEM aparelho, e o lugar do `data-campo` para as que têm.
+#: A CLASSE DO EMBRULHO DO CHIP. Ela é a célula da grade, e agora é ela quem
+#: CARREGA a cor do aparelho — ver :data:`CAMPO_DO_PLASTICO`.
 CLASSE_DO_CHIP = "cabeca"
 
-#: O ENDEREÇO DO CHIP — e ele mora no EMBRULHO, não no `<span>`.
+#: O ENDEREÇO DO MIOLO DO CHIP, e ele mora num `<span>` DENTRO do embrulho.
 #:
-#: POR QUE O EMBRULHO E NÃO O CHIP: o piloto **não sabe reescrever o estilo de
-#: um elemento**. Os alvos são texto·largura·fundo·valor·html·classe·cor, e
-#: nenhum deles escreve uma propriedade CSS de autor — e a cor do plástico é
-#: `--plastico` no `style` do próprio `<span>`. Trocando o MIOLO do embrulho, o
-#: `<span>` inteiro é refeito: borda, dica e texto de uma vez.
+#: O QUE ELE ESCREVE: o `<span class="chip …">` inteiro — classe, dica e texto
+#: de uma vez, pelo alvo `html`. Um bloco cujo conteúdo muda de forma (o chip do
+#: lugar vazio não é o do controle na mesa) não se pinta campo a campo.
 #:
-#: E POR QUE ELE NÃO PODE MORAR NO `<span>`, que era onde ele estava até a
-#: medição de 03/09/2026 desfazer a escolha: `escrever()` carimba
-#: `data-hef-visto="1"` no elemento que visita, e um selo posto DENTRO do HTML
-#: comparado faz a comparação nunca mais bater. Medido com o piloto e os dois
-#: controles dela, 17 tiques:
+#: ELE DESCEU UM NÍVEL — 03/09/2026, e a razão é a lei dela. Enquanto ele morava
+#: no `.cabeca`, a cor do plástico morava no `style` do `<span>` de dentro, isto
+#: é, DENTRO do HTML que o produto compara. Aquilo tinha duas consequências, e a
+#: segunda é a que esta frente veio pagar:
 #:
-#:     selo dentro do miolo comparado ... 17 tiques pintaram
-#:     selo no embrulho (agora) .........  2 tiques pintaram
+#: * o `<span>` nunca podia receber o selo da visita — carimbá-lo poria
+#:   `data-hef-visto="1"` dentro do `innerHTML` comparado e a coluna repintaria
+#:   a cada tique, para sempre (medido: 17 tiques, 17 pinturas);
+#: * logo o `--plastico` ficava num elemento cujo alvo era `texto`, e
+#:   `check_a_cor_vem_do_aparelho.py` o contava como cor CRAVADA — com razão:
+#:   *"o `escrever()` escreve no elemento que ACHOU"*.
 #:
-#: Repintar o mesmo HTML a cada tique não muda um pixel, mas **infla o contador
-#: de pinturas** — que é O instrumento com que esta casa prova que um endereço
-#: existe. `hefesto_vivo.escrever` diz a mesma frase sobre o `<select>` que
-#: recusa um valor: *um contador que mente é pior que um campo parado*.
+#: Descendo o alvo `html` para um `<span>` de embrulho, a cor sobe para o
+#: `.cabeca`, que fica FORA do HTML comparado e pode ter alvo próprio. As duas
+#: escritas convivem: cada uma no seu elemento, cada uma com o seu selo.
+#:
+#: A PÁGINA PUBLICADA CONTINUA FUNCIONANDO com o mesmo pacote, e isso não é
+#: acaso: lá o `data-campo` ainda está no `.cabeca`, e o valor que chega é o
+#: mesmo HTML do chip. O que ela não tem é o endereço da COR — e é por isso que
+#: a cura espera o `--publicar 03`.
 CAMPO_DO_CHIP = "chip-do-controle"
 
-#: O ENDEREÇO NO PRÓPRIO `<span>`, e ele existe por UMA razão: a régua
-#: `check_identidade_vem_de_cima.py` julga o `--plastico` pelo endereço do
-#: ELEMENTO QUE O CARREGA — um pai endereçado não dá ao filho o direito de
-#: trazer cor congelada, e está certa nisso. Sem ele, os chips com cor
-#: continuariam acusados com o produto já os reescrevendo.
+#: O ENDEREÇO DA COR DO PLÁSTICO — no EMBRULHO, com o alvo que a alcança.
 #:
-#: ELE É `data-hef`, E O NOME NÃO CASA COM CHAVE NENHUMA, de propósito. O
-#: `achar()` do piloto varre os três vocabulários pela MESMA chave: dar ao
-#: `<span>` o nome do embrulho faria a pintura escrever um chip DENTRO do chip.
-#: Quem reescreve este elemento é o pai, pelo alvo `html` — o `<span>` é
-#: refeito inteiro a cada tique, e por isso não precisa (nem pode) receber
-#: escrita própria.
+#: A LEI DELA, 03/09/2026: *"imagina que cada pessoa tenha um dualsense
+#: diferente. (…) eu quero que cada um, ao usar seu controle, se toque disso —
+#: que o app se adaptou ao controle dele"*. Ela catalogou 28 modelos em
+#: `docs/data/cores-do-dualsense.csv`; a aba mostrava o do desenho.
 #:
-#: **O ENDEREÇO ACOMPANHA A COR — 03/09/2026, e a razão é medida.** Ele sai
-#: onde não há `--plastico` no `style`, e o motivo é que ali ele é LASTRO: não
-#: há cor congelada para o produto reescrever, e a régua da identidade não olha
-#: um elemento que não carrega cor (ela julga o `style` do PRÓPRIO elemento; o
-#: texto e a dica já ficam cobertos pelo embrulho endereçado).
+#: O ALVO É `plastico`, e ele é o único que escreve `--plastico`: os outros
+#: escrevem texto, largura, fundo, valor, html, classe, cor ou atributo. Vazio e
+#: travessão APAGAM a variável, e é assim que a regra dela vale nos dois
+#: sentidos — *sem cor lida, sem cor na tela*: o `topo.html` declara
+#: `.chip.plastico{border-color:var(--plastico, var(--border-forte))}` e a queda
+#: assume sozinha.
 #:
-#: O QUE O LASTRO CUSTAVA, e é a dívida desta frente: um `<span>` DENTRO de um
-#: pai que se troca inteiro **nunca pode receber o selo da visita** — carimbá-lo
-#: poria `data-hef-visto="1"` dentro do `innerHTML` que o pai compara, e a
-#: coluna repintaria a cada tique, para sempre (é o mesmo defeito que o
-#: `CAMPO_DO_CHIP` acima já mediu: 17 tiques, 17 pinturas). Sem selo, um campo
-#: só é PRODUTO quando o seu valor MUDA — e o do lugar vazio nunca muda:
-#: `P3 • Desconectado` é o mesmo no desenho e no produto, por construção. O
-#: desfecho eram DOIS campos eternamente contados como mockup, sem que houvesse
-#: o que consertar. Endereço que ninguém pode pintar não é cobertura: é dívida
-#: que não se paga.
-HEF_DO_CHIP = "chip.plastico"
+#: A VARIÁVEL DESCE POR HERANÇA, que é o que torna o embrulho um lugar legítimo:
+#: uma propriedade customizada de CSS vale para toda a subárvore. É o mesmo
+#: arranjo da `.moldura` da `05-vibracao`, e pela mesma razão.
+#:
+#: ELE É `data-campo` E NÃO `data-hef` por uma razão medida: a `cobertura` desta
+#: aba conta pintura contra `_enderecos_da_pagina()`, que varre a página
+#: publicada por `data-campo=` — um `data-hef` nunca entraria na conta, e a aba
+#: pintaria quatro valores que ninguém somaria.
+CAMPO_DO_PLASTICO = "plastico"
+
+#: O ALVO que alcança a cor. Escrito uma vez, lido pelo desenho e pelo pacote.
+ALVO_DO_PLASTICO = "plastico"
 
 #: O separador dos pedaços do rótulo. É o mesmo `monta.SEPARADOR`, e está aqui
 #: como literal pela razão que o `NOME_SEM_LEITURA` do `pacotes/__init__` já
@@ -1288,8 +1289,29 @@ def miolo_do_chip(jogador: int, nome: str, via: str,
     return PONTO.join(pedacos)
 
 
+def a_pagina_recebe_a_cor_por_endereco() -> bool:
+    """A página PUBLICADA já tem onde receber a cor por endereço?
+
+    ELA EXISTE PARA NÃO APAGAR A BORDA NA TELA DELA. O desenho de hoje pôs o
+    `--plastico` no embrulho, com `data-campo="plastico"`; a página que o
+    `WebView` renderiza AGORA não o tem — ela só recebe o chip inteiro pelo alvo
+    `html`. Um pacote que escrevesse só no endereço novo deixaria as duas
+    colunas dela com a borda neutra até o `--publicar 03`, que é ato dela.
+
+    Medido em 03/09/2026, com a página publicada e um Nova Pink na mesa: a
+    borda saía `rgb(68, 71, 90)` — a queda do tema — em vez de
+    `rgb(227, 91, 140)`.
+
+    ELA SE APOSENTA SOZINHA. No dia em que a bancada virar produto, o endereço
+    passa a existir e este ramo deixa de correr. É a mesma forma de
+    `_lugares_que_o_desenho_da_por_vazios` e `_casas_cravadas`: o pacote
+    pergunta à PÁGINA o que ela sabe receber, em vez de presumir.
+    """
+    return CAMPO_DO_PLASTICO in _enderecos_da_pagina()
+
+
 def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
-                     conectado: bool = True) -> str:
+                     conectado: bool = True, cor_no_chip: bool = False) -> str:
     """O `<span>` do cabeçalho da coluna, com endereço e sem cor inventada.
 
     `plastico` é o HEX JÁ RESOLVIDO, e não o *slug*, de propósito: o gerador
@@ -1300,17 +1322,22 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     A política de resolução é de quem chama; a MARCAÇÃO é daqui, e é ela que não
     pode divergir.
 
-    SEM HEX, SEM `style` — e quem julga o que é hex é :func:`cor_de_borda`, que
-    recusa o que o mapa dela responde quando não há hex. A borda não some:
-    `topo.html` declara
+    A COR NÃO SAI DAQUI NO DESENHO — 03/09/2026, e é a mudança desta frente. O
+    `--plastico` subiu para o EMBRULHO (:func:`_cabeca_do_controle`), que tem
+    endereço e alvo próprios; este `<span>` é o miolo que o alvo `html` refaz.
+    O parâmetro `plastico` fica porque é ele que decide A DICA, e a dica tem de
+    saber separar as duas ausências. Quem julga o que é hex é
+    :func:`cor_de_borda`, que recusa o que o mapa dela responde quando não há
+    hex. A borda não some: `topo.html` declara
     `.chip.plastico{border-color:var(--plastico, var(--border-forte))}`, com a
-    queda já escrita. Cravar um hex de mockup aqui seria dizer que se sabe a cor
-    do plástico de um controle que ainda não a disse.
+    queda já escrita.
 
-    E SEM HEX, SEM ENDEREÇO NO `<span>` — ver :data:`HEF_DO_CHIP`. Os dois
-    andam juntos porque o endereço existe para defender a cor: onde não há cor
-    congelada não há o que defender, e o endereço vira lastro que a régua do
-    mockup cobra sem que ninguém possa pagar.
+    `cor_no_chip` É A PONTE ATÉ O `--publicar 03`, e só o PACOTE a levanta —
+    ver :func:`a_pagina_recebe_a_cor_por_endereco`. A página que ela vê hoje não
+    tem o endereço da cor; enquanto não tiver, o produto continua mandando a cor
+    dentro do chip, como sempre mandou. O DESENHO nunca a levanta: ali a cor tem
+    de estar no embrulho, ou a régua a acusa — e com razão, porque num arquivo
+    estático ninguém a reescreve.
 
     **E A DICA ACOMPANHA A COR — 03/09/2026.** Ela dizia *"a borda é a cor do
     plástico"* nos TRÊS casos, e nos dois últimos era mentira: sem hex a borda é
@@ -1341,11 +1368,50 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
         dica = (f"{nome} — a cor do plástico deste controle ainda não foi lida"
                 if nome else
                 "A cor do plástico deste controle ainda não foi lida.")
-    estilo = f' style="--plastico:{cor}"' if conectado and cor else ""
-    endereco = f' data-hef="{HEF_DO_CHIP}"' if estilo else ""
-    return (f'<span class="{classe}"{endereco}{estilo}'
-            f' title="{dica}">'
+    estilo = f' style="--plastico:{cor}"' if cor_no_chip and cor else ""
+    return (f'<span class="{classe}"{estilo} title="{dica}">'
             f"{miolo_do_chip(jogador, nome, via, conectado)}</span>")
+
+
+def _cabeca_do_controle(jogador: int, nome: str, via: str, plastico: str,
+                        conectado: bool = True) -> str:
+    """O cabeçalho INTEIRO da coluna: o embrulho que veste a cor e o miolo.
+
+    ELE É PRIVADO, e o nome diz um fato: **só o gerador monta este elemento**. O
+    produto escreve nos dois endereços que ele deixa; nunca refaz a `.cabeca`.
+    Público, ele seria uma promessa ao produto sem chamador em produção — e o
+    `portao_a_casa_sabe_e_o_produto_nao_faz` acusa isso, com razão: os dez
+    `interface/abaNN.py` são BANCADA e saem da conta pela poda dele.
+
+    MORA AQUI E NÃO NO GERADOR porque a MARCAÇÃO tem um dono só. Se o desenho a
+    escrevesse por conta própria, a estrutura que ele emite e a que
+    :func:`seletor_do_chip` procura divergiriam no primeiro dia em que alguém
+    mexesse numa só — e o produto passaria a escrever no lugar errado, calado.
+
+    DOIS ELEMENTOS, DOIS ENDEREÇOS, e a divisão é o ponto:
+
+        .cabeca   `data-campo="plastico"`  alvo `plastico`  → a COR do aparelho
+          span    `data-campo="chip-do-controle"` alvo `html` → o CHIP inteiro
+
+    Só o gerador emite esta função — o produto escreve nos dois endereços que
+    ela deixa. Aninhá-los é o que permite as duas escritas conviverem: o selo do
+    embrulho fica FORA do `innerHTML` que o miolo compara, e o selo do miolo fica
+    no elemento que o escreve. Com a cor dentro do miolo (como era até hoje) uma
+    das duas tinha de ser sacrificada, e a sacrificada era a cor.
+
+    O EMBRULHO TEM ENDEREÇO NAS QUATRO COLUNAS, inclusive nas vazias, e isso é
+    deliberado: a página é estática e o piloto não cria endereço. Sem ele, o dia
+    em que um controle entra no P3 a coluna mostra o nome do plástico e uma borda
+    neutra — a cor não teria por onde chegar. Onde não há leitura o produto
+    escreve o vazio, que APAGA a variável.
+    """
+    cor = cor_de_borda(plastico) if conectado else ""
+    estilo = f' style="--plastico:{cor}"' if cor else ""
+    return (f'<div class="{CLASSE_DO_CHIP}" data-campo="{CAMPO_DO_PLASTICO}"'
+            f' data-hef-alvo="{ALVO_DO_PLASTICO}"{estilo}>'
+            f'<span data-campo="{CAMPO_DO_CHIP}" data-hef-alvo="html">'
+            f"{chip_do_controle(jogador, nome, via, plastico, conectado)}"
+            f"</span></div>")
 
 
 def _cor_do_plastico(slug: str) -> str:
@@ -1396,8 +1462,15 @@ def seletor_do_chip(pref: str) -> str:
     O SELETOR TEM DE ACHAR UM ELEMENTO SÓ — o piloto usa `querySelector`, o
     primeiro que casar. `.cabeca` sozinho acharia o do P1 e escreveria o chip do
     P3 nele; é a mesma armadilha que `_blocos_da_coluna` já documenta.
+
+    ELE MIRA O `data-campo`, E NÃO A CLASSE — 03/09/2026. As duas páginas têm o
+    `chip-do-controle` num lugar diferente (na bancada ele desceu para o `<span>`
+    de dentro, para o `.cabeca` poder vestir a cor), e um seletor pela CLASSE
+    escreveria por cima do embrulho endereçado da bancada — matando, na primeira
+    pintura, o endereço da cor que esta frente veio criar. Perguntar pelo
+    endereço acha o elemento certo nas duas.
     """
-    return f'[data-controle="{pref}"] .{CLASSE_DO_CHIP}'
+    return f'[data-controle="{pref}"] [data-campo="{CAMPO_DO_CHIP}"]'
 
 
 def _numero_da_posicao(pref: str) -> int:
@@ -1432,9 +1505,26 @@ def _identidade_viva(ctx: Contexto, c: dict[str, Any]) -> tuple[int, str, str, s
     return jogador, nome, via, _cor_do_plastico(str(casa.get("cor") or ""))
 
 
-def _chip_vivo(ctx: Contexto, c: dict[str, Any]) -> str:
-    """O `<span>` inteiro de um controle que está na mesa AGORA."""
-    return chip_do_controle(*_identidade_viva(ctx, c))
+def _cabecalho_vivo(ctx: Contexto, c: dict[str, Any]) -> tuple[str, str]:
+    """`(chip, cor)` de um controle que está na mesa AGORA — de UMA leitura.
+
+    Os dois valores vão para endereços diferentes (o miolo pelo alvo `html`, a
+    cor pelo alvo `plastico`) e por isso saem juntos daqui: lidos em duas
+    chamadas, `_identidade_viva` podia responder duas mesas no mesmo tique — e a
+    coluna vestiria a borda de um controle com o nome de outro, que é a família
+    de defeito desta frente.
+
+    A COR VAI PENEIRADA por :func:`cor_de_borda`, e não crua: em oito dos 28
+    modelos o mapa dela responde a hachura do SEM-HEX, que não é cor. Escrevê-la
+    em `--plastico` deixa a `var()` inválida no tempo de valor computado, e a
+    borda vira o `currentColor` — o chip vestindo a cor da LETRA com a dica ao
+    lado dizendo que aquela é a cor do plástico. Vazio APAGA a variável, e a
+    queda do `topo.html` assume.
+    """
+    identidade = _identidade_viva(ctx, c)
+    chip = chip_do_controle(
+        *identidade, cor_no_chip=not a_pagina_recebe_a_cor_por_endereco())
+    return chip, cor_de_borda(identidade[3])
 
 
 def _chip_do_lugar_vazio(pref: str) -> str:
@@ -1513,16 +1603,23 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         deste = {sig: (_do_lado(cfgs[sig], specs) if cfgs[sig] else lados[sig])
                  for sig in LADOS}
 
+        chip, plastico = _cabecalho_vivo(ctx, c)
         col: dict[str, object] = {
             # O CABEÇALHO DA COLUNA, e ele é IDENTIDADE — vem da mesa, que é a
             # MESMA lista que a fita do topo desenha. Ver `chip_do_controle`.
             #
-            # O CHIP INTEIRO, e não só o texto: borda, dica e nome saem juntos
-            # pelo alvo `html` do embrulho. E ele sai por CAMPO — não por bloco
-            # — porque só o campo carimba o selo `data-hef-visto`: sem o selo,
-            # um controle que por acaso SEJA o Cosmic Red do desenho ficaria
-            # classificado como mockup para sempre pela régua do mockup.
-            CAMPO_DO_CHIP: _chip_vivo(ctx, c),
+            # O CHIP INTEIRO, e não só o texto: classe, dica e nome saem juntos
+            # pelo alvo `html`. E ele sai por CAMPO — não por bloco — porque só
+            # o campo carimba o selo `data-hef-visto`: sem o selo, um controle
+            # que por acaso SEJA o Cosmic Red do desenho ficaria classificado
+            # como mockup para sempre pela régua do mockup.
+            CAMPO_DO_CHIP: chip,
+            # A COR DO PLÁSTICO, no embrulho e por endereço próprio — a lei
+            # dela, 03/09/2026. Ela vem do MAPA (`monta.cor_da_zona` lê a folha
+            # dos 28 modelos), e não de uma tabela deste arquivo: quem tem um
+            # Nova Pink recebe o Nova Pink, e o dia em que ela acrescentar um
+            # modelo ao CSV a aba o veste sem uma linha de Python a mais.
+            CAMPO_DO_PLASTICO: plastico,
             "l2-raw": l2, "r2-raw": r2,
             "l2-pct": round((l2 or 0) / 255 * 100),
             "r2-pct": round((r2 or 0) / 255 * 100),
@@ -1583,6 +1680,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # conectado, custaria a trava. Por isso o bloco continua existindo, para
         # os lugares que este laço não alcança.
         vazia[CAMPO_DO_CHIP] = _chip_do_lugar_vazio(pref)
+        # E A COR SAI, no mesmo tique — 03/09/2026. O vazio APAGA o
+        # `--plastico` do embrulho (`escrever` chama `removeProperty`), que é o
+        # que a decisão dela pede: *"os demais 3 e o 4 ficam lá com os espaços
+        # mas tudo com Desligado e Nenhum, fora a borda do P1 e P2"*. Sem esta
+        # linha, um controle que SAI do P1 deixaria a borda dele acesa num lugar
+        # sem aparelho — a nona aparição de *a tela afirmando o que não é*.
+        vazia[CAMPO_DO_PLASTICO] = ""
         colunas[pref] = vazia
         pintados += sum(1 for k in vazia if k in tem_endereco)
 

@@ -25,27 +25,28 @@ AS DUAS METADES DA CURA, e elas são de naturezas diferentes:
    conectado (o P2 com um controle só na mesa), onde emitir coluna custaria o
    `data-conectado="nao"` que segura o `pointer-events:none`.
 
-2. **O ENDEREÇO DO `<span>` ACOMPANHA A COR.** Ele existe por UMA razão
-   (`a03_gatilhos.HEF_DO_CHIP`): a `check_identidade_vem_de_cima.py` julga o
-   `--plastico` pelo endereço do elemento que o CARREGA. Num chip sem cor não há
-   o que defender — e ali o endereço é LASTRO, porque um `<span>` dentro de um
-   pai que se troca inteiro **nunca pode receber selo**: carimbá-lo poria
-   `data-hef-visto="1"` dentro do `innerHTML` que o pai compara, e a coluna
-   repintaria a cada tique, para sempre. Endereço que ninguém pode pintar não é
-   cobertura: é dívida que não se paga.
+2. **A COR SAI DE DENTRO DO CHIP.** Ela morava no `style` do `<span>`, isto é,
+   DENTRO do `innerHTML` que o alvo `html` compara — e ali o `<span>` **nunca
+   pode receber selo**: carimbá-lo poria `data-hef-visto="1"` dentro do HTML
+   comparado, e a coluna repintaria a cada tique, para sempre (medido: 17
+   tiques, 17 pinturas). Em 03/09/2026 o `--plastico` subiu para o EMBRULHO,
+   com endereço (`a03_gatilhos.CAMPO_DO_PLASTICO`) e o alvo que o alcança —
+   ele fica fora do HTML comparado, ganha selo, e a cor passa a vir do aparelho
+   nos 28 modelos que ela mapeou. O `<span>` do chip ficou sem endereço nenhum:
+   quem o reescreve é o pai.
 
 O QUE ESTA RÉGUA MORDE:
 
 * devolver o chip do lugar vazio para `blocos`  → `test_o_lugar_vazio_sai_por_campo`
 * deixar de escrever o chip de ALGUM lugar sem
   aparelho (o P2 com um controle só)            → `test_nenhum_lugar_sem_aparelho_fica_sem_chip`
-* pôr o endereço de volta onde não há cor       → `test_o_endereco_do_span_acompanha_a_cor`
+* pôr a cor de volta dentro do chip             → `test_a_cor_saiu_de_dentro_do_chip`
+* o produto deixar a cor acesa num lugar vazio  → `test_o_lugar_vazio_apaga_a_cor`
 * o pacote assinar a visita que não fez         → `test_o_pacote_nao_emite_o_selo`
 """
 from __future__ import annotations
 
 import pathlib
-import re
 import sys
 
 import pytest
@@ -88,14 +89,6 @@ def a03():
     return a03_gatilhos
 
 
-@pytest.fixture(scope="module")
-def publicada() -> str:
-    """O HTML que o produto RENDERIZA — é contra ele que a régua do mockup mede."""
-    from hefesto_dualsense4unix.interface import onde
-
-    caminho = onde.pagina(PAGINA, publicado=True)
-    assert caminho.exists(), f"{PAGINA} sumiu do publicado — não há o que medir"
-    return caminho.read_text(encoding="utf-8")
 
 
 def _pacote(a03, mesa, conectados):
@@ -182,70 +175,75 @@ def test_nenhum_lugar_sem_aparelho_fica_sem_chip(a03):
 
 
 # ---------------------------------------------------------------------------
-# 2. O ENDEREÇO DO `<span>` — ele acompanha a COR, e só ela.
+# 2. A COR — ela mora no EMBRULHO, que é o que o produto pode pintar.
 # ---------------------------------------------------------------------------
 
-def test_o_endereco_do_span_acompanha_a_cor(a03):
-    """`data-hef` no chip existe onde há `--plastico`, e em nenhum outro lugar.
+def test_a_cor_saiu_de_dentro_do_chip(a03):
+    """O `<span>` do chip não carrega cor nem endereço. Quem carrega é o pai.
 
-    AS DUAS RÉGUAS PUXAM PARA LADOS OPOSTOS, e este é o ponto exato em que elas
-    se encontram:
+    AS DUAS RÉGUAS PUXAVAM PARA LADOS OPOSTOS enquanto a cor morava no chip:
 
-    * `check_identidade_vem_de_cima.py` EXIGE o endereço onde há cor cravada —
-      ela julga o `--plastico` pelo endereço do elemento que o carrega.
-    * `regua_do_mockup` COBRA todo endereço que não vira PRODUTO — e o `<span>`
-      é filho de um pai que se troca inteiro, logo nunca recebe selo. Onde o
-      valor não muda (o lugar vazio), ele fica acusado para sempre.
+    * `check_a_cor_vem_do_aparelho.py` EXIGE que o `--plastico` esteja num
+      elemento cujo alvo o alcance (`plastico` ou `html`) — e o do `<span>` era
+      `texto`, que escreveria o hexadecimal como palavra na tela.
+    * `regua_do_mockup` COBRA todo endereço que não vira PRODUTO — e um `<span>`
+      dentro de um pai que se troca inteiro nunca recebe selo, porque carimbá-lo
+      poria `data-hef-visto="1"` dentro do `innerHTML` comparado.
 
-    ARRANQUE a condição (`endereco = f' data-hef="{...}"'` sem o `if`) e esta
-    régua reprova no chip do lugar vazio.
+    Tirar a cor de dentro do chip resolve as duas de uma vez, e é a cura de
+    03/09/2026. ARRANQUE-A de volta para o `<span>` e esta régua reprova.
     """
-    com_cor = a03.chip_do_controle(1, "White", "USB", "#e4e0d8")
-    assert f'data-hef="{a03.HEF_DO_CHIP}"' in com_cor and "--plastico:" in com_cor, (
-        f"o chip COM cor perdeu o endereço: {com_cor!r}. A régua da identidade "
-        f"volta a acusar um `--plastico` que o produto não pode reescrever.")
+    com_cor = a03._cabeca_do_controle(1, "White", "USB", "#e4e0d8")
+    assert 'style="--plastico:#e4e0d8"' in com_cor, (
+        f"o cabeçalho COM cor não a veste: {com_cor!r}")
+    chip = com_cor[com_cor.index('<span class="chip'):]
+    assert "--plastico" not in chip, (
+        f"a cor voltou para dentro do chip: {chip!r}. Ali o produto não pode "
+        f"reescrevê-la sem repintar a coluna a cada tique.")
+    assert "data-hef" not in chip and "data-campo" not in chip, (
+        f"o `<span>` do chip ganhou endereço: {chip!r}. Ele é filho de um pai "
+        f"que se troca inteiro — nunca vai receber selo, e a régua do mockup "
+        f"vai cobrá-lo para sempre.")
 
-    vazio = a03.chip_do_controle(3, "", "", "", conectado=False)
+    vazio = a03._cabeca_do_controle(3, "", "", "", conectado=False)
     assert "--plastico" not in vazio, (
-        f"o chip do lugar vazio ganhou cor de plástico: {vazio!r}")
-    assert "data-hef=" not in vazio, (
-        f"o chip do lugar vazio ficou com endereço sem ter cor para defender: "
-        f"{vazio!r}. Ele é filho de um pai que se troca inteiro — nunca vai "
-        f"receber selo, e a régua do mockup vai cobrá-lo para sempre.")
+        f"o cabeçalho do lugar vazio ganhou cor de plástico: {vazio!r}")
+    assert f'data-campo="{a03.CAMPO_DO_PLASTICO}"' in vazio, (
+        f"o cabeçalho do lugar vazio ficou SEM o endereço da cor: {vazio!r}. A "
+        f"página é estática: sem ele, o dia em que um controle entrar no P3 a "
+        f"cor não terá por onde chegar.")
 
     # E O CONECTADO SEM COR LIDA cai do mesmo lado do vazio: pelo rádio a cor
-    # ainda não chega, e um chip sem `--plastico` não tem o que defender.
-    sem_leitura = a03.chip_do_controle(2, "", "BT", "")
-    assert "data-hef=" not in sem_leitura, (
-        f"o chip do controle por rádio, sem cor lida, ficou com endereço: "
+    # ainda não chega, e o cabeçalho sai sem `style` — a queda do `topo.html`
+    # deixa a borda neutra em vez de vestir o plástico de outro controle.
+    sem_leitura = a03._cabeca_do_controle(2, "", "BT", "")
+    assert "--plastico" not in sem_leitura, (
+        f"o cabeçalho do controle por rádio, sem cor lida, vestiu plástico: "
         f"{sem_leitura!r}")
 
 
-def test_o_span_do_lugar_vazio_some_da_tela(a03, publicada):
-    """O produto APAGA o `<span>` endereçado que a página publicada ainda crava.
+def test_o_lugar_vazio_apaga_a_cor(a03):
+    """O que o produto escreve num lugar vazio APAGA a borda de quem saiu.
 
-    É esta diferença que faz a régua do mockup dar `PRODUTO` nos dois campos:
-    o endereço do arquivo deixa de existir no DOM, e ela chama isso pelo nome —
-    *"o bloco que continha este campo foi TROCADO pelo produto — o desenho não
-    sobreviveu, que é o que se queria"*.
+    O `escrever()` do alvo `plastico` chama `removeProperty` no vazio e no
+    travessão — é assim que a decisão dela vale nos dois sentidos: *"os demais 3
+    e o 4 ficam lá com os espaços mas tudo com Desligado e Nenhum, fora a borda
+    do P1 e P2."* Sem esta escrita, um controle que SAI do P1 deixaria a borda
+    dele acesa num lugar sem aparelho.
 
-    E ELA CONTINUA VALENDO DEPOIS DE PUBLICAR: quando o desenho de hoje chegar
-    ao produto, o endereço sai do arquivo e o campo deixa de ser contado. Nos
-    dois estados a conta fecha; o que não podia ficar era o meio-termo de antes.
+    ARRANQUE a linha `vazia[CAMPO_DO_PLASTICO] = ""` do laço dos vazios e esta
+    régua reprova nomeando a coluna.
     """
     r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
     for pref in sorted(a03._lugares_que_o_desenho_da_por_vazios()):
-        escrito = str((r["colunas"].get(pref) or {})[a03.CAMPO_DO_CHIP])
-        assert f'data-hef="{a03.HEF_DO_CHIP}"' not in escrito, (
-            f"o que o produto escreve em {pref} ainda traz o endereço do "
-            f"`<span>`: {escrito!r}")
-    cravados = re.findall(
-        rf'data-conectado="nao">\s*<div class="{a03.CLASSE_DO_CHIP}"[^>]*>'
-        rf'<span[^>]*data-hef="{a03.HEF_DO_CHIP}"', publicada)
-    if not cravados:
-        pytest.skip("o publicado já recebeu o desenho de hoje: o `<span>` do "
-                    "lugar vazio não tem mais endereço no arquivo, e o campo "
-                    "deixou de existir para a régua")
+        col = r["colunas"].get(pref) or {}
+        assert col.get(a03.CAMPO_DO_PLASTICO) == "", (
+            f"{pref} está vazio e a coluna não apaga a cor: "
+            f"{col.get(a03.CAMPO_DO_PLASTICO)!r}")
+        escrito = str(col[a03.CAMPO_DO_CHIP])
+        assert "--plastico" not in escrito, (
+            f"o que o produto escreve em {pref} traz cor de plástico: "
+            f"{escrito!r}")
 
 
 def test_o_pacote_nao_emite_o_selo(a03):

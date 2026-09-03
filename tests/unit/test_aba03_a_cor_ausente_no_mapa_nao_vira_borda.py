@@ -108,14 +108,19 @@ def test_o_mapa_tem_os_dois_casos(mapa_das_cores):
 
 
 def test_so_o_hexadecimal_vira_borda(a03, mapa_das_cores):
-    """O chip veste `--plastico` EXATAMENTE nos modelos que têm hex.
+    """O cabeçalho veste `--plastico` EXATAMENTE nos modelos que têm hex.
 
     Nos dois sentidos, e isso importa: um a menos e um controle que ela mapeou
     perde a identidade na tela; um a mais e a borda diz uma cor que ninguém
     mediu.
+
+    O `--plastico` MORA NO EMBRULHO desde 03/09/2026, e por isso a régua olha
+    `_cabeca_do_controle`: dentro do chip a cor ficava num elemento cujo alvo é
+    `html`, e o produto não tinha como reescrevê-la sem repintar a coluna a
+    cada tique.
     """
     for slug, nome, tinta in mapa_das_cores:
-        chip = a03.chip_do_controle(1, nome, "USB", a03._cor_do_plastico(slug))
+        chip = a03._cabeca_do_controle(1, nome, "USB", a03._cor_do_plastico(slug))
         tem = "--plastico:" in chip
         assert tem == tinta.startswith("#"), (
             f"{nome} ({slug}): o mapa responde {tinta!r} e o chip "
@@ -133,7 +138,7 @@ def test_nenhum_chip_leva_url_para_dentro_do_style(a03, mapa_das_cores):
     partida se um dia ele chegar à `casca-solida`.
     """
     for slug, nome, _tinta in mapa_das_cores:
-        chip = a03.chip_do_controle(1, nome, "USB", a03._cor_do_plastico(slug))
+        chip = a03._cabeca_do_controle(1, nome, "USB", a03._cor_do_plastico(slug))
         assert "url(" not in chip, (
             f"{nome} ({slug}) levou uma referência de SVG para dentro do "
             f"`style`: {chip!r}. Numa `border-color` isso não pinta hachura — "
@@ -172,19 +177,28 @@ def test_a_dica_acompanha_a_cor(a03):
         f"a dica de quem não teve a cor lida culpa o mapa: {nao_lida!r}")
 
 
-def test_o_endereco_acompanha_a_cor(a03, mapa_das_cores):
-    """Sem cor no `style`, sem `data-hef` no `<span>`.
+def test_o_endereco_da_cor_existe_ate_sem_cor(a03, mapa_das_cores):
+    """O endereço da cor está SEMPRE lá — inclusive nos oito modelos sem hex.
 
-    É o mesmo invariante que o gerador já cobra (`enderecados == com_cor`), e
-    ele tem de continuar valendo para os oito modelos sem hex: um endereço a
-    mais é um campo que a régua do mockup cobra sem que o produto possa selá-lo
-    — o `<span>` é filho de um pai que se troca inteiro e nunca recebe a visita.
+    ISTO INVERTEU EM 03/09/2026, e a inversão é a cura. Enquanto a cor morava no
+    `<span>`, o endereço tinha de ACOMPANHÁ-LA: um `<span>` filho de um pai que
+    se troca inteiro nunca recebe o selo da visita, e um endereço sem selo era
+    dívida que ninguém podia pagar.
+
+    No embrulho não é assim: ele fica FORA do HTML comparado, recebe o selo, e o
+    produto escreve nele a cada tique — o hexadecimal quando o mapa dela
+    responde um, e o vazio (que APAGA a variável) quando não responde. Tirar o
+    endereço dos oito modelos sem hex faria o controle que sai de um Chroma Teal
+    para um White ficar sem borda: a página é estática e o piloto não cria
+    endereço.
     """
     for slug, nome, _t in mapa_das_cores:
-        chip = a03.chip_do_controle(1, nome, "USB", a03._cor_do_plastico(slug))
-        assert (a03.HEF_DO_CHIP in chip) == ("--plastico:" in chip), (
-            f"{nome} ({slug}): o endereço do `<span>` deixou de acompanhar a "
-            f"cor. {chip!r}")
+        chip = a03._cabeca_do_controle(1, nome, "USB", a03._cor_do_plastico(slug))
+        assert f'data-campo="{a03.CAMPO_DO_PLASTICO}"' in chip, (
+            f"{nome} ({slug}): o cabeçalho saiu sem o endereço da cor. {chip!r}")
+        assert f'data-hef-alvo="{a03.ALVO_DO_PLASTICO}"' in chip, (
+            f"{nome} ({slug}): o cabeçalho não diz o alvo que alcança a cor — "
+            f"o hexadecimal do aparelho viraria o texto do chip. {chip!r}")
 
 
 def test_cor_de_borda_recusa_o_que_o_mapa_nao_diz_em_hex(a03):
