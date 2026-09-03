@@ -135,7 +135,8 @@ def _chips(a03, r, mesa) -> dict[str, str]:
     fora = {}
     for seletor, html in r["blocos"].items():
         achou = re.fullmatch(
-            rf'\[data-controle="(p\d+)"\] \.{a03.CLASSE_DO_CHIP}', seletor)
+            rf'\[data-controle="(p\d+)"\] \[data-campo="{a03.CAMPO_DO_CHIP}"\]',
+            seletor)
         if achou:
             fora[achou.group(1)] = str(html)
     pref_de = {str(m.get("uniq") or ""): str(m.get("pref") or "") for m in mesa}
@@ -145,6 +146,25 @@ def _chips(a03, r, mesa) -> dict[str, str]:
     return fora
 
 
+def _cores(a03, r, mesa) -> dict[str, str]:
+    """A COR que o pacote escreve em cada coluna, por `pref`.
+
+    Ela saiu do HTML do chip em 03/09/2026 e passou a ter endereço próprio no
+    EMBRULHO — o único elemento que o produto pode pintar com o alvo `plastico`
+    sem carimbar o selo dentro do HTML que ele mesmo compara. Uma régua que
+    continuasse procurando `--plastico` no chip daria verde sobre a mesa dela e
+    vermelho sobre a cura, que é o pior defeito que uma régua pode ter.
+
+    O LUGAR SEM COLUNA NÃO APARECE AQUI, e é fato e não omissão: o `blocos`
+    escreve HTML, não estilo. Quem checa aquele caso é
+    `test_o_lugar_sem_aparelho_perde_o_nome`.
+    """
+    pref_de = {str(m.get("uniq") or ""): str(m.get("pref") or "") for m in mesa}
+    return {pref_de.get(chave, chave): str(col[a03.CAMPO_DO_PLASTICO])
+            for chave, col in r["colunas"].items()
+            if a03.CAMPO_DO_PLASTICO in col}
+
+
 # ---------------------------------------------------------------------------
 # 1. O ENDEREÇO — sem ele a régua da identidade acusa, e com razão.
 # ---------------------------------------------------------------------------
@@ -152,83 +172,81 @@ def _chips(a03, r, mesa) -> dict[str, str]:
 def test_todo_chip_da_bancada_tem_endereco(a03, bancada):
     """Os dois endereços do chip, e cada um tem um trabalho — e um alcance.
 
-    O DO `<span>` É O QUE A RÉGUA EXIGE, E ELE ACOMPANHA A COR:
-    `check_identidade_vem_de_cima.py` julga o `--plastico` pelo endereço do
-    ELEMENTO QUE O CARREGA — um pai endereçado não dá ao filho o direito de
-    trazer cor congelada. MEDIDO em 03/09/2026, arrancando este endereço dos
-    chips COM cor: a conta desta aba sobe, um achado por chip descoberto.
+    O DO EMBRULHO É O DA COR — 03/09/2026, e é a cura desta frente. O
+    `--plastico` morava no `style` do `<span>` de dentro, e ali o produto não
+    tinha como reescrevê-lo: `check_a_cor_vem_do_aparelho.py` contava os dois
+    chips com cor como CRAVADOS, com razão — *"o `escrever()` escreve no
+    elemento que ACHOU"*, e o alvo daquele `<span>` era `texto`.
 
-    E ONDE NÃO HÁ COR ELE SAI — 03/09/2026, e a razão é a outra régua. Um
-    `<span>` dentro de um pai que se troca inteiro (alvo `html`) **nunca pode
-    receber o selo da visita**: carimbá-lo poria `data-hef-visto="1"` dentro do
-    `innerHTML` que o pai compara, e a coluna repintaria a cada tique. Sem selo,
-    a régua do mockup só dá por PRODUTO um campo cujo valor MUDE — e o do lugar
-    vazio nunca muda (`P3 • Desconectado` é o mesmo no desenho e no produto,
-    porque saem da mesma função). Eram dois campos cobrados para sempre por um
-    endereço que não defendia cor nenhuma. Endereço que ninguém pode pintar não
-    é cobertura: é dívida que não se paga.
+    ELE ESTÁ NAS QUATRO COLUNAS, com cor ou sem: a página é estática e o piloto
+    não cria endereço. Sem ele no P3, o dia em que um controle entra ali a cor
+    não teria por onde chegar — e a coluna mostraria o nome do plástico com a
+    borda neutra.
 
-    O DO EMBRULHO É O QUE O PRODUTO ESCREVE, e ele está nas QUATRO colunas:
-    trocando o miolo, o `<span>` sai inteiro — borda, dica e nome. O piloto não
-    tem alvo que escreva uma propriedade CSS de autor, então a cor só se troca
-    assim.
+    O DO MIOLO É O QUE REFAZ O CHIP: classe, dica e nome de uma vez, pelo alvo
+    `html`. Ele desceu para um `<span>` de embrulho justamente para a cor poder
+    subir: o selo da visita não pode cair dentro do HTML comparado, ou a coluna
+    repinta a cada tique (medido: 17 tiques, 17 pinturas).
 
     ARRANQUE qualquer um dos dois, rode o gerador, e esta régua reprova aqui.
     """
-    quantos = bancada.count(f'data-hef="{a03.HEF_DO_CHIP}"')
-    com_cor = bancada[_depois_da_fita(bancada):].count("--plastico:")
-    assert quantos == com_cor, (
-        f"a bancada tem {quantos} chips endereçados para {com_cor} com cor "
-        f"cravada. Um a MENOS e a régua da identidade acusa a cor sem dono; um "
-        f"a MAIS e a régua do mockup cobra um campo que o produto não tem como "
-        f"selar — o `<span>` é filho de um pai que se troca inteiro.")
-    assert quantos, (
-        "nenhum chip da bancada tem endereço. Ou a `MESA` do desenho ficou sem "
-        "controle com cor, ou o endereço caiu de todos — e aí a régua da "
-        "identidade volta a acusar a cor congelada que o produto já reescreve.")
-
     embrulhos = bancada.count(
-        f'<div class="{a03.CLASSE_DO_CHIP}" data-campo="{a03.CAMPO_DO_CHIP}"'
-        f' data-hef-alvo="html">')
+        f'<div class="{a03.CLASSE_DO_CHIP}" data-campo="{a03.CAMPO_DO_PLASTICO}"'
+        f' data-hef-alvo="{a03.ALVO_DO_PLASTICO}"')
     assert embrulhos == 4, (
-        f"o embrulho endereçado está em {embrulhos} colunas. É ele que o produto "
-        f"troca INTEIRO para reescrever a borda do plástico.")
+        f"o endereço da COR está em {embrulhos} colunas, e não em 4. É por ele "
+        f"que o produto veste o plástico do controle que a fita já leu.")
 
-    # E A COR CRAVADA SÓ MORA ONDE HÁ ENDEREÇO. Um `--plastico` solto em
-    # qualquer outro lugar da página é identidade sem dono, de novo.
+    miolos = bancada.count(
+        f'<span data-campo="{a03.CAMPO_DO_CHIP}" data-hef-alvo="html">')
+    assert miolos == 4, (
+        f"o endereço do MIOLO está em {miolos} colunas, e não em 4. É por ele "
+        f"que o nome e a dica do chip trocam quando a mesa muda.")
+
+    # E A COR CRAVADA SÓ MORA NO EMBRULHO ENDEREÇADO. Um `--plastico` solto em
+    # qualquer outro lugar da página é identidade que o produto não alcança.
     #
     # A FITA DO TOPO ESTÁ FORA DESTE ALCANCE, e a razão é de território, não de
     # conveniência: os chips dela saem de `monta.fita()`, o esqueleto das DEZ
     # páginas, e os mesmos seis achados aparecem nas dez. Consertá-los aqui
     # seria dez pessoas editando a mesma linha. **Ela continua acusada** pela
     # `check_identidade_vem_de_cima --bancada`, que é onde o número tem de
-    # aparecer — 6 dos 12 desta aba, 60 dos 134 da bancada inteira.
+    # aparecer.
     for casa in re.finditer(r"--plastico\s*:", bancada[_depois_da_fita(bancada):]):
         posicao = casa.start() + _depois_da_fita(bancada)
         inicio = bancada.rfind("<", 0, posicao)
         tag = bancada[inicio:bancada.find(">", posicao) + 1]
-        assert a03.HEF_DO_CHIP in tag, (
-            f"há `--plastico` num elemento sem endereço: {tag[:120]!r}. O "
-            f"produto não consegue reescrevê-lo, e a borda fica com a cor de um "
-            f"controle que não está na mesa.")
+        assert f'data-hef-alvo="{a03.ALVO_DO_PLASTICO}"' in tag, (
+            f"há `--plastico` num elemento que o produto não repinta: "
+            f"{tag[:120]!r}. A borda fica com a cor de um controle que não "
+            f"está na mesa.")
 
 
 def test_o_embrulho_diz_como_quer_ser_pintado(a03, bancada):
-    """O embrulho declara o alvo `html`, e não o `texto`.
+    """Cada endereço declara o alvo que o alcança — e são dois alvos diferentes.
 
-    `escrever()` no alvo padrão faz `el.textContent = t`, que **apaga os
-    filhos** — e o que se escreve aqui é um `<span>` inteiro com dois
-    `<span class="pt">•</span>` dentro. Sem o alvo declarado, o primeiro tique
-    poria a marcação como TEXTO LITERAL na tela: `<span class="chip …`. É a
-    mesma família do `Aceso` escrito dentro do desenho da Iluminação, que esta
-    casa já pagou.
+    O MIOLO PEDE `html`: `escrever()` no alvo padrão faz `el.textContent = t`,
+    que **apaga os filhos** — e o que se escreve ali é um `<span>` inteiro com
+    dois `<span class="pt">•</span>` dentro. Sem o alvo declarado, o primeiro
+    tique poria a marcação como TEXTO LITERAL na tela: `<span class="chip …`. É
+    a mesma família do `Aceso` escrito dentro do desenho da Iluminação.
+
+    O EMBRULHO PEDE `plastico`: é o único alvo do piloto que escreve uma
+    propriedade CSS de autor. Com qualquer outro, o hexadecimal do aparelho vira
+    o TEXTO do cabeçalho — `#e4e0d8` no lugar de `P1 • White • USB`.
     """
     for casa in re.finditer(rf'<div class="{a03.CLASSE_DO_CHIP}"([^>]*)>', bancada):
         atributos = casa.group(1)
-        assert f'data-campo="{a03.CAMPO_DO_CHIP}"' in atributos, (
-            f"um embrulho de chip sem endereço: {casa.group(0)!r}")
-        assert 'data-hef-alvo="html"' in atributos, (
-            f"o embrulho {casa.group(0)!r} não diz como quer ser pintado — no "
+        assert f'data-campo="{a03.CAMPO_DO_PLASTICO}"' in atributos, (
+            f"um embrulho de chip sem o endereço da cor: {casa.group(0)!r}")
+        assert f'data-hef-alvo="{a03.ALVO_DO_PLASTICO}"' in atributos, (
+            f"o embrulho {casa.group(0)!r} não diz como quer ser pintado — sem "
+            f"o alvo `plastico` o hexadecimal do aparelho vira texto de tela")
+
+    for casa in re.finditer(
+            rf'<span data-campo="{a03.CAMPO_DO_CHIP}"([^>]*)>', bancada):
+        assert 'data-hef-alvo="html"' in casa.group(1), (
+            f"o miolo {casa.group(0)!r} não diz como quer ser pintado — no "
             f"alvo padrão o `textContent` põe a marcação do chip como texto")
 
 
@@ -257,9 +275,12 @@ def test_o_chip_vivo_e_o_controle_da_mesa(a03):
 
     assert "White" in chips["p1"], (
         f"a coluna do controle no cabo não diz o nome dele: {chips['p1']!r}")
-    assert "--plastico:" in chips["p1"], (
-        "a borda da coluna do White não recebeu a cor do mapa — ela é como se "
-        "sabe de quem é a coluna (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`)")
+    from monta import cor_da_zona
+
+    assert _cores(a03, r, MESA_DELA)["p1"] == cor_da_zona("white"), (
+        "a borda da coluna do White não recebeu a cor do MAPA dela — ela é "
+        "como se sabe de quem é a coluna (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`), "
+        "e o hexadecimal tem de sair do CSV, não de uma tabela deste código")
 
     inteiro = "".join(chips.values()) + str(r["colunas"])
     for cor in DO_MOCKUP:
@@ -329,9 +350,11 @@ def test_sem_cor_lida_o_chip_nao_veste_plastico(a03):
     """
     r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
     chip = _chips(a03, r, MESA_DELA)["p2"]
-    assert "--plastico" not in chip, (
-        f"o chip do controle por rádio recebeu cor de plástico: {chip!r}. "
-        f"Ninguém leu essa cor — ela viria do desenho.")
+    assert _cores(a03, r, MESA_DELA)["p2"] == "", (
+        f"a coluna do controle por rádio recebeu cor de plástico: "
+        f"{_cores(a03, r, MESA_DELA)['p2']!r}. Ninguém leu essa cor — ela viria "
+        f"do desenho. O vazio APAGA o `--plastico`, e a queda do `topo.html` "
+        f"deixa a borda neutra.")
     assert "Não sei" not in chip, (
         f"`Não sei` é a AUSÊNCIA de leitura, não um nome, e ela não vai para a "
         f"tela: {chip!r}")
@@ -350,13 +373,22 @@ def test_o_lugar_sem_aparelho_perde_o_nome(a03):
     """
     r = _pacote(a03, MESA_DE_UM, [NO_CABO])
     chips = _chips(a03, r, MESA_DE_UM)
+    cores = _cores(a03, r, MESA_DE_UM)
     assert "Desconectado" in chips["p2"], (
         f"o P2 ficou com {chips['p2']!r} e não há controle nele")
     for pref in ("p2", "p3", "p4"):
         assert "--plastico" not in chips[pref], (
-            f"{pref} está vazio e ganhou borda de plástico: {chips[pref]!r}. "
-            f"Pintar a cor de um plástico que não está na mesa é dizer que ele "
-            f"está.")
+            f"{pref} está vazio e o chip dele traz cor: {chips[pref]!r}. A cor "
+            f"mora no embrulho, e o chip de um lugar vazio não a carrega.")
+    # O P3 E O P4 A APAGAM POR CAMPO; o P2 sai por BLOCO (a página o dá por
+    # conectado) e o bloco escreve HTML, não estilo. Ali o `--plastico` do
+    # desenho fica no embrulho — e é INERTE, porque a classe do chip vira
+    # `vazio` e `.chip.vazio` declara a borda inteira sem `var(--plastico)`.
+    for pref in ("p3", "p4"):
+        assert cores.get(pref) == "", (
+            f"{pref} está vazio e a coluna não apaga a cor: {cores.get(pref)!r}. "
+            f"Um controle que SAI do P1 deixaria a borda dele acesa num lugar "
+            f"sem aparelho.")
 
 
 def test_o_numero_do_jogador_fica(a03):

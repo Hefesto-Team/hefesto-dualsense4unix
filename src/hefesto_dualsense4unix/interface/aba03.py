@@ -41,11 +41,12 @@ SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 # a cada tique. Se o desenho o montasse à mão, a bancada e o produto teriam duas
 # marcações — e a régua `check_identidade_vem_de_cima` só enxerga a bancada.
 from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E402
+    ALVO_DO_PLASTICO,
     CAMPO_DO_CHIP,
+    CAMPO_DO_PLASTICO,
     CLASSE_DO_CHIP,
-    HEF_DO_CHIP,
     TRAVESSAO,
-    chip_do_controle,
+    _cabeca_do_controle,
     html_dos_ajustes,
     sem_comentarios_de_css,
 )
@@ -751,8 +752,12 @@ def _chip(c):
     colorway que o desenho não tem, e está certo em levantar — a bancada nasce
     de uma `MESA` escrita à mão e um modelo errado nela tem de reprovar o
     gerador. O pacote resolve pela porta macia, que devolve `""`.
+
+    O QUE SAI DAQUI É O CABEÇALHO INTEIRO — 03/09/2026: o embrulho que veste a
+    cor do aparelho e o `<span>` do miolo, com os dois endereços. Ver
+    `_cabeca_do_controle`.
     """
-    return chip_do_controle(
+    return _cabeca_do_controle(
         c["jogador"],
         c["nome"] if c.get("conectado", True) else "",
         c["via"] if c.get("conectado", True) else "",
@@ -775,7 +780,7 @@ def coluna(c):
     conectado = "sim" if c.get("conectado", True) else "nao"  # (noqa-acento) valor
     return f'''        <div class="ctrl" data-controle="{c.get("uniq") or c["pref"]}"
              data-conectado="{conectado}">
-          <div class="{CLASSE_DO_CHIP}" data-campo="{CAMPO_DO_CHIP}" data-hef-alvo="html">{_chip(c)}</div>
+          {_chip(c)}
 {esq}
 <!-- ESTE ELEMENTO É CÉLULA DA GRADE, não enfeite. Ele ocupa a trilha de
                1px que separa o bloco do L2 do bloco do R2 (`grid-template-rows`
@@ -1110,40 +1115,52 @@ def _conferir(doc):
            f"os chips sem cor do plástico não são {len(vazios)}")
     exigir(corpo.count('class="chip plastico"') == len(MESA) - len(vazios),
            "a borda de cor saiu de quem ESTÁ na mesa, ou ficou em quem não está")
-    # 2-bis. TODO CHIP TEM ENDEREÇO, e nenhum deles guarda cor sem dono —
-    #    03/09/2026, a lei dela: *"cada aba vai usar os controles lá de cima.
-    #    Não mistura com a info dos mockups."*
+    # 2-bis. TODO CHIP TEM DOIS ENDEREÇOS, e a cor mora no de fora —
+    #    03/09/2026, a lei dela: *"imagina que cada pessoa tenha um dualsense
+    #    diferente. (…) nada hardcoded. eu quero que cada user ao usar seu  # noqa-acento: citação literal dela
+    #    controle se toque disso que o app se adaptou ao controle dele"*
     #
-    #    SÃO DOIS ENDEREÇOS, e cada um tem um trabalho:
+    #    SÃO DOIS ENDEREÇOS ANINHADOS, e cada um tem um trabalho:
     #
-    #    * o do EMBRULHO (`data-campo` + alvo `html`) é quem o produto ESCREVE:
-    #      trocando o miolo, o `<span>` inteiro é refeito — borda, dica e nome.
-    #      Ele está nas QUATRO colunas, cheias e vazias.
-    #    * o do `<span>` (`data-hef`) é o que a régua EXIGE, e ele ACOMPANHA A
-    #      COR: `check_identidade_vem_de_cima.py` julga o `--plastico` pelo
-    #      endereço do elemento que o carrega, e um pai endereçado não dá ao
-    #      filho o direito de trazer cor congelada. Onde não há cor não há o que
-    #      defender — e o endereço a mais era LASTRO que a régua do mockup
-    #      cobrava sem que ninguém pudesse pagar: um `<span>` dentro de um pai
-    #      que se troca inteiro nunca recebe o selo da visita, e sem selo um
-    #      campo só é PRODUTO quando o valor MUDA. O do lugar vazio não muda.
+    #    * o do EMBRULHO (`data-campo="plastico"` + alvo `plastico`) é o da COR.
+    #      É o único alvo do piloto que escreve `--plastico`, e ele vale para a
+    #      subárvore inteira por herança de CSS. Ele está nas QUATRO colunas,
+    #      cheias e vazias: a página é estática, e sem endereço no P3 o dia em
+    #      que um controle entra ali a cor não teria por onde chegar.
+    #    * o do MIOLO (`data-campo="chip-do-controle"` + alvo `html`) refaz o
+    #      `<span>` inteiro — classe, dica e nome de uma vez.
+    #
+    #    POR QUE ANINHADOS, e não um só: `escrever()` carimba o selo da visita
+    #    no elemento que escreve. Com a cor DENTRO do HTML comparado, o selo
+    #    entra na comparação e a coluna repinta a cada tique, para sempre
+    #    (medido: 17 tiques, 17 pinturas). Fora dele, as duas escritas convivem.
     #
     #    Arranque qualquer um dos dois e é aqui que o gerador para.
     exigir(corpo.count(f'data-campo="{CAMPO_DO_CHIP}"') == len(MESA),
-           f"os {len(MESA)} embrulhos de chip não têm endereço — o produto "
+           f"os {len(MESA)} miolos de chip não têm endereço — o produto "
            f"perde onde escrever a identidade que a fita do topo já leu")
-    enderecados = corpo.count(f'data-hef="{HEF_DO_CHIP}"')
+    exigir(corpo.count(f'data-campo="{CAMPO_DO_PLASTICO}"') == len(MESA),
+           f"os {len(MESA)} embrulhos de chip não têm o endereço da COR — a "
+           f"aba volta a mostrar o plástico do desenho a quem tem outro")
+    enderecados = corpo.count(f'data-hef-alvo="{ALVO_DO_PLASTICO}"')
     com_cor = corpo.count("--plastico:")
-    exigir(enderecados == com_cor,
-           f"o endereço do `<span>` deixou de acompanhar a cor: {enderecados} "
-           f"endereços para {com_cor} cores cravadas. Um a menos e a régua da "
-           f"identidade acusa a cor sem dono; um a mais e a régua do mockup "
-           f"cobra um campo que o produto não tem como selar")
+    exigir(enderecados == len(MESA) and com_cor <= enderecados,
+           f"o alvo que alcança a cor não está nas {len(MESA)} colunas: "
+           f"{enderecados} alvos para {com_cor} cores cravadas. Sem ele o "
+           f"`escrever()` cai no ramo padrão e escreve o hexadecimal como "
+           f"TEXTO, no lugar do nome do controle")
     exigir(corpo.count(f'<div class="{CLASSE_DO_CHIP}" ') == len(MESA),
            f"o embrulho `.{CLASSE_DO_CHIP}` sumiu de alguma coluna — é ele que "
-           f"o produto troca inteiro para reescrever a borda do plástico")
+           f"veste a cor do aparelho e a passa ao chip por herança")
     exigir(corpo.count("--plastico:") == len(MESA) - len(vazios),
            "há cor de plástico cravada fora dos chips de quem está na mesa")
+    # E A COR NÃO MORA MAIS DENTRO DO HTML COMPARADO. Um `--plastico` no
+    # `<span class="chip …">` volta a ser cor que o produto não reescreve — é o
+    # achado que `check_a_cor_vem_do_aparelho.py` contava nesta aba.
+    exigir(not re.search(r'<span class="chip[^>]*--plastico', corpo),
+           "o `<span>` do chip voltou a carregar a cor. Ali ela fica DENTRO do "
+           "HTML que o alvo `html` compara: o produto não pode reescrevê-la "
+           "sem repintar a coluna a cada tique, e a régua da cor a acusa")
 
     for c in vazios:
         # O TRAVESSÃO SUBSTITUIU O "DESLIGADO" AQUI — decisão 13 dela, 02/09.
