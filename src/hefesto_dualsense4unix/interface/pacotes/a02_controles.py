@@ -70,13 +70,25 @@ from typing import Any
 
 from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
 from hefesto_dualsense4unix.app.widgets.controller_card import (
+    ALL_BUTTONS,
+    L2_R2_THRESHOLD,
+    _markup_xy,
     acao_mic,
     acao_speaker_mudo,
+    accel_do_inputs,
+    gyro_do_inputs,
     rotulo_lightbar,
     speaker_do_entry,
     touchpad_do_inputs,
 )
-from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques, texto_volume
+from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+    ESCALA_ACCEL_G,
+    ESCALA_GYRO_GRAUS_S,
+    texto_eixo,
+    texto_eixo_g,
+    texto_toques,
+    texto_volume,
+)
 from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
 
 from . import (
@@ -215,6 +227,155 @@ def toque_do_controle(inputs: Any) -> tuple[str, str]:
         return (str(mesa_viva.SEM_LEITOR), "")
     tocando = bool(lido[0])
     return (texto_toques(1 if tocando else 0), "sim" if tocando else "")
+
+
+# ---------------------------------------------------------------------------
+# A LEITURA VIVA — o nome desta aba, e o que ela NÃO fazia até 03/09/2026
+# ---------------------------------------------------------------------------
+# O QUE ESTAVA NA TELA DELA, medido com os dois controles na mesa e o aparelho
+# PARADO (`daemon.state_full`, 03/09/2026):
+#
+#   na tela (o desenho)              no aparelho (o daemon)
+#   cross · dpad_up · l2 acesos      buttons = []
+#   L2 200 / 255 · R2 40 / 255       l2_raw = 0 · r2_raw = 0
+#   giro +143.2 / -412.0 / +22.8     gyro  x=-0.24 y=-0.61 z=-0.3
+#   accel +0.105 / +0.976 / +0.170   accel x=0.116 y=0.948 z=0.204
+#   X:  60 · Y: 200                  lx=125 ly=121
+#
+# NÃO É TELA VAZIA, É TELA QUE MENTE — e no card do P2 é pior: ele NÃO TEM
+# `inputs` (o daemon só publica leitura para o `is_primary`), e mostrava os
+# mesmos números como se estivesse medindo.
+#
+# NADA AQUI É REGRA NOVA. Os cinco donos já existiam na GTK, e é o que a LEI 0
+# manda: achar a função e CHAMAR.
+#
+#   `ALL_BUTTONS` + `L2_R2_THRESHOLD`  os 16 nomes e o limiar de L2/R2, do
+#                                      `_refresh_glyphs` (controller_card:5425)
+#   `gyro_do_inputs` / `accel_do_inputs`  os três eixos, ou `None` quando o
+#                                      bloco não veio — os DOIS já eram públicos
+#   `texto_eixo` / `texto_eixo_g`      a grafia de largura fixa (+7.1f e +7.2f),
+#                                      que existe para o painel não "respirar"
+#   `_markup_xy`                       os dois eixos do analógico
+#   `mesa_viva._barra_bipolar`         a geometria e a cor da barrinha
+#
+# O `_markup_xy` COMEÇA COM UNDERSCORE E MESMO ASSIM SE IMPORTA: ele é função de
+# MÓDULO, pura, e é o dono da frase — redigitar `f"X:{x:>3}"` aqui seria a
+# segunda cópia que a LEI 0 proíbe, e uma cópia que já divergiu (o desenho
+# escrevia `X: {x:>3}`, com um espaço a mais).
+
+
+def meias_da_barra(estilo: Any) -> tuple[str, str, str]:
+    """`(negativa%, positiva%, cor)` de uma barrinha de eixo.
+
+    RECEBE O QUE `mesa_viva._barra_bipolar` DEVOLVE — o dono da geometria e da
+    cor —, e só o RE-EXPRESSA na gramática que o piloto alcança: duas metades
+    ancoradas no centro, cada uma com a sua largura. Aceita o dicionário dele e
+    também a string `left:…;width:…;background:…` que o desenho carrega, porque
+    o gerador tem as duas formas na cena fixa do mockup.
+
+    O SINAL SAI DO `left`, e isso é conta do dono: `_barra_bipolar` devolve
+    `esquerda = 50 - largura` para todo valor negativo, então `left < 50%` é
+    exatamente "esta barra desce para a esquerda". Só uma das metades tem
+    largura por vez.
+
+    A LARGURA VOLTA COMO VEIO, em texto: `"22"`, `"0.4"`, `"0"`. Convertê-la
+    para `float` e reimprimi-la trocaria `0%` por `0.0%` no desenho — um diff
+    em cada eixo de cada card, sem um pixel de diferença.
+    """
+    if isinstance(estilo, str):
+        estilo = dict(
+            p.split(":", 1) for p in estilo.split(";") if ":" in p  # noqa-acento (CSS)
+        )
+    largura = str(estilo.get("width", "0%")).strip().removesuffix("%")
+    esquerda = str(estilo.get("left", "50%")).strip().removesuffix("%")
+    cor = str(estilo.get("background", ""))
+    negativa = float(esquerda or 50) < 50.0
+    return (largura if negativa else "0", "0" if negativa else largura, cor)
+
+
+def texto_do_xy(x: Any, y: Any) -> str:
+    """Os dois eixos de um analógico, na frase do produto e com quebra de HTML.
+
+    `_markup_xy` devolve `"X:125\\nY:121"`; a tela dela quebra com `<br>`, e o
+    alvo `html` do piloto é o que escreve marcação (`hefesto_vivo.py`, ramo
+    `html`) — o alvo padrão escreveria o `<br>` como texto literal.
+    """
+    return _markup_xy(int(x), int(y)).replace("\n", "<br>")
+
+
+def _eixos_do_sensor(
+    familia: str, lido: tuple[float, float, float] | None, escala: float, grafia: Any
+) -> dict[str, Any]:
+    """Os quatro campos de cada eixo de um sensor — número, duas metades e cor.
+
+    `lido is None` é "a leitura não chegou", e é o estado que a GTK trata
+    escondendo a moldura (`_update_gyro`). Esta tela não tem alvo que esconda,
+    então ela diz o que sobra de honesto: travessão no número e barra a zero,
+    que é o mesmo desfecho da `bateria-barra` e do `alto-barra`.
+    """
+    import mesa_viva
+
+    campos: dict[str, Any] = {}
+    for i, eixo in enumerate(("x", "y", "z")):
+        valor = lido[i] if lido is not None else None
+        chave = f"{familia}-{eixo}"
+        neg, pos, cor = meias_da_barra(mesa_viva._barra_bipolar(valor, escala))
+        campos[chave] = grafia(valor) if valor is not None else str(mesa_viva.SEM_LEITOR)
+        campos[f"{chave}-neg"] = neg
+        campos[f"{chave}-pos"] = pos
+        campos[f"{chave}-cor"] = cor
+    return campos
+
+
+def leitura_viva(entrada: dict[str, Any]) -> dict[str, Any]:
+    """Tudo o que o card LÊ do aparelho: glifos, gatilhos, analógicos, sensores.
+
+    SEM LEITOR, TUDO VOLTA AO REPOUSO — e não ao último valor nem ao desenho. É
+    o `_reset_inputs_render` da GTK (`controller_card.py:5489`), linha por
+    linha: gatilhos em `0 / 255` com a barra vazia, analógicos no centro, os
+    dezesseis glifos apagados e os sensores no travessão. Vale para METADE da
+    mesa dela agora: o daemon só publica `inputs` para o `is_primary`.
+    """
+    # `inputs` TEM TRÊS ESTADOS e o `or {}` só enxerga dois — é o mesmo cuidado
+    # que o `tem_leitor` do `pacote()` já toma. Aqui o desfecho é o mesmo para
+    # `None` e para `{}` (tudo ao repouso), mas a leitura passa por uma variável
+    # DECLARADA `dict`: sem ela o `mypy`, que é portão, acusa `Item "None" …
+    # has no attribute "get"` em quatro linhas.
+    lido = entrada.get("inputs")
+    e: dict[str, Any] = lido if isinstance(lido, dict) else {}
+    apertados = {str(b) for b in (e.get("buttons") or ())}
+    l2 = int(e.get("l2_raw") or 0)
+    r2 = int(e.get("r2_raw") or 0)
+    # O REMENDO DO NOME É DO PRODUTO, e ele carrega número de defeito:
+    # BUG-GLYPH-SHARE-NAME-MISMATCH-01 — *"o daemon emite `create`
+    # (BTN_SELECT), mas o glyph/asset chama-se `share`"*. Sem ele o glifo do
+    # `share` fica morto e ninguém vê.
+    aceso = {n: n in apertados for n in ALL_BUTTONS}
+    aceso["share"] = ("share" in apertados) or ("create" in apertados)
+    aceso["l2"] = l2 > L2_R2_THRESHOLD
+    aceso["r2"] = r2 > L2_R2_THRESHOLD
+
+    campos: dict[str, Any] = {f"glifo-{n}": ("sim" if aceso[n] else "") for n in aceso}
+    # A FRASE DOS GATILHOS É A DA GTK, palavra por palavra (`f"{l2} / 255"`,
+    # `controller_card.py:5393`), e a barra é a mesma fração — `set_fraction(l2
+    # / 255)` ali, `width` em por cento aqui. `//` porque o desenho já escreve
+    # inteiro e um `22.35%` seria um dígito a mais no `style` a cada tique.
+    for nome, cru in (("l2", l2), ("r2", r2)):
+        campos[f"{nome}-num"] = f"{cru} / 255"
+        campos[f"{nome}-barra"] = cru * 100 // 255
+    # OS ANALÓGICOS. O centro é 128 e a AUSÊNCIA também é 128 — é o que a GTK
+    # faz (`int(inputs.get("lx", 128))`), e é o repouso do
+    # `_reset_inputs_render`. Aqui não se usa `or 128`: `0` é o EXTREMO do
+    # curso, e o `or` o transformaria no centro (o defeito que
+    # `mesa_viva._eixo_do_analogico` mediu e curou em 29/08).
+    for lado, (cx, cy) in (("l", ("lx", "ly")), ("r", ("rx", "ry"))):
+        x, y = e.get(cx), e.get(cy)
+        campos[f"xy-{lado}"] = texto_do_xy(128 if x is None else x, 128 if y is None else y)
+    campos.update(_eixos_do_sensor("giro", gyro_do_inputs(e), ESCALA_GYRO_GRAUS_S, texto_eixo))
+    campos.update(
+        _eixos_do_sensor("accel", accel_do_inputs(e), ESCALA_ACCEL_G, texto_eixo_g)
+    )
+    return campos
 
 
 # ---------------------------------------------------------------------------
@@ -785,6 +946,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # hoje, com a cor do rádio ainda não lida.
                 "peca": "" if nome_na_tela == via_na_tela else nome_na_tela,
                 "via": via_na_tela,
+                # A LEITURA VIVA — 46 campos por card, e nenhum deles tinha
+                # endereço até 03/09/2026. Ver `leitura_viva`, que traz a mesa
+                # do que a tela dizia contra o que o aparelho publicava no
+                # mesmo instante.
+                **leitura_viva(c),
             }),
         }
     # OS VALORES QUE VALEM PARA A PÁGINA INTEIRA, e não por card. Os três nasceram
