@@ -116,6 +116,58 @@ def _no_teto(pct: dict[str, Any]) -> str:
     return "1" if valor >= _tela.teto_da_barra() else ""
 
 
+def _pct_do_pedido(state: dict[str, Any]) -> dict[str, str]:
+    """A barra do multiplicador com o que a aba PEDE, e não com o que o daemon
+    diz ter aplicado.
+
+    **O NÚMERO ESTAVA MORTO, e a medição é de 03/09/2026, contra o daemon
+    dela.** `pacote_da_coluna` monta esta barra a partir de
+    `state_full.rumble_mult_applied`, que é o `daemon._last_auto_mult`. Cliquei
+    os QUATRO degraus pela mesma porta que o botão da coluna usa
+    (`rumble_policy_set_checked`), esperei meio segundo e reli o `state_full`:
+
+        policy_set(max       ) → policy='max'        applied=0.7
+        policy_set(economia  ) → policy='economia'   applied=0.7
+        policy_set(auto      ) → policy='auto'       applied=0.7
+        policy_set(balanceado) → policy='balanceado' applied=0.7
+
+    O daemon obedeceu as quatro vezes — a política mudou —, e o número que a
+    tela mostra **não se moveu uma vez**. Com `rumble_policy='balanceado'`
+    (multiplicador 1,0) a aba escrevia `70%`, pintava o trilho em 46,7% e
+    deixava o `Máx` apagado no `max`. A própria dica dela, duas linhas acima na
+    mesma tela, promete o contrário: *"Economia 30% · Balanceado 100% · Máximo
+    150%"*.
+
+    O PRODUTO JÁ SABIA, por escrito: `daemon/lifecycle.py:3459-3468` conta que
+    `_last_auto_mult` fica **preso no default 0.7** em passthrough ocioso e que,
+    ao vivo, `policy=max` com `rumble_mult_applied=0.7` *"parecia atenuação real
+    do rumble do jogo"*. A aba publicava exatamente essa aparência.
+
+    A CONTA NÃO NASCE AQUI. `app/telas/vibracao._pedido_da_politica` é a MESMA
+    linha da janela estável (`rumble_actions._pintar_a_linha_do_teto:537`), e
+    `_barra` é o mesmo formatador que monta as duas barras de motor. Chamar as
+    duas é ponte; redigitar `_POLICY_MULT[policy] * 100` aqui seria a segunda
+    tabela de degraus que `teto_da_barra()` existe para não ter.
+
+    `None` — política fora dos quatro, ou `custom` sem multiplicador lido —
+    atravessa como o `—` de sempre: `_barra(None, …)` devolve `sabe = ""`, e
+    campo sem informação não acende o `Máx` nem afirma largura.
+
+    O QUE ISTO NÃO RESOLVE, e fica dito: no degrau `Auto` a barra passa a dizer
+    **100%**, que é o TETO dele — o mesmo número da janela estável — e não os
+    70% que a cena do mockup ensina para uma bateria no meio. O valor vivo do
+    Auto exige um campo que o daemon não publica com honestidade hoje; enquanto
+    ele não existir, o teto é a única resposta que as duas telas conseguem dar
+    igual. Está em `mockup/DIVERGENCIAS.md`.
+    """
+    pedido = _tela._pedido_da_politica(state)
+    return _tela._barra(
+        None if pedido is None else round(pedido * 100),
+        _tela.teto_da_barra(),
+        sufixo="%",
+    )
+
+
 def _do_vpad(ff: dict[str, Any], player: Any) -> dict[str, Any]:
     """O bloco `per_vpad` daquele jogador, ou `{}`.
 
@@ -147,9 +199,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     duplicação que a pergunta dela de 01/09 pegou — *"não estamos refazendo do
     zero né?"*
 
-    O QUE SOBRA AQUI é o ACHATAMENTO: o produto devolve `{"pct": {"w": "46.7%"}}`
+    O QUE SOBRA AQUI é o ACHATAMENTO: o produto devolve `{"pct": {"w": "66.7%"}}`
     e a tela endereça `data-campo="forca-pct"`. Traduzir a forma é da interface;
     calcular o valor é do produto.
+
+    A ÚNICA CONTA QUE NÃO VEM DO `pacote_da_mesa` é a barra do multiplicador, e
+    ela vem de outra função do MESMO módulo do produto — ver
+    :func:`_pct_do_pedido`, com as quatro medições que a decidiram.
 
     O NOME `forca` NÃO SAI MAIS DAQUI — 02/09/2026, e a razão está fotografada.
     O pintor procura um valor por `[data-campo=X],[data-papel=X],[data-hef=X]`
@@ -186,8 +242,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     bruto = _tela.pacote_da_mesa(ctx.state, mesa, ctx.conectados,
                                  contagem=mesa_viva.texto_da_contagem(ctx.mesa))
     colunas: dict[str, dict[str, Any]] = {}
+    # O MULTIPLICADOR É O PEDIDO, e não o `rumble_mult_applied` — 03/09/2026.
+    # A razão inteira, com as quatro medições que a decidiram, está em
+    # :func:`_pct_do_pedido`. É UM por tique porque a política é da MESA: um por
+    # coluna seria a mesma conta feita quatro vezes sobre o mesmo campo.
+    pct = _pct_do_pedido(ctx.state)
     for uniq, col in (bruto.get("colunas") or {}).items():
-        pct = col.get("pct") or {}
         plano = {
             "identidade": _sem_marcacao(col.get("identidade", "")),
             # A COR DA MOLDURA, e ela é o campo que a lei da identidade cobra:
@@ -225,6 +285,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         for lado, m in (col.get("motores") or {}).items():
             plano[f"motor-{lado}"] = m.get("n", "—")
             plano[f"motor-{lado}-pct"] = str(m.get("w", "")).rstrip("%")
+        # O PUNHO QUE TREME — 03/09/2026, e era um FIO SOLTO com as duas pontas
+        # já prontas. `app/telas/vibracao.pacote_da_coluna` calcula `treme` por
+        # lado desde que nasceu, o CSS que acende o punho existe
+        # (`aba05.py`, `.vib .ds-svg .oculta.acesa`) e o desenho já sabe qual
+        # grupo do SVG é cada motor. O que faltava era ESTE achatamento: o
+        # `treme` era descartado entre o produto e a tela, e o punho aceso na
+        # página era o da CENA do mockup — o P1 com o direito aceso e o P2 com o
+        # esquerdo, para sempre, com a mesa parada e `vpads == 0`.
+        #
+        # BOOLEANO, como o `mult-teto`: o alvo `classe` sem `data-hef-quando`
+        # acende por si (`hefesto_vivo.py:227`). `""` atravessa como o travessão
+        # e APAGA — que é a resposta certa para "ninguém mediu tremor nenhum".
+        for lado, treme in (col.get("treme") or {}).items():
+            plano[f"treme-{lado}"] = "1" if treme else ""
         colunas[uniq] = plano
     # A LINHA DO ESTADO — 02/09/2026, e ela é a única coisa que esta aba diz
     # sobre a MESA. Vai por `blocos` e não por campo: o NÚMERO de linhas muda com
@@ -315,6 +389,38 @@ PAR_DE_TESTE = (160, 220)
 #: (`aba05.py:582`). A dica publicada diz o mesmo: *"faz aquele controle tremer
 #: meio segundo"*.
 SEGUNDOS_DO_TESTE = 0.5
+
+#: O TESTE EM CURSO, para que o seguinte o CANCELE — 03/09/2026.
+#:
+#: A janela estável tem isto e a aba nova não tinha: `_cancel_rumble_test_timer`
+#: (`app/actions/rumble_actions.py:985-994`) remove a fonte GLib pendente e é
+#: chamado no começo do "Testar", do "Aplicar", do "Parar" e do "Devolver" —
+#: *"senão o `_rumble_test_stop` pendente desfaria a ação seguinte"*, que é o
+#: defeito M6, nomeado lá.
+#:
+#: AQUI ELE VOLTA PIOR, e por uma diferença desta aba: o meio segundo é um
+#: `time.sleep` numa thread própria (o piloto roda todo gesto fora do laço), e
+#: `rumble.stop` **não leva endereço** — ele cai no alvo de output DE AGORA. Dois
+#: cliques seguidos em colunas diferentes fazem a thread do primeiro acordar
+#: depois de o segundo já ter mirado o outro controle: o "Testar" do P2 morre
+#: meio segundo antes da hora, e quem o desliga é o clique do P1.
+#:
+#: O CONTADOR É A CURA MAIS BARATA QUE EXISTE: quem começa um teste leva um
+#: número; ao acordar, só solta o silêncio e devolve a mão ao jogo se o número
+#: ainda for o dele. Não há temporizador a cancelar, não há thread a matar — o
+#: teste que perdeu a vez simplesmente não fala.
+#:
+#: A GUARDA NÃO DEIXA ESTADO MORTO: o teste que ATROPELA é responsável por
+#: parar e devolver o passthrough no fim do próprio meio segundo, e o "Parar"
+#: também toma a vez (por isso ele conta). O último a falar sempre devolve a
+#: vibração ao jogo, que é a regra desta aba.
+_VEZ = [0]
+
+
+def _minha_vez() -> int:
+    """Toma a vez do teste e devolve o número dela. Quem chega depois vence."""
+    _VEZ[0] += 1
+    return _VEZ[0]
 
 
 def _uniq(o: dict[str, Any]) -> str:
@@ -463,6 +569,7 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     de 9,5 s). A janela estável usa `GLib.timeout_add` porque lá o gesto roda
     no laço do GTK.
     """
+    vez = _minha_vez()
     uniq = _mirar(ctx, o, p)
     v = _do_vpad(ctx.state.get("rumble_ff") or {}, ctx.por_uniq(uniq).get("player"))
     strong = int(v.get("last_strong") or 0)
@@ -473,6 +580,13 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not ok:
         raise RuntimeError(motivo or "o Hefesto não está rodando — ligue na aba Sistema")
     time.sleep(SEGUNDOS_DO_TESTE)
+    # QUEM PERDEU A VEZ NÃO FALA — ver :data:`_VEZ`. Sem esta linha, a thread
+    # deste teste manda `rumble.stop` no alvo de output DE AGORA, que já é o do
+    # clique seguinte: o segundo "Testar" morre antes da hora, e o culpado é o
+    # primeiro. Quem tomou a vez para e devolve o passthrough no fim do seu meio
+    # segundo, então a mão volta ao jogo de todo jeito.
+    if vez != _VEZ[0]:
+        return
     p.rumble_stop()
     p.rumble_passthrough(True)
 
@@ -499,6 +613,11 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     erro porque é o único canal que esta aba tem hoje; um recado de tela para
     ele ainda não existe, e está no relato.
     """
+    # O "PARAR" TAMBÉM TOMA A VEZ — é o equivalente da chamada que a janela
+    # estável faz em `on_rumble_stop` (`rumble_actions.py:1091`). Sem ela, um
+    # "Testar" ainda dormindo acordaria depois deste "Parar" e mandaria
+    # `rumble.stop` no alvo de agora: parar o P1 apagaria a vibração do P2.
+    _minha_vez()
     _mirar(ctx, o, p)
     ok, motivo = _resposta(p.rumble_stop_checked())
     if not ok:

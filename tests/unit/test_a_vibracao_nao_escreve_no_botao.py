@@ -199,12 +199,35 @@ def test_o_degrau_cai_nos_quatro_botoes_pelo_alvo_classe(arvore, emitidos):
             "quatro ficariam acesos ao mesmo tempo")
 
 
+#: OS ALVOS QUE SUBSTITUEM O MIOLO DO ELEMENTO, e só eles apagam o de dentro.
+#:
+#: **A LISTA ENTROU EM 03/09/2026, e sem ela a régua acusava o inocente.** O que
+#: apaga filhos é o `textContent` do ramo PADRÃO do `escrever()` e o `innerHTML`
+#: do alvo `html` (`hefesto_vivo.py`). Os outros escrevem no PRÓPRIO elemento e
+#: não tocam a subárvore: `classe` liga uma classe, `largura`/`cor` mexem no
+#: `style`, `plastico` põe uma variável de CSS, `valor` é o `value` de um campo.
+#:
+#: O CASO QUE A OBRIGOU: a moldura de cada coluna é `data-campo="plastico"` com
+#: alvo `plastico` — a cor do aparelho como variável, que a borda e o halo do
+#: punho herdam — e os dois grupos de motor do SVG, que ganharam endereço no
+#: mesmo dia (`treme-e`/`treme-d`, alvo `classe`), moram DENTRO dela. Sem esta
+#: distinção a régua reprovava uma pintura que não apaga um pixel, e a única
+#: saída seria tirar a cor da moldura — desfazendo a lei da identidade dela.
+#:
+#: ELA NÃO AFROUXA O QUE A RÉGUA NASCEU PARA PEGAR: a linha do "Personalizado"
+#: com `data-campo="forca"` era o ramo PADRÃO, sem `data-hef-alvo` nenhum, e
+#: continua reprovando.
+ALVOS_QUE_APAGAM_OS_FILHOS = ("", "html")
+
+
 def test_nenhuma_chave_do_pacote_apaga_outra(arvore, emitidos):
     """Pintar um elemento que CONTÉM outro endereço apaga o de dentro.
 
     `textContent` substitui a subárvore inteira. A linha do "Personalizado"
     guardava o trilho (`forca-pct`) e o número (`mult`) dentro de um elemento que
     também era endereço — e a pintura seguinte já não achava nem um nem outro.
+
+    SÓ VALE PARA QUEM ESCREVE MIOLO — ver :data:`ALVOS_QUE_APAGAM_OS_FILHOS`.
     """
     _, chaves = emitidos
     por_chave = {chave: _achar(arvore, chave) for chave in chaves}
@@ -213,6 +236,8 @@ def test_nenhuma_chave_do_pacote_apaga_outra(arvore, emitidos):
     falhas = []
     for chave, nos in sorted(por_chave.items()):
         for no in nos:
+            if no["attrs"].get("data-hef-alvo", "") not in ALVOS_QUE_APAGAM_OS_FILHOS:
+                continue
             for neto in _todos(no):
                 for e in ENDERECOS:
                     alvo = neto["attrs"].get(e)
@@ -270,17 +295,35 @@ def test_testar_e_parar_sabem_de_quem_foi_o_clique(arvore):
 # 3. o que o pacote escreve é o que a caixa pede
 # --------------------------------------------------------------------------
 def test_o_multiplicador_e_o_numero_e_nao_o_degrau(emitidos):
-    """A caixa do "Personalizado" pede o NÚMERO, e o desenho escreve `150%`.
+    """A caixa do "Personalizado" pede o NÚMERO, e ele é o PEDIDO do degrau.
 
-    O pacote mandava ali o nome do degrau (`balanceado`). O número sai do
-    produto — `app/telas/vibracao._barra` sobre `rumble_mult_applied` — e com
-    0,7 aplicado ele é `70%`.
+    O pacote mandava ali o nome do degrau (`balanceado`), e essa metade continua
+    valendo — a chave `forca` não pode voltar.
+
+    **CORRIGIDO EM 03/09/2026, e a régua CIMENTAVA a divergência.** Ela exigia
+    `70%` e `46.7`, os números de `rumble_mult_applied` — um campo que o daemon
+    dela deixa **preso no default 0,7** em passthrough ocioso
+    (`daemon/lifecycle.py:3459-3468`, com todas as letras). Medido no mesmo dia,
+    clicando os quatro degraus pela porta do produto: a política mudou as quatro
+    vezes e o número **não se moveu**. Com o degrau em "Balanceado" — cujo
+    multiplicador é 1,0 — a tela escrevia `70%`, ao lado de uma dica dela que
+    promete *"Balanceado 100%, como o jogo pediu"*.
+
+    É a mesma forma de defeito de `f6c6745b`: a régua guardando o número errado
+    e, com ele, o defeito. O esperado passou a sair de
+    `app/telas/vibracao._escada()` — a única cópia autorizada em `app/` —, de
+    modo que ela não pode mais ficar verde sobre um número digitado aqui.
     """
+    from hefesto_dualsense4unix.app.telas import vibracao as _tela
+
     pacote, _ = emitidos
     col = next(iter(pacote["colunas"].values()))
-    assert col["mult"] == "70%", f"o multiplicador saiu {col['mult']!r}"
-    assert col["forca-pct"] == "46.7", (
-        f"a largura da barra saiu {col['forca-pct']!r} — 70 de um teto de 150")
+    pedido = round(_tela._escada()["balanceado"] * 100)
+    largura = round(100.0 * pedido / _tela.teto_da_barra(), 1)
+    assert col["mult"] == f"{pedido}%", f"o multiplicador saiu {col['mult']!r}"
+    assert col["forca-pct"] == f"{largura}", (
+        f"a largura da barra saiu {col['forca-pct']!r} — "
+        f"{pedido} de um teto de {_tela.teto_da_barra()}")
     assert "forca" not in col, (
         "a chave `forca` voltou ao pacote: ela é `data-papel` dos quatro degraus")
 
