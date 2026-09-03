@@ -19,6 +19,7 @@ from monta import MESA, CONECTADOS, glifo, monta, CSS_GLIFO  # noqa: E402
 # geradores 08 e 09 pararam de RODAR por isso, calados até alguém tentar:
 # `FileNotFoundError: .../src/src/hefesto_dualsense4unix/app/actions/...`.
 # O contador de níveis é o defeito que o `onde.py` existe para não repetir.
+import onde  # noqa: E402
 from onde import RAIZ as R  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -1382,5 +1383,59 @@ if "var(--rot-campo)" in _R_ROT.group(0):
                      "ESTADO (o glifo e o valor), não de nome.")
 
 n = monta("09-sistema", "Sistema", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
+
+# ---------------------------------------------------------------------------
+# O ENDEREÇO DA FITA, POSTO NA SAÍDA — 03/09/2026, a lei dela:
+#
+#     "se no topo tá mostrando controle white player 1, então cada aba vai usar
+#      os controles lá de cima. Não mistura com a info dos mockups."
+#
+# A fita inteira sai de `monta.fita()`, que é o dono dela nas DEZ páginas e não
+# é território desta aba. É a mesma situação que a `aba06.py` já resolve assim
+# desde 28/08 — *"trocado na saída, porque o texto mora no esqueleto (topo.html)
+# e esta aba só pode mexer no arquivo dela"*.
+#
+# O QUE ISTO NÃO É: maquiagem. `data-campo` sem escritor zera a régua da
+# identidade e deixa a tela mentindo igual — trocaria um congelado por um vazio.
+# Quem escreve neste endereço é `pacotes/a09_sistema.py`, e o par de nomes tem
+# régua: `test_aba09_a_fita_vem_de_cima.py` reprova se os dois arquivos
+# divergirem.
+#
+# NENHUM PIXEL MUDA. `data-campo` e `data-hef-alvo` estão nos INVISIVEIS do
+# `check_o_desenho_aprovado.py`, que compara o que se VÊ — decisão dela em
+# 01/09: *"ok, pode comparar então o que se vê."*
+# ---------------------------------------------------------------------------
+CAMPO_DA_FITA = "fita-chips"
+CAMPO_DO_CHIP = "fita-chip"
+
+p = onde.pagina("09-sistema.html")
+s = p.read_text()
+
+# A ÂNCORA EXIGE A CLASSE INTEIRA. `'<div class="fita'` cru casa PRIMEIRO com
+# `<div class="fita-linha">`, o invólucro que também guarda o Perfil ativo — e
+# endereçar o invólucro com alvo `html` mandaria o produto reescrever o miolo
+# dele a cada tique, apagando o `data-campo="perfil"` do cabeçalho, que é das
+# dez abas. Aconteceu na primeira execução deste bloco, em 03/09/2026.
+_ABRE = re.search(r'<div class="fita[ "][^>]*>', s)
+if not _ABRE:
+    raise SystemExit("ERRO: a `.fita` sumiu do esqueleto — o endereço da fita "
+                     "ficou sem onde pousar, e a aba volta a mostrar o desenho.")
+_FIM = s.index("</div>", _ABRE.start()) + len("</div>")
+_BLOCO = s[_ABRE.start():_FIM]
+
+_NOVO = _BLOCO.replace(
+    _ABRE.group(0),
+    f'{_ABRE.group(0)[:-1]} data-campo="{CAMPO_DA_FITA}" data-hef-alvo="html">',
+    1)
+# O CHIP `Todos` NÃO ENTRA: ele não é aparelho nenhum, não traz cor nem nome de
+# plástico. Endereçá-lo diria que o produto o reescreve por identidade, e
+# endereço morto é exatamente o defeito que esta leva existe para não repetir.
+_NOVO, _QUANTOS = re.subn(r'(<span class="chip plastico[^"]*")',
+                          rf'\1 data-campo="{CAMPO_DO_CHIP}"', _NOVO)
+if len(CONECTADOS) != _QUANTOS:
+    raise SystemExit(f"ERRO: endereçei {_QUANTOS} chips e a mesa tem "
+                     f"{len(CONECTADOS)} conectados — a forma da fita mudou.")
+onde.gravar("09-sistema.html", s[:_ABRE.start()] + _NOVO + s[_FIM:])
+
 print(f"09-sistema: OK, {n} divs · a faixa do serviço: "
       + " · ".join(f"{t.strip()!r}" for t in _ROTULOS.values()))
