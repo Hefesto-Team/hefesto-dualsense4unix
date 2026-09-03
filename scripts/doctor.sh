@@ -3352,6 +3352,46 @@ check_kernel_watch() {
         info "sem log do kernel-watch ainda (nasce no primeiro start/evento)"
         return
     fi
+    # A JANELA, e ela é o commit inteiro — 03/09/2026, achado POR ELA.
+    #
+    # ELE CONTAVA O ARQUIVO INTEIRO E ESCREVIA NO PRESENTE. `grep -c "[JOYCON]"`
+    # sobre um log que começa em 20/07 devolvia 9, e a frase saía *"o kernel deu
+    # rate-limit no 8BitDo 9 vezes"* — com o 8BitDo desligado e os nove eventos
+    # em 11/08 e 26/08. A palavra dela: *"nem o 8bitdo tá conectado nem o usb
+    # pareceu ter dado pau. acho que essas 4 mensagens tão erradas não?"*.
+    #
+    # ESTAVAM. E o defeito não é o número — é o TEMPO VERBAL. Um aviso que
+    # afirma com confiança um estado que não é o de agora é pior que aviso
+    # nenhum: manda procurar defeito onde não há.
+    #
+    # A CURA TEM DUAS METADES: só é AVISO o que aconteceu dentro da janela, e
+    # todo número vem com a DATA do último evento. Fora da janela vira `info`,
+    # com o histórico dito como histórico.
+    local dias_da_janela="${HEFESTO_DOCTOR_JANELA_DIAS:-7}"
+    local corte
+    corte="$(date -d "${dias_da_janela} days ago" +%Y-%m-%d 2>/dev/null || echo 0000-00-00)"
+
+    # As linhas do kernel-watch abrem com `YYYY-MM-DD`, e data ISO compara como
+    # texto — nenhuma aritmética por linha, nenhum `date` por evento.
+    _quantos_desde() {  # <tag> <corte>
+        awk -v tag="[$1]" -v corte="$2" \
+            'index($0, tag) && substr($0,1,10) >= corte { n++ } END { print n+0 }' \
+            "${log}" 2>/dev/null || echo 0
+    }
+    _quando_o_ultimo() {  # <tag> — devolve DD/MM ou vazio
+        grep -F "[$1]" "${log}" 2>/dev/null | tail -1 |
+            awk '{ d=substr($0,1,10); if (d ~ /^[0-9]{4}-/) printf "%s/%s", substr(d,9,2), substr(d,6,2) }'
+    }
+    #: A FRASE DE UM CONTADOR, e ela nunca mente sobre o tempo.
+    #: `$1` tag · `$2` total · `$3` recentes · `$4` último · `$5` o que dizer.
+    _relata() {
+        if [[ "${3:-0}" -gt 0 ]]; then
+            warn "$5 — ${3} vez(es) nos últimos ${dias_da_janela} dias (a última em ${4:-?}); ${2} no log inteiro"
+        elif [[ "${2:-0}" -gt 0 ]]; then
+            info "[$1] não aconteceu nos últimos ${dias_da_janela} dias. O log guarda ${2} do passado, a última em ${4:-?} — histórico, não o estado de agora"
+        fi
+    }
+
     local tag n resumo="" n_joycon=0 n_joycon_probe=0 n_usb71=0 n_bterr=0
     for tag in USB-71 JOYCON JOYCON-PROBE BT-HCI XHCI BT-ERR; do
         n="$(grep -cF "[${tag}]" "${log}" 2>/dev/null || true)"; n="${n:-0}"
@@ -3363,19 +3403,20 @@ check_kernel_watch() {
             BT-ERR) n_bterr="${n}" ;;
         esac
     done
-    info "kernel-watch (${log##*/}):${resumo}"
-    if [[ "${n_joycon}" -gt 0 ]]; then
-        warn "o kernel deu rate-limit no controle Nintendo/8BitDo ${n_joycon} vez(es) [JOYCON] — é a morte do 8BitDo em Bluetooth (muro do hid-nintendo); a configuração estável é NO CABO. Onda T: o patch DKMS (ver seção abaixo) reduz a chance do link cair, mas não elimina a degradação de rádio"
-    fi
-    if [[ "${n_joycon_probe}" -gt 0 ]]; then
-        warn "o hid-nintendo falhou no PROBE ${n_joycon_probe} vez(es) [JOYCON-PROBE] neste log — morte 'invisível' (o device nem chega a registrar; sem cascata [JOYCON]); ver a seção DKMS hid-nintendo abaixo"
-    fi
-    if [[ "${n_usb71}" -gt 0 ]]; then
-        warn "storm USB (-71) registrado ${n_usb71} vez(es) no kernel-watch [USB-71] — confira a seção USB/dropout abaixo"
-    fi
-    if [[ "${n_bterr}" -gt 0 ]]; then
-        warn "o rádio BT acumulou erros em ${n_bterr} janela(s) [BT-ERR] — rádio sujo; ver os conselhos de posicionamento acima"
-    fi
+    info "kernel-watch (${log##*/}), o log INTEIRO desde $(head -1 "${log}" 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1):${resumo}"
+
+    _relata JOYCON "${n_joycon}" "$(_quantos_desde JOYCON "${corte}")" \
+        "$(_quando_o_ultimo JOYCON)" \
+        "o kernel deu rate-limit no controle Nintendo/8BitDo [JOYCON] — é a morte do 8BitDo em Bluetooth (muro do hid-nintendo); a configuração estável é NO CABO. Onda T: o patch DKMS (ver seção abaixo) reduz a chance do link cair, mas não elimina a degradação de rádio"
+    _relata JOYCON-PROBE "${n_joycon_probe}" "$(_quantos_desde JOYCON-PROBE "${corte}")" \
+        "$(_quando_o_ultimo JOYCON-PROBE)" \
+        "o hid-nintendo falhou no PROBE [JOYCON-PROBE] — morte 'invisível' (o device nem chega a registrar; sem cascata [JOYCON]); ver a seção DKMS hid-nintendo abaixo"
+    _relata USB-71 "${n_usb71}" "$(_quantos_desde USB-71 "${corte}")" \
+        "$(_quando_o_ultimo USB-71)" \
+        "storm USB (-71) registrado no kernel-watch [USB-71] — confira a seção USB/dropout abaixo"
+    _relata BT-ERR "${n_bterr}" "$(_quantos_desde BT-ERR "${corte}")" \
+        "$(_quando_o_ultimo BT-ERR)" \
+        "o rádio BT acumulou erros [BT-ERR] — rádio sujo; ver os conselhos de posicionamento acima"
     # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026): [BT-ERR] só nasce se o
     # kernel-watch conseguiu LER os contadores, e a única fonte deles é o
     # `hciconfig` depreciado. Sem ele o log fica sem [BT-ERR] para sempre — e
