@@ -744,6 +744,40 @@
   .ctl.off .leia,
   .ctl.off .bat{color:var(--linha)}
 
+  /* ---------- UM LUGAR SEM CONTROLE NÃO TEM BATERIA, NEM LUZ, NEM SENSOR ----
+     03/09/2026, medido clicando no produto instalado com UM controle no cabo.
+
+     O QUE A TELA MOSTRAVA: a linha do P2 — com o cabeçalho dizendo `1 controle`
+     e TODOS os campos de texto no travessão — trazia uma barra de bateria
+     PINTADA a 89,9 px de 140,5 (`style="width:64%"`, o literal deste gerador) e
+     os dois chips de sensor em `rgb(80, 250, 123)`, o mesmo verde do controle
+     que está mesmo na mesa. Quem olha lê "o P2 tem 64% e o giroscópio ligado".
+
+     POR QUE O TRAVESSÃO NÃO ALCANÇOU ESTES: o molde do lugar vazio
+     (`pacotes.apagar_os_lugares_sem_dono`) escreve `—` em TODA chave, e o
+     `escrever()` do piloto leva o travessão a `style.width = '—%'` — CSS
+     inválido, que o CSSOM DESCARTA CALADO. O número virou travessão; o pixel
+     ficou com o desenho. Medido: escrever `'—%'` na barra deixa `style.width`
+     em `64%`, byte por byte. Os chips não têm `data-campo` nenhum — não há
+     endereço por onde o produto os alcance.
+
+     A CURA AQUI É DA FOLHA, e é a que sobrevive ao pixel do mockup: uma regra
+     de estilo vence o `style=` inline com `!important`, e não depende de o
+     produto lembrar de apagar. Ela pende do `data-conectado`, que é o que o
+     piloto MANTÉM a cada tique (`hefesto_vivo.py`, laço dos `vazios`) — o mesmo
+     seletor que a aba Gatilhos já usa, e não um terceiro estado inventado.
+
+     E O CINZA NÃO É NOVO: `.sensores-peca .sw.off` já é o desligado que ESTE
+     desenho tem. O lugar vazio passa a usá-lo, em vez de ganhar cor própria. */
+  .ctl[data-conectado="nao"] .bat .cheio,
+  .ctl[data-conectado="nao"] .vol .cheio{width:0 !important}
+  .ctl[data-conectado="nao"] .vol .cheio::after{display:none}
+  .ctl[data-conectado="nao"] .barra-luz{color:var(--panel) !important}
+  .ctl[data-conectado="nao"] .sensores-peca .sw{
+    border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .ctl[data-conectado="nao"] .sensores-peca .sw .p{
+    background:var(--border-forte);box-shadow:none}
+
   /* ---------- OS DOIS BOTÕES DO FIM ----------
      Ela, 31/08: *"Temos que ter dois botões no final."* Eles são `<a>`, e não
      `<button>`, porque abrem PÁGINA — o `.btn` desta casa já é usado nas duas
@@ -1102,7 +1136,27 @@
   .eixo{display:grid;grid-template-columns:11px 52px 1fr;align-items:center;gap:8px;
         font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave);height:18px}
   .eixo .g{height:6px;border-radius:3px;background:var(--panel);position:relative}
-  .eixo .v{position:absolute;top:0;bottom:0;border-radius:3px}
+  /* A BARRA BIPOLAR SÃO DUAS METADES, e a razão é o que o produto ALCANÇA.
+     Ela era UM `<span class="v" style="left:L%;width:W%;background:C">`, e os
+     três valores mudam com a leitura: o `escrever` do piloto sabe escrever
+     `width` (alvo `largura`) e `color` (alvo `cor`), e NÃO tem alvo de
+     POSIÇÃO. Com um elemento só, dar-lhe endereço pintaria a largura sobre um
+     `left` congelado — a barra de um eixo NEGATIVO cresceria para o lado
+     errado, que é pior que a barra parada.
+
+     A GEOMETRIA É A MESMA, e isso é conta, não gosto: `mesa_viva._barra_bipolar`
+     devolve `esquerda = 50 - largura` para todo valor negativo, ou seja a barra
+     negativa SEMPRE termina no centro. Uma metade ancorada em `right:50%` e
+     outra em `left:50%` desenham exatamente os mesmos pixels, e só uma delas
+     tem largura por vez.
+
+     A COR SOBE PARA O TRILHO (`.g`) e desce por `currentColor`: assim o cinza
+     do repouso, o verde e o vermelho continuam sendo a resposta de
+     `_barra_bipolar` — um valor só, num elemento só, em vez de repetido nas
+     duas metades. */
+  .eixo .v{position:absolute;top:0;bottom:0;border-radius:3px;background:currentColor}
+  .eixo .v.neg{right:50%}
+  .eixo .v.pos{left:50%}
   /* AS ONDAS SONORAS — o medidor de nível que a minha primeira versão comeu */
   .onda{height:22px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
@@ -1261,13 +1315,11 @@
     padding-left:9px;list-style:none;margin-left:-16px}
 
 </style>
-<style id="plastico-do-desenho">
-  .ctl[data-controle="p1"]{--plastico:#ae335a}
-  .ctl[data-controle="p2"]{--plastico:#7eb8d4}
-  .fita .chip[for="c-p1"]{--plastico:#ae335a}
-  .fita .chip[for="c-p2"]{--plastico:#7eb8d4}
+<style data-campo="plastico-css" data-hef-alvo="html">
+  .ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}
+  .ctl[data-controle="p1"],.fita .chip[for="c-p1"]{--plastico:#ae335a}
+  .ctl[data-controle="p2"],.fita .chip[for="c-p2"]{--plastico:#7eb8d4}
 </style>
-<style data-campo="plastico-css"></style>
 </head>
 <body>
 
@@ -1401,8 +1453,8 @@
     <div class="fita" title="O que você mudar nesta aba vai para o controle escolhido aqui.">
       <span>Selecionar:</span>
       <label for="c-todos" class="chip" title="Abre os 4 cards de uma vez — e aí a caixa rola.">Todos</label>
-      <label for="c-p1" class="chip plastico" title="Clique para abrir o card dele — a borda é a cor do plástico.">P1 <span class="pt">•</span> <span data-campo="fita-peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="fita-via">USB</span></label>
-      <label for="c-p2" class="chip plastico" title="Clique para abrir o card dele — a borda é a cor do plástico.">P2 <span class="pt">•</span> <span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via">BT</span></label>
+      <label for="c-p1" class="chip plastico" data-campo="fita-chip" title="Clique para abrir o card dele — a borda é a cor do plástico.">P1 <span class="pt">•</span> <span data-campo="fita-peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="fita-via">USB</span></label>
+      <label for="c-p2" class="chip plastico" data-campo="fita-chip" title="Clique para abrir o card dele — a borda é a cor do plástico.">P2 <span class="pt">•</span> <span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via">BT</span></label>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1539,14 +1591,14 @@
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span class="p" style="left:23.5%;top:78.4%"></span></div>
-                <div class="xy" data-xy="l">X:  60<br>Y: 200</div>
+                <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X: 60<br>Y:200</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span class="p" style="left:70.6%;top:35.3%"></span></div>
-                <div class="xy" data-xy="r">X: 180<br>Y:  90</div>
+                <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:180<br>Y: 90</div>
               </div>
             </div>
           </div>
@@ -1555,82 +1607,82 @@
         <div>
           <div class="moldura">
             <div class="glifos">
-            <span class="gb on" data-glifo="cross"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+            <span class="gb on" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb" data-glifo="circle"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
+            <span class="gb" data-glifo="circle" data-campo="glifo-circle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
 
   <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg></span>
-            <span class="gb" data-glifo="square"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
+            <span class="gb" data-glifo="square" data-campo="glifo-square" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
 
   <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
 </svg></span>
-            <span class="gb" data-glifo="triangle"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
+            <span class="gb" data-glifo="triangle" data-campo="glifo-triangle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
 
   <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
 </svg></span>
-            <span class="gb on" data-glifo="dpad_up"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
+            <span class="gb on" data-glifo="dpad_up" data-campo="glifo-dpad_up" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
 
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
 </svg></span>
-            <span class="gb" data-glifo="dpad_down"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
+            <span class="gb" data-glifo="dpad_down" data-campo="glifo-dpad_down" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
 
   <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
 </svg></span>
-            <span class="gb" data-glifo="dpad_left"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Esquerda</title>
+            <span class="gb" data-glifo="dpad_left" data-campo="glifo-dpad_left" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Esquerda</title>
 
   <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
 </svg></span>
-            <span class="gb" data-glifo="dpad_right"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Direita</title>
+            <span class="gb" data-glifo="dpad_right" data-campo="glifo-dpad_right" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Direita</title>
 
   <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
 </svg></span>
-            <span class="gb" data-glifo="l1"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
+            <span class="gb" data-glifo="l1" data-campo="glifo-l1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
 
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
 </svg></span>
-            <span class="gb" data-glifo="r1"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
+            <span class="gb" data-glifo="r1" data-campo="glifo-r1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
 
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
 </svg></span>
-            <span class="gb on" data-glifo="l2"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+            <span class="gb on" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb plast" data-glifo="r2"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+            <span class="gb plast" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb" data-glifo="share"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
+            <span class="gb" data-glifo="share" data-campo="glifo-share" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
 
   <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb" data-glifo="options"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
+            <span class="gb" data-glifo="options" data-campo="glifo-options" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
 
   <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb" data-glifo="ps"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+            <span class="gb" data-glifo="ps" data-campo="glifo-ps" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
 </svg></span>
-            <span class="gb" data-glifo="touchpad"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
+            <span class="gb" data-glifo="touchpad" data-campo="glifo-touchpad" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
@@ -1768,31 +1820,45 @@
                 Um traço no lugar do número quer dizer que a leitura ainda não chegou.
               </span></span>
             </div>
-            <div class="eixo" data-eixo="giro-x"><span>X</span><span>+143.2</span>
-              <span class="g"><span class="v" style="left:50%;width:22%;background:var(--red)"></span></span></div>
-            <div class="eixo" data-eixo="giro-y"><span>Y</span><span>−412.0</span>
-              <span class="g"><span class="v" style="left:12%;width:38%;background:var(--green)"></span></span></div>
-            <div class="eixo" data-eixo="giro-z"><span>Z</span><span> +22.8</span>
-              <span class="g"><span class="v" style="left:50%;width:4%;background:var(--cyan)"></span></span></div>
+            <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">+143.2</span>
+              <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--red)"><span
+                class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:22%"></span></span></div>
+            <div class="eixo" data-eixo="giro-y"><span>Y</span><span data-campo="giro-y">−412.0</span>
+              <span class="g" data-campo="giro-y-cor" data-hef-alvo="cor" style="color:var(--green)"><span
+                class="v neg" data-campo="giro-y-neg" data-hef-alvo="largura" style="width:38%"></span><span
+                class="v pos" data-campo="giro-y-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+            <div class="eixo" data-eixo="giro-z"><span>Z</span><span data-campo="giro-z"> +22.8</span>
+              <span class="g" data-campo="giro-z-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="giro-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-z-pos" data-hef-alvo="largura" style="width:4%"></span></span></div>
           </div>
           <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
             <div class="rot">Acelerômetro</div>
-            <div class="eixo" data-eixo="accel-x"><span>X</span><span> +0.105</span>
-              <span class="g"><span class="v" style="left:50%;width:3%;background:var(--cyan)"></span></span></div>
-            <div class="eixo" data-eixo="accel-y"><span>Y</span><span> +0.976</span>
-              <span class="g"><span class="v" style="left:50%;width:24%;background:var(--green)"></span></span></div>
-            <div class="eixo" data-eixo="accel-z"><span>Z</span><span> +0.170</span>
-              <span class="g"><span class="v" style="left:50%;width:4%;background:var(--cyan)"></span></span></div>
+            <div class="eixo" data-eixo="accel-x"><span>X</span><span data-campo="accel-x"> +0.105</span>
+              <span class="g" data-campo="accel-x-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="accel-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-x-pos" data-hef-alvo="largura" style="width:3%"></span></span></div>
+            <div class="eixo" data-eixo="accel-y"><span>Y</span><span data-campo="accel-y"> +0.976</span>
+              <span class="g" data-campo="accel-y-cor" data-hef-alvo="cor" style="color:var(--green)"><span
+                class="v neg" data-campo="accel-y-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-y-pos" data-hef-alvo="largura" style="width:24%"></span></span></div>
+            <div class="eixo" data-eixo="accel-z"><span>Z</span><span data-campo="accel-z"> +0.170</span>
+              <span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:4%"></span></span></div>
           </div>
           <div class="moldura gatilhos" style="margin-top:9px">
             <div class="rot">Gatilhos</div>
             <div class="gat">
               <div class="gat-linha" data-gatilho="l2"><span>L2</span>
-                <span class="trilho"><span class="cheio" style="width:78%"></span>
-                  <span class="n">200 / 255</span></span></div>
+                <span class="trilho"><span class="cheio" data-campo="l2-barra"
+                  data-hef-alvo="largura" style="width:78%"></span>
+                  <span class="n" data-campo="l2-num">200 / 255</span></span></div>
               <div class="gat-linha" data-gatilho="r2"><span>R2</span>
-                <span class="trilho"><span class="cheio" style="width:15%"></span>
-                  <span class="n">40 / 255</span></span></div>
+                <span class="trilho"><span class="cheio" data-campo="r2-barra"
+                  data-hef-alvo="largura" style="width:15%"></span>
+                  <span class="n" data-campo="r2-num">40 / 255</span></span></div>
             </div>
           </div>
         </div>
@@ -1873,14 +1939,14 @@
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span class="p" style="left:50.2%;top:50.2%"></span></div>
-                <div class="xy" data-xy="l">X: 128<br>Y: 128</div>
+                <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span class="p" style="left:50.2%;top:50.2%"></span></div>
-                <div class="xy" data-xy="r">X: 128<br>Y: 128</div>
+                <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
             </div>
           </div>
@@ -1889,82 +1955,82 @@
         <div>
           <div class="moldura">
             <div class="glifos">
-            <span class="gb plast" data-glifo="cross"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+            <span class="gb plast" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb" data-glifo="circle"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
+            <span class="gb" data-glifo="circle" data-campo="glifo-circle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Círculo</title>
 
   <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg></span>
-            <span class="gb" data-glifo="square"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
+            <span class="gb" data-glifo="square" data-campo="glifo-square" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Quadrado</title>
 
   <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
 </svg></span>
-            <span class="gb" data-glifo="triangle"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
+            <span class="gb" data-glifo="triangle" data-campo="glifo-triangle" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Triângulo</title>
 
   <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
 </svg></span>
-            <span class="gb" data-glifo="dpad_up"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
+            <span class="gb" data-glifo="dpad_up" data-campo="glifo-dpad_up" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
 
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
 </svg></span>
-            <span class="gb" data-glifo="dpad_down"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
+            <span class="gb" data-glifo="dpad_down" data-campo="glifo-dpad_down" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
 
   <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
 </svg></span>
-            <span class="gb" data-glifo="dpad_left"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Esquerda</title>
+            <span class="gb" data-glifo="dpad_left" data-campo="glifo-dpad_left" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Esquerda</title>
 
   <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
 </svg></span>
-            <span class="gb" data-glifo="dpad_right"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Direita</title>
+            <span class="gb" data-glifo="dpad_right" data-campo="glifo-dpad_right" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Direita</title>
 
   <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
 </svg></span>
-            <span class="gb" data-glifo="l1"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
+            <span class="gb" data-glifo="l1" data-campo="glifo-l1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
 
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
 </svg></span>
-            <span class="gb" data-glifo="r1"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
+            <span class="gb" data-glifo="r1" data-campo="glifo-r1" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
 
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
 </svg></span>
-            <span class="gb plast" data-glifo="l2"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+            <span class="gb plast" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb plast" data-glifo="r2"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+            <span class="gb plast" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb" data-glifo="share"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
+            <span class="gb" data-glifo="share" data-campo="glifo-share" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
 
   <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb" data-glifo="options"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
+            <span class="gb" data-glifo="options" data-campo="glifo-options" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
 
   <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb" data-glifo="ps"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+            <span class="gb" data-glifo="ps" data-campo="glifo-ps" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
 </svg></span>
-            <span class="gb" data-glifo="touchpad"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
+            <span class="gb" data-glifo="touchpad" data-campo="glifo-touchpad" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
@@ -2102,31 +2168,45 @@
                 Um traço no lugar do número quer dizer que a leitura ainda não chegou.
               </span></span>
             </div>
-            <div class="eixo" data-eixo="giro-x"><span>X</span><span>  +0.0</span>
-              <span class="g"><span class="v" style="left:50%;width:1%;background:var(--border-forte)"></span></span></div>
-            <div class="eixo" data-eixo="giro-y"><span>Y</span><span>  +0.0</span>
-              <span class="g"><span class="v" style="left:50%;width:1%;background:var(--border-forte)"></span></span></div>
-            <div class="eixo" data-eixo="giro-z"><span>Z</span><span>  +0.0</span>
-              <span class="g"><span class="v" style="left:50%;width:1%;background:var(--border-forte)"></span></span></div>
+            <div class="eixo" data-eixo="giro-x"><span>X</span><span data-campo="giro-x">  +0.0</span>
+              <span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><span
+                class="v neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
+            <div class="eixo" data-eixo="giro-y"><span>Y</span><span data-campo="giro-y">  +0.0</span>
+              <span class="g" data-campo="giro-y-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><span
+                class="v neg" data-campo="giro-y-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-y-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
+            <div class="eixo" data-eixo="giro-z"><span>Z</span><span data-campo="giro-z">  +0.0</span>
+              <span class="g" data-campo="giro-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><span
+                class="v neg" data-campo="giro-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="giro-z-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
           </div>
           <div class="moldura leituras" style="margin-top:9px" data-bloco="acelerometro">
             <div class="rot">Acelerômetro</div>
-            <div class="eixo" data-eixo="accel-x"><span>X</span><span> −0.032</span>
-              <span class="g"><span class="v" style="left:49%;width:1%;background:var(--cyan)"></span></span></div>
-            <div class="eixo" data-eixo="accel-y"><span>Y</span><span> +0.998</span>
-              <span class="g"><span class="v" style="left:50%;width:25%;background:var(--green)"></span></span></div>
-            <div class="eixo" data-eixo="accel-z"><span>Z</span><span> +0.041</span>
-              <span class="g"><span class="v" style="left:50%;width:1%;background:var(--cyan)"></span></span></div>
+            <div class="eixo" data-eixo="accel-x"><span>X</span><span data-campo="accel-x"> −0.032</span>
+              <span class="g" data-campo="accel-x-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="accel-x-neg" data-hef-alvo="largura" style="width:1%"></span><span
+                class="v pos" data-campo="accel-x-pos" data-hef-alvo="largura" style="width:0%"></span></span></div>
+            <div class="eixo" data-eixo="accel-y"><span>Y</span><span data-campo="accel-y"> +0.998</span>
+              <span class="g" data-campo="accel-y-cor" data-hef-alvo="cor" style="color:var(--green)"><span
+                class="v neg" data-campo="accel-y-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-y-pos" data-hef-alvo="largura" style="width:25%"></span></span></div>
+            <div class="eixo" data-eixo="accel-z"><span>Z</span><span data-campo="accel-z"> +0.041</span>
+              <span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--cyan)"><span
+                class="v neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></span><span
+                class="v pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:1%"></span></span></div>
           </div>
           <div class="moldura gatilhos" style="margin-top:9px">
             <div class="rot">Gatilhos</div>
             <div class="gat">
               <div class="gat-linha" data-gatilho="l2"><span>L2</span>
-                <span class="trilho"><span class="cheio" style="width:0%"></span>
-                  <span class="n">0 / 255</span></span></div>
+                <span class="trilho"><span class="cheio" data-campo="l2-barra"
+                  data-hef-alvo="largura" style="width:0%"></span>
+                  <span class="n" data-campo="l2-num">0 / 255</span></span></div>
               <div class="gat-linha" data-gatilho="r2"><span>R2</span>
-                <span class="trilho"><span class="cheio" style="width:0%"></span>
-                  <span class="n">0 / 255</span></span></div>
+                <span class="trilho"><span class="cheio" data-campo="r2-barra"
+                  data-hef-alvo="largura" style="width:0%"></span>
+                  <span class="n" data-campo="r2-num">0 / 255</span></span></div>
             </div>
           </div>
         </div>
@@ -2187,11 +2267,29 @@
          `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
          num botão ela viraria um "?" ao lado do rótulo, que não é o que ela pediu.
          `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
-         (`aba09.py`). -->
+         (`aba09.py`).
+
+         O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
+         pela régua do mockup e nomeado pelo juiz da leva. O pedido dela trazia um
+         EXEMPLO — *"Salvar Perfil grava no Mortal Kombat"* — e este arquivo
+         congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
+         "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
+         em cima já dizia o que importava — *o NOME do perfil, "a informação que
+         faltava e lhe custou semanas"* — e era exatamente essa informação que a
+         dica estava errando.
+
+         AGORA O TEXTO CONGELADO É HONESTO SOZINHO ("no perfil ativo") e o produto
+         o troca pelo nome de verdade, com o alvo `atributo` que nasceu em 03/09.
+         As duas metades importam: sem a primeira, quem abre a página antes de o
+         produto pintar lê uma mentira; sem a segunda, ninguém lê o nome. -->
     <button class="r-aplicar" title="Vale agora: envia a configuração aos controles na hora. Não grava — ao trocar de perfil ou reiniciar, volta ao que está salvo.">Aplicar</button>
-    <button class="r-salvar" title="Grava no perfil Mortal Kombat. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
+    <button class="r-salvar" data-campo="rodape.salvar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Grava no perfil ativo. É onde a mudança vai cair: o que você salvar aqui volta sozinho toda vez que este jogo abrir.">Salvar Perfil</button>
     <button class="r-importar" title="Carrega um perfil de arquivo .json.">Importar</button>
-    <button class="r-exportar" title="Escreve o perfil Mortal Kombat num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
+    <button class="r-exportar" data-campo="rodape.exportar"
+            data-hef-alvo="atributo" data-hef-atributo="title"
+            title="Escreve o perfil ativo num arquivo .json, para guardar ou levar para outra máquina.">Exportar</button>
   </div>
 
 </div>
