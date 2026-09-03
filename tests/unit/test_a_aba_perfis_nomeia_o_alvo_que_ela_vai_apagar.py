@@ -230,9 +230,9 @@ def test_o_marcador_orfao_nao_vira_alvo_de_gesto(
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, "Perfil Que Ela Apagou")
     ctx = _ctx()
-    with pytest.raises(ValueError, match="escolha um perfil na lista primeiro"):
+    with pytest.raises(RuntimeError, match="escolha um perfil na lista primeiro"):
         a10_perfis._perfil_do_editor(ctx)
-    with pytest.raises(ValueError, match="escolha um perfil na lista primeiro"):
+    with pytest.raises(RuntimeError, match="escolha um perfil na lista primeiro"):
         a10_perfis.voltar_a_de_ontem(ctx, {}, PonteDeMentira())
 
 
@@ -281,7 +281,7 @@ def test_o_realce_e_a_guarda_do_ativar_dao_o_mesmo_veredito(
         "o dono devolveu o nome DIGITADO, e não o da linha da lista")
 
     a10_perfis.selecionar(ctx, {"texto": "Sackboy"}, ponte)
-    with pytest.raises(ValueError, match="já é o perfil que está valendo"):
+    with pytest.raises(RuntimeError, match="já é o perfil que está valendo"):
         a10_perfis.ativar(ctx, {}, ponte)
     assert ponte.chamadas == []
 
@@ -315,7 +315,7 @@ def test_lista_vazia_nao_desarma_a_guarda_do_perfil_que_vale(
     assert a10_perfis._valendo(ctx) == "meu_perfil", (
         "lista vazia rebaixou o nome que vale — ausência de prova virou prova "
         "de órfão, e as três guardas do §P1 se desligam juntas")
-    with pytest.raises(ValueError, match="está valendo agora"):
+    with pytest.raises(RuntimeError, match="está valendo agora"):
         a10_perfis.remover(ctx, {}, PonteDeMentira())
 
 
@@ -354,7 +354,7 @@ def test_voltar_a_de_ontem_acha_o_perfil_e_manda_reaplicar(
     ela leu como "não está salvando".
 
     MORDIDA: troque qualquer um dos dois pela leitura crua do ``state`` e este
-    teste reprova — o primeiro com ``ValueError``, o segundo sem o
+    teste reprova — o primeiro com ``RuntimeError``, o segundo sem o
     ``profile_switch`` na ponte.
     """
     restaurados: list[str] = []
