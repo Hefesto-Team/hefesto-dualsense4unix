@@ -186,8 +186,20 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:                       CONTINENTE. Nunca houve valor para escrever nele.
 #:                       (A lista de perfis tinha o mesmo formato e ganhou
 #:                       conserto por OUTRA porta — ver `_html_da_lista`.)
-#:   editor.prioridade.dica  a frase já é o `title=` estático do desenho, e o
-#:                       texto novo é decisão DELA (ver a ROTA-G).
+#:   editor.prioridade.dica  **a frase JÁ FOI APROVADA e não chega à tela** —
+#:                       correção de fato, 02/09/2026. Aqui estava escrito que
+#:                       *"o texto novo é decisão DELA"*; ela decidiu (decisão
+#:                       nº11, *"Quando dois perfis servem ao mesmo tempo, o de
+#:                       número maior entra."*) e o texto está em
+#:                       `perfis_web._pacote_do_editor`. O que segura é ESTA
+#:                       lista, e por uma razão que continua de pé: o alvo é um
+#:                       `<span>` com DOIS filhos-elemento (o trilho e o
+#:                       número), e `textContent` os apagaria. A tela mostra
+#:                       hoje o `title=` estático do desenho, que não é nem a
+#:                       frase velha nem a nova. **Para destravar, o pintor
+#:                       precisa de um `data-hef-alvo` que escreva ATRIBUTO
+#:                       (`title=`)** — `hefesto_vivo.py`, fora do território
+#:                       desta frente; está no relatório.
 #:   editor.estilo       **não há valor a escrever, e escrever apaga o `—` que
 #:                       ela pediu** — 02/09/2026. O perfil não tem campo de
 #:                       Estilo (`perfis_web` devolve `estilo: None`), então o
@@ -205,6 +217,41 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:                       caminho para MARCAR uma opção de `value` vazio.
 NAO_PINTAVEIS = ("guarda.linhas", "guarda.secao", "editor.prioridade.dica",
                  "editor.estilo")
+
+#: AS CHAVES QUE SAEM DAQUI E A PÁGINA NÃO TEM ONDE PÔR — o inventário, com a
+#: razão medida de cada uma. É a lista irmã do `SEM_ENDERECO` da aba 06, e ela
+#: existe pela mesma razão: **órfão calado é defeito; órfão declarado é
+#: inventário.** A régua que a cobra é
+#: `tests/unit/test_a_aba_perfis_manda_para_um_endereco_que_existe.py`.
+#:
+#: A DIFERENÇA PARA `NAO_PINTAVEIS`, e as duas listas não se confundem:
+#: ali estão os endereços que a página TEM e que escrever DESTRÓI; aqui estão
+#: os valores que a página NÃO TEM — eles caem no vazio, sem estrago e sem
+#: notícia. Um valor desta lista nunca aparece na tela nem no contador.
+#:
+#: MEDIDO em 02/09/2026 contra as duas páginas, que hoje são byte-idênticas:
+SEM_ENDERECO = {
+    # Os quatro do editor vêm inteiros de `perfis_web._pacote_do_editor` pelo
+    # laço de achatamento — a camada do produto os monta e o desenho ainda não
+    # tem lugar para eles. `*.travado` é o seletor que a tela não pode editar
+    # sem rebaixar a regra do disco; `*.recado` é a frase que explica por quê.
+    # São trabalho de DESENHO, não de código: quando o mockup ganhar o lugar,
+    # o valor já está saindo.
+    "editor.ambiente.travado": "o seletor travado não tem marca no desenho",
+    "editor.ambiente.recado": "a frase da válvula não tem lugar no desenho",
+    "editor.estilo.travado": "idem, para o Estilo de Jogo",
+    "editor.estilo.recado": "idem — a frase de `GESTOS_SEM_MOTOR`",
+    # `quantos` é a SEGUNDA forma da mesma pergunta: `perfis.conta` tem
+    # endereço (a página o mostra) e sai deste mesmo pacote. Medido: ninguém o
+    # lê hoje — nem produto, nem régua. Fica declarado, e não apagado, porque
+    # tirar emissão é decisão de quem tem a aba inteira na mão; declarado, ele
+    # aparece nesta lista para quem for tomá-la.
+    "quantos": "a contagem que a tela mostra é `perfis.conta`, e essa tem endereço",
+    # `autoswitch_locked` é estado do daemon, e o desenho desta aba não o
+    # mostra em lugar nenhum. Quem tem endereço para a troca automática é a aba
+    # Sistema (`data-campo="hefesto-troca-de-perfil"`, em `09-sistema.html`).
+    "travado": "a trava da troca automática não é desenhada nesta aba",
+}
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
@@ -514,11 +561,30 @@ def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
 
     **E O MARCADOR ÓRFÃO CAI JUNTO** — perfil renomeado ou apagado por fora. O
     `resolve_boot_profile` declara na própria docstring que *"só resolve NOMES —
-    não valida se o perfil carrega"*; o que ele devolve ia CRU para o chip
-    "Perfil ativo" e para o alvo dos gestos. Medido, com o marcador em "Perfil
-    Que Ela Apagou": o chip nomeava um perfil sem linha entre as 33 e sem
-    arquivo no disco, e ela ia procurá-lo na lista. Sem casar com ninguém, o
-    nome vira `""` — que aqui é "não há", e a tela mostra travessão.
+    não valida se o perfil carrega"*; o que ele devolve ia CRU para o REALCE DA
+    LISTA e para o alvo dos gestos. Sem casar com ninguém, o nome vira `""` —
+    que aqui é "não há", e a lista não acende linha nenhuma.
+
+    **FATO ERRADO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que o nome
+    cru ia também *"para o chip 'Perfil ativo'"*, e que a cura o levava ao
+    travessão. **O chip não passa por aqui, e continua nomeando o órfão.** Ele
+    é `<span class="pa-nome" data-campo="perfil">` (`10-perfis.html:1035`, nas
+    duas páginas), do `topo.html`, que é das dez abas — e quem o pinta é
+    `pacotes.topo()`, com `ctx.state.get("active_profile")` CRU. Medido pelo
+    caminho do piloto (`pacote_da_pagina` → `normalizar` → `topo` com
+    `setdefault`), dois perfis no disco e dublê de ponte:
+
+        daemon diz              chip na tela            linhas realçadas
+        "Perfil Que Ela Apagou" "Perfil Que Ela Apagou"  []
+        "sackboy"               "sackboy"                ["Sackboy"]
+
+    A segunda linha é a pior: a MESMA tela passa a dar dois nomes para a mesma
+    pergunta. A cura mora no dono compartilhado (`pacotes/__init__.py`, `topo`),
+    que tem de resolver o nome do mesmo jeito — **não aqui**: um pacote de aba
+    que emitisse `perfil` seria o segundo dono do cabeçalho, que é o defeito
+    fotografado às 04:23 de 02/09 na aba Sistema e está escrito em
+    `a09_sistema.pacote`. A dívida tem régua própria, em
+    `tests/unit/test_a_aba_perfis_manda_para_um_endereco_que_existe.py`.
 
     **LISTA VAZIA NÃO É PROVA DE ÓRFÃO — é a AUSÊNCIA de prova**, e essa
     distinção é a que impede a cura de desarmar o §P7. Só se rebaixa o nome a
@@ -569,10 +635,22 @@ def _rotulo_do_remover(alvo: str) -> str:
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
     thread** (`hefesto_vivo.py:520`) e GTK só aceita diálogo no laço principal.
 
-    E a recusa do piloto não serve de pergunta: ela sai em `stderr`
-    (`hefesto_vivo.py:527`), no terminal, onde a dona não está olhando.
+    **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
+    recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
+    onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
+    `_recusou_dizendo` (`hefesto_vivo.py:1074`): todo `RuntimeError` de gesto
+    vira TARJA na tela — no cartão do controle quando a página tem um, e no
+    `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
+    `SEGUNDOS_DO_RECADO = 30.0`.
 
-    Então a pergunta é o PRÓPRIO RÓTULO do botão. É o único pedaço de tela que
+    **O RÓTULO CONTINUA SENDO A PERGUNTA, e agora por outra razão:** a tarja é
+    AVISO e o rótulo é ESTADO. A tarja conta o que acabou de acontecer e vai
+    embora em trinta segundos; o rótulo diz, enquanto o armamento vive, qual
+    perfil o próximo clique apaga. Com só a tarja, ela leria "Apagar
+    “Pragmata”?" e teria oito segundos para decidir olhando um botão que diz
+    "Remover".
+
+    O rótulo é o pedaço de tela que
     já existe, que ela está olhando no instante do clique, e que o piloto sabe
     pintar. O desenho não muda: o mockup continua escrevendo "Remover".
 
@@ -580,18 +658,35 @@ def _rotulo_do_remover(alvo: str) -> str:
     APAGAVA OUTRO.** O armamento sempre foi por perfil — `remover` exige
     `_ARMADO[0] == nome` — mas este rótulo olhava só o RELÓGIO, e por isso
     continuava perguntando pelo perfil armado depois de ela clicar noutra linha.
-    Reproduzido com 33 perfis no disco e dublê de ponte, sem nenhum valendo:
+    **A SEQUÊNCIA, MEDIDA PASSO A PASSO** — dois perfis no disco, dublê de
+    ponte, ninguém valendo. A coluna ANTES é este rótulo sem o `== alvo` (a
+    mordida); a coluna DEPOIS é o de hoje:
 
-        clique em Remover (Pragmata escolhido) -> rótulo: Remover “Pragmata”?
-        ela clica na linha do Sackboy          -> rótulo: Remover “Pragmata”?
-        clique em Remover                      -> arma o SACKBOY, calado
-        clique em Remover                      -> some do disco: ["Sackboy"]
+        passo                          ANTES                      DEPOIS
+        1 clicou na linha do Pragmata  "Remover"                  "Remover"
+        2 CLIQUE em Remover            arma o Pragmata, levanta   igual
+        3 o rótulo, no tique seguinte  "Remover “Pragmata”? …"    igual
+        4 clicou na linha do Sackboy   "Remover “Pragmata”? …"    "Remover"
+        5 CLIQUE em Remover            arma o SACKBOY, levanta    igual
+        6 o rótulo, no tique seguinte  "Remover “Sackboy”? …"     igual
+        7 CLIQUE em Remover            APAGA o Sackboy            igual
 
-    Três cliques num botão que nunca deixou de dizer "Pragmata" apagam o
-    Sackboy. A frase de recusa que armaria o segundo perfil sai em `stderr`
-    (`hefesto_vivo.py`), então nada na tela contradiz o rótulo. Com o alvo, o
-    rótulo volta a "Remover" no instante em que ela troca de linha — que é a
-    verdade: o próximo clique naquele botão ARMA, não apaga.
+    **UM ÚNICO PASSO DIFERE, e é o 4 — o defeito inteiro está ali:** o botão
+    anuncia que o próximo clique apaga o Pragmata, e o próximo clique arma o
+    Sackboy.
+
+    **FATO ERRADO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito *"três
+    cliques num botão que nunca deixou de dizer 'Pragmata' apagam o Sackboy"*, e
+    que o passo 5 armava *"calado"*. A medição acima derruba as duas: no passo
+    6, **ainda sem a cura**, o rótulo já diz "Sackboy" — dentro de um tique de
+    500 ms —, então o clique que APAGA nunca acontece sob um botão dizendo
+    "Pragmata". E o "calado" é o que menos se sustenta hoje: com
+    `_recusou_dizendo` no piloto, o passo 5 **põe a frase em TARJA na tela**, e
+    o rótulo fala meio segundo depois. Exagerar o defeito não o torna mais real,
+    e a próxima pessoa leria isto como o enunciado.
+
+    Com o alvo, o rótulo volta a "Remover" no instante em que ela troca de
+    linha — que é a verdade: o próximo clique naquele botão ARMA, não apaga.
     """
     if (_ARMADO and _ARMADO[0] == alvo
             and (time.monotonic() - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR):
@@ -651,7 +746,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "perfis.linha.nome": [x.get("nome", "") for x in lista],
         "perfis.linha.prioridade": [x.get("prioridade", "") for x in lista],
         "perfis.linha.quando": [x.get("quando", "") for x in lista],
-        "ativo": ativo or "—",
+        # O `ativo` SAIU DAQUI — 02/09/2026, e ele é o achado desta correção.
+        # Esta chave carregava o nome resolvido por `_valendo` e **não tinha
+        # endereço em página nenhuma**: `data-(campo|papel|hef)="ativo"` dá ZERO
+        # ocorrências em `interface/paginas/10-perfis.html` e zero em
+        # `mockup/10-perfis.html`. O chip que ela lê é
+        # `<span class="pa-nome" data-campo="perfil">` (linha 1035 das duas), e
+        # quem o pinta é `pacotes.topo()` — o dono das dez abas.
+        #
+        # O CUSTO DE TER EXISTIDO foi uma cura declarada sobre uma tela que não
+        # mudou: três réguas chamavam este valor de "o chip" e ficavam verdes
+        # sem tocar o que ela vê. Ver
+        # `tests/unit/test_a_aba_perfis_manda_para_um_endereco_que_existe.py`,
+        # que agora cobra endereço de TODA chave emitida por esta aba.
         "quantos": len(lista),
         "travado": bool(ctx.state.get("autoswitch_locked")),
         "sem_dono": {},
