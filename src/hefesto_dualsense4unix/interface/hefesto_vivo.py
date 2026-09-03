@@ -135,6 +135,36 @@ BOOTSTRAP = r"""
              || b === 'nao' || b === 'não' || b === 'off'  // (noqa-acento) valores
              || b === 'none' || b === 'null');
   }
+  // O QUE O ALVO `atributo` PODE ESCREVER, e a lista é curta de propósito.
+  //
+  // O NOME VEM DA PÁGINA (do `data-hef-atributo` que o gerador escreve), não do
+  // daemon — então isto não é guarda contra invasor, é guarda contra ERRO DE
+  // GERADOR. Sem ela, um `data-hef-atributo="style"` apagaria, no mesmo tique, o
+  // `--plastico` e a `width` que os outros alvos acabaram de pintar no MESMO
+  // elemento; um `class` apagaria o alvo `classe`; um `id` quebraria os `url(#…)`
+  // que o `monta.svg` prefixa por controle.
+  //
+  // E A RAZÃO MAIS DURA É O SELO: `escrever()` carimba `data-hef-visto`, e é ele
+  // que decide um INDECIDÍVEL na régua do mockup. Um alvo capaz de escrever
+  // `data-hef-visto` é um alvo capaz de FORJAR a medição desta casa — por isso
+  // todo o prefixo `data-hef` está fora, e não só o selo.
+  //
+  // Os cinco nomeados são o vocabulário de ENDEREÇO do próprio piloto (`achar()`,
+  // os donos de bloco e o ouvinte de gesto): o alvo não pode reescrever a placa
+  // da porta por onde ele mesmo entrou.
+  //
+  // `data-*` e `aria-*` é o que SOBRA, e chega para o que a lei pede: o
+  // `data-colorway` do SVG, o `data-modelo`, e o `aria-label` que um leitor de
+  // tela anuncia. Uma lista de proibidos, em vez desta de permitidos, teria de
+  // crescer toda vez que o HTML crescer.
+  const ATRIBUTO_DE_ENDERECO = ['data-campo', 'data-papel', 'data-controle',
+                                'data-uniq', 'data-gesto'];
+  function atributo_escrevivel(n){
+    return /^(data|aria)-[a-z0-9]+(-[a-z0-9]+)*$/.test(n)
+           && n.indexOf('data-hef') !== 0
+           && ATRIBUTO_DE_ENDERECO.indexOf(n) < 0;
+  }
+  window.__hef.atributoEscrevivel = atributo_escrevivel;
   function escrever(el, v){
     if(!el) return 0;
     const vazio = (v === null || v === undefined || v === '');
@@ -286,6 +316,61 @@ BOOTSTRAP = r"""
       if(vazio || t === '—'){ el.style.removeProperty('--plastico'); }
       else { el.style.setProperty('--plastico', t); }
       return el.style.getPropertyValue('--plastico') === antes ? 0 : 1;
+    }
+    // O ALVO `atributo` — UM ATRIBUTO DA TAG, e é o que faltava para o desenho
+    // do controle seguir o aparelho. A lei dela, 03/09/2026: *"os svgs do
+    // dualsense (…) mudam de acordo com o controle identificado no canto
+    // superior. É white no p1, mas (…) os svgs não são os que o meu mapa
+    // cataloga. Isso tá errado."*
+    //
+    // O SVG ESCOLHE A COR POR ATRIBUTO: o `monta.svg()` grava
+    // `<svg data-colorway="cosmic-red">` e a folha embutida pinta as dez zonas
+    // com `svg[data-colorway="…"] .z-casca{fill:var(--z-casca)}`. Havia 181
+    // `data-colorway` nas dez páginas publicadas e NENHUM alcançável: dos oito
+    // alvos do `escrever()`, nenhum escrevia atributo. A aba 08 desistiu com a
+    // razão escrita no próprio HTML publicado (`08-conexoes.html:1033`) —
+    // *"a cura certa é um alvo de atributo no piloto"*. É este.
+    //
+    // O NOME VEM DE `data-hef-atributo`, E NÃO DE UM `data-hef-alvo`
+    // COMPOSTO. `atributo:data-colorway` no `data-hef-alvo` seria mais curto de
+    // escrever e quebraria tudo que LÊ o alvo: `regua_do_mockup._campo`, o
+    // `LER_CAMPOS` aqui embaixo e cada `campo.alvo == "…"` comparam o alvo por
+    // IGUALDADE, e um alvo composto viraria 181 palavras diferentes onde hoje
+    // há oito. O par alvo/parâmetro em atributos separados é o que o alvo
+    // `classe` já faz com `data-hef-classe` e `data-hef-quando` — a casa tem a
+    // forma, e inventar uma segunda seria a terceira maneira de dizer o mesmo.
+    //
+    // VAZIO E TRAVESSÃO APAGAM O ATRIBUTO, e a razão foi MEDIDA antes de
+    // escolhida. Sem `data-colorway` nenhuma regra da folha casa, e o desenho
+    // cai nos `fill` crus do `ds_limpo.svg`: 62 formas em `#3a3f4b` — um cinza
+    // neutro, com o contorno intacto. Não é um SVG quebrado nem invisível: é o
+    // controle SEM identidade, que é exatamente o que a regra dela pede quando
+    // não há informação. Deixar o atributo faria o contrário — manteria na tela
+    // o colorway do MOCKUP sobre um aparelho que é outro, que é o defeito que
+    // este alvo nasceu para curar.
+    //
+    // ESCREVE E DEPOIS RELÊ, como o `cor` e o `plastico`: um atributo aceita
+    // qualquer texto, então só a releitura diz se algo mudou. `getAttribute`
+    // devolve `null` quando não há atributo, e `null === null` conta 0 — que é o
+    // que impede o contador de somar uma pintura que não aconteceu ao apagar o
+    // que já estava apagado.
+    //
+    // ELE É NECESSÁRIO E NÃO É SUFICIENTE, e quem for ligar uma aba precisa
+    // saber: `monta._so_o_colorway` guarda na folha de cada SVG **só as regras
+    // do modelo pedido** — 3.082 bytes dos 45.452 dos 28. Escrever aqui um
+    // colorway que não está embutido dá o MESMO cinza do atributo apagado. Ou o
+    // `monta.svg()` deixa de podar, ou a página publica a folha inteira uma vez.
+    if(alvo === 'atributo'){
+      const nome = (el.dataset.hefAtributo || '').trim().toLowerCase();
+      // NOME RECUSADO NÃO PINTA E NÃO MENTE. O selo já foi carimbado acima, mas
+      // a tela continua mostrando o valor velho e o pacote continua declarando
+      // outro — então a régua do mockup acusa este endereço, que é o barulho
+      // certo para um `data-hef-atributo` mal escrito.
+      if(!atributo_escrevivel(nome)) return 0;
+      const antes = el.getAttribute(nome);
+      if(vazio || t === '—'){ el.removeAttribute(nome); }
+      else { el.setAttribute(nome, t); }
+      return el.getAttribute(nome) === antes ? 0 : 1;
     }
     if(el.textContent !== t){
       el.textContent = t;
@@ -819,6 +904,15 @@ LER_CAMPOS = r"""
     if(alvo === 'largura'){ v = el.style.width; }
     else if(alvo === 'valor'){ v = ('value' in el) ? String(el.value ?? '') : ''; }
     else if(alvo === 'cor'){ v = el.style.color; }
+    else if(alvo === 'atributo'){
+      // O ATRIBUTO, NA MESMA LÍNGUA DOS DOIS LADOS: o texto que ele guarda, ou
+      // `''` quando não há atributo nenhum. `regua_do_mockup._campo` lê o mesmo
+      // atributo do arquivo com o mesmo vazio por omissão — sem isso um SVG cujo
+      // `data-colorway` o produto APAGOU (o aparelho não disse a cor) seria lido
+      // como `null` de um lado e `''` do outro, e a régua acusaria a pintura
+      // certa.
+      v = el.getAttribute((el.dataset.hefAtributo || '').trim().toLowerCase()) || '';
+    }
     else if(alvo === 'classe'){
       // O QUE ESTE ELEMENTO MOSTRA, na MESMA língua em que o `escrever` recebe:
       // o `data-hef-quando` de quem está aceso, ou `sim` quando o alvo é
