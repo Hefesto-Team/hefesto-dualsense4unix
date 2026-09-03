@@ -167,10 +167,8 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #: estava escrito que `editor.prioridade` também não sai, porque o
 #: `data-hef-alvo="largura"` estaria *"já escrito na BANCADA (`aba10.py`),
 #: esperando o ato de publicar DELA"*. **Ela já publicou.** O commit `70b58116`
-#: levou a aba inteira ao produto, e o atributo está na linha 1162 das DUAS
-#: páginas — a bancada e a publicada, que hoje são byte-idênticas
-#: (`diff mockup/10-perfis.html interface/paginas/10-perfis.html` é vazio, e
-#: `mockup/DIVERGENCIAS.md` não tem seção da aba 10). Enquanto este nome ficou
+#: levou a aba inteira ao produto, e o atributo está nas DUAS páginas — na
+#: linha 1162 da publicada e na 1165 da bancada. Enquanto este nome ficou
 #: na lista, a barra da prioridade continuou nos 90% do desenho para um perfil
 #: em 1 de 200 — a tela afirmando o que não mediu, com o conserto no disco há
 #: um commit. Ele SAI da lista, e o `escrever()` do piloto escreve a largura.
@@ -241,9 +239,16 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:                       `'—'` passa a guarda pelo TEXTO da opção e depois
 #:                       deixa `selectedIndex = -1` — o campo renderiza EM
 #:                       BRANCO, e `el.value` nunca volta igual ao escrito, o
-#:                       que faz o contador somar +1 a cada visita. O desenho já
-#:                       nasce com a opção certa marcada; a tela só precisa não
-#:                       estragá-la. Quem lhe dá valor de verdade é a
+#:                       que faz o contador somar +1 a cada visita.
+#:                       **PRECISÃO DA AUDITORIA, 02/09/2026:** aqui estava
+#:                       escrito que *"o desenho já nasce com a opção certa
+#:                       marcada"*, e isso vale só na BANCADA. No PUBLICADO —
+#:                       o que ela abre hoje — a linha 1194 ainda é
+#:                       `<option selected>Luta</option>`, e a foto de hoje
+#:                       mostra `Estilo de Jogo: Luta` nos 33 perfis dela. Não
+#:                       pintar continua sendo o certo (pintar deixaria o campo
+#:                       EM BRANCO), mas o `—` da decisão nº3 só chega quando
+#:                       ela publicar. Quem lhe dá valor de verdade é a
 #:                       ONDA-PERFIS-04, e nesse dia o piloto precisa de um
 #:                       caminho para MARCAR uma opção de `value` vazio.
 NAO_PINTAVEIS = ("guarda.linhas", "editor.prioridade.dica", "editor.estilo")
@@ -310,7 +315,23 @@ def _a_pagina_acende_a_secao_por_classe() -> bool:
 #: os valores que a página NÃO TEM — eles caem no vazio, sem estrago e sem
 #: notícia. Um valor desta lista nunca aparece na tela nem no contador.
 #:
-#: MEDIDO em 02/09/2026 contra as duas páginas, que hoje são byte-idênticas:
+#: MEDIDO em 02/09/2026 contra AS DUAS PÁGINAS, uma de cada vez — e elas
+#: **NÃO** são byte-idênticas, ao contrário do que esta linha e o parágrafo do
+#: `editor.prioridade` acima diziam até a auditoria de 02/09. `diff
+#: mockup/10-perfis.html src/…/interface/paginas/10-perfis.html` acusa **16
+#: linhas** — a aba 10 é uma das SEIS em que o produto está atrás da bancada,
+#: e o portão `desenho-aprovado` fica verde justamente por isso estar
+#: declarado. A divergência é a decisão nº3 DELA: o `<select>` do Estilo nasce
+#: com `<option value="" selected>—</option>` na BANCADA e continua em
+#: `<option selected>Luta</option>` no PUBLICADO, que é o que o produto
+#: renderiza hoje. Está declarada em `mockup/DIVERGENCIAS.md`, seção
+#: `## 10-perfis.html`, esperando o ato de publicar dela.
+#:
+#: **É POR ISSO QUE A RÉGUA COBRA AS DUAS.** Escrever aqui que elas são iguais
+#: é a frase que faz a próxima pessoa conferir só uma — e a armadilha desta
+#: leva é exatamente essa: curar na bancada e o produto seguir lendo o
+#: publicado. Ver `test_a_aba_perfis_manda_para_um_endereco_que_existe.py`,
+#: que roda `[bancada]` e `[publicada]` como dois casos separados.
 SEM_ENDERECO = {
     # Os quatro do editor vêm inteiros de `perfis_web._pacote_do_editor` pelo
     # laço de achatamento — a camada do produto os monta e o desenho ainda não
