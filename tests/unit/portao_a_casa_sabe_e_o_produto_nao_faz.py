@@ -1265,25 +1265,19 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "nada no produto a roda — nem o `doctor`, nem a aba Perfis. Fecha quando o "
         "exame da aba Sistema ou o `doctor` a chamarem. MEDIDO em 01/09/2026."
     ),
-    "app/actions/jogar/painel.py::hefesto_ligado": (
-        "A posição do interruptor Hefesto, com `None` para *'o daemon não "
-        "respondeu'* (app/actions/jogar/painel.py:204). A aba Jogar foi ligada e "
-        "usa as quatro funções vizinhas; esta ficou de fora, e o pacote lê o estado "
-        "direto. Fecha quando `a01_jogar` perguntar a ela — é a dona do terceiro "
-        "estado. MEDIDO em 01/09/2026."
-    ),
+    # `painel.py::hefesto_ligado` e `painel.py::modo_lembrado` MORAVAM AQUI e
+    # SAÍRAM em 03/09/2026, pelo mesmo motivo das duas de `jogar_vivo`: o
+    # caminho nasceu e a lápide ficou. Quem as alcança é
+    # `interface/controles_vivos.py` — `:933` (`painel.hefesto_ligado(state)`) e
+    # `:877`/`:909` (`painel.modo_lembrado()`) —, que é o piloto que os
+    # lançadores abrem. A cura de `hefesto_ligado` é literalmente a que a lápide
+    # pedia (*"fecha quando alguém perguntar a ela — é a dona do terceiro
+    # estado"*); a de `modo_lembrado` é a lembrança do opt-out chegando à tela.
     "app/actions/jogar/painel.py::indice_do_chip": (
         "A posição de um chip na `ponte_escada.ESCADA` "
         "(app/actions/jogar/painel.py:524). É a peça das duas conferências abaixo "
         "(`chips_sem_degrau`, `degraus_sem_chip`), e sai da dívida junto com elas. "
         "MEDIDO em 01/09/2026."
-    ),
-    "app/actions/jogar/painel.py::modo_lembrado": (
-        "O opt-out persistido do gamepad virtual, com a frase da tela "
-        "(app/actions/jogar/painel.py:351). A aba Jogar não mostra o que ficou "
-        "LEMBRADO, só o que está valendo agora — e a diferença entre os dois é o "
-        "que confunde quem desligou o virtual ontem. Fecha quando a aba mostrar a "
-        "lembrança. MEDIDO em 01/09/2026."
     ),
     "core/led_control.py::player_bitmask": (
         "Converte as cinco lâmpadas em bitmask 0-31 (core/led_control.py:83). O "
@@ -2091,15 +2085,20 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # se ele ganhar lançador próprio). No dia em que isso acontecer estas cinco
     # entradas viram lápides caducas e `test_nenhuma_lapide_sobreviveu_a_propria`
     # `_cura` cobra o apagamento — que é como esta lista deve encolher.
-    "app/actions/jogar/painel.py::avisos_do_estado": (
-        "MEDIDO em 31/08/2026. É a coluna Atenção inteira: seis fontes puras de "
-        "`home_actions` (pausa, gamepad degradado, rádio frágil, wrapper, trava "
-        "de autoswitch, cadeado cego), com a garantia de que uma fonte que "
-        "levanta exceção não derruba as outras cinco. TEM chamador — "
-        "`src/hefesto_dualsense4unix/interface/jogar_vivo.py`:723 (no tique) e :797 (no pacote de "
-        "pintura) —, e o chamador é a aba viva que nenhum lançador abre. ONDE O "
-        "CAMINHO SE PERDE: no enxerto, não no código; ver o bloco acima."
-    ),
+    #
+    # E ENCOLHEU: DUAS DAS CINCO SAÍRAM EM 03/09/2026 — `avisos_do_estado` e
+    # `texto_da_conta`. Não pelo enxerto que este bloco esperava: o caminho veio
+    # pelo OUTRO lado, `interface/pacotes/a01_jogar.py` (`7c69be86`, *"a aba
+    # parou de afirmar"*), que é pacote de aba PUBLICADA e roda. As TRÊS que
+    # ficam (`chips_sem_dono`, `degrau_vivo`, `nome_do_perfil`) continuam com o
+    # chamador só em `jogar_vivo.py`, e para elas o bloco acima vale inteiro.
+    #
+    # A LIÇÃO, e ela custou um portão VERMELHO no `dev`: `test_nenhuma_lapide_`
+    # `sobreviveu_a_propria_cura` cobrou o apagamento das QUATRO no mesmo dia em
+    # que os caminhos nasceram (estas duas, mais `hefesto_ligado` e
+    # `modo_lembrado`, que fecharam por `controles_vivos.py`) — e ninguém releu.
+    # O portão fica vermelho para TODA a casa enquanto uma lápide caduca fica de
+    # pé, e um portão que vive vermelho é um portão que se aprende a ignorar.
     "app/actions/jogar/painel.py::chips_sem_dono": (
         "MEDIDO em 31/08/2026. É a régua que a TELA usa para marcar um chip como "
         "inerte — sem degrau na `ESCADA` E sem modo em `mode_transition`. Hoje "
@@ -2126,15 +2125,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "dizia o perfil vivo e o rodapé continuava dizendo `Mortal Kombat`, que "
         "é o do mockup. Chamador: `src/hefesto_dualsense4unix/interface/jogar_vivo.py`:814. ONDE "
         "O CAMINHO SE PERDE: no enxerto da aba, ver o bloco acima."
-    ),
-    "app/actions/jogar/painel.py::texto_da_conta": (
-        "MEDIDO em 31/08/2026. Escreve `1 aviso` / `3 avisos` / `nenhum aviso` "
-        "no canto da coluna Atenção. A palavra do zero mora aqui e não no "
-        "desenho porque o desenho tem `1 aviso` chumbado e zero avisos é o "
-        "estado NORMAL de uma máquina saudável — sem esta função a tela de quem "
-        "está bem seria a única sem legenda. Chamador: "
-        "`src/hefesto_dualsense4unix/interface/jogar_vivo.py`:844. ONDE O CAMINHO SE PERDE: no "
-        "enxerto da aba, ver o bloco acima."
     ),
     "integrations/proton_pin.py::steam_root_ou_recusa": (
         "ENTREGUE em 24/08/2026 (T-09, ONDA0-Z7). `default_steam_root` "
