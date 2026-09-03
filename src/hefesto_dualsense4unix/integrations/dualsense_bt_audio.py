@@ -557,6 +557,55 @@ def versao_libopus() -> str | None:
 #: `systemctl --user status wireplumber`, não o DualSense.
 _MODULO_PIPE_SOURCE = "module-pipe-source"
 
+#: A `priority.session` com que a source da ponte nasce — A MESMA FAIXA DO CABO.
+#:
+#: CANAL-POR-CONTROLE-02 (03/09/2026). Aqui estava **200**, escrito em
+#: 25/07/2026 (`d6f9d331`) com o comentário *"é o mesmo princípio do drop-in 51
+#: do WirePlumber"*. Era, naquele dia: o 51 daquela data REBAIXAVA a entrada do
+#: controle para 50, e 200 espelhava aquilo.
+#:
+#: **A doutrina que o 200 espelhava foi SUBSTITUÍDA por medição em 08/08/2026**
+#: (MONITOR-QUE-VENCE-01, `4289ace0`), e o número da ponte não veio junto. O 51
+#: parou de rebaixar e passou a pôr a entrada do controle numa FAIXA medida —
+#: acima de qualquer monitor, abaixo de qualquer captura real —, sob um
+#: invariante de uma linha: *um microfone de verdade nunca pode perder para um
+#: monitor*. Monitor é o laço de retorno do que SAI; eleger um como microfone
+#: padrão é gravar o áudio do jogo no lugar da voz dela.
+#:
+#: **E o 51 não alcança esta source.** `monitor.alsa.rules` só vê nós criados
+#: pelo monitor de ALSA do WirePlumber, e a source da ponte é um
+#: `module-pipe-source` — nó virtual, criado pelo servidor. Logo o único lugar
+#: onde a prioridade do canal do RÁDIO pode ser escrita é aqui, e ela ficou
+#: catorze dias atrás da doutrina que diz espelhar.
+#:
+#: MEDIDO NA MÁQUINA DELA EM 03/09/2026, com um DualSense no cabo e a webcam
+#: plugada (`LC_ALL=C pactl list sources`)::
+#:
+#:     alsa_output.pci-…hdmi-stereo.monitor                  696
+#:     alsa_output.pci-…iec958-stereo.monitor                736
+#:     alsa_output…DualSense…analog-surround-40.monitor     1109
+#:     alsa_input…DualSense…iec958-stereo   (o CABO)        1500   ← o drop-in 51
+#:     alsa_input.pci-…analog-stereo        (placa do PC)   2009
+#:     alsa_input…HD_Pro_Webcam_C920        (a webcam)      2109
+#:
+#: Com 200 a ponte nascia **abaixo dos três monitores** — inclusive abaixo do
+#: monitor do alto-falante do OUTRO controle. O aparelho aceita e publica o
+#: canal; quem o punha em último lugar era este literal.
+#:
+#: O QUE ISTO **NÃO** DECIDE: quem, entre dois DualSense, é o microfone padrão.
+#: Isso é da eleição (`integrations/eleicao_de_microfone.py`), e o empate entre
+#: iguais já existe no cabo desde 08/08 — o drop-in 51 casa por padrão de nome
+#: e dá 1500 aos DOIS controles no fio. A ponte passa a empatar com eles, que é
+#: o contrato da CANAL-POR-CONTROLE-01: *"perder o padrão não é perder o
+#: canal"*.
+#:
+#: DONO ÚNICO IMPOSSÍVEL, DUAS RÉGUAS NO LUGAR: um `.conf` do WirePlumber não
+#: importa Python. Então o número vive nos dois sítios e um portão exige que
+#: sejam o MESMO — `tests/unit/test_o_canal_do_radio_nao_perde_para_um_monitor.py`,
+#: que lê este valor e o do `assets/wireplumber/51-*.conf` e reprova a
+#: divergência.
+PRIORIDADE_SESSAO_DA_PONTE = 1500
+
 #: Tamanho do fifo. Ele é o ÚNICO buffer entre o rádio e o PipeWire, então ele
 #: é o teto de latência: 8 KiB = 4096 amostras ≈ 85 ms. Maior só acumularia
 #: áudio velho quando ninguém está gravando (a source fica SUSPENDED e não
@@ -623,16 +672,18 @@ class SourceVirtualPipeWire:
                 "format=s16le",
                 f"rate={self.taxa_hz}",
                 f"channels={self.canais}",
-                # `priority.session` baixa de propósito: o mic do controle NÃO
-                # deve virar a entrada padrão do sistema sozinho. É o mesmo
-                # princípio do drop-in 51 do WirePlumber
-                # (FEAT-WIREPLUMBER-DUALSENSE-NOT-DEFAULT-SOURCE-01) — "o
-                # controle fica mexendo no microfone" foi um sintoma real.
+                # A FAIXA MEDIDA, a mesma do cabo: acima de qualquer monitor e
+                # abaixo de qualquer captura real. O objetivo original continua
+                # cumprido — o controle não rouba o posto de um microfone de
+                # verdade, que é a queixa que criou o drop-in 51 —, e o modo de
+                # falha que o 200 criava (perder para o laço de retorno do
+                # alto-falante) deixa de ser possível. Ver
+                # `PRIORIDADE_SESSAO_DA_PONTE` para os números medidos.
                 "source_properties="
                 + " ".join(
                     (
                         f"device.description='{self.descricao}'",
-                        "priority.session=200",
+                        f"priority.session={PRIORIDADE_SESSAO_DA_PONTE}",
                         "device.icon_name=audio-input-microphone",
                     )
                 ),
@@ -1279,6 +1330,7 @@ __all__ = [
     "MIC_OPUS_LEN",
     "MIC_OPUS_OFFSET",
     "MIC_TAXA_HZ",
+    "PRIORIDADE_SESSAO_DA_PONTE",
     "STATUS_FONE_PLUGADO",
     "STATUS_MIC_MUDO",
     "DecodadorOpus",
