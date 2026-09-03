@@ -238,7 +238,11 @@ def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():
     # O `data-hef` do anel entrou em 03/09/2026 (IDENTIDADE-VEM-DE-CIMA-01): sem
     # ele a régua da identidade acusa o `--plastico` do `<i>`, porque ela julga
     # a cor no elemento que a carrega. Ver `a04_iluminacao.ANEL_DO_DONO`.
-    assert (f'<i class="dono" data-hef="{pac.ANEL_DO_DONO}"'
+    # O ENDEREÇO SAI DE `endereco_do_anel` e o ALVO de `ALVO_DO_PLASTICO`: os
+    # dois têm dono, e digitá-los aqui foi o que deixou esta linha para trás
+    # quando o endereço virou um por jogador, em 03/09/2026.
+    assert (f'<i class="dono" data-hef="{pac.endereco_do_anel(1)}"'
+            f' data-hef-alvo="{pac.ALVO_DO_PLASTICO}"'
             f' style="--plastico:#ae335a"></i>1</button>') in botao, (
         f"o anel perdeu a cor do plástico ou o endereço: {botao!r}. O hex sai de "
         f"`monta.cor_da_zona`, que LÊ a folha que pinta o desenho.")

@@ -50,11 +50,28 @@ sys.path.insert(0, str(INTERFACE))
 
 PAGINA = "07-lancadores.html"
 
-#: OS ENDEREÇOS QUE O CABEÇALHO PINTA, e não o pacote da aba. Eles são das DEZ
-#: páginas (`pacotes.topo()`), e cobrá-los deste pacote faria a régua exigir que
-#: cada aba reescrevesse o que já tem dono — o defeito que o comentário do
+#: OS ENDEREÇOS QUE O TOPO PINTA, e não o pacote da aba. Eles são das DEZ
+#: páginas, e cobrá-los deste pacote faria a régua exigir que cada aba
+#: reescrevesse o que já tem dono — o defeito que o comentário do
 #: `a01_jogar.py:67` nomeia.
-DO_CABECALHO = {"conta", "conta-b", "perfil"}
+#:
+#: A LISTA SAI DO DONO, e não se digita — 03/09/2026. Ela era
+#: `{"conta", "conta-b", "perfil"}` à mão, e no dia em que o `topo()` ganhou os
+#: dois campos do RODAPÉ (a dica do "Salvar Perfil" e a do "Exportar", que
+#: passaram a dizer o nome do perfil ativo em vez do exemplo congelado) esta
+#: régua reprovou a aba Lançadores por um endereço que não é dela. Ler o dono é
+#: o que faz o próximo campo compartilhado entrar sozinho.
+
+
+def _do_topo() -> set[str]:
+    """Os endereços que `pacotes.topo()` emite, perguntados a ele."""
+    import pacotes
+
+    class _Vazio:
+        state: dict = {}
+        mesa: list = []
+
+    return set(pacotes.topo(_Vazio()))
 
 CAMPO = re.compile(r'data-campo="([^"]+)"')
 GESTO = re.compile(r'data-gesto="([^"]+)"')
@@ -108,7 +125,7 @@ def test_todo_endereco_da_pagina_tem_quem_o_pinte(a07, ctx):
     mockup da casa o conta como MOCKUP); um valor sem endereço é escrito no
     nada. As duas falhas são invisíveis na tela, que é por que estão aqui.
     """
-    da_pagina = set(CAMPO.findall(_bancada())) - DO_CABECALHO
+    da_pagina = set(CAMPO.findall(_bancada())) - _do_topo()
     emite = {k for k in a07.pacote(ctx)
              if k not in ("sem_dono", "cobertura", "blocos")}
     assert da_pagina, "a página não tem um endereço sequer — a régua ficou cega"
