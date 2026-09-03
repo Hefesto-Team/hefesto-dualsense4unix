@@ -289,6 +289,32 @@ CSS = CSS_GLIFO + """
      texto de um rótulo tem de remedir no Chrome e trazer o número para cá. */
   :root{--rot-p:86px}
 
+  /* ---------- A TIRA DO DESFECHO — o toast que esta janela não tinha ----------
+     PARIDADE COM A JANELA ESTÁVEL, 03/09/2026. Lá, TODO gesto desta aba termina
+     num `_toast_profile` no rodapé (`profiles_actions.py:4579`): "Perfil
+     removido: X", "Lista recarregada", `mensagem_de_ativacao`. Aqui só a
+     RECUSA falava — `RuntimeError` vira tarja no piloto — e o SUCESSO era
+     silêncio. Para os NOVE gestos desta aba que ESCREVEM NO DISCO DELA,
+     silêncio no sucesso é o botão que responde calado.
+
+     O ESPAÇO É RESERVADO, e `visibility` em vez de `display`: uma tira que
+     nasce e some empurraria a lista de 33 perfis para cima e para baixo a cada
+     clique. É a mesma escolha que a linha laranja tracejada da aba Jogar já
+     fez — *"o espaço dela é reservado, para a tela não pular"*.
+
+     VERDE porque é desfecho BOM: a recusa já tem cor e lugar próprios (a tarja
+     do piloto). Dois canais, duas cores, nenhuma dúvida sobre qual é qual.
+
+     UMA LINHA SÓ, com reticências: a frase mais longa que o produto emite aqui
+     é a `mensagem_de_ativacao` com seções de fora, e ela pode passar de 120
+     caracteres. Deixá-la quebrar em duas linhas devolveria o pulo que o
+     `height` fixo acabou de tirar. */
+  .desfecho{padding:0 14px;margin-top:7px;height:15px;line-height:15px;
+            font-size:11px;color:var(--green);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+            visibility:hidden}
+  .desfecho.on{visibility:visible}
+
   /* ---------- as QUATRO configurações que cabem dentro deste perfil ----------
      O editor mostrava CINCO campos e gravava vinte, e a única frase que dizia
      isso vivia escondida na dica do "Perfil ativo": *"cada controle guarda a sua
@@ -588,6 +614,19 @@ MIOLO = f'''
         <span class="conta"><span data-hef="perfis.conta">{len(PERFIS)} perfis</span> <span class="sep">·</span>
           <span data-hef="perfis.com-ajuste">{COM_AJUSTE} de {len(MESA)} controles com ajuste próprio neste perfil</span></span>
       </div>
+      <!-- O DESFECHO DO ÚLTIMO GESTO — ver `.desfecho` no CSS para a razão.
+           SÃO DOIS ENDEREÇOS PARA UM VALOR, e não é redundância: a CAIXA usa o
+           alvo `classe` (acende a tira quando há notícia — o `ligado()` do
+           piloto lê o travessão do campo vazio como APAGADO) e o TEXTO de
+           dentro escreve a frase. É o mesmo par que a coluna "Ajuste próprio"
+           já usa, e é o que faz a tira sumir sozinha quando o desfecho vence os
+           trinta segundos, em vez de deixar um "—" pendurado na tela dela.
+
+           E NÃO SE ESCREVE A TAG DE CAIXA POR EXTENSO NESTE COMENTÁRIO: o
+           balanço do `monta` conta SUBSTRING no documento inteiro, comentário
+           incluído, e uma abertura solta aqui derruba o gerador com
+           "desbalanceado". Custou duas execuções; fica escrito. -->
+      <div class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe"><span data-hef="perfis.desfecho"></span></div>
       <div class="quadro-corpo">
         <div class="perfis">
 
@@ -941,6 +980,21 @@ def _conferir(html: str) -> None:
            "a coluna do microfone sumiu da linha `Ajuste próprio` (decisão nº20)")
     exigir(f"São os {QUANTAS_SECOES} ajustes" in html,
            f"a dica do cabeçalho não diz mais `{QUANTAS_SECOES}` ajustes por controle")
+
+    # A TIRA DO DESFECHO — 03/09/2026. As três coisas que a fazem funcionar, e
+    # cada uma some sem sintoma se ninguém a cobrar: os DOIS endereços (o
+    # `classe` acende, o `<span>` escreve), e o espaço RESERVADO. Sem o
+    # `visibility` a tira viraria `display:none` no primeiro conserto de CSS e a
+    # lista de 33 perfis pularia a cada clique.
+    exigir(html.count('data-hef="perfis.desfecho"') == 2,
+           "a tira do desfecho perdeu um dos dois endereços — sem o `classe` "
+           "ela fica acesa com um travessão; sem o `<span>` ela nunca escreve")
+    exigir('class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe"' in html,
+           "a tira do desfecho perdeu o alvo `classe` — ela acenderia sempre")
+    exigir("visibility:hidden" in html and "display:none" not in
+           html.split(".desfecho{")[-1].split("}")[0],
+           "a tira do desfecho deixou de reservar o espaço — a lista volta a "
+           "pular a cada clique")
 
     # A COLUNA JUSTA. O `104px` é o valor antigo, e o vão morto de 22px é ele.
     exigir("--rot-p:86px" in html,
