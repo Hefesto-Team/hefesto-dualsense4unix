@@ -453,3 +453,22 @@ seção daqui**: a aba deixou de estar em trabalho.
   segunda posição mostrava a palavra **CERTO** dentro da pílula **laranja** —
   a palavra era do produto, a cor era do mockup.
   Não publiquei: quem publica é quem integra a leva.
+## 05-vibracao.html
+
+- **03/09/2026** — a **decisão 11 dela**: o `Máx` do multiplicador passa a
+  esconder **reservando o espaço** (`visibility:hidden`), em vez de sair do
+  HTML. A palavra fica sempre no arquivo e quem a acende é a classe `on`, que o
+  produto escreve. Isso muda o que se vê e por isso espera o OK dela:
+  `scripts/check_o_desenho_aprovado.py --publicar 05`.
+  Junto vieram os endereços de pintura dos quatro degraus de Força
+  (`data-campo="degrau"`) e as oito marcas `data-hef-rotulo` — esses **não movem
+  um pixel**, mas viajam no mesmo arquivo.
+  Medido com a mesa dela (um DualSense no cabo, um no rádio): a aba saiu de
+  **55% para 91%** pronto na `--prova-de-mockup`; o defeito que fecha é a coluna
+  do P1 mostrando "Máximo" com o daemon em `balanceado`.
+- **O QUE ELA VÊ ENQUANTO ESPERA, e o custo é ZERO.** A página publicada não tem
+  os endereços novos: `achar()` devolve lista vazia para `degrau` e para
+  `mult-teto`, e o `escrever()` nem é chamado — nenhum clique morre, nada vaza e
+  o contador de pinturas não infla. Até ela publicar, a Vibração continua
+  exatamente como está hoje: o degrau aceso e o `Máx` saem do desenho, que é o
+  defeito que esta leva mediu. Nenhum outro campo desta aba mudou de nome.
