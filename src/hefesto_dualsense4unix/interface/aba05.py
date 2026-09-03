@@ -650,6 +650,56 @@ CSS = """
 # na Iluminação, onde o controle é grande.
 # ---------------------------------------------------------------------------
 
+#: OS ÚNICOS PAPÉIS QUE PODEM SAIR COMO `data-papel` NESTA ABA — os que têm
+#: gesto registrado em `pacotes/a05_vibracao.py`.
+#:
+#: POR QUE ESTA LISTA EXISTE, e a medição é de 03/09/2026, clicando a aba
+#: publicada no WebKit com o daemon dela vivo. O ouvinte do piloto lê
+#: **qualquer** `data-papel` como o NOME DE UM GESTO
+#: (`hefesto_vivo.py`, `manda_do_alvo`: `gesto: d.gesto || d.hefGesto ||
+#: d.papel || …`). Esta aba tinha QUATRO nomes que nenhum pacote registra, e os
+#: quatro estavam em elementos grandes:
+#:
+#: ===========  =========  ============  ==========================================
+#: `data-papel` elementos  área clicável o que a usuária vê ao clicar
+#: ===========  =========  ============  ==========================================
+#: `desenho`    4          98.332 px²    o DESENHO do controle — o maior alvo da aba
+#: `motor`      4          28.548 px²    a linha inteira de cada motor
+#: `identidade` 2           6.740 px²    o rótulo `P1 · White · USB`
+#: `lado`       4           5.184 px²    o interruptor de punho, que é `<button>`
+#: ===========  =========  ============  ==========================================
+#:
+#: São **138.804 px²** — perto de um quarto do miolo — em que o clique dela vira
+#: `[gesto sem dono]` no terminal de quem lançou a janela e **nada** na tela.
+#: Medido: `desfechos` marca os quatro como `("sem dono", "")` e o DOM não ganha
+#: uma letra (`recados: []`). É a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura
+#: — a forma que o próprio `_gesto` nomeia: *"um botão que responde calado
+#: quando não há quem atenda"*.
+#:
+#: A CURA É O ATRIBUTO, e não uma lista nova de exceções: os TRÊS atributos de
+#: endereço de pintura são `data-campo`, `data-papel` e `data-hef`
+#: (`regua_do_mockup.ATRIBUTOS_DE_CAMPO`), e o ouvinte de clique só lê o do
+#: meio. Trocar `data-papel` por `data-hef` mantém o endereço **exatamente**
+#: onde estava — o pintor continua achando por `[data-hef=X]`, a régua do mockup
+#: continua contando o campo — e tira o clique fantasma. Nenhum pixel muda.
+#:
+#: O QUE ISTO NÃO CURA, e fica dito: o interruptor de punho continua PARECENDO
+#: um interruptor, com estado aceso e apagado, e continua sem fonte no produto
+#: (`app/telas/vibracao.SEM_FONTE["lado:ligado"]`, fecha em MIGRA-VIBRACAO-06).
+#: Um clique nele agora é silêncio honesto em vez de despacho fantasma — o botão
+#: que não deveria estar ligado é decisão dela.
+PAPEIS_QUE_SAO_GESTO = ("forca", "testar", "parar")
+
+
+def _endereco_de_pintura(nome, extra=""):
+    """`data-papel` quando o nome é gesto desta aba; `data-hef` quando não é.
+
+    Ver :data:`PAPEIS_QUE_SAO_GESTO` — a razão inteira, com a área medida.
+    """
+    atributo = "data-papel" if nome in PAPEIS_QUE_SAO_GESTO else "data-hef"
+    return f' {atributo}="{nome}"' + extra
+
+
 def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
            campo_num="", sufixo_html=""):
     """Uma linha de barra: interruptor · trilho · número · sufixo.
@@ -686,7 +736,12 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     unidade, não um estado.
     """
     pct = round(100 * valor / teto, 1)
-    endereco = f' data-papel="{papel}"' + (f' data-lado="{lado}"' if lado else "")
+    # `motor` NÃO É GESTO, e por isso ele sai em `data-hef` — ver
+    # :data:`PAPEIS_QUE_SAO_GESTO`. `forca` continua em `data-papel`: ele TEM
+    # gesto registrado, e a recusa da linha "Personalizado" (*"a barra não é
+    # botão"*) é o comportamento escrito no pacote, não um clique órfão.
+    endereco = _endereco_de_pintura(
+        papel, f' data-lado="{lado}"' if lado else "")
 
     #: O SEGUNDO ENDEREÇO, e ele não substitui o primeiro. Esta aba nasceu com
     #: `data-papel` + `data-lado`, que é um PAR — e o piloto `vibracao_viva.py`
@@ -941,7 +996,7 @@ def _coluna_vazia(c):
     return f'''
           <div class="ctrl vazia" data-controle="{c["pref"]}" data-conectado="nao"
                title="Nenhum controle neste lugar.">
-            <div class="moldura" data-papel="desenho">{_endereca_a_cor(svg(f'vb-{c["pref"]}', c["cor"], lampadas=False), f'vb-{c["pref"]}', c["cor"], com_dono=False)}</div>
+            <div class="moldura" data-hef="desenho">{_endereca_a_cor(svg(f'vb-{c["pref"]}', c["cor"], lampadas=False), f'vb-{c["pref"]}', c["cor"], com_dono=False)}</div>
             <div class="rot-ctrl">P{j} <span class="pt">•</span> Desconectado</div>
             <div class="seg"><span class="nada">{VAZIO}</span></div>
             <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
@@ -1015,7 +1070,7 @@ def _coluna(c, e=None):
         # elemento troca a marca pelo alvo `classe` — como os degraus acabaram
         # de fazer.
         botao = (f'<button class="lado{" on" if ligado else ""}" '
-                 f'data-papel="lado" data-lado="{sigla}" '
+                 f'data-hef="lado" data-lado="{sigla}" '
                  f'data-hef-rotulo="o nome do motor" '
                  f'title="{m["nome"]} — {m["nota"]}">'
                  f'{glifo(m["glifo"], ativo=ligado, tam=18)}</button>')
@@ -1066,9 +1121,9 @@ def _coluna(c, e=None):
     # pintor alcança.
     return f'''
           <div class="ctrl" data-controle="{c["pref"]}" data-uniq="{c.get("uniq", "")}">
-            <div class="moldura" data-papel="desenho" data-campo="plastico"
+            <div class="moldura" data-hef="desenho" data-campo="plastico"
                  data-hef-alvo="plastico" style="--plastico:{plastico}">{desenho}</div>
-            <div class="rot-ctrl" data-papel="identidade">P{c["jogador"]} <span class="pt">•</span> {c["nome"]}
+            <div class="rot-ctrl" data-hef="identidade">P{c["jogador"]} <span class="pt">•</span> {c["nome"]}
               <span class="pt">•</span> {c["via"]}</div>
             <div class="seg">{degraus}</div>
             {_barra(e["pct"], TETO, "", papel="forca", campo_num="mult",
@@ -1269,8 +1324,14 @@ def _conferir(doc):
     #    não é botão fraco: é botão que mente.
     for pedaco in corpo.split('class="ctrl vazia"')[1:]:
         bloco = pedaco.split('<div class="ctrl', 1)[0]
-        for proibido in ('data-papel="forca"', 'data-papel="lado"',
-                         'data-papel="testar"', 'data-papel="motor"'):
+        # OS DOIS ATRIBUTOS, e não só o `data-papel` — 03/09/2026. `lado` e
+        # `motor` deixaram de ser `data-papel` (ver :data:`PAPEIS_QUE_SAO_GESTO`)
+        # e uma régua que só olhasse o atributo antigo passaria a dar verde por
+        # VACUIDADE: o ajuste podia voltar ao lugar vazio sob o nome novo e ela
+        # não veria. É o mesmo defeito que ela existe para pegar.
+        for proibido in ('data-papel="forca"', 'data-papel="testar"',
+                         'data-papel="lado"', 'data-papel="motor"',
+                         'data-hef="lado"', 'data-hef="motor"'):
             exigir(proibido not in bloco, f"um lugar vazio tem ajuste vivo: {proibido!r}")
     # 4. O RESPIRO — a divisória no meio do vão, e o passo como o dobro do ar.
     exigir("--r-passo:calc(var(--r-ar) * 2)" in doc, "o passo deixou de ser o dobro do ar")
@@ -1335,6 +1396,27 @@ def _conferir(doc):
                         (DICA_DA_ESPERA_DO_AUTO, "os 5 segundos do Auto"),
                         (DICA_DOS_VALORES_QUE_PASSAM, "os valores que passam pela intensidade")):
         exigir(frase in corpo, f"a dica perdeu a frase da janela estável: {nome}")
+    # 11. TODO `data-papel` DESTA ABA TEM GESTO — 03/09/2026, e é a irmã da
+    #     régua 6. A 6 pega o nome que é VALOR e CLIQUE ao mesmo tempo; esta
+    #     pega o nome que é CLIQUE E NINGUÉM ATENDE.
+    #
+    #     Medido clicando a aba publicada no WebKit, com o daemon dela vivo:
+    #     `desenho`, `motor`, `identidade` e `lado` chegavam ao Python como
+    #     gesto, saíam em `[gesto sem dono]` no terminal e não punham uma letra
+    #     na tela (`desfechos` = `("sem dono", "")`, `recados: []`). São 138.804
+    #     px² de clique que não responde — o maior deles é o próprio desenho do
+    #     controle. Ver :data:`PAPEIS_QUE_SAO_GESTO`.
+    #
+    #     A LISTA NÃO SE DIGITA DUAS VEZES: os nomes vêm de
+    #     `PAPEIS_QUE_SAO_GESTO`, que é a mesma constante que o `_barra` e o
+    #     `_endereco_de_pintura` usam para escolher o atributo. Uma segunda
+    #     lista aqui seria a régua conferindo a si mesma.
+    sobrando = papeis - set(PAPEIS_QUE_SAO_GESTO)
+    exigir(not sobrando,
+           f"`data-papel` sem gesto que atenda: {sorted(sobrando)} — o ouvinte "
+           f"do piloto lê todo `data-papel` como nome de gesto, e um nome que "
+           f"nenhum pacote registra vira clique que não responde. Use "
+           f"`data-hef` para endereço que é só pintura")
 
     if falhas:
         raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "

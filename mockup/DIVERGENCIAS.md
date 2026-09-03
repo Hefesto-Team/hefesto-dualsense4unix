@@ -513,6 +513,54 @@ seção daqui**: a aba deixou de estar em trabalho.
   dono), então o `--publicar-enderecos 05` não alcança esta leva — é
   `--publicar 05`, que é ato dela. O atributo é endereço puro: não há uma regra
   de CSS que o leia em nenhuma das dez páginas.
+
+- **03/09/2026 · QUATRO CLIQUES QUE NÃO RESPONDIAM, e nenhum pixel mudou.**
+  Medido CLICANDO a página publicada no WebKit, com o daemon dela vivo e o
+  DualSense White no cabo. O ouvinte do piloto lê **qualquer** `data-papel` como
+  o nome de um gesto (`hefesto_vivo.manda_do_alvo`), e esta aba tinha quatro
+  nomes que nenhum pacote registra:
+
+  ```
+  [gesto sem dono] 05-vibracao.html · desenho    · '/* Fonte: docs/data/…'
+  [gesto sem dono] 05-vibracao.html · identidade · 'P1 · White · USB'
+  [gesto sem dono] 05-vibracao.html · motor      · 'Motor de vibração esquerdo…—/255'
+  [gesto sem dono] 05-vibracao.html · lado       · 'Motor de vibração esquerdo'
+
+  desfechos: os quatro -> ('sem dono', '')      tela depois de cada um: recados: []
+  ```
+
+  A frase vai para o terminal de quem lançou a janela; quem clica na janela não
+  lê esse terminal. Na tela, nada. As áreas, lidas do DOM vivo com
+  `getBoundingClientRect`: `desenho` 98.332 px² (o maior alvo da aba — o próprio
+  desenho do controle), `motor` 28.548, `identidade` 6.740, `lado` 5.184 —
+  **138.804 px²**, perto de um quarto do miolo.
+
+  **A CURA É O ATRIBUTO.** Os três endereços de pintura são `data-campo`,
+  `data-papel` e `data-hef` (`regua_do_mockup.ATRIBUTOS_DE_CAMPO`), e o ouvinte
+  de clique só lê o do meio. Os quatro passaram a `data-hef`: o pintor continua
+  achando por `[data-hef=X]`, a régua do mockup continua contando os quatro
+  campos, e o clique fantasma acabou. **Diff da regeração: 10 linhas, todas
+  trocando só o nome do atributo.** Fotografado antes e depois — a tela é a
+  mesma.
+
+  **Provado clicando a página curada**, os mesmos quatro elementos mais o
+  "Testar" do P1: `recusados: []`, `desfechos` só com
+  `05-vibracao.html:testar -> ('aplicou', '')`, e o mapa de gestos da página
+  reduzido aos sete que têm dono (`forca`, `testar`, `parar` e os quatro do
+  rodapé).
+
+  **O QUE ISTO NÃO CURA, e fica dito:** o interruptor de punho continua
+  PARECENDO um interruptor, com aceso e apagado, e continua sem fonte no produto
+  (`app/telas/vibracao.SEM_FONTE["lado:ligado"]`, fecha em MIGRA-VIBRACAO-06).
+  O clique nele agora é silêncio honesto em vez de despacho fantasma; **o botão
+  que não deveria estar ligado é decisão dela.**
+
+  **Para quem for publicar:** até o `--publicar 05` a página que o produto
+  renderiza continua com os quatro cliques mortos. E há um relógio: o guarda de
+  vacuidade de `tests/unit/test_o_lugar_vazio_para_de_mostrar_o_desenho.py`
+  (`test_o_molde_nao_toca_o_desenho_da_vibracao`) exige
+  `data-papel="desenho"` na página **publicada** — ele foi alargado para
+  aceitar `data-hef` também, senão a publicação o quebraria.
 ## 06-navegacao.html
 
 - **03/09/2026** — **A-COR-VEM-DO-APARELHO.** O desenho do controle em cada um
