@@ -110,6 +110,18 @@ rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
 # NASCE VERMELHO, e é o ponto: 360 cravados em sete das dez abas, o número de
 # onde as ondas partem. Ele distingue a TABELA dela (a folha com os 28 modelos,
 # que é o mecanismo certo) da ESCOLHA cravada (a folha podada para um só).
+# VERMELHO POR DECISÃO DELA, e não por descuido — 03/09/2026. Ele mede a página
+# PUBLICADA, e a bancada já está em ZERO: `--bancada` devolve 0 plástico, 0
+# colorway, 0 zona nas dez abas (era 503 na manhã deste dia). Os 358 que sobram
+# vivem só no publicado, e publicar é ATO DELA.
+#
+# ELA ESCOLHEU PUBLICAR POR ÚLTIMO, depois do install e dos cliques: *"deixa
+# para o fim, depois do install"*. Até lá este portão fica vermelho, e ficar
+# vermelho é o comportamento CERTO — ele está dizendo a verdade sobre a tela
+# que ela vê hoje.
+#
+# NÃO O CALE, e não publique para o silenciar. `--publicar` é a palavra dela, e
+# antecipá-lo entregaria dez abas que ela ainda não olhou.
 rapido|cor-vem-do-aparelho|py|scripts/check_a_cor_vem_do_aparelho.py
 rapido|colisao-de-sprints|py|scripts/check_colisao_de_sprints.py
 rapido|icones|bash|scripts/gerar_icones.sh --check
