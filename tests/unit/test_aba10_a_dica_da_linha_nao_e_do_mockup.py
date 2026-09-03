@@ -23,13 +23,20 @@ A célula dizia o aparelho; o ``title`` da MESMA linha dizia o desenho. E as
 duas metades da frase estavam erradas ao mesmo tempo: o perfil dela guarda
 ZERO ajustes por controle — o painel ao lado já anunciava ``0 de 2``.
 
-POR QUE NÃO SE PINTA, e é estrutural, não preguiça: o ``escrever()`` do piloto
-conhece sete alvos (``texto``, ``largura``, ``fundo``, ``valor``, ``html``,
-``cor``, ``classe``) e **nenhum escreve atributo**. O alvo ``atributo`` que
-nasceu nesta leva também não alcança — a guarda ``atributo_escrevivel`` aceita
-só nome ``data-*``/``aria-*``, para que ninguém possa forjar o selo
-``data-hef-visto``, e ``title`` cai fora por construção. Um ``title`` emitido
-pelo gerador fica congelado no arquivo para sempre.
+POR QUE NÃO SE PINTAVA, e era estrutural, não preguiça: o ``escrever()`` do
+piloto conhece sete alvos (``texto``, ``largura``, ``fundo``, ``valor``,
+``html``, ``cor``, ``classe``) e **nenhum escreve atributo**. O alvo
+``atributo``, que nasceu nesta leva, também não alcançava: a guarda
+``atributo_escrevivel`` aceitava só nome ``data-*``/``aria-*``, e ``title``
+caía fora por construção.
+
+**O CANAL ABRIU NO MESMO DIA — 03/09/2026.** ``atributo_escrevivel`` passou a
+aceitar ``title``, nomeado na lista curta e com a razão escrita no piloto: o
+``fim.html`` pedia ``data-hef-atributo="title"`` nas vinte páginas e era
+recusado CALADO. **A remoção desta dica deixa de ser a melhor resposta**: com um
+canal, ela pode voltar VIVA, com o modelo e a conta do aparelho, em vez de ficar
+fora por inércia. As três primeiras seções deste arquivo continuam valendo — o
+que mudou é que a quarta virou trabalho, e não mais um bilhete.
 
 TIRAR FOI A CURA, E NÃO PERDEU NADA: o modelo está na PRÓPRIA célula que o
 cursor toca (``guarda.nome``, vivo) e a conta está na coluna ao lado
@@ -48,9 +55,10 @@ AS QUATRO MORDIDAS, e cada uma acusa uma metade diferente:
     ponha `title="Nova Pink"` numa célula da tabela por controle
         -> `test_nenhuma_dica_da_tabela_nomeia_um_modelo_do_mapa` reprova, e
            ela pega os 28 do CSV, não os 4 do desenho.
-    ensine o piloto a escrever `title`
-        -> `test_alvo_nenhum_do_piloto_escreve_title` reprova, e aí a cura
-           pode ser revista: com um canal de pintura, a dica volta VIVA.
+    ensine o piloto a escrever `title` POR FORA da guarda (`el.title = t`)
+        -> `test_alvo_nenhum_do_piloto_escreve_title` reprova. O canal
+           legítimo — o alvo `atributo` com o nome na lista curta — já
+           existe desde 03/09; ver a §4.
 """
 from __future__ import annotations
 
@@ -209,13 +217,26 @@ def test_o_nome_do_modelo_so_vive_em_elemento_enderecado() -> None:
 # 4. O TRIPWIRE — o dia em que o piloto souber pintar `title`, revejam a cura
 # --------------------------------------------------------------------------
 def test_alvo_nenhum_do_piloto_escreve_title() -> None:
-    """A razão de a dica ter SAÍDO em vez de virar dado é que não há canal.
+    """O `escrever()` não pode ganhar um caminho para `title` FORA da guarda.
 
-    Se alguém abrir um — um alvo que escreva `title`, ou a guarda
-    `atributo_escrevivel` passar a aceitá-lo —, esta remoção deixa de ser a
-    melhor resposta: a dica pode voltar VIVA, com o modelo e a conta do
-    aparelho. Este teste é o bilhete para essa pessoa, e ele reprova no dia
-    em que o canal existir.
+    **O CANAL EXISTE — 03/09/2026, fato substituído.** Este bilhete dizia *"não
+    há canal, e ele reprova no dia em que houver"*, e as duas metades caíram no
+    mesmo dia: `atributo_escrevivel` passou a aceitar `title` (era o `fim.html`
+    pedindo `data-hef-atributo="title"` nas vinte páginas e sendo recusado
+    calado), e esta linha **não reprovou** — ela procura `el.title =` e
+    `setAttribute('title')` literais, e o ramo `atributo` escreve
+    `setAttribute(nome, t)` com o nome vindo da página.
+
+    **O QUE ISSO DEIXA PARA A ABA 10:** a dica da linha por controle foi
+    REMOVIDA justamente por não haver canal. Com um, ela pode voltar VIVA — com
+    o modelo e a conta do aparelho —, e não ficar fora por inércia. Ver
+    `aba10.linha_do_controle`; é trabalho de quem tomar aquela aba.
+
+    **O QUE ESTA LINHA AINDA GUARDA, e é por isso que ela fica:** o caminho de
+    fora da guarda. Um `el.title = t` no `escrever()` pintaria `title` sem
+    passar por `atributo_escrevivel`, e aí o nome do atributo deixaria de ser
+    uma decisão da lista curta — que é o que impede um `data-hef-visto` forjado.
+    O canal legítimo é o alvo `atributo` com o nome NA LISTA, e só ele.
 
     MORDIDA: acrescente `el.title = t;` ao `escrever()` de `hefesto_vivo`.
     """
@@ -229,7 +250,7 @@ def test_alvo_nenhum_do_piloto_escreve_title() -> None:
         "casa, esta régua precisa de um ponteiro novo, não de ser apagada")
     canais = re.findall(r"\.title\s*=|setAttribute\(\s*['\"]title['\"]", fonte)
     assert not canais, (
-        "o piloto aprendeu a escrever `title`. A dica da linha por controle "
-        "foi REMOVIDA em 03/09/2026 justamente por não haver canal — com um, "
-        "ela deve voltar viva (modelo e conta do aparelho), e não ficar fora "
-        "por inércia. Ver `aba10.linha_do_controle`.")
+        "o piloto ganhou um caminho para `title` FORA de `atributo_escrevivel`. "
+        "O canal legítimo é o alvo `atributo` com o nome na lista curta — um "
+        "atalho aqui tira do piloto a decisão de QUAL atributo pode ser escrito, "
+        "que é o que impede um `data-hef-visto` forjado.")

@@ -153,13 +153,34 @@ BOOTSTRAP = r"""
   // os donos de bloco e o ouvinte de gesto): o alvo não pode reescrever a placa
   // da porta por onde ele mesmo entrou.
   //
-  // `data-*` e `aria-*` é o que SOBRA, e chega para o que a lei pede: o
+  // `data-*` e `aria-*` é o que SOBRA, e chega para quase tudo que a lei pede: o
   // `data-colorway` do SVG, o `data-modelo`, e o `aria-label` que um leitor de
   // tela anuncia. Uma lista de proibidos, em vez desta de permitidos, teria de
   // crescer toda vez que o HTML crescer.
+  //
+  // O `title` É A ÚNICA EXCEÇÃO, e ela é NOMEADA — 03/09/2026. O `fim.html`, que
+  // é um só para as dez páginas, pede `data-hef-alvo="atributo"
+  // data-hef-atributo="title"` nos botões Salvar e Exportar, para a dica dizer o
+  // NOME do perfil ativo em vez de congelar um exemplo (`7db1e0e6`). Aquele
+  // commit deu por certo que este alvo "sabe escrever num `title`" — e a guarda o
+  // recusava CALADA: as 20 páginas (dez publicadas, dez da bancada) pediam um
+  // atributo que nunca pintava, e o único barulho veio do portão
+  // `test_todo_data_hef_atributo_publicado_e_escrevivel`.
+  //
+  // ELE PODE ENTRAR, e as três razões da lista curta não o alcançam: `title` não
+  // é `data-hef` (não forja o selo), não é vocabulário de endereço (não move a
+  // placa da porta) e não é `style`/`class`/`id` (não desfaz o que outro alvo
+  // acabou de pintar no mesmo elemento). É texto de dica, e nada mais.
+  //
+  // E ELE MUDA UMA DECISÃO DE OUTRA ABA: a dica da linha por controle da
+  // `10-perfis` foi REMOVIDA em 03/09 por não haver canal de pintura
+  // (`test_aba10_a_dica_da_linha_nao_e_do_mockup`, §4). O canal existe agora —
+  // aquela dica pode voltar VIVA, com o modelo e a conta do aparelho.
   const ATRIBUTO_DE_ENDERECO = ['data-campo', 'data-papel', 'data-controle',
                                 'data-uniq', 'data-gesto'];
+  const ATRIBUTO_A_MAIS = ['title'];
   function atributo_escrevivel(n){
+    if(ATRIBUTO_A_MAIS.indexOf(n) >= 0) return true;
     return /^(data|aria)-[a-z0-9]+(-[a-z0-9]+)*$/.test(n)
            && n.indexOf('data-hef') !== 0
            && ATRIBUTO_DE_ENDERECO.indexOf(n) < 0;

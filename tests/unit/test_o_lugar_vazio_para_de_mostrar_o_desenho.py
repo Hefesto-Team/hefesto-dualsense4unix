@@ -319,8 +319,20 @@ def test_o_travessao_nao_pousa_em_marca_que_o_texto_nao_devolve(pacotes_mod):
         "navega"}, (
         "a `06-navegacao` publicada perdeu o `<span class=\"bolinha\">` dentro "
         "do `navega` — a razão desta régua mudou")
-    assert "aceso" in pacotes_mod.enderecos_que_o_texto_apaga(
-        "04-iluminacao.html")
+    # A SEGUNDA ÂNCORA MUDOU DE ENDEREÇO — 03/09/2026, fato substituído. Ela era
+    # `04-iluminacao·aceso`, e o `aceso` NÃO EXISTE MAIS na página publicada: a
+    # cura de 02/09 renomeou o endereço para `luz`, com alvo `html`, justamente
+    # para o `el.textContent` parar de apagar as duas tiras e as cinco lâmpadas
+    # (`a04_iluminacao`, a nota do campo `luz`) — e ela publicou em `3f9160f4`.
+    # O `html` já está em `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`, então aquele
+    # desenho passou a ser poupado por OUTRA porta, e não por esta.
+    #
+    # A âncora de hoje é `troca.item`, que é a mesma forma de dano: um
+    # `<i class="dono">` vazio e as `luzinhas`, filhos que só o CSS desenha.
+    assert "troca.item" in pacotes_mod.enderecos_que_o_texto_apaga(
+        "04-iluminacao.html"), (
+        "a `04-iluminacao` publicada perdeu os filhos mudos do `troca.item` — "
+        "esta linha existe para o teste acima não passar por vacuidade")
 
 
 def test_o_travessao_nao_pousa_no_fundo_nem_na_barra(pacotes_mod):
