@@ -368,6 +368,18 @@ class _Leitor(html.parser.HTMLParser):
             # ``color`` é fechada e ``_cor_css`` a reproduz. Ver a nota do
             # ``LER_CAMPOS``, com a sondagem que a mediu.
             valor = _cor_css(_do_estilo(d.get("style", ""), "color"))
+        elif alvo == "atributo":
+            # O ALVO `atributo` — o que o ARQUIVO crava no atributo que o
+            # `data-hef-atributo` nomeia. Sem este ramo a régua leria o TEXTO de
+            # um `<svg>` (que é vazio) e chamaria de ENDEREÇO MORTO todo
+            # `data-colorway` que o produto pintasse certo — foi o que acabou de
+            # acontecer com o alvo `html`, e a lição ficou escrita em
+            # `_declarado_neste_elemento`.
+            #
+            # O VAZIO POR OMISSÃO CASA COM O `|| ''` do `LER_CAMPOS`: atributo
+            # ausente é `""` nos dois lados, que é como o produto deixa um SVG
+            # cujo aparelho não disse a cor.
+            valor = d.get((d.get("data-hef-atributo") or "").strip().lower(), "")
         elif alvo == "classe":
             classe = d.get("data-hef-classe") or "on"
             quando = d.get("data-hef-quando") or ""
@@ -867,6 +879,18 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
         # O VAZIO APAGA A COR DE LINHA — o `escrever()` põe `''` no
         # `style.color`, e não o travessão, que não é cor nenhuma.
         return _cor_css("" if declarado == TRAVESSAO else declarado)
+    if campo.alvo == "atributo":
+        # O TRAVESSÃO APAGA O ATRIBUTO, e não vira o texto `—`. O `escrever()`
+        # chama `removeAttribute` no vazio e no travessão (é o mesmo par de
+        # caminhos do alvo `plastico`: `""` é a cor que o aparelho não respondeu,
+        # `—` é o que o molde escreve num lugar sem dono), e atributo ausente
+        # volta do `LER_CAMPOS` como `''`.
+        #
+        # Sem esta linha a régua compararia `'—'` com `''` e acusaria ENDEREÇO
+        # MORTO exatamente sobre a mesa dela: pelo rádio o mapa de canais
+        # responde que a cor do aparelho NÃO se lê, e todo SVG daquele controle
+        # é pintado com o vazio.
+        return "" if declarado == TRAVESSAO else declarado
     if campo.alvo != "classe":
         return declarado
     if not campo.quando:

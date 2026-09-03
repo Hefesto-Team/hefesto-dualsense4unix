@@ -87,6 +87,7 @@ jobs:
       # RECUSA o que não entende dizendo a linha.
       - run: python3 scripts/check_o_desenho_aprovado.py
       - run: python3 scripts/check_identidade_vem_de_cima.py
+      - run: python3 scripts/check_a_cor_vem_do_aparelho.py
       - run: python3 scripts/check_colisao_de_sprints.py
 
   acentuacao:

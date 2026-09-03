@@ -91,6 +91,14 @@ completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chamador.py
 rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
+# 03/09/2026, a lei dela: *"cada pessoa tem um dualsense diferente (…) nada
+# hardcoded, trazer tudo que eu já mapeei"*. O irmão acima acha cor congelada
+# em elemento SEM endereço; este acha cor de aparelho cravada mesmo ONDE o
+# endereço existe -- porque um endereço com o alvo errado não alcança a cor.
+# NASCE VERMELHO, e é o ponto: 360 cravados em sete das dez abas, o número de
+# onde as ondas partem. Ele distingue a TABELA dela (a folha com os 28 modelos,
+# que é o mecanismo certo) da ESCOLHA cravada (a folha podada para um só).
+rapido|cor-vem-do-aparelho|py|scripts/check_a_cor_vem_do_aparelho.py
 rapido|colisao-de-sprints|py|scripts/check_colisao_de_sprints.py
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
