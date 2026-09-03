@@ -120,9 +120,23 @@ def test_a_bancada_nao_traz_cor_de_plastico_no_estilo_de_linha():
 
 
 def test_a_bancada_tem_a_folha_enderecada_do_plastico():
-    """E ela nasce VAZIA: um valor aqui seria a terceira cópia do desenho."""
+    """E o produto a TROCA INTEIRA — por isso ela nasce com o desenho dentro.
+
+    FATO SUBSTITUÍDO, 03/09/2026. Esta linha exigia
+    `<style data-campo="plastico-css"></style>` — a folha VAZIA, com a do
+    desenho separada por cima. **Duas folhas só se sobrepõem no assento que a
+    segunda NOMEIA**, e o buraco está medido no WebKitGTK: com um controle só na
+    mesa (P1 White), o `p2` ficava `rgb(126, 184, 212)` — Starlight Blue, a cor
+    do desenho, num assento onde não há controle nenhum.
+
+    Agora é UMA folha, com `data-hef-alvo="html"`: ela nasce com o desenho (é o
+    que a bancada tem de mostrar) e o produto substitui o `innerHTML` inteiro.
+    O que a troca não escreve deixa de existir.
+    `test_aba02_a_cor_do_plastico_vem_do_aparelho.py` é quem guarda a cascata.
+    """
     doc = BANCADA.read_text(encoding="utf-8")
-    assert '<style data-campo="plastico-css"></style>' in doc
+    assert '<style data-campo="plastico-css" data-hef-alvo="html">' in doc
+    assert "plastico-do-desenho" not in doc
 
 
 # ---------------------------------------------------------------------------

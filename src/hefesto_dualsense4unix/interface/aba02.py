@@ -1947,14 +1947,23 @@ def fita_clicavel(doc, mesa=None):
 # texto · largura · fundo · valor · html · classe · cor, e nenhum escreve
 # propriedade personalizada (`hefesto_vivo.py`, a função `escrever`).
 #
-# ENTÃO A COR DO DESENHO VIRA REGRA e ganha um lugar onde o produto escreve por
-# cima: duas folhas, nesta ordem, no fim do `<head>`.
+# ENTÃO A COR DO DESENHO VIRA REGRA, numa folha que o produto TROCA INTEIRA:
 #
-#     <style id="plastico-do-desenho">   o que ELA aprovou. Sai da MESA.
-#     <style data-campo="plastico-css">  o que o produto LEU. Nasce vazia.
+#     <style data-campo="plastico-css" data-hef-alvo="html">
 #
-# A segunda vem depois e usa o MESMO seletor, então ela vence sem `!important`.
-# Vazia, o desenho fica de pé — que é o que a bancada tem de mostrar.
+# Ela nasce com o que ELA aprovou (sai da MESA), e é isso que a bancada mostra.
+# Com o daemon vivo, o `escrever` do piloto substitui o `innerHTML` dela pelo
+# que `pacotes.a02_controles.folha_do_plastico` monta da mesa LIDA.
+#
+# ERAM DUAS FOLHAS ATÉ 03/09/2026 — a do desenho e uma vazia por cima —, E O
+# BURACO ESTÁ MEDIDO. Duas folhas só se sobrepõem no assento que a segunda
+# NOMEIA. Com um controle só na mesa (P1 White), o produto escrevia uma regra
+# para o `p1` e o `p2` ficava com o `#7eb8d4` do desenho: **Starlight Blue num
+# assento onde não há controle nenhum** — medido no WebKitGTK desta máquina,
+# `getComputedStyle(.ctl[data-controle="p2"]).borderTopColor` →
+# `rgb(126, 184, 212)`. É exatamente a mentira que a lei dela veio matar.
+#
+# Uma folha só não tem esse buraco: o que a troca não escreve, deixa de existir.
 #
 # ISTO NÃO É EDITAR O HTML À MÃO: é o gerador terminando a própria saída, com
 # âncora asserida, exatamente como o `fita_clicavel` acima. E ele roda só no
@@ -1986,17 +1995,50 @@ CHIP_COM_COR = re.compile(
     r'(<label for="(c-[^"]+)" class="chip plastico"[^>]*?)'
     r' style="--plastico:(#[0-9a-fA-F]{3,8})"')
 
+#: O PISO DO PLÁSTICO — a cor de quem a folha NÃO nomeia, e ele é a metade
+#: que faz a troca inteira ser segura.
+#:
+#: `.ctl{border:2px solid var(--plastico)}` usa uma `var()`, e uma `var()` sem
+#: valor **invalida a declaração inteira, em silêncio**: a borda não fica cinza,
+#: ela deixa de existir. Está medido neste próprio arquivo, no comentário do
+#: `.ctl.off` — a foto mostrou dois lugares soltos, sem caixa nenhuma. Sem este
+#: piso, um assento que a mesa VIVA não nomeia perderia a borda ao invés de
+#: ficar neutro.
+#:
+#: A ESPECIFICIDADE É A MESMA das regras por assento — `.ctl[data-controle]` e
+#: `.ctl[data-controle="p1"]` valem (0,2,0) —, então quem decide é a ORDEM, e
+#: por isso o piso vem PRIMEIRO na folha. Nenhum `!important` no caminho.
+#:
+#: O TOM É O TOKEN QUE O LUGAR VAZIO JÁ USA (`.ctl.off{border:1px solid
+#: var(--border-forte)}`), e é o mesmo `BORDA_SEM_COR` do lado do produto
+#: (`pacotes/a02_controles.py`). Não é cor nova: é o "nada" que a regra dela
+#: manda mostrar quando não se leu cor nenhuma.
+PISO_DO_PLASTICO = ".ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}"
+
+
+def seletor_do_plastico(pref: str) -> str:
+    """Os dois lugares onde o plástico de um assento pinta: a caixa e o chip.
+
+    UM SELETOR SÓ PARA OS DOIS, e não dois — é a mesma forma que
+    `pacotes.a02_controles.folha_do_plastico` escreve com a mesa VIVA. Duas
+    gramáticas para a mesma regra é o que faz a folha do produto e a do desenho
+    divergirem sem ninguém ver; o
+    `test_a_cor_do_plastico_da_02_vem_do_aparelho` compara as duas.
+    """
+    return f'.ctl[data-controle="{pref}"],.fita .chip[for="c-{pref}"]'
+
 
 def cor_do_plastico_por_regra(doc):
-    """Tira o `--plastico` cravado do `style=` e o devolve como folha de estilo."""
-    regras = []
+    """Tira o `--plastico` cravado do `style=` e o devolve como folha VIVA."""
+    das_caixas: dict[str, str] = {}
+    dos_chips: dict[str, str] = {}
 
     def _caixa(m):
-        regras.append(f'  .ctl[data-controle="{m.group(4)}"]{{--plastico:{m.group(2)}}}')
+        das_caixas[m.group(4)] = m.group(2)
         return m.group(1) + m.group(3)
 
     def _chip(m):
-        regras.append(f'  .fita .chip[for="{m.group(2)}"]{{--plastico:{m.group(3)}}}')
+        dos_chips[m.group(2).removeprefix("c-")] = m.group(3)
         return m.group(1)
 
     doc, caixas = CAIXA_COM_COR.subn(_caixa, doc)
@@ -2008,18 +2050,25 @@ def cor_do_plastico_por_regra(doc):
         raise SystemExit(
             f"ERRO no plástico: {caixas} caixa(s) e {chips} chip(s) com cor cravada, "
             f"e a mesa tem {len(CONECTADOS)} conectado(s) — a forma mudou.")
+    # A CAIXA E O CHIP DO MESMO ASSENTO SÃO O MESMO PLÁSTICO. Se divergirem, o
+    # seletor único calaria uma das duas cores — e a página sairia mostrando uma
+    # divergência que ninguém veria.
+    if das_caixas != dos_chips:
+        raise SystemExit(
+            f"ERRO no plástico: as caixas dizem {das_caixas} e os chips dizem "
+            f"{dos_chips} — o mesmo assento com duas cores.")
     if "--plastico:#" in doc.split("</head>", 1)[-1]:
         raise SystemExit("ERRO no plástico: sobrou cor cravada no corpo da página")
-    folhas = ('<style id="plastico-do-desenho">\n'
-              + "\n".join(regras)
-              + "\n</style>\n"
-              # NASCE VAZIA de propósito: um valor aqui seria uma TERCEIRA cópia
-              # do desenho, e a régua `check_identidade_vem_de_cima` não olha
-              # dentro de `<style>` — congelar aqui seria esconder, não curar.
-              + '<style data-campo="plastico-css"></style>\n')
+    regras = [PISO_DO_PLASTICO] + [
+        f"{seletor_do_plastico(pref)}{{--plastico:{cor}}}"
+        for pref, cor in das_caixas.items()
+    ]
+    folha = ('<style data-campo="plastico-css" data-hef-alvo="html">\n'
+             + "\n".join(f"  {r}" for r in regras)
+             + "\n</style>\n")
     if "</head>" not in doc:
         raise SystemExit("ERRO no plástico: a página não tem `</head>`")
-    return doc.replace("</head>", folhas + "</head>", 1)
+    return doc.replace("</head>", folha + "</head>", 1)
 
 
 # ESCREVER O ARQUIVO É O `__main__`, E NÃO O IMPORT (29/08/2026).
@@ -2182,9 +2231,22 @@ def _conferir(doc):
     exigir("--plastico:#" not in doc.split("</head>", 1)[-1],
            "a cor do plástico voltou para o `style=` — estilo de linha vence "
            "folha de estilo, e o produto não tem como reescrevê-la")
-    exigir('<style data-campo="plastico-css">' in doc,
-           "a folha endereçada do plástico sumiu — o produto perde onde escrever "
-           "a cor que leu")
+    exigir('<style data-campo="plastico-css" data-hef-alvo="html">' in doc,
+           "a folha endereçada do plástico sumiu, ou perdeu o `data-hef-alvo=html` "
+           "— sem ele o produto escreve a folha como TEXTO por cima da página, e "
+           "a cor do desenho continua mandando")
+    # UMA FOLHA SÓ, E ELA TEM O PISO. Duas folhas se sobrepõem apenas no
+    # assento que a segunda nomeia — com um controle na mesa, o outro ficava
+    # com a cor do desenho (medido no WebKit: `rgb(126, 184, 212)` num assento
+    # vazio). E sem o piso, o assento que a troca não nomeia perde a borda
+    # inteira, porque `var()` sem valor invalida a declaração.
+    exigir(doc.count('data-campo="plastico-css"') == 1
+           and "plastico-do-desenho" not in doc,
+           "a folha do plástico deixou de ser UMA — duas folhas voltam a deixar "
+           "a cor do desenho de pé no assento que a mesa viva não nomeia")
+    exigir(PISO_DO_PLASTICO in doc,
+           "o piso do plástico sumiu da folha — o assento que a mesa viva não "
+           "nomeia perderia a borda em vez de ficar neutro")
     for nome in {str(c["nome"]) for c in CONECTADOS}:
         exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>'),
                f"o nome de plástico `{nome}` aparece no miolo sem endereço")
