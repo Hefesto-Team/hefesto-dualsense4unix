@@ -261,6 +261,57 @@ seção daqui**: a aba deixou de estar em trabalho.
   porque a página publicada ainda não oferece o `—`. O dia da publicação troca a
   palavra sozinho, pelo mesmo mecanismo.
 
+- **02/09/2026** — **a "Função do teclado" ganhou as três palavras que você
+  escolheu**, e é a única mudança que se vê: `Só dentro do jogo` · `Só fora do
+  jogo` · `Desativado`. A lista **nasce marcada em `Só fora do jogo`**, que é o
+  padrão que você pediu.
+
+  **A opção que saiu foi "Ligada — atalhos e teclado na tela", e ela estava
+  mentindo.** O Hefesto já cala o teclado emulado quando um jogo assume o
+  controle — é a cura da sua queixa de 29/07 (*"aperto r1 e ele muda de app ao
+  invés de funcionar no jogo"*), em `daemon/lifecycle.py:2263`. Logo o teclado
+  ligado **já era** "só fora do jogo": a etiqueta é que prometia mais.
+
+  **Uma das três recusa dizendo, e é a `Só dentro do jogo`.** Ela é o inverso do
+  que o produto faz, e precisa de um campo novo no perfil (o portão com o sinal
+  trocado). Enquanto ele não existir, escolhê-la não faz nada e a lista volta
+  sozinha para o que está valendo — em vez de fingir que mudou.
+
+  **A LINHA DIZ A VERDADE NOS DOIS ESTADOS, hoje e depois de publicar.** A
+  pintura de um `<select>` só entra quando o texto casa com uma `<option>`
+  (`hefesto_vivo.py`, ramo `alvo === 'valor'`), e a sua lista publicada oferece
+  `Ligada — atalhos e teclado na tela` · `Só fora do jogo` · `Desligada`. Então
+  o produto passou a **falar a língua da página que está na sua tela**: com o
+  teclado ligado ele diz `Só fora do jogo` (que já existe nas duas listas), e
+  com ele desligado diz `Desligada` hoje e `Desativado` no dia em que você
+  publicar — sem ninguém mexer em nada. E clicar em qualquer uma das três
+  opções que você vê hoje funciona: as duas do desenho antigo são entendidas
+  como sinônimos até a publicação, e o teste que as guarda avisa quando elas
+  puderem ser apagadas.
+
+- **02/09/2026** — **as 21 listas de "o que cada botão faz" param de desfazer a
+  sua escolha, e isto ESPERA A SUA PUBLICAÇÃO.** É a decisão que você tomou
+  junto com o "Guardar FICA". Nenhum pixel muda: o que entrou foram endereços
+  invisíveis (`data-gesto="linha-de-botao"` nas 21, e
+  `data-gesto="fechar-definicoes"` no `×` e no `Cancelar` da tela de
+  definições).
+
+  **O que eles curam, medido:** trocar uma linha nunca chegava ao Python — o
+  ouvinte da janela não reconhece `data-campo` nem `data-linha` como algo
+  clicável — e o tique de meio segundo reescrevia a sua escolha por cima em até
+  1,5 s. Com isso, o "Guardar" ao lado **nunca recebia** uma tabela diferente do
+  perfil: ele caía sempre no "não havia o que guardar", e a recusa ainda mandava
+  *"troque a linha antes de clicar"*, um caminho que não existia.
+
+  Depois de publicar, a tabela para de ser repintada enquanto você mexe, e volta
+  a acompanhar o perfil quando você **guarda**, quando **volta ao padrão**,
+  quando **fecha a tela** (o `×` ou o `Cancelar`) ou quando **sai da aba**.
+
+  **Por que só depois:** os endereços são atributos do DESENHO, e o produto lê a
+  página publicada. Medido em 02/09 — `data-gesto="linha-de-botao"` aparece **21
+  vezes na bancada e ZERO na página que o produto renderiza**. Até você
+  publicar, a tabela continua se comportando como hoje.
+
 
 ## 07-lancadores.html
 - **02/09/2026** — **um comentário HTML dentro da lista do cartão da Steam, e
