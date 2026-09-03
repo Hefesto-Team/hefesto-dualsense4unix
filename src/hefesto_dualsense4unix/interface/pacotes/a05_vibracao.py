@@ -86,6 +86,36 @@ SEM_DONO: dict[str, str] = {
 }
 
 
+def _plastico_do_item(controle: dict[str, Any]) -> str:
+    """O `#hex` da cor do plástico daquele controle, ou `""` quando não se sabe.
+
+    O item de mesa traz o SLUG (`mesa_viva.mesa_do_estado`, campo `cor`), e o
+    dono da tradução slug → cor é `monta.cor_da_zona`, que LÊ o `<style>` que o
+    `gerar_cores_do_dualsense.py` escreveu no SVG. Digitar um hexadecimal aqui
+    seria a segunda lista de cores que o `docs/data/cores-do-dualsense.csv`
+    existe para não ter.
+
+    VAZIO É RESPOSTA, e é a mais comum na mesa dela: pelo rádio o mapa de canais
+    diz `identidade.cor_do_aparelho = não`, o `LeitorDeCor` guarda `None`, e o
+    item chega com `cor = ""`. Devolver `""` faz o pintor APAGAR a variável — a
+    moldura cai no tom neutro em vez de ficar com a cor do desenho.
+
+    `cor_da_zona` LEVANTA `SystemExit` num slug que não existe, e `SystemExit`
+    não é `Exception`: os dois entram no `except` de propósito. Um colorway novo
+    no aparelho dela não pode derrubar a aba inteira — ele deixa a moldura sem
+    cor, que é o mesmo caminho do "não sei".
+    """
+    slug = str(controle.get("cor") or "")
+    if not slug:
+        return ""
+    try:
+        import monta
+
+        return str(monta.cor_da_zona(slug))
+    except (Exception, SystemExit):
+        return ""
+
+
 def _do_vpad(ff: dict[str, Any], player: Any) -> dict[str, Any]:
     """O bloco `per_vpad` daquele jogador, ou `{}`.
 
@@ -144,13 +174,28 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     import mesa_viva
 
 
-    bruto = _tela.pacote_da_mesa(ctx.state, ctx.mesa, ctx.conectados,
+    # A COR DO PLÁSTICO ENTRA NA MESA AQUI, e o campo é do PRODUTO: a
+    # `app/telas/vibracao.pacote_da_coluna` devolve `controle["plastico"]` desde
+    # que nasceu, com a nota de que a cor *"vem pronta, e não se resolve aqui,
+    # porque quem sabe traduzir colorway em cor é o gerador do desenho"*. Só que
+    # NINGUÉM a punha: `mesa_viva.mesa_do_estado` monta o item com `cor` (o slug)
+    # e `nome`, e nunca com `plastico` — o campo saía vazio em todo tique desde
+    # 01/09/2026. Traduzir slug em `#hex` é uma linha, e ela mora do lado da
+    # interface, que é quem conhece `monta.cor_da_zona`.
+    mesa = [dict(c, plastico=_plastico_do_item(c)) for c in ctx.mesa]
+    bruto = _tela.pacote_da_mesa(ctx.state, mesa, ctx.conectados,
                                  contagem=mesa_viva.texto_da_contagem(ctx.mesa))
     colunas: dict[str, dict[str, Any]] = {}
     for uniq, col in (bruto.get("colunas") or {}).items():
         pct = col.get("pct") or {}
         plano = {
             "identidade": _sem_marcacao(col.get("identidade", "")),
+            # A COR DA MOLDURA, e ela é o campo que a lei da identidade cobra:
+            # a borda em volta do desenho passa a ser a cor do controle LIDO, e
+            # não a do mockup. Vazio é resposta válida — pelo rádio o mapa diz
+            # que a cor não se lê —, e o alvo `plastico` do pintor apaga a
+            # variável em vez de inventar um tom.
+            "plastico": str(col.get("plastico") or ""),
             # O NÚMERO DO MULTIPLICADOR, e não o nome do degrau: o desenho
             # escreve `150%` nesta caixa, ao lado do trilho e do "Máx". Quem diz
             # QUAL degrau está aceso é a classe `on` do botão — e ela não tem
