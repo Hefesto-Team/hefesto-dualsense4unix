@@ -303,6 +303,10 @@ def apagar_os_lugares_sem_dono(carga: dict[str, Any]) -> dict[str, Any]:
     chaves: set[str] = set()
     for campos in colunas.values():
         chaves |= set(campos)
+    # OS OCUPADOS SÃO LIDOS ANTES DO PREENCHIMENTO, e é a única janela em que
+    # dá para lê-los: três linhas abaixo `colunas` passa a ter os quatro
+    # lugares, e a diferença entre "tem dono" e "recebeu travessão" some.
+    ocupados = sorted(set(colunas) & TODOS_OS_LUGARES)
     apagar = sorted(TODOS_OS_LUGARES - set(colunas))
     for pref in apagar:
         colunas[pref] = dict.fromkeys(chaves, TRAVESSAO)
@@ -310,6 +314,18 @@ def apagar_os_lugares_sem_dono(carga: dict[str, Any]) -> dict[str, Any]:
     # P2 continuava com a borda de CONECTADO e os botões de máscara acesos. Meio
     # apagado é pior que aceso — quem olha lê a borda antes de ler o campo.
     carga["vazios"] = apagar
+    # E O COMPLEMENTO, que faltava — QUEBRA-CARTAO-QUE-NAO-REABRE-01,
+    # 03/09/2026. `vazios` só sabia MARCAR: o piloto escrevia
+    # `data-conectado="nao"` e a classe `off`, e não havia uma linha em lugar
+    # nenhum que as tirasse. O primeiro controle a chegar num lugar que já
+    # esvaziou uma vez encontrava o cartão fechado — 24 px de altura contra os
+    # 358 de um cartão aberto — e o dado dela chegava INVISÍVEL. Só recarregar a
+    # página (sair da aba e voltar) desfazia.
+    #
+    # POR QUE O DESENHO NÃO RESOLVIA SOZINHO: o P3 e o P4 nascem com a marca no
+    # HTML, por decisão dela de 31/08. Uma marca que o HTML crava e o produto só
+    # sabe acrescentar é uma marca de mão única.
+    carga["ocupados"] = ocupados
     return carga
 
 
