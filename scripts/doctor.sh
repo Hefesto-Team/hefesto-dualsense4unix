@@ -2035,6 +2035,9 @@ PAR = re.compile(r'^"LaunchOptions"\s+"(?P<v>(?:\\.|[^"\\])*)"$', re.IGNORECASE)
 
 canonicos: dict[str, str] = {}
 secundarios: dict[str, str] = {}
+#: appid -> o VALOR que está lá fora. É ele que diz se a linha é NOSSA
+#: (tem a chamada do wrapper) ou se é sobra de texto de quem escreveu.
+valor_secundario: dict[str, str] = {}
 lidos = 0
 for vdf in discover_vdfs():
     if is_sandboxed_layout(vdf):
@@ -2074,34 +2077,56 @@ for vdf in discover_vdfs():
             canonicos[appid] = valor
         else:
             secundarios.setdefault(appid, "/".join(pilha[:-1]))
+            valor_secundario.setdefault(appid, valor)
     lidos += 1 if visto else 0
 
 if not lidos:
     sys.exit(0)
 sem = [a for a, v in canonicos.items() if WRAPPER_PREFIX not in v]
 orfaos = [a for a in secundarios if a not in canonicos]
+nossos = [a for a in orfaos if WRAPPER_PREFIX in valor_secundario.get(a, "")]
+alheios = [a for a in orfaos if a not in nossos]
 print("total=%d" % len(canonicos))
 print("sem=" + "; ".join(rotulo_do_jogo(a) for a in sorted(sem)))
-print("orfaos=" + "; ".join(rotulo_do_jogo(a) for a in sorted(orfaos)))
+print("orfaos_nossos=" + "; ".join(rotulo_do_jogo(a) for a in sorted(nossos)))
+print("orfaos_alheios=" + "; ".join(rotulo_do_jogo(a) for a in sorted(alheios)))
 print("poluidos=%d" % len(secundarios))
+print(
+    "poluidos_nossos=%d"
+    % sum(1 for v in valor_secundario.values() if WRAPPER_PREFIX in v)
+)
 PY
 )"
     [[ -n "${saida}" ]] || return 0
-    local total sem orfaos poluidos
+    local total sem orfaos_nossos orfaos_alheios poluidos poluidos_nossos
     total="$(sed -n 's/^total=//p' <<<"${saida}")"
     sem="$(sed -n 's/^sem=//p' <<<"${saida}")"
-    orfaos="$(sed -n 's/^orfaos=//p' <<<"${saida}")"
+    orfaos_nossos="$(sed -n 's/^orfaos_nossos=//p' <<<"${saida}")"
+    orfaos_alheios="$(sed -n 's/^orfaos_alheios=//p' <<<"${saida}")"
     poluidos="$(sed -n 's/^poluidos=//p' <<<"${saida}")"
+    poluidos_nossos="$(sed -n 's/^poluidos_nossos=//p' <<<"${saida}")"
 
     if [[ -n "${sem}" ]]; then
         fail "na árvore que a Steam de fato lê (Software/Valve/Steam/apps), ESTE(S) jogo(s) NÃO chamam o wrapper: ${sem} — sem eles, no Bluetooth o jogo tende a não enxergar controle nenhum, mesmo com o controle vivo e o perfil aplicado. Reparo: o Hefesto repõe sozinho assim que a Steam fechar (é quando a reposição sobrevive), e também ao salvar ou aplicar um perfil"
     else
         pass "os ${total:-0} jogos da árvore viva (Software/Valve/Steam/apps) chamam o wrapper"
     fi
-    if [[ -n "${orfaos}" ]]; then
-        warn "Opções de Inicialização escritas por nós FORA da árvore viva, para jogo(s) que nem existem nela: ${orfaos} — a Steam nunca lê essas linhas, e o censo as conta como cobertura; é falso conforto, não defeito no jogo"
+    # AUTORIA-DA-SOBRA-01 (02/09/2026): as duas frases daqui AFIRMAVAM duas
+    # coisas que a medição derrubou — que a linha era "escrita por nós", sem
+    # olhar o valor, e que "o censo as conta como cobertura", que o censo não
+    # faz desde a âncora de caminho de 16/08 (ARVORE-ERRADA-01). Medido no vdf
+    # dela: o único órfão (appid 413080) carrega `VKD3D_CONFIG=no_upload_hvv
+    # %command%` — sem a chamada do wrapper — e o `censo_do_wrapper` devolveu
+    # 63 com wrapper, que é exatamente o total da árvore viva. Agora a autoria
+    # é LIDA no valor, e o que sobra é dito pelo que é: inerte.
+    if [[ -n "${orfaos_nossos}" ]]; then
+        warn "Opções de Inicialização NOSSAS (com a chamada do wrapper) numa árvore que a Steam não lê, para jogo(s) que nem existem na árvore viva: ${orfaos_nossos} — não quebram nada e não contam como cobertura, mas são lixo nosso no arquivo dela; recolha com a Steam fechada: python3 ${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py --recolher-fora-da-arvore-viva"
+    elif [[ -n "${orfaos_alheios}" ]]; then
+        info "sobra inerte numa árvore que a Steam não lê, para jogo(s) fora da árvore viva: ${orfaos_alheios} — a linha NÃO carrega a nossa chamada do wrapper, e o censo não a conta (ele lê só Software/Valve/Steam/apps desde 16/08). Quem abriu esse buraco foi um escritor nosso sem âncora, em 21/07; para recolher, com a Steam fechada: python3 ${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py --recolher-fora-da-arvore-viva"
+    elif [[ "${poluidos_nossos:-0}" -gt 0 ]]; then
+        info "${poluidos_nossos} de ${poluidos:-0} bloco(s) de 'apps' fora da árvore viva ainda têm a chamada do wrapper (escritas por nós em 21/07) — inertes para a Steam e ignoradas pelo censo; recolha com a Steam fechada: python3 ${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py --recolher-fora-da-arvore-viva"
     elif [[ "${poluidos:-0}" -gt 0 ]]; then
-        info "${poluidos} bloco(s) de 'apps' fora da árvore viva também têm LaunchOptions (escritas por nós em 21/07) — inertes para a Steam, mas é delas que vem o falso conforto do censo"
+        info "${poluidos} bloco(s) de 'apps' fora da árvore viva também têm LaunchOptions — inertes para a Steam, sem a chamada do wrapper, e o censo não as lê. Quem as pôs lá foi um escritor nosso sem âncora (21/07); para recolher, com a Steam fechada: python3 ${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py --recolher-fora-da-arvore-viva"
     fi
     return 0
 }
@@ -3844,6 +3869,29 @@ print("naosei=" + rot("nao_sei"))
 }
 
 # PLAT-01: relatório read-only do Proton pinado (proton_pin.py --report).
+#
+# CONSELHO-QUE-NAO-CURA-01 (02/09/2026) — DOIS destes avisos mandavam fazer
+# algo que não resolve, e conselho que não funciona é pior que aviso nenhum:
+# ele gasta a confiança de quem o segue.
+#
+# 1. *"o manifesto do hefesto não bate — rode ./install.sh"*. Medido na máquina
+#    dela: o `GE-Proton10-34` foi instalado por FORA (ProtonUp, 03/04), não tem
+#    o `.hefesto-proton-pin.json` dentro, e o `ensure_pinned_proton` devolve
+#    `already ("instalação pré-existente sem manifesto (mantida)")` — ele
+#    MANTÉM de propósito o que a dona da máquina instalou. O install rodou com
+#    rc=0 e o aviso voltou igual, porque não havia o que curar.
+#    A confusão era de UMA palavra: "não bate" descreve manifesto DIVERGENTE
+#    (esse o install re-extrai e cura de verdade); manifesto AUSENTE é outra
+#    coisa — é não termos como atestar o SHA256 de algo que não extraímos.
+#    Os dois viraram ramos separados, com o gesto que serve a cada um.
+#
+# 2. *"1 jogo(s) fora do Proton pinado"*, sem nome e sem razão. O jogo é o
+#    DON'T SCREAM, e ele está fora PORQUE O PRODUTO RESPEITOU A ESCOLHA DELA:
+#    em 14/08/2026 a trava o arrastou de `proton_11` para o pinado e o
+#    microfone do jogo — que é a mecânica inteira dele — morreu. Desde 19/08 o
+#    `build_compat_tool_mapping` preserva escolha por jogo e registra
+#    `action="preservado"` no `proton-pin-lock.json`. Esse registro é lido
+#    aqui: escolha respeitada é INFO com o nome do jogo, não WARN sem nome.
 check_proton_pin() {
     local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
     local conf="${ROOT_DIR}/assets/proton-pin.conf"
@@ -3872,6 +3920,7 @@ print("manifest=" + ("1" if d.get("pinned_manifest_ok") else "0"))
 print("global=" + ("1" if d.get("global_is_pinned") else "0"))
 off = d.get("games_off_pin") or []
 print("off=" + str(len(off)))
+print("offids=" + " ".join(str(a) for a in off))
 leaky = d.get("games_leaky_proton") or []
 print("leaky=" + " ".join(f"{a}:{t}" for a, t in leaky))
 ' 2>/dev/null)"
@@ -3879,17 +3928,100 @@ print("leaky=" + " ".join(f"{a}:{t}" for a, t in leaky))
         warn "relatório do Proton pinado indisponível — rode: python3 ${py} --report"
         return
     fi
-    local nome present manifest glob off leaky
+    local nome present manifest glob off offids leaky
     nome="$(sed -n 's/^name=//p' <<<"${resumo}")"
     present="$(sed -n 's/^present=//p' <<<"${resumo}")"
     manifest="$(sed -n 's/^manifest=//p' <<<"${resumo}")"
     glob="$(sed -n 's/^global=//p' <<<"${resumo}")"
     off="$(sed -n 's/^off=//p' <<<"${resumo}")"
+    offids="$(sed -n 's/^offids=//p' <<<"${resumo}")"
     leaky="$(sed -n 's/^leaky=//p' <<<"${resumo}")"
+
+    # O `--report` é PURO de propósito (a docstring do módulo diz: "quem lê
+    # arquivos é a lane de wiring"), e o doctor é a lane de wiring. É aqui que
+    # se abre o manifesto e o registro do lock — os dois dados que separam um
+    # conselho que cura de um que só se repete.
+    local detalhe
+    detalhe="$(HEFESTO_PP="${py}" HEFESTO_CONF="${conf}" HEFESTO_OFF="${offids}" \
+        python3 - <<'PY' 2>/dev/null
+import json
+import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(os.environ.get("HEFESTO_PP", "")).parent))
+try:  # o MESMO modo standalone do CLI (o uninstall roda sem venv)
+    import proton_pin as pp
+except Exception:  # noqa: BLE001 - sem o módulo o detalhe some, o resto segue
+    sys.exit(0)
+try:
+    conf = pp.parse_pin_conf(
+        Path(os.environ["HEFESTO_CONF"]).read_text(encoding="utf-8")
+    )
+except (OSError, ValueError, KeyError):
+    sys.exit(0)
+
+raiz = pp.default_compat_dir() / conf["name"]
+print("compat=" + str(raiz))
+
+alvo = raiz / pp.MANIFEST_BASENAME
+if not alvo.is_file():
+    estado = "ausente"
+else:
+    try:
+        sha = json.loads(alvo.read_text(encoding="utf-8")).get("sha256")
+    except (OSError, ValueError):
+        sha = None
+    if not isinstance(sha, str):
+        estado = "corrompido"
+    elif sha.lower() == conf["sha256"].lower():
+        estado = "ok"
+    else:
+        estado = "divergente"
+print("manifesto=" + estado)
+
+try:
+    registro = json.loads(
+        pp.default_lock_state_path().read_text(encoding="utf-8")
+    ).get("changes") or {}
+except (OSError, ValueError, AttributeError):
+    registro = {}
+try:
+    from steam_launch_options import rotulo_do_jogo
+except Exception:  # noqa: BLE001 - sem rótulo o appid ainda nomeia o jogo
+    def rotulo_do_jogo(appid, home=None):
+        return f"appid {appid}"
+
+respeitados = []
+desconhecidos = []
+for appid in (os.environ.get("HEFESTO_OFF") or "").split():
+    marca = registro.get(appid) or {}
+    if marca.get("action") == "preservado":
+        respeitados.append(
+            f"{rotulo_do_jogo(appid)} em {marca.get('previous_name') or '?'}"
+        )
+    else:
+        desconhecidos.append(rotulo_do_jogo(appid))
+print("respeitados=" + "; ".join(respeitados))
+print("desconhecidos=" + "; ".join(desconhecidos))
+PY
+)"
+    local raiz_do_pin manifesto respeitados desconhecidos
+    raiz_do_pin="$(sed -n 's/^compat=//p' <<<"${detalhe}")"
+    manifesto="$(sed -n 's/^manifesto=//p' <<<"${detalhe}")"
+    respeitados="$(sed -n 's/^respeitados=//p' <<<"${detalhe}")"
+    desconhecidos="$(sed -n 's/^desconhecidos=//p' <<<"${detalhe}")"
+
     if [[ "${present}" == "1" && "${manifest}" == "1" ]]; then
         pass "Proton pinado presente e íntegro (${nome})"
+    elif [[ "${present}" == "1" && "${manifesto}" == "divergente" ]]; then
+        warn "Proton pinado presente (${nome}) e o manifesto do hefesto aponta OUTRO sha256 — $(conselho_de_instalacao)$(so_no_checkout "(re-extrai do cache e re-verifica o SHA256)")"
+    elif [[ "${present}" == "1" && "${manifesto}" == "ausente" ]]; then
+        info "Proton pinado presente (${nome}), instalado por FORA do hefesto (ProtonUp ou à mão): mantemos de propósito o que você instalou, e por isso NÃO dá para conferir aqui o SHA256 do release — rodar o instalador de novo não muda isto. Para ficar com a cópia que nós verificamos, tire ${raiz_do_pin:-o diretório dele} do caminho e $(conselho_de_instalacao)"
+    elif [[ "${present}" == "1" && "${manifesto}" == "corrompido" ]]; then
+        warn "Proton pinado presente (${nome}) e o manifesto do hefesto está ilegível — o instalador trata isso como 'sem manifesto' e MANTÉM o diretório, então rodá-lo de novo não muda nada. Para refazer verificado, tire ${raiz_do_pin:-o diretório dele} do caminho e $(conselho_de_instalacao)"
     elif [[ "${present}" == "1" ]]; then
-        warn "Proton pinado presente (${nome}) mas o manifesto do hefesto não bate — $(conselho_de_instalacao)$(so_no_checkout "(re-verifica o SHA256)")"
+        warn "Proton pinado presente (${nome}) mas não consegui ler o manifesto do hefesto — rode: python3 ${py} --report"
     else
         warn "Proton pinado AUSENTE (${nome}) — $(conselho_de_instalacao)$(so_no_checkout "(baixa, verifica o SHA256 e extrai por default)")"
     fi
@@ -3897,7 +4029,11 @@ print("leaky=" + " ".join(f"{a}:{t}" for a, t in leaky))
         pass "todos os jogos travados no Proton pinado (default global + por jogo)"
     else
         [[ "${glob}" != "1" ]] && warn "default global da Steam NÃO aponta pro Proton pinado — use o botão 'Travar Proton validado' (aba Sistema da GUI, com a Steam fechada); ou, para refazer pela linha de comando, $(conselho_de_instalacao)"
-        [[ "${off:-0}" -gt 0 ]] && warn "${off} jogo(s) fora do Proton pinado — um upgrade de Proton pode reintroduzir o controle duplicado nesses jogos"
+        [[ -n "${respeitados}" ]] && info "fora do Proton pinado por ESCOLHA SUA, e o produto respeitou: ${respeitados} — está assim no registro do lock, como 'preservado'. Não há o que consertar: trocar Proton por baixo já matou o microfone de um jogo aqui (14/08/2026). Se quiser mesmo travá-los, mude o Proton pela janela da Steam"
+        [[ -n "${desconhecidos}" ]] && warn "jogo(s) fora do Proton pinado sem registro de escolha sua: ${desconhecidos} — um upgrade de Proton pode reintroduzir o controle duplicado neles; trave pelo botão 'Travar Proton validado' (aba Sistema da GUI, com a Steam fechada)"
+        if [[ "${off:-0}" -gt 0 && -z "${respeitados}" && -z "${desconhecidos}" ]]; then
+            warn "${off} jogo(s) fora do Proton pinado — um upgrade de Proton pode reintroduzir o controle duplicado nesses jogos"
+        fi
     fi
     if [[ -n "${leaky}" ]]; then
         warn "jogo(s) em Proton <= 9: ${leaky} — nessa família o PROTON_DISABLE_HIDRAW não existe e o controle físico VAZA duplicado no jogo; trave no Proton pinado"
