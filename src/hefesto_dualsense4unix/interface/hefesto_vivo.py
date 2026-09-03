@@ -591,6 +591,20 @@ BOOTSTRAP = r"""
         el.classList.remove('alvo');
       }
     }
+    // 1c. E OS LUGARES QUE TÊM DONO REABREM — o simétrico do passo acima, e
+    // ele faltava. Sem esta linha a marca é de mão única: o piloto fechava o
+    // cartão de um controle que sai e NUNCA o reabria quando ele voltava. Quem
+    // liga o controle depois de a aba estar aberta via o cabeçalho contar `1
+    // controle` e o cartão continuar em 24 px, com o travessão — o dado dela
+    // chegando invisível. Só recarregar a página desfazia.
+    for(const pref of (p.ocupados || [])){
+      for(const el of document.querySelectorAll('[data-controle="' + pref + '"]')){
+        if(el.dataset.conectado === 'nao'){  // (noqa-acento) valor do atributo
+          el.dataset.conectado = 'sim'; n += 1;
+        }
+        el.classList.remove('off');
+      }
+    }
     // 2. OS CAMPOS POR CONTROLE — dentro do bloco daquele `data-controle`.
     for(const [pref, campos] of Object.entries(p.colunas || {})){
       for(const raiz of document.querySelectorAll('[data-controle="' + pref + '"]')){

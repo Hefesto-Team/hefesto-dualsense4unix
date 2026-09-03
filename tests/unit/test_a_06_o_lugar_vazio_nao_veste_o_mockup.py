@@ -13,7 +13,8 @@ cartões, lidos do DOM VIVO por `getComputedStyle`::
 `rgb(126, 184, 212)` é `#7eb8d4` — o **Starlight Blue do mockup** — e
 `rgb(255, 0, 0)` é o `style="--luz:#ff0000"` que o `monta.svg()` cravou no
 `<g id="p2-lightbar">` do desenho. O cartão do P2 estava VAZIO (o rótulo dizia
-`P2 • —` e o `data-conectado` dizia `nao`) e mesmo assim era o mais colorido e o
+`P2 • —` e o `data-conectado` dizia `nao`) e era o  (noqa-acento: atributo)
+ mais colorido e o
 mais aceso da fileira: mais chamativo que o do único controle de verdade na
 mesa. É a oitava aparição do defeito que esta casa já nomeou — *a tela
 afirmando um controle que não está na mesa*.
@@ -86,8 +87,8 @@ def test_o_desenho_crava_um_aparelho_no_lugar_do_p2(publicado: str) -> None:
         "o cartão do P2 perdeu o `data-controle` — a folha viva não tem mais "
         "como endereçá-lo, e a cura inteira deixa de alcançar o lugar")
     assert 'id="p2-lightbar" style="--luz:#ff0000"' in publicado, (
-        "o `--luz` cravado do P2 mudou de forma; a régua media o vermelho do "
-        "mockum num lugar vazio e passou a medir outra coisa")
+        "o `--luz` cravado do P2 mudou de forma; a régua aferia o vermelho "
+        "do mockup num lugar vazio e passou a medir outra coisa")
     assert re.search(r'<svg data-colorway="starlight-blue"[^>]*class="ds-svg"',
                      publicado), (
         "o `data-colorway` do desenho do P2 mudou — era o Starlight Blue do "
