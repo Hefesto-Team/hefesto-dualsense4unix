@@ -49,7 +49,15 @@ PAGINA = "03-gatilhos.html"
 #: pacote por não fazer o trabalho de outro. Medido em 01/09/2026, quando os
 #: três apareciam vazios em TODAS as abas porque ninguém cuidava do que era de
 #: todas.
-DO_CABECALHO = {"conta", "conta-b", "perfil"}
+#:
+#: `fita-chip` ENTROU EM 03/09/2026, e pelo mesmo motivo: os chips da fita
+#: ganharam endereço em `monta.fita()`, que é o esqueleto das DEZ páginas, e
+#: quem os escreve é a troca do bloco `fita` no `hefesto_vivo.pintar` — não o
+#: pacote da aba. Sem esta linha a régua cobrava do `a03` a pintura da fita do
+#: topo, que não é dele. **Não foi esta frente que abriu o vermelho** — ele já
+#: estava no `dev` no momento em que ela começou; foi consertado aqui porque o
+#: arquivo é desta aba.
+DO_CABECALHO = {"conta", "conta-b", "perfil", "fita-chip"}
 
 
 @pytest.fixture(scope="module")
@@ -507,11 +515,17 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
             f'a coluna {pref} não foi escrita. A página a marca '
             f'`data-conectado="nao"`, e o que o pacote não escreve continua '
             f"mostrando o desenho — é o ENDEREÇO MORTO da régua do mockup.")
-        assert set(col) == {"modo-chave-e", "modo-chave-d", "pronto-e", "pronto-d"}, (
+        assert set(col) == {"modo-chave-e", "modo-chave-d", "pronto-e", "pronto-d",
+                            a03.CAMPO_DO_CHIP}, (
             f"{pref} recebeu {sorted(col)}. A coluna vazia do desenho não tem "
             f"barra de ajuste nenhuma — ela traz 'Este modo não tem o que "
             f"ajustar.' —, e emitir `aj-*` ali é se dar nota por escrever no vazio.")
-        for campo, valor in col.items():
+        # O CABEÇALHO NÃO É `<select>`, e por isso sai da conta abaixo. Ele
+        # entrou na coluna em 03/09/2026 para ganhar o SELO da visita — ver
+        # `a03_gatilhos.HEF_DO_CHIP`. As quatro escolhas continuam com a régua
+        # de valor oferecido que este teste sempre cobrou.
+        escolhas = {k: v for k, v in col.items() if k != a03.CAMPO_DO_CHIP}
+        for campo, valor in escolhas.items():
             oferece = re.search(
                 rf'data-campo="{campo}"(.*?)</select>', publicada, re.S)
             assert oferece, f"{pref}·{campo} não é um `<select>` da página"
