@@ -104,14 +104,39 @@ def _opcoes(publicado: bool) -> list[str]:
 
 
 class _PonteQueAnota:
-    """Aceita tudo e ANOTA. É o que separa "recusou" de "chamou e não disse"."""
+    """Aceita tudo e ANOTA. É o que separa "recusou" de "chamou e não disse".
 
-    def __init__(self) -> None:
+    ELE RESPONDE PELO CORPO DESDE 03/09/2026, e a mudança é do contrato: o gesto
+    passou de `chamar` (devolve `bool`, joga fora a resposta) para `resultado`
+    (devolve o que o daemon disse), porque era o `bool` que fazia um
+    `{"status": "failed"}` voltar como sucesso e a recusa não chegar à tela
+    dela. O dublê devolve o `ok` do daemon de verdade — inclusive o bloco
+    `keyboard_emulation`, que é o que o handler manda para a janela não precisar
+    de uma segunda chamada (`daemon/ipc_handlers.py:5279`).
+
+    O `chamar` FICA, e não é enfeite: ele prova que nenhum gesto desta aba
+    voltou ao caminho que perde o motivo — se alguém reintroduzir um `p.chamar`,
+    ele aparece em `self.chamadas` com o nome errado e o `assert` do método
+    acusa.
+    """
+
+    def __init__(self, status: str = "ok", bloqueio: str | None = None) -> None:
         self.chamadas: list[tuple[str, dict]] = []
+        self.status = status
+        self.bloqueio = bloqueio
 
     def chamar(self, metodo: str, **params: object) -> bool:
         self.chamadas.append((metodo, dict(params)))
         return True
+
+    def resultado(self, metodo: str, **params: object) -> dict:
+        self.chamadas.append((metodo, dict(params)))
+        bloco: dict[str, object] = {"enabled": bool(params.get("enabled"))}
+        if self.bloqueio is not None:
+            bloco["bloqueio"] = self.bloqueio
+        return {"status": self.status,
+                "enabled": bool(params.get("enabled")),
+                "keyboard_emulation": bloco}
 
 
 @pytest.fixture
@@ -216,13 +241,19 @@ def test_o_gesto_casa_pela_palavra_que_distingue(ctx):
     # importa — se o gesto escolhesse "a primeira que achar", uma opção nova mal
     # escrita ligaria o teclado sem ninguém pedir.
     #
-    # ESTA LINHA JÁ USOU "Ligada — atalhos e teclado na tela", que é PALAVRA POR
-    # PALAVRA a primeira `<option>` da página que o produto renderiza hoje. O
+    # ESTA LINHA JÁ USOU "Ligada — atalhos e teclado na tela", que era PALAVRA
+    # POR PALAVRA a primeira `<option>` da página que o produto renderizava. O
     # teste cravava como CORRETO que o clique dela naquela opção fosse
     # clique-inválido, e assim o teste protegia o defeito: quem curasse o clique
     # morto veria esta linha ficar vermelha e concluiria que a cura é que estava
     # errada. O item 5 desta régua é o que ficou no lugar.
-    for lixo in ("Modo turbo", "Ligada — só dentro do jogo"):
+    #
+    # E DEPOIS USOU "Ligada — só dentro do jogo" para o caso das DUAS palavras.
+    # Com os sinônimos da travessia apagados (03/09/2026) `ligada` deixou de ser
+    # palavra do gesto, e a frase passou a trazer UMA — o exemplo virava um
+    # `RuntimeError`, e a régua deixava de medir o que prometia. O par de agora
+    # traz as duas palavras que EXISTEM.
+    for lixo in ("Modo turbo", "Só dentro do jogo e só fora do jogo"):
         with pytest.raises(ValueError, match="não reconheci"):
             mod.teclado(ctx, {"valor": lixo}, _PonteQueAnota())
 
@@ -385,27 +416,37 @@ def test_a_palavra_que_a_tela_diz_e_a_que_o_clique_devolve(ctx, publicado, monke
             "outro.")
 
 
-def test_os_sinonimos_da_travessia_tem_prazo():
-    """Cada sinônimo só vale enquanto a página publicada ainda o oferece.
+def test_a_travessia_acabou_e_nao_deixou_lapide():
+    """A régua que existia para ficar vermelha CUMPRIU — e virou esta.
 
-    `SINONIMOS_ATE_A_PUBLICACAO` existe por UM motivo: a bancada mudou e ela
-    ainda não publicou. No dia em que publicar, as duas palavras somem da tela e
-    a declaração vira lápide — e lápide é a régua se desligando sozinha.
+    A anterior, `test_os_sinonimos_da_travessia_tem_prazo`, cobrava que cada
+    entrada de `SINONIMOS_ATE_A_PUBLICACAO` ainda existisse como `<option>` da
+    página publicada, e reprovava no dia da publicação nomeando o que apagar.
+    Ela ficou vermelha em 03/09/2026 e foi obedecida: os sinônimos e as
+    constantes `TECLADO_*_HOJE` saíram.
 
-    Então esta linha reprova NAQUELE dia, dizendo o que apagar. Ela é a única
-    régua desta casa que existe para ficar vermelha, e a mensagem diz por quê.
+    O QUE ESTA COBRA AGORA, e é o outro lado da mesma linha: que o vocabulário
+    do gesto seja **exatamente** a decisão dela, e que ninguém volte a plantar
+    uma tradução sem prazo. Um sinônimo novo é legítimo — durante uma travessia
+    —, e o lugar dele é uma régua que o mate no dia seguinte, não um dicionário
+    permanente.
+
+    A MORDIDA: acrescente `{"ligada": True}` ao `_ESCOLHA` do pacote. Esta linha
+    reprova dizendo que apareceu uma palavra que a tela não oferece.
     """
     from pacotes import a06_navegacao as mod
 
-    publicadas = " ".join(_opcoes(True)).lower()
-    na_bancada = " ".join(_opcoes(False)).lower()
-    for palavra in mod.SINONIMOS_ATE_A_PUBLICACAO:
-        assert palavra in publicadas, (
-            f"o sinônimo {palavra!r} não está mais em nenhuma `<option>` da "
-            f"página publicada ({_opcoes(True)}). Se ela PUBLICOU a 06, apague "
-            "a entrada de `SINONIMOS_ATE_A_PUBLICACAO` e as constantes "
-            "`TECLADO_*_HOJE` — a travessia acabou.")
-        assert palavra not in na_bancada, (
-            f"o sinônimo {palavra!r} está na BANCADA. Sinônimo é o rótulo VELHO "
-            "que só a página publicada ainda usa; se ele passou a ser o rótulo "
-            "de hoje, o lugar dele é `_ESCOLHA_DELA`, com a razão escrita.")
+    assert not hasattr(mod, "SINONIMOS_ATE_A_PUBLICACAO"), (
+        "`SINONIMOS_ATE_A_PUBLICACAO` voltou. Ele só se justifica enquanto a "
+        "bancada e o publicado divergirem nos rótulos — e neste caso ele vem "
+        "com a régua que o apaga no dia da publicação, como a anterior tinha.")
+    # As palavras que o gesto entende têm de estar na tela, nos DOIS mundos —
+    # a bancada é o que ela olha, o publicado é o que o produto renderiza.
+    for mundo, publicado in (("publicada", True), ("bancada", False)):
+        texto = " ".join(_opcoes(publicado)).lower()
+        for palavra in mod._ESCOLHA:
+            assert palavra in texto, (
+                f"o gesto entende {palavra!r} e a página {mundo} não a oferece "
+                f"({_opcoes(publicado)}) — ou é tradução sem prazo, ou é a "
+                "bancada tendo andado sem ninguém perguntar o que a tela dela "
+                "mostra hoje.")

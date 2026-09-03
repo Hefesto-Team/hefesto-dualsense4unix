@@ -579,26 +579,65 @@ CSS = CSS_GLIFO + """
   .abre-conf:checked ~ .veu{display:block}
   .abre-conf:checked ~ .confirma{display:flex}
 
-  /* as duas linhas de estado ficam no MESMO y: altura fixa e fundo da coluna */
+  /* as linhas de estado ficam no MESMO y: altura fixa e fundo da coluna */
   .estado{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--texto-mudo)}
   .estado .verde{color:var(--green)} .estado .laranja{color:var(--orange)}
   .estado .valor{color:var(--fg);font-weight:600}
 
+  /* AS TRÊS LINHAS DE ESTADO NASCEM VAZIAS, E É REGRA DELA — 30/08/2026:
+     *"se não tá mostrando agora, não tem info pra mostrar no produto; mas
+     quando tiver, aparece a info correta"*. Elas são o que a GTK mostra e esta
+     aba calava — a dica do quadro Navegação já cita "a linha de estado abaixo"
+     desde 27/08, e até hoje a linha que ela cita não existia.
+
+     NA MESMA FILEIRA, e a razão é medida: a aba já ocupa quase toda a altura da
+     janela (757px), e três linhas empilhadas empurraram a fileira dos botões
+     para FORA da tela — visto na foto de 03/09, com o "Definições Controle e
+     Mouse" cortado pelo rodapé. Em fileira com `wrap` elas custam uma linha
+     quando cabem, e só quebram quando a frase é longa (a de "não há teclado na
+     tela instalado", que é justamente a que precisa de espaço).
+
+     O `.nada` É COMO UMA LINHA SOME, e não o `:empty`: o `escrever()` do piloto
+     troca valor vazio por `—` (`hefesto_vivo.py:141`), então uma frase vazia
+     viraria um travessão solto na tela dela — foi o que a primeira foto
+     mostrou. O pacote manda o marcador, e o `:has()` apaga a linha inteira.
+     Emitir a chave sempre (em vez de omiti-la quando não há o que dizer) é o
+     que faz a linha SUMIR quando o bloqueio acaba; chave ausente deixaria a
+     frase velha na tela para sempre. O `:has()` já é usado nesta folha
+     (`.at-linha:has(.btn)`), então não é aposta nova sobre o WebKit dela. */
+  .estados{display:flex;flex-wrap:wrap;align-items:center;gap:3px 22px;padding:2px 0 0}
+  .estados:empty{display:none}
+  .estado:empty{display:none}
+  .estado:has(.nada){display:none}
+  /* `<tt>` vem das frases do produto (`frase_do_teclado_na_tela` nomeia os dois
+     pacotes de teclado na tela dentro de um). A fonte é a MESMA que o resto da
+     página usa para código — não uma segunda escolha inventada aqui. */
+  .estado tt{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
+
   /* ---- O STATUS DO MODO (27/08, ela: "Status do Modo: ao clicar no botão
-          Ligado. Ao clicar nele de novo desligado.") — um interruptor de
-          verdade, sem uma linha de script: o `:checked` do input faz o resto.
-          Ele é o dono do que os dois botões suspensos faziam embaixo. ---- */
-  .tog-in{display:none}
+          Ligado. Ao clicar nele de novo desligado.") — o dono do que os dois
+          botões suspensos faziam embaixo.
+
+          A COR SAI DE UMA CLASSE, e não mais do `:checked` de um input —
+          03/09/2026. O desenho nascia `<input checked>`, a palavra saía de um
+          `content:` de CSS, e o produto não tinha por onde escrever nenhum dos
+          dois: a tela dizia **Ligado** com `mouse_emulation.enabled=false` no
+          daemon dela. Pior, clicar no `<label>` virava a caixa no DOM mesmo
+          quando o gesto RECUSAVA — a tela trocava de lado sozinha e nada a
+          devolvia.
+
+          O piloto ganhou o alvo `classe` em 02/09 (`hefesto_vivo.py:227`), e é
+          ele quem acende agora; a palavra virou nó de texto, que o alvo padrão
+          escreve. Nasce em `—` de propósito: antes do primeiro tique ninguém
+          perguntou ao Hefesto, e "Desligado" seria uma afirmação. ---- */
   .tog{display:flex;align-items:center;gap:9px;width:100%;height:var(--h-escolha);border-radius:7px;
        font-size:12px;padding:0 12px;border:1px solid var(--border-forte);
        background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;user-select:none}
   .tog:hover{border-color:var(--comment)}
   .tog .pino{width:9px;height:9px;border-radius:50%;background:var(--border-forte);flex:0 0 9px}
-  .tog .txt::after{content:'Desligado'}
-  .tog-in:checked + .tog{border-color:var(--green);background:rgba(80,250,123,.1);
+  .tog.ligado{border-color:var(--green);background:rgba(80,250,123,.1);
        color:var(--fg);font-weight:600}
-  .tog-in:checked + .tog .pino{background:var(--green);box-shadow:0 0 7px var(--green)}
-  .tog-in:checked + .tog .txt::after{content:'Ligado'}
+  .tog.ligado .pino{background:var(--green);box-shadow:0 0 7px var(--green)}
 
   /* A DENSIDADE DE 22px FICA SÓ DENTRO DAS TELAS DE CIMA, e o número diz por quê.
      Cada uma das duas telas de botões tem 21 listas em 21 linhas, e mede 660px
@@ -1088,21 +1127,40 @@ D_STEAM = ajuda(
 # no botão Ligado. Ao clicar nele de novo desligado." e "Suspender Mouse e Teclado,
 # Sair do Modo Jogo, deixam de existir devido ao botão status na parte superior."
 #
-# O `data-gesto` VAI NO `<label>`, e não no `<input>`: o `.tog-in` é
-# `display:none`, então clique nenhum o alcança direto — quem recebe o clique é
-# o rótulo, e é dele que o `closest()` do piloto parte.
+# A MAIOR MENTIRA DESTA ABA MORREU EM 03/09/2026, e ela era de DESENHO.
 #
-# O QUE ESTE ENDEREÇO **NÃO** RESOLVE, e é dívida declarada: a marca de qual
-# lado o interruptor está mora no `:checked` do CSS, e o piloto não sabe
-# escrever `checked` — o `escrever()` dele cobre texto, largura, fundo e
-# `value`, mais nada. Então o desenho nasce `checked` e o daemon dela nasce com
-# `mouse_emulation.enabled=false`: os dois podem discordar até alguém dar ao
-# piloto um alvo de `checked`. O gesto trata isso do único jeito honesto que lhe
-# resta — decide pelo DAEMON, nunca pelo que a caixinha mostra.
-STATUS_MODO = ('<input type="checkbox" id="st-modo" class="tog-in" checked>'
-               '<label class="tog" for="st-modo" data-gesto="modo">'
+# O que havia aqui: `<input type="checkbox" id="st-modo" checked>` mais um
+# `<label class="tog">` vazio, com a palavra saindo de
+# `.tog-in:checked + .tog .txt::after{content:'Ligado'}`. Duas consequências
+# medidas, as duas caladas:
+#
+#   1. o produto não tinha ONDE escrever. O `escrever()` do piloto cobre texto,
+#      valor, largura, fundo, cor, `innerHTML` e classe — nunca o atributo
+#      `checked`, e um `content:` de CSS não é nó de texto. `rato-ligado` era
+#      emitido a cada tique e caía no vazio (estava em `SEM_ENDERECO`). Com
+#      `mouse_emulation.enabled=false` no daemon dela, a tela dizia **Ligado**;
+#   2. clicar no `<label>` virava a caixa NO DOM, porque é o que o navegador faz
+#      com um rótulo ligado a um `<input>`. A tela trocava de lado mesmo quando
+#      o gesto RECUSAVA — e nada a devolvia.
+#
+# AS DUAS SAEM COM A MESMA MUDANÇA: o `<input>` some, a cor passa a ser a classe
+# `ligado` (alvo `classe` do piloto, `hefesto_vivo.py:227`, com
+# `data-hef-quando` dizendo qual palavra a acende) e a palavra vira nó de texto
+# no `.txt` (alvo padrão). Os dois elementos levam o MESMO `data-campo`: o
+# `achar()` visita os dois com o mesmo valor e cada um decide por si — é a
+# semântica que os quatro degraus da Vibração já usavam.
+#
+# NASCE EM `—`, e não em "Desligado": antes do primeiro tique ninguém perguntou
+# ao Hefesto, e afirmar o lado desligado seria trocar uma mentira por outra. É a
+# regra dela de 30/08 — *"se não tá mostrando agora, não tem info pra mostrar"*.
+#
+# O `data-gesto` FICA NO `<label>`: quem recebe o clique é ele, e é dele que o
+# `closest()` do piloto parte. Sem `for=`, porque não há mais input a alcançar.
+STATUS_MODO = ('<label class="tog" data-gesto="modo" data-campo="rato-ligado"'
+               ' data-hef-alvo="classe" data-hef-classe="ligado"'
+               ' data-hef-quando="Ligado">'
                '<span class="pino"></span>'
-               '<span class="txt"></span></label>')
+               '<span class="txt" data-campo="rato-ligado">—</span></label>')
 
 # ---------------------------------------------------------------------------
 # UM BOTÃO VIROU DOIS, E UMA POP-UP VIROU DUAS. Ela, 28/08/2026: "aba navegação
@@ -1230,6 +1288,47 @@ ATIVACAO_DIR = [
         "Ligado — o controle navega a Steam como num Steam Deck",
         "Ligado, e a Steam abre em Modo Jogo na próxima vez"], gesto="modo-steam")),
 ]
+
+#: AS TRÊS LINHAS DE ESTADO QUE A GTK MOSTRA E ESTA ABA CALAVA — 03/09/2026.
+#:
+#: Nenhuma frase é escrita aqui: as três saem do PRODUTO, e é o pacote que as
+#: chama (ver `a06_navegacao.LINHAS_DE_ESTADO`). O que este bloco faz é dar-lhes
+#: LUGAR — que era exatamente o que faltava, e estava declarado em
+#: `SEM_ENDERECO` com as três razões:
+#:
+#:   · `rato-estado`      "Pronto para usar como mouse" / o motivo do bloqueio,
+#:                        de `app/actions/mouse_actions` (`_refresh_mouse_view`
+#:                        e `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`). É a linha que
+#:                        responde *por que o cursor não anda* com o
+#:                        interruptor em pé — e a dica deste quadro já a citava
+#:                        pelo nome ("se a linha de estado abaixo estiver
+#:                        vermelha") desde 27/08, para uma linha inexistente;
+#:   · `teclado-bloqueio` "Ligado, em pausa agora: …", de
+#:                        `app/actions/emulation_actions.descrever_teclado_emulado`.
+#:                        Separa *desligado por você* de *ligado e calado porque
+#:                        um jogo assumiu* — a lista "Função do teclado" sozinha
+#:                        fala da CONFIGURAÇÃO, nunca do que está acontecendo;
+#:   · `teclado-osk`      "Neste computador: o teclado na tela está instalado —
+#:                        o L3 abre", de
+#:                        `app/actions/input_actions.frase_do_teclado_na_tela`.
+#:                        Como nenhum atalho de fábrica digita letra, é a frase
+#:                        que decide se existe ALGUM caminho para escrever texto
+#:                        com o controle. A dica desta aba manda abrir o teclado
+#:                        na tela com o L3 sem nunca dizer se há um instalado.
+#:
+#: O ALVO É `html` PORQUE AS FRASES DO PRODUTO TÊM MARCAÇÃO — `<b>` e `<tt>` em
+#: `frase_do_teclado_na_tela`. O alvo padrão escreveria `<b>` como texto na tela
+#: dela.
+#:
+#: VAZIAS ATÉ O HEFESTO FALAR: o `:empty` do CSS as apaga, e a fileira dos
+#: botões sobe. Nenhuma das três afirma coisa alguma sobre uma máquina que
+#: ninguém olhou — as próprias funções do produto devolvem `""` nesse caso.
+ESTADOS = '''
+        <div class="estados">
+          <div class="estado" data-campo="rato-estado" data-hef-alvo="html"></div>
+          <div class="estado" data-campo="teclado-bloqueio" data-hef-alvo="html"></div>
+          <div class="estado" data-campo="teclado-osk" data-hef-alvo="html"></div>
+        </div>'''
 
 # A FILEIRA AO PÉ DO BLOCO: os QUATRO botões com a mesma largura, ocupando-o inteiro.
 #
@@ -1544,6 +1643,7 @@ MIOLO = f'''
             </div>
           </div>
         </div>
+{ESTADOS}
 
         <!-- ---------- O TERCEIRO BLOCO: os três botões, sozinhos ----------
              Ela, 27/08: "separa os três botões do bloco dois ... e os coloca
@@ -1896,6 +1996,37 @@ def _conferir(doc):
     for opcao in OPCOES_TECLADO:
         exigir(f">{opcao}</option>" in corpo,
                f"a opção {opcao!r} da 'Função do teclado' sumiu do desenho")
+
+    # 6. O "STATUS DO MODO" NÃO VOLTA A AFIRMAR SOZINHO — 03/09/2026. As três
+    #    coisas abaixo são a mesma cura vista de três lados, e cada uma sozinha
+    #    a desfaz: sem o `data-campo` o produto não tem onde escrever; com o
+    #    `<input checked>` de volta a tela troca de lado no clique recusado; com
+    #    o `content:'Ligado'` de volta a palavra volta a ser do CSS e o nó de
+    #    texto vira enfeite.
+    exigir(corpo.count('data-campo="rato-ligado"') == 2,
+           "o 'Status do Modo' perdeu um dos dois `data-campo=\"rato-ligado\"` "
+           "(a classe no rótulo e a palavra no `.txt`) — a tela volta a dizer "
+           "'Ligado' com a emulação desligada")
+    exigir('class="tog-in"' not in doc and 'id="st-modo"' not in doc,
+           "voltou o `<input type=\"checkbox\">` do 'Status do Modo': clicar no "
+           "rótulo vira a caixa no DOM mesmo quando o gesto RECUSA, e nada a "
+           "devolve")
+    exigir("content:'Ligado'" not in doc and "content:'Desligado'" not in doc,
+           "a palavra do 'Status do Modo' voltou a sair de um `content:` de "
+           "CSS — o piloto não escreve pseudoelemento, e a palavra fica a do "
+           "desenho para sempre")
+    exigir('<span class="txt" data-campo="rato-ligado">—</span>' in corpo,
+           "o 'Status do Modo' não nasce mais em '—': antes do primeiro tique "
+           "ninguém perguntou ao Hefesto, e qualquer das duas palavras é uma "
+           "afirmação")
+
+    # 7. AS TRÊS LINHAS DE ESTADO TÊM LUGAR. Elas são a única coisa desta aba
+    #    que responde "por que o cursor não anda" e "há teclado na tela nesta
+    #    máquina" — as duas perguntas que a GTK responde e a tela nova calava.
+    for campo in ("rato-estado", "teclado-bloqueio", "teclado-osk"):
+        exigir(f'data-campo="{campo}" data-hef-alvo="html"' in corpo,
+               f"a linha de estado `{campo}` sumiu do desenho — a frase do "
+               f"produto volta a ser emitida para o vazio")
 
     if falhas:
         raise SystemExit("ERRO em 06-navegacao — decisão dela desfeita:\n  "
