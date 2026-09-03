@@ -376,7 +376,8 @@ CSS = """
      na CAIXA, não na coluna: `border-top` na coluna empurraria as sete linhas
      2px para baixo e o rótulo deixaria de casar com o das vizinhas. */
   .vib .moldura{
-    border:1px solid var(--plastico);border-radius:8px;background:var(--app-bg);
+    border:1px solid var(--plastico, var(--border-forte));border-radius:8px;
+    background:var(--app-bg);
     display:flex;align-items:center;justify-content:center;padding:5px;
   }
   /* ALTURA e não largura: a linha tem altura fixa e o desenho tem de caber nela.
@@ -452,7 +453,7 @@ CSS = """
      `ds_limpo.svg`/`importar.py`, que não são desta aba. */
   .vib .ds-svg .oculta{opacity:0 !important}
   .vib .ds-svg .oculta.acesa{opacity:.95 !important;
-                             filter:drop-shadow(0 0 1.8px var(--plastico))}
+                             filter:drop-shadow(0 0 1.8px var(--plastico, var(--border-forte)))}
 
   /* ---------- A LINHA DO ESTADO — 02/09/2026 ----------
      A janela estável tem QUATRO avisos nesta aba e a interface nova não tinha
@@ -711,10 +712,25 @@ def _coluna(c, e=None):
     #    controle por `[data-controle="pN"]`. Sem o atributo, um controle só na
     #    mesa deixava a coluna do P2 com os números do desenho — a sétima
     #    aparição do defeito que o pintor já sabia curar.
+    #
+    # A COR DO PLÁSTICO DESCEU DA COLUNA PARA A MOLDURA — 03/09/2026, e é o que
+    # a lei da identidade obriga: *"se identificou o controle como modelo White
+    # a cor do card em volta tem que ser branco"*. Ela era `style="--plastico:…"`
+    # no `<div class="ctrl">`, que NÃO tem endereço de pintura — e o pintor só
+    # visita DESCENDENTES da raiz (`hefesto_vivo.achar` é
+    # `raiz.querySelectorAll`, e a raiz é este `<div>`). Escrita ali, a cor
+    # ficava congelada no que o desenho soube: a foto de 03/09 mostra a moldura
+    # do P1 em Cosmic Red com o rótulo logo abaixo dizendo `P1 · White · USB`.
+    #
+    # A MOLDURA É O LUGAR CERTO e não um lugar qualquer: os DOIS usos de
+    # `var(--plastico)` nesta aba moram nela ou dentro dela — a borda da própria
+    # moldura e o halo do lado que treme (`.vib .ds-svg .oculta.acesa`).
+    # Descer a variável não muda um pixel do desenho e a põe num elemento que o
+    # pintor alcança.
     return f'''
-          <div class="ctrl" data-controle="{c["pref"]}" data-uniq="{c.get("uniq", "")}"
-               style="--plastico:{plastico}">
-            <div class="moldura" data-papel="desenho">{desenho}</div>
+          <div class="ctrl" data-controle="{c["pref"]}" data-uniq="{c.get("uniq", "")}">
+            <div class="moldura" data-papel="desenho" data-campo="plastico"
+                 data-hef-alvo="plastico" style="--plastico:{plastico}">{desenho}</div>
             <div class="rot-ctrl" data-papel="identidade">P{c["jogador"]} <span class="pt">•</span> {c["nome"]}
               <span class="pt">•</span> {c["via"]}</div>
             <div class="seg">{degraus}</div>
