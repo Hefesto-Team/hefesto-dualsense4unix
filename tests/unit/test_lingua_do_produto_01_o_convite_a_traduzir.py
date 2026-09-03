@@ -186,8 +186,8 @@ def _modulos_que_escrevem_portugues_cru(diretorio: Path) -> dict[str, int]:
     curado só de UM lado. Naquele dia o DENOMINADOR (`_modulos_de_acoes`) passou
     de `glob` para `rglob` porque o pacote `config/` sumira inteiro do mapa; o
     NUMERADOR aqui ficou em `glob("*.py")`. O resultado é que a proporção
-    publicada — "19 de 31" nas três páginas — media numerador de um nível contra
-    denominador de todos: nunca foram a mesma população.
+    publicada — "19 de 31" nas três páginas — aferia numerador de um nível
+    contra denominador de todos: nunca foram a mesma população.
 
     O que isso escondia, medido hoje: `jogar/painel.py` nasceu em 30/08 com 37
     literais de português cru e não aparecia no numerador, junto com
