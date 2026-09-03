@@ -35,9 +35,32 @@ A SEGUNDA LEVA SÓ FOI POSSÍVEL POR TRÊS CORREÇÕES, e nenhuma é do daemon:
    pintava o perfil ATIVO enquanto os botões agiam sobre o ESCOLHIDO — e ligar
    o campo Nome seria ela renomear um perfil olhando o nome de outro.
 
-O ÚNICO QUE CONTINUA SEM DONO — `editor.estilo` — está com o motivo medido logo
-acima do `PONTE`, no fim deste arquivo. O `recarregar` ganhou dono em
-03/09/2026, e a razão de ele ter ficado dez dias morto está no gesto.
+NÃO SOBRA NENHUM SEM DONO — 03/09/2026. O `recarregar` ganhou o dele de manhã, e
+o `editor.estilo` à tarde: ele não guarda nada e agora **diz** que não guarda,
+em vez de deixar a tela afirmar um estilo que perfil nenhum tem. A razão de cada
+um está no gesto; o motivo de o Estilo não ter motor continua declarado num
+lugar só, em `perfis_web.GESTOS_SEM_MOTOR`.
+
+RECUSA-CHEGA-NA-TELA-01 — A REGRA DE QUAL EXCEÇÃO LEVANTAR, e ela não é gosto.
+`hefesto_vivo._recusou_dizendo` pinta a tarja **só para `RuntimeError`**; um
+`ValueError` sai no `stderr` do processo que lançou a janela e mais nada. O
+contrato está escrito lá: `RuntimeError` é *"o produto recusou, e a frase VAI
+PARA A TELA"*; `ValueError` é *clique inválido*, frase para quem programa.
+
+**ESTA ABA VINHA VIOLANDO O CONTRATO EM NOVE FRASES**, e a mais cara delas
+tinha teste verde. Medido em 03/09/2026, dirigindo a aba no produto instalado —
+clique de verdade no "Ativar" com o perfil ativo já escolhido:
+
+    [gesto falhou] ativar: “meu_perfil” já é o perfil que está valendo…  (stderr)
+    tarjas na tela: []                                                   (o DOM)
+
+A frase é inequivocamente DELA (*"Escolha outro na lista da esquerda e clique em
+Ativar"*), a cura de 02/09 a escreveu com cuidado, o
+`test_ativar_nao_diz_aplicado_sobre_o_perfil_que_ja_vale` a provou — e ela nunca
+chegou à tela. É a forma de defeito que o próprio `_recusou_dizendo` nomeia:
+*alguém curou o caminho e provou a cura num caminho que ela não usa.* Sobrou
+UM `ValueError` neste arquivo — o do `selecionar`, que fala de um clique sem
+nome de perfil e é a única frase daqui escrita para quem programa.
 
 A LISTA PASSOU A CABER INTEIRA — 02/09/2026. O `<tbody>` publicado tem catorze
 linhas porque catorze cabiam na figura, e a pasta dela tem **33 perfis**: os
@@ -59,6 +82,7 @@ que escreve tem de avisar o daemon depois (`profile.switch` para reaplicar,
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Any
 
@@ -1273,7 +1297,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """
     nome = _ESCOLHIDO or str(o.get("texto") or "").strip()
     if not nome:
-        raise ValueError("ativar: escolha um perfil na lista primeiro")
+        raise RuntimeError("ativar: escolha um perfil na lista primeiro")
     # A TERCEIRA GUARDA, e ela é POR QUE ESTE GESTO ESTAVA NA LISTA DOS
     # DEZESSEIS — 02/09/2026. O mapa o acusa de *"clicou, respondeu `aplicado`,
     # o estado do daemon não mudou"*, e a acusação está certa no FATO e errada
@@ -1293,7 +1317,8 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     ativo = _valendo(ctx)
     if ativo and mesmo_slug(ativo, nome):
-        raise ValueError(
+        # `RuntimeError` E NÃO `ValueError` — ver `RECUSA-CHEGA-NA-TELA-01`.
+        raise RuntimeError(
             f"“{nome}” já é o perfil que está valendo. Escolha outro na lista "
             f"da esquerda e clique em Ativar — reativar o mesmo não muda nada, "
             f"e dizer “aplicado” seria mentira.")
@@ -1371,7 +1396,7 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     nome = _ESCOLHIDO or _valendo(ctx)
     if not nome:
-        raise ValueError("voltar à de ontem: escolha um perfil na lista primeiro")
+        raise RuntimeError("voltar à de ontem: escolha um perfil na lista primeiro")
     # Levanta `FileNotFoundError` quando não há versão guardada, e a frase dela
     # já diz o que houve — o histórico nasce na PRÓXIMA gravação daquele perfil.
     restaurar_do_historico(nome)
@@ -1408,8 +1433,8 @@ def _perfil_do_editor(ctx: Contexto) -> str:
     """
     nome = _ESCOLHIDO or _valendo(ctx)
     if not nome:
-        raise ValueError("escolha um perfil na lista primeiro — a coluna da "
-                         "esquerda; o editor abre na linha que você clicar.")
+        raise RuntimeError("escolha um perfil na lista primeiro — a coluna da "
+                           "esquerda; o editor abre na linha que você clicar.")
     return nome
 
 
@@ -1589,7 +1614,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     novo = str(o.get("valor") or "").strip()
     era = _perfil_do_editor(ctx)
     if not novo:
-        raise ValueError("o perfil precisa de um nome — o campo ficou vazio.")
+        raise RuntimeError("o perfil precisa de um nome — o campo ficou vazio.")
     prof = load_profile(era)
     if prof.name == novo:
         return
@@ -1597,7 +1622,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if troca_de_arquivo:
         for outro in load_all_profiles():
             if slugify(outro.name) == slugify(novo):
-                raise ValueError(
+                raise RuntimeError(
                     f"já existe um perfil chamado “{outro.name}”. Escolha outro "
                     f"nome — gravar este por cima apagaria o dele.")
     _gravar(prof.model_copy(update={"name": novo}), ctx, p, era=era)
@@ -1642,14 +1667,14 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     nome = _perfil_do_editor(ctx)
     chave = PRESET_DO_ROTULO.get(rotulo)
     if chave is None:
-        raise ValueError(
+        raise RuntimeError(
             f"“{rotulo}” não é uma regra que o perfil saiba guardar. O produto "
             f"conhece {', '.join(sorted(PRESET_DO_ROTULO))} — “Estilo de Jogo” "
             f"está desenhado e não tem campo nem preset atrás dele.")
     prof = load_profile(nome)
     editor = _editor_de(prof)
     if editor.get("ambiente_travado"):
-        raise ValueError(str(editor.get("ambiente_recado") or ""))
+        raise RuntimeError(str(editor.get("ambiente_recado") or ""))
     _pergunta_antes_de_rebaixar(prof, chave)
     # O NOME DO JOGO VEM DO DISCO, e não do campo ao lado: o `<input>` pode ter
     # texto que ela digitou e ainda não confirmou (o `change` só dispara quando
@@ -1658,6 +1683,101 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
                                     regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
     return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
+
+
+#: O RÓTULO DA SPRINT NO FIM DA FRASE — `(ONDA-PERFIS-04)` e as irmãs.
+_SPRINT_NO_FIM = re.compile(r"\s*\((?:ONDA|MIGRA|PERFIL)[A-Z0-9-]*\)\s*$")
+
+
+def _sem_a_sprint(frase: str) -> str:
+    """A frase do produto vestida para a TARJA dela: sem sprint, e com maiúscula.
+
+    As três entradas de `perfis_web.GESTOS_SEM_MOTOR` terminam em
+    `(ONDA-PERFIS-NN)`: é o endereço da fila, útil para quem vai dar motor ao
+    campo e RUÍDO para quem só quer saber por que o clique não pegou. O
+    `_recusou_dizendo` do piloto avisa exatamente disto — *"pôr um caminho de
+    arquivo no cartão dela trocaria um silêncio por um ruído"*.
+
+    A MAIÚSCULA é o outro meio-passo: aquelas frases nascem para entrar numa
+    coluna de tabela, em minúscula, e aqui elas entram DEPOIS de um ponto final.
+    Sem isto a tarja saía com uma frase começando em minúscula no meio do aviso.
+
+    **NÃO É SEGUNDA VERDADE, e a diferença importa:** a frase continua tendo UM
+    dono (`GESTOS_SEM_MOTOR`); o que muda é o público. Reescrevê-la aqui criaria
+    a segunda cópia que diverge no dia em que a ONDA-PERFIS-04 fechar; aparar o
+    rótulo e subir uma letra não podem divergir de nada.
+    """
+    limpa = _SPRINT_NO_FIM.sub("", frase.strip())
+    return limpa[:1].upper() + limpa[1:]
+
+
+@gesto("10-perfis.html", "editor.estilo")
+def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Estilo de Jogo": o único `<select>` desta aba que não guarda nada — e ele
+    passou a DIZER isso.
+
+    **ELE ERA O ÚLTIMO GESTO SEM DONO DA ABA, e o silêncio era o defeito** —
+    03/09/2026, medido no produto instalado, com o daemon dela vivo e um
+    DualSense White no cabo:
+
+        $ hefesto_vivo.py --oculta --prova-no-aparelho --abre 10-perfis.html
+        [gesto sem dono] 10-perfis.html · editor.estilo
+        ? editor.estilo (ALVO FORCADO p1) → SEM DONO
+
+    E o que a TELA fazia, dirigida como ela dirige (`change` de verdade no
+    `<select>`, escolhendo "Terror" em `meu_perfil`):
+
+        estilo_na_tela: "Terror"      ← a tela AFIRMA o estilo, e continua
+        tarjas: []                    ← ninguém disse nada
+        md5 de meu_perfil.json:  b4387a17…  ANTES **e** DEPOIS — nada gravou
+
+    Ou seja: a tela afirmava, sobre o perfil dela, um Estilo de Jogo que perfil
+    nenhum guarda; o único vestígio era um `print` no stdout de quem lançou a
+    janela. É a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` inteira num campo só — e o
+    contrato do próprio produto já a proibia com todas as letras
+    (`perfis_web.py`, o docstring do módulo): *"Ele nasce TRAVADO, com o motivo
+    — um `<select>` que aceita escolha e não guarda nada é a pior das saídas"*.
+
+    O MOTIVO NÃO É ESCRITO AQUI, e não pode ser: quem o declara é
+    `perfis_web.GESTOS_SEM_MOTOR["editor.estilo"]`, num lugar só. Digitá-lo de
+    novo seria a segunda verdade sobre por que este campo não guarda — a mesma
+    razão pela qual `editor.ambiente` empresta o `ambiente_recado` em vez de
+    inventar frase.
+
+    `RuntimeError` E NÃO `ValueError` — ver `RECUSA-CHEGA-NA-TELA-01`, no alto
+    do arquivo. `hefesto_vivo._recusou_dizendo` só pinta tarja para
+    `RuntimeError`; um `ValueError` aqui trocaria o silêncio do gesto sem dono
+    pelo silêncio da recusa que ninguém lê, que é o mesmo silêncio.
+
+    O QUE ESTE GESTO **NÃO** CURA, e escrever isso é o honesto: o `<select>`
+    continua MOSTRANDO o estilo que ela escolheu até a página trocar. Repintá-lo
+    de volta não está disponível — `editor.estilo` está em `NAO_PINTAVEIS`, e
+    tirá-lo de lá quebraria o campo: `pacote()` emite `estilo: None`, o
+    `escrever()` do piloto converte vazio em `'—'` (`hefesto_vivo.py:194`), e
+    `'—'` casa pelo TEXTO da primeira opção mas não pelo `value` (que é `""`) —
+    o `<select>` ficaria com `selectedIndex = -1`, RENDERIZANDO EM BRANCO, e
+    contando uma pintura nova por tique para sempre. Quem fecha essa metade é o
+    DESENHO: um `<select disabled>` (o "travado" que `perfis_web` já emite em
+    `estilo_travado`) não deixa ela escolher, e é dela aprovar.
+
+    NÃO ENTRA EM `SEM_ECO`: o desfecho dele é "recusou dizendo" (`!`), que a
+    prova no aparelho conta à parte de "disse aplicado e nada mudou" (`—`).
+    """
+    # SEM `_so_mudou`: aqui não há valor que "não mudou" — o campo não guarda
+    # nada em estado nenhum. Uma guarda de mudança só faria a primeira escolha
+    # dela passar calada.
+    # O `valor` PRIMEIRO E O `rotulo` DEPOIS, e o travessão não conta como
+    # escolha: a primeira opção do desenho é `<option value="">—</option>`, então
+    # o clique que não escolheu nada chega com `valor=""` e `rotulo="—"`. Sem
+    # esta guarda a tarja dizia *“—” não foi salvo*, que não é frase de gente.
+    escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
+    if escolhido == "—":
+        escolhido = ""
+    alvo = f"“{escolhido}”" if escolhido else "um Estilo de Jogo"
+    raise RuntimeError(
+        f"o perfil não guarda Estilo de Jogo — {alvo} não foi salvo, e o que "
+        f"vale continua sendo o que está nas abas. "
+        f"{_sem_a_sprint(_tela.GESTOS_SEM_MOTOR['editor.estilo'])}")
 
 
 @gesto("10-perfis.html", "editor.jogo")
@@ -1706,7 +1826,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     prof = load_profile(nome)
     editor = _editor_de(prof)
     if editor.get("ambiente_travado"):
-        raise ValueError(str(editor.get("ambiente_recado") or ""))
+        raise RuntimeError(str(editor.get("ambiente_recado") or ""))
     chave = PRESET_DO_ROTULO.get(str(editor.get("ambiente") or ""))
     if chave not in ("game", "steam_game"):
         chave = "steam_game" if normalize_appid(texto) is not None else "game"
@@ -1756,7 +1876,7 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     appid = steam_appid_from_wm_class(classe) if classe else None
     if appid is None:
         visto = f"“{classe}”" if classe and classe != "unknown" else "nenhuma janela"
-        raise ValueError(
+        raise RuntimeError(
             f"não achei jogo da Steam em foco — o detector está vendo {visto}. "
             f"Abra o jogo, deixe-o em foco por um instante e clique de novo; "
             f"para jogo de fora da Steam, a regra ainda se escreve pela linha "
@@ -1956,7 +2076,7 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     aviso = frase_da_remocao_do_perfil_ativo(nome, perfil_que_esta_valendo(ctx.state))
     if aviso:
-        raise ValueError(aviso)
+        raise RuntimeError(aviso)
     agora = time.monotonic()
     armado = (_ARMADO and _ARMADO[0] == nome
               and (agora - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR)
@@ -2047,9 +2167,10 @@ def _editor_de(prof: Any) -> dict[str, Any]:
     return editor
 
 
-#: O ÚNICO QUE CONTINUA SEM DONO, e o motivo é MEDIDO.
+#: NÃO SOBRA GESTO SEM DONO NESTA ABA — 03/09/2026, e os dois últimos caíram no
+#: mesmo dia.
 #:
-#: **`recarregar` GANHOU DONO — 03/09/2026.** Aqui estava escrito que *"não há o
+#: **`recarregar` GANHOU DONO.** Aqui estava escrito que *"não há o
 #: que chamar: a lista já é relida do disco a cada tique de 500 ms, então ligar
 #: este botão a um `load_all` extra seria fingir trabalho que já está feito; o
 #: que falta não é motor, é o botão sair do desenho"*. A premissa continua
@@ -2059,23 +2180,21 @@ def _editor_de(prof: Any) -> dict[str, Any]:
 #: botão ficou vivo na tela e morto no código, imprimindo `[gesto sem dono]`
 #: num terminal que ela não olha. Ver o gesto `recarregar`.
 #:
-#:   editor.estilo NÃO EXISTE EM LUGAR NENHUM, e o produto já o declara assim:
-#:                 `perfis_web.GESTOS_SEM_MOTOR["editor.estilo"]` diz *"não
-#:                 existe campo de Estilo de Jogo no perfil, nem preset que o
-#:                 resolva"*. Conferido em 01/09/2026: não há campo em
-#:                 `profiles/schema.Profile`, não há chave em
-#:                 `SIMPLE_MATCH_PRESETS` e os quinze estilos do desenho não têm
-#:                 arquivo atrás. Quem lhe dá motor é a ONDA-PERFIS-04.
-#:                 A TELA MENTIA, e a cura é do DESENHO — 02/09/2026. O campo
-#:                 dizia "Luta" para TODO perfil, porque o desenho trazia
-#:                 `<option selected>Luta</option>` e a pintura não alcançava um
-#:                 `<select>` com valor vazio (ver `NAO_PINTAVEIS`). Decisão
-#:                 dela, hoje: o `<select>` ganha PRIMEIRA opção com `value=""`,
-#:                 texto `—`, marcada. Está feita no gerador (`aba10.py`) e mora
-#:                 na BANCADA — declarada em `mockup/DIVERGENCIAS.md`, esperando
-#:                 o ato de publicar DELA. Até lá, a página publicada continua
-#:                 abrindo em "Luta"; o pacote parou de escrever nela nos dois
-#:                 casos, que é o que impede a tela de piorar.
+#: **`editor.estilo` GANHOU DONO, e o dono RECUSA DIZENDO.** Motor ele continua
+#: não tendo: não há campo em `profiles/schema.Profile`, não há chave em
+#: `SIMPLE_MATCH_PRESETS` e os quinze estilos do desenho não têm arquivo atrás
+#: (conferido em 01/09/2026; quem lhes dá motor é a ONDA-PERFIS-04). O que
+#: mudou é que a escolha dela deixou de cair no vazio — ver o gesto
+#: `editor_estilo`, com o que a tela afirmava medido.
+#:
+#: FATO SUBSTITUÍDO — 03/09/2026. Aqui estava escrito que *"a página publicada
+#: continua abrindo em «Luta»"*, com a cura do `<option value="" selected>—`
+#: esperando na bancada. **Ela foi publicada.** Medido no produto instalado,
+#: lendo o DOM: `src/…/paginas/10-perfis.html:1217` traz
+#: `<option value="" selected>—</option>` e o campo abre com `value === ""`.
+#: O que continua VERDADEIRO é a outra metade, e é a razão de `editor.estilo`
+#: seguir em `NAO_PINTAVEIS`: escrever nele é que não dá — ver a nota do
+#: `editor_estilo` sobre o `'—'` do `escrever()`.
 #: `resultado` ENTROU EM 03/09/2026, e o `profile_switch` FICA: o `ativar`
 #: passou a ler o CORPO da resposta em vez do booleano (ELO-MUDO-01), mas o
 #: `voltar-a-de-ontem` e o `gravar_e_reaplicar` continuam usando o invólucro —
@@ -2089,7 +2208,7 @@ METODOS = {"launch_env.refresh", "profile.switch"}
 
 
 PAGINA = "10-perfis.html"
-PISO_DA_ABA = 11
+PISO_DA_ABA = 12
 #: SÓ UMA PROVA DECLARADA PARA ONZE GESTOS, e a razão é estrutural, não
 #: preguiça: nove dos outros dez agem sobre o perfil ESCOLHIDO, e o `ctx` desta
 #: régua é fixo — `active_profile="regua"`, sem `_ESCOLHIDO` (um gesto que
