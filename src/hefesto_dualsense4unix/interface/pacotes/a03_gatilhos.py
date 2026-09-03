@@ -1221,6 +1221,48 @@ HEF_DO_CHIP = "chip.plastico"
 PONTO = ' <span class="pt">•</span> '
 
 
+def cor_de_borda(tinta: str) -> str:
+    """A tinta da zona quando ela É cor, e `""` quando o mapa não tem hex.
+
+    O QUE O MAPA DELA RESPONDE, e são TRÊS formas — `gerar_cores_do_dualsense.
+    _tinta` é quem as escreve, a partir de `docs/data/cores-do-dualsense.csv`:
+
+        `#rrggbb`                 o hexadecimal daquela zona
+        `url(#casca-<modelo>)`    a casca partida em duas, num gradiente
+        `url(#hachura-sem-hex)`   a AUSÊNCIA DECLARADA — *"o acabamento não cabe
+                                  num hexadecimal (iridescente, metálico,
+                                  camuflado, arte)"*
+
+    Só a primeira é uma cor. E a terceira não é caso raro: **OITO dos vinte e
+    oito modelos** respondem hachura na `casca-solida`, que é justamente a zona
+    do chip — Grey Camouflage, Chroma Teal, Chroma Indigo, Chroma Pearl, Ghost
+    of Yōtei, Marathon, Genshin Impact e 007 First Light.
+
+    MEDIDO NO WEBKIT DESTA MÁQUINA, 03/09/2026, com a regra que o `topo.html`
+    declara (`.chip.plastico{border-color:var(--plastico, var(--border-forte))}`)::
+
+        --plastico:#ae335a                → rgb(174, 51, 90)   a cor do plástico
+        --plastico ausente                → rgb(98, 114, 164)  a QUEDA declarada
+        --plastico:url(#hachura-sem-hex)  → rgb(139, 233, 253) a cor do TEXTO
+
+    A terceira linha é o defeito, e ele é do CSS e não do desenho: uma `var()`
+    que resolve para algo que a propriedade não aceita fica **inválida no tempo
+    de valor computado**, e nesse caso o navegador NÃO usa a queda escrita ao
+    lado — ele volta ao valor herdado, que numa `border-color` é o
+    `currentColor`. O chip vestia a cor da LETRA e a dica ao lado dizia, com
+    todas as letras, que aquela era a cor do plástico daquele aparelho.
+
+    A REGRA É A DELA: *sem cor lida, sem cor na tela.* Sem `--plastico` a queda
+    do `topo.html` vale, a borda fica neutra, e a dica diz por quê.
+
+    O TESTE DO `#` NÃO É NOVO: é o mesmo que `gerar_cores_do_dualsense.legivel`
+    já usa, pela mesma razão — *"gradiente, hachura: não são cor"*. Não há
+    tabela de cor aqui; quem sabe a cor continua sendo o CSV dela.
+    """
+    tinta = (tinta or "").strip()
+    return tinta if tinta.startswith("#") else ""
+
+
 def miolo_do_chip(jogador: int, nome: str, via: str,
                   conectado: bool = True) -> str:
     """O texto do chip: `P1 • White • USB`, e cada pedaço só entra se existir.
@@ -1258,7 +1300,9 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     A política de resolução é de quem chama; a MARCAÇÃO é daqui, e é ela que não
     pode divergir.
 
-    SEM HEX, SEM `style`. A borda não some: `topo.html` declara
+    SEM HEX, SEM `style` — e quem julga o que é hex é :func:`cor_de_borda`, que
+    recusa o que o mapa dela responde quando não há hex. A borda não some:
+    `topo.html` declara
     `.chip.plastico{border-color:var(--plastico, var(--border-forte))}`, com a
     queda já escrita. Cravar um hex de mockup aqui seria dizer que se sabe a cor
     do plástico de um controle que ainda não a disse.
@@ -1267,15 +1311,37 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     andam juntos porque o endereço existe para defender a cor: onde não há cor
     congelada não há o que defender, e o endereço vira lastro que a régua do
     mockup cobra sem que ninguém possa pagar.
+
+    **E A DICA ACOMPANHA A COR — 03/09/2026.** Ela dizia *"a borda é a cor do
+    plástico"* nos TRÊS casos, e nos dois últimos era mentira: sem hex a borda é
+    a neutra do tema, não o plástico de ninguém. São duas ausências diferentes, e
+    a tela tem de saber dizer qual é qual — porque uma se conserta lendo o
+    aparelho e a outra não se conserta:
+
+        o mapa RESPONDEU e não é cor  o acabamento não cabe num hexadecimal
+                                      (:func:`cor_de_borda`, oito dos 28 modelos)
+        ninguém leu a cor             pelo rádio ela pode não chegar nunca, hoje
+
+    É a metade que faltava da regra dela: *sem cor lida, sem cor na tela* — e,
+    quando não há, dizer POR QUE não há.
     """
+    cor = cor_de_borda(plastico)
     classe = "chip plastico" if conectado else "chip vazio"
     if not conectado:
         dica = "Nenhum controle neste lugar."
-    elif nome:
-        dica = f"{nome} — a borda é a cor do plástico"
+    elif cor:
+        dica = (f"{nome} — a borda é a cor do plástico" if nome
+                else "A borda é a cor do plástico deste controle.")
+    elif plastico:
+        dica = (f"{nome} — o acabamento deste modelo não cabe num hexadecimal, "
+                f"e a borda fica neutra" if nome else
+                "O acabamento deste modelo não cabe num hexadecimal, e a borda "
+                "fica neutra.")
     else:
-        dica = "A borda é a cor do plástico deste controle."
-    estilo = f' style="--plastico:{plastico}"' if conectado and plastico else ""
+        dica = (f"{nome} — a cor do plástico deste controle ainda não foi lida"
+                if nome else
+                "A cor do plástico deste controle ainda não foi lida.")
+    estilo = f' style="--plastico:{cor}"' if conectado and cor else ""
     endereco = f' data-hef="{HEF_DO_CHIP}"' if estilo else ""
     return (f'<span class="{classe}"{endereco}{estilo}'
             f' title="{dica}">'
@@ -1283,13 +1349,20 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
 
 
 def _cor_do_plastico(slug: str) -> str:
-    """O hex da casca daquele modelo, ou `""` quando ninguém sabe ainda.
+    """A TINTA da casca daquele modelo, como o mapa dela a escreve — ou `""`.
 
     `monta.cor_da_zona` é o dono — ele LÊ a folha que pinta o desenho, em vez de
     digitar hex. O `""` não é desistência: a cor chega pelo broker, uma vez por
     endereço e em thread, então o primeiro tique de uma sessão sempre tem a mesa
     sem cor. **E pelo rádio ela pode não chegar nunca**, hoje: sem hex o chip
     sai com a borda neutra em vez de vestir o plástico de outro controle.
+
+    ELA DEVOLVE A TINTA CRUA, E NÃO SÓ O HEX, de propósito — 03/09/2026. Em oito
+    dos 28 modelos a resposta do mapa é a hachura do SEM-HEX, e essas duas
+    ausências são diferentes na tela: *"o mapa respondeu, e não é cor"* se
+    conserta medindo o plástico; *"ninguém leu"* se conserta lendo o aparelho.
+    Quem separa as duas é :func:`chip_do_controle`, com :func:`cor_de_borda` —
+    peneirar aqui apagaria a diferença antes de alguém poder dizê-la.
     """
     if not slug:
         return ""
