@@ -1218,18 +1218,48 @@ class TestAsFrasesNoSingular:
         # O item 7 no Python: a frase é UMA e vive em quatro lugares. Se ela
         # for pluralizada, é para ser pluralizada em todos — e é por isso que a
         # decisão é dela.
+        #
+        # A RÉGUA CONFUNDIA DONO COM CITAÇÃO, e envelheceu em 03/09/2026.
+        # Ela contava todo `.py` que CONTIVESSE a frase, e a `interface/aba01.py`
+        # passou a contê-la — mas para dizer que ela SAIU dali: *"O que era um
+        # seletor único lá em cima ('O jogo vê o controle como:') saiu do quadro
+        # Quando o jogo abrir — e o rótulo veio junto, no plural."* É a legenda
+        # do histórico da aba nova, no passado, marcada com o `<span
+        # class="marca">` que esta casa usa para CITAR.
+        #
+        # Contá-la como dono seria dizer que a dívida cresceu quando o que
+        # cresceu foi o registro de que ela já foi paga do lado novo — e
+        # pluralizar o rótulo do GTK não muda uma vírgula dessa frase, porque
+        # ela descreve o que era.
+        #
+        # ENTÃO A RÉGUA PASSOU A SEPARAR OS DOIS: dono é quem tem a frase como
+        # TEXTO DE TELA; citação é quem a traz dentro do `<span class="marca">`.
+        # MORDIDA: ponha um quinto `Gtk.Label(label="O jogo vê o controle
+        # como:")` em qualquer módulo — ele não está dentro de uma `marca`, e
+        # este teste reprova nomeando o arquivo.
         raiz = GLADE.parents[2] / "hefesto_dualsense4unix"
-        donos = sorted(
-            p.name
-            for p in raiz.rglob("*.py")
-            if "O jogo vê o controle como:" in p.read_text(encoding="utf-8")
-        )
+        citacao = re.compile(
+            r'<span class="marca">\s*"?O jogo vê o controle como:"?\s*</span>')
+        donos, citam = [], []
+        for p in sorted(raiz.rglob("*.py")):
+            texto = p.read_text(encoding="utf-8")
+            if "O jogo vê o controle como:" not in texto:
+                continue
+            (citam if citacao.search(texto) else donos).append(p.name)
+        donos, citam = sorted(donos), sorted(citam)
         assert donos == [
             "home_actions.py",
             "painel_no_jogo.py",
             "profiles_actions.py",
             "relancar.py",
-        ], donos
+        ], (
+            f"os donos da frase mudaram: {donos}. Ela é UMA e vive em quatro "
+            f"lugares; um quinto significa que pluralizá-la — decisão DELA — "
+            f"passou a custar mais um arquivo.")
+        assert citam == ["aba01.py"], (
+            f"quem CITA a frase mudou: {citam}. A citação é a legenda que conta "
+            f"que o seletor único saiu do quadro; ela fala do passado e não "
+            f"envelhece quando o rótulo do GTK for pluralizado.")
 
     def test_a_intensidade_global_fica_de_fora_ate_a_d_4(self) -> None:
         """Nota datada, não esquecimento: "Intensidade global:" é o único

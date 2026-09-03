@@ -216,29 +216,48 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
     travessão sobre dado que existe; **cada um é um caminho que o produto não
     tem**, e a razão de cada um está escrita no `SEM_DONO` do próprio pacote:
 
-    Da `05-vibracao` — TRÊS deles esperam o PINTOR, não o pacote:
-      * `degrau-aceso` e `mult-teto` — o alvo é uma CLASSE e um rótulo que às
-        vezes não existe; `hefesto_vivo.escrever()` alcança texto, largura,
-        fundo, valor e html, e classe não é um deles. Emiti-los era o que
-        apagava os quatro rótulos dos botões até 02/09;
+    **DE SETE PARA CINCO — 03/09/2026, e a régua ENVELHECEU: os três que
+    saíram saíram porque foram CURADOS.** Ela tinha a lista de 02/09 congelada e
+    reprovava a melhora em vez do defeito. Cada saída foi conferida no pacote
+    que a declarava:
+
+      * `degrau-aceso` e `mult-teto` — o motivo escrito aqui (*"o pintor não
+        alcança classe"*) caducou: o alvo `classe` existe no pintor desde
+        02/09, e o que faltava eram o ENDEREÇO no desenho e a EMISSÃO no
+        pacote. As duas metades entraram juntas (`aba05._coluna` e
+        `aba05._teto_do_multiplicador`), e `a05_vibracao.SEM_DONO` registra:
+        *"Mantê-los depois de pintados seria dívida fantasma — a próxima pessoa
+        esperaria por uma cura que já chegou."*
+      * `abrir-lancador` — o motivo era a PERGUNTA ERRADA. *"O daemon não tem
+        método para isso"* é verdade pelo IPC, e irrelevante: o produto sabe
+        abrir a Steam desde 23/08 por outro caminho
+        (`steam_launch_options.reopen_steam`, que tinha zero chamadores vindos
+        de `interface/`). Decisão 17 dela, 03/09: o botão liga, e o gesto entra
+        em `hefesto_vivo.PERIGOSOS` para a `--prova-gesto` não abrir a Steam na
+        tela dela.
+
+    OS CINCO QUE FICAM, com a razão no `SEM_DONO` do próprio pacote:
       * `barra:motor` — o dono do gesto ESTÁ escrito
         (`app/telas/vibracao.DONOS_DOS_GESTOS`); o que falta é o NÚMERO: a
         linha é um `<div>`, e um `<div>` não tem `value`. Trocar a barra por um
         controle arrastável é decisão DELA;
       * `lado:ligado` — os oito interruptores de punho são desenho, e o produto
         concorda por escrito em `app/telas/vibracao.SEM_FONTE`: não há campo no
-        esquema, nem método de IPC, nem chave no `state_full`.
-
-    Da `07-lancadores`, a aba que nasceu nesta leva:
-      * `abrir-lancador` — abrir a Steam é `xdg-open`, não IPC;
+        esquema, nem método de IPC, nem chave no `state_full`;
       * `criar-perfil` — é da aba Perfis, e dois caminhos para o mesmo disco é
         como duas telas passam a discordar;
-      * `heroic` — **medido**: o produto não tem UMA função que olhe o Heroic,
-        o Lutris, o RetroArch, o Dolphin ou o mGBA. As cinco menções em `src/`
-        são comentário, e por isso os cartões deles dizem NÃO SEI.
+      * `heroic` — **medido**: o produto PROCURA os seis lançadores
+        (`_onde_estao_os_lancadores`) mas não LÊ a biblioteca de nenhum deles;
+      * `plugins` — o IPC `plugin.list` existe e **só a CLI o chama**.
 
     O `sem_dono` é o oposto de esconder: é a tela dizendo *"isto eu não sei"*
     em vez de mostrar o desenho como se fosse dado.
+
+    **A RÉGUA MORDE NOS DOIS SENTIDOS, e é por isso que a igualdade é exata:**
+    um órfão a MAIS é alguém voltando a escrever travessão sobre dado que
+    existe; um a MENOS sem esta lista mudar junto é uma cura que ninguém
+    registrou — e a dívida fantasma faz a próxima pessoa esperar por algo que
+    já chegou.
     """
     from pacotes import PACOTES, pacote_da_pagina
 
@@ -250,11 +269,12 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         if n:
             orfaos[pagina] = sorted(r.get("sem_dono") or {})
     assert orfaos == {
-        "05-vibracao.html": ["barra:motor", "degrau-aceso", "lado:ligado", "mult-teto"],
-        "07-lancadores.html": ["abrir-lancador", "criar-perfil", "heroic"],
+        "05-vibracao.html": ["barra:motor", "lado:ligado"],
+        "07-lancadores.html": ["criar-perfil", "heroic"],
         "09-sistema.html": ["plugins"],
     }, (
         f"os órfãos mudaram: {orfaos}. Cada um aqui é um valor que a tela mostra "
         f"como travessão — e a lição de 01/09 é que doze deles tinham dono e "
         f"ninguém tinha ido olhar. Se acrescentou um, prove que perguntou ao "
-        f"perfil, ao IPC e à `gui/aba_*.py` antes.")
+        f"perfil, ao IPC e à `gui/aba_*.py` antes. Se TIROU um, a cura tem de "
+        f"estar escrita no `SEM_DONO` do pacote — senão a dívida vira fantasma.")
