@@ -253,10 +253,22 @@ def test_a_cobertura_conta_o_campo_novo() -> None:
 
     Ele diz quantos valores a aba promete pintar. Deixá-lo em três por cartão
     depois de acrescentar o quarto é o começo de um contador que mente.
+
+    O QUATRO SAIU DAQUI EM 03/09/2026, e a razão é a mesma que o comentário
+    abaixo já registra: a aba ganhou o `desenho` (o `data-colorway` do SVG, o
+    quinto campo do cartão) e esta linha reprovou a ENTREGA em vez do defeito.
+    O número passa a sair de `POR_CARTAO`, que é o DONO da lista — o que se
+    prova aqui é que o pacote emite exatamente o que promete, e é isso que
+    pega um contador mentiroso nos dois sentidos.
     """
     fora = aba.pacote(_ctx("white", "White"))
     por_cartao = {len(c) for c in fora["cartoes"].values()}
-    assert por_cartao == {4}, f"o cartão passou a ter {por_cartao} campos"
+    assert por_cartao == {len(aba.POR_CARTAO)}, (
+        f"o cartão emite {por_cartao} campos e `POR_CARTAO` promete "
+        f"{len(aba.POR_CARTAO)}: {aba.POR_CARTAO}")
+    assert set(next(iter(fora["cartoes"].values()))) == set(aba.POR_CARTAO), (
+        "o pacote emite um campo de cartão que `POR_CARTAO` não lista — a "
+        "cobertura contaria menos do que a aba pinta")
     # A CONTA SAI DA FORMA DO PACOTE, E NÃO DE UM NÚMERO DIGITADO — 03/09/2026.
     # Ela era `3 + cartoes * 4`, e o 3 era a quantidade de endereços de PÁGINA
     # daquele dia. A aba ganhou os endereços que faltavam (a posição do
