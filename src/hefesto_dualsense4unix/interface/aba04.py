@@ -3,7 +3,7 @@ import onde
 import monta as monta_
 from itertools import cycle
 from monta import (monta, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
-                   cor_da_zona, luzinhas, player_slot_color, tom_da_casa)
+                   cor_da_zona, player_slot_color, tom_da_casa)
 #: O PACOTE DESENHA A FILEIRA DE NÚMEROS, e o gerador a chama. Um dono, dois
 #: chamadores — ver `botao_player` abaixo.
 from pacotes import a04_iluminacao as _pacote04
@@ -89,12 +89,12 @@ BRILHO = {c["pref"]: next(_b) for c in MESA}
 # (o mapa mora em `monta.py` — dois donos: esta guia e a barra de luz da 02)
 TONS = [tom_da_casa(luz(n)) for n in range(1, 9)]
 
-#: O EXEMPLO DA TROCA, derivado da mesa. É o caso dela, de 26/08: quem tem o 1
-#: hoje, e o primeiro da mesa que NÃO o tem — na mesa de hoje, o Cosmic Red e o
-#: Starlight Blue, que é o "meu controle azul" da frase dela. Se a mesa mudar,
-#: os dois mudam junto: nada aqui está escrito com o nome de um controle.
-TEM_O_1 = DONO[NUMEROS[0]]
-QUER_O_1 = next(c for c in MESA if c is not TEM_O_1)
+#: O EXEMPLO DA TROCA SAIU DAQUI — 03/09/2026. Ele era `TEM_O_1`/`QUER_O_1`,
+#: derivado da `MESA` do desenho, e alimentava a dica do "Jogador" e a legenda do
+#: rodapé. Derivar da mesa FIXA não é derivar da mesa DELA: os dois nomes que
+#: saíam nas duas frases eram os do mockup, na tela do produto. Quem faz o
+#: exemplo agora é `pacotes.a04_iluminacao.secao_da_troca`, que recebe a mesa —
+#: a do desenho quando o gerador a chama, a VIVA a cada tique.
 
 CSS = """
   /* ---------- Iluminação ---------- */
@@ -316,9 +316,30 @@ CSS = """
 
   /* O DESENHO: a borda tem a cor do plástico, sempre — é como ela sabe de quem
      é a luz que está vendo (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). O desenho ocupa
-     a coluna inteira: nesta aba ele é o instrumento, não a ilustração. */
-  .luz-grade .moldura{border:1px solid var(--plastico);border-radius:8px;
-                      background:var(--app-bg);overflow:hidden}
+     a coluna inteira: nesta aba ele é o instrumento, não a ilustração.
+
+     A BORDA SAI DE `currentColor`, E NÃO DE `--plastico` — 03/09/2026, e é o
+     que faz a cor do plástico ser LIDA DO APARELHO em vez de cravada aqui.
+     Nenhum alvo do pintor escreve uma variável CSS (`hefesto_vivo.escrever`
+     sabe `texto`, `largura`, `fundo`, `valor`, `html`, `classe` e `cor`), e o
+     alvo `cor` escreve `style.color`. Com a borda em `currentColor` o pacote
+     passa a mandar a cor da casca a cada tique, pelo `data-campo="plastico"`.
+
+     O PADRÃO É NEUTRO de propósito: sem leitura do broker — o primeiro tique de
+     toda sessão, e o rádio enquanto a cor não chega — `style.color` volta a
+     vazio e a borda cai em `var(--linha)`. Regra dela: campo sem informação não
+     mostra nada. Uma borda colorida ali afirmaria um modelo que ninguém leu.
+
+     E O DESENHO NÃO HERDA A COR DA MOLDURA. Medido em 03/09 no Chrome, dentro
+     desta página: `#il-p1-glifo-ps` e `#il-p1-glifo-share` desenham com
+     `stroke="currentColor"` e SEM classe, então herdavam `--fg` do documento.
+     Sem a linha abaixo, a cor que vai à borda tingiria os glifos do PS, do
+     share, do options, do mic e dos analógicos. Os quatro glifos de face
+     (`.z-simbolos`) já têm cor própria com `!important`, e não estavam em
+     risco — os outros cinco estavam. */
+  .luz-grade .moldura{color:var(--linha);border:1px solid currentColor;
+                      border-radius:8px;background:var(--app-bg);overflow:hidden}
+  .luz-grade .moldura .ds-svg{color:var(--fg)}
   .ctrl-rot{font-size:11px;color:var(--texto-mudo);text-align:center;white-space:nowrap;
             display:flex;align-items:center;justify-content:center}
 
@@ -590,8 +611,16 @@ def coluna(c):
         f'            <button class="tom{" on" if t == tom_da_casa(cor) else ""}" style="background:{t}"'
         f' data-campo="hex" data-hef-alvo="classe" data-hef-quando="{luz(i)}"'
         f' data-gesto="cor" data-hex="{luz(i)}"'
-        f' title="Cor automática do Player {i} — usar aqui pinta a barra do'
-        f' {c["nome"]}, e não muda o número dele."></button>'
+        # E O `title` NÃO NOMEIA CONTROLE — 03/09/2026. Ele dizia *"pinta a
+        # barra do {nome}"*, com o nome do MOCKUP, e a régua da identidade não o
+        # acusava: ela pula o `title` de quem já tem endereço, e este botão tem
+        # (`data-campo="hex"`). Endereço não cura frase congelada — `title` é
+        # ATRIBUTO, e o pintor não tem alvo para atributo, então o que estivesse
+        # escrito aqui ficaria na tela dela para sempre. A frase que sobra é
+        # verdadeira em qualquer mesa: quem é "este controle" a coluna já diz,
+        # no rótulo vivo logo acima.
+        f' title="Cor automática do Player {i} — usar aqui pinta a barra deste'
+        f' controle, e não muda o número dele."></button>'
         for i, t in enumerate(TONS, 1))
     # A DICA DA CÉLULA `LEDs` SAIU DA CÉLULA E ENTROU NO DESENHO — 02/09/2026,
     # decisões 7 e 8 dela. Ela dizia *"O Cosmic Red **aceso**: as duas tiras na
@@ -609,7 +638,7 @@ def coluna(c):
     # decide qual desenho está em vigor. Aqui, sem mesa viva, o gerador não
     # passa nem o número: `dica_da_luz` não precisa mais dele.
     return f'''        <div class="ctrl" data-controle="{c.get("uniq") or p}" data-conectado="sim">
-          <div class="moldura" style="--plastico:{cor_da_zona(c["cor"])}" title="O {c["nome"]} agora: a barra na cor do Player {j}, e as cinco lâmpadas no padrão dele.">
+          <div class="moldura" data-campo="plastico" data-hef-alvo="cor" style="color:{cor_da_zona(c["cor"])}" title="A borda é a cor do plástico deste controle, quando o produto a conhece. A barra acende a cor do número, e as cinco lâmpadas dizem qual é.">
             {svg(f"il-{p}", c["cor"], jogador=j, luz=tinta)}
           </div>
           <div class="ctrl-rot" data-campo="identidade">P{j} <span class="pt">•</span> {c["nome"]} <span class="pt">•</span> {c["via"]}</div>
@@ -633,24 +662,10 @@ def coluna(c):
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
-            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz do {c["nome"]}.">Desligar</button>
+            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
           </div>
         </div>'''
 
-
-def item_troca(c, n, mexeu=False):
-    """Um controle com um número, para o antes/depois da legenda."""
-    return (f'<span class="troca-item{" mexeu" if mexeu else ""}"'
-            f' style="--plastico:{cor_da_zona(c["cor"])}">'
-            f'<i class="dono"></i><span class="np">P{n}</span>'
-            f'<span>{c["nome"]}</span>{luzinhas(n)}</span>')
-
-
-#: O DEPOIS da troca: os dois trocam, os outros ficam. É uma permutação, e é o
-#: que a frase dela exige — "nunca fica um número repetido nem um controle sem
-#: número". Calculado, não escrito: se a mesa mudar, o desenho da legenda muda.
-DEPOIS = {c["pref"]: c["jogador"] for c in MESA}
-DEPOIS[QUER_O_1["pref"]], DEPOIS[TEM_O_1["pref"]] = TEM_O_1["jogador"], QUER_O_1["jogador"]
 
 MIOLO = f'''
     <div class="quadro luzes">
@@ -722,11 +737,18 @@ MIOLO = f'''
                   <b>Isto não escolhe o que você está vendo</b> — os {len(MESA)} estão na tela. Isto
                   <b>dá</b> um número ao controle da coluna. O <b>anelzinho</b> de cada botão é
                   a cor do plástico de quem tem aquele número hoje.<br><br>
+                  <!-- A FRASE PAROU DE NOMEAR CONTROLE — 03/09/2026, a lei dela.
+                       Ela dizia *"pôr o Starlight Blue no 1 faz o Cosmic Red virar
+                       2"*: os dois nomes do MOCKUP, numa coluna de RÓTULOS que é
+                       uma só para as quatro colunas — não há "este controle" aqui
+                       a que endereçar, e por isso a cura não é endereço, é dizer a
+                       regra em vez do exemplo. Quem nomeia os dois de verdade é a
+                       dica de cada botão da fileira (`um_botao_de_player`), que o
+                       pacote reescreve a cada tique com a mesa viva. -->
                   Dar a este controle um número que já é de outro faz <b>os dois trocarem de
-                  lugar</b>: pôr o {QUER_O_1["nome"]} no {TEM_O_1["jogador"]} faz o
-                  {TEM_O_1["nome"]} virar {QUER_O_1["jogador"]}. Nunca fica um número
-                  repetido, nunca fica um controle sem número — por isso a fileira oferece
-                  os números que existem na mesa, e não os oito.<br><br>
+                  lugar</b>: quem tem aquele número hoje fica com o deste. Nunca fica um
+                  número repetido, nunca fica um controle sem número — por isso a fileira
+                  oferece os números que existem na mesa, e não os oito.<br><br>
                   Um jogo em co-op pode mandar o seu próprio número por cima — e aí quem
                   manda nas luzinhas é o jogo, não esta escolha.
                 </span></span>
@@ -744,38 +766,21 @@ MIOLO = f'''
     </div>
 '''
 
+# A SEÇÃO DA TROCA É UM BLOCO VIVO — 03/09/2026, a lei dela: *"cada aba vai
+# usar os controles lá de cima. Não mistura com a info dos mockups."*
+#
+# Ela era o maior amontoado de identidade congelada desta aba: dezesseis valores
+# em oito `.troca-item`, mais quatro frases que nomeavam dois controles do
+# desenho. E o rodapé NÃO é papel de parede — ele viaja no mesmo arquivo que o
+# produto renderiza.
+#
+# O `data-hef` do contêiner declara o dono (a gramática da `10-perfis`), e o
+# `blocos:` do pacote o reescreve a cada tique com `ctx.mesa`. Um dono, dois
+# chamadores: `secao_da_troca` desenha a bancada aqui e o produto lá.
 LEGENDA = f'''<div class="nota">
-  <h2>Trocar o número: o antes e o depois</h2>
-  <p>O caso é o seu, de 26/08 — <i>"o meu controle azul é o player 2 e antes de irmos pro
-  jogo ele tem que ser o player 1"</i>. Na coluna do <b>{QUER_O_1["nome"]}</b>, clique no
-  <b>{TEM_O_1["jogador"]}</b>:</p>
-
-  <div class="troca">
-    <div class="troca-linha"><span class="troca-rot">Antes</span>
-{chr(10).join("      " + item_troca(c, c["jogador"], c is QUER_O_1) for c in MESA)}
-    </div>
-    <div class="troca-gesto">↓ clique no <b>{TEM_O_1["jogador"]}</b> na coluna do
-      <b>{QUER_O_1["nome"]}</b></div>
-    <div class="troca-linha"><span class="troca-rot">Depois</span>
-{chr(10).join("      " + item_troca(c, DEPOIS[c["pref"]], DEPOIS[c["pref"]] != c["jogador"]) for c in MESA)}
-    </div>
+  <div class="nota-troca" data-hef="troca">
+{_pacote04.secao_da_troca(MESA, recuo="    ")}
   </div>
-
-  <ul>
-    <li><b>Os dois trocam, os outros não se mexem.</b> É uma permutação: ninguém repete
-        número e ninguém fica sem. Por isso a fileira oferece
-        <span class="marca">{" · ".join(str(n) for n in NUMEROS)}</span> — os números que
-        existem na mesa. Um número livre não teria com quem trocar, e dá-lo deixaria um
-        controle sem número.</li>
-    <li><b>As luzinhas seguem o número</b>, no padrão do produto: 1 é a do <b>meio</b>,
-        2 são as duas de dentro, 3 são as pontas e o meio, 4 são quatro sem a do meio
-        (<code>core/led_control.py::player_led_pattern</code>).</li>
-    <li><b>E a cor da barra segue junto</b>, porque sem escolha à mão ela é a cor do
-        <i>número</i>: depois da troca o {QUER_O_1["nome"]} acende
-        <span class="marca">{luz(TEM_O_1["jogador"])}</span> e o {TEM_O_1["nome"]} acende
-        <span class="marca">{luz(QUER_O_1["jogador"])}</span>
-        (<code>core/led_control.py::player_slot_color</code>).</li>
-  </ul>
 
   <h2>O que mudou hoje</h2>
   <ul>
@@ -796,10 +801,10 @@ LEGENDA = f'''<div class="nota">
         desenhos pequenos das outras abas.</li>
     <li><b>Saiu o "Sony" do rótulo</b>, que ainda estava aqui. Decisão sua de 27/08 — "tira o
         Sony das outras abas também", porque a marca se repetia em cada card sem separar um
-        controle do outro. Agora ele lê <span class="marca">P1 • Cosmic Red • USB</span>,
+        controle do outro. Agora ele lê <span class="marca">P1 • Modelo • USB</span>,
         que é exatamente o que os chips da fita dizem 100 px acima, na mesma tela.
         <b>Aviso:</b> Controles e Conexões ainda escrevem a forma longa
-        (<i>Sony • Player 1 • Cosmic Red • USB</i>), citando a sua ordem de 26/08 — a que
+        (<i>Sony • Player 1 • Modelo • USB</i>), citando a sua ordem de 26/08 — a que
         você trocou no dia seguinte. Não é falta de espaço: medida aqui, a forma longa dá
         196 px numa coluna de 208. É uma escolha, e ela precisa valer para as três.</li>
     <li><b>O hexadecimal fica</b>, por decisão sua de 28/08 — e agora há um por controle,

@@ -483,3 +483,55 @@ seção daqui**: a aba deixou de estar em trabalho.
 
   **NADA FOI PUBLICADO.** Publicar continua sendo ato seu:
   `scripts/check_o_desenho_aprovado.py --publicar 02`.
+- **03/09/2026** — **A COR DO CONTROLE PASSA A VIR DO APARELHO.** É a sua lei
+  deste dia: *"se no topo tá mostrando controle white player 1, então cada aba
+  vai usar os controles lá de cima. Não mistura com a info dos mockups."* — e,
+  sobre a cor: *"se identificou o controle como modelo White a cor do card em
+  volta tem que ser branco. Temos isso no mapa."*
+
+  **O que estava na sua tela, fotografado hoje com os seus dois controles:** o
+  rótulo da coluna dizia `P1 • White • USB` — certo, vivo — e a **moldura em
+  volta do desenho estava vermelha**, que é o Cosmic Red do mockup. A moldura é
+  justamente como esta aba diz de quem é a luz. Eram **39 valores de identidade
+  congelados** nesta página; **sobraram 6**, e os seis não são desta aba (ver o
+  fim desta seção).
+
+  | o que era | o que passa a ser |
+  | --- | --- |
+  | a moldura com `--plastico:#ae335a` cravado | `data-campo="plastico"`, e o produto escreve a cor da casca LIDA |
+  | *"Apaga a barra de luz do Cosmic Red"* | *"…deste controle"* |
+  | *"pinta a barra do Cosmic Red"*, nos 8 botões de cor de cada coluna | *"…pinta a barra deste controle"* |
+  | a dica do **Jogador**: *"pôr o Starlight Blue no 1 faz o Cosmic Red virar 2"* | a REGRA: *"quem tem aquele número hoje fica com o deste"* |
+  | o **antes/depois** do rodapé, desenhado com os controles do mockup | um bloco vivo, com os controles que estiverem na mesa |
+
+  **SEM COR LIDA, A MOLDURA FICA NEUTRA — e isso é a sua regra:** campo sem
+  informação não mostra nada. A cor do plástico chega pelo broker, e hoje o
+  controle **por rádio** ainda vem sem ela. Fotografado agora: a coluna do cabo
+  com a borda **branca** (o seu White) e a do rádio **cinza**. Antes as duas
+  mostravam cor de controle nenhum.
+
+  **NENHUM PIXEL DO DESENHO MUDOU NA BANCADA.** Medido no Chrome, dentro desta
+  página, antes e depois: a borda da coluna P1 continua `rgb(174, 51, 90)` e os
+  glifos do desenho continuam nas cores de sempre. O que muda é de onde a cor
+  vem quando o produto abre a página.
+
+  **O QUE VOCÊ VÊ ENQUANTO ESPERA:** nada muda e nada piora. O
+  `data-campo="plastico"` não existe na página publicada, então o produto de
+  hoje não acha onde escrever e a moldura fica no que o arquivo diz. **Quando
+  você publicar a 04**, a borda passa a ser a do controle de verdade.
+
+  **O QUE FICA ABERTO, e é honesto dizer: o DESENHO dentro da moldura continua
+  na cor do mockup.** A borda diz White e o controle desenhado continua
+  vermelho. Não é esquecimento — é medida: redesenhar o SVG a cada tique custa
+  **4,5 ms e 52 KB por coluna** (medido hoje), contra um tique que hoje leva
+  1,4 ms inteiro. O caminho barato existe e não é desta aba: o piloto não tem
+  alvo de pintura para ATRIBUTO, e com ele bastaria trocar o `data-colorway` do
+  SVG. **O mesmo alvo cura de uma vez as dicas congeladas desta aba**, que são
+  `title` e por isso ficam no que o gerador soube.
+
+  **E OS SEIS QUE SOBRAM SÃO DE TODAS AS DEZ ABAS, não desta:** são os dois
+  chips da fita — `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT` —, que
+  saem de `interface/monta.py::fita()`, um arquivo só para as dez páginas. O
+  produto já os reescreve por `document.querySelector('.fita')`, mas eles não
+  têm endereço no HTML, e por isso toda régua os lê como congelados. A cura é
+  uma linha no dono comum, e não dez cópias dela.
