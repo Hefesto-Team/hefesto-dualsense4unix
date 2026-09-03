@@ -128,9 +128,18 @@ DEFAULT_BUTTON_BINDINGS: dict[str, KeyBinding] = {
 #: tabela contra a MEDIÇÃO, nos dois sentidos: padrão novo fora da tela sem
 #: declaração reprova na hora, e declaração que caducou (ela publicou) reprova
 #: também — é o sino que manda apagar a linha.
-PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ: dict[str, tuple[str, str]] = {
-    "l3": (TOKEN_TOGGLE_OSK, TOKEN_OPEN_OSK),
-}
+# A DECLARAÇÃO DO `l3` MORREU EM 03/09/2026, e morreu do jeito certo: ela
+# existia porque a `06-navegacao.html` publicada tinha sido congelada ANTES de o
+# L3 virar alternador, e não oferecia a `<option>` do rótulo novo. A página de
+# hoje traz *"Abrir e fechar o teclado"* nos 28 seletores — o defeito acabou por
+# PUBLICAÇÃO, que é ato dela.
+#
+# `test_o_padrao_de_fabrica_cabe_na_tela_publicada.py` cobra os dois sentidos e
+# foi ele que apontou a caducidade, com a frase que é a regra: *declaração que
+# sobrevive ao defeito é lápide*. O mecanismo que a consome
+# (`a06_navegacao._congelado_na_tela`) fica de pé, vazio, para a próxima linha
+# que alguém congelar.
+PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ: dict[str, tuple[str, str]] = {}
 
 
 def is_virtual_token(token: str) -> bool:

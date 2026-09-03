@@ -142,7 +142,18 @@ GRAU = 1
 #: `check_fotos_da_tela.py`, que é a interface GTK de hoje. As duas convivem
 #: enquanto a migração corre, e as duas precisam de régua.
 TELA = (
-    "layout",
+    # A INTERFACE NOVA MUDOU DE ENDEREÇO, e este portão não tinha ido junto —
+    # medido em 03/09/2026. As páginas que o produto RENDERIZA moram em
+    # `src/…/interface/paginas/` e os geradores em `src/…/interface/abaNN.py`;
+    # a pasta `layout/` que estava aqui NÃO EXISTE MAIS nesta árvore. O portão
+    # que existe para induzir régua de tela ficava CALADO diante de qualquer
+    # mudança numa página publicada — que é exatamente o commit dos dois botões
+    # mortos de 29/08, o caso que ele nasceu para pegar.
+    #
+    # As RÉGUAS que moram na mesma pasta não são acusadas: `julgar` chama
+    # `e_regua` ANTES de `e_tela`, e quem se chama `regua*`/`conferir*`/
+    # `olhar*`/`medir*` é creditado, não cobrado.
+    "src/hefesto_dualsense4unix/interface",
     "src/hefesto_dualsense4unix/app",
     "src/hefesto_dualsense4unix/gui",
     "scripts/gui-captura",
@@ -187,6 +198,10 @@ A_PONTE_JS = "src/hefesto_dualsense4unix/interface/controles_vivos.py"
 
 #: A pasta das ferramentas do mockup.
 FERRAMENTAS = "src/hefesto_dualsense4unix/interface"
+
+#: Onde moram as páginas que o produto RENDERIZA — o que o `WebView`
+#: abre. Nomeada porque `aba_de` precisa dela para dizer QUAL aba mudou.
+PAGINAS = "src/hefesto_dualsense4unix/interface/paginas"
 
 #: O INSTRUMENTO versionado: a biblioteca com que se escreve régua nova sobre a
 #: interface que roda num `WebView`. Nomeado à parte da lista porque ele não é
@@ -287,7 +302,8 @@ def aba_de(caminho: str) -> str | None:
     de abas aqui, e é de propósito: tabela apodrece, nome de arquivo não.
     """
     p = PurePosixPath(caminho)
-    if p.parent == PurePosixPath("layout") and p.suffix == ".html":
+    # AS PÁGINAS PUBLICADAS, no endereço de hoje. `layout/` era o de ontem.
+    if p.parent == PurePosixPath(PAGINAS) and p.suffix == ".html":
         cabeca = p.name[:2]
         return cabeca if cabeca.isdigit() else None
     if str(p.parent) == FERRAMENTAS and p.name.startswith("aba"):
