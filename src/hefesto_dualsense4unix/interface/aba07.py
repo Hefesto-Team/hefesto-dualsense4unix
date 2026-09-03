@@ -3,11 +3,18 @@
 # abas vinham de um montador e de um esqueleto de ontem, e nenhuma correção
 # no topo.html desta pasta as alcançava. Achado em 27/08.
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import csv
+import re
+
 import onde
 # `MESA` SAIU DO IMPORT em 02/09/2026, e a razão é a mesma que mudou a régua da
 # promessa: os cartões deixaram de contar controle. `CONECTADOS` fica — ele
 # ainda responde pelo texto do "?" ("a resposta vale igual para os N").
-from monta import CONECTADOS, monta
+#
+# `cor_da_zona` entrou em 03/09/2026 e serve à RÉGUA, não ao desenho: é ele que
+# transforma a isenção das cinco variáveis do esqueleto numa MEDIÇÃO. Ver
+# `identidade_congelada`.
+from monta import CONECTADOS, cor_da_zona, monta
 
 # O DESENHO DOS CARTÕES TEM UM DONO SÓ, e ele é o mesmo que o pacote
 # `pacotes/a07_lancadores.py` usa em tempo de execução. Enquanto os cartões
@@ -20,6 +27,169 @@ from monta import CONECTADOS, monta
 # de a leitura de disco voltar. É o único desenho honesto para uma página
 # estática: ela não sabe nada da biblioteca dela até o produto abrir.
 import desenho_dos_lancadores as dl
+
+# ---------------------------------------------------------------------------
+# A RÉGUA DA IDENTIDADE DESTA ABA — CINCO FORMAS, e três delas cegas em toda a
+# casa até 03/09/2026.
+#
+# A LEI, e ela é dela:
+#
+#     "os svgs do dualsense, as bordas das fitas das áreas, as escolhas dos
+#      players com cada controle — tudo isso muda de acordo com o controle
+#      identificado no canto superior. é white no p1, mas a borda de tudo é
+#      cosmic red e os svgs não são os que o meu mapa cataloga. isso tá errado"
+#
+# O QUE JÁ HAVIA, e cobre DUAS formas: `scripts/check_identidade_vem_de_cima.py`
+# e `tests/unit/test_a_aba_07_usa_o_controle_da_fita.py` pegam (1) o NOME de um
+# colorway no texto e (2) o `--plastico:` cravado.
+#
+# O QUE NENHUMA DAS DUAS ENXERGA, medido nesta árvore em 03/09/2026 injetando
+# cada forma na `07-lancadores.html` e rodando as duas réguas — as três saíram
+# VERDES sobre a página envenenada:
+#
+#   3. o APELIDO do modelo (`cosmic-red`), que é o que vai num
+#      `data-colorway="…"` ou numa classe. Nenhum "Cosmic Red" aparece: o
+#      apelido não é o nome, e a régua por nome não o vê. É exatamente a forma
+#      que a frase dela nomeia — *"os svgs não são os que o meu mapa cataloga"*;
+#   4. o HEXADECIMAL do mapa (`#A51C48`) solto num `fill=` ou num
+#      `border-color:`. Sem nome e sem `--plastico:`, ele passa pelas duas —
+#      e é a forma de *"a borda de tudo é cosmic red"*;
+#   5. o `var(--cosmic-red)`, que empresta a tabela de CINCO plásticos do
+#      esqueleto. É a mais silenciosa das três: não há nome, nem apelido em
+#      posição de valor, nem hexadecimal — só uma referência.
+#
+# A TABELA DO ESQUELETO NÃO É ISENTA POR DECRETO. O `topo.html` declara
+# `--cosmic-red`, `--nova-pink`, `--starlight-blue`, `--galactic-purple` e
+# `--midnight-black` no `:root` das DEZ páginas, e `monta.monta()` reescreve o
+# valor de cada uma com `cor_da_zona`, que lê o mapa dela. A régua CONFERE isso
+# em vez de acreditar: se um sexto plástico for digitado à mão no esqueleto, ou
+# se um dos cinco divergir do CSV, ela acusa. Isenção sem razão é ponto cego com
+# nome bonito; isenção MEDIDA é régua.
+#
+# `--conferir <arquivo>` roda só esta régua sobre um HTML qualquer, sem gerar
+# nada. É por essa porta que a mordida entra
+# (`tests/unit/test_aba07_a_cor_do_aparelho_nao_se_crava.py`): sem ela o teste
+# teria de reescrever a regra, e duas escritas da mesma regra é o defeito que
+# esta casa mais paga.
+# ---------------------------------------------------------------------------
+#: A prosa não conta: `<!-- -->` e `/* */` falam DE cor sem pintar nenhuma.
+#: Contá-los inflaria o número, e número inflado é o que esta casa mais derruba.
+_PROSA = re.compile(r"<!--.*?-->|/\*.*?\*/", re.S)
+
+#: A tabela do esqueleto, na forma `--<apelido>:#hex`. O `<apelido>` só vale se
+#: for um `id` do mapa — `--plastico:#fff` cai fora daqui e é acusado à parte.
+_TABELA_DO_ESQUELETO = re.compile(r"--([a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{6})")
+
+#: Um elemento com `data-colorway`. O CONTRATO do alvo novo (frente irmã,
+#: 03/09/2026) é `data-hef-alvo="atributo"` + `data-hef-atributo="data-colorway"`
+#: no MESMO elemento — o par em atributos separados, como o alvo `classe` já faz.
+_COM_COLORWAY = re.compile(r"<[a-zA-Z][^>]*\bdata-colorway\s*=[^>]*>")
+
+
+def _mapa_das_cores() -> list[dict[str, str]]:
+    """As 233 linhas de `docs/data/cores-do-dualsense.csv`: 28 modelos, 10 zonas.
+
+    Digitar aqui um nome, um apelido ou um hexadecimal criaria a segunda lista
+    que o CSV existe para não ter — e ela envelheceria calada no dia em que ela
+    mapear o vigésimo nono modelo.
+    """
+    linhas = [ln for ln in (onde.RAIZ / "docs/data/cores-do-dualsense.csv")
+              .read_text(encoding="utf-8").splitlines()
+              if ln.strip() and not ln.lstrip().startswith("#")]
+    return list(csv.DictReader(linhas))
+
+
+def identidade_congelada(doc: str) -> list[str]:
+    """As cores de APARELHO cravadas nesta página, uma frase por achado.
+
+    Devolve lista vazia quando a página está limpa — que é o estado da
+    `07-lancadores` desde 03/09/2026, e o que esta régua existe para manter.
+    """
+    mapa = _mapa_das_cores()
+    nomes = sorted({(ln.get("nome") or "").strip() for ln in mapa} - {""})
+    apelidos = sorted({(ln.get("id") or "").strip() for ln in mapa} - {""})
+    tons = sorted({(ln.get("hex") or "").strip().lower() for ln in mapa} - {""})
+
+    # As quebras de linha sobrevivem ao apagador de prosa: sem isso um
+    # comentário de vinte linhas vira uma só e todo número depois dele erra.
+    limpo = _PROSA.sub(lambda m: "".join(c if c == "\n" else " " for c in m.group(0)), doc)
+    achados: list[str] = []
+
+    # 0. A TABELA DO ESQUELETO, conferida contra o mapa antes de ser isentada.
+    vaos: list[tuple[int, int]] = []
+    for m in _TABELA_DO_ESQUELETO.finditer(limpo):
+        apelido, tom = m.group(1), m.group(2)
+        if apelido not in apelidos:
+            continue
+        vaos.append(m.span())
+        do_mapa = cor_da_zona(apelido) or ""
+        if tom.lower() != do_mapa.lower():
+            achados.append(
+                f"a página traz `--{apelido}:{tom}` e o mapa dela diz "
+                f"`{do_mapa or 'nada'}`. As cinco variáveis de plástico do "
+                f"esqueleto são REESCRITAS por `monta.cor_da_zona`; um valor "
+                f"que diverge é hexadecimal digitado à mão, não leitura do CSV.")
+
+    def _fora_da_tabela(i: int) -> bool:
+        return not any(a <= i < b for a, b in vaos)
+
+    # 1. O NOME do modelo no que a tela mostra.
+    achados += [f"nome de colorway na página: {nome!r}. A identidade do controle "
+                f"vem da FITA, que lê do APARELHO — um nome de modelo escrito "
+                f"aqui é o desenho mandando na tela do produto."
+                for nome in nomes if len(nome) >= 4 and nome in limpo]
+
+    # 2. A COR do plástico cravada.
+    if re.search(r"--plastico\s*:", limpo):
+        achados.append(
+            "voltou um `--plastico:` cravado à página. A cor do plástico é "
+            "leitura de aparelho — quem a escreve é o pacote, nunca o gerador.")
+
+    # 3. O APELIDO do modelo em posição de valor (`data-colorway`, classe…).
+    for apelido in apelidos:
+        agulha = rf"(?<![A-Za-z0-9_-]){re.escape(apelido)}(?![A-Za-z0-9_-])"
+        achados += [f"apelido de modelo do mapa na página: {apelido!r}. É o que "
+                    f"vai num `data-colorway` ou numa classe, e a régua por NOME "
+                    f"não o enxerga — nenhum 'Cosmic Red' aparece num "
+                    f"`data-colorway=\"cosmic-red\"`."
+                    for m in re.finditer(agulha, limpo) if _fora_da_tabela(m.start())]
+
+    # 3b. A TABELA DE CINCO DO ESQUELETO, emprestada por esta aba.
+    achados += [f"a página usa `var(--{apelido})`. Aquelas cinco são a paleta do "
+                f"DESENHO, congelada no esqueleto: elas respondem por 5 dos 28 "
+                f"modelos do mapa, e quem tiver o sexto vê a cor de outro "
+                f"aparelho. A cor do controle DELA vem do pacote, no tique."
+                for apelido in apelidos if f"var(--{apelido})" in limpo]
+
+    # 4. O HEXADECIMAL do mapa solto — a forma de "a borda de tudo é cosmic red".
+    for tom in tons:
+        achados += [f"hexadecimal do mapa cravado na página: {tom}. Ele não tem "
+                    f"nome nem `--plastico:` e por isso atravessa as duas réguas "
+                    f"que já havia — e é a cor de um modelo que pode não ser o "
+                    f"dela."
+                    for m in re.finditer(re.escape(tom), limpo, re.I)
+                    if _fora_da_tabela(m.start())]
+
+    # 5. O `data-colorway` SEM o endereço que deixa o produto reescrevê-lo.
+    achados += [f"`data-colorway` sem endereço em {' '.join(m.group(0).split())[:90]!r}. "
+                f"O contrato é `data-hef-alvo=\"atributo\"` com "
+                f"`data-hef-atributo=\"data-colorway\"` no mesmo elemento; sem "
+                f"eles o SVG fica com o colorway do desenho para sempre."
+                for m in _COM_COLORWAY.finditer(limpo)
+                if 'data-hef-alvo="atributo"' not in m.group(0)
+                or 'data-hef-atributo="data-colorway"' not in m.group(0)]
+
+    return achados
+
+
+if "--conferir" in sys.argv:
+    _ALVO = pathlib.Path(sys.argv[sys.argv.index("--conferir") + 1])
+    _PROBLEMAS = identidade_congelada(_ALVO.read_text(encoding="utf-8"))
+    for _p in _PROBLEMAS:
+        print(f"ERRO: {_p}", file=sys.stderr)
+    print(f"{_ALVO.name}: {len(_PROBLEMAS)} cor(es) de aparelho cravada(s)")
+    raise SystemExit(1 if _PROBLEMAS else 0)
+
 
 # ---------------------------------------------------------------------------
 # A MESA RESPONDE PELO NÚMERO — aqui não se escreve "quatro".
@@ -274,8 +444,6 @@ LEGENDA = f'''<div class="nota">
 # ELA LÊ O MIOLO, e não as variáveis que o escreveram: comparar o produto com
 # ele mesmo é como uma régua irmã, na aba Conexões, passou por uma mordida.
 # ---------------------------------------------------------------------------
-import re  # noqa: E402
-
 _PROMESSAS = re.findall(r"[Oo]s (\d+) controles chegam", MIOLO)
 if _PROMESSAS:
     raise SystemExit(
@@ -351,37 +519,22 @@ if not _CONGELADOS:
 onde.gravar("07-lancadores.html", _CHIP_DE_CONTROLE.sub("", _DOC))
 
 # ---------------------------------------------------------------------------
-# A RÉGUA DA IDENTIDADE — ela lê o HTML JÁ GRAVADO, que é a última coisa que a
+# A RÉGUA DA IDENTIDADE roda sobre o HTML JÁ GRAVADO, que é a última coisa que a
 # página é. Ler o `MIOLO` deixaria de fora justamente a fita, que vem do
 # esqueleto e é onde o defeito morava.
 #
-# OS NOMES SAEM DO MAPA, e não daqui: `docs/data/cores-do-dualsense.csv` é o
-# dono dos 28 colorways. Digitar "Cosmic Red" nesta régua criaria a segunda
-# lista que o CSV existe para não ter, e ela envelheceria calada no dia em que
-# o desenho trocasse de controle de exemplo.
+# A REGRA MORA EM `identidade_congelada`, lá em cima, com as cinco formas e a
+# razão de cada uma. Aqui só se aplica — e a mesma função responde ao
+# `--conferir`, que é por onde o teste a morde.
 # ---------------------------------------------------------------------------
-import csv  # noqa: E402
+_CRAVADAS = identidade_congelada(onde.pagina("07-lancadores.html").read_text())
+if _CRAVADAS:
+    raise SystemExit("ERRO: " + "\nERRO: ".join(_CRAVADAS))
 
-_FINAL = onde.pagina("07-lancadores.html").read_text()
-_SEM_PROSA = re.sub(r"<!--.*?-->|/\*.*?\*/", " ", _FINAL, flags=re.S)
-_LINHAS_DO_MAPA = [ln for ln in (onde.RAIZ / "docs/data/cores-do-dualsense.csv")
-                   .read_text(encoding="utf-8").splitlines()
-                   if ln.strip() and not ln.lstrip().startswith("#")]
-_COLORWAYS = sorted({(ln.get("nome") or "").strip()
-                     for ln in csv.DictReader(_LINHAS_DO_MAPA)} - {""})
-_ACHADOS = [c for c in _COLORWAYS if len(c) >= 4 and c in _SEM_PROSA]
-if _ACHADOS:
-    raise SystemExit(
-        f"ERRO: {len(_ACHADOS)} nome(s) de colorway na página — {_ACHADOS}. A "
-        "identidade do controle vem da FITA, que lê do APARELHO; um nome de "
-        "modelo escrito na página é o desenho mandando na tela do produto.")
-if "--plastico:" in _SEM_PROSA:
-    raise SystemExit(
-        "ERRO: voltou um `--plastico:` cravado à página. A cor do plástico é "
-        "leitura de aparelho — quem a escreve é o pacote, nunca o gerador.")
+_MODELOS = sorted({(ln.get("id") or "").strip() for ln in _mapa_das_cores()} - {""})
 
 print(f"07-lancadores: OK, {n} divs · mesa {N_CTRL} ({N_USB} USB/{N_BT} BT) · "
       f"{QUADRO.achados} encontrados, {QUADRO.impedidos} com impedimento · "
       f"{len(_ESPERADOS) * len(dl.SUFIXOS)} endereços em {len(_ESPERADOS)} cartões · "
       f"{len(_CONGELADOS)} chip(s) do desenho fora da fita, "
-      f"0 dos {len(_COLORWAYS)} colorways do mapa na página")
+      f"0 dos {len(_MODELOS)} modelos do mapa cravados na página")
