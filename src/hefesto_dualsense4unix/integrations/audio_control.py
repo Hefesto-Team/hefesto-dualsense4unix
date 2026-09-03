@@ -259,8 +259,29 @@ def fonte_de_captura_do_controle() -> str | None:
     return None
 
 
+def _texto_do_pactl(argv: list[str]) -> str | None:
+    """`pactl` com `LC_ALL=C`, sem shell. `None` em qualquer falha.
+
+    O `LC_ALL=C` não é zelo: o `pactl` desta máquina TRADUZ a saída, e uma
+    versão desta rotina em português já respondeu "nenhum controle com placa de
+    áudio" sobre um sistema que tinha uma (medido em 15/08/2026).
+    """
+    try:
+        return subprocess.run(
+            argv,
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT_SEC,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        ).stdout
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("audio_fonte_do_uniq_falhou", err=str(exc))
+        return None
+
+
 def fonte_de_captura_do_uniq(uniq: str) -> str | None:
-    """A fonte de captura DAQUELE controle, pelo dispositivo USB em que ela pendura.
+    """A fonte de captura DAQUELE controle — pela régua que já é dona da pergunta.
 
     MIC-DA-MESA-CHEIA-01 (20/08/2026). A `fonte_de_captura_do_controle` acima
     devolve a PRIMEIRA fonte que casar com a marca — e isso estava certo enquanto
@@ -271,19 +292,51 @@ def fonte_de_captura_do_uniq(uniq: str) -> str | None:
     DualSense no cabo há DUAS placas de som, cada uma pendurada no seu
     dispositivo USB — foi exatamente por isso que `usb_pai_por_uniq` nasceu em
     15/08, quando mic e botão de saída sumiram de todos os controles assim que
-    havia dois. O medidor de cada card da aba Status já casa certo desde então.
-    Só o controle deslizante de VOLUME não casava: ele mandava o `uniq`, o
-    handler o descartava, e o gesto ia para a primeira placa da lista — o
-    microfone de outra pessoa, na mesa cheia.
+    havia dois.
 
-    A identidade é o dispositivo USB, e não o nome do nó, porque o nome NÃO TEM
-    identidade: o `-00`/`-00.2` é desempate posicional do PipeWire e a string de
-    serial USB do DualSense é a mesma em todos os aparelhos.
+    ESTA FUNÇÃO ERA UMA SEGUNDA RÉGUA, E SÓ ENXERGAVA O CABO (03/09/2026)
+    ---------------------------------------------------------------------
+    Ela resolvia por UMA regra — o dispositivo USB em que a placa pendura — e
+    saía com `None` logo na primeira linha quando o controle não tinha
+    dispositivo USB nenhum. **Um controle no RÁDIO nunca tem** (medido em
+    15/08/2026: a placa segue o transporte), então a resposta por rádio era
+    `None` SEMPRE, inclusive com a ponte de microfone de pé publicando
+    ``hefesto_dualsense_bt_<hex6>`` — um nome que carrega os três últimos
+    octetos do MAC daquele controle e portanto o identifica melhor que o
+    dispositivo USB identifica os do fio.
+
+    O estrago não era o `None`: era o que vem depois dele. O
+    `mic.volume.set` cai na rota GLOBAL quando esta função não resolve
+    (`daemon/ipc_handlers.py`, o ramo `if fonte is None`), e a rota global
+    devolve a PRIMEIRA fonte de DualSense da lista. Numa mesa com um controle
+    no fio e um no ar, o controle deslizante do card de quem está no RÁDIO
+    mexia no microfone de quem está no CABO — que é, palavra por palavra, o
+    defeito que esta sprint fechou para o cabo em 20/08.
+
+    **O aparelho aceitava; quem recusava era o filtro.** A casa já tinha a
+    resposta certa e com dono único:
+    :func:`~hefesto_dualsense4unix.integrations.fontes_de_captura.escolher_fonte`,
+    com as quatro regras (MAC inteiro no nome · rabo do MAC da ponte BT · mesmo
+    dispositivo USB · um-para-um). O medidor de cada card, a luz do microfone e
+    a eleição já perguntavam por lá; só este caminho tinha régua própria — e
+    duas verdades sobre a mesma pergunta é como esta casa fabrica divergência
+    silenciosa.
+
+    A REGRA 4 FICA DESLIGADA, de propósito: ``uniqs_com_audio=[]``. Aqui só se
+    conhece UM `uniq`, e o um-para-um precisa saber que ele é o único candidato
+    da mesa para valer. Ligá-lo com a mesa desconhecida daria a única fonte da
+    lista a quem calhasse de perguntar primeiro — o chute que o `None` desta
+    função existe para não dar.
 
     Devolve `None` quando não dá para saber de quem é a fonte — e `None` aqui é
     a resposta CERTA, não uma falha: mexer no microfone do controle errado é
     pior que não mexer em nenhum. Quem chama decide se cai para a rota global.
     """
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+        CasamentoUSB,
+        escolher_fonte,
+        fontes_dualsense,
+    )
     from hefesto_dualsense4unix.integrations.usb_pai import (
         nos_e_sysfs,
         usb_pai_por_no,
@@ -292,33 +345,27 @@ def fonte_de_captura_do_uniq(uniq: str) -> str | None:
 
     if not uniq:
         return None
-    do_controle = usb_pai_por_uniq([uniq]).get(uniq, "")
-    if not do_controle:
+    curta = _texto_do_pactl(["pactl", "list", "sources", "short"])
+    if curta is None:
         return None
-    # A saída LONGA, e não a curta: só ela traz o `sysfs.path` de cada nó, que é
-    # o fio inteiro desta cura.
-    try:
-        longa = subprocess.run(
-            ["pactl", "list", "sources"],
-            capture_output=True,
-            text=True,
-            timeout=SUBPROCESS_TIMEOUT_SEC,
-            check=False,
-            env={**os.environ, "LC_ALL": "C"},
-        ).stdout
-    except (OSError, subprocess.SubprocessError) as exc:
-        logger.warning("audio_fonte_do_uniq_falhou", err=str(exc))
+    # O dono do "quais destas são de DualSense" é o mesmo de sempre: ele
+    # descarta o `.monitor` (o ECO DA SAÍDA, que já custou um defeito real em
+    # 16/08) e reconhece tanto a placa do cabo quanto a source da ponte.
+    fontes = fontes_dualsense(curta)
+    if not fontes:
         return None
-    por_no = usb_pai_por_no(nos_e_sysfs(longa or ""))
-    for nome, usb in por_no.items():
-        alvo = nome.lower()
-        # Mesmas duas guardas da rota global, e pela mesma razão medida: o
-        # `.monitor` é o ECO DA SAÍDA, não a captura.
-        if alvo.endswith(".monitor") or alvo.startswith("alsa_output."):
-            continue
-        if usb and usb == do_controle:
-            return nome
-    return None
+    # A saída LONGA só serve ao casamento por USB — e é o único passo que o
+    # controle no rádio não tem. Sem ela, as regras de IDENTIDADE continuam
+    # valendo, e são justamente as que respondem por rádio.
+    usb: CasamentoUSB | None = None
+    longa = _texto_do_pactl(["pactl", "list", "sources"])
+    if longa is not None:
+        do_controle = usb_pai_por_uniq([uniq]).get(uniq, "")
+        usb = CasamentoUSB(
+            por_uniq={uniq: do_controle} if do_controle else {},
+            por_no=usb_pai_por_no(nos_e_sysfs(longa)),
+        )
+    return escolher_fonte(fontes, uniq, [], usb)
 
 
 def definir_volume_da_captura(volume_pct: int, *, fonte: str | None = None) -> bool:
