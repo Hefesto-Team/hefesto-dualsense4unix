@@ -165,10 +165,16 @@ def _mic_led(aceso: bool | None, *, uniq: str | None = None) -> int:
     - ``True``  — acende, e a posse do `common[8]` passa a ser nossa;
     - ``False`` — apaga; é uma ORDEM, e o kernel deixa de mandar na luz;
     - ``None``  — devolve a posse ao `hid-playstation`, que volta a escrever
-      `mute_button_led = ds->mic_muted` a cada borda do botão físico.
+      `mute_button_led = ds->mic_muted` a cada borda do botão físico. Desde a
+      LUZ-DO-MIC-01 §2 o daemon REPINTA a luz com o mudo de fato antes de
+      soltar: o kernel só escreve na borda do botão, então largar o byte
+      deixava o último valor nosso preso no plástico até ela apertar o mudo.
 
     Não existe leitura deste registrador no firmware — por isso a linha
-    impressa diz o que PEDIMOS, e nunca finge ser leitura.
+    impressa diz o que PEDIMOS, e nunca finge ser leitura. Pela mesma razão a
+    linha do `led-release` descreve o CAMINHO (o daemon repinta antes de
+    soltar) e não afirma em que estado a luz ficou: quem sabe isso é o log do
+    daemon (`microphone_led_repintado`), não este processo.
     """
     import asyncio
 
@@ -202,7 +208,7 @@ def _mic_led(aceso: bool | None, *, uniq: str | None = None) -> int:
     pedido = {
         True: "ACESO (este microfone está vivo)",
         False: "apagado",
-        None: "posse devolvida ao kernel",
+        None: "posse devolvida ao kernel (repintada com o mudo de fato antes)",
     }[aceso]
     console.print(f"  LED do microfone ......... {pedido}")
     return 0

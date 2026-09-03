@@ -732,7 +732,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         #: `0x01` sai APAGADO e o byte fica inerte; só quem chamou
         #: `set_microphone_led` assume o campo. Não escrever é o único write
         #: não-destrutivo, porque este registrador não tem leitura.
-        self._mic_led_desejado: bool | None = None
+        self._mic_led_desejado: int | bool | None = None
         #: 4 posições (fone, alto-falante, mic, roteamento). Cada uma é
         #: independente: `None` = não somos donos DAQUELE byte e o bit de
         #: validação dele sai apagado. Isso importa no byte 7 (roteamento de
@@ -1092,7 +1092,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         """
         self._mic_mute_desejado = None if muted is None else bool(muted)
 
-    def set_microphone_led(self, aceso: bool | None) -> None:
+    def set_microphone_led(self, aceso: bool | int | None) -> None:
         """Assume (ou devolve) a POSSE do LED do botão de mudo (`common[8]`).
 
         Irmão exato do `set_microphone_mute` acima, e pelo MESMO motivo: o
@@ -1109,7 +1109,14 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         o estado que a pydualsense (e a suíte) leem, e quem lê o handle tem de
         ver o que foi pedido.
         """
-        self._mic_led_desejado = None if aceso is None else bool(aceso)
+        # `bool` é subclasse de `int`, então `isinstance(True, int)` é
+        # verdadeiro e o ramo de cima guarda `True`/`False` inalterados: para
+        # todo chamador que existe hoje isto é BYTE-IDÊNTICO ao `bool(aceso)`
+        # que estava aqui. O que ele acrescenta é o NÍVEL, que o `bool` não
+        # sabe carregar (ver o `common[8] = int(...)` em `_build_common`).
+        self._mic_led_desejado = (
+            None if aceso is None else aceso if isinstance(aceso, int) else bool(aceso)
+        )
         if aceso is not None:
             with contextlib.suppress(Exception):
                 self.audio.setMicrophoneLED(bool(aceso))
@@ -1284,7 +1291,13 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         common[0] = flag0
         common[1] = flag1
         if mic_led is not None:
-            common[8] = 1 if mic_led else 0
+            # NÃO se esmaga mais em 0/1: `int(True)` é 1 e `int(False)` é 0,
+            # logo isto é idêntico ao `1 if mic_led else 0` para bool — e deixa
+            # o NÍVEL passar, que é o que a decisão dela de 02/09 pede (aceso
+            # fraco = canal vivo · aceso forte = microfone padrão do sistema).
+            # QUANTOS níveis o aparelho aceita é medição em aberto:
+            # `scripts/ensaios/nivel_do_led_do_mic.py`.
+            common[8] = int(mic_led) & 0xFF
         # `audio.microphone_mute` da pydualsense continua sendo o valor de
         # fato mandado — mas só quando temos a posse (ver AUDIO-OWNER-01).
         if mic_mute is not None:
@@ -4393,7 +4406,7 @@ class PyDualSenseController(IController):
         return ok
 
     def set_microphone_led(
-        self, aceso: bool | None, *, uniq: str | None = None
+        self, aceso: bool | int | None, *, uniq: str | None = None
     ) -> bool:
         """Assume (`True`/`False`) ou DEVOLVE (`None`) a posse do `common[8]`.
 
@@ -4413,6 +4426,18 @@ class PyDualSenseController(IController):
         existe no rádio, apaga os player-LEDs sempre e trava a lightbar na
         janela pós-conexão. Aqui só o bit `0x01` do flag1 cai, nos dois
         transportes, e nada mais é tocado.
+
+        LUZ-DO-MIC-01 §2 (03/09/2026) — A DEVOLUÇÃO REPINTA ANTES DE SOLTAR.
+
+        `None` não é mais só "derruba o bit": antes de soltar, o valor que
+        corresponde ao mudo DE FATO é escrito e ENTREGUE ao aparelho (ver
+        `_repintar_antes_de_soltar`). Sem isso a luz ficava presa no último
+        valor que escrevemos até ela apertar o botão — foi o que ela mediu com
+        dois controles na mesa: *"ambos tão ligados. e ficaram."*
+
+        A repintura vale para os três caminhos porque todos passam por aqui: o
+        `mic.led.set {aceso: null}` do IPC, o `mic led-release` da CLI (que é
+        casca sobre o IPC) e quem devolver a posse no desligamento do daemon.
         """
         alvo = self._handle_for(uniq)
         if alvo is None:
@@ -4422,6 +4447,7 @@ class PyDualSenseController(IController):
         if not callable(tomar):
             logger.warning("output_handle_failed", op="set_microphone_led", err="sem_api")
             return False
+        repintado = self._repintar_antes_de_soltar(alvo, uniq) if aceso is None else None
         try:
             tomar(aceso)
         except Exception as exc:
@@ -4429,8 +4455,121 @@ class PyDualSenseController(IController):
                 "output_handle_failed", op="set_microphone_led", err=str(exc)
             )
             return False
-        logger.info("microphone_led_set", aceso=aceso, uniq=uniq)
+        logger.info(
+            "microphone_led_set", aceso=aceso, uniq=uniq, repintado=repintado
+        )
         return True
+
+    def _repintar_antes_de_soltar(self, handle: Any, uniq: str | None) -> int | None:
+        """Escreve o mudo REAL no `common[8]` e ENTREGA o report, antes de soltar.
+
+        LUZ-DO-MIC-01 §2 — o defeito que ela viu com dois controles na mesa:
+        *"ambos tão ligados. e ficaram."* Devolver a posse só derruba o bit
+        `0x01` do flag1; o byte não é reescrito, e o `hid-playstation` **não
+        repinta em regime** — ele escreve `mute_button_led = ds->mic_muted`
+        somente na BORDA do botão físico
+        (`assets/dkms/hid-playstation/hid-playstation.c:1538-1540`, dentro do
+        `if (ds->update_mic_mute)` armado em `:1631-1640`). Logo o último valor
+        que NÓS escrevemos fica no plástico até ela apertar o botão — e sob a
+        LUZ-DO-MIC esse valor pode ser `2` ou `3` (piscando), um estado que o
+        kernel nunca produz e que nenhuma borda explicaria.
+
+        POR QUE A ESCRITA É SÍNCRONA AQUI, E NÃO UM PEDIDO À THREAD DE REPORT.
+        O `sendReport` amostra o estado desejado na PRÓPRIA thread e só escreve
+        quando o buffer muda (o `mudou` e a condição de write do laço de
+        `sendReport`). Marcar o valor real e soltar em seguida colapsa nos
+        dois: a thread acorda já com `None` no desejo, monta um único report
+        sem posse, e o valor real **nunca sai pelo fio**. Pior — uma régua que
+        chamasse `_build_common` à mão veria o estado final certo e daria VERDE
+        sobre uma cura que não repintou nada, que é a família de defeitos que
+        esta casa chama de *régua que confunde a palavra com o ato*. Por isso o
+        report é montado e ENTREGUE aqui, pelo `writeReport` do handle — o
+        mesmo caminho avulso do `reescrever_lightbar_por_hidraw`, e pelo mesmo
+        motivo: é ele que carimba o `seq` do BT e recalcula o CRC, e report BT
+        escrito cru com seq 0 o firmware descarta com o nosso log dizendo
+        "escrito".
+
+        QUAL VALOR SE REPINTA: o do KERNEL, não o desta casa. Enquanto a posse
+        é nossa a luz responde *quem te escuta* (LUZ-DO-MIC-01 §1); devolvida,
+        ela volta a responder *você está mudo*, porque é a única frase que o
+        `hid-playstation` sabe dizer. O mudo de fato é LEITURA do firmware — o
+        bit `STATUS_MIC_MUDO` de `status[1]`, que chega em todo report de input
+        e sobe pelo `audio_status_for` (medido vivo em 03/09/2026 com dois
+        controles: `false` no cabo e `true` no rádio, no mesmo instante).
+
+        E QUANDO NÃO DÁ PARA SABER — `audio_status_for` devolve `None` sempre
+        que o controle ainda não entregou um report íntegro — repinta-se **0**,
+        e a assimetria é de propósito. Na convenção do kernel `1` = MUDO:
+        pintar `1` no escuro faria a luz afirmar *"você está mudo"* sobre um
+        microfone que pode estar vivo, e ela calaria achando que ninguém a
+        ouve. Pintar `0` erra na direção oposta e barata — ela fala achando que
+        é ouvida enquanto o firmware está mudo, e o primeiro toque no botão põe
+        tudo no lugar. Não repintar não é alternativa: deixaria no plástico o
+        `2`/`3` que o kernel jamais escreveria.
+
+        NÃO SE REPINTA O QUE NÃO É NOSSO. Com `_mic_led_desejado` já em `None`
+        a posse é do kernel, e tomá-la por um report só para devolvê-la seria
+        escrever por cima dele sem ter o que corrigir — a devolução continua
+        idempotente, que é o contrato de quem a chama em massa.
+
+        O TETO DESTA CURA, e ele fica escrito porque prometer mais seria falso.
+        `ds->mic_muted` é um toggle INTERNO do driver: nasce `false` no probe e
+        nunca é sincronizado com o firmware
+        (`assets/dkms/hid-playstation/hid-playstation.c:1635`, o
+        `ds->mic_muted = !ds->mic_muted` cego). Se o mudo de fato tiver ido a
+        `true` por um caminho que o driver não viu — o nosso `common[9]`, ou um
+        estado que veio de antes do probe —, a CRENÇA do kernel e a LEITURA do
+        firmware divergem. Repintar com a leitura é o certo, e mesmo assim a
+        próxima borda do botão pode escrever o oposto, porque o kernel escreve
+        o que ele acredita, não o que ele leu. O que esta função garante é o
+        instante da devolução: a luz sai verdadeira, e não presa no `2`/`3` que
+        nós pintamos. Um toque no botão a partir daí é do kernel, e não há como
+        pedir a ele que repinte — o botão é consumido pelo driver (`:1631-1636`)
+        e não vira evento, e os únicos `DEVICE_ATTR` do módulo inteiro são
+        `firmware_version` (`:1129`) e `hardware_version` (`:1140`): não há nó
+        de sysfs para ler nem para escrever essa crença.
+
+        Devolve o valor repintado, ou `None` quando nada foi escrito (posse já
+        devolvida, Modo Nativo, handle sem as APIs de report, ou falha).
+        """
+        if getattr(handle, "_mic_led_desejado", None) is None:
+            logger.debug("microphone_led_repintura_no_op_sem_posse", uniq=uniq)
+            return None
+        if getattr(handle, "_output_muted", False):
+            # FEAT-NATIVE-OUTPUT-MUTE-01: o JOGO é o dono do hidraw neste
+            # controle; um write nosso aqui atropela o output dele. Solta sem
+            # repintar, e declara — silêncio aqui viraria "a cura não pegou".
+            logger.info("microphone_led_repintura_no_op_modo_nativo", uniq=uniq)
+            return None
+        montar = getattr(handle, "prepareReport", None)
+        escrever = getattr(handle, "writeReport", None)
+        tomar = getattr(handle, "set_microphone_led", None)
+        if not (callable(montar) and callable(escrever) and callable(tomar)):
+            logger.warning(
+                "microphone_led_repintura_sem_api",
+                uniq=uniq,
+                detalhe="handle sem prepareReport/writeReport",
+            )
+            return None
+        estado: Any = None
+        with contextlib.suppress(Exception):
+            estado = self.audio_status_for(uniq)
+        mudo = estado.get("mic_mudo") if isinstance(estado, dict) else None
+        valor = 1 if mudo else 0
+        try:
+            tomar(valor)
+            escrever(montar())
+        except Exception as exc:
+            logger.warning("microphone_led_repintura_falhou", uniq=uniq, err=str(exc))
+            return None
+        logger.info(
+            "microphone_led_repintado",
+            uniq=uniq,
+            valor=valor,
+            mudo=mudo,
+            no_escuro=mudo is None,
+        )
+        return valor
 
     def microphone_mute_for(self, uniq: str | None = None) -> bool | None:
         """Valor de mudo que o HEFESTO afirma no firmware, ou None (MIC-USB-01).

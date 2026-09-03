@@ -595,7 +595,20 @@ def _fita(mesa: list[dict[str, Any]]) -> str:
     sem o argumento ele cai nos `CONECTADOS` do mockup, que são derivados no
     IMPORT e nunca recalculados — trocar `monta.MESA` de fora não alcança.
     """
-    if not mesa or any(not c.get("cor") for c in mesa):
+    # UM CONTROLE SEM COR NÃO PODE CALAR A FITA INTEIRA — medido em 03/09/2026,
+    # e o defeito era grave porque a fita É a fonte de identidade que a lei dela
+    # nomeia: *"se no topo tá mostrando controle white player 1, então cada aba
+    # vai usar os controles lá de cima"*. Com um controle no rádio na mesa (a
+    # mesa dela de hoje), a cor daquele não chegava, e o `any()` devolvia `""`
+    # para TODOS — a fita ficava congelada no Cosmic Red do mockup enquanto o
+    # card logo abaixo já mostrava o White lido do aparelho. As dez abas podiam
+    # ficar perfeitas que o TOPO continuaria mentindo.
+    #
+    # Agora quem não tem cor sai da fita, e quem tem aparece. Sumir é honesto —
+    # é a regra dela, *campo sem informação não mostra nada* — e é o oposto de
+    # mostrar a cor errada, que é o que a guarda antiga produzia.
+    mesa = [c for c in (mesa or []) if c.get("cor")]
+    if not mesa:
         # A COR AINDA NÃO CHEGOU. O leitor do plástico é perguntado em thread e
         # a mesa nasce sem cor — `monta.fita` levanta `SystemExit: colorway ''
         # não existe` nesse instante. Devolver "" deixa a fita como está e o
