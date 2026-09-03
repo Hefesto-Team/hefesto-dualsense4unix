@@ -60,6 +60,7 @@ auditoria mediu o buraco — clonar `texto_volume` dentro do pacote passava nos
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 from typing import Any
 
@@ -234,19 +235,78 @@ def test_o_mudo_do_alto_falante_le_a_segunda_posicao(pac, a02):
     ], "o gesto não leu o bloco que o daemon publicou dentro de `inputs`"
 
 
-def test_sem_volume_conhecido_o_pedido_vai_sem_volume(pac, a02):
-    """O outro lado: sem bloco nenhum, o payload NÃO inventa um número.
+def test_sem_volume_conhecido_o_botao_do_alto_falante_recusa_aqui(pac, a02):
+    """Sem volume conhecido o ♪ não manda nada — e diz por quê.
 
-    Mandar um palpite tomaria a posse do registrador com o valor errado — a
-    razão está no `_volume_conhecido`, e vem da GUI estável.
+    **ISTO SUBSTITUI UM CONTRATO, e a substituição é a entrega.** O teste
+    anterior (`..._o_pedido_vai_sem_volume`) cobrava que o clique CHAMASSE
+    `speaker_set(muted=True)` sem volume, e contava com a recusa do
+    `ipc_handlers.py:4682` do outro lado do soquete. Recusa de longe é recusa
+    que depende do outro lado continuar recusando — e o que está do outro lado
+    é o alto-falante dela: `acao_speaker_mudo` diz que o par `muted=True` +
+    `muted=False` sem volume *"tranca o alto-falante em `{'volume': 0, 'muted':
+    True}` e o próprio botão não tem como soltá-lo (armadilha 2 da SOM-02,
+    executada contra o backend real)"*.
 
-    MORDE: fazer `_volume_conhecido` devolver `{"volume": 0}` na ausência
-    reprova aqui.
+    A REGRA É DO MOTOR (`acao_speaker_mudo(...).sensivel`), e é o mesmo estado
+    em que a GTK deixa o botão CINZA. A FRASE é desta janela, e a diferença
+    está medida: a do motor manda *"use o controle deslizante primeiro"*, e
+    aqui não há deslizante — `type="range"` aparece zero vez nas dez páginas.
+
+    MORDE: apagar a guarda faz a chamada voltar, e a asserção de `chamadas ==
+    []` reprova.
     """
     ctx = pac.Contexto(state={}, mesa=[], conectados=[BASE], estados={})
     p = PonteDeMentira()
+    with pytest.raises(RuntimeError) as erro:
+        a02.mudo(ctx, {"uniq": UNIQ, "mudo": "alto-falante"}, p)
+    assert p.chamadas == [], "o clique chegou ao daemon com o volume desconhecido"
+    assert "volume" in str(erro.value)
+
+
+def test_com_volume_conhecido_o_pedido_leva_o_numero(pac, a02):
+    """A metade que prova que a guarda não é "o botão nunca mais funciona"."""
+    dele = {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": False}}
+    ctx = pac.Contexto(state={}, mesa=[], conectados=[dele], estados={})
+    p = PonteDeMentira()
     a02.mudo(ctx, {"uniq": UNIQ, "mudo": "alto-falante"}, p)
-    assert p.chamadas == [("speaker_set", (), {"muted": True, "uniq": UNIQ})]
+    assert p.chamadas == [
+        ("speaker_set", (), {"muted": True, "uniq": UNIQ, "volume": VOLUME_VIVO})]
+
+
+def test_sem_leitura_de_audio_o_microfone_nao_chuta(pac, a02):
+    """Sem a chave `audio`, o 🎙 recusa DIZENDO em vez de adivinhar o oposto.
+
+    O ESTADO É REAL: o byte de áudio é atributo de INSTÂNCIA do handle, e no
+    instante seguinte a um hotplug-out o handle novo ainda não leu um report
+    íntegro — `audio` SOME do `state_full`. A linha do gesto fazia
+    `bool(None)` → `False` → `mic_set(True)`: o clique CALAVA um microfone que
+    ninguém sabia se estava calado.
+
+    A regra é a do motor, palavra por palavra: *"mandar um pedido sem saber o
+    estado atual seria chutar qual é o oposto"* (`controller_card.acao_mic`), e
+    a frase que sobe à tela é a dele (`DICA_MIC_SEM_LEITURA`).
+
+    MORDE: apagar a guarda faz `chamadas` virar `[("mic_set", (True,), ...)]`.
+    """
+    from hefesto_dualsense4unix.app.widgets.controller_card import DICA_MIC_SEM_LEITURA
+
+    sem_audio = {k: v for k, v in BASE.items() if k != "audio"}
+    ctx = pac.Contexto(state={}, mesa=[], conectados=[sem_audio], estados={})
+    p = PonteDeMentira()
+    with pytest.raises(RuntimeError) as erro:
+        a02.mudo(ctx, {"uniq": UNIQ, "mudo": "microfone"}, p)
+    assert p.chamadas == [], "o clique calou um microfone que ninguém mediu"
+    assert str(erro.value) == DICA_MIC_SEM_LEITURA
+
+
+def test_com_leitura_de_audio_o_microfone_continua_alternando(pac, a02):
+    """A metade que prova que a guarda não apagou o botão."""
+    dele = {**BASE, "audio": {"mic_mudo": False}}
+    ctx = pac.Contexto(state={}, mesa=[], conectados=[dele], estados={})
+    p = PonteDeMentira()
+    a02.mudo(ctx, {"uniq": UNIQ, "mudo": "microfone"}, p)
+    assert p.chamadas == [("mic_set", (True,), {"uniq": UNIQ})]
 
 
 # --------------------------------------------------------------------------
@@ -425,14 +485,25 @@ def test_o_backend_uinput_e_ambiguo_e_diz_nao_sei(pac, a02):
 
 
 # --------------------------------------------------------------------------
-# 5. O TOQUE — o terceiro estado que o `or {}` apagava
+# 5. O TOQUE — um dono só, e ele é o do produto
 # --------------------------------------------------------------------------
+#: O bloco `touchpad` COMO O DAEMON O PUBLICA. As cinco chaves saem de UM
+#: literal em `daemon/sensor_hub.py:155-161` — não há caminho no código que
+#: escreva `touching` sem escrever `x`. Medido em 02/09/2026, 60 leituras de
+#: `daemon.state_full` com os dois controles dela na mesa: 36 blocos, todos com
+#: `height,touching,width,x,y`.
+TOUCHPAD_COMO_O_DAEMON_PUBLICA = {
+    "touching": False, "x": 960, "y": 540, "width": 1920, "height": 1080,
+}
+
+
 def test_inputs_com_leitura_e_sem_touchpad_nao_e_sem_toque(pac, a02):
     """Ler os botões e não ler o touchpad é "não sei", não "ninguém encostou".
 
-    O `tem_leitor` separa `inputs: None` de `inputs: {}`; faltava separar
-    `inputs` COM leitura mas SEM a chave `touchpad`. Os dois são o mesmo
-    travessão, pela mesma razão.
+    Este estado o daemon PUBLICA, e com frequência: o reader do touchpad nasce
+    sob demanda (`sensor_hub.leitura:113`), então nas primeiras leituras depois
+    de o `state_full` ser pedido a chave ainda não existe — 24 das 60 amostras
+    de 02/09/2026.
 
     MORDE: voltar ao `e.get("touchpad") or {}` reprova aqui com `'Sem toque'`.
     """
@@ -440,6 +511,86 @@ def test_inputs_com_leitura_e_sem_touchpad_nao_e_sem_toque(pac, a02):
 
     d = _card(pac, a02, {**BASE, "inputs": {"buttons": ["cross"]}})
     assert d["touch-estado"] == mesa_viva.SEM_LEITOR
+
+
+def test_a_palavra_do_touchpad_e_a_do_produto(pac, a02):
+    """`Sem toque` / `1 toque` — a conta é a MESMA linha que a GTK escreve.
+
+    DECISÃO DELA, 02/09/2026 (item 15): *"o touchpad usa a palavra do produto:
+    '1 toque', '2 toques', 'Sem toque', que é o que o motor já conta"*. A GTK
+    faz `texto_toques(1 if tocando else 0)` (`controller_card.py:5079`), e é
+    isso que esta aba passou a fazer — no lugar do `COM_TOQUE = "Tocando"`, que
+    era palavra do DESENHO redigitada no pacote.
+
+    "2 TOQUES" NÃO APARECE, e a razão é de DADO: o `state_full` publica
+    `touchpad.touching`, um booleano, e não uma contagem de dedos. No dia em
+    que ele publicar o segundo, a palavra sai do motor sem ninguém tocar aqui.
+
+    MORDE: redigitar `"Tocando"` no pacote reprova nas duas linhas.
+    """
+    from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
+
+    solto = _card(pac, a02, {**BASE, "inputs": {
+        "touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA}})
+    tocando = _card(pac, a02, {**BASE, "inputs": {
+        "touchpad": {**TOUCHPAD_COMO_O_DAEMON_PUBLICA, "touching": True}}})
+    assert solto["touch-estado"] == texto_toques(0) == "Sem toque"
+    assert tocando["touch-estado"] == texto_toques(1) == "1 toque"
+
+
+def test_o_bloco_que_a_recusa_protegia_o_daemon_nao_publica():
+    """A recusa de `touchpad_do_inputs` era sobre um estado que não existe.
+
+    O QUE ESTAVA ESCRITO NO PACOTE, e caiu: *"ele exige `bloco['x']` e
+    `bloco['y']`: um bloco com `{"touching": True}` e sem coordenada cai no
+    `except KeyError` e volta `None`"*. É verdade sobre a função e falso sobre
+    o produto — quem monta a chave é `daemon/sensor_hub.py`, num literal com as
+    CINCO chaves juntas.
+
+    ESTA RÉGUA MEDE O DAEMON, e não o pacote: ela lê o fonte do dono da chave e
+    exige que as cinco nasçam no mesmo dicionário. Se alguém partir aquele
+    literal em dois — que é o único jeito de o estado passar a existir —, ela
+    reprova e manda reabrir a discussão, em vez de deixar a tela dizer "não
+    sei" sobre um dedo que o daemon está vendo.
+
+    MORDE: apagar `"x"` do literal do `sensor_hub` reprova aqui.
+    """
+    import inspect
+
+    from hefesto_dualsense4unix.daemon import sensor_hub
+
+    fonte = inspect.getsource(sensor_hub.SensorHub.leitura)
+    bloco = fonte.split('out["touchpad"] = {', 1)[1].split("}", 1)[0]
+    faltando = [c for c in ("touching", "x", "y", "width", "height")
+                if f'"{c}":' not in bloco]
+    assert not faltando, (
+        f"o `sensor_hub` deixou de publicar {faltando} junto com as outras — o "
+        f"estado que a recusa de `touchpad_do_inputs` protegia passou a existir")
+
+
+def test_o_pontinho_so_acende_com_toque(a02):
+    """Decisão dela (item 15): o ponto só aparece quando há toque.
+
+    Fotografado em 02/09/2026 às 19h, antes desta cura: `touch-estado` dizia
+    **Sem toque** e o pontinho ciano estava ACESO no card do P1, parado em
+    `left:62%;top:44%` — o desenho contradizendo o campo ao lado dele, na mesma
+    moldura. **A régua do mockup é cega a isso**: ela conta `data-campo`, e o
+    ponto não tinha nenhum. `02-controles` dava `23 campos · 23 PRODUTO · 0
+    MOCKUP` com o ponto mentindo.
+
+    O VALOR É LIDO PELO ALVO `classe` do piloto, e o vocabulário dele é o
+    `ligado()` do BOOTSTRAP: `''` e `'—'` apagam, o resto acende.
+
+    MORDE: mandar `"sim"` sempre (ou voltar o `style` do gerador) reprova nas
+    duas primeiras linhas.
+    """
+    solto = a02.toque_do_controle({"touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA})[1]
+    tocando = a02.toque_do_controle(
+        {"touchpad": {**TOUCHPAD_COMO_O_DAEMON_PUBLICA, "touching": True}})[1]
+    sem_leitor = a02.toque_do_controle({})[1]
+    assert solto == "", "o ponto fica aceso com o dedo fora do pad"
+    assert tocando, "o ponto não acende com o dedo no pad"
+    assert sem_leitor == "", "o ponto acende sem leitura nenhuma"
 
 
 def test_o_rotulo_do_sem_toque_nao_e_digitado_aqui(a02):
@@ -464,7 +615,8 @@ def test_o_rotulo_do_sem_toque_nao_e_digitado_aqui(a02):
 
     assert a02.texto_toques is texto_toques, (
         "a aba deixou de importar o dono da palavra e voltou a digitá-la")
-    assert texto_toques(0) == a02.SEM_TOQUE
+    assert a02.toque_do_controle(
+        {"touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA})[0] == texto_toques(0)
 
 
 # --------------------------------------------------------------------------
@@ -496,15 +648,331 @@ def test_a_aba_chama_o_motor_em_vez_de_reescreve_lo(a02, motor):
         texto_volume,
     )
 
+    from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
+
     donos = {
         "speaker_do_entry": motor.speaker_do_entry,
         "rotulo_lightbar": motor.rotulo_lightbar,
         "texto_volume": texto_volume,
         "texto_toques": texto_toques,
         "mascara_viva": mascara_viva,
+        # OS QUATRO DE 02/09/2026 À NOITE. `touchpad_do_inputs` tinha sido
+        # RECUSADO aqui por causa de um bloco que o daemon não publica;
+        # `acao_mic` e `acao_speaker_mudo` são as regras dos dois botões de
+        # calar, que este arquivo decidia sozinho; `percentual_do_volume` é a
+        # curva medida no hardware, e sem ela o número e a barra do volume
+        # seriam uma segunda conta ao lado da do `texto_volume`.
+        "touchpad_do_inputs": motor.touchpad_do_inputs,
+        "acao_mic": motor.acao_mic,
+        "acao_speaker_mudo": motor.acao_speaker_mudo,
+        "percentual_do_volume": percentual_do_volume,
     }
     reescritos = [
         nome for nome, dono in donos.items() if getattr(a02, nome, None) is not dono
     ]
     assert not reescritos, (
         f"a aba deixou de chamar o motor e reescreveu: {', '.join(reescritos)}")
+
+
+# --------------------------------------------------------------------------
+# 7. OS QUATRO DA BANCADA — endereço novo, emissão CONDICIONAL
+# --------------------------------------------------------------------------
+def _campos_do_arquivo(caminho: pathlib.Path) -> frozenset[str]:
+    """Todo `data-campo` de um HTML — LIDO do arquivo, nunca digitado aqui."""
+    return frozenset(
+        re.findall(r'data-campo="([^"]+)"', caminho.read_text(encoding="utf-8")))
+
+
+BANCADA = RAIZ / "mockup/02-controles.html"
+PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
+
+#: Os endereços que ESTÃO na bancada e AINDA NÃO na página publicada. Três são
+#: decisão dela (itens 15 e 16); o quarto é o defeito que a foto de 02/09 pegou
+#: — o retângulo da barra de luz contradizendo o campo ao lado.
+#:
+#: ELE É LIDO DOS DOIS ARQUIVOS, e a razão é um defeito medido nesta mesma aba
+#: em 02/09/2026: a lista era uma TUPLA ESCRITA À MÃO, e ela nomeava um
+#: `luz-cor` que a bancada não tinha — o gerador fora editado e nunca rodado.
+#: A simulação de publicação olhava a tupla, dava "16 casam", e o arquivo que
+#: ela iria publicar tinha 15. **Uma lista digitada não descobre que o arquivo
+#: ao lado dela ficou para trás.** Quem descobre é
+#: `test_os_dez_geradores_rodam::test_o_gerador_reproduz_a_bancada`, e esta
+#: leitura é a segunda trava.
+#:
+#: E ELE ESVAZIA SOZINHO no dia em que ela publicar, que é o desfecho que este
+#: trabalho espera: a fixture vira um no-op e as réguas abaixo passam a medir a
+#: página de verdade, sem ninguém tocar em teste.
+DA_BANCADA = tuple(sorted(_campos_do_arquivo(BANCADA) - _campos_do_arquivo(PUBLICADA)))
+
+
+@pytest.fixture()
+def com_a_pagina_publicada(a02):
+    """Finge que ela já publicou: a página passa a ter os quatro endereços.
+
+    O estado de módulo é o mesmo cache que o produto usa, e ele é devolvido no
+    fim — deixá-lo sujo faria a próxima régua medir uma página que não existe.
+    """
+    antes = a02._ENDERECOS
+    a02._ENDERECOS = frozenset(antes or ()) | frozenset(DA_BANCADA)
+    yield
+    a02._ENDERECOS = antes
+
+
+def test_o_pacote_so_emite_endereco_que_a_pagina_tem(pac, a02):
+    """Toda chave emitida tem onde pousar na página que o piloto ABRE.
+
+    A BANCADA É DELA. O gerador escreve em `mockup/`, e o produto só recebe
+    pelo `--publicar 02`, que é ato dela. Emitir antes põe as chaves em
+    `casamento.medir(...)["orfaos"]`, e quem reprova é
+    `test_o_clique_do_analogico_tem_dono::test_a_aba_controles_nao_emite_para_
+    endereco_que_a_pagina_nao_tem` — **não** o `test_o_casamento_das_dez`, que
+    só cobra `casam >= piso` e passou verde com os quatro órfãos na mordida de
+    02/09/2026. E, pior que a régua, o pacote contaria em `cobertura.pintados`
+    uma pintura que não acontece, que é o defeito que o casamento nasceu para
+    pegar.
+
+    A PERGUNTA É `emitido ⊆ página`, e não *"os quatro nomes de hoje estão
+    fora?"* — auditoria de 02/09/2026. A redação anterior afirmava um NEGATIVO
+    sobre quatro endereços NOMEADOS, e por isso ficava verde só enquanto ela
+    **não** publicasse: simulada a publicação (um `data-campo="alto-num"`
+    acrescentado à página publicada), ela reprovava com a frase *"o pacote
+    emitiu ['alto-num'] para uma página que não os tem"* — que afirma o
+    contrário do que aconteceu, e manda quem herdar procurar um órfão que não
+    existe. **O contrato é o mesmo nos dois mundos**, e esta forma o diz.
+
+    MORDE: trocar `_so_se_a_pagina_tiver(...)` por `**{...}` direto reprova
+    aqui nomeando o que sobrou sem endereço.
+    """
+    d = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": False}})
+    tem = a02._enderecos_da_pagina()
+    assert tem, "a página publicada não abriu — a régua ficaria verde sobre nada"
+    orfaos = sorted(k for k in d if k not in tem)
+    assert not orfaos, (
+        f"o pacote emitiu {orfaos} e a página publicada não tem onde pô-los — "
+        f"órfãos. Se ela acabou de publicar, o gerador é que ficou para trás.")
+
+
+def test_publicada_a_pagina_o_volume_e_a_curva_medida(pac, a02,
+                                                      com_a_pagina_publicada):
+    """Decisão dela (item 16): o número E a barra do volume ganham endereço.
+
+    Ela disse o defeito com número: *"hoje os dois estão congelados: com o
+    volume em 40, a tela mostra 100"*. `40` no registrador é **3 %** pela curva
+    medida no hardware (`core/speaker_scale.py`: abaixo de 38 tudo é mudo), e
+    era isso que a tela escondia atrás de um `100` cravado.
+
+    A CONTA É A MESMA do `alto-estado` — os dois campos do mesmo bloco saem de
+    `percentual_do_volume`, e divergirem por dois arredondamentos é o defeito
+    que aquele módulo existe para não cometer.
+
+    MORDE: escrever `sp[0]` cru (o registrador 0-255) reprova nas duas linhas.
+    """
+    from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
+
+    d = _card(pac, a02, {**BASE, "speaker": {"volume": 40, "muted": False}})
+    assert d["alto-num"] == percentual_do_volume(40) == 3
+    assert d["alto-barra"] == 3
+    assert d["alto-estado"] == "3 %"
+
+
+def test_publicada_a_pagina_o_volume_desconhecido_nao_vira_cem(
+        pac, a02, com_a_pagina_publicada):
+    """Sem `speaker`, o número diz `—` e a barra vai a ZERO — nunca ao desenho.
+
+    A barra não pode dizer "não sei": `largura` é um dos
+    `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE` (`width: "—%"` o CSSOM recusa, e o
+    contador de pintura mente para sempre). Zero é o mesmo desfecho que a
+    `bateria-barra` já tem, e quem separa "zero" de "não sei" é o número ao
+    lado.
+
+    MORDE: deixar de emitir a barra devolve a tela ao `width:100%` do desenho.
+    """
+    import mesa_viva
+
+    d = _card(pac, a02, BASE)
+    assert d["alto-num"] == mesa_viva.SEM_LEITOR
+    assert d["alto-barra"] == 0
+
+
+def test_publicada_a_pagina_o_retangulo_da_luz_diz_o_que_o_campo_diz(
+        pac, a02, com_a_pagina_publicada):
+    """O desenho ao lado do campo para de contradizer o campo.
+
+    FOTOGRAFADO em 02/09/2026 às 19h, com os dois controles dela: o `luz-hex`
+    dizia `#0000FF` (o `lightbar_rgb` vivo do P1) e o retângulo logo abaixo
+    estava no `#7EB8D4` que o mockup cravou. **A régua do mockup não vê** — ela
+    conta `data-campo`, e o retângulo não tinha nenhum: `02-controles` deu
+    `23 campos · 23 PRODUTO · 0 MOCKUP` nessa mesma foto.
+
+    OS TRÊS "NÃO SEI" MANDAM VAZIO, e o vazio apaga a cor de linha
+    (`hefesto_vivo.py:246-250`) — o retângulo volta ao `--panel` da folha de
+    estilo, que é o "nada" que ela decidiu para campo sem informação.
+
+    MORDE: fazer `_cor_da_barra` devolver o hex sempre reprova na terceira
+    linha, com o travessão virando `background` inválido.
+    """
+    acesa = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 255],
+                             "lightbar_source": "sysfs", "lightbar_on": True})
+    apagada = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 255],
+                               "lightbar_source": "sysfs", "lightbar_on": False})
+    nao_sei = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 0],
+                               "lightbar_source": "desconhecida"})
+    assert acesa["luz-cor"] == acesa["luz-hex"] == "#0000FF"
+    assert apagada["luz-cor"] == apagada["luz-hex"] == "#000000"
+    assert nao_sei["luz-cor"] == "", "o retângulo afirma uma cor que ninguém mediu"
+
+
+def test_publicada_a_pagina_o_ponto_do_touchpad_segue_o_campo(
+        pac, a02, com_a_pagina_publicada):
+    """O par completo: a palavra e o ponto saem da MESMA leitura.
+
+    MORDE: separar as duas decisões (uma lendo `touching`, outra não) deixa a
+    tela dizer "Sem toque" com o ponto aceso — que é exatamente a foto do
+    antes.
+    """
+    solto = _card(pac, a02, {**BASE, "inputs": {
+        "touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA}})
+    tocando = _card(pac, a02, {**BASE, "inputs": {
+        "touchpad": {**TOUCHPAD_COMO_O_DAEMON_PUBLICA, "touching": True}}})
+    assert (solto["touch-estado"], solto["touch-ponto"]) == ("Sem toque", "")
+    assert tocando["touch-estado"] == "1 toque" and tocando["touch-ponto"]
+
+
+# --------------------------------------------------------------------------
+# 8. A OUTRA METADE DA DECISÃO 15 — medida NA TELA, e não no texto do CSS
+# --------------------------------------------------------------------------
+# A decisão dela (item 15, segunda metade) tem DUAS metades, e elas moram em
+# arquivos diferentes: o pacote emite `""`/`"sim"` (as duas réguas acima), e o
+# HTML tem de deixar a CLASSE decidir — senão `on` acende algo que já estava
+# aceso, e o ponto fica visível com `touching: false`, que é a foto do defeito.
+#
+# A SEGUNDA METADE NÃO TINHA RÉGUA, e a auditoria de 02/09/2026 mediu o preço:
+# apagado o `opacity:0` do CSS do gerador e regerada a bancada, o `_conferir`
+# do gerador não reclamou (`02-controles: OK, 122 divs`, rc=0) e os 40 testes
+# desta aba passaram VERDES — com o pontinho visível sem toque nos dois cards.
+#
+# O QUE ELA COBRA SÃO DUAS COISAS, e a segunda a primeira redação desta régua
+# errou: (a) SEM a classe o navegador desenha `opacity: 0` e COM ela `1` — é o
+# que dá poder ao alvo `classe`; (b) na cena FIXA do desenho, o ponto concorda
+# com a palavra do card ao lado. Nem todo card nasce apagado, e nem devia: o
+# P1 do mockup diz "1 toque" e mostra o ponto de propósito. Exigir "apagado em
+# todos" reprovava o desenho aprovado — medido nesta bancada, `['1', '0']`.
+#
+# POR QUE O CHROME, e não uma leitura do texto do CSS: o `_conferir` do gerador
+# já cobra a PALAVRA (que o `data-campo="touch-ponto"` carregue o seu
+# `data-hef-alvo="classe"`), e foi exatamente por medir palavra que ele passou
+# sobre o defeito. Aqui a pergunta é o ATO — *quanto o navegador desenha* —, e
+# quem responde é o `getComputedStyle`, que já viu a cascata inteira: folha,
+# `style` inline e especificidade. Mesmo motor e mesma forma do
+# `test_a_tela_entrega_as_vinte_e_uma_linhas.py`, e o Chrome roda headless.
+CHROME = pathlib.Path("/usr/bin/google-chrome")
+
+#: AS PÁGINAS QUE JÁ TÊM O ENDEREÇO — a régua SEGUE O ENDEREÇO, em vez de uma
+#: lista de caminhos digitada. Hoje é só a bancada; no dia em que ela publicar,
+#: as duas, sem ninguém tocar em teste.
+PAGINAS_COM_O_PONTO = [
+    (rotulo, caminho)
+    for rotulo, caminho in (("bancada", BANCADA), ("publicada", PUBLICADA))
+    if 'data-campo="touch-ponto"' in caminho.read_text(encoding="utf-8")
+]
+
+O_QUE_O_NAVEGADOR_DESENHA = r"""
+(() => {
+  const saida = [];
+  for (const el of document.querySelectorAll('[data-campo="touch-ponto"]')) {
+    const cartao = el.closest('[data-controle],[data-uniq]');
+    const rotulo = cartao ? cartao.querySelector('[data-campo="touch-estado"]') : null;
+    const aceso_na_cena = el.classList.contains('on');
+    // A CLASSE É A DO PRODUTO: `data-hef-alvo="classe"` faz o piloto pôr `on`
+    // no elemento (o ramo `classe` do `escrever`, em `hefesto_vivo.py`). Aqui
+    // ela é posta e tirada à mão, porque o que se mede é a FOLHA, não o piloto
+    // — e a cena volta como estava, para a leitura seguinte não herdar isto.
+    el.classList.remove('on');
+    const sem_a_classe = getComputedStyle(el).opacity;
+    el.classList.add('on');
+    const com_a_classe = getComputedStyle(el).opacity;
+    if (!aceso_na_cena) el.classList.remove('on');
+    saida.push({
+      cartao: cartao ? (cartao.dataset.controle || cartao.dataset.uniq || '?') : '?',
+      estado: rotulo ? (rotulo.textContent || '').trim() : '',
+      aceso_na_cena: aceso_na_cena,
+      sem_a_classe: sem_a_classe,
+      com_a_classe: com_a_classe,
+    });
+  }
+  return saida;
+})()
+"""
+
+
+def test_ha_pagina_com_o_ponto_para_medir():
+    """Sem esta linha, a régua abaixo some inteira e ninguém percebe.
+
+    `parametrize` sobre lista vazia coleta ZERO testes e o pytest não reclama —
+    é a forma mais silenciosa de uma régua deixar de medir, e esta casa já a
+    pagou (é a razão do `assert saiu` em `test_os_dez_geradores_rodam`).
+    """
+    assert PAGINAS_COM_O_PONTO, (
+        'nenhuma das duas páginas tem `data-campo="touch-ponto"` — ou o '
+        "gerador perdeu o endereço, ou a bancada ficou para trás. Rode "
+        "`python3 src/hefesto_dualsense4unix/interface/aba02.py`.")
+
+
+@pytest.mark.skipif(not CHROME.exists(),
+                    reason="sem o Chrome do sistema — a régua não tem motor")
+@pytest.mark.parametrize(
+    "arquivo", [c for _, c in PAGINAS_COM_O_PONTO],
+    ids=[r for r, _ in PAGINAS_COM_O_PONTO])
+def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
+    """A classe DECIDE (0 sem ela, 1 com ela) e a cena fixa não se contradiz.
+
+    EM TODOS OS CARDS, e não no primeiro: a mordida da auditoria deixou o ponto
+    visível no card do P2, e uma régua que olhasse só o P1 daria verde sobre
+    ele.
+
+    A PALAVRA DO "SEM TOQUE" VEM DO MOTOR, não é digitada aqui — é o mesmo
+    `texto_toques` que o pacote chama, e uma régua que redigitasse a frase
+    passaria a medir a si mesma no dia em que o motor a mudasse.
+
+    MORDE: tirar o `opacity:0` de `.touch .ponto` no `aba02.py` e rodar o
+    gerador reprova aqui, com o `sem_a_classe` vindo `1`.
+    """
+    from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
+
+    from playwright.sync_api import sync_playwright
+
+    sem_toque = texto_toques(0)
+
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(
+            executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = navegador.new_page(viewport={"width": 1180, "height": 900})
+            pg.goto(arquivo.as_uri())
+            medido = pg.evaluate(O_QUE_O_NAVEGADOR_DESENHA)
+        finally:
+            navegador.close()
+
+    assert len(medido) >= 2, (
+        f"achei {len(medido)} ponto(s) em {arquivo.name} — a página tem dois "
+        f"cards conectados, e medir um só é medir metade")
+
+    mudos = [d for d in medido if d["sem_a_classe"] != "0"]
+    assert not mudos, (
+        f"em {arquivo.name} o ponto do touchpad continua desenhado SEM a classe "
+        f"`on`: {mudos}. Decisão dela, item 15: *\"o pontinho do touchpad só "
+        f"aparece quando há toque\"* — com o CSS já aceso, a classe não acende "
+        f"nada e a tela diz \"{sem_toque}\" com o ponto na superfície")
+
+    apagados = [d for d in medido if d["com_a_classe"] != "1"]
+    assert not apagados, (
+        f"em {arquivo.name} a classe `on` não acende o ponto: {apagados} — o "
+        f"pacote emitiria 'sim' e a tela ficaria muda")
+
+    # A CENA FIXA NÃO PODE SE CONTRADIZER: era o defeito de 02/09 na página
+    # publicada, onde `touch-estado` dizia "Sem toque" com o ponto aceso.
+    discordam = [d for d in medido
+                 if (d["estado"] == sem_toque) == d["aceso_na_cena"]]
+    assert not discordam, (
+        f"em {arquivo.name} o desenho contradiz a palavra do card ao lado: "
+        f"{discordam}. O ponto marca ONDE o dedo está; sem toque não há ponto")
