@@ -117,15 +117,24 @@ def test_uniq_sem_fonte_nao_cai_para_a_global(
         "disse `APLICADO` sem ter escrito em lugar nenhum")
 
 
-def test_o_esquema_ainda_recusa_o_volume_por_peca() -> None:
-    """A borda continua fechada — abrir o campo é decisão à parte.
+def test_o_esquema_abriu_o_volume_por_peca_e_o_dia_foi_deliberado() -> None:
+    """A borda ABRIU — 03/09/2026, e o dia foi deliberado, como este fio pedia.
 
-    A costura do applier é METADE do que o esquema pede; a outra metade é
-    deixar o campo entrar, e isso muda o que o perfil dela aceita no disco.
-    Este teste existe para que o dia em que alguém abrir o campo seja um dia
-    DELIBERADO: ele reprova, e quem o apagar terá lido esta frase.
+    Ele dizia: *"este teste existe para que o dia em que alguém abrir o campo
+    seja um dia DELIBERADO: ele reprova, e quem o apagar terá lido esta frase."*
+    Foi lida. Ela mandou: *"manda a ver em tudo que falta por favor"* — depois de
+    ter dito o alvo do produto no mesmo dia, *"4 controles funcionarem no mesmo
+    modo com configs diferentes"*.
+
+    O QUE ELE GUARDA AGORA é o outro lado da mesma porta: que o campo aceite a
+    faixa do global e recuse o resto. Uma borda aberta sem limite não é abertura,
+    é buraco — e o `ge=0, le=100` é o que separa os dois.
     """
+    from pydantic import ValidationError
+
     from hefesto_dualsense4unix.profiles.schema import ControllerMicOverride
 
-    with pytest.raises(ValueError, match="ainda não vale por unidade"):
-        ControllerMicOverride.model_validate({"volume": 50})
+    assert ControllerMicOverride.model_validate({"volume": 50}).volume == 50
+    for fora in (-1, 101, 999):
+        with pytest.raises(ValidationError):
+            ControllerMicOverride.model_validate({"volume": fora})

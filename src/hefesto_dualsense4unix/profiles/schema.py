@@ -895,25 +895,36 @@ class ControllerMicOverride(BaseModel):
     #: `ProfileManager.apply_mic`.
     muted: bool | None = None
 
+    #: GANHO DE CAPTURA DESTA PEÇA, 0..100. `None` = sem opinião.
+    #:
+    #: ABERTO EM 03/09/2026, E A PALAVRA É DELA. O campo esteve travado o dia
+    #: inteiro por uma razão que NÃO era técnica: a costura por unidade ficou
+    #: pronta pela manhã (`apply_profile_mic` resolve a fonte com
+    #: `fonte_de_captura_do_uniq(uniq)` e NÃO cai para a global quando o uniq
+    #: não resolve — cair seria escrever no microfone do vizinho). O que
+    #: faltava era a decisão de mudar o que o perfil dela aceita no disco.
+    #:
+    #: ELA MANDOU, com estas palavras: *"manda a ver em tudo que falta por
+    #: favor"* — depois de ter dito, no mesmo dia, o que o produto tem de
+    #: entregar: *"4 controles funcionarem no mesmo modo com configs
+    #: diferentes"*. Com dois DualSense no cabo há DUAS placas de som
+    #: (MIC-DA-MESA-CHEIA-01, 20/08/2026), e o ganho de cada uma é justamente
+    #: uma config que difere por peça.
+    #:
+    #: A FAIXA É A DA SEÇÃO GLOBAL, e é lida dela, não digitada aqui: uma
+    #: segunda definição de 0..100 envelheceria no dia em que a primeira
+    #: mudasse.
+    volume: int | None = Field(default=None, ge=0, le=100)
+
     @model_validator(mode="before")
     @classmethod
     def _o_que_ainda_nao_tem_caminho_por_peca(cls, data: Any) -> Any:
         """Mensagem que EXPLICA a recusa em vez do ``extra_forbidden`` cru."""
         if not isinstance(data, dict):
             return data
-        if "volume" in data:
-            raise ValueError(
-                "controllers[...].mic: 'volume' ainda não vale por unidade — "
-                "e o que falta agora é a PALAVRA DELA, não o caminho. A "
-                "costura existe desde 03/09/2026: `Daemon.apply_profile_mic` "
-                "resolve a fonte com `fonte_de_captura_do_uniq(uniq)` quando "
-                "há `uniq`, e só usa `fonte_de_captura_do_controle()` — a "
-                "PRIMEIRA fonte da lista — na seção GLOBAL, que não tem dono. "
-                "Abrir o campo aqui muda o que o perfil aceita no disco, e com "
-                "dois DualSense no cabo há DUAS placas de som "
-                "(MIC-DA-MESA-CHEIA-01): é decisão dela, não de quem gera o "
-                "esquema. Use o 'volume' da seção GLOBAL `mic` do perfil."
-            )
+        # O `volume` SAIU DAQUI EM 03/09/2026 — ela mandou abrir. A recusa que
+        # morava nesta linha dizia, com todas as letras, que *"o que falta
+        # agora é a PALAVRA DELA, não o caminho"*. A palavra veio.
         if "button_toggles_system" in data:
             raise ValueError(
                 "controllers[...].mic: 'button_toggles_system' é UM por "
