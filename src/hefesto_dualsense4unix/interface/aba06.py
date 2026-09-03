@@ -1189,10 +1189,26 @@ def controle_vazio(c):
     uma casa da fila e o P4 receberia a cor do P3. O valor que ele recebe é `""`,
     que APAGA o `data-colorway` — e o desenho cai no neutro que as regras
     `.nav-ctl.vazia .ds-svg` já pintam.
+
+    O `data-controle` FICA AQUI TAMBÉM — decisão dela, 03/09/2026, e ela a
+    enunciou assim: *"tem que aparecer desligado enquanto não tem nenhum
+    controle. A partir do momento que tiver, ele aparece o controle devidamente
+    conectado. Se isso não ocorre com os 4 controles em cada aba, então temos
+    que construir isso e garantir isso."*
+
+    SEM O ENDEREÇO O LUGAR VAZIO É VAZIO SÓ PORQUE O DESENHO O DESENHOU VAZIO.
+    Medido no DOM vivo desta aba em 03/09, antes desta linha:
+    ``[data-controle="p3"]`` devolvia **zero elementos** — a coluna estava na
+    tela, com o desenho e o rótulo "P3 · Desconectado", e o produto não tinha
+    por onde escrever nela quando o terceiro controle chegasse.
+
+    A ``05-vibracao`` já fazia certo, e o comentário dela dizia a mesma coisa.
+    Esta linha é a cópia daquela decisão para as abas que ficaram para trás.
     """
     n = c["jogador"]
     return (
-        f'              <div class="nav-ctl vazia" data-conectado="nao"'
+        f'              <div class="nav-ctl vazia" data-controle="{c["pref"]}"'
+        f' data-conectado="nao"'
         f' data-campo="plastico" data-hef-alvo="cor"'
         f' title="Nenhum controle neste lugar.">\n'
         f'                {desenho(c)}\n'
