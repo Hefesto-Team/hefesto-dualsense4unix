@@ -1,40 +1,51 @@
-"""A coluna "Ajuste próprio" da aba Perfis acende por CLASSE — e só quando pode.
+"""A coluna "Ajuste próprio" da aba Perfis acende por CLASSE, e com o dado DELA.
 
-**O QUE ESTAVA ERRADO, e são dezesseis células da tabela ``Controle / Ajuste
-próprio / ID da peça``.** Cada linha tem quatro ``<span class="gr">``, um por
-seção que o perfil sabe guardar por controle (luz · gatilhos · vibração ·
-alto-falante). Aceso é ``.gr.on``; apagado é ``.gr``. Nenhum dos cinco alvos do
-pintor até 02/09/2026 (texto · largura · fundo · valor · html) alcançava uma
-CLASSE, então o endereço vivia em ``a10_perfis.NAO_PINTAVEIS`` e **a coluna
-mostrava o desenho para todo perfil**: a régua do mockup acusava 16 dos 17
-campos que faltavam nesta aba.
+**O QUE ESTAVA ERRADO, e é a tabela ``Controle / Ajuste próprio / ID da
+peça``.** Cada linha tem um ``<span class="gr">`` por seção que o perfil sabe
+guardar daquele controle (luz · gatilhos · vibração · alto-falante · microfone).
+Aceso é ``.gr.on``; apagado é ``.gr``. Nenhum dos cinco alvos do pintor até
+02/09/2026 (texto · largura · fundo · valor · html) alcançava uma CLASSE, então
+o endereço vivia em ``a10_perfis.NAO_PINTAVEIS`` e **a coluna mostrava o desenho
+para todo perfil**: a régua do mockup acusava 16 dos 17 campos daquela aba.
 
-**AS TRÊS COISAS QUE ESTE ARQUIVO GUARDA:**
+**AS DUAS COISAS QUE ESTE ARQUIVO GUARDA:**
 
 1. **O DESENHO DECLARA O ALVO.** ``aba10.linha_do_controle`` escreve
-   ``data-hef-alvo="classe"`` nos dezesseis ``<span>``, e a bancada sai com ele.
+   ``data-hef-alvo="classe"`` em toda célula, e a bancada sai com ele.
 
 2. **O PACOTE MANDA O ESTADO, não o nome da seção.** A emissão era
    ``[s for g in guarda for s in (g.get("secoes") or [])]`` — iterar um ``dict``
    devolve as CHAVES. Com dois controles na mesa ela dava
    ``["leds","triggers","rumble","speaker"] * 2`` para QUALQUER perfil, e como
-   ``ligado("leds")`` é verdadeiro isso teria acendido as quatro seções nos
-   quatro controles. O defeito viveu escondido atrás de ``NAO_PINTAVEIS``: uma
-   emissão que ninguém pinta é uma emissão que ninguém confere.
-
-3. **A CURA VALE NOS DOIS MUNDOS.** ``--publicar-enderecos 10`` RECUSOU — a
-   ferramenta é por PÁGINA e esta já carregava uma mudança de desenho pendente
-   (a opção ``—`` do Estilo de Jogo, decisão dela). Então o pacote **pergunta à
-   página publicada** se ela traz o atributo, e cala enquanto não trouxer:
-   escrever texto num ``<span>`` com um ``<svg>`` dentro apaga o glifo, dezesseis
-   vezes, duas vezes por segundo.
+   ``ligado("leds")`` é verdadeiro isso teria acendido tudo para todo mundo. O
+   defeito viveu escondido atrás de ``NAO_PINTAVEIS``: uma emissão que ninguém
+   pinta é uma emissão que ninguém confere.
 
 **E POR QUE A CLASSE BASTA — medido, não suposto:** ``monta.glifo(p,
 ativo=True)`` e ``monta.glifo(p, ativo=False)`` devolvem bytes IDÊNTICOS para as
-sete peças destas quatro seções. Os arquivos ``X.svg`` e ``X_active.svg`` só
-diferem no traço (``#f8f8f2`` contra ``#bd93f9``) e ``glifo`` troca os dois por
+peças destas seções. Os arquivos ``X.svg`` e ``X_active.svg`` só diferem no
+traço (``#f8f8f2`` contra ``#bd93f9``) e ``glifo`` troca os dois por
 ``currentColor``. Logo a diferença visível inteira entre aceso e apagado é o
 ``color`` que ``.gr.on`` dá ao ``<span>`` — trocar a classe é a cura COMPLETA.
+
+O DIA EM QUE ESTE ARQUIVO INTEIRO MORREU — 03/09/2026
+------------------------------------------------------
+Ele nasceu em ``c3712efb`` (02/09, 23h38) e ``7e64c2e3`` (03/09, 02h56) mudou
+por baixo dele TRÊS contratos sem tocá-lo. **Nove dos dez testes pararam de
+rodar** — não de reprovar: ``ValueError``, ``AttributeError`` e um ``20 == 16``:
+
+- ``aba10.SECOES`` virou um PAR (era ``campo, pecas, dica``); a decisão nº4 dela
+  tirou as oito dicas das células;
+- ``_a_pagina_acende_a_secao_por_classe`` foi REMOVIDA, com razão — ver a nota
+  datada na seção 4;
+- a página passou de 16 para 20 células, e três asserções cravavam o 16 e o 4.
+
+**E foi sob esta régua morta que a coluna do microfone ficou apagada à força por
+um dia**: ``ControllerOverrides`` ganhou o campo ``mic`` às 02h50 e o produto
+continuou emitindo quatro chaves, porque ``SECOES_POR_CONTROLE`` era digitada.
+As três asserções cravadas foram trocadas por leituras do gerador — a régua que
+digita o que devia LER é a forma de instrumento falso que esta casa já pagou
+onze vezes, e aqui ela cobrou duas: reprovava a melhora e morria com ela.
 """
 
 from __future__ import annotations
@@ -133,21 +144,30 @@ def _emitidos(**overrides: Any) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # 1. O DESENHO DECLARA O ALVO
 # ---------------------------------------------------------------------------
-def test_a_bancada_declara_o_alvo_classe_nas_dezesseis_celulas() -> None:
+def test_a_bancada_declara_o_alvo_classe_em_toda_celula() -> None:
     """Sem ``data-hef-alvo="classe"`` o pintor cai no ramo padrão e apaga o SVG.
 
-    MORDIDA: tire o ``data-hef-alvo="classe"`` de
-    ``aba10.linha_do_controle`` e este teste reprova dizendo quantas células
-    ficaram sem alvo.
+    O NÚMERO É LIDO, E NÃO DIGITADO — 03/09/2026. Esta régua se chamava
+    ``…_nas_dezesseis_celulas`` e cravava ``== 16``. No dia em que a decisão
+    nº20 dela pôs a quinta coluna, ela passou a reprovar a MELHORA: *"a tabela
+    tem 20 células, e o desenho dela são quatro linhas de quatro seções"* — a
+    régua digitando o que devia LER, que é a forma de instrumento falso que esta
+    casa já pagou onze vezes. O número sai agora do gerador.
+
+    MORDIDA: tire o ``data-hef-alvo="classe"`` de ``aba10.linha_do_controle`` e
+    este teste reprova dizendo quantas células ficaram sem alvo.
     """
+    aba10 = _gerador()
+    esperado = len(aba10.MESA) * len(aba10.SECOES)
     html = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
     celulas = re.findall(r'<span[^>]*data-hef="guarda\.secao"[^>]*>', html)
-    assert len(celulas) == 16, (
+    assert len(celulas) == esperado, (
         f"a tabela da guarda tem {len(celulas)} células endereçadas, e o "
-        "desenho dela são quatro linhas de quatro seções")
+        f"desenho são {len(aba10.MESA)} linhas de {len(aba10.SECOES)} seções "
+        f"({esperado})")
     sem_alvo = [c for c in celulas if 'data-hef-alvo="classe"' not in c]
     assert not sem_alvo, (
-        f"{len(sem_alvo)} de 16 células de `guarda.secao` não declaram "
+        f"{len(sem_alvo)} de {esperado} células de `guarda.secao` não declaram "
         "`data-hef-alvo=\"classe\"` — o pintor escreveria TEXTO nelas e o "
         "`el.textContent` apagaria o glifo SVG de dentro")
 
@@ -165,9 +185,14 @@ def test_o_glifo_aceso_e_o_apagado_sao_o_mesmo_desenho() -> None:
     aba10 = _gerador()
     from hefesto_dualsense4unix.interface import monta
 
+    # A FORMA DE `SECOES` É LIDA, E NÃO SUPOSTA — 03/09/2026. Estas três linhas
+    # desempacotavam `(campo, pecas, dica)`; a decisão nº4 dela tirou as oito
+    # dicas das células e a tupla virou um PAR. O `ValueError` que isso produzia
+    # não é reprovação, é a régua morta — quatro testes deste arquivo caíram
+    # assim, e a coluna ficou sem guarda no dia em que mais precisava dela.
     diferentes = [
         peca
-        for _campo, pecas, _dica in aba10.SECOES
+        for _campo, pecas in aba10.SECOES
         for peca in pecas
         if monta.glifo(peca, ativo=True, tam=15) != monta.glifo(peca, ativo=False,
                                                                tam=15)
@@ -180,7 +205,7 @@ def test_o_glifo_aceso_e_o_apagado_sao_o_mesmo_desenho() -> None:
 # ---------------------------------------------------------------------------
 # 2. A ORDEM É O CONTRATO
 # ---------------------------------------------------------------------------
-def test_o_produtor_e_o_desenho_dizem_as_quatro_secoes_na_mesma_ordem() -> None:
+def test_o_produtor_e_o_desenho_dizem_as_secoes_na_mesma_ordem() -> None:
     """O piloto distribui a lista pelos elementos na ordem do DOM.
 
     ``perfis_web.SECOES_POR_CONTROLE`` decide a ordem dos VALORES e
@@ -192,7 +217,7 @@ def test_o_produtor_e_o_desenho_dizem_as_quatro_secoes_na_mesma_ordem() -> None:
     ``SECOES_POR_CONTROLE``) e este teste reprova mostrando as duas sequências.
     """
     aba10 = _gerador()
-    do_desenho = tuple(campo for campo, _pecas, _dica in aba10.SECOES)
+    do_desenho = tuple(campo for campo, _pecas in aba10.SECOES)
     assert do_desenho == perfis_web.SECOES_POR_CONTROLE, (
         "o desenho e o produto discordam na ordem das seções:\n"
         f"  desenho (aba10.SECOES)         {do_desenho}\n"
@@ -208,21 +233,30 @@ def test_a_emissao_e_o_estado_de_cada_secao_e_nao_o_nome_dela(
     """O defeito que ``NAO_PINTAVEIS`` escondia — e ele acenderia tudo.
 
     Com o perfil guardando SÓ a vibração do primeiro controle, a coluna tem de
-    dizer: apagado, apagado, ACESO, apagado · e quatro apagados no segundo.
+    dizer: apagado, apagado, ACESO, apagado, apagado · e cinco apagados no
+    segundo.
+
+    O ESPERADO É CALCULADO, e não digitado — 03/09/2026. Este ``assert`` trazia
+    oito booleanos cravados; a emissão passou a mandar ``"sim"``/``""`` (o alvo
+    ``classe`` lê string) e a coluna ganhou a quinta seção, e a régua morreu
+    duas vezes na mesma linha.
 
     MORDIDA: volte a ``[s for g in guarda for s in (g.get("secoes") or [])]`` e
-    este teste reprova com ``['leds', 'triggers', …]`` no lugar dos oito
-    booleanos.
+    este teste reprova com ``['leds', 'triggers', …]`` no lugar dos estados.
     """
     monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", True, raising=False)
     fora = _emitidos(rumble={"policy": "economia"})
-    assert fora["guarda.secao"] == [False, False, True, False,
-                                    False, False, False, False], (
-        f"a coluna não conta o que o perfil guarda: {fora['guarda.secao']!r}")
+    quantas = len(a10_perfis.SECOES_DA_COLUNA)
+    onde_acende = a10_perfis.SECOES_DA_COLUNA.index("rumble")
+    esperado = ["sim" if i == onde_acende else "" for i in range(quantas)]
+    esperado += [""] * quantas
+    assert fora["guarda.secao"] == esperado, (
+        f"a coluna não conta o que o perfil guarda: {fora['guarda.secao']!r} "
+        f"em vez de {esperado!r}")
 
     # E O QUE A TELA FARIA COM ISSO — a mesma lista que o `ligado()` do JS lê.
     acesos = [regua_do_mockup._ligado(str(v)) for v in fora["guarda.secao"]]
-    assert acesos == [False, False, True, False, False, False, False, False], (
+    assert acesos == [v == "sim" for v in esperado], (
         "o que o pacote emite não é lido como aceso/apagado pelo alvo `classe`")
 
 
@@ -242,104 +276,56 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
     # aceitam `{}`; o `speaker` exige `volume`, e a razão está no próprio
     # schema (SOM-02: `muted` sem `volume` mandaria volume ZERO e tomaria a
     # posse do alto-falante).
-    minimo: dict[str, dict[str, Any]] = {
+    menor_corpo: dict[str, dict[str, Any]] = {
         "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
+        # O `mic` é o QUINTO ajuste desde a decisão nº20 dela (03/09/2026). Ele
+        # aceita `{}` como os três primeiros — `ControllerMicOverride.muted`
+        # nasce `None`, e `_secoes_do_controle` pergunta `is not None` sobre a
+        # SEÇÃO, não sobre o campo de dentro.
+        "mic": {},
     }
+    faltando = set(perfis_web.SECOES_POR_CONTROLE) - set(menor_corpo)
+    assert not faltando, (
+        f"o esquema ganhou {sorted(faltando)} e esta régua não sabe montar o "
+        f"corpo mínimo dessa seção — acrescente-o a `menor_corpo`, senão a coluna "
+        f"nova atravessa este arquivo sem ser medida (foi o que aconteceu com "
+        f"o `mic` em 03/09/2026)")
+    quantas = len(perfis_web.SECOES_POR_CONTROLE)
     for posicao, secao in enumerate(perfis_web.SECOES_POR_CONTROLE):
-        fora = _emitidos(**{secao: minimo[secao]})
-        esperado = [i == posicao for i in range(4)] + [False] * 4
+        fora = _emitidos(**{secao: menor_corpo[secao]})
+        esperado = ["sim" if i == posicao else "" for i in range(quantas)]
+        esperado += [""] * quantas
         assert fora["guarda.secao"] == esperado, (
             f"com só `{secao}` guardado, a coluna acendeu "
             f"{fora['guarda.secao']!r} em vez de {esperado!r}")
 
 
 # ---------------------------------------------------------------------------
-# 4. A CURA VALE NOS DOIS MUNDOS
+# 4. A CURA VALIA NOS DOIS MUNDOS — E OS DOIS MUNDOS VIRARAM UM (03/09/2026)
+#
+# Aqui viviam QUATRO testes sobre `a10_perfis._a_pagina_acende_a_secao_por_classe`:
+# o pacote perguntava à página PUBLICADA se ela trazia `data-hef-alvo="classe"` e
+# calava enquanto não trouxesse, porque escrever texto num `<span>` com `<svg>`
+# dentro apaga o glifo.
+#
+# ESSA GUARDA NÃO EXISTE MAIS, e a remoção foi certa: `7e64c2e3` mediu que o
+# `--publicar-enderecos` nunca copiava página nenhuma (o ramo `shutil.copy2` era
+# INALCANÇÁVEL — o `elif` de cima comparava por `soma()`, o sha256 que APAGA os
+# atributos de endereço, então duas páginas que diferem só num `data-hef-alvo`
+# caíam em "já igual"). Corrigido isso, o alvo chegou à página publicada e a
+# espera acabou.
+#
+# O QUE ELES GUARDAVAM CONTINUA GUARDADO, e por isso não foram substituídos:
+# `test_a_pagina_publicada_sabe_receber_a_pintura`, em
+# `test_a_coluna_de_ajuste_proprio_da_aba10_e_dado.py`, exige o alvo em TODA
+# célula da página publicada. Uma publicação futura que o perdesse reprova lá.
+#
+# POR QUE ISTO ESTÁ ESCRITO EM VEZ DE APAGADO: os quatro ficaram QUEBRADOS no
+# `dev` por um dia inteiro (`AttributeError`, e mais cinco irmãos deste arquivo),
+# e uma régua quebrada não reprova nada — foi sob ela que a coluna do microfone
+# passou apagada à força. Quem apagar em silêncio a próxima régua caduca deixa a
+# mesma armadilha.
 # ---------------------------------------------------------------------------
-def _pagina_de_mentira(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-                       com_alvo: bool) -> None:
-    """Põe no lugar da página publicada uma com — ou sem — o alvo declarado."""
-    alvo = ' data-hef-alvo="classe"' if com_alvo else ""
-    arquivo = tmp_path / "10-perfis.html"
-    arquivo.write_text(
-        f'<span class="gr on" data-hef="guarda.secao"{alvo}'
-        f' data-hef-secao="leds"><svg></svg></span>', encoding="utf-8")
-    verdadeiro = onde.pagina
-    monkeypatch.setattr(
-        onde, "pagina",  # (noqa-acento) nome de função
-        lambda nome, publicado=False: (
-            arquivo if (publicado and nome == a10_perfis.PAGINA)
-            else verdadeiro(nome, publicado)))
-    monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", None, raising=False)
-
-
-def test_sem_o_alvo_na_pagina_publicada_o_pacote_cala(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Enquanto ela não publicar, escrever ali apagaria dezesseis glifos.
-
-    MORDIDA: tire o ``if _a_pagina_acende_a_secao_por_classe():`` de
-    ``a10_perfis.pacote`` e este teste reprova — o pacote passa a emitir para
-    uma página que só sabe receber TEXTO.
-    """
-    _pagina_de_mentira(tmp_path, monkeypatch, com_alvo=False)
-    assert a10_perfis._a_pagina_acende_a_secao_por_classe() is False
-    assert "guarda.secao" not in _emitidos(), (
-        "o pacote emitiu `guarda.secao` para uma página publicada SEM "
-        "`data-hef-alvo=\"classe\"` — o pintor escreveria texto nos dezesseis "
-        "`<span>` e o `el.textContent` apagaria o glifo SVG de cada um")
-
-
-def test_com_o_alvo_na_pagina_publicada_o_pacote_escreve(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O outro lado, e sem ele a guarda acima seria silêncio para sempre.
-
-    No tique seguinte ao ``--publicar 10`` dela as dezesseis células passam a
-    receber o estado — sem ninguém tocar em código.
-    """
-    _pagina_de_mentira(tmp_path, monkeypatch, com_alvo=True)
-    assert a10_perfis._a_pagina_acende_a_secao_por_classe() is True
-    fora = _emitidos(rumble={"policy": "economia"})
-    assert fora["guarda.secao"] == [False, False, True, False,
-                                    False, False, False, False]
-
-
-def test_a_pergunta_e_feita_a_pagina_publicada_e_nao_a_bancada(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O piloto abre SEMPRE o publicado; medir a bancada é verde sobre o futuro.
-
-    É a armadilha nomeada em ``onde.pagina``: *"apontá-lo para o publicado o
-    faria dar verde sobre a página congelada"* — aqui o erro é o inverso e é o
-    que derrubou três frentes em 02/09, medir a BANCADA e o produto renderizar
-    outra coisa.
-
-    MORDIDA: troque ``publicado=True`` por ``publicado=False`` em
-    ``_a_pagina_acende_a_secao_por_classe`` e este teste reprova.
-    """
-    _pagina_de_mentira(tmp_path, monkeypatch, com_alvo=False)
-    # A BANCADA DE VERDADE JÁ TEM O ALVO — é isto que separa as duas perguntas.
-    bancada = onde.pagina("10-perfis.html", publicado=False).read_text(
-        encoding="utf-8")
-    assert 'data-hef-alvo="classe"' in bancada, (
-        "a bancada perdeu o alvo; sem ele esta régua não separa nada")
-    assert a10_perfis._a_pagina_acende_a_secao_por_classe() is False, (
-        "o pacote respondeu pela BANCADA — no dia em que o desenho anda à "
-        "frente do produto, é a tela dela que paga")
-
-
-def test_pagina_ilegivel_responde_que_nao(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O erro seguro é não escrever: uma página que não abre não sabe receber."""
-
-    def _explode(nome: str, publicado: bool = False) -> Path:
-        raise OSError("a página sumiu")
-
-    monkeypatch.setattr(onde, "pagina", _explode)  # (noqa-acento) nome de função
-    monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", None, raising=False)
-    assert a10_perfis._a_pagina_acende_a_secao_por_classe() is False
-
-
 def test_o_endereco_saiu_de_nao_pintaveis_e_nao_voltou_calado() -> None:
     """``guarda.secao`` não é mais um nome cravado — quem decide é a MEDIÇÃO.
 

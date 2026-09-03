@@ -37,9 +37,29 @@ AS DUAS DECISÕES DELA QUE ESTE ARQUIVO SEGURA — 03/09/2026
   por estado) que repetiam a dica do cabeçalho e ainda re-explicavam o que cada
   peça é. A régua olha o ELEMENTO, não a frase: proibir os oito textos deixaria
   o nono entrar livre.
-- **nº20, o microfone é o QUINTO ajuste por controle.** A tela mostra cinco
-  antes de o esquema guardar cinco, e isso é declaração, não invenção — ver
-  ``a10_perfis.ESPERANDO_O_ESQUEMA``.
+- **nº20, o microfone é o QUINTO ajuste por controle.** A tela ganhou a coluna
+  no mesmo dia em que ``ControllerOverrides`` ganhou o campo — e por um dia os
+  dois não se falaram.
+
+O DIA EM QUE ESTE ARQUIVO NÃO BASTOU — 03/09/2026
+--------------------------------------------------
+Este docstring dizia *"a tela mostra cinco antes de o esquema guardar cinco, e
+isso é declaração, não invenção"*. Não era mais verdade quando foi escrito:
+``3f757b77`` (02:50) pôs o ``mic`` em ``ControllerOverrides`` e ``7e64c2e3``
+(02:56), noutra worktree, desenhou a coluna afirmando no commit que o campo
+*"ainda não existe"*. O merge levou os dois e ninguém releu a isenção.
+
+O resultado ficou vivo por um dia: o daemon aplicava o mudo só daquele controle
+(``manager.apply_controller_mics``), e a coluna que existe para dizer *"este
+controle tem ajuste próprio"* ficava **apagada à força** — ``pintaGuarda`` faz
+``!!linha.secoes['mic']`` e a chave não saía de ``SECOES_POR_CONTROLE``, que era
+digitada à mão.
+
+**As duas réguas que faltavam, e elas fecham a direção que ninguém guardava:**
+``test_o_produto_mostra_todo_campo_do_esquema`` (o produto não pode esconder um
+campo que o perfil guarda) e ``test_nenhuma_isencao_desta_lista_ja_caducou``
+(uma isenção que já foi atendida tem de sumir). ``SECOES_POR_CONTROLE`` deixou
+de ser digitada e passa a sair de ``ControllerOverrides.model_fields``.
 
 A MORDIDA (as quatro, e cada uma acusa uma metade diferente):
 
@@ -278,3 +298,84 @@ def test_a_coluna_do_microfone_existe_na_tela() -> None:
     secoes = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)
               for c in _celulas(publicado=False)}
     assert "mic" in secoes, "o desenho perdeu a célula do microfone"
+
+
+# ---------------------------------------------------------------------------
+# A DIREÇÃO QUE NINGUÉM GUARDAVA — o ESQUEMA contra o PRODUTO
+#
+# As duas réguas acima comparam o produto com o DESENHO, e as duas estavam
+# verdes enquanto a coluna do microfone ficava apagada à força: o desenho tinha
+# as cinco células e o produto emitia quatro chaves. Faltava perguntar ao
+# ESQUEMA, que é quem decide o que existe no disco.
+# ---------------------------------------------------------------------------
+def test_o_produto_mostra_todo_campo_do_esquema() -> None:
+    """O que o perfil GUARDA por controle, a coluna MOSTRA. Nome a nome, na ordem.
+
+    A ORDEM entra no ``assert`` de propósito: ``pintaGuarda`` casa por NOME
+    (``linha.secoes[g.dataset.hefSecao]``), mas o pacote emite uma LISTA que o
+    piloto distribui pela ordem do documento. Duas listas com os mesmos nomes em
+    ordens diferentes acendem a luz onde a vibração está guardada, e o número de
+    valores continua batendo — ninguém acusaria.
+
+    MORDIDA: devolva ``perfis_web.SECOES_POR_CONTROLE`` à tupla digitada de
+    quatro nomes (sem o ``mic``) e esta régua reprova nomeando o campo
+    escondido.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    do_esquema = tuple(ControllerOverrides.model_fields)
+    assert do_esquema == perfis_web.SECOES_POR_CONTROLE, (
+        "o que o perfil guarda por controle e o que a coluna `Ajuste próprio` "
+        "mostra deixaram de ser a mesma lista:\n"
+        f"  esquema (ControllerOverrides)  {do_esquema}\n"
+        f"  produto (SECOES_POR_CONTROLE)  {perfis_web.SECOES_POR_CONTROLE}\n"
+        "Um campo do esquema que não sai daqui fica APAGADO À FORÇA na tela: "
+        "`pintaGuarda` faz `!!linha.secoes[nome]`, e chave ausente é `false`.")
+
+
+def test_nenhuma_isencao_desta_lista_ja_caducou() -> None:
+    """Uma coluna declarada *"o campo está a caminho"* some quando ele chega.
+
+    ``ESPERANDO_O_ESQUEMA`` é isenção com prazo, e a régua que a guardava é de
+    uma direção só de propósito — ``test_toda_coluna_sem_campo_esta_declarada``
+    diz, com todas as letras, que *"ela não reprova quando o campo chega"*. Isso
+    evita uma armadilha para a frente seguinte e cria outra: a isenção nunca
+    caduca sozinha. Foi assim que o ``mic`` ficou declarado como ausente por um
+    dia depois de ter chegado, cobrindo a coluna apagada.
+
+    Esta fecha a outra direção. Ela não pede que ninguém lembre — reprova.
+
+    MORDIDA: ponha ``"mic"`` de volta em ``a10_perfis.ESPERANDO_O_ESQUEMA`` e
+    esta régua reprova mandando apagá-lo.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    caducas = set(a10_perfis.ESPERANDO_O_ESQUEMA) & set(
+        ControllerOverrides.model_fields)
+    assert not caducas, (
+        f"`ESPERANDO_O_ESQUEMA` ainda declara {sorted(caducas)} como *a "
+        "caminho*, e o campo JÁ está em `ControllerOverrides`. Apague o nome "
+        "da lista: enquanto ele estiver lá, a isenção cobre uma coluna que "
+        "deveria estar acendendo com o dado dela.")
+
+
+def test_a_frase_da_linha_sem_ajuste_conta_os_ajustes_certos() -> None:
+    """*"herda os cinco ajustes do perfil"* — e a palavra sai da lista.
+
+    A frase trazia ``quatro`` digitado. Com a quinta coluna na tela, a linha de
+    um controle sem ajuste próprio mostrava cinco glifos apagados e dizia
+    *"herda os quatro"* — o número ao lado do que o desmente. Para quem lê a
+    tela contando, são duas afirmações contrárias na mesma linha.
+
+    MORDIDA: volte a escrever ``"herda os quatro ajustes do perfil"`` em
+    ``perfis_web._linhas_da_guarda`` e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    esperado = {4: "quatro", 5: "cinco", 6: "seis"}[
+        len(perfis_web.SECOES_POR_CONTROLE)]
+    sem_nada = Profile(name="sem nada", match=MatchAny(), controllers={})
+    linhas = perfis_web._linhas_da_guarda([dict(MESA[0])], sem_nada)
+    assert f"herda os {esperado} ajustes do perfil" in linhas[0]["dica"], (
+        f"a linha sem ajuste próprio não diz `herda os {esperado} ajustes`; "
+        f"a dica é {linhas[0]['dica']!r}")
