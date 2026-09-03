@@ -873,6 +873,16 @@ PERIGOSOS = {
     # ela está trabalhando — é o mesmo motivo de toda janela desta casa nascer
     # com `--oculta`.
     ("06-navegacao.html", "modo"),
+    # A TELA É DELA, E A STEAM ABRE EM CIMA. `abrir-lancador` chama
+    # `steam_launch_options.reopen_steam`, que abre a janela da Steam
+    # DESANEXADA — ela não nasce oculta, não obedece ao `--oculta` desta casa e
+    # não some quando a prova termina. Uma régua que a clicasse encheria a tela
+    # dela de Steam a cada volta.
+    # ELA ESCOLHEU ESTA COMBINAÇÃO — decisão 17 dela, 03/09/2026: o botão LIGA
+    # *e* o gesto entra aqui, para que a prova automática nunca o clique. As
+    # duas metades são uma decisão só: ligar sem o isento seria ligar contra
+    # ela.
+    ("07-lancadores.html", "abrir-lancador"),
 }
 
 

@@ -567,6 +567,13 @@ AINDA_LENDO = "…"
 #: A chave do único cartão com fonte.
 STEAM = "steam"
 
+#: O NOME DO GESTO DO "Abrir o lançador", e ele mora aqui porque o desenho e o
+#: pacote precisam do MESMO texto: o desenho o escreve no `data-gesto` e o
+#: pacote o registra em `@gesto(...)`. Digitá-lo duas vezes é como um botão
+#: ganha endereço que ninguém atende — a forma de defeito que
+#: `test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono` cobra.
+ABRIR = "abrir-lancador"
+
 
 @dataclass(frozen=True)
 class Leitura:
@@ -723,7 +730,11 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     # família, mesma coisa" que esta aba já pagou uma vez (o `.lanc .btn` que
     # encolhia). A exceção é o cartão em ERRO, o único estado em que ele
     # responde uma pergunta que o cartão fez.
-    abrir = Acao("Abrir o lançador", "", "", "")
+    # O BOTÃO GANHOU ENDEREÇO — 03/09/2026, decisão 17 dela (ligar o botão, com
+    # o gesto isento da prova automática). Quem atende é
+    # `a07_lancadores.abrir_lancador`, e o `v` diz QUAL lançador — sem ele o
+    # gesto teria de adivinhar pelo texto do botão, que é o mesmo nos seis.
+    abrir = Acao("Abrir o lançador", "", ABRIR, STEAM)
     criar = Acao("Criar perfil para um jogo", "", "", "")
     # O `fora=SEM_LISTA` DOS DOIS RAMOS É CURA, e não enfeite: sem ele o
     # `steam-fora` sai vazio, o `escrever()` do bootstrap o troca por `—` e a
@@ -837,11 +848,15 @@ def cartao_sem_censo(item: SemCenso, onde: str | None) -> Lancador:
     que ela não viu. Se ele deve sumir quando o lançador não está aqui, quem
     diz é ela — está em `espera_a_palavra_dela`, junto com as três frases.
 
-    (Ele continua sem dono — `SEM_DONO["abrir-lancador"]` — nos seis cartões,
-    exatamente como no cartão da Steam. Sumir só neste era, além de mudança não
-    pedida, a única incoerência da fileira.)
+    O BOTÃO GANHOU ENDEREÇO NOS SEIS — 03/09/2026, e a linha que estava aqui
+    ("ele continua sem dono, `SEM_DONO['abrir-lancador']`") caducou com a
+    decisão 17 dela. **O produto só sabe abrir a Steam**
+    (`steam_launch_options.reopen_steam`), e nos outros cinco o gesto RECUSA
+    dizendo — que é o contrário de fingir, e é melhor que o silêncio que havia:
+    um botão sem `data-gesto` não chega ao Python, o clique some, e quem clica
+    conclui que funcionou. Ver `a07_lancadores.abrir_lancador`.
     """
-    abrir = (Acao("Abrir o lançador", "", "", ""),)
+    abrir = (Acao("Abrir o lançador", "", ABRIR, item.chave),)
     if onde is None:
         return Lancador(chave=item.chave, nome=item.nome, selo="nao_sei",
                         jogos="—", diz=DIZ_SEM_FONTE, acoes=abrir)
@@ -898,6 +913,7 @@ class Quadro:
 
 
 __all__ = [
+    "ABRIR",
     "AINDA_LENDO",
     "A_STEAM",
     "CLASSE_DA_GRADE",
