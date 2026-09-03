@@ -17,11 +17,13 @@ DE ONDE VEM CADA COISA NA TELA
   `controller.list` devolve a lista sem ele;
 * **os que o Hefesto só vê** — `controller.list {external: true}`, que já traz o
   `player_slot` deles resolvido pelo registro do daemon;
-* **a cor do plástico** — lida DO APARELHO, pelo cabo, por
+* **a cor do plástico** — lida DO APARELHO, pelos DOIS transportes, por
   `integrations/cor_do_plastico` (decisão T6). Antes desta leva a leitura vivia
   fora do aplicativo, em `scripts/ensaios/`, e toda linha "Cor:" nasceria em
   "Não sei" — inclusive nos controles no cabo, que o desenho mostra com a cor
-  lida;
+  lida. **Quem decide se um nó pode responder é `cor_do_plastico`**, dono único
+  do envelope de cada transporte — aqui não há `if` de barramento nenhum, e a
+  razão está em :meth:`_PainelDosControles._perguntar_as_cores`;
 * **o resto** — declaração dela, acumulada em `_maquina_pendente` e gravada
   pelo "Aplicar" do rodapé (`D-A4`: a aba é diferida, o clique só marca).
 
@@ -914,7 +916,7 @@ class _PainelDosControles:
         return gravado
 
     def _perguntar_as_cores(self, adotados: list[dict[str, Any]]) -> None:
-        """Pergunta a cor do plástico a cada DualSense NOVO que está no cabo.
+        """Pergunta a cor do plástico a cada DualSense NOVO da mesa.
 
         Uma vez por endereço e por sessão, porque a resposta não muda: a cor
         está no serial de fábrica. Sem esse cache, cada entrada na aba mandaria
@@ -922,12 +924,41 @@ class _PainelDosControles:
         essa família é a mesma em que um par errado RESETA o aparelho. A trava
         de `integrations/cor_do_plastico` recusa qualquer par que não seja o do
         serial, mas não mandar é melhor que mandar e ser recusado.
+
+        **O FILTRO DE CABO SAIU DAQUI — 03/09/2026.** A linha era
+        ``transporte != "usb"``, e ela era NOSSA: o aparelho sempre respondeu.
+        Ela é a IRMÃ do filtro que a ``ONDA-CONEXOES-11`` arrancou de
+        ``cor_do_plastico.alvo_do_controle`` em 02/09 — a mesma razão herdada
+        (*"por rádio o SET_FEATURE 0x80 devolve EIO"*, E7, 15/08/2026), que
+        caiu em 27/08 quando se mediu que o EIO era a semente do NOSSO CRC, e
+        de novo em 02/09 com o controle dela no rádio devolvendo o serial pelo
+        produto. Arrancado o filtro de lá, este ficou de pé sozinho: a GTK
+        continuava mostrando "Não sei" no card do controle de rádio enquanto a
+        interface nova já mostrava o nome de fábrica dele.
+
+        **E NENHUM SEGUNDO FILTRO ENTROU NO LUGAR, de propósito.** Quem decide
+        se um nó pode responder é `cor_do_plastico.alvo_do_controle`, que já
+        sabe o transporte e já escolhe o ENVELOPE por ele (nu no cabo, assinado
+        com CRC de semente `0x53` no rádio) — e devolve `None` sem levantar
+        quando não sabe, que é "Não sei" na tela. Um gate aqui seria um SEGUNDO
+        dono da mesma pergunta, e é assim que dois donos se afastam.
+
+        A célula do mapa que responde por esta leitura é
+        :data:`ID_DA_COR_NO_MAPA`, e ela diz `sim` nos dois lados. Quem quiser
+        o gate LIDO DO MAPA aqui — como faz a interface nova em
+        `interface/mesa_viva.LeitorDeCor.pendentes`, que precisa dele porque
+        pergunta num tique de 10 Hz — leia antes o custo medido em 03/09/2026:
+        importar `app/fatos_do_mapa` em produção põe as chaves do dicionário
+        gerado (`canal`, `aciona`, `existe`…) ao alcance da régua PLANA do
+        portão `casa-sabe`, e uma promessa pública com um desses nomes passa a
+        contar como alcançada sem ter chamador. Aqui não é preciso: a pergunta
+        sai UMA VEZ por endereço e por sessão, e a trava confere o pedido byte
+        a byte antes do `ioctl`.
         """
         leitor = getattr(self._host, "_cor_do_plastico_leitor", None)
         for entrada in adotados:
             uniq = str(entrada.get("uniq") or "")
-            transporte = str(entrada.get("transport") or "").lower()
-            if not uniq or uniq in self._cores or transporte != "usb":
+            if not uniq or uniq in self._cores:
                 continue
             self._cores[uniq] = None
             alvo = leitor if leitor is not None else ler_pelo_cabo
@@ -1526,6 +1557,12 @@ def _por_numero_de_jogador(
         cards,
         key=lambda card: (card.slot is None, card.slot if card.slot else 0),
     )
+
+
+#: O endereço da linha do mapa de canais que responde por esta leitura, e que
+#: diz `aciona = sim` nos DOIS lados desde 02/09/2026. Está escrito aqui para
+#: quem vier conferir a célula antes de mexer no comportamento da seção.
+ID_DA_COR_NO_MAPA = "identidade.cor_do_aparelho@dualsense"
 
 
 def _pergunta_de_cor(

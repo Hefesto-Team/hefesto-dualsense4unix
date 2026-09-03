@@ -197,13 +197,14 @@ def _codigo_para_colorway() -> dict[str, tuple[str, str]]:
 CORES = _codigo_para_colorway()
 
 #: O que a linha do rótulo diz quando a cor não é legível. É "não sei", e é
-#: resposta válida: o `ler_pelo_cabo` do produto devolve `None` sem levantar, e
-#: pelo rádio o mapa de canais diz `identidade.cor_do_aparelho = não`.
+#: resposta válida: o `ler_pelo_cabo` do produto devolve `None` sem levantar
+#: quando o aparelho não responde, quando o broker fecha a porta ou quando o
+#: código de fábrica está fora da tabela de vinte e uma entradas.
 COR_DESCONHECIDA = "Não sei"
 
 
 class LeitorDeCor:
-    """Pergunta a cor do plástico UMA VEZ por endereço, e só no cabo.
+    """Pergunta a cor do plástico UMA VEZ por endereço, nos DOIS transportes.
 
     Não é um caminho novo: é `integrations/cor_do_plastico.ler_pelo_cabo`, o
     mesmo que a aba Configurações já chama ao entrar. Fica atrás desta classe
@@ -212,8 +213,14 @@ class LeitorDeCor:
     * o pedido é um `SET_FEATURE` da família `0x80` — a mesma em que um par
       errado RESETA o aparelho —, então ele NÃO pode entrar num tique de 10 Hz;
       a trava do módulo confere o pedido byte a byte antes do `ioctl`;
-    * pelo rádio a resposta não vem, e quem diz isso é o mapa
-      (`identidade.cor_do_aparelho`, `radio_aciona = não`), não um `if` decorado;
+    * quem decide a quem perguntar é o MAPA (`identidade.cor_do_aparelho`,
+      coluna `aciona` do lado daquele transporte), não um `if` decorado. **A
+      célula do rádio virou `sim` em 02/09/2026** — SUBSTITUÍDO o que esta
+      docstring dizia até então (*"pelo rádio a resposta não vem"*, com
+      `radio_aciona = não`): o `EIO` de 15/08 era a semente do NOSSO CRC, e com
+      a semente de escrita `0x53` o controle dela no rádio devolveu o serial em
+      13,6 ms. O mecanismo aqui não mudou uma linha — mudou a célula, e o
+      produto seguiu;
     * a resposta não muda — está no serial de fábrica —, então uma vez por
       endereço por sessão basta.
     """
