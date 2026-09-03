@@ -1285,6 +1285,13 @@
                  color:var(--texto-mudo)}
   .mm-conf-linha b{font-weight:600;color:var(--texto-suave)}
   .mm-conf-linha span{cursor:help;border-bottom:1px dotted var(--border-forte)}
+  /* A LINHA SOME QUANDO NÃO HÁ O QUE CONFESSAR — 03/09/2026, e a regra é a da
+     janela do desenho: lá `confissao_do_desenho` devolve vazio e nada é
+     desenhado. Quem acende esta classe é o produto, pelo `confissao-nada`; no
+     arquivo aberto no navegador ela nunca está ligada, porque a cena tem
+     lacuna. Sem esta regra, uma mesa sem lacuna leria "…: nada." — texto que
+     ocupa a linha para não dizer nada. */
+  .mm-conf-linha.sumido{display:none}
 
   /* ---- os gestos de baixo. `.apagado` deixou de ser só da Gestão de Controles:
      os dois botões de ação desta pop-up nascem apagados pela mesma regra dela —
@@ -2062,7 +2069,7 @@
               <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Sony <span class="pt">•</span> Player 1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
               <span class="gc-resumo">
                 <span title="A borda deste controle é a cor lida do aparelho.">Vê como <b>DualSense</b></span>
-                <span title="O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio USB do próprio aparelho — o PipeWire a publica sozinho (medido em 15/08/2026). Pelo cabo ele não custa turno de rádio nenhum.">Microfone <b>Ligado</b>, pelo cabo <span class="pt">•</span> Placa do controle</span>
+                <span title="O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio USB do próprio aparelho — o PipeWire a publica sozinho (medido em 15/08/2026). Pelo cabo ele não custa turno de rádio nenhum.">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">pelo cabo <span class="pt">•</span> Placa do controle</span></span>
                 <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">100%</b></span>
               </span>
               </label>
@@ -2385,7 +2392,7 @@
                   <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">O teto da vibração <b>deste controle</b>. O global manda e o do controle sobrepõe: hoje este controle <b>segue o global</b>, e o motor recebe <b>100% da força</b>. Quem muda o global é o <b>Perfil de Bateria</b>, na aba <b>Sistema</b> — ele decide o que custa bateria, e esta aba mede o rádio. O degrau vem de <code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único recurso com teto real hoje.</span></span></span>
                 <select class="pronto" title="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
               </span>
-              <button class="btn apagado" data-gesto="luz-nao-acende" title="Só funciona com o controle no rádio: a cura é derrubar a conexão Bluetooth para você apertar PS. Este controle está no cabo, onde a barra de luz não depende de reconexão nenhuma.">A luz não acende</button>
+              <button class="btn apagado" data-gesto="luz-nao-acende" data-campo="luz-trava" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-quando="cabo" title="Só funciona com o controle no rádio: a cura é derrubar a conexão Bluetooth para você apertar PS. Este controle está no cabo, onde a barra de luz não depende de reconexão nenhuma.">A luz não acende</button>
             </div>
           </div>
           <div class="gc-item gc-p2" data-controle="p2">
@@ -2396,7 +2403,7 @@
               <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Sony <span class="pt">•</span> Player 2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
               <span class="gc-resumo">
                 <span title="A cor deste controle não foi lida — a borda fica neutra.">Vê como <b>Xbox 360</b></span>
-                <span title="O microfone deste controle chega <b>pelo rádio</b>: o DualSense não tem A2DP nem HFP, então o áudio vem em Opus dentro do relatório HID e o Hefesto publica uma fonte de captura do PipeWire com ele. Custa +16,3 turnos de rádio — o preço está na régua de Desempenho, e é <b>consequência</b>, não escolha: o microfone segue o transporte.">Microfone <b>Ligado</b>, pelo rádio <span class="pt">•</span> Pela ponte</span>
+                <span title="O microfone deste controle chega <b>pelo rádio</b>: o DualSense não tem A2DP nem HFP, então o áudio vem em Opus dentro do relatório HID e o Hefesto publica uma fonte de captura do PipeWire com ele. Custa +16,3 turnos de rádio — o preço está na régua de Desempenho, e é <b>consequência</b>, não escolha: o microfone segue o transporte.">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">pelo rádio <span class="pt">•</span> Pela ponte</span></span>
                 <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">64%</b></span>
               </span>
               </label>
@@ -2719,7 +2726,7 @@
                   <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">O teto da vibração <b>deste controle</b>. O global manda e o do controle sobrepõe: hoje este controle <b>segue o global</b>, e o motor recebe <b>100% da força</b>. Quem muda o global é o <b>Perfil de Bateria</b>, na aba <b>Sistema</b> — ele decide o que custa bateria, e esta aba mede o rádio. O degrau vem de <code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único recurso com teto real hoje.</span></span></span>
                 <select class="pronto" title="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
               </span>
-              <button class="btn" data-gesto="luz-nao-acende" title="Derruba este controle do rádio para você apertar PS e a barra de luz voltar a obedecer. Enquanto ele espera o PS, o mesmo botão vira “Cancelar”.">A luz não acende</button>
+              <button class="btn" data-gesto="luz-nao-acende" data-campo="luz-trava" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-quando="cabo" title="Derruba este controle do rádio para você apertar PS e a barra de luz voltar a obedecer. Enquanto ele espera o PS, o mesmo botão vira “Cancelar”.">A luz não acende</button>
             </div>
           </div>
           <div class="gc-item gc-p3 fora" data-controle="p3">
@@ -2977,7 +2984,7 @@
               </div>
         </div>
       </div>
-      <div class="mm-conf-linha"><span title="O que eu não consegui conferir neste desenho:&#10;· em que ponto da fileira cada entrada fica. Sem isso eu não conto a folga entre dois adaptadores de rádio, e duas entradas nas pontas opostas do hub recebem o mesmo juízo de duas coladas.&#10;· quais entradas são azuis. Enquanto você não passar por &quot;Mapear Entrada a Entrada&quot;, eu trato todas como pretas.&#10;· o que é algum dos aparelhos da lista: o sistema não diz o que ele é, e sobre ele eu não tenho juízo nenhum.">O que eu não consegui conferir neste desenho: <b>três coisas</b>.</span></div>
+      <div class="mm-conf-linha" data-campo="confissao-nada" data-hef-alvo="classe" data-hef-classe="sumido" data-hef-quando="sim"><span data-campo="confissao-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O que eu não consegui conferir neste desenho:&#10;· em que ponto da fileira cada entrada fica. Sem isso eu não conto a folga entre dois adaptadores de rádio, e duas entradas nas pontas opostas do hub recebem o mesmo juízo de duas coladas.&#10;· quais entradas são azuis. Enquanto você não passar por &quot;Mapear Entrada a Entrada&quot;, eu trato todas como pretas.&#10;· o que é algum dos aparelhos da lista: o sistema não diz o que ele é, e sobre ele eu não tenho juízo nenhum.">O que eu não consegui conferir neste desenho: <b data-campo="confissao-conta">três coisas</b>.</span></div>
 
       <div class="acoes mm-acoes">
         <button class="btn apagado" data-gesto="tirar-daqui" title="Acende quando você clica numa entrada que TEM aparelho. Ele escreve “sem aparelho” nessa entrada — a entrada continua no desenho, só fica vazia.">Tirar daqui</button>
