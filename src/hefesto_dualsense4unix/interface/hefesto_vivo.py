@@ -967,6 +967,12 @@ PERIGOSOS = {
     # ela está trabalhando — é o mesmo motivo de toda janela desta casa nascer
     # com `--oculta`.
     ("06-navegacao.html", "modo"),
+    # E A MESMA COISA PELA OUTRA PORTA, achada em 03/09/2026 pelo juiz da leva:
+    # o chip "Navegação" da aba Jogar chama `mouse.emulation.restore` (o
+    # terceiro dos três IPCs de `a01_jogar.modo_navegacao`), que LIGA o mouse
+    # conforme a preferência persistida. Só o `("06-navegacao.html", "modo")`
+    # estava isento, e o cursor é o mesmo cursor.
+    ("01-jogar.html", "modo-navegacao"),
     # A TELA É DELA, E A STEAM ABRE EM CIMA. `abrir-lancador` chama
     # `steam_launch_options.reopen_steam`, que abre a janela da Steam
     # DESANEXADA — ela não nasce oculta, não obedece ao `--oculta` desta casa e

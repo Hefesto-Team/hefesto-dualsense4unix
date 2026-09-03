@@ -73,9 +73,30 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
     if ctx is None:
         return draft
 
+    # QUEM DECIDE SE HÁ COR A GRAVAR É O DONO DA LEITURA, e não este pacote.
+    # `rotulo_lightbar` devolve a cor BASE como `None` exatamente nos dois
+    # estados em que não há cor a afirmar — "cor desconhecida" e "apagada" —, e
+    # é a mesma função que o cartão da GUI estável usa. Reler os campos crus
+    # aqui seria uma segunda verdade, e a aba 04 já pagou por essa: o
+    # `c.get("lightbar_on", True)` que estava lá tinha o padrão INVERTIDO e
+    # AFIRMAVA aceso na ausência do campo, que é o estado de partida de um
+    # controle no rádio.
+    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
-        rgb = c.get("lightbar_rgb") or []
+        # A BARRA APAGADA NÃO É UMA COR PRETA, e a diferença custa o trabalho
+        # dela. O `LedsDraft` não tem campo de aceso/apagado — só `lightbar_rgb`
+        # —, então gravar o `(0,0,0)` de uma barra desligada não guarda "estava
+        # apagada": guarda PRETO por cima da cor que ela escolheu, e não há como
+        # voltar. Medido em 03/09/2026 e nomeado pelo juiz da leva como o achado
+        # mais grave do dia: desligar a barra e salvar apagava a escolha dela,
+        # em silêncio, para sempre.
+        #
+        # O QUE ESTÁ NO DISCO É A COR PARA QUANDO ACENDER, e é isso que o
+        # esquema sabe dizer. Com a barra apagada, o certo é não mexer nela.
+        _recado, base = rotulo_lightbar(c, ctx.state)
+        rgb = list(base) if base is not None else []
         if not uniq or len(rgb) < 3:
             continue
         # A COR VIVA VIRA OVERRIDE DAQUELE CONTROLE, e não a cor global: cada
