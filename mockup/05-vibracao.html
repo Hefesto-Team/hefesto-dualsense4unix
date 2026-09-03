@@ -832,7 +832,8 @@
      na CAIXA, não na coluna: `border-top` na coluna empurraria as sete linhas
      2px para baixo e o rótulo deixaria de casar com o das vizinhas. */
   .vib .moldura{
-    border:1px solid var(--plastico);border-radius:8px;background:var(--app-bg);
+    border:1px solid var(--plastico, var(--border-forte));border-radius:8px;
+    background:var(--app-bg);
     display:flex;align-items:center;justify-content:center;padding:5px;
   }
   /* ALTURA e não largura: a linha tem altura fixa e o desenho tem de caber nela.
@@ -908,7 +909,7 @@
      `ds_limpo.svg`/`importar.py`, que não são desta aba. */
   .vib .ds-svg .oculta{opacity:0 !important}
   .vib .ds-svg .oculta.acesa{opacity:.95 !important;
-                             filter:drop-shadow(0 0 1.8px var(--plastico))}
+                             filter:drop-shadow(0 0 1.8px var(--plastico, var(--border-forte)))}
 
   /* ---------- A LINHA DO ESTADO — 02/09/2026 ----------
      A janela estável tem QUATRO avisos nesta aba e a interface nova não tinha
@@ -1121,8 +1122,8 @@
     <div class="fita inerte" title="Esta aba não usa o controle escolhido aqui — os cards são leitura.">
       <span>Selecionar:</span>
       <span class="chip on">Todos</span>
-      <span class="chip plastico" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
-      <span class="chip plastico" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
+      <span class="chip plastico" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
+      <span class="chip plastico" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
@@ -1219,9 +1220,9 @@
               </span></span></span></div>
           </div>
 
-          <div class="ctrl" data-controle="p1" data-uniq=""
-               style="--plastico:#ae335a">
-            <div class="moldura" data-papel="desenho"><?xml version="1.0" encoding="utf-8"?>
+          <div class="ctrl" data-controle="p1" data-uniq="">
+            <div class="moldura" data-papel="desenho" data-campo="plastico"
+                 data-hef-alvo="plastico" style="--plastico:#ae335a"><?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="cosmic-red" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p1-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
@@ -1625,9 +1626,9 @@
               <button class="btn vermelho" data-papel="parar">Parar</button>
             </div>
           </div>
-          <div class="ctrl" data-controle="p2" data-uniq=""
-               style="--plastico:#7eb8d4">
-            <div class="moldura" data-papel="desenho"><?xml version="1.0" encoding="utf-8"?>
+          <div class="ctrl" data-controle="p2" data-uniq="">
+            <div class="moldura" data-papel="desenho" data-campo="plastico"
+                 data-hef-alvo="plastico" style="--plastico:#7eb8d4"><?xml version="1.0" encoding="utf-8"?>
 <svg data-colorway="starlight-blue" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p2-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">

@@ -258,6 +258,35 @@ BOOTSTRAP = r"""
       el.style.color = vazio ? '' : t;
       return el.style.color === antes ? 0 : 1;
     }
+    // O ALVO `plastico` — A COR DO APARELHO COMO VARIÁVEL, e é o que a lei de
+    // 03/09/2026 pede com todas as letras: *"se identificou o controle como
+    // modelo White a cor do card em volta tem que ser branco"*.
+    //
+    // POR QUE NÃO O `cor` NEM O `fundo`: `--plastico` não pinta UM elemento —
+    // ele governa a borda da moldura E o halo do lado que treme, que é um
+    // descendente. Escrever `color` obrigaria toda a coluna a herdar o tom do
+    // plástico, e `background` pintaria o retângulo inteiro. Uma variável de
+    // CSS é exatamente o mecanismo que o desenho já usa (`var(--plastico)` nas
+    // dez páginas): o que faltava era o produto poder escrevê-la.
+    //
+    // VAZIO E TRAVESSÃO APAGAM — e os dois entram porque chegam por caminhos
+    // diferentes: `""` é a cor que o aparelho não respondeu (pelo rádio o mapa
+    // diz que ela não se lê), e `—` é o que o molde escreve num lugar sem dono
+    // (`pacotes.TRAVESSAO`). Apagar devolve a borda ao tom neutro da folha de
+    // estilo (`var(--plastico, …)`) em vez de deixar a cor do MOCKUP na tela —
+    // regra dela: campo sem informação não mostra nada. Escrever `—` numa
+    // variável usada em `border` deixaria a declaração inválida no cálculo e a
+    // borda sumiria de vez.
+    //
+    // ESCREVE E DEPOIS COMPARA, como o `cor`: uma propriedade personalizada
+    // aceita qualquer texto, então só a releitura diz se algo mudou — e é isso
+    // que impede o contador de somar uma pintura que não aconteceu.
+    if(alvo === 'plastico'){
+      const antes = el.style.getPropertyValue('--plastico');
+      if(vazio || t === '—'){ el.style.removeProperty('--plastico'); }
+      else { el.style.setProperty('--plastico', t); }
+      return el.style.getPropertyValue('--plastico') === antes ? 0 : 1;
+    }
     if(el.textContent !== t){
       el.textContent = t;
       // O PAINEL QUE MOSTRA O FIM. Um registro tem ordem: o que acabou de
@@ -376,7 +405,40 @@ BOOTSTRAP = r"""
     // a mesa, e não há endereço para um chip que ainda não existe.
     if(p.fita){
       const f = document.querySelector('.fita');
-      if(f && f.outerHTML !== p.fita){ f.outerHTML = p.fita; n += 1; }
+      if(f){
+        // O SELO SAI DA COMPARAÇÃO, e sem isto a fita se trocava A CADA TIQUE.
+        // Medido em 03/09/2026: o laço abaixo escreve `data-hef-visto` nos
+        // chips, o `outerHTML` do DOM passa a trazer o atributo, o texto que o
+        // Python emitiu nunca o traz — e a igualdade nunca mais casava. Treze
+        // tiques, treze pinturas, com a mesa parada. Um contador que mente é
+        // pior que um campo parado: é O instrumento com que esta casa prova que
+        // um endereço existe.
+        // A INDENTAÇÃO SAI DOS DOIS LADOS, e sem isto a comparação NUNCA casa:
+        // `monta.fita()` devolve o bloco com os quatro espaços com que ele
+        // entra no esqueleto (`f'    <div class="fita…'`), e `outerHTML` começa
+        // no `<`. Medido em 03/09/2026: treze tiques, treze trocas da fita
+        // inteira, com a mesa parada — e cada troca deixava mais um nó de texto
+        // de quatro espaços ao lado dela, porque `outerHTML =` insere o
+        // fragmento inteiro, espaço e tudo.
+        //
+        // O DEFEITO É VELHO E ESTAVA DORMINDO: até hoje `_fita` devolvia `""`
+        // sempre que UM controle não tinha cor — e pelo rádio nenhum tem —,
+        // então o ramo quase nunca corria na mesa dela. Curar a guarda acordou
+        // o contador.
+        const desejado = String(p.fita).trim();
+        const agora = f.outerHTML.split(' data-hef-visto="1"').join('');
+        if(agora !== desejado){ f.outerHTML = desejado; n += 1; }
+        // O SELO DA VISITA NOS CHIPS, e sem ele o endereço deles pareceria
+        // MORTO. Os chips ganharam `data-campo` em 03/09/2026 (`monta.fita`)
+        // para que a régua da identidade saiba que ali não há desenho
+        // congelado — mas quem os escreve é esta troca de bloco, e não o laço
+        // de campos: sem o selo, a régua do mockup os contaria como endereço
+        // que ninguém pinta. Ele é escrito a cada tique, mesmo quando o HTML
+        // não mudou, porque é a visita SEM mudança que não deixa rastro.
+        for(const c of document.querySelectorAll('.fita [data-campo]')){
+          c.dataset.hefVisto = '1';
+        }
+      }
     }
     // OS BLOCOS QUE SE TROCAM INTEIROS, e a fita acima é o primeiro deles —
     // esta é a mesma ideia, com endereço. Um bloco cujo NÚMERO DE FILHOS muda
@@ -595,30 +657,40 @@ def _fita(mesa: list[dict[str, Any]]) -> str:
     sem o argumento ele cai nos `CONECTADOS` do mockup, que são derivados no
     IMPORT e nunca recalculados — trocar `monta.MESA` de fora não alcança.
     """
-    # UM CONTROLE SEM COR NÃO PODE CALAR A FITA INTEIRA — medido em 03/09/2026,
-    # e o defeito era grave porque a fita É a fonte de identidade que a lei dela
-    # nomeia: *"se no topo tá mostrando controle white player 1, então cada aba
-    # vai usar os controles lá de cima"*. Com um controle no rádio na mesa (a
-    # mesa dela de hoje), a cor daquele não chegava, e o `any()` devolvia `""`
-    # para TODOS — a fita ficava congelada no Cosmic Red do mockup enquanto o
-    # card logo abaixo já mostrava o White lido do aparelho. As dez abas podiam
-    # ficar perfeitas que o TOPO continuaria mentindo.
+    # A VERSÃO DESTA GUARDA É DA FRENTE DA ABA 05, e ela venceu a minha na
+    # integração de 03/09/2026. As duas achavam o mesmo defeito; a diferença é
+    # o que fazem com o controle SEM cor lida:
     #
-    # Agora quem não tem cor sai da fita, e quem tem aparece. Sumir é honesto —
-    # é a regra dela, *campo sem informação não mostra nada* — e é o oposto de
-    # mostrar a cor errada, que é o que a guarda antiga produzia.
-    mesa = [c for c in (mesa or []) if c.get("cor")]
+    #   a minha  — filtrava (`[c for c in mesa if c.get("cor")]`), e o controle
+    #              sem cor SUMIA da fita;
+    #   a dela   — deixa todos, e quem trata a cor ausente é o `monta.fita`: o
+    #              chip nasce sem `--plastico` e cai no tom neutro do esqueleto.
+    #
+    # A dela é a certa, e a razão é dela também: ver QUE HÁ um controle ali
+    # importa mais do que saber a cor dele. Sumir da fita esconderia o controle
+    # do rádio da própria fonte de identidade que a lei manda consultar.
     if not mesa:
-        # A COR AINDA NÃO CHEGOU. O leitor do plástico é perguntado em thread e
-        # a mesa nasce sem cor — `monta.fita` levanta `SystemExit: colorway ''
-        # não existe` nesse instante. Devolver "" deixa a fita como está e o
-        # tique seguinte a pinta; erguer aqui derrubaria a aba inteira por meio
-        # segundo de espera.
+        # MESA VAZIA é a única razão de não pintar: sem controle nenhum não há
+        # chip a emitir, e devolver "" deixa a fita como está.
+        #
+        # A GUARDA ERA MAIOR E MENTIA — 03/09/2026. Ela dizia
+        # `any(not c.get("cor") for c in mesa)`, e a intenção era esperar a
+        # resposta do leitor de plástico, que é perguntado em thread. Só que
+        # pelo RÁDIO a resposta NUNCA vem: o mapa de canais responde
+        # `identidade.cor_do_aparelho = não` e `mesa_viva.LeitorDeCor` marca
+        # aquele endereço como perguntado com `None` para sempre. Com um
+        # controle no cabo e outro no rádio — a mesa dela — a fita ficava
+        # eternamente no desenho, e a tela dizia `P1 · Cosmic Red · USB` /
+        # `P2 · Starlight Blue · BT` sobre um White e um controle sem cor
+        # legível. Fotografado nas dez abas em 03/09/2026.
+        #
+        # ESPERAR PELO QUE NUNCA CHEGA É CAIR DE VOLTA NO MOCKUP, que é
+        # exatamente o que a lei da identidade proíbe. Quem trata a cor que não
+        # veio é o `monta.fita`: o chip nasce sem `--plastico`, e o `.chip` cai
+        # no tom neutro que a folha de estilo já declara como recurso.
         #
         # `SystemExit` NÃO é `Exception` — herda de `BaseException`, e um
-        # `except Exception` passa ao lado. Foi o que aconteceu na primeira
-        # execução: o piloto morreu com a mensagem do portão de cores, que é um
-        # portão e está certo em erguer.
+        # `except Exception` passa ao lado. O `except` abaixo cobre os dois.
         return ""
     try:
         from hefesto_dualsense4unix.interface import monta

@@ -509,14 +509,31 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     chips = [f'<span class="chip{" on" if ativo == "todos" else ""}">Todos</span>']
     for c in (CONECTADOS if mesa is None else mesa):
         on = " on" if ativo == c["pref"] else ""
+        # `data-campo` NO CHIP — 03/09/2026, e ele não é enfeite de régua. A
+        # identidade do controle vem da FITA, e a fita é escrita pelo produto
+        # (`hefesto_vivo._fita`, que troca o `.fita` inteiro a cada tique). Sem
+        # um endereço aqui, um leitor não tinha como distinguir este chip de um
+        # nome de cor CONGELADO no desenho: o `check_identidade_vem_de_cima`
+        # acusava os três valores de cada chip nas dez páginas — 60 dos 134 da
+        # bancada. O endereço diz o que é verdade: aqui não mora desenho.
+        #
+        # SEM COR LIDA, SEM COR NA TELA. `cor_da_zona("")` levanta, e cair fora
+        # da fita inteira era o que deixava o mockup na tela pelo rádio (ver a
+        # guarda de `hefesto_vivo._fita`). O chip nasce sem `--plastico` e o
+        # `.chip.plastico{border-color:var(--plastico, var(--border-forte))}` do
+        # esqueleto já tem o recurso neutro — regra dela: campo sem informação
+        # não mostra nada.
+        slug = str(c.get("cor") or "")
+        estilo = f' style="--plastico:{cor_da_zona(slug)}"' if slug else ""
         chips.append(
-            # O `data-campo` NÃO é enfeite: sem ele os seis chips da fita são
-            # cor congelada em CADA uma das dez páginas — 60 dos 134 congelados
-            # que a leva de 03/09 mediu, e a `09-sistema` e a `07-lancadores`
-            # eram SÓ isso. Como `hefesto_vivo._fita()` chama esta mesma função,
-            # o endereço nasce também na fita VIVA, de graça.
-            f'<span class="chip plastico{on}" data-campo="chip-do-controle"'
-            f' style="--plastico:{cor_da_zona(str(c["cor"]))}"'
+            # A VERSÃO DESTA LINHA É DA FRENTE DA ABA 05, e ela venceu a minha na
+            # integração por UM motivo medido: a minha chamava
+            # `cor_da_zona(str(c["cor"]))` sem guarda, e `cor_da_zona("")` LEVANTA —
+            # com um controle no rádio sem cor lida (a mesa dela de hoje), a fita
+            # inteira morria de novo, que é exatamente o defeito que as duas
+            # tentavam curar. A dela nasce sem `--plastico` e o esqueleto já tem o
+            # recurso neutro no `var(--plastico, var(--border-forte))`.
+            f'<span class="chip plastico{on}" data-campo="fita-chip"{estilo}'
             f' title="{c["nome"]} — a borda é a cor do plástico">'
             f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}'
             f' <span class="pt">•</span> {c["via"]}</span>')

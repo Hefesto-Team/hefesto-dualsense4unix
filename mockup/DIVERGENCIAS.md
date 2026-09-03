@@ -136,6 +136,43 @@ seção daqui**: a aba deixou de estar em trabalho.
   aparece nesta aba (a fita do topo é inerte, decisão sua de 28/08); nasce no
   tom certo quando a força ganhar endereço por controle.
 
+- **03/09/2026** — **a borda em volta do desenho passa a ser a cor do controle
+  QUE ESTÁ NA MESA.** Sua lei do dia: *"se identificou o controle como modelo
+  White a cor do card em volta tem que ser branco. Temos isso no mapa."*
+
+  **O que estava na tela, medido com os seus dois controles às 01h:** a coluna
+  do P1 dizia `P1 · White · USB` no rótulo e desenhava a moldura em `#ae335a` —
+  **Cosmic Red**, o controle do mockup. As duas frases ficavam a três
+  centímetros uma da outra, discordando.
+
+  | onde | antes | agora |
+  | --- | --- | --- |
+  | moldura do P1 (White, no cabo) | `#ae335a` do desenho | `#e4e0d8`, a cor lida do aparelho |
+  | moldura do P2 (no rádio, sem cor legível) | `#7eb8d4` do desenho | **nada** — a borda cai no cinza neutro |
+  | chips da fita | `P1 · Cosmic Red · USB` · `P2 · Starlight Blue · BT` | `P1 · White · USB` · `P2 · Não sei · BT` |
+
+  **O P2 não ganha cor nenhuma de propósito, e é a sua regra:** pelo rádio o
+  mapa de canais responde `identidade.cor_do_aparelho = não` — o aparelho não
+  diz a cor por ali. *Campo sem informação não mostra nada*, então a moldura
+  fica no cinza da folha de estilo em vez de herdar a do desenho.
+
+  **UM PIXEL MUDA NO DESENHO, e só um:** a moldura do P2 deixa de ser azul. A do
+  P1 continua colorida — só que agora com a cor do controle que está lá. Nada
+  mais se mexe: a cor saiu do `<div class="ctrl">` (que a pintura não alcança)
+  para o `<div class="moldura">` logo abaixo, e os dois lugares pintam a mesma
+  borda.
+
+  **O QUE VOCÊ VÊ ENQUANTO ESPERA:** nada muda na sua tela. O endereço novo
+  (`data-campo="plastico"`) não existe na página publicada, então o piloto não o
+  acha — a moldura da sua `05` continua em Cosmic Red e Starlight Blue até o
+  `--publicar 05`. Medido com a bancada no lugar da publicada, com o daemon
+  vivo: a borda do P1 saiu em `#e4e0d8` e a do P2 em cinza, na primeira volta.
+
+  **E a fita do topo já ficou certa, sem esperar publicação** — ela é trocada
+  inteira pelo produto, e a cura foi na troca. Ela desistia calada quando UM
+  controle não tinha cor legível, e pelo rádio nenhum tem: era isso que deixava
+  os dois controles do mockup no alto de TODAS as dez abas.
+
 
 ## 06-navegacao.html
 - **02/09/2026** — **o L3 passou a ALTERNAR o teclado na tela, e as 21 listas
