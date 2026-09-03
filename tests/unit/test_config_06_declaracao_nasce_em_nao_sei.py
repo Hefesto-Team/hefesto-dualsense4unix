@@ -257,7 +257,7 @@ class TestATabelaDeCores:
 
     def test_o_serial_entrega_a_cor_nos_caracteres_cinco_e_seis(self) -> None:
         """`AB1C05...` -> Starlight Blue. Serial forjado, com o `05` no lugar."""
-        cor = cor_do_serial("AB1C05D1234567890")
+        cor = cor_do_serial(_SERIAL_05)
         assert cor is not None
         assert (cor.codigo, cor.nome) == ("05", "Starlight Blue")
 
@@ -329,9 +329,22 @@ class TestOPretoNaoSome:
         assert tom_para_a_borda("#nope") == ""
 
 
+#: OS DOIS SERIAIS FORJADOS DESTE ARQUIVO. Eles vivem em constante, e não
+#: soltos na linha do `assert`, por uma razão medida em 03/09/2026: com a marca
+#: de isenção do portão `serial-de-aparelho` na mesma linha, quatro `assert`
+#: passavam de cem caracteres e o `ruff` reprovava. A constante paga a marca uma
+#: vez só.
+#:
+#: O prefixo `AB1C` não sai de fábrica nenhuma; o que eles preservam é a FORMA —
+#: dezessete caracteres, com o CÓDIGO DA COR nos caracteres cinco e seis, que é
+#: o que estes testes medem.
+_SERIAL_05 = "AB1C05D1234567890"  # serial-de-mentira: prefixo forjado
+_SERIAL_02 = "AB1C02D1234567890"  # serial-de-mentira: prefixo forjado
+
+
 class TestARespostaDoAparelho:
     def test_resposta_boa_vira_cor(self) -> None:
-        dados = bytes([0x81, 1, 19, 2]) + b"AB1C02D1234567890"
+        dados = bytes([0x81, 1, 19, 2]) + _SERIAL_02.encode()
         cor = decodificar(dados)
         assert cor is not None
         assert cor.nome == "Cosmic Red"
@@ -343,8 +356,8 @@ class TestARespostaDoAparelho:
         a medição falsa que esta casa pegou em 15/08/2026, com um pedido de
         `0x20` voltando com `0x80` no byte 0.
         """
-        assert decodificar(bytes([0x81, 9, 9, 2]) + b"AB1C02D1234567890") is None
-        assert decodificar(bytes([0x81, 1, 19, 0]) + b"AB1C02D1234567890") is None
+        assert decodificar(bytes([0x81, 9, 9, 2]) + _SERIAL_02.encode()) is None
+        assert decodificar(bytes([0x81, 1, 19, 0]) + _SERIAL_02.encode()) is None
         assert decodificar(bytes([0x81, 1, 19, 2]) + b"curto") is None
 
 

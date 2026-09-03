@@ -102,7 +102,7 @@ def _assinado_a_mao(pedido: bytes) -> bytes:
 #: Serial FORJADO: 17 caracteres com a cor `05` (Starlight Blue) nos caracteres
 #: 5 e 6, e uma LETRA na posição 2 de propósito — é o que o tira da forma do
 #: serial de fábrica de verdade e o faz passar pelo `check_anonymity.sh`.
-_SERIAL_FORJADO = "ZZ9Y05Q0000000000"
+_SERIAL_FORJADO = "ZZ9Y05Q0000000000"  # serial-de-mentira: prefixo forjado
 
 _DUALSENSE_NO_CABO = {
     "HID_ID": "0003:0000054C:00000CE6",

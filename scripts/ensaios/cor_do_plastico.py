@@ -424,7 +424,7 @@ CARACTERES_PUBLICOS_DO_SERIAL = 6
 
 
 def mascarar_serial(serial: str) -> str:
-    """`AB1C05D1234567890` -> `AB1C05###########` — a mesma lógica da do MAC.
+    """`AB1C05D1234567890` -> `AB1C05###########` — a mesma lógica da do MAC.  # serial-de-mentira: prefixo forjado
 
     O exemplo é forjado; os dois caracteres da cor (`05`) estão na posição real.
     Ele já foi escrito com o serial VERDADEIRO de um dos controles da bancada —
