@@ -453,8 +453,16 @@ def test_o_molde_nao_toca_o_desenho_da_vibracao(pacotes_mod):
     from hefesto_dualsense4unix.interface import onde
 
     doc = onde.pagina("05-vibracao.html", publicado=True).read_text(encoding="utf-8")
+    # OS DOIS ATRIBUTOS, e o motivo é de 03/09/2026: `desenho` deixou de ser
+    # `data-papel` na bancada e virou `data-hef` — o ouvinte do piloto lê todo
+    # `data-papel` como nome de GESTO, e `desenho` não tem quem atenda (ver
+    # `aba05.PAPEIS_QUE_SAO_GESTO`). O que este guarda mede é se o ENDEREÇO
+    # existe na página, e os dois atributos são endereço
+    # (`regua_do_mockup.ATRIBUTOS_DE_CAMPO`). Cobrar só o antigo faria o
+    # `--publicar 05` quebrar um teste que nada tem a ver com a mudança.
     for endereco in ("testar", "parar", "forca", "desenho"):
-        assert f'data-papel="{endereco}"' in doc, (
+        assert (f'data-papel="{endereco}"' in doc
+                or f'data-hef="{endereco}"' in doc), (
             f"a página publicada não tem mais `{endereco}` — este teste virou "
             "vácuo e a razão dele mudou")
 
