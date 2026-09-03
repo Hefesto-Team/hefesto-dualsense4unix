@@ -429,7 +429,29 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
         titulo = (dica if on else
                   dica.split(":")[0] + ": usa o do perfil, igual aos outros controles.")
         gs = "".join(glifo(p, ativo=on, tam=15) for p in pecas)
+        # `data-hef-alvo="classe"` — 02/09/2026, e ele é o que faz esta coluna
+        # PARAR DE MENTIR. O estado desta célula na tela é uma CLASSE
+        # (`.gr.on`), não uma palavra; sem alvo o pintor cai no ramo padrão e
+        # `el.textContent = t` apagaria os glifos SVG de dentro do `<span>`. Foi
+        # por isso que `a10_perfis.NAO_PINTAVEIS` segurou este endereço, e por
+        # isso a coluna "Ajuste próprio" mostrava o desenho para todo perfil.
+        #
+        # É BOOLEANO — SEM `data-hef-quando`: cada `<span>` acende por si, e o
+        # pacote manda um `True`/`False` por célula, na ordem. O `quando` é para
+        # grupo que divide UM endereço e elege um só (os quatro degraus da
+        # Vibração); aqui as quatro seções são INDEPENDENTES — um controle pode
+        # ter as quatro próprias, ou nenhuma.
+        #
+        # O GLIFO NÃO PRECISA MUDAR, e isto foi MEDIDO, não suposto:
+        # `monta.glifo(p, ativo=True)` e `monta.glifo(p, ativo=False)` devolvem
+        # bytes IDÊNTICOS para as sete peças destas quatro seções — os arquivos
+        # `X.svg` e `X_active.svg` só diferem no traço (`#f8f8f2` × `#bd93f9`), e
+        # `glifo` troca os dois por `currentColor`. Logo a diferença visível
+        # inteira entre aceso e apagado é o `color` que `.gr.on` dá ao `<span>`
+        # — e trocar a classe é a cura COMPLETA, não a metade dela.
+        # (Régua: `test_a_coluna_do_ajuste_proprio_acende_pela_classe.py`.)
         grupos.append(f'<span class="gr{" on" if on else ""}" data-hef="guarda.secao"'
+                      f' data-hef-alvo="classe"'
                       f' data-hef-secao="{campo}" title="{titulo}">{gs}</span>')
     quantos = (f'{len(tem)} de {len(SECOES)} ajustes só deste controle'
                if tem else "nada só dele — herda os quatro ajustes do perfil")

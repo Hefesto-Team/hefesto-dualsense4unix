@@ -58,6 +58,7 @@ que escreve tem de avisar o daemon depois (`profile.switch` para reaplicar,
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Any
 
@@ -153,7 +154,6 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:
 #:     endereço                 tag      elementos  filhos  o que some
 #:     guarda.linhas            tbody            1       4  as 4 linhas, com 24 endereços
-#:     guarda.secao             span            16       2  o glifo SVG da seção
 #:     editor.prioridade.dica   span             1       2  o TRILHO e o número ao lado
 #:
 #: **É ISTO QUE ELA FOTOGRAFOU.** A tabela `Controle / Ajuste próprio / ID da
@@ -175,13 +175,44 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #: em 1 de 200 — a tela afirmando o que não mediu, com o conserto no disco há
 #: um commit. Ele SAI da lista, e o `escrever()` do piloto escreve a largura.
 #:
+#: SEGUNDO FATO DERRUBADO — 02/09/2026. Aqui estava escrito que `guarda.secao`
+#: fica *"porque o pintor precisa de um alvo que ligue/desligue CLASSE, e nenhum
+#: dos cinco alvos de hoje (texto·largura·fundo·valor·html) alcança uma
+#: classe"*. **O alvo `classe` nasceu no mesmo dia** (`hefesto_vivo.py`, o ramo
+#: `if(alvo === 'classe')`), e a nota dele já cita esta coluna pelo nome.
+#: `aba10.linha_do_controle` passou a escrever `data-hef-alvo="classe"` nos
+#: dezesseis `<span class="gr">`, e o nome **saiu desta lista** — mas não para
+#: sair sempre: ele passou a ser decidido por MEDIÇÃO, em
+#: `_a_pagina_acende_a_secao_por_classe()`, que pergunta à página PUBLICADA se
+#: ela já traz o atributo. É o mesmo padrão do `a02_controles`/`a03_gatilhos`, e
+#: a razão de ele existir aqui está medida logo abaixo.
+#:
+#: **POR QUE NÃO BASTOU TIRAR DA LISTA:** `--publicar-enderecos 10` RECUSOU.
+#: A ferramenta é por PÁGINA, não por atributo, e esta página já carregava uma
+#: mudança de DESENHO pendente — a primeira opção `—` do Estilo de Jogo, decisão
+#: dela deste dia. Medido:
+#:
+#:     endereços: 0 levada(s) · 1 recusada(s) · 0 já igual(is)
+#:       RECUSADA 10-perfis.html  (o DESENHO mudou — isto é decisão dela)
+#:
+#: Emitir mesmo assim seria escrever TEXTO nos dezesseis `<span>` da página que
+#: o produto renderiza hoje, apagando o glifo SVG de cada um duas vezes por
+#: segundo. Por isso a emissão pergunta à página: hoje ela cala, e no tique
+#: seguinte ao `--publicar 10` dela as dezesseis células acendem sem ninguém
+#: tocar em código.
+#:
+#: **E O QUE SAÍA DAQUI ESTAVA ERRADO, o que só se viu ao destravar.** A
+#: emissão era `[s for g in guarda for s in (g.get("secoes") or [])]` —
+#: iterar um `dict` dá as CHAVES. Com dois controles na mesa ela devolvia
+#: `["leds","triggers","rumble","speaker"] * 2`, sempre, para qualquer perfil.
+#: Como `ligado("leds")` é verdadeiro, publicar isso teria ACENDIDO AS QUATRO
+#: SEÇÕES NOS QUATRO CONTROLES — exatamente o que a docstring de
+#: `perfis_web._secoes_do_controle` diz que a tela não pode ensinar (*"apagado é
+#: a resposta certa para a maioria dos controles na maioria dos perfis"*). A
+#: lista agora manda os VALORES (`bool`), que é o que o alvo `classe` lê.
+#:
 #: **PARA DESTRAVAR OS QUE FICAM**, e cada um tem um dono diferente:
 #:
-#:   guarda.secao        o pintor precisa de um alvo que ligue/desligue CLASSE:
-#:                       aceso é `.gr.on`, apagado é `.gr`, e nenhum dos cinco
-#:                       alvos de hoje (texto·largura·fundo·valor·html) alcança
-#:                       uma classe. `hefesto_vivo.py` não é território desta
-#:                       frente; a peça está pedida ao orquestrador.
 #:   guarda.linhas       não tem conserto e não precisa: é o `<tbody>`, um
 #:                       CONTINENTE. Nunca houve valor para escrever nele.
 #:                       (A lista de perfis tinha o mesmo formato e ganhou
@@ -215,8 +246,58 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:                       estragá-la. Quem lhe dá valor de verdade é a
 #:                       ONDA-PERFIS-04, e nesse dia o piloto precisa de um
 #:                       caminho para MARCAR uma opção de `value` vazio.
-NAO_PINTAVEIS = ("guarda.linhas", "guarda.secao", "editor.prioridade.dica",
-                 "editor.estilo")
+NAO_PINTAVEIS = ("guarda.linhas", "editor.prioridade.dica", "editor.estilo")
+
+#: A resposta de `_a_pagina_acende_a_secao_por_classe()`, lida UMA vez.
+_SECAO_POR_CLASSE: bool | None = None
+
+#: O `guarda.secao` da página com o alvo `classe` declarado, nas DUAS ordens de
+#: atributo — quem gera o HTML não deve a ninguém a ordem em que os escreve.
+_ALVO_DA_SECAO = re.compile(
+    r'data-hef="guarda\.secao"[^>]*data-hef-alvo="classe"'
+    r'|data-hef-alvo="classe"[^>]*data-hef="guarda\.secao"'
+)
+
+
+def _a_pagina_acende_a_secao_por_classe() -> bool:
+    """A página **PUBLICADA** já sabe receber o `guarda.secao` como CLASSE?
+
+    ESTA PERGUNTA É A CURA QUE VALE NOS DOIS MUNDOS, e ela existe porque a
+    coluna "Ajuste próprio" ficou entre um desenho pronto e um ato dela.
+
+    O que a tela mostra é uma CLASSE (`.gr.on` aceso, `.gr` apagado), e o único
+    alvo do pintor que alcança classe nasceu em 02/09/2026. O atributo que o
+    liga — `data-hef-alvo="classe"` — está escrito no gerador e já saiu na
+    bancada; **só que `--publicar-enderecos 10` recusou**, porque a mesma página
+    carrega uma mudança de DESENHO pendente (a opção `—` do Estilo de Jogo, que
+    é decisão dela). A ferramenta publica por PÁGINA, não por atributo.
+
+    ENTÃO O PACOTE PERGUNTA À PÁGINA, uma vez, em vez de um nome cravado numa
+    lista. Sem esta guarda, o produto que ela usa HOJE receberia TEXTO nos
+    dezesseis `<span class="gr">` e o `el.textContent` do ramo padrão apagaria o
+    glifo SVG de dentro de cada um, duas vezes por segundo — o mesmo estrago que
+    ela fotografou na tabela desta aba. Com ela, o tique seguinte ao
+    `--publicar 10` acende as dezesseis células sem ninguém tocar em código.
+
+    É o padrão que `a02_controles._enderecos_da_pagina` e
+    `a03_gatilhos._pagina_publicada` já usam, pela mesma razão e com a mesma
+    escolha deliberada de `publicado=True`: **o piloto abre SEMPRE o
+    publicado**, e medir a bancada daria verde sobre uma página que o `WebView`
+    não carrega.
+
+    Página ilegível responde `False`: o erro seguro é não escrever.
+    """
+    global _SECAO_POR_CLASSE
+    if _SECAO_POR_CLASSE is None:
+        from hefesto_dualsense4unix.interface import onde
+
+        try:
+            doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+        except OSError:
+            doc = ""
+        _SECAO_POR_CLASSE = bool(_ALVO_DA_SECAO.search(doc))
+    return _SECAO_POR_CLASSE
+
 
 #: AS CHAVES QUE SAEM DAQUI E A PÁGINA NÃO TEM ONDE PÔR — o inventário, com a
 #: razão medida de cada uma. É a lista irmã do `SEM_ENDERECO` da aba 06, e ela
@@ -812,20 +893,55 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     # A GUARDA são os overrides por controle — o que cada um guarda de próprio
     # neste perfil. O produto já a monta; a tela a distribui por linha.
-    # AS CHAVES SAEM MESMO VAZIAS, e é o que faz a tela APAGAR a lista do
-    # mockup quando não há perfil. Emiti-las só quando há conteúdo deixaria os
-    # catorze nomes do desenho na tela de quem não tem perfil nenhum — a mesma
-    # mentira dos lugares vazios da mesa, que já custou sete reincidências.
+    #
+    # FATO DERRUBADO — 02/09/2026. Aqui estava escrito que *"as chaves saem
+    # mesmo vazias, e é o que faz a tela APAGAR a lista do mockup quando não há
+    # perfil"*. **A lista vazia não chega à tela.** `pacotes.normalizar` a
+    # descarta antes do JS — `if valor and all(...)`, e um `[]` é falso —, então
+    # com o disco sem perfil nenhum (ou com a mesa vazia) o `<tbody>` da guarda
+    # continua mostrando os quatro controles do DESENHO. Medido com dublê de
+    # `load_all_profiles` devolvendo `[]`:
+    #
+    #     guarda.nome  = []      chega à mesa? False
+    #     guarda.secao = []      chega à mesa? False
+    #
+    # É a oitava aparição de *a tela afirmando um controle que não está*, e a
+    # cura mora no despachante (`pacotes/__init__.py`), fora do território desta
+    # frente: uma lista VAZIA precisa atravessar, porque o laço do piloto já
+    # sabe apagar o que sobra (`i < v.length ? v[i] : ''`). Está no relatório.
     guarda = bruto.get("guarda") or []
     if isinstance(guarda, list):
         fora["guarda.nome"] = [g.get("nome", "") for g in guarda]
         fora["guarda.id"] = [g.get("id", "") for g in guarda]
-        # OS DOIS ABAIXO CONTINUAM SENDO MONTADOS, e o `pop` do fim é quem os
-        # retira. Apagar as duas linhas daria o mesmo resultado hoje e deixaria
+        # OS VALORES, E NÃO AS CHAVES — 02/09/2026, e o erro só apareceu no dia
+        # em que o endereço saiu de `NAO_PINTAVEIS`. `for s in g["secoes"]`
+        # itera um `dict` e devolve os NOMES das seções (`"leds"`, `"triggers"`
+        # …), iguais para todo perfil e para todo controle; como `ligado()` diz
+        # que qualquer palavra é ligada, o alvo `classe` acenderia as quatro
+        # seções nos quatro controles, sempre. O que a coluna responde é
+        # *"este perfil guarda isto SÓ deste controle?"*, e a resposta é o
+        # `bool` que `perfis_web._secoes_do_controle` já calculou.
+        #
+        # A ORDEM É O CONTRATO, porque o piloto distribui a lista pelos
+        # elementos de mesmo endereço na ordem do DOM: `SECOES_POR_CONTROLE`
+        # (o produtor) e `aba10.SECOES` (o desenho) têm de dizer as quatro na
+        # mesma sequência. Isso não fica ao acaso — a régua é
+        # `test_a_coluna_do_ajuste_proprio_acende_pela_classe.py`.
+        #
+        # E SÓ SAI SE A PÁGINA PUBLICADA SOUBER RECEBER — ver
+        # `_a_pagina_acende_a_secao_por_classe`. Sem o `data-hef-alvo="classe"`
+        # lá, escrever isto apagaria os dezesseis glifos SVG.
+        if _a_pagina_acende_a_secao_por_classe():
+            fora["guarda.secao"] = [
+                bool(ligada)
+                for g in guarda
+                for ligada in (g.get("secoes") or {}).values()
+            ]
+        # O `guarda.linhas` CONTINUA SENDO MONTADO, e o `pop` do fim é quem o
+        # retira. Apagar a linha daria o mesmo resultado hoje e deixaria
         # `NAO_PINTAVEIS` sem mordida: uma lista que não segura nada fica verde
         # para sempre e ninguém percebe quando o motivo dela caduca. Assim há
         # UM lugar que decide, e arrancá-lo faz a régua reprovar.
-        fora["guarda.secao"] = [s for g in guarda for s in (g.get("secoes") or [])]
         fora["guarda.linhas"] = str(len(guarda))
 
     # OS QUE NÃO SAEM — a lista é `NAO_PINTAVEIS`, e cada nome tem lá a sua
