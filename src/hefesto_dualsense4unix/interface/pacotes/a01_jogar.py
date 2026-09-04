@@ -31,6 +31,16 @@ DA_PAGINA: tuple[str, ...] = (
     "aviso-selo",
     "aviso-texto",
     "aviso-vivo",
+    # O CADEADO DA TROCA AUTOMÁTICA — 04/09/2026, decisão [03] do PO sobre esta
+    # aba: *"Volta para a Jogar, embaixo de Modo."*
+    #
+    # O PEDIDO É DELA E É DE 23/07. A caixa saiu do desenho por escolha minha,
+    # declarada na legenda desta página — *"A caixa saiu — o perfil ativo já diz
+    # isso"* —, e o que mudou desde então é que a coluna **Atenção** passou a ler
+    # `painel.AVISOS_DA_TELA`: `autoswitch_lock_text` e `texto_do_cadeado_cego`
+    # são duas das seis fontes. Logo esta tela EXPLICA o cadeado hoje e não
+    # oferece onde ligá-lo — em nenhuma das dez abas.
+    "cadeado",
     "hef-posicao",
     # A RESSALVA DA MÁSCARA e a FRASE DA MESA — 04/09/2026. As duas são
     # `data-campo` de UM valor pintado em DOIS elementos: o de fora com
@@ -74,8 +84,20 @@ DA_PAGINA: tuple[str, ...] = (
 #: o que o desenho dela mostra — os dois cartões acendiam o MESMO chip. A
 #: bancada já fazia certo (`jogar_vivo` pinta `[data-mascara]` dentro de cada
 #: cartão, com o valor daquele `uniq`); quem discordava era o produto.
-POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "bateria",
-                               "identidade", "mascara-cartao")
+#: `jogador-espera` É O ESMAECIDO DO NÚMERO — decisão do PO, 04/09/2026, sobre a
+#: pergunta [02] desta aba: *"'Player N', esmaecido enquanto espera."*
+#:
+#: ELE NÃO TOCA A PALAVRA, e é isso que o faz caber: a **D-04** dela fixou
+#: *"Player N, como está hoje"* contra a minha recomendação, e é decisão dela.
+#: O que sobra de dano é o cartão AFIRMAR um jogador que o jogo ainda não tem —
+#: e esse se mata com tinta, não com texto.
+#:
+#: DOIS ENDEREÇOS PARA UM CARTÃO, e não um: o `jogador` é o TEXTO (`Player 2`) e
+#: este é a CLASSE. Um elemento carrega um endereço só, e `escrever()` num
+#: elemento com filho apagaria os filhos — é a armadilha medida do piloto da
+#: Controles. O de fora acende a classe, a folha do de dentro esmaece.
+POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "jogador-espera",
+                               "bateria", "identidade", "mascara-cartao")
 
 #: QUANTOS `aviso-item` A COLUNA TEM. **Este é o dono do número**, e o gerador o
 #: lê daqui (`aba01.py` importa esta constante) — a direção é essa e não a
@@ -192,6 +214,95 @@ RESSALVA_DA_MASCARA = (
     "agora, e a escolha vale assim que ele voltar a entregar."
 )
 
+#: O RÓTULO E A DICA DO CADEADO — **as duas palavras são da JANELA ANTIGA**, e
+#: por isso não são texto novo de tela: o `Gtk.CheckButton` de
+#: `home_actions._build_home` já as escreve, e o pedido da caixa é dela, de
+#: 23/07/2026.
+#:
+#: POR QUE LITERAL AQUI, e não uma leitura: o dono delas é um `Gtk.CheckButton`
+#: construído dentro de um método de janela — lê-las em tempo de execução
+#: exigiria montar a GTK dentro do pacote das dez abas, que é justamente o que
+#: `_painel()` existe para evitar. **A DIVERGÊNCIA MORRE PELA RÉGUA, não pela
+#: leitura:** `test_a_aba_01_jogar_fecha_as_linhas` lê o fonte da GTK e reprova
+#: no dia em que as duas se afastarem. É a mesma escolha que a `MESA_VAZIA` já
+#: fez com a frase gêmea da bancada, e pelo mesmo motivo.
+#:
+#: DECISÃO DELA, portanto — não minha: a palavra que vai à tela nova é a que ela
+#: já leu na janela antiga.
+#: A RAZÃO DO ESMAECIDO, no ponteiro do mouse — a segunda metade da decisão
+#: [02]: *"o número perde a cor forte enquanto o daemon não confirmar o jogador,
+#: e o porquê fica no ponteiro do mouse."*
+#:
+#: ELA É `title`, LOGO É CRAVADA, e isso aqui é seguro pela razão que o
+#: `aba01.cartao` já escreve: o piloto **não tem alvo de pintura para atributo
+#: de texto**, então toda dica congela no que o gerador soube. O que torna ESTA
+#: honesta é ela não afirmar nada sobre um controle em particular — é a razão do
+#: ESTADO, igual para os quatro cartões, e o estado quem diz é a classe.
+#:
+#: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01).
+ESPERA_DICA = (
+    "O lugar está reservado e o jogo ainda não recebeu este controle. "
+    "O número fica forte quando ele entrar na partida."
+)
+
+CADEADO_ROTULO = "Não trocar de perfil sozinho ao abrir um jogo"
+CADEADO_DICA = (
+    "Congela a troca automática: o perfil que você deixou ativo continua "
+    "valendo mesmo ao abrir qualquer jogo. "
+    "Desmarque para o Hefesto voltar a escolher o perfil por você."
+)
+
+
+def _cadeado(state: dict[str, Any]) -> str:
+    """``"sim"`` com o cadeado ligado, ``""`` quando não — na língua do `marcado`.
+
+    O ALVO É O DÉCIMO (`hefesto_vivo`, `data-hef-alvo="marcado"`), e a língua
+    dele é a MESMA do alvo `classe` booleano: ``sim`` liga, e vazio, travessão
+    ou qualquer outra palavra DESLIGAM. Uma segunda palavra para o mesmo
+    "ligado" seria a terceira maneira de dizer a mesma coisa.
+
+    **SEM DAEMON A CAIXA DESMARCA, e isso é escolha declarada.** Um checkbox tem
+    dois estados e o produto tem três — a aba inteira já resolve isso do mesmo
+    jeito (`_estado_da_tela` devolve `""` e o interruptor apaga as duas
+    posições). Marcar sobre um estado que ninguém leu seria a tela afirmando uma
+    escolha dela que ela não fez; o inverso apenas mostra o padrão do produto,
+    que é destravado.
+
+    SÓ O ``True`` LITERAL LIGA, a mesma disciplina do `wrapper_used` e do
+    `texto_da_pausa`: chave ausente (daemon antigo) ou valor de outro tipo não
+    marcam a caixa.
+    """
+    return "sim" if state.get("autoswitch_locked") is True else ""
+
+
+def _jogador_esperando(c: dict[str, Any]) -> str:
+    """``"1"`` enquanto o jogo não recebeu este controle, ``""`` quando recebeu.
+
+    A DECISÃO É [02] desta aba: *"'Player N', esmaecido enquanto espera."* — e o
+    dano que ela mata está medido, em 02/09/2026, na mesa dela:
+
+        uniq …0003 · bt  · player 1    · player_slot 1
+        uniq …00d8 · usb · player None · player_slot 2   ← o cartão dizia "Player 2"
+
+    **O `None` NÃO É DO TRANSPORTE**, e o `jogador_de` já carrega a medição que
+    derrubou essa hipótese: quem volta ``None`` é quem o co-op ainda não promoveu
+    a jogador — *"um secundário ainda aguardando o grab não tem vpad: reservou o
+    índice, mas não é jogador nenhum até ser promovido"*
+    (`daemon/subsystems/coop.CoopManager.player_indexes`).
+
+    AS DUAS CHAVES SÃO LIDAS PELA MESMA ORDEM DO CARTÃO, e é o que impede esta
+    função de discordar do número que ela esmaece: se `jogador_de` não achou
+    número nenhum, o cartão mostra travessão e não há jogador a ressalvar —
+    esmaecer um travessão prometeria que ALGUÉM está esperando.
+
+    O ``player`` É LIDO CRU DE PROPÓSITO. `jogador_de` responde *"que número o
+    cartão mostra"* e cai no `player_slot` primeiro; aqui a pergunta é outra —
+    *"o JOGO já viu este controle?"* —, e só a chave `player` a responde.
+    """
+    if jogador_de(c) is None:
+        return ""
+    return "" if c.get("player") is not None else "1"
+
 
 def mascaras_montaveis() -> frozenset[str]:
     """Os rótulos de máscara que o produto SABE MONTAR — para o desenho perguntar.
@@ -281,6 +392,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # abaixo, mostrava com o botão 2 ACESO. O dono lê `player_slot`
             # antes, que é a ordem da GTK (`controller_card.py:1059-1067`).
             "jogador": f"Player {jogador_de(c) or '—'}",
+            # O ESMAECIDO — decisão [02], 04/09/2026. A palavra fica (D-04
+            # dela); o que sai é a AFIRMAÇÃO de um jogador que o jogo ainda não
+            # recebeu. Ver `_jogador_esperando`.
+            "jogador-espera": _jogador_esperando(c),
             "bateria": f"{c.get('battery_pct')}%" if c.get("battery_pct") is not None else "—",
             "identidade": f"{nome} · {via}",
             # A MÁSCARA DESTE APARELHO — ver `_mascara_do_cartao` e a nota do
@@ -329,6 +444,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `classe` do elemento de fora lê travessão como desligado.
         "mesa-frase": _frase_da_mesa(ctx),
         "mascara-ressalva": _ressalva_da_mascara(ctx.state),
+        # O CADEADO — decisão [03], 04/09/2026. A coluna Atenção já EXPLICA o
+        # cadeado desde 03/09 (`autoswitch_lock_text` é uma das seis fontes); o
+        # que faltava, em todas as dez abas, era onde ligá-lo. Ver `_cadeado`.
+        "cadeado": _cadeado(ctx.state),
         "cartoes": cartoes,
         # O INTERRUPTOR E A FILEIRA, VIVOS — 03/09/2026. Ver `_estado_da_tela`.
         **_estado_da_tela(ctx.state),
@@ -1463,6 +1582,63 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _lembrar_do_chip("navegacao", o)
 
 
+@gesto("01-jogar.html", "cadeado")
+def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A caixa "Não trocar de perfil sozinho ao abrir um jogo".
+
+    PEDIDO NOMEADO DELA, de 23/07/2026, e ele saiu do desenho por escolha minha
+    — declarada na legenda desta própria página: *"A caixa saiu — o perfil ativo
+    já diz isso"*. O que mudou desde então está medido: a coluna **Atenção**
+    passou a ler `painel.AVISOS_DA_TELA`, e `autoswitch_lock_text` e
+    `texto_do_cadeado_cego` são duas das seis fontes. **A tela EXPLICA o cadeado
+    e não oferece onde ligá-lo, em nenhuma das dez abas.** A decisão [03] do PO
+    o traz de volta para cá: *"Volta para a Jogar, embaixo de Modo"* — a única
+    posição em que a frase que explica e o botão que resolve ficam na mesma
+    tela.
+
+    O ESCRITOR JÁ EXISTIA: `ponte.autoswitch_lock_set` expõe o
+    `app/ipc_bridge.autoswitch_lock_set`, que é o mesmo que o
+    `_on_home_autoswitch_lock_toggled` da janela antiga aciona. Zero regra
+    reescrita.
+
+    **O VALOR VAI ABSOLUTO, NUNCA COMO TOGGLE, e é a metade que decide.** A
+    ponte aceita `locked=None` e o daemon inverte sozinho; usar isso aqui seria
+    o defeito, por duas razões medidas:
+
+    1. **um clique chega DUAS vezes.** O ouvinte único do piloto está em `click`
+       **e** em `change` (`hefesto_vivo.BOOTSTRAP`), e um `<input
+       type="checkbox">` dispara os dois — o `change` nasceu para os `<select>`
+       e os campos de texto, que nunca dão clique com o valor novo. Dois
+       toggles seriam um NO-OP: ela clica e nada acontece, que é a queixa dela
+       em estado puro;
+    2. **o daemon poderia inverter a partir de outro estado.** O valor absoluto
+       é a escolha DELA lida da tela; o toggle é a tela obedecendo a um estado
+       que ela não viu.
+
+    E O `evento` FILTRA A SEGUNDA ENTREGA, para o disco dela receber UMA
+    escrita por clique: `save_autoswitch_locked` grava (`ipc_handlers.py:2536`).
+    O `change` é o escolhido porque é o único que só dispara quando a caixa de
+    fato MUDOU — clique em rótulo, tecla de espaço e `el.click()` sintético
+    passam pelos três caminhos. Um clique sem `evento` (a régua dos botões, que
+    monta o recado à mão) continua valendo: o padrão é `change`.
+
+    A VERDADE VOLTA DO DAEMON, não deste gesto: o alvo `marcado` repinta a caixa
+    a cada tique a partir de `autoswitch_locked`. Se a escrita não pegar, a
+    caixa **volta sozinha** — que é o oposto de uma tela que finge ter guardado.
+
+    RELATO — `hefesto_vivo.PERIGOSOS` NÃO É DESTA POSSE, e este gesto pertence
+    lá: ele grava em disco (`utils/session.save_autoswitch_locked`), logo a
+    régua de clique (`--prova-gesto`) mudaria uma preferência DELA para provar
+    que sabe clicar. O `test_todo_gesto_que_grava_esta_protegido` não o pega
+    porque `ESCREVEM`/`METODOS_QUE_ESCREVEM` não conhecem esta porta — e os dois
+    arquivos são de outro dono. Enquanto isso não fechar, a mordida é o desenho:
+    a caixa vive só no `mockup/`, e o piloto abre o PUBLICADO.
+    """
+    if str(o.get("evento") or "change") != "change":
+        return
+    p.autoswitch_lock_set(locked=_cadeado(ctx.state) != "sim")
+
+
 @gesto("01-jogar.html", "reconectar")
 def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Reconectar Controles": os jogadores voltam, e a numeração se ajeita.
@@ -1555,7 +1731,13 @@ OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. Uma só, e o `chamar` é o degrau 3: os
 #: quatro métodos abaixo não têm invólucro no `app/ipc_bridge.py` — conferido nas
 #: 36 funções que ele expõe.
-PONTE = {"chamar"}
+#: `autoswitch_lock_set` É DEGRAU 2 — 04/09/2026. Ele TEM invólucro no
+#: `app/ipc_bridge.py` (o mesmo que a janela antiga aciona no `toggled` do
+#: checkbox), e por isso não desce ao `chamar` cru: o degrau 3 é só para o que
+#: não tem função em lugar nenhum. Chamá-lo por `chamar("autoswitch.lock", …)`
+#: seria a segunda rota para um ato que já tem uma, e a de cá não saberia ler o
+#: `autoswitch_locked` que o handler devolve.
+PONTE = {"chamar", "autoswitch_lock_set"}
 #: OS MÉTODOS CRUS. A régua confere um a um contra o `ipc_server.py`, e um nome
 #: inventado reprova AQUI, não na mão de quem clica.
 #: OS CINCO DA TROCA DE MODO — os que `ponte.TETOS` cobre com os 2,0 s do
@@ -1587,10 +1769,12 @@ METODOS = METODOS_DA_TROCA_DE_MODO | {
 }
 
 
-#: O QUE ESTA ABA DECLARA À RÉGUA. O piso é CINCO, e não seis: o `modo-steam`
-#: está marcado no desenho e **não** tem `@gesto` (ver `BOTOES_SEM_DONO`).
+#: O QUE ESTA ABA DECLARA À RÉGUA. O piso é SEIS desde 04/09/2026 — o sexto é o
+#: `cadeado`, a caixa que ela pediu em 23/07 e que voltou para esta aba pela
+#: decisão [03]. O `modo-steam` continua marcado no desenho e **sem** `@gesto`
+#: (ver `BOTOES_SEM_DONO`), e por isso ele não conta.
 PAGINA = "01-jogar.html"
-PISO_DA_ABA = 5
+PISO_DA_ABA = 6
 
 #: AS PROVAS SÃO LITERAIS, E É ESCOLHA — a tentação era montá-las chamando o
 #: mesmo `_plano()` que o gesto chama, para "não digitar o que tem dono". Isso
@@ -1659,4 +1843,16 @@ PROVAS = [
      "clique": {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"},
      "chama": [("chamar", ["gamepad.mask.set"],
                 {"uniq": "aa:bb:cc:00:00:01", "flavor": "xbox"})]},
+    # O CADEADO — 04/09/2026. Ele NÃO passa pelo `chamar`: `autoswitch_lock_set`
+    # é função da ponte (degrau 2), a mesma que a janela antiga aciona.
+    #
+    # O `locked` VAI POR NOME e vai ABSOLUTO, e a régua mede as duas coisas: um
+    # `locked=None` daria toggle no daemon e a prova passaria com `kw` vazio,
+    # que é exatamente o defeito que este gesto não pode ter (um clique chega
+    # DUAS vezes ao ouvinte único — `click` e `change` — e dois toggles são um
+    # no-op). O `ctx` da régua tem `autoswitch_locked` ausente, logo o cadeado
+    # está DESTRAVADO e o clique pede `True`.
+    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
+     "gesto": "cadeado", "clique": {"evento": "change"},
+     "chama": [("autoswitch_lock_set", [], {"locked": True})]},
 ]
