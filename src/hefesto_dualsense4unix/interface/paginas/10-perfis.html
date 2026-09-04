@@ -497,6 +497,31 @@
   .logo svg{width:44px;height:44px;display:block}
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
+
+  /* O LUGAR VAZIO NÃO DESENHA CONTROLE — 04/09/2026, e é decisão DELA:
+     "aqui os svgs do controle so deveria aparecer se eles tivessem conectados".
+
+     ELA SUBSTITUI A DECISÃO DE 31/08, que dizia o contrário e está escrita em
+     seis lugares (`monta.py:267`, `aba01.py:936`, `aba04.py:832`,
+     `aba05.py:1105`, `aba06.py:1181`, `aba10.py:584`), assim:
+     "O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe
+     um controle; um desenho cinza diz."
+     O lugar CONTINUA na tela — a moldura, o rótulo `P3 · Desconectado` e o
+     travessão ficam, e é isso que segue ensinando que ali cabe um. O que sai é
+     só o desenho do aparelho, que era a parte que afirmava presença.
+
+     É `display:none`, e NÃO remoção do DOM, por duas razões medidas: as réguas
+     cobram a regra e o elemento no publicado
+     (`test_a_06_o_lugar_vazio_nao_veste_o_mockup.py`), e o pintor distribui cor
+     por ÍNDICE — `aba06.py:1186` avisa que "um lugar vazio sem endereço tiraria
+     uma casa da fila e o P4 receberia a cor do P3".
+
+     UMA REGRA PARA AS CINCO ABAS: a marca `data-conectado="nao"` é escrita pelo
+     gerador E pelo piloto (`hefesto_vivo.py:603`), e reaberta quando o controle
+     chega (`:611`). Por isso isto vive aqui, na folha das dez, e não repetido em
+     aba01/04/05/06/10. */
+  [data-conectado="nao"] .ds-svg,
+  .ds-svg[data-conectado="nao"]{display:none}
   .ds-motores{max-width:250px;margin:6px auto}
   /* as peças ocultas do SVG acendem quando a classe .acesa entra */
   .ds-svg .oculta{opacity:0}
@@ -773,11 +798,35 @@
   }
   .campo select{cursor:pointer}
   .campo select.destaque{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
-  /* a prioridade é slicer */
+  /* A PRIORIDADE É SLIDER — pedido dela em 27/08 (*"prioridade é slicer"*, em
+     CORRECOES-DELA.md) e reconfirmado em 03/09/2026: *"Slider, como você
+     pediu"*. Até aqui o desenho tinha uma BARRA, que não se arrasta: era o
+     único campo do editor sem nenhum caminho de escrita na interface nova.
+
+     O TRILHO E O CHEIO FICAM, e continuam sendo quem MOSTRA — o produto escreve
+     a largura do cheio a cada tique. O que nasce é o `<input type=range>` por
+     cima: transparente, do tamanho do trilho, e é ele quem ACEITA o arrasto.
+
+     O PUNHO MUDOU DE DONO, e essa é a única coisa que se perde do desenho
+     antigo: ele era o `::after` do cheio — pintado pelo produto, logo com meio
+     segundo de atraso — e passou a ser o `::-webkit-slider-thumb` do range, que
+     segue o dedo dela no mesmo quadro. Enquanto ela arrasta, o cheio fica para
+     trás (ele só sabe o que o disco diz); no `change` o gesto grava e a resposta
+     do próprio gesto repinta os dois na hora, sem esperar o tique.
+
+     `-webkit-` E NÃO `-moz-`: a janela é um `WebKit2.WebView`, e o Chrome que a
+     bancada usa para fotografar é a mesma família. Um `::-moz-range-thumb` aqui
+     seria regra que nenhum dos dois lê. */
   .campo .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);position:relative}
   .campo .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .campo .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
-    border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
+  .campo .desliza{position:absolute;left:0;top:50%;transform:translateY(-50%);
+    width:100%;height:14px;margin:0;padding:0;background:transparent;border:0;
+    -webkit-appearance:none;appearance:none;cursor:pointer}
+  .campo .desliza:focus{outline:none}
+  .campo .desliza::-webkit-slider-runnable-track{height:14px;background:transparent;border:0}
+  .campo .desliza::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;background:var(--purple);
+    border:2px solid var(--app-bg);margin-top:1px}
   .campo .n{flex:0 0 40px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .campo .btn{flex:0 0 auto;white-space:nowrap}
   /* A COLUNA DO RÓTULO É JUSTA — remedida no Chrome em 31/08/2026, DEPOIS que ela
@@ -1228,7 +1277,22 @@
                        de `NAO_PINTAVEIS` no `1f6e356b`. A barra recebe a
                        largura; o número ao lado (`editor.prioridade.n`) é um
                        `<span>` sem filhos e recebe o valor pelo mesmo tique. -->
-                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:90%"></span></span>
+                  <!-- O `<input type=range>` — 03/09/2026, e é o que fez este
+                       campo deixar de ser leitura. Ele fica DENTRO do trilho,
+                       absoluto e transparente: o desenho que ela aprovou
+                       continua sendo o trilho + o cheio, e o range só empresta
+                       o punho e o arrasto.
+                       `min`/`max` SAEM DO ESQUEMA (`PRIORIDADE_MINIMA`/`MAXIMA`)
+                       — ver o comentário do import. `step="1"` porque
+                       `Profile.priority` é `int`: um slider que oferecesse
+                       meio número faria a tela prometer o que o esquema recusa.
+                       O ENDEREÇO É PRÓPRIO (`editor.prioridade.escolha`) e não
+                       o `.n` do vizinho: o pacote pinta este UMA VEZ por perfil
+                       escolhido (ver `a10_perfis.CAMPOS_QUE_ELA_DIGITA`) para
+                       não devolver o punho ao valor do disco no meio do arrasto
+                       dela, enquanto o número ao lado continua repintando a
+                       cada tique. -->
+                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:45%"></span><input type="range" class="desliza" min="0" max="200" step="1" value="90" aria-label="Prioridade" data-hef="editor.prioridade.escolha" data-hef-alvo="valor" data-hef-gesto="editor.prioridade"></span>
                   <span class="n" data-hef="editor.prioridade.n">90</span>
                 </span>
               </div>

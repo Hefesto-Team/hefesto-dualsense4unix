@@ -165,6 +165,128 @@ def escalar_nome_da_fonte(nome: str, delta: int) -> str:
     return f"{familia} {pontos + delta * _PONTOS_POR_PIXEL:g}"
 
 
+#: O tema que a sessão dela escolheu, perguntado ao dono da escolha.
+#:
+#: ``org.gnome.desktop.interface gtk-theme`` é o mesmo lugar que o portal lê. Ele
+#: mora no dconf, e por isso responde **igual sob Wayland e sob XWayland** — que
+#: é o ponto inteiro desta peça.
+_CHAVE_DO_TEMA = ("org.gnome.desktop.interface", "gtk-theme")
+
+
+def tema_escolhido_na_sessao() -> str:
+    """O nome do tema GTK que a sessão escolheu, ou ``""`` se não der para saber.
+
+    Pergunta ao ``Gio.Settings``, que lê o dconf direto — sem depender do backend
+    gráfico nem do portal.
+    """
+    try:
+        from gi.repository import Gio
+    except ImportError:  # pragma: no cover — gi sem Gio não existe na prática
+        return ""
+    esquema, chave = _CHAVE_DO_TEMA
+    try:
+        fonte = Gio.SettingsSchemaSource.get_default()
+        if fonte is None or fonte.lookup(esquema, True) is None:
+            return ""  # o esquema não está instalado — não há o que perguntar
+        return str(Gio.Settings.new(esquema).get_string(chave) or "")
+    except Exception as exc:  # amplo de propósito: nunca impedir a janela de abrir
+        logger.warning("tema_da_sessao_indisponivel", erro=str(exc))
+        return ""
+
+
+def adotar_o_tema_da_sessao() -> str:
+    """Faz o processo usar o tema que ELA escolheu. Devolve o nome adotado, ou ``""``.
+
+    O DEFEITO QUE ISTO CURA, fotografado por ela em 04/09/2026: ela abre a aba
+    Gatilhos, clica num efeito pronto, e o menu nasce **branco, com a linha
+    selecionada em azul**, no meio de uma interface escura.
+
+    A CORRENTE, medida inteira:
+
+    1. O ``.desktop`` instalado lança com ``env GDK_BACKEND=x11``
+       (``install.sh:2806``), e o ``app/main._force_xwayland_on_cosmic`` faz o
+       mesmo no arranque. A razão está escrita lá e é boa: no cosmic-comp
+       nativo os popups de ``GtkComboBox``/``GtkMenu`` abrem **com fundo claro**,
+       mal posicionados e com o grab quebrado.
+    2. Sob XWayland, porém, o GTK3 **não lê o tema do portal** — ele espera um
+       daemon XSettings, que o COSMIC não tem, e cai no ``settings.ini``.
+    3. O ``~/.config/gtk-3.0/settings.ini`` dela declara **só**
+       ``gtk-decoration-layout``. Não há ``gtk-theme-name``.
+    4. Logo o processo cai no padrão do GTK — ``Adwaita``, **claro** — e todo
+       widget que o CSS do autor não alcança nasce claro.
+
+    O popup do ``<select>`` é exatamente esse caso: o WebKit o desenha **fora**
+    da página, então nem o CSS de autor nem ``color-scheme: dark`` o alcançam.
+    Medido no WebKitGTK 2.52.6, sob XWayland, com o cenário dela reproduzido:
+
+    ======================================  ==================================
+    o que se tentou                         o popup
+    ======================================  ==================================
+    nada (o estado de hoje)                 **BRANCO, com a linha azul**
+    ``color-scheme: dark`` na página        branco — as fotos saem idênticas
+    ``gtk-application-prefer-dark-theme``   branco — as fotos saem idênticas
+    ``gtk-theme-name`` = o tema DELA        **escuro**
+    ======================================  ==================================
+
+    É por isso que esta função existe e a ``pedir_a_variante_escura`` não basta.
+
+    E ELA NÃO ESCOLHE O TEMA — ela **pergunta qual ele é**. A escolha continua
+    dela, no lugar onde ela a fez; o que se conserta é o processo ter perdido a
+    resposta ao ser empurrado para o XWayland. Um aplicativo que cravasse
+    ``adw-gtk3-dark`` passaria a ignorar a próxima troca de tema dela.
+    """
+    escolhido = tema_escolhido_na_sessao()
+    if not escolhido:
+        return ""
+    settings = Gtk.Settings.get_default()
+    if settings is None:
+        return ""
+    try:
+        if (settings.get_property("gtk-theme-name") or "") == escolhido:
+            return ""  # já é o dela — o portal entregou, nada a fazer
+        settings.set_property("gtk-theme-name", escolhido)
+    except (TypeError, ValueError) as exc:
+        logger.warning("tema_da_sessao_nao_aplicavel", tema=escolhido, erro=str(exc))
+        return ""
+    logger.info("tema_da_sessao_adotado", tema=escolhido)
+    return escolhido
+
+
+def pedir_a_variante_escura() -> bool:
+    """Pede ao GTK a variante ESCURA do tema do sistema. Devolve se conseguiu.
+
+    BUG-GUI-COSMIC-WIDGET-CONTRAST-01: em COSMIC a sessão **não** aplica a
+    variante escura do tema GTK por padrão — medido na máquina dela em
+    04/09/2026, com a sessão inteira em escuro:
+
+        gsettings org.gnome.desktop.interface color-scheme = 'prefer-dark'
+        Gtk.Settings gtk-application-prefer-dark-theme     = False   ← aqui
+
+    Sem este pedido, todo widget que o CSS do aplicativo **não alcança** herda o
+    claro do sistema. Na janela GTK isso dava branco-sobre-branco em containers;
+    na janela do WebKit dá o defeito que ela fotografou em 04/09: o popup de um
+    ``<select>`` aberto nasce **branco, com a linha azul do sistema**, no meio de
+    uma interface escura. O popup é desenhado pelo WebKit fora da página — CSS de
+    autor não o alcança, e ``color-scheme: dark`` também não (medido nos dois, no
+    WebKitGTK 2.52.6: as duas fotos saíram idênticas, brancas).
+
+    ESTA FUNÇÃO TEM DOIS CHAMADORES, e é por isso que ela existe separada: a
+    regra morava dentro do ``apply_theme``, que também carrega o CSS Drácula da
+    janela antiga. A janela do WebKit não quer esse CSS — ela é HTML — mas quer
+    exatamente esta linha, e nasceu sem ela. É o padrão que esta casa persegue:
+    *a casa sabe e o produto não faz*.
+    """
+    settings = Gtk.Settings.get_default()
+    if settings is None:
+        return False
+    try:
+        settings.set_property("gtk-application-prefer-dark-theme", True)
+    except (TypeError, ValueError) as exc:  # propriedade ausente em algum backend
+        logger.warning("theme_prefer_dark_indisponivel", erro=str(exc))
+        return False
+    return True
+
+
 def apply_theme(window: Gtk.Window) -> None:
     """Carrega theme.css e aplica à janela principal com classe .hefesto-dualsense4unix-window.
 
@@ -177,17 +299,8 @@ def apply_theme(window: Gtk.Window) -> None:
 
     settings = Gtk.Settings.get_default()
 
-    # BUG-GUI-COSMIC-WIDGET-CONTRAST-01: camada defensiva. Em COSMIC a sessão
-    # não aplica a variante escura do tema GTK por padrão, então containers/
-    # widgets não cobertos pelo nosso CSS herdam o claro do sistema (causando
-    # branco-sobre-branco). Pedir a variante escura faz o tema-base do sistema
-    # já entregar fundos escuros onde existir; o CSS Drácula continua sendo o
-    # canal principal (PRIORITY_APPLICATION sobrepõe o tema mesmo assim).
-    if settings is not None:
-        try:
-            settings.set_property("gtk-application-prefer-dark-theme", True)
-        except (TypeError, ValueError) as exc:  # propriedade ausente em algum backend
-            logger.warning("theme_prefer_dark_indisponivel", erro=str(exc))
+    # A variante escura tem dono próprio — as duas janelas a pedem.
+    pedir_a_variante_escura()
 
     delta = escala_fonte()
 

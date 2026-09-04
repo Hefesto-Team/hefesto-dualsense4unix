@@ -88,6 +88,8 @@ gi.require_version("WebKit2", "4.1")
 
 from gi.repository import GLib, Gtk, WebKit2  # noqa: E402
 
+from hefesto_dualsense4unix.app import theme as tema  # noqa: E402
+
 #: As quatro armadilhas, em código. Cada uma custou uma sessão desta casa, e a
 #: forma de não as redescobrir é elas viajarem com o módulo que as paga — não
 #: numa página de documentação que ninguém abre no meio de um transplante.
@@ -121,11 +123,45 @@ FOLHA_DA_CASA = ".nota{display:none !important}select{appearance:none;-webkit-ap
 #: ``window.webkit.messageHandlers.<canal>.postMessage``.
 CANAL_PADRAO = "hefesto"
 
+#: O QUE O DESENHO PEDE, em pixels, e cada parcela tem dono no CSS:
+#:
+#:     .janela{width:1180px; height:var(--alt-janela)}   `interface/topo.html:147`
+#:     --alt-janela:777px                                `interface/topo.html:567`
+#:     body{padding:16px}                                `interface/topo.html:122`
+#:
+#: Logo o documento ocupa ``16+1180+16 = 1212`` por ``16+777+16 = 809``.
+LARGURA_DO_DESENHO = 1212
+ALTURA_DO_DESENHO = 809
+
+#: A ``Gtk.HeaderBar`` desta janela, medida (04/09/2026, GTK3 + adw-gtk3-dark):
+#: **46 px**. Ela fica FORA do miolo, então a janela na tela precisa pedir a
+#: altura do desenho MAIS ela.
+ALTURA_DA_BARRA = 46
+
 #: O tamanho da janela na tela dela, e o da janela oculta. São diferentes de
-#: propósito: com barra de título o compositor come a diferença, e uma foto
-#: precisa da altura inteira do desenho.
-TAMANHO_NA_TELA = (1180, 757)
-TAMANHO_OCULTA = (1180, 900)
+#: propósito: a janela na tela carrega a ``HeaderBar``, a oculta
+#: (``Gtk.OffscreenWindow``) não tem barra nenhuma.
+#:
+#: NÚMEROS ERRADOS, SUBSTITUÍDOS EM 04/09/2026. Eram ``(1180, 757)`` e
+#: ``(1180, 900)``, e o comentário dizia que *"com barra de título o compositor
+#: come a diferença"* — o que trocava a conta por uma esperança. A conta é esta:
+#:
+#: ===============  =========  ==========  ====================================
+#: o que                largura    altura   sobra para a página
+#: ===============  =========  ==========  ====================================
+#: pedia antes           1180        757   757 menos 46 = **711** de miolo
+#: o desenho pede        1212        809   —
+#: faltava                 -32        -98   e o rodapé nascia abaixo da dobra
+#: ===============  =========  ==========  ====================================
+#:
+#: Era este o *"tela do layout quebra direto"* que ela fotografou: 32 px cortados
+#: na largura e 98 na altura, com ``.janela{overflow:hidden}`` — que **não corta
+#: nem rola: some**. E a largura piora ao encolher, porque as colunas do miolo
+#: são declaradas em px; por isso a janela também ganhou um MÍNIMO (o
+#: ``set_size_request`` lá embaixo), sem o qual ela pode ser arrastada até
+#: engolir o desenho em silêncio.
+TAMANHO_NA_TELA = (LARGURA_DO_DESENHO, ALTURA_DO_DESENHO + ALTURA_DA_BARRA)
+TAMANHO_OCULTA = (LARGURA_DO_DESENHO, ALTURA_DO_DESENHO)
 
 #: A TRAVA DA TELA DELA — 02/09/2026, e ela nasceu de uma foto.
 #:
@@ -377,6 +413,18 @@ class JanelaDaAba:
             )
             oculta = True
             self.oculta = True
+
+        # O TEMA DELA, ANTES DE QUALQUER WIDGET NASCER. O popup de um `<select>`
+        # é desenhado pelo WebKit FORA da página: nem o CSS do autor nem
+        # `color-scheme: dark` o alcançam, e `prefer-dark` também não — medido
+        # nos três, WebKitGTK 2.52.6. Quem decide a cor dele é o `gtk-theme-name`
+        # do processo, e sob o `GDK_BACKEND=x11` que o `.desktop` força esse nome
+        # se perde: o GTK espera um XSettings que o COSMIC não tem. Sem estas
+        # duas linhas ela abre a aba Gatilhos, clica num efeito pronto, e o menu
+        # nasce BRANCO com a linha azul no meio da interface escura — fotografado
+        # por ela em 04/09/2026. A razão inteira está em `theme.adotar_o_tema_da_sessao`.
+        tema.adotar_o_tema_da_sessao()
+        tema.pedir_a_variante_escura()
 
         if oculta:
             self.janela: Any = Gtk.OffscreenWindow()

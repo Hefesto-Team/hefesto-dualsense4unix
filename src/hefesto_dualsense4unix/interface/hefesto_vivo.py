@@ -75,9 +75,27 @@ from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
 #: gosto: é a aba que o `.desktop` dela abre.
 PRIMEIRA = "01-jogar.html"
 
-#: O tique da pintura. 500 ms é o mesmo do `controles_vivos`, medido lá: o custo
-#: por volta ficou em 0,9% do orçamento, com IPC de mediana 0,8 ms.
-TIQUE_MS = 500
+#: O tique da pintura. **100 ms — o mesmo da janela GTK**
+#: (`app/constants.LIVE_POLL_INTERVAL_MS`) e o mesmo do `controles_vivos`
+#: (`controles_vivos.TIQUE_MS`). As três leituras ao vivo do produto batem.
+#:
+#: FATO ERRADO, SUBSTITUÍDO EM 04/09/2026: esta linha dizia `500` e o comentário
+#: justificava o número afirmando que *"500 ms é o mesmo do `controles_vivos`"*.
+#: Não era: o `controles_vivos.py:150` sempre teve `TIQUE_MS = 100`. O número
+#: errado tinha consequência medida — ela relatou *"delay absurdo em controles"*
+#: olhando a aba 02, onde meio segundo de atraso separa o dedo do desenho.
+#:
+#: O CUSTO FOI MEDIDO ANTES DE BAIXAR, com o daemon dela vivo e dois DualSense
+#: na mesa (04/09/2026, `--passear` pelas dez abas, 52 voltas):
+#:
+#:     custo do tique: mediana 2,92 ms · max 19,17 ms   ← as dez abas
+#:     custo do tique: mediana 1,73 ms · max 23,89 ms   ← só a 02, 91 voltas
+#:
+#: Num orçamento de 100 ms isso é **2,9% na mediana e 19% no pico** — folga de
+#: cinco vezes sobre o pior caso das dez. O tique é o mesmo laço para todas: o
+#: `_tique` mede de `t0` (antes do IPC) até o fim da pintura, então o número
+#: acima já inclui o `estado_do_daemon()` e o `pacote_da_pagina()`.
+TIQUE_MS = 100
 
 #: OS QUATRO LUGARES DA MESA DO DESENHO mudaram de casa em 02/09/2026: vivem em
 #: `pacotes.TODOS_OS_LUGARES`, junto com a conta que os apaga
@@ -1263,7 +1281,7 @@ class Piloto:
         #: `{uniq_normalizado: (frase, quando_monotônico)}`.
         #:
         #: ELA VIVE NO ESTADO, e não no instante do clique: a tela repinta a cada
-        #: 500 ms, e uma frase publicada só no tique da borda tem probabilidade
+        #: 100 ms, e uma frase publicada só no tique da borda tem probabilidade
         #: ~0 de coincidir com o tique em que ela olha — existiria e ninguém a
         #: veria. É a mesma razão pela qual
         #: `daemon/subsystems/recado_do_microfone.py` é um DEPÓSITO e não um

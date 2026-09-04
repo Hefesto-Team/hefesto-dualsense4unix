@@ -348,15 +348,22 @@ def test_dentro_da_janela_do_tique_a_memoria_vale(
 def test_a_janela_da_memoria_cobre_mais_de_um_tique() -> None:
     """O número não é digitado à toa: ele tem de valer mais que UM tique.
 
-    O tique da pintura é de 500 ms (`hefesto_vivo.TIQUE_MS`, não importável
+    O tique da pintura é de 100 ms (`hefesto_vivo.TIQUE_MS`, não importável
     daqui — o piloto puxa GTK no topo). Uma janela menor que um tique tornaria a
     memória inútil no caso exato para o qual ela existe.
+
+    O PISO CONTINUA 1 s, e ele não é o tique: o que a memória atravessa não é o
+    intervalo da pintura, é a viagem inteira do pedido — clique, IPC, o daemon
+    aplicar, e o tique seguinte LER de volta o que mudou. Baixar o tique de 500
+    para 100 ms em 04/09/2026 encurtou só a última perna. O piso de 1 s dá dez
+    tiques de folga onde antes dava dois; frouxo de propósito, porque quem paga
+    o erro é ela, com um clique engolido.
     """
     from pacotes import a06_navegacao as mod
 
     assert mod.MEMORIA_DE_UM_CLIQUE >= 1.0, (
-        f"a memória vale {mod.MEMORIA_DE_UM_CLIQUE}s — menos que dois tiques de "
-        "500 ms, que é o intervalo que ela existe para atravessar")
+        f"a memória vale {mod.MEMORIA_DE_UM_CLIQUE}s — menos que o segundo que "
+        "a viagem do pedido leva para voltar lida pelo tique")
 
 
 # "O homem é a medida de todas as coisas." — Protágoras

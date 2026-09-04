@@ -223,7 +223,7 @@ SEM_COR_LIDA = "A cor do plástico deste controle não foi lida."
 #:
 #: ELE PRECISOU EXISTIR NO DIA EM QUE A PINTURA ALCANÇOU O PAINEL, e a razão é
 #: de relógio: `ver-detalhes` e `ver-plugins` devolvem texto, o piloto o escreve
-#: na hora — e 500 ms depois o tique seguinte repintaria o valor de repouso por
+#: na hora — e um tique depois o seguinte repintaria o valor de repouso por
 #: cima. As oitenta linhas do registro apareceriam e sumiriam antes de ela
 #: terminar de ler. Guardando o que foi pedido, a pintura passa a repintar **o
 #: mesmo texto**, e o painel para quieto até o próximo clique.
@@ -715,7 +715,7 @@ def _faixa_lenta(state: dict[str, Any] | None,
     """As leituras CARAS: SÍNCRONA na primeira, EM THREAD nas releituras.
 
     Elas saem deste processo — subprocesso, disco — e nenhuma muda entre dois
-    piscares. O tique da pintura é de 500 ms; a faixa lenta é de 2 s, que é a
+    piscares. O tique da pintura é de 100 ms; a faixa lenta é de 2 s, que é a
     mesma separação que `interface/sistema_viva.py` já tinha medido e escolhido.
 
     ERAM TRÊS E VIRARAM CINCO em 03/09/2026 — o estado do serviço (dois

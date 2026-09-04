@@ -144,9 +144,10 @@ Medido em 02/09/2026, na máquina dela:
     jogos_instalados()          12 ms
     levantar_censo()        13.440 ms   <- treze segundos e meio
 
-O tique do piloto é de 500 ms. Ler 40 ms de disco a cada tique seria 8% do
+O tique do piloto é de 100 ms. Ler 40 ms de disco a cada tique seria 40% do
 orçamento gasto relendo um arquivo que muda uma vez por semana; o prontuário
-sequer cabe. Por isso a leitura vive na :class:`_Vigia`: a pintura NUNCA
+sequer cabe. (A 500 ms, que era o tique até 04/09/2026, isso já custava 8% — a
+cura vale MAIS agora, não menos.) Por isso a leitura vive na :class:`_Vigia`: a pintura NUNCA
 bloqueia, uma thread refaz a conta quando ela passa de :data:`TTL_S`, e o
 prontuário só sai do lugar quando ela clica em "Ver o que impede".
 """
@@ -272,7 +273,7 @@ class _Portoes:
     QUAL BOTÃO o cartão da Steam oferece.
 
     POR QUE NÃO SE MEDE NA HORA DE DESENHAR O BOTÃO: `steam_running()` e
-    `steam_game_running()` varrem `/proc`, e o orçamento do tique é de 500 ms
+    `steam_game_running()` varrem `/proc`, e o orçamento do tique é de 100 ms
     para a janela inteira — é a mesma razão que pôs o resto do disco na
     :class:`_Vigia`. O `censo_do_wrapper` já os mede a cada leitura, então o
     dado sai de graça: o que faltava era guardá-lo.
@@ -335,7 +336,7 @@ def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
     dezesseis `stem` no total e quatro pastas nesta máquina — 64 verificações de
     existência, contra as centenas de arquivos que um `glob("*.desktop")`
     abriria. Ainda assim ela roda pela :class:`_Vigia`, fora do tique: disco é
-    disco, e o orçamento do tique é de 500 ms para a janela inteira.
+    disco, e o orçamento do tique é de 100 ms para a janela inteira.
 
     NUNCA LEVANTA. Um `PATH` estranho ou uma pasta sem permissão devolve
     "não achei" para aquele lançador, que é o pior caso honesto — e degradar

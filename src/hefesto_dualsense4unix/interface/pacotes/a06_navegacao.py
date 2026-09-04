@@ -40,7 +40,7 @@ escolheria (evento `change`):
     ANTES  (o que a pintura pôs) : Botão direito
     CLIQUE (a escolha dela)      : F11
     +100 ms                      : F11
-    +1500 ms (três tiques)       : Botão direito
+    +1500 ms                     : Botão direito
 
 Eram DUAS causas, e as duas eram desta aba: os 21 `<select>` não casavam com
 nenhum endereço clicável do ouvinte (`hefesto_vivo.py:367`, o `closest` de
@@ -283,8 +283,8 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
     publicado (`hefesto_vivo.py:913, 1418, 1458, 1646, 1818`).
 
     LÊ UMA VEZ POR VERSÃO DO ARQUIVO, e o selo é `(mtime_ns, tamanho)`: a
-    página tem 385 KB e a pintura roda a cada 500 ms — reler a cada tique seria
-    750 KB/s por uma resposta que só muda quando ela publica.
+    página tem 385 KB e a pintura roda a cada 100 ms — reler a cada tique seria
+    3,8 MB/s por uma resposta que só muda quando ela publica.
 
     `frozenset()` quando o arquivo não abre. Aí `_o_teclado_em_palavras` cai na
     profissão de fé — a palavra DELA —, que é o destino: um produto instalado
@@ -860,7 +860,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 #: vez."*
 #:
 #: O QUE ISSO CURA, e estava medido no próprio arquivo: a pintura desfazia a
-#: escolha de quem clica em ≤1,5 s (três tiques de `hefesto_vivo.TIQUE_MS`),
+#: escolha de quem clica em ≤1,5 s (quinze tiques de `hefesto_vivo.TIQUE_MS`),
 #: e por isso o "Guardar" NUNCA recebia uma forma diferente do perfil —
 #: ele caía sempre no ramo de "não havia o que guardar". A recusa daquele ramo
 #: ainda mandava *"troque a linha antes de clicar"*, um caminho que o mesmo
@@ -875,9 +875,9 @@ _MEXENDO: dict[str, str] = {}
 #: distingue "ela continua na aba" de "ela saiu e voltou".
 _ULTIMA_PINTURA = 0.0
 
-#: A PAUSA QUE SIGNIFICA OUTRA ABA. O tique do piloto é de 500 ms
+#: A PAUSA QUE SIGNIFICA OUTRA ABA. O tique do piloto é de 100 ms
 #: (`hefesto_vivo.TIQUE_MS`), e enquanto ela estiver nesta página o `pacote()`
-#: é chamado a cada tique. Dez tiques sem uma chamada só acontecem se a página
+#: é chamado a cada tique. Cinco segundos sem uma chamada só acontecem se a página
 #: SAIU de cena — e voltar a ela é um documento NOVO, com os 21 `<select>` de
 #: volta no que o gerador cravou. Aí a trava tem de estar solta, senão a tabela
 #: ficaria mostrando o desenho com o perfil dizendo outra coisa.
@@ -1100,12 +1100,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 # e `keyboard.emulation.set` valem para a MÁQUINA.
 #
 # DE ONDE VEM O NÚMERO QUE O GESTO SOMA: do `ctx`, que é o estado do ÚLTIMO
-# TIQUE (500 ms, `hefesto_vivo.TIQUE_MS`). Ler o daemon a cada clique custaria um
+# TIQUE (100 ms, `hefesto_vivo.TIQUE_MS`). Ler o daemon a cada clique custaria um
 # `daemon.state_full` por clique (57 ms medidos, e HARM-15 já registra que ele
 # passa dos 0,25 s sob carga), e ainda assim a tela só repinta no tique.
 #
 # O SEGUNDO CLIQUE DENTRO DO MESMO TIQUE PARAVA DE ANDAR — CURADO em 03/09/2026.
-# Dois cliques em menos de 500 ms liam o mesmo `atual` e mandavam o mesmo alvo:
+# Dois cliques dentro do mesmo tique liam o mesmo `atual` e mandavam o mesmo alvo:
 # o segundo não movia nada, e era o defeito que quem clica rápido no `+` sente
 # primeiro. A cura é `_de_onde_partir`, e ela é do tamanho do problema — a
 # memória do último alvo pedido, largada assim que o daemon fala.
@@ -1222,7 +1222,7 @@ def _recusa_do_teclado(resposta: Any) -> str:
 #: clique, o relógio da confirmação)}`.
 #:
 #: Ele existe por UM defeito medido, e some sozinho: o `ctx` é o estado do
-#: último tique (500 ms), então dois cliques dentro do mesmo tique partiam do
+#: último tique (100 ms), então dois cliques dentro do mesmo tique partiam do
 #: MESMO número e pediam o MESMO alvo — o segundo clique não andava. Ver
 #: `_partir_de`.
 #:
@@ -1233,9 +1233,11 @@ def _recusa_do_teclado(resposta: Any) -> str:
 #: um bool É um número de dois valores, e uma trava só é uma trava só.
 _PEDIDO: dict[str, tuple[int, int, int, float]] = {}
 
-#: QUANTO TEMPO A MEMÓRIA DE UM CLIQUE VALE. Ela existe para atravessar UM tique
-#: de pintura — 500 ms (`hefesto_vivo.TIQUE_MS`) —, e quatro tiques é folga de
-#: sobra para um daemon lento sem virar uma segunda verdade sobre o valor.
+#: QUANTO TEMPO A MEMÓRIA DE UM CLIQUE VALE. Ela existe para atravessar a VIAGEM
+#: INTEIRA do pedido — clicar, o daemon aplicar, e o tique seguinte LER de volta
+#: o que mudou. O tique de pintura é só a última perna dela: 100 ms
+#: (`hefesto_vivo.TIQUE_MS`). Um segundo é folga de sobra para um daemon lento
+#: sem virar uma segunda verdade sobre o valor.
 #:
 #: SEM O RELÓGIO A MEMÓRIA ATRAVESSAVA UMA VOLTA INTEIRA, e o docstring de
 #: `_partir_de` prometia o contrário (*"não há caminho em que ela sobreviva a
@@ -1404,7 +1406,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     # O SEGUNDO CLIQUE DENTRO DO MESMO TIQUE DESFAZ O PRIMEIRO — 03/09/2026, e é
     # a cura que o `+`/`-` já tinha e este interruptor não. O `ctx` é o estado de
-    # 500 ms atrás, então dois cliques seguidos liam o MESMO `enabled` e mandavam
+    # um tique atrás, então dois cliques seguidos liam o MESMO `enabled` e mandavam
     # `enabled=True` duas vezes: o segundo era engolido, e a tela — que desde
     # hoje só acende pelo daemon — ficava dizendo "Ligado" sem ela ter querido.
     # Ver `_partir_de`, com `sentido=0`: o interruptor tem um gesto só.
@@ -1668,7 +1670,7 @@ def linha_de_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
 
         ANTES  (o que a pintura pôs) : Botão direito
         CLIQUE (a escolha dela)      : F11
-        +1500 ms (três tiques)       : Botão direito
+        +1500 ms                     : Botão direito
 
     O `data-gesto` que o gerador passou a pôr (`aba06.LINHA_DE_BOTAO`) é o que
     abre este caminho.
@@ -1857,7 +1859,7 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     O QUE SOBRA DA TRAVA, e por que ela FICA: a forma toda no de fábrica com o
     perfil guardando escolhas deixou de ser o estado permanente e virou uma
-    JANELA — os 500 ms entre a página carregar e o primeiro tique pintar
+    JANELA — os 100 ms entre a página carregar e o primeiro tique pintar
     (`hefesto_vivo.TIQUE_MS`). Um clique ali dentro ainda leria o desenho como
     se fosse a escolha dela, e ainda apagaria. Enquanto o piloto não marcar o
     que já foi pintado, esta trava é o que separa "ela zerou" de "a tela ainda
@@ -1951,7 +1953,7 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # A TRAVA CONTRA O APAGADOR — 02/09/2026. "Nada diferente do de fábrica" só
     # quer dizer "ela zerou as 21 linhas" DEPOIS que as 21 linhas mostraram o
     # que o perfil guarda. Elas mostram desde que a página foi publicada, mas
-    # não no primeiro instante: entre a carga e o primeiro tique há 500 ms
+    # não no primeiro instante: entre a carga e o primeiro tique há 100 ms
     # (`hefesto_vivo.TIQUE_MS`) em que a tela ainda é o desenho, e nessa janela
     # esta forma quer dizer outra coisa — *o piloto releu o desenho*.
     #

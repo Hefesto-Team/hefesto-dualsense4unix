@@ -162,7 +162,7 @@ def _mesa_do_radio(recarregar: bool = False) -> Any:
 
 #: O CENSO DO BARRAMENTO, lido UMA vez e renovado pelo "Examinar Portas" — a
 #: mesma regra do `_mesa_do_radio` acima, e pelo mesmo motivo: é varredura de
-#: `/sys`, e o tique desta aba é de 500 ms.
+#: `/sys`, e o tique desta aba é de 100 ms.
 _CENSO: Any = None
 
 
@@ -559,7 +559,7 @@ def _pedir_o_exame_de_entrada() -> None:
     gabinete, cravada no arquivo, sobre uma máquina que ninguém examinou.
 
     UMA VEZ SÓ, E EM THREAD. O exame forka `busctl` com teto de 5 s; correr isso
-    no tique de 500 ms seria a janela pedindo ao sistema duas vezes por segundo
+    no tique de 100 ms seria a janela pedindo ao sistema dez vezes por segundo
     o que ele acabou de responder. `_EXAME_PEDIDO` não se re-arma nem quando o
     exame FALHA — quem rearma é o botão **Examinar Portas**, que é gesto dela.
 
@@ -1177,7 +1177,7 @@ def palavra_da_conta(quantas: int) -> str:
     A RESERVA NÃO É DESLEIXO: a cena pode acender uma sexta lacuna no dia em que
     `mapa_da_mesa.CONFISSAO` crescer, e escrever "cinco coisas" sobre seis seria
     a tela afirmando uma contagem que ela não fez. O gerador tem um `raise` para
-    o mesmo caso — ele PARA a geração; aqui, no tique de 500 ms da mesa dela,
+    o mesmo caso — ele PARA a geração; aqui, no tique de 100 ms da mesa dela,
     parar não é opção e o número por extenso vira número.
     """
     return PALAVRA_DA_CONTA.get(int(quantas), str(int(quantas)))
