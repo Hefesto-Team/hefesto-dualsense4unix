@@ -73,6 +73,9 @@ from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
 # oito — que é a divergência silenciosa que este projeto persegue.
 from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
     AVISOS_VIVOS,
+    CADEADO_DICA,
+    CADEADO_ROTULO,
+    ESPERA_DICA,
     MESA_VAZIA,
     RESSALVA_DA_MASCARA,
     mascaras_montaveis,
@@ -519,6 +522,35 @@ CSS = """
      e cada pixel aqui vale três. */
   .cartao .rotulo{color:var(--texto-mudo);line-height:15px;white-space:nowrap}
   .cartao .rotulo b{color:var(--fg);font-weight:500}
+  /* O "PLAYER N" ESMAECIDO — 04/09/2026, decisão [02] desta aba: *"'Player N',
+     esmaecido enquanto espera."* A palavra FICA (D-04 dela, contra a minha
+     recomendação); o que sai é o cartão AFIRMAR um jogador que o jogo ainda não
+     recebeu. Medido em 02/09 na mesa dela: o controle do CABO estava com
+     `player` nulo e o cartão dizia "Player 2" assim mesmo.
+     A COR É A DO PRÓPRIO RÓTULO, e não uma terceira: `--texto-mudo` é o que as
+     outras duas linhas do cartão já usam, e é ela que faz o número "voltar ao
+     nível do resto" em vez de virar um estado novo com cor própria. NADA DE
+     `opacity` — a razão é a mesma do `.degrau.sem-dono` vinte linhas acima: a
+     opacidade mora no ancestral e toda régua de contraste que lê `color` fica
+     cega a ela.
+     ZERO PIXEL: só `color` e `font-weight` mudam, e o peso volta ao do rótulo.
+     Nenhuma medida de caixa se move, então a cena que ela aprovou — os dois
+     controles numerados pelo jogo — continua idêntica. */
+  .cartao .rotulo b.espera{color:var(--texto-mudo);font-weight:400}
+  /* ---------- O CADEADO DA TROCA AUTOMÁTICA — 04/09/2026 ----------
+     A caixa que ela pediu em 23/07 e que voltou para esta aba pela decisão [03].
+     A GRAMÁTICA É A DA LINHA DE AJUDA desta mesma página: 12px, `--texto-mudo`,
+     e o rótulo ao lado do controle. Ela mora no rodapé do quadro Modo, fora das
+     duas seções do interruptor — a troca de perfil vale ligado e desligado.
+     A CONTA DA ALTURA, e ela decide se a linha cabe: 16px de caixa contra os
+     ~28px que a decisão orçou. O miolo pedia 502px de 542 antes desta linha, e
+     a foto de 04/09 mostra 106px de vão sobrando embaixo do último quadro —
+     a folga medida comporta a linha com sobra. */
+  .cadeado{display:flex;align-items:center;gap:6px;margin-top:8px;
+           color:var(--texto-mudo);font-size:12px;line-height:16px;cursor:pointer}
+  .cadeado input{margin:0;width:13px;height:13px;accent-color:var(--purple);
+                 flex:0 0 auto;cursor:pointer}
+  .cadeado:hover{color:var(--fg)}
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;
                display:inline-flex;align-items:center;gap:3px;
                line-height:1;vertical-align:-2px}
@@ -1016,7 +1048,7 @@ def cartao(c, bateria=None):
                 <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:{monta.cor_da_zona(c["cor"])}"></i>
                 <div class="peca-topo">
                 {_desenho(c)}
-                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player {c["jogador"]}</b><br><span data-campo="identidade">{c["nome"]} <span class="pt">•</span> {c["via"]}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%</span></span></span>
+                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="{ESPERA_DICA}"><span data-campo="jogador">Player {c["jogador"]}</span></b><br><span data-campo="identidade">{c["nome"]} <span class="pt">•</span> {c["via"]}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%</span></span></span>
                 </div>
                 <div class="mascara">
 {_chips_de_mascara(c["mascara"])}
@@ -1256,6 +1288,38 @@ MIOLO = f'''
                   title="O Hefesto sai do meio e o jogo fala direto com o controle. Vale no próximo jogo que abrir.">Modo Nativo <span class="sep">·</span> <span class="mud">o DualSense da forma como veio ao mundo</span></span>
           </div>
         </div>
+
+        <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA ----------
+             04/09/2026, decisão [03] do PO sobre esta aba: *"Volta para a
+             Jogar, embaixo de Modo."* É PEDIDO NOMEADO DELA, de 23/07, e a
+             caixa saiu do desenho por escolha minha — declarada na legenda
+             desta página: *"A caixa saiu — o perfil ativo já diz isso"*.
+
+             O QUE MUDOU DESDE ENTÃO, e é o que reverte a escolha: a coluna
+             Atenção passou a ler as fontes do produto, e DUAS delas são o
+             cadeado (`autoswitch_lock_text`) e o detector cego
+             (`texto_do_cadeado_cego`). A tela EXPLICA o cadeado e não oferece
+             onde ligá-lo — em nenhuma das dez abas. Esta é a única posição em
+             que a frase que explica e o botão que resolve ficam na mesma tela.
+
+             FORA DAS DUAS SEÇÕES DO INTERRUPTOR, e é o ponto: `so-ligado` e
+             `so-desligado` trocam com o Hefesto; a troca automática de PERFIL
+             vale nas duas. Pôr a caixa dentro de uma delas a faria sumir
+             justamente no Modo Nativo, que é onde ela continua valendo.
+
+             O RÓTULO E A DICA SÃO DA JANELA ANTIGA, palavra por palavra — o
+             `Gtk.CheckButton` de `home_actions._build_home`. Texto novo de tela
+             é decisão dela; texto que ela já leu, não.
+
+             `data-hef-alvo="marcado"` É O DÉCIMO ALVO, nascido em 04/09 na
+             ONDA0-P e ainda sem um único endereço nas dez páginas. Ele é o
+             único que escreve `el.checked` — os outros nove escreveriam a
+             string `"on"` no `value`, que num checkbox não é o estado. -->
+        <label class="cadeado" title="{CADEADO_DICA}">
+          <input type="checkbox" data-gesto="cadeado"
+                 data-campo="cadeado" data-hef-alvo="marcado">
+          <span>{CADEADO_ROTULO}</span>
+        </label>
 
       </div>
     </div>
@@ -1808,6 +1872,78 @@ def _conferir(doc):
                "um chip cinza saiu sem a razão na dica")
     #    E O CLIQUE FICA NOS TRÊS: a contagem de `data-gesto="mascara"` acima já
     #    o exige, e é ela que impede a cura de virar "o chip sumiu".
+
+    # 10. O "PLAYER N" ESMAECIDO — 04/09/2026, decisão [02] desta aba.
+    #
+    #    SÃO DOIS ELEMENTOS ANINHADOS, e a régua cobra os dois porque cada um
+    #    sozinho é um defeito diferente: só o de fora e o cartão perde o número
+    #    (o piloto escreveria a classe onde deveria haver texto); só o de dentro
+    #    e o número nunca esmaece — que é o estado de hoje.
+    #
+    #    E O DE DENTRO TEM DE SER FOLHA. `escrever()` no elemento com filho
+    #    apaga os filhos e força layout: é a armadilha medida do piloto da
+    #    Controles, e é por isso que o `<b>` leva a CLASSE e o `<span>` de dentro
+    #    leva o TEXTO.
+    esmaece = corpo.count('data-campo="jogador-espera" data-hef-alvo="classe"'
+                          ' data-hef-classe="espera"')
+    exigir(esmaece == len(monta.CONECTADOS),
+           f"esperava {len(monta.CONECTADOS)} números de jogador endereçados "
+           f"para o esmaecido (`jogador-espera` com alvo `classe`), achei "
+           f"{esmaece}")
+    exigir(corpo.count('<span data-campo="jogador">') == len(monta.CONECTADOS),
+           "o número do jogador deixou de ser FOLHA: com `data-campo=\"jogador\"` "
+           "num elemento que tem filho, a pintura apaga os filhos")
+    #    E NENHUM NASCE ESMAECIDO: a cena que ela aprovou tem os dois controles
+    #    numerados PELO JOGO. Um cartão que nascesse com a classe mudaria o
+    #    desenho aprovado — e diria, no desenho, que o jogo não recebeu um
+    #    controle que a própria cena mostra jogando.
+    exigir("<b data-campo=\"jogador-espera\" data-hef-alvo=\"classe\""
+           " data-hef-classe=\"espera\" class=" not in corpo
+           and 'class="espera"' not in corpo,
+           "um número de jogador nasce esmaecido — a cena que ela aprovou tem os "
+           "dois controles recebidos pelo jogo")
+
+    # 11. O CADEADO DA TROCA AUTOMÁTICA — 04/09/2026, decisão [03] desta aba, e
+    #    pedido nomeado dela de 23/07.
+    #
+    #    OS DOIS LADOS, e são o mesmo par de sempre: `data-campo` é por onde a
+    #    verdade CHEGA (o alvo `marcado`, o décimo, é o único que escreve
+    #    `el.checked`) e `data-gesto` é por onde o dedo dela SAI. Um sem o outro
+    #    é uma caixa que mostra e não deixa mudar, ou que deixa mudar e não
+    #    mostra o que o daemon guardou.
+    exigir(corpo.count('data-campo="cadeado" data-hef-alvo="marcado"') == 1,
+           "o cadeado perdeu o endereço de pintura (`cadeado` com alvo "
+           "`marcado`) — a caixa deixaria de dizer o que o daemon guardou")
+    exigir(corpo.count('data-gesto="cadeado"') == 1,
+           "o cadeado perdeu o endereço do clique — a caixa mudaria de marca e "
+           "não mudaria nada no produto")
+    #    A PALAVRA É A DA JANELA ANTIGA, e ela não se digita duas vezes: o
+    #    literal tem dono em `pacotes/a01_jogar`, e a régua da suíte confere
+    #    aquele literal contra o `Gtk.CheckButton` do `home_actions`.
+    exigir(CADEADO_ROTULO in corpo, "o rótulo do cadeado sumiu da tela")
+    exigir(CADEADO_DICA in corpo, "o cadeado ficou sem a razão na dica")
+    #    ELE NASCE DESMARCADO: destravado é o padrão do produto, e marcá-lo no
+    #    desenho afirmaria uma escolha dela que ela não fez.
+    exigir('data-hef-alvo="marcado" checked' not in corpo
+           and 'checked data-campo="cadeado"' not in corpo,
+           "o cadeado nasce marcado — o desenho afirmaria uma escolha dela")
+    #    E ELE FICA FORA DAS DUAS SEÇÕES DO INTERRUPTOR. `so-ligado` e
+    #    `so-desligado` trocam com o Hefesto; a troca automática de PERFIL vale
+    #    nos dois. Dentro de uma delas a caixa sumiria justamente no Modo
+    #    Nativo, onde ela continua valendo — e sumiria em SILÊNCIO, que é o
+    #    modo de falhar que esta casa persegue.
+    if 'class="cadeado"' in corpo:
+        depois = corpo.split('class="hef-modo so-desligado"', 1)
+        exigir(len(depois) == 2 and 'class="cadeado"' in depois[1],
+               "o cadeado subiu para dentro de uma seção do interruptor — ele "
+               "sumiria da tela na outra posição")
+        # E A SEÇÃO FECHOU ANTES DELE: entre o rótulo da seção e a caixa tem de
+        # haver o fim da `escada` e o fim da própria seção. Menos que isso e ela
+        # está DENTRO, com a ordem certa e o aninhamento errado.
+        entre = depois[1].split('class="cadeado"', 1)[0]
+        exigir(entre.count("</div>") >= 2,
+               "o cadeado está aninhado dentro da seção `so-desligado` — a "
+               "ordem no arquivo está certa e o aninhamento, não")
 
     if falhas:
         raise SystemExit("ERRO em 01-jogar — decisão dela desfeita:\n  "

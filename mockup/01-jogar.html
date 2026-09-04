@@ -890,6 +890,35 @@
      e cada pixel aqui vale três. */
   .cartao .rotulo{color:var(--texto-mudo);line-height:15px;white-space:nowrap}
   .cartao .rotulo b{color:var(--fg);font-weight:500}
+  /* O "PLAYER N" ESMAECIDO — 04/09/2026, decisão [02] desta aba: *"'Player N',
+     esmaecido enquanto espera."* A palavra FICA (D-04 dela, contra a minha
+     recomendação); o que sai é o cartão AFIRMAR um jogador que o jogo ainda não
+     recebeu. Medido em 02/09 na mesa dela: o controle do CABO estava com
+     `player` nulo e o cartão dizia "Player 2" assim mesmo.
+     A COR É A DO PRÓPRIO RÓTULO, e não uma terceira: `--texto-mudo` é o que as
+     outras duas linhas do cartão já usam, e é ela que faz o número "voltar ao
+     nível do resto" em vez de virar um estado novo com cor própria. NADA DE
+     `opacity` — a razão é a mesma do `.degrau.sem-dono` vinte linhas acima: a
+     opacidade mora no ancestral e toda régua de contraste que lê `color` fica
+     cega a ela.
+     ZERO PIXEL: só `color` e `font-weight` mudam, e o peso volta ao do rótulo.
+     Nenhuma medida de caixa se move, então a cena que ela aprovou — os dois
+     controles numerados pelo jogo — continua idêntica. */
+  .cartao .rotulo b.espera{color:var(--texto-mudo);font-weight:400}
+  /* ---------- O CADEADO DA TROCA AUTOMÁTICA — 04/09/2026 ----------
+     A caixa que ela pediu em 23/07 e que voltou para esta aba pela decisão [03].
+     A GRAMÁTICA É A DA LINHA DE AJUDA desta mesma página: 12px, `--texto-mudo`,
+     e o rótulo ao lado do controle. Ela mora no rodapé do quadro Modo, fora das
+     duas seções do interruptor — a troca de perfil vale ligado e desligado.
+     A CONTA DA ALTURA, e ela decide se a linha cabe: 16px de caixa contra os
+     ~28px que a decisão orçou. O miolo pedia 502px de 542 antes desta linha, e
+     a foto de 04/09 mostra 106px de vão sobrando embaixo do último quadro —
+     a folga medida comporta a linha com sobra. */
+  .cadeado{display:flex;align-items:center;gap:6px;margin-top:8px;
+           color:var(--texto-mudo);font-size:12px;line-height:16px;cursor:pointer}
+  .cadeado input{margin:0;width:13px;height:13px;accent-color:var(--purple);
+                 flex:0 0 auto;cursor:pointer}
+  .cadeado:hover{color:var(--fg)}
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;
                display:inline-flex;align-items:center;gap:3px;
                line-height:1;vertical-align:-2px}
@@ -1705,6 +1734,38 @@
           </div>
         </div>
 
+        <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA ----------
+             04/09/2026, decisão [03] do PO sobre esta aba: *"Volta para a
+             Jogar, embaixo de Modo."* É PEDIDO NOMEADO DELA, de 23/07, e a
+             caixa saiu do desenho por escolha minha — declarada na legenda
+             desta página: *"A caixa saiu — o perfil ativo já diz isso"*.
+
+             O QUE MUDOU DESDE ENTÃO, e é o que reverte a escolha: a coluna
+             Atenção passou a ler as fontes do produto, e DUAS delas são o
+             cadeado (`autoswitch_lock_text`) e o detector cego
+             (`texto_do_cadeado_cego`). A tela EXPLICA o cadeado e não oferece
+             onde ligá-lo — em nenhuma das dez abas. Esta é a única posição em
+             que a frase que explica e o botão que resolve ficam na mesma tela.
+
+             FORA DAS DUAS SEÇÕES DO INTERRUPTOR, e é o ponto: `so-ligado` e
+             `so-desligado` trocam com o Hefesto; a troca automática de PERFIL
+             vale nas duas. Pôr a caixa dentro de uma delas a faria sumir
+             justamente no Modo Nativo, que é onde ela continua valendo.
+
+             O RÓTULO E A DICA SÃO DA JANELA ANTIGA, palavra por palavra — o
+             `Gtk.CheckButton` de `home_actions._build_home`. Texto novo de tela
+             é decisão dela; texto que ela já leu, não.
+
+             `data-hef-alvo="marcado"` É O DÉCIMO ALVO, nascido em 04/09 na
+             ONDA0-P e ainda sem um único endereço nas dez páginas. Ele é o
+             único que escreve `el.checked` — os outros nove escreveriam a
+             string `"on"` no `value`, que num checkbox não é o estado. -->
+        <label class="cadeado" title="Congela a troca automática: o perfil que você deixou ativo continua valendo mesmo ao abrir qualquer jogo. Desmarque para o Hefesto voltar a escolher o perfil por você.">
+          <input type="checkbox" data-gesto="cadeado"
+                 data-campo="cadeado" data-hef-alvo="marcado">
+          <span>Não trocar de perfil sozinho ao abrir um jogo</span>
+        </label>
+
       </div>
     </div>
 
@@ -2047,7 +2108,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player 1</b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">Player 1</span></b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -2354,7 +2415,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player 2</b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">Player 2</span></b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
