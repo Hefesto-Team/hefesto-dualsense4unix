@@ -968,7 +968,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # O ESPAÇO É O DA GTK, e ela é o dono desta frase:
             # `_update_bateria` escreve `f"{bateria} %"`
             # (`controller_card.py:4910`), e `status_actions._set_battery_text`
-            # recebe a mesma grafia (`status_actions.py:993`). São três lugares
+            # recebe a mesma grafia (`status_actions.py:995`). São três lugares
             # do produto dizendo `N %` e um dizendo `N%`.
             #
             # NÃO HÁ FUNÇÃO DONA PARA IMPORTAR, e é por isso que a frase é
