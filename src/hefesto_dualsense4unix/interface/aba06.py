@@ -639,6 +639,92 @@ CSS = CSS_GLIFO + """
        color:var(--fg);font-weight:600}
   .tog.ligado .pino{background:var(--green);box-shadow:0 0 7px var(--green)}
 
+  /* ---------- O PORTÃO DE MODO APAGA O INTERRUPTOR (D-03 + D-02) ----------
+     Decisão do PO, 04/09/2026 (`2026-09-04-O-PO-DECIDE` §2 `06[01]`):
+     *"Apaga o interruptor e escreve ao lado, na tira de estados."* A janela
+     antiga já faz isso desde sempre (`mouse_actions._sync_mouse_mode_gate`,
+     `blocked = mode != MODE_DESKTOP`); o que faltava aqui era o MOMENTO — a
+     tela aceitava o clique e recusava depois, e ela gastava o clique para
+     descobrir.
+
+     UM CAMPO SÓ, E NENHUM SEGUNDO ENDEREÇO: a razão é escrita numa linha só
+     (`data-campo="modo-portao"`, na tira de estados), e o cinza do interruptor
+     SAI DELA por `:has()`. Com dois campos seria possível pintar um interruptor
+     apagado sem razão, ou uma razão sem interruptor apagado — que é exatamente
+     o que a peça `monta.botao_cinza` evita do outro lado, e pela mesma regra.
+     Aqui não dá para usar aquela peça: ela emite um `.btn`, e o "Status do
+     Modo" é o rótulo `.tog` que ela pediu em 27/08.
+
+     E A MARCAÇÃO NÃO SE ESCREVE NUM COMENTÁRIO DE CSS: a primeira redação deste
+     bloco citava a tag do rótulo por extenso, e a citação SAIU NA PÁGINA — o
+     `<style>` vem antes do corpo, e `test_o_interruptor_tem_os_dois_enderecos`
+     achou a citação em vez do elemento. É a irmã da armadilha do `# noqa-acento`
+     que virou título visível: o que se escreve num gerador chega ao arquivo.
+
+     A GRAMÁTICA DO APAGADO É A DA CASA, letra por letra — `.btn.apagado` do
+     `monta.CSS_FOLHA`: borda sutil, texto mudo, `cursor:not-allowed`. Inventar
+     uma segunda cara de apagado seria a doença que esta casa persegue.
+
+     E ELE CONTINUA RESPONDENDO, como o botão cinza da D-03: nada aqui é
+     `disabled` nem `pointer-events:none`. Quem navega pelo controle chega à
+     razão pelo clique, e o gesto levanta a MESMA frase que está escrita ao lado
+     (`a06_navegacao.RAZAO_DO_PORTAO`).
+
+     O `.laranja` É O GATILHO, e não uma classe nova: o pacote manda a razão
+     dentro de um `<span class="laranja">`, como as outras linhas de estado
+     fazem, e manda `<i class="nada"></i>` quando não há bloqueio — que é o
+     mesmo marcador que apaga a linha. Sem bloqueio não há `.laranja` naquela
+     linha, e o interruptor fica como sempre foi. ---------- */
+  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]{
+       border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]:hover{
+       border-color:var(--border-sutil)}
+  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"] .pino{
+       background:var(--border-sutil);box-shadow:none}
+
+  /* ---------- A TIRA DE AVISO SOB A TABELA DE BOTÕES ----------
+     Decisão do PO, 04/09/2026 (§2 `06[04]`): *"Uma tira de aviso sob a tabela.
+     O que vai ser APAGADO não mora num hover."*
+
+     Ela nasce VAZIA e não ocupa nada: `:empty` no desenho, `.nada` quando o
+     pacote diz que não há o que dizer — as duas metades, como a tira de estados
+     já faz, porque a linha some por dois caminhos diferentes (nunca pintada, e
+     pintada com "nada"). ---------- */
+  .aviso-tabela{margin-top:8px;display:flex;flex-direction:column;gap:4px;
+       font-size:11.5px;line-height:1.45;color:var(--texto-mudo)}
+  .aviso-tabela:empty{display:none}
+  .aviso-tabela:has(.nada){display:none}
+  .aviso-tabela b{color:var(--texto-suave);font-weight:600}
+
+  /* ---------- A MARCA DE "NÃO DISPARA" NA COLUNA DO NOME ----------
+     Decisão do PO, 04/09/2026 (§2 `06[02]`): as três regiões do touchpad
+     **ficam** — é a D-15 dela, *"pedi pra tirar o texto não o touch mostrando
+     os toques"* — **com a marca de que não disparam**. A marca nasce FIXA: a
+     marca VIVA (que acende só quando o touchpad é o ponteiro do sistema)
+     espera o daemon publicar esse dado, e isso é sprint própria.
+
+     Ela cabe na coluna do nome e não custa linha nenhuma, que é o que a decisão
+     pede. O texto inteiro está no `title` e no `?` da tela. ---------- */
+  .marca-nao-dispara{margin-left:7px;padding:0 5px;border-radius:4px;
+       border:1px solid var(--border-sutil);color:var(--texto-mudo);
+       font-size:9.5px;line-height:14px;display:inline-block;white-space:nowrap;
+       cursor:help}
+  /* A COLUNA DO NOME CRESCE **SÓ DENTRO DAS POP-UPS**, e o número é medido, não
+     escolhido: a decisão do PO diz que a marca *"cabe na coluna do nome"*, e ela
+     NÃO cabia — `.tab td.b` tem `width:176px`, `white-space:nowrap` e
+     `overflow:hidden`, e a linha mais longa das 21 ("Touchpad · Clique
+     esquerdo") já usa ~168px. Fotografado em 04/09/2026: a marca saía cortada,
+     com dois caracteres à mostra por baixo do `<select>` vizinho.
+
+     Quando o instrumento e o aparelho discordam, o aparelho ganha: a marca é a
+     decisão, e o que cede é o número. 250px deixam ~350px para a segunda
+     coluna, que é mais do que a maior opção da lista pede ("Abrir e fechar o
+     teclado na tela", ~200px).
+
+     `.tn-cx` ESCOPA A REGRA: as tabelas da ABA (os cinco combos) continuam com
+     os 176px que ela aprovou — lá não há marca nenhuma a caber. */
+  .tn-cx .tab th:first-child,.tn-cx .tab td.b{width:250px}
+
   /* A DENSIDADE DE 22px FICA SÓ DENTRO DAS TELAS DE CIMA, e o número diz por quê.
      Cada uma das duas telas de botões tem 21 listas em 21 linhas, e mede 660px
      com elas a 22px. No token de 36 as linhas sozinhas passariam de 750px, e a
@@ -1292,6 +1378,23 @@ def linha_combo(n, pecas, faz):
 _PADRAO_DOS_BOTOES = {b: rotulo_da_acao(a)
                       for b, a in _padrao_dos_botoes().items()}
 
+#: A MARCA DAS TRÊS REGIÕES DO TOUCHPAD — decisão do PO, 04/09/2026, §2 `06[02]`:
+#: *"Ficam, com a marca de que não disparam."*
+#:
+#: ELA NASCE FIXA, e isso é a decisão e não uma economia: a marca VIVA (que
+#: acende só quando o touchpad é o ponteiro do sistema) depende de o daemon
+#: publicar o `ponteiro_do_sistema` do leitor no estado — hoje ele só existe
+#: dentro do daemon —, e isso é sprint própria. Está no relato desta frente.
+#:
+#: O TEXTO CURTO FICA NA COLUNA e o inteiro no `title`: a decisão diz, com todas
+#: as letras, que a marca cabe na coluna do nome e não custa linha nova.
+MARCA_DO_TOUCHPAD = (
+    '<span class="marca-nao-dispara" title="O touchpad do controle continua '
+    "sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto "
+    "não transforma o clique dele em tecla. A escolha fica guardada no perfil e "
+    'volta a valer no dia em que o touchpad deixar de ser o ponteiro.">'
+    "não dispara</span>")
+
 BOTOES = [
     (gl("cross"),                                "cross"),
     (gl("circle"),                               "circle"),
@@ -1315,9 +1418,17 @@ BOTOES = [
     (gl("share"),                                "create"),
     # as TRÊS regiões do touchpad ganharam linha — ela, 27/08: "o touchpad tem o
     # click pra esquerda, linha do clique direita linha do click centro".
-    (gl("touchpad", rot=TOUCH_REGIOES[0]),       "touchpad_left_press"),
-    (gl("touchpad", rot=TOUCH_REGIOES[1]),       "touchpad_right_press"),
-    (gl("touchpad", rot=TOUCH_REGIOES[2]),       "touchpad_middle_press"),
+    #
+    # E ELAS GANHARAM A MARCA — 04/09/2026, decisão do PO (§2 `06[02]`) sobre a
+    # D-15 dela. A escolha de OFERECÊ-LAS é dela e fica; o que a marca cura é a
+    # tela PROMETER um clique que o produto não dispara. A medição:
+    # `daemon/subsystems/keyboard._combine_with_touchpad:442` se cala quando o
+    # touchpad é o ponteiro do sistema, e a regra de udev instalada nesta
+    # máquina só esconde os touchpads VIRTUAIS — o físico do DualSense continua
+    # sendo o mouse do computador.
+    (gl("touchpad", rot=TOUCH_REGIOES[0]) + MARCA_DO_TOUCHPAD, "touchpad_left_press"),
+    (gl("touchpad", rot=TOUCH_REGIOES[1]) + MARCA_DO_TOUCHPAD, "touchpad_right_press"),
+    (gl("touchpad", rot=TOUCH_REGIOES[2]) + MARCA_DO_TOUCHPAD, "touchpad_middle_press"),
 ]
 SEM_TROCA = REMAP[-1][1][0]
 
@@ -1440,11 +1551,34 @@ VALEM_PARA = (
     + rotulo_de_quem_navega(NAVEGA, QUEM_NAVEGA["nome"], QUEM_NAVEGA["via"])
     + "</b>.")
 
+#: AS DUAS RESPOSTAS QUE ESTA DICA PASSOU A DAR — 04/09/2026, decisões do PO:
+#:
+#:   · §2 `06[03]` — *"O botão PS fica fora, e a razão vira dica."* Ele é a
+#:     única saída de emergência (os cinco combos desta aba mais o modo jogo), e
+#:     como o PS chega ao teclado virtual pelo mesmo caminho dos outros, dar-lhe
+#:     uma tecla o faria digitar SEM parar de abrir a Steam. A janela antiga
+#:     oferece; esta não, e agora diz por quê em vez de a tabela parecer
+#:     incompleta;
+#:   · §2 `06[02]` — a frase que explica a marca das três regiões do touchpad.
+#:     A marca diz *o quê*; a dica diz *por quê* e o que continua guardado.
+#:
+#: AS DUAS ENTRAM NO `?` E NÃO NA TELA, e é a regra dela de 30/08: *"texto na
+#: interface é zero, só deixamos se for algo extremamente importante, e se for
+#: de média importância vira tooltip"*. O que é importante o bastante para
+#: ocupar linha é o que se PERDE, e isso mora na tira sob a tabela.
 D_DEFINICOES = ajuda(
     f"As <b>{len(BOTOES)} linhas</b> de cada botão do controle: <b>o que ele faz</b> "
     "— mouse, tecla ou programa, tudo na mesma lista.<br><br>"
     "A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa "
     "que nomeia as peças do desenho.<br><br>"
+    "<b>O botão PS não entra</b>, e é de propósito: ele é a saída de emergência "
+    f"— os {len(COMBOS)} gestos desta aba saem dele, e segurá-lo alterna o modo "
+    "jogo. Como o PS chega ao teclado pelo mesmo caminho dos outros, dar uma "
+    "tecla a ele faria o botão digitar <b>sem parar</b> de abrir a Steam.<br><br>"
+    "<b>As três regiões do touchpad estão marcadas.</b> Enquanto o touchpad do "
+    "controle for o mouse do computador, o Hefesto não transforma o clique dele "
+    "em tecla — a escolha fica guardada no perfil e volta a valer no dia em que "
+    "isso mudar.<br><br>"
     + VALEM_PARA)
 D_REMAPEAMENTO = ajuda(
     f"As mesmas <b>{len(BOTOES)} linhas</b>, na mesma ordem, dizendo outra coisa: "
@@ -1565,10 +1699,29 @@ ATIVACAO_DIR = [
 #: VAZIAS ATÉ O HEFESTO FALAR: o `:empty` do CSS as apaga, e a fileira dos
 #: botões sobe. Nenhuma das três afirma coisa alguma sobre uma máquina que
 #: ninguém olhou — as próprias funções do produto devolvem `""` nesse caso.
+#: E DUAS ENTRARAM NA ONDA 2 — 04/09/2026, as duas por decisão do PO e as duas
+#: na MESMA tira, que é o que a decisão pede em vez de um lugar novo:
+#:
+#:   · `modo-portao`   §2 `06[01]`: a razão de o interruptor do "Status do Modo"
+#:                     estar apagado. Ela é DUAS coisas com um endereço só — a
+#:                     frase desta linha e, pela regra `:has()` da folha desta
+#:                     aba, o cinza do próprio interruptor. A frase é a MESMA
+#:                     que o gesto levanta ao recusar
+#:                     (`a06_navegacao.RAZAO_DO_PORTAO`);
+#:   · `teclado-custo` §2 `06[05]`: o que sai junto enquanto a "Função do
+#:                     teclado" estiver em "Desativado". A dica `?` já dizia o
+#:                     custo ANTES do ato e some com o ponteiro; a pergunta
+#:                     *"por que o L3 parou de abrir o teclado?"* chega dias
+#:                     depois, e nesse dia esta linha ainda está aqui.
+#:
+#: A ORDEM É A DA LEITURA: primeiro o que impede (o portão), depois o mouse,
+#: depois o teclado. As cinco continuam se apagando sozinhas.
 ESTADOS = '''
         <div class="estados">
+          <div class="estado portao" data-campo="modo-portao" data-hef-alvo="html"></div>
           <div class="estado" data-campo="rato-estado" data-hef-alvo="html"></div>
           <div class="estado" data-campo="teclado-bloqueio" data-hef-alvo="html"></div>
+          <div class="estado" data-campo="teclado-custo" data-hef-alvo="html"></div>
           <div class="estado" data-campo="teclado-osk" data-hef-alvo="html"></div>
         </div>'''
 
@@ -1636,7 +1789,7 @@ PONTO_MAPA = [
 # única e comum às duas tabelas, não podia dizer.
 # ---------------------------------------------------------------------------
 def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padrao,
-                   fechar=""):
+                   fechar="", aviso=""):
     """Uma das duas telas de botões.
 
     Os NOMES dos gestos vêm por argumento, e desde 02/09/2026 são TRÊS: o de
@@ -1657,6 +1810,13 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
     A tela que passa `fechar=""` continua sem os nomes, e é o caso da de
     remapeamento: lá não há trava a soltar, porque o `Guardar` dela não tem
     dono no produto (ver `SEM_GESTO`).
+
+    O `aviso` É A TIRA SOB A TABELA — 04/09/2026, decisão do PO (§2 `06[04]`).
+    Só a tela de Definições a recebe, e a razão é a mesma que dá o `data-campo`
+    às 21 listas de lá e não às da outra: o que a tira nomeia é o que o
+    "Guardar" DESTA tela substitui, e o "Guardar" da outra não tem dono no
+    produto. Uma tira que avisasse sobre um botão que não grava nada seria a
+    tela inventando um risco.
     """
     x = f' data-gesto="{fechar}"' if fechar else ""
     return f'''
@@ -1679,6 +1839,7 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
 {linhas}
         </table>
       </div>
+{aviso}
     </div>
     <div class="tn-rod grupo-padrao">
       <a class="btn" href="#"{x}>Cancelar</a>
@@ -1708,6 +1869,19 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
 #: cima; e o "Guardar" ao lado nunca via uma forma diferente do perfil.
 LINHA_DE_BOTAO = "linha-de-botao"
 
+#: A TIRA DE AVISO SOB A TABELA — nasce VAZIA e o pacote a escreve a cada tique
+#: (`a06_navegacao._aviso_da_tabela`). Decisão do PO, 04/09/2026, §2 `06[04]`:
+#: *"Uma tira de aviso sob a tabela. O que vai ser APAGADO não mora num hover."*
+#:
+#: NENHUMA FRASE É ESCRITA AQUI, e é a mesma disciplina da tira de estados: o
+#: que ela diz sai do PRODUTO — os nomes dos botões de
+#: `input_actions.humanize_button`, as teclas de `humanize_binding`, e o que
+#: cada linha faz de `core/acoes_de_botao`. O que este bloco faz é dar LUGAR.
+#:
+#: O ALVO É `html` porque as três frases levam `<b>` e vêm em `<div>` cada uma.
+AVISO_DA_TABELA = ('        <div class="aviso-tabela" data-campo="aviso-da-tabela"'
+                   ' data-hef-alvo="html"></div>')
+
 TELA_DEFINICOES = tela_de_botoes(
     "definicoes-mouse", "Definições Controle e Mouse", D_DEFINICOES,
     "O que ele faz",
@@ -1715,10 +1889,22 @@ TELA_DEFINICOES = tela_de_botoes(
         f'          <tr><td class="b">{b}</td>'
         f'<td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], gesto=LINHA_DE_BOTAO, linha=i, campo=f"acao-{i}")}</td></tr>'
         for b, i in BOTOES),
+    # A CONFIRMAÇÃO GANHOU A METADE QUE FALTAVA — 04/09/2026, e é o defeito §3-2
+    # dito na tela. Ela dizia só *"as 21 linhas de o que cada botão faz"* e
+    # **nunca usava a palavra atalhos**, sendo que o gesto zera os DOIS campos
+    # do perfil (`key_bindings` e `button_actions`), direto no disco e sem
+    # desfazer. Quem tivesse escrito "Ctrl + W" na janela antiga perdia isso
+    # neste clique, com a pergunta falando de outra coisa.
+    #
+    # ZERAR OS DOIS CONTINUA SENDO O CERTO — zerar só um deixaria a tabela
+    # metade de fábrica, com o botão dizendo o contrário. O que estava errado
+    # era a pergunta, não o ato.
     f"Devolver ao de fábrica as {len(BOTOES)} linhas de <b>o que cada botão faz</b>? "
-    "O <b>Remapeamento dos botões</b> não é tocado.",
+    "Isto apaga também os <b>atalhos de teclado</b> que este perfil guarda — "
+    "inclusive os que você escreveu na janela antiga e esta lista não sabe "
+    "mostrar. O <b>Remapeamento dos botões</b> não é tocado.",
     guardar="guardar-definicoes", padrao="padrao-definicoes",
-    fechar="fechar-definicoes")
+    fechar="fechar-definicoes", aviso=AVISO_DA_TABELA)
 
 TELA_REMAPEAMENTO = tela_de_botoes(
     "remapeamento", "Remapeamento dos botões", D_REMAPEAMENTO,
