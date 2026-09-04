@@ -306,6 +306,34 @@ def _tinta(rgb: Any) -> str:
     return str(monta.tom_da_casa(_hex(rgb)))
 
 
+def chave_do_override(uniq: str) -> str:
+    """O `uniq` na forma em que o DISCO guarda a chave de `controllers`.
+
+    UM DONO PARA O ENDEREÇO DO CONTROLE DENTRO DO PERFIL, e ele é o `norm_mac`
+    do backend — o MESMO que `profiles/schema._validate_controllers_keys` usa
+    para canonizar a chave na entrada. Escrever `d4:2f:…` onde o disco guarda
+    `d42f…` criaria um segundo dono para o mesmo controle: o override que ela
+    gravou pela tela e o que o backend enumera deixariam de ser o mesmo.
+
+    POR QUE ELE PRECISOU EXISTIR AGORA: até 03/09/2026 esta aba só LIA o
+    override (`brilho_do_controle`), e lia com a string crua. Isso funciona na
+    mesa dela — medido no daemon vivo, o `state_full` publica
+    `uniq='143a9a0000ab'`, já normalizado —, mas não é contrato: o `norm_mac`
+    aceita as duas formas justamente porque as duas circulam, e a régua desta
+    casa endereça com `aa:bb:cc:00:00:01`. Com o trilho passando a ESCREVER, ler
+    numa forma e gravar noutra seria a divergência clássica: o brilho gravado no
+    `aabbcc000001` e a coluna imprimindo o global, para sempre.
+
+    `""` VOLTA `""` — quem decide o que fazer sem alvo é quem chamou (`_uniq`,
+    que recusa dizendo). Inventar uma chave aqui gravaria no controle errado.
+    """
+    if not uniq:
+        return ""
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    return norm_mac(uniq) or uniq
+
+
 def brilho_do_controle(p: dict[str, Any] | None, uniq: str) -> float | None:
     """O brilho da barra DAQUELE controle: o override, ou o do perfil.
 
@@ -330,7 +358,20 @@ def brilho_do_controle(p: dict[str, Any] | None, uniq: str) -> float | None:
         return None
     leds = p.get("leds")
     global_ = leds.get("lightbar_brightness") if isinstance(leds, dict) else None
-    meu = (p.get("controllers") or {}).get(uniq)
+    #: OS DOIS LADOS PASSAM PELO DONO — ver `chave_do_override`. A comparação
+    #: era `dict.get(uniq)`, string contra string, até 03/09/2026: funciona na
+    #: mesa dela (o `state_full` publica `uniq='143a9a0000ab'`, já normalizado)
+    #: e falha em toda outra forma do mesmo endereço. Com o trilho passando a
+    #: ESCREVER — e a escrita tem de canonizar, porque é o que o esquema exige
+    #: (`_validate_controllers_keys`) —, ler cru gravaria no `aabbcc000001` e
+    #: imprimiria o global, para sempre.
+    #:
+    #: NORMALIZAR OS DOIS LADOS, e não só o de cá: as chaves do dicionário vêm
+    #: do JSON, e um perfil editado à mão guarda `aa:bb:cc:…` — o próprio
+    #: esquema aceita e canoniza essa forma na entrada.
+    alvo = chave_do_override(uniq)
+    meu = next((v for k, v in (p.get("controllers") or {}).items()
+                if chave_do_override(str(k)) == alvo), None)
     seus = (meu.get("leds") or {}) if isinstance(meu, dict) else {}
     b = seus.get("lightbar_brightness", global_) if isinstance(seus, dict) else global_
     if b is None:
@@ -339,6 +380,27 @@ def brilho_do_controle(p: dict[str, Any] | None, uniq: str) -> float | None:
         return max(0.0, min(1.0, float(b)))
     except (TypeError, ValueError):
         return None
+
+
+#: O NOME DO TRILHO PARA QUEM NÃO VÊ A TELA. O `aria-label` é a única coisa que
+#: um leitor de tela anuncia num `<input type="range">` sem rótulo próprio — a
+#: linha "Brilho" da primeira coluna é uma célula de grid, não um `<label>`.
+ROTULO_DO_BRILHO = "Brilho da barra de luz deste controle"
+
+#: A DICA DO TRILHO, e ela diz A CONSEQUÊNCIA — decisão dela, 03/09/2026:
+#: perguntada se mexer no brilho grava o perfil na hora ou espera o "Salvar
+#: Perfil", ela respondeu **"Grava na hora"**. Um gesto que escreve no disco
+#: dela sem dizer que escreve é a metade do defeito que esta casa mais paga; a
+#: outra metade é o botão que aceita o toque e não age, que era o que este
+#: trilho fazia até hoje.
+#:
+#: ELA NÃO NOMEIA O PERFIL, e a razão é o canal: `title` é ATRIBUTO, e o gerador
+#: só sabe o que sabia quando gerou. Uma frase com o nome do perfil ficaria
+#: CONGELADA no nome de hoje na tela dela para sempre — é a mesma armadilha que
+#: tirou a dica da célula `LEDs` do desenho, em 02/09.
+DICA_DO_BRILHO = ("Arraste para mudar o brilho da barra deste controle. "
+                  "Ao soltar, a barra acende no brilho novo e o valor é "
+                  "gravado no perfil ativo — não espera o Salvar Perfil.")
 
 
 def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:
@@ -1646,6 +1708,16 @@ def _so_abriu_o_seletor(o: dict[str, Any]) -> bool:
     SEM `evento` NO CLIQUE, NADA MUDA. As provas do contrato e a régua chamam o
     gesto com a carga mínima, e uma carga sem `evento` não é a abertura de nada
     — o guarda só fecha quando os DOIS campos dizem que foi abertura.
+
+    E ELE VALE PARA O TRILHO PELO MESMO MOTIVO, com o tempo invertido —
+    03/09/2026. Um `<input type="range">` clicado na pista dispara `input`,
+    depois `change` e depois `click`; o BOOTSTRAP escuta `change` e `click`, e
+    sem este guarda cada clique na pista viraria DUAS gravações no perfil dela e
+    DUAS escritas no rádio. No seletor de cor o `click` chega ANTES da escolha e
+    carrega o valor velho; no trilho ele chega DEPOIS e carrega o mesmo valor.
+    Nos dois casos ele não é um pedido — o pedido é o `change` —, e nos dois a
+    resposta certa é sair calado: recusar dizendo poria uma frase de erro na
+    tela dela por um gesto que ela fez uma vez só.
     """
     return (str(o.get("tipo") or "").lower() == "input"
             and str(o.get("evento") or "").lower() == "click")
@@ -1754,10 +1826,30 @@ def _textos_do_desfecho(brilho: float | None, apagando: bool) -> tuple[str, str]
             str(lightbar_actions._TOAST_COR_ENVIADA).format(pct=pct))
 
 
+#: "PERGUNTE AO PERFIL" — o brilho que `_escrever_a_cor` usa quando quem chama
+#: não tem um na mão. Ele não é `None`: `None` é um valor legítimo deste
+#: parâmetro e quer dizer *"não sei o brilho"* (o `led.set` sai sem o campo e o
+#: daemon assume 1.0). Um default `None` faria o gesto do trilho não ter como
+#: dizer "mande SEM brilho" — e, pior, faria os três gestos de cor perderem a
+#: leitura do perfil no dia em que alguém passasse `None` por engano.
+_DO_PERFIL: Any = object()
+
+
 def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
                     rgb: tuple[int, int, int], *,
-                    apagando: bool = False) -> None:
+                    apagando: bool = False,
+                    brilho: Any = _DO_PERFIL) -> None:
     """O CAMINHO ÚNICO de escrita de cor desta aba — com o brilho e com a frase.
+
+    O `brilho` CHEGA PRONTO OU SE PERGUNTA AO PERFIL, e o parâmetro nasceu em
+    03/09/2026 com o trilho que grava. Os três gestos de COR não têm brilho na
+    mão — eles pintam com o que já está guardado —, e para eles nada muda: o
+    default `_DO_PERFIL` lê `brilho_do_controle`, que é o MESMO número que a
+    coluna imprime. Quem passa o valor é o gesto `brilho`, e a razão é de ORDEM:
+    ele precisa aplicar no aparelho o número que ela ACABOU de escolher, e não
+    depender de a gravação em disco ter acontecido primeiro. Sem o parâmetro,
+    "aplicar" e "guardar" ficariam presos numa ordem só — e um disco que
+    recusasse a escrita levaria junto a aplicação, que não tem nada a ver.
 
     ELE É O `_aplicar_cor_no_controle` DA GTK, no que esta tela pode ter
     (`app/actions/lightbar_actions.py:881`). Duas coisas que faltavam, e as duas
@@ -1806,7 +1898,8 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     """
     from hefesto_dualsense4unix.app.actions.lightbar_actions import frase_do_envio
 
-    brilho = brilho_do_controle(perfil.ativo(ctx.state.get("active_profile")), uniq)
+    if brilho is _DO_PERFIL:
+        brilho = brilho_do_controle(perfil.ativo(ctx.state.get("active_profile")), uniq)
     corpo = p.led_set_detalhado(rgb, brightness=brilho, uniq=uniq)
     if corpo is None:
         raise RuntimeError(sem_resposta_do_daemon())
@@ -1977,6 +2070,197 @@ def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                     player_slot_color(_numero(ctx, dele or {"uniq": uniq})))
 
 
+def _pct_pedido(o: dict[str, Any]) -> int:
+    """Os 0-100 que o trilho mandou, validados PELO ESQUEMA e não por mim.
+
+    A FAIXA TEM DONO: `app/draft_config.LedsDraft.lightbar_brightness` é
+    `int, ge=0, le=100` — o mesmo campo que o `GtkScale` da janela estável
+    alimenta. Digitar `0 <= n <= 100` aqui seria a segunda declaração da mesma
+    faixa, e a que envelheceria calada no dia em que o produto mudasse a escala.
+    Aqui só se traduz a recusa do pydantic para uma frase de tela.
+
+    `valor` É A PORTA, e é o que o BOOTSTRAP manda de todo elemento que tem
+    `value` — num `<input type="range">` é a posição do polegar, como string.
+    """
+    from hefesto_dualsense4unix.app.draft_config import LedsDraft
+
+    cru = str(o.get("valor") or "").strip()
+    try:
+        return int(LedsDraft(lightbar_brightness=int(float(cru))).lightbar_brightness)
+    except (TypeError, ValueError) as erro:
+        raise ValueError(
+            f"brilho: o trilho mandou {cru!r}, que não é uma porcentagem de "
+            f"0 a 100 ({erro})") from erro
+
+
+def _fracao_do_disco(pct: int) -> float:
+    """Os 0-100 da TELA na escala em que o PERFIL guarda o brilho (0.0-1.0).
+
+    A CONTA TEM DONO, e ela é `app/draft_config._leds_draft_to_config` — o
+    `leds.lightbar_brightness / 100.0` que o "Salvar Perfil" da janela estável
+    já faz com o mesmo número. As duas escalas convivem de propósito e estão
+    declaradas nos dois esquemas: `LedsDraft` é `int 0-100` (é o que a tela
+    mostra) e `LedsConfig` é `float 0.0-1.0` (é o que o disco guarda). Digitar
+    o `/100` aqui seria a terceira cópia, e a primeira a errar no dia em que a
+    escala mudar.
+
+    ELE É PRIVADO POR CONVENÇÃO DE NOME, e não por contrato — do mesmo jeito que
+    este arquivo já lê `lightbar_actions._AVISO_HEFESTO_DESLIGADO`.
+    **RELATADO:** a conversão entre as duas escalas merece nome público; é
+    `app/draft_config.py`, fora do território deste arquivo.
+    """
+    from hefesto_dualsense4unix.app.draft_config import (
+        LedsDraft,
+        _leds_draft_to_config,
+    )
+
+    so_o_brilho = _leds_draft_to_config(LedsDraft(lightbar_brightness=pct),
+                                        only_fields={"lightbar_brightness"})
+    return float(so_o_brilho.lightbar_brightness)
+
+
+def _com_o_brilho_gravado(prof: Any, uniq: str, pct: int) -> Any:
+    """O perfil com o brilho DESTE controle trocado, ou `None` se nada mudou.
+
+    `None` EVITA O BARULHO, e é a mesma regra do `_com_os_gatilhos` da aba
+    Gatilhos: regravar um perfil idêntico troca a data do arquivo e cria um
+    backup em `.historico/` por um arraste que voltou ao mesmo lugar.
+
+    O ALVO É O OVERRIDE DO CONTROLE, e não a seção global — decisão do enunciado
+    desta frente, e ela tem base medida: `ControllerOverrides.leds` existe desde
+    a PERFIL-02 e `manager._controllers_to_led_scales` já distribui o brilho por
+    MAC. **E esta aba não tem outro alvo possível:** a fita do topo é INERTE
+    aqui desde 28/08 (decisão dela — os quatro controles ficam lado a lado e
+    *"não há escolhido"*), então cada trilho pertence a UMA coluna e a uma só.
+    Gravar no global faria o trilho do P2 mudar o brilho do P1, que é a mesma
+    contradição que o `_janela_do_desfecho` já anota sobre o ramo "Todos".
+
+    A FUSÃO É POR CAMPO, e o esquema a escreve: um override PARCIAL nunca apaga
+    o global no replug (PERFIL-01). Por isso o ramo do `model_copy` existe — os
+    overrides do disco dela HOJE são `{"lightbar": [255, 0, 0]}` e nada mais, e
+    trocar a seção inteira por uma que só fala de brilho apagaria a cor que ela
+    escolheu para aquele controle. `save_profile` serializa as entradas do mapa
+    com `exclude_unset`, então o que não foi tocado continua ausente do arquivo.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    fracao = _fracao_do_disco(pct)
+    chave = chave_do_override(uniq)
+    atuais = dict(prof.controllers or {})
+    dele = atuais.get(chave) or ControllerOverrides()
+    antes = dele.leds
+    if antes is None:
+        from hefesto_dualsense4unix.app.draft_config import (
+            LedsDraft,
+            _leds_draft_to_config,
+        )
+
+        novos = _leds_draft_to_config(LedsDraft(lightbar_brightness=pct),
+                                      only_fields={"lightbar_brightness"})
+    else:
+        if antes.lightbar_brightness == fracao:
+            return None
+        novos = antes.model_copy(update={"lightbar_brightness": fracao})
+    atuais[chave] = dele.model_copy(update={"leds": novos})
+    return prof.model_copy(update={"controllers": atuais})
+
+
+@gesto("04-iluminacao.html", "brilho")
+def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Ela arrastou o trilho. O brilho vai AO APARELHO e AO DISCO, na hora.
+
+    DECISÃO DELA, 03/09/2026. Perguntada se mexer no brilho grava o perfil na
+    hora ou espera o "Salvar Perfil": **"Grava na hora"**.
+
+    O QUE ISSO DESFAZ, e estava na tela: o trilho JÁ ERA DESENHADO como slider —
+    a regra `.cheio::after` punha um knob de 12px na ponta da barra roxa — e não
+    fazia nada. Ela via `100%`, arrastava, e o número não mudava. O
+    `docs/data/paridade-gtk-html.csv` a chamava de *"a maior falta desta aba"*.
+
+    POR QUE GRAVAR É A ÚNICA SAÍDA COERENTE, e a razão é medida: esta interface
+    NÃO TEM RASCUNHO (decisão dela de 01/09 — *"clicar na cor já deveria aplicar
+    a cor no controle"*), e o número que a coluna imprime é lido do PERFIL EM
+    DISCO por `brilho_do_controle`. Sem gravar, o valor voltaria sozinho ao
+    velho no tique seguinte, e o gesto seria mais um botão que aceita o toque e
+    não age — a família de defeito que o mapa desta casa nomeia dezesseis vezes.
+
+    OS TRÊS TEMPOS, E A ORDEM IMPORTA:
+
+        1. a COR PEDIDA sai da tela com o brilho VELHO — `cor_escolhida` inverte
+           a escala do daemon (D8: o `lightbar_rgb` é PÓS-escala), e invertê-la
+           com o brilho NOVO devolveria uma cor que ela nunca pediu;
+        2. o DISCO recebe o número novo. Ele é a promessa do gesto, e é o que
+           sobrevive a um `profile.switch`;
+        3. o APARELHO recebe a mesma cor com o brilho NOVO, passado no
+           parâmetro — e não relido do disco. Assim a aplicação não depende de a
+           gravação ter dado certo, e um disco cheio não apaga a barra dela.
+
+    ESCREVE NO DISCO DELA, e por isso ele entra em `hefesto_vivo.PERIGOSOS`: a
+    prova botão a botão roda aba por aba e arrastaria este trilho para o valor
+    que estivesse na tela, gravando no perfil ATIVO. É o molde do `("*",
+    "salvar")` e do `guardar` da aba Gatilhos, pelo mesmo motivo.
+
+    NÃO É `perfil.gravar_e_reaplicar`, e o preço está medido em 03/09 no
+    `a03_gatilhos._gravar_so_o_gatilho`: aquele caminho termina em
+    `profile_switch`, que manda o daemon reaplicar o perfil INTEIRO — e a barra
+    que ela tinha DESLIGADO acende de novo, sem nada na tela dizer que ia
+    acontecer. Um trilho de brilho é o escopo mais estreito desta aba; ele não
+    pode ser o gesto que desfaz escolha viva dela em outra célula.
+
+    O `click` QUE VEM DEPOIS DO `change` NÃO É UM SEGUNDO PEDIDO. Medido no
+    contrato do próprio ouvinte: um `<input type="range">` clicado na pista
+    dispara `input`, `change` e `click`, nesta ordem, e o BOOTSTRAP escuta os
+    dois últimos. Sem o guarda, um clique na pista gravaria DUAS vezes e mandaria
+    DUAS escritas ao rádio. `_so_abriu_o_seletor` já era exatamente esse guarda,
+    do outro lado do mesmo problema.
+
+    SEM COR CONHECIDA, GUARDA E DIZ. Nos quatro estados de ressalva do motor
+    (Nativo, a Steam segurando o `fd`, cor desconhecida) não há cor a reescalar,
+    e mandar preto APAGARIA a barra por um arraste de brilho. O número vai para
+    o disco — que é o que ela pediu — e o cartão diz que a barra não mudou
+    agora. Entre a frase no cartão e o silêncio, o silêncio é a mentira.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("brilho: o clique não disse em qual controle")
+    if _so_abriu_o_seletor(o):
+        return
+    pct = _pct_pedido(o)
+
+    nome = str(ctx.state.get("active_profile") or "").strip()
+    if not nome:
+        raise RuntimeError(
+            "não há perfil ativo agora, e o brilho da barra é do perfil — não "
+            "da máquina. Escolha um perfil na aba Perfis.")
+
+    #: A COR PEDIDA COM O BRILHO VELHO — ver o tempo 1 da docstring.
+    from hefesto_dualsense4unix.app.widgets.controller_card import (
+        cor_do_swatch,
+        rotulo_lightbar,
+    )
+
+    dele = next((c for c in ctx.conectados if str(c.get("uniq") or "") == uniq), None)
+    if dele is None:
+        raise RuntimeError(
+            "este controle não está na mesa agora — não há barra em que "
+            "aplicar o brilho.")
+    velho = brilho_do_controle(perfil.ativo(nome), uniq)
+    recado, _base = rotulo_lightbar(dele, ctx.state)
+    pedida = cor_escolhida(cor_do_swatch(dele), velho)
+
+    loader = perfil._com_o_src()
+    novo = _com_o_brilho_gravado(loader.load_profile(nome), uniq, pct)
+    if novo is not None:
+        loader.save_profile(novo, origem="interface-nova")
+
+    if recado is not None or not pedida:
+        porque = recado or "o produto não sabe de que cor ela está"
+        raise RuntimeError(
+            f"guardei o brilho em {pct}% no perfil deste controle. A barra não "
+            f"mudou agora porque não há cor a reacender: {porque}.")
+    _escrever_a_cor(ctx, p, uniq, tuple(pedida)[:3], brilho=_fracao_do_disco(pct))
+
+
 @gesto("04-iluminacao.html", "player")
 def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Dar o Player N a este controle." `ipc_bridge.identity_number_set`.
@@ -2017,7 +2301,10 @@ METODOS = {"lightbar.reset"}
 #: teste, para que ligar uma aba não exija editar um arquivo que oito pessoas
 #: editariam ao mesmo tempo.
 PAGINA = "04-iluminacao.html"
-PISO_DA_ABA = 4
+#: 4 → 5 EM 03/09/2026: o `brilho` nasceu, e com ele o trilho passou a gravar.
+#: O PISO SÓ SOBE, e uma queda não aparece na tela — o arraste simplesmente
+#: deixaria de fazer alguma coisa, que é exatamente o que ele fazia antes.
+PISO_DA_ABA = 5
 PROVAS = [
     {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(255, 128, 0)],

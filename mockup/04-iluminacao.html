@@ -1012,10 +1012,50 @@
   .cel-brilho{display:flex;align-items:center;gap:9px}
   .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);position:relative}
   .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
-    border-radius:50%;background:var(--purple);border:2px solid var(--panel)}
   .num{flex:0 0 38px;text-align:right;font-family:'JetBrains Mono',monospace;
        font-size:11.5px;color:var(--fg)}
+  /* O TRILHO PASSA A ACEITAR O ARRASTE — 03/09/2026, decisão dela: perguntada
+     se mexer no brilho grava o perfil na hora ou espera o "Salvar Perfil", ela
+     respondeu **"Grava na hora"**.
+
+     O QUE HAVIA ATÉ HOJE: o desenho já era um slider — a regra `.cheio::after`
+     punha um knob de 12px na ponta da barra roxa — e ele **não fazia nada**.
+     Ela via 100%, arrastava, e nada acontecia: a célula inteira era só leitura,
+     e o `docs/data/paridade-gtk-html.csv` a nomeia como *"a maior falta desta
+     aba"*. Um desenho de slider que não desliza é a família de defeito que esta
+     casa mais paga: a tela AFIRMANDO o que o produto não faz.
+
+     O KNOB DEIXA DE SER DESENHO E VIRA O POLEGAR DE VERDADE, e é por isso que
+     a regra `.cheio::after` SAIU em vez de ganhar um irmão: com as duas, ela
+     veria DOIS knobs durante o arraste — o nativo, que a segue, e o pintado,
+     que só alcança o valor no tique seguinte à soltura.
+
+     A GEOMETRIA É A MESMA DO DESENHO APROVADO, e ela não é aproximada: é
+     resolvida. O knob do mockup tinha o centro em `larg × b% − 1px` (uma caixa
+     de 12px com `right:-5px` dentro de um `.cheio` de largura `b%`). O polegar
+     nativo tem o centro em `L + 6px + b% × (W − 12px)`. Igualando para TODO
+     `b`: `W = 100% + 12px` e `L = −7px` — que são exatamente os dois números
+     abaixo. Com `left:0;width:100%` (o encaixe óbvio) o polegar erraria 7px nas
+     pontas, e o desenho dela mudaria de lugar em 0% e em 100%.
+
+     O FUNDO É TRANSPARENTE — a barra roxa continua sendo o `.cheio`, que é
+     quem carrega o endereço `brilho-pct` e é pintado pelo PRODUTO. O trilho
+     nativo por baixo desenharia uma segunda barra, cinza, por cima da dela.
+
+     `appearance:none` NOS DOIS LADOS: sem ele o WebKit ignora `::-webkit-slider-thumb`
+     e devolve o polegar do sistema — outro tamanho, outra cor, e a coluna deixa
+     de ser a coluna que ela aprovou. */
+  .puxador{position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+    width:calc(100% + 12px);height:12px;margin:0;padding:0;
+    -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+  .puxador::-webkit-slider-runnable-track{height:12px;background:transparent;border:0}
+  .puxador::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;background:var(--purple);
+    border:2px solid var(--panel);box-sizing:border-box;cursor:pointer}
+  /* O FOCO SE VÊ, e ele importa mais aqui que em qualquer botão desta aba: o
+     polegar anda pelas setas do teclado, e um foco invisível seria uma barra
+     que muda sozinha sem ninguém saber qual está em foco. */
+  .puxador:focus-visible{outline:2px solid var(--purple);outline-offset:4px}
 
   /* ---------- SELECIONE O PLAYER: a troca ---------- */
   .players{display:flex;gap:5px;align-items:center;height:100%}
@@ -2072,7 +2112,7 @@
             <span class="hex" data-campo="hex">#0000FF</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:82%"></span></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:82%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="82" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Arraste para mudar o brilho da barra deste controle. Ao soltar, a barra acende no brilho novo e o valor é gravado no perfil ativo — não espera o Salvar Perfil."></span>
             <span class="num" data-campo="brilho">82%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -2425,7 +2465,7 @@
             <span class="hex" data-campo="hex">#FF0000</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:100%"></span></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:100%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="100" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Arraste para mudar o brilho da barra deste controle. Ao soltar, a barra acende no brilho novo e o valor é gravado no perfil ativo — não espera o Salvar Perfil."></span>
             <span class="num" data-campo="brilho">100%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
