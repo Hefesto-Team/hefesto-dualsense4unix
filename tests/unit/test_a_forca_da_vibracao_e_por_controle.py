@@ -226,16 +226,32 @@ def test_o_auto_limpa_o_override_e_nunca_o_grava(
     o clique em *"limpa o override dela e devolve a peça ao global — que é a
     leitura honesta do gesto, e não um erro silencioso"*.
 
+    **E ELE PASSOU A DIZER ISSO — 04/09/2026.** Até 03/09 o gesto limpava e
+    voltava CALADO: a coluna caía no degrau da mesa um tique depois, e o botão
+    que ela clicou não era o que ficava aceso. A janela estável conta o mesmo
+    desfecho desde 25/08 (RUM-3), e a frase é dela —
+    `rumble_actions.TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL`, lida daqui em vez de
+    redigitada, porque duas cópias de um texto de tela divergem na primeira
+    edição.
+
     MORDIDA: em `a05_vibracao.forca`, contorne o produto gravando
     `ControllerRumbleOverride(policy="auto")` à mão — o esquema levanta e este
     caso reprova com a recusa dele em vez do perfil limpo.
     """
+    from hefesto_dualsense4unix.app.actions.rumble_actions import (
+        TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL,
+    )
+
     estado, gravados = disco
     estado["Bancada"] = _perfil_de_verdade(
         rumble={"policy": "balanceado"},
         controllers={CHAVE: {"rumble": {"policy": "economia"}}})
 
-    clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "auto"}, PonteDeMentira())
+    with pytest.raises(RuntimeError) as recusa:
+        clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "auto"},
+                         PonteDeMentira())
+    assert TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL.strip(" —") in str(recusa.value), (
+        f"o Auto voltou a limpar o override em silêncio: {recusa.value}")
 
     assert len(gravados) == 1, "o Auto não gravou — a coluna ficaria em Economia"
     dele = (gravados[0].controllers or {}).get(CHAVE)

@@ -166,6 +166,16 @@ def test_a_vibracao_recusa_sem_alvo_e_trabalha_com_ele(ctx, nome):
     é o comportamento CERTO: uma régua que engolisse isso faria a mesa dela
     inteira vibrar para provar que sabe clicar. Com o alvo, o gesto chega à
     ponte. Medido com dublê — nenhum comando saiu para o daemon dela.
+
+    **A RECUSA PASSOU DE `ValueError` A `RuntimeError` — 04/09/2026**, e o tipo
+    é o contrato: `hefesto_vivo._recusou_dizendo` leva `RuntimeError` ao CARTÃO
+    daquele controle e deixa `ValueError` no `stderr` de quem lançou a janela.
+    A frase estava certa desde 02/09 e **nunca chegou aos olhos dela** — clicar
+    "Testar" numa coluna sem controle não fazia nada e não explicava nada, que é
+    a queixa *"vibração nem funciona"* na forma mais barata de produzir.
+
+    A MORDIDA: devolva o `raise ValueError` a `a05_vibracao._mirar` — este caso
+    reprova, porque `RuntimeError` deixa de ser levantado.
     """
     import pacotes
 
@@ -173,7 +183,7 @@ def test_a_vibracao_recusa_sem_alvo_e_trabalha_com_ele(ctx, nome):
     assert fn is not None
 
     sem = {"gesto": nome, "texto": "x", "valor": "", "controle": "", "uniq": ""}
-    with pytest.raises(ValueError, match="não disse em qual controle"):
+    with pytest.raises(RuntimeError, match="não disse em qual controle"):
         fn(ctx, sem, PonteDeMentira())
 
     p = PonteDeMentira()

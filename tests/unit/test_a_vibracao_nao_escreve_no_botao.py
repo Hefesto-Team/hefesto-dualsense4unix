@@ -370,18 +370,25 @@ def test_o_que_falta_esta_declarado(emitidos):
     política POR CONTROLE: `forca:auto-da-mesa` (pôr a MESA em `Auto` perdeu o
     botão, porque o esquema recusa `auto` por unidade) e `forca:global-em-auto`
     (com o global em `Auto` o produto PULA o override, e a tela ainda não
-    avisa). Nenhuma das duas é código que falta escrever: as duas esperam uma
-    frase dela.
+    avisa).
 
-    A `barra:forca` SAIU no mesmo dia — a barra virou arrastável e grava.
+    **E `forca:global-em-auto` SAIU EM 04/09/2026** — pela mesma regra que fez
+    `degrau-aceso` e `mult-teto` saírem: a cura chegou. Ele dizia *"o que falta
+    é a tela AVISAR"*, e a tela avisa agora em DOIS tempos, que é o que a
+    condição pede: `a05_vibracao._aplicar_a_forca` leva a frase ao cartão no
+    instante do clique, e `a05_vibracao._ressalva_da_mesa` põe a linha no
+    `#vib-estado` **enquanto a condição existir** — inclusive para quem abrir a
+    aba amanhã sem ter clicado nada. A prova das duas metades está em
+    `test_a05_a_vibracao_aplica_e_fala.py`, com a mordida dos dois lados.
+
+    A `barra:forca` SAIU no dia anterior — a barra virou arrastável e grava.
     `lado:ligado` continua sem existir em linha nenhuma do produto, e
     `barra:motor` continua esperando a palavra dela sobre o par `weak`/`strong`,
     que viaja JUNTO ao daemon.
     """
     pacote, _ = emitidos
     assert set(pacote["sem_dono"]) == {
-        "lado:ligado", "barra:motor",
-        "forca:auto-da-mesa", "forca:global-em-auto"}
+        "lado:ligado", "barra:motor", "forca:auto-da-mesa"}
     for chave, razao in pacote["sem_dono"].items():
         assert len(razao) > 80, f"{chave} declara sem dizer por quê"
     # E OS DOIS QUE FECHARAM SÃO PINTADOS — sem isto, apagá-los da lista seria
