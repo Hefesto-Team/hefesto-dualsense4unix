@@ -1,6 +1,7 @@
 """A queixa 15 dela, em forma de régua — e ela é sobre uma frase INVERTIDA.
 
-*"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*  <!-- noqa-acento: citação literal dela -->
+<!-- noqa-acento: citação literal dela -->
+*"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*
 
 O aviso que ela leu na aba 02, disparado pelo botão "Virtual" do microfone:
 
@@ -51,7 +52,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-from hefesto_dualsense4unix.app.actions.config.secao_controles import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions.config.secao_controles import (
     DICA_MIC_NO_CABO,
     DICA_MIC_NO_RADIO,
     DICA_MIC_SEM_CANAL,

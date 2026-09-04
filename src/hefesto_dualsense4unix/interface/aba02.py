@@ -2582,8 +2582,8 @@ def _conferir(doc):
            "invisível, e é o ♪ que mostra o mudo agora")
     alvos_do_mudo = re.findall(r'<[^>]*data-campo="alto-mudo"[^>]*>', corpo)
     exigir(len(alvos_do_mudo) == len(CONECTADOS),
-           f"o ♪ perdeu o endereço `alto-mudo` — ele volta a acender pela "
-           f"classe que o gerador escreveu, nunca pelo que o aparelho diz")
+           "o ♪ perdeu o endereço `alto-mudo` — ele volta a acender pela "
+           "classe que o gerador escreveu, nunca pelo que o aparelho diz")
     exigir(all('data-hef-alvo="classe"' in t for t in alvos_do_mudo),
            "o `alto-mudo` perdeu o alvo `classe`: a pintura escreveria a "
            "palavra MUDO dentro do botão, no lugar do glifo ♪")
