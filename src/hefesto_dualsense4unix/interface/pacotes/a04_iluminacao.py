@@ -382,6 +382,37 @@ def brilho_do_controle(p: dict[str, Any] | None, uniq: str) -> float | None:
         return None
 
 
+#: O ENDEREÇO DO INTERRUPTOR DO AUTOMÁTICO — D-13, 04/09/2026.
+ENDERECO_DO_AUTOMATICO = "auto-cores"
+
+
+def automatico_do_perfil(p: dict[str, Any] | None) -> bool:
+    """O `leds.auto_player_colors` do perfil ativo — o martelo mais pesado da aba.
+
+    ELE É **GLOBAL DO PERFIL**, e não por controle, e isso não é escolha minha:
+    `profiles/schema.LedsConfig` diz, com todas as letras, que dentro de um
+    override por-controle o campo *"é aceito pelo schema (reuso do modelo) mas
+    ignorado — o toggle é do perfil, não do controle"*. Ler o override aqui
+    inventaria uma camada que o backend não tem.
+
+    A AUSÊNCIA É `True`, e o default também tem dono: `LedsConfig` declara
+    `auto_player_colors: bool = True`, e o comentário de lá explica por quê — um
+    perfil antigo sem o campo valida com o default, sem migração. Responder
+    `False` na ausência faria a tela dizer DESLIGADO sobre trinta e três perfis
+    dela que estão ligados.
+
+    SEM PERFIL ATIVO A RESPOSTA TAMBÉM É `True`, e é o honesto: é o estado em
+    que o produto nasce, e é o que o daemon aplica enquanto ninguém escolheu
+    outra coisa.
+    """
+    if not isinstance(p, dict):
+        return True
+    leds = p.get("leds")
+    if not isinstance(leds, dict) or "auto_player_colors" not in leds:
+        return True
+    return bool(leds.get("auto_player_colors"))
+
+
 #: O NOME DO TRILHO PARA QUEM NÃO VÊ A TELA. O `aria-label` é a única coisa que
 #: um leitor de tela anuncia num `<input type="range">` sem rótulo próprio — a
 #: linha "Brilho" da primeira coluna é uma célula de grid, não um `<label>`.
@@ -533,6 +564,39 @@ ENDERECO_DA_INCERTA = "luz-incerta"
 #: (`aba04.CSS`, `.tira-luz.incerta`); aqui mora só o nome, para que o gerador e
 #: o pintor não o escrevam em dois lugares.
 CLASSE_DA_INCERTA = "incerta"
+
+#: O ENDEREÇO DA LINHA QUE DIZ **POR QUÊ** — D-02, e a decisão [01] desta aba em
+#: 04/09/2026: *"Uma linha só quando há ressalva."*
+#:
+#: O TRACEJADO AVISA QUE ALGO MUDOU E NÃO DIZ O QUÊ. As três causas — o jogo é
+#: dono do LED em Modo Nativo, a Steam está com o `fd` deste controle, ou a cor
+#: é desconhecida — saem do MESMO motor que o `ENDERECO_DA_INCERTA` já consulta
+#: (`controller_card.rotulo_lightbar`), e até hoje viajavam só no `title` das
+#: tiras: some para quem não passa o rato. Aqui elas ganham linha.
+#:
+#: ELE É SEPARADO DO `luz` de propósito, e a razão é a mesma que criou o
+#: `ENDERECO_DA_INCERTA`: o `luz` é alvo `html` e troca o miolo do `.aceso`
+#: inteiro a cada tique. Uma frase escrita lá dentro seria destruída e recriada
+#: com o desenho, e nenhuma régua a leria — os alvos `html` são lidos pelo TEXTO
+#: visível, e o que se lê ali é o desenho, que não tem texto.
+ENDERECO_DA_RESSALVA = "luz-ressalva"
+
+#: "NÃO HÁ O QUE DIZER", dito de um jeito que a tela sabe APAGAR — o mesmo
+#: marcador de `monta.NADA_A_DIZER`, e o mesmo motivo: `escrever()` troca valor
+#: vazio por travessão, de propósito, e numa linha de ressalva isso vira um `—`
+#: solto, que é ruído com cara de dado.
+#:
+#: A CHAVE CONTINUA SENDO EMITIDA em todo tique: é o que faz a linha SUMIR
+#: quando a ressalva acaba. Omiti-la deixaria a frase velha na tela para sempre.
+#:
+#: DUAS CÓPIAS DO MESMO LITERAL, e é assim de propósito: importar `monta` de
+#: dentro de um pacote puxaria o desenho inteiro (a mesa do mockup, o SVG, o
+#: CSV das cores) para dentro de um módulo que tem de importar sem janela e sem
+#: bancada. A `a06_navegacao` já convive com a mesma cópia, e a régua
+#: `test_a_linha_de_ressalva_so_nasce_quando_ha` compara as duas para que não
+#: divirjam caladas; a desta aba é comparada em
+#: `test_a_aba_04_iluminacao_fecha_as_linhas`.
+NADA_A_DIZER = '<i class="nada"></i>'
 
 
 def estado_da_tira(recado: str | None) -> str:
@@ -1564,6 +1628,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: escreveria `"true"`; as duas réguas desta casa que traduzem o
             #: declarado dizem, por escrito, que erram nesse par.
             ENDERECO_DA_INCERTA: "sim" if estado == INCERTA else "",
+            #: A RAZÃO DO TRACEJADO, EM UMA LINHA — D-02, decisão [01] de
+            #: 04/09/2026. Ela é o PRIMEIRO retorno de `rotulo_lightbar`, o
+            #: mesmo que decide `acesa` e `estado` acima: uma leitura só, três
+            #: consequências. Uma frase escrita aqui a partir do `estado` seria
+            #: a segunda verdade sobre o mesmo fato — e a que perderia a
+            #: distinção entre "a Steam está com ele" e "em Nativo o jogo é
+            #: dono", que é justamente a pergunta que esta linha responde.
+            #:
+            #: SEM RESSALVA, O MARCADOR — e a chave vai em TODO tique. Omiti-la
+            #: quando não há nada a dizer deixaria a frase do estado anterior na
+            #: tela para sempre; mandar `""` a trocaria por um travessão solto,
+            #: porque `escrever()` faz isso de propósito. Ver `NADA_A_DIZER`.
+            ENDERECO_DA_RESSALVA: recado or NADA_A_DIZER,
             #: O RÓTULO INTEIRO, e não só o número. O desenho escreve
             #: `P1 • Cosmic Red • USB`; emitir só o `P1` fazia o primeiro tique
             #: APAGAR o nome do controle e o transporte da tela dela — a
@@ -1600,6 +1677,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: JavaScript, e o que se lê no HTML é um `--plastico` com endereço sem
         #: alvo, que é a forma exata da cor congelada. Ver `cores_da_troca`.
         ITEM_DA_TROCA: cores_da_troca(ctx.mesa),
+        #: O INTERRUPTOR DO AUTOMÁTICO — D-13. Ele é da MESA e não da coluna: o
+        #: campo é um só para o perfil inteiro, e emiti-lo por controle
+        #: desenharia quatro interruptores para um valor só.
+        #:
+        #: A LÍNGUA É `sim`/`""`, e é a do alvo `marcado` do piloto — a mesma do
+        #: alvo `classe` booleano. `str(True)` seria `"True"`, o JS escreveria
+        #: `"true"`, e as duas réguas desta casa que traduzem o declarado dizem,
+        #: por escrito, que erram nesse par.
+        ENDERECO_DO_AUTOMATICO: "sim" if automatico_do_perfil(p) else "",
         "perfil": ctx.state.get("active_profile") or "",
         "sem_dono": {},
         #: O ANTES/DEPOIS DO RODAPÉ, com a mesa VIVA — ver `secao_da_troca`.
@@ -1898,13 +1984,27 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     está em `_TOAST_COR_ENVIADA`, 330 mil escritas ignoradas com a barra
     apagada). Nada de texto nasce deste lado.
 
-    POR QUE O `RuntimeError` NO RAMO DO GUARDADO, e ele não é "recusa": o único
-    canal que esta tela tem para falar com quem clicou é o cartão do
-    `hefesto_vivo._recusou_dizendo`, e ele só carrega `RuntimeError`. A GTK diz
-    a mesma frase num toast neutro. Entre a frase no cartão e o silêncio, o
-    silêncio é a mentira — quem clica conclui que a cor foi. **RELATO:** um
-    canal de AVISO (nem recusa nem silêncio) no piloto resolveria isto para as
-    dez abas; é `interface/hefesto_vivo.py`, fora do território deste arquivo.
+    POR QUE O `RuntimeError` NO RAMO DO GUARDADO, e ele não é "recusa": entre a
+    frase no cartão e o silêncio, o silêncio é a mentira — quem clica conclui
+    que a cor foi. A GTK diz a mesma frase num toast neutro.
+
+    **FATO SUBSTITUÍDO — 04/09/2026.** Estas linhas diziam que *"o único canal
+    que esta tela tem é o `_recusou_dizendo`, e ele só carrega `RuntimeError`"*,
+    com um RELATO pedindo um canal de aviso. **O canal existe:** a ONDA0-P o
+    entregou com a D-01, e um gesto que devolve `{"recado": …}` pousa no MESMO
+    cartão com tom de sucesso e vida de 6 s — o `brilho` desta aba já o usa.
+
+    **E MESMO ASSIM ELE NÃO SERVE AQUI**, e a razão não é de infraestrutura:
+    este caminho **não sabe qual dos dois desfechos aconteceu**. Quem lê o corpo
+    do daemon é `frase_do_desfecho`, e o que volta é UMA frase — as quatro
+    razões (recusa explicada, aplicado, guardado, nada aconteceu) chegam aqui já
+    colapsadas em texto. Escolher o tom exigiria reler `destinos_da_aplicacao`
+    deste lado, que é a segunda verdade sobre o mesmo payload, e é exatamente o
+    que a ELO-MUDO-01 inverteu. Enquanto o dono não separar os dois, o laranja é
+    o erro mais barato: diz demais sobre um guardado, e não de menos sobre uma
+    recusa. **RELATO:** um segundo retorno de `frase_do_desfecho`, dizendo QUAL
+    dos quatro destinos venceu, fecharia isto para as dez abas — é
+    `app/textos_de_aplicacao.py`, fora do território deste arquivo.
 
     A COMPARAÇÃO É COM A FRASE FELIZ, e não com `aplicado_em`: quem lê os dois
     destinos é `frase_do_desfecho`, que conhece as QUATRO razões do daemon e a
@@ -2018,6 +2118,54 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not uniq:
         raise ValueError("apagar: o clique não disse em qual controle")
     _escrever_a_cor(ctx, p, uniq, (0, 0, 0), apagando=True)
+
+
+@gesto("04-iluminacao.html", "reenviar")
+def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A caixa `#RRGGBB` é o botão: a cor que está escrita vai ao controle de novo.
+
+    DECISÃO DELA, 04/09/2026, na pergunta [03] desta aba, contra as outras duas
+    opções que eu ofereci (deixar como está, ou um terceiro botão em Opções):
+    *"A caixa do hexadecimal vira o botão."*
+
+    O BURACO QUE ISSO FECHA, e ele só existe para UMA das duas portas de cor: um
+    `<button>` da guia sempre dispara, então clicar de novo no mesmo tom
+    reenvia. O `<input type="color">` não — ele só avisa no `change`, e reabrir
+    o seletor para confirmar a MESMA cor não manda nada ao aparelho (ver
+    `_so_abriu_o_seletor`, que é quem descarta o `click` de abertura, e tem de
+    descartar). Quando um controle cai e volta, ou quando ela quer conferir se a
+    cor chegou, a cor que ela escolheu à mão era justamente a única sem porta de
+    volta. A janela GTK tem um botão dedicado para isso.
+
+    O VALOR VEM DO `texto`, e não de um `data-hex`, e essa é a parte que
+    importa: `data-hex` é escrito pelo GERADOR e fica congelado no que o mockup
+    sabia — reenviar por ele mandaria ao plástico dela a cor do desenho. O
+    `textContent` desta caixa é reescrito a cada tique pelo `data-campo="hex"`,
+    com a cor PEDIDA (pré-escala de brilho — ver `cor_escolhida`), então o que
+    sai daqui é exatamente o que ela está lendo na tela.
+
+    NÃO É UM SEGUNDO CAMINHO DE ESCRITA. Ele passa pelo `_escrever_a_cor` como
+    os outros três, então herda o brilho do perfil e a leitura do desfecho. Uma
+    chamada direta ao `led_set` aqui reintroduziria, nesta porta, os dois
+    defeitos que aquele caminho único nasceu para curar.
+
+    O TRAVESSÃO É RECUSA. Numa coluna que esvaziou, o molde do lugar sem dono
+    escreve `—` nesta caixa; a folha desta aba já lhe tira o clique
+    (`pointer-events:none`), e esta guarda é a segunda trava — a que vale se
+    alguém alcançar o gesto por outro caminho. `hex_to_rgb` recusaria dizendo,
+    mas com uma frase que fala de formato, não do que aconteceu.
+    """
+    from hefesto_dualsense4unix.core.led_control import hex_to_rgb
+
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("reenviar: o clique não disse em qual controle")
+    escrito = str(o.get("texto") or "").strip()
+    if not escrito or not escrito.startswith("#"):
+        raise ValueError(
+            f"reenviar: a caixa do hexadecimal não tem uma cor a reenviar "
+            f"({escrito!r}) — este lugar da mesa está sem controle.")
+    _escrever_a_cor(ctx, p, uniq, hex_to_rgb(escrito))
 
 
 @gesto("04-iluminacao.html", "auto")
@@ -2184,7 +2332,7 @@ def _com_o_brilho_gravado(prof: Any, uniq: str, pct: int) -> Any:
 
 
 @gesto("04-iluminacao.html", "brilho")
-def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Ela arrastou o trilho. O brilho vai AO APARELHO e AO DISCO, na hora.
 
     DECISÃO DELA, 03/09/2026. Perguntada se mexer no brilho grava o perfil na
@@ -2237,12 +2385,32 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     e mandar preto APAGARIA a barra por um arraste de brilho. O número vai para
     o disco — que é o que ela pediu — e o cartão diz que a barra não mudou
     agora. Entre a frase no cartão e o silêncio, o silêncio é a mentira.
+
+    **A FRASE ENCOLHEU — 04/09/2026, decisão [04] dela**, entre três opções: a
+    frase inteira, uma frase curta, e o silêncio. Ela escolheu a curta, e a
+    razão que ela deu é a que este arquivo já sabia: a versão longa gastava três
+    linhas de cartão *"repetindo com palavras o que a tira tracejada já mostra
+    sem palavra nenhuma"*. O que saiu foi a explicação do *"porque não há cor a
+    reacender"*; o que ficou é o que só a frase pode dizer — quanto foi guardado
+    e qual é a causa, e a causa continua vindo do MOTOR, palavra por palavra.
+
+    **E ELE DEIXOU DE MENTIR SOBRE O PRÓPRIO DESFECHO, no mesmo dia.** A frase
+    saía por `RuntimeError`, que no piloto é o canal da RECUSA — cartão laranja,
+    30 s, a mesma cara de *"o produto não fez"*. E o produto FEZ: o brilho está
+    no disco dela, que é a promessa inteira deste gesto. O relato desta função
+    pedia por escrito *"um canal de AVISO (nem recusa nem silêncio)"*, e a
+    ONDA0-P o entregou com a D-01: um gesto que devolve `{"recado": …}` deposita
+    no MESMO cartão com tom de sucesso e vida de 6 s. É o que ele faz agora —
+    e o pedido some do relato porque foi atendido.
+
+    :return: `{"recado": …}` quando o número foi guardado e a barra não pôde
+        mudar; `None` no caminho feliz, em que o cartão diz a frase padrão.
     """
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("brilho: o clique não disse em qual controle")
     if _so_abriu_o_seletor(o):
-        return
+        return None
     pct = _pct_pedido(o)
 
     nome = str(ctx.state.get("active_profile") or "").strip()
@@ -2273,10 +2441,182 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     if recado is not None or not pedida:
         porque = recado or "o produto não sabe de que cor ela está"
-        raise RuntimeError(
-            f"guardei o brilho em {pct}% no perfil deste controle. A barra não "
-            f"mudou agora porque não há cor a reacender: {porque}.")
+        return {"recado": f"Guardei {pct}%. A barra não mudou agora: {porque}."}
     _escrever_a_cor(ctx, p, uniq, tuple(pedida)[:3], brilho=_fracao_do_disco(pct))
+    return None
+
+
+def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
+                    c: dict[str, Any]) -> tuple[int, int, int]:
+    """A cor que ESTE controle está acendendo agora — a que o desligamento grava.
+
+    ELA É A PEDIDA, e não a publicada: `lightbar_rgb` vem PÓS-escala de brilho
+    por contrato do daemon (D8), e gravar esse valor faria a cor do perfil
+    escurecer a cada volta — a 50% de brilho, `#0000FF` viraria `#00007F` no
+    disco e o brilho o escalaria de novo na aplicação seguinte. `cor_escolhida`
+    é quem inverte a escala, e é o mesmo caminho que a caixa `#RRGGBB` usa.
+
+    A QUEDA É A COR DO SLOT, e ela é a resposta CERTA e não um remendo: nos
+    quatro estados em que o motor não afirma cor (Nativo, a Steam com o `fd`,
+    cor desconhecida) o que o automático estava dando àquele controle era
+    exatamente `player_slot_color(numero)` — é essa a paleta que ele governa. Um
+    preto aqui apagaria a barra dela por um clique num interruptor; um branco
+    inventaria uma cor que ninguém escolheu.
+
+    :param cru: o perfil como DICIONÁRIO (`perfil.ativo`), e não o `Profile` do
+        pydantic: `brilho_do_controle` lê o JSON cru, e um modelo passado aqui
+        devolveria `None` em silêncio — o brilho sumiria da inversão de escala e
+        a cor gravada sairia escurecida.
+    """
+    from hefesto_dualsense4unix.app.widgets.controller_card import cor_do_swatch
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    uniq = str(c.get("uniq") or "")
+    pedida = cor_escolhida(cor_do_swatch(c), brilho_do_controle(cru, uniq))
+    if pedida:
+        r, g, b = tuple(pedida)[:3]
+        return (int(r), int(g), int(b))
+    return player_slot_color(_numero(ctx, c))
+
+
+def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int]) -> Any:
+    """O perfil com a cor DESTE controle escrita no override dele.
+
+    É O IRMÃO DE `_com_o_brilho_gravado`, campo por campo, e a razão de ser um
+    segundo é a mesma que aquele documenta: **a fusão é POR CAMPO**. Um override
+    do disco dela hoje é `{"lightbar": [255, 0, 0]}` e nada mais; trocar a seção
+    inteira por uma que só fale de cor apagaria o brilho próprio daquele
+    controle. `save_profile` serializa com `exclude_unset`, então o que não foi
+    tocado continua ausente do arquivo.
+
+    NÃO DEVOLVE `None` QUANDO NADA MUDA, ao contrário do irmão, e é de
+    propósito: aqui a escrita não é o pedido dela — é a **consequência** do
+    pedido, e ela tem de acontecer nas duas hipóteses. Uma cor que por acaso já
+    é a do override precisa continuar lá depois de o automático sair; devolver
+    `None` faria o chamador achar que não havia o que gravar naquele controle e
+    seguir sem ele.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig
+
+    chave = chave_do_override(uniq)
+    atuais = dict(prof.controllers or {})
+    dele = atuais.get(chave) or ControllerOverrides()
+    antes = dele.leds
+    novos = (LedsConfig(lightbar=rgb) if antes is None
+             else antes.model_copy(update={"lightbar": rgb}))
+    atuais[chave] = dele.model_copy(update={"leds": novos})
+    return prof.model_copy(update={"controllers": atuais})
+
+
+#: O QUE O CARTÃO DIZ QUANDO O AUTOMÁTICO SAI. A frase é do PRODUTO e nasce
+#: aqui porque é aqui que o ato mora — não há dono anterior: a janela GTK
+#: desliga este mesmo campo sem gravar cor nenhuma, que é justamente o caminho
+#: que a D-13 recusou. Ela conta as DUAS metades do que aconteceu, porque as
+#: duas foram feitas no mesmo clique e a segunda é a que ela aceitou por
+#: escrito: *"ok aceito o caminho"*.
+_RECADO_DO_AUTOMATICO_SAIU = (
+    "Cores automáticas desligadas. Guardei a cor de cada controle no perfil, "
+    "para nenhuma se perder e nenhuma se repetir.")
+
+#: E QUANDO ELE VOLTA. Curta porque não há consequência a confessar: as cores
+#: gravadas continuam no perfil e a camada automática passa a vencer no merge
+#: por campo do backend — nada se apaga.
+_RECADO_DO_AUTOMATICO_VOLTOU = (
+    "Cores automáticas ligadas. Cada controle volta a acender a cor do número "
+    "dele.")
+
+
+@gesto("04-iluminacao.html", "auto-cores")
+def auto_cores(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O interruptor do "Cores automáticas por controle" — e ele MUDA o perfil.
+
+    **DECISÃO DELA, 04/09/2026 (D-13), contra a recomendação escrita.** A lista
+    desta aba propunha que o botão "Automático" só MOSTRASSE o estado, e que
+    mudá-lo continuasse na aba Perfis. Ela recusou as duas primeiras opções e
+    escolheu a terceira, com estas palavras:
+
+        *"Um interruptor no topo da aba Iluminação."*
+
+    Mostrar sem poder mudar é menos do que ela pediu — e o campo é o martelo
+    mais pesado desta aba: ele governa a paleta automática **e** a numeração,
+    inclusive a dos controles de outras marcas.
+
+    **A CONTRADIÇÃO QUE ELE ABRE, E O CAMINHO QUE ELA ACEITOU.** A regra dela de
+    03/09 é *"nenhuma cor dos controles nunca pode ser a mesma"*. Com o
+    automático desligado, um controle que chega depois não tem cor própria e cai
+    na cor GLOBAL do perfil — o seguinte também, e dois ficam iguais. Hoje isso
+    não acontece só porque não HÁ como desligar o automático pela interface
+    nova; o interruptor tira essa proteção acidental. Ofereci avisar, recusar ou
+    gravar, e ela respondeu:
+
+        *"ok aceito o caminho"*
+
+    **Então desligar GRAVA a cor de cada controle no ato.** O automático sai,
+    nenhuma cor se perde e nenhuma se repete, e o produto nunca precisa dizer
+    não a ela.
+
+    **A ORDEM É A DA GTK, e ela está medida lá:** os overrides por MAC vão
+    ANTES da mudança global (`lightbar_actions._persist_leds_update`, a nota da
+    R-14). Aqui os dois caem no MESMO `save_profile`, então a ordem não é de
+    escrita e sim de LEITURA: a cor de cada controle é lida com o automático
+    ainda valendo, que é o único instante em que ela existe para ser guardada.
+
+    **NÃO SE DEDUZ O ESTADO DO CLIQUE, PERGUNTA-SE AO DISCO.** O `value` de um
+    `<input type="checkbox">` é a string `"on"` em qualquer estado, e o piloto
+    manda o `value` — não o `checked`. Ler o clique daria sempre a mesma
+    resposta. O disco é a fonte que a tela já pinta a cada tique
+    (`automatico_do_perfil`), então virar o que está lá é o único jeito de o
+    interruptor e o perfil nunca discordarem.
+
+    **O `click` NÃO É UM SEGUNDO PEDIDO.** Um checkbox dispara `click` e
+    `change` no mesmo ato, e o BOOTSTRAP escuta os dois. Sem o guarda,
+    UM clique dela viraria DUAS inversões — e o interruptor voltaria sozinho ao
+    lugar, com duas gravações no perfil pelo caminho. `_so_abriu_o_seletor` já é
+    exatamente esse guarda: ele descarta o `click` de todo `<input>` e deixa o
+    `change`, que é o que carrega o ato.
+
+    **REAPLICAR É METADE DO GESTO**, e sem ela ele seria o botão que aceita o
+    toque e não age: `auto_player_colors` só entra em vigor na ATIVAÇÃO do
+    perfil (`ProfileManager._configure_auto_player_colors`, chamado por
+    `apply_profile`). `perfil.gravar_e_reaplicar` é o dono dos três tempos —
+    disco, `profile.switch`, `launch_env.refresh` — e já tinha dois chamadores.
+
+    E AQUI REAPLICAR NÃO DESFAZ ESCOLHA VIVA DELA, que é a razão pela qual o
+    gesto `brilho` o recusa: as cores que o `switch` vai reaplicar são as que
+    este mesmo gesto acabou de gravar, controle a controle. O que ele pinta é o
+    que já estava aceso.
+
+    :return: `{"recado": …}` — o cartão verde da D-01, dizendo qual das duas
+        metades aconteceu.
+    """
+    if _so_abriu_o_seletor(o):
+        return None
+
+    nome = str(ctx.state.get("active_profile") or "").strip()
+    if not nome:
+        raise RuntimeError(
+            "não há perfil ativo agora, e as cores automáticas são do perfil — "
+            "não da máquina. Escolha um perfil na aba Perfis.")
+
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+    cru = perfil.ativo(nome)
+    ligado = automatico_do_perfil(cru)
+
+    if ligado:
+        #: AS CORES PRIMEIRO, e com o automático AINDA valendo — ver a ordem na
+        #: docstring. Só os CONECTADOS: um controle que não está na mesa não tem
+        #: cor de agora a guardar, e inventar uma seria escrever no perfil dela
+        #: um valor que ninguém escolheu.
+        for c in ctx.conectados:
+            uniq = str(c.get("uniq") or "")
+            if uniq:
+                prof = _com_a_cor_gravada(prof, uniq, _a_cor_de_agora(ctx, cru, c))
+
+    leds = prof.leds.model_copy(update={"auto_player_colors": not ligado})
+    perfil.gravar_e_reaplicar(prof.model_copy(update={"leds": leds}), ctx, p)
+    return {"recado": (_RECADO_DO_AUTOMATICO_SAIU if ligado
+                       else _RECADO_DO_AUTOMATICO_VOLTOU)}
 
 
 #: O MÉTODO QUE RECONCILIA O CO-OP — ver `_acender_o_numero`. Ele tem teto
@@ -2524,7 +2864,7 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: daemon respondeu"* — foi com um `aplicado_em` desses que a medição da mesa
 #: dela mostrou duas lâmpadas paradas. Ver `_acender_o_numero`.
 PONTE = {"led_set_detalhado", "identity_number_set",
-         "player_leds_set_detalhado", "chamar"}
+         "player_leds_set_detalhado", "chamar", "profile_switch"}
 #: `coop.sync` É O ÚNICO JEITO DE MOVER AS LÂMPADAS COM O CO-OP LIGADO —
 #: medido, e o porquê está em `_acender_o_numero`.
 METODOS = {"lightbar.reset", "coop.sync"}
@@ -2537,13 +2877,23 @@ PAGINA = "04-iluminacao.html"
 #: 4 → 5 EM 03/09/2026: o `brilho` nasceu, e com ele o trilho passou a gravar.
 #: O PISO SÓ SOBE, e uma queda não aparece na tela — o arraste simplesmente
 #: deixaria de fazer alguma coisa, que é exatamente o que ele fazia antes.
-PISO_DA_ABA = 5
+#:
+#: 5 → 7 EM 04/09/2026, com as decisões [02] e [03] dela: o `auto-cores`
+#: (o interruptor da D-13) e o `reenviar` (a caixa do hexadecimal).
+PISO_DA_ABA = 7
 PROVAS = [
     {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(255, 128, 0)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
     {"pagina": PAGINA, "gesto": "apagar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("led_set_detalhado", [(0, 0, 0)],
+                {"uniq": "aa:bb:cc:00:00:01"})]},
+    # O REENVIO LÊ O TEXTO DA CAIXA, e o clique de prova o traz — é o mesmo
+    # `textContent` que o piloto manda. Um `hex` aqui passaria pela porta
+    # errada e a régua ficaria verde sobre um gesto que na tela não acha valor
+    # nenhum: na caixa `#RRGGBB` não há `data-hex`, de propósito.
+    {"pagina": PAGINA, "gesto": "reenviar", "clique": {"texto": "#12AB34"},  # (noqa-acento) id
+     "chama": [("led_set_detalhado", [(18, 171, 52)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
     # DUAS chamadas, e a ordem importa: largar o claim e SÓ ENTÃO pintar.
     {"pagina": PAGINA, "gesto": "auto", "clique": {},  # (noqa-acento) chave do contrato
@@ -2560,4 +2910,10 @@ PROVAS = [
      "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {}),
                ("player_leds_set_detalhado", [(False, True, False, True, False)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
+    # `brilho` E `auto-cores` NÃO ESTÃO AQUI, e a ausência é declarada: os dois
+    # ESCREVEM NO DISCO (`loader.save_profile`), e esta régua roda com o perfil
+    # ATIVO da máquina em que ela roda. Uma prova deles aqui gravaria no perfil
+    # de quem rodou o teste — que é o oposto do que uma régua faz.
+    # Quem os morde é `tests/unit/test_a_aba_04_iluminacao_fecha_as_linhas.py`,
+    # com a pasta de perfis desviada para um lar de mentira.
 ]
