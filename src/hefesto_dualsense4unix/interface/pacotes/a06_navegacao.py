@@ -64,7 +64,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:1549`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:1798`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE CONTINUA VALENDO, e é o que separa os dois erros: **só o `RuntimeError`
@@ -99,7 +99,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:1549`) leva à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:1798`) leva à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -294,7 +294,7 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
     ABERTO e sem trocar de aba. O arquivo muda, o selo muda, o pacote passa a
     emitir a palavra nova — e o DOM carregado ainda é o antigo, então a escrita
     volta a ser descartada até o próximo carregamento. Trocar de aba já
-    recarrega (`hefesto_vivo.py:1818`), e reabrir também. Ler o DOM em vez do
+    recarrega (`hefesto_vivo.py:1966`), e reabrir também. Ler o DOM em vez do
     arquivo exigiria uma pergunta ao piloto que o `Contexto` não tem.
     """
     global _OFERTAS
@@ -729,7 +729,7 @@ def _apagar_os_lugares_sem_dono(
     aqui.
 
     O `!important` NÃO É ZELO: a `--luz` chega como `style="--luz:#ff0000"` no
-    próprio elemento (`monta.py:1000`), e estilo de linha vence qualquer regra
+    próprio elemento (`monta.py:1165`), e estilo de linha vence qualquer regra
     de folha que não o traga.
     """
     if not identidade:
@@ -2105,7 +2105,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #:
 #: 1. o handler diz o lugar dele com todas as letras — *"entra na transição de
 #:    modo (`app/actions/mode_transition.py`), **nunca em um botão solto**"*
-#:    (`daemon/ipc_handlers.py:5011`);
+#:    (`daemon/ipc_handlers.py:5039`);
 #: 2. ele devolve a preferência PERSISTIDA — não "o de fábrica" nem "o que a
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;
@@ -2226,7 +2226,7 @@ SEM_GESTO = {
 #: este assunto" — é "não há assunto do daemon", que é mais forte.
 #:
 #: SEM ESTA LINHA a régua do aparelho os leria como *"disse aplicado e nada
-#: mudou"* (`hefesto_vivo.py:2255`), que é o rótulo dos botões que mentem — e
+#: mudou"* (`hefesto_vivo.py:2707`), que é o rótulo dos botões que mentem — e
 #: aqui seria a régua acusando o comportamento CERTO. Declará-los sem prova
 #: seria o inverso: lápide escondendo defeito. A prova deles não é o estado do
 #: daemon, é o efeito na pintura, e ela roda no CI, sem janela:

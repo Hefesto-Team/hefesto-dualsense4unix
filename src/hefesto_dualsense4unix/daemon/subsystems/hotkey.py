@@ -14,12 +14,14 @@ import asyncio
 import contextlib
 import subprocess as _sp
 import threading
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Final
 
 from hefesto_dualsense4unix.daemon.subsystems import recado_do_microfone
 from hefesto_dualsense4unix.integrations import ponte_tentativa
 from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
     EleitorDeMicrofone,
+    ResultadoDaEleicao,
     recusa_de_quem_nao_elegeu,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -866,7 +868,136 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
     start_mic_da_mesa(daemon)
     task = asyncio.create_task(mic_button_loop(daemon), name="mic_button_loop")
     daemon._tasks.append(task)
+    # A QUARTA FACE DO ESTADO (MICROFONE-UM-ATO-01): o que o PipeWire diz sobre
+    # o canal deste controle. Laço próprio, e não leitura no tique, porque o
+    # `state_full` roda a 20 Hz no loop do daemon e cada resposta destas custa
+    # um subprocesso — perguntar ali travaria o loop inteiro pelo tempo do
+    # `pactl`. Aqui a pergunta é feita a cada dois segundos, numa thread, e o
+    # tique só LÊ o que já está lido.
+    tarefa_do_canal = asyncio.create_task(
+        canal_do_microfone_loop(daemon), name="canal_do_microfone_loop"
+    )
+    daemon._tasks.append(tarefa_do_canal)
     logger.info("mic_hotkey_iniciado")
+
+
+#: De quanto em quanto o canal de captura de cada controle é relido. Dois
+#: segundos é o dobro do sossego das bordas: a tela mostra a mudança no ciclo
+#: seguinte ao gesto, e a máquina paga dois subprocessos por controle nesse
+#: intervalo, não vinte por segundo.
+CANAL_TTL_S: float = 2.0
+
+#: `{uniq: {fonte, canal_ativo, canal_mudo, volume_captura}}` — a última
+#: leitura do PipeWire por controle. Nasce VAZIO de propósito: até a primeira
+#: varredura o `state_full` não publica as chaves, e ausência é a resposta
+#: honesta de quem ainda não perguntou. Inventar `false` aqui seria dizer "o
+#: canal não está ativo" sobre um canal que ninguém olhou.
+_CANAL_POR_UNIQ: dict[str, dict[str, Any]] = {}
+
+
+def canal_do_microfone(uniq: str | None) -> dict[str, Any] | None:
+    """O que o PipeWire disse sobre o canal deste controle, ou `None`.
+
+    Leitura de dicionário, sem subprocesso: é o que o `state_full` chama.
+    `None` = ainda não perguntamos (ou este controle não tem canal).
+    """
+    if not uniq:
+        return None
+    lido = _CANAL_POR_UNIQ.get(uniq)
+    return dict(lido) if isinstance(lido, dict) else None
+
+
+def _ler_o_canal(uniq: str) -> dict[str, Any]:
+    """As três respostas do PipeWire sobre UM controle. Bloqueante.
+
+    `canal_ativo` compara a fonte DESTE controle com a fonte ativa do sistema,
+    e as duas leituras vêm dos donos que já existem — `fonte_de_captura_do_uniq`
+    (o casamento por dispositivo USB, o mesmo do `mic.volume.set`) e
+    `fonte_ativa` (que já sabe recusar `auto_null` e `.monitor`). Escrever uma
+    terceira régua aqui daria ao selo uma verdade diferente da do gesto.
+    """
+    from hefesto_dualsense4unix.integrations.audio_control import (
+        fonte_de_captura_do_uniq,
+        volume_da_captura,
+    )
+    from hefesto_dualsense4unix.integrations.eleicao_de_microfone import fonte_ativa
+
+    fonte = None
+    with contextlib.suppress(Exception):
+        fonte = fonte_de_captura_do_uniq(uniq)
+    if not fonte:
+        return {"fonte": None, "canal_ativo": False, "canal_mudo": None,
+                "volume_captura": None}
+    ativa = None
+    with contextlib.suppress(Exception):
+        ativa = fonte_ativa()
+    volume = None
+    with contextlib.suppress(Exception):
+        volume = volume_da_captura(fonte=fonte)
+    return {
+        "fonte": fonte,
+        "canal_ativo": bool(ativa) and ativa == fonte,
+        "canal_mudo": _fonte_esta_muda(fonte),
+        "volume_captura": volume,
+    }
+
+
+def _fonte_esta_muda(fonte: str) -> bool | None:
+    """`pactl get-source-mute` — `None` quando a pergunta não teve resposta.
+
+    `None` NÃO é `False`: "não sei se está muda" e "não está muda" levam a
+    telas diferentes, e colapsá-las é o hábito que faz o selo prometer o que
+    ninguém mediu.
+    """
+    import os
+    import subprocess
+
+    try:
+        r = subprocess.run(
+            ["pactl", "get-source-mute", fonte],
+            capture_output=True,
+            text=True,
+            timeout=2.0,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        return None
+    saida = (r.stdout or "").strip().lower()
+    if saida.endswith("yes"):
+        return True
+    if saida.endswith("no"):
+        return False
+    return None
+
+
+async def canal_do_microfone_loop(daemon: DaemonProtocol) -> None:
+    """Relê o canal de cada controle da mesa, a cada `CANAL_TTL_S`.
+
+    **A ARMADILHA QUE ELE EVITA, medida em 04/09/2026:** leitura sob demanda
+    mede ausência. Quem pergunta uma vez e lê na mesma linha recebe vazio
+    sempre — vale para toda leitura sob demanda deste daemon, não só a do
+    sensor. Aqui o laço já correu antes de alguém perguntar, e a primeira
+    varredura acontece no primeiro ciclo, não no primeiro pedido.
+    """
+    while not daemon._is_stopping():
+        await asyncio.sleep(CANAL_TTL_S)
+        uniqs = _uniqs_conectados(daemon)
+        if not uniqs:
+            _CANAL_POR_UNIQ.clear()
+            continue
+        for uniq in uniqs:
+            if daemon._is_stopping():
+                return
+            with contextlib.suppress(Exception):
+                _CANAL_POR_UNIQ[uniq] = await daemon._run_blocking(_ler_o_canal, uniq)
+        # Controle que saiu da mesa perde a leitura: publicar o canal de quem
+        # não está mais aqui é o nono caso desta casa de nomear um controle
+        # fora da mesa.
+        for fora in [u for u in _CANAL_POR_UNIQ if u not in uniqs]:
+            _CANAL_POR_UNIQ.pop(fora, None)
 
 
 
@@ -938,18 +1069,407 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
             if not getattr(daemon.config, "mic_button_toggles_system", True):
                 logger.debug("mic_hotkey_desligado_por_config")
                 continue
+            mudo = bool(payload.get("mudo"))
+            # A BORDA QUE NÓS MESMOS CAUSAMOS NÃO É GESTO — MICROFONE-UM-ATO-01
+            # (04/09/2026). O ato do microfone escreve o bit do mudo no
+            # firmware, e o firmware devolve essa mudança no report de INPUT
+            # ~550 ms depois (medido na bancada: o `report_thread` só põe o
+            # byte no fio no ciclo do keepalive). O laço das bordas não tem
+            # como saber, sozinho, se o bit mudou pelo dedo dela ou pela nossa
+            # escrita — e tratar o eco como gesto executa o ato DUAS vezes.
+            #
+            # A segunda execução não é inócua: com `ligado=False`, a primeira
+            # devolve o canal e zera o eleito, e o eco chega em `mudo=True`
+            # sobre `eleito is None` — que é o ramo da RECUSA, e ele deposita
+            # no cartão dela uma frase dizendo que o microfone está com outro
+            # controle. Medido em 04/09 pelo caminho do `mic.set` da tela.
+            if _borda_e_eco_do_ato(uniq, mudo):
+                logger.debug("mic_da_mesa_eco_do_ato_engolido", uniq=uniq, mudo=mudo)
+                continue
             try:
-                await _eleger_ou_devolver(daemon, uniq, bool(payload.get("mudo")))
+                await ligar_o_microfone(daemon, uniq, ligado=not mudo)
             except Exception as exc:
                 logger.warning("mic_hotkey_falhou", err=str(exc))
     finally:
         daemon.bus.unsubscribe(EventTopic.MIC_DA_MESA, queue)
 
 
+# ---------------------------------------------------------------------------
+# O ATO DO MICROFONE — uma função, dois chamadores (MICROFONE-UM-ATO-01)
+# ---------------------------------------------------------------------------
+
+#: Teto da espera pela CONFIRMAÇÃO do byte do mudo no aparelho. Medido na
+#: bancada em 04/09/2026, com o controle no cabo: o `mic.set` leva **547 ms e
+#: 548 ms** (duas medições, nos dois sentidos) até o `state_full` publicar o
+#: valor novo — o `report_thread` só escreve no ciclo do keepalive, que é de
+#: 0,5 s. Três segundos é seis vezes isso, e continua curto o bastante para a
+#: posse não ficar nossa por engano quando o aparelho responde.
+CONFIRMACAO_DO_MUDO_S: float = 3.0
+
+#: De quanto em quanto se relê, esperando a confirmação. 100 ms é um décimo do
+#: sossego das bordas e cinco vezes o intervalo do laço que as vê.
+PASSO_DA_CONFIRMACAO_S: float = 0.1
+
+#: Janela em que uma borda do bit de mudo é ECO da nossa própria escrita.
+#: Maior que a confirmação medida (~550 ms) com folga, e menor que qualquer
+#: segundo toque deliberado de quem está com o controle na mão.
+ECO_DO_ATO_S: float = 2.0
+
+#: `{uniq: (instante, mudo_que_escrevemos)}` — o registro das escritas que o
+#: ATO fez no byte do mudo. Só ele; o que o kernel escreve na borda do botão
+#: físico não passa por aqui, que é justamente a diferença que o laço precisa.
+_ECO_DO_ATO: dict[str, tuple[float, bool]] = {}
+
+
+def _relogio() -> float:
+    """O monotônico, isolado num nome para o teste poder congelá-lo."""
+    import time
+
+    return time.monotonic()
+
+
+def _marcar_eco_do_ato(uniq: str, mudo: bool) -> None:
+    """Anota que NÓS escrevemos este valor no byte do mudo deste controle."""
+    _ECO_DO_ATO[uniq] = (_relogio(), bool(mudo))
+
+
+def _borda_e_eco_do_ato(uniq: str, mudo: bool) -> bool:
+    """A borda que chegou é o eco da nossa escrita, e não um gesto dela?
+
+    Exige as DUAS coisas — a janela de tempo **e** o mesmo valor. Só o tempo
+    engoliria o gesto de quem apertasse o plástico para desfazer o que acabou
+    de fazer pela tela, que é o uso mais provável do botão logo depois de um
+    clique. O valor casa porque o eco só pode trazer de volta o que mandamos.
+    """
+    marca = _ECO_DO_ATO.get(uniq)
+    if marca is None:
+        return False
+    quando, escrito = marca
+    if bool(mudo) != escrito:
+        return False
+    if (_relogio() - quando) >= ECO_DO_ATO_S:
+        _ECO_DO_ATO.pop(uniq, None)
+        return False
+    # O eco só vale UMA vez: a próxima borda com o mesmo valor é gesto dela.
+    _ECO_DO_ATO.pop(uniq, None)
+    return True
+
+
+@dataclass(frozen=True)
+class MetadeDoAto:
+    """Uma das duas metades do ato, e o motivo quando ela não aconteceu.
+
+    `motivo` vazio com `feita=False` é proibido por construção: quem constrói
+    uma metade não-feita passa a frase, porque é ela que vai para o cartão.
+    """
+
+    feita: bool
+    motivo: str = ""
+
+
+@dataclass(frozen=True)
+class AtoDoMicrofone:
+    """O ato inteiro: o canal no sistema **e** o mudo no firmware.
+
+    O CONCEITO É DELA, e ele derrubou a pergunta que eu tinha feito. Eu levei
+    o microfone como *"duas camadas se contradizem"* e ofereci três arranjos
+    que GUARDAVAM a contradição; ela recusou os três:
+
+        *"tá errado o conceito da coisa. o botão é pra ligar o microfone e ele
+        ser ouvido no canal específico dele."*
+
+    E ao meio-dia de 04/09 acrescentou as duas regras que faltavam, com todas
+    as letras:
+
+        *"o botão fisico do mic se ligado no  # noqa-acento: citação dela
+        microfone ele fica ligado tambem.  # noqa-acento: citação dela
+        indepente se nativo ou virtual"*  # noqa-acento: citação dela
+
+    Não são duas camadas com duas verdades: é UM ato, e ele só está feito
+    quando as duas metades estão feitas. Por isso este tipo carrega as duas
+    separadas — para a frase de recusa poder dizer QUAL faltou, que é o que a
+    S-01 do piloto leva ao cartão.
+    """
+
+    uniq: str
+    ligado: bool
+    canal_no_sistema: MetadeDoAto
+    firmware: MetadeDoAto
+    ativo: str | None = None
+
+    @property
+    def feito(self) -> bool:
+        """As duas metades feitas. Nada de "meio ato" contando como sucesso."""
+        return self.canal_no_sistema.feita and self.firmware.feita
+
+    @property
+    def motivo(self) -> str:
+        """A frase que diz QUAL metade faltou — vazia quando o ato está feito.
+
+        As duas metades falhando viram UMA frase com as duas razões, e não a
+        primeira delas: quem lê o cartão precisa saber que não foi só um
+        pedaço. O texto de tela é dela; o que se monta aqui é a junção.
+        """
+        faltou = [
+            m.motivo
+            for m in (self.canal_no_sistema, self.firmware)
+            if not m.feita
+        ]
+        return " · ".join(f for f in faltou if f)
+
+    def como_corpo(self) -> dict[str, Any]:
+        """A resposta do IPC — o mesmo dicionário para os dois chamadores."""
+        return {
+            "status": "ok" if self.feito else "incompleto",
+            "uniq": self.uniq,
+            "ligado": self.ligado,
+            "canal_feito": self.canal_no_sistema.feita,
+            "canal_motivo": self.canal_no_sistema.motivo,
+            "firmware_pedido": self.firmware.feita,
+            "firmware_motivo": self.firmware.motivo,
+            "ativo": self.ativo,
+            "motivo": self.motivo,
+        }
+
+
+async def ligar_o_microfone(
+    daemon: DaemonProtocol, uniq: str, *, ligado: bool
+) -> AtoDoMicrofone:
+    """O ATO — e é a MESMA função para o botão do plástico e o da tela.
+
+    Uma função, dois chamadores, por nome: `mic_button_loop` (a borda do
+    plástico) e `ipc_handlers._handle_mic_canal_set` (o 🎙 da tela). A régua
+    `tests/unit/test_o_microfone_e_um_estado_so.py` confere isso arrancando o
+    chamador — se os dois deixarem de apontar para este nome, ela reprova.
+
+    **ELE NÃO CONSULTA O MODO**, e é a segunda regra dela. Não há um `if
+    native_mode` neste caminho nem em nenhuma das duas metades: o ato é o
+    mesmo em Nativo e em Virtual. O que muda é o que o APARELHO consegue
+    fazer, e isso o ato RELATA em vez de esconder — ver a metade do firmware.
+
+    A ORDEM É O CANAL PRIMEIRO, e ela é medida: a metade do canal é a que
+    funciona em qualquer modo (o PipeWire não passa pelo hidraw) e é a que ela
+    nomeou — *"ele ser ouvido no canal específico dele"*. A do firmware pode
+    ficar represada; fazê-la primeiro atrasaria a metade que sempre pega.
+    """
+    no_sistema, ativo = await _metade_do_canal(daemon, uniq, ligado)
+    firmware = await _metade_do_firmware(daemon, uniq, ligado)
+    ato = AtoDoMicrofone(
+        uniq=uniq,
+        ligado=ligado,
+        canal_no_sistema=no_sistema,
+        firmware=firmware,
+        ativo=ativo,
+    )
+    logger.info(
+        "mic_ato",
+        uniq=uniq,
+        ligado=ligado,
+        feito=ato.feito,
+        canal=no_sistema.feita,
+        firmware=firmware.feita,
+        motivo=ato.motivo,
+    )
+    return ato
+
+
+async def _metade_do_canal(
+    daemon: DaemonProtocol, uniq: str, ligado: bool
+) -> tuple[MetadeDoAto, str | None]:
+    """A metade do SISTEMA: a fonte de captura deste controle é a ouvida.
+
+    É `_eleger_ou_devolver` inteiro, sem uma linha de regra nova: ele já é o
+    dono da eleição, da recusa de quem não elegeu, do LED que segue a leitura
+    conferida e do recado que vai para o cartão. Chamá-lo daqui é o oposto de
+    reescrevê-lo — a segunda régua sobre o mesmo estado é o defeito que esta
+    casa já pagou onze vezes.
+    """
+    resultado = await _eleger_ou_devolver(daemon, uniq, not ligado)
+    if resultado is None:
+        return (
+            MetadeDoAto(False, "o canal deste controle não foi tocado"),
+            None,
+        )
+    return (
+        MetadeDoAto(bool(resultado.ok), "" if resultado.ok else resultado.motivo),
+        resultado.ativo,
+    )
+
+
+async def _metade_do_firmware(
+    daemon: DaemonProtocol, uniq: str, ligado: bool
+) -> MetadeDoAto:
+    """A metade do APARELHO: o bit `MIC_MUTE` do firmware, e a posse de volta.
+
+    **É IDEMPOTENTE, E ISSO NÃO É ZELO — É A DECISÃO DELA.** Escrever o byte
+    toma a posse dele do `hid-playstation`, e enquanto a posse for nossa o
+    botão do plástico **deixa de valer** (`_handle_mic_set`: *"é uma ORDEM, e
+    enquanto ela vigorar o botão físico não manda mais"*). Vindo do plástico,
+    o kernel JÁ pôs o bit no valor certo antes de a borda chegar aqui — então
+    não há o que escrever, e não escrever é o que mantém o botão dela vivo.
+    Só o gesto de TELA encontra o bit divergente, e só ele escreve.
+
+    **E A POSSE VOLTA AO KERNEL depois de o valor ir ao fio**, pela mesma
+    razão: *"o botão do Controle sempre controla a interface"* (decisão dela,
+    30/08/2026). A devolução é AGENDADA e não imediata, e isso é medição: o
+    `handle.set_microphone_mute` só marca o desejo, e quem põe bytes no fio é
+    o `report_thread` — devolver na linha seguinte apagaria o bit de validação
+    antes de o report sair, e o valor nunca aconteceria.
+
+    O QUE ELA DEVOLVE quando o aparelho não confirma: `feita=True` com o
+    pedido ACEITO pelo backend é o que se sabe AGORA — a confirmação leva
+    ~550 ms e a ponte da GUI tem teto de 250 ms. Quem diz a verdade conferida
+    é o `state_full`, e é de lá que o selo composto se pinta. O que NÃO se faz
+    aqui é responder "ok" sobre um backend que recusou: aí `feita` é `False`
+    com a frase.
+    """
+    mudo_desejado = not ligado
+    controller = getattr(daemon, "controller", None)
+    leitor = getattr(controller, "audio_status_for", None)
+    estado: Any = None
+    if callable(leitor):
+        with contextlib.suppress(Exception):
+            estado = leitor(uniq)
+    mudo_agora = estado.get("mic_mudo") if isinstance(estado, dict) else None
+    if isinstance(mudo_agora, bool) and mudo_agora == mudo_desejado:
+        # Já está como o ato pede. É o caminho do BOTÃO DO PLÁSTICO, e não
+        # escrever aqui é o que deixa a posse com o kernel — ou seja, o que
+        # deixa o botão dela continuar funcionando no toque seguinte.
+        return MetadeDoAto(True)
+    setter = getattr(controller, "set_microphone_mute", None)
+    if not callable(setter):
+        return MetadeDoAto(
+            False, "este controle não expõe o mudo do microfone ao Hefesto"
+        )
+    ok = False
+    with contextlib.suppress(Exception):
+        ok = bool(await daemon._run_blocking(_mutar, setter, mudo_desejado, uniq))
+    if not ok:
+        return MetadeDoAto(False, MOTIVO_FIRMWARE_REPRESADO)
+    _marcar_eco_do_ato(uniq, mudo_desejado)
+    _agendar_a_devolucao_da_posse(daemon, uniq, mudo_desejado)
+    return MetadeDoAto(True)
+
+
+def _mutar(setter: Any, muted: bool | None, uniq: str) -> bool:
+    """`set_microphone_mute(muted, uniq=…)` por POSICIONAIS. Não é enfeite.
+
+    **`_run_blocking(self, fn, *args)` NÃO ACEITA KEYWORDS** — é a assinatura
+    do daemon real (`daemon/lifecycle.py`) e a do protocolo. Chamar
+    `_run_blocking(setter, muted, uniq=uniq)` levanta `TypeError`, e um
+    `TypeError` dentro de um `suppress` vira "a escrita não pegou" com o
+    produto respondendo uma frase educada sobre um byte que nunca saiu.
+
+    **ISSO ACONTECEU AQUI, em 04/09/2026, e o teste estava VERDE.** O dublê da
+    régua tinha `async def _run_blocking(self, fn, *a, **kw)` — mais frouxo que
+    o daemon real —, e quem revelou foi o APARELHO: o ato respondeu "não
+    conseguiu escrever" na bancada, com o backend intacto. É a mesma família da
+    máscara que nunca gravou um byte (`p.chamar("gamepad.mask.set", {…})` com
+    o dicionário virando o `timeout` posicional).
+
+    O envelope existe pelo mesmo motivo do `_acender` deste arquivo, e é o
+    padrão da casa: quem precisa de keyword embrulha em posicionais.
+    """
+    return bool(setter(muted, uniq=uniq))
+
+
+def _agendar_a_devolucao_da_posse(
+    daemon: DaemonProtocol, uniq: str, mudo_desejado: bool
+) -> None:
+    """Espera o aparelho CONFIRMAR e só então devolve a posse ao kernel.
+
+    Task própria porque a confirmação custa ~550 ms (medido) e o handler do
+    IPC não pode pagá-la: a ponte da GUI corta em 250 ms. Sem task, ou a tela
+    trava, ou a posse fica nossa para sempre — e a posse nossa é o botão do
+    plástico morto.
+
+    **NÃO devolve quando a confirmação não vem**, e isso é deliberado: em Modo
+    Nativo o `report_thread` não escreve nada (contrato de zero escrita,
+    FEAT-NATIVE-OUTPUT-MUTE-01, medido na bancada em 04/09 — `mic.set`
+    respondeu `ok` com o `mic_mudo` parado). Devolver ali apagaria o bit de
+    validação e o pedido dela morreria calado. Ele fica represado, a posse
+    fica nossa, e o `state_full` publica a discordância — que é o que o selo
+    composto existe para mostrar.
+    """
+    with contextlib.suppress(Exception):
+        task = asyncio.create_task(
+            _confirmar_e_devolver(daemon, uniq, mudo_desejado),
+            name=f"mic_ato_confirma_{uniq}",
+        )
+        daemon._tasks.append(task)
+
+
+async def _confirmar_e_devolver(
+    daemon: DaemonProtocol, uniq: str, mudo_desejado: bool
+) -> None:
+    """Relê até o aparelho concordar; devolve a posse; anota o que aconteceu."""
+    controller = getattr(daemon, "controller", None)
+    leitor = getattr(controller, "audio_status_for", None)
+    devolver = getattr(controller, "set_microphone_mute", None)
+    if not (callable(leitor) and callable(devolver)):
+        return
+    esperou = 0.0
+    while esperou < CONFIRMACAO_DO_MUDO_S:
+        await asyncio.sleep(PASSO_DA_CONFIRMACAO_S)
+        esperou += PASSO_DA_CONFIRMACAO_S
+        if daemon._is_stopping():
+            return
+        estado: Any = None
+        with contextlib.suppress(Exception):
+            estado = leitor(uniq)
+        lido = estado.get("mic_mudo") if isinstance(estado, dict) else None
+        if isinstance(lido, bool) and lido == mudo_desejado:
+            with contextlib.suppress(Exception):
+                # POSICIONAIS: `_run_blocking(self, fn, *args)`. Ver `_mutar`.
+                await daemon._run_blocking(_mutar, devolver, None, uniq)
+            logger.info(
+                "mic_ato_posse_devolvida", uniq=uniq, esperou_s=round(esperou, 2)
+            )
+            return
+    logger.info("mic_ato_represado", uniq=uniq, mudo_desejado=mudo_desejado)
+    # `recusa` E NÃO UMA PALAVRA NOVA. `recado_do_microfone.GESTOS` é uma
+    # tupla FECHADA e `anotar` LEVANTA em gesto desconhecido — de propósito,
+    # para a tela nunca receber uma palavra que não sabe pintar. Medido na
+    # bancada em 04/09: a primeira redação disto mandava
+    # `gesto="firmware-represado"`, o `ValueError` subiu dentro da task e o
+    # recado do represamento nunca chegou ao `state_full` — o log dizia
+    # `mic_ato_represado` e a tela não recebia nada.
+    #
+    # `recusa` é a palavra certa e não é remendo: ela já significa *"o produto
+    # não fez, e a razão é esta"*. O que muda é o `motivo`, que é o que a tela
+    # pinta.
+    with contextlib.suppress(Exception):
+        recado_do_microfone.anotar(
+            daemon,
+            uniq,
+            gesto="recusa",
+            ok=False,
+            motivo=MOTIVO_FIRMWARE_REPRESADO,
+        )
+
+
+#: A frase de quando o byte do mudo não chega ao aparelho. Ela NÃO nomeia o
+#: modo por adivinhação — nomeia o que foi medido: o pedido ficou de pé e o
+#: controle não confirmou. Em Modo Nativo o hidraw é do jogo e o daemon não
+#: escreve nada nele; é o caso conhecido, e é o que a frase descreve sem
+#: prometer que é o único.
+MOTIVO_FIRMWARE_REPRESADO: Final[str] = (
+    "o microfone foi ligado no canal deste controle, mas o Hefesto não "
+    "conseguiu escrever o mudo no aparelho — enquanto um jogo estiver com o "
+    "controle (Modo Nativo) quem manda no plástico é ele, e o pedido fica "
+    "guardado até o Hefesto poder escrever"
+)
+
+
 async def _eleger_ou_devolver(
     daemon: DaemonProtocol, uniq: str, mudo: bool
-) -> None:
+) -> ResultadoDaEleicao:
     """O controle passou a NÃO-MUDO: elege. O ELEITO passou a MUDO: devolve.
+
+    **DEVOLVE O RESULTADO desde 04/09/2026 (MICROFONE-UM-ATO-01).** Ele já
+    tinha um: as cinco frases de `ResultadoDaEleicao.motivo` iam para o log e
+    para o recado, e o chamador ficava sem saber se a metade do canal tinha
+    acontecido. O ato precisa saber — é metade dele.
 
     O caminho de VOLTA não é opcional: sem ele, o desfecho padrão de ela tirar
     o mic do controle é o `.monitor` do sink ou o `auto_null` — o sistema
@@ -1054,8 +1574,13 @@ async def _eleger_ou_devolver(
             acender_outro = getattr(daemon.controller, "set_mic_led", None)
             if callable(acender_outro):
                 await daemon._run_blocking(_acender, acender_outro, False, uniq)
-            return
-        resultado = await daemon._run_blocking(eleitor.devolver_o_microfone)
+            return recusa
+        # ANOTADO porque `_run_blocking` devolve `Any` e este método passou a
+        # DEVOLVER o resultado (MICROFONE-UM-ATO-01): sem a anotação o `Any`
+        # vazaria para o ato inteiro e o mypy pararia de conferir as metades.
+        resultado: ResultadoDaEleicao = await daemon._run_blocking(
+            eleitor.devolver_o_microfone
+        )
         # A LUZ FICA ACESA QUANDO A DEVOLUÇÃO É RECUSADA — decisão dela, e ela
         # não é nova: o contrato do LED é *"aceso = este mic está no ar"*
         # (01/09/2026). Se o produto não conseguiu devolver, o padrão do
@@ -1135,6 +1660,7 @@ async def _eleger_ou_devolver(
         await _apagar_a_luz_de_quem_perdeu_o_canal(
             daemon, acender, dono_antes=dono_antes, quem_tocou=uniq, eleitor=eleitor
         )
+    return resultado
 
 
 async def _apagar_a_luz_de_quem_perdeu_o_canal(
@@ -1317,21 +1843,30 @@ class HotkeySubsystem:
 
 
 __all__ = [
+    "CANAL_TTL_S",
     "CICLO_DE_PONTES",
+    "CONFIRMACAO_DO_MUDO_S",
     "CORES_DO_MODO",
+    "ECO_DO_ATO_S",
     "MIC_SOSSEGO_S",
     "MODO_NATIVO",
     "MODO_STEAM_INPUT",
+    "MOTIVO_FIRMWARE_REPRESADO",
     "PONTE_DUALSENSE",
     "PONTE_MOUSE_TECLADO",
     "PONTE_XBOX",
+    "AtoDoMicrofone",
     "HotkeySubsystem",
+    "MetadeDoAto",
     "avisar_troca_de_modo",
     "build_next_bridge_callback",
     "build_profile_cycle_callback",
     "build_ps_long_press_callback",
     "build_ps_solo_callback",
+    "canal_do_microfone",
+    "canal_do_microfone_loop",
     "devolver_a_luz_ao_kernel",
+    "ligar_o_microfone",
     "mic_button_loop",
     "modo_vigente",
     "ponte_atual",

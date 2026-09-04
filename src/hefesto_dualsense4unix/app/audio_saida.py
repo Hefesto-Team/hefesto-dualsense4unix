@@ -69,6 +69,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Final, NamedTuple
 
+from hefesto_dualsense4unix.core.ds_output_report import (
+    SAIDA_L_FONE_R_ALTO_FALANTE,
+    SAIDA_SO_NO_ALTO_FALANTE,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -1052,6 +1056,154 @@ def devolver_o_som_do_pc(
 
 
 # ---------------------------------------------------------------------------
+# A LEITURA DE VOLTA, e ela é das DUAS camadas
+# (ALTO-FALANTE-DOIS-CANAIS-01, 04/09/2026)
+# ---------------------------------------------------------------------------
+
+#: O `OUTPUT_PATH_SEL` de "Sons do jogo": canal esquerdo para o fone/TV e o
+#: direito para o alto-falante do controle. Nomes importados do dono do byte
+#: (`core/ds_output_report`) para não haver uma segunda tabela de rotas.
+BYTE_SONS_DO_JOGO: Final[int] = SAIDA_L_FONE_R_ALTO_FALANTE
+
+#: O `OUTPUT_PATH_SEL` de "Todo o som do PC": só o alto-falante interno.
+BYTE_TODO_O_SOM_DO_PC: Final[int] = SAIDA_SO_NO_ALTO_FALANTE
+
+#: A frase do cartão quando as duas camadas DISCORDAM: o firmware está roteado
+#: para "Todo o som do PC" e a saída padrão do sistema não é este controle.
+#: Foi o estado medido em 03/09 — o botão aceso com o som saindo na TV.
+MOTIVO_ROTA_SO_NO_BYTE: Final[str] = (
+    "o alto-falante deste controle está roteado para receber todo o som, mas "
+    "a saída padrão do sistema não é ele — o som continua saindo onde estava. "
+    "Clique em 'Todo o som do PC' para mandá-lo para cá."
+)
+
+
+def botao_da_rota_aceso(
+    byte: Any, sink_do_controle: str, sink_padrao: str
+) -> str:
+    """Qual dos dois botões acende: ``"jogo"``, ``"pc"`` ou ``""``. Função PURA.
+
+    **ELA LÊ AS DUAS CAMADAS, e é essa a entrega.** Até 04/09/2026 a tela
+    acendia "Todo o som do PC" pelo FIRMWARE e mais nada
+    (`a02_controles.rota_na_tela`), e o resultado foi medido em 03/09: o card 2
+    com o botão aceso e o som saindo na TV. O byte é a camada 2; quem decide
+    onde o som sai é a camada 1, e *"a camada 1 vence a camada 2 — volume e
+    rota perfeitos num sink mudo é trabalho invisível"* (`controller_card.py`).
+
+    A tabela inteira, e cada linha tem razão:
+
+    =====================  =========================  ==============
+    byte                   camada 1                   acende
+    =====================  =========================  ==============
+    3 (todo o som do PC)   padrão É este controle     ``"pc"``
+    3 (todo o som do PC)   padrão é outra saída       ``""`` (recado)
+    2 (sons do jogo)       qualquer                   ``"jogo"``
+    0, 1 ou ausente        qualquer                   ``""``
+    =====================  =========================  ==============
+
+    A segunda linha é a que não se adivinha: apagar OS DOIS é mais honesto que
+    acender o errado, porque nenhum dos dois descreve o que está acontecendo —
+    o firmware quer uma coisa e o sistema faz outra. Quem diz isso em palavras
+    é :func:`recado_da_rota`.
+
+    As rotas 0 e 1 (tudo no fone, mono no fone) apagam os dois de propósito:
+    são rotas legítimas do protocolo que estes dois botões não representam, e
+    acender um deles ali seria arredondar o byte para o botão mais parecido.
+
+    ``sink_do_controle`` vazio é o RÁDIO — o DualSense não publica placa de som
+    por Bluetooth. Aí a camada 1 não tem como estar no controle, e "pc" nunca
+    acende: a recusa honesta já está em :data:`MOTIVO_ROTA_SEM_SINK`.
+    """
+    if isinstance(byte, bool) or not isinstance(byte, int):
+        return ""
+    if byte == BYTE_SONS_DO_JOGO:
+        return "jogo"
+    if byte != BYTE_TODO_O_SOM_DO_PC:
+        return ""
+    if sink_do_controle and sink_padrao == sink_do_controle:
+        return "pc"
+    return ""
+
+
+def recado_da_rota(byte: Any, sink_do_controle: str, sink_padrao: str) -> str:
+    """A frase para o cartão quando as duas camadas discordam; ``""`` senão.
+
+    Só existe UM desacordo que precisa de palavras: o byte diz "todo o som do
+    PC" e a saída padrão do sistema é outra. O contrário — a saída padrão ser
+    este controle com o byte em "sons do jogo" — **não** é desacordo: é o
+    estado de quem mandou o som para cá pelas configurações do sistema, e o
+    botão "Todo o som do PC" apagado descreve isso sem mentir.
+    """
+    if isinstance(byte, bool) or not isinstance(byte, int):
+        return ""
+    if byte != BYTE_TODO_O_SOM_DO_PC:
+        return ""
+    if sink_do_controle and sink_padrao == sink_do_controle:
+        return ""
+    return MOTIVO_ROTA_SO_NO_BYTE
+
+
+@dataclass(frozen=True)
+class RotaDasDuasCamadas:
+    """O que as duas camadas dizem sobre a saída de UM controle.
+
+    `byte` é a camada 2 (o `speaker.rota` do `state_full`), `sink_do_controle`
+    e `sink_padrao` são a camada 1 (o PipeWire). Os três juntos são a única
+    resposta honesta a *"o som deste controle está recebendo o quê"*.
+    """
+
+    byte: int | None = None
+    sink_do_controle: str = ""
+    sink_padrao: str = ""
+
+    @property
+    def botao_aceso(self) -> str:
+        """``"jogo"``, ``"pc"`` ou ``""`` — o que a tela pode afirmar."""
+        return botao_da_rota_aceso(self.byte, self.sink_do_controle, self.sink_padrao)
+
+    @property
+    def no_controle(self) -> bool:
+        """A saída padrão do sistema É a placa deste controle (camada 1)."""
+        return bool(self.sink_do_controle) and self.sink_padrao == self.sink_do_controle
+
+    @property
+    def concordam(self) -> bool:
+        """As duas camadas contam a mesma história."""
+        return not recado_da_rota(self.byte, self.sink_do_controle, self.sink_padrao)
+
+    @property
+    def recado(self) -> str:
+        """A frase do cartão quando elas discordam; ``""`` quando concordam."""
+        return recado_da_rota(self.byte, self.sink_do_controle, self.sink_padrao)
+
+
+def ler_as_duas_camadas(
+    uniq: str,
+    byte: Any,
+    uniqs_na_mesa: list[str] | tuple[str, ...] = (),
+    *,
+    runner: Callable[[list[str]], str] | None = None,
+) -> RotaDasDuasCamadas:
+    """Junta o byte (que quem chama já tem) com o que o PipeWire diz. Bloqueante.
+
+    O byte vem do `state_full` e NÃO se relê aqui: quem o publica é o daemon,
+    e uma segunda leitura seria a segunda verdade. O que falta é a camada 1, e
+    ela sai dos dois donos que já existem — `sink_do_controle` (o mesmo
+    casamento por dispositivo USB que o `MicMonitor` faz) e a saída padrão do
+    sistema, pela mesma leitura de `pactl` que `RotaDeSaida` usa.
+
+    Bloqueante como todo este módulo: quem chama é `ipc_bridge.run_in_thread`.
+    """
+    ler = runner if runner is not None else rodar_leitura
+    padrao = sink_padrao_da_saida(ler(["pactl", "get-default-sink"]))
+    do_controle = sink_do_controle(uniq, uniqs_na_mesa, runner=ler)
+    lido = byte if isinstance(byte, int) and not isinstance(byte, bool) else None
+    return RotaDasDuasCamadas(
+        byte=lido, sink_do_controle=do_controle, sink_padrao=padrao
+    )
+
+
+# ---------------------------------------------------------------------------
 # Bordas com o sistema
 # ---------------------------------------------------------------------------
 
@@ -1263,6 +1415,8 @@ def estado_do_sono(home: str | None = None) -> str:
 
 
 __all__ = [
+    "BYTE_SONS_DO_JOGO",
+    "BYTE_TODO_O_SOM_DO_PC",
     "CANAL_ACORDADO",
     "CANAL_DORMINDO",
     "CANAL_SEM_LEITURA",
@@ -1279,6 +1433,7 @@ __all__ = [
     "MOTIVO_ROTA_NAO_PEGOU",
     "MOTIVO_ROTA_SEM_SINK",
     "MOTIVO_ROTA_SEM_VOLTA",
+    "MOTIVO_ROTA_SO_NO_BYTE",
     "MOTIVO_SAIDA_MUDA",
     "MOTIVO_SEM_ARQUIVO",
     "MOTIVO_SEM_SINK",
@@ -1296,20 +1451,24 @@ __all__ = [
     "DesfechoDaRota",
     "EstadoDaRota",
     "ResultadoDoSom",
+    "RotaDasDuasCamadas",
     "RotaDeSaida",
     "acao_da_rota",
     "acordar_sink",
     "apelido_do_sink",
     "argv_do_tocador",
     "arquivo_de_confirmacao",
+    "botao_da_rota_aceso",
     "caminho_regra_nunca_dorme",
     "devolver_o_som_do_pc",
     "estado_do_canal",
     "estado_do_sono",
     "estados_crus_dos_sinks",
     "estados_dos_sinks",
+    "ler_as_duas_camadas",
     "mandar_o_som_do_pc",
     "nomes_de_sinks",
+    "recado_da_rota",
     "regra_nunca_dorme_instalada",
     "rodar_leitura",
     "sink_do_controle",

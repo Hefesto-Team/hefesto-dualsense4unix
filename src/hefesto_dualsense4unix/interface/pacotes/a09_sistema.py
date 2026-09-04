@@ -1448,7 +1448,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:5787`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:5913`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:167`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no
@@ -1531,7 +1531,7 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ter dois estados, o clique não muda nem a aparência (não há um `<script>` na
     página que troque a classe localmente), e quem clica não tem como saber que
     não pegou. Medido em execução em 02/09: `autostart` estava entre os SETE
-    gestos desta página sem dono — o clique caía em `hefesto_vivo.py:1018`,
+    gestos desta página sem dono — o clique caía em `hefesto_vivo.py:1690`,
     imprimia `[gesto sem dono]` no stdout do processo e voltava.
 
     O QUE ELE MANDA É O CONTRÁRIO DO QUE ESTÁ LIDO, e a leitura é a mesma que

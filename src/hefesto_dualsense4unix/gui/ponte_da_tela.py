@@ -76,6 +76,7 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -117,7 +118,56 @@ AS_QUATRO_ARMADILHAS: tuple[str, ...] = (
 #: do autor e desenha a caixa BRANCA do tema do sistema. São **117** ``<select>``
 #: nas dez abas, e a aba Controles não tem nenhum: aqui a cura não se prova pelo
 #: olho, ela viaja no módulo para as outras nove.
-FOLHA_DA_CASA = ".nota{display:none !important}select{appearance:none;-webkit-appearance:none}"
+#: ``.hef-em-voo`` é o BOTÃO QUE ESTÁ TRABALHANDO — decisão dela, `09` [03],
+#: 04/09/2026: *"o botão diz que está trabalhando"*, e fala **durante** a espera,
+#: no lugar exato do clique. Há um gesto desta casa que leva 9,5 s
+#: (``daemon.reload``, medido em 01/09) e nenhuma das dez abas tinha estado "em
+#: voo": o clique sumia por nove segundos e meio e o segundo clique parecia o
+#: primeiro.
+#:
+#: A REGRA MORA AQUI, NA FOLHA DO MÓDULO, e não no CSS das dez páginas: o piloto
+#: é um só para as dez, e a classe tem de valer em todas sem que ninguém
+#: republique desenho. ``cursor:progress`` é o que o ponteiro dela já diz em
+#: qualquer aplicativo; a opacidade é o sinal que não depende de texto — quem
+#: publicar um ``data-hef-em-voo`` ganha o rótulo por cima, quem não publicar
+#: ganha o sinal mesmo assim.
+#:
+#: O ``!important`` NÃO É EXAGERO, e o número é medido (04/09/2026, foto
+#: ``--oculta`` da aba 02): sem ele o ``cursor`` saiu **``pointer``**, e não
+#: ``progress``. A razão é do cascade: uma folha de USUÁRIO **perde** para o
+#: autor em declaração normal — só o ``!important`` do usuário vence. As dez
+#: páginas declaram ``cursor:pointer`` nos botões, então a metade do sinal que
+#: mora no ponteiro dela estava morta. É a mesma razão pela qual o ``.nota``
+#: acima o carrega desde sempre.
+#:
+#: E O RÓTULO NÃO CABE EM BOTÃO DE ÍCONE — medido na mesma foto: publicado num
+#: 🎙 de 20 px, o ``"Calando…"`` transborda. **Quem publica o
+#: ``data-hef-em-voo`` é quem responde por caber**; num botão de ícone a
+#: resposta certa é NÃO publicar e deixar o sinal da classe falar. A decisão
+#: dela (`09` [03]) é sobre o "Atualizar", que tem 184 px de coluna.
+FOLHA_DA_CASA = (
+    ".nota{display:none !important}"
+    "select{appearance:none;-webkit-appearance:none}"
+    ".hef-em-voo{opacity:.6 !important;cursor:progress !important}"
+)
+
+#: QUANTO O PILOTO ESPERA ANTES DE RECARREGAR a página cujo processo web morreu.
+#:
+#: Não é zero porque o sinal chega DENTRO do handler do WebKit, e recarregar de
+#: lá é reentrar no que acabou de cair. Um tique de laço basta.
+MS_ANTES_DE_RECARREGAR = 250
+
+#: O TETO DE RECARGAS SEGUIDAS, e ele é a diferença entre uma cura e um laço.
+#:
+#: Uma página que mate o processo web a cada carga viraria recarga infinita — e
+#: um laço comendo CPU na máquina dela é pior que a tela congelada, porque não
+#: para sozinho. Depois do teto o piloto **para e diz** em vez de insistir.
+RECARGAS_SEGUIDAS = 3
+
+#: Quanto tempo de página VIVA zera a conta acima. Um crash hoje e outro daqui a
+#: uma hora não são "seguidos" — e tratá-los como tal deixaria a janela sem cura
+#: no segundo dia de uso.
+SEGUNDOS_PARA_ESQUECER_O_CRASH = 60.0
 
 #: O nome do canal de mensagens. A página o pronuncia em
 #: ``window.webkit.messageHandlers.<canal>.postMessage``.
@@ -366,6 +416,9 @@ class JanelaDaAba:
         janela**: isso é navegação legítima, não erro.
     :param ao_falhar: chamado com o motivo quando a PRIMEIRA carga falha.
         ``None`` → imprime no ``stderr`` e ``Gtk.main_quit()``.
+    :param ao_morrer_a_pagina: chamado com o motivo quando o processo web do
+        WebKit termina. A janela **recarrega sozinha** de qualquer jeito; este
+        gancho existe para quem quiser DIZER na tela que isso aconteceu.
     :param oculta: ``Gtk.OffscreenWindow`` — nada aparece na tela dela.
     """
 
@@ -379,6 +432,7 @@ class JanelaDaAba:
         ao_recusar: Callable[[str, str], None] | None = None,
         ao_sair_da_aba: Callable[[str], None] | None = None,
         ao_falhar: Callable[[str], None] | None = None,
+        ao_morrer_a_pagina: Callable[[str], None] | None = None,
         oculta: bool = False,
         titulo: str = "Hefesto",
         subtitulo: str = "",
@@ -391,17 +445,28 @@ class JanelaDaAba:
         self._ao_carregar = ao_carregar
         self._ao_sair_da_aba = ao_sair_da_aba
         self._ao_falhar = ao_falhar
+        self._ao_morrer_a_pagina = ao_morrer_a_pagina
         self.oculta = oculta
         #: A guarda vale só na PRIMEIRA carga. Depois disso, sair da aba pausa.
         self.primeira_carga = True
         #: Se a página à vista AGORA é a aba desta janela.
         self.na_aba = False
+        #: Toda morte do processo web, com o motivo, na ordem. Lista vazia é a
+        #: única forma honesta de dizer "não morreu nenhuma vez" — ausência de
+        #: notícia lida como sucesso é o defeito que esta casa nomeou em 22/08.
+        self.mortes: list[str] = []
+        #: Quantas recargas seguidas já foram gastas, e desde quando esta página
+        #: está viva. Ver :data:`RECARGAS_SEGUIDAS`.
+        self.recargas = 0
+        self._viva_desde = time.monotonic()
 
         self.ponte = PonteDaTela(
             canal=canal, ao_receber=ao_receber, ao_recusar=ao_recusar, folha=folha
         )
         self.view = self.ponte.view
         self.view.connect("load-changed", self._carregou)
+        # A QUINTA ARMADILHA, e ela é a que ela FOTOGRAFOU. Ver `_morreu_a_pagina`.
+        self.view.connect("web-process-terminated", self._morreu_a_pagina)
 
         # A TRAVA DA TELA DELA vem ANTES do `if`, e é de propósito: ela não
         # avisa e segue, ela DECIDE. Ver `SEM_JANELA_NA_TELA`, no topo.
@@ -425,6 +490,13 @@ class JanelaDaAba:
         # por ela em 04/09/2026. A razão inteira está em `theme.adotar_o_tema_da_sessao`.
         tema.adotar_o_tema_da_sessao()
         tema.pedir_a_variante_escura()
+        # OS BOTÕES DO LADO DO SISTEMA — queixa 2 dela, 04/09/2026, e a única
+        # das quinze que tinha ficado aberta. Vem junto do tema porque é a mesma
+        # forma de cura: o produto se ajusta à sessão DENTRO do próprio
+        # processo, em vez de exigir que a sessão se ajuste a ele. A razão de
+        # não ser uma leitura do `button-layout` — e a medição que derrubou essa
+        # premissa — está em `theme.barra_que_o_sistema_usa`.
+        tema.adotar_a_barra_da_sessao()
 
         if oculta:
             self.janela: Any = Gtk.OffscreenWindow()
@@ -491,9 +563,90 @@ class JanelaDaAba:
                 return
             self.primeira_carga = False
             self.na_aba = True
+            # A CONTA DE RECARGAS ZERA QUANDO UMA PÁGINA CONFIRMA, e o relógio
+            # recomeça: é o que separa "morreu três vezes seguidas" de "morreu
+            # três vezes no dia". Ver `SEGUNDOS_PARA_ESQUECER_O_CRASH`.
+            self._viva_desde = time.monotonic()
             self._ao_carregar()
 
         self.ponte.perguntar("document.title", respondeu)
+
+    # -- a página que morreu -----------------------------------------------
+    def _morreu_a_pagina(self, _view: Any, motivo: Any) -> None:
+        """O processo web do WebKit terminou. A janela RECARREGA — e diz.
+
+        **A QUINTA ARMADILHA DO WebKit2 4.1**, e é a que ela fotografou em
+        04/09/2026 (*"interface quebrou sozinha oxi"*): quando o
+        ``WebKitWebProcess`` morre, a ``WebView`` **não avisa a quem a usa e não
+        volta sozinha**. Ela fica com o último quadro na tela e todo JavaScript
+        passa a falhar, para sempre, com a mesma linha.
+
+        MEDIDO nesta máquina em 04/09/2026, matando o processo filho por PID
+        conferido com ``ps -o pid,ppid,cmd`` (nunca por padrão de nome — um
+        ``pkill -f`` já derrubou o compositor dela no mesmo dia):
+
+        =========================================  =============================
+        depois da morte do ``WebKitWebProcess``    o que a janela faz
+        =========================================  =============================
+        sem esta cura                              ``evaluate_javascript`` devolve
+                                                   ``WebKitJavascriptError:
+                                                   Unsupported result type (601)``
+                                                   em **todo** tique, para sempre;
+                                                   o piloto imprime "a pintura
+                                                   falhou" a cada 100 ms e a tela
+                                                   fica congelada
+        com esta cura (``view.reload()``)          a página volta inteira —
+                                                   ``backgroundColor
+                                                   rgb(17, 18, 26)``, ``padding
+                                                   16px``, as 64.910 letras de
+                                                   estilo, e o bootstrap
+                                                   reinstalado sozinho
+        =========================================  =============================
+
+        **E O SINAL EXISTIA O TEMPO TODO:** ``web-process-terminated`` dispara
+        com ``crashed``. Ninguém o ouvia — a janela tinha o aviso na mão e não o
+        lia, que é a forma de defeito que esta casa chama de *a casa sabe e o
+        produto não faz*.
+
+        DUAS HIPÓTESES DA SPRINT CAÍRAM AQUI, e ficam escritas para ninguém as
+        remedir: matar o ``WebKitNetworkProcess`` e recarregar **não** deixa a
+        página nua (a folha é inline; o ``<link>`` do Google só traz fonte), e as
+        dez páginas publicadas não foram reescritas no disco no dia da foto.
+        """
+        nome = getattr(motivo, "value_nick", None) or str(motivo)
+        self.mortes.append(str(nome))
+        self.na_aba = False
+        print(f"[página morreu] o processo web do WebKit terminou ({nome})",
+              file=sys.stderr)
+        if self._ao_morrer_a_pagina is not None:
+            self._ao_morrer_a_pagina(str(nome))
+        if time.monotonic() - self._viva_desde >= SEGUNDOS_PARA_ESQUECER_O_CRASH:
+            self.recargas = 0
+        if self.recargas >= RECARGAS_SEGUIDAS:
+            print(f"[página morreu] {self.recargas} recargas seguidas sem a "
+                  f"página parar de pé — não recarrego de novo.", file=sys.stderr)
+            return
+        self.recargas += 1
+        self._viva_desde = time.monotonic()
+        # O TIQUE DE LAÇO ANTES DE RECARREGAR: o sinal chega DENTRO do handler
+        # do WebKit, e recarregar de lá é reentrar no que acabou de cair.
+        GLib.timeout_add(MS_ANTES_DE_RECARREGAR, self._recarregar)
+
+    def _recarregar(self) -> bool:
+        """Traz a página de volta. ``load_uri`` quando nunca houve carga boa.
+
+        ``reload()`` repete a URI à vista, que é o certo: ela pode ter navegado
+        para outra aba antes do crash, e recarregar a PRIMEIRA a tiraria de onde
+        ela estava. Só quando nenhuma carga confirmou é que não há o que repetir
+        — aí vale o arquivo com que a janela nasceu.
+        """
+        print(f"[página morreu] recarregando ({self.recargas}/{RECARGAS_SEGUIDAS})",
+              file=sys.stderr)
+        if self.primeira_carga:
+            self.view.load_uri(self.arquivo.as_uri())
+        else:
+            self.view.reload()
+        return False
 
     def _saiu_da_aba(self, titulo: str) -> None:
         """Ela clicou na tira. Isso é LEGÍTIMO, e matar a janela por isso é bug."""

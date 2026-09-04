@@ -841,11 +841,27 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`promessas_sem_caminho` tira os geradores da conta e, com eles, os "
         "chamadores desta função. MEDIDO em 01/09/2026."
     ),
-    "interface/monta.py::troca": (
-        "Auxiliar do gerador do mockup (interface/monta.py:809), chamado só pelos "
-        "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
-        "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
-        "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
+    # A LÁPIDE DE `interface/monta.py::troca` SAIU EM 04/09/2026, e a cura foi
+    # dela mesma: a ONDA0-F pôs a folha das dez peças (D-02 e D-03) dentro de
+    # `monta()`, e a injeção passa pelo `troca()` — justamente para que um
+    # `</style>` que suma PARE a geração em vez de publicar dez páginas sem as
+    # peças. Com isso a função ganhou chamador estático num módulo alcançado, e
+    # o portão cobrou a lápide, que é o que ele existe para fazer.
+    "interface/monta.py::botao_cinza": (
+        "Auxiliar do gerador do mockup (a peça S-03 da D-03, 04/09/2026), que "
+        "quem chama são os dez `interface/abaNN.py` — BANCADA, e por isso fora da "
+        "conta pela poda de `promessas_sem_caminho`. É a mesma classificação que "
+        "`interface/monta.py::monta` carrega logo acima, pela mesma razão medida: "
+        "o produto não gera página em tempo de execução, ele lê o HTML já escrito "
+        "em `interface/paginas/`. O docstring da função diz o mecanismo, e a "
+        "régua `tests/unit/test_o_botao_cinza_diz_a_razao.py` a exercita."
+    ),
+    "interface/monta.py::ressalva": (
+        "Auxiliar do gerador do mockup (a peça S-02 da D-02, 04/09/2026), que "
+        "quem chama são os dez `interface/abaNN.py` — BANCADA, e por isso fora da "
+        "conta pela poda de `promessas_sem_caminho`. Mesma classificação e mesma "
+        "razão de `interface/monta.py::monta`. A régua "
+        "`tests/unit/test_a_linha_de_ressalva_so_nasce_quando_ha.py` a exercita."
     ),
     # ── AS CAMADAS DE TELA DA INTERFACE NOVA, 01/09/2026 ──────────────
     # Elas entraram quando a boca passou a ser o `hefesto_vivo.py`, o
@@ -969,6 +985,38 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # ONDA1-D1 / O SOM (04/09/2026) — TRÊS PROMESSAS QUE ESPERAM A ABA 02.
+    # A frente do SOM é dona do daemon e da ponte; a metade de TELA é da aba 02
+    # (`interface/pacotes/a02_controles.py`) e do piloto, que outra frente da
+    # mesma onda está editando. Fiar daqui seria a colisão que a R1 desta casa
+    # existe para impedir — as três nascem declaradas, com o endereço exato de
+    # onde o caminho se fecha.
+    "app/ipc_bridge.py::mic_canal_set": (
+        "MICROFONE-UM-ATO-01 (04/09/2026): o ATO do microfone, com as duas metades "
+        "(o canal no PipeWire e o mudo do firmware). O caminho se perde no gesto `mudo` de "
+        "`interface/pacotes/a02_controles.py`, que hoje chama `p.mic_set(not agora, uniq=)` — "
+        "e ele JÁ executa o ato, porque `ipc_bridge.mic_set_detalhado` passou a delegar a "
+        "`mic_canal_set_detalhado` para não mudar o comportamento de um arquivo que outra "
+        "frente edita agora. FECHA quando a aba 02 trocar aquela linha por "
+        "`p.mic_canal_set(ligado=not mudo_agora, uniq=uniq)` e pintar a recusa com "
+        "`frase_do_ato_do_microfone` — a metade do daemon está medida na bancada e no "
+        "relatório `docs/process/agentes/2026-09-04/ONDA1-D1.md`."
+    ),
+    "app/ipc_bridge.py::frase_do_ato_do_microfone": (
+        "MICROFONE-UM-ATO-01 (04/09/2026): traduz o corpo do ato na frase que vai ao CARTÃO "
+        "daquele controle, dizendo QUAL das duas metades faltou. O caminho se perde no mesmo "
+        "gesto `mudo` da aba 02, que hoje levanta um `RuntimeError` com frase fixa e por isso "
+        "não tem onde pôr esta. FECHA junto com `mic_canal_set`, na mesma linha."
+    ),
+    "app/audio_saida.py::ler_as_duas_camadas": (
+        "ALTO-FALANTE-DOIS-CANAIS-01 (04/09/2026): a leitura de volta da rota do som pelas "
+        "DUAS camadas — o byte `OUTPUT_PATH_SEL` do `state_full` e o `pactl get-default-sink`. "
+        "O caminho se perde em `a02_controles.rota_na_tela`, que lê só o byte: foi assim que "
+        "em 03/09 o card 2 mostrou 'Todo o som do PC' aceso com o som saindo na TV. FECHA "
+        "quando aquela função passar a montar um `RotaDasDuasCamadas` e devolver "
+        "`.botao_aceso`. A função PURA que decide (`botao_da_rota_aceso`) já é exercida pelo "
+        "ensaio `scripts/ensaios/a_rota_do_som_vai_e_volta.py`, que passou na bancada."
+    ),
     # LUZ-DO-MIC-01, 03/09/2026 — NOVE PROMESSAS QUE TÊM CAMINHO E O PORTÃO
     # NÃO VÊ. As duas peças de leitura do microfone são importadas pelo laço
     # da luz com `importlib`, e o portão varre chamadas estáticas. A dívida
