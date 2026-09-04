@@ -682,7 +682,7 @@ def _sem_marcacao(texto: str) -> str:
 #     rumble.passthrough  ('enabled',)            ← nenhum endereço
 #
 # Quem escolhe o controle é o ALVO DE OUTPUT do daemon, e o handler o congela
-# junto do par: `daemon/ipc_handlers.py:4294` grava `rumble_active_uniq =
+# junto do par: `daemon/ipc_handlers.py:4706` grava `rumble_active_uniq =
 # uniq_do_alvo_de_output(self.controller)`. Sem alvo escolhido o padrão é
 # BROADCAST (`ipc_handlers.py:4368`) — os quatro tremeriam, e a coluna, que é o
 # endereço desta aba, estaria mentindo. Por isso `_mirar()` vem antes.
