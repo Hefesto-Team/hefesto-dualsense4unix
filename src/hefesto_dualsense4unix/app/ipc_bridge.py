@@ -1104,10 +1104,108 @@ def mic_set_detalhado(
     ``sem_controle`` (o Hefesto está VIVO e não há controle na mesa) chegava na
     janela como o mesmo ``False`` de "o Hefesto está desligado".
     """
-    payload: dict[str, Any] = {"muted": muted}
+    if muted is None:
+        # A PORTA DA POSSE continua sendo o `mic.set` cru, e ela é a única
+        # coisa que o ato NÃO faz: `muted: null` devolve o byte ao
+        # `hid-playstation`. Mandá-la pelo ato não faria sentido — o ato liga
+        # ou desliga o microfone, e "devolver a posse" não é nenhum dos dois.
+        payload: dict[str, Any] = {"muted": None}
+        if uniq:
+            payload["uniq"] = uniq
+        return _corpo_do_daemon("mic.set", payload)
+    # O 🎙 PASSA A SER O ATO INTEIRO — MICROFONE-UM-ATO-01 (04/09/2026).
+    #
+    # Esta função mandava `mic.set` e mais nada: o MUDO do firmware, metade do
+    # gesto. A outra metade — a fonte de captura deste controle eleita e
+    # ouvida — acontecia por EFEITO COLATERAL, e o efeito colateral foi medido
+    # na bancada em 04/09: um `mic.set {muted: false}` mudava o bit, o laço das
+    # bordas via a mudança e elegia o canal, e o microfone padrão do sistema
+    # dela trocava sem que método nenhum tivesse dito isso.
+    #
+    # O conceito é dela, e derrubou a pergunta que eu tinha feito: *"o botão é
+    # pra ligar o microfone e ele ser ouvido no canal específico dele"*. Um
+    # ato só, com as duas metades declaradas.
+    #
+    # **O `status` NÃO MUDOU DE SIGNIFICADO**, e isso é deliberado: ele sempre
+    # quis dizer *"o backend aceitou o pedido do firmware"*, e é o que os
+    # chamadores de hoje leem para decidir se levantam a frase de recusa.
+    # Trocá-lo por *"as duas metades aconteceram"* mudaria, em silêncio, o
+    # comportamento de um botão que outra frente está editando neste momento.
+    # A verdade inteira viaja nos campos NOVOS (`canal_feito`, `motivo`…) e em
+    # :func:`mic_canal_set_detalhado`, que nasce sem chamador e por isso pode
+    # nascer com o contrato inteiro.
+    corpo = mic_canal_set_detalhado(not muted, uniq)
+    if corpo is None:
+        return None
+    corpo = dict(corpo)
+    corpo["mic_mudo_desejado"] = muted
+    corpo["status"] = "ok" if corpo.get("firmware_pedido") else corpo.get("status")
+    return corpo
+
+
+def mic_canal_set(ligado: bool, uniq: str | None = None) -> bool:
+    """O ATO do microfone: o canal DESTE controle, e o mudo do firmware.
+
+    Decisão dela, 04/09/2026: *"o botão é pra ligar o microfone e ele ser
+    ouvido no canal específico dele"* — e, ao meio-dia:
+
+        *"o botão fisico do mic se ligado no  # noqa-acento: citação dela
+        microfone ele fica ligado tambem.  # noqa-acento: citação dela
+        indepente se nativo ou  # noqa-acento: citação dela
+    virtual"*.  # noqa-acento: citação literal dela
+
+    ``True`` só quando as DUAS metades aconteceram. Quem precisa saber QUAL
+    faltou — e é quem pinta o cartão — chama
+    :func:`mic_canal_set_detalhado` e lê a frase com
+    :func:`frase_do_ato_do_microfone`.
+    """
+    corpo = mic_canal_set_detalhado(ligado, uniq)
+    return corpo is not None and corpo.get("status") == "ok"
+
+
+def mic_canal_set_detalhado(
+    ligado: bool, uniq: str | None = None
+) -> dict[str, Any] | None:
+    """``mic.canal.set`` com a RESPOSTA inteira do daemon.
+
+    O corpo traz ``status`` (``"ok"`` só com as duas metades feitas,
+    ``"incompleto"`` quando faltou uma, ``"sem_controle"`` com a mesa vazia),
+    ``canal_feito`` / ``canal_motivo``, ``firmware_pedido`` /
+    ``firmware_motivo``, ``ativo`` (a fonte que ficou valendo) e ``motivo`` —
+    a junção das frases que faltaram. ``None`` = daemon não respondeu.
+
+    **Por que as duas metades viajam separadas.** Elas falham por razões
+    diferentes e em transportes diferentes: no rádio o DualSense não publica
+    fonte de captura sem a ponte de microfone de pé (`mapa-controles.csv`,
+    `audio.microfone.mudo` do dualsense: cabo=sim, rádio=parcial), e em Modo
+    Nativo o hidraw é do jogo e o mudo do firmware fica represado (medido na
+    bancada em 04/09: o `mic.set` respondia ``ok`` com o aparelho parado).
+    Um ``False`` só diria "não deu"; a pessoa precisa saber qual metade.
+    """
+    payload: dict[str, Any] = {"ligado": bool(ligado)}
     if uniq:
         payload["uniq"] = uniq
-    return _corpo_do_daemon("mic.set", payload)
+    return _corpo_do_daemon("mic.canal.set", payload)
+
+
+def frase_do_ato_do_microfone(corpo: Any) -> str | None:
+    """A frase que vai para o CARTÃO daquele controle — ``None`` se deu certo.
+
+    Ela existe porque o ato falha pela METADE, e "não deu" não diz nada a quem
+    está com o controle na mão: o canal pode ter sido eleito e o mudo do
+    firmware ter ficado represado (Modo Nativo), ou o firmware ter obedecido
+    sem haver canal nenhum para onde apontar (o rádio sem a ponte).
+
+    ``None`` também quando o daemon não respondeu: aí a frase é a de daemon
+    parado, que já é de quem chama, e inventar outra aqui daria duas frases
+    para o mesmo silêncio.
+    """
+    if not isinstance(corpo, dict):
+        return None
+    if corpo.get("status") == "ok":
+        return None
+    motivo = corpo.get("motivo")
+    return motivo if isinstance(motivo, str) and motivo else None
 
 
 def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
@@ -1311,11 +1409,14 @@ __all__ = [
     "daemon_state_full",
     "daemon_status_basic",
     "destinos_da_aplicacao",
+    "frase_do_ato_do_microfone",
     "identity_number_set",
     "led_set",
     "led_set_detalhado",
     "machine_declare",
     "machine_declare_detalhado",
+    "mic_canal_set",
+    "mic_canal_set_detalhado",
     "mic_set",
     "mic_set_detalhado",
     "mic_volume_set_detalhado",
