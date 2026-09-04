@@ -408,8 +408,13 @@ def test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte(
 #:
 #: `selecionar` NÃO ESTÁ AQUI e não é esquecimento: ele grava um nome num
 #: módulo, não no disco, e a janela estável também não dá toast por seleção.
-#: `editor.estilo` também não: ele SEMPRE levanta — o desfecho dele é a recusa.
-ESCRITORES = ("editor.nome", "editor.jogo", "detectar", "voltar-a-de-ontem",
+#:
+#: **ONZE DESDE 03/09/2026.** `editor.prioridade` nasceu com o slider que ela
+#: pediu, e `editor.estilo` deixou de ser a exceção desta lista: ele estava fora
+#: porque *"SEMPRE levanta — o desfecho dele é a recusa"*, e com o motor ele
+#: grava três coisas no `.json` dela.
+ESCRITORES = ("editor.nome", "editor.jogo", "editor.prioridade",
+              "editor.estilo", "detectar", "voltar-a-de-ontem",
               "novo", "duplicar", "remover", "ativar", "recarregar")
 
 

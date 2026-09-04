@@ -773,11 +773,35 @@
   }
   .campo select{cursor:pointer}
   .campo select.destaque{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
-  /* a prioridade é slicer */
+  /* A PRIORIDADE É SLIDER — pedido dela em 27/08 (*"prioridade é slicer"*, em
+     CORRECOES-DELA.md) e reconfirmado em 03/09/2026: *"Slider, como você
+     pediu"*. Até aqui o desenho tinha uma BARRA, que não se arrasta: era o
+     único campo do editor sem nenhum caminho de escrita na interface nova.
+
+     O TRILHO E O CHEIO FICAM, e continuam sendo quem MOSTRA — o produto escreve
+     a largura do cheio a cada tique. O que nasce é o `<input type=range>` por
+     cima: transparente, do tamanho do trilho, e é ele quem ACEITA o arrasto.
+
+     O PUNHO MUDOU DE DONO, e essa é a única coisa que se perde do desenho
+     antigo: ele era o `::after` do cheio — pintado pelo produto, logo com meio
+     segundo de atraso — e passou a ser o `::-webkit-slider-thumb` do range, que
+     segue o dedo dela no mesmo quadro. Enquanto ela arrasta, o cheio fica para
+     trás (ele só sabe o que o disco diz); no `change` o gesto grava e a resposta
+     do próprio gesto repinta os dois na hora, sem esperar o tique.
+
+     `-webkit-` E NÃO `-moz-`: a janela é um `WebKit2.WebView`, e o Chrome que a
+     bancada usa para fotografar é a mesma família. Um `::-moz-range-thumb` aqui
+     seria regra que nenhum dos dois lê. */
   .campo .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);position:relative}
   .campo .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .campo .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
-    border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
+  .campo .desliza{position:absolute;left:0;top:50%;transform:translateY(-50%);
+    width:100%;height:14px;margin:0;padding:0;background:transparent;border:0;
+    -webkit-appearance:none;appearance:none;cursor:pointer}
+  .campo .desliza:focus{outline:none}
+  .campo .desliza::-webkit-slider-runnable-track{height:14px;background:transparent;border:0}
+  .campo .desliza::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;background:var(--purple);
+    border:2px solid var(--app-bg);margin-top:1px}
   .campo .n{flex:0 0 40px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .campo .btn{flex:0 0 auto;white-space:nowrap}
   /* A COLUNA DO RÓTULO É JUSTA — remedida no Chrome em 31/08/2026, DEPOIS que ela
@@ -1228,7 +1252,22 @@
                        de `NAO_PINTAVEIS` no `1f6e356b`. A barra recebe a
                        largura; o número ao lado (`editor.prioridade.n`) é um
                        `<span>` sem filhos e recebe o valor pelo mesmo tique. -->
-                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:90%"></span></span>
+                  <!-- O `<input type=range>` — 03/09/2026, e é o que fez este
+                       campo deixar de ser leitura. Ele fica DENTRO do trilho,
+                       absoluto e transparente: o desenho que ela aprovou
+                       continua sendo o trilho + o cheio, e o range só empresta
+                       o punho e o arrasto.
+                       `min`/`max` SAEM DO ESQUEMA (`PRIORIDADE_MINIMA`/`MAXIMA`)
+                       — ver o comentário do import. `step="1"` porque
+                       `Profile.priority` é `int`: um slider que oferecesse
+                       meio número faria a tela prometer o que o esquema recusa.
+                       O ENDEREÇO É PRÓPRIO (`editor.prioridade.escolha`) e não
+                       o `.n` do vizinho: o pacote pinta este UMA VEZ por perfil
+                       escolhido (ver `a10_perfis.CAMPOS_QUE_ELA_DIGITA`) para
+                       não devolver o punho ao valor do disco no meio do arrasto
+                       dela, enquanto o número ao lado continua repintando a
+                       cada tique. -->
+                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:45%"></span><input type="range" class="desliza" min="0" max="200" step="1" value="90" aria-label="Prioridade" data-hef="editor.prioridade.escolha" data-hef-alvo="valor" data-hef-gesto="editor.prioridade"></span>
                   <span class="n" data-hef="editor.prioridade.n">90</span>
                 </span>
               </div>

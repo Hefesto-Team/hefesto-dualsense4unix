@@ -60,12 +60,20 @@ MESA = [
 #: leva ao DOM. O ``selecionar`` fica FORA de propósito: a frase dele
 #: ("o clique não trouxe o nome do perfil") fala com quem programa, e é o único
 #: ``ValueError`` que continua certo neste arquivo.
+#:
+#: A SEXTA MUDOU EM 03/09/2026, à noite, e a troca é a entrega: era *"o perfil
+#: não guarda Estilo de Jogo"*, a recusa do campo sem motor. O motor nasceu (ver
+#: `test_aba10_o_slider_e_o_estilo_gravam.py`) e a frase que sobra é a de quem
+#: escolheu o travessão — a única recusa que o campo ainda tem. As duas últimas
+#: são as do slider, que nasceu no mesmo dia.
 DELA = ("já é o perfil que está valendo",
         "escolha um perfil na lista primeiro",
         "o perfil precisa de um nome",
         "gravar este por cima apagaria o dele",
         "não é uma regra que o perfil saiba guardar",
-        "o perfil não guarda Estilo de Jogo")
+        "escolha um Estilo de Jogo na lista",
+        "está fora da faixa que o perfil aceita",
+        "a prioridade tem de ser um número")
 
 
 class PonteDeMentira:
@@ -116,7 +124,12 @@ def _ctx(ativo: str | None = None) -> Contexto:
 
 
 # --------------------------------------------------------------------------
-# 1. O "ESTILO DE JOGO" TEM DONO, E O DONO RECUSA DIZENDO
+# 1. O "ESTILO DE JOGO" TEM DONO — e desde 03/09/2026, à noite, o dono APLICA
+#
+# O QUE ESTA SEÇÃO GUARDA depois do motor: que o campo tem dono, e as DUAS
+# recusas que sobraram — o clique sem valor e o travessão. O que ele GRAVA está
+# em `test_aba10_o_slider_e_o_estilo_gravam.py`, junto do slider que nasceu no
+# mesmo dia.
 # --------------------------------------------------------------------------
 
 def test_o_estilo_de_jogo_tem_dono() -> None:
@@ -131,42 +144,6 @@ def test_o_estilo_de_jogo_tem_dono() -> None:
         "dela some no stdout de quem lançou a janela")
 
 
-def test_escolher_um_estilo_recusa_dizendo_e_nomeia_o_que_ela_escolheu(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A recusa nomeia o estilo, diz que não salvou, e traz o motivo do produto.
-
-    NOMEAR O QUE ELA ESCOLHEU não é enfeite: a tarja aparece no rodapé, longe do
-    campo, e uma frase genérica sobre "Estilo de Jogo" não diz se foi este
-    clique ou o anterior que ela está lendo.
-    """
-    from hefesto_dualsense4unix.app.actions.perfis_web import GESTOS_SEM_MOTOR
-
-    _o_disco_tem(monkeypatch, "Pragmata")
-    a10_perfis._ESCOLHIDO = "Pragmata"
-    ponte = PonteDeMentira()
-    with pytest.raises(RuntimeError) as erro:
-        a10_perfis.editor_estilo(_ctx("Pragmata"), {"valor": "Terror"}, ponte)
-
-    frase = str(erro.value)
-    assert "Terror" in frase, f"a recusa não disse o que ela escolheu: {frase}"
-    assert "não guarda Estilo de Jogo" in frase, frase
-    # O MOTIVO VEM DO PRODUTO, e não daqui: uma segunda cópia da explicação
-    # diverge no dia em que a ONDA-PERFIS-04 der motor ao campo.
-    motivo = a10_perfis._sem_a_sprint(GESTOS_SEM_MOTOR["editor.estilo"])
-    assert motivo in frase, (
-        "a frase parou de citar `perfis_web.GESTOS_SEM_MOTOR` — nasceu a "
-        "segunda verdade sobre por que o Estilo de Jogo não guarda nada")
-    # O RÓTULO DA SPRINT NÃO VAI PARA A TARJA DELA. `(ONDA-PERFIS-04)` é o
-    # endereço da fila; num aviso de tela é o "ruído" que
-    # `_recusou_dizendo` nomeia. MORDIDA: tire o `_sem_a_sprint` do gesto e
-    # esta linha reprova.
-    assert "ONDA-PERFIS" not in frase, (
-        f"o código de sprint foi parar no aviso que ela lê: {frase}")
-    assert ponte.chamadas == [], (
-        f"um campo que não guarda nada falou com o daemon: {ponte.chamadas}")
-
-
 def test_o_estilo_recusa_ate_sem_valor_no_clique(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -178,7 +155,7 @@ def test_o_estilo_recusa_ate_sem_valor_no_clique(
     despacho em vez de recusar.
     """
     _o_disco_tem(monkeypatch, "Pragmata")
-    with pytest.raises(RuntimeError, match="um Estilo de Jogo não foi salvo"):
+    with pytest.raises(RuntimeError, match="escolha um Estilo de Jogo na lista"):
         a10_perfis.editor_estilo(_ctx("Pragmata"), {}, PonteDeMentira())
 
 
@@ -189,25 +166,33 @@ def test_o_travessao_nao_e_uma_escolha(monkeypatch: pytest.MonkeyPatch) -> None:
     ``rotulo`` é o texto VISÍVEL da opção marcada (``hefesto_vivo.py:702``).
     Medido na prova no aparelho: a tarja saía dizendo *“—” não foi salvo*.
 
-    MORDIDA: tire o ``if escolhido == "—"`` do gesto e isto reprova.
+    MORDIDA: tire o ``if escolhido == "—"`` do gesto e isto reprova com
+    *"“—” não é um dos Estilos de Jogo do produto"*, que não é frase de gente.
     """
     _o_disco_tem(monkeypatch, "Pragmata")
     with pytest.raises(RuntimeError) as erro:
         a10_perfis.editor_estilo(_ctx("Pragmata"),
                                  {"valor": "", "rotulo": "—"}, PonteDeMentira())
-    assert "um Estilo de Jogo não foi salvo" in str(erro.value), str(erro.value)
+    assert "escolha um Estilo de Jogo na lista" in str(erro.value), str(erro.value)
     assert "“—”" not in str(erro.value), (
         f"o travessão do lugar vazio virou nome de estilo na tarja: {erro.value}")
 
 
-def test_o_estilo_nao_entra_em_sem_eco() -> None:
-    """``SEM_ECO`` é para quem APLICA e não ecoa. Este recusa — e recusa é `!`.
+def test_o_estilo_entrou_em_sem_eco_quando_ganhou_motor() -> None:
+    """``SEM_ECO`` é de quem GRAVA no disco e o ``state_full`` não ecoa.
 
-    Pôr um gesto que sempre levanta em ``SEM_ECO`` faria a prova no aparelho
-    isentá-lo da conta errada: ``--prova-no-aparelho`` já separa "recusou
-    dizendo" (``!``) de "disse aplicado e nada mudou" (``—``).
+    ELE ESTAVA FORA por outra razão, e a razão caducou em 03/09/2026: até a
+    tarde ele SEMPRE levantava, e recusa é ``!`` na prova no aparelho, não
+    ``—``. Com o motor, ele grava três coisas no ``.json`` dela — deixá-lo de
+    fora faria a régua acusar de mudo um gesto que trabalhou.
+
+    MORDIDA: tire ``editor.estilo`` (ou ``editor.prioridade``) de ``SEM_ECO`` e
+    isto reprova.
     """
-    assert "editor.estilo" not in a10_perfis.SEM_ECO
+    for nome in ("editor.estilo", "editor.prioridade"):
+        assert nome in a10_perfis.SEM_ECO, (
+            f"{nome} grava no disco e saiu de `SEM_ECO`: a prova no aparelho "
+            f"vai contá-lo como 'disse aplicado e nada mudou'")
 
 
 # --------------------------------------------------------------------------
