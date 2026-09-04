@@ -337,10 +337,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # por travessão — um `—` numa linha de alerta afirmaria "não sei" onde a
     # resposta é "não há nada a avisar" (`hefesto_vivo.py:118`).
     #
-    # O SELETOR É `#vib-estado`, e ele só existe na BANCADA até ela publicar. Na
-    # página publicada o `document.querySelector` devolve `null` e o laço do
-    # bootstrap não faz nada — nem erro, nem pintura contada. É o preço de a
-    # publicação ser ato dela, e está declarado em `mockup/DIVERGENCIAS.md`.
+    # O SELETOR É `#vib-estado`, e ele ESTÁ NA PÁGINA PUBLICADA — medido em
+    # 03/09/2026, contando as duas: `id="vib-estado"` aparece uma vez na bancada
+    # e uma vez no publicado, e os dois arquivos são byte-idênticos.
+    #
+    # FATO ERRADO, SUBSTITUÍDO: esta nota dizia que o seletor *"só existe na
+    # BANCADA até ela publicar"* e que na publicada o `querySelector` devolvia
+    # `null`. Era verdade quando foi escrita e deixou de ser quando ela publicou
+    # a aba; enquanto ficou aqui, ensinava que a única linha de texto desta tela
+    # não chegava ao produto — e a próxima pessoa a leria como dívida aberta.
+    # A frase que ELA vê hoje, no rodapé do quadro, é a que este bloco escreve.
     estado = _tela.html_do_estado(_tela.textos_do_estado(ctx.state))
     return {
         "colunas": colunas,
