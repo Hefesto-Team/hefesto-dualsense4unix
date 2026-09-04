@@ -520,13 +520,20 @@ def test_os_sensores_nao_tem_por_onde_ser_desligados() -> None:
     VERMELHO AQUI É BOA NOTÍCIA: o interruptor nasceu (``sensors.set`` no IPC
     ou um método de escrita no hub). Traga ``ProfileSensorsConfig`` para o
     ``Profile`` e para ``ControllerOverrides`` — é a ONDA-CONTROLES-07.
+
+    ``entradas`` entrou na lista em 04/09/2026 (STATUS-04) e NÃO é o
+    interruptor: é o gêmeo de ``leitura`` — LÊ analógicos, gatilhos e botões
+    de um ``uniq`` por um ``EvdevReader`` passivo, sem ``set_grab``, para o
+    segundo card deixar de ficar mudo fora do co-op. Quem acrescentar o
+    PRÓXIMO nome aqui tem de fazer a mesma pergunta: **este método LÊ ou
+    APLICA?** Se aplica, a lista não cresce — cresce o ``Profile``.
     """
     publicos = {
         nome
         for nome, _ in inspect.getmembers(sensor_hub_module.SensorHub, inspect.isfunction)
         if not nome.startswith("_")
     }
-    assert publicos == {"leitura", "reconciliar", "stop_all"}, (
+    assert publicos == {"entradas", "leitura", "reconciliar", "stop_all"}, (
         f"o SensorHub ganhou método público novo: {sorted(publicos)}"
     )
 
