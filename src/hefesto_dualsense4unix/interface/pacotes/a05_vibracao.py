@@ -37,6 +37,7 @@ from typing import Any
 from hefesto_dualsense4unix.app.telas import vibracao as _tela
 
 from . import Contexto, registrar
+from . import perfil as _perfil
 
 #: O QUE ESTA ABA MOSTRA E ESTE PACOTE NÃO PINTA — com o motivo e o DONO da
 #: cura. Estava `{}` até 02/09/2026, e o vazio dizia "nada falta", que é a forma
@@ -48,6 +49,13 @@ from . import Contexto, registrar
 #: juntas (`aba05._coluna` e `aba05._teto_do_multiplicador`; as chaves `degrau` e
 #: `mult-teto` da :func:`pacote`). Mantê-los depois de pintados seria dívida
 #: fantasma — a próxima pessoa esperaria por uma cura que já chegou.
+#:
+#: **A `barra:forca` FECHOU — 03/09/2026, decisão dela: *"0 a 200%, e grava na
+#: hora."*** A linha do "Personalizado" era um `<div>` sem `value`, e a receita
+#: da cura estava escrita na irmã dela abaixo: *"sem um `<input type=range>` no
+#: desenho, o clique chega sem quantidade nenhuma"*. O desenho ganhou o
+#: `<input>` (`aba05._trilho_arrastavel`) e o gesto :func:`intensidade` grava —
+#: no perfil, e só para aquele controle.
 SEM_DONO: dict[str, str] = {
     "lado:ligado": "Os oito interruptores de punho são DESENHO, e o produto "
     "concorda por escrito: `app/telas/vibracao.SEM_FONTE['lado:ligado']` — não "
@@ -57,9 +65,28 @@ SEM_DONO: dict[str, str] = {
     "dono está escrito (`app/telas/vibracao.DONOS_DOS_GESTOS['barra:motor']`). "
     "O que falta é o NÚMERO: a linha é um `<div>`, o ouvinte manda "
     "`valor: alvo.value ?? ''` (`hefesto_vivo.py:299`) e um `<div>` não tem "
-    "`value`. Sem um `<input type=range>` no desenho, o clique chega sem "
-    "quantidade nenhuma — e é decisão dela trocar a barra por um controle "
-    "arrastável.",
+    "`value`. A cura é a MESMA que a barra do multiplicador acabou de receber "
+    "— um `<input type=range>` —, e o que falta aqui é a palavra dela: o par "
+    "`weak`/`strong` viaja JUNTO ao daemon, então uma barra por lado manda meio "
+    "par, e é ela que decide se as duas viram um controle só.",
+    "forca:auto-da-mesa": "Pôr a MESA INTEIRA em `Auto` deixou de ter botão "
+    "nesta aba — 03/09/2026, e é consequência da decisão dela de construir a "
+    "política POR CONTROLE. O esquema RECUSA `auto` por unidade, com validador "
+    "e razão próprios (`profiles/schema.py`, `ControllerRumbleOverride`): ele "
+    "escala pela bateria do controle PRIMÁRIO, e guardá-lo por peça faria duas "
+    "escalarem pela bateria da mesma. O produto já decidiu o que o clique faz "
+    "no lugar disso — `app/draft_config.with_controller_rumble`: *\"escolher "
+    "'Auto' com uma peça selecionada limpa o override dela e devolve a peça ao "
+    "global\"* —, e é isso que o botão faz hoje. O que NÃO existe mais é um "
+    "caminho, nesta tela, para mudar o degrau da mesa inteira; ele é decisão "
+    "dela (um chip na fita? um botão de mesa?).",
+    "forca:global-em-auto": "Com o degrau da MESA em `Auto`, o que ela "
+    "escolher por controle NÃO CHEGA AO MOTOR, e o produto diz por quê: "
+    "`profiles/manager._controllers_to_rumble_scales` PULA a peça, com log, "
+    "porque o denominador (`auto`) muda com a bateria a cada tique e um fator "
+    "sobre denominador móvel faria a peça vibrar de forma imprevisível. A "
+    "escolha fica GRAVADA e volta a valer assim que o global sair do `Auto` — "
+    "o que falta é a tela AVISAR, e a frase é dela.",
 }
 
 
@@ -93,13 +120,47 @@ def _plastico_do_item(controle: dict[str, Any]) -> str:
         return ""
 
 
+def teto_da_barra() -> int:
+    """O 100% da barra "Personalizado", em pontos percentuais. Hoje: **200**.
+
+    **DECISÃO DELA, 03/09/2026:** *"0 a 200%, e grava na hora."* A barra deixou
+    de ser leitura e virou um `<input type=range>` que ela arrasta
+    (:func:`intensidade`), e o teto do que ela pode PEDIR é o do multiplicador
+    personalizado — não o do degrau `Máximo`.
+
+    O NÚMERO NÃO SE DIGITA, e o dono é o esquema do perfil:
+    `RUMBLE_CUSTOM_MULT_MAX` = 2,0 é quem RECUSA o que passa dele, nas duas
+    bordas (`RumbleConfig` e `ControllerRumbleOverride`). Escrever `200` aqui
+    seria a segunda verdade, e o `150` que a aba usava até ontem já era
+    exatamente isso: a segunda cópia de `RUMBLE_POLICY_MULT["max"]`.
+
+    **NÃO É `app/telas/vibracao.teto_da_barra()`, e a diferença é o ponto.**
+    Aquela função é o teto da ESCADA — o quanto o degrau mais alto pede —, e
+    continua sendo o que a janela estável desenha. Esta é o teto do que se pode
+    ARRASTAR. Enquanto a barra era leitura os dois coincidiam; a partir do
+    momento em que ela arrasta, deixaram de coincidir, e usar o da escada faria
+    a barra encher aos 150% e ficar cheia até os 200 — escondendo um quarto do
+    que o produto aceita.
+
+    O MESMO DONO ESTÁ NO GERADOR (`aba05.TETO`), e é de propósito: um lê para
+    desenhar o `max` do `<input>`, o outro para calcular a largura e o `Máx`.
+    Dois leitores, uma fonte.
+    """
+    from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
+
+    return round(RUMBLE_CUSTOM_MULT_MAX * 100)
+
+
 def _no_teto(pct: dict[str, Any]) -> str:
     """`"1"` quando o multiplicador desta coluna bateu no teto da barra; `""` não.
 
     É o que acende o `Máx` (decisão 11 dela, 03/09/2026). O TETO NÃO SE DIGITA:
-    sai de `app/telas/vibracao.teto_da_barra()`, que é quem o calcula a partir do
-    `RUMBLE_POLICY_MULT` do daemon. Um `150` escrito aqui seria a segunda tabela
-    de degraus, e o dia em que o produto mudasse o Máximo a tela mentiria.
+    sai de :func:`teto_da_barra`, que o lê do esquema do perfil.
+
+    **O TETO MUDOU DE DONO NO MESMO DIA**, e a linha anterior lia
+    `app/telas/vibracao.teto_da_barra()` (150, o degrau `Máximo`). Com a barra
+    arrastável até 200, o `Máx` no 150 acenderia com um quarto da barra ainda
+    por percorrer — a tela dizendo "não passa daqui" com espaço à frente.
 
     NÃO SEI NÃO É TETO, e é o único caso que engana: `_barra` devolve `n = "—"`
     com `sabe = ""` quando o daemon não respondeu o multiplicador. Sem a guarda
@@ -113,18 +174,100 @@ def _no_teto(pct: dict[str, Any]) -> str:
         valor = int(str(pct.get("n") or "").rstrip("%"))
     except ValueError:
         return ""
-    return "1" if valor >= _tela.teto_da_barra() else ""
+    return "1" if valor >= teto_da_barra() else ""
 
 
-def _pct_do_pedido(state: dict[str, Any]) -> dict[str, str]:
-    """A barra do multiplicador com o que a aba PEDE, e não com o que o daemon
-    diz ter aplicado.
+def _chave_no_perfil(uniq: str) -> str:
+    """O `uniq` na grafia com que o PERFIL o guarda — doze hexa, ou `""`.
+
+    O DONO É `core.sysfs_leds.norm_mac`, e é o MESMO que
+    `Profile._validate_controllers_keys` usa para canonizar o mapa ao carregar.
+    Escrever a normalização de novo aqui produziria duas grafias da mesma regra
+    — e o defeito que isso causa é caro e calado: gravar sob `aa:bb:…` quando o
+    disco guarda `aabbcc…` cria uma SEGUNDA chave para o mesmo aparelho, e a
+    borda do esquema rejeita o perfil INTEIRO com "chaves duplicadas após
+    normalização". A escolha dela sumiria, e o arquivo junto.
+
+    `""` é resposta, e quem a trata é quem chama: um controle sem endereço
+    estável (a chave de recurso `path:…` do backend) não tem onde guardar uma
+    força só dele.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    return norm_mac(str(uniq or "").strip()) or ""
+
+
+def _overrides_do_perfil(ctx: Contexto) -> dict[str, Any]:
+    """O bloco `controllers` do perfil ATIVO, cru do disco. `{}` quando não há.
+
+    CRU E SEM PYDANTIC de propósito — é o que `pacotes/perfil.ativo` entrega, e
+    a razão está escrita lá: validar aqui só serviria para LEVANTAR a aba
+    inteira por causa de um campo que o esquema ainda não conhece, e a tela
+    congelaria sem dizer por quê.
+
+    LÊ O DISCO A CADA TIQUE, e é o que a aba Conexões já faz para o mesmo dado
+    (`a08_conexoes._teto_do_controle`). O `state_full` **não publica override
+    por controle nenhum** — nem o de vibração, nem o dos LEDs —, então o disco é
+    a única fonte que existe. Um perfil é um JSON de alguns kB; dois tiques por
+    segundo cabem.
+    """
+    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "")
+    if not nome:
+        return {}
+    bloco = _perfil.ativo(nome).get("controllers")
+    return bloco if isinstance(bloco, dict) else {}
+
+
+def _forca_da_coluna(overrides: dict[str, Any], uniq: str,
+                     state: dict[str, Any]) -> tuple[str, Any]:
+    """`(policy, custom_mult)` que ESTA coluna está pedindo — dela, ou da mesa.
+
+    **É A METADE QUE PINTA da decisão dela de 03/09/2026** — *"construir por
+    controle"*. A outra é :func:`_gravar_a_forca`, e sem esta a tela mentiria
+    logo depois do primeiro clique: o override vai para o PERFIL, o
+    `state_full` continua publicando só o `rumble_policy` da mesa, e as quatro
+    colunas voltariam a acender o mesmo degrau um tique depois de ela escolher
+    quatro diferentes.
+
+    A PRECEDÊNCIA É A DO PRODUTO, campo por campo: override com `policy`
+    escrita vence; sem ela, herda o global. É a mesma regra de
+    `app/draft_config.effective_rumble_for` e de
+    `profiles/manager._controllers_to_rumble_scales` — os dois desviam por
+    `cfg.rumble is None` e por `"policy" not in model_fields_set`.
+
+    AS DUAS GRAFIAS DE CHAVE, e a segunda não é paranoia: `perfil.ativo` lê o
+    JSON **sem** o pydantic, então um arquivo editado à mão pode trazer
+    `aa:bb:…` — que o loader só canoniza quando alguém o CARREGA. É o mesmo
+    cuidado do `a08_conexoes._teto_do_controle`.
+    """
+    dele = overrides.get(_chave_no_perfil(uniq)) or overrides.get(uniq) or {}
+    seu = dele.get("rumble") if isinstance(dele, dict) else None
+    if isinstance(seu, dict) and seu.get("policy"):
+        return str(seu["policy"]), seu.get("custom_mult")
+    return str(state.get("rumble_policy") or ""), state.get("rumble_mult_applied")
+
+
+def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
+    """A barra do multiplicador DESTA coluna: largura, número e o `sabe`.
+
+    A CONTA NÃO NASCE AQUI. `app/telas/vibracao._pedido_da_politica` é a mesma
+    linha da janela estável (`rumble_actions._pintar_a_linha_do_teto:537`) —
+    `custom_mult if policy == "custom" else _POLICY_MULT.get(policy)` — e ela
+    recebe um dicionário com as duas chaves. Passar `{"rumble_policy": …,
+    "rumble_mult_applied": …}` **não é forjar um estado**: são os nomes que o
+    daemon dá aos mesmos dois valores, e para `custom` o `rumble_mult_applied`
+    do daemon É o multiplicador personalizado. Redigitar `_POLICY_MULT[policy]
+    * 100` aqui seria a segunda tabela de degraus que `_escada()` existe para
+    não ter.
+
+    ESTA FUNÇÃO SUCEDE A `_pct_do_pedido`, e herda a medição que a decidiu —
+    ela sai daqui inteira porque é decisão medida, não número errado.
 
     **O NÚMERO ESTAVA MORTO, e a medição é de 03/09/2026, contra o daemon
-    dela.** `pacote_da_coluna` monta esta barra a partir de
+    dela.** `pacote_da_coluna` montava esta barra a partir de
     `state_full.rumble_mult_applied`, que é o `daemon._last_auto_mult`. Cliquei
-    os QUATRO degraus pela mesma porta que o botão da coluna usa
-    (`rumble_policy_set_checked`), esperei meio segundo e reli o `state_full`:
+    os QUATRO degraus pela mesma porta que o botão da coluna usava então
+    (`rumble_policy_set_checked`), esperei meio segundo e reli o `state_full`::
 
         policy_set(max       ) → policy='max'        applied=0.7
         policy_set(economia  ) → policy='economia'   applied=0.7
@@ -143,27 +286,20 @@ def _pct_do_pedido(state: dict[str, Any]) -> dict[str, str]:
     ao vivo, `policy=max` com `rumble_mult_applied=0.7` *"parecia atenuação real
     do rumble do jogo"*. A aba publicava exatamente essa aparência.
 
-    A CONTA NÃO NASCE AQUI. `app/telas/vibracao._pedido_da_politica` é a MESMA
-    linha da janela estável (`rumble_actions._pintar_a_linha_do_teto:537`), e
-    `_barra` é o mesmo formatador que monta as duas barras de motor. Chamar as
-    duas é ponte; redigitar `_POLICY_MULT[policy] * 100` aqui seria a segunda
-    tabela de degraus que `teto_da_barra()` existe para não ter.
-
-    `None` — política fora dos quatro, ou `custom` sem multiplicador lido —
+    `None` — política fora das cinco, ou `custom` sem multiplicador lido —
     atravessa como o `—` de sempre: `_barra(None, …)` devolve `sabe = ""`, e
     campo sem informação não acende o `Máx` nem afirma largura.
 
-    O QUE ISTO NÃO RESOLVE, e fica dito: no degrau `Auto` a barra passa a dizer
-    **100%**, que é o TETO dele — o mesmo número da janela estável — e não os
-    70% que a cena do mockup ensina para uma bateria no meio. O valor vivo do
-    Auto exige um campo que o daemon não publica com honestidade hoje; enquanto
-    ele não existir, o teto é a única resposta que as duas telas conseguem dar
-    igual. Está em `mockup/DIVERGENCIAS.md`.
+    O QUE ISTO NÃO RESOLVE, e fica dito: no degrau `Auto` a barra diz **100%**,
+    que é o TETO dele — o mesmo número da janela estável — e não os 70% que a
+    cena do mockup ensina para uma bateria no meio. O valor vivo do Auto exige
+    um campo que o daemon não publica com honestidade hoje.
     """
-    pedido = _tela._pedido_da_politica(state)
+    pedido = _tela._pedido_da_politica(
+        {"rumble_policy": policy, "rumble_mult_applied": custom})
     return _tela._barra(
         None if pedido is None else round(pedido * 100),
-        _tela.teto_da_barra(),
+        teto_da_barra(),
         sufixo="%",
     )
 
@@ -205,7 +341,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     A ÚNICA CONTA QUE NÃO VEM DO `pacote_da_mesa` é a barra do multiplicador, e
     ela vem de outra função do MESMO módulo do produto — ver
-    :func:`_pct_do_pedido`, com as quatro medições que a decidiram.
+    :func:`_pct_da_coluna`, com as quatro medições que a decidiram.
 
     O NOME `forca` NÃO SAI MAIS DAQUI — 02/09/2026, e a razão está fotografada.
     O pintor procura um valor por `[data-campo=X],[data-papel=X],[data-hef=X]`
@@ -267,12 +403,22 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         str(c.get("uniq") or ""): str(c.get("cor") or "") for c in ctx.mesa
     }
     colunas: dict[str, dict[str, Any]] = {}
-    # O MULTIPLICADOR É O PEDIDO, e não o `rumble_mult_applied` — 03/09/2026.
-    # A razão inteira, com as quatro medições que a decidiram, está em
-    # :func:`_pct_do_pedido`. É UM por tique porque a política é da MESA: um por
-    # coluna seria a mesma conta feita quatro vezes sobre o mesmo campo.
-    pct = _pct_do_pedido(ctx.state)
+    # A FORÇA PASSOU A SER POR CONTROLE — 03/09/2026, decisão dela: *"construir
+    # por controle"*. O `bruto` do produto ainda traz o degrau da MESA em
+    # `col["forca"]`, porque `pacote_da_coluna` só conhece o `state_full`; quem
+    # sabe do override é o PERFIL, e ele mora no disco. Ver
+    # :func:`_forca_da_coluna`.
+    #
+    # UMA LEITURA POR TIQUE, e não uma por coluna: `perfil.ativo` abre o JSON,
+    # e quatro colunas o abririam quatro vezes por tique para ler o mesmo mapa.
+    overrides = _overrides_do_perfil(ctx)
     for uniq, col in (bruto.get("colunas") or {}).items():
+        # O MULTIPLICADOR É O PEDIDO DESTA COLUNA, e não o `rumble_mult_applied`
+        # da mesa — as quatro medições que derrubaram aquele campo estão em
+        # :func:`_pct_da_coluna`, que é quem faz a conta para a coluna e para a
+        # mesa (é dela que a coluna herda quando não tem opinião própria).
+        politica, custom = _forca_da_coluna(overrides, uniq, ctx.state)
+        pct = _pct_da_coluna(politica, custom)
         plano = {
             "identidade": _sem_marcacao(col.get("identidade", "")),
             # A COR DA MOLDURA, e ela é o campo que a lei da identidade cobra:
@@ -290,6 +436,42 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # O NÚMERO DO MULTIPLICADOR, e não o nome do degrau: o desenho
             # escreve `150%` nesta caixa, ao lado do trilho e do "Máx".
             "mult": pct.get("n", "—"),
+            # A POSIÇÃO DO CURSOR DA BARRA, e ela substituiu a LARGURA de um
+            # trilho pintado — 03/09/2026. O elemento deixou de ser um `<span>`
+            # cuja largura o pintor escrevia e virou um `<input type=range>`:
+            # quem move o polegar agora é o `value`, e o alvo é `valor`
+            # (`aba05._trilho_arrastavel`).
+            #
+            # É O NÚMERO CRU (0 a 200), NÃO UMA PORCENTAGEM DE LARGURA. O
+            # `pct["w"]` do produto é `100 * valor / teto` — a fração da barra
+            # —, e escrevê-lo no `value` de um range que vai a 200 poria o
+            # cursor em 75 quando o pedido é 150.
+            #
+            # VAZIO QUANDO NÃO SE SABE, e o pintor o troca por travessão
+            # (`hefesto_vivo.escrever`). Um `<input type=range>` recusa o
+            # travessão e cai no valor padrão dele — o meio da escala. Acontece
+            # só quando o daemon responde uma política fora das cinco que o
+            # produto conhece, e o número ao lado diz `—` no mesmo tique: a
+            # tela não afirma o valor, mas o cursor fica num lugar que ninguém
+            # escolheu. É o que sobra para ela decidir — desabilitar a barra
+            # nesse estado é desenho.
+            "mult-pos": (str(pct.get("n", "")).rstrip("%")
+                         if pct.get("sabe") else ""),
+            # A LARGURA CONTINUA SAINDO, e ela é a PONTE DE PUBLICAÇÃO — 03/09,
+            # medido na tela dela e não deduzido. O desenho novo já não tem o
+            # `<span class="cheio">`, mas a página que ela ABRE hoje ainda tem:
+            # publicar é ato dela, e enquanto a `05-vibracao` estiver em
+            # `mockup/DIVERGENCIAS.md` os dois endereços convivem.
+            #
+            # TIRÁ-LA CUSTOU UMA FOTO: com `mult-pos` sozinho, o clique em
+            # "Economia" trocou o número de `100%` para `30%` e o trilho da
+            # coluna FICOU ONDE ESTAVA, com a largura que o mockup cravou. É a
+            # mentira que esta aba mais persegue — *o olho lê a barra, não o
+            # travessão* — e ela apareceu na página publicada, não na bancada.
+            #
+            # QUANDO ELA SAI: no dia em que a `05-vibracao` deixar a
+            # `DIVERGENCIAS.md`, o `<span>` some do produto e esta linha vira
+            # endereço que ninguém pinta. Sai junto com a publicação.
             "forca-pct": str(pct.get("w", "")).rstrip("%"),
             # QUAL DEGRAU ESTÁ ACESO — 03/09/2026, e é o campo que fechou a
             # maior dívida desta aba. O valor é a CHAVE do produto
@@ -303,12 +485,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # fotografado em 02/09. A régua 6 do `aba05._conferir` reprova o dia
             # em que um nome voltar a ser valor e clique ao mesmo tempo.
             #
-            # É O MESMO PARA AS QUATRO COLUNAS, e não é descuido: a política é da
-            # MESA (`app/telas/vibracao.SEM_FONTE["forca:por-controle"]` —
-            # `daemon.config.rumble_policy` é um campo só). O que esta linha
-            # conserta é a tela AFIRMAR degraus diferentes por coluna quando o
-            # daemon tem um valor só.
-            "degrau": str(col.get("forca") or ""),
+            # E ELE PASSOU A SER POR COLUNA — 03/09/2026, decisão dela:
+            # *"construir por controle"*. Até ontem esta linha era
+            # `col.get("forca")`, o `rumble_policy` da MESA, e as quatro colunas
+            # acendiam forçosamente o mesmo degrau — o que era honesto enquanto
+            # o clique também era da mesa.
+            #
+            # AGORA A FONTE É O PERFIL, e a precedência é a do produto:
+            # override com `policy` escrita vence, sem ela herda o global. Ver
+            # :func:`_forca_da_coluna`. `custom` NÃO acende degrau nenhum: ele
+            # não é um dos quatro botões, é a barra — e o `classe` do pintor
+            # apaga os quatro quando o valor não casa com nenhum
+            # `data-hef-quando`, que é a resposta certa.
+            "degrau": politica,
             # O `Máx` AO LADO DO NÚMERO — decisão 11 dela. Booleano: o alvo
             # `classe` sem `data-hef-quando` acende por si.
             "mult-teto": _no_teto(pct),
@@ -536,42 +725,183 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     return uniq
 
 
+def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str,
+                    policy: str | None, custom: float | None = None) -> None:
+    """Grava a força DAQUELE controle no perfil ativo, e manda reaplicar.
+
+    **É A DECISÃO DELA DE 03/09/2026** — *"construir por controle"* — e a
+    cadeia inteira já existia (`POR-UNIDADE-01`, 10/08): o que este gesto
+    escreve é `controllers[chave].rumble` no PERFIL, e daí em diante o produto
+    faz sozinho — `profiles/manager._controllers_to_rumble_scales` converte em
+    fator RELATIVO ao global, `ProfileManager.apply` publica o mapa com
+    `set_rumble_scales`, e `core/backend_pydualsense._escalar_rumble`
+    multiplica o que vai ao motor. Nenhum payload novo, nenhum IPC novo.
+
+    **QUEM DECIDE O QUE VIRA OVERRIDE É O PRODUTO**, e não este arquivo:
+    `app/draft_config.with_controller_rumble` já tem as três regras escritas, e
+    reescrevê-las aqui seria a segunda cópia que esta casa persegue:
+
+    * igual ao global **não vira override** — a conta do produto descarta o
+      fator 1,0, e guardar a opinião só deixaria no disco o que o motor ignora;
+    * `policy=None` **limpa**;
+    * `auto` **limpa também**, porque o esquema o recusa por unidade (ele
+      escala pela bateria do controle PRIMÁRIO) — e o produto chama isso, com
+      todas as letras, de *"a leitura honesta do gesto, e não um erro
+      silencioso"*.
+
+    O CAMINHO DE DISCO É O DA ABA PERFIS (`pacotes/rodape.salvar`):
+    `load_profile` → `DraftConfig.from_profile` → o método acima →
+    `to_profile(nome, priority=…)` → `perfil.gravar_e_reaplicar`. A `priority`
+    vai junto porque `to_profile` a recebe de fora; sem ela o perfil dela
+    perderia a ordem de casamento — é o `BUG-FOOTER-SAVE-DROPS-SECTIONS-01`,
+    nomeado no próprio `to_profile`.
+
+    NADA MUDOU = NADA GRAVA, e não é economia: regravar um perfil idêntico
+    troca a data do arquivo e faz o daemon reaplicá-lo, e um `profile.switch`
+    no meio de uma partida não é de graça. É a mesma guarda do
+    `a08_conexoes._com_o_teto`. Ela também é o que torna inócuo o clique DOBRADO
+    da barra arrastável — ver :func:`intensidade`.
+
+    A BORDA RECUSA, E A FRASE DELA VAI PARA A TELA. Um `uniq` degenerado
+    (`000000…`, o broadcast, o MAC forjado que dois clones compartilham) ou um
+    multiplicador fora de `[0, RUMBLE_CUSTOM_MULT_MAX]` faz o esquema levantar
+    com a razão escrita — e é ela que sobe como `RuntimeError`, em vez de um
+    traço de pydantic. Repetir a lista de recusas aqui a faria envelhecer na
+    primeira que o produto acrescentasse.
+    """
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig, RumbleDraft
+
+    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "").strip()
+    if not nome:
+        raise RuntimeError(
+            "não há perfil ativo agora, e a força da vibração de um controle é "
+            "do PERFIL — não da mesa. Escolha um perfil na aba Perfis e tente "
+            "de novo.")
+    chave = _chave_no_perfil(uniq)
+    if not chave:
+        raise RuntimeError(
+            "este controle não tem endereço fixo de doze hexa, e sem ele não há "
+            "chave no perfil para guardar a força só dele. Um controle sem "
+            "endereço estável muda de nome a cada conexão, e a escolha cairia "
+            "num aparelho diferente do que você está vendo.")
+
+    loader = _perfil._com_o_src()
+    try:
+        prof = loader.load_profile(nome)
+    except Exception as erro:
+        raise RuntimeError(f"não consegui ler o perfil {nome!r}: {erro}") from erro
+
+    draft = DraftConfig.from_profile(prof)
+    try:
+        # `model_validate` E NÃO `model_copy`, e a razão é a FRASE, não a
+        # segurança: o `model_copy` do pydantic não valida, mas a borda de baixo
+        # (`ControllerRumbleOverride`) pega o mesmo número um passo adiante —
+        # medido com a cura arrancada, e o teste continuou verde. O que se ganha
+        # aqui é a recusa mais PERTO do valor, e por isso com o nome dele
+        # (`custom_mult`, com o `le=RUMBLE_CUSTOM_MULT_MAX` que o declara) em
+        # vez do nome de um campo interno de `Profile`.
+        pedido = RumbleDraft.model_validate(
+            {**draft.rumble.model_dump(), "policy": policy, "custom_mult": custom})
+        novo = draft.with_controller_rumble(chave, pedido)
+        if novo.source_controllers == draft.source_controllers:
+            return
+        adiante = novo.to_profile(nome, priority=prof.priority)
+    except Exception as erro:
+        raise RuntimeError(
+            f"o produto recusou essa força para este controle: {erro}") from erro
+    _perfil.gravar_e_reaplicar(adiante, ctx, p)
+
+
 @gesto("05-vibracao.html", "forca")
 def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Um dos quatro degraus: quanto da vibração pedida chega ao aparelho.
+    """Um dos quatro degraus, **daquele controle** — decisão dela, 03/09/2026.
 
-    `rumble_policy_set_checked` é a ÚNICA porta do `rumble.policy_set` desde
-    26/08 (`app/ipc_bridge.py:666`) — as outras duas caíram por descartarem o
-    motivo da recusa. É a mesma função que a janela estável chama em
-    `app/actions/rumble_actions.py:797`, com a MESMA folga de leitura: o
-    `STATE_IPC_TIMEOUT_S` não se digita aqui, sai de quem é dono dele.
+    **FATO SUBSTITUÍDO, e era o parágrafo final deste docstring:** *"a política
+    é da MESA, não da coluna … clicar 'Economia' na coluna do P2 muda os
+    quatro"*. Era verdade enquanto o gesto chamava `rumble.policy_set`, que não
+    aceita `uniq` (`daemon/ipc_handlers.py:4452`). Ela decidiu **construir por
+    controle**, e o caminho já existia inteiro pelo PERFIL — ver
+    :func:`_gravar_a_forca`. O clique da coluna deixou de mexer nos vizinhos.
 
     O DEGRAU VEM DO `data-forca`, nunca do rótulo: o HTML carrega a CHAVE do
     produto (`economia`/`balanceado`/`max`/`auto`), e o gerador reprova a si
-    mesmo se os degraus divergirem do `RUMBLE_POLICY_MULT` (`aba05.py:98`).
+    mesmo se os degraus divergirem do `RUMBLE_POLICY_MULT` (`aba05.py`).
 
-    A BARRA "Personalizado" TAMBÉM É `data-papel="forca"` — e é a leitura do
-    multiplicador, não um botão. Um clique nela chega aqui sem degrau, e a
-    recusa é o que separa as duas coisas: `rumble.policy_custom` pede um número
-    (`mult`), e um clique numa barra sem cursor não carrega número nenhum.
+    O `Auto` NÃO VIRA OVERRIDE, e quem decidiu foi o produto — o esquema o
+    recusa por unidade e `with_controller_rumble` traduz o clique em *"limpa o
+    override e devolve a peça ao global"*. Na tela isso é: a coluna volta a
+    seguir o degrau da mesa. O que não existe mais é o caminho para PÔR a mesa
+    em `Auto` a partir daqui, e está declarado em
+    :data:`SEM_DONO`\\ ``["forca:auto-da-mesa"]``.
 
-    O QUE ESTE BOTÃO NÃO FAZ, e o produto já sabia: **a política é da MESA, não
-    da coluna.** `app/actions/rumble_actions.py:911` escreve *"não há IPC de
-    política por unidade, e inventar um seria mecanismo novo"*. O desenho
-    endereça por coluna e o daemon responde pela mesa inteira — clicar
-    "Economia" na coluna do P2 muda os quatro. O que vale por peça chega pelo
-    perfil (`set_rumble_scales`), não por este clique.
+    A RECUSA VIRA `RuntimeError`, e não `ValueError` — 03/09/2026. O contrato
+    do piloto é explícito: `RuntimeError` leva a frase ao CARTÃO dela e
+    `ValueError` fica no `stderr` de quem lançou a janela
+    (`hefesto_vivo._recusou_dizendo`). As duas recusas deste gesto falam com
+    quem está com o controle na mão — "clique sem degrau" e "clique sem
+    controle" —, então as duas têm de chegar aos olhos dela.
     """
-    from hefesto_dualsense4unix.app.actions.mode_transition import STATE_IPC_TIMEOUT_S
-
     degrau = str(o.get("forca") or "")
     if not degrau:
-        raise ValueError(
-            "força: este clique não trouxe degrau — a barra 'Personalizado' não é "
-            "botão, e o multiplicador dela precisa de um número que o clique não tem")
-    ok, motivo = _resposta(p.rumble_policy_set_checked(degrau, timeout=STATE_IPC_TIMEOUT_S))
-    if not ok:
-        raise RuntimeError(motivo or "o Hefesto não está rodando — ligue na aba Sistema")
+        raise RuntimeError(
+            "este clique não disse qual degrau — tente de novo em cima de um "
+            "dos quatro botões (Economia, Balanceado, Máximo ou Auto).")
+    uniq = _uniq(o)
+    if not uniq:
+        raise RuntimeError(
+            "o clique não disse em qual controle — e a força agora é de cada "
+            "um. Clique o degrau dentro da coluna do controle que você quer "
+            "mudar.")
+    _gravar_a_forca(ctx, p, uniq, degrau)
+
+
+@gesto("05-vibracao.html", "intensidade")
+def intensidade(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A barra "Personalizado", arrastada: **0 a 200%, e grava na hora.**
+
+    DECISÃO DELA, 03/09/2026, e são as palavras dela. Até ontem esta linha era
+    LEITURA: um `<div>` sem `value`, e o gesto `forca` a recusava com um
+    `ValueError` que **não chegava à tela** — para ela, arrastar não fazia nada
+    e não explicava nada.
+
+    O TETO É DO ESQUEMA (:func:`teto_da_barra`, do `RUMBLE_CUSTOM_MULT_MAX`), e
+    o `<input type=range>` do desenho já nasce com `max` igual a ele
+    (`aba05._trilho_arrastavel`). Aqui ele não se confere de novo: quem recusa
+    o que passa do teto é a BORDA do esquema, e :func:`_gravar_a_forca` sobe a
+    frase dela. Uma segunda checagem aqui seria a segunda régua do mesmo
+    número, e é ela que envelhece.
+
+    A DIVISÃO POR 100 É A ÚNICA CONTA, e ela é de unidade: a tela fala em
+    pontos percentuais (o que ela lê ao lado da barra) e o perfil guarda o
+    multiplicador (`custom_mult`, 0 a 2). É a mesma tradução que
+    `_pedido_da_politica` faz na volta.
+
+    O CLIQUE CHEGA DUAS VEZES, e é inócuo de propósito. O ouvinte do piloto
+    escuta `change` **e** `click`, e soltar o polegar de um `<input type=range>`
+    dispara os dois com o MESMO valor. A segunda passagem encontra o perfil já
+    com aquele número e :func:`_gravar_a_forca` volta sem gravar — a mesma
+    guarda que impede um `profile.switch` no meio de uma partida. Filtrar por
+    `evento` aqui seria escrever, neste arquivo, uma regra sobre o ouvinte que
+    mora em outro; a guarda que já existe cobre o caso sem saber dele.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise RuntimeError(
+            "o arraste não disse em qual controle — a intensidade agora é de "
+            "cada um. Use a barra dentro da coluna do controle que você quer "
+            "mudar.")
+    bruto = str(o.get("valor") or "").strip()
+    if not bruto:
+        raise RuntimeError(
+            "a barra não mandou número nenhum. Arraste o cursor dela em vez de "
+            "clicar no rótulo ao lado.")
+    try:
+        pontos = round(float(bruto))
+    except ValueError as erro:
+        raise RuntimeError(
+            f"a barra mandou {bruto!r}, que não é um número de porcentagem"
+        ) from erro
+    _gravar_a_forca(ctx, p, uniq, "custom", custom=pontos / 100)
 
 
 @gesto("05-vibracao.html", "testar")
@@ -666,7 +996,12 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
 #: inventado aparece aqui, e não na mão de quem clica.
-PONTE = {"chamar", "rumble_policy_set_checked", "rumble_set_checked",
+#:
+#: `rumble_policy_set_checked` SAIU EM 03/09/2026, e `profile_switch` entrou no
+#: lugar dele: a força deixou de ir por IPC global e passa a ir pelo PERFIL —
+#: `perfil.gravar_e_reaplicar` grava e manda o daemon reaplicar. É a decisão
+#: dela de construir por controle, vista do lado da ponte.
+PONTE = {"chamar", "profile_switch", "rumble_set_checked",
          "rumble_stop", "rumble_stop_checked", "rumble_passthrough"}
 #: O ÚNICO MÉTODO CRU, e ele é o que dá endereço aos outros quatro.
 METODOS = {"controller.target.set"}
@@ -674,11 +1009,17 @@ METODOS = {"controller.target.set"}
 
 #: O QUE ESTA ABA DECLARA À RÉGUA — o piso e as provas moram AQUI, não no teste.
 PAGINA = "05-vibracao.html"
-PISO_DA_ABA = 3
+PISO_DA_ABA = 4
+#: `forca` E `intensidade` NÃO TÊM LINHA AQUI — 03/09/2026, e a razão é a mesma
+#: que tirou o `teto-da-vibracao` das provas da aba Conexões: esta régua passa
+#: um dublê de ponte e cobra QUAL função dela foi chamada, e os dois gestos
+#: exigem **perfil ativo** — que o `ctx` dela não tem — e mudam primeiro o
+#: DISCO; o `profile.switch` vem depois. Uma prova que só olhasse a ponte diria
+#: que eles funcionam mesmo com o que foi para o arquivo errado.
+#:
+#: A prova deles é o disco, com perfil descartável e ponte dublê, e está em
+#: `tests/unit/test_a_forca_da_vibracao_e_por_controle.py`.
 PROVAS = [
-    # A política NÃO leva alvo: é da mesa, e mirar antes só mentiria melhor.
-    {"pagina": PAGINA, "gesto": "forca", "clique": {"forca": "max"},  # (noqa-acento) id
-     "chama": [("rumble_policy_set_checked", ["max"], {"timeout": 1.0})]},
     # QUATRO chamadas, e a ordem é o gesto inteiro: mirar, vibrar, calar,
     # devolver. Invertidas, o passthrough soltaria antes de o silêncio ir.
     {"pagina": PAGINA, "gesto": "testar", "clique": {},  # (noqa-acento) chave do contrato
@@ -699,4 +1040,11 @@ PROVAS = [
 #:
 #: A prova destes dois é a mão dela, e é honesto dizer isso em vez de fingir que
 #: uma régua os alcança.
-SEM_ECO = ("testar", "parar")
+#:
+#: `forca` E `intensidade` ENTRARAM EM 03/09/2026, e por outra razão: eles
+#: passaram a escrever no PERFIL, e o `state_full` **não publica override por
+#: controle nenhum**. Eles TÊM efeito vivo — o `profile.switch` de
+#: `gravar_e_reaplicar` faz `ProfileManager.apply` publicar as escalas no
+#: backend; o que não têm é ECO. A prova deles é o ARQUIVO, e está em
+#: `tests/unit/test_a_forca_da_vibracao_e_por_controle.py`.
+SEM_ECO = ("testar", "parar", "forca", "intensidade")
