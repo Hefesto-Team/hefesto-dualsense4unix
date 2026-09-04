@@ -155,9 +155,9 @@ class _Ponte:
     A ASSINATURA É A DA PONTE DE VERDADE, e isso não é preciosismo — foi este
     dublê que deixou o defeito passar. `pacotes.ponte.chamar` é
 
-        chamar(metodo, timeout=None, **params)
+        chamar(metodo, timeout=None, **params)  # (assinatura) noqa-acento
 
-    e até 04/09/2026 o dublê aqui era `chamar(self, metodo, params)`, POSICIONAL.
+    e até 04/09 o dublê era `chamar(self, metodo, params)`  # noqa-acento
     O gesto da máscara passava `p.chamar("gamepad.mask.set", {...})` — o
     dicionário caía no `timeout` da ponte real e o `_safe_call` estourava com
     `'<=' not supported between instances of 'dict' and 'int'`. **Na ponte de
