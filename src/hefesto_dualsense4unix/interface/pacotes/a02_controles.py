@@ -837,6 +837,43 @@ def modo_do_mic(endereco: str) -> str:
 #: o decorador roda antes de qualquer coisa que este módulo defina.
 PAGINA = "02-controles.html"
 
+def texto_da_bateria(pct: int | None) -> str:
+    """A carga na grafia da GTK, PERGUNTADA a ela — as duas frases.
+
+    DECISÃO DELA, 03/09/2026, sobre a bateria desconhecida: **"— %", como a
+    janela antiga** — paridade literal com a GTK.
+
+    O QUE CADUCOU, e é decisão medida, por isso fica escrito: em 02/09 esta
+    linha passou a devolver o travessão SECO (`mesa_viva.SEM_LEITOR`), pela
+    regra de *campo sem informação não mostra nada* e para casar com o
+    `alto-estado` e o `touch-estado`, ao lado. Ela decidiu o contrário — a
+    paridade com a janela que ela usa vence a harmonia interna do card —, e a
+    decisão é dela.
+
+    FATO SUBSTITUÍDO — o comentário que morava aqui dizia *"NÃO HÁ FUNÇÃO DONA
+    PARA IMPORTAR … os dois lugares da GTK são literais dentro de métodos de
+    widget"*. É falso: `StatusActionsMixin._bateria_da_mesa` é `@staticmethod`,
+    devolve `(fração, texto)` e não toca em `self` nem em widget nenhum —
+    importá-la não puxa janela. Medido em 03/09: `_bateria_da_mesa({})` dá
+    `(0.0, "— %")` e `_bateria_da_mesa({"battery_pct": 85})` dá `(0.85, "85 %")`.
+
+    E É POR ISSO QUE ELA É CHAMADA, E NÃO COPIADA — regra da casa: quando um
+    valor tem dono, a régua PERGUNTA ao dono. Uma cópia da `f-string` daqui
+    envelhece na primeira vez que a GTK mudar a grafia, e o card volta a mostrar
+    duas gramáticas — que é exatamente o defeito que 03/09 curou de manhã.
+
+    O ESTADO SINTÉTICO É DE PROPÓSITO: passar `{"battery_pct": pct}` sem a chave
+    `controllers` deixa `mesa_publicada` falso, então a guarda de "quem está na
+    mesa" (que é da aba Status, sobre o estado GLOBAL) não corre. Quem decide se
+    ESTE controle está na mesa, aqui, é `mesa_viva.mesa_do_estado` — o card só
+    existe porque o controle está nela. O que se pede à GTK é a GRAFIA.
+    """
+    from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
+
+    return StatusActionsMixin._bateria_da_mesa(
+        {} if pct is None else {"battery_pct": pct})[1]
+
+
 _ENDERECOS: frozenset[str] | None = None
 
 
@@ -957,35 +994,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         via_na_tela = VIA_DO_TRANSPORTE.get(str(c.get("transport") or "").lower(), "")
         nome_na_tela = identidade_de(c, ctx.mesa)
         cards[uniq] = {
-            # A GRAFIA DA CARGA É A DA CASA, E ESTA LINHA ERA A ÚNICA FORA DELA
-            # — 03/09/2026. Ela escrevia `f"{pct}%"`, colado, e o card MOSTRAVA
-            # as duas gramáticas ao mesmo tempo: três centímetros abaixo, o
-            # `alto-estado` sai de `sensor_widgets.texto_volume`, que é
-            # `f"{...} %"` com espaço (`sensor_widgets.py:223`). Medido na mesa
-            # dela agora, com o controle no cabo: `bateria = "85%"` e
-            # `alto-estado = "100 %"`, um em cima do outro.
-            #
-            # O ESPAÇO É O DA GTK, e ela é o dono desta frase:
-            # `_update_bateria` escreve `f"{bateria} %"`
-            # (`controller_card.py:4910`), e `status_actions._set_battery_text`
-            # recebe a mesma grafia (`status_actions.py:995`). São três lugares
-            # do produto dizendo `N %` e um dizendo `N%`.
-            #
-            # NÃO HÁ FUNÇÃO DONA PARA IMPORTAR, e é por isso que a frase é
-            # redigitada aqui em vez de chamada: os dois lugares da GTK são
-            # literais dentro de métodos de widget (`self._battery_bar`,
-            # `self._set_battery_text`), e importar um mixin GTK para pegar uma
-            # `f-string` puxaria janela para dentro do pacote. O que se pode
-            # fazer é escrever a MESMA grafia e dizer aqui de onde ela veio.
-            #
-            # O DESCONHECIDO FICA NO TRAVESSÃO SECO, e é DIFERENTE da GTK de
-            # propósito: lá ele é `"— %"`. Aqui vale a regra dela — *campo sem
-            # informação não mostra nada* —, que é a mesma que o `alto-estado`
-            # ao lado já segue (`mesa_viva.SEM_LEITOR`) e a mesma que o
-            # `touch-estado` segue duas linhas abaixo. Um `%` pendurado num
-            # travessão seria a segunda gramática do "não sei" dentro do mesmo
-            # card.
-            "bateria": f"{pct} %" if pct is not None else str(mesa_viva.SEM_LEITOR),
+            # A GRAFIA DA CARGA NÃO É MAIS REDIGITADA AQUI — ver
+            # `texto_da_bateria`, que PERGUNTA à GTK as duas frases.
+            "bateria": texto_da_bateria(pct),
             # A BARRA, e ela precisa do NÚMERO CRU: o `escrever` do piloto com
             # `data-hef-alvo="largura"` monta `width: <t>%`, e um "95%" ali
             # viraria `width: 95%%`. Zero quando o daemon não sabe — deixar a

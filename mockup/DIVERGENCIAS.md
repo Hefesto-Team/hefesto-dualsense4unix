@@ -49,3 +49,26 @@ seção daqui**: a aba deixou de estar em trabalho.
   mockup, e a confissão do mapa dizendo "**três coisas**" onde a bancada dela
   tem uma. O pacote já emite os cinco campos e o `achar()` do piloto não os
   encontra — escreve zero, sem custo e sem estrago.
+## 02-controles.html
+- **03/09/2026** — o **selo do microfone ganhou COR + ÍCONE**, decisão dela:
+  *"Cor + ícone. Redundante de propósito — quem lê rápido pega pela cor, quem
+  não distingue cor pega pelo risco."*
+
+  O que MUDA na tela: o selo passa a trazer um microfone desenhado (SVG de 9px,
+  em `currentColor`) antes da palavra, e um **risco** cruza esse microfone
+  quando o valor é MUDO. A classe da cor foi **invertida** — o selo nasce
+  apagado e ACENDE em ATIVO, em vez de nascer verde e apagar em MUDO. A largura
+  do selo vai de **34,8px para 46,8px** (MUDO) e para 52,5px (ATIVO), medido no
+  `WebKit2.WebView`; a linha do rótulo **não transborda** (`scrollWidth ==
+  clientWidth`), e há régua cobrando isso.
+
+  **O que ela vê HOJE, na página publicada, enquanto isto espera o OK:** o selo
+  sem ícone, e **a cor congelada no que o gerador desenhou**. Medido no DOM vivo
+  em 03/09, injetando os três valores do selo na página publicada: o cartão do
+  P1 fica `rgb(80,250,123)` nos três — diz **MUDO em VERDE** — e o do P2 fica
+  `rgb(68,71,90)` nos três — diz **ATIVO em CINZA**. É o defeito que esta
+  divergência cura, e ele está na tela dela agora. Nada some e nenhum clique
+  morre até a publicação: o que falta é a cor seguir a palavra.
+
+  A metade do PACOTE não espera publicação — ela não mudou: o valor continua
+  saindo de `mesa_viva.selo_do_mic`, e é o mesmo dos três alvos.
