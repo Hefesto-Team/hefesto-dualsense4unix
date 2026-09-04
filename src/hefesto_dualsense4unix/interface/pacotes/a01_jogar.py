@@ -32,6 +32,19 @@ DA_PAGINA: tuple[str, ...] = (
     "aviso-texto",
     "aviso-vivo",
     "hef-posicao",
+    # A RESSALVA DA MÁSCARA e a FRASE DA MESA — 04/09/2026. As duas são
+    # `data-campo` de UM valor pintado em DOIS elementos: o de fora com
+    # `data-hef-alvo="classe"` (existe / não existe) e o de dentro sem alvo (o
+    # texto). O piloto escreve o mesmo valor em todo elemento de mesmo endereço
+    # e cada um decide pelo alvo dele (`hefesto_vivo`, passo 1), e `ligado('—')`
+    # é falso — então a linha some sozinha quando não há o que dizer.
+    #
+    # É o par que o `pendente`/`pendente-ha` precisou de DOIS endereços para
+    # fazer, com um a menos: lá a frase e a existência têm valores diferentes
+    # (a frase é do produto, a existência é `"1"`), aqui é o MESMO texto que
+    # decide as duas coisas.
+    "mascara-ressalva",
+    "mesa-frase",
     "modo-aceso",
     "pendente",
     "pendente-alvo",
@@ -75,6 +88,134 @@ POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "bateria",
 #: TOTAL e não o que coube — uma coluna que mostra 6 de 8 e escreve "6 avisos"
 #: esconderia dois sem dizer que os escondeu.
 AVISOS_VIVOS = 6
+
+#: QUANTAS A COLUNA ACENDE — decisão dela, 04/09/2026 (D-09): *"Até três linhas,
+#: o mais grave em cima."*, com ``+N`` se passar.
+#:
+#: SÃO DOIS NÚMEROS DIFERENTES, E ISSO NÃO É DESCUIDO. :data:`AVISOS_VIVOS` é
+#: quantas linhas a PÁGINA publica (endereço, e endereço não move pixel); este é
+#: quantas o PRODUTO acende. O quarto lugar recebe a linha do ``+N``, e os dois
+#: que sobram ficam apagados — prontos para o dia em que ela subir o teto, o que
+#: custa esta constante e nada mais. Cravar os dois no mesmo número faria a
+#: coluna crescer até seis numa máquina ruim, que é o vão de 38 px que ela
+#: reclamou em 31/08.
+AVISOS_NA_COLUNA = 3
+
+#: A ORDEM DA GRAVIDADE, do que mais dói para o que menos dói — a outra metade
+#: da D-09 (*"o mais grave em cima"*).
+#:
+#: **O CRITÉRIO É "O QUE INVALIDA O QUÊ"**, e não uma escala de cor:
+#:
+#: 1. ``PAUSA`` — o produto inteiro está parado. Enquanto ela valer, TODAS as
+#:    outras linhas descrevem coisas que não estão acontecendo;
+#: 2. ``ERRO`` — uma fonte da coluna não respondeu. Não sabemos o que não
+#:    estamos vendo, e isso vem antes de qualquer notícia que sobrou;
+#: 3. ``GAMEPAD`` — o jogo recebe MENOS do que ela pediu (vpad degradado, ou a
+#:    emulação desligada por uma escolha antiga);
+#: 4. ``PONTE`` — por onde o jogo recebe o controle agora, quando a resposta é
+#:    má notícia;
+#: 5. ``JOGO`` — há jogo aberto fora do caminho do Hefesto;
+#: 6. ``RÁDIO`` — o transporte está frágil;
+#: 7. ``PERFIL`` — o cadeado da troca automática e o detector cego.
+#:
+#: O QUE NÃO ESTÁ AQUI VAI DEPOIS, na ordem em que chegou: são os achados do
+#: exame da mesa, que já vêm ordenados pelo dono deles
+#: (`a08_conexoes._exame`). Uma lista que tentasse ranqueá-los aqui seria a
+#: segunda cópia de uma escada que `secao_exame.ESCADA_DE_GRAVIDADE` já tem.
+ORDEM_DA_GRAVIDADE: tuple[str, ...] = (
+    "PAUSA", "ERRO", "GAMEPAD", "PONTE", "JOGO", "RÁDIO", "PERFIL",
+)
+
+#: O SELO DA PONTE. Não é um selo inventado: ``PONTE_PREFIXO`` do produto é
+#: *"Ponte com o jogo: "* — a palavra é dele, e este selo é ela.
+SELO_DA_PONTE = "PONTE"
+
+#: A LINHA DO ``+N`` — o que a coluna diz quando não coube tudo.
+#:
+#: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01). O que a D-09
+#: fixou foi a FORMA (*"com `+N` se passar de três"*); a frase é minha até ela
+#: ver. Ela nomeia as duas coisas que a pessoa precisa saber para não achar que
+#: a coluna está mentindo: quantos ficaram de fora e por que critério.
+def _linha_do_mais(quantos: int) -> tuple[str, str]:
+    """``(selo, texto)`` da linha que fecha a coluna quando não coube tudo."""
+    return (
+        f"+{quantos}",
+        f"mais {quantos} aviso" + ("s" if quantos != 1 else "")
+        + f" — a coluna mostra {AVISOS_NA_COLUNA} de cada vez, do mais grave.",
+    )
+
+
+#: A FRASE DA MESA VAZIA — decisão dela, 04/09/2026 (D-07): *"Uma frase por cima
+#: dos lugares apagados."*
+#:
+#: **ELA JÁ EXISTIA, E NO LUGAR ERRADO**: a bancada `interface/jogar_vivo.py`
+#: escreve esta mesma sentença desde que nasceu, e o PRODUTO — a página
+#: estática, que é a que ela abre — não a tinha. A cópia aqui é a mesma sequência
+#: de bytes de propósito, e :func:`o_gemeo_da_bancada_ainda_bate` (na régua
+#: `tests/unit/test_a01_a_mesa_vazia_fala.py`) reprova no dia em que as duas se
+#: afastarem. Quem cuidar de `jogar_vivo.py` fecha isto com uma linha: importar
+#: esta constante em vez de repetir a frase.
+MESA_VAZIA = (
+    "Nenhum controle na mesa agora. Conecte um pelo cabo ou pelo "
+    "rádio — a mesa aparece sozinha, sem recarregar esta tela."
+)
+
+#: QUANTOS LUGARES A PÁGINA TEM. O dono é o desenho (`monta.MESA`), e o número
+#: se LÊ dele — cravar `4` aqui é o que faz a tela contar uma coisa e mostrar
+#: outra, que é exatamente o defeito que a linha do ``+N`` existe para fechar.
+def lugares_da_mesa() -> int:
+    """Quantos cartões a página publica. Lido de `monta.MESA`, nunca digitado."""
+    return len(_monta().MESA)
+
+
+#: A RESSALVA DA MÁSCARA — 04/09/2026, e ela é a queixa 1 dela:
+#: *"independente do modo a mascara deve funcionar ali sempre."*
+#:
+#: O QUE FOI MEDIDO, e decide a forma desta cura: `gamepad.mask.set` grava
+#: SEMPRE (`ipc_handlers.py:5482`, sem gate de modo), `set_mask` persiste em
+#: `controller_masks.json` e `mascara_efetiva` é consultada na criação de todo
+#: gamepad virtual (`gamepad.py:2014`, `uinput_gamepad.py:419`). **Logo a
+#: escolha dela JÁ vale sempre que pode valer** — o que faltava não era motor,
+#: era a tela dizer que a escolha ficou guardada.
+#:
+#: POR QUE RESSALVA E NÃO CINZA, e é a diferença entre as duas metades da D-03:
+#: um botão fica cinza quando ele **não pode funcionar**. Este pode: clicar fora
+#: do modo jogo grava a escolha, e o vpad nasce com ela quando o modo voltar.
+#: Apagar o chip diria *"você não pode escolher agora"*, que é FALSO — e trocaria
+#: a queixa dela (*clico e não acontece nada*) por outra pior (*clico e nem
+#: deixa*). O cinza fica onde ele é verdade: no chip que o produto não sabe
+#: montar (ver :func:`mascaras_montaveis`).
+#:
+#: PROVISÓRIO — texto de tela é palavra dela.
+RESSALVA_DA_MASCARA = (
+    "Guardada por controle: o Hefesto não está entregando o controle ao jogo "
+    "agora, e a escolha vale assim que ele voltar a entregar."
+)
+
+
+def mascaras_montaveis() -> frozenset[str]:
+    """Os rótulos de máscara que o produto SABE MONTAR — para o desenho perguntar.
+
+    O gerador (`aba01._chips_de_mascara`) apaga o chip que não estiver aqui e
+    põe a razão na dica: é a D-03 dela (*"cinza antes, com a razão na dica"*)
+    aplicada ao único chip que recusa em TODO modo, o **Nintendo Pro**.
+
+    **NADA SE DIGITA.** `external_mask.mascaras_validas()` é o catálogo do vpad
+    (ele próprio derivado de `uinput_gamepad.FLAVORS`) e `mesa_viva.
+    NOME_DA_MASCARA` é a tradução flavor → rótulo que a pintura já usa. Uma
+    máscara nova no produto acende o chip dela na próxima geração, sem uma linha
+    de edição — e é isso que separa esta cura de apagar o chip à mão, que
+    envelheceria no dia em que o produto aprendesse a montá-lo.
+
+    O CHIP NÃO PERDE O CLIQUE ao ficar cinza, e é escolha: `mascara_do_controle`
+    recusa DIZENDO o nome e as que existem. Tirar o `data-gesto` faria o clique
+    sumir calado — que é o defeito que este arquivo inteiro persegue.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascaras_validas
+    from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
+
+    return frozenset(
+        NOME_DA_MASCARA[f] for f in mascaras_validas() if f in NOME_DA_MASCARA)
 
 
 @registrar("01-jogar.html")
@@ -152,8 +293,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # `_avisos`: das oito fontes possíveis, sete já estavam escritas em
     # `app/actions/` e nenhuma frase nasce aqui.
     avisos = _avisos(ctx)
-    selos = [a["selo"] for a in avisos][:AVISOS_VIVOS]
-    textos = [a["texto"] for a in avisos][:AVISOS_VIVOS]
+    selos, textos = _coluna_de_avisos(avisos)
 
     # A FAIXA LARANJA. Os dois endereços saem daqui SEMPRE — inclusive vazios —
     # porque o que estava cravado na página é uma frase, e uma frase só se apaga
@@ -179,7 +319,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # (`hefesto_vivo.escrever`), e o travessão que o piloto escreve num
         # valor vazio conta como desligado — então a lista de `"1"` acende
         # exatamente as que têm texto.
-        "aviso-vivo": ["1"] * len(selos),
+        # O ACENDEDOR ACOMPANHA AS SEIS, e não só as acesas — ver a nota do
+        # `_coluna_de_avisos`. Uma lista curta some inteira quando fica vazia, e
+        # é justamente a coluna VAZIA que precisa apagar o aviso do desenho.
+        "aviso-vivo": ["1" if s else "" for s in selos],
+        # A FRASE DA MESA e a RESSALVA DA MÁSCARA — as duas saem SEMPRE,
+        # inclusive vazias, pela mesma razão da faixa laranja: o que se apaga é
+        # o que se escreve por cima. O `""` vira travessão no piloto, e o alvo
+        # `classe` do elemento de fora lê travessão como desligado.
+        "mesa-frase": _frase_da_mesa(ctx),
+        "mascara-ressalva": _ressalva_da_mascara(ctx.state),
         "cartoes": cartoes,
         # O INTERRUPTOR E A FILEIRA, VIVOS — 03/09/2026. Ver `_estado_da_tela`.
         **_estado_da_tela(ctx.state),
@@ -365,6 +514,10 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
                      "texto": f"o opt-out antigo não respondeu ({type(erro).__name__}).",
                      "fonte": "home_actions.aviso_de_opt_out_antigo"})
 
+    ponte = _aviso_da_ponte(ctx.state)
+    if ponte:
+        fora.append(ponte)
+
     try:
         fora += [{"selo": str(i["selo"]), "texto": str(i["titulo"]),
                   "fonte": "a08_conexoes._exame"}
@@ -374,6 +527,189 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
                      "texto": f"o exame da mesa não respondeu ({type(erro).__name__}).",
                      "fonte": "a08_conexoes._exame"})
     return fora
+
+
+def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
+    """A linha *"Ponte com o jogo"*, e só quando ela é MÁ NOTÍCIA.
+
+    É a órfã que faltava da D-10 (*"Todas na coluna Atenção"*) — e a medição
+    corrigiu o enunciado: das TRÊS frases que a decisão nomeia, **duas já
+    estavam na coluna** desde 03/09. A PAUSA é `AVISOS_DA_TELA[0]` e o cadeado
+    são as duas últimas (`autoswitch_lock_text` e `texto_do_cadeado_cego`). A
+    ponte era a única sem canal em toda a interface nova.
+
+    **QUEM DECIDE SE É MÁ NOTÍCIA É O PRODUTO, e a leitura é a cor dele.**
+    `texto_da_ponte` devolve markup do Pango e pinta o veredito: `_COR_OK` nos
+    dois desfechos bons ("direto (Sony)" e "pelo Hefesto"), `_COR_AVISO` nos
+    dois ruins ("de pé, e vazia" e "nenhuma"), e cor NENHUMA no "não sei" de
+    daemon desligado. Ler a cor é ler a escada de gravidade que a função já tem;
+    reescrever aqui as quatro perguntas dela seria a segunda cópia da regra, e a
+    de cá envelheceria no primeiro desfecho novo.
+
+    A COLUNA CHAMA-SE ATENÇÃO, e é por isso que a boa notícia fica de fora — a
+    mesma disciplina que já deixa os ``certo`` do exame de fora. E o "não sei"
+    também: sem daemon não se afirma nada, que é a regra do `autoswitch_lock_
+    text` e a razão de o `_estado_da_tela` não pintar sobre estado vazio.
+
+    O MARKUP NÃO CHEGA À TELA: `gui.aba_sistema.sem_markup` é o dono de tirá-lo
+    (a `a09_sistema` já o usa), e sem ele o `<span foreground="#ffb86c">` iria
+    LITERAL para o `textContent` — o piloto escreve texto, não HTML.
+
+    A CONSTANTE PRIVADA É DE PROPÓSITO, e a guarda também: `_COR_AVISO` é o
+    único lugar em que aquela função declara *"isto é ruim"*. Se ela sumir, esta
+    régua **cala** em vez de alarmar — um `"" in frase` casaria com tudo e
+    encheria a coluna de boa notícia vestida de alerta, que é exatamente o
+    defeito que o `_do_exame` já custou nesta aba.
+    """
+    if not state:
+        return None
+    from hefesto_dualsense4unix.app.actions import home_actions
+    from hefesto_dualsense4unix.gui.aba_sistema import sem_markup
+
+    ruim = str(getattr(home_actions, "_COR_AVISO", "") or "")
+    if not ruim:
+        return None
+    frase = home_actions.texto_da_ponte(state)
+    if ruim not in frase:
+        return None
+    texto = sem_markup(frase)
+    # O PREFIXO SAI porque o SELO É ELE. Deixar os dois escreveria
+    # "PONTE  Ponte com o jogo: nenhuma —…" na mesma linha, que é a repetição
+    # que esta casa tira do `<title>` do glifo e do `title` do cartão.
+    if texto.startswith(home_actions.PONTE_PREFIXO):
+        texto = texto[len(home_actions.PONTE_PREFIXO):]
+    return {"selo": SELO_DA_PONTE, "texto": texto,
+            "fonte": "home_actions.texto_da_ponte"}
+
+
+def _coluna_de_avisos(avisos: list[dict[str, str]]) -> tuple[list[str], list[str]]:
+    """``(selos, textos)`` da coluna — o mais grave em cima, e o ``+N`` no fim.
+
+    A D-09 dela, em duas metades: *"Até três linhas, o mais grave em cima"*,
+    *"com `+N` se passar de três"*.
+
+    A ORDENAÇÃO É ESTÁVEL, e isso é o que faz a coluna parar quieta: dois
+    avisos do mesmo selo mantêm a ordem em que as fontes falaram, então a linha
+    não troca de lugar a cada tique só porque um dicionário mudou de humor. O
+    que não está em :data:`ORDEM_DA_GRAVIDADE` cai depois de tudo, na ordem de
+    chegada — são os achados do exame, que já vêm ordenados pelo dono.
+
+    O ``+N`` OCUPA UMA LINHA, e ela não sai do teto: com quatro avisos a coluna
+    mostra três e diz "+1". Somar o ``+N`` ao teto faria a coluna mostrar três
+    avisos e a linha do "+1" só a partir do QUINTO, escondendo o quarto sem
+    contá-lo — que é o defeito que esta linha existe para fechar.
+
+    E A CONTA AO LADO CONTINUA DIZENDO O TOTAL (`atencao-conta`, do
+    `painel.texto_da_conta`): ela conta os avisos, não as linhas. Uma coluna que
+    mostrasse 3 e escrevesse "3 avisos" com cinco na máquina esconderia dois sem
+    dizer que os escondeu.
+    """
+    posto = {selo: i for i, selo in enumerate(ORDEM_DA_GRAVIDADE)}
+    fim = len(ORDEM_DA_GRAVIDADE)
+    ordenados = sorted(avisos, key=lambda a: posto.get(str(a.get("selo") or ""), fim))
+
+    selos = [str(a["selo"]) for a in ordenados[:AVISOS_NA_COLUNA]]
+    textos = [str(a["texto"]) for a in ordenados[:AVISOS_NA_COLUNA]]
+    sobra = len(ordenados) - AVISOS_NA_COLUNA
+    if sobra > 0:
+        selo, texto = _linha_do_mais(sobra)
+        selos.append(selo)
+        textos.append(texto)
+    # AS SEIS SAEM SEMPRE, com `""` no que não tem aviso — e esta linha é uma
+    # CURA, não asseio. Medida no DOM vivo em 04/09/2026, com a máquina dela sem
+    # um aviso: a coluna mostrava *"RÁDIO · Dois rádios da bancada estão em
+    # portas vizinhas"* ao lado de *"nenhum aviso"* — a mesma tela afirmando duas
+    # coisas contrárias. A frase é do MOCKUP (`aba01.AVISOS`, cena declarada), e
+    # ninguém a apagava.
+    #
+    # A CAUSA NÃO É DAQUI, e está nomeada para quem cuidar do despachante:
+    # `pacotes.normalizar` descarta lista VAZIA (`if valor and all(...)`, e
+    # `all([])` já seria `True`), então os três endereços não chegavam ao JS e o
+    # piloto **nunca visitava** os seis elementos — medido pelo selo da visita,
+    # `data-hef-visto` ausente nos seis. Vale para toda aba que emita lista: os
+    # achados do exame na 08 e a lista de perfis na 10 têm o mesmo caminho.
+    #
+    # A CURA DAQUI É CERTA POR SI: quem publica seis lugares tem de dizer o que
+    # cada um dos seis mostra. Depender do `i < v.length ? v[i] : ''` do piloto
+    # é depender de um comportamento; declarar as seis é afirmá-lo — e é o que
+    # faz o endereço vazio APAGAR em vez de deixar o desenho à mostra.
+    vazias = [""] * (AVISOS_VIVOS - len(selos))
+    return (selos + vazias)[:AVISOS_VIVOS], (textos + vazias)[:AVISOS_VIVOS]
+
+
+def _frase_da_mesa(ctx: Contexto) -> str:
+    """A linha por cima dos lugares apagados — ``""`` quando a mesa cabe na tela.
+
+    D-07 dela, 04/09/2026: *"Uma frase por cima dos lugares apagados."*, e o
+    ``+N`` do quinto na mesma linha. A decisão de 31/08 fica de pé — **os
+    lugares continuam**: *"o lugar apagado ensina que ali cabe um"*. O que muda
+    é o estado vazio deixar de ser MUDO.
+
+    DOIS ESTADOS, E OS DOIS SÃO A MESMA CONTRADIÇÃO VISTA DOS DOIS LADOS:
+
+    * **mesa vazia** — quatro lugares apagados e nenhuma palavra. Quem abre a
+      aba não sabe se o Hefesto não vê o controle, se o controle está fora, ou
+      se a tela quebrou;
+    * **mais controles que lugares** — o cabeçalho conta a mesa inteira
+      (`mesa_viva`) e a fileira mostra quatro. `hefesto_vivo.pintar` procura
+      `[data-controle="p5"]`, não acha, e segue **sem contar pintura nem erro**:
+      o quinto some calado e a MESMA tela afirma dois números.
+
+    SEM DAEMON NÃO SE AFIRMA NADA, e é a mesma guarda do `_estado_da_tela`:
+    `ctx.conectados` vazio pode ser "não há controle" ou "ninguém respondeu", e
+    escrever "nenhum controle na mesa" sobre um tique sem resposta seria a tela
+    afirmando o que não leu.
+
+    O NÚMERO DE LUGARES SE LÊ do desenho (:func:`lugares_da_mesa`). Cravar
+    ``4`` aqui poria nesta frase o mesmo defeito que ela denuncia.
+    """
+    if not ctx.state:
+        return ""
+    quantos = len(ctx.conectados)
+    if quantos == 0:
+        return MESA_VAZIA
+    lugares = lugares_da_mesa()
+    if quantos > lugares:
+        return (f"Há {quantos} controles na mesa e esta tela mostra "
+                f"{lugares}: o cabeçalho conta todos.")
+    return ""
+
+
+def _ressalva_da_mascara(state: dict[str, Any]) -> str:
+    """A linha da máscara quando ela ainda não tem efeito — ``""`` quando tem.
+
+    A QUEIXA É DELA, e é a primeira da lista de 04/09: *"independente do modo a
+    mascara deve funcionar ali sempre."*
+
+    O QUE ELA SENTE, medido: fora do modo `gamepad` **não existe gamepad
+    virtual**, e `mascara_efetiva` só é lida na criação de um
+    (`gamepad.py:2014`). O clique é aceito, gravado no disco e não muda nada que
+    se veja. A janela GTK escondia a caixa inteira fora do modo `gamepad`
+    (`home_actions.py:2648`); esta tela deixava clicar e ficava calada — que é
+    pior, porque o silêncio se lê como defeito.
+
+    **A ESCOLHA NÃO SE PERDE, e é isso que esta linha diz.** `gamepad.mask.set`
+    grava sempre e `set_mask` persiste em `controller_masks.json`; quando o vpad
+    nascer, ele nasce com a máscara que ela escolheu. Esconder a caixa como a
+    GTK faz apagaria uma escolha que É possível fazer agora.
+
+    QUEM RESPONDE PELO MODO É `painel.modo_vivo`, o ponto único de leitura — o
+    mesmo que acende o interruptor. Comparar `native_mode` e
+    `gamepad_emulation.enabled` aqui seria o terceiro leitor do modo nesta aba.
+
+    A FRASE NÃO NOMEIA O MODO de propósito. São DOIS os modos sem vpad — o
+    Nativo e a Navegação —, e na Navegação o interruptor está em **Ligado**
+    (`painel.MODOS_LIGADOS` tem `gamepad` e `desktop`): uma frase que dissesse
+    "ligue o Hefesto" mandaria ligar o que já está ligado.
+    """
+    if not state:
+        return ""
+    from hefesto_dualsense4unix.app.actions.mode_transition import MODE_GAMEPAD
+
+    modo = _painel().modo_vivo(state)
+    if modo is None or modo == MODE_GAMEPAD:
+        return ""
+    return RESSALVA_DA_MASCARA
 
 
 def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
@@ -742,14 +1078,28 @@ BOTOES_SEM_DONO: dict[str, str] = {
         "a Steam, reabrir a Steam e reabrir o jogo "
         "(`integrations/ponte_escada.py`, § OS DOIS TRAMOS)."
     ),
-    "mascara": (
-        "a máscara do gamepad virtual é UMA para a máquina, não uma por "
-        "controle: `gamepad.emulation.set` recebe `flavor` e não recebe `uniq` "
-        "(`daemon/ipc_handlers.py:5060`). E 'Nintendo Pro' não é máscara do "
-        "produto — o portão de entrada recusa em voz alta tudo o que não for "
-        "`dualsense`/`xbox` e sinônimos (`ipc_handlers.py:5090`)."
-    ),
 }
+
+#: FATO ERRADO, SUBSTITUÍDO — 04/09/2026. Havia aqui uma segunda entrada,
+#: `"mascara"`, dizendo *"a máscara do gamepad virtual é UMA para a máquina, não
+#: uma por controle: `gamepad.emulation.set` recebe `flavor` e não recebe
+#: `uniq`"*. **As duas metades caíram no mesmo dia em que foram escritas**, e o
+#: próprio arquivo já dizia o contrário trinta linhas adiante: `gamepad.mask.set`
+#: nasceu em 03/09 recebendo `uniq` (`ipc_handlers.py:5482`), o registro
+#: `external_mask` guarda a escolha por APARELHO desde 15/08, e o gesto
+#: `mascara_do_controle` existe e é `@gesto`. Um botão listado como SEM DONO com
+#: o dono declarado no mesmo arquivo manda a próxima pessoa construir o que já
+#: está construído — e é como a régua `chips_sem_dono` acusaria falso.
+#:
+#: O QUE ERA VERDADE E MUDOU DE LUGAR: o 'Nintendo Pro' continua não sendo
+#: máscara do produto. Isso deixou de ser "botão sem dono" e virou **botão
+#: cinza com a razão na dica**, que é a D-03 dela — ver
+#: :func:`mascaras_montaveis` e `aba01._chips_de_mascara`.
+_MASCARA_SAIU_DOS_SEM_DONO = (
+    "gamepad.mask.set recebe `uniq` e o gesto `mascara` tem dono desde "
+    "03/09/2026; o que sobrou do achado antigo é o Nintendo Pro, que agora "
+    "fica cinza com a razão na dica em vez de constar como sem dono."
+)
 
 
 def _painel() -> Any:
@@ -1067,7 +1417,26 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"“{rotulo}” está desenhado na tela e o Hefesto não sabe montar "
             f"essa máscara. As que existem: {tem}.")
 
-    p.chamar("gamepad.mask.set", {"uniq": uniq, "flavor": flavor})
+    # OS PARÂMETROS VÃO POR NOME, e esta linha é a CURA da queixa 1 dela —
+    # 04/09/2026, achada CLICANDO o chip com o daemon vivo.
+    #
+    # Ela estava escrita `p.chamar("gamepad.mask.set", {"uniq": …, "flavor": …})`,
+    # com o dicionário POSICIONAL. A assinatura é
+    # `ponte.chamar(metodo, timeout=None, **params)`: o segundo posicional é o
+    # TIMEOUT. O dicionário virava o prazo, `timeout or teto(metodo)` o
+    # mantinha (dicionário é verdadeiro), e o `_safe_call` estourava lá dentro
+    # com `'<=' not supported between instances of 'dict' and 'int'`.
+    #
+    # **LOGO ESTE GESTO NUNCA GRAVOU UM BYTE.** Medido na máquina dela: clicar
+    # o chip DualSense do P1 não criava o `controller_masks.json` e não mexia em
+    # `gamepad_emulation.por_aparelho`. Era a queixa dela em estado puro —
+    # *"clico e não acontece nada"* —, e a causa não era o MODO: era a chamada.
+    #
+    # POR QUE NINGUÉM VIU: `gamepad.mask.set` não estava em `METODOS` (a régua
+    # que confere nome contra o `ipc_server`) e o gesto `mascara` não tinha
+    # linha em `PROVAS` (a régua que confere a CHAMADA). As duas nasceram com
+    # esta cura, e é a de `PROVAS` que morde a assinatura.
+    p.chamar("gamepad.mask.set", uniq=uniq, flavor=flavor)
 
 
 @gesto("01-jogar.html", "modo-navegacao")
@@ -1189,12 +1558,32 @@ OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
 PONTE = {"chamar"}
 #: OS MÉTODOS CRUS. A régua confere um a um contra o `ipc_server.py`, e um nome
 #: inventado reprova AQUI, não na mão de quem clica.
-METODOS = {
+#: OS CINCO DA TROCA DE MODO — os que `ponte.TETOS` cobre com os 2,0 s do
+#: produto. Eles são um SUBCONJUNTO de :data:`METODOS`, e a separação nasceu em
+#: 04/09/2026 junto com o `gamepad.mask.set`: a folga de 2,0 s existe porque
+#: trocar de modo CRIA uinput e faz grab (`mode_transition.MODE_IPC_TIMEOUT_S`),
+#: e gravar a máscara de um aparelho não faz nem uma coisa nem outra.
+METODOS_DA_TROCA_DE_MODO = {
     "native.mode.set",
     "gamepad.emulation.set",
     "mouse.emulation.restore",
     "coop.sync",
     "identity.renumber",
+}
+METODOS = METODOS_DA_TROCA_DE_MODO | {
+    # A MÁSCARA DE UM APARELHO — 04/09/2026, e a AUSÊNCIA dela desta lista é
+    # parte da história do defeito que a `mascara_do_controle` acabou de curar:
+    # sem o nome aqui, `test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende`
+    # nunca olhou para este método, e a única régua que sobrava era o clique na
+    # mão dela.
+    #
+    # DÍVIDA DECLARADA, e ela é de `pacotes/ponte.py`: `gamepad.mask.set` não
+    # está em `ponte.TETOS`, logo cai nos 250 ms do bridge — que cobrem também
+    # a LEITURA da resposta. `set_mask` grava um JSON no disco; sob carga, o
+    # `chamar` pode voltar `False` com a escolha JÁ gravada, e este gesto não
+    # lê o retorno. Uma linha em `TETOS` (2,0 s) fecha isso, e ela não é desta
+    # aba.
+    "gamepad.mask.set",
 }
 
 
@@ -1257,4 +1646,17 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "reconectar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["coop.sync"], {}),
                ("chamar", ["identity.renumber"], {})]},
+    # A MÁSCARA DE UM APARELHO — a prova que FALTAVA, e a falta custou o gesto
+    # inteiro. Ela é a única desta lista que mede os PARÂMETROS POR NOME, e é
+    # exatamente o que o defeito de 03/09 escondia: o dicionário ia posicional,
+    # caía no `timeout` do `ponte.chamar`, e o gesto estourava dentro da ponte
+    # sem gravar nada. A régua compara os posicionais tupla a tupla — com o
+    # dicionário no lugar errado, `a` é uma 2-tupla contra a 1-tupla esperada.
+    #
+    # O RÓTULO DA TELA VIRA `flavor` PELO DONO (`mesa_viva.NOME_DA_MASCARA`),
+    # nunca por um mapa digitado aqui: o que está declarado é a EXPECTATIVA.
+    {"pagina": PAGINA, "gesto": "mascara",  # (noqa-acento) chave do contrato
+     "clique": {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"},
+     "chama": [("chamar", ["gamepad.mask.set"],
+                {"uniq": "aa:bb:cc:00:00:01", "flavor": "xbox"})]},
 ]

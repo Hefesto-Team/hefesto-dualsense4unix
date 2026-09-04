@@ -73,6 +73,9 @@ from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
 # oito — que é a divergência silenciosa que este projeto persegue.
 from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
     AVISOS_VIVOS,
+    MESA_VAZIA,
+    RESSALVA_DA_MASCARA,
+    mascaras_montaveis,
 )
 
 # ---------------------------------------------------------------------------
@@ -704,6 +707,32 @@ CSS = """
      sempre. */
   .col-atencao .aviso-item:not(.mostra){display:none}
   .col-atencao .aviso-item.mostra ~ .aviso-item.mostra{flex:1 1 100%}
+  /* ---------- AS DUAS LINHAS POR CIMA DOS LUGARES — 04/09/2026 ----------
+     A frase da mesa (D-07 dela: *"uma frase por cima dos lugares apagados"*) e
+     a ressalva da máscara (a queixa 1 dela).
+
+     `display:none` E NÃO `visibility:hidden`, ao contrário da faixa laranja
+     logo abaixo — e a diferença é o que cada uma promete. A faixa reserva o
+     espaço porque ela APARECE E SOME no uso normal (ela clica, a pendência
+     nasce, o daemon alcança, ela some), e a tela não pode pular a cada clique.
+     Estas duas mudam com o ESTADO DA MÁQUINA — um controle que entra, um modo
+     que muda —, e reservar 2 linhas em toda tela normal para o estado vazio
+     custaria 36 dos 40 px de folga do miolo (502 de 542, pela conta da legenda
+     desta aba) sem mostrar nada 99% do tempo.
+
+     O ORÇAMENTO ESTÁ MEDIDO e o pior caso cabe: as duas juntas só acontecem com
+     a mesa VAZIA e fora do modo jogo — e aí os quatro cartões estão apagados,
+     que é o estado com mais folga da aba. */
+  .mesa-notas:not(.ha){display:none}
+  .mesa-notas{margin:0 0 6px}
+  .mesa-nota{color:var(--orange);font-size:12px;line-height:16px}
+  /* O CHIP QUE O PRODUTO NÃO SABE MONTAR — D-03 dela: *"cinza antes, com a
+     razão na dica"*. Ele continua clicável de propósito (o gesto recusa DIZENDO
+     o nome e as que existem); o que muda é a tela em REPOUSO parar de o mostrar
+     igual aos dois que funcionam.
+     `cursor:not-allowed` é o que diz isso antes do clique, e o `title` do
+     gerador é a razão. Nenhuma das duas coisas move um pixel. */
+  .cartao .chip.inerte{opacity:.42;cursor:not-allowed}
   /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
      "muda tudo ao clicar" é queixa dela, e a legenda desta aba promete que o
      espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
@@ -867,13 +896,36 @@ def _chips_de_mascara(escolhida):
     devolve `{dualsense, xbox}`; o **Nintendo Pro** está no desenho por ordem
     dela e o gesto RECUSA DIZENDO o nome, que é melhor que sumir calado. O
     desenho é dela: este arquivo não tira nem acrescenta chip.
+
+    O QUE MUDOU EM 04/09/2026: o chip que o produto NÃO SABE MONTAR nasce
+    **cinza, com a razão na dica** — a D-03 dela (*"cinza antes, com a razão na
+    dica"*) aplicada ao único botão desta aba que recusa em TODO modo. Até
+    aqui ele parecia igual aos outros dois em repouso, e só falava depois do
+    clique; a tela não distinguia o botão que funciona do que vai recusar.
+
+    **QUEM É "O QUE O PRODUTO NÃO SABE MONTAR" NÃO SE DIGITA:** a lista sai de
+    `a01_jogar.mascaras_montaveis()`, que pergunta ao catálogo do vpad. No dia
+    em que o Hefesto aprender a montar um Nintendo Pro, o chip acende sozinho na
+    próxima geração — e é isso que separa esta cura de apagar o chip à mão.
+
+    O CLIQUE FICA. `data-gesto` continua nos três: o gesto recusa DIZENDO o nome
+    e as máscaras que existem, e tirar o endereço faria o clique sumir calado —
+    o defeito que o cinza veio curar, repetido do outro lado.
     """
-    return "\n".join(
-        f'                  <span class="chip{" on" if m == escolhida else ""}"'
-        f' data-gesto="mascara" data-mascara="{m}"'
-        f' data-campo="mascara-cartao" data-hef-alvo="classe"'
-        f' data-hef-quando="{m}">{m}</span>'
-        for m in MASCARAS)
+    montaveis = mascaras_montaveis()
+    razao = ("O Hefesto não sabe montar esta máscara. As que existem: "
+             + ", ".join(sorted(montaveis)) + ".")
+    fora = []
+    for m in MASCARAS:
+        inerte = m not in montaveis
+        fora.append(
+            f'                  <span class="chip{" inerte" if inerte else ""}'
+            f'{" on" if m == escolhida else ""}"'
+            + (f' title="{razao}"' if inerte else "")
+            + f' data-gesto="mascara" data-mascara="{m}"'
+            f' data-campo="mascara-cartao" data-hef-alvo="classe"'
+            f' data-hef-quando="{m}">{m}</span>')
+    return "\n".join(fora)
 
 
 def cartao(c, bateria=None):
@@ -1226,6 +1278,34 @@ MIOLO = f'''
       <div class="quadro-corpo">
 
         <div>
+            <!-- ---------- AS DUAS LINHAS POR CIMA DOS LUGARES ----------
+                 04/09/2026. Nenhuma das duas ocupa um pixel na cena que ela
+                 aprovou: as duas nascem SEM a classe `ha`, e `.mesa-notas
+                 :not(.ha)` é `display:none`. Elas crescem para baixo quando o
+                 produto tem o que dizer, como a segunda linha da coluna
+                 Atenção já faz.
+
+                 UM `data-campo`, DOIS ELEMENTOS: o de fora leva
+                 `data-hef-alvo="classe"` (existe ou não) e o de dentro não leva
+                 alvo nenhum (o texto). O piloto escreve o MESMO valor em todo
+                 elemento de mesmo endereço e cada um decide pelo alvo dele; o
+                 travessão que ele põe num valor vazio conta como desligado no
+                 alvo `classe`. É a forma do `pendente`/`pendente-ha` com um
+                 endereço a menos.
+
+                 O TEXTO CRAVADO É O ESTADO QUE A LINHA DESCREVE, e não um
+                 exemplo: com a mesa vazia é esta a frase que o produto escreve
+                 (`a01_jogar.MESA_VAZIA`), e fora do modo jogo é esta a ressalva
+                 (`RESSALVA_DA_MASCARA`). Quem abrir o arquivo sozinho lê o que
+                 a tela diria, não uma legenda de mentira. -->
+            <div class="mesa-notas" data-campo="mesa-frase"
+                 data-hef-alvo="classe" data-hef-classe="ha">
+              <span class="mesa-nota" data-campo="mesa-frase">{MESA_VAZIA}</span>
+            </div>
+            <div class="mesa-notas" data-campo="mascara-ressalva"
+                 data-hef-alvo="classe" data-hef-classe="ha">
+              <span class="mesa-nota" data-campo="mascara-ressalva">{RESSALVA_DA_MASCARA}</span>
+            </div>
             <div class="pecas" data-lista="cartoes">
 {CARTOES}
             </div>
@@ -1689,6 +1769,45 @@ def _conferir(doc):
     exigir(corpo.count('data-campo="pendente-ha" data-hef-alvo="classe"') == 1,
            "a faixa da pendência perdeu o `pendente-ha` — ela volta a mostrar um "
            "travessão solto quando não há o que anunciar")
+
+    # 8. AS DUAS LINHAS POR CIMA DOS LUGARES — 04/09/2026, D-07 dela e a queixa
+    #    1 dela. CADA UMA PRECISA DOS DOIS ELEMENTOS, e a régua cobra os dois
+    #    separados porque cada um sozinho é um defeito diferente: só o de fora e
+    #    a linha aparece VAZIA (o piloto escreve o travessão no texto que não
+    #    existe); só o de dentro e a linha fica ACESA PARA SEMPRE, escrevendo
+    #    "nenhum controle na mesa" com dois controles na mesa.
+    for campo, oque in (("mesa-frase", "a frase da mesa vazia"),
+                        ("mascara-ressalva", "a ressalva da máscara")):
+        de_fora = corpo.count(f'data-campo="{campo}"\n                 '
+                              f'data-hef-alvo="classe"')
+        exigir(de_fora == 1, f"{oque} perdeu o interruptor de existência "
+                             f"(`{campo}` com alvo `classe`), achei {de_fora}")
+        exigir(corpo.count(f'data-campo="{campo}"') == 2,
+               f"{oque}: esperava DOIS elementos com `{campo}` — o de fora que "
+               f"a acende e o de dentro que a escreve")
+    #    E ELAS NASCEM APAGADAS: a cena que ela aprovou tem dois controles na
+    #    mesa e o modo jogo ligado, então nenhuma das duas tem o que dizer. Uma
+    #    linha que nascesse com a classe `ha` mudaria o desenho aprovado.
+    exigir('class="mesa-notas ha"' not in corpo,
+           "uma das linhas por cima dos lugares nasce acesa — ela mudaria a cena "
+           "que ela aprovou, que tem a mesa cheia e o modo jogo ligado")
+
+    # 9. O CHIP QUE O PRODUTO NÃO SABE MONTAR NASCE CINZA — D-03 dela, e o
+    #    número não se digita: é a diferença entre o que o DESENHO tem
+    #    (`monta.MASCARAS`) e o que o PRODUTO monta (`mascaras_montaveis`),
+    #    vezes os quatro lugares da mesa.
+    sem_motor = [m for m in MASCARAS if m not in mascaras_montaveis()]
+    cinzas = corpo.count('class="chip inerte"')
+    exigir(cinzas == len(sem_motor) * len(MESA),
+           f"esperava {len(sem_motor) * len(MESA)} chips cinza ({sem_motor} por "
+           f"{len(MESA)} lugares), achei {cinzas}")
+    #    E O CINZA VEM COM A RAZÃO. Um botão apagado sem dizer por quê troca
+    #    "clico e não acontece nada" por "não deixa clicar e não diz por quê".
+    for pedaco in corpo.split('class="chip inerte"')[1:]:
+        exigir(pedaco.lstrip().startswith('title="'),
+               "um chip cinza saiu sem a razão na dica")
+    #    E O CLIQUE FICA NOS TRÊS: a contagem de `data-gesto="mascara"` acima já
+    #    o exige, e é ela que impede a cura de virar "o chip sumiu".
 
     if falhas:
         raise SystemExit("ERRO em 01-jogar — decisão dela desfeita:\n  "
