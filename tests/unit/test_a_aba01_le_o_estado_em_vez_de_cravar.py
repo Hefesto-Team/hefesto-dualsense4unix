@@ -295,6 +295,13 @@ def test_uma_boa_noticia_nao_entra_na_coluna_atencao(monkeypatch: Any) -> None:
     quatro estados e inclui o **CERTO**. Fotografado: o selo `CERTO` com
     "Economia de energia desligada" sob o cabeçalho laranja **Atenção**.
     """
+    # A PONTE FICA DE FORA DESTE TESTE — 04/09/2026, e é escolha, não remendo.
+    # `_aviso_da_ponte` nasceu como a sétima fonte da coluna (D-10 dela), e ela
+    # FALA em `VIVO_NAVEGACAO`: sem gamepad de pé, `texto_da_ponte` responde
+    # "nenhuma" com a cor de aviso do produto. Este teste mede OUTRA coisa, e
+    # deixá-la entrar aqui trocaria uma régua afiada por uma que conta linhas.
+    # Quem mede a ponte é `tests/unit/test_a01_a_ponte_entra_na_coluna.py`.
+    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
     monkeypatch.setattr(aba, "_do_exame", lambda: [
         {"selo": "CERTO", "titulo": "Economia de energia desligada", "grave": False},
@@ -303,9 +310,13 @@ def test_uma_boa_noticia_nao_entra_na_coluna_atencao(monkeypatch: Any) -> None:
     fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
     assert "CERTO" not in fora["aviso-selo"], (
         "uma boa notícia voltou a aparecer sob o cabeçalho 'Atenção'")
-    assert fora["aviso-selo"] == ["AJUSTAR"], (
+    # AS SEIS VIAJAM SEMPRE — 04/09/2026: a lista curta some inteira em
+    # `pacotes.normalizar` quando fica vazia, e é a coluna VAZIA que precisa
+    # apagar o aviso que o mockup cravou. As entradas `""` são o apagador, não
+    # conteúdo; o que se mede aqui continua sendo o que a coluna ACENDE.
+    assert [x for x in fora["aviso-selo"] if x] == ["AJUSTAR"], (
         f"o selo do exame não é mais o do produto: {fora['aviso-selo']!r}")
-    assert fora["aviso-texto"] == ["Dois rádios em portas vizinhas"]
+    assert fora["aviso-texto"][0] == "Dois rádios em portas vizinhas"
 
 
 def test_a_conta_e_a_do_produto_e_conta_o_que_a_coluna_mostra(monkeypatch: Any) -> None:
@@ -314,6 +325,13 @@ def test_a_conta_e_a_do_produto_e_conta_o_que_a_coluna_mostra(monkeypatch: Any) 
     E ela contava ERRADO: era o exame INTEIRO, incluindo os `certo` — a tela
     dizia "3 avisos" com duas boas notícias na conta.
     """
+    # A PONTE FICA DE FORA DESTE TESTE — 04/09/2026, e é escolha, não remendo.
+    # `_aviso_da_ponte` nasceu como a sétima fonte da coluna (D-10 dela), e ela
+    # FALA em `VIVO_NAVEGACAO`: sem gamepad de pé, `texto_da_ponte` responde
+    # "nenhuma" com a cor de aviso do produto. Este teste mede OUTRA coisa, e
+    # deixá-la entrar aqui trocaria uma régua afiada por uma que conta linhas.
+    # Quem mede a ponte é `tests/unit/test_a01_a_ponte_entra_na_coluna.py`.
+    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
     monkeypatch.setattr(aba, "_do_exame", lambda: [
         {"selo": "CERTO", "titulo": "tudo bem", "grave": False}])
@@ -334,31 +352,56 @@ def test_a_linha_sem_aviso_nao_fica_com_travessao(monkeypatch: Any) -> None:
     `data-hef-quando` é booleano: a lista de `"1"` acende exatamente as que têm
     texto, e as outras ficam com `display:none`.
     """
+    # A PONTE FICA DE FORA DESTE TESTE — 04/09/2026, e é escolha, não remendo.
+    # `_aviso_da_ponte` nasceu como a sétima fonte da coluna (D-10 dela), e ela
+    # FALA em `VIVO_NAVEGACAO`: sem gamepad de pé, `texto_da_ponte` responde
+    # "nenhuma" com a cor de aviso do produto. Este teste mede OUTRA coisa, e
+    # deixá-la entrar aqui trocaria uma régua afiada por uma que conta linhas.
+    # Quem mede a ponte é `tests/unit/test_a01_a_ponte_entra_na_coluna.py`.
+    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
     monkeypatch.setattr(
         painel, "avisos_do_estado",
         lambda _s: [{"selo": "PAUSA", "texto": "a", "fonte": "x"},
                     {"selo": "JOGO", "texto": "b", "fonte": "y"}])
     fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
-    assert fora["aviso-vivo"] == ["1", "1"], (
+    assert fora["aviso-vivo"] == ["1", "1"] + [""] * (aba.AVISOS_VIVOS - 2), (
         f"o acendedor não acompanha a lista de avisos: {fora['aviso-vivo']!r}")
-    assert len(fora["aviso-vivo"]) == len(fora["aviso-selo"])
+    assert len(fora["aviso-vivo"]) == len(fora["aviso-selo"]) == aba.AVISOS_VIVOS
 
 
 def test_a_coluna_nao_estoura_o_que_a_pagina_publica(monkeypatch: Any) -> None:
-    """Mais avisos que linhas: a lista corta, e a CONTA continua dizendo o total.
+    """Mais avisos que linhas: a coluna corta, DIZ quantos ficaram, e a CONTA
+    continua dizendo o total.
 
     Uma coluna que mostrasse 6 de 8 e escrevesse "6 avisos" esconderia dois sem
     dizer que os escondeu.
+
+    O TETO MUDOU DE NÚMERO EM 04/09/2026, e não de natureza: era
+    `AVISOS_VIVOS` (as SEIS linhas que a página publica) e passou a ser
+    `AVISOS_NA_COLUNA` (as TRÊS que o produto acende), por decisão dela —
+    *"até três linhas, o mais grave em cima"*, com `+N` se passar. A linha do
+    `+N` é a quarta, e ela não sai do teto: com quatro avisos a coluna mostra
+    três e diz "+1".
     """
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
+    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
+    quantos = aba.AVISOS_NA_COLUNA + 2
     monkeypatch.setattr(
         painel, "avisos_do_estado",
         lambda _s: [{"selo": "PAUSA", "texto": str(i), "fonte": "x"}
-                    for i in range(aba.AVISOS_VIVOS + 2)])
+                    for i in range(quantos)])
     fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
-    assert len(fora["aviso-selo"]) == aba.AVISOS_VIVOS
-    assert fora["atencao-conta"] == painel.texto_da_conta(aba.AVISOS_VIVOS + 2)
+    acesas = [x for x in fora["aviso-selo"] if x]
+    assert len(acesas) == aba.AVISOS_NA_COLUNA + 1, (
+        f"a coluna acendeu {len(acesas)} linhas: eram para ser as "
+        f"{aba.AVISOS_NA_COLUNA} dela mais a do `+N`")
+    assert acesas[-1] == "+2", (
+        f"a última linha não conta o que ficou de fora: {fora['aviso-selo']!r}")
+    assert len(fora["aviso-selo"]) == aba.AVISOS_VIVOS, (
+        "os endereços deixaram de viajar completos: a coluna vazia perde o "
+        "apagador do aviso que o mockup cravou")
+    assert fora["atencao-conta"] == painel.texto_da_conta(quantos)
 
 
 def test_uma_fonte_que_quebra_nao_apaga_a_coluna(monkeypatch: Any) -> None:
@@ -518,7 +561,13 @@ def test_os_cinco_metodos_desta_aba_tem_a_folga_do_produto() -> None:
     from hefesto_dualsense4unix.app.actions.mode_transition import MODE_IPC_TIMEOUT_S
     from pacotes import ponte
 
-    for metodo in aba.METODOS:
+    # OS CINCO DA TROCA DE MODO, e não `METODOS` inteiro — 04/09/2026. O
+    # `gamepad.mask.set` entrou em `METODOS` junto com a cura da chamada dele, e
+    # ele NÃO é troca de modo: não cria uinput e não faz grab, que é o que os
+    # 2,0 s pagam. Ele cai nos 250 ms do bridge, e a dívida está declarada no
+    # próprio `a01_jogar.METODOS` — a linha que a fecha é de `pacotes/ponte.py`.
+    # Cobrar os 2,0 s dele aqui mandaria consertar no lugar errado.
+    for metodo in aba.METODOS_DA_TROCA_DE_MODO:
         assert ponte.teto(metodo) == MODE_IPC_TIMEOUT_S, (
             f"{metodo} espera {ponte.teto(metodo)}s e o produto declara "
             f"{MODE_IPC_TIMEOUT_S}s para trocar de modo")
