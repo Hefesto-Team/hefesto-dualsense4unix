@@ -139,6 +139,14 @@ MESA = {"estado": ESTADO}
 #: para o teste — a régua mede o mesmo caminho.
 VENCE_EM_S = 8.0
 
+#: A FRASE QUE O ATO DO MICROFONE DEVOLVE quando falha pela metade. Ela é uma
+#: frase de PROVA, com forma reconhecível — o texto que o produto diz é do
+#: DAEMON (`ipc_handlers._handle_mic_canal_set`), e digitá-lo aqui faria esta
+#: régua medir a si mesma em vez de medir se a frase do dono ATRAVESSA da
+#: resposta até o cartão. É esse atravessar que este arquivo existe para cobrar.
+RECUSA_DO_ATO = ("o microfone foi ligado no canal deste controle, mas o "
+                 "Hefesto não conseguiu escrever o mudo no aparelho")
+
 #: O que se lê do DOM a cada parada do roteiro. `dentro_de` é o item 2: de quem
 #: é o cartão em que a frase pousou.
 LER_A_TELA = r"""
@@ -235,7 +243,15 @@ def medido() -> dict:
     # em 9º, à frente de quatro medições de GUI. Não houve vítima — mas um
     # vizinho verde sobre um dublê que ele não escreveu é a forma exata do
     # defeito que esta casa persegue, e o relatório dele diria "medido".
-    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_set,
+    # **O DUBLÊ MUDOU DE FUNÇÃO EM 04/09/2026 — S-05, a D-12 dela.** Era
+    # `ponte.mic_set`, e o gesto `mudo` da aba 02 passou a chamar o ATO inteiro
+    # (`mic_canal_set_detalhado`). Com o dublê no nome VELHO esta régua
+    # continuava VERDE — mas pelo caminho errado: a chamada ia ao socket, não
+    # achava daemon, e a recusa vinha do ramo *"o Hefesto está parado"* em vez
+    # do ramo que este arquivo existe para medir. É a forma exata do defeito que
+    # a nota logo abaixo persegue: **um vizinho verde sobre um dublê que ele não
+    # escreveu**. O nome novo devolve a régua ao caminho que ela promete.
+    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
                 hv.SEGUNDOS_DO_RECADO)
     #: O VALOR DO PRODUTO, lido ANTES de a régua o encolher. É o que dá dono à
     #: decisão 19 dela (*"~30 s e desaparece"*): sem ele, trocar `30.0` por
@@ -244,7 +260,12 @@ def medido() -> dict:
     fora_do_produto = float(hv.SEGUNDOS_DO_RECADO)
     MESA["estado"] = ESTADO
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
-    hv.ponte.mic_set = lambda *a, **k: False  # type: ignore[assignment]
+    # `status: "incompleto"` COM MOTIVO é o que o daemon responde quando o ato
+    # falha pela metade, e é o corpo que `frase_do_ato_do_microfone` traduz. Um
+    # `False` aqui seria mais frouxo que a ponte real, que devolve `dict|None`.
+    hv.ponte.mic_canal_set_detalhado = lambda *a, **k: {  # type: ignore[assignment]
+        "status": "incompleto", "canal_feito": False, "firmware_pedido": True,
+        "motivo": RECUSA_DO_ATO}
     hv.SEGUNDOS_DO_RECADO = VENCE_EM_S
 
     args = argparse.Namespace(
@@ -398,7 +419,7 @@ def medido() -> dict:
         piloto.pronto = False
         piloto.tela.janela.destroy()
         # E OS TRÊS SÍMBOLOS DE MÓDULO VOLTAM. Ver a nota na instalação deles.
-        (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_set,
+        (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
          hv.SEGUNDOS_DO_RECADO) = guardado
         MESA["estado"] = ESTADO
     fora["segundos-do-produto"] = fora_do_produto
@@ -438,7 +459,12 @@ def test_a_frase_da_recusa_chega_ao_dom(medido: dict) -> None:
         f"depois do clique recusado a tela mostra {frases!r}. Um botão que "
         f"aceita o clique e não diz nada é o defeito mais caro desta casa: o "
         f"segundo clique parece o primeiro.")
-    assert "não confirmou o mudo do microfone" in frases[0], frases[0]
+    # A FRASE É A DO DONO, E NÃO UMA DAQUI — 04/09/2026, S-05. Até hoje esta
+    # linha casava um pedaço do `RuntimeError` fixo do gesto; o ato do
+    # microfone traz a frase do DAEMON, que diz QUAL das duas metades faltou, e
+    # o gesto a repassa por `frase_do_ato_do_microfone`. O que a régua cobra
+    # agora é o ATRAVESSAR — a frase que o dublê devolveu chegou ao DOM.
+    assert RECUSA_DO_ATO in frases[0], frases[0]
 
 
 # --------------------------------------------------------------------------
