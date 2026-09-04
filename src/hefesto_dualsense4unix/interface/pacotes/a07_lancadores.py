@@ -104,6 +104,9 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     app/actions/launch_wrapper_dialog.extract_steam_appid    o jogo em foco
     app/actions/home_actions.wrapper_banner_text         o aviso do jogo aberto
     app/actions/daemon_actions.format_steam_janela_recusa a recusa de fechar
+    app/actions/carona_do_wrapper.passada                o tique da vigia da Steam
+    app/actions/carona_do_wrapper.INTERVALO_DA_VIGIA_S   de quanto em quanto
+    app/actions/carona_do_wrapper.ligada                 o desligador da suíte
     daemon/launch_env.launch_session_appid               1º degrau da escada
     daemon/launch_env.read_last_run_marker               3º degrau da escada
 
@@ -119,7 +122,15 @@ DISPENSA o aviso (a lista existia e só a GTK a escrevia) e o caminho para
 `localconfig.vdf` quando há o que repor, e uma PINTURA que escreve em disco a
 cada tique é a coisa mais perigosa que esta aba poderia fazer. A pintura usa o
 CENSO (read-only, seguro com a Steam aberta — e é por isso que ele é uma camada
-separada do reparo); só o gesto "Consertar" chama o caminho que escreve.
+separada do reparo); quem chama o caminho que escreve é o gesto "Consertar" e,
+desde 03/09/2026, a :class:`_VigiaDaSteam` que esse gesto arma quando é adiado
+— nunca a pintura, e nunca sem um clique dela antes.
+
+E ELA FOI A ÚLTIMA METADE QUE FALTAVA: com a Steam aberta o `Consertar` recusa
+dizendo *"Feche a Steam e eu reponho"*, e até 03/09 **nada reperguntava** — a
+tela prometia e ela é que tinha de lembrar. A janela velha cumpre essa frase
+desde 16/08 com um tique de `INTERVALO_DA_VIGIA_S`; a página cumpre agora com o
+mesmo tique, a mesma frase e o mesmo desligador.
 
 O DESENHO dos cartões mora em `interface/desenho_dos_lancadores.py`, e é o MESMO
 que o gerador `aba07.py` usa. Um dono, dois dados — é o que impede o número
@@ -587,6 +598,187 @@ def _armado() -> bool:
     return time.monotonic() < _ARMADO_ATE
 
 
+# ---------------------------------------------------------------------------
+# A VIGIA DA STEAM — a promessa que o cartão FAZIA e ninguém cumpria
+#
+# O QUE A TELA JÁ DIZIA, medido em 03/09/2026 nesta máquina: com a Steam aberta
+# o `Consertar` recusa com a frase da sentinela, e ela termina em *"Feche a
+# Steam e eu reponho"* (`sentinela_do_wrapper.frase_do_aviso`). Era uma promessa
+# sem ninguém para cumpri-la: `reparar_ou_adiar` devolve `REPARO_ADIADO_STEAM`,
+# o gesto vira tarja de 30 s, e **nada** reperguntava depois. Para o reparo
+# acontecer ela tinha de fechar a Steam, LEMBRAR da tarja, voltar à aba 07 e
+# clicar de novo — que é exatamente o que o pedido dela recusa: *"ela não pode
+# precisar lembrar de nada"* (`carona_do_wrapper`, "A STEAM ABERTA").
+#
+# A JANELA VELHA CUMPRE, e desde 16/08: quando o reparo é adiado ela arma um
+# `GLib.timeout_add_seconds(INTERVALO_DA_VIGIA_S)` que só pergunta *"a Steam já
+# fechou?"* — sem reler o vdf — e o reparo ACONTECE quando ela sai da Steam.
+#
+# NADA AQUI É MOTOR NOVO. O tique é `carona_do_wrapper.passada(completa=False)`,
+# a mesma função que o tique do GTK chama, com o mesmo desiste-barato e a mesma
+# frase de volta; o relógio é o `INTERVALO_DA_VIGIA_S` DELE, lido a cada volta
+# em vez de copiado — um 45 digitado aqui envelheceria calado no dia em que o
+# dono mudasse o compromisso. O que muda é só o temporizador: onde a GTK tem o
+# laço do GLib, uma página tem uma thread.
+#
+# O DESLIGADOR É O DO DONO, e ele não é opcional: `carona_do_wrapper.ligada()`
+# lê o `HEFESTO_CARONA_WRAPPER`, que o `conftest.py` desliga em TODO teste
+# justamente porque este caminho ESCREVE no `localconfig.vdf` — uma suíte
+# rodando na máquina dela reescreveria a biblioteca dela em segundo plano.
+# Quem quer exercitar a vigia religa por escrito.
+# ---------------------------------------------------------------------------
+class _VigiaDaSteam:
+    """Repergunta "a Steam já fechou?" até o reparo caber — e então repõe.
+
+    ELA SÓ NASCE DE UM CLIQUE DELA. Armar de dentro da pintura seria a mesma
+    coisa que a :class:`_Vigia` de leitura existe para impedir, com o agravante
+    de ESCREVER: quem arma é o gesto que ela acionou e que foi adiado, e a
+    frase que a tela mostrou nesse instante é a promessa que esta classe
+    cumpre.
+
+    UMA POR VEZ, e :meth:`armada` pergunta à thread (`is_alive`) em vez de
+    guardar um `bool` que uma exceção deixaria mentindo para sempre.
+
+    NÃO GUARDA NADA EM DISCO, e a decisão é da sentinela, palavra por palavra:
+    *"estado guardado sobre um vdf que muda sozinho envelheceria errado"*. Se a
+    janela fechar antes, nada se perde — o censo é uma leitura de arquivo, e o
+    próximo `Consertar` (ou o `install.sh`, ou o `doctor.sh`) refaz a conta do
+    zero.
+
+    O ERRO MANTÉM A VIGIA ARMADA, e é paridade deliberada com a janela velha:
+    `passada` devolve ``adiado=True`` também no `REPARO_ERRO`, e o
+    `_carona_reagir` do GTK arma sobre esse mesmo campo. Um vdf trancado no meio
+    da escrita é transitório; desarmar no primeiro tropeço entregaria de volta
+    o silêncio que esta classe existe para acabar.
+    """
+
+    def __init__(self) -> None:
+        self._thread: threading.Thread | None = None
+        self._parar = threading.Event()
+        self._trava = threading.Lock()
+        self._noticia = ""
+        self._quando = 0.0
+
+    # -- o estado -----------------------------------------------------------
+    def armada(self) -> bool:
+        """Há vigia viva agora?"""
+        thread = self._thread
+        return thread is not None and thread.is_alive()
+
+    def intervalo(self) -> float:
+        """O relógio, PERGUNTADO ao dono a cada volta. Nunca digitado."""
+        from hefesto_dualsense4unix.app.actions import carona_do_wrapper as cdw
+
+        return float(cdw.INTERVALO_DA_VIGIA_S)
+
+    # -- armar e desarmar ---------------------------------------------------
+    def armar(self) -> bool:
+        """Passa a reperguntar pela Steam. Devolve se ARMOU nesta chamada.
+
+        O DESLIGADOR ANTES DE TUDO, e ele é do dono: `carona_do_wrapper.ligada()`
+        lê o `HEFESTO_CARONA_WRAPPER`, que o `conftest.py` desliga em TODO teste
+        porque este caminho ESCREVE no `localconfig.vdf`.
+
+        NUNCA LEVANTA. Quem chama é o ramo de RECUSA de um gesto, e a recusa
+        dela é a frase da sentinela — uma exceção daqui a trocaria por um
+        traceback, que é a tela deixando de dizer o que o produto sabe.
+        """
+        try:
+            from hefesto_dualsense4unix.app.actions import carona_do_wrapper as cdw
+
+            if not cdw.ligada():
+                return False
+        except Exception:  # pragma: no cover - a carona sumiu do disco
+            return False
+        with self._trava:
+            if self.armada():
+                return False
+            self._parar.clear()
+            self._thread = threading.Thread(
+                target=self._corpo, name="hefesto-vigia-da-steam", daemon=True
+            )
+            self._thread.start()
+        return True
+
+    def desarmar(self) -> None:
+        """Pede à vigia que pare. Ela para no fim da espera em curso."""
+        self._parar.set()
+
+    # -- o tique ------------------------------------------------------------
+    def tique(self) -> bool:
+        """UMA volta. ``True`` = ainda há trabalho pendente, continue.
+
+        O `completa=False` é o que torna o tique barato: com a Steam viva ele
+        nem abre o `localconfig.vdf` — pergunta ao `/proc` e volta a dormir. A
+        leitura completa (e a escrita) só acontece quando há chance real de
+        repor.
+        """
+        from hefesto_dualsense4unix.app.actions import carona_do_wrapper as cdw
+
+        try:
+            resultado = cdw.passada(completa=False)
+        except Exception:
+            # Uma passada que levanta não pode desarmar a vigia em silêncio:
+            # seria a promessa morrendo sem ninguém saber.
+            return True
+        if resultado.adiado:
+            return True
+        # A leitura da aba ficou velha no instante da escrita. `esquecer` é o
+        # que faz o cartão se repintar sozinho no próximo tique da janela.
+        VIGIA.esquecer()
+        self._anotar(resultado.frase)
+        return False
+
+    def _corpo(self) -> None:
+        while not self._parar.wait(self.intervalo()):
+            if not self.tique():
+                return
+
+    # -- a notícia ----------------------------------------------------------
+    def _anotar(self, frase: str) -> None:
+        if not frase:
+            return
+        self._noticia = frase
+        self._quando = time.monotonic()
+
+    def noticia(self) -> str:
+        """O que a vigia fez, enquanto a notícia vale. Vazio = nada a dizer.
+
+        POR QUE ELA EXISTE: sem uma palavra, o reparo da vigia seria um cartão
+        que muda sozinho enquanto ela olha outra coisa — e ela nunca saberia
+        que o Hefesto cumpriu. A janela velha diz isso num toast do rodapé
+        (`_carona_toast`); aqui a mesma frase entra no corpo do cartão da
+        Steam, que é o lugar onde a recusa também aparece.
+
+        A FRASE É A DO DONO, montada por `carona_do_wrapper.passada` — a mesma
+        que a GTK mostra, com os jogos nomeados. Nada é redigitado aqui.
+
+        E O RELÓGIO TAMBÉM É DELE: a notícia dura UMA volta da vigia
+        (:meth:`intervalo`). Um número novo aqui seria a terceira duração de
+        tela desta casa sem dono; a volta da vigia é o único relógio que este
+        episódio já tem.
+
+        NUNCA LEVANTA: quem chama é a PINTURA, duas vezes por segundo. Uma
+        exceção aqui derrubaria a aba inteira por causa de uma frase.
+        """
+        if not self._noticia:
+            return ""
+        try:
+            vale = self.intervalo()
+        except Exception:  # pragma: no cover - a carona sumiu do disco
+            self._noticia = ""
+            return ""
+        if time.monotonic() - self._quando >= vale:
+            self._noticia = ""
+            return ""
+        return self._noticia
+
+
+#: A vigia é do MÓDULO, pela mesma razão da :data:`VIGIA`: o pacote é recriado
+#: a cada tique, e uma vigia dentro dele morreria meio segundo depois de armada.
+VIGIA_DA_STEAM = _VigiaDaSteam()
+
+
 def com_o_que_o_daemon_diz(
     lancadores: list[desenho.Lancador],
     state: dict[str, Any] | None,
@@ -594,8 +786,12 @@ def com_o_que_o_daemon_diz(
 ) -> list[desenho.Lancador]:
     """O cartão da Steam com o AVISO VIVO e os botões que o estado permite.
 
-    TRÊS COISAS ENTRAM AQUI, e nenhuma delas é regra nova:
+    QUATRO COISAS ENTRAM AQUI, e nenhuma delas é regra nova:
 
+    0. **a notícia da vigia da Steam** — o que ela repôs sozinha depois de a
+       Steam fechar, na frase do `carona_do_wrapper` (ver
+       :meth:`_VigiaDaSteam.noticia`). Ela vem PRIMEIRO porque é a resposta ao
+       clique dela: o aviso do jogo aberto é permanente, a notícia passa;
     1. **o aviso do jogo aberto sem o wrapper** — a decisão e o texto são de
        `home_actions.wrapper_banner_text` (ver :func:`aviso_do_jogo_aberto`);
     2. **"Não perguntar para este jogo"** — o botão que escreve na lista que a
@@ -622,6 +818,11 @@ def com_o_que_o_daemon_diz(
         return lancadores
     steam = lancadores[0]
     aviso, appid = aviso_do_jogo_aberto(state, lida)
+    noticia = VIGIA_DA_STEAM.noticia()
+    # DUAS VARIÁVEIS, e não uma: o botão "Não perguntar" pende do AVISO (e do
+    # appid dele), nunca da notícia. Somar as duas numa só faria a notícia da
+    # vigia acender um botão que não tem sobre o que agir.
+    cabeca = (f"<b>{_texto(noticia)}</b><br>" if noticia else "") + aviso
     acoes = steam.acoes
     if aviso and appid:
         acoes = (*acoes, desenho.Acao(DISPENSAR, "", "nao-perguntar", appid))
@@ -633,10 +834,10 @@ def com_o_que_o_daemon_diz(
             if _armado()
             else desenho.Acao(PERGUNTA_DA_STEAM, "", FECHAR, desenho.STEAM),
         )
-    if aviso == "" and acoes is steam.acoes:
+    if cabeca == "" and acoes is steam.acoes:
         return lancadores
     fora = list(lancadores)
-    fora[0] = dataclasses.replace(steam, diz=aviso + steam.diz, acoes=acoes)
+    fora[0] = dataclasses.replace(steam, diz=cabeca + steam.diz, acoes=acoes)
     return fora
 
 
@@ -884,14 +1085,24 @@ def consertar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     A RECUSA VAI PARA A TELA. `RuntimeError` é o contrato desta casa para "o
     produto recusou", e a frase é a da sentinela, que já nomeia o jogo e já diz
     o que vai acontecer — *"Vou repor assim que o jogo e a Steam fecharem"*.
+
+    E AGORA ALGUÉM CUMPRE A FRASE. A recusa arma a :data:`VIGIA_DA_STEAM`, que
+    é a metade que faltava: até 03/09/2026 a tela prometia repor *"assim que a
+    Steam fechar"* e nada reperguntava depois — ela tinha de fechar a Steam,
+    lembrar da tarja de 30 s e voltar aqui para clicar de novo. Ver
+    :class:`_VigiaDaSteam`.
     """
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 
     status, censo, _ = sw.reparar_ou_adiar()
     VIGIA.esquecer()
     if status in (sw.REPARO_ADIADO_JOGO, sw.REPARO_ADIADO_STEAM, sw.REPARO_ERRO):
+        VIGIA_DA_STEAM.armar()
         raise RuntimeError(sw.frase_do_aviso(censo) or
                            "não consegui repor o atalho de inicialização")
+    # Deu certo: não há o que vigiar, e uma vigia sobrevivente reabriria o vdf
+    # de 45 em 45 s para nada.
+    VIGIA_DA_STEAM.desarmar()
     return _resposta(VIGIA.ler(), ctx.state)
 
 
@@ -1208,8 +1419,13 @@ def fechar_a_steam_e_repor(ctx: Contexto, o: dict[str, Any],
         raise RuntimeError(recusa)
     status, censo, _ = resultado
     if status in (sw.REPARO_ADIADO_JOGO, sw.REPARO_ADIADO_STEAM, sw.REPARO_ERRO):
+        # Fechar a Steam e ainda assim não caber (o jogo abriu no meio, o vdf
+        # tropeçou) é o caso mais forte para a vigia: ela já fez o que a tela
+        # pedia e continua sem o atalho.
+        VIGIA_DA_STEAM.armar()
         raise RuntimeError(sw.frase_do_aviso(censo) or
                            "não consegui repor o atalho de inicialização")
+    VIGIA_DA_STEAM.desarmar()
     return _resposta(VIGIA.ler(), ctx.state)
 
 
