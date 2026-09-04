@@ -45,11 +45,24 @@ abertas e aparecem aqui como ESTADO HONESTO, nunca como escolha silenciosa:
    :data:`AMBIENTE_QUE_A_TELA_NAO_MOSTRA`, com a regra do disco intacta. Abrir
    dizendo "Todos" é o defeito R-12 pelo avesso, e o estrago dele já aconteceu
    nesta casa (``profiles/loader.py:1229-1237``);
-2. **"Estilo de Jogo"** não existe em campo, widget ou preset nenhum. Ele nasce
-   TRAVADO, com o motivo — um ``<select>`` que aceita escolha e não guarda nada
-   é a pior das saídas;
-3. **a prioridade arrastável** — o mockup desenha um trilho que não é controle,
-   e ela pediu *"prioridade é slicer"*. Aqui ele é PINTADO e não tem gesto.
+**AS DUAS PERGUNTAS QUE ERAM 2 E 3 FECHARAM — 03/09/2026, e as duas por decisão
+dela.** Ficam escritas porque a forma delas é a que se repete:
+
+2. **"Estilo de Jogo"** não existia em campo, widget ou preset nenhum, e por
+   isso nascia TRAVADO — *um ``<select>`` que aceita escolha e não guarda nada é
+   a pior das saídas*. Ela mandou **construir o motor**, e escolheu o alcance:
+   gatilho + vibração + luz. As quinze receitas estão em
+   ``profiles/estilos_de_jogo.py``, e quem as aplica é
+   ``interface/pacotes/a10_perfis.editor_estilo``. **O campo continua sem valor
+   a MOSTRAR** — o estilo é um verbo, não um campo do ``Profile``: escolher
+   resolve os três de uma vez, e daí em diante quem manda são os três. Por isso
+   :func:`_pacote_do_editor` continua emitindo ``estilo: None``;
+3. **a prioridade arrastável** — o mockup desenhava um trilho que não é
+   controle, e ela pediu *"prioridade é slicer"* em 27/08, reconfirmando em
+   03/09 (*"Slider, como você pediu"*). O ``<input type=range>`` nasceu no
+   ``interface/aba10.py``, vestido com o CSS do trilho, e o gesto que grava é
+   ``a10_perfis.editor_prioridade``. Era o ÚLTIMO campo do editor sem caminho
+   de escrita.
 """
 from __future__ import annotations
 
@@ -97,12 +110,16 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "_reload_profiles_store:3772 (o disco em thread, a pintura pela idle_add).",
     "editor.nome": "o campo Nome do editor; quem o lê no Salvar é "
     "profiles_actions.on_profile_save:3323.",
+    # FATO SUBSTITUÍDO — 03/09/2026. Aqui estava escrito que *"NO DESENHO NÃO HÁ
+    # CONTROLE"* e que *"ATÉ LÁ ESTE GESTO NÃO EXISTE"*. As duas metades caíram
+    # no mesmo dia: ela reconfirmou o pedido de 27/08 (*"Slider, como você
+    # pediu"*), o `<input type=range>` nasceu vestido com o CSS do trilho, e o
+    # gesto grava. A cura era exatamente a que esta linha previa.
     "editor.prioridade": "profiles_actions._on_prioridade_tocada:4081 arma a "
     "guarda SALVAR-NAO-REBAIXA-02 sobre a `Gtk.Scale` profile_priority_scale. "
-    "NO DESENHO NÃO HÁ CONTROLE: o mockup traz `<span class=\"trilho\">`, que "
-    "não se arrasta. Ela pediu *\"prioridade é slicer\"* (CORRECOES-DELA.md, "
-    "27/08) e a cura é vestir um `<input type=range>` com o CSS do trilho — "
-    "trabalho de pixel, e é dela aprovar. ATÉ LÁ ESTE GESTO NÃO EXISTE.",
+    "Do lado HTML quem grava é `a10_perfis.editor_prioridade`, sobre o "
+    "`<input type=range>` do `interface/aba10.py` — a faixa sai de "
+    "`profiles/schema.PRIORIDADE_MINIMA/MAXIMA`, nunca digitada.",
     "editor.ambiente": "profiles_actions._select_radio:3749 e "
     "_selected_simple_choice:3733, sobre profiles/simple_match.SIMPLE_MATCH_PRESETS:157.",
     "editor.jogo": "o campo livre do editor simples; o texto sai de "
@@ -136,11 +153,17 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "profiles/loader.restaurar_do_historico:1509 e listar_historico:1272, com "
     "HISTORICO_MAX_VERSOES = 10 (loader.py:1246). Os únicos chamadores estão na "
     "CLI (cli/cmd_profile.py). Quem lhe dá tela é a ONDA-PERFIS-05.",
-    "editor.estilo": "NÃO EXISTE EM LUGAR NENHUM: não há campo em "
-    "profiles/schema.Profile, não há widget no gui/main.glade e não há preset "
-    "em profiles/simple_match.SIMPLE_MATCH_PRESETS. Os seis de gênero em "
-    "assets/profiles_default/ são PERFIS, não estilos. Quem lhe dá motor é a "
-    "ONDA-PERFIS-04.",
+    # FATO SUBSTITUÍDO — 03/09/2026. Aqui estava escrito que o Estilo de Jogo
+    # *"NÃO EXISTE EM LUGAR NENHUM"* e que *"quem lhe dá motor é a
+    # ONDA-PERFIS-04"*. O motor nasceu, por decisão dela (*"Construir o
+    # motor"*), e o que continua verdadeiro é só a metade do CAMPO: `Profile`
+    # não ganhou campo de estilo, e não vai ganhar — ele é um verbo.
+    "editor.estilo": "SÓ NO HTML: `profiles/estilos_de_jogo.py` traz as quinze "
+    "receitas que ela aprovou (gatilho + vibração + luz por unidade), e "
+    "`a10_perfis.editor_estilo` as aplica no perfil. A GTK não tem widget "
+    "equivalente. NÃO há campo em profiles/schema.Profile nem preset em "
+    "profiles/simple_match.SIMPLE_MATCH_PRESETS, e não é falta: o estilo "
+    "RESOLVE os três ajustes e sai de cena — não é um valor a guardar.",
 }
 
 #: O que se diz de um gesto SEM linha na tabela acima. O gerador só emite chaves
@@ -154,15 +177,36 @@ SEM_DONO = (
 
 #: Os gestos que a página tem de mostrar TRAVADOS, e o motivo curto de cada um.
 #: A frase longa (o quê, por quê, o que fazer) sai de :data:`DONOS_DOS_GESTOS`.
+#:
+#: **`editor.estilo` SAIU DAQUI — 03/09/2026, e a saída é a entrega.** Ele
+#: estava listado como *"não existe campo de Estilo de Jogo no perfil, nem
+#: preset que o resolva"*, e a conclusão que se tirava disso — que o campo não
+#: podia agir — era o erro: o estilo nunca precisou de campo, porque ele APLICA
+#: em vez de guardar. O motor (`profiles/estilos_de_jogo.py`) nasceu por decisão
+#: dela e `a10_perfis.editor_estilo` o liga. Deixá-lo aqui faria a tela mostrar
+#: travado um campo que grava — a mentira ao contrário, e igualmente cara.
 GESTOS_SEM_MOTOR: dict[str, str] = {
     "detectar": "o daemon lê a janela em foco, mas o IPC não publica o título "
     "nem a classe — sem isso não há o que detectar. (ONDA-PERFIS-03)",
     "voltar-a-de-ontem": "cada gravação já guarda a anterior, e só a linha de "
     "comando sabe restaurar. Falta a tela. (ONDA-PERFIS-05)",
-    "editor.estilo": "não existe campo de Estilo de Jogo no perfil, nem preset "
-    "que o resolva. A lista está desenhada; o que cada um liga, não. "
-    "(ONDA-PERFIS-04)",
 }
+
+#: A frase do "Estilo de Jogo" — e ela deixou de ser a de um campo travado.
+#:
+#: ELA MORA AQUI e não no motor de propósito: `profiles/estilos_de_jogo.py` é a
+#: camada que sabe o que cada receita FAZ, e não a que fala com ela. Este módulo
+#: é o dono do texto de tela desta aba desde que nasceu — é o mesmo lugar de
+#: :data:`AMBIENTE_QUE_A_TELA_NAO_MOSTRA` e de :data:`LISTA_VAZIA`.
+#:
+#: O QUE ELA PRECISA DIZER, e é a única coisa que a tela não mostra sozinha: que
+#: o campo volta ao travessão depois do clique **porque o perfil não guarda
+#: estilo**, e não porque a escolha se perdeu.
+ESTILO_APLICA_E_SAI = (
+    "Escolher um estilo ajusta o gatilho, a vibração e a cor de cada controle "
+    "de uma vez. O perfil guarda os três — não o nome do estilo —, então o "
+    "campo volta ao travessão e você continua ajustando o que quiser nas abas."
+)
 
 #: O rótulo do seletor "Funciona em" para cada preset do produto — e ele tem
 #: CINCO entradas porque o desenho aprovado tem cinco opções.
@@ -358,10 +402,16 @@ def _pacote_do_editor(profile: Any) -> dict[str, Any]:
         "ambiente_recado": recado,
         "jogo": simple_extra(match) if match is not None else "",
         # O Estilo de Jogo NÃO tem campo no perfil: pintar qualquer opção seria
-        # a tela afirmando um valor que ninguém guarda.
+        # a tela afirmando um valor que ninguém guarda. **Isso não mudou com o
+        # motor** — ver a §2 do docstring do módulo: o estilo aplica os três
+        # ajustes e sai de cena, e é o gatilho/vibração/luz que passam a valer.
         "estilo": None,
-        "estilo_travado": True,
-        "estilo_recado": GESTOS_SEM_MOTOR["editor.estilo"],
+        # E ELE DEIXOU DE SER TRAVADO — 03/09/2026. O campo grava desde que
+        # `a10_perfis.editor_estilo` ganhou o motor; um `<select disabled>` aqui
+        # seria a tela desligando o único caminho que resolve três ajustes de
+        # uma vez.
+        "estilo_travado": False,
+        "estilo_recado": ESTILO_APLICA_E_SAI,
     }
 
 

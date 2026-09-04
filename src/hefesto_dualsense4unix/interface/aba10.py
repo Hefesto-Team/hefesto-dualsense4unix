@@ -3,7 +3,35 @@
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import re
 import onde
-from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR
+from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR, R
+
+# OS DOIS DONOS QUE ESTA PÁGINA PERGUNTA EM VEZ DE DIGITAR — 03/09/2026.
+#
+# A FAIXA DA PRIORIDADE sai de `profiles/schema.py`, que é onde o teto mora
+# desde a UNIFICA-CONSTANTE-01 e tem portão próprio
+# (`test_teto_da_prioridade_tem_uma_fonte_so.py`). O `<input type=range>` desta
+# aba nasce com `min`/`max` de lá: o dia em que o teto sair de 200 e o desenho
+# continuar oferecendo 0..200 é o dia em que o slider dela para de alcançar os
+# números que o produto aceita — e ninguém veria.
+#
+# OS RÓTULOS DOS ESTILOS saem de `profiles/estilos_de_jogo.py`, o motor que
+# nasceu em 03/09/2026 com as quinze receitas que ela aprovou. Eram QUINZE
+# palavras digitadas aqui, e a lista só concordava com o motor por coincidência:
+# um estilo novo lá, ou um rótulo corrigido, e o `<select>` passaria a oferecer
+# uma opção que o gesto não sabe aplicar — a tarja diria "não é um estilo" sobre
+# uma palavra que a própria página escreveu.
+#
+# O `R` É A PASTA `interface/`, então o `src/` é dois acima. O `insert` é a
+# trava para quem rodar o gerador sem `PYTHONPATH`; com ele posto, o import é o
+# mesmo que o `aba03.py` já faz com o `trigger_specs`.
+sys.path.insert(0, str(R.parents[1]))
+from hefesto_dualsense4unix.profiles.estilos_de_jogo import (  # noqa: E402
+    ESTILOS as ESTILOS_DO_MOTOR,
+)
+from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
+    PRIORIDADE_MAXIMA,
+    PRIORIDADE_MINIMA,
+)
 
 # ---------------------------------------------------------------------------
 # O QUE O PERFIL GUARDA DE CADA CONTROLE — e isto NÃO é escolha de desenho.
@@ -270,11 +298,35 @@ CSS = CSS_GLIFO + """
   }
   .campo select{cursor:pointer}
   .campo select.destaque{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
-  /* a prioridade é slicer */
+  /* A PRIORIDADE É SLIDER — pedido dela em 27/08 (*"prioridade é slicer"*, em
+     CORRECOES-DELA.md) e reconfirmado em 03/09/2026: *"Slider, como você
+     pediu"*. Até aqui o desenho tinha uma BARRA, que não se arrasta: era o
+     único campo do editor sem nenhum caminho de escrita na interface nova.
+
+     O TRILHO E O CHEIO FICAM, e continuam sendo quem MOSTRA — o produto escreve
+     a largura do cheio a cada tique. O que nasce é o `<input type=range>` por
+     cima: transparente, do tamanho do trilho, e é ele quem ACEITA o arrasto.
+
+     O PUNHO MUDOU DE DONO, e essa é a única coisa que se perde do desenho
+     antigo: ele era o `::after` do cheio — pintado pelo produto, logo com meio
+     segundo de atraso — e passou a ser o `::-webkit-slider-thumb` do range, que
+     segue o dedo dela no mesmo quadro. Enquanto ela arrasta, o cheio fica para
+     trás (ele só sabe o que o disco diz); no `change` o gesto grava e a resposta
+     do próprio gesto repinta os dois na hora, sem esperar o tique.
+
+     `-webkit-` E NÃO `-moz-`: a janela é um `WebKit2.WebView`, e o Chrome que a
+     bancada usa para fotografar é a mesma família. Um `::-moz-range-thumb` aqui
+     seria regra que nenhum dos dois lê. */
   .campo .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);position:relative}
   .campo .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .campo .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
-    border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
+  .campo .desliza{position:absolute;left:0;top:50%;transform:translateY(-50%);
+    width:100%;height:14px;margin:0;padding:0;background:transparent;border:0;
+    -webkit-appearance:none;appearance:none;cursor:pointer}
+  .campo .desliza:focus{outline:none}
+  .campo .desliza::-webkit-slider-runnable-track{height:14px;background:transparent;border:0}
+  .campo .desliza::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;background:var(--purple);
+    border:2px solid var(--app-bg);margin-top:1px}
   .campo .n{flex:0 0 40px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .campo .btn{flex:0 0 auto;white-space:nowrap}
   /* A COLUNA DO RÓTULO É JUSTA — remedida no Chrome em 31/08/2026, DEPOIS que ela
@@ -445,9 +497,9 @@ CSS = CSS_GLIFO + """
 """
 
 AMBIENTES = ["Todos","Steam","Estilo de Jogo","Jogo","Jogo da Steam"]
-ESTILOS = ["FPS","Corrida","Ação","Aventura","Esportes","Point-and-click","Terror","Luta",
-           "Co-op na mesa","Maratona","Plataforma","Retrô/Emulador","Ritmo/Música",
-           "Simulação/Voo","Personalizado"]
+#: OS RÓTULOS SAEM DO MOTOR — ver o comentário do import, no alto. Eram quinze
+#: palavras digitadas aqui, e a coincidência com o motor não era construção.
+ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]
 PERFIS = [("Mortal Kombat", 90, "Jogo · mk1.exe", True),
           ("Elden Ring", 85, "Jogo da Steam · 1245620", False),
           ("Orpheus", 82, "Jogo · mgba", False),
@@ -462,6 +514,17 @@ PERFIS = [("Mortal Kombat", 90, "Jogo · mk1.exe", True),
           ("Luta", 58, "Estilo de Jogo · Luta", False),
           ("Navegação", 40, "Todos — 4 disputam", False),
           ("Universal", 0, "Todos — quando nenhum casa", False)]
+
+#: A PRIORIDADE DO PERFIL QUE O EDITOR DO DESENHO ABRE — o primeiro da lista.
+#: Ela é o número ao lado do trilho E a largura do cheio, e os dois saem daqui
+#: em vez de serem digitados: enquanto o `90` era escrito duas vezes, a barra
+#: cravava `width:90%` e a legenda dizia `90` — o que só fecharia se o teto
+#: fosse 100. O teto é 200 (`schema.PRIORIDADE_MAXIMA`), então a barra do
+#: desenho anunciava "quase no máximo" um perfil que está em 90 de 200.
+PRI_DO_DESENHO = PERFIS[0][1]
+#: E A LARGURA É A CONTA, não um número: a mesma que
+#: `perfis_web._pacote_do_editor` faz para o produto.
+PCT_DO_DESENHO = round(PRI_DO_DESENHO * 100 / PRIORIDADE_MAXIMA)
 
 def opts(lista, escolhido, vazio=False):
     """As opções de um `<select>` do desenho.
@@ -727,8 +790,23 @@ MIOLO = f'''
                        de `NAO_PINTAVEIS` no `1f6e356b`. A barra recebe a
                        largura; o número ao lado (`editor.prioridade.n`) é um
                        `<span>` sem filhos e recebe o valor pelo mesmo tique. -->
-                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:90%"></span></span>
-                  <span class="n" data-hef="editor.prioridade.n">90</span>
+                  <!-- O `<input type=range>` — 03/09/2026, e é o que fez este
+                       campo deixar de ser leitura. Ele fica DENTRO do trilho,
+                       absoluto e transparente: o desenho que ela aprovou
+                       continua sendo o trilho + o cheio, e o range só empresta
+                       o punho e o arrasto.
+                       `min`/`max` SAEM DO ESQUEMA (`PRIORIDADE_MINIMA`/`MAXIMA`)
+                       — ver o comentário do import. `step="1"` porque
+                       `Profile.priority` é `int`: um slider que oferecesse
+                       meio número faria a tela prometer o que o esquema recusa.
+                       O ENDEREÇO É PRÓPRIO (`editor.prioridade.escolha`) e não
+                       o `.n` do vizinho: o pacote pinta este UMA VEZ por perfil
+                       escolhido (ver `a10_perfis.CAMPOS_QUE_ELA_DIGITA`) para
+                       não devolver o punho ao valor do disco no meio do arrasto
+                       dela, enquanto o número ao lado continua repintando a
+                       cada tique. -->
+                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:{PCT_DO_DESENHO}%"></span><input type="range" class="desliza" min="{PRIORIDADE_MINIMA}" max="{PRIORIDADE_MAXIMA}" step="1" value="{PRI_DO_DESENHO}" aria-label="Prioridade" data-hef="editor.prioridade.escolha" data-hef-alvo="valor" data-hef-gesto="editor.prioridade"></span>
+                  <span class="n" data-hef="editor.prioridade.n">{PRI_DO_DESENHO}</span>
                 </span>
               </div>
               <div class="campo">
@@ -1044,6 +1122,45 @@ def _conferir(html: str) -> None:
            html.split(".desfecho{")[-1].split("}")[0],
            "a tira do desfecho deixou de reservar o espaço — a lista volta a "
            "pular a cada clique")
+
+    # A PRIORIDADE É SLIDER — 03/09/2026, decisão dela (*"Slider, como você
+    # pediu"*). A régua cobra as QUATRO metades, e cada uma some sem sintoma:
+    # o campo existe e ARRASTA; ele tem gesto (senão arrastar é silêncio); a
+    # faixa é a do ESQUEMA, e não uma digitada; e o valor de partida é o mesmo
+    # número que a legenda ao lado mostra.
+    faixa = re.search(r'<input type="range" class="desliza"[^>]*>', html)
+    exigir(faixa is not None,
+           "a Prioridade voltou a ser uma barra que não se arrasta — era o "
+           "único campo do editor sem caminho de escrita")
+    if faixa:
+        campo = faixa.group(0)
+        exigir(f'min="{PRIORIDADE_MINIMA}"' in campo
+               and f'max="{PRIORIDADE_MAXIMA}"' in campo,
+               f"a faixa do slider não é a do esquema "
+               f"({PRIORIDADE_MINIMA}..{PRIORIDADE_MAXIMA}) — ela passou a ser "
+               f"digitada, e envelhece no dia em que o teto mudar")
+        exigir('data-hef-gesto="editor.prioridade"' in campo,
+               "o slider da Prioridade perdeu o gesto — arrastar volta a ser "
+               "silêncio no stdout de quem lançou a janela")
+        exigir(f'value="{PRI_DO_DESENHO}"' in campo,
+               f"o slider abre num número que não é o do desenho "
+               f"({PRI_DO_DESENHO}) — o punho e a legenda discordariam")
+    # E O CHEIO É A CONTA, não os 90% de antes: com o teto em 200, `width:90%`
+    # dizia "quase no máximo" sobre um perfil que está em 90 de 200.
+    exigir(f'data-hef-alvo="largura" style="width:{PCT_DO_DESENHO}%"' in html,
+           f"a barra do cheio não mostra {PCT_DO_DESENHO}% — a largura do "
+           f"desenho voltou a ser digitada em vez de sair do teto do esquema")
+
+    # OS ESTILOS SÃO OS DO MOTOR, e a régua pergunta ao motor. Uma contagem
+    # (`== 15`) envelheceria na primeira receita nova; o que se cobra é o
+    # CONJUNTO, e que a opção vazia dela continue na frente.
+    for e in ESTILOS_DO_MOTOR:
+        exigir(f">{e.rotulo}</option>" in html,
+               f"o estilo '{e.rotulo}' está no motor e não está no `<select>` "
+               f"— o gesto saberia aplicá-lo e ela não teria como pedir")
+    exigir('<option value="" selected>—</option>' in html,
+           "a opção vazia do Estilo de Jogo saiu — o campo voltaria a abrir "
+           "afirmando um estilo que perfil nenhum guarda")
 
     # A COLUNA JUSTA. O `104px` é o valor antigo, e o vão morto de 22px é ele.
     exigir("--rot-p:86px" in html,
