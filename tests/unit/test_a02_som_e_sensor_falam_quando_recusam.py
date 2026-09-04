@@ -303,11 +303,20 @@ class TestOsDoisDeslizantes:
         E ele NÃO toca no firmware: não apaga a luz vermelha e não tira o botão
         físico do controle. É a metade medida da D-12 — o ganho da FONTE é
         literalmente *"o canal específico dele"*.
+
+        **A VARIANTE MUDOU EM 04/09/2026, decisão [03] da ONDA2-02** — de
+        `mic_volume_set` para `mic_volume_set_detalhado`. O número mandado é o
+        MESMO, e é o que esta régua mede; o que o `bool` da primeira apagava é o
+        `por_uniq` do daemon, que separa *"mexi no microfone deste controle"* de
+        *"caí na rota global e mexi no de outra pessoa"* (MIC-DA-MESA-CHEIA-01).
+        Quem cobra a confissão é `test_a_aba_02_controles_fecha_as_linhas.py`,
+        com um dublê que devolve o CORPO — este aqui usa o dublê compartilhado,
+        que responde `True` a todo nome.
         """
         p = PonteDeMentira()
         _gesto("volume")(_ctx(), {"uniq": UNIQ, "volume": "microfone",
                                   "valor": "42"}, p)
-        assert p.chamadas == [("mic_volume_set", (42,), {"uniq": UNIQ})]
+        assert p.chamadas == [("mic_volume_set_detalhado", (42,), {"uniq": UNIQ})]
 
     def test_o_deslizante_do_alto_falante_passa_pela_curva_medida(self) -> None:
         """MORDIDA: mande o número cru e isto reprova.

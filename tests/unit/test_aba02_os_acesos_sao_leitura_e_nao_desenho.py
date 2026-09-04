@@ -280,13 +280,29 @@ def test_o_pacote_emite_os_dois_acesos_para_a_pagina_publicada(a02, monkeypatch)
 
     Esta régua confere o caminho INTEIRO — o pacote emite, e a página publicada
     tem onde pôr —, que é o que separa "escrevi o código" de "chegou à tela".
+
+    **O `alto-rota` PASSOU A LER AS DUAS CAMADAS — 04/09/2026, decisão [09].**
+    O byte 3 sozinho NÃO acende mais "Todo o som do PC": foi assim que o card 2
+    dela ficou aceso em 03/09 com o som saindo na TV. Quem decide agora é
+    `audio_saida.botao_da_rota_aceso`, e ele exige que a saída padrão do
+    sistema seja a placa DESTE controle.
+
+    POR ISSO A CAMADA 1 É INJETADA, e não esperada: `a02._CAMADA_1` é o ponto
+    de injeção da régua, como o `_LENTO` da `a09_sistema`. Esperar a thread
+    seria uma corrida — e uma corrida na suíte é vermelho que aparece uma vez
+    em dez.
     """
     from types import SimpleNamespace
 
+    from hefesto_dualsense4unix.app.audio_saida import RotaDasDuasCamadas
     from pacotes import Contexto
 
     monkeypatch.setattr(a02, "_ENDERECOS", None)
     monkeypatch.setattr(a02, "_DECLARADOS", {"aabbcc000001": SimpleNamespace(microfone=True)})
+    monkeypatch.setattr(a02, "_CAMADA_1", {UNIQ_CABO: RotaDasDuasCamadas(
+        byte=3, sink_do_controle="alsa_output.dualsense",
+        sink_padrao="alsa_output.dualsense")})
+    monkeypatch.setattr(a02, "_CAMADA_1_EM_VOO", [True])
     controle = {
         "uniq": UNIQ_CABO, "transport": "usb", "battery_pct": 85, "player_slot": 1,
         "speaker": {"volume": 102, "muted": False, "rota": 3},
