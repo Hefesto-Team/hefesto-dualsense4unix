@@ -1233,6 +1233,92 @@
        color:var(--fg);font-weight:600}
   .tog.ligado .pino{background:var(--green);box-shadow:0 0 7px var(--green)}
 
+  /* ---------- O PORTÃO DE MODO APAGA O INTERRUPTOR (D-03 + D-02) ----------
+     Decisão do PO, 04/09/2026 (`2026-09-04-O-PO-DECIDE` §2 `06[01]`):
+     *"Apaga o interruptor e escreve ao lado, na tira de estados."* A janela
+     antiga já faz isso desde sempre (`mouse_actions._sync_mouse_mode_gate`,
+     `blocked = mode != MODE_DESKTOP`); o que faltava aqui era o MOMENTO — a
+     tela aceitava o clique e recusava depois, e ela gastava o clique para
+     descobrir.
+
+     UM CAMPO SÓ, E NENHUM SEGUNDO ENDEREÇO: a razão é escrita numa linha só
+     (`data-campo="modo-portao"`, na tira de estados), e o cinza do interruptor
+     SAI DELA por `:has()`. Com dois campos seria possível pintar um interruptor
+     apagado sem razão, ou uma razão sem interruptor apagado — que é exatamente
+     o que a peça `monta.botao_cinza` evita do outro lado, e pela mesma regra.
+     Aqui não dá para usar aquela peça: ela emite um `.btn`, e o "Status do
+     Modo" é o rótulo `.tog` que ela pediu em 27/08.
+
+     E A MARCAÇÃO NÃO SE ESCREVE NUM COMENTÁRIO DE CSS: a primeira redação deste
+     bloco citava a tag do rótulo por extenso, e a citação SAIU NA PÁGINA — o
+     `<style>` vem antes do corpo, e `test_o_interruptor_tem_os_dois_enderecos`
+     achou a citação em vez do elemento. É a irmã da armadilha do `# noqa-acento`
+     que virou título visível: o que se escreve num gerador chega ao arquivo.
+
+     A GRAMÁTICA DO APAGADO É A DA CASA, letra por letra — `.btn.apagado` do
+     `monta.CSS_FOLHA`: borda sutil, texto mudo, `cursor:not-allowed`. Inventar
+     uma segunda cara de apagado seria a doença que esta casa persegue.
+
+     E ELE CONTINUA RESPONDENDO, como o botão cinza da D-03: nada aqui é
+     `disabled` nem `pointer-events:none`. Quem navega pelo controle chega à
+     razão pelo clique, e o gesto levanta a MESMA frase que está escrita ao lado
+     (`a06_navegacao.RAZAO_DO_PORTAO`).
+
+     O `.laranja` É O GATILHO, e não uma classe nova: o pacote manda a razão
+     dentro de um `<span class="laranja">`, como as outras linhas de estado
+     fazem, e manda `<i class="nada"></i>` quando não há bloqueio — que é o
+     mesmo marcador que apaga a linha. Sem bloqueio não há `.laranja` naquela
+     linha, e o interruptor fica como sempre foi. ---------- */
+  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]{
+       border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]:hover{
+       border-color:var(--border-sutil)}
+  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"] .pino{
+       background:var(--border-sutil);box-shadow:none}
+
+  /* ---------- A TIRA DE AVISO SOB A TABELA DE BOTÕES ----------
+     Decisão do PO, 04/09/2026 (§2 `06[04]`): *"Uma tira de aviso sob a tabela.
+     O que vai ser APAGADO não mora num hover."*
+
+     Ela nasce VAZIA e não ocupa nada: `:empty` no desenho, `.nada` quando o
+     pacote diz que não há o que dizer — as duas metades, como a tira de estados
+     já faz, porque a linha some por dois caminhos diferentes (nunca pintada, e
+     pintada com "nada"). ---------- */
+  .aviso-tabela{margin-top:8px;display:flex;flex-direction:column;gap:4px;
+       font-size:11.5px;line-height:1.45;color:var(--texto-mudo)}
+  .aviso-tabela:empty{display:none}
+  .aviso-tabela:has(.nada){display:none}
+  .aviso-tabela b{color:var(--texto-suave);font-weight:600}
+
+  /* ---------- A MARCA DE "NÃO DISPARA" NA COLUNA DO NOME ----------
+     Decisão do PO, 04/09/2026 (§2 `06[02]`): as três regiões do touchpad
+     **ficam** — é a D-15 dela, *"pedi pra tirar o texto não o touch mostrando
+     os toques"* — **com a marca de que não disparam**. A marca nasce FIXA: a
+     marca VIVA (que acende só quando o touchpad é o ponteiro do sistema)
+     espera o daemon publicar esse dado, e isso é sprint própria.
+
+     Ela cabe na coluna do nome e não custa linha nenhuma, que é o que a decisão
+     pede. O texto inteiro está no `title` e no `?` da tela. ---------- */
+  .marca-nao-dispara{margin-left:7px;padding:0 5px;border-radius:4px;
+       border:1px solid var(--border-sutil);color:var(--texto-mudo);
+       font-size:9.5px;line-height:14px;display:inline-block;white-space:nowrap;
+       cursor:help}
+  /* A COLUNA DO NOME CRESCE **SÓ DENTRO DAS POP-UPS**, e o número é medido, não
+     escolhido: a decisão do PO diz que a marca *"cabe na coluna do nome"*, e ela
+     NÃO cabia — `.tab td.b` tem `width:176px`, `white-space:nowrap` e
+     `overflow:hidden`, e a linha mais longa das 21 ("Touchpad · Clique
+     esquerdo") já usa ~168px. Fotografado em 04/09/2026: a marca saía cortada,
+     com dois caracteres à mostra por baixo do `<select>` vizinho.
+
+     Quando o instrumento e o aparelho discordam, o aparelho ganha: a marca é a
+     decisão, e o que cede é o número. 250px deixam ~350px para a segunda
+     coluna, que é mais do que a maior opção da lista pede ("Abrir e fechar o
+     teclado na tela", ~200px).
+
+     `.tn-cx` ESCOPA A REGRA: as tabelas da ABA (os cinco combos) continuam com
+     os 176px que ela aprovou — lá não há marca nenhuma a caber. */
+  .tn-cx .tab th:first-child,.tn-cx .tab td.b{width:250px}
+
   /* A DENSIDADE DE 22px FICA SÓ DENTRO DAS TELAS DE CIMA, e o número diz por quê.
      Cada uma das duas telas de botões tem 21 listas em 21 linhas, e mede 660px
      com elas a 22px. No token de 36 as linhas sozinhas passariam de 750px, e a
@@ -3099,8 +3185,10 @@
         </div>
 
         <div class="estados">
+          <div class="estado portao" data-campo="modo-portao" data-hef-alvo="html"></div>
           <div class="estado" data-campo="rato-estado" data-hef-alvo="html"></div>
           <div class="estado" data-campo="teclado-bloqueio" data-hef-alvo="html"></div>
+          <div class="estado" data-campo="teclado-custo" data-hef-alvo="html"></div>
           <div class="estado" data-campo="teclado-osk" data-hef-alvo="html"></div>
         </div>
 
@@ -3222,7 +3310,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Definições Controle e Mouse</span>
-      <span class="ajuda">?<span class="dica">As <b>21 linhas</b> de cada botão do controle: <b>o que ele faz</b> — mouse, tecla ou programa, tudo na mesma lista.<br><br>A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa que nomeia as peças do desenho.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
+      <span class="ajuda">?<span class="dica">As <b>21 linhas</b> de cada botão do controle: <b>o que ele faz</b> — mouse, tecla ou programa, tudo na mesma lista.<br><br>A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa que nomeia as peças do desenho.<br><br><b>O botão PS não entra</b>, e é de propósito: ele é a saída de emergência — os 5 gestos desta aba saem dele, e segurá-lo alterna o modo jogo. Como o PS chega ao teclado pelo mesmo caminho dos outros, dar uma tecla a ele faria o botão digitar <b>sem parar</b> de abrir a Steam.<br><br><b>As três regiões do touchpad estão marcadas.</b> Enquanto o touchpad do controle for o mouse do computador, o Hefesto não transforma o clique dele em tecla — a escolha fica guardada no perfil e volta a valer no dia em que isso mudar.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-definicoes">×</a>
     </div>
     <div class="tn-corpo">
@@ -3333,30 +3421,31 @@
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span></td><td><select class="campo-linha" data-gesto="linha-de-botao" data-linha="touchpad_left_press" data-campo="acao-touchpad_left_press" data-hef-alvo="valor"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option selected>Backspace</option><option>Delete</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir e fechar o teclado na tela</option><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span><span class="marca-nao-dispara" title="O touchpad do controle continua sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto não transforma o clique dele em tecla. A escolha fica guardada no perfil e volta a valer no dia em que o touchpad deixar de ser o ponteiro.">não dispara</span></td><td><select class="campo-linha" data-gesto="linha-de-botao" data-linha="touchpad_left_press" data-campo="acao-touchpad_left_press" data-hef-alvo="valor"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option selected>Backspace</option><option>Delete</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir e fechar o teclado na tela</option><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span></td><td><select class="campo-linha" data-gesto="linha-de-botao" data-linha="touchpad_right_press" data-campo="acao-touchpad_right_press" data-hef-alvo="valor"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Backspace</option><option selected>Delete</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir e fechar o teclado na tela</option><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span><span class="marca-nao-dispara" title="O touchpad do controle continua sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto não transforma o clique dele em tecla. A escolha fica guardada no perfil e volta a valer no dia em que o touchpad deixar de ser o ponteiro.">não dispara</span></td><td><select class="campo-linha" data-gesto="linha-de-botao" data-linha="touchpad_right_press" data-campo="acao-touchpad_right_press" data-hef-alvo="valor"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Backspace</option><option selected>Delete</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir e fechar o teclado na tela</option><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique central</span></span></td><td><select class="campo-linha" data-gesto="linha-de-botao" data-linha="touchpad_middle_press" data-campo="acao-touchpad_middle_press" data-hef-alvo="valor"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option selected>Enter</option><option>Esc</option><option>Espaço</option><option>Backspace</option><option>Delete</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir e fechar o teclado na tela</option><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique central</span></span><span class="marca-nao-dispara" title="O touchpad do controle continua sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto não transforma o clique dele em tecla. A escolha fica guardada no perfil e volta a valer no dia em que o touchpad deixar de ser o ponteiro.">não dispara</span></td><td><select class="campo-linha" data-gesto="linha-de-botao" data-linha="touchpad_middle_press" data-campo="acao-touchpad_middle_press" data-hef-alvo="valor"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option selected>Enter</option><option>Esc</option><option>Espaço</option><option>Backspace</option><option>Delete</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir e fechar o teclado na tela</option><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
         </table>
       </div>
+        <div class="aviso-tabela" data-campo="aviso-da-tabela" data-hef-alvo="html"></div>
     </div>
     <div class="tn-rod grupo-padrao">
       <a class="btn" href="#" data-gesto="fechar-definicoes">Cancelar</a>
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
       <a class="btn roxo" href="#" data-gesto="guardar-definicoes" data-hef-forma="definicoes-mouse">Guardar</a>
       <div class="confirma">
-        <span>Devolver ao de fábrica as 21 linhas de <b>o que cada botão faz</b>? O <b>Remapeamento dos botões</b> não é tocado.</span>
+        <span>Devolver ao de fábrica as 21 linhas de <b>o que cada botão faz</b>? Isto apaga também os <b>atalhos de teclado</b> que este perfil guarda — inclusive os que você escreveu na janela antiga e esta lista não sabe mostrar. O <b>Remapeamento dos botões</b> não é tocado.</span>
         <button class="btn-conf vermelho" data-gesto="padrao-definicoes">Confirmar</button>
         <button class="btn-conf">Cancelar</button>
       </div>
@@ -3478,23 +3567,24 @@
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span><span class="marca-nao-dispara" title="O touchpad do controle continua sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto não transforma o clique dele em tecla. A escolha fica guardada no perfil e volta a valer no dia em que o touchpad deixar de ser o ponteiro.">não dispara</span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span><span class="marca-nao-dispara" title="O touchpad do controle continua sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto não transforma o clique dele em tecla. A escolha fica guardada no perfil e volta a valer no dia em que o touchpad deixar de ser o ponteiro.">não dispara</span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique central</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique central</span></span><span class="marca-nao-dispara" title="O touchpad do controle continua sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto não transforma o clique dele em tecla. A escolha fica guardada no perfil e volta a valer no dia em que o touchpad deixar de ser o ponteiro.">não dispara</span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
         </table>
       </div>
+
     </div>
     <div class="tn-rod grupo-padrao">
       <a class="btn" href="#">Cancelar</a>
