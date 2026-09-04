@@ -40,13 +40,29 @@ SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 # controle vem da fita do topo, que lê do aparelho, e o produto reescreve o chip
 # a cada tique. Se o desenho o montasse à mão, a bancada e o produto teriam duas
 # marcações — e a régua `check_identidade_vem_de_cima` só enxerga a bancada.
+#
+# E A DESCRIÇÃO DE CADA MODO VEIO JUNTO, em 04/09/2026, pela MESMA regra. Ela
+# era um dicionário deste arquivo, e por isso só existia na BANCADA: o gerador a
+# cravava no `title` de cada `<option>` e o produto não tinha como pôr a frase do
+# modo ESCOLHIDO no campo. Com a decisão [01] do PO — *"a dica do campo deixa de
+# ser fixa e passa a ser a explicação do modo escolhido, reescrita a cada
+# tique"* — quem a escreve passou a ser o produto, e o dono do texto é o pacote.
+# A guarda de conjunto contra o `PRESETS` fica AQUI, logo abaixo, porque é aqui
+# que ela pode morder: neste arquivo o `PRESETS` é importado no topo.
 from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E402
     ALVO_DO_PLASTICO,
     CAMPO_DO_CHIP,
     CAMPO_DO_PLASTICO,
     CLASSE_DO_CHIP,
+    DICA_DO_MODO,
+    PREFIXO_DA_DICA_DO_MODO,
+    PREFIXO_DA_DICA_DO_PRONTO,
+    SEM_APARELHO_AQUI,
     TRAVESSAO,
     _cabeca_do_controle,
+    _escapar,
+    descricao_do_modo,
+    dica_do_pronto,
     html_dos_ajustes,
     sem_comentarios_de_css,
 )
@@ -488,6 +504,36 @@ CSS = CSS_GLIFO + """
      recusa. Ver a trava dos `select` acima. */
   .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito{
     pointer-events:none;opacity:.55}
+
+  /* ---------- O REENVIO — decisão [03] do PO, 04/09/2026 ----------
+     *"Um botão na faixa que JÁ EXISTE (`--r-acao`, 34 px, já desenhada e
+     aprovada), mandando os DOIS gatilhos daquela coluna. Zero trilha nova."*
+
+     ELE É UM GLIFO, E A RAZÃO É MEDIDA. A faixa tem 202px úteis na coluna de
+     228, e ela já gasta 123 com "Guardar esse efeito" (texto dela, aprovado) e
+     6 de vão — sobram 74 para o campo do nome. A palavra "Reenviar" mede ~62px
+     com o padding, e o campo cairia para 6px: um campo de texto de seis pixels
+     não é um campo, é um traço. Com o glifo o botão custa ~26px e o campo fica
+     com ~42 — que é o que a palavra "Nome" ocupa a 11px. Não há terceira linha
+     a inventar: a decisão diz zero trilha nova, e a conta fecha.
+
+     `↻` É U+21BB (ARROWS), e não um emoji: o ADR-011 preserva o bloco
+     Arrows justamente como UI textual, e `scripts/validar-glifos.py` reprova o
+     que desenha como emoji por omissão. O emoji U+1F504, que tem o mesmo
+     desenho, seria barrado — e com razão. (Ele não é citado aqui de propósito:
+     este comentário vai para o `<style>` da página, e o portão de glifos leria
+     o exemplo como o defeito.)
+
+     E ELE LEVA `aria-label`, porque um botão que só tem símbolo não tem nome
+     para quem navega por leitor de tela. O `title` é a explicação; o
+     `aria-label` é o NOME. */
+  .duas-colunas .ctrl .guardar .reenviar{
+    width:auto;flex:0 0 auto;padding:0 5px;font-size:14px;line-height:1}
+  /* O LUGAR VAZIO NÃO REENVIA, pela mesma razão que não se digita nem se
+     escolhe nele: não há aparelho a quem mandar, e o clique só poderia terminar
+     em recusa. A trava é a MESMA do `<select>` e do campo do nome. */
+  .duas-colunas .ctrl[data-conectado="nao"] .guardar .reenviar{
+    pointer-events:none;opacity:.55}
 """
 
 # ---------------------------------------------------------------------------
@@ -522,27 +568,11 @@ CSS = CSS_GLIFO + """
 # desceria um modo, e o portão de tamanho não veria nada. Com o `name` como
 # chave, um modo novo no produto reprova ALTO na hora — a guarda logo abaixo.
 # ---------------------------------------------------------------------------
-DICA_DO_MODO = {
- "Off": "Sem resistência nenhuma — o gatilho fica solto, como num controle comum.",
- "Rigid": "Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.",
- "SimpleRigid": "A mesma trava dura, com um só ponto de ajuste em vez de dez.",
- "Pulse": "Um solavanco num ponto do curso e depois solta — o coice de um tiro único.",
- "PulseA": "Pulso com a subida mais suave: a força cresce antes do estalo.",
- "PulseB": "Pulso com a descida mais suave: o estalo vem e a força cai devagar.",
- "Resistance": "Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.",
- "Bow": "Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.",
- "Galloping": "Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.",
- "SemiAutoGun": "Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.",
- "AutoGun": "Vibra continuamente enquanto está apertado — rajada.",
- "Machine": "Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.",
- "Feedback": "Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.",
- "Weapon": "Trava, solta no estalo e fica leve até o fim — espingarda.",
- "Vibration": "Treme o gatilho na frequência escolhida, sem opor força.",
- "SlopeFeedback": "A força sobe em linha reta do início ao fim do curso.",
- "MultiPositionFeedback": "Você desenha a força em dez posições do curso, uma por uma.",
- "MultiPositionVibration": "Treme só na faixa do curso que você marcar.",
- "Custom": "As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.",
-}
+# A TABELA MUDOU DE CASA — 04/09/2026. Ela mora em
+# `pacotes/a03_gatilhos.DICA_DO_MODO`, importada no topo, porque quem a
+# reescreve a cada tique é o PRODUTO (decisão [01] do PO). O que fica aqui é a
+# GUARDA, e ela fica porque é aqui que morde: `PRESETS` é importado no topo
+# deste arquivo, e um modo novo no produto REPROVA a geração alto.
 
 _SEM_DICA = [p.name for p in PRESETS if p.name not in DICA_DO_MODO]
 _DICA_ORFA = [n for n in DICA_DO_MODO if n not in {p.name for p in PRESETS}]
@@ -788,17 +818,29 @@ def bloco(lado, sigla, modo, pronto, ajustes):
     # carrega. O `modo-*` (o rótulo "Rígido") continua saindo do pacote porque
     # `tests/unit/test_o_perfil_chega_na_tela.py:134` o cobra, mas nenhum
     # elemento o lê: o que casa com a opção é a chave.
-    return f'''          <div>
+    # A DICA DE CADA CAMPO SAI DO PACOTE, e a CENA a pede pelo modo que ela
+    # desenha — decisões [01] e [02] do PO, 04/09/2026. Escrevê-la aqui à mão
+    # seria a segunda cópia de um texto que o produto reescreve a cada tique, e
+    # a bancada passaria a explicar um modo com a frase de outro no dia em que
+    # alguém mexesse num só. O lugar vazio não tem modo: o `TRAVESSAO` cai na
+    # queda do pacote, e o produto escreve a frase do lugar sem aparelho.
+    _chave = CHAVE_DO_MODO.get(modo, modo)
+    _vazio = _chave == TRAVESSAO
+    _d_modo = SEM_APARELHO_AQUI if _vazio else descricao_do_modo(_chave)
+    _d_pronto = SEM_APARELHO_AQUI if _vazio else dica_do_pronto(_chave)
+    return f'''          <div data-campo="{PREFIXO_DA_DICA_DO_MODO}{sigla}"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="{_escapar(_d_modo)}">
             <select class="modo" data-gesto="modo" data-campo="modo-chave-{sigla}"
-                    data-hef-alvo="valor" data-lado="{sigla}"
-                    title="Gatilho {lado} — os 19 modos, com a descrição de cada um">
+                    data-hef-alvo="valor" data-lado="{sigla}">
 {opcoes_modo(modo)}
             </select>
           </div>
-          <div>
+          <div data-campo="{PREFIXO_DA_DICA_DO_PRONTO}{sigla}"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="{_escapar(_d_pronto)}">
             <select class="pronto" data-gesto="pronto" data-campo="pronto-{sigla}"
-                    data-hef-alvo="valor" data-lado="{sigla}"
-                    title="Efeito pronto do gatilho {lado}">
+                    data-hef-alvo="valor" data-lado="{sigla}">
 {opcoes_pronto(pronto)}
             </select>
           </div>
@@ -870,6 +912,9 @@ def coluna(c):
           <div class="vao-l2-r2"></div>
 {dire}
           <div class="guardar">
+            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
+                    aria-label="Reenviar os dois gatilhos ao controle"
+                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -1097,7 +1142,30 @@ LEGENDA = f'''<div class="nota">
         pergunta já não se faz.</li>
     <li><b>"Guardar esse efeito" é um por controle</b>, e não um só no pé do quadro — um botão
         único não diria qual dos {len(MESA)} pares ele guarda, que é exatamente a ambiguidade que
-        o recibo foi criado para matar. Continua sendo o <b>único</b> botão da aba.</li>
+        o recibo foi criado para matar. <b>O reenvio ao lado nasceu pela mesma regra</b>, e por
+        isso também é um por coluna.</li>
+  </ul>
+
+  <h2>O que as quatro decisões de 04/09 puseram aqui</h2>
+  <ul>
+    <li><b>A dica do campo Modo passou a explicar o modo ESCOLHIDO</b>, reescrita a cada tique.
+        Antes ela era fixa ("os 19 modos, com a descrição de cada um") e a explicação do modo em
+        uso só existia parando o rato em cima da opção <i>dentro</i> da lista aberta — depois de
+        escolher, a coluna não dizia mais o que aquele modo faz. A frase é a <b>desta tela</b>, a
+        concreta: a do produto diz "Barreira rígida numa posição fixa." e a daqui fala de freio de
+        carro e de espingarda.</li>
+    <li><b>A dica do campo Efeito pronto avisa ANTES do clique.</b> Escolher uma curva pronta com
+        o gatilho fora dos dois modos por posição <b>troca o modo</b> — é o atalho de um clique que
+        você aprovou, e a única dívida medida era a tela não avisar. Agora ela diz em que modo o
+        gatilho está e para onde cada família de curva o leva.</li>
+    <li><b>O <span class="marca">↻</span> reenvia o L2 e o R2 desta coluna ao controle.</b>
+        O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um
+        jogo escreve por cima, ou o controle volta do rádio, não há como a tela saber: o caminho de
+        volta é reenviar. Ele manda <b>o que está na tela</b>, e é nisso que ele difere do
+        "Aplicar" do rodapé, que manda o que está no disco. Ele não grava nada.</li>
+    <li><b>Quando o efeito chega, a tela diz.</b> Até agora ela só falava quando RECUSAVA; o
+        "aplicado" ia para o terminal de quem abriu a janela. A confirmação nasce no <b>próprio
+        cartão</b>, como a recusa, e some sozinha em segundos.</li>
   </ul>
 
   <h2>O que teve de mudar de forma para caber</h2>
@@ -1147,7 +1215,8 @@ LEGENDA = f'''<div class="nota">
   <h2>O que NÃO mudou</h2>
   <ul>
     <li>Os <b>19 modos</b> e seus textos, o <b>efeito pronto</b> com "Meus efeitos" na mesma lista,
-        as <b>barras de ajuste</b>, o <b>título "Seleção de Gatilho"</b> e o botão único.</li>
+        as <b>barras de ajuste</b>, o <b>título "Seleção de Gatilho"</b> e o "Guardar esse efeito"
+        um por coluna.</li>
     <li><b>Os glifos são os do mapa</b> — <code>assets/glyphs/l2.svg</code> e <code>r2.svg</code>,
         a 36px, que é o piso medido para a palavra dentro deles chegar aos 10px de tipo desta casa.</li>
     <li><b>A dispensa da régua deixou de ser necessária.</b> Ela existia porque "modos diferentes têm
@@ -1282,9 +1351,52 @@ def _conferir(doc):
     # 5. OS BOTÕES TÊM ENDEREÇO — 01/09/2026. Sem `data-gesto` o clique não
     #    atravessa a ponte, e o piloto nem consegue RECUSAR dizendo o nome: o
     #    ouvinte dele (`hefesto_vivo.py:190`) só enxerga quem está marcado.
-    for _g in ("modo", "pronto", "guardar"):
+    for _g in ("modo", "pronto", "guardar", "reenviar"):
         exigir(f'data-gesto="{_g}"' in corpo,
                f"o endereço do gesto {_g!r} sumiu do desenho — o clique some calado")
+
+    # 5-bis. O REENVIO É UM POR COLUNA, e recolhe a COLUNA — decisão [03] do PO.
+    #    Um botão só no pé do quadro não diria de QUAL controle ele fala, que é a
+    #    mesma ambiguidade que o recibo desta aba já pagou; e sem
+    #    `data-hef-forma` o piloto não recolhe os campos, e o gesto reenviaria o
+    #    que está no DISCO — que é exatamente o que o "Aplicar" do rodapé já faz,
+    #    e o que este botão existe para NÃO fazer.
+    exigir(corpo.count('data-gesto="reenviar"') == len(MESA),
+           f"o reenvio não está nas {len(MESA)} colunas — um botão só não diz "
+           f"em qual controle ele manda")
+    exigir(corpo.count('data-gesto="reenviar" data-hef-forma="@controle"')
+           == len(MESA),
+           "o reenvio perdeu o `data-hef-forma` — ele passaria a mandar o que "
+           "está no disco, e o 'Aplicar' do rodapé já faz isso")
+
+    # 5-ter. A DICA DO CAMPO É PINTADA, E O `<select>` NÃO TEM `title` PRÓPRIO —
+    #    decisões [01] e [02] do PO, e as DUAS metades são a mesma cura.
+    #
+    #    O navegador mostra o `title` do ancestral mais próximo quando o
+    #    elemento sob o rato não tem o seu. Um `title` no `<select>` VENCE o do
+    #    embrulho — e o embrulho é o único que pode ser pintado, porque o campo
+    #    de escolha já gasta o seu `data-hef-alvo` com `valor`. Devolver o
+    #    `title` ao `<select>` não deixaria a tela vazia: deixaria a explicação
+    #    CONGELADA na frase da cena, que é a tela afirmando o modo de ontem.
+    exigir("<select" in corpo and 'title="' not in corpo.split("<select", 1)[1]
+           .split(">", 1)[0],
+           "o `<select>` voltou a ter `title` próprio — ele sombreia a dica que "
+           "o produto reescreve a cada tique, e a tela congela na frase da cena")
+    #    A RÉGUA COBRA O ENDEREÇO E O ALVO NA MESMA CONTA, e por isso ela é uma
+    #    expressão só: um embrulho com `data-campo` e sem `data-hef-alvo`
+    #    nasceria com o `title` da CENA cravado e nunca mais mudaria — que é o
+    #    defeito, não a metade dele. Contar `data-hef-atributo="title"` solto no
+    #    documento não serve: o rodapé (`fim.html`, um só para as dez páginas)
+    #    já traz dois, nos botões Salvar e Exportar.
+    for _pre in (PREFIXO_DA_DICA_DO_MODO, PREFIXO_DA_DICA_DO_PRONTO):
+        for _s in ("e", "d"):
+            _n = len(re.findall(
+                rf'data-campo="{_pre}{_s}"\s+data-hef-alvo="atributo"'
+                rf' data-hef-atributo="title"', corpo))
+            exigir(_n == len(MESA),
+                   f"{_n} embrulhos pintáveis com `{_pre}{_s}` e há "
+                   f"{len(MESA)} colunas — a coluna que ficar sem endereço, ou "
+                   f"sem alvo, guarda a dica da CENA para sempre")
 
     # 6. TODO MODO CARREGA O CONTRATO DE DISCO NO `value`. `trigger.set` quer
     #    `Rigid`; a opção que só tivesse "Rígido" mandaria um modo que o
