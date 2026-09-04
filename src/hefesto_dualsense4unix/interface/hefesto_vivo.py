@@ -1076,6 +1076,19 @@ PERIGOSOS = {
     # o que ela pediu dele. O que não é legítimo é uma RÉGUA escrever no perfil
     # dela para provar que sabe clicar; é a mesma razão do `salvar` acima.
     ("03-gatilhos.html", "guardar"),
+    # E O TRILHO DE BRILHO PASSOU A GRAVAR — 03/09/2026, decisão dela:
+    # perguntada se mexer no brilho grava o perfil na hora ou espera o "Salvar
+    # Perfil", ela respondeu *"Grava na hora"*. O gesto entra aqui na MESMA
+    # decisão que o liga, como o `abrir-lancador` da Lançadores: ligar sem o
+    # isento seria ligar contra ela.
+    #
+    # O QUE A RÉGUA FARIA SEM ESTA LINHA: `_alvos_a_clicar` acha o
+    # `<input type="range">` pelo `data-gesto` e o aciona com o valor que
+    # estiver na tela — e o gesto grava `lightbar_brightness` no override do
+    # controle, no perfil ATIVO, com backup novo em `.historico/`. Pior que o
+    # `salvar`, que ao menos regrava o que já estava lá: um arraste da régua
+    # copia por cima do brilho que ela escolheu, e isso não se desfaz.
+    ("04-iluminacao.html", "brilho"),
     # O ⊘ DA CONEXÕES DISPENSA UMA ORDEM DE SERVIÇO DELA, E NÃO VOLTA SOZINHO.
     #
     # MEDIDO EM 03/09/2026, com o journal dos dois lados. Às 16:11:53, ANTES da
