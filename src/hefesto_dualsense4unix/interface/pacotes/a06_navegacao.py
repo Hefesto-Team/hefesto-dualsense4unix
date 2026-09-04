@@ -456,6 +456,94 @@ def _o_teclado_na_tela_em_uma_linha(tecla: dict[str, Any]) -> str:
         bruto if isinstance(bruto, bool) else None) or NADA_A_DIZER
 
 
+#: O CUSTO DE DESLIGAR O TECLADO, dito ENQUANTO ele estiver desligado — decisão
+#: do PO em 04/09/2026 (`2026-09-04-O-PO-DECIDE` §2 `06[05]`): *"Uma frase
+#: permanente enquanto estiver desativado."*
+#:
+#: POR QUE PERMANENTE, e a razão é a pergunta que chega tarde: a dica `?` da
+#: "Função do teclado" já diz o custo ANTES do ato, e some com o ponteiro. A
+#: pergunta *"por que o L3 parou de abrir o teclado na tela?"* chega dias
+#: depois, e nesse dia a dica não está lá. A tira de estados está.
+#:
+#: A FRASE É COPIADA DA GTK, e a duplicação é declarada pelo mesmo motivo de
+#: `PRONTO_PARA_MOUSE`: o original é um literal DENTRO de
+#: `emulation_actions.on_keyboard_toggle_set` (`:1725`), método de mixin GTK que
+#: escreve num toast. Extraí-lo para uma constante é o certo, e é edição naquele
+#: arquivo — que não é desta frente. O que muda é só a moldura: lá o toast diz
+#: *"Teclado emulado desligado — saem também …"*, e aqui a linha vive no
+#: presente contínuo, porque ela fica.
+#:
+#: ELA NÃO PODE DIVERGIR CALADA: `test_a_aba_06_navegacao_fecha_as_linhas.py`
+#: lê o fonte da GTK e reprova no dia em que a lista de lá mudar.
+O_QUE_SAI_COM_O_TECLADO = ("o teclado na tela (L3/R3) e as três regiões do "
+                           "touchpad")
+
+
+def _o_custo_de_desligar_o_teclado(tecla: dict[str, Any]) -> str:
+    """"Com o teclado desativado saem também …" — e só enquanto ele estiver.
+
+    TRI-ESTADO como as outras três linhas: sem o bloco `keyboard_emulation` a
+    linha não afirma nada, porque ninguém perguntou ao Hefesto. Ligado, também
+    não há o que dizer — o custo é o de DESLIGAR.
+
+    ELA NÃO SUBSTITUI O `teclado-bloqueio`, e as duas convivem de propósito:
+    aquela diz *o teclado está ligado e calado agora porque um jogo assumiu*;
+    esta diz *você o desligou, e isto saiu junto*. São o presente e a escolha.
+    """
+    ligado = (tecla or {}).get("enabled")
+    if not isinstance(ligado, bool) or ligado:
+        return NADA_A_DIZER
+    return ('<span class="laranja">Com a “Função do teclado” em “'
+            f'{TECLADO_DESATIVADO}” saem também {O_QUE_SAI_COM_O_TECLADO}.'
+            "</span>")
+
+
+#: A RAZÃO DO PORTÃO DE MODO — UMA frase, e ela serve aos DOIS caminhos: a linha
+#: permanente da tira de estados (antes do clique) e o `RuntimeError` do gesto
+#: `modo` (depois dele, quando alguém clica assim mesmo).
+#:
+#: UMA SÓ, e não duas: a tela e a recusa dizendo a mesma coisa com palavras
+#: diferentes é a doença que esta casa persegue. O gesto a levanta inteira.
+#:
+#: DECISÃO DO PO, 04/09/2026 (`2026-09-04-O-PO-DECIDE` §2 `06[01]`): *"Apaga o
+#: interruptor e escreve ao lado, na tira de estados. É a D-03 com a D-02."* A
+#: janela antiga já faz isso — `_sync_mouse_mode_gate`
+#: (`app/actions/mouse_actions.py:299`) põe `blocked = mode != MODE_DESKTOP` e
+#: apaga o switch ANTES de qualquer clique. O que faltava aqui era o MOMENTO:
+#: a tela nova aceitava o clique e recusava por escrito, e ela gastava o clique
+#: para descobrir.
+#:
+#: A FRASE É OUTRA QUE A DA GTK, e tem de ser: `MODE_GATE_HINT` manda ir à aba
+#: **Início**, que não existe no desenho das dez — o degrau mudou para a aba
+#: **Jogar**. Reusar o módulo também não dá: `mouse_actions.py` importa GTK no
+#: topo, e os pacotes são puros de propósito.
+RAZAO_DO_PORTAO = (
+    "O mouse e o teclado só se ligam fora do jogo: jogando, o controle é do "
+    "jogo, e ligar o mouse aqui derrubaria o controle virtual e os jogadores "
+    "do co-op no meio da partida. O degrau se troca na aba Jogar.")
+
+
+def _a_razao_do_portao(estado: dict[str, Any]) -> str:
+    """Por que o "Status do Modo" vai recusar agora — ou nada a dizer.
+
+    O ENDEREÇO É UM SÓ, e é ele que faz as duas metades da D-03 nunca
+    discordarem: esta chave alimenta a LINHA da tira (alvo `html`) e, pela folha
+    da aba, o CINZA do interruptor — que é uma regra `:has()` lendo a própria
+    linha. Não há segundo campo a divergir porque não há segundo campo.
+
+    SEM ESTADO, NÃO AFIRMA. O gesto recusa dizendo que não conseguiu falar com o
+    Hefesto, e isso é resposta a um clique — não é fato sobre o portão. Apagar o
+    interruptor por falta de resposta seria a tela afirmando um bloqueio que
+    ninguém mediu, que é a regra dela de 30/08: *"se não tá mostrando agora, não
+    tem info pra mostrar"*.
+    """
+    if not estado:
+        return NADA_A_DIZER
+    if mode_of_state(estado) == MODE_DESKTOP:
+        return NADA_A_DIZER
+    return f'<span class="laranja">{RAZAO_DO_PORTAO}</span>'
+
+
 def _nome_do_botao(botao: str) -> str:
     """`"l2"` → `"L2 (gatilho esquerdo)"`. O nome que ELA lê, e é do MOTOR.
 
@@ -849,6 +937,241 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
     }
 
 
+# ---------------------------------------------------------------------------
+# A TIRA DE AVISO SOB A TABELA — as três verdades que a tabela escondia.
+#
+# DECISÃO DO PO, 04/09/2026 (`2026-09-04-O-PO-DECIDE` §2 `06[04]`): *"Uma tira
+# de aviso sob a tabela. O que vai ser APAGADO não mora num hover."* Ninguém
+# passa o rato onde não sabe que há algo, e as duas linhas que esta tira fecha
+# (`Nomear os botões que não digitam nada` e `Nomear os atalhos que o perfil
+# guarda e a lista não mostra`) falam justamente do que se perde.
+#
+# ELA NÃO É A FRASE DA GTK, e a diferença é um FATO medido, não estilo. A
+# `input_actions.frase_dos_atalhos_fora_da_lista` termina com *"nada nesta aba
+# os apaga"* — verdade na janela antiga, porque lá a fusão de
+# `_persist_key_bindings_to_draft` protege o que a lista não mostra. **Aqui é o
+# contrário**: o "Voltar ao padrão" desta tela zera `key_bindings` inteiro, e o
+# "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
+# fábrica (`profiles/manager.py:570`, `core/acoes_de_botao.resolver`, que nunca
+# consulta `profile.key_bindings`). Copiar a frase de lá seria a tela afirmando
+# o oposto do que este produto faz — e é a família de defeito que esta casa
+# persegue acima de todas.
+#
+# O QUE ELA **NÃO** DUPLICA: nenhum nome de botão e nenhum rótulo de tecla é
+# escrito aqui. Os nomes saem de `input_actions.humanize_button` e as teclas de
+# `input_actions.humanize_binding` — os mesmos donos que a GTK usa —, e o que
+# cada linha faz sai de `core/acoes_de_botao`.
+# ---------------------------------------------------------------------------
+
+
+def _colado(ligacao: Any) -> str:
+    """A ligação do perfil na forma com `+`, que é a que o produto lê de volta.
+
+    O perfil guarda combo como LISTA (`["KEY_LEFTCTRL", "KEY_W"]`) e tecla
+    solta às vezes como string. `keyboard_mappings.parse_binding` lê a forma
+    colada — um round-trip, e não uma segunda grafia.
+    """
+    if isinstance(ligacao, (list, tuple)):
+        return "+".join(str(t) for t in ligacao)
+    return str(ligacao)
+
+
+def _atalho_em_palavras(colado: str) -> str:
+    """`"KEY_LEFTCTRL+KEY_W"` → `"Ctrl + W"`, pelo dono do produto.
+
+    O IMPORT É TARDIO pela mesma razão de `_nome_do_botao`: `input_actions` puxa
+    GTK no topo, e os pacotes são puros de propósito. Sem GTK no ambiente volta
+    o token cru, que é feio e é honesto.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.input_actions import humanize_binding
+    except Exception:
+        return colado
+    return str(humanize_binding(colado))
+
+
+def _dois_donos() -> list[tuple[str, str, str]]:
+    """Os botões que o mouse E o teclado atendem ao mesmo tempo, DE FÁBRICA.
+
+    `(botão, o que a tabela mostra, o que o teclado faz no mesmo botão)`.
+
+    MEDIDO, NÃO DIGITADO: `acoes.padrao()` mostra o do MOUSE quando os dois têm
+    opinião (o docstring dele diz por quê — é o que a pessoa vê acontecer com o
+    cursor na frente dela), e `DEFAULT_BUTTON_BINDINGS` diz o do teclado. Onde
+    os dois discordam, o produto faz OS DOIS e a tabela conta metade.
+
+    Hoje isso dá um botão só — o R3, "Botão do meio" para o mouse e "Fechar o
+    teclado na tela" para o teclado —, e a colisão já está escrita em
+    `core/keyboard_mappings.py:47-52`. Derivar em vez de digitar é o que faz
+    esta tira acompanhar o dia em que um segundo botão entrar na mesma situação.
+    """
+    from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
+
+    de_fabrica = acoes.padrao()
+    fora: list[tuple[str, str, str]] = []
+    for botao in acoes.BOTOES:
+        ligacao = DEFAULT_BUTTON_BINDINGS.get(botao)
+        if not ligacao:
+            continue
+        colado = "+".join(ligacao)
+        na_tabela = str(de_fabrica.get(botao) or "")
+        if na_tabela and na_tabela != colado:
+            fora.append((botao, acoes.rotulo(na_tabela), acoes.rotulo(colado)))
+    return fora
+
+
+#: OS DOIS MAPAS QUE O `set_button_actions` RECONSTRÓI DO DE FÁBRICA, e é deles
+#: que sai o defeito medido em 04/09/2026 nesta frente:
+#:
+#:     self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items() if b not in do_mouse}
+#:     self._mapa_tap  = {b: k for b, k in EDGE_KEY_MAP.items() if b not in do_mouse}
+#:                                        (`integrations/uinput_mouse.py:315-316`)
+#:
+#: Um botão em `— Nada —` **não entra em `do_mouse`** — o `resolver()` o pula de
+#: propósito —, logo ele não é subtraído desses dois mapas e **continua
+#: emitindo o de fábrica**. Medido, com o `resolver()` e os mapas do dono:
+#:
+#:     "— Nada —" no cross    -> calou de verdade
+#:     "— Nada —" no options  -> calou de verdade
+#:     "— Nada —" no dpad_up  -> AINDA emite KEY_UP
+#:     "— Nada —" no circle   -> AINDA emite KEY_ENTER
+#:
+#: São SEIS das vinte e uma linhas: as quatro direções do d-pad, o Círculo e o
+#: Quadrado. A cura é do MOTOR (`uinput_mouse.set_button_actions` precisa saber
+#: quais botões foram calados de propósito, e hoje não sabe: `do_mouse` não
+#: distingue "não é do mouse" de "foi calado") e está no relato desta frente.
+#: Enquanto ela não vem, **a tela diz**, que é o contrário de um botão que
+#: responde calado.
+#:
+#: A REGRA É COPIADA, e a duplicação é declarada — os MAPAS são importados do
+#: dono, nunca digitados, e `test_a_aba_06_navegacao_fecha_as_linhas.py` chama o
+#: `set_button_actions` DE VERDADE e compara com o que esta função responde.
+
+
+def _mapas_que_sobrevivem_ao_nada() -> frozenset[str]:
+    """Os botões cujo som de fábrica o `— Nada —` da tela não desliga."""
+    from hefesto_dualsense4unix.integrations.uinput_mouse import (
+        DPAD_TO_KEY,
+        EDGE_KEY_MAP,
+    )
+
+    return frozenset(DPAD_TO_KEY) | frozenset(EDGE_KEY_MAP)
+
+
+def _o_que_a_tabela_diz_de_cada_botao(p: dict[str, Any]) -> dict[str, str]:
+    """Botão -> token que VALE agora: o de fábrica com o perfil por cima."""
+    escolhas = (p.get("button_actions") or None) if p else None
+    tabela = acoes.padrao()
+    if escolhas:
+        tabela.update({b: a for b, a in escolhas.items() if b in tabela})
+    return tabela
+
+
+def _linhas_que_nao_acendem(p: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """`(as que calaram de verdade, as que o "— Nada —" NÃO calou)`.
+
+    A primeira lista tem DUAS origens, e as duas são do motor: a escolha
+    `— Nada —` que o device realmente atende, e a terceira sacola do
+    `resolver()` — os comandos sem atendente, os papéis de eixo pedidos a um
+    botão e o gatilho cuja escolha diverge do espelho dele.
+
+    A segunda é o defeito medido acima, e ela existe para a tela poder dizê-lo.
+    """
+    tabela = _o_que_a_tabela_diz_de_cada_botao(p)
+    escolhas = (p.get("button_actions") or None) if p else None
+    mudos = {b for b in acoes.BOTOES if tabela.get(b) == acoes.TOKEN_NADA}
+    teimosos = mudos & _mapas_que_sobrevivem_ao_nada()
+    _do_mouse, _do_teclado, sem_dono = acoes.resolver(escolhas)
+    return sorted((mudos - teimosos) | set(sem_dono)), sorted(teimosos)
+
+
+def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
+    """Os `key_bindings` do perfil que o "Guardar" desta tela faz parar de valer.
+
+    **É A METADE VISÍVEL DO DEFEITO §3-1**, e o defeito é do produto, não desta
+    aba: `apply_button_actions` (`profiles/manager.py:570`) roda DEPOIS do
+    `apply_keyboard` e chama `teclado.set_bindings(...)` com o conjunto INTEIRO
+    que `acoes_de_botao.resolver()` deriva — e `resolver()` parte de
+    `acoes.padrao()` e **nunca consulta `profile.key_bindings`**. Logo, um perfil com
+    `button_actions` preenchido apaga o efeito do que ela escreveu à mão na
+    janela antiga, em silêncio, na próxima ativação.
+
+    A COMPARAÇÃO É CONTRA O QUE O DAEMON VAI APLICAR, e não contra a lista da
+    tela: `resolver(button_actions)` é literalmente a chamada que o
+    `apply_button_actions` faz. Um atalho que COINCIDA com o resultado sobrevive
+    — por coincidência, e não por cuidado — e não entra aqui, porque nomear o
+    que não se perde é ruído.
+
+    A RESSALVA QUE A FRASE CARREGA, e ela é medida: sem device de mouse vivo o
+    `apply_button_actions` sai antes (`manager.py:614`) e nada é reescrito. Por
+    isso a tira diz *"quando o mouse virtual estiver de pé"* em vez de prometer
+    o desastre em todo caso.
+
+    ELA MORRE SOZINHA no dia em que `resolver()` passar a herdar
+    `key_bindings`: a lista fica vazia e a tira some, sem ninguém apagar nada
+    daqui.
+
+    :returns: `[(botão, o binding colado), …]`, em ordem de botão.
+    """
+    atalhos = (p.get("key_bindings") or {}) if p else {}
+    if not atalhos:
+        return []
+    _do_mouse, do_teclado, _sem = acoes.resolver((p or {}).get("button_actions"))
+    fora: list[tuple[str, str]] = []
+    for botao, ligacao in sorted(atalhos.items()):
+        agora = (tuple(ligacao) if isinstance(ligacao, (list, tuple))
+                 else (str(ligacao),))
+        if do_teclado.get(botao) == agora:
+            continue
+        fora.append((botao, _colado(agora)))
+    return fora
+
+
+def _aviso_da_tabela(p: dict[str, Any]) -> str:
+    """A tira sob a tabela de botões — vazia quando não há o que perder.
+
+    TRÊS FRASES, e nenhuma nasce se o fato dela não existir. A tira só ocupa
+    espaço nos perfis em que há mesmo algo a dizer, que é o que a decisão do PO
+    pede: *"a tira se esconde vazia, como a de estados já faz"*.
+    """
+    partes: list[str] = []
+    donos = _dois_donos()
+    if donos:
+        quais = "; ".join(
+            f"{_nome_do_botao(b)} faz “{do_mouse}” para o mouse e “{do_teclado}” "
+            f"para o teclado"
+            for b, do_mouse, do_teclado in donos)
+        partes.append(
+            f"<b>Dois donos:</b> {quais}. A tabela mostra só o do mouse, e "
+            "guardar aqui deixa valendo só o que ela mostra.")
+    mudos, teimosos = _linhas_que_nao_acendem(p)
+    if mudos:
+        partes.append(
+            "<b>Não acendem nada hoje:</b> "
+            + ", ".join(_nome_do_botao(b) for b in mudos)
+            + ". A escolha fica guardada no perfil — é feature que falta, não "
+              "erro seu.")
+    if teimosos:
+        partes.append(
+            "<b>“— Nada —” ainda não cala estes:</b> "
+            + ", ".join(_nome_do_botao(b) for b in teimosos)
+            + ". Eles continuam digitando o de fábrica, porque o Hefesto ainda "
+              "não sabe distinguir “este botão não é do mouse” de “este botão "
+              "foi calado”.")
+    perdidos = atalhos_que_param_de_valer(p)
+    if perdidos:
+        quais = ", ".join(f"{_nome_do_botao(b)} = {_atalho_em_palavras(t)}"
+                          for b, t in perdidos)
+        partes.append(
+            f"<b>O perfil guarda atalhos que esta lista não diz:</b> {quais}. "
+            "Guardar aqui substitui o conjunto inteiro de atalhos pelo que a "
+            "tabela mostra, e esses param de valer assim que o mouse virtual "
+            "estiver de pé.")
+    if not partes:
+        return NADA_A_DIZER
+    return "".join(f"<div>{x}</div>" for x in partes)
+
+
 #: O QUE ELA JÁ ESCOLHEU E AINDA NÃO GUARDOU: `acao-<botão>` → o rótulo que
 #: está no `<select>`. Só entram as linhas que DIFEREM do que o perfil guarda —
 #: escolher de volta o valor do perfil tira a linha daqui, e com o dicionário
@@ -1033,6 +1356,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     mesa["rato-estado"] = _o_mouse_virtual_em_uma_linha(rato)
     mesa["teclado-bloqueio"] = _o_teclado_em_uma_linha(tecla)
     mesa["teclado-osk"] = _o_teclado_na_tela_em_uma_linha(tecla)
+    # AS TRÊS QUE A ONDA 2 ACRESCENTOU, e as três são "só quando há o que
+    # dizer": a razão do portão de modo (que também é o que APAGA o interruptor,
+    # pela folha desta aba), o custo de manter o teclado desligado, e a tira sob
+    # a tabela de botões. Emitidas em TODO tique, como as três de cima — chave
+    # ausente deixaria a frase velha na tela para sempre.
+    mesa["modo-portao"] = _a_razao_do_portao(st)
+    mesa["teclado-custo"] = _o_custo_de_desligar_o_teclado(tecla)
+    mesa["aviso-da-tabela"] = _aviso_da_tabela(p)
     # AS VINTE E UMA LINHAS DE *O QUE CADA BOTÃO FAZ*, do perfil dela — e elas
     # não existiam aqui até 02/09/2026. O botão "Guardar" LIA essas linhas
     # (`data-hef-forma`) e nada as ESCREVIA, então a tela mostrava para sempre o
@@ -1398,11 +1729,12 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "mouse derrubaria um jogo em andamento. Tente de novo em instantes.")
     modo_agora = mode_of_state(ctx.state)
     if modo_agora != MODE_DESKTOP:
-        raise RuntimeError(
-            "só dá para mexer no mouse e no teclado fora do jogo: jogando, o "
-            "controle é do jogo, e ligar o mouse aqui derrubaria o controle "
-            "virtual e os jogadores do co-op no meio da partida. O degrau se "
-            "troca na aba Jogar.")
+        # A MESMA FRASE QUE A TIRA JÁ MOSTRA — 04/09/2026. Desde que o portão
+        # ganhou linha permanente (`_a_razao_do_portao`), a recusa e o aviso
+        # passaram a ser o mesmo texto: duas grafias do mesmo fato divergiriam
+        # na primeira correção, e quem clicasse leria uma coisa depois de ter
+        # lido outra ao lado do interruptor.
+        raise RuntimeError(RAZAO_DO_PORTAO)
 
     # O SEGUNDO CLIQUE DENTRO DO MESMO TIQUE DESFAZ O PRIMEIRO — 03/09/2026, e é
     # a cura que o `+`/`-` já tinha e este interruptor não. O `ctx` é o estado de
@@ -1991,6 +2323,14 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "voltar tudo ao de fábrica de propósito, use o “Voltar ao padrão” "
             "ao lado."
             + (f" E {aviso}" if aviso else ""))
+    # O QUE ESTE CLIQUE VAI FAZER PARAR DE VALER, contado ANTES da gravação —
+    # 04/09/2026, e é a metade dita do defeito §3-1. Depois do
+    # `gravar_e_reaplicar` o `prof` da memória continua sendo o de antes, mas
+    # contar aqui deixa a ordem óbvia para quem ler: o recado fala do que ESTE
+    # gesto trocou, e não do estado que sobrou.
+    perdidos = atalhos_que_param_de_valer(
+        {"key_bindings": getattr(prof, "key_bindings", None) or {},
+         "button_actions": novo})
     perfil.gravar_e_reaplicar(prof.model_copy(update={"button_actions": novo}), ctx, p)
     # GUARDADO É O FIM DA EDIÇÃO. A partir daqui o perfil diz o que a tela diz,
     # e o tique volta a mandar na tabela — que é a outra metade de *"até guardar
@@ -1999,6 +2339,20 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     _, _, sem_dono = acoes.resolver(novo)
     recados = []
+    if perdidos:
+        # NOMEAR O QUE SE PERDE É O MÍNIMO, e o silêncio aqui era o defeito
+        # inteiro: o perfil continua MOSTRANDO os dois campos, como se os dois
+        # valessem, e o efeito de `key_bindings` morre na próxima ativação sem
+        # uma palavra. A cura de verdade é `resolver()` herdar `key_bindings`, e
+        # ela mora em `core/acoes_de_botao.py` — está no relato desta frente.
+        recados.append(
+            "guardei, e estes atalhos que você escreveu na janela antiga param "
+            "de valer neste perfil: "
+            + ", ".join(f"{_nome_do_botao(b)} = {_atalho_em_palavras(t)}"
+                        for b, t in perdidos)
+            + ". O perfil ainda os guarda no arquivo, mas o que passa a valer é "
+              "o que esta tabela mostra — use o “Voltar ao padrão” para devolver "
+              "tudo ao de fábrica.")
     if sem_dono:
         recados.append(
             "guardei o que o produto sabe fazer, e estas linhas ficaram sem "
@@ -2012,7 +2366,8 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("06-navegacao.html", "padrao-definicoes")
-def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
+                      p: Any) -> dict[str, Any] | None:
     """"Voltar ao padrão" das 21 linhas de *o que cada botão faz*.
 
     O QUE ELE FAZ: grava `key_bindings = None` no perfil ATIVO e manda o daemon
@@ -2052,6 +2407,13 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     FATO SUBSTITUÍDO, e é o que destravou este botão: o `SEM_GESTO` abaixo dizia
     que "gravar perfil não tem método". Tem — `profiles/loader.save_profile`, e
     o `a10_perfis` já o usava desde a mesma leva que escreveu a frase.
+
+    E ELE DÁ RECIBO DO QUE APAGOU — 04/09/2026, pelo canal de SUCESSO da D-01.
+    Até hoje ele apagava os `key_bindings` que ela escreveu na janela antiga e
+    voltava sem uma palavra: o piloto imprimia `aplicado` no terminal de quem
+    lançou a janela, e quem clica não lê terminal. O `recado` que este gesto
+    devolve nomeia quantos atalhos saíram, no cartão dela, em verde — o que
+    apaga tem de dizer o que apagou.
     """
     nome = _perfil_ativo_ou_recusa(ctx)
     loader = perfil._com_o_src()
@@ -2076,12 +2438,23 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"não havia o que voltar — o perfil “{nome}” já está no de fábrica "
             "nas 21 linhas de o que cada botão faz. Não gravei nada e não "
             "incomodei o daemon.")
+    # O QUE ELE APAGA, contado ANTES de apagar: os atalhos que ela escreveu à
+    # mão continuam sendo os do perfil até esta linha.
+    atalhos = getattr(prof, "key_bindings", None) or {}
     perfil.gravar_e_reaplicar(
         prof.model_copy(update={"key_bindings": None, "button_actions": None}), ctx, p)
     # "VOLTAR AO PADRÃO" TAMBÉM É FIM DE EDIÇÃO: o perfil foi zerado, e segurar
     # escolhas pendentes por cima disso faria a tabela mostrar o contrário do
     # que o botão acabou de fazer.
     _largar_o_que_ela_mexeu()
+    if not atalhos:
+        return None
+    quais = ", ".join(f"{_nome_do_botao(b)} = {_atalho_em_palavras(_colado(v))}"
+                      for b, v in sorted(atalhos.items()))
+    return {"recado": (
+        f"Voltei as {len(acoes.BOTOES)} linhas ao de fábrica, e com elas saíram "
+        f"{len(atalhos)} atalho(s) de teclado que este perfil guardava: "
+        f"{quais}.")}
 
 
 #: OS OITO QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
