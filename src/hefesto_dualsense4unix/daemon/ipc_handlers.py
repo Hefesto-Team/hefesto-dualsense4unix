@@ -3868,6 +3868,34 @@ class IpcHandlersMixin:
                 status["mic_mudo_desejado"] = (
                     bool(desejado) if isinstance(desejado, bool) else None
                 )
+            # AS OUTRAS DUAS FACES DO MESMO ESTADO — MICROFONE-UM-ATO-01
+            # (04/09/2026). O bloco `audio` publicava só o que o FIRMWARE diz;
+            # o canal no sistema — que é a metade que ela nomeou, *"ele ser
+            # ouvido no canal específico dele"* — não chegava à tela por
+            # caminho nenhum. Sem estes três campos o selo do microfone só
+            # podia pintar meia verdade, e meia verdade acesa é o verde falso.
+            #
+            # A LEITURA NÃO ACONTECE AQUI, e isso não é detalhe: este método
+            # roda no tique do `state_full`, a 20 Hz, dentro do loop do daemon.
+            # Cada resposta do PipeWire custa um subprocesso, e perguntar aqui
+            # travaria o loop pelo tempo do `pactl`. Quem pergunta é o
+            # `canal_do_microfone_loop`, a cada dois segundos, numa thread; o
+            # que se faz aqui é ler o dicionário que ele deixou pronto.
+            #
+            # AUSÊNCIA FALA: enquanto aquele laço não tiver perguntado uma vez,
+            # as três chaves não aparecem — a mesma disciplina do `gyro` e do
+            # `touchpad`. Publicar `canal_ativo: false` sobre um canal que
+            # ninguém olhou seria dizer que ele está desligado.
+            from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
+                canal_do_microfone,
+            )
+
+            lido = canal_do_microfone(uniq)
+            if isinstance(lido, dict):
+                status["canal_ativo"] = bool(lido.get("canal_ativo"))
+                status["canal_mudo"] = lido.get("canal_mudo")
+                status["volume_captura"] = lido.get("volume_captura")
+                status["canal_fonte"] = lido.get("fonte")
             entry["audio"] = status
 
         speaker: Any = None
@@ -5244,6 +5272,104 @@ class IpcHandlersMixin:
             "audio": estado if isinstance(estado, dict) else None,
             "mic_mudo_desejado": muted,
         }
+
+    async def _handle_mic_canal_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`mic.canal.set` — O ATO INTEIRO do microfone (MICROFONE-UM-ATO-01).
+
+        Params: ``{ligado: bool, uniq?: str}``. `uniq` omitido = o primário.
+
+        POR QUE ESTE MÉTODO EXISTE, e o conceito é DELA. Havia `mic.set` (o
+        mudo do FIRMWARE) e havia a eleição do canal no PipeWire, e as duas
+        eram gestos separados que se contradiziam. Eu levei isso a ela como
+        *"duas camadas se contradizem"* e ofereci três arranjos que GUARDAVAM
+        a contradição; ela recusou os três:
+
+            *"tá errado o conceito da coisa. o botão é pra ligar o microfone e
+            ele ser ouvido no canal específico dele."*
+
+        Não são duas camadas com duas verdades — é UM ato, e ele só está feito
+        quando as duas metades estão feitas. Quem o executa é
+        `daemon/subsystems/hotkey.ligar_o_microfone`, **a mesma função** que a
+        borda do botão do plástico chama: uma função, dois chamadores.
+
+        **A CONTRADIÇÃO ERA MEDÍVEL, e foi medida em 04/09/2026 na bancada.**
+        Um `mic.set {muted: false}` pela tela mudava o bit no firmware, o laço
+        das bordas via a mudança e ELEGIA o canal por efeito colateral — o
+        microfone padrão do sistema dela trocava sem que método nenhum tivesse
+        dito isso, e a resposta do `mic.set` não trazia uma palavra a respeito.
+        O acoplamento existia; o que não existia era o ato declarado.
+
+        **NÃO CONSULTA O MODO**, que é a segunda regra dela:
+
+            *"o botão fisico do mic se ligado no  # noqa-acento: citação dela
+            microfone ele fica ligado tambem.  # noqa-acento: citação dela
+            indepente se  # noqa-acento: citação dela
+        nativo ou virtual"*.  # noqa-acento: citação literal dela
+
+        O que muda com o Modo Nativo não é o caminho, é o que o aparelho
+        aceita: lá o hidraw é do jogo e o daemon não escreve nada nele
+        (FEAT-NATIVE-OUTPUT-MUTE-01). Medido no mesmo dia: `mic.set` respondeu
+        ``{"status": "ok"}`` com o `mic_mudo` do aparelho PARADO. Por isso a
+        resposta daqui separa `canal_feito` de `firmware_pedido`, e o
+        `status` só é `"ok"` quando as duas metades aconteceram — responder
+        "ok" sobre meio ato é o verde falso que esta casa passou 04/09 inteiro
+        arrancando.
+        """
+        if "ligado" not in params:
+            raise ValueError(
+                "mic.canal.set: 'ligado' é obrigatório — true liga o microfone "
+                "deste controle no canal dele, false o desliga"
+            )
+        ligado = params.get("ligado")
+        if not isinstance(ligado, bool):
+            raise ValueError("mic.canal.set: 'ligado' precisa ser boolean")
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("mic.canal.set: 'uniq' precisa ser string ou omitido")
+        if self.daemon is None:
+            raise RuntimeError("daemon indisponível")
+        alvo = uniq or self._uniq_do_primario()
+        if not alvo:
+            return {
+                "status": "sem_controle",
+                "uniq": None,
+                "ligado": ligado,
+                "motivo": (
+                    "não há controle na mesa para ligar o microfone — o ato "
+                    "precisa de um endereço, e cair no primeiro da lista é o "
+                    "que faria a mesa cheia eleger sempre o mesmo"
+                ),
+            }
+        from hefesto_dualsense4unix.daemon.subsystems.hotkey import ligar_o_microfone
+
+        ato = await ligar_o_microfone(self.daemon, alvo, ligado=ligado)
+        if ato.feito:
+            # PERFIL-GUARDA-O-MIC-01, exceção MIC-GRAVACAO-01: idem `mic.set` —
+            # o ato é um gesto DELA, e o perfil reaplicado na próxima troca de
+            # janela não pode desfazê-lo em silêncio.
+            self._marcar_audio_manual()
+        return ato.como_corpo()
+
+    def _uniq_do_primario(self) -> str | None:
+        """O endereço do controle primário, ou `None` quando a mesa está vazia.
+
+        O ato EXIGE endereço (a mesa de quatro é a razão), e `uniq` omitido é a
+        conveniência de quem tem um controle só. Resolver aqui, e não dentro do
+        ato, mantém o ato com uma regra só.
+        """
+        listar = getattr(self.controller, "describe_controllers", None)
+        if not callable(listar):
+            return None
+        with contextlib.suppress(Exception):
+            for entrada in listar() or []:
+                if not isinstance(entrada, dict):
+                    continue
+                if not entrada.get("connected"):
+                    continue
+                endereco = entrada.get("uniq")
+                if isinstance(endereco, str) and endereco:
+                    return endereco
+        return None
 
     async def _handle_mic_led_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`mic.led.set` — o LED do botão de mudo, e a DEVOLUÇÃO da posse dele.

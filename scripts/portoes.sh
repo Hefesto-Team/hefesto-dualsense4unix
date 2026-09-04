@@ -126,6 +126,8 @@ completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chama
 # SUÍTE, e a suíte roda no FIM -- entre o vazamento e a reprovação havia um dia
 # inteiro de trabalho. Custa ~1 s.
 completo|interpretador-do-portao|pytest|tests/unit/test_o_portao_declara_o_interpretador.py
+completo|a-tela-dela|pytest|tests/unit/test_a_tela_dela_nao_recebe_janela_de_teste.py
+completo|src-desta-arvore|pytest|tests/unit/test_a_suite_mede_esta_arvore.py
 rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
 # 03/09/2026, a lei dela: *"cada pessoa tem um dualsense diferente (…) nada
@@ -284,11 +286,25 @@ _bin() {  # resolve um binário: venv primeiro, PATH depois
 echo "portões — árvore ${RAIZ}"
 echo "         python  ${PY}"
 echo "         camadas ${CAMADAS}"
-if [ -n "${PYTHONPATH:-}" ]; then
-  echo "         PYTHONPATH ${PYTHONPATH}"
-else
-  echo "         PYTHONPATH (vazio) -- numa árvore de agente isto é ARMADILHA: rode 'source .envrc-voo' antes."
+# O `src/` DESTA árvore vai na frente do PYTHONPATH, sempre.
+#
+# Aqui havia só um AVISO ("PYTHONPATH (vazio) -- armadilha"), e aviso não é
+# cura: ninguém lê o cabeçalho de um comando que termina verde. Medido em
+# 04/09/2026 numa árvore de integração — doze lotes de suíte e uma leva de
+# portões mediram o `src/` de OUTRA cópia do repositório, porque a venv tem o
+# pacote em modo editável apontando para a árvore onde ela nasceu. Não dá erro:
+# dá `ImportError` de símbolo novo, que se lê como "o agente não terminou".
+#
+# É a mesma família do defeito do interpretador, e a mesma resposta: o script
+# RESOLVE em vez de pedir que alguém lembre.
+if [ -d "${RAIZ}/src" ]; then
+  case ":${PYTHONPATH:-}:" in
+    *":${RAIZ}/src:"*) : ;;
+    *) PYTHONPATH="${RAIZ}/src${PYTHONPATH:+:${PYTHONPATH}}" ;;
+  esac
+  export PYTHONPATH
 fi
+echo "         PYTHONPATH ${PYTHONPATH:-(vazio)}"
 if [ -n "${VENV_INCOMPLETA:-}" ]; then
   echo "         INTERPRETADOR INCOMPLETO -- falta: ${VENV_INCOMPLETA}"
   echo "         O VERMELHO QUE VIER PODE SER DO INSTRUMENTO, NÃO DO CÓDIGO."

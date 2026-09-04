@@ -157,7 +157,7 @@ class _Ponte:
 
         chamar(metodo, timeout=None, **params)  # (assinatura) noqa-acento
 
-    e até 04/09 o dublê era `chamar(self, metodo, params)`  # noqa-acento
+    e até 04/09 o dublê era `chamar(self, metodo, params)`  # (assinatura) noqa-acento
     O gesto da máscara passava `p.chamar("gamepad.mask.set", {...})` — o
     dicionário caía no `timeout` da ponte real e o `_safe_call` estourava com
     `'<=' not supported between instances of 'dict' and 'int'`. **Na ponte de

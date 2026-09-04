@@ -874,6 +874,182 @@ CSS_POPUP = """
   .tn-cx .dica{left:auto;right:22px}
 """
 
+# ---------------------------------------------------------------------------
+# A FOLHA DA D-02 E DA D-03 — 04/09/2026, e ela entra nas DEZ páginas por
+# `monta()`, nunca por `css_extra`.
+#
+# POR QUE NÃO POR `css_extra`, que seria o caminho óbvio: uma peça que cada aba
+# precisa lembrar de pedir é uma peça que alguma aba esquece — e o esquecimento
+# não dá erro, dá silêncio. É a mesma razão que trouxe o `CSS_GLIFO`, o
+# `CSS_POPUP` e as `CSS_LUZINHAS` para cá: o que vale para mais de uma aba não
+# se digita em cada uma.
+#
+# ELA ENTRA DEPOIS DO `topo.html` E ANTES DO `css_extra` DA ABA, e a ordem é
+# escolha: depois do esqueleto para vencer `.btn.verde` e companhia por ordem
+# de fonte (a especificidade é igual: duas classes); antes da aba para que uma
+# aba que precise divergir consiga — folha é base, não lei.
+#
+# AS DUAS PEÇAS SÃO DELA, e as palavras estão no
+# `docs/process/2026-09-04-AS-DEZESSEIS-DECISOES-DELA-e-as-sprints-que-nascem.md`:
+#
+#   D-03  "Cinza antes, com a razão na dica."
+#   D-02  "Linha fixa só quando HÁ ressalva."
+#
+# O CINZA É VISUAL, E NUNCA `disabled` — e isso é decisão do PO em 04/09, sobre
+# a aba 09: *"Apagado e ainda assim responde"*. `disabled` mata o clique, e com
+# ele mata o recado que o clique traz: quem aponta o rato lê a razão no `?`,
+# quem chega pelo controle só a alcança clicando. A gramática do apagado é a
+# que a página já tem desde 31/08 (`.seg button:disabled`), reusada letra por
+# letra — inventar uma segunda cara de apagado seria a doença que esta casa
+# persegue.
+#
+# `:has()` NÃO É APOSTA NOVA sobre o WebKit dela: o esqueleto já o usa
+# (`.quadro:has(> input.abre:not(:checked))`), e a `06-navegacao` já apaga uma
+# linha de estado por ele desde 03/09.
+# ---------------------------------------------------------------------------
+CSS_FOLHA = """
+  /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
+
+  /* ---- S-03 · O BOTÃO QUE VAI RECUSAR JÁ NASCE CINZA (D-03) ----
+     A CARA É A DO `.seg button:disabled`, letra por letra. O que muda é o
+     mecanismo: ali o botão está `disabled` de verdade e não recebe clique;
+     aqui a classe é só tinta, e o botão continua respondendo — que é o que o
+     PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
+     tem rato na mão. */
+  .btn.apagado,.seg button.apagado{
+    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .btn.apagado:hover,.seg button.apagado:hover{
+    border-color:var(--border-sutil);color:var(--texto-mudo)}
+
+  /* O `?` DA RAZÃO. Ele é o `.ajuda` que a página já tem — a mesma bolinha,
+     a mesma `.dica` — com a classe `porque` dizendo que o texto dela vem do
+     PRODUTO, e não do desenho. A distinção é da aba 08, onde a frase congelada
+     já mentiu ("está no cabo" com o controle no rádio).
+
+     TRÊS JEITOS DE ELE SUMIR, e os três existem porque as abas emitem de três
+     jeitos: colado ao botão (o botão não está cinza -> não há o que explicar),
+     com a dica VAZIA de nascença, e com o marcador `.nada` que o pacote manda
+     quando não há o que dizer. O marcador é preciso porque `escrever()` troca
+     valor vazio por travessão — sem ele, "nada a dizer" vira um `—` solto. */
+  .btn:not(.apagado) + .ajuda.porque,
+  .seg button:not(.apagado) + .ajuda.porque{display:none}
+  .ajuda.porque:has(.dica:empty){display:none}
+  .ajuda.porque:has(.nada){display:none}
+  /* ELE COLA NO BOTÃO DELE, e as duas linhas saíram da foto de 04/09: dentro
+     de `.acoes` (vão de 8px) o `?` ficava a 8px dos DOIS vizinhos e lia como
+     se explicasse o botão seguinte; e o `.ajuda` tem 17px de altura fixa num
+     flex que estica, então ele subia para o topo do botão, acima do texto que
+     explica. */
+  .ajuda.porque{align-self:center;margin-left:-4px}
+
+  /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
+     No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
+     cobrando a altura da fonte, que é o preço que a regra dela de 30/08
+     (*"texto na interface é zero"*) não aceita pagar.
+
+     A peça é o `:empty{display:none}` que a `05-vibracao` e a `06-navegacao`
+     já tinham cada uma na sua folha, promovido a peça das dez — com o
+     `:has(.nada)` junto, porque as duas metades são a mesma peça: `:empty`
+     cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
+     piloto pinta a cada tique com "não há o que dizer". Faltando uma das
+     duas, a linha volta a aparecer num dos dois caminhos, calada. */
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
+  .ressalva:empty{display:none}
+  .ressalva:has(.nada){display:none}
+"""
+
+#: "NÃO HÁ O QUE DIZER", dito de um jeito que a tela sabe APAGAR.
+#:
+#: Ele existe por um detalhe do piloto que já custou uma foto: `escrever()`
+#: troca valor vazio por um travessão (`hefesto_vivo.py`), de propósito — um
+#: lugar VAZIO da mesa tem de apagar o que estava lá. Numa linha de ressalva
+#: isso vira um `—` solto, que é ruído com cara de dado.
+#:
+#: A CHAVE CONTINUA SENDO EMITIDA em todo tique: é o que faz a linha SUMIR
+#: quando a ressalva acaba. Omiti-la deixaria a frase velha na tela para sempre,
+#: que é o defeito oposto e pior.
+#:
+#: ELE NASCEU NA `pacotes/a06_navegacao.py`, onde a mesma constante continua
+#: viva. **A frente da aba 06, na Onda 2, aponta a de lá para cá** — este
+#: arquivo não é dela e não pode fazê-lo. Enquanto isso, são duas cópias do
+#: mesmo literal, e a régua `test_a_linha_de_ressalva_so_nasce_quando_ha` as
+#: compara para que não divirjam calado.
+NADA_A_DIZER = '<i class="nada"></i>'
+
+
+def botao_cinza(rotulo: str, campo: str, tom: str = "", razao: str = "",
+                extra: str = "") -> str:
+    """O botão que a tela JÁ SABE que vai recusar: cinza, com a razão no `?`.
+
+    Decisão dela (D-03): *"Cinza antes, com a razão na dica."*
+
+    **UM CAMPO SÓ ALIMENTA OS DOIS**, e isso não é economia — é o que impede a
+    tela de se contradizer. O botão e a `.dica` levam o MESMO `data-campo`: o
+    botão pelo alvo `classe` (que acende `apagado` quando o valor não é vazio
+    nem travessão) e a dica pelo alvo `html` (que recebe a frase). Com dois
+    campos seria possível pintar um botão cinza sem razão, ou uma razão sem
+    botão cinza; com um, não há caminho no código em que isso aconteça.
+
+    O MESMO VALE NA PÁGINA PARADA: quem decide o cinza aqui é `razao`, e não um
+    parâmetro à parte. Um `cinza=True` sem razão seria exatamente o defeito que
+    a D-03 nasceu para curar — o botão que não diz por quê.
+
+    **NÃO EMITE `disabled`**, e é o ponto inteiro (PO, 04/09, sobre a aba 09):
+    *"Apagado e ainda assim responde."* `disabled` mata o clique, e o clique é
+    o único caminho de quem navega pelo controle até a razão.
+
+    **E EMITE `aria-disabled`, mas só desde 04/09/2026 — e a história importa.**
+    Esta peça nasceu SEM ele, e a razão estava escrita aqui: *"nenhum alvo do
+    piloto escreve atributo E classe no mesmo elemento, então o `aria-disabled`
+    congelaria no valor do desenho e passaria a mentir no primeiro tique."* Era
+    verdade quando foi escrita, e o julgamento continua certo — **atributo que a
+    tela viva não consegue manter verdadeiro é pior que a ausência dele.**
+
+    O que mudou é o FATO, não o julgamento: na mesma leva, a ONDA0-P fez o alvo
+    `classe` vestir junto o `data-hef-atributo`, derivado da MESMA classe, na
+    língua do ARIA. A verdade continua morando num lugar só — a classe —, e o
+    atributo é dito para quem não enxerga a cor. Como o piloto o reescreve a
+    cada tique, ele não congela.
+
+    **É a regra desta casa em ato: fato errado se SUBSTITUI.** Quem ler esta
+    peça não deve encontrar, lado a lado, a razão de não emitir e a emissão.
+
+    `tom` é a variante de cor do `.btn` (`verde`/`vermelho`/`roxo`); `extra` é
+    o que a aba precisa acrescentar na tag — o `data-gesto` do clique, por
+    exemplo, que é da aba e não desta peça.
+    """
+    if not campo:
+        raise SystemExit(
+            f"ERRO em botao_cinza({rotulo!r}): sem `campo` não há endereço, e "
+            f"sem endereço o piloto não tem onde acender o cinza nem onde "
+            f"escrever a razão — o botão nasceria congelado no desenho.")
+    classes = " ".join(x for x in ("btn", tom, "apagado" if razao else "") if x)
+    return (f'<button class="{classes}" data-campo="{campo}"'
+            f' data-hef-alvo="classe" data-hef-classe="apagado"'
+            f' data-hef-atributo="aria-disabled"'
+            f'{" " + extra if extra else ""}>{rotulo}</button>'
+            f'<span class="ajuda porque">?'
+            f'<span class="dica" data-campo="{campo}" data-hef-alvo="html">'
+            f'{html.escape(razao) if razao else NADA_A_DIZER}</span></span>')
+
+
+def ressalva(campo: str, texto: str = "") -> str:
+    """A linha curta que explica um valor estranho — e só quando existe (D-02).
+
+    Decisão dela: *"Linha fixa só quando HÁ ressalva."* No repouso ela não
+    ocupa nada; no estado estranho nasce ao lado do valor.
+
+    O ALVO É `html`, e não o texto: as ressalvas desta casa levam marcação
+    (`<span class="laranja">`, `<tt>`), e é por ele que o marcador `.nada`
+    chega como ELEMENTO em vez de virar `<i class="nada"></i>` escrito na tela.
+    """
+    if not campo:
+        raise SystemExit(
+            f"ERRO em ressalva({texto!r}): sem `campo` a linha nasce congelada "
+            f"no desenho — e ressalva congelada é a que já mentiu na aba 08.")
+    return (f'<div class="ressalva" data-campo="{campo}" data-hef-alvo="html">'
+            f'{texto or NADA_A_DIZER}</div>')
+
 
 def _so_o_colorway(x: str, colorway: str) -> str:
     """Do `<style>` gerado, guarda só as regras DESTE modelo.
@@ -1036,6 +1212,16 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     t = TOPO
     t = t.replace("<title>Hefesto — aba JOGAR (mockup 26/08/2026)</title>",
                   f"<title>Hefesto — aba {titulo_aba.upper()} (mockup 26/08/2026)</title>")
+    # A FOLHA DAS DEZ ENTRA AQUI, E ANTES DO `css_extra` DA ABA. As duas peças
+    # da D-02 e da D-03 valem nas dez páginas, e por isso não passam por quem
+    # chama: uma peça que a aba precisa lembrar de pedir é uma peça que alguma
+    # aba esquece, sem erro e sem aviso.
+    #
+    # PELO `troca()`, e não por `str.replace`: uma troca que não casa devolve o
+    # texto intacto e não avisa — foi assim que a fita viva morreu em silêncio.
+    # Se o `</style>` do esqueleto sumir, a geração PARA em vez de publicar dez
+    # páginas sem as duas peças.
+    t = troca(t, arq, "</style>", CSS_FOLHA + "\n</style>")
     if css_extra:
         t = t.replace("</style>", css_extra + "\n</style>", 1)
     # a fita: viva quando a aba ajusta por controle
