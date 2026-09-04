@@ -831,6 +831,51 @@ def _desenho(c):
 _VAZIO = "—"
 
 
+def _chips_de_mascara(escolhida):
+    """Os três chips de máscara de UM cartão — os mesmos nos QUATRO lugares.
+
+    A DECISÃO É DELA, 03/09/2026: *"É uma máscara por controle. (…) Se isso não
+    ocorre com os 4 controles em cada aba, então temos que construir isso e
+    garantir isso."*
+
+    O QUE ESTAVA ERRADO, e era invisível no desenho: os chips existiam nos
+    quatro cartões, mas só os dois CONECTADOS tinham endereço. Medido no
+    publicado de hoje — ``grep -c 'data-gesto="mascara"'`` devolvia **6**, que é
+    dois cartões vezes três chips. No produto a página é ESTÁTICA: os quatro
+    lugares nascem do arquivo e o piloto só os pinta (quem remonta cartão é a
+    bancada, `jogar_vivo.html_dos_cartoes`). Então, com um terceiro controle na
+    mesa dela, o cartão do P3 REABRIA com o dado certo — passo `1c` do piloto —
+    e os três chips dele continuavam **mudos**: clicar não mudava nada e não
+    dizia nada.
+
+    O GESTO JÁ SABIA RESPONDER PELO LUGAR VAZIO, e o ramo estava inalcançável:
+    `a01_jogar.mascara_do_controle` levanta *"Não há controle no lugar P3"*
+    quando o clique chega sem `uniq`. Sem `data-gesto` naquele chip, nenhum
+    clique chegava — o ramo era código morto, e é a prova de que este endereço é
+    o que faltava, e não uma invenção deste arquivo.
+
+    O `data-campo` VAI JUNTO, e não acende nada em repouso: o lugar sem dono
+    recebe travessão de `pacotes.apagar_os_lugares_sem_dono`, e o alvo `classe`
+    com `data-hef-quando` só acende no que CASA — travessão não casa com rótulo
+    nenhum. A cena que ela aprovou continua idêntica; o que muda é que o chip
+    passa a ter onde a verdade chegar quando um controle ocupar o lugar.
+
+    `escolhida` é ``None`` no lugar vazio: máscara é escolha por controle, e sem
+    controle não há escolha. Marcar uma seria desenhar um ajuste que não existe.
+
+    TRÊS CHIPS, DUAS MÁSCARAS — e isto não muda aqui. `mascaras_validas()`
+    devolve `{dualsense, xbox}`; o **Nintendo Pro** está no desenho por ordem
+    dela e o gesto RECUSA DIZENDO o nome, que é melhor que sumir calado. O
+    desenho é dela: este arquivo não tira nem acrescenta chip.
+    """
+    return "\n".join(
+        f'                  <span class="chip{" on" if m == escolhida else ""}"'
+        f' data-gesto="mascara" data-mascara="{m}"'
+        f' data-campo="mascara-cartao" data-hef-alvo="classe"'
+        f' data-hef-quando="{m}">{m}</span>'
+        for m in MASCARAS)
+
+
 def cartao(c, bateria=None):
     """Um cartão da fileira: desenho na cor do plástico, rótulo e as máscaras.
 
@@ -898,9 +943,6 @@ def cartao(c, bateria=None):
     # NENHUMA MÁSCARA FICA `on`: máscara é escolha por controle, e sem controle
     # não há escolha. Marcar uma seria desenhar um ajuste que não existe.
     if not c.get("conectado", True):
-        chips = "\n".join(
-            f'                  <span class="chip" data-mascara="{m}">{m}</span>'
-            for m in MASCARAS)
         return f'''              <div class="cartao off"
                    data-controle="{c["pref"]}" data-conectado="nao"
                    title="Lugar vazio: nenhum controle conectado aqui.">
@@ -909,47 +951,14 @@ def cartao(c, bateria=None):
                 <span class="rotulo">{_VAZIO}<br>{_VAZIO}<br><span class="bat">{_BATERIA_GLIFO} <span>{_VAZIO}</span></span></span>
                 </div>
                 <div class="mascara">
-{chips}
+{_chips_de_mascara(None)}
                 </div>
               </div>'''
 
-    # O `data-gesto` DOS CHIPS DE MÁSCARA — 01/09/2026, e ele é uma RECUSA, não
-    # uma ligação. Medido contra os 39 métodos que o daemon atende:
-    #
-    #   * a máscara do gamepad virtual é UMA SÓ para a máquina —
-    #     `gamepad.emulation.set` recebe `flavor` e **não** recebe `uniq`
-    #     (`daemon/ipc_handlers.py:5060`), e o vpad que ela desenha é o do
-    #     processo, não o de um controle;
-    #   * "Nintendo Pro" não é máscara nenhuma do produto: o portão de entrada
-    #     RECUSA em voz alta o que não for `dualsense`/`xbox` e os sinônimos
-    #     (`ipc_handlers.py:5090`, *"nome desconhecido é erro, não default"*).
-    #
-    # Logo, o chip por controle não tem quem o atenda, e ele NÃO ganha `@gesto`
-    # em `pacotes/a01_jogar.py`. O que ele ganha é o ENDEREÇO: com ele o piloto
-    # recusa dizendo o nome; sem ele o clique sumia calado — e a mesma tela
-    # continuava desenhando três máscaras escolhíveis. O chip do LUGAR VAZIO
-    # segue sem endereço, de propósito: sem controle não há sequer o que pedir.
-    # O CHIP ACESO PASSA A SER LIDO — 03/09/2026, e era a mentira mais visível
-    # desta aba: o `on` saía de `c["mascara"]`, que é a MESA DO DESENHO, e o
-    # cartão do P2 mostrava **Xbox 360** aceso com o daemon em
-    # `flavor=dualsense`. Não é atraso de tique: nada o repintava.
-    #
-    # O ENDEREÇO É DA MESA, E NÃO DO CARTÃO, e a diferença é o fato: a máscara é
-    # UMA para a máquina — `gamepad.emulation.set` recebe `flavor` e não recebe
-    # `uniq` (`daemon/ipc_handlers.py:5060`). Um valor por cartão prometeria
-    # quatro escolhas onde há uma. O pacote emite `mascara-cartao` uma vez, e os
-    # doze chips da fileira decidem por si pelo `data-hef-quando`.
-    #
-    # O CLIQUE CONTINUA SEM DONO, e isso não muda: `data-gesto="mascara"` sem
-    # `@gesto` faz o piloto recusar DIZENDO o nome. Ler não é escrever — o chip
-    # passa a mostrar a verdade sobre o que vale, e continua dizendo que não sabe
-    # mudá-la por controle.
-    chips = "\n".join(
-        f'                  <span class="chip{" on" if m == c["mascara"] else ""}"'
-        f' data-gesto="mascara" data-mascara="{m}"'
-        f' data-campo="mascara-cartao" data-hef-alvo="classe"'
-        f' data-hef-quando="{m}">{m}</span>'
-        for m in MASCARAS)
+    # OS TRÊS CHIPS SÃO OS MESMOS NOS QUATRO CARTÕES — ver `_chips_de_mascara`,
+    # que é o dono da forma desde 03/09/2026. Aqui o único argumento é a máscara
+    # DAQUELE aparelho, que a mesa viva já traz por controle
+    # (`mesa_viva.mesa_do_estado`, lendo `gamepad_emulation.por_aparelho`).
     return f'''              <div class="cartao{" alvo" if c["alvo"] else ""}"
                    data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim">
                 <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:{monta.cor_da_zona(c["cor"])}"></i>
@@ -958,7 +967,7 @@ def cartao(c, bateria=None):
                 <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador">Player {c["jogador"]}</b><br><span data-campo="identidade">{c["nome"]} <span class="pt">•</span> {c["via"]}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%</span></span></span>
                 </div>
                 <div class="mascara">
-{chips}
+{_chips_de_mascara(c["mascara"])}
                 </div>
               </div>'''
 
@@ -1637,18 +1646,36 @@ def _conferir(doc):
     #    ELA MORDE PELO NÚMERO, e não pela presença: `hef-posicao` tem de
     #    aparecer nas DUAS posições do interruptor (uma só deixaria a outra
     #    acesa para sempre), `modo-aceso` nos CINCO chips da fileira, e
-    #    `mascara-cartao` em três chips por controle CONECTADO — o lugar vazio
-    #    não tem máscara escolhida e não pode ganhar endereço.
+    #    `mascara-cartao` em três chips por LUGAR DA MESA — os quatro, e não só
+    #    os conectados.
+    #
+    #    ERA `len(monta.CONECTADOS)` ATÉ 03/09/2026, e a régua trancava o
+    #    defeito em vez do contrato: o lugar vazio ficava sem endereço "de
+    #    propósito", e no produto — onde a página é ESTÁTICA e o cartão do P3
+    #    REABRE quando um terceiro controle chega — os três chips dele
+    #    continuavam mudos ao clique e cegos à pintura. A decisão dela é *"uma
+    #    máscara por controle (…) se isso não ocorre com os 4 controles em cada
+    #    aba, então temos que construir isso e garantir isso"*.
     for campo, quantos, oque in (
         ("hef-posicao", len(INTERRUPTOR), "as posições do interruptor"),
         ("modo-aceso", len(MODOS), "os chips da fileira de modos"),
-        ("mascara-cartao", len(MASCARAS) * len(monta.CONECTADOS),
-         "os chips de máscara dos cartões conectados"),
+        ("mascara-cartao", len(MASCARAS) * len(MESA),
+         "os chips de máscara dos QUATRO lugares da mesa"),
     ):
         achei = corpo.count(f'data-campo="{campo}" data-hef-alvo="classe"')
         exigir(achei == quantos,
                f"{oque}: esperava {quantos} endereços `{campo}` com alvo "
                f"`classe`, achei {achei}")
+    #    E O CLIQUE ALCANÇA OS QUATRO, que é a OUTRA metade e não a mesma:
+    #    `data-campo` é por onde a verdade CHEGA, `data-gesto` é por onde o dedo
+    #    dela SAI. Um chip com endereço de pintura e sem endereço de clique
+    #    mostra a máscara e não deixa trocá-la — e era exatamente o estado do P3
+    #    e do P4 até hoje. Os dois números saem da mesma conta de propósito: no
+    #    dia em que um cartão perder um dos dois lados, esta linha o diz.
+    cliques = corpo.count('data-gesto="mascara"')
+    exigir(cliques == len(MASCARAS) * len(MESA),
+           f"o clique da máscara não alcança os quatro lugares: esperava "
+           f"{len(MASCARAS) * len(MESA)} `data-gesto=\"mascara\"`, achei {cliques}")
     #    E A COLUNA ATENÇÃO PUBLICA AS SEIS LINHAS, com uma só acesa: a cena que
     #    ela aprovou tem UM aviso, e as outras cinco são endereço para quando a
     #    máquina dela tiver mais. Cobrar as duas coisas juntas é o que impede
