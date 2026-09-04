@@ -877,6 +877,51 @@
   .exame .txt{flex:0 1 auto;min-width:0}
   .exame .ignora{margin-left:auto}
 
+  /* ---- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026 ----
+     *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
+
+     O QUE ELA CURA, e a queixa é dela: o Check-up tinha cinco pílulas e nenhum
+     veredito. Para saber se está tudo certo era preciso ler as cinco e achar a
+     pior — e a segunda ordem de serviço desta bancada, que não cabe nas cinco,
+     não entrava nessa leitura de jeito nenhum. A janela estável responde em uma
+     linha desde sempre, e o carimbo do lado só diz QUANDO.
+
+     ELA MORA NO TOPO DA SEÇÃO e não dentro da coluna do exame: "no topo" é a
+     palavra dela, e a resposta que vale para as duas colunas — o exame à
+     esquerda e a ordem de serviço à direita — não pode ficar pendurada em uma
+     delas. São 11px de altura mais o vão, e é o preço declarado da decisão.
+
+     A COR VEM POR INTERRUPTOR, um por estado, exatamente como as cinco linhas
+     ganharam em 03/09: o alvo `classe` do piloto acende UMA classe por
+     elemento, então um nó só não tem como escolher entre quatro cores. Aqui os
+     QUATRO são interruptores — inclusive o `problema` —, porque não há pílula
+     com classe cravada a reaproveitar: a linha inteira nasce do produto.
+
+     O `~` LEVA A COR DO IRMÃO ao ponto e ao texto sem que nenhum dos dois
+     precise de um segundo `data-campo`, que o vocabulário de endereço não
+     permite. É o mesmo combinador de `.exame .est-ok.on ~ .selo`.
+
+     O ESTADO DE REPOUSO É O CINZA DE "não sei", e não o verde: enquanto o
+     produto não respondeu, a linha não pode afirmar que está tudo bem — é o F7
+     desta casa, o estado em que o produto não sabe se disfarçando do estado em
+     que está tudo certo. */
+  .veredito{display:flex;align-items:center;gap:9px;min-height:19px;font-size:12px;
+            font-weight:600;color:var(--texto-suave);margin-bottom:11px}
+  .veredito .vst{display:none}
+  .veredito .ponto{flex:0 0 8px;width:8px;height:8px;border-radius:50%;
+                   background:var(--comment)}
+  .veredito .vst-ok.on ~ .ponto{background:var(--green)}
+  .veredito .vst-warn.on ~ .ponto{background:var(--orange)}
+  .veredito .vst-info.on ~ .ponto{background:var(--comment)}
+  .veredito .vst-bad.on ~ .ponto{background:var(--red)}
+  .veredito .vst-ok.on ~ .txt{color:var(--green)}
+  .veredito .vst-warn.on ~ .txt{color:var(--orange)}
+  .veredito .vst-info.on ~ .txt{color:var(--texto-suave)}
+  /* O VERMELHO POR ÚLTIMO, e pela mesma razão do `.selo.grave`: um instante com
+     dois interruptores acesos não pode deixar o que está QUEBRADO com a cor do
+     que só podia estar melhor. */
+  .veredito .vst-bad.on ~ .txt{color:var(--red)}
+
   /* ---- a ordem de serviço: imperativo, receita e ganho ---- */
   .ordem{border:1px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
          padding:10px 12px}
@@ -1068,6 +1113,32 @@
   .btn.apagado{border-color:var(--border-forte);color:var(--texto-mudo);
                opacity:.55;cursor:help}
   .btn.apagado:hover{border-color:var(--border-forte);color:var(--texto-mudo)}
+  /* A TRAVA VIROU IRMÃ — 04/09/2026, e a razão é o vocabulário: UM `data-campo`
+     por nó. O botão tinha o dele gasto na CLASSE (`luz-trava`), e por isso o
+     `title` continuava sendo o do desenho — a dica dizia "este controle está no
+     cabo" com o controle no rádio, e ao contrário. Estava escrito ali mesmo,
+     como dívida: *"um segundo campo para o `title` pede outro elemento"*.
+
+     ELE É ESSE OUTRO ELEMENTO. O `<i class="ltrava">` invisível recebe a classe
+     e o botão fica com a DICA — que agora vem do produto inteira, com o aviso da
+     mesa suja e a razão do carimbo de nascimento juntos
+     (`a08_conexoes.dica_da_luz`). Zero pixel se move: a regra abaixo pinta o
+     mesmo `.btn.apagado` de cima, pelo irmão.
+
+     É O MESMO DESENHO dos `<i class="est">` das cinco linhas do exame, e pela
+     mesma razão. */
+  /* UMA LEITURA NO LUGAR DE UMA ESCOLHA — 04/09/2026, o escopo do botão físico
+     do microfone. Ela ocupa a MESMA fatia que o `<select>` ocupava (mesma
+     altura de linha, mesmo alinhamento), e a diferença é justamente a que se
+     quer: nada aqui parece clicável, porque não há o que clicar.
+
+     A GRAMÁTICA É A DA CASA para valor lido: peso normal, cor de texto, sem
+     moldura — é o que separa "isto é uma resposta" de "isto é um campo". */
+  .gc-corpo .leitura{font-size:11.5px;color:var(--texto-suave);white-space:nowrap;
+                     cursor:help}
+  .gc-corpo .ltrava{display:none}
+  .gc-corpo .ltrava.on ~ .btn{border-color:var(--border-forte);color:var(--texto-mudo);
+                              opacity:.55;cursor:help}
   /* o SVG real ganha a barra de luz acesa. A BARRA É PREENCHIDA, E NÃO
      CONTORNADA: estava `stroke:var(--luz)` com `stroke-width:1.2` numa forma de
      2×9,6px — metade do traço cai FORA da forma, e o que sobra dentro pinta
@@ -1103,6 +1174,29 @@
   .viz{display:flex;flex-direction:column;gap:4px;min-width:0}
   .viz .qual{font-size:10.5px;color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
              text-overflow:ellipsis}
+  /* A COLUNA "ONDE" — 04/09/2026, e ela é a que faltava para a linha do
+     Check-up ter endereço na mesa. O exame diz "dois rádios da bancada estão em
+     entradas vizinhas" e não diz QUAL; a janela estável põe o aviso ao lado do
+     rádio culpado, e é isto.
+
+     ELA NÃO CUSTA LINHA NOVA: o bloco `.viz` é uma coluna de 53px com o nome em
+     cima e o `<select>` embaixo, e o "onde" entra como terceira linha de 10,5px
+     — a mesma altura do nome. Quando não há aviso ele diz só o painel ("Direita",
+     "Entrada 7" quando ela desenhou a mesa), e quando há, o aviso vem colado.
+
+     O AMARELO SÓ ACENDE COM AVISO, e quem decide é o produto: o interruptor é
+     um `<i>` invisível irmão, com o alvo `classe` BOOLEANO — o valor que ele
+     recebe é a DICA de `_avisos_de_vizinhanca`, e o `ligado()` do piloto só
+     pergunta se ela existe. Rádio que ninguém acusou recebe `""`, a classe
+     apaga e a linha fica na cor de sempre. Nada aqui adivinha vizinhança.
+
+     POR QUE UM IRMÃO E NÃO A PRÓPRIA LINHA: o vocabulário é UM `data-campo` por
+     nó, e a linha já tem o dela (o texto). É o mesmo desenho dos `<i class="est">`
+     das cinco linhas do exame, e do `~` que leva a cor do irmão até elas. */
+  .viz .vaviso{display:none}
+  .viz .onde{font-size:10.5px;color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
+             text-overflow:ellipsis}
+  .viz .vaviso.on ~ .onde{color:var(--orange)}
   /* a sobra de altura das duas colunas do inventário cai ANTES da última fileira,
      nunca entre irmãos — `space-between` só empurra o buraco para o meio */
   .lado-e > .empurra,.lado-d > .empurra{margin-top:auto}
@@ -1968,6 +2062,19 @@
         <span class="conta" data-campo="examinado">Examinado há 3 minutos</span>
       </div>
       <div class="quadro-corpo">
+        <!-- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026:
+             *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
+
+             ELA FICA ACIMA DAS DUAS COLUNAS, e não dentro da do exame: a
+             resposta vale para as duas — os achados à esquerda e a ordem de
+             serviço à direita —, e pendurá-la em uma delas faria a pergunta
+             *"está tudo certo?"* ser respondida por metade da seção.
+
+             A FRASE E A COR NÃO SÃO DIGITADAS: saem de
+             `ordens_da_mesa.cabecalho()` e de `exame_da_mesa.veredito()` sobre
+             a cena declarada em `ESTADOS_DO_EXAME`, que são os mesmos dois
+             donos que `a08_conexoes._veredito_do_exame` chama na tela viva. -->
+        <div class="veredito"><i class="vst vst-ok" data-campo="veredito-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="vst vst-warn on" data-campo="veredito-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="vst vst-bad" data-campo="veredito-problema" data-hef-alvo="classe" data-hef-quando="problema"></i><i class="vst vst-info" data-campo="veredito-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i><span class="ponto"></span><span class="txt" data-campo="veredito">1 mudança recomendada</span></div>
         <div class="duas-colunas">
 
           <div class="lado-e">
@@ -2094,7 +2201,7 @@
               <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Sony <span class="pt">•</span> Player 1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
               <span class="gc-resumo">
                 <span title="A borda deste controle é a cor lida do aparelho.">Vê como <b>DualSense</b></span>
-                <span title="O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio USB do próprio aparelho — o PipeWire a publica sozinho (medido em 15/08/2026). Pelo cabo ele não custa turno de rádio nenhum.">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">pelo cabo <span class="pt">•</span> Placa do controle</span></span>
+                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio USB do próprio aparelho — o PipeWire a publica sozinho (medido em 15/08/2026). Pelo cabo ele não custa turno de rádio nenhum.">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">pelo cabo <span class="pt">•</span> Placa do controle</span></span>
                 <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">100%</b></span>
               </span>
               </label>
@@ -2402,9 +2509,9 @@
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg> Microfone e botões
-                  <span class="ajuda">?<span class="dica">Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, e a linha ao lado diz qual é.<br><br>Decide se o botão físico do microfone <b>deste controle</b> cala só ele ou o <b>computador inteiro</b> — inclusive a chamada de voz que estiver aberta fora do jogo.</span></span></span>
+                  <span class="ajuda">?<span class="dica">Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, e a linha ao lado diz qual é.<br><br>O botão físico do microfone faz o mesmo que o desta tela: liga o microfone <b>e</b> o canal dele. O que ele cala é <b>um ajuste da máquina</b>, não deste controle — a linha ao lado diz qual está valendo.</span></span></span>
                 <select class="pronto" title="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
-                <select class="pronto" title="O botão físico do microfone deste controle cala só ele ou o computador inteiro — inclusive a chamada de voz aberta fora do jogo." data-gesto="mic-escopo"><option selected>Só este controle</option><option>O computador inteiro</option></select>
+                <span class="leitura" data-campo="mic-escopo" title="O que o botão físico do microfone cala. É um ajuste da MÁQUINA, um só para todos os controles — o Hefesto o lê do serviço a cada tique.">O computador inteiro</span>
               </span>
               <span class="gc-bloco barra">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
@@ -2417,7 +2524,7 @@
                   <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">O teto da vibração <b>deste controle</b>. O global manda e o do controle sobrepõe: hoje este controle <b>segue o global</b>, e o motor recebe <b>100% da força</b>. Quem muda o global é o <b>Perfil de Bateria</b>, na aba <b>Sistema</b> — ele decide o que custa bateria, e esta aba mede o rádio. O degrau vem de <code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único recurso com teto real hoje.</span></span></span>
                 <select class="pronto" title="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
               </span>
-              <button class="btn apagado" data-gesto="luz-nao-acende" data-campo="luz-trava" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-quando="cabo" title="Só funciona com o controle no rádio: a cura é derrubar a conexão Bluetooth para você apertar PS. Este controle está no cabo, onde a barra de luz não depende de reconexão nenhuma.">A luz não acende</button>
+              <i class="ltrava on" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn apagado" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Só funciona com o controle no rádio: a cura é derrubar a conexão Bluetooth para você apertar PS. Este controle está no cabo, onde a barra de luz não depende de reconexão nenhuma.">A luz não acende</button>
             </div>
           </div>
           <div class="gc-item gc-p2" data-controle="p2">
@@ -2428,7 +2535,7 @@
               <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Sony <span class="pt">•</span> Player 2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
               <span class="gc-resumo">
                 <span title="A cor deste controle não foi lida — a borda fica neutra.">Vê como <b>Xbox 360</b></span>
-                <span title="O microfone deste controle chega <b>pelo rádio</b>: o DualSense não tem A2DP nem HFP, então o áudio vem em Opus dentro do relatório HID e o Hefesto publica uma fonte de captura do PipeWire com ele. Custa +16,3 turnos de rádio — o preço está na régua de Desempenho, e é <b>consequência</b>, não escolha: o microfone segue o transporte.">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">pelo rádio <span class="pt">•</span> Pela ponte</span></span>
+                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O microfone deste controle chega <b>pelo rádio</b>: o DualSense não tem A2DP nem HFP, então o áudio vem em Opus dentro do relatório HID e o Hefesto publica uma fonte de captura do PipeWire com ele. Com o microfone ligado, um controle no rádio troca 260,4 relatórios de entrada por segundo por 170,5 mais 106,2 quadros de áudio: 276,7 das 1600 fatias daquele adaptador. Quanto já está em uso está na seção "Conexões".">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">pelo rádio <span class="pt">•</span> Pela ponte</span></span>
                 <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">64%</b></span>
               </span>
               </label>
@@ -2736,9 +2843,9 @@
   <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg> Microfone e botões
-                  <span class="ajuda">?<span class="dica">Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, e a linha ao lado diz qual é.<br><br>Decide se o botão físico do microfone <b>deste controle</b> cala só ele ou o <b>computador inteiro</b> — inclusive a chamada de voz que estiver aberta fora do jogo.</span></span></span>
+                  <span class="ajuda">?<span class="dica">Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, e a linha ao lado diz qual é.<br><br>O botão físico do microfone faz o mesmo que o desta tela: liga o microfone <b>e</b> o canal dele. O que ele cala é <b>um ajuste da máquina</b>, não deste controle — a linha ao lado diz qual está valendo.</span></span></span>
                 <select class="pronto" title="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
-                <select class="pronto" title="O botão físico do microfone deste controle cala só ele ou o computador inteiro — inclusive a chamada de voz aberta fora do jogo." data-gesto="mic-escopo"><option selected>Só este controle</option><option>O computador inteiro</option></select>
+                <span class="leitura" data-campo="mic-escopo" title="O que o botão físico do microfone cala. É um ajuste da MÁQUINA, um só para todos os controles — o Hefesto o lê do serviço a cada tique.">O computador inteiro</span>
               </span>
               <span class="gc-bloco barra">
                 <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
@@ -2751,7 +2858,7 @@
                   <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">O teto da vibração <b>deste controle</b>. O global manda e o do controle sobrepõe: hoje este controle <b>segue o global</b>, e o motor recebe <b>100% da força</b>. Quem muda o global é o <b>Perfil de Bateria</b>, na aba <b>Sistema</b> — ele decide o que custa bateria, e esta aba mede o rádio. O degrau vem de <code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único recurso com teto real hoje.</span></span></span>
                 <select class="pronto" title="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
               </span>
-              <button class="btn" data-gesto="luz-nao-acende" data-campo="luz-trava" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-quando="cabo" title="Derruba este controle do rádio para você apertar PS e a barra de luz voltar a obedecer. Enquanto ele espera o PS, o mesmo botão vira “Cancelar”.">A luz não acende</button>
+              <i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Derruba este controle do rádio para você apertar PS e a barra de luz voltar a obedecer. Enquanto ele espera o PS, o mesmo botão vira “Cancelar”.">A luz não acende</button>
             </div>
           </div>
           <div class="gc-item gc-p3 fora" data-controle="p3">
@@ -2792,7 +2899,23 @@
 
           <div class="lado-e">
             <div class="linha-rot"><b style="color:var(--texto-suave)">Adaptadores Bluetooth</b></div>
-            <table class="tab">
+            <!-- A TABELA GANHOU ENDEREÇO — 04/09/2026, e ela era a peça mais
+                 lida desta aba sendo CENÁRIO. As duas linhas abaixo ("Sala /
+                 TP-Link UB500 / Entrada 3" e "Sem nome / Intel AX211 /
+                 Interno") são de uma bancada de exemplo; a mesa desta casa tem
+                 TRÊS adaptadores, os três `2357:0604`, e o BlueZ dá a cada um o
+                 nome que ela escreveu.
+
+                 O BLOCO É TROCADO INTEIRO, com o `<tr>` do cabeçalho junto, e é
+                 a mesma razão do `.mm-faces` e da régua do rádio: quantas
+                 linhas existem é o que a máquina dela responde, e não há
+                 endereço para uma `<tr>` que ainda não nasceu. Deixar o
+                 cabeçalho fora obrigaria a pintura a conhecer a estrutura do
+                 `<table>` do desenho.
+
+                 AS TRÊS COLUNAS TÊM TRÊS DONOS NO PRODUTO, e nenhum deles é
+                 este arquivo — ver `a08_conexoes._html_dos_adaptadores`. -->
+            <table class="tab" data-campo="adaptadores-tabela" data-hef-alvo="html">
               <tr><th>Nome</th><th>Adaptador</th><th>Onde está</th></tr>
               <tr><td><span class="renomeia" contenteditable="true" title="Dê um duplo clique para dar um nome seu a este adaptador — “Sala”, “Extra”. É por ele que o resto da tela passa a chamá-lo.">Sala</span></td>
                   <td class="mudo">TP-Link UB500</td>
@@ -2810,10 +2933,10 @@
           <div class="lado-d">
             <div class="linha-rot"><b style="color:var(--texto-suave)">Outros rádios na faixa de 2,4 GHz</b></div>
             <div class="vizinhos">
-              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Intel AX211 (banda 2,4)">Intel AX211 (banda 2,4)</span><select class="pronto" title="O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo para você escrever o nome." data-gesto="vizinho-o-que-e" data-v="0" data-campo="vizinho-tipo" data-hef-alvo="valor"><option data-campo="vizinho-pergunta">— O que é? —</option><option selected>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
-              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Logitech Unifying">Logitech Unifying</span><select class="pronto" title="O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo para você escrever o nome." data-gesto="vizinho-o-que-e" data-v="1" data-campo="vizinho-tipo" data-hef-alvo="valor"><option data-campo="vizinho-pergunta">— O que é? —</option><option>Wi-Fi</option><option selected>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
-              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="2.4G Wireless Rcvr">2.4G Wireless Rcvr</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e" data-v="2" data-campo="vizinho-tipo" data-hef-alvo="valor"><option selected data-campo="vizinho-pergunta">— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
-              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Unknown 0e8d:0608">Unknown 0e8d:0608</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e" data-v="3" data-campo="vizinho-tipo" data-hef-alvo="valor"><option selected data-campo="vizinho-pergunta">— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select></div>
+              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Intel AX211 (banda 2,4)">Intel AX211 (banda 2,4)</span><select class="pronto" title="O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo para você escrever o nome." data-gesto="vizinho-o-que-e" data-v="0" data-campo="vizinho-tipo" data-hef-alvo="valor"><option data-campo="vizinho-pergunta">— O que é? —</option><option selected>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select><i class="vaviso" data-campo="vizinho-onde-dica" data-hef-alvo="classe"></i><span class="onde" data-campo="vizinho-onde">—</span></div>
+              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Logitech Unifying">Logitech Unifying</span><select class="pronto" title="O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo para você escrever o nome." data-gesto="vizinho-o-que-e" data-v="1" data-campo="vizinho-tipo" data-hef-alvo="valor"><option data-campo="vizinho-pergunta">— O que é? —</option><option>Wi-Fi</option><option selected>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select><i class="vaviso" data-campo="vizinho-onde-dica" data-hef-alvo="classe"></i><span class="onde" data-campo="vizinho-onde">—</span></div>
+              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="2.4G Wireless Rcvr">2.4G Wireless Rcvr</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e" data-v="2" data-campo="vizinho-tipo" data-hef-alvo="valor"><option selected data-campo="vizinho-pergunta">— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select><i class="vaviso" data-campo="vizinho-onde-dica" data-hef-alvo="classe"></i><span class="onde" data-campo="vizinho-onde">—</span></div>
+              <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Unknown 0e8d:0608">Unknown 0e8d:0608</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e" data-v="3" data-campo="vizinho-tipo" data-hef-alvo="valor"><option selected data-campo="vizinho-pergunta">— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select><i class="vaviso" data-campo="vizinho-onde-dica" data-hef-alvo="classe"></i><span class="onde" data-campo="vizinho-onde">—</span></div>
             </div>
             <div class="acoes empurra">
               <a class="btn" href="#mapear-entrada-a-entrada" title="Um toque por aparelho e o Hefesto aprende em que entrada cada um está.">Mapear Entrada a Entrada</a>

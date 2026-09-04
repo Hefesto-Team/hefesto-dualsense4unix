@@ -181,7 +181,8 @@ class TestOInterruptorEstaNaTela:
     def test_no_cabo_o_interruptor_esta_aceso_e_a_dica_so_informa(self) -> None:
         """A queixa 15 dela, em forma de régua — 04/09/2026.
 
-        *"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*  <!-- noqa-acento: citação literal dela -->
+        <!-- noqa-acento: citação literal dela -->
+        *"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*
 
         O interruptor continua sempre visível; o que mudou é que ele **acende
         nos dois transportes**. E a dica do cabo deixa de RECUSAR: ela diz por
@@ -222,7 +223,7 @@ class TestOInterruptorEstaNaTela:
 
         **O PAR MUDOU EM 04/09/2026.** Era *"no cabo não FAZ FALTA, sem endereço
         não TEM ONDE ser guardada"*; o do cabo caiu com a D-12. O par que sobrou
-        é **sem canal** × **sem endereço**, e cada um continua com a frase dele.
+        é **sem canal** vs. **sem endereço**, e cada um continua com a frase dele.
         """
         dados = _dados(endereco="")
         assert pode_ligar_o_mic(dados) is False

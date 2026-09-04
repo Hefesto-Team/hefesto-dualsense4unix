@@ -436,8 +436,9 @@ class EsperaPeloPS:
 #    desligar volta a "não sei" em vez de gravar um `false`;
 # 3. **sempre visível, e acionável nos DOIS transportes** — REESCRITA em
 #    04/09/2026 (D-12). Ela dizia *"só acionável no rádio"*, e a queixa 15 dela
+#    <!-- noqa-acento: citação literal dela -->
 #    derrubou a regra com uma pergunta: *"esse aviso nao devia aparecer pq era
-#    pra funcionar em ambos ne"*. O CSV desta casa já dizia o mesmo — <!-- noqa-acento: citação literal dela -->
+#    pra funcionar em ambos ne"*. O CSV desta casa já dizia o mesmo —
 #    `audio.microfone` tem `cabo_aciona=sim` e `radio_aciona=parcial`
 #    (`docs/data/mapa-controles.csv`): quem é PARCIAL é o rádio. O que "não vale
 #    no cabo" nunca foi a feature — é uma IMPLEMENTAÇÃO dela, a
@@ -608,7 +609,7 @@ def dica_do_microfone(dados: Any) -> str:
     cabo não FAZ FALTA, sem endereço não TEM ONDE ser guardada"*; o do cabo caiu
     com a D-12 — no cabo o interruptor está ACESO, e o que a dica faz ali é
     INFORMAR por onde o canal vem, não recusar. O par que sobrou é **não tem
-    canal** × **não tem onde guardar**, e cada um continua com a frase dele:
+    canal** e **não tem onde guardar**, e cada um continua com a frase dele:
     responder aos dois com uma só mandaria a pessoa procurar endereço onde o
     problema é o aparelho.
 
