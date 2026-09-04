@@ -922,7 +922,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # vazio, e daí em diante "não sei" é indistinguível de "solto".
         # Medido em 02/09/2026, com os dois controles dela ligados: só o
         # `is_primary` traz `inputs`; o outro vem `None`
-        # (`daemon/ipc_handlers.py:3379-3383`).
+        # (`daemon/ipc_handlers.py:3513-3516`).
         tem_leitor = isinstance(c.get("inputs"), dict)
         e = c.get("inputs") or {}
         a = c.get("audio") or {}

@@ -128,7 +128,7 @@ SEM_FONTE: dict[str, str] = {
     "As quatro colunas mostram o MESMO valor porque é o que existe. "
     "Fecha: MIGRA-VIBRACAO-04.",
     "trava:por-controle": "A trava é UMA para a mesa — `daemon_cfg.rumble_active` "
-    "mais `rumble_active_uniq` (`daemon/ipc_handlers.py:4214-4215`). Quatro "
+    "mais `rumble_active_uniq` (`daemon/ipc_handlers.py:4561-4562`). Quatro "
     "'Parar' sobre uma trava só: parar o P2 apaga a vibração do P1. "
     "Fecha: MIGRA-VIBRACAO-05.",
     "estado:da-vibracao": "O produto de hoje tem uma LINHA DE ESTADO da vibração e "

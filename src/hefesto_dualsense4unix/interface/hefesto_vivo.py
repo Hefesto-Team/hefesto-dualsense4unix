@@ -675,7 +675,7 @@ BOOTSTRAP = r"""
       // tinha catorze nomes, escritos à mão, e os gestos da aba Conexões leem
       // `caminho`, `entrada` e `face` — NENHUM dos três estava nela. O botão
       // "escolher aparelho" traz `data-caminho` (o pacote o gera em
-      // `a08_conexoes.py:541`), as entradas do gabinete trazem `data-entrada`
+      // `a08_conexoes.py:1340`), as entradas do gabinete trazem `data-entrada`
       // no HTML publicado, e o clique chegava ao Python sem eles. Resultado:
       // SEIS gestos recusavam dizendo *"o clique não disse qual aparelho"* — e
       // recusavam para ELA também, não só para a régua. O diagnóstico que

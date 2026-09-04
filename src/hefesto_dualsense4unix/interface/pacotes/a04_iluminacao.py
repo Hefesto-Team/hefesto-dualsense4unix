@@ -628,7 +628,7 @@ def dica_da_luz(nome: str, via: str, recado: str,
     controle, exatamente as chaves de
     `daemon/ipc_handlers._enrich_controllers_per_controller` — `lightbar_rgb`,
     `lightbar_on`, `lightbar_source`, `player_slot`, `inputs`… — e nenhum campo
-    do desejado; `interface/aba02.py:881` já dizia isso com todas as letras
+    do desejado; `interface/aba02.py:943` já dizia isso com todas as letras
     (*"publica o ``player_slot`` e NÃO publica ``player_leds``"*). E o override
     é justamente onde a janela GTK escreve quando ela aplica um desenho:
     `lightbar_actions._enviar_player_leds` manda `player_leds_set_detalhado(…,
@@ -2010,7 +2010,7 @@ def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     automático nesse caso é deixar o jogo escolher."* Não é devolver a cor do
     número do jogador — é o Hefesto soltar o claim da barra.
 
-    `lightbar.reset` é exatamente isso, e o `ipc_handlers.py:4159` diz com
+    `lightbar.reset` é exatamente isso, e o `ipc_handlers.py:4422` diz com
     todas as letras: *"o 0x08 devolve o claim da lightbar ao host"*. O nome do
     método engana — o docstring dele começa chamando-o de INSTRUMENTO de
     medição — e foi por isso que eu quase o troquei por outra coisa. **O nome do
