@@ -1020,10 +1020,48 @@ _METODO_DO_GESTO = {
 #: entre não provar o seguro ou estragar o trabalho dela.
 PERIGOSOS = {
     ("09-sistema.html", "desligar"), ("09-sistema.html", "reiniciar"),
-    ("09-sistema.html", "restaurar-de-fabrica"), ("09-sistema.html", "refazer-proton"),
+    # `restaurar-de-fabrica` NÃO EXISTE MAIS — o gesto desta página chama-se
+    # `refazer-proton` desde que a aba nasceu, e a entrada velha protegia NADA.
+    # Achado pela guarda `test_a_lista_nao_protege_gesto_que_nao_existe`, que
+    # existe porque uma lista lida só para PULAR nunca acusa o próprio erro de
+    # digitação. ("09-sistema.html", "refazer-proton"),
     ("09-sistema.html", "autostart"),
     ("10-perfis.html", "remover"), ("10-perfis.html", "novo"),
     ("10-perfis.html", "voltar-a-de-ontem"), ("10-perfis.html", "duplicar"),
+    # OS DOIS QUE A LEVA DE 03/09 ENSINOU A ESCREVER — e ficaram de fora dela.
+    # Achado por um CONFERENTE ADVERSÁRIO, que rodou a régua contra a lista real
+    # e imprimiu o que ela faria:
+    #
+    #     SERÃO CLICADOS (8): … editor.estilo … editor.prioridade
+    #     PULADOS        (9): novo remover editor.nome … salvar
+    #
+    # O seletor do clique sintético cobre `[data-hef-gesto]`, então a régua ACHA
+    # e CLICA os dois — e os dois passaram a gravar no perfil DELA nesta mesma
+    # leva. Uma régua que prova saber clicar não pode escolher o estilo de jogo
+    # dela nem mudar a prioridade de um perfil pelo caminho.
+    #
+    # É a MESMA razão do `("*", "salvar")` acima, e a terceira vez que a lista
+    # fica para trás de uma cura: quem ensinar um gesto a escrever no disco
+    # acrescenta a linha aqui NO MESMO COMMIT.
+    ("10-perfis.html", "editor.prioridade"),
+    ("10-perfis.html", "editor.estilo"),
+    # E MAIS QUATRO, que a régua nova achou — inclusive um que EU escrevi hoje.
+    # `test_todo_gesto_que_grava_esta_protegido` lê a ÁRVORE de cada gesto e
+    # pergunta se ele chama uma porta de escrita. Os quatro abaixo gravam VALOR
+    # NOVO, e por isso entram:
+    #
+    #   01-jogar·mascara            grava a máscara DAQUELE aparelho no
+    #                               `external_mask` — e trocar a máscara
+    #                               DERRUBA E RECRIA o gamepad virtual, o que
+    #                               num jogo aberto reordena os jogadores
+    #   06-navegacao·guardar-…      `gravar_e_reaplicar`: grava o perfil E o
+    #   06-navegacao·padrao-…       manda inteiro ao daemon — o preço medido em
+    #   08-conexoes·teto-da-vibracao 03/09 é a barra de luz que ela DESLIGOU
+    #                               acender de novo
+    ("01-jogar.html", "mascara"),
+    ("06-navegacao.html", "guardar-definicoes"),
+    ("06-navegacao.html", "padrao-definicoes"),
+    ("08-conexoes.html", "teto-da-vibracao"),
     # OS CAMPOS DO EDITOR GRAVAM NO DISCO DELA, e o `editor.nome` RENOMEIA o
     # perfil escolhido. Uma régua que os clicasse com o valor que estivesse na
     # tela renomearia um perfil dela para provar que sabe digitar — e o `nome` é
