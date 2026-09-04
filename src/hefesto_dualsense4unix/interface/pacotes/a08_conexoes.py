@@ -263,6 +263,116 @@ def _a_pergunta() -> str:
         return ""
 
 
+#: O KERNEL E A LISTA DELA FALAM LÍNGUAS DIFERENTES — e ela decidiu o que fazer
+#: com isso em 03/09/2026, perguntada se a "Câmera" do kernel e a "Webcam" da
+#: lista dela são a mesma coisa:
+#:
+#:     "Depende do aparelho. Nem toda 'Câmera' do kernel é a webcam que você
+#:      quer marcar. A tela pode SUGERIR e deixar você confirmar, em vez de
+#:      decidir sozinha."
+#:
+#: Então esta tabela NÃO é uma tradução, e a diferença é o ponto inteiro: o que
+#: ela produz vira uma PERGUNTA na tela (`— Webcam? —`), nunca uma resposta.
+#: Nada chega ao `maquina.json` enquanto ela não tocar.
+#:
+#: SÓ AS EQUIVALÊNCIAS QUE UMA PESSOA FARIA SEM PENSAR entram aqui. As palavras
+#: que o kernel dá e que não têm par na lista dela — "Rede", "Impressora",
+#: "Armazenamento", "Não identificado" — não viram sugestão nenhuma: a linha
+#: continua em "— O que é? —", que é a verdade. Sugerir "Wi-Fi" a partir da
+#: classe `02` (Rede) seria chutar entre o dongle Wi-Fi e o adaptador Ethernet,
+#: e é exatamente o número plausível e falso que esta aba não escreve.
+#:
+#: "Teclado" e "Mouse" NÃO ESTÃO AQUI de propósito: o kernel os nomeia com a
+#: MESMA palavra da lista dela (`censo_do_barramento._especie`, pela tripla
+#: `03/01/01` e `03/01/02`), e o casamento exato é feito contra
+#: `_tipos_de_radio()` — o dono da lista — em vez de repetido nesta tabela.
+_SUGESTAO_DO_KERNEL: dict[str, str] = {
+    "Câmera": "Webcam",
+    "Áudio": "Caixa de som",
+}
+
+
+def _lido_do_kernel(no: str) -> str:
+    """A palavra do KERNEL para este nó do sysfs — `""` quando ele não disse.
+
+    PERGUNTA AO DONO e não digita: quem classifica é
+    `integrations/censo_do_barramento`, pela tripla `bInterfaceClass /
+    SubClass / Protocol`, e `GRAU_LIDO` é a declaração dele de que a palavra
+    veio do kernel e não de um chute. Grau `desconhecido` — a classe `ff`, em
+    que o fabricante declinou de classificar — devolve `""`, e é aí que a
+    pergunta continua sendo a única resposta honesta. É o mesmo degrau que a
+    janela estável já consultava (`secao_mesa._celula_do_que_e`).
+    """
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.integrations.censo_do_barramento import GRAU_LIDO
+    except Exception:
+        return ""
+    censo = _censo()
+    aparelho = censo.aparelho(no) if censo is not None and no else None
+    if aparelho is None or getattr(aparelho, "grau", "") != GRAU_LIDO:
+        return ""
+    return str(getattr(aparelho, "especie", "") or "")
+
+
+def _sugestao_do_vizinho(no: str, rotulos: Any) -> str:
+    """A palavra da LISTA DELA que o kernel sugere para este rádio, ou `""`.
+
+    `rotulos` é o `{rótulo: id}` de :func:`_tipos_de_radio` — o dono da lista.
+    Uma sugestão fora dela seria pior que nenhuma: o `<select>` só aceita o que
+    OFERECE (`hefesto_vivo.escrever`, alvo `valor`, o teste `o.text === t`), e
+    o pintor descartaria a escrita **calado**.
+    """
+    lido = _lido_do_kernel(no)
+    if not lido:
+        return ""
+    if lido in rotulos:
+        return lido
+    equivale = _SUGESTAO_DO_KERNEL.get(lido, "")
+    return equivale if equivale in rotulos else ""
+
+
+def _moldura_da_pergunta(pergunta: str) -> tuple[str, str]:
+    """O «— … —» da pergunta, LIDO dela e não digitado.
+
+    `"— O que é? —"` devolve `("— ", "? —")`. Se a pergunta um dia perder a
+    moldura, a sugestão a perde junto — em vez de ficar com uma moldura que a
+    tela não usa mais, que é a régua que digita e envelhece na primeira melhora.
+    """
+    inicio = 0
+    while inicio < len(pergunta) and not pergunta[inicio].isalnum():
+        inicio += 1
+    fim = len(pergunta)
+    while fim > inicio and not pergunta[fim - 1].isalnum():
+        fim -= 1
+    return pergunta[:inicio], pergunta[fim:]
+
+
+def _pergunta_sugerida(palavra: str, pergunta: str) -> str:
+    """`"— Teclado? —"` — a sugestão vestida de PERGUNTA, nunca de resposta.
+
+    É a marca visível de que aquilo não é resposta dela: a mesma moldura e o
+    mesmo ponto de interrogação da pergunta que já estava ali. Ela confirma
+    escolhendo "Teclado" na mesma caixa, e só então o `maquina.json` recebe.
+    """
+    abre, fecha = _moldura_da_pergunta(pergunta)
+    return f"{abre}{palavra}{fecha}"
+
+
+def _perguntas_sugeridas() -> frozenset[str]:
+    """Toda pergunta que esta tela pode fazer com uma sugestão dentro.
+
+    PERGUNTA AOS DOIS DONOS — a lista de rótulos é `_TIPOS_DE_RADIO` e a
+    moldura é a própria pergunta —, e por isso não envelhece no dia em que a
+    lista ganhar uma opção. Digitá-las aqui faria o clique na sugestão nova cair
+    no `raise ValueError` do gesto, que nesta aba é recusa **calada**
+    (`hefesto_vivo._recusou_dizendo` só leva `RuntimeError` à tela).
+    """
+    pergunta = _a_pergunta()
+    para_id, _ = _tipos_de_radio()
+    return frozenset(_pergunta_sugerida(r, pergunta) for r in para_id)
+
+
 def _mesa_declarada(declaracao: Any) -> dict[str, Any]:
     """As duas respostas que barramento nenhum dá: a altura e a visada.
 
@@ -1860,17 +1970,51 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # a primeira leva sem dono.
     radios = tuple(getattr(_mesa_do_radio(), "radios", ()) or ())
     _VIZINHOS = tuple(_chave_do_radio(r) for r in radios)
-    _, rotulo_do_tipo = _tipos_de_radio()
+    para_id, rotulo_do_tipo = _tipos_de_radio()
     pergunta = _a_pergunta()
     declarados = _radios_declarados(declaracao)
-    vizinho_nome, vizinho_tipo = [], []
-    for chave in _VIZINHOS:
+    vizinho_nome, vizinho_tipo, vizinho_pergunta = [], [], []
+    # `strict=True` E NÃO POR ESTILO: as duas saem do MESMO `radios` duas
+    # linhas acima, então um comprimento diferente aqui quer dizer que alguém
+    # passou a montar `_VIZINHOS` noutro lugar — e o `zip` frouxo apagaria os
+    # rádios do fim em silêncio, que é o pior desfecho numa lista que endereça
+    # o clique dela por POSIÇÃO.
+    for chave, radio in zip(_VIZINHOS, radios, strict=True):
         # `vid:pid` É O NOME QUE O PRODUTO TEM. A GUI estável escreve o mesmo
         # (`gui/aba_conexoes.html_dos_vizinhos`), e a tela já explica por quê:
         # *"o sistema entrega o nome cru e não sabe o que é"*. Um nome bonito
         # aqui seria adivinhação a partir do vid.
         vizinho_nome.append(chave)
-        vizinho_tipo.append(rotulo_do_tipo.get(declarados.get(chave, ""), pergunta))
+        # A TELA SUGERE, ELA CONFIRMA — decisão dela de 03/09/2026, e a razão
+        # está em :data:`_SUGESTAO_DO_KERNEL`. Enquanto ela não respondeu, a
+        # primeira opção do `<select>` deixa de ser "— O que é? —" seco e passa
+        # a carregar o que o kernel LEU, ainda como pergunta: "— Teclado? —".
+        #
+        # A RESPOSTA DELA VENCE O KERNEL, SEMPRE, e é a mesma precedência da
+        # janela estável (`secao_mesa._celula_do_que_e`): declarado primeiro, o
+        # que o kernel leu depois, e a pergunta seca quando ninguém sabe. Com
+        # ela respondida a primeira opção volta a ser a pergunta — a sugestão
+        # não pode ficar por cima do que ela disse.
+        respondido = rotulo_do_tipo.get(declarados.get(chave, ""), "")
+        sugerida = ("" if respondido
+                    else _sugestao_do_vizinho(str(getattr(radio, "no", "")), para_id))
+        primeira = _pergunta_sugerida(sugerida, pergunta) if sugerida else pergunta
+        vizinho_pergunta.append(primeira)
+        vizinho_tipo.append(respondido or primeira)
+    # O QUE NÃO CABE AQUI, E FICA NOMEADO: a borda CIANO de "o produto não sabe
+    # o que é isto" (`select.pronto.pergunta`) está CRAVADA no desenho — dois
+    # dos quatro blocos, para sempre — e nunca é repintada. Na mesa desta casa
+    # os QUATRO rádios estão sem resposta e só DOIS aparecem em ciano: a tela
+    # afirma conhecer dois rádios sobre os quais o produto nada sabe. É a mesma
+    # família do `sala-altura` de 03/09.
+    #
+    # A CURA CUSTA UMA REGRA DE CSS — mover a classe do `<select>` para a
+    # `.viz` que o embrulha, para o alvo `classe` do pintor alcançá-la, e
+    # trocar o seletor por `.viz.pergunta select.pronto`. Zero pixel se move, e
+    # ainda assim o `check_o_desenho_aprovado` a lê como DESENHO (o `INVISIVEIS`
+    # apaga endereço, não classe nem folha de estilo) — logo é decisão dela, e
+    # não se faz por conta própria. O texto da opção já diz o essencial sem ela:
+    # `— Teclado? —` não se confunde com `Teclado`.
 
     # O TETO DA VIBRAÇÃO TEM TRÊS FONTES, E DUAS DELAS SE CHAMAVAM "O GLOBAL"
     # — corrigido em 01/09/2026, e foi o defeito que segurou esta leva:
@@ -2083,6 +2227,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # decisão, e também já pintado.
         "examinado": _carimbo_do_exame(),
         "vizinho-nome": vizinho_nome,
+        # A ORDEM DESTES TRÊS IMPORTA, e é a única coisa neste dicionário em
+        # que ela importa: `vizinho-pergunta` reescreve o TEXTO da primeira
+        # `<option>`, e o alvo `valor` do `<select>` logo abaixo só aceita o que
+        # a caixa OFERECE (`hefesto_vivo.escrever`: `o.text === t`). Emitido
+        # depois, a escrita do valor cairia num texto que ainda não existe e
+        # seria descartada calada — a tela pegaria a sugestão só no tique
+        # seguinte. `Object.entries` preserva a ordem de inserção nos dois
+        # lados, e é dela que a pintura de UM tique depende.
+        "vizinho-pergunta": vizinho_pergunta,
         "vizinho-tipo": vizinho_tipo,
         "exame": itens,
         "achados": len(itens),
@@ -2118,7 +2271,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # Os dois novos POR CONTROLE (`mic-caminho`, `luz-trava`) não precisam
         # de termo: eles entram pelo `sum(len(v) …)` das colunas.
         "cobertura": {"pintados": 4 + len(confissao) + len(itens) * 4 + 1 + len(adap)
-                      + len(vizinho_nome) * 2
+                      + len(vizinho_nome) * 3
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO) + len(sem_dono)},
     }
@@ -2711,12 +2864,22 @@ def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     "— O que é? —" E "Não sei" VIRAM `None`, e é a mesma resposta: enquanto ela
     não responder, o produto NÃO sabe, e a tela diz isso em vez de chutar.
+
+    **E A SUGESTÃO DO KERNEL TAMBÉM VIRA `None`** — 03/09/2026. Desde que a
+    primeira opção passou a carregar o que o kernel leu (`— Teclado? —`, ver
+    :data:`_SUGESTAO_DO_KERNEL`), ela é escolhível como qualquer outra, e
+    escolhê-la quer dizer *"continuo sem responder"*. Sem esta linha o clique
+    cairia no `raise` abaixo, que nesta aba é recusa **calada** — a mesma forma
+    dos quatro gestos que recusam sem uma palavra (`ValueError` não vai para a
+    tela). E, mais grave: aceitá-la como resposta gravaria no `maquina.json` uma
+    palavra que ela nunca disse, que é justamente o que a sugestão existe para
+    não fazer.
     """
     posicao = _slot(o, len(_VIZINHOS), "vizinho-o-que-e")
     chave = _VIZINHOS[posicao]
     rotulo = str(o.get("valor") or o.get("rotulo") or "").strip()
     para_id, _ = _tipos_de_radio()
-    if rotulo in ("", _a_pergunta()):
+    if rotulo in ("", _a_pergunta()) or rotulo in _perguntas_sugeridas():
         tipo = None
     elif rotulo in para_id:
         tipo = para_id[rotulo]
