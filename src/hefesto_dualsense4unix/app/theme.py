@@ -172,6 +172,122 @@ def escalar_nome_da_fonte(nome: str, delta: int) -> str:
 #: é o ponto inteiro desta peça.
 _CHAVE_DO_TEMA = ("org.gnome.desktop.interface", "gtk-theme")
 
+#: Onde o GTK guarda de que lado ficam fechar/maximizar/minimizar.
+#:
+#: O que vem ANTES dos dois-pontos vai para a esquerda; o que vem depois, para a
+#: direita. ``:minimize,maximize,close`` é o lado direito, e é o que o COSMIC faz
+#: nas janelas dele.
+_CHAVE_DOS_BOTOES = ("org.gnome.desktop.wm.preferences", "button-layout")
+
+#: DE QUE LADO O COSMIC PÕE OS BOTÕES, e ele não tem chave a perguntar.
+#:
+#: Medido na máquina dela em 04/09/2026: o compositor decora as janelas dele com
+#: os três botões à DIREITA e não expõe nenhuma configuração para o lado —
+#: ``~/.config/cosmic/`` inteiro não tem uma linha com ``minimize``.
+LADO_DO_COSMIC = ":minimize,maximize,close"
+
+
+def sessao_e_cosmic() -> bool:
+    """Esta sessão é COSMIC? Lê o ambiente a cada chamada, nunca na importação.
+
+    Um teste que troca a variável no meio da sessão precisa ser obedecido.
+    """
+    import os
+
+    for chave in ("XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP", "DESKTOP_SESSION"):
+        if "cosmic" in (os.environ.get(chave) or "").lower():
+            return True
+    return False
+
+
+def lado_dos_botoes_na_sessao() -> str:
+    """O que o ``button-layout`` do dconf responde, ou ``""`` se não der para saber.
+
+    Ela existe para o RELATO e para a mordida: é a resposta que a sessão dá, e
+    que — medida — **não serve** para curar a queixa. Ver
+    :func:`barra_que_o_sistema_usa`.
+    """
+    try:
+        from gi.repository import Gio
+    except ImportError:  # pragma: no cover — gi sem Gio não existe na prática
+        return ""
+    esquema, chave = _CHAVE_DOS_BOTOES
+    try:
+        fonte = Gio.SettingsSchemaSource.get_default()
+        if fonte is None or fonte.lookup(esquema, True) is None:
+            return ""  # o esquema não está instalado — não há o que perguntar
+        return str(Gio.Settings.new(esquema).get_string(chave) or "")
+    except Exception as exc:  # amplo de propósito: nunca impedir a janela de abrir
+        logger.warning("botoes_da_sessao_indisponiveis", erro=str(exc))
+        return ""
+
+
+def barra_que_o_sistema_usa() -> str:
+    """De que lado ESTA sessão põe fechar/maximizar/minimizar. ``""`` = não mexer.
+
+    **A QUEIXA 2 DELA, 04/09/2026:** *"a barra de navegação fechar, maximizar
+    diminuir não é a mesma do sistema"*. Decidida no mesmo dia — opção ``1-a``,
+    **só a janela do Hefesto**: nenhuma linha na configuração dela.
+
+    A PREMISSA DA SPRINT CAIU NA MEDIÇÃO, e o número está aqui porque quem vier
+    depois vai querer refazê-lo. A `BARRA-DA-JANELA-01` mandava *"ler
+    ``org.gnome.desktop.wm.preferences button-layout``; se a sessão não disser,
+    cair em ``:minimize,maximize,close``"* — supondo que só o ``settings.ini``
+    dela carregasse o valor errado e o dconf estivesse mudo. Medido na máquina
+    dela em 04/09/2026:
+
+    ==========================================  ================================
+    a fonte                                     o que ela responde
+    ==========================================  ================================
+    ``~/.config/gtk-3.0/settings.ini``          ``close,maximize,minimize:``
+    ``gsettings … wm.preferences button-layout``  ``'close,maximize,minimize:'``
+    as janelas do COSMIC, na tela               os três botões à **direita**
+    ==========================================  ================================
+
+    **As duas fontes dizem a mesma coisa, e as duas dizem ESQUERDA** — que é
+    exatamente a queixa. Perguntar à sessão devolve a resposta que produziu o
+    defeito: a cura escrita como a sprint mandava passaria no teste com um dublê
+    mudo e deixaria a janela dela igual. É o padrão que esta casa nomeou em
+    04/09 — *quando o instrumento e o aparelho discordam, o aparelho ganha*.
+
+    **QUEM É O DONO DA RESPOSTA CERTA É O COMPOSITOR**, e ele não tem chave: o
+    COSMIC crava os botões à direita e ``~/.config/cosmic/`` não guarda nada
+    sobre lado. Então o produto usa a constante do compositor **e só sob COSMIC**
+    — fora dele o GTK já está certo, e mexer seria o aplicativo passando por cima
+    de uma escolha que ninguém contestou.
+
+    O ``lado_dos_botoes_na_sessao`` continua existindo e continua sendo lido:
+    ele é o que a mordida arranca, e o que o relato imprime.
+    """
+    if not sessao_e_cosmic():
+        return ""
+    return LADO_DO_COSMIC
+
+
+def adotar_a_barra_da_sessao() -> str:
+    """Põe os botões da janela do lado do sistema. Devolve o layout adotado, ou ``""``.
+
+    Escreve ``gtk-decoration-layout`` **dentro deste processo**, ao lado de onde
+    o :func:`adotar_o_tema_da_sessao` já pergunta a sessão pelo tema. Nenhum
+    outro GTK muda, e a configuração dela não é tocada — é a decisão ``1-a``.
+    """
+    layout = barra_que_o_sistema_usa()
+    if not layout:
+        return ""
+    settings = Gtk.Settings.get_default()
+    if settings is None:
+        return ""
+    try:
+        if (settings.get_property("gtk-decoration-layout") or "") == layout:
+            return ""  # já está do lado certo — nada a fazer
+        settings.set_property("gtk-decoration-layout", layout)
+    except (TypeError, ValueError) as exc:
+        logger.warning("barra_da_sessao_nao_aplicavel", layout=layout, erro=str(exc))
+        return ""
+    logger.info("barra_da_sessao_adotada", layout=layout,
+                sessao_dizia=lado_dos_botoes_na_sessao())
+    return layout
+
 
 def tema_escolhido_na_sessao() -> str:
     """O nome do tema GTK que a sessão escolheu, ou ``""`` se não der para saber.
