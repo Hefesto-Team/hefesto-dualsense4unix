@@ -432,6 +432,24 @@ class JanelaDaAba:
         else:
             self.janela = Gtk.Window(title=f"{titulo} — {subtitulo}" if subtitulo else titulo)
             self.janela.set_default_size(*(tamanho or TAMANHO_NA_TELA))
+            # O PISO DA JANELA, e ele é o desenho inteiro. `set_size_request` é
+            # MÍNIMO, nunca máximo (armadilha que o COMO-OLHAR-A-TELA já lista):
+            # a janela continua crescendo, e deixa de encolher até engolir o que
+            # ela veio ver.
+            #
+            # SEM ELE O CSS É A ÚNICA DEFESA, E ELE PERDE: `.janela` tem
+            # `max-width:100%` com `overflow:hidden` e colunas em px, então
+            # abaixo de 1212 o conteúdo não corta nem rola — **some**. Nos 940 px
+            # da foto dela, 272 px do desenho desapareciam sem afordância.
+            #
+            # ESTA LINHA ERA UMA PROMESSA POR ESCRITO E NÃO EXISTIA. O comentário
+            # de `TAMANHO_NA_TELA` dizia *"por isso a janela também ganhou um
+            # MÍNIMO (o `set_size_request` lá embaixo)"* e `grep` no arquivo
+            # devolvia só aquela frase — achado da régua de janela estreita, em
+            # 04/09/2026, no mesmo dia em que a frase foi escrita. Comentário que
+            # descreve código inexistente é pior que comentário nenhum: ele faz a
+            # próxima pessoa parar de procurar.
+            self.janela.set_size_request(LARGURA_DO_DESENHO, ALTURA_DO_DESENHO + ALTURA_DA_BARRA)
             # SEM A HeaderBar OS BOTÕES SAEM DO LADO ERRADO NO COSMIC. Não é
             # enfeite: a barra de título do sistema não segue a decoração do
             # tema, e a janela nasce com fechar/minimizar espelhados.
