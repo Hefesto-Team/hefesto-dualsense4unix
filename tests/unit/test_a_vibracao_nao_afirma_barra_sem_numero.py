@@ -10,9 +10,16 @@ comprimento primeiro.
 **MEDIDO NO DOM VIVO em 03/09/2026**, com a mesa dela (um DualSense White no
 cabo), pela ``scripts/ensaios/a_coluna_sem_controle_da_vibracao.py``::
 
-    lugar  identidade          mult/forca-pct   motor-e/motor-e-pct  motor-d/…
-    p1     P1 · White · USB      100%/66.7%          —/0%                —/0%
-    p2     —                       —/66.7%           —/47.1%             —/47.1%
+    lugar  identidade          mult/mult-pos    motor-e/motor-e-pct  motor-d/…
+    p1     P1 · White · USB      100%/100            —/0%                —/0%
+    p2     —                       —/                —/47.1%             —/47.1%
+
+**A COLUNA DO MEIO MUDOU DE CONTRATO EM 03/09/2026**, decisão dela: a linha do
+multiplicador virou um ``<input type=range>``, e o que o pintor escreve nela
+deixou de ser a LARGURA (``forca-pct``, uma fração de 0 a 100) e passou a ser a
+POSIÇÃO (``mult-pos``, o número de 0 ao teto). A medição acima está reescrita
+com os nomes de hoje; o que ela mediu — o par número/trilho contando a mesma
+história — não mudou.
 
 A coluna do controle DELA está honesta: os motores não sabem, e os trilhos vão
 a zero. É essa metade que este arquivo guarda, e ela é do pacote desta aba —
@@ -30,9 +37,15 @@ compartilhado, não nesta aba, e está no relato da frente.
 
 AS MORDIDAS, todas com ``cp`` para devolver — nunca ``git checkout --``:
 
-* em ``a05_vibracao.pacote``, troque ``str(pct.get("w", "")).rstrip("%")`` por
+* em ``a05_vibracao.pacote``, troque ``str(m.get("w", "")).rstrip("%")`` por
   ``""`` → ``test_todo_trilho_desta_aba_sai_com_numero`` reprova dizendo que
-  ``forca-pct`` não é número;
+  ``motor-e-pct`` não é número;
+* apague a linha do ``forca-pct`` do pacote (a ponte de publicação) → o mesmo
+  caso reprova, e é o defeito que ELE já teve na tela dela: o trilho do
+  multiplicador congelado na largura do mockup;
+* emita ``pct["w"]`` em ``mult-pos`` →
+  ``test_a_posicao_do_multiplicador_cabe_na_barra`` reprova no ``max``, onde a
+  fração (75) e o número (150) divergem;
 * troque o ``"0"`` que ``_barra`` devolve no desconhecido por ``"66.7"`` →
   ``test_o_que_nao_se_sabe_manda_o_trilho_a_zero`` reprova nos três pares;
 * apague ``id="vib-estado"`` da página publicada →
@@ -58,8 +71,24 @@ UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
 
 #: O PAR NÚMERO → TRILHO desta aba. Os nomes são os do pacote, e o par é o
 #: contrato: cada largura tem um número ao lado, e é o número que manda.
+#:
+#: **CONTINUAM TRÊS, e o do multiplicador é a PONTE DE PUBLICAÇÃO — 03/09/2026.**
+#: No desenho novo a linha do multiplicador virou um `<input type=range>` (a
+#: decisão dela: *"0 a 200%, e grava na hora"*), e ali o pintor escreve o VALOR,
+#: não a largura. Mas publicar é ato dela: a página que ela ABRE hoje ainda tem
+#: o `<span class="cheio">`, e o `forca-pct` é o único endereço que ele tem.
+#:
+#: TIRÁ-LO CUSTOU UMA FOTO, e por isso ele está de volta nesta lista: com
+#: `mult-pos` sozinho, o clique em "Economia" trocou o número de `100%` para
+#: `30%` na tela dela e o trilho FICOU ONDE ESTAVA, com a largura que o mockup
+#: cravou. Os dois endereços convivem enquanto a `05-vibracao` estiver em
+#: `mockup/DIVERGENCIAS.md`.
 PARES = (("mult", "forca-pct"), ("motor-e", "motor-e-pct"),
          ("motor-d", "motor-d-pct"))
+
+#: O PAR NÚMERO → POSIÇÃO do multiplicador, que é o outro contrato — o da
+#: bancada. A faixa dele não é 0-100: é 0-`teto_da_barra()`.
+PAR_DO_MULTIPLICADOR = ("mult", "mult-pos")
 
 
 def _ctx(policy: str = "balanceado", *, per_vpad: list | None = None):
@@ -137,6 +166,34 @@ def test_todo_trilho_desta_aba_sai_com_numero(policy: str) -> None:
                 f"{uniq}: {larg} saiu {valor}, fora da faixa de 0 a 100")
 
 
+@pytest.mark.parametrize("policy", ["economia", "balanceado", "max", "auto"])
+def test_a_posicao_do_multiplicador_cabe_na_barra(policy: str) -> None:
+    """O `value` de um `<input type=range>` é o NÚMERO, não a fração.
+
+    O ramo `valor` do pintor faz `el.value = t`. Um valor fora de
+    `[min, max]` o navegador GRAMPEIA no extremo mais perto, calado: o polegar
+    para na ponta e a tela afirma um pedido que ninguém fez. E escrever ali a
+    LARGURA (`pct["w"]`, que é `100 * valor / teto`) poria o cursor em 75
+    quando o pedido é 150.
+
+    MORDIDA: em `a05_vibracao.pacote`, emita `pct["w"]` em `mult-pos` — este
+    caso reprova no `max`, onde a fração (75) e o número (150) divergem.
+    """
+    from pacotes import a05_vibracao as a05
+
+    num, pos = PAR_DO_MULTIPLICADOR
+    teto = a05.teto_da_barra()
+    for uniq, col in _colunas(policy).items():
+        assert pos in col, f"{uniq}: o pacote deixou de emitir {pos}"
+        valor = _numero(col[pos])
+        assert 0.0 <= valor <= teto, (
+            f"{uniq}: {pos} saiu {valor}, fora da faixa de 0 a {teto} — o "
+            f"navegador grampearia o polegar na ponta, calado")
+        assert str(col[num]).rstrip("%") == col[pos], (
+            f"{uniq}: o número diz {col[num]!r} e o cursor está em {col[pos]!r} "
+            f"— a mesma linha contando duas histórias")
+
+
 # --------------------------------------------------------------------------
 # 2. o que não se sabe manda o trilho a ZERO
 # --------------------------------------------------------------------------
@@ -149,8 +206,12 @@ def test_o_que_nao_se_sabe_manda_o_trilho_a_zero() -> None:
     largura tem de ir a zero, porque uma barra é uma AFIRMAÇÃO de quantidade e
     "não sei" não afirma nenhuma.
 
-    O degrau desconhecido cobre o mesmo par do multiplicador: uma política que o
-    produto não conhece devolve ``None`` em ``_pedido_da_politica``.
+    O MULTIPLICADOR SEGUE OUTRA REGRA desde 03/09/2026, e ela é do elemento: a
+    linha dele virou um ``<input type=range>``, e ``0`` ali não é "não sei" — é
+    *"nenhuma vibração"*, uma escolha que ela pode ter feito. Um zero escrito no
+    desconhecido seria a barra afirmando silêncio. O pacote manda ``""``, o
+    pintor o troca por travessão, o navegador recusa e o cursor fica onde
+    estava — e o número ao lado diz ``—`` no mesmo tique.
     """
     colunas = _colunas("uma-politica-que-o-produto-nao-conhece", per_vpad=[])
     vistos = 0
@@ -165,6 +226,15 @@ def test_o_que_nao_se_sabe_manda_o_trilho_a_zero() -> None:
     assert vistos == len(PARES) * len(colunas), (
         f"a régua só encontrou {vistos} pares desconhecidos, e esperava "
         f"{len(PARES) * len(colunas)}: sem eles ela ficaria verde por vacuidade")
+
+    num, pos = PAR_DO_MULTIPLICADOR
+    for uniq, col in colunas.items():
+        assert col.get(num) == _tela.NAO_SEI, (
+            f"{uniq}: uma política que o produto não conhece devolveu "
+            f"{col.get(num)!r} — a régua mediria o vazio")
+        assert col.get(pos) == "", (
+            f"{uniq}: {num} diz {_tela.NAO_SEI!r} e {pos} afirma {col[pos]!r} — "
+            f"um número ali põe o cursor num lugar que ninguém escolheu")
 
 
 # --------------------------------------------------------------------------

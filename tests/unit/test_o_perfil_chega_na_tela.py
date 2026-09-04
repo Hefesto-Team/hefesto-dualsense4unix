@@ -269,7 +269,29 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         if n:
             orfaos[pagina] = sorted(r.get("sem_dono") or {})
     assert orfaos == {
-        "05-vibracao.html": ["barra:motor", "lado:ligado"],
+        # OS DOIS `forca:*` ENTRARAM À TARDE DE 03/09/2026, e nasceram de uma
+        # decisão dela — *"construir por controle"*. Nenhum é travessão sobre
+        # dado que existe; os dois foram perguntados ao esquema, ao IPC e ao
+        # produto antes de entrarem, e o que sobra em cada um é UMA FRASE DELA:
+        #
+        #   `forca:auto-da-mesa`    pôr a MESA em `Auto` perdeu o botão nesta
+        #                           aba, porque `ControllerRumbleOverride`
+        #                           RECUSA `auto` por unidade (ele escala pela
+        #                           bateria do controle PRIMÁRIO) e
+        #                           `draft_config.with_controller_rumble`
+        #                           traduz o clique em "limpa o override e
+        #                           devolve a peça ao global". Um caminho novo
+        #                           para o degrau da mesa é desenho dela.
+        #   `forca:global-em-auto`  com o global em `Auto`,
+        #                           `_controllers_to_rumble_scales` PULA a peça
+        #                           (denominador móvel, com log) — a escolha
+        #                           dela fica gravada e não chega ao motor. O
+        #                           que falta é a tela AVISAR.
+        #
+        # E `barra:forca` SAIU no mesmo dia, curada: a barra "Personalizado"
+        # virou `<input type=range>` e grava (`a05_vibracao.intensidade`).
+        "05-vibracao.html": ["barra:motor", "forca:auto-da-mesa",
+                             "forca:global-em-auto", "lado:ligado"],
         "07-lancadores.html": ["criar-perfil", "heroic"],
         "09-sistema.html": ["plugins"],
     }, (

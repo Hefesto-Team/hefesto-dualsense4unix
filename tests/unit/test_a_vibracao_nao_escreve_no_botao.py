@@ -319,11 +319,13 @@ def test_o_multiplicador_e_o_numero_e_nao_o_degrau(emitidos):
     pacote, _ = emitidos
     col = next(iter(pacote["colunas"].values()))
     pedido = round(_tela._escada()["balanceado"] * 100)
-    largura = round(100.0 * pedido / _tela.teto_da_barra(), 1)
     assert col["mult"] == f"{pedido}%", f"o multiplicador saiu {col['mult']!r}"
-    assert col["forca-pct"] == f"{largura}", (
-        f"a largura da barra saiu {col['forca-pct']!r} — "
-        f"{pedido} de um teto de {_tela.teto_da_barra()}")
+    # O CURSOR, e não mais a LARGURA — 03/09/2026, decisão dela: a linha do
+    # multiplicador virou um `<input type=range>`, e o que o pintor escreve nela
+    # é o `value` (o número de 0 ao teto), não a fração do trilho.
+    assert col["mult-pos"] == f"{pedido}", (
+        f"o cursor da barra saiu {col['mult-pos']!r}, e o número ao lado diz "
+        f"{col['mult']!r} — a mesma linha contando duas histórias")
     assert "forca" not in col, (
         "a chave `forca` voltou ao pacote: ela é `data-papel` dos quatro degraus")
 
@@ -359,15 +361,27 @@ def test_o_que_falta_esta_declarado(emitidos):
     `SEM_DONO` estava `{}` — o vazio dizia "nada falta" numa aba onde quatro
     coisas faltavam, e é a forma mais barata de mentir.
 
-    ERAM QUATRO E HOJE SÃO DOIS — 03/09/2026. `degrau-aceso` e `mult-teto`
-    fecharam, e ficar na lista depois de pintados seria a mentira SIMÉTRICA:
-    dívida fantasma, que faz a próxima pessoa esperar por uma cura que já
-    chegou. Os dois que sobram esperam por coisa que não é desta camada —
-    `lado:ligado` não existe em linha nenhuma do produto e `barra:motor` pede
-    um controle arrastável no desenho, que é decisão dela.
+    ERAM QUATRO, VIRARAM DOIS E HOJE SÃO QUATRO DE NOVO — e as duas contas são
+    a mesma regra. `degrau-aceso` e `mult-teto` fecharam pela manhã de 03/09;
+    ficar na lista depois de pintados seria a mentira SIMÉTRICA — dívida
+    fantasma, que faz a próxima pessoa esperar por uma cura que já chegou.
+
+    À TARDE ENTRARAM DUAS, e as duas nasceram da decisão dela de construir a
+    política POR CONTROLE: `forca:auto-da-mesa` (pôr a MESA em `Auto` perdeu o
+    botão, porque o esquema recusa `auto` por unidade) e `forca:global-em-auto`
+    (com o global em `Auto` o produto PULA o override, e a tela ainda não
+    avisa). Nenhuma das duas é código que falta escrever: as duas esperam uma
+    frase dela.
+
+    A `barra:forca` SAIU no mesmo dia — a barra virou arrastável e grava.
+    `lado:ligado` continua sem existir em linha nenhuma do produto, e
+    `barra:motor` continua esperando a palavra dela sobre o par `weak`/`strong`,
+    que viaja JUNTO ao daemon.
     """
     pacote, _ = emitidos
-    assert set(pacote["sem_dono"]) == {"lado:ligado", "barra:motor"}
+    assert set(pacote["sem_dono"]) == {
+        "lado:ligado", "barra:motor",
+        "forca:auto-da-mesa", "forca:global-em-auto"}
     for chave, razao in pacote["sem_dono"].items():
         assert len(razao) > 80, f"{chave} declara sem dizer por quê"
     # E OS DOIS QUE FECHARAM SÃO PINTADOS — sem isto, apagá-los da lista seria

@@ -177,29 +177,44 @@ def test_o_multiplicador_nao_e_o_campo_preso() -> None:
         f"escolha dela — {escritos}")
 
 
-def test_a_largura_do_trilho_acompanha_o_pedido() -> None:
-    """O trilho e o número contam a mesma história, e a largura sai SEM `%`.
+def test_o_cursor_da_barra_acompanha_o_pedido() -> None:
+    """O cursor e o número contam a mesma história, e o cursor sai SEM `%`.
 
-    O alvo ``largura`` do ``escrever()`` faz ``el.style.width = valor + '%'``
-    (``hefesto_vivo.py``): quem emite escreve o número pelado. Um ``%`` aqui
-    viraria ``width:66.7%%``, que o CSS descarta em silêncio.
+    **REESCRITO EM 03/09/2026, decisão dela:** *"0 a 200%, e grava na hora."* Era
+    ``test_a_largura_do_trilho_acompanha_o_pedido``, e cobrava o ``forca-pct`` —
+    a LARGURA de um `<span>`, uma fração de 0 a 100. A linha do multiplicador
+    virou um ``<input type=range>``: o que o pintor escreve nela é o ``value``
+    (``mult-pos``), que é o NÚMERO de 0 ao teto.
+
+    O ``%`` continua proibido pela mesma razão de sempre, com o alvo trocado: o
+    ramo ``valor`` do ``escrever()`` faz ``el.value = t``, e um ``"150%"`` num
+    range é valor inválido — o navegador o recusa e o cursor fica onde estava.
     """
-    teto = _tela.teto_da_barra()
     for degrau, mult in _tela._escada().items():
-        esperado = f"{round(min(100.0, 100.0 * round(mult * 100) / teto), 1)}"
+        esperado = f"{round(mult * 100)}"
         for col in _pacote(degrau)["colunas"].values():
-            assert col["forca-pct"] == esperado, (
-                f"o trilho do degrau {degrau!r} saiu em {col['forca-pct']!r}")
-            assert "%" not in col["forca-pct"], "a largura voltou a levar `%`"
+            assert col["mult-pos"] == esperado, (
+                f"o cursor do degrau {degrau!r} saiu em {col['mult-pos']!r}")
+            assert "%" not in col["mult-pos"], "o cursor voltou a levar `%`"
 
 
 def test_o_max_acende_so_no_teto() -> None:
     """O ``Máx`` é booleano e diz UMA coisa: este número é o topo da barra.
 
-    Com o campo preso em 0,7 ele **nunca** acendia — nem no "Máximo", que é o
-    teto por definição (``teto_da_barra()`` deriva de ``_escada()['max']``).
+    **O TETO TROCOU DE DONO EM 03/09/2026**, e é a decisão dela: a barra deixou
+    de parar no degrau ``Máximo`` (150) e vai até onde ela pode ARRASTAR —
+    ``a05_vibracao.teto_da_barra()``, que sai do ``RUMBLE_CUSTOM_MULT_MAX`` do
+    esquema. Consequência medida, e é o ponto deste caso: **nenhum dos quatro
+    degraus acende o `Máx`**, nem o "Máximo" — ele não é mais o topo. Quem
+    acende é a barra arrastada até o fim.
+
+    MORDIDA: em ``a05_vibracao._no_teto``, volte a comparar com
+    ``_tela.teto_da_barra()`` (150) — este caso reprova no ``max``, com o `Máx`
+    aceso e um quarto da barra ainda por percorrer.
     """
-    teto = _tela.teto_da_barra()
+    from pacotes import a05_vibracao as a05
+
+    teto = a05.teto_da_barra()
     for degrau, mult in _tela._escada().items():
         no_teto = round(mult * 100) >= teto
         for col in _pacote(degrau)["colunas"].values():
@@ -207,6 +222,10 @@ def test_o_max_acende_so_no_teto() -> None:
             assert aceso is no_teto, (
                 f"o degrau {degrau!r} vale {round(mult * 100)}% e o teto é "
                 f"{teto}%: o `Máx` saiu {'aceso' if aceso else 'apagado'}")
+    # E ELE ACENDE NO TOPO, senão este caso ficaria verde por vacuidade — um
+    # `Máx` que nunca acende passa nas quatro asserções acima.
+    assert a05._no_teto({"n": f"{teto}%", "sabe": "1"}) == "1", (
+        "o `Máx` não acende nem no topo da barra: ele virou enfeite")
 
 
 def test_degrau_que_o_produto_nao_conhece_nao_afirma_numero() -> None:
