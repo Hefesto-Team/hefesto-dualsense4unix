@@ -931,8 +931,25 @@
      halo do `box-shadow` das acesas. Cinco pontos viraram um, dois, três e
      quatro anéis, e o padrão — que é o que aquele desenho existe para mostrar —
      não estava lá. */
-  /* as duas cores das lâmpadas moram no `CSS_LUZINHAS`, com elas */
+  /* AS DUAS CORES DAS LÂMPADAS MORAM NO `CSS_LUZINHAS` — E NÃO CHEGAVAM AQUI.
+     A linha que estava neste lugar dizia "moram no `CSS_LUZINHAS`, com elas" e
+     parava aí. Elas moram em `.luzinhas`, que é o indicador PEQUENO da célula
+     LEDs, e `.luzinhas` é uma FOLHA da árvore, não um ancestral do desenho: as
+     duas regras abaixo pintam `<rect>` DENTRO DO SVG, e variável de CSS só
+     herda para baixo. Medido no DOM vivo em 03/09/2026, na mesa dela — as cinco
+     lâmpadas do desenho grande saíam todas com o mesmo cinza herdado do casco,
+     nenhuma acesa, com o `title` da moldura prometendo que *"as cinco lâmpadas
+     dizem qual é [o número]"*.
+
+     O `--luz-apagada` NÃO TEM ESSA DOENÇA, e a primeira volta desta cura disse
+     que tinha: `.luzes` é o QUADRO que envolve a `.luz-grade`, então ele já
+     descia. A mordida desmentiu — arrancadas as declarações, a barra ficou no
+     cinza certo e só as lâmpadas caíram.
+
+     A declaração entra por `CSS_DA_LUZ_NO_DESENHO`, logo abaixo — o par é LIDO
+     do dono (o PACOTE, que também o escreve na folha viva), nunca digitado. */
   .luzes,.troca{--luz-apagada:#3f4350}
+  .luz-grade{--led-apagado:#4a4f5c;--led-aceso:#e8ecf5}
   .luz-grade [id$="-lightbar"] .peca{fill:var(--luz,var(--luz-apagada))}
   .luz-grade [id$="-lightbar"]{filter:drop-shadow(0 0 1.1px var(--luz))}
 
