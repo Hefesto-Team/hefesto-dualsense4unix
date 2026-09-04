@@ -887,6 +887,24 @@ BOOTSTRAP = r"""
       // existiam — cada piloto de aba usava o seu.
       manda_do_alvo(ev);
     }, true);
+    // E O `blur`, que é a TERCEIRA porta e faltava — achado pela frente da aba
+    // 08 em 04/09/2026, e a forma do defeito é a mesma das outras duas: um
+    // `contenteditable` (o apelido do adaptador) **não dispara `click` nem
+    // `change`** ao perder o foco. O motor do apelido estava de pé, completo e
+    // testado, e simplesmente NUNCA era acionado — o gesto existia e a tela
+    // não tinha como chamá-lo.
+    //
+    // `blur` não borbulha, por isso a captura (`true`) é obrigatória, e não
+    // uma preferência de estilo.
+    //
+    // A LIÇÃO É A DE 01/09, repetida com outro elemento: **o ouvinte único só
+    // ouve o que alguém lembrou de ensinar a ele.** Quem puser na tela um
+    // elemento novo que carregue valor confere se ele fala por uma destas três
+    // portas — senão o gesto nasce mudo, e mudo dá verde em toda régua que
+    // pergunte se o motor existe.
+    document.addEventListener('blur', function(ev){
+      if(ev.target && ev.target.isContentEditable) manda_do_alvo(ev);
+    }, true);
   }
   function manda_do_alvo(ev){
       const alvo = ev.target.closest(
@@ -1339,6 +1357,35 @@ PERIGOSOS = {
     # que já foi lembrado — ver a cura no próprio teste, no mesmo commit.
     ("01-jogar.html", "cadeado"),
     ("04-iluminacao.html", "auto-cores"),
+    # E O TERCEIRO, da mesma leva e pela mesma razão de posse: o apelido do
+    # adaptador grava no BlueZ (`renomear_o_dongle`), que é estado da MÁQUINA
+    # dela e não do perfil. Hoje o gesto recusa nome igual e portanto é
+    # idempotente — mas isso é propriedade DO GESTO, não da lista, e uma lista
+    # que depende da boa vontade do gesto protege até o dia em que alguém
+    # mudar o gesto.
+    ("08-conexoes.html", "renomear-adaptador"),
+    # E MAIS SEIS DA ABA 08, que ninguém tinha visto porque a régua lia SÓ o
+    # corpo do gesto — e os seis chamam `machine_declare` por um AJUDANTE do
+    # mesmo arquivo. A régua aprendeu a descer um nível em 04/09/2026 e os
+    # revelou de uma vez.
+    #
+    # OS SEIS ENTRAM SEM MEDIÇÃO, E ISSO É DELIBERADO. A volta de 03/09 mediu
+    # três gestos por nome e achou-os idempotentes; estes seis NÃO foram
+    # medidos, e três deles dizem no nome que mudam a declaração dela
+    # (`nova-entrada`, `nova-face`, `tirar-daqui`). O preço de proteger um
+    # gesto inócuo é COBERTURA — a régua deixa de provar que aquele botão
+    # responde. O preço de expor um que grava é a DECLARAÇÃO DELA mudando para
+    # a régua provar que sabe clicar. Os dois preços não se comparam.
+    #
+    # PARA QUEM FOR MEDIR: clique cada um e compare o `maquina.json` antes e
+    # depois. O que sair idempotente sobe para o `ISENTOS` da régua, COM a
+    # medição do lado — nunca pela porta, sempre pelo par.
+    ("08-conexoes.html", "escolher-entrada"),
+    ("08-conexoes.html", "nova-entrada"),
+    ("08-conexoes.html", "nova-extensao"),
+    ("08-conexoes.html", "nova-face"),
+    ("08-conexoes.html", "tirar-daqui"),
+    ("08-conexoes.html", "vizinho-o-que-e"),
     # OS CAMPOS DO EDITOR GRAVAM NO DISCO DELA, e o `editor.nome` RENOMEIA o
     # perfil escolhido. Uma régua que os clicasse com o valor que estivesse na
     # tela renomearia um perfil dela para provar que sabe digitar — e o `nome` é

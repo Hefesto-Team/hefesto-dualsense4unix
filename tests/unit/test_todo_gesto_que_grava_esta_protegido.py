@@ -63,6 +63,16 @@ ESCREVEM = {
     # um gesto a escrever acrescenta a porta AQUI no mesmo commit.
     "autoswitch_lock_set",     # grava a trava da troca automática
     "save_autoswitch_locked",  # o escritor por baixo dela
+    # E A TERCEIRA PORTA DO MESMO DIA, achada pela frente da aba 08: esta régua
+    # estava CEGA PARA TODA ESCRITA QUE PASSE PELO BlueZ. O apelido do
+    # adaptador grava estado da MÁQUINA dela — não do perfil, não do aparelho —
+    # e nenhum dos nomes acima o alcançava.
+    #
+    # É a segunda vez no mesmo dia que a lista chega atrasada, e a forma é
+    # sempre esta: a régua conhece as portas que alguém já lembrou. Quem
+    # ensinar um gesto a escrever por uma porta NOVA acrescenta o nome aqui no
+    # mesmo commit — inclusive quando a porta é de outro subsistema.
+    "renomear_o_dongle",       # grava o alias do adaptador no BlueZ
 }
 
 #: E O QUE CHEGA LÁ POR IPC, pelo nome do método. `p.chamar("machine.declare")`
@@ -96,6 +106,15 @@ ISENTOS: dict[tuple[str, str], str] = {
         "mostra, medido em 03/09/2026",
     ("08-conexoes.html", "mic-existe"):
         "idem — foi um dos três medidos por nome naquela volta",
+    # OS DOIS IRMÃOS DELE, e a medição de 03/09 os nomeia junto: *"`sala-altura`,
+    # `sala-visada` e `mic-existe` gravaram exatamente o que já estava lá"*.
+    # Estavam de fora por acidente — a régua não os enxergava, então ninguém
+    # precisou decidir. A régua que desce um nível os revelou em 04/09.
+    ("08-conexoes.html", "sala-altura"):
+        "`machine.declare` idempotente: um dos TRÊS medidos por nome em "
+        "03/09/2026, e a medição está citada acima",
+    ("08-conexoes.html", "sala-visada"):
+        "idem — o segundo dos três daquela volta",
     ("09-sistema.html", "perfil-da-mesa"):
         "idem: o clique manda o valor que a tela já exibe",
 }
@@ -108,18 +127,41 @@ def _gestos_registrados():
     return dict(pacotes.GESTOS)
 
 
-def _escreve(fn) -> str:
+#: Quantos ajudantes de profundidade a régua segue. DOIS basta para todo caso
+#: medido nas dez abas, e um teto existe para a régua não virar um interpretador.
+_FUNDO = 2
+
+
+def _escreve(fn, _visto: frozenset[str] = frozenset(), _fundo: int = _FUNDO) -> str:
     """O nome da porta de escrita que este gesto usa, ou `""`.
 
     LÊ A ÁRVORE. Um `grep` por `save_profile` casaria a docstring de quem apenas
     explica por que NÃO grava — e marcaria como perigoso um gesto inócuo, que é
     o erro na direção oposta e igualmente caro: a régua de clique deixaria de
     cobrir um botão que precisa ser coberto.
+
+    E ELA DESCE PELOS AJUDANTES DO PRÓPRIO MÓDULO — acrescentado em 04/09/2026,
+    e a razão é um defeito vivo que ela deixou passar. O gesto
+    `08-conexoes·renomear-adaptador` grava o alias no BlueZ, e esta régua deu
+    VERDE sobre ele: o corpo do gesto chama `_gravar_o_apelido(...)`, um
+    ajudante do mesmo arquivo, e é o AJUDANTE que chama `renomear_o_dongle`.
+    Ler um nível só é ler o que o autor teve a gentileza de deixar na
+    superfície.
+
+    A forma do defeito é a mesma das outras duas cegueiras do dia (a porta que
+    faltava na lista, e a que passava pelo BlueZ): **a régua conhece o que
+    alguém já lembrou de ensinar a ela.** Aqui o que faltava não era um nome —
+    era um NÍVEL.
     """
     try:
-        arvore = ast.parse(textwrap.dedent(inspect.getsource(fn)))
-    except (OSError, SyntaxError):  # pragma: no cover - defesa
+        fonte = inspect.getsource(fn)
+        arvore = ast.parse(textwrap.dedent(fonte))
+    except (OSError, SyntaxError, TypeError):  # pragma: no cover - defesa
         return ""
+
+    modulo = inspect.getmodule(fn)
+    a_descer: list[str] = []
+
     for no in ast.walk(arvore):
         if not isinstance(no, ast.Call):
             continue
@@ -132,6 +174,22 @@ def _escreve(fn) -> str:
             alvo = no.args[0]
             if isinstance(alvo, ast.Constant) and alvo.value in METODOS_QUE_ESCREVEM:
                 return str(alvo.value)
+        # UM AJUDANTE DO MESMO MÓDULO, chamado pelo nome. Guardado para depois
+        # de esgotar a superfície: a porta direta é a resposta mais barata.
+        if (
+            _fundo > 0
+            and isinstance(no.func, ast.Name)
+            and nome not in _visto
+            and modulo is not None
+            and callable(getattr(modulo, nome, None))
+        ):
+            a_descer.append(nome)
+
+    visto = _visto | {getattr(fn, "__name__", "")} | set(a_descer)
+    for nome in a_descer:
+        achado = _escreve(getattr(modulo, nome), visto, _fundo - 1)
+        if achado:
+            return achado
     return ""
 
 
@@ -234,3 +292,33 @@ def test_a_isencao_nao_alcanca_o_que_grava_valor_novo() -> None:
         "só a devolve se os cabos mudarem")
     assert ("08-conexoes.html", "ignorar") in set(PERIGOSOS), (
         "o ⊘ saiu de PERIGOSOS — foi o defeito medido em 03/09/2026")
+
+
+def test_a_regua_desce_pelo_ajudante_do_mesmo_modulo() -> None:
+    """A MORDIDA QUE FALTAVA — e ela existe porque a outra não pegou.
+
+    Arrancar a descida (fazer `_escreve` ler UM nível só, como era antes de
+    04/09/2026) não derrubava régua nenhuma: as entradas a mais em `PERIGOSOS`
+    passavam a ser apenas inúteis, e nada reclama de proteção sobrando. Ou
+    seja, a cura podia ser desfeita em silêncio — que é a definição de cura sem
+    régua.
+
+    Aqui a profundidade é medida DIRETAMENTE, no caso que a revelou: o gesto
+    `08-conexoes·renomear-adaptador` não chama `renomear_o_dongle`; ele chama
+    `_gravar_o_apelido`, do mesmo arquivo, e é o ajudante que grava no BlueZ.
+    """
+    gestos = _gestos_registrados()
+    fn = gestos[("08-conexoes.html", "renomear-adaptador")]
+
+    assert _escreve(fn) == "renomear_o_dongle", (
+        "a régua parou de descer pelos ajudantes do módulo: ela voltou a ler "
+        "só o corpo do gesto, e é assim que `renomear-adaptador` ficou "
+        "desprotegido até 04/09/2026."
+    )
+    # E a superfície do próprio gesto NÃO tem a porta — é isso que torna o
+    # caso uma prova de profundidade, e não uma coincidência.
+    fonte = inspect.getsource(fn)
+    assert "renomear_o_dongle" not in fonte.split('"""')[-1], (
+        "o gesto passou a chamar a porta DIRETAMENTE; este caso deixou de "
+        "provar a descida. Escolha outro gesto que grave por ajudante."
+    )
