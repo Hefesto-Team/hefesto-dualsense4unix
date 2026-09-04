@@ -1112,6 +1112,19 @@ PERIGOSOS = {
     # mudarem a linha fica calada. Uma régua não cala um achado da máquina dela
     # para provar que sabe clicar.
     ("08-conexoes.html", "ignorar"),
+    # A FORÇA DA VIBRAÇÃO PASSOU A ESCREVER NO PERFIL DELA — 03/09/2026, e é
+    # consequência direta da decisão dela de construir a política POR CONTROLE.
+    # Até ontem o clique num degrau ia por IPC (`rumble.policy_set`), que não
+    # deixa rastro em disco; hoje ele grava `controllers[uniq].rumble` no perfil
+    # ATIVO e dispara `profile.switch`, exatamente como o `teto-da-vibracao` da
+    # Conexões — que já está isento acima, pelo mesmo motivo.
+    #
+    # SÃO OS DOIS, e o segundo não é o mesmo botão: `forca` são os quatro
+    # degraus, `intensidade` é a barra arrastável. Uma prova botão a botão que
+    # clicasse os dois deixaria, por volta e por aba, uma escolha de vibração
+    # que ela não fez em cada controle da mesa — e a régua não tem como saber
+    # qual era a de antes.
+    ("05-vibracao.html", "forca"), ("05-vibracao.html", "intensidade"),
 }
 
 

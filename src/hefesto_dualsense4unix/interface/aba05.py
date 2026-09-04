@@ -18,6 +18,7 @@ Aqui isso quer dizer quatro coisas, e nenhuma é digitada:
   (`monta.PADRAO_JOGADOR`, de `core/led_control.py`).
 """
 import csv
+import math
 import pathlib
 import re
 import sys
@@ -37,6 +38,15 @@ from monta import (  # noqa: E402
 # divergir no dia em que o produto renomear um.
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
     RUMBLE_POLICY_MULT,
+)
+
+# O DONO ÚNICO DO TETO DA BARRA "Personalizado" — 03/09/2026, decisão dela:
+# *"0 a 200%, e grava na hora."* O número mora no esquema do perfil, que é quem
+# recusa o que passa dele (`ControllerRumbleOverride._validate_custom_mult` e o
+# irmão global). Digitar `200` aqui seria a segunda verdade que a régua desta
+# casa persegue — e o `150` que estava nesta linha já era exatamente isso.
+from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
+    RUMBLE_CUSTOM_MULT_MAX,
 )
 
 # A LINHA DO ESTADO SAI DO PRODUTO, e não de prosa digitada aqui — 02/09/2026.
@@ -130,7 +140,34 @@ if set(RUMBLE_POLICY_MULT) != _COM_MULT:
         "`data-forca` é o endereço por onde a pintura acha o botão — divergir "
         "aqui faz a tela acender o degrau errado, em silêncio.")
 
-TETO = 150  # a barra para no Máximo — "não passa dele", pedido dela
+#: O TETO DA BARRA "Personalizado", em pontos percentuais. **200 — decisão dela,
+#: 03/09/2026:** *"0 a 200%, e grava na hora."*
+#:
+#: FATO SUBSTITUÍDO, e a linha inteira era `TETO = 150  # a barra para no Máximo
+#: — "não passa dele", pedido dela`. Os 150 eram o teto da POLÍTICA (o degrau
+#: `max`), e valiam enquanto a barra era LEITURA: ela só mostrava o que um dos
+#: quatro degraus pedia. A partir do momento em que ela ARRASTA a barra, o teto
+#: passa a ser o do multiplicador personalizado — `RUMBLE_CUSTOM_MULT_MAX`, que
+#: é 2,0 e é quem recusa o que passa dele. Manter 150 aqui faria a barra encher
+#: aos 150% e ficar cheia até os 200%, mentindo sobre o quanto ainda há.
+#:
+#: E ELE NÃO SE DIGITA: o `150` do dia anterior já era a segunda cópia de
+#: `RUMBLE_POLICY_MULT["max"]`, e `app/telas/vibracao.teto_da_barra()` nasceu
+#: justamente para não a ter. Aquela função continua sendo o teto da ESCADA (os
+#: quatro degraus); esta constante é o teto do que ela pode PEDIR.
+TETO = round(RUMBLE_CUSTOM_MULT_MAX * 100)
+
+#: O PASSO DO ARRASTE, e ele é DERIVADO — nunca escolhido a dedo.
+#:
+#: A regra: **todo degrau do produto tem de cair EM CIMA de uma parada da
+#: barra.** Se o `Máximo` vale 150% e a barra andasse de 7 em 7, ela não
+#: conseguiria pousar no mesmo número que o botão ao lado escreve — e as duas
+#: metades da mesma tela diriam coisas diferentes.
+#:
+#: O maior passo que satisfaz isso é o MDC dos degraus e do teto: hoje
+#: `mdc(30, 100, 150, 200) = 10`, que dá 21 paradas. No dia em que o produto
+#: acrescentar um degrau de 0,45, o passo vira 5 sozinho.
+PASSO = math.gcd(*(round(m * 100) for m in RUMBLE_POLICY_MULT.values()), TETO)
 
 # ---------------------------------------------------------------------------
 # AS FRASES QUE A JANELA ESTÁVEL TEM E ESTA ABA NÃO TINHA — 03/09/2026.
@@ -486,6 +523,39 @@ CSS = """
   /* o lado desligado não finge que tem força: o trilho fica apagado */
   .motor.off .cheio{background:var(--border-forte)}
   .motor.off .num{color:var(--comment)}
+  /* O TRILHO ARRASTÁVEL — 03/09/2026, decisão dela: *"0 a 200%, e grava na
+     hora."* Ele é um `<input type=range>` de verdade, e não um trilho pintado:
+     é o `value` dele que o piloto lê no `change`.
+
+     A APARÊNCIA NÃO MUDA UM PIXEL DE PROPÓSITO. A Vibração está FECHADA por
+     elogio literal dela (`CORRECOES-DELA.md:39`), e um controle nativo do
+     WebKit ali dentro traria a cor e a altura do tema do sistema no meio de uma
+     tela que ela aprovou. `appearance:none` desliga o desenho nativo e as duas
+     regras abaixo reconstroem EXATAMENTE o que o `.trilho` + `.cheio` já eram:
+     5px de altura, raio 3, o fundo `--border-forte` e o polegar de 12px em
+     `--purple` com a borda `--panel`.
+
+     O CHEIO É UM GRADIENTE, e não um filho: um `<input>` não tem onde pendurar
+     o `<span class="cheio">`, então a parte preenchida vem de
+     `background-size` — o piloto escreve o `value`, o navegador move o polegar,
+     e o `--pct` do gradiente acompanha por `accent-color`... que o WebKit2 desta
+     versão não pinta em trilho customizado. Por isso o preenchimento fica no
+     próprio `--purple` do polegar e o trilho inteiro no tom apagado: o que
+     informa a posição é o POLEGAR, que é o que ela arrasta.
+
+     `cursor:grab` diz que a coisa se pega — a única affordance que o desenho
+     ganhou, e ela não desloca nada. */
+  .motor .trilho.arrasta{appearance:none;-webkit-appearance:none;
+    width:100%;padding:0;margin:0;border:0;background:var(--border-forte);
+    cursor:grab}
+  .motor .trilho.arrasta:active{cursor:grabbing}
+  .motor .trilho.arrasta::-webkit-slider-runnable-track{
+    height:5px;border-radius:3px;background:transparent}
+  .motor .trilho.arrasta::-webkit-slider-thumb{appearance:none;
+    -webkit-appearance:none;width:12px;height:12px;border-radius:50%;
+    background:var(--purple);border:2px solid var(--panel);margin-top:-4px}
+  .motor .trilho.arrasta:focus-visible{outline:2px solid var(--purple);
+    outline-offset:3px}
 
   /* o interruptor de cada lado: o GLIFO do mapa, aceso quando o lado está ligado */
   .lado{
@@ -688,7 +758,12 @@ CSS = """
 #: (`app/telas/vibracao.SEM_FONTE["lado:ligado"]`, fecha em MIGRA-VIBRACAO-06).
 #: Um clique nele agora é silêncio honesto em vez de despacho fantasma — o botão
 #: que não deveria estar ligado é decisão dela.
-PAPEIS_QUE_SAO_GESTO = ("forca", "testar", "parar")
+#:
+#: `intensidade` ENTROU EM 03/09/2026 com a barra arrastável — ver
+#: :func:`_barra` e `a05_vibracao.intensidade`. Ele é o único desta aba que
+#: chega por `change` e não por `click`: um `<input type=range>` não se "clica"
+#: no sentido útil, ele MUDA (`hefesto_vivo.py`, o ouvinte de `change`).
+PAPEIS_QUE_SAO_GESTO = ("forca", "testar", "parar", "intensidade")
 
 
 def _endereco_de_pintura(nome, extra=""):
@@ -700,9 +775,50 @@ def _endereco_de_pintura(nome, extra=""):
     return f' {atributo}="{nome}"' + extra
 
 
+def _trilho_arrastavel(valor, teto, campo):
+    """O trilho da "Personalizado" como `<input type=range>` — 03/09/2026.
+
+    DECISÃO DELA: *"0 a 200%, e grava na hora."* Até hoje esta linha era
+    LEITURA — um `<div>` sem `value` — e o gesto `forca` recusava o clique nela
+    com um `ValueError` que **não chega à tela**: o contrato do piloto manda
+    `RuntimeError` ao cartão e deixa o `ValueError` no `stderr` de quem lançou a
+    janela (`hefesto_vivo._recusou_dizendo`). Para ela, clicar na barra não
+    fazia nada, sem uma letra de explicação.
+
+    E O `<div>` ERA A CAUSA, por escrito: `a05_vibracao.SEM_DONO["barra:motor"]`
+    já nomeava o mesmo defeito na linha vizinha — *"o ouvinte manda
+    `valor: alvo.value ?? ''` e um `<div>` não tem `value`"*. Um
+    `<input type=range>` tem, e o ouvinte de `change` do piloto já o escuta
+    desde 01/09.
+
+    OS TRÊS NÚMEROS SÃO DERIVADOS: `max` é :data:`TETO` (do
+    `RUMBLE_CUSTOM_MULT_MAX` do esquema), `step` é :data:`PASSO` (o MDC dos
+    degraus com o teto) e `min` é zero — que é o único que se escreve, porque
+    "nada de vibração" não é um número que alguém decidiu, é o fundo da escala.
+
+    O ALVO DE PINTURA É `valor`, e não `largura`: quem move o cursor agora é o
+    `value` do próprio elemento (`hefesto_vivo.escrever`, ramo `alvo ===
+    'valor'`). Pintar `style.width` num `<input>` esticaria o controle em vez de
+    mover o polegar dele.
+    """
+    return (f'<input class="trilho arrasta" type="range" min="0"'
+            f' max="{teto}" step="{PASSO}" value="{valor}"'
+            f' data-papel="intensidade" data-campo="{campo}"'
+            f' data-hef-alvo="valor"'
+            f' title="Arraste para escolher quanto da vibração que o jogo pede'
+            f' chega a este controle — de 0 a {teto}%. Grava na hora, no perfil'
+            f' ativo, só para ele.">')
+
+
 def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
-           campo_num="", sufixo_html=""):
+           campo_num="", sufixo_html="", arrasta=False, campo_trilho=""):
     """Uma linha de barra: interruptor · trilho · número · sufixo.
+
+    `arrasta` troca o trilho de LEITURA pelo `<input type=range>` da decisão
+    dela de 03/09 — ver :func:`_trilho_arrastavel`. Só a linha do
+    "Personalizado" o pede: as duas de motor continuam leitura, porque o par
+    `weak`/`strong` viaja JUNTO ao daemon (`app/telas/vibracao.DONOS_DOS_GESTOS
+    ["barra:motor"]`) e um arraste por lado mandaria meio par.
 
     `papel`/`lado` são o ENDEREÇO DO CLIQUE, e sem eles a pintura só alcança as
     três barras de uma coluna por POSIÇÃO — que é o casamento que quebra em
@@ -740,8 +856,12 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     # :data:`PAPEIS_QUE_SAO_GESTO`. `forca` continua em `data-papel`: ele TEM
     # gesto registrado, e a recusa da linha "Personalizado" (*"a barra não é
     # botão"*) é o comportamento escrito no pacote, não um clique órfão.
-    endereco = _endereco_de_pintura(
-        papel, f' data-lado="{lado}"' if lado else "")
+    # PAPEL VAZIO = LINHA SEM ENDEREÇO, e é o que a linha do "Personalizado"
+    # passou a ser em 03/09/2026: o clique dela mora agora no `<input>` de
+    # dentro, e o valor também. Um `data-hef` no `<div>` de fora seria endereço
+    # que ninguém pinta — a dívida que a régua do mockup conta.
+    endereco = (_endereco_de_pintura(papel, f' data-lado="{lado}"' if lado else "")
+                if papel else "")
 
     #: O SEGUNDO ENDEREÇO, e ele não substitui o primeiro. Esta aba nasceu com
     #: `data-papel` + `data-lado`, que é um PAR — e o piloto `vibracao_viva.py`
@@ -755,10 +875,19 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     #: usava, uma chave para quem chegou depois.
     campo = f"{papel}-{lado}" if lado else papel
     cauda = sufixo_html or f'<span class="teto">{sufixo}</span>'
-    return (f'<div class="motor{"" if ligado else " off"}"{endereco}>'
+    # O TRILHO TEM DUAS FORMAS, e a diferença não é de estilo: o de LEITURA é um
+    # `<span>` cuja LARGURA o piloto pinta; o arrastável é um `<input>` cujo
+    # VALOR ele pinta, e que devolve o número dela quando ela solta. Ver
+    # :func:`_trilho_arrastavel`.
+    trilho = (_trilho_arrastavel(valor, teto, campo_trilho or f"{campo}-pct")
+              if arrasta else
+              f'<span class="trilho"><span class="cheio"'
+              f' data-campo="{campo_trilho or f"{campo}-pct"}"'
+              f' data-hef-alvo="largura" style="width:{pct}%"></span></span>')
+    return (f'<div class="motor{" mult" if arrasta else ""}'
+            f'{"" if ligado else " off"}"{endereco}>'
             f'{botao or "<span></span>"}'
-            f'<span class="trilho"><span class="cheio" data-campo="{campo}-pct"'
-            f' data-hef-alvo="largura" style="width:{pct}%"></span></span>'
+            f'{trilho}'
             f'<span class="num" data-campo="{campo_num or campo}">'
             f'{valor}{"%" if teto == TETO else ""}</span>'
             f'{cauda}</div>')
@@ -1126,7 +1255,8 @@ def _coluna(c, e=None):
             <div class="rot-ctrl" data-hef="identidade">P{c["jogador"]} <span class="pt">•</span> {c["nome"]}
               <span class="pt">•</span> {c["via"]}</div>
             <div class="seg">{degraus}</div>
-            {_barra(e["pct"], TETO, "", papel="forca", campo_num="mult",
+            {_barra(e["pct"], TETO, "", papel="", campo_num="mult",
+                    arrasta=True, campo_trilho="mult-pos",
                     sufixo_html=_teto_do_multiplicador(e["pct"] == TETO))}
             {linhas[0]}
             {linhas[1]}
@@ -1330,6 +1460,7 @@ def _conferir(doc):
         # VACUIDADE: o ajuste podia voltar ao lugar vazio sob o nome novo e ela
         # não veria. É o mesmo defeito que ela existe para pegar.
         for proibido in ('data-papel="forca"', 'data-papel="testar"',
+                         'data-papel="intensidade"',
                          'data-papel="lado"', 'data-papel="motor"',
                          'data-hef="lado"', 'data-hef="motor"'):
             exigir(proibido not in bloco, f"um lugar vazio tem ajuste vivo: {proibido!r}")
@@ -1417,6 +1548,46 @@ def _conferir(doc):
            f"do piloto lê todo `data-papel` como nome de gesto, e um nome que "
            f"nenhum pacote registra vira clique que não responde. Use "
            f"`data-hef` para endereço que é só pintura")
+
+    # 12. A BARRA "Personalizado" SE ARRASTA, E O TETO É O DO ESQUEMA —
+    #     03/09/2026, decisão dela: *"0 a 200%, e grava na hora."*
+    #
+    #     TRÊS COISAS, E CADA UMA É UM JEITO DIFERENTE DE A BARRA MENTIR:
+    #
+    #     a) ela tem de ser um `<input type=range>`, uma vez por coluna VIVA. Um
+    #        `<div>` não tem `value`, e o ouvinte manda `valor: alvo.value ?? ''`
+    #        — o clique chegaria ao pacote sem quantidade nenhuma, que é
+    #        exatamente o estado de ontem (a recusa da linha "Personalizado").
+    #     b) o `max` tem de ser o :data:`TETO`, que sai do
+    #        `RUMBLE_CUSTOM_MULT_MAX` do esquema. Um `max` menor esconderia
+    #        posições que o produto aceita; um maior gravaria o que a borda
+    #        recusa, e a recusa sairia como erro de pydantic na cara dela.
+    #     c) todo degrau do produto tem de cair EM CIMA de uma parada. Com o
+    #        `max` e o `step` divergindo da escada, o botão "Máximo" escreveria
+    #        150% e a barra não conseguiria pousar nesse número — as duas
+    #        metades da mesma linha diriam coisas diferentes.
+    arrastaveis = _re.findall(r'<input class="trilho arrasta"[^>]*>', corpo)
+    exigir(len(arrastaveis) == len(CONECTADOS),
+           f"as barras arrastáveis não são {len(CONECTADOS)} (achei "
+           f"{len(arrastaveis)}) — a barra 'Personalizado' de cada coluna viva "
+           f"tem de ser um `<input type=range>`, senão o clique dela chega ao "
+           f"pacote sem número")
+    for tag in arrastaveis:
+        exigir(f'max="{TETO}"' in tag,
+               f"a barra arrastável não vai até {TETO}% — o teto é o "
+               f"`RUMBLE_CUSTOM_MULT_MAX` do esquema, e é ele que recusa o que "
+               f"passa dele")
+        exigir(f'step="{PASSO}"' in tag,
+               f"o passo do arraste não é {PASSO} — ele é o MDC dos degraus com "
+               f"o teto, e é o que faz cada degrau ter uma parada em cima dele")
+    for _rot, chave in FORCA:
+        if chave == FORCA_SEM_MULTIPLICADOR:
+            continue
+        degrau = round(RUMBLE_POLICY_MULT[chave] * 100)
+        exigir(degrau % PASSO == 0 and degrau <= TETO,
+               f"o degrau {chave!r} vale {degrau}% e a barra não para nele "
+               f"(passo {PASSO}, teto {TETO}) — clicar o botão e arrastar a "
+               f"barra deixariam de poder dizer o mesmo número")
 
     if falhas:
         raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "

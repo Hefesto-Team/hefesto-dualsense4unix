@@ -298,11 +298,17 @@ def test_o_max_e_estado_e_o_espaco_fica_reservado(regua, cravados):
 
 
 def test_o_teto_do_multiplicador_sai_do_produto():
-    """`_no_teto` pergunta o teto a quem é dono dele, e não sabe o que é `—`."""
-    from hefesto_dualsense4unix.app.telas import vibracao as tela
-    from pacotes.a05_vibracao import _no_teto
+    """`_no_teto` pergunta o teto a quem é dono dele, e não sabe o que é `—`.
 
-    teto = tela.teto_da_barra()
+    O DONO TROCOU EM 03/09/2026, decisão dela: *"0 a 200%"*. A barra deixou de
+    parar no degrau `Máximo` (`app/telas/vibracao.teto_da_barra`, 150) e vai até
+    onde ela pode ARRASTAR — `a05_vibracao.teto_da_barra`, que sai do
+    `RUMBLE_CUSTOM_MULT_MAX` do esquema. A régua continua PERGUNTANDO; o que
+    mudou é a quem.
+    """
+    from pacotes.a05_vibracao import _no_teto, teto_da_barra
+
+    teto = teto_da_barra()
     assert _no_teto({"n": f"{teto}%", "sabe": "1"}) == "1"
     assert _no_teto({"n": f"{teto - 1}%", "sabe": "1"}) == ""
     assert _no_teto({"n": "—", "sabe": ""}) == "", (

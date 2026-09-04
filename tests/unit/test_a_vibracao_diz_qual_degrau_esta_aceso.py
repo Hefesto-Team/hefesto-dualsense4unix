@@ -288,8 +288,15 @@ def test_a_largura_sai_sem_o_por_cento(pacote, bancada) -> None:
     """
     largura = {c.chave for c in _regua._campos_cravados(bancada)
                if c.alvo == "largura"}
-    assert {"forca-pct", "motor-e-pct", "motor-d-pct"} <= largura, (
+    # ERAM TRÊS E HOJE SÃO DOIS — 03/09/2026, decisão dela: a linha do
+    # multiplicador virou um `<input type=range>`, e o que o pintor escreve nela
+    # é o `value` (alvo `valor`, chave `mult-pos`), não a largura. O `forca-pct`
+    # saiu do desenho junto com o `<span>` que o carregava.
+    assert {"motor-e-pct", "motor-d-pct"} <= largura, (
         f"os endereços de largura desta aba mudaram: {sorted(largura)}")
+    assert "forca-pct" not in largura, (
+        "o `forca-pct` voltou como largura — a barra do multiplicador é um "
+        "`<input type=range>` desde 03/09, e o que ele escreve é o `value`")
     for uniq, col in pacote["colunas"].items():
         for chave in sorted(largura & set(col)):
             assert "%" not in str(col[chave]), (
