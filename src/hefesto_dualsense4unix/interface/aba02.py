@@ -1,4 +1,5 @@
 import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import mesa_viva
 import onde
 from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTADOS,
                    SEPARADOR, cor_da_zona, luzinhas, player_slot_color, tom_da_casa)
@@ -643,11 +644,38 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .onda{height:22px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
   .onda.mudo i{background:var(--border-forte);opacity:.5}
-  .selo-ativo{font-size:9.5px;font-family:'JetBrains Mono',monospace;padding:1px 6px;border-radius:3px;
-              background:var(--green);color:var(--app-bg);font-weight:600}
-  /* 3,47:1 sobre o próprio fundo -> 9,3:1. O selo continua dizendo
-     "desligado" pelo FUNDO cinza, que é o sinal; o texto passa a ser lido. */
-  .selo-ativo.off{background:var(--border-forte);color:var(--texto-suave)}
+  /* O SELO DO MICROFONE NASCE APAGADO E **ACENDE** — 03/09/2026, e a inversão
+     é o que torna a cor honesta nos TRÊS estados.
+
+     DECISÃO DELA: *"Cor + ícone. Redundante de propósito — quem lê rápido pega
+     pela cor, quem não distingue cor pega pelo risco."*
+
+     POR QUE INVERTER, e não só acrescentar o risco: o alvo `classe` do piloto
+     casa UM valor (`data-hef-quando`). Com a classe `off` acesa em `MUDO`, o
+     TERCEIRO estado — o travessão de `mesa_viva.selo_do_mic(_, sabemos=False)`
+     — cairia no ramo de baixo e ficaria VERDE. Um microfone que ninguém leu
+     anunciando que está capturando é o defeito que aquela função existe para
+     matar. Com a classe `on` acesa em `ATIVO`, verde quer dizer uma coisa só, e
+     tudo o que não é ATIVO fica apagado.
+
+     E O PADRÃO PASSA A SER O HONESTO: uma página que o produto nunca pinte
+     mostra o selo apagado, não um verde de mentira.
+
+     O contraste do apagado continua o medido (3,47:1 sobre o próprio fundo ->
+     9,3:1): a regra é a mesma, só trocou de lado. */
+  .selo-ativo{font-size:9.5px;font-family:'JetBrains Mono',monospace;padding:1px 6px;
+              border-radius:3px;background:var(--border-forte);color:var(--texto-suave);
+              font-weight:600;display:inline-flex;align-items:center;gap:3px;
+              vertical-align:middle;line-height:1.5}
+  .selo-ativo.on{background:var(--green);color:var(--app-bg)}
+  /* O ÍCONE E O RISCO — a segunda metade da escolha dela, para quem não
+     distingue cor. O risco é um `::after` do PRÓPRIO glifo, e não do selo: ele
+     tem de cruzar o microfone, não a palavra. */
+  .mic-glifo{position:relative;display:inline-flex;flex:0 0 auto;width:9px;height:9px}
+  .mic-glifo svg{display:block}
+  .mic-glifo.cortado::after{content:'';position:absolute;left:-1.5px;top:50%;
+    width:12px;height:1.5px;background:currentColor;border-radius:1px;
+    transform:translateY(-50%) rotate(-45deg)}
   .vol{display:flex;align-items:center;gap:8px;height:22px}
   .vol .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
   .vol .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
@@ -1089,13 +1117,100 @@ def resumo_fechado(mic_mudo):
     do jogador é a segunda palavra da linha. Era o único item que não dizia nada
     que a linha já não dissesse, e custava ~100px da largura da bateria.
     """
-    selo = "MUDO" if mic_mudo else "ATIVO"
     porque = ("Calado no firmware do controle — a luz vermelha do plástico está apagada."
               if mic_mudo else "Capturando: o som que entra por este controle chega ao PC.")
     return (f'<span class="div so-fechado">·</span>\n'
             f'          <span class="leia so-fechado" title="{porque}">Microfone '
-            f'<span class="selo-ativo{" off" if mic_mudo else ""}" data-campo="mic-selo">'
-            f'{selo}</span></span>')
+            f'{selo_do_microfone(mic_mudo)}</span>')
+
+
+# ---------------------------------------------------------------------------
+# O SELO DO MICROFONE — três elementos, um endereço, três alvos de pintura
+# ---------------------------------------------------------------------------
+# A ARMADILHA, medida no DOM VIVO em 03/09/2026 com o daemon ligado e o
+# DualSense no cabo (`scripts/ensaios/o_selo_do_mic_muda_de_cor.py`): o gerador
+# escrevia a palavra E a classe no MESMO `<span>`, e `escrever()` do piloto tem
+# UM alvo por elemento. O alvo padrão é o texto, então o tique trocava a palavra
+# e **nunca a cor**. Na página publicada, injetando os três valores do selo:
+#
+#     P1  MUDO -> rgb(80, 250, 123)   ATIVO -> rgb(80, 250, 123)   — -> rgb(80, 250, 123)
+#     P2  MUDO -> rgb(68, 71, 90)     ATIVO -> rgb(68, 71, 90)     — -> rgb(68, 71, 90)
+#
+# A cor de cada card ficou congelada no que o GERADOR desenhou, e as duas
+# metades do defeito aparecem: o P1 diz MUDO em VERDE, e o P2 diz ATIVO em
+# CINZA. Quem lesse pela cor lia o contrário do que a palavra dizia.
+#
+# A CURA É PARTIR O ELEMENTO, e não inventar um alvo novo: `achar()` visita
+# TODOS os elementos de mesmo `data-campo` com o mesmo valor, e cada um decide
+# por si — é o mecanismo que o próprio `escrever` documenta ("LIGAR UM DESLIGA
+# AS IRMÃS … cada um decide por si"). Três elementos, três alvos:
+#
+#     .selo-ativo      alvo `classe`  ->  acende `on` quando o valor é ATIVO
+#     .mic-glifo       alvo `classe`  ->  acende `cortado` quando o valor é MUDO
+#     .selo-palavra    alvo `texto`   ->  escreve a palavra
+#
+# POR QUE NÃO A OUTRA SAÍDA (uma regra de CSS pendurada num atributo): o alvo
+# `atributo` escreve `data-*`, e a cor viria de `.selo-ativo[data-mic="MUDO"]`.
+# Ela custa o MESMO segundo elemento — o atributo não escreve a palavra —, e
+# ainda põe o literal "MUDO" dentro de um seletor de CSS, onde ninguém o vê
+# envelhecer: no dia em que o selo mudar de palavra, a regra para de casar
+# CALADA e a cor congela de novo. Com o alvo `classe` o literal vive em
+# `data-hef-quando`, que é HTML gerado — e gerado perguntando ao dono, abaixo.
+#
+# O <span> DA PALAVRA NÃO MOVE UM PIXEL: `display:inline`, sem padding e sem
+# margem, dentro do mesmo `inline-flex`.
+
+#: OS TRÊS SELOS, PERGUNTADOS AO DONO — `mesa_viva.selo_do_mic`, o mesmo que o
+#: pacote chama a cada tique. Digitar "ATIVO" aqui seria a régua que esta casa
+#: pagou seis vezes para não escrever: o dia em que a palavra mudar no dono, o
+#: `data-hef-quando` deixa de casar e a cor para de seguir o estado, sem barulho.
+SELO_ATIVO = mesa_viva.selo_do_mic(False, True)
+SELO_MUDO = mesa_viva.selo_do_mic(True, True)
+
+#: O MICROFONE DESENHADO, e não um emoji: o portão `glifos` reprova
+#: `Emoji_Presentation` e o U+FE0F, e um emoji de 9px dentro de uma pílula
+#: monoespaçada herda o tamanho da fonte de emoji do sistema em vez do `9px`
+#: que o selo pede. O SVG usa `currentColor`, então ele acompanha as duas cores
+#: do selo sem uma segunda declaração — e sem um hex de plástico digitado, que
+#: `check_cores_do_dualsense` reprova nos geradores.
+MIC_SVG = ('<svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true"'
+           ' focusable="false">'
+           '<rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/>'
+           '<path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor"'
+           ' stroke-width="2" stroke-linecap="round"/>'
+           '<path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2"'
+           ' stroke-linecap="round"/></svg>')
+
+
+def selo_do_microfone(mic_mudo, *, estilo=""):
+    """O selo ATIVO/MUDO/— com COR e ÍCONE, decisão dela de 03/09/2026.
+
+    *"Cor + ícone. Redundante de propósito — quem lê rápido pega pela cor, quem
+    não distingue cor pega pelo risco."*
+
+    O QUE CADA ESTADO MOSTRA, e os três são distinguíveis sem a cor:
+
+    ======  ==========  =========  ==============================================
+    valor   fundo       risco      quando
+    ======  ==========  =========  ==============================================
+    ATIVO   verde       não        o daemon leu o byte e o microfone captura
+    MUDO    apagado     **sim**    o daemon leu o byte e o microfone está calado
+    —       apagado     não        ninguém leu o byte (`sabemos=False`)
+    ======  ==========  =========  ==============================================
+
+    MUDO E — COMPARTILHAM O FUNDO de propósito: os dois querem dizer "não está
+    capturando", e o que os separa é o risco e a palavra. Dar ao MUDO uma cor
+    própria (vermelho) é DESENHO, logo decisão dela — o par verde/apagado é o
+    que ela já aprovou, com o contraste já medido no CSS acima.
+    """
+    return (f'<span class="selo-ativo{"" if mic_mudo else " on"}"{estilo}'
+            f' data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on"'
+            f' data-hef-quando="{SELO_ATIVO}"'
+            f'><span class="mic-glifo{" cortado" if mic_mudo else ""}"'
+            f' data-campo="mic-selo" data-hef-alvo="classe"'
+            f' data-hef-classe="cortado" data-hef-quando="{SELO_MUDO}"'
+            f'>{MIC_SVG}</span><span class="selo-palavra" data-campo="mic-selo"'
+            f'>{SELO_MUDO if mic_mudo else SELO_ATIVO}</span></span>')
 
 
 # OS DOIS TEXTOS DOS BOTÕES DE SOM, e cada um diz o PREÇO do clique — que é o
@@ -1182,8 +1297,11 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
     plastico = cor_da_zona(c["cor"])            # a cor da casca, lida do SVG gerado
     luz = luz_do_jogador(c)
     rid = f'c-{c["pref"]}'
-    mic_selo = "MUDO" if mic_mudo else "ATIVO"
-    mic_off  = " off" if mic_mudo else ""
+    # O SELO INTEIRO, montado pelo dono único (`selo_do_microfone`): são três
+    # elementos com o mesmo endereço e três alvos de pintura, e escrevê-los à
+    # mão nos dois lugares era como a cor congelou. O `mic_selo`/`mic_off` que
+    # viviam aqui saíram junto — a palavra agora vem de `mesa_viva.selo_do_mic`.
+    selo_do_mic = selo_do_microfone(mic_mudo, estilo=' style="margin-left:5px"')
     mic_on   = " on"  if mic_mudo else ""
     # OS TRÊS ESTADOS DE SOM QUE ENTRARAM POR ARGUMENTO TÊM DEFAULT, e o default
     # é o que a mesa dela responde HOJE, medido no `state_full` dos dois
@@ -1301,7 +1419,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                  botão que desfaz algo que não acontece é um botão que ensina errado.
                  O método continua no daemon, para quem precisar dele. -->
             <div class="rot rot-linha">Microfone
-              <span class="selo-ativo{mic_off}" style="margin-left:5px" data-campo="mic-selo">{mic_selo}</span>
+              {selo_do_mic}
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala no
                 <b>firmware</b> e apaga a luz vermelha do plástico.<br><br>

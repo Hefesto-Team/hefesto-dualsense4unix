@@ -325,14 +325,21 @@ def test_a_bateria_escreve_o_numero_com_a_grafia_da_gtk(a02, monkeypatch):
         f"{texto_volume(102, False)!r} — duas gramáticas no mesmo card")
 
 
-def test_a_carga_desconhecida_e_o_travessao_seco(a02, monkeypatch):
-    """Ela decidiu o travessão para todo campo sem informação.
+def test_a_carga_desconhecida_e_a_da_janela_antiga(a02, monkeypatch):
+    """A carga sem leitura é `— %`, como a GTK. Decisão dela, 03/09/2026.
 
-    A GTK escreve `— %` aqui; esta tela não pendura um `%` num travessão, pela
-    mesma razão que o `alto-estado` e o `touch-estado` do mesmo card não o
-    fazem — seria a segunda gramática do "não sei" dentro do mesmo bloco.
+    O QUE CADUCOU, e esta régua era ele: até 03/09 o teste se chamava
+    `test_a_carga_desconhecida_e_o_travessao_seco` e cobrava o travessão SECO,
+    pela regra de *campo sem informação não mostra nada* e para casar com o
+    `alto-estado` e o `touch-estado` do mesmo card. Ela decidiu o contrário —
+    **"— %, como a janela antiga"** —, e a paridade com a janela que ela usa
+    vence a harmonia interna do card. A decisão é dela.
+
+    E A FRASE É PERGUNTADA, não digitada: o dono é
+    `StatusActionsMixin._bateria_da_mesa`, o mesmo que a GTK usa. Uma régua com
+    `== "— %"` reprovaria a MELHORA no dia em que a GTK mudasse a grafia.
     """
-    import mesa_viva
+    from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
     from pacotes import Contexto
 
     monkeypatch.setattr(a02, "_ENDERECOS", None)
@@ -340,4 +347,7 @@ def test_a_carga_desconhecida_e_o_travessao_seco(a02, monkeypatch):
     controle = {"uniq": UNIQ_CABO, "transport": "usb", "player_slot": 1}
     campos = a02.pacote(Contexto(state={}, mesa=[], conectados=[controle],
                                  estados={}))["cards"][UNIQ_CABO]
-    assert campos["bateria"] == str(mesa_viva.SEM_LEITOR)
+    assert campos["bateria"] == StatusActionsMixin._bateria_da_mesa({})[1], (
+        "a carga desconhecida saiu da grafia da janela antiga — ela pediu "
+        "paridade literal"
+    )
