@@ -497,6 +497,31 @@
   .logo svg{width:44px;height:44px;display:block}
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
+
+  /* O LUGAR VAZIO NÃO DESENHA CONTROLE — 04/09/2026, e é decisão DELA:
+     "aqui os svgs do controle so deveria aparecer se eles tivessem conectados".
+
+     ELA SUBSTITUI A DECISÃO DE 31/08, que dizia o contrário e está escrita em
+     seis lugares (`monta.py:267`, `aba01.py:936`, `aba04.py:832`,
+     `aba05.py:1105`, `aba06.py:1181`, `aba10.py:584`), assim:
+     "O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe
+     um controle; um desenho cinza diz."
+     O lugar CONTINUA na tela — a moldura, o rótulo `P3 · Desconectado` e o
+     travessão ficam, e é isso que segue ensinando que ali cabe um. O que sai é
+     só o desenho do aparelho, que era a parte que afirmava presença.
+
+     É `display:none`, e NÃO remoção do DOM, por duas razões medidas: as réguas
+     cobram a regra e o elemento no publicado
+     (`test_a_06_o_lugar_vazio_nao_veste_o_mockup.py`), e o pintor distribui cor
+     por ÍNDICE — `aba06.py:1186` avisa que "um lugar vazio sem endereço tiraria
+     uma casa da fila e o P4 receberia a cor do P3".
+
+     UMA REGRA PARA AS CINCO ABAS: a marca `data-conectado="nao"` é escrita pelo
+     gerador E pelo piloto (`hefesto_vivo.py:603`), e reaberta quando o controle
+     chega (`:611`). Por isso isto vive aqui, na folha das dez, e não repetido em
+     aba01/04/05/06/10. */
+  [data-conectado="nao"] .ds-svg,
+  .ds-svg[data-conectado="nao"]{display:none}
   .ds-motores{max-width:250px;margin:6px auto}
   /* as peças ocultas do SVG acendem quando a classe .acesa entra */
   .ds-svg .oculta{opacity:0}
@@ -879,6 +904,39 @@
   /* o lado desligado não finge que tem força: o trilho fica apagado */
   .motor.off .cheio{background:var(--border-forte)}
   .motor.off .num{color:var(--comment)}
+  /* O TRILHO ARRASTÁVEL — 03/09/2026, decisão dela: *"0 a 200%, e grava na
+     hora."* Ele é um `<input type=range>` de verdade, e não um trilho pintado:
+     é o `value` dele que o piloto lê no `change`.
+
+     A APARÊNCIA NÃO MUDA UM PIXEL DE PROPÓSITO. A Vibração está FECHADA por
+     elogio literal dela (`CORRECOES-DELA.md:39`), e um controle nativo do
+     WebKit ali dentro traria a cor e a altura do tema do sistema no meio de uma
+     tela que ela aprovou. `appearance:none` desliga o desenho nativo e as duas
+     regras abaixo reconstroem EXATAMENTE o que o `.trilho` + `.cheio` já eram:
+     5px de altura, raio 3, o fundo `--border-forte` e o polegar de 12px em
+     `--purple` com a borda `--panel`.
+
+     O CHEIO É UM GRADIENTE, e não um filho: um `<input>` não tem onde pendurar
+     o `<span class="cheio">`, então a parte preenchida vem de
+     `background-size` — o piloto escreve o `value`, o navegador move o polegar,
+     e o `--pct` do gradiente acompanha por `accent-color`... que o WebKit2 desta
+     versão não pinta em trilho customizado. Por isso o preenchimento fica no
+     próprio `--purple` do polegar e o trilho inteiro no tom apagado: o que
+     informa a posição é o POLEGAR, que é o que ela arrasta.
+
+     `cursor:grab` diz que a coisa se pega — a única affordance que o desenho
+     ganhou, e ela não desloca nada. */
+  .motor .trilho.arrasta{appearance:none;-webkit-appearance:none;
+    width:100%;padding:0;margin:0;border:0;background:var(--border-forte);
+    cursor:grab}
+  .motor .trilho.arrasta:active{cursor:grabbing}
+  .motor .trilho.arrasta::-webkit-slider-runnable-track{
+    height:5px;border-radius:3px;background:transparent}
+  .motor .trilho.arrasta::-webkit-slider-thumb{appearance:none;
+    -webkit-appearance:none;width:12px;height:12px;border-radius:50%;
+    background:var(--purple);border:2px solid var(--panel);margin-top:-4px}
+  .motor .trilho.arrasta:focus-visible{outline:2px solid var(--purple);
+    outline-offset:3px}
 
   /* o interruptor de cada lado: o GLIFO do mapa, aceso quando o lado está ligado */
   .lado{
@@ -1895,7 +1953,7 @@
             <div class="rot-ctrl" data-hef="identidade">P1 <span class="pt">•</span> Cosmic Red
               <span class="pt">•</span> USB</div>
             <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="auto" data-papel="forca" data-forca="auto">Auto</button></div>
-            <div class="motor" data-papel="forca"><span></span><span class="trilho"><span class="cheio" data-campo="forca-pct" data-hef-alvo="largura" style="width:100.0%"></span></span><span class="num" data-campo="mult">150%</span><span class="teto mx on" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             <div class="motor off" data-hef="motor" data-lado="e"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
@@ -2236,7 +2294,7 @@
             <div class="rot-ctrl" data-hef="identidade">P2 <span class="pt">•</span> Starlight Blue
               <span class="pt">•</span> BT</div>
             <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="auto" data-papel="forca" data-forca="auto">Auto</button></div>
-            <div class="motor" data-papel="forca"><span></span><span class="trilho"><span class="cheio" data-campo="forca-pct" data-hef-alvo="largura" style="width:66.7%"></span></span><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             <div class="motor" data-hef="motor" data-lado="e"><button class="lado on" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
@@ -2982,7 +3040,7 @@
     <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. Elas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>
     <li><b>Um bloco só</b> — as duas áreas viraram uma tabela do mesmo quadro.</li>
     <li><b>Motor esquerdo e direito são o que ATIVA o lado durante o jogo</b> — o interruptor de cada lado, e o desenho mostra qual punho treme.</li>
-    <li><b>A barra de Força para em 150%</b>, que é o Máximo — não passa dele.</li>
+    <li><b>A barra de Força para em 200%</b>, que é o Máximo — não passa dele.</li>
   </ul>
 
   <h2>O que passou a vir do mapa, e deixou de ser digitado</h2>

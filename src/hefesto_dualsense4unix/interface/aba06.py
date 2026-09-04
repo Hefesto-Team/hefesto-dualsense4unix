@@ -822,7 +822,7 @@ def simples(ops, classe="escolha-at", gesto="", campo="", escolhido=""):
     `Só fora do jogo` · `Desativado`, e **o padrão é a do meio**. Sem este
     argumento a lista nasceria marcada na PRIMEIRA — que é justamente a única
     das três sem dono no produto. Uma tela que nasce mostrando a opção que o
-    produto não sabe fazer promete o que não entrega nos 500 ms anteriores ao
+    produto não sabe fazer promete o que não entrega nos 100 ms anteriores ao
     primeiro tique (`hefesto_vivo.TIQUE_MS`).
     """
     g = f' data-gesto="{gesto}"' if gesto else ""
@@ -1704,7 +1704,7 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
 #: piloto só reconhece um alvo que case com o `closest` de `manda_do_alvo`
 #: (`hefesto_vivo.py:367` — `[data-gesto]`, `[data-modo]`, `[data-papel]`…), e
 #: os 21 `<select>` tinham só `data-campo`, `data-linha` e `data-hef-alvo`.
-#: O `change` morria no navegador; o tique de 500 ms reescrevia a escolha por
+#: O `change` morria no navegador; o tique da pintura reescrevia a escolha por
 #: cima; e o "Guardar" ao lado nunca via uma forma diferente do perfil.
 LINHA_DE_BOTAO = "linha-de-botao"
 
@@ -2266,7 +2266,7 @@ def _conferir(doc):
            "presa depois de ela desistir")
     # 5. A LISTA DO TECLADO NASCE NA OPÇÃO QUE ELA ESCOLHEU COMO PADRÃO, e ela
     #    é a única das três com dono no produto. Nascer marcada na primeira
-    #    ("Só dentro do jogo") faria a tela prometer, nos 500 ms anteriores ao
+    #    ("Só dentro do jogo") faria a tela prometer, nos 100 ms anteriores ao
     #    primeiro tique, o que o Hefesto ainda não sabe fazer.
     exigir(f'<option selected>{TECLADO_PADRAO}</option>' in corpo,
            f"a 'Função do teclado' não nasce em {TECLADO_PADRAO!r}")

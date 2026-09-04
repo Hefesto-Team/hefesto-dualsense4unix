@@ -497,6 +497,31 @@
   .logo svg{width:44px;height:44px;display:block}
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
+
+  /* O LUGAR VAZIO NÃO DESENHA CONTROLE — 04/09/2026, e é decisão DELA:
+     "aqui os svgs do controle so deveria aparecer se eles tivessem conectados".
+
+     ELA SUBSTITUI A DECISÃO DE 31/08, que dizia o contrário e está escrita em
+     seis lugares (`monta.py:267`, `aba01.py:936`, `aba04.py:832`,
+     `aba05.py:1105`, `aba06.py:1181`, `aba10.py:584`), assim:
+     "O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe
+     um controle; um desenho cinza diz."
+     O lugar CONTINUA na tela — a moldura, o rótulo `P3 · Desconectado` e o
+     travessão ficam, e é isso que segue ensinando que ali cabe um. O que sai é
+     só o desenho do aparelho, que era a parte que afirmava presença.
+
+     É `display:none`, e NÃO remoção do DOM, por duas razões medidas: as réguas
+     cobram a regra e o elemento no publicado
+     (`test_a_06_o_lugar_vazio_nao_veste_o_mockup.py`), e o pintor distribui cor
+     por ÍNDICE — `aba06.py:1186` avisa que "um lugar vazio sem endereço tiraria
+     uma casa da fila e o P4 receberia a cor do P3".
+
+     UMA REGRA PARA AS CINCO ABAS: a marca `data-conectado="nao"` é escrita pelo
+     gerador E pelo piloto (`hefesto_vivo.py:603`), e reaberta quando o controle
+     chega (`:611`). Por isso isto vive aqui, na folha das dez, e não repetido em
+     aba01/04/05/06/10. */
+  [data-conectado="nao"] .ds-svg,
+  .ds-svg[data-conectado="nao"]{display:none}
   .ds-motores{max-width:250px;margin:6px auto}
   /* as peças ocultas do SVG acendem quando a classe .acesa entra */
   .ds-svg .oculta{opacity:0}
@@ -931,8 +956,25 @@
      halo do `box-shadow` das acesas. Cinco pontos viraram um, dois, três e
      quatro anéis, e o padrão — que é o que aquele desenho existe para mostrar —
      não estava lá. */
-  /* as duas cores das lâmpadas moram no `CSS_LUZINHAS`, com elas */
+  /* AS DUAS CORES DAS LÂMPADAS MORAM NO `CSS_LUZINHAS` — E NÃO CHEGAVAM AQUI.
+     A linha que estava neste lugar dizia "moram no `CSS_LUZINHAS`, com elas" e
+     parava aí. Elas moram em `.luzinhas`, que é o indicador PEQUENO da célula
+     LEDs, e `.luzinhas` é uma FOLHA da árvore, não um ancestral do desenho: as
+     duas regras abaixo pintam `<rect>` DENTRO DO SVG, e variável de CSS só
+     herda para baixo. Medido no DOM vivo em 03/09/2026, na mesa dela — as cinco
+     lâmpadas do desenho grande saíam todas com o mesmo cinza herdado do casco,
+     nenhuma acesa, com o `title` da moldura prometendo que *"as cinco lâmpadas
+     dizem qual é [o número]"*.
+
+     O `--luz-apagada` NÃO TEM ESSA DOENÇA, e a primeira volta desta cura disse
+     que tinha: `.luzes` é o QUADRO que envolve a `.luz-grade`, então ele já
+     descia. A mordida desmentiu — arrancadas as declarações, a barra ficou no
+     cinza certo e só as lâmpadas caíram.
+
+     A declaração entra por `CSS_DA_LUZ_NO_DESENHO`, logo abaixo — o par é LIDO
+     do dono (o PACOTE, que também o escreve na folha viva), nunca digitado. */
   .luzes,.troca{--luz-apagada:#3f4350}
+  .luz-grade{--led-apagado:#4a4f5c;--led-aceso:#e8ecf5}
   .luz-grade [id$="-lightbar"] .peca{fill:var(--luz,var(--luz-apagada))}
   .luz-grade [id$="-lightbar"]{filter:drop-shadow(0 0 1.1px var(--luz))}
 
@@ -995,10 +1037,50 @@
   .cel-brilho{display:flex;align-items:center;gap:9px}
   .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);position:relative}
   .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
-    border-radius:50%;background:var(--purple);border:2px solid var(--panel)}
   .num{flex:0 0 38px;text-align:right;font-family:'JetBrains Mono',monospace;
        font-size:11.5px;color:var(--fg)}
+  /* O TRILHO PASSA A ACEITAR O ARRASTE — 03/09/2026, decisão dela: perguntada
+     se mexer no brilho grava o perfil na hora ou espera o "Salvar Perfil", ela
+     respondeu **"Grava na hora"**.
+
+     O QUE HAVIA ATÉ HOJE: o desenho já era um slider — a regra `.cheio::after`
+     punha um knob de 12px na ponta da barra roxa — e ele **não fazia nada**.
+     Ela via 100%, arrastava, e nada acontecia: a célula inteira era só leitura,
+     e o `docs/data/paridade-gtk-html.csv` a nomeia como *"a maior falta desta
+     aba"*. Um desenho de slider que não desliza é a família de defeito que esta
+     casa mais paga: a tela AFIRMANDO o que o produto não faz.
+
+     O KNOB DEIXA DE SER DESENHO E VIRA O POLEGAR DE VERDADE, e é por isso que
+     a regra `.cheio::after` SAIU em vez de ganhar um irmão: com as duas, ela
+     veria DOIS knobs durante o arraste — o nativo, que a segue, e o pintado,
+     que só alcança o valor no tique seguinte à soltura.
+
+     A GEOMETRIA É A MESMA DO DESENHO APROVADO, e ela não é aproximada: é
+     resolvida. O knob do mockup tinha o centro em `larg × b% − 1px` (uma caixa
+     de 12px com `right:-5px` dentro de um `.cheio` de largura `b%`). O polegar
+     nativo tem o centro em `L + 6px + b% × (W − 12px)`. Igualando para TODO
+     `b`: `W = 100% + 12px` e `L = −7px` — que são exatamente os dois números
+     abaixo. Com `left:0;width:100%` (o encaixe óbvio) o polegar erraria 7px nas
+     pontas, e o desenho dela mudaria de lugar em 0% e em 100%.
+
+     O FUNDO É TRANSPARENTE — a barra roxa continua sendo o `.cheio`, que é
+     quem carrega o endereço `brilho-pct` e é pintado pelo PRODUTO. O trilho
+     nativo por baixo desenharia uma segunda barra, cinza, por cima da dela.
+
+     `appearance:none` NOS DOIS LADOS: sem ele o WebKit ignora `::-webkit-slider-thumb`
+     e devolve o polegar do sistema — outro tamanho, outra cor, e a coluna deixa
+     de ser a coluna que ela aprovou. */
+  .puxador{position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+    width:calc(100% + 12px);height:12px;margin:0;padding:0;
+    -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+  .puxador::-webkit-slider-runnable-track{height:12px;background:transparent;border:0}
+  .puxador::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;background:var(--purple);
+    border:2px solid var(--panel);box-sizing:border-box;cursor:pointer}
+  /* O FOCO SE VÊ, e ele importa mais aqui que em qualquer botão desta aba: o
+     polegar anda pelas setas do teclado, e um foco invisível seria uma barra
+     que muda sozinha sem ninguém saber qual está em foco. */
+  .puxador:focus-visible{outline:2px solid var(--purple);outline-offset:4px}
 
   /* ---------- SELECIONE O PLAYER: a troca ---------- */
   .players{display:flex;gap:5px;align-items:center;height:100%}
@@ -2055,7 +2137,7 @@
             <span class="hex" data-campo="hex">#0000FF</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:82%"></span></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:82%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="82" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Arraste para mudar o brilho da barra deste controle. Ao soltar, a barra acende no brilho novo e o valor é gravado no perfil ativo — não espera o Salvar Perfil."></span>
             <span class="num" data-campo="brilho">82%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -2408,7 +2490,7 @@
             <span class="hex" data-campo="hex">#FF0000</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:100%"></span></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:100%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="100" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Arraste para mudar o brilho da barra deste controle. Ao soltar, a barra acende no brilho novo e o valor é gravado no perfil ativo — não espera o Salvar Perfil."></span>
             <span class="num" data-campo="brilho">100%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
