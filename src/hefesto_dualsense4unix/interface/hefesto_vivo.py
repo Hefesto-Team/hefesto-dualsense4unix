@@ -454,6 +454,12 @@ BOOTSTRAP = r"""
   //: cartão daquele controle que não existe NESTA página.
   const ESTILO_DA_TARJA =
     'position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;margin:0;';
+  //: O RECADO DENTRO DE UM CARTÃO QUE É GRADE. Ver a razão inteira em
+  //: `pintar_recados`: no fluxo, ele come uma célula e desloca a coluna toda.
+  //: `left/right:4px` em vez de `0` para não cobrir a borda colorida do cartão,
+  //: que é quem diz de quem é a coluna.
+  const ESTILO_NA_GRADE =
+    'position:absolute;top:4px;left:4px;right:4px;z-index:5;margin:0;';
   // O RECADO DA RECUSA — a frase do produto CHEGANDO AO CARTÃO.
   //
   // POR QUE ELE PRECISOU EXISTIR, medido em 02/09/2026 PELO CAMINHO DELA: o
@@ -510,7 +516,38 @@ BOOTSTRAP = r"""
         el.setAttribute('role', 'status');
         // SEM CLIQUE: o aviso mora DENTRO do cartão e o ouvinte é delegado —
         // sem isto um clique nele subiria pelo `closest` e viraria gesto.
-        el.style.cssText = ESTILO_DO_RECADO + (cartao ? '' : ESTILO_DA_TARJA);
+        //
+        // O CARTÃO DE LINHAS FIXAS PRECISA DA TERCEIRA FORMA, e ela nasceu de um
+        // defeito FOTOGRAFADO em 04/09/2026, na aba 05: um recado inserido como
+        // primeiro filho de um `[data-controle]` de linhas fixas OCUPA UMA
+        // LINHA — o desenho do controle sumia, o nome caía na faixa da Força, e
+        // a coluna inteira descia uma casa. O aviso que veio explicar quebrava a
+        // tela que estava explicando.
+        //
+        // Medido no cartão da 05, com a recusa entrando pelo caminho do produto:
+        //
+        //     sem a cura   topo do desenho 389 -> 454   (65 px, e o recado static)
+        //     com a cura   topo do desenho 389 -> 389   (não se move)
+        //
+        // GRID **E** FLEX, e a segunda metade custou uma medição: a primeira
+        // versão desta cura cobria só `grid`, e o `.cartao` da 05 é `flex` —
+        // então ela passou verde sem tocar no defeito. Nos dois o filho é
+        // posicionado pela ORDEM, que é o que faz o recado empurrar.
+        //
+        // `block` fica de fora de propósito: ali empurrar é o fluxo normal do
+        // documento, o layout aguenta, e tirar do fluxo criaria sobreposição
+        // onde não havia problema.
+        var foraDoFluxo = false;
+        if(cartao){
+          var disp = getComputedStyle(pai).display;
+          foraDoFluxo = disp === 'grid' || disp === 'inline-grid'
+                     || disp === 'flex' || disp === 'inline-flex';
+          if(foraDoFluxo && getComputedStyle(pai).position === 'static'){
+            pai.style.position = 'relative';
+          }
+        }
+        el.style.cssText = ESTILO_DO_RECADO
+          + (cartao ? (foraDoFluxo ? ESTILO_NA_GRADE : '') : ESTILO_DA_TARJA);
         if(cartao){ pai.insertBefore(el, pai.firstChild); } else { pai.appendChild(el); }
         n += 1;
       }
