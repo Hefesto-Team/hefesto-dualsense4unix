@@ -132,6 +132,28 @@ BASE: dict[str, Any] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# O ENDEREÇO MUDOU EM 04/09/2026, e esta régua mudou com ele.
+#
+# O `alto-estado` era um `<span class="mudo" data-campo="alto-estado" hidden>` —
+# valor vivo, escrito a cada tique, dentro de um vão que o piloto NUNCA
+# desesconde. Foi assim que o "102%" viveu meses sem ninguém ver, e é a decisão
+# [09] dela (*"onde a tela mostra que o alto-falante está mudo?"*).
+#
+# O vão saiu do desenho e a informação virou DOIS campos, cada um no lugar em
+# que ela olha:
+#
+#     alto-num    o número, pela curva medida  (102 -> 100, 255 -> 100)
+#     alto-mudo   a palavra, do MESMO dono que o selo do microfone usa
+#                 (`mesa_viva.selo_do_mic`): MUDO / ATIVO / travessão
+#
+# O `alto-estado` some sozinho do pacote quando a página publicada deixa de
+# tê-lo (`_so_se_a_pagina_tiver`) — foi o que aconteceu ao publicar a aba 02.
+# **O que esta régua cobra não mudou:** a curva medida, o talo que não vira
+# 255%, o mudo que vence a porcentagem, e a ausência que não vira zero.
+# ---------------------------------------------------------------------------
+
+
 # --------------------------------------------------------------------------
 # 1. O VOLUME — o registrador cru com um sinal de porcentagem
 # --------------------------------------------------------------------------
@@ -147,9 +169,8 @@ def test_o_volume_nao_e_o_registrador_cru_com_por_cento(pac, a02):
     mesa dela cheia.
     """
     d = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": False}})
-    assert d["alto-estado"] == "100 %"
-    assert "%" in d["alto-estado"]
-    assert str(VOLUME_VIVO) not in d["alto-estado"], (
+    assert d["alto-num"] == 100
+    assert d["alto-num"] != VOLUME_VIVO, (
         "a tela escreveu o registrador cru do protocolo como se fosse por cento")
 
 
@@ -163,8 +184,8 @@ def test_o_talo_do_registrador_nao_vira_duzentos_e_cinquenta_e_cinco_por_cento(p
     """
     talo = _card(pac, a02, {**BASE, "speaker": {"volume": 255, "muted": False}})
     meio = _card(pac, a02, {**BASE, "speaker": {"volume": 128, "muted": False}})
-    assert talo["alto-estado"] == "100 %"
-    assert meio["alto-estado"] == "100 %", (
+    assert talo["alto-num"] == 100
+    assert meio["alto-num"] == 100, (
         "128 soa igual a 255 no alto-falante do DualSense (curva medida em "
         "01/08/2026) — uma conta linear diria 50 % sobre o volume máximo")
 
@@ -176,7 +197,10 @@ def test_o_mudo_vence_a_porcentagem(pac, a02):
     aqui, porque a palavra some.
     """
     d = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": True}})
-    assert d["alto-estado"] == "Mudo"
+    assert d["alto-mudo"] == "MUDO"
+    aceso = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": False}})
+    assert aceso["alto-mudo"] == "ATIVO", (
+        "sem o par, a régua passaria com um campo que diz MUDO para sempre")
 
 
 def test_sem_alto_falante_a_tela_nao_diz_zero(pac, a02):
@@ -190,8 +214,9 @@ def test_sem_alto_falante_a_tela_nao_diz_zero(pac, a02):
     import mesa_viva
 
     d = _card(pac, a02, BASE)
-    assert d["alto-estado"] == mesa_viva.SEM_LEITOR
-    assert "0" not in d["alto-estado"]
+    assert d["alto-num"] == mesa_viva.SEM_LEITOR
+    assert d["alto-mudo"] == mesa_viva.SEM_LEITOR
+    assert "0" not in str(d["alto-num"])
 
 
 def test_o_bloco_do_alto_falante_e_lido_nas_duas_posicoes(pac, a02):
@@ -207,7 +232,7 @@ def test_o_bloco_do_alto_falante_e_lido_nas_duas_posicoes(pac, a02):
     """
     dentro = {k: v for k, v in BASE.items() if k != "speaker"}
     dentro["inputs"] = {"speaker": {"volume": 60, "muted": False}}
-    assert _card(pac, a02, dentro)["alto-estado"] == "34 %"
+    assert _card(pac, a02, dentro)["alto-num"] == 34
 
 
 # --------------------------------------------------------------------------
@@ -761,7 +786,7 @@ def test_publicada_a_pagina_o_volume_e_a_curva_medida(pac, a02,
     medida no hardware (`core/speaker_scale.py`: abaixo de 38 tudo é mudo), e
     era isso que a tela escondia atrás de um `100` cravado.
 
-    A CONTA É A MESMA do `alto-estado` — os dois campos do mesmo bloco saem de
+    A CONTA É A MESMA do `alto-barra` — os dois campos do mesmo bloco saem de
     `percentual_do_volume`, e divergirem por dois arredondamentos é o defeito
     que aquele módulo existe para não cometer.
 
@@ -772,7 +797,6 @@ def test_publicada_a_pagina_o_volume_e_a_curva_medida(pac, a02,
     d = _card(pac, a02, {**BASE, "speaker": {"volume": 40, "muted": False}})
     assert d["alto-num"] == percentual_do_volume(40) == 3
     assert d["alto-barra"] == 3
-    assert d["alto-estado"] == "3 %"
 
 
 def test_publicada_a_pagina_o_volume_desconhecido_nao_vira_cem(
