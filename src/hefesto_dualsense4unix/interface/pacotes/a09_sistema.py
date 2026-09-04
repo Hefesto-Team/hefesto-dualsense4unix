@@ -1269,6 +1269,40 @@ def _trava(ctx: Contexto, nome: str) -> str | None:
         return None
 
 
+#: A ÚNICA TRAVA DA CAMADA DO PRODUTO QUE ESTE ARQUIVO **NÃO** OBEDECE, e ela é
+#: nomeada aqui em vez de ignorada em silêncio — 03/09/2026.
+#:
+#: `aba_sistema.travas()` (`gui/aba_sistema.py:606`) tranca `ver-plugins` E
+#: `ver-detalhes` com a mesma frase: *"O serviço está desligado — não há o que
+#: perguntar a ele."* Para o `ver-plugins` a frase é exata: ele fala com o
+#: daemon por IPC (`plugin.reload` + `plugin.list`), e um daemon parado não
+#: responde. Para o `ver-detalhes` ela é FALSA neste produto:
+#:
+#:     o `ver-detalhes` daqui NÃO pergunta ao daemon. Ele roda
+#:     `journalctl --user -u <unit> -n 80`, que lê o JOURNAL do systemd — um
+#:     arquivo do sistema, que continua inteiro depois de a unit cair.
+#:
+#: E TRANCÁ-LO CUSTARIA EXATAMENTE O QUE ELE EXISTE PARA DAR: com o serviço
+#: desligado, "Ver detalhes" é o botão que responde **por que ele caiu**.
+#: Obedecer à trava apagaria a única pista no minuto em que ela é a única coisa
+#: que importa. A janela antiga também não a tranca — `on_daemon_view_logs:2387`
+#: não tem regra de sensibilidade, e `_aplicar_sensibilidade_ligar_desligar` só
+#: alcança Ligar, Desligar e Reiniciar.
+#:
+#: A CURA NÃO É MINHA: a linha que tranca os dois juntos está em
+#: `gui/aba_sistema.travas()`, que é a camada do produto e território de outra
+#: frente. Enquanto ela não separar os dois, esta divergência fica DECLARADA —
+#: e `test_a_09_sistema_fecha_a_paridade.py` a cobra nos dois sentidos, para
+#: que ela não vire um esquecimento no dia em que `travas()` for corrigida.
+TRAVA_QUE_NAO_VALE_AQUI: dict[str, str] = {
+    "ver-detalhes": "`travas()` o tranca com o serviço desligado, e este gesto "
+                    "não fala com o daemon: ele lê o journal do systemd, que "
+                    "sobrevive à queda da unit. Trancá-lo apagaria a resposta "
+                    "para 'por que ele caiu?' no minuto em que ela é a única "
+                    "que importa.",
+}
+
+
 @gesto("09-sistema.html", "retomar")
 def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Sair da pausa. `daemon.resume` — e só quando HÁ pausa de que sair.
@@ -1299,8 +1333,22 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `daemon.resume` e 57 ms do `daemon.status`. É a razão de os gestos rodarem em
     thread: síncrono, este botão congelaria a janela inteira por nove segundos e
     meio, e quem clicou concluiria que o app travou.
+
+    E ELE PASSA A RELER A ABA, que é a METADE que a janela antiga faz com este
+    mesmo rótulo — 03/09/2026. O `on_daemon_refresh:2267` da GTK não toca no
+    daemon: ele relê o estado, o exame e a linha do detector. Aqui o botão
+    mandava o daemon reaplicar a configuração e deixava a TELA com o valor de
+    antes por até dois segundos, porque as cinco leituras caras vivem num cache
+    de `LENTO_S`. Zerar `_LENTO` faz a próxima pintura reler tudo na hora — o
+    mesmo gesto que `_systemctl()` já fazia depois de mexer no serviço, e pela
+    mesma razão: quem clicou não pode concluir que não pegou.
+
+    A ORDEM IMPORTA: zera-se DEPOIS de o `daemon.reload` voltar. Zerar antes
+    faria a releitura acontecer no meio dos 9,5 s e publicar o estado de antes
+    como se fosse o de depois.
     """
     p.chamar("daemon.reload")
+    _LENTO.clear()
 
 
 def _teto_do_perfil(escolha: str) -> str | None:
@@ -1545,7 +1593,17 @@ def ver_plugins(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     porquê: `_handle_plugin_list` devolve `[]` tanto quando o subsistema está
     desligado quanto quando ele está ligado e vazio. Um "Nenhum plugin" seco
     faria as duas situações parecerem a mesma.
+
+    A TRAVA ENTROU EM 03/09/2026, e ela é a mesma de `retomar` e `reiniciar`:
+    `aba_sistema.travas()` responde *"O serviço está desligado — não há o que
+    perguntar a ele."* Com o serviço parado os dois métodos vão a um daemon que
+    não está lá; sem a trava, o clique voltava calado e o painel continuava com
+    o texto do último pedido — quem clicou concluiria que a lista de agora é
+    aquela. O motivo é da camada do produto, não uma frase minha.
     """
+    motivo = _trava(ctx, "ver-plugins")
+    if motivo:
+        raise RuntimeError(motivo)
     releu = p.chamar("plugin.reload")
     lista = p.resultado("plugin.list")
     itens = lista if isinstance(lista, list) else []
@@ -1575,6 +1633,9 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     A UNIT NÃO SE DIGITA. Ela vem de `utils/identidade`, pelo mesmo motivo que a
     leitura do autostart passou a vir: a literal do `-dev` sobreviveu à purga
     num lugar e fez a tela afirmar `not-found` sobre uma unit `enabled`.
+
+    ESTE É O ÚNICO GESTO DESTA ABA QUE **NÃO** OBEDECE A `travas()`, e a razão
+    está em :data:`TRAVA_QUE_NAO_VALE_AQUI`.
     """
     import subprocess
 
