@@ -121,6 +121,34 @@ _DISPENSADAS: dict[str, str] = {}
 #: segundo o que ele acabou de recusar.
 _EXAME_PEDIDO: bool = False
 
+#: OS APELIDOS DOS ADAPTADORES, lidos do BlueZ. **Forka `busctl`**, e por isso
+#: entra na mesma regra do `_MESA_DO_RADIO`: uma leitura, renovada pelo
+#: **Examinar Portas**. Medido nesta bancada em 04/09/2026: `ler_os_dongles()`
+#: custa **21,8 ms** e devolve os três adaptadores dela com o nome que ela
+#: escreveu. A 500 ms de tique isso seria um fork a cada meio segundo contra o
+#: BlueZ — o preço que o bloco acima proíbe.
+#:
+#: `None` = ainda não lido, ou a leitura falhou; e o `None` é diferente de uma
+#: tupla vazia: "não perguntei ao BlueZ" não pode virar "nenhum adaptador tem
+#: nome", que é a ausência de notícia lida como fato.
+_DONGLES: Any = None
+
+#: A ÚLTIMA SONDA DA MESA SUJA, e ela é `(quando, resposta)`. A resposta é a de
+#: `secao_controles._pergunta_da_mesa()` — `True`/`False`/`None`, e o `None` é
+#: "não consegui olhar", que NUNCA vira aviso.
+#:
+#: POR QUE UM CACHE DE 2 s E NÃO O DO PRODUTO: a sonda já tem um cache de 5 s
+#: para a lista de PIDs da Steam (`escritor_cru.VALIDADE_DO_VEREDITO_S`), mas a
+#: varredura de `/proc/<pid>/fd` roda **a cada chamada** quando a Steam está de
+#: pé. Medido com a Steam fechada: 67 ms na primeira e 0,0 ms depois. Com ela
+#: aberta o custo é o da varredura, e um tique de 500 ms o pagaria duas vezes
+#: por segundo. Dois segundos é curto o bastante para ela fechar a Steam e ver a
+#: dica mudar, e longo o bastante para não pendurar a varredura no tique.
+_MESA_SUJA: tuple[float, bool | None] | None = None
+
+#: Quanto vale a sonda da mesa suja, em segundos. Ver :data:`_MESA_SUJA`.
+VALIDADE_DA_MESA_SUJA_S = 2.0
+
 
 def _declaracao(recarregar: bool = False) -> Any:
     """O `maquina.json` já validado, ou `None` se não deu para ler.
@@ -158,6 +186,60 @@ def _mesa_do_radio(recarregar: bool = False) -> Any:
         except Exception:
             return None
     return _MESA_DO_RADIO
+
+
+def _dongles(recarregar: bool = False) -> Any:
+    """Os adaptadores pela ótica do BlueZ — endereço, alias e o nome DELA.
+
+    É a única fonte do **nome** de um adaptador: o sysfs não publica o endereço
+    (medido em 22/08, `/sys/class/bluetooth/hci0/` não tem `address`) e o
+    apelido mora no `org.bluez.Adapter1.Alias`, não no `maquina.json` — está
+    escrito em `secao_mesa`: *"o alias mora no BlueZ, que não passa pelo
+    rascunho da máquina"*.
+
+    `None` quando não deu para perguntar, e ele é diferente de `()`: sem
+    resposta a coluna Nome fica com a palavra do produto (**Sem nome**) em vez
+    de afirmar que ela não deu nome a nenhum.
+    """
+    global _DONGLES
+    if _DONGLES is None or recarregar:
+        try:
+            perfil._com_o_src()
+            from hefesto_dualsense4unix.integrations.apelido_do_dongle import (
+                ler_os_dongles,
+            )
+
+            _DONGLES = tuple(ler_os_dongles())
+        except Exception:
+            return None
+    return _DONGLES
+
+
+def _mesa_suja() -> bool | None:
+    """Alguém está segurando nó de controle AGORA? `None` = não consegui olhar.
+
+    O DONO DA PERGUNTA É `secao_controles._pergunta_da_mesa`, e as três
+    respostas são de propósito — a terceira é a que importa: um "não sei" não
+    vira aviso, *"porque alarme sem medição atrás ensina a ignorar alarme"*.
+
+    O CACHE É DAQUI E O MOTIVO ESTÁ EM :data:`_MESA_SUJA`: a sonda é a única
+    coisa desta aba que responde a algo que ela pode MUDAR no meio da sessão
+    (fechar a Steam), então não cabe na regra do "lê uma vez e o botão renova".
+    """
+    global _MESA_SUJA
+    agora = time.monotonic()
+    if _MESA_SUJA is not None and (agora - _MESA_SUJA[0]) < VALIDADE_DA_MESA_SUJA_S:
+        return _MESA_SUJA[1]
+    resposta: bool | None = None
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+            _pergunta_da_mesa,
+        )
+
+        resposta = _pergunta_da_mesa()
+    _MESA_SUJA = (agora, resposta)
+    return resposta
 
 
 #: O CENSO DO BARRAMENTO, lido UMA vez e renovado pelo "Examinar Portas" — a
@@ -692,6 +774,126 @@ def _selos_por_estado(itens: list[dict[str, Any]]) -> dict[str, list[str]]:
         ]
         for estado, endereco in ENDERECO_DO_ESTADO.items()
     }
+
+
+#: OS ENDEREÇOS DO VEREDITO, um por estado — **S-09, decisão D-16 dela**,
+#: 04/09/2026: *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
+#:
+#: A GRAMÁTICA É A MESMA DAS CINCO LINHAS (:data:`ENDERECO_DO_ESTADO`), e é de
+#: propósito: o alvo `classe` do piloto acende UMA classe por elemento, então um
+#: elemento só não tem como escolher entre quatro cores. Aqui não há uma pílula
+#: com classe cravada a reaproveitar — a linha nasce do produto —, então os
+#: QUATRO são interruptores, inclusive o `problema`.
+#:
+#: A QUARTA COR JÁ ESTÁ PUBLICADA, e isto é correção de fato: a D-16 diz que ela
+#: *"entra junto"* e espera o `--publicar` da 08. Contado na página que ela usa
+#: em 04/09/2026: os cinco `selo-estado`, os cinco `selo-certo`, `selo-atencao`
+#: e `selo-nao-sei`, e a regra `.selo.grave` do vermelho. Aquela metade da S-09
+#: fechou em 03/09; o que faltava era a LINHA.
+ENDERECO_DO_VEREDITO = {
+    "certo": "veredito-certo",
+    "atencao": "veredito-atencao",  # (noqa-acento) chave de máquina, ASCII por contrato
+    "problema": "veredito-problema",
+    "nao_sei": "veredito-nao-sei",
+}
+
+
+def _veredito_do_exame(vivos: list[Any]) -> dict[str, Any]:
+    """A resposta em UMA linha: *"está tudo certo?"* — e a cor do pior achado.
+
+    **D-16, e ela fecha a queixa que a janela estável já não tinha:** o topo do
+    Check-up só dizia QUANDO foi examinado. Para saber se há algo errado era
+    preciso ler as cinco pílulas e achar a pior — e a segunda ordem de serviço
+    desta bancada, que não cabe nas cinco, não entrava nessa leitura de jeito
+    nenhum.
+
+    **NENHUMA FRASE NASCE AQUI, E NENHUMA CONTA TAMBÉM.** As quatro frases são
+    de `ordens_da_mesa.cabecalho()`, que é o dono declarado — *"a chave de
+    estado vem CALCULADA AQUI, num lugar só: um segundo lugar decidindo a cor do
+    topo é exatamente como o verde volta a conviver com o vermelho (cicatriz de
+    6c86e295)"*. As duas contagens saem de `secao_exame.contagens_do_cabecalho`,
+    que as mantém SEPARADAS de propósito: *"conferi 5 coisas"* e *"5 coisas não
+    deram resposta"* são afirmações opostas, e a tela que as colapsa mente de
+    verde.
+
+    **DUAS PERGUNTAS RESPONDEM SOBRE ESTA LINHA E NENHUMA VÊ A OUTRA**, e é
+    `secao_exame.o_mais_grave` quem as concilia: `exame_da_mesa.veredito()` lê
+    as linhas conferidas e conhece `problema`; `cabecalho()` lê as ordens e as
+    contagens e **não** conhece. Escalar não inventa estado — o resultado é
+    sempre um dos dois que entraram —, e o empate devolve o do cabeçalho, que é
+    o que tem a frase.
+
+    **O QUE ELA CALOU NÃO SEGURA A COR.** É a mesma regra do
+    `_escrever_o_cabecalho` da janela estável: o veredito conta os itens que ela
+    NÃO dispensou, senão uma ordem dispensada prenderia o topo em laranja para
+    sempre e o ⊘ não faria nada visível — que é a definição de botão morto.
+
+    Devolve o dicionário pronto para o :func:`pacote`: a frase em `veredito` e
+    um interruptor por estado. Dicionário VAZIO quando o produto não pôde
+    responder — e ele é diferente de uma frase vazia, que o `escrever()` do
+    piloto traduziria em travessão: uma linha de juízo dizendo `—` é a tela
+    afirmando um nada.
+    """
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_exame import (
+            contagens_do_cabecalho,
+            o_mais_grave,
+        )
+        from hefesto_dualsense4unix.integrations.exame_da_mesa import veredito
+        from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
+            cabecalho,
+            ordens_caladas,
+            ordens_novas,
+        )
+    except Exception:
+        return {}
+    todas = [o for i in vivos if (o := getattr(i, "ordem", None)) is not None]
+    novas = ordens_novas(todas, _DISPENSADAS)
+    caladas = ordens_caladas(todas, _DISPENSADAS)
+    conferidas, sem_resposta = contagens_do_cabecalho(vivos)
+    topo = cabecalho(
+        ordens=novas,
+        conferidas=conferidas,
+        sem_resposta=sem_resposta,
+        dispensadas=len(caladas),
+    )
+    mudas = {o.chave for o in caladas}
+    falantes = [
+        i for i in vivos
+        if (o := getattr(i, "ordem", None)) is None or o.chave not in mudas
+    ]
+    estado = o_mais_grave(veredito(falantes), topo.estado)
+    # A FRASE SÓ VALE COM O ESTADO DELA. Quando o veredito das linhas é MAIS
+    # grave que o do cabeçalho, dizer "Nada a mudar" em vermelho seria a
+    # contradição exata da cicatriz — e a janela estável resolve trocando a
+    # frase pela do estado (`FRASE_DO_SELO`). Aqui a tela não tem esse mapa, e
+    # inventá-lo seria a quinta grafia: o que sobra é o texto do dono, e ele só
+    # é escrito quando o estado é o dele.
+    frase = topo.texto if estado == topo.estado else _frase_do_selo(estado)
+    if not frase:
+        return {}
+    return {
+        "veredito": frase,
+        **{
+            endereco: (estado if estado == qual else "")
+            for qual, endereco in ENDERECO_DO_VEREDITO.items()
+        },
+    }
+
+
+def _frase_do_selo(estado: str) -> str:
+    """A frase do selo quando o estado das LINHAS venceu o do cabeçalho.
+
+    O DONO É `secao_exame.FRASE_DO_SELO`, o mesmo mapa que a janela estável
+    escreve nesse caso exato. Import tardio pela razão de sempre neste arquivo.
+    """
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_exame import FRASE_DO_SELO
+
+        return str(FRASE_DO_SELO.get(estado, ""))
+    return ""
 
 
 def _selo_do_estado(estado: str) -> tuple[str, str]:
@@ -1342,6 +1544,185 @@ def _html_dos_aparelhos() -> str:
     return "\n".join(fora)
 
 
+#: A PALAVRA DA COLUNA "Nome" QUANDO ELA NÃO DEU NOME, e ela tem UM dono: é a
+#: mesma que `gui.aba_conexoes.html_dos_adaptadores` escreve. O gerador a lia da
+#: própria cópia até 04/09/2026 — duas grafias da mesma célula, e a tabela
+#: passou a ser pintada por este arquivo, que é onde a terceira nasceria.
+SEM_NOME = "Sem nome"
+
+#: A DICA DO CAMPO DE NOME. **DUAS ESCRITAS, UM DONO** — mesma razão de
+#: :func:`rotulo_do_controle`: o gerador a escreve no mockup e este pacote a
+#: escreve a cada tique, e enquanto ela morou só no `aba08.py` a tabela viva não
+#: tinha de onde tirá-la.
+#:
+#: O RENOMEAR DEIXOU DE SER BOTÃO — 31/08/2026, decisão dela: *"tirar o botão
+#: Renomear e adicionar a possibilidade de renomear dando duplo clique no
+#: nome"*. `contenteditable` é o que o mockup sabe fazer sem uma linha de
+#: JavaScript; o DUPLO clique é gesto do produto, e é ele que a dica promete.
+RENOMEAR_DICA = (
+    "Dê um duplo clique para dar um nome seu a este adaptador — “Sala”, "
+    "“Extra”. É por ele que o resto da tela passa a chamá-lo."
+)
+
+#: O cabeçalho da tabela dos adaptadores. Ele viaja JUNTO com as linhas porque o
+#: bloco inteiro é trocado por `innerHTML` — o mesmo molde do `.mm-faces` e da
+#: régua do rádio. Deixá-lo fora obrigaria a pintura a conhecer a estrutura do
+#: `<table>` do desenho, que é o acoplamento que o alvo `html` existe para
+#: evitar.
+_CABECALHO_DOS_ADAPTADORES = (
+    "<tr><th>Nome</th><th>Adaptador</th><th>Onde está</th></tr>"
+)
+
+#: O que a tabela diz quando a varredura do barramento não respondeu. Ela é
+#: DIFERENTE de "nenhum adaptador": ausência de leitura não é ausência de
+#: aparelho, e é o defeito que esta casa chama de *ausência de notícia lida
+#: como sucesso*. O `None` de `_mesa_do_radio` é o único caminho até aqui.
+_NAO_CONSEGUI_LER_OS_ADAPTADORES = "Não consegui ler os adaptadores agora."
+
+#: E o que ela diz quando LEU e não havia nenhum. A frase é a da janela estável
+#: (`secao_mesa`), e existe porque uma tabela vazia lê como tela quebrada.
+_NENHUM_ADAPTADOR = "Nenhum adaptador Bluetooth encontrado."
+
+
+def _apelidos_por_interface() -> dict[str, str]:
+    """`{hciN: o nome que ELA deu}` — vazio quando o BlueZ não respondeu.
+
+    O DONO DA COSTURA É `apelido_do_dongle.Dongle.nome`, que devolve o alias
+    **sem** a marca que o produto acrescenta. Ler `alias` cru aqui poria na
+    coluna o nome com a costura, que é o que a janela estável evita de
+    propósito (`secao_mesa._campo_do_nome`).
+    """
+    dongles = _dongles()
+    if not dongles:
+        return {}
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
+            _dongle_por_interface,
+        )
+
+        return {
+            interface: nome
+            for interface, dongle in _dongle_por_interface(dongles).items()
+            if (nome := str(getattr(dongle, "nome", "") or ""))
+        }
+    return {}
+
+
+def _html_dos_adaptadores() -> str:
+    """A tabela "Nome · Adaptador · Onde está" com os adaptadores DELA.
+
+    ELA ERA CENÁRIO — e é a tabela mais lida desta aba. O desenho crava duas
+    linhas ("Sala / TP-Link UB500 / Entrada 3 · traseira" e "Sem nome / Intel
+    AX211 / Interno · M.2") sobre uma bancada que tem **TRÊS** adaptadores, os
+    três `2357:0604`. Medido em 04/09/2026: `ler_a_mesa()` devolve três, e o
+    BlueZ dá a cada um o nome que ela escreveu.
+
+    AS TRÊS COLUNAS TÊM TRÊS DONOS, e nenhuma frase nasce aqui:
+
+    * **Nome** — `apelido_do_dongle.Dongle.nome`, o alias dela sem a costura;
+    * **Adaptador** — `secao_mesa._nome_do_adaptador`, que é VID:PID e **nunca**
+      `hciN`: o índice inverte entre boots, e um nome que troca de dono faz a
+      pessoa mexer na porta errada (decisão M1);
+    * **Onde está** — `secao_mesa._onde_esta_o_adaptador`, que já fala o número
+      do mapa DELA quando ela desenhou a mesa, e desce a procedência para o
+      `title`.
+
+    O `contenteditable` DA PRIMEIRA CÉLULA CONTINUA, porque o gesto de renomear
+    é dela e é duplo clique (`RENOMEAR_DICA`, decisão de 31/08). O que muda é o
+    texto que ele começa editando: o nome do adaptador, e não "Sala".
+    """
+    mesa = _mesa_do_radio()
+    if mesa is None:
+        return f'{_CABECALHO_DOS_ADAPTADORES}<tr><td colspan="3" class="mudo">' \
+               f"{_NAO_CONSEGUI_LER_OS_ADAPTADORES}</td></tr>"
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
+        _nome_do_adaptador,
+        _onde_esta_o_adaptador,
+    )
+    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+
+    apelidos = _apelidos_por_interface()
+    mapa = getattr(_declaracao(), "mapa", None)
+    linhas = []
+    for a in tuple(getattr(mesa, "adaptadores", ()) or ()):
+        nome = apelidos.get(str(getattr(a, "interface", "")), "")
+        onde, dica = _onde_esta_o_adaptador(a, mapa)
+        mudo = "" if nome else ' class="mudo"'
+        # A PROCEDÊNCIA SÓ VAI QUANDO EXISTE. `_onde_esta_o_adaptador` devolve
+        # `None` de dica para o adaptador que não está em entrada declarada, e
+        # pôr a dica do RENOMEAR nessa célula seria prometer, no hover da coluna
+        # "Onde está", um gesto que é da coluna "Nome".
+        titulo = f' title="{_e(dica)}"' if dica else ""
+        linhas.append(
+            f"<tr><td{mudo}>"
+            f'<span class="renomeia" contenteditable="true" '
+            f'title="{_e(RENOMEAR_DICA)}">{_e(nome or SEM_NOME)}</span></td>'
+            f'<td class="mudo">{_e(_nome_do_adaptador(a))}</td>'
+            f"<td{titulo}>{_e(onde)}</td></tr>")
+    if not linhas:
+        linhas = [f'<tr><td colspan="3" class="mudo">{_NENHUM_ADAPTADOR}</td></tr>']
+    return _CABECALHO_DOS_ADAPTADORES + "".join(linhas)
+
+
+def _onde_dos_vizinhos(mesa: Any) -> list[str]:
+    """A terceira coluna do bloco de cada rádio vizinho: **onde ele está**.
+
+    E ELA CARREGA O AVISO DE VIZINHANÇA, que é o mesmo fato que a linha do
+    Check-up chama de *"dois rádios da bancada estão em entradas vizinhas"* —
+    só que dito ao lado do rádio CULPADO. Na janela estável ele aparece nos
+    dois lugares; aqui aparecia só na linha do exame, sem dizer qual dos rádios
+    é. Medido nesta bancada em 04/09/2026: o `3554:fa09` é *"vizinho do
+    adaptador 3"*, e os outros dois calam.
+
+    OS DOIS DONOS SÃO DO PRODUTO — `secao_mesa._onde_esta_o_radio` (que já
+    junta o painel com o aviso, e já fala o número do mapa dela quando existe) e
+    `secao_mesa._avisos_de_vizinhanca` (que garante **um** aviso por par: são
+    dois aparelhos e UM problema, e marcar os dois leria como dois).
+    """
+    if mesa is None:
+        return []
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
+            _avisos_de_vizinhanca,
+            _onde_esta_o_radio,
+        )
+
+        avisos = _avisos_de_vizinhanca(mesa)
+        mapa = getattr(_declaracao(), "mapa", None)
+        return [
+            _onde_esta_o_radio(r, avisos.get(str(getattr(r, "no", ""))), mapa)
+            for r in tuple(getattr(mesa, "radios", ()) or ())
+        ]
+    return []
+
+
+def _dicas_dos_vizinhos(mesa: Any) -> list[str]:
+    """O `title` de cada "onde" — a segunda metade do aviso de vizinhança.
+
+    `_avisos_de_vizinhanca` devolve `(sufixo, dica)`: o sufixo entra na coluna
+    (é o que se lê sem gesto nenhum) e a dica diz POR QUE aquilo importa. Sem
+    ela a coluna acusaria sem explicar, que é a metade que a janela estável
+    nunca deixou de fora.
+    """
+    if mesa is None:
+        return []
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
+            _avisos_de_vizinhanca,
+        )
+
+        avisos = _avisos_de_vizinhanca(mesa)
+        return [
+            (avisos.get(str(getattr(r, "no", ""))) or ("", ""))[1]
+            for r in tuple(getattr(mesa, "radios", ()) or ())
+        ]
+    return []
+
+
 # ---------------------------------------------------------------------------
 # A IDENTIDADE DO CONTROLE — `IDENTIDADE-VEM-DE-CIMA-01`, 03/09/2026
 #
@@ -1434,6 +1815,65 @@ def caminho_do_microfone(via: str) -> str:
     return f"{rota}{_PONTO}{quem}"
 
 
+#: A METADE FÍSICA DA DICA DO MICROFONE — a que o desenho já escrevia, e que
+#: continua sendo verdade porque é FATO de protocolo, não conclusão de produto.
+#: Pelo cabo o DualSense expõe uma placa USB Audio própria (medido em
+#: 15/08/2026); pelo rádio não existe placa nenhuma, e o áudio vem em Opus
+#: dentro do relatório HID 0x31.
+#:
+#: **O QUE ELA NÃO DIZ MAIS**, e é a correção de 04/09: nenhuma das duas
+#: condiciona a FEATURE ao transporte. O que muda com o transporte é a ROTA — e
+#: a rota é consequência, exatamente como a chavinha *"pelo cabo / pelo rádio"*
+#: que saiu desta aba porque *"oferecia uma escolha que o transporte já tinha
+#: feito"*. A frase do custo entra derivada, logo abaixo.
+_DICA_DO_MIC = {
+    "bt": (
+        "O microfone deste controle chega <b>pelo rádio</b>: o DualSense não tem "
+        "A2DP nem HFP, então o áudio vem em Opus dentro do relatório HID e o "
+        "Hefesto publica uma fonte de captura do PipeWire com ele."
+    ),
+    "usb": (
+        "O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio "
+        "USB do próprio aparelho — o PipeWire a publica sozinho (medido em "
+        "15/08/2026)."
+    ),
+}
+
+#: O que se diz do custo quando ele não existe. Pelo cabo o microfone não passa
+#: pelo rádio, então não há fatia a contar — e dizer "0 turnos" seria um número
+#: onde não há conta.
+_MIC_NAO_CUSTA_RADIO = "Pelo cabo ele não custa turno de rádio nenhum."
+
+
+def dica_do_microfone(via: str) -> str:
+    """O `title` da linha do microfone: por onde ele chega e quanto ele custa.
+
+    **O NÚMERO DEIXA DE SER DIGITADO — 04/09/2026.** O desenho cravava
+    *"Custa +16,3 turnos de rádio"* no `title` do resumo, e os 16,3 conferiam
+    com `radio_da_mesa` **hoje**: eles são a segunda grafia, e no dia em que
+    alguém remedir o A/B a janela estável acompanha e o HTML não. É exatamente a
+    forma de defeito que `frase_da_capacidade_do_mic` foi escrita para impedir —
+    ela deriva os quatro números das constantes do medidor, *"que é o mesmo
+    lugar de onde a barra de Rádio em uso tira os dela"*.
+
+    A FRASE DO CUSTO SÓ ENTRA NO RÁDIO, e é a mesma regra do medidor: pelo cabo
+    o microfone não toca o rádio. O que muda com o transporte é a ROTA e o
+    PREÇO — nunca se o microfone existe.
+    """
+    chave = (via or "").strip().lower()
+    fisica = _DICA_DO_MIC.get(chave, _DICA_DO_MIC["usb"])
+    if chave != "bt":
+        return f"{fisica} {_MIC_NAO_CUSTA_RADIO}"
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+            frase_da_capacidade_do_mic,
+        )
+
+        return f"{fisica} {frase_da_capacidade_do_mic()}"
+    return fisica
+
+
 #: O VALOR DO `data-hef-quando` DO BOTÃO "A luz não acende" — 03/09/2026.
 #:
 #: A CURA É DO RÁDIO, e o botão do desenho já nascia apagado no cabo. O que ele
@@ -1477,6 +1917,97 @@ def trava_da_luz(via: str) -> str:
     então não há regressão; o que muda é que agora há um dono a quem cobrar.
     """
     return LUZ_LIVRE if (via or "").strip().lower() == "bt" else LUZ_TRAVADA
+
+
+def dica_da_luz(via: str, nascimento: Any = None, mesa_suja: bool | None = None) -> str:
+    """A dica do botão "A luz não acende" — a do PRODUTO, e nunca vazia.
+
+    **TRÊS COISAS QUE A TELA NÃO DIZIA, e as três têm dono no produto:**
+
+    1. **por que o botão está apagado.** O `title` do desenho é congelado: o
+       primeiro cartão diz *"Este controle está no cabo"* e o segundo diz o que
+       o clique faz — e os dois continuam dizendo isso quando o controle troca
+       de transporte. A cor já obedecia (`trava_da_luz`, 03/09); a frase, não.
+       `secao_controles.dica_do_botao` decide as duas juntas, e é ela quem passa
+       a escrever;
+    2. **o AVISO DA MESA SUJA.** Quando outro programa está segurando nó de
+       controle agora, a conexão nova nasce travada igual — e a cura que o botão
+       oferece não pega. A janela estável ANEXA o aviso à dica, nunca no lugar:
+       a pessoa continua precisando saber o que o botão faz. Aqui não havia
+       nada; ela clicava, não funcionava, e não havia segunda frase;
+    3. **a RAZÃO de a cura ser oferecida** — `frase_do_nascimento`, o carimbo
+       que o daemon põe na conexão (`SINAL-NO-NASCIMENTO-01`). Só a condenação
+       fala: ausência, `limpa` e `nao_sei` calam, cada um por um motivo medido
+       no dono. O `nascimento` chega por controle no `state_full`
+       (`ipc_handlers.py:3526`) e pacote nenhum o lia.
+
+    **NENHUMA FRASE NASCE AQUI.** O que este arquivo faz é a junção — a mesma
+    que `secao_controles._card_do_controle` faz do lado da janela estável — e a
+    ordem: o que o botão faz primeiro, a razão de ele estar sendo oferecido
+    depois. O `▲` da razão já vem do dono.
+
+    `mesa_suja` é `True`/`False`/`None`, e o `None` **não** vira aviso: alarme
+    sem medição atrás ensina a ignorar alarme.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+        dica_do_botao,
+        frase_do_nascimento,
+    )
+
+    # `dica_do_botao` pergunta ao objeto três coisas (`adotado`, `no_cabo`,
+    # `uniq`), e as três são as MESMAS que `trava_da_luz` já respondeu para a
+    # cor. Um objeto anônimo com esses três campos é o que faz as duas metades
+    # do botão — a cor e a frase — saírem da mesma pergunta em vez de duas.
+    no_radio = trava_da_luz(via) == LUZ_LIVRE
+    dados = _dataclasses.make_dataclass(
+        "ControleDaLuz", ["adotado", "no_cabo", "uniq"])(True, not no_radio, "x")
+    dica = dica_do_botao(dados, mesa_suja=bool(mesa_suja is True))
+    razao = frase_do_nascimento(nascimento) if no_radio else None
+    return f"{dica} {razao}" if razao else dica
+
+
+#: COMO A TELA LÊ O `mic_button_toggles_system` — **D-12, 04/09/2026**, e ela
+#: transforma a única escolha desta aba que o produto não sabia guardar numa
+#: LEITURA.
+#:
+#: O QUE ESTAVA AQUI ANTES ERA UM `<select>` MORTO: a tela oferecia *"Só este
+#: controle"* ou *"O computador inteiro"* POR CONTROLE, e o produto guarda UM por
+#: máquina (`daemon/lifecycle.py:301`, aplicado por `ipc_draft_applier.py:592`).
+#: A recusa estava registrada em `SEM_GESTO` e só aparecia no terminal, a cada
+#: clique — um botão que não faz nada e não diz nada.
+#:
+#: **A DOUTRINA É A DESTA MESMA ABA**, e ela já a aplicou uma vez: a chavinha
+#: *"pelo cabo / pelo rádio"* SAIU porque *"oferecia uma escolha que o
+#: transporte já tinha feito"*, e os 16,3 turnos viraram consequência. Aqui é
+#: igual — a escolha já foi feita, e foi por ela: *"o botão do Controle sempre
+#: controla a interface"* (30/08) mais *"o botão é pra ligar o microfone e ele
+#: ser ouvido no canal específico dele"* (D-12), que é UM ato só. Com esse
+#: conceito não há duas rotas com dois comportamentos, e a tela **diz** o que o
+#: botão físico faz em vez de perguntá-lo.
+#:
+#: AS DUAS FRASES SÃO AS DO `<select>` QUE SAIU — nem uma palavra nova. Elas
+#: eram o rótulo das duas opções e passam a ser a resposta.
+FALA_DO_BOTAO_DO_MIC = {
+    True: "O computador inteiro",
+    False: "Só este controle",
+}
+
+
+def escopo_do_botao_do_mic(estado: Any) -> str:
+    """O que o botão FÍSICO do microfone cala — lido do daemon, um por máquina.
+
+    A chave é `mic_button_toggles_system`, publicada pelo `state_full` desde o
+    `MIC-EXPOSE-01` (*"o botão de mic deixa de ser campo secreto do lifecycle —
+    a GUI/CLI leem o estado efetivo daqui"*). Medido na máquina dela em
+    04/09/2026: `True`.
+
+    AUSÊNCIA DEVOLVE VAZIO, e não o padrão do `DaemonConfig`: um daemon que não
+    respondeu não é um daemon que respondeu `True`. O `escrever()` do piloto
+    traduz vazio em travessão, que é a resposta honesta.
+    """
+    valor = (estado or {}).get("mic_button_toggles_system")
+    return "" if valor is None else FALA_DO_BOTAO_DO_MIC[bool(valor)]
 
 
 def _tela_da_aba() -> Any:
@@ -1619,6 +2150,57 @@ def _da_mesa_para_a_regua(m: dict[str, Any], com_mic: set[str]) -> dict[str, Any
     }
 
 
+def _nomes_dos_adaptadores() -> tuple[dict[str, str], dict[str, str]]:
+    """`({endereço: nome}, {hciN: nome})` — as duas chaves da MESMA leitura.
+
+    A régua precisa das duas porque as duas pontas dela falam línguas
+    diferentes: a pista COM gente é endereçada pelo endereço de rádio (é o que
+    `radio_da_mesa.adaptador_por_uniq` lê do `HID_PHYS`), e a pista VAZIA é
+    endereçada pelo `hciN` da varredura do sysfs (que não publica endereço
+    nenhum — medido em 22/08). O `Dongle` do BlueZ é o único lugar onde as duas
+    aparecem juntas, e é por isso que a junção mora aqui.
+
+    **O ENDEREÇO NÃO SAI DAQUI PARA A TELA.** Ele é chave de casamento e mais
+    nada: o que a pista escreve é o `nome`. Um MAC na tela é o que o
+    `check_endereco_de_radio.py` reprova, e com razão.
+    """
+    dongles = _dongles()
+    if not dongles:
+        return {}, {}
+    por_endereco: dict[str, str] = {}
+    por_interface: dict[str, str] = {}
+    for d in dongles:
+        nome = str(getattr(d, "nome", "") or "")
+        if not nome:
+            continue
+        endereco = str(getattr(d, "endereco", "") or "")
+        if endereco:
+            por_endereco[endereco] = nome
+        # `/org/bluez/hci1` → `hci1`. É o único ponto em que o `hciN` é usado, e
+        # ele NUNCA vai para a tela: a decisão M1 o proíbe ali porque o índice
+        # inverte entre boots. Aqui ele só casa duas leituras do mesmo instante.
+        interface = str(getattr(d, "objeto", "") or "").rsplit("/", 1)[-1]
+        if interface:
+            por_interface[interface] = nome
+    return por_endereco, por_interface
+
+
+def _endereco_do_adaptador(interface: str) -> str:
+    """O endereço de rádio daquele `hciN`, pelo BlueZ. `""` = não perguntei.
+
+    É a ponte entre a varredura do sysfs (que conhece `hciN` e a porta) e o
+    medidor (que conhece endereço). Sem o BlueZ ela devolve vazio, e o efeito é
+    o certo: a pista do adaptador nasce vazia em vez de receber a fatia de
+    outro.
+    """
+    if not interface:
+        return ""
+    for d in (_dongles() or ()):
+        if str(getattr(d, "objeto", "") or "").rsplit("/", 1)[-1] == interface:
+            return str(getattr(d, "endereco", "") or "")
+    return ""
+
+
 def _regua_do_radio(ctx: Contexto) -> str:
     """A régua de Desempenho com a mesa DELA — pistas, eixo e legenda.
 
@@ -1627,12 +2209,35 @@ def _regua_do_radio(ctx: Contexto) -> str:
     `HID_PHYS` do sysfs) e quanto cada fatia custa (`radio_da_mesa`, os mesmos
     quatro números que o desenho já lia).
 
-    O QUE ELE NÃO SABE É O NOME DO ADAPTADOR. O apelido mora na declaração dela,
-    endereçado por CAMINHO de barramento, e aqui a chave é o endereço de rádio —
-    as duas não casam hoje. Então a coluna diz **Sem nome**, que é a palavra que
-    o próprio produto usa quando não há apelido
-    (`gui/aba_conexoes.html_das_pistas`), e a dica fica VAZIA em vez de repetir
-    o "TP-Link UB500 — Entrada 3" do desenho. Nenhuma palavra nova nasce aqui.
+    **UMA PISTA POR ADAPTADOR DELA — 04/09/2026, e o que faltava era a FONTE.**
+    O que estava escrito aqui dizia, com todas as letras, que o passo seguinte
+    *"espera uma fonte: `radio_da_mesa` só sabe mapear `uniq` → adaptador
+    (`adaptador_por_uniq`), e não sabe ENUMERAR os adaptadores"*. **Sabe outro
+    módulo:** `mesa_de_radio.ler_a_mesa().adaptadores` — o mesmo que esta aba já
+    lia para os rádios vizinhos, e que devolve TRÊS nesta bancada (medido em
+    04/09). A régua desenhava uma pista quando havia gente no rádio e uma pista
+    vazia e sem nome quando não havia; com os dois controles dela no cabo, a
+    seção Desempenho respondia *"cabe mais um controle no rádio?"* mostrando UMA
+    barra sobre TRÊS adaptadores.
+
+    **E O NOME DO ADAPTADOR TAMBÉM TEM FONTE.** A outra frase que estava aqui —
+    *"o apelido mora na declaração dela, endereçado por CAMINHO de barramento, e
+    aqui a chave é o endereço de rádio: as duas não casam hoje"* — descrevia o
+    caminho errado. O apelido **não** está no `maquina.json`: está no
+    `org.bluez.Adapter1.Alias` (`secao_mesa`: *"o alias mora no BlueZ, que não
+    passa pelo rascunho da máquina"*), e o `Dongle` que o traz carrega TAMBÉM o
+    endereço e o `/org/bluez/hciN` — as duas pontas que faltavam. O casamento é
+    endereço→nome para a pista com gente e `hciN`→nome para as vazias, e ele
+    fecha porque as duas chaves saem da MESMA leitura.
+
+    A ORDEM DAS PISTAS É A DA TABELA acima — `ler_a_mesa()` devolve os
+    adaptadores em ordem de `hciN`, e é essa ordem que a tabela de "Adaptadores
+    Bluetooth" mostra. Duas listas do mesmo hardware em ordens diferentes fariam
+    a pessoa procurar a barra do adaptador errado.
+
+    O ADAPTADOR QUE O SYSFS NÃO SOUBE DIZER continua ganhando pista própria, sem
+    nome, e a regra é do dono: `adaptador_por_uniq` devolve `""` para o controle
+    cujo `HID_PHYS` não é MAC, e *"nunca empresta o adaptador do vizinho"*.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import radio_da_mesa as rm
@@ -1659,12 +2264,41 @@ def _regua_do_radio(ctx: Contexto) -> str:
             continue
         grupos.setdefault(onde.get(str(m.get("uniq") or ""), ""), []).append(c)
 
-    pistas: list[dict[str, Any]] = [
-        {"nome": "Sem nome", "dica": "", "dentro": grupos[chave], "vagas": no_cabo}
-        for chave in sorted(grupos, key=lambda k: (k == "", k))
-    ]
+    nome_por_endereco, nome_por_interface = _nomes_dos_adaptadores()
+    pistas: list[dict[str, Any]] = []
+    # PRIMEIRO OS ADAPTADORES QUE EXISTEM, na ordem da tabela. Cada um leva o que
+    # está NELE — e quando não há ninguém, leva a pista vazia que o desenho dela
+    # já traz (o `if not dentro` de :func:`html_da_regua_do_radio` escreve
+    # "Nenhum controle neste rádio · 0 de 1.600").
+    #
+    # O `endereco` de cada adaptador vem do BlueZ, e é a MESMA chave que o
+    # `adaptador_por_uniq` devolve. Um adaptador que o BlueZ não listou não tem
+    # como casar com o grupo, e por isso ele aparece com o que sabe de si (o
+    # `hciN` → nome) e sem fatia — nunca com a fatia de outro.
+    mesa = _mesa_do_radio()
+    for a in tuple(getattr(mesa, "adaptadores", ()) or ()):
+        interface = str(getattr(a, "interface", ""))
+        endereco = _endereco_do_adaptador(interface)
+        dentro = grupos.pop(endereco, []) if endereco else []
+        pistas.append({
+            "nome": nome_por_interface.get(interface, "") or SEM_NOME,
+            "dica": "",
+            "dentro": dentro,
+            "vagas": no_cabo,
+        })
+    # E DEPOIS O QUE SOBROU: um grupo cujo endereço não bate com adaptador
+    # nenhum da varredura. Ele existe — há um controle falando por ele —, e
+    # calá-lo seria esconder ocupação de rádio real.
+    for chave in sorted(grupos, key=lambda k: (k == "", k)):
+        pistas.append({
+            "nome": nome_por_endereco.get(chave, "") or SEM_NOME,
+            "dica": "",
+            "dentro": grupos[chave],
+            "vagas": no_cabo,
+        })
     if not pistas:
-        # NINGUÉM NO RÁDIO — E ISSO NÃO PODE VIRAR UM EIXO SOZINHO.
+        # NEM ADAPTADOR NEM CONTROLE NO RÁDIO — E ISSO NÃO PODE VIRAR UM EIXO
+        # SOZINHO.
         #
         # O DEFEITO, fotografado na mesa dela em 03/09/2026 com o White no cabo
         # e nada no rádio: `grupos` nasce dos controles que estão NO RÁDIO, e
@@ -1675,26 +2309,16 @@ def _regua_do_radio(ctx: Contexto) -> str:
         # cara de medição e sem nada a que pertencer. Medido no WebKit:
         # `querySelectorAll('.bloco')` devolveu 0 e `.pista` devolveu 0.
         #
-        # O DONO FAZ O CONTRÁRIO, e é dele a regra: `gui.aba_conexoes
-        # .html_das_pistas` percorre os ADAPTADORES, não os controles — um
-        # adaptador sem ninguém vira uma pista com `Nenhum controle neste
-        # rádio` e `0 de 1.600`. A `08-conexoes` publicada tem essa pista vazia
-        # DESENHADA (a segunda do bloco), então esta é a forma que ela aprovou.
+        # ESTE RAMO ENCOLHEU em 04/09: ele só é alcançado quando a varredura do
+        # barramento FALHOU (`_mesa_do_radio()` devolve `None`) e não há
+        # ninguém no rádio. Com a varredura de pé, o laço acima já dá uma pista
+        # a cada adaptador dela.
         #
-        # NENHUMA PALAVRA NOVA NASCE AQUI: a frase e o `0 de …` já são do ramo
-        # `if not dentro` de :func:`html_da_regua_do_radio`, logo abaixo.
-        #
-        # O NOME FICA VAZIO DE PROPÓSITO. Sem ninguém no rádio não há `uniq`
-        # para perguntar ao sysfs, então não se sabe QUAL adaptador é — e ela
-        # tem três (o próprio Check-up desta aba diz *"2 de 3 adaptadores
-        # Bluetooth chegam ao computador por dentro de um hub"*). Escrever
-        # `Sem nome` aqui afirmaria "existe UM adaptador, e ele não tem
-        # apelido"; a coluna vazia não afirma nada, e os 96 px do
-        # `.pista .quem` seguram o alinhamento com o eixo do mesmo jeito.
-        #
-        # UMA PISTA POR ADAPTADOR DELA é o passo seguinte, e ele espera uma
-        # fonte: `radio_da_mesa` só sabe mapear `uniq` → adaptador
-        # (`adaptador_por_uniq`), e não sabe ENUMERAR os adaptadores.
+        # O NOME FICA VAZIO DE PROPÓSITO. Sem leitura não se sabe QUAL adaptador
+        # é — e ela tem três. Escrever `Sem nome` aqui afirmaria "existe UM
+        # adaptador, e ele não tem apelido"; a coluna vazia não afirma nada, e
+        # os 96 px do `.pista .quem` seguram o alinhamento com o eixo do mesmo
+        # jeito.
         pistas = [{"nome": "", "dica": "", "dentro": [], "vagas": []}]
     return html_da_regua_do_radio(
         pistas, no_radio,
@@ -2048,6 +2672,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # do daemon e não sabe o nome do plástico.
     da_mesa = {str(m.get("uniq") or ""): m for m in ctx.mesa}
 
+    # A SONDA DA MESA SUJA, UMA VEZ POR TIQUE e não uma por controle: ela
+    # responde sobre a MÁQUINA ("alguém está segurando nó de controle agora?"),
+    # não sobre um aparelho. Chamá-la dentro do laço varreria `/proc` uma vez
+    # por cartão para receber a mesma resposta.
+    mesa_suja = _mesa_suja()
+
     colunas = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
@@ -2105,6 +2735,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # os desenhou; agora ele apaga no CABO e acende no RÁDIO, que é a
             # mesma condição que o gesto usa para recusar depois do clique.
             "luz-trava": trava_da_luz(str(c.get("transport") or "")),
+            # A DICA DO MESMO BOTÃO, e ela é a metade que a cor não conta — ver
+            # :func:`dica_da_luz`. O `title` do desenho é congelado: o cartão da
+            # esquerda explica o cabo e o da direita explica o rádio, e os dois
+            # continuam explicando isso quando o controle troca de transporte.
+            # Junto vêm o AVISO DA MESA SUJA (quando outro programa segura nó de
+            # controle agora) e a RAZÃO do carimbo de nascimento — os dois com
+            # dono no produto e zero leitor no HTML até hoje.
+            "luz-dica": dica_da_luz(str(c.get("transport") or ""),
+                                    c.get("nascimento"), mesa_suja),
+            # O `title` DA LINHA DO MICROFONE — ver :func:`dica_do_microfone`. O
+            # `+16,3 turnos` era digitado no desenho; agora é derivado das
+            # constantes do medidor, que é de onde a barra de Desempenho já
+            # tirava os dela.
+            "mic-dica": dica_do_microfone(str(c.get("transport") or "")),
             # O `?` DO TETO VAI SEMPRE, e o campo só quando há o que escolher.
             # Pintar só a caixa deixaria a tela dizendo "30% da força" no campo
             # e "este controle segue o global" na dica — uma contradição NOVA,
@@ -2117,6 +2761,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # dicionário: a `cobertura` conta os campos da confissão, e chamar a função
     # duas vezes releria o barramento no mesmo tique.
     confissao = _confissao_do_mapa()
+    # PELA MESMA RAZÃO DA CONFISSÃO: a `cobertura` conta os campos do veredito, e
+    # chamar `_veredito_do_exame` duas vezes refaria a conta do cabeçalho no
+    # mesmo tique.
+    veredito = _veredito_do_exame(vivos)
     return {
         "colunas": colunas,
         # O MAPA DO GABINETE, trocado INTEIRO — 01/09/2026. Ele não se pinta
@@ -2164,6 +2812,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `html_da_regua_do_radio`: o `title` de cada fatia nomeia o plástico, e
         # `title` não tem alvo no piloto — o bloco tem de nascer do produto.
         "regua-do-radio": _regua_do_radio(ctx),
+        # A TABELA DOS ADAPTADORES — 04/09/2026. Ela era HTML fixo do mockup
+        # ("Sala / TP-Link UB500 / Entrada 3 · traseira" e "Sem nome / Intel
+        # AX211 / Interno · M.2") sobre uma bancada com TRÊS adaptadores. É
+        # trocada INTEIRA pela mesma razão da régua e do mapa: quantas linhas
+        # existem é o que a máquina dela responde, e não há endereço para uma
+        # `<tr>` que ainda não nasceu.
+        "adaptadores-tabela": _html_dos_adaptadores(),
+        # O QUE O BOTÃO FÍSICO DO MICROFONE CALA — **D-12**, e é a resposta que
+        # substitui o `<select>` morto de `mic-escopo`. Um valor por MÁQUINA num
+        # endereço por máquina; era um por controle num campo que o produto não
+        # tem como guardar por controle.
+        "mic-escopo": escopo_do_botao_do_mic(st),
         # AS TRÊS LISTAS SÃO O QUE A TELA MOSTRA, uma por bloco de achado: o
         # selo, a frase e o `?`. Elas se distribuem pelos elementos de mesmo
         # `data-campo`, na ordem — o gerador não precisa saber quantos achados
@@ -2226,6 +2886,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # O CARIMBO do topo do Check-up — publicado no mesmo dia e pela mesma
         # decisão, e também já pintado.
         "examinado": _carimbo_do_exame(),
+        # A RESPOSTA EM UMA LINHA — **S-09, D-16**. Ver :func:`_veredito_do_exame`.
+        # O carimbo acima diz QUANDO; esta linha diz O QUÊ, e na cor do pior
+        # achado. O dicionário pode vir VAZIO, e o vazio é resposta: sem exame
+        # não há juízo, e um travessão numa linha de veredito seria a tela
+        # afirmando um nada.
+        **veredito,
         "vizinho-nome": vizinho_nome,
         # A ORDEM DESTES TRÊS IMPORTA, e é a única coisa neste dicionário em
         # que ela importa: `vizinho-pergunta` reescreve o TEXTO da primeira
@@ -2237,6 +2903,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # lados, e é dela que a pintura de UM tique depende.
         "vizinho-pergunta": vizinho_pergunta,
         "vizinho-tipo": vizinho_tipo,
+        # ONDE CADA RÁDIO VIZINHO ESTÁ, e o AVISO DE VIZINHANÇA junto — ver
+        # :func:`_onde_dos_vizinhos`. É o mesmo fato que a linha do Check-up
+        # chama de "dois rádios da bancada estão em entradas vizinhas"; aqui ele
+        # aparece ao lado do rádio CULPADO, que é a metade que faltava para a
+        # frase do exame ter endereço na mesa.
+        "vizinho-onde": _onde_dos_vizinhos(_mesa_do_radio()),
+        "vizinho-onde-dica": _dicas_dos_vizinhos(_mesa_do_radio()),
         "exame": itens,
         "achados": len(itens),
         "graves": sum(1 for i in itens if i["grave"]),
@@ -2270,8 +2943,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # contaria pintura que não aconteceu nos dois últimos casos.
         # Os dois novos POR CONTROLE (`mic-caminho`, `luz-trava`) não precisam
         # de termo: eles entram pelo `sum(len(v) …)` das colunas.
-        "cobertura": {"pintados": 4 + len(confissao) + len(itens) * 4 + 1 + len(adap)
-                      + len(vizinho_nome) * 3
+        # O `+ 2` DE 04/09 são a tabela dos adaptadores e o escopo do botão do
+        # microfone; o `+ len(veredito)` são a frase do veredito e os quatro
+        # interruptores de estado dela, LIDOS em vez de digitados — o
+        # dicionário vem vazio quando o produto não pôde responder, e contar um
+        # `+ 5` cravado contaria pintura que não aconteceu. O
+        # `len(vizinho_nome) * 3` virou `* 5`: o "onde" e a dica dele.
+        "cobertura": {"pintados": 4 + 2 + len(confissao) + len(veredito)
+                      + len(itens) * 4 + 1 + len(adap)
+                      + len(vizinho_nome) * 5
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO) + len(sem_dono)},
     }
@@ -2329,14 +3009,37 @@ from . import gesto  # noqa: E402
 # dizia que ligá-lo *"exige o helper privilegiado ou um método de log que o
 # daemon não tem"*, e bastava `journalctl --user`.
 SEM_GESTO: dict[str, str] = {
+    # `mic-escopo` SAIU DAQUI em 04/09/2026, e não porque alguém achou como
+    # ligá-lo: porque **ele deixou de ser gesto**. A recusa que estava aqui
+    # continua verdadeira palavra por palavra — `mic_button_toggles_system` é UM
+    # por máquina (`daemon/lifecycle.py:301`, aplicado por
+    # `ipc_draft_applier.py:592`) e a tela oferecia por controle, então ligá-lo
+    # faria o segundo cartão sobrescrever a escolha do primeiro, calado.
+    #
+    # O QUE MUDOU FOI A PERGUNTA. A D-12 é dela: *"o botão é pra ligar o
+    # microfone e ele ser ouvido no canal específico dele"* — UM ato só —, e
+    # com o *"o botão do Controle sempre controla a interface"* de 30/08 não há
+    # duas rotas com dois comportamentos a escolher. É a mesma doutrina que já
+    # tirou desta aba a chavinha "pelo cabo / pelo rádio", com a razão escrita
+    # na legenda: *"ela oferecia uma escolha que o transporte já tinha feito"*.
+    # O `<select>` virou LEITURA (`escopo_do_botao_do_mic`), e a linha
+    # `controle.*.mic.escopo` de `gui/aba_conexoes.SEM_FONTE` deixa de ser
+    # espera dela — a palavra veio.
+    #
+    # **A ENTRADA FICA ATÉ A PUBLICAÇÃO, e é por isso que ela não sumiu.** A
+    # página que ela usa AINDA desenha o `<select>` com
+    # `data-gesto="mic-escopo"`: tirá-lo daqui agora faria o clique deixar de
+    # produzir **até a recusa** — a forma calada do mesmo defeito, e a pior
+    # das duas. Quem publicar a 08 tira esta entrada junto.
     "mic-escopo":
-        "CONTRADIÇÃO, e o ouvinte de `change` de 01/09 NÃO a desfaz: é "
-        "`mic_button_toggles_system`, e o produto guarda UM por máquina "
-        "(`daemon/lifecycle.py:272`), aplicado pelo rascunho do perfil "
-        "(`ipc_draft_applier.py:592`) — não por controle, que é o que a tela "
-        "oferece. Ligá-lo faria o segundo card sobrescrever a escolha do "
-        "primeiro, calado. Declarada em `gui/aba_conexoes.SEM_FONTE`, linha "
-        "`controle.*.mic.escopo`, com dona: MIGRA-CONEXOES-06, §0.7, palavra dela.",
+        "SAIU DO DESENHO em 04/09/2026 — a escolha virou LEITURA, e a razão "
+        "está em `FALA_DO_BOTAO_DO_MIC`. A recusa continua verdadeira enquanto "
+        "a página publicada ainda mostrar o `<select>`: "
+        "`mic_button_toggles_system` é UM por máquina "
+        "(`daemon/lifecycle.py:301`, aplicado por `ipc_draft_applier.py:592`) e "
+        "a tela oferecia por controle, então ligá-lo faria o segundo cartão "
+        "sobrescrever a escolha do primeiro, calado. **Some com o `--publicar` "
+        "da 08.**",
     # `teto-da-vibracao` SAIU DAQUI em 01/09/2026, e o que o segurava era um
     # FATO ERRADO nas duas metades. A entrada dizia: *"a tela oferece um teto
     # POR CONTROLE e o produto aplica `min` global (`core/rumble.py`) — e o
@@ -2950,6 +3653,11 @@ def _correr_o_exame_completo() -> None:
     declaracao = _reler_a_declaracao()
     _dispensadas_do_disco(declaracao)
     _mesa_do_radio(recarregar=True)
+    # E OS APELIDOS JUNTO — 04/09/2026. Eles vêm do BlueZ por `busctl`, logo
+    # obedecem à mesma regra do `ler_a_mesa`: nunca em tique, e é o botão quem
+    # renova. Sem esta linha, renomear um adaptador na tela deixaria a tabela e
+    # a régua com o nome de antes até a próxima sessão.
+    _dongles(recarregar=True)
 
     mesa = _mesa_declarada(declaracao)
     itens = exame_da_mesa.exame(

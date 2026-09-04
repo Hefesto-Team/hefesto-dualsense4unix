@@ -113,8 +113,17 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
         # POR CONTROLE
         'data-campo="mic-existe"',
         'data-campo="mic-caminho" data-hef-alvo="html"',
+        # A TRAVA MUDOU DE NÓ EM 04/09/2026, e não de dono: ela saiu do
+        # `<button>` para um `<i class="ltrava">` irmão, porque o vocabulário é
+        # UM `data-campo` por nó e o botão precisava do dele para a DICA. A
+        # classe deixou de ser nomeada (`apagado`) e passou a ser o `on` padrão,
+        # que é o que a folha lê pelo `~` — ver `.gc-corpo .ltrava.on ~ .btn`.
         f'data-campo="luz-trava" data-hef-alvo="classe" '
-        f'data-hef-classe="apagado" data-hef-quando="{pac.LUZ_TRAVADA}"',
+        f'data-hef-quando="{pac.LUZ_TRAVADA}"',
+        # E A DICA DO BOTÃO — a metade que era do desenho e mentia quando o
+        # controle trocava de transporte.
+        'data-campo="luz-dica" data-hef-alvo="atributo" '
+        'data-hef-atributo="title"',
         # A CONFISSÃO DO DESENHO
         'data-campo="confissao-nada" data-hef-alvo="classe" '
         'data-hef-classe="sumido" data-hef-quando="sim"',
@@ -157,10 +166,16 @@ def test_todo_botao_da_luz_tem_a_trava() -> None:
     """
     html = BANCADA.read_text(encoding="utf-8")
     botoes = re.findall(r'<button[^>]*data-gesto="luz-nao-acende"[^>]*>', html)
-    com_trava = [b for b in botoes if 'data-campo="luz-trava"' in b]
+    # A TRAVA É O IRMÃO ANTERIOR desde 04/09/2026 — ver o teste acima. O `~` do
+    # CSS só alcança irmãos POSTERIORES, então o `<i>` colado antes do botão é a
+    # única forma que faz o apagado acender; um `<i>` solto noutro canto passaria
+    # por um `in html` e nunca pintaria nada.
+    com_trava = re.findall(
+        r'<i class="ltrava[^"]*" data-campo="luz-trava"[^>]*></i><button[^>]*'
+        r'data-gesto="luz-nao-acende"', html)
     assert botoes and len(botoes) == len(com_trava), (
         f"a bancada da 08 tem {len(botoes)} botões da luz e {len(com_trava)} "
-        f"com endereço de trava")
+        f"com o interruptor da trava colado antes deles")
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +203,19 @@ def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
                for c in re.findall(r'data-campo="([^"]+)"', bloco)}
     pac = _pacote().pacote(_ctx())
     emitidos = {k for coluna in pac["colunas"].values() for k in coluna}
+    # OS CAMPOS DE MÁQUINA CONTAM — 04/09/2026, e é o piloto quem manda: o passo
+    # 1 da pintura faz `achar(document, k)` para as chaves de topo, sem recorte
+    # por `[data-controle]` (`hefesto_vivo.py:612`). Um valor que é UM por
+    # máquina e mora dentro da linha do controle — o escopo do botão físico do
+    # microfone, decisão D-12 dela — é pintado ali do mesmo jeito, e nas duas
+    # linhas com o mesmo valor, que é a verdade dele.
+    #
+    # A RÉGUA NÃO AFROUXA: ela continua reprovando o endereço que NINGUÉM
+    # escreve, que é o defeito que ela existe para pegar. O que ela deixa de
+    # exigir é que todo campo da linha seja POR CONTROLE — e essa exigência era
+    # sobre a arquitetura do pacote, não sobre a tela.
+    emitidos |= {k for k, v in pac.items()
+                 if not isinstance(v, (dict, list))}
     sem_dono = na_tela - emitidos
     assert not sem_dono, (
         f"a linha do controle na bancada da 08 tem endereço sem ninguém que o "

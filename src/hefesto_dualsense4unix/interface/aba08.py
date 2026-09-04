@@ -33,6 +33,15 @@ from onde import RAIZ as R  # noqa: E402
 # Daqui sai a lista de respostas do "— O que é? —": ver `VIZINHOS`, abaixo.
 from hefesto_dualsense4unix.gui import aba_conexoes as _aba_conexoes  # noqa: E402
 
+# OS DOIS DONOS DO VEREDITO DO CHECK-UP — decisão D-16 dela, 04/09/2026.
+# `ordens_da_mesa.cabecalho` escreve as QUATRO frases possíveis do topo e
+# `exame_da_mesa.veredito` decide a cor. Os dois são puros e importam sem
+# `structlog`, que é o que separa este par do `secao_exame` (ele puxa
+# `escritor_cru`, que puxa o logger, e o `python3 aba08.py` desta pasta não roda
+# no `.venv`). Ver `VEREDITO_DO_DESENHO`, abaixo.
+from hefesto_dualsense4unix.integrations import exame_da_mesa as _exame_da_mesa  # noqa: E402
+from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens_da_mesa  # noqa: E402
+
 # O PACOTE DESTA ABA — e ele é DONO de três coisas que os dois lados desenham:
 # o rótulo do controle, a tinta legível sobre o plástico e a régua do rádio.
 # Mesma dependência que o `aba04.py` já tem do `pacotes.a04_iluminacao`, e pela
@@ -271,7 +280,14 @@ if faltam := {c["pref"] for c in MESA} - set(DA_CONTROLES):
 #: grava nada tem um dono só (`gui.aba_conexoes.SEGUE_O_GLOBAL`).
 SEGUE_O_GLOBAL = _aba_conexoes.SEGUE_O_GLOBAL
 TETO_DO_CONTROLE = {"p3": COM_TETO}
-BOTAO_DO_MIC = "Só este controle"
+#: O QUE O BOTÃO FÍSICO DO MICROFONE FAZ — e ele deixou de ser ESCOLHA em
+#: 04/09/2026. Ver `a08_conexoes.FALA_DO_BOTAO_DO_MIC`, que é o dono das duas
+#: falas e o único lugar que traduz o `mic_button_toggles_system` do daemon.
+#:
+#: A CENA DA BANCADA MOSTRA O PADRÃO DO PRODUTO (`DaemonConfig
+#: .mic_button_toggles_system = True`), e não uma das duas escolhida a dedo:
+#: o desenho tem de parecer o que a máquina de quem instala vai mostrar.
+BOTAO_DO_MIC = _pacote08.FALA_DO_BOTAO_DO_MIC[True]
 
 
 #: ONDE O TETO GLOBAL MORA AGORA — e não é mais nesta aba.
@@ -372,8 +388,12 @@ def teto_que_vale(c):
 # porque o valor é lido DUAS vezes: uma para escrever a célula e outra para
 # decidir se ela sai apagada (`class="mudo"`) — dois literais iguais é um que
 # pode ficar para trás.
+# O `SEM_NOME` PASSOU A VIR DO PACOTE em 04/09/2026, com a tabela: agora quem
+# escreve essa célula na tela viva é `a08_conexoes._html_dos_adaptadores`, e
+# duas grafias da mesma palavra é o que faz o desenho e o produto divergirem
+# no primeiro dia em que uma delas mudar.
 # ---------------------------------------------------------------------------
-SEM_NOME = "Sem nome"
+SEM_NOME = _pacote08.SEM_NOME
 ADAPTADORES = [
     {"nome": "Sala", "modelo": "TP-Link UB500", "onde": "Entrada 3",
      "detalhe": "traseira", "prefs": ["p2", "p3"]},
@@ -737,6 +757,51 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .exame .txt{flex:0 1 auto;min-width:0}
   .exame .ignora{margin-left:auto}
 
+  /* ---- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026 ----
+     *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
+
+     O QUE ELA CURA, e a queixa é dela: o Check-up tinha cinco pílulas e nenhum
+     veredito. Para saber se está tudo certo era preciso ler as cinco e achar a
+     pior — e a segunda ordem de serviço desta bancada, que não cabe nas cinco,
+     não entrava nessa leitura de jeito nenhum. A janela estável responde em uma
+     linha desde sempre, e o carimbo do lado só diz QUANDO.
+
+     ELA MORA NO TOPO DA SEÇÃO e não dentro da coluna do exame: "no topo" é a
+     palavra dela, e a resposta que vale para as duas colunas — o exame à
+     esquerda e a ordem de serviço à direita — não pode ficar pendurada em uma
+     delas. São 11px de altura mais o vão, e é o preço declarado da decisão.
+
+     A COR VEM POR INTERRUPTOR, um por estado, exatamente como as cinco linhas
+     ganharam em 03/09: o alvo `classe` do piloto acende UMA classe por
+     elemento, então um nó só não tem como escolher entre quatro cores. Aqui os
+     QUATRO são interruptores — inclusive o `problema` —, porque não há pílula
+     com classe cravada a reaproveitar: a linha inteira nasce do produto.
+
+     O `~` LEVA A COR DO IRMÃO ao ponto e ao texto sem que nenhum dos dois
+     precise de um segundo `data-campo`, que o vocabulário de endereço não
+     permite. É o mesmo combinador de `.exame .est-ok.on ~ .selo`.
+
+     O ESTADO DE REPOUSO É O CINZA DE "não sei", e não o verde: enquanto o
+     produto não respondeu, a linha não pode afirmar que está tudo bem — é o F7
+     desta casa, o estado em que o produto não sabe se disfarçando do estado em
+     que está tudo certo. */
+  .veredito{display:flex;align-items:center;gap:9px;min-height:19px;font-size:12px;
+            font-weight:600;color:var(--texto-suave);margin-bottom:11px}
+  .veredito .vst{display:none}
+  .veredito .ponto{flex:0 0 8px;width:8px;height:8px;border-radius:50%;
+                   background:var(--comment)}
+  .veredito .vst-ok.on ~ .ponto{background:var(--green)}
+  .veredito .vst-warn.on ~ .ponto{background:var(--orange)}
+  .veredito .vst-info.on ~ .ponto{background:var(--comment)}
+  .veredito .vst-bad.on ~ .ponto{background:var(--red)}
+  .veredito .vst-ok.on ~ .txt{color:var(--green)}
+  .veredito .vst-warn.on ~ .txt{color:var(--orange)}
+  .veredito .vst-info.on ~ .txt{color:var(--texto-suave)}
+  /* O VERMELHO POR ÚLTIMO, e pela mesma razão do `.selo.grave`: um instante com
+     dois interruptores acesos não pode deixar o que está QUEBRADO com a cor do
+     que só podia estar melhor. */
+  .veredito .vst-bad.on ~ .txt{color:var(--red)}
+
   /* ---- a ordem de serviço: imperativo, receita e ganho ---- */
   .ordem{border:1px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
          padding:10px 12px}
@@ -928,6 +993,32 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .btn.apagado{border-color:var(--border-forte);color:var(--texto-mudo);
                opacity:.55;cursor:help}
   .btn.apagado:hover{border-color:var(--border-forte);color:var(--texto-mudo)}
+  /* A TRAVA VIROU IRMÃ — 04/09/2026, e a razão é o vocabulário: UM `data-campo`
+     por nó. O botão tinha o dele gasto na CLASSE (`luz-trava`), e por isso o
+     `title` continuava sendo o do desenho — a dica dizia "este controle está no
+     cabo" com o controle no rádio, e ao contrário. Estava escrito ali mesmo,
+     como dívida: *"um segundo campo para o `title` pede outro elemento"*.
+
+     ELE É ESSE OUTRO ELEMENTO. O `<i class="ltrava">` invisível recebe a classe
+     e o botão fica com a DICA — que agora vem do produto inteira, com o aviso da
+     mesa suja e a razão do carimbo de nascimento juntos
+     (`a08_conexoes.dica_da_luz`). Zero pixel se move: a regra abaixo pinta o
+     mesmo `.btn.apagado` de cima, pelo irmão.
+
+     É O MESMO DESENHO dos `<i class="est">` das cinco linhas do exame, e pela
+     mesma razão. */
+  /* UMA LEITURA NO LUGAR DE UMA ESCOLHA — 04/09/2026, o escopo do botão físico
+     do microfone. Ela ocupa a MESMA fatia que o `<select>` ocupava (mesma
+     altura de linha, mesmo alinhamento), e a diferença é justamente a que se
+     quer: nada aqui parece clicável, porque não há o que clicar.
+
+     A GRAMÁTICA É A DA CASA para valor lido: peso normal, cor de texto, sem
+     moldura — é o que separa "isto é uma resposta" de "isto é um campo". */
+  .gc-corpo .leitura{font-size:11.5px;color:var(--texto-suave);white-space:nowrap;
+                     cursor:help}
+  .gc-corpo .ltrava{display:none}
+  .gc-corpo .ltrava.on ~ .btn{border-color:var(--border-forte);color:var(--texto-mudo);
+                              opacity:.55;cursor:help}
   /* o SVG real ganha a barra de luz acesa. A BARRA É PREENCHIDA, E NÃO
      CONTORNADA: estava `stroke:var(--luz)` com `stroke-width:1.2` numa forma de
      2×9,6px — metade do traço cai FORA da forma, e o que sobra dentro pinta
@@ -963,6 +1054,29 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .viz{display:flex;flex-direction:column;gap:4px;min-width:0}
   .viz .qual{font-size:10.5px;color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
              text-overflow:ellipsis}
+  /* A COLUNA "ONDE" — 04/09/2026, e ela é a que faltava para a linha do
+     Check-up ter endereço na mesa. O exame diz "dois rádios da bancada estão em
+     entradas vizinhas" e não diz QUAL; a janela estável põe o aviso ao lado do
+     rádio culpado, e é isto.
+
+     ELA NÃO CUSTA LINHA NOVA: o bloco `.viz` é uma coluna de 53px com o nome em
+     cima e o `<select>` embaixo, e o "onde" entra como terceira linha de 10,5px
+     — a mesma altura do nome. Quando não há aviso ele diz só o painel ("Direita",
+     "Entrada 7" quando ela desenhou a mesa), e quando há, o aviso vem colado.
+
+     O AMARELO SÓ ACENDE COM AVISO, e quem decide é o produto: o interruptor é
+     um `<i>` invisível irmão, com o alvo `classe` BOOLEANO — o valor que ele
+     recebe é a DICA de `_avisos_de_vizinhanca`, e o `ligado()` do piloto só
+     pergunta se ela existe. Rádio que ninguém acusou recebe `""`, a classe
+     apaga e a linha fica na cor de sempre. Nada aqui adivinha vizinhança.
+
+     POR QUE UM IRMÃO E NÃO A PRÓPRIA LINHA: o vocabulário é UM `data-campo` por
+     nó, e a linha já tem o dela (o texto). É o mesmo desenho dos `<i class="est">`
+     das cinco linhas do exame, e do `~` que leva a cor do irmão até elas. */
+  .viz .vaviso{display:none}
+  .viz .onde{font-size:10.5px;color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
+             text-overflow:ellipsis}
+  .viz .vaviso.on ~ .onde{color:var(--orange)}
   /* a sobra de altura das duas colunas do inventário cai ANTES da última fileira,
      nunca entre irmãos — `space-between` só empurra o buraco para o meio */
   .lado-e > .empurra,.lado-d > .empurra{margin-top:auto}
@@ -1361,12 +1475,12 @@ MAPEAR_UMA_A_UMA = "Mapear Entrada a Entrada"
 #: *"Banco de provas: o mapa das portas"* — a palavra já vive ali.
 EXAMINAR_PORTAS = "Examinar Portas"
 
-#: O RENOMEAR DEIXOU DE SER BOTÃO — 31/08/2026: *"tirar o botão Renomear e
-#: adicionar a possibilidade de renomear dando duplo clique no nome"*.
-#: `contenteditable` é o que o mockup sabe fazer sem uma linha de JavaScript; o
-#: DUPLO clique é gesto do produto, e é ele que a dica promete.
-RENOMEAR_DICA = ("Dê um duplo clique para dar um nome seu a este adaptador — “Sala”, "
-                 "“Extra”. É por ele que o resto da tela passa a chamá-lo.")
+#: A DICA DO CAMPO DE NOME — e ela mudou de casa em 04/09/2026, com a tabela:
+#: quem a escreve na tela viva é `a08_conexoes._html_dos_adaptadores`, então o
+#: dono passou a ser o pacote. A razão dela (*"tirar o botão Renomear e
+#: adicionar a possibilidade de renomear dando duplo clique no nome"*, 31/08)
+#: está lá, com o resto.
+RENOMEAR_DICA = _pacote08.RENOMEAR_DICA
 
 
 #: O ESTADO DA SEGUNDA LINHA DO EXAME, e ele é constante por um motivo de
@@ -1380,6 +1494,48 @@ RENOMEAR_DICA = ("Dê um duplo clique para dar um nome seu a este adaptador — 
 #: acento, e o terceiro vem colado num `_`, que é o que a régua de acentuação
 #: já não cobra.
 _ATENCAO = "atencao"  # noqa-acento (chave de máquina do exame, ASCII por contrato)
+
+
+#: A CLASSE DE CADA ESTADO NA LINHA DE VEREDITO. O nome é `vst` e não `est` para
+#: não colidir com os interruptores das cinco linhas do exame — os dois grupos
+#: vivem na mesma seção, e um `~` que atravessasse os dois pintaria a linha de
+#: cima com a cor de uma linha de baixo.
+#:
+#: A ORDEM É A DO PACOTE (`a08_conexoes.ENDERECO_DO_VEREDITO`), e os endereços
+#: saem de lá: digitar os quatro aqui seria a segunda grafia do vocabulário que
+#: o pacote emite, e a primeira coisa que uma segunda grafia perde é o dia em
+#: que a outra muda.
+_CLASSE_DO_VEREDITO = {"certo": "ok", "atencao": "warn",  # noqa-acento (chave de máquina do exame)
+                       "problema": "bad", "nao_sei": "info"}
+
+
+def veredito_do_checkup(estado, frase):
+    """A linha de veredito do topo do Check-up — **D-16 dela**, 04/09/2026.
+
+    *"Uma linha de veredito no topo."* · *"Na cor do pior achado."*
+
+    `estado` é o estado do exame que o DESENHO mostra em repouso, e `frase` é a
+    frase dele. Os dois são de bancada, como as cinco linhas abaixo: o mockup é
+    HTML estático e ninguém o pinta quando ela o abre no navegador, então uma
+    linha que o produto ainda não preencheu tem de continuar parecendo o que
+    parecia.
+
+    NA TELA VIVA OS DOIS VÊM DO PRODUTO: a frase de `ordens_da_mesa.cabecalho()`
+    — que é o dono das quatro — e o estado de `secao_exame.o_mais_grave` sobre
+    ela e sobre `exame_da_mesa.veredito()`. Ver `a08_conexoes._veredito_do_exame`.
+
+    O PONTO É UM ELEMENTO E NÃO UM `::before`, e a razão é o combinador: a cor
+    chega pelo `~` a partir do interruptor irmão, e um pseudo-elemento não é
+    irmão de ninguém.
+    """
+    interruptores = "".join(
+        f'<i class="vst vst-{_CLASSE_DO_VEREDITO[e]}'
+        f'{" on" if e == estado else ""}" data-campo="{endereco}" '
+        f'data-hef-alvo="classe" data-hef-quando="{e}"></i>'
+        for e, endereco in _pacote08.ENDERECO_DO_VEREDITO.items())
+    return (f'        <div class="veredito">{interruptores}'
+            f'<span class="ponto"></span>'
+            f'<span class="txt" data-campo="veredito">{frase}</span></div>')
 
 
 def exame(estado, txt, dica, linha=0):
@@ -1494,11 +1650,25 @@ def viz_bloco(nome, escolha, pergunta=False, linha=0):
          "O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo "
          "para você escrever o nome.")
     c = "pronto pergunta" if pergunta else "pronto"
+    # A TERCEIRA LINHA DO BLOCO — 04/09/2026: ONDE aquele rádio está, com o aviso
+    # de vizinhança colado quando há um. Os dois donos são do produto
+    # (`secao_mesa._onde_esta_o_radio` e `secao_mesa._avisos_de_vizinhanca`), e
+    # nesta bancada UM dos três rádios acusa: *"Não sei · vizinho do adaptador
+    # 3"*. É o mesmo fato que a linha do Check-up chama de "dois rádios da
+    # bancada estão em entradas vizinhas" — e que ali não diz qual dos rádios é.
+    #
+    # NO DESENHO ELE FICA MUDO, e é a mesma regra dos `<i class="est">`: o mockup
+    # é HTML estático, ninguém o pinta quando ela o abre no navegador, e uma cena
+    # de bancada não tem como saber a entrada de um rádio que não existe. O
+    # travessão é a palavra da casa para "sem dado" (`gui.aba_conexoes.TRACO`).
     return (f'              <div class="viz">'
             f'<span class="qual" data-campo="vizinho-nome" title="{nome}">{nome}</span>'
             f'<select class="{c}" title="{d}" data-gesto="vizinho-o-que-e" data-v="{linha}"'
             f' data-campo="vizinho-tipo" data-hef-alvo="valor">'
-            f'{viz_sel(escolha)}</select></div>')
+            f'{viz_sel(escolha)}</select>'
+            f'<i class="vaviso" data-campo="vizinho-onde-dica" data-hef-alvo="classe"></i>'
+            f'<span class="onde" data-campo="vizinho-onde">'
+            f'{_aba_conexoes.TRACO}</span></div>')
 
 
 # ---------------------------------------------------------------------------
@@ -1545,22 +1715,45 @@ LUZ_NO_RADIO = ("Derruba este controle do rádio para você apertar PS e a barra
 # SÓ A TELA TROCA. Em `src/` a palavra "fatia" aparece 75 vezes e a maioria é
 # outro sentido — a fatia de TEMPO do laço do daemon (`daemon/connection.py`).
 # Troca cega lá quebraria código não relacionado.
-MIC_PELO_RADIO = (
-    "O microfone deste controle chega <b>pelo rádio</b>: o DualSense não tem A2DP nem HFP, "
-    "então o áudio vem em Opus dentro do relatório HID e o Hefesto publica uma fonte de "
-    "captura do PipeWire com ele. Custa +{c} turnos de rádio — o preço está na régua de "
-    "Desempenho, e é <b>consequência</b>, não escolha: o microfone segue o transporte.")
-MIC_PELO_CABO = (
-    "O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio USB do próprio "
-    "aparelho — o PipeWire a publica sozinho (medido em 15/08/2026). Pelo cabo ele não custa "
-    "turno de rádio nenhum.")
+# AS DUAS FRASES DO MICROFONE MUDARAM DE CASA — 04/09/2026, e o `+16,3` que uma
+# delas trazia DIGITADO virou derivado. Elas moram agora em
+# `a08_conexoes._DICA_DO_MIC` (a metade física, que é fato de protocolo e
+# continua verdadeira) mais `secao_controles.frase_da_capacidade_do_mic()` (o
+# custo, que deriva as constantes do medidor).
+#
+# POR QUE O NÚMERO NÃO PODIA FICAR AQUI: os 16,3 conferiam com `radio_da_mesa`
+# HOJE — eles são a segunda grafia, e no dia em que alguém remedir o A/B a
+# janela estável acompanha e o HTML não. É a forma de defeito que
+# `frase_da_capacidade_do_mic` foi escrita para impedir.
+#
+# E O `title` DESTE RESUMO DEIXOU DE SER DÍVIDA no mesmo dia: ele ganhou
+# `data-campo="mic-dica"` com alvo `atributo`, então segue o transporte VIVO em
+# vez de congelar o da cena.
 MIC_LIGADO_DICA = (
     "Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, "
     "nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, "
     "e a linha ao lado diz qual é.")
+#: O `?` DO BLOCO DO MICROFONE, segunda metade — e ela deixou de DECIDIR em
+#: 04/09/2026. A frase dizia *"Decide se o botão físico … cala só ele ou o
+#: computador inteiro"*, e a tela oferecia a escolha por controle enquanto o
+#: produto guarda UM valor por máquina. Agora ela DIZ.
+#:
+#: **A DOUTRINA É A DESTA MESMA ABA**, e está escrita na legenda dela: a
+#: chavinha *"pelo cabo / pelo rádio"* saiu porque *"oferecia uma escolha que o
+#: transporte já tinha feito"*. Aqui a escolha já tinha sido feita por ELA —
+#: *"o botão do Controle sempre controla a interface"* (30/08) e *"o botão é pra
+#: ligar o microfone e ele ser ouvido no canal específico dele"* (D-12, 04/09),
+#: que é um ato só. Não há duas rotas com dois comportamentos a escolher.
 BOTAO_DICA = (
-    "Decide se o botão físico do microfone <b>deste controle</b> cala só ele ou o "
-    "<b>computador inteiro</b> — inclusive a chamada de voz que estiver aberta fora do jogo.")
+    "O botão físico do microfone faz o mesmo que o desta tela: liga o microfone "
+    "<b>e</b> o canal dele. O que ele cala é <b>um ajuste da máquina</b>, não "
+    "deste controle — a linha ao lado diz qual está valendo.")
+
+#: A MESMA COISA EM UMA LINHA, para o `title` da leitura. O `?` do bloco explica;
+#: o hover da linha responde "o que é isto que estou lendo".
+BOTAO_DICA_CURTA = (
+    "O que o botão físico do microfone cala. É um ajuste da MÁQUINA, um só para "
+    "todos os controles — o Hefesto o lê do serviço a cada tique.")
 
 #: A DICA DO GESTO, e ela é a MESMA nos três estados de propósito.
 #:
@@ -1751,7 +1944,7 @@ def linha_do_controle(c):
     # Montá-la aqui pela terceira vez é o que fazia a borda do gesto conferir o
     # clique contra literais em vez de contra a lista que a tela desenhou.
     opcoes_teto = list(_aba_conexoes.opcoes_do_teto())
-    mic_dica = (MIC_PELO_RADIO.format(c=num(CUSTO_DO_MIC)) if no_radio else MIC_PELO_CABO)
+    mic_dica = _pacote08.dica_do_microfone("BT" if no_radio else "USB")
     # O RESUMO DO MICROFONE GANHOU ENDEREÇO — 03/09/2026, e as duas metades
     # dele estavam mentindo na mesa dela ao mesmo tempo:
     #
@@ -1774,17 +1967,24 @@ def linha_do_controle(c):
     # tique: `data-hef-quando="cabo"` acende a classe quando o pacote emitir
     # `cabo`, e a apaga quando emitir `radio`.
     #
-    # POR QUE A CLASSE E NÃO O `title`: o alvo é UM por elemento, e o que ela
-    # VÊ é o botão apagado. A dica continua a do desenho, e isso é dívida
-    # declarada — no cabo o `title` já diz a razão certa, mas ele não segue o
-    # transporte real. Um segundo campo para o `title` pede outro elemento.
-    trava = (f'data-campo="luz-trava" data-hef-alvo="classe" '
-             f'data-hef-classe="apagado" '
-             f'data-hef-quando="{_pacote08.LUZ_TRAVADA}"')
-    botao = (f'<button class="btn" data-gesto="luz-nao-acende" {trava} '
+    # E A DÍVIDA DO `title` FECHOU EM 04/09/2026. O que estava escrito aqui —
+    # *"a dica continua a do desenho, e isso é dívida declarada … um segundo
+    # campo para o `title` pede outro elemento"* — estava certo, e o outro
+    # elemento é o `<i class="ltrava">` abaixo: ele fica com a CLASSE e o botão
+    # fica com a DICA. O que a dica ganha não é só seguir o transporte: vêm
+    # junto o AVISO DA MESA SUJA (quando outro programa segura nó de controle
+    # agora, a cura não pega) e a RAZÃO do carimbo de nascimento — os dois com
+    # dono no produto e zero leitor no HTML até hoje. Ver
+    # `a08_conexoes.dica_da_luz`.
+    trava = (f'<i class="ltrava{"" if no_radio else " on"}" data-campo="luz-trava" '
+             f'data-hef-alvo="classe" '
+             f'data-hef-quando="{_pacote08.LUZ_TRAVADA}"></i>')
+    dica_luz = ('data-campo="luz-dica" data-hef-alvo="atributo" '
+                'data-hef-atributo="title"')
+    botao = (f'{trava}<button class="btn" data-gesto="luz-nao-acende" {dica_luz} '
              f'title="{LUZ_NO_RADIO}">A luz não acende</button>' if no_radio
-             else f'<button class="btn apagado" data-gesto="luz-nao-acende" {trava} '
-                  f'title="{LUZ_NO_CABO}">A luz não acende</button>')
+             else f'{trava}<button class="btn apagado" data-gesto="luz-nao-acende" '
+                  f'{dica_luz} title="{LUZ_NO_CABO}">A luz não acende</button>')
     return f'''          <div class="gc-item gc-{c["pref"]}" data-controle="{c["pref"]}">
             {barra}
             <div class="gc-cabeca">
@@ -1793,7 +1993,7 @@ def linha_do_controle(c):
               <span class="gc-nome" data-campo="nome" data-hef-alvo="html">{rotulo(c)}</span>
               <span class="gc-resumo">
                 <span title="{"A borda deste controle é a cor lida do aparelho." if not no_radio else "A cor deste controle não foi lida — a borda fica neutra."}">Vê como <b>{c["mascara"]}</b></span>
-                <span title="{mic_dica}">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">{caminho_do_mic(c)}</span></span>
+                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{mic_dica}">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">{caminho_do_mic(c)}</span></span>
                 <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">{da_controles["bat"]}%</b></span>
               </span>
               </label>
@@ -1810,7 +2010,7 @@ def linha_do_controle(c):
                 <span class="rot">{glifo("mic", ativo=True, tam=16)} Microfone e botões
                   <span class="ajuda">?<span class="dica">{MIC_LIGADO_DICA}<br><br>{BOTAO_DICA}</span></span></span>
                 {sel(["Ligado", "Desligado"], "Ligado", gesto="mic-existe", campo="mic-existe", dica="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz.")}
-                {sel([BOTAO_DO_MIC, "O computador inteiro"], BOTAO_DO_MIC, gesto="mic-escopo", dica="O botão físico do microfone deste controle cala só ele ou o computador inteiro — inclusive a chamada de voz aberta fora do jogo.")}
+                <span class="leitura" data-campo="mic-escopo" title="{BOTAO_DICA_CURTA}">{BOTAO_DO_MIC}</span>
               </span>
               <span class="gc-bloco barra">
                 <span class="rot">{glifo("rumble_esquerdo", ativo=True, tam=16)} Teto da vibração
@@ -1871,6 +2071,44 @@ TOTAL_NO_RADIO = sum(custo(c) for c in NO_RADIO)
 TODOS_COM_MIC = len(CONECTADOS) * CUSTO_COM_MIC
 #: "o Player 1 e o Player 4" — a lista escrita por extenso, do jeito que se lê.
 JOGADORES_NO_CABO = " e o ".join(f"Player {c['jogador']}" for c in NO_CABO)
+
+# ---------------------------------------------------------------------------
+# O VEREDITO DO DESENHO — decisão D-16 dela, 04/09/2026.
+#
+# A CENA DA BANCADA, declarada uma vez: os estados das CINCO linhas do exame na
+# ordem em que elas saem, e quantas ordens de serviço a coluna da direita mostra
+# aberta. Ela existe para a linha de veredito não ser DIGITADA: com os estados e
+# a contagem, quem escreve a frase é o dono (`ordens_da_mesa.cabecalho`) e quem
+# decide a cor é o dono (`exame_da_mesa.veredito`) — os mesmos dois que o pacote
+# chama na tela viva.
+#
+# ELA TAMBÉM É RÉGUA: mudar o estado de uma linha do exame lá embaixo sem mudar
+# esta lista faz o `_exigir` do fim do arquivo reprovar, porque a cor do topo
+# deixa de bater com a pior das cinco.
+# ---------------------------------------------------------------------------
+ESTADOS_DO_EXAME = ("certo", _ATENCAO, "certo", "nao_sei", "certo")
+
+#: Quantas ordens de serviço a cena tem abertas — o card da coluna da direita.
+ORDENS_ABERTAS = 1
+
+_CABECALHO = _ordens_da_mesa.cabecalho(
+    # `cabecalho` só conta o comprimento da sequência; o que há dentro dela não
+    # é lido. A cena tem UMA ordem aberta, e é ela que dá a frase.
+    ordens=[None] * ORDENS_ABERTAS,
+    conferidas=sum(1 for e in ESTADOS_DO_EXAME if e != "nao_sei"),
+    sem_resposta=sum(1 for e in ESTADOS_DO_EXAME if e == "nao_sei"),
+    dispensadas=0,
+)
+
+#: A COR DO PIOR ACHADO, e ela sai do MESMO `veredito()` que a janela estável
+#: usa. O estado do cabeçalho entra na lista como mais um item: `veredito()`
+#: devolve o pior de todos, que é o que `secao_exame.o_mais_grave` faz com dois
+#: — e aquele módulo não é importável fora da venv (puxa `structlog` por
+#: `escritor_cru`), enquanto este gerador roda com o `python3` da pasta.
+VEREDITO_DO_DESENHO = _exame_da_mesa.veredito([
+    _exame_da_mesa.Item(chave=f"desenho-{i}", rotulo="", estado=e, porque="")
+    for i, e in enumerate((*ESTADOS_DO_EXAME, _CABECALHO.estado))
+])
 
 
 def _plural(n, um, muitos):
@@ -2736,6 +2974,19 @@ MIOLO = f'''
         <span class="conta" data-campo="examinado">Examinado há 3 minutos</span>
       </div>
       <div class="quadro-corpo">
+        <!-- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026:
+             *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
+
+             ELA FICA ACIMA DAS DUAS COLUNAS, e não dentro da do exame: a
+             resposta vale para as duas — os achados à esquerda e a ordem de
+             serviço à direita —, e pendurá-la em uma delas faria a pergunta
+             *"está tudo certo?"* ser respondida por metade da seção.
+
+             A FRASE E A COR NÃO SÃO DIGITADAS: saem de
+             `ordens_da_mesa.cabecalho()` e de `exame_da_mesa.veredito()` sobre
+             a cena declarada em `ESTADOS_DO_EXAME`, que são os mesmos dois
+             donos que `a08_conexoes._veredito_do_exame` chama na tela viva. -->
+{veredito_do_checkup(VEREDITO_DO_DESENHO, _CABECALHO.texto)}
         <div class="duas-colunas">
 
           <div class="lado-e">
@@ -2873,7 +3124,23 @@ MIOLO = f'''
 
           <div class="lado-e">
             <div class="linha-rot"><b style="color:var(--texto-suave)">Adaptadores Bluetooth</b></div>
-            <table class="tab">
+            <!-- A TABELA GANHOU ENDEREÇO — 04/09/2026, e ela era a peça mais
+                 lida desta aba sendo CENÁRIO. As duas linhas abaixo ("Sala /
+                 TP-Link UB500 / Entrada 3" e "Sem nome / Intel AX211 /
+                 Interno") são de uma bancada de exemplo; a mesa desta casa tem
+                 TRÊS adaptadores, os três `2357:0604`, e o BlueZ dá a cada um o
+                 nome que ela escreveu.
+
+                 O BLOCO É TROCADO INTEIRO, com o `<tr>` do cabeçalho junto, e é
+                 a mesma razão do `.mm-faces` e da régua do rádio: quantas
+                 linhas existem é o que a máquina dela responde, e não há
+                 endereço para uma `<tr>` que ainda não nasceu. Deixar o
+                 cabeçalho fora obrigaria a pintura a conhecer a estrutura do
+                 `<table>` do desenho.
+
+                 AS TRÊS COLUNAS TÊM TRÊS DONOS NO PRODUTO, e nenhum deles é
+                 este arquivo — ver `a08_conexoes._html_dos_adaptadores`. -->
+            <table class="tab" data-campo="adaptadores-tabela" data-hef-alvo="html">
               <tr><th>Nome</th><th>Adaptador</th><th>Onde está</th></tr>
 {chr(10).join(f"""              <tr><td{' class="mudo"' if a["nome"] == SEM_NOME else ""}><span class="renomeia" contenteditable="true" title="{RENOMEAR_DICA}">{a["nome"]}</span></td>
                   <td class="mudo">{a["modelo"]}</td>
