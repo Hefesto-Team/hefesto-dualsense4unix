@@ -150,12 +150,32 @@ def test_o_rotulo_sai_do_dono_da_traducao() -> None:
 # 3. O GESTO — o degrau que faltava, lado da escrita
 # --------------------------------------------------------------------------
 class _Ponte:
-    """Anota o que o gesto mandaria ao daemon, sem mandar nada."""
+    """Anota o que o gesto mandaria ao daemon, sem mandar nada.
+
+    A ASSINATURA É A DA PONTE DE VERDADE, e isso não é preciosismo — foi este
+    dublê que deixou o defeito passar. `pacotes.ponte.chamar` é
+
+        chamar(metodo, timeout=None, **params)
+
+    e até 04/09/2026 o dublê aqui era `chamar(self, metodo, params)`, POSICIONAL.
+    O gesto da máscara passava `p.chamar("gamepad.mask.set", {...})` — o
+    dicionário caía no `timeout` da ponte real e o `_safe_call` estourava com
+    `'<=' not supported between instances of 'dict' and 'int'`. **Na ponte de
+    mentira aquilo casava perfeitamente**, e a régua ficou VERDE sobre um gesto
+    que nunca gravou um byte: medido com o daemon dela, `controller_masks.json`
+    não existia antes nem depois do clique.
+
+    Um dublê com assinatura mais frouxa que o original não é um dublê — é uma
+    segunda API, que aceita o que a primeira recusa.
+    """
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, dict]] = []
 
-    def chamar(self, metodo: str, params: dict) -> None:
+    def chamar(self, metodo: str, timeout: float | None = None, **params) -> None:  # noqa-acento
+        # O `timeout` é engolido de propósito: o que esta régua mede é O QUE foi
+        # pedido, não quanto tempo se esperou. Mas ele existe na assinatura para
+        # um dicionário posicional voltar a estourar aqui, como estoura lá.
         self.chamadas.append((metodo, params))
 
 
