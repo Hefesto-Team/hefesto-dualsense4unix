@@ -321,12 +321,25 @@ def test_o_selo_do_card_continua_saindo_do_dono(mudo: bool) -> None:
     Esta régua existe porque a frente do selo tocou o GERADOR e o PACOTE no
     mesmo dia: sem ela, um erro no pacote passaria escondido atrás do desenho
     novo, que é bonito e não pinta nada sozinho.
+
+    **O SELO PASSOU A DIZER O ESTADO COMPOSTO — 04/09/2026, decisão [03] da
+    ONDA2-02, pela D-12 dela.** ATIVO só quando as QUATRO faces concordam, e o
+    bit do firmware é UMA delas: um microfone destravado no plástico cujo som
+    não chega a canal nenhum não está capturando coisa alguma.
+
+    ENTÃO A ENTRADA GANHOU AS DUAS CHAVES DE CANAL, e é o que faz este caso
+    continuar medindo o que promete: o dono da PALAVRA continua sendo
+    `mesa_viva.selo_do_mic`, e é isso que esta régua cobra. Sem elas o `False`
+    daria `—` — que é a resposta certa para "ainda não perguntamos", e não a
+    que este teste existe para medir.
     """
     from pacotes import Contexto
     from pacotes import a02_controles as mod
 
     entrada = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
                "battery_pct": 50, "is_primary": True, "inputs": {},
-               "audio": {"mic_mudo": mudo}, "speaker": {}}
+               "audio": {"mic_mudo": mudo, "canal_ativo": True,
+                         "canal_mudo": False},
+               "speaker": {}}
     assert _card(mod, Contexto, entrada)["mic-selo"] == mesa_viva.selo_do_mic(
         mudo, True)

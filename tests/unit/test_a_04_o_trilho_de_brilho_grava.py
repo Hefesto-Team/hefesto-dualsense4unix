@@ -27,7 +27,9 @@ O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 4. o aparelho recebe a COR PEDIDA com o brilho NOVO, e a cor pedida sai do
    brilho VELHO (D8: o `lightbar_rgb` do daemon é pós-escala);
 5. o `click` que o navegador manda DEPOIS do `change` não grava uma segunda vez;
-6. as quatro recusas dizem por quê, e a que grava-e-avisa guarda antes de falar;
+6. as TRÊS recusas dizem por quê — e a quarta deixou de ser recusa em
+   04/09/2026: quando não há cor a reacender o brilho VAI ao disco, e o gesto
+   avisa pelo canal de SUCESSO da D-01, com a frase curta que ela escolheu;
 7. o gesto está em `hefesto_vivo.PERIGOSOS` — uma régua não arrasta o brilho
    dela para provar que sabe clicar.
 
@@ -446,16 +448,33 @@ def test_sem_cor_conhecida_guarda_e_diz(pac):
     mentira: sem ela, ela arrasta o trilho sob o Modo Nativo, vê o número mudar,
     e conclui que a barra escureceu.
 
+    **O CANAL MUDOU EM 04/09/2026, e a frase encolheu — decisão [04] dela.**
+    Este caso exigia `RuntimeError` com *"guardei o brilho em 30% no perfil
+    deste controle…"*, e as duas coisas caducaram no mesmo dia:
+
+    * a frase é a CURTA (*"Guardei 30%. A barra não mudou agora: …"*) — ela
+      escolheu entre três opções, e a longa *"repete com palavras o que a tira
+      tracejada já diz com desenho"*;
+    * e ela deixou de sair pelo canal da RECUSA. O `RuntimeError` do piloto é
+      cartão laranja de 30 s, a cara de *"o produto não fez"* — e o produto FEZ:
+      o brilho está no disco, que é a promessa inteira do gesto. Com o canal de
+      SUCESSO da D-01 entregue pela ONDA0-P, um `{"recado": …}` pousa no MESMO
+      cartão, em verde e por 6 s.
+
+    **O QUE ESTE CASO MEDE NÃO MUDOU**, e é o que importa: o disco recebeu, o
+    aparelho não recebeu, e a tela DIZ. Só o canal e o tamanho da frase mudaram.
+
     A MORDIDA: mande a cor mesmo assim e a barra dela APAGA por um gesto de
-    brilho; troque o `raise` por um `return` e o teste reprova por não avisar.
+    brilho; devolva `None` no lugar do recado e o teste reprova por não avisar.
     """
     arquivo = _semear("regua")
     p = PonteDeMentira()
     fn = pac.gesto_da_pagina(PAGINA, "brilho")
-    with pytest.raises(RuntimeError, match="guardei o brilho em 30%"):
-        fn(_ctx(pac, state={"native_mode": True}),
-           {"uniq": UNIQ, "valor": "30", "evento": "change"}, p)
+    saiu = fn(_ctx(pac, state={"native_mode": True}),
+              {"uniq": UNIQ, "valor": "30", "evento": "change"}, p)
 
+    assert isinstance(saiu, dict) and "Guardei 30%" in saiu.get("recado", ""), (
+        f"o gesto não avisou que guardou sem acender: {saiu!r}")
     assert not p.chamadas, "escreveu no aparelho sem cor a reacender"
     assert _do_disco(arquivo)["controllers"][CHAVE]["leds"][
         "lightbar_brightness"] == pytest.approx(0.3), "avisou e NÃO guardou"

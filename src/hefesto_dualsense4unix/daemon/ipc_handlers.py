@@ -36,7 +36,10 @@ from hefesto_dualsense4unix.integrations.no_do_vpad import (
     no_ainda_vale,
     resolver_no_do_vpad,
 )
-from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
+from hefesto_dualsense4unix.profiles.schema import (
+    MOTOR_PCT_PADRAO,
+    RUMBLE_CUSTOM_MULT_MAX,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 
@@ -3026,6 +3029,31 @@ class IpcHandlersMixin:
                 getattr(daemon_cfg, "rumble_policy_custom_mult", 0.7)
             )
             result["rumble_mult_applied"] = rumble_mult_applied
+            # VIBRACAO-POR-MOTOR-01 (04/09/2026): a BARRA de cada motor, POR
+            # PEÇA. Sem isto a aba 05 desenha a barra onde ela ESTAVA, não onde
+            # ela está — grava por `rumble.motores.set` e nunca lê de volta.
+            #
+            # A FONTE É A MESMA QUE O MOTOR LÊ, e isso não é economia de
+            # linhas: `gamepad._motores_do_perfil_ativo` é o mapa memoizado que
+            # `apply_game_rumble` multiplica. Uma segunda leitura do disco aqui
+            # poderia pintar um número que o motor não está usando — que é
+            # exatamente o "aplicado" falso que esta casa passou 04/09
+            # arrancando.
+            #
+            # SÓ QUEM TEM OPINIÃO ENTRA no mapa (o irmão `set_rumble_scales` faz
+            # igual): peça ausente vale `rumble_motor_pct_padrao`, publicado ao
+            # lado para a tela não digitar o 100.
+            result["rumble_motores"] = {}
+            result["rumble_motor_pct_padrao"] = MOTOR_PCT_PADRAO
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                    _motores_do_perfil_ativo,
+                )
+
+                result["rumble_motores"] = {
+                    uniq: {"forte_pct": par[0], "fraco_pct": par[1]}
+                    for uniq, par in _motores_do_perfil_ativo(self.daemon).items()
+                }
 
             # SPRINT-GAME-RUMBLE-01: diagnóstico de rumble in-game + estado do
             # rumble. `plays` = nº de "play" de FF que o JOGO pediu nos vpads
@@ -4945,6 +4973,232 @@ class IpcHandlersMixin:
         self._mark_rumble_policy_manual()
         logger.info("rumble_policy_custom_definida", mult=mult)
         return {"status": "ok", "mult": mult}
+
+    @staticmethod
+    def _chave_de_peca_que_grava(alvo: str) -> str | None:
+        """A chave sob a qual é SEGURO gravar no perfil, ou `None`.
+
+        **`norm_mac` sozinho não serve para GRAVAR, e isto foi medido em
+        04/09/2026** pela régua desta sprint. A docstring dele promete `None`
+        *"quando não há nenhum dígito hex (ex.: `key` que é um `path`)"*, e a
+        promessa não se cumpre para um path que POR ACASO tem letras hex:
+        ``norm_mac("path:/dev/input/event9")`` devolve ``"adeee9"`` — uma chave
+        que parece boa e que motor nenhum casa. Para LER, isso é inofensivo (a
+        chave simplesmente não bate, e `a08_conexoes._so_hex` já registra que
+        *"as duas erram, e errar de um jeito só é o ponto"*); para GRAVAR é o
+        defeito mais caro desta casa, porque a escolha dela vai para o disco e
+        **some calada**.
+
+        As duas condições, e as duas são verificáveis:
+
+        - **doze dígitos hex** — é o que um MAC é. Um `path:` ou um
+          `usb-0000:00:14.0-3` não passa;
+        - **não é vpad** (`02fe…`, `broker.hidraw_broker.VPAD_UNIQ_PREFIX`) —
+          o gamepad virtual não é uma peça de plástico e não tem motor próprio.
+
+        Recusar em voz alta é a direção certa do erro: um endereço de forma
+        inesperada vira `sem_endereco` com motivo, e não um override fantasma.
+        """
+        from hefesto_dualsense4unix.broker.hidraw_broker import VPAD_UNIQ_PREFIX
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        chave = norm_mac(alvo)
+        if not chave or len(chave) != 12:
+            return None
+        if chave.startswith(VPAD_UNIQ_PREFIX):
+            return None
+        return chave
+
+    async def _handle_rumble_motores_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`rumble.motores.set` — a barra de CADA motor, no perfil (VIBRACAO-POR-MOTOR-01).
+
+        Params: ``{uniq?: str, forte_pct?: int, fraco_pct?: int}`` — 0 a 100.
+        `uniq` omitido = o primário; campo omitido = **não mexe naquela barra**.
+
+        A DECISÃO É DELA, 04/09/2026, e veio fora das três opções que eu ofereci
+        (eu perguntei se a barra mandava o par `rumble.set` agora ou virava
+        leitura):
+
+            *"os slcers do botão esquerdo e direito (forte e fraco) se
+            multiplicam (interagem com os botões economia, moderado,máximo, se
+            eu tiver 150% do perfil de vibração e as duas linhas estiverem 100
+            entao a vibração dos 2 será 150%, mas se so a do motor fraco tiver
+            100 e a outrqa 50% então será 150 em um e 75% no outro entende?"*
+            <!-- noqa-acento: citação literal dela -->
+
+        **A barra não é um comando: é POLÍTICA.** Por isso ela vai para o
+        PERFIL, ao lado do degrau daquela peça, e não para o `DaemonConfig`.
+        `rumble.set {weak, strong}` continua sendo o comando de tremer agora, e
+        este método não o chama — são camadas diferentes, pela mesma razão que
+        separa `mic.set` de `mic.volume.set`.
+
+        POR QUE É UM MÉTODO DO DAEMON, e não a tela gravando o perfil sozinha
+        (que é como o teto por controle faz, em `a08_conexoes.teto_da_vibracao`):
+        **o daemon MEMOIZA o mapa por peça**, chaveado pelo nome do perfil
+        (`daemon.subsystems.gamepad._motores_do_perfil_ativo` — o FF do jogo
+        chega a centenas de Hz e ler o disco por report seria uma tempestade de
+        syscalls). Uma gravação de fora do daemon deixaria a barra nova valendo
+        **só na próxima troca de perfil**, com a tela dizendo "aplicado" sobre
+        um motor que não mudou. A linha que fecha isso é uma só, e está logo
+        abaixo: `daemon._rumble_motores_pct = None`.
+
+        100 EM AMBAS APAGA OS CAMPOS em vez de gravar `100`, e é a mesma regra
+        de `_com_o_teto`: no aparelho "escreveu 100" e "não escreveu" são
+        idênticos (fator 1,0), então guardar o override só deixaria no disco uma
+        opinião que o motor ignora — e uma chave a mais para um hefesto antigo
+        (`extra="forbid"`) recusar num downgrade. A seção `rumble` inteira só
+        cai quando ela fica vazia: o degrau daquela peça (`policy`) mora ali e
+        não é deste gesto.
+
+        NADA MUDOU = NÃO REGRAVA. Um `save_profile` troca a data do arquivo e
+        faz o daemon reaplicar o perfil; no meio de uma partida isso não é de
+        graça. Mesma decisão de `_com_o_teto`.
+
+        A FAIXA É DA BORDA DO ESQUEMA, e não digitada aqui: quem recusa o 101 é
+        `ControllerRumbleOverride`, com a frase que EXPLICA por que a barra não
+        passa de 100 (ela é o SEGUNDO fator; quem amplifica é o degrau). Uma
+        segunda faixa neste handler seria o HARM-19 renascendo — foi exatamente
+        assim que `rumble.policy_custom` e o esquema divergiram em 0,0-1,0 contra
+        0,0-2,0, com a usuária levando erro de validação a partir de 101 %.
+        """
+        from hefesto_dualsense4unix.profiles.loader import (
+            load_profile,
+            save_profile,
+        )
+        from hefesto_dualsense4unix.profiles.schema import (
+            ControllerOverrides,
+            ControllerRumbleOverride,
+        )
+
+        pedidos: dict[str, int] = {}
+        for campo, chave_ipc in (
+            ("motor_forte_pct", "forte_pct"),
+            ("motor_fraco_pct", "fraco_pct"),
+        ):
+            if chave_ipc not in params:
+                continue
+            valor = params.get(chave_ipc)
+            if not isinstance(valor, int) or isinstance(valor, bool):
+                raise ValueError(
+                    f"rumble.motores.set: '{chave_ipc}' precisa ser inteiro 0-100"
+                )
+            pedidos[campo] = valor
+        if not pedidos:
+            raise ValueError(
+                "rumble.motores.set exige ao menos um de 'forte_pct' ou "
+                "'fraco_pct' — campo omitido NÃO mexe naquela barra"
+            )
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("rumble.motores.set: 'uniq' precisa ser string ou omitido")
+        # A BORDA DECIDE A FAIXA. Validar aqui, antes de tocar em disco, para
+        # que o 101 morra com a frase do esquema em vez de meio perfil gravado.
+        ControllerRumbleOverride.model_validate(pedidos)
+
+        alvo = uniq or self._uniq_do_primario()
+        if not alvo:
+            return {
+                "status": "sem_controle",
+                "uniq": None,
+                "motivo": (
+                    "não há controle na mesa para guardar a barra de motor — a "
+                    "barra é POR PEÇA, e cair no primeiro da lista é o que "
+                    "faria a mesa cheia escrever sempre no mesmo"
+                ),
+            }
+        chave = self._chave_de_peca_que_grava(alvo)
+        if not chave:
+            return {
+                "status": "sem_endereco",
+                "uniq": alvo,
+                "motivo": (
+                    f"{alvo!r} não é um endereço de rádio de uma peça de "
+                    "plástico — sem MAC não há como mirar uma peça, e gravar "
+                    "sob uma chave que o motor nunca casa faria a escolha "
+                    "sumir calada"
+                ),
+            }
+        nome = getattr(self.store, "active_profile", None)
+        if not isinstance(nome, str) or not nome:
+            return {
+                "status": "sem_perfil",
+                "uniq": alvo,
+                "motivo": (
+                    "a barra de motor é POLÍTICA e mora no perfil; sem perfil "
+                    "ativo não há onde guardá-la. Ative um perfil e repita"
+                ),
+            }
+        perfil = load_profile(nome)
+        atuais = dict(perfil.controllers or {})
+        dele = atuais.get(chave) or ControllerOverrides()
+        antes = dele.rumble
+        # `model_fields_set` e não os valores: é ele que separa "escreveu 100"
+        # de "não escreveu", e é ele que o `exclude_unset` do save lê.
+        campos = dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
+        for campo, valor in pedidos.items():
+            if valor == MOTOR_PCT_PADRAO:
+                campos.pop(campo, None)  # 100 = sem opinião: a chave sai
+            else:
+                campos[campo] = valor
+        novo = ControllerRumbleOverride.model_validate(campos) if campos else None
+        antes_campos = (
+            dict(antes.model_dump(exclude_unset=True)) if antes is not None else None
+        )
+        depois_campos = dict(campos) if campos else None
+        efetivos = self._pcts_efetivos(novo)
+        if antes_campos == depois_campos:
+            logger.info("rumble_motores_sem_mudanca", uniq=chave, perfil=nome)
+            return {
+                "status": "ok",
+                "uniq": alvo,
+                "perfil": nome,
+                "gravado": False,
+                "forte_pct": efetivos[0],
+                "fraco_pct": efetivos[1],
+            }
+        atuais[chave] = dele.model_copy(update={"rumble": novo})
+        save_profile(perfil.model_copy(update={"controllers": atuais}))
+        # A LINHA QUE FAZ A BARRA VALER AGORA. Sem ela o mapa memoizado do
+        # `gamepad._motores_do_perfil_ativo` continua sendo o de antes, e a
+        # barra nova só entraria na próxima troca de perfil — a tela diria
+        # "aplicado" sobre um motor que não mudou, que é a família de defeito
+        # mais cara desta casa. O import é tardio pela razão medida em 14/08
+        # (ver `_handle_rumble_stop`): puxar um módulo de `daemon.subsystems`
+        # executa o `__init__` que importa TODOS eles, e o `state_full` já paga
+        # essa conta — aqui ela é rara, uma vez por gesto dela.
+        if self.daemon is not None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                esquecer_motores_do_perfil,
+            )
+
+            esquecer_motores_do_perfil(self.daemon)
+        logger.info(
+            "rumble_motores_gravados",
+            uniq=chave,
+            perfil=nome,
+            forte_pct=efetivos[0],
+            fraco_pct=efetivos[1],
+        )
+        return {
+            "status": "ok",
+            "uniq": alvo,
+            "perfil": nome,
+            "gravado": True,
+            "forte_pct": efetivos[0],
+            "fraco_pct": efetivos[1],
+        }
+
+    @staticmethod
+    def _pcts_efetivos(rumble: Any) -> tuple[int, int]:
+        """`(forte_pct, fraco_pct)` que passam a valer — 100 quando sem opinião.
+
+        A CONTA É DO ESQUEMA (`schema.pcts_dos_motores`), e não deste arquivo:
+        é ele que define o que "campo não escrito" vale, e uma segunda grafia do
+        default divergiria no primeiro dia em que ele mudasse.
+        """
+        from hefesto_dualsense4unix.profiles.schema import pcts_dos_motores
+
+        return pcts_dos_motores(rumble)
 
     def _mark_rumble_policy_manual(self) -> None:
         """Propaga o gesto manual de política de rumble ao daemon.

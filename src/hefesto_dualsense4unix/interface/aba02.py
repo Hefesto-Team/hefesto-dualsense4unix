@@ -2,7 +2,8 @@ import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import mesa_viva
 import onde
 from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTADOS,
-                   SEPARADOR, cor_da_zona, luzinhas, player_slot_color, tom_da_casa)
+                   NADA_A_DIZER, SEPARADOR, cor_da_zona, luzinhas, player_slot_color,
+                   ressalva as monta_ressalva, tom_da_casa)
 
 # O TEXTO DE TELA DESTA ABA MORA NO PACOTE, e a seta aponta para cá — não daqui
 # para lá. O produto (`pacotes/a02_controles.py`) é quem ESCREVE estas palavras
@@ -29,6 +30,14 @@ from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTAD
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
 from pacotes.a02_controles import ROTULO_DO_CLIQUE, meias_da_barra as _meias_da_barra
 from pacotes.a02_controles import texto_do_xy as _texto_do_xy
+# AS DUAS FRASES DE TELA QUE O PRODUTO PINTA — e por isso o dono delas é o
+# PACOTE, pela lei do cabeçalho deste arquivo. `DICA_DA_LUZ` vai para o `title`
+# da linha da Barra de luz, que passou a ser PINTADO (decisão [02]); a
+# `DICA_ALTO_SEM_POSSE` vai para o `?` do ♪, que o produto reescreve a cada
+# tique (decisão [04]). Enquanto elas eram literais daqui, o desenho e a tela
+# viva diriam coisas diferentes na primeira edição de uma das duas.
+from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
+                                   DICA_DA_LUZ as DE_QUEM_E_A_LUZ)
 # A GEOMETRIA DO PONTINHO TAMBÉM É DO PACOTE, e pela mesma razão do
 # `ROTULO_DO_CLIQUE`: a folha que o produto escreve a cada tique
 # (`a02_controles.folha_das_posicoes`) e a folha que este gerador escreve uma
@@ -189,7 +198,38 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      terminam no mesmo x (1488). Com os 25px da primeira tentativa dava 431
      contra 432: um pixel, e ela repara em dois. */
   .ctl{display:flex;flex-direction:column;flex:0 0 auto;height:var(--h-acao);
-       border:2px solid var(--plastico);border-radius:9px;background:var(--app-bg)}
+       border:2px solid var(--plastico);border-radius:9px;background:var(--app-bg);
+       position:relative}
+
+  /* ---------- DOIS ANÉIS: O CASCO FORA, A LUZ VIVA DENTRO (D-06 / S-11) ----
+     Decisão dela, 04/09/2026, verbatim: *"Casco borda externa lightbar borda
+     interna"*. São duas cores que respondem a duas perguntas diferentes e
+     estavam disputando a mesma borda: o PLÁSTICO é o que o aparelho É (não
+     muda enquanto ele existir) e a BARRA DE LUZ é o que ele mostra AGORA.
+
+     É ELA QUE FAZ RECONHECER DE RELANCE numa mesa de quatro: os quatro cascos
+     podem ser iguais (quatro DualSense brancos), e a luz do jogador nunca é.
+
+     O ANEL É UM ELEMENTO, E NÃO UMA SEGUNDA BORDA da `.ctl`. A razão é o
+     mecanismo: o piloto pinta cor por `data-campo`, e um elemento só aceita UM
+     alvo — a `.ctl` já carrega `--plastico` (alvo `plastico`) e o `data-controle`
+     que endereça o card inteiro. O anel próprio compartilha o `data-campo` do
+     retângulo da Barra de luz (`luz-cor`), e é isso que garante que os dois
+     NUNCA divirjam: `achar()` visita os dois elementos com o mesmo valor, no
+     mesmo tique.
+
+     `transparent` É O REPOUSO, e não uma cor de espera: quando o motor diz "não
+     sei" o pacote manda vazio, o `escrever` do alvo `cor` faz
+     `el.style.color = ''` e a regra abaixo volta a valer. Anel invisível é o
+     que a tela pode afirmar sobre uma luz que ninguém leu — e é a mesma regra
+     que o retângulo já segue desde 03/09.
+
+     O RAIO É 7 E NÃO 9 porque o anel mora DENTRO dos 2px da borda do casco:
+     `border-radius` externo menos a espessura da borda é o que faz os dois
+     arcos ficarem concêntricos. Com 9 nos dois, o interno abre uma meia-lua
+     branca em cada canto. */
+  .ctl.card > .anel-vivo{position:absolute;inset:0;border-radius:7px;
+       border:1px solid currentColor;color:transparent;pointer-events:none;z-index:1}
   .ctl > .faixa{flex:1;margin:0;padding:0 26px;border:0;border-radius:0;
                 background:transparent;flex-wrap:nowrap;white-space:nowrap;
                 cursor:pointer;-webkit-user-select:none;user-select:none}
@@ -707,7 +747,62 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      o volume do controle for desconhecido (`ipc_handlers.py`). Um botão que a
      tela oferece e o produto recusa é a mentira que esta aba existe para não
      contar: ele apaga e para de responder ao clique. */
+  /* O `[disabled]` FICA PARA QUEM AINDA O USA e não vale mais para o ♪ — ver a
+     regra abaixo. Ele continua declarado porque o seletor é genérico e o
+     desenho pode precisar dele noutro botão de ícone. */
   .mudo-i[disabled]{opacity:.4;cursor:not-allowed}
+  /* ---------- O BOTÃO AVISA ANTES DO CLIQUE (D-03, decisão [04]) ----------
+     O `[disabled]` acima MATA O CLIQUE, e o PO decidiu o contrário para esta
+     família — *"apagado e ainda assim responde"* —: sem clique não há caminho
+     de quem navega pelo teclado ou pelo controle até a razão, e a razão é a
+     entrega inteira da D-03.
+
+     A CARA É A DA FOLHA DAS DEZ (`monta.CSS_FOLHA`, `.btn.apagado`), letra por
+     letra. **E ESTA É UMA SEGUNDA CÓPIA, declarada:** a peça da ONDA0-F casa
+     `.btn` e `.seg button`, e o 🎙/♪ é `.mudo-i` — um botão de ÍCONE, com
+     largura fixa de 22px, que não pode virar `.btn` sem trocar o desenho que
+     ela aprovou. **RELATADO à frente da FOLHA:** o dia em que `.mudo-i` entrar
+     na lista de seletores de lá, estas três linhas somem daqui. É a mesma
+     dívida que a `05-vibracao` e a `06-navegacao` já têm com o `:empty`.
+
+     QUEM CARREGA O ENDEREÇO É A LINHA, e não o botão — a razão está em
+     `linha_de_volume`: o ♪ já gasta o seu único par alvo/campo para ACENDER
+     quando o alto-falante está mudo, e um elemento aceita um alvo só. */
+  .vol[data-porque] .mudo-i{border-color:var(--border-sutil);
+                            color:var(--texto-mudo);cursor:not-allowed}
+  .vol[data-porque] .mudo-i:hover{border-color:var(--border-sutil);
+                                  color:var(--texto-mudo)}
+  /* O `?` SEGUE O MESMO ATRIBUTO QUE O CINZA, e esta linha saiu da FOTO —
+     04/09/2026, com o controle dela no cabo.
+     A folha das dez esconde o `?` de três jeitos, e NENHUM alcançava este: ela
+     prende o primeiro a `.btn`, e os outros dois olham o CONTEÚDO da dica
+     (`:has(.dica:empty)` e `:has(.nada)`). Só que o campo aqui alimenta DUAS
+     coisas — a dica e o atributo que apaga o botão —, e as duas querem valores
+     opostos para "não há o que dizer": o atributo quer VAZIO (o piloto o
+     remove) e a dica queria o marcador. Com o vazio, `escrever()` escreve o
+     travessão no `innerHTML` (`hefesto_vivo.py:245`, para TODOS os alvos), a
+     dica deixa de ser vazia e o `?` apareceu na tela — **com um `—` dentro**,
+     ao lado dos dois botões que estavam clicáveis. Ruído com cara de dado, que
+     é exatamente o que o `?` da D-03 existe para não ser.
+     A cura é fazer o `?` seguir o MESMO atributo do cinza: um campo, um
+     atributo, e não há caminho em que o `?` apareça sem o botão estar apagado. */
+  .vol:not([data-porque]) .ajuda.porque{display:none}
+
+  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA (decisão [07]) ----------
+     Decisão dela, 04/09/2026: *"uma marca na palavra e o motivo no hover"*.
+
+     UM CAMPO SÓ FAZ AS DUAS COISAS, e é por isso que o alvo é `atributo`: sem
+     motivo o piloto REMOVE o `title` (o ramo `vazio || t === '—'`), e a regra
+     abaixo apaga a marca junto. Com uma classe para a marca e um segundo campo
+     para o motivo, seria possível pintar uma marca sem explicação — que é
+     exatamente o ruído com cara de dado que o `?` da folha recusa.
+
+     A COR É `--orange`, a mesma da tarja de recusa desta janela: degradação não
+     é erro (o controle funciona) e não é normal (o jogo vê menos do que
+     poderia), e o laranja é a palavra que esta casa já usa para esse meio. */
+  .degradou{display:none;margin-left:1px;font-size:9px;line-height:1;
+            color:var(--orange);cursor:help;vertical-align:2px}
+  .degradou[title]{display:inline-block}
   /* O POLEGAR DOS DOIS DESLIZANTES — D-08 dela, 04/09/2026. Ele é INVISÍVEL de
      propósito: o knob que se vê é o `.vol .cheio::after` que ela aprovou, e um
      polegar nativo por cima desenharia o segundo. O que este `<input>` traz é o
@@ -984,10 +1079,11 @@ DICA_LED_JOGADOR = ("As cinco lâmpadas do controle, no padrão do jogador "
                     "diante). É DERIVADO do número do jogador, não lido do "
                     "aparelho — o daemon publica o número, não o que está aceso.")
 
-DE_QUEM_E_A_LUZ = ("Este é o código da cor do JOGADOR, não a do plástico — quem escolhe "
-                   "é o produto, pela mesma tabela que acende as cinco lâmpadas "
-                   "(core/led_control.py::player_slot_color). Ele não é digitado aqui: "
-                   "sai da tabela, e muda no dia em que ela mudar.")
+# `DE_QUEM_E_A_LUZ` SAIU DAQUI — 04/09/2026, decisão [02]. Ele é importado do
+# PACOTE (`a02_controles.DICA_DA_LUZ`), no topo deste arquivo, porque o `title`
+# da linha da Barra de luz passou a ser PINTADO: com o produto reescrevendo
+# aquele atributo a cada tique, um literal aqui seria a segunda cópia — e as
+# duas divergiriam na primeira edição de uma delas.
 
 # O QUE A LINHA DIZ SOBRE A MÁSCARA, e o que ela NÃO diz. Decisão dela, 28/08:
 # a máscara é por controle e mora na aba Jogar, com três opções e SEM aviso.
@@ -1133,7 +1229,25 @@ def identidade(c, *, bat, meio=""):
                máscara passa o mouse. É a mesma economia que ela mandou fazer nos
                tooltips do resto da janela — o rótulo sai, a explicação continua
                alcançável. -->
-          <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b></span>{meio}
+          <!-- A MARCA DA EMULAÇÃO DEGRADADA — decisão dela, 04/09/2026:
+               *"uma marca na palavra e o motivo no hover"*.
+
+               O AJUDANTE QUE MONTA O MOTIVO JÁ EXISTIA (`pacotes.degradacao_de`,
+               que delega ao dono da regra na GTK) e NENHUM dos dez pacotes o
+               chamava: `vpad_backend` sozinho não separa "degradou" de "é uinput
+               por desenho" — a máscara Xbox é uinput e não é defeito nenhum. Não
+               faltava código; faltava onde pousar a frase.
+
+               UM CAMPO, UM ELEMENTO, AS DUAS COISAS: o alvo `atributo` REMOVE o
+               `title` quando o motivo é vazio, e a folha apaga a marca por
+               `[title]`. Com a marca numa classe e o motivo noutro campo daria
+               para pintar uma marca sem explicação.
+
+               O ASTERISCO É TEXTO E FICA NO ARQUIVO, e é de propósito: o que o
+               produto pinta é só o motivo. Uma marca cujo GLIFO viesse do
+               produto sumiria da página parada, e o desenho dela deixaria de
+               mostrar o que ela aprovou. -->
+          <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b><sup class="degradou" data-campo="mascara-degradou" data-hef-alvo="atributo" data-hef-atributo="title">*</sup></span>{meio}
 {sensores_da_peca(c)}
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -1279,10 +1393,84 @@ DICA_MIC_MUDO = ("Calar no firmware do controle — apaga a luz vermelha do plá
                  "A partir daqui quem manda no mudo é o Hefesto, e o botão do "
                  "controle para de valer. Esta tela não devolve o comando: a volta é "
                  "pela janela do aplicativo ou reiniciando o Hefesto.")
-DICA_ALTO_MUDO = "Manda zero ao alto-falante do controle, sem perder o volume guardado."
-DICA_ALTO_SEM_POSSE = ("Apagado porque o volume deste alto-falante ainda é desconhecido: "
-                       "o DualSense não o publica, e o daemon recusa calar sem ele. "
-                       "Arraste o volume ao lado uma vez e ele destrava.")
+# **A DICA DO ♪ DIZ O PREÇO — decisão dela, 04/09/2026 [06].** A pergunta era se
+# o alto-falante ganharia um "Devolver", e a resposta é a mesma que ela deu ao
+# gêmeo em 31/08 (o "Liberar" do microfone): *"o botão do Controle sempre
+# controla a interface, por isso não faz sentido o liberar ali"*. Ele fica fora
+# — e o preço, que é real e menor que o do 🎙, passa a estar escrito.
+#
+# QUAL É O PREÇO, medido no protocolo e não suposto: o DualSense **não devolve**
+# o registrador de volume, então a primeira escrita faz o Hefesto assumir a
+# posse (`ipc_handlers.py:4600` — o daemon só publica `speaker` depois dela) e
+# não há caminho de volta por esta tela. É menor que o do microfone porque nada
+# aqui tira o comando das mãos de quem está com o controle: não há botão de
+# alto-falante no plástico.
+DICA_ALTO_MUDO = ("Manda zero ao alto-falante do controle, sem perder o volume "
+                  "guardado. A partir da primeira escrita quem guarda o volume "
+                  "deste alto-falante é o Hefesto — o controle não o devolve, e "
+                  "esta tela não tem como largá-lo de volta.")
+
+
+# ---------------------------------------------------------------------------
+# OS DOIS BOTÕES DE SOM AVISAM ANTES DO CLIQUE — decisão [04] (D-03)
+# ---------------------------------------------------------------------------
+# A PEÇA É A DA ONDA0-F (`monta.botao_cinza`) e o MOLDE é o dela, letra por
+# letra: o botão com `data-hef-alvo="classe"` acendendo `apagado`, o
+# `data-hef-atributo="aria-disabled"` derivado da mesma classe, e o `?` com a
+# `.dica` no MESMO `data-campo`, alvo `html`.
+#
+# **POR QUE NÃO SE CHAMA `monta.botao_cinza` DIRETO:** aquela peça emite
+# `class="btn …"`, e o 🎙/♪ é `.mudo-i` — 22px quadrados, o desenho que ela
+# aprovou. Virar `.btn` trocaria o botão de ícone por um botão de texto, que é
+# desenho e é dela. O que se reusa é o MECANISMO e o vocabulário; o que muda é
+# uma classe. As quatro linhas de CSS que isso custa estão no bloco `.mudo-i`,
+# declaradas como segunda cópia e relatadas à frente da FOLHA.
+#
+# **UM CAMPO SÓ ALIMENTA OS DOIS**, e é a razão inteira do desenho da peça: o
+# botão e a dica levam o MESMO `data-campo`. Com dois, seria possível pintar um
+# botão cinza sem razão — ou uma razão sem botão cinza.
+#
+# **E O `disabled` SAIU.** O ♪ o carregava desde 03/09 (`alto_pode`), e o PO
+# decidiu o contrário para esta família: *"apagado e ainda assim responde"*.
+# `disabled` mata o clique, e o clique é o único caminho de quem navega pelo
+# teclado ou pelo controle até a razão — que é a entrega inteira da D-03. O
+# gesto continua recusando com a MESMA frase, que é a segunda trava.
+
+
+def linha_de_volume(campo, razao=""):
+    """A abertura da `<div class="vol">` do bloco, com o endereço da recusa.
+
+    **O CINZA NÃO NASCE NO BOTÃO, E A RAZÃO É O MECANISMO.** O ♪ já usa o seu
+    único par alvo/campo para ACENDER quando o alto-falante está mudo
+    (`alto-mudo`, decisão [09]), e um elemento aceita UM alvo — não há como o
+    mesmo botão receber também a classe `apagado`. Então quem recebe o endereço
+    é a LINHA: o alvo `atributo` põe `data-porque` nela quando há razão e o
+    REMOVE quando não há (o ramo `vazio || t === '—'` do piloto), e o CSS
+    apaga o botão de dentro. É a mesma forma do `.degradou[title]` desta aba, e
+    ela existe pelo mesmo motivo: um campo que precisa dizer duas coisas.
+
+    **UM CAMPO PARA A LINHA E PARA A DICA.** Os dois elementos levam o MESMO
+    `data-campo`, e o `achar()` do piloto os visita com o mesmo valor no mesmo
+    tique — não há caminho no código em que o botão fique cinza sem razão, nem
+    razão sem botão cinza. É a lei da peça da ONDA0-F, aplicada com outra
+    classe.
+    """
+    porque = f' data-porque="{razao}"' if razao else ""
+    return (f'<div class="vol" data-campo="{campo}" data-hef-alvo="atributo"'
+            f' data-hef-atributo="data-porque"{porque}>')
+
+
+def ponto_de_interrogacao(campo, razao=""):
+    """O `?` da razão — a mesma marcação da peça das dez, com o mesmo `.nada`.
+
+    O QUE O ESCONDE são as DUAS regras da folha comum, e nenhuma delas prende a
+    `.btn`: `.ajuda.porque:has(.dica:empty)` e `.ajuda.porque:has(.nada)`. Por
+    isso este `?` some sozinho quando não há o que dizer, sem uma linha de CSS
+    própria.
+    """
+    return (f'<span class="ajuda porque">?'
+            f'<span class="dica" data-campo="{campo}" data-hef-alvo="html">'
+            f'{razao or NADA_A_DIZER}</span></span>')
 
 # ---------------------------------------------------------------------------
 # OS DOIS DESLIZANTES — decisão dela, 04/09/2026 (D-08): *"Deslizante nos dois."*
@@ -1406,9 +1594,13 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
     # duas constantes do pacote, e o "Tocando" era palavra do desenho: ela
     # decidiu em 02/09/2026 (item 15) que o touchpad usa a do produto.
     toque_txt = texto_toques(1 if tocando else 0)
-    # os três botões de som: a trava e a dica saem do MESMO booleano, senão um
-    # botão apagado poderia carregar a dica de quem está clicável.
-    alto_trava, alto_dica = ("", DICA_ALTO_MUDO) if alto_pode else (" disabled", DICA_ALTO_SEM_POSSE)
+    # O `disabled` DO ♪ SAIU — 04/09/2026, decisão [04]. Estas duas variáveis
+    # escolhiam entre `disabled`+dica-da-recusa e nada+dica-do-preço, e o
+    # `disabled` matava o clique: o PO decidiu o contrário para esta família
+    # ("apagado e ainda assim responde"), porque o clique é o único caminho de
+    # quem navega pelo teclado ou pelo controle até a razão. Hoje o botão leva
+    # SEMPRE a dica do preço (que é o que ele faz) e a razão da recusa vive no
+    # `?` ao lado, pintada pelo produto — ver `linha_de_volume`.
     # O PONTO ACENDE POR CLASSE, e não por `style`: é o que o produto
     # alcança (`data-hef-alvo="classe"`) e o que faz o desenho parar de
     # contradizer o campo ao lado dele.
@@ -1440,7 +1632,22 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
 {identidade(c, bat=bat, meio=resumo_fechado(mic_mudo))}
       </label>'''
     return f'''    <div class="ctl card" style="--plastico:{plastico}" data-controle="{c.get("uniq") or c["pref"]}">
-      <input class="radio-mesa" type="radio" name="mesa" id="{rid}"{" checked" if c["alvo"] else ""}>
+      <!-- O ACORDEÃO GANHOU O DÉCIMO ALVO — T-07, 04/09/2026. A ONDA0-P
+           construiu o `marcado` no piloto (o único que escreve `el.checked`) e
+           pediu o ENDEREÇO a esta aba.
+
+           ELE NASCE DE LEITURA, E ISSO É UMA DECISÃO MEDIDA. O `LER_CAMPOS` do
+           piloto devolve `sim`/`""` por este alvo, e é com ele que a régua do
+           mockup passa a saber QUAL card está aberto — hoje ela não sabe. O
+           pacote **não emite** este campo, e não é esquecimento: os quatro
+           rádios são um GRUPO, então pintar `sim` num deles a cada tique
+           reabriria, dez vezes por segundo, o card que ela acabou de fechar; e
+           pintar `""` nos quatro fecharia a mesa inteira, porque um grupo de
+           rádio sem nenhum marcado não tem card aberto. Um endereço de leitura
+           é o que este elemento pode ter sem disputar o clique dela.
+           A razão está repetida no pacote, no lugar onde alguém tentaria emitir. -->
+      <input class="radio-mesa" type="radio" name="mesa" id="{rid}" data-campo="card-aberto" data-hef-alvo="marcado"{" checked" if c["alvo"] else ""}>
+      <span class="anel-vivo" data-campo="luz-cor" data-hef-alvo="cor"></span>
 {fx}
       <div class="corpo-cx">
       <div class="card-corpo">
@@ -1453,9 +1660,28 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
               <span class="ponto{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"
                 style="left:{touch[0]}%;top:{touch[1]}%"></span></div>
           </div>
+          <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
+               *"palavra curta no lugar do travessão, frase inteira no hover"*,
+               com as quatro palavras dela: Jogo · Steam · Não sei · Apagada.
+
+               O `title` SUBIU DO CAMPO PARA A LINHA, e é o mecanismo que obriga:
+               um elemento aceita UM alvo, e o `.de-quem` já usa o padrão (o
+               texto) para mostrar a palavra. A frase inteira vai no `title` da
+               linha, pelo alvo `atributo` — e a área de hover cresce do valor
+               para a linha, que é sobre o que a frase fala.
+
+               A FRASE NÃO CABE NO CAMPO, e está medido: a linha mede 148px e
+               "Lightbar: apagada" ocupa 86,7px QUEBRANDO em duas alturas. Palavra
+               cabe; frase, não. Foi essa medição que deixou os quatro estados
+               num travessão só até hoje.
+
+               E O TEXTO SAIU DAQUI PARA O PACOTE (`a02_controles.DICA_DA_LUZ`),
+               pela lei do cabeçalho deste arquivo: o texto de tela desta aba mora
+               no pacote. Com o `title` PINTADO, um literal aqui seria a segunda
+               cópia — e a viva e a do desenho divergiriam na primeira edição. -->
           <div class="moldura luz" style="margin-top:9px">
-            <div class="rot rot-linha">Barra de luz
-              <span class="de-quem" data-campo="luz-hex" title="{DE_QUEM_E_A_LUZ}">{luz.upper()}</span></div>
+            <div class="rot rot-linha" data-campo="luz-porque" data-hef-alvo="atributo" data-hef-atributo="title" title="{DE_QUEM_E_A_LUZ}">Barra de luz
+              <span class="de-quem" data-campo="luz-hex">{luz.upper()}</span></div>
             <div class="barra-luz" data-campo="luz-cor" data-hef-alvo="cor"
               style="color:{luz}"></div>
           </div>
@@ -1539,10 +1765,11 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                    as tem. -->
             </div>
             {onda(mic_v, mic_mudo)}
-            <div class="vol">
+            {linha_de_volume("mic-porque")}
               <span class="trilho"><span class="cheio" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
               <span class="n">{mic_vol}</span>
               <button class="mudo-i{mic_on}" data-gesto="mudo" data-mudo="microfone" title="{DICA_MIC_MUDO}">🎙</button>
+              {ponto_de_interrogacao("mic-porque")}
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
                  *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
@@ -1579,16 +1806,27 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
               </span></span>
             </div>
             {onda(alto_v)}
-            <div class="vol">
+            {linha_de_volume("alto-porque", "" if alto_pode else DICA_ALTO_SEM_POSSE)}
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:{alto_v[0]}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{alto_v[0]}" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_ALTO}" title="{DICA_VOL_ALTO}"></span>
               <span class="n" data-campo="alto-num">{alto_v[0]}</span>
-              <button class="mudo-i{alto_on}" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="{SELO_MUDO}"{alto_trava} title="{alto_dica}">♪</button>
+              <button class="mudo-i{alto_on}" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="{SELO_MUDO}" title="{DICA_ALTO_MUDO}">♪</button>
+              {ponto_de_interrogacao("alto-porque", "" if alto_pode else DICA_ALTO_SEM_POSSE)}
             </div>
             <div class="rota">
               <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
               <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
             </div>
+            <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
+                 motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela existe por um
+                 estado que ela VIU em 03/09: o card 2 com "Todo o som do PC"
+                 aceso e o som saindo na TV. Hoje os dois botões APAGAM nesse
+                 desacordo (a decisão [09]), e apagar sozinho não explica —
+                 esta linha é o que explica.
+                 NO REPOUSO ELA NÃO OCUPA NADA: a folha das dez a esconde por
+                 `:empty` e pelo marcador `.nada`, e o pacote manda o marcador
+                 em TODO tique. Sem a chave, a frase velha ficaria para sempre. -->
+            {monta_ressalva("alto-ressalva")}
           </div>
         </div>
 
@@ -2547,18 +2785,27 @@ def _conferir(doc):
     #     arranjo que a aba Iluminação usa no trilho de brilho (`brilho-pct` na
     #     `.cheio` e no `<input>`). A régua conta POR ALVO, então perder QUALQUER
     #     um dos dois em QUALQUER card continua reprovando com o nome.
+    #     E O MESMO ALVO PODE APARECER DUAS VEZES — 04/09/2026, D-06/S-11. O
+    #     `luz-cor` passou a vestir DOIS elementos por card com o alvo `cor`: o
+    #     retângulo da Barra de luz e o ANEL INTERNO do cartão (*"casco borda
+    #     externa lightbar borda interna"*). É a mesma razão do `alto-barra`
+    #     logo acima — um fato, um endereço, quantas expressões o desenho pedir
+    #     —, e é ela que garante que o anel e o retângulo nunca discordem. Por
+    #     isso a conta de baixo é `alvos.count(alvo)`, e não `1`: perder UMA das
+    #     duas continua reprovando com o nome.
     for campo, alvos in (("bateria-barra", ("largura",)),
                          ("alto-barra", ("largura", "valor")),
-                         ("luz-cor", ("cor",)), ("touch-ponto", ("classe",))):
+                         ("luz-cor", ("cor", "cor")), ("touch-ponto", ("classe",))):
         tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
         exigir(len(tags) == len(CONECTADOS) * len(alvos),
                f"o endereço `{campo}` não está nos {len(CONECTADOS)} cards "
                f"com os {len(alvos)} alvo(s) que ele tem")
-        for alvo in alvos:
+        for alvo in set(alvos):
+            quantos = len(CONECTADOS) * alvos.count(alvo)
             certos = [t for t in tags if f'data-hef-alvo="{alvo}"' in t]
-            exigir(len(certos) == len(CONECTADOS),
+            exigir(len(certos) == quantos,
                    f"`{campo}` perdeu o `data-hef-alvo={alvo}` em "
-                   f"{len(CONECTADOS) - len(certos)} card(s): a pintura vai "
+                   f"{quantos - len(certos)} elemento(s): a pintura vai "
                    f"escrever o valor como TEXTO dentro do elemento, em vez de "
                    f"mexer no que ele desenha")
 

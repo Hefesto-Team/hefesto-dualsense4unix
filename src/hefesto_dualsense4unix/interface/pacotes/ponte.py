@@ -78,7 +78,19 @@ rumble_policy_custom = _b.rumble_policy_custom
 
 mic_set = _b.mic_set
 mic_set_detalhado = _b.mic_set_detalhado
+# O ATO INTEIRO DO MICROFONE (D-12, 04/09/2026): o canal DESTE controle e o
+# mudo do firmware, num pedido só. A ONDA1-D1 construiu as três funções no
+# `ipc_bridge` e elas nasceram SEM chamador de tela — o gesto do 🎙 da aba 02 é
+# quem as chama, e um gesto só alcança o que este módulo expõe.
+mic_canal_set = _b.mic_canal_set
+mic_canal_set_detalhado = _b.mic_canal_set_detalhado
 mic_volume_set = _b.mic_volume_set
+# A RESPOSTA INTEIRA DO VOLUME DO MICROFONE, e ela existe por um fato da MESA
+# CHEIA: com dois DualSense no cabo há duas placas de som, e a rota global pega
+# a PRIMEIRA — o microfone de outra pessoa. O `bool` do `mic_volume_set`
+# colapsa isso em sucesso; o corpo traz `por_uniq`, que `ipc_bridge.
+# alvo_honrado` lê em três estados.
+mic_volume_set_detalhado = _b.mic_volume_set_detalhado
 speaker_set = _b.speaker_set
 speaker_set_detalhado = _b.speaker_set_detalhado
 

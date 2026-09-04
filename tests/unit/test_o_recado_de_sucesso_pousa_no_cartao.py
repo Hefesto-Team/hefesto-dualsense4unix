@@ -178,7 +178,13 @@ def medido() -> dict:
     # devolver deixaria, no mesmo processo, uma mesa de mentira e um `mic.set`
     # que sempre passa para todo vizinho que abrir um `Piloto` depois.
     chave = ("02-controles.html", "mudo")
-    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_set,
+    # **O DUBLÊ MUDOU DE FUNÇÃO EM 04/09/2026 — S-05, a D-12 dela.** O gesto
+    # `mudo` da aba 02 passou a chamar o ATO inteiro do microfone
+    # (`mic_canal_set_detalhado`), e com o dublê no nome VELHO esta régua
+    # mediria o caminho da RECUSA no lugar do sucesso: a chamada iria ao
+    # socket, não achava daemon, e o cartão recebia a frase laranja. É o mesmo
+    # arranjo do `test_a_recusa_chega_ao_cartao`, do outro lado do desfecho.
+    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
                 hv.SEGUNDOS_DO_RECADO_DE_SUCESSO,
                 hv.pacotes.GESTOS.get(chave))
     #: O VALOR DO PRODUTO, lido ANTES de a régua o encolher. É o que dá dono à
@@ -192,7 +198,13 @@ def medido() -> dict:
     MESA["estado"] = ESTADO
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
     # `mic.set` PASSANDO — é o caminho do SUCESSO, e é o que nunca foi medido.
-    hv.ponte.mic_set = lambda *a, **k: True  # type: ignore[assignment]
+    # `status: "ok"` É O QUE O ATO RESPONDE COM AS DUAS METADES FEITAS, e é o
+    # único corpo em que `frase_do_ato_do_microfone` devolve `None` — o caminho
+    # do SUCESSO, que é o que este arquivo existe para medir. Um `True` seria
+    # mais frouxo que a ponte real, que devolve `dict | None`.
+    hv.ponte.mic_canal_set_detalhado = (  # type: ignore[assignment]
+        lambda *a, **k: {"status": "ok", "canal_feito": True,
+                         "firmware_pedido": True})
     hv.SEGUNDOS_DO_RECADO_DE_SUCESSO = VENCE_EM_S
 
     args = argparse.Namespace(
@@ -344,7 +356,7 @@ def medido() -> dict:
         # laço GTK que vier depois, no mesmo processo.
         piloto.pronto = False
         piloto.tela.janela.destroy()
-        (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_set,
+        (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
          hv.SEGUNDOS_DO_RECADO_DE_SUCESSO, velho) = guardado
         if velho is None:
             hv.pacotes.GESTOS.pop(chave, None)
