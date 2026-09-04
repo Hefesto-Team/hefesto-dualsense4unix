@@ -124,6 +124,32 @@ seção daqui**: a aba deixou de estar em trabalho.
   **Até publicar, o produto continua exatamente como ela o vê hoje:** nenhum
   elemento desta aba usa as peças, então as regras novas não casam com nada e
   a página publicada desenha o mesmo pixel que a bancada.
+- **04/09/2026 · ONDA2-08** — quatro decisões do PO viraram desenho, e **três
+  delas já valem no produto sem publicar nada**: a coluna da direita do Check-up
+  é UM endereço com alvo `html` (`data-campo="ordem"`), e quem a desenha é o
+  pacote.
+
+  | o quê | decisão | onde já vale |
+  | --- | --- | --- |
+  | o **cartão de cura** abaixo da ordem de serviço | [03] | **no produto**, hoje |
+  | o **`[derivado da conta]`** nas frases não medidas aqui | [04] | **no produto**, hoje |
+  | o **`+N`** das ordens que não couberam | [07] | **no produto**, hoje |
+  | a **frase do rodapé do Mapa**, trocada pela verdade | [08] | só na bancada |
+  | o `?` da quinta linha e a dica do ⊘, sem o botão morto | [05], a metade do fato errado | só na bancada |
+
+  **O QUE MUDA DE PIXEL NA BANCADA, e é o que ela precisa olhar:** a coluna da
+  direita ganhou um segundo card, e com ele a coluna da esquerda estica — as
+  cinco linhas do exame passam a repartir mais altura. Medido nas duas fotos
+  (`olhar.py`, Chrome, 1920×1080): a `.janela` continua em **1180×777**,
+  `passa_da_dobra: 0`, sem rolagem lateral. O card coube na folga que a coluna
+  já tinha.
+
+  **A DÍVIDA DECLARADA, e ela é de tinta, nunca de informação:** as regras
+  `.col-ordem .mais` e `.ordem.cura` nasceram nesta folha e a página publicada
+  ainda não as tem. Fotografado no produto vivo em 04/09: a pílula do card de
+  cura sai **certa** (`.selo.warn` é global e já existe), e a linha do `+N` sai
+  em corpo de texto normal em vez de 11 px itálico cinza. **A frase está certa
+  desde já; a tinta chega no `--publicar`.**
 
 ## 09-sistema.html
 - **04/09/2026** — a folha das dez peças (D-02 e D-03) entrou pelo `monta.py`.

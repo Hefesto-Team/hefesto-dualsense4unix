@@ -817,6 +817,54 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .ordem .ganho{margin-top:8px;font-size:11.5px;color:var(--green)}
   .ordem .ganho span{color:var(--texto-mudo)}
 
+  /* ---- as TRÊS peças que a coluna da direita ganhou em 04/09/2026 ----
+     Decisões [03], [04] e [07] do PO, e as três nascem da mesma medição: a
+     coluna existia, ficava ociosa a maior parte do tempo, e o que não cabia
+     nela sumia sem a tela dizer.
+
+     ELAS SÃO PINTADAS PELO PRODUTO — `a08_conexoes._html_da_ordem` —, e não há
+     `data-campo` novo em nenhuma: a coluna inteira é UM endereço com alvo
+     `html`. É a razão de estas regras existirem sem elemento correspondente no
+     desenho estático desta página. */
+
+  /* O CARD DE CURA — [03]. Ele veste `.ordem` de propósito: é a única moldura
+     que a página PUBLICADA já sabe desenhar, e enquanto a folha não for
+     publicada o card de cura nasce com a moldura do card de ordem, que é o
+     parecido certo. O que `.cura` acrescenta é o que a distingue: sem receita,
+     sem selo, e um respiro entre um card e o de cima. */
+  .col-ordem > .ordem + .ordem{margin-top:8px}
+  .ordem.cura .faca{font-weight:500}
+  /* A PÍLULA DO CARD DE CURA É A MESMA DA LINHA DO EXAME, com a mesma palavra
+     e a mesma cor — e isso não é preguiça: o card fala do MESMO achado que a
+     linha da esquerda, e duas gramáticas para o mesmo estado é como o verde
+     volta a conviver com o vermelho.
+
+     ELA DEGRADA CERTO NA PÁGINA PUBLICADA. `.exame .selo` é escopado, então lá
+     a pílula sai sem largura fixa e sem respiro — mas `.selo.warn`/`.ok`/`.info`
+     são globais e já existem, então a COR e a PALAVRA chegam. O que falta é
+     tinta, nunca informação. */
+  .ordem.cura .faca .selo{flex:0 0 62px;text-align:center;font-size:10px;
+                          font-weight:600;padding:2px 0;border-radius:4px;
+                          font-family:'JetBrains Mono',monospace}
+  .ordem.cura .ganho{color:var(--texto-suave)}
+
+  /* O SELO DE PROCEDÊNCIA — [04]. Cinza e menor: ele QUALIFICA a frase, e uma
+     marca do mesmo peso viraria uma segunda afirmação ao lado da primeira. É a
+     mesma gramática de `secao_exame._linha_da_ordem`, que a pinta com
+     `foreground=COR_APAGADA size=small` na janela dela. */
+  .proc{color:var(--texto-mudo);font-size:10.5px;white-space:nowrap}
+
+  /* O `+N` — [07]. Ele não tem moldura: não é um card, é a confissão de que
+     falta card. E só nasce no dia em que sobra — sem sobra, o produto não
+     emite o elemento e a coluna fica exatamente como estava.
+
+     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:732` já
+     define `.gls .mais` para o "+N" do glossário das dez páginas. Um `.mais`
+     solto aqui é o vizinho de nome igual que esta aba já pagou três vezes
+     (`peca`, `tira`, `mesa`) — nome de classe se confere ANTES de escrever. */
+  .col-ordem .mais{margin-top:8px;font-size:11px;color:var(--texto-mudo);
+                   font-style:italic}
+
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
      145×4 na Vibração, 173×6 na Perfis. Aqui eram 134/159, 157/71 e 170/192. */
@@ -1435,20 +1483,57 @@ CSS += """
 """
 
 
-#: "VER AS ORDENS IGNORADAS", e não "caladas" — corrigido em 28/08.
+#: "VER AS ORDENS IGNORADAS" — o nome do botão que ELA APAGOU em 31/08.
 #:
-#: Ela escreveu a fileira de botões com todas as letras: *"Examinar de novo. /
-#: Já Movi - Reexaminar. / Ignorar / Ver Ordens ignoradas."* A tela dizia "Ver as
-#: ordens caladas", e o defeito é de PAR: o botão irmão — o que produz a ordem
-#: nesse estado — chama-se **Ignorar**. Quem aperta "Ignorar" procura depois as
-#: ordens *ignoradas*, não as *caladas*: "caladas" era a única palavra da dupla
-#: sem par na tela, e nenhuma outra frase da aba a sustentava.
+#: **ELE NÃO É MAIS TEXTO DE TELA VIVA**, e é isso que mudou em 04/09/2026: o
+#: nome sobrevive só na retrospectiva do fim desta página, que conta por que a
+#: fileira de quatro botões existiu e por que a palavra "caladas" virou
+#: "ignoradas". Ali ele nomeia um botão no PASSADO, e isso continua verdadeiro.
 #:
-#: O nome fica num lugar só porque ele aparece em TRÊS: o botão, a linha CERTO do
-#: exame ("elas voltam em …") e a dica do próprio "Ignorar". Uma correção pela
-#: metade deixaria as duas palavras vivas, que é o defeito que a regra da casa
-#: existe para matar.
+#: O QUE SAIU foi o uso dele em frase que fala do AGORA — ver
+#: :data:`ORDEM_IGNORADA_VOLTA`.
 VER_IGNORADAS = "Ver as ordens ignoradas"
+
+#: O QUE ACONTECE COM UMA ORDEM QUE ELA MANDOU IGNORAR — a MEDIÇÃO, não a
+#: promessa. 04/09/2026, decisão [05] do PO.
+#:
+#: **FATO ERRADO, SUBSTITUÍDO.** A quinta linha do Check-up dizia *"elas voltam
+#: em <b>Ver as ordens ignoradas</b>"*, e **o botão saiu da tela em 31/08** —
+#: decisão dela, no mesmo turno em que o `Ignorar` virou glifo. A frase mandava
+#: ela procurar um botão que não existe. Isto não é decisão medida a preservar:
+#: é uma frase que a medição derrubou, e ela sai de TODOS os lugares em que fala
+#: do presente.
+#:
+#: O QUE A FRASE NOVA AFIRMA ESTÁ MEDIDO, em `a08_conexoes._itens_da_tela` e em
+#: `ordens_da_mesa.ordens_novas`: a dispensa é gravada com o ARRANJO, e a linha
+#: volta sozinha quando o arranjo muda. Nenhuma palavra aqui promete um lugar.
+#:
+#: **A DECISÃO [05] PEDE MAIS DO QUE ISTO** — *"a linha fica na lista, apagada,
+#: e o mesmo ⊘ desfaz"* —, e essa metade precisa de um endereço que a página
+#: publicada não tem. Ela está declarada no relatório desta frente como o que
+#: sobra; a frase, enquanto isso, diz o que o produto FAZ.
+ORDEM_IGNORADA_VOLTA = "volta sozinha se o arranjo dos cabos mudar"
+
+#: O RODAPÉ DA JANELINHA DO MAPA — decisão [08] do PO, 04/09/2026:
+#: **"Trocar pela verdade."**
+#:
+#: **O QUE ESTAVA AQUI MENTIA, e a contradição era com um clique DELA.** A linha
+#: dizia *"O desenho vale quando você clicar em Aplicar, na barra de baixo da
+#: janela."* — e ela decidiu em 01/09 que **clicar já aplica**: os seis gestos
+#: do mapa gravam no ato (`a08_conexoes._gravar_o_mapa`). Pior: o "Aplicar" do
+#: rodapé faz OUTRA coisa, e a dica dele diz isso — *"Vale agora: envia a
+#: configuração aos controles na hora. NÃO grava"*. A frase mandava apertar um
+#: botão que não tem nada a ver com o desenho que o clique dela já gravou.
+#:
+#: **POR QUE A FRASE NÃO VEM DO DONO, e isto é dívida declarada:** a de antes
+#: era `mapa_da_mesa.ESPERA_O_APLICAR`, e ela continua VERDADEIRA lá — o widget
+#: GTK que a exibe (`mapa_da_mesa.py:559`) É uma janela que espera o Aplicar.
+#: São duas interfaces com dois comportamentos, e trocar a constante do dono
+#: poria a mentira na janela dela. O dono precisa de uma segunda frase, para
+#: quem grava no clique; `mapa_da_mesa.py` não é desta sprint, e o pedido está
+#: no relatório desta frente.
+MAPA_JA_GRAVOU = ("Cada mudança aqui já foi gravada, no clique. "
+                  "Não há nada a aplicar depois.")
 
 #: AS DUAS JANELAS DA MESA — `D-MAPEAR-ENTRADAS-E-NAO-PORTAS` (28/08).
 #:
@@ -1623,7 +1708,7 @@ def exame(estado, txt, dica, linha=0):
             <span class="selo {classe}" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">{palavra}</span></span>
             <span class="txt" data-campo="achado">{txt}</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html">{dica}</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="{linha}" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="{linha}" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e {ORDEM_IGNORADA_VOLTA}.">⊘</button>
           </div>'''
 
 
@@ -2750,7 +2835,7 @@ TELA_MAPEAR = f'''
         <span class="mm-nova"><input class="mm-campo" placeholder="{MAPA["NOME_DA_FACE_EM_BRANCO"]}" maxlength="16">
           <button class="btn" data-gesto="nova-face" title="Cria uma face com o nome que você escreveu, sem entrada nenhuma. Sem nome, não cria.">{MAPA["ROTULO_NOVA_FACE"]}</button></span>
       </div>
-      <div class="tn-frase mm-aplicar">{MAPA["ESPERA_O_APLICAR"]}</div>
+      <div class="tn-frase mm-aplicar">{MAPA_JA_GRAVOU}</div>
     </div>
     <div class="tn-rod mm-rod">
       <a class="btn" href="#">{MAPA["ROTULO_FECHAR"]}</a>
@@ -3016,7 +3101,7 @@ MIOLO = f'''
        f'o que dá para desligar e o que não dá.', linha=3)}
 {exame("certo", "Nenhuma outra ordem de serviço pendente",
        "<b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou "
-       f"ignorar não contam aqui — elas voltam em <b>{VER_IGNORADAS}</b>.", linha=4)}
+       f"ignorar não contam aqui — cada uma {ORDEM_IGNORADA_VOLTA}.", linha=4)}
             </div>
           </div>
 
@@ -3040,7 +3125,25 @@ MIOLO = f'''
               </div>
               <div class="ganho"><span>Ganho esperado:</span> sai do controlador do teclado e do
                 ruído do USB 3.0 — e {"são " + str(len(NO_RADIO)) + " controles" if len(NO_RADIO) != 1
-                else "é 1 controle"} dependendo desse rádio.</div>
+                else "é 1 controle"} dependendo desse rádio. <span class="proc">[derivado da conta]</span></div>
+            </div>
+            <!-- O CARTÃO DE CURA — decisão [03] do PO, 04/09/2026: *"Cartão de
+                 cura na coluna da direita."* Até hoje a cura das conferências
+                 só existia dentro do `?` de cada linha, e quem não passasse o
+                 mouse não descobria o que fazer. A janela estável saiu deste
+                 mesmo estado em 25/08 (`secao_exame._card_da_cura`).
+
+                 ELE NÃO TEM SELO DE PROCEDÊNCIA, e é regra do dono: *"uma cura
+                 de conferência não traz selo … porque não há medição por trás
+                 dela dizendo de onde vem o conselho"*. É a contramão da [04] ao
+                 lado, e as duas convivem porque falam de coisas diferentes.
+
+                 A CURA DESTE CARD É A DA QUARTA LINHA do exame ao lado — os
+                 rádios vizinhos por nomear —, e não uma inventada: quem pinta
+                 na tela viva lê `exame_da_mesa.Item.cura`. -->
+            <div class="ordem cura">
+              <div class="faca"><span class="selo info">NOTA</span><span>O que fazer: nomeie os {len(POR_NOMEAR)} rádios que faltam na tabela de <b>Rádio e adaptadores</b>.</span></div>
+              <div class="ganho"><span></span>{len(RADIOS_VIZINHOS)} fontes de rádio perto. {len(JA_NOMEADOS)} você já nomeou.</div>
             </div>
             </div>
           </div>

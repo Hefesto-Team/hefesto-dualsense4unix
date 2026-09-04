@@ -987,6 +987,54 @@
   .ordem .ganho{margin-top:8px;font-size:11.5px;color:var(--green)}
   .ordem .ganho span{color:var(--texto-mudo)}
 
+  /* ---- as TRÊS peças que a coluna da direita ganhou em 04/09/2026 ----
+     Decisões [03], [04] e [07] do PO, e as três nascem da mesma medição: a
+     coluna existia, ficava ociosa a maior parte do tempo, e o que não cabia
+     nela sumia sem a tela dizer.
+
+     ELAS SÃO PINTADAS PELO PRODUTO — `a08_conexoes._html_da_ordem` —, e não há
+     `data-campo` novo em nenhuma: a coluna inteira é UM endereço com alvo
+     `html`. É a razão de estas regras existirem sem elemento correspondente no
+     desenho estático desta página. */
+
+  /* O CARD DE CURA — [03]. Ele veste `.ordem` de propósito: é a única moldura
+     que a página PUBLICADA já sabe desenhar, e enquanto a folha não for
+     publicada o card de cura nasce com a moldura do card de ordem, que é o
+     parecido certo. O que `.cura` acrescenta é o que a distingue: sem receita,
+     sem selo, e um respiro entre um card e o de cima. */
+  .col-ordem > .ordem + .ordem{margin-top:8px}
+  .ordem.cura .faca{font-weight:500}
+  /* A PÍLULA DO CARD DE CURA É A MESMA DA LINHA DO EXAME, com a mesma palavra
+     e a mesma cor — e isso não é preguiça: o card fala do MESMO achado que a
+     linha da esquerda, e duas gramáticas para o mesmo estado é como o verde
+     volta a conviver com o vermelho.
+
+     ELA DEGRADA CERTO NA PÁGINA PUBLICADA. `.exame .selo` é escopado, então lá
+     a pílula sai sem largura fixa e sem respiro — mas `.selo.warn`/`.ok`/`.info`
+     são globais e já existem, então a COR e a PALAVRA chegam. O que falta é
+     tinta, nunca informação. */
+  .ordem.cura .faca .selo{flex:0 0 62px;text-align:center;font-size:10px;
+                          font-weight:600;padding:2px 0;border-radius:4px;
+                          font-family:'JetBrains Mono',monospace}
+  .ordem.cura .ganho{color:var(--texto-suave)}
+
+  /* O SELO DE PROCEDÊNCIA — [04]. Cinza e menor: ele QUALIFICA a frase, e uma
+     marca do mesmo peso viraria uma segunda afirmação ao lado da primeira. É a
+     mesma gramática de `secao_exame._linha_da_ordem`, que a pinta com
+     `foreground=COR_APAGADA size=small` na janela dela. */
+  .proc{color:var(--texto-mudo);font-size:10.5px;white-space:nowrap}
+
+  /* O `+N` — [07]. Ele não tem moldura: não é um card, é a confissão de que
+     falta card. E só nasce no dia em que sobra — sem sobra, o produto não
+     emite o elemento e a coluna fica exatamente como estava.
+
+     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:732` já
+     define `.gls .mais` para o "+N" do glossário das dez páginas. Um `.mais`
+     solto aqui é o vizinho de nome igual que esta aba já pagou três vezes
+     (`peca`, `tira`, `mesa`) — nome de classe se confere ANTES de escrever. */
+  .col-ordem .mais{margin-top:8px;font-size:11px;color:var(--texto-mudo);
+                   font-style:italic}
+
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
      145×4 na Vibração, 173×6 na Perfis. Aqui eram 134/159, 157/71 e 170/192. */
@@ -2134,35 +2182,35 @@
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
             <span class="txt" data-campo="achado">As entradas dão energia para o 1 controle no cabo</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma parece defeito do controle.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="0" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="0" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <i class="est est-ok" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn on" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo warn" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">AJUSTAR</span></span>
             <span class="txt" data-campo="achado">Dois rádios da bancada estão em entradas vizinhas</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na <b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de serviço ao lado, e o <b>?</b> dela diz por que isso importa.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="1" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="1" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <i class="est est-ok on" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
             <span class="txt" data-campo="achado">O controle no cabo tem uma entrada só para ele</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das entradas onde estão o Player 1.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="2" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="2" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <i class="est est-ok" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info on" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo info" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">NOTA</span></span>
             <span class="txt" data-campo="achado">4 rádios vizinhos ativos na faixa de 2,4 GHz</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> 4 fontes de rádio perto. 2 você já nomeou; 2 continuam por nomear, na tabela de <b>Rádio e adaptadores</b>.<br><br><b>Por que importa:</b> 1 dos seus 2 controles falam nessa mesma faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe o que dá para desligar e o que não dá.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="3" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="3" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
           <div class="exame" data-campo="exame">
             <i class="est est-ok on" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
             <span class="txt" data-campo="achado">Nenhuma outra ordem de serviço pendente</span>
-            <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou ignorar não contam aqui — elas voltam em <b>Ver as ordens ignoradas</b>.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="4" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A linha fica apagada aqui, e volta sozinha se o arranjo mudar.">⊘</button>
+            <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou ignorar não contam aqui — cada uma volta sozinha se o arranjo dos cabos mudar.</span></span>
+            <button class="ignora" data-gesto="ignorar" data-v="4" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
             </div>
           </div>
@@ -2186,7 +2234,25 @@
                 <span class="caixa alvo" title="Entrada 9 — traseira do gabinete, USB 2.0, num controlador que só ela usa.">Entrada 9 <span class="pt">•</span> USB 2.0</span>
               </div>
               <div class="ganho"><span>Ganho esperado:</span> sai do controlador do teclado e do
-                ruído do USB 3.0 — e é 1 controle dependendo desse rádio.</div>
+                ruído do USB 3.0 — e é 1 controle dependendo desse rádio. <span class="proc">[derivado da conta]</span></div>
+            </div>
+            <!-- O CARTÃO DE CURA — decisão [03] do PO, 04/09/2026: *"Cartão de
+                 cura na coluna da direita."* Até hoje a cura das conferências
+                 só existia dentro do `?` de cada linha, e quem não passasse o
+                 mouse não descobria o que fazer. A janela estável saiu deste
+                 mesmo estado em 25/08 (`secao_exame._card_da_cura`).
+
+                 ELE NÃO TEM SELO DE PROCEDÊNCIA, e é regra do dono: *"uma cura
+                 de conferência não traz selo … porque não há medição por trás
+                 dela dizendo de onde vem o conselho"*. É a contramão da [04] ao
+                 lado, e as duas convivem porque falam de coisas diferentes.
+
+                 A CURA DESTE CARD É A DA QUARTA LINHA do exame ao lado — os
+                 rádios vizinhos por nomear —, e não uma inventada: quem pinta
+                 na tela viva lê `exame_da_mesa.Item.cura`. -->
+            <div class="ordem cura">
+              <div class="faca"><span class="selo info">NOTA</span><span>O que fazer: nomeie os 2 rádios que faltam na tabela de <b>Rádio e adaptadores</b>.</span></div>
+              <div class="ganho"><span></span>4 fontes de rádio perto. 2 você já nomeou.</div>
             </div>
             </div>
           </div>
@@ -3190,7 +3256,7 @@
         <span class="mm-nova"><input class="mm-campo" placeholder="Nome da face" maxlength="16">
           <button class="btn" data-gesto="nova-face" title="Cria uma face com o nome que você escreveu, sem entrada nenhuma. Sem nome, não cria.">Acrescentar face</button></span>
       </div>
-      <div class="tn-frase mm-aplicar">O desenho vale quando você clicar em Aplicar, na barra de baixo da janela.</div>
+      <div class="tn-frase mm-aplicar">Cada mudança aqui já foi gravada, no clique. Não há nada a aplicar depois.</div>
     </div>
     <div class="tn-rod mm-rod">
       <a class="btn" href="#">Fechar</a>
