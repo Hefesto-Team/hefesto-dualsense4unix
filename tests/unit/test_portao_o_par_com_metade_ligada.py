@@ -866,7 +866,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "daemon/subsystems/hotkey.py::daemon/protocols.py:180",
     "daemon/subsystems/hotkey.py::profiles/manager.py:384-387",
     "integrations/exame_da_mesa.py::sentinela_do_wrapper.py:524",
-    "integrations/mesa_de_radio.py::tests/conftest.py:338",
     "profiles/loader.py::schema.py:52",
     "utils/repo_files.py::cli/cmd_doctor.py:23",
     "utils/repo_files.py::emulation_actions.py:1200",

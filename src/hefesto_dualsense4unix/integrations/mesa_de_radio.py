@@ -56,7 +56,7 @@ como prova (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01, A6).
 
 Todas as raízes e todos os leitores entram por argumento com default do sistema
 real — nunca por constante de módulo, que o ``CANARIO-FS-01``
-(``tests/conftest.py:338``) pega e que impediria o retrato de fotografar a aba
+(``tests/conftest.py:549``) pega e que impediria o retrato de fotografar a aba
 com uma bancada de mentira.
 """
 
