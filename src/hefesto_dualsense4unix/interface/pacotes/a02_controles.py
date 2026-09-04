@@ -1761,7 +1761,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
-    `rota` (`ipc_handlers.py:4626`) e a GUI estável manda exatamente isto
+    `rota` (`ipc_handlers.py:4654`) e a GUI estável manda exatamente isto
     (`controller_card.py:4273`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O

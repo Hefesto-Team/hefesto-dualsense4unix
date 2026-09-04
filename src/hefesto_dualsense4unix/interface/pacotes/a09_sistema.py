@@ -1448,7 +1448,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:5787`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:5913`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:167`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no
