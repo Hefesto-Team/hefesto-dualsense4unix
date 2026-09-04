@@ -27,6 +27,7 @@
 #   scripts/portoes.sh --rapido     só a camada rápida (~6 s)
 #   scripts/portoes.sh --suite      acrescenta a suíte de testes
 #   scripts/portoes.sh --listar     a tabela crua, que é o que o portão do portão lê
+#   scripts/portoes.sh --interpretador  só o cabeçalho: qual python, e o que falta nele
 #
 # O INTERPRETADOR SE DECLARA. A casa já pagou por medir contra a biblioteca
 # errada — "todo instrumento tem de declarar qual biblioteca está usando" — e
@@ -116,6 +117,15 @@ completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 # rodado por esta lista — só pela camada `suite`, que é de quem coordena e
 # roda no fim. Achado pela conferência da frente C2, e a ironia é o ponto.
 completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chamador.py
+# 04/09/2026 — O PORTÃO QUE MEDE O PRÓPRIO INSTRUMENTO. Numa árvore de voo o
+# cabeçalho deste script imprimia a venv da `-estavel`, outra cópia do
+# repositório, sem structlog/playwright/ruff/mypy: QUATRO vermelhos falsos sobre
+# código são. A causa era a regra da POSIÇÃO (`worktree list | awk NR==1`), e a
+# regra passou a ser a de CAPACIDADE. Ele entra na camada `completo` e não na
+# suíte pela lição que este arquivo já carrega no `mac-por-oui`: era teste da
+# SUÍTE, e a suíte roda no FIM -- entre o vazamento e a reprovação havia um dia
+# inteiro de trabalho. Custa ~1 s.
+completo|interpretador-do-portao|pytest|tests/unit/test_o_portao_declara_o_interpretador.py
 rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
 # 03/09/2026, a lei dela: *"cada pessoa tem um dualsense diferente (…) nada
@@ -182,6 +192,7 @@ case "${1:-}" in
     _DIVERGENCIAS
     exit 0 ;;
   --rapido)  CAMADAS="rapido" ;;
+  --interpretador) CAMADAS="" ;;   # só o cabeçalho; ver o bloco do interpretador
   --suite)   CAMADAS="rapido completo suite" ;;
   --aceite)  CAMADAS="rapido completo suite" ;;
   -h|--help) _uso; exit 0 ;;
@@ -190,21 +201,58 @@ case "${1:-}" in
 esac
 
 # --- o interpretador, resolvido e DECLARADO -------------------------------
+#
+# O DEFEITO QUE ESTE BLOCO CUROU, medido em 04/09/2026 dentro de uma árvore de
+# voo: o cabeçalho imprimia
+#
+#     python  /mnt/.../hefesto-dualsense4unix-estavel/venv/bin/python
+#
+# — a venv de OUTRA CÓPIA do repositório, sem playwright, sem structlog e sem
+# ruff, e por isso com QUATRO vermelhos falsos. A causa era uma suposição
+# escrita aqui: `worktree list | awk NR==1` devolve a árvore PRINCIPAL do
+# `.git`, e esta casa tem TRÊS árvores — a principal do git é a `-estavel`, que
+# não é a de trabalho. "A primeira da lista" nunca foi "a que tem as
+# dependências".
+#
+# É a família de defeito que esta casa persegue acima de todas: **o instrumento
+# apontando para outra coisa.** Um portão que roda com o interpretador errado
+# não é um portão vermelho — é um portão que não mede.
+#
+# A REGRA NOVA: não se adivinha a venv pela POSIÇÃO na lista. PERGUNTA-SE a ela
+# se tem o que os portões precisam, e a que responder sim ganha. Se nenhuma
+# responder, o cabeçalho DIZ, em vez de deixar o vermelho falso explicar-se
+# sozinho.
+_VENV_FALTA=""
+
+_venv_completa() {  # rc=0 se esta venv tem o que os portões precisam
+  local d="$1" falta=""
+  "$d/python" -c 'import structlog, playwright' >/dev/null 2>&1 || falta="python:structlog/playwright"
+  [ -x "$d/ruff" ] || falta="${falta:+$falta }bin:ruff"
+  [ -x "$d/mypy" ] || falta="${falta:+$falta }bin:mypy"
+  _VENV_FALTA="$falta"
+  [ -z "$falta" ]
+}
+
 _venv_bin() {
-  local d
-  for d in "$RAIZ/.venv/bin" "$RAIZ/venv/bin"; do
-    [ -x "$d/python" ] && { echo "$d"; return 0; }
+  local d cand=() primeira="" w
+  # 1. a venv DESTA árvore, se houver.
+  cand+=("$RAIZ/.venv/bin" "$RAIZ/venv/bin")
+  # 2. as das outras árvores do mesmo `.git` — TODAS, não só a primeira. Numa
+  #    árvore de agente não há venv (o worktree copia só o que o git rastreia,
+  #    e `.venv/` é ignorado), então é aqui que ela é achada.
+  while read -r w; do
+    [ -n "$w" ] && cand+=("$w/.venv/bin" "$w/venv/bin")
+  done < <(git -C "$RAIZ" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}')
+
+  for d in "${cand[@]}"; do
+    [ -x "$d/python" ] || continue
+    [ -n "$primeira" ] || primeira="$d"
+    if _venv_completa "$d"; then echo "$d"; return 0; fi
   done
-  # Numa árvore de agente não há venv: o worktree copia só o que o git
-  # rastreia, e `.venv/` é ignorado. Cai na venv da árvore PRINCIPAL, que é
-  # onde o install editable mora. Isso vale para os BINÁRIOS (ruff, mypy,
-  # pytest); o código sob teste continua vindo do PYTHONPATH do `.envrc-voo`.
-  local principal
-  principal="$(git -C "$RAIZ" worktree list --porcelain 2>/dev/null | awk 'NR==1{print $2}')"
-  if [ -n "${principal:-}" ]; then
-    for d in "$principal/.venv/bin" "$principal/venv/bin"; do
-      [ -x "$d/python" ] && { echo "$d"; return 0; }
-    done
+  # Nenhuma completa: devolve a primeira que existe, e o chamador AVISA.
+  if [ -n "$primeira" ]; then
+    _venv_completa "$primeira" || true   # repovoa _VENV_FALTA com a escolhida
+    echo "$primeira"; return 0
   fi
   return 1
 }
@@ -216,6 +264,15 @@ elif [ -n "$VENV_BIN" ]; then
   PY="$VENV_BIN/python"
 else
   PY="$(command -v python3)"
+fi
+
+# A CONFERÊNCIA É SOBRE O INTERPRETADOR QUE VAI RODAR, não sobre o que foi
+# escolhido — senão um `HEFESTO_PY` apontado para uma venv capenga passa em
+# silêncio, que é o mesmo defeito com outra porta. Medido ao morder o próprio
+# conserto, em 04/09/2026.
+VENV_INCOMPLETA=""
+if ! _venv_completa "$(dirname "$PY")"; then
+  VENV_INCOMPLETA="$_VENV_FALTA"
 fi
 
 _bin() {  # resolve um binário: venv primeiro, PATH depois
@@ -231,6 +288,17 @@ if [ -n "${PYTHONPATH:-}" ]; then
   echo "         PYTHONPATH ${PYTHONPATH}"
 else
   echo "         PYTHONPATH (vazio) -- numa árvore de agente isto é ARMADILHA: rode 'source .envrc-voo' antes."
+fi
+if [ -n "${VENV_INCOMPLETA:-}" ]; then
+  echo "         INTERPRETADOR INCOMPLETO -- falta: ${VENV_INCOMPLETA}"
+  echo "         O VERMELHO QUE VIER PODE SER DO INSTRUMENTO, NÃO DO CÓDIGO."
+  echo "         Aponte o certo: HEFESTO_PY=<árvore>/.venv/bin/python bash scripts/portoes.sh"
+fi
+# `--interpretador` para AQUI, e é ele que torna a resolução OBSERVÁVEL — que é
+# a metade que faltava quando o defeito de 04/09 viveu meses: o python errado
+# saía impresso e ninguém tinha como afirmar, numa régua, que ele estava certo.
+if [ "${1:-}" = "--interpretador" ]; then
+  [ -z "${VENV_INCOMPLETA:-}" ]; exit $?
 fi
 echo
 
