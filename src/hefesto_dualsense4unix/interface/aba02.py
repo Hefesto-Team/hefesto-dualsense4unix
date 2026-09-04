@@ -29,6 +29,14 @@ from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTAD
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
 from pacotes.a02_controles import ROTULO_DO_CLIQUE, meias_da_barra as _meias_da_barra
 from pacotes.a02_controles import texto_do_xy as _texto_do_xy
+# A GEOMETRIA DO PONTINHO TAMBÉM É DO PACOTE, e pela mesma razão do
+# `ROTULO_DO_CLIQUE`: a folha que o produto escreve a cada tique
+# (`a02_controles.folha_das_posicoes`) e a folha que este gerador escreve uma
+# vez têm de falar a MESMA gramática de seletor — duas cópias divergem calada, e
+# esta casa já pagou isso com o `--plastico`. O `pos` era daqui e mudou de lado.
+from pacotes.a02_controles import (ALVOS_DA_POSICAO, PISO_DAS_POSICOES,
+                                   pos_do_analogico as pos, regra_da_posicao,
+                                   seletor_da_posicao)
 
 # ---------------------------------------------------------------------------
 # D-A-LEITURA-DO-ACELERÔMETRO-SAI-DA-TELA (29/08/2026) — MUDANÇA DE ESPECIFICAÇÃO.
@@ -915,9 +923,9 @@ def onda(vals, mudo=False):
     return ('<span class="onda' + (' mudo' if mudo else '') + '">'
             + "".join(f'<i style="height:{max(v, 16)}%"></i>' for v in vals) + '</span>')
 
-def pos(v):
-    """0-255 -> posição em % dentro do círculo. 128 é o centro."""
-    return round(v / 255 * 100, 1)
+# O `pos` SAIU DAQUI — 04/09/2026. Ele agora é `a02_controles.pos_do_analogico`,
+# importado no topo: a conta que põe o polegar na tela passou a ter UM dono, e o
+# dono é o produto. Ver o bloco `A POSIÇÃO DOS PONTINHOS` lá.
 
 def luz_do_jogador(c):
     """A cor da barra de luz, VINDA DO PRODUTO.
@@ -2269,6 +2277,90 @@ def cor_do_plastico_por_regra(doc):
     return doc.replace("</head>", folha + "</head>", 1)
 
 
+# ---------------------------------------------------------------------------
+# A POSIÇÃO DOS PONTINHOS SAI DO `style=` E VIRA REGRA — 04/09/2026
+# ---------------------------------------------------------------------------
+# A QUEIXA É DELA, com dois DualSense na mesa: *"não funciona o touch,
+# analogicos"*. O dado chegava inteiro do daemon e morria aqui: o `left`/`top`
+# do pontinho do touchpad e dos dois polegares era `style=` de LINHA, escrito
+# pelo desenho — e estilo de linha vence folha de estilo, então o produto não
+# tinha como movê-los. Pior: ele nem tem o alvo. Os nove do `escrever()` são
+# texto · largura · fundo · valor · html · classe · cor · plástico · atributo, e
+# o `atributo` RECUSA `style` por nome (`hefesto_vivo.atributo_escrevivel`).
+#
+# É EXATAMENTE A MESMA CURA DA COR DO PLÁSTICO, na função logo acima, com a
+# mesma âncora asserida e o mesmo lugar de execução — o `__main__`, e não o
+# `bloco()`: `controles_vivos.py` chama `bloco()` direto para montar a mesa
+# VIVA, e ali o `style=` de linha é o valor LIDO. Tirá-lo de lá apagaria a
+# posição de um piloto que não é meu.
+#
+# OS SELETORES NÃO SÃO DIGITADOS AQUI: `regra_da_posicao` e `PISO_DAS_POSICOES`
+# vêm do pacote, que é quem escreve a folha VIVA. Uma segunda gramática faria as
+# duas folhas divergirem sem ninguém ver.
+CARD_DA_MESA = re.compile(r'<div class="ctl card" data-controle="([^"]+)">')
+#: O pontinho do touchpad. A âncora é o `data-campo` — a classe muda (`ponto` ou
+#: `ponto on`) e o `style` está na linha SEGUINTE, dentro da mesma tag.
+PONTO_DO_TOUCH = re.compile(
+    r'(?P<antes><span class="ponto[^"]*" data-campo="touch-ponto"[^>]*?)'
+    r'\s*style="left:(?P<x>[0-9.]+)%;top:(?P<y>[0-9.]+)%"')
+#: A bolinha de um analógico. Quem diz QUAL é o `data-stick` da moldura, e não a
+#: ordem em que ela aparece: contar na ordem é a família de régua que esta casa
+#: já pagou.
+PONTO_DO_STICK = re.compile(
+    r'(?P<antes><div class="stick" data-stick="(?P<lado>[lr])">.*?<span class="p")'
+    r' style="left:(?P<x>[0-9.]+)%;top:(?P<y>[0-9.]+)%"', re.S)
+#: `data-stick` -> o nome do alvo em `a02_controles.ALVOS_DA_POSICAO`.
+LADO_DO_STICK = {"l": "ana-e", "r": "ana-d"}
+
+
+def posicao_por_regra(doc):
+    """Tira o `left`/`top` cravado do `style=` e o devolve como folha VIVA.
+
+    CARD A CARD, e não com um `sub` sobre o documento inteiro: o `data-controle`
+    que nomeia o assento está na tag ANCESTRAL do pontinho, e uma substituição
+    global teria de adivinhar de quem é cada um pela ordem.
+    """
+    aberturas = [(m.start(), m.group(1)) for m in CARD_DA_MESA.finditer(doc)]
+    if len(aberturas) != len(CONECTADOS):
+        raise SystemExit(
+            f"ERRO na posição: {len(aberturas)} card(s) com `data-controle` e a "
+            f"mesa tem {len(CONECTADOS)} conectado(s) — a forma mudou.")
+    limites = [i for i, _ in aberturas] + [len(doc)]
+    regras: list[str] = []
+    pedacos = [doc[:limites[0]]]
+    for n, (inicio, pref) in enumerate(aberturas):
+        trecho = doc[inicio:limites[n + 1]]
+
+        # `pref` ENTRA COMO PADRÃO, e não por fechamento: uma função definida
+        # dentro do laço que LÊ a variável do laço é o `B023` do ruff, que é
+        # portão — e o defeito que ele persegue é real em quem guarda a função
+        # para depois.
+        def _guardar(m, alvo=None, pref=pref):
+            alvo = alvo or LADO_DO_STICK[m.group("lado")]
+            regras.append(regra_da_posicao(pref, alvo, m.group("x"), m.group("y")))
+            return m.group("antes")
+
+        trecho, toques = PONTO_DO_TOUCH.subn(
+            lambda m: _guardar(m, "touch"), trecho)
+        trecho, polegares = PONTO_DO_STICK.subn(_guardar, trecho)
+        # A ÂNCORA, e ela é por CARD: um card que mude de forma casaria zero e a
+        # página sairia com a posição congelada de volta, verde em todo portão.
+        if (toques, polegares) != (1, 2):
+            raise SystemExit(
+                f"ERRO na posição: o card `{pref}` tem {toques} pontinho(s) de "
+                f"touchpad e {polegares} de analógico — esperados 1 e 2.")
+        pedacos.append(trecho)
+    doc = "".join(pedacos)
+    if re.search(r'style="left:[0-9.]+%;top:[0-9.]+%"', doc):
+        raise SystemExit("ERRO na posição: sobrou posição cravada na página")
+    folha = ('<style data-campo="posicao-css" data-hef-alvo="html">\n'
+             + "\n".join(f"  {r}" for r in [PISO_DAS_POSICOES, *regras])
+             + "\n</style>\n")
+    if "</head>" not in doc:
+        raise SystemExit("ERRO na posição: a página não tem `</head>`")
+    return doc.replace("</head>", folha + "</head>", 1)
+
+
 # ESCREVER O ARQUIVO É O `__main__`, E NÃO O IMPORT (29/08/2026).
 #
 # `regerar.py:31` chama este arquivo por `subprocess` — o portão continua o
@@ -2469,6 +2561,29 @@ def _conferir(doc):
     exigir(PISO_DO_PLASTICO in doc,
            "o piso do plástico sumiu da folha — o assento que a mesa viva não "
            "nomeia perderia a borda em vez de ficar neutro")
+    # A POSIÇÃO DOS PONTINHOS, pela mesma régua da cor — 04/09/2026. A queixa
+    # dela era *"não funciona o touch, analogicos"*, e a causa era esta: o
+    # `left`/`top` num `style=` de linha, que o produto não alcança.
+    exigir(not re.search(r'style="left:[0-9.]+%;top:[0-9.]+%"', doc),
+           "a posição do pontinho voltou para o `style=` — estilo de linha vence "
+           "folha de estilo, e o produto não tem alvo que escreva `style`")
+    exigir('<style data-campo="posicao-css" data-hef-alvo="html">' in doc,
+           "a folha endereçada da posição sumiu, ou perdeu o `data-hef-alvo=html` "
+           "— sem ele o pontinho volta a ficar onde o mockup o cravou")
+    exigir(doc.count('data-campo="posicao-css"') == 1,
+           "a folha da posição deixou de ser UMA — duas folhas deixam o assento "
+           "que a segunda não nomeia com a posição do desenho")
+    exigir(PISO_DAS_POSICOES in doc,
+           "o piso da posição sumiu da folha — o assento que a mesa viva não "
+           "nomeia ficaria sem `left`/`top` em vez de cair no repouso")
+    # TRÊS PONTINHOS POR CONTROLE CONECTADO: o dedo e os dois polegares. Uma
+    # regra a menos é um pontinho que o produto não move — e o seletor é pedido
+    # ao DONO, nunca redigitado aqui.
+    faltam = [f'{c["pref"]}/{alvo}' for c in CONECTADOS for alvo in ALVOS_DA_POSICAO
+              if f"{seletor_da_posicao(c['pref'], alvo)}{{left:" not in doc]
+    exigir(not faltam,
+           f"a folha da posição não nomeia {faltam} — esse pontinho fica onde o "
+           "desenho o cravou")
     for nome in {str(c["nome"]) for c in CONECTADOS}:
         exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>'),
                f"o nome de plástico `{nome}` aparece no miolo sem endereço")
@@ -2489,7 +2604,8 @@ if __name__ == "__main__":
     # reprovou com `0 chips para 5 rádios` — ela lia o arquivo VELHO, já com os
     # `<label>` da execução anterior. Régua que acha zero é ERRO, não silêncio.
     SAIDA = onde.pagina("02-controles.html")
-    SAIDA.write_text(cor_do_plastico_por_regra(fita_clicavel(SAIDA.read_text())))
+    SAIDA.write_text(
+        posicao_por_regra(cor_do_plastico_por_regra(fita_clicavel(SAIDA.read_text()))))
     _conferir(SAIDA.read_text())
     print(f"02-controles: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
           f"+ {VAZIOS} lugar(es) vazio(s) — 1 card de {PARA_O_CARD}px, "

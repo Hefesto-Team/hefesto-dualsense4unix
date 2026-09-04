@@ -1372,6 +1372,15 @@
   .ctl[data-controle="p1"],.fita .chip[for="c-p1"]{--plastico:#ae335a}
   .ctl[data-controle="p2"],.fita .chip[for="c-p2"]{--plastico:#7eb8d4}
 </style>
+<style data-campo="posicao-css" data-hef-alvo="html">
+  .ctl .touch .ponto,.ctl .stick .p{left:50.2%;top:50.2%}
+  .ctl[data-controle="p1"] .touch .ponto{left:62%;top:44%}
+  .ctl[data-controle="p1"] .stick[data-stick="l"] .p{left:23.5%;top:78.4%}
+  .ctl[data-controle="p1"] .stick[data-stick="r"] .p{left:70.6%;top:35.3%}
+  .ctl[data-controle="p2"] .touch .ponto{left:50%;top:50%}
+  .ctl[data-controle="p2"] .stick[data-stick="l"] .p{left:50.2%;top:50.2%}
+  .ctl[data-controle="p2"] .stick[data-stick="r"] .p{left:50.2%;top:50.2%}
+</style>
 </head>
 <body>
 
@@ -1620,8 +1629,7 @@
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense só publica posição enquanto alguém encosta na superfície.">1 toque</span></div>
             <div class="touch">
-              <span class="ponto on" data-campo="touch-ponto" data-hef-alvo="classe"
-                style="left:62%;top:44%"></span></div>
+              <span class="ponto on" data-campo="touch-ponto" data-hef-alvo="classe"></span></div>
           </div>
           <div class="moldura luz" style="margin-top:9px">
             <div class="rot rot-linha">Barra de luz
@@ -1642,14 +1650,14 @@
                 <div class="stick-rot">Analógico<br>esquerdo</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
-                  <span class="p" style="left:23.5%;top:78.4%"></span></div>
+                  <span class="p"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X: 60<br>Y:200</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
-                  <span class="p" style="left:70.6%;top:35.3%"></span></div>
+                  <span class="p"></span></div>
                 <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:180<br>Y: 90</div>
               </div>
             </div>
@@ -1968,8 +1976,7 @@
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense só publica posição enquanto alguém encosta na superfície.">Sem toque</span></div>
             <div class="touch">
-              <span class="ponto" data-campo="touch-ponto" data-hef-alvo="classe"
-                style="left:50%;top:50%"></span></div>
+              <span class="ponto" data-campo="touch-ponto" data-hef-alvo="classe"></span></div>
           </div>
           <div class="moldura luz" style="margin-top:9px">
             <div class="rot rot-linha">Barra de luz
@@ -1990,14 +1997,14 @@
                 <div class="stick-rot">Analógico<br>esquerdo</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
-                  <span class="p" style="left:50.2%;top:50.2%"></span></div>
+                  <span class="p"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
-                  <span class="p" style="left:50.2%;top:50.2%"></span></div>
+                  <span class="p"></span></div>
                 <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
             </div>
