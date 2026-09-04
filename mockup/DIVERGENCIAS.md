@@ -37,6 +37,23 @@ seção daqui**: a aba deixou de estar em trabalho.
   produto de hoje JÁ tem. O que a publicação acrescenta é a mesma declaração na
   folha estática — o que faz a bancada se ver sozinha, sem daemon, no navegador.
   Nenhum clique fica morto e nada some da tela até lá.
+- **03/09/2026** — **o trilho de brilho passou a GRAVAR.** Decisão dela:
+  perguntada se mexer no brilho grava o perfil na hora ou espera o "Salvar
+  Perfil", ela respondeu ***"Grava na hora"***. O trilho JÁ ERA desenhado como
+  slider — a regra `.cheio::after` punha um knob de 12px na ponta da barra roxa
+  — e **não fazia nada**: ela via `100%`, arrastava, e o número não mudava.
+  O que muda no DESENHO é uma coisa só: o knob deixa de ser pintado pelo CSS e
+  passa a ser o polegar de um `<input type="range">` de verdade. **A geometria é
+  a mesma**, e não por aproximação: o `left:-7px` e a `width:calc(100% + 12px)`
+  saem de igualar o centro do polegar nativo ao centro do knob do mockup para
+  TODO valor — medido no WebKit vivo, trilho em `[164, 169]px` e polegar em
+  `[157, 181]px`. Nenhuma caixa nova, nenhum texto novo, nenhuma cor nova.
+  **O que ela vê HOJE, na página publicada, enquanto isto espera o OK:** a
+  célula de brilho exatamente como está — a barra roxa, o knob e o `%`, tudo
+  vivo e tudo SÓ LEITURA, que é o que ela já era. O `<input>` não existe no
+  publicado, então **nenhum clique fica morto**: não há polegar a arrastar. O
+  gesto `brilho` já está registrado no pacote e entra em ação no instante em que
+  a página for publicada.
 ## 08-conexoes.html
 - **03/09/2026** — a linha fechada da Gestão de Controles e a confissão do mapa
   ganharam ENDEREÇO, para o produto poder reescrever o que era do desenho:
