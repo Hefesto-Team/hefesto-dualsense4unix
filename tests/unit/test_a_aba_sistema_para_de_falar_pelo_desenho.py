@@ -221,15 +221,22 @@ def test_tudo_o_que_o_pacote_emite_e_endereco_desta_pagina(a09, ctx):
         AssertionError: o pacote emite chaves que não são endereço desta
         página nem `-cls`: ['frase']
     """
+    import pacotes
+
     from hefesto_dualsense4unix.gui import aba_sistema
 
     conhecidos = set(aba_sistema.ENDERECOS) | _campos_da_pagina()
+    # O QUE VIRA VALOR DE TELA TEM DONO, E ELE NÃO É ESTA RÉGUA: quem separa
+    # "chave de contrato" (`mesa`, `colunas`, `blocos`, `cobertura`, `sem_dono`)
+    # de "endereço a escrever" é `pacotes.normalizar`, e é dele que sai a lista
+    # medida aqui. A versão anterior digitava `("sem_dono", "cobertura")` e por
+    # isso ACUSOU o `blocos:` dos rótulos dos botões destrutivos (03/09/2026) —
+    # uma chave de contrato que o piloto consome desde 01/09. Régua que digita o
+    # que devia perguntar reprova a melhora; é a lição mais cara desta casa.
     p = a09.pacote(ctx)
     estranhas = sorted(
-        k for k in p
-        if k not in ("sem_dono", "cobertura")
-        and not k.endswith("-cls")
-        and k not in conhecidos)
+        k for k in pacotes.normalizar(p)["mesa"]
+        if not k.endswith("-cls") and k not in conhecidos)
     assert not estranhas, (
         f"o pacote emite chaves que não são endereço desta página nem `-cls`: "
         f"{estranhas}. O nome que a CAMADA usa por dentro não é o endereço da "
