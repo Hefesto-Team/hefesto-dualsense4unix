@@ -211,25 +211,40 @@ from . import (
 # segundo dedo, a palavra sai daqui sem ninguém tocar nesta aba.
 
 
-def toque_do_controle(inputs: Any) -> tuple[str, str]:
-    """`(palavra, ponto)` do touchpad — as duas linhas da GTK, num par.
+def toque_do_controle(inputs: Any) -> tuple[str, str, tuple[float, float] | None]:
+    """`(palavra, ponto, onde)` do touchpad — as TRÊS linhas da GTK, num terno.
 
     `palavra` é o `touch-estado`; `ponto` é o `touch-ponto`, que o desenho lê
     como CLASSE (`data-hef-alvo="classe"`): `""` apaga o pontinho e qualquer
-    outra coisa o acende (`hefesto_vivo.BOOTSTRAP::ligado`).
+    outra coisa o acende (`hefesto_vivo.BOOTSTRAP::ligado`); `onde` é a POSIÇÃO
+    do dedo em POR CENTO da superfície, ou `None` quando não houve leitura.
 
-    Sem leitura, os DOIS dizem "não sei": a palavra vira o travessão e o ponto
-    apaga. Apagar aqui não é afirmar "ninguém está tocando" — é a mesma recusa
-    que a GTK faz escondendo o bloco inteiro, e é a única coisa que esta tela
-    pode fazer sem inventar uma posição.
+    O TERCEIRO ERA JOGADO FORA, e ele é a queixa dela — *"não funciona o touch,
+    analogicos"*. `touchpad_do_inputs` devolve `(tocando, fx, fy)` com os dois
+    últimos já normalizados 0..1 pelos limites que o PRÓPRIO payload declara
+    (`sensor_widgets.posicao_normalizada`), e esta função lia só `lido[0]`: o
+    pontinho acendia e apagava certo, e ficava parado onde o mockup o cravou —
+    `left:62%;top:44%`. Acender no lugar errado é a mesma família de defeito que
+    esta aba já pagou duas vezes: **ter dono não é dizer a verdade**.
+
+    A POSIÇÃO VEM MESMO SEM TOQUE, e é de propósito: o pontinho está invisível
+    (`opacity:0` sem a classe `on`, decisão dela de 02/09 item 15), então
+    escrevê-la não afirma nada na tela — e quando o dedo pousa ele já nasce no
+    lugar certo, em vez de piscar um quadro na posição anterior.
+
+    Sem leitura, os TRÊS dizem "não sei": a palavra vira o travessão, o ponto
+    apaga e a posição some. Apagar aqui não é afirmar "ninguém está tocando" — é
+    a mesma recusa que a GTK faz escondendo o bloco inteiro, e é a única coisa
+    que esta tela pode fazer sem inventar uma posição.
     """
     lido = touchpad_do_inputs(inputs)
     if lido is None:
         import mesa_viva
 
-        return (str(mesa_viva.SEM_LEITOR), "")
+        return (str(mesa_viva.SEM_LEITOR), "", None)
     tocando = bool(lido[0])
-    return (texto_toques(1 if tocando else 0), "sim" if tocando else "")
+    return (texto_toques(1 if tocando else 0), "sim" if tocando else "",
+            (round(lido[1] * 100, 1), round(lido[2] * 100, 1)))
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +319,168 @@ def texto_do_xy(x: Any, y: Any) -> str:
     `html`) — o alvo padrão escreveria o `<br>` como texto literal.
     """
     return _markup_xy(int(x), int(y)).replace("\n", "<br>")
+
+
+# ---------------------------------------------------------------------------
+# A POSIÇÃO DOS PONTINHOS — a queixa dela, e por que ela não era alcançável
+# ---------------------------------------------------------------------------
+# A QUEIXA, com dois DualSense na mesa (um no cabo, um no rádio): *"não funciona
+# o touch, analogicos"*. Ela está certa nos dois, e os dois são o MESMO defeito
+# em dois lugares.
+#
+# O DADO CHEGA INTEIRO. `daemon/sensor_hub.py` publica o bloco `touchpad` com as
+# cinco chaves (`touching`, `x`, `y`, `width`, `height`) e o `inputs` com
+# `lx`/`ly`/`rx`/`ry`; `docs/data/mapa-controles.csv` diz `toque.touchpad = sim`
+# nos DOIS transportes. Quem o normaliza também já existe e é do produto:
+# `touchpad_do_inputs` devolve `(tocando, fx, fy)` em 0..1, e
+# `mesa_viva._eixo_do_analogico` devolve o eixo cru com o zero PRESERVADO (num
+# analógico o zero é o EXTREMO, não o centro — defeito medido e curado em 29/08).
+#
+# O QUE FALTAVA ERA O CANAL. Na página, o `.ponto` do touchpad tem endereço só
+# para ACENDER (`data-hef-alvo="classe"`) e os dois `<span class="p">` dos
+# analógicos não tinham endereço nenhum: o `left`/`top` dos três era `style=` de
+# LINHA, escrito pelo desenho. **Estilo de linha vence folha de estilo**, e
+# `escrever()` do piloto não tem alvo que escreva `style` — o alvo `atributo` o
+# RECUSA por nome (`hefesto_vivo.atributo_escrevivel`, que exige `data-`/`aria-`
+# ou `title`). Fotografado em 02/09 e ainda de pé em 04/09: o pontinho ciano do
+# P1 parado em `left:62%;top:44%`, que é onde o mockup o cravou.
+#
+# A CURA É A DA COR DO PLÁSTICO, e não precisa de alvo novo: a posição sai do
+# `style=` e vira REGRA numa folha endereçada que o produto TROCA INTEIRA
+# (`data-campo="posicao-css"`, alvo `html`). É a mesma forma que
+# `folha_do_plastico` já usa, e o gerador faz a mesma mudança do lado do desenho
+# (`aba02.posicao_por_regra`).
+#
+# POR QUE UMA FOLHA IRMÃ, E NÃO A MESMA DO PLÁSTICO — a escolha é de DONO e de
+# CADÊNCIA, e a razão é estrutural: uma folha endereçada é substituída INTEIRA.
+# O plástico sai da MESA (identidade: muda quando um controle entra ou sai) e a
+# posição sai da LEITURA (muda a cada tique). Numa folha só, um tique que
+# soubesse a identidade e não a leitura teria de reemitir a posição para não
+# apagá-la — e vice-versa: os dois "não sei" ficariam amarrados um no outro, que
+# é justamente o que a regra dela (*campo sem informação não mostra nada*) exige
+# separar. Duas folhas não têm o buraco das DUAS FOLHAS de 03/09, que era outro:
+# lá as duas escreviam a MESMA propriedade (`--plastico`) e só se sobrepunham no
+# assento que a segunda nomeava. Aqui as propriedades são disjuntas.
+
+#: O CURSO DE UM EIXO DE ANALÓGICO, cru. É o `max` do `absinfo` dos dois
+#: DualSense dela (`ABS_X/ABS_Y/ABS_RX/ABS_RY min=0 max=255`), o mesmo 255 que
+#: os gatilhos já escrevem em `leitura_viva`.
+CURSO_DO_ANALOGICO = 255
+#: O REPOUSO, e ele é também a AUSÊNCIA — é o que a GTK faz
+#: (`int(inputs.get("lx", 128))`) e o que `mesa_viva._eixo_do_analogico`
+#: devolve quando a chave não veio.
+REPOUSO_DO_ANALOGICO = 128
+
+
+def pos_do_analogico(v: Any) -> float:
+    """0-255 -> posição em % dentro do círculo. 128 é o centro.
+
+    ESTA CONTA MORAVA NO GERADOR (`aba02.pos`) e mudou de lado — a seta aponta
+    para o produto, como já apontam `ROTULO_DO_CLIQUE` e `texto_do_xy`. Duas
+    cópias dela seriam duas geometrias: a do desenho e a da tela viva, divergindo
+    calada no dia em que uma das duas fosse ajustada.
+
+    A CONTA DA GTK NÃO SERVE AQUI, E ISSO NÃO É REESCREVER O MOTOR. O
+    `StickPreviewGtk` põe o ponto em `centro + (v-128)/128 * raio * 0,85`
+    (`gui/widgets/stick_preview_gtk.py`), confinando-o a 85% do raio porque quem
+    desenha é o Cairo e o ponto de 6px vazaria o anel. Na página o ponto é
+    centrado pelo CSS (`transform:translate(-50%,-50%)` no `.stick .p`) e 100% é
+    a borda do círculo — copiar o 0,85 encolheria em 15% o curso que ela
+    aprovou, sem a palavra dela. O que se reusa da GTK é a LEITURA do eixo
+    (`mesa_viva._eixo_do_analogico`, com o zero preservado), que é onde estava o
+    defeito de verdade.
+    """
+    return round(int(v) / CURSO_DO_ANALOGICO * 100, 1)
+
+
+#: ONDE MORA CADA PONTINHO, dentro do card de um controle. Os três seletores em
+#: um lugar só: o gerador os importa daqui para escrever a folha do DESENHO, e
+#: `folha_das_posicoes` os usa para a folha VIVA. Duas gramáticas para a mesma
+#: regra é o que faz as duas folhas divergirem sem ninguém ver — foi a lição do
+#: `seletor_do_plastico`.
+ALVOS_DA_POSICAO: dict[str, str] = {
+    "touch": ".touch .ponto",
+    "ana-e": '.stick[data-stick="l"] .p',
+    "ana-d": '.stick[data-stick="r"] .p',
+}
+
+
+def seletor_da_posicao(pref: str, alvo: str) -> str:
+    """O seletor de UM pontinho de UM assento. `pref` é `p1`… (o `data-controle`)."""
+    return f'.ctl[data-controle="{pref}"] {ALVOS_DA_POSICAO[alvo]}'
+
+
+def regra_da_posicao(pref: str, alvo: str, x: Any, y: Any) -> str:
+    """A regra CSS de um pontinho: seletor + `left`/`top` em por cento."""
+    return f"{seletor_da_posicao(pref, alvo)}{{left:{x}%;top:{y}%}}"
+
+
+#: O PISO DA FOLHA, e ele existe pela mesma razão que o `PISO_DA_FOLHA` do
+#: plástico: a folha é trocada INTEIRA, então o assento que a mesa viva não
+#: nomeia tem de cair num neutro — e não sobrar com a posição que o desenho
+#: deixou ali. O neutro é o REPOUSO (128 nos dois eixos), que é o que o `xy-l`
+#: /`xy-r` ao lado já dizem quando não há leitura, e onde o pontinho do touchpad
+#: fica invisível de qualquer modo.
+#:
+#: A ESPECIFICIDADE É O QUE FAZ ISTO FUNCIONAR, e ela foi contada: o piso é
+#: `.ctl .touch .ponto` (0,3,0) e a regra de um assento é
+#: `.ctl[data-controle="p1"] .touch .ponto` (0,4,0) — a específica vence
+#: independentemente da ordem em que as duas apareçam na folha.
+PISO_DAS_POSICOES = (
+    f".ctl .touch .ponto,.ctl .stick .p"
+    f"{{left:{pos_do_analogico(REPOUSO_DO_ANALOGICO)}%;"
+    f"top:{pos_do_analogico(REPOUSO_DO_ANALOGICO)}%}}"
+)
+
+
+def posicoes_do_controle(
+    inputs: Any, tem_leitor: bool, onde_o_dedo: tuple[float, float] | None
+) -> dict[str, tuple[float, float] | None]:
+    """Os TRÊS pontinhos de um controle, em % — `None` no que não se leu.
+
+    `onde_o_dedo` vem de :func:`toque_do_controle`, que já perguntou ao dono
+    (`touchpad_do_inputs`); pedi-lo de novo aqui seria ler o mesmo bloco duas
+    vezes por tique e abrir a porta para as duas leituras discordarem.
+
+    OS ANALÓGICOS SÓ SAEM COM LEITOR. `tem_leitor` é o mesmo `isinstance(...,
+    dict)` que o `pacote()` usa para os outros 46 campos: sem ele o repouso (128)
+    seria indistinguível de "o daemon não publica `inputs` para este controle" —
+    e é justamente o card do P2 da mesa dela, que mostrava os números do P1 como
+    se estivesse medindo. Sem regra, o pontinho cai no piso, que é o centro.
+    """
+    import mesa_viva
+
+    e: dict[str, Any] = inputs if isinstance(inputs, dict) else {}
+    return {
+        "touch": onde_o_dedo,
+        **{
+            alvo: (
+                (pos_do_analogico(mesa_viva._eixo_do_analogico(e, cx)),
+                 pos_do_analogico(mesa_viva._eixo_do_analogico(e, cy)))
+                if tem_leitor else None
+            )
+            for alvo, (cx, cy) in (("ana-e", ("lx", "ly")), ("ana-d", ("rx", "ry")))
+        },
+    }
+
+
+def folha_das_posicoes(
+    posicoes: dict[str, dict[str, tuple[float, float] | None]],
+) -> str:
+    """A folha de posição INTEIRA, montada da leitura VIVA.
+
+    `posicoes` é `{pref: {alvo: (x, y) | None}}`. Assento sem `pref` e alvo sem
+    leitura não viram regra — quem não tem o que dizer não escreve, e o piso
+    responde por ele.
+    """
+    return "\n".join([PISO_DAS_POSICOES] + [
+        regra_da_posicao(pref, alvo, x, y)
+        for pref, alvos in posicoes.items()
+        if pref
+        for alvo, xy in alvos.items()
+        if xy is not None
+        for x, y in (xy,)
+    ])
 
 
 def _eixos_do_sensor(
@@ -914,6 +1091,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     import mesa_viva
 
     cards = {}
+    # ONDE CADA PONTINHO ESTÁ, por assento — ver `folha_das_posicoes`. Ele se
+    # junta AQUI, e não dentro de `cards`, porque o destino é a folha da PÁGINA:
+    # `left`/`top` não são campo de um elemento, são regra de um seletor.
+    posicoes: dict[str, dict[str, tuple[float, float] | None]] = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         # `inputs` TEM TRÊS ESTADOS, E O PRODUTO SÓ ENXERGAVA DOIS. O `or {}`
@@ -988,7 +1169,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # dentro de `touchpad_do_inputs`, e a razão de a recusa anterior ter
         # caído está no bloco `O TOUCHPAD` no topo deste arquivo, com as 60
         # leituras que a mediram.
-        toque_txt, toque_ponto = toque_do_controle(e)
+        toque_txt, toque_ponto, onde_o_dedo = toque_do_controle(e)
+        # A POSIÇÃO DOS TRÊS PONTINHOS, pelo `pref` do assento — que é o que o
+        # `data-controle` das páginas traz, e o mesmo endereço que a
+        # `folha_do_plastico` usa. Sem `pref` na mesa não há seletor a escrever.
+        posicoes[str(casa.get("pref") or "")] = posicoes_do_controle(
+            e, tem_leitor, onde_o_dedo)
         # A IDENTIDADE DO CABEÇALHO, pelos donos: a ordem das quatro fontes é de
         # `identidade_de`, e a tradução do transporte é a MESMA que a mesa usa.
         via_na_tela = VIA_DO_TRANSPORTE.get(str(c.get("transport") or "").lower(), "")
@@ -1251,6 +1437,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # o ramo `Array.isArray`). Chip a mais recebe vazio e vira travessão.
     da_pagina = _so_se_a_pagina_tiver({
         "plastico-css": folha_do_plastico(ctx.mesa),
+        # ONDE O DEDO E OS DOIS POLEGARES ESTÃO — a queixa dela de 04/09. Ver o
+        # bloco `A POSIÇÃO DOS PONTINHOS` no topo: `left`/`top` viravam `style=`
+        # de linha, que folha de estilo nenhuma vence e o piloto não sabe
+        # escrever. Ela entra pelo `_so_se_a_pagina_tiver` como os outros da
+        # bancada: acende no minuto em que ela mandar publicar.
+        "posicao-css": folha_das_posicoes(posicoes),
         "fita-peca": [
             "" if str(m.get("nome") or "") == NOME_SEM_LEITURA else str(m.get("nome") or "")
             for m in ctx.mesa
