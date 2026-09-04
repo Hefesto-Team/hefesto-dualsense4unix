@@ -203,6 +203,13 @@ TONS = [tom_da_casa(luz(n)) for n in range(1, 9)]
 #: exemplo agora é `pacotes.a04_iluminacao.secao_da_troca`, que recebe a mesa —
 #: a do desenho quando o gerador a chama, a VIVA a cada tique.
 
+#: OS TOKENS DA LUZ NO ESCOPO QUE O DESENHO ALCANÇA — e o dono deles é o PACOTE
+#: (`a04_iluminacao.tokens_da_luz`), onde está a medição. São dois chamadores: o
+#: gerador aqui, para a bancada se ver sozinha, e a folha VIVA, porque a página
+#: publicada ainda não os tem. Digitá-los nos dois daria dois brancos na mesma
+#: célula no primeiro ajuste.
+CSS_DA_LUZ_NO_DESENHO = "  " + _pacote04.tokens_da_luz()
+
 CSS = """
   /* ---------- Iluminação ---------- */
   /* UMA GRADE SÓ: uma coluna de rótulos e uma coluna por controle da MESA.
@@ -540,8 +547,25 @@ CSS = """
      halo do `box-shadow` das acesas. Cinco pontos viraram um, dois, três e
      quatro anéis, e o padrão — que é o que aquele desenho existe para mostrar —
      não estava lá. */
-  /* as duas cores das lâmpadas moram no `CSS_LUZINHAS`, com elas */
+  /* AS DUAS CORES DAS LÂMPADAS MORAM NO `CSS_LUZINHAS` — E NÃO CHEGAVAM AQUI.
+     A linha que estava neste lugar dizia "moram no `CSS_LUZINHAS`, com elas" e
+     parava aí. Elas moram em `.luzinhas`, que é o indicador PEQUENO da célula
+     LEDs, e `.luzinhas` é uma FOLHA da árvore, não um ancestral do desenho: as
+     duas regras abaixo pintam `<rect>` DENTRO DO SVG, e variável de CSS só
+     herda para baixo. Medido no DOM vivo em 03/09/2026, na mesa dela — as cinco
+     lâmpadas do desenho grande saíam todas com o mesmo cinza herdado do casco,
+     nenhuma acesa, com o `title` da moldura prometendo que *"as cinco lâmpadas
+     dizem qual é [o número]"*.
+
+     O `--luz-apagada` NÃO TEM ESSA DOENÇA, e a primeira volta desta cura disse
+     que tinha: `.luzes` é o QUADRO que envolve a `.luz-grade`, então ele já
+     descia. A mordida desmentiu — arrancadas as declarações, a barra ficou no
+     cinza certo e só as lâmpadas caíram.
+
+     A declaração entra por `CSS_DA_LUZ_NO_DESENHO`, logo abaixo — o par é LIDO
+     do dono (o PACOTE, que também o escreve na folha viva), nunca digitado. */
   .luzes,.troca{--luz-apagada:#3f4350}
+""" + CSS_DA_LUZ_NO_DESENHO + """
   .luz-grade [id$="-lightbar"] .peca{fill:var(--luz,var(--luz-apagada))}
   .luz-grade [id$="-lightbar"]{filter:drop-shadow(0 0 1.1px var(--luz))}
 

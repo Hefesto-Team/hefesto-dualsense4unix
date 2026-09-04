@@ -964,6 +964,177 @@ def _folha_do_plastico(mesa: list[dict[str, Any]], caixa: str) -> str:
     return a06_navegacao.folha_do_plastico(mesa, caixa)
 
 
+#: O GRUPO DA BARRA e os cinco `<rect>` do indicador, DENTRO do desenho grande.
+#: A âncora é o SUFIXO do `id`, e não a posição inteira: `monta.svg` prefixa todo
+#: `id` com o nome do lugar (`il-p1-lightbar` aqui, `jg-p1-lightbar` na Jogar), e
+#: um seletor com o prefixo escrito envelheceria no dia em que ele mudasse.
+ALVO_DA_BARRA = '[id$="-lightbar"]'
+ALVO_DAS_LAMPADAS = '[id*="-led-jogador-"]'
+
+#: O DESLIGADO DA BARRA é `initial`, e não um cinza escrito aqui. Uma
+#: propriedade personalizada em `initial` fica *guaranteed-invalid*, e é isso que
+#: faz o `fill:var(--luz,var(--luz-apagada))` da folha cair no SEGUNDO argumento
+#: — o mesmo caminho de uma coluna que nasce sem `--luz`. Escrever um hexadecimal
+#: aqui seria um segundo "apagado" ao lado do que a aba já declara, e o
+#: `drop-shadow(… var(--luz))` continuaria aceso em volta de uma barra apagada.
+BARRA_APAGADA = "initial"
+
+#: O CINZA DE UMA BARRA SEM LUZ — o valor que o CSS do gerador declara em
+#: `.luzes,.troca`. Ele NÃO é redeclarado por este pacote: `.luzes` é o quadro
+#: que ENVOLVE a `.luz-grade` (medido no HTML publicado, linhas 1643 e 1658), e
+#: variável de CSS herda para baixo, então a barra do desenho sempre a alcançou.
+#:
+#: FATO ERRADO, SUBSTITUÍDO no mesmo dia em que foi escrito (03/09/2026): a
+#: primeira volta desta cura afirmou que o `--luz-apagada` tinha a mesma doença
+#: das lâmpadas e acrescentou `.luz-grade` ao seletor. A MORDIDA desmentiu — com
+#: as declarações arrancadas, a barra continuou no `(63, 67, 80)` deste valor, e
+#: só as lâmpadas caíram. Ele está aqui porque o ENSAIO precisa perguntar a
+#: alguém qual é o cinza do apagado, e não para ser declarado de novo.
+LUZ_APAGADA = "#3f4350"
+
+#: A GRADE DA ABA — o escopo em que o desenho grande mora, e o que faltava às
+#: duas cores das lâmpadas. Ver `token_das_luzinhas`.
+ESCOPO_DO_DESENHO = ".luz-grade"
+
+
+def token_das_luzinhas(nome: str) -> str:
+    """O valor de um token do `CSS_LUZINHAS` — PERGUNTADO a ele, nunca digitado.
+
+    POR QUE ESTA FUNÇÃO PRECISOU EXISTIR, e a medição está no DOM vivo de
+    03/09/2026, na mesa dela, com o produto instalado e UM controle no cabo
+    (``ensaios/a_luz_do_desenho_e_a_luz_do_aparelho.py``)::
+
+        as cinco lâmpadas do DESENHO GRANDE do P1, número 1   nenhuma acesa
+
+    `--led-apagado` e `--led-aceso` são declarados em `.luzinhas`
+    (`monta.CSS_LUZINHAS`), que é o indicador PEQUENO da célula LEDs. As regras
+    do desenho — `.luz-grade [id*="-led-jogador-"]` e `.luz-grade .led-on` —
+    usam o mesmo par, e um `<rect>` dentro do SVG **não é descendente de
+    `.luzinhas` nenhum**: as duas variáveis chegam lá vazias, o
+    `fill:var(--led-aceso)` fica inválido no tempo de computar e a lâmpada herda
+    o cinza do casco. As cinco saíam iguais — com o `title` da moldura
+    prometendo que *"as cinco lâmpadas dizem qual é [o número]"*.
+
+    É O DEFEITO QUE O PRÓPRIO `CSS_LUZINHAS` JÁ TINHA PAGADO, um andar acima:
+    *"Um bloco reusável que depende de um seletor da aba que o pariu não é
+    reusável"*. Esta aba o repetiu ao usar os tokens fora do seletor deles.
+
+    A CURA NÃO É DIGITAR OS DOIS HEXADECIMAIS. Duas cópias divergem no primeiro
+    ajuste, e a lâmpada pequena e a grande da MESMA célula passariam a ter dois
+    brancos. O dono do par é o `CSS_LUZINHAS`; esta função o LÊ.
+
+    FALHA FECHADA, como o `_cores_do_mapa` do gerador: um token que sumir do dono
+    levanta com o nome dele, em vez de devolver uma folha que apaga a lâmpada de
+    novo — que é o estado que ninguém viu por semanas.
+    """
+    import re
+
+    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
+    achado = re.search(rf"{re.escape(nome)}\s*:\s*([^;}}]+)", monta.CSS_LUZINHAS)
+    if achado is None:
+        raise SystemExit(
+            f"ERRO em 04-iluminacao: `{nome}` sumiu do `monta.CSS_LUZINHAS` — o "
+            f"desenho grande lê de lá o par de cores das lâmpadas.")
+    return achado.group(1).strip()
+
+
+def tokens_da_luz() -> str:
+    """As duas cores das lâmpadas, declaradas onde o DESENHO as alcança.
+
+    UM DONO, DOIS CHAMADORES — a mesma disciplina da `fileira_de_players`. O
+    gerador as põe na folha da página, que é o que a bancada precisa para se ver
+    sozinha, sem daemon; este pacote as põe na folha VIVA, porque a página
+    PUBLICADA ainda não as tem — e o publicado é o que está na tela dela hoje.
+    Duas escritas do mesmo par dariam dois brancos na mesma célula.
+
+    O `--luz-apagada` NÃO ENTRA, e a mordida é que decidiu: ver `LUZ_APAGADA`.
+    """
+    return (f"{ESCOPO_DO_DESENHO}{{"
+            f"--led-apagado:{token_das_luzinhas('--led-apagado')};"
+            f"--led-aceso:{token_das_luzinhas('--led-aceso')}}}")
+
+
+def folha_da_luz(luzes: dict[str, tuple[str, int | None]],
+                 caixa: str = CAIXA_DA_COLUNA) -> str:
+    """A folha viva da LUZ: a barra e as cinco lâmpadas do DESENHO GRANDE.
+
+    POR QUE ELA PRECISOU EXISTIR, e a medição está no DOM vivo de 03/09/2026, na
+    mesa dela, com UM controle no cabo (``ensaios/a_luz_do_desenho_e_a_luz_do_aparelho.py``)::
+
+        p1   o aparelho diz (0, 0, 255)   e o desenho acende (126, 184, 212)
+        p1   o número 1 pede a lâmpada 3  e o desenho não acende nenhuma
+
+    O `#7EB8D4` é o `--luz` que o GERADOR crava no `<g>` — a cor do MOCKUP,
+    parada na tela dela debaixo de um hexadecimal que já dizia `#0000FF`. A
+    mesma célula afirmando duas cores, e quem olha lê o desenho antes do número.
+
+    POR QUE UMA FOLHA, e não um campo — a mesma razão de `folha_do_plastico`: o
+    pintor sabe escrever texto, largura, fundo, valor, `innerHTML`, classe, cor,
+    atributo e `--plastico`, e **nenhum deles escreve um `--luz`**. Reescrever o
+    SVG inteiro pelo `innerHTML` custaria as 370 linhas do desenho a cada meio
+    segundo e nunca sossegaria (o navegador normaliza marcação). O `innerHTML` de
+    um `<style>` é TEXTO, e texto volta como foi escrito.
+
+    O `!important` NÃO É FORÇA BRUTA, e é o único caminho: o `--luz` do mockup
+    mora no atributo `style` do `<g>`, e declaração de linha vence folha. A marca
+    `led-on` das lâmpadas tem o mesmo problema — ela é cravada pelo gerador nos
+    `<rect>` que o MOCKUP escolheu, e some do cálculo assim que uma regra
+    `!important` de igual especificidade pinta as cinco.
+
+    A ORDEM DAS DUAS REGRAS DE LÂMPADA É O QUE DECIDE: as cinco apagam primeiro,
+    as do padrão acendem depois. As duas valem (0,3,0) e as duas são
+    `!important`, então quem vem por último ganha — escrever na ordem inversa
+    apagaria a lâmpada que acabou de acender.
+
+    SEM COR A AFIRMAR, A BARRA APAGA. É a regra dela — *"se não tá mostrando
+    agora, não tem info pra mostrar no produto"* — e ela vale para os quatro
+    lugares: um lugar sem controle recebe as regras de apagado do mesmo jeito,
+    senão o `--luz` do mockup fica aceso num lugar que diz "Desconectado".
+
+    :param luzes: por lugar (`p1`…`p4`), o par `(hexadecimal da barra, número)`.
+        O hexadecimal vazio ou `—` apaga a barra; o número `None` apaga as cinco
+        lâmpadas. Um lugar ausente do dicionário é tratado como apagado.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_led_pattern
+
+    from . import TODOS_OS_LUGARES, TRAVESSAO
+
+    #: AS TRÊS VARIÁVEIS VÊM JUNTO, e é o que faz esta cura chegar HOJE: a
+    #: página publicada declara o par das lâmpadas só em `.luzinhas`, e sem elas
+    #: no escopo do desenho as regras abaixo seriam inválidas no tempo de
+    #: computar — a folha viva pintaria o nada, com todo o mecanismo montado.
+    regras: list[str] = [tokens_da_luz()]
+    for pref in sorted(TODOS_OS_LUGARES | set(luzes)):
+        onde = f'{caixa}[data-controle="{pref}"]'
+        cor, numero = luzes.get(pref) or ("", None)
+        cor = "" if str(cor).strip() in ("", TRAVESSAO) else str(cor).strip()
+        regras.append(f"{onde} {ALVO_DA_BARRA}"
+                      f"{{--luz:{cor or BARRA_APAGADA} !important}}")
+        #: AS CINCO APAGAM PRIMEIRO, E O PADRÃO ACENDE DEPOIS. As duas regras
+        #: valem (0,3,0) e as duas são `!important`, então entre iguais decide a
+        #: ORDEM — inverter as duas linhas apaga a lâmpada que acabou de
+        #: acender, e a tela volta às cinco iguais. Medido nos dois lugares:
+        #: reprova no teste de unidade e reprova no DOM vivo.
+        regras.append(f"{onde} {ALVO_DAS_LAMPADAS}"
+                      f"{{fill:var(--led-apagado) !important;"
+                      f"filter:none !important}}")
+        #: O PADRÃO SAI DE `player_led_pattern`, a tabela que o DAEMON acende —
+        #: nunca da classe `led-on` do arquivo, que é o desenho perguntando a si
+        #: mesmo. Ele responde a qualquer número (o `monta.PADRAO_JOGADOR` só
+        #: precomputa 1..8 e levanta `KeyError` fora disso), e é por isso que a
+        #: leitura é esta e não a da bancada.
+        if not isinstance(numero, int) or isinstance(numero, bool):
+            continue
+        for i, acesa in enumerate(player_led_pattern(numero), 1):
+            if acesa:
+                regras.append(
+                    f'{onde} [id$="-led-jogador-{i}"]'
+                    f"{{fill:var(--led-aceso) !important;"
+                    f"filter:drop-shadow(0 0 .5px var(--led-aceso)) !important}}")
+    return "".join(regras)
+
+
 def _luzinhas(numero: int) -> str:
     """As cinco lâmpadas daquele número, ou `""` quando ninguém sabe o padrão.
 
@@ -1175,6 +1346,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             donos[_numero(ctx, c)] = casa_dele
 
     colunas: dict[str, dict[str, Any]] = {}
+    #: A LUZ DO DESENHO GRANDE, por LUGAR — ver `folha_da_luz`. Ela nasce vazia
+    #: e só recebe quem tem controle: `folha_da_luz` APAGA todo lugar que não
+    #: aparecer aqui, que é como o `--luz` do mockup morre num lugar vazio.
+    luz_do_desenho: dict[str, tuple[str, int | None]] = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         crua = cor_do_swatch(c)
@@ -1215,6 +1390,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: MESMO primeiro retorno que decide `acesa`, e não de uma segunda
         #: leitura: "apagada" e "não sei" só se separam pela frase do motor.
         estado = estado_da_tira(recado)
+        #: A LUZ DO DESENHO GRANDE, por LUGAR e não por `uniq` — ela viaja numa
+        #: folha de estilo (`folha_da_luz`), e um seletor CSS endereça o `p1`,
+        #: que é o que a página tem. A cor é a `acesa`, isto é, a que o daemon
+        #: publica: ela já vem PÓS-ESCALA de brilho por contrato (D8), então o
+        #: desenho mostra a cor JÁ escalada sem esta aba refazer a conta — que é o
+        #: mesmo que a prévia da GTK pinta (`_on_lightbar_preview_draw`).
+        #: `None` nos quatro estados de ressalva, e aí a barra APAGA.
+        if casa.get("pref"):
+            luz_do_desenho[str(casa["pref"])] = (_hex(acesa) if acesa else "", n)
         colunas[uniq] = {
             #: A TELA MOSTRA PORCENTAGEM, e o `%` é DELA: o desenho escreve
             #: `82%` nesta caixa. Emitir o `0.82` cru — o que esta linha fazia
@@ -1367,8 +1551,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: `rgb(228,224,216)` (o White, vivo) em volta de um controle desenhado
         #: em `rgb(174,51,90)` — o Cosmic Red do mockup. A mesma célula dizendo
         #: duas coisas, com o rótulo certo logo abaixo. Ver `folha_do_plastico`.
+        #:
+        #: E A LUZ VIAJA NO MESMO `<style>` — 03/09/2026. O `id` dele diz
+        #: "plastico" porque foi o casco que o pariu, e ele fica: **ele já está
+        #: PUBLICADO**, e é isso que decide. Um `<style id="luz-viva">` novo só
+        #: chegaria à tela dela no dia em que ela mandasse publicar a 04, e a
+        #: barra continuaria com a cor do mockup até lá. As duas folhas não se
+        #: cruzam — uma pinta `.ds-svg`, a outra o grupo do lightbar e os cinco
+        #: `<rect>` do indicador —, e a ordem entre elas não muda nada.
         "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa),
-                   "#plastico-vivo": _folha_do_plastico(ctx.mesa, CAIXA_DA_COLUNA)},
+                   "#plastico-vivo": (_folha_do_plastico(ctx.mesa, CAIXA_DA_COLUNA)
+                                      + folha_da_luz(luz_do_desenho))},
         #: O NÚMERO SAI DO DICIONÁRIO, nunca de uma constante escrita à mão —
         #: foi assim que a curva da aba Gatilhos ficou fora da cobertura.
         #: `player`, `fonte`, `recado` e `rgb` saíram em 02/09/2026: os quatro
