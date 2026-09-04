@@ -61,6 +61,7 @@ import time
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any, Literal
 
+from hefesto_dualsense4unix.profiles.schema import MOTOR_PCT_PADRAO
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -1119,6 +1120,12 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
 def _game_rumble_mult(daemon: DaemonProtocol, now: float) -> float:
     """Multiplicador da política global de rumble para o rumble do JOGO.
 
+    É O DEGRAU DA COLUNA, e só ele. **Quem escreve no motor NÃO chama esta
+    função** — chama :func:`_mults_por_motor`, que compõe este degrau com a
+    barra de cada motor (VIBRACAO-POR-MOTOR-01, 04/09/2026). Chamá-la direto
+    entregaria o degrau sem a barra dela, que é o defeito que a régua
+    `tests/unit/test_cada_motor_tem_o_seu_multiplicador.py` vigia por AST.
+
     FEAT-VPAD-FF-PASSTHROUGH-01: o FF do vpad passa pela MESMA política
     (economia/balanceado/max/auto/custom) do slider "Intensidade global" —
     espelho fiel de `subsystems.rumble.reassert_rumble` (bateria do snapshot
@@ -1148,6 +1155,113 @@ def _game_rumble_mult(daemon: DaemonProtocol, now: float) -> float:
     return mult
 
 
+def _chave_da_peca(uniq: str | None) -> str | None:
+    """MAC normalizado do jeito que o perfil chaveia `controllers`, ou `None`.
+
+    Sem dois-pontos, sem hífen, minúsculo — a MESMA forma que
+    `core/backend_pydualsense.py:213` grava a partir do `HID_UNIQ` e que o
+    `_key_to_uniq` do backend casa com os handles. Normalizar aqui é barato e
+    evita o modo de falha silencioso do endereço que chega com dois-pontos e
+    não casa chave nenhuma — o mapa fica mudo e ninguém vê.
+    """
+    limpo = str(uniq or "").replace(":", "").replace("-", "").strip().lower()
+    return limpo or None
+
+
+def _motores_do_perfil_ativo(daemon: Any) -> dict[str, tuple[int, int]]:
+    """`{uniq: (forte_pct, fraco_pct)}` do perfil ATIVO, memoizado pelo nome.
+
+    POR QUE MEMOIZADO, e o número é medido: o FF do jogo chega a centenas de
+    Hz (`core/rumble` abre com isso), e ler o disco por report seria uma
+    tempestade de syscalls no caminho mais quente do daemon. O cache é
+    `(nome_do_perfil, mapa)` guardado no próprio daemon, no molde de
+    `_grab_retry_falhas` e `_steam_input_coop_derrubados` — os dois atributos
+    que este arquivo já cria em runtime.
+
+    **QUEM GRAVAR A BARRA INVALIDA O CACHE**, e é uma linha:
+    `daemon._rumble_motores_pct = None`. Sem ela a barra nova só vale na
+    próxima troca de perfil. É o que o método `rumble.motores.set` de
+    `daemon/ipc_handlers.py` tem de fazer ao gravar — RELATADO, porque aquele
+    arquivo não é desta posse (ver a entrega desta sprint).
+
+    Perfil ilegível não levanta: cai em mapa vazio, que é "ninguém opinou", e
+    o rumble do jogo continua exatamente como era. Vibração é caminho quente e
+    transitório — derrubá-lo por um JSON torto seria trocar um ajuste perdido
+    por um jogo sem vibração.
+    """
+    nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    if not isinstance(nome, str) or not nome:
+        nome = None
+    cache = getattr(daemon, "_rumble_motores_pct", None)
+    if isinstance(cache, tuple) and len(cache) == 2 and cache[0] == nome:
+        mapa_cacheado = cache[1]
+        if isinstance(mapa_cacheado, dict):
+            return mapa_cacheado
+    mapa: dict[str, tuple[int, int]] = {}
+    if nome is not None:
+        try:
+            from hefesto_dualsense4unix.profiles.loader import load_profile
+            from hefesto_dualsense4unix.profiles.schema import motores_dos_controles
+
+            cru = motores_dos_controles(load_profile(nome).controllers)
+            mapa = {
+                chave: par
+                for uniq, par in cru.items()
+                if (chave := _chave_da_peca(uniq)) is not None
+            }
+        except Exception:
+            logger.debug("rumble_motores_perfil_ilegivel", exc_info=True)
+            mapa = {}
+    with contextlib.suppress(Exception):
+        daemon._rumble_motores_pct = (nome, mapa)
+    return mapa
+
+
+def _pcts_dos_motores(daemon: Any, target_uniq: str | None) -> tuple[int, int]:
+    """`(forte_pct, fraco_pct)` da peça mirada — `(100, 100)` sem opinião.
+
+    `target_uniq is None` devolve o par neutro, e a razão é a MESMA disciplina
+    do BROADCAST-PROIBIDO-01 logo abaixo: **sem endereço não há peça**, e uma
+    barra por peça aplicada a um destino que ninguém nomeou seria a promessa
+    do jogador 2 chegando no controle do jogador 1. Byte-idêntico ao que era
+    antes de 04/09/2026 nesse caso.
+    """
+    chave = _chave_da_peca(target_uniq)
+    if chave is None:
+        return (MOTOR_PCT_PADRAO, MOTOR_PCT_PADRAO)
+    par = _motores_do_perfil_ativo(daemon).get(chave)
+    if par is None:
+        return (MOTOR_PCT_PADRAO, MOTOR_PCT_PADRAO)
+    return par
+
+
+def _mults_por_motor(
+    daemon: DaemonProtocol, now: float, target_uniq: str | None
+) -> tuple[float, float]:
+    """`(mult_fraco, mult_forte)` — o DEGRAU da coluna VEZES a barra de cada motor.
+
+    A CONTA DELA, 04/09/2026, com os números dela:
+
+        efetivo(motor) = degrau x barra(motor)
+
+        degrau 150 %, fraca 100 %, forte 100 %  ->  150 % e 150 %
+        degrau 150 %, fraca 100 %, forte  50 %  ->  150 % e  75 %
+
+    **É O ÚNICO LUGAR ONDE A MULTIPLICAÇÃO ACONTECE.** Se ela aparecesse em
+    dois, um dos dois envelheceria sozinho — e a barra é justamente o tipo de
+    ajuste que só se percebe errado com a mão no plástico.
+
+    E ELA COMPÕE COM O TETO POR CONTROLE em vez de apagá-lo: o teto do card do
+    cabo (`08-conexoes`) vira fator por uniq em
+    `profiles/manager._controllers_to_rumble_scales` e é aplicado um andar
+    ABAIXO, dentro do backend (`_escalar_rumble`, sobre o par já escrito). Os
+    dois se multiplicam na ordem degrau → barra → teto, e nenhum come o outro.
+    """
+    degrau = _game_rumble_mult(daemon, now)
+    forte_pct, fraco_pct = _pcts_dos_motores(daemon, target_uniq)
+    return (degrau * fraco_pct / 100.0, degrau * forte_pct / 100.0)
+
+
 def apply_game_rumble(
     daemon: DaemonProtocol,
     weak: int,
@@ -1175,6 +1289,13 @@ def apply_game_rumble(
         reassert é no-op e o FF do jogo manda sozinho.
       - A política global de intensidade é aplicada AQUI (mesmo multiplicador
         do reassert) — o slider vale também para o rumble do jogo.
+      - VIBRACAO-POR-MOTOR-01 (04/09/2026): e o degrau não vai sozinho — cada
+        motor leva a SUA barra, `efetivo(motor) = degrau x barra(motor)`. Os
+        dois `mult` abaixo saem de :func:`_mults_por_motor`, e por isso `weak`
+        e `strong` podem sair com fatores diferentes do MESMO controle: é o
+        caso dela, `degrau 150 · fraca 100 · forte 50 → 150 % e 75 %`. Sem
+        barra escrita no perfil os dois fatores são o degrau, e o par é
+        byte-idêntico ao que era.
       - `target_uniq` (MAC) mira o controle de UM jogador via a API por-uniq
         do backend (`set_rumble_for`, PERFIL-01) — SEM o flip transitório do
         seletor global (`set_output_target`) que existia antes: o flip corria
@@ -1196,9 +1317,9 @@ def apply_game_rumble(
     if daemon.config.rumble_active is not None:
         return None  # rumble fixado manual vence o FF do jogo
     controller = daemon.controller
-    mult = _game_rumble_mult(daemon, time.monotonic())
-    weak_eff = max(0, min(255, round(weak * mult)))
-    strong_eff = max(0, min(255, round(strong * mult)))
+    mult_fraco, mult_forte = _mults_por_motor(daemon, time.monotonic(), target_uniq)
+    weak_eff = max(0, min(255, round(weak * mult_fraco)))
+    strong_eff = max(0, min(255, round(strong * mult_forte)))
 
     # Any: o targeting por-uniq é opcional no backend (só o PyDualSense o
     # tem; IController/FakeController não) — o gate é o callable() abaixo.
