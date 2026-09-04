@@ -1289,7 +1289,7 @@ def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
 #
 # A FITA NEM SEMPRE LÊ, e isso é fato medido em 03/09/2026, não ressalva:
 # `hefesto_vivo._fita` devolve `""` — deixando a fita INTEIRA no desenho —
-# quando QUALQUER controle da mesa está sem cor lida (`hefesto_vivo.py:860`).
+# quando QUALQUER controle da mesa está sem cor lida (`hefesto_vivo.py:1054`).
 # Com um controle no rádio, que é a mesa dela agora, a fita fica no mockup. Esta
 # aba não depende disso: ela lê a MESA, controle a controle, e cala sobre quem
 # não disse a cor em vez de calar sobre todos.
