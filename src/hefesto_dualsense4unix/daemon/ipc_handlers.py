@@ -1670,6 +1670,64 @@ class IpcHandlersMixin:
         if not renumbered:
             return {"ok": True, "renumbered": {}}
 
+        self._repintar_apos_renumeracao()
+
+        return {"ok": True, "renumbered": renumbered}
+
+    def _repintar_apos_renumeracao(self) -> None:
+        """As TRÊS repinturas de quem mexeu na fila de números. Nesta ordem.
+
+        Compartilhada por `identity.renumber` e `identity.number.set` porque o
+        defeito é o mesmo nos dois: os dois escrevem a MESMA fila
+        (`identity_registry`), e é dela que sai a lâmpada de jogador —
+        `_apply_coop_player_leds` → `numeros_de_jogador()` → `_numero_exibido`
+        → `slot_for`.
+
+        1. **`coop.sync(force=True)` PRIMEIRO, e a ordem é o conserto.** Com
+           `coop_enabled=True` a camada do co-op fica ACIMA do override
+           por-uniq no merge do backend, e ela só é republicada no FIM de um
+           ciclo CHEIO de `sync()` — que o `sync` só roda com
+           `self._watch.poll() or activated or grab_degraded or vpad_morto or
+           retry_needed or force` (`subsystems/coop.py`). **Renumerar não é
+           nenhum desses**: o `/dev/input` não muda quando alguém troca um
+           número. Sem o `force`, o passo 2 reafirmava a camada VELHA e a
+           lâmpada só acertava no próximo hotplug.
+
+           MEDIDO com os dois DualSense dela e o daemon vivo, lendo
+           `/sys/class/leds`:
+
+               identity.number.set sozinho ....... o `player_slot` troca,
+                                                   lâmpada NENHUMA se move
+               + player_leds_set por uniq ........ o daemon responde
+                                                   "aplicado_em" — e nenhuma
+                                                   lâmpada se move
+               + coop.sync ....................... as duas seguem o número
+
+           **Cura a janela GTK antiga junto**, e é por isso que ela mora aqui e
+           não na aba: o cabeçalho da GTK tem exatamente o mesmo defeito, e um
+           ramo "chama `coop.sync` quando o co-op está mandando" do lado de
+           quem CLICA seria contorno — a hipótese tem de explicar o que já
+           funcionava, e o que já funcionava era o hotplug.
+
+        2. `reassert_resolved_outputs`: o DualSense reafirma o output já com o
+           número novo — agora sobre a camada fresca do passo 1.
+        3. `_schedule_external_tick`: os externos são repintados pelo tick
+           lento, adiantado aqui para não esperar o intervalo cheio do poll.
+
+        Custo: o `sync(force=True)` paga uma `discover_dualsense_evdevs()`
+        (~10-40 ms, PERF-MULTI-CONTROLLER-01) no event loop. É o mesmo preço
+        que o handler `coop.sync` já cobra, e renumerar é gesto MANUAL e raro —
+        não é caminho quente. Nada aqui pode derrubar a renumeração, que já
+        aconteceu: os três passos são defensivos.
+        """
+        if self.daemon is not None:
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.subsystems.coop import (
+                    get_coop_manager,
+                )
+
+                get_coop_manager(self.daemon).sync(force=True)
+
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
@@ -1680,8 +1738,6 @@ class IpcHandlersMixin:
         )
         if callable(schedule_external_tick):
             schedule_external_tick()
-
-        return {"ok": True, "renumbered": renumbered}
 
     async def _handle_identity_number_set(
         self, params: dict[str, Any]
@@ -1812,19 +1868,10 @@ class IpcHandlersMixin:
             }
 
         if changed:
-            # Mesma repintura do renumber: o DualSense reafirma o output já
-            # com o número novo; os externos são repintados pelo tick lento,
-            # adiantado aqui para não esperar o intervalo cheio do poll.
-            reassert = getattr(self.controller, "reassert_resolved_outputs", None)
-            if callable(reassert):
-                reassert()
-            schedule_external_tick = (
-                getattr(self.daemon, "_schedule_external_tick", None)
-                if self.daemon is not None
-                else None
-            )
-            if callable(schedule_external_tick):
-                schedule_external_tick()
+            # As MESMAS três repinturas do renumber, e o `coop.sync(force=True)`
+            # que faltava nas duas — ver `_repintar_apos_renumeracao` para a
+            # medição no `/sys/class/leds` que provou a ordem.
+            self._repintar_apos_renumeracao()
 
         return {"ok": True, "number": numero, "changed": changed}
 
@@ -3437,12 +3484,26 @@ class IpcHandlersMixin:
         - ``inputs``: ``{lx,ly,rx,ry,l2_raw,r2_raw,buttons}`` — mais as chaves
           OPCIONAIS ``gyro`` (``{x,y,z}`` em graus/s) e ``touchpad``
           (``{touching,x,y,width,height}``) quando o controle tem os nodes
-          evdev correspondentes (S2, via `SensorHub`) — ou None. O
-          PRIMÁRIO espelha o `state` do topo do payload (`daemon._last_state`
-          — a MESMA fonte, nunca um snapshot evdev paralelo: armadilha A-09);
-          secundários vêm de `CoopManager.live_snapshots()` (leitura
-          não-destrutiva por MAC). Sem leitor → None (o card mostra "—",
-          nunca um valor congelado fingindo vida).
+          evdev correspondentes (S2, via `SensorHub`) — ou None.
+
+          **TRÊS FONTES, nesta ordem, e a ordem é o contrato:**
+
+          1. O PRIMÁRIO espelha o `state` do topo do payload
+             (`daemon._last_state` — a MESMA fonte, nunca um snapshot evdev
+             paralelo: armadilha A-09). Quando `state` é None ele fica em
+             None e NÃO cai para a fonte 3: o card e o topo do payload têm de
+             dizer a mesma coisa sobre o mesmo controle.
+          2. Secundário que o co-op promoveu: `CoopManager.live_snapshots()`
+             (leitura não-destrutiva por MAC).
+          3. **STATUS-04 (04/09/2026)** — qualquer outro controle conectado:
+             um `EvdevReader` PASSIVO, sem grab, do `SensorHub`
+             (:meth:`_inputs_passivos`). É o que cura a mesa pela metade nos
+             modos em que o co-op está desmontado — modo Nativo, emulação
+             off, suspensão por Steam Input —, em que o secundário publicava
+             `inputs: None` **por desenho**, não por falta de dado.
+
+          Sem nenhuma das três → None (o card mostra "—", nunca um valor
+          congelado fingindo vida).
         - ``vpad_backend``/``vpad_motivo`` (BT-03): backend real do vpad DO
           JOGADOR deste controle ("uhid" | "uinput") e o motivo quando
           degradado (máscara DualSense em uinput — `fallback_motivo` que a
@@ -3484,6 +3545,7 @@ class IpcHandlersMixin:
                 nos_por_uniq = dict(mapear() or {})
 
         snapshots = self._coop_live_snapshots()
+        com_leitor_coop = self._coop_uniqs_com_leitor()
         vpad_by_uniq = self._coop_vpads_by_uniq()
         gp_dev = (
             getattr(self.daemon, "_gamepad_device", None)
@@ -3515,7 +3577,7 @@ class IpcHandlersMixin:
             elif uniq is not None and uniq in snapshots:
                 entry["inputs"] = self._inputs_from_snapshot(snapshots[uniq])
             else:
-                entry["inputs"] = None
+                entry["inputs"] = self._inputs_passivos(entry, uniq, com_leitor_coop)
             self._merge_sensores(entry, uniq)
             self._merge_audio(entry, uniq)
 
@@ -3663,6 +3725,12 @@ class IpcHandlersMixin:
         inputs = entry.get("inputs")
         if uniq is None or not isinstance(inputs, dict):
             return
+        # As cinco linhas abaixo repetem `_garantir_sensor_hub` DE PROPÓSITO, e
+        # a razão é uma régua: `test_sensores_status._HandlerFalso` exercita
+        # este método fora do `IpcServer`, pendurando SÓ ele num objeto vazio.
+        # Chamar um segundo método do mixin daqui faria o `AttributeError` cair
+        # no `suppress` abaixo e a régua ficaria VERDE sobre um `inputs` sem
+        # sensor nenhum — verde sobre nada, medido em 04/09/2026.
         hub = self._sensor_hub
         if hub is None:
             from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
@@ -3674,6 +3742,82 @@ class IpcHandlersMixin:
             leitura = hub.leitura(uniq)
         if isinstance(leitura, dict):
             inputs.update(leitura)
+
+    def _garantir_sensor_hub(self) -> Any:
+        """O `SensorHub` desta sessão, criado no primeiro uso (S2/STATUS-04)."""
+        hub = self._sensor_hub
+        if hub is None:
+            from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
+
+            hub = SensorHub()
+            self._sensor_hub = hub
+        return hub
+
+    def _inputs_passivos(
+        self, entry: dict[str, Any], uniq: str | None, com_leitor_coop: set[str]
+    ) -> dict[str, Any] | None:
+        """Entrega STATUS-04: `inputs` de quem não tem NENHUMA outra fonte.
+
+        Escrita em 17/07/2026 e adiada com razão medida — *"co-op é DEFAULT ON
+        (…) no estado normal da máquina dela, TODO secundário já tem reader
+        (…) O buraco real é o modo Nativo e emulação-off"*. A razão continua
+        de pé (medido em 04/09/2026 com os dois DualSense dela em USB e co-op
+        ligado: os dois já traziam `inputs`, e este caminho não abriu reader
+        nenhum). O que caducou foi tratar o buraco como hipotético: nos modos
+        em que o co-op se desmonta, metade da mesa ficava muda — e nesses
+        modos ela está JOGANDO, que é quando o card importa.
+
+        As TRÊS recusas, e cada uma evita uma mentira diferente:
+
+        - **primário** — cair aqui seria publicar um snapshot evdev paralelo
+          ao `state` do topo do payload (armadilha A-09): dois números para o
+          mesmo controle no mesmo tique. `state is None` significa "o daemon
+          não está lendo", e o card tem de dizer isso.
+        - **desconectado** — abrir node de quem saiu da mesa.
+        - **controle que o co-op já segura** (inclusive o pendente de grab,
+          que o `live_snapshots` exclui de propósito): o node está sob
+          `EVIOCGRAB` do reader dele e um fd passivo não recebe evento NENHUM.
+          É a entrega (c) do STATUS-04 — *"ceder o leitor quando o co-op
+          assume"* — e MEDIDO no hardware dela em 04/09/2026 é pior do que
+          parece: o reader passivo abre sem erro e publica a posição REAL de
+          repouso lida do `absinfo` (`lx=129 ly=130 rx=127 ry=130`), parada
+          para sempre. Não é um zero reconhecível — é um número plausível e
+          congelado, e um card alimentado por ele parece um controle que
+          ninguém está tocando.
+
+        Custo quando não há o que fazer: um `set` de MACs e três `if`. Nada de
+        I/O — a descoberta e a abertura moram na thread de manutenção do hub.
+        """
+        if uniq is None or entry.get("is_primary") or not entry.get("connected"):
+            return None
+        if uniq in com_leitor_coop:
+            return None
+        leitura: Any = None
+        with contextlib.suppress(Exception):
+            leitura = self._garantir_sensor_hub().entradas(uniq)
+        return leitura if isinstance(leitura, dict) else None
+
+    def _coop_uniqs_com_leitor(self) -> set[str]:
+        """MACs cujo node de gamepad o co-op já abriu (promovido OU pendente).
+
+        Mais largo que `live_snapshots()` DE PROPÓSITO: aquele publica só quem
+        tem vpad, este responde "quem está com o node na mão" — que é a
+        pergunta do :meth:`_inputs_passivos`. Um jogador pendente de grab não
+        aparece no primeiro e aparece aqui.
+        """
+        coop = (
+            getattr(self.daemon, "_coop_manager", None)
+            if self.daemon is not None
+            else None
+        )
+        players = getattr(coop, "_players", None) if coop is not None else None
+        if not isinstance(players, dict):
+            return set()
+        return {
+            mac
+            for mac in players
+            if isinstance(mac, str) and mac and not mac.startswith("path:")
+        }
 
     def _merge_audio(self, entry: dict[str, Any], uniq: str | None) -> None:
         """Acrescenta `audio` e `speaker` a ESTE controle (AUDIO-STATUS-01 / D4).

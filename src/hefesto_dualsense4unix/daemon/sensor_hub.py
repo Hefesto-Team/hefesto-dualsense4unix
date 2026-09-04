@@ -1,9 +1,20 @@
-"""sensor_hub.py — giroscópio, acelerômetro e touchpad POR CONTROLE (S2).
+"""sensor_hub.py — giroscópio, acelerômetro, touchpad e ENTRADAS por controle.
 
 Quem consome: o enriquecimento do `state_full` (`ipc_handlers`), que roda no
 event loop do daemon a 10 Hz enquanto a GUI está aberta. Quem produz: um
-`MotionSensorReader` e um `TouchpadReader` por controle, cada um na sua
-thread de evdev.
+`MotionSensorReader`, um `TouchpadReader` e — desde STATUS-04 — um
+`EvdevReader` PASSIVO por controle, cada um na sua thread de evdev.
+
+**O terceiro tipo nasceu em 04/09/2026 e é a entrega STATUS-04**, escrita em
+17/07/2026 e adiada com razão medida: *"co-op é DEFAULT ON (…) no estado
+normal da máquina dela, TODO secundário já tem reader e o card dele já terá
+inputs só com STATUS-01/02. O buraco real é o **modo Nativo** (…) e
+emulação-off"*. A aposta continua verdadeira — medido em 04/09/2026 com os
+dois DualSense dela em USB e co-op ligado, os DOIS controles publicam
+`inputs` com giro, acelerômetro e touchpad, e este hub não abre reader de
+gamepad NENHUM. O que ela fecha é o buraco: nos modos em que o co-op está
+desmontado (Nativo, emulação off, suspensão por Steam Input) o secundário
+ficava com `inputs: None` e METADE DA MESA emudecia por desenho.
 
 As três regras que moldaram este desenho:
 
@@ -29,6 +40,30 @@ O touchpad é aberto com `acumular_movimento=False`: o mesmo node já é lido
 pelo `TouchpadReader` do cursor, e um segundo acumulador que ninguém drena
 viraria salto de cursor. Aqui só se OBSERVA (`touch_state()`), nunca se
 drena (`consume_motion()` continua sendo exclusividade do poll loop).
+
+**NENHUM reader daqui faz `set_grab`, e o do gamepad é onde isso deixa de ser
+detalhe.** Um `EVIOCGRAB` no node do controle tornaria o daemon leitor
+exclusivo e o JOGO pararia de ver o controle — seria trocar um card mudo por
+um controle morto. Observar um node que ninguém grabou não disputa nada: o
+evdev entrega o mesmo evento a todos os fds abertos, e isto não é hidraw
+(a armadilha nº 3 desta casa, o instrumento que briga com o produto, mora na
+outra camada).
+
+**Quem grabou o node é que fica com os eventos, e por isso o `ipc_handlers`
+NÃO pede `entradas()` de um controle que o co-op já segura.** MEDIDO no
+hardware dela em 04/09/2026, e o resultado é PIOR do que "o card fica em
+zero": abrindo um reader passivo sobre os dois nodes que o daemon já grabava,
+os dois abriram sem erro e publicaram
+
+    lx=129 ly=130 rx=127 ry=130   ·   lx=128 ly=129 rx=130 ry=126
+
+**parados, por 4 s.** Não são os `128` de fábrica, que se reconheceriam de
+longe: o `_on_device_opened` lê o `absinfo` no open, então a leitura nasce com
+a posição REAL de repouso de cada analógico daquele aparelho — um número
+plausível, específico do controle, e eternamente congelado. Um card alimentado
+por isso não parece quebrado; parece um controle que ninguém está tocando. É a
+mentira mais cara que este módulo poderia contar, e é por isso que a recusa
+mora em quem PERGUNTA (`_inputs_passivos`), não aqui.
 """
 from __future__ import annotations
 
@@ -54,14 +89,19 @@ class SensorHub:
     #: acabou de abrir a aba e barato o bastante para rodar o dia inteiro
     #: (a volta é um comparativo de conjuntos quando nada mudou).
     _MANUTENCAO_INTERVALO_S: ClassVar[float] = 1.0
+    #: Os três tipos de leitor administrados. "gamepad" (STATUS-04) tem
+    #: registro de demanda PRÓPRIO — ver :meth:`entradas`.
+    _TIPOS: ClassVar[tuple[str, ...]] = ("motion", "touchpad", "gamepad")
 
     def __init__(
         self,
         *,
         motion_factory: Callable[[str, Any], Any] | None = None,
         touch_factory: Callable[[str, Any], Any] | None = None,
+        gamepad_factory: Callable[[str, Any], Any] | None = None,
         descobrir_motion: Callable[[], dict[str, Any]] | None = None,
         descobrir_touch: Callable[[], dict[str, Any]] | None = None,
+        descobrir_gamepad: Callable[[], dict[str, Any]] | None = None,
         relogio: Callable[[], float] | None = None,
         auto_manutencao: bool = True,
     ) -> None:
@@ -78,13 +118,22 @@ class SensorHub:
         self._auto_manutencao = auto_manutencao
         self._motion_factory = motion_factory or self._motion_reader_real
         self._touch_factory = touch_factory or self._touch_reader_real
+        self._gamepad_factory = gamepad_factory or self._gamepad_reader_real
         self._descobrir_motion = descobrir_motion or self._descobrir_motion_real
         self._descobrir_touch = descobrir_touch or self._descobrir_touch_real
+        self._descobrir_gamepad = descobrir_gamepad or self._descobrir_gamepad_real
 
         self._lock = threading.RLock()
+        #: Demanda dos SENSORES (`leitura`) — vale para motion e touchpad.
         self._demanda: dict[str, float] = {}
+        #: Demanda das ENTRADAS (`entradas`), separada de propósito: o
+        #: `state_full` pede sensor de TODO controle que já tem `inputs`, e
+        #: pediria um reader de gamepad inútil para cada um deles. Aqui só
+        #: entra quem ficaria mudo sem ele.
+        self._demanda_entradas: dict[str, float] = {}
         self._motion: dict[str, Any] = {}
         self._touch: dict[str, Any] = {}
+        self._gamepad: dict[str, Any] = {}
         #: Pares `(identidade, tipo)` já procurados sem sucesso. Por TIPO
         #: porque os dois nodes são independentes: um controle pode ter
         #: touchpad e não ter motion, e marcar só a identidade faria o hub
@@ -161,6 +210,45 @@ class SensorHub:
                 }
         return out
 
+    def entradas(self, uniq: str) -> dict[str, Any] | None:
+        """Analógicos, gatilhos e botões de `uniq` agora; `None` sem reader.
+
+        STATUS-04. Mesmo contrato de `leitura`: registra a demanda (é o que
+        mantém o reader vivo), só toca dicionário sob lock e NUNCA levanta.
+        A primeira chamada devolve `None` — o reader nasce na volta seguinte
+        da thread de manutenção, porque a descoberta é cara e o event loop é
+        único (regra 1 do módulo).
+
+        **`None` não é falha, é a verdade daquele instante**, e a interface já
+        sabe lê-la: é o mesmo `None` que o card desenha como "—". O erro que
+        esta função não pode cometer é o contrário — devolver os `128` de
+        fábrica de um reader que nunca vai receber evento. Ver o cabeçalho do
+        módulo: quem decide QUANDO perguntar é o `ipc_handlers`, e ele só
+        pergunta por controle que não tem outra fonte.
+        """
+        agora = self._relogio()
+        with self._lock:
+            self._demanda_entradas[uniq] = agora
+            reader = self._gamepad.get(uniq)
+        self._garantir_manutencao()
+
+        if reader is None:
+            return None
+        try:
+            snap = reader.snapshot()
+            return {
+                "lx": int(snap.lx),
+                "ly": int(snap.ly),
+                "rx": int(snap.rx),
+                "ry": int(snap.ry),
+                "l2_raw": int(snap.l2_raw),
+                "r2_raw": int(snap.r2_raw),
+                "buttons": sorted(snap.buttons_pressed),
+            }
+        except Exception as exc:  # o `state_full` não cai por causa de um node
+            logger.debug("sensor_hub_entradas_falhou", identity=uniq, err=str(exc))
+            return None
+
     def stop_all(self) -> None:
         """Para a manutenção e todos os readers. Idempotente."""
         self._parar.set()
@@ -169,10 +257,14 @@ class SensorHub:
         if thread is not None:
             thread.join(timeout=2.0)
         with self._lock:
-            readers = list(self._motion.values()) + list(self._touch.values())
+            readers = [
+                reader for tipo in self._TIPOS for reader in self._mapa(tipo).values()
+            ]
             self._motion.clear()
             self._touch.clear()
+            self._gamepad.clear()
             self._demanda.clear()
+            self._demanda_entradas.clear()
         for reader in readers:
             with contextlib.suppress(Exception):
                 reader.stop()
@@ -213,22 +305,29 @@ class SensorHub:
         """
         agora = self._relogio()
         with self._lock:
-            desejados = {
-                uniq
-                for uniq, visto in self._demanda.items()
-                if (agora - visto) <= self._DEMANDA_TTL_S
+            vivos_sensores = self._podar(self._demanda, agora)
+            self._demanda = {
+                u: t for u, t in self._demanda.items() if u in vivos_sensores
             }
-            self._demanda = {u: t for u, t in self._demanda.items() if u in desejados}
+            vivos_entradas = self._podar(self._demanda_entradas, agora)
+            self._demanda_entradas = {
+                u: t for u, t in self._demanda_entradas.items() if u in vivos_entradas
+            }
+            desejados: dict[str, set[str]] = {
+                "motion": vivos_sensores,
+                "touchpad": vivos_sensores,
+                "gamepad": vivos_entradas,
+            }
             sobrando = [
                 (uniq, tipo)
-                for tipo in ("motion", "touchpad")
+                for tipo in self._TIPOS
                 for uniq in list(self._mapa(tipo))
-                if uniq not in desejados
+                if uniq not in desejados[tipo]
             ]
             faltando = {
                 (uniq, tipo)
-                for tipo in ("motion", "touchpad")
-                for uniq in desejados
+                for tipo in self._TIPOS
+                for uniq in desejados[tipo]
                 if uniq not in self._mapa(tipo)
             }
             sem_node = set(self._sem_node)
@@ -251,9 +350,21 @@ class SensorHub:
         if novos:
             self._abrir_readers(novos)
 
+    def _podar(self, registro: dict[str, float], agora: float) -> set[str]:
+        """Quem, neste registro de demanda, ainda está dentro do TTL."""
+        return {
+            uniq
+            for uniq, visto in registro.items()
+            if (agora - visto) <= self._DEMANDA_TTL_S
+        }
+
     def _mapa(self, tipo: str) -> dict[str, Any]:
-        """Registro de readers do `tipo` ("motion" | "touchpad")."""
-        return self._motion if tipo == "motion" else self._touch
+        """Registro de readers do `tipo` ("motion" | "touchpad" | "gamepad")."""
+        if tipo == "motion":
+            return self._motion
+        if tipo == "touchpad":
+            return self._touch
+        return self._gamepad
 
     def _input_dir_mudou(self) -> bool:
         """True se `/dev/input` mudou desde a última volta (barato, ~µs)."""
@@ -270,13 +381,23 @@ class SensorHub:
 
     def _abrir_readers(self, pendentes: set[tuple[str, str]]) -> None:
         """Cria e inicia os readers que faltam (descoberta cara mora aqui)."""
+        descobridores = {
+            "motion": self._descobrir_motion,
+            "touchpad": self._descobrir_touch,
+            "gamepad": self._descobrir_gamepad,
+        }
+        # SÓ o tipo que falta paga a descoberta. Cada descobridor abre todos os
+        # nodes de `/dev/input` (~10-40 ms — PERF-MULTI-CONTROLLER-01) e o caso
+        # normal é faltar um tipo só; pagar os três aqui era desperdício desde
+        # antes do "gamepad", e com ele passaria a custar 50% a mais.
         nodes = {
-            "motion": self._chamar_descobridor(self._descobrir_motion),
-            "touchpad": self._chamar_descobridor(self._descobrir_touch),
+            tipo: self._chamar_descobridor(descobridores[tipo])
+            for tipo in {t for _, t in pendentes}
         }
         fabricas = {
             "motion": self._motion_factory,
             "touchpad": self._touch_factory,
+            "gamepad": self._gamepad_factory,
         }
         for uniq, tipo in sorted(pendentes):
             if not self._abrir_um(uniq, tipo, nodes[tipo], fabricas[tipo]):
@@ -351,6 +472,19 @@ class SensorHub:
         )
 
     @staticmethod
+    def _gamepad_reader_real(uniq: str, node: Any) -> Any:
+        """O reader PASSIVO de STATUS-04 — e `set_grab` nunca é chamado.
+
+        `EvdevReader` nasce com `_grab=False` e só graba por pedido explícito
+        (`set_grab`); a ausência da chamada aqui é a entrega, não um esquecimento.
+        Com grab, o daemon viraria leitor exclusivo do controle e o JOGO
+        deixaria de vê-lo — o card acenderia à custa da partida dela.
+        """
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+        return EvdevReader(device_path=node, target_uniq=uniq)
+
+    @staticmethod
     def _descobrir_motion_real() -> dict[str, Any]:
         from hefesto_dualsense4unix.core.evdev_reader import (
             discover_dualsense_motion_evdevs,
@@ -365,6 +499,19 @@ class SensorHub:
         )
 
         return dict(discover_dualsense_touchpad_evdevs())
+
+    @staticmethod
+    def _descobrir_gamepad_real() -> dict[str, Any]:
+        """MAC -> node de gamepad, reusando a descoberta ÚNICA da casa.
+
+        `discover_dualsense_evdevs()` e não uma enumeração por VID/PID: o
+        filtro `_is_virtual_evdev` dela é o que impede o hub de abrir o
+        PRÓPRIO vpad do daemon — o fallback uinput cria um `054c:0ce6`
+        idêntico ao físico, e o card viraria eco do daemon.
+        """
+        from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
+
+        return dict(discover_dualsense_evdevs())
 
 
 __all__ = ["SensorHub"]
