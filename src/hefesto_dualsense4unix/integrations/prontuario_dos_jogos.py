@@ -47,7 +47,7 @@ QUEM O CHAMA, E O QUE ELE ESCREVE
 BANCADA: medido em 21/08/2026, NENHUM chamador em produção o invoca — nem o
 `doctor.sh`, nem a janela. `grep -rn prontuario_dos_jogos src scripts
 install.sh uninstall.sh assets` devolve só menções em prosa (`schema.py:668`,
-`ponte_escada.py:123`, `steam_input_ponte.py:5`, `hotkey.py:447`). Quem o roda
+`ponte_escada.py:123`, `steam_input_ponte.py:5`, `hotkey.py:449`). Quem o roda
 é gente, por `python -m
 hefesto_dualsense4unix.integrations.prontuario_dos_jogos`, e a suíte — e a
 suíte verde não é chamador: é capacidade sem quem a use.

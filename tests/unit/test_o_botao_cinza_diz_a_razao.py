@@ -32,6 +32,7 @@ regras do `?` e cai o quarto.
 """
 from __future__ import annotations
 
+import re
 import pathlib
 import sys
 
@@ -183,6 +184,17 @@ def test_a_folha_entra_nas_dez_paginas_da_bancada() -> None:
           "trás.")
 
 
+#: A REGRA DO ATRIBUTO BOOLEANO, e ela existe porque a primeira redação deste
+#: caso perguntava `"disabled" not in marcado` — uma SUBSTRING. Em 04/09/2026 a
+#: integração fez a peça emitir `aria-disabled` (o alvo `classe` do piloto
+#: passou a vesti-lo, então ele deixou de congelar), e a régua reprovou a
+#: MELHORA: `aria-disabled` contém `disabled`. É a família de defeito que esta
+#: casa nomeou onze vezes em 26/08 — a régua que reprova quem faz a coisa certa.
+#: A cura é AFIAR, nunca afrouxar: o que mata o clique é o atributo booleano
+#: `disabled`, e ele só aparece como palavra solta ou como `disabled=`.
+_DISABLED_BOOLEANO = re.compile(r'(?<![-\w])disabled(?=[\s=>])')
+
+
 def test_o_botao_cinza_nao_emite_disabled_no_html() -> None:
     """A leitura do texto emitido, antes de qualquer navegador.
 
@@ -190,9 +202,14 @@ def test_o_botao_cinza_nao_emite_disabled_no_html() -> None:
     clique, e o recado da D-03 morre junto. Este caso o pega sem motor nenhum.
     """
     marcado = monta.botao_cinza("Travado", "x", razao=RAZAO)
-    assert "disabled" not in marcado, (
-        f"`botao_cinza` emitiu `disabled` — o botão apagado tem de RESPONDER "
-        f"ao clique (PO, 04/09, aba 09):\n  {marcado}")
+    assert not _DISABLED_BOOLEANO.search(marcado), (
+        f"`botao_cinza` emitiu o atributo booleano `disabled` — o botão "
+        f"apagado tem de RESPONDER ao clique (PO, 04/09, aba 09):\n  {marcado}")
+    assert 'data-hef-atributo="aria-disabled"' in marcado, (
+        f"o botão perdeu o `aria-disabled`. Ele NÃO é o `disabled` proibido: é "
+        f"a mesma verdade da classe, dita para quem não enxerga a cor, e o "
+        f"alvo `classe` do piloto o reescreve a cada tique — por isso ele não "
+        f"congela no desenho:\n  {marcado}")
     assert 'data-hef-alvo="classe"' in marcado and 'data-hef-classe="apagado"' in marcado, (
         f"o botão perdeu o alvo do piloto — sem ele o cinza fica congelado no "
         f"desenho e nunca acende no produto:\n  {marcado}")

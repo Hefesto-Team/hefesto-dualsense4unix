@@ -413,6 +413,25 @@ _SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
         "quem `app/actions/footer_actions.py:353` chama. Lápide em "
         "`_NAO_E_PROMESSA`."
     ),
+    #: AS DUAS DE 04/09/2026 SÃO DÍVIDA COM DATA E DONO, e é por isso que elas
+    #: entram aqui em vez de a rota ser forçada: a ONDA1-D1 entregou o MOTOR do
+    #: microfone-como-um-ato (D-12), e quem atravessa é a frente da aba 02, na
+    #: ONDA 2 — `interface/pacotes/a02_controles.py`, o gesto `mudo`, que hoje
+    #: ainda chama `mic_set`. Fiar a rota daqui seria a frente do motor editando
+    #: arquivo de outra frente, que é a R1 desta casa ao contrário.
+    #: QUANDO A ABA 02 FECHAR, ESTAS DUAS LINHAS SAEM — e a régua volta a
+    #: cobrá-las sozinha, que é o desenho dela.
+    "mic_canal_set": (
+        "ONDA1-D1-O-SOM-01 (04/09/2026): o ato inteiro do microfone — mudo do "
+        "firmware MAIS o canal de captura eleito no PipeWire. Atravessa quando "
+        "o gesto `mudo` de `interface/pacotes/a02_controles.py` trocar "
+        "`p.mic_set(...)` por `p.mic_canal_set(...)`, na ONDA 2."
+    ),
+    "frase_do_ato_do_microfone": (
+        "Irmã da de cima, pela mesma entrega: é ela que diz QUAL das duas "
+        "metades faltou, e é o caso que o recado de sucesso da D-01 carrega ao "
+        "cartão. Mesmo atravessador, mesma onda, mesmo commit quando cair."
+    ),
     "player_leds_set": (
         "Irmão exato do `led_set`, pela mesma edição (BG-01) e com a mesma "
         "lápide. Cai no mesmo commit que ele, quando cair."

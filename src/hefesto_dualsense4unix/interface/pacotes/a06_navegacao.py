@@ -729,7 +729,7 @@ def _apagar_os_lugares_sem_dono(
     aqui.
 
     O `!important` NÃO É ZELO: a `--luz` chega como `style="--luz:#ff0000"` no
-    próprio elemento (`monta.py:1000`), e estilo de linha vence qualquer regra
+    próprio elemento (`monta.py:1165`), e estilo de linha vence qualquer regra
     de folha que não o traga.
     """
     if not identidade:
@@ -2105,7 +2105,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #:
 #: 1. o handler diz o lugar dele com todas as letras — *"entra na transição de
 #:    modo (`app/actions/mode_transition.py`), **nunca em um botão solto**"*
-#:    (`daemon/ipc_handlers.py:5011`);
+#:    (`daemon/ipc_handlers.py:5039`);
 #: 2. ele devolve a preferência PERSISTIDA — não "o de fábrica" nem "o que a
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;

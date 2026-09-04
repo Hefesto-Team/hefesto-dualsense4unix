@@ -998,11 +998,21 @@ def botao_cinza(rotulo: str, campo: str, tom: str = "", razao: str = "",
     *"Apagado e ainda assim responde."* `disabled` mata o clique, e o clique é
     o único caminho de quem navega pelo controle até a razão.
 
-    **E NÃO EMITE `aria-disabled`**, que seria o reflexo natural: nenhum alvo do
+    **E EMITE `aria-disabled`, mas só desde 04/09/2026 — e a história importa.**
+    Esta peça nasceu SEM ele, e a razão estava escrita aqui: *"nenhum alvo do
     piloto escreve atributo E classe no mesmo elemento, então o `aria-disabled`
-    congelaria no valor do desenho e passaria a mentir no primeiro tique. Um
-    atributo que a tela viva não consegue manter verdadeiro é pior que a
-    ausência dele.
+    congelaria no valor do desenho e passaria a mentir no primeiro tique."* Era
+    verdade quando foi escrita, e o julgamento continua certo — **atributo que a
+    tela viva não consegue manter verdadeiro é pior que a ausência dele.**
+
+    O que mudou é o FATO, não o julgamento: na mesma leva, a ONDA0-P fez o alvo
+    `classe` vestir junto o `data-hef-atributo`, derivado da MESMA classe, na
+    língua do ARIA. A verdade continua morando num lugar só — a classe —, e o
+    atributo é dito para quem não enxerga a cor. Como o piloto o reescreve a
+    cada tique, ele não congela.
+
+    **É a regra desta casa em ato: fato errado se SUBSTITUI.** Quem ler esta
+    peça não deve encontrar, lado a lado, a razão de não emitir e a emissão.
 
     `tom` é a variante de cor do `.btn` (`verde`/`vermelho`/`roxo`); `extra` é
     o que a aba precisa acrescentar na tag — o `data-gesto` do clique, por
@@ -1016,6 +1026,7 @@ def botao_cinza(rotulo: str, campo: str, tom: str = "", razao: str = "",
     classes = " ".join(x for x in ("btn", tom, "apagado" if razao else "") if x)
     return (f'<button class="{classes}" data-campo="{campo}"'
             f' data-hef-alvo="classe" data-hef-classe="apagado"'
+            f' data-hef-atributo="aria-disabled"'
             f'{" " + extra if extra else ""}>{rotulo}</button>'
             f'<span class="ajuda porque">?'
             f'<span class="dica" data-campo="{campo}" data-hef-alvo="html">'
