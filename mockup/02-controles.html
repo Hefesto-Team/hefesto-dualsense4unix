@@ -1242,6 +1242,31 @@
      tela oferece e o produto recusa é a mentira que esta aba existe para não
      contar: ele apaga e para de responder ao clique. */
   .mudo-i[disabled]{opacity:.4;cursor:not-allowed}
+  /* O POLEGAR DOS DOIS DESLIZANTES — D-08 dela, 04/09/2026. Ele é INVISÍVEL de
+     propósito: o knob que se vê é o `.vol .cheio::after` que ela aprovou, e um
+     polegar nativo por cima desenharia o segundo. O que este `<input>` traz é o
+     ARRASTO e o teclado.
+
+     A GEOMETRIA NÃO É CHUTE, e é a mesma conta que a aba Iluminação resolveu em
+     03/09: o knob do desenho tem o centro em `larg × pct − 1px` (uma caixa de
+     12px com `right:-5px` dentro de uma `.cheio` de largura `pct`), e o polegar
+     nativo em `L + 6px + pct × (W − 12px)`. Igualando para TODO `pct`:
+     `W = 100% + 12px` e `L = −7px`. Com `left:0;width:100%` o arrasto erraria
+     7px nas duas pontas, e o desenho dela mudaria de lugar em 0% e em 100%.
+
+     `appearance:none` NOS DOIS LADOS: sem ele o WebKit ignora
+     `::-webkit-slider-thumb` e devolve o polegar do sistema — que é opaco, tem
+     outro tamanho, e apareceria por cima do desenho. */
+  .puxa-vol{position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+    width:calc(100% + 12px);height:12px;margin:0;padding:0;
+    -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+  .puxa-vol::-webkit-slider-runnable-track{height:12px;background:transparent;border:0}
+  .puxa-vol::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;background:transparent;border:0;
+    cursor:pointer}
+  /* O FOCO SE VÊ, e aqui ele é a ÚNICA marca do polegar: como o polegar é
+     transparente, quem anda pelas setas do teclado não teria nada a olhar. */
+  .puxa-vol:focus-visible{outline:2px solid var(--purple);outline-offset:4px}
   /* O `.solta` — o botão "Liberar" do microfone — SAIU em 31/08/2026, por
      decisão dela, e a regra de estilo saiu junto: CSS de elemento que ninguém
      mais escreve é promessa esperando alguém tropeçar nela. A história inteira
@@ -1602,8 +1627,8 @@
           <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura."><b data-campo="mascara">DualSense</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo on" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
           <span class="sensores-peca">
-            <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No cabo são 250,0 Hz exatos, e três fontes independentes concordam: o relógio do host, o relógio do controle e o descritor USB (bInterval = 6)."><span class="p"></span>Giroscópio</button>
-            <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
+            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No cabo são 250,0 Hz exatos, e três fontes independentes concordam: o relógio do host, o relógio do controle e o descritor USB (bInterval = 6)."><span class="p"></span>Giroscópio</button>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -1799,7 +1824,7 @@
             </div>
             <span class="onda"><i style="height:22%"></i><i style="height:48%"></i><i style="height:72%"></i><i style="height:95%"></i><i style="height:64%"></i><i style="height:38%"></i><i style="height:52%"></i><i style="height:80%"></i><i style="height:44%"></i><i style="height:26%"></i><i style="height:58%"></i><i style="height:88%"></i><i style="height:40%"></i><i style="height:20%"></i></span>
             <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:80%"></span></span>
+              <span class="trilho"><span class="cheio" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">80</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
             </div>
@@ -1831,7 +1856,7 @@
 
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
-            <div class="rot">Alto-falante<span class="mudo" data-campo="alto-estado" hidden></span>
+            <div class="rot">Alto-falante
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.
@@ -1840,9 +1865,9 @@
             <span class="onda"><i style="height:100%"></i><i style="height:88%"></i><i style="height:64%"></i><i style="height:92%"></i><i style="height:76%"></i><i style="height:54%"></i><i style="height:82%"></i><i style="height:96%"></i><i style="height:70%"></i><i style="height:48%"></i><i style="height:86%"></i><i style="height:60%"></i><i style="height:74%"></i><i style="height:90%"></i></span>
             <div class="vol">
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
-                data-hef-alvo="largura" style="width:100%"></span></span>
+                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O DualSense não devolve este número — o primeiro arrasto é o que faz o Hefesto passar a saber qual ele é, e é ele que destrava o ♪."></span>
               <span class="n" data-campo="alto-num">100</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="MUDO" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
             </div>
             <div class="rota">
               <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
@@ -1949,8 +1974,8 @@
           <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura."><b data-campo="mascara">Xbox 360</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Calado no firmware do controle — a luz vermelha do plástico está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">MUDO</span></span></span>
           <span class="sensores-peca">
-            <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no mesmo controle: a média foi de 38 a 392 Hz entre janelas consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara para Bluetooth não aparecem em janela nenhuma."><span class="p"></span>Giroscópio</button>
-            <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
+            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no mesmo controle: a média foi de 38 a 392 Hz entre janelas consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara para Bluetooth não aparecem em janela nenhuma."><span class="p"></span>Giroscópio</button>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -2146,7 +2171,7 @@
             </div>
             <span class="onda mudo"><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i></span>
             <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:0%"></span></span>
+              <span class="trilho"><span class="cheio" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">0</span>
               <button class="mudo-i on" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
             </div>
@@ -2178,7 +2203,7 @@
 
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
-            <div class="rot">Alto-falante<span class="mudo" data-campo="alto-estado" hidden></span>
+            <div class="rot">Alto-falante
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.
@@ -2187,9 +2212,9 @@
             <span class="onda"><i style="height:70%"></i><i style="height:52%"></i><i style="height:66%"></i><i style="height:44%"></i><i style="height:72%"></i><i style="height:58%"></i><i style="height:48%"></i><i style="height:64%"></i><i style="height:54%"></i><i style="height:70%"></i><i style="height:46%"></i><i style="height:60%"></i><i style="height:50%"></i><i style="height:68%"></i></span>
             <div class="vol">
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
-                data-hef-alvo="largura" style="width:70%"></span></span>
+                data-hef-alvo="largura" style="width:70%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="70" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O DualSense não devolve este número — o primeiro arrasto é o que faz o Hefesto passar a saber qual ele é, e é ele que destrava o ♪."></span>
               <span class="n" data-campo="alto-num">70</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="MUDO" title="Manda zero ao alto-falante do controle, sem perder o volume guardado.">♪</button>
             </div>
             <div class="rota">
               <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>

@@ -977,8 +977,28 @@ def normalizar(pacote: dict[str, Any], para_pref: dict[str, str] | None = None) 
         # UMA LISTA DE ESCALARES PASSA: a tela a distribui por N blocos iguais
         # (os achados do exame, os perfis). Uma lista de dicionários não — ela
         # é estrutura, e escrever `[object Object]` numa caixa é pior que nada.
+        #
+        # A LISTA VAZIA PASSA TAMBÉM, e ela é o caso que mais importa — foi o
+        # `valor and` desta linha que fez a coluna Atenção da aba 01 MENTIR,
+        # fotografada no DOM vivo em 04/09/2026:
+        #
+        #     "RÁDIO · Dois rádios da bancada estão em portas vizinhas"   ← o MOCKUP
+        #     "nenhum aviso"                                              ← o produto
+        #
+        # As duas frases na tela, no mesmo tique. Com a lista vazia descartada, o
+        # endereço some do pacote, o piloto nunca visita aqueles seis elementos, e
+        # o que o gerador desenhou fica lá para sempre.
+        #
+        # LISTA VAZIA É UMA RESPOSTA, não a ausência de uma: quer dizer *"não há
+        # nada nesta coleção"*, e a tela precisa ouvir isso para apagar o que
+        # mostrava. É a mesma regra que `apagar_os_lugares_sem_dono` já aplica aos
+        # quatro lugares da mesa, e que o `forEach` do bootstrap já sabe honrar —
+        # ele escreve `''` no que sobra.
+        #
+        # (`all([])` é `True`, então a condição de escalares já aceitava a vazia;
+        # quem a barrava era só o `valor and` à esquerda.)
         if isinstance(valor, list):
-            if valor and all(not isinstance(x, (dict, list)) for x in valor):
+            if all(not isinstance(x, (dict, list)) for x in valor):
                 mesa.setdefault(chave, valor)
             continue
         if isinstance(valor, dict):

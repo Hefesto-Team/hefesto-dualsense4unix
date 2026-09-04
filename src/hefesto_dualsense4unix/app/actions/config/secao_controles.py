@@ -434,10 +434,19 @@ class EsperaPeloPS:
 #    (`daemon/subsystems/bt_mic.py`, que explica por que o `bool` não servia);
 # 2. **nasce desligado**, sempre. Ausência é desligado, e é por isso que
 #    desligar volta a "não sei" em vez de gravar um `false`;
-# 3. **sempre visível, só acionável no rádio** — a mesma regra do botão da luz,
-#    no mesmo card. No cabo o microfone do DualSense é placa de som USB e não
-#    passa por esta ponte; o interruptor fica apagado e a dica diz por quê.
-#    Botão que SOME ensina que a tela é instável;
+# 3. **sempre visível, e acionável nos DOIS transportes** — REESCRITA em
+#    04/09/2026 (D-12). Ela dizia *"só acionável no rádio"*, e a queixa 15 dela
+#    derrubou a regra com uma pergunta: *"esse aviso nao devia aparecer pq era
+#    pra funcionar em ambos ne"*. O CSV desta casa já dizia o mesmo — <!-- noqa-acento: citação literal dela -->
+#    `audio.microfone` tem `cabo_aciona=sim` e `radio_aciona=parcial`
+#    (`docs/data/mapa-controles.csv`): quem é PARCIAL é o rádio. O que "não vale
+#    no cabo" nunca foi a feature — é uma IMPLEMENTAÇÃO dela, a
+#    `PonteMicBluetooth`, e a frase deu à ponte o nome da capacidade.
+#    O que a declaração diz é *"o microfone deste controle chega ao PC pelo
+#    canal dele"*, e ela é DURÁVEL: no cabo ela não sobe ponte nenhuma (o
+#    `bt_mic.alvos()` só enxerga nós de Bluetooth) e fica escrita para quando
+#    este controle voltar ao rádio. Botão que SOME ensina que a tela é instável;
+#    botão que RECUSA no transporte em que a feature é mais forte ensina pior;
 # 4. **capacidade, não advertência.** A frase de preço que existia foi derrubada
 #    por ela no mesmo dia — comparava 170 Hz de rádio com um espelho de 250 Hz
 #    que é a taxa NATIVA DO CABO. O que fica ao lado do interruptor é quanto do
@@ -455,11 +464,41 @@ DICA_MIC_NO_RADIO = (
     "controle."
 )
 
-#: A dica do interruptor apagado no cabo. Diz POR QUE está apagado, que é a
-#: metade que falta em todo botão insensível desta casa.
+#: A dica no CABO. **Ela era uma RECUSA e virou INFORMAÇÃO — 04/09/2026, D-12.**
+#:
+#: O que ela dizia, palavra por palavra: *"Só vale no rádio. Pelo cabo o
+#: microfone deste controle é uma placa de som USB e não passa por esta ponte —
+#: ele já funciona sem ela."* Três coisas erradas numa frase só:
+#:
+#: 1. **"Só vale no rádio" está de cabeça para baixo.** `audio.microfone` é
+#:    `cabo_aciona=sim` e `radio_aciona=parcial` no `mapa-controles.csv`. A
+#:    frase promovia o transporte fraco e recusava o forte;
+#: 2. **deu à PONTE o nome da CAPACIDADE.** O que não vale no cabo é a
+#:    `PonteMicBluetooth`, não o microfone;
+#: 3. **"ele já funciona sem ela" é falso** sob o conceito dela: pelo cabo o
+#:    canal existe mas nasce PARADO — `SUSPENDED`, medido em
+#:    `daemon/subsystems/bt_mic.py`. Existir não é ser ouvido.
+#:
+#: A que fica diz o que o transporte muda de verdade — a ROTA, nunca se o
+#: microfone existe — e não recusa nada: no cabo o interruptor está ACESO.
 DICA_MIC_NO_CABO = (
-    "Só vale no rádio. Pelo cabo o microfone deste controle é uma placa de som "
-    "USB e não passa por esta ponte — ele já funciona sem ela."
+    "Pelo cabo o canal deste microfone já existe: o PipeWire o publica sozinho, "
+    "e o Hefesto não precisa de ponte para entregá-lo. A escolha fica gravada "
+    "para quando este controle voltar ao rádio, onde a ponte é o que o traz."
+)
+
+#: A dica de quem NÃO TEM canal de captura a ligar — 04/09/2026. Ela nasce com
+#: :func:`tem_canal_de_captura`, e existe porque a `dica_do_microfone` passou a
+#: ter dois motivos de recusa e não podia responder aos dois com a frase do
+#: endereço: uma frase só mandaria a pessoa procurar endereço onde o problema é
+#: o aparelho. Na GUI ela não chega à tela — `_pendurar_o_microfone` nem
+#: pendura o interruptor em card que não é DualSense adotado —, e é justamente
+#: por isso que ela precisa existir: o dia em que alguém pendurar, a frase está
+#: pronta em vez de mentir sobre o motivo.
+DICA_MIC_SEM_CANAL = (
+    "Este controle não tem canal de captura para o Hefesto entregar: o áudio do "
+    "microfone vem tunelado num report HID da Sony, e só um DualSense adotado o "
+    "carrega."
 )
 
 #: A dica do interruptor apagado por falta de endereço. Sem os doze hexa não há
@@ -519,37 +558,72 @@ def frase_da_capacidade_do_mic() -> str:
     )
 
 
+def tem_canal_de_captura(dados: Any) -> bool:
+    """Este controle tem canal de captura? **A pergunta que substituiu "é cabo?"**
+
+    04/09/2026, D-12: *"o botão é pra ligar o microfone e ele ser ouvido no
+    canal específico dele"*. A pergunta certa nunca foi o transporte — é se
+    existe um canal de captura DESTE controle a ligar.
+
+    E o dono da resposta já existe e já sabe os dois transportes:
+    `integrations/eleicao_de_microfone.EleitorDoMicrofone._canal_no_ar`, que diz
+    com todas as letras — *"se existe (o caso do CABO, que publica sozinho),
+    nada é pedido e nada é esperado (…) se não existe, pede uma vez e espera o
+    PipeWire publicá-lo"*. Os dois transportes têm canal; o que muda é **quem o
+    põe no ar**, e nenhum dos dois é uma recusa.
+
+    Então a condição estrutural é a mesma nos dois: um DualSense **adotado** (a
+    ponte é Opus tunelado em report HID da Sony, e o 8BitDo não tem isso) com um
+    `uniq` pelo qual o daemon o case com o nó do sysfs. Nada de `pactl` aqui: um
+    canal que está no ar AGORA é leitura de instante, e esta pergunta responde
+    pelo aparelho, não pelo relógio.
+    """
+    return bool(getattr(dados, "adotado", False)) and bool(
+        getattr(dados, "uniq", "")
+    )
+
+
 def pode_ligar_o_mic(dados: Any) -> bool:
     """O interruptor é clicável neste card?
 
-    Quatro condições. A primeira é a regra dela — **no rádio**; as outras três
-    são o que a ponte precisa para existir: um DualSense adotado (a ponte é
-    Opus tunelado em report HID da Sony, o 8BitDo não tem isso), um `uniq` para
-    o daemon casar com o nó do sysfs, e um `endereco` para a escolha ter onde
-    ser gravada.
+    **ERAM QUATRO CONDIÇÕES E SÃO TRÊS — 04/09/2026.** A que saiu era
+    `not no_cabo`, e ela não era uma exigência: era a `PonteMicBluetooth`
+    usando o nome da capacidade (ver :data:`DICA_MIC_NO_CABO`). Ficam as que a
+    escolha realmente precisa — :func:`tem_canal_de_captura` (o aparelho tem
+    canal a ligar) e um `endereco` de doze hexa para a escolha ter **onde ser
+    gravada** no `maquina.json`.
+
+    NO CABO A DECLARAÇÃO NÃO ACENDE NADA, E ISSO NÃO É DEFEITO: o
+    `bt_mic.alvos()` só enxerga nós de Bluetooth (`nos_dualsense_bluetooth`),
+    então declarar pelo cabo é inerte HOJE e vale no dia em que este controle
+    voltar ao rádio. É a mesma natureza durável que o "Nativo" sempre teve.
     """
-    return (
-        bool(getattr(dados, "adotado", False))
-        and not bool(getattr(dados, "no_cabo", False))
-        and bool(getattr(dados, "uniq", ""))
-        and bool(getattr(dados, "endereco", ""))
-    )
+    return tem_canal_de_captura(dados) and bool(getattr(dados, "endereco", ""))
 
 
 def dica_do_microfone(dados: Any) -> str:
     """A dica do interruptor, e ela nunca é vazia.
 
-    Os dois motivos de estar apagado são diferentes e pedem frases diferentes:
-    no cabo não FAZ FALTA, sem endereço não TEM ONDE ser guardada. Uma frase só
-    para os dois mandaria a pessoa procurar cabo onde o problema é endereço.
+    **OS DOIS MOTIVOS DE ESTAR APAGADO MUDARAM DE PAR — 04/09/2026.** Eram *"no
+    cabo não FAZ FALTA, sem endereço não TEM ONDE ser guardada"*; o do cabo caiu
+    com a D-12 — no cabo o interruptor está ACESO, e o que a dica faz ali é
+    INFORMAR por onde o canal vem, não recusar. O par que sobrou é **não tem
+    canal** × **não tem onde guardar**, e cada um continua com a frase dele:
+    responder aos dois com uma só mandaria a pessoa procurar endereço onde o
+    problema é o aparelho.
+
+    E as duas perguntas são feitas na ORDEM em que elas mandam: sem canal, o
+    endereço não interessa.
     """
-    if pode_ligar_o_mic(dados):
-        return DICA_MIC_NO_RADIO
-    if not bool(getattr(dados, "endereco", "")) and bool(
-        getattr(dados, "adotado", False)
-    ):
+    if not tem_canal_de_captura(dados):
+        return DICA_MIC_SEM_CANAL
+    if not bool(getattr(dados, "endereco", "")):
         return DICA_MIC_SEM_ENDERECO
-    return DICA_MIC_NO_CABO
+    return (
+        DICA_MIC_NO_CABO
+        if bool(getattr(dados, "no_cabo", False))
+        else DICA_MIC_NO_RADIO
+    )
 
 
 class _BlocoDoMicrofone:
@@ -1107,8 +1181,11 @@ class _PainelDosControles:
         e o Xbox não têm isso. Um interruptor num card onde ele não pode ligar
         nada é promessa que o produto não cumpre.
 
-        **No cabo o interruptor VAI**, apagado — é a regra dela, a mesma do botão
-        da luz logo acima.
+        **No cabo o interruptor VAI, e ACESO — 04/09/2026, D-12.** Aqui estava
+        escrito *"no cabo o interruptor VAI, apagado — é a regra dela, a mesma
+        do botão da luz logo acima"*, e a comparação com o botão da luz é o que
+        estava errado: aquele gesto é mesmo do rádio (é um repareamento), e o
+        microfone não. Ver :func:`pode_ligar_o_mic`.
         """
         if not bool(getattr(dados, "adotado", False)) or not dados.uniq:
             return

@@ -92,7 +92,10 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     texto_toques,
     texto_volume,
 )
-from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
+from hefesto_dualsense4unix.core.speaker_scale import (
+    percentual_do_volume,
+    volume_do_percentual,
+)
 
 from . import (
     NOME_SEM_LEITURA,
@@ -1307,9 +1310,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #      sobre um alto-falante que ninguém mediu, que é o gêmeo exato
             #      do "Sem toque" logo abaixo. `speaker_do_entry` devolve `None`
             #      nesse caso, e `None` é o travessão.
-            "alto-estado": (
-                texto_volume(*sp_lido) if sp_lido is not None else mesa_viva.SEM_LEITOR
-            ),
+            #
+            # **ELE SAIU DAQUI EM 04/09/2026, e desceu para o bloco da bancada.**
+            # A razão é a decisão [09] resolvida: o valor ia para um `<span
+            # hidden>` desde sempre, e o desenho novo não tem mais esse vão — o
+            # que MOSTRA o mudo agora é o próprio ♪, pelo alvo `classe`. Emitir
+            # para um endereço que a página não tem é o que
+            # `_so_se_a_pagina_tiver` existe para impedir; enquanto o publicado
+            # ainda tiver o `alto-estado`, ele continua sendo pintado, e no dia
+            # em que ela publicar a bancada ele para sozinho.
             # SEM BLOCO `touchpad` NÃO É "SEM TOQUE" — e quem separa os três
             # estados é o dono, não um `isinstance` escrito aqui.
             "touch-estado": toque_txt,
@@ -1339,6 +1348,38 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # `espera_o_pintor` — a posição já está calculada e sem
                 # endereço.
                 "touch-ponto": toque_ponto,
+                # O `alto-estado` DESCEU PARA CÁ — 04/09/2026, decisão [09]
+                # resolvida. Ele era emitido SEMPRE, para um `<span
+                # class="mudo" data-campo="alto-estado" hidden>` que o piloto
+                # nunca desesconde: valor vivo escrito a cada tique num vão
+                # invisível, e foi assim que o "102%" viveu meses sem ninguém
+                # ver. A bancada não tem mais o vão; enquanto o PUBLICADO tiver,
+                # ele continua sendo pintado — e no dia da publicação para
+                # sozinho, sem virar órfão.
+                "alto-estado": (
+                    texto_volume(*sp_lido) if sp_lido is not None
+                    else mesa_viva.SEM_LEITOR
+                ),
+                # **ONDE A TELA MOSTRA QUE O ALTO-FALANTE ESTÁ MUDO** — em lugar
+                # nenhum, até hoje. O ♪ nunca acendeu por leitura: o `on` dele
+                # era classe do desenho. Agora ele acende como os quatro botões
+                # que a leva de 03/09 endereçou, pelo alvo `classe`.
+                #
+                # SÃO TRÊS ESTADOS E NÃO DOIS, e o terceiro é a razão de este
+                # campo não ser um `bool`: `speaker_do_entry` devolve `None`
+                # quando o daemon nunca publicou `speaker` para este controle, e
+                # `muted` pode ser `None` dentro de um bloco que traz volume.
+                # Um `False` nos dois casos acenderia "não está mudo" sobre um
+                # alto-falante que ninguém leu.
+                # A PALAVRA É A DO MESMO DONO QUE O SELO DO MICROFONE usa —
+                # `mesa_viva.selo_do_mic`, que já sabe os TRÊS estados e já
+                # escreve `MUDO` / `ATIVO` / `—`. Escrever os literais aqui
+                # seria a segunda gramática para o mesmo par de palavras, na
+                # mesma tela, a dois blocos de distância.
+                "alto-mudo": mesa_viva.selo_do_mic(
+                    bool(sp_lido and sp_lido[1]),
+                    sp_lido is not None and sp_lido[1] is not None,
+                ),
                 # O VOLUME DO ALTO-FALANTE GANHA ENDEREÇO, decisão dela de
                 # 02/09 (item 16): *"o número E a barra. Hoje os dois estão
                 # congelados no desenho: com o volume em 40, a tela continua
@@ -1500,20 +1541,24 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #                               O rascunho também não os conhece:
 #                               `ipc_draft_applier.py` não tem uma ocorrência de
 #                               giro, sensor ou accel.
-#   Todo o som do PC            metade dele é `pactl set-default-sink`, que não
-#                               é IPC. Ver o gesto `rota`.
 #   Calibrar / Mapa do Controle são `<a href>`, navegação — não IPC.
-#   Os dois deslizantes de volume   NÃO EXISTEM como elemento clicável. Medido
-#                               em 01/09/2026: `type="range"` aparece **zero**
-#                               vez nos 16 HTML de `layout/`. O que o desenho
-#                               tem é `<span class="trilho"><span class="cheio"
-#                               style="width:N%">` — pintura, sem `value` e sem
-#                               nenhum `data-*`, logo o `closest` do ouvinte
-#                               (`hefesto_vivo.py:204`) nem dispara.
-#                               O DAEMON ATENDE OS DOIS (`mic.volume.set` e
-#                               `speaker.set {volume}`, e a ponte tem
-#                               `mic_volume_set`/`speaker_set`): o que falta é
-#                               do lado do DESENHO, e desenho é dela.
+#
+# O QUE SAIU DESTA LISTA EM 04/09/2026:
+#
+#   Todo o som do PC            **GANHOU DONO** — `audio_saida.mandar_o_som_do_pc`,
+#                               que é a camada 1 sem GTK. Ver o gesto `rota`.
+#   Os dois deslizantes de volume   **GANHARAM PEÇA E DONO** (D-08 dela:
+#                               *"Deslizante nos dois"*). Aqui estava escrito que
+#                               eles *"NÃO EXISTEM como elemento clicável"* e que
+#                               *"o que falta é do lado do DESENHO, e desenho é
+#                               dela"* — ela decidiu, e o gerador passou a emitir
+#                               `<input type="range" data-gesto="volume">` nos
+#                               dois blocos. Ver o gesto `volume`.
+#
+# GIROSCÓPIO E ACELERÔMETRO CONTINUAM SEM MÉTODO, e agora têm DONO MESMO ASSIM —
+# ver o gesto `sensor`, que é o que separa as duas coisas: *ter dono* não é *ter
+# método*. O que ele faz é recusar DIZENDO, no cartão daquele controle, em vez de
+# a página emitir um gesto chamado `clique` que aba nenhuma registra.
 #
 # NADA SE REESCREVE: o `p` é `pacotes/ponte.py`, que expõe o `app/ipc_bridge.py`
 # — a mesma camada que a GUI estável usa, com o payload montado e a recusa do
@@ -1530,9 +1575,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 # `dica_do_microfone` são funções de MÓDULO, puras, sobre um objeto de dados.
 # Medido em 01/09/2026: o import roda sem display e sem `gi` (o `from
 # gi.repository import Gtk` daquele arquivo mora DENTRO dos construtores de
-# widget). Reescrevê-las seria a segunda verdade: a condição "só no rádio" e a
-# frase que a explica já existem, com dono, e são exatamente o que este botão
-# precisa dizer quando recusa.
+# widget). Reescrevê-las seria a segunda verdade: a condição e a frase que a
+# explica já existem, com dono, e são exatamente o que este botão precisa dizer
+# quando recusa. **A condição NÃO é mais "só no rádio" — 04/09/2026, D-12**: é
+# `tem_canal_de_captura`, e o transporte saiu dela. Ver o gesto `mic-modo`.
 #
 # `norm_mac` é o dono da CHAVE do `maquina.json` — doze hex minúsculos. O daemon
 # publica o `uniq` ora com dois-pontos, ora sem, e montar a chave à mão aqui
@@ -1540,6 +1586,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # A ORDEM DESTE BLOCO É A DO `ruff --select I`, não a da leitura: um bloco fora
 # de ordem reprova o portão de lint, e é ele que decide a integração.
+from hefesto_dualsense4unix.app import audio_saida  # noqa: E402
 from hefesto_dualsense4unix.app.actions.config import (  # noqa: E402
     secao_controles as _mic_do_produto,
 )
@@ -1730,37 +1777,208 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     que roda `pactl set-default-sink` — não há método no daemon para isso, e não
     poderia haver sem inventá-lo.
 
-    ENTÃO ELE RECUSA DIZENDO, em vez de mandar só a metade que dá. Mandar
-    `rota=3` sozinho escreveria o byte certo e não moveria uma nota de som: o PC
-    continuaria tocando no alto-falante da TV, e a tela teria acendido o botão.
-    É a forma exata do defeito que esta casa chama de *ausência de notícia lida
-    como sucesso* — e o `--prova-gesto` daria verde por cima dele.
+    **"TODO O SOM DO PC" GANHOU DONO — 04/09/2026, queixa 7 dela.** Ele recusava
+    SEMPRE, e a recusa era honesta: mandar `rota=3` sozinho escreveria o byte
+    certo e não moveria uma nota de som — o PC continuaria tocando na TV e a
+    tela teria acendido o botão. O que estava escrito aqui, e agora está feito:
 
-    O que falta para ligá-lo NÃO é código novo de protocolo: é dar à janela nova
-    o dono da camada 1 que a janela velha injeta no card
-    (`controller_card.definir_pedido_de_rota`, `:4310`). Enquanto isso não
-    existir, este botão é honesto ao recusar.
+        O que falta para ligá-lo NÃO é código novo de protocolo: é dar à janela
+        nova o dono da camada 1 que a janela velha injeta no card
+        (`controller_card.definir_pedido_de_rota`, `:4310`).
+
+    O dono novo é `app/audio_saida.mandar_o_som_do_pc`, e ele NÃO é uma segunda
+    implementação: junta a mesma `RotaDeSaida` que a janela antiga usa com a
+    mesma resolução de sink (`fontes_de_captura.escolher_sink` mais o casamento
+    por dispositivo USB) que o `MicMonitor` faz por dentro — as duas metades que
+    a janela nova tinha sem cola.
+
+    **A ORDEM É CAMADA 1 PRIMEIRO, e ela é medida:** *"a camada 1 vence a camada
+    2 — volume e rota perfeitos num sink mudo é trabalho invisível"*
+    (`controller_card.py:4218`). Se o sink não existe (o RÁDIO, em que o
+    DualSense não publica placa de som), este gesto recusa ANTES de escrever o
+    byte, dizendo por quê — em vez de deixar o firmware roteado para um canal
+    que o sistema não alimenta.
+
+    ELE MANDA AS DUAS, e o "Sons do jogo" também: a janela antiga chama
+    `pedir_rota_do_sistema(canal == CANAL_TODO_O_PC)` nos DOIS estados
+    (`controller_card.py:4285`) — voltar para "Sons do jogo" DEVOLVE a saída
+    padrão do sistema. Fazer só a ida deixaria o som do PC preso no controle sem
+    botão nenhum que o soltasse.
     """
     uniq, qual = _uniq(o), str(o.get("rota") or "")
     if not uniq:
         raise ValueError("rota: o clique não disse em qual controle")
-
-    if qual == "pc":
-        raise RuntimeError(
-            "'Todo o som do PC' ainda não tem dono nesta janela: metade dele é "
-            "a saída padrão do PipeWire (pactl set-default-sink), que não é IPC "
-            "— o daemon só faz a camada 2, o byte do firmware. Mandar só ela "
-            "acenderia o botão sem mover som nenhum.")
-
-    if qual != "jogo":
+    if qual not in ("jogo", "pc"):
         raise ValueError(f"rota: não conheço a rota {qual!r} — a página manda "
                          f"'jogo' ou 'pc'")
 
-    if not p.speaker_set(rota=SAIDA_L_FONE_R_ALTO_FALANTE, uniq=uniq,
+    # A CAMADA 1 VEM PRIMEIRO — ver a docstring. `uniqs_na_mesa` é a mesa
+    # inteira porque o casamento por dispositivo USB precisa saber de QUEM são
+    # as outras placas: com dois DualSense no cabo, sem a lista o `escolher_sink`
+    # não tem como vetar a placa do vizinho.
+    na_mesa = [str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq")]
+    desfecho = (
+        audio_saida.mandar_o_som_do_pc(uniq, na_mesa)
+        if qual == "pc"
+        else audio_saida.devolver_o_som_do_pc()
+    )
+    # DEVOLVER PODE NÃO TER PARA ONDE, E ISSO NÃO INVALIDA O CLIQUE: se o som
+    # nunca esteve no controle, "Sons do jogo" continua sendo só o byte da
+    # camada 2, que é o que ele sempre foi. O caminho de IDA é diferente — sem
+    # sink não há som a mover, e aí a recusa é a resposta certa.
+    if qual == "pc" and not desfecho.ok:
+        raise RuntimeError(desfecho.motivo)
+
+    if not p.speaker_set(rota=ROTA_DO_CANAL[
+                             CANAL_TODO_O_PC if qual == "pc"
+                             else CANAL_SONS_DO_JOGO],
+                         uniq=uniq,
                          **_volume_conhecido(ctx.por_uniq(uniq))):
         raise RuntimeError(
             "o daemon não confirmou a rota do alto-falante — ou o Hefesto está "
             "parado, ou este controle saiu da mesa")
+
+
+#: O QUE O 🎙 E O ♪ ACEITAM DE VOLUME. O mic é 0-100 por contrato do daemon
+#: (`mic.volume.set`, `ipc_handlers.py:5319-5324`); o alto-falante também sai
+#: daqui em 0-100 e quem converte para o registrador 0-255 é o dono da curva
+#: (`core/speaker_scale.volume_do_percentual`), a MESMA que pinta o `alto-num`.
+#: Digitar 255 aqui seria a segunda escala.
+VOLUME_MIN, VOLUME_MAX = 0, 100
+
+#: A frase do 🎙/giro que RECUSA DIZENDO — queixa 8 dela, *"nem giroscopio e
+#: acelerometro"*. Ela é longa de propósito: é a única coisa que ela vai ler
+#: sobre este botão, e uma frase curta aqui devolveria o silêncio que a queixa
+#: nomeia.
+SEM_INTERRUPTOR_DE_SENSOR = (
+    "o giroscópio e o acelerômetro deste controle JÁ ESTÃO ligados, e não há "
+    "como desligá-los pelo Hefesto: o DualSense manda giro e aceleração em todo "
+    "relatório de entrada, e o daemon só os LÊ — não existe método de sensor "
+    "entre os do Hefesto. Este botão é leitura, não interruptor."
+)
+
+
+@gesto("02-controles.html", "sensor")
+def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Giroscópio e Acelerômetro — **os quatro botões que respondiam calados**.
+
+    QUEIXA 8 DELA: *"nem giroscopio e acelerometro"*.  <!-- noqa-acento: citação literal dela -->
+
+    O QUE ACONTECIA, medido: `<button class="sw" data-sensor="giroscopio">` não
+    tinha `data-gesto`, e o ouvinte monta o nome como `d.gesto || d.hefGesto ||
+    d.papel || doRodape || 'clique'` (`hefesto_vivo.py`). Chegava `"clique"`,
+    que aba nenhuma registra, e saía `[gesto sem dono]` **no stderr** — que ela
+    nunca vê, porque quem clica na janela não lê o terminal de quem a lançou. É
+    a mesma forma que a `mudo` desta aba curou em 02/09, e ela sobreviveu em
+    QUATRO botões (dois por card).
+
+    NÃO HÁ MÉTODO DE SENSOR, e isto foi remedido em 04/09/2026: `daemon.metodos()`
+    não traz um `sensor.*`, um `gyro.*` nem um `motion.*`. O `sensor_hub` só LÊ —
+    as suas funções são `leitura`, `reconciliar` e `_abrir_*`, e nenhuma liga ou
+    desliga nada. O `profiles/schema.py` diz que os dois estão *"FORA POR
+    AUSÊNCIA, NÃO POR DECISÃO"*.
+
+    **A ESCOLHA DESTA ONDA, e a razão dela por extenso.** A alternativa era a
+    D-03 — *"cinza antes, com a razão na dica"*. Ela NÃO SERVE a este botão, e a
+    razão é que o cinza deste desenho já quer dizer outra coisa: `.sensores-peca
+    .sw.off` é o **desligado**, e é o mesmo cinza que a folha usa para o lugar
+    VAZIO (`.ctl[data-conectado="nao"]`). Pintar de cinza um sensor que está
+    entregando dado a cada tique trocaria um silêncio por uma afirmação FALSA —
+    a tela diria "desligado" sobre o giro que o card mostra vivo, três linhas
+    abaixo, na moldura Giroscópio.
+
+    ENTÃO O BOTÃO CONTINUA ACESO (é verdade: o sensor está no ar) e ganha o que
+    lhe faltava — **um dono que recusa DIZENDO**. A frase vai para o cartão
+    daquele controle por 30 s, pelo canal que ela já aprovou em 02/09 (*"é
+    aviso, não estado"*), e o `data-gesto` que a página passou a ter é
+    **invisível**: está na lista `INVISIVEIS` do portão do desenho, logo a cura
+    chega ao produto por `--publicar-enderecos 02`, sem tocar um pixel do que
+    ela aprovou.
+
+    O QUE FICA PARA ELA DECIDIR, e é desenho: o fim honesto deste botão é virar
+    **leitura** (que é o que o `title` dele já diz — *"Ligado: o jogo recebe o
+    giro deste controle"*) ou sair da tela. Interruptor de coisa que não tem
+    interruptor é promessa que o produto não pode cumprir.
+    """
+    uniq, qual = _uniq(o), str(o.get("sensor") or "")
+    if not uniq:
+        raise ValueError("sensor: o clique não disse em qual controle")
+    if qual not in ("giroscopio", "acelerometro"):
+        raise ValueError(f"sensor: não conheço o sensor {qual!r} — a página "
+                         f"manda 'giroscopio' ou 'acelerometro'")
+    raise RuntimeError(SEM_INTERRUPTOR_DE_SENSOR)
+
+
+@gesto("02-controles.html", "volume")
+def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Os DOIS deslizantes — o do microfone e o do alto-falante (D-08).
+
+    DECISÃO DELA: *"Deslizante nos dois."* Até 04/09/2026 os dois volumes eram
+    PINTURA: `type="range"` aparecia zero vez nas dez páginas, e o que havia era
+    `<span class="trilho"><span class="cheio" style="width:N%">`.
+
+    **E A FALTA DELES TRANCAVA O ♪.** O DualSense não devolve o volume do
+    alto-falante, então o daemon só publica a chave `speaker` **depois** de
+    alguém ESCREVER um (`ipc_handlers.py:4600`); sem escritor nesta tela, o ♪
+    recusava para sempre num controle cujo volume nunca foi ajustado por outro
+    caminho — e a frase de recusa original mandava *"use o controle deslizante
+    primeiro"*, sobre um deslizante que não existia. Este gesto é o escritor que
+    faltava: o primeiro arrasto no trilho do alto-falante destrava o ♪.
+
+    **SÃO DOIS MÉTODOS, E NÃO É DETALHE** — é a metade medida da D-12. O
+    `mic.volume.set` mexe no ganho da FONTE no PipeWire (é literalmente *"o
+    canal específico dele"*) e **não toca no firmware**: não apaga a luz
+    vermelha e não tira o botão físico do controle. O `speaker.set {volume}`
+    escreve no registrador do aparelho. Somar os dois num método só *"faria a
+    interface prometer uma coisa e entregar outra"* — a docstring do daemon.
+
+    A ESCALA DO ALTO-FALANTE NÃO SE DIGITA: a tela fala 0-100 e o registrador é
+    0-255, com uma curva MEDIDA no hardware (`core/speaker_scale.py`, tom de
+    1 kHz). É a mesma curva que pinta o `alto-num` e o `alto-barra` ao lado —
+    converter à mão aqui faria o número que ela arrasta e o número que ela lê
+    discordarem.
+    """
+    uniq, qual = _uniq(o), str(o.get("volume") or "")
+    if not uniq:
+        raise ValueError("volume: o clique não disse em qual controle")
+    # O `click` QUE VEM DEPOIS DO `change` NÃO É UM SEGUNDO PEDIDO, e o guarda é
+    # o mesmo que a aba Iluminação já pôs no trilho de brilho em 03/09: um
+    # `<input type="range">` clicado na pista dispara `input`, `change` e
+    # `click`, nesta ordem, e o bootstrap escuta os dois últimos. Sem ele, cada
+    # clique na pista manda DUAS escritas ao aparelho.
+    if (str(o.get("tipo") or "").lower() == "input"
+            and str(o.get("evento") or "").lower() == "click"):
+        return
+    # `valor` É A PORTA: é o que o bootstrap manda de todo elemento que tem
+    # `value` (`hefesto_vivo.py:772`), e num `type="range"` é a posição do
+    # polegar, como string. O `v` fica como segunda leitura porque é o que a
+    # régua compartilhada sabe mandar.
+    cru = str(o.get("valor") or o.get("v") or "").strip()
+    try:
+        pedido = int(float(cru))
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"volume: o deslizante mandou {cru!r}, que não é um número") from None
+    if not VOLUME_MIN <= pedido <= VOLUME_MAX:
+        raise ValueError(f"volume: {pedido} está fora de "
+                         f"{VOLUME_MIN}-{VOLUME_MAX}")
+
+    if qual == "microfone":
+        if not p.mic_volume_set(pedido, uniq=uniq):
+            raise RuntimeError(
+                "o daemon não confirmou o volume do microfone — ou o Hefesto "
+                "está parado, ou este controle saiu da mesa")
+        return
+
+    if qual == "alto-falante":
+        if not p.speaker_set(volume=volume_do_percentual(pedido), uniq=uniq):
+            raise RuntimeError(
+                "o daemon não confirmou o volume do alto-falante — ou o Hefesto "
+                "está parado, ou este controle saiu da mesa")
+        return
+
+    raise ValueError(f"volume: não sei ajustar {qual!r} — a página manda "
+                     f"'microfone' ou 'alto-falante'")
 
 
 def _resposta(r: Any) -> tuple[bool, str]:
@@ -1848,17 +2066,42 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     presente na declaração é uma escolha e SOBRESCREVE; só a AUSÊNCIA da chave
     preserva o que havia"*. Sem isso, "Nativo" seria um botão calado.
 
-    NO CABO O "VIRTUAL" RECUSA, e a frase é a do produto — `DICA_MIC_NO_CABO`,
-    palavra por palavra. A condição é `pode_ligar_o_mic`, também do produto:
-    *"pelo cabo o microfone deste controle é uma placa de som USB e não passa
-    por esta ponte — ele já funciona sem ela"*. Deixá-lo gravar ali acenderia o
-    botão sem mover uma nota de som, que é o defeito que o gesto `rota` desta
-    mesma aba recusa pela mesma razão.
+    **O "VIRTUAL" NÃO RECUSA MAIS NO CABO — 04/09/2026, queixa 15 dela.** O que
+    estava escrito aqui, e caiu inteiro:
 
-    O "NATIVO" GRAVA NOS DOIS TRANSPORTES, e é diferente de propósito: no cabo
-    ele afirma o que já é verdade E deixa escrito que, quando este controle for
-    para o rádio, o Hefesto fica fora. É declaração durável, não gesto de
-    momento — o `maquina.json` é o que o daemon lê no próximo boot.
+        NO CABO O "VIRTUAL" RECUSA, e a frase é a do produto —
+        `DICA_MIC_NO_CABO`, palavra por palavra. A condição é
+        `pode_ligar_o_mic`, também do produto: *"pelo cabo o microfone deste
+        controle é uma placa de som USB e não passa por esta ponte — ele já
+        funciona sem ela"*. Deixá-lo gravar ali acenderia o botão sem mover uma
+        nota de som, que é o defeito que o gesto `rota` desta mesma aba recusa
+        pela mesma razão.
+
+    A palavra dela, olhando essa recusa na tela: *"esse aviso nao devia aparecer
+    pq era pra funcionar em ambos ne"*. <!-- noqa-acento: citação literal dela -->
+    E ela tem razão em duas medições independentes:
+
+    * o CSV desta casa diz o CONTRÁRIO da frase — `audio.microfone` é
+      `cabo_aciona=sim` / `radio_aciona=parcial`. Quem é parcial é o rádio;
+    * a **mesma tela** já promete a simetria que este gesto recusava: o `title`
+      do próprio botão "Virtual" diz *"É o que faz o mic soar igual no cabo e no
+      rádio"*.
+
+    O paralelo com o gesto `rota` também não se sustentava: lá o botão promete
+    MOVER SOM AGORA e só metade do caminho existe; aqui a declaração é DURÁVEL,
+    e o `bt_mic.alvos()` — que só enxerga nós de Bluetooth — garante que ela não
+    acende nada no cabo. Declarar pelo cabo não mente sobre som nenhum.
+
+    A PERGUNTA QUE ESTE GESTO FAZ AGORA é `tem_canal_de_captura`, e não "é
+    cabo?" — a D-12 dela: *"o botão é pra ligar o microfone e ele ser ouvido no
+    canal específico dele"*. O dono da resposta já existia e já sabia os dois
+    transportes (`eleicao_de_microfone._canal_no_ar`: *"o caso do CABO, que
+    publica sozinho"*).
+
+    O "NATIVO" GRAVA NOS DOIS TRANSPORTES, e agora o "Virtual" também: no cabo
+    ele afirma o que já é verdade E deixa escrito o que vale quando este
+    controle for para o rádio. É declaração durável, não gesto de momento — o
+    `maquina.json` é o que o daemon lê no próximo boot.
     """
     uniq, qual = _uniq(o), str(o.get("micModo") or "")
     if not uniq:
@@ -1868,9 +2111,18 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                          f"manda 'virtual' ou 'nativo'")
 
     dados = _como_o_produto_ve(ctx, uniq)
-    if not dados.endereco:
-        raise RuntimeError(_mic_do_produto.DICA_MIC_SEM_ENDERECO)
-    if qual == "virtual" and not _mic_do_produto.pode_ligar_o_mic(dados):
+    # A ÚNICA RECUSA QUE SOBROU, e ela não é sobre transporte: sem canal de
+    # captura não há microfone a ligar, e sem endereço não há onde gravar a
+    # escolha. As duas juntas SÃO o `pode_ligar_o_mic` do produto — a mesma
+    # condição que a GTK usa para acender o interruptor no card, e é ele que se
+    # chama aqui, não uma cópia das duas perguntas. **A diferença não é de
+    # estilo: com a cópia, devolver o `not no_cabo` ao produto deixaria a janela
+    # antiga recusando e esta aceitando, e nenhuma régua desta casa veria.**
+    # Medido nesta leva, arrancando a cura: com a cópia, a MORDIDA passou verde.
+    #
+    # Vale para os DOIS botões: declarar "Nativo" sem endereço também não tem
+    # onde pousar.
+    if not _mic_do_produto.pode_ligar_o_mic(dados):
         raise RuntimeError(_mic_do_produto.dica_do_microfone(dados))
 
     ok, motivo = _resposta(p.machine_declare(
@@ -1888,7 +2140,7 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
 #: inventado aparece aqui, e não na mão de quem clica.
-PONTE = {"mic_set", "speaker_set", "machine_declare"}
+PONTE = {"mic_set", "speaker_set", "machine_declare", "mic_volume_set"}
 #: VAZIO, e o vazio é uma AFIRMAÇÃO: os TRÊS métodos desta aba têm função no
 #: `ipc_bridge`, então nenhum gesto precisa do degrau cru do `p.chamar`.
 METODOS: set[str] = set()
@@ -1929,11 +2181,16 @@ SEM_ECO = ("mic-modo",)
 #: pessoas editariam ao mesmo tempo. O `PAGINA` que elas leem é o do topo — ele
 #: era redigitado aqui, e duas cópias do mesmo nome de arquivo é a segunda
 #: verdade que esta casa não guarda.
-#: TRÊS GESTOS, CINCO BOTÕES: o `mudo` atende o 🎙 e o ♪ (mesmo `data-mudo`) e o
-#: `mic-modo` atende o Virtual e o Nativo (mesmo `data-mic-modo`). O piso conta
-#: GESTOS porque é o que o despachante registra — a cobertura por botão está nas
-#: PROVAS abaixo, que são quatro.
-PISO_DA_ABA = 3
+#: **CINCO GESTOS, NOVE PEÇAS POR CARD — 04/09/2026.** Eram três gestos e cinco
+#: botões; entraram o `sensor` (o Giroscópio e o Acelerômetro, que emitiam um
+#: gesto chamado `clique` e morriam no stderr) e o `volume` (os dois deslizantes
+#: da D-08). O piso conta GESTOS porque é o que o despachante registra — a
+#: cobertura por peça está nas PROVAS abaixo.
+#:
+#: O `mudo` atende o 🎙 e o ♪ (mesmo `data-mudo`), o `mic-modo` atende o Virtual
+#: e o Nativo, o `rota` atende os dois do alto-falante, o `sensor` atende os dois
+#: interruptores e o `volume` atende os dois deslizantes.
+PISO_DA_ABA = 5
 #: OS DOIS BOTÕES DE CALAR SAÍRAM DESTA LISTA EM 02/09/2026, e a razão é da
 #: FIXTURE, não deles. O controle da régua compartilhada é
 #: `test_os_botoes_tem_dono.FALSO`, e ele traz `audio: {}` e `speaker: {}` — um
@@ -1962,11 +2219,8 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "rota", "clique": {"rota": "jogo"},  # (noqa-acento) id
      "chama": [("speaker_set", [],
                 {"rota": SAIDA_L_FONE_R_ALTO_FALANTE, "uniq": "aa:bb:cc:00:00:01"})]},
-    # "NATIVO", e a prova é ele porque o controle da régua está no CABO
-    # (`transport: "usb"`, `test_os_botoes_tem_dono.FALSO`). O "Virtual" ali
-    # RECUSA — é o `pode_ligar_o_mic` do produto —, e uma prova que exigisse
-    # chamada dele estaria pedindo ao botão que mentisse. Quem cobra a recusa é
-    # o teste da mordida, e não esta lista.
+    # "NATIVO". O controle da régua está no CABO (`transport: "usb"`,
+    # `test_os_botoes_tem_dono.FALSO`).
     #
     # O `None` É O VALOR, E NÃO A AUSÊNCIA: um `{}` aqui passaria com o gesto
     # mandando qualquer coisa. E a CHAVE é o `uniq` sem os dois-pontos — é o que
@@ -1974,4 +2228,38 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "mic-modo", "clique": {"micModo": "nativo"},  # (noqa-acento) id
      "chama": [("machine_declare",
                 [{"controles": {"aabbcc000001": {"microfone": None}}}], {})]},
+    # "VIRTUAL" NO CABO — A PROVA DA QUEIXA 15, e ela é NOVA em 04/09/2026.
+    # Aqui estava escrito que uma prova assim *"estaria pedindo ao botão que
+    # mentisse"*, porque o "Virtual" recusava no cabo. A recusa caiu com a D-12
+    # e é ESTA linha que a mede: o mesmo controle no cabo, o mesmo `uniq`, e
+    # agora `machine_declare` é CHAMADO. Se alguém devolver o `not no_cabo` a
+    # `pode_ligar_o_mic`, esta prova reprova na hora — que é o que a régua
+    # compartilhada faltava fazer.
+    {"pagina": PAGINA, "gesto": "mic-modo", "clique": {"micModo": "virtual"},  # (noqa-acento) id
+     "chama": [("machine_declare",
+                [{"controles": {"aabbcc000001": {"microfone": True}}}], {})]},
+    # OS DOIS DESLIZANTES (D-08). O do microfone manda o número CRU (0-100 é o
+    # contrato do `mic.volume.set`); o do alto-falante passa pela curva medida no
+    # hardware — 80 % vira 187 no registrador, e é `volume_do_percentual` quem
+    # diz isso, nunca uma regra de três escrita aqui.
+    {"pagina": PAGINA, "gesto": "volume",  # (noqa-acento) id
+     "clique": {"volume": "microfone", "v": "80"},
+     "chama": [("mic_volume_set", [80], {"uniq": "aa:bb:cc:00:00:01"})]},
+    {"pagina": PAGINA, "gesto": "volume",  # (noqa-acento) id
+     "clique": {"volume": "alto-falante", "v": "80"},
+     "chama": [("speaker_set", [],
+                {"volume": volume_do_percentual(80),
+                 "uniq": "aa:bb:cc:00:00:01"})]},
 ]
+
+#: O QUE ESTA ABA PROVA PELA RECUSA, e não pela chamada — 04/09/2026.
+#:
+#: O `sensor` não tem o que chamar: não há método de sensor no daemon (ver o
+#: gesto). Uma entrada em `PROVAS` para ele estaria pedindo ao botão que
+#: inventasse uma chamada; o que ele deve fazer é RECUSAR DIZENDO, e quem cobra
+#: isso é `tests/unit/test_a02_som_e_sensor_falam_quando_recusam.py`.
+#:
+#: Esta lista existe para que a próxima pessoa não leia a ausência do `sensor`
+#: em `PROVAS` como "botão sem dono" — foi assim que os quatro passaram uma leva
+#: inteira despercebidos.
+SEM_CHAMADA = ("sensor",)
