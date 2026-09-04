@@ -1161,11 +1161,38 @@
   .onda{height:22px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
   .onda.mudo i{background:var(--border-forte);opacity:.5}
-  .selo-ativo{font-size:9.5px;font-family:'JetBrains Mono',monospace;padding:1px 6px;border-radius:3px;
-              background:var(--green);color:var(--app-bg);font-weight:600}
-  /* 3,47:1 sobre o próprio fundo -> 9,3:1. O selo continua dizendo
-     "desligado" pelo FUNDO cinza, que é o sinal; o texto passa a ser lido. */
-  .selo-ativo.off{background:var(--border-forte);color:var(--texto-suave)}
+  /* O SELO DO MICROFONE NASCE APAGADO E **ACENDE** — 03/09/2026, e a inversão
+     é o que torna a cor honesta nos TRÊS estados.
+
+     DECISÃO DELA: *"Cor + ícone. Redundante de propósito — quem lê rápido pega
+     pela cor, quem não distingue cor pega pelo risco."*
+
+     POR QUE INVERTER, e não só acrescentar o risco: o alvo `classe` do piloto
+     casa UM valor (`data-hef-quando`). Com a classe `off` acesa em `MUDO`, o
+     TERCEIRO estado — o travessão de `mesa_viva.selo_do_mic(_, sabemos=False)`
+     — cairia no ramo de baixo e ficaria VERDE. Um microfone que ninguém leu
+     anunciando que está capturando é o defeito que aquela função existe para
+     matar. Com a classe `on` acesa em `ATIVO`, verde quer dizer uma coisa só, e
+     tudo o que não é ATIVO fica apagado.
+
+     E O PADRÃO PASSA A SER O HONESTO: uma página que o produto nunca pinte
+     mostra o selo apagado, não um verde de mentira.
+
+     O contraste do apagado continua o medido (3,47:1 sobre o próprio fundo ->
+     9,3:1): a regra é a mesma, só trocou de lado. */
+  .selo-ativo{font-size:9.5px;font-family:'JetBrains Mono',monospace;padding:1px 6px;
+              border-radius:3px;background:var(--border-forte);color:var(--texto-suave);
+              font-weight:600;display:inline-flex;align-items:center;gap:3px;
+              vertical-align:middle;line-height:1.5}
+  .selo-ativo.on{background:var(--green);color:var(--app-bg)}
+  /* O ÍCONE E O RISCO — a segunda metade da escolha dela, para quem não
+     distingue cor. O risco é um `::after` do PRÓPRIO glifo, e não do selo: ele
+     tem de cruzar o microfone, não a palavra. */
+  .mic-glifo{position:relative;display:inline-flex;flex:0 0 auto;width:9px;height:9px}
+  .mic-glifo svg{display:block}
+  .mic-glifo.cortado::after{content:'';position:absolute;left:-1.5px;top:50%;
+    width:12px;height:1.5px;background:currentColor;border-radius:1px;
+    transform:translateY(-50%) rotate(-45deg)}
   .vol{display:flex;align-items:center;gap:8px;height:22px}
   .vol .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
   .vol .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
@@ -1539,7 +1566,7 @@
                tooltips do resto da janela — o rótulo sai, a explicação continua
                alcançável. -->
           <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura."><b data-campo="mascara">DualSense</b></span><span class="div so-fechado">·</span>
-          <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo" data-campo="mic-selo">ATIVO</span></span>
+          <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo on" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
           <span class="sensores-peca">
             <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No cabo são 250,0 Hz exatos, e três fontes independentes concordam: o relógio do host, o relógio do controle e o descritor USB (bInterval = 6)."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
@@ -1707,7 +1734,7 @@
                  botão que desfaz algo que não acontece é um botão que ensina errado.
                  O método continua no daemon, para quem precisar dele. -->
             <div class="rot rot-linha">Microfone
-              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo">ATIVO</span>
+              <span class="selo-ativo on" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala no
                 <b>firmware</b> e apaga a luz vermelha do plástico.<br><br>
@@ -1887,7 +1914,7 @@
                tooltips do resto da janela — o rótulo sai, a explicação continua
                alcançável. -->
           <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura."><b data-campo="mascara">Xbox 360</b></span><span class="div so-fechado">·</span>
-          <span class="leia so-fechado" title="Calado no firmware do controle — a luz vermelha do plástico está apagada.">Microfone <span class="selo-ativo off" data-campo="mic-selo">MUDO</span></span>
+          <span class="leia so-fechado" title="Calado no firmware do controle — a luz vermelha do plástico está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">MUDO</span></span></span>
           <span class="sensores-peca">
             <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no mesmo controle: a média foi de 38 a 392 Hz entre janelas consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara para Bluetooth não aparecem em janela nenhuma."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
@@ -2055,7 +2082,7 @@
                  botão que desfaz algo que não acontece é um botão que ensina errado.
                  O método continua no daemon, para quem precisar dele. -->
             <div class="rot rot-linha">Microfone
-              <span class="selo-ativo off" style="margin-left:5px" data-campo="mic-selo">MUDO</span>
+              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">MUDO</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala no
                 <b>firmware</b> e apaga a luz vermelha do plástico.<br><br>
