@@ -323,8 +323,19 @@ def medido() -> dict:
         # Um `timeout_add` não morre com o `main_quit`, então reentrar no laço
         # retoma o roteiro exatamente de onde ele estava. O relógio de parede é
         # o teto real, e ele é o mesmo de antes.
+        #
+        # A CONDIÇÃO É A ÚLTIMA ETAPA DO ROTEIRO, E ISSO CUSTOU UMA MEDIÇÃO —
+        # 04/09/2026, na integração desta leva. Ela era `"depois-do-pouso" not
+        # in fora`, que é a PENÚLTIMA: quem preenche `desfechos` é o `fim()`,
+        # agendado 500 ms DEPOIS do `pousou()`. Rodada sozinha a janela dava
+        # tempo; rodada no lote, o `main_quit` do vizinho caía exatamente nesses
+        # 500 ms, o laço via a condição satisfeita e voltava sem `desfechos` —
+        # `KeyError`, reprodutível, e o produto sem defeito nenhum.
+        #
+        # Esperar pelo penúltimo passo de um roteiro é esperar por quase tudo, e
+        # "quase tudo" é o que falha só quando há vizinho.
         limite = _time.monotonic() + 60.0
-        while "depois-do-pouso" not in fora and _time.monotonic() < limite:
+        while "desfechos" not in fora and _time.monotonic() < limite:
             Gtk.main()
     finally:
         GLib.source_remove(guarda)
@@ -340,8 +351,11 @@ def medido() -> dict:
         else:
             hv.pacotes.GESTOS[chave] = velho
         MESA["estado"] = ESTADO
-    assert "depois-do-pouso" in fora, (
-        f"o roteiro não chegou ao fim — o que voltou foi {sorted(fora)}")
+    assert "desfechos" in fora, (
+        f"o roteiro não chegou ao fim — o que voltou foi {sorted(fora)}. "
+        f"O último passo é o `fim()`, e é ele que guarda os `desfechos`: "
+        f"esperar por qualquer passo anterior deixa a régua verde sobre uma "
+        f"medição pela metade.")
     return fora
 
 

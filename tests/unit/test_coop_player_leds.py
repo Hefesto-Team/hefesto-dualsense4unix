@@ -132,10 +132,24 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> None:
             _FakeVpad(str(flavor), rumble_sink)
         ),
     )
-    monkeypatch.setattr(
-        "hefesto_dualsense4unix.integrations.uinput_gamepad.normalize_flavor",
-        lambda f: f or "dualsense",
-    )
+    # NÃO se patcheia `normalize_flavor` aqui, e a razão custou um lote
+    # inteiro vermelho (medido em 04/09/2026):
+    #
+    # havia neste ponto um `monkeypatch.setattr(..., lambda f: f or "dualsense")`
+    # — um dublê MAIS FROUXO que a função real, que resolve sinônimos ("sony",
+    # "ps5") e o dublê devolvia crus. O `monkeypatch` desfaz o que fez em
+    # `uinput_gamepad`, mas `external_mask` faz `from ... import
+    # normalize_flavor` **na primeira vez que é importado** — e, se essa
+    # primeira vez cai DENTRO do patch, o módulo guarda a lambda para sempre.
+    # O desfazer do pytest não alcança um nome já copiado.
+    #
+    # O estrago aparecia longe: `mascara_efetiva(None, "sony")` devolvia
+    # `"sony"`, e `UinputGamepad.for_flavor` morria em `FLAVORS["sony"]` —
+    # `KeyError` num teste de OUTRO arquivo, dependente de ordem, sem relação
+    # visível com o co-op.
+    #
+    # E o patch nunca foi preciso: `normalize_flavor` é pura, não toca disco
+    # nem kernel. Retirado, estes três arquivos de co-op fecham 53 verdes.
     # Nunca materializar envs do wrapper em ~/.config da usuária (DEDUP-04 é
     # best-effort e fora do assunto deste arquivo).
     monkeypatch.setattr(
@@ -463,3 +477,34 @@ def test_revert_em_modo_nativo_respeita_output_mute(
     assert len(nodes[MAC2].patterns) == escritas_2
     # O override segue guardado para o unmute restaurar.
     assert backend._desired_by_uniq[MAC2].player_leds == OVERRIDE_BITS
+
+
+def test_o_dublê_do_coop_não_vaza_para_a_máscara(
+    patched: None,  # o fixture é o RÉU desta régua
+) -> None:
+    """A MORDIDA de 04/09/2026: o cenário do co-op não pode adulterar sinônimo.
+
+    Ela morde de verdade — devolva a
+    ``monkeypatch.setattr(..., lambda f: f or "dualsense")`` ao fixture `patched`
+    e esta régua reprova na hora, porque `external_mask` copia o nome
+    `normalize_flavor` para si na primeira importação e o desfazer do pytest não
+    alcança a cópia.
+
+    Sem ela o vazamento só aparecia como `KeyError: 'sony'` em
+    `test_sony_virava_xbox_01.py` — outro arquivo, dependente de ordem, e
+    silencioso quando esse arquivo rodava sozinho.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import external_mask as em
+    from hefesto_dualsense4unix.integrations import uinput_gamepad as ug
+
+    assert em.normalize_flavor is ug.normalize_flavor, (
+        "o cenário do co-op trocou `normalize_flavor` e `external_mask` ficou "
+        "com a cópia adulterada — é o vazamento de 04/09/2026."
+    )
+    for sinonimo in ("sony", "SONY", " ps5 "):
+        chave = em.mascara_efetiva(None, sinonimo)
+        assert chave in ug.FLAVORS, (
+            f"`mascara_efetiva` devolveu {chave!r}, que `FLAVORS` não indexa — "
+            "é exatamente o `KeyError` que `for_flavor` levava."
+        )
+        assert chave == "dualsense"
