@@ -447,6 +447,17 @@ _PORTAS_DE_AMBIENTE: dict[str, tuple[str, ...]] = {
 #: razão é o que permite a próxima pessoa discordar com conhecimento de causa.
 #: Interruptor novo que ninguém classificar reprova por estar SEM CLASSIFICAÇÃO.
 _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
+    "HEFESTO_NA_TELA": (
+        "04/09/2026 — o ESCAPE da guarda TELA-DELA-01/02. Sem ele, a suíte e "
+        "os 21 instrumentos de `scripts/` que abrem `Gtk.Window` desviam a "
+        "janela para um `Xvfb` próprio, porque ela tem UMA tela e uma janela "
+        "que nasce nela quebra o trabalho dela — reportado por ela duas vezes "
+        "no mesmo dia. `HEFESTO_NA_TELA=1` devolve a sessão viva para quem "
+        "PRECISA ver a janela (depurar um layout com gerenciador de janelas). "
+        "É instrumento e não promessa: nenhum fluxo dela passa por aqui, o "
+        "produto instalado não lê esta chave, e ligá-la não abre feature "
+        "nenhuma — só transfere para quem ligou a responsabilidade pela tela."
+    ),
     "HEFESTO_BANCADA": (
         "Desvia para onde os geradores de página ESCREVEM "
         "(interface/onde.py:_DESVIO). Existe para UMA coisa: deixar um portão "
@@ -797,6 +808,26 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "utils/tela_de_mentira.py::garantir_tela_de_mentira": (
+        "04/09/2026 — INSTRUMENTO, e o docstring do módulo diz isso na "
+        "primeira linha: `A janela de instrumento não nasce na tela dela`. "
+        "Quem chama é `tests/conftest.py` e os 21 scripts de `scripts/` que "
+        "abrem `Gtk.Window` — os dois mundos que o portão não conta, e com "
+        "razão. O PRODUTO nunca deve chamá-la: a janela dele é para ser vista. "
+        "Ela vive em `src/` por um motivo único e mecânico — é o único lugar "
+        "importável tanto de `tests/` quanto de `scripts/`, e duas cópias "
+        "divergiriam (a primeira versão TINHA duas, e a segunda subia um Xvfb "
+        "por cima do primeiro; a régua de cobertura pegou ao nascer). "
+        "Evidência: `tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py`."
+    ),
+    "utils/tela_de_mentira.py::derrubar_tela_de_mentira": (
+        "04/09/2026 — o par de `garantir_tela_de_mentira`, e pela mesma razão. "
+        "Ela não é chamada por nome nem pelos instrumentos: quem a chama é o "
+        "`atexit` que a própria guarda registra, para o Xvfb morrer com o "
+        "processo que o subiu — e morrer PELO PID, nunca por padrão de linha "
+        "de comando. É pública para a régua poder conferir o par, o que "
+        "`test_a_guarda_desvia_e_se_anuncia` faz."
+    ),
     "core/acoes_de_botao.py::por_grupo": (
         "A lista agrupada como a tela a desenha "
         "(core/acoes_de_botao.py). Quem a chama e o GERADOR da aba Navegacao, "

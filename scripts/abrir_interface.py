@@ -81,6 +81,21 @@ import runpy
 import sys
 from pathlib import Path
 
+# Este lançador de DESENVOLVIMENTO roda o piloto no PRÓPRIO processo (`runpy`),
+# então a janela dele é uma janela de verdade — e não nasce na tela dela
+# (TELA-DELA-02). Quem quer VER a interface declara `HEFESTO_NA_TELA=1`; o
+# produto que ela usa é o lançador instalado, e não passa por aqui.
+import pathlib as _pathlib
+
+_RAIZ_TELA = str(_pathlib.Path(__file__).resolve().parents[1] / "src")
+if _RAIZ_TELA not in sys.path:
+    sys.path.insert(0, _RAIZ_TELA)
+from hefesto_dualsense4unix.utils.tela_de_mentira import (
+    garantir_tela_de_mentira,
+)
+
+garantir_tela_de_mentira()
+
 AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 
