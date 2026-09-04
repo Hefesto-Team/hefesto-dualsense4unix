@@ -48,6 +48,7 @@ mais discordar do ``mesmo_slug``.
 """
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -360,8 +361,17 @@ def test_voltar_a_de_ontem_acha_o_perfil_e_manda_reaplicar(
     restaurados: list[str] = []
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, "Sackboy")
-    monkeypatch.setattr(loader, "restaurar_do_historico",
-                        lambda n: restaurados.append(n))
+    # O DUBLÊ DEVOLVE O QUE O PRODUTO DEVOLVE — `(alvo, versão)`, as duas
+    # `Path` de `loader.restaurar_do_historico:1455`. Ele devolvia `None`
+    # (o retorno do `list.append`), e isso escondia metade do contrato: no dia
+    # em que o gesto passou a DIZER qual versão voltou, o dublê é que quebrou.
+    # Um dublê com assinatura mais pobre que a do produto é um teste que
+    # aprova código que o produto não aceitaria.
+    def _restaurar(n: str) -> tuple[Path, Path]:
+        restaurados.append(n)
+        return Path(f"/perfis/{n}.json"), Path("2026-09-03T04-00-00.json")
+
+    monkeypatch.setattr(loader, "restaurar_do_historico", _restaurar)
     ponte = PonteDeMentira()
     a10_perfis.voltar_a_de_ontem(_ctx(), {}, ponte)
     assert restaurados == ["Sackboy"]
