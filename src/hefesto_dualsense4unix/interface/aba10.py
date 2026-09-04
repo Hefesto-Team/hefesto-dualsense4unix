@@ -226,9 +226,45 @@ CSS = CSS_GLIFO + """
           border-bottom:1px solid var(--linha)}
   .tab tbody tr:nth-child(even) td{background:rgba(255,255,255,.018)}
   .tab tbody tr:last-child td{border-bottom:none}
+  /* OS TRÊS ESTADOS DA LINHA, e são TRÊS porque são duas verdades diferentes —
+     queixa dela, 04/09/2026: *"quando clica em algum nome do perfis salvos nada
+     indica que tal coisa tá selecionado"*.
+
+       VALENDO       o perfil que o daemon está aplicando agora  → `class="ativo"`
+       ABERTO        a linha em que o editor ao lado está aberto → `aria-selected`
+       VALENDO+ABERTO os dois na mesma linha — é o estado em que a aba ABRE,
+                     porque `a10_perfis._escolhido` sincroniza o escolhido com o
+                     ativo enquanto ela não clicou em nada.
+
+     A janela GTK antiga já tinha os dois separados — `Gtk.TreeSelection` para a
+     seleção e `Pango.AttrList` para o ativo (`profiles_actions.py:1400`, sprint
+     `2026-08-10-PERFIL-ATUAL-01`) —, e o HTML tinha implementado só o segundo:
+     clicar num perfil mudava o alvo de nove botões e a tela não dizia uma letra.
+
+     A COR DIZ *VALENDO*, O FUNDO DIZ *ABERTO*, e por isso os dois se somam sem se
+     apagar: verde é o plástico do "está no ar" em toda esta casa, e o par
+     `--purple`/`--sel-bg` é o "isto está escolhido" das dez abas (o `.chip.on` do
+     topo, o `.rota button.on`, o `.mm-ap.on`). Quem está nos dois estados mostra
+     a barra DUPLA — 3px de verde por cima de 6px de roxo.
+
+     O ESTADO MORA NUM ATRIBUTO E NÃO NUMA SEGUNDA CLASSE, e a razão é medida:
+     `test_a_lista_de_perfis_cabe_inteira.py:195` procura a SUBSTRING
+     `class="ativo"`, e um `class="ativo escolhido"` a apaga — a régua do realce
+     ficaria verde sobre uma linha que ela não acha mais. `aria-selected` é o que
+     o papel `row` já define para isto, é uma verdade só, e leitor de tela lê.
+
+     `tbody` NOS SELETORES NÃO É ENFEITE: sem ele a regra empata com
+     `.tab tbody tr:nth-child(even) td` (0,2,3) e a zebra come o fundo da linha
+     escolhida nas posições pares — metade das linhas sem marca. */
   .tab tr.ativo td{color:var(--green);font-weight:600}
   .tab tr.ativo td:first-child{box-shadow:inset 3px 0 0 var(--green)}
-  .tab tbody tr:hover:not(.ativo) td{background:var(--sel-bg)}
+  .tab tbody tr[aria-selected="true"] td{background:var(--sel-bg);color:var(--fg);
+          font-weight:600}
+  .tab tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 0 var(--purple)}
+  .tab tbody tr.ativo[aria-selected="true"] td{color:var(--green)}
+  .tab tbody tr.ativo[aria-selected="true"] td:first-child{
+          box-shadow:inset 3px 0 0 var(--green),inset 6px 0 0 var(--purple)}
+  .tab tbody tr:hover:not(.ativo):not([aria-selected="true"]) td{background:var(--sel-bg)}
   /* `Pri.` VIROU `Priorização` — 31/08/2026, pedido dela. Os 46px do valor
      antigo JÁ NÃO ERAM VERDADE: `table-layout` é `auto`, então `width` é
      sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa  # (noqa-acento) id
@@ -522,6 +558,19 @@ PERFIS = [("Mortal Kombat", 90, "Jogo · mk1.exe", True),
 #: fosse 100. O teto é 200 (`schema.PRIORIDADE_MAXIMA`), então a barra do
 #: desenho anunciava "quase no máximo" um perfil que está em 90 de 200.
 PRI_DO_DESENHO = PERFIS[0][1]
+#: O PERFIL QUE O EDITOR DO DESENHO ABRE, pelo NOME — e é o mesmo primeiro da
+#: lista de onde sai o `PRI_DO_DESENHO` logo acima. Ele existe para a linha da
+#: esquerda e o editor da direita nunca discordarem: marcar `Elden Ring` como
+#: escolhido enquanto o editor mostra a prioridade do `Mortal Kombat` seria o
+#: desenho afirmando que há dois perfis abertos ao mesmo tempo.
+#:
+#: E O DESENHO MOSTRA O ESTADO COMBINADO de propósito — `ativo` E `escolhido` na
+#: mesma linha —, porque é o estado em que a aba ABRE: `a10_perfis._escolhido`
+#: sincroniza o escolhido com o ativo enquanto ela não clicou em nada. Os outros
+#: dois estados (só ativo, só escolhido) nascem do CLIQUE, e quem os prova é
+#: `tests/unit/test_a10_a_linha_escolhida_tem_marca.py` — um desenho estático não
+#: tem como mostrar os três sem inventar uma tela que o produto nunca produz.
+PERFIL_DO_EDITOR = PERFIS[0][0]
 #: E A LARGURA É A CONTA, não um número: a mesma que
 #: `perfis_web._pacote_do_editor` faz para o produto.
 PCT_DO_DESENHO = round(PRI_DO_DESENHO * 100 / PRIORIDADE_MAXIMA)
@@ -650,7 +699,7 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
                   </tr>'''
 
 
-def linha_do_perfil(nome, prioridade, quando, ativo, dica=""):
+def linha_do_perfil(nome, prioridade, quando, ativo, dica="", escolhido=False):
     """Uma linha da lista de perfis salvos — a MESMA para o mockup e para a viva.
 
     Ela era uma compreensão de lista embutida no `MIOLO`; virou função pelo mesmo
@@ -676,9 +725,22 @@ def linha_do_perfil(nome, prioridade, quando, ativo, dica=""):
     `data-hef-gesto` e não `data-gesto`: esta aba já tem 77 endereços nesse
     vocabulário, e o despachante aceita os três — inventar um quarto aqui seria
     a segunda verdade que esta casa persegue.
+
+    `escolhido` É A LINHA ABERTA NO EDITOR, e não o perfil que está valendo —
+    04/09/2026, queixa dela: *"quando clica em algum nome do perfis salvos nada
+    indica que tal coisa tá selecionado"*. Ele sai em `aria-selected` e não numa
+    segunda classe; a razão inteira está no CSS, junto das três regras que o
+    leem.
+
+    ELE É SEMPRE EMITIDO, `true` ou `false`, e não só quando é verdade: o
+    `blocos` do piloto compara a MINHA string com a serialização que o navegador
+    devolve, e um atributo que aparece e desaparece muda o comprimento da linha
+    a cada clique. Um valor constante no lugar constante é o que deixa o
+    `<tbody>` assentar.
     """
     return (f'                <tr class="{"ativo" if ativo else ""}" '
-            f'data-hef-perfil="{nome}" title="{dica}">'
+            f'data-hef-perfil="{nome}" '
+            f'aria-selected="{"true" if escolhido else "false"}" title="{dica}">'
             f'<td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">{nome}</td>'
             f'<td class="pri" data-hef="perfis.linha.prioridade">{prioridade}</td>'
             f'<td class="quando" data-hef="perfis.linha.quando">{quando}</td></tr>')
@@ -728,7 +790,7 @@ MIOLO = f'''
               <table class="tab">
                 <thead><tr><th>Nome</th><th class="pri">Priorização</th><th>Quando usar</th></tr></thead>
                 <tbody data-hef="perfis.lista">
-{chr(10).join(linha_do_perfil(n, p, q, a) for n,p,q,a in PERFIS)}
+{chr(10).join(linha_do_perfil(n, p, q, a, escolhido=n == PERFIL_DO_EDITOR) for n,p,q,a in PERFIS)}
                 </tbody>
               </table>
               </div>
@@ -919,6 +981,14 @@ LEGENDA = f'''<div class="nota">
       Sem cor lida, a barra <b>some</b>: campo sem informação não mostra nada.</li>
     <li><b>O cabeçalho conta a mesa</b>: {len(PERFIS)} perfis e
       {COM_AJUSTE} de {len(MESA)} controles com ajuste próprio neste perfil.</li>
+    <li><b>A linha diz DUAS coisas, e elas não são a mesma.</b> A <b>cor verde e a barra
+      verde</b> dizem <b>está valendo agora</b>; o <b>fundo roxo e a barra roxa</b> dizem
+      <b>é esta que o editor ao lado está mostrando</b> — a que os nove botões vão mexer.
+      Quando são a mesma linha, a barra vem <b>dupla</b>: verde e roxa, lado a lado. É o
+      estado desenhado aqui, porque é o estado em que a aba abre.
+      <span class="marca">Antes disto, clicar num nome não mudava um pixel</span> — palavra
+      sua: "quando clica em algum nome do perfis salvos nada indica que tal coisa tá
+      selecionado".</li>
   </ul>
 
   <h2>O que você mandou tirar, e continua fora</h2>
