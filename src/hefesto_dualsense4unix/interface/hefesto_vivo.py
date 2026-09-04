@@ -115,6 +115,41 @@ SEM_PACOTE = {"07-lancadores.html"}
 #: segunda divergiria. Ver `Piloto._recados_para_a_tela`.
 SEGUNDOS_DO_RECADO = 30.0
 
+#: QUANTO A FRASE DE SUCESSO FICA NA TELA — D-01, 04/09/2026.
+#:
+#: **A decisão dela:** *"No próprio cartão, como a recusa."* Mesmo lugar, mesma
+#: forma, mesmo mecanismo — o que muda é a COR e o RELÓGIO.
+#:
+#: E O RELÓGIO É MAIS CURTO DE PROPÓSITO. A recusa é uma coisa a resolver: ela
+#: fica os 30 s que ela decidiu, porque quem a lê pode precisar de tempo para
+#: entender o que fazer. O sucesso é um recibo — a informação inteira dele é
+#: *"foi"*, e ela se esgota na leitura. Um recibo que fica meio minuto no cartão
+#: vira estado, e a palavra dela sobre este canal é a de 02/09: **é aviso, não
+#: estado**.
+SEGUNDOS_DO_RECADO_DE_SUCESSO = 6.0
+
+#: A FRASE QUE O PILOTO DIZ QUANDO O GESTO NÃO TRAZ UMA.
+#:
+#: ELA NÃO É INVENÇÃO: `"Pronto."` é a palavra que a janela GTK desta casa já usa
+#: para o mesmo fato (`app/actions/daemon_actions._SYSTEMCTL_OK_MSG`), e a regra
+#: de 04/09 é a D-05 — *pela função dona*. Uma segunda palavra para "deu certo"
+#: faria as duas janelas do mesmo produto falarem línguas diferentes.
+#:
+#: **QUEM TEM O QUE DIZER DIZ MELHOR.** Um gesto que devolva `{"recado": "…"}`
+#: manda a própria frase para o cartão, e ela vence esta. É onde a D-12 pousa —
+#: *"o microfone ligou, mas o canal dele está mudo no sistema"* é frase do dono
+#: do assunto, não do piloto. O piloto é o CANAL; o texto é de quem sabe.
+FRASE_DE_SUCESSO = "Pronto."
+
+#: O QUE O PILOTO DIZ QUANDO A PÁGINA MORRE E ELE A RECARREGA.
+#:
+#: PROVISÓRIO — decisão dela. A sprint manda o piloto *"recarregar a página à
+#: vista, com um recado no stderr e no cartão"*, e a frase precisava existir
+#: para o recado existir. Ela é curta e factual de propósito: diz o que
+#: aconteceu e o que foi feito, e não promete que nada se perdeu — porque o que
+#: estava digitado e não salvo se perde mesmo.
+FRASE_DA_PAGINA_QUE_MORREU = "A tela parou de responder e foi recarregada."
+
 #: O QUE A GUARDA DE CARGA ACEITA. Os pilotos de uma aba só passavam o nome
 #: dela — `"Controles"` — e a guarda matava a janela em qualquer outra página.
 #: Aqui as DEZ são legítimas, então o esperado é o que as dez compartilham:
@@ -254,6 +289,35 @@ BOOTSTRAP = r"""
       if(el.value !== t){ el.value = t; return 1; }
       return 0;
     }
+    // O ALVO `marcado` — O DÉCIMO, e o único que escreve `el.checked`.
+    //
+    // A DECISÃO DELA, 04/09/2026: opção **a**, *décimo alvo `marcado`*. O
+    // acordeão do alto-falante da aba 02 é um `<input type="checkbox">` em CSS
+    // puro, e o estado da saída não tinha como chegar nele: dos nove alvos, o
+    // `valor` escreve `el.value` (que num checkbox é a string `"on"`, e não o
+    // estado) e nenhum toca a propriedade que decide se ele está marcado.
+    //
+    // A LÍNGUA É `sim`, e é a mesma do alvo `classe` booleano — que é quem já
+    // responde `sim` na leitura de volta (ver `LER_CAMPOS`). Uma segunda palavra
+    // para o mesmo "ligado" seria a terceira maneira de dizer a mesma coisa.
+    // Vazio, travessão e qualquer outra palavra DESMARCAM: o lugar sem dono da
+    // mesa leva `—` (`pacotes.TRAVESSAO`), e um acordeão que abrisse sozinho num
+    // lugar vazio seria a tela afirmando o que não é.
+    //
+    // IDEMPOTENTE COMO OS OUTROS NOVE: compara antes de mexer e devolve 0
+    // quando nada mudou. Um alvo que devolve 1 sempre infla a contagem de
+    // pinturas de toda aba que o use — e ela é O instrumento com que esta casa
+    // prova que um endereço existe.
+    //
+    // ELE VALE PARA TODO CHECKBOX E RADIO das dez abas. A metade que falta é o
+    // ENDEREÇO — o `data-hef-alvo="marcado"` no elemento —, e essa é da frente
+    // da aba que o publicar: atributo invisível, zero pixel.
+    if(alvo === 'marcado'){
+      const querido = (t === 'sim');
+      if(el.checked === querido) return 0;
+      el.checked = querido;
+      return 1;
+    }
     // O ALVO `html` EXISTE PARA UM BLOCO COM MARCAÇÃO — a dica do `?` do teto
     // da vibração (`aba08.teto_dica`) traz `<b>` e `<code>` no desenho dela, e o
     // `textContent` do ramo padrão escreveria os marcadores como texto literal
@@ -293,13 +357,49 @@ BOOTSTRAP = r"""
     // `cls()` dos pilotos velhos devolvia 1 SEMPRE, e um alvo assim infla a
     // contagem de pinturas de toda aba que o use — que é o instrumento com que
     // esta casa prova que um endereço existe.
+    // E ELE VESTE UM ATRIBUTO JUNTO, quando o elemento pedir — 04/09/2026, e a
+    // dívida foi achada pela frente da FOLHA no dia em que ela construiu o botão
+    // cinza (S-03): *"nenhum alvo do `hefesto_vivo.py` escreve atributo E classe
+    // no mesmo elemento, e o `aria-disabled` do botão cinza precisa disso"*.
+    //
+    // O PROBLEMA É REAL E É DE FORMA: `data-hef-alvo` é UM por elemento, e um
+    // botão que fica cinza precisa das duas metades ao mesmo tempo — a classe,
+    // que é o que a folha pinta, e o `aria-disabled`, que é o que um leitor de
+    // tela anuncia. Sem as duas, ou o botão fica cinza sem dizer por quê a quem
+    // não vê, ou diz e não fica cinza.
+    //
+    // POR QUE NÃO UM ALVO COMPOSTO, nem um segundo `data-campo`: alvo composto
+    // quebraria tudo que LÊ o alvo por igualdade (o `LER_CAMPOS` aqui embaixo,
+    // o `regua_do_mockup._campo`, os `campo.alvo == "…"`), e o comentário do
+    // alvo `atributo` já paga essa lição. Dois endereços para o mesmo fato seria
+    // pior: dois campos que podem DIVERGIR na tela, e a casa persegue o oposto.
+    //
+    // A VERDADE É UMA SÓ e ela mora na classe; o atributo é DERIVADO dela, na
+    // língua do ARIA (`true`/`false`, que é o que a especificação exige — um
+    // `aria-disabled` ausente e um `aria-disabled="false"` NÃO são a mesma coisa
+    // para um leitor de tela). O nome vem do MESMO `data-hef-atributo` que o alvo
+    // `atributo` já usa, e passa pela MESMA guarda: `aria-*` entra, `data-hef` e
+    // o vocabulário de endereço não.
+    //
+    // A LEITURA DE VOLTA CONTINUA LENDO A CLASSE, de propósito: um endereço, uma
+    // leitura. O atributo não é um segundo campo a medir — é a mesma verdade
+    // dita para quem não enxerga a cor.
     if(alvo === 'classe'){
       const c = el.dataset.hefClasse || 'on';
       const quando = el.dataset.hefQuando;
       const aceso = (quando === undefined || quando === '') ? ligado(t) : (t === quando);
-      if(el.classList.contains(c) === aceso) return 0;
+      let n = 0;
+      const junto = (el.dataset.hefAtributo || '').trim().toLowerCase();
+      if(junto && atributo_escrevivel(junto)){
+        const querido = aceso ? 'true' : 'false';
+        if(el.getAttribute(junto) !== querido){
+          el.setAttribute(junto, querido);
+          n += 1;
+        }
+      }
+      if(el.classList.contains(c) === aceso) return n;
       el.classList.toggle(c, aceso);
-      return 1;
+      return n + 1;
     }
     // O ALVO `cor` — o `color` do elemento, e ele é o par que faltava do
     // `fundo`. O clique do analógico é COR na GTK
@@ -449,6 +549,13 @@ BOOTSTRAP = r"""
     + 'line-height:1.35;pointer-events:none;'
     + 'color:var(--orange,#ffb86c);background:var(--elevated,#2b2d3a);'
     + 'border:1px solid var(--orange,#ffb86c);';
+  // A COR DO SUCESSO, e ela REUSA a paleta como a da recusa: `--green` é o que
+  // o mockup já usa para o que deu certo. Trocar só a cor — e não a forma, nem
+  // o lugar, nem o mecanismo — é a decisão dela em uma linha: *"No próprio
+  // cartão, como a recusa."* Um segundo canal para o mesmo tipo de fato é o que
+  // os conflitos C-1, C-3, C-6 e C-7 recusaram no mesmo dia.
+  const COR_DO_SUCESSO =
+    'color:var(--green,#50fa7b);border-color:var(--green,#50fa7b);';
   //: A TARJA é o recado que não tem cartão a que pertencer — um gesto do
   //: rodapé, uma aba sem coluna de controle (`09-sistema`, `10-perfis`), ou o
   //: cartão daquele controle que não existe NESTA página.
@@ -494,6 +601,10 @@ BOOTSTRAP = r"""
       // saiu passava a aparecer no cartão de quem ficou.
       const chave = String(r.chave || '');
       const onde = String(r.cartao || '');
+      // O TOM — `recusa` (o laranja de sempre) ou `sucesso` (o verde da D-01).
+      // Ele viaja no recado e não numa segunda lista: um recado é UM fato, e
+      // quem o depositou é quem sabe se ele deu certo.
+      const tom = String(r.tom || 'recusa');
       vivas.push(chave);
       // O CARTÃO DAQUELE CONTROLE, quando ele existe NESTA página. Quando não
       // existe — outra aba, ou o controle já fora da mesa —, a frase vira tarja
@@ -546,9 +657,20 @@ BOOTSTRAP = r"""
             pai.style.position = 'relative';
           }
         }
-        el.style.cssText = ESTILO_DO_RECADO
-          + (cartao ? (foraDoFluxo ? ESTILO_NA_GRADE : '') : ESTILO_DA_TARJA);
+        el.dataset.hefLugar = cartao ? (foraDoFluxo ? 'grade' : 'fluxo') : 'tarja';
         if(cartao){ pai.insertBefore(el, pai.firstChild); } else { pai.appendChild(el); }
+        n += 1;
+      }
+      // O ESTILO SE REFAZ QUANDO O TOM MUDA, e não só quando o nó nasce: no
+      // MESMO cartão uma recusa pode virar sucesso no clique seguinte — a chave
+      // é o controle, não o desfecho. Sem esta linha o aviso trocaria de frase
+      // e ficaria laranja dizendo que deu certo.
+      if(el.dataset.hefTom !== tom){
+        const lugar = el.dataset.hefLugar || 'tarja';
+        el.style.cssText = ESTILO_DO_RECADO
+          + (lugar === 'grade' ? ESTILO_NA_GRADE : (lugar === 'tarja' ? ESTILO_DA_TARJA : ''))
+          + (tom === 'sucesso' ? COR_DO_SUCESSO : '');
+        el.dataset.hefTom = tom;
         n += 1;
       }
       if(el.textContent !== r.texto){ el.textContent = r.texto; n += 1; }
@@ -560,6 +682,66 @@ BOOTSTRAP = r"""
     }
     return n;
   }
+  // O ESTADO "EM VOO" DO BOTÃO — decisão dela, `09` [03], 04/09/2026: **o botão
+  // diz que está trabalhando**, e diz DURANTE a espera, no lugar exato do
+  // clique.
+  //
+  // O DEFEITO MEDIDO: `daemon.reload` leva **9,5 segundos** (medido no daemon
+  // dela em 01/09), o gesto corre em thread para a janela não congelar, e
+  // NENHUMA das dez abas tinha estado "em voo" — o clique sumia por nove
+  // segundos e meio e o segundo clique parecia o primeiro. É o mesmo enunciado
+  // da recusa que ia para o terminal, um degrau antes: ali a resposta existia e
+  // não chegava; aqui a ESPERA não tinha como se anunciar.
+  //
+  // AS DUAS METADES, e a segunda é opcional de propósito:
+  //
+  //   a CLASSE `hef-em-voo`   sempre. Mora na folha do módulo
+  //                           (`gui/ponte_da_tela.FOLHA_DA_CASA`), vale nas dez
+  //                           abas sem republicar desenho, e não inventa texto.
+  //   `data-hef-em-voo="…"`   quando a página publica um rótulo, ele entra no
+  //                           lugar do original — *"Reaplicando…"* na `09`. O
+  //                           texto continua sendo dela; o piloto só o troca.
+  //
+  // O ORIGINAL VOLTA INTEIRO, e por isso ele é guardado como `innerHTML` num
+  // mapa, e não como texto num `data-`: os botões desta casa têm `<span>` dentro
+  // (o `.pt` da fita, os ícones), e devolver `textContent` os achataria — o
+  // botão voltaria da espera diferente de como entrou.
+  window.__hef.voo = 0;
+  window.__hef.rotulos = {};
+  function em_voo(el){
+    const n = String(++window.__hef.voo);
+    el.setAttribute('data-hef-voo', n);
+    el.classList.add('hef-em-voo');
+    const dito = el.dataset.hefEmVoo;
+    if(dito){
+      window.__hef.rotulos[n] = el.innerHTML;
+      el.textContent = dito;
+    }
+    return n;
+  }
+  // E ELE VOLTA SOZINHO. Um botão que ficasse "trabalhando" para sempre é pior
+  // que um botão calado: o calado ao menos não afirma nada.
+  //
+  // O `querySelectorAll` E NÃO UMA REFERÊNCIA GUARDADA: entre o clique e a
+  // volta, a pintura pode ter trocado o bloco inteiro (a fita, a tabela de
+  // perfis, o mapa do gabinete). Uma referência apontaria para um nó que já saiu
+  // do documento, e o botão que está na tela ficaria em voo para sempre. Zero
+  // elementos é a resposta certa nesse caso, e o rótulo guardado é jogado fora
+  // junto — senão o mapa cresce a cada gesto, para sempre.
+  window.__hef.voltouDoVoo = function(n){
+    const chave = String(n);
+    let k = 0;
+    for(const el of document.querySelectorAll('[data-hef-voo="' + chave + '"]')){
+      el.classList.remove('hef-em-voo');
+      if(window.__hef.rotulos[chave] !== undefined){
+        el.innerHTML = window.__hef.rotulos[chave];
+      }
+      el.removeAttribute('data-hef-voo');
+      k += 1;
+    }
+    delete window.__hef.rotulos[chave];
+    return k;
+  };
   window.__hef.pintar = function(p){
     let n = 0;
     // A FITA SE TROCA INTEIRA, e não campo a campo: o número de chips muda com
@@ -742,7 +924,19 @@ BOOTSTRAP = r"""
       // se lembra, e o esquecimento é silencioso. O dataset inteiro não
       // esquece — e o custo é uma cópia de meia dúzia de strings por clique.
       const tudo = Object.assign({}, d);
+      // O CARIMBO DO VOO, e ele é aplicado ANTES de a mensagem sair: a resposta
+      // tem de ser do CLIQUE, não da volta do Python. O gesto atravessa uma
+      // thread e o IPC; esperar por ele para dizer "estou trabalhando" seria
+      // dizê-lo tarde demais — que é o defeito inteiro.
+      //
+      // TODO CLIQUE QUE VAI PARA O PYTHON É CARIMBADO, inclusive o que vai ser
+      // recusado por não ter dono. O piloto despacha o pouso nos TRÊS desfechos
+      // (aplicou, recusou, sem dono), e um botão que ficasse em voo porque o
+      // gesto não existia seria a tela mentindo sobre um trabalho que ninguém
+      // começou.
+      const voo = em_voo(alvo);
       manda(Object.assign(tudo, {
+        voo: voo,
         gesto: d.gesto || d.hefGesto || d.papel || doRodape || 'clique',
         modo: d.modo || '', forca: d.forca || '', player: d.player || '',
         lado: d.lado || '', campo: d.campo || '', hef: d.hef || '',
@@ -1034,6 +1228,13 @@ LER_CAMPOS = r"""
       // como `null` de um lado e `''` do outro, e a régua acusaria a pintura
       // certa.
       v = el.getAttribute((el.dataset.hefAtributo || '').trim().toLowerCase()) || '';
+    }
+    else if(alvo === 'marcado'){
+      // NA MESMA LÍNGUA DO `escrever`: `sim` quando está marcado, vazio quando
+      // não. Devolver `true`/`false` faria a régua do mockup comparar a palavra
+      // do arquivo com um booleano do navegador e acusar toda pintura certa —
+      // é a mesma cura de forma que o alvo `cor` já custou uma medição.
+      v = el.checked ? 'sim' : '';
     }
     else if(alvo === 'classe'){
       // O QUE ESTE ELEMENTO MOSTRA, na MESMA língua em que o `escrever` recebe:
@@ -1357,7 +1558,18 @@ class Piloto:
         #:
         #: SÓ O LAÇO DO GTK ESCREVE AQUI. O gesto corre em thread, e depositar de
         #: lá deixaria o tique iterando um dicionário que outra thread muda.
-        self._recados: dict[str, tuple[str, float]] = {}
+        #:
+        #: A TERCEIRA CASA DA TUPLA É O TOM — `recusa` ou `sucesso`, e ela nasceu
+        #: com a D-01 em 04/09/2026. Um dicionário SEPARADO para o sucesso seria
+        #: a segunda cópia da mesma regra (a poda, a tradução `uniq → pref`, a
+        #: sobrevivência à repintura), e a segunda divergiria — é o mesmo
+        #: argumento que fez a recusa ter um canal só para as dez abas.
+        #:
+        #: E A CHAVE CONTINUA UMA POR CONTROLE, de propósito: o último ato daquele
+        #: aparelho é o que a coluna dele mostra. Uma recusa seguida de um
+        #: sucesso no mesmo botão não pode deixar as duas frases na tela, uma
+        #: dizendo o contrário da outra.
+        self._recados: dict[str, tuple[str, float, str]] = {}
         self._fila: list[str] = []
         #: O `--prova-de-mockup`: o que o ARQUIVO crava, o que o DOM mostra
         #: ANTES de qualquer pintura, e o veredito de cada campo por aba.
@@ -1384,6 +1596,11 @@ class Piloto:
             ao_carregar=self._instalar,
             ao_receber=self._gesto,
             ao_sair_da_aba=self._navegou,
+            # A TELA QUE NÃO FICA NUA — T-01, e é o único defeito VIVO desta
+            # frente: ela viu acontecer, com foto. Quem RECARREGA é a janela
+            # (`gui/ponte_da_tela.JanelaDaAba._morreu_a_pagina`, e a medição está
+            # lá); o que o piloto faz aqui é PARAR de pintar no vazio e DIZER.
+            ao_morrer_a_pagina=self._a_pagina_morreu,
             oculta=args.oculta,
             subtitulo="as dez abas, vivas",
         )
@@ -1462,11 +1679,16 @@ class Piloto:
         self.gestos.append(o)
         nome = str(o.get("gesto") or "")
         pagina = str(o.get("pagina") or self.pagina)  # (noqa-acento: verbo)  (nome de variável)
+        # O NÚMERO DO VOO, carimbado pelo ouvinte no elemento clicado. Ele é o
+        # que devolve o botão ao normal — e tem de ser devolvido nos TRÊS
+        # desfechos, o "sem dono" incluído.
+        voo = str(o.get("voo") or "")
         acao = pacotes.gesto_da_pagina(pagina, nome)
         if acao is None:
             self.recusados.append(f"{pagina}:{nome}")
             self.desfechos[f"{pagina}:{nome}"] = ("sem dono", "")
             print(f"[gesto sem dono] {pagina} · {nome} · {o.get('texto', '')!r}")
+            self._pousou(voo)
             return
         # O `uniq` É RESOLVIDO AQUI, e não dentro do gesto: a tela endereça por
         # `pref` (`p1`), o daemon por `uniq` (`d4:2f:00:00:…`), e a mesa que traduz é
@@ -1509,15 +1731,42 @@ class Piloto:
                 # esta linha só imprimia no `stderr` — ver `_recusou_dizendo`.
                 GLib.idle_add(
                     lambda x=erro: self._recusou_dizendo(pagina, nome, alvo, x))
-                return
-            # OS DOIS DESFECHOS SÃO ANOTADOS NO MESMO LUGAR, e é aqui: o `except`
-            # logo acima guarda a recusa, e esta linha guarda o "voltou sem
-            # levantar". Anotar o sucesso lá no `_deu_certo` separaria os dois
-            # ramos do mesmo `try`, e quem lesse um não veria o outro.
-            self.desfechos[f"{pagina}:{nome}"] = ("aplicou", "")
-            GLib.idle_add(lambda r=resposta: self._deu_certo(pagina, nome, r))
+            else:
+                # OS DOIS DESFECHOS SÃO ANOTADOS NO MESMO LUGAR, e é aqui: o
+                # `except` logo acima guarda a recusa, e esta linha guarda o
+                # "voltou sem levantar". Anotar o sucesso lá no `_deu_certo`
+                # separaria os dois ramos do mesmo `try`, e quem lesse um não
+                # veria o outro.
+                self.desfechos[f"{pagina}:{nome}"] = ("aplicou", "")
+                GLib.idle_add(
+                    lambda r=resposta: self._deu_certo_dizendo(pagina, nome, alvo, r))
+            finally:
+                # O POUSO É DOS TRÊS DESFECHOS, e por isso mora no `finally`: um
+                # gesto que levante fora do contrato (nem `RuntimeError` nem
+                # `ValueError`) deixaria o botão "trabalhando" para sempre — e um
+                # botão que afirma um trabalho que ninguém está fazendo é pior
+                # que o silêncio que este estado veio curar.
+                #
+                # DEPOIS dos dois `idle_add` acima, e é a ordem que importa: o
+                # `idle_add` respeita a ordem de agendamento na mesma
+                # prioridade, então o recado já está na tela quando o rótulo
+                # volta ao normal.
+                GLib.idle_add(lambda v=voo: self._pousou(v))
 
         threading.Thread(target=trabalhar, daemon=True).start()
+
+    def _pousou(self, voo: str) -> bool:
+        """O botão volta do voo — a classe sai e o rótulo original é devolvido.
+
+        Sem número não há o que devolver: um gesto que chegou por caminho que
+        não passa pelo ouvinte (uma régua chamando `_gesto` à mão) não carimbou
+        elemento nenhum, e mandar JS por isso seria poluir o console de quem
+        depura com uma varredura que não acha nada.
+        """
+        if not voo:
+            return False
+        self._js(f"window.__hef && window.__hef.voltouDoVoo({_json(voo)})")
+        return False
 
     def _deu_certo(self, pagina: str, nome: str, resposta: object = None) -> bool:
         """O gesto voltou. Se ele TROUXE ALGO, o que trouxe vai para a tela.
@@ -1574,13 +1823,88 @@ class Piloto:
         print(f"[gesto falhou] {pagina} · {nome}: {erro}", file=sys.stderr)
         if not isinstance(erro, RuntimeError):
             return False
-        self._recados[uniq] = (str(erro), time.monotonic())
-        # NA HORA, e não no próximo tique. Meio segundo entre o clique e a
-        # resposta basta para ela clicar de novo achando que o primeiro não
-        # pegou — que é o defeito de origem, não um detalhe de acabamento.
+        self._depositar(uniq, str(erro), "recusa")
+        return False
+
+    # -- o canal de SUCESSO (D-01) ----------------------------------------
+    def _depositar(self, uniq: str, frase: str, tom: str) -> None:
+        """Guarda um aviso e o põe na tela NA HORA. É o canal, e ele é um só.
+
+        NA HORA, e não no próximo tique. Meio segundo entre o clique e a resposta
+        basta para ela clicar de novo achando que o primeiro não pegou — que é o
+        defeito de origem, não um detalhe de acabamento.
+
+        A RECUSA E O SUCESSO ATRAVESSAM AQUI, os dois, e é essa a peça: o lugar
+        (a coluna de quem ela clicou), a sobrevivência à repintura, a tradução
+        `uniq → pref` no instante da pintura e a poda por tempo já existiam para
+        a recusa e não podiam ser escritos de novo para o sucesso. A D-01 em uma
+        linha é *"como a recusa"* — e "como" quer dizer *o mesmo caminho*.
+        """
+        self._recados[uniq] = (frase, time.monotonic(), tom)
         self._js(f"window.__hef && window.__hef.pintar("
                  f"{_json({'recados': self._recados_para_a_tela()})})")
-        return False
+
+    def _deu_certo_dizendo(self, pagina: str, nome: str, uniq: str,
+                           resposta: object = None) -> bool:
+        """O gesto voltou SEM levantar — e agora a tela dela sabe disso.
+
+        **O DEFEITO, e a decisão que o fecha.** Até 04/09/2026 a interface nova
+        só falava quando RECUSAVA: um gesto que dava certo imprimia
+        `[gesto] … → aplicado` no terminal de quem lançou a janela, e quem clica
+        não lê terminal. **Cinco linhas do CSV paravam neste mesmo buraco**, em
+        cinco abas (02, 03, 05, 06 e 09). A decisão dela, no mesmo dia:
+
+            *"No próprio cartão, como a recusa."*   — D-01
+
+        DUAS RECOMENDAÇÕES PROPUNHAM OUTRO CANAL e as duas foram recusadas por
+        ela no mesmo dia (os conflitos C-3 e C-6): *o campo que pisca*, na aba
+        03, e *a faixa embaixo da grade*, na 05. **Não construa nenhum dos dois.**
+        É um fato, um sinal — e é o que faz esta peça fechar as cinco abas de
+        uma vez em vez de virar cinco peças que divergem.
+
+        A FRASE É DO DONO DO ASSUNTO, e não deste arquivo: um gesto que devolva
+        `{"recado": "…"}` manda a própria, e o piloto a leva. Sem isso vale a
+        `FRASE_DE_SUCESSO`, que é a palavra que a janela GTK já usa. O `recado`
+        SAI da carga antes de a resposta ir para a pintura: ele não é endereço de
+        página nenhuma, e deixá-lo entrar faria o `escrever()` procurar um
+        `data-campo="recado"` que não existe.
+
+        ELE NÃO SUBSTITUI O `_deu_certo`, ele o EMBRULHA — e isso é de propósito:
+        `_deu_certo` é o caminho da carga de volta (`plugin.list`, "Ver
+        detalhes"), tem régua própria e não precisa saber que existe recado.
+        """
+        frase = ""
+        if isinstance(resposta, dict):
+            bruto = resposta.get("recado")
+            if isinstance(bruto, str) and bruto.strip():
+                frase = bruto.strip()
+            if "recado" in resposta:
+                resposta = {k: v for k, v in resposta.items() if k != "recado"}
+        self._depositar(uniq, frase or FRASE_DE_SUCESSO, "sucesso")
+        return self._deu_certo(pagina, nome, resposta)
+
+    def _a_pagina_morreu(self, motivo: str) -> None:
+        """O processo web do WebKit caiu. A janela já está recarregando; aqui se DIZ.
+
+        A PINTURA PARA ATÉ A PÁGINA VOLTAR, e sem esta linha o tique continuaria
+        mandando JavaScript para um documento que não existe — foi o que a
+        medição de 04/09 mostrou: `Unsupported result type (601)` a cada 100 ms,
+        para sempre, no `stderr` de quem lançou a janela. O `_carregou` religa o
+        `pronto` quando a página nova confirmar.
+
+        O RECADO VAI PARA A CHAVE VAZIA — a tarja de rodapé —, e é o endereço
+        honesto: um processo que morre não é de controle nenhum, e pousar a
+        frase no cartão de um deles seria a tela afirmando, sobre um aparelho,
+        uma coisa que não é dele.
+
+        E ELE SOBREVIVE À RECARGA sem nenhum cuidado extra: o depósito é do
+        PILOTO, não do documento — o tique da página nova o repõe. Era esse o
+        ponto de o canal ser um depósito e não um evento.
+        """
+        print(f"[página morreu] {motivo} — a pintura pausou até a página voltar",
+              file=sys.stderr)
+        self.pronto = False
+        self._recados[""] = (FRASE_DA_PAGINA_QUE_MORREU, time.monotonic(), "recusa")
 
     def _recados_para_a_tela(self) -> list[dict[str, str]]:
         """As frases de recusa ainda vivas, a poda das vencidas, e o CARTÃO de
@@ -1614,15 +1938,20 @@ class Piloto:
         para curar.
         """
         agora = time.monotonic()
-        for chave, (_frase, quando) in list(self._recados.items()):
-            if agora - quando >= SEGUNDOS_DO_RECADO:
+        for chave, (_frase, quando, tom) in list(self._recados.items()):
+            # CADA TOM TEM O SEU PRAZO, e os dois são decisão dela: a recusa
+            # vive os 30 s de 02/09; o sucesso é um recibo e vive 6 s. A conta
+            # continua sendo UMA — o que muda é o número que ela compara.
+            if agora - quando >= (SEGUNDOS_DO_RECADO_DE_SUCESSO
+                                  if tom == "sucesso" else SEGUNDOS_DO_RECADO):
                 del self._recados[chave]
         onde_esta = {norm_mac(str(c.get("uniq") or "")) or "": str(c.get("pref") or "")
                      for c in self._mesa_de_agora}
         return [{"chave": chave,
                  "cartao": onde_esta.get(chave, "") if chave else "",
-                 "texto": frase}
-                for chave, (frase, _quando) in sorted(self._recados.items())]
+                 "texto": frase,
+                 "tom": tom}
+                for chave, (frase, _quando, tom) in sorted(self._recados.items())]
 
     # O `_ipc` CRU MORREU em 01/09/2026. Ele abria o socket à mão e montava o
     # JSON-RPC — reescrevendo o que o `app/ipc_bridge.py` já faz há meses, com
