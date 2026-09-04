@@ -1756,6 +1756,24 @@ class _Janela:
     __slots__ = ("_alvo_de_edicao", "_coop_ligado", "_edit_target_label",
                  "_edit_target_uniq", "_modo_nativo_ligado", "_target_uniq_by_index")
 
+    def _quantos_recebem_o_desenho(self) -> int:
+        """ZERO, e o zero é um FATO desta aba — não um valor de conveniência.
+
+        É o único degrau que `lightbar_actions._msg_do_desenho` pede além dos
+        seis campos acima, e ele existe lá para o aviso *"o mesmo desenho foi
+        para N controles"* do "Todos" da janela GTK. **Esta aba nunca escreve
+        sem `uniq`** — está dito no `_janela_do_desfecho`, e os dois gestos que
+        chegam aqui recusam antes com *"o clique não disse em qual controle"*.
+        Com alvo por controle, a própria GTK devolve 0 nesse método.
+
+        Escrever `0` aqui é declarar a ausência do ramo, e não copiar a regra:
+        a leitura de "Todos" mora em `_edit_uniq`/`_uniqs_conectados`, e nenhum
+        dos dois é alcançado por um caminho que sempre tem alvo. Se um dia esta
+        aba ganhar um "Todos", o lugar de emendar é aqui — e o método some em
+        favor do da GTK, com o mixin emprestando os dois degraus.
+        """
+        return 0
+
 
 def _janela_do_desfecho(ctx: Contexto, uniq: str, rotulo: str = "") -> Any:
     """Um `_Janela` com o estado DESTA mesa, para a frase do desfecho.
@@ -2261,9 +2279,210 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _escrever_a_cor(ctx, p, uniq, tuple(pedida)[:3], brilho=_fracao_do_disco(pct))
 
 
+#: O MÉTODO QUE RECONCILIA O CO-OP — ver `_acender_o_numero`. Ele tem teto
+#: declarado na ponte (`ponte.TETOS["coop.sync"] = 2.0`), e é preciso: um ciclo
+#: cheio do co-op pode derrubar e recriar um vpad, e o teto padrão de 250 ms do
+#: `_safe_call` devolveria `False` com o trabalho feito.
+_RECONCILIAR_O_COOP = "coop.sync"
+
+
+def _pares_da_troca(ctx: Contexto, uniq: str, n: int) -> list[tuple[str, int]]:
+    """Quem fica com que número DEPOIS da troca — o alvo e o parceiro dele.
+
+    `identity.number.set` **PERMUTA**: o alvo vai para o número pedido e quem
+    tinha aquele número fica com o do alvo, e mais ninguém se mexe. Está no
+    daemon (`_set_number_locked`: *"trocar de lugar o alvo e quem tem o número
+    pedido — os dois, e mais ninguém"*) e está nos dezessete lugares do desenho
+    que ela aprovou (*"Os dois trocam, os outros não se mexem"*).
+
+    POR QUE O PARCEIRO ENTRA, e ele não é zelo: as cinco lâmpadas de um
+    controle preso num override velho continuariam acesas no número que o
+    OUTRO acabou de receber — dois controles com o mesmo desenho, que é
+    exatamente a colisão que a numeração única (R-24) existe para matar.
+    Curar só o alvo trocaria uma queixa por outra, na mesma tela.
+
+    A CONTA É DAQUI E NÃO DO DAEMON porque a resposta não a traz: o
+    `identity.number.set` devolve `changed` com quem mudou de lugar, e
+    `ipc_bridge.identity_number_set` reduz tudo a `(ok, motivo)`. Ler o
+    `state_full` DEPOIS seria mais fiel; custa uma volta ao daemon e um dublê
+    que saiba responder. **RELATADO:** uma `identity_number_set_detalhado`
+    que entregue o `changed` é `app/ipc_bridge.py`, fora deste arquivo.
+
+    Números saem de `_numero` — o dono único (`app/actions/base`), o MESMO que
+    pinta a fileira de botões. Sem parceiro (número livre na mesa) a lista tem
+    um par só, e é o caso da mesa de um controle.
+    """
+    velho = 0
+    parceiro = ""
+    for c in ctx.conectados:
+        chave = str(c.get("uniq") or "")
+        if not chave:
+            continue
+        numero = _numero(ctx, c)
+        if chave == uniq:
+            velho = numero
+        elif numero == n:
+            parceiro = chave
+    pares = [(uniq, n)]
+    if parceiro and velho:
+        pares.append((parceiro, velho))
+    return pares
+
+
+def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> None:
+    """As cinco lâmpadas SEGUEM o número que ela acabou de escolher.
+
+    **A QUEIXA DELA, 04/09/2026:** *"escolha do jogador no iluminação não
+    funciona"*. O gesto renumerava e parava aí — e renumerar não move lâmpada
+    nenhuma por conta própria. Medido na mesa dela, com os dois DualSense
+    ligados e o daemon vivo, lendo `/sys/class/leds` a cada passo::
+
+        estado de partida            slot=2 → lâmpadas do 2 · slot=1 → do 1
+        1. identity.number.set       slot=1 → lâmpadas do 2 · slot=2 → do 1   ✗
+        2. + led.player_set por uniq slot=1 → lâmpadas do 2 · slot=2 → do 1   ✗
+        3. + coop.sync               slot=1 → lâmpadas do 1 · slot=2 → do 2   ✓
+
+    **A LINHA 2 É O ACHADO, e ela derruba a cura óbvia.** O daemon respondeu
+    `{"status":"ok","aplicado_em":["<o controle>"],"guardado_em":[]}` às DUAS
+    escritas — e nenhuma lâmpada se mexeu. O byte saiu; a camada do co-op o
+    repintou por cima no mesmo instante, porque no merge por campo do backend
+    (`core/backend_pydualsense._merged_desired_for_key`) ela está ACIMA do
+    override por-uniq::
+
+        default global < camada AUTOMÁTICA < override por-uniq < CO-OP < jogo
+
+    Escrever o override e ler o `aplicado_em` como sucesso teria posto na tela
+    dela um "aplicado" sobre duas lâmpadas paradas — a mesma mentira que a
+    MESA-CHEIA-09 mediu na janela GTK, reproduzida aqui.
+
+    **POR QUE A CAMADA DO CO-OP FICA VELHA, e é o defeito de fundo.** Ela é um
+    mapa PUBLICADO, não uma leitura: `coop._apply_coop_player_leds` calcula
+    `numeros_de_jogador()` — que pergunta o número ao MESMO
+    `identity_registry` que o `identity.number.set` acabou de escrever — e
+    publica o resultado em `_desired_coop_by_uniq`. Só que ele roda no fim de
+    um ciclo CHEIO do co-op, e um ciclo cheio pede `/dev/input` ter mudado, ou
+    um grab degradado, ou `force`. Renumerar não é nenhum dos três. O
+    `reassert_resolved_outputs()` que o próprio handler dispara reafirma então
+    a camada VELHA, com os números de antes — e ela fica assim até o próximo
+    hotplug. Na mesa dela estava assim quando esta medição começou.
+
+    **RELATADO, e a cura estrutural é de UMA linha, no daemon:** o
+    `_handle_identity_number_set` já adianta duas repinturas no ramo `changed`
+    (`reassert_resolved_outputs` e `_schedule_external_tick`); falta a
+    terceira, `get_coop_manager(daemon).sync(force=True)` — ou o
+    `_apply_coop_player_leds` direto. É `daemon/ipc_handlers.py`, fora do
+    território deste arquivo, e com ela este ramo daqui vira redundância
+    barata em vez de cura.
+
+    **OS DOIS RAMOS, e cada um trata do dono das lâmpadas naquele momento:**
+
+    * **o co-op manda** (`o_coop_manda`: mais de um jogador na mesa) — quem
+      escreve as cinco luzes é a camada dele, e a ÚNICA coisa que a move é
+      recalculá-la. `coop.sync` é o gesto que o produto já tem para isso, e a
+      docstring dele é explícita: *"Não liga nem desliga nada"*, *"reconciliar
+      nunca ressuscita o que o jogo suspendeu"*. Escrever o override aqui
+      seria escrever debaixo de quem manda;
+    * **o co-op não manda** — sobra a camada automática, e ela SEGUE o número
+      sozinha no `reassert` do handler… a menos que um override por-uniq esteja
+      preso acima dela. É o que a janela GTK deixa para trás toda vez que ela
+      usa "Desenho do PN" (`lightbar_actions._enviar_player_leds`), e ela USA a
+      GTK. Aqui o override é reescrito com o padrão do número de AGORA, pelo
+      dono da tabela (`core/led_control.player_led_pattern`, a mesma que o
+      daemon acende e a mesma que `luzinhas` desenha nesta aba).
+
+    **O PREÇO DO SEGUNDO RAMO, escrito porque ele é real:** um override
+    por-uniq PRENDE as lâmpadas acima da camada automática, e daí em diante um
+    controle que saia da mesa não faz mais os outros reacenderem sozinhos. É o
+    mesmo preço que a GTK já paga desde sempre, e não há IPC que limpe o
+    override (`lightbar.reset` é da barra, não das lâmpadas). Ele só se paga
+    quando o co-op não manda — no ramo de cima nenhum override é escrito.
+
+    A ORDEM É RENUMERAR PRIMEIRO, e ela decide o desfecho: o padrão das
+    lâmpadas é função do número NOVO, então sem o número não há o que acender.
+    E se a renumeração passar e a lâmpada não, **a renumeração VALE** — ela já
+    está gravada no registro, desfazê-la seria uma segunda escrita que também
+    pode falhar, e o cartão diz o que aconteceu com as luzes. O contrário —
+    calar sobre a lâmpada — é o silêncio que esta casa nomeia como a mentira.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_led_pattern
+
+    if o_coop_manda(ctx.state):
+        if not p.chamar(_RECONCILIAR_O_COOP):
+            raise RuntimeError(
+                f"o número deste controle mudou para {n}, mas as cinco "
+                f"lâmpadas não acompanharam: com o co-op ligado quem as "
+                f"acende é ele, e o Hefesto não respondeu ao pedido de "
+                f"reconciliar a mesa. {sem_resposta_do_daemon()}")
+        return
+
+    for alvo, numero in _pares_da_troca(ctx, uniq, n):
+        bits = tuple(player_led_pattern(numero))
+        corpo = p.player_leds_set_detalhado(bits, uniq=alvo)
+        if corpo is None:
+            raise RuntimeError(sem_resposta_do_daemon())
+        _cobrar_a_frase_do_desenho(ctx, alvo, bits, corpo)
+
+
+def _cobrar_a_frase_do_desenho(ctx: Contexto, uniq: str,
+                               bits: tuple[bool, ...], corpo: Any) -> None:
+    """Levanta com a frase da GTK quando o desenho NÃO foi para o aparelho.
+
+    NADA DE TEXTO NASCE DESTE LADO, e é o mesmo contrato de `_escrever_a_cor`:
+    quem compõe é `lightbar_actions._msg_do_desenho`, o dono ÚNICO da frase do
+    desenho das cinco luzes desde a MESA-CHEIA-09/E3 — três caminhos da janela
+    GTK passam por ele. Ele é chamado DESLIGADO da instância, com o mesmo
+    `_Janela` que a frase da cor já usa: o método lê o estado por funções de
+    `app/textos_de_aplicacao` que interrogam um objeto qualquer por `getattr`,
+    e o único degrau que ele pede a mais é o `_quantos_recebem_o_desenho` — ver
+    lá por que ele é zero nesta aba.
+
+    OS TRÊS ARGUMENTOS DE TEXTO SÃO OS DO CAMINHO GÊMEO — `descricao` de
+    `_descreve_player_leds`, `feito="atualizado"`, `fazer="atualizar"`. É o
+    que a GTK passa em `_set_player_leds`, que é para onde vão os botões
+    "Desenho do PN" dela; passar outra coisa faria as duas telas do mesmo
+    produto contarem o mesmo evento com palavras diferentes.
+
+    **A FRASE FELIZ É PERGUNTADA, NUNCA DIGITADA**, e essa é a diferença para o
+    `_escrever_a_cor`: lá o par `(assunto, frase feliz)` existe como constante
+    na GTK e se lê de lá; aqui ele é montado DENTRO do `_msg_do_desenho` e não
+    tem nome público. Digitá-lo deste lado seria a segunda escrita da mesma
+    frase — o defeito que a RADAR-01 mediu. Então pergunta-se ao dono: o MESMO
+    método, com um corpo sinteticamente feliz (`aplicado_em` com um destino),
+    devolve exatamente o que ele diria se tudo tivesse dado certo. Comparar
+    contra isso é perguntar *"a frase que saiu é a do caminho feliz?"* sem
+    conhecer uma sílaba dela.
+
+    O CORPO SINTÉTICO NÃO É UM DUBLÊ DO DAEMON: ele nunca vai ao aparelho e
+    nunca é lido como resposta. É a pergunta *"o que você diria no melhor
+    caso, para este controle, com este desenho?"* — e as duas chamadas usam o
+    MESMO `_Janela`, então toda pendência do estado (Modo Nativo, alvo fora da
+    mesa) vale igual nas duas e não some na comparação.
+
+    ESTE CAMINHO SÓ CORRE COM O CO-OP FORA. Com ele ligado, `_acender_o_numero`
+    volta antes — e é bom que volte: o ramo do co-op no `_msg_do_desenho`
+    responde a mesma frase para os dois corpos, e a comparação ficaria cega.
+    """
+    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
+        LightbarActionsMixin,
+    )
+
+    janela = _janela_do_desfecho(ctx, uniq, _nome_da_coluna(ctx, uniq))
+    descricao = LightbarActionsMixin._descreve_player_leds(bits)
+
+    def diz(qual: Any) -> str:
+        return str(LightbarActionsMixin._msg_do_desenho(
+            janela, ok=True, motivo=None, corpo=qual, descricao=descricao,
+            feito="atualizado", fazer="atualizar"))
+
+    feliz = diz({"status": "ok", "aplicado_em": [uniq], "guardado_em": []})
+    frase = diz(corpo)
+    if frase != feliz:
+        raise RuntimeError(frase)
+
+
 @gesto("04-iluminacao.html", "player")
 def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Dar o Player N a este controle." `ipc_bridge.identity_number_set`.
+    """"Dar o Player N a este controle" — o número E as cinco lâmpadas.
 
     NÃO é `identity.renumber`, e a diferença está escrita no
     `app/ipc_bridge.py:712`: o `renumber` COMPACTA todos preservando a ordem
@@ -2274,6 +2493,12 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     tela (`_MOTIVOS_NUMERO`): "O jogo está aberto", "Esse número é maior do que
     a quantidade de controles ligados". Levantar com ele é o que faz o botão
     RECUSAR DIZENDO em vez de falhar calado.
+
+    **ELE ERA MEIO GESTO ATÉ 04/09/2026**, e a metade que faltava é a que ela
+    olha: `identity.number.set` troca o NÚMERO EXIBIDO, e as cinco lâmpadas do
+    controle não vêm com ele. Ver `_acender_o_numero` para o que foi medido na
+    mesa dela — inclusive a razão de a cura óbvia (escrever o desenho por
+    `uniq`) não funcionar com o co-op ligado.
     """
     uniq = _uniq(o)
     try:
@@ -2285,6 +2510,7 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ok, motivo = p.identity_number_set(uniq, n)
     if not ok:
         raise RuntimeError(motivo or "não consegui trocar o número")
+    _acender_o_numero(ctx, p, uniq, n)
 
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
@@ -2293,8 +2519,15 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: `bool` dela não carrega `aplicado_em`/`guardado_em`, e sem eles os três
 #: gestos que escrevem cor diziam "aplicou" para um clique que não acendeu nada.
 #: Ver `_escrever_a_cor`.
-PONTE = {"led_set_detalhado", "identity_number_set", "chamar"}
-METODOS = {"lightbar.reset"}
+#: A PORTA DAS CINCO LÂMPADAS É A `_detalhado` DESDE 04/09/2026, e nasceu já
+#: assim: o `player_leds_set` devolve `bool`, e um `True` dele significa só *"o
+#: daemon respondeu"* — foi com um `aplicado_em` desses que a medição da mesa
+#: dela mostrou duas lâmpadas paradas. Ver `_acender_o_numero`.
+PONTE = {"led_set_detalhado", "identity_number_set",
+         "player_leds_set_detalhado", "chamar"}
+#: `coop.sync` É O ÚNICO JEITO DE MOVER AS LÂMPADAS COM O CO-OP LIGADO —
+#: medido, e o porquê está em `_acender_o_numero`.
+METODOS = {"lightbar.reset", "coop.sync"}
 
 
 #: O QUE ESTA ABA DECLARA À RÉGUA — o piso e as provas moram AQUI, e não no
@@ -2317,6 +2550,14 @@ PROVAS = [
      "chama": [("chamar", ["lightbar.reset"], {"uniq": "aa:bb:cc:00:00:01"}),
                ("led_set_detalhado", [(0, 0, 255)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
+    # DUAS chamadas, e a ordem é o desfecho: sem o número novo não há padrão
+    # de lâmpada a acender. A mesa da régua tem UM controle, então o parceiro
+    # da troca não existe e só o alvo recebe o desenho — ver `_pares_da_troca`.
+    # O segundo par (`(False, True, False, True, False)`) é `player_led_pattern(2)`,
+    # e está escrito aqui de propósito: se alguém trocar a tabela do daemon, a
+    # régua reprova em vez de a lâmpada acender o desenho de outro jogador.
     {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},  # (noqa-acento) id
-     "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {})]},
+     "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {}),
+               ("player_leds_set_detalhado", [(False, True, False, True, False)],
+                {"uniq": "aa:bb:cc:00:00:01"})]},
 ]
