@@ -327,12 +327,31 @@ def test_o_travessao_nao_pousa_em_marca_que_o_texto_nao_devolve(pacotes_mod):
     # O `html` já está em `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`, então aquele
     # desenho passou a ser poupado por OUTRA porta, e não por esta.
     #
-    # A âncora de hoje é `troca.item`, que é a mesma forma de dano: um
-    # `<i class="dono">` vazio e as `luzinhas`, filhos que só o CSS desenha.
-    assert "troca.item" in pacotes_mod.enderecos_que_o_texto_apaga(
-        "04-iluminacao.html"), (
-        "a `04-iluminacao` publicada perdeu os filhos mudos do `troca.item` — "
-        "esta linha existe para o teste acima não passar por vacuidade")
+    # A SEGUNDA ÂNCORA É DESCOBERTA, E NÃO DIGITADA — 03/09/2026, e esta é a
+    # TERCEIRA vez que ela troca de nome. Foi `04-iluminacao·aceso`, virou
+    # `04-iluminacao·troca.item`, e o `troca.item` saiu da lista quando outra
+    # frente lhe deu `data-hef-alvo="plastico"` — o alvo `texto` deixou de
+    # tocá-lo, e ele passou a ser poupado por OUTRA porta.
+    #
+    # Ou seja: a âncora envelheceu porque o produto MELHOROU, e a régua reprovou
+    # a melhora. É a forma que esta casa mais pagou em 03/09, e ela apareceu
+    # aqui numa guarda de vacuidade — o lugar de onde menos se espera.
+    #
+    # A guarda continua guardando o que importa: que o conjunto NÃO seja vazio
+    # em toda a árvore. Qual página o sustenta é dado, não requisito.
+    onde_ha_mudo = {
+        pagina: sorted(pacotes_mod.enderecos_que_o_texto_apaga(pagina))
+        # A LISTA DAS DEZ TEM DONO: `pacotes.PACOTES` é a tabela que diz qual
+        # pacote pinta cada página, e é ela que o despachante consulta.
+        for pagina in sorted(pacotes_mod.PACOTES)
+    }
+    com_mudo = {k: v for k, v in onde_ha_mudo.items() if v}
+    assert com_mudo, (
+        "NENHUMA página tem filho mudo sob alvo `texto` — o teste acima passa "
+        "por vacuidade, e a exceção que ele mede deixou de ter caso. Se isso é "
+        "verdade de propósito (todo elemento com filho mudo ganhou outro alvo), "
+        "apague os dois; se não é, alguém apagou desenho.\n"
+        f"medido: {onde_ha_mudo}")
 
 
 def test_o_travessao_nao_pousa_no_fundo_nem_na_barra(pacotes_mod):
@@ -576,12 +595,36 @@ def test_a_coluna_viva_manda_e_o_lugar_dela_nao_e_apagado(pacotes_mod):
 def test_o_piloto_ainda_chama_a_conta_do_despachante():
     """As duas pontas continuam ligadas — e agora o elo é uma CHAMADA.
 
-    Este é o único literal que sobrou, e ele cobra o que literal sabe cobrar: se
-    o piloto deixar de chamar a função, o molde vira uma coluna que não pinta
-    nada. O que a função FAZ é medido pelos dois testes acima, rodando-a.
+    O ELO É A CHAMADA, E A CHAMADA SE LÊ NA ÁRVORE — 03/09/2026. Este teste
+    digitava a assinatura inteira (`...sem_dono(carga)`) e reprovou no dia em que
+    a função ganhou um segundo argumento: o piloto passou a escrever
+    `apagar_os_lugares_sem_dono(carga, _com_dono(ctx))`, que é a cura de
+    QUEM-TEM-DONO-01 — e a régua acusou a MELHORA de ter quebrado o elo. Foi
+    achado por uma frente da leva de paridade, medindo numa árvore limpa para
+    provar que o vermelho não era dela.
+
+    *Régua que digita a assinatura envelhece na primeira melhora.* O que importa
+    é que a chamada EXISTA, não quantos argumentos ela leva — e `ast` responde
+    isso sem opinar sobre a forma.
     """
+    import ast
+
     piloto = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
               ).read_text(encoding="utf-8")
-    assert "pacotes.apagar_os_lugares_sem_dono(carga)" in piloto, (
-        "o piloto deixou de apagar os lugares sem dono — o molde do "
-        "despachante ficou sem quem o aplique")
+    chamadas = [
+        n for n in ast.walk(ast.parse(piloto))
+        if isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Attribute)
+        and n.func.attr == "apagar_os_lugares_sem_dono"
+    ]
+    assert chamadas, (
+        "o piloto deixou de CHAMAR `apagar_os_lugares_sem_dono` — o molde do "
+        "despachante ficou sem quem o aplique, e as colunas sem dono voltam a "
+        "mostrar o desenho")
+    # E A CARGA CONTINUA SENDO O PRIMEIRO ARGUMENTO. Sem esta metade, alguém
+    # poderia chamar a função com outra coisa e o teste ficaria verde sobre uma
+    # chamada que não apaga a carga do tique.
+    assert any(c.args and isinstance(c.args[0], ast.Name) and c.args[0].id == "carga"
+               for c in chamadas), (
+        "a chamada existe mas não recebe a `carga` do tique como primeiro "
+        "argumento — o molde aplicado seria outro")
