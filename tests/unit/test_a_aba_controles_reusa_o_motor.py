@@ -326,12 +326,29 @@ def test_sem_leitura_de_audio_o_microfone_nao_chuta(pac, a02):
 
 
 def test_com_leitura_de_audio_o_microfone_continua_alternando(pac, a02):
-    """A metade que prova que a guarda não apagou o botão."""
+    """A metade que prova que a guarda não apagou o botão.
+
+    **A FUNÇÃO MUDOU EM 04/09/2026 — S-05, a D-12 dela:** *"o botão é pra ligar
+    o microfone e ele ser ouvido no canal específico dele"*. O 🎙 chama o ATO
+    inteiro (`mic_canal_set_detalhado`) em vez do mudo do firmware sozinho.
+
+    **O QUE O APARELHO FAZ NÃO MUDOU COM ESTA TROCA**, e é por isso que a
+    substituição é segura: `ipc_bridge.mic_set_detalhado` já DELEGAVA ao ato
+    desde a ONDA1-D1. O que a variante direta traz é o `status` honesto — o
+    embrulho do `mic_set` reescreve `status` para `"ok"` assim que o firmware
+    foi pedido, e com isso a metade do CANAL sumia da resposta, que é
+    justamente a metade que falha no Modo Nativo e no rádio sem ponte.
+
+    E O ARGUMENTO INVERTEU DE SENTIDO, não de valor: `mic_set` recebia
+    `muted=True` (*"cale"*) e o ato recebe `ligado=False`. `mic_mudo` era
+    `False` — o microfone está no ar —, então o clique o CALA nos dois
+    vocabulários.
+    """
     dele = {**BASE, "audio": {"mic_mudo": False}}
     ctx = pac.Contexto(state={}, mesa=[], conectados=[dele], estados={})
     p = PonteDeMentira()
     a02.mudo(ctx, {"uniq": UNIQ, "mudo": "microfone"}, p)
-    assert p.chamadas == [("mic_set", (True,), {"uniq": UNIQ})]
+    assert p.chamadas == [("mic_canal_set_detalhado", (False,), {"uniq": UNIQ})]
 
 
 # --------------------------------------------------------------------------
@@ -345,14 +362,21 @@ def test_a_cor_de_fonte_desconhecida_nao_vira_preto(pac, a02):
     sysfs sem escrita nossa pode ser o azul-kernel brilhando neste exato
     momento"*.
 
-    MORDE: voltar ao `"#{:02X}{:02X}{:02X}".format(*rgb[:3])` cru reprova aqui
-    com `'#000000' != '—'`.
-    """
-    import mesa_viva
+    **A PALAVRA MUDOU EM 04/09/2026 — decisão [02] dela**, e o que esta régua
+    mede não: *"palavra curta no lugar do travessão, frase inteira no hover"*.
+    Os três "não sei" dividiam um `—` só e diziam coisas diferentes; agora cada
+    um tem a sua palavra, e a frase inteira vai no `luz-porque`. O que continua
+    valendo, letra por letra, é o que este teste sempre cobrou: **a cor crua
+    NÃO aparece**.
 
+    A palavra é PERGUNTADA à tabela, e não digitada — a tabela é asked ao motor
+    (`a02.PALAVRA_DA_LUZ`, com as chaves vindas de `rotulo_lightbar`).
+
+    MORDE: voltar ao `"#{:02X}{:02X}{:02X}".format(*rgb[:3])` cru reprova aqui.
+    """
     d = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 0],
                          "lightbar_source": "desconhecida"})
-    assert d["luz-hex"] == mesa_viva.SEM_LEITOR
+    assert d["luz-hex"] == a02.PALAVRA_DA_LUZ[a02.ROTULO_DA_LUZ_DESCONHECIDA]
     assert "000000" not in d["luz-hex"]
 
 
@@ -376,17 +400,29 @@ def test_a_barra_apagada_nao_diz_nao_sei(pac, a02):
     travessão que o piloto usa para null (`hefesto_vivo.py:118`), a tela dizia
     "não medi" sobre a única coisa que se mediu.
 
-    MORDE: voltar a decidir pela base (`base is not None`) reprova aqui com
-    `'—' != '#000000'`, porque o motor devolve `None` como base nos DOIS casos.
-    """
-    import mesa_viva
+    **O CAMPO PASSOU A DIZER A PALAVRA — 04/09/2026, decisão [02] dela**, e o
+    que esta régua cobra continua sendo o mesmo: apagada e "não sei" são dois
+    estados que o motor SEPARA, e a tela tem de separá-los também. Antes o que
+    os separava era `#000000` contra `—`; hoje é `Apagada` contra `Não sei`.
 
+    **O `#000000` NÃO SUMIU — ele foi para onde quer dizer alguma coisa.** Uma
+    barra sem corrente emite zero nos três canais, e é isso que o RETÂNGULO
+    mostra (`luz-cor`, que continua saindo do `luz_hex`). O que mudou é o
+    CAMPO, que agora responde à pergunta que a pessoa faz olhando ali — *"por
+    que não vejo a cor?"* — em vez de mostrar um código de cor que ela não tem
+    como distinguir de uma cor de verdade.
+
+    MORDE: voltar a decidir pela base (`base is not None`) reprova aqui,
+    porque o motor devolve `None` como base nos DOIS casos.
+    """
     apagada = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 255],
                                "lightbar_source": "sysfs", "lightbar_on": False})
     naosei = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 0],
                               "lightbar_source": "desconhecida"})
-    assert apagada["luz-hex"] == a02.HEX_DA_LUZ_APAGADA
-    assert apagada["luz-hex"] != mesa_viva.SEM_LEITOR
+    assert apagada["luz-hex"] == a02.PALAVRA_DA_LUZ[a02.ROTULO_DA_LUZ_APAGADA]
+    assert apagada["luz-cor"] == a02.HEX_DA_LUZ_APAGADA, (
+        "o retângulo deixou de mostrar o preto de uma barra sem corrente — o "
+        "fato saiu do campo E do desenho, e aí ele sumiu de vez")
     assert apagada["luz-hex"] != naosei["luz-hex"], (
         "dois estados que o motor SEPARA voltaram a mostrar a mesma coisa")
 
@@ -398,11 +434,12 @@ def test_o_zero_de_uma_barra_desligada_tambem_e_apagada(pac, a02):
     tela tem de mandá-los para o mesmo lugar — senão a cura separa três estados
     onde o dono separa dois.
 
-    MORDE: cravar `#000000` só no ramo `lightbar_on is False` reprova aqui.
+    MORDE: cravar a palavra só no ramo `lightbar_on is False` reprova aqui.
     """
     d = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 0],
                          "lightbar_source": "sysfs", "lightbar_on": True})
-    assert d["luz-hex"] == a02.HEX_DA_LUZ_APAGADA
+    assert d["luz-hex"] == a02.PALAVRA_DA_LUZ[a02.ROTULO_DA_LUZ_APAGADA]
+    assert d["luz-cor"] == a02.HEX_DA_LUZ_APAGADA
 
 
 def test_em_nativo_a_tela_nao_afirma_a_cor_crua(pac, a02):
@@ -419,14 +456,16 @@ def test_em_nativo_a_tela_nao_afirma_a_cor_crua(pac, a02):
     GTK mostra essa cor COM a frase que a explica ao lado; aqui a frase não tem
     endereço, e cor sem ressalva é afirmar o que ninguém mediu.
 
+    A PALAVRA É `Jogo` DESDE 04/09/2026 (decisão [02] dela), e ela diz o que o
+    travessão calava: quem está com o LED é o JOGO. O que a régua cobra
+    continua sendo o mesmo — a cor crua não aparece.
+
     MORDE: decidir pela base (`base is not None`) reprova aqui com `'#000000'`.
     """
-    import mesa_viva
-
     d = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 0],
                          "lightbar_source": "desconhecida", "lightbar_on": True},
               state={"native_mode": True})
-    assert d["luz-hex"] == mesa_viva.SEM_LEITOR
+    assert d["luz-hex"] == a02.PALAVRA_DA_LUZ[a02.ROTULO_DA_LUZ_EM_NATIVO]
     assert "000000" not in d["luz-hex"]
 
 
@@ -437,14 +476,15 @@ def test_com_a_steam_segurando_o_fd_a_tela_nao_afirma_a_cor_crua(pac, a02):
     que a classe LED devolve é o que o Hefesto PEDIU — a madrugada de 16/08 leu
     `[0 255 0]` com a barra apagada e `[0 255 0]` com ela verde"*.
 
+    A PALAVRA É `Steam` DESDE 04/09/2026 (decisão [02] dela) — e é ela que
+    manda a pessoa olhar para o lugar certo, que um travessão não fazia.
+
     MORDE: decidir pela base reprova aqui com `'#000000'`.
     """
-    import mesa_viva
-
     d = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 0],
                          "lightbar_source": "desconhecida", "lightbar_on": True,
                          "lightbar_disputada": True})
-    assert d["luz-hex"] == mesa_viva.SEM_LEITOR
+    assert d["luz-hex"] == a02.PALAVRA_DA_LUZ[a02.ROTULO_DA_LUZ_SEGURADA]
 
 
 def test_o_rotulo_da_apagada_e_perguntado_ao_motor(a02, motor):
@@ -842,7 +882,13 @@ def test_publicada_a_pagina_o_retangulo_da_luz_diz_o_que_o_campo_diz(
     nao_sei = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 0],
                                "lightbar_source": "desconhecida"})
     assert acesa["luz-cor"] == acesa["luz-hex"] == "#0000FF"
-    assert apagada["luz-cor"] == apagada["luz-hex"] == "#000000"
+    # A APAGADA DEIXOU DE DIZER A MESMA COISA NOS DOIS, e é decisão dela ([02],
+    # 04/09/2026): o RETÂNGULO continua no preto que uma barra sem corrente
+    # emite, e o CAMPO passou a dizer a palavra. São duas perguntas diferentes
+    # no mesmo bloco — *"que cor?"* e *"por que não vejo cor?"* —, e é
+    # justamente por o campo responder a segunda que a palavra entrou.
+    assert apagada["luz-cor"] == "#000000"
+    assert apagada["luz-hex"] == a02.PALAVRA_DA_LUZ[a02.ROTULO_DA_LUZ_APAGADA]
     assert nao_sei["luz-cor"] == "", "o retângulo afirma uma cor que ninguém mediu"
 
 

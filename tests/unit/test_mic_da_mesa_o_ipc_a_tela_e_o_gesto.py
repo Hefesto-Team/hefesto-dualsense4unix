@@ -121,12 +121,29 @@ def test_o_selo_pinta_desconhecido_quando_o_state_full_nao_traz_audio() -> None:
 
 
 def test_o_selo_continua_dizendo_a_verdade_quando_ha_leitura() -> None:
-    """A metade que prova que a cura não é "nunca mais mostra nada"."""
+    """A metade que prova que a cura não é "nunca mais mostra nada".
+
+    **O SELO PASSOU A DIZER O ESTADO COMPOSTO — 04/09/2026, decisão [03] da
+    ONDA2-02, pela D-12 dela.** ATIVO agora exige as QUATRO faces, e o
+    `casamento.FALSO` traz UMA: `{"audio": {"mic_mudo": False}}`. Com só ela, a
+    resposta certa é `—` (*"ainda não perguntamos ao canal"*) — e é o que o
+    caso ACIMA já mede.
+
+    ENTÃO ESTE CASO PASSOU A MONTAR AS QUATRO, no lugar de mexer no `FALSO`.
+    O dublê compartilhado é a fixture de DEZ abas e a ONDA1-D1 já relatou que
+    ele precisa crescer; encolher a decisão dela para caber num dublê velho
+    seria o contrário do que esta casa faz. Enquanto ele não cresce, quem
+    precisa de leitura completa a monta — e diz por quê.
+    """
     from hefesto_dualsense4unix.interface import casamento
     from hefesto_dualsense4unix.interface.pacotes import a02_controles
 
+    com_o_canal = {**casamento.FALSO,
+                   "audio": {**(casamento.FALSO.get("audio") or {}),
+                             "canal_ativo": True, "canal_mudo": False}}
+
     class _Ctx:
-        conectados: ClassVar[list[Any]] = [casamento.FALSO]
+        conectados: ClassVar[list[Any]] = [com_o_canal]
         mesa: ClassVar[list[Any]] = casamento.MESA_FALSA
 
     saida = a02_controles.pacote(_Ctx())  # type: ignore[arg-type]

@@ -1016,12 +1016,15 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    # ONDA1-D1 / O SOM (04/09/2026) — TRÊS PROMESSAS QUE ESPERAM A ABA 02.
-    # A frente do SOM é dona do daemon e da ponte; a metade de TELA é da aba 02
-    # (`interface/pacotes/a02_controles.py`) e do piloto, que outra frente da
-    # mesma onda está editando. Fiar daqui seria a colisão que a R1 desta casa
-    # existe para impedir — as três nascem declaradas, com o endereço exato de
-    # onde o caminho se fecha.
+    # AS TRÊS DA ONDA1-D1 MORRERAM — 04/09/2026, e elas previram o próprio fim.
+    # `mic_canal_set`, `frase_do_ato_do_microfone` e `ler_as_duas_camadas`
+    # nasceram declaradas AQUI porque a metade de tela era de outra frente da
+    # mesma onda; as três diziam, com o endereço exato, onde o caminho se
+    # fecharia — no gesto `mudo` e na leitura da rota da `interface/pacotes/
+    # a02_controles.py`. A ONDA2-02 fechou os dois, e o portão cobrou as
+    # lápides de volta ao pó no mesmo dia. **É o desenho funcionando**: uma
+    # dívida que se anuncia com endereço é uma dívida que alguém paga.
+
     # ONDA1-D2 / A VIBRAÇÃO (04/09/2026) — A BARRA POR MOTOR ESPERA A ABA 05.
     # Mesma forma da de cima e pela mesma razão: a frente da vibração é dona do
     # daemon e da ponte; a metade de TELA é da aba 05, que está no `nao_toca:`
@@ -1038,32 +1041,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "nascer e chamar `p.rumble_motores_set(forte_pct=..., fraco_pct=..., uniq=...)`, "
         "pintando a volta com `state_full[\"rumble_motores\"]`. A metade do daemon está "
         "medida em `docs/process/agentes/2026-09-04/ONDA1-D2-A-VIBRACAO-01-D2.md`."
-    ),
-    "app/ipc_bridge.py::mic_canal_set": (
-        "MICROFONE-UM-ATO-01 (04/09/2026): o ATO do microfone, com as duas metades "
-        "(o canal no PipeWire e o mudo do firmware). O caminho se perde no gesto `mudo` de "
-        "`interface/pacotes/a02_controles.py`, que hoje chama `p.mic_set(not agora, uniq=)` — "
-        "e ele JÁ executa o ato, porque `ipc_bridge.mic_set_detalhado` passou a delegar a "
-        "`mic_canal_set_detalhado` para não mudar o comportamento de um arquivo que outra "
-        "frente edita agora. FECHA quando a aba 02 trocar aquela linha por "
-        "`p.mic_canal_set(ligado=not mudo_agora, uniq=uniq)` e pintar a recusa com "
-        "`frase_do_ato_do_microfone` — a metade do daemon está medida na bancada e no "
-        "relatório `docs/process/agentes/2026-09-04/ONDA1-D1.md`."
-    ),
-    "app/ipc_bridge.py::frase_do_ato_do_microfone": (
-        "MICROFONE-UM-ATO-01 (04/09/2026): traduz o corpo do ato na frase que vai ao CARTÃO "
-        "daquele controle, dizendo QUAL das duas metades faltou. O caminho se perde no mesmo "
-        "gesto `mudo` da aba 02, que hoje levanta um `RuntimeError` com frase fixa e por isso "
-        "não tem onde pôr esta. FECHA junto com `mic_canal_set`, na mesma linha."
-    ),
-    "app/audio_saida.py::ler_as_duas_camadas": (
-        "ALTO-FALANTE-DOIS-CANAIS-01 (04/09/2026): a leitura de volta da rota do som pelas "
-        "DUAS camadas — o byte `OUTPUT_PATH_SEL` do `state_full` e o `pactl get-default-sink`. "
-        "O caminho se perde em `a02_controles.rota_na_tela`, que lê só o byte: foi assim que "
-        "em 03/09 o card 2 mostrou 'Todo o som do PC' aceso com o som saindo na TV. FECHA "
-        "quando aquela função passar a montar um `RotaDasDuasCamadas` e devolver "
-        "`.botao_aceso`. A função PURA que decide (`botao_da_rota_aceso`) já é exercida pelo "
-        "ensaio `scripts/ensaios/a_rota_do_som_vai_e_volta.py`, que passou na bancada."
     ),
     # LUZ-DO-MIC-01, 03/09/2026 — NOVE PROMESSAS QUE TÊM CAMINHO E O PORTÃO
     # NÃO VÊ. As duas peças de leitura do microfone são importadas pelo laço
@@ -1233,14 +1210,11 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     #
     # TRÊS ABAS, TRÊS CAMINHOS, o MESMO dia. A lápide não morreu de uma cura —
     # morreu porque a lei dela ("a identidade vem de cima") atravessou as dez.
-    "interface/pacotes/__init__.py::degradacao_de": (
-        "A frase 'Emulação degradada (uinput): …', que delega para "
-        "`app/widgets/controller_card.texto_degradacao`. `vpad_motivo` é lido "
-        "UMA vez na GTK e ZERO em `interface/pacotes/` — a razão pela qual a "
-        "emulação caiu não chega à tela nova. Fecha quando a aba Controles, "
-        "que já lê `vpad_backend`, passar a mostrar o porquê. MEDIDO em "
-        "02/09/2026."
-    ),
+    # `interface/pacotes/__init__.py::degradacao_de` SAIU DAQUI — 04/09/2026.
+    # A lápide dizia, palavra por palavra: *"fecha quando a aba Controles, que
+    # já lê `vpad_backend`, passar a mostrar o porquê"*. A decisão [07] dela
+    # mandou mostrar (*"uma marca na palavra e o motivo no hover"*), e o
+    # `mascara-degradou` da aba 02 é o chamador que faltava.
     "app/actions/jogar/painel.py::chips_sem_degrau": (
         "Os chips que nomeiam uma ponte que a `ESCADA` não tem "
         "(app/actions/jogar/painel.py:534) — a tela prometendo o que o produto não "
