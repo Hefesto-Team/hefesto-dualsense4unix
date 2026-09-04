@@ -1,13 +1,13 @@
 {
-  "medido_em": 1787534197.094181,
+  "medido_em": 1788539960.0710177,
   "portoes": {
     "ruff": {
-      "ok": false,
-      "cauda": "R,\n65 | )\n66 | from hefesto_dualsense4unix.integrations.cor_do_plastico import (  # noqa: E402\n   |                                                                    ^^^^^^^^^^^^\n67 |     NOMES_DE_FABRICA,\n68 |     TONS,\n   |\nhelp: Remove unused `noqa` directive\n\nFound 4 errors.\n[*] 4 fixable with the `--fix` option."
+      "ok": true,
+      "cauda": "All checks passed!"
     },
     "mypy": {
       "ok": true,
-      "cauda": "Success: no issues found in 208 source files"
+      "cauda": "Success: no issues found in 297 source files"
     },
     "acentuação": {
       "ok": true,
@@ -18,12 +18,12 @@
       "cauda": ""
     },
     "referências": {
-      "ok": true,
-      "cauda": "OK: 418 documento(s) sem referência morta."
+      "ok": false,
+      "cauda": "ambiente ou um\nmétodo de IPC que NÃO existe nesta árvore. Corrija o nome, crie o\nque falta, ou -- se a ausência for o assunto do parágrafo --\nmarque a linha com o comentário de isenção descrito no cabeçalho\ndeste script. Em ADR, a nota de verificação datada no fim do\narquivo já isenta o documento inteiro daquele nome."
     },
     "palavra de tela": {
-      "ok": false,
-      "cauda": "x/src/hefesto_dualsense4unix/app/widgets/painel_no_jogo.py:615: o texto de tela '<span foreground=\"' (texto de tela) começa em minúscula. A janela fala com quem joga: comece com maiúscula.\n    Se for exceção de verdade, declare em `EXCECOES_DE_MINUSCULA_PY` com a razão e a data.\n\n35 reprovação(ões) da palavra de tela."
+      "ok": true,
+      "cauda": ""
     },
     "anonimato": {
       "ok": true,
@@ -43,18 +43,18 @@
     },
     "paridade de transporte": {
       "ok": true,
-      "cauda": "tenta sozinha...... 36\n       desses, SEM ensaio no caderno.......... 0\n       desses, na direção de ENTRADA (o jogo). 0\n  ensaios lidos do caderno de bancada......... 177\n  linhas que alcançam o jogo por `uhid`....... 16\n       dessas, com afirmação forte............ 4\n       dessas, SEM `ponte_alcanca`............ 0"
+      "cauda": "afirmação forte.............................. 4\n       dessas, SEM `ponte_alcanca`.............................. 0\n  citações da escada de vibração conferidas contra o dono....... 12\n  células com conteúdo de um lado (offset, evidência, ressalva…) 575\n       dessas, SEM `de_onde_sei` daquele lado................... 0"
     },
     "specs.html em dia": {
       "ok": true,
-      "cauda": "specs.html: atualizado (confere com o CSV, com o caderno de ensaios e com os três desenhos)"
+      "cauda": "html/specs.html: atualizado (confere com o CSV, com o caderno de ensaios e com os três desenhos)"
     }
   },
   "suite": {
-    "passed": 11686,
-    "failed": 1,
+    "passed": null,
+    "failed": 0,
     "ok": false,
-    "nao_mediu": false,
-    "porque": ""
+    "nao_mediu": true,
+    "porque": "................ [ 44%]\n........................................................................ [ 44%]\n........................................................................ [ 45%]\n........................................................................ [ 45%]\n...................................."
   }
 }
