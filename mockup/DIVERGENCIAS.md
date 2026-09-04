@@ -47,6 +47,29 @@ seção daqui**: a aba deixou de estar em trabalho.
   **Até publicar, o produto continua exatamente como ela o vê hoje:** nenhum
   elemento desta aba usa as peças, então as regras novas não casam com nada e
   a página publicada desenha o mesmo pixel que a bancada.
+- **04/09/2026 · ONDA2-02** — as dez decisões desta aba viraram desenho na
+  BANCADA, e **nada foi publicado**: a publicação é uma leva só, para o olho
+  dela (`PROVA-DE-TELA-01`). O que a bancada passou a ter, e o produto ainda
+  não:
+
+  | o quê | decisão | o que muda no desenho |
+  | --- | --- | --- |
+  | o **anel interno** de cada cartão, seguindo a luz viva | D-06 / S-11 | um `<span class="anel-vivo">` de 1px dentro dos 2px do casco. **É o único item desta lista que move pixel**, e é o que ela pediu com todas as letras: *"casco borda externa lightbar borda interna"* |
+  | a **palavra curta** no lugar do travessão da Barra de luz | [02] | o campo passa a mostrar `Jogo` · `Steam` · `Não sei` · `Apagada`; o `title` da linha passa a ser PINTADO com a frase inteira |
+  | o **`?`** ao lado do 🎙 e do ♪ | [04] / [06] | invisível em repouso (a folha o esconde); ele só aparece com o botão apagado |
+  | o **`disabled` do ♪ SAIU** | [04] | o botão continua respondendo ao clique — *"apagado e ainda assim responde"* |
+  | a **marca da emulação degradada** na máscara | [07] | um `<sup>` que nasce `display:none` e só aparece quando o produto escreve o motivo no `title` |
+  | a **linha de ressalva** do alto-falante | [09] + D-02 | não ocupa nada em repouso (`:empty` e `.nada`, as duas metades da peça) |
+  | o **endereço do décimo alvo** no acordeão | T-07 | `data-hef-alvo="marcado"` no rádio — endereço de LEITURA, e nada mais |
+
+  **O QUE O PRODUTO FAZ ENQUANTO ESPERA:** exatamente o que fazia. Os endereços
+  novos só existem na bancada, e o pacote pergunta à página PUBLICADA antes de
+  emitir (`a02_controles._so_se_a_pagina_tiver`) — nenhum valor novo é escrito
+  num vão que não existe, e nenhum órfão entra no `casamento.medir(...)`.
+
+  **O QUE JÁ VALE NO PRODUTO SEM PUBLICAR NADA**, porque é campo que a página
+  publicada JÁ TEM: o selo composto do microfone (`mic-selo`), a rota lida nas
+  duas camadas (`alto-rota`) e o ato do 🎙 num pedido só.
 
 ## 03-gatilhos.html
 - **04/09/2026** — a folha das dez peças (D-02 e D-03) entrou pelo `monta.py`.
