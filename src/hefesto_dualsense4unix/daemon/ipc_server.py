@@ -30,6 +30,10 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     speaker.set          {volume?: 0-255, muted?: bool, release?: bool, uniq?}
                          -> {status, speaker}
     mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}
+    mic.canal.set        {ligado: bool, uniq?}
+                         -> {status, uniq, ligado, canal_feito, canal_motivo,
+                             firmware_pedido, firmware_motivo, ativo, motivo}
+                         `status` só é "ok" com as DUAS metades feitas
     mic.led.set          {aceso: bool|null, uniq?} -> {status, aceso}
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
@@ -155,6 +159,13 @@ class IpcServer(IpcHandlersMixin):
             # WirePlumber e moram no `doctor --fix`; esta é a única do
             # controle, e até 25/07 só o botão físico a alcançava.
             "mic.set": self._handle_mic_set,
+            # MICROFONE-UM-ATO-01 (04/09/2026): o ATO INTEIRO — o canal de
+            # captura deste controle eleito no sistema E o mudo do firmware,
+            # num pedido só. Conceito dela: *"o botão é pra ligar o microfone
+            # e ele ser ouvido no canal específico dele"*. O `mic.set` acima
+            # continua existindo porque é a porta de emergência da POSSE
+            # (`muted: null` devolve o byte ao kernel); o ato não a substitui.
+            "mic.canal.set": self._handle_mic_canal_set,
             # MIC-DA-MESA-ELEICAO-01: o LED do botão de mudo, que é campo
             # SEPARADO do mudo (`common[8]`, autorizado pelo
             # `MIC_MUTE_LED_CONTROL_ENABLE`). `aceso: null` DEVOLVE a
