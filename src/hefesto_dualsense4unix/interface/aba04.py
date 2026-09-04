@@ -628,10 +628,50 @@ CSS = """
   .cel-brilho{display:flex;align-items:center;gap:9px}
   .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);position:relative}
   .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
-    border-radius:50%;background:var(--purple);border:2px solid var(--panel)}
   .num{flex:0 0 38px;text-align:right;font-family:'JetBrains Mono',monospace;
        font-size:11.5px;color:var(--fg)}
+  /* O TRILHO PASSA A ACEITAR O ARRASTE — 03/09/2026, decisão dela: perguntada
+     se mexer no brilho grava o perfil na hora ou espera o "Salvar Perfil", ela
+     respondeu **"Grava na hora"**.
+
+     O QUE HAVIA ATÉ HOJE: o desenho já era um slider — a regra `.cheio::after`
+     punha um knob de 12px na ponta da barra roxa — e ele **não fazia nada**.
+     Ela via 100%, arrastava, e nada acontecia: a célula inteira era só leitura,
+     e o `docs/data/paridade-gtk-html.csv` a nomeia como *"a maior falta desta
+     aba"*. Um desenho de slider que não desliza é a família de defeito que esta
+     casa mais paga: a tela AFIRMANDO o que o produto não faz.
+
+     O KNOB DEIXA DE SER DESENHO E VIRA O POLEGAR DE VERDADE, e é por isso que
+     a regra `.cheio::after` SAIU em vez de ganhar um irmão: com as duas, ela
+     veria DOIS knobs durante o arraste — o nativo, que a segue, e o pintado,
+     que só alcança o valor no tique seguinte à soltura.
+
+     A GEOMETRIA É A MESMA DO DESENHO APROVADO, e ela não é aproximada: é
+     resolvida. O knob do mockup tinha o centro em `larg × b% − 1px` (uma caixa
+     de 12px com `right:-5px` dentro de um `.cheio` de largura `b%`). O polegar
+     nativo tem o centro em `L + 6px + b% × (W − 12px)`. Igualando para TODO
+     `b`: `W = 100% + 12px` e `L = −7px` — que são exatamente os dois números
+     abaixo. Com `left:0;width:100%` (o encaixe óbvio) o polegar erraria 7px nas
+     pontas, e o desenho dela mudaria de lugar em 0% e em 100%.
+
+     O FUNDO É TRANSPARENTE — a barra roxa continua sendo o `.cheio`, que é
+     quem carrega o endereço `brilho-pct` e é pintado pelo PRODUTO. O trilho
+     nativo por baixo desenharia uma segunda barra, cinza, por cima da dela.
+
+     `appearance:none` NOS DOIS LADOS: sem ele o WebKit ignora `::-webkit-slider-thumb`
+     e devolve o polegar do sistema — outro tamanho, outra cor, e a coluna deixa
+     de ser a coluna que ela aprovou. */
+  .puxador{position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+    width:calc(100% + 12px);height:12px;margin:0;padding:0;
+    -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+  .puxador::-webkit-slider-runnable-track{height:12px;background:transparent;border:0}
+  .puxador::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;background:var(--purple);
+    border:2px solid var(--panel);box-sizing:border-box;cursor:pointer}
+  /* O FOCO SE VÊ, e ele importa mais aqui que em qualquer botão desta aba: o
+     polegar anda pelas setas do teclado, e um foco invisível seria uma barra
+     que muda sozinha sem ninguém saber qual está em foco. */
+  .puxador:focus-visible{outline:2px solid var(--purple);outline-offset:4px}
 
   /* ---------- SELECIONE O PLAYER: a troca ---------- */
   .players{display:flex;gap:5px;align-items:center;height:100%}
@@ -932,7 +972,7 @@ def coluna(c):
             <span class="hex" data-campo="hex">{cor}</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:{b}%"></span></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:{b}%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="{b}" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="{_pacote04.ROTULO_DO_BRILHO}" title="{_pacote04.DICA_DO_BRILHO}"></span>
             <span class="num" data-campo="brilho">{b}%</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -1228,9 +1268,64 @@ def _conferir(doc):
 
     # 4. NENHUM AJUSTE VIVO NUM LUGAR VAZIO. Sem controle não há cor, brilho nem
     #    número de player — desenhar um é oferecer um ajuste que não existe.
-    for pedaco in corpo.split('class="ctrl vazia"')[1:]:
-        bloco = pedaco.split('<div class="ctrl', 1)[0]
-        for proibido in ('class="tom', 'type="color"', 'class="cheio"', 'class="pl'):
+    #
+    #    ESTA RÉGUA DAVA VERDE SOBRE NADA, e foi medido em 03/09/2026 ao
+    #    tentar MORDÊ-LA: emiti um `<input type="range">` dentro da
+    #    `coluna_vazia`, regerei a página, e ela passou. O delimitador de coluna
+    #    era `'<div class="ctrl'` — e `<div class="ctrl-rot">`, o rótulo que vem
+    #    logo depois do desenho, COMEÇA COM ESSE PREFIXO. O bloco inspecionado
+    #    terminava no `</div>` da moldura: 46.798 caracteres de SVG e nenhuma
+    #    das quatro células que a régua existe para vigiar (`cel-cor`,
+    #    `cel-brilho`, `players`, `cel-acoes` — medido: `"cel-brilho" in bloco`
+    #    era `False` nas duas colunas vazias).
+    #
+    #    O RECORTE PASSA A SER POR REGEX, e a classe de coluna é `ctrl` seguido
+    #    de `"` (a viva) ou de espaço (`ctrl vazia`). `ctrl-rot` tem um `-` na
+    #    terceira posição e deixa de casar. É a armadilha que o
+    #    `COMO-OLHAR-A-TELA.md` nomeia: casar um token por PREFIXO, em vez do
+    #    campo que ele significa.
+    #    E O RECORTE É DENTRO DA GRADE, e não do miolo inteiro: a ÚLTIMA coluna
+    #    vazia termina onde a grade termina, e um `\Z` a fazia engolir o RODAPÉ
+    #    — os quatro botões `Aplicar`/`Salvar`/`Exportar`/`Importar`, que são do
+    #    esqueleto das dez páginas e não pertencem a coluna nenhuma. Medido em
+    #    03/09/2026: com o `\Z`, o segundo bloco tinha 48.131 caracteres e a
+    #    régua acusava `<button` num lugar vazio que não tem botão nenhum. É a
+    #    MESMA família do prefixo `ctrl-rot`, do outro lado do recorte.
+    grade = corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
+    for bloco in re.findall(
+            r'<div class="ctrl vazia"(.*?)(?=<div class="ctrl[" ]|\Z)', grade, re.S):
+        exigir("cel-brilho" in bloco,
+               "a régua do lugar vazio não alcança as células da coluna — ela "
+               "voltou a dar verde sobre o desenho, que é onde nunca houve "
+               "ajuste nenhum")
+        #    A REGRA GERAL VEM PRIMEIRO, e ela não envelhece: um lugar sem
+        #    aparelho não oferece GESTO NENHUM. `data-gesto` é o endereço que o
+        #    ouvinte único do piloto procura (`hefesto_vivo`, `manda_do_alvo`),
+        #    então esta linha alcança todo botão futuro desta coluna sem que
+        #    ninguém se lembre de acrescentá-lo à lista abaixo. Uma lista escrita
+        #    à mão só cresce quando alguém lembra, e o esquecimento é silencioso.
+        exigir("data-gesto" not in bloco,
+               "um lugar vazio oferece gesto — os dez endereços dessa coluna "
+               "levantam `o clique não disse em qual controle`, e o cartão do "
+               "piloto só leva `RuntimeError`: botão que engole o toque")
+        #    E OS ELEMENTOS NOMEADOS FICAM, porque dizem QUAL ajuste apareceu —
+        #    a frase de erro vira acionável em vez de genérica.
+        #
+        #    `class="pl` SAIU EM 03/09/2026, e ele era um proibido MORTO: os
+        #    botões de jogador da coluna viva não têm classe nenhuma que comece
+        #    por `pl` (eles se endereçam por `data-gesto="player"` e
+        #    `data-player="N"`), e a única coisa que ele casava era o
+        #    `<div class="players">` — o CONTÊINER da célula vazia, que carrega
+        #    o travessão e nada mais. Enquanto o recorte estava cego isso nunca
+        #    apareceu; com o recorte certo, ele reprovava a página LIMPA. Um
+        #    proibido por PREFIXO de classe é a mesma armadilha que cegou o
+        #    recorte, do outro lado.
+        #
+        #    `type="range"` ENTROU no mesmo dia, com o trilho que grava. Ele é
+        #    o ajuste mais perigoso desta coluna — arrastá-lo ESCREVE no perfil
+        #    dela —, e num lugar vazio não teria em qual controle escrever.
+        for proibido in ('class="tom', 'type="color"', 'class="cheio"',
+                         'type="range"', "<button"):
             exigir(proibido not in bloco,
                    f"um lugar vazio tem ajuste vivo: {proibido!r}")
 
