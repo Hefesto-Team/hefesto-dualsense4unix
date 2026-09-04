@@ -635,18 +635,75 @@ def rumble_stop_checked() -> tuple[bool, str | None]:
 
 
 def rumble_stop() -> bool:
-    """Para rumble e fixa estado (0, 0) para re-asserção (BUG-RUMBLE-APPLY-IGNORED-01).
+    """Para rumble e FIXA (0, 0) — **isto não devolve a vibração ao jogo**.
 
     Descarta a frase do daemon — use ``rumble_stop_checked`` para tê-la.
+
+    **"PARAR" NÃO É "DESFAZER", e a diferença tem consequência medida**
+    (04/09/2026, no aparelho, pelo ensaio
+    `scripts/ensaios/o_multiplicador_chega_ao_motor.py`). O par ``(0, 0)`` é um
+    par FIXADO, e não `None`: enquanto ele estiver de pé,
+    `daemon.subsystems.gamepad.apply_game_rumble` **descarta o FF de todo
+    jogo** na primeira linha (`rumble_active is not None` → `return None`). Um
+    instrumento que chamou `rumble_stop` achando que estava "limpando a
+    bagunça" deixou a máquina dela **sem vibração em jogo nenhum, em
+    silêncio** — e não havia uma palavra aqui que avisasse.
+
+    **A FIXAÇÃO É DELIBERADA, e não é defeito** (`_handle_rumble_stop`,
+    HARM-16): o poll loop re-afirma o silêncio para que outra escrita HID não
+    reative os motores por acidente. O que faltava era esta frase.
+
+    **Quem quer devolver a vibração ao jogo chama `rumble_passthrough(True)`.**
     """
     ok, _motivo = rumble_stop_checked()
     return ok
 
 
 def rumble_passthrough(enabled: bool = True) -> bool:
-    """Libera controle de rumble para o jogo (BUG-RUMBLE-APPLY-IGNORED-01)."""
+    """Devolve a vibração ao JOGO (BUG-RUMBLE-APPLY-IGNORED-01).
+
+    É o par simétrico de `rumble_stop`, e é ELE — não o "parar" — que solta o
+    par fixado (`rumble_active = None`). Ver a advertência em `rumble_stop`.
+    """
     ok, _ = _safe_call("rumble.passthrough", {"enabled": bool(enabled)})
     return ok
+
+
+def rumble_motores_set(
+    *,
+    forte_pct: int | None = None,
+    fraco_pct: int | None = None,
+    uniq: str | None = None,
+) -> tuple[bool, dict[str, Any] | None]:
+    """A BARRA de cada motor, no perfil, POR PEÇA (VIBRACAO-POR-MOTOR-01).
+
+    Decisão dela, 04/09/2026: a barra não manda o par `rumble.set` agora — ela
+    é POLÍTICA, e MULTIPLICA o degrau da coluna. ``efetivo(motor) = degrau x
+    barra(motor)``.
+
+    ``None`` em um dos dois = **não mexe naquela barra**; passar os dois em
+    `None` é erro (não haveria o que gravar). ``uniq`` omitido = o primário.
+
+    Devolve ``(ok, corpo)``, e o corpo é o do daemon — ele traz `status`
+    (`"ok"`, `"sem_controle"`, `"sem_endereco"`, `"sem_perfil"`), o `motivo`
+    quando recusa, o `perfil` em que gravou, se `gravado` de fato (regravar
+    perfil idêntico troca a data do arquivo e faz o daemon reaplicá-lo), e os
+    `forte_pct`/`fraco_pct` que **passaram a valer** — que é o que a tela pinta
+    de volta. Corpo `None` quer dizer daemon fora do ar.
+
+    **A tela NÃO deve digitar a faixa nem o padrão:** quem recusa fora de 0-100
+    é a borda do esquema, com a frase que explica, e o 100 do "sem opinião"
+    chega no `state_full` como `rumble_motor_pct_padrao`.
+    """
+    params: dict[str, Any] = {}
+    if forte_pct is not None:
+        params["forte_pct"] = int(forte_pct)
+    if fraco_pct is not None:
+        params["fraco_pct"] = int(fraco_pct)
+    if uniq:
+        params["uniq"] = uniq
+    corpo = _corpo_do_daemon("rumble.motores.set", params)
+    return corpo is not None, corpo
 
 
 def rumble_policy_set_checked(
@@ -1424,6 +1481,7 @@ __all__ = [
     "player_leds_set_detalhado",
     "profile_list",
     "profile_switch",
+    "rumble_motores_set",
     "rumble_passthrough",
     "rumble_policy_custom",
     "rumble_policy_set_checked",

@@ -63,6 +63,7 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp_mod
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -625,3 +626,382 @@ class TestODegrauNaoEscapaSozinho:
         degrau = _degrau("max")
         assert fraco == pytest.approx(degrau)
         assert forte == pytest.approx(degrau * 0.5)
+
+
+# ---------------------------------------------------------------------------
+# 8. O MÉTODO QUE GRAVA — `rumble.motores.set`
+# ---------------------------------------------------------------------------
+#
+# A METADE DE IPC, e ela fecha o que a metade de daemon deixou em aberto:
+# `gamepad._motores_do_perfil_ativo` LÊ um mapa; alguém tem de ESCREVER, e tem
+# de derrubar o cache no mesmo ato. Enquanto `daemon/ipc_handlers.py` não era
+# desta posse, o contrato da invalidação vivia escrito de FORA
+# (`TestOCacheDoMapa::test_invalidar_o_cache_e_uma_linha`, que ainda vale como
+# régua do mecanismo). Agora ele é medido por dentro, pelo método real.
+
+
+class _Store:
+    """`store` de mentira: só o `active_profile` e as travas manuais."""
+
+    def __init__(self, ativo: str | None) -> None:
+        self.active_profile = ativo
+        self.travas: list[str] = []
+
+    def mark_manual_trigger_active(self, categoria: str) -> None:
+        self.travas.append(categoria)
+
+
+class _Handlers(IpcHandlersMixin):
+    """O bastante do mixin para chamar `_handle_rumble_motores_set`."""
+
+    def __init__(self, *, ativo: str | None, primario: str | None) -> None:
+        self.store = _Store(ativo)  # type: ignore[assignment]
+        self.controller = SimpleNamespace(  # type: ignore[assignment]
+            describe_controllers=lambda: (
+                [{"connected": True, "uniq": primario}] if primario else []
+            )
+        )
+        self.daemon = _daemon(perfil_ativo=ativo)  # type: ignore[assignment]
+        self.daemon.store = self.store
+
+
+def _grava_ipc(h: _Handlers, **params: Any) -> dict[str, Any]:
+    import asyncio
+
+    return asyncio.run(h._handle_rumble_motores_set(params))
+
+
+class TestOMetodoQueGrava:
+    def test_grava_a_barra_no_perfil_da_peca(self, perfis: Path) -> None:
+        """Do IPC ao disco: o par dela cai no `controllers[chave].rumble`.
+
+        MORDIDA: apagar o `save_profile` do handler — o `load_profile` abaixo
+        devolve o perfil sem as barras e o assert nomeia os dois campos.
+        """
+        save_profile(Profile(name="Bancada", match=MatchAny()))
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+
+        corpo = _grava_ipc(h, uniq=BRANCO, forte_pct=50, fraco_pct=100)
+
+        assert corpo["status"] == "ok" and corpo["gravado"] is True
+        assert (corpo["forte_pct"], corpo["fraco_pct"]) == (50, 100)
+        dele = (loader_module.load_profile("Bancada").controllers or {})[BRANCO]
+        assert dele.rumble is not None
+        assert dele.rumble.motor_forte_pct == 50
+        assert "motor_fraco_pct" not in dele.rumble.model_fields_set, (
+            "o 100 é 'sem opinião' e não pode ocupar chave no disco"
+        )
+
+    def test_a_gravacao_derruba_o_cache_no_mesmo_ato(self, perfis: Path) -> None:
+        """A LINHA QUE FAZ A BARRA VALER AGORA, medida por dentro.
+
+        Sem ela a barra nova só entraria na próxima troca de perfil, e a tela
+        diria "aplicado" sobre um motor que não mudou.
+
+        MORDIDA: apagar `self.daemon._rumble_motores_pct = None` do handler. O
+        segundo par volta 200/200 — o degrau inteiro nos dois — e reprova.
+        """
+        save_profile(Profile(name="Bancada", match=MatchAny()))
+        backend = _Backend()
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        h.daemon.controller = backend
+
+        # Um FF ANTES da gravação: é ele que popula o cache com o mapa vazio.
+        gp_mod.apply_game_rumble(h.daemon, 200, 200, target_uniq=BRANCO)
+        _grava_ipc(h, uniq=BRANCO, forte_pct=50)
+        gp_mod.apply_game_rumble(h.daemon, 200, 200, target_uniq=BRANCO)
+
+        assert backend.rumbles == [(BRANCO, 200, 200), (BRANCO, 200, 100)], (
+            "o segundo FF tinha de sair com o forte pela metade — o cache do "
+            "mapa não caiu na gravação"
+        )
+
+    def test_cem_nos_dois_apaga_a_secao_sem_matar_o_degrau(self, perfis: Path) -> None:
+        """Voltar as duas a 100 limpa as barras e PRESERVA o teto da peça.
+
+        `policy` é o degrau daquela peça (`08-conexoes`) e não é deste gesto —
+        apagá-lo junto seria o gesto comendo a decisão do vizinho.
+
+        MORDIDA: trocar o `campos.pop(campo, None)` por `campos.clear()`. O
+        `policy` some e o assert do teto reprova.
+        """
+        save_profile(
+            Profile(
+                name="Bancada",
+                match=MatchAny(),
+                controllers={
+                    BRANCO: ControllerOverrides(
+                        rumble=ControllerRumbleOverride(
+                            policy="economia", motor_forte_pct=50
+                        )
+                    )
+                },
+            )
+        )
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+
+        corpo = _grava_ipc(h, uniq=BRANCO, forte_pct=100, fraco_pct=100)
+
+        assert corpo["gravado"] is True
+        dele = (loader_module.load_profile("Bancada").controllers or {})[BRANCO]
+        assert dele.rumble is not None, "a seção morreu e levou o teto junto"
+        assert dele.rumble.policy == "economia", "o degrau da peça foi apagado"
+        assert dele.rumble.motor_forte_pct is None
+
+    def test_secao_vazia_vira_none(self, perfis: Path) -> None:
+        """Sem degrau e sem barras, a seção `rumble` inteira sai do disco.
+
+        É a mesma disciplina do `_com_o_teto`: "sem opinião" é AUSÊNCIA, e
+        `_controllers_to_rumble_scales` desvia por `cfg.rumble is None`.
+        """
+        _grava("Bancada", motor_forte_pct=50)
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+
+        _grava_ipc(h, uniq=BRANCO, forte_pct=100)
+
+        dele = (loader_module.load_profile("Bancada").controllers or {})[BRANCO]
+        assert dele.rumble is None
+
+    def test_nada_mudou_nao_regrava(self, perfis: Path) -> None:
+        """Regravar perfil idêntico troca a data do arquivo e o daemon reaplica.
+
+        MORDIDA: apagar o `if antes_campos == depois_campos`. O `gravado` volta
+        `True` e o assert pega.
+        """
+        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+
+        corpo = _grava_ipc(h, uniq=BRANCO, forte_pct=50)
+
+        assert corpo["status"] == "ok"
+        assert corpo["gravado"] is False, "regravou um perfil que já estava assim"
+        assert (corpo["forte_pct"], corpo["fraco_pct"]) == (50, 100)
+
+    def test_campo_omitido_nao_mexe_na_outra_barra(self, perfis: Path) -> None:
+        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=20)
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+
+        corpo = _grava_ipc(h, uniq=BRANCO, forte_pct=70)
+
+        assert (corpo["forte_pct"], corpo["fraco_pct"]) == (70, 20)
+
+    def test_uniq_omitido_cai_no_primario(self, perfis: Path) -> None:
+        save_profile(Profile(name="Bancada", match=MatchAny()))
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+
+        corpo = _grava_ipc(h, forte_pct=40)
+
+        assert corpo["uniq"] == BRANCO
+        assert BRANCO in (loader_module.load_profile("Bancada").controllers or {})
+
+    # --- A RÉGUA SABE RECUSAR, e as quatro recusas têm razão escrita --------
+
+    def test_mesa_vazia_recusa_com_razao(self, perfis: Path) -> None:
+        save_profile(Profile(name="Bancada", match=MatchAny()))
+        h = _Handlers(ativo="Bancada", primario=None)
+        corpo = _grava_ipc(h, forte_pct=50)
+        assert corpo["status"] == "sem_controle"
+        assert "POR PEÇA" in corpo["motivo"]
+
+    def test_sem_perfil_ativo_recusa_com_razao(self, perfis: Path) -> None:
+        h = _Handlers(ativo=None, primario=BRANCO)
+        corpo = _grava_ipc(h, forte_pct=50)
+        assert corpo["status"] == "sem_perfil"
+        assert "perfil" in corpo["motivo"]
+
+    def test_endereco_sem_mac_recusa_em_vez_de_gravar_errado(
+        self, perfis: Path
+    ) -> None:
+        """Gravar sob uma chave que o motor nunca casa faz a escolha sumir calada.
+
+        **ESTA RÉGUA ACHOU UM DEFEITO VIVO em 04/09/2026**, e ele era do tipo
+        que nenhum verde vê: `norm_mac` promete `None` para um `path`, e
+        entrega `"adeee9"` para `"path:/dev/input/event9"` — as letras hex do
+        caminho sobrevivem à filtragem. Uma chave que PARECE boa e que motor
+        nenhum casa: a escolha dela iria para o disco e sumiria calada. A cura
+        é `_chave_de_peca_que_grava`, que exige DOZE dígitos hex.
+
+        MORDIDA: trocar `self._chave_de_peca_que_grava(alvo)` por
+        `norm_mac(alvo)` no handler — o status volta `"ok"` e o perfil ganha um
+        override sob `adeee9`.
+        """
+        save_profile(Profile(name="Bancada", match=MatchAny()))
+        h = _Handlers(ativo="Bancada", primario="path:/dev/input/event9")
+        corpo = _grava_ipc(h, forte_pct=50)
+        assert corpo["status"] == "sem_endereco"
+        assert not (loader_module.load_profile("Bancada").controllers or {}), (
+            "gravou um override sob uma chave que o motor nunca casa"
+        )
+
+    def test_o_vpad_nao_tem_motor_e_e_recusado(self, perfis: Path) -> None:
+        """`02fe…` é o gamepad VIRTUAL — não é peça de plástico, não tem motor.
+
+        MORDIDA: apagar o desvio do `VPAD_UNIQ_PREFIX`. O perfil dela passa a
+        guardar uma barra de motor para um device que não tem motor.
+        """
+        from hefesto_dualsense4unix.broker.hidraw_broker import VPAD_UNIQ_PREFIX
+
+        save_profile(Profile(name="Bancada", match=MatchAny()))
+        vpad = f"{VPAD_UNIQ_PREFIX}00000001"
+        h = _Handlers(ativo="Bancada", primario=vpad)
+        corpo = _grava_ipc(h, forte_pct=50)
+        assert corpo["status"] == "sem_endereco"
+        assert not (loader_module.load_profile("Bancada").controllers or {})
+
+    def test_sem_nenhum_dos_dois_campos_levanta(self, perfis: Path) -> None:
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        with pytest.raises(ValueError, match="ao menos um"):
+            _grava_ipc(h, uniq=BRANCO)
+
+    def test_a_faixa_e_a_do_esquema_e_nada_e_gravado(self, perfis: Path) -> None:
+        """O 101 morre com a FRASE do esquema, e o disco não é tocado.
+
+        A faixa não se digita no handler — seria o HARM-19 renascendo, que é o
+        que fez `rumble.policy_custom` divergir do esquema em 0-1 contra 0-2.
+
+        MORDIDA: mover o `model_validate` para DEPOIS do `save_profile`. O
+        perfil ganha a chave e o assert de disco reprova.
+        """
+        save_profile(Profile(name="Bancada", match=MatchAny()))
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        with pytest.raises(ValueError, match="SEGUNDO fator"):
+            _grava_ipc(h, uniq=BRANCO, forte_pct=101)
+        assert not (loader_module.load_profile("Bancada").controllers or {})
+
+    @pytest.mark.parametrize("valor", ["50", 50.0, True, None])
+    def test_tipo_errado_levanta_antes_do_disco(self, perfis: Path, valor: Any) -> None:
+        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        with pytest.raises(ValueError, match="inteiro 0-100"):
+            _grava_ipc(h, uniq=BRANCO, forte_pct=valor)
+
+    def test_o_metodo_esta_no_despacho(self) -> None:
+        """Handler sem entrada na tabela é método inalcançável.
+
+        MORDIDA: apagar a linha do `ipc_server._handlers`. O produto continua
+        compilando e o método fica morto — e é só isto que pega.
+        """
+        from hefesto_dualsense4unix.daemon import ipc_server
+
+        fonte = inspect.getsource(ipc_server)
+        assert '"rumble.motores.set": self._handle_rumble_motores_set' in fonte
+
+
+# ---------------------------------------------------------------------------
+# 9. O `state_full` DEVOLVE OS DOIS NÚMEROS
+# ---------------------------------------------------------------------------
+
+
+class TestOEstadoDevolveAsBarras:
+    def test_o_state_full_publica_as_barras_da_peca(self, perfis: Path) -> None:
+        """Sem isto a aba 05 desenha a barra onde ela ESTAVA.
+
+        MORDIDA: apagar o bloco `result["rumble_motores"]` do `state_full`. A
+        chave some e o assert nomeia o que a tela deixaria de ler.
+        """
+        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=20)
+        d = _daemon(perfil_ativo="Bancada")
+
+        mapa = gp_mod._motores_do_perfil_ativo(d)
+        publicado = {
+            uniq: {"forte_pct": par[0], "fraco_pct": par[1]}
+            for uniq, par in mapa.items()
+        }
+
+        assert publicado == {BRANCO: {"forte_pct": 50, "fraco_pct": 20}}
+
+    def test_a_fonte_publicada_e_a_mesma_que_o_motor_le(self) -> None:
+        """A tela e o motor não podem ler de lugares diferentes.
+
+        Uma segunda leitura do disco no `state_full` poderia pintar um número
+        que o motor não está usando — o "aplicado" falso que esta casa passou
+        04/09 arrancando. A régua lê a FONTE do `state_full` e exige que o
+        bloco chame a função do `gamepad`.
+
+        MORDIDA: trocar a chamada por um `load_profile` próprio no `state_full`.
+        """
+        from hefesto_dualsense4unix.daemon import ipc_handlers
+
+        fonte = inspect.getsource(
+            ipc_handlers.IpcHandlersMixin._handle_daemon_state_full
+        )
+        assert '_motores_do_perfil_ativo(self.daemon)' in fonte, (
+            "o `state_full` deixou de ler o MESMO mapa que `apply_game_rumble` "
+            "multiplica"
+        )
+        assert "load_profile" not in fonte, (
+            "o `state_full` abriu uma SEGUNDA leitura do disco — as duas podem "
+            "divergir, e a tela pintaria o que o motor não usa"
+        )
+
+    def test_o_padrao_viaja_junto_para_a_tela_nao_digitar_o_cem(self) -> None:
+        """Peça ausente do mapa vale 100, e o 100 vem do produto.
+
+        MORDIDA: apagar `result["rumble_motor_pct_padrao"]`. A aba 05 passa a
+        ter de digitar o 100, que é a segunda grafia que divergiria no primeiro
+        dia em que o padrão mudasse.
+        """
+        from hefesto_dualsense4unix.daemon import ipc_handlers
+
+        fonte = inspect.getsource(
+            ipc_handlers.IpcHandlersMixin._handle_daemon_state_full
+        )
+        assert 'result["rumble_motor_pct_padrao"] = MOTOR_PCT_PADRAO' in fonte
+        assert MOTOR_PCT_PADRAO == 100
+
+
+# ---------------------------------------------------------------------------
+# 10. A PONTE, e a armadilha que ela deixava de contar
+# ---------------------------------------------------------------------------
+
+
+class TestAPonte:
+    def test_a_ponte_manda_so_o_que_foi_pedido(self, monkeypatch) -> None:
+        """Campo `None` = "não mexe naquela barra", e não `null` no payload."""
+        from hefesto_dualsense4unix.app import ipc_bridge
+
+        vistos: list[tuple[str, dict[str, Any]]] = []
+        monkeypatch.setattr(
+            ipc_bridge,
+            "_safe_call",
+            lambda m, p=None: (vistos.append((m, dict(p or {}))), (True, {"status": "ok"}))[1],
+        )
+
+        ok, corpo = ipc_bridge.rumble_motores_set(forte_pct=50, uniq=BRANCO)
+
+        assert ok and corpo == {"status": "ok"}
+        assert vistos == [("rumble.motores.set", {"forte_pct": 50, "uniq": BRANCO})]
+
+    def test_daemon_fora_do_ar_devolve_corpo_none(self, monkeypatch) -> None:
+        from hefesto_dualsense4unix.app import ipc_bridge
+
+        monkeypatch.setattr(ipc_bridge, "_safe_call", lambda m, p=None: (False, None))
+        assert ipc_bridge.rumble_motores_set(forte_pct=50) == (False, None)
+
+    def test_parar_avisa_que_nao_devolve_a_vibracao_ao_jogo(self) -> None:
+        """A ARMADILHA MEDIDA NO APARELHO em 04/09/2026, e a cura é a frase.
+
+        `rumble_stop` fixa `(0, 0)` — um par FIXADO, não `None` —, e enquanto
+        ele estiver de pé `apply_game_rumble` descarta o FF de TODO jogo na
+        primeira linha. O ensaio desta sprint chamou `rumble_stop` achando que
+        estava limpando a bagunça e deixou a máquina dela sem vibração em jogo
+        nenhum, em silêncio.
+
+        A FIXAÇÃO NÃO É DEFEITO — é decisão medida (HARM-16): o poll loop
+        re-afirma o silêncio para que outra escrita HID não reative os motores.
+        Trocá-la seria repropor decisão medida, que esta casa não faz. O que
+        faltava era a ponte DIZER, e é isso que esta régua trava.
+
+        MORDIDA: apagar a advertência da docstring de `rumble_stop`.
+        """
+        from hefesto_dualsense4unix.app import ipc_bridge
+
+        doc = inspect.getdoc(ipc_bridge.rumble_stop) or ""
+        assert "rumble_passthrough" in doc, (
+            "a ponte não diz qual é o gesto que DEVOLVE a vibração ao jogo"
+        )
+        assert "descarta o FF" in doc, (
+            "a ponte não conta a consequência do par fixado — quem chamar "
+            "`rumble_stop` continua deixando a máquina sem vibração em jogo"
+        )
+        # E o par simétrico aponta de volta, senão a advertência é um beco.
+        assert "rumble_stop" in (inspect.getdoc(ipc_bridge.rumble_passthrough) or "")
