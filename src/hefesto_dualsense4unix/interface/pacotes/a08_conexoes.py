@@ -3026,20 +3026,11 @@ SEM_GESTO: dict[str, str] = {
     # `controle.*.mic.escopo` de `gui/aba_conexoes.SEM_FONTE` deixa de ser
     # espera dela — a palavra veio.
     #
-    # **A ENTRADA FICA ATÉ A PUBLICAÇÃO, e é por isso que ela não sumiu.** A
-    # página que ela usa AINDA desenha o `<select>` com
-    # `data-gesto="mic-escopo"`: tirá-lo daqui agora faria o clique deixar de
-    # produzir **até a recusa** — a forma calada do mesmo defeito, e a pior
-    # das duas. Quem publicar a 08 tira esta entrada junto.
-    "mic-escopo":
-        "SAIU DO DESENHO em 04/09/2026 — a escolha virou LEITURA, e a razão "
-        "está em `FALA_DO_BOTAO_DO_MIC`. A recusa continua verdadeira enquanto "
-        "a página publicada ainda mostrar o `<select>`: "
-        "`mic_button_toggles_system` é UM por máquina "
-        "(`daemon/lifecycle.py:301`, aplicado por `ipc_draft_applier.py:592`) e "
-        "a tela oferecia por controle, então ligá-lo faria o segundo cartão "
-        "sobrescrever a escolha do primeiro, calado. **Some com o `--publicar` "
-        "da 08.**",
+    # A ENTRADA FICOU AQUI ATÉ A PUBLICAÇÃO, e saiu com ela no mesmo dia:
+    # enquanto a página que ela usa ainda desenhava o `<select>`, tirá-la faria
+    # o clique deixar de produzir **até a recusa** — a forma calada do mesmo
+    # defeito. Conferido depois do `--publicar`: `data-gesto="mic-escopo"` não
+    # existe mais nem na bancada nem na página publicada.
     # `teto-da-vibracao` SAIU DAQUI em 01/09/2026, e o que o segurava era um
     # FATO ERRADO nas duas metades. A entrada dizia: *"a tela oferece um teto
     # POR CONTROLE e o produto aplica `min` global (`core/rumble.py`) — e o

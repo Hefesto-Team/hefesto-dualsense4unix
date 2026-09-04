@@ -2077,7 +2077,7 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         nota de som, que é o defeito que o gesto `rota` desta mesma aba recusa
         pela mesma razão.
 
-    A palavra dela, olhando essa recusa na tela: *"esse aviso nao devia aparecer
+    A palavra dela, olhando essa recusa na tela: *"esse aviso nao devia aparecer  # noqa-acento
     pq era pra funcionar em ambos ne"*. <!-- noqa-acento: citação literal dela -->
     E ela tem razão em duas medições independentes:
 

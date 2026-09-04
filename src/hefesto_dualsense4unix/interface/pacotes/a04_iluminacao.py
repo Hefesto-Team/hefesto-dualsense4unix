@@ -2436,7 +2436,7 @@ def _cobrar_a_frase_do_desenho(ctx: Contexto, uniq: str,
     e o único degrau que ele pede a mais é o `_quantos_recebem_o_desenho` — ver
     lá por que ele é zero nesta aba.
 
-    OS TRÊS ARGUMENTOS DE TEXTO SÃO OS DO CAMINHO GÊMEO — `descricao` de
+    OS TRÊS ARGUMENTOS DE TEXTO SÃO OS DO CAMINHO GÊMEO — `descricao` de  # noqa-acento
     `_descreve_player_leds`, `feito="atualizado"`, `fazer="atualizar"`. É o
     que a GTK passa em `_set_player_leds`, que é para onde vão os botões
     "Desenho do PN" dela; passar outra coisa faria as duas telas do mesmo

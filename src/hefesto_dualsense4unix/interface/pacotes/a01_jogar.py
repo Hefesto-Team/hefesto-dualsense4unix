@@ -1422,8 +1422,8 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     #
     # Ela estava escrita `p.chamar("gamepad.mask.set", {"uniq": …, "flavor": …})`,
     # com o dicionário POSICIONAL. A assinatura é
-    # `ponte.chamar(metodo, timeout=None, **params)`: o segundo posicional é o
-    # TIMEOUT. O dicionário virava o prazo, `timeout or teto(metodo)` o
+    # `ponte.chamar(metodo, timeout=None, **params)`: o segundo posicional é o  # noqa-acento
+    # TIMEOUT. O dicionário virava o prazo, `timeout or teto(metodo)` o  # noqa-acento
     # mantinha (dicionário é verdadeiro), e o `_safe_call` estourava lá dentro
     # com `'<=' not supported between instances of 'dict' and 'int'`.
     #
