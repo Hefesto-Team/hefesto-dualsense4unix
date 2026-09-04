@@ -107,9 +107,35 @@ def _mesa_de_dois(marcador: str) -> dict[str, SimpleNamespace]:
 
 
 def _com_a_mesa(marcador: str) -> Any:
+    """Os dois nós sintéticos, e o TERCEIRO dublê sem o qual esta régua mentia.
+
+    `_is_virtual_evdev` NÃO era dublada, e ela não olha o objeto `InputDevice` —
+    ela lê o `/sys` da máquina que roda o teste. Para um caminho que não existe
+    aqui (`/dev/input/event256`, o do rádio) os atributos são ilegíveis, e ela
+    devolve `True` de propósito: *"na dúvida, o risco maior é o feedback loop de
+    auto-adoção"*. Medido em 04/09/2026 nesta bancada:
+
+        _is_virtual_evdev("/dev/input/event28")   -> False
+        _is_virtual_evdev("/dev/input/event256")  -> True    <- o nó do rádio
+
+    Então o nó do rádio era descartado ANTES do casamento por nome, e a régua
+    acusava o produto por uma recusa que era do PRÓPRIO INSTRUMENTO. Ela nasceu
+    vermelha em 03/09 e ficou assim, com o defeito atribuído ao lugar errado.
+
+    O dublê diz `False` para os dois porque é isso que eles SÃO — dois controles
+    físicos, um em cada barramento. O filtro de virtual tem régua própria
+    (`_is_virtual_evdev` e o BLUEZ-UHID-01); dublá-lo aqui não afrouxa nada:
+    afrouxaria se esta régua alegasse medi-lo, e ela mede outra coisa — que o
+    casamento por vendor + PID + nome não consulta `bustype`.
+    """
     nos = _mesa_de_dois(marcador)
-    return patch("evdev.list_devices", return_value=list(nos)), patch(
-        "evdev.InputDevice", side_effect=lambda p: nos[p]
+    return (
+        patch("evdev.list_devices", return_value=list(nos)),
+        patch("evdev.InputDevice", side_effect=lambda p: nos[p]),
+        patch(
+            "hefesto_dualsense4unix.core.evdev_reader._is_virtual_evdev",
+            return_value=False,
+        ),
     )
 
 
@@ -131,8 +157,8 @@ def test_a_descoberta_do_no_acha_o_do_radio_igual_ao_do_cabo(
     `_discover_dualsense_por_nome`, reprovam os quatro casos deste arquivo que
     dependem do nó de rádio.
     """
-    lista, dispositivo = _com_a_mesa(marcador)
-    with lista, dispositivo:
+    lista, dispositivo, nao_virtual = _com_a_mesa(marcador)
+    with lista, dispositivo, nao_virtual:
         achados = descobre()
 
     esperado = {"aabbcc000001": Path("/dev/input/event28"),
@@ -161,6 +187,14 @@ def test_o_nome_do_no_do_radio_vem_sem_o_prefixo_do_fabricante() -> None:
     )}
     with patch("evdev.list_devices", return_value=list(nos)), patch(
         "evdev.InputDevice", side_effect=lambda p: nos[p]
+    ), patch(
+        # O TERCEIRO DUBLÊ — a razão inteira está em `_com_a_mesa`: sem ele,
+        # `_is_virtual_evdev` lê o `/sys` desta máquina, não acha o caminho
+        # sintético do rádio e devolve `True` na dúvida. O nó era descartado
+        # antes do casamento por nome, e a régua acusava o produto pela recusa
+        # do próprio instrumento.
+        "hefesto_dualsense4unix.core.evdev_reader._is_virtual_evdev",
+        return_value=False,
     ):
         achados = discover_dualsense_motion_evdevs()
 
@@ -180,6 +214,14 @@ def test_o_leitor_de_movimento_resolve_o_alvo_do_radio() -> None:
     leitor = MotionSensorReader(target_uniq="aabbcc000002")
     with patch("evdev.list_devices", return_value=list(nos)), patch(
         "evdev.InputDevice", side_effect=lambda p: nos[p]
+    ), patch(
+        # O TERCEIRO DUBLÊ — a razão inteira está em `_com_a_mesa`: sem ele,
+        # `_is_virtual_evdev` lê o `/sys` desta máquina, não acha o caminho
+        # sintético do rádio e devolve `True` na dúvida. O nó era descartado
+        # antes do casamento por nome, e a régua acusava o produto pela recusa
+        # do próprio instrumento.
+        "hefesto_dualsense4unix.core.evdev_reader._is_virtual_evdev",
+        return_value=False,
     ):
         alvo = leitor._locate()
 

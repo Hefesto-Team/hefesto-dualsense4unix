@@ -11,7 +11,7 @@ dizem o que aconteceu com a máquina dela, nunca o nome do backend/protocolo.
 As três:
 
 * :func:`descrever_teclado_na_tela` — lê ``osk_disponivel``. Publicada por
-  ``daemon/ipc_handlers.py:2091`` desde 10/08/2026 (TECLADO-QUE-NAO-DIGITA-01)
+  ``daemon/ipc_handlers.py:2268`` desde 10/08/2026 (TECLADO-QUE-NAO-DIGITA-01)
   e **zero leitores em `app/`** até aqui (medido em §3.6 da sprint) — é a
   chave órfã que o portão de completude, em
   ``tests/unit/test_ambiente_presumido_01_o_que_a_maquina_nao_tem.py``, existe

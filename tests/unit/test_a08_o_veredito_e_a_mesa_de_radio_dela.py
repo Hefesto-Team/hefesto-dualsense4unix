@@ -180,7 +180,7 @@ def test_o_que_ela_calou_nao_segura_a_cor() -> None:
     """
     p = _pacote()
     ordem = _ordem("vizinhanca", "arranjo-de-hoje")
-    itens = [_item("certo"), _item("atencao", chave="o1", ordem=ordem)]  # noqa-acento
+    itens = [_item("certo"), _item("atencao", chave="o1", ordem=ordem)]  # (dado) noqa-acento
 
     antes = dict(p._DISPENSADAS)
     try:

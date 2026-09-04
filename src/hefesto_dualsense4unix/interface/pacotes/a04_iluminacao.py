@@ -628,7 +628,7 @@ def dica_da_luz(nome: str, via: str, recado: str,
     controle, exatamente as chaves de
     `daemon/ipc_handlers._enrich_controllers_per_controller` — `lightbar_rgb`,
     `lightbar_on`, `lightbar_source`, `player_slot`, `inputs`… — e nenhum campo
-    do desejado; `interface/aba02.py:943` já dizia isso com todas as letras
+    do desejado; `interface/aba02.py:976` já dizia isso com todas as letras
     (*"publica o ``player_slot`` e NÃO publica ``player_leds``"*). E o override
     é justamente onde a janela GTK escreve quando ela aplica um desenho:
     `lightbar_actions._enviar_player_leds` manda `player_leds_set_detalhado(…,
@@ -2436,7 +2436,7 @@ def _cobrar_a_frase_do_desenho(ctx: Contexto, uniq: str,
     e o único degrau que ele pede a mais é o `_quantos_recebem_o_desenho` — ver
     lá por que ele é zero nesta aba.
 
-    OS TRÊS ARGUMENTOS DE TEXTO SÃO OS DO CAMINHO GÊMEO — `descricao` de  # noqa-acento
+    OS TRÊS ARGUMENTOS DE TEXTO SÃO OS DO GÊMEO — `descricao` de  # (argumento) noqa-acento
     `_descreve_player_leds`, `feito="atualizado"`, `fazer="atualizar"`. É o
     que a GTK passa em `_set_player_leds`, que é para onde vão os botões
     "Desenho do PN" dela; passar outra coisa faria as duas telas do mesmo

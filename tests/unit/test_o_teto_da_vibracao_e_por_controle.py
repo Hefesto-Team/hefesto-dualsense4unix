@@ -743,10 +743,35 @@ def test_a_divergencia_do_quarto_selo_esta_declarada() -> None:
 
     Sem a seção em `mockup/DIVERGENCIAS.md`, o `desenho-aprovado` reprova a aba
     inteira; com ela, o que espera a palavra dela fica escrito onde ela lê.
+
+    **A RÉGUA MEDE A DIVERGÊNCIA, NÃO A DECLARAÇÃO** — e isso mudou em
+    04/09/2026, porque a primeira redação cobrava a seção INCONDICIONALMENTE.
+    A aba 08 foi publicada nesta madrugada; bancada e produto ficaram
+    byte-idênticos, a seção saiu do `DIVERGENCIAS.md` (é o `--publicar` que a
+    apaga) e este teste passou a REPROVAR EXATAMENTE QUEM PAGOU A DÍVIDA.
+
+    É o defeito que a `ROTULOS-DE-SPRINT-01` nomeia: *um gate que castiga a
+    honestidade é pior que gate nenhum*. Agora ele pergunta ao disco em que
+    estado a aba está, e cobra só o que aquele estado exige:
+
+        bancada == publicado   -> nada a declarar, e declarar seria mentira
+        bancada  > publicado   -> a seção TEM de existir
     """
+    bancada = (RAIZ / "mockup/08-conexoes.html").read_bytes()
+    publicado = (
+        RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
+    ).read_bytes()
     texto = (RAIZ / "mockup/DIVERGENCIAS.md").read_text(encoding="utf-8")
     corpo = texto.split("\n---\n", 1)[-1]
-    assert "## 08-conexoes.html" in corpo, (
+    declarada = "## 08-conexoes.html" in corpo
+
+    if bancada == publicado:
+        assert not declarada, (
+            "a bancada da 08 e o produto são byte-idênticos, e ainda há uma "
+            "seção dizendo que a aba está EM TRABALHO — a lápide sobreviveu à "
+            "publicação e vai enganar quem ler o arquivo")
+        return
+    assert declarada, (
         "a bancada da 08 andou à frente do publicado e ninguém declarou — o "
         "portão `desenho-aprovado` reprova, e com razão")
 

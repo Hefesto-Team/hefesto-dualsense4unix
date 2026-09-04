@@ -172,11 +172,11 @@ class _Ponte:
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, dict]] = []
 
-    def chamar(self, metodo: str, timeout: float | None = None, **params) -> None:  # noqa-acento
+    def chamar(self, metodo: str, timeout: float | None = None, **p):  # (parâmetro) noqa-acento
         # O `timeout` é engolido de propósito: o que esta régua mede é O QUE foi
         # pedido, não quanto tempo se esperou. Mas ele existe na assinatura para
         # um dicionário posicional voltar a estourar aqui, como estoura lá.
-        self.chamadas.append((metodo, params))
+        self.chamadas.append((metodo, p))
 
 
 def _clicar(**o):
