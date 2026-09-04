@@ -71,7 +71,10 @@ from typing import Any
 from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     ALL_BUTTONS,
+    CANAL_SONS_DO_JOGO,
+    CANAL_TODO_O_PC,
     L2_R2_THRESHOLD,
+    ROTA_DO_CANAL,
     _markup_xy,
     acao_mic,
     acao_speaker_mudo,
@@ -678,6 +681,134 @@ def _cor_da_barra(rotulo: str | None, base: tuple[int, ...] | None) -> str:
 
 
 # ---------------------------------------------------------------------------
+# OS DOIS ACESOS QUE A TELA AFIRMAVA SEM LER — 03/09/2026
+# ---------------------------------------------------------------------------
+# ESTA ABA TEM QUATRO BOTÕES QUE DIZEM "ESTE É O ESCOLHIDO" — os dois da rota
+# do alto-falante e os dois do modo do microfone —, e nenhum deles era leitura.
+# O aceso era a classe `on` que o GERADOR desenhou, uma vez, no dia em que
+# escreveu o arquivo. Medido na mesa dela em 03/09/2026:
+#
+#   na tela (o desenho)                    no aparelho / no disco
+#   card 2: "Todo o som do PC" aceso       speaker.rota = 2  (Sons do jogo)
+#   card 1: "Virtual" aceso                maquina.json sem `microfone` (Nativo)
+#
+# E NO CARD 2 O DESENHO NÃO É NEUTRO: ele afirma que o som INTEIRO do PC está
+# saindo naquele controle. Se ela olhar a tela para responder *"por que o som
+# não está vindo pelo controle?"*, a tela responde errado.
+#
+# OS DOIS PARES SÃO O MESMO DEFEITO E TÊM CURAS DIFERENTES, porque os donos são
+# diferentes: a rota é do APARELHO (o daemon publica `speaker.rota` a cada
+# tique) e o modo do microfone é do DISCO (a declaração dela no `maquina.json`,
+# que o `state_full` não ecoa de propósito — ver `SEM_ECO`).
+
+
+def _bloco_do_speaker(entry: Any) -> dict[str, Any] | None:
+    """O bloco `speaker` cru do controle, nas DUAS posições em que ele chega.
+
+    ELE É A SEGUNDA LEITURA DA MESMA REGRA, e isso está declarado em vez de
+    escondido: o dono é `speaker_do_entry` (`controller_card.py:1936`), que
+    conhece as duas posições — `entry["speaker"]` e `entry["inputs"]["speaker"]`
+    — mas devolve só `(volume, muted)`. A ROTA não passa por ele, e alargar a
+    assinatura do widget da GTK a partir daqui não é trabalho desta aba.
+
+    O QUE IMPEDE AS DUAS DE DIVERGIREM é régua, não disciplina:
+    `test_a_rota_sai_do_mesmo_bloco_que_o_volume` pergunta aos DOIS sobre as
+    mesmas entradas e cobra que achem o mesmo bloco — se o daemon mudar de
+    posição e só um dos leitores acompanhar, ela reprova nomeando o caso.
+    """
+    if not isinstance(entry, dict):
+        return None
+    bloco = entry.get("speaker")
+    if not isinstance(bloco, dict):
+        dentro = entry.get("inputs")
+        bloco = dentro.get("speaker") if isinstance(dentro, dict) else None
+    return bloco if isinstance(bloco, dict) else None
+
+
+#: O BYTE DA ROTA → O NOME DO BOTÃO NA PÁGINA. **Os bytes são perguntados**, e
+#: o dono deles é o mesmo par que a GTK usa para estes dois botões:
+#: `ROTA_DO_CANAL[CANAL_SONS_DO_JOGO]` e `ROTA_DO_CANAL[CANAL_TODO_O_PC]`
+#: (`controller_card.py:716`), que por sua vez saem de
+#: `core/ds_output_report.py:136-137`. Digitar `2` e `3` aqui seria a régua que
+#: envelhece no dia em que o protocolo mudar de número.
+#:
+#: O QUE SE TRADUZ É SÓ O NOME: a GTK chama o segundo canal de `"tudo"` e o
+#: `data-rota` da página o chama de `"pc"` — a página é mais velha que a
+#: constante, e o gesto `rota` desta mesma aba já fala `'jogo'`/`'pc'`. Trocar o
+#: vocabulário da página é desenho, logo decisão dela.
+NOME_DO_BOTAO_DA_ROTA: dict[int, str] = {
+    ROTA_DO_CANAL[CANAL_SONS_DO_JOGO]: "jogo",
+    ROTA_DO_CANAL[CANAL_TODO_O_PC]: "pc",
+}
+
+
+def rota_na_tela(entry: Any) -> str:
+    """Qual dos dois botões de rota está aceso: `"jogo"`, `"pc"` ou `""`.
+
+    `""` É "NÃO SEI", E ELE APAGA OS DOIS. O piloto escreve o travessão para
+    valor vazio, e no alvo `classe` com `data-hef-quando` nenhum dos dois casa
+    com `—`: os dois botões ficam apagados, que é o que a tela pode afirmar
+    quando o daemon nunca publicou `speaker` para este controle — o estado real
+    de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4600`).
+
+    ELE TAMBÉM APAGA OS DOIS NAS ROTAS 0 E 1 (tudo no fone, mono no fone), e
+    isso é de propósito: são rotas legítimas do protocolo que estes dois botões
+    não representam. Acender um deles ali seria arredondar o byte para o botão
+    mais parecido.
+    """
+    bloco = _bloco_do_speaker(entry)
+    if bloco is None:
+        return ""
+    rota = bloco.get("rota")
+    if isinstance(rota, bool) or not isinstance(rota, int):
+        return ""
+    return NOME_DO_BOTAO_DA_ROTA.get(rota, "")
+
+
+#: A DECLARAÇÃO DELA, do `maquina.json`, lida UMA VEZ e renovada pelo gesto que
+#: a muda. É o mesmo padrão — e a mesma razão — do `_DECLARACAO` da
+#: `a08_conexoes.py:83`: ler o disco duas vezes por segundo para pintar dois
+#: botões é desperdício com nome, e o arquivo só muda por gesto dela.
+_DECLARADOS: dict[str, Any] | None = None
+
+
+def _controles_declarados(recarregar: bool = False) -> dict[str, Any]:
+    """O bloco `controles` do `maquina.json`, por endereço normalizado.
+
+    `carregar_maquina` **nunca levanta** — no pior caso devolve o documento
+    inteiro em "não sei" —, então o `except` daqui só alcança árvore sem `src`.
+    """
+    global _DECLARADOS
+    if _DECLARADOS is None or recarregar:
+        try:
+            from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+            _DECLARADOS = dict(carregar_maquina().controles or {})
+        except Exception:
+            _DECLARADOS = {}
+    return _DECLARADOS
+
+
+def modo_do_mic(endereco: str) -> str:
+    """Qual dos dois botões do modo do microfone está aceso.
+
+    A REGRA É A DA GTK, e é uma linha só lá: `meu.get("microfone") is True`
+    (`app/actions/config/secao_controles.py:876`), que alimenta o
+    `set_active(bool(ligado))` do interruptor (`:584`). `True` e só `True` é
+    Virtual; ausência e `False` deixam a ponte no chão do mesmo jeito, e as duas
+    são Nativo — que é por que desligar grava `None` e não `False`.
+
+    SEM ENDEREÇO NÃO SE AFIRMA NADA: um controle sem `uniq` normalizado não tem
+    linha no `maquina.json`, e escrever "Nativo" ali seria afirmar uma escolha
+    que ninguém fez. `""` apaga os dois botões, como na rota.
+    """
+    if not endereco:
+        return ""
+    meu = _controles_declarados().get(endereco)
+    return "virtual" if getattr(meu, "microfone", None) is True else "nativo"
+
+
+# ---------------------------------------------------------------------------
 # O QUE A PÁGINA PUBLICADA TEM — e por que o pacote precisa perguntar
 # ---------------------------------------------------------------------------
 # QUATRO ENDEREÇOS DESTA ABA NASCERAM NA BANCADA, e a bancada é dela: o gerador
@@ -826,7 +957,35 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         via_na_tela = VIA_DO_TRANSPORTE.get(str(c.get("transport") or "").lower(), "")
         nome_na_tela = identidade_de(c, ctx.mesa)
         cards[uniq] = {
-            "bateria": f"{pct}%" if pct is not None else "—",
+            # A GRAFIA DA CARGA É A DA CASA, E ESTA LINHA ERA A ÚNICA FORA DELA
+            # — 03/09/2026. Ela escrevia `f"{pct}%"`, colado, e o card MOSTRAVA
+            # as duas gramáticas ao mesmo tempo: três centímetros abaixo, o
+            # `alto-estado` sai de `sensor_widgets.texto_volume`, que é
+            # `f"{...} %"` com espaço (`sensor_widgets.py:223`). Medido na mesa
+            # dela agora, com o controle no cabo: `bateria = "85%"` e
+            # `alto-estado = "100 %"`, um em cima do outro.
+            #
+            # O ESPAÇO É O DA GTK, e ela é o dono desta frase:
+            # `_update_bateria` escreve `f"{bateria} %"`
+            # (`controller_card.py:4910`), e `status_actions._set_battery_text`
+            # recebe a mesma grafia (`status_actions.py:993`). São três lugares
+            # do produto dizendo `N %` e um dizendo `N%`.
+            #
+            # NÃO HÁ FUNÇÃO DONA PARA IMPORTAR, e é por isso que a frase é
+            # redigitada aqui em vez de chamada: os dois lugares da GTK são
+            # literais dentro de métodos de widget (`self._battery_bar`,
+            # `self._set_battery_text`), e importar um mixin GTK para pegar uma
+            # `f-string` puxaria janela para dentro do pacote. O que se pode
+            # fazer é escrever a MESMA grafia e dizer aqui de onde ela veio.
+            #
+            # O DESCONHECIDO FICA NO TRAVESSÃO SECO, e é DIFERENTE da GTK de
+            # propósito: lá ele é `"— %"`. Aqui vale a regra dela — *campo sem
+            # informação não mostra nada* —, que é a mesma que o `alto-estado`
+            # ao lado já segue (`mesa_viva.SEM_LEITOR`) e a mesma que o
+            # `touch-estado` segue duas linhas abaixo. Um `%` pendurado num
+            # travessão seria a segunda gramática do "não sei" dentro do mesmo
+            # card.
+            "bateria": f"{pct} %" if pct is not None else str(mesa_viva.SEM_LEITOR),
             # A BARRA, e ela precisa do NÚMERO CRU: o `escrever` do piloto com
             # `data-hef-alvo="largura"` monta `width: <t>%`, e um "95%" ali
             # viraria `width: 95%%`. Zero quando o daemon não sabe — deixar a
@@ -1050,6 +1209,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # hoje, com a cor do rádio ainda não lida.
                 "peca": "" if nome_na_tela == via_na_tela else nome_na_tela,
                 "via": via_na_tela,
+                # OS DOIS ACESOS QUE ERAM DESENHO — 03/09/2026. Cada um vai
+                # para os DOIS botões do seu par: eles compartilham o mesmo
+                # `data-campo`, e cada um decide por si pelo `data-hef-quando`
+                # (`hefesto_vivo.escrever`, ramo `classe`). É a mesma gramática
+                # dos quatro degraus da Vibração, e é ela que faz "ligar um
+                # desligar a irmã" acontecer sem lista de irmãs.
+                "alto-rota": rota_na_tela(c),
+                "mic-modo-aceso": modo_do_mic(norm_mac(uniq) or ""),
                 # A LEITURA VIVA — 46 campos por card, e nenhum deles tinha
                 # endereço até 03/09/2026. Ver `leitura_viva`, que traz a mesa
                 # do que a tela dizia contra o que o aparelho publicava no
@@ -1508,6 +1675,12 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "microfone": True if qual == "virtual" else None}}}))
     if not ok:
         raise RuntimeError(motivo or "não consegui gravar o modo do microfone")
+    # O DISCO MUDOU, ENTÃO A LEITURA EM CACHE MORREU — e ela morre AQUI, não no
+    # tique seguinte por acaso. `_controles_declarados` guarda o `maquina.json`
+    # porque ele só muda por gesto dela; este É o gesto. Sem esta linha, o botão
+    # aceso continuaria sendo o de antes do clique até alguém reabrir a janela —
+    # que é o mesmo "botão que grava e não diz nada" que esta leva veio matar.
+    _controles_declarados(recarregar=True)
 
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
