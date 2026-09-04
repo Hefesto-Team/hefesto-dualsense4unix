@@ -45,3 +45,19 @@ seção daqui**: a aba deixou de estar em trabalho.
   `Arma semi-automática` e `Vibração por posição`, que já estavam na lista. A
   coluna mediu 453px de 477 depois da mudança — os mesmos 24px de folga de
   antes.
+## 04-iluminacao.html
+- **03/09/2026** — as duas cores das lâmpadas (`--led-apagado` e `--led-aceso`)
+  passaram a ser declaradas em `.luz-grade`, o escopo que o DESENHO alcança.
+  Elas moravam só em `.luzinhas`, que é o indicador PEQUENO da célula LEDs, e
+  `.luzinhas` é uma folha da árvore — as cinco lâmpadas do desenho grande não
+  acendiam **nenhuma**, medido no DOM vivo. É CSS, e só: nenhuma caixa nova,
+  nenhum texto novo, nenhum botão. O que muda na tela é a lâmpada do número
+  aparecer, que é o que o `title` da moldura já prometia.
+  **O que ela vê HOJE, na página publicada, enquanto isto espera o OK:** a aba
+  Iluminação está INTEIRA — as cinco lâmpadas do desenho grande já acendem o
+  número vivo e a barra já mostra a luz do aparelho. A metade viva desta cura
+  (`a04_iluminacao.folha_da_luz`) não espera publicação nenhuma: ela declara o
+  par de cores e escreve as regras dentro do `<style id="plastico-vivo">`, que o
+  produto de hoje JÁ tem. O que a publicação acrescenta é a mesma declaração na
+  folha estática — o que faz a bancada se ver sozinha, sem daemon, no navegador.
+  Nenhum clique fica morto e nada some da tela até lá.
