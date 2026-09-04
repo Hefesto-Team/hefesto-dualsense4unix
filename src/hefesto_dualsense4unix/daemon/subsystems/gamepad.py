@@ -1158,14 +1158,21 @@ def _game_rumble_mult(daemon: DaemonProtocol, now: float) -> float:
 def _chave_da_peca(uniq: str | None) -> str | None:
     """MAC normalizado do jeito que o perfil chaveia `controllers`, ou `None`.
 
-    Sem dois-pontos, sem hífen, minúsculo — a MESMA forma que
-    `core/backend_pydualsense.py:213` grava a partir do `HID_UNIQ` e que o
-    `_key_to_uniq` do backend casa com os handles. Normalizar aqui é barato e
-    evita o modo de falha silencioso do endereço que chega com dois-pontos e
-    não casa chave nenhuma — o mapa fica mudo e ninguém vê.
+    A CONTA É DE `core.sysfs_leds.norm_mac`, o dono da chave — e não se
+    reescreve aqui. A primeira versão desta função era um
+    `.replace(":", "").replace("-", "").lower()` à mão, ou seja, uma SEGUNDA
+    grafia da mesma regra: as duas concordam sobre MAC e discordam sobre texto
+    que não é MAC (`"usb-0000:00:14.0-3"` vira `"usb00000014.03"` numa e
+    `"b0000001403"` na outra), e é dessa divergência que nasce a chave que
+    nunca casa. É a mesma cura que a `a08_conexoes._so_hex` recebeu em 02/09.
+
+    Normalizar importa porque o modo de falha é SILENCIOSO: um endereço com
+    dois-pontos não casa chave nenhuma, o mapa fica mudo, e a tela diz
+    "aplicado" sobre um motor que não mudou.
     """
-    limpo = str(uniq or "").replace(":", "").replace("-", "").strip().lower()
-    return limpo or None
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    return norm_mac(uniq)
 
 
 def _motores_do_perfil_ativo(daemon: Any) -> dict[str, tuple[int, int]]:
@@ -1215,6 +1222,26 @@ def _motores_do_perfil_ativo(daemon: Any) -> dict[str, tuple[int, int]]:
     with contextlib.suppress(Exception):
         daemon._rumble_motores_pct = (nome, mapa)
     return mapa
+
+
+def esquecer_motores_do_perfil(daemon: Any) -> None:
+    """Derruba o mapa memoizado das barras — **a linha que faz a barra valer AGORA**.
+
+    Quem grava a barra (`daemon/ipc_handlers._handle_rumble_motores_set`) chama
+    isto no MESMO ato. Sem ela o mapa continua sendo o de antes e a barra nova
+    só entraria na próxima troca de perfil, com a tela dizendo "aplicado" sobre
+    um motor que não mudou — a família de defeito mais cara desta casa.
+
+    Mora AQUI, e não como um `daemon._rumble_motores_pct = None` escrito no
+    handler, por duas razões que andam juntas: o cache é desta função (quem o
+    lê e quem o esquece ficam à vista um do outro), e `daemon` é `Any` só neste
+    arquivo — o `DaemonProtocol` não declara o atributo, que nasce em runtime
+    como `_grab_retry_falhas` e `_steam_input_coop_derrubados`. O handler
+    escrevendo direto no atributo levava um `attr-defined` do mypy, e calá-lo
+    com um `cast` seria esconder a mesma coisa em vez de nomeá-la.
+    """
+    with contextlib.suppress(Exception):
+        daemon._rumble_motores_pct = None
 
 
 def _pcts_dos_motores(daemon: Any, target_uniq: str | None) -> tuple[int, int]:
@@ -2488,6 +2515,7 @@ __all__ = [
     "dispatch_gamepad",
     "end_game_output_session",
     "esconder_o_fisico_para_o_jogo",
+    "esquecer_motores_do_perfil",
     "make_primary_replica_sinks",
     "make_primary_rumble_sink",
     "notify_vpad_degradado",
