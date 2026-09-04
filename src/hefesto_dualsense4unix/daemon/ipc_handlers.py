@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import inspect
+import json
 import os
 import time
 from collections.abc import Callable
@@ -37,6 +38,39 @@ from hefesto_dualsense4unix.integrations.no_do_vpad import (
 )
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+
+def _config_que_viaja(cfg: object) -> dict[str, Any]:
+    """`asdict(cfg)` sem os campos que não atravessam JSON.
+
+    DEFEITO VIVO, achado em 03/09/2026 lendo o journal do daemon dela:
+
+        ipc_client_error  err='Object of type function is not JSON serializable'
+
+    `daemon.reload` FAZIA O TRABALHO — `reload_config` roda, a config nova
+    vale — e a resposta NUNCA CHEGAVA: o `asdict` do `DaemonConfig` arrasta o
+    `orcamento_da_mesa`, que em runtime é uma `lambda` que o daemon injeta, e
+    `json.dumps` explode em cima dela. O cliente fica pendurado até o timeout, e
+    o daemon cospe um traceback de 40 linhas no journal.
+
+    **O PIOR DESFECHO NÃO É O ERRO — É O TRABALHO FEITO SEM RESPOSTA.** Quem
+    chama não sabe se recarregou; quem tenta de novo recarrega duas vezes.
+
+    POR QUE NÃO SE LISTA O CAMPO A EXCLUIR: uma lista de nomes envelheceria no
+    dia em que o `DaemonConfig` ganhasse o oitavo applier — e envelheceria em
+    silêncio, porque só o journal acusaria. Aqui se PERGUNTA ao `json`: o que
+    ele não sabe serializar não viaja, e o nome do campo sai no lugar com a
+    marca, para quem lê a resposta saber que algo ficou de fora e o quê.
+    """
+    fora: dict[str, Any] = {}
+    for chave, valor in asdict(cfg).items():  # type: ignore[call-overload]
+        try:
+            json.dumps(valor)
+        except (TypeError, ValueError):
+            fora[chave] = "<não viaja por IPC>"
+            continue
+        fora[chave] = valor
+    return fora
 
 
 def _mascaras_por_aparelho(handlers: object) -> dict[str, str]:
@@ -4796,7 +4830,7 @@ class IpcHandlersMixin:
             )
 
             materialize_launch_env(self.daemon)
-        return {"status": "ok", "config": asdict(new_cfg)}
+        return {"status": "ok", "config": _config_que_viaja(new_cfg)}
 
     async def _handle_launch_env_refresh(
         self, _params: dict[str, Any]
