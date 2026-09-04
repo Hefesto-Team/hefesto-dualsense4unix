@@ -533,18 +533,36 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
             f'a coluna {pref} não foi escrita. A página a marca '
             f'`data-conectado="nao"`, e o que o pacote não escreve continua '
             f"mostrando o desenho — é o ENDEREÇO MORTO da régua do mockup.")
-        assert set(col) == {"modo-chave-e", "modo-chave-d", "pronto-e", "pronto-d",
-                            a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO}, (
-            f"{pref} recebeu {sorted(col)}. A coluna vazia do desenho não tem "
-            f"barra de ajuste nenhuma — ela traz 'Este modo não tem o que "
-            f"ajustar.' —, e emitir `aj-*` ali é se dar nota por escrever no vazio.")
+        # A RÉGUA PERGUNTA PELO QUE ELA VEIO MEDIR — 04/09/2026, e a mudança é
+        # do escopo, não do rigor. Ela era uma IGUALDADE de conjunto, e o que a
+        # motivou está escrito na própria mensagem: a coluna vazia não tem barra
+        # de ajuste, então **emitir `aj-*` ali** é se dar nota por escrever no
+        # vazio. A igualdade cobrava mais do que isso: ela congelava o conjunto
+        # inteiro, e por isso reprovava toda cura que acrescentasse um endereço
+        # honesto — a dica do modo e a do efeito pronto (decisões [01] e [02] do
+        # PO) reprovaram aqui já nascendo certas, com o lugar vazio dizendo
+        # "Nenhum controle neste lugar." Um portão que acusa quem está certo
+        # ensina a próxima pessoa a ignorá-lo.
+        assert not [k for k in col if k.startswith("aj-")], (
+            f"{pref} recebeu {sorted(k for k in col if k.startswith('aj-'))}. A "
+            f"coluna vazia do desenho não tem barra de ajuste nenhuma — ela traz "
+            f"'Este modo não tem o que ajustar.' —, e emitir `aj-*` ali é se dar "
+            f"nota por escrever no vazio.")
+        assert {"modo-chave-e", "modo-chave-d", "pronto-e", "pronto-d",
+                a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO} <= set(col), (
+            f"{pref} recebeu {sorted(col)} e falta um dos seis que a coluna "
+            f"vazia precisa: as quatro escolhas e os dois do cabeçalho.")
         # O CABEÇALHO NÃO É `<select>`, e por isso sai da conta abaixo. São DOIS
         # campos: o miolo do chip (que entrou na coluna em 03/09/2026 para ganhar
         # o SELO da visita) e a COR do plástico, que no lugar vazio vai vazia
-        # para APAGAR a borda de quem saiu. As quatro escolhas continuam com a
+        # para APAGAR a borda de quem saiu. As DICAS saem pela mesma razão: elas
+        # pousam no `title` do EMBRULHO do campo de escolha, pelo alvo
+        # `atributo`, e não numa `<option>`. As quatro escolhas continuam com a
         # régua de valor oferecido que este teste sempre cobrou.
         escolhas = {k: v for k, v in col.items()
-                    if k not in (a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO)}
+                    if k not in (a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO)
+                    and not k.startswith(a03.PREFIXO_DA_DICA_DO_MODO)
+                    and not k.startswith(a03.PREFIXO_DA_DICA_DO_PRONTO)}
         for campo, valor in escolhas.items():
             oferece = re.search(
                 rf'data-campo="{campo}"(.*?)</select>', publicada, re.S)

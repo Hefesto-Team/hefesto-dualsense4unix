@@ -435,6 +435,163 @@ MODO_DA_VIBRACAO = "MultiPositionVibration"
 MODOS_COM_CURVA = (MODO_DA_CURVA, MODO_DA_VIBRACAO)
 
 
+# ---------------------------------------------------------------------------
+# A DESCRIÇÃO DO MODO — decisão [01] do PO, 04/09/2026: *"Dica do campo, com o
+# texto desta tela. A dica do campo deixa de ser fixa e passa a ser a explicação
+# do modo ESCOLHIDO, reescrita a cada tique."*
+#
+# ELA MORA AQUI, E NÃO NO GERADOR, e a razão é a mesma da caixa de ajustes e do
+# chip da coluna: **quem reescreve a cada tique é o produto**. Enquanto o
+# dicionário vivia em `interface/aba03.py`, o texto só existia na BANCADA — o
+# gerador o cravava no `title` de cada `<option>` e ninguém, do lado vivo, tinha
+# como pôr a frase do modo ESCOLHIDO no campo. Agora `aba03.py` importa daqui, e
+# a cena e o tique dizem a mesma frase por construção.
+#
+# O TEXTO É O DESTA TELA, e a escolha é do PO com a razão medida: o produto tem
+# a sua própria descrição (`PRESETS[i].description`, *"Barreira rígida numa
+# posição fixa."*) e esta é a concreta — fala de freio de carro e de espingarda.
+# As duas continuam existindo, cada uma no seu lugar: a do produto é a da GTK, e
+# a linha `Dica (tooltip) por modo` do CSV declara a divergência de propósito.
+#
+# A GUARDA DE CONJUNTO CONTINUA NO GERADOR (`interface/aba03.py`), e é onde ela
+# morde: lá o `PRESETS` é importado no topo e um modo novo REPROVA a geração
+# alto. Aqui `_specs()` é preguiçoso e devolve `None` numa árvore sem `src/` —
+# uma guarda de import neste arquivo derrubaria a interface inteira por causa
+# de uma frase de dica, que é trocar um buraco por um apagão.
+DICA_DO_MODO = {
+ "Off": "Sem resistência nenhuma — o gatilho fica solto, como num controle comum.",
+ "Rigid": "Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.",
+ "SimpleRigid": "A mesma trava dura, com um só ponto de ajuste em vez de dez.",
+ "Pulse": "Um solavanco num ponto do curso e depois solta — o coice de um tiro único.",
+ "PulseA": "Pulso com a subida mais suave: a força cresce antes do estalo.",
+ "PulseB": "Pulso com a descida mais suave: o estalo vem e a força cai devagar.",
+ "Resistance": "Peso constante do começo ao fim, sem trava — remada, alavanca, arco sendo puxado.",
+ "Bow": "Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.",
+ "Galloping": "Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.",
+ "SemiAutoGun": "Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.",
+ "AutoGun": "Vibra continuamente enquanto está apertado — rajada.",
+ "Machine": "Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.",
+ "Feedback": "Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.",
+ "Weapon": "Trava, solta no estalo e fica leve até o fim — espingarda.",
+ "Vibration": "Treme o gatilho na frequência escolhida, sem opor força.",
+ "SlopeFeedback": "A força sobe em linha reta do início ao fim do curso.",
+ "MultiPositionFeedback": "Você desenha a força em dez posições do curso, uma por uma.",
+ "MultiPositionVibration": "Treme só na faixa do curso que você marcar.",
+ "Custom": "As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.",
+}
+
+#: O QUE A DICA DIZ NUM LUGAR SEM APARELHO. É a MESMA frase que o chip da coluna
+#: já usa (:func:`chip_do_controle`), e ela mora numa constante por isso: duas
+#: cópias divergiriam no primeiro dia em que alguém mexesse numa só, e a coluna
+#: vazia passaria a dizer duas coisas diferentes sobre o mesmo nada.
+SEM_APARELHO_AQUI = "Nenhum controle neste lugar."
+
+#: OS DOIS ENDEREÇOS DA DICA, um por campo de escolha, com o lado no fim
+#: (`dica-modo-e`, `dica-pronto-d`). Eles ficam no EMBRULHO do `<select>`, e não
+#: no próprio: um elemento tem UM `data-hef-alvo`, e o do campo de escolha já é
+#: `valor` — sem ele a primeira pintura faria `select.textContent = "Rígido"` e
+#: apagaria as 19 opções. O `title` de um ancestral é o que o navegador mostra
+#: quando o elemento sob o rato não tem o seu, e esta casa já depende disso na
+#: `08-conexoes` (o `mic-dica` embrulha o `<b>` do estado).
+PREFIXO_DA_DICA_DO_MODO = "dica-modo-"
+PREFIXO_DA_DICA_DO_PRONTO = "dica-pronto-"
+
+
+def descricao_do_modo(chave: str) -> str:
+    """A explicação do modo, na frase desta tela — vazio nunca.
+
+    A QUEDA É A DESCRIÇÃO DO PRODUTO, e não o silêncio: um modo que o produto
+    ganhe e que esta tela ainda não tenha frase para continua tendo o
+    `spec.description`, que é a frase da GTK. Entre a frase concreta, a genérica
+    e nenhuma, a ordem é essa — e o gerador reprova alto no dia em que a
+    primeira faltar, para que a segunda não vire o padrão calado.
+    """
+    daqui = DICA_DO_MODO.get(chave)
+    if daqui:
+        return daqui
+    specs = _specs()
+    spec = specs.get_spec(chave) if specs else None
+    return str(getattr(spec, "description", "") or "")
+
+
+def _rotulo_do_modo(chave: str) -> str:
+    """O rótulo de tela de um modo (`Rigid` → `Rígido`), ou a chave crua.
+
+    A CHAVE CRUA É O CONTRATO DE DISCO e não é texto de tela — é a separação que
+    o `GATILHO-PALAVRA-01` escreveu neste projeto. Ela só sai daqui quando o
+    `src/` não abre, que é o caso em que não há tradução a oferecer.
+    """
+    specs = _specs()
+    spec = specs.get_spec(chave) if specs else None
+    return str(getattr(spec, "label", "") or chave)
+
+
+def destinos_do_campo_de_pronto(modo_chave: str) -> list[str]:
+    """Os modos a que as curvas OFERECIDAS neste campo levam, naquele modo.
+
+    ELE É DERIVADO, NUNCA DIGITADO — e essa é a razão de ele existir em vez de
+    duas frases escritas à mão. Quem decide o que o campo oferece é
+    :func:`_tabela_que_o_campo_mostra`; quem decide para que modo cada curva
+    leva é :func:`_curva`, pela TABELA em que ela mora. Perguntar aos dois é o
+    único jeito de a dica não prometer um caminho que a lista não abre.
+    """
+    presets, _ = _tabela_que_o_campo_mostra(modo_chave)
+    fora: list[str] = []
+    for chave in presets:
+        try:
+            destino = _curva(chave)[1]
+        except (ValueError, RuntimeError):
+            continue
+        if destino not in fora:
+            fora.append(destino)
+    return fora
+
+
+def dica_do_pronto(modo_chave: str) -> str:
+    """O aviso do campo "Efeito pronto" — ANTES do clique, com o modo de AGORA.
+
+    DECISÃO [02] do PO, 04/09/2026: *"Fica como está, e a dica avisa ANTES do
+    clique. O desenho é dela, o atalho de um clique é real, e a única dívida
+    medida é a tela não avisar que o modo vai mudar."*
+
+    A DIVERGÊNCIA COM A GTK É REAL E CONHECIDA (linha `Quando o campo "Efeito
+    pronto" aparece, e o que escolhê-lo faz`): lá a linha só existe nos DOIS
+    modos por posição e escolher um preset preenche os sliders **sem mexer no
+    modo**; aqui o campo aparece nos 19 e o clique já aplica — logo, fora dos
+    dois modos por posição, escolher uma curva TROCA o modo. Quem decidiu manter
+    foi o PO; o que faltava era a tela dizer isso antes.
+
+    **A PRIMEIRA VERSÃO DESTA FRASE PROMETIA DEMAIS, e quem a derrubou foi a
+    mordida.** Ela dizia *"as curvas de força vão para «Curva de força» e as de
+    vibração para «Vibração por posição»"* nos dezessete modos comuns — e é
+    FALSO: com o gatilho em `Rigid`, o campo oferece SÓ as seis curvas de
+    feedback (`_tabela_que_o_campo_mostra`, medido no DOM em 03/09), então
+    `Vibração por posição` não é alcançável dali. A tela estaria descrevendo um
+    caminho que a lista não abre — que é o alarme sem medição que esta casa bane.
+
+    **A CURA É PERGUNTAR À LISTA**, e não escolher melhor as palavras: o destino
+    sai de :func:`destinos_do_campo_de_pronto`, que lê o que o campo oferece
+    naquele modo e resolve cada curva pela tabela em que ela mora. Se um dia o
+    campo passar a oferecer as onze, a dica nomeia as duas sozinha.
+    """
+    agora = _rotulo_do_modo(modo_chave)
+    fim = "Um efeito seu põe o modo com que ele foi guardado."
+    destinos = destinos_do_campo_de_pronto(modo_chave)
+    if not destinos:
+        # SEM CURVA A OFERECER NÃO HÁ TROCA A ANUNCIAR. É o caminho que só se
+        # alcança sem o `src/` (as tabelas do produto não abriram), e ali a
+        # honestidade é dizer o que se sabe: o modo de agora, e mais nada.
+        return f"Este gatilho está em «{agora}». {fim}"
+    para = " ou ".join(f"«{_rotulo_do_modo(d)}»" for d in destinos)
+    if destinos == [modo_chave]:
+        return (f"Este gatilho está em «{agora}», e o campo mostra as curvas "
+                f"deste modo: escolher uma aplica as dez posições dela na hora, "
+                f"sem trocar o modo. {fim}")
+    return (f"Este gatilho está em «{agora}». Escolher uma curva pronta TROCA o "
+            f"modo dele para {para} na hora — é um clique, e já vai ao "
+            f"controle. {fim}")
+
+
 def _tabela_da_curva(modo: str) -> tuple[dict[str, list[int]], dict[str, str]]:
     """`(presets, rótulos)` do modo por posição, ou dois vazios nos outros 17.
 
@@ -1499,7 +1656,7 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     cor = cor_de_borda(plastico)
     classe = "chip plastico" if conectado else "chip vazio"
     if not conectado:
-        dica = "Nenhum controle neste lugar."
+        dica = SEM_APARELHO_AQUI
     elif cor:
         dica = (f"{nome} — a borda é a cor do plástico" if nome
                 else "A borda é a cor do plástico deste controle.")
@@ -1776,6 +1933,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         for sig, d in deste.items():
             col[f"modo-{sig}"] = d["modo"]
             col[f"modo-chave-{sig}"] = d["modo-chave"]
+            # AS DUAS DICAS DO LADO, reescritas a cada tique — decisões [01] e
+            # [02] do PO. Elas pousam no `title` do EMBRULHO de cada `<select>`,
+            # pelo alvo `atributo`: o campo de escolha já gasta o seu alvo com
+            # `valor`, e um `title` cravado no desenho congelaria a explicação
+            # do modo que a CENA tinha — que é o defeito de forma que esta aba
+            # já pagou quatro vezes (a tela afirmando o que não é).
+            col[f"{PREFIXO_DA_DICA_DO_MODO}{sig}"] = descricao_do_modo(
+                str(d["modo-chave"]))
+            col[f"{PREFIXO_DA_DICA_DO_PRONTO}{sig}"] = dica_do_pronto(
+                str(d["modo-chave"]))
             # O EFEITO DELA VENCE A CURVA DO PRODUTO, e a ordem é a única
             # honesta: se a configuração de agora É o "Recuo do MK" que ela
             # salvou, dizer "Stop hard" seria trocar o nome dela pelo do motor.
@@ -1810,6 +1977,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         vazia = {f"modo-chave-{sig}": _sem_nada("modo", str(sem_ninguem["modo-chave"]))
                  for sig in LADOS}
         vazia.update({f"pronto-{sig}": _sem_nada("pronto", str(sem_ninguem["pronto"]))
+                      for sig in LADOS})
+        # A DICA DO LUGAR VAZIO NÃO EXPLICA MODO NENHUM. Deixar a frase do
+        # `Desligado` ali seria a tela explicando o efeito de um aparelho que
+        # não está aqui; deixar VAZIO seria pior, porque o `escrever()` do
+        # piloto troca vazio por travessão e o `title` viraria um `—` solto.
+        vazia.update({f"{pref_}{sig}": SEM_APARELHO_AQUI
+                      for pref_ in (PREFIXO_DA_DICA_DO_MODO,
+                                    PREFIXO_DA_DICA_DO_PRONTO)
                       for sig in LADOS})
         # O CABEÇALHO DO LUGAR VAZIO É CAMPO, E NÃO BLOCO — 03/09/2026, e é a
         # dívida que esta frente veio pagar. Ele SEMPRE foi escrito (pelo
@@ -2192,7 +2367,7 @@ def _params_da_curva(modo_: str, curva: list[int]) -> list[int]:
 
 
 def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
-             uniq: str, ctx: Contexto | None = None) -> tuple[bool, str]:
+             uniq: str, ctx: Contexto | None = None) -> tuple[bool, str, str]:
     """Manda o efeito ao daemon pela porta CERTA, e a certa depende do modo.
 
     "DESLIGADO" É `trigger.reset`, E NÃO `trigger.set` COM `Off` — a R-19. O
@@ -2216,6 +2391,11 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     O RASCUNHO SÓ RECEBE O QUE O DAEMON ACEITOU. Guardar antes faria a tela
     afirmar um efeito que o aparelho recusou — trocaria a mentira de hoje (a
     escolha some) por uma pior (a escolha fica, e é falsa).
+
+    E ELE DEVOLVE O RECIBO — 04/09/2026, a D-01. A terceira casa é a frase de
+    SUCESSO daquele envio, e ela sai daqui porque é aqui que o CORPO do daemon
+    existe: montá-la nos quatro chamadores seria o quarto que esquece, que é o
+    mesmo argumento pelo qual o rascunho já mora nesta função.
     """
     if modo_ == "Off":
         ok, motivo, corpo = _desfecho(p.trigger_reset_detalhado(lado, uniq=uniq))
@@ -2226,7 +2406,8 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     if ok and _chegou_ao_aparelho(corpo):
         _lembrar_o_aplicado(str((ctx.state if ctx else {}).get("active_profile") or ""),
                             uniq, lado, {"mode": modo_, "params": params})
-    return _conferir_o_desfecho(lado, modo_, ok, motivo, corpo, ctx, uniq)
+    ok, motivo = _conferir_o_desfecho(lado, modo_, ok, motivo, corpo, ctx, uniq)
+    return ok, motivo, _recibo(lado, modo_, corpo, ctx, uniq)
 
 
 #: OS DOIS CAMPOS EM QUE O DAEMON DIZ ONDE A ESCRITA FOI PARAR. O vocabulário é
@@ -2330,6 +2511,63 @@ def _como_a_janela_pergunta(ctx: Contexto | None, uniq: str) -> Any:
     return _Janela()
 
 
+def _assunto(lado: str, modo_: str) -> str:
+    """`"Gatilho esquerdo (L2): Rigid"` — o assunto de toda frase desta aba.
+
+    UM SÓ, e é o ponto: a recusa e o recibo falam do mesmo gatilho, e escrever a
+    mesma construção duas vezes é como se acaba com duas frases para o mesmo
+    fato. É a MESMA que `triggers_actions._toast_trigger` monta na barra da GTK
+    — inclusive no `preset_id` cru, que é uma dívida conhecida desta casa e não
+    uma escolha desta função (ver o relatório desta frente).
+
+    O NOME DO LADO É A CURA TRG-01: a barra dizia `"LEFT -> Off"`, trocando a
+    fala dela pelo id interno mais o lado em inglês.
+    """
+    return f"{NOME_DO_LADO.get(lado, lado)}: {modo_}"
+
+
+def _recibo(lado: str, modo_: str, corpo: dict[str, Any] | None,
+            ctx: Contexto | None, uniq: str) -> str:
+    """A frase de SUCESSO que vai ao CARTÃO daquele controle — a D-01 em ato.
+
+    **O DEFEITO QUE ELA FECHA**, e ele é a queixa de origem desta casa: quando
+    dava certo, a tela não dizia nada. O piloto imprimia `[gesto] … → aplicado`
+    no terminal de quem lançou a janela, e quem clica não lê terminal. A decisão
+    dela, 04/09/2026: *"No próprio cartão, como a recusa."*
+
+    **NÃO HÁ CANAL NOVO AQUI, e é o ponto inteiro do conflito C-3.** A lista
+    desta aba propunha *o campo que pisca*; ela escolheu o cartão, que é a mesma
+    peça das outras quatro abas. Esta função só ESCREVE a frase — quem a leva ao
+    cartão é o `hefesto_vivo._deu_certo_dizendo`, lendo o `recado` que o gesto
+    devolve.
+
+    A FRASE É DO DONO DO ASSUNTO: `app/textos_de_aplicacao.frase_do_desfecho`,
+    a mesma que a barra da GTK usa, com o CORPO do daemon como autoridade — é
+    ela que sabe dizer *"aplicado em 2 controles"* em vez de um "aplicado" que
+    não conta.
+
+    **O CORPO QUE NÃO FALA DE DESTINO NÃO PASSA POR ELA**, e essa guarda é a
+    lição de 04/09: o dublê da régua devolve `{}`, e `frase_do_desfecho` leria
+    as duas listas vazias como *"nenhum controle recebeu"* — um recibo de
+    SUCESSO afirmando que nada aconteceu. É a mesma armadilha que
+    `_fala_de_destino` já documenta do outro lado, e a resposta é a mesma
+    pergunta.
+    """
+    assunto = _assunto(lado, modo_)
+    if not _fala_de_destino(corpo):
+        return f"{assunto} aplicado"
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.textos_de_aplicacao import frase_do_desfecho
+
+        return frase_do_desfecho(assunto, corpo, _como_a_janela_pergunta(ctx, uniq))
+    except Exception:
+        # O TRADUTOR NÃO PODE CALAR O RECIBO, pela mesma razão que ele não pode
+        # derrubar o gesto em `_conferir_o_desfecho`: sem ele a frase é a curta,
+        # e a curta ainda diz mais que o silêncio que esta peça veio curar.
+        return f"{assunto} aplicado"
+
+
 def _conferir_o_desfecho(lado: str, modo_: str, ok: bool, motivo: str,
                          corpo: dict[str, Any] | None,
                          ctx: Contexto | None, uniq: str) -> tuple[bool, str]:
@@ -2367,7 +2605,7 @@ def _conferir_o_desfecho(lado: str, modo_: str, ok: bool, motivo: str,
     dizia `"LEFT -> Off"`, trocando a fala dela por id interno mais o lado em
     inglês. A tela nova não vai reintroduzir o defeito com outro atalho.
     """
-    assunto = f"{NOME_DO_LADO.get(lado, lado)}: {modo_}"
+    assunto = _assunto(lado, modo_)
     if not ok or corpo is None:
         return ok, motivo
     calado = ((not _fala_de_destino(corpo) or _chegou_ao_aparelho(corpo))
@@ -2388,7 +2626,7 @@ def _conferir_o_desfecho(lado: str, modo_: str, ok: bool, motivo: str,
 
 
 @gesto("03-gatilhos.html", "modo")
-def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Escolher um modo APLICA o efeito naquele gatilho, naquele controle.
 
     É O QUE O PRÓPRIO DESENHO PROMETE, na dica do quadro: *"Escolher um modo já
@@ -2430,14 +2668,15 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(
             "modo: `—` é como esta tela diz que não há controle neste lugar, e "
             "não um efeito a aplicar. Escolha `Desligado` para soltar o gatilho.")
-    ok, motivo = _aplicar(p, lado, chave, _padroes(chave), uniq, ctx)
+    ok, motivo, recibo = _aplicar(p, lado, chave, _padroes(chave), uniq, ctx)
     if not ok:
         raise RuntimeError(_na_lingua_da_tela(motivo, chave)
                            or f"o daemon não aplicou o modo {chave!r}")
+    return {"recado": recibo}
 
 
 @gesto("03-gatilhos.html", "pronto")
-def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Escolher um efeito pronto põe aquela CURVA no gatilho, na hora.
 
     O EFEITO PRONTO TEM DONO, e o dono é `profiles/trigger_presets.py`. São
@@ -2488,11 +2727,11 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 f"dois ajustados.")
         modo_salvo = str(meia.get("mode") or "Off")
         params = [int(v) for v in (meia.get("params") or [])]
-        ok, motivo = _aplicar(p, lado, modo_salvo, params, uniq, ctx)
+        ok, motivo, recibo = _aplicar(p, lado, modo_salvo, params, uniq, ctx)
         if not ok:
             raise RuntimeError(_na_lingua_da_tela(motivo, modo_salvo)
                                or f"o daemon não aplicou o seu efeito {nome!r}")
-        return
+        return {"recado": recibo}
     if chave in ("", "custom", TRAVESSAO):
         raise ValueError(
             "efeito pronto: não há curva a aplicar. '— Nenhum —' é a ausência "
@@ -2504,18 +2743,19 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # aplicadas: mandá-las como `MultiPositionFeedback` poria uma curva de
     # vibração num modo de força — o número certo no efeito errado.
     curva, modo_da_curva = _curva(chave)
-    ok, motivo = _aplicar(p, lado, modo_da_curva,
-                          _params_da_curva(modo_da_curva, curva), uniq, ctx)
+    ok, motivo, recibo = _aplicar(p, lado, modo_da_curva,
+                                  _params_da_curva(modo_da_curva, curva), uniq, ctx)
     if not ok:
         # O SPEC DA TRADUÇÃO É O DO MODO POR POSIÇÃO, e não o do preset: quem
         # recusa é ele, e é dele que saem os rótulos `Posição 0..9` que a recusa
         # vai nomear.
         raise RuntimeError(_na_lingua_da_tela(motivo, modo_da_curva)
                            or f"o daemon não aplicou a curva {chave!r}")
+    return {"recado": recibo}
 
 
 @gesto("03-gatilhos.html", "ajuste")
-def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Arrastar uma barra muda AQUELE parâmetro e reaplica o efeito na hora.
 
     A MAIOR DÍVIDA DESTA ABA, e o nome dela já estava reservado: o `SEM_ECO`
@@ -2587,11 +2827,102 @@ def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"Zero é uma medida; o que a tela não soube dizer não vira zero.") from None
     ja = _do_rascunho(uniq, lado)
     if ja and ja.get("mode") == modo_ and list(ja.get("params") or []) == params:
-        return
-    ok, motivo = _aplicar(p, lado, modo_, params, uniq, ctx)
+        return None
+    ok, motivo, recibo = _aplicar(p, lado, modo_, params, uniq, ctx)
     if not ok:
         raise RuntimeError(_na_lingua_da_tela(motivo, modo_)
                            or f"o daemon não aplicou o ajuste no modo {modo_!r}")
+    return {"recado": recibo}
+
+
+#: O SEPARADOR DAS DUAS METADES DO RECIBO DO REENVIO. Ele é uma constante
+#: porque é `PONTO` sem a marcação — o recado do cartão é texto, não HTML
+#: (`hefesto_vivo.pintar_recados` escreve `textContent`), e um `<span>` ali
+#: apareceria escrito na tela dela.
+_E_TAMBEM = " · "
+
+
+@gesto("03-gatilhos.html", "reenviar")
+def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Manda de novo ao controle os DOIS gatilhos que estão NA TELA desta coluna.
+
+    DECISÃO [03] do PO, 04/09/2026: *"Um botão na faixa que JÁ EXISTE
+    (`--r-acao`, 34 px, já desenhada e aprovada), mandando os DOIS gatilhos
+    daquela coluna. Zero trilha nova."*
+
+    **O QUE ELE PAGA, e a dívida é medida** (linha `Aplicar o efeito no
+    aparelho`): a GTK tem *"Aplicar em L2"* e *"Aplicar em R2"*, dois botões que
+    reenviam o que está na tela sem mexer em nada; a interface nova não tinha
+    nenhum. E o "Aplicar" do rodapé **não é substituto** — ele manda o rascunho
+    montado a partir do PERFIL NO DISCO, não o que ela acabou de escolher.
+
+    **POR QUE ISSO NÃO É LUXO, e é a natureza do aparelho:** o DualSense não
+    devolve o modo em que está. Gatilho adaptativo é comando de IDA, e o
+    `state_full` não publica `triggers` — está escrito no topo deste arquivo e
+    o `docs/data/mapa-controles.csv` diz o mesmo pela outra ponta. Quando o
+    efeito se perde (o jogo escreveu por cima pelo hidraw, o controle voltou do
+    rádio, o daemon reaplicou um perfil), **não há como a tela saber**: o único
+    caminho de volta é reenviar.
+
+    **A FONTE É A TELA, e não o disco** — é a diferença inteira em relação ao
+    rodapé. O piloto recolhe a coluna pelo `data-hef-forma="@controle"`, do
+    mesmo jeito que o "Guardar esse efeito" já recolhe, e por isso este gesto
+    reusa o `_ajustes_da_coluna` em vez de escrever uma segunda leitura.
+
+    **ELE NÃO GRAVA NADA NO DISCO DELA**, e é o que o distingue do vizinho: o
+    `guardar` escreve em `meu_perfil.json` (e por isso está em
+    `hefesto_vivo.PERIGOSOS`); este só reenvia ao APARELHO valores que já estão
+    na tela. Reenviar o que já está lá é idempotente — nenhum valor novo, nenhum
+    byte a mais do que o `modo` e o `pronto` já mandam a cada clique dela.
+
+    **UM LADO QUE RECUSA NÃO CALA O OUTRO.** Os dois gatilhos são independentes,
+    e parar no primeiro deixaria a coluna pela metade sem dizer. Aqui os dois
+    vão, e o desfecho de cada um entra na frase: se algum recusou, a frase
+    inteira sai como recusa (que é o canal que pousa no cartão em laranja); se
+    os dois foram, sai como recibo verde. **Um recibo que some a recusa de um
+    lado com o sucesso do outro seria a tela afirmando o que não é.**
+    """
+    uniq = _exigir_controle(o, "reenviar")
+    forma = o.get("forma")
+    if not isinstance(forma, dict) or not forma:
+        raise RuntimeError(
+            "não consegui ler a coluna deste controle. O botão precisa do "
+            "`data-hef-forma` para o piloto recolher os campos — e sem eles não "
+            "há o que reenviar, porque o daemon não devolve o modo do gatilho.")
+
+    recibos: list[str] = []
+    recusas: list[str] = []
+    for sigla, disco in LADOS.items():
+        modo_ = str(forma.get(f"modo-chave-{sigla}") or "").strip()
+        if not modo_ or modo_ == TRAVESSAO:
+            continue
+        params = _ajustes_da_coluna(forma, sigla, modo_)
+        try:
+            ok, motivo, recibo = _aplicar(p, disco, modo_, params, uniq, ctx)
+        except RuntimeError as erro:
+            # O `_conferir_o_desfecho` LEVANTA quando o byte não saiu, e a
+            # frase dele já nomeia o lado. Deixá-la subir aqui mataria o outro
+            # gatilho antes de ele ser tentado.
+            recusas.append(str(erro))
+            continue
+        if ok:
+            recibos.append(recibo)
+        else:
+            # O ASSUNTO VAI NA FRENTE, e aqui ele NÃO é opcional — medido na
+            # mordida desta frente. `_na_lingua_da_tela` devolve a recusa
+            # traduzida do daemon (*"Fim (3) precisa ser maior que Início (5)"*)
+            # e ela não nomeia gatilho nenhum: num clique que manda os DOIS, a
+            # frase sozinha deixa ela sem saber qual dos dois recusou.
+            recusas.append(
+                f"{_assunto(disco, modo_)} — "
+                f"{_na_lingua_da_tela(motivo, modo_) or 'o daemon não aplicou'}")
+    if not recibos and not recusas:
+        raise RuntimeError(
+            "esta coluna não tem gatilho nenhum para reenviar. Escolha um modo "
+            "em L2 ou em R2 — `—` é como esta tela diz que o lugar está vazio.")
+    if recusas:
+        raise RuntimeError(_E_TAMBEM.join(recusas + recibos))
+    return {"recado": _E_TAMBEM.join(recibos)}
 
 
 @gesto("03-gatilhos.html", "guardar")
@@ -2859,7 +3190,10 @@ METODOS: set[str] = set()
 #: 3 → 4 EM 03/09/2026: o `ajuste` nasceu, e com ele os 73 parâmetros dos 17
 #: modos que a GTK deixa mexer. O piso SÓ SOBE, e uma queda não aparece na tela
 #: — o clique simplesmente deixa de fazer alguma coisa.
-PISO_DA_ABA = 4
+#: 4 → 5 EM 04/09/2026: nasceu o `reenviar`, a decisão [03] do PO — o botão que
+#: a GTK tem por lado ("Aplicar em L2"/"Aplicar em R2") e a interface nova não
+#: tinha por nenhum.
+PISO_DA_ABA = 5
 #: O `uniq` da prova é a faixa sintética da casa: há dois portões de anonimato
 #: nesta árvore e eles não perdoam.
 _UNIQ = "aa:bb:cc:00:00:01"
@@ -2927,6 +3261,19 @@ PROVAS = [
                                    "forma": _forma_de_prova("e", "Rigid")},
      "chama": [("trigger_set_detalhado",
                 ["left", "Rigid", [_padroes("Rigid")[0], 200]], {"uniq": _UNIQ})]},
+    # O REENVIO: UM clique, DOIS envios, na ordem L2 → R2. A prova mistura os
+    # dois modos de propósito — `Rigid` de um lado e `Desligado` do outro —
+    # porque as PORTAS são diferentes e a R-19 mora nessa diferença: `Off` é
+    # `trigger.reset` (que LIMPA a trava manual) e nunca `trigger.set` com
+    # `Off` (que a ARMA). Se alguém fizer o reenvio mandar tudo pela mesma
+    # porta, esta linha reprova pelo NOME da função.
+    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
+     "gesto": "reenviar",
+     "clique": {"forma": {**_forma_de_prova("e", "Rigid"),
+                          **_forma_de_prova("d", "Off")}},
+     "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
+                {"uniq": _UNIQ}),
+               ("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ})]},
 ]
 
 #: OS GESTOS QUE O DAEMON ACEITA E NÃO PUBLICA. O `state_full` não traz
