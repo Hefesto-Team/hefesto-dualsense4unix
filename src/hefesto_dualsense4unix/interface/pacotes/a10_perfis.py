@@ -262,7 +262,7 @@ def _com_a_carona(frase: str) -> str:
     `passada()` daqui é o mesmo trabalho sem a segunda troca de thread.
 
     `ligada()` É O PORTÃO E NÃO UM `if` MEU: ele é o mesmo que a janela estável
-    consulta, e é o que desliga a carona na suíte (a `conftest.py:2159` põe
+    consulta, e é o que desliga a carona na suíte (a `conftest.py:2308` põe
     `HEFESTO_CARONA_WRAPPER=0`). Uma régua desta aba não vai ao `/proc` dela.
 
     NUNCA LEVANTA. Ela é efeito colateral de um gesto que já deu certo: uma
