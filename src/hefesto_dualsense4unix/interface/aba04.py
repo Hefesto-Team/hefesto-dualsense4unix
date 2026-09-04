@@ -224,10 +224,13 @@ CSS = """
      apontava. Com a fita esmaecida (decisão dela, 28/08) esse alvo deixou de
      existir, e as seções desceram para dentro das colunas.
 
-     AS ALTURAS SÃO TOKENS porque a soma é o orçamento: 146+16+44+26+62+34+72
-     = 400, mais seis passos de 8 = 448, e o miolo dá 452. Mexer numa linha sem
-     tirar de outra faz a aba rolar por dentro — e quadro que rola por dentro é
-     conteúdo que ninguém sabe que existe. */
+     AS ALTURAS SÃO TOKENS porque a soma é o orçamento: 146+16+44+26+52+56+72
+     = 412, mais seis passos de 10 = 472, contra o teto de 476 que a caixa do
+     miolo oferece. Mexer numa linha sem tirar de outra faz a aba rolar por
+     dentro — e quadro que rola por dentro é conteúdo que ninguém sabe que
+     existe. O teto sai da MEDIÇÃO, não de uma conta: o `.miolo` dá 564px de
+     caixa, 34 vão nos paddings dele e 54 no cromo do quadro (as duas bordas,
+     os 17px da faixa do título com o seu padding, e os 24 do corpo). */
   /* A LINHA NÃO PODE QUEBRAR NOS VÃOS — 30/08/2026, pedido dela: *"as linhas
      horizontais (…) precisam melhorar ali"*.
 
@@ -250,7 +253,28 @@ CSS = """
     grid-template-columns:var(--larg-rot) repeat(4,1fr);
     gap:var(--gap-col);
     --r-des:146px;--r-nome:16px;--r-cor:44px;--r-brilho:26px;
-    --r-player:62px;--r-leds:34px;--r-acoes:72px;
+    /* A LINHA DE RESSALVA CABE NA LINHA DOS LEDs — 04/09/2026, decisão dela
+       (D-02, e a pergunta [01] desta aba): *"Uma linha só quando há
+       ressalva."* Ela nasce DEBAIXO da tira, e por isso não é uma oitava
+       faixa da grade: uma faixa a mais cobra o `--r-passo` inteiro (10px) em
+       toda tela, inclusive nas que não têm nada a ressalvar — e a régua da
+       D-02 mede exatamente esse pixel. Aqui ela mora DENTRO da faixa dos
+       LEDs, na `.cel-leds`, e o `:empty`/`:has(.nada)` de `monta.CSS_FOLHA`
+       a apaga por coluna.
+
+       O QUE ELA CUSTA, e a conta está fechada porque o teto é medido: a
+       ressalva pede 22px (5 de `margin-top` + 17,25 de linha, arredondado),
+       e `--r-leds` vai de 34 para 56. Doze vêm dos 16px de folga que a
+       coluna tinha, e DEZ vêm do `--r-player`, que os tinha sobrando: os
+       botões de número medem 36px (`--h-escolha`) e a faixa dava 62 —
+       medido no Chrome, o conteúdo ia de y=13 a y=49 dentro dela. Com 52 o
+       respiro cai de 13 para 8px de cada lado, e nenhum botão encolhe.
+
+       A COLUNA VAI DE 460 PARA 472, contra o teto de 476. O interruptor da
+       D-13 não entra nesta conta porque não gasta linha nenhuma: ele mora na
+       faixa do TÍTULO do quadro, que tem 17px de altura e 1000px vazios à
+       direita — ver `.chave-auto`. */
+    --r-player:52px;--r-leds:56px;--r-acoes:72px;
     /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido dela:
        *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
        construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
@@ -258,9 +282,11 @@ CSS = """
        MEDIDO ANTES: o passo era 8 e a divisória ficava em `top:0` — encostada no
        conteúdo de cima, com o vão INTEIRO embaixo. `a_divisoria_sobe: [0]`.
        O QUE ELE CUSTA: o passo vai de 8 para 10, e 2px em seis vãos são 12. A
-       coluna vai de 448 para 460, contra o teto MEDIDO de 476 — 16px de folga.
+       coluna foi de 448 para 460, contra o teto MEDIDO de 476.
        A parte que NÃO custa nada é a que arruma o feio: descer a linha meio
-       passo só muda de que lado dela o vão está. */
+       passo só muda de que lado dela o vão está.
+       A FOLGA DE HOJE É 4px, e não os 16 de então: a linha de ressalva de
+       04/09 comeu doze — ver a nota do `--r-leds` acima. */
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
   .luz-grade > div{
@@ -595,6 +621,54 @@ CSS = """
   .luz-grade .led-on{fill:var(--led-aceso);
                      filter:drop-shadow(0 0 .5px var(--led-aceso)) !important}
 
+  /* ---------- O INTERRUPTOR DO AUTOMÁTICO (D-13) ----------
+     ELA ESCOLHEU O INTERRUPTOR DE VERDADE — 04/09/2026, e a recomendação
+     escrita propunha o contrário (só MOSTRAR o estado no botão "Automático"):
+     *"Um interruptor no topo da aba Iluminação."*
+
+     O CUSTO DECLARADO ERA ~30px, E ELE SAIU DE GRAÇA. A faixa do título do
+     quadro (`.quadro-topo`) é um flex de 17px de altura com dois filhos que
+     somam 87px numa linha de 1140 — mil pixels vazios à direita. O
+     `margin-left:auto` empurra o interruptor para lá, e a faixa não cresce um
+     pixel: nada aqui passa dos 17px que o `.ajuda` já ocupa. Os 30px que ela
+     aceitou pagar ficaram no bolso, e é o que deixou a linha de ressalva da
+     D-02 caber na mesma leva.
+
+     A ALTURA É 17px E NÃO 18: o trilho é 15 de caixa mais 1+1 de borda. Um
+     pixel a mais faria a faixa do título crescer, e com ela a coluna inteira
+     — que está a 4px do teto.
+
+     O `<input>` É INVISÍVEL E CONTINUA SENDO O ESTADO. Quem pinta é o
+     `:checked` do CSS; quem escreve é o alvo `marcado` do piloto, o décimo, e
+     é o único que toca `el.checked`. Uma caixinha `class="ligado"` pintada à
+     mão seria um estado que só o desenho sabe — e o desenho não sabe o perfil
+     dela.
+
+     A DICA ABRE PARA A ESQUERDA, e é medida: a `.dica` tem 330px e nasce em
+     `left:22px`; num `?` encostado na direita do quadro ela sairia da janela
+     de 1180. `right:22px` é a mesma peça, do outro lado. */
+  .chave-auto{
+    margin-left:auto;display:flex;align-items:center;gap:7px;cursor:pointer;
+    font-size:11.5px;color:var(--texto-suave);height:17px;position:relative;
+    -webkit-user-select:none;user-select:none;
+  }
+  .chave-auto:hover{color:var(--fg)}
+  .chave-auto input{position:absolute;width:0;height:0;opacity:0;margin:0;padding:0}
+  .chave-trilho{
+    width:28px;height:15px;flex:0 0 28px;border-radius:8px;position:relative;
+    background:var(--app-bg);border:1px solid var(--border-forte);
+  }
+  .chave-trilho::after{
+    content:"";position:absolute;top:2px;left:2px;width:9px;height:9px;
+    border-radius:50%;background:var(--texto-mudo);
+  }
+  .chave-auto input:checked + .chave-trilho{background:var(--sel-bg);border-color:var(--purple)}
+  .chave-auto input:checked + .chave-trilho::after{left:15px;background:var(--purple)}
+  .chave-auto:hover .chave-trilho{border-color:var(--comment)}
+  .chave-auto input:checked:focus-visible + .chave-trilho,
+  .chave-auto input:focus-visible + .chave-trilho{outline:1px solid var(--cyan);outline-offset:1px}
+  .quadro-topo .ajuda.esq .dica{left:auto;right:22px}
+
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
   .guia{display:flex;gap:4px;align-items:center}
   /* A MOLDURA DA AMOSTRA SAIU — 31/08/2026, e é a mais pura das "bordas
@@ -623,6 +697,32 @@ CSS = """
   .cel-cor{display:flex;flex-direction:column;gap:4px;justify-content:center}
   .hex{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fg);
        text-align:center;line-height:14px}
+  /* A CAIXA DO HEXADECIMAL VIRA O BOTÃO — 04/09/2026, decisão dela na pergunta
+     [03] desta aba, contra as outras duas opções (deixar como está, ou um
+     terceiro botão em Opções).
+
+     O QUE ELA FECHA: a aba manda a cor no instante do clique, e um botão da
+     guia SEMPRE dispara — clicar de novo no mesmo tom reenvia. O seletor livre
+     não: ele só avisa quando o valor MUDA, então a cor que ela escolheu à mão
+     era justamente a única sem porta de volta. A janela GTK tem um botão
+     dedicado para isso; aqui o botão é o lugar onde a cor já está escrita.
+
+     NENHUM ELEMENTO NOVO E NENHUMA LINHA, que é a razão da escolha — a fileira
+     de Opções já estava apertada. O que muda é o SINAL de que se pode clicar:
+     o cursor, e a borda no rato. Sem eles, uma caixa que se lê como texto
+     aceitaria clique sem nunca dizer que aceita.
+
+     A BORDA JÁ NASCE (transparente) para o hover não mexer no tamanho — a
+     mesma lição que `.guia .tom.on` pagou nesta folha, quatro regras acima. */
+  .hex.reenvia{cursor:pointer;border:1px solid transparent;border-radius:5px;
+            padding:0 4px;align-self:center}
+  .hex.reenvia:hover{border-color:var(--purple);color:var(--purple)}
+  /* O LUGAR QUE ESVAZIA NÃO ACEITA O CLIQUE. Ali o `.hex` mostra o travessão
+     que o molde escreve, e um clique nele levantaria `o clique não disse em
+     qual controle` — que o cartão do piloto não leva à tela (só `RuntimeError`
+     chega lá). É a MESMA cura que a folha do `.off` já faz com a guia, o
+     trilho e os dois botões, três seções acima. */
+  .luz-grade .ctrl.off .cel-cor .hex.reenvia{pointer-events:none;border-color:transparent}
 
   /* ---------- BRILHO ---------- */
   .cel-brilho{display:flex;align-items:center;gap:9px}
@@ -721,8 +821,40 @@ CSS = """
      separava nada: a faixa já está delimitada pela divisória de cima, pela de
      baixo e pela barra vertical da coluna. Quem tem de ter contorno é o
      touchpad, porque o contorno É o desenho dele. */
+  /* A CÉLULA DOS LEDs TEM DOIS ANDARES DESDE 04/09/2026 — a tira em cima e a
+     RESSALVA embaixo (D-02, pergunta [01] desta aba). Ela é quem ocupa a faixa
+     `--r-leds`; a tira deixou de ser o item da grade e virou o primeiro filho.
+
+     `flex:0 0 34px` NA TIRA, e não `height:100%`: com a ressalva presente o
+     `100%` esticaria a tira e o halo das duas barras junto. Trinta e quatro é
+     a altura que a tira sempre teve, e ela não muda quando a frase aparece.
+
+     A FRASE FICA CENTRADA como o resto da coluna, e o `min-width:0` é o que
+     deixa uma frase longa QUEBRAR em vez de alargar a coluna — as cinco
+     colunas dividem 1112px em partes iguais, e um item de flex não encolhe
+     abaixo do conteúdo sem isto. */
+  /* `justify-content:center` E NÃO `flex-start`, e a diferença aparece no dia
+     NORMAL: com a ressalva escondida a tira ficaria encostada no topo da faixa
+     de 56px, com 22px de vão embaixo — fora do eixo do rótulo "LEDs" da
+     primeira coluna e do travessão das colunas vazias. Centrado, o par se
+     acomoda como um bloco só: sozinha, a tira fica onde sempre esteve; com a
+     frase, as duas dividem a faixa. */
+  .cel-leds{display:flex;flex-direction:column;align-items:stretch;
+            justify-content:center;min-width:0}
+  .cel-leds .ressalva{text-align:center;overflow:hidden}
+  /* E A TIRA DO LUGAR VAZIO ACOMPANHA. Lá o `.aceso` continua sendo o item da
+     grade — não há ressalva a acomodar num lugar sem aparelho —, e um item de
+     grade ESTICA por default: ele encheria os 56px enquanto a tira viva ao lado
+     mede 34, e as duas caixas da mesma linha ficariam de tamanhos diferentes. */
+  .luz-grade .ctrl.vazia .aceso{align-self:center;height:34px}
+  /* E ELA SOME NO LUGAR QUE ESVAZIA. O molde do lugar sem dono escreve o
+     travessão em todo `data-campo` da coluna, e o alvo `html` desta linha o
+     receberia como um `—` solto debaixo de uma tira apagada — dado com cara de
+     ressalva num lugar onde não há aparelho que ressalvar. */
+  .luz-grade .ctrl.off .ressalva{display:none}
   .aceso{border-radius:8px;background:var(--app-bg);
-         display:flex;align-items:center;justify-content:center;gap:16px;height:100%}
+         display:flex;align-items:center;justify-content:center;gap:16px;
+         flex:0 0 34px}
   .tira-luz{width:6px;height:20px;border-radius:3px}
   .tira-luz.esq{box-shadow:-3px 0 12px 1px currentColor}
   .tira-luz.dir{box-shadow:3px 0 12px 1px currentColor}
@@ -969,7 +1101,15 @@ def coluna(c):
               <input type="color" class="livre" value="{cor.lower()}" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
-            <span class="hex" data-campo="hex">{cor}</span>
+            <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
+                 vai NESTA caixa e não num botão novo, e o valor que ele leva é
+                 o TEXTO dela: `data-hex` seria a cor do gerador, congelada, e
+                 mandaria ao aparelho a cor do mockup em vez da que está
+                 gravada. O `texto` do clique é o que o piloto lê do
+                 `textContent`, e o `textContent` é o que o pacote reescreve a
+                 cada tique pelo `data-campo="hex"`. -->
+            <span class="hex reenvia" data-campo="hex" data-gesto="reenviar"
+                  title="Manda esta cor ao controle de novo — a mesma que já está escrita aqui.">{cor}</span>
           </div>
           <div class="cel-brilho">
             <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura" style="width:{b}%"></span><input class="puxador" type="range" min="0" max="100" step="1" value="{b}" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="{_pacote04.ROTULO_DO_BRILHO}" title="{_pacote04.DICA_DO_BRILHO}"></span>
@@ -978,8 +1118,22 @@ def coluna(c):
           <div class="players" data-campo="players" data-hef-alvo="html">
 {_pacote04.fileira_de_players(c["nome"], c["jogador"], DONOS_NA_MESA, "            ", quantos=len(monta_.CONECTADOS))}
           </div>
-          <div class="aceso" data-campo="luz" data-hef-alvo="html">
-{_pacote04.desenho_da_luz(tinta, b / 100, j, dica=_pacote04.dica_da_luz(c["nome"], c["via"], ""), recuo="            ")}
+          <div class="cel-leds">
+            <div class="aceso" data-campo="luz" data-hef-alvo="html">
+{_pacote04.desenho_da_luz(tinta, b / 100, j, dica=_pacote04.dica_da_luz(c["nome"], c["via"], ""), recuo="              ")}
+            </div>
+            <!-- A RAZÃO DO TRACEJADO, EM UMA LINHA — 04/09/2026, D-02 e a
+                 pergunta [01] desta aba. O desenho da tira já diz que algo
+                 mudou; esta linha responde a pergunta seguinte — QUAL das
+                 três causas — sem exigir que o rato passe por cima.
+
+                 A PEÇA É A DAS DEZ (`monta.ressalva`), e ela NASCE VAZIA aqui:
+                 no desenho não há aparelho a ressalvar, e uma frase cravada
+                 seria a oitava aparição da identidade congelada desta aba. Quem
+                 a escreve é o pacote, a cada tique, com o primeiro retorno de
+                 `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
+                 janela GTK. -->
+            {monta_.ressalva(_pacote04.ENDERECO_DA_RESSALVA)}
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
@@ -1010,6 +1164,40 @@ MIOLO = f'''
           A <b>barra de luz</b> é a faixa que acende dos dois lados do touchpad, e é a
           identidade do controle na mesa: você olha e sabe de quem é.<br><br>
           O plástico é físico e pode se repetir; a <b>luz</b> é o que nunca se repete.
+        </span></span>
+        <!-- O INTERRUPTOR DO AUTOMÁTICO — D-13, decisão dela de 04/09/2026:
+             *"Um interruptor no topo da aba Iluminação."*
+
+             O QUE ELE GOVERNA não é o botão "Automático" da célula Opções: são
+             coisas diferentes com a mesma palavra. Aquele é POR CONTROLE e é um
+             toque só — larga o claim da barra para o jogo. Este é do PERFIL, e
+             governa a paleta automática E a numeração (inclusive a dos
+             externos). Pelo HTML ela não via o estado nem podia mudá-lo, e o
+             perfil dela está com ele LIGADO.
+
+             `checked` NO DESENHO porque é o estado do perfil dela hoje; no
+             produto quem manda é o alvo `marcado`, que o piloto escreve a cada
+             tique com o que está no disco. O `data-gesto` fica no `<input>` e
+             não no `<label>`: um clique no rótulo já dispara o do `<input>` por
+             ativação, e dois endereços para o mesmo ato mandariam dois pedidos.
+
+             A DICA DIZ A CONSEQUÊNCIA, e ela é a que ela aceitou por escrito
+             (*"ok aceito o caminho"*): desligar GRAVA a cor de cada controle no
+             ato, para nenhuma se perder e nenhuma se repetir. -->
+        <label class="chave-auto">
+          <input type="checkbox" data-gesto="auto-cores" data-campo="auto-cores"
+                 data-hef-alvo="marcado" checked>
+          <span class="chave-trilho"></span>
+          <span>Cores automáticas por controle</span>
+        </label>
+        <span class="ajuda esq">?<span class="dica">
+          Ligado, cada controle acende a <b>cor do número dele</b> e recebe o número
+          automaticamente — inclusive os controles de outras marcas.<br><br>
+          Ao <b>desligar</b>, a cor que cada controle tem agora é <b>gravada no perfil</b>
+          na hora. Assim nenhuma se perde e nenhuma se repete: sem isso, o próximo
+          controle a chegar cairia na cor global e ficaria igual ao vizinho.<br><br>
+          Isto é do <b>perfil</b>. O botão <b>Automático</b> de cada coluna é outra coisa:
+          ele larga a barra <i>daquele</i> controle para o jogo escolher.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -1148,6 +1336,20 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O que mudou hoje</h2>
   <ul>
+    <li><b>O "Cores automáticas por controle" ganhou interruptor, no alto desta aba.</b>
+        Ele é do <b>perfil</b>, e governa a paleta e a numeração automática — o botão
+        <span class="marca">Automático</span> de cada coluna continua sendo outra coisa:
+        aquele larga a barra <i>daquele</i> controle para o jogo. <b>Desligar grava a cor
+        de cada controle no ato</b>, para nenhuma se perder e nenhuma se repetir. Ele não
+        custou linha nenhuma: mora na faixa do título, que estava vazia à direita.</li>
+    <li><b>Debaixo da tira nasce uma linha quando há o que ressalvar.</b> A tira tracejada
+        avisa que a luz não é nossa; a linha diz <i>qual</i> das três causas — o jogo em
+        Modo Nativo, a Steam com o controle aberto, ou a cor desconhecida. Nos dias em que
+        está tudo bem ela não existe.</li>
+    <li><b>O hexadecimal virou botão.</b> Clicar em <span class="marca">#0000FF</span> manda
+        aquela cor ao controle de novo. Antes, uma cor escolhida à mão era a única sem
+        caminho de volta: os oito tons reenviam ao serem clicados, e o seletor livre só
+        avisa quando o valor muda.</li>
     <li><b>A fita está esmaecida, e a aba parou de ter um "escolhido".</b> Antes as seções de
         baixo ajustavam UM controle — o que a fita apontava, de borda roxa. Com a fita
         inerte e presa em <span class="marca">Todos</span>, esse destaque passaria a afirmar
@@ -1390,6 +1592,84 @@ def _conferir(doc):
     exigir(colunas.count("data-colorway=") == len(monta_.CONECTADOS),
            "há `data-colorway` fora das colunas conectadas — identidade do "
            "mockup parada num lugar sem aparelho")
+
+    # 9. O INTERRUPTOR DO AUTOMÁTICO — D-13, e as TRÊS metades dele.
+    #
+    #    A PRIMEIRA é o lugar: ele é o interruptor "no topo da aba", e o topo
+    #    desta aba é a faixa do título do quadro. Fora dela ele custaria uma
+    #    linha da grade, que é o custo de 30px que ela aceitou pagar e que esta
+    #    conta não precisou cobrar.
+    topo = corpo.split('<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
+    exigir('class="chave-auto"' in topo,
+           "o interruptor das cores automáticas saiu da faixa do título — a "
+           "D-13 pede ele NO TOPO da aba, e qualquer outro lugar cobra uma "
+           "linha da grade que já está a 4px do teto")
+    #    A SEGUNDA é o ENDEREÇO, e sem ele o interruptor é desenho: um
+    #    `<input type="checkbox">` sem `data-hef-alvo="marcado"` fica congelado
+    #    no `checked` que este gerador escreveu, e passa a afirmar o estado do
+    #    MOCKUP sobre o perfil dela. Os três atributos vão juntos porque é
+    #    assim que o piloto lê — `escrever()` só toca `el.checked` no alvo
+    #    `marcado`, e só acha o elemento pelo `data-campo`.
+    for atributo in (f'data-gesto="{_pacote04.ENDERECO_DO_AUTOMATICO}"',
+                     f'data-campo="{_pacote04.ENDERECO_DO_AUTOMATICO}"',
+                     'data-hef-alvo="marcado"'):
+        exigir(atributo in topo,
+               f"o interruptor perdeu {atributo!r} — sem os três ele é uma "
+               f"chave que não lê o perfil nem o muda")
+    #    A TERCEIRA é a DICA ABRINDO PARA A ESQUERDA. Medido: a `.dica` tem
+    #    330px e nasce em `left:22px`; num `?` encostado na direita de um quadro
+    #    de 1142 ela sairia da janela de 1180. A regra é a peça, e sem ela a
+    #    explicação do martelo mais pesado da aba fica meio fora da tela.
+    exigir(".quadro-topo .ajuda.esq .dica{left:auto;right:22px}" in doc,
+           "a dica do interruptor voltou a abrir para a direita — ela tem "
+           "330px e o `?` está encostado na borda do quadro")
+
+    # 10. A LINHA DE RESSALVA — D-02, decisão [01] dela, e as duas metades.
+    #
+    #     A PRIMEIRA: ela existe, com o endereço, em TODA coluna conectada. Uma
+    #     ressalva que nasça em três de quatro colunas é a quarta calada.
+    exigir(colunas.count(
+        f'class="ressalva" data-campo="{_pacote04.ENDERECO_DA_RESSALVA}"')
+        == len(monta_.CONECTADOS),
+        "a linha de ressalva não está em todas as colunas conectadas — a "
+        "coluna sem ela volta a esconder no `title` a razão de a barra ter "
+        "apagado")
+    #     A SEGUNDA: ela nasce VAZIA. Uma frase cravada aqui seria identidade
+    #     congelada — o gerador só sabe o mockup, e a razão de a barra ter
+    #     apagado é do aparelho DELA, agora. É o mesmo defeito que tirou a dica
+    #     da célula `LEDs` do desenho em 02/09.
+    exigir(monta_.NADA_A_DIZER in colunas,
+           "a linha de ressalva nasceu com frase — o desenho passou a afirmar "
+           "uma causa que só o produto vivo conhece")
+    #     E ELA FICA DEBAIXO DA TIRA, dentro da MESMA faixa da grade. Fora da
+    #     `.cel-leds` ela seria uma oitava faixa, e uma faixa a mais cobra o
+    #     `--r-passo` inteiro em toda tela — inclusive nas que não têm nada a
+    #     ressalvar, que é o pixel que a régua da D-02 mede.
+    for bloco in re.findall(
+            r'<div class="cel-leds">(.*?)<div class="cel-acoes">', colunas, re.S):
+        exigir('class="aceso"' in bloco and 'class="ressalva"' in bloco,
+               "a tira e a ressalva deixaram de dividir a célula dos LEDs — "
+               "separadas, a linha vira uma faixa nova e cobra 10px de passo "
+               "em toda tela")
+
+    # 11. A CAIXA DO HEXADECIMAL É O BOTÃO — decisão [03] dela.
+    #
+    #     E ELA NÃO LEVA `data-hex`: esse atributo é escrito pelo gerador e fica
+    #     congelado no que o mockup sabia. Um reenvio por ele mandaria ao
+    #     plástico dela a cor do DESENHO; o gesto lê o `textContent`, que o
+    #     produto reescreve a cada tique. As duas metades vão juntas porque a
+    #     segunda é a que morde: só a primeira daria verde sobre um botão que
+    #     reenvia a cor errada.
+    caixas = re.findall(r'<span class="hex reenvia"[^>]*>', colunas)
+    exigir(len(caixas) == len(monta_.CONECTADOS),
+           "a caixa do hexadecimal não virou botão em todas as colunas "
+           "conectadas")
+    for caixa in caixas:
+        exigir('data-gesto="reenviar"' in caixa,
+               "a caixa do hexadecimal perdeu o gesto de reenvio")
+        exigir("data-hex=" not in caixa,
+               "a caixa do hexadecimal ganhou `data-hex` — o gesto passaria a "
+               "reenviar a cor CRAVADA no desenho, e não a que está na tela")
 
     if falhas:
         raise SystemExit("ERRO em 04-iluminacao — decisão dela desfeita:\n  "
