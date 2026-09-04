@@ -64,7 +64,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:1426`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:1477`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE CONTINUA VALENDO, e é o que separa os dois erros: **só o `RuntimeError`
@@ -99,7 +99,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:1426`) leva à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:1477`) leva à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -1126,7 +1126,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 from . import gesto  # noqa: E402
 
 #: A ORIGEM É `manual` PORQUE É A MÃO DELA. `origem_do_pedido`
-#: (`daemon/ipc_handlers.py:95`) lê a AUSÊNCIA como `"profile"`, e a assimetria é
+#: (`daemon/ipc_handlers.py:129`) lê a AUSÊNCIA como `"profile"`, e a assimetria é
 #: de propósito — foi um cliente que só reconciliava estado, promovido a gesto
 #: humano, que devolveu o gamepad virtual com o grab pulado e pôs um "Jogador 3"
 #: fantasma na tela dela (JOGADOR-3-FANTASMA-01). Aqui é clique, logo é manual.

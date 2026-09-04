@@ -670,7 +670,7 @@ def _indice(ctx: Contexto, uniq: str) -> int:
 
     O RECURSO À POSIÇÃO NA MESA existe porque nem toda entrada publica `index`
     (backend falso, daemon legado); o próprio handler cai nesse recurso em
-    `_numero_de_exibicao` (`ipc_handlers.py:559`). E se o controle não estiver
+    `_numero_de_exibicao` (`ipc_handlers.py:593`). E se o controle não estiver
     na mesa, levanta: mirar um lugar vazio deixaria o alvo ANTERIOR de pé, e o
     tremor sairia na coluna errada, calado.
     """

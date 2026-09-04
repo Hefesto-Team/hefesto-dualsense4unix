@@ -2467,7 +2467,7 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     fita do topo passa a apontar para ele."*
 
     `controller.target.set` é exatamente isso, e o handler diz com todas as
-    letras (`daemon/ipc_handlers.py:4132`): *"Com o alvo setado,
+    letras (`daemon/ipc_handlers.py:4400`): *"Com o alvo setado,
     lightbar/gatilhos/player-LED/rumble/mic-LED passam a mirar SÓ aquele
     controle"*. É o mesmo método que o seletor da GUI estável chama
     (`app/actions/status_actions.py:2453`).
@@ -2640,7 +2640,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
     DESCE o subsystem `bt_mic` no mesmo pedido — a nota está no próprio handler
-    (`ipc_handlers.py:5609`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
+    (`ipc_handlers.py:5643`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
     agora"*. Sem essa parte, a escolha dela só valeria no próximo início do
     daemon.
 
@@ -3045,7 +3045,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # OS CINCO QUE GRAVAM SÃO **SEM ECO**, e isso foi MEDIDO em 02/09/2026, não
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:5609`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:5643`) → `maquina.json`, e
 # ali ele PARA. Nada volta pelo estado. Ver a nota do `SEM_ECO`, no fim deste
 # arquivo, para o que isso significa para quem lê a régua do piloto.
 
