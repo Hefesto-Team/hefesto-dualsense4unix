@@ -282,16 +282,19 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         #                           traduz o clique em "limpa o override e
         #                           devolve a peça ao global". Um caminho novo
         #                           para o degrau da mesa é desenho dela.
-        #   `forca:global-em-auto`  com o global em `Auto`,
-        #                           `_controllers_to_rumble_scales` PULA a peça
-        #                           (denominador móvel, com log) — a escolha
-        #                           dela fica gravada e não chega ao motor. O
-        #                           que falta é a tela AVISAR.
         #
         # E `barra:forca` SAIU no mesmo dia, curada: a barra "Personalizado"
         # virou `<input type=range>` e grava (`a05_vibracao.intensidade`).
+        #
+        # `forca:global-em-auto` SAIU EM 04/09/2026, curado. Ele dizia *"a
+        # escolha dela fica gravada e não chega ao motor; o que falta é a tela
+        # AVISAR"* — e a tela avisa em dois tempos: no clique
+        # (`a05_vibracao._aplicar_a_forca`, frase no cartão daquele controle) e
+        # no TEMPO (`a05_vibracao._ressalva_da_mesa`, linha no `#vib-estado`
+        # enquanto a mesa estiver em `Auto` com alguma peça a perder). A prova
+        # está em `test_a05_a_vibracao_aplica_e_fala.py`.
         "05-vibracao.html": ["barra:motor", "forca:auto-da-mesa",
-                             "forca:global-em-auto", "lado:ligado"],
+                             "lado:ligado"],
         "07-lancadores.html": ["criar-perfil", "heroic"],
         "09-sistema.html": ["plugins"],
     }, (
