@@ -136,21 +136,49 @@ def test_o_override_e_subconjunto_estrito_do_global() -> None:
         f"campo(s) só no override: {sorted(do_override - do_global)} — "
         "`apply_mic` lê a seção por getattr e não os veria"
     )
-    assert do_override == {"muted"}, (
-        "o override cresceu sem passar pela fila. Campo novo aqui exige o "
-        "caminho por unidade primeiro — ver ControllerMicOverride."
-    )
+    # O CONJUNTO É `{muted, volume}` DESDE 03/09/2026 — ela mandou abrir o
+    # volume por peça, e o applier já o consumia (`apply_mic` lê a seção por
+    # `getattr(secao, "volume"/"muted")`).
+    #
+    # E ELE DEIXOU DE SER DIGITADO: a régua cobra a RELAÇÃO — todo campo do
+    # override tem de existir no global —, que é o contrato de verdade. Uma
+    # lista literal aqui obrigaria alguém a vir editar duas vezes a cada campo
+    # novo, e foi assim que ela reprovou a abertura do `volume` no mesmo dia.
+    assert do_override <= do_global, (
+        f"o override tem campo que o global não tem: {do_override - do_global}. "
+        "O override é subconjunto do global por construção — `apply_mic` lê a "
+        "seção por `getattr`, e um campo só daqui não teria quem o lesse.")
+    assert do_override, "o override ficou vazio — nenhum ajuste de mic por peça"
+    # E O QUE FICA DE FORA CONTINUA FORA, com a razão na borda. Sem esta
+    # metade, abrir `button_toggles_system` passaria calado.
+    assert "button_toggles_system" not in do_override, (
+        "`button_toggles_system` entrou no override: ele é UM por máquina "
+        "(`hotkey.mic_button_loop` lê `daemon.config`, sem consultar uniq), e "
+        "quatro controles gravariam quatro opiniões sobre um interruptor só")
 
 
-def test_o_volume_por_peca_e_recusado_com_a_medicao_na_mensagem() -> None:
+def test_o_que_continua_recusado_diz_a_medicao_na_mensagem() -> None:
     """"Extra inputs are not permitted" mandaria procurar no lugar errado.
 
-    MORDIDA 4: apagar o validador ``_o_que_ainda_nao_tem_caminho_por_peca``.
+    O `volume` SAIU desta lista em 03/09/2026 — ela mandou abri-lo. O que
+    sobrou é `button_toggles_system`, e a razão dele NÃO é decisão: o
+    interruptor é UM por máquina, e a mensagem tem de dizer isso, senão quem
+    esbarrar nele vai procurar a palavra dela em vez do limite técnico.
+
+    MORDIDA: apagar o validador ``_o_que_ainda_nao_tem_caminho_por_peca``.
     """
-    with pytest.raises(ValueError, match="fonte_de_captura_do_controle"):
-        ControllerMicOverride.model_validate({"volume": 50})
-    with pytest.raises(ValueError, match="MIC-DA-MESA-CHEIA-01"):
-        ControllerOverrides.model_validate({"mic": {"volume": 50}})
+    # O que ABRIU passa, nos dois níveis do esquema.
+    assert ControllerMicOverride.model_validate({"volume": 50}).volume == 50
+    assert ControllerOverrides.model_validate(
+        {"mic": {"volume": 50}}).mic.volume == 50
+
+    # O que continua fora recusa DIZENDO o motivo — e o motivo é o mecanismo,
+    # não a fila.
+    for erro in (pytest.raises(ValueError, match="UM por"),
+                 pytest.raises(ValueError, match="interruptor só")):
+        with erro:
+            ControllerMicOverride.model_validate(
+                {"button_toggles_system": True})
 
 
 def test_o_interruptor_do_botao_por_peca_e_recusado_com_a_razao() -> None:
