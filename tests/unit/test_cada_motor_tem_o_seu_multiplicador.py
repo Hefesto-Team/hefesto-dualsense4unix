@@ -1005,3 +1005,29 @@ class TestAPonte:
         )
         # E o par simétrico aponta de volta, senão a advertência é um beco.
         assert "rumble_stop" in (inspect.getdoc(ipc_bridge.rumble_passthrough) or "")
+
+
+def test_o_norm_mac_nao_devolve_none_para_caminho_e_a_docstring_diz_isso() -> None:
+    """FATO ERRADO SUBSTITUÍDO (04/09/2026) — e a régua guarda o fato certo.
+
+    A docstring de `norm_mac` afirmava devolver `None` para um `path`, e dava
+    esse exemplo. Medido, ela devolve `'adeee9'`: um caminho tem letras de `a` a
+    `f` no meio e a peneira as recolhe.
+
+    Para LER é inofensivo (a chave não casa com nada). Para GRAVAR é perda de
+    dado dela — a escolha vai ao disco sob uma chave que aparelho nenhum
+    reivindica. Esta régua trava as duas metades: o comportamento REAL, e a
+    docstring dizendo a verdade sobre ele.
+    """
+    from hefesto_dualsense4unix.core import sysfs_leds
+
+    assert sysfs_leds.norm_mac("path:/dev/input/event9") == "adeee9"
+    assert sysfs_leds.norm_mac("/dev/hidraw4") == "deda4"
+    assert sysfs_leds.norm_mac("xyz") is None
+    assert sysfs_leds.norm_mac("AA:BB:CC:00:00:01") == "aabbcc000001"
+
+    doc = sysfs_leds.norm_mac.__doc__ or ""
+    assert "FATO ERRADO, SUBSTITUÍDO" in doc, (
+        "a docstring voltou a prometer um `None` que a função não entrega."
+    )
+    assert "adeee9" in doc, "a docstring tem de carregar a medição, não a promessa"

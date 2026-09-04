@@ -38,8 +38,25 @@ def norm_mac(value: str | None) -> str | None:
     """Normaliza um MAC/serial para só os dígitos hex em minúsculo.
 
     ``serial_number`` (hidapi) e ``uniq`` (sysfs) podem diferir em caixa e na
-    presença de ``:`` — normalizar os dois lados garante o casamento. Retorna
-    ``None`` quando não há nenhum dígito hex (ex.: ``key`` que é um ``path``).
+    presença de ``:`` — normalizar os dois lados garante o casamento.
+
+    FATO ERRADO, SUBSTITUÍDO EM 04/09/2026. Esta docstring dizia *"retorna
+    ``None`` quando não há nenhum dígito hex (ex.: ``key`` que é um ``path``)"*,
+    e o exemplo que ela dava é justamente o caso em que ela falha — medido:
+
+        norm_mac("path:/dev/input/event9")  ->  'adeee9'
+        norm_mac("/dev/hidraw4")            ->  'deda4'
+        norm_mac("xyz")                     ->  None
+
+    Um caminho tem letras de ``a`` a ``f`` no meio (``d``, ``e``, ``a``…), e a
+    peneira as recolhe. O ``None`` só vem quando NÃO SOBRA NENHUM dígito hex.
+
+    **Para LER isso é inofensivo** — a chave inventada não casa com nada e o
+    resultado é um "não achei". **Para GRAVAR é perda de dado dela**: a escolha
+    dela vai ao disco sob uma chave que parece boa e que aparelho nenhum
+    reivindica, e some calada. Quem grava não usa esta função sozinha; usa uma
+    peneira que exige a FORMA de um MAC (ver
+    ``daemon/subsystems/gamepad._chave_de_peca_que_grava``, 04/09/2026).
     """
     if not value:
         return None
