@@ -726,9 +726,45 @@
           border-bottom:1px solid var(--linha)}
   .tab tbody tr:nth-child(even) td{background:rgba(255,255,255,.018)}
   .tab tbody tr:last-child td{border-bottom:none}
+  /* OS TRÊS ESTADOS DA LINHA, e são TRÊS porque são duas verdades diferentes —
+     queixa dela, 04/09/2026: *"quando clica em algum nome do perfis salvos nada
+     indica que tal coisa tá selecionado"*.
+
+       VALENDO       o perfil que o daemon está aplicando agora  → `class="ativo"`
+       ABERTO        a linha em que o editor ao lado está aberto → `aria-selected`
+       VALENDO+ABERTO os dois na mesma linha — é o estado em que a aba ABRE,
+                     porque `a10_perfis._escolhido` sincroniza o escolhido com o
+                     ativo enquanto ela não clicou em nada.
+
+     A janela GTK antiga já tinha os dois separados — `Gtk.TreeSelection` para a
+     seleção e `Pango.AttrList` para o ativo (`profiles_actions.py:1400`, sprint
+     `2026-08-10-PERFIL-ATUAL-01`) —, e o HTML tinha implementado só o segundo:
+     clicar num perfil mudava o alvo de nove botões e a tela não dizia uma letra.
+
+     A COR DIZ *VALENDO*, O FUNDO DIZ *ABERTO*, e por isso os dois se somam sem se
+     apagar: verde é o plástico do "está no ar" em toda esta casa, e o par
+     `--purple`/`--sel-bg` é o "isto está escolhido" das dez abas (o `.chip.on` do
+     topo, o `.rota button.on`, o `.mm-ap.on`). Quem está nos dois estados mostra
+     a barra DUPLA — 3px de verde por cima de 6px de roxo.
+
+     O ESTADO MORA NUM ATRIBUTO E NÃO NUMA SEGUNDA CLASSE, e a razão é medida:
+     `test_a_lista_de_perfis_cabe_inteira.py:195` procura a SUBSTRING
+     `class="ativo"`, e um `class="ativo escolhido"` a apaga — a régua do realce
+     ficaria verde sobre uma linha que ela não acha mais. `aria-selected` é o que
+     o papel `row` já define para isto, é uma verdade só, e leitor de tela lê.
+
+     `tbody` NOS SELETORES NÃO É ENFEITE: sem ele a regra empata com
+     `.tab tbody tr:nth-child(even) td` (0,2,3) e a zebra come o fundo da linha
+     escolhida nas posições pares — metade das linhas sem marca. */
   .tab tr.ativo td{color:var(--green);font-weight:600}
   .tab tr.ativo td:first-child{box-shadow:inset 3px 0 0 var(--green)}
-  .tab tbody tr:hover:not(.ativo) td{background:var(--sel-bg)}
+  .tab tbody tr[aria-selected="true"] td{background:var(--sel-bg);color:var(--fg);
+          font-weight:600}
+  .tab tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 0 var(--purple)}
+  .tab tbody tr.ativo[aria-selected="true"] td{color:var(--green)}
+  .tab tbody tr.ativo[aria-selected="true"] td:first-child{
+          box-shadow:inset 3px 0 0 var(--green),inset 6px 0 0 var(--purple)}
+  .tab tbody tr:hover:not(.ativo):not([aria-selected="true"]) td{background:var(--sel-bg)}
   /* `Pri.` VIROU `Priorização` — 31/08/2026, pedido dela. Os 46px do valor
      antigo JÁ NÃO ERAM VERDADE: `table-layout` é `auto`, então `width` é
      sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa  # (noqa-acento) id
@@ -1202,20 +1238,20 @@
               <table class="tab">
                 <thead><tr><th>Nome</th><th class="pri">Priorização</th><th>Quando usar</th></tr></thead>
                 <tbody data-hef="perfis.lista">
-                <tr class="ativo" data-hef-perfil="Mortal Kombat" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Mortal Kombat</td><td class="pri" data-hef="perfis.linha.prioridade">90</td><td class="quando" data-hef="perfis.linha.quando">Jogo · mk1.exe</td></tr>
-                <tr class="" data-hef-perfil="Elden Ring" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Elden Ring</td><td class="pri" data-hef="perfis.linha.prioridade">85</td><td class="quando" data-hef="perfis.linha.quando">Jogo da Steam · 1245620</td></tr>
-                <tr class="" data-hef-perfil="Orpheus" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Orpheus</td><td class="pri" data-hef="perfis.linha.prioridade">82</td><td class="quando" data-hef="perfis.linha.quando">Jogo · mgba</td></tr>
-                <tr class="" data-hef-perfil="Pragmata" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Pragmata</td><td class="pri" data-hef="perfis.linha.prioridade">80</td><td class="quando" data-hef="perfis.linha.quando">Jogo da Steam · 1358160</td></tr>
-                <tr class="" data-hef-perfil="Don't Scream" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Don't Scream</td><td class="pri" data-hef="perfis.linha.prioridade">78</td><td class="quando" data-hef="perfis.linha.quando">Jogo da Steam · 2380050</td></tr>
-                <tr class="" data-hef-perfil="Reanimal" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Reanimal</td><td class="pri" data-hef="perfis.linha.prioridade">76</td><td class="quando" data-hef="perfis.linha.quando">Jogo · reanimal.exe</td></tr>
-                <tr class="" data-hef-perfil="Faith" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Faith</td><td class="pri" data-hef="perfis.linha.prioridade">74</td><td class="quando" data-hef="perfis.linha.quando">Jogo · faith.exe</td></tr>
-                <tr class="" data-hef-perfil="Wendigo Blue" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Wendigo Blue</td><td class="pri" data-hef="perfis.linha.prioridade">72</td><td class="quando" data-hef="perfis.linha.quando">Jogo · wendigo.exe</td></tr>
-                <tr class="" data-hef-perfil="Duskfade" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Duskfade</td><td class="pri" data-hef="perfis.linha.prioridade">70</td><td class="quando" data-hef="perfis.linha.quando">Jogo · duskfade.exe</td></tr>
-                <tr class="" data-hef-perfil="Mina the Hollower" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Mina the Hollower</td><td class="pri" data-hef="perfis.linha.prioridade">68</td><td class="quando" data-hef="perfis.linha.quando">Jogo · mina.exe</td></tr>
-                <tr class="" data-hef-perfil="Terror (os dez)" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Terror (os dez)</td><td class="pri" data-hef="perfis.linha.prioridade">60</td><td class="quando" data-hef="perfis.linha.quando">Estilo de Jogo · Terror</td></tr>
-                <tr class="" data-hef-perfil="Luta" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Luta</td><td class="pri" data-hef="perfis.linha.prioridade">58</td><td class="quando" data-hef="perfis.linha.quando">Estilo de Jogo · Luta</td></tr>
-                <tr class="" data-hef-perfil="Navegação" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Navegação</td><td class="pri" data-hef="perfis.linha.prioridade">40</td><td class="quando" data-hef="perfis.linha.quando">Todos — 4 disputam</td></tr>
-                <tr class="" data-hef-perfil="Universal" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Universal</td><td class="pri" data-hef="perfis.linha.prioridade">0</td><td class="quando" data-hef="perfis.linha.quando">Todos — quando nenhum casa</td></tr>
+                <tr class="ativo" data-hef-perfil="Mortal Kombat" aria-selected="true" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Mortal Kombat</td><td class="pri" data-hef="perfis.linha.prioridade">90</td><td class="quando" data-hef="perfis.linha.quando">Jogo · mk1.exe</td></tr>
+                <tr class="" data-hef-perfil="Elden Ring" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Elden Ring</td><td class="pri" data-hef="perfis.linha.prioridade">85</td><td class="quando" data-hef="perfis.linha.quando">Jogo da Steam · 1245620</td></tr>
+                <tr class="" data-hef-perfil="Orpheus" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Orpheus</td><td class="pri" data-hef="perfis.linha.prioridade">82</td><td class="quando" data-hef="perfis.linha.quando">Jogo · mgba</td></tr>
+                <tr class="" data-hef-perfil="Pragmata" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Pragmata</td><td class="pri" data-hef="perfis.linha.prioridade">80</td><td class="quando" data-hef="perfis.linha.quando">Jogo da Steam · 1358160</td></tr>
+                <tr class="" data-hef-perfil="Don't Scream" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Don't Scream</td><td class="pri" data-hef="perfis.linha.prioridade">78</td><td class="quando" data-hef="perfis.linha.quando">Jogo da Steam · 2380050</td></tr>
+                <tr class="" data-hef-perfil="Reanimal" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Reanimal</td><td class="pri" data-hef="perfis.linha.prioridade">76</td><td class="quando" data-hef="perfis.linha.quando">Jogo · reanimal.exe</td></tr>
+                <tr class="" data-hef-perfil="Faith" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Faith</td><td class="pri" data-hef="perfis.linha.prioridade">74</td><td class="quando" data-hef="perfis.linha.quando">Jogo · faith.exe</td></tr>
+                <tr class="" data-hef-perfil="Wendigo Blue" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Wendigo Blue</td><td class="pri" data-hef="perfis.linha.prioridade">72</td><td class="quando" data-hef="perfis.linha.quando">Jogo · wendigo.exe</td></tr>
+                <tr class="" data-hef-perfil="Duskfade" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Duskfade</td><td class="pri" data-hef="perfis.linha.prioridade">70</td><td class="quando" data-hef="perfis.linha.quando">Jogo · duskfade.exe</td></tr>
+                <tr class="" data-hef-perfil="Mina the Hollower" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Mina the Hollower</td><td class="pri" data-hef="perfis.linha.prioridade">68</td><td class="quando" data-hef="perfis.linha.quando">Jogo · mina.exe</td></tr>
+                <tr class="" data-hef-perfil="Terror (os dez)" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Terror (os dez)</td><td class="pri" data-hef="perfis.linha.prioridade">60</td><td class="quando" data-hef="perfis.linha.quando">Estilo de Jogo · Terror</td></tr>
+                <tr class="" data-hef-perfil="Luta" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Luta</td><td class="pri" data-hef="perfis.linha.prioridade">58</td><td class="quando" data-hef="perfis.linha.quando">Estilo de Jogo · Luta</td></tr>
+                <tr class="" data-hef-perfil="Navegação" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Navegação</td><td class="pri" data-hef="perfis.linha.prioridade">40</td><td class="quando" data-hef="perfis.linha.quando">Todos — 4 disputam</td></tr>
+                <tr class="" data-hef-perfil="Universal" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Universal</td><td class="pri" data-hef="perfis.linha.prioridade">0</td><td class="quando" data-hef="perfis.linha.quando">Todos — quando nenhum casa</td></tr>
                 </tbody>
               </table>
               </div>
@@ -1686,6 +1722,14 @@
       Sem cor lida, a barra <b>some</b>: campo sem informação não mostra nada.</li>
     <li><b>O cabeçalho conta a mesa</b>: 14 perfis e
       3 de 4 controles com ajuste próprio neste perfil.</li>
+    <li><b>A linha diz DUAS coisas, e elas não são a mesma.</b> A <b>cor verde e a barra
+      verde</b> dizem <b>está valendo agora</b>; o <b>fundo roxo e a barra roxa</b> dizem
+      <b>é esta que o editor ao lado está mostrando</b> — a que os nove botões vão mexer.
+      Quando são a mesma linha, a barra vem <b>dupla</b>: verde e roxa, lado a lado. É o
+      estado desenhado aqui, porque é o estado em que a aba abre.
+      <span class="marca">Antes disto, clicar num nome não mudava um pixel</span> — palavra
+      sua: "quando clica em algum nome do perfis salvos nada indica que tal coisa tá
+      selecionado".</li>
   </ul>
 
   <h2>O que você mandou tirar, e continua fora</h2>

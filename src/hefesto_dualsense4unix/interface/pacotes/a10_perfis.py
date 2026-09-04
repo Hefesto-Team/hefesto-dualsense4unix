@@ -318,7 +318,7 @@ def _anotar(frase: str) -> None:
     ELE NÃO ESCREVE NO DOM, e não pode: os gestos rodam em thread
     (`hefesto_vivo._gesto`, `trabalhar()`), e só o laço do GTK toca a página. O
     caminho é o mesmo do `_rotulo_do_remover` — o estado mora no Python e a
-    pintura o busca a cada 500 ms.
+    pintura o busca a cada 100 ms.
 
     FRASE VAZIA APAGA. É o que faz um gesto que não tem notícia limpar a notícia
     do anterior, em vez de deixar a tela afirmando um desfecho velho.
@@ -527,17 +527,15 @@ SEM_ENDERECO = {
 #: endereço novo na bancada antes de ela aprovar. Apagá-lo obrigaria a próxima
 #: pessoa a reinventá-lo.
 #:
-#: **E ELE VOLTOU A TER UM NOME — 03/09/2026.** O `editor.prioridade.escolha` é o
-#: punho do `<input type=range>` que ela pediu, e ele NÃO chega ao produto pelo
-#: `--publicar-enderecos`: aquele caminho copia a página só quando o DESENHO não
-#: muda, e aqui nasceu um elemento novo, com CSS novo. Isto é decisão dela, está
-#: declarado em `mockup/DIVERGENCIAS.md`, e o que ela vê enquanto espera é a
-#: barra de leitura de sempre — nada some da tela, e nenhum clique fica morto.
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {
-    "editor.prioridade.escolha":
-        "o punho do slider da Prioridade — elemento NOVO no desenho, logo é o "
-        "`--publicar` dela que o leva, não o `--publicar-enderecos`",
-}
+#: **E ELE VOLTOU A TER UM NOME — 03/09/2026**, o `editor.prioridade.escolha`, o
+#: punho do `<input type=range>` que ela pediu. **E O NOME SAIU EM 04/09/2026**:
+#: a publicação das dez de `2a7d6583` levou o punho para
+#: `interface/paginas/10-perfis.html`, onde o endereço aparece duas vezes. A
+#: régua `test_o_que_espera_publicacao_sai_da_lista_quando_ela_publicar` acusou
+#: no mesmo dia, e a instrução dela é a que se seguiu: *"Tire da lista no mesmo
+#: commit."* Um nome publicado que continua declarado como à espera vira ponto
+#: cego — a lista deixa de ser lida como fila e passa a ser lida como decoração.
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
@@ -576,7 +574,7 @@ def _uma_vez_so(alvo: str) -> tuple[str, ...]:
 
     O PROBLEMA, medido em 01/09/2026 lendo o `escrever()` do piloto
     (`hefesto_vivo.py:114`): com `data-hef-alvo="valor"` a pintura faz
-    `el.value = t` sempre que o valor difere. O tique é de 500 ms
+    `el.value = t` sempre que o valor difere. O tique é de 100 ms
     (`hefesto_vivo.py:63`). Na segunda tecla que ela digita, o campo já difere
     do que está no disco — e meio segundo depois a pintura o devolve ao valor
     do perfil. **O campo ficaria intocável.**
@@ -764,7 +762,7 @@ def _atr(v: Any) -> str:
 
 
 def _linha_da_lista(nome: str, prioridade: str, quando: str,
-                    ativo: bool, dica: str = "") -> str:
+                    ativo: bool, dica: str = "", escolhido: bool = False) -> str:
     """Uma linha da lista de perfis — a MESMA forma que o desenho crava.
 
     O DONO DA FORMA CONTINUA SENDO O GERADOR, `aba10.linha_do_perfil`, cuja
@@ -783,9 +781,27 @@ def _linha_da_lista(nome: str, prioridade: str, quando: str,
     discordar de si mesma.
 
     A ÚNICA DIVERGÊNCIA DECLARADA É O ESCAPE — ver `_texto` e `_atr`.
+
+    `escolhido` É A LINHA ABERTA NO EDITOR — 04/09/2026, queixa dela: *"quando
+    clica em algum nome do perfis salvos nada indica que tal coisa tá
+    selecionado"*. O valor já existia (`_escolhido`, no alto deste arquivo) e
+    alimentava só o texto do botão Remover e os gestos; ele não chegava à LINHA,
+    e a tela ficava calada sobre o alvo de nove botões.
+
+    **A MARCA TEM DE VIR DAQUI, e não de um `classList.add` no JS**: o `blocos`
+    do piloto reescreve este `<tbody>` inteiro a cada tique, e o tique é de
+    **100 ms** — qualquer marca posta pelo navegador vive um décimo de segundo.
+
+    NÃO É UMA SEGUNDA CLASSE, e a razão é medida:
+    `test_a_lista_de_perfis_cabe_inteira.py:195` procura a SUBSTRING
+    `class="ativo"` na linha realçada, e um `class="ativo escolhido"` a some —
+    a régua do realce ficaria verde sobre uma linha que ela não acha mais. O
+    estado vai em `aria-selected`, que é o que o papel `row` já define para
+    seleção: uma verdade só, no atributo que a própria plataforma leu primeiro.
     """
     return (f'{_RECUO}<tr class="{"ativo" if ativo else ""}" '
-            f'data-hef-perfil="{_atr(nome)}" title="{_atr(dica)}">'
+            f'data-hef-perfil="{_atr(nome)}" '
+            f'aria-selected="{"true" if escolhido else "false"}" title="{_atr(dica)}">'
             f'<td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">'
             f'{_texto(nome)}</td>'
             f'<td class="pri" data-hef="perfis.linha.prioridade">'
@@ -794,7 +810,8 @@ def _linha_da_lista(nome: str, prioridade: str, quando: str,
             f'{_texto(quando)}</td></tr>')
 
 
-def _html_da_lista(lista: list[dict[str, Any]], vazia: str) -> str:
+def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
+                   escolhido: str = "") -> str:
     """As linhas da lista de perfis, TODAS — e é a maior mentira que esta aba
     contava.
 
@@ -858,6 +875,16 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str) -> str:
     morde um `blocos` cujos FILHOS tenham endereço, e os dois da `08-conexoes`
     (`.mm-faces` e `.mm-lista`) não emitem `data-campo` nenhum dentro. Quando
     emitirem, entram no mesmo buraco.
+
+    `escolhido` É O NOME DA LINHA ABERTA NO EDITOR, e a comparação é por NOME
+    EXATO de propósito: quem chama já resolveu o slug (`find_by_slug`) contra os
+    perfis que existem, e o `nome` de cada linha vem do mesmo `p.name`. Comparar
+    slug de novo aqui seria a segunda resolução do mesmo dado — e é assim que
+    esta aba já deu dois vereditos sobre a mesma tela em 02/09.
+
+    O VAZIO É O ESTADO SEM MARCA: `escolhido=""` não casa com nome nenhum, e a
+    lista sai como saía. É o que mantém verde toda régua que chama esta função
+    sem saber que ela ganhou um terceiro argumento.
     """
     if not lista:
         return (f'{_RECUO}<tr class="vazia"><td colspan="3">'
@@ -865,7 +892,9 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str) -> str:
     return "\n".join(
         _linha_da_lista(str(x.get("nome") or ""), str(x.get("prioridade") or ""),
                         str(x.get("quando") or ""), bool(x.get("ativo")),
-                        str(x.get("dica") or ""))
+                        str(x.get("dica") or ""),
+                        escolhido=bool(escolhido)
+                        and str(x.get("nome") or "") == escolhido)
         for x in lista)
 
 
@@ -1284,8 +1313,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # continua enchendo as catorze linhas do desenho. Duas portas para o mesmo
     # dado não brigam — o `blocos` roda ANTES no laço do piloto, e a distribuição
     # por endereço encontra os valores já no lugar e escreve zero.
+    # O NOME DA LINHA ESCOLHIDA SAI DO PERFIL QUE O EDITOR ABRIU, e não do que
+    # `_escolhido()` devolveu cru — 04/09/2026. Os dois quase sempre coincidem,
+    # e o "quase" é o defeito: `_escolhido` guarda o que o CLIQUE trouxe, que é
+    # o texto da célula; `alvo` é o objeto que `find_by_slug` achou no disco, e
+    # é o `alvo.name` que a lista mostra. Comparar o texto cru com `x["nome"]`
+    # perderia a marca em todo perfil cujo nome e slug divirjam — `Navegação`
+    # contra `navegacao` é o caso que esta casa já pagou duas vezes.
+    #
+    # É O MESMO PERFIL QUE O EDITOR AO LADO ESTÁ MOSTRANDO (`editado=alvo`, no
+    # alto desta função), e é isso que a marca promete a ela: a linha marcada é
+    # a que os campos da direita e os nove botões vão mexer.
+    escolhido_na_lista = str(getattr(alvo, "name", "") or escolhido)
     fora["blocos"] = {SELETOR_DA_LISTA: _html_da_lista(
-        lista, str(bruto.get("lista_vazia") or ""))}
+        lista, str(bruto.get("lista_vazia") or ""), escolhido_na_lista)}
     fora["cobertura"] = {"pintados": len(fora) + len(lista) * 3, "sem_dono": 0}
     return fora
 
@@ -1815,7 +1856,7 @@ def editor_prioridade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     que faz o daemon reaplicar o perfil no meio da partida.
 
     **O DESFECHO REPINTA OS DOIS VIZINHOS NA HORA**, e essa é a metade que faz o
-    slider parecer vivo. O tique é de 500 ms; enquanto ele não vem, a barra
+    slider parecer vivo. O tique é de 100 ms; enquanto ele não vem, a barra
     `.cheio` e o número ao lado continuam no valor do disco — o punho no lugar
     novo e a barra atrás dele. A resposta do gesto (`_dizer` devolve `mesa:`,
     que o piloto pinta na hora) leva a largura e o número junto com a frase.
@@ -2380,7 +2421,7 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
        frase para esse risco (`frase_da_remocao_do_perfil_ativo`). Aqui a
        resposta é mais curta: recusa e diz para ativar outro antes.
     3. **pergunta.** O primeiro clique ARMA e levanta; o rótulo do botão vira
-       a pergunta no tique seguinte (≤500 ms) e o segundo clique, dentro de
+       a pergunta no tique seguinte (≤100 ms) e o segundo clique, dentro de
        oito segundos, apaga. Ver `_rotulo_do_remover` para por que a pergunta
        mora no rótulo e não num diálogo.
 
@@ -2447,7 +2488,7 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     #
     # `_dizer` E NÃO `_anotar` — 03/09/2026. Os dois guardam a frase; só o
     # primeiro a DEVOLVE para o `_deu_certo` pintar no ato. Com o `_anotar` a
-    # tira só acendia no tique seguinte (até 500 ms), e o argumento é o do
+    # tira só acendia no tique seguinte (até 100 ms), e o argumento é o do
     # piloto, palavra por palavra: *"Meio segundo entre o clique e a resposta
     # basta para ela clicar de novo achando que o primeiro não pegou"* — e no
     # gesto mais destrutivo da aba, o segundo clique acerta a linha seguinte.
@@ -2527,7 +2568,7 @@ def _editor_de(prof: Any) -> dict[str, Any]:
 #: mesmo dia.
 #:
 #: **`recarregar` GANHOU DONO.** Aqui estava escrito que *"não há o
-#: que chamar: a lista já é relida do disco a cada tique de 500 ms, então ligar
+#: que chamar: a lista já é relida do disco a cada tique de 100 ms, então ligar
 #: este botão a um `load_all` extra seria fingir trabalho que já está feito; o
 #: que falta não é motor, é o botão sair do desenho"*. A premissa continua
 #: certa e **a conclusão não seguia**: a janela estável tem o MESMO botão sobre
