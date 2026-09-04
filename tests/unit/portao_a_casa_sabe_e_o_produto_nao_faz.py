@@ -1022,6 +1022,23 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # mesma onda está editando. Fiar daqui seria a colisão que a R1 desta casa
     # existe para impedir — as três nascem declaradas, com o endereço exato de
     # onde o caminho se fecha.
+    # ONDA1-D2 / A VIBRAÇÃO (04/09/2026) — A BARRA POR MOTOR ESPERA A ABA 05.
+    # Mesma forma da de cima e pela mesma razão: a frente da vibração é dona do
+    # daemon e da ponte; a metade de TELA é da aba 05, que está no `nao_toca:`
+    # desta sprint. Fiar daqui seria a R1 ao contrário.
+    "app/ipc_bridge.py::rumble_motores_set": (
+        "VIBRACAO-POR-MOTOR-01 (04/09/2026): a barra de cada motor, que MULTIPLICA o degrau "
+        "da coluna — `efetivo(motor) = degrau x barra(motor)`, decisão dela, fora das três "
+        "opções que eu ofereci. O caminho se perde nas DUAS barras do card da aba 05, que "
+        "hoje são `<span class=\"trilho\">` sem arrasto: `interface/aba05._coluna` ainda "
+        "não chama `_barra(..., arrasta=True, papel=\"motor\")`, e por isso não há gesto "
+        "`barra-motor` em `interface/pacotes/a05_vibracao.py` para chamar esta ponte. O "
+        "`SEM_DONO[\"barra:motor\"]` de lá registra que faltavam DUAS metades — a palavra "
+        "dela, que veio em 04/09, e o desenho, que é da ONDA 2. FECHA quando aquele gesto "
+        "nascer e chamar `p.rumble_motores_set(forte_pct=..., fraco_pct=..., uniq=...)`, "
+        "pintando a volta com `state_full[\"rumble_motores\"]`. A metade do daemon está "
+        "medida em `docs/process/agentes/2026-09-04/ONDA1-D2-A-VIBRACAO-01-D2.md`."
+    ),
     "app/ipc_bridge.py::mic_canal_set": (
         "MICROFONE-UM-ATO-01 (04/09/2026): o ATO do microfone, com as duas metades "
         "(o canal no PipeWire e o mudo do firmware). O caminho se perde no gesto `mudo` de "

@@ -15,6 +15,8 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     rumble.set           {weak, strong}        -> {status, weak, strong}
     rumble.stop          {}                    -> {status}
     rumble.passthrough   {enabled: bool}       -> {status}
+    rumble.motores.set   {uniq?, forte_pct?, fraco_pct?} -> {status, uniq, perfil,
+                                                     gravado, forte_pct, fraco_pct}
     daemon.status        {}          -> {connected, transport, active_profile, battery_pct}
     daemon.state_full    {}          -> {... estado + mouse_emulation se daemon expõe}
     controller.list      {}          -> {controllers: [{index, connected, transport, is_primary?}]}
@@ -120,6 +122,7 @@ class IpcServer(IpcHandlersMixin):
             "rumble.passthrough": self._handle_rumble_passthrough,
             "rumble.policy_set": self._handle_rumble_policy_set,
             "rumble.policy_custom": self._handle_rumble_policy_custom,
+            "rumble.motores.set": self._handle_rumble_motores_set,
             "daemon.status": self._handle_daemon_status,
             "daemon.state_full": self._handle_daemon_state_full,
             "daemon.pause": self._handle_daemon_pause,
