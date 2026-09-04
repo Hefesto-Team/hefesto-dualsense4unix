@@ -115,6 +115,16 @@ TETOS = {
     "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
     "profile.switch": 3.0, "profile.apply_draft": 3.0,
     "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
+    # A MÁSCARA GRAVA EM DISCO E PODE RECRIAR O VPAD — mesma família do
+    # `gamepad.emulation.set` logo acima, e por isso o mesmo teto. Sem ele o
+    # gesto caía nos 250 ms do bridge, que desde o BUG-IPC-READ-NO-TIMEOUT-01
+    # cobrem também a LEITURA da resposta: sob carga, `chamar` voltaria `False`
+    # com a escolha JÁ gravada — o defeito exato que o `MODE_IPC_TIMEOUT_S`
+    # curou, de volta por outra porta. Entrou em 04/09/2026, junto com a cura do
+    # gesto que passava os parâmetros como `timeout` posicional e nunca chegava
+    # ao daemon.
+    "gamepad.mask.set": 2.0,
+    "identity.number.set": 2.0,
     # Medido no daemon dela em 01/09: `daemon.reload` leva 9,5 SEGUNDOS.
     "daemon.reload": 15.0,
 }

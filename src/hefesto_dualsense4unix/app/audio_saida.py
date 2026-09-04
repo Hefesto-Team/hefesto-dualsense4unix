@@ -60,6 +60,7 @@ padrão. As duas metades da decisão:
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import subprocess
@@ -892,6 +893,165 @@ class RotaDeSaida:
 
 
 # ---------------------------------------------------------------------------
+# A CAMADA 1 SEM JANELA — o dono que a interface nova não tinha (04/09/2026)
+# ---------------------------------------------------------------------------
+#
+# QUEIXA 7 DELA: *"e os botoes do autofalante"*. Medido: o botão "Todo o som do
+# PC" da aba 02 RECUSAVA SEMPRE, com esta frase —
+#
+#     "'Todo o som do PC' ainda não tem dono nesta janela: metade dele é a saída
+#      padrão do PipeWire (pactl set-default-sink), que não é IPC (…)"
+#
+# A recusa era HONESTA e o diagnóstico estava certo: mandar só o byte do
+# firmware acenderia o botão sem mover uma nota de som. O que faltava não era
+# protocolo — era **um dono da camada 1 fora da janela GTK**.
+#
+# NA JANELA ANTIGA O DONO EXISTE E É INJETADO: `status_actions` chama
+# `card.definir_pedido_de_rota(self._aplicar_rota_do_sistema)`, e aquele método
+# junta duas coisas que a janela nova não tem — a `RotaDeSaida` viva
+# (`self._rota_de_som`) e o SINK daquele controle, que vem do `MicMonitor`
+# (`monitor.sink_de(uniq)`), o leitor de PipeWire da janela antiga.
+#
+# ENTÃO O QUE ESTAS DUAS FUNÇÕES FAZEM É JUNTAR AS DUAS METADES SEM GTK e sem
+# `MicMonitor`: a resolução do sink usa os MESMOS donos que o monitor usa por
+# dentro (`fontes_de_captura.sinks_dualsense` + `escolher_sink`, com o casamento
+# por dispositivo USB de `integrations/usb_pai`), e a troca usa a MESMA
+# `RotaDeSaida`. Nenhuma regra nova, nenhuma segunda leitura do PipeWire — é a
+# forma que esta casa chama de *reusar o que está abaixo do mixin*.
+#
+# É BLOQUEANTE, e isso é declarado: três `pactl` curtos, cada um com o teto de
+# `_TIMEOUT_LEITURA_S`. Quem chamar de dentro do GTK deve estar numa worker (é o
+# que a janela antiga faz com `run_in_thread`); o gesto da janela nova já chama
+# o `ipc_bridge` bloqueante no mesmo lugar, então o custo aqui é da mesma ordem
+# do que já existe naquele clique.
+
+
+@dataclass(frozen=True)
+class DesfechoDaRota:
+    """O que aconteceu com o pedido de camada 1. `motivo` vazio = deu certo.
+
+    NÃO É `bool`, e a razão é a queixa: um `False` cru vira *"não aconteceu
+    nada"* na tela, que é exatamente o silêncio que ela reclamou. Quem recebe
+    isto tem a frase pronta para pôr no cartão do controle.
+    """
+
+    ok: bool
+    motivo: str = ""
+    sink: str = ""
+
+
+#: Não há sink de saída atribuível a este controle. **É o caso do RÁDIO**, e não
+#: é falha: medido em 15/08/2026, a placa de som segue o transporte — um
+#: DualSense no rádio não publica placa nenhuma, e o `mapa-controles.csv`
+#: registra o mesmo fato do outro lado (`audio.alto_falante`, `radio_aciona=não`).
+#: **Esta é a única assimetria de transporte REAL do bloco de som**, e por isso
+#: é a única frase de transporte que esta leva manteve.
+MOTIVO_ROTA_SEM_SINK: Final[str] = (
+    "este controle não publica placa de som para o sistema — pelo rádio o "
+    "DualSense não expõe nenhuma, e é por isso que 'Todo o som do PC' não tem "
+    "para onde mandar. Pelo cabo ele tem."
+)
+
+#: O `pactl` não confirmou a troca. Reler é a régua desta casa: o `pactl`
+#: responde sem erro em casos em que a troca não vale.
+MOTIVO_ROTA_NAO_PEGOU: Final[str] = (
+    "pedi ao PipeWire para mandar o som do PC a este controle e a saída padrão "
+    "não mudou — o sink pode ter saído da lista entre o pedido e a conferência."
+)
+
+#: Não há para onde voltar. `voltar_ao_anterior` recusa em vez de chutar um
+#: destino, e a razão está no `acao_da_rota`: se o som já estava no controle e
+#: não fomos NÓS que o pusemos lá, não há sink anterior guardado.
+MOTIVO_ROTA_SEM_VOLTA: Final[str] = (
+    "não há saída anterior guardada para devolver o som — ou ele não foi o "
+    "Hefesto que o trouxe para cá, ou aquela saída não está mais na máquina."
+)
+
+
+def sink_do_controle(
+    uniq: str,
+    uniqs_na_mesa: list[str] | tuple[str, ...] = (),
+    *,
+    runner: Callable[[list[str]], str] | None = None,
+) -> str:
+    """O sink de SAÍDA deste controle — ``""`` quando não dá para saber.
+
+    Mesmas quatro regras do `escolher_sink`, porque é ELE quem decide: aqui só
+    se juntam os ingredientes que o `MicMonitor` juntaria (a lista viva de
+    sinks e o casamento por dispositivo USB). Escrever uma segunda regra de
+    atribuição seria dar ao alto-falante do controle errado o som do PC — e é
+    o defeito que `escolher_fonte` foi escrita para não cometer.
+
+    ``""`` é resposta honesta e frequente: é o RÁDIO.
+    """
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+        CasamentoUSB,
+        escolher_sink,
+        sinks_dualsense,
+    )
+
+    if not uniq:
+        return ""
+    ler = runner if runner is not None else rodar_leitura
+    sinks = sinks_dualsense(ler(["pactl", "list", "sinks", "short"]))
+    if not sinks:
+        return ""
+    conhecidos = list(uniqs_na_mesa) or [uniq]
+    usb: CasamentoUSB | None = None
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.integrations.usb_pai import (
+            nos_e_sysfs,
+            usb_pai_por_no,
+            usb_pai_por_uniq,
+        )
+
+        longa = ler(["pactl", "list", "sinks"])
+        if longa.strip():
+            usb = CasamentoUSB(
+                por_uniq=usb_pai_por_uniq(conhecidos),
+                por_no=usb_pai_por_no(nos_e_sysfs(longa)),
+            )
+    return escolher_sink(sinks, uniq, conhecidos, usb) or ""
+
+
+def mandar_o_som_do_pc(
+    uniq: str,
+    uniqs_na_mesa: list[str] | tuple[str, ...] = (),
+    *,
+    rota: RotaDeSaida | None = None,
+    runner: Callable[[list[str]], str] | None = None,
+) -> DesfechoDaRota:
+    """Camada 1: a saída PADRÃO do sistema passa a ser o alto-falante deste controle.
+
+    É a metade que faltava ao botão "Todo o som do PC" da janela nova, e ela é
+    a que MANDA: *"a camada 1 vence a camada 2 — volume e rota perfeitos num
+    sink mudo é trabalho invisível"* (`controller_card.py:4218`).
+    """
+    alvo = sink_do_controle(uniq, uniqs_na_mesa, runner=runner)
+    if not alvo:
+        return DesfechoDaRota(False, MOTIVO_ROTA_SEM_SINK)
+    motor = rota if rota is not None else RotaDeSaida(runner=runner)
+    if not motor.mandar_para_o_controle(alvo):
+        return DesfechoDaRota(False, MOTIVO_ROTA_NAO_PEGOU, alvo)
+    return DesfechoDaRota(True, "", alvo)
+
+
+def devolver_o_som_do_pc(
+    *,
+    rota: RotaDeSaida | None = None,
+    runner: Callable[[list[str]], str] | None = None,
+) -> DesfechoDaRota:
+    """Camada 1, o desfazer: a saída padrão volta para onde estava.
+
+    Recusa em vez de chutar um destino — ver :data:`MOTIVO_ROTA_SEM_VOLTA`.
+    """
+    motor = rota if rota is not None else RotaDeSaida(runner=runner)
+    if not motor.voltar_ao_anterior():
+        return DesfechoDaRota(False, MOTIVO_ROTA_SEM_VOLTA)
+    return DesfechoDaRota(True)
+
+
+# ---------------------------------------------------------------------------
 # Bordas com o sistema
 # ---------------------------------------------------------------------------
 
@@ -1122,6 +1282,9 @@ __all__ = [
     "MOTIVO_SEM_TOCADOR",
     "MOTIVO_TOCOU",
     "NOME_REGRA_NUNCA_DORME",
+    "MOTIVO_ROTA_NAO_PEGOU",
+    "MOTIVO_ROTA_SEM_SINK",
+    "MOTIVO_ROTA_SEM_VOLTA",
     "RECADOS",
     "TEXTO_ROTA_PARA_O_CONTROLE",
     "TEXTO_ROTA_VOLTAR",
@@ -1130,6 +1293,7 @@ __all__ = [
     "TEXTO_SONO_PODE_DORMIR",
     "TEXTO_SONO_SEM_PLACA",
     "AcaoRota",
+    "DesfechoDaRota",
     "EstadoDaRota",
     "ResultadoDoSom",
     "RotaDeSaida",
@@ -1139,13 +1303,16 @@ __all__ = [
     "argv_do_tocador",
     "arquivo_de_confirmacao",
     "caminho_regra_nunca_dorme",
+    "devolver_o_som_do_pc",
     "estado_do_canal",
     "estado_do_sono",
     "estados_crus_dos_sinks",
     "estados_dos_sinks",
+    "mandar_o_som_do_pc",
     "nomes_de_sinks",
     "regra_nunca_dorme_instalada",
     "rodar_leitura",
+    "sink_do_controle",
     "sink_padrao_da_saida",
     "som_ligado",
     "sono_dos_sinks_do_controle",

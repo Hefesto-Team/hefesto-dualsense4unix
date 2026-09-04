@@ -708,6 +708,31 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      tela oferece e o produto recusa é a mentira que esta aba existe para não
      contar: ele apaga e para de responder ao clique. */
   .mudo-i[disabled]{opacity:.4;cursor:not-allowed}
+  /* O POLEGAR DOS DOIS DESLIZANTES — D-08 dela, 04/09/2026. Ele é INVISÍVEL de
+     propósito: o knob que se vê é o `.vol .cheio::after` que ela aprovou, e um
+     polegar nativo por cima desenharia o segundo. O que este `<input>` traz é o
+     ARRASTO e o teclado.
+
+     A GEOMETRIA NÃO É CHUTE, e é a mesma conta que a aba Iluminação resolveu em
+     03/09: o knob do desenho tem o centro em `larg × pct − 1px` (uma caixa de
+     12px com `right:-5px` dentro de uma `.cheio` de largura `pct`), e o polegar
+     nativo em `L + 6px + pct × (W − 12px)`. Igualando para TODO `pct`:
+     `W = 100% + 12px` e `L = −7px`. Com `left:0;width:100%` o arrasto erraria
+     7px nas duas pontas, e o desenho dela mudaria de lugar em 0% e em 100%.
+
+     `appearance:none` NOS DOIS LADOS: sem ele o WebKit ignora
+     `::-webkit-slider-thumb` e devolve o polegar do sistema — que é opaco, tem
+     outro tamanho, e apareceria por cima do desenho. */
+  .puxa-vol{position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+    width:calc(100% + 12px);height:12px;margin:0;padding:0;
+    -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+  .puxa-vol::-webkit-slider-runnable-track{height:12px;background:transparent;border:0}
+  .puxa-vol::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;background:transparent;border:0;
+    cursor:pointer}
+  /* O FOCO SE VÊ, e aqui ele é a ÚNICA marca do polegar: como o polegar é
+     transparente, quem anda pelas setas do teclado não teria nada a olhar. */
+  .puxa-vol:focus-visible{outline:2px solid var(--purple);outline-offset:4px}
   /* O `.solta` — o botão "Liberar" do microfone — SAIU em 31/08/2026, por
      decisão dela, e a regra de estilo saiu junto: CSS de elemento que ninguém
      mais escreve é promessa esperando alguém tropeçar nela. A história inteira
@@ -986,6 +1011,21 @@ def sensores_da_peca(c):
     quatro controles, um interruptor global mente sobre três deles. O Calibrar
     ficou lá em cima, porque esse é gesto de mesa mesmo.
 
+    **OS QUATRO GANHARAM `data-gesto` — 04/09/2026, queixa 8 dela** (*"nem
+    giroscopio e acelerometro"*). Eles tinham `data-sensor` e mais nada, e o
+    ouvinte monta o nome como `d.gesto || d.hefGesto || d.papel || 'clique'`:
+    chegava `"clique"`, que aba nenhuma registra, e saía `[gesto sem dono]` no
+    **stderr** — que ela nunca vê. Quatro botões (dois por card) aceitavam o
+    clique e não diziam nada.
+
+    O `data-gesto` é ENDEREÇO, não desenho: ele está na lista `INVISIVEIS` do
+    `check_o_desenho_aprovado`, e não move um pixel. Quem responde agora é
+    `pacotes/a02_controles.sensor`, que RECUSA DIZENDO — não há método de sensor
+    no daemon, e a razão inteira está na docstring daquele gesto, inclusive por
+    que o cinza da D-03 **não serve a este botão**: `.sw.off` é o desligado
+    deste desenho, e pintar de cinza um sensor que está entregando dado a cada
+    tique trocaria o silêncio por uma afirmação falsa.
+
     A TAXA DO GIROSCÓPIO VIVE AQUI AGORA. Ela era uma LEITURA na linha
     (`Giroscópio 250 Hz`), e a leitura saiu — decisão dela no mesmo turno:
     *"se der problema de espaço remover Giroscópio, Hefesto e vê como (na real
@@ -996,8 +1036,8 @@ def sensores_da_peca(c):
     """
     hz_por_que = TAXA_DO_GIRO[c["via"]]
     return f'''          <span class="sensores-peca">
-            <button class="sw" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. {hz_por_que}"><span class="p"></span>Giroscópio</button>
-            <button class="sw" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
+            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. {hz_por_que}"><span class="p"></span>Giroscópio</button>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
           </span>'''
 
 
@@ -1241,7 +1281,42 @@ DICA_MIC_MUDO = ("Calar no firmware do controle — apaga a luz vermelha do plá
                  "pela janela do aplicativo ou reiniciando o Hefesto.")
 DICA_ALTO_MUDO = "Manda zero ao alto-falante do controle, sem perder o volume guardado."
 DICA_ALTO_SEM_POSSE = ("Apagado porque o volume deste alto-falante ainda é desconhecido: "
-                       "o DualSense não o publica, e o daemon recusa calar sem ele.")
+                       "o DualSense não o publica, e o daemon recusa calar sem ele. "
+                       "Arraste o volume ao lado uma vez e ele destrava.")
+
+# ---------------------------------------------------------------------------
+# OS DOIS DESLIZANTES — decisão dela, 04/09/2026 (D-08): *"Deslizante nos dois."*
+# ---------------------------------------------------------------------------
+# Até hoje os dois volumes eram PINTURA: `type="range"` aparecia ZERO vez nas dez
+# páginas, e o que havia era `<span class="trilho"><span class="cheio"
+# style="width:N%">`. O `closest` do ouvinte nem disparava.
+#
+# O CUSTO DE TELA É ZERO, e não os ~24 px que a decisão declarou. O caminho é o
+# que a aba Iluminação abriu em 03/09 para o trilho de brilho: um
+# `<input type="range">` TRANSPARENTE por cima do trilho que já existe, com a
+# geometria resolvida (`left:-7px; width:calc(100% + 12px)`, que é o que faz o
+# centro do polegar nativo cair exatamente onde o knob do desenho está). A barra
+# roxa continua sendo a `.cheio` — quem carrega o endereço e é pintada pelo
+# produto — e o knob continua sendo o `.vol .cheio::after` do desenho dela.
+#
+# **A DIFERENÇA PARA A ABA 04 É O POLEGAR.** Lá o `::-webkit-slider-thumb` é
+# roxo e VISÍVEL, porque naquele trilho não há knob desenhado. Aqui há, e um
+# polegar nativo por cima desenharia DOIS. Por isso o daqui é transparente: ele
+# existe para o arrasto e para o teclado, e quem se vê é o desenho.
+#
+# E O DESLIZANTE DO ALTO-FALANTE DESTRAVA O ♪. O DualSense não devolve o volume,
+# então o daemon só publica a chave `speaker` depois do primeiro `speaker.set` —
+# sem escritor nesta tela, o ♪ recusava PARA SEMPRE num controle cujo volume
+# nunca foi ajustado por outro caminho. Este é o escritor que faltava.
+ROTULO_VOL_MIC = "Volume do microfone deste controle"
+DICA_VOL_MIC = ("Arraste para escolher quanto do microfone deste controle chega ao "
+                "PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do "
+                "plástico: não apaga a luz vermelha e não tira o botão do controle. "
+                "Grava na hora.")
+ROTULO_VOL_ALTO = "Volume do alto-falante deste controle"
+DICA_VOL_ALTO = ("Arraste para escolher o volume do alto-falante deste controle. O "
+                 "DualSense não devolve este número — o primeiro arrasto é o que faz o "
+                 "Hefesto passar a saber qual ele é, e é ele que destrava o ♪.")
 
 # ---------------------------------------------------------------------------
 # OS QUATRO BOTÕES QUE DIZIAM "ESTE É O ESCOLHIDO" SEM LER NADA — 03/09/2026
@@ -1459,7 +1534,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
             </div>
             {onda(mic_v, mic_mudo)}
             <div class="vol">
-              <span class="trilho"><span class="cheio" style="width:{mic_vol}%"></span></span>
+              <span class="trilho"><span class="cheio" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
               <span class="n">{mic_vol}</span>
               <button class="mudo-i{mic_on}" data-gesto="mudo" data-mudo="microfone" title="{DICA_MIC_MUDO}">🎙</button>
             </div>
@@ -1491,7 +1566,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
 
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
-            <div class="rot">Alto-falante<span class="mudo" data-campo="alto-estado" hidden></span>
+            <div class="rot">Alto-falante
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.
@@ -1500,9 +1575,9 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
             {onda(alto_v)}
             <div class="vol">
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
-                data-hef-alvo="largura" style="width:{alto_v[0]}%"></span></span>
+                data-hef-alvo="largura" style="width:{alto_v[0]}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{alto_v[0]}" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_ALTO}" title="{DICA_VOL_ALTO}"></span>
               <span class="n" data-campo="alto-num">{alto_v[0]}</span>
-              <button class="mudo-i{alto_on}" data-gesto="mudo" data-mudo="alto-falante"{alto_trava} title="{alto_dica}">♪</button>
+              <button class="mudo-i{alto_on}" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="{SELO_MUDO}"{alto_trava} title="{alto_dica}">♪</button>
             </div>
             <div class="rota">
               <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
@@ -2458,16 +2533,60 @@ def _conferir(doc):
     #     `data-hef-alvo` de UMA das barras reprova nomeando qual, o que a
     #     contagem global não fazia (ela passaria com a largura no lugar
     #     errado, desde que o total batesse).
-    for campo, alvo in (("bateria-barra", "largura"), ("alto-barra", "largura"),
-                        ("luz-cor", "cor"), ("touch-ponto", "classe")):
+    #     E ELA PASSOU A ACEITAR MAIS DE UM ALVO POR ENDEREÇO — 04/09/2026. O
+    #     deslizante do alto-falante (D-08) partilha o `alto-barra` com a barra
+    #     pintada, e é de propósito: os dois mostram o MESMO volume, um como
+    #     largura e o outro como posição do polegar. Dois `data-campo` para o
+    #     mesmo número seriam duas verdades a manter sincronizadas — é o mesmo
+    #     arranjo que a aba Iluminação usa no trilho de brilho (`brilho-pct` na
+    #     `.cheio` e no `<input>`). A régua conta POR ALVO, então perder QUALQUER
+    #     um dos dois em QUALQUER card continua reprovando com o nome.
+    for campo, alvos in (("bateria-barra", ("largura",)),
+                         ("alto-barra", ("largura", "valor")),
+                         ("luz-cor", ("cor",)), ("touch-ponto", ("classe",))):
         tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
-        exigir(len(tags) == len(CONECTADOS),
-               f"o endereço `{campo}` não está nos {len(CONECTADOS)} cards")
-        errados = [t for t in tags if f'data-hef-alvo="{alvo}"' not in t]
-        exigir(not errados,
-               f"`{campo}` perdeu o `data-hef-alvo={alvo}` em {len(errados)} "
-               f"card(s): a pintura vai escrever o valor como TEXTO dentro do "
-               f"elemento, em vez de mexer no que ele desenha")
+        exigir(len(tags) == len(CONECTADOS) * len(alvos),
+               f"o endereço `{campo}` não está nos {len(CONECTADOS)} cards "
+               f"com os {len(alvos)} alvo(s) que ele tem")
+        for alvo in alvos:
+            certos = [t for t in tags if f'data-hef-alvo="{alvo}"' in t]
+            exigir(len(certos) == len(CONECTADOS),
+                   f"`{campo}` perdeu o `data-hef-alvo={alvo}` em "
+                   f"{len(CONECTADOS) - len(certos)} card(s): a pintura vai "
+                   f"escrever o valor como TEXTO dentro do elemento, em vez de "
+                   f"mexer no que ele desenha")
+
+    # 2e. OS QUATRO BOTÕES MUDOS DE SENSOR GANHARAM DONO — queixa 8 dela.
+    #     Sem `data-gesto` o ouvinte monta o nome como `clique`, aba nenhuma o
+    #     registra, e a recusa sai no stderr que ela nunca lê. MORDE: tire o
+    #     `data-gesto="sensor"` de `sensores_da_peca` e esta linha reprova.
+    exigir(corpo.count('data-gesto="sensor"') == 2 * len(CONECTADOS),
+           f"os {2 * len(CONECTADOS)} interruptores de sensor não têm "
+           f"`data-gesto` — o clique volta a morrer no stderr")
+
+    # 2f. OS DOIS DESLIZANTES (D-08 dela). Um por bloco, dois por card, e cada
+    #     um diz de QUAL volume fala — sem o `data-volume` o gesto não sabe se
+    #     mexe no microfone ou no alto-falante.
+    exigir(corpo.count('type="range"') == 2 * len(CONECTADOS),
+           f"os {2 * len(CONECTADOS)} deslizantes de volume sumiram — os dois "
+           f"volumes voltam a ser pintura, e o ♪ volta a travar para sempre")
+    for qual in ("microfone", "alto-falante"):
+        exigir(corpo.count(f'data-volume="{qual}"') == len(CONECTADOS),
+               f"o deslizante de {qual} não está nos {len(CONECTADOS)} cards")
+
+    # 2g. O ♪ ACENDE POR LEITURA — decisão [09], resolvida em 04/09/2026. O
+    #     `alto-estado` era escrito a cada tique dentro de um `<span hidden>`;
+    #     o vão saiu do desenho e quem mostra o mudo é o botão que o causa.
+    exigir("alto-estado" not in corpo,
+           "o `alto-estado` voltou ao desenho — ele era um valor vivo num vão "
+           "invisível, e é o ♪ que mostra o mudo agora")
+    alvos_do_mudo = re.findall(r'<[^>]*data-campo="alto-mudo"[^>]*>', corpo)
+    exigir(len(alvos_do_mudo) == len(CONECTADOS),
+           f"o ♪ perdeu o endereço `alto-mudo` — ele volta a acender pela "
+           f"classe que o gerador escreveu, nunca pelo que o aparelho diz")
+    exigir(all('data-hef-alvo="classe"' in t for t in alvos_do_mudo),
+           "o `alto-mudo` perdeu o alvo `classe`: a pintura escreveria a "
+           "palavra MUDO dentro do botão, no lugar do glifo ♪")
 
     # 3. O "· 100 % · Acordado" saiu do rótulo do alto-falante.
     exigir("Acordado" not in corpo, "o estado do alto-falante voltou ao rótulo")

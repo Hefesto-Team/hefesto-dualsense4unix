@@ -8,11 +8,19 @@ no ambiente do daemon — **nenhuma superfície do produto a ligava**.
 AS TRÊS REGRAS QUE ESTE ARQUIVO GUARDA
 ---------------------------------------
 
-1. **Sempre visível, só acionável no rádio.** É a mesma regra que já vale no
-   botão da luz, no mesmo card, e ela é dela: *"sempre visível mas só acionável
-   quando tiver no rádio"*. Botão que SOME ensina que a tela é instável — e no
-   cabo o microfone do DualSense é placa de som USB, que não passa por ponte
-   nenhuma.
+1. **Sempre visível, e ACIONÁVEL NOS DOIS TRANSPORTES.** A regra era *"sempre
+   visível mas só acionável quando tiver no rádio"*, herdada do botão da luz do
+   mesmo card, e ela **CAIU EM 04/09/2026** com a queixa 15 dela: *"esse aviso
+   nao devia aparecer pq era pra funcionar em ambos ne"*. <!-- noqa-acento: citação literal dela -->
+   O `docs/data/mapa-controles.csv` já dizia o contrário da tela —
+   `audio.microfone` é `cabo_aciona=sim` e `radio_aciona=parcial` —, e o que
+   "não vale no cabo" nunca foi a feature: era a `PonteMicBluetooth`, uma
+   IMPLEMENTAÇÃO dela. Botão que SOME ensina que a tela é instável; botão que
+   RECUSA no transporte em que a feature é mais forte ensina pior.
+   O paralelo com o botão da luz não valia: aquele gesto é mesmo do rádio (é um
+   repareamento), e este é uma DECLARAÇÃO durável — pelo cabo ela não sobe
+   ponte nenhuma (`bt_mic.alvos()` só enxerga nós de Bluetooth) e fica escrita
+   para quando o controle voltar ao rádio.
 2. **Diferido, como o resto da aba.** O clique acumula em
    `host._maquina_pendente`; quem grava é o "Aplicar" do rodapé. É o que a
    frase `QUANDO_VALE`, no pé da seção, promete — e o
@@ -33,8 +41,10 @@ AS MORDIDAS, EXERCIDAS EM 23/08/2026 — a saída real está no relatório da le
    é um valor de catálogo para o silêncio, e é por essa porta que o default
    entra disfarçado de escolha dela.
 2. **`self.botao.set_sensitive(True)`** no lugar do `pode_ligar_o_mic(dados)`.
-   Reprovou `test_no_cabo_o_interruptor_aparece_apagado` — o interruptor
-   prometeria uma ponte que o cabo não usa.
+   Reprovava `test_no_cabo_o_interruptor_aparece_apagado`, que MORREU em
+   04/09/2026 junto com a regra que ele guardava. A mordida equivalente hoje é
+   devolver o `not no_cabo` a `pode_ligar_o_mic`, e quem reprova é
+   `test_no_cabo_o_interruptor_esta_aceso_e_a_dica_so_informa`.
 3. **Números digitados na frase de capacidade** (`"260,4"` literal no lugar de
    `_numero(HZ_INPUT_SEM_MIC)`). Reprovou
    `test_a_frase_de_capacidade_e_derivada_do_medidor`, que é o portão contra a
@@ -65,6 +75,7 @@ from hefesto_dualsense4unix.app.actions.config import secao_controles
 from hefesto_dualsense4unix.app.actions.config.secao_controles import (
     DICA_MIC_NO_CABO,
     DICA_MIC_NO_RADIO,
+    DICA_MIC_SEM_CANAL,
     DICA_MIC_SEM_ENDERECO,
     TEXTO_DO_MIC,
     _BlocoDoMicrofone,
@@ -72,6 +83,7 @@ from hefesto_dualsense4unix.app.actions.config.secao_controles import (
     dica_do_microfone,
     frase_da_capacidade_do_mic,
     pode_ligar_o_mic,
+    tem_canal_de_captura,
 )
 from hefesto_dualsense4unix.app.widgets.external_card import (
     DadosDoControle,
@@ -166,28 +178,66 @@ class TestOInterruptorEstaNaTela:
         )
         assert bloco.botao.get_sensitive() is True
 
-    def test_no_cabo_o_interruptor_aparece_apagado(self) -> None:
-        """A regra dela: sempre visível, só acionável no rádio.
+    def test_no_cabo_o_interruptor_esta_aceso_e_a_dica_so_informa(self) -> None:
+        """A queixa 15 dela, em forma de régua — 04/09/2026.
 
-        Um botão que SOME quando o controle troca de transporte ensina que a
-        tela é instável — e a pessoa passa a duvidar do que está vendo.
+        *"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*  <!-- noqa-acento: citação literal dela -->
+
+        O interruptor continua sempre visível; o que mudou é que ele **acende
+        nos dois transportes**. E a dica do cabo deixa de RECUSAR: ela diz por
+        onde o canal vem, e não que ele não vem.
+
+        ARRANQUE A CURA: devolva `and not bool(getattr(dados, "no_cabo",
+        False))` a `pode_ligar_o_mic` e este caso reprova nas duas asserções —
+        o botão volta a nascer insensível e a dica volta a ser a do endereço,
+        que é a frase errada para um controle que tem endereço.
         """
         card, bloco, _ = _card_com_o_bloco(_dados(no_cabo=True))
 
         assert TEXTO_DO_MIC in _rotulos(card), "o interruptor SUMIU no cabo"
-        assert bloco.botao.get_sensitive() is False
+        assert bloco.botao.get_sensitive() is True, (
+            "o interruptor de microfone nasceu APAGADO no cabo — é a frase "
+            "invertida da queixa 15 dela de volta, e o CSV desta casa diz o "
+            "contrário: audio.microfone tem cabo_aciona=sim"
+        )
         assert bloco.botao.get_tooltip_text() == DICA_MIC_NO_CABO
+
+    def test_a_dica_do_cabo_informa_e_nao_recusa(self) -> None:
+        """A frase do cabo é CAPACIDADE, não advertência — e ela dizia o inverso.
+
+        O que ela dizia, e o que a medição derrubou palavra por palavra: *"Só
+        vale no rádio (…) ele já funciona sem ela."* Quem é `parcial` no
+        `mapa-controles.csv` é o RÁDIO; e "já funciona" é falso sob o conceito
+        dela — pelo cabo o canal existe e nasce `SUSPENDED`.
+        """
+        for proibida in ("só vale", "não passa", "sem ela"):
+            assert proibida not in DICA_MIC_NO_CABO.lower(), (
+                f"{proibida!r} voltou à dica do cabo: ela é informação sobre "
+                "por onde o canal vem, nunca recusa (D-12)"
+            )
+        assert "já existe" in DICA_MIC_NO_CABO
 
     def test_sem_endereco_a_dica_diz_o_outro_motivo(self) -> None:
         """Os dois motivos de estar apagado pedem frases diferentes.
 
-        No cabo a ponte não FAZ FALTA; sem endereço ela não TEM ONDE ser
-        guardada. Uma frase só para os dois mandaria a pessoa procurar cabo onde
-        o problema é endereço.
+        **O PAR MUDOU EM 04/09/2026.** Era *"no cabo não FAZ FALTA, sem endereço
+        não TEM ONDE ser guardada"*; o do cabo caiu com a D-12. O par que sobrou
+        é **sem canal** × **sem endereço**, e cada um continua com a frase dele.
         """
         dados = _dados(endereco="")
         assert pode_ligar_o_mic(dados) is False
         assert dica_do_microfone(dados) == DICA_MIC_SEM_ENDERECO
+
+    def test_sem_canal_de_captura_a_dica_nao_fala_de_endereco(self) -> None:
+        """Sem canal, o endereço não interessa — e a frase não pode mentir.
+
+        `dica_do_microfone` respondia a TODA recusa com a frase do endereço, e
+        isso aparecia como um controle com doze hexa sendo recusado por não ter
+        endereço. As duas perguntas agora são feitas na ordem em que mandam.
+        """
+        dados = _dados(adotado=False)
+        assert tem_canal_de_captura(dados) is False
+        assert dica_do_microfone(dados) == DICA_MIC_SEM_CANAL
 
     def test_no_radio_a_dica_diz_que_a_escolha_e_dela_e_e_de_um_so(self) -> None:
         assert dica_do_microfone(_dados()) == DICA_MIC_NO_RADIO

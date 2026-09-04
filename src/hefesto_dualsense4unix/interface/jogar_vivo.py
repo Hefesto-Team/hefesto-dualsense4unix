@@ -73,6 +73,13 @@ AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
 
 import mesa_viva  # noqa: E402
+
+
+def _a01():  # noqa: ANN202
+    """O pacote da aba 01, importado TARDE — ele puxa o produto inteiro."""
+    from pacotes import a01_jogar
+
+    return a01_jogar
 import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
 
 import aba01  # noqa: E402  isort:skip
@@ -736,8 +743,11 @@ class Janela:
         mesa = mesa_viva.mesa_do_estado(state, self.leitor_de_cor.conhecidos(), alvo=self.alvo)
         if not mesa:
             self._mesa_ausente(
-                "Nenhum controle na mesa agora. Conecte um pelo cabo ou pelo "
-                "rádio — a mesa aparece sozinha, sem recarregar esta tela.",
+                # A FRASE TEM UM DONO SÓ — `a01_jogar.MESA_VAZIA`. Ela vivia
+                # digitada aqui E lá, e duas cópias da mesma frase concordam até
+                # o dia em que uma muda. Fechado em 04/09/2026, com a régua
+                # (`test_a01_a_mesa_vazia_fala.py`) já cobrando as duas.
+                _a01().MESA_VAZIA,
                 bolinha="○",
                 cor="var(--orange)",
             )

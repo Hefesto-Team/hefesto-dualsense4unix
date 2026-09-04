@@ -141,20 +141,40 @@ def test_a_pagina_publica_os_dois_elementos_da_linha() -> None:
 
 
 def test_o_gemeo_da_bancada_ainda_bate() -> None:
-    """A frase da mesa vazia já existia — e no lugar errado.
+    """A frase da mesa vazia tem UM DONO, e a bancada o usa.
 
-    `interface/jogar_vivo.py` (a BANCADA desta aba) escreve esta mesma sentença
-    desde que nasceu, e o PRODUTO — a página estática, que é a que ela abre —
-    não a tinha. A cópia em `a01_jogar.MESA_VAZIA` é a mesma sequência de bytes
-    de propósito, e esta régua reprova no dia em que as duas se afastarem.
+    `interface/jogar_vivo.py` (a BANCADA desta aba) escrevia esta mesma sentença
+    DIGITADA desde que nasceu, e o PRODUTO — a página estática, que é a que ela
+    abre — não a tinha. Enquanto foram duas cópias, esta régua cobrava que os
+    bytes batessem.
 
-    O FECHO É DE UMA LINHA e é de quem cuidar do `jogar_vivo.py`: importar
-    `a01_jogar.MESA_VAZIA` em vez de repetir a frase. Enquanto isso não
-    acontece, a régua é o que impede duas verdades vivas.
+    **O FECHO ACONTECEU EM 04/09/2026:** o `jogar_vivo` importa
+    `a01_jogar.MESA_VAZIA` em vez de repetir a frase, e a régua mudou de alvo
+    junto — ela deixou de cobrar a CÓPIA e passou a cobrar o DONO ÚNICO. Cobrar
+    a cópia depois do fecho seria a régua reprovando exatamente quem fez a
+    correção certa, que é o defeito que esta casa chama de *gate que castiga a
+    honestidade*.
+
+    QUALQUER UM DOS DOIS ESTADOS PASSA — o importado (o de hoje) ou a cópia
+    byte-idêntica (o de ontem). O que NÃO passa é a bancada com uma frase
+    PRÓPRIA, que é a única forma de haver duas verdades vivas.
     """
     fonte = (INTERFACE / "jogar_vivo.py").read_text(encoding="utf-8")
     # As quebras de linha do fonte não contam: o que tem de bater é a FRASE.
     achatado = re.sub(r'"\s*\n\s*"', "", fonte)
-    assert aba.MESA_VAZIA in achatado, (
-        "a frase da mesa vazia da bancada (`jogar_vivo.py`) e a do produto "
-        "(`a01_jogar.MESA_VAZIA`) se afastaram — são duas verdades vivas")
+    # SEM COMENTÁRIOS: a primeira versão desta régua procurava a string
+    # `MESA_VAZIA` no fonte inteiro e passava VERDE com a bancada tendo frase
+    # própria — porque o COMENTÁRIO da cura citava o nome da constante. Uma
+    # régua que casa um token em qualquer lugar do texto, em vez do que o
+    # significa, é a armadilha que o COMO-OLHAR-A-TELA já lista. Só código.
+    sem_comentario = re.sub(r"#[^\n]*", "", achatado)
+    usa_o_dono = bool(re.search(r"\bMESA_VAZIA\b", sem_comentario))
+    tem_a_copia = aba.MESA_VAZIA in sem_comentario
+    assert usa_o_dono or tem_a_copia, (
+        "a bancada (`jogar_vivo.py`) não usa `a01_jogar.MESA_VAZIA` nem repete a "
+        "frase dele — se ela tem uma frase própria para a mesa vazia, são duas "
+        "verdades vivas sobre a mesma tela")
+    if usa_o_dono and tem_a_copia:
+        raise AssertionError(
+            "a bancada importa `MESA_VAZIA` E ainda tem a frase digitada — "
+            "a cópia sobrou do fecho e vai divergir na próxima edição")
