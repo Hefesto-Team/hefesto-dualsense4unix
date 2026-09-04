@@ -228,37 +228,53 @@ def test_o_mapa_guarda_o_caminho_do_radio_desta_area(chave: str, controle: str) 
 
 
 def test_o_mapa_conta_o_portao_do_segundo_controle_e_o_codigo_ainda_bate() -> None:
-    """O achado de 03/09 tem de continuar escrito NO MAPA e VERDADEIRO NO CÓDIGO.
+    """O PORTÃO FOI CURADO em 04/09/2026, e esta régua virou junto.
 
-    Duas leituras, e as duas mordem por lados opostos:
+    Ela nasceu em 03/09 guardando o achado — *"o `daemon.state_full` publica
+    `inputs: null` para todo controle que não é o primário"* — e cobrando que
+    o mapa e o código dissessem a mesma coisa. A terceira asserção dela era
+    `'entry["inputs"] = None' in fonte`, e a mensagem já dizia o que fazer no
+    dia em que ela reprovasse: *"Se o portão foi curado, ótimo — e então o mapa
+    mente: reescreva a `radio_ressalva`"*. Foi o que aconteceu (STATUS-04), e
+    é o que este commit faz.
+
+    **A régua não foi apagada, foi virada** — continua mordendo por dois
+    lados, agora sobre a CURA em vez do defeito:
 
     - se alguém apagar a evidência do mapa, a primeira metade reprova;
-    - se alguém CURAR o portão em `daemon/ipc_handlers.py` sem atualizar o mapa,
-      a segunda metade reprova — e a mensagem diz o que fazer. É de propósito:
-      nesta casa, curar o defeito e deixar o mapa afirmando que ele existe é o
-      mesmo tipo de podridão que a citação de linha que não abre.
+    - se alguém REGREDIR o `_inputs_passivos` (ou a exigência de dicionário do
+      `_merge_sensores`, que continua sendo o portão a vigiar), a segunda
+      metade reprova — e o segundo card volta a ficar mudo em silêncio, que é
+      exatamente como o defeito atravessou de 17/07 a 03/09.
     """
     linha = _linhas_do_mapa()[("movimento.giroscopio", "dualsense")]
     ressalva = linha["radio_ressalva"]
     assert "_merge_sensores" in ressalva and "ipc_handlers.py" in ressalva, (
         "a `radio_ressalva` de `movimento.giroscopio@dualsense` perdeu o endereço "
-        "do portão que deixa o SEGUNDO controle sem sensores — medido em 03/09/2026"
+        "do portão que deixava o SEGUNDO controle sem sensores — medido em "
+        "03/09/2026, curado em 04/09/2026"
+    )
+    assert "_inputs_passivos" in ressalva, (
+        "a `radio_ressalva` de `movimento.giroscopio@dualsense` não conta mais "
+        "COMO o portão foi curado. Se a cura foi revertida, o mapa tem de voltar "
+        "a descrever o defeito — e as três que apontam para ela também "
+        "(`movimento.acelerometro@dualsense`, `toque.touchpad@dualsense`, "
+        "`toque.touchpad.cursor@dualsense`)"
     )
 
     fonte = IPC.read_text(encoding="utf-8")
     assert "def _merge_sensores" in fonte, (
-        "`_merge_sensores` sumiu de daemon/ipc_handlers.py — se o portão foi "
-        "curado, a `radio_ressalva` de `movimento.giroscopio@dualsense` tem de ser "
-        "reescrita NO MESMO COMMIT"
+        "`_merge_sensores` sumiu de daemon/ipc_handlers.py — a `radio_ressalva` "
+        "de `movimento.giroscopio@dualsense` tem de ser reescrita NO MESMO COMMIT"
     )
-    assert 'entry["inputs"] = None' in fonte, (
-        "o `entry[\"inputs\"] = None` do controle não-primário sumiu de "
-        "daemon/ipc_handlers.py. Se o portão foi curado, ótimo — e então o mapa "
-        "mente: reescreva a `radio_ressalva` de `movimento.giroscopio@dualsense` e "
-        "as duas que apontam para ela (`movimento.acelerometro@dualsense`, "
-        "`toque.touchpad@dualsense`, `toque.touchpad.cursor@dualsense`)"
+    assert "def _inputs_passivos" in fonte, (
+        "`_inputs_passivos` sumiu de daemon/ipc_handlers.py: a TERCEIRA fonte de "
+        "`inputs` era o que dava sensores ao segundo controle fora do co-op. Sem "
+        "ela o card volta a mostrar '—' em silêncio — reescreva a "
+        "`radio_ressalva` de `movimento.giroscopio@dualsense` e as três que "
+        "apontam para ela"
     )
     assert "not isinstance(inputs, dict)" in fonte, (
         "a desistência de `_merge_sensores` mudou de forma; confira se o segundo "
-        "controle passou a receber sensores e atualize o mapa junto"
+        "controle continua recebendo sensores e atualize o mapa junto"
     )
