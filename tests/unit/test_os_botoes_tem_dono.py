@@ -293,7 +293,22 @@ def test_o_gesto_recusa_o_clique_sem_controle(pac, ctx):
 
 
 def test_um_botao_sem_dono_devolve_none(pac):
-    """`None` é o estado honesto — e quem chama tem de RECUSAR DIZENDO."""
-    assert pac.gesto_da_pagina("09-sistema.html", "desligar") is None, (
-        "`desligar` é `systemctl`, não IPC — se ganhou dono, a régua precisa "
-        "saber COMO, porque da tela não se chama systemctl sem o helper.")
+    """`None` é o estado honesto — e quem chama tem de RECUSAR DIZENDO.
+
+    O EXEMPLAR NÃO SE DIGITA: ele sai de `a09_sistema.SEM_MOTOR`, que é onde a
+    aba declara quais botões continuam sem quem os atenda e por quê. Até
+    03/09/2026 esta linha cravava `desligar` — e nesse dia ele GANHOU dono (o
+    par "Parar o serviço"/"Ativar o serviço"), então a régua reprovou a melhora.
+    É a forma de defeito que esta casa nomeia: *a régua digita o que devia
+    perguntar*. Perguntando, ela acompanha a lista sozinha e só some no dia em
+    que não houver mais botão morto nesta página — que é quando ela deve sumir.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import a09_sistema
+
+    sem_motor = sorted(a09_sistema.SEM_MOTOR)
+    if not sem_motor:
+        pytest.skip("a aba Sistema não tem mais botão sem motor — apague esta régua")
+    for nome in sem_motor:
+        assert pac.gesto_da_pagina(a09_sistema.PAGINA, nome) is None, (
+            f"`{nome}` está declarado em `SEM_MOTOR` e TEM dono. Se o ato saiu "
+            "do handler da janela velha, tire-o da declaração.")

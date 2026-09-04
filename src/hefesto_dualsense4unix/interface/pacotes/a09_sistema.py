@@ -42,6 +42,7 @@ lia) tomava o lugar e o cabeçalho inteiro virava travessão nesta aba.
 from __future__ import annotations
 
 import html
+import re
 import threading
 import time
 from typing import Any
@@ -61,6 +62,7 @@ from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcamento
 from hefesto_dualsense4unix.gui import aba_sistema as _tela
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
+from hefesto_dualsense4unix.interface import onde as _onde
 
 from . import (
     TRAVESSAO,
@@ -1055,7 +1057,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     try:
         bruto = _tela.pacote(_leitura(ctx))
     except Exception as erro:
+        # O `blocos:` DOS BOTÕES SAI TAMBÉM DAQUI, e esta é a metade que
+        # importa: com o serviço parado a camada do produto levanta e a aba
+        # inteira emudece — que é exatamente o instante em que ela precisa ler
+        # "Ativar o serviço" no botão. Deixar este ramo sem os rótulos faria a
+        # saída de emergência existir só enquanto ela não é necessária.
         return {"sem_dono": {"tela": {"sem_dono": True, "oque": str(erro)}},
+                "blocos": blocos_dos_botoes(_de_pe(ctx)),
                 "cobertura": {"pintados": 0, "sem_dono": 1}}
 
     fora: dict[str, object] = {}
@@ -1102,7 +1110,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # responde. Ler o `maquina.json` e o `systemctl status` uma segunda vez por
     # tique seria desfazer, dentro desta função, o que a faixa lenta existe para
     # fazer.
-    _, _, perfil_da_bateria, _, repouso = _faixa_lenta(ctx.state or None, ctx.mesa)
+    _, _, perfil_da_bateria, estado, repouso = _faixa_lenta(ctx.state or None,
+                                                            ctx.mesa)
     fora["bateria-perfil"] = perfil_da_bateria
     fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
@@ -1114,8 +1123,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     tira = _html_da_fita(ctx.mesa)
     if tira:
         fora[CAMPO_DA_FITA] = tira
+    # OS RÓTULOS DOS CINCO DESTRUTIVOS — quem REPÕE é o tique. Ver o bloco do
+    # consentimento em dois cliques: sem esta linha um "Confirma?" ficaria na
+    # tela para sempre depois de ela armar um botão e sair, e o "Ativar o
+    # serviço" nunca voltaria a ser "Parar o serviço" quando o daemon subisse.
+    #
+    # É `blocos:` E NÃO `mesa:` de propósito: o endereço é o `data-gesto` que o
+    # desenho já tem, e não um `data-campo` novo — logo esta cura alcança a
+    # página PUBLICADA de hoje, sem esperar publicação nenhuma.
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
     fora["cobertura"] = {"pintados": len(fora), "sem_dono": len(SEM_DONO)}
+    # DEPOIS DA COBERTURA, e não antes: `pintados` conta ENDEREÇO de valor, e
+    # `blocos` é chave de contrato — somá-la inflaria em um o instrumento com
+    # que esta casa prova que um endereço existe.
+    fora["blocos"] = blocos_dos_botoes(estado in _tela.DE_PE)
     return fora
 
 
@@ -1295,6 +1316,14 @@ def _trava(ctx: Contexto, nome: str) -> str | None:
 #: e `test_a_09_sistema_fecha_a_paridade.py` a cobra nos dois sentidos, para
 #: que ela não vire um esquecimento no dia em que `travas()` for corrigida.
 TRAVA_QUE_NAO_VALE_AQUI: dict[str, str] = {
+    "desligar": "`travas()` o tranca com o serviço desligado, dizendo *'O "
+                "serviço já está desligado'* — e isso era verdade até 03/09/2026, "
+                "quando ele deixou de ser um botão só de parar. Ela mandou o "
+                "mesmo botão LIGAR nesse estado (*'um específico pra parar o "
+                "Daemon E Ativar o Daemon'*), e obedecer à trava aqui recusaria "
+                "exatamente o clique que ela pediu que passasse a funcionar. A "
+                "cara de parar não precisa da trava: ela só aparece com o "
+                "serviço de pé. Ver :func:`desligar`.",
     "ver-detalhes": "`travas()` o tranca com o serviço desligado, e este gesto "
                     "não fala com o daemon: ele lê o journal do systemd, que "
                     "sobrevive à queda da unit. Trancá-lo apagaria a resposta "
@@ -1545,35 +1574,406 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _systemctl("restart")
 
 
-#: OS CINCO QUE CONTINUAM SEM DONO, E A RAZÃO É A MESMA PARA OS CINCO: eles
-#: PROMETEM PERGUNTAR ANTES, e a infraestrutura para perguntar não existe.
+# ---------------------------------------------------------------------------
+# O CONSENTIMENTO EM DOIS CLIQUES — decisão DELA, 03/09/2026
+#
+# ELA ESCOLHEU, entre as três formas que lhe foram postas: **"Dois cliques, como
+# na Lançadores"**. E escolheu a palavra do botão armado, entre três:
+# **"Confirma?"**.
+#
+# O MECANISMO NÃO NASCE AQUI — ELE JÁ RODA EM PRODUÇÃO. A `07-lancadores`
+# confirma assim desde 03/09 (`a07_lancadores.fechar_a_steam_e_repor`): o
+# primeiro clique ARMA e devolve o botão com o rótulo trocado; o segundo só vale
+# se trouxer o valor que **só existe no botão já armado**, e só dentro da janela
+# de tempo. Os dois guardas são independentes de propósito — um deles sozinho
+# basta hoje; dois é o que sobrevive a uma régua que releia o DOM entre cliques.
+#
+# O QUE MUDA AQUI É O CANAL, e a razão é de MECANISMO, não de gosto. Lá o valor
+# viaja num `data-v` porque aquela aba REMONTA o cartão inteiro a cada pintura.
+# Esta página é ESTÁTICA: o desenho não tem `data-v` nestes botões, e um
+# `data-campo` novo só chegaria à tela dela **depois de publicar** — ou seja, a
+# cura ficaria guardada na bancada enquanto os botões continuam mortos na mesa
+# dela. Aqui o valor que só existe no botão armado é o **RÓTULO**:
+#
+#     `hefesto_vivo.BOOTSTRAP`, o ouvinte de clique -> `texto: alvo.textContent`
+#
+# O piloto já manda o rótulo em `o["texto"]`, e quem o escreve é o mesmo
+# `blocos:` que arma. Um dono só (:data:`CONFIRMA`) pinta e confere — não há
+# como a tela e o guarda discordarem, que é a mesma disciplina do `data-v` de lá.
+#
+# E POR ISSO A CURA ALCANÇA A PÁGINA PUBLICADA DE HOJE, sem publicar nada:
+# `blocos:` endereça por SELETOR CSS (`hefesto_vivo`, `document.querySelector`),
+# e `[data-gesto="…"]` é o endereço que o desenho JÁ tem nos cinco botões.
+# Nenhum pixel novo, nenhum atributo novo, nenhuma linha do mockup.
+#
+# QUEM REPÕE O RÓTULO É O TIQUE, e não o gesto: `pacote()` emite o `blocos:` a
+# cada volta com o rótulo que cada botão TEM de estar mostrando agora. Sem isso
+# um "Confirma?" ficaria na tela para sempre depois de ela clicar uma vez e sair
+# — a tela mentindo sobre o estado, que é o defeito que esta aba inteira existe
+# para não repetir. O `blocos:` do piloto compara antes de escrever
+# (`alvo.innerHTML !== html`), então emitir todo tique não mexe no DOM nem soma
+# pintura nenhuma quando nada mudou.
+# ---------------------------------------------------------------------------
+
+#: A PALAVRA DO BOTÃO ARMADO. É DELA, escolhida entre três em 03/09/2026.
+CONFIRMA = "Confirma?"
+
+#: O VERBO É DELA — *"em sistema um específico pra parar o Daemon E Ativar o
+#: Daemon"*, 03/09/2026. O SUBSTANTIVO não é escolha minha: é o vocabulário
+#: desta aba, fechado com ela em 31/08 e escrito no `mockup/TODO-DELA.md` —
+#: *"Sistema: a aba diz **serviço**, e o verbo é **Parar**"*. Daí "Ativar o
+#: serviço", e não "Ativar o Daemon": "Daemon" é a palavra dela para o que a
+#: TELA chama de serviço, e a tela tem de falar uma língua só.
+ATIVAR = "Ativar o serviço"
+
+#: O gesto do botão que passou a ter DUAS CARAS. O `data-gesto` não muda com a
+#: cara — quem despacha é o desenho, e o desenho é um botão só. Ver
+#: :func:`desligar`.
+DESLIGAR = "desligar"
+
+#: OS CINCO DESTRUTIVOS DESTA PÁGINA — a lista que `SEM_CONFIRMACAO` guardava
+#: até 03/09/2026, e que agora tem quem lhe dê o consentimento. Dois deles
+#: ganharam motor neste commit; os três que sobram estão em :data:`SEM_MOTOR`,
+#: e o que os segura NÃO é mais a falta de confirmação.
+DESTRUTIVOS = ("desligar", "restaurar-de-fabrica", "refazer-consertos",
+               "refazer-proton", "procurar-camadas")
+
+#: O QUE AINDA SEGURA TRÊS DOS CINCO — e a razão MUDOU em 03/09/2026.
 #:
-#: A ponte dos gestos oferece `chamar`, `chamar_detalhado`, `resultado`,
-#: `escolher_arquivo` e `salvar_arquivo` (`pacotes/ponte.py`), e o piloto só sabe
-#: abrir um seletor de arquivo (`hefesto_vivo.py`, os diálogos). **Não há
-#: primitiva de confirmação.** Na janela antiga os cinco abrem diálogo temado e
-#: não-bloqueante antes de agir (`daemon_actions.py:1806`, `:1373`, `:1590`,
-#: `emulation_actions.py:2114`, `gui_dialogs.py:696`).
+#: **O FATO QUE CAIU:** `SEM_CONFIRMACAO` dizia *"não há primitiva de
+#: confirmação"*. Isso deixou de ser verdade no instante em que ela escolheu os
+#: dois cliques — e a `07-lancadores` já o desmentia no produto inteiro. O que
+#: sobra é OUTRA coisa, e é de MOTOR: o ato destes três mora dentro de um
+#: handler da janela GTK que fala com a janela (toast, diálogo, `self.window`),
+#: e não há função de produto a chamar de fora. Reescrever o miolo aqui criaria
+#: um SEGUNDO DONO da mesma regra — que é a regressão que esta rota existe para
+#: não repetir.
 #:
-#: HOJE ISSO NÃO FAZ ESTRAGO PORQUE ELES ESTÃO MORTOS. No dia em que forem
-#: ligados sem esta peça, a promessa vira o oposto: quatro `title` desta página
-#: dizem "Pergunta antes, dizendo o que se perde", e a ação aconteceria sem
-#: perguntar. **Ligar sem a confirmação seria pior que o botão morto.**
-#:
-#: `procurar-camadas` tem um risco a mais, e a `gui/aba_sistema.py:89` já o
-#: escreveu: o handler dele mora na aba que MORRE (Emulação).
-SEM_CONFIRMACAO: dict[str, str] = {
-    "desligar": "`daemon_actions.on_daemon_stop:2234`, e o `title` promete "
-                "\"Pergunta antes, dizendo o que se perde\".",
-    "restaurar-de-fabrica": "`footer_actions.on_restore_default:1477`, com "
-                            "`gui_dialogs.confirm_restore_default:696`.",
-    "refazer-consertos": "`daemon_actions.on_storm_fix_safe:1218` — roda dois "
-                         "scripts e pode FECHAR a Steam dela.",
-    "refazer-proton": "`daemon_actions.on_proton_lock:1793` — escreve no "
-                      "`config.vdf`, que é arquivo global da Steam.",
-    "procurar-camadas": "`emulation_actions.on_camadas_engasgo:2075` — e o "
-                        "diálogo dele MOSTRA o que achou antes de mexer.",
+#: `procurar-camadas` tem um risco a mais, e ele não é de motor: o `title` dele
+#: promete *"Se achar, mostra qual é antes de tirar"* — TRÊS tempos (procurar ·
+#: mostrar o achado · tirar), e dois cliques cobrem dois. O que falta a ele é
+#: DESENHO, e desenho é dela.
+SEM_MOTOR: dict[str, str] = {
+    "restaurar-de-fabrica": "o ato mora em `footer_actions.on_restore_default:1477` "
+                            "— ele lê `self._get('main_window')`, grava pelo funil "
+                            "e manda TODAS as abas da janela velha se repintarem.",
+    "refazer-consertos": "o ato mora dentro do `_worker` de "
+                         "`daemon_actions.on_storm_fix_safe:1218`, junto com o "
+                         "toast de cada etapa — não há função de produto que rode "
+                         "os dois scripts e devolva o relatório.",
+    "procurar-camadas": "`emulation_actions.on_camadas_engasgo:2075` — o motor "
+                        "(`camadas_vulkan.censo`) é limpo, mas o botão promete "
+                        "MOSTRAR o achado ENTRE procurar e tirar, e isso é uma "
+                        "tela que ainda não existe. É desenho, e desenho é dela.",
 }
+
+
+def _seletor(gesto: str) -> str:
+    """Como o `blocos:` endereça um botão desta página. Ver o bloco acima."""
+    return f'[data-gesto="{gesto}"]'
+
+
+#: Os rótulos do DESENHO, lidos da página publicada na primeira vez que alguém
+#: pergunta. Vazio = nunca lido.
+_ROTULOS: dict[str, str] = {}
+
+
+def _rotulo_do_desenho(gesto: str) -> str:
+    """O que o DESENHO escreve naquele botão — LIDO da página, nunca digitado.
+
+    O dono do rótulo é o gerador (`interface/aba09.py`, o `item()`), e o que ele
+    produziu está na página que o produto renderiza. Digitar "Parar o serviço"
+    aqui seria o segundo dono de uma palavra que ela escolheu — e envelheceria
+    calado no dia em que ela trocasse o verbo, que é exatamente o que aconteceu
+    em 31/08 ("encerrar" -> "parar").
+
+    Devolve `""` quando não achou: quem chama trata como "não sei" e não escreve.
+    """
+    if not _ROTULOS:
+        try:
+            doc = _onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+        except Exception:  # pragma: no cover - página fora do disco
+            doc = ""
+        for achado in re.finditer(
+                r'data-gesto="([^"]+)"[^>]*>([^<]*)</button>', doc):
+            _ROTULOS[achado.group(1)] = html.unescape(achado.group(2)).strip()
+    return _ROTULOS.get(gesto, "")
+
+
+#: O QUE ESTÁ ARMADO AGORA: `{"gesto": …, "ate": <time.monotonic>}`. Vazio =
+#: nada armado. Uma coisa só de cada vez — armar o segundo desarma o primeiro,
+#: e o tique repõe o rótulo daquele.
+_ARMADO: dict[str, Any] = {}
+
+
+def segundos_para_confirmar() -> float:
+    """A janela do consentimento — PERGUNTADA a quem já a tem.
+
+    O dono é `a07_lancadores.SEGUNDOS_PARA_CONFIRMAR`, e ele não é um número
+    solto: é *"o consentimento que `with_steam_closed` EXIGE de quem a chama, na
+    forma que uma página tem"*. Um `20.0` digitado aqui seria a segunda duração
+    de consentimento desta casa, e as duas se afastariam na primeira mudança.
+    """
+    from . import a07_lancadores
+
+    return float(a07_lancadores.SEGUNDOS_PARA_CONFIRMAR)
+
+
+def _armado_agora() -> str:
+    """O gesto armado NESTE instante, ou `""` — e ele desarma sozinho no tempo.
+
+    O relógio é lido aqui, e não guardado num `bool`: um `bool` armado por um
+    clique que ninguém confirmou continuaria armado depois de a janela passar, e
+    o segundo clique de dez minutos depois valeria como consentimento.
+    """
+    if _ARMADO and time.monotonic() >= float(_ARMADO.get("ate") or 0.0):
+        _ARMADO.clear()
+    return str(_ARMADO.get("gesto") or "")
+
+
+def _rotulo_de_agora(gesto: str, de_pe: bool) -> str:
+    """O que aquele botão TEM de estar dizendo agora. Três caras, uma conta.
+
+    A ordem importa: armado vence estado. Um botão armado que voltasse a dizer
+    "Ativar o serviço" porque o serviço caiu no meio deixaria o consentimento
+    dela pendurado sobre uma pergunta que a tela não mostra mais.
+    """
+    if gesto == _armado_agora():
+        return CONFIRMA
+    if gesto == DESLIGAR and not de_pe:
+        return ATIVAR
+    return _rotulo_do_desenho(gesto)
+
+
+def blocos_dos_botoes(de_pe: bool) -> dict[str, str]:
+    """O `blocos:` que põe os cinco no rótulo de agora — do tique e do gesto.
+
+    O MESMO PARA OS DOIS CAMINHOS, de propósito: o gesto devolve isto para a
+    troca ser INSTANTÂNEA (não esperar o tique), e o tique devolve isto para
+    REPOR. Duas montagens diferentes é como as duas se afastariam.
+
+    Rótulo vazio (o desenho não tem aquele botão) NÃO entra: escrever `""` num
+    `blocos:` apagaria o miolo do elemento, e um botão sem palavra nenhuma é
+    pior que um botão com a palavra velha.
+    """
+    fora: dict[str, str] = {}
+    for gesto_ in DESTRUTIVOS:
+        rotulo = _rotulo_de_agora(gesto_, de_pe)
+        if rotulo:
+            fora[_seletor(gesto_)] = html.escape(rotulo)
+    return fora
+
+
+def _de_pe(ctx: Contexto) -> bool:
+    """O serviço está de pé? A lista dos estados "de pé" é da CAMADA DO PRODUTO.
+
+    `aba_sistema.DE_PE` são os dois que contam como vivo (`online_systemd` e
+    `online_avulso`). Perguntar a ela, em vez de comparar com `"offline"`, é o
+    que impede esta aba de voltar a colapsar os QUATRO estados em dois — que foi
+    o defeito curado em 03/09 e está escrito em :func:`_status_do_daemon`.
+    """
+    return _status_do_daemon(ctx.state) in _tela.DE_PE
+
+
+def _confirmado(o: dict[str, Any], gesto_: str) -> bool:
+    """Este clique é a CONFIRMAÇÃO? Quando não é, ARMA o botão e devolve `False`.
+
+    OS DOIS GUARDAS, e eles são independentes:
+
+    1. o clique tem de trazer :data:`CONFIRMA` em `o["texto"]` — o rótulo que
+       **só existe no botão já armado**, escrito pelo `blocos:` de quem armou;
+    2. e tem de chegar dentro de :func:`segundos_para_confirmar`.
+
+    O SEGUNDO SEM O PRIMEIRO NÃO BASTARIA, e o caso é real: a prova automática
+    desta casa (`--prova-gesto`) clica cada botão UMA vez por volta, com o que o
+    DOM tinha — e o DOM tinha a pergunta. É o mesmo raciocínio escrito em
+    `a07_lancadores.fechar_a_steam_e_repor`.
+
+    FORA DO PRAZO ELE LEVANTA, em vez de agir ou de rearmar calado: a frase vai
+    para a tarja pelo caminho do `RuntimeError`, e o tique seguinte repõe o
+    rótulo do desenho. Rearmar calado deixaria a tela dizendo "Confirma?" sobre
+    um consentimento que já tinha vencido.
+    """
+    rotulo = str(o.get("texto") or "").strip()
+    armado = _armado_agora() == gesto_
+    if rotulo == CONFIRMA:
+        _ARMADO.clear()
+        if not armado:
+            raise RuntimeError(
+                f"Passaram-se mais de {int(segundos_para_confirmar())} segundos "
+                "desde a pergunta — não fiz nada. Clique de novo para começar.")
+        return True
+    _ARMADO.clear()
+    _ARMADO.update(gesto=gesto_, ate=time.monotonic() + segundos_para_confirmar())
+    return False
+
+
+@gesto("09-sistema.html", DESLIGAR)
+def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O PAR que ela pediu, num botão só: **Parar o serviço** e **Ativar o serviço**.
+
+    DECISÃO DELA, 03/09/2026, com estas palavras: *"E em sistema um específico
+    pra parar o Daemon E Ativar o Daemon (sendo que em jogar também consegue
+    isso)."* — **um** controle, os dois atos. E é o que a página comporta: a
+    coluna de ações desta faixa tem quatro botões e o portão do gerador
+    (`aba09.py`, o par de alturas) reprova o quinto, porque as duas colunas
+    irmãs desta aba acabam no mesmo y. Um botão a mais abriria os 38px de vão
+    que ela reclamou em 31/08.
+
+    AS DUAS CARAS NÃO SÃO SIMÉTRICAS, e a assimetria é o ponto:
+
+    * **Parar** derruba o serviço e os controles dela viram gamepads comuns —
+      pede os dois cliques (:func:`_confirmado`);
+    * **Ativar** devolve o que já estava parado. Não há o que perder, e pedir
+      confirmação para consertar seria uma parede na saída de emergência: com o
+      daemon parado esta aba emudece INTEIRA (`pacote()` cai no `sem_dono`), e
+      este botão é o único caminho de volta que a interface nova tem.
+
+    O `_user_stopped_daemon` É METADE DO ATO, e a janela antiga já o sabia
+    (`daemon_actions.on_daemon_stop:2234`): sem ele o `ensure_daemon_running`
+    ressuscita o daemon na próxima abertura, e o "Parar" dura até o próximo F5.
+    Ele é armado **no sucesso**, nunca no clique — e aqui isso sai de graça,
+    porque :func:`_systemctl` LEVANTA quando o `rc != 0`. "Ativar" o desarma,
+    que é o gesto explícito de volta, exatamente como o `on_daemon_start:2231`.
+
+    A TRAVA DA CAMADA NÃO É CONSULTADA NESTE, e está declarado: `travas()` prende
+    o `desligar` com *"O serviço já está desligado"* — que é verdade e deixou de
+    ser trava no instante em que o botão passou a LIGAR nesse estado. Consultá-la
+    aqui recusaria exatamente o clique que ela pediu que funcionasse.
+
+    O QUE ELE DEVOLVE é o `blocos:` dos cinco rótulos, para a troca ser
+    instantânea: sem isso a palavra do botão só mudaria no tique seguinte, e
+    quem clicou concluiria que não pegou.
+    """
+    if not _de_pe(ctx):
+        _ARMADO.clear()
+        if not ativar_o_servico():
+            # OS TRÊS PORTÕES DO PRODUTO recusaram, e nenhum deles é falha do
+            # systemd — por isso a frase não fala em `rc`. Ver
+            # :func:`ativar_o_servico`.
+            raise RuntimeError(
+                "Não liguei o serviço, e o systemd nem chegou a ser chamado: "
+                "ou esta máquina não tem a unit instalada (o instalador nunca "
+                "rodou aqui), ou já há um Hefesto vivo fora do systemd — e "
+                "nesse caso subir a unit criaria um segundo.")
+        return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
+    if not _confirmado(o, DESLIGAR):
+        return {"blocos": blocos_dos_botoes(True)}
+    _systemctl("stop")
+    _matriz()._user_stopped_daemon = True
+    return {"blocos": blocos_dos_botoes(False)}
+
+
+def ativar_o_servico() -> bool:
+    """Liga o serviço se ele estiver PARADO. Devolve se ELE precisou ligar.
+
+    DONO ÚNICO DO ATO, e ele existe por causa da outra metade da decisão dela:
+    *"Adiciona essa função extra quando clicar em ligar"* — o interruptor
+    **Ligado** da aba Jogar liga o serviço também, e é o mesmo ato que o "Ativar
+    o serviço" desta aba faz. Escrito duas vezes, ele teria dois donos: uma
+    cópia desarmaria o `_user_stopped_daemon` e a outra não, e o daemon voltaria
+    a morrer no próximo F5 por um caminho e não pelo outro.
+
+    OS TRÊS PORTÕES SÃO DO PRODUTO, e não meus — são exatamente os que
+    `daemon_actions.ensure_daemon_running` consulta antes de subir o daemon, na
+    ordem dele:
+
+    1. **sem unit instalada, não se liga nada** (`detect_installed_unit`). Quem
+       nunca rodou o `install.sh` não tem o que iniciar, e um `systemctl start`
+       aí devolve erro sobre uma unit que não existe;
+    2. **já ativo, não se liga de novo** (`_is_service_active`) — é o defeito
+       que `travas()` nomeia: `systemctl start` numa unit ativa devolve `rc=0` e
+       a tela confirmaria um trabalho que não houve;
+    3. **daemon avulso vivo, não se duplica** (`_daemon_pid_alive`, a
+       BUG-MULTI-INSTANCE-01): com o daemon rodando fora do systemd, subir a
+       unit criaria um segundo processo disputando o mesmo hidraw.
+
+    O PRIMEIRO PORTÃO É TAMBÉM O QUE MANTÉM A SUÍTE FORA DO SYSTEMD DESTA
+    MÁQUINA: a régua de `test_os_botoes_tem_dono` clica o `hefesto` da aba Jogar
+    de verdade, e o `conftest.py` desvia o `HOME` para um lar de mentira — não
+    há unit instalada lá, e este ato vira no-op antes de tocar em `systemctl`.
+    Uma régua que liga o daemon de quem a executa não é régua.
+
+    NÃO LEVANTA QUANDO JÁ ESTÁ DE PÉ — devolve `False`. Quem chama da aba Jogar
+    não está pedindo para ligar: está pedindo o MODO, e ligar é o que falta
+    quando falta. Levantar aí trocaria um gesto que funciona por uma recusa.
+    Quando ele TENTA e não consegue, `_systemctl` levanta com o `stderr` junto —
+    e aí a recusa é verdadeira e vai para a tela.
+    """
+    from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
+
+    janela = _matriz()
+    try:
+        if ServiceInstaller().detect_installed_unit() is None:
+            return False
+    except Exception:
+        return False
+    if str(janela._is_service_active()) == "active":
+        return False
+    if janela._daemon_pid_alive():
+        return False
+    janela._user_stopped_daemon = False
+    _systemctl("start")
+    return True
+
+
+@gesto("09-sistema.html", "refazer-proton")
+def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Refazer a fixação do Proton" — dois cliques, e o motor é o da GTK.
+
+    O QUE MUDOU EM 03/09/2026: ele estava entre os cinco sem dono porque
+    *"promete perguntar antes"*. A pergunta existe agora (ver o bloco do
+    consentimento), e o motor **nunca foi o handler** — é
+    `integrations.proton_pin.lock_proton_for_all_games`, com o portão da Steam
+    aberta e a frase de retorno de `daemon_actions.format_proton_lock_result`.
+    O `on_proton_lock:1793` da janela antiga é o diálogo e o toast em volta
+    dele; nada aqui reescreve uma linha do ato.
+
+    O `getattr` DEFENSIVO É DO CONTRATO DA LANE DO PIN (PLAT-01), e não zelo
+    meu: uma instalação sem o módulo — ou sem a função — recusa DIZENDO e
+    apontando o caminho, em vez de rebentar com `AttributeError`. A frase de
+    "como atualizar" é a do produto.
+
+    A STEAM ABERTA RECUSA, e a razão é da própria lane: ela regrava o
+    `config.vdf` ao sair, e a edição seria perdida. Um botão que "aplicasse" e
+    perdesse a aplicação é o botão que responde calado com outro nome.
+
+    O RECIBO VAI PARA O PAINEL DE REGISTRO, que é onde esta aba já põe o que os
+    botões respondem (`ver-plugins`, `ver-detalhes`). Na janela antiga é um
+    toast; aqui não há toast, e jogar fora o `format_proton_lock_result` seria
+    perder exatamente o que ele diz — quantos jogos foram travados, ou por quê
+    não deu.
+
+    NÃO É CLICADO POR RÉGUA NENHUMA: `("09-sistema.html", "refazer-proton")` já
+    está em `hefesto_vivo.PERIGOSOS` desde antes de ele ter dono.
+    """
+    if not _confirmado(o, "refazer-proton"):
+        return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
+    import importlib
+
+    try:
+        pin: Any = importlib.import_module(
+            "hefesto_dualsense4unix.integrations.proton_pin")
+    except ImportError:
+        pin = None
+    travar = getattr(pin, "lock_proton_for_all_games", None)
+    if travar is None:
+        raise RuntimeError(
+            "Esta instalação ainda não tem o Proton pinado — "
+            f"{_daemon.como_atualizar_esta_instalacao()}.")
+    steam_viva = getattr(pin, "steam_running", None)
+    if steam_viva is None:
+        from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+        steam_viva = slo.steam_running
+    if steam_viva():
+        raise RuntimeError(
+            "A Steam está aberta — feche-a e clique de novo. Não travo o Proton "
+            "com a Steam viva porque ela regrava o arquivo ao sair e a mudança "
+            "seria perdida.")
+    carga = _para_o_painel(_daemon.format_proton_lock_result(travar()))
+    carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
+    return carga
 
 
 @gesto("09-sistema.html", "ver-plugins")
@@ -1706,7 +2106,13 @@ PAGINA = "09-sistema.html"
 #: QUEM OS MEDE É `tests/unit/test_a_09_sistema_sai_do_desenho.py`, com o
 #: `_invoke_systemctl` da janela antiga dublado — o clique inteiro roda, e o que
 #: se confere é o comando que teria ido ao systemd.
-PISO_DA_ABA = 7
+#:
+#: E VIRARAM NOVE no mesmo dia, com o consentimento em dois cliques: `desligar`
+#: (que agora é o PAR "Parar o serviço"/"Ativar o serviço") e `refazer-proton`.
+#: Nenhum dos dois entra em `PROVAS`, pela mesma razão dos dois de cima e com um
+#: agravante: um clique de régua no `desligar` pararia o daemon de quem roda a
+#: suíte. Os dois já estão em `hefesto_vivo.PERIGOSOS` desde antes de terem dono.
+PISO_DA_ABA = 9
 PROVAS = [
     {"pagina": PAGINA, "gesto": "retomar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["daemon.resume"], {})]},

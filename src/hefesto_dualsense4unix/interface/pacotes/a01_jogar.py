@@ -853,9 +853,45 @@ def hefesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **"Desligado" É O MODO NATIVO, e não "parar o Hefesto"** — decisão dela,
     31/08/2026: *"o modo nativo já existe ali (…) e se eu quiser desligar modo
-    hefesto clico em desligado e o modo nativo fica online."* Parar o serviço
-    continua sendo a aba Sistema, e é por isso que este gesto nunca chama
-    `daemon.pause` nem toca em `systemctl`.
+    hefesto clico em desligado e o modo nativo fica online."* **Parar** o serviço
+    continua sendo só a aba Sistema: este gesto nunca chama `daemon.pause` nem
+    manda `stop` a coisa nenhuma.
+
+    **LIGADO PASSOU A LIGAR O SERVIÇO TAMBÉM — decisão dela, 03/09/2026:**
+    *"Adiciona essa função extra quando clicar em ligar. E em sistema um
+    específico pra parar o Daemon E Ativar o Daemon (sendo que em jogar também
+    consegue isso)."*
+
+    E ELE VEM ANTES DO PLANO, não depois, porque sem o daemon de pé não há a
+    quem mandar: os três IPCs deste gesto atravessam a ponte, e com o serviço
+    parado a ponte não tem socket. A ordem inversa recusaria o clique e deixaria
+    o serviço parado — o gesto falhando exatamente no caso que ela pediu que
+    passasse a funcionar.
+
+    O ATO NÃO É REESCRITO AQUI: `a09_sistema.ativar_o_servico()` é o mesmo que o
+    botão "Ativar o serviço" da aba Sistema aciona, com o `_user_stopped_daemon`
+    desarmado junto — sem ele o `ensure_daemon_running` volta a matar o daemon
+    na próxima abertura da janela por um caminho e não pelo outro. Duas cópias
+    deste ato é como as duas se afastariam.
+
+    SÓ NAS POSIÇÕES **LIGADAS**, e quem diz quais são é o produto
+    (`painel.MODOS_LIGADOS`): o `gamepad` e o `desktop` são o Hefesto no meio; o
+    `native` é ele fora do meio. Ligar o serviço no clique do "Desligado" seria
+    subir o que ela acabou de mandar sair da frente.
+    """
+    if str(o.get("modo") or "") in _painel().MODOS_LIGADOS:
+        from . import a09_sistema
+
+        a09_sistema.ativar_o_servico()
+    return _hefesto_o_modo(ctx, o, p)
+
+
+def _hefesto_o_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O interruptor propriamente dito: o plano do modo, e a anotação da faixa.
+
+    SEPARADO DE :func:`hefesto` para que o docstring de lá — que é onde moram as
+    DUAS decisões dela sobre este botão — não fique com o corpo no fim de trinta
+    linhas de prosa.
 
     POR QUE `plano_do_modo` E NÃO `apply_mode`: os dois delegam ao mesmo
     `plan_mode_transition`, mas `apply_mode` despacha por `call_async`, que
