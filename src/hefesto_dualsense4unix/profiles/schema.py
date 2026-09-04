@@ -751,13 +751,96 @@ class PonteConfirmada(BaseModel):
         )
 
 
+#: O QUE UMA BARRA DE MOTOR VALE QUANDO NINGUÉM A ARRASTOU — 100 %, ou seja,
+#: fator 1,0: o degrau da coluna chega ao motor inteiro. É a conta de hoje, e o
+#: número mora aqui num dono só para que "sem opinião" e "escolheu 100" sejam
+#: byte-idênticos no aparelho (só o disco os distingue: um grava, o outro não).
+MOTOR_PCT_PADRAO = 100
+
+#: Teto da barra de motor. **Não é o ``RUMBLE_CUSTOM_MULT_MAX``, e a diferença
+#: é o ponto inteiro da decisão dela de 04/09/2026:** a barra é o SEGUNDO fator,
+#: e quem amplifica é o degrau (``Máximo`` = 150 %, ``custom`` até 200 %). Uma
+#: barra acima de 100 amplificaria de novo, e a mesma peça teria duas portas
+#: para o mesmo estouro — que é o defeito HARM-19 pela outra porta.
+MOTOR_PCT_MAX = 100
+
+
+def pcts_dos_motores(rumble: ControllerRumbleOverride | None) -> tuple[int, int]:
+    """``(forte_pct, fraco_pct)`` desta peça — ``(100, 100)`` sem opinião.
+
+    O ÚNICO lugar que resolve o "campo não escrito = sem opinião" das duas
+    barras. Quem multiplicar (``daemon.subsystems.gamepad``) lê daqui em vez de
+    repetir o ``or 100``: dois defaults digitados divergem no primeiro dia em
+    que um deles mudar, e a casa já pagou por isso (HARM-19).
+    """
+    if rumble is None:
+        return (MOTOR_PCT_PADRAO, MOTOR_PCT_PADRAO)
+    forte = rumble.motor_forte_pct
+    fraco = rumble.motor_fraco_pct
+    return (
+        MOTOR_PCT_PADRAO if forte is None else int(forte),
+        MOTOR_PCT_PADRAO if fraco is None else int(fraco),
+    )
+
+
+def motores_dos_controles(
+    controllers: dict[str, ControllerOverrides] | None,
+) -> dict[str, tuple[int, int]]:
+    """``{uniq: (forte_pct, fraco_pct)}`` do perfil — só quem TEM opinião.
+
+    Espelho de ``manager._controllers_to_rumble_scales``, campo por campo, e
+    pela mesma razão de desenho: a peça sem opinião **não entra no mapa**, para
+    que o consumidor não precise distinguir "escreveu 100" de "não escreveu".
+
+    A diferença de fundo, e ela é a decisão dela de 04/09/2026: a escala do
+    irmão é RELATIVA ao degrau global (``mult_da_unidade / mult_global``, e por
+    isso ela pula sob um global em ``auto``); esta é um SEGUNDO FATOR que
+    *compõe* com o degrau — ``efetivo(motor) = degrau x barra(motor)`` —, então
+    não há denominador para se mover, e ela vale com o global em ``auto``
+    também.
+    """
+    fora: dict[str, tuple[int, int]] = {}
+    for uniq, cfg in (controllers or {}).items():
+        rumble = getattr(cfg, "rumble", None)
+        if rumble is None:
+            continue
+        campos = rumble.model_fields_set
+        if "motor_forte_pct" not in campos and "motor_fraco_pct" not in campos:
+            continue
+        par = pcts_dos_motores(rumble)
+        if par == (MOTOR_PCT_PADRAO, MOTOR_PCT_PADRAO):
+            continue  # 100/100 é "sem opinião" no aparelho — não ocupa o mapa
+        fora[uniq] = par
+    return fora
+
+
 class ControllerRumbleOverride(BaseModel):
     """A INTENSIDADE da vibração de UMA unidade física (POR-UNIDADE-01, 10/08).
 
-    Subconjunto DELIBERADO de ``RumbleConfig``: só ``policy`` e
-    ``custom_mult``, os dois campos que descrevem *o quanto* aquela peça de
-    plástico vibra. É o que ela pediu em 10/08/2026 — "uma guia específica do
-    perfil X pro controle branco e outra pro mesmo perfil pro controle preto".
+    Subconjunto DELIBERADO de ``RumbleConfig``: ``policy`` e ``custom_mult``,
+    os dois campos que descrevem *o quanto* aquela peça de plástico vibra. É o
+    que ela pediu em 10/08/2026 — "uma guia específica do perfil X pro controle
+    branco e outra pro mesmo perfil pro controle preto".
+
+    **E, desde 04/09/2026, as DUAS BARRAS DE MOTOR** — ``motor_forte_pct`` e
+    ``motor_fraco_pct``. A decisão é dela, e veio FORA das três opções que eu
+    ofereci (eu perguntei se a barra mandava o par ``rumble.set`` agora ou
+    virava leitura; as duas perguntas estavam erradas):
+
+        *"os slcers do botão esquerdo e direito (forte e fraco) se multiplicam*
+        *(interagem com os botões economia, moderado, máximo, se eu tiver 150%*
+        *do perfil de vibração e as duas linhas estiverem 100 entao a vibração*
+        *dos 2 será 150%, mas se so a do motor fraco tiver 100 e a outrqa 50%*
+        *então será 150 em um e 75% no outro entende?"*
+        <!-- noqa-acento: citação literal dela -->
+
+    A barra **não é um comando: é POLÍTICA**, e por isso mora no perfil ao lado
+    do degrau, e não no ``DaemonConfig``. ``efetivo(motor) = degrau x barra``,
+    e quem faz a conta é ``daemon.subsystems.gamepad``, num lugar só.
+
+    ``rumble.set {weak, strong}`` continua sendo o comando de tremer AGORA, e a
+    barra não o chama — são camadas diferentes, pela mesma razão que separa
+    ``mic.set`` de ``mic.volume.set``.
 
     ``passthrough`` FICA DE FORA, e a ausência é a entrega. Ele não descreve a
     peça: descreve *quem manda na vibração agora* — soltar o rumble que a GUI
@@ -787,6 +870,17 @@ class ControllerRumbleOverride(BaseModel):
     policy: Literal["economia", "balanceado", "max", "custom"] | None = None
     custom_mult: float | None = None
 
+    #: A BARRA DO MOTOR FORTE (``strong``, o grande) desta peça, 0-100.
+    #: ``None`` = sem opinião, que vale ``MOTOR_PCT_PADRAO``. Segundo fator: ele
+    #: MULTIPLICA o degrau da coluna, nunca o substitui.
+    motor_forte_pct: int | None = None
+
+    #: A BARRA DO MOTOR FRACO (``weak``, o pequeno) desta peça, 0-100. Mesmo
+    #: contrato do irmão acima. Os dois são independentes de propósito — é
+    #: exatamente o caso dela: *"se so a do motor fraco tiver 100 e a outrqa
+    #: 50% então será 150 em um e 75% no outro"*. <!-- noqa-acento: citação literal dela -->
+    motor_fraco_pct: int | None = None
+
     @model_validator(mode="before")
     @classmethod
     def _auto_nao_e_por_unidade(cls, data: Any) -> Any:
@@ -815,6 +909,34 @@ class ControllerRumbleOverride(BaseModel):
                 raise ValueError(
                     "custom_mult só é válido com policy='custom' "
                     f"(policy={self.policy!r})"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_barras_de_motor(self) -> ControllerRumbleOverride:
+        """A faixa das barras é 0-100, e a recusa EXPLICA por que não passa de 100.
+
+        Na BORDA, e não no consumidor, pela mesma disciplina do ``custom_mult``:
+        o arquivo inválido morre no load com mensagem, em vez de virar
+        comportamento errado silencioso meses depois. ``0`` é aceito de
+        propósito — "este motor não treme neste perfil" é uma escolha, e é a
+        mesma que o irmão ``set_rumble_scales`` já aceita com fator ``0``.
+        """
+        for nome, valor in (
+            ("motor_forte_pct", self.motor_forte_pct),
+            ("motor_fraco_pct", self.motor_fraco_pct),
+        ):
+            if valor is None:
+                continue
+            if not (0 <= valor <= MOTOR_PCT_MAX):
+                raise ValueError(
+                    f"controllers[...].rumble.{nome} fora de [0, "
+                    f"{MOTOR_PCT_MAX}]: {valor}. A barra é o SEGUNDO fator — "
+                    f"ela multiplica o degrau da coluna (Máximo = 150%, "
+                    f"'custom' até {int(RUMBLE_CUSTOM_MULT_MAX * 100)}%), e "
+                    f"quem amplifica é o degrau. Uma barra acima de "
+                    f"{MOTOR_PCT_MAX} daria à mesma peça duas portas para o "
+                    f"mesmo estouro."
                 )
         return self
 

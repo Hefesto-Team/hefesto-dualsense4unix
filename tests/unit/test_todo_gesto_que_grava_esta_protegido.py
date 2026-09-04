@@ -52,6 +52,17 @@ ESCREVEM = {
     "machine_declare",         # grava `MesaDeclarada` no `maquina.json`
     "set_mask",                # grava a máscara daquele aparelho
     "clear_mask",
+    # ACRESCENTADA EM 04/09/2026, e a razão é o buraco que ela deixou aberto:
+    # a frente da aba 01 pôs na tela o cadeado do `autoswitch`, cujo gesto
+    # grava no disco DELA a preferência de não trocar de perfil sozinho — e
+    # esta régua NÃO O ACUSOU, porque a porta não estava na lista. O gesto
+    # irmão da aba 04 (que usa `gravar_e_reaplicar`) foi acusado no mesmo dia.
+    #
+    # A LIÇÃO, e vale para a próxima porta: uma régua com lista incompleta
+    # protege o que alguém já lembrou, e chama isso de cobertura. Quem ensinar
+    # um gesto a escrever acrescenta a porta AQUI no mesmo commit.
+    "autoswitch_lock_set",     # grava a trava da troca automática
+    "save_autoswitch_locked",  # o escritor por baixo dela
 }
 
 #: E O QUE CHEGA LÁ POR IPC, pelo nome do método. `p.chamar("machine.declare")`
@@ -60,6 +71,7 @@ METODOS_QUE_ESCREVEM = {
     "machine.declare",
     "gamepad.mask.set",
     "profile.save",
+    "autoswitch.lock",         # 04/09/2026 — ver a nota em `ESCREVEM`
 }
 
 

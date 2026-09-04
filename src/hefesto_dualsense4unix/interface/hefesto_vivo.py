@@ -1318,6 +1318,27 @@ PERIGOSOS = {
     ("06-navegacao.html", "guardar-definicoes"),
     ("06-navegacao.html", "padrao-definicoes"),
     ("08-conexoes.html", "teto-da-vibracao"),
+    # E MAIS DOIS, DA LEVA DE 04/09 — e o fato que importa é COMO apareceram:
+    # DUAS frentes independentes (aba 01 e aba 04) toparam com o mesmo buraco,
+    # e NENHUMA das duas podia curá-lo, porque este arquivo está no `nao_toca`
+    # das duas. É a forma exata do defeito que esta casa já viu em 02/09 —
+    # *o defeito que quatro frentes acharam e nenhuma podia curar* — e quem
+    # fecha é quem integra, no mesmo ato em que integra.
+    #
+    #   01-jogar·cadeado       `autoswitch_lock_set` — grava no disco DELA a
+    #                          preferência de não trocar de perfil sozinho. A
+    #                          régua de clique mudaria uma escolha dela para
+    #                          provar que sabe clicar.
+    #   04-iluminacao·auto-cores  `gravar_e_reaplicar` — DESLIGA o automático
+    #                          no perfil dela, pelo mesmo motivo.
+    #
+    # A DIFERENÇA ENTRE OS DOIS, e ela vale registro: o da 04 foi ACUSADO por
+    # `test_todo_gesto_que_grava_esta_protegido`; o da 01 NÃO, porque a régua
+    # não conhecia `autoswitch_lock_set` nem `autoswitch.lock` entre as portas
+    # de escrita. Régua com lista de portas incompleta é régua que protege o
+    # que já foi lembrado — ver a cura no próprio teste, no mesmo commit.
+    ("01-jogar.html", "cadeado"),
+    ("04-iluminacao.html", "auto-cores"),
     # OS CAMPOS DO EDITOR GRAVAM NO DISCO DELA, e o `editor.nome` RENOMEIA o
     # perfil escolhido. Uma régua que os clicasse com o valor que estivesse na
     # tela renomearia um perfil dela para provar que sabe digitar — e o `nome` é
@@ -2754,9 +2775,37 @@ class Piloto:
 
 
 def _json(obj: Any) -> str:
+    """Serializa para o WebView — e RECUSA o que ela mandou tirar da tela.
+
+    Este é o funil: **todo** valor que chega ao `WebKit2.WebView` passa aqui, a
+    pintura e a resposta de gesto. Por isso a guarda de execução das frases
+    banidas mora neste ponto e não em cada aba — uma guarda por aba seriam dez
+    guardas a divergir, e a décima primeira aba nasceria sem nenhuma.
+
+    POR QUE ELA LEVANTA em vez de limpar: as três frases são constantes
+    LITERAIS que já estiveram no produto (`frases_que_ela_baniu`). Código que as
+    produz é defeito, não gosto — e limpar produziria uma frase mutilada na tela
+    dela, que é pior que o vermelho. O OITAVO CONFLITO de 04/09/2026 nasceu
+    exatamente de uma proibição que sabia recusar, mas recusava no LUGAR ERRADO:
+    ela lia o HTML estático, e a coluna Atenção é escrita em execução.
+    """
     import json
 
-    return json.dumps(obj, ensure_ascii=False, default=str)
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+        frase_banida_em,
+    )
+
+    saida = json.dumps(obj, ensure_ascii=False, default=str)
+    banida = frase_banida_em(saida)
+    if banida is not None:
+        raise ValueError(
+            f"um texto banido ia para a tela dela: {banida!r}. "
+            "Ela, 31/08/2026: NENHUM ALARME SEM MEDIÇÃO — as três frases "
+            "alarmavam sobre número que ensaio nenhum deste repositório mede. "
+            "A coluna Atenção pode dizer o ESTADO MEDIDO; não pode profetizar "
+            "consequência. Ver `interface/frases_que_ela_baniu.py`."
+        )
+    return saida
 
 
 def main() -> None:

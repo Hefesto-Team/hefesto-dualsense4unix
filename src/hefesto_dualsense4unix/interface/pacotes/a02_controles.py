@@ -69,6 +69,10 @@ import re
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
+from hefesto_dualsense4unix.app.ipc_bridge import (
+    alvo_honrado,
+    frase_do_ato_do_microfone,
+)
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     ALL_BUTTONS,
     CANAL_SONS_DO_JOGO,
@@ -79,6 +83,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     acao_mic,
     acao_speaker_mudo,
     accel_do_inputs,
+    frase_do_alvo_do_mic,
     gyro_do_inputs,
     rotulo_lightbar,
     speaker_do_entry,
@@ -101,6 +106,7 @@ from . import (
     NOME_SEM_LEITURA,
     VIA_DO_TRANSPORTE,
     Contexto,
+    degradacao_de,
     identidade_de,
     registrar,
 )
@@ -861,6 +867,101 @@ def _cor_da_barra(rotulo: str | None, base: tuple[int, ...] | None) -> str:
 
 
 # ---------------------------------------------------------------------------
+# O TRAVESSÃO DA BARRA DE LUZ VIRA PALAVRA — decisão [02], 04/09/2026
+# ---------------------------------------------------------------------------
+# ATÉ HOJE OS TRÊS "NÃO SEI" DO `luz_hex` COLAPSAVAM NUM TRAVESSÃO SÓ, e os
+# três dizem coisas diferentes: em Modo Nativo o LED é do JOGO, com a Steam
+# aberta o valor é o que nós PEDIMOS (não o que a barra emite), e a cor
+# desconhecida é o sysfs sem escrita nossa. Um `—` para os três apaga a única
+# pergunta que a pessoa faz olhando ali: *"por que não vejo a cor?"*.
+#
+# A DECISÃO DELA: **palavra curta no lugar do travessão, frase inteira no
+# hover** — as quatro palavras são dela, e estão no
+# `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`, §2, `02-controles`
+# [02]: `Jogo` · `Steam` · `Não sei` · `Apagada`.
+#
+# A FRASE INTEIRA NÃO CABE NO CAMPO, e isso está MEDIDO (ver o comentário do
+# `luz-hex` no pintor): a linha que contém o `<span class="de-quem">` mede
+# 148px, e "Lightbar: apagada" ocupa 86,7px QUEBRANDO a linha. Palavra cabe,
+# frase não — e é por isso que a frase mora no `title`, que não paga pixel.
+#
+# OS QUATRO RÓTULOS SÃO PERGUNTADOS AO MOTOR, NENHUM DIGITADO. É a mesma
+# disciplina do `ROTULO_DA_LUZ_APAGADA` logo acima, e a mesma razão: no dia em
+# que `rotulo_lightbar` trocar uma frase, a tabela abaixo deixa de casar e a
+# palavra volta a ser o travessão — barulhento, e não calado.
+
+#: "Em Nativo o jogo é dono do LED" — a entrada mínima que só este ramo atende.
+ROTULO_DA_LUZ_EM_NATIVO = rotulo_lightbar({}, {"native_mode": True})[0]
+
+#: "A Steam tem este controle aberto" — `lightbar_disputada`, sem Nativo.
+ROTULO_DA_LUZ_SEGURADA = rotulo_lightbar({"lightbar_disputada": True}, {})[0]
+
+#: "Lightbar: cor desconhecida" — sem fonte e sem rgb, que é o ramo padrão.
+ROTULO_DA_LUZ_DESCONHECIDA = rotulo_lightbar({}, {})[0]
+
+#: A PALAVRA CURTA DE CADA RÓTULO — decisão dela, [02].
+#:
+#: `Não sei` NÃO É DIGITADO: é `pacotes.NOME_SEM_LEITURA`, a mesma palavra que a
+#: fita do topo já usa para um controle sem nome lido. Duas grafias de "não sei"
+#: na mesma tela seriam duas traduções do mesmo fato — o que esta casa persegue.
+PALAVRA_DA_LUZ: dict[str | None, str] = {
+    ROTULO_DA_LUZ_EM_NATIVO: "Jogo",
+    ROTULO_DA_LUZ_SEGURADA: "Steam",
+    ROTULO_DA_LUZ_DESCONHECIDA: NOME_SEM_LEITURA,
+    ROTULO_DA_LUZ_APAGADA: "Apagada",
+}
+
+#: A FRASE DO HOVER QUANDO A COR É CONHECIDA — e ela é a do desenho de hoje,
+#: movida para cá porque **o texto de tela desta aba mora no pacote** (o
+#: cabeçalho do `interface/aba02.py` escreve a lei, e a seta aponta para cá).
+#: Ela era um literal do gerador, e o `title` do campo passou a ser PINTADO:
+#: com duas cópias, a viva e a do desenho divergiriam na primeira edição.
+DICA_DA_LUZ = ("Este é o código da cor do JOGADOR, não a do plástico — quem "
+               "escolhe é o produto, pela mesma tabela que acende as cinco "
+               "lâmpadas (core/led_control.py::player_slot_color). Ele não é "
+               "digitado aqui: sai da tabela, e muda no dia em que ela mudar.")
+
+
+def luz_palavra(rotulo: str | None, base: tuple[int, ...] | None) -> str:
+    """O que o campo MOSTRA: o código de cor, ou a palavra curta do estado.
+
+    A cor conhecida continua sendo o hexadecimal — ela é a informação, e
+    trocá-la por palavra perderia o que a pessoa foi ali ver. O que muda são os
+    três "não sei" e a "apagada", que dividiam um travessão só.
+
+    RÓTULO QUE O MOTOR PASSE A DEVOLVER E ESTA TABELA NÃO CONHEÇA cai no
+    travessão de antes, e não numa palavra chutada: o `luz_hex` é o dono do
+    desfecho, e esta função só traduz o que ele já decidiu ser "não sei".
+
+    **A TABELA VEM ANTES DO `luz_hex`, e a ordem foi medida.** A "apagada" é o
+    único dos quatro estados em que o `luz_hex` devolve um CÓDIGO
+    (`HEX_DA_LUZ_APAGADA`, o preto que uma barra sem corrente emite) — decidir
+    pelo `#` deixaria justamente ela sem a palavra dela, e ela é uma das quatro
+    que o PO nomeou. O preto continua indo para o RETÂNGULO, que é onde ele
+    quer dizer alguma coisa: `_cor_da_barra` lê o `luz_hex`, não esta função.
+    """
+    if rotulo in PALAVRA_DA_LUZ:
+        return PALAVRA_DA_LUZ[rotulo]
+    return luz_hex(rotulo, base)
+
+
+def luz_porque(rotulo: str | None, base: tuple[int, ...] | None) -> str:
+    """A frase inteira, para o `title` da linha da Barra de luz.
+
+    Com a cor conhecida ela é a explicação de quem escolhe a cor
+    (:data:`DICA_DA_LUZ`); nos outros quatro estados é a frase que o MOTOR
+    devolve, palavra por palavra — é ela que diz por que o código não aparece.
+
+    O `base` entra sem ser lido de propósito: a assinatura é a mesma do
+    `luz_palavra` e do `_cor_da_barra`, e os três são chamados lado a lado com
+    o par inteiro. Uma assinatura diferente aqui convidaria alguém a passar só
+    o rótulo num dos três — que é exatamente o defeito que o `luz_hex` existe
+    para fechar.
+    """
+    return DICA_DA_LUZ if rotulo is None and base is not None else str(rotulo or "")
+
+
+# ---------------------------------------------------------------------------
 # OS DOIS ACESOS QUE A TELA AFIRMAVA SEM LER — 03/09/2026
 # ---------------------------------------------------------------------------
 # ESTA ABA TEM QUATRO BOTÕES QUE DIZEM "ESTE É O ESCOLHIDO" — os dois da rota
@@ -923,7 +1024,15 @@ NOME_DO_BOTAO_DA_ROTA: dict[int, str] = {
 
 
 def rota_na_tela(entry: Any) -> str:
-    """Qual dos dois botões de rota está aceso: `"jogo"`, `"pc"` ou `""`.
+    """O que a CAMADA 2 (o byte do firmware) diz: `"jogo"`, `"pc"` ou `""`.
+
+    **ELA É METADE DA RESPOSTA, e a outra metade decide** — 04/09/2026,
+    decisão [09] desta aba. O que a tela ACENDE sai de :func:`aceso_da_rota`,
+    que junta esta leitura com a camada 1 (a saída padrão do PipeWire). Esta
+    função continua existindo porque o byte é um fato próprio, com dono
+    próprio, e quem compõe as duas precisa de cada uma separada — foi assim
+    que a ONDA1-D1 escreveu `audio_saida.botao_da_rota_aceso`, que é o dono da
+    composição.
 
     `""` É "NÃO SEI", E ELE APAGA OS DOIS. O piloto escreve o travessão para
     valor vazio, e no alvo `classe` com `data-hef-quando` nenhum dos dois casa
@@ -943,6 +1052,325 @@ def rota_na_tela(entry: Any) -> str:
     if isinstance(rota, bool) or not isinstance(rota, int):
         return ""
     return NOME_DO_BOTAO_DA_ROTA.get(rota, "")
+
+
+def _byte_da_rota(entry: Any) -> int | None:
+    """O `speaker.rota` cru — `None` quando o daemon nunca o publicou."""
+    bloco = _bloco_do_speaker(entry)
+    if bloco is None:
+        return None
+    rota = bloco.get("rota")
+    return None if isinstance(rota, bool) or not isinstance(rota, int) else rota
+
+
+# ---------------------------------------------------------------------------
+# A CAMADA 1 DA ROTA — o que o PipeWire diz, num relógio próprio
+# ---------------------------------------------------------------------------
+# O CARD 2 DELA ACENDIA "TODO O SOM DO PC" COM O SOM NA TV, medido em
+# 03/09/2026. A causa está escrita no motor: *"a camada 1 vence a camada 2 —
+# volume e rota perfeitos num sink mudo é trabalho invisível"*
+# (`controller_card.py:4218`). O byte é a camada 2; quem decide ONDE o som sai
+# é a saída padrão do sistema.
+#
+# POR QUE NÃO NO TIQUE: `audio_saida.ler_as_duas_camadas` roda `pactl` — dois
+# subprocessos por controle. A dez tiques por segundo, com quatro controles na
+# mesa, seriam 80 subprocessos por segundo na máquina dela. A leitura vive num
+# CACHE com relógio próprio e uma thread que o renova, que é a mesma forma da
+# `a09_sistema._faixa_lenta` (e a mesma razão: *"a primeira leva 18 ms"* lá,
+# aqui bem mais).
+#
+# E A PRIMEIRA LEITURA É SÍNCRONA de propósito. Devolver "não sei" até uma
+# thread voltar faria os dois botões apagarem no primeiro tique e acenderem no
+# segundo — a tela piscando sobre um fato que não mudou. Quem paga é a primeira
+# pintura da aba, uma vez por abertura.
+
+#: De quanto em quanto tempo a camada 1 se relê. Dois segundos é o mesmo ciclo
+#: que o `canal_do_microfone_loop` do daemon usa para a mesma família de
+#: pergunta (o PipeWire), e pela mesma razão: é leitura de sistema, não de
+#: quadro.
+CAMADA_1_S = 2.0
+
+#: `{uniq: RotaDasDuasCamadas}` — o que a última leitura disse, por controle.
+_CAMADA_1: dict[str, Any] = {}
+_CAMADA_1_QUANDO = [0.0]
+_CAMADA_1_EM_VOO = [False]
+
+
+def _ler_a_camada_1(entradas: tuple[tuple[str, int | None], ...],
+                    na_mesa: tuple[str, ...]) -> dict[str, Any]:
+    """A camada 1 de cada controle da mesa. BLOQUEANTE — roda `pactl`.
+
+    `entradas` é `(uniq, byte)` porque o byte **não se relê aqui**: quem o
+    publica é o daemon, e uma segunda leitura seria a segunda verdade. É o
+    contrato que `audio_saida.ler_as_duas_camadas` escreve com todas as letras.
+    """
+    lido: dict[str, Any] = {}
+    for uniq, byte in entradas:
+        if not uniq:
+            continue
+        try:
+            lido[uniq] = audio_saida.ler_as_duas_camadas(uniq, byte, list(na_mesa))
+        except Exception:
+            # UMA LEITURA QUE FALHA NÃO APAGA AS OUTRAS, e não vira `False`:
+            # a chave simplesmente não entra, e quem pergunta recebe "não sei".
+            continue
+    return lido
+
+
+def _camada_1(entradas: tuple[tuple[str, int | None], ...],
+              na_mesa: tuple[str, ...]) -> dict[str, Any]:
+    """O cache da camada 1, renovado em THREAD a cada :data:`CAMADA_1_S`.
+
+    **NUNCA SÍNCRONO, nem na primeira vez** — e a primeira redação desta função
+    era, o que estava errado por dois motivos que apontam para o mesmo lado:
+
+    * quem chama é o pintor, e o pintor roda no laço principal da GTK a 10 Hz.
+      Um `subprocess` ali TRAVA a janela dela — é exatamente por isso que o
+      `ipc_bridge.run_in_thread` existe, e a ONDA1-D1 escreveu com todas as
+      letras que esta leitura *"é bloqueante: quem chama é `run_in_thread`"*;
+    * numa suíte de teste, uma primeira leitura síncrona faria toda régua que
+      chama `pacote()` conversar com o PipeWire da máquina dela.
+
+    O QUE ISSO CUSTA, e o preço está declarado: nos primeiros tiques o cache
+    está vazio e `aceso_da_rota` cai no BYTE — a resposta de antes desta cura,
+    por ~2 s. É menos honesto que a resposta inteira e é mais honesto que
+    apagar os dois botões afirmando uma ignorância que dura dois segundos.
+
+    **ELE É O PONTO DE INJEÇÃO DAS RÉGUAS**, como o `_LENTO` da `a09_sistema`:
+    quem quiser medir o desacordo das duas camadas escreve em `_CAMADA_1` e não
+    espera thread nenhuma — uma régua que dependesse de um relógio seria uma
+    corrida, e corrida na suíte é vermelho que aparece uma vez em dez.
+    """
+    import threading
+    import time
+
+    if not na_mesa or _CAMADA_1_EM_VOO[0]:
+        return _CAMADA_1
+    agora = time.monotonic()
+    if _CAMADA_1_QUANDO[0] and agora - _CAMADA_1_QUANDO[0] < CAMADA_1_S:
+        return _CAMADA_1
+    _CAMADA_1_EM_VOO[0] = True
+    # O RELÓGIO ANDA AGORA, e não quando a thread voltar: com a leitura levando
+    # mais que o intervalo, marcar no fim faria o pintor disparar uma thread por
+    # tique — dez `pactl` por segundo, que é o oposto do que esta função existe
+    # para evitar. O `_CAMADA_1_EM_VOO` já impede a segunda; isto impede que a
+    # primeira volte a ser "devida" antes de a próxima janela abrir.
+    _CAMADA_1_QUANDO[0] = agora
+
+    def renovar() -> None:
+        try:
+            novo = _ler_a_camada_1(entradas, na_mesa)
+            _CAMADA_1.clear()
+            _CAMADA_1.update(novo)
+        finally:
+            _CAMADA_1_EM_VOO[0] = False
+
+    threading.Thread(target=renovar, name="hefesto-rota-camada-1",
+                     daemon=True).start()
+    return _CAMADA_1
+
+
+def aceso_da_rota(uniq: str, entry: Any) -> str:
+    """Qual botão de rota a tela pode ACENDER, lendo as DUAS camadas.
+
+    O dono da tabela é `audio_saida.botao_da_rota_aceso`, e ela está escrita
+    lá: byte 3 com a saída padrão NESTE controle acende `"pc"`; byte 3 com a
+    saída padrão em outro lugar **apaga os dois** e vira recado; byte 2 acende
+    `"jogo"`; 0, 1 e ausente apagam os dois.
+
+    SEM A CAMADA 1 LIDA, o que sobra é o byte — e é o que esta função devolve.
+    É o estado dos primeiros milissegundos da aba (o cache ainda vazio para
+    aquele controle) e o de uma máquina sem `pactl`: melhor mostrar a metade
+    que se sabe do que apagar os dois botões afirmando ignorância que não há.
+    """
+    lida = _CAMADA_1.get(uniq)
+    if lida is None:
+        return rota_na_tela(entry)
+    return str(lida.botao_aceso)
+
+
+def recado_da_rota(uniq: str) -> str:
+    """A frase do cartão quando as duas camadas discordam; `""` quando não.
+
+    Só há UM desacordo que precisa de palavras, e o dono dele é
+    `audio_saida.recado_da_rota`: o firmware roteado para "todo o som do PC"
+    com a saída padrão do sistema em outro lugar — o estado exato que ela viu
+    em 03/09, com o botão aceso e o som na TV.
+    """
+    lida = _CAMADA_1.get(uniq)
+    return "" if lida is None else str(lida.recado)
+
+
+# ---------------------------------------------------------------------------
+# O SELO DO MICROFONE DIZ O ESTADO COMPOSTO — decisão [03], conflito C-2
+# ---------------------------------------------------------------------------
+# A D-12 DELA, verbatim: *"o botão é pra ligar o microfone e ele ser ouvido no
+# canal específico dele"*. Sob esse conceito não há duas camadas a conciliar: o
+# microfone deste controle está no ar quando o firmware NÃO o cala **e** o som
+# dele chega ao PC pelo canal dele. Um selo que dissesse ATIVO só pelo bit do
+# firmware afirmaria captura sobre um controle cujo som não sai em lugar
+# nenhum — e foi o que ele fez até hoje.
+#
+# AS QUATRO FACES, e cada uma tem chave própria no `state_full.audio` desde a
+# ONDA1-D1:
+#
+#   mic_mudo             o PLÁSTICO. O bit que vem em todo report de entrada.
+#   mic_mudo_desejado    o que NÓS pedimos. `None` = a posse é do kernel, e
+#                        aí o desejo não existe — não é "não sei".
+#   canal_ativo          a fonte deste controle é a fonte ATIVA do sistema.
+#   canal_mudo           essa fonte está muda no PipeWire.
+#
+# `mic_da_mesa.eleito` **NÃO ENTRA**, e a razão é medida: a D1 o viu MENTINDO —
+# com o canal trocado por fora (`pactl set-default-source`), o `state_full`
+# seguiu dizendo `eleito: <uniq>` com o ativo sendo a webcam, porque o
+# `EleitorDeMicrofone` só se corrige em gesto. `canal_ativo` é LEITURA; `eleito`
+# é memória. Onde os dois divergem, a leitura ganha.
+#
+# AUSÊNCIA NÃO É `False`. As três chaves de canal são novas e o laço que as
+# preenche tem ciclo de 2 s: enquanto ele não perguntou, elas não aparecem.
+# `bool(None)` é `False`, e um `False` ali pintaria MUDO sobre um microfone que
+# ninguém leu — o gêmeo exato do "Sem toque" e do "0%" que esta aba já matou.
+
+# QUEM DIZ "CALADO" GANHA DE QUEM DIZ "NÃO SEI", e a ordem é essa porque um
+# FATO vence uma ausência: com o firmware calado e o canal ainda não lido, a
+# resposta é MUDO — não "não sei". O contrário (ausência vencendo fato)
+# apagaria o único estado desta tela que se mede sem perguntar ao PipeWire.
+def _faces_do_microfone(a: dict[str, Any]) -> tuple[bool, bool]:
+    """`(alguma_diz_calado, alguma_nao_foi_lida)` das quatro faces.
+
+    Ela é uma função à parte para poder ser MEDIDA face a face: a régua desta
+    aba passa os dezesseis arranjos e cobra o par, o que uma expressão dentro
+    do pintor não deixaria fazer sem montar um `state_full` inteiro.
+    """
+    calado = False
+    nao_sei = False
+
+    firmware = a.get("mic_mudo")
+    if isinstance(firmware, bool):
+        calado = calado or firmware
+    else:
+        nao_sei = True
+
+    # O DESEJO SÓ FALA QUANDO EXISTE: `None` é "a posse é do kernel", que é um
+    # fato sobre QUEM MANDA e não sobre o mudo. Tratá-lo como ausência faria a
+    # mesa dela inteira dizer `—`, porque `mic_mudo_desejado: null` é o estado
+    # dos dois controles dela agora.
+    desejado = a.get("mic_mudo_desejado")
+    if isinstance(desejado, bool):
+        calado = calado or desejado
+
+    canal = a.get("canal_ativo")
+    if isinstance(canal, bool):
+        calado = calado or not canal
+    else:
+        nao_sei = True
+
+    mudo_do_canal = a.get("canal_mudo")
+    if isinstance(mudo_do_canal, bool):
+        calado = calado or mudo_do_canal
+    elif "canal_mudo" in a:
+        # `None` DENTRO da chave é o que o daemon devolve quando não há fonte
+        # para perguntar (`hotkey.py:929`) — "não consegui ler", e não "está no
+        # ar". A chave AUSENTE é o mesmo desfecho por outro caminho.
+        nao_sei = True
+    else:
+        nao_sei = True
+
+    return calado, nao_sei
+
+
+def selo_composto(a: dict[str, Any]) -> str:
+    """ATIVO · MUDO · — pelas QUATRO faces, e ATIVO só quando elas concordam.
+
+    A palavra é do MESMO dono de sempre — `mesa_viva.selo_do_mic` —, e é ele
+    que escreve as três; o que esta função faz é decidir QUAL. Escrever
+    "ATIVO" aqui seria a segunda gramática para o par de palavras que a tela
+    inteira já usa, a dois blocos de distância.
+    """
+    import mesa_viva
+
+    calado, nao_sei = _faces_do_microfone(a)
+    if calado:
+        return str(mesa_viva.selo_do_mic(True, True))
+    if nao_sei:
+        return str(mesa_viva.selo_do_mic(False, False))
+    return str(mesa_viva.selo_do_mic(False, True))
+
+
+# ---------------------------------------------------------------------------
+# O BOTÃO AVISA ANTES DO CLIQUE — decisão [04] (D-03), 04/09/2026
+# ---------------------------------------------------------------------------
+# ELA DESCOBRIA A RECUSA DEPOIS DE CLICAR, e essa é a queixa inteira: o 🎙 e o
+# ♪ ficavam da mesma cor de sempre, ela clicava, e só então a frase caía no
+# cartão. A D-03: *"Cinza antes, com a razão na dica."*
+#
+# A CONDIÇÃO **NÃO SE ESCREVE AQUI** — ela é a mesma que o GESTO usa para
+# levantar, e é do motor: `acao_mic` e `acao_speaker_mudo`
+# (`app/widgets/controller_card.py`) são os donos dos estados destes dois
+# botões, e `sensivel=False` é exatamente o estado em que a GTK os deixa
+# cinza. Uma cópia da pergunta faria a tela apagar um botão que o gesto aceita
+# — ou pior, deixar aceso um que ele recusa, que é a doença de origem.
+#
+# MEDIDO NESTA LEVA, e é por isso que a régua morde nos DOIS lados: com a
+# condição copiada, arrancar a cura do gesto passava VERDE. É a mesma cicatriz
+# que o `mic-modo` desta aba já carrega, escrita no gesto dele.
+
+
+#: POR QUE O ♪ ESTÁ CINZA, na frase que aponta para a saída. Ela mora no
+#: PACOTE porque **o texto de tela desta aba mora no pacote** — a lei está no
+#: cabeçalho do `interface/aba02.py`, e o gerador a importa daqui para o
+#: `title`. Enquanto ela era literal do gerador, o botão apagado dizia uma
+#: coisa no desenho e o `?` diria outra na tela viva.
+DICA_ALTO_SEM_POSSE = ("Apagado porque o volume deste alto-falante ainda é "
+                       "desconhecido: o DualSense não o publica, e o daemon "
+                       "recusa calar sem ele. Arraste o volume ao lado uma vez "
+                       "e ele destrava.")
+
+#: "NÃO HÁ O QUE DIZER", dito de um jeito que a folha da casa sabe APAGAR.
+#:
+#: **É CÓPIA DECLARADA de `interface/monta.NADA_A_DIZER`**, e a cópia existe
+#: por uma razão estrutural, não por descuido: `monta.py` é BANCADA — importá-lo
+#: de dentro de um pacote arrasta o gerador para o fecho de produção, e o
+#: `portao_a_casa_sabe_e_o_produto_nao_faz` já reprovou exatamente isso em
+#: 02/09/2026, nomeando três lápides daquele arquivo que viraram alcançáveis.
+#:
+#: QUEM IMPEDE AS DUAS DE DIVERGIREM É RÉGUA, e é a mesma disciplina que a
+#: ONDA0-F já aplicou à terceira cópia (`a06_navegacao.py`): o teste desta aba
+#: importa `monta` — que ele PODE, porque teste não é fecho de produção — e
+#: compara os dois literais.
+#:
+#: E O MARCADOR É NECESSÁRIO: `escrever()` troca valor vazio por travessão para
+#: TODOS os alvos, o `html` incluído (`hefesto_vivo.py:245`), então mandar `""`
+#: numa ressalva escreve um `—` solto onde não há nada a dizer.
+NADA_A_DIZER = '<i class="nada"></i>'
+
+
+def porques_do_som(entry: Any) -> dict[str, str]:
+    """`{"mic-porque": …, "alto-porque": …}` — vazio quando o botão está vivo.
+
+    **A do ♪ NÃO é a do motor, e a diferença está medida.** O
+    `DICA_SPEAKER_SEM_DADO` da GTK manda *"use o controle deslizante primeiro"*,
+    e até 04/09/2026 esta janela não tinha deslizante nenhum — mandar alguém a
+    um controle que não está na tela é pior que não dizer nada. **Hoje ele
+    existe** (D-08, o `<input type="range">` dos dois blocos), então a frase
+    daqui aponta para ELE, que é o que destrava o botão: é a mesma frase que o
+    gerador já escrevia no `title` desde 03/09 (`DICA_ALTO_SEM_POSSE`), e
+    escrevê-la nos dois lugares seria a segunda cópia — o gerador passa a
+    importá-la daqui.
+
+    **O "DEVOLVER" FICA FORA, E É A DICA QUE DIZ O PREÇO — decisão [06].** É a
+    decisão dela de 31/08 sobre o gêmeo (o "Liberar" do microfone): *"o botão
+    do Controle sempre controla a interface, por isso não faz sentido o liberar
+    ali"*. O preço do ♪ é menor que o do 🎙 e continua sendo um preço — quem
+    diz isso é o `title` do botão, e ele mora no gerador, ao lado do rótulo que
+    explica.
+    """
+    do_mic = acao_mic(entry)
+    do_alto = acao_speaker_mudo(entry)
+    return {
+        "mic-porque": "" if do_mic.sensivel else str(do_mic.dica),
+        "alto-porque": "" if do_alto.sensivel else DICA_ALTO_SEM_POSSE,
+    }
 
 
 #: A DECLARAÇÃO DELA, do `maquina.json`, lida UMA VEZ e renovada pelo gesto que
@@ -1094,6 +1522,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     import mesa_viva
 
     cards = {}
+    # A CAMADA 1 DA ROTA, uma vez por tique e para a mesa inteira — ver
+    # `_camada_1`. Ela é BLOQUEANTE (roda `pactl`), então tem relógio próprio:
+    # a leitura fica em cache e uma thread a renova a cada dois segundos. Sem
+    # isto o "Todo o som do PC" continuaria acendendo pelo byte, que é como o
+    # card 2 dela ficou aceso com o som saindo na TV, em 03/09.
+    na_mesa = tuple(str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq"))
+    _camada_1(
+        tuple((str(c.get("uniq") or ""), _byte_da_rota(c)) for c in ctx.conectados),
+        na_mesa,
+    )
     # ONDE CADA PONTINHO ESTÁ, por assento — ver `folha_das_posicoes`. Ele se
     # junta AQUI, e não dentro de `cards`, porque o destino é a folha da PÁGINA:
     # `left`/`top` não são campo de um elemento, são regra de um seletor.
@@ -1153,8 +1591,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # seja, o controle que acabou de cair anunciava que estava capturando.
         # Com a inversão da luz (aceso = no ar), isso vira mentira no plástico
         # de quatro pessoas ao mesmo tempo.
-        sabemos = isinstance(a.get("mic_mudo"), bool)
-        mudo = bool(a.get("mic_mudo"))
+        #
+        # **AS DUAS LEITURAS QUE MORAVAM AQUI DESCERAM PARA `selo_composto` —
+        # 04/09/2026, decisão [03].** Eram `sabemos = isinstance(a["mic_mudo"],
+        # bool)` e `mudo = bool(a["mic_mudo"])`, as duas do MESMO bit, e o selo
+        # se decidia só com elas. As quatro faces da D-12 não cabem em duas
+        # variáveis locais, e escrevê-las aqui deixaria a régua sem como medir
+        # o selo sem montar um `state_full` inteiro.
         pct = c.get("battery_pct")
         # OS BOTÕES APERTADOS, com o nome que o daemon publica. É a MESMA leitura
         # do dono na GTK (`app/widgets/controller_card.py:5453`, `"l3" in
@@ -1260,11 +1703,23 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # 28px de altura). Ou seja: PALAVRA CABE aqui, frase não. Qual
             # palavra é decisão dela; até ela dizer, o campo mostra código de
             # cor ou travessão, que é o vocabulário que ele já tem.
-            "luz-hex": luz_hex(rotulo_da_luz, base_da_luz),
+            # A PALAVRA CURTA NO LUGAR DO TRAVESSÃO — decisão [02], 04/09/2026.
+            # O código de cor continua saindo quando há cor; o que muda são os
+            # quatro estados que dividiam um `—` só. Ver `luz_palavra`, e a
+            # frase inteira vai para o `title` da linha (`luz-porque`).
+            "luz-hex": luz_palavra(rotulo_da_luz, base_da_luz),
             # UM DONO SÓ para o selo, nos dois pintores (auditoria 02/09/2026):
             # `mesa_viva.selo_do_mic`. O ternário estava escrito duas vezes, e
             # a régua do outro lado olhava o TEXTO — a cura de lá caía calada.
-            "mic-selo": mesa_viva.selo_do_mic(mudo, sabemos),
+            #
+            # **E ELE PASSOU A DIZER O ESTADO COMPOSTO — 04/09/2026, decisão
+            # [03] (conflito C-2), pela D-12 dela.** Esta linha era
+            # `selo_do_mic(mudo, sabemos)`, e `mudo` é SÓ o bit do firmware: a
+            # tela dizia ATIVO sobre um microfone cujo som não chegava a canal
+            # nenhum. As quatro faces e a razão de cada uma estão em
+            # `selo_composto`, logo acima; o `sabemos`/`mudo` daqui continuam
+            # vivos porque o `resumo_fechado` da linha fechada os usa.
+            "mic-selo": selo_composto(a),
             # O `mic-modo` SAIU DAQUI EM 01/09/2026, e ele APAGAVA DOIS BOTÕES.
             # O endereço `data-campo="mic-modo"` não era uma folha: era o
             # `<span class="rota mic-modo">` que ENVOLVE o Virtual e o Nativo. O
@@ -1453,13 +1908,63 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # (`hefesto_vivo.escrever`, ramo `classe`). É a mesma gramática
                 # dos quatro degraus da Vibração, e é ela que faz "ligar um
                 # desligar a irmã" acontecer sem lista de irmãs.
-                "alto-rota": rota_na_tela(c),
+                # **ELE PASSOU A LER AS DUAS CAMADAS — 04/09/2026, decisão
+                # [09].** Era `rota_na_tela(c)`, o byte e mais nada, e foi
+                # assim que o card 2 dela acendeu "Todo o som do PC" com o som
+                # saindo na TV. Ver `aceso_da_rota`, e a ressalva logo abaixo,
+                # que é onde o desacordo entre as duas vira palavra.
+                "alto-rota": aceso_da_rota(uniq, c),
+                # A RESSALVA DO ALTO-FALANTE — a peça da ONDA0-F (D-02), e o
+                # texto é do motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela
+                # **nasce e morre com o desacordo**: sem ele, o campo vai com
+                # `monta.NADA_A_DIZER` e a linha some sem cobrar um pixel.
+                #
+                # E A CHAVE VAI EM TODO TIQUE, que é a instrução da folha com
+                # todas as letras: omiti-la deixaria a frase velha na tela para
+                # sempre — o defeito oposto, e pior.
+                "alto-ressalva": recado_da_rota(uniq) or NADA_A_DIZER,
                 "mic-modo-aceso": modo_do_mic(norm_mac(uniq) or ""),
+                # A DEGRADAÇÃO DA MÁSCARA — decisão [07], 04/09/2026: *"uma
+                # marca na palavra e o motivo no hover"*.
+                #
+                # O AJUDANTE JÁ EXISTIA E NENHUM DOS DEZ PACOTES O CHAMAVA:
+                # `pacotes.degradacao_de` delega a `controller_card.
+                # texto_degradacao`, que é o dono da regra na GTK e o dono da
+                # tradução do motivo técnico para frase leiga
+                # (`MOTIVOS_DEGRADACAO_LEIGOS`). Não faltava código — faltava
+                # onde pousar a frase.
+                #
+                # UM CAMPO SÓ FAZ AS DUAS COISAS, e é por isso que o alvo é
+                # `atributo` e não `classe`: o `<sup>` do gerador nasce
+                # `display:none` e a folha o mostra por `[title]`. Com a marca
+                # numa classe e o motivo noutro campo, seria possível pintar
+                # uma marca sem motivo — e uma marca sem explicação é ruído com
+                # cara de dado, que é o que o `?` da ONDA0-F já recusa.
+                "mascara-degradou": degradacao_de(c),
                 # A LEITURA VIVA — 46 campos por card, e nenhum deles tinha
                 # endereço até 03/09/2026. Ver `leitura_viva`, que traz a mesa
                 # do que a tela dizia contra o que o aparelho publicava no
                 # mesmo instante.
                 **leitura_viva(c),
+                # A FRASE INTEIRA DA BARRA DE LUZ, no `title` da linha —
+                # decisão [02]. O campo ao lado mostra a PALAVRA (`Jogo`,
+                # `Steam`, `Não sei`, `Apagada`) e este diz a frase que o motor
+                # devolve. Ver `luz_porque`: com a cor conhecida ele volta a
+                # ser a explicação de quem escolhe a cor, que era literal do
+                # gerador até hoje.
+                "luz-porque": luz_porque(rotulo_da_luz, base_da_luz),
+                # OS DOIS BOTÕES DE SOM QUE VÃO RECUSAR — decisão [04] (D-03),
+                # com a peça da ONDA0-F. **UM CAMPO SÓ ALIMENTA O BOTÃO E A
+                # DICA**: o botão pelo alvo `classe` (acende `apagado` quando o
+                # valor não é vazio) e o `?` pelo alvo `html`. Com dois campos
+                # seria possível pintar um botão cinza sem razão.
+                #
+                # A RAZÃO É A DO MOTOR, e é a MESMA que o gesto levanta quando
+                # o clique chega assim mesmo: `acao_mic` e `acao_speaker_mudo`
+                # são os donos dos estados destes dois botões na GTK. A tela
+                # deixa de descobrir a recusa DEPOIS do clique — que é a
+                # queixa inteira da D-03.
+                **porques_do_som(c),
             }),
         }
     # OS VALORES QUE VALEM PARA A PÁGINA INTEIRA, e não por card. Os três nasceram
@@ -1598,6 +2103,30 @@ from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 from . import gesto  # noqa: E402
 
 
+def _corpo(r: Any) -> dict[str, Any] | None:
+    """A resposta do daemon como CORPO, tolerando ponte que devolva só `bool`.
+
+    As duas funções `_detalhado` da ponte devolvem `dict | None`, e é o corpo
+    que carrega o que o `bool` apagava — QUAL metade do ato do microfone
+    faltou, e se o volume caiu no controle de outra pessoa. Este guarda existe
+    pela MESMA razão que o `_resposta` daqui de baixo, e ela é do instrumento:
+    o dublê da régua compartilhada (`test_os_botoes_tem_dono.PonteDeMentira`)
+    responde `True` a todo nome que ele não conhece, e um `.get` às cegas
+    levantaria `AttributeError` DENTRO do teste — o instrumento reprovando a si
+    mesmo em vez de medir o botão.
+
+    **E ELE NÃO INVENTA A NOTÍCIA QUE O `bool` NÃO TEM.** `True` vira
+    `{"status": "ok"}` e mais nada: sem `motivo` e sem `por_uniq`, os dois
+    caminhos que dizem alguma coisa a mais ficam CALADOS — que é a verdade
+    sobre um `bool`. É por isso que a régua desta aba usa um dublê ESTRITO, que
+    devolve o corpo de verdade: **um dublê mais frouxo que a ponte real é a
+    cicatriz de 04/09**, e ela custou duas máscaras que nunca gravaram um byte.
+    """
+    if isinstance(r, dict):
+        return r
+    return {"status": "ok"} if r else None
+
+
 def _uniq(o: dict[str, Any]) -> str:
     """O `uniq` do controle onde ela clicou. Vazio = clique solto, e recusa.
 
@@ -1696,10 +2225,45 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # A LEITURA DO FIRMWARE, não o desejo: `mic_mudo` é o que está valendo
         # no plástico agora, e é o que o selo ATIVO/MUDO mostra ao lado.
         agora = bool((dele.get("audio") or {}).get("mic_mudo"))
-        if not p.mic_set(not agora, uniq=uniq):
+        # **O BOTÃO É UM ATO SÓ — S-05, e a D-12 dela por extenso:** *"o botão
+        # é pra ligar o microfone e ele ser ouvido no canal específico dele"*.
+        #
+        # O ATO JÁ RODAVA HOJE, e é por isso que esta troca não muda o que o
+        # aparelho faz: `ipc_bridge.mic_set_detalhado` passou a DELEGAR ao
+        # `mic.canal.set` na ONDA1-D1. O que faltava era a FRASE — aquele
+        # embrulho reescreve `status` para `"ok"` assim que o firmware foi
+        # pedido, e com isso a metade do CANAL some da resposta. Chamando o ato
+        # direto, o `status` só é `"ok"` com as DUAS metades feitas.
+        #
+        # `ligado` É `agora`, E NÃO `not agora` — a inversão é real e vale a
+        # linha: `agora` é *"está mudo"*, então o clique LIGA o microfone
+        # exatamente quando ele está mudo. O `mic_set` recebia `muted=not
+        # agora`, que é o mesmo pedido dito ao contrário.
+        corpo = _corpo(p.mic_canal_set_detalhado(agora, uniq=uniq))
+        if corpo is None:
+            # A TERCEIRA CAUSA ENTROU NA FRASE PORQUE ELA ACONTECEU — medida na
+            # máquina dela em 04/09/2026, com o clique de verdade nesta tela: o
+            # daemon INSTALADO é mais velho que esta janela e não conhece
+            # `mic.canal.set` (o método é da ONDA1-D1, e o `install.sh` não
+            # rodou desde então). A resposta some, o `_corpo` devolve `None`, e
+            # a frase que ela leu no cartão listava duas causas — nenhuma delas
+            # a verdadeira. Uma frase de recusa que não contém o caso que
+            # acontece manda a pessoa procurar o defeito no lugar errado.
             raise RuntimeError(
-                "o daemon não confirmou o mudo do microfone — ou o Hefesto está "
-                "parado, ou este controle saiu da mesa")
+                "o daemon não confirmou o mudo do microfone — ou o Hefesto "
+                "está parado, ou este controle saiu da mesa, ou o Hefesto "
+                "instalado é mais velho que esta janela e ainda não sabe "
+                "ligar o microfone e o canal dele num ato só")
+        # QUAL METADE FALTOU, na frase do dono. `frase_do_ato_do_microfone`
+        # devolve `None` quando as duas aconteceram, e o motivo do daemon
+        # quando não — é ele que separa *"o canal foi eleito e o firmware ficou
+        # represado"* (Modo Nativo) de *"o firmware obedeceu e não há canal"*
+        # (o rádio sem a ponte). Um `RuntimeError` genérico aqui devolveria o
+        # "não deu" que a D1 mediu não dizendo nada a quem está com o controle
+        # na mão.
+        frase = frase_do_ato_do_microfone(corpo)
+        if frase:
+            raise RuntimeError(frase)
         return
 
     if qual == "alto-falante":
@@ -1964,10 +2528,33 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                          f"{VOLUME_MIN}-{VOLUME_MAX}")
 
     if qual == "microfone":
-        if not p.mic_volume_set(pedido, uniq=uniq):
+        # **A RESPOSTA TEM TRÊS ESTADOS, E O `bool` GUARDAVA DOIS — decisão
+        # [08], 04/09/2026.** Na mesa cheia há duas placas de som e a rota
+        # global devolve a PRIMEIRA: o daemon atende, responde `ok`, e o
+        # microfone que mudou foi o de outra pessoa. O `mic_volume_set`
+        # colapsa isso no mesmo `True` de um pedido honrado, e a tela pintava
+        # o selo do card certo sobre um número que aquele controle nunca teve.
+        #
+        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:5536`) e a
+        # janela ANTIGA já o lê (`controller_card:4443`). Quem não lia era esta.
+        corpo = _corpo(p.mic_volume_set_detalhado(pedido, uniq=uniq))
+        if corpo is None or corpo.get("status") != "ok":
             raise RuntimeError(
                 "o daemon não confirmou o volume do microfone — ou o Hefesto "
                 "está parado, ou este controle saiu da mesa")
+        # A CONFISSÃO, NA FRASE DO PRODUTO. `frase_do_alvo_do_mic` é a dona dos
+        # três estados e devolve `""` para `True` e para `None` — *"não sei"
+        # não é "não honrei", e inventar a confissão por ausência de notícia
+        # acusaria o produto de um erro que ninguém mediu*.
+        #
+        # ELA VAI PELO CANAL DA RECUSA, e é a decisão [08] com todas as
+        # letras: *"vira aviso no cartão, como as recusas"*. O `RuntimeError`
+        # é o único caminho que deposita frase no cartão daquele controle, e o
+        # que ele diz é verdade — este controle não teve o volume mexido. Que
+        # OUTRO teve é o que a frase do produto conta.
+        confissao = frase_do_alvo_do_mic(alvo_honrado(corpo))
+        if confissao:
+            raise RuntimeError(confissao)
         return
 
     if qual == "alto-falante":
@@ -2140,7 +2727,13 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
 #: inventado aparece aqui, e não na mão de quem clica.
-PONTE = {"mic_set", "speaker_set", "machine_declare", "mic_volume_set"}
+#: **`mic_set` SAIU E `mic_canal_set_detalhado` ENTROU — 04/09/2026, S-05.** O
+#: 🎙 chama o ATO inteiro (a D-12 dela), e o `mic_volume_set` virou
+#: `mic_volume_set_detalhado` pela decisão [08] — o `bool` daquele guardava o
+#: `por_uniq`, que é a diferença entre mexer no microfone dela e no de outra
+#: pessoa.
+PONTE = {"mic_canal_set_detalhado", "speaker_set", "machine_declare",
+         "mic_volume_set_detalhado"}
 #: VAZIO, e o vazio é uma AFIRMAÇÃO: os TRÊS métodos desta aba têm função no
 #: `ipc_bridge`, então nenhum gesto precisa do degrau cru do `p.chamar`.
 METODOS: set[str] = set()
@@ -2242,9 +2835,12 @@ PROVAS = [
     # contrato do `mic.volume.set`); o do alto-falante passa pela curva medida no
     # hardware — 80 % vira 187 no registrador, e é `volume_do_percentual` quem
     # diz isso, nunca uma regra de três escrita aqui.
+    # O DO MICROFONE CHAMA A VARIANTE `_detalhado` — decisão [08], 04/09/2026.
+    # O `bool` do `mic_volume_set` colapsava o `por_uniq` do daemon, que é a
+    # diferença entre mexer no microfone deste controle e no de outra pessoa.
     {"pagina": PAGINA, "gesto": "volume",  # (noqa-acento) id
      "clique": {"volume": "microfone", "v": "80"},
-     "chama": [("mic_volume_set", [80], {"uniq": "aa:bb:cc:00:00:01"})]},
+     "chama": [("mic_volume_set_detalhado", [80], {"uniq": "aa:bb:cc:00:00:01"})]},
     {"pagina": PAGINA, "gesto": "volume",  # (noqa-acento) id
      "clique": {"volume": "alto-falante", "v": "80"},
      "chama": [("speaker_set", [],
