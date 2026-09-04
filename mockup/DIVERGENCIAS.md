@@ -49,3 +49,25 @@ seção daqui**: a aba deixou de estar em trabalho.
   mockup, e a confissão do mapa dizendo "**três coisas**" onde a bancada dela
   tem uma. O pacote já emite os cinco campos e o `achar()` do piloto não os
   encontra — escreve zero, sem custo e sem estrago.
+## 10-perfis.html
+- **03/09/2026** — **a Prioridade virou SLIDER**, que é o pedido dela de 27/08
+  (*"prioridade é slicer"*) reconfirmado hoje: *"Slider, como você pediu"*. Era
+  o único campo do editor sem NENHUM caminho de escrita na interface nova — o
+  desenho trazia uma barra, e barra não se arrasta.
+  **O que muda no desenho, e é só isto:** dentro do mesmo `<span class="trilho">`
+  nasce um `<input type="range">` transparente do tamanho do trilho, com a faixa
+  do esquema (`0..200`, de `profiles/schema.PRIORIDADE_MINIMA/MAXIMA`). O punho
+  redondo saiu do `::after` do cheio e passou a ser o do próprio range — mesma
+  cor, mesmo tamanho, mesma posição; a diferença é que agora ele segue o dedo.
+  E a barra do desenho passou de `width:90%` para **45%**: com o teto em 200, os
+  90% diziam "quase no máximo" sobre um perfil que está em 90 de 200.
+  **O que ela vê HOJE, na página publicada, enquanto isto espera o OK:** a
+  Prioridade continua sendo uma barra de leitura, com o número certo ao lado —
+  nada some da tela e nenhum clique fica morto. O gesto que grava
+  (`a10_perfis.editor_prioridade`) já existe e já está provado; ele só não tem
+  onde ser clicado até a publicação.
+  **O "Estilo de Jogo" NÃO espera nada disto:** o `<select>` já está na página
+  publicada, e desde hoje escolher um estilo GRAVA (gatilho, degrau de vibração
+  e a cor de cada controle, de `profiles/estilos_de_jogo.py`). O único efeito de
+  desenho ali é que a lista de rótulos passou a sair do motor em vez de ser
+  digitada — as quinze palavras são as mesmas.
