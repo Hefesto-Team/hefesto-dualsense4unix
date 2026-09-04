@@ -1038,6 +1038,57 @@ def _dica_da_linha(item: Any) -> str:
         return ""
 
 
+#: A CLASSE DA MARCA DE PROCEDÊNCIA. Ela é uma só nas duas casas onde a marca
+#: aparece — o `?` do card e a linha do ganho —, e a folha de estilo desta aba
+#: (`aba08.py`) é quem a pinta de cinza.
+#:
+#: **NA PÁGINA PUBLICADA ELA AINDA NÃO TEM COR**, e isso é declarado e não
+#: esquecido: a regra `.proc` nasceu na BANCADA nesta leva e o produto só a
+#: recebe no `--publicar`. Até lá a marca sai na cor do texto — legível, e
+#: dizendo a mesma coisa. O que NÃO se pode fazer é segurar a marca esperando a
+#: folha: a informação é o que ela decide, e a cor é como ela é servida.
+_CLASSE_DA_PROCEDENCIA = "proc"
+
+
+def _marca_da_procedencia(linha: Any) -> str:
+    """`[derivado da conta]` — e VAZIO quando a frase foi medida aqui.
+
+    **DECISÃO [04] DO PO, 04/09/2026:** *"Só nas frases que NÃO foram medidas
+    aqui. A marca aparece exatamente quando ela muda a decisão dela, e some
+    quando não muda."*
+
+    A JANELA ESTÁVEL IMPRIME AS TRÊS (`secao_exame._linha_da_ordem`), e a
+    diferença não é descuido: lá a marca mora numa `Gtk.Label` que ocupa a
+    largura do card; aqui ela divide um balão de 330 px com duas frases. Três
+    marcas seriam o dobro de cinza a atravessar para chegar ao texto.
+
+    **NENHUMA PALAVRA NASCE AQUI.** As três saem de
+    `ordens_da_mesa.TEXTO_DO_SELO`, que é o dono — o mesmo mapa que a janela
+    estável lê. Um selo que este mapa não conhece sai CRU, e de propósito: uma
+    procedência nova tem de aparecer na tela como coisa estranha, não sumir.
+
+    `fonte` NÃO ENTRA, pela razão que `secao_exame._linha_da_ordem` já mediu:
+    ela é um caminho desta árvore (`docs/protocol/…`), e quem usa o produto não
+    tem esta árvore.
+    """
+    selo = str(getattr(linha, "selo", "") or "")
+    if not selo:
+        return ""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+    from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
+        MEDIDO_AQUI,
+        TEXTO_DO_SELO,
+    )
+    from hefesto_dualsense4unix.utils.i18n import _
+
+    if selo == MEDIDO_AQUI:
+        return ""
+    palavra = str(TEXTO_DO_SELO.get(selo, selo))
+    return (f' <span class="{_CLASSE_DA_PROCEDENCIA}">'
+            f"[{_e(_(palavra))}]</span>")
+
+
 def _dica_da_ordem(ordem: Any) -> str:
     """O `?` do card da ordem: *O que eu vi aqui* e *Por que importa*.
 
@@ -1050,10 +1101,14 @@ def _dica_da_ordem(ordem: Any) -> str:
     `Ganho esperado:` que `html_da_ordem` emite. Repeti-la no `?` seria a mesma
     frase duas vezes no mesmo cartão — a decisão 9 dela, aplicada ao card.
 
-    O SELO DE PROCEDÊNCIA CONTINUA FORA, pela razão já medida em
-    :func:`_dica_da_linha`: as duas frases dividem uma dica estreita, e um
-    `[medido]` em cinza no fim de cada uma competiria com o texto que ela foi
-    ler. Fica escrito para quem desenhar a dica maior.
+    **O SELO DE PROCEDÊNCIA ENTROU — 04/09/2026, decisão [04] do PO:** *"Só nas
+    frases que NÃO foram medidas aqui."* O que estava escrito neste lugar dizia
+    que ele *"continua fora … um `[medido]` em cinza no fim de cada uma
+    competiria com o texto que ela foi ler"* — e a medição que sustentava a
+    frase continua certa: são DUAS frases num balão de 330 px. O que mudou é a
+    regra: `medido aqui` fica IMPLÍCITO e não é escrito, então o balão só ganha
+    tinta quando a frase é conta ou vem de terceiro — que é exatamente quando a
+    marca muda a decisão dela. Ver :func:`_marca_da_procedencia`.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.gui.aba_conexoes import _e
@@ -1061,7 +1116,9 @@ def _dica_da_ordem(ordem: Any) -> str:
     from hefesto_dualsense4unix.utils.i18n import _
 
     partes = [
-        f"<b>{_e(_(str(rotulo)))}:</b> {_e(_(str(getattr(linha, 'texto', '') or '')))}"
+        f"<b>{_e(_(str(rotulo)))}:</b> "
+        f"{_e(_(str(getattr(linha, 'texto', '') or '')))}"
+        f"{_marca_da_procedencia(linha)}"
         for rotulo, linha in zip(ROTULOS_DA_ORDEM[:2], ordem.linhas[:2], strict=True)
         if getattr(linha, "texto", "")]
     if not partes:
@@ -1176,14 +1233,142 @@ def _card_da_ordem(ordem: Any) -> str:
         # terceira grafia da mesma palavra.
         from hefesto_dualsense4unix.integrations.exame_da_mesa import ROTULOS_DA_ORDEM
 
+        # E A MARCA DE PROCEDÊNCIA VAI AQUI TAMBÉM — decisão [04]. Nesta mesa a
+        # terceira linha é `DERIVADO_DA_CONTA` nas duas ordens abertas, então a
+        # marca aparece: é o card confessando que o ganho foi CALCULADO e não
+        # medido, no mesmo lugar em que ele o promete.
         partes.append(
             f'<div class="ganho"><span>{_e(_(str(ROTULOS_DA_ORDEM[2])))}:</span> '
-            f"{_e(_(ganho))}</div>")
+            f"{_e(_(ganho))}{_marca_da_procedencia(ordem.ganho_esperado)}</div>")
     return f'<div class="ordem">{"".join(partes)}</div>'
 
 
-def _html_da_ordem() -> str:
-    """O card da ordem de serviço, desenhado pelo produto — nunca pelo mockup.
+#: O PREFIXO DA CURA e o teto de cards da coluna. Os dois têm dono no produto:
+#: a palavra é `secao_exame.PREFIXO_DA_CURA` (lida no ato, nunca copiada), e o
+#: teto é o do DESENHO — a coluna da direita tem UM card de ordem, e quatro
+#: cards de cura é a altura da coluna do exame ao lado.
+#:
+#: QUATRO É O QUE A MÁQUINA PODE RENDER: são cinco conferências e uma delas
+#: (`energia_das_portas`) não escreve cura. A janela estável não tem teto porque
+#: a zona dela cresce; aqui a seção divide altura com as outras duas do quadro.
+_TETO_DE_CURAS = 4
+
+
+def _card_da_cura(item: Any) -> str:
+    """O card de uma conferência que tem CURA e não tem ordem — decisão [03].
+
+    **DECISÃO [03] DO PO, 04/09/2026:** *"Cartão de cura na coluna da direita."*
+    Até hoje a cura das conferências só existia dentro do `?` de cada linha
+    (:func:`_dica_da_linha`), e quem não passasse o mouse não descobria o que
+    fazer. A janela estável esteve nesse mesmo estado e saiu dele em 25/08 —
+    `secao_exame._card_da_cura`, cuja nota diz por quê com todas as letras: *"a
+    cura de quatro das cinco conferências chegava à tela SÓ dentro de um
+    tooltip"*.
+
+    **SEM SELO DE PROCEDÊNCIA, e é regra do dono, não economia:** *"uma cura de
+    conferência não traz selo … porque não há medição por trás dela dizendo de
+    onde vem o conselho. Pôr um selo aqui seria dar ao raciocínio a roupa da
+    medição, que é o que o selo existe para impedir."* É a contramão exata da
+    decisão [04], e as duas convivem porque falam de coisas diferentes: a ORDEM
+    sabe de onde veio cada frase; a cura de conferência, não.
+
+    A CLASSE É `ordem cura`, e o primeiro nome não é enfeite: `.ordem` é a única
+    moldura que a página PUBLICADA já sabe desenhar. Enquanto a folha da bancada
+    não for publicada, o card de cura nasce com a moldura do card de ordem — que
+    é o parecido certo, e não um bloco solto sem borda.
+
+    A PÍLULA É A MESMA DA LINHA DO EXAME — a palavra e a classe saem de
+    `gui.aba_conexoes.SELO_DO_ESTADO`, o dono do mapa. O card fala do MESMO
+    achado que a linha da esquerda, e duas gramáticas para o mesmo estado é como
+    o verde volta a conviver com o vermelho. **Ela não é o selo de procedência**,
+    que é o que o parágrafo acima recusa: uma diz o ESTADO do achado, a outra
+    diria de onde veio a frase.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
+    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+    from hefesto_dualsense4unix.utils.i18n import _
+
+    classe, palavra = _selo_do_estado(str(getattr(item, "estado", "") or ""))
+    cura = str(getattr(item, "cura", "") or "")
+    porque = str(getattr(item, "porque", "") or "")
+    # O TEXTO VAI DENTRO DE UM `<span>`, e não solto: `.ordem .faca` é `display:
+    # flex` com `gap:8px`, então cada filho inline vira um ITEM da flexbox — um
+    # `<b>` no meio da frase abriria oito pixels de vão de cada lado dele.
+    # Medido na foto de 04/09, antes desta linha existir.
+    corpo = [f'<div class="faca"><span class="selo {classe}">{_e(_(palavra))}</span>'
+             f"<span>{_e(_(str(PREFIXO_DA_CURA)) + _(cura))}</span></div>"]
+    if porque:
+        corpo.append(f'<div class="ganho"><span></span>{_e(_(porque))}</div>')
+    return f'<div class="ordem cura">{"".join(corpo)}</div>'
+
+
+#: A FRASE DO `+N`, e ela tem UM dono nesta casa — este.
+#:
+#: **PROCUREI O DONO ANTES DE ESCREVER, e ele não existe.** A dívida do "+N"
+#: está escrita em quatro lugares desta árvore apontando para
+#: `gui.aba_conexoes.sobraram` como se ele fosse a frase; medido em 04/09/2026,
+#: `sobraram(controles)` devolve um **int** e fala do ACORDEÃO, não do exame.
+#: Chamá-lo aqui teria posto na tela a conta de outra lista — a armadilha que
+#: esta casa chama de *perguntar no lugar errado*.
+#:
+#: O MOLDE É O DA DECISÃO [07] DO PO, ao pé da letra: *"+1 recomendação não
+#: coube aqui"*. O substantivo é de quem chama, porque as três listas desta aba
+#: contam coisas diferentes; a moldura é uma só, para as três dizerem o mesmo
+#: fato do mesmo jeito.
+_MAIS_N = "+{n} {coisa} não {coube} aqui"
+
+
+def _sobraram(quantos: int, cabem: int, um: str, muitos: str) -> str:
+    """A linha `+N` do fim de uma lista — decisão [07]. VAZIA quando cabe tudo.
+
+    **DECISÃO [07] DO PO, 04/09/2026:** *"Um '+N' no fim de cada lista. É a
+    diferença entre uma tela que não mostra e uma tela que ESCONDE — e só custa
+    linha no dia em que sobra."*
+
+    O QUE ELA CURA ESTÁ MEDIDO, e estava escrito como dívida em três lugares
+    deste arquivo: o exame de 03/09 devolveu DUAS ordens abertas, a coluna da
+    direita tem UM card, *"e a segunda não aparece em lugar nenhum"*.
+
+    **SÓ CUSTA LINHA NO DIA EM QUE SOBRA** — com tudo cabendo, devolve `""` e a
+    coluna fica exatamente como estava. É a mesma gramática da D-02 (a ressalva
+    que não ocupa nada em repouso), e é o que a torna barata.
+    """
+    if quantos <= cabem:
+        return ""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+    from hefesto_dualsense4unix.utils.i18n import _
+
+    n = quantos - cabem
+    frase = _(_MAIS_N).format(
+        n=n, coisa=(um if n == 1 else muitos),
+        coube=("coube" if n == 1 else "couberam"))
+    return f'<div class="mais">{_e(frase)}</div>'
+
+
+def _html_da_ordem(vivos: list[Any] | None = None) -> str:
+    """A coluna da direita inteira: a ordem, as curas e o que não coube.
+
+    TRÊS DECISÕES DO PO MORAM NESTA FUNÇÃO, e é de propósito que elas moram
+    juntas: a coluna é UM endereço (`data-campo="ordem"`, alvo `html`), e quem
+    decide o que cabe nela tem de ver as três listas ao mesmo tempo.
+
+    * **[03]** o cartão de cura, abaixo da ordem — :func:`_card_da_cura`;
+    * **[04]** o selo de procedência nas frases não medidas aqui;
+    * **[07]** o `+N` quando há mais ordem aberta do que card.
+
+    A ORDEM DOS CARDS É A DO PRODUTO, e a razão está escrita em
+    `secao_exame._desenhar_o_que_fazer`: *"As ordens vêm antes das curas de
+    conferência: uma ordem sabe de onde veio cada frase dela, e uma cura de
+    conferência não. O que afirma mais vem primeiro."*
+
+    `vivos` É A MESMA LISTA QUE PINTOU A TIRA, e recebê-la é o que impede as duas
+    metades da seção de discordarem: se esta função relesse o exame, a coluna da
+    direita poderia falar de um achado que a coluna da esquerda não mostra. Sem
+    ela — o padrão — só o card da ordem sai, que é o que esta função fazia antes.
+
+    ---
 
     O QUE ESTAVA NA TELA DELA NO LUGAR, fotografado nesta bancada em 03/09/2026:
     um card cravado no arquivo mandando **mover o adaptador Bluetooth da Entrada
@@ -1210,11 +1395,28 @@ def _html_da_ordem() -> str:
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.gui import aba_conexoes as _tela
+    from hefesto_dualsense4unix.integrations.exame_da_mesa import ESTADO_CERTO
 
     ordem = _ordem_na_tela()
-    if ordem is None:
-        return _tela.html_da_ordem(None)
-    return _card_da_ordem(ordem)
+    partes = [_tela.html_da_ordem(None) if ordem is None else _card_da_ordem(ordem)]
+    if vivos is None:
+        return partes[0]
+    # AS ORDENS ABERTAS QUE NÃO COUBERAM — decisão [07]. `_ordem_na_tela` mostra
+    # a PRIMEIRA e o desenho tem UM card; nesta mesa o exame de 03/09 devolveu
+    # DUAS, e a segunda não aparecia em lugar nenhum.
+    abertas = sum(1 for i in vivos if getattr(i, "ordem", None) is not None)
+    partes.append(_sobraram(abertas, 1, "recomendação", "recomendações"))
+    # AS CURAS DAS CONFERÊNCIAS — decisão [03]. A REGRA DOS TRÊS FILTROS É DO
+    # DONO (`secao_exame._desenhar_o_que_fazer`), lida linha a linha: sem ordem
+    # (a ordem já tem card), COM cura (não há o que dizer sem ela) e o estado
+    # diferente de CERTO — uma conferência que passou não pede conserto.
+    curas = [i for i in vivos
+             if getattr(i, "ordem", None) is None
+             and str(getattr(i, "cura", "") or "")
+             and str(getattr(i, "estado", "")) != ESTADO_CERTO]
+    partes += [_card_da_cura(i) for i in curas[:_TETO_DE_CURAS]]
+    partes.append(_sobraram(len(curas), _TETO_DE_CURAS, "cura", "curas"))
+    return "".join(p for p in partes if p)
 
 
 def _carimbo_do_exame() -> str:
@@ -1631,6 +1833,16 @@ def _html_dos_adaptadores() -> str:
     O `contenteditable` DA PRIMEIRA CÉLULA CONTINUA, porque o gesto de renomear
     é dela e é duplo clique (`RENOMEAR_DICA`, decisão de 31/08). O que muda é o
     texto que ele começa editando: o nome do adaptador, e não "Sala".
+
+    **E A CÉLULA GANHOU DONO — 04/09/2026.** Ela era `contenteditable` e mais
+    nada: nenhum gesto, e `apelido_do_dongle` sem um único chamador na interface
+    nova. *Ela digitava e perdia.* Agora a célula leva o `data-hef-gesto` e o
+    `data-caminho` — o endereço de barramento, que é a palavra comum desta aba —,
+    e o gesto :func:`renomear_adaptador` grava no BlueZ.
+
+    **O `hciN` NÃO VAI PARA O HTML** (decisão M1) e o endereço, tampouco: o
+    `data-caminho` é `3-1.2`, e quem o traduz em BD Address é
+    :func:`_endereco_e_nome_do_adaptador`, no ato do clique.
     """
     mesa = _mesa_do_radio()
     if mesa is None:
@@ -1658,6 +1870,8 @@ def _html_dos_adaptadores() -> str:
         linhas.append(
             f"<tr><td{mudo}>"
             f'<span class="renomeia" contenteditable="true" '
+            f'data-hef-gesto="{GESTO_DO_APELIDO}" '
+            f'data-caminho="{_e(str(getattr(a, "caminho", "") or ""))}" '
             f'title="{_e(RENOMEAR_DICA)}">{_e(nome or SEM_NOME)}</span></td>'
             f'<td class="mudo">{_e(_nome_do_adaptador(a))}</td>'
             f"<td{titulo}>{_e(onde)}</td></tr>")
@@ -2796,7 +3010,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `_html_da_ordem`: o card era HTML cravado no mockup mandando mover o
         # adaptador da Entrada 3 para a Entrada 9, com de→para e ganho, sobre
         # uma máquina que ninguém tinha examinado.
-        "ordem": _html_da_ordem(),
+        #
+        # E A COLUNA CRESCEU EM 04/09/2026 — as decisões [03], [04] e [07] do
+        # PO. `vivos` VAI JUNTO de propósito: é a mesma lista que pintou a tira
+        # à esquerda, e as duas metades da seção têm de falar do mesmo exame.
+        "ordem": _html_da_ordem(vivos),
         # A CONTAGEM DA SEÇÃO, pelo dono da frase
         # (`gui.aba_conexoes.texto_da_contagem`). Ela era `2 na mesa • 1 no cabo
         # • 1 no rádio` cravado — com um controle só na mesa, a seção continuava
@@ -3533,6 +3751,128 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if novo is None:
         return
     perfil.gravar_e_reaplicar(novo, ctx, p)
+
+
+# ---------------------------------------------------------------------------
+# DAR NOME A UM ADAPTADOR — o defeito da §3 desta aba, 04/09/2026
+# ---------------------------------------------------------------------------
+# O QUE ESTAVA AQUI ERA UMA PROMESSA VAZIA: a primeira célula da tabela "Rádio e
+# adaptadores" nasce `contenteditable`, com uma dica dizendo *"dê um nome a
+# este adaptador"*, e nenhum código da interface nova chamava
+# `integrations/apelido_do_dongle`. **Ela digitava e perdia.**
+#
+# O MOTOR SEMPRE EXISTIU, e é o mesmo que a janela estável usa
+# (`secao_mesa._ao_salvar_o_nome`): `renomear_o_dongle(endereco, nome)` grava o
+# `Alias` no BlueZ por `busctl`, com a costura do prefixo Nintendo por cima
+# quando o adaptador hospeda um Pro.
+
+#: O NOME DO GESTO, e ele é UM só: o HTML o escreve, o teste o lê e o relatório
+#: o cita. Digitá-lo três vezes é como um `data-gesto` fica órfão de um lado.
+GESTO_DO_APELIDO = "renomear-adaptador"
+
+
+def _endereco_e_nome_do_adaptador(caminho: str) -> tuple[str, str]:
+    """Do `3-1.2` da tela para `(BD Address, o nome DELA de agora)`.
+
+    A JUNÇÃO PASSA PELO `hciN` E NÃO SAI DAQUI, e a razão é do dono
+    (`secao_mesa._dongle_por_interface`): *"o sysfs conhece porta e `vid:pid` e
+    não publica o endereço; o BlueZ conhece o endereço e não conhece a porta"*.
+    O índice inverte entre boots, então ele nasce e morre dentro desta chamada —
+    o que atravessa para a escrita é sempre o BD Address.
+
+    Devolve `("", "")` quando a mesa não responde ou o caminho não é de nenhum
+    adaptador desta mesa. Um par vazio é uma RESPOSTA, e quem chama a transforma
+    em recusa dizendo — nunca em escrita no adaptador errado.
+    """
+    if not caminho:
+        return "", ""
+    mesa = _mesa_do_radio()
+    if mesa is None:
+        return "", ""
+    alvo = next((a for a in tuple(getattr(mesa, "adaptadores", ()) or ())
+                 if str(getattr(a, "caminho", "") or "") == caminho), None)
+    if alvo is None:
+        return "", ""
+    interface = str(getattr(alvo, "interface", "") or "")
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
+            _dongle_por_interface,
+        )
+
+        dongle = _dongle_por_interface(_dongles()).get(interface)
+        if dongle is not None:
+            return str(dongle.endereco), str(dongle.nome)
+    return "", ""
+
+
+def _gravar_o_apelido(endereco: str, nome: str) -> Any:
+    """Escreve o `Alias` no BlueZ. Devolve a `Renomeacao` do dono.
+
+    NÃO CONFERE O QUE GRAVOU, e é do dono a razão medida: *"a escrita é
+    assíncrona — ler logo depois devolve o valor antigo — e uma conferência com
+    espera dentro travaria a interface por um segundo a cada salvamento."*
+
+    A COSTURA DO PREFIXO NINTENDO VAI JUNTO, e ela é de `renomear_o_dongle`:
+    num adaptador que hospeda um Pro, o alias sem o prefixo devolve o aparelho
+    ao sniff frágil. Escrever o `Alias` cru daqui desfaria isso em silêncio.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations.apelido_do_dongle import renomear_o_dongle
+
+    return renomear_o_dongle(endereco, nome, dongles=_dongles())
+
+
+@gesto("08-conexoes.html", GESTO_DO_APELIDO)
+def renomear_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O nome que ELA deu ao adaptador, gravado no BlueZ.
+
+    **O QUE CHEGA É `texto`**, e não `valor`: a célula é um `contenteditable`, e
+    o ouvinte do piloto manda `texto: alvo.textContent` para quem não tem
+    `value` (`hefesto_vivo.py`). `SEM_NOME` é o marcador do vazio na tela e
+    NUNCA é gravado — ele é a ausência de nome, não um nome.
+
+    **NÃO ESCREVE QUANDO O NOME NÃO MUDOU**, e a regra é da janela estável
+    (`secao_mesa._ao_salvar_o_nome`): *"Sem ela, cada troca de aba reescreveria
+    o alias dos três adaptadores com o valor que eles já têm — escrita à toa num
+    barramento de sistema, e uma delas cairia bem em cima do prefixo que segura
+    o Pro."* É também o que torna o clique da régua inofensivo: ela clica com o
+    texto que a tela mostra, que é o nome de agora.
+
+    **O QUE FALTA PARA ELE VALER NA MÃO DELA, e não é meu** — `hefesto_vivo.py`
+    está no `nao_toca` desta sprint. O ouvinte do piloto escuta `click` e
+    `change`; um `contenteditable` não dispara nenhum dos dois ao PERDER O FOCO,
+    que é quando ela termina de digitar. O gesto está de pé e o endereço está no
+    HTML; falta a linha do ouvinte. Ver o relatório desta frente.
+    """
+    caminho = str(o.get("caminho") or "").strip()
+    if not caminho:
+        raise ValueError(
+            "renomear-adaptador: o clique não disse em qual adaptador — sem o "
+            "caminho de barramento eu daria o seu nome ao rádio errado")
+    novo = str(o.get("texto") or o.get("valor") or "").strip()
+    if not novo or novo == SEM_NOME:
+        raise ValueError(
+            f"renomear-adaptador: {SEM_NOME!r} é como a tela mostra a ausência "
+            f"de nome, e não um nome — apagar o apelido é outro gesto")
+    endereco, agora = _endereco_e_nome_do_adaptador(caminho)
+    if not endereco:
+        raise RuntimeError(
+            "renomear-adaptador: este adaptador não está mais na mesa, ou o "
+            "Bluetooth do sistema não respondeu por ele agora")
+    if novo == agora:
+        return
+    feito = _gravar_o_apelido(endereco, novo)
+    if not getattr(feito, "aplicado", False):
+        # A FRASE DA RECUSA É DO MOTOR — `Renomeacao.porque` traz as três que ele
+        # sabe dizer ("Este adaptador não está mais na mesa.", "Não achei este
+        # adaptador no Bluetooth do sistema.", "O Bluetooth do sistema recusou o
+        # nome novo."). Escrever uma quarta aqui seria a segunda grafia.
+        raise RuntimeError(str(getattr(feito, "porque", "") or "")
+                           or "o Bluetooth do sistema não gravou o nome novo")
+    # O BLUEZ NÃO ECOA, então a próxima leitura tem de ser nova: sem isto a
+    # tabela continuaria mostrando o nome velho até alguém apertar "Examinar".
+    _dongles(recarregar=True)
 
 
 @gesto("08-conexoes.html", "vizinho-o-que-e")
