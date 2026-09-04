@@ -9,7 +9,7 @@ O QUE TEM DONO: o perfil em vigor (`active_profile`) e o travamento do
 autoswitch (`autoswitch_locked`), que é o que diz se a troca automática está
 segurada.
 
-OS DOZE GESTOS MARCADOS, E OS DEZ COM DONO — 01/09/2026, em duas levas:
+OS DEZ PRIMEIROS A GANHAR DONO — 01/09/2026, em duas levas:
 
     selecionar          a célula do nome, na lista. Abre o perfil no editor.
     ativar              `profile.switch`
@@ -35,11 +35,17 @@ A SEGUNDA LEVA SÓ FOI POSSÍVEL POR TRÊS CORREÇÕES, e nenhuma é do daemon:
    pintava o perfil ATIVO enquanto os botões agiam sobre o ESCOLHIDO — e ligar
    o campo Nome seria ela renomear um perfil olhando o nome de outro.
 
-NÃO SOBRA NENHUM SEM DONO — 03/09/2026. O `recarregar` ganhou o dele de manhã, e
-o `editor.estilo` à tarde: ele não guarda nada e agora **diz** que não guarda,
-em vez de deixar a tela afirmar um estilo que perfil nenhum tem. A razão de cada
-um está no gesto; o motivo de o Estilo não ter motor continua declarado num
-lugar só, em `perfis_web.GESTOS_SEM_MOTOR`.
+NÃO SOBRA NENHUM SEM DONO — 03/09/2026, e os DOIS ÚLTIMOS fecharam no fim do
+dia:
+
+    editor.prioridade   o `<input type=range>` que ela pediu — era o ÚNICO
+                        campo do editor sem NENHUM caminho de escrita
+    editor.estilo       escolher um estilo APLICA a receita: gatilho, degrau de
+                        vibração e a cor de cada controle, de uma vez
+
+São TREZE gestos com dono. As duas decisões são dela, do mesmo dia: *"Slider,
+como você pediu"* e *"Construir o motor"* — e as receitas moram em
+`profiles/estilos_de_jogo.py`, num lugar só, nunca digitadas aqui.
 
 RECUSA-CHEGA-NA-TELA-01 — A REGRA DE QUAL EXCEÇÃO LEVANTAR, e ela não é gosto.
 `hefesto_vivo._recusou_dizendo` pinta a tarja **só para `RuntimeError`**; um
@@ -82,7 +88,6 @@ que escreve tem de avisar o daemon depois (`profile.switch` para reaplicar,
 """
 from __future__ import annotations
 
-import re
 import time
 from typing import Any
 
@@ -409,9 +414,15 @@ def _desfecho_para_a_tela() -> str:
 #:                       BRANCO, e `el.value` nunca volta igual ao escrito, o
 #:                       que faz o contador somar +1 a cada visita. O desenho já
 #:                       nasce com a opção certa marcada; a tela só precisa não
-#:                       estragá-la. Quem lhe dá valor de verdade é a
-#:                       ONDA-PERFIS-04, e nesse dia o piloto precisa de um
-#:                       caminho para MARCAR uma opção de `value` vazio.
+#:                       estragá-la.
+#:                       **E O MOTOR NÃO MUDA ISTO — 03/09/2026.** Aqui estava
+#:                       escrito que *"quem lhe dá valor de verdade é a
+#:                       ONDA-PERFIS-04"*. O motor nasceu e o campo GRAVA; o que
+#:                       ele nunca vai ter é valor a MOSTRAR, porque o estilo é
+#:                       um verbo e não um campo do `Profile` — ver
+#:                       `editor_estilo`. Este nome fica nesta lista para
+#:                       sempre, e agora por uma razão de projeto em vez de uma
+#:                       espera.
 #: **`guarda.secao` SAIU DESTA LISTA — 03/09/2026**, e o motivo dela caducou por
 #: inteiro. Estava escrito aqui que *"nenhum dos cinco alvos de hoje
 #: (texto·largura·fundo·valor·html) alcança uma classe"*. O piloto ganhou o alvo
@@ -451,7 +462,9 @@ SEM_ENDERECO = {
     "editor.ambiente.travado": "o seletor travado não tem marca no desenho",
     "editor.ambiente.recado": "a frase da válvula não tem lugar no desenho",
     "editor.estilo.travado": "idem, para o Estilo de Jogo",
-    "editor.estilo.recado": "idem — a frase de `GESTOS_SEM_MOTOR`",
+    "editor.estilo.recado": "a frase que explica por que o campo volta ao "
+                            "travessão (`perfis_web.ESTILO_APLICA_E_SAI`) não "
+                            "tem lugar no desenho",
     # `quantos` é a SEGUNDA forma da mesma pergunta: `perfis.conta` tem
     # endereço (a página o mostra) e sai deste mesmo pacote. Medido: ninguém o
     # lê hoje — nem produto, nem régua. Fica declarado, e não apagado, porque
@@ -513,7 +526,18 @@ SEM_ENDERECO = {
 #: O DICIONÁRIO FICA, e vazio: ele é o lugar combinado de quem escrever um
 #: endereço novo na bancada antes de ela aprovar. Apagá-lo obrigaria a próxima
 #: pessoa a reinventá-lo.
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
+#:
+#: **E ELE VOLTOU A TER UM NOME — 03/09/2026.** O `editor.prioridade.escolha` é o
+#: punho do `<input type=range>` que ela pediu, e ele NÃO chega ao produto pelo
+#: `--publicar-enderecos`: aquele caminho copia a página só quando o DESENHO não
+#: muda, e aqui nasceu um elemento novo, com CSS novo. Isto é decisão dela, está
+#: declarado em `mockup/DIVERGENCIAS.md`, e o que ela vê enquanto espera é a
+#: barra de leitura de sempre — nada some da tela, e nenhum clique fica morto.
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {
+    "editor.prioridade.escolha":
+        "o punho do slider da Prioridade — elemento NOVO no desenho, logo é o "
+        "`--publicar` dela que o leva, não o `--publicar-enderecos`",
+}
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
@@ -523,14 +547,28 @@ _ARMADO: tuple[str, float] | None = None
 _PINTADO_PARA: str = ""
 _ULTIMO_TIQUE: float = 0.0
 
-#: OS DOIS CAMPOS QUE NÃO SE REPINTAM, porque ela DIGITA neles.
+#: OS CAMPOS QUE NÃO SE REPINTAM, porque ela MEXE neles enquanto o tique corre.
 #:
 #: ERAM TRÊS até 02/09/2026: o `editor.estilo` estava aqui por outro motivo —
 #: *"o valor é sempre o mesmo e repintá-lo custava uma escrita por tique"*. Ele
 #: saiu porque a razão dele não é "não repintar", é **não pintar**: foi para
 #: `NAO_PINTAVEIS`, onde está a medição. Deixá-lo nos dois lugares faria duas
 #: listas decidirem o mesmo campo.
-CAMPOS_QUE_ELA_DIGITA = ("editor.nome", "editor.jogo")
+#:
+#: E O TERCEIRO ENTROU EM 03/09/2026 — `editor.prioridade.escolha`, o punho do
+#: slider que nasceu com a decisão dela (*"Slider, como você pediu"*). O nome
+#: desta lista diz "digita" e o gesto dela aqui é ARRASTAR; a razão é a mesma, e
+#: é a medida que está em `_uma_vez_so`: com `data-hef-alvo="valor"` a pintura
+#: faz `el.value = t` a cada 500 ms, e num `<input type=range>` isso devolve o
+#: punho ao número do disco NO MEIO do arrasto — o slider ficaria intocável do
+#: mesmo jeito que os dois `<input>` de texto ficariam.
+#:
+#: O NÚMERO AO LADO NÃO ENTRA, e é por isso que o punho ganhou endereço próprio
+#: em vez de dividir o `editor.prioridade.n` com ele: o `<span class="n">` é
+#: leitura, repintá-lo a cada tique não atrapalha ninguém, e é ele que mostra na
+#: hora o que o disco passou a guardar.
+CAMPOS_QUE_ELA_DIGITA = ("editor.nome", "editor.jogo",
+                         "editor.prioridade.escolha")
 
 
 def _uma_vez_so(alvo: str) -> tuple[str, ...]:
@@ -645,7 +683,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     FATO ERRADO, SUBSTITUÍDO — 02/09/2026. A docstring de
     `perfis_web.pacote_da_aba` afirma que a mesa vem *"no formato que
     ``mesa_viva.mesa_do_estado`` devolve mais ``rotulo`` e ``plastico``"*, e o
-    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:446`).
+    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:468`).
     **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
     `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
     `mascara` (`mesa_viva.py:320-332`). Medido: `guarda.nome` saía `["", ""]`
@@ -657,7 +695,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     caminho do produto.
 
     O `plastico` ENTROU EM 03/09/2026, e o fato acima valia para ele também:
-    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:418`) e
+    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:468`) e
     recebia `""` para todo controle, porque ninguém o punha aqui. Ver `_plastico`.
     """
     return [{**c, "rotulo": _rotulo_curto(c), "plastico": _plastico(c)}
@@ -1034,7 +1072,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         ativo = _valendo(ctx, todos)
         # O `editado` FALTAVA, e o editor mostrava o perfil ERRADO — corrigido
         # em 01/09/2026, ao ligar os campos. Sem ele `pacote_da_aba` cai no
-        # ativo (`perfis_web.py:446`), então clicar numa linha mudava o alvo dos
+        # ativo (`perfis_web.py:496`), então clicar numa linha mudava o alvo dos
         # botões e o editor ao lado continuava pintando OUTRO perfil. Enquanto
         # nenhum campo tinha gesto isso era só uma tela desalinhada; com o Nome
         # e o Nome do Jogo ligados, seria ela renomear um perfil olhando para o
@@ -1104,6 +1142,22 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # O `%` fica lá: `prioridade` é valor do PRODUTO, e o produto o descreve com
     # o sinal. Quem tira a casca é este achatamento, que é o que ele faz.
     fora["editor.prioridade"] = str(editor.get("prioridade") or "0").rstrip("%")
+
+    # O PUNHO DO SLIDER — 03/09/2026, e ele é o número CRU, nunca o `'—'`.
+    #
+    # A EMISSÃO É CONDICIONAL de propósito, e a razão é a mesma que segura o
+    # `editor.estilo` em `NAO_PINTAVEIS`: `escrever()` troca vazio por `'—'`
+    # ANTES de escolher o ramo (`hefesto_vivo.py`), e `el.value = '—'` num
+    # `<input type=range>` é recusado pelo DOM — o campo volta ao meio da faixa
+    # e `el.value` NUNCA volta igual ao escrito, então o contador soma +1 por
+    # tique para sempre. Um contador que mente é pior que um punho parado: ele é
+    # O instrumento com que esta casa prova que um endereço existe.
+    #
+    # Sem perfil aberto, o punho fica onde o DESENHO o pôs — que é a leitura
+    # honesta de "não há prioridade para mostrar", e o mesmo que o `<select>` do
+    # Estilo faz com a opção vazia dela.
+    if editor:
+        fora["editor.prioridade.escolha"] = str(editor.get("prioridade_n") or "0")
 
     # OS TRÊS CAMPOS QUE SE PINTAM UMA VEZ SÓ — e a razão é medida, não gosto.
     # Ver `_uma_vez_so`: repintar um `<input>` a cada 500 ms apagaria o que ela
@@ -1729,6 +1783,83 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     return _dizer(mensagem_do_salvar(novo, renomeado_de=prof.name))
 
 
+@gesto("10-perfis.html", "editor.prioridade")
+def editor_prioridade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Prioridade": o número que decide quem vence quando dois perfis servem.
+
+    **ERA O ÚNICO CAMPO DO EDITOR SEM NENHUM CAMINHO DE ESCRITA** na interface
+    nova, e o próprio produto já dizia por quê
+    (`perfis_web.DONOS_DOS_GESTOS["editor.prioridade"]`): *"NO DESENHO NÃO HÁ
+    CONTROLE: o mockup traz `<span class="trilho">`, que não se arrasta"*. Ela
+    pediu o conserto em 27/08 — *"prioridade é slicer"* — e reconfirmou em
+    03/09/2026, escolhendo **"Slider, como você pediu"**. O `<input type=range>`
+    nasceu no `aba10.py`, vestido com o CSS do trilho que já existia.
+
+    POR QUE ISSO NÃO É ENFEITE, e a medição é do próprio produto: o perfil que
+    ela criou para o Pragmata nasceu em prioridade 0 e **nunca valia no jogo**,
+    porque o catch-all dela (prioridade 100) vencia em todo o resto — está
+    escrito na docstring do gesto `novo`. Sem este campo, o único conserto era
+    editar o `.json` na mão.
+
+    A FAIXA É A DO ESQUEMA, não uma digitada: `PRIORIDADE_MINIMA` e
+    `PRIORIDADE_MAXIMA` moram em `profiles/schema.py` desde a UNIFICA-CONSTANTE-01
+    e têm portão próprio (`test_teto_da_prioridade_tem_uma_fonte_so.py`). O
+    `<input>` recebe os dois no `min`/`max`, e esta guarda os cobra de novo —
+    porque um clique pode chegar de qualquer lugar, inclusive de uma régua, e um
+    número fora da faixa iria direto para o `.json` dela.
+
+    `_so_mudou` SEGURA O CLIQUE SOLTO, e aqui ele é mais necessário que nos
+    campos de texto: o ouvinte do piloto escuta `click` E `change`
+    (`hefesto_vivo.py`), e um `<input type=range>` dispara os DOIS num toque só.
+    Sem a guarda, cada arrasto gravaria duas vezes — e a segunda gravação é o
+    que faz o daemon reaplicar o perfil no meio da partida.
+
+    **O DESFECHO REPINTA OS DOIS VIZINHOS NA HORA**, e essa é a metade que faz o
+    slider parecer vivo. O tique é de 500 ms; enquanto ele não vem, a barra
+    `.cheio` e o número ao lado continuam no valor do disco — o punho no lugar
+    novo e a barra atrás dele. A resposta do gesto (`_dizer` devolve `mesa:`,
+    que o piloto pinta na hora) leva a largura e o número junto com a frase.
+
+    A LARGURA VAI EM NÚMERO PURO, sem `%` e sem travessão: o ramo `largura` do
+    `escrever()` faz `el.style.width = t + '%'`, e um `'45%'` viraria `'45%%'` —
+    CSS inválido, largura congelada no desenho e o contador somando +1 por
+    tique. A conta é a mesma de `perfis_web._pacote_do_editor`, e ela é PERGUNTA
+    ao teto, não uma divisão por 100.
+    """
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        mensagem_do_salvar,
+    )
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.profiles.schema import (
+        PRIORIDADE_MAXIMA,
+        PRIORIDADE_MINIMA,
+    )
+
+    if not _so_mudou(o):
+        return None
+    cru = str(o.get("valor") or "").strip()
+    nome = _perfil_do_editor(ctx)
+    try:
+        novo = int(float(cru))
+    except ValueError:
+        raise RuntimeError(
+            f"a prioridade tem de ser um número, e o campo mandou “{cru}”. "
+            f"Nada foi salvo.") from None
+    if not PRIORIDADE_MINIMA <= novo <= PRIORIDADE_MAXIMA:
+        raise RuntimeError(
+            f"prioridade {novo} está fora da faixa que o perfil aceita "
+            f"({PRIORIDADE_MINIMA} a {PRIORIDADE_MAXIMA}). Nada foi salvo.")
+    prof = load_profile(nome)
+    if int(prof.priority or 0) == novo:
+        return None
+    _gravar(prof.model_copy(update={"priority": novo}), ctx, p)
+    resposta = _dizer(f"{mensagem_do_salvar(prof.name)} · prioridade {novo}")
+    pct = round(novo * 100 / PRIORIDADE_MAXIMA) if PRIORIDADE_MAXIMA else 0
+    resposta["mesa"]["editor.prioridade"] = str(pct)
+    resposta["mesa"]["editor.prioridade.n"] = str(novo)
+    return resposta
+
+
 @gesto("10-perfis.html", "editor.ambiente")
 def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Funciona em": trocar a REGRA que faz o perfil entrar. `from_simple_choice`.
@@ -1748,7 +1879,7 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
 
     * **o seletor travado** — quando o perfil casa por uma regra que esta tela
       não sabe mostrar (`window_title_regex`, lista de classes), o produto abre
-      o campo travado com a frase do que fazer (`perfis_web.py:172`). Aceitar a
+      o campo travado com a frase do que fazer (`perfis_web.py:233`). Aceitar a
       troca ali seria o defeito R-12: substituir uma regra fina por "Todos".
       MEDIDO: sete dos nove perfis de fábrica caem nesse estado.
     * **"Estilo de Jogo"** — é a quinta opção do desenho e não tem preset
@@ -1783,99 +1914,203 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
 
 
-#: O RÓTULO DA SPRINT NO FIM DA FRASE — `(ONDA-PERFIS-04)` e as irmãs.
-_SPRINT_NO_FIM = re.compile(r"\s*\((?:ONDA|MIGRA|PERFIL)[A-Z0-9-]*\)\s*$")
+# O `_sem_a_sprint` MORREU AQUI — 03/09/2026, e a morte é a entrega. Ele
+# aparava o `(ONDA-PERFIS-04)` do fim da frase de `GESTOS_SEM_MOTOR` para a
+# tarja dela não carregar endereço de fila. A frase saiu daquela tabela porque
+# o campo ganhou motor; sem chamador, a função vira o "campo morto com nome de
+# promessa" que esta casa já nomeou. Quem precisar de novo aparar um rótulo de
+# sprint reescreve duas linhas — guardá-la desligada custaria mais.
 
 
-def _sem_a_sprint(frase: str) -> str:
-    """A frase do produto vestida para a TARJA dela: sem sprint, e com maiúscula.
+def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[Any, int]:
+    """O perfil com a receita do estilo dentro, e QUANTOS controles ganharam cor.
 
-    As três entradas de `perfis_web.GESTOS_SEM_MOTOR` terminam em
-    `(ONDA-PERFIS-NN)`: é o endereço da fila, útil para quem vai dar motor ao
-    campo e RUÍDO para quem só quer saber por que o clique não pegou. O
-    `_recusou_dizendo` do piloto avisa exatamente disto — *"pôr um caminho de
-    arquivo no cartão dela trocaria um silêncio por um ruído"*.
+    AS TRÊS COISAS QUE O ESTILO ESCREVE são as que ela aprovou em 03/09/2026 ao
+    mandar construir o motor — **gatilho + vibração + luz** —, e cada uma vai
+    para o lugar que já era dela no esquema:
 
-    A MAIÚSCULA é o outro meio-passo: aquelas frases nascem para entrar numa
-    coluna de tabela, em minúscula, e aqui elas entram DEPOIS de um ponto final.
-    Sem isto a tarja saía com uma frase começando em minúscula no meio do aviso.
+        `estilo.gatilho`  → `triggers.left/right.mode`, nos DOIS lados
+        `estilo.vibracao` → `rumble.policy` (o degrau, não um multiplicador)
+        a cor            → `controllers[uniq].leds`, **uma por unidade**
 
-    **NÃO É SEGUNDA VERDADE, e a diferença importa:** a frase continua tendo UM
-    dono (`GESTOS_SEM_MOTOR`); o que muda é o público. Reescrevê-la aqui criaria
-    a segunda cópia que diverge no dia em que a ONDA-PERFIS-04 fechar; aparar o
-    rótulo e subir uma letra não podem divergir de nada.
+    OS PARÂMETROS DO GATILHO NÃO SÃO DIGITADOS. `Estilo.gatilho` guarda só a
+    CHAVE do modo (`AutoGun`, `PulseB`…), e as factories do produto exigem
+    posicionais sem default — um `params=[]` passaria pelo esquema e explodiria
+    lá no `apply()`, ou pior: `simple_rigid` com zonas zeradas é *"nenhuma zona
+    ativa"*, o gatilho fica solto e a tela diz que aplicou. Quem sabe os números
+    é `app/actions/trigger_specs.PRESETS`, e `preset_to_positional_params(spec,
+    {})` devolve exatamente o padrão de cada modo. É a mesma porta que a aba
+    Gatilhos usa (`a03_gatilhos._padroes`).
+
+    A LUZ É POR UNIDADE PORQUE A LEI É DELA, verbatim: *"nenhuma cor dos
+    controles nunca pode ser a mesma, mesmo no mesmo perfil e estilo de jogo.
+    Dentro da paleta de fps tem que ter variações pra cada unidade de
+    controle."* Quem garante isso, medindo, é `estilos_de_jogo.as_quatro` — e
+    por isso a cor sai de `cor_da_unidade(estilo, jogador)`, nunca de uma cor
+    escrita aqui. **O global `leds` NÃO é tocado**: uma cor no global é a cor
+    que os quatro herdariam, que é exatamente o defeito que a lei dela proíbe.
+
+    E DOIS CONTROLES NO MESMO LUGAR É RECUSA, não escolha silenciosa: dois
+    `jogador` iguais na mesa dariam a MESMA cor às duas peças, com o motor
+    inocente. É o único caminho pelo qual a lei dela cairia depois de o motor
+    dizer que está tudo distinto.
+
+    `LedsConfig` COM DOIS CAMPOS SÓ, e isso é contrato: `_controllers_to_specs`
+    lê `model_fields_set` (`profiles/manager.py`), então escrever `lightbar` e
+    `lightbar_brightness` deixa `player_leds` e `auto_player_colors` SEM
+    OPINIÃO — o controle continua herdando o resto do perfil. Um `LedsConfig`
+    "cheio" apagaria os LEDs de jogador de quem nunca pediu isso.
     """
-    limpa = _SPRINT_NO_FIM.sub("", frase.strip())
-    return limpa[:1].upper() + limpa[1:]
+    from hefesto_dualsense4unix.app.actions import trigger_specs as specs
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import cor_da_unidade
+    from hefesto_dualsense4unix.profiles.schema import (
+        ControllerOverrides,
+        LedsConfig,
+        RumbleConfig,
+        TriggerConfig,
+        TriggersConfig,
+    )
+
+    mudanca: dict[str, Any] = {}
+    if estilo.gatilho:
+        spec = specs.get_spec(estilo.gatilho)
+        if spec is None:  # pragma: no cover — o motor só nomeia modo do produto
+            raise RuntimeError(
+                f"o estilo “{estilo.rotulo}” pede o gatilho {estilo.gatilho!r}, "
+                f"que não é um dos modos do produto. Nada foi salvo.")
+        lado = TriggerConfig(
+            mode=estilo.gatilho,
+            params=list(specs.preset_to_positional_params(spec, {})))
+        mudanca["triggers"] = TriggersConfig(left=lado, right=lado)
+    if estilo.vibracao:
+        # CONSTRUÍDO, e não `model_copy`: o `custom_mult` do perfil antigo é
+        # recusado pelo esquema fora de `policy="custom"`, e `model_copy` NÃO
+        # revalida — o perfil sairia daqui inválido e só quebraria no load
+        # seguinte, longe daqui. `passthrough` é o único campo que se preserva:
+        # ele não descreve intensidade, descreve QUEM manda na vibração.
+        mudanca["rumble"] = RumbleConfig(
+            passthrough=bool(getattr(prof.rumble, "passthrough", True)),
+            policy=estilo.vibracao)
+
+    atuais = dict(prof.controllers or {})
+    lugares: dict[int, str] = {}
+    pintados = 0
+    for controle in mesa:
+        uniq = str(controle.get("uniq") or "").replace(":", "").lower()
+        # O `jogador` VEM COMO `int` de `base.numero_do_controle`, e o `int()`
+        # aqui não é desconfiança: a mesa também chega de régua e de ensaio, e
+        # um `"1"` de string cairia fora calado — a cor nunca chegaria àquela
+        # peça e ninguém saberia por quê.
+        try:
+            jogador = int(controle.get("jogador"))  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            continue
+        # FORA DA MESA DE QUATRO ele é PULADO, e não é omissão: `as_quatro` só
+        # sabe separar quatro, e é a mesa que o produto desenha. Um quinto
+        # controle fica com a cor que já tinha — o desfecho conta quantos foram,
+        # e prometer cor a quem não recebeu seria a tela afirmando o que não fez.
+        if not uniq or not 1 <= jogador <= 4:
+            continue
+        if jogador in lugares and lugares[jogador] != uniq:
+            raise RuntimeError(
+                f"dois controles estão no lugar P{jogador} da mesa, e o estilo "
+                f"daria a MESMA cor aos dois — a regra é que nenhum controle "
+                f"repete a cor de outro. Nada foi salvo.")
+        lugares[jogador] = uniq
+        dele = atuais.get(uniq) or ControllerOverrides()
+        atuais[uniq] = dele.model_copy(update={"leds": LedsConfig(
+            lightbar=cor_da_unidade(estilo, jogador),
+            lightbar_brightness=estilo.brilho)})
+        pintados += 1
+    if pintados:
+        mudanca["controllers"] = atuais
+    return prof.model_copy(update=mudanca), pintados
 
 
 @gesto("10-perfis.html", "editor.estilo")
-def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Estilo de Jogo": o único `<select>` desta aba que não guarda nada — e ele
-    passou a DIZER isso.
+def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Estilo de Jogo": escolher um APLICA a receita inteira no perfil.
 
-    **ELE ERA O ÚLTIMO GESTO SEM DONO DA ABA, e o silêncio era o defeito** —
-    03/09/2026, medido no produto instalado, com o daemon dela vivo e um
-    DualSense White no cabo:
+    **ELE GANHOU MOTOR EM 03/09/2026, e a decisão de construí-lo é dela.**
+    Perguntada se o motor devia existir, respondeu *"Construir o motor"*, e
+    escolheu o alcance: **gatilho + vibração + luz**. As quinze receitas estão
+    em `profiles/estilos_de_jogo.py` — *"o resto ta aprovado"* —, e é de lá que
+    saem tanto os rótulos do `<select>` (`aba10.ESTILOS`) quanto o que cada um
+    faz. **Não há tabela de estilo neste arquivo**, e não pode haver: uma
+    segunda cópia da receita divergiria no dia em que ela mudasse uma.
 
-        $ hefesto_vivo.py --oculta --prova-no-aparelho --abre 10-perfis.html
-        [gesto sem dono] 10-perfis.html · editor.estilo
-        ? editor.estilo (ALVO FORCADO p1) → SEM DONO
-
-    E o que a TELA fazia, dirigida como ela dirige (`change` de verdade no
-    `<select>`, escolhendo "Terror" em `meu_perfil`):
+    O QUE ELE ERA ATÉ HOJE DE MANHÃ, medido no produto instalado com o daemon
+    dela vivo e um DualSense White no cabo:
 
         estilo_na_tela: "Terror"      ← a tela AFIRMA o estilo, e continua
         tarjas: []                    ← ninguém disse nada
         md5 de meu_perfil.json:  b4387a17…  ANTES **e** DEPOIS — nada gravou
 
-    Ou seja: a tela afirmava, sobre o perfil dela, um Estilo de Jogo que perfil
-    nenhum guarda; o único vestígio era um `print` no stdout de quem lançou a
-    janela. É a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` inteira num campo só — e o
-    contrato do próprio produto já a proibia com todas as letras
-    (`perfis_web.py`, o docstring do módulo): *"Ele nasce TRAVADO, com o motivo
-    — um `<select>` que aceita escolha e não guarda nada é a pior das saídas"*.
+    À tarde ele passou a RECUSAR dizendo, o que já era melhor que o silêncio.
+    Agora ele **grava** — e é a diferença entre a tela pedir desculpa e a tela
+    fazer o trabalho.
 
-    O MOTIVO NÃO É ESCRITO AQUI, e não pode ser: quem o declara é
-    `perfis_web.GESTOS_SEM_MOTOR["editor.estilo"]`, num lugar só. Digitá-lo de
-    novo seria a segunda verdade sobre por que este campo não guarda — a mesma
-    razão pela qual `editor.ambiente` empresta o `ambiente_recado` em vez de
-    inventar frase.
+    O ESTILO NÃO FICA GUARDADO NO PERFIL, e isso é a coisa mais importante a
+    entender aqui: `Profile` não tem campo de estilo, e não ganhou um. O estilo
+    é um **verbo**, não um campo — ele resolve gatilho, vibração e luz de uma
+    vez, e a partir daí quem manda são esses três, que ela pode reajustar nas
+    abas sem nada "voltar atrás". Por isso `editor.estilo` continua em
+    `NAO_PINTAVEIS` e o `<select>` continua abrindo no travessão: afirmar um
+    estilo depois do clique seria a tela dizendo que guardou o que não guardou.
 
-    `RuntimeError` E NÃO `ValueError` — ver `RECUSA-CHEGA-NA-TELA-01`, no alto
-    do arquivo. `hefesto_vivo._recusou_dizendo` só pinta tarja para
-    `RuntimeError`; um `ValueError` aqui trocaria o silêncio do gesto sem dono
-    pelo silêncio da recusa que ninguém lê, que é o mesmo silêncio.
+    "PERSONALIZADO" NÃO MEXE EM NADA, e é o único que responde sem gravar. Ele é
+    o estilo que diz *"eu ajusto na mão"* — `as_quatro()` levanta de propósito se
+    alguém lhe pedir a cor. A resposta é um DESFECHO (a tira do rodapé), não uma
+    tarja de recusa: escolher "Personalizado" é uma escolha legítima, e recusar
+    dizendo faria a tela tratar de erro o que é o comportamento pedido.
 
-    O QUE ESTE GESTO **NÃO** CURA, e escrever isso é o honesto: o `<select>`
-    continua MOSTRANDO o estilo que ela escolheu até a página trocar. Repintá-lo
-    de volta não está disponível — `editor.estilo` está em `NAO_PINTAVEIS`, e
-    tirá-lo de lá quebraria o campo: `pacote()` emite `estilo: None`, o
-    `escrever()` do piloto converte vazio em `'—'` (`hefesto_vivo.py:194`), e
-    `'—'` casa pelo TEXTO da primeira opção mas não pelo `value` (que é `""`) —
-    o `<select>` ficaria com `selectedIndex = -1`, RENDERIZANDO EM BRANCO, e
-    contando uma pintura nova por tique para sempre. Quem fecha essa metade é o
-    DESENHO: um `<select disabled>` (o "travado" que `perfis_web` já emite em
-    `estilo_travado`) não deixa ela escolher, e é dela aprovar.
+    `RuntimeError` NAS RECUSAS — ver `RECUSA-CHEGA-NA-TELA-01`, no alto do
+    arquivo: é a única classe que `_recusou_dizendo` leva ao DOM.
 
-    NÃO ENTRA EM `SEM_ECO`: o desfecho dele é "recusou dizendo" (`!`), que a
-    prova no aparelho conta à parte de "disse aplicado e nada mudou" (`—`).
+    ELE SAIU DE `SEM_ECO`, e continua fora: o `state_full` não publica nada do
+    conteúdo do perfil, então a gravação não ecoa — mas o `_gravar` chama
+    `profile.switch` quando o perfil é o ativo, e é isso que faz a luz e o
+    gatilho chegarem ao aparelho no mesmo segundo.
     """
-    # SEM `_so_mudou`: aqui não há valor que "não mudou" — o campo não guarda
-    # nada em estado nenhum. Uma guarda de mudança só faria a primeira escolha
-    # dela passar calada.
+    from hefesto_dualsense4unix.profiles import estilos_de_jogo as receitas
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    # SEM `_so_mudou`: um `<select>` clicado sem trocar de opção não vale como
+    # escolha nova, mas o `change` é o único evento que traz a opção nova — e
+    # aplicar de novo a MESMA receita é idempotente por construção. O que a
+    # guarda evitaria aqui é uma gravação repetida; o que ela custaria é a
+    # primeira escolha dela passar calada, que foi o defeito de manhã.
+    #
     # O `valor` PRIMEIRO E O `rotulo` DEPOIS, e o travessão não conta como
     # escolha: a primeira opção do desenho é `<option value="">—</option>`, então
-    # o clique que não escolheu nada chega com `valor=""` e `rotulo="—"`. Sem
-    # esta guarda a tarja dizia *“—” não foi salvo*, que não é frase de gente.
+    # o clique que não escolheu nada chega com `valor=""` e `rotulo="—"`.
     escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
     if escolhido == "—":
         escolhido = ""
-    alvo = f"“{escolhido}”" if escolhido else "um Estilo de Jogo"
-    raise RuntimeError(
-        f"o perfil não guarda Estilo de Jogo — {alvo} não foi salvo, e o que "
-        f"vale continua sendo o que está nas abas. "
-        f"{_sem_a_sprint(_tela.GESTOS_SEM_MOTOR['editor.estilo'])}")
+    if not escolhido:
+        raise RuntimeError(
+            "escolha um Estilo de Jogo na lista — um Estilo de Jogo não foi "
+            "salvo, e o que vale continua sendo o que está nas abas.")
+    estilo = receitas.POR_ROTULO.get(escolhido)
+    if estilo is None:
+        raise RuntimeError(
+            f"“{escolhido}” não é um dos Estilos de Jogo do produto. Nada foi "
+            f"salvo, e o que vale continua sendo o que está nas abas.")
+    nome = _perfil_do_editor(ctx)
+    if estilo.chave == "personalizado":
+        return _dizer(
+            f"“{estilo.rotulo}” não mexe em nada: é o estilo que diz “eu ajusto "
+            f"na mão”. O que vale em “{nome}” continua sendo o que está nas abas.")
+    prof = load_profile(nome)
+    novo, pintados = _com_o_estilo(prof, estilo, ctx.mesa)
+    _gravar(novo, ctx, p)
+    # O DESFECHO DIZ AS TRÊS COISAS, e a da luz diz QUANTAS peças alcançou. Com
+    # a mesa vazia o gatilho e a vibração entram do mesmo jeito — e prometer cor
+    # a zero controles seria a tela afirmando o que não fez.
+    luz = (f"e a luz de {pintados} controle{'s' if pintados != 1 else ''}"
+           if pintados else "e nenhum controle na mesa para acender")
+    return _dizer(
+        f"“{estilo.rotulo}” aplicado em “{prof.name}”: gatilho, vibração {luz}.")
 
 
 @gesto("10-perfis.html", "editor.jogo")
@@ -2301,12 +2536,17 @@ def _editor_de(prof: Any) -> dict[str, Any]:
 #: botão ficou vivo na tela e morto no código, imprimindo `[gesto sem dono]`
 #: num terminal que ela não olha. Ver o gesto `recarregar`.
 #:
-#: **`editor.estilo` GANHOU DONO, e o dono RECUSA DIZENDO.** Motor ele continua
-#: não tendo: não há campo em `profiles/schema.Profile`, não há chave em
-#: `SIMPLE_MATCH_PRESETS` e os quinze estilos do desenho não têm arquivo atrás
-#: (conferido em 01/09/2026; quem lhes dá motor é a ONDA-PERFIS-04). O que
-#: mudou é que a escolha dela deixou de cair no vazio — ver o gesto
-#: `editor_estilo`, com o que a tela afirmava medido.
+#: **`editor.estilo` GANHOU MOTOR, e não só dono** — 03/09/2026, no fim do dia.
+#: De manhã ele era um gesto sem dono; à tarde passou a RECUSAR dizendo; à noite
+#: ele APLICA. Aqui estava escrito que *"motor ele continua não tendo … quem
+#: lhes dá motor é a ONDA-PERFIS-04"*, e a premissa estava certa e a conclusão
+#: não seguia: o estilo nunca precisou de campo no `Profile` — ele resolve
+#: gatilho, vibração e luz e sai de cena. As quinze receitas são de
+#: `profiles/estilos_de_jogo.py`, por decisão dela.
+#:
+#: **`editor.prioridade` NASCEU COM DONO no mesmo dia**, e era o único campo do
+#: editor sem nenhum caminho de escrita: o desenho tinha uma barra, e barra não
+#: se arrasta. Ver `editor_prioridade`.
 #:
 #: FATO SUBSTITUÍDO — 03/09/2026. Aqui estava escrito que *"a página publicada
 #: continua abrindo em «Luta»"*, com a cura do `<option value="" selected>—`
@@ -2329,7 +2569,10 @@ METODOS = {"launch_env.refresh", "profile.switch"}
 
 
 PAGINA = "10-perfis.html"
-PISO_DA_ABA = 12
+#: 12 → 13 EM 03/09/2026: nasceu o `editor.prioridade`, o slider que ela pediu.
+#: O piso SÓ SOBE — um gesto que sumisse não apareceria na tela, e é essa queda
+#: silenciosa que este número existe para pegar.
+PISO_DA_ABA = 13
 #: SÓ UMA PROVA DECLARADA PARA ONZE GESTOS, e a razão é estrutural, não
 #: preguiça: nove dos outros dez agem sobre o perfil ESCOLHIDO, e o `ctx` desta
 #: régua é fixo — `active_profile="regua"`, sem `_ESCOLHIDO` (um gesto que
@@ -2361,7 +2604,7 @@ PROVAS: list[dict[str, Any]] = [
      "chama": [("resultado", ["profile.switch"], {"name": "Ação"})]},
 ]
 
-#: O QUE NÃO ECOA NO `state_full`, e são DEZ dos onze. A razão é uma só e está
+#: O QUE NÃO ECOA NO `state_full`, e são DOZE dos treze. A razão é uma só e está
 #: no alto deste arquivo: **o daemon não guarda perfil, o disco guarda**. Ele
 #: publica `active_profile` (um nome) e mais nada sobre o conteúdo — renomear,
 #: duplicar, apagar, trocar a regra do jogo, restaurar a versão de ontem: nada
@@ -2375,6 +2618,12 @@ PROVAS: list[dict[str, Any]] = [
 #: E ISSO MUDA A PROVA de quase todos: eles agem sobre o perfil ESCOLHIDO, e
 #: uma régua que os clicasse em ordem alfabética — sem `selecionar` antes —
 #: veria nove recusas em vez de nove gestos.
+#: OS DOIS QUE ENTRARAM EM 03/09/2026, e o `editor.estilo` mudou de razão: ele
+#: estava fora porque SEMPRE levantava (recusa é `!` na prova no aparelho, não
+#: `—`). Agora ele grava, e grava no DISCO — que é a mesma razão dos outros
+#: onze. Deixá-lo de fora depois do motor faria a régua acusar de mudo um gesto
+#: que fez três coisas no aparelho dela.
 SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
+           "editor.prioridade", "editor.estilo",
            "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem",
            "recarregar")
