@@ -406,9 +406,28 @@ RADIOS_VIZINHOS = [
 VIZINHOS = list(_aba_conexoes.RESPOSTAS_DO_VIZINHO)
 
 
+#: O ENDEREÇO DA PRIMEIRA `<option>` — a pergunta em si.
+#:
+#: Ela deixa de ser texto morto em 03/09/2026 porque a tela passou a SUGERIR: o
+#: pacote reescreve o TEXTO desta opção com o que o kernel leu daquele rádio,
+#: ainda vestido de pergunta (`— Teclado? —`), e ela confirma escolhendo na
+#: mesma caixa. Decisão dela, perguntada se a "Câmera" do kernel é a "Webcam" da
+#: lista: *"Depende do aparelho. (…) A tela pode SUGERIR e deixar você
+#: confirmar, em vez de decidir sozinha."*
+#:
+#: NÃO NASCE UMA CAIXA NOVA, e isso é o contrato: a `<option>` já existia, o
+#: `<select>` já existia, e nem uma nem outro mudam de tamanho, de lugar ou de
+#: cor. A janela estável resolve o mesmo problema com TRÊS caixas a mais por
+#: linha — a palavra, o selo `(lido)` e um botão "Corrigir"
+#: (`secao_mesa._celula_respondida`) —, e essas três são desenho DELA.
+PERGUNTA_DO_VIZINHO = ' data-campo="vizinho-pergunta"'
+
+
 def viz_sel(escolhida):
-    return "".join(f'<option{" selected" if v == escolhida else ""}>{v}</option>'
-                   for v in VIZINHOS)
+    return "".join(
+        f'<option{" selected" if v == escolhida else ""}'
+        f'{PERGUNTA_DO_VIZINHO if i == 0 else ""}>{v}</option>'
+        for i, v in enumerate(VIZINHOS))
 
 
 def sel(opcoes, escolhida, classe="pronto", dica="", gesto="", campo=""):
