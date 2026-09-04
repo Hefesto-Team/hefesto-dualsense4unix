@@ -519,9 +519,15 @@ def tem_mic_pelo_radio(c):
 #: todo campo começa com maiúscula. "pela ponte" e "placa do controle" eram os
 #: dois únicos campos minúsculos da linha fechada, ao lado de "Vê como
 #: DualSense" e "Bateria 100%". Medido em 28/08 nas quatro linhas.
+#: O DONO DAS DUAS FRASES MUDOU-SE PARA O PACOTE — 03/09/2026, mesmo molde do
+#: `rotulo_do_controle` e do `html_da_conta`. Enquanto elas moravam só aqui, o
+#: produto não tinha como reescrevê-las: a linha fechada dizia "pelo cabo •
+#: Placa do controle" no primeiro lugar e "pelo rádio • Pela ponte" no segundo
+#: porque foi assim que a CENA foi desenhada, e não porque o daemon tenha dito.
+#: Agora há um dono só, chamado pelos dois — este gerador com a mesa da bancada,
+#: o pacote a cada tique com o transporte vivo.
 def caminho_do_mic(c):
-    return ("pelo rádio <span class=\"pt\">•</span> Pela ponte" if tem_mic_pelo_radio(c)
-            else "pelo cabo <span class=\"pt\">•</span> Placa do controle")
+    return _pacote08.caminho_do_microfone(c["via"])
 
 
 def custo(c):
@@ -1145,6 +1151,13 @@ CSS = CSS_GLIFO + CSS_POPUP + """
                  color:var(--texto-mudo)}
   .mm-conf-linha b{font-weight:600;color:var(--texto-suave)}
   .mm-conf-linha span{cursor:help;border-bottom:1px dotted var(--border-forte)}
+  /* A LINHA SOME QUANDO NÃO HÁ O QUE CONFESSAR — 03/09/2026, e a regra é a da
+     janela do desenho: lá `confissao_do_desenho` devolve vazio e nada é
+     desenhado. Quem acende esta classe é o produto, pelo `confissao-nada`; no
+     arquivo aberto no navegador ela nunca está ligada, porque a cena tem
+     lacuna. Sem esta regra, uma mesa sem lacuna leria "…: nada." — texto que
+     ocupa a linha para não dizer nada. */
+  .mm-conf-linha.sumido{display:none}
 
   /* ---- os gestos de baixo. `.apagado` deixou de ser só da Gestão de Controles:
      os dois botões de ação desta pop-up nascem apagados pela mesma regra dela —
@@ -1720,9 +1733,38 @@ def linha_do_controle(c):
     # clique contra literais em vez de contra a lista que a tela desenhou.
     opcoes_teto = list(_aba_conexoes.opcoes_do_teto())
     mic_dica = (MIC_PELO_RADIO.format(c=num(CUSTO_DO_MIC)) if no_radio else MIC_PELO_CABO)
-    botao = (f'<button class="btn" data-gesto="luz-nao-acende" '
+    # O RESUMO DO MICROFONE GANHOU ENDEREÇO — 03/09/2026, e as duas metades
+    # dele estavam mentindo na mesa dela ao mesmo tempo:
+    #
+    #   · o `<b>Ligado</b>` era palavra do desenho. Medido em 03/09 com a mesa
+    #     dela: o `maquina.json` diz que a ponte deste controle está
+    #     DESLIGADA, e a linha fechada dizia "Microfone Ligado". O endereço é o
+    #     MESMO `mic-existe` do `<select>` do corpo, de propósito — o piloto
+    #     distribui um valor por `data-campo` e cada elemento o veste como
+    #     sabe: `texto` no `<b>`, `valor` no `<select>`. Dois endereços para o
+    #     mesmo fato é como duas grafias começam.
+    #   · o caminho ("pelo cabo · Placa do controle") vinha do transporte da
+    #     CENA. Ver `_pacote08.caminho_do_microfone`, que agora é o dono único.
+    #
+    # O `title` FICA COMO ESTÁ, e é dívida declarada: ele é do transporte da
+    # cena e não segue o vivo. O alvo é um por elemento, e o que ela LÊ sem
+    # passar o mouse é o texto.
+    # A TRAVA DO BOTÃO VIROU DADO — 03/09/2026. A classe `apagado` continua
+    # nascendo do transporte da CENA (é o que ela vê ao abrir o arquivo), e o
+    # `data-campo="luz-trava"` é o que deixa o produto reescrevê-la a cada
+    # tique: `data-hef-quando="cabo"` acende a classe quando o pacote emitir
+    # `cabo`, e a apaga quando emitir `radio`.
+    #
+    # POR QUE A CLASSE E NÃO O `title`: o alvo é UM por elemento, e o que ela
+    # VÊ é o botão apagado. A dica continua a do desenho, e isso é dívida
+    # declarada — no cabo o `title` já diz a razão certa, mas ele não segue o
+    # transporte real. Um segundo campo para o `title` pede outro elemento.
+    trava = (f'data-campo="luz-trava" data-hef-alvo="classe" '
+             f'data-hef-classe="apagado" '
+             f'data-hef-quando="{_pacote08.LUZ_TRAVADA}"')
+    botao = (f'<button class="btn" data-gesto="luz-nao-acende" {trava} '
              f'title="{LUZ_NO_RADIO}">A luz não acende</button>' if no_radio
-             else f'<button class="btn apagado" data-gesto="luz-nao-acende" '
+             else f'<button class="btn apagado" data-gesto="luz-nao-acende" {trava} '
                   f'title="{LUZ_NO_CABO}">A luz não acende</button>')
     return f'''          <div class="gc-item gc-{c["pref"]}" data-controle="{c["pref"]}">
             {barra}
@@ -1732,7 +1774,7 @@ def linha_do_controle(c):
               <span class="gc-nome" data-campo="nome" data-hef-alvo="html">{rotulo(c)}</span>
               <span class="gc-resumo">
                 <span title="{"A borda deste controle é a cor lida do aparelho." if not no_radio else "A cor deste controle não foi lida — a borda fica neutra."}">Vê como <b>{c["mascara"]}</b></span>
-                <span title="{mic_dica}">Microfone <b>Ligado</b>, {caminho_do_mic(c)}</span>
+                <span title="{mic_dica}">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">{caminho_do_mic(c)}</span></span>
                 <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">{da_controles["bat"]}%</b></span>
               </span>
               </label>
@@ -2157,18 +2199,42 @@ CONFISSAO_EM_TITLE = "&#10;".join(
 #: A CONTA, por extenso — e ela é o que a linha do corpo entrega DE GRAÇA, sem
 #: hover nenhum. É dado derivado (`len(LACUNAS)`), não frase de tela: por isso
 #: pode nascer aqui sem ferir a regra de que todo texto sai do produto.
-#: O `raise` é portão: no dia em que a cena acender uma quarta lacuna, a
+#: O `raise` é portão: no dia em que a cena acender uma sexta lacuna, a
 #: geração PARA em vez de a tela publicar uma conta que não bate.
-_POR_EXTENSO = {1: "uma coisa", 2: "duas coisas", 3: "três coisas",
-                4: "quatro coisas", 5: "cinco coisas"}
+#:
+#: A TABELA MUDOU-SE PARA O PACOTE — 03/09/2026, pela mesma razão do
+#: `caminho_do_mic`: a linha agora é REPINTADA com as lacunas da mesa dela, e
+#: duas tabelas de números por extenso divergiriam no dia em que uma crescesse.
+_POR_EXTENSO = _pacote08.PALAVRA_DA_CONTA
 if len(LACUNAS) not in _POR_EXTENSO:
     raise SystemExit(f"ERRO: a cena tem {len(LACUNAS)} lacunas e esta tela só "
                      f"sabe dizer {sorted(_POR_EXTENSO)} por extenso.")
 
 #: A linha que FICA no corpo, fora da `.moldura` — sempre à vista.
+#:
+#: OS TRÊS ENDEREÇOS SÃO DE 03/09/2026, e o defeito que eles fecham foi medido
+#: na mesa dela no mesmo dia: esta linha dizia **"três coisas"** — a conta da
+#: CENA — e o desenho dela tem **UMA** lacuna (`especie`). A `.mm-conf-linha`
+#: mora FORA do bloco `.mm-faces` que o pacote troca inteiro, então nunca era
+#: repintada; a dica listava as três da bancada. Uma confissão que confessa a
+#: mais manda ela procurar o que o produto já sabe, e é tão falsa quanto uma
+#: que cala.
+#:
+#:   · `confissao-nada`  no `<div>`, alvo `classe`: acende `sumido` quando o
+#:     pacote emite `sim`, isto é, quando NÃO há o que confessar. É a regra da
+#:     GTK — lá a linha não é desenhada quando `confissao_do_desenho` devolve
+#:     vazio. O `data-hef-quando` compara por IGUALDADE de propósito: sem ele o
+#:     alvo vira booleano e o sumiço acenderia justo quando há confissão;
+#:   · `confissao-dica`  no `<span>`, alvo `atributo`/`title`: os itens da mesa
+#:     dela, um por linha;
+#:   · `confissao-conta` no `<b>`: a palavra por extenso.
 CONFISSAO_NA_TELA = (
-    f'<div class="mm-conf-linha"><span title="{CONFISSAO_EM_TITLE}">'
-    f'{MAPA["CONFISSAO_ABERTURA"]} <b>{_POR_EXTENSO[len(LACUNAS)]}</b>.'
+    f'<div class="mm-conf-linha" data-campo="confissao-nada" '
+    f'data-hef-alvo="classe" data-hef-classe="sumido" data-hef-quando="sim">'
+    f'<span data-campo="confissao-dica" data-hef-alvo="atributo" '
+    f'data-hef-atributo="title" title="{CONFISSAO_EM_TITLE}">'
+    f'{MAPA["CONFISSAO_ABERTURA"]} '
+    f'<b data-campo="confissao-conta">{_POR_EXTENSO[len(LACUNAS)]}</b>.'
     f'</span></div>')
 
 #: As três dicas de botão da janela do desenho — literais de dentro de função,
