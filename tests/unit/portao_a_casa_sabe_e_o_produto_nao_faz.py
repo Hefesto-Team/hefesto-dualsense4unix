@@ -841,11 +841,27 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`promessas_sem_caminho` tira os geradores da conta e, com eles, os "
         "chamadores desta função. MEDIDO em 01/09/2026."
     ),
-    "interface/monta.py::troca": (
-        "Auxiliar do gerador do mockup (interface/monta.py:809), chamado só pelos "
-        "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
-        "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
-        "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
+    # A LÁPIDE DE `interface/monta.py::troca` SAIU EM 04/09/2026, e a cura foi
+    # dela mesma: a ONDA0-F pôs a folha das dez peças (D-02 e D-03) dentro de
+    # `monta()`, e a injeção passa pelo `troca()` — justamente para que um
+    # `</style>` que suma PARE a geração em vez de publicar dez páginas sem as
+    # peças. Com isso a função ganhou chamador estático num módulo alcançado, e
+    # o portão cobrou a lápide, que é o que ele existe para fazer.
+    "interface/monta.py::botao_cinza": (
+        "Auxiliar do gerador do mockup (a peça S-03 da D-03, 04/09/2026), que "
+        "quem chama são os dez `interface/abaNN.py` — BANCADA, e por isso fora da "
+        "conta pela poda de `promessas_sem_caminho`. É a mesma classificação que "
+        "`interface/monta.py::monta` carrega logo acima, pela mesma razão medida: "
+        "o produto não gera página em tempo de execução, ele lê o HTML já escrito "
+        "em `interface/paginas/`. O docstring da função diz o mecanismo, e a "
+        "régua `tests/unit/test_o_botao_cinza_diz_a_razao.py` a exercita."
+    ),
+    "interface/monta.py::ressalva": (
+        "Auxiliar do gerador do mockup (a peça S-02 da D-02, 04/09/2026), que "
+        "quem chama são os dez `interface/abaNN.py` — BANCADA, e por isso fora da "
+        "conta pela poda de `promessas_sem_caminho`. Mesma classificação e mesma "
+        "razão de `interface/monta.py::monta`. A régua "
+        "`tests/unit/test_a_linha_de_ressalva_so_nasce_quando_ha.py` a exercita."
     ),
     # ── AS CAMADAS DE TELA DA INTERFACE NOVA, 01/09/2026 ──────────────
     # Elas entraram quando a boca passou a ser o `hefesto_vivo.py`, o
