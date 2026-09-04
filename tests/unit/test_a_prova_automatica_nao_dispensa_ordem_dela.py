@@ -74,16 +74,37 @@ def test_a_regua_realmente_pula_o_ignorar() -> None:
 def test_os_outros_gestos_da_aba_continuam_sendo_provados() -> None:
     """A isenção é de UM gesto, e não da aba.
 
-    Isentar demais é o outro jeito de a régua deixar de medir: os onze gestos
+    Isentar demais é o outro jeito de a régua deixar de medir: os gestos
     idempotentes desta aba têm de continuar sendo clicados, senão a prova botão
     a botão da 08 vira uma volta em branco.
+
+    **ESTA RÉGUA DIGITAVA A LISTA, e envelheceu na primeira melhora** —
+    04/09/2026. Ela cravava os onze nomes e cobrava que os onze fossem
+    clicados; quando `teto-da-vibracao` entrou em `PERIGOSOS` (ele passou a
+    gravar `controllers[uniq].rumble` no perfil ATIVO, por decisão dela de
+    construir a política por controle), a régua REPROVOU A MELHORA. É a família
+    de defeito que esta casa mais paga: *a régua digita em vez de perguntar*.
+
+    Agora ela pergunta ao dono. O que se mede é o que a régua garantia de
+    verdade: **tudo o que ela pula desta aba está em `PERIGOSOS`, e nada mais.**
     """
     from hefesto_dualsense4unix.interface import regua_do_mockup
 
     outros = {"alvo", "todos", "mic-existe", "sala-altura", "sala-visada",
               "vizinho-o-que-e", "teto-da-vibracao", "examinar-portas",
               "escolher-aparelho", "luz-nao-acende", "aplicar"}
+    perigosos = _perigosos()
+    protegidos = {g for p, g in perigosos if p == PAGINA} & outros
     clicar, pulados = regua_do_mockup._alvos_a_clicar(
-        [], outros, PAGINA, _perigosos())
-    assert set(clicar) == outros, (
-        f"a isenção do ⊘ levou junto outros gestos da aba: pulados={pulados!r}")
+        [], outros, PAGINA, perigosos)
+
+    assert set(pulados) <= protegidos, (
+        "a régua pulou gesto que NÃO está em `PERIGOSOS` — a isenção do ⊘ "
+        f"levou junto: {sorted(set(pulados) - protegidos)!r}")
+    assert set(clicar) == outros - protegidos, (
+        f"a volta perdeu gesto sem razão: clicar={sorted(clicar)!r} "
+        f"pulados={pulados!r} protegidos={sorted(protegidos)!r}")
+    assert len(clicar) >= 8, (
+        f"sobraram só {len(clicar)} gestos a clicar nesta aba — se a lista de "
+        "PERIGOSOS crescer a este ponto, a prova da 08 virou volta em branco e "
+        "a cobertura precisa de outro caminho, não de mais isenção")
