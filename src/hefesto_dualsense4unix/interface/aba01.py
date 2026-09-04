@@ -71,6 +71,9 @@ from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
 # gerador nenhum, e o gerador roda uma vez por mudança de desenho. Digitar o
 # número aqui abriria a porta para a página ter seis linhas e o pacote emitir
 # oito — que é a divergência silenciosa que este projeto persegue.
+from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (  # noqa: E402
+    FRASES_BANIDAS,
+)
 from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
     AVISOS_VIVOS,
     CADEADO_DICA,
@@ -1772,7 +1775,11 @@ def _conferir(doc):
     #    tá incorreta"* — a regra do Nativo é só "Desligado põe o Nativo online".
     #    As duas frases que caíram alarmavam sobre número que ensaio nenhum deste
     #    repositório mede.
-    for frase in ("derrubam o controle", "resultado é ZERO", "duros como no PS5"):
+    # A LISTA MORA EM UM LUGAR SÓ (`frases_que_ela_baniu`), e esta régua a LÊ.
+    # Ela estava DIGITADA aqui, e por isso a proibição alcançava só o HTML
+    # estático — a coluna Atenção é escrita em tempo de execução, e a frase
+    # passava por baixo com o gerador verde. Ver o módulo, que conta o caso.
+    for frase in FRASES_BANIDAS:
         exigir(frase not in corpo, f"um texto voltou a alarmar sem medição: {frase!r}")
 
     # 6. A PENDÊNCIA DIZ O QUE ESTÁ MARCADO — ela viu a contradição: a tela em

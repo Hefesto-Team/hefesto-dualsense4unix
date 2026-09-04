@@ -2754,9 +2754,37 @@ class Piloto:
 
 
 def _json(obj: Any) -> str:
+    """Serializa para o WebView — e RECUSA o que ela mandou tirar da tela.
+
+    Este é o funil: **todo** valor que chega ao `WebKit2.WebView` passa aqui, a
+    pintura e a resposta de gesto. Por isso a guarda de execução das frases
+    banidas mora neste ponto e não em cada aba — uma guarda por aba seriam dez
+    guardas a divergir, e a décima primeira aba nasceria sem nenhuma.
+
+    POR QUE ELA LEVANTA em vez de limpar: as três frases são constantes
+    LITERAIS que já estiveram no produto (`frases_que_ela_baniu`). Código que as
+    produz é defeito, não gosto — e limpar produziria uma frase mutilada na tela
+    dela, que é pior que o vermelho. O OITAVO CONFLITO de 04/09/2026 nasceu
+    exatamente de uma proibição que sabia recusar, mas recusava no LUGAR ERRADO:
+    ela lia o HTML estático, e a coluna Atenção é escrita em execução.
+    """
     import json
 
-    return json.dumps(obj, ensure_ascii=False, default=str)
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+        frase_banida_em,
+    )
+
+    saida = json.dumps(obj, ensure_ascii=False, default=str)
+    banida = frase_banida_em(saida)
+    if banida is not None:
+        raise ValueError(
+            f"um texto banido ia para a tela dela: {banida!r}. "
+            "Ela, 31/08/2026: NENHUM ALARME SEM MEDIÇÃO — as três frases "
+            "alarmavam sobre número que ensaio nenhum deste repositório mede. "
+            "A coluna Atenção pode dizer o ESTADO MEDIDO; não pode profetizar "
+            "consequência. Ver `interface/frases_que_ela_baniu.py`."
+        )
+    return saida
 
 
 def main() -> None:
