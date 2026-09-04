@@ -158,11 +158,24 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "lado": "SEM DONO — ver SEM_FONTE['lado:ligado'].",
     "testar": "rumble.set {weak, strong} e, meio segundo depois, rumble.stop — é "
     "o que o `rumble_test_500ms` do produto faz hoje. Global.",
-    "parar": "rumble.stop pela ponte `app/ipc_bridge.rumble_stop_checked`. "
-    "Global, e sem antídoto nesta tela: o botão 'Deixar o jogo controlar a "
-    "vibração' (`rumble_actions.py:1092`) não existe em nenhum dos dez mockups, "
-    "e o banner do cabeçalho manda clicar nele PELO NOME "
-    "(`status_actions.py:2262`).",
+    # FATO SUBSTITUÍDO EM 03/09/2026, e quem o derrubou foi ELA, em uma linha:
+    # *"O parar é sobre o teste."* Esta célula dizia "sem antídoto nesta tela",
+    # e a frase mandou-me concluir que o Parar deixava o controle mudo no jogo
+    # sem caminho de volta — cheguei a apresentar isso a ela como armadilha de
+    # mão única. NÃO É, e não é desde a cura que juntou os dois passos:
+    # `a05_vibracao.parar` chama `rumble_stop_checked()` E `rumble_passthrough
+    # (True)` na mesma função. O que na janela estável são DOIS botões, aqui é
+    # um só — e a dica publicada já dizia isso com todas as letras: *"Parar
+    # corta a vibração dele agora e devolve a mão ao jogo"*.
+    #
+    # A NOTA VELHA CUSTOU CARO justamente por descrever um estado que a cura já
+    # tinha desfeito: eu li a prosa, não o ato. É a forma que esta casa
+    # persegue, aparecendo do lado de dentro de uma tabela de donos.
+    "parar": "rumble.stop pela ponte `app/ipc_bridge.rumble_stop_checked` E "
+    "`rumble_passthrough(True)` na sequência — os DOIS passos que a janela "
+    "estável separa em dois botões. Corta a vibração daquele controle agora e "
+    "devolve a mão ao jogo, que é o que a dica publicada promete. Global no "
+    "primeiro passo; o alvo é mirado antes por `_mirar`.",
 }
 
 #: O que se diz de um gesto sem linha na tabela. Era um `KeyError` no piloto da
