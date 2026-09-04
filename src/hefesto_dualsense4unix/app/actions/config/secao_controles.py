@@ -437,7 +437,7 @@ class EsperaPeloPS:
 # 3. **sempre visível, e acionável nos DOIS transportes** — REESCRITA em
 #    04/09/2026 (D-12). Ela dizia *"só acionável no rádio"*, e a queixa 15 dela
 #    <!-- noqa-acento: citação literal dela -->
-#    derrubou a regra com uma pergunta: *"esse aviso nao devia aparecer pq era
+#    derrubou a regra com uma pergunta: *"esse aviso nao devia aparecer pq era  # noqa-acento
 #    pra funcionar em ambos ne"*. O CSV desta casa já dizia o mesmo —
 #    `audio.microfone` tem `cabo_aciona=sim` e `radio_aciona=parcial`
 #    (`docs/data/mapa-controles.csv`): quem é PARCIAL é o rádio. O que "não vale

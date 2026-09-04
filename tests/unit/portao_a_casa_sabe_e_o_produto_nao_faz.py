@@ -814,6 +814,20 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
         "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
     ),
+    "interface/pacotes/a01_jogar.py::mascaras_montaveis": (
+        "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
+        "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
+        "Jogar — `interface/aba01.py:915` e `:1799` —, que é BANCADA e sai da "
+        "conta pela poda de `promessas_sem_caminho`. "
+        "E ISSO ESTÁ CERTO, e a razão é do dado: a lista de máscaras montáveis "
+        "é do CÓDIGO, e não do estado da máquina: ela não muda entre dois tiques. "
+        "Por isso o chip cinza do `Nintendo Pro` vai CRAVADO no HTML publicado, "
+        "em vez de ser repintado dez vezes por segundo com a mesma resposta. "
+        "A IRMÃ dela é do produto e não está aqui: `mascara_do_controle` (o "
+        "gesto) recusa em tempo de execução lendo a mesma fonte, e é ela que "
+        "põe a frase no cartão quando alguém clica assim mesmo. "
+        "MEDIDO em 04/09/2026, na leva das quinze queixas dela."
+    ),
     # `luzinhas` E `tom_da_casa` SAÍRAM DAQUI EM 02/09/2026, e o portão foi quem
     # mandou: *"APAGUE a entrada. A cura chegou e a lápide ficou."* As duas
     # deixaram de ser só da bancada quando `pacotes/a04_iluminacao.desenho_da_luz`

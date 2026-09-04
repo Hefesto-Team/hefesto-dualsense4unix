@@ -1366,6 +1366,12 @@ DICA_VOL_ALTO = ("Arraste para escolher o volume do alto-falante deste controle.
 
 
 def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
+          # `estado_alto` NÃO DESENHA NADA DESDE 04/09/2026 (decisão [09]): o
+          # `<span class="mudo" data-campo="alto-estado" hidden>` que o recebia
+          # saiu do desenho, e quem mostra o mudo do alto-falante é o próprio ♪,
+          # que passou a ACENDER por leitura. Ele fica na assinatura porque
+          # `mesa_viva.estado_do_card` — o dono dos kwargs, e de outra onda —
+          # ainda o monta; tirá-lo daqui quebraria a chamada sem ganhar nada.
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_pc, estado_alto,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
           mic_modo="virtual", accel=None):

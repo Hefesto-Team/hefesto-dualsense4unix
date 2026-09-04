@@ -1123,6 +1123,23 @@ PERIGOSOS = {
     # a identidade do arquivo, não um campo qualquer.
     ("10-perfis.html", "editor.nome"), ("10-perfis.html", "editor.jogo"),
     ("10-perfis.html", "editor.ambiente"), ("10-perfis.html", "detectar"),
+    # O SOM É DELA, e estes dois entraram em 04/09/2026 NO MESMO COMMIT em que os
+    # gestos aprenderam a escrever — que é a regra que esta lista pede três
+    # parágrafos acima e que já ficou para trás três vezes.
+    #
+    #   02-controles·rota    "Todo o som do PC" agora tem dono: ele chama
+    #                        `audio_saida.mandar_o_som_do_pc`, que faz
+    #                        `pactl set-default-sink` — MOVE A SAÍDA DE ÁUDIO DA
+    #                        MÁQUINA DELA para o alto-falante do controle. Uma
+    #                        régua que o clicasse mudaria o som do que ela está
+    #                        ouvindo, no meio do trabalho, para provar que sabe
+    #                        clicar.
+    #   02-controles·volume  os dois deslizantes novos GRAVAM VALOR: o do
+    #                        microfone manda `mic.volume.set` e o do alto-falante
+    #                        `speaker_set`. A régua clicaria com o valor que
+    #                        estivesse na tela.
+    ("02-controles.html", "rota"),
+    ("02-controles.html", "volume"),
     # O CURSOR É DELA. Ligar a emulação de mouse move o ponteiro na tela em que
     # ela está trabalhando — é o mesmo motivo de toda janela desta casa nascer
     # com `--oculta`.

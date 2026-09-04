@@ -182,7 +182,7 @@ class TestOInterruptorEstaNaTela:
         """A queixa 15 dela, em forma de régua — 04/09/2026.
 
         <!-- noqa-acento: citação literal dela -->
-        *"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*
+        *"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*  # noqa-acento
 
         O interruptor continua sempre visível; o que mudou é que ele **acende
         nos dois transportes**. E a dica do cabo deixa de RECUSAR: ela diz por
