@@ -4,11 +4,11 @@ O DEFEITO, medido em 04/09/2026 e reportado por ELA duas vezes no mesmo dia:
 *"segue tudo abrindo na Meow ao invés da OS"*.
 
 A causa não era o workspace, e nenhum script de workspace podia resolvê-la:
-`aurora-claude-workspace.sh park` move uma janela DEPOIS de ela existir, e a
-suíte abre e fecha centenas em segundos. O `tests/conftest.py` simplesmente
-**não desviava a tela** — rodando na máquina dela, `WAYLAND_DISPLAY=wayland-1`
-e `GDK_BACKEND=wayland,x11`, e mais de vinte arquivos de teste constroem
-`Gtk.Window(...)` e chamam `show_all()`.
+o `park` do script de workspace desta máquina move uma janela DEPOIS de ela
+existir, e a suíte abre e fecha centenas em segundos. O `tests/conftest.py`
+simplesmente **não desviava a tela** — rodando na máquina dela,
+`WAYLAND_DISPLAY=wayland-1` e `GDK_BACKEND=wayland,x11`, e mais de vinte
+arquivos de teste constroem `Gtk.Window(...)` e chamam `show_all()`.
 
 A cura tem de ser ANTES: a janela não pode ter para onde nascer. O conftest
 sobe um Xvfb próprio e tira o Wayland do caminho.

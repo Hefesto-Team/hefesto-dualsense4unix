@@ -29,6 +29,45 @@ from typing import Any
 import pytest
 
 # ---------------------------------------------------------------------------
+# SRC-DESTA-ARVORE-01 — a suíte mede o código DESTA árvore, não o de outra
+# ---------------------------------------------------------------------------
+#
+# MEDIDO EM 04/09/2026, numa árvore de integração, e a conta foi cara: doze
+# lotes inteiros mediram o `src/` de OUTRA cópia do repositório.
+#
+# O caminho é banal e por isso passa despercebido: qualquer venv do projeto tem
+# o pacote instalado em modo editável, e o `.pth` dela aponta para o `src/` da
+# árvore onde a venv nasceu. Chamar `<venv-de-lá>/bin/python -m pytest` aqui
+# roda os TESTES daqui contra o PRODUTO de lá. Não dá erro; dá `ImportError` de
+# símbolo novo e `AttributeError` de atributo novo — que se leem como
+# *"o agente não terminou"*, quando o que houve foi o teste nunca ter visto o
+# código que ele testa.
+#
+# O `portoes.sh` já sofria disto e apenas AVISAVA ("PYTHONPATH (vazio) --
+# armadilha"). Aviso não é cura: ninguém lê o cabeçalho de um comando que
+# termina verde.
+#
+# Aqui a cura é estrutural e não depende de ninguém lembrar de nada: o
+# `conftest.py` sabe em que árvore ele mesmo está, e põe o `src/` dessa árvore
+# na FRENTE do `sys.path`. Viaja pelo git para toda árvore de agente.
+#
+# **Antes de tudo no módulo, de propósito** — os módulos de teste importam o
+# produto na coleta, que é depois disto e nunca antes.
+_RAIZ_DESTA_ARVORE = Path(__file__).resolve().parents[1]
+_SRC_DESTA_ARVORE = _RAIZ_DESTA_ARVORE / "src"
+if _SRC_DESTA_ARVORE.is_dir():
+    _caminho = str(_SRC_DESTA_ARVORE)
+    while _caminho in sys.path:
+        sys.path.remove(_caminho)
+    sys.path.insert(0, _caminho)
+    # Os subprocessos que a suíte dispara (há dezenas) herdam a mesma escolha.
+    _antes = os.environ.get("PYTHONPATH", "")
+    if _caminho not in _antes.split(os.pathsep):
+        os.environ["PYTHONPATH"] = (
+            _caminho + (os.pathsep + _antes if _antes else "")
+        )
+
+# ---------------------------------------------------------------------------
 # SUITE-SEM-COR-01 — a suíte não pode depender do terminal de quem a roda
 # ---------------------------------------------------------------------------
 #
@@ -71,7 +110,7 @@ os.environ.setdefault("NO_COLOR", "1")
 # verdade, no compositor de verdade, no workspace que estivesse na frente —
 # que é o dela. Ela tem UMA tela; janela que nasce nela quebra o trabalho dela.
 #
-# Nenhum script de workspace resolve isto: `aurora-claude-workspace.sh park`
+# Nenhum script de workspace resolve isto: o `park` desses scripts
 # move uma janela DEPOIS de ela existir, e a suíte abre e fecha centenas em
 # segundos. A cura tem de ser ANTES — a janela não pode ter para onde nascer.
 #
