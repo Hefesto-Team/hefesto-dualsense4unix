@@ -388,6 +388,7 @@ jobs:
       - run: python -m pytest tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py -q
       - run: python -m pytest tests/unit/test_o_portao_declara_o_interpretador.py -q
       - run: python -m pytest tests/unit/test_a_tela_dela_nao_recebe_janela_de_teste.py -q
+      - run: python -m pytest tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py -q
       - run: python -m pytest tests/unit/test_a_suite_mede_esta_arvore.py -q
 
   version-check:

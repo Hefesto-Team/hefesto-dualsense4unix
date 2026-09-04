@@ -127,6 +127,7 @@ completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chama
 # inteiro de trabalho. Custa ~1 s.
 completo|interpretador-do-portao|pytest|tests/unit/test_o_portao_declara_o_interpretador.py
 completo|a-tela-dela|pytest|tests/unit/test_a_tela_dela_nao_recebe_janela_de_teste.py
+completo|o-instrumento-e-a-tela|pytest|tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py
 completo|src-desta-arvore|pytest|tests/unit/test_a_suite_mede_esta_arvore.py
 rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py

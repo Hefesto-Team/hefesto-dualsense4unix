@@ -44,7 +44,7 @@ def test_a_suite_nao_enxerga_o_wayland_dela() -> None:
 def test_o_escape_existe_e_tem_nome() -> None:
     """Quem PRECISA ver a janela declara — e o padrão seguro fica de pé.
 
-    A MORDIDA: um subprocesso com `HEFESTO_TESTE_NA_TELA=1` recupera a sessão
+    A MORDIDA: um subprocesso com `HEFESTO_NA_TELA=1` recupera a sessão
     viva. Se este teste reprovar, ou o escape sumiu (e alguém que precisa
     depurar não tem saída), ou a guarda parou de agir (e a tela dela paga).
     """
@@ -56,7 +56,7 @@ def test_o_escape_existe_e_tem_nome() -> None:
     assert not sonda.exists(), "um conftest local aqui mascararia a guarda"
 
     env = dict(os.environ)
-    env["HEFESTO_TESTE_NA_TELA"] = "1"
+    env["HEFESTO_NA_TELA"] = "1"
     env["WAYLAND_DISPLAY"] = "wayland-1"
     env["DISPLAY"] = ":1"
     env["GDK_BACKEND"] = "wayland,x11"
@@ -67,14 +67,14 @@ def test_o_escape_existe_e_tem_nome() -> None:
     )
     assert r.returncode == 0, r.stderr
     assert "wayland-1" in r.stdout, (
-        "`HEFESTO_TESTE_NA_TELA=1` não devolveu a sessão viva:\n" + r.stdout
+        "`HEFESTO_NA_TELA=1` não devolveu a sessão viva:\n" + r.stdout
     )
 
 
 def test_sem_o_escape_a_guarda_age_mesmo_com_sessao_viva() -> None:
     """A METADE QUE IMPORTA: sessão viva no ambiente e a guarda desvia assim mesmo."""
     env = dict(os.environ)
-    env.pop("HEFESTO_TESTE_NA_TELA", None)
+    env.pop("HEFESTO_NA_TELA", None)
     env["WAYLAND_DISPLAY"] = "wayland-1"
     env["DISPLAY"] = ":1"
     env["GDK_BACKEND"] = "wayland,x11"
@@ -97,8 +97,16 @@ def test_sem_o_escape_a_guarda_age_mesmo_com_sessao_viva() -> None:
 
 def test_o_xvfb_morre_com_a_sessao_e_e_morto_pelo_pid() -> None:
     """Nada de processo órfão, e nada de `pkill -f` (que já derrubou o dela)."""
-    fonte = (RAIZ / "tests" / "conftest.py").read_text(encoding="utf-8")
-    assert "atexit.register(_derrubar_tela_de_mentira)" in fonte
+    from hefesto_dualsense4unix.utils import tela_de_mentira as tm
+
+    # A implementação é UMA SÓ (TELA-DELA-02): o conftest chama o módulo, e é
+    # no módulo que se confere. Duas cópias divergiriam — e a segunda subiria
+    # um Xvfb por cima do primeiro.
+    assert "garantir_tela_de_mentira" in (
+        RAIZ / "tests" / "conftest.py"
+    ).read_text(encoding="utf-8")
+    fonte = Path(tm.__file__ or "").read_text(encoding="utf-8")
+    assert "atexit.register(derrubar_tela_de_mentira)" in fonte
     # `pkill` como PALAVRA aparece no comentário que conta por que ele é
     # proibido; o que a régua veda é `pkill` EXECUTADO — argv ou shell.
     for forma in ('"pkill"', "'pkill'", "pkill -"):

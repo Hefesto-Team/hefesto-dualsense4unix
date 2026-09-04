@@ -14,6 +14,18 @@ _RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 sys.path.insert(0, str(_RAIZ / "src"))
 import argparse
+# A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
+# Ela pediu duas vezes em 04/09/2026; o `park` do workspace chega tarde,
+# porque move a janela DEPOIS de ela existir. Escape: HEFESTO_NA_TELA=1.
+_RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[2] / 'src')
+if _RAIZ_TELA not in sys.path:
+    sys.path.insert(0, _RAIZ_TELA)
+from hefesto_dualsense4unix.utils.tela_de_mentira import (
+    garantir_tela_de_mentira,
+)
+
+garantir_tela_de_mentira()
+
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
