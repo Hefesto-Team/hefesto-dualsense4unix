@@ -1217,31 +1217,111 @@ def _recusa_do_teclado(resposta: Any) -> str:
     return "o Hefesto recusou e não disse por quê"
 
 
-#: O QUE ESTA ABA JÁ PEDIU E O DAEMON AINDA NÃO CONFIRMOU, por parâmetro:
-#: `{"speed": (o número que o tique mostrava, o alvo pedido, o passo)}`.
+#: O QUE O HEFESTO JÁ CONFIRMOU E O TIQUE AINDA NÃO TROUXE, por campo:
+#: `{"speed": (o número que o tique mostrava, o que ele confirmou, o sentido do
+#: clique, o relógio da confirmação)}`.
 #:
 #: Ele existe por UM defeito medido, e some sozinho: o `ctx` é o estado do
 #: último tique (500 ms), então dois cliques dentro do mesmo tique partiam do
 #: MESMO número e pediam o MESMO alvo — o segundo clique não andava. Ver
-#: `_de_onde_partir`.
-_PEDIDO: dict[str, tuple[int, int, int]] = {}
+#: `_partir_de`.
+#:
+#: O INTERRUPTOR VIAJA COMO 0/1, e é de propósito: "Status do Modo" tinha o
+#: MESMO defeito e não tinha a cura (medido em 03/09/2026 — dois cliques no
+#: mesmo tique mandavam `enabled=True` duas vezes, e o segundo era engolido).
+#: Dois armazéns seriam dois relógios, duas expirações e duas regras de largar;
+#: um bool É um número de dois valores, e uma trava só é uma trava só.
+_PEDIDO: dict[str, tuple[int, int, int, float]] = {}
+
+#: QUANTO TEMPO A MEMÓRIA DE UM CLIQUE VALE. Ela existe para atravessar UM tique
+#: de pintura — 500 ms (`hefesto_vivo.TIQUE_MS`) —, e quatro tiques é folga de
+#: sobra para um daemon lento sem virar uma segunda verdade sobre o valor.
+#:
+#: SEM O RELÓGIO A MEMÓRIA ATRAVESSAVA UMA VOLTA INTEIRA, e o docstring de
+#: `_partir_de` prometia o contrário (*"não há caminho em que ela sobreviva a
+#: uma discordância"*). Havia um: ela clica `+` aqui (6 → 7), volta o número
+#: para 6 pela janela GTK, e o `+` seguinte partia de 7 e pedia 8 — porque o
+#: daemon dizia 6 de novo e o sentido era o mesmo. Concordar por acaso não é
+#: concordar.
+#:
+#: NÃO SE IMPORTA `TIQUE_MS` DAQUI, pela mesma razão de `PAUSA_DE_OUTRA_ABA`:
+#: `hefesto_vivo` puxa GTK no topo e os pacotes são puros de propósito. O número
+#: está escrito com a conta ao lado, que é o que permite conferir a divergência
+#: se o tique mudar.
+MEMORIA_DE_UM_CLIQUE = 2.0
 
 
-def _de_onde_partir(chave: str, atual: int, passo: int,
-                    minimo: int, maximo: int) -> int:
-    """O alvo do clique — partindo do que já se pediu quando o tique não chegou.
+def _partir_de(chave: str, atual: int, sentido: int) -> int:
+    """De onde o clique parte: o daemon, ou o último valor que ele CONFIRMOU.
 
-    DUAS CONDIÇÕES, e as duas desligam a memória sozinhas:
+    TRÊS CONDIÇÕES, e as três desligam a memória sozinhas:
 
     1. **o daemon ainda diz o mesmo número.** Se ele já publica outro — porque
        aplicou, porque aparou, ou porque ela mexeu pela janela GTK —, a memória
-       é largada e a partida volta a ser ele. Não há caminho em que ela
-       sobreviva a uma discordância;
+       é largada e a partida volta a ser ele;
     2. **o clique vai para o mesmo lado.** Dois `+` seguidos somam de verdade;
        um `+` seguido de um `-` parte do DAEMON, não do alvo pendente. A razão é
        que os dois gestos querem coisas diferentes: repetir é *ande mais*, e
        inverter dentro de meio segundo é ambíguo — a leitura conservadora é a de
-       sempre, e é a que o `PROVAS` desta aba já cobrava.
+       sempre, e é a que o `PROVAS` desta aba já cobrava. O interruptor manda
+       `sentido=0` e cai sempre neste ramo: ele tem UM gesto, e o segundo
+       clique é *desfaça*, nunca *ande mais*;
+    3. **o relógio ainda está na janela do tique** — ver `MEMORIA_DE_UM_CLIQUE`.
+
+    ELA SÓ FICA COM O QUE O HEFESTO NÃO RECUSOU — ver `_reservar`. Guardar o
+    alvo e deixá-lo lá era o defeito medido em 03/09/2026: um clique RECUSADO
+    (`sem_device`) deixava o alvo na memória, e o clique seguinte partia de um
+    número que nunca existiu — pedia 8 tendo o daemon em 6, pulando o 7.
+    """
+    pendente = _PEDIDO.get(chave)
+    if pendente is None:
+        return atual
+    visto, confirmado, sentido_antes, quando = pendente
+    if visto != atual or sentido_antes != sentido:
+        return atual
+    if time.monotonic() - quando > MEMORIA_DE_UM_CLIQUE:
+        del _PEDIDO[chave]
+        return atual
+    return confirmado
+
+
+def _reservar(chave: str, atual: int, valor: int,
+              sentido: int) -> tuple[int, int, int, float] | None:
+    """Anota o alvo ANTES de mandar, e devolve o que estava lá para o desfazer.
+
+    A RESERVA VEM ANTES DA CHAMADA, e isto é medido: os gestos rodam em THREAD
+    (`hefesto_vivo.trabalhar`, `:1384` — *"um gesto síncrono congelaria a janela
+    inteira por nove segundos e meio"*), então dois cliques rápidos são duas
+    threads. Anotar só DEPOIS da resposta deixaria a segunda ler a memória vazia
+    e repetir o pedido da primeira — o defeito que esta memória cura voltaria
+    dentro do tempo de ida e volta do IPC, que é justamente a janela em que ela
+    clica duas vezes.
+
+    E ELA É DESFEITA NA FALHA, por `_largar_a_reserva`: reservar não é
+    confirmar. Sem o desfazer, a reserva seria o mesmo defeito com outro nome.
+    """
+    antes = _PEDIDO.get(chave)
+    _PEDIDO[chave] = (atual, valor, sentido, time.monotonic())
+    return antes
+
+
+def _largar_a_reserva(chave: str,
+                      antes: tuple[int, int, int, float] | None) -> None:
+    """O Hefesto recusou ou ficou mudo: a reserva volta ao que era.
+
+    VOLTA AO QUE ERA, e não some: um `+` aceito seguido de um `+` recusado tem
+    de deixar o primeiro alvo de pé, senão a recusa apagaria um pedido que
+    aconteceu — e o clique seguinte pediria de novo o número que já está lá.
+    """
+    if antes is None:
+        _PEDIDO.pop(chave, None)
+    else:
+        _PEDIDO[chave] = antes
+
+
+def _de_onde_partir(chave: str, atual: int, passo: int,
+                    minimo: int, maximo: int) -> int:
+    """O alvo de um clique de `bignum`, aparado pela faixa do dono.
 
     A FAIXA VEM DO DONO, e isto NÃO é a "segunda verdade" que o docstring de
     `vel_cursor` proíbe: `MOUSE_SPEED_MIN`/`MAX` são LIDOS de
@@ -1251,16 +1331,9 @@ def _de_onde_partir(chave: str, atual: int, passo: int,
     o daemon vira `12`, e o `+` seguinte partiria de `13` — o clique ficaria
     preso no teto, que é um defeito PIOR que o que esta função cura.
 
-    O daemon continua aparando: esta função não decide nada sozinha, só evita
-    guardar um número que ele nunca vai confirmar.
+    O daemon continua aparando: esta função não decide nada sozinha.
     """
-    pendente = _PEDIDO.get(chave)
-    partida = atual
-    if pendente is not None and pendente[0] == atual and pendente[2] == passo:
-        partida = pendente[1]
-    novo = max(minimo, min(maximo, partida + passo))
-    _PEDIDO[chave] = (atual, novo, passo)
-    return novo
+    return max(minimo, min(maximo, _partir_de(chave, atual, passo) + passo))
 
 
 def _mandar(p: Any, **params: Any) -> None:
@@ -1321,29 +1394,46 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             "não consegui falar com o Hefesto agora, então não sei se ligar o "
             "mouse derrubaria um jogo em andamento. Tente de novo em instantes.")
-    atual = mode_of_state(ctx.state)
-    if atual != MODE_DESKTOP:
+    modo_agora = mode_of_state(ctx.state)
+    if modo_agora != MODE_DESKTOP:
         raise RuntimeError(
             "só dá para mexer no mouse e no teclado fora do jogo: jogando, o "
             "controle é do jogo, e ligar o mouse aqui derrubaria o controle "
             "virtual e os jogadores do co-op no meio da partida. O degrau se "
             "troca na aba Jogar.")
 
-    novo = not bool(_rato(ctx).get("enabled"))
+    # O SEGUNDO CLIQUE DENTRO DO MESMO TIQUE DESFAZ O PRIMEIRO — 03/09/2026, e é
+    # a cura que o `+`/`-` já tinha e este interruptor não. O `ctx` é o estado de
+    # 500 ms atrás, então dois cliques seguidos liam o MESMO `enabled` e mandavam
+    # `enabled=True` duas vezes: o segundo era engolido, e a tela — que desde
+    # hoje só acende pelo daemon — ficava dizendo "Ligado" sem ela ter querido.
+    # Ver `_partir_de`, com `sentido=0`: o interruptor tem um gesto só.
+    ligado = bool(_rato(ctx).get("enabled"))
+    novo = not bool(_partir_de("modo", int(ligado), 0))
+    # A RESERVA COBRE SÓ O MOUSE, e é onde ela tem de estar: a memória espelha
+    # `mouse_emulation.enabled`, que é o que `_rato` lê no clique seguinte. Se o
+    # TECLADO falhar depois, o mouse já mudou — largar a reserva ali faria o
+    # próximo clique repetir o pedido que o mouse já atendeu.
+    reserva = _reservar("modo", int(ligado), int(novo), 0)
     try:
-        resposta = p.resultado("mouse.emulation.set", enabled=novo, origin=MANUAL)
-    except RuntimeError as erro:
-        raise RuntimeError(
-            "o Hefesto não respondeu — o mouse ficou como estava") from erro
-    # O MOTIVO DA RECUSA CHEGA À TELA — 03/09/2026. Este `if` não existia: o
-    # `chamar` devolvia `True` para um `{"status": "failed", "bloqueio":
-    # "sem_device"}` e o gesto seguia adiante, mandando ligar o teclado como se
-    # o mouse tivesse ligado. Agora ele PARA e diz o motivo, com a tabela do
-    # produto — e o interruptor da tela não mente, porque desde hoje é o daemon
-    # quem o acende (ver `pacote()`).
-    recusa = _recusa_do_mouse(resposta)
-    if recusa:
-        raise RuntimeError(recusa)
+        try:
+            resposta = p.resultado("mouse.emulation.set", enabled=novo,
+                                   origin=MANUAL)
+        except RuntimeError as erro:
+            raise RuntimeError(
+                "o Hefesto não respondeu — o mouse ficou como estava") from erro
+        # O MOTIVO DA RECUSA CHEGA À TELA — 03/09/2026. Este `if` não existia: o
+        # `chamar` devolvia `True` para um `{"status": "failed", "bloqueio":
+        # "sem_device"}` e o gesto seguia adiante, mandando ligar o teclado como
+        # se o mouse tivesse ligado. Agora ele PARA e diz o motivo, com a tabela
+        # do produto — e o interruptor da tela não mente, porque desde hoje é o
+        # daemon quem o acende (ver `pacote()`).
+        recusa = _recusa_do_mouse(resposta)
+        if recusa:
+            raise RuntimeError(recusa)
+    except Exception:
+        _largar_a_reserva("modo", reserva)
+        raise
     try:
         resposta = p.resultado("keyboard.emulation.set", enabled=novo)
     except RuntimeError as erro:
@@ -1514,9 +1604,17 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     atual = _rato(ctx).get("speed")
     atual = DEFAULT_MOUSE_SPEED if atual is None else int(atual)
-    alvo = _de_onde_partir("speed", atual, _passo(o),
+    passo = _passo(o)
+    alvo = _de_onde_partir("speed", atual, passo,
                            MOUSE_SPEED_MIN, MOUSE_SPEED_MAX)
-    _mandar(p, speed=alvo, origin=MANUAL)
+    # A MEMÓRIA NÃO FICA COM O QUE ELE NÃO ACEITOU: `_mandar` levanta na recusa
+    # e no silêncio, e o alvo que não aconteceu sai do caminho do clique seguinte.
+    antes = _reservar("speed", atual, alvo, passo)
+    try:
+        _mandar(p, speed=alvo, origin=MANUAL)
+    except Exception:
+        _largar_a_reserva("speed", antes)
+        raise
 
 
 @gesto("06-navegacao.html", "rolagem-mais")
@@ -1529,14 +1627,24 @@ def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (`integrations/uinput_mouse.py:466`) e nada mais — o touchpad não rola.
 
     A FAIXA DELE É OUTRA, e o daemon é quem a impõe: `max(1, min(5, …))`
-    (`daemon/lifecycle.py:1404` e `:1452`), contra os 12 do cursor. A dica da tela
-    1 a 10" nas duas linhas, e nas duas está errada — está no relato.
+    (`daemon/lifecycle.py:1404` e `:1452`), contra os 12 do cursor.
+
+    FATO SUBSTITUÍDO — 03/09/2026. Esta frase estava truncada no meio e afirmava
+    que a dica da tela dizia *"De 1 a 10"* nas duas linhas *"e nas duas está
+    errada"*. Caducou: `aba06.D_VEL` e `aba06.D_ROL` LEEM a faixa do dono, e a
+    página publicada diz "De 1 a 12" no cursor e "De 1 a 5" na rolagem.
     """
     atual = _rato(ctx).get("scroll_speed")
     atual = DEFAULT_SCROLL_SPEED if atual is None else int(atual)
-    alvo = _de_onde_partir("scroll_speed", atual, _passo(o),
+    passo = _passo(o)
+    alvo = _de_onde_partir("scroll_speed", atual, passo,
                            SCROLL_SPEED_MIN, SCROLL_SPEED_MAX)
-    _mandar(p, scroll_speed=alvo, origin=MANUAL)
+    antes = _reservar("scroll_speed", atual, alvo, passo)
+    try:
+        _mandar(p, scroll_speed=alvo, origin=MANUAL)
+    except Exception:
+        _largar_a_reserva("scroll_speed", antes)
+        raise
 
 
 @gesto("06-navegacao.html", "linha-de-botao")
