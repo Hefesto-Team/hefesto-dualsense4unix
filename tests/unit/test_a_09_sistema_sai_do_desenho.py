@@ -702,19 +702,38 @@ def test_a_classe_da_linha_esta_declarada_como_sem_alvo(a09, ctx):
             "sem alvo — a dívida fechou e a declaração ficou.")
 
 
-def test_os_cinco_sem_dono_estao_declarados_com_a_razao(a09):
-    """Os que ficam de fora ficam ESCRITOS, e a razão não é de mecanismo.
+def test_os_que_ficam_sem_motor_estao_declarados_com_a_razao(a09):
+    """Os que ficam de fora ficam ESCRITOS — e a razão MUDOU em 03/09/2026.
 
-    Os cinco PROMETEM perguntar antes, e não há primitiva de confirmação nesta
-    interface. Ligar sem essa peça viraria o oposto da promessa: quatro `title`
-    desta página dizem "Pergunta antes, dizendo o que se perde".
+    Até hoje a lista se chamava `SEM_CONFIRMACAO` e a razão era *"não há
+    primitiva de confirmação"*. **Esse fato caiu**: ela escolheu os dois cliques
+    e eles existem (`a09_sistema.CONFIRMA`). O que segura os que sobram é de
+    MOTOR — o ato mora dentro de um handler da janela GTK.
+
+    A RÉGUA COBRA NOS DOIS SENTIDOS, e é o que a impede de virar paisagem: quem
+    está em `SEM_MOTOR` não pode ter dono, e todo nome ali tem de ser um dos
+    `DESTRUTIVOS` — uma linha órfã seria uma declaração sobre um botão que não
+    existe mais.
+
+    A MORDIDA: registre `@gesto("09-sistema.html", "procurar-camadas")` sem
+    tirá-lo do `SEM_MOTOR`, e isto reprova nomeando o gesto.
     """
     import pacotes
 
     com_dono = {g for (pg, g) in pacotes.GESTOS if pg == a09.PAGINA}
-    for nome, razao in a09.SEM_CONFIRMACAO.items():
+    assert set(a09.SEM_MOTOR) <= set(a09.DESTRUTIVOS), (
+        "há nome em `SEM_MOTOR` que não é um dos cinco destrutivos desta "
+        f"página: {sorted(set(a09.SEM_MOTOR) - set(a09.DESTRUTIVOS))}")
+    for nome, razao in a09.SEM_MOTOR.items():
         assert nome not in com_dono, (
-            f"`{nome}` ganhou dono e continua declarado como sem confirmação. "
-            "Se a primitiva de confirmação nasceu, tire-o desta lista.")
+            f"`{nome}` ganhou dono e continua declarado como sem motor. "
+            "Se o ato saiu do handler da janela velha, tire-o desta lista.")
         assert len(razao) > 20, f"`{nome}` está declarado sem razão escrita."
+    # E A OUTRA METADE: os destrutivos que NÃO estão declarados têm de ter dono.
+    # Sem esta linha, apagar um do `SEM_MOTOR` e não ligá-lo passaria verde.
+    for nome in a09.DESTRUTIVOS:
+        if nome not in a09.SEM_MOTOR:
+            assert nome in com_dono, (
+                f"`{nome}` saiu da declaração e continua sem dono — o botão "
+                "voltou a ser morto e nenhuma lista o diz.")
     assert len(com_dono) >= a09.PISO_DA_ABA
