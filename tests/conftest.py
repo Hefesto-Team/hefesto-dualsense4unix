@@ -19,7 +19,6 @@ import os
 import shutil
 import sys
 import tempfile
-import time as _tempo
 import types
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -122,85 +121,19 @@ os.environ.setdefault("NO_COLOR", "1")
 # a mesma razão do bloco acima: uma fixture roda depois da coleta, e a coleta
 # já importou os módulos que abrem `Gtk.init`.
 #
-# ESCAPE, explícito e com nome: `HEFESTO_TESTE_NA_TELA=1` deixa a suíte usar a
+# ESCAPE, explícito e com nome: `HEFESTO_NA_TELA=1` deixa a suíte usar a
 # sessão viva. Existe para quem PRECISA ver a janela — e é opt-in porque o
 # padrão seguro tem de ser o que não custa o trabalho dela.
 
-#: Handle do Xvfb desta sessão de teste. Guardado para matar **por PID** —
-#: nunca por padrão de linha de comando (um `pkill -f` já derrubou o
-#: compositor dela em 04/09/2026).
-_XVFB: Any = None
+# A implementação é UMA SÓ, e vive no pacote: os instrumentos de `scripts/`
+# chamam a mesma função (TELA-DELA-02). Duas cópias da mesma guarda seriam duas
+# guardas a divergir — e uma delas subiria um segundo Xvfb por cima do outro,
+# que foi exatamente o que a régua de cobertura pegou ao nascer.
+from hefesto_dualsense4unix.utils.tela_de_mentira import (
+    garantir_tela_de_mentira,
+)
 
-
-def _tela_de_mentira() -> None:
-    """Sobe um Xvfb e aponta o GTK para ele. Sem tela livre, RECUSA."""
-    global _XVFB
-
-    if os.environ.get("HEFESTO_TESTE_NA_TELA") == "1":
-        return
-
-    # Já headless (CI sem sessão gráfica): nada a fazer, e nada a quebrar.
-    if not os.environ.get("WAYLAND_DISPLAY") and not os.environ.get("DISPLAY"):
-        return
-
-    xvfb = shutil.which("Xvfb")
-    if xvfb is None:
-        raise RuntimeError(
-            "A suíte abre janelas GTK de verdade e NÃO há `Xvfb` para segurá-las: "
-            "elas nasceriam na sessão gráfica viva — a tela dela. Instale "
-            "`xvfb`, ou declare que você QUER ver as janelas com "
-            "`HEFESTO_TESTE_NA_TELA=1`."
-        )
-
-    import subprocess  # local: só quem tem sessão gráfica paga o import
-
-    for numero in range(80, 130):
-        if Path(f"/tmp/.X11-unix/X{numero}").exists():
-            continue
-        # O caminho vem do `shutil.which`, nunca do ambiente.
-        proc = subprocess.Popen(
-            [xvfb, f":{numero}", "-screen", "0", "1920x1080x24", "-nolisten", "tcp"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        for _ in range(100):  # até 5 s; o socket é o sinal de "pronto"
-            if Path(f"/tmp/.X11-unix/X{numero}").exists():
-                break
-            if proc.poll() is not None:
-                break
-            _tempo.sleep(0.05)
-        if proc.poll() is not None:
-            continue  # esta tela não subiu; tenta a próxima
-        _XVFB = proc
-        os.environ["DISPLAY"] = f":{numero}"
-        os.environ.pop("WAYLAND_DISPLAY", None)
-        os.environ["GDK_BACKEND"] = "x11"
-        # WebKit sem GPU: sob Xvfb não há compositor com aceleração, e o modo
-        # composto trava em vez de reprovar.
-        os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
-        os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
-        atexit.register(_derrubar_tela_de_mentira)
-        return
-
-    raise RuntimeError(
-        "Nenhuma tela Xvfb livre entre :80 e :129 — a suíte não vai abrir "
-        "janela na sessão dela para contornar isso."
-    )
-
-
-def _derrubar_tela_de_mentira() -> None:
-    """Mata o Xvfb **pelo PID desta sessão**, e só ele."""
-    proc = _XVFB
-    if proc is None or proc.poll() is not None:
-        return
-    proc.terminate()
-    with contextlib.suppress(Exception):
-        proc.wait(timeout=5)
-    if proc.poll() is None:
-        proc.kill()
-
-
-_tela_de_mentira()
+garantir_tela_de_mentira(anunciar=False)
 
 # ---------------------------------------------------------------------------
 # GUARDA-GI-REAL-01 — o `gi` do processo é o de verdade, ou é um stub?
