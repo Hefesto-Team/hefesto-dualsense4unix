@@ -447,26 +447,52 @@ def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
         f"a frase não termina no caminho que ESTA tela alcança: {frase!r}")
 
 
-def test_a_remenda_do_fim_da_frase_nao_apodrece() -> None:
-    """No dia em que o produto mudar o fim, a régua reprova AQUI.
+def test_o_matcher_nao_nomeia_botao_de_tela_nenhuma() -> None:
+    """A REMENDA ACABOU — 05/09/2026, e esta régua guarda o que ficou no lugar.
 
-    É o que separa uma remenda declarada de uma remenda podre: a troca é por
-    sufixo exato, e um sufixo que deixa de casar faria a frase da GTK voltar
-    inteira à tela, calada.
+    ELA COBRAVA UM SUFIXO. Até aqui, `exigencia_invisivel` devolvia a frase com
+    o fim *"Ligue o Modo avançado para ver e mudar."* — o nome de um interruptor
+    do `main.glade` — e esta aba TROCAVA esse sufixo pelo caminho que ela
+    alcança. A régua guardava a troca: *"no dia em que o produto mudar o fim,
+    ela reprova AQUI"*.
 
-    MORDIDA: mude uma letra de `FIM_DA_EXIGENCIA_NA_GTK` e esta régua reprova.
+    O CONSERTO DE VERDADE ERA OUTRO, e estava escrito no próprio bloco que a
+    remenda documentava: um matcher de `profiles/` não pode nomear um botão de
+    uma tela. O FATO saiu para `exigencia_invisivel` e o CAMINHO para cada
+    tela — `simple_match.CAMINHO_DA_JANELA_GTK` na janela estável, o
+    `FIM_DA_EXIGENCIA_AQUI` aqui.
+
+    O QUE ESTA RÉGUA COBRA AGORA é o que a remenda existia para impedir, sem a
+    remenda: que a frase do produto não volte a mandar ninguém a um botão.
+
+    A MORDIDA: devolva `CAMINHO_DA_JANELA_GTK` ao fim de `exigencia_invisivel`
+    e este teste reprova nomeando a peça de tela que voltou ao matcher.
     """
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria
-    from hefesto_dualsense4unix.profiles.simple_match import exigencia_invisivel
+    from hefesto_dualsense4unix.profiles.simple_match import (
+        CAMINHO_DA_JANELA_GTK,
+        exigencia_invisivel,
+    )
 
     match = MatchCriteria(window_class=["steam_app_3357650"],
                           process_name=["PRAGMATA.exe"])
     do_produto = exigencia_invisivel(match)
     assert do_produto, "o produto parou de contar a exigência escondida"
-    assert do_produto.endswith(a10_perfis.FIM_DA_EXIGENCIA_NA_GTK), (
-        f"o fim da frase do produto mudou e a remenda desta aba não o alcança "
-        f"mais:\n    produto  {do_produto!r}\n"
-        f"    esperava {a10_perfis.FIM_DA_EXIGENCIA_NA_GTK!r}")
+    assert CAMINHO_DA_JANELA_GTK not in do_produto, (
+        f"o caminho da janela GTK voltou para dentro do matcher:\n"
+        f"    {do_produto!r}\n"
+        f"Um matcher de `profiles/` não sabe que botões cada tela desenhou, e "
+        f"esta interface não tem 'Modo avançado' nenhum.")
+    assert "Modo avançado" not in do_produto, (
+        "o matcher voltou a nomear uma peça da janela GTK")
+
+    # E O CAMINHO DESTA TELA CONTINUA SENDO SOMADO — sem isto o aviso vira
+    # beco sem saída: ela lê que falta um campo e não lê onde mexer.
+    daqui = a10_perfis._exigencia_para_esta_tela(match)
+    assert daqui.startswith(do_produto), (
+        f"esta aba deixou de partir do fato do produto: {daqui!r}")
+    assert daqui.endswith(a10_perfis.FIM_DA_EXIGENCIA_AQUI), (
+        f"esta aba deixou de somar o caminho dela: {daqui!r}")
 
 
 def test_nenhuma_pagina_desta_interface_oferece_o_modo_avancado() -> None:
