@@ -1153,12 +1153,12 @@ def _rotulo_do_remover(alvo: str) -> str:
     não tem diálogo. O `on_profile_remove` da janela estável abre um
     `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3171`), que é
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
-    thread** (`hefesto_vivo.py:1849`) e GTK só aceita diálogo no laço principal.
+    thread** (`hefesto_vivo.py:2117`) e GTK só aceita diálogo no laço principal.
 
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:1969`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:2159`): todo `RuntimeError` de gesto
     vira TARJA na tela — no cartão do controle quando a página tem um, e no
     `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
     `SEGUNDOS_DO_RECADO = 30.0`.

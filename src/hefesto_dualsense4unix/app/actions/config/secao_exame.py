@@ -1048,7 +1048,7 @@ class PainelDoExame:
         self._marcar_examinando()
 
         def _trabalho() -> None:
-            # DIAGNÓSTICO-NAO-DERRUBA-A-ABA-01 (`daemon_actions.py:787`): o que
+            # DIAGNÓSTICO-NAO-DERRUBA-A-ABA-01 (`daemon_actions.py:1194`): o que
             # se perde no pior caso é uma frase na tela; o que se protege é a
             # aba inteira, e com ela a janela.
             try:

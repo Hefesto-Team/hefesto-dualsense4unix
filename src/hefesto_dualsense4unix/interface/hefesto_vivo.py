@@ -1661,6 +1661,16 @@ PERIGOSOS = {
     #                        microfone manda `mic.volume.set` e o do alto-falante
     #                        `speaker_set`. A régua clicaria com o valor que
     #                        estivesse na tela.
+    #   02-controles·mudo    O MUDO PASSOU A GRAVAR — 05/09/2026, e a entrada
+    #                        faltou no commit que o ensinou. Ele já mexia no
+    #                        firmware do controle dela (`mic.canal.set` elege o
+    #                        canal de captura no PipeWire, `speaker_set` cala o
+    #                        alto-falante); agora escreve TAMBÉM no perfil ativo
+    #                        por `save_profile`. Sem esta linha, a próxima volta
+    #                        da `--prova-clique` mudaria o mudo dela no disco,
+    #                        com backup novo em `.historico/`, para provar que
+    #                        sabe clicar.
+    ("02-controles.html", "mudo"),
     ("02-controles.html", "rota"),
     ("02-controles.html", "volume"),
     # O CURSOR É DELA. Ligar a emulação de mouse move o ponteiro na tela em que

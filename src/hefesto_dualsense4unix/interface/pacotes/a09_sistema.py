@@ -378,7 +378,7 @@ def _achados(state: dict[str, Any] | None,
 #:     medir_prontuario_dos_jogos      7.148,8 ms
 #:
 #: **FATO DERRUBADO:** o comentário que o chama na janela antiga
-#: (`daemon_actions.py:1145`) diz *"Roda dentro do worker porque leva ~1 s"*. Na
+#: (`daemon_actions.py:1156`) diz *"Roda dentro do worker porque leva ~1 s"*. Na
 #: mesa dela ele leva SETE, e a ordem de grandeza é o que decide o desenho desta
 #: função: 1 s numa faixa lenta de 2 s seria caro; 7 s é impossível.
 #:
