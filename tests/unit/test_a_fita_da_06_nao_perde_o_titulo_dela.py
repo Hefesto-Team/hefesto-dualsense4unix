@@ -64,7 +64,7 @@ class TestOTituloDaFitaSobreviveAoTique:
         arquivo publicado e a tela viva voltam a divergir — e a divergência dura
         um tique, que é o tempo de ninguém ver.
         """
-        publicado = (_INTERFACE / "paginas" / "06-navegacao.html").read_text(
+        publicado = (_INTERFACE / "paginas" / "06-navegacao.html").read_text(  # noqa-acento: nome de pasta no disco
             encoding="utf-8")
         titulo = monta.TITULOS_DA_FITA["06-navegacao.html"]
         assert f'title="{titulo}"' in publicado

@@ -3320,7 +3320,8 @@ _UNIQ = "aa:bb:cc:00:00:01"
 #: passo desse caminho é pedir ao daemon que releia o ambiente de lançamento.
 #: Declarar aqui é o contrário de afrouxar: a régua passa a COBRAR a segunda
 #: metade do ato, e um gatilho que só chega ao aparelho volta a reprovar.
-_GUARDOU = ("chamar", ["launch_env.refresh"], {})
+_GUARDOU: tuple[str, list[str], dict[str, Any]] = (
+    "chamar", ["launch_env.refresh"], {})
 
 #: sem repetir a chamada. `stop_hard` é de feedback; `galope`, de vibração.
 _STOP_HARD, _MODO_STOP_HARD = _curva("stop_hard")
