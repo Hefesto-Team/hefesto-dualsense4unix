@@ -49,13 +49,13 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 # faz um segundo trabalho: sob o `Xvfb` a área de transferência é a DAQUELE
 # servidor, não a da sessão dela. Escape: HEFESTO_NA_TELA=1 — e quem o declarar
 # passa a copiar por cima do que ela tiver copiado.
-from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
+from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
 
 garantir_tela_de_mentira()
 
-import gi  # noqa: E402
+import gi
 
 gi.require_version("Gtk", "3.0")
 # O `Gdk` PRECISA DE VERSÃO DECLARADA, e este ensaio pagou por descobrir: sem
@@ -65,12 +65,12 @@ gi.require_version("Gtk", "3.0")
 # mesma armadilha do produto: `Gdk.SELECTION_CLIPBOARD` não existe no GDK 4.
 gi.require_version("Gdk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import Gdk, GLib, Gtk  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk
 
-from hefesto_dualsense4unix.integrations import steam_launch_options as slo  # noqa: E402
-from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho  # noqa: E402
-from hefesto_dualsense4unix.interface import hefesto_vivo  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07  # noqa: E402
+from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+from hefesto_dualsense4unix.interface import hefesto_vivo
+from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 
 ABA = "07-lancadores.html"
 

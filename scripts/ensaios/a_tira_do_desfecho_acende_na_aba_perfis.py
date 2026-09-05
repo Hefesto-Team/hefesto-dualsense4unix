@@ -269,7 +269,7 @@ def main() -> int:
     tarde: list[str] = []
     for x in lido:
         t = x.get("assentado") or {}
-        print(f"  {str(x['passo']):32s} "
+        print(f"  {x['passo']!s:32s} "
               f"{('MUDA' if _mudo(x.get('no_ato')) else 'fala'):7s} "
               f"{('MUDA' if _mudo(t) else 'fala'):7s} "
               f"{str(t.get('texto'))!r}"

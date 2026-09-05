@@ -355,7 +355,7 @@ def conferir_o_documento(linhas: list[dict[str, str]]) -> list[str]:
     publicado: dict[str, tuple[int, ...]] = {}
     for linha in texto[inicio:fim].splitlines():
         partes = [p.strip() for p in linha.strip().strip("|").split("|")]
-        if len(partes) != 8 or partes[0] not in ABAS + ("TODAS",):
+        if len(partes) != 8 or partes[0] not in (*ABAS, "TODAS"):
             continue
         try:
             publicado[partes[0]] = tuple(int(p.rstrip("%")) for p in partes[1:])
@@ -363,7 +363,7 @@ def conferir_o_documento(linhas: list[dict[str, str]]) -> list[str]:
             return [f"numero-publicado: {DOC.name}: a linha de '{partes[0]}' "
                     "tem célula que não é número."]
     falhas: list[str] = []
-    for aba in ABAS + ("TODAS",):
+    for aba in (*ABAS, "TODAS"):
         deste = linhas if aba == "TODAS" else [l for l in linhas if l["aba"] == aba]
         c = Counter(l["veredito"] for l in deste)
         medido = (len(deste), c["IGUAL"], c["DIFERENTE"], c["FALTA_NO_HTML"],
@@ -383,7 +383,7 @@ def conferir_o_documento(linhas: list[dict[str, str]]) -> list[str]:
 def tabela(linhas: list[dict[str, str]]) -> str:
     saida = [f"{'aba':<15}{'feats':>6}{'IGUAL':>7}{'DIFER':>7}{'FALTA':>7}"
              f"{'SO_HTML':>9}{'?':>4}{'paridade':>10}"]
-    for aba in ABAS + ("TODAS",):
+    for aba in (*ABAS, "TODAS"):
         deste = linhas if aba == "TODAS" else [l for l in linhas if l["aba"] == aba]
         if not deste:
             continue

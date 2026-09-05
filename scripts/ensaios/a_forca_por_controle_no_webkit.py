@@ -70,13 +70,13 @@ from hefesto_dualsense4unix.utils.tela_de_mentira import (
 
 garantir_tela_de_mentira()
 
-import gi  # noqa: E402
+import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk
 
-from hefesto_dualsense4unix.interface import hefesto_vivo  # noqa: E402
+from hefesto_dualsense4unix.interface import hefesto_vivo
 
 ABA = "05-vibracao.html"
 
@@ -236,8 +236,8 @@ def main() -> int:
     print(f"{'coluna':8s} {'uniq':20s} {'antes':12s} {'depois':12s}")
     for pref in sorted(set(a["colunas"]) | set(d["colunas"])):
         ca, cd = a["colunas"].get(pref, {}), d["colunas"].get(pref, {})
-        print(f"{pref:8s} {str(cd.get('uniq') or ca.get('uniq') or '—'):20s} "
-              f"{str(ca.get('aceso')):12s} {str(cd.get('aceso')):12s}")
+        print(f"{pref:8s} {cd.get('uniq') or ca.get('uniq') or '—'!s:20s} "
+              f"{ca.get('aceso')!s:12s} {cd.get('aceso')!s:12s}")
     print(f"recados na tela, depois: {d['recados']}")
 
     for arq in sorted(destino.glob("*.json")):
