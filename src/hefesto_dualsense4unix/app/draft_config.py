@@ -1303,6 +1303,109 @@ class DraftConfig(BaseModel):
             ),
         )
 
+    def effective_mic_for(self, uniq: str | None) -> MicDraft:
+        """Microfone EFETIVO que o card exibe para o alvo ``uniq``.
+
+        Merge POR CAMPO, como o de LEDs e pela mesma razão: o
+        ``ControllerMicOverride`` é um subconjunto ESTRITO do global — só
+        ``muted`` e ``volume`` —, então ``button_toggles_system`` **sempre**
+        vem do global, e um override que só diz ``muted`` não pode zerar o
+        volume que a seção global carrega.
+        """
+        override = self.controller_override(uniq)
+        cfg = getattr(override, "mic", None)
+        if cfg is None:
+            return self.mic
+        campos = cfg.model_fields_set
+        return self.mic.model_copy(update={
+            nome: getattr(cfg, nome)
+            for nome in ("muted", "volume") if nome in campos
+        } | {"in_profile": True})
+
+    def with_controller_mic(self, uniq: str, mic: MicDraft) -> DraftConfig:
+        """Novo draft com o microfone de ``uniq`` substituído.
+
+        ESCRITA EM 05/09/2026, e o que a fez faltar é o que a fez nascer: o
+        ``ControllerOverrides`` do esquema tem SEIS seções e o ``DraftConfig``
+        sabia escrever QUATRO — ``mic`` e ``sensores`` só atravessavam pelo
+        passthrough byte-idêntico de ``source_controllers``. Enquanto a peça
+        não existisse, "Salvar" não tinha por onde levar ao disco o que ela
+        escolheu no card daquele microfone; o pedido dela era *"cada config
+        pra cada controle"*.
+
+        AS DUAS REGRAS SÃO AS DAS IRMÃS, e nenhuma é nova:
+
+        * **igual ao global não vira override** (COR-04) — um override que
+          repete o global é dívida silenciosa: some da tela e reaparece quando
+          o global mudar, contradizendo a peça sem ninguém ver;
+        * **só os campos MEXIDOS entram** — o esquema declara ``None`` como
+          *sem opinião*, e escrever o valor de leitura transformaria "não
+          pedi nada" em "pedi exatamente isto".
+
+        ``button_toggles_system`` NÃO ENTRA, e a razão está medida no esquema
+        (``ControllerMicOverride``): ``hotkey.mic_button_loop`` consulta o
+        ``DaemonConfig``, que é um por máquina — o campo não tem caminho por
+        unidade, e campo que grava sem quem leia faz a tela prometer.
+        """
+        from hefesto_dualsense4unix.profiles.schema import ControllerMicOverride
+
+        campos: dict[str, Any] = {}
+        if mic.muted is not None and mic.muted != self.mic.muted:
+            campos["muted"] = bool(mic.muted)
+        if mic.volume is not None and mic.volume != self.mic.volume:
+            campos["volume"] = int(mic.volume)
+        if not campos:
+            return self.with_controller_fields_cleared(
+                uniq, "mic", {"muted", "volume"}
+            )
+        return self._with_override_section(
+            uniq, "mic", ControllerMicOverride(**campos)
+        )
+
+    def effective_sensores_for(self, uniq: str | None) -> Any:
+        """Giroscópio e acelerômetro DESTA peça, ou ``None`` — sem opinião.
+
+        SEM MERGE COM GLOBAL, e a ausência é o desenho: ``sensores`` **não
+        tem seção global** no ``Profile``. O override é o único lugar onde a
+        opinião existe, e ``None`` significa o que ``D-AUDIO-E-GIRO-NASCEM-
+        LIGADOS`` (25/08/2026) manda: **ligado**. Um perfil que não pediu nada
+        não desliga o sensor dela por omissão.
+        """
+        override = self.controller_override(uniq)
+        return getattr(override, "sensores", None)
+
+    def with_controller_sensores(
+        self, uniq: str, *,
+        giroscopio: bool | None = None,
+        acelerometro: bool | None = None,
+    ) -> DraftConfig:
+        """Novo draft com os sensores de ``uniq`` substituídos.
+
+        DOIS CAMPOS E NÃO UM porque ela disse *"ambos independente do modo e
+        da mascara"* e cada um por si — giroscópio e acelerômetro viajam na
+        mesma janela de 25 bytes, em faixas distintas, e zerar meia faixa
+        desliga um sem tocar no outro.
+
+        ``None`` em um campo é *sem opinião* e o deixa fora do override; os
+        dois ``None`` limpam a seção inteira, que é o caminho de volta ao
+        default ligado. Não há "igual ao global" a conferir aqui: o esquema
+        não tem seção global de sensores — a peça É o único dono.
+        """
+        from hefesto_dualsense4unix.profiles.schema import ControllerSensoresOverride
+
+        campos: dict[str, Any] = {}
+        if giroscopio is not None:
+            campos["giroscopio"] = bool(giroscopio)
+        if acelerometro is not None:
+            campos["acelerometro"] = bool(acelerometro)
+        if not campos:
+            return self.with_controller_fields_cleared(
+                uniq, "sensores", {"giroscopio", "acelerometro"}
+            )
+        return self._with_override_section(
+            uniq, "sensores", ControllerSensoresOverride(**campos)
+        )
+
     def _with_override_section(
         self, uniq: str, section: str, value: Any
     ) -> DraftConfig:
