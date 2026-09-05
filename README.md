@@ -60,7 +60,14 @@ entram.
 | **Navegação** — o controle como mouse e teclado | **Configurações** — o que o Hefesto não tem como medir |
 | [![Navegação](docs/usage/assets/readme_navegacao_dsx.png)](docs/usage/interface.md) | [![Configurações](docs/usage/assets/readme_configuracoes.png)](docs/usage/interface.md#configurações) |
 
-Aba por aba em [docs/usage/interface.md](docs/usage/interface.md).
+Aba por aba em
+[docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md).
+
+> **As imagens acima são da janela antiga, de onze abas** (05/09/2026). O
+> produto que o lançador abre hoje tem **dez**, e a aba **Emulação** não existe
+> mais. Quem procura o que mudou de lugar:
+> [docs/usage/A-JANELA-ANTIGA-o-que-mudou-de-lugar.md](docs/usage/A-JANELA-ANTIGA-o-que-mudou-de-lugar.md).
+> As capturas novas vêm da frente que refotografa as abas.
 
 ## O que ele entrega
 
@@ -250,7 +257,12 @@ escopo — ver [ADR-009](docs/adr/009-systemd-logind-scope.md).
 
 - **Primeiros passos:** [quickstart.md](docs/usage/quickstart.md)
 - **Instalação em detalhe:** [instalação.md](docs/usage/instalacao.md)
-- **A janela, aba por aba:** [interface.md](docs/usage/interface.md)
+- **A janela, aba por aba:**
+  [AS-DEZ-ABAS-o-que-cada-uma-faz.md](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md)
+- **Quem conhece a janela antiga:**
+  [A-JANELA-ANTIGA-o-que-mudou-de-lugar.md](docs/usage/A-JANELA-ANTIGA-o-que-mudou-de-lugar.md)
+  (a descrição da janela aposentada continua em
+  [interface.md](docs/usage/interface.md), com nota no topo)
 - **Os três modos:** [modos.md](docs/usage/modos.md)
 - **Perfis:** [creating-profiles.md](docs/usage/creating-profiles.md)
 - **Atalhos no controle:** [hotkeys.md](docs/usage/hotkeys.md)

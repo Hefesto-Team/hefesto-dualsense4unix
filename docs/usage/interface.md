@@ -1,5 +1,31 @@
 # A janela, aba por aba
 
+> # NOTA DATADA — 05/09/2026: ESTA PÁGINA DESCREVE A JANELA APOSENTADA.
+>
+> **Ela está aqui como registro, não como manual.** O que o lançador abre hoje
+> é a interface nova, de **dez** abas — **Jogar, Controles, Gatilhos,
+> Iluminação, Vibração, Navegação, Lançadores, Conexões, Sistema, Perfis** (a
+> lista viva é `ABAS`, em
+> `src/hefesto_dualsense4unix/interface/monta.py:137-140`).
+>
+> As **onze** abas descritas abaixo são as da janela GTK anterior, e uma delas
+> — a **Emulação** — deixou de existir por decisão de 26/08/2026
+> (`D-A-EMULACAO-MORRE`, em
+> [O redesenho da janela](../process/2026-08-26-O-REDESENHO-as-dez-abas.md)).
+>
+> **Onde continuar:**
+>
+> - **O que cada aba de hoje faz:**
+>   [AS-DEZ-ABAS-o-que-cada-uma-faz.md](AS-DEZ-ABAS-o-que-cada-uma-faz.md)
+> - **Onde foi parar o que você procura:**
+>   [A-JANELA-ANTIGA-o-que-mudou-de-lugar.md](A-JANELA-ANTIGA-o-que-mudou-de-lugar.md)
+>
+> **Por que a página não foi apagada:** ela descreve um produto que existiu, com
+> medições e decisões datadas que continuam explicando por que as coisas são
+> como são. Fato errado se substitui; documento inteiro que descreve algo que
+> existiu ganha nota, não sumiço. As capturas abaixo são da janela antiga e não
+> serão atualizadas.
+
 A janela principal tem onze abas — dez sempre à vista e a **No jogo**, que entra
 na tira quando há um jogo da Steam aberto e sai quando ele fecha (10/08/2026).
 Esta página diz o que cada uma faz e o que se ajusta nela — e, no fim, o
