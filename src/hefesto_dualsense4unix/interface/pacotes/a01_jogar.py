@@ -194,9 +194,9 @@ def lugares_da_mesa() -> int:
 #: *"independente do modo a mascara deve funcionar ali sempre."*
 #:
 #: O QUE FOI MEDIDO, e decide a forma desta cura: `gamepad.mask.set` grava
-#: SEMPRE (`ipc_handlers.py:5482`, sem gate de modo), `set_mask` persiste em
+#: SEMPRE (`ipc_handlers.py:6139`, sem gate de modo), `set_mask` persiste em
 #: `controller_masks.json` e `mascara_efetiva` é consultada na criação de todo
-#: gamepad virtual (`gamepad.py:2014`, `uinput_gamepad.py:419`). **Logo a
+#: gamepad virtual (`gamepad.py:2162`, `uinput_gamepad.py:419`). **Logo a
 #: escolha dela JÁ vale sempre que pode valer** — o que faltava não era motor,
 #: era a tela dizer que a escolha ficou guardada.
 #:
@@ -802,7 +802,7 @@ def _ressalva_da_mascara(state: dict[str, Any]) -> str:
 
     O QUE ELA SENTE, medido: fora do modo `gamepad` **não existe gamepad
     virtual**, e `mascara_efetiva` só é lida na criação de um
-    (`gamepad.py:2014`). O clique é aceito, gravado no disco e não muda nada que
+    (`gamepad.py:2162`). O clique é aceito, gravado no disco e não muda nada que
     se veja. A janela GTK escondia a caixa inteira fora do modo `gamepad`
     (`home_actions.py:2648`); esta tela deixava clicar e ficava calada — que é
     pior, porque o silêncio se lê como defeito.
@@ -1204,7 +1204,7 @@ BOTOES_SEM_DONO: dict[str, str] = {
 #: uma por controle: `gamepad.emulation.set` recebe `flavor` e não recebe
 #: `uniq`"*. **As duas metades caíram no mesmo dia em que foram escritas**, e o
 #: próprio arquivo já dizia o contrário trinta linhas adiante: `gamepad.mask.set`
-#: nasceu em 03/09 recebendo `uniq` (`ipc_handlers.py:5482`), o registro
+#: nasceu em 03/09 recebendo `uniq` (`ipc_handlers.py:6139`), o registro
 #: `external_mask` guarda a escolha por APARELHO desde 15/08, e o gesto
 #: `mascara_do_controle` existe e é `@gesto`. Um botão listado como SEM DONO com
 #: o dono declarado no mesmo arquivo manda a próxima pessoa construir o que já

@@ -73,25 +73,47 @@ PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 CAMPO = re.compile(r'data-(?:campo|papel|hef)="([^"]+)"')
 
 
-def _perfil_de_mentira(tmp_path, **campos):
-    """Grava um perfil no disco e aponta a `pacotes.perfil` para ele."""
+def _perfil_de_mentira(monkeypatch, tmp_path, **campos):
+    """Grava um perfil no disco e aponta a `pacotes.perfil` para ele.
+
+    O DESVIO É PELO `monkeypatch`, E ISSO NÃO É ESTILO — é o que impede esta
+    régua de mentir sobre as vizinhas. A primeira versão fazia
+    `perfil.pasta = lambda: tmp_path` cru (02/09/2026, `ad7c2c3f`), e o
+    `pacotes.perfil` é um módulo importado UMA vez por processo: a lambda ficava
+    presa ao `tmp_path` DESTE arquivo pelo resto do lote inteiro.
+
+    O QUE ISSO CUSTOU, medido em 04/09/2026 no lote 00 dos oito: três casos de
+    `test_a_aba_04_iluminacao_fecha_as_linhas.py` reprovaram por lerem o
+    `regua.json` daqui — um perfil sem a chave `leds`. Os três liam o perfil
+    pelo default da ausência (`auto_player_colors` → `True`, brilho → nenhum) e
+    acusavam o produto de não gravar o que ele tinha acabado de gravar::
+
+        AssertionError: assert 'sim' == ''
+        AssertionError: gravou (0, 0, 127) — a cor guardada é a PEDIDA
+        AssertionError: assert False is True
+
+    O par mínimo que reproduz, e ele é o mais curto que existe::
+
+        pytest tests/unit/test_a_06_nao_manda_para_o_vazio.py \\
+               tests/unit/test_a_aba_04_iluminacao_fecha_as_linhas.py
+    """
     from pacotes import perfil
 
     corpo = {"name": "Régua", "version": 1, "priority": 50,
              "match": {"type": "criteria"}}
     corpo.update(campos)
     (tmp_path / "regua.json").write_text(json.dumps(corpo), encoding="utf-8")
-    perfil.pasta = lambda: tmp_path
+    monkeypatch.setattr(perfil, "pasta", lambda: tmp_path)
     return tmp_path
 
 
 @pytest.fixture
-def aba(tmp_path):
+def aba(monkeypatch, tmp_path):
     """O pacote da 06 rodado contra o estado acima, com um perfil no disco."""
     import pacotes
     from pacotes import a06_navegacao
 
-    _perfil_de_mentira(tmp_path)
+    _perfil_de_mentira(monkeypatch, tmp_path)
     ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
     bruto = a06_navegacao.pacote(ctx)
     pronto = pacotes.normalizar(bruto, {UNIQ: "p1"})
@@ -169,7 +191,7 @@ def test_a_linha_do_cartao_nao_inventa_transporte(aba):
     assert mod._linha_do_cartao({}, False) == "Só a janela"
 
 
-def test_as_vinte_e_uma_linhas_saem_do_perfil(tmp_path):
+def test_as_vinte_e_uma_linhas_saem_do_perfil(monkeypatch, tmp_path):
     """O que o perfil guarda vence o de fábrica, linha a linha.
 
     A mordida: faça `_linhas_dos_botoes` ignorar `button_actions` — este teste
@@ -181,7 +203,7 @@ def test_as_vinte_e_uma_linhas_saem_do_perfil(tmp_path):
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes  # noqa: F401
     from pacotes import a06_navegacao
 
-    _perfil_de_mentira(tmp_path, button_actions={"cross": "KEY_ESC"})
+    _perfil_de_mentira(monkeypatch, tmp_path, button_actions={"cross": "KEY_ESC"})
     ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
     mesa = a06_navegacao.pacote(ctx)["mesa"]
     assert mesa["acao-cross"] == "Esc", (

@@ -101,6 +101,18 @@ mic_volume_set_detalhado = _b.mic_volume_set_detalhado
 speaker_set = _b.speaker_set
 speaker_set_detalhado = _b.speaker_set_detalhado
 
+#: O INTERRUPTOR DE GIROSCÓPIO E ACELERÔMETRO, por peça (SENSOR-DE-VERDADE-01).
+#: Mesma história do `rumble_motores_set` logo acima: a ONDA1-D3 construiu o
+#: caminho no daemon, no perfil e no `ipc_bridge` em 04/09/2026, e ele nasceu
+#: SEM chamador de tela porque a metade de TELA é da aba 02, que estava no
+#: `nao_toca:` daquela sprint. Esta linha é a travessia.
+#:
+#: A VARIANTE É A `_detalhado`, e não o `bool` da irmã estreita: o corpo traz
+#: `alcance` e `ressalva`, e é a `ressalva` que diz que em Modo Nativo o jogo
+#: continua recebendo o giro pelo `hidraw` do controle físico. Um `bool` faria
+#: a tela dizer "aplicado" sobre um sensor que não parou de chegar ao jogo.
+sensor_set_detalhado = _b.sensor_set_detalhado
+
 profile_list = _b.profile_list
 profile_switch = _b.profile_switch
 apply_draft_detalhado = _b.apply_draft_detalhado
