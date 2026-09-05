@@ -80,6 +80,16 @@ ESCREVEM = {
     # escreve o gesto e a põe no próprio decorador.
     "rumble_motores_set",      # grava a barra de cada motor no perfil dela
     "rumble_policy_set_checked",  # muda o degrau de vibração de TODOS, ao vivo
+    # E A QUARTA VEZ NO MESMO DIA, agora com uma porta que não é disco nem
+    # aparelho: a ÁREA DE TRANSFERÊNCIA dela. O botão «Copiar a linha» da aba
+    # 07 não grava byte nenhum em lugar nenhum — e mesmo assim a régua de
+    # clique, ao acioná-lo, JOGA FORA o que ela tinha copiado.
+    #
+    # Isto alarga a definição desta lista, e de propósito: `ESCREVEM` não é
+    # "grava no disco", é **"muda algo dela que ela não mandou mudar"**. A
+    # quarta repetição é o que autoriza a generalização; as três primeiras
+    # ainda podiam passar por azar.
+    "set_text",                # `Gtk.Clipboard.set_text` — a área dela
 }
 
 #: E O QUE CHEGA LÁ POR IPC, pelo nome do método. `p.chamar("machine.declare")`
