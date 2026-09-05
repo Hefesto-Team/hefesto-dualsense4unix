@@ -856,8 +856,8 @@ ACHADOS = [
     saude("OK", "✓", "Nenhuma sobreposição picotando o jogo",
           "<b>O que eu vi:</b> o exame procurou camadas de gravação e de estatística sobre os jogos e não achou nenhuma."
           "<br><br><b>Por que importa:</b> sobreposição mal comportada engasga o jogo e a culpa costuma cair no controle."
-          "<br><br><b>O que fazer:</b> nada agora. Para procurar de novo, é <b>Procurar sobreposição de novo</b>, ao lado — "
-          "se achar, ele mostra qual é antes de tirar."),
+          "<br><br><b>O que fazer:</b> nada agora. Para olhar de novo, é <b>Tirar a sobreposição Vulkan</b>, ao lado — "
+          "ele mostra o que achou antes de tirar."),
     saude("NOTA", "i", "Um gamepad virtual por jogador (co-op)",
           f"<b>O que eu vi:</b> o co-op está ligado e o Hefesto criou <b>{N}</b> gamepads virtuais, um para cada controle."
           "<br><br><b>Por que importa:</b> é o que dá um jogador a cada pessoa em vez de todo mundo mexer no mesmo "
@@ -1119,7 +1119,7 @@ MIOLO = f'''
           <div class="col-acao">
 {item("Refazer os consertos automáticos", f"Sem senha e sem fechar nada: arruma o áudio dos {N} controles, desliga o Steam Input onde ele atrapalha e põe a linha de inicialização nos jogos instalados, com cópia de segurança. O exame já rodou isto — o botão refaz.", "btn", gesto=_gesto("refazer-consertos"))}
 {item("Refazer a fixação do Proton", "Trava de novo o Proton que você validou nos jogos escolhidos — e diz o motivo em português quando não dá.", gesto=_gesto("refazer-proton"))}
-{item("Procurar sobreposição de novo", "Procura de novo a camada que picota o jogo. Se achar, mostra qual é antes de tirar.", gesto=_gesto("procurar-camadas"))}
+{item("Tirar a sobreposição Vulkan", "Mostra, jogo por jogo, a sobreposição Vulkan pendurada por dentro, e só então tira. Guarda cópia do arquivo e devolve aqui mesmo. Já medimos tirar no jogo que engasgava e o engasgo continuou — não prometo que resolve.", gesto=_gesto("procurar-camadas"))}
           </div>
         </div>
 

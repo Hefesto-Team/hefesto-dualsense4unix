@@ -1777,9 +1777,11 @@ DESTRUTIVOS = ("desligar", "restaurar-de-fabrica", "refazer-consertos",
 #: não repetir.
 #:
 #: `procurar-camadas` tem um risco a mais, e ele não é de motor: o `title` dele
-#: promete *"Se achar, mostra qual é antes de tirar"* — TRÊS tempos (procurar ·
-#: mostrar o achado · tirar), e dois cliques cobrem dois. O que falta a ele é
-#: DESENHO, e desenho é dela.
+#: promete *"Mostra, jogo por jogo, a sobreposição Vulkan (…), e só então tira"*
+#: — TRÊS tempos (procurar · mostrar o achado · tirar), e dois cliques cobrem
+#: dois. O que falta a ele é DESENHO, e desenho é dela. O rótulo passou a dizer
+#: "Tirar a sobreposição Vulkan" em 05/09/2026, a pedido dela, e isso não muda a
+#: conta: o tempo do meio continua sem tela.
 SEM_MOTOR: dict[str, str] = {
     # FATO CORRIGIDO EM 04/09/2026, e a correção MUDA a natureza da dívida.
     #
@@ -1813,7 +1815,7 @@ SEM_MOTOR: dict[str, str] = {
                          "`daemon_actions.on_storm_fix_safe:1218`, junto com o "
                          "toast de cada etapa — não há função de produto que rode "
                          "os dois scripts e devolva o relatório.",
-    "procurar-camadas": "`emulation_actions.on_camadas_engasgo:2075` — o motor "
+    "procurar-camadas": "`emulation_actions.on_camadas_engasgo:2086` — o motor "
                         "(`camadas_vulkan.censo`) é limpo, mas o botão promete "
                         "MOSTRAR o achado ENTRE procurar e tirar, e isso é uma "
                         "tela que ainda não existe. É desenho, e desenho é dela.",
@@ -2224,7 +2226,7 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #:   `desligar`             `_run_systemctl_async("stop")` (daemon_actions.py:2234)
 #:   `refazer-consertos`    `bash scripts/*.sh` (…:1218)
 #:   `refazer-proton`       diálogo GTK + `config.vdf` da Steam (…:1793)
-#:   `procurar-camadas`     censo do `system.reg` em disco (emulation_actions.py:2075)
+#:   `procurar-camadas`     censo do `system.reg` em disco (emulation_actions.py:2086)
 #:   `restaurar-de-fabrica` cópia do asset + `DraftConfig` (footer_actions.py:1477)
 #:
 #: ERAM OITO, DEPOIS SETE, E AGORA SÃO CINCO. `ver-detalhes` e `ver-plugins`
