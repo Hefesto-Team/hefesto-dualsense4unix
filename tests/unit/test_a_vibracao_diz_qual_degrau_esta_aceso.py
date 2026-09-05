@@ -127,12 +127,21 @@ def test_cada_degrau_diz_quem_ele_e(bancada) -> None:
                 f'data-hef-quando="{chave}"')
         assert alvo in bancada, f"o degrau {chave!r} não tem endereço de classe"
 
+    # E A LINHA DE MESA CONTA JUNTO — 04/09/2026, decisão [05] dela. Os quatro
+    # degraus do ajuste GERAL vivem fora das colunas (`.vib-mesa`), e é lá que o
+    # `auto` passou a morar: o esquema o RECUSA por peça. Uma régua que só
+    # contasse as colunas passaria a acusar quatro endereços a mais.
     quandos = re.findall(r'data-hef-quando="([^"]+)"', bancada)
     colunas_vivas = bancada.count('<div class="ctrl" data-controle=')
-    esperado = len(_tela.degraus_da_forca()) * colunas_vivas
+    linhas_de_mesa = bancada.count('class="vib-mesa"')
+    assert linhas_de_mesa == 1, (
+        f"a linha de MESA não é uma só ({linhas_de_mesa}) — ela é a decisão "
+        f"[05] dela, e duas dariam dois degraus gerais na mesma tela")
+    esperado = len(_tela.degraus_da_forca()) * (colunas_vivas + linhas_de_mesa)
     assert len(quandos) == esperado, (
         f"são {len(_tela.degraus_da_forca())} degraus em {colunas_vivas} "
-        f"colunas conectadas = {esperado}, e achei {len(quandos)}")
+        f"colunas conectadas mais a linha de mesa = {esperado}, e achei "
+        f"{len(quandos)}")
     assert set(quandos) == set(_tela.degraus_da_forca()), (
         f"os degraus endereçados não são os do produto: {sorted(set(quandos))}")
 
@@ -172,9 +181,17 @@ def test_o_pacote_emite_o_degrau_que_o_produto_calculou(pacote) -> None:
     """
     colunas = pacote["colunas"]
     assert len(colunas) == 2, f"a mesa de mentira tem dois controles: {list(colunas)}"
+    # A COLUNA SÓ ACENDE O QUE É DELA — 04/09/2026, decisão [05] dela. Nesta
+    # cena nenhum dos dois controles tem override no perfil, então os dois
+    # HERDAM: o campo da coluna sai vazio (os quatro apagam) e quem acende é a
+    # LINHA DE MESA. Antes as duas coisas tinham a mesma cara, e ela não tinha
+    # como saber se aquele degrau era escolha dela ou herança.
     for uniq, col in colunas.items():
-        assert col["degrau"] == "balanceado", (
-            f"a coluna {uniq} emitiu {col.get('degrau')!r}")
+        assert col["degrau"] == "", (
+            f"a coluna {uniq} acendeu {col.get('degrau')!r} sem ter ajuste "
+            f"próprio — o degrau herdado é o da linha de mesa")
+    assert pacote["mesa"]["degrau-mesa"] == "balanceado", (
+        f"a linha de mesa emitiu {pacote['mesa'].get('degrau-mesa')!r}")
     assert set(_tela.degraus_da_forca()) >= {"balanceado"}, (
         "o degrau emitido tem de ser uma das chaves do produto")
 
@@ -192,8 +209,15 @@ def test_o_degrau_emitido_e_sempre_um_dos_quatro() -> None:
     conhecidos = set(_tela.degraus_da_forca())
     for policy in sorted(conhecidos):
         pac = pacotes.pacote_da_pagina(PAGINA, _ctx(policy))
+        assert pac["mesa"]["degrau-mesa"] in conhecidos, (
+            f"a linha de mesa emitiu {pac['mesa']['degrau-mesa']!r} para a "
+            f"política {policy!r}")
+        # `""` É RESPOSTA VÁLIDA NA COLUNA desde 04/09/2026 — quer dizer
+        # "herdado", e os quatro apagam. O que continua proibido é um token
+        # que nenhum botão conhece: ele apagaria os quatro do mesmo jeito, e
+        # ninguém veria erro. Por isso o teste é a pertinência, não o vazio.
         for col in pac["colunas"].values():
-            assert col["degrau"] in conhecidos, (
+            assert col["degrau"] in conhecidos | {""}, (
                 f"o pacote emitiu {col['degrau']!r} para a política {policy!r}")
 
 
@@ -230,11 +254,22 @@ def test_a_regua_ve_os_oito_degraus_com_alvo_classe(bancada) -> None:
     assert {c.alvo for c in degraus} == {"classe"}
     assert {c.quando for c in degraus} == {"economia", "balanceado", "max", "auto"}
     # O CRAVADO de um alvo `classe` é o `quando` de quem tem a classe `on`, e
-    # `''` para as irmãs. O desenho acende UM por coluna — e são dois diferentes,
-    # que é exatamente a razão de este endereço existir.
+    # `''` para as irmãs.
+    #
+    # **UM SÓ, E É A DECISÃO [05] DELA — 04/09/2026.** A cena tem o P1 com
+    # ajuste PRÓPRIO (acende `max` na coluna) e o P2 HERDANDO (nenhum aceso).
+    # Antes eram dois acesos, e as duas colunas mentiam sobre a mesma coisa: o
+    # degrau da coluna sem override era o do Hefesto, com a cara do dela.
     acesos = sorted(c.quando for c in degraus if c.valor)
-    assert acesos == ["balanceado", "max"], (
-        f"o desenho crava {acesos} — se virarem iguais, a prova perde o caso")
+    assert acesos == ["max"], (
+        f"o desenho crava {acesos} — a cena tem UMA coluna com ajuste próprio "
+        f"e UMA herdando, e é o que a decisão [05] existe para ensinar")
+    # E O DEGRAU DA MESA É OUTRO ENDEREÇO, com o `auto` aceso — o degrau que
+    # NÃO pode ser override de peça, no único lugar onde ele cabe.
+    da_mesa = _campos(bancada, "degrau-mesa")
+    assert len(da_mesa) == 4, f"a régua achou {len(da_mesa)} degraus de mesa"
+    assert sorted(c.quando for c in da_mesa if c.valor) == ["auto"], (
+        "a linha de mesa não acende o degrau da cena")
 
 
 def test_o_degrau_deixa_de_ser_desenho_quando_o_pacote_o_declara(bancada, pacote) -> None:
@@ -247,8 +282,10 @@ def test_o_degrau_deixa_de_ser_desenho_quando_o_pacote_o_declara(bancada, pacote
     cravados = [c for c in _regua._campos_cravados(bancada)
                 if c.chave == "degrau" and c.dono == "p1"]
     declarados = {("p1", "degrau"): "balanceado"}
-    # O QUE A TELA MOSTRA depois da pintura, medido no WebKit em 02/09/2026 e
-    # transcrito aqui: acende `balanceado`, apagam as três irmãs.
+    # O QUE A TELA MOSTRA depois da pintura: acende `balanceado`, apagam as três
+    # irmãs. O desenho da cena crava `max` no P1 (ajuste próprio), então o
+    # veredito continua sendo PRODUTO por um caminho ainda mais claro — o vivo
+    # e o cravado diferem.
     vivos = ["balanceado" if c.quando == "balanceado" else "" for c in cravados]
     selos = [True] * len(cravados)
     vereditos = _regua._classificar(cravados, vivos, declarados, selos)
@@ -288,18 +325,24 @@ def test_a_largura_sai_sem_o_por_cento(pacote, bancada) -> None:
     """
     largura = {c.chave for c in _regua._campos_cravados(bancada)
                if c.alvo == "largura"}
-    # ERAM TRÊS E HOJE SÃO DOIS — 03/09/2026, decisão dela: a linha do
-    # multiplicador virou um `<input type=range>`, e o que o pintor escreve nela
-    # é o `value` (alvo `valor`, chave `mult-pos`), não a largura. O `forca-pct`
-    # saiu do desenho junto com o `<span>` que o carregava.
-    assert {"motor-e-pct", "motor-d-pct"} <= largura, (
-        f"os endereços de largura desta aba mudaram: {sorted(largura)}")
-    assert "forca-pct" not in largura, (
-        "o `forca-pct` voltou como largura — a barra do multiplicador é um "
-        "`<input type=range>` desde 03/09, e o que ele escreve é o `value`")
+    # ERAM TRÊS, VIRARAM DOIS E HOJE SÃO ZERO — e a conta é sempre a mesma: cada
+    # `<span class="cheio">` que virou `<input type=range>` levou junto o alvo
+    # `largura`, porque o que move um range é o `value`.
+    #
+    # * 03/09 — a linha "Personalizado" (`forca-pct` saiu do desenho);
+    # * 04/09 — as DUAS de motor, com a decisão dela de que a barra do motor é
+    #   POLÍTICA. `motor-e-pct` e `motor-d-pct` continuam sendo EMITIDOS pelo
+    #   pacote, e é de propósito: eles são a PONTE DE PUBLICAÇÃO, porque a
+    #   página que ela abre hoje ainda tem a linha como leitura.
+    assert not largura, (
+        f"voltou alvo `largura` a esta aba: {sorted(largura)} — as três barras "
+        f"são `<input type=range>`, e o que o pintor escreve nelas é o `value`")
+    # O CONTRATO DO NÚMERO PELADO CONTINUA, e é o que esta régua guarda: quem
+    # emitir para um alvo `largura` (na página publicada, hoje) manda o número
+    # sem `%`, porque o pintor faz `el.style.width = valor + '%'`.
     for uniq, col in pacote["colunas"].items():
-        for chave in sorted(largura & set(col)):
-            assert "%" not in str(col[chave]), (
+        for chave in ("motor-e-pct", "motor-d-pct", "forca-pct"):
+            assert "%" not in str(col.get(chave, "")), (
                 f"{uniq}·{chave} saiu {col[chave]!r} — o pintor acrescenta o `%`")
 
 

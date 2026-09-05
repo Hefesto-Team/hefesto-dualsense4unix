@@ -300,6 +300,12 @@ def test_o_auto_diz_que_a_coluna_volta_ao_ajuste_geral(pac, disco) -> None:
     A FRASE DIZ TAMBÉM O QUE VAI FICAR ACESO, e isso é a metade prática: sem
     ela, ela ficaria olhando quatro botões para descobrir qual.
 
+    **E ELA DEIXOU DE SER UMA RECUSA — 04/09/2026, decisão [04] dela (D-01).**
+    O gesto DEVOLVE `{"recado": …}` em vez de levantar: a gravação aconteceu, e
+    o canal de SUCESSO da ONDA0-P leva a frase ao mesmo cartão, em verde e por
+    6 s. Enquanto só existia o canal da recusa, um clique que deu certo pousava
+    uma tarja laranja de 30 s — que ensina que o botão falha.
+
     MORDIDA: em `a05_vibracao._aplicar_a_forca`, apague o ramo
     `if policy == "auto":` — este caso reprova, porque a frase do produto some
     do recado.
@@ -312,11 +318,15 @@ def test_o_auto_diz_que_a_coluna_volta_ao_ajuste_geral(pac, disco) -> None:
     estado["Bancada"] = _perfil_de_verdade(
         controllers={CHAVE: {"rumble": {"policy": "economia"}}})
 
-    with pytest.raises(RuntimeError) as recusa:
-        _gesto(pac, "forca")(_ctx(pac, policy_da_mesa="max"),
-                             {"uniq": UNIQ, "forca": "auto"}, PonteDeMentira())
+    volta = _gesto(pac, "forca")(_ctx(pac, policy_da_mesa="max"),
+                                 {"uniq": UNIQ, "forca": "auto"},
+                                 PonteDeMentira())
 
-    frase = str(recusa.value)
+    assert isinstance(volta, dict) and volta.get("recado"), (
+        f"o gesto não devolveu recado nenhum ({volta!r}) — o canal de SUCESSO "
+        f"da D-01 é `{{'recado': …}}`, e sem ele o Auto volta a apagar o "
+        f"ajuste da peça em silêncio")
+    frase = str(volta["recado"])
     assert TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL.strip(" —") in frase, (
         f"o Auto voltou a apagar o ajuste da peça em silêncio: {frase}")
     assert "Máximo" in frase, (
@@ -338,6 +348,10 @@ def test_a_mesa_em_auto_confessa_no_clique(pac, disco) -> None:
     escala sai vazia (ela não chega ao motor). Sem os dois, o caso seria
     indistinguível de "não gravou".
 
+    **E ELE DEIXOU DE SER UMA RECUSA — 04/09/2026, decisão [04] dela (D-01):**
+    o gesto devolve `{"recado": …}`, porque a gravação ACONTECEU. Ver a nota em
+    `_aplicar_a_forca`.
+
     MORDIDA: em `a05_vibracao._aplicar_a_forca`, apague as duas linhas do
     `if _fator_no_motor(...) is None:` — este caso reprova, porque o clique
     volta a ser silencioso sobre uma escolha que o motor nunca vê.
@@ -349,10 +363,12 @@ def test_a_mesa_em_auto_confessa_no_clique(pac, disco) -> None:
     estado, gravados = disco
     estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "auto"})
 
-    with pytest.raises(RuntimeError, match="Auto"):
-        _gesto(pac, "forca")(_ctx(pac, policy_da_mesa="economia"),
-                             {"uniq": UNIQ, "forca": "economia"},
-                             PonteDeMentira())
+    volta = _gesto(pac, "forca")(_ctx(pac, policy_da_mesa="economia"),
+                                 {"uniq": UNIQ, "forca": "economia"},
+                                 PonteDeMentira())
+    assert isinstance(volta, dict) and "Auto" in str(volta.get("recado") or ""), (
+        f"o clique voltou a ser silencioso sobre uma escolha que o motor nunca "
+        f"vê: {volta!r}")
 
     assert gravados, "a escolha não foi gravada — ela se perderia de vez"
     prof = gravados[0]

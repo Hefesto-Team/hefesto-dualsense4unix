@@ -106,6 +106,46 @@ seção daqui**: a aba deixou de estar em trabalho.
   **Até publicar, o produto continua exatamente como ela o vê hoje:** nenhum
   elemento desta aba usa as peças, então as regras novas não casam com nada e
   a página publicada desenha o mesmo pixel que a bancada.
+- **04/09/2026 · ONDA2-05** — **QUATRO decisões dela viraram desenho, e três
+  delas OCUPAM ESPAÇO. Nada foi publicado.**
+
+  | o que entrou | decisão | o que muda na tela |
+  | --- | --- | --- |
+  | as duas linhas de motor viraram **barra que arrasta**, de 0 a 100% | dela, 04/09 (*"os slcers … se multiplicam"*) <!-- noqa-acento: citação literal dela --> | mesma linha, mesmo lugar. O que muda é o **significado do número**: era o par 0-255 que o jogo pediu, e passa a ser o AJUSTE que multiplica o degrau. O pedido do jogo não se perdeu — vira o `title` da linha, pintado pelo produto |
+  | uma **linha de estado por coluna** | D-14 | uma faixa nova no fim de cada coluna, com um dos três estados que ela nomeou |
+  | uma **linha de MESA** embaixo da grade | [05] | uma linha nova com os quatro degraus do ajuste geral, fora das colunas. E as colunas sem ajuste próprio **deixam de acender degrau** |
+  | a **nota do Testar** sobe do `?` para a tela | [02] | uma linha em itálico, esmaecida, embaixo de tudo |
+
+  **O QUE ELA PRECISA OLHAR ANTES DE PUBLICAR — e é um número, não uma
+  impressão: o quadro passou a ROLAR 103 px.** Medido no Chrome, no tamanho da
+  janela do produto (1180×757), com a `.nota` escondida:
+
+  ```
+  PUBLICADO (a que ela abre hoje)  miolo 564 visíveis · 564 de conteúdo · rola 0
+  BANCADA   (o desenho de hoje)    miolo 564 visíveis · 667 de conteúdo · rola 103
+  ```
+
+  O custo, medido peça por peça: **linha de mesa 53 px · faixa de estado 31 px ·
+  nota do Testar 21 px**. Na foto, o que fica abaixo da dobra é a linha de mesa.
+
+  **NÃO HÁ PIXEL A DEVOLVER DENTRO DO QUADRO**, e isso também foi medido: a
+  única faixa com conteúdo elástico é o desenho do controle (`--r-des`, 124 px),
+  e pagar os 103 px ali deixaria o desenho com 21 — a faixa que ela aprovou
+  desapareceria. O `.miolo` (que reserva os 564) é do `topo.html`, comum às dez
+  abas, e é decisão dela. **O piso do estado já foi apertado ao mínimo** (20 px,
+  uma sublinha) e as margens da mesa e da nota também: os 118 px da primeira
+  medição viraram 103.
+
+  **O QUE ISSO DEIXA PARA ELA DECIDIR**, e é a única coisa que este trabalho não
+  pode escolher sozinho: se a aba pode rolar 103 px, ou se alguma das três sai.
+  As três são decisão dela, e nenhuma foi encolhida para economizar pixel.
+
+  **O QUE O PRODUTO CONTINUA FAZENDO ATÉ ELA PUBLICAR:** as duas linhas de motor
+  seguem sendo LEITURA (o par 0-255), e o pacote continua emitindo os endereços
+  velhos (`motor-e`, `motor-e-pct`) exatamente para isso — a página que ela abre
+  hoje não congela. O gesto `motor`, a linha de mesa e a linha de estado por
+  coluna **existem no código e não têm onde cair** na página publicada: são
+  endereço novo, e endereço novo só chega pelo `--publicar 05`.
 
 ## 06-navegacao.html
 - **04/09/2026** — a folha das dez peças (D-02 e D-03) entrou pelo `monta.py`.
