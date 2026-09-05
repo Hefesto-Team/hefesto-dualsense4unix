@@ -393,15 +393,74 @@ CSS = CSS_GLIFO + """
      VERDE porque é desfecho BOM: a recusa já tem cor e lugar próprios (a tarja
      do piloto). Dois canais, duas cores, nenhuma dúvida sobre qual é qual.
 
-     UMA LINHA SÓ, com reticências: a frase mais longa que o produto emite aqui
-     é a `mensagem_de_ativacao` com seções de fora, e ela pode passar de 120
-     caracteres. Deixá-la quebrar em duas linhas devolveria o pulo que o
-     `height` fixo acabou de tirar. */
-  .desfecho{padding:0 14px;margin-top:7px;height:15px;line-height:15px;
+     DUAS LINHAS, E A SEGUNDA É A QUE AVISA — decisão [05] do PO, 04/09/2026.
+     Aqui estava escrito *"UMA LINHA SÓ, com reticências"*, e o preço estava
+     medido do lado errado: o que a reticência come é o FIM da frase, e o fim é
+     sempre a metade que avisa. A carona da Steam sozinha tem 218 caracteres
+     («Reposta a Opção de Inicialização … Sem ela, no Bluetooth o jogo tende a
+     não enxergar controle nenhum»), vem grudada na frase de ativação, e as
+     duas passam de 280; a linha de 1.180px a 11px comporta ~200. O que sumia
+     era exatamente o *"sem ela, o jogo tende a não enxergar controle nenhum"*.
+
+     AS DUAS LINHAS SÃO RESERVADAS, e é a mesma escolha de antes levada a sério:
+     `visibility` continua no lugar de `display`, e a altura continua FIXA. Uma
+     tira que crescesse só quando a frase é longa devolveria o pulo de 15px a
+     cada clique de frase longa — que é a quarta opção que o PO recusou.
+
+     `-webkit-line-clamp` E NÃO `text-overflow`: a reticência de `text-overflow`
+     é de UMA linha só. A janela é um `WebKit2.WebView` e o Chrome da bancada é
+     a mesma família, então o prefixo `-webkit-` é o que os dois leem — a mesma
+     razão do `::-webkit-slider-thumb` da Prioridade, logo acima.
+
+     O CUSTO SAI DA LISTA, e está declarado: 15px a mais, ~meia linha da tabela
+     de perfis. Nada pula, porque o espaço já era reservado. */
+  .desfecho{padding:0 14px;margin-top:7px;height:30px;line-height:15px;
             font-size:11px;color:var(--green);
-            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+            display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+            overflow:hidden;
             visibility:hidden}
   .desfecho.on{visibility:visible}
+
+  /* ---------- O CADEADO E O PONTO DE ALERTA — decisão [01] do PO ----------
+     *"Cadeado no campo, frase no hover."* Sete dos nove perfis de fábrica casam
+     por uma regra que o "Funciona em" não sabe descrever (cinco por título de
+     janela, dois por lista de classes), e até aqui o seletor ficava IDÊNTICO a
+     um destravado: só reclamava DEPOIS do clique. O irmão é o campo do jogo —
+     o Pragmata exigia também `PRAGMATA.exe` e a tela mostrava só o número.
+
+     OS DOIS SÃO `.ajuda` POR DENTRO, e isso não é economia de CSS: é o canal de
+     hover que esta página JÁ tem (`.ajuda:hover .dica{display:block}`, do
+     `topo.html`), o mesmo que o `?` do quadro usa. Inventar um segundo
+     mecanismo de dica seria a segunda gramática que esta casa persegue.
+
+     O QUE MUDA É SÓ A CARA: sem a bolinha e sem borda, na cor do alerta. O
+     `.ajuda` mede 17px e é `flex:0 0 17px` — aqui vira 13px, para caber ao lado
+     de um campo de 30px sem empurrar nada.
+
+     O CADEADO É SVG INLINE, e não um caractere: nenhuma das dez páginas usa
+     emoji (medido: zero fora do latim acentuado, do travessão e do `·`), e um
+     glifo que depende da fonte do sistema é um glifo que some na máquina
+     seguinte. São dois traços — o arco e o corpo —, em `currentColor`, como
+     todo glifo de `assets/glyphs/`.
+
+     O PONTO DE ALERTA É UM PONTO, literalmente: `border-radius:50%` de 7px na
+     cor laranja. A decisão diz *"ponto de alerta"*, e um ponto é o que ele é.
+
+     OS DOIS NASCEM ESCONDIDOS e o PRODUTO os acende, pelo alvo `classe` — o
+     desenho não sabe se a regra deste perfil é travada, e cravar visível faria
+     a tela afirmar um cadeado sobre um perfil que não tem nenhum. */
+  .campo .trava,.campo .exige{
+    display:none;flex:0 0 13px;width:13px;height:13px;position:relative;
+    cursor:help;color:var(--orange);align-items:center;justify-content:center}
+  .campo .trava.on,.campo .exige.on{display:inline-flex}
+  .campo .trava:hover .dica,.campo .exige:hover .dica{display:block}
+  .campo .exige::after{content:"";width:7px;height:7px;border-radius:50%;
+                       background:currentColor}
+  /* A DICA ABRE PARA A ESQUERDA: os dois marcadores moram no fim de um campo
+     que já encosta na borda direita do quadro, e uma caixa de 330px a 22px
+     para a direita sairia da janela. É a mesma cura que o `.tn-cx .dica` do
+     `monta` já faz na aba Conexões. */
+  .campo .trava .dica,.campo .exige .dica{left:auto;right:20px;width:300px}
 
   /* ---------- as QUATRO configurações que cabem dentro deste perfil ----------
      O editor mostrava CINCO campos e gravava vinte, e a única frase que dizia
@@ -532,6 +591,79 @@ CSS = CSS_GLIFO + """
   .tab.miuda tr.fora .gd-nome{color:var(--comment)}
 """
 
+# O CADEADO, EM DOIS TRAÇOS — decisão [01] do PO, 04/09/2026. Ver o bloco
+# `.trava` no CSS para a razão de ser SVG e não um caractere. `currentColor` nos
+# dois traços é o que deixa a cor morar no CSS, como em todo glifo desta casa.
+CADEADO = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
+           '<path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" '
+           'stroke="currentColor" stroke-width="1.2"/>'
+           '<rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" '
+           'fill="currentColor"/></svg>')
+
+
+def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
+                   miolo: str = "") -> str:
+    """O cadeado (ou o ponto) que só aparece quando o produto tem o que dizer.
+
+    SÃO DOIS ENDEREÇOS PARA UM FATO, e a divergência é impossível por
+    construção: quem os emite é `a10_perfis`, na MESMA linha, do MESMO valor —
+    a marca acende quando a frase existe, e some quando ela some. A régua que
+    cobra a equivalência é
+    `tests/unit/test_a_aba_10_perfis_fecha_as_linhas.py`, e ela morde nos dois
+    sentidos (marca sem frase, frase sem marca).
+
+    POR QUE NÃO UM CAMPO SÓ, como o `monta.botao_cinza` faz: aquele elemento é o
+    BOTÃO, que já existe na tela e só muda de cor — aqui a marca NASCE ou não
+    nasce, e o alvo que a faz nascer (`classe`) é o mesmo que teria de carregar
+    a frase (`html`). `data-hef-alvo` é UM por elemento; com um campo só, ou a
+    marca aparece sem explicar, ou a explicação existe sem marca que a alcance.
+
+    SEM `data-hef-atributo` JUNTO, e a razão é que o único atributo que caberia
+    aqui diria o CONTRÁRIO: o alvo `classe` veste o atributo com `true` quando
+    ACENDE, e um `aria-hidden="true"` no instante em que a marca passa a ter o
+    que dizer esconderia de quem não enxerga justamente o aviso que nasceu.
+
+    A `.dica` NASCE VAZIA no desenho, de propósito: a frase é DADO (a regra
+    daquele perfil, a exigência escondida daquele `match`), e o mockup não tem
+    nenhum. Um texto de exemplo aqui viraria a tela afirmando uma regra que o
+    perfil dela não tem — a mesma razão do `title=""` da linha da lista.
+    """
+    return (f'<span class="{classe}" data-hef="{campo_estado}"'
+            f' data-hef-alvo="classe">{miolo}'
+            f'<span class="dica" data-hef="{campo_frase}"'
+            f' data-hef-alvo="html"></span></span>')
+
+
+#: A FRASE DA PRIORIDADE QUE ELA APROVOU — 02/09/2026, decisão nº11 dela.
+#:
+#: ELA NUNCA TINHA CHEGADO À TELA, e o motivo era estrutural: o lugar onde ela
+#: escreveria é o `<span>` que segura o TRILHO e o NÚMERO, e o pintor termina em
+#: `el.textContent = t` — escrever ali apagaria os dois. Por isso
+#: `editor.prioridade.dica` vive em `a10_perfis.NAO_PINTAVEIS`, e o que ela lia
+#: ao parar o rato era o texto que ficou no desenho, que não é nem a frase velha
+#: nem a nova.
+#:
+#: O PO DECIDIU [03] EM 04/09: **a frase dela entra no DESENHO — e vão as DUAS**,
+#: a dela primeiro, seguida da explicação do Universal em zero, que o texto de
+#: hoje tem e o dela não. O produto para de tentar mandá-la: a frase é
+#: CONSTANTE (`perfis_web._pacote_do_editor` a devolve igual para todo perfil, e
+#: está escrito lá que é de propósito), e uma constante mora no desenho.
+#:
+#: **O LITERAL FICA NUM LUGAR SÓ, e quem o amarra ao produto é uma régua**:
+#: `test_a_aba_10_perfis_fecha_as_linhas.py` compara esta constante com o
+#: `prioridade_dica` de `perfis_web` e reprova se as duas divergirem. Sem ela,
+#: mudar a frase do produto deixaria o desenho recitando a versão velha — que é
+#: a forma de defeito que esta seção inteira existe para curar.
+FRASE_DA_PRIORIDADE_DELA = (
+    "Quando dois perfis servem ao mesmo tempo, o de número maior entra.")
+#: A SEGUNDA METADE, que o texto de hoje tem e o dela não. Ela responde a única
+#: pergunta que a frase dela deixa aberta — *"e o perfil que vale para tudo,
+#: que número tem?"* —, e o PO mandou as duas, nesta ordem.
+FRASE_DO_UNIVERSAL = (
+    "O Universal fica em zero, para nunca atropelar ninguém e nunca deixar o "
+    "controle sem nada.")
+DICA_DA_PRIORIDADE = f"{FRASE_DA_PRIORIDADE_DELA} {FRASE_DO_UNIVERSAL}"
+
 AMBIENTES = ["Todos","Steam","Estilo de Jogo","Jogo","Jogo da Steam"]
 #: OS RÓTULOS SAEM DO MOTOR — ver o comentário do import, no alto. Eram quinze
 #: palavras digitadas aqui, e a coincidência com o motor não era construção.
@@ -575,8 +707,41 @@ PERFIL_DO_EDITOR = PERFIS[0][0]
 #: `perfis_web._pacote_do_editor` faz para o produto.
 PCT_DO_DESENHO = round(PRI_DO_DESENHO * 100 / PRIORIDADE_MAXIMA)
 
-def opts(lista, escolhido, vazio=False):
+#: O VALOR QUE O `escrever()` DO PILOTO MANDA quando não há o que mostrar. Ele
+#: troca vazio por este travessão ANTES de escolher o ramo, e é por isso que ele
+#: precisa EXISTIR como opção: um `<select>` só aceita o que ele oferece.
+TRAVESSAO = "—"
+
+
+def opts(lista, escolhido, vazio=False, travessao=False):
     """As opções de um `<select>` do desenho.
+
+    `travessao=True` põe na frente a opção `—`, DESABILITADA — e ela é a cura de
+    uma tela que afirmava o que não é, medida no DOM vivo em 04/09/2026.
+
+    O QUE ACONTECIA, e é o irmão exato do defeito que o cadeado veio marcar: um
+    perfil que casa por título de janela vem de `perfis_web` com
+    `ambiente: None`. O `escrever()` do piloto troca `None` por `—`, e num
+    `<select>` ele só escreve se alguma opção CASAR — nenhuma casava, então ele
+    devolvia 0 e **o campo ficava com o "Jogo" do MOCKUP**. Medido, com o
+    cadeado já aceso ao lado:
+
+        trava.acesa      true        ← "esta tela não sabe mostrar a regra"
+        editor.ambiente  "Jogo"      ← o desenho, afirmando uma regra que não é
+
+    O cadeado dizia a verdade e o campo ao lado dizia outra, na mesma linha.
+
+    `value="—"` E NÃO `value=""`: com o valor vazio, `el.value = '—'` não casa
+    nada (a atribuição olha o VALUE, não o texto), o `selectedIndex` cai para
+    -1, o campo renderiza EM BRANCO e — porque `el.value` nunca volta igual ao
+    escrito — o contador de pinturas soma +1 por tique, para sempre. É a
+    medição que segura o `editor.estilo` em `NAO_PINTAVEIS`, e aqui ela é o que
+    escolhe o valor. Com `value="—"` a escrita é idempotente.
+
+    `disabled` PORQUE ELA NÃO É UMA ESCOLHA: "não sei mostrar" é um estado que o
+    produto relata, não uma regra que o perfil saiba guardar. Se ela pudesse
+    escolhê-lo, o gesto recusaria dizendo (`editor_ambiente` levanta para todo
+    rótulo fora de `PRESET_DO_ROTULO`) — melhor não oferecer.
 
     `vazio=True` põe NA FRENTE a opção que ela decidiu em 02/09/2026:
     `value=""`, texto travessão, marcada — e aí nenhuma das outras nasce
@@ -589,6 +754,9 @@ def opts(lista, escolhido, vazio=False):
     linhas = []
     if vazio:
         linhas.append('                <option value="" selected>—</option>')
+    if travessao:
+        linhas.append(f'                <option value="{TRAVESSAO}" disabled>'
+                      f'{TRAVESSAO}</option>')
     linhas += [f'                <option{" selected" if (o == escolhido and not vazio) else ""}>{o}</option>'
                for o in lista]
     return "\n".join(linhas)
@@ -834,7 +1002,7 @@ MIOLO = f'''
               </div>
               <div class="campo">
                 <span>Prioridade:</span>
-                <span class="val" data-hef="editor.prioridade.dica" title="Decide quem ganha quando dois perfis poderiam entrar: o maior vence. O Universal fica em zero, para nunca atropelar ninguém e nunca deixar o controle sem nada.">
+                <span class="val" data-hef="editor.prioridade.dica" title="{DICA_DA_PRIORIDADE}">
                   <!-- `data-hef-alvo="largura"` — 02/09/2026, e sem ele a barra
                        MENTIA de duas formas ao mesmo tempo. O pintor cai no
                        ramo padrão (`el.textContent = t`, `hefesto_vivo.py:170`)
@@ -871,17 +1039,35 @@ MIOLO = f'''
                   <span class="n" data-hef="editor.prioridade.n">{PRI_DO_DESENHO}</span>
                 </span>
               </div>
+              <!-- O CADEADO — decisão [01] do PO, 04/09/2026: *"Cadeado no
+                   campo, frase no hover."* Sete dos nove perfis de fábrica
+                   casam por uma regra que este seletor não sabe descrever, e
+                   até aqui ele ficava IDÊNTICO a um destravado: a marca de
+                   travado e a frase que a explica já saíam do produto
+                   (`perfis_web._ambiente_do_perfil`) e caíam no vazio, porque
+                   endereço para elas não existia nesta página. Só depois do
+                   clique é que a tela reclamava. -->
               <div class="campo">
                 <span>Funciona em:</span>
                 <span class="val"><select data-hef="editor.ambiente" data-hef-gesto="editor.ambiente" data-hef-alvo="valor">
-{opts(AMBIENTES, "Jogo")}
-                </select></span>
+{opts(AMBIENTES, "Jogo", travessao=True)}
+                </select>{marca_com_dica("trava", "editor.ambiente.travado",
+                                        "editor.ambiente.recado", CADEADO)}</span>
               </div>
+              <!-- O PONTO DE ALERTA — a outra metade da mesma decisão. O caso
+                   é o do Pragmata: o editor mostrava "Jogo da Steam · 3357650"
+                   e o arquivo exigia TAMBÉM `PRAGMATA.exe`; o `matches` é AND,
+                   o campo invisível era o que decidia, e o perfil não entrava
+                   sozinho — medido seis vezes em dois minutos com ela jogando.
+                   A frase que conta isso já existia
+                   (`simple_match.exigencia_invisivel`) e nunca tinha chegado a
+                   esta tela. -->
               <div class="campo">
                 <span>Nome do Jogo:</span>
                 <span class="val">
                   <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo"
-                         data-hef-alvo="valor" value="Mortal Kombat 1">
+                         data-hef-alvo="valor" value="Mortal Kombat 1">{marca_com_dica(
+                           "exige", "editor.jogo.exige", "editor.jogo.exigencia")}
                   <button class="btn roxo" data-hef-gesto="detectar" title="Pega o jogo que está rodando atrás desta janela e monta a regra — funciona com jogo de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
               </div>
@@ -1193,6 +1379,62 @@ def _conferir(html: str) -> None:
            "a tira do desfecho deixou de reservar o espaço — a lista volta a "
            "pular a cada clique")
 
+    # A SEGUNDA LINHA DA TIRA — decisão [05] do PO, 04/09/2026. As três metades,
+    # e cada uma some sem sintoma: a ALTURA (uma linha volta a cortar), o
+    # `line-clamp` (sem ele a frase de 280 caracteres vaza para fora da caixa em
+    # vez de reticenciar) e a AUSÊNCIA do `nowrap`, que sozinho desfaz as outras
+    # duas — com ele a frase continua numa linha só dentro de uma caixa de duas.
+    regra = re.search(r"\.desfecho\{[^}]*\}", html)
+    exigir(regra is not None, "a regra da tira do desfecho sumiu do CSS")
+    if regra:
+        corpo = regra.group(0)
+        exigir("height:30px" in corpo,
+               "a tira do desfecho voltou a UMA linha — o fim da frase, que é "
+               "a metade que avisa, some com reticências")
+        exigir("-webkit-line-clamp:2" in corpo,
+               "a tira perdeu o `-webkit-line-clamp:2` — a frase longa vaza "
+               "para fora da caixa em vez de parar na segunda linha")
+        exigir("white-space:nowrap" not in corpo,
+               "o `nowrap` voltou à tira — com ele a frase continua numa linha "
+               "só, e as duas linhas reservadas viram espaço morto")
+
+    # O CADEADO E O PONTO DE ALERTA — decisão [01] do PO. A régua cobra as TRÊS
+    # coisas que os fazem funcionar, e as três somem caladas: os DOIS endereços
+    # de cada marca (a `classe` que a acende, o `html` que escreve a frase), e a
+    # `.dica` VAZIA — um texto de exemplo aqui seria a tela afirmando uma regra
+    # que o perfil dela não tem.
+    for classe, estado, frase in (
+            ("trava", "editor.ambiente.travado", "editor.ambiente.recado"),
+            ("exige", "editor.jogo.exige", "editor.jogo.exigencia")):
+        marca = re.search(rf'<span class="{classe}"[^>]*>', html)
+        exigir(marca is not None,
+               f"a marca `{classe}` sumiu do editor — o campo volta a ficar "
+               f"idêntico a um destravado e só reclama depois do clique")
+        if marca:
+            exigir(f'data-hef="{estado}"' in marca.group(0)
+                   and 'data-hef-alvo="classe"' in marca.group(0),
+                   f"a marca `{classe}` perdeu o endereço que a acende "
+                   f"(`{estado}`, alvo `classe`) — ela ficaria escondida para "
+                   f"sempre, ou visível para sempre")
+        exigir(f'<span class="dica" data-hef="{frase}" data-hef-alvo="html">'
+               f'</span>' in html,
+               f"a dica de `{classe}` não é um `{frase}` VAZIO no desenho — ou "
+               f"o endereço sumiu, ou o mockup passou a cravar uma frase que é "
+               f"dado do perfil dela")
+
+    # A FRASE DA PRIORIDADE, E A ORDEM DAS DUAS — decisão [03] do PO. A dela
+    # PRIMEIRO: é a que ela aprovou, e a do Universal responde a pergunta que a
+    # dela deixa aberta.
+    dica = re.search(r'data-hef="editor\.prioridade\.dica" title="([^"]*)"', html)
+    exigir(dica is not None, "a dica da Prioridade perdeu o `title` do desenho")
+    if dica:
+        exigir(dica.group(1) == DICA_DA_PRIORIDADE,
+               f"a dica da Prioridade não é a frase decidida:\n"
+               f"    tem  {dica.group(1)!r}\n"
+               f"    quer {DICA_DA_PRIORIDADE!r}")
+        exigir(dica.group(1).startswith(FRASE_DA_PRIORIDADE_DELA),
+               "a frase DELA deixou de vir primeiro na dica da Prioridade")
+
     # A PRIORIDADE É SLIDER — 03/09/2026, decisão dela (*"Slider, como você
     # pediu"*). A régua cobra as QUATRO metades, e cada uma some sem sintoma:
     # o campo existe e ARRASTA; ele tem gesto (senão arrastar é silêncio); a
@@ -1231,6 +1473,14 @@ def _conferir(html: str) -> None:
     exigir('<option value="" selected>—</option>' in html,
            "a opção vazia do Estilo de Jogo saiu — o campo voltaria a abrir "
            "afirmando um estilo que perfil nenhum guarda")
+
+    # O TRAVESSÃO DO "FUNCIONA EM" — 04/09/2026, medido no DOM vivo. Sem esta
+    # opção o `escrever()` não tem onde pousar o `—` de um perfil cuja regra a
+    # tela não sabe mostrar, e o campo fica com o "Jogo" do MOCKUP — o cadeado
+    # ao lado dizendo "não sei mostrar" e o campo dizendo "Jogo".
+    exigir(f'<option value="{TRAVESSAO}" disabled>{TRAVESSAO}</option>' in html,
+           "a opção `—` do 'Funciona em' saiu — o perfil de regra fina volta a "
+           "mostrar a opção que o DESENHO trazia")
 
     # A COLUNA JUSTA. O `104px` é o valor antigo, e o vão morto de 22px é ele.
     exigir("--rot-p:86px" in html,
