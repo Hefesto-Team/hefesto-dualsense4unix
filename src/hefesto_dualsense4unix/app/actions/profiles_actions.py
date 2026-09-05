@@ -2235,10 +2235,19 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         rotulo = self._get("profile_exigencia_invisivel")
         if rotulo is None:
             return
-        from hefesto_dualsense4unix.profiles.simple_match import exigencia_invisivel
+        # O CAMINHO É DESTA JANELA, e por isso ele é somado AQUI — 05/09/2026.
+        # O `exigencia_invisivel` devolve só o FATO desde então: nomear o
+        # "Modo avançado" (um interruptor do `main.glade`) dentro de um matcher
+        # de `profiles/` fazia a frase mandar a pessoa a um botão que a
+        # interface nova não tem, e obrigava aquela aba a remendar a saída.
+        from hefesto_dualsense4unix.profiles.simple_match import (
+            CAMINHO_DA_JANELA_GTK,
+            exigencia_invisivel,
+        )
 
         regra = self._regra_do_disco
-        texto = exigencia_invisivel(regra) if regra is not None else ""
+        fato = exigencia_invisivel(regra) if regra is not None else ""
+        texto = f"{fato} {CAMINHO_DA_JANELA_GTK}" if fato else ""
         if texto:
 
             rotulo.set_markup(

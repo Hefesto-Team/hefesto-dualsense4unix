@@ -433,6 +433,13 @@ def _preset_historico(match: MatchCriteria) -> str | None:
     return None
 
 
+#: O CAMINHO DA JANELA GTK, e ele mora aqui por um motivo só: é a janela cujo
+#: botão tem este nome, e a constante precisa de UM dono para a régua da aba 10
+#: poder cobrar a troca. Quem a CONCATENA é `profiles_actions`, não esta função
+#: — uma tela sem "Modo avançado" nunca a vê.
+CAMINHO_DA_JANELA_GTK = "Ligue o Modo avançado para ver e mudar."
+
+
 def exigencia_invisivel(match: Match) -> str:
     """O que o perfil exige e a página SIMPLES não mostra. "" = nada escondido.
 
@@ -455,7 +462,20 @@ def exigencia_invisivel(match: Match) -> str:
     Preservar o invisível continua certo. Esconder que ele EXISTE é que não.
 
     A frase é factual e não manda apagar nada: quem escreveu o critério foi ela,
-    e a decisão de mudá-lo é dela. Diz o que há e onde mexer.
+    e a decisão de mudá-lo é dela. Diz o que há.
+
+    **ELA DIZIA "ONDE MEXER", E ISSO SAIU EM 05/09/2026.** O fim da frase era
+    *"Ligue o Modo avançado para ver e mudar."* — e o "Modo avançado" é uma
+    peça da JANELA GTK, um interruptor do `main.glade`. Um matcher de
+    `profiles/` não pode nomear um botão de uma tela: quando nasceu a interface
+    nova, que não tem esse interruptor, a frase passou a mandar a pessoa a um
+    lugar que não existe, e a aba 10 teve de REMENDÁ-LA na saída — trocando o
+    fim exato por outro, com uma régua guardando a troca.
+
+    A REPARTIÇÃO É A ÓBVIA, e é a que o relatório daquela frente pediu: o FATO
+    mora aqui, porque é do critério; o CAMINHO mora em cada tela, porque só ela
+    sabe que botões desenhou. Ver
+    :data:`CAMINHO_DA_JANELA_GTK`, e o `FIM_DA_EXIGENCIA_AQUI` da aba 10.
     """
     if not isinstance(match, MatchCriteria):
         return ""
@@ -471,6 +491,5 @@ def exigencia_invisivel(match: Match) -> str:
         return ""
     return (
         f"Este perfil também exige {' e '.join(partes)}, e só entra quando isso "
-        "bater junto com o número do jogo. Ligue o Modo avançado para ver e "
-        "mudar."
+        "bater junto com o número do jogo."
     )

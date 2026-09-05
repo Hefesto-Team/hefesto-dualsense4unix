@@ -41,6 +41,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchManual,
 )
 from hefesto_dualsense4unix.profiles.simple_match import (
+    CAMINHO_DA_JANELA_GTK,
     exigencia_invisivel,
     from_simple_choice,
 )
@@ -60,7 +61,15 @@ def test_o_caso_dela_e_declarado_com_o_campo_e_o_valor() -> None:
     texto = exigencia_invisivel(PRAGMATA)
     assert "nome do processo" in texto, "o rótulo tem de ser o do editor avançado"
     assert '"PRAGMATA.exe"' in texto, "o valor exato, para ela reconhecer"
-    assert "Modo avançado" in texto, "e onde mexer, senão o aviso é beco sem saída"
+    # O "ONDE MEXER" SAIU DAQUI EM 05/09/2026, e não sumiu do produto: ele
+    # virou `CAMINHO_DA_JANELA_GTK`, somado por `profiles_actions` — porque o
+    # nome do botão é da JANELA, e um matcher de `profiles/` que o nomeia manda
+    # a interface nova (que não tem esse interruptor) a um lugar inexistente.
+    # O aviso continua sem virar beco sem saída: cada tela soma o seu caminho.
+    assert "Modo avançado" not in texto, (
+        "o matcher voltou a nomear um botão da janela GTK")
+    assert CAMINHO_DA_JANELA_GTK, "o caminho da janela GTK perdeu o dono"
+    assert "Modo avançado" in CAMINHO_DA_JANELA_GTK
 
 
 def test_a_frase_nao_manda_apagar_nada() -> None:

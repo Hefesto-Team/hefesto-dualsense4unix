@@ -609,9 +609,16 @@ SEM_ENDERECO = {
 ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
 
 
-#: O FIM DA FRASE DA EXIGÊNCIA ESCONDIDA, REESCRITO PARA ESTA TELA — decisão
-#: [02] do PO, 04/09/2026: *"as duas frases prontas mandam a lugares que não
-#: existem aqui … Isso é fato errado e se substitui."*
+#: O FIM DA FRASE DA EXIGÊNCIA ESCONDIDA — decisão [02] do PO, 04/09/2026:
+#: *"as duas frases prontas mandam a lugares que não existem aqui … Isso é
+#: fato errado e se substitui."*
+#:
+#: **DEIXOU DE SER REMENDA EM 05/09/2026.** O conserto que o bloco abaixo
+#: pedia — *"a frase factual devia sair de lá e o caminho, de cada tela"* — foi
+#: feito: `simple_match.exigencia_invisivel` devolve só o FATO, e o caminho da
+#: janela GTK virou `simple_match.CAMINHO_DA_JANELA_GTK`, somado por
+#: `profiles_actions`. Esta tela soma o seu. Não há mais troca de sufixo, nem
+#: régua guardando uma troca — só duas telas escrevendo cada uma o seu fim.
 #:
 #: **A FRASE DO PRODUTO NÃO ESTÁ ERRADA — ELA ESTÁ NA TELA ERRADA.**
 #: `simple_match.exigencia_invisivel` termina em *"Ligue o Modo avançado para
@@ -666,8 +673,9 @@ def _exigencia_para_esta_tela(match: Any) -> str:
         return ""
     if not frase:
         return ""
-    if frase.endswith(FIM_DA_EXIGENCIA_NA_GTK):
-        frase = frase[: -len(FIM_DA_EXIGENCIA_NA_GTK)].rstrip()
+    # A REMENDA SAIU EM 05/09/2026, e é o conserto que esta docstring pedia.
+    # `exigencia_invisivel` devolve só o FATO desde então; o CAMINHO passou a
+    # ser de quem desenhou os botões. Aqui só se soma o nosso.
     return f"{frase} {FIM_DA_EXIGENCIA_AQUI}"
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
