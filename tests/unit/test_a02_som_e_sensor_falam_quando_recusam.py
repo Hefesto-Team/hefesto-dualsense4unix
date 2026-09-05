@@ -12,7 +12,11 @@ NÃO FAZ:
    resolução de sink de `fontes_de_captura` —, faltava a cola;
 2. **os quatro botões de sensor respondiam CALADOS.** Sem `data-gesto`, o
    ouvinte monta o nome como `clique`, aba nenhuma o registra, e a recusa sai no
-   **stderr** — que quem clica na janela nunca lê;
+   **stderr** — que quem clica na janela nunca lê. **E a recusa que os curou
+   durou uma tarde:** ela dizia *"não existe método de sensor"*, a ONDA1-D3 pôs
+   `sensor.set` no daemon no mesmo dia, e a régua-estopim que a recusa deixou
+   armada (`test_o_daemon_continua_sem_metodo_de_sensor`) reprovou pedindo a
+   chamada. Ver `TestOsQuatroBotoesDeSensor`;
 3. **o `♪` era um beco**, porque o daemon só publica `speaker` depois de alguém
    escrever um volume, e não havia escritor nesta tela. O deslizante da D-08 é o
    escritor que faltava.
@@ -24,8 +28,9 @@ AS MORDIDAS DESTE ARQUIVO
   gesto `rota` — reprova `test_o_som_do_pc_move_a_saida_do_sistema`;
 * tirar o `data-gesto="sensor"` de `aba02.sensores_da_peca` — reprova
   `test_os_quatro_botoes_de_sensor_tem_endereco_na_bancada`;
-* fazer o gesto `sensor` voltar calado (`return` no lugar do `raise`) — reprova
-  `test_o_sensor_recusa_dizendo`;
+* devolver o `raise SEM_INTERRUPTOR_DE_SENSOR` ao gesto `sensor` — reprova
+  `test_o_sensor_desliga_pelo_daemon_com_um_campo_so`;
+* mandar os DOIS sensores em cada clique — reprova a mesma;
 * mandar o volume do alto-falante CRU (0-100) ao daemon, em vez de passar pela
   curva — reprova `test_o_deslizante_do_alto_falante_passa_pela_curva_medida`.
 """
@@ -227,12 +232,59 @@ class TestATodoOSomDoPC:
 # ===========================================================================
 
 
+#: O CONTROLE COM O BLOCO `sensores`, que é a chave NOVA do payload — irmã de
+#: `inputs`, publicada por `ipc_handlers._merge_sensores`. Sem ela o gesto
+#: recusa por falta de LEITURA, e é isso que o teste da recusa mede.
+def _com_sensores(*, giro: bool = True, accel: bool = True):
+    return {"sensores": {"giroscopio_ligado": giro,
+                         "acelerometro_ligado": accel,
+                         "grab_do_movimento": "held"}}
+
+
+class PonteQueDevolveOCorpo(PonteDeMentira):
+    """O dublê ESTRITO: devolve o CORPO do daemon, como a ponte real devolve.
+
+    **A cicatriz de 04/09/2026 obriga a este cuidado:** um dublê mais frouxo
+    que a ponte real deu verde sobre duas máscaras que nunca gravaram um byte.
+    O `PonteDeMentira` de cima responde `True` a todo nome, e um `True` some com
+    a `ressalva` — que é exatamente a metade que esta frente entrega.
+    """
+
+    def __init__(self, corpo: dict[str, Any]) -> None:
+        super().__init__()
+        self.corpo = corpo
+
+    def sensor_set_detalhado(self, **kwargs: Any) -> dict[str, Any]:
+        self.chamadas.append(("sensor_set_detalhado", (), kwargs))
+        return self.corpo
+
+
 class TestOsQuatroBotoesDeSensor:
+    """**O INTERRUPTOR PASSOU A INTERROMPER — 04/09/2026, à tarde.**
+
+    Esta classe cobrava uma RECUSA, e a premissa dela ia à régua a cada volta:
+    *"não há método de sensor no daemon"*. A ONDA1-D3 fechou essa ausência no
+    mesmo dia, por decisão dela contra a recomendação de virar leitura (*"ele
+    tem que funcionar de verdade. ambos independente do modo e da mascara."*),
+    e a régua-estopim reprovou dizendo o que fazer: *"o botão deixou de precisar
+    recusar, e a frase de recusa virou mentira"*.
+
+    **A régua não foi afrouxada — ela mudou de alvo com o fato.** O que era
+    cobrado da recusa passou a ser cobrado da CHAMADA, e a única recusa que
+    sobra é a de falta de leitura, que é a mesma disciplina do 🎙: sem saber o
+    estado atual, alternar é chutar qual é o oposto.
+    """
+
     def test_os_quatro_botoes_de_sensor_tem_endereco_na_bancada(self) -> None:
         """MORDIDA: tire o `data-gesto="sensor"` do gerador e isto reprova.
 
         A régua olha a BANCADA — `mockup/02-controles.html` —, que é o desenho
         de hoje. O publicado só recebe com o OK dela.
+
+        E O ENDEREÇO DE ESTADO ENTROU JUNTO: sem `data-campo`, o `.sw` volta a
+        ser classe fixa do gerador e o botão fica aceso para sempre — inclusive
+        depois de ela desligar o sensor, que é a mentira que o interruptor de
+        verdade tornou possível.
         """
         doc = (RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
         assert doc.count('data-gesto="sensor"') == doc.count('data-sensor="'), (
@@ -242,53 +294,145 @@ class TestOsQuatroBotoesDeSensor:
         assert doc.count('data-sensor="') >= 2, (
             "os interruptores de sensor sumiram do desenho"
         )
+        endereços = doc.count('data-campo="giro-ligado"') + doc.count(
+            'data-campo="accel-ligado"')
+        assert endereços == doc.count('data-sensor="'), (
+            "há interruptor de sensor sem endereço de ESTADO — o botão volta a "
+            "acender por desenho, e fica aceso sobre um sensor desligado"
+        )
+        assert doc.count('data-hef-quando="DESLIGADO"') == endereços, (
+            "o endereço de estado perdeu o valor que o apaga: sem "
+            "`data-hef-quando`, o alvo `classe` vira booleano e o botão acende "
+            "com QUALQUER valor pintado, travessão inclusive"
+        )
 
-    def test_o_sensor_recusa_dizendo(self) -> None:
-        """MORDIDA: troque o `raise` por um `return` e isto reprova.
+    def test_o_sensor_desliga_pelo_daemon_com_um_campo_so(self) -> None:
+        """MORDIDA: devolva o `raise SEM_INTERRUPTOR…` ao gesto e isto reprova.
 
-        Não há método de sensor no daemon — o `sensor_hub` só LÊ. O que o botão
-        pode fazer é dizer isso, no cartão daquele controle, em vez de aceitar o
-        clique e sumir.
+        **UM CAMPO SÓ, e é o contrato do daemon:** campo omitido NÃO mexe
+        naquele sensor (`ipc_handlers._handle_sensor_set`). Mandar os dois faria
+        o clique no Giroscópio reafirmar o Acelerômetro a cada vez — que é o
+        "pelas costas dela" que a `sensor_set_detalhado` documenta.
+        """
+        for qual, ligado_agora in (("giroscopio", True), ("acelerometro", False)):
+            p = PonteQueDevolveOCorpo({"status": "ok", "ressalva": None})
+            _gesto("sensor")(
+                _ctx(**_com_sensores(giro=ligado_agora, accel=ligado_agora)),
+                {"uniq": UNIQ, "sensor": qual}, p)
+            assert p.chamadas == [
+                ("sensor_set_detalhado", (), {qual: not ligado_agora,
+                                              "uniq": UNIQ})
+            ], (
+                f"o clique no {qual} não virou o pedido esperado — ou ele "
+                "deixou de alternar pela leitura, ou passou a mandar o outro "
+                "sensor junto"
+            )
+
+    def test_o_sensor_sem_leitura_recusa_dizendo(self) -> None:
+        """MORDIDA: troque o `raise` por um `p.sensor_set_detalhado` cego.
+
+        Sem o bloco `sensores` o gesto não sabe qual é o oposto. É a MESMA regra
+        do 🎙 — *"mandar um pedido sem saber o estado atual seria chutar qual é
+        o oposto"* —, e chutar aqui custa o clique dela sem sinal nenhum.
         """
         import pacotes.a02_controles as a02
 
         for qual in ("giroscopio", "acelerometro"):
+            p = PonteDeMentira()
             with pytest.raises(RuntimeError) as erro:
-                _gesto("sensor")(_ctx(), {"uniq": UNIQ, "sensor": qual},
-                                 PonteDeMentira())
-            assert str(erro.value) == a02.SEM_INTERRUPTOR_DE_SENSOR
+                _gesto("sensor")(_ctx(), {"uniq": UNIQ, "sensor": qual}, p)
+            assert str(erro.value) == a02.SEM_LEITURA_DE_SENSOR
+            assert p.chamadas == [], "recusou e mandou o pedido assim mesmo"
 
-    def test_a_frase_do_sensor_diz_o_estado_e_a_razao(self) -> None:
-        """Ela tem de responder às DUAS perguntas de quem clicou.
+    def test_a_ressalva_do_modo_nativo_vira_aviso_no_cartao(self) -> None:
+        """O verde falso que esta linha existe para não cometer.
 
-        *"por que não aconteceu nada?"* e *"então o sensor está ligado ou não?"*
-        Uma frase que só diga "não dá" deixaria a segunda no ar — e a segunda é a
-        que ela fez (*"nem giroscopio e acelerometro"*).
+        Em Modo Nativo o jogo lê o movimento pelo `hidraw` do controle FÍSICO, e
+        o daemon não escreve byte nenhum nesse caminho. O daemon responde
+        `status=ok` COM `ressalva`, e um gesto que olhasse só o `status` diria
+        "aplicado" sobre um giro que continua chegando ao jogo.
         """
-        import pacotes.a02_controles as a02
+        recado = ("Modo Nativo: o jogo lê o movimento pelo hidraw do controle "
+                  "FÍSICO, e nesse caminho o daemon não escreve byte nenhum.")
+        p = PonteQueDevolveOCorpo({"status": "ok", "ressalva": recado})
+        with pytest.raises(RuntimeError) as erro:
+            _gesto("sensor")(_ctx(**_com_sensores()),
+                             {"uniq": UNIQ, "sensor": "giroscopio"}, p)
+        assert str(erro.value) == recado
+        assert p.chamadas, "levantou a ressalva sem ter chamado o daemon"
 
-        frase = a02.SEM_INTERRUPTOR_DE_SENSOR.lower()
-        assert "já estão ligados" in frase, (
-            "a frase não diz que os sensores ESTÃO no ar — sem isso ela sugere "
-            "que o giro não chega ao jogo, que é o contrário do medido"
-        )
-        assert "não existe método" in frase or "só os lê" in frase, frase
+    def test_o_daemon_calado_diz_a_terceira_causa(self) -> None:
+        """A que aconteceu na máquina dela: o instalado é mais velho que a tela.
 
-    def test_o_daemon_continua_sem_metodo_de_sensor(self) -> None:
-        """A premissa da recusa, remedida a cada execução.
+        `_corpo(None)` é o daemon que não respondeu, e a frase tem de listar a
+        causa que ACONTECE — em 04/09 ela leu no cartão uma recusa que citava
+        duas causas, e nenhuma era a verdadeira.
+        """
+        p = PonteQueDevolveOCorpo({})
+        p.corpo = None  # type: ignore[assignment]
+        with pytest.raises(RuntimeError) as erro:
+            _gesto("sensor")(_ctx(**_com_sensores()),
+                             {"uniq": UNIQ, "sensor": "giroscopio"}, p)
+        assert "mais velho que esta janela" in str(erro.value), erro.value
 
-        No dia em que o daemon ganhar `sensor.*`, esta régua reprova e o gesto
-        passa a ter o que chamar — que é o desfecho certo desta linha.
+    def test_o_daemon_tem_o_metodo_de_sensor(self) -> None:
+        """A premissa da CHAMADA, remedida a cada execução — o estopim invertido.
+
+        Esta régua nasceu ao contrário (*"o daemon continua SEM método de
+        sensor"*) e reprovou em 04/09/2026, que era o desfecho que ela previa
+        por escrito. Agora ela guarda o fato NOVO: no dia em que `sensor.set`
+        sair do daemon, o gesto passa a chamar um fantasma e o clique dela some
+        outra vez — e é esta linha que avisa.
         """
         from pacotes import daemon
 
         metodos = daemon.metodos()
         assert metodos, "o inventário de métodos veio vazio — régua cega"
-        assert not [m for m in metodos
-                    if m.startswith(("sensor.", "gyro.", "motion."))], (
-            "o daemon ganhou método de sensor: o botão deixou de precisar "
-            "recusar, e a frase de recusa virou mentira"
+        assert "sensor.set" in metodos, (
+            "o daemon perdeu `sensor.set`: o gesto `sensor` da aba 02 chama "
+            f"um método que não existe mais. Os que há: {sorted(metodos)[:8]}…"
         )
+
+    def test_o_botao_pinta_pelo_que_o_aparelho_diz(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """São TRÊS estados, e o terceiro é a razão de o campo não ser `bool`.
+
+        Sem o bloco `sensores` a resposta é o travessão — nunca `DESLIGADO`. Um
+        `bool()` cru apagaria o botão de todo controle que ainda não tem leitor
+        de entradas, afirmando "desligado" sobre o que ninguém leu.
+
+        MORDIDA: emita `bool(...)` no lugar de `_selo_do_sensor` e o terceiro
+        caso vira `DESLIGADO`.
+        """
+        import mesa_viva
+
+        import pacotes.a02_controles as a02
+
+        # O endereço FORÇADO a existir: a página PUBLICADA ainda não tem os dois
+        # campos (a bancada espera o OK dela), e sem este desvio a régua mediria
+        # o `_so_se_a_pagina_tiver` em vez do campo.
+        monkeypatch.setattr(a02, "_so_se_a_pagina_tiver", lambda campos: campos)
+
+        def _campos(**over: Any) -> dict[str, Any]:
+            cards = a02.pacote(_ctx(**over))["cards"]
+            assert cards, "o pacote não montou card nenhum — régua cega"
+            return next(iter(cards.values()))
+
+        aceso = _campos(**_com_sensores())
+        assert aceso["giro-ligado"] == a02.SENSOR_LIGADO
+        assert aceso["accel-ligado"] == a02.SENSOR_LIGADO
+
+        meio = _campos(**_com_sensores(giro=False))
+        assert meio["giro-ligado"] == a02.SENSOR_DESLIGADO
+        assert meio["accel-ligado"] == a02.SENSOR_LIGADO, (
+            "desligar um sensor apagou o outro — o botão perdeu a independência "
+            "que o `sensor.set` de um campo só existe para garantir"
+        )
+
+        mudo = _campos()
+        assert mudo["giro-ligado"] == mesa_viva.SEM_LEITOR
+        assert mudo["accel-ligado"] == mesa_viva.SEM_LEITOR
 
 
 # ===========================================================================

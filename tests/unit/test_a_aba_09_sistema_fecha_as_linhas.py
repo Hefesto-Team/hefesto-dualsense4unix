@@ -386,11 +386,13 @@ LER_A_TELA = r"""
   const miolo = document.querySelector('.janela > .miolo') ||
                 document.querySelector('.miolo');
   const rea = document.querySelector('[data-gesto="atualizar"]');
+  // ONDE UM ELEMENTO ACABA, arredondado. As duas irmãs medem pela mesma peça.
+  const fim = (el) => el ? Math.round(el.getBoundingClientRect().bottom) : null;
   return JSON.stringify({
     botoes: botoes,
     // AS DUAS COLUNAS IRMÃS, medidas onde elas ACABAM.
-    fim_do_estado: est ? Math.round(est.getBoundingClientRect().bottom) : null,
-    fim_da_acao: acao ? Math.round(acao.getBoundingClientRect().bottom) : null,  // (noqa-acento)
+    fim_do_estado: fim(est),
+    fim_da_acao: fim(acao),  // (noqa-acento) `acao` é nome de variável do JS
     // E A ALTURA DA FAIXA. Ela é o que o `?` faria crescer se virasse fileira —
     // e o `align-items:stretch` do `.par2` ESCONDE isso de quem só compara os
     // dois fins: a coluna irmã estica junto, os dois `bottom` continuam iguais,

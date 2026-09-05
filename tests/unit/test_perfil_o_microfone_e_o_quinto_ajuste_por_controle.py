@@ -109,11 +109,27 @@ def _espiao() -> tuple[Any, list[tuple[int | None, bool | None, str | None, str]
 
 
 def test_o_microfone_e_o_quinto_ajuste_por_controle() -> None:
-    """São CINCO, e o quinto é o ``mic``.
+    """O ``mic`` é o QUINTO, depois de luz, gatilhos, vibração e alto-falante.
 
-    MORDIDA 1: apagar o campo de ``ControllerOverrides``.
+    MORDIDA 1: apagar o campo de ``ControllerOverrides`` — a lista encurta e o
+    prefixo deixa de casar. Trocar a ORDEM reprova igual, e é a metade que
+    importa: quem lê o esquema conta as seções na ordem em que elas aparecem.
+
+    **O SEXTO NASCEU EM 04/09/2026, e esta régua reprovou por isso.** Ela cravava
+    a lista INTEIRA (``== [leds, triggers, rumble, speaker, mic]``), e a ONDA1-D3
+    acrescentou ``sensores`` — o interruptor de giroscópio e acelerômetro por
+    peça, decisão dela (*"ele tem que funcionar de verdade. ambos independente do
+    modo e da mascara."*).  <!-- noqa-acento: citação literal dela -->
+    Medido com ``list(ControllerOverrides.model_fields)``:
+    ``['leds', 'triggers', 'rumble', 'speaker', 'mic', 'sensores']``.
+
+    O QUE ESTA RÉGUA AFIRMA continua sendo o que o título deste arquivo diz — o
+    microfone é o quinto —, e ela passou a afirmar SÓ isso. Cravar o comprimento
+    total nunca foi o contrato: obrigaria toda frente que abrir um ajuste novo
+    por controle a vir editar um arquivo sobre microfone, e foi assim que a
+    ONDA1-D3 deixou este arquivo vermelho sem tocar numa linha dele.
     """
-    assert list(ControllerOverrides.model_fields) == [
+    assert list(ControllerOverrides.model_fields)[:5] == [
         "leds",
         "triggers",
         "rumble",

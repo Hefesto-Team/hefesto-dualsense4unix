@@ -658,8 +658,9 @@ CSS = CSS_GLIFO + """
      E A MARCAÇÃO NÃO SE ESCREVE NUM COMENTÁRIO DE CSS: a primeira redação deste
      bloco citava a tag do rótulo por extenso, e a citação SAIU NA PÁGINA — o
      `<style>` vem antes do corpo, e `test_o_interruptor_tem_os_dois_enderecos`
-     achou a citação em vez do elemento. É a irmã da armadilha do `# noqa-acento`
-     que virou título visível: o que se escreve num gerador chega ao arquivo.
+     achou a citação em vez do elemento. É a irmã da armadilha do
+     `# noqa-acento` (menção em prosa, não válvula: nada aqui pede escape) que
+     virou título visível: o que se escreve num gerador chega ao arquivo.
 
      A GRAMÁTICA DO APAGADO É A DA CASA, letra por letra — `.btn.apagado` do
      `monta.CSS_FOLHA`: borda sutil, texto mudo, `cursor:not-allowed`. Inventar

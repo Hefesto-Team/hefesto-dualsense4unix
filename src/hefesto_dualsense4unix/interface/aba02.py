@@ -1115,12 +1115,22 @@ def sensores_da_peca(c):
     clique e não diziam nada.
 
     O `data-gesto` é ENDEREÇO, não desenho: ele está na lista `INVISIVEIS` do
-    `check_o_desenho_aprovado`, e não move um pixel. Quem responde agora é
-    `pacotes/a02_controles.sensor`, que RECUSA DIZENDO — não há método de sensor
-    no daemon, e a razão inteira está na docstring daquele gesto, inclusive por
-    que o cinza da D-03 **não serve a este botão**: `.sw.off` é o desligado
-    deste desenho, e pintar de cinza um sensor que está entregando dado a cada
-    tique trocaria o silêncio por uma afirmação falsa.
+    `check_o_desenho_aprovado`, e não move um pixel. Quem responde é
+    `pacotes/a02_controles.sensor`.
+
+    **E OS QUATRO GANHARAM O ENDEREÇO DE ESTADO — 04/09/2026, à tarde.** Aqui
+    estava escrito que o gesto *"RECUSA DIZENDO — não há método de sensor no
+    daemon"*, e que pintar o botão *"trocaria o silêncio por uma afirmação
+    falsa"*. As duas frases caíram na mesma tarde: a ONDA1-D3 pôs `sensor.set`
+    no daemon por decisão dela (*"ele tem que funcionar de verdade"*), e o
+    `.sw.off` deixou de ser afirmação falsa para virar a **leitura** de
+    `sensores.<qual>_ligado`.
+
+    O `data-campo`/`data-hef-alvo`/`data-hef-classe`/`data-hef-quando` são os
+    QUATRO atributos do alvo `classe`, e os quatro estão na `INVISIVEIS` — nada
+    aqui move um pixel do que ela aprovou. Com o sensor LIGADO (o default dela,
+    e o de sempre) nenhum deles casa, e o botão fica exatamente como está
+    desenhado; o `off` só aparece depois de ela desligar um.
 
     A TAXA DO GIROSCÓPIO VIVE AQUI AGORA. Ela era uma LEITURA na linha
     (`Giroscópio 250 Hz`), e a leitura saiu — decisão dela no mesmo turno:
@@ -1132,8 +1142,8 @@ def sensores_da_peca(c):
     """
     hz_por_que = TAXA_DO_GIRO[c["via"]]
     return f'''          <span class="sensores-peca">
-            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" title="Ligado: o jogo recebe o giro deste controle. {hz_por_que}"><span class="p"></span>Giroscópio</button>
-            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
+            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle. {hz_por_que}"><span class="p"></span>Giroscópio</button>
+            <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
           </span>'''
 
 
