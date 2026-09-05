@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho para
 # sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
 
-ensaio:  2026-09-04 05:00
+ensaio:  2026-09-05 05:11
 abas:    16
 modo:    padrão
 fixture: nenhum — os dublês nascem fixos no próprio script (padrão de dois controles)
@@ -18,8 +18,8 @@ b7016b2cc75aab92ba658e195bd815ebd73ef375b21324bb33c733af70c57b02  perfis-jogo-da
 1fbbb73f24b101d1888c1b6aa18d7703612b90e16f0f5c385a8ef92e5e2263ed  readme_cabecalho.png
 cdded7497f0a96227ec9cbb9f3b9da1629bea017f3c2f968cf6d2bac9684a48f  readme_cabecalho_alvo_inativo.png
 e8175c3ab51e2b2fbe4ffcb80014381e297f3895871581528b9c6eeb2b5fb1e1  readme_configuracoes.png
-65bc8d9c9c57e16053a5e96955bfec81d28c179f9dfee3dfa3ccd6f91613793e  readme_configuracoes_inteira.png
-0703ee2f302354e19cdd031327541b8df2c2ec787ab373ef23cce72ec6a9372f  readme_emulacao.png
+c348cf6e98e7849166e76092d4f20d3082afa359f676ca25c72f811adb82ff99  readme_configuracoes_inteira.png
+6d264cdcc37fea514a7a84d35461411a441902d82cca9cd8d337dfe2409d217c  readme_emulacao.png
 b012924afb3abbf093c62d3a2d3e97ebc13ba1906aec92cd5338daab01c7ece9  readme_gatilhos.png
 f58f792a2cf6fa63c95ba5800241f48ad7ea3b761fae3e2f4e6de58abc7dd252  readme_inicio.png
 133486cfab7b99613c8c67b4e7076511123fb370b2dd8ef61a3bd2113956a16b  readme_lightbar.png
@@ -27,6 +27,6 @@ f58f792a2cf6fa63c95ba5800241f48ad7ea3b761fae3e2f4e6de58abc7dd252  readme_inicio.
 d2ef1e8fa945716d1a3d4331fdcd72b6d63b35961a4b1b509e60002d87f874a9  readme_no_jogo.png
 096ddb6166626840fc2af41616dc02c3b9d1c1085c0a84f9bb4aeb956b37fcf2  readme_perfis.png
 e8c08b6cced746a3bf30f4b641614f3524aecadc79d9fa5adc8080892cbf5a62  readme_rumble.png
-04915a8834db0fdf3deeb079bde2531ef1b49257c56237449acc24ceb5732235  readme_sistema.png
+0f7f3c6f0a8aa9e0c94d912032a9dc9b12166c29a752b28a18fcf4168d414c2a  readme_sistema.png
 8cb8169a094ab85596dfac9de1b4d63010963f85330b2c5c9b8f88270ce8ef64  readme_status.png
 d4f96145200656d478ea9c8297fcf5dd0c83a950b2c7f71676979242ef85c943  social-preview.png
