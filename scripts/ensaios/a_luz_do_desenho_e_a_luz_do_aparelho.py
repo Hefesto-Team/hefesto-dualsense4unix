@@ -59,9 +59,9 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk
 
-from hefesto_dualsense4unix.interface import hefesto_vivo  # noqa: E402
+from hefesto_dualsense4unix.interface import hefesto_vivo
 
 ABA = "04-iluminacao.html"
 
@@ -264,7 +264,7 @@ def main() -> int:
         print(f"{pref:6s} {estado:12s} "
               f"{(str(quero) if quero else 'sem cor a afirmar'):>18s} "
               f"{(str(tenho) if tenho else '—'):>16s} "
-              f"{str(acesas):>12s} {str(esperadas or '—'):>12s}")
+              f"{acesas!s:>12s} {esperadas or '—'!s:>12s}")
         if campos.get("ressalva"):
             print(f"{'':6s} ressalva do motor: {campos['ressalva']}")
         if estado != "sim":

@@ -68,7 +68,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk
 
 # PELO NOME DO PACOTE, e não pelo nome curto. Custou uma medição falsa em
 # 03/09/2026: `from pacotes import ponte` cria um módulo DIFERENTE de
@@ -76,11 +76,11 @@ from gi.repository import GLib, Gtk  # noqa: E402
 # (`hefesto_vivo.py:69`). O `ponte.resultado` trocado ficava num objeto que o
 # produto nunca olha — o instrumento medindo contra a biblioteca errada, que é a
 # primeira das armadilhas de `COMO-OLHAR-A-TELA.md`.
-from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import (  # noqa: E402
+from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva
+from hefesto_dualsense4unix.interface.pacotes import (
     a06_navegacao as aba,
 )
-from hefesto_dualsense4unix.interface.pacotes import ponte  # noqa: E402
+from hefesto_dualsense4unix.interface.pacotes import ponte
 
 ABA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 

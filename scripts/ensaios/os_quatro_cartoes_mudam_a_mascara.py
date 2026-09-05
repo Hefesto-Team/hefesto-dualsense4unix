@@ -70,10 +70,10 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk
 
-from hefesto_dualsense4unix.interface import hefesto_vivo, onde  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import ponte  # noqa: E402
+from hefesto_dualsense4unix.interface import hefesto_vivo, onde
+from hefesto_dualsense4unix.interface.pacotes import ponte
 
 ABA = "01-jogar.html"
 

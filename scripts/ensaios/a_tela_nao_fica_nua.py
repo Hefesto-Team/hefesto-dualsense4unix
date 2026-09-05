@@ -88,12 +88,12 @@ from hefesto_dualsense4unix.utils.tela_de_mentira import (
 
 garantir_tela_de_mentira()
 
-import gi  # noqa: E402
+import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk
 
-import hefesto_vivo as hv  # noqa: E402
+import hefesto_vivo as hv
 
 #: O fundo de um ``body`` que perdeu toda regra de estilo. É a assinatura da
 #: tela nua, e o WebKit a devolve com este espaçamento exato.
