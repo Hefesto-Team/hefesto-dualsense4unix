@@ -122,7 +122,7 @@ def _colorways() -> list[str]:
 
 
 def _chips(html: str) -> list[str]:
-    """Os `<span class="chip …">` da fita, um por elemento, na ordem.
+    """Os `<label class="chip …">` da fita, um por elemento, na ordem.
 
     POR FATIA E NÃO POR REGEX: o chip tem `<span class="pt">•</span>` DENTRO, e
     um `.*?</span>` fecha no filho — a primeira versão deste ajudante perdia o
@@ -130,8 +130,8 @@ def _chips(html: str) -> list[str]:
     do próximo chip não tem esse buraco, e `class="pt"` não colide com
     `class="chip`.
     """
-    partes = html.split('<span class="chip')[1:]
-    return ['<span class="chip' + p for p in partes]
+    partes = html.split('<label class="chip')[1:]
+    return ['<label class="chip' + p for p in partes]
 
 
 # ---------------------------------------------------------------------------

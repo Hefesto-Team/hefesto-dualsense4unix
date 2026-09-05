@@ -86,7 +86,7 @@ def _nome_escrito(chip: str, c: dict[str, Any]) -> str:
     meio é o que separa "o chip diz o nome certo" de "a string está lá em algum
     lugar", que é a diferença entre uma régua e um instrumento falso.
     """
-    dentro = chip[chip.index(">", chip.index("title=")) + 1: chip.rindex("</span>")]
+    dentro = chip[chip.index(">", chip.index("title=")) + 1: chip.rindex("</label>")]
     partes = [p.strip() for p in dentro.split(monta.SEPARADOR.strip())]
     partes = [p for p in partes if p]
     # O MEIO É POSIÇÃO, NÃO FILTRO. Filtrar "o que não for `P2` nem `BT`"
@@ -317,7 +317,7 @@ def test_o_chip_continua_na_forma_que_a_aba_controles_reescreve(
 ) -> None:
     """A `02-controles` transforma cada chip num ``<label for>`` do rádio dele.
 
-    ``aba02.fita_clicavel`` casa por ``<span class="chip…"…>…</span>`` numa
+    ``aba02.fita_clicavel`` casa por ``<label class="chip…"…>…</label>`` numa
     linha só, e PARA em vez de entregar uma fita que não clica. Esta régua roda
     o gerador contra a fita viva também: sem ela, uma mudança de forma aqui só
     apareceria no dia em que a tela viva trocasse a fita da aba Controles — e

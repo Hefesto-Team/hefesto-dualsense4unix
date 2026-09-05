@@ -157,6 +157,28 @@ PUBLICAR_O_ROTULO = r"""
 """
 
 
+#: O PERFIL ATIVO PRECISA EXISTIR NO DISCO — 05/09/2026. Desde que a aba 02
+#: aprendeu a GUARDAR o som por controle, o gesto lê o perfil ativo para
+#: escrever nele; sem arquivo, ele recusa com *"o ajuste chegou ao controle,
+#: mas não consegui ler o perfil"* — e a recusa está CERTA: dizer "Pronto."
+#: sobre um ajuste que amanhã volta ao de ontem seria a mentira que a frase
+#: existe para evitar. O que faltava era esta régua ter um perfil.
+#: `scope="module"` PORQUE O PILOTO TAMBÉM É — uma fixture de função
+#: correria DEPOIS da `medido`, que abre a janela, e o perfil chegaria
+#: tarde. Autouse do mesmo escopo corre antes das outras.
+@pytest.fixture(scope="module", autouse=True)
+def _perfil_ativo_no_disco() -> None:
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    profiles_dir().mkdir(parents=True, exist_ok=True)
+    for nome in ("regua", "Bancada"):
+        if not (profiles_dir() / f"{nome.lower()}.json").exists():
+            loader.save_profile(Profile(name=nome, match=MatchManual()),
+                                origem="regua")
+
+
 @pytest.fixture(scope="module")
 def medido() -> dict:
     """Abre o piloto DE VERDADE, oculto, e roda o roteiro de tempo."""

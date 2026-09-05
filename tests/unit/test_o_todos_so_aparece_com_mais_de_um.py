@@ -77,12 +77,12 @@ def _tem_todos(html: str) -> bool:
     daria verde sobre uma frase — que é a forma de instrumento falso que esta
     casa mais paga.
     """
-    return re.search(r'<span class="chip[^"]*"[^>]*>Todos</span>', html) is not None
+    return re.search(r'<label class="chip[^"]*"[^>]*>Todos</label>', html) is not None
 
 
 def _acesos(html: str) -> int:
     """Quantos chips estão acesos. Nunca pode ser zero com a mesa cheia."""
-    return len(re.findall(r'<span class="chip[^"]*\bon"', html))
+    return len(re.findall(r'<label class="chip[^"]*\bon"', html))
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ def test_com_um_controle_a_escolha_cai_para_o_que_restou() -> None:
 def test_a_fita_esconde_o_todos_com_um_controle_e_o_devolve_com_dois() -> None:
     """A mordida DOS DOIS SENTIDOS, na função que as dez páginas usam.
 
-    MORDIDA: volte o `chips = [f'<span class="chip…">Todos</span>']` incondicional
+    MORDIDA: volte o `chips = [f'<label class="chip…">Todos</label>']` incondicional
     e o caso de UM reprova; tire o `if mostra_todos` inteiro e o de DOIS reprova.
     """
     com_dois = monta.fita(ativo="todos", mesa=DOIS)
@@ -170,7 +170,7 @@ def test_o_desenho_dela_nao_se_mexe() -> None:
 def test_as_abas_que_escrevem_a_propria_fita_seguem_a_mesma_regra(quem: str) -> None:
     """A 06 e a 09 não podem oferecer o botão que a 01 já não oferece.
 
-    MORDIDA: devolva o `'<span class="chip on">Todos</span>'` incondicional em
+    MORDIDA: devolva o `'<label class="chip on">Todos</label>'` incondicional em
     qualquer uma das duas e o caso de UM reprova só nela — que é exatamente a
     divergência que fazer a régua morar em `monta` existe para impedir.
     """

@@ -24,9 +24,9 @@ _INTERFACE = (Path(__file__).resolve().parents[2] / "src"
 if str(_INTERFACE) not in sys.path:
     sys.path.insert(0, str(_INTERFACE))
 
-import monta  # noqa: E402
+import monta
 
-from hefesto_dualsense4unix.interface import hefesto_vivo  # noqa: E402
+from hefesto_dualsense4unix.interface import hefesto_vivo
 
 #: Uma mesa mínima, no formato que `_fita` recebe do tique.
 MESA = [{"pref": "p1", "jogador": 1, "nome": "DualSense", "via": "USB",
@@ -57,7 +57,7 @@ class TestOTituloDaFitaSobreviveAoTique:
         assert "vai para o controle escolhido aqui" in html
         assert "inerte" not in html
 
-    def test_o_arquivo_publicado_e_o_piloto_dizem_a_MESMA_frase(self) -> None:
+    def test_o_arquivo_publicado_e_o_piloto_dizem_a_mesma_frase(self) -> None:
         """A dona é uma só, e é isto que prova que ela é uma só.
 
         Se alguém reescrever o `title` no `aba06.py` sem passar pela tabela, o
@@ -69,7 +69,33 @@ class TestOTituloDaFitaSobreviveAoTique:
         titulo = monta.TITULOS_DA_FITA["06-navegacao.html"]
         assert f'title="{titulo}"' in publicado
 
-    def test_a_casca_devolve_None_para_quem_nao_tem_frase_propria(self) -> None:
+    def test_a_casca_devolve_nada_para_quem_nao_tem_frase_propria(self) -> None:
         assert monta.casca_da_fita("06-navegacao.html")
         assert monta.casca_da_fita("09-sistema.html") is None
         assert monta.casca_da_fita("01-jogar.html") is None
+
+
+#: A GUARDA DE `a_fita_escolhe` PARAVA A BANCADA JUNTO COM O TYPO — 05/09/2026.
+#: Ela nasceu no mesmo dia para impedir que um nome errado respondesse *"esta
+#: aba é leitura"* em silêncio, e parava TUDO que não fosse uma das dez. Oito
+#: testes que geram página própria (`98-prova-da-ressalva`, `97-botao-cinza`)
+#: morreram na coleta. Bancada não é aba errada: é outra coisa.
+class TestAGuardaSeparaOTypoDaBancada:
+    def test_o_typo_de_uma_das_dez_ainda_para(self) -> None:
+        import pytest
+
+        with pytest.raises(SystemExit):
+            monta.a_fita_escolhe("03-gatihos")
+
+    def test_a_bancada_com_numero_de_fora_passa_e_nao_escolhe(self) -> None:
+        assert monta.a_fita_escolhe("98-prova-da-ressalva") is False
+        assert monta.a_fita_escolhe("97-botao-cinza.html") is False
+
+    def test_as_dez_continuam_respondendo_o_que_respondiam(self) -> None:
+        assert monta.a_fita_escolhe("01-jogar") is True
+        assert monta.a_fita_escolhe("02-controles.html") is True
+        assert monta.a_fita_escolhe("08-conexoes") is True
+        for leitura in ("03-gatilhos", "04-iluminacao", "05-vibracao",
+                        "06-navegacao", "07-lancadores", "09-sistema",
+                        "10-perfis"):
+            assert monta.a_fita_escolhe(leitura) is False, leitura

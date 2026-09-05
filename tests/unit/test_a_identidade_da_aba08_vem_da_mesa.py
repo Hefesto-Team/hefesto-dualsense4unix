@@ -109,7 +109,7 @@ def test_os_chips_da_fita_tem_endereco() -> None:
     """
     html = BANCADA.read_text(encoding="utf-8")
     # As tags de abertura de cada chip de plástico, inteiras.
-    tags = re.findall(r"<span[^>]*\bclass=\"chip plastico[^>]*>", html)
+    tags = re.findall(r"<label[^>]*\bclass=\"chip plastico[^>]*>", html)
     endereçados = [t for t in tags if 'data-campo="fita-chip"' in t]
     assert tags and len(tags) == len(endereçados), (
         f"a fita da 08 tem {len(tags)} chips de plástico e "

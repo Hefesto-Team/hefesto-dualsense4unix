@@ -68,7 +68,7 @@ PAGINA = "07-lancadores.html"
 #: A ÂNCORA DO VENENO: o chip `Todos`, que é ESTRUTURA da fita (não nomeia
 #: aparelho nenhum) e existe em toda página desta aba. Envenenar em cima dele
 #: põe cada forma no lugar em que ela apareceria de verdade — dentro da fita.
-ANCORA = '<span class="chip on">Todos</span>'
+ANCORA = '<label class="chip on">Todos</label>'
 
 
 def _bancada() -> pathlib.Path:
@@ -167,7 +167,7 @@ def test_a_regua_morde_o_nome_do_modelo(envenenar) -> None:
 
 def test_a_regua_morde_o_plastico_cravado(envenenar) -> None:
     """`--plastico:` no `style`. A outra que as réguas velhas já pegam."""
-    alvo = envenenar('<span class="chip on" style="--plastico:#A51C48">Todos</span>',
+    alvo = envenenar('<label class="chip on" style="--plastico:#A51C48">Todos</label>',
                      "plastico")
     r = _conferir(alvo)
     assert r.returncode == 1, "a régua passou com um `--plastico:` cravado"
@@ -194,7 +194,7 @@ def test_a_regua_morde_o_hexadecimal_do_mapa(envenenar) -> None:
     É a forma de *"a borda de tudo é cosmic red"*: um hexadecimal que o mapa
     dela cataloga, sem nome e sem `--plastico:` para denunciá-lo.
     """
-    alvo = envenenar('<span class="chip on" style="border-color:#A51C48">Todos</span>',
+    alvo = envenenar('<label class="chip on" style="border-color:#A51C48">Todos</label>',
                      "hex")
     r = _conferir(alvo)
     assert r.returncode == 1, "a régua passou com um hexadecimal do mapa cravado"
@@ -209,7 +209,7 @@ def test_a_regua_morde_a_paleta_de_cinco_do_esqueleto(envenenar) -> None:
     aparelho que pode não ser o dela, sem escrever nome, apelido nem hexa.
     """
     alvo = envenenar(
-        '<span class="chip on" style="border-color:var(--cosmic-red)">Todos</span>',
+        '<label class="chip on" style="border-color:var(--cosmic-red)">Todos</label>',
         "var")
     r = _conferir(alvo)
     assert r.returncode == 1, "a régua passou com a paleta do esqueleto emprestada"

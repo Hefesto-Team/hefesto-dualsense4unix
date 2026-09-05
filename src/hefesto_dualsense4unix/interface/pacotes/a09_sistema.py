@@ -921,13 +921,13 @@ def _um_chip(c: dict[str, Any], escolhido: str = "") -> str:
     ponto = ' <span class="pt">•</span> '
     aceso = " on" if escolhido and str(c.get("pref") or "") == escolhido else ""
     if not cor:
-        return (f'<span class="chip{aceso}" data-campo="{CAMPO_DO_CHIP}"'
+        return (f'<label class="chip{aceso}" data-campo="{CAMPO_DO_CHIP}"'
                 f' title="{html.escape(SEM_COR_LIDA)}">'
-                f"P{jogador}{ponto}{via}</span>")
-    return (f'<span class="chip plastico{aceso}" data-campo="{CAMPO_DO_CHIP}"'
+                f"P{jogador}{ponto}{via}</label>")
+    return (f'<label class="chip plastico{aceso}" data-campo="{CAMPO_DO_CHIP}"'
             f' style="--plastico:{html.escape(_cor_da_zona(cor))}"'
             f' title="{html.escape(nome)} — a borda é a cor do plástico">'
-            f"P{jogador}{ponto}{html.escape(nome)}{ponto}{via}</span>")
+            f"P{jogador}{ponto}{html.escape(nome)}{ponto}{via}</label>")
 
 
 def _html_da_fita(mesa: list[dict[str, Any]]) -> str:
@@ -955,7 +955,7 @@ def _html_da_fita(mesa: list[dict[str, Any]]) -> str:
     mostra_todos, escolhido = _monta().escolha_da_fita("todos", mesa)
     partes = [f"<span>{html.escape(_rotulo_da_fita())}</span>"]
     if mostra_todos:
-        partes.append('<span class="chip on">Todos</span>')
+        partes.append('<label class="chip on">Todos</label>')
     partes += [_um_chip(c, "" if mostra_todos else escolhido) for c in mesa]
     return "\n      ".join(partes)
 

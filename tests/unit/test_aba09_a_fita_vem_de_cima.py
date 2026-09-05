@@ -125,7 +125,7 @@ def test_cada_chip_de_controle_tem_o_seu_endereco() -> None:
     registra isso no arquivo.
     """
     bloco = _fita_da_bancada()
-    com_cor = re.findall(r'<span class="chip plastico[^>]*>', bloco)
+    com_cor = re.findall(r'<label class="chip plastico[^>]*>', bloco)
     assert com_cor, "nenhum chip de plástico na fita — a forma da página mudou"
     for chip in com_cor:
         assert 'data-campo="fita-chip"' in chip, f"chip sem endereço: {chip}"
@@ -139,7 +139,7 @@ def test_o_chip_todos_nao_ganhou_endereco() -> None:
     esta leva existe para não repetir.
     """
     bloco = _fita_da_bancada()
-    todos = re.search(r'<span class="chip on"[^>]*>Todos</span>', bloco)
+    todos = re.search(r'<label class="chip on"[^>]*>Todos</label>', bloco)
     assert todos, "o chip `Todos` sumiu da fita"
     assert "data-campo" not in todos.group(0)
 
@@ -196,7 +196,7 @@ def test_o_controle_sem_cor_nao_ganha_cor_inventada() -> None:
     `title` diz por quê; o que ele NÃO faz é escolher um tom para preencher.
     """
     saida = a09_sistema._html_da_fita(MESA_DELA)
-    chips = re.findall(r'<span class="chip[^"]*" data-campo="fita-chip"[^>]*>', saida)
+    chips = re.findall(r'<label class="chip[^"]*" data-campo="fita-chip"[^>]*>', saida)
     assert len(chips) == 2, f"esperava dois chips de controle, achei {len(chips)}"
     assert "--plastico:" in chips[0], "o controle do cabo perdeu a cor que foi lida"
     assert "--plastico:" not in chips[1], (
@@ -213,7 +213,7 @@ def test_o_chip_sem_leitura_nao_diz_nao_sei_nem_travessao() -> None:
     `P2 • BT • BT` afirma o mesmo fato duas vezes.
     """
     saida = a09_sistema._html_da_fita(MESA_DELA)
-    segundo = saida[saida.rindex("<span class=\"chip"):]
+    segundo = saida[saida.rindex("<label class=\"chip"):]
     assert "Não sei" not in segundo
     assert "—" not in segundo
     assert segundo.count("BT") == 1, f"o transporte saiu duas vezes: {segundo}"

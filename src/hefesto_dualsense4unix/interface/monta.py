@@ -666,6 +666,13 @@ TITULOS_DA_FITA: dict[str, str] = {
     ),
 }
 
+#: A TAG DO CHIP DA FITA, e ela tem dono desde 05/09/2026. Era `<span>` e virou
+#: `<label>` para o chip PODER SER CLICADO (`<label for=…>` entrega o clique ao
+#: rádio escondido). A troca deixou DEZOITO réguas vermelhas de uma vez, em oito
+#: arquivos, todas pela mesma forma: elas DIGITAVAM `<span class="chip`.
+#: Quem escreve uma régua nova sobre a fita lê daqui.
+TAG_DO_CHIP = "label"
+
 #: O ENDEREÇO QUE O ARQUIVO PUBLICADO TRAZ nas abas 06 e 09.
 CAMPO_DA_FITA = "fita-chips"
 
@@ -711,10 +718,24 @@ def a_fita_escolhe(pagina: str) -> bool:
     """
     nome = pagina[:-5] if pagina.endswith(".html") else pagina
     if nome not in {a for _, a in ABAS}:
-        raise SystemExit(
-            f"ERRO: {pagina!r} não é uma das dez abas. Quem responde 'esta aba "
-            f"escolhe controle?' é `monta.ABAS_QUE_ESCOLHEM`, e ele só conhece "
-            f"as dez de `monta.ABAS`.")
+        # O QUE A PARADA TEM DE PEGAR É O ERRO DE DIGITAÇÃO, e só ele —
+        # 05/09/2026. A guarda parava TUDO que não fosse uma das dez, e com isso
+        # derrubou oito testes de bancada que geram páginas próprias
+        # (`98-prova-da-ressalva`, `97-botao-cinza`) para medir UM pedaço de
+        # tela sem carregar uma aba inteira. Bancada não é aba errada: é outra
+        # coisa, e a resposta certa para ela é *não escolhe controle*.
+        #
+        # A REGRA QUE SEPARA AS DUAS é o número: `03-gatihos` tem o prefixo de
+        # uma das dez e é typo — para. `98-prova-da-ressalva` não tem, e não
+        # há como confundi-lo com aba nenhuma.
+        prefixo = nome.split("-", 1)[0]
+        if prefixo in {a.split("-", 1)[0] for _, a in ABAS}:
+            raise SystemExit(
+                f"ERRO: {pagina!r} não é uma das dez abas, e o número {prefixo} "
+                f"é de uma delas — isto é erro de digitação. Quem responde "
+                f"'esta aba escolhe controle?' é `monta.ABAS_QUE_ESCOLHEM`, e "
+                f"ele só conhece as dez de `monta.ABAS`.")
+        return False
     return nome in ABAS_QUE_ESCOLHEM
 
 
