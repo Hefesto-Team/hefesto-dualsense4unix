@@ -3279,6 +3279,28 @@
               <div class="at-linha"><span class="at-rot">Modo Steam<span class="ajuda">?<span class="dica">O controle passa a navegar a <b>Steam</b> do jeito que navega num Steam Deck: o Modo Jogo responde ao d-pad e aos botões, sem mouse.<br><br>O terceiro degrau grava a escolha para a <b>próxima vez</b> — a Steam abre direto em Modo Jogo, sem ninguém clicar. Esse degrau vale para a máquina, não só para este perfil.</span></span></span><select class="escolha-at" data-gesto="modo-steam"><option selected>Desligado</option><option>Ligado — o controle navega a Steam como num Steam Deck</option><option>Ligado, e a Steam abre em Modo Jogo na próxima vez</option></select></div>
             </div>
           </div>
+          <!-- ---------- A RESSALVA DA D3: o ajuste é de todos ----------
+               05/09/2026, decisão D3 de `2026-09-05-AS-TRES-DECISOES-DO-PERFIL`:
+               `mouse`, `key_bindings`, `button_actions`, `teclado_emulado` e
+               `suppress_desktop_emulation` ficam GLOBAIS enquanto o caminho de
+               ENTRADA por unidade não existir — o `Daemon` tem UM
+               `_mouse_device` e UM `_keyboard_device`, e o input vem sempre do
+               primário. A decisão pede a tela junto: *"onde a aba oferece um
+               destes cinco, a linha de ressalva diz que o ajuste vale para a
+               mesa inteira, não só para o controle selecionado."*
+
+               A PEÇA É A DAS DEZ (`monta.ressalva`, D-02), e ela NASCE VAZIA:
+               quem decide se há o que ressalvar é o pacote, ao vivo, contando
+               os CONECTADOS — com um controle ligado não há promessa quebrada.
+               Uma frase cravada aqui a afirmaria também na tela de quem tem um
+               controle só, que é a ressalva mentindo pelo desenho.
+
+               DENTRO DA `.moldura` E DEPOIS DA GRADE, e não na tira de
+               `.estados` logo abaixo: aquelas cinco linhas falam do que está
+               ACONTECENDO agora (o portão, o bloqueio, o custo); esta fala do
+               ALCANCE das sete linhas acima dela, e é delas que ela precisa
+               estar perto. -->
+          <div class="ressalva" data-campo="ativacao-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
         </div>
 
         <div class="estados">
