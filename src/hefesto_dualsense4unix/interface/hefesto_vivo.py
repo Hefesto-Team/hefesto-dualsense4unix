@@ -40,7 +40,21 @@ import threading
 import time
 
 AQUI = pathlib.Path(__file__).resolve().parent
-RAIZ = AQUI.parents[1]
+# A RAIZ É `parents[2]`, e o `[1]` custou dois instrumentos calados.
+#
+# MEDIDO EM 04/09/2026: com `AQUI` em `<árvore>/src/hefesto_dualsense4unix/
+# interface`, `parents[1]` é o **`src`** — não a árvore. Logo `RAIZ / "src"`
+# resolvia para `<árvore>/src/src`, que NÃO EXISTE, e:
+#
+#   - o `sys.path.insert` virava no-op, e o piloto importava o produto da
+#     OUTRA árvore pelo `.pth` do editable install (o defeito `SRC-DESTA-
+#     ARVORE-01`, aqui pela terceira porta: script rodado à mão);
+#   - `PAGINA` apontava para um HTML inexistente.
+#
+# É a assinatura de 03/09 outra vez: **as pastas mudaram de nome e a
+# aritmética não foi junto** — estes arquivos nasceram em `novo-layout/
+# _ferramentas/`, onde `parents[1]` ERA a árvore.
+RAIZ = AQUI.parents[2]
 for _p in (str(AQUI), str(RAIZ / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -2927,7 +2941,25 @@ def main() -> None:
 
     piloto = Piloto(args)
     if args.prova_de_mockup:
-        GLib.timeout_add(900, piloto._provar_mockup)
+        # ESPERA A PRIMEIRA PÁGINA CONFIRMAR, e não um relógio.
+        #
+        # MEDIDO EM 04/09/2026: com o `timeout_add(900, ...)` a régua navegava
+        # ANTES de a carga inicial confirmar, e a confirmação chegava com o
+        # título vazio — `carregou OUTRA página: título ''`. A janela morria, a
+        # régua imprimia o cabeçalho e saía **rc=0 sem medir uma aba**.
+        #
+        # O relógio era a suposição; `na_aba` é o FATO. É a mesma lição do
+        # `_confirmar_a_pagina` um andar abaixo: *quem diz que a carga deu certo
+        # é a PÁGINA, não o evento nem o URI* — e não é o cronômetro.
+        def _quando_a_pagina_estiver_de_pe() -> bool:
+            if piloto.tela.morreu is not None:
+                return False  # a janela já morreu; o rc de `main` acusa
+            if not piloto.tela.na_aba:
+                return True   # ainda não confirmou: volta no próximo tique
+            piloto._provar_mockup()
+            return False
+
+        GLib.timeout_add(120, _quando_a_pagina_estiver_de_pe)
     if args.prova_no_aparelho:
         GLib.timeout_add(2500, piloto._provar_no_aparelho)
     if args.prova_clique:
@@ -2935,6 +2967,27 @@ def main() -> None:
     if args.abre:
         GLib.timeout_add(400, lambda: piloto._ir(args.abre))
     Gtk.main()
+
+    # O RC DIZ A VERDADE SOBRE A MEDIÇÃO — e é o que faltava.
+    #
+    # Uma régua que imprime `ERRO DE CARGA` e sai `rc=0` é pior que régua
+    # nenhuma: quem a chama num portão lê verde. Achado em 04/09/2026 pela
+    # frente da aba 10, que precisou escrever um driver próprio porque este
+    # não mediu nada.
+    #
+    # Vale para as TRÊS provas, não só para a que falhou: o defeito é da forma
+    # de sair, não da régua que o revelou.
+    e_regua = bool(args.prova_de_mockup or args.prova_no_aparelho or args.prova_clique)
+    if e_regua and piloto.tela.morreu is not None:
+        print(f"\nREPROVA: a página morreu e nada foi medido — {piloto.tela.morreu}",
+              file=sys.stderr)
+        raise SystemExit(1)
+    if args.prova_de_mockup and not piloto.visitadas:
+        # ZERO É ERRO, NÃO SILÊNCIO — a mesma regra que o `_relatar` já aplica
+        # às abas mudas, aqui aplicada à régua inteira.
+        print("\nREPROVA: `--prova-de-mockup` não visitou aba nenhuma.",
+              file=sys.stderr)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
