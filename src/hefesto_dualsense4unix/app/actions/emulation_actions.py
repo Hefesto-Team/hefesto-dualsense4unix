@@ -551,7 +551,7 @@ BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO: dict[str, str] = {
         "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1, reconferido aqui). O "
         "predicado de daemon/lifecycle.py:2209 só devolve esta constante sob a "
         "flag do vpad suspenso, e nada em produção a põe em True: o armador de "
-        "daemon/subsystems/gamepad.py:796 tem zero chamadores em src/. A causa "
+        "daemon/subsystems/gamepad.py:797 tem zero chamadores em src/. A causa "
         "é decisão dela (ESCONDER-EM-VEZ-DE-SAIR-01, `d8022ea`, 09/08/2026), e "
         "reviver ou apagar a frase é da mantenedora — a pergunta aberta é se o "
         "par (excecao ativa, vpad suspenso) vira um estado só."

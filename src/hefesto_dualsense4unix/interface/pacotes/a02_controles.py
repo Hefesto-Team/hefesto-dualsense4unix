@@ -72,6 +72,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
 from hefesto_dualsense4unix.app.ipc_bridge import (
     alvo_honrado,
     frase_do_ato_do_microfone,
+    frase_do_interruptor_de_sensor,
 )
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     ALL_BUTTONS,
@@ -1862,6 +1863,24 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "alto-barra": (
                     percentual_do_volume(sp_lido[0]) if sp_lido is not None else 0
                 ),
+                # OS DOIS INTERRUPTORES DE SENSOR — 04/09/2026, e eles acendem
+                # pelo que o daemon diz, não pelo que o gerador desenhou.
+                #
+                # O `.sw` do desenho era classe FIXA: os quatro botões nasciam
+                # acesos e ficavam acesos, mesmo depois de a ONDA1-D3 pôr o
+                # interruptor de verdade no daemon. `sensores.<qual>_ligado` é a
+                # chave nova do payload (irmã de `inputs`), e o alvo `classe`
+                # acende `off` quando o valor for `DESLIGADO`.
+                #
+                # TRÊS ESTADOS, PELA MESMA RAZÃO DO `alto-mudo`: sem o bloco
+                # `sensores` a resposta é o travessão, e não `DESLIGADO` — um
+                # `bool()` cru aqui apagaria o botão de todo controle que ainda
+                # não tem leitor de entradas.
+                **{
+                    campo: _selo_do_sensor(_sensor_ligado(c, qual_do_campo))
+                    for campo, qual_do_campo in (("giro-ligado", "giroscopio"),
+                                                 ("accel-ligado", "acelerometro"))
+                },
                 # O RETÂNGULO DA BARRA DE LUZ — o desenho que CONTRADIZ o campo
                 # ao lado dele. Fotografado em 02/09/2026 às 19h: o `luz-hex`
                 # dizia `#0000FF` (a cor viva do P1) e o retângulo logo abaixo
@@ -2127,6 +2146,42 @@ def _corpo(r: Any) -> dict[str, Any] | None:
     return {"status": "ok"} if r else None
 
 
+def _selo_do_sensor(ligado: bool | None) -> str:
+    """`LIGADO` · `DESLIGADO` · travessão — as três respostas do interruptor.
+
+    Irmã de `mesa_viva.selo_do_mic`, e escrita aqui pela mesma razão que aquela
+    mora lá: um lugar só para o par de palavras. `None` é o travessão de
+    `mesa_viva.SEM_LEITOR`, que é o que a casa inteira usa para "ninguém leu".
+    """
+    import mesa_viva
+
+    if ligado is None:
+        return str(mesa_viva.SEM_LEITOR)
+    return SENSOR_LIGADO if ligado else SENSOR_DESLIGADO
+
+
+def _sensor_ligado(dele: dict[str, Any], qual: str) -> bool | None:
+    """`True`/`False` do interruptor daquele sensor; `None` = o daemon não disse.
+
+    A CHAVE É `sensores`, IRMÃ DE `inputs`, e ela é NOVA em 04/09/2026
+    (`daemon/ipc_handlers._merge_sensores`). O bloco traz
+    `giroscopio_ligado`/`acelerometro_ligado` — o INTERRUPTOR — ao lado dos
+    valores vivos que a moldura Giroscópio mostra. São coisas diferentes: o
+    Hefesto continua LENDO o sensor desligado, quem deixa de recebê-lo é o jogo.
+    Adivinhar o interruptor pelo valor faria um controle parado na mesa desenhar
+    "desligado" com o sensor ligado.
+
+    `None` E NÃO `True`: a ausência aqui não é o default dela (esse mora no
+    `RegistroDeSensores.estado`, do lado do daemon) — é a falta de LEITURA, e os
+    dois desfechos são opostos. Ver `SEM_LEITURA_DE_SENSOR`.
+    """
+    bloco = dele.get("sensores")
+    if not isinstance(bloco, dict):
+        return None
+    valor = bloco.get(f"{qual}_ligado")
+    return valor if isinstance(valor, bool) else None
+
+
 def _uniq(o: dict[str, Any]) -> str:
     """O `uniq` do controle onde ela clicou. Vazio = clique solto, e recusa.
 
@@ -2179,7 +2234,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
     `audio.mic_mudo` é LEITURA do byte que vem em todo report de input, e
     `speaker.muted` é o que nós mandamos (o aparelho não devolve). Guardar o
-    valor enviado como se fosse leitura é o hábito que o `ipc_bridge.py:1082`
+    valor enviado como se fosse leitura é o hábito que o `ipc_bridge.py:1141`
     nomeia como o que *"fez a tela parecer mentirosa quando ela nunca mentiu"*.
 
     `mic_set(False)` NÃO devolve a posse ao `hid-playstation` — isso é
@@ -2277,7 +2332,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # ISTO ERA DELEGADO AO DAEMON, e delegar não é travar: a linha abaixo
         # mandava `muted=True` sem volume e contava com a recusa do
-        # `ipc_handlers.py:4682` para não estragar nada. Recusa de longe é
+        # `ipc_handlers.py:5588` para não estragar nada. Recusa de longe é
         # recusa que depende do outro lado continuar recusando.
         #
         # A FRASE NÃO É A DO MOTOR, e a diferença está medida: `DICA_SPEAKER_
@@ -2301,7 +2356,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         lido = speaker_do_entry(dele)
         # O VOLUME VAI JUNTO QUANDO SE SABE, e a razão é uma recusa do daemon,
         # não zelo: `speaker.set {muted}` sem volume conhecido é ERRO
-        # (`ipc_handlers.py:4682`), porque mudo como primeira escrita tranca o
+        # (`ipc_handlers.py:5588`), porque mudo como primeira escrita tranca o
         # alto-falante em zero e o próprio mudo não o solta. O desenho já apaga
         # o botão nesse estado (`alto_pode` do `aba02.py`); esta linha é a
         # segunda trava, para o clique que chegar mesmo assim.
@@ -2325,7 +2380,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
-    `rota` (`ipc_handlers.py:4654`) e a GUI estável manda exatamente isto
+    `rota` (`ipc_handlers.py:5532`) e a GUI estável manda exatamente isto
     (`controller_card.py:4273`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
@@ -2410,15 +2465,41 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: Digitar 255 aqui seria a segunda escala.
 VOLUME_MIN, VOLUME_MAX = 0, 100
 
-#: A frase do 🎙/giro que RECUSA DIZENDO — queixa 8 dela, *"nem giroscopio e
-#: acelerometro"*. Ela é longa de propósito: é a única coisa que ela vai ler
-#: sobre este botão, e uma frase curta aqui devolveria o silêncio que a queixa
-#: nomeia.
-SEM_INTERRUPTOR_DE_SENSOR = (
-    "o giroscópio e o acelerômetro deste controle JÁ ESTÃO ligados, e não há "
-    "como desligá-los pelo Hefesto: o DualSense manda giro e aceleração em todo "
-    "relatório de entrada, e o daemon só os LÊ — não existe método de sensor "
-    "entre os do Hefesto. Este botão é leitura, não interruptor."
+#: O ESTADO DE CADA INTERRUPTOR DE SENSOR, na língua da TELA.
+#:
+#: `LIGADO` é o default dela (`D-AUDIO-E-GIRO-NASCEM-LIGADOS`, 25/08/2026) e não
+#: acende classe nenhuma — o desenho aprovado já mostra o botão aceso.
+#: `DESLIGADO` é o que acende o `.sw.off` que a folha desta aba já tem. O
+#: terceiro estado é o travessão de `mesa_viva.SEM_LEITOR`, e ele existe pela
+#: mesma razão do `alto-mudo`: um `False` sobre "o daemon não disse" pintaria
+#: "desligado" sobre um sensor que ninguém leu.
+SENSOR_LIGADO, SENSOR_DESLIGADO = "LIGADO", "DESLIGADO"
+
+#: A ÚNICA RECUSA QUE SOBROU NESTE BOTÃO — e ela é sobre LEITURA, não sobre
+#: capacidade.
+#:
+#: **A FRASE ANTERIOR MORREU EM 04/09/2026, e ela dizia o contrário do que hoje
+#: é verdade:** *"não existe método de sensor entre os do Hefesto. Este botão é
+#: leitura, não interruptor."* A premissa caiu no mesmo dia, pela decisão dela
+#: (*"ele tem que funcionar de verdade. ambos independente do modo e da
+#: mascara."*): a ONDA1-D3 pôs `sensor.set` no daemon
+#: (`daemon/ipc_handlers._handle_sensor_set`), o registro vivo em
+#: `core/virtual_motion.REGISTRO` e o `EVIOCGRAB` do `SensorHub`. Quem mediu a
+#: queda foi a régua que a própria recusa deixou armada —
+#: `test_o_daemon_continua_sem_metodo_de_sensor` —, e ela previu o desfecho: *"o
+#: gesto passa a ter o que chamar"*.
+#:
+#: O QUE SOBRA DE RECUSA é o mesmo cuidado do 🎙: **sem leitura o botão não
+#: chuta.** O daemon publica `sensores.giroscopio_ligado` ao lado de `inputs`
+#: (`ipc_handlers._merge_sensores`); sem essa chave, alternar seria adivinhar
+#: qual é o oposto — e adivinhar errado deixa o clique dela sem efeito visível
+#: nenhum, que é o silêncio que a queixa 8 nomeia.
+SEM_LEITURA_DE_SENSOR = (
+    "o Hefesto ainda não disse se este sensor está ligado ou desligado, e "
+    "alternar sem saber o estado atual seria chutar qual é o oposto. O "
+    "interruptor lê `sensores.giroscopio_ligado` do daemon, publicado ao lado "
+    "do bloco de entradas deste controle — sem ele, ou o Hefesto está parado, "
+    "ou este controle ainda não tem leitor de entradas."
 )
 
 
@@ -2436,33 +2517,46 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     a mesma forma que a `mudo` desta aba curou em 02/09, e ela sobreviveu em
     QUATRO botões (dois por card).
 
-    NÃO HÁ MÉTODO DE SENSOR, e isto foi remedido em 04/09/2026: `daemon.metodos()`
-    não traz um `sensor.*`, um `gyro.*` nem um `motion.*`. O `sensor_hub` só LÊ —
-    as suas funções são `leitura`, `reconciliar` e `_abrir_*`, e nenhuma liga ou
-    desliga nada. O `profiles/schema.py` diz que os dois estão *"FORA POR
-    AUSÊNCIA, NÃO POR DECISÃO"*.
+    **E ELE DEIXOU DE RECUSAR EM 04/09/2026 — a premissa da recusa MORREU no
+    mesmo dia em que a recusa nasceu.** Aqui estava escrito, e era verdade
+    quando foi medido de manhã:
 
-    **A ESCOLHA DESTA ONDA, e a razão dela por extenso.** A alternativa era a
-    D-03 — *"cinza antes, com a razão na dica"*. Ela NÃO SERVE a este botão, e a
-    razão é que o cinza deste desenho já quer dizer outra coisa: `.sensores-peca
-    .sw.off` é o **desligado**, e é o mesmo cinza que a folha usa para o lugar
-    VAZIO (`.ctl[data-conectado="nao"]`). Pintar de cinza um sensor que está
-    entregando dado a cada tique trocaria um silêncio por uma afirmação FALSA —
-    a tela diria "desligado" sobre o giro que o card mostra vivo, três linhas
-    abaixo, na moldura Giroscópio.
+        "NÃO HÁ MÉTODO DE SENSOR (…) `daemon.metodos()` não traz um `sensor.*`,
+         um `gyro.*` nem um `motion.*`. O `sensor_hub` só LÊ. (…) o fim honesto
+         deste botão é virar leitura ou sair da tela."
 
-    ENTÃO O BOTÃO CONTINUA ACESO (é verdade: o sensor está no ar) e ganha o que
-    lhe faltava — **um dono que recusa DIZENDO**. A frase vai para o cartão
-    daquele controle por 30 s, pelo canal que ela já aprovou em 02/09 (*"é
-    aviso, não estado"*), e o `data-gesto` que a página passou a ter é
-    **invisível**: está na lista `INVISIVEIS` do portão do desenho, logo a cura
-    chega ao produto por `--publicar-enderecos 02`, sem tocar um pixel do que
-    ela aprovou.
+    A ONDA1-D3 fechou essa ausência à tarde, por decisão dela e contra a
+    recomendação de virar leitura: *"ele tem que funcionar de verdade. ambos
+    independente do modo e da mascara."*  <!-- noqa-acento: citação literal dela -->
+    O daemon ganhou `sensor.set`, o registro vivo (`core/virtual_motion`) e o
+    `EVIOCGRAB` do nó "Motion Sensors". **Quem mediu a queda foi a régua que a
+    própria recusa deixou armada** — `test_o_daemon_continua_sem_metodo_de_sensor`
+    reprovou dizendo *"o botão deixou de precisar recusar, e a frase de recusa
+    virou mentira"*, que é o desfecho que ela previa por escrito.
 
-    O QUE FICA PARA ELA DECIDIR, e é desenho: o fim honesto deste botão é virar
-    **leitura** (que é o que o `title` dele já diz — *"Ligado: o jogo recebe o
-    giro deste controle"*) ou sair da tela. Interruptor de coisa que não tem
-    interruptor é promessa que o produto não pode cumprir.
+    O QUE ESTE GESTO FAZ AGORA, e por que nesta ordem:
+
+    1. **LÊ o estado**, de `sensores.<qual>_ligado` — a chave que o
+       `_merge_sensores` publica ao lado de `inputs`. Sem ela o gesto RECUSA
+       (`SEM_LEITURA_DE_SENSOR`) em vez de chutar o oposto: é a mesma
+       disciplina do 🎙 três blocos acima, e a razão é a mesma — *"mandar um
+       pedido sem saber o estado atual seria chutar qual é o oposto"*;
+    2. **CHAMA `sensor.set` com UM campo só.** Campo omitido não mexe naquele
+       sensor (contrato do daemon), e é isso que impede o clique no Giroscópio
+       de religar o Acelerômetro pelas costas dela;
+    3. **DIZ QUAL METADE PEGOU.** `frase_do_interruptor_de_sensor` devolve
+       `None` quando o interruptor pegou inteiro e a ressalva do daemon quando
+       não: em Modo Nativo o jogo lê o movimento pelo `hidraw` do controle
+       FÍSICO, onde o daemon não escreve byte nenhum, e responder "aplicado"
+       ali seria o verde falso que a ONDA1-D3 existe para não cometer. A frase
+       vai ao cartão daquele controle por 30 s, pelo canal que ela aprovou em
+       02/09 (*"é aviso, não estado"*).
+
+    O BOTÃO PINTA PELO QUE O APARELHO DIZ, e não mais pelo desenho: `giro-ligado`
+    e `accel-ligado` saem do `pacote` pelo alvo `classe`, acendendo o `.sw.off`
+    que a folha desta aba já tinha. Enquanto a página PUBLICADA não tiver os dois
+    endereços, o `_so_se_a_pagina_tiver` os segura — e eles acendem sozinhos no
+    dia em que ela publicar a bancada.
     """
     uniq, qual = _uniq(o), str(o.get("sensor") or "")
     if not uniq:
@@ -2470,7 +2564,22 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if qual not in ("giroscopio", "acelerometro"):
         raise ValueError(f"sensor: não conheço o sensor {qual!r} — a página "
                          f"manda 'giroscopio' ou 'acelerometro'")
-    raise RuntimeError(SEM_INTERRUPTOR_DE_SENSOR)
+    agora = _sensor_ligado(ctx.por_uniq(uniq), qual)
+    if agora is None:
+        raise RuntimeError(SEM_LEITURA_DE_SENSOR)
+    # UM CAMPO SÓ, e o nome dele é o que a página mandou. `sensor.set` não mexe
+    # no sensor cujo campo veio omitido — mandar os dois faria o clique no
+    # Giroscópio reafirmar o Acelerômetro a cada vez.
+    corpo = _corpo(p.sensor_set_detalhado(**{qual: not agora}, uniq=uniq))
+    if corpo is None:
+        raise RuntimeError(
+            "o daemon não confirmou o interruptor do sensor — ou o Hefesto "
+            "está parado, ou este controle saiu da mesa, ou o Hefesto "
+            "instalado é mais velho que esta janela e ainda não conhece "
+            "`sensor.set`")
+    frase = frase_do_interruptor_de_sensor(corpo)
+    if frase:
+        raise RuntimeError(frase)
 
 
 @gesto("02-controles.html", "volume")
@@ -2732,8 +2841,14 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: `mic_volume_set_detalhado` pela decisão [08] — o `bool` daquele guardava o
 #: `por_uniq`, que é a diferença entre mexer no microfone dela e no de outra
 #: pessoa.
+#: **`sensor_set_detalhado` ENTROU — 04/09/2026.** O interruptor de giroscópio
+#: e acelerômetro deixou de recusar e passou a chamar: a ONDA1-D3 pôs
+#: `sensor.set` no daemon no mesmo dia, e a variante `_detalhado` é a que
+#: carrega o `alcance` e a `ressalva` — o `bool` da irmã estreita apagaria
+#: justamente a metade que diz que em Modo Nativo o giro continua chegando ao
+#: jogo pelo `hidraw` do físico.
 PONTE = {"mic_canal_set_detalhado", "speaker_set", "machine_declare",
-         "mic_volume_set_detalhado"}
+         "mic_volume_set_detalhado", "sensor_set_detalhado"}
 #: VAZIO, e o vazio é uma AFIRMAÇÃO: os TRÊS métodos desta aba têm função no
 #: `ipc_bridge`, então nenhum gesto precisa do degrau cru do `p.chamar`.
 METODOS: set[str] = set()
@@ -2850,10 +2965,21 @@ PROVAS = [
 
 #: O QUE ESTA ABA PROVA PELA RECUSA, e não pela chamada — 04/09/2026.
 #:
-#: O `sensor` não tem o que chamar: não há método de sensor no daemon (ver o
-#: gesto). Uma entrada em `PROVAS` para ele estaria pedindo ao botão que
-#: inventasse uma chamada; o que ele deve fazer é RECUSAR DIZENDO, e quem cobra
-#: isso é `tests/unit/test_a02_som_e_sensor_falam_quando_recusam.py`.
+#: **A RAZÃO DO `sensor` AQUI MUDOU NO MESMO DIA, e a antiga era esta:** *"o
+#: `sensor` não tem o que chamar: não há método de sensor no daemon"*. Tinha, à
+#: tarde: a ONDA1-D3 pôs `sensor.set`, e o gesto passou a chamá-lo.
+#:
+#: ELE CONTINUA FORA DAS `PROVAS`, e agora pela MESMA razão que tirou os dois
+#: botões de calar em 02/09 — **é da FIXTURE, não do botão**. O controle da
+#: régua compartilhada (`test_os_botoes_tem_dono.FALSO`) não traz o bloco
+#: `sensores`, que é a chave nova do payload; nesse estado o gesto RECUSA em vez
+#: de chutar o oposto (ver `SEM_LEITURA_DE_SENSOR`), e uma entrada em `PROVAS`
+#: aqui cobraria o CHUTE como comportamento esperado.
+#:
+#: A COBERTURA MORA EM `tests/unit/test_a02_som_e_sensor_falam_quando_recusam.py`,
+#: que monta o controle COM o bloco e prova as duas pernas: a chamada de um
+#: campo só (`sensor_set_detalhado(giroscopio=False, uniq=…)`) e a ressalva do
+#: Modo Nativo virando aviso no cartão.
 #:
 #: Esta lista existe para que a próxima pessoa não leia a ausência do `sensor`
 #: em `PROVAS` como "botão sem dono" — foi assim que os quatro passaram uma leva

@@ -87,14 +87,33 @@ PERFIL = {
 
 @pytest.fixture(scope="module")
 def casamento(tmp_path_factory):
+    """O instrumento com um perfil de mentira sob ele — **e o desvio se desfaz**.
+
+    O `yield` + `finally` NÃO É CERIMÔNIA: `pacotes.perfil` é um módulo, e um
+    módulo é importado UMA vez por processo. Sobrescrever `perfil.pasta` e ir
+    embora deixa a lambda presa a este `tmp_path_factory` para todo teste que
+    rodar depois neste lote — que passa a ler o `regua.json` daqui achando que
+    lê o perfil que ele mesmo acabou de gravar no lar de mentira.
+
+    É o defeito exato que `test_a_06_nao_manda_para_o_vazio.py` cometeu em
+    02/09/2026 e que só apareceu em 04/09, quando um vizinho novo entrou no
+    lote: três casos de `test_a_aba_04_iluminacao_fecha_as_linhas.py`
+    reprovaram acusando o produto de não gravar o que ele tinha gravado. Aqui a
+    fixture é de MÓDULO, então o `monkeypatch` (que é de função) não serve — o
+    desfazer é escrito à mão.
+    """
     import casamento as mod
     from pacotes import perfil
 
     pasta = tmp_path_factory.mktemp("perfis")
     (pasta / "regua.json").write_text(json.dumps(PERFIL), encoding="utf-8")
-    perfil.pasta = lambda: pasta
+    guardado = perfil.pasta
+    perfil.pasta = lambda: pasta  # type: ignore[assignment]
     mod.ESTADO_DA_REGUA = {"active_profile": "regua", "rumble_policy": "balanceado"}
-    return mod
+    try:
+        yield mod
+    finally:
+        perfil.pasta = guardado  # type: ignore[assignment]
 
 
 def test_o_instrumento_acha_os_tres_vocabularios(casamento):

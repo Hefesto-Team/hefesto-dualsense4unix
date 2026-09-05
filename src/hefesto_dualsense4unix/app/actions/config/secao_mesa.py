@@ -185,7 +185,7 @@ logger = get_logger(__name__)
 #: aqui dentro.
 #:
 #: O rodapé acompanha sozinho: `ipc_bridge._rotulos_dos_campos` LÊ esta
-#: constante (`ipc_bridge.py:812`), nunca a copia.
+#: constante (`ipc_bridge.py:851`), nunca a copia.
 TITULO = "Conexões"
 
 #: A dica do título, palavra por palavra como saiu do desenho aprovado

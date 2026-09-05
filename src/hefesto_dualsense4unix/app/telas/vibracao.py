@@ -157,7 +157,7 @@ SEM_FONTE: dict[str, str] = {
 DONOS_DOS_GESTOS: dict[str, str] = {
     "forca": "rumble.policy_set {policy} pela ponte `app/ipc_bridge."
     "rumble_policy_set_checked` — a ÚNICA porta desde 26/08/2026. É GLOBAL: o "
-    "handler não aceita `uniq` (`daemon/ipc_handlers.py:4452`). E `auto` por "
+    "handler não aceita `uniq` (`daemon/ipc_handlers.py:4953`). E `auto` por "
     "unidade é RECUSADO pelo esquema, com validador e mensagem dedicados "
     "(`profiles/schema.py:798-811`): ele escala pela bateria do controle "
     "PRIMÁRIO, então guardá-lo por peça faria duas escalarem pela bateria da "

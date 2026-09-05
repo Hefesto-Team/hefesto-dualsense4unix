@@ -1055,27 +1055,24 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # **Uma dívida que se anuncia com endereço é uma dívida que alguém paga.**
 
 
-    # ONDA1-D3 / O SENSOR (04/09/2026) — O INTERRUPTOR ESPERA A ABA 02.
-    # Mesma forma da de cima e pela mesma razão: esta frente é dona do daemon,
-    # do perfil e da ponte; a metade de TELA é da aba 02, que está no
-    # `nao_toca:` da sprint. Fiar daqui seria a R1 ao contrário.
-    "app/ipc_bridge.py::frase_do_interruptor_de_sensor": (
-        "SENSOR-DE-VERDADE-01 (04/09/2026): a linha de ressalva do interruptor de "
-        "giroscópio/acelerômetro — a frase que diz QUAL metade do interruptor pegou. Ela "
-        "existe porque a medição de 04/09 achou um caminho em que o daemon não escreve "
-        "byte nenhum: em Modo Nativo o jogo lê o movimento pelo `hidraw` do controle "
-        "FÍSICO (SDL 2.30 abrindo `/dev/hidraw4`, `tem_giro=true`, 192 amostras em 2 s), e "
-        "o kernel entrega o report direto. O caminho se perde no gesto `sensor` de "
-        "`interface/pacotes/a02_controles.py:1861`, que hoje RECUSA dizendo em vez de "
-        "chamar o método. FECHA quando aquele gesto chamar "
-        "`p.sensor_set_detalhado(giroscopio=..., uniq=...)` e passar o corpo por esta "
-        "função, pintando o botão com "
-        "`state_full[\"controllers\"][i][\"sensores\"][\"giroscopio_ligado\"]` — chave "
-        "NOVA do payload, irmã de `inputs`. A `PONTE` do pacote "
-        "(`a02_controles.py:2735`) precisa ganhar `sensor_set_detalhado` e "
-        "`frase_do_interruptor_de_sensor` junto. A metade do daemon está medida em "
-        "`docs/process/agentes/2026-09-04/ONDA1-D3.md`."
-    ),
+    # A LÁPIDE DE `frase_do_interruptor_de_sensor` SAIU EM 04/09/2026, no mesmo
+    # dia em que nasceu, e ela dizia com endereço exato quando fecharia:
+    # "FECHA quando aquele gesto chamar `p.sensor_set_detalhado(giroscopio=...,
+    # uniq=...)` e passar o corpo por esta função, pintando o botão com
+    # `state_full["controllers"][i]["sensores"]["giroscopio_ligado"]`".
+    #
+    # A ONDA1-D3 era dona do daemon, do perfil e da ponte; a metade de TELA era
+    # da aba 02, que estava no `nao_toca:` daquela sprint. O gesto `sensor` de
+    # `interface/pacotes/a02_controles.py` fez as três coisas — a chamada, a
+    # frase e os endereços `giro-ligado`/`accel-ligado` —, e o portão volta a
+    # cobrar esta função sozinho.
+    #
+    # **QUEM MEDIU A HORA FOI A RÉGUA-ESTOPIM DA PRÓPRIA RECUSA:**
+    # `test_o_daemon_continua_sem_metodo_de_sensor` guardava a premissa *"não há
+    # método de sensor no daemon"* e reprovou no dia em que `sensor.set` nasceu,
+    # dizendo o que fazer — *"o botão deixou de precisar recusar, e a frase de
+    # recusa virou mentira"*. **Uma dívida que se anuncia com endereço é uma
+    # dívida que alguém paga.**
 
     # LUZ-DO-MIC-01, 03/09/2026 — NOVE PROMESSAS QUE TÊM CAMINHO E O PORTÃO
     # NÃO VÊ. As duas peças de leitura do microfone são importadas pelo laço

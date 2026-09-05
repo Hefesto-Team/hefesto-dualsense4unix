@@ -208,7 +208,7 @@ def test_o_pacote_nao_apaga_o_perfil_do_cabecalho(a09, ctx):
 
 
 def test_tudo_o_que_o_pacote_emite_e_endereco_desta_pagina(a09, ctx):
-    """Nenhuma chave com nome de CAMADA — só endereço da tela (ou `-cls`).
+    """Nenhuma chave com nome de CAMADA — só endereço da tela, ou DECLARADO.
 
     `frase`, `autostart` e `registro` são os nomes que `gui/aba_sistema.pacote`
     usa internamente; os da página são `bateria-frase`, `hefesto-autostart` e
@@ -219,13 +219,12 @@ def test_tudo_o_que_o_pacote_emite_e_endereco_desta_pagina(a09, ctx):
     reprova nomeando a chave. Executada:
 
         AssertionError: o pacote emite chaves que não são endereço desta
-        página nem `-cls`: ['frase']
+        página nem declaração deste módulo: ['frase']
     """
     import pacotes
 
     from hefesto_dualsense4unix.gui import aba_sistema
 
-    conhecidos = set(aba_sistema.ENDERECOS) | _campos_da_pagina()
     # O QUE VIRA VALOR DE TELA TEM DONO, E ELE NÃO É ESTA RÉGUA: quem separa
     # "chave de contrato" (`mesa`, `colunas`, `blocos`, `cobertura`, `sem_dono`)
     # de "endereço a escrever" é `pacotes.normalizar`, e é dele que sai a lista
@@ -233,12 +232,36 @@ def test_tudo_o_que_o_pacote_emite_e_endereco_desta_pagina(a09, ctx):
     # isso ACUSOU o `blocos:` dos rótulos dos botões destrutivos (03/09/2026) —
     # uma chave de contrato que o piloto consome desde 01/09. Régua que digita o
     # que devia perguntar reprova a melhora; é a lição mais cara desta casa.
+    #
+    # E ELA CAIU NELA DE NOVO, EM 04/09/2026 — de duas formas, no mesmo `if`:
+    #
+    # 1. A isenção do `-cls` era um SUFIXO DIGITADO. A lista declarada para
+    #    exatamente isso é `a09_sistema.SEM_ALVO_NA_PAGINA`, e as entradas dela
+    #    terminam em `-cls` POR ACASO — o dia em que uma declaração precisar de
+    #    outro sufixo, o sufixo digitado deixa a chave passar calada. Medido
+    #    hoje: os seis `-cls` que o pacote emite são EXATAMENTE os seis
+    #    declarados (`set(cls_emitidos) - set(SEM_ALVO_NA_PAGINA) == set()`),
+    #    logo ler em vez de digitar é mais APERTADO, não mais frouxo: um `-cls`
+    #    novo e não declarado passa a reprovar aqui.
+    # 2. Faltava a QUARTA espécie, `ESPERA_A_PUBLICACAO` — a página TEM o
+    #    endereço (`mockup/09-sistema.html`), o piloto SABE escrevê-lo, e o que
+    #    falta é a PUBLICAÇÃO, que é ato dela. `_campos_da_pagina()` lê o
+    #    PUBLICADO, então os três `data-campo` do botão cinza caíam como
+    #    "nome de camada" — o contrário do que são.
+    #
+    # AS DUAS DECLARAÇÕES SÃO COBRADAS NOS DOIS SENTIDOS por outras réguas
+    # (`test_a_classe_da_linha_esta_declarada_como_sem_alvo` e
+    # `test_o_que_espera_a_publicacao_esta_declarado_nos_dois_sentidos`), então
+    # consultá-las não abre porta: no dia em que a aba for publicada, aquelas
+    # reprovam pedindo que a declaração saia, e esta volta a cobrar o endereço.
+    conhecidos = (set(aba_sistema.ENDERECOS) | _campos_da_pagina()
+                  | set(a09.SEM_ALVO_NA_PAGINA) | set(a09.ESPERA_A_PUBLICACAO))
     p = a09.pacote(ctx)
     estranhas = sorted(
-        k for k in pacotes.normalizar(p)["mesa"]
-        if not k.endswith("-cls") and k not in conhecidos)
+        k for k in pacotes.normalizar(p)["mesa"] if k not in conhecidos)
     assert not estranhas, (
-        f"o pacote emite chaves que não são endereço desta página nem `-cls`: "
+        f"o pacote emite chaves que não são endereço desta página nem estão "
+        f"declaradas em `SEM_ALVO_NA_PAGINA`/`ESPERA_A_PUBLICACAO`: "
         f"{estranhas}. O nome que a CAMADA usa por dentro não é o endereço da "
         f"tela — e uma chave dessas escreve em lugar nenhum, calada.")
 
