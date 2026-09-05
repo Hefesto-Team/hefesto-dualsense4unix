@@ -257,6 +257,18 @@ class TestDegradacaoDe:
 #: caso estreito — a mesma linha, letra por letra, duas vezes no mesmo corpo —
 #: e o preço de fechá-lo seria trazer de volta o número de linha e o aluguel.
 EXCECOES_DATADAS: dict[str, str] = {
+    '_jogador_esperando: return "" if c.get("player") is not None else "1"': (
+        "a01_jogar.py (04/09/2026) — A EXCEÇÃO MAIS ESTRITA DA LISTA, e a única "
+        "em que trocar por `jogador_de` MATA a feature. Ela não lê o `player` "
+        "para saber QUAL jogador é: lê para saber se ele JÁ É jogador. Quem "
+        "volta `None` é quem o co-op ainda não promoveu — reservou o índice e "
+        "não tem vpad —, e é exatamente esse `None` que acende o `Player N` "
+        "esmaecido da decisão [02] desta aba. O `jogador_de` existe para "
+        "APAGAR essa diferença: ele lê `player_slot` antes, e o slot está "
+        "preenchido justamente em quem ainda espera. Usá-lo aqui faria o "
+        "cartão dizer `Player 2` para um controle que o jogo não recebeu — o "
+        "dano medido na mesa dela em 02/09."
+    ),
     '_do_vpad: if v.get("player") == player:': (
         "a05_vibracao.py — NÃO é controle: casa a entrada de `rumble_ff.per_vpad` "
         "pelo número do vpad"
