@@ -1462,7 +1462,7 @@ D_ROL = ajuda(
     f"{DEFAULT_SCROLL_SPEED}.")
 D_INTERNA = ajuda(
     "Navegar <b>a janela do Hefesto</b> com o controle — abas, botões e listas.<br><br>"
-    f"Com os {len(MESA)} controles na mesa, cada jogador anda no seu próprio card "
+    f"Com os {len(MESA)} controles ligados, cada jogador anda no seu próprio card "
     "e o <b>X de cada um grava no controle dele</b> — sem disputar o card do "
     "vizinho.<br><br>"
     "É outra coisa que o cursor do PC: esse é <b>um só</b>, e sai do controle do "
@@ -1970,7 +1970,7 @@ def at_linha(rot, dica, campo):
 
 
 D_MESA = ajuda(
-    f"Os {len(MESA)} controles da mesa, cada um na cor do seu plástico, com as "
+    f"Os {len(MESA)} controles ligados, cada um na cor do seu plástico, com as "
     "cinco lâmpadas no padrão do número dele e a barra de luz na cor automática "
     "daquele número.<br><br>"
     f"<b>O cursor do PC é um só.</b> Mouse, teclado e os {len(COMBOS)} gestos saem "

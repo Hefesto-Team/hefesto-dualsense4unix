@@ -522,7 +522,7 @@ POR_PREF = {c["pref"]: c for c in MESA}
 CAMPO_DA_ORDEM = "ordem"
 
 #: A CONTAGEM DA SEÇÃO GESTÃO DE CONTROLES, e ela tem UM dono: o
-#: `gui.aba_conexoes.texto_da_contagem`, que escreve *"2 na mesa • 1 no cabo • 1
+#: `gui.aba_conexoes.texto_da_contagem`, que escreve *"2 controles • 1 no cabo • 1
 #: no rádio"* — a frase inteira, com os três números. Este arquivo a digitava,
 #: e era a segunda grafia: com um controle só na mesa, o produto continuava
 #: mostrando 2/1/1 porque o `<span>` não tinha endereço nem dono.
@@ -3524,8 +3524,11 @@ def _numero(padrao, onde_diz):
     return int(achado.group(1))
 
 
-_exigir(_numero(r">(\d+) na mesa", "a contagem do cabeçalho") == len(_na_mesa),
-        f"o cabeçalho da Gestão não conta os {len(_na_mesa)} que estão na mesa")
+# A PALAVRA "mesa" SAIU DA TELA EM 05/09/2026, ordem dela. A régua segue o
+# rótulo em vez de o cravar: quem escreve a frase é
+# `gui.aba_conexoes.texto_da_contagem`, e é dele que sai o "controles".
+_exigir(_numero(r">(\d+) controles", "a contagem do cabeçalho") == len(_na_mesa),
+        f"o cabeçalho da Gestão não conta os {len(_na_mesa)} controles ligados")
 _exigir(_numero(r"energia para o?s? ?(\d+) ", "a frase da energia") == _cabo,
         f"o Check-up não fala dos {_cabo} controle(s) no cabo — ele voltou a contar "
         "quem não está na mesa")

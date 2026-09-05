@@ -379,17 +379,17 @@ def linha_do_vale_para(state: object) -> Linha:
     if quantos is None:
         return Linha(
             NAO_DEU, INFO, GLIFO_INFO,
-            "O serviço não respondeu quantos controles estão na mesa.",
+            "O serviço não respondeu quantos controles estão ligados.",
         )
     if quantos == 0:
         return Linha(
-            "Nenhum controle na mesa", INFO, GLIFO_INFO,
+            "Nenhum controle ligado", INFO, GLIFO_INFO,
             "O teto continua valendo para quem chegar.",
         )
     if quantos == 1:
         return Linha(
-            "O controle da mesa", INFO, GLIFO_INFO,
-            "É o teto da MESA; o controle pode sobrepô-lo na linha dele.",
+            "O controle ligado", INFO, GLIFO_INFO,
+            "É o teto geral; o controle pode sobrepô-lo na linha dele.",
         )
     return Linha(
         f"Os {quantos} controles",
@@ -418,11 +418,11 @@ def forca_do_perfil(perfil: str | None) -> str | None:
 
 
 def linha_do_impoe(perfil: str | None) -> Linha:
-    """O que o perfil escolhido impõe, hoje, na mesa inteira."""
+    """O que o perfil escolhido impõe, hoje, em todos os controles."""
     if perfil is None:
         return Linha(
             NAO_DEU, INFO, GLIFO_INFO,
-            "Ninguém escolheu um perfil de bateria para a mesa.",
+            "Ninguém escolheu um perfil de bateria.",
         )
     forca = forca_do_perfil(perfil)
     valor = f"Vibração em {forca}" if forca else "Nada é limitado"
@@ -430,7 +430,7 @@ def linha_do_impoe(perfil: str | None) -> Linha:
         valor,
         INFO,
         GLIFO_INFO,
-        "O que este perfil limita hoje, na mesa inteira. O degrau vem de "
+        "O que este perfil limita hoje, em todos os controles. O degrau vem de "
         "RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela.",
     )
 

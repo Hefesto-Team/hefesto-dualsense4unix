@@ -291,8 +291,8 @@ def _do_glade(padrao, oque):
 #: já cortou, e por isso nunca ensinou que o teto existe.
 DICA_DO_TETO_DA_MESA = _do_glade(
     r'id="rumble_policy_economia".*?tooltip-text[^>]*>[^<]*?'
-    r'(A mesa pode ter um teto[^<]*?)</property>',
-    "a oração do teto da mesa, dos quatro tooltips de degrau")
+    r'(O Perfil de Bateria pode impor um teto[^<]*?)</property>',
+    "a oração do teto do orçamento, dos tooltips de degrau")
 
 #: A ÚNICA FRASE DA JANELA ESTÁVEL QUE LIGA OS DOIS CARDS: explica por que um
 #: "Testar" com 220 pode sair fraco (o degrau em Economia corta para 30%). Na

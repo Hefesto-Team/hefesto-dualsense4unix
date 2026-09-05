@@ -890,7 +890,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os 4
      controles ao mesmo tempo"*. Os dois interruptores desceram para a linha de
      cada controle — são estado POR PEÇA —, e aqui em cima sobrou o Calibrar,
-     que é o único que vale para a mesa toda.
+     que é o único que vale para todos de uma vez.
      A GRADE DE LARGURA IGUAL DESCEU JUNTO: com um botão só, `grid-auto-columns`
      não iguala nada. Ela agora está no `.sensores-peca`, que é onde há dois. */
   .sensores{display:flex;gap:8px;margin-left:auto}
@@ -2184,10 +2184,10 @@ MIOLO = f'''
           ajustes desta aba vão para ele. O chip <b>Todos</b> abre os {len(MESA)}, e aí a
           caixa rola.<br><br>
           A <b>borda</b> tem a cor do plástico, aberto ou fechado — é como você sabe qual é
-          qual com a mesa cheia; o <b>fundo lilás</b> diz qual está escolhido.<br><br>
+          qual com vários ligados; o <b>fundo lilás</b> diz qual está escolhido.<br><br>
           O <b>giroscópio</b> e o <b>acelerômetro</b> são de cada controle, e por isso o
           interruptor de cada um está na <b>linha dele</b>. O botão acima é o único que vale
-          para a <b>mesa toda</b>: ele calibra os {len(MESA)} de uma vez.
+          para <b>todos de uma vez</b>: ele calibra os {len(MESA)} numa passada.
         </span></span>
         <!-- OS DOIS BOTÕES VOLTARAM AO CANTO SUPERIOR DIREITO — decisão dela,
              31/08/2026: *"A posição deles volta pro canto superior direito."*

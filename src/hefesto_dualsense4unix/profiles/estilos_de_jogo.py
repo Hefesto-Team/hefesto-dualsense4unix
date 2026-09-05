@@ -121,7 +121,7 @@ ESTILOS: tuple[Estilo, ...] = (
            "o pulso irregular é o susto no dedo; a luz baixa não denuncia"),
     Estilo("luta", "Luta", "SemiAutoGun", "max", (255, 40, 180), 1.0,
            "um estalo por golpe, com volta rápida"),
-    Estilo("coop", "Co-op na mesa", "SimpleRigid", "balanceado", (0, 0, 255), 1.0,
+    Estilo("coop", "Co-op local", "SimpleRigid", "balanceado", (0, 0, 255), 1.0,
            "quatro na mesa: a família é a paleta canônica de jogador, que é a "
            "que ela já conhece de olhar"),
     Estilo("maratona", "Maratona", "Off", "economia", (120, 120, 140), 0.25,

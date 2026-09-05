@@ -248,7 +248,7 @@ LISTA_VAZIA = (
 #: A tabela é POR CONTROLE PRESENTE: sem mesa não há linha a mostrar, e inventar
 #: uma seria a tela afirmando um controle que não está aí.
 GUARDA_SEM_MESA = (
-    "Nenhum controle na mesa agora. Conecte um pelo cabo ou pelo rádio — a "
+    "Nenhum controle ligado agora. Conecte um pelo cabo ou pelo rádio — a "
     "tabela aparece sozinha, sem recarregar esta tela."
 )
 

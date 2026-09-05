@@ -1189,8 +1189,8 @@ class Janela:
         mesa = mesa_viva.mesa_do_estado(state, self.leitor_de_cor.conhecidos(), alvo=self.alvo)
         if not mesa:
             self._mesa_ausente(
-                "Nenhum controle na mesa agora. Conecte um pelo cabo ou pelo "
-                "rádio — a mesa aparece sozinha, sem recarregar esta tela.",
+                "Nenhum controle ligado agora. Conecte um pelo cabo ou pelo "
+                "rádio — ele aparece sozinho, sem recarregar esta tela.",
                 bolinha="○",
                 cor="var(--orange)",
                 conta=" 0 controles: ",
