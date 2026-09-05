@@ -98,6 +98,7 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     integrations/prontuario_dos_jogos.pontes_confirmadas quem já sabe por onde entrar
     integrations/jogos_locais.pastas_de_atalhos          onde moram os `.desktop`
     integrations/steam_launch_options.with_steam_closed  fechar · aplicar · reabrir
+    integrations/steam_launch_options.WRAPPER_LAUNCH     a linha que se copia
     app/actions/launch_wrapper_dialog.load_dismissed_appids  quem ela dispensou
     app/actions/launch_wrapper_dialog.add_dismissed_appid    o "não perguntar"
     app/actions/launch_wrapper_dialog.remove_dismissed_appid o "voltar a perguntar"
@@ -485,6 +486,13 @@ def _ler_do_disco() -> desenho.Leitura:
         pontes=pontes,
         onde_estao=onde_estao,
         frase=sw.frase_do_aviso(censo),
+        # A LINHA É A CONSTANTE DO MOTOR, e não uma segunda redação: é a MESMA
+        # que o botão "Copiar opções para os jogos" da janela velha copia
+        # (`daemon_actions.compose_launch` devolve `WRAPPER_LAUNCH` e nada mais)
+        # e a MESMA que o `apply_wrapper_to_all_games` grava no vdf. Digitá-la
+        # aqui seria a terceira cópia de 143 caracteres que já têm dono — e a
+        # cópia envelheceria calada no dia em que o wrapper mudasse de caminho.
+        linha=slo.WRAPPER_LAUNCH,
         erros=tuple(censo.erros),
     )
 
@@ -546,15 +554,40 @@ def aviso_do_jogo_aberto(
     ganhasse um quarto valor.
 
     O TEXTO É O DELA, VERBATIM (`home_actions.WRAPPER_MISSING_TEXT`), e sai da
-    própria função. Ver `espera_a_palavra_dela`: a última frase dele manda
-    copiar as opções *"na aba Sistema"*, e no desenho novo não há esse botão em
-    aba nenhuma — quem decide o texto é ela, não esta frente.
+    própria função — nada é redigitado aqui.
 
-    A DISPENSA DELA É RESPEITADA, e é a metade que faz o par existir: se ela
-    clicou em *"Não perguntar para este jogo"*, o aviso não volta para aquele
-    appid. A lista sai da `Leitura` que a vigia já leu (`lida.dispensados`) —
-    reler o JSON a cada tique seria disco na thread da janela, que é o que a
-    :class:`_Vigia` existe para impedir.
+    **A FRASE AINDA MANDA A UM BOTÃO QUE NÃO EXISTE, e a decisão já caiu.** Ela
+    termina em *"Copie as opções na aba Sistema."*; a aba Sistema da interface
+    nova tem doze botões e **nenhum copia coisa alguma** — quem copia é esta
+    aba, desde hoje (:func:`copiar_a_linha`). O PO decidiu em 04/09/2026
+    (`07[02]`): **a frase para de nomear lugar** e passa a dizer só o fato —
+    *"O jogo está rodando sem o hefesto-launch — controles podem duplicar."* —,
+    porque quem diz o que fazer é o botão ao lado, em cada tela. É a única
+    redação que fica certa nas DUAS janelas.
+
+    **A LINHA A MUDAR NÃO É DESTA POSSE**, e por isso ela não mudou aqui: o
+    texto tem UM dono para as duas telas, `app/actions/home_actions.py:559-562`
+    (com a régua em `tests/unit/test_wrapper_banner.py:84`, que ainda exige o
+    literal *"aba Sistema"*). Reescrevê-lo aqui criaria a segunda frase que a
+    decisão existe para impedir. **Está relatado, com as duas linhas exatas.**
+
+    AS DUAS RECUSAS CALAM — PO, 04/09/2026, `07[03]`. Até hoje só a dispensa
+    (*"Não perguntar para este jogo"*) calava; o *"Não usar neste jogo"* — o
+    `jogos_sem_wrapper.txt`, a lista que o produto INTEIRO respeita no reparo —
+    não calava tela nenhuma. Ela tirava o jogo de propósito e a tela reclamava
+    dele toda vez que ele abrisse. **Um aviso que sobrevive à resposta dela
+    ensina que o botão não obedece.**
+
+    E AS DUAS SÃO A MESMA FRASE DELA, dita de dois jeitos: *"eu sei, deixa
+    assim"*. O desfazer de cada uma já está na lista do cartão — *"Voltar a
+    usar"* e *"Voltar a perguntar"* —, e é o que impede o silêncio por engano
+    de ser um caminho só de ida.
+
+    AS DUAS LISTAS SAEM DA `Leitura` QUE A VIGIA JÁ LEU (`lida.dispensados` e
+    `lida.recusados`), nunca do disco: reler dois arquivos a cada tique seria
+    disco na thread da janela, que é o que a :class:`_Vigia` existe para
+    impedir — e é o custo que a própria decisão nomeia (*"a leitura das duas
+    listas vem de vigia em segundo plano"*).
 
     SEM O APPID O AVISO CONTINUA, e é decisão: `wrapper_used is False` é o
     daemon afirmando que HÁ jogo aberto sem o wrapper. Calar porque a
@@ -568,9 +601,27 @@ def aviso_do_jogo_aberto(
     if not texto:
         return "", ""
     appid = _o_jogo_em_foco(state)
-    if appid and lida is not None and appid in {a for a, _ in lida.dispensados}:
+    if appid and lida is not None and appid in calados(lida):
         return "", ""
     return f"<b>{_texto(texto)}</b><br>", appid
+
+
+def calados(lida: desenho.Leitura | None) -> set[str]:
+    """Os appids sobre os quais ela JÁ RESPONDEU — as duas recusas juntas.
+
+    ELA É PÚBLICA E TEM NOME PRÓPRIO porque a segunda tela precisa dela. A
+    coluna Atenção da aba Jogar acende o MESMO aviso, pela MESMA função
+    (`app/actions/jogar/painel.AVISOS_DA_TELA`, o `Aviso("JOGO", …)`), e não
+    consulta lista nenhuma — a decisão `07[03]` manda calar nas DUAS. Esta
+    frente não é dona daquele arquivo; o que ela pode fazer é deixar a conta
+    escrita UMA vez, com nome, para a outra metade não a redigitar. **Está
+    relatado como trabalho de fora desta aba.**
+
+    NUNCA LEVANTA: quem chama é a pintura, duas vezes por segundo.
+    """
+    if lida is None:
+        return set()
+    return ({a for a, _ in lida.dispensados} | {a for a, _ in lida.recusados})
 
 
 #: O rótulo do botão que dispensa o aviso. É o do diálogo da GTK, palavra por
@@ -1493,6 +1544,157 @@ def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# «COPIAR A LINHA» — a saída manual que a tela prometia e não oferecia
+#
+# O DEFEITO, medido em 04/09/2026: o cartão da Steam escreve *"N jogos com a
+# linha intocável — só reparo manual"* e a frase da sentinela termina em
+# *"Reparo manual."* — e **não existia UM botão de copiar em toda a interface
+# nova** (`grep -rn WRAPPER_LAUNCH src/hefesto_dualsense4unix/interface/`
+# devolvia zero). A tela mandava fazer à mão e não dava a mão.
+#
+# DECIDIDO — PO, 04/09/2026, `07[01]`: **os dois, só quando faz falta.**
+# ---------------------------------------------------------------------------
+#: Quanto o gesto espera a área de transferência CONFIRMAR. Ele é curto de
+#: propósito: o gesto roda em thread, mas quem clicou está olhando o botão em
+#: voo — e uma espera longa sobre um laço de GTK que pode nem existir (uma
+#: régua chamando o gesto à mão) travaria o pouso do botão.
+SEGUNDOS_PARA_COPIAR = 2.0
+
+#: A TARJA DO SUCESSO, e ela é a decisão dela palavra por palavra (`07[01]`) —
+#: a mesma primeira oração que a janela velha já diz no toast do
+#: `on_storm_copy_launch`. Ela está escrita aqui porque lá é um literal solto
+#: dentro do método, sem nome; **extrair a constante na GTK e importá-la é
+#: trabalho de fora desta frente, e está relatado.**
+COPIADO = ("Copiado! Cole em: Steam → jogo → Propriedades → Opções de "
+           "inicialização.")
+
+
+def para_a_area_de_transferencia(texto: str) -> bool:
+    """Põe o texto na área de transferência e **CONFERE lendo de volta**.
+
+    A LEITURA DE VOLTA NÃO É ZELO, e a cicatriz é da própria janela velha:
+    `daemon_actions.on_storm_copy_launch` envolve o `set_text` num
+    `contextlib.suppress(Exception)` e conclui `copied = True` — o `set_text`
+    não devolve nada e ninguém pergunta ao ambiente se a seleção foi tomada.
+    Aquele caminho diz *"Copiado!"* pelo fato de **não ter levantado**, que é
+    outra pergunta. **Nenhum alarme sem medição** vale nos dois sentidos: um
+    recibo que não mediu nada é um recibo que mente.
+
+    O QUE ESTA FUNÇÃO AFIRMA, e é só isto: o texto que voltou da área de
+    transferência é o mesmo que foi mandado. Ela não diagnostica POR QUE não
+    voltou — o `False` é a ausência da confirmação, e a frase que a tela mostra
+    a partir dele não inventa causa nenhuma.
+
+    O `request_text` É ASSÍNCRONO DE PROPÓSITO. O irmão dele — `wait_for_text`
+    — BLOQUEIA rodando um laço aninhado, e chamá-lo de dentro de um `idle_add`
+    reentraria no laço da janela dela no meio da pintura. Aqui a leitura volta
+    por retorno de chamada no mesmo laço, e quem espera é a thread do gesto,
+    que é onde esperar é barato.
+
+    SEM LAÇO DE GTK ELA DEVOLVE `False`, e isso é o comportamento certo, não
+    uma limitação: uma régua que chame o gesto sem janela nenhuma **não tem**
+    área de transferência, e dizer "copiei" ali seria a régua provando o que
+    não aconteceu. É por isso que a decisão `07[01]` pediu OS DOIS — com a
+    linha à mostra, o `False` não deixa ninguém sem saída.
+
+    NUNCA LEVANTA: o `False` já carrega tudo o que o chamador precisa saber, e
+    quem escreve a frase de recusa é o gesto, que sabe falar com ela.
+    """
+    if not texto:
+        return False
+    pronto = threading.Event()
+    lido: list[str] = []
+
+    def _no_laco_do_gtk() -> bool:
+        try:
+            # O `Gdk` GANHA VERSÃO DECLARADA, e a razão está MEDIDA nos dois
+            # sentidos — 04/09/2026, com o ensaio deste botão:
+            #
+            #   DENTRO DO PILOTO ela NÃO é a cura. `hefesto_vivo` importa
+            #   `Gtk` 3.0, o que já carrega o Gdk 3.0 no repositório, e um
+            #   `from gi.repository import Gdk` sem versão resolve para o 3.0
+            #   que está lá. Arrancada esta linha, o ensaio passa igual —
+            #   está no relato desta frente, e a afirmação contrária que eu
+            #   tinha escrito aqui CAIU.
+            #
+            #   FORA DELE ela é o que separa funcionar de recusar sempre. Num
+            #   processo que chegue ao Gdk ANTES do Gtk, o gi escolhe o mais
+            #   NOVO instalado — o GDK 4 nesta máquina —, e ali
+            #   `SELECTION_CLIPBOARD` **não existe**. Foi exatamente o que o
+            #   ensaio fez na primeira volta, no `import` do próprio módulo.
+            #
+            # O `suppress(ValueError)` é o outro lado: com o 3.0 já carregado o
+            # pedido é inócuo; com outro carregado ele levanta, e o `except` de
+            # fora devolve `False` — a recusa honesta, não um traceback.
+            import contextlib
+
+            import gi
+
+            with contextlib.suppress(ValueError):
+                gi.require_version("Gdk", "3.0")
+            from gi.repository import Gdk, Gtk
+            area = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+            area.set_text(texto, -1)
+            area.store()
+
+            def _voltou(_area: Any, devolvido: Any, _dado: Any) -> None:
+                if isinstance(devolvido, str):
+                    lido.append(devolvido)
+                pronto.set()
+
+            area.request_text(_voltou, None)
+        except Exception:
+            pronto.set()
+        return False
+
+    try:
+        from gi.repository import GLib
+    except Exception:  # pragma: no cover - máquina sem GTK
+        return False
+    GLib.idle_add(_no_laco_do_gtk)
+    pronto.wait(SEGUNDOS_PARA_COPIAR)
+    return bool(lido) and lido[0] == texto
+
+
+@gesto("07-lancadores.html", desenho.COPIAR)
+def copiar_a_linha(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Copiar a linha": a linha de inicialização do Hefesto na área de transferência.
+
+    ELE SÓ EXISTE ONDE FAZ FALTA. O botão nasce no cartão da Steam **apenas**
+    quando há jogo com a linha intocável (`desenho.cartao_da_steam`), que é o
+    único estado em que o produto DECIDIU não repor sozinho — nos outros a
+    `_VigiaDaSteam` repõe assim que o jogo e a Steam fecham, e um botão de
+    copiar ali seria trabalho manual oferecido sem necessidade.
+
+    A LINHA É A DO MOTOR (`steam_launch_options.WRAPPER_LAUNCH`), a MESMA que o
+    botão da janela velha copia e a MESMA que o reparo grava no vdf. Este gesto
+    não redige uma linha: se ele redigisse, a linha copiada e a linha aplicada
+    poderiam divergir — e ela colaria à mão uma opção que o produto não
+    reconhece depois.
+
+    A RECUSA É HONESTA E APONTA A SAÍDA QUE SOBRA. Quando a área de
+    transferência não confirma, a frase manda ela para o bloco que está na tela
+    logo acima do botão — a segunda saída da mesma decisão. Uma recusa que só
+    dissesse "não consegui" deixaria a pessoa exatamente onde o defeito a
+    deixava.
+
+    **NÃO GRAVA EM DISCO — E MESMO ASSIM PRECISA DE `PERIGOSOS`.** Ele
+    substitui o que ela tiver na área de transferência, e a `--prova-gesto`
+    clica todo `[data-gesto]` que achar. A linha que falta em
+    `hefesto_vivo.PERIGOSOS` é `("07-lancadores.html", "copiar-a-linha")`, e
+    aquele arquivo é de outra posse: **está relatado, com a linha exata.**
+    """
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    if not para_a_area_de_transferencia(slo.WRAPPER_LAUNCH):
+        raise RuntimeError(
+            "Não consegui pôr a linha na área de transferência. Ela está à "
+            "mostra no cartão, logo acima deste botão: selecione e copie com "
+            "Ctrl+C. Nada foi alterado.")
+    return {**_resposta(VIGIA.agora(), ctx.state), "recado": COPIADO}
+
+
 #: VAZIOS, E É A MEDIÇÃO QUE OS DEIXA VAZIOS: nenhum gesto desta aba fala com o
 #: daemon. O wrapper vive em dois arquivos em disco, e `pacotes.daemon.metodos()`
 #: não traz um método sequer que os toque.
@@ -1506,8 +1708,10 @@ PAGINA = "07-lancadores.html"
 #: 8 PARA 10 no mesmo dia, com as duas faltas de paridade que a medição das dez
 #: abas nomeou — o "Não perguntar para este jogo" (a metade de ida do par, que
 #: só a GTK sabia escrever) e o "Posso fechar a Steam por uns 20 segundos?" (o
-#: caminho para `with_steam_closed`, que a interface nova não tinha).
-PISO_DA_ABA = 10
+#: caminho para `with_steam_closed`, que a interface nova não tinha); e de
+#: 10 PARA 11 em 04/09/2026, com o "Copiar a linha" (decisão `07[01]` do PO) —
+#: o único botão de copiar de toda a interface nova.
+PISO_DA_ABA = 11
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
 #: `PonteDeMentira` e cobra QUAL função da ponte o gesto chamou. Um gesto que
@@ -1530,6 +1734,10 @@ PROVAS: list[dict[str, Any]] = []
 #: nunca no eco de um gesto. Um `state_full` lido logo depois responde o mesmo
 #: que respondia antes, e uma régua que cobrasse eco dele reprovaria o botão
 #: por estar CERTO.
+#:
+#: O `copiar-a-linha` ENTROU EM 04/09/2026 pelo mesmo motivo do
+#: `abrir-lancador`, e ainda mais forte: o efeito dele é a ÁREA DE
+#: TRANSFERÊNCIA do ambiente gráfico dela, que o daemon não vê de jeito nenhum.
 SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
            "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
-           "abrir-lancador", "nao-perguntar", FECHAR)
+           "abrir-lancador", "nao-perguntar", FECHAR, desenho.COPIAR)
