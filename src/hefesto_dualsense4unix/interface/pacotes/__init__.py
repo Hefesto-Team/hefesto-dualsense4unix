@@ -321,6 +321,26 @@ def apagar_os_lugares_sem_dono(
     apagar = sorted(TODOS_OS_LUGARES - set(colunas))
     for pref in apagar:
         colunas[pref] = dict.fromkeys(chaves, TRAVESSAO)
+        # O LUGAR VAZIO DIZ QUE ESTÁ VAZIO, e não um travessão mudo.
+        #
+        # MEDIDO NA TELA EM 05/09/2026, com UM controle na bancada: a aba 05
+        # mostrava `P3 • Desconectado` e `P4 • Desconectado` — porque essas
+        # duas colunas são desenho e ninguém escreve nelas — e um `—` seco na
+        # do P2, que TEM endereço (`data-hef="identidade"`) e por isso recebia
+        # o travessão por cima. Três lugares igualmente vazios, dois dizendo o
+        # que são e um calado, lado a lado.
+        #
+        # O travessão continua certo para todo o resto da coluna: *"isto eu
+        # não sei"* é a resposta honesta para o volume de um controle que não
+        # está aqui. Mas a IDENTIDADE do lugar não é desconhecida — o lugar é
+        # o P2, e ele está desconectado. Isso se sabe, e a tela já sabia dizer
+        # em dois dos quatro.
+        #
+        # A frase é a mesma do desenho, sem a marcação: as abas escrevem esta
+        # chave por `texto`, não por `html`.
+        if IDENTIDADE_DO_LUGAR in chaves:
+            colunas[pref][IDENTIDADE_DO_LUGAR] = (
+                f"P{pref[1:]} {PONTO_DO_ROTULO} {SEM_NINGUEM_AQUI}")
     # A MOLDURA TAMBÉM, e não só o texto: com os travessões escritos, o card do
     # P2 continuava com a borda de CONECTADO e os botões de máscara acesos. Meio
     # apagado é pior que aceso — quem olha lê a borda antes de ler o campo.
@@ -383,6 +403,17 @@ _MOLDE: dict[tuple[str, str], dict[str, str]] = {}
 #: grafias de divergirem é `test_o_molde_escreve_o_travessao_do_desenho`, que
 #: procura este caractere DENTRO do lugar vazio da página publicada.
 TRAVESSAO = "—"
+
+#: A CHAVE QUE CARREGA A IDENTIDADE DO LUGAR nas abas de quatro colunas. Quem
+#: a emite recebe `P2 • Desconectado` no lugar vazio, em vez do travessão —
+#: ver a razão medida em :func:`apagar_os_lugares_sem_dono`. Aba que não a emite não ganha
+#: chave nova: `chaves` é a união do que a PRÓPRIA carga trouxe.
+IDENTIDADE_DO_LUGAR = "identidade"
+#: O separador do rótulo, igual ao do desenho (que o envolve num `<span
+#: class="pt">` — aqui não, porque esta chave se escreve por `texto`).
+PONTO_DO_ROTULO = "\u2022"
+#: E a palavra, uma só, para não haver duas versões dela na casa.
+SEM_NINGUEM_AQUI = "Desconectado"
 
 
 #: OS TRÊS ALVOS QUE O TRAVESSÃO NÃO ATENDE, e os três foram medidos, não
