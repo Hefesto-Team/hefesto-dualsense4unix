@@ -199,31 +199,32 @@ def test_o_interruptor_recusado_nao_deixa_rastro() -> None:
 # ---------------------------------------------------------------------------
 # 2. A MEMÓRIA SÓ GUARDA O QUE O HEFESTO CONFIRMOU
 # ---------------------------------------------------------------------------
-def test_a_velocidade_recusada_nao_envenena_o_clique_seguinte() -> None:
-    """Com o daemon em 6, um `+` recusado e outro `+` pedem 7 — nunca 8.
-
-    O alvo que ele NÃO aceitou não pode ficar no caminho: pular o 7 é a tela
-    decidindo por ela um número que ninguém pediu.
-    """
-    from pacotes import a06_navegacao as mod
-
-    ctx = _ctx(speed=DEFAULT_MOUSE_SPEED)
-    negou = _Ponte({"status": "failed", "bloqueio": "sem_device"})
-    with pytest.raises(RuntimeError):
-        mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, negou)
-    assert not mod._PEDIDO, f"a recusa deixou rastro: {mod._PEDIDO}"
-
-    aceitou = _Ponte()
-    mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, aceitou)
-    assert aceitou.pedidos(MOUSE, "speed") == [DEFAULT_MOUSE_SPEED + 1], (
-        "o clique depois da recusa partiu de um número que nunca existiu")
+# **AS SEIS RÉGUAS DESTA SEÇÃO E DA SEGUINTE MUDARAM DE CLIENTE — 05/09/2026.**
+# Elas mediam a memória através das VELOCIDADES, e as velocidades deixaram de
+# usá-la: decisão dela, *"velocidade do cursor e da rolagem coloca um slicer
+# pra cada"*. Uma barra manda o número INTEIRO — não há de onde partir, logo não
+# há passo engolido a curar, e `_velocidade` não chama `_partir_de` nem
+# `_reservar`.
+#
+# A MEMÓRIA NÃO MORREU: ela tem exatamente UM cliente hoje, o interruptor
+# "Status do Modo", que tem UM gesto e por isso depende dela para o segundo
+# clique ser *desfaça*. Todo comportamento que estas réguas mediam continua
+# existindo e continua importando — o que muda é o gesto que as exercita.
+#
+# O QUE NÃO SOBREVIVEU, e é honesto dizer: o caso NUMÉRICO
+# (`+` recusado, o clique seguinte não pode pular o 7). Com um booleano não há
+# número a pular. A prova numérica do aparo na faixa mudou de casa e está em
+# `test_a_06_a_recusa_diz_o_motivo_e_o_clique_anda.py`, sobre a barra.
+#
+# UMA DELAS ERA VERDE PELO MOTIVO ERRADO. `test_o_silencio_do_hefesto_tambem_
+# nao_e_confirmacao` chamava `vel_cursor` com o gesto dos botões, e depois da
+# troca ele levantava `RuntimeError("a barra não mandou número nenhum")` — um
+# `pytest.raises(RuntimeError)` genérico aceitava isso e o teste passava sem
+# nunca chegar ao daemon. Aqui ele mede o silêncio de verdade.
 
 
 def test_o_silencio_do_hefesto_tambem_nao_e_confirmacao() -> None:
-    """`_mandar` levanta quando ninguém responde — e nada é guardado.
-
-    Silêncio e recusa são dois desfechos, e nenhum dos dois é "o valor mudou".
-    """
+    """Silêncio e recusa são dois desfechos, e nenhum é "o valor mudou"."""
     from pacotes import a06_navegacao as mod
 
     class _Muda(_Ponte):
@@ -231,19 +232,23 @@ def test_o_silencio_do_hefesto_tambem_nao_e_confirmacao() -> None:
             self.chamadas.append((metodo, dict(params)))
             raise RuntimeError("ninguém respondeu")
 
-    with pytest.raises(RuntimeError):
-        mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, _Muda())
+    muda = _Muda()
+    with pytest.raises(RuntimeError, match="não respondeu"):
+        mod.modo(_ctx(enabled=False), {"gesto": "modo"}, muda)
+    assert muda.chamadas, (
+        "o gesto nem chegou a falar com o daemon — o silêncio que se mede aqui "
+        "não chegou a acontecer, e o resto deste teste não vale nada")
     assert not mod._PEDIDO, f"o silêncio deixou rastro: {mod._PEDIDO}"
 
 
 def test_a_reserva_ja_esta_de_pe_durante_a_chamada() -> None:
     """Os gestos rodam em THREAD — anotar só na volta reabre o buraco.
 
-    `hefesto_vivo.trabalhar` (`:1384`) dispara uma thread por clique, *"um gesto
-    síncrono congelaria a janela inteira por nove segundos e meio"*. Se a
-    memória só fosse escrita DEPOIS da resposta, um segundo clique chegado
-    dentro do tempo de ida e volta do IPC leria a memória vazia e repetiria o
-    pedido do primeiro — que é exatamente a janela em que ela clica duas vezes.
+    `hefesto_vivo.trabalhar` dispara uma thread por clique, *"um gesto síncrono
+    congelaria a janela inteira por nove segundos e meio"*. Se a memória só
+    fosse escrita DEPOIS da resposta, um segundo clique chegado dentro do tempo
+    de ida e volta do IPC leria a memória vazia e repetiria o pedido do
+    primeiro — que é exatamente a janela em que ela clica duas vezes.
 
     A ponte olha `_PEDIDO` de dentro da chamada: é o único jeito de medir
     "antes" sem depender de escalonamento de thread.
@@ -254,50 +259,52 @@ def test_a_reserva_ja_esta_de_pe_durante_a_chamada() -> None:
 
     class _Espia(_Ponte):
         def resultado(self, metodo: str, **params: object) -> dict:
-            visto["durante"] = dict(mod._PEDIDO)
+            visto.setdefault("durante", dict(mod._PEDIDO))
             return super().resultado(metodo, **params)
 
-    mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, _Espia())
-    assert "speed" in visto.get("durante", {}), (
+    mod.modo(_ctx(enabled=False), {"gesto": "modo"}, _Espia())
+    assert "modo" in visto.get("durante", {}), (
         "durante a chamada a memória estava vazia — dois cliques em duas "
-        "threads pedem o mesmo número")
-    assert visto["durante"]["speed"][1] == 7
+        "threads pedem a mesma coisa")
+    assert visto["durante"]["modo"][1] == 1, (
+        "a reserva não guardou o alvo do clique: o segundo clique partiria do "
+        "estado velho")
 
 
 def test_a_recusa_nao_apaga_o_pedido_anterior() -> None:
     """Largar a reserva devolve o que estava lá — não esvazia a memória.
 
-    Um `+` aceito seguido de um `+` recusado tem de deixar o primeiro alvo de
-    pé: apagá-lo faria o clique seguinte pedir de novo o 7 que já aconteceu.
+    Um clique aceito seguido de um recusado tem de deixar o primeiro alvo de
+    pé: apagá-lo faria o clique seguinte repetir o que já aconteceu.
     """
     from pacotes import a06_navegacao as mod
 
-    ctx = _ctx(speed=6)
+    ctx = _ctx(enabled=False)
     aceitou = _Ponte()
-    mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, aceitou)      # 6 -> 7
+    mod.modo(ctx, {"gesto": "modo"}, aceitou)                     # desligado -> ligado
     negou = _Ponte({"status": "failed", "bloqueio": "sem_device"})
     with pytest.raises(RuntimeError):
-        mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, negou)    # 7 -> 8, não
+        mod.modo(ctx, {"gesto": "modo"}, negou)                   # ligado -> desligado, não
     de_novo = _Ponte()
-    mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, de_novo)
-    assert de_novo.pedidos(MOUSE, "speed") == [8], (
+    mod.modo(ctx, {"gesto": "modo"}, de_novo)
+    assert de_novo.pedidos(MOUSE, "enabled") == [False], (
         "a recusa apagou o pedido que TINHA acontecido, e o clique seguinte "
-        "voltou a pedir um número que o daemon já tem")
+        "voltou a pedir o que o daemon já tem")
 
 
 def test_o_clique_aceito_continua_andando() -> None:
     """A guarda de vacuidade: mover a anotação não pode matar a cura de 02/09.
 
-    Três `+` dentro do mesmo tique andam três — que é o defeito que a memória
-    nasceu para curar, e que continua curado depois de ela virar confirmação.
+    Três cliques dentro do mesmo tique alternam três vezes — que é o defeito
+    que a memória nasceu para curar, e que continua curado depois de ela virar
+    confirmação.
     """
     from pacotes import a06_navegacao as mod
 
-    ctx, ponte = _ctx(speed=DEFAULT_MOUSE_SPEED), _Ponte()
+    ctx, ponte = _ctx(enabled=False), _Ponte()
     for _ in range(3):
-        mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, ponte)
-    assert ponte.pedidos(MOUSE, "speed") == [
-        DEFAULT_MOUSE_SPEED + 1, DEFAULT_MOUSE_SPEED + 2, DEFAULT_MOUSE_SPEED + 3]
+        mod.modo(ctx, {"gesto": "modo"}, ponte)
+    assert ponte.pedidos(MOUSE, "enabled") == [True, False, True]
 
 
 # ---------------------------------------------------------------------------
@@ -307,9 +314,10 @@ def test_a_memoria_expira_e_a_volta_pela_janela_gtk_nao_pula_numero(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Concordar POR ACASO não é concordar.
 
-    Ela clica `+` aqui (6 → 7), volta o número para 6 pela janela GTK, e clica
-    `+` de novo. O daemon diz 6 outra vez e o sentido é o mesmo — as duas
-    condições de 02/09 casavam, e o clique pedia 8. O relógio é a terceira.
+    Ela clica aqui (desligado -> ligado), desliga de novo pela janela GTK, e
+    clica aqui outra vez. O daemon diz `desligado` das duas vezes e o sentido é
+    o mesmo — as duas condições de 02/09 casavam, e o clique mandava DESLIGAR
+    uma emulação que já estava desligada. O relógio é a terceira condição.
     """
     from pacotes import a06_navegacao as mod
 
@@ -317,13 +325,14 @@ def test_a_memoria_expira_e_a_volta_pela_janela_gtk_nao_pula_numero(
     monkeypatch.setattr(mod, "time", relogio)
 
     ponte = _Ponte()
-    mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, ponte)
-    # Ela foi à janela GTK e pôs de volta em 6. Isso leva mais que a janela do
+    mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
+    # Ela foi à janela GTK e desligou de novo. Isso leva mais que a janela do
     # tique — é um gesto humano, noutra janela.
     relogio.agora += mod.MEMORIA_DE_UM_CLIQUE + 1.0
-    mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, ponte)
-    assert ponte.pedidos(MOUSE, "speed") == [7, 7], (
-        f"a memória atravessou a volta pela janela GTK: {ponte.pedidos(MOUSE, 'speed')}")
+    mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
+    assert ponte.pedidos(MOUSE, "enabled") == [True, True], (
+        f"a memória atravessou a volta pela janela GTK: "
+        f"{ponte.pedidos(MOUSE, 'enabled')}")
 
 
 def test_dentro_da_janela_do_tique_a_memoria_vale(
@@ -339,10 +348,10 @@ def test_dentro_da_janela_do_tique_a_memoria_vale(
     monkeypatch.setattr(mod, "time", relogio)
 
     ponte = _Ponte()
-    mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, ponte)
+    mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
     relogio.agora += mod.MEMORIA_DE_UM_CLIQUE / 2
-    mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, ponte)
-    assert ponte.pedidos(MOUSE, "speed") == [7, 8]
+    mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
+    assert ponte.pedidos(MOUSE, "enabled") == [True, False]
 
 
 def test_a_janela_da_memoria_cobre_mais_de_um_tique() -> None:
