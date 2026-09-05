@@ -29,6 +29,7 @@ dez páginas. Fica no piloto, que é quem já tem a mesa na mão.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import argparse
@@ -176,6 +177,35 @@ FRASE_DA_PAGINA_QUE_MORREU = "A tela parou de responder e foi recarregada."
 #: existe: uma página que NÃO é do mockup (um erro de carga, um `about:blank`)
 #: não tem este título e a guarda a pega.
 TITULO_DE_QUALQUER_ABA = "Hefesto — aba "
+
+
+def _a_pagina_pedida(pedido: str) -> str:
+    """Resolve o que veio no ``--abre`` para o nome de arquivo da página.
+
+    ACEITA AS TRÊS FORMAS QUE ALGUÉM DIGITA, e a razão é medida: o `--abre`
+    dizia só *"abrir direto numa aba"* e passava a string CRUA ao
+    `onde.pagina`. `--abre 10` virava `paginas/10`, o WebKit carregava a
+    página de erro dele, o piloto seguia o passeio e o relatório saía com as
+    dez abas zeradas — **rc=0 sobre uma foto que dizia "No such file"**.
+
+    * ``"10"``            → ``"10-perfis.html"``
+    * ``"10-perfis"``     → ``"10-perfis.html"``
+    * ``"10-perfis.html"`` → ele mesmo
+
+    O que não casar com nenhuma página volta INTACTO — quem reprova é o
+    `_ir`, que confere a existência do arquivo. Adivinhar aqui esconderia o
+    erro de digitação dela dentro de uma aba que ela não pediu.
+    """
+    pedido = (pedido or "").strip()
+    if not pedido:
+        return pedido
+    nomes = [caminho.name for caminho in onde.paginas(publicado=True)]
+    if pedido in nomes:
+        return pedido
+    for nome in nomes:
+        if nome == f"{pedido}.html" or nome.split("-", 1)[0] == pedido:
+            return nome
+    return pedido
 
 #: O BOOTSTRAP: uma função de pintura, genérica, para as dez.
 #:
@@ -2799,7 +2829,16 @@ class Piloto:
 
     def _ir(self, pagina: str) -> bool:
         """Abre uma aba. `False` para o GLib — ver `_proximo_da_fila`."""
-        self.view.load_uri(onde.pagina(pagina, publicado=True).as_uri())
+        alvo = onde.pagina(_a_pagina_pedida(pagina), publicado=True)
+        if not alvo.exists():
+            # ARQUIVO QUE NÃO EXISTE NÃO É NAVEGAÇÃO: o WebKit carrega a
+            # página de erro DELE, o piloto segue o passeio e o relatório sai
+            # com a tabela das dez abas zerada — verde sobre o vazio.
+            # MEDIDO EM 05/09/2026 com `--abre 10`: a foto saiu com "Error
+            # opening file .../paginas/10" e o comando devolveu rc=0.
+            self.tela._morrer(f"não existe a página pedida: {alvo.name}")
+            return False
+        self.view.load_uri(alvo.as_uri())
         return False
 
     def _relatar(self) -> bool:
@@ -2942,7 +2981,10 @@ def main() -> None:
     p.add_argument("--parada", type=int, default=900,
                    help="ms em cada aba durante o passeio")
     p.add_argument("--foto", default="")
-    p.add_argument("--abre", default="", help="abrir direto numa aba")
+    p.add_argument("--abre", default="",
+                   help="abrir direto numa aba: o número (`10`), o nome sem "
+                        "extensão (`10-perfis`) ou o arquivo "
+                        "(`10-perfis.html`). Página que não existe REPROVA")
     p.add_argument("--prova-no-aparelho", action="store_true",
                    help="clica CADA gesto da aba, um por vez, e mede o que mudou "
                         "no estado do daemon — a prova que ela pediu")
@@ -3002,32 +3044,51 @@ def main() -> None:
     ondas_de_som.ligar(not args.sem_ondas)
 
     piloto = Piloto(args)
-    if args.prova_de_mockup:
-        # ESPERA A PRIMEIRA PÁGINA CONFIRMAR, e não um relógio.
-        #
-        # MEDIDO EM 04/09/2026: com o `timeout_add(900, ...)` a régua navegava
-        # ANTES de a carga inicial confirmar, e a confirmação chegava com o
-        # título vazio — `carregou OUTRA página: título ''`. A janela morria, a
-        # régua imprimia o cabeçalho e saía **rc=0 sem medir uma aba**.
-        #
-        # O relógio era a suposição; `na_aba` é o FATO. É a mesma lição do
-        # `_confirmar_a_pagina` um andar abaixo: *quem diz que a carga deu certo
-        # é a PÁGINA, não o evento nem o URI* — e não é o cronômetro.
-        def _quando_a_pagina_estiver_de_pe() -> bool:
+
+    def _quando_a_pagina_estiver_de_pe(acao: Callable[[], Any]) -> None:
+        """Agenda ``acao`` para o instante em que a PÁGINA confirmar — não o relógio.
+
+        MEDIDO EM 04/09/2026: com um `timeout_add` fixo, quem navegava antes de
+        a carga inicial confirmar recebia a confirmação com o título VAZIO —
+        `carregou OUTRA página: título ''`. A janela morria, e a régua saía
+        **rc=0 sem medir nada**.
+
+        **A CURA NASCEU APLICADA A UMA DAS QUATRO, e as outras três ficaram com
+        o relógio — 05/09/2026.** `--abre 10 --foto` reproduzia o mesmo
+        `título ''` em toda execução: `_ir` disparava aos 400 ms, antes de a
+        primeira página confirmar. Uma cura que conhece a causa e cobre um
+        chamador só deixa a próxima pessoa remedindo o mesmo defeito — foi o
+        que aconteceu com a frente da aba 10, que teve de escrever um driver
+        próprio.
+
+        O relógio era a suposição; `na_aba` é o FATO. É a mesma lição do
+        `_confirmar_a_pagina` um andar abaixo: *quem diz que a carga deu certo
+        é a PÁGINA, não o evento nem o URI* — e não é o cronômetro.
+        """
+
+        def _tique() -> bool:
             if piloto.tela.morreu is not None:
                 return False  # a janela já morreu; o rc de `main` acusa
             if not piloto.tela.na_aba:
                 return True   # ainda não confirmou: volta no próximo tique
-            piloto._provar_mockup()
+            acao()
             return False
 
-        GLib.timeout_add(120, _quando_a_pagina_estiver_de_pe)
+        GLib.timeout_add(120, _tique)
+
+    if args.prova_de_mockup:
+        _quando_a_pagina_estiver_de_pe(piloto._provar_mockup)
     if args.prova_no_aparelho:
-        GLib.timeout_add(2500, piloto._provar_no_aparelho)
+        # A ESPERA EXTRA CONTINUA, e é outra coisa: a página de pé não quer
+        # dizer daemon respondido. Estes 2,5 s são para o primeiro tique pintar
+        # antes de alguém clicar no que ele pintou.
+        _quando_a_pagina_estiver_de_pe(
+            lambda: GLib.timeout_add(2500, piloto._provar_no_aparelho))
     if args.prova_clique:
-        GLib.timeout_add(2000, piloto._provar_cliques)
+        _quando_a_pagina_estiver_de_pe(
+            lambda: GLib.timeout_add(2000, piloto._provar_cliques))
     if args.abre:
-        GLib.timeout_add(400, lambda: piloto._ir(args.abre))
+        _quando_a_pagina_estiver_de_pe(lambda: piloto._ir(args.abre))
     Gtk.main()
 
     # O RC DIZ A VERDADE SOBRE A MEDIÇÃO — e é o que faltava.
@@ -3039,8 +3100,13 @@ def main() -> None:
     #
     # Vale para as TRÊS provas, não só para a que falhou: o defeito é da forma
     # de sair, não da régua que o revelou.
-    e_regua = bool(args.prova_de_mockup or args.prova_no_aparelho or args.prova_clique)
-    if e_regua and piloto.tela.morreu is not None:
+    #
+    # **E VALE PARA TODA EXECUÇÃO — 05/09/2026.** O gate era `e_regua`, e por
+    # isso `--abre 99` imprimia `ERRO DE CARGA` e saía rc=0: quem chamasse o
+    # piloto num script leria verde sobre uma janela morta. Página que morreu é
+    # execução que falhou, com ou sem régua ligada; a diferença entre os dois
+    # casos é só a FRASE, e ela continua abaixo.
+    if piloto.tela.morreu is not None:
         print(f"\nREPROVA: a página morreu e nada foi medido — {piloto.tela.morreu}",
               file=sys.stderr)
         raise SystemExit(1)
