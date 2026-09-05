@@ -291,6 +291,33 @@ def _opcoes_da_pagina(publicado: bool, chave: str) -> set[str] | None:
     return set(re.findall(r"<option[^>]*>(.*?)</option>", bloco.group(1)))
 
 
+#: A BARRA NÃO É UMA LISTA, e a régua acima só sabia perguntar a listas.
+#: Nasceu em 05/09/2026, com a decisão dela — *"velocidade do cursor e da
+#: rolagem coloca um slicer pra cada"*: as duas linhas deixaram de ser um
+#: `<select>` e viraram `<input type="range">`, e a régua passou a reprovar
+#: dizendo *"a página não tem `<select>` com esse endereço"* — verdade, e
+#: irrelevante. Afrouxá-la (pular todo campo sem `<select>`) teria deixado de
+#: medir DUAS linhas em que o dublê pode mandar número fora da faixa, que é o
+#: mesmo defeito com outro nome. Ela aprendeu a perguntar à faixa.
+_TRILHO = r'<input[^>]*type="range"[^>]*data-campo="{}"[^>]*>'
+
+
+def _faixa_da_pagina(publicado: bool, chave: str) -> tuple[int, int] | None:
+    """O `min`/`max` daquele `<input type=range>`, ou ``None`` se não é barra."""
+    import onde
+
+    doc = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
+    bloco = re.search(_TRILHO.format(re.escape(chave)), doc)
+    if not bloco:
+        return None
+    tag = bloco.group(0)
+    minimo = re.search(r'\bmin="(-?\d+)"', tag)
+    maximo = re.search(r'\bmax="(-?\d+)"', tag)
+    if not minimo or not maximo:
+        return None
+    return int(minimo.group(1)), int(maximo.group(1))
+
+
 @pytest.mark.parametrize("publicado", OS_DOIS_MUNDOS)
 def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
     """As 22 escolhas do dublê têm de ser oferecidas pela lista daquela linha.
@@ -321,20 +348,34 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
             continue
         valor = str(declarados.get((campo.dono, campo.chave),
                                    declarados.get(("", campo.chave))))
+        faixa = _faixa_da_pagina(publicado, campo.chave)
+        if faixa is not None:
+            # A LINHA É UMA BARRA: a pergunta muda de "está na lista?" para
+            # "cabe na faixa?", e o estrago que ela evita é o mesmo — um número
+            # fora do `min`/`max` faz o `<input>` aparar em silêncio, e o que
+            # fica na tela deixa de ser o que o pacote disse.
+            minimo, maximo = faixa
+            assert minimo <= int(valor) <= maximo, (
+                f"{campo.endereco}: na página {onde_estou} o dublê manda "
+                f"{valor!r} e a barra vai de {minimo} a {maximo} — o navegador "
+                "apara sem dizer nada, e a tela passa a AFIRMAR outro número.")
+            conferidos += 1
+            continue
         oferece = _opcoes_da_pagina(publicado, campo.chave)
         assert oferece is not None, (
-            f"{campo.endereco}: a página {onde_estou} não tem `<select>` com "
-            "esse endereço")
+            f"{campo.endereco}: a página {onde_estou} não tem `<select>` nem "
+            "`<input type=range>` com esse endereço")
         assert valor in oferece, (
             f"{campo.endereco}: na página {onde_estou} o dublê manda {valor!r} "
             f"e a lista oferece {sorted(oferece)} — o `escrever()` devolveria 0 "
             "em silêncio, e o que ficaria na tela é a `<option selected>` que o "
             "desenho crava. O campo não para: ele passa a AFIRMAR o contrário.")
         conferidos += 1
-    assert conferidos == 22, (
-        f"conferi {conferidos} listas na página {onde_estou} e a aba tem 22 (as "
-        "21 linhas de botão mais a 'Função do teclado') — se o número caiu, um "
-        "`<select>` perdeu o endereço e saiu da conferência sem reprovar nada.")
+    assert conferidos == 24, (
+        f"conferi {conferidos} linhas na página {onde_estou} e a aba tem 24 (as "
+        "21 linhas de botão, a 'Função do teclado' e as DUAS barras de "
+        "velocidade) — se o número caiu, uma linha perdeu o endereço e saiu da "
+        "conferência sem reprovar nada.")
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):

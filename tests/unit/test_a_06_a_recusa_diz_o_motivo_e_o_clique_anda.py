@@ -119,7 +119,7 @@ def test_a_velocidade_recusada_diz_por_que(bloqueio: str) -> None:
 
     ponte = _Ponte({"status": "failed", "bloqueio": bloqueio})
     with pytest.raises(RuntimeError) as caiu:
-        mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, ponte)
+        mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor", "valor": "7"}, ponte)
     assert str(caiu.value) == frase_da_recusa_do_mouse({"bloqueio": bloqueio}), (
         f"a tela diria {caiu.value!r}, e o produto traduz esse motivo como "
         f"{frase_da_recusa_do_mouse({'bloqueio': bloqueio})!r}")
@@ -135,7 +135,7 @@ def test_a_recusa_sem_motivo_nao_vira_queda_de_linha() -> None:
 
     ponte = _Ponte({"status": "failed"})
     with pytest.raises(RuntimeError) as caiu:
-        mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, ponte)
+        mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor", "valor": "7"}, ponte)
     assert str(caiu.value) == frase_da_recusa_do_mouse({}), caiu.value
 
 
@@ -144,7 +144,7 @@ def test_sem_resposta_continua_sendo_sem_resposta() -> None:
     from pacotes import a06_navegacao as mod
 
     with pytest.raises(RuntimeError, match="não respondeu"):
-        mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"},
+        mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor", "valor": "7"},
                        _Ponte(muda=True))
 
 
@@ -153,7 +153,7 @@ def test_o_ok_nao_reclama_de_nada() -> None:
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte({"status": "ok", "enabled": True})
-    mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, ponte)
+    mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor", "valor": "7"}, ponte)
     assert ponte.chamadas == [
         ("mouse.emulation.set", {"speed": 7, "origin": "manual"})]
 
@@ -208,83 +208,102 @@ def test_o_teclado_recusado_sem_bloco_nao_culpa_o_hefesto_de_estar_morto() -> No
 
 
 # ---------------------------------------------------------------------------
-# 2. O SEGUNDO CLIQUE ANDA
+# 2. A BARRA MANDA O NÚMERO INTEIRO — e o que a memória curava não existe mais
 # ---------------------------------------------------------------------------
-def test_dois_cliques_no_mesmo_tique_andam_dois() -> None:
-    """O `ctx` não muda entre eles — é exatamente o caso medido."""
+# **A SEÇÃO INTEIRA FOI REESCRITA EM 05/09/2026, e a razão é uma decisão dela:**
+# *"velocidade do cursor e da rolagem coloca um slicer pra cada"*. Até aqui as
+# duas linhas eram um par de botões `-`/`+`, e os gestos `vel-cursor-menos` e
+# `vel-cursor-mais` somavam ±1 ao número do ÚLTIMO TIQUE (500 ms). Daí vinha
+# tudo o que esta seção media: a memória `_PEDIDO`, o `_partir_de`, o
+# `_reservar`, as três condições que a desligam.
+#
+# **UMA BARRA NÃO TEM DE ONDE PARTIR.** Ela manda o número inteiro, e a partida
+# é o polegar dela — não há passo engolido a curar. Os quatro testes que
+# mediam a memória da VELOCIDADE não medem mais nada: o produto que eles
+# guardavam saiu com os botões.
+#
+# A MEMÓRIA CONTINUA VIVA E CONTINUA COBRADA — pelo interruptor "Status do
+# Modo", que tem UM gesto e por isso depende dela para o segundo clique ser
+# *desfaça*. As cinco mordidas do `test_a_06_o_segundo_clique_nao_e_engolido.py`
+# continuam de pé para ele.
+#
+# O QUE ENTRA NO LUGAR são as três coisas que a barra pode errar, e nenhuma
+# delas existia antes: mandar sem número, mandar fora da faixa, e consultar o
+# tique em vez do polegar.
+
+
+def test_a_barra_sem_numero_reprova_e_nao_manda_nada() -> None:
+    """Clicar no rótulo ao lado da barra não pode virar um pedido em branco.
+
+    O `data-hef-alvo="valor"` do `<input type=range>` faz o ouvinte mandar
+    `valor: alvo.value`. Um clique que NÃO nasce da barra chega sem `valor` —
+    e mandar `speed` vazio ao daemon seria pedir que ele adivinhasse.
+    """
+    from pacotes import a06_navegacao as mod
+
+    ponte = _Ponte()
+    with pytest.raises(RuntimeError, match="não mandou número nenhum"):
+        mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor"}, ponte)
+    assert ponte.chamadas == [], (
+        "a barra sem número chegou a falar com o daemon — o pedido em branco "
+        f"virou uma chamada: {ponte.chamadas}")
+
+
+def test_dois_arrastes_mandam_os_dois_numeros() -> None:
+    """Cada arraste é absoluto: o `ctx` não muda entre eles e não precisa mudar.
+
+    É o mesmo caso que os `+`/`-` erravam — dois gestos dentro do mesmo tique —,
+    e com a barra ele é trivial por construção. A régua fica porque o caso é o
+    mesmo, e porque uma volta a `_partir_de` faria o segundo número sumir.
+    """
     from pacotes import a06_navegacao as mod
 
     ctx, ponte = _ctx(speed=DEFAULT_MOUSE_SPEED), _Ponte()
-    for _ in range(3):
-        mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, ponte)
-    pedidos = [p["speed"] for _m, p in ponte.chamadas]
-    assert pedidos == [DEFAULT_MOUSE_SPEED + 1, DEFAULT_MOUSE_SPEED + 2,
-                       DEFAULT_MOUSE_SPEED + 3], (
-        f"três cliques no `+` dentro do mesmo tique pediram {pedidos} — o "
-        "segundo e o terceiro não andaram.")
+    for numero in (9, 4, 11):
+        mod.vel_cursor(ctx, {"gesto": "vel-cursor", "valor": str(numero)}, ponte)
+    assert [p["speed"] for _m, p in ponte.chamadas] == [9, 4, 11]
 
 
-def test_quando_o_daemon_fala_a_memoria_e_largada() -> None:
-    """O tique chegou: a partida volta a ser o daemon, e não o alvo pendente.
+def test_a_barra_nao_consulta_o_tique() -> None:
+    """O número vem do polegar dela, e o estado do daemon não entra na conta.
 
-    É o que impede a memória de virar uma segunda verdade sobre a velocidade.
+    A MORDIDA: some o valor ao `ctx` em `_velocidade` e esta régua reprova —
+    é o retorno da partida-pelo-tique que a barra existe para não ter.
     """
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte()
-    mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor-mais"}, ponte)
-    # O daemon aplicou e o tique trouxe 7; o clique seguinte parte de 7.
-    mod.vel_cursor(_ctx(speed=7), {"gesto": "vel-cursor-mais"}, ponte)
-    assert [p["speed"] for _m, p in ponte.chamadas] == [7, 8]
-
-    # E se ela mexer pela janela GTK, o daemon diz outro número e a memória
-    # também é largada — não há caminho em que ela sobreviva a uma discordância.
-    mod.vel_cursor(_ctx(speed=3), {"gesto": "vel-cursor-mais"}, ponte)
-    assert ponte.chamadas[-1][1]["speed"] == 4
+    # O daemon diz 3; o polegar dela diz 10. Vale o polegar.
+    mod.vel_cursor(_ctx(speed=3), {"gesto": "vel-cursor", "valor": "10"}, ponte)
+    assert ponte.chamadas[0][1]["speed"] == 10
 
 
-def test_inverter_o_lado_parte_do_daemon() -> None:
-    """`+` e depois `-` dentro do mesmo tique não é "somar duas vezes".
+def test_a_barra_apara_na_faixa_e_a_faixa_tem_dono() -> None:
+    """Número fora do `min`/`max` é aparado aqui, e a faixa não é digitada.
 
-    Repetir é *ande mais*; inverter em meio segundo é ambíguo, e a leitura
-    conservadora é a de sempre — que é o que o `PROVAS` desta aba já cobrava.
+    `MOUSE_SPEED_MIN`/`MAX` vêm de `integrations/uinput_mouse.py`, o mesmo
+    módulo de onde o `set_speed` do daemon tira a sua — aparar aqui é a rede
+    para o dia em que alguém publicar a página sem regerar o desenho, não uma
+    segunda verdade.
     """
     from pacotes import a06_navegacao as mod
 
-    ctx, ponte = _ctx(speed=6), _Ponte()
-    mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, ponte)
-    mod.vel_cursor(ctx, {"gesto": "vel-cursor-menos"}, ponte)
-    assert [p["speed"] for _m, p in ponte.chamadas] == [7, 5]
-
-
-def test_no_teto_a_memoria_nao_prende_o_clique() -> None:
-    """Sem apará-la, a memória guardaria um número que o daemon nunca confirma.
-
-    É o defeito que o `max/min` de `_de_onde_partir` existe para não criar: a
-    faixa continua com UM dono — `MOUSE_SPEED_MIN`/`MAX` são importados de
-    `integrations/uinput_mouse.py`, não digitados.
-    """
-    from pacotes import a06_navegacao as mod
-
-    ctx, ponte = _ctx(speed=MOUSE_SPEED_MAX), _Ponte()
-    mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, ponte)
-    mod.vel_cursor(ctx, {"gesto": "vel-cursor-mais"}, ponte)
-    assert [p["speed"] for _m, p in ponte.chamadas] == [MOUSE_SPEED_MAX] * 2, (
-        "o clique no teto pediu um número fora da faixa e a memória o guardou")
-
-    ponte.chamadas.clear()
-    mod.vel_cursor(_ctx(speed=MOUSE_SPEED_MIN), {"gesto": "vel-cursor-menos"},
-                   ponte)
-    assert ponte.chamadas[0][1]["speed"] == MOUSE_SPEED_MIN
+    ponte = _Ponte()
+    mod.vel_cursor(_ctx(), {"gesto": "vel-cursor",
+                           "valor": str(MOUSE_SPEED_MAX + 5)}, ponte)
+    mod.vel_cursor(_ctx(), {"gesto": "vel-cursor",
+                           "valor": str(MOUSE_SPEED_MIN - 5)}, ponte)
+    assert [p["speed"] for _m, p in ponte.chamadas] == [
+        MOUSE_SPEED_MAX, MOUSE_SPEED_MIN]
 
 
 def test_a_rolagem_tem_a_faixa_dela() -> None:
-    """Duas faixas, dois donos, e nenhum dos dois digitado aqui."""
+    """Duas barras, dois donos, e nenhum dos dois digitado aqui."""
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte()
-    mod.vel_rolagem(_ctx(scroll_speed=SCROLL_SPEED_MIN),
-                    {"gesto": "rolagem-menos"}, ponte)
+    mod.vel_rolagem(_ctx(), {"gesto": "vel-rolagem",
+                            "valor": str(SCROLL_SPEED_MIN - 3)}, ponte)
     assert ponte.chamadas[0][1]["scroll_speed"] == SCROLL_SPEED_MIN
 
 
