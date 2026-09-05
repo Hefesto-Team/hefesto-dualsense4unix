@@ -450,13 +450,13 @@ class TestImportarERestaurar:
         assert janela.draft.source_name == "Pragmata"
         assert janela._active_profile_name == "Pragmata"
 
-    def test_restaurar_padrao_deixa_o_rascunho_no_meu_perfil(
+    def test_restaurar_padrao_deixa_o_rascunho_no_perfil_padrao(
         self, disco: Path
     ) -> None:
         """R-08/C9: rascunho e NOME trocam como unidade, também no restauro."""
         asset = footer_actions._meu_perfil_asset()
         if asset is None:
-            pytest.skip("preset meu_perfil.json ausente em todos os candidatos")
+            pytest.skip("preset do perfil padrão ausente em todos os candidatos")
         janela = _janela_fake(DraftConfig.from_profile(_perfil_do_jogo()), "Pragmata")
 
         dialogos = MagicMock()
@@ -466,8 +466,8 @@ class TestImportarERestaurar:
         ):
             janela.on_restore_default()
 
-        assert janela._active_profile_name == "meu_perfil"
-        assert janela.draft.source_name == "meu_perfil"
+        assert janela._active_profile_name == "Personalizado"
+        assert janela.draft.source_name == "Personalizado"
 
 
 # ---------------------------------------------------------------------------

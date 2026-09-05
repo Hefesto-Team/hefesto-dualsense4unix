@@ -2,9 +2,15 @@
 
 Valida que cada JSON é aceito pelo schema pydantic e que os params de
 trigger são reconhecidos por build_from_name. Cobre os 9 arquivos que a
-fábrica embarca depois da poda de 26/08/2026:
+fábrica embarca depois da poda de 26/08/2026 e da renomeação de 05/09/2026:
   acao.json, aventura.json, corrida.json, esportes.json, fallback.json,
-  fps.json, meu_perfil.json, navegacao.json, point_and_click.json.
+  fps.json, navegacao.json, personalizado.json, point_and_click.json.
+
+O `meu_perfil.json` VIROU `personalizado.json` em 05/09/2026, por decisão dela:
+*"Meu_perfil como perfil default não deveria existir. Deixa ou Meu Perfil ou
+Personalizado. acho esse melhor."* A migração one-shot que renomeia o arquivo
+no disco DELA — e repõe o `session.json` e o `active_profile.txt` para o nome
+novo — é `loader.migrate_default_profile_name`.
 
 A PODA DE 26/08/2026
 ---------------------
@@ -86,8 +92,8 @@ EXPECTED_PRESETS = {
         "lightbar": (200, 20, 20),
         "lightbar_brightness": 0.9,
     },
-    "meu_perfil": {
-        "name": "meu_perfil",
+    "personalizado": {
+        "name": "Personalizado",
         "priority": 1,
         "triggers_left_mode": "Off",
         "triggers_right_mode": "Off",
@@ -205,21 +211,32 @@ class TestPresetValida:
         assert p.version == 1
 
 
-class TestPresetMeuPerfil:
+class TestPresetPersonalizado:
     def test_match_any(self) -> None:
-        """meu_perfil.json deve ter match type=any (slot universal)."""
+        """personalizado.json deve ter match type=any (slot universal)."""
         from hefesto_dualsense4unix.profiles.schema import MatchAny
-        p = _load_preset("meu_perfil")
-        assert isinstance(p.match, MatchAny), "meu_perfil deve ter MatchAny"
+        p = _load_preset("personalizado")
+        assert isinstance(p.match, MatchAny), "Personalizado deve ter MatchAny"
+
+    def test_nome_nao_e_slug(self) -> None:
+        """PERFIL-PADRAO-PERSONALIZADO-01: o asset traz NOME DE GENTE.
+
+        Decisão dela, 05/09/2026: *"Meu_perfil como perfil default nao deveria
+        existir. Deixa ou Meu Perfil ou Personalizado. acho esse melhor."* O
+        `Profile.name` é o que a aba Perfis MOSTRA — o asset gravava o slug
+        `meu_perfil` ali, e era isso que ela lia na lista.
+        """
+        p = _load_preset("personalizado")
+        assert p.name == "Personalizado"
 
     def test_priority_acima_do_fallback(self) -> None:
-        """meu_perfil.json deve ter priority=1 (catch-all pessoal acima do fallback nu).
+        """personalizado.json deve ter priority=1 (catch-all pessoal acima do fallback nu).
 
-        Empata-quebra: meu_perfil (priority 1) vence o fallback.json (priority 0)
-        e auto-ativa como slot universal; perfis de jogo (priority 10-70) ainda
-        ganham de ambos.
+        Empata-quebra: Personalizado (priority 1) vence o fallback.json
+        (priority 0) e auto-ativa como slot universal; perfis de jogo
+        (priority 10-70) ainda ganham de ambos.
         """
-        p = _load_preset("meu_perfil")
+        p = _load_preset("personalizado")
         assert p.priority == 1
 
     def test_brightness_100_por_cento(self) -> None:
@@ -227,7 +244,7 @@ class TestPresetMeuPerfil:
         destoava em 0.4 (queixa "brightness deveria ser 100% e não é") —
         decisão de produto: alinhar o asset ao default (falha-sem: antes
         deste fix o asset tinha 0.4)."""
-        p = _load_preset("meu_perfil")
+        p = _load_preset("personalizado")
         assert abs(p.leds.lightbar_brightness - 1.0) < 1e-6
 
 
@@ -502,7 +519,11 @@ class TestOsPodadosNaoVoltam:
             "esportes.json",
             "fallback.json",
             "fps.json",
-            "meu_perfil.json",
             "navegacao.json",  # (noqa-acento) nome literal de arquivo
+            # O `meu_perfil.json` ESTAVA AQUI e virou este, em 05/09/2026, por
+            # decisão dela: *"Meu_perfil como perfil default não deveria
+            # existir. Deixa ou Meu Perfil ou Personalizado. acho esse
+            # melhor."* A conta continua NOVE — foi renomeação, não poda.
+            "personalizado.json",
             "point_and_click.json",
         ], f"a fábrica mudou de tamanho sem passar por aqui: {presets}"

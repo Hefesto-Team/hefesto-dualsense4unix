@@ -5,8 +5,9 @@
 #   - Se o diretório de perfis estiver VAZIO (primeira instalação), copia
 #     todos os JSONs de assets/profiles_default/.
 #   - Se já houver perfis (reinstalação), NÃO sobrescreve nenhum existente.
-#   - EXCEÇÃO: meu_perfil.json é sempre copiado SE AUSENTE (slot do usuário
-#     deve sempre existir), mas nunca sobrescrito se já existe.
+#   - EXCEÇÃO: personalizado.json é sempre copiado SE AUSENTE (slot do usuário
+#     deve sempre existir), mas nunca sobrescrito se já existe — e nunca
+#     copiado quando o meu_perfil.json antigo ainda ocupa o slot dela.
 #
 # Uso:
 #   ./scripts/install_profiles.sh [ROOT_DIR]
@@ -53,6 +54,15 @@ for src in "${SRC_DIR}"/*.json; do
     if grep -qxF "${fname}" "${MARKER}"; then
         continue
     fi
+    # PERFIL-PADRAO-PERSONALIZADO-01: o slot dela já existe sob o nome antigo.
+    # Copiar aqui daria a ela DOIS catch-all disputando o controle. Registra
+    # sem copiar; quem renomeia é `loader.migrate_default_profile_name`.
+    # Espelha a mesma recusa em `profiles/loader.py:seed_default_presets` — o
+    # marker é contrato compartilhado entre os dois semeadores.
+    if [[ "${fname}" == "personalizado.json" && -f "${DEST_DIR}/meu_perfil.json" ]]; then
+        printf '%s\n' "${fname}" >> "${MARKER}"
+        continue
+    fi
     if [[ -f "${dest}" ]]; then
         # Presente na 1ª execução (v3.10/editado): registra sem copiar.
         printf '%s\n' "${fname}" >> "${MARKER}"
@@ -60,8 +70,8 @@ for src in "${SRC_DIR}"/*.json; do
     fi
     cp -f "${src}" "${dest}"
     printf '%s\n' "${fname}" >> "${MARKER}"
-    if [[ "${fname}" == "meu_perfil.json" ]]; then
-        printf '      copiado: meu_perfil.json (slot do usuário criado)\n'
+    if [[ "${fname}" == "personalizado.json" ]]; then
+        printf '      copiado: personalizado.json (slot do usuário criado)\n'
     else
         printf '      copiado: %s\n' "${fname}"
     fi
