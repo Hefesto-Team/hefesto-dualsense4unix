@@ -344,15 +344,32 @@ def test_a_identidade_sai_com_um_ponto_so():
     assert "<" not in _sem_marcacao(do_produto)
 
 
-def test_a_mesa_desta_aba_nao_emite_valor(emitidos):
-    """Nada da MESA tem endereço nesta página — e emitir sem endereço custou caro.
+def test_a_mesa_desta_aba_so_emite_o_degrau_geral(emitidos):
+    """A MESA emite UM campo, e ele tem endereço — 04/09/2026, decisão [05] dela.
 
-    `rumble_policy` e `rumble_passthrough` não têm `data-campo` nenhum: o degrau
-    aceso é uma CLASSE, e o pintor não mexe em classe. O que a chave `forca`
-    fazia era só destruição.
+    **FATO SUBSTITUÍDO**, e a régua anterior dizia *"nada da MESA tem endereço
+    nesta página"*. Era verdade e deixou de ser: a linha de MESA (`.vib-mesa`)
+    nasceu com os quatro degraus do ajuste geral, e o `degrau-mesa` é o campo
+    que os acende. A razão de então continua valendo, virada do avesso — o
+    degrau aceso é uma CLASSE, e é o alvo `classe` que este campo alimenta.
+
+    O QUE CONTINUA PROIBIDO é emitir um campo SEM endereço na página: era o que
+    a chave `forca` fazia, e o que ela fazia era só destruição. Por isso a régua
+    passou de "a mesa não emite" para "a mesa emite exatamente o que a página
+    sabe receber".
     """
+    import onde
+
     pacote, _ = emitidos
-    assert pacote["mesa"] == {}, f"a mesa voltou a emitir: {pacote['mesa']}"
+    assert set(pacote["mesa"]) == {"degrau-mesa"}, (
+        f"a mesa emite {sorted(pacote['mesa'])} — e a página só tem endereço "
+        f"para o degrau geral")
+    bancada = onde.pagina(PAGINA).read_text(encoding="utf-8")
+    assert 'data-campo="degrau-mesa"' in bancada, (
+        "o `degrau-mesa` não tem onde cair no desenho — campo sem endereço é "
+        "pintura que não acontece, e ela é silenciosa dos dois lados")
+    assert pacote["mesa"]["degrau-mesa"], (
+        "o degrau da mesa saiu vazio com o daemon dizendo a política")
 
 
 def test_o_que_falta_esta_declarado(emitidos):
@@ -382,19 +399,33 @@ def test_o_que_falta_esta_declarado(emitidos):
     `test_a05_a_vibracao_aplica_e_fala.py`, com a mordida dos dois lados.
 
     A `barra:forca` SAIU no dia anterior — a barra virou arrastável e grava.
-    `lado:ligado` continua sem existir em linha nenhuma do produto, e
-    `barra:motor` continua esperando a palavra dela sobre o par `weak`/`strong`,
-    que viaja JUNTO ao daemon.
+
+    **E AS DUAS ÚLTIMAS SAÍRAM EM 04/09/2026, pela mesma regra e no mesmo dia
+    em que ela decidiu as duas:**
+
+    * `barra:motor` esperava *a palavra dela* sobre o par `weak`/`strong`. Ela
+      veio, e desfez a premissa: a barra **não manda o par** — ela é POLÍTICA
+      que MULTIPLICA o degrau, e as duas são independentes. O método existe
+      (`rumble.motores.set`), o gesto é `a05_vibracao.motor`;
+    * `forca:auto-da-mesa` dizia que pôr a MESA em `Auto` perdera o botão e que
+      o desenho era decisão dela. Ela escolheu a **linha de mesa embaixo da
+      grade** (decisão [05]), e o gesto é `a05_vibracao.forca_da_mesa`.
+
+    `lado:ligado` é o que sobra, e continua sem existir em linha nenhuma do
+    produto — nem campo no esquema, nem método de IPC, nem chave no `state_full`.
     """
     pacote, _ = emitidos
-    assert set(pacote["sem_dono"]) == {
-        "lado:ligado", "barra:motor", "forca:auto-da-mesa"}
+    assert set(pacote["sem_dono"]) == {"lado:ligado"}
     for chave, razao in pacote["sem_dono"].items():
         assert len(razao) > 80, f"{chave} declara sem dizer por quê"
-    # E OS DOIS QUE FECHARAM SÃO PINTADOS — sem isto, apagá-los da lista seria
-    # indistinguível de esconder a dívida debaixo do tapete.
+    # E O QUE FECHOU É PINTADO — sem isto, apagar da lista seria indistinguível
+    # de esconder a dívida debaixo do tapete.
     col = next(iter(pacote["colunas"].values()))
-    assert col["degrau"] == "balanceado", (
-        f"o degrau aceso saiu {col.get('degrau')!r} — ele é a `rumble_policy` "
-        "do daemon, e é o que separa a tela do desenho")
     assert "mult-teto" in col, "o `Máx` voltou a ser texto cravado no desenho"
+    assert pacote["mesa"].get("degrau-mesa") == "balanceado", (
+        "a linha de mesa não pinta o degrau geral — e era ela que a "
+        "`forca:auto-da-mesa` esperava")
+    for lado in ("e", "d"):
+        assert f"barra-{lado}" in col, (
+            f"a barra do motor {lado!r} não é pintada — era ela que a "
+            f"`barra:motor` esperava")

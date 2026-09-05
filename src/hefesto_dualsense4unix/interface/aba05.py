@@ -46,6 +46,8 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
 # irmão global). Digitar `200` aqui seria a segunda verdade que a régua desta
 # casa persegue — e o `150` que estava nesta linha já era exatamente isso.
 from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
+    MOTOR_PCT_MAX,
+    MOTOR_PCT_PADRAO,
     RUMBLE_CUSTOM_MULT_MAX,
 )
 
@@ -54,6 +56,11 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
 # dia a frase mudar no produto, o desenho muda junto e não fica um mockup
 # afirmando o que a tela já não diz.
 from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
+    SOLTAR_A_TRAVA,
+    TRAVA_EM_SILENCIO,
+    TRAVA_JOGO_CONTROLA,
+    estado_da_trava,
+    html_da_trava,
     html_do_estado,
     textos_do_estado,
 )
@@ -105,12 +112,41 @@ ESQ, DIR = MOTORES
 
 # ---------------------------------------------------------------------------
 # O ESTADO DE CADA CONTROLE NA MESA. Um mockup mostra uma cena, e esta cena foi
-# escolhida para ensinar: os quatro degraus de força aparecem uma vez cada, e os
-# lados desligados são dois — um à esquerda (P4) e um à direita (P1) —, que é o
-# que prova no desenho que o lado tem endereço.
+# escolhida para ensinar — e o que ela ensina agora são as DUAS decisões de
+# 04/09, nas duas colunas que estão VIVAS (P1 e P2; o P3 e o P4 são lugares
+# vazios desde 31/08, por ordem dela):
 #
-# O P1 é o que ela aprovou em 27/08 ("ok, foda… Tá fechado essa"), com os mesmos
-# números: Máximo, 150%, esquerdo desligado em 0, direito ligado em 60.
+#   P1  o AJUSTE PRÓPRIO, com a conta dela: Máximo (150%) e as duas barras de
+#       motor diferentes. O degrau aceso na coluna é dela.
+#   P2  o HERDADO — a decisão [05]: nenhum dos quatro degraus acende, porque
+#       este controle não tem ajuste próprio; quem está aceso é o `Auto` da
+#       LINHA DE MESA, que é o que o produto está usando nele. Sem UMA coluna
+#       viva assim o desenho não ensinaria a diferença, e a régua reprova.
+#   P2  também é o lado DESLIGADO, à esquerda, com a barra em 0 — *"este motor
+#       não treme neste perfil"*, que é o zero como escolha válida.
+#   P4  guarda o lado desligado à direita, para o dia em que a mesa encher.
+#
+# O `auto` MUDOU DE LUGAR, e é fato do produto: ele é o único degrau que **não
+# pode ser override de peça** (`profiles/schema.py` o recusa por unidade), então
+# ele só existe na MESA. Até 04/09 uma coluna o desenhava como escolha dela
+# naquele controle — um estado que o produto não sabe guardar.
+#
+# A CENA DO P1 É A CONTA DELA, 04/09/2026, com os números que ela escreveu:
+#
+#     "se eu tiver 150% do perfil de vibração e as duas linhas estiverem 100
+#      entao a vibração dos 2 será 150%, mas se so a do motor fraco tiver 100 e  # noqa-acento: citação literal dela
+#      a outrqa 50% então será 150 em um e 75% no outro entende?"
+#
+# Máximo (150%) · barra do motor FRACO (o direito) em 100 · barra do motor FORTE
+# (o esquerdo) em 50. `efetivo = degrau x barra`, e a coluna mostra os dois
+# fatores lado a lado.
+#
+# FATO SUBSTITUÍDO — as duas linhas anteriores diziam *"o P1 … esquerdo
+# desligado em 0, direito ligado em 60"*, e os números eram do tempo em que a
+# linha do motor era LEITURA (o par 0-255 que o jogo pediu). A partir do momento
+# em que ela decidiu que a barra é POLÍTICA que multiplica o degrau, `60 /255`
+# deixou de ser o que a linha mostra — mantê-lo ao lado faria a próxima pessoa
+# escolher entre duas escalas para a mesma barra.
 # ---------------------------------------------------------------------------
 # OS QUATRO DEGRAUS: o RÓTULO é dela, a CHAVE é do produto.
 #
@@ -168,6 +204,27 @@ TETO = round(RUMBLE_CUSTOM_MULT_MAX * 100)
 #: `mdc(30, 100, 150, 200) = 10`, que dá 21 paradas. No dia em que o produto
 #: acrescentar um degrau de 0,45, o passo vira 5 sozinho.
 PASSO = math.gcd(*(round(m * 100) for m in RUMBLE_POLICY_MULT.values()), TETO)
+
+#: O TETO DA BARRA DE CADA MOTOR — **100, e ele NÃO é o :data:`TETO` da linha
+#: "Personalizado"**. A diferença é a decisão dela de 04/09/2026, e ela está
+#: escrita no esquema (`MOTOR_PCT_MAX`): a barra do motor é o SEGUNDO fator, e
+#: quem amplifica é o degrau. `efetivo(motor) = degrau x barra(motor)`.
+#:
+#: Uma barra de motor acima de 100 daria à mesma peça **duas portas para o mesmo
+#: estouro** — e o número não se digita aqui pelo mesmo motivo de sempre: quem
+#: RECUSA o que passa dele é a borda do esquema, e a frase da recusa é dela.
+TETO_DO_MOTOR = MOTOR_PCT_MAX
+
+#: O PASSO DA BARRA DE MOTOR, e ele é DERIVADO como o irmão :data:`PASSO`: a
+#: regra é que a barra tenha uma parada em cima de **todo valor que a borda
+#: aceita**. O esquema aceita `int` de 0 a 100 (`motor_forte_pct`), logo o passo
+#: é 1 — qualquer outro esconderia números que o produto grava sem reclamar.
+PASSO_DO_MOTOR = 1
+
+#: O VALOR DE QUEM NÃO ARRASTOU NADA, do esquema (`MOTOR_PCT_PADRAO`). Ele é o
+#: que a peça sem opinião vale no motor, e o `state_full` o publica ao lado do
+#: mapa (`rumble_motor_pct_padrao`) justamente para a tela não o digitar.
+BARRA_DO_MOTOR_PADRAO = MOTOR_PCT_PADRAO
 
 # ---------------------------------------------------------------------------
 # AS FRASES QUE A JANELA ESTÁVEL TEM E ESTA ABA NÃO TINHA — 03/09/2026.
@@ -231,11 +288,42 @@ DICA_DOS_VALORES_QUE_PASSAM = _do_glade(
     r'(.*?)&lt;/i&gt;</property>',
     "a nota do card Testar motores")
 
+#: A CENA DA LINHA DE ESTADO POR COLUNA — D-14, 04/09/2026.
+#:
+#: `passthrough=True` é o estado NORMAL, e é o único que o desenho pode cravar:
+#: os dois travados carregam NÚMEROS que ninguém mediu (`fraca=160, forte=220`),
+#: e um mockup que os cravasse afirmaria uma trava que não existe — o mesmo
+#: defeito do punho aceso para sempre que o `_endereca_o_tremor` curou. Os dois
+#: outros estados a tela viva mostra; o `?` da linha os explica.
+#:
+#: SEPARADO DO :data:`CENA_DO_ESTADO` de propósito: aquele alimenta
+#: `textos_do_estado`, que consulta o ORÇAMENTO DA MÁQUINA, e acrescentar chaves
+#: lá arriscaria mudar a linha de mesa do desenho pela máquina de quem gera.
+CENA_DA_TRAVA = {"rumble_passthrough": True, "rumble_active": None}
+
+#: O DEGRAU DA MESA na cena — **`auto`, e não é enfeite**. Os quatro degraus
+#: continuam aparecendo uma vez cada, e agora no lugar CERTO de cada um: `auto`
+#: é o único que **não pode ser override de peça** (`profiles/schema.py`
+#: recusa-o por unidade, e `app/draft_config.with_controller_rumble` traduz o
+#: clique em "limpa o override"), logo ele só existe na MESA. Até 04/09 a coluna
+#: do P3 desenhava `auto` como se fosse escolha dela naquele controle — um
+#: estado que o produto não sabe guardar.
+FORCA_DA_MESA = "auto"
+
+#: A CHAVE `propria` É O QUE A DECISÃO [05] DELA ACRESCENTA — e ela é chave de  # (noqa-acento) chave da cena
+#: máquina, por isso sem acento. A coluna que **não tem
+#: ajuste próprio deixa de acender degrau e passa a apontar para a linha de
+#: mesa — *"herdado fica óbvio sem uma palavra a mais"*. O P2 é o caso, e ele é
+#: o caso NECESSÁRIO: a coluna dele mostra `auto`, que não pode ser dela.
 ESTADO = {
-    "p1": {"forca": "max",        "pct": 150, "esq": (False, 0),   "dir": (True, 60)},
-    "p2": {"forca": "balanceado", "pct": 100, "esq": (True, 120),  "dir": (True, 120)},
-    "p3": {"forca": "auto",       "pct": 70,  "esq": (True, 90),   "dir": (True, 90)},
-    "p4": {"forca": "economia",   "pct": 30,  "esq": (True, 40),   "dir": (False, 0)},
+    "p1": {"forca": "max",        "pct": 150, "propria": True,  # (noqa-acento) chave
+           "esq": (True, 50),   "dir": (True, 100)},
+    "p2": {"forca": FORCA_DA_MESA, "pct": 70, "propria": False,  # (noqa-acento) chave
+           "esq": (False, 0),   "dir": (True, 100)},
+    "p3": {"forca": "economia",   "pct": 30,  "propria": True,  # (noqa-acento) chave
+           "esq": (True, 100),  "dir": (True, 100)},
+    "p4": {"forca": "balanceado", "pct": 100, "propria": True,  # (noqa-acento) chave
+           "esq": (True, 100),  "dir": (False, 0)},
 }
 
 CSS = """
@@ -313,13 +401,27 @@ CSS = """
     grid-template-columns:var(--larg-rot) repeat(4,1fr);
     gap:var(--gap-col);
     --r-des:124px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
-    --r-acoes:74px;
+    --r-acoes:74px;--r-estado:20px;
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
+  /* A OITAVA LINHA É `minmax(--r-estado, auto)`, e é a ÚNICA elástica da grade.
+     Ela pode: é a ÚLTIMA, e a divisória de uma linha é o `::before` da célula de
+     BAIXO — não há célula depois desta, então nenhuma linha horizontal depende
+     da altura dela. O topo da faixa continua sendo a soma das sete fixas, que é
+     igual nas cinco colunas: as divisórias seguem nascendo no mesmo y, que é a
+     régua dela desde 30/08.
+     O PISO É O DE UMA SUBLINHA (20px = 11.5px x 1.5, arredondado): ele impede
+     que uma coluna de frase curta fique mais baixa que a vizinha, e não paga um
+     pixel a mais do que isso — o quadro desta aba já passa da dobra por causa
+     das três decisões de 04/09, e cada pixel de piso aqui é um pixel a mais de
+     rolagem. O TETO não existe porque a frase da trava carrega NÚMEROS
+     ("travada em fraca=160, forte=220"): cortá-la seria a linha que ocupa o
+     lugar e não informa — o defeito medido em 04/09 na linha de mesa. */
   .vib > div{
     display:grid;row-gap:var(--r-passo);
     grid-template-rows:var(--r-des) var(--r-nome) var(--r-forca) var(--r-barra)
-                       var(--r-motor) var(--r-motor) var(--r-acoes);
+                       var(--r-motor) var(--r-motor) var(--r-acoes)
+                       minmax(var(--r-estado),auto);
   }
   /* a barra vertical entre blocos irmãos — pedido dela */
   /* O PADDING SAIU DA COLUNA E FOI PARA AS CÉLULAS — 30/08/2026.
@@ -691,6 +793,67 @@ CSS = """
      hexadecimal, já declarado no `topo.html`. */
   .vib-estado .est.info{color:var(--cyan)}
   .vib-estado .est.info .sinal{color:var(--cyan)}
+
+  /* ---------- A LINHA DE ESTADO POR COLUNA — D-14, 04/09/2026 ----------
+     A peça é a `monta.ressalva` da ONDA0-F, e por isso não há aqui nem tamanho
+     de fonte nem cor de repouso: os dois moram na folha das dez
+     (`monta.CSS_FOLHA`). O que esta aba acrescenta são as DUAS coisas que são
+     desta tela: o `margin-top` (a folha o põe para uma linha que nasce ABAIXO de
+     um valor; aqui ela é uma FAIXA da grade, e o vão já é o `row-gap`) e os dois
+     tons, que são os MESMOS da linha de mesa logo abaixo — o nome do tom vem do
+     produto (`app/telas/vibracao.DIZ`/`.ALERTA`) e a cor é o token do tema.
+
+     O MARCADOR HERDA A COR DO TEXTO, como na linha de mesa: `diz` não é "bom" e
+     `alerta` não precisa de um segundo verde para negá-lo. É a mesma correção de
+     03/09 que tirou o verde do `●` do `diz`. */
+  .vib .ressalva{margin-top:0;display:flex;align-items:center}
+  .vib .ressalva .est{display:flex;gap:6px;align-items:flex-start}
+  .vib .ressalva .est .sinal{flex:0 0 auto;font-size:8px;line-height:2.1}
+  .vib .ressalva .est.alerta{color:var(--orange)}
+
+  /* ---------- A LINHA DE MESA — decisão [05] dela, 04/09/2026 ----------
+     *"Uma linha de MESA embaixo da grade."* Ela devolve o caminho para pôr a
+     mesa inteira em Auto — perdido em 03/09, quando a força virou POR CONTROLE
+     — e, no mesmo gesto, faz "herdado" ficar óbvio sem uma palavra a mais: a
+     coluna sem ajuste próprio deixa de acender degrau, e o único aceso na tela
+     é o desta linha.
+
+     FORA DA GRADE, e não dentro: as cinco colunas compartilham as alturas de
+     linha, e um degrau da mesa lá dentro empurraria as sete faixas de todas as
+     colunas. É a mesma razão pela qual a linha de estado da mesa mora fora da
+     grade, e não dentro dela.
+
+     A LARGURA DO RÓTULO É A MESMA DA PRIMEIRA COLUNA (`--larg-rot`, de
+     `medidas.py`), e o vão é o `--gap-col`: assim os quatro botões desta linha
+     começam exatamente onde começa a coluna do P1, e a linha lê como uma
+     continuação da tabela em vez de um bloco solto. */
+     A CLASSE É `.seg`, A MESMA DOS QUATRO DA COLUNA, e não uma classe nova: o
+     desenho do botão (altura, borda, o `.on` roxo, o `:hover`) mora no
+     `topo.html`, que é o esqueleto das dez. Uma classe própria aqui seria a
+     segunda gramática de botão de degrau na MESMA tela — e as duas divergiriam
+     no primeiro ajuste de tema. O que esta aba acrescenta é só a largura igual.
+
+     OS QUATRO DA MESMA LARGURA: `flex:1` sobre base zero é o que impede
+     "Balanceado" de ficar maior que "Auto". */
+  .vib-mesa{display:grid;grid-template-columns:var(--larg-rot) 1fr;
+            gap:var(--gap-col);align-items:center;margin:6px 4px 0}
+  .vib-mesa .seg button{flex:1 1 0;min-width:0;padding:0 8px;font-size:12px}
+  .vib-mesa .sec-rot{white-space:nowrap}
+
+  /* ---------- A NOTA DO TESTAR — decisão [02] dela, 04/09/2026 ----------
+     *"Só a nota do Testar sobe para a tela. A do Auto fica no `?`."*
+
+     ELA É A ÚNICA FRASE DESTA ABA QUE EXPLICA UM RESULTADO QUE A PRÓPRIA TELA
+     PRODUZ: por que um "Testar" com 220 sai fraco quando o degrau está em
+     Economia. Na janela estável ela é um rótulo em itálico, permanente, no
+     rodapé do card de testar (`rumble_info`, no `gui/main.glade`) — e é DE LÁ
+     que ela é lida, nunca redigitada (:data:`DICA_DOS_VALORES_QUE_PASSAM`).
+
+     O ITÁLICO E O TOM APAGADO SÃO OS DA JANELA ESTÁVEL, onde ela é
+     `<i>…</i>` em cor de comentário. Atravessa as cinco colunas porque é sobre
+     a tabela inteira, não sobre uma delas. */
+  .vib-nota{font-size:11.5px;line-height:1.5;color:var(--comment);
+            font-style:italic;margin:4px 4px 0}
 """
 
 # ---------------------------------------------------------------------------
@@ -763,7 +926,20 @@ CSS = """
 #: :func:`_barra` e `a05_vibracao.intensidade`. Ele é o único desta aba que
 #: chega por `change` e não por `click`: um `<input type=range>` não se "clica"
 #: no sentido útil, ele MUDA (`hefesto_vivo.py`, o ouvinte de `change`).
-PAPEIS_QUE_SAO_GESTO = ("forca", "testar", "parar", "intensidade")
+#: `motor` E `forca-mesa` ENTRARAM EM 04/09/2026, e os dois trazem gesto no
+#: mesmo commit — que é a única forma de entrar nesta lista sem a devolver ao
+#: defeito que ela nomeia:
+#:
+#: * `motor` era `data-hef` desde 03/09 porque a barra do motor não tinha dono
+#:   (`a05_vibracao.SEM_DONO["barra:motor"]`, que esperava a palavra dela). Ela
+#:   decidiu, o método existe (`rumble.motores.set`), e o gesto está registrado.
+#:   O `data-papel` vive no `<input>`, não na linha inteira — ver
+#:   :func:`_barra_de_motor`;
+#: * `forca-mesa` é a decisão [05] dela: a linha de MESA embaixo da grade, que
+#:   devolve o caminho para pôr a mesa inteira em `Auto` — perdido em 03/09,
+#:   quando a força virou POR CONTROLE.
+PAPEIS_QUE_SAO_GESTO = ("forca", "forca-mesa", "testar", "parar",
+                        "intensidade", "motor")
 
 
 def _endereco_de_pintura(nome, extra=""):
@@ -801,13 +977,39 @@ def _trilho_arrastavel(valor, teto, campo):
     'valor'`). Pintar `style.width` num `<input>` esticaria o controle em vez de
     mover o polegar dele.
     """
+    return _trilho(valor, teto, PASSO, campo, "intensidade",
+                   f'Arraste para escolher quanto da vibração que o jogo pede'
+                   f' chega a este controle — de 0 a {teto}%. Grava na hora, no'
+                   f' perfil ativo, só para ele.')
+
+
+def _trilho(valor, teto, passo, campo, papel, titulo, extra=""):
+    """O `<input type=range>` das TRÊS barras que se arrastam nesta coluna.
+
+    NASCEU DE UMA SÓ — a "Personalizado" de 03/09 — e virou três em 04/09, com
+    as duas barras de motor (:func:`_barra`, `arrasta=True`). Extrair foi a
+    resposta certa e não estética: as duas de motor precisam do MESMO `min`,
+    do mesmo `appearance:none`, do mesmo alvo `valor` e do mesmo cuidado com o
+    `data-papel` no `<input>` (e não no `<div>` de fora, que é onde o clique
+    ficaria sem `value`). Uma segunda tag escrita à mão divergiria no primeiro
+    atributo — e a divergência é silenciosa: um `<input>` sem
+    `data-hef-alvo="valor"` recebe o número no `textContent`, que num `<input>`
+    não desenha nada.
+
+    OS TRÊS NÚMEROS SÃO DE QUEM CHAMA, e cada um é DERIVADO na origem: o `max` e
+    o `step` da Personalizado saem do esquema e do MDC dos degraus
+    (:data:`TETO`, :data:`PASSO`); os do motor saem do `MOTOR_PCT_MAX` e da
+    faixa que a borda aceita (:data:`TETO_DO_MOTOR`, :data:`PASSO_DO_MOTOR`).
+    O `min` é o único escrito, e é zero nas três — *"nada de vibração"* não é um
+    número que alguém decidiu, é o fundo da escala. **E nas barras de motor o
+    zero é ESCOLHA VÁLIDA**, dita por quem construiu o método: *"este motor não
+    treme neste perfil"*.
+    """
     return (f'<input class="trilho arrasta" type="range" min="0"'
-            f' max="{teto}" step="{PASSO}" value="{valor}"'
-            f' data-papel="intensidade" data-campo="{campo}"'
-            f' data-hef-alvo="valor"'
-            f' title="Arraste para escolher quanto da vibração que o jogo pede'
-            f' chega a este controle — de 0 a {teto}%. Grava na hora, no perfil'
-            f' ativo, só para ele.">')
+            f' max="{teto}" step="{passo}" value="{valor}"'
+            f' data-papel="{papel}" data-campo="{campo}"'
+            f' data-hef-alvo="valor"{extra}'
+            f' title="{titulo}">')
 
 
 def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
@@ -815,10 +1017,19 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
     """Uma linha de barra: interruptor · trilho · número · sufixo.
 
     `arrasta` troca o trilho de LEITURA pelo `<input type=range>` da decisão
-    dela de 03/09 — ver :func:`_trilho_arrastavel`. Só a linha do
-    "Personalizado" o pede: as duas de motor continuam leitura, porque o par
-    `weak`/`strong` viaja JUNTO ao daemon (`app/telas/vibracao.DONOS_DOS_GESTOS
-    ["barra:motor"]`) e um arraste por lado mandaria meio par.
+    dela de 03/09 — ver :func:`_trilho_arrastavel`. Aqui só a linha do
+    "Personalizado" o pede; as duas de motor têm builder próprio
+    (:func:`_barra_de_motor`) desde 04/09.
+
+    **FATO SUBSTITUÍDO, e quem o derrubou foi ELA.** Esta linha dizia *"as duas
+    de motor continuam leitura, porque o par `weak`/`strong` viaja JUNTO ao
+    daemon e um arraste por lado mandaria meio par"*. Era verdade enquanto a
+    barra do motor fosse um comando (`rumble.set`). Ela decidiu em 04/09/2026 —
+    fora das opções que eu ofereci — que a barra **não manda o par: ela é
+    POLÍTICA que MULTIPLICA o degrau**, e as duas são independentes de propósito
+    (*"se so a do motor fraco tiver 100 e a outrqa 50% então será 150 em um e  # noqa-acento: citação literal dela
+    75% no outro"*). O método que grava uma barra sem a outra existe desde o
+    mesmo dia (`rumble.motores.set`, campo omitido não mexe naquela barra).
 
     `papel`/`lado` são o ENDEREÇO DO CLIQUE, e sem eles a pintura só alcança as
     três barras de uma coluna por POSIÇÃO — que é o casamento que quebra em
@@ -891,6 +1102,72 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
             f'<span class="num" data-campo="{campo_num or campo}">'
             f'{valor}{"%" if teto == TETO else ""}</span>'
             f'{cauda}</div>')
+
+
+def _barra_de_motor(valor, sigla, m, ligado, botao):
+    """A linha de UM motor: interruptor · barra que arrasta · número · `%`.
+
+    **É A METADE DE DESENHO QUE A ONDA1-D2 DEIXOU COM ENDEREÇO**, e a decisão é
+    dela, de 04/09/2026, dita fora das três opções que eu ofereci:
+
+        "os slcers do botão esquerdo e direito (forte e  # noqa-acento: citação dela
+         fraco) se multiplicam (interagem com os botões economia, moderado,
+         máximo, se eu tiver 150% do perfil de vibração e as duas linhas
+         estiverem 100 entao a vibração dos 2 será 150%, mas se so a do motor
+         fraco tiver 100 e a outrqa 50% então será 150 em um e 75% no outro
+         entende?"
+
+    `efetivo(motor) = degrau(coluna) x barra(motor)`, e a conta mora num lugar
+    só, do lado do daemon (`gamepad._mults_por_motor`). Esta linha é o primeiro
+    fator visível ao lado do segundo: os quatro degraus logo acima, a barra
+    aqui.
+
+    **O QUE A LINHA DEIXOU DE MOSTRAR, e onde ele foi parar.** Até 04/09 o
+    número desta linha era o par `weak`/`strong` que o JOGO pediu, de 0 a 255 —
+    LEITURA. Ele não cabe mais no mesmo pixel que o ajuste (duas escalas na
+    mesma barra é a contradição que esta aba mais persegue), e não se perdeu:
+
+    * o **punho que treme** no desenho já sai do mesmo dado (`treme-e`/`treme-d`,
+      `_endereca_o_tremor`), e é ele que responde *"chegou força agora?"*;
+    * o número exato vira o `title` DESTA linha, pintado pelo alvo `atributo`
+      (`motor-{sigla}-pedido`) — e quando não há o que dizer o pintor **APAGA o
+      atributo** (`hefesto_vivo.escrever`, ramo `atributo`), de modo que não
+      sobra dica afirmando um pedido que ninguém mediu.
+
+    **O `data-papel` VAI NO `<input>`, NUNCA NO `<div>` DE FORA** — a lição já
+    paga pela linha "Personalizado": o ouvinte manda `valor: alvo.value ?? ''`,
+    e um `<div>` não tem `value`, então o clique chegaria ao pacote sem
+    quantidade nenhuma. O `data-lado` viaja junto no MESMO elemento, porque é
+    ele que diz ao gesto qual das duas barras foi arrastada
+    (`hefesto_vivo.manda_do_alvo`: `lado: d.lado || ''`).
+
+    **O ENDEREÇO DE PINTURA É NOVO DE PROPÓSITO** (`barra-e`/`barra-e-pct`), e
+    os velhos (`motor-e`, `motor-e-pct`) continuam sendo emitidos pelo pacote.
+    É a PONTE DE PUBLICAÇÃO, e a razão é a mesma do `forca-pct`: a página que
+    ela ABRE hoje ainda tem a linha de leitura, e publicar é ato dela. Reusar o
+    nome velho para o significado novo faria o produto pintar um multiplicador
+    dentro de uma barra de 0 a 255 — a mentira que esta aba mais persegue.
+
+    `off` SEGUE A BARRA, e não o interruptor: com a barra em 0 aquele motor não
+    treme neste perfil, e é o que o trilho apagado diz. O interruptor de punho
+    continua sem fonte no produto (`app/telas/vibracao.SEM_FONTE['lado:ligado']`)
+    e continua sendo desenho — mas agora o desenho não se contradiz, porque a
+    cena põe os dois de acordo.
+    """
+    campo = f"barra-{sigla}"
+    titulo = (f'Arraste para escolher quanto da vibração que o jogo pede chega'
+              f' a {m["nome"].lower()} — de 0 a {TETO_DO_MOTOR}%. Ela MULTIPLICA'
+              f' o degrau da coluna: {TETO_DO_MOTOR}% deixa como o degrau pediu,'
+              f' 0 deixa este motor mudo neste perfil. Grava na hora, no perfil'
+              f' ativo, só para este controle.')
+    trilho = _trilho(valor, TETO_DO_MOTOR, PASSO_DO_MOTOR, campo, "motor",
+                     titulo, extra=f' data-lado="{sigla}"')
+    return (f'<div class="motor mult{"" if ligado else " off"}"'
+            f' data-campo="motor-{sigla}-pedido" data-hef-alvo="atributo"'
+            f' data-hef-atributo="title">'
+            f'{botao}{trilho}'
+            f'<span class="num" data-campo="{campo}-pct">{valor}</span>'
+            f'<span class="teto">%</span></div>')
 
 
 def _teto_do_multiplicador(no_teto):
@@ -1132,6 +1409,11 @@ def _coluna_vazia(c):
             <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
             <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
             <div class="acoes-col"><span class="nada">{VAZIO}</span></div>
+            <!-- A OITAVA LINHA — a de estado da vibração. Num lugar VAZIO ela é
+                 travessão e não frase: não há controle de quem dizer se a
+                 vibração está travada, e repetir a linha da mesa aqui seria a
+                 tela falando de um aparelho que não está na sala. -->
+            <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
           </div>'''
 
 
@@ -1176,8 +1458,16 @@ def _coluna(c, e=None):
     # E O RÓTULO NÃO PRECISA DE MARCA: com o alvo `classe`, o que a régua do
     # mockup mede neste elemento é o ESTADO, não o texto. Marcá-lo
     # `data-hef-rotulo` esconderia justamente o dado que ele passou a mostrar.
+    #
+    # E SÓ ACENDE QUEM TEM AJUSTE PRÓPRIO — decisão [05] dela, 04/09/2026:
+    # *"a coluna sem ajuste próprio deixa de acender degrau e passa a apontar
+    # para essa linha — 'herdado' fica óbvio sem uma palavra a mais"*. Até
+    # 04/09 as duas coisas tinham a MESMA cara: um degrau que ela escolheu para
+    # aquele controle e um degrau que o Hefesto está usando porque a mesa manda.
+    # Quem sabe a diferença é o PERFIL (existe override com `policy` escrita?),
+    # e o pacote a emite como valor vazio — o alvo `classe` apaga os quatro.
     degraus = "".join(
-        f'<button class="{"on" if chave == e["forca"] else ""}" '
+        f'<button class="{"on" if e["propria"] and chave == e["forca"] else ""}" '  # noqa-acento: chave
         f'data-campo="degrau" data-hef-alvo="classe" data-hef-quando="{chave}" '
         f'data-papel="forca" data-forca="{chave}">{rot}</button>'
         for rot, chave in FORCA)
@@ -1203,8 +1493,7 @@ def _coluna(c, e=None):
                  f'data-hef-rotulo="o nome do motor" '
                  f'title="{m["nome"]} — {m["nota"]}">'
                  f'{glifo(m["glifo"], ativo=ligado, tam=18)}</button>')
-        linhas.append(_barra(valor, 255, "/255", ligado=ligado, botao=botao,
-                             papel="motor", lado=sigla))
+        linhas.append(_barra_de_motor(valor, sigla, m, ligado, botao))
 
     # `data-uniq` VAZIO NA CENA ESTÁTICA, e não é descuido: o mockup não tem MAC
     # de verdade e não pode ter — `AA:BB:CC:DD:EE:FF` num arquivo é o que os dois
@@ -1277,6 +1566,23 @@ def _coluna(c, e=None):
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
+            <!-- A LINHA DE ESTADO DESTA COLUNA — D-14, decisão dela de
+                 04/09/2026: *"Uma linha de estado por coluna"*, com os TRÊS
+                 estados que ela nomeou. Com `rumble_passthrough=False` e
+                 `rumble_active=[160,220]` a janela estável grita "travada em
+                 fraca=160, forte=220" e esta aba ficava MUDA — que é o estado
+                 exato da queixa *"testei os motores e o jogo não vibra mais"*.
+
+                 A PEÇA É A `monta.ressalva` DA ONDA0-F (D-02), e o texto é do
+                 PRODUTO (`app/telas/vibracao.html_da_trava`), nunca redigitado
+                 aqui: o desenho e a tela viva montam esta linha do mesmo lugar.
+
+                 O CUSTO FOI DECLARADO E ACEITO: a trava é UMA para a mesa
+                 (`SEM_FONTE["trava:por-controle"]`), então as colunas vivas
+                 dizem a mesma coisa. Encolher a decisão dela para economizar
+                 pixel não é escolha de quem executa. -->
+            {monta_.ressalva("trava", html_da_trava(estado_da_trava(CENA_DA_TRAVA),
+                                                    saida=SOLTAR_A_TRAVA))}
           </div>'''
 
 
@@ -1346,13 +1652,70 @@ MIOLO = f'''
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
                 <b>Testar</b> faz aquele controle tremer meio segundo com os valores das
                 barras daquela coluna; <b>Parar</b> corta a vibração dele agora e devolve
-                a mão ao jogo.<br><br>
-                {DICA_DOS_VALORES_QUE_PASSAM}
+                a mão ao jogo.
+                <!-- A NOTA DOS VALORES QUE PASSAM SAIU DAQUI e virou linha de
+                     tela — decisão [02] dela, 04/09/2026. Mantê-la nos dois
+                     lugares seria a mesma frase duas vezes na MESMA tela, que é
+                     a forma mais barata de as duas divergirem. Ver `.vib-nota`. -->
+              </span></span></span></div>
+            <!-- O RÓTULO DA OITAVA LINHA. A coluna de rótulos nomeia linhas, e
+                 uma linha sem nome é o defeito que ela apontou em 30/08 sobre a
+                 do Modelo: *"tá o espaço vazio ali. a primeira coluna serve como
+                 nome da linha"*. -->
+            <div><span class="sec-rot">Estado
+              <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
+                O que está acontecendo com a vibração <b>agora</b>, em três estados:<br><br>
+                <b>{TRAVA_JOGO_CONTROLA}</b> — o normal: o jogo manda, e o que você
+                ajustou aqui em cima escala o que ele pede.<br><br>
+                <b>{TRAVA_EM_SILENCIO}</b> — alguém fixou a vibração em zero, e o jogo
+                não consegue mais fazer o controle tremer.<br><br>
+                <b>travada em fraca=X, forte=Y</b> — alguém fixou este par de valores, e
+                o jogo também não passa. Nos dois casos, {SOLTAR_A_TRAVA}.<br><br>
+                Esta aba não trava — quem trava é a janela do Hefesto ou a linha de
+                comando.
               </span></span></span></div>
           </div>
 {"".join(_coluna(c) if c.get("conectado", True) else _coluna_vazia(c) for c in MESA)}
 
         </div>
+        <!-- A LINHA DE MESA — decisão [05] dela, 04/09/2026. Ela responde a
+             pergunta *"a força agora tem dois donos; a tela mostra os dois?"*
+             com um sim que devolve um caminho perdido: pôr a MESA INTEIRA em
+             `Auto`. Ele sumiu em 03/09, quando a força virou por controle — o
+             esquema RECUSA `auto` por peça, e o clique daquele degrau numa
+             coluna passou a significar *"limpa o meu ajuste e volta a seguir a
+             mesa"*.
+
+             E ELA FAZ O "HERDADO" FICAR ÓBVIO SEM PALAVRA NOVA: com a coluna
+             sem ajuste próprio deixando de acender degrau, o único degrau aceso
+             na tela é o desta linha — que é exatamente o que o produto está
+             usando naquela coluna.
+
+             O `data-campo` É `degrau-mesa`, e ele NÃO é `degrau`: o pintor pinta
+             a coluna por dentro (`achar(raiz, k)`) e a mesa no documento
+             inteiro (`achar(document, k)`). O mesmo nome nos dois faria a
+             pintura da mesa acender degrau DENTRO das colunas — que é a régua 6
+             deste arquivo, um andar acima. -->
+        <div class="vib-mesa">
+          <span class="sec-rot">Força da mesa
+            <span class="ajuda">?<span class="dica">
+              O degrau que vale para <b>todos</b> os controles que não têm um ajuste
+              próprio. Uma coluna com degrau aceso está usando o dela; uma coluna com
+              os quatro apagados está seguindo esta linha.<br><br>
+              <b>Auto</b> só existe aqui: o Hefesto o escala pela bateria do controle
+              principal, e por isso ele não pode ser o ajuste de uma peça só.<br><br>
+              {DICA_DA_ESPERA_DO_AUTO}
+            </span></span></span>
+          <div class="seg">{"".join(
+            f'<button class="{"on" if chave == FORCA_DA_MESA else ""}" '
+            f'data-campo="degrau-mesa" data-hef-alvo="classe" '
+            f'data-hef-quando="{chave}" data-papel="forca-mesa" '
+            f'data-forca="{chave}">{rot}</button>' for rot, chave in FORCA)}</div>
+        </div>
+        <!-- A NOTA DO TESTAR, na tela — decisão [02] dela, 04/09/2026. A frase é
+             lida do `gui/main.glade` (ver `DICA_DOS_VALORES_QUE_PASSAM`), e é a
+             mesma que a janela estável mostra em itálico no rodapé do card. -->
+        <div class="vib-nota">{DICA_DOS_VALORES_QUE_PASSAM}</div>
         <!-- A LINHA DO ESTADO — 02/09/2026. Ela existe na janela estável desde
              sempre e NÃO existia aqui: a tela nova tinha os dois motores, os
              quatro degraus e o "Testar", e nenhuma palavra sobre o que acontece
@@ -1453,16 +1816,27 @@ def _conferir(doc):
     # 3. NENHUM AJUSTE VIVO NUM LUGAR VAZIO. Testar a vibração de um lugar vazio
     #    não é botão fraco: é botão que mente.
     for pedaco in corpo.split('class="ctrl vazia"')[1:]:
-        bloco = pedaco.split('<div class="ctrl', 1)[0]
+        # O BLOCO ACABA NA PRÓXIMA COLUNA **OU NA LINHA DE MESA** — 04/09/2026.
+        # Sem o segundo corte, o pedaço da ÚLTIMA coluna vazia varre o resto do
+        # corpo e engole a linha de mesa: a régua acusava `data-papel=
+        # "forca-mesa"` como "ajuste vivo num lugar vazio", e o ajuste estava
+        # fora de coluna nenhuma. Régua que lê o pedaço errado acusa o inocente.
+        bloco = pedaco.split('<div class="ctrl', 1)[0].split('class="vib-mesa"', 1)[0]
         # OS DOIS ATRIBUTOS, e não só o `data-papel` — 03/09/2026. `lado` e
         # `motor` deixaram de ser `data-papel` (ver :data:`PAPEIS_QUE_SAO_GESTO`)
         # e uma régua que só olhasse o atributo antigo passaria a dar verde por
         # VACUIDADE: o ajuste podia voltar ao lugar vazio sob o nome novo e ela
         # não veria. É o mesmo defeito que ela existe para pegar.
+        # `barra-e`/`barra-d` ENTRARAM EM 04/09/2026 com a barra de motor: o
+        # `data-papel="motor"` passou a viver no `<input>`, e uma régua que só
+        # olhasse o papel não veria uma barra de ajuste plantada num lugar
+        # vazio se alguém a escrevesse sem o papel. Os dois endereços, sempre.
         for proibido in ('data-papel="forca"', 'data-papel="testar"',
-                         'data-papel="intensidade"',
+                         'data-papel="intensidade"', 'data-papel="forca-mesa"',
                          'data-papel="lado"', 'data-papel="motor"',
-                         'data-hef="lado"', 'data-hef="motor"'):
+                         'data-hef="lado"', 'data-hef="motor"',
+                         'data-campo="barra-e"', 'data-campo="barra-d"',
+                         'class="trilho arrasta"'):
             exigir(proibido not in bloco, f"um lugar vazio tem ajuste vivo: {proibido!r}")
     # 4. O RESPIRO — a divisória no meio do vão, e o passo como o dobro do ar.
     exigir("--r-passo:calc(var(--r-ar) * 2)" in doc, "o passo deixou de ser o dobro do ar")
@@ -1566,13 +1940,23 @@ def _conferir(doc):
     #        `max` e o `step` divergindo da escada, o botão "Máximo" escreveria
     #        150% e a barra não conseguiria pousar nesse número — as duas
     #        metades da mesma linha diriam coisas diferentes.
+    #
+    #     E A CONTA PASSOU A SER POR PAPEL — 04/09/2026. Eram uma por coluna
+    #     viva; hoje são TRÊS (a Personalizado e as duas de motor), com tetos e
+    #     passos DIFERENTES de propósito. Uma régua que só contasse `<input>`
+    #     daria verde com a barra do motor indo até 200% — que é o HARM-19 pela
+    #     outra porta, e é justamente o que `MOTOR_PCT_MAX` existe para impedir.
     arrastaveis = _re.findall(r'<input class="trilho arrasta"[^>]*>', corpo)
-    exigir(len(arrastaveis) == len(CONECTADOS),
-           f"as barras arrastáveis não são {len(CONECTADOS)} (achei "
-           f"{len(arrastaveis)}) — a barra 'Personalizado' de cada coluna viva "
-           f"tem de ser um `<input type=range>`, senão o clique dela chega ao "
-           f"pacote sem número")
+    por_papel = {}
     for tag in arrastaveis:
+        achado = _re.search(r'data-papel="([^"]+)"', tag)
+        por_papel.setdefault(achado.group(1) if achado else "", []).append(tag)
+    exigir(len(por_papel.get("intensidade", [])) == len(CONECTADOS),
+           f"as barras 'Personalizado' arrastáveis não são {len(CONECTADOS)} "
+           f"(achei {len(por_papel.get('intensidade', []))}) — a de cada coluna "
+           f"viva tem de ser um `<input type=range>`, senão o clique dela chega "
+           f"ao pacote sem número")
+    for tag in por_papel.get("intensidade", []):
         exigir(f'max="{TETO}"' in tag,
                f"a barra arrastável não vai até {TETO}% — o teto é o "
                f"`RUMBLE_CUSTOM_MULT_MAX` do esquema, e é ele que recusa o que "
@@ -1580,6 +1964,81 @@ def _conferir(doc):
         exigir(f'step="{PASSO}"' in tag,
                f"o passo do arraste não é {PASSO} — ele é o MDC dos degraus com "
                f"o teto, e é o que faz cada degrau ter uma parada em cima dele")
+    # 13. AS DUAS BARRAS DE MOTOR SÃO AJUSTE — 04/09/2026, decisão dela: a barra
+    #     não manda `rumble.set`, ela é POLÍTICA que MULTIPLICA o degrau.
+    #
+    #     QUATRO COISAS, e cada uma é um jeito de a linha voltar a mentir:
+    #
+    #     a) DUAS por coluna viva, e as duas com `data-lado` — sem o lado, o
+    #        gesto não sabe qual das duas foi arrastada e gravaria a errada;
+    #     b) o teto é o `MOTOR_PCT_MAX` do esquema, **não** o :data:`TETO` da
+    #        Personalizado. Os dois são 100 e 200 de propósito: a barra é o
+    #        SEGUNDO fator, e quem amplifica é o degrau;
+    #     c) o `data-papel` no `<input>`, nunca no `<div>` — a lição já paga:
+    #        um `<div>` não tem `value`, e o clique chega sem quantidade;
+    #     d) o endereço de pintura é NOVO (`barra-e`/`barra-d`). Reusar
+    #        `motor-e` — que na página PUBLICADA é o número de 0 a 255 que o
+    #        jogo pediu — faria o produto escrever um multiplicador dentro de
+    #        uma barra de outra escala.
+    de_motor = por_papel.get("motor", [])
+    exigir(len(de_motor) == len(LADOS) * len(CONECTADOS),
+           f"as barras de motor arrastáveis não são {len(LADOS) * len(CONECTADOS)} "
+           f"(achei {len(de_motor)}) — cada coluna viva tem UMA por punho, e é "
+           f"o que fecha a `SEM_DONO['barra:motor']`")
+    for sigla, _m, _k in LADOS:
+        do_lado = [t for t in de_motor if f'data-lado="{sigla}"' in t]
+        exigir(len(do_lado) == len(CONECTADOS),
+               f"a barra do motor {sigla!r} não tem `data-lado` em cada coluna "
+               f"viva — sem ele o gesto não sabe qual das duas foi arrastada")
+        for tag in do_lado:
+            exigir(f'data-campo="barra-{sigla}"' in tag,
+                   f"a barra do motor {sigla!r} não usa o endereço novo "
+                   f"`barra-{sigla}` — `motor-{sigla}-pct` é a LEITURA de 0 a "
+                   f"255 da página publicada, e escrever nela um multiplicador "
+                   f"põe o cursor no lugar errado")
+    for tag in de_motor:
+        exigir(f'max="{TETO_DO_MOTOR}"' in tag,
+               f"a barra de motor não para em {TETO_DO_MOTOR}% — o teto é o "
+               f"`MOTOR_PCT_MAX` do esquema, e passar dele daria à mesma peça "
+               f"duas portas para o mesmo estouro")
+        exigir(f'step="{PASSO_DO_MOTOR}"' in tag,
+               f"o passo da barra de motor não é {PASSO_DO_MOTOR} — a borda "
+               f"aceita todo inteiro de 0 a {TETO_DO_MOTOR}, e um passo maior "
+               f"esconderia valores que o produto grava sem reclamar")
+    # 14. A LINHA DE ESTADO DE CADA COLUNA — D-14, e ela é a peça da ONDA0-F com
+    #     o texto do PRODUTO. Não basta a linha existir: o que ela mostra tem de
+    #     ser BYTE A BYTE o que `app/telas/vibracao.html_da_trava` monta, senão
+    #     alguém "melhora" a frase aqui e a tela passa a ter duas versões dela.
+    da_trava = html_da_trava(estado_da_trava(CENA_DA_TRAVA), saida=SOLTAR_A_TRAVA)
+    exigir(corpo.count('class="ressalva" data-campo="trava"') == len(CONECTADOS),
+           f"a linha de estado não é uma por coluna viva ({len(CONECTADOS)}) — "
+           f"é a D-14, e a peça é a `monta.ressalva`")
+    exigir(da_trava and corpo.count(da_trava) == len(CONECTADOS),
+           "o texto da linha de estado por coluna não é o que o produto monta")
+    # 15. A LINHA DE MESA — decisão [05] dela. Ela devolve o caminho para pôr a
+    #     mesa em `Auto`, e é o que faz o "herdado" ser legível: a coluna sem
+    #     ajuste próprio não acende degrau, e o único aceso é o desta linha.
+    exigir('class="vib-mesa"' in corpo, "a linha de MESA sumiu da aba")
+    for _rot, chave in FORCA:
+        exigir(f'data-papel="forca-mesa" data-forca="{chave}"' in corpo,
+               f"a linha de mesa não tem o degrau {chave!r} — os quatro são o "
+               f"caminho que 03/09 tirou desta tela")
+    exigir(corpo.count('data-campo="degrau-mesa"') == len(FORCA),
+           "os degraus da mesa não são quatro, ou não têm endereço de pintura")
+    herdadas = [c for c in CONECTADOS
+                if not ESTADO[c["pref"]]["propria"]]  # noqa-acento: chave da cena
+    exigir(herdadas,
+           "nenhuma coluna viva da cena HERDA a força da mesa — sem uma, o "
+           "desenho não ensina a diferença que a decisão [05] existe para "
+           "mostrar, e o `auto` voltaria a aparecer como escolha de peça, que o "
+           "esquema recusa")
+    # 16. A NOTA DO TESTAR ESTÁ NA TELA — decisão [02] dela, e uma vez só: ela
+    #     saiu do `?` para não ficar escrita duas vezes na mesma tela.
+    exigir(f'class="vib-nota">{DICA_DOS_VALORES_QUE_PASSAM}' in corpo,
+           "a nota do Testar não é linha de tela — a decisão [02] dela é `só a "
+           "nota do Testar sobe`")
+    exigir(corpo.count(DICA_DOS_VALORES_QUE_PASSAM) == 1,
+           "a nota do Testar aparece mais de uma vez na mesma tela")
     for _rot, chave in FORCA:
         if chave == FORCA_SEM_MULTIPLICADOR:
             continue
