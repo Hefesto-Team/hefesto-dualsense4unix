@@ -272,23 +272,35 @@ def test_a_regua_le_o_mapa_e_nao_um_veredito_cravado() -> None:
     assert tem_lastro_nos_dois({"cabo": medido, "radio": parcial}) is False
 
 
-def test_a_celula_da_vibracao_e_a_que_a_sprint_mediu() -> None:
-    """A régua vê hoje o defeito que a sprint nomeou — e o tamanho REAL dele.
+def test_a_celula_da_vibracao_ganhou_lastro_e_a_ressalva_saiu_junto() -> None:
+    """INVERTIDO EM 05/09/2026, e a régua velha mandou inverter.
 
-    Se um dia a medição de rádio chegar, este caso reprova, e é para reprovar:
-    a ressalva da tela tem de sair junto com a dívida. É a metade que avisa
-    sozinha, no molde do portão da VPAD-SUSPENSO-MORTO-01.
+    Ela dizia, com todas as letras: *"Se um dia a medição de rádio chegar, este
+    caso reprova, e é para reprovar: a ressalva da tela tem de sair junto com a
+    dívida."* A medição chegou, ela reprovou, e este é o outro lado.
+
+    O QUE ACONTECEU, e é a forma de defeito que ELA nomeou: a prova morava no
+    repositório desde sempre — `integrations/uinput_gamepad.py:130` registra
+    *"a vibração funciona — provado com SDL2 e validado em gameplay"* — e a
+    célula do mapa continuava `inferido-do-codigo`. A régua, lendo o mapa,
+    OBRIGAVA a tela a dizer que a vibração não fora conferida. A tela estava
+    honesta perante o mapa; **o mapa é que estava atrás do código**.
+
+    Palavra dela: *"isso já tá medido no projeto e implementado. talvez versão
+    errada ou não documentada"*.
+
+    A MORDIDA: devolva `inferido-do-codigo` a um dos lados da célula e este
+    caso reprova, cobrando a ressalva de volta.
     """
     celula = _fatos_do_mapa()["vibracao.rumble.passthrough@dualsense"]
-    assert not tem_lastro_nos_dois(celula), (
-        "a vibração ganhou lastro nos dois transportes — apague a ressalva de "
-        "RESSALVA_DE_TRANSPORTE e as três frases que a carregam, e reescreva "
-        "a promessa. O mapa hoje diz: " + repr(celula)
+    assert tem_lastro_nos_dois(celula), (
+        "a vibração perdeu o lastro no mapa — se isso for verdade, a ressalva "
+        "tem de VOLTAR a `RESSALVA_DE_TRANSPORTE` e às frases da aba, senão a "
+        "tela afirma o que o mapa não sustenta. O mapa hoje diz: " + repr(celula)
     )
-    # E o tamanho: a sprint propunha "provada no cabo". Não está.
-    assert celula["cabo"]["de_onde_sei"] != "medido", (
-        "o cabo passou a ser `medido` — a ressalva ainda diz «nem no cabo, nem "
-        "no rádio», e agora isso é fato errado na tela"
+    assert not _declaracao("RESSALVA_DE_TRANSPORTE"), (
+        "a vibração tem lastro nos dois transportes e ainda há ressalva "
+        "declarada — ressalva que sobrevive à dívida é fato errado na tela"
     )
 
 
