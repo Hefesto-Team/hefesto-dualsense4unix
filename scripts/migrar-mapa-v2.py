@@ -62,8 +62,34 @@ As 204 linhas do v1 carregam medição real. Este script prova campo a campo que
 toda informação sobreviveu, e reprova se não sobreviver. O v1 fica guardado em
 ``docs/data/mapa-controles-v1.csv`` — não se apaga medição.
 
+ELE JÁ RODOU, E RODAR DE NOVO DESTRUÍA O MAPA — trancado em 05/09/2026
+---------------------------------------------------------------------
+A migração aconteceu UMA vez, em 11/08/2026. Desde então o mapa cresceu de 204
+para 308 linhas, preenchidas por cerca de trezentos agentes que leram os
+repositórios externos, mais validação ao vivo na bancada dela. **Nada disso está
+no v1 congelado.**
+
+Medido em 05/09/2026, com o script como estava:
+
+* ``fonte = V1_GUARDADO if V1_GUARDADO.exists() else V1`` — o guardado EXISTE,
+  então a fonte é o retrato de 11/08;
+* ``escreve(V2, ...)`` e ``V2 is V1`` — o mesmo caminho no disco;
+* o resultado seriam **264 linhas no lugar de 308**, com o conteúdo das 264 de
+  volta ao estado de 11/08;
+* o backup NÃO acontecia — ``if not V1_GUARDADO.exists()`` é falso;
+* e ele imprimia ``prova: nenhum campo do v1 se perdeu``, porque a prova
+  compara o v2 recém-montado com o v1 que o gerou. Ela nunca olhou o destino.
+  **Verde sobre a destruição.**
+
+A palavra dela, 05/09/2026: *"Não podemos perder ou regenerar errado isso e
+desconsiderar o excelente trabalho deles."*
+
+Então a trava é do INSTRUMENTO, não do leitor: se o destino já está no formato
+v2, este script **não escreve**. Aviso no cabeçalho de um comando que termina
+verde ninguém lê — regra desta casa, 04/09/2026.
+
 Uso:
-    .venv/bin/python scripts/migrar-mapa-v2.py           # migra e prova
+    .venv/bin/python scripts/migrar-mapa-v2.py           # recusa: o destino já é v2
     .venv/bin/python scripts/migrar-mapa-v2.py --provar  # só reprova a prova
 """
 
@@ -864,11 +890,27 @@ def escreve(caminho: Path, cabecalho: list[str], linhas: list[dict]) -> None:
             w.writerow({c: lin.get(c, "") for c in cabecalho})
 
 
-def main() -> int:
+def destino_ja_e_v2() -> bool:
+    """O destino já está migrado? Perguntado ao ARQUIVO, não decorado.
+
+    O v1 e o v2 se distinguem pela primeira coluna: ``id`` lá, ``chave`` aqui.
+    Ler o cabeçalho é o que impede este script de escrever por cima de trabalho
+    que ele não produziu — ver o bloco ELE JÁ RODOU no topo.
+    """
+    if not V2.exists():
+        return False
+    with open(V2, encoding="utf-8", newline="") as fh:
+        cabecalho = next(csv.reader(fh), [])
+    return cabecalho[:1] == ["chave"]
+
+
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="migra o mapa de canais para o v2")
     ap.add_argument("--provar", action="store_true",
                     help="não escreve nada: só refaz a conta e reprova se faltar campo")
-    args = ap.parse_args()
+    # `argv` explícito para que a régua possa chamar `main([])` sem herdar a
+    # linha de comando do pytest — 05/09/2026.
+    args = ap.parse_args(argv)
 
     fonte = V1_GUARDADO if V1_GUARDADO.exists() else V1
     v1 = le_v1(fonte)
@@ -893,6 +935,18 @@ def main() -> int:
 
     if args.provar:
         return 0
+
+    if destino_ja_e_v2():
+        print(
+            "RECUSADO: `docs/data/mapa-controles.csv` já está no formato v2.\n"
+            "  Escrever aqui trocaria o mapa de hoje pela migração do retrato de\n"
+            "  11/08/2026 — as linhas que os agentes acrescentaram desde então NÃO\n"
+            "  estão no v1 congelado, e o backup não aconteceria (o guardado já\n"
+            "  existe). A migração é de uma vez só, e já aconteceu.\n"
+            "  Para conferir a conta sem escrever: --provar.",
+            file=sys.stderr,
+        )
+        return 1
 
     if not V1_GUARDADO.exists():
         shutil.copy2(V1, V1_GUARDADO)
