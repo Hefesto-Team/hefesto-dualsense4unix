@@ -2331,7 +2331,7 @@ V_EVITAR = "vale evitar"
 V_MELHOR = "melhor lugar"
 P_TIRAR = "clique para tirar"
 P_EXTENSOR = "o extensor está nela"
-P_SERVE = "entrada direta, mas na altura da mesa"
+P_SERVE = "entrada direta, mas na altura da escrivaninha"
 P_MELHOR = "na ponta do extensor: a antena mais longe das outras"
 P_COLADA = "colada no {tipo}, na entrada {n}"
 _confere_no_produto(_JULGAR, [
@@ -2609,9 +2609,13 @@ def ap_botao(esp, no, em, quem):
     # SEM DICA quando não há lugar: o produto também não põe
     # (`mapa_da_mesa._desenhar_aparelhos` só chama `set_tooltip_text` sob `if onde:`).
     dica = DICA_JA_COLOCADO.format(n=em) if em else ""
+    # A PALAVRA "mesa" SAIU DA TELA — 05/09/2026, ordem dela. Esta metade da
+    # dica é da BANCADA, não do produto (o `_desenhar_aparelhos` da janela GTK
+    # não a põe): ela ETIQUETA o aparelho daquele botão. "O objeto:" é o termo
+    # que ela pediu, e diz o que a etiqueta é.
     return (f'<button class="mm-ap{" on" if no == ESCOLHIDO else ""}" '
             f'data-gesto="escolher-aparelho" '
-            f'title="{dica} · Na mesa: {quem}.">{esp}'
+            f'title="{dica} · O objeto: {quem}.">{esp}'
             f'<span class="pt">·</span><code>{no}</code></button>')
 
 
@@ -2685,7 +2689,7 @@ def face_dos_hubs():
         for mae, filha in EXTENSAO.items())
     return f'''            <div class="mm-face">
               <div class="mm-face-cab"><span class="mm-face-nome">Hubs e extensões</span>
-                <button class="btn mini" data-gesto="novo-hub" title="Acrescenta um hub ou uma extensão à mesa e pergunta em que entrada ele está ligado. Cabo passivo não tem descritor USB: nenhuma leitura do sistema o enxerga, e por isso quem o declara é você.">Acrescentar hub</button></div>
+                <button class="btn mini" data-gesto="novo-hub" title="{_aba_conexoes.DICA_NOVO_HUB}">Acrescentar hub</button></div>
               <div class="mm-grade mm-grade-hubs">{celulas}</div>
             </div>'''
 
@@ -3316,7 +3320,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>Os dois botões abrem agora, e o que abre não é tela nova.</b> <b>{MAPEAR_ENTRADAS}</b> é a janela <code>mapa_da_mesa.py</code> e <b>{MAPEAR_UMA_A_UMA}</b> é a <code>calibrar_entradas.py</code>, as duas já rodando. <b>Todo texto delas sai do produto, lido por AST</b> — a mesma disciplina dos sete números do rádio. O que o AST não alcança (o veredito de cada entrada, os dois relógios, as três dicas de botão) tem portão: a geração <b>para</b> se a frase deixar de existir no fonte.</li>
     <li><b>A cena é a SUA mesa, e é a ordem de serviço desta aba sendo cumprida.</b> O aparelho na mão é o adaptador <b>“{ADAPTADORES[0]["nome"]}”</b>, que o exame manda tirar da <b>Entrada 3</b> — e com ele escolhido cada quadrado publica o juízo <i>para ele</i>. Os cinco estados da tela são os cinco que a janela sabe produzir: <b>ocupada</b>, <b>indisponível</b>, <b>serve</b>, <b>vale evitar</b> e <b>melhor lugar</b>. Os três do modo ideal (<i>chega</i>, <i>sai</i>, <i>fica</i>) <b>não entram</b>: vêm do plano, e esta janela não calcula plano nenhum.</li>
     <li><b>Nenhum plug é azul, e a própria tela diz por quê.</b> A velocidade vem dos nós declarados, e quem os escreve é a OUTRA janela — logo toda entrada desenhada aqui sai <code>usb=2</code>. Pintar azul contradiria a confissão três blocos abaixo. <b>Mas repare a tensão</b>: o exame desta aba afirma que a Entrada 3 é <b>USB 3.0</b> e a 9 é <b>2.0</b>. As duas telas são honestas cada uma no seu canto, e o produto ainda não junta o que já sabe.</li>
-    <li><b>Um nome não batia, e a tela corrigiu: a confissão mandava você a “Calibrar as entradas”.</b> Esse é o título da outra janela no código; o botão desta aba chama-se <b>{MAPEAR_UMA_A_UMA}</b> desde 28/08. A frase da tela já diz o nome certo — <b>quem falta corrigir é o produto</b>, e em três lugares: a confissão, o título da janela de calibrar, e o <code>TITULO_DA_JANELA</code> do desenho, que ainda diz <i>“A minha mesa”</i> onde o botão diz <b>{MAPEAR_ENTRADAS}</b>.</li>
+    <li><b>Um nome não batia, e a tela corrigiu: a confissão mandava você a “Calibrar as entradas”.</b> Esse é o título da outra janela no código; o botão desta aba chama-se <b>{MAPEAR_UMA_A_UMA}</b> desde 28/08. A frase da tela já diz o nome certo — <b>quem falta corrigir é o produto</b>, e hoje em <b>dois</b> lugares: a confissão e o título da janela de calibrar. <b>O terceiro fechou em 05/09</b>: o <code>TITULO_DA_JANELA</code> do desenho dizia <i>“A minha mesa”</i> e agora diz <b>{MAPEAR_ENTRADAS}</b>, junto com o botão que o abre — a ordem dela de tirar a palavra “mesa” da tela cumpriu a <code>D-MAPEAR-ENTRADAS-E-NAO-PORTAS</code> pela metade que dizia a palavra.</li>
     <li><b>As duas perguntas da sala chegaram, e vieram inteiras</b> — pergunta, dica e as três opções, literais de onde moravam. A da altura está respondida e a da visada não, de propósito: <b>sem resposta não é “Não sei”</b>, e a tela precisa mostrar os dois. <b>O preço, escrito:</b> elas gravam sob <code>mesa</code> e o desenho grava sob <code>mapa</code> — chaves com disciplinas diferentes (substituição num, fusão no outro). É trabalho de código, não de desenho, e a sprint que as implementar tem de saber disto.</li>
     <li><b>A cerimônia são TRÊS telas, ligadas pelos próprios botões dela</b>: a pergunta sentada, o fim da parte sem levantar, e a fase em pé. Custa só HTML e não mente sobre transição nenhuma — a webcam é o único aparelho sem lugar, então responder <i>aquela</i> pergunta leva mesmo ao fim.</li>
     <li><b>A frase do jogo aberto está amarrada ao FOCO, e ela é ESPECIFICAÇÃO.</b> A tela diz <i>“enquanto esta janela estiver na frente”</i>, e não “enquanto estiver aberta”, porque é no foco que a janela toma o controle. <b>Hoje o produto não faz isso</b>: a peneira está escrita e não tem quem a chame — é lápide viva do portão da casa. A frase depende da <code>ONDA-CONEXOES-10</code>. Por isso também <b>nenhum glifo de X/O/D-pad</b> acompanha: hoje o botão não anda na janela <i>e</i> chega ao jogo.</li>

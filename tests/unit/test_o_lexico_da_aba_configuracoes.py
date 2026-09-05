@@ -84,11 +84,14 @@ PARAGRAFOS_QUE_FICAM: dict[str, str] = {
     "Não sei quem está no rádio": (
         "estado do daemon: só aparece quando ele não respondeu. `secao_orcamento`."
     ),
-    "Você ainda não desenhou a sua mesa.": (
+    "Você ainda não mapeou as suas entradas.": (
         "estado da declaração dela: some no instante em que o mapa é desenhado. "
-        "`secao_mesa`. A palavra `mesa` FICA aqui: esta é a mesa FÍSICA — a "
-        "escrivaninha e as entradas USB —, e não o jargão dos controles "
-        "ligados que saiu em 05/09/2026."
+        "`secao_mesa`. A frase dizia `Você ainda não desenhou a sua mesa.` até "
+        "05/09/2026, e a razão escrita aqui era que a palavra FICAVA — por ser "
+        "a mesa FÍSICA, a escrivaninha e as entradas USB. **Ela derrubou esse "
+        "juízo no mesmo dia**: *\"muda o termo pra objeto e sinônimos nesses "
+        "casos\"*. O verbo acompanhou o botão ao lado, que é o \"o que fazer\" "
+        "desta frase e passou a chamar-se `Mapear Entradas`."
     ),
 }
 
@@ -148,9 +151,9 @@ AINDA_NA_PAGINA: dict[str, str] = {
 #: POR QUE 2 E NÃO 4, que é o que esta bancada acha: só DOIS dos quatro são
 #: incondicionais. A frase de capacidade do microfone e o "Não sei quem está no
 #: rádio" nascem em toda montagem (`montar` nunca pergunta ao daemon); os outros
-#: dois somem sozinhos numa bancada com controle na mesa ("Nenhum controle na
-#: mesa agora.") ou com a mesa já desenhada ("Você ainda não desenhou a sua
-#: mesa."). Um piso de 4 reprovaria na máquina DELA, que tem as duas coisas.
+#: dois somem sozinhos numa bancada com controle ligado ("Nenhum controle ligado
+#: agora.") ou com as entradas já mapeadas ("Você ainda não mapeou as suas
+#: entradas."). Um piso de 4 reprovaria na máquina DELA, que tem as duas coisas.
 NUNCA_MENOS_QUE = 2
 
 

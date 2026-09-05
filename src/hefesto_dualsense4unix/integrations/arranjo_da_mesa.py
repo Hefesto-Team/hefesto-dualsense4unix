@@ -49,8 +49,9 @@ O QUE SE PERDE SAI EM PALAVRA, NUNCA EM PONTOS
 -----------------------------------------------
 
 ``consequencias()`` devolve frases. *"437 pontos pior"* não diz nada a ninguém;
-*"os dongles ficam na altura da mesa, não no alto do rack"* diz. ``qualidade()``
-existe só para ordenar variantes entre si e **não vai para a tela**.
+*"os dongles ficam na altura da escrivaninha, não no alto do rack"* diz.
+``qualidade()`` existe só para ordenar variantes entre si e **não vai para a
+tela**.
 
 DIVERGÊNCIAS DECLARADAS ENTRE ESTE PORTE E O MOCKUP
 -----------------------------------------------------
@@ -991,7 +992,11 @@ def julgar(
         if no_hub:
             return Veredito("melhor", "melhor lugar",
                             "no alto do rack, com a antena acima das cabeças")
-        return Veredito("serve", "serve", "entrada direta, mas na altura da mesa")
+        # A PALAVRA "mesa" SAIU DA TELA — 05/09/2026, ordem dela: *"muda o termo
+        # pra objeto e sinônimos nesses casos"*. Aqui o sentido é ALTURA FÍSICA,
+        # e o contraste com "no alto do rack" (duas linhas acima) é o que a frase
+        # vende: "escrivaninha" o diz inteiro, sem a palavra.
+        return Veredito("serve", "serve", "entrada direta, mas na altura da escrivaninha")
 
     if na_mao == "wifi":
         if no_hub:
@@ -1077,7 +1082,7 @@ def consequencias(mesa: Mesa, op: Opcoes | None = None) -> list[str]:
     ]
     no_alto = sum(1 for e in bts if e.onde == "hub")
     if bts and no_alto == 0:
-        fora.append("os dongles ficam na altura da mesa, não no alto do rack")
+        fora.append("os dongles ficam na altura da escrivaninha, não no alto do rack")
     elif no_alto < len(bts):
         fora.append(f"{len(bts) - no_alto} dongle(s) fora do alto")
     if not any(e.esticada for e in bts):

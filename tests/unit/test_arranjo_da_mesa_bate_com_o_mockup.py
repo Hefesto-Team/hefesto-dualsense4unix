@@ -53,6 +53,34 @@ def _js(v: object) -> str:
 # ── as duas beiras da mesma forma ────────────────────────────────────────
 
 
+#: AS PALAVRAS QUE DIVERGIRAM DO ORÁCULO, e a razão de cada uma.
+#:
+#: O oráculo é o mockup CONGELADO de 24/08/2026
+#: (``docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html``),
+#: e ele não se reescreve: é o registro de como o motor pensava naquele dia. Em
+#: 05/09/2026 ela mandou tirar a palavra "mesa" da interface —  *"muda o termo
+#: pra objeto e sinônimos nesses casos"* — e as duas frases abaixo mudaram no
+#: produto. O oráculo continua dizendo a palavra velha, e está certo em dizê-la.
+#:
+#: POR QUE UMA TABELA, E NÃO UM `!=` AFROUXADO: a régua tem de continuar
+#: comparando a frase INTEIRA. Se ela passasse a ignorar `porque` e `texto`,
+#: pararia de medir justamente o que o porte promete reproduzir — e um dia
+#: alguém trocaria a frase por outra sem que nada reprovasse. Aqui a única
+#: liberdade é esta: DUAS traduções, escritas com nome e data, e um portão logo
+#: abaixo que exige que as duas ainda DISPAREM. Tradução que não dispara mais é
+#: tradução morta, e sai.
+DIVERGENCIA_DA_PALAVRA_MESA: dict[str, str] = {
+    "entrada direta, mas na altura da mesa":
+        "entrada direta, mas na altura da escrivaninha",
+    "os dongles ficam na altura da mesa, não no alto do rack":
+        "os dongles ficam na altura da escrivaninha, não no alto do rack",
+}
+
+#: Quantas vezes cada tradução foi usada nesta rodada. O
+#: ``test_as_traducoes_da_palavra_mesa_ainda_disparam`` lê daqui.
+_TRADUZIDAS: dict[str, int] = {frase: 0 for frase in DIVERGENCIA_DA_PALAVRA_MESA}
+
+
 def ouro(chave: str) -> Any:
     """O que o mockup respondeu neste cenário, com ``Infinity`` de volta."""
     dados = json.loads(OURO.read_text(encoding="utf-8"))
@@ -69,6 +97,9 @@ def _numeros(v: Any) -> Any:
         return [_numeros(x) for x in v]
     if isinstance(v, dict):
         return {k: _numeros(x) for k, x in v.items()}
+    if isinstance(v, str) and v in DIVERGENCIA_DA_PALAVRA_MESA:
+        _TRADUZIDAS[v] += 1
+        return DIVERGENCIA_DA_PALAVRA_MESA[v]
     return v
 
 
@@ -292,3 +323,44 @@ def test_sem_adaptador_nenhum_controle_cabe_e_o_motor_diz_isso() -> None:
     assert plano.cabe is False
     assert plano.sobra == 0
     assert plano.destino == {}
+
+
+# ── a divergência de palavra, e o portão que a segura ────────────────────
+
+
+def test_as_traducoes_da_palavra_mesa_ainda_disparam() -> None:
+    """Toda tradução declarada tem de ser USADA, e nenhuma pode sobrar.
+
+    A MORDIDA QUE ESTE TESTE É: ``DIVERGENCIA_DA_PALAVRA_MESA`` é a única
+    liberdade que a comparação com o oráculo tem, e liberdade que ninguém
+    confere vira armário. Se o produto voltar a dizer "mesa", a tradução deixa
+    de ser necessária e **esta linha reprova** — obrigando quem a tornou inútil
+    a apagá-la, em vez de deixá-la de pé perdoando uma frase que já não existe.
+
+    Ele roda depois dos outros de propósito: ``_TRADUZIDAS`` conta o que a
+    leitura do ouro traduziu ao longo do arquivo.
+    """
+    ouro("julgar/3/bt")
+    ouro("consequencias/so-pc")
+
+    mortas = [frase for frase, vezes in _TRADUZIDAS.items() if vezes == 0]
+    assert not mortas, (
+        "tradução declarada que nunca disparou — o oráculo já não diz esta "
+        f"frase, então APAGUE a entrada: {mortas}"
+    )
+
+
+def test_nenhuma_traducao_muda_mais_do_que_a_palavra() -> None:
+    """Uma tradução só pode trocar a PALAVRA, nunca o que a frase diz.
+
+    Sem esta régua a tabela viraria a porta dos fundos do oráculo: bastaria
+    declarar ``"x" -> "y"`` para qualquer frase divergente passar. Aqui o resto
+    da frase — tudo menos a palavra trocada — tem de ficar idêntico.
+    """
+    for antes, depois in DIVERGENCIA_DA_PALAVRA_MESA.items():
+        assert "mesa" in antes, f"tradução que não é sobre a palavra: {antes!r}"
+        assert "mesa" not in depois, f"a tradução mantém a palavra: {depois!r}"
+        assert antes.replace("mesa", "escrivaninha") == depois, (
+            "a tradução mudou mais do que a palavra — o oráculo é o juiz do "
+            f"resto da frase:\n  antes:  {antes!r}\n  depois: {depois!r}"
+        )

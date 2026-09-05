@@ -708,7 +708,10 @@ class _PainelDaMesa:
 
         fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         fileira.set_margin_top(6)
-        botao = Gtk.Button(label=_("Reexaminar a mesa"))
+        # A PALAVRA "mesa" SAIU DA TELA em 05/09/2026, ordem dela. O que este
+        # botão relê é o BARRAMENTO — os adaptadores e os rádios —, e a própria
+        # dica ao lado já dizia isso sem a palavra.
+        botao = Gtk.Button(label=_("Reexaminar as conexões"))
         botao.set_tooltip_text(_("Relê os adaptadores e os rádios. Não muda nada."))
         botao.connect("clicked", self._ao_clicar_reexaminar)
         fileira.pack_start(botao, False, False, 0)
@@ -1794,11 +1797,16 @@ _RESUMO_DO_MAPA = "Mesa: {faces} faces, {entradas} entradas, {colocados} aparelh
 #: teclado, -45 no Bluetooth, -40 no mouse) nunca disparam. Calar sobre isso faria
 #: a tela publicar juízo otimista silencioso — "aqui fica bem" onde ela não tem
 #: como saber —, que é o defeito de forma que esta casa persegue. O "o que fazer"
-#: não está na frase de propósito: ele é o botão ao lado, que diz "Desenhar a
-#: minha mesa".
+#: não está na frase de propósito: ele é o botão ao lado, que diz "Mapear
+#: Entradas".
 #: PROVISÓRIO — decisão dela.
+#:
+#: A PRIMEIRA FRASE MUDOU EM 05/09/2026: dizia *"Você ainda não desenhou a sua
+#: mesa"*, e a palavra saiu da interface por ordem dela. O verbo acompanhou o
+#: botão ao lado — que é o "o que fazer" desta frase e passou a chamar-se
+#: **Mapear Entradas** (`D-MAPEAR-ENTRADAS-E-NAO-PORTAS`, 28/08).
 _SEM_MAPA = (
-    "Você ainda não desenhou a sua mesa. Enquanto isso o Hefesto diz o caminho "
+    "Você ainda não mapeou as suas entradas. Enquanto isso o Hefesto diz o caminho "
     "do sistema (3-1.1.4) em vez do número da sua entrada, e não sabe quais "
     "entradas ficam coladas no metal — então ele não avisa quando dois "
     "receptores sem fio estão encostados. Não é que esteja tudo bem: ele não "
@@ -1807,7 +1815,15 @@ _SEM_MAPA = (
 
 #: O botão que abre a janela do desenho.
 #: PROVISÓRIO — decisão dela.
-_BOTAO_DESENHAR = "Desenhar a minha mesa"
+#:
+#: O NOME NOVO É DELA E ESPERAVA DESDE 28/08/2026 —
+#: `D-MAPEAR-ENTRADAS-E-NAO-PORTAS` (`docs/data/decisoes-dela.csv`), que decide
+#: com todas as letras: *"Desenhar a minha mesa" vira "Mapear Entradas"*. A
+#: decisão nomeava este arquivo e esta linha e nunca tinha sido cumprida; a
+#: ordem de 05/09 sobre a palavra "mesa" só a alcançou. O par
+#: (`_BOTAO_CALIBRAR` -> "Mapear Entrada a Entrada") NÃO entra aqui: não diz a
+#: palavra, e trocá-lo é da frente daquela decisão.
+_BOTAO_DESENHAR = "Mapear Entradas"
 
 # -- o gabinete que o install já contou (26/08/2026) -------------------------
 #

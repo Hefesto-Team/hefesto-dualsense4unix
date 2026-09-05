@@ -1921,7 +1921,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                 Leitura viva do aparelho, dez vezes por segundo. Nada aqui se clica.<br><br>
                 O <b>giroscópio</b> mede o quanto o controle gira, em graus por segundo.
                 O <b>acelerômetro</b> mede a inclinação e o chacoalhar, em g — parado
-                numa mesa plana a soma dos três eixos dá <b>1 g</b>, que é a gravidade,
+                numa superfície plana a soma dos três eixos dá <b>1 g</b>, que é a gravidade,
                 e é por isso que um deles fica perto de 1 e os outros perto de 0.<br><br>
                 Um traço no lugar do número quer dizer que a leitura ainda não chegou.
               </span></span>
@@ -2255,7 +2255,7 @@ MIOLO = f'''
              precisou dos 24px dos lugares vazios para caber. -->
         <span class="sensores">
           <a class="btn" href="calibrar-sensores.html"
-             title="Calibra o giroscópio e o acelerômetro dos {len(CONECTADOS)} controles conectados numa passada só, com todos parados numa mesa plana.">Calibrar Sensores de Movimento</a>
+             title="Calibra o giroscópio e o acelerômetro dos {len(CONECTADOS)} controles conectados numa passada só, com todos parados numa superfície plana.">Calibrar Sensores de Movimento</a>
           <a class="btn" href="mapa-do-controle.html"
              title="Abre o mapa do controle: cada peça do DualSense com o nome, o glifo e o que o Hefesto lê dela.">Mapa do Controle</a>
         </span>
