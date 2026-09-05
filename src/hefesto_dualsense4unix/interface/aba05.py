@@ -55,12 +55,16 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
 # O mesmo par de funções que a tela viva chama monta o desenho da bancada: se um
 # dia a frase mudar no produto, o desenho muda junto e não fica um mockup
 # afirmando o que a tela já não diz.
+#
+# `estado_da_trava` / `html_da_trava` SAÍRAM DAQUI EM 05/09/2026, com a oitava
+# faixa da grade — ver :data:`SEM_A_FAIXA_DE_ESTADO`. E saíram do PRODUTO junto:
+# esta aba era a única chamadora das cinco peças da trava, e a janela estável
+# pinta a linha dela pelo seu próprio método (`app/actions/rumble_actions.py`,
+# linha 1274 — o nome NÃO se escreve aqui: ele é o `sinal` AUSENTE da linha 170
+# do `paridade-gtk-html.csv`, e citá-lo deste lado fecharia a dívida no papel).
+# Quem mediu isso não fui eu — foi o `portao_a_casa_sabe_e_o_produto_nao_faz`,
+# que reprovou nomeando as duas assim que a faixa saiu.
 from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
-    SOLTAR_A_TRAVA,
-    TRAVA_EM_SILENCIO,
-    TRAVA_JOGO_CONTROLA,
-    estado_da_trava,
-    html_da_trava,
     html_do_estado,
     textos_do_estado,
 )
@@ -303,18 +307,29 @@ DICA_DOS_VALORES_QUE_PASSAM = _do_glade(
     r'(.*?)&lt;/i&gt;</property>',
     "a nota do card Testar motores")
 
-#: A CENA DA LINHA DE ESTADO POR COLUNA — D-14, 04/09/2026.
+#: A OITAVA FAIXA DA GRADE — a linha "Estado" — SAIU. Decisão dela, 05/09/2026:
 #:
-#: `passthrough=True` é o estado NORMAL, e é o único que o desenho pode cravar:
-#: os dois travados carregam NÚMEROS que ninguém mediu (`fraca=160, forte=220`),
-#: e um mockup que os cravasse afirmaria uma trava que não existe — o mesmo
-#: defeito do punho aceso para sempre que o `_endereca_o_tremor` curou. Os dois
-#: outros estados a tela viva mostra; o `?` da linha os explica.
+#:   *"pq temos uma linha de estado se o estado em vibração sempre vai ser o
+#:    jogo mandando os input pro controle e a gnt aumentando eles ou
+#:    diminuindo? remove ela não faz sentido"*
 #:
-#: SEPARADO DO :data:`CENA_DO_ESTADO` de propósito: aquele alimenta
-#: `textos_do_estado`, que consulta o ORÇAMENTO DA MÁQUINA, e acrescentar chaves
-#: lá arriscaria mudar a linha de mesa do desenho pela máquina de quem gera.
-CENA_DA_TRAVA = {"rumble_passthrough": True, "rumble_active": None}
+#: **E A MEDIÇÃO DÁ RAZÃO A ELA, pelo caminho que ela usa.** A faixa tinha três
+#: estados (o `estado_da_trava` de `app/telas/vibracao.py`, morto no mesmo dia),
+#: e os dois "travada" só nascem com `rumble_active` armado. Os DOIS gestos
+#: desta aba terminam em
+#: `rumble_passthrough(True)` — `a05_vibracao.testar` (passos 3 e 4) e
+#: `a05_vibracao.parar` —, que zera o par. Quem arma e DEIXA armado é a janela
+#: GTK (o "Parar" de lá é botão separado do "Devolver ao jogo") ou a linha de
+#: comando (`hef test rumble`), que é exatamente o que o `?` da faixa confessava:
+#: *"Esta aba não trava — quem trava é a janela do Hefesto ou a linha de
+#: comando."* Nesta tela a faixa dizia sempre a mesma frase, menos pelo meio
+#: segundo do "Testar" (`SEGUNDOS_DO_TESTE`), em que ela piscava a trava.
+#:
+#: O QUE SOBRA NA TELA é o rodapé `#vib-estado`, que é outra coisa: ele avisa
+#: quantas vezes o jogo pediu vibração e que a intensidade não alcança jogo
+#: nenhum sem o gamepad virtual. Nenhuma das suas frases é um dos três estados
+#: da trava.
+SEM_A_FAIXA_DE_ESTADO = True
 
 #: A CHAVE `propria` DIZ SE AQUELA COLUNA TEM AJUSTE PRÓPRIO — e ela é chave de  # (noqa-acento) chave da cena
 #: máquina, por isso sem acento.
@@ -413,27 +428,28 @@ CSS = """
     grid-template-columns:var(--larg-rot) repeat(4,1fr);
     gap:var(--gap-col);
     --r-des:124px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
-    --r-acoes:74px;--r-estado:20px;
+    --r-acoes:74px;
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
-  /* A OITAVA LINHA É `minmax(--r-estado, auto)`, e é a ÚNICA elástica da grade.
-     Ela pode: é a ÚLTIMA, e a divisória de uma linha é o `::before` da célula de
-     BAIXO — não há célula depois desta, então nenhuma linha horizontal depende
-     da altura dela. O topo da faixa continua sendo a soma das sete fixas, que é
-     igual nas cinco colunas: as divisórias seguem nascendo no mesmo y, que é a
-     régua dela desde 30/08.
-     O PISO É O DE UMA SUBLINHA (20px = 11.5px x 1.5, arredondado): ele impede
-     que uma coluna de frase curta fique mais baixa que a vizinha, e não paga um
-     pixel a mais do que isso — o quadro desta aba já passa da dobra por causa
-     das três decisões de 04/09, e cada pixel de piso aqui é um pixel a mais de
-     rolagem. O TETO não existe porque a frase da trava carrega NÚMEROS
-     ("travada em fraca=160, forte=220"): cortá-la seria a linha que ocupa o
-     lugar e não informa — o defeito medido em 04/09 na linha de mesa. */
+  /* SETE FAIXAS, E NÃO OITO — a oitava saiu em 05/09/2026 com a linha "Estado"
+     (ver `SEM_A_FAIXA_DE_ESTADO`). Ela era um `minmax` de piso 20px e a única
+     elástica da grade; com ela foram embora a variável do piso e um `--r-passo`
+     de vão. MEDIDO na janela do produto (`ponte_da_tela.TAMANHO_OCULTA`, WebKit
+     offscreen, 05/09/2026): o miolo rolava 74px e passou a rolar 43, e a grade
+     caiu de 483px para 452 — 31px devolvidos.
+     NÃO FECHA A `VIBRAÇÃO-CABE-01`, e o número fica dito: o alerta do gamepad
+     virtual terminava 41px abaixo do fundo do miolo e agora termina 10px
+     abaixo. A primeira das duas frases passou a caber; a segunda ainda não.
+     A VARIÁVEL DO PISO NÃO É CITADA POR NOME AQUI DE PROPÓSITO: a régua 14 do
+     `_conferir` pergunta o nome dela ao documento inteiro, e um comentário que
+     o escrevesse reprovaria o próprio gerador.
+     O `--r-acoes` PASSA A SER A ÚLTIMA FAIXA, e nada nas divisórias muda: a
+     divisória de uma faixa é o `::before` da célula de BAIXO, e a que sumiu era
+     a última — nenhuma linha horizontal dependia da altura dela. */
   .vib > div{
     display:grid;row-gap:var(--r-passo);
     grid-template-rows:var(--r-des) var(--r-nome) var(--r-forca) var(--r-barra)
-                       var(--r-motor) var(--r-motor) var(--r-acoes)
-                       minmax(var(--r-estado),auto);
+                       var(--r-motor) var(--r-motor) var(--r-acoes);
   }
   /* a barra vertical entre blocos irmãos — pedido dela */
   /* O PADDING SAIU DA COLUNA E FOI PARA AS CÉLULAS — 30/08/2026.
@@ -885,22 +901,12 @@ CSS = """
   .vib-estado .est.info{color:var(--cyan)}
   .vib-estado .est.info .sinal{color:var(--cyan)}
 
-  /* ---------- A LINHA DE ESTADO POR COLUNA — D-14, 04/09/2026 ----------
-     A peça é a `monta.ressalva` da ONDA0-F, e por isso não há aqui nem tamanho
-     de fonte nem cor de repouso: os dois moram na folha das dez
-     (`monta.CSS_FOLHA`). O que esta aba acrescenta são as DUAS coisas que são
-     desta tela: o `margin-top` (a folha o põe para uma linha que nasce ABAIXO de
-     um valor; aqui ela é uma FAIXA da grade, e o vão já é o `row-gap`) e os dois
-     tons, que são os MESMOS da linha de mesa logo abaixo — o nome do tom vem do
-     produto (`app/telas/vibracao.DIZ`/`.ALERTA`) e a cor é o token do tema.
-
-     O MARCADOR HERDA A COR DO TEXTO, como na linha de mesa: `diz` não é "bom" e
-     `alerta` não precisa de um segundo verde para negá-lo. É a mesma correção de
-     03/09 que tirou o verde do `●` do `diz`. */
-  .vib .ressalva{margin-top:0;display:flex;align-items:center}
-  .vib .ressalva .est{display:flex;gap:6px;align-items:flex-start}
-  .vib .ressalva .est .sinal{flex:0 0 auto;font-size:8px;line-height:2.1}
-  .vib .ressalva .est.alerta{color:var(--orange)}
+  /* AS QUATRO REGRAS DA `.vib .ressalva` SAÍRAM em 05/09/2026, com a faixa que
+     era a única a usá-las. Elas vestiam a `monta.ressalva` que ficava dentro da
+     grade; sem a faixa não há uma `.ressalva` dentro da `.vib`, e CSS para
+     elemento que a página não tem é a segunda cara de um dado morto. A peça
+     comum segue na folha das dez (`monta.CSS_FOLHA`), intacta para as outras
+     abas. */
 
   /* ---------- A NOTA DO TESTAR — decisão [02] dela, 04/09/2026 ----------
      *"Só a nota do Testar sobe para a tela. A do Auto fica no `?`."*
@@ -1470,11 +1476,6 @@ def _coluna_vazia(c):
             <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
             <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
             <div class="acoes-col"><span class="nada">{VAZIO}</span></div>
-            <!-- A OITAVA LINHA — a de estado da vibração. Num lugar VAZIO ela é
-                 travessão e não frase: não há controle de quem dizer se a
-                 vibração está travada, e repetir a linha da mesa aqui seria a
-                 tela falando de um aparelho que não está na sala. -->
-            <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
           </div>'''
 
 
@@ -1627,23 +1628,6 @@ def _coluna(c, e=None):
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
-            <!-- A LINHA DE ESTADO DESTA COLUNA — D-14, decisão dela de
-                 04/09/2026: *"Uma linha de estado por coluna"*, com os TRÊS
-                 estados que ela nomeou. Com `rumble_passthrough=False` e
-                 `rumble_active=[160,220]` a janela estável grita "travada em
-                 fraca=160, forte=220" e esta aba ficava MUDA — que é o estado
-                 exato da queixa *"testei os motores e o jogo não vibra mais"*.
-
-                 A PEÇA É A `monta.ressalva` DA ONDA0-F (D-02), e o texto é do
-                 PRODUTO (`app/telas/vibracao.html_da_trava`), nunca redigitado
-                 aqui: o desenho e a tela viva montam esta linha do mesmo lugar.
-
-                 O CUSTO FOI DECLARADO E ACEITO: a trava é UMA para a mesa
-                 (`SEM_FONTE["trava:por-controle"]`), então as colunas vivas
-                 dizem a mesma coisa. Encolher a decisão dela para economizar
-                 pixel não é escolha de quem executa. -->
-            {monta_.ressalva("trava", html_da_trava(estado_da_trava(CENA_DA_TRAVA),
-                                                    saida=SOLTAR_A_TRAVA))}
           </div>'''
 
 
@@ -1717,22 +1701,10 @@ MIOLO = f'''
                      lugares seria a mesma frase duas vezes na MESMA tela, que é
                      a forma mais barata de as duas divergirem. Ver `.vib-nota`. -->
               </span></span></span></div>
-            <!-- O RÓTULO DA OITAVA LINHA. A coluna de rótulos nomeia linhas, e
-                 uma linha sem nome é o defeito que ela apontou em 30/08 sobre a
-                 do Modelo: *"tá o espaço vazio ali. a primeira coluna serve como
-                 nome da linha"*. -->
-            <div><span class="sec-rot">Estado
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
-                O que está acontecendo com a vibração <b>agora</b>, em três estados:<br><br>
-                <b>{TRAVA_JOGO_CONTROLA}</b> — o normal: o jogo manda, e o que você
-                ajustou aqui em cima escala o que ele pede.<br><br>
-                <b>{TRAVA_EM_SILENCIO}</b> — alguém fixou a vibração em zero, e o jogo
-                não consegue mais fazer o controle tremer.<br><br>
-                <b>travada em fraca=X, forte=Y</b> — alguém fixou este par de valores, e
-                o jogo também não passa. Nos dois casos, {SOLTAR_A_TRAVA}.<br><br>
-                Esta aba não trava — quem trava é a janela do Hefesto ou a linha de
-                comando.
-              </span></span></span></div>
+            <!-- O RÓTULO "Estado" SAIU EM 05/09/2026, com a faixa inteira —
+                 ver `SEM_A_FAIXA_DE_ESTADO`. O `?` dele terminava confessando
+                 *"Esta aba não trava — quem trava é a janela do Hefesto ou a
+                 linha de comando"*, e era a medição inteira em uma frase. -->
           </div>
 {"".join(_coluna(c) if c.get("conectado", True) else _coluna_vazia(c) for c in MESA)}
 
@@ -2032,16 +2004,28 @@ def _conferir(doc):
                f"o passo da barra de motor não é {PASSO_DO_MOTOR} — a borda "
                f"aceita todo inteiro de 0 a {TETO_DO_MOTOR}, e um passo maior "
                f"esconderia valores que o produto grava sem reclamar")
-    # 14. A LINHA DE ESTADO DE CADA COLUNA — D-14, e ela é a peça da ONDA0-F com
-    #     o texto do PRODUTO. Não basta a linha existir: o que ela mostra tem de
-    #     ser BYTE A BYTE o que `app/telas/vibracao.html_da_trava` monta, senão
-    #     alguém "melhora" a frase aqui e a tela passa a ter duas versões dela.
-    da_trava = html_da_trava(estado_da_trava(CENA_DA_TRAVA), saida=SOLTAR_A_TRAVA)
-    exigir(corpo.count('class="ressalva" data-campo="trava"') == len(CONECTADOS),
-           f"a linha de estado não é uma por coluna viva ({len(CONECTADOS)}) — "
-           f"é a D-14, e a peça é a `monta.ressalva`")
-    exigir(da_trava and corpo.count(da_trava) == len(CONECTADOS),
-           "o texto da linha de estado por coluna não é o que o produto monta")
+    # 14. A FAIXA "Estado" NÃO VOLTA — decisão dela, 05/09/2026. A régua que
+    #     EXIGIA a linha por coluna passou a guardar a REMOÇÃO dela: é a regra
+    #     desta casa (régua que cobrava o que saiu se inverte, não se apaga).
+    #     OS TRÊS ENDEREÇOS, e não só o primeiro: a célula, o rótulo da coluna
+    #     de rótulos e a faixa da grade. Apagar o `<div>` e deixar o
+    #     `data-campo="trava"` vivo noutro canto seria campo emitido para
+    #     endereço que a página não tem — escrita em lugar nenhum, calada.
+    #     O `corpo` NÃO TEM CSS (o `_conferir` tira o `<style>` logo no começo),
+    #     por isso as duas últimas perguntas vão ao `doc` inteiro. Foi o próprio
+    #     gerador que ensinou isso: a primeira versão desta régua perguntou
+    #     `--r-estado` ao `corpo` e teria dado verde sobre a variável viva.
+    for morto in ('data-campo="trava"', '<span class="sec-rot">Estado'):
+        exigir(morto not in corpo,
+               f"{morto!r} voltou à aba 05 — a faixa de estado saiu em "
+               f"05/09/2026 por decisão dela: *'remove ela não faz sentido'*")
+    exigir("--r-estado" not in doc,
+           "`--r-estado` voltou à folha da aba 05 — a faixa cuja altura ele "
+           "reservava saiu em 05/09/2026, e altura guardada para linha que não "
+           "existe é rolagem paga por nada")
+    exigir(doc.count("var(--r-motor) var(--r-motor) var(--r-acoes);") == 1,
+           "a grade da aba 05 deixou de terminar no `--r-acoes` — a oitava "
+           "faixa saiu em 05/09/2026 e a `grid-template-rows` foi junto")
     # 16. A NOTA DO TESTAR ESTÁ NA TELA — decisão [02] dela, e uma vez só: ela
     #     saiu do `?` para não ficar escrita duas vezes na mesma tela.
     exigir(f'class="vib-nota">{DICA_DOS_VALORES_QUE_PASSAM}' in corpo,

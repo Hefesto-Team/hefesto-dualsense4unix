@@ -11,7 +11,10 @@ esquema, os textos vêm do produto e o desenho vem da BANCADA:
    POLÍTICA, e ``efetivo(motor) = degrau x barra(motor)``. Esta régua cobre as
    DUAS metades: o desenho (o ``<input type=range>`` com o lado) e o gesto (o
    ``rumble.motores.set`` com UM campo só).
-2. **A LINHA DE ESTADO POR COLUNA** (D-14), com os três estados que ela nomeou.
+2. **A FAIXA "Estado" SAIU** — decisão dela, 05/09/2026. Era a D-14 (uma linha
+   de estado por coluna, com os três estados que ela nomeou), e a régua que a
+   EXIGIA passou a guardar a REMOÇÃO: regra desta casa, régua que cobrava o que
+   saiu se inverte, não se apaga.
 3. **A LINHA DE MESA** (decisão [05]) e o "herdado" que ela torna legível: a
    coluna sem ajuste próprio deixa de acender degrau.
 4. **A NOTA DO TESTAR NA TELA** (decisão [02]) — e uma vez só.
@@ -345,90 +348,95 @@ def test_o_endereco_velho_do_motor_continua_sendo_emitido(a05) -> None:
 
 
 # --------------------------------------------------------------------------
-# 4. A LINHA DE ESTADO POR COLUNA — D-14
+# 4. A FAIXA "Estado" SAIU — decisão dela, 05/09/2026
 # --------------------------------------------------------------------------
-@pytest.mark.parametrize(("estado", "espera"), [
-    ({"rumble_passthrough": True, "rumble_active": None},
-     _tela.TRAVA_JOGO_CONTROLA),
-    ({"rumble_passthrough": False, "rumble_active": [0, 0]},
-     _tela.TRAVA_EM_SILENCIO),
-    ({"rumble_passthrough": False, "rumble_active": [160, 220]},
-     "travada em fraca=160, forte=220"),
-])
-def test_os_tres_estados_que_ela_nomeou(estado: dict, espera: str) -> None:
-    """Os TRÊS, com as palavras dela — e a ordem do par é `fraca`, `forte`.
+def test_a_faixa_de_estado_nao_existe_mais_no_desenho(bancada: str) -> None:
+    """Nem a célula, nem o rótulo da coluna de rótulos, nem a faixa da grade.
 
-    `rumble_active` é `(weak, strong)` do começo ao fim do produto, e a janela
-    estável escreve `fraca={active[0]}, forte={active[1]}`. Trocá-los aqui faria
-    as duas telas dizerem o contrário sobre o mesmo aparelho.
+    **DECISÃO DELA, 05/09/2026, verbatim:** *"pq temos uma linha de estado se o
+    estado em vibração sempre vai ser o jogo mandando os input pro controle e a
+    gnt aumentando eles ou diminuindo? remove ela não faz sentido"*.
 
-    MORDIDA: em `app/telas/vibracao.estado_da_trava`, inverta o par da
-    f-string — o terceiro caso reprova nomeando os dois números.
+    **ELA TEM RAZÃO MEDIDA pelo caminho que ela usa**, e é por isso que esta
+    régua guarda a remoção em vez de a lamentar. A faixa tinha três estados
+    (`estado_da_trava`) e os dois "travada" precisam de `rumble_active` armado.
+    Os DOIS gestos desta aba terminam em `rumble_passthrough(True)` —
+    `a05_vibracao.testar` (passos 3 e 4) e `a05_vibracao.parar` —, que solta o
+    par. Quem arma e DEIXA armado é a janela GTK (lá o "Parar" é botão separado
+    do "Devolver ao jogo") ou `hef test rumble`. O próprio `?` da faixa
+    confessava isso: *"Esta aba não trava — quem trava é a janela do Hefesto ou
+    a linha de comando."*
+
+    OS TRÊS ENDEREÇOS, e não só o primeiro: apagar o `<div>` e deixar o
+    `data-campo="trava"` vivo noutro canto seria campo emitido para endereço que
+    a página não tem — escrita em lugar nenhum, calada.
+
+    MORDIDA: devolva o `monta_.ressalva("trava", …)` a `aba05._coluna`, ou o
+    rótulo `Estado` à `.rotulos`, e este caso reprova.
     """
-    achado = _tela.estado_da_trava(estado)
-    assert achado is not None, f"o estado {estado!r} não produziu linha nenhuma"
-    tom, fato = achado
-    assert fato == espera, f"a frase saiu {fato!r}"
-    assert tom == (_tela.DIZ if espera == _tela.TRAVA_JOGO_CONTROLA
-                   else _tela.ALERTA), f"o tom de {fato!r} saiu {tom!r}"
+    for morto in ('data-campo="trava"', '<span class="sec-rot">Estado'):
+        assert morto not in bancada, (
+            f"{morto!r} voltou ao desenho da aba 05 — a faixa de estado saiu em "
+            f"05/09/2026 por decisão dela")
 
 
-def test_o_daemon_calado_nao_afirma_trava() -> None:
-    """Sem as duas chaves, a linha NÃO é montada — nunca um travessão.
+def test_a_grade_da_vibracao_tem_sete_faixas(bancada: str) -> None:
+    """A `grid-template-rows` perdeu a oitava, e a variável do piso foi junto.
 
-    Um `—` num estado de vibração afirma *"não sei se está travada"*, onde a
-    resposta honesta é não dizer nada. É a mesma disciplina de
-    `textos_do_estado`, e a peça que a recebe some por `:empty`.
+    O CSS É A OUTRA METADE DA REMOÇÃO: uma faixa sem células continua reservando
+    altura, e altura reservada para linha que não existe é rolagem paga por
+    nada. MEDIDO no WebKit da janela do produto em 05/09/2026: o miolo rolava
+    74 px e passou a rolar 43 — 31 px devolvidos.
+
+    MORDIDA: devolva `minmax(var(--r-estado),auto)` à `grid-template-rows` da
+    `.vib > div` — este caso reprova.
     """
-    assert _tela.estado_da_trava({}) is None
-    assert _tela.html_da_trava(None) == ""
+    assert "--r-estado" not in bancada, (
+        "a variável do piso da faixa de estado voltou à folha da aba 05")
+    assert bancada.count("var(--r-motor) var(--r-motor) var(--r-acoes);") == 1, (
+        "a grade da aba 05 deixou de terminar no `--r-acoes` — a oitava faixa "
+        "saiu em 05/09/2026 e a `grid-template-rows` foi junto")
 
 
-def test_a_linha_da_trava_manda_o_marcador_quando_nao_ha(a05) -> None:
-    """Vazio vira `monta.NADA_A_DIZER`, e não string vazia.
+def test_o_pacote_nao_emite_mais_o_campo_da_trava() -> None:
+    """O campo sai com o endereço — senão é escrita em lugar nenhum, calada.
 
-    O `escrever()` troca vazio por travessão ANTES de escolher o alvo, e no alvo
-    `html` isso põe um `—` DENTRO da linha. O marcador `.nada` é o que a folha
-    das dez sabe esconder (`.ressalva:has(.nada){display:none}`).
+    Um `plano["trava"]` sobrevivente pintaria um `data-campo="trava"` que a
+    página não tem mais: o pintor procura, não acha, e não diz nada. É o defeito
+    que esta casa persegue, e ele é INVISÍVEL na tela — só uma régua o vê.
 
-    MORDIDA: em `a05_vibracao.pacote`, tire o `_sem_o_que_dizer(...)` e emita o
-    HTML cru — este caso reprova, e na tela dela apareceria um travessão numa
-    linha de alerta.
+    MORDIDA: devolva o `plano["trava"] = …` a `a05_vibracao.pacote` — este caso
+    reprova.
     """
     import pacotes
 
     carga = pacotes.pacote_da_pagina(PAGINA, _ctx())
     col = next(iter(carga["colunas"].values()))
-    assert col["trava"], "a linha de estado da coluna saiu vazia"
-    assert "nada" in col["trava"] or "est " in col["trava"], (
-        f"o que saiu não é nem a frase nem o marcador: {col['trava']!r}")
+    assert "trava" not in col, (
+        f"o pacote voltou a emitir o campo `trava`: {col.get('trava')!r}")
 
 
-def test_a_linha_da_trava_e_a_do_produto(a05, bancada: str) -> None:
-    """O que a coluna mostra é BYTE A BYTE o que o produto monta.
+def test_as_cinco_pecas_da_trava_morreram_com_a_faixa() -> None:
+    """A camada de produto da trava saiu junto — ela era desta aba e de mais
+    nenhuma.
 
-    É esta comparação que impede alguém de "melhorar" a frase no gerador e criar
-    a segunda versão de um texto de tela.
+    **NÃO FUI EU QUEM MEDIU ISSO**, e é o que torna a remoção segura: assim que
+    a faixa saiu, o `portao_a_casa_sabe_e_o_produto_nao_faz` reprovou nomeando
+    `estado_da_trava` e `html_da_trava` como *promessas públicas sem chamador em
+    produção*. A janela estável nunca as chamou — ela tem a sua própria linha
+    (`app/actions/rumble_actions._update_rumble_state_label`), com as suas
+    próprias palavras —, e o `SOLTAR_A_TRAVA` mandava clicar no "Parar nesta
+    coluna", que só existe no HTML.
 
-    MORDIDA: em `aba05._coluna`, troque a chamada por um texto escrito à mão —
-    este caso reprova.
+    MORDIDA: devolva qualquer uma das cinco a `app/telas/vibracao.py` sem
+    chamador — este caso reprova, e o portão da casa reprova junto.
     """
-    import pacotes
-
-    carga = pacotes.pacote_da_pagina(
-        PAGINA, _ctx(rumble_passthrough=False, rumble_active=[160, 220]))
-    col = next(iter(carga["colunas"].values()))
-    esperado = _tela.html_da_trava(
-        (_tela.ALERTA, "travada em fraca=160, forte=220"),
-        saida=_tela.SOLTAR_A_TRAVA)
-    assert col["trava"] == esperado, (
-        f"a linha da coluna não é a do produto:\n  {col['trava']}\n  {esperado}")
-    assert _tela.SOLTAR_A_TRAVA in col["trava"], (
-        "a frase não diz como soltar — e o botão que a janela estável nomeia "
-        "não existe nesta aba")
-    vivas = bancada.count('<div class="ctrl" data-controle=')
-    assert bancada.count('class="ressalva" data-campo="trava"') == vivas, (
-        "a linha de estado não é uma por coluna viva — é a D-14")
+    for morta in ("TRAVA_JOGO_CONTROLA", "TRAVA_EM_SILENCIO", "estado_da_trava",
+                  "SOLTAR_A_TRAVA", "html_da_trava"):
+        assert not hasattr(_tela, morta), (
+            f"`{morta}` voltou a `app/telas/vibracao.py`. As cinco nasceram em "
+            f"04/09/2026 para a faixa de estado da aba 05, que saiu em 05/09 "
+            f"por decisão dela — sem ela, não há quem as chame no produto.")
 
 
 # --------------------------------------------------------------------------
