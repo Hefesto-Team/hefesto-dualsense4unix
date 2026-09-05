@@ -944,7 +944,7 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     mostra_todos, escolhido = monta.escolha_da_fita("todos", mesa)
     chips = [f"<span>{monta.ROTULO_DA_FITA}</span>"]
     if mostra_todos:
-        chips.append('<span class="chip on">Todos</span>')
+        chips.append('<label class="chip on">Todos</label>')
     for lugar in mesa:
         nome = str(lugar.get("nome") or "")
         if nome == NOME_SEM_LEITURA:
@@ -956,9 +956,9 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
         # escolhido — uma fita com um chip e nenhum aceso diria "escolha" sobre
         # a única coisa que não se pode deixar de escolher.
         aceso = " on" if str(lugar.get("pref") or "") == escolhido else ""
-        chips.append(f'<span class="chip plastico{aceso}"'
+        chips.append(f'<label class="chip plastico{aceso}"'
                      ' title="a borda é a cor do plástico">'
-                     f"{rotulo}</span>")
+                     f"{rotulo}</label>")
     return "".join(chips)
 
 

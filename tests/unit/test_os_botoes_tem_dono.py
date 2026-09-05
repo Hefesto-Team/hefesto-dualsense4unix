@@ -39,7 +39,16 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
          "battery_pct": 95, "lightbar_rgb": [0, 0, 255], "is_primary": True,
-         "inputs": {}, "audio": {}, "speaker": {}}
+         # O DUBLÊ ERA MAIS FROUXO QUE O DAEMON — 05/09/2026. `audio` e
+         # `speaker` vinham VAZIOS, e o daemon vivo publica os dois cheios em
+         # todo controle conectado. Desde que a aba 02 aprendeu a guardar o som
+         # no perfil, o gesto `rota` precisa do volume para escrever a seção
+         # (o esquema recusa rota sem volume) — e com o dublê vazio ele
+         # recusava, dizendo a verdade sobre um estado que não existe na mesa
+         # dela. Dublê mais frouxo que o real é o defeito que esta casa já
+         # pagou três vezes.
+         "inputs": {}, "audio": {"mic_mudo": False},
+         "speaker": {"volume": 100, "muted": False}}
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense"}]
 
@@ -93,6 +102,25 @@ class PonteDeMentira:
             # `identity_number_set` devolve `(ok, motivo)`; os outros, `bool`.
             return (True, None) if nome.endswith("_set") and "identity" in nome else True
         return registrar
+
+
+#: O PERFIL ATIVO PRECISA EXISTIR NO DISCO — 05/09/2026. Desde que a aba 02
+#: aprendeu a GUARDAR o som por controle, o gesto lê o perfil ativo para
+#: escrever nele; sem arquivo, ele recusa com *"o ajuste chegou ao controle,
+#: mas não consegui ler o perfil"* — e a recusa está CERTA: dizer "Pronto."
+#: sobre um ajuste que amanhã volta ao de ontem seria a mentira que a frase
+#: existe para evitar. O que faltava era esta régua ter um perfil.
+@pytest.fixture(autouse=True)
+def _perfil_ativo_no_disco() -> None:
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    profiles_dir().mkdir(parents=True, exist_ok=True)
+    for nome in ("regua", "Bancada"):
+        if not (profiles_dir() / f"{nome.lower()}.json").exists():
+            loader.save_profile(Profile(name=nome, match=MatchManual()),
+                                origem="regua")
 
 
 @pytest.fixture(scope="module")

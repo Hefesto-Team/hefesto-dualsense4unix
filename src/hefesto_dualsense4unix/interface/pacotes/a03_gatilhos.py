@@ -3314,6 +3314,14 @@ PISO_DA_ABA = 5
 #: nesta árvore e eles não perdoam.
 _UNIQ = "aa:bb:cc:00:00:01"
 #: A CURVA E O MODO DELA, resolvidos uma vez para as provas abaixo lerem os dois
+#: O QUE O GUARDAR NO PERFIL ACRESCENTA A TODA PROVA QUE CHEGA AO APARELHO —
+#: 05/09/2026. Desde a decisão D2 o gatilho que chega ao controle vai também
+#: ao perfil ativo (`_guardar_no_perfil` → `_gravar_so_o_gatilho`), e o último
+#: passo desse caminho é pedir ao daemon que releia o ambiente de lançamento.
+#: Declarar aqui é o contrário de afrouxar: a régua passa a COBRAR a segunda
+#: metade do ato, e um gatilho que só chega ao aparelho volta a reprovar.
+_GUARDOU = ("chamar", ["launch_env.refresh"], {})
+
 #: sem repetir a chamada. `stop_hard` é de feedback; `galope`, de vibração.
 _STOP_HARD, _MODO_STOP_HARD = _curva("stop_hard")
 _GALOPE, _MODO_GALOPE = _curva("galope")
@@ -3338,17 +3346,17 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "e",  # (noqa-acento) id
      "modo": "Rigid"},
      "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
-                {"uniq": _UNIQ})]},
+                {"uniq": _UNIQ}), _GUARDOU]},
     # "Desligado" é `trigger.reset` — a R-19. Se alguém trocar por um
     # `trigger.set` com `Off`, esta linha reprova: o nome da função muda.
     {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "d", "modo": "Off"},  # (noqa-acento) id
-     "chama": [("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ})]},
+     "chama": [("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ}), _GUARDOU]},
     # A MESMA ESCOLHA PELA OUTRA CHAVE: `valor` é o que um `<select>` manda no
     # `change`. As duas portas do `_escolhido` têm de levar ao mesmo lugar.
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
      "gesto": "modo", "clique": {"lado": "e", "valor": "Vibration"},
      "chama": [("trigger_set_detalhado", ["left", "Vibration", _padroes("Vibration")],
-                {"uniq": _UNIQ})]},
+                {"uniq": _UNIQ}), _GUARDOU]},
     # O efeito pronto: a curva sai de `profiles/trigger_presets.py`, e o modo é
     # o da TABELA em que ela mora — aqui, o de força.
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
@@ -3356,7 +3364,7 @@ PROVAS = [
      "chama": [("trigger_set_detalhado",
                 ["right", _MODO_STOP_HARD,
                  _params_da_curva(_MODO_STOP_HARD, _STOP_HARD)],
-                {"uniq": _UNIQ})]},
+                {"uniq": _UNIQ}), _GUARDOU]},
     # E A CURVA DE VIBRAÇÃO, que até 03/09/2026 não tinha como ser aplicada por
     # esta tela. Ela prova as DUAS metades da cura: o modo tem de ser
     # `MultiPositionVibration` (e não o de força, que era o cravado) e as dez
@@ -3367,7 +3375,7 @@ PROVAS = [
      "gesto": "pronto", "clique": {"lado": "e", "v": "galope"},
      "chama": [("trigger_set_detalhado",
                 ["left", _MODO_GALOPE, _params_da_curva(_MODO_GALOPE, _GALOPE)],
-                {"uniq": _UNIQ})]},
+                {"uniq": _UNIQ}), _GUARDOU]},
     # O AJUSTE: uma barra arrastada troca UM parâmetro e reaplica o modo com a
     # lista inteira. A prova manda `Rigid` com a força em 200 e espera os
     # padrões do modo com o índice 1 trocado — se alguém passar a mandar só o
@@ -3376,7 +3384,7 @@ PROVAS = [
      "gesto": "ajuste", "clique": {"lado": "e", "i": "1", "valor": "200",
                                    "forma": _forma_de_prova("e", "Rigid")},
      "chama": [("trigger_set_detalhado",
-                ["left", "Rigid", [_padroes("Rigid")[0], 200]], {"uniq": _UNIQ})]},
+                ["left", "Rigid", [_padroes("Rigid")[0], 200]], {"uniq": _UNIQ}), _GUARDOU]},
     # O REENVIO: UM clique, DOIS envios, na ordem L2 → R2. A prova mistura os
     # dois modos de propósito — `Rigid` de um lado e `Desligado` do outro —
     # porque as PORTAS são diferentes e a R-19 mora nessa diferença: `Off` é
@@ -3390,6 +3398,10 @@ PROVAS = [
      "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
                 {"uniq": _UNIQ}),
                ("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ})]},
+    #: O `reenviar` NÃO leva `_GUARDOU`, e não é esquecimento: ele reenvia ao
+    #: aparelho o que o rascunho JÁ tem, e o rascunho veio do perfil. Não há
+    #: escolha nova a guardar, e gravar aqui reescreveria o perfil a cada
+    #: reenvio — inclusive por cima de uma edição feita noutra aba no meio.
 ]
 
 #: OS GESTOS QUE O DAEMON ACEITA E NÃO PUBLICA. O `state_full` não traz
