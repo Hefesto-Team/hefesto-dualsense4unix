@@ -60,10 +60,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-from hefesto_dualsense4unix.integrations.uinput_mouse import (
-    DEFAULT_MOUSE_SPEED,
-)
-
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
          "battery_pct": 90, "is_primary": True, "inputs": {}, "audio": {},
