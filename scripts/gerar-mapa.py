@@ -851,6 +851,53 @@ def _bloco_fila_no_specs() -> str:
     )
 
 
+#: O que sustenta cada `inferido-do-codigo` — LIDO da coluna `codigo_ref`, que
+#: os agentes preencheram, e nunca digitado aqui. Decisão dela, 05/09/2026:
+#: *"Sim o driver é espec"* — ler o `hid-playstation` não é palpite, é
+#: especificação. A legenda dizia só "alguém leu a fonte", e nivelava por baixo
+#: as duzentas células que apontam para o driver do kernel.
+_DRIVER = re.compile(
+    r"hid[-_](playstation|nintendo|sony)|xpadneo|drivers/hid|linux|kernel"
+    r"|dualsense\.c|sony_gamepad|8bitdo|SDL|steam|dualshock|ds4|joycon|\.c:|\.h:",
+    re.IGNORECASE,
+)
+_NOSSO = re.compile(
+    r"src/hefesto|hefesto_dualsense4unix"
+    r"|(^|[ /])(daemon|core|integrations|app|interface|profiles)/",
+    re.IGNORECASE,
+)
+
+
+def procedencia_do_inferido(linhas: list[dict]) -> dict[str, int]:
+    """Conta, por procedência, as células `inferido-do-codigo` do mapa inteiro.
+
+    A pergunta que ela fez em 05/09/2026 é *quem* sustenta a inferência. A
+    resposta já estava no mapa — em `cabo_codigo_ref` / `radio_codigo_ref` e em
+    `fonte_externa` — e esta função a LÊ. Acrescentar coluna seria pedir que
+    refizessem trabalho já feito.
+    """
+    conta = {"driver": 0, "os_dois": 0, "nosso": 0, "sem_referencia": 0}
+    for lin in linhas:
+        for _lado, pref in LADOS:
+            if (lin.get(f"{pref}de_onde_sei") or "").strip() != "inferido-do-codigo":
+                continue
+            texto = " ".join(
+                (lin.get(c) or "")
+                for c in (f"{pref}codigo_ref", "fonte_externa", f"{pref}evidencia")
+            )
+            se_driver = bool(_DRIVER.search(texto))
+            se_nosso = bool(_NOSSO.search(texto))
+            if se_driver and se_nosso:
+                conta["os_dois"] += 1
+            elif se_driver:
+                conta["driver"] += 1
+            elif se_nosso:
+                conta["nosso"] += 1
+            else:
+                conta["sem_referencia"] += 1
+    return conta
+
+
 def monta() -> str:
     linhas = le_csv(reclamar=True)
     fams = sorted({lin["familia"] for lin in linhas})
@@ -896,6 +943,11 @@ def monta() -> str:
 
     opt_fam = "".join(f'<option value="{html.escape(f)}">{html.escape(f)}</option>' for f in fams)
 
+    proc = procedencia_do_inferido(linhas)
+    inf_driver = proc["driver"]
+    inf_os_dois = proc["os_dois"]
+    inf_nosso = proc["nosso"]
+    inf_sem_ref = proc["sem_referencia"]
     escada_de_saida = degraus_em_prosa(DIRECAO_SAIDA)
     escada_de_entrada = degraus_em_prosa(DIRECAO_ENTRADA)
     bloco_fila = _bloco_fila_no_specs()
@@ -951,8 +1003,20 @@ def monta() -> str:
 
   <div class="duas">
     <p><code>de_onde_sei</code> — <strong>de onde vem a informação</strong>:
-       <em>medido</em> no aparelho · <em>inferido-do-codigo</em> (alguém leu a
-       fonte) · <em>afirmado-no-doc</em> · <em>incerto</em>.</p>
+       <em>medido</em> no aparelho · <em>inferido-do-codigo</em> ·
+       <em>afirmado-no-doc</em> · <em>incerto</em>.</p>
+    <p><strong>E <em>inferido-do-codigo</em> não é um grau só.</strong> A coluna
+       <code>codigo_ref</code> diz <em>qual</em> fonte foi lida, e o censo abaixo
+       é contado dela agora, não digitado aqui:
+       <strong>{inf_driver}</strong> células apontam para o
+       <strong>driver do kernel ou um repositório externo</strong>
+       (<code>hid-playstation</code>, <code>hid-nintendo</code>,
+       <code>xpadneo</code>) — e o driver <em>é</em> a especificação do aparelho,
+       decisão dela em 05/09/2026;
+       <strong>{inf_os_dois}</strong> apontam para o driver <em>e</em> para o
+       nosso código; <strong>{inf_nosso}</strong> só para o nosso;
+       <strong>{inf_sem_ref}</strong> não citam arquivo nenhum — e são
+       essas, só essas, que ainda pedem lastro.</p>
     <p><code>ate_onde_foi</code> — <strong>até onde a prova chegou</strong>.
        {escada_de_saida}.</p>
     <p>E a volta, do aparelho para o JOGO — os dois degraus que entraram em
