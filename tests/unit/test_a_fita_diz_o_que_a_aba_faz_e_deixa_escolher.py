@@ -251,9 +251,24 @@ def test_o_gesto_do_chip_tem_dono_nas_dez_abas(hv):
 # 4 · O DONO DA RESPOSTA É UM SÓ
 # ---------------------------------------------------------------------------
 def test_quem_diz_se_a_aba_escolhe_para_diante_de_pagina_que_nao_conhece(hv):
-    """Responder `False` calado devolveria a fita esmaecida sem dizer por quê."""
+    """Responder `False` calado devolveria a fita esmaecida sem dizer por quê.
+
+    O QUE A PARADA COBRE MUDOU EM 05/09/2026, e o que ela cobre é o TYPO. Como
+    nasceu, a guarda parava TODA página fora das dez — e matou na coleta oito
+    testes que geram página própria (`98-prova-da-ressalva`, `97-botao-cinza`)
+    para medir um pedaço de tela sem carregar uma aba inteira. Bancada não é aba
+    errada: é outra coisa, e a resposta certa para ela é *não escolhe*.
+
+    A REGRA QUE SEPARA AS DUAS É O NÚMERO. Esta régua mede as duas metades: o
+    número de uma das dez com o nome errado PARA; um número que não é de aba
+    nenhuma segue, calado e `False`.
+    """
     with pytest.raises(SystemExit, match="ABAS_QUE_ESCOLHEM"):
-        _monta().a_fita_escolhe("99-inventada")
+        _monta().a_fita_escolhe("03-gatihos")
+    with pytest.raises(SystemExit, match="ABAS_QUE_ESCOLHEM"):
+        _monta().a_fita_escolhe("10-perfil")
+    assert _monta().a_fita_escolhe("99-inventada") is False
+    assert _monta().a_fita_escolhe("98-prova-da-ressalva.html") is False
 
 
 def test_a_resposta_nao_e_mais_digitada_nos_geradores(hv):

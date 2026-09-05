@@ -232,8 +232,19 @@ def medido() -> dict:
 
     view.connect("load-changed", carregou)
     view.load_uri(onde.pagina(PAGINA, publicado=True).as_uri())
-    GLib.timeout_add(20000, Gtk.main_quit)
-    Gtk.main()
+    # O `timeout_add` PENDENTE DISPARA NO LAÇO DO PRÓXIMO TESTE de GUI do
+    # mesmo processo — 05/09/2026, e a cura já existia em cinco arquivos
+    # irmãos (*"Já matou onze medições"*). Aqui ela faltava: medido no
+    # lote-00 da suíte, DUAS voltas em três davam *"o WebKit não respondeu
+    # em 30 s"* com o `saiu` VAZIO — o laço não estourou, ele foi MORTO por
+    # um `main_quit` que outro teste deixou armado. Reprodutível só na
+    # ordem aleatória, que é o que o torna invisível quando se roda o
+    # arquivo sozinho.
+    guarda = GLib.timeout_add(20000, Gtk.main_quit)
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
     assert saiu, "o WebKit não respondeu em 20 s"
     assert not saiu[0].startswith("ERRO"), saiu[0]
     lido = json.loads(saiu[0])
