@@ -166,5 +166,9 @@ def test_restore_dialog_nao_cita_navegacao(monkeypatch: pytest.MonkeyPatch) -> N
     (secundario,) = exibidos
     # A frase enganosa antiga sumiu, e a correta está na TELA.
     assert "Navegação" not in secundario
-    assert "meu_perfil" in secundario
+    # PERFIL-PADRAO-PERSONALIZADO-01: a régua exigia o nome que ela mandou
+    # aposentar. Invertida — o diálogo tem de citar o perfil pelo nome que
+    # ela LÊ na lista, e o slug antigo passa a ser motivo de reprovação.
+    assert "Personalizado" in secundario
+    assert "meu_perfil" not in secundario
     assert "aplica-se a todos os apps" in secundario

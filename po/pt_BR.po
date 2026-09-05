@@ -129,7 +129,7 @@ msgstr ""
 
 #: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1338
 msgid ""
-"Asset 'meu_perfil.json' não encontrado — Restaurar Default indisponível."
+"Asset 'personalizado.json' não encontrado — Restaurar Default indisponível."
 msgstr ""
 
 #: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1346
@@ -138,7 +138,7 @@ msgstr ""
 
 #: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1394
 #, python-brace-format
-msgid "meu_perfil restaurado para {destino}"
+msgid "Personalizado restaurado para {destino}"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1396
@@ -515,13 +515,14 @@ msgid "Restaurar perfil original?"
 msgstr "Restaurar perfil original?"
 
 #: src/hefesto_dualsense4unix/app/gui_dialogs.py:714
-#, fuzzy
 msgid ""
-"Isso vai restaurar o 'meu_perfil' para a configuração padrão de fábrica "
-"(aplica-se a todos os apps). As suas alterações serão perdidas. Continuar?"
+"Isso vai restaurar o 'Personalizado' para a configuração padrão de "
+"fábrica (aplica-se a todos os apps). As suas alterações serão perdidas. "
+"Continuar?"
 msgstr ""
-"Isso vai restaurar o 'meu_perfil' para a cópia original (Navegação). As suas "
-"alterações serão perdidas. Continuar?"
+"Isso vai restaurar o 'Personalizado' para a configuração padrão de "
+"fábrica (aplica-se a todos os apps). As suas alterações serão perdidas. "
+"Continuar?"
 
 #: src/hefesto_dualsense4unix/app/gui_dialogs.py:720
 msgid "Restaurar"

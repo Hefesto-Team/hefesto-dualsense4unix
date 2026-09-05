@@ -98,6 +98,44 @@ def _lock_path(path: Path) -> Path:
 # COMPARTILHADO entre os dois semeadores — mantê-los em sincronia.
 SEED_MARKER_NAME = ".seeded_presets"
 
+# --- PERFIL-PADRAO-PERSONALIZADO-01 (05/09/2026) ---------------------------
+# Decisão dela, literal: *"Meu_perfil como perfil default nao deveria existir.
+# Deixa ou Meu Perfil ou Personalizado. acho esse melhor."*
+#
+# O nome `meu_perfil` era um SLUG aparecendo cru na lista da aba Perfis — ela
+# lê o `Profile.name`, e o asset de fábrica gravava o slug ali. O padrão passa
+# a nascer com nome de gente: "Personalizado", que slugifica para
+# `personalizado.json`.
+#
+# O disco de quem já usa o produto é o centro do risco. Medido na máquina dela
+# em 05/09: 33 perfis, e SÓ DOIS são catch-all (`fallback` prio 0 e
+# `meu_perfil` prio 1) — o `meu_perfil.json` dela NÃO é o asset de fábrica,
+# carrega os ajustes por controle (lightbar vermelha num, azul no outro, e as
+# políticas de rumble). Semear `personalizado.json` por cima disso daria a ela
+# DOIS padrões disputando, que é exatamente o que `profiles.sanidade`
+# (`MAX_CATCH_ALL_TOLERADOS = 1`) chama de configuração machucando.
+#
+# Por isso são DUAS peças, e as duas precisam existir:
+#   1. `migrate_default_profile_name` renomeia o arquivo DELA, preservando o
+#      conteúdo e guardando o antigo — one-shot, com marker próprio.
+#   2. os dois semeadores (aqui e `scripts/install_profiles.sh`) recusam
+#      copiar `personalizado.json` enquanto `meu_perfil.json` existir no
+#      destino. É a rede embaixo da migração: se ela não tiver rodado ainda
+#      (install.sh chama o shell antes de qualquer processo Python carregar
+#      perfil), o pior caso é ela continuar com o nome velho — nunca com dois.
+NOME_DO_PADRAO = "Personalizado"
+NOME_ANTIGO_DO_PADRAO = "meu_perfil"
+ARQUIVO_DO_PADRAO = "personalizado.json"
+ARQUIVO_ANTIGO_DO_PADRAO = "meu_perfil.json"
+
+#: O arquivo antigo não é apagado: vira este nome. Não termina em `.json`, e
+#: por isso some do `glob("*.json")` de TODO leitor de perfil desta casa — a
+#: lista dela não ganha uma linha, e o arquivo continua no disco para quem
+#: quiser desfazer à mão.
+BACKUP_DO_PADRAO = "meu_perfil.json.antes-de-personalizado"
+
+_RENAME_PADRAO_MARKER = ".perfil_padrao_renomeado"
+
 # Opt-out explícito da semeadura automática ("1" desliga). Usado pela suíte de
 # testes (hermetismo: um teste que carrega perfis não pode receber os presets
 # do repo no seu tmp) e disponível para quem quiser um config 100% manual.
@@ -176,6 +214,16 @@ def seed_default_presets(
             # Já semeado antes → respeita a decisão da usuária (inclusive deletar).
             if fname in seeded:
                 continue
+            # PERFIL-PADRAO-PERSONALIZADO-01: o slot dela JÁ EXISTE sob o nome
+            # antigo. Copiar o asset aqui criaria um SEGUNDO catch-all — e o
+            # segundo catch-all é o defeito que `profiles.sanidade` existe
+            # para acusar. Registra sem copiar: a migração renomeia o dela.
+            if (
+                fname == ARQUIVO_DO_PADRAO
+                and (directory / ARQUIVO_ANTIGO_DO_PADRAO).exists()
+            ):
+                new_entries.append(fname)
+                continue
             dest = directory / fname
             if dest.exists():
                 # Presente na 1ª execução: registra sem copiar.
@@ -226,6 +274,113 @@ def seed_default_presets(
 # e nada no arquivo separa os dois casos. Uma migração inversa desfaria em
 # silêncio uma escolha real — que é o defeito que esta sprint existe para
 # matar, com o sinal trocado. Portão: `test_o_preset_nao_escolhe_a_mascara.py`.
+
+
+def _repontar_a_sessao_para_o_padrao_novo() -> None:
+    """Faz `session.json` e `active_profile.txt` seguirem o perfil renomeado.
+
+    Os dois guardam o NOME do último perfil que ela ativou na mão, e o daemon
+    restaura por esse nome no boot (`resolve_boot_profile`). Sem esta linha, a
+    renomeação deixaria os dois apontando um perfil que não existe mais: o
+    `restore_last_profile` falharia, logaria `last_profile_restore_failed` e o
+    boot ficaria SEM perfil — a metade B deste item quebrada pela metade A.
+
+    Só reescreve o que apontava para o nome antigo. Best-effort dos dois lados,
+    pelo mesmo contrato de `utils.session`: nunca propaga exceção.
+    """
+    from hefesto_dualsense4unix.utils.session import (
+        load_last_profile,
+        read_active_marker,
+        save_active_marker,
+        save_last_profile,
+    )
+
+    with contextlib.suppress(Exception):
+        if load_last_profile() == NOME_ANTIGO_DO_PADRAO:
+            save_last_profile(NOME_DO_PADRAO)
+    with contextlib.suppress(Exception):
+        if read_active_marker() == NOME_ANTIGO_DO_PADRAO:
+            save_active_marker(NOME_DO_PADRAO)
+
+
+def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
+    """One-shot: o perfil padrão deixa de se chamar `meu_perfil`.
+
+    PERFIL-PADRAO-PERSONALIZADO-01 (ver o bloco no topo do módulo). Devolve o
+    nome novo quando renomeou, `None` em toda recusa.
+
+    O que ela tem no disco é o valor a proteger, então a migração RECUSA em
+    quatro casos, e cada recusa tem teste:
+
+    - `meu_perfil.json` ausente — máquina nova, nada a migrar (o semeador
+      entrega o `personalizado.json` de fábrica).
+    - `personalizado.json` já existe — ela própria criou um perfil com esse
+      nome. Sobrescrever seria destruir configuração dela; o velho fica.
+    - o JSON não abre, ou o `name` lá dentro não é exatamente `meu_perfil` —
+      ela já renomeou o perfil na mão, e a identidade é dela.
+    - o marker já existe — a migração é one-shot, como as vizinhas.
+
+    Quando renomeia, a ORDEM é o que garante que ela não perca nada: o arquivo
+    novo é escrito e trocado atomicamente ANTES de o antigo sair do caminho. Um
+    disco cheio no meio deixa o disco dela exatamente como estava.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _RENAME_PADRAO_MARKER
+    if marker.exists():
+        return None
+    antigo = directory / ARQUIVO_ANTIGO_DO_PADRAO
+    novo = directory / ARQUIVO_DO_PADRAO
+    renomeado: str | None = None
+    desfecho = "sem_perfil_antigo"
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return None
+        if novo.exists() and antigo.is_file():
+            desfecho = "personalizado_ja_existe"
+        elif antigo.is_file():
+            dados: object = None
+            try:
+                dados = json.loads(antigo.read_text(encoding="utf-8"))
+            except Exception as exc:
+                desfecho = "ilegivel"
+                logger.warning("perfil_padrao_rename_ilegivel", err=str(exc))
+            if isinstance(dados, dict):
+                if dados.get("name") == NOME_ANTIGO_DO_PADRAO:
+                    dados["name"] = NOME_DO_PADRAO
+                    fd, tmp = tempfile.mkstemp(
+                        dir=str(directory), prefix=".personalizado_"
+                    )
+                    try:
+                        os.write(
+                            fd,
+                            (
+                                json.dumps(dados, ensure_ascii=False, indent=2)
+                                + "\n"
+                            ).encode("utf-8"),
+                        )
+                    finally:
+                        os.close(fd)
+                    os.replace(tmp, novo)
+                    # Só agora o antigo sai de cena — e sai para um nome que
+                    # nenhum `glob("*.json")` enxerga, em vez de para o lixo.
+                    antigo.replace(directory / BACKUP_DO_PADRAO)
+                    renomeado = NOME_DO_PADRAO
+                    desfecho = "renomeado"
+                else:
+                    desfecho = "nome_mudado_pela_usuaria"
+        with contextlib.suppress(Exception):
+            marker.write_text("done\n", encoding="utf-8")
+    if renomeado:
+        _repontar_a_sessao_para_o_padrao_novo()
+    logger.info(
+        "perfil_padrao_renomeado",
+        desfecho=desfecho,
+        de=NOME_ANTIGO_DO_PADRAO,
+        para=NOME_DO_PADRAO if renomeado else None,
+        backup=BACKUP_DO_PADRAO if renomeado else None,
+    )
+    return renomeado
+
 
 
 #: R-12 (auditoria 23/07): marker da migração do `match` inalcançável do
@@ -435,6 +590,14 @@ def _maybe_seed_presets() -> None:
         return
     _seed_attempted = True
     try:
+        # PERFIL-PADRAO-PERSONALIZADO-01: ANTES da semeadura, e a ordem é o
+        # ponto. Depois da renomeação o `personalizado.json` dela já existe no
+        # destino, então o semeador cai no ramo "presente na 1ª execução" e
+        # REGISTRA sem copiar — o asset de fábrica nunca encosta no arquivo
+        # dela. Invertida, a ordem faria o semeador entregar o preset nu e a
+        # migração recusar por "personalizado_ja_existe", deixando os dois.
+        with contextlib.suppress(Exception):
+            migrate_default_profile_name()
         seed_default_presets()
         # MASCARA-QUE-GRUDA-01 (22/08/2026): aqui rodava a
         # `migrate_game_presets_to_xbox`. Nenhuma migração escreve máscara em
@@ -1621,6 +1784,7 @@ __all__ = [
     "load_all_profiles",
     "load_profile",
     "migrate_coop_local_match",
+    "migrate_default_profile_name",
     "perfis_de_jogo_semeados",
     "perfis_que_casam_com_o_cliente_steam",
     "restaurar_do_historico",

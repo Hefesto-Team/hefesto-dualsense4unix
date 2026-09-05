@@ -61,7 +61,7 @@ def _sync_run_in_thread(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def asset_content() -> dict:  # type: ignore[type-arg]
-    """Conteúdo canônico do asset meu_perfil.json.
+    """Conteúdo canônico do asset do perfil padrão.
 
     CI-SMOKE-SEM-ASSETS-01: o caminho é resolvido a partir do `__file__` do
     PACOTE, então no smoke multi-distro — onde o hefesto vem de um wheel
@@ -76,7 +76,7 @@ def asset_content() -> dict:  # type: ignore[type-arg]
     """
     asset = _meu_perfil_asset()
     if asset is None:
-        pytest.skip("preset meu_perfil.json ausente em todos os candidatos")
+        pytest.skip("preset do perfil padrão ausente em todos os candidatos")
     return json.loads(asset.read_text(encoding="utf-8"))
 
 
@@ -113,7 +113,7 @@ def stub_mixin(profiles_dir_isolado: Path) -> FooterActionsMixin:
 def _perfil_modificado() -> dict:  # type: ignore[type-arg]
     """Retorna um dict de perfil com priority diferente do asset (99)."""
     return {
-        "name": "meu_perfil",
+        "name": "Personalizado",
         "version": 1,
         "match": {"type": "any"},
         "priority": 99,
@@ -143,8 +143,8 @@ class TestRestoreDefault:
         asset_content: dict,  # type: ignore[type-arg]
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Conteúdo de meu_perfil.json em profiles_dir deve voltar ao asset."""
-        destino = profiles_dir_isolado / "meu_perfil.json"
+        """Conteúdo de personalizado.json em profiles_dir volta ao asset."""
+        destino = profiles_dir_isolado / "personalizado.json"
         destino.write_text(json.dumps(_perfil_modificado()), encoding="utf-8")
 
         import hefesto_dualsense4unix.profiles.loader as loader_mod
@@ -192,7 +192,12 @@ class TestRestoreDefault:
         profiles_dir_isolado: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Statusbar deve receber mensagem mencionando meu_perfil."""
+        """Statusbar deve receber mensagem mencionando o perfil padrão.
+
+        PERFIL-PADRAO-PERSONALIZADO-01: a régua exigia a palavra `meu_perfil`
+        no toast — o nome que ela mandou aposentar. Invertida: agora ela
+        GUARDA que o toast cita `Personalizado`, e reprova se o slug voltar.
+        """
         import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         monkeypatch.setattr(
@@ -205,7 +210,8 @@ class TestRestoreDefault:
         with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
             stub_mixin.on_restore_default()
 
-        assert any("meu_perfil" in msg for msg in stub_mixin._toasted)
+        assert any("Personalizado" in msg for msg in stub_mixin._toasted)
+        assert not any("meu_perfil" in msg for msg in stub_mixin._toasted)
 
 
 # ---------------------------------------------------------------------------
@@ -330,7 +336,7 @@ class TestRestoreDefaultEmInstalacaoEmpacotada:
         destino.mkdir(parents=True)
         conteudo = _perfil_modificado()
         conteudo["priority"] = 42
-        (destino / "meu_perfil.json").write_text(
+        (destino / "personalizado.json").write_text(
             json.dumps(conteudo), encoding="utf-8"
         )
         monkeypatch.setattr(
@@ -360,7 +366,7 @@ class TestRestoreDefaultEmInstalacaoEmpacotada:
         with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
             stub_mixin.on_restore_default()
 
-        destino = profiles_dir_isolado / "meu_perfil.json"
+        destino = profiles_dir_isolado / "personalizado.json"
         assert destino.is_file(), "o botão morre em instalação não-editável"
         assert json.loads(destino.read_text(encoding="utf-8"))["priority"] == 42
         assert not any("não encontrado" in msg for msg in stub_mixin._toasted)

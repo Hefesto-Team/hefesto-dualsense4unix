@@ -91,7 +91,8 @@ VOCABULARIO_GENERICO: frozenset[str] = frozenset(
         "video",
         "filme",
         "musica",  # (noqa-acento): slug, sempre ASCII
-        "meu_perfil",
+        "meu_perfil",  # nome antigo do padrão, ainda vivo em disco velho
+        "personalizado",
         "perfil_padrao",
         "teste",
     }

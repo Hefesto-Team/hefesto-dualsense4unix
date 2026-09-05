@@ -694,7 +694,7 @@ def prompt_import_conflict(
 
 
 def confirm_restore_default(parent: Gtk.Window) -> bool:
-    """Pede confirmação antes de restaurar meu_perfil ao estado original.
+    """Pede confirmação antes de restaurar o perfil padrão ao original.
 
     Retorna True se o usuário confirmou, False se cancelou.
     """
@@ -709,10 +709,12 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
     _apply_app_theme(dialog)
     dialog.format_secondary_text(
         # BUG-RESTORE-DIALOG-WRONG-PROFILE-01: citava 'Navegação' (outro asset,
-        # navegacao.json); o restore aplica o asset 'meu_perfil' (match: any).
+        # navegacao.json); o restore aplica o asset do perfil padrão
+        # (match: any). PERFIL-PADRAO-PERSONALIZADO-01: e o nome dele passou a
+        # ser 'Personalizado' — a frase cita o que ela vê na lista.
         _(
-            "Isso vai restaurar o 'meu_perfil' para a configuração padrão de "
-            "fábrica (aplica-se a todos os apps). As suas alterações serão "
+            "Isso vai restaurar o 'Personalizado' para a configuração padrão "
+            "de fábrica (aplica-se a todos os apps). As suas alterações serão "
             "perdidas. Continuar?"
         )
     )

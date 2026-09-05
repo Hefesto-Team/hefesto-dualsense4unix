@@ -45,6 +45,9 @@ from hefesto_dualsense4unix.app.actions.profile_writer import (
 )
 from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
 from hefesto_dualsense4unix.profiles.loader import (
+    ARQUIVO_ANTIGO_DO_PADRAO,
+    ARQUIVO_DO_PADRAO,
+    NOME_DO_PADRAO,
     _seed_source_file,
     load_all_profiles,
     load_profile,
@@ -62,12 +65,22 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 # Asset canônico do perfil do usuário (FEAT-PROFILES-PRESET-06).
-_MEU_PERFIL_NOME = "meu_perfil"
-_MEU_PERFIL_ARQUIVO = f"{_MEU_PERFIL_NOME}.json"
+# PERFIL-PADRAO-PERSONALIZADO-01 (05/09/2026): o nome vem do loader, que é o
+# dono da decisão — duplicar a string aqui foi o que deixou o botão apontando
+# para um arquivo que a renomeação já tinha movido.
+_MEU_PERFIL_NOME = NOME_DO_PADRAO
+_MEU_PERFIL_ARQUIVO = ARQUIVO_DO_PADRAO
 
 
 def _meu_perfil_asset() -> Path | None:
-    """Acha o preset `meu_perfil.json`; ``None`` quando não há em lugar nenhum.
+    """Acha o preset do perfil padrão; ``None`` quando não há em lugar nenhum.
+
+    Tenta o nome de hoje (`personalizado.json`) e cai no antigo
+    (`meu_perfil.json`): numa máquina com o `/usr/share` de uma versão
+    anterior o asset ainda está lá sob o nome velho, e o botão tem de
+    continuar funcionando. Quem normaliza a IDENTIDADE do que sai daí é
+    `on_restore_default`, que reescreve o `name` — assim o botão restaura
+    sempre PARA o `Personalizado`, venha o asset de onde vier.
 
     JANELA-FIEL-01/E3: este caminho era `ROOT_DIR / "assets" / ...`, e
     `ROOT_DIR` é `parents[3]` do módulo — a raiz do repositório SÓ em instalação
@@ -82,7 +95,9 @@ def _meu_perfil_asset() -> Path | None:
     caminho duplicado aqui, o botão passa a achar o arquivo onde ele realmente
     está.
     """
-    return _seed_source_file(_MEU_PERFIL_ARQUIVO)
+    return _seed_source_file(ARQUIVO_DO_PADRAO) or _seed_source_file(
+        ARQUIVO_ANTIGO_DO_PADRAO
+    )
 
 
 # APLICAR-VERDADE-01: nome de cada seção do contrato IPC na língua da janela.
@@ -1475,9 +1490,9 @@ class FooterActionsMixin(ProfileWriterMixin):
     # ------------------------------------------------------------------
 
     def on_restore_default(self, _btn: Any = None) -> None:
-        """Restaura meu_perfil ao estado do asset original.
+        """Restaura o perfil padrão ao estado do asset original.
 
-        Confirma com usuário, copia asset -> profiles_dir/meu_perfil.json,
+        Confirma com usuária, copia asset -> profiles_dir/personalizado.json,
         recarrega DraftConfig e dispara refresh de todas as abas.
         """
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -1488,7 +1503,7 @@ class FooterActionsMixin(ProfileWriterMixin):
         if asset is None:
             self._footer_toast(
                 _(
-                    "Asset 'meu_perfil.json' não encontrado — "
+                    "Asset 'personalizado.json' não encontrado — "
                     "Restaurar Default indisponível."
                 )
             )
@@ -1506,6 +1521,13 @@ class FooterActionsMixin(ProfileWriterMixin):
         # partes que são DESTE botão — ler o asset e recarregar o rascunho.
         def _construir() -> Profile:
             raw = json.loads(asset.read_text(encoding="utf-8"))
+            # PERFIL-PADRAO-PERSONALIZADO-01: a IDENTIDADE é decidida aqui, não
+            # pelo arquivo achado. O asset pode ser o de hoje ("Personalizado")
+            # ou o de uma versão anterior ainda no `/usr/share` ("meu_perfil"),
+            # e o segundo faria o botão GRAVAR de volta o nome que ela mandou
+            # aposentar — e num arquivo à parte, criando o segundo catch-all
+            # que a migração existe para evitar.
+            raw["name"] = NOME_DO_PADRAO
             return Profile.model_validate(raw)
 
         def _rascunho_restaurado(profile: Profile) -> Any:
@@ -1544,7 +1566,7 @@ class FooterActionsMixin(ProfileWriterMixin):
             _construir,
             adotar_como_ativo=True,
             mensagem_ok=lambda _perfil, caminho: _(
-                "meu_perfil restaurado para {destino}"
+                "Personalizado restaurado para {destino}"
             ).format(destino=caminho),
             mensagem_erro=lambda exc: _("Falha ao restaurar: {erro}").format(erro=exc),
             evento="footer_restore_default",

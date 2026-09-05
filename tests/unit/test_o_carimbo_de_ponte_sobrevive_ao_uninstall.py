@@ -87,13 +87,13 @@ def _um_nome_de_preset() -> str:
     """Um nome que o `install_profiles.sh` de fato tentaria copiar.
 
     Sai de `assets/profiles_default/`, que é a fonte que ele lê — nunca escrito
-    à mão aqui. O `meu_perfil` fica de fora: ele tem regra própria (é o slot
+    à mão aqui. O `personalizado` fica de fora: tem regra própria (é o slot
     dela, copiado se ausente), e usá-lo mediria outra coisa.
     """
     presets = sorted(
         p.stem
         for p in (RAIZ / "assets" / "profiles_default").glob("*.json")
-        if p.stem != "meu_perfil"
+        if p.stem != "personalizado"
     )
     assert presets, "assets/profiles_default/ sem preset nenhum"
     return presets[0]
