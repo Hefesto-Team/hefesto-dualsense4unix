@@ -1958,7 +1958,7 @@ def _conferir(doc):
 
 
 if __name__ == "__main__":
-    n = montar("01-jogar", "Jogar", MIOLO, CSS, fita_viva=True, legenda=LEGENDA)
+    n = montar("01-jogar", "Jogar", MIOLO, CSS, legenda=LEGENDA)
     _conferir(onde.pagina("01-jogar.html").read_text())
     print(f"01-jogar: OK, {n} divs · mesa de {len(monta.CONECTADOS)} conectado(s) "
           f"+ {len(MESA) - len(monta.CONECTADOS)} lugar(es) vazio(s) · "

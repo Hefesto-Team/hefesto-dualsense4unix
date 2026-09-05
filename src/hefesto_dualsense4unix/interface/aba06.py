@@ -2363,7 +2363,7 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
-n = monta("06-navegacao", "Navegação", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
+n = monta("06-navegacao", "Navegação", MIOLO, CSS, legenda=LEGENDA)
 
 # A FITA fica apagada nesta aba, mas o motivo herdado da Jogar é falso aqui: não há
 # card nenhum, há 28 campos editáveis. Trocado na saída, porque o texto mora no

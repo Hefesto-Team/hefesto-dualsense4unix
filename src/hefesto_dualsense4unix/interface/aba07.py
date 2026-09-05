@@ -211,7 +211,7 @@ if "--conferir" in sys.argv:
 # `LINHA_INTOCAVEL`, `EXCECAO_INERTE`, `PONTE_DIVERGENTE` e `SEM_EXECUTAVEL` são
 # fatos do jogo em disco (`:139-143`), e as duas curas de `_CURAS` (`:878`) mexem
 # na linha de inicialização e na exceção do Steam Input. É o mesmo motivo pelo
-# qual a fita desta aba nasce esmaecida (`fita_viva=False`, no fim do arquivo).
+# qual a fita desta aba nasce esmaecida (fora de `monta.ABAS_QUE_ESCOLHEM`).
 #
 # Por isso o número sai de `MESA` e não do teclado: no dia em que a mesa mudar, o
 # texto dos cartões muda junto com o cabeçalho, que já sai de lá.
@@ -493,7 +493,7 @@ if _FALTAM:
         "é pintura perdida — `querySelector` devolve `null`, a pintura conta "
         "zero, e zero passa por 'nada mudou'.")
 
-n = monta("07-lancadores", "Lançadores", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
+n = monta("07-lancadores", "Lançadores", MIOLO, CSS, legenda=LEGENDA)
 
 # ---------------------------------------------------------------------------
 # A FITA NÃO NOMEIA UM CONTROLE QUE NÃO ESTÁ NA MESA — 03/09/2026
@@ -530,15 +530,19 @@ n = monta("07-lancadores", "Lançadores", MIOLO, CSS, fita_viva=False, legenda=L
 # ele acerta o alvo com ou sem a troca do bloco inteiro.
 #
 # O QUE FICA: o `Selecionar:` e o chip `Todos`, que são ESTRUTURA — não nomeiam
-# aparelho nenhum e o `Todos` é o alvo desta aba (`fita_viva=False`).
+# aparelho nenhum e o `Todos` é o alvo desta aba (fora de `monta.ABAS_QUE_ESCOLHEM`).
 # ---------------------------------------------------------------------------
-_CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<span class="chip plastico"[^\n]*\n', re.M)
+# O CHIP É `<label>` DESDE 05/09/2026 (`monta.fita`), para poder clicar nas
+# três abas que escolhem controle. Nesta, que não escolhe, ele nasce sem
+# `data-gesto` e sai daqui inteiro — mas a ÂNCORA tinha de acompanhar: com
+# `<span>` ela deixaria de casar e este bloco ficaria verde sem apagar nada.
+_CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico"[^\n]*\n', re.M)
 _PAG = onde.pagina("07-lancadores.html")
 _DOC = _PAG.read_text()
 _CONGELADOS = _CHIP_DE_CONTROLE.findall(_DOC)
 if not _CONGELADOS:
     raise SystemExit(
-        "ERRO: não achei um único `<span class=\"chip plastico\">` na página "
+        "ERRO: não achei um único `<label class=\"chip plastico\">` na página "
         "recém-gerada. Ou `monta.fita()` mudou de forma, ou a fita saiu vazia — "
         "e nos dois casos esta troca ficaria VERDE sem fazer nada, que é como a "
         "fita viva morreu calada em 27/08.")

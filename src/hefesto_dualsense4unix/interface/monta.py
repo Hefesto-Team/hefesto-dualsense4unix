@@ -610,6 +610,102 @@ def escolha_da_fita(ativo: str,
     return False, ativo
 
 
+# ---------------------------------------------------------------------------
+# QUEM RESPONDE "ESTA ABA ESCOLHE CONTROLE?" — 05/09/2026
+# ---------------------------------------------------------------------------
+# A RESPOSTA ERA DIGITADA DUAS VEZES, e a segunda nunca existiu: cada gerador
+# passava `fita_viva=` para `monta()`, e o PILOTO — que troca o bloco INTEIRO da
+# fita a cada tique — não passava nada. O padrão de `fita()` é `inerte=False`,
+# então as SETE abas em que a fita é leitura nasciam esmaecidas (do arquivo
+# publicado) e, no primeiro tique, ficavam acesas com o `title` errado:
+# *"O que você mudar nesta aba vai para o controle escolhido aqui."* sobre uma
+# aba onde nada vai.
+#
+# MEDIDO EM 05/09/2026, com o daemon dela no ar, nas dez abas: as dez terminaram
+# `class="fita"` (sem `inerte`) e com aquele `title`, incluindo as sete cujo
+# arquivo publicado traz `class="fita inerte"`. É a quarta vez que esta fita
+# afirma o que não é.
+#
+# ENTÃO A RESPOSTA GANHA UM DONO SÓ, e ele é lido pelos dois: `monta()` na hora
+# de gravar o arquivo e `hefesto_vivo._fita` na hora de repintar a tela. O
+# parâmetro `fita_viva` SAIU da assinatura de `monta()` de propósito — enquanto
+# ele existisse, alguém podia responder a mesma pergunta de novo, e a segunda
+# resposta é a que diverge.
+#
+# A LISTA É DECISÃO DELA, de 28/08/2026 (`aba04.py:14`): em Gatilhos,
+# Iluminação e Vibração *nada ajusta por controle*; o mesmo vale para
+# Navegação, Lançadores, Sistema e Perfis. Sobram as três em que o chip escolhe
+# de verdade.
+ABAS_QUE_ESCOLHEM: frozenset[str] = frozenset({
+    "01-jogar", "02-controles", "08-conexoes"})
+
+
+def a_fita_escolhe(pagina: str) -> bool:
+    """Se a fita daquela aba ESCOLHE controle, ou é só leitura.
+
+    Aceita as duas grafias que esta casa usa para nomear uma aba — `"03-gatilhos"`
+    (o que os geradores passam) e `"03-gatilhos.html"` (o que o piloto tem à
+    mão) —, porque obrigar quem pergunta a normalizar é como um dos dois
+    esquece.
+
+    ABA DESCONHECIDA PARA, e não devolve `False` calado: um nome de página
+    errado responderia *"esta aba é leitura"* sobre qualquer coisa, e a fita
+    voltaria a nascer esmaecida sem que ninguém soubesse por quê — que é
+    exatamente o defeito de 05/09 por outro caminho.
+    """
+    nome = pagina[:-5] if pagina.endswith(".html") else pagina
+    if nome not in {a for _, a in ABAS}:
+        raise SystemExit(
+            f"ERRO: {pagina!r} não é uma das dez abas. Quem responde 'esta aba "
+            f"escolhe controle?' é `monta.ABAS_QUE_ESCOLHEM`, e ele só conhece "
+            f"as dez de `monta.ABAS`.")
+    return nome in ABAS_QUE_ESCOLHEM
+
+
+#: O NOME DO GESTO DO CHIP, e ele mora aqui porque é AQUI que ele é emitido.
+#: Quem o atende é `hefesto_vivo`, que o importa deste módulo — o nome escrito
+#: duas vezes seria a mesma divergência calada que a fita já pagou quatro vezes.
+GESTO_DA_FITA = "escolher-na-fita"
+
+
+def _endereco_do_chip(pref: str, inerte: bool) -> str:
+    """O que faz o chip CLICAR — e o vazio que o mantém honesto quando não deve.
+
+    ELE ERA UM `<span>` SEM ENDEREÇO NENHUM, e é o segundo defeito desta fita:
+    `Selecionar:` MOSTRAVA quem estava escolhido (sempre o primeiro da mesa) e
+    NÃO deixava escolher. Só a bancada da Controles o tornava clicável, por um
+    pós-processamento que o produto desfazia no primeiro tique — medido em
+    05/09/2026: o `paginas/02-controles.html` publicado traz três `<label
+    for="c-…">`, e o DOM vivo, passados 1,6 s, trazia três `<span>`.
+
+    O `aba08.py:3354` já tinha escrito o conserto: *"para o chip da fita clicar
+    de verdade, o `monta.fita()` precisa emitir `<label>` em vez de `<span>` —
+    é uma linha lá, e vale para as dez abas."*
+
+    O `for=` NÃO SAI DAQUI, e é o limite desta função: ele casa com um `<input
+    type="radio">` que só a `02-controles` tem, e escrevê-lo nas outras nove
+    apontaria para um `id` que não existe. Quem o insere é `aba02.fita_clicavel`,
+    que conhece os rádios dela.
+
+    NA FITA INERTE NÃO HÁ ENDEREÇO NENHUM, e é a metade que impede a cura de
+    virar a mentira seguinte: naquelas sete abas o chip não escolhe coisa
+    alguma, e um `data-gesto` ali faria a tela oferecer uma escolha que o
+    produto não tem para onde levar.
+    """
+    if inerte:
+        return ""
+    # O `data-controle` VAZIO NÃO É DESCUIDO — ele diz que este elemento não
+    # pertence a controle nenhum, e é o que impede o recado de pousar no cartão
+    # ERRADO. O ouvinte do piloto resolve o dono do clique por
+    # `closest('[data-controle],[data-uniq]')` e, sem nada, cai no alvo escolhido
+    # ANTES — então o "deu certo" de trocar do P1 para o P2 aparecia no cartão
+    # do P1. Medido em 05/09/2026, com dois na mesa. Com o atributo vazio o
+    # chip é o próprio dono, o endereço sai vazio, e a frase vira tarja de
+    # rodapé: a resposta honesta para um gesto que não age em aparelho nenhum.
+    return (f' data-gesto="{GESTO_DA_FITA}" data-pref="{pref}"'
+            f' data-controle=""')
+
+
 def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
          mesa: list[dict[str, Any]] | None = None) -> str:
     """Os chips da fita, um por controle da mesa, gerados.
@@ -680,7 +776,8 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     mostra_todos, ativo = escolha_da_fita(ativo, lista)
     chips: list[str] = []
     if mostra_todos:
-        chips.append(f'<span class="chip{" on" if ativo == "todos" else ""}">Todos</span>')
+        chips.append(f'<label class="chip{" on" if ativo == "todos" else ""}"'
+                     + _endereco_do_chip("todos", inerte) + ">Todos</label>")
     for c in lista:
         on = " on" if ativo == c["pref"] else ""
         # A VERSÃO DESTA FITA É DA FRENTE DO RÁDIO, e ela venceu a minha na
@@ -711,9 +808,10 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
                   "a cor do plástico deste controle não foi lida")
         dica = f"{nome} — {porque}" if nome else porque
         chips.append(
-            f'<span class="chip{" plastico" if slug else ""}{on}" data-campo="fita-chip"{pintado}'
-            f' title="{dica}">'
-            + rotulo({**c, "nome": nome}, "curta") + "</span>")
+            f'<label class="chip{" plastico" if slug else ""}{on}" data-campo="fita-chip"'
+            + _endereco_do_chip(str(c["pref"]), inerte)
+            + f'{pintado} title="{dica}">'
+            + rotulo({**c, "nome": nome}, "curta") + "</label>")
     # SEM O RECUO DA PRIMEIRA LINHA, e isto é medição, não estilo. Quem monta a
     # página põe o recuo (`RECUO_DA_FITA`); quem pinta a tela viva joga esta
     # string num `outerHTML`, e o navegador devolve o nó SEM recuo nenhum. Com o
@@ -1086,6 +1184,21 @@ CSS_FOLHA = """
   .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
+
+  /* ---- S-05 · O CHIP DA FITA VIRA CONTROLE, E O CURSOR DIZ ----
+     O chip passou de `<span>` a `<label>` em 05/09/2026 (`monta.fita`), e um
+     `<label>` sem cursor continua parecendo texto. A regra é `:not(.inerte)`
+     porque nas SETE abas em que a fita é leitura ele NÃO clica — e um dedinho
+     sobre um chip morto é a mesma promessa vazia por outro meio.
+
+     NENHUM PIXEL MUDA. `cursor` não aparece em foto, e o portão do desenho
+     aprovado compara o que se VÊ; a regra existe para o rato dela.
+
+     AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: a fita mora no
+     esqueleto das dez. A `02-controles` já tinha a sua própria linha desde que
+     virou bancada clicável — a dela vira redundante, e redundante é melhor que
+     divergente. */
+  .fita:not(.inerte) label.chip{cursor:pointer}
 """
 
 #: "NÃO HÁ O QUE DIZER", dito de um jeito que a tela sabe APAGAR.
@@ -1338,7 +1451,7 @@ RECUO_DA_FITA = "    "
 
 
 def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
-          fita_viva: bool = False, legenda: str = "") -> int:
+          legenda: str = "") -> int:
     t = TOPO
     t = t.replace("<title>Hefesto — aba JOGAR (mockup 26/08/2026)</title>",
                   f"<title>Hefesto — aba {titulo_aba.upper()} (mockup 26/08/2026)</title>")
@@ -1359,9 +1472,14 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     # AS ÂNCORAS SÃO AS CLASSES, NÃO O TEXTO DO CHIP. A troca antiga procurava
     # `Sony 1 · USB`, que era o rótulo do chip em algum momento de 26/08; quando
     # ele virou `P1 • Cosmic Red • USB` a troca deixou de casar e passou a NÃO
-    # FAZER NADA — em silêncio, com a régua verde. As seis abas que ajustam por
+    # FAZER NADA — em silêncio, com a régua verde. As abas que ajustam por
     # controle ficaram com o destaque em "Todos" sem ninguém ver. Achado em
     # 27/08; a linha do chip vai mudar de novo, e a classe não.
+    #
+    # NÚMERO ERRADO, SUBSTITUÍDO (05/09/2026): esta nota dizia "as SEIS abas que
+    # ajustam por controle". Contadas hoje, com o dono que passou a existir, são
+    # TRÊS — `ABAS_QUE_ESCOLHEM`. Deixar o seis aqui obrigaria a próxima pessoa
+    # a escolher entre duas contagens do mesmo fato.
     # AS VARIÁVEIS DE PLÁSTICO DO ESQUELETO SAEM DO DESENHO. Elas eram cinco
     # hexadecimais digitados no `:root` do `topo.html` — `--cosmic-red:#b11f54` e
     # companhia —, e o primeiro deles estava ERRADO: a amostragem de 27/08
@@ -1410,10 +1528,16 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     # O RECUO É DAQUI, e não de `fita()`: quem monta o ARQUIVO indenta; quem
     # pinta a TELA VIVA não pode (o `outerHTML` do navegador não tem recuo, e a
     # comparação nunca casaria). Ver a nota no fim de `fita()`.
+    #
+    # QUEM DIZ SE ESTA ABA ESCOLHE É `a_fita_escolhe(arq)`, e não mais um
+    # parâmetro — ver a nota dele. Enquanto a resposta era digitada aqui, o
+    # piloto (que repinta a fita inteira a cada tique) nunca a recebia, e as
+    # sete abas de leitura acendiam no primeiro tique com o `title` errado.
+    viva = a_fita_escolhe(arq)
     i = t.index(MARCA_DA_FITA)
     j = t.index("</div>", t.index('class="fita', i)) + len("</div>")
     t = (t[:i] + RECUO_DA_FITA
-         + fita(ativo=("p1" if fita_viva else "todos"), inerte=not fita_viva) + t[j:])
+         + fita(ativo=("p1" if viva else "todos"), inerte=not viva) + t[j:])
     # a tira: marca a aba ativa
     tira = ['  <div class="tira">']
     for nome, a in ABAS:

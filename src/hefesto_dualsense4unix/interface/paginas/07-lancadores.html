@@ -731,6 +731,21 @@
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
 
+  /* ---- S-05 · O CHIP DA FITA VIRA CONTROLE, E O CURSOR DIZ ----
+     O chip passou de `<span>` a `<label>` em 05/09/2026 (`monta.fita`), e um
+     `<label>` sem cursor continua parecendo texto. A regra é `:not(.inerte)`
+     porque nas SETE abas em que a fita é leitura ele NÃO clica — e um dedinho
+     sobre um chip morto é a mesma promessa vazia por outro meio.
+
+     NENHUM PIXEL MUDA. `cursor` não aparece em foto, e o portão do desenho
+     aprovado compara o que se VÊ; a regra existe para o rato dela.
+
+     AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: a fita mora no
+     esqueleto das dez. A `02-controles` já tinha a sua própria linha desde que
+     virou bancada clicável — a dela vira redundante, e redundante é melhor que
+     divergente. */
+  .fita:not(.inerte) label.chip{cursor:pointer}
+
 
   /* ---------- Lançadores ---------- */
   .lancadores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -997,7 +1012,7 @@
   <div class="fita-linha">
     <div class="fita inerte" title="Esta aba não usa o controle escolhido aqui — os cards são leitura.">
       <span>Selecionar:</span>
-      <span class="chip on">Todos</span>
+      <label class="chip on">Todos</label>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>

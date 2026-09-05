@@ -731,6 +731,21 @@
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
 
+  /* ---- S-05 · O CHIP DA FITA VIRA CONTROLE, E O CURSOR DIZ ----
+     O chip passou de `<span>` a `<label>` em 05/09/2026 (`monta.fita`), e um
+     `<label>` sem cursor continua parecendo texto. A regra é `:not(.inerte)`
+     porque nas SETE abas em que a fita é leitura ele NÃO clica — e um dedinho
+     sobre um chip morto é a mesma promessa vazia por outro meio.
+
+     NENHUM PIXEL MUDA. `cursor` não aparece em foto, e o portão do desenho
+     aprovado compara o que se VÊ; a regra existe para o rato dela.
+
+     AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: a fita mora no
+     esqueleto das dez. A `02-controles` já tinha a sua própria linha desde que
+     virou bancada clicável — a dela vira redundante, e redundante é melhor que
+     divergente. */
+  .fita:not(.inerte) label.chip{cursor:pointer}
+
 
   /* Os glifos são os MESMOS SVGs da aba Status (assets/glyphs, 27 peças).
      `currentColor` faz cada um herdar a cor da linha em que está. */
@@ -1759,9 +1774,9 @@
   <div class="fita-linha">
     <div class="fita" title="O que você mudar nesta aba vai para o controle escolhido aqui.">
       <span>Selecionar:</span>
-      <label for="c-todos" class="chip" title="Abre os 4 cards de uma vez — e aí a caixa rola.">Todos</label>
-      <label for="c-p1" class="chip plastico" data-campo="fita-chip" title="Clique para abrir o card dele — a borda é a cor do plástico.">P1 <span class="pt">•</span> <span data-campo="fita-peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="fita-via">USB</span></label>
-      <label for="c-p2" class="chip plastico" data-campo="fita-chip" title="Clique para abrir o card dele — a borda é a cor do plástico.">P2 <span class="pt">•</span> <span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via">BT</span></label>
+      <label for="c-todos" class="chip" data-gesto="escolher-na-fita" data-pref="todos" data-controle="" title="Abre os 4 cards de uma vez — e aí a caixa rola.">Todos</label>
+      <label for="c-p1" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p1" data-controle="" title="Clique para abrir o card dele — a borda é a cor do plástico.">P1 <span class="pt">•</span> <span data-campo="fita-peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="fita-via">USB</span></label>
+      <label for="c-p2" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p2" data-controle="" title="Clique para abrir o card dele — a borda é a cor do plástico.">P2 <span class="pt">•</span> <span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via">BT</span></label>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>

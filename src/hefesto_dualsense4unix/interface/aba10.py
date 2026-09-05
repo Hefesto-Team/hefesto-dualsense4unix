@@ -1616,7 +1616,7 @@ def _conferir(html: str) -> None:
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
-n = monta("10-perfis", "Perfis", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
+n = monta("10-perfis", "Perfis", MIOLO, CSS, legenda=LEGENDA)
 _conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
 # O NÚMERO SAI DO CSS, não de um literal aqui: ele já mentiu duas vezes hoje —
 # a coluna mudou de 82 para 87 e para 86 enquanto ela ajustava os rótulos, e a
