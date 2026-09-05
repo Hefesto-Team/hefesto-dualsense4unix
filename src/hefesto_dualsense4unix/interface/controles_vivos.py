@@ -306,7 +306,15 @@ def html_da_fita(mesa: list[dict[str, Any]]) -> str:
         # `Starlight Blue · USB` e o topo `1 controle: 1 USB · 0 BT`, enquanto a
         # fita mostrava `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT` —
         # o controle dela aparecendo no RÁDIO como P2 enquanto estava no cabo.
-        bruta = monta.fita(ativo=(mesa[0]["pref"] if mesa else "todos"), mesa=mesa)
+        # O `inerte` VAI EXPLÍCITO, e não pelo padrão — 05/09/2026. Esta bancada
+        # serve a aba 02, que ESCOLHE controle, então o padrão `False` acerta
+        # hoje. Mas foi contando com esse padrão que o piloto acendeu a fita das
+        # sete abas de leitura e lhes deu o `title` de quem escolhe. Quem responde
+        # é `monta.a_fita_escolhe`, e passar a resposta aqui faz a bancada seguir
+        # a aba no dia em que ela mudar, em vez de repetir o defeito adormecido.
+        bruta = monta.fita(
+            ativo=(mesa[0]["pref"] if mesa else "todos"), mesa=mesa,
+            inerte=not monta.a_fita_escolhe("02-controles.html"))
         return aba02.fita_clicavel(bruta, mesa=mesa)
     finally:
         monta.MESA, aba02.MESA = antes_monta, antes_aba

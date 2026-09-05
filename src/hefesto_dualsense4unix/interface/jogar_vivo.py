@@ -195,7 +195,14 @@ def html_da_fita(mesa: list[dict[str, Any]], alvo: str | None) -> str:
         # A mesa como ARGUMENTO — `monta.MESA` acima não alcança a fita,
         # porque `monta.CONECTADOS` é derivado no import. Ver a nota gêmea em
         # `controles_vivos.html_da_fita`.
-        return monta.fita(ativo=escolhido, mesa=mesa)
+        # O `inerte` VAI EXPLÍCITO, e não pelo padrão — 05/09/2026. Esta bancada
+        # serve a aba 01, que ESCOLHE controle, então o padrão `False` acerta
+        # hoje. Mas foi contando com esse padrão que o piloto acendeu a fita das
+        # sete abas de leitura e lhes deu o `title` de quem escolhe. Quem responde
+        # é `monta.a_fita_escolhe`, e passar a resposta aqui faz a bancada seguir
+        # a aba no dia em que ela mudar, em vez de repetir o defeito adormecido.
+        return monta.fita(ativo=escolhido, mesa=mesa,
+                          inerte=not monta.a_fita_escolhe("01-jogar.html"))
     finally:
         monta.MESA = antes
 
