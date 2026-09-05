@@ -73,18 +73,37 @@ def test_o_coringa_nao_isenta_o_que_nao_pediu() -> None:
 def test_a_isencao_por_pagina_continua_valendo() -> None:
     """O casamento novo não pode ter apagado o velho.
 
-    ``("06-navegacao.html", "modo")`` liga a emulação de mouse e MEXE NO CURSOR
-    DELA; o mesmo ``modo`` nos Gatilhos é inócuo. Se o coringa tivesse
-    substituído o casamento por página em vez de somar-se a ele, os dois
-    passariam a ser tratados igual — e a escolha seria entre não provar o
-    seguro ou estragar o trabalho dela.
+    ``("10-perfis.html", "detectar")`` grava no perfil DELA; o mesmo
+    ``detectar`` na Lançadores só procura o jogo e não escreve nada. Se o
+    coringa tivesse substituído o casamento por página em vez de somar-se a ele,
+    os dois passariam a ser tratados igual — e a escolha seria entre não provar
+    o seguro ou estragar o trabalho dela.
+
+    **O PAR ERA OUTRO, e o exemplo velho CADUCOU — 05/09/2026.** Este teste
+    usava ``modo`` na Navegação (que mexe no cursor dela) contra ``modo`` nos
+    Gatilhos, descrito como *"inócuo"*. Deixou de ser: pela decisão **D2**, o
+    ``modo`` dos Gatilhos passou a gravar `controllers[uniq].triggers` no perfil
+    ativo a cada clique, e entrou em ``PERIGOSOS`` no mesmo commit. Os dois
+    lados do par viraram isentos e o teste perdeu o contraste — não porque a
+    cura afrouxou, mas porque o fato que ele ilustrava mudou.
+
+    O par novo foi MEDIDO contra o registro e a lista, não escolhido de memória:
+    ``detectar`` e ``tirar-daqui`` são hoje os DOIS únicos nomes de gesto que
+    vivem em duas páginas com isenção de um lado só. Se um dia sobrar zero, esta
+    guarda deixa de ter como se expressar — e aí é ela que precisa de conserto,
+    não o produto.
     """
-    _, pulados_nav = regua_do_mockup._alvos_a_clicar(
-        [_Gesto("modo")], {"modo"}, "06-navegacao.html", hefesto_vivo.PERIGOSOS)
-    vistos_gat, _ = regua_do_mockup._alvos_a_clicar(
-        [_Gesto("modo")], {"modo"}, "03-gatilhos.html", hefesto_vivo.PERIGOSOS)
-    assert pulados_nav == ["modo"], "a emulação de mouse deixou de ser isenta"
-    assert vistos_gat == ["modo"], "o `modo` dos Gatilhos deixou de ser provado"
+    _, pulados_perfis = regua_do_mockup._alvos_a_clicar(
+        [_Gesto("detectar")], {"detectar"}, "10-perfis.html",
+        hefesto_vivo.PERIGOSOS)
+    vistos_lanc, _ = regua_do_mockup._alvos_a_clicar(
+        [_Gesto("detectar")], {"detectar"}, "07-lancadores.html",
+        hefesto_vivo.PERIGOSOS)
+    assert pulados_perfis == ["detectar"], (
+        "o `detectar` dos Perfis deixou de ser isento — ele grava no perfil dela")
+    assert vistos_lanc == ["detectar"], (
+        "o `detectar` dos Lançadores deixou de ser provado: a qualificação por "
+        "página parou de valer e o coringa passou a tratar os dois igual")
 
 
 def test_incluir_perigosos_continua_alcancando_o_salvar() -> None:

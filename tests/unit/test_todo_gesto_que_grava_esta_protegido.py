@@ -90,6 +90,19 @@ ESCREVEM = {
     # quarta repetição é o que autoriza a generalização; as três primeiras
     # ainda podiam passar por azar.
     "set_text",                # `Gtk.Clipboard.set_text` — a área dela
+    # E A PORTA DOS GATILHOS — 05/09/2026, no mesmo commit em que `modo`,
+    # `pronto` e `ajuste` aprenderam a persistir no clique (decisão D2). O
+    # `a03_gatilhos._gravar_so_o_gatilho` grava o perfil SEM reaplicá-lo, e a
+    # razão de ele existir em vez de `gravar_e_reaplicar` está medida lá: um
+    # `profile.switch` acende de volta a barra de luz que ela desligou.
+    #
+    # SEM ESTE NOME A RÉGUA FICARIA CEGA POR PROFUNDIDADE, não por vocabulário:
+    # a cadeia é gesto → `_aplicar` → `_guardar_no_perfil` → este helper →
+    # `save_profile`, e `_FUNDO` são DOIS ajudantes. O nível em que a porta
+    # aparece é o terceiro. Acrescentar o helper é mais barato — e mais
+    # honesto — que alargar a profundidade de toda a régua por causa de um
+    # arquivo.
+    "_gravar_so_o_gatilho",    # grava o perfil dela sem reaplicá-lo
 }
 
 #: E O QUE CHEGA LÁ POR IPC, pelo nome do método. `p.chamar("machine.declare")`
@@ -134,6 +147,16 @@ ISENTOS: dict[tuple[str, str], str] = {
         "idem — o segundo dos três daquela volta",
     ("09-sistema.html", "perfil-da-mesa"):
         "idem: o clique manda o valor que a tela já exibe",
+    # O REENVIAR CHEGA À PORTA PELA ÁRVORE E NÃO PASSA POR ELA — 05/09/2026.
+    # Ele chama o mesmo `_aplicar` dos irmãos, e o `_aplicar` grava; mas o
+    # reenviar passa `guardar=False`, e uma régua de ÁRVORE não enxerga o valor
+    # de um argumento. MEDIDO, e não afirmado:
+    # `test_o_gatilho_aplicado_vai_para_o_perfil.py::test_reenviar_nao_grava`
+    # roda o gesto com um disco de mentira e conta ZERO gravações — a mesma
+    # montagem que conta UMA para o `modo`.
+    ("03-gatilhos.html", "reenviar"):
+        "passa `guardar=False` ao `_aplicar`; medido em 05/09/2026 com disco de "
+        "mentira: zero gravações — ver `test_reenviar_nao_grava`",
 }
 
 
