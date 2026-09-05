@@ -28,6 +28,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA, CONECTADOS,
                    cor_da_zona, player_slot_color, DS)
 from monta import ressalva as _ressalva  # noqa: E402
+from monta import TITULOS_DA_FITA  # noqa: E402
 
 # O DESENHO E O PRODUTO ESCREVEM A IDENTIDADE PELA MESMA FUNÇÃO — 03/09/2026,
 # IDENTIDADE-VEM-DE-CIMA. É o mesmo arranjo de `aba04.py` com
@@ -2371,8 +2372,15 @@ n = monta("06-navegacao", "Navegação", MIOLO, CSS, legenda=LEGENDA)
 p = onde.pagina("06-navegacao.html")
 s = p.read_text()
 ANTES = 'title="Esta aba não usa o controle escolhido aqui — os cards são leitura."'
-DEPOIS = ('title="Não se aplica: mouse, teclado e gestos saem de um controle só — '
-          f'o do Player {NAVEGA} — e o que eles fazem é do perfil."')
+# O TÍTULO SAI DE `monta.TITULOS_DA_FITA` — 05/09/2026. Ele era digitado aqui,
+# e o PILOTO não o conhecia: como ele troca o bloco inteiro da fita a cada
+# tique, esta frase durava um tique e dava lugar ao genérico de leitura. Agora
+# há um dono, consultado pelo gerador do arquivo E pela tela viva.
+DEPOIS = f'title="{TITULOS_DA_FITA["06-navegacao.html"]}"'
+if f"Player {NAVEGA}" not in DEPOIS:
+    raise SystemExit(
+        f"ERRO: a fita da 06 nomeia o Player 1 e o mockup elegeu o {NAVEGA} — "
+        "reveja `monta.TITULOS_DA_FITA` antes de gerar")
 if ANTES not in s:
     raise SystemExit("ERRO: o title da fita mudou no topo.html — refaça a troca")
 s = s.replace(ANTES, DEPOIS)
