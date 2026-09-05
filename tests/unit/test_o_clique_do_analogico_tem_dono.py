@@ -296,10 +296,42 @@ def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
     import monta
 
     do_piloto = set(_re.findall(r'data-campo="([^"]+)"', monta.fita([])))
-    sobrando = sorted(set(m["vazios"]) - do_piloto)
+
+    # E OS ENDEREÇOS QUE SÃO SÓ DE LEITURA — 05/09/2026. Um `data-campo` existe
+    # para o piloto ESCREVER **ou** para ele LER; esta régua só conhecia a
+    # primeira espécie, e por isso acusava a segunda de órfã.
+    #
+    # `card-aberto` é o caso, e a razão está escrita no gerador
+    # (`aba02.py`, no `<input class="radio-mesa">`): os quatro rádios são um
+    # GRUPO. Pintar `sim` num deles a cada tique reabriria, dez vezes por
+    # segundo, o card que ela acabou de fechar; pintar `""` nos quatro fecharia
+    # todos, porque um grupo de rádio sem nenhum marcado não tem card aberto.
+    # O endereço existe para o piloto SABER qual está aberto — e é o que a
+    # `--prova-de-mockup` lê para decidir se mede o card ou a tira.
+    #
+    # A LISTA É DECLARADA AQUI e não no pacote de propósito: quem a lê é esta
+    # régua, e uma isenção mora onde ela é cobrada. Entrada nova pede a RAZÃO,
+    # como as três acima — isenção sem motivo é a porta por onde um órfão de
+    # verdade entra calado.
+    so_de_leitura = {
+        "card-aberto": "grupo de rádio: pintar reabriria o card que ela fechou",
+    }
+    sobrando = sorted(set(m["vazios"]) - do_piloto - set(so_de_leitura))
     assert sobrando == [], (
         f"a página 02-controles.html tem {sobrando} e ninguém os "
         f"pinta — o rótulo do mockup fica na tela como se fosse leitura.")
+
+    # E A ISENÇÃO É COBRADA NOS DOIS SENTIDOS: no dia em que o endereço sair da
+    # página, a declaração tem de sair junto, senão ela vira perdão a um nome
+    # que já não existe.
+    na_pagina = set(_re.findall(
+        r'data-campo="([^"]+)"',
+        (RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html")
+        .read_text(encoding="utf-8")))
+    mortas = sorted(set(so_de_leitura) - na_pagina)
+    assert mortas == [], (
+        f"{mortas} está declarado como só-de-leitura e não existe mais na "
+        f"página — tire a declaração no mesmo commit que tirou o endereço")
 
 
 # --------------------------------------------------------------------------
