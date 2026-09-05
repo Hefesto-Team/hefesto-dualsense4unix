@@ -79,6 +79,24 @@ E A ABA PAROU DE PERGUNTAR SÓ AO DAEMON quem está valendo — ver `_valendo`. 
 `active_profile: null`, que é o estado da máquina dela hoje, três guardas se
 desligavam ao mesmo tempo.
 
+O QUE A ONDA2-10 ACRESCENTOU — 04/09/2026, as decisões do PO:
+
+    [01] o CADEADO e o PONTO DE ALERTA. `editor.ambiente.travado` e
+         `editor.ambiente.recado` saíam do produto e caíam no vazio — não havia
+         endereço na página. Agora há, e junto veio a metade que ninguém tinha
+         olhado: o `<select>` travado ficava com o **"Jogo" do mockup**, porque
+         `escrever()` não tem onde pousar um `—` num `<select>` que não o
+         oferece. Ver `aba10.opts(travessao=True)`.
+    [02] o FIM da frase da exigência escondida, reescrito para ESTA tela — ver
+         `FIM_DA_EXIGENCIA_AQUI`. A frase do produto está certa na janela GTK e
+         errada aqui, e por isso a substituição é neste arquivo.
+    [04] o CAMPO DO JOGO SE CORRIGE: `editor_jogo` e `detectar` devolvem
+         `editor.jogo` na forma canônica junto com o desfecho. É o único
+         instante em que a tela pode fazê-lo — o campo está em
+         `CAMPOS_QUE_ELA_DIGITA` e o tique não o repinta.
+
+    As decisões [03] e [05] são de DESENHO e moram no `aba10.py`.
+
 O QUE ESTA ABA NÃO SABE FAZER, e é o teto de tudo o que está acima: **o daemon
 não tem `profile.save` nem `profile.delete`.** Os 39 métodos que ele atende
 trazem só `profile.switch`, `profile.list` e `profile.apply_draft` — gravar e
@@ -287,8 +305,16 @@ def _com_a_carona(frase: str) -> str:
     return f"{frase} · {resultado.frase}" if resultado.frase else frase
 
 
-def _dizer(frase: str) -> dict[str, Any]:
+def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
     """Anota o desfecho E o devolve para a tela AGORA, sem esperar o tique.
+
+    `campos` SÃO OS ENDEREÇOS QUE O GESTO CORRIGE NA HORA, e eles viajam no
+    mesmo embrulho — 04/09/2026, decisão [04] do PO. O caso que os pediu é o do
+    "Nome do Jogo": os campos que ela DIGITA são omitidos do tique
+    (`CAMPOS_QUE_ELA_DIGITA`, para a pintura não apagar o que ela está
+    escrevendo), então o único instante em que a tela pode devolver a forma
+    canônica do que ela colou é a resposta do PRÓPRIO gesto. Sem isto, o
+    endereço da loja fica no campo até ela trocar de perfil.
 
     O CAMINHO DE VOLTA JÁ EXISTIA e ninguém desta aba o usava: um gesto que
     devolve um dicionário tem a carga pintada na hora (`hefesto_vivo._deu_certo`
@@ -309,7 +335,7 @@ def _dizer(frase: str) -> dict[str, Any]:
     põe; um gesto não passa por lá, e põe o seu.
     """
     _anotar(frase)
-    return {"mesa": {"perfis.desfecho": frase}}
+    return {"mesa": {"perfis.desfecho": frase, **campos}}
 
 
 def _anotar(frase: str) -> None:
@@ -453,18 +479,28 @@ NAO_PINTAVEIS = ("guarda.linhas", "editor.prioridade.dica",
 #:
 #: MEDIDO em 02/09/2026 contra as duas páginas, que hoje são byte-idênticas:
 SEM_ENDERECO = {
-    # Os quatro do editor vêm inteiros de `perfis_web._pacote_do_editor` pelo
-    # laço de achatamento — a camada do produto os monta e o desenho ainda não
-    # tem lugar para eles. `*.travado` é o seletor que a tela não pode editar
-    # sem rebaixar a regra do disco; `*.recado` é a frase que explica por quê.
-    # São trabalho de DESENHO, não de código: quando o mockup ganhar o lugar,
-    # o valor já está saindo.
-    "editor.ambiente.travado": "o seletor travado não tem marca no desenho",
-    "editor.ambiente.recado": "a frase da válvula não tem lugar no desenho",
-    "editor.estilo.travado": "idem, para o Estilo de Jogo",
+    # **OS DOIS DO AMBIENTE SAÍRAM DAQUI — 04/09/2026, decisão [01] do PO.**
+    # Estava escrito que *"o seletor travado não tem marca no desenho"* e que
+    # *"a frase da válvula não tem lugar no desenho"*, e as duas metades caíram
+    # no mesmo commit: o gerador ganhou o CADEADO (`aba10.marca_com_dica`), com
+    # a `classe` acendendo em `editor.ambiente.travado` e a frase no hover, por
+    # `editor.ambiente.recado`. Eles esperam agora o `--publicar` DELA, e é isso
+    # que `ESPERANDO_A_PUBLICACAO` declara — a lista logo abaixo.
+    #
+    # OS DOIS DO ESTILO FICAM, e a razão é outra: o `estilo_travado` é `False`
+    # em todo perfil desde 03/09 (o campo GRAVA), então uma marca de travado
+    # ali nunca acenderia; e o `estilo_recado` é uma explicação PERMANENTE, não
+    # uma ressalva — o `title` que o desenho já põe no rótulo "Estilo de Jogo"
+    # diz a mesma coisa, no mesmo hover, sem um endereço a mais. O PO decidiu o
+    # cadeado para o "Funciona em" e o ponto para o "Nome do Jogo"; não para
+    # este campo.
+    "editor.estilo.travado": "o campo GRAVA desde 03/09 (`estilo_travado` é "
+                             "sempre `False`) — uma marca de travado aqui "
+                             "nunca acenderia",
     "editor.estilo.recado": "a frase que explica por que o campo volta ao "
-                            "travessão (`perfis_web.ESTILO_APLICA_E_SAI`) não "
-                            "tem lugar no desenho",
+                            "travessão (`perfis_web.ESTILO_APLICA_E_SAI`) diz "
+                            "o mesmo que o `title` do rótulo, no mesmo hover — "
+                            "um segundo canal para o mesmo fato",
     # `quantos` é a SEGUNDA forma da mesma pergunta: `perfis.conta` tem
     # endereço (a página o mostra) e sai deste mesmo pacote. Medido: ninguém o
     # lê hoje — nem produto, nem régua. Fica declarado, e não apagado, porque
@@ -535,7 +571,81 @@ SEM_ENDERECO = {
 #: no mesmo dia, e a instrução dela é a que se seguiu: *"Tire da lista no mesmo
 #: commit."* Um nome publicado que continua declarado como à espera vira ponto
 #: cego — a lista deixa de ser lida como fila e passa a ser lida como decoração.
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
+#:
+#: **E ELE VOLTOU A TER QUATRO — 04/09/2026, decisão [01] do PO.** O cadeado do
+#: "Funciona em" e o ponto de alerta do "Nome do Jogo" MUDAM PIXEL: nascem
+#: elementos que não existiam, ao lado de dois campos. Isso é DESENHO, e
+#: `--publicar-enderecos` o recusa dizendo — que é exatamente o certo. Enquanto
+#: ela não publicar, os quatro valores continuam saindo e caindo no vazio na
+#: página que o produto renderiza; o que ela vê hoje não muda.
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {
+    "editor.ambiente.travado": "o cadeado do seletor travado nasceu na bancada",
+    "editor.ambiente.recado": "a frase do cadeado, no hover",
+    "editor.jogo.exige": "o ponto de alerta da exigência escondida",
+    "editor.jogo.exigencia": "a frase do ponto de alerta, no hover",
+}
+
+
+#: O FIM DA FRASE DA EXIGÊNCIA ESCONDIDA, REESCRITO PARA ESTA TELA — decisão
+#: [02] do PO, 04/09/2026: *"as duas frases prontas mandam a lugares que não
+#: existem aqui … Isso é fato errado e se substitui."*
+#:
+#: **A FRASE DO PRODUTO NÃO ESTÁ ERRADA — ELA ESTÁ NA TELA ERRADA.**
+#: `simple_match.exigencia_invisivel` termina em *"Ligue o Modo avançado para
+#: ver e mudar."*, e na JANELA GTK isso é VERDADE: o `main.glade:2275` tem o
+#: interruptor com esse nome, e `profiles_actions._sincronizar_exigencia_invisivel`
+#: escreve a frase no rótulo ao lado dele. Nesta interface não há uma ocorrência
+#: — medido: `grep -rn "Modo avançado"` em `interface/paginas/` dá zero fora do
+#: arquivo de estudo `Telas Hefesto.dc.html`.
+#:
+#: **POR ISSO A SUBSTITUIÇÃO É AQUI, E NÃO LÁ.** Corrigir a frase em
+#: `simple_match.py` apagaria a metade que está CERTA na janela estável e
+#: deixaria as duas telas com a mesma frase errada em uma delas — o defeito ao
+#: contrário. Quem sabe para onde ESTA tela pode mandar alguém é esta tela.
+#:
+#: O FIM NOVO É O MESMO DA OUTRA FRASE desta aba (`AMBIENTE_QUE_A_TELA_NAO_MOSTRA`,
+#: em `perfis_web`), e isso é de propósito: as duas contam o mesmo estado — a
+#: tela mostra menos regra do que o disco guarda — e o PO decidiu **"a tela
+#: avisa e para por aí"**. Duas saídas diferentes para o mesmo beco seriam duas
+#: verdades sobre o que se pode fazer.
+#:
+#: **O CONSERTO DE VERDADE É DE OUTRA POSSE, e está no relatório:**
+#: `exigencia_invisivel` é um matcher de `profiles/`, e nomear ali uma peça de
+#: interface é o que obriga esta remenda. A frase factual devia sair de lá e o
+#: caminho, de cada tela.
+FIM_DA_EXIGENCIA_NA_GTK = "Ligue o Modo avançado para ver e mudar."
+FIM_DA_EXIGENCIA_AQUI = (
+    "Esta tela não mostra esses campos; para vê-los e mudá-los, use "
+    "`hefesto-dualsense4unix profile` na linha de comando."
+)
+
+
+def _exigencia_para_esta_tela(match: Any) -> str:
+    """A exigência escondida daquele `match`, com o fim que ESTA tela alcança.
+
+    NUNCA LEVANTA: ela roda dentro de `pacote()`, e uma exceção aqui derrubaria
+    a pintura da aba inteira por causa de um perfil com uma regra estranha — a
+    tela ficaria congelada sem dizer por quê.
+
+    **A TROCA É EXATA E COBRADA**: `test_a_aba_10_perfis_fecha_as_linhas.py`
+    exige que `FIM_DA_EXIGENCIA_NA_GTK` continue sendo o fim que o produto
+    emite. No dia em que a frase de lá mudar, a régua reprova AQUI — em vez de
+    a troca falhar em silêncio e a tela voltar a mandá-la a um lugar que não
+    existe. É a diferença entre uma remenda declarada e uma remenda podre.
+    """
+    try:
+        from hefesto_dualsense4unix.profiles.simple_match import (
+            exigencia_invisivel,
+        )
+
+        frase = str(exigencia_invisivel(match) or "") if match is not None else ""
+    except Exception:
+        return ""
+    if not frase:
+        return ""
+    if frase.endswith(FIM_DA_EXIGENCIA_NA_GTK):
+        frase = frase[: -len(FIM_DA_EXIGENCIA_NA_GTK)].rstrip()
+    return f"{frase} {FIM_DA_EXIGENCIA_AQUI}"
 
 #: O que o "Remover" está esperando: `(perfil, instante)`, ou `None`.
 _ARMADO: tuple[str, float] | None = None
@@ -1187,6 +1297,26 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # Estilo faz com a opção vazia dela.
     if editor:
         fora["editor.prioridade.escolha"] = str(editor.get("prioridade_n") or "0")
+
+    # O PONTO DE ALERTA DO "NOME DO JOGO" — decisão [01] do PO, 04/09/2026.
+    #
+    # O CASO É O DO PRAGMATA, e ele foi medido com ela jogando: o editor
+    # mostrava "Jogo da Steam · 3357650" e o arquivo exigia TAMBÉM
+    # `PRAGMATA.exe`. O `matches` é AND, o campo invisível era o que decidia, e
+    # o perfil não entrava sozinho — seis vezes em dois minutos. A tela afirmava
+    # uma regra que não era a regra.
+    #
+    # SÃO DUAS CHAVES E UM VALOR: a marca acende quando a frase existe. Elas
+    # saem da MESMA linha, do MESMO cálculo, e por isso não há caminho no código
+    # em que uma exista sem a outra — que é a guarda que o `monta.botao_cinza`
+    # consegue com um campo só e esta marca não consegue (ver
+    # `aba10.marca_com_dica` para o porquê).
+    #
+    # O `alvo` É O PERFIL ABERTO NO EDITOR, e não o que está valendo: a
+    # exigência escondida é do perfil que os campos ao lado estão mostrando.
+    exigencia = _exigencia_para_esta_tela(getattr(alvo, "match", None))
+    fora["editor.jogo.exigencia"] = exigencia
+    fora["editor.jogo.exige"] = "sim" if exigencia else ""
 
     # OS TRÊS CAMPOS QUE SE PINTAM UMA VEZ SÓ — e a razão é medida, não gosto.
     # Ver `_uma_vez_so`: repintar um `<input>` a cada 500 ms apagaria o que ela
@@ -2193,11 +2323,31 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     O desfecho nomeia as duas coisas que mudaram — o rótulo novo do "Quando
     usar" e, quando o número é de um jogo que esta máquina conhece, o NOME dele.
     É o degrau que faltava para ela conferir o que digitou (JOGO-QUE-SE-DIZ-01).
+
+    **E O CAMPO SE CORRIGE — 04/09/2026, decisão [04] do PO.** Colar o endereço
+    da loja funciona: `normalize_appid` lê o número de dentro dele e a regra
+    grava o número. O que ficava errado era a TELA — o campo continuava
+    mostrando `https://store.steampowered.com/app/1599660/…` sobre uma regra que
+    já guardava `1599660`, e assim ficava até ela trocar de perfil. A janela
+    antiga trocava o endereço pelo número na frente dela.
+
+    **A CORREÇÃO SÓ CABE AQUI, e a razão é medida:** `editor.jogo` está em
+    `CAMPOS_QUE_ELA_DIGITA`, logo o tique NÃO o repinta enquanto ela está no
+    mesmo perfil (senão a pintura apagaria a segunda tecla que ela digita). O
+    único instante em que a tela pode devolver a forma canônica é a resposta
+    deste gesto — e ela é pintada na hora, sem esperar os 500 ms.
+
+    O VALOR SAI DE `simple_extra(prof.match)`, e não de um `if` meu: é a MESMA
+    função que `perfis_web._pacote_do_editor` usa para encher este campo a cada
+    tique. Escrever aqui "o appid quando é steam_game, o texto quando não é"
+    seria a segunda verdade sobre o que este campo mostra — e as duas
+    divergiriam no dia em que a regra ganhasse uma terceira forma.
     """
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from hefesto_dualsense4unix.profiles.simple_match import (
         from_simple_choice,
         normalize_appid,
+        simple_extra,
     )
 
     if not _so_mudou(o):
@@ -2213,7 +2363,12 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
         chave = "steam_game" if normalize_appid(texto) is not None else "game"
     prof.match = from_simple_choice(chave, texto, regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
-    return _dizer(_agora_vale_em(prof, texto))
+    # O `or texto` É O PISO, e não zelo: `simple_extra` devolve `""` para uma
+    # regra que não guarda extra nenhum, e escrever vazio num campo faz o
+    # `escrever()` do piloto pôr um travessão — a tela apagaria o que ela acabou
+    # de digitar e diria "não sei" sobre um valor que ela vê no disco.
+    return _dizer(_agora_vale_em(prof, texto),
+                  **{"editor.jogo": simple_extra(prof.match) or texto})
 
 
 @gesto("10-perfis.html", "detectar")
@@ -2256,7 +2411,10 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     pegou o jogo certo e não o launcher que estava por cima.
     """
     from hefesto_dualsense4unix.profiles.loader import load_profile
-    from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
+    from hefesto_dualsense4unix.profiles.simple_match import (
+        from_simple_choice,
+        simple_extra,
+    )
     from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
     nome = _perfil_do_editor(ctx)
@@ -2274,7 +2432,12 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     prof.match = from_simple_choice("steam_game", str(appid),
                                     regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
-    return _dizer(_agora_vale_em(prof, str(appid)))
+    # O CAMPO SE CORRIGE AQUI TAMBÉM, e este é o caso mais forte dos dois: o
+    # número que passa a valer ela NÃO digitou — veio de uma janela que ela nem
+    # está mais olhando. Sem isto, o "Nome do Jogo" continua mostrando o que
+    # havia antes do clique, sobre uma regra que já é outra. Ver `editor_jogo`.
+    return _dizer(_agora_vale_em(prof, str(appid)),
+                  **{"editor.jogo": simple_extra(prof.match) or str(appid)})
 
 
 @gesto("10-perfis.html", "novo")

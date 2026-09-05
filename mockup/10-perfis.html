@@ -943,15 +943,74 @@
      VERDE porque é desfecho BOM: a recusa já tem cor e lugar próprios (a tarja
      do piloto). Dois canais, duas cores, nenhuma dúvida sobre qual é qual.
 
-     UMA LINHA SÓ, com reticências: a frase mais longa que o produto emite aqui
-     é a `mensagem_de_ativacao` com seções de fora, e ela pode passar de 120
-     caracteres. Deixá-la quebrar em duas linhas devolveria o pulo que o
-     `height` fixo acabou de tirar. */
-  .desfecho{padding:0 14px;margin-top:7px;height:15px;line-height:15px;
+     DUAS LINHAS, E A SEGUNDA É A QUE AVISA — decisão [05] do PO, 04/09/2026.
+     Aqui estava escrito *"UMA LINHA SÓ, com reticências"*, e o preço estava
+     medido do lado errado: o que a reticência come é o FIM da frase, e o fim é
+     sempre a metade que avisa. A carona da Steam sozinha tem 218 caracteres
+     («Reposta a Opção de Inicialização … Sem ela, no Bluetooth o jogo tende a
+     não enxergar controle nenhum»), vem grudada na frase de ativação, e as
+     duas passam de 280; a linha de 1.180px a 11px comporta ~200. O que sumia
+     era exatamente o *"sem ela, o jogo tende a não enxergar controle nenhum"*.
+
+     AS DUAS LINHAS SÃO RESERVADAS, e é a mesma escolha de antes levada a sério:
+     `visibility` continua no lugar de `display`, e a altura continua FIXA. Uma
+     tira que crescesse só quando a frase é longa devolveria o pulo de 15px a
+     cada clique de frase longa — que é a quarta opção que o PO recusou.
+
+     `-webkit-line-clamp` E NÃO `text-overflow`: a reticência de `text-overflow`
+     é de UMA linha só. A janela é um `WebKit2.WebView` e o Chrome da bancada é
+     a mesma família, então o prefixo `-webkit-` é o que os dois leem — a mesma
+     razão do `::-webkit-slider-thumb` da Prioridade, logo acima.
+
+     O CUSTO SAI DA LISTA, e está declarado: 15px a mais, ~meia linha da tabela
+     de perfis. Nada pula, porque o espaço já era reservado. */
+  .desfecho{padding:0 14px;margin-top:7px;height:30px;line-height:15px;
             font-size:11px;color:var(--green);
-            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+            display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+            overflow:hidden;
             visibility:hidden}
   .desfecho.on{visibility:visible}
+
+  /* ---------- O CADEADO E O PONTO DE ALERTA — decisão [01] do PO ----------
+     *"Cadeado no campo, frase no hover."* Sete dos nove perfis de fábrica casam
+     por uma regra que o "Funciona em" não sabe descrever (cinco por título de
+     janela, dois por lista de classes), e até aqui o seletor ficava IDÊNTICO a
+     um destravado: só reclamava DEPOIS do clique. O irmão é o campo do jogo —
+     o Pragmata exigia também `PRAGMATA.exe` e a tela mostrava só o número.
+
+     OS DOIS SÃO `.ajuda` POR DENTRO, e isso não é economia de CSS: é o canal de
+     hover que esta página JÁ tem (`.ajuda:hover .dica{display:block}`, do
+     `topo.html`), o mesmo que o `?` do quadro usa. Inventar um segundo
+     mecanismo de dica seria a segunda gramática que esta casa persegue.
+
+     O QUE MUDA É SÓ A CARA: sem a bolinha e sem borda, na cor do alerta. O
+     `.ajuda` mede 17px e é `flex:0 0 17px` — aqui vira 13px, para caber ao lado
+     de um campo de 30px sem empurrar nada.
+
+     O CADEADO É SVG INLINE, e não um caractere: nenhuma das dez páginas usa
+     emoji (medido: zero fora do latim acentuado, do travessão e do `·`), e um
+     glifo que depende da fonte do sistema é um glifo que some na máquina
+     seguinte. São dois traços — o arco e o corpo —, em `currentColor`, como
+     todo glifo de `assets/glyphs/`.
+
+     O PONTO DE ALERTA É UM PONTO, literalmente: `border-radius:50%` de 7px na
+     cor laranja. A decisão diz *"ponto de alerta"*, e um ponto é o que ele é.
+
+     OS DOIS NASCEM ESCONDIDOS e o PRODUTO os acende, pelo alvo `classe` — o
+     desenho não sabe se a regra deste perfil é travada, e cravar visível faria
+     a tela afirmar um cadeado sobre um perfil que não tem nenhum. */
+  .campo .trava,.campo .exige{
+    display:none;flex:0 0 13px;width:13px;height:13px;position:relative;
+    cursor:help;color:var(--orange);align-items:center;justify-content:center}
+  .campo .trava.on,.campo .exige.on{display:inline-flex}
+  .campo .trava:hover .dica,.campo .exige:hover .dica{display:block}
+  .campo .exige::after{content:"";width:7px;height:7px;border-radius:50%;
+                       background:currentColor}
+  /* A DICA ABRE PARA A ESQUERDA: os dois marcadores moram no fim de um campo
+     que já encosta na borda direita do quadro, e uma caixa de 330px a 22px
+     para a direita sairia da janela. É a mesma cura que o `.tn-cx .dica` do
+     `monta` já faz na aba Conexões. */
+  .campo .trava .dica,.campo .exige .dica{left:auto;right:20px;width:300px}
 
   /* ---------- as QUATRO configurações que cabem dentro deste perfil ----------
      O editor mostrava CINCO campos e gravava vinte, e a única frase que dizia
@@ -1345,7 +1404,7 @@
               </div>
               <div class="campo">
                 <span>Prioridade:</span>
-                <span class="val" data-hef="editor.prioridade.dica" title="Decide quem ganha quando dois perfis poderiam entrar: o maior vence. O Universal fica em zero, para nunca atropelar ninguém e nunca deixar o controle sem nada.">
+                <span class="val" data-hef="editor.prioridade.dica" title="Quando dois perfis servem ao mesmo tempo, o de número maior entra. O Universal fica em zero, para nunca atropelar ninguém e nunca deixar o controle sem nada.">
                   <!-- `data-hef-alvo="largura"` — 02/09/2026, e sem ele a barra
                        MENTIA de duas formas ao mesmo tempo. O pintor cai no
                        ramo padrão (`el.textContent = t`, `hefesto_vivo.py:170`)
@@ -1382,21 +1441,38 @@
                   <span class="n" data-hef="editor.prioridade.n">90</span>
                 </span>
               </div>
+              <!-- O CADEADO — decisão [01] do PO, 04/09/2026: *"Cadeado no
+                   campo, frase no hover."* Sete dos nove perfis de fábrica
+                   casam por uma regra que este seletor não sabe descrever, e
+                   até aqui ele ficava IDÊNTICO a um destravado: a marca de
+                   travado e a frase que a explica já saíam do produto
+                   (`perfis_web._ambiente_do_perfil`) e caíam no vazio, porque
+                   endereço para elas não existia nesta página. Só depois do
+                   clique é que a tela reclamava. -->
               <div class="campo">
                 <span>Funciona em:</span>
                 <span class="val"><select data-hef="editor.ambiente" data-hef-gesto="editor.ambiente" data-hef-alvo="valor">
+                <option value="—" disabled>—</option>
                 <option>Todos</option>
                 <option>Steam</option>
                 <option>Estilo de Jogo</option>
                 <option selected>Jogo</option>
                 <option>Jogo da Steam</option>
-                </select></span>
+                </select><span class="trava" data-hef="editor.ambiente.travado" data-hef-alvo="classe"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg><span class="dica" data-hef="editor.ambiente.recado" data-hef-alvo="html"></span></span></span>
               </div>
+              <!-- O PONTO DE ALERTA — a outra metade da mesma decisão. O caso
+                   é o do Pragmata: o editor mostrava "Jogo da Steam · 3357650"
+                   e o arquivo exigia TAMBÉM `PRAGMATA.exe`; o `matches` é AND,
+                   o campo invisível era o que decidia, e o perfil não entrava
+                   sozinho — medido seis vezes em dois minutos com ela jogando.
+                   A frase que conta isso já existia
+                   (`simple_match.exigencia_invisivel`) e nunca tinha chegado a
+                   esta tela. -->
               <div class="campo">
                 <span>Nome do Jogo:</span>
                 <span class="val">
                   <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo"
-                         data-hef-alvo="valor" value="Mortal Kombat 1">
+                         data-hef-alvo="valor" value="Mortal Kombat 1"><span class="exige" data-hef="editor.jogo.exige" data-hef-alvo="classe"><span class="dica" data-hef="editor.jogo.exigencia" data-hef-alvo="html"></span></span>
                   <button class="btn roxo" data-hef-gesto="detectar" title="Pega o jogo que está rodando atrás desta janela e monta a regra — funciona com jogo de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
               </div>
