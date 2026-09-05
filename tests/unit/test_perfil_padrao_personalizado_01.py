@@ -2,9 +2,9 @@
 
 Decisão dela, 05/09/2026, literal:
 
-    *"Meu_perfil como perfil default nao deveria existir. Deixa ou Meu Perfil
+    *"Meu_perfil como perfil default nao deveria existir. Deixa ou Meu Perfil  noqa-acento
     ou Personalizado. acho esse melhor. fora que ao abrir o programa ele deve
-    iniciar com o ultimo perfil ativado. ate eu alterar novamente e ativar
+    iniciar com o ultimo perfil ativado. ate eu alterar novamente e ativar  noqa-acento
     outro perfil"*
 
 Este arquivo cobre a PRIMEIRA metade (o nome). A segunda vive em
@@ -235,7 +235,7 @@ def test_recusa_quando_ela_ja_renomeou_o_perfil_na_mao(disco: Path) -> None:
 
 def test_recusa_em_json_ilegivel_sem_explodir(disco: Path) -> None:
     """Perfil corrompido não pode derrubar a carga de perfil de ninguém."""
-    (disco / ARQUIVO_ANTIGO_DO_PADRAO).write_text("{ nao é json", encoding="utf-8")
+    (disco / ARQUIVO_ANTIGO_DO_PADRAO).write_text("{ não é json", encoding="utf-8")
 
     assert migrate_default_profile_name(disco) is None
     assert (disco / ARQUIVO_ANTIGO_DO_PADRAO).is_file()

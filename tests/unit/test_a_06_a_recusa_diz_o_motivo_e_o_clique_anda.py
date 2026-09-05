@@ -214,7 +214,7 @@ def test_o_teclado_recusado_sem_bloco_nao_culpa_o_hefesto_de_estar_morto() -> No
 # *"velocidade do cursor e da rolagem coloca um slicer pra cada"*. Até aqui as
 # duas linhas eram um par de botões `-`/`+`, e os gestos `vel-cursor-menos` e
 # `vel-cursor-mais` somavam ±1 ao número do ÚLTIMO TIQUE (500 ms). Daí vinha
-# tudo o que esta seção media: a memória `_PEDIDO`, o `_partir_de`, o
+# tudo o que esta seção mede: a memória `_PEDIDO`, o `_partir_de`, o
 # `_reservar`, as três condições que a desligam.
 #
 # **UMA BARRA NÃO TEM DE ONDE PARTIR.** Ela manda o número inteiro, e a partida

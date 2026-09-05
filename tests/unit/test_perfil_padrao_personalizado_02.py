@@ -1,6 +1,6 @@
 """PERFIL-PADRAO-PERSONALIZADO-01, metade B — abrir no ÚLTIMO perfil ativado.
 
-Palavra dela, 05/09/2026: *"ao abrir o programa ele deve iniciar com o ultimo
+Palavra dela, 05/09/2026: *"ao abrir o programa ele deve iniciar com o ultimo  noqa-acento
 perfil ativado. **ate eu alterar novamente e ativar outro perfil**"*.
 
 MEDIDO ANTES DE CONSTRUIR, e o veredito é que **já funciona** — o item B não

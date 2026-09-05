@@ -859,7 +859,7 @@ CSS = """
      `.miolo` (16px 3px 18px 18px) é do `topo.html`, comum às dez abas: é
      DECISÃO DELA, não pixel. As saídas estão em `mockup/DIVERGENCIAS.md`. */
   /* OS DEZ PIXELS QUE FALTAVAM — VIBRAÇÃO-CABE-01 FECHA EM 05/09/2026.
-     A régua media o alerta terminando 41 px abaixo do fundo do miolo; a saída
+     A régua acusava o alerta terminando 41 px abaixo do fundo do miolo; a saída
      da faixa "Estado" devolveu 31, e estes dez são os últimos. Eles saem do
      ESPAÇAMENTO DESTE RODAPÉ, e de mais lugar nenhum:
 
