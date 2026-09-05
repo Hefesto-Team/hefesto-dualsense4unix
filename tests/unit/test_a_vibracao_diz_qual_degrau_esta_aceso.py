@@ -56,7 +56,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-from hefesto_dualsense4unix.app.telas import vibracao as _tela
 from hefesto_dualsense4unix.interface import aba05 as _aba05
 from hefesto_dualsense4unix.interface import regua_do_mockup as _regua
 
