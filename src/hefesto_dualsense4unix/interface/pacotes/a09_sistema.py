@@ -996,23 +996,27 @@ def _quem_esta_na_frente(state: Any) -> str:
     """A classe da janela em foco AGORA, ou `""` — a MESMA regra da GTK.
 
     `descrever_deteccao_de_janela` só nomeia a janela **dentro do ramo
-    `vendo`**, e a queda de `window_detect_current_class` para
-    `window_detect_last_class` acontece lá dentro. As duas metades vêm juntas de
-    propósito, e a primeira é a que importa: `last_class` é STICKY — ela guarda
-    a última janela que se conseguiu ler e não decai. Fora do ramo `vendo`, o
-    nome que ela devolve é de horas atrás.
+    `vendo`**, e é a mesma regra aqui: `last_class` é STICKY — guarda a última
+    janela que se conseguiu ler e não decai.
 
     MEDIDO na mesa dela em 03/09/2026: `seeing=False`, `current=unknown`,
     `last=Hefesto-Dualsense4Unix`, `useful_age_sec=5861` — uma hora e meia. Ler o
     `last` fora do `vendo` faria a linha dizer "Sem ver a janela agora ·
     Hefesto" e nomear uma janela que não está na frente há uma hora e meia.
+
+    E O `last` SAIU TAMBÉM DE DENTRO DO `vendo` — 05/09/2026. O recuo sobrevivia
+    ali, e o `vendo` sozinho não o salva: com `seeing=True` e `current=unknown`
+    o backend está VENDO uma janela que não sabe classificar, e o nome que o
+    `last` devolve continua sendo o de antes. Medido no retrato das abas de hoje
+    às 05:11: a linha nomeava `pragmata.exe` com o jogo fechado havia horas,
+    sem um processo de Steam, Proton ou Wine na máquina. A GTK foi curada no
+    mesmo commit, e as duas metades continuam sendo a mesma regra.
     """
     if not isinstance(state, dict) or not state.get("window_detect_seeing"):
         return ""
-    for chave in ("window_detect_current_class", "window_detect_last_class"):
-        valor = state.get(chave)
-        if isinstance(valor, str) and valor and valor != "unknown":
-            return valor
+    valor = state.get("window_detect_current_class")
+    if isinstance(valor, str) and valor and valor != "unknown":
+        return valor
     return ""
 
 
