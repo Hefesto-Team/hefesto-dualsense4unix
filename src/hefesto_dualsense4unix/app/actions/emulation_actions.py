@@ -1600,13 +1600,22 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def on_emulation_gamepad_xbox(self, _btn: Gtk.Button) -> None:
         # BG-TOAST-01 (26/08/2026): o recibo dizia "(vibra no jogo)" enquanto o
         # tooltip do MESMO botão já carregava a ressalva da EMULACAO-UM-DONO-SO-01
-        # — e quem clica lê o toast, não o tooltip. A ressalva é colada VERBATIM
-        # de `RESSALVA_DE_TRANSPORTE`, que é a única cópia dela nesta casa.
+        # — e quem clica lê o toast, não o tooltip.
+        #
+        # A RESSALVA SAIU DAQUI EM 05/09/2026, com a medição que a derrubou: a
+        # vibração do jogo chega ao controle nos dois transportes
+        # (`integrations/uinput_gamepad.py:130` repassa o FF_RUMBLE ao hidraw
+        # sem consultar o barramento), medida na bancada dela. Colar a ressalva
+        # aqui passou a ser afirmar na tela que uma feature que funciona não foi
+        # conferida — ver `RESSALVA_DE_TRANSPORTE`, hoje vazio pela mesma razão.
+        #
+        # E o recibo NÃO ganhou no lugar dela uma lista do que o Xbox não faz:
+        # decisão dela, 05/09/2026 — *"o Hefesto não descreve falha e limitação.
+        # Criamos mecanismos pra usarmos todas as feature."*
         self._apply_mode(
             MODE_GAMEPAD,
             "xbox",
-            "Gamepad Xbox 360 ligado. A "
-            + RESSALVA_DE_TRANSPORTE["vibracao.rumble.passthrough@dualsense"],
+            "Gamepad Xbox 360 ligado — o jogo mostra os botões do Xbox",
         )
 
     def _set_suppress(self, suppressed: bool, msg: str) -> None:
