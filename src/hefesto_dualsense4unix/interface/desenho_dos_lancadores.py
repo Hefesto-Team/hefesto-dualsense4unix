@@ -613,6 +613,50 @@ STEAM = "steam"
 #: `test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono` cobra.
 ABRIR = "abrir-lancador"
 
+#: O NOME DO GESTO DO "Copiar a linha", pela mesma razão do :data:`ABRIR`.
+#: DECISÃO DELA (PO, 04/09/2026, `07[01]`): *"Os dois, só quando faz falta"* —
+#: o botão E a linha à mostra, e **só** no estado em que o cartão já diz
+#: «linha intocável».
+COPIAR = "copiar-a-linha"
+
+#: O RÓTULO DO BOTÃO, palavra por palavra da decisão. Ele mora aqui e não no
+#: pacote porque quem o escreve é o desenho; o pacote só atende o gesto.
+COPIAR_ROTULO = "Copiar a linha"
+
+
+def linha_do_wrapper_html(linha: str) -> str:
+    """A linha de inicialização À MOSTRA, para ela selecionar e copiar à mão.
+
+    A SEGUNDA SAÍDA DA DECISÃO [01], e ela existe porque a primeira pode
+    falhar CALADA: pôr texto na área de transferência não devolve resposta, e
+    a janela velha já resolve isso do mesmo jeito — o texto do aviso dela
+    *"continua selecionável"* quando a cópia não vai
+    (`docs/data/paridade-gtk-html.csv`, linha 237). Com a linha na tela, um
+    `Ctrl+C` salva o dia sem o produto ter de acertar a seleção.
+
+    ESTE MÓDULO NÃO COPIA NADA, e o parágrafo acima é prosa: quem fala com a
+    área de transferência é `a07_lancadores.para_a_area_de_transferencia`, e
+    nomear a classe do GTK aqui daria à régua da paridade um endereço onde não
+    há um ato. É o defeito que esta casa nomeia como *a régua confundindo a
+    PALAVRA com o ATO*.
+
+    ELA NÃO É INVENTADA AQUI. Este módulo **não importa nada do produto** (é o
+    que deixa o gerador rodar como script solto), então a linha chega pelo
+    contrato frio: `Leitura.linha`, que o pacote enche de
+    `steam_launch_options.WRAPPER_LAUNCH`. Sem ela não há o que mostrar — e o
+    desenho cala em vez de escrever uma linha de mentira, que é a doença que
+    esta aba inteira nasceu para curar.
+
+    `<code>` E NÃO `<pre>`: são 143 caracteres numa coluna de cartão, e o
+    `<pre>` não quebra — ele empurraria uma barra de rolagem lateral para
+    dentro do cartão. Quem quebra é o CSS (`.linha-do-wrapper`, em `aba07.py`),
+    com `word-break:break-all`, porque a linha não tem espaço onde caiba.
+    MEDIDO no Chrome, 1920x1080: o bloco fica com 523 px dentro da coluna do
+    cartão e a janela continua em 1180x777, sem rolagem lateral.
+    """
+    return (f'<div class="linha-do-wrapper"><code>{_e(linha)}</code></div>'
+            if linha else "")
+
 
 @dataclass(frozen=True)
 class Leitura:
@@ -649,6 +693,14 @@ class Leitura:
     onde_estao: tuple[tuple[str, str], ...] = ()
     #: a frase da sentinela, que já nomeia o jogo e já diz o que vai acontecer.
     frase: str = ""
+    #: A LINHA DE INICIALIZAÇÃO do Hefesto — o que o botão «Copiar a linha»
+    #: copia e o que o bloco à mostra exibe. Ela é `steam_launch_options.
+    #: WRAPPER_LAUNCH`, e vem por aqui porque o desenho não importa o produto.
+    #:
+    #: VAZIA É RESPOSTA, e não descuido: sem linha o cartão não oferece o botão
+    #: nem o bloco. Um botão de copiar sobre uma linha que o desenho não tem
+    #: copiaria o vazio e diria "Copiado!".
+    linha: str = ""
     erros: tuple[str, ...] = ()
 
     @property
@@ -822,16 +874,41 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         #                                               (`len(lida.com_wrapper)`)
         #
         # As duas afirmações são VERDADEIRAS — "biblioteca" inclui o que não
-        # está instalado, "instalados" não —, e a tela não dá como saber disso.
-        # Quem lê vê 63 > 22 e conclui que um dos dois está errado. Não mexi na
-        # frase: texto de tela é dela, e as duas palavras que separam os
-        # conjuntos já estão escritas. O que falta é dizer que são conjuntos
-        # diferentes.
+        # está instalado, "instalados" não —, e a tela não dava como saber
+        # disso. Quem lê vê 63 > 22 e conclui que um dos dois está errado.
+        #
+        # DECIDIDO — PO, 04/09/2026, `07[04]`: *"O corpo nomeia o conjunto"*.
+        # Três palavras, zero linha nova, nenhum botão: as duas contagens
+        # continuam as que o produto mediu, e a frase passa a dizer que elas
+        # contam coisas diferentes. As outras duas opções morreram por medição:
+        # contar só instalados apagaria as dezenas de jogos já preparados, e pôr
+        # os dois números no canto disputa a linha com o selo em janela estreita.
         diz = ("Os controles chegam. O atalho de inicialização está no lugar em "
                f"{_plural(len(lida.com_wrapper), 'jogo', 'jogos')} da sua "
-               "biblioteca.")
+               "biblioteca (instalados ou não).")
         acoes = (abrir, criar)
         selo = "ok"
+
+    # OS DOIS, SÓ QUANDO FAZ FALTA — PO, 04/09/2026, `07[01]`.
+    #
+    # O ESTADO É O DA LINHA INTOCÁVEL, e não o da recusa do Consertar: essa
+    # metade CAIU em 03/09, quando a recusa passou a armar a `_VigiaDaSteam`,
+    # que repõe sozinha assim que o jogo e a Steam fecham. O buraco que sobra é
+    # só o dos intocáveis — os jogos que o produto DECIDIU nunca tocar
+    # (`apply_wrapper_vdf_text` os pula por construção), e para os quais o
+    # carimbo já escreve *"N jogos com a linha intocável — só reparo manual"*.
+    # Era uma tela prometendo um reparo manual sem oferecer um caminho para
+    # fazê-lo: **não existia UM botão de copiar em toda a interface nova.**
+    #
+    # E OS DOIS, e não um: a cópia pode falhar em SILÊNCIO — pôr texto na área
+    # de transferência não devolve resposta nenhuma —, e aí a linha à mostra
+    # ainda salva. É o que a janela velha faz no mesmo aviso desde sempre.
+    #
+    # NO DIA BOM NADA DISSO OCUPA A TELA: sem intocáveis, o cartão sai daqui
+    # byte a byte como saía antes.
+    if lida.intocaveis and lida.linha:
+        acoes = (*acoes, Acao(COPIAR_ROTULO, "", COPIAR, STEAM))
+        diz = diz + linha_do_wrapper_html(lida.linha)
 
     return Lancador(
         chave=STEAM, nome="Steam", selo=selo,
@@ -969,6 +1046,8 @@ __all__ = [
     "AINDA_LENDO",
     "A_STEAM",
     "CLASSE_DA_GRADE",
+    "COPIAR",
+    "COPIAR_ROTULO",
     "DIZ_ACHEI",
     "DIZ_NAO_ACHEI",
     "DIZ_SEM_FONTE",
@@ -997,6 +1076,7 @@ __all__ = [
     "cartoes",
     "cartoes_html",
     "conta_html",
+    "linha_do_wrapper_html",
     "linhas_de_jogos",
     "lista_de_jogos",
     "quantos_html",

@@ -155,10 +155,18 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
     # daquele estado aparecem nele. Os demais entram pela pintura de `-acoes`.
     assert no_html <= com_dono, (
         f"a página tem gestos que ninguém atende: {sorted(no_html - com_dono)}")
+    # `copiar-a-linha` ENTROU EM 04/09/2026 e é o caso mais estrito da lista: os
+    # outros aparecem no cartão de quem tem jogo faltando, e este só no estado
+    # em que há jogo com a LINHA INTOCÁVEL (decisão `07[01]` do PO — *"os dois,
+    # só quando faz falta"*). O HTML estático nasce em `cartoes(None)`, que não
+    # tem nem leitura de disco nem linha, então ele não pode aparecer ali.
+    # Quem prova que ele CHEGA à tela é
+    # `test_a_aba_07_lancadores_fecha_as_linhas.py`, sobre a fileira pintada.
     assert com_dono - no_html <= {"consertar", "ver-o-que-impede",
                                   "tirar-daqui", "voltar-a-usar",
                                   "voltar-a-perguntar", "nao-perguntar",
-                                  "consertar-fechando-a-steam"}, (
+                                  "consertar-fechando-a-steam",
+                                  "copiar-a-linha"}, (
         f"estes gestos têm dono e não aparecem em estado nenhum da página: "
         f"{sorted(com_dono - no_html)}")
 
@@ -473,19 +481,21 @@ def test_esta_regua_nao_alcanca_a_biblioteca_dela():
         "`conftest` caiu, e um teste desta aba passaria a ler a biblioteca dela")
 
 
-def test_o_piso_de_gestos_da_aba_e_dez(a07):
+def test_o_piso_de_gestos_da_aba_e_onze(a07):
     """Ele SÓ SOBE. Uma queda não aparece na tela: o clique não faz nada.
 
     SUBIU DE SEIS PARA SETE em 02/09/2026, com o "Voltar a perguntar" que a
     decisão dela mandou nascer; DE SETE PARA OITO em 03/09/2026, com o
-    "Abrir o lançador" da decisão 17 dela; e DE OITO PARA DEZ no mesmo dia, com
+    "Abrir o lançador" da decisão 17 dela; DE OITO PARA DEZ no mesmo dia, com
     as duas faltas de paridade que a medição das dez abas nomeou — o "Não
-    perguntar para este jogo" e o "Posso fechar a Steam por uns 20 segundos?".
+    perguntar para este jogo" e o "Posso fechar a Steam por uns 20 segundos?";
+    e DE DEZ PARA ONZE em 04/09/2026, com o "Copiar a linha" (decisão `07[01]`
+    do PO), que é **o único botão de copiar de toda a interface nova**.
     """
     import pacotes
 
     quantos = sum(1 for (p, _) in pacotes.GESTOS if p == PAGINA)
-    assert quantos >= a07.PISO_DA_ABA == 10, (
+    assert quantos >= a07.PISO_DA_ABA == 11, (
         f"{PAGINA} tem {quantos} gestos com dono e o piso é {a07.PISO_DA_ABA}")
 
 

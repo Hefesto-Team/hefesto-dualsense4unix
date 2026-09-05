@@ -158,6 +158,33 @@ seção daqui**: a aba deixou de estar em trabalho.
   **Até publicar, o produto continua exatamente como ela o vê hoje:** nenhum
   elemento desta aba usa as peças, então as regras novas não casam com nada e
   a página publicada desenha o mesmo pixel que a bancada.
+- **04/09/2026 · ONDA2-07** — **UMA regra de folha, e ZERO pixel no estado que
+  ela vê hoje.** A única mudança de HTML é a classe `.linha-do-wrapper` no
+  `<style>`, para o bloco da linha de inicialização à mostra (decisão `07[01]`
+  do PO: *"os dois, só quando faz falta"*). **Nenhum elemento da página
+  estática a usa** — o bloco e o botão «Copiar a linha» só nascem quando o
+  produto lê um jogo com a LINHA INTOCÁVEL na biblioteca dela, e a página
+  estática é `cartoes(None)`, que ainda não leu disco nenhum.
+
+  **O QUE ELA PRECISA OLHAR ANTES DE PUBLICAR:** o cartão da Steam **no estado
+  intocável** — é o único que muda. Medido no Chrome, 1920×1080, com a carga
+  que o produto emitiria:
+
+  | estado | altura do cartão da Steam | botões | janela |
+  | --- | --- | --- | --- |
+  | dia bom (biblioteca em ordem) | **157 px** | Abrir o lançador · Criar perfil | 1180×777, dobra 0 |
+  | com jogo intocável | **231 px** | + **Copiar a linha** | 1180×777, dobra 0 |
+
+  O custo é de **74 px, e só naquele estado**; sem rolagem lateral e sem passar
+  da dobra nos dois. As outras duas mudanças desta frente não têm desenho: a
+  frase do corpo ganhou três palavras (`(instalados ou não)`, decisão `07[04]`)
+  e o silêncio do aviso é comportamento (`07[03]`).
+
+  **O QUE O PRODUTO JÁ FAZ SEM PUBLICAR:** o botão, o bloco e o clique chegam à
+  tela viva — o `-diz` e o `-acoes` são pintados pelo pacote a cada tique.
+  O que falta até a publicação é só a MOLDURA do bloco (a regra acima), então
+  hoje a linha aparece como texto solto dentro do cartão. Foto do WebKit vivo
+  no relato desta frente.
 
 ## 08-conexoes.html
 - **04/09/2026** — a folha das dez peças (D-02 e D-03) entrou pelo `monta.py`.

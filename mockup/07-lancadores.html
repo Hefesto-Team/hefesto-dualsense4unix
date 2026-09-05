@@ -779,6 +779,28 @@
      34px por jogo empurraria a lista para fora do cartão. */
   .lanc-fora .btn.mini{height:24px;font-size:10.5px;padding:0 9px;flex:0 0 auto}
   .lanc-vazio{font-size:11px;color:var(--comment)}
+  /* A LINHA DE INICIALIZAÇÃO À MOSTRA — 04/09/2026, decisão `07[01]` do PO.
+     Ela NASCE AUSENTE: `desenho_dos_lancadores.linha_do_wrapper_html` devolve
+     string vazia sempre que não há jogo com a linha intocável, e o bloco não
+     ocupa um pixel — a mesma regra do carimbo e da lista de jogos.
+     `word-break:break-all` E NÃO `pre`: são 143 caracteres sem um espaço onde
+     caiba a quebra, e um `<pre>` empurraria barra de rolagem lateral para
+     dentro de um cartão de meia largura. Aqui ela ocupa três linhas e o cartão
+     continua no lugar.
+     AS CORES SÃO AS DO ESQUELETO, e foram CONFERIDAS antes de escritas:
+     `--elevated`, `--border-sutil` e `--texto-suave` existem no `:root` do
+     `topo.html` (`:14`, `:15`, `:33`). O `--elevated` é o tom que sobe UM
+     degrau sobre o `--app-bg` do cartão — é o que separa o bloco do corpo sem
+     acrescentar cor nova à paleta.
+     `user-select` NÃO É DECLARADO AQUI, e a razão foi medida: o `topo.html`
+     não desliga a seleção em lugar nenhum (`grep user-select` devolve ZERO),
+     então o padrão do WebKit já deixa o Ctrl+C funcionar — que é a SEGUNDA
+     saída desta decisão. Declarar o que já vale seria regra que ninguém
+     consegue provar. */
+  .linha-do-wrapper{margin-top:7px;padding:6px 8px;border-radius:6px;
+    background:var(--elevated);border:1px solid var(--border-sutil)}
+  .linha-do-wrapper code{font-family:'JetBrains Mono',monospace;font-size:10px;
+    line-height:1.5;color:var(--texto-suave);word-break:break-all}
 
 </style>
 </head>
