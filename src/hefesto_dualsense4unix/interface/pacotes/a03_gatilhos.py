@@ -1444,12 +1444,17 @@ def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
 # dela — a fita lia do aparelho e as dez abas abaixo continuavam mostrando o
 # controle do desenho.
 #
-# A FITA NEM SEMPRE LÊ, e isso é fato medido em 03/09/2026, não ressalva:
-# `hefesto_vivo._fita` devolve `""` — deixando a fita INTEIRA no desenho —
-# quando QUALQUER controle da mesa está sem cor lida (`hefesto_vivo.py:1054`).
-# Com um controle no rádio, que é a mesa dela agora, a fita fica no mockup. Esta
-# aba não depende disso: ela lê a MESA, controle a controle, e cala sobre quem
-# não disse a cor em vez de calar sobre todos.
+# FATO SUBSTITUÍDO — 04/09/2026, na integração, e não é renumeração: aqui
+# estava escrito que *"a fita nem sempre lê: `hefesto_vivo._fita` devolve `""`
+# quando QUALQUER controle da mesa está sem cor lida"*, e que por isso, com um
+# controle no rádio, a fita ficava no mockup. **Essa guarda não existe mais.**
+# Ela dizia `any(not c.get("cor") for c in mesa)` e outra frente a retirou no
+# mesmo 03/09 exatamente por mentir: pelo rádio a cor NUNCA chega, então a fita
+# ficava eternamente no desenho. Hoje `_fita` só devolve `""` com a MESA VAZIA
+# (`hefesto_vivo.py:1105`); quem trata a cor ausente é o `monta.fita`, que
+# emite o chip sem `--plastico`. Esta aba continua não dependendo disso: ela lê
+# a MESA, controle a controle, e cala sobre quem não disse a cor em vez de
+# calar sobre todos.
 #
 # UM DONO, DOIS CHAMADORES — é a forma que a `fileira_de_players` da aba
 # Iluminação já usa. `aba03.py` chama estas funções para desenhar a bancada e o

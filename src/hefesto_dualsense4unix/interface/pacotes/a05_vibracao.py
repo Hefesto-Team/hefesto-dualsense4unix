@@ -842,7 +842,7 @@ def _sem_marcacao(texto: str) -> str:
 #     rumble.passthrough  ('enabled',)            ← nenhum endereço
 #
 # Quem escolhe o controle é o ALVO DE OUTPUT do daemon, e o handler o congela
-# junto do par: `daemon/ipc_handlers.py:4706` grava `rumble_active_uniq =
+# junto do par: `daemon/ipc_handlers.py:4795` grava `rumble_active_uniq =
 # uniq_do_alvo_de_output(self.controller)`. Sem alvo escolhido o padrão é
 # BROADCAST (`ipc_handlers.py:4368`) — os quatro tremeriam, e a coluna, que é o
 # endereço desta aba, estaria mentindo. Por isso `_mirar()` vem antes.
@@ -921,7 +921,7 @@ def _indice(ctx: Contexto, uniq: str) -> int:
 
     O RECURSO À POSIÇÃO NA MESA existe porque nem toda entrada publica `index`
     (backend falso, daemon legado); o próprio handler cai nesse recurso em
-    `_numero_de_exibicao` (`ipc_handlers.py:593`). E se o controle não estiver
+    `_numero_de_exibicao` (`ipc_handlers.py:596`). E se o controle não estiver
     na mesa, levanta: mirar um lugar vazio deixaria o alvo ANTERIOR de pé, e o
     tremor sairia na coluna errada, calado.
 
@@ -1319,7 +1319,7 @@ def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     **FATO SUBSTITUÍDO, e era o parágrafo final deste docstring:** *"a política
     é da MESA, não da coluna … clicar 'Economia' na coluna do P2 muda os
     quatro"*. Era verdade enquanto o gesto chamava `rumble.policy_set`, que não
-    aceita `uniq` (`daemon/ipc_handlers.py:4452`). Ela decidiu **construir por
+    aceita `uniq` (`daemon/ipc_handlers.py:4953`). Ela decidiu **construir por
     controle**, e o caminho já existia inteiro pelo PERFIL — ver
     :func:`_gravar_a_forca`. O clique da coluna deixou de mexer nos vizinhos.
 
@@ -1506,7 +1506,7 @@ def forca_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     era dela; ela escolheu o botão de mesa.
 
     A PORTA É A GLOBAL, e é a única que existe: `rumble.policy_set` **não aceita
-    `uniq`** (`daemon/ipc_handlers.py:4452`), e o produto sabe disso por escrito
+    `uniq`** (`daemon/ipc_handlers.py:4953`), e o produto sabe disso por escrito
     — *"não há IPC de política por unidade, e inventar um seria mecanismo novo"*
     (`rumble_actions.py:911`). É a MESMA ponte da janela estável
     (`rumble_policy_set_checked`), que é a única desde 26/08/2026.

@@ -481,7 +481,7 @@ def trigger_reset_detalhado(
     escritos como espelho um do outro (ELO-MUDO-01, 23/08).
 
     R-19 (auditoria 23/07): o RPC já existia e já estava roteado
-    (`ipc_server.py:102`), mas a GUI não o expunha — então o botão "Desligar" da
+    (`ipc_server.py:124`), mas a GUI não o expunha — então o botão "Desligar" da
     aba Gatilhos mandava outro `trigger.set` com modo "Off". A diferença é
     decisiva: `trigger.set` **ARMA** `mark_manual_trigger_active`, então o botão
     que a usuária usa para "voltar ao normal" era mais um jeito de PAUSAR a
