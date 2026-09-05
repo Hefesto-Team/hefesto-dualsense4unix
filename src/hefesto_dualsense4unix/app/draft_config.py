@@ -540,6 +540,32 @@ class DraftConfig(BaseModel):
     # do ativo depois de mexer no Modo pela aba Perfis APAGAVA a seção `mode`
     # recém-configurada (o snapshot ainda era o do boot, com mode=None).
     # Reemitir só faz sentido quando o alvo é o MESMO perfil de onde vieram.
+    # OS DOIS QUE TODO "SALVAR" APAGAVA — medido em 05/09/2026, com o
+    # round-trip mais favorável possível (mesmo nome, todo passthrough
+    # valendo): `button_actions={"circle": "KEY_ESC"}` entrava e saía `None`;
+    # `teclado_emulado=True` entrava e saía `None`. Os dois são campos do
+    # `Profile` (`schema.py:1342` e `:1363`) e os dois nomes apareciam ZERO
+    # vezes neste arquivo — o `Profile(...)` de `to_profile` simplesmente não
+    # os emitia, então cada Salvar zerava um campo que ninguém tinha tocado.
+    #
+    # O ALCANCE ERA MAIOR QUE A INTERFACE NOVA: `footer_actions.py` (o Salvar
+    # da janela GTK) e `profiles_actions.py` (a aba Perfis) chamam este mesmo
+    # método. O `button_actions` nasceu por decisão dela em 01/09 e nenhum
+    # Salvar do produto o preservava.
+    #
+    # POR QUE PASSTHROUGH E NÃO CAMPO EDITÁVEL: quem os escreve hoje é a aba
+    # 06, direto no disco, no clique. `from_profile` lê o disco; reemitir o que
+    # veio é exatamente "não destrua". Um campo editável aqui exigiria um
+    # escritor, e escrever campo sem leitor é o defeito que
+    # `test_perfil_por_controle_o_campo_espera_o_caminho.py` proíbe.
+    #
+    # FORA DO GATE `mesmo_perfil`, junto de `controllers` e `key_bindings` e
+    # não de `match`/`mode`/`priority`: os dois são CONFIGURAÇÃO dela, não
+    # regra de identidade do perfil. "Salvar com nome novo" leva a config
+    # junto; a regra do outro perfil, não (R-11).
+    source_button_actions: Any | None = None
+    source_teclado_emulado: bool | None = None
+
     source_name: str | None = None
 
     # --- construtores ---
@@ -635,6 +661,8 @@ class DraftConfig(BaseModel):
             source_priority=profile.priority,
             source_controllers=profile.controllers,
             source_ponte=profile.ponte,
+            source_button_actions=profile.button_actions,
+            source_teclado_emulado=profile.teclado_emulado,
             source_name=profile.name,
         )
 
@@ -823,6 +851,9 @@ class DraftConfig(BaseModel):
                 custom_mult=self.rumble.custom_mult,
             ),
             key_bindings=self.key_bindings,
+            # OS DOIS QUE O SALVAR APAGAVA — ver o bloco dos campos.
+            button_actions=self.source_button_actions,
+            teclado_emulado=self.source_teclado_emulado,
             mouse=mouse_cfg,
             mic=mic_cfg,
             speaker=speaker_cfg,
