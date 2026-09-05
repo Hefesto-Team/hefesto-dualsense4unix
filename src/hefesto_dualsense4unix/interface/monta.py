@@ -910,6 +910,54 @@ CSS_POPUP = """
 CSS_FOLHA = """
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
+  /* ---- S-04 · O LUGAR QUE PERDE O DONO AO VIVO NÃO OFERECE CONTROLE ----
+     QUEIXA DELA, 05/09/2026: *"temos que entender se só tem um controle
+     conectado só aparece config daquele. aba cinco tá errada."*
+
+     E ESTAVA, e não era só a cinco. Medido na tela viva com UM controle ligado:
+     a 02 servia 11 widgets por coluna, a 03 servia 7 nas QUATRO, a 04 servia 16
+     e a 08 servia 3 — todos clicáveis, todos para aparelhos que não estão aqui.
+     A 05 mostrava até um interruptor de motor ACESO em laranja.
+
+     POR QUE O DESENHO NÃO PODIA PREVER: o mockup assa duas colunas ligadas
+     (decisão dela de 31/08 — *"deixa os outros espaços a mostra ainda mas
+     cinza"*). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
+     entre "o desenho disse vazio" e "o produto descobriu vazio" era o buraco.
+
+     O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA: `pacotes.__init__` calcula os
+     `vazios` e o piloto marca cada lugar com `data-conectado="nao"` mais a
+     classe `off`. O travessão dos CAMPOS já chegava (`dict.fromkeys(chaves,
+     TRAVESSAO)`). O que não chegava era o sumiço dos WIDGETS — um botão não é
+     campo de texto, e nenhum `—` o apaga.
+
+     AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: uma peça que cada
+     aba precisa lembrar de pedir é uma peça que alguma aba esquece. Foram
+     QUATRO abas com o mesmo defeito e o mesmo remédio.
+
+     `:not(.vazia)` NÃO É DETALHE: o piloto marca `data-conectado="nao"` também
+     nas que já NASCEM vazias, e essas trazem o `<span class="nada">` por
+     dentro. Sem a exclusão, esta regra esconderia o travessão delas e a coluna
+     ficaria em branco — a régua trocada por outra pior.
+
+     O CINZA É POR ESCONDER E NÃO POR `disabled`, ao contrário da S-03 logo
+     abaixo, e a diferença tem razão: ali o botão EXISTE e recusa dizendo o
+     porquê; aqui não há aparelho sobre o qual dizer coisa alguma. Um botão
+     cinza num lugar vazio ainda promete que ali cabe uma escolha. */
+  [data-controle][data-conectado="nao"]:not(.vazia) button,
+  [data-controle][data-conectado="nao"]:not(.vazia) input,
+  [data-controle][data-conectado="nao"]:not(.vazia) select,
+  [data-controle][data-conectado="nao"]:not(.vazia) textarea,
+  [data-controle][data-conectado="nao"]:not(.vazia) [contenteditable]{
+    display:none !important}
+  /* E O QUE SOBRA FICA APAGADO — o rótulo, o desenho e os números que o
+     travessão do pacote já escreveu. Sem isto o nome do plástico continuaria
+     colorido em cima de uma coluna sem aparelho. */
+  [data-controle][data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
+  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg .peca,
+  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg .corpo,
+  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg .miolo *{
+    fill:var(--linha) !important}
+
   /* ---- S-03 · O BOTÃO QUE VAI RECUSAR JÁ NASCE CINZA (D-03) ----
      A CARA É A DO `.seg button:disabled`, letra por letra. O que muda é o
      mecanismo: ali o botão está `disabled` de verdade e não recebe clique;
