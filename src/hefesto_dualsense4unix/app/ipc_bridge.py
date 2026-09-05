@@ -1245,6 +1245,85 @@ def mic_canal_set_detalhado(
     return _corpo_do_daemon("mic.canal.set", payload)
 
 
+def sensor_set_detalhado(
+    *,
+    giroscopio: bool | None = None,
+    acelerometro: bool | None = None,
+    uniq: str | None = None,
+) -> dict[str, Any] | None:
+    """``sensor.set`` com a RESPOSTA inteira do daemon — o giro e o accel.
+
+    SENSOR-DE-VERDADE-01, decisão dela: *"ele tem que funcionar de verdade.
+    ambos independente do modo e da mascara."*
+    <!-- noqa-acento: citação literal dela -->
+
+    Campo ``None`` **não é enviado** — e por isso não mexe naquele sensor. É o
+    mesmo contrato de ``rumble_motores_set``, e a razão é a mesma: desligar o
+    giroscópio não pode ligar o acelerômetro de volta pelas costas dela.
+
+    O corpo traz ``status``, ``giroscopio``/``acelerometro`` (o que passou a
+    valer), ``gravado`` (foi ao perfil?), ``alcance`` (``report`` e ``evdev``,
+    separados) e ``ressalva`` — a frase para a tela quando o interruptor pegou
+    só pela metade. ``None`` = daemon não respondeu.
+
+    **A ressalva não é decoração.** Medido em 04/09/2026: em Modo Nativo o
+    jogo lê o movimento pelo ``hidraw`` do controle físico, onde o daemon não
+    escreve — o interruptor esconde o sensor de quem lê evdev e não de quem lê
+    hidraw. Uma ponte que devolvesse só ``True`` faria a tela dizer "aplicado"
+    sobre um giro que continua chegando ao jogo.
+    """
+    payload: dict[str, Any] = {}
+    if giroscopio is not None:
+        payload["giroscopio"] = bool(giroscopio)
+    if acelerometro is not None:
+        payload["acelerometro"] = bool(acelerometro)
+    if not payload:
+        return None
+    if uniq:
+        payload["uniq"] = uniq
+    return _corpo_do_daemon("sensor.set", payload)
+
+
+def frase_do_interruptor_de_sensor(corpo: Any) -> str | None:
+    """A frase que vai para o CARTÃO daquele controle — ``None`` se deu certo.
+
+    Irmã de :func:`frase_do_ato_do_microfone`, e pelo mesmo motivo: o corpo do
+    daemon tem tudo, e é a TELA que precisa de uma linha. Quem a desenha é a
+    aba 02 (`interface/pacotes/a02_controles.py`), que não é desta frente — ver
+    a dívida declarada na entrega da ONDA1-D3.
+
+    ``None`` significa **nada a dizer**: o interruptor pegou inteiro, ou ela
+    LIGOU o sensor (ligar nunca é parcial — o dado volta a fluir por todos os
+    caminhos de uma vez).
+    """
+    if not isinstance(corpo, dict):
+        return "o daemon não respondeu ao interruptor do sensor"
+    status = corpo.get("status")
+    if status != "ok":
+        motivo = corpo.get("motivo")
+        return str(motivo) if motivo else f"o daemon recusou: {status}"
+    ressalva = corpo.get("ressalva")
+    return str(ressalva) if ressalva else None
+
+
+def sensor_set(
+    *,
+    giroscopio: bool | None = None,
+    acelerometro: bool | None = None,
+    uniq: str | None = None,
+) -> bool:
+    """``sensor.set`` estreitado a ``bool`` — só para quem não vai ler a frase.
+
+    ``True`` = o daemon aceitou. **Não** significa "o jogo parou de ver": para
+    isso é o ``alcance`` de :func:`sensor_set_detalhado`, e é por isso que esta
+    função existe estreita e documentada em vez de ser a porta principal.
+    """
+    corpo = sensor_set_detalhado(
+        giroscopio=giroscopio, acelerometro=acelerometro, uniq=uniq
+    )
+    return isinstance(corpo, dict) and corpo.get("status") == "ok"
+
+
 def frase_do_ato_do_microfone(corpo: Any) -> str | None:
     """A frase que vai para o CARTÃO daquele controle — ``None`` se deu certo.
 
@@ -1467,6 +1546,7 @@ __all__ = [
     "daemon_status_basic",
     "destinos_da_aplicacao",
     "frase_do_ato_do_microfone",
+    "frase_do_interruptor_de_sensor",
     "identity_number_set",
     "led_set",
     "led_set_detalhado",
@@ -1488,6 +1568,8 @@ __all__ = [
     "rumble_set",
     "rumble_stop",
     "run_in_thread",
+    "sensor_set",
+    "sensor_set_detalhado",
     "speaker_set",
     "speaker_set_detalhado",
     "trigger_reset_detalhado",
