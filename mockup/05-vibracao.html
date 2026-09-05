@@ -931,8 +931,28 @@
   .rot-ctrl{font-size:11px;color:var(--texto-mudo);text-align:center;
             display:flex;align-items:center;justify-content:center}
 
-  /* os quatro degraus de força, 2x2 e todos da MESMA largura */
+  /* OS TRÊS DEGRAUS DE FORÇA — 2 em cima, o terceiro OCUPANDO A LARGURA.
+     Eram quatro em 2x2 até o `Auto` sair em 05/09/2026 (ver :data:`FORCA`), e
+     com três o 2x2 puro deixava o "Máximo" sozinho e curto na segunda linha —
+     o desenho anunciando um quarto botão que não existe.
+
+     OS TRÊS NUMA LINHA SÓ NÃO CABEM, e isto foi MEDIDO em vez de estimado: a
+     coluna tem 227,5px, o `.ctrl` recolhe 24 e sobram 203 para três botões mais
+     dois vãos. "Balanceado" mede 68px a 12px de fonte, e o botão fica com 63.
+     Varridas 27 combinações de vão (7/5/4), fonte (12/11,5/11) e recuo (8/4/2),
+     a MELHOR ainda estoura em 2px — e mesmo com o recuo do pai a zero o texto
+     ocupa 68 de 72, sem respiro. Encolher a fonte até caber daria um degrau com
+     letra menor que o resto da tela para esconder um problema de largura.
+
+     O `span 2` do terceiro é o que faz a falta do quarto parecer o que é: uma
+     escolha. E ele não custa altura nenhuma — `--r-forca` continua nos 79 que
+     as duas faixas sempre custaram.
+
+     QUANDO A COLUNA CRESCER, os três cabem lado a lado e este bloco volta a ser
+     `repeat(3, 1fr)` com `--r-forca:36px` — são 43px devolvidos à aba que mais
+     rola. A medição acima é o que diz a partir de que largura isso vale. */
   .vib .seg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .vib .seg button:last-child{grid-column:1 / -1}
   .vib .seg button{min-width:0;padding:0 8px;font-size:12px}
 
   /* AS TRÊS BARRAS DE UM CONTROLE NA MESMA GRADE — a Força e os dois motores.
@@ -1153,35 +1173,6 @@
   .vib .ressalva .est{display:flex;gap:6px;align-items:flex-start}
   .vib .ressalva .est .sinal{flex:0 0 auto;font-size:8px;line-height:2.1}
   .vib .ressalva .est.alerta{color:var(--orange)}
-
-  /* ---------- A LINHA DE MESA — decisão [05] dela, 04/09/2026 ----------
-     *"Uma linha de MESA embaixo da grade."* Ela devolve o caminho para pôr a
-     mesa inteira em Auto — perdido em 03/09, quando a força virou POR CONTROLE
-     — e, no mesmo gesto, faz "herdado" ficar óbvio sem uma palavra a mais: a
-     coluna sem ajuste próprio deixa de acender degrau, e o único aceso na tela
-     é o desta linha.
-
-     FORA DA GRADE, e não dentro: as cinco colunas compartilham as alturas de
-     linha, e um degrau da mesa lá dentro empurraria as sete faixas de todas as
-     colunas. É a mesma razão pela qual a linha de estado da mesa mora fora da
-     grade, e não dentro dela.
-
-     A LARGURA DO RÓTULO É A MESMA DA PRIMEIRA COLUNA (`--larg-rot`, de
-     `medidas.py`), e o vão é o `--gap-col`: assim os quatro botões desta linha
-     começam exatamente onde começa a coluna do P1, e a linha lê como uma
-     continuação da tabela em vez de um bloco solto. */
-     A CLASSE É `.seg`, A MESMA DOS QUATRO DA COLUNA, e não uma classe nova: o
-     desenho do botão (altura, borda, o `.on` roxo, o `:hover`) mora no
-     `topo.html`, que é o esqueleto das dez. Uma classe própria aqui seria a
-     segunda gramática de botão de degrau na MESMA tela — e as duas divergiriam
-     no primeiro ajuste de tema. O que esta aba acrescenta é só a largura igual.
-
-     OS QUATRO DA MESMA LARGURA: `flex:1` sobre base zero é o que impede
-     "Balanceado" de ficar maior que "Auto". */
-  .vib-mesa{display:grid;grid-template-columns:var(--larg-rot) 1fr;
-            gap:var(--gap-col);align-items:center;margin:6px 4px 0}
-  .vib-mesa .seg button{flex:1 1 0;min-width:0;padding:0 8px;font-size:12px}
-  .vib-mesa .sec-rot{white-space:nowrap}
 
   /* ---------- A NOTA DO TESTAR — decisão [02] dela, 04/09/2026 ----------
      *"Só a nota do Testar sobe para a tela. A do Auto fica no `?`."*
@@ -1743,9 +1734,7 @@
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
                 <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
-                <b>Máximo</b> 150%, mais forte do que ele pediu · <b>Auto</b>, o Hefesto
-                escolhe pela bateria (100/70/30%) e nunca amplifica.<br><br>
-                Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.<br><br>
+                <b>Máximo</b> 150%, mais forte do que ele pediu.<br><br>
                 A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.
               </span></span></span></div>
             <div><span class="sec-rot">Personalizado</span></div>
@@ -2096,7 +2085,7 @@
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P1 <span class="pt">•</span> Cosmic Red
               <span class="pt">•</span> USB</div>
-            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="auto" data-papel="forca" data-forca="auto">Auto</button></div>
+            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
             <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -2453,8 +2442,8 @@
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P2 <span class="pt">•</span> Starlight Blue
               <span class="pt">•</span> BT</div>
-            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="auto" data-papel="forca" data-forca="auto">Auto</button></div>
-            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="70" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">70%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
@@ -3138,36 +3127,6 @@
             <div class="nada-lin"><span class="nada">—</span></div>
           </div>
 
-        </div>
-        <!-- A LINHA DE MESA — decisão [05] dela, 04/09/2026. Ela responde a
-             pergunta *"a força agora tem dois donos; a tela mostra os dois?"*
-             com um sim que devolve um caminho perdido: pôr a MESA INTEIRA em
-             `Auto`. Ele sumiu em 03/09, quando a força virou por controle — o
-             esquema RECUSA `auto` por peça, e o clique daquele degrau numa
-             coluna passou a significar *"limpa o meu ajuste e volta a seguir a
-             mesa"*.
-
-             E ELA FAZ O "HERDADO" FICAR ÓBVIO SEM PALAVRA NOVA: com a coluna
-             sem ajuste próprio deixando de acender degrau, o único degrau aceso
-             na tela é o desta linha — que é exatamente o que o produto está
-             usando naquela coluna.
-
-             O `data-campo` É `degrau-mesa`, e ele NÃO é `degrau`: o pintor pinta
-             a coluna por dentro (`achar(raiz, k)`) e a mesa no documento
-             inteiro (`achar(document, k)`). O mesmo nome nos dois faria a
-             pintura da mesa acender degrau DENTRO das colunas — que é a régua 6
-             deste arquivo, um andar acima. -->
-        <div class="vib-mesa">
-          <span class="sec-rot">Força da mesa
-            <span class="ajuda">?<span class="dica">
-              O degrau que vale para <b>todos</b> os controles que não têm um ajuste
-              próprio. Uma coluna com degrau aceso está usando o dela; uma coluna com
-              os quatro apagados está seguindo esta linha.<br><br>
-              <b>Auto</b> só existe aqui: o Hefesto o escala pela bateria do controle
-              principal, e por isso ele não pode ser o ajuste de uma peça só.<br><br>
-              Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.
-            </span></span></span>
-          <div class="seg"><button class="" data-campo="degrau-mesa" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca-mesa" data-forca="economia">Economia</button><button class="" data-campo="degrau-mesa" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca-mesa" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau-mesa" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca-mesa" data-forca="max">Máximo</button><button class="on" data-campo="degrau-mesa" data-hef-alvo="classe" data-hef-quando="auto" data-papel="forca-mesa" data-forca="auto">Auto</button></div>
         </div>
         <!-- A NOTA DO TESTAR, na tela — decisão [02] dela, 04/09/2026. A frase é
              lida do `gui/main.glade` (ver `DICA_DOS_VALORES_QUE_PASSAM`), e é a

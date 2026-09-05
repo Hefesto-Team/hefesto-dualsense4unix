@@ -620,6 +620,56 @@
      competir com o texto. Medido em 27/08/2026. */
   .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
 
+  /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
+
+  /* ---- S-03 · O BOTÃO QUE VAI RECUSAR JÁ NASCE CINZA (D-03) ----
+     A CARA É A DO `.seg button:disabled`, letra por letra. O que muda é o
+     mecanismo: ali o botão está `disabled` de verdade e não recebe clique;
+     aqui a classe é só tinta, e o botão continua respondendo — que é o que o
+     PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
+     tem rato na mão. */
+  .btn.apagado,.seg button.apagado{
+    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .btn.apagado:hover,.seg button.apagado:hover{
+    border-color:var(--border-sutil);color:var(--texto-mudo)}
+
+  /* O `?` DA RAZÃO. Ele é o `.ajuda` que a página já tem — a mesma bolinha,
+     a mesma `.dica` — com a classe `porque` dizendo que o texto dela vem do
+     PRODUTO, e não do desenho. A distinção é da aba 08, onde a frase congelada
+     já mentiu ("está no cabo" com o controle no rádio).
+
+     TRÊS JEITOS DE ELE SUMIR, e os três existem porque as abas emitem de três
+     jeitos: colado ao botão (o botão não está cinza -> não há o que explicar),
+     com a dica VAZIA de nascença, e com o marcador `.nada` que o pacote manda
+     quando não há o que dizer. O marcador é preciso porque `escrever()` troca
+     valor vazio por travessão — sem ele, "nada a dizer" vira um `—` solto. */
+  .btn:not(.apagado) + .ajuda.porque,
+  .seg button:not(.apagado) + .ajuda.porque{display:none}
+  .ajuda.porque:has(.dica:empty){display:none}
+  .ajuda.porque:has(.nada){display:none}
+  /* ELE COLA NO BOTÃO DELE, e as duas linhas saíram da foto de 04/09: dentro
+     de `.acoes` (vão de 8px) o `?` ficava a 8px dos DOIS vizinhos e lia como
+     se explicasse o botão seguinte; e o `.ajuda` tem 17px de altura fixa num
+     flex que estica, então ele subia para o topo do botão, acima do texto que
+     explica. */
+  .ajuda.porque{align-self:center;margin-left:-4px}
+
+  /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
+     No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
+     cobrando a altura da fonte, que é o preço que a regra dela de 30/08
+     (*"texto na interface é zero"*) não aceita pagar.
+
+     A peça é o `:empty{display:none}` que a `05-vibracao` e a `06-navegacao`
+     já tinham cada uma na sua folha, promovido a peça das dez — com o
+     `:has(.nada)` junto, porque as duas metades são a mesma peça: `:empty`
+     cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
+     piloto pinta a cada tique com "não há o que dizer". Faltando uma das
+     duas, a linha volta a aparecer num dos dois caminhos, calada. */
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
+  .ressalva:empty{display:none}
+  .ressalva:has(.nada){display:none}
+
+
   /* ---------- Sistema ---------- */
 
   /* AS FAIXAS. Cada uma é [bloco | barra de 1px | bloco], e o rótulo de cada
@@ -693,6 +743,27 @@
      antes eram três larguras (138,2 / 141,3 / 80,7) numa fileira que deixava
      157,8px de sobra. */
   .col-acao .btn{width:100%;justify-content:center;padding:0 8px}
+
+  /* A CAIXA DO BOTÃO QUE PODE FICAR CINZA (D-03, decisão [02] do PO).
+     Ela é de ALTURA, não de enfeite: `.col-acao` e `.lista` são colunas de
+     flex, e um `?` solto viraria UMA FILEIRA a mais no instante em que o
+     piloto o mostrasse — as duas colunas irmãs desta faixa deixariam de acabar
+     no mesmo `y`, que é o vão de 58px que ela apontou em 31/08. Aqui ele fica
+     na LINHA do botão: com razão o botão encolhe ~13px de largura; sem razão a
+     folha comum esconde o `?` e o botão ocupa a linha inteira. A altura é a
+     mesma nos dois estados, e é isso que o portão dos dois blocos exige. */
+  .acao{display:flex;align-items:center}
+  /* `.col-acao`/`.lista` NO SELETOR, e não `.acao > .btn` solto: as duas
+     colunas declaram `width:100%` no `.btn` DEPOIS deste bloco, e a mesma
+     especificidade faria a última regra vencer. O `flex:1` é o que deixa o
+     botão encolher os 13px do `?` em vez de estourar a coluna. */
+  .col-acao .acao > .btn,.lista .acao > .btn{flex:1;min-width:0;width:auto}
+  /* A DICA ABRE PARA A ESQUERDA NA COLUNA DA DIREITA. Medido: a coluna de
+     ações da faixa do serviço acaba em x=932 e a `.dica` tem 330px a partir de
+     `left:22px` — 932+22+330 = 1284 numa janela de 1180. É a mesma cura que o
+     `saude()` já carrega em linha (`left:auto;right:22px`), aqui em regra
+     porque a peça das dez não escreve `style`. */
+  .col-acao .ajuda.porque .dica{left:auto;right:22px}
 
   /* a linha de estado: glifo E cor mudam juntos — quem não distingue verde de
      laranja continua lendo o estado pelo símbolo. Antes "ok" e "aviso" usavam o MESMO ●. */
@@ -1092,9 +1163,9 @@
             </div>
             <div class="risco"></div>
             <div class="col-acao">
-            <button class="btn verde" title="Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador." data-gesto="retomar">Retomar</button>
-            <button class="btn" title="Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu." data-gesto="reiniciar">Reiniciar o serviço</button>
-            <button class="btn" title="Relê tudo o que esta aba mostra. Não muda nada." data-gesto="atualizar">Atualizar</button>
+            <div class="acao"><button class="btn verde" data-campo="retomar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="retomar" title="Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.">Retomar</button><span class="ajuda porque">?<span class="dica" data-campo="retomar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" title="Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.">Reiniciar o serviço</button><span class="ajuda porque">?<span class="dica" data-campo="reiniciar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <button class="btn" title="Manda o serviço reaplicar a configuração e reescrever os arquivos de ambiente que a Steam usa para lançar os jogos; no fim, relê o que esta aba mostra. Leva alguns segundos, e o botão avisa enquanto trabalha." data-gesto="atualizar" data-hef-em-voo="Reaplicando…">Reaplicar ajustes</button>
             <button class="btn vermelho" title="O Hefesto deixa de rodar e os 2 viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde." data-gesto="desligar">Parar o serviço</button>
             </div>
           </div>
@@ -1242,7 +1313,7 @@
         <div class="avancado">
           <div class="lista">
             <button class="btn vermelho" title="Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos continuam onde estão." data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
-            <button class="btn" title="Lista os plugins do daemon e relê. Hoje só o terminal alcança isso." data-gesto="ver-plugins">Ver os plugins carregados</button>
+            <div class="acao"><button class="btn" data-campo="ver-plugins-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="ver-plugins" title="Lista os plugins do daemon e relê. Hoje só o terminal alcança isso.">Ver os plugins carregados</button><span class="ajuda porque">?<span class="dica" data-campo="ver-plugins-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
             <button class="btn" title="Joga as últimas 80 linhas do registro técnico no painel ao lado." data-gesto="ver-detalhes">Ver detalhes</button>
           </div>
           <div class="risco"></div>

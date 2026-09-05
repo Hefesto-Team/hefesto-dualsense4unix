@@ -620,6 +620,56 @@
      competir com o texto. Medido em 27/08/2026. */
   .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
 
+  /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
+
+  /* ---- S-03 · O BOTÃO QUE VAI RECUSAR JÁ NASCE CINZA (D-03) ----
+     A CARA É A DO `.seg button:disabled`, letra por letra. O que muda é o
+     mecanismo: ali o botão está `disabled` de verdade e não recebe clique;
+     aqui a classe é só tinta, e o botão continua respondendo — que é o que o
+     PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
+     tem rato na mão. */
+  .btn.apagado,.seg button.apagado{
+    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .btn.apagado:hover,.seg button.apagado:hover{
+    border-color:var(--border-sutil);color:var(--texto-mudo)}
+
+  /* O `?` DA RAZÃO. Ele é o `.ajuda` que a página já tem — a mesma bolinha,
+     a mesma `.dica` — com a classe `porque` dizendo que o texto dela vem do
+     PRODUTO, e não do desenho. A distinção é da aba 08, onde a frase congelada
+     já mentiu ("está no cabo" com o controle no rádio).
+
+     TRÊS JEITOS DE ELE SUMIR, e os três existem porque as abas emitem de três
+     jeitos: colado ao botão (o botão não está cinza -> não há o que explicar),
+     com a dica VAZIA de nascença, e com o marcador `.nada` que o pacote manda
+     quando não há o que dizer. O marcador é preciso porque `escrever()` troca
+     valor vazio por travessão — sem ele, "nada a dizer" vira um `—` solto. */
+  .btn:not(.apagado) + .ajuda.porque,
+  .seg button:not(.apagado) + .ajuda.porque{display:none}
+  .ajuda.porque:has(.dica:empty){display:none}
+  .ajuda.porque:has(.nada){display:none}
+  /* ELE COLA NO BOTÃO DELE, e as duas linhas saíram da foto de 04/09: dentro
+     de `.acoes` (vão de 8px) o `?` ficava a 8px dos DOIS vizinhos e lia como
+     se explicasse o botão seguinte; e o `.ajuda` tem 17px de altura fixa num
+     flex que estica, então ele subia para o topo do botão, acima do texto que
+     explica. */
+  .ajuda.porque{align-self:center;margin-left:-4px}
+
+  /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
+     No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
+     cobrando a altura da fonte, que é o preço que a regra dela de 30/08
+     (*"texto na interface é zero"*) não aceita pagar.
+
+     A peça é o `:empty{display:none}` que a `05-vibracao` e a `06-navegacao`
+     já tinham cada uma na sua folha, promovido a peça das dez — com o
+     `:has(.nada)` junto, porque as duas metades são a mesma peça: `:empty`
+     cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
+     piloto pinta a cada tique com "não há o que dizer". Faltando uma das
+     duas, a linha volta a aparecer num dos dois caminhos, calada. */
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
+  .ressalva:empty{display:none}
+  .ressalva:has(.nada){display:none}
+
+
   /* Os glifos são os MESMOS SVGs da aba Status (assets/glyphs, 27 peças).
      `currentColor` faz cada um herdar a cor da linha em que está. */
   .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
@@ -1050,6 +1100,36 @@
   .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito{
     pointer-events:none;opacity:.55}
 
+  /* ---------- O REENVIO — decisão [03] do PO, 04/09/2026 ----------
+     *"Um botão na faixa que JÁ EXISTE (`--r-acao`, 34 px, já desenhada e
+     aprovada), mandando os DOIS gatilhos daquela coluna. Zero trilha nova."*
+
+     ELE É UM GLIFO, E A RAZÃO É MEDIDA. A faixa tem 202px úteis na coluna de
+     228, e ela já gasta 123 com "Guardar esse efeito" (texto dela, aprovado) e
+     6 de vão — sobram 74 para o campo do nome. A palavra "Reenviar" mede ~62px
+     com o padding, e o campo cairia para 6px: um campo de texto de seis pixels
+     não é um campo, é um traço. Com o glifo o botão custa ~26px e o campo fica
+     com ~42 — que é o que a palavra "Nome" ocupa a 11px. Não há terceira linha
+     a inventar: a decisão diz zero trilha nova, e a conta fecha.
+
+     `↻` É U+21BB (ARROWS), e não um emoji: o ADR-011 preserva o bloco
+     Arrows justamente como UI textual, e `scripts/validar-glifos.py` reprova o
+     que desenha como emoji por omissão. O emoji U+1F504, que tem o mesmo
+     desenho, seria barrado — e com razão. (Ele não é citado aqui de propósito:
+     este comentário vai para o `<style>` da página, e o portão de glifos leria
+     o exemplo como o defeito.)
+
+     E ELE LEVA `aria-label`, porque um botão que só tem símbolo não tem nome
+     para quem navega por leitor de tela. O `title` é a explicação; o
+     `aria-label` é o NOME. */
+  .duas-colunas .ctrl .guardar .reenviar{
+    width:auto;flex:0 0 auto;padding:0 5px;font-size:14px;line-height:1}
+  /* O LUGAR VAZIO NÃO REENVIA, pela mesma razão que não se digita nem se
+     escolhe nele: não há aparelho a quem mandar, e o clique só poderia terminar
+     em recusa. A trava é a MESMA do `<select>` e do campo do nome. */
+  .duas-colunas .ctrl[data-conectado="nao"] .guardar .reenviar{
+    pointer-events:none;opacity:.55}
+
   .duas-colunas{
     --r-nome:24px;--r-modo:36px;--r-pronto:36px;
     --r-aj-e:92px;--r-sep:1px;--r-aj-d:46px;
@@ -1304,10 +1384,11 @@
         <div class="ctrl" data-controle="p1"
              data-conectado="sim">
           <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#ae335a"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span></span></div>
-          <div>
+          <div data-campo="dica-modo-e"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.">
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
-                    data-hef-alvo="valor" data-lado="e"
-                    title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+                    data-hef-alvo="valor" data-lado="e">
                 <option value="—" disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
@@ -1330,10 +1411,11 @@
                 <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
-          <div>
+          <div data-campo="dica-pronto-e"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Este gatilho está em «Metralhadora». Escolher uma curva pronta TROCA o modo dele para «Curva de força» na hora — é um clique, e já vai ao controle. Um efeito seu põe o modo com que ele foi guardado.">
             <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
-                    data-hef-alvo="valor" data-lado="e"
-                    title="Efeito pronto do gatilho esquerdo">
+                    data-hef-alvo="valor" data-lado="e">
                 <option value="—" disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
@@ -1378,10 +1460,11 @@
                agora vem da borda de célula (`--rot-linha`); esta célula só guarda
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
-          <div>
+          <div data-campo="dica-modo-d"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.">
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
-                    data-hef-alvo="valor" data-lado="d"
-                    title="Gatilho direito — os 19 modos, com a descrição de cada um">
+                    data-hef-alvo="valor" data-lado="d">
                 <option value="—" disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
@@ -1404,10 +1487,11 @@
                 <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
-          <div>
+          <div data-campo="dica-pronto-d"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Este gatilho está em «Arco de flecha (Bow)». Escolher uma curva pronta TROCA o modo dele para «Curva de força» na hora — é um clique, e já vai ao controle. Um efeito seu põe o modo com que ele foi guardado.">
             <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
-                    data-hef-alvo="valor" data-lado="d"
-                    title="Efeito pronto do gatilho direito">
+                    data-hef-alvo="valor" data-lado="d">
                 <option value="—" disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
@@ -1434,6 +1518,9 @@
             </div>
           </div>
           <div class="guardar">
+            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
+                    aria-label="Reenviar os dois gatilhos ao controle"
+                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -1443,10 +1530,11 @@
         <div class="ctrl" data-controle="p2"
              data-conectado="sim">
           <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico" style="--plastico:#7eb8d4"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip plastico" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span></span></div>
-          <div>
+          <div data-campo="dica-modo-e"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.">
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
-                    data-hef-alvo="valor" data-lado="e"
-                    title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+                    data-hef-alvo="valor" data-lado="e">
                 <option value="—" disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
@@ -1469,10 +1557,11 @@
                 <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
-          <div>
+          <div data-campo="dica-pronto-e"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Este gatilho está em «Arma semi-automática». Escolher uma curva pronta TROCA o modo dele para «Curva de força» na hora — é um clique, e já vai ao controle. Um efeito seu põe o modo com que ele foi guardado.">
             <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
-                    data-hef-alvo="valor" data-lado="e"
-                    title="Efeito pronto do gatilho esquerdo">
+                    data-hef-alvo="valor" data-lado="e">
                 <option value="—" disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
@@ -1512,10 +1601,11 @@
                agora vem da borda de célula (`--rot-linha`); esta célula só guarda
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
-          <div>
+          <div data-campo="dica-modo-d"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
-                    data-hef-alvo="valor" data-lado="d"
-                    title="Gatilho direito — os 19 modos, com a descrição de cada um">
+                    data-hef-alvo="valor" data-lado="d">
                 <option value="—" disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" selected title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
@@ -1538,10 +1628,11 @@
                 <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
-          <div>
+          <div data-campo="dica-pronto-d"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Este gatilho está em «Rígido». Escolher uma curva pronta TROCA o modo dele para «Curva de força» na hora — é um clique, e já vai ao controle. Um efeito seu põe o modo com que ele foi guardado.">
             <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
-                    data-hef-alvo="valor" data-lado="d"
-                    title="Efeito pronto do gatilho direito">
+                    data-hef-alvo="valor" data-lado="d">
                 <option value="—" disabled>—</option>
                 <option value="custom" selected>— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
@@ -1568,6 +1659,9 @@
             </div>
           </div>
           <div class="guardar">
+            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
+                    aria-label="Reenviar os dois gatilhos ao controle"
+                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -1577,10 +1671,11 @@
         <div class="ctrl" data-controle="p3"
              data-conectado="nao">
           <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P3 <span class="pt">•</span> Desconectado</span></span></div>
-          <div>
+          <div data-campo="dica-modo-e"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Nenhum controle neste lugar.">
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
-                    data-hef-alvo="valor" data-lado="e"
-                    title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+                    data-hef-alvo="valor" data-lado="e">
                 <option value="—" selected disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
@@ -1603,10 +1698,11 @@
                 <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
-          <div>
+          <div data-campo="dica-pronto-e"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Nenhum controle neste lugar.">
             <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
-                    data-hef-alvo="valor" data-lado="e"
-                    title="Efeito pronto do gatilho esquerdo">
+                    data-hef-alvo="valor" data-lado="e">
                 <option value="—" selected disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
@@ -1632,10 +1728,11 @@
                agora vem da borda de célula (`--rot-linha`); esta célula só guarda
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
-          <div>
+          <div data-campo="dica-modo-d"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Nenhum controle neste lugar.">
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
-                    data-hef-alvo="valor" data-lado="d"
-                    title="Gatilho direito — os 19 modos, com a descrição de cada um">
+                    data-hef-alvo="valor" data-lado="d">
                 <option value="—" selected disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
@@ -1658,10 +1755,11 @@
                 <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
-          <div>
+          <div data-campo="dica-pronto-d"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Nenhum controle neste lugar.">
             <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
-                    data-hef-alvo="valor" data-lado="d"
-                    title="Efeito pronto do gatilho direito">
+                    data-hef-alvo="valor" data-lado="d">
                 <option value="—" selected disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
@@ -1679,6 +1777,9 @@
             <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>
           </div>
           <div class="guardar">
+            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
+                    aria-label="Reenviar os dois gatilhos ao controle"
+                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -1688,10 +1789,11 @@
         <div class="ctrl" data-controle="p4"
              data-conectado="nao">
           <div class="cabeca" data-campo="plastico" data-hef-alvo="plastico"><span data-campo="chip-do-controle" data-hef-alvo="html"><span class="chip vazio" title="Nenhum controle neste lugar.">P4 <span class="pt">•</span> Desconectado</span></span></div>
-          <div>
+          <div data-campo="dica-modo-e"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Nenhum controle neste lugar.">
             <select class="modo" data-gesto="modo" data-campo="modo-chave-e"
-                    data-hef-alvo="valor" data-lado="e"
-                    title="Gatilho esquerdo — os 19 modos, com a descrição de cada um">
+                    data-hef-alvo="valor" data-lado="e">
                 <option value="—" selected disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
@@ -1714,10 +1816,11 @@
                 <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
-          <div>
+          <div data-campo="dica-pronto-e"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Nenhum controle neste lugar.">
             <select class="pronto" data-gesto="pronto" data-campo="pronto-e"
-                    data-hef-alvo="valor" data-lado="e"
-                    title="Efeito pronto do gatilho esquerdo">
+                    data-hef-alvo="valor" data-lado="e">
                 <option value="—" selected disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
@@ -1743,10 +1846,11 @@
                agora vem da borda de célula (`--rot-linha`); esta célula só guarda
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
-          <div>
+          <div data-campo="dica-modo-d"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Nenhum controle neste lugar.">
             <select class="modo" data-gesto="modo" data-campo="modo-chave-d"
-                    data-hef-alvo="valor" data-lado="d"
-                    title="Gatilho direito — os 19 modos, com a descrição de cada um">
+                    data-hef-alvo="valor" data-lado="d">
                 <option value="—" selected disabled>—</option>
                 <option value="Off" title="Sem resistência nenhuma — o gatilho fica solto, como num controle comum.">Desligado</option>
                 <option value="Rigid" title="Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.">Rígido</option>
@@ -1769,10 +1873,11 @@
                 <option value="Custom" title="As dez posições em branco, para desenhar a curva do jeito que a sua mão pedir.">Montar do zero</option>
             </select>
           </div>
-          <div>
+          <div data-campo="dica-pronto-d"
+               data-hef-alvo="atributo" data-hef-atributo="title"
+               title="Nenhum controle neste lugar.">
             <select class="pronto" data-gesto="pronto" data-campo="pronto-d"
-                    data-hef-alvo="valor" data-lado="d"
-                    title="Efeito pronto do gatilho direito">
+                    data-hef-alvo="valor" data-lado="d">
                 <option value="—" selected disabled>—</option>
                 <option value="custom">— Nenhum —</option>
                 <option value="rampa_crescente">Rampa crescente</option>
@@ -1790,6 +1895,9 @@
             <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>
           </div>
           <div class="guardar">
+            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
+                    aria-label="Reenviar os dois gatilhos ao controle"
+                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -1875,7 +1983,30 @@
         pergunta já não se faz.</li>
     <li><b>"Guardar esse efeito" é um por controle</b>, e não um só no pé do quadro — um botão
         único não diria qual dos 4 pares ele guarda, que é exatamente a ambiguidade que
-        o recibo foi criado para matar. Continua sendo o <b>único</b> botão da aba.</li>
+        o recibo foi criado para matar. <b>O reenvio ao lado nasceu pela mesma regra</b>, e por
+        isso também é um por coluna.</li>
+  </ul>
+
+  <h2>O que as quatro decisões de 04/09 puseram aqui</h2>
+  <ul>
+    <li><b>A dica do campo Modo passou a explicar o modo ESCOLHIDO</b>, reescrita a cada tique.
+        Antes ela era fixa ("os 19 modos, com a descrição de cada um") e a explicação do modo em
+        uso só existia parando o rato em cima da opção <i>dentro</i> da lista aberta — depois de
+        escolher, a coluna não dizia mais o que aquele modo faz. A frase é a <b>desta tela</b>, a
+        concreta: a do produto diz "Barreira rígida numa posição fixa." e a daqui fala de freio de
+        carro e de espingarda.</li>
+    <li><b>A dica do campo Efeito pronto avisa ANTES do clique.</b> Escolher uma curva pronta com
+        o gatilho fora dos dois modos por posição <b>troca o modo</b> — é o atalho de um clique que
+        você aprovou, e a única dívida medida era a tela não avisar. Agora ela diz em que modo o
+        gatilho está e para onde cada família de curva o leva.</li>
+    <li><b>O <span class="marca">↻</span> reenvia o L2 e o R2 desta coluna ao controle.</b>
+        O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um
+        jogo escreve por cima, ou o controle volta do rádio, não há como a tela saber: o caminho de
+        volta é reenviar. Ele manda <b>o que está na tela</b>, e é nisso que ele difere do
+        "Aplicar" do rodapé, que manda o que está no disco. Ele não grava nada.</li>
+    <li><b>Quando o efeito chega, a tela diz.</b> Até agora ela só falava quando RECUSAVA; o
+        "aplicado" ia para o terminal de quem abriu a janela. A confirmação nasce no <b>próprio
+        cartão</b>, como a recusa, e some sozinha em segundos.</li>
   </ul>
 
   <h2>O que teve de mudar de forma para caber</h2>
@@ -1925,7 +2056,8 @@
   <h2>O que NÃO mudou</h2>
   <ul>
     <li>Os <b>19 modos</b> e seus textos, o <b>efeito pronto</b> com "Meus efeitos" na mesma lista,
-        as <b>barras de ajuste</b>, o <b>título "Seleção de Gatilho"</b> e o botão único.</li>
+        as <b>barras de ajuste</b>, o <b>título "Seleção de Gatilho"</b> e o "Guardar esse efeito"
+        um por coluna.</li>
     <li><b>Os glifos são os do mapa</b> — <code>assets/glyphs/l2.svg</code> e <code>r2.svg</code>,
         a 36px, que é o piso medido para a palavra dentro deles chegar aos 10px de tipo desta casa.</li>
     <li><b>A dispensa da régua deixou de ser necessária.</b> Ela existia porque "modos diferentes têm
