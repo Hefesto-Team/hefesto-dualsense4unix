@@ -362,8 +362,19 @@ def test_o_travessao_nao_pousa_no_fundo_nem_na_barra(pacotes_mod):
     `background: "—"` nunca volta igual — o contador soma +1 por tique para
     sempre. Hoje é latente (zero páginas com esse alvo), e é por isso que ele
     tinha de entrar ANTES do primeiro.
+
+    `altura` ENTROU EM 05/09/2026 com o alvo do mesmo nome — o gêmeo vertical da
+    `largura`, criado para as ondas sonoras da aba 02. A recusa é idêntica e foi
+    medida no mesmo dia, pela `--prova-de-mockup`: com ele fora deste conjunto o
+    molde do lugar vazio escreve `el.style.height = "—%"`, o CSSOM descarta
+    calado, e as 56 barrinhas do assento vazio ficam com a onda do DESENHO —
+    acusadas como ENDEREÇO MORTO, com o contador somando +1 por barra por tique.
+
+    A IGUALDADE É DE PROPÓSITO, e continua: um `>=` deixaria um alvo sair sem
+    ninguém ver, que é o defeito que este teste existe para pegar. Quem
+    acrescenta um nome escreve a medição dele aqui, como as quatro acima.
     """
-    medidos = {"largura", "html", "fundo"}
+    medidos = {"largura", "altura", "html", "fundo"}
     assert medidos == pacotes_mod.ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE, (
         "o conjunto mudou: cada alvo aqui custou uma medição, e sair dele "
         "devolve um defeito de contador ou de marcação à tela")

@@ -498,6 +498,40 @@ CSS = CSS_GLIFO + """
          cursor:pointer;line-height:1;padding:0}
   .passo:hover{border-color:var(--purple);color:var(--purple)}
 
+  /* AS DUAS VELOCIDADES ARRASTAM — decisão dela, 05/09/2026: *"velocidade do
+     cursor e da rolagem coloca um slicer pra cada"*. O molde é o da aba
+     Vibração (`aba05._trilho`), e a aparência é copiada dela de propósito:
+     `appearance:none` desliga o controle nativo do WebKit — que traria a cor e
+     a altura do tema do sistema para dentro de uma tela que ela aprovou — e as
+     três regras abaixo reconstroem o mesmo trilho de 5px, raio 3, fundo
+     `--border-forte`, com o polegar de 12px em `--purple` e borda `--panel`.
+
+     O TRILHO É QUEM ESTICA (`flex:1 1 auto`) e o NÚMERO fica na direita, com a
+     mesma trinca de 22px do `.bignum` que ele substitui: assim o campo continua
+     começando e acabando no mesmo x das listas da coluna (324px), que é o
+     alinhamento que ela cobrou nas outras abas. `min-width:0` é a mesma rede do
+     `.par`: sem ele o mínimo automático do item de flex impediria o campo de
+     encolher e ele pintaria fora da janela.
+
+     O GRADIENTE DE PREENCHIMENTO NÃO EXISTE, e é a mesma medição da aba 05: o
+     `accent-color` não pinta trilho customizado neste WebKit2, então quem
+     informa a posição é o POLEGAR — que é o que ela arrasta. */
+  .campo-num .trilho{appearance:none;-webkit-appearance:none;flex:1 1 auto;
+    min-width:0;height:5px;padding:0;margin:0;border:0;border-radius:3px;
+    background:var(--border-forte);cursor:grab}
+  .campo-num .trilho:active{cursor:grabbing}
+  .campo-num .trilho::-webkit-slider-runnable-track{
+    height:5px;border-radius:3px;background:transparent}
+  .campo-num .trilho::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;
+    width:12px;height:12px;border-radius:50%;background:var(--purple);
+    border:2px solid var(--panel);margin-top:-4px}
+  .campo-num .trilho:focus-visible{outline:2px solid var(--purple);outline-offset:3px}
+  /* O NÚMERO ao lado do trilho: mesma fonte e mesma largura do `.bignum b`, para
+     as duas linhas terem a coluna do número no mesmo x uma da outra. */
+  .campo-num .num{font-family:'JetBrains Mono',monospace;font-size:15px;
+    color:var(--fg);font-weight:600;min-width:22px;text-align:right;flex:none;
+    margin-left:11px}
+
   /* ---- as TRÊS tabelas: mesma largura de bloco, mesma coluna de valor,
           cabeçalho em roxo (fala [90]) — inclusive a dos gestos ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
@@ -960,6 +994,39 @@ def bignum(*pares):
             f'<button class="passo"{mais}>+</button>'
             f'</span></span>')
     return f'<div class="campo-num">{"".join(partes)}</div>'
+
+
+def trilho(valor, minimo, maximo, gesto, campo, titulo):
+    """Uma velocidade como barra arrastável, com o número ao lado.
+
+    DECISÃO DELA, 05/09/2026: *"velocidade do cursor e da rolagem coloca um
+    slicer pra cada"*. Ela substitui o :func:`bignum` de `−`/`+` nas duas linhas
+    das "opções de ativação" — e o par de botões saiu junto com os quatro gestos
+    de passo que o atendiam, para não deixar endereço sem campo na página.
+
+    OS TRÊS NÚMEROS SÃO LIDOS, NUNCA DIGITADOS. `min`/`max` vêm de
+    `integrations/uinput_mouse.py` — o mesmo módulo de onde `set_speed` tira a
+    faixa com que apara — e `step` é 1 porque as duas velocidades são INTEIRAS
+    dos dois lados (o `GtkAdjustment` da janela estável usa `step-increment` 1,
+    `main.glade:79` e `:87`). Digitar `1..12` aqui seria a segunda verdade que
+    esta casa persegue.
+
+    O ENDEREÇO É UM SÓ para o trilho e para o número, e é de propósito: os dois
+    mostram o MESMO inteiro, na mesma unidade. O piloto escreve um valor escalar
+    em TODOS os elementos de mesmo `data-campo` (`hefesto_vivo.pintar`), e cada
+    um decide como o mostra pelo `data-hef-alvo` — o `<input>` no `value`, o
+    `<b>` no texto. É o contrário do par `forca`/`forca-pct` da aba Vibração, que
+    precisa de dois nomes porque ali a barra fala em porcentagem e o número não.
+
+    O `data-gesto` VIVE NO `<input>`, e não na linha: um `<div>` de fora não tem
+    `value`, e o ouvinte do piloto manda `valor: alvo.value ?? ''`. Foi este o
+    defeito que a aba 05 nomeou em 03/09 antes de o trilho dela virar `<input>`.
+    """
+    return (f'<div class="campo-num">'
+            f'<input class="trilho" type="range" min="{minimo}" max="{maximo}"'
+            f' step="1" value="{valor}" data-gesto="{gesto}"'
+            f' data-campo="{campo}" data-hef-alvo="valor" title="{titulo}">'
+            f'<span class="num" data-campo="{campo}">{valor}</span></div>')
 
 
 def ajuda(txt, largura=""):
@@ -1635,20 +1702,21 @@ ATIVACAO_ESQ = [
         "Desligada"], gesto="navegacao-interna")),
 ]
 
-# AS DUAS METADES DE CADA LINHA NÃO SÃO IRMÃS, e foi isto que a ligação mediu:
-# só a da direita ("Analógico") tem dono no produto.
+# AS DUAS METADES DE CADA LINHA NÃO ERAM IRMÃS, e foi isto que a ligação mediu:
+# só a da direita ("Analógico") tinha dono no produto.
 #
 #   · `mouse_emulation.speed`        é UM número (1..12), e o cursor do TOUCHPAD
 #     sai dele: `emit_touchpad_move` escala por
 #     `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
 #     (`integrations/uinput_mouse.py:486`). Não há segunda velocidade a ajustar
-#     — o "Touch" da tela é uma conta que ninguém faz do outro lado.
+#     — o "Touch" da tela era uma conta que ninguém faz do outro lado.
 #   · `mouse_emulation.scroll_speed` é UM número (1..5) e vale só para o
 #     analógico DIREITO: `_emit_scroll(rx, ry)` (`uinput_mouse.py:412`). Rolagem
 #     por dois dedos no touchpad **não existe** no produto — nem uma linha.
 #
-# Os dois campos sem dono ficam com NOME e sem gesto, que é o que faz o piloto
-# recusar dizendo qual é, em vez de o clique sumir.
+# As duas metades sem dono SAÍRAM do desenho em 01/09/2026, com os rótulos e os
+# quatro botões delas; sobrou um número por linha, com dono. A medição fica
+# porque é ela que responde "por que uma velocidade só".
 ATIVACAO_DIR = [
     # UM NÚMERO EM CADA LINHA — decisão dela, 01/09/2026: *"só ajustar o texto e
     # deixar rolagem, ajustar ali pra deixar um só se for o caso pra ambos"*.
@@ -1656,10 +1724,23 @@ ATIVACAO_DIR = [
     # medição está logo acima: `mouse_speed` move o touchpad E o analógico, e
     # rolagem por dois dedos não existe. Os quatro botões `−`/`+` que sobravam
     # saíram do desenho junto com os rótulos.
+    #
+    # E OS DOIS QUE FICARAM VIRARAM BARRA — decisão dela, 05/09/2026:
+    # *"velocidade do cursor e da rolagem coloca um slicer pra cada"*. Com isso
+    # os `−`/`+` sumiram das duas linhas, e com eles os quatro gestos de passo
+    # (`vel-cursor-menos`/`-mais`, `rolagem-menos`/`-mais`): quem atende as
+    # barras é um gesto por linha, que recebe o número inteiro em `o["valor"]`.
+    # A faixa que cada barra oferece é a do DONO — ver :func:`trilho`.
     ("Velocidade de cursor", D_VEL,
-     bignum(("", DEFAULT_MOUSE_SPEED, "vel-cursor", "vel-cursor"))),
+     trilho(DEFAULT_MOUSE_SPEED, MOUSE_SPEED_MIN, MOUSE_SPEED_MAX,
+            "vel-cursor", "vel-cursor",
+            f"Arraste para escolher a velocidade do cursor — de "
+            f"{MOUSE_SPEED_MIN} a {MOUSE_SPEED_MAX}. Vale na hora.")),
     ("Velocidade da rolagem", D_ROL,
-     bignum(("", DEFAULT_SCROLL_SPEED, "rolagem", "vel-rolagem"))),
+     trilho(DEFAULT_SCROLL_SPEED, SCROLL_SPEED_MIN, SCROLL_SPEED_MAX,
+            "vel-rolagem", "vel-rolagem",
+            f"Arraste para escolher a velocidade da rolagem — de "
+            f"{SCROLL_SPEED_MIN} a {SCROLL_SPEED_MAX}. Vale na hora.")),
     ("Modo Steam", D_STEAM, simples([
         "Desligado",
         "Ligado — o controle navega a Steam como num Steam Deck",
@@ -2491,6 +2572,39 @@ def _conferir(doc):
         exigir(f'data-campo="{campo}" data-hef-alvo="html"' in corpo,
                f"a linha de estado `{campo}` sumiu do desenho — a frase do "
                f"produto volta a ser emitida para o vazio")
+
+    # 8. AS DUAS VELOCIDADES ARRASTAM, E A FAIXA DELAS É A DO PRODUTO —
+    #    05/09/2026, decisão dela: *"velocidade do cursor e da rolagem coloca
+    #    um slicer pra cada"*.
+    #
+    #    A FAIXA VAI CONFERIDA CONTRA A CONSTANTE, e não contra um literal: se
+    #    alguém digitar `max="100"` no gerador, esta régua reprova. É a mesma
+    #    razão de as dicas lerem `MOUSE_SPEED_MAX` em vez de dizerem "de 1 a
+    #    10", que era o erro que elas carregavam até 01/09.
+    #
+    #    E O NÚMERO AO LADO TEM O MESMO ENDEREÇO DO TRILHO: os dois mostram o
+    #    mesmo inteiro, e o piloto escreve um escalar em TODOS os elementos de
+    #    mesmo `data-campo`. Sem o segundo, a barra andaria e o número ficaria
+    #    parado no que o desenho cravou.
+    for campo, minimo, maximo in (("vel-cursor", MOUSE_SPEED_MIN, MOUSE_SPEED_MAX),
+                                  ("vel-rolagem", SCROLL_SPEED_MIN, SCROLL_SPEED_MAX)):
+        exigir(f'<input class="trilho" type="range" min="{minimo}"'
+               f' max="{maximo}" step="1" ' in corpo
+               and f'data-gesto="{campo}" data-campo="{campo}"'
+                   ' data-hef-alvo="valor"' in corpo,
+               f"a barra de `{campo}` sumiu, ou a faixa dela deixou de ser a do "
+               f"produto ({minimo} a {maximo}, de `integrations/uinput_mouse.py`)")
+        exigir(f'<span class="num" data-campo="{campo}">' in corpo,
+               f"o número ao lado da barra de `{campo}` perdeu o endereço — a "
+               f"barra andaria e o número ficaria no que o desenho cravou")
+    #    E OS `−`/`+` NÃO VOLTAM AO PAINEL. Os do "Estilo Point-and-click" ficam
+    #    (nunca tiveram endereço, e a razão está no comentário daquela pop-up):
+    #    por isso a conta é do PAINEL, recortado, e não da página.
+    painel = corpo.split('As opções de ativação', 1)[-1].split('class="tela-nova"', 1)[0]
+    exigir(len(painel) > 2000, "a régua não achou o painel das opções de ativação")
+    exigir('class="passo"' not in painel,
+           "voltou um `−`/`+` ao painel das opções de ativação — ela mandou "
+           "barra, e um par de botões ao lado dela é a meia-cura")
 
     if falhas:
         raise SystemExit("ERRO em 06-navegacao — decisão dela desfeita:\n  "

@@ -1430,24 +1430,27 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 # métodos do daemon aceita um: `mouse.emulation.set`, `mouse.emulation.restore`
 # e `keyboard.emulation.set` valem para a MÁQUINA.
 #
-# DE ONDE VEM O NÚMERO QUE O GESTO SOMA: do `ctx`, que é o estado do ÚLTIMO
+# DE ONDE VEM O NÚMERO DE QUEM DEPENDE DO ESTADO: do `ctx`, que é o do ÚLTIMO
 # TIQUE (100 ms, `hefesto_vivo.TIQUE_MS`). Ler o daemon a cada clique custaria um
 # `daemon.state_full` por clique (57 ms medidos, e HARM-15 já registra que ele
 # passa dos 0,25 s sob carga), e ainda assim a tela só repinta no tique.
 #
 # O SEGUNDO CLIQUE DENTRO DO MESMO TIQUE PARAVA DE ANDAR — CURADO em 03/09/2026.
 # Dois cliques dentro do mesmo tique liam o mesmo `atual` e mandavam o mesmo alvo:
-# o segundo não movia nada, e era o defeito que quem clica rápido no `+` sente
-# primeiro. A cura é `_de_onde_partir`, e ela é do tamanho do problema — a
-# memória do último alvo pedido, largada assim que o daemon fala.
+# o segundo não movia nada. A cura é `_partir_de` — a memória do último alvo
+# pedido, largada assim que o daemon fala.
+#
+# QUEM AINDA DEPENDE DELA É O INTERRUPTOR, e só ele: as duas velocidades
+# deixaram de somar passos em 05/09/2026, quando os `-`/`+` viraram barra
+# (decisão dela). Uma barra manda o número INTEIRO — não tem de onde partir, e
+# por isso não passa por aqui. O "Status do Modo" tem UM gesto, e o segundo
+# clique dele é *desfaça*: sem a memória ele volta a ser engolido.
 # ---------------------------------------------------------------------------
 from hefesto_dualsense4unix.app.actions.mode_transition import (  # noqa: E402
     MODE_DESKTOP,
     mode_of_state,
 )
 from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
-    DEFAULT_MOUSE_SPEED,
-    DEFAULT_SCROLL_SPEED,
     MOUSE_SPEED_MAX,
     MOUSE_SPEED_MIN,
     SCROLL_SPEED_MAX,
@@ -1474,22 +1477,30 @@ def _rato(ctx: Contexto) -> dict[str, Any]:
     return ctx.state.get("mouse_emulation") or {}
 
 
-def _passo(o: dict[str, Any]) -> int:
-    """`+1` ou `-1`, lido do NOME do gesto que chegou.
+def _numero_da_barra(o: dict[str, Any], oque: str) -> int:
+    """O inteiro que a barra mandou, ou uma frase que chega ao cartão dela.
 
-    O piloto manda `o["gesto"]` com o `data-gesto` do botão clicado
-    (`hefesto_vivo.py:202`), e os dois botões de um `bignum` são
-    `<nome>-menos` e `<nome>-mais`. Assim a direção não precisa de um atributo
-    novo — e `data-v`, que seria o candidato, é o único da lista do piloto que
-    o portão do desenho NÃO ignora (`check_o_desenho_aprovado.INVISIVEIS`), o
-    que faria toda marcação virar divergência de desenho.
+    O `data-hef-alvo="valor"` do `<input type=range>` faz o ouvinte do piloto
+    mandar `valor: alvo.value` (`hefesto_vivo.py`, o ouvinte de `change`). Um
+    `<div>` não teria `value` e o gesto chegaria com a chave vazia — foi o
+    defeito que a aba Vibração nomeou em 03/09/2026 antes de o trilho dela
+    virar `<input>`, e a frase abaixo é para ele.
+
+    `RuntimeError` E NÃO `ValueError` porque é ELA quem tem de ler: o contrato
+    do piloto leva a frase de um `RuntimeError` ao cartão e deixa o `ValueError`
+    no `stderr` de quem lançou a janela (`hefesto_vivo._recusou_dizendo`).
     """
-    nome = str(o.get("gesto") or "")
-    if nome.endswith("-mais"):
-        return 1
-    if nome.endswith("-menos"):
-        return -1
-    raise ValueError(f"velocidade: o clique não disse a direção (veio {nome!r})")
+    bruto = str(o.get("valor") or "").strip()
+    if not bruto:
+        raise RuntimeError(
+            f"a barra não mandou número nenhum, e {oque} ficou como estava. "
+            "Arraste o cursor dela em vez de clicar no rótulo ao lado.")
+    try:
+        return round(float(bruto))
+    except ValueError as erro:
+        raise RuntimeError(
+            f"a barra mandou {bruto!r}, que não é um número — {oque} ficou "
+            "como estava") from erro
 
 
 def _recusa_do_mouse(resposta: Any) -> str:
@@ -1652,21 +1663,43 @@ def _largar_a_reserva(chave: str,
         _PEDIDO[chave] = antes
 
 
-def _de_onde_partir(chave: str, atual: int, passo: int,
-                    minimo: int, maximo: int) -> int:
-    """O alvo de um clique de `bignum`, aparado pela faixa do dono.
+def _velocidade(p: Any, o: dict[str, Any], campo: str,
+                minimo: int, maximo: int, oque: str) -> None:
+    """O corpo comum das duas barras de velocidade. `mouse.emulation.set`.
 
-    A FAIXA VEM DO DONO, e isto NÃO é a "segunda verdade" que o docstring de
-    `vel_cursor` proíbe: `MOUSE_SPEED_MIN`/`MAX` são LIDOS de
-    `integrations/uinput_mouse.py:78`, o mesmo módulo que o `set_speed` usa para
-    aparar. Digitar `1..12` aqui seria a segunda verdade; importá-la é ler a
-    primeira. E ela é necessária: sem apará-la, a memória guardaria um `13` que
-    o daemon vira `12`, e o `+` seguinte partiria de `13` — o clique ficaria
-    preso no teto, que é um defeito PIOR que o que esta função cura.
+    SEM `enabled` DE PROPÓSITO, e é a rota que o produto criou para isto: o
+    handler manda o pedido sem `enabled` para `set_mouse_speed`
+    (`daemon/ipc_handlers.py:4970`), que atualiza a config e o device vivo **sem
+    start/stop e sem gravar o flag**. É o que impede um ajuste de velocidade de
+    RELIGAR a emulação e matar o gamepad virtual — a regressão que o
+    BUG-MOUSE-GUI-SYNC-01 (A4) fechou. O `_send_mouse_param_async` da GUI
+    estável (`app/actions/mouse_actions.py:559`) manda exatamente este payload.
 
-    O daemon continua aparando: esta função não decide nada sozinha.
+    ELE NÃO LÊ O `ctx`, E É A DIFERENÇA QUE A BARRA TROUXE. Os `-`/`+` liam o
+    estado do último tique porque um passo precisa saber de ONDE parte — e daí
+    vinham `_partir_de`, a memória `_PEDIDO` e as três condições que a
+    desligam. Uma barra manda o número inteiro: a partida é o polegar dela, e
+    não há clique engolido a curar. A memória continua de pé, e continua com um
+    cliente — o interruptor "Status do Modo", que tem UM gesto e por isso
+    depende dela para o segundo clique ser *desfaça*.
+
+    A FAIXA NÃO É DIGITADA AQUI: quem chama passa as constantes de
+    `integrations/uinput_mouse.py:78-79`, o mesmo módulo de onde `set_speed`
+    (`:279`) tira a sua. A barra já nasce com esses `min`/`max`
+    (`aba06.trilho`), então aparar aqui é a rede para o dia em que alguém
+    publicar a página sem regerar o desenho — não é a segunda verdade que esta
+    casa persegue. O daemon continua aparando por último.
+
+    O ARRASTE CHEGA DUAS VEZES, e é inócuo de propósito — a mesma medição de
+    `a05_vibracao.intensidade`: o ouvinte do piloto escuta `change` **e**
+    `click`, e soltar o polegar de um `<input type=range>` dispara os dois com o
+    MESMO valor. `set_mouse_speed` é idempotente — grava o mesmo número e
+    reconfigura o mesmo device —, então a segunda passagem não muda nada.
+    Filtrar por evento aqui seria escrever, neste arquivo, uma regra sobre o
+    ouvinte que mora em outro.
     """
-    return max(minimo, min(maximo, _partir_de(chave, atual, passo) + passo))
+    alvo = max(minimo, min(maximo, _numero_da_barra(o, oque)))
+    _mandar(p, origin=MANUAL, **{campo: alvo})
 
 
 def _mandar(p: Any, **params: Any) -> None:
@@ -1913,72 +1946,53 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"o teclado ficou como estava: {_recusa_do_teclado(resposta)}")
 
 
-@gesto("06-navegacao.html", "vel-cursor-mais")
-@gesto("06-navegacao.html", "vel-cursor-menos")
+@gesto("06-navegacao.html", "vel-cursor")
 def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O menos e o mais do "Analógico" da Velocidade de cursor. `mouse_emulation.speed`.
+    """A barra da Velocidade de cursor, arrastada. `mouse_emulation.speed`.
 
-    SEM `enabled` DE PROPÓSITO, e é a rota que o produto criou para isto: o
-    handler manda o pedido sem `enabled` para `set_mouse_speed`
-    (`daemon/ipc_handlers.py:4970`), que atualiza a config e o device vivo **sem
-    start/stop e sem gravar o flag**. É o que impede um passo de velocidade de
-    RELIGAR a emulação e matar o gamepad virtual — a regressão que o
-    BUG-MOUSE-GUI-SYNC-01 (A4) fechou. O `_send_mouse_param_async` da GUI
-    estável (`app/actions/mouse_actions.py:559`) manda exatamente este payload.
+    DECISÃO DELA, 05/09/2026: *"velocidade do cursor e da rolagem coloca um
+    slicer pra cada"*. Até aqui a linha era um par de botões `-`/`+`, e os dois
+    gestos que os atendiam (`vel-cursor-menos`/`-mais`) somavam ±1 ao número do
+    ÚLTIMO TIQUE. Os dois saíram com os botões: uma barra manda o número
+    INTEIRO, e não uma direção — não há de onde partir, e por isso não há passo
+    engolido a curar.
 
-    O NÚMERO NÃO É DIGITADO AQUI. A faixa tem dono desde 01/09/2026 —
-    `MOUSE_SPEED_MIN`/`MAX` em `integrations/uinput_mouse.py:78`, lidos pelo
-    `set_speed` (`:279`) — e é ele que a `_de_onde_partir` IMPORTA. Digitar
-    `1..12` neste arquivo seria a segunda verdade que esta casa persegue; ler a
-    constante do dono é o contrário disso. O daemon continua aparando: nada aqui
-    decide sozinho.
+    E A PARIDADE COM A JANELA GTK FECHOU NO MESMO MOVIMENTO: lá esta linha é um
+    `Gtk.Scale` de `mouse_speed_adj` (`gui/main.glade:79`, 1..12, passo 1), que
+    é a MESMA faixa que a barra oferece agora — porque as duas leem o dono
+    (`integrations/uinput_mouse.py:78`). Ver `docs/data/paridade-gtk-html.csv`,
+    linha "Velocidade do cursor".
 
-    O CHÃO É O DO PRODUTO: sem `speed` no estado (daemon sem responder ainda), o
-    passo parte de `DEFAULT_MOUSE_SPEED`, que é o mesmo 6 que o desenho mostra.
+    O ALCANCE É O DE UM NÚMERO SÓ, e a medição é de 01/09: `mouse_speed` move o
+    analógico esquerdo **e** o cursor do touchpad — `emit_touchpad_move` escala
+    por `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
+    (`integrations/uinput_mouse.py:500`).
     """
-    atual = _rato(ctx).get("speed")
-    atual = DEFAULT_MOUSE_SPEED if atual is None else int(atual)
-    passo = _passo(o)
-    alvo = _de_onde_partir("speed", atual, passo,
-                           MOUSE_SPEED_MIN, MOUSE_SPEED_MAX)
-    # A MEMÓRIA NÃO FICA COM O QUE ELE NÃO ACEITOU: `_mandar` levanta na recusa
-    # e no silêncio, e o alvo que não aconteceu sai do caminho do clique seguinte.
-    antes = _reservar("speed", atual, alvo, passo)
-    try:
-        _mandar(p, speed=alvo, origin=MANUAL)
-    except Exception:
-        _largar_a_reserva("speed", antes)
-        raise
+    _velocidade(p, o, "speed", MOUSE_SPEED_MIN, MOUSE_SPEED_MAX,
+                "a velocidade do cursor")
 
 
-@gesto("06-navegacao.html", "rolagem-mais")
-@gesto("06-navegacao.html", "rolagem-menos")
+@gesto("06-navegacao.html", "vel-rolagem")
 def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O menos e o mais do "Analógico" da Velocidade da rolagem. `scroll_speed`.
+    """A barra da Velocidade da rolagem, arrastada. `scroll_speed`.
 
-    Mesma rota speed-only do vizinho, e o mesmo motivo. O que muda é o alcance:
-    `scroll_speed` multiplica o passo do analógico DIREITO em `_emit_scroll`
-    (`integrations/uinput_mouse.py:466`) e nada mais — o touchpad não rola.
+    Mesma rota speed-only do vizinho, e o mesmo motivo — ver :func:`_velocidade`.
+    O que muda é o alcance: `scroll_speed` multiplica o passo do analógico
+    DIREITO em `_emit_scroll` (`integrations/uinput_mouse.py:466`) e nada mais —
+    o touchpad não rola.
 
-    A FAIXA DELE É OUTRA, e o daemon é quem a impõe: `max(1, min(5, …))`
-    (`daemon/lifecycle.py:1404` e `:1452`), contra os 12 do cursor.
+    A FAIXA DELE É OUTRA, e o dono é o mesmo: `SCROLL_SPEED_MIN`/`MAX` (1..5,
+    `uinput_mouse.py:79`), contra os 12 do cursor. O daemon apara com as mesmas
+    constantes (`daemon/lifecycle.py:1404` e `:1452`), e o `GtkAdjustment` da
+    janela estável publica os mesmos limites (`gui/main.glade:87`).
 
     FATO SUBSTITUÍDO — 03/09/2026. Esta frase estava truncada no meio e afirmava
     que a dica da tela dizia *"De 1 a 10"* nas duas linhas *"e nas duas está
     errada"*. Caducou: `aba06.D_VEL` e `aba06.D_ROL` LEEM a faixa do dono, e a
     página publicada diz "De 1 a 12" no cursor e "De 1 a 5" na rolagem.
     """
-    atual = _rato(ctx).get("scroll_speed")
-    atual = DEFAULT_SCROLL_SPEED if atual is None else int(atual)
-    passo = _passo(o)
-    alvo = _de_onde_partir("scroll_speed", atual, passo,
-                           SCROLL_SPEED_MIN, SCROLL_SPEED_MAX)
-    antes = _reservar("scroll_speed", atual, alvo, passo)
-    try:
-        _mandar(p, scroll_speed=alvo, origin=MANUAL)
-    except Exception:
-        _largar_a_reserva("scroll_speed", antes)
-        raise
+    _velocidade(p, o, "scroll_speed", SCROLL_SPEED_MIN, SCROLL_SPEED_MAX,
+                "a velocidade da rolagem")
 
 
 @gesto("06-navegacao.html", "linha-de-botao")
@@ -2637,35 +2651,37 @@ def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any
             "clique": clique, "chama": chama}
 
 
-#: O `ctx` da régua não tem `mouse_emulation`, então cada gesto parte do padrão
-#: do produto: 6 no cursor e 1 na rolagem. É de propósito — é o mesmo chão que a
-#: tela mostra enquanto o daemon ainda não falou.
+#: O `ctx` da régua não tem `mouse_emulation`, e é de propósito: o gesto que
+#: depende do estado — o interruptor — tem de partir do mesmo chão que a tela
+#: mostra enquanto o daemon ainda não falou.
 #:
-#: DECISÃO REVISTA — 03/09/2026. Aqui estava escrito que o `rolagem-menos` manda
-#: `0` e não `1`, *"a faixa tem UM dono e é o daemon; apará-la aqui seria a
-#: segunda verdade"*. O princípio continua valendo e o número mudou por uma
-#: razão medida: com a memória do último alvo (`_de_onde_partir`), guardar um
-#: `0` que o daemon vira `1` deixaria o clique preso no piso — o `+` seguinte
-#: partiria de `0` e pediria `1`, que é onde já se está. A faixa continua com um
-#: dono só: `SCROLL_SPEED_MIN`/`MAX` são IMPORTADOS de
-#: `integrations/uinput_mouse.py:79`, não digitados, e o daemon continua
-#: aparando. Ler a constante do dono é o contrário de escrever a segunda verdade.
+#: AS DUAS VELOCIDADES MANDAM O NÚMERO QUE A BARRA DEU, e não um passo — as
+#: quatro provas de `-`/`+` saíram em 05/09/2026 com os botões (decisão dela,
+#: *"velocidade do cursor e da rolagem coloca um slicer pra cada"*). O `clique`
+#: leva `valor` porque é ele que o piloto manda de um `<input type=range>`
+#: (`data-hef-alvo="valor"`), e as duas provas de EXTREMO são as que mordem: a
+#: barra do cursor manda `99` e o pacote apara em `MOUSE_SPEED_MAX`; a da
+#: rolagem manda `0` e ele apara em `SCROLL_SPEED_MIN`. A faixa continua com um
+#: dono só — as constantes são IMPORTADAS de `integrations/uinput_mouse.py:78-79`,
+#: não digitadas, e o daemon continua aparando por último.
 #:
-#: AS CHAMADAS VIRARAM `resultado` — mesmo dia, e é o que faz a recusa do daemon
+#: AS CHAMADAS VIRARAM `resultado` — 03/09/2026, e é o que faz a recusa do daemon
 #: chegar à tela: `chamar` devolve `bool` e joga fora o corpo com o `bloqueio`.
 _MOUSE = "mouse.emulation.set"
 PROVAS = [
     _prova("modo", {},
            [("resultado", [_MOUSE], {"enabled": True, "origin": "manual"}),
             ("resultado", ["keyboard.emulation.set"], {"enabled": True})]),
-    _prova("vel-cursor-mais", {"gesto": "vel-cursor-mais"},
-           [("resultado", [_MOUSE], {"speed": 7, "origin": "manual"})]),
-    _prova("vel-cursor-menos", {"gesto": "vel-cursor-menos"},
-           [("resultado", [_MOUSE], {"speed": 5, "origin": "manual"})]),
-    _prova("rolagem-mais", {"gesto": "rolagem-mais"},
-           [("resultado", [_MOUSE], {"scroll_speed": 2, "origin": "manual"})]),
-    _prova("rolagem-menos", {"gesto": "rolagem-menos"},
-           [("resultado", [_MOUSE], {"scroll_speed": 1, "origin": "manual"})]),
+    _prova("vel-cursor", {"valor": "9"},
+           [("resultado", [_MOUSE], {"speed": 9, "origin": "manual"})]),
+    _prova("vel-cursor", {"valor": "99"},
+           [("resultado", [_MOUSE],
+             {"speed": MOUSE_SPEED_MAX, "origin": "manual"})]),
+    _prova("vel-rolagem", {"valor": "4"},
+           [("resultado", [_MOUSE], {"scroll_speed": 4, "origin": "manual"})]),
+    _prova("vel-rolagem", {"valor": "0"},
+           [("resultado", [_MOUSE],
+             {"scroll_speed": SCROLL_SPEED_MIN, "origin": "manual"})]),
     # AS DUAS PONTAS DA LISTA DO TECLADO, e as duas provam a mesma coisa por
     # lados opostos: que o `valor` do `<select>` decide o bool. O `clique` traz
     # `valor` porque é ele que o piloto manda desde 01/09 — `texto`, num

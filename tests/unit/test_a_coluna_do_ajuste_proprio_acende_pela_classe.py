@@ -283,6 +283,12 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
         # nasce `None`, e `_secoes_do_controle` pergunta `is not None` sobre a
         # SEÇÃO, não sobre o campo de dentro.
         "mic": {},
+        # O `sensores` é o SEXTO desde 04/09/2026 (SENSOR-DE-VERDADE-01), e ele
+        # atravessou este arquivo por um dia exatamente como o aviso acima
+        # previa: o campo entrou no esquema em `8f9589ba` e a coluna só nasceu
+        # em 05/09, com esta régua VERMELHA no `dev` no meio. `{}` basta —
+        # `ControllerSensoresOverride.giroscopio`/`.acelerometro` nascem `None`.
+        "sensores": {},
     }
     faltando = set(perfis_web.SECOES_POR_CONTROLE) - set(menor_corpo)
     assert not faltando, (

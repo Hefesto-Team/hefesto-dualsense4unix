@@ -61,7 +61,10 @@ VAZIAS = frozenset({
 #: dentro passou a ser acusado de apagar o glifo. É a armadilha desta casa —
 #: *a régua confunde a PALAVRA com o ATO* — e ela desliga exatamente quando
 #: alguém acerta.
-ALVOS_SEGUROS = frozenset({"largura", "fundo", "valor", "html",
+#: E ``altura`` entrou em 05/09/2026, pelo mesmo motivo dos três de 03/09: ele
+#: escreve ``style.height`` e não toca ``textContent``. É o alvo das ondas
+#: sonoras da aba 02.
+ALVOS_SEGUROS = frozenset({"largura", "altura", "fundo", "valor", "html",
                            "classe", "cor", "plastico"})
 
 

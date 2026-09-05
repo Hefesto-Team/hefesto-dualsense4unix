@@ -363,6 +363,12 @@ class _Leitor(html.parser.HTMLParser):
                 valor = d.get("value", "")
         elif alvo == "largura":
             valor = _do_estilo(d.get("style", ""), "width")
+        elif alvo == "altura":
+            # O GÊMEO VERTICAL DO `largura` — as ondas sonoras da aba 02. Sem
+            # este ramo a régua leria o TEXTO de um `<i>` (que é vazio) nos dois
+            # lados e devolveria INDECIDÍVEL para as 56 barrinhas, que é o
+            # veredito mais caro que ela sabe dar.
+            valor = _do_estilo(d.get("style", ""), "height")
         elif alvo == "cor":
             # LIDA DE VERDADE, e não pelo texto: a normalização do WebKit para
             # ``color`` é fechada e ``_cor_css`` a reproduz. Ver a nota do
@@ -837,7 +843,7 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
         # pegou o `no-redef`. Uma casa com duas implementações da mesma regra
         # é o defeito que esta leva inteira existe para não repetir.
         return _so_o_texto(declarado or "")
-    if campo.alvo == "largura":
+    if campo.alvo in ("largura", "altura"):
         # A LARGURA TAMBÉM É NORMALIZADA NA ATRIBUIÇÃO, e ignorar isso acusava
         # endereço morto sobre o produto que ACERTOU — medido em 02/09/2026, na
         # aba Iluminação: a barra do P1 saiu de `width:82%` para `100%` e a régua

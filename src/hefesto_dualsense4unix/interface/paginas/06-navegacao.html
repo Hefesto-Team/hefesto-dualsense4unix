@@ -1140,6 +1140,40 @@
          cursor:pointer;line-height:1;padding:0}
   .passo:hover{border-color:var(--purple);color:var(--purple)}
 
+  /* AS DUAS VELOCIDADES ARRASTAM — decisão dela, 05/09/2026: *"velocidade do
+     cursor e da rolagem coloca um slicer pra cada"*. O molde é o da aba
+     Vibração (`aba05._trilho`), e a aparência é copiada dela de propósito:
+     `appearance:none` desliga o controle nativo do WebKit — que traria a cor e
+     a altura do tema do sistema para dentro de uma tela que ela aprovou — e as
+     três regras abaixo reconstroem o mesmo trilho de 5px, raio 3, fundo
+     `--border-forte`, com o polegar de 12px em `--purple` e borda `--panel`.
+
+     O TRILHO É QUEM ESTICA (`flex:1 1 auto`) e o NÚMERO fica na direita, com a
+     mesma trinca de 22px do `.bignum` que ele substitui: assim o campo continua
+     começando e acabando no mesmo x das listas da coluna (324px), que é o
+     alinhamento que ela cobrou nas outras abas. `min-width:0` é a mesma rede do
+     `.par`: sem ele o mínimo automático do item de flex impediria o campo de
+     encolher e ele pintaria fora da janela.
+
+     O GRADIENTE DE PREENCHIMENTO NÃO EXISTE, e é a mesma medição da aba 05: o
+     `accent-color` não pinta trilho customizado neste WebKit2, então quem
+     informa a posição é o POLEGAR — que é o que ela arrasta. */
+  .campo-num .trilho{appearance:none;-webkit-appearance:none;flex:1 1 auto;
+    min-width:0;height:5px;padding:0;margin:0;border:0;border-radius:3px;
+    background:var(--border-forte);cursor:grab}
+  .campo-num .trilho:active{cursor:grabbing}
+  .campo-num .trilho::-webkit-slider-runnable-track{
+    height:5px;border-radius:3px;background:transparent}
+  .campo-num .trilho::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;
+    width:12px;height:12px;border-radius:50%;background:var(--purple);
+    border:2px solid var(--panel);margin-top:-4px}
+  .campo-num .trilho:focus-visible{outline:2px solid var(--purple);outline-offset:3px}
+  /* O NÚMERO ao lado do trilho: mesma fonte e mesma largura do `.bignum b`, para
+     as duas linhas terem a coluna do número no mesmo x uma da outra. */
+  .campo-num .num{font-family:'JetBrains Mono',monospace;font-size:15px;
+    color:var(--fg);font-weight:600;min-width:22px;text-align:right;flex:none;
+    margin-left:11px}
+
   /* ---- as TRÊS tabelas: mesma largura de bloco, mesma coluna de valor,
           cabeçalho em roxo (fala [90]) — inclusive a dos gestos ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
@@ -3226,8 +3260,8 @@
               <div class="at-linha"><span class="at-rot">Navegação Interna<span class="ajuda">?<span class="dica">Navegar <b>a janela do Hefesto</b> com o controle — abas, botões e listas.<br><br>Com os 4 controles ligados, cada jogador anda no seu próprio card e o <b>X de cada um grava no controle dele</b> — sem disputar o card do vizinho.<br><br>É outra coisa que o cursor do PC: esse é <b>um só</b>, e sai do controle do Player 1.</span></span></span><select class="escolha-at" data-gesto="navegacao-interna"><option selected>Ligada — cada controle navega o Hefesto</option><option>Só o Player 1 navega</option><option>Desligada</option></select></div>
             </div>
             <div class="at-col">
-              <div class="at-linha"><span class="at-rot">Velocidade de cursor<span class="ajuda">?<span class="dica">Uma velocidade só, porque é um número só no Hefesto: o <b>analógico esquerdo</b> e o <b>touch</b> do touchpad andam pelo mesmo ajuste.<br><br>De 1 a 12. O padrão do Hefesto é 6.</span></span></span><div class="campo-num"><span class="par"><span class="bignum"><button class="passo" data-gesto="vel-cursor-menos">−</button><b data-campo="vel-cursor">6</b><button class="passo" data-gesto="vel-cursor-mais">+</button></span></span></div></div>
-              <div class="at-linha"><span class="at-rot">Velocidade da rolagem<span class="ajuda">?<span class="dica">Rola com o <b>analógico direito</b>. Rolar com dois dedos no touchpad é outra coisa, e o Hefesto ainda não faz.<br><br>De 1 a 5. O padrão do Hefesto é 1.</span></span></span><div class="campo-num"><span class="par"><span class="bignum"><button class="passo" data-gesto="rolagem-menos">−</button><b data-campo="vel-rolagem">1</b><button class="passo" data-gesto="rolagem-mais">+</button></span></span></div></div>
+              <div class="at-linha"><span class="at-rot">Velocidade de cursor<span class="ajuda">?<span class="dica">Uma velocidade só, porque é um número só no Hefesto: o <b>analógico esquerdo</b> e o <b>touch</b> do touchpad andam pelo mesmo ajuste.<br><br>De 1 a 12. O padrão do Hefesto é 6.</span></span></span><div class="campo-num"><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="vel-cursor" data-campo="vel-cursor" data-hef-alvo="valor" title="Arraste para escolher a velocidade do cursor — de 1 a 12. Vale na hora."><span class="num" data-campo="vel-cursor">6</span></div></div>
+              <div class="at-linha"><span class="at-rot">Velocidade da rolagem<span class="ajuda">?<span class="dica">Rola com o <b>analógico direito</b>. Rolar com dois dedos no touchpad é outra coisa, e o Hefesto ainda não faz.<br><br>De 1 a 5. O padrão do Hefesto é 1.</span></span></span><div class="campo-num"><input class="trilho" type="range" min="1" max="5" step="1" value="1" data-gesto="vel-rolagem" data-campo="vel-rolagem" data-hef-alvo="valor" title="Arraste para escolher a velocidade da rolagem — de 1 a 5. Vale na hora."><span class="num" data-campo="vel-rolagem">1</span></div></div>
               <div class="at-linha"><span class="at-rot">Modo Steam<span class="ajuda">?<span class="dica">O controle passa a navegar a <b>Steam</b> do jeito que navega num Steam Deck: o Modo Jogo responde ao d-pad e aos botões, sem mouse.<br><br>O terceiro degrau grava a escolha para a <b>próxima vez</b> — a Steam abre direto em Modo Jogo, sem ninguém clicar. Esse degrau vale para a máquina, não só para este perfil.</span></span></span><select class="escolha-at" data-gesto="modo-steam"><option selected>Desligado</option><option>Ligado — o controle navega a Steam como num Steam Deck</option><option>Ligado, e a Steam abre em Modo Jogo na próxima vez</option></select></div>
             </div>
           </div>

@@ -83,16 +83,50 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
 # a dica do CABEÇALHO já explica o conceito uma vez, e o glifo já diz o nome da
 # peça. Por isso esta lista tem DOIS termos, e não três — o terceiro era o texto
 # que saiu, e deixá-lo aqui sem uso o faria voltar no primeiro descuido.
+#
+# A SEXTA NASCEU EM 05/09/2026, e ela é a queixa dela: *"a aba 10 tá com o mesmo
+# problema de antes. nada mudou."* O `sensores` entrou em `ControllerOverrides`
+# em 04/09 (`8f9589ba`, SENSOR-DE-VERDADE-01) e esta lista ficou nos cinco — o
+# perfil passou a guardar giroscópio e acelerômetro POR PEÇA e a tabela que
+# existe para mostrar o que cada controle tem de próprio não tinha célula para
+# eles. Medido com o disco dela: `_secoes_do_controle` devolvia SEIS chaves e a
+# página tinha CINCO endereços, então a dica da linha dizia *"3 de 6 ajustes só
+# deste controle"* enquanto o cabeçalho ao lado dizia *"os cinco ajustes"*.
+# Um controle cujo único ajuste próprio fosse o sensor entrava na conta do
+# cabeçalho ("1 de 2 controles com ajuste próprio") com a fileira toda apagada.
 SECOES = [
     ("leds", ("lightbar", "led-jogador")),
     ("triggers", ("l2", "r2")),
     ("rumble", ("rumble_esquerdo", "rumble_direito")),
     ("speaker", ("alto-falante",)),
     ("mic", ("mic",)),
+    ("sensores", ("giroscopio", "acelerometro")),
 ]
 
+#: COMO CADA SEÇÃO SE CHAMA NA DICA DO CABEÇALHO, e por que ela não é digitada
+#: na frase: a dica listava *"luz, gatilhos, vibração, alto-falante e
+#: microfone"* à mão, e foi ela que sobreviveu intacta à chegada do `sensores` —
+#: a mesma família de defeito que o `QUANTAS_SECOES` abaixo já tinha matado para
+#: o NÚMERO e ninguém tinha matado para os NOMES. A frase agora se monta desta
+#: tabela, na ordem de `SECOES`, e `monta` reprova a seção que não tiver nome.
+NOME_DA_SECAO = {
+    "leds": "luz",
+    "triggers": "gatilhos",
+    "rumble": "vibração",
+    "speaker": "alto-falante",
+    "mic": "microfone",
+    "sensores": "sensores",
+}
+
+
+def _lista_das_secoes() -> str:
+    """`luz, gatilhos, vibração, alto-falante, microfone e sensores`."""
+    nomes = [NOME_DA_SECAO[campo] for campo, _pecas in SECOES]
+    return f"{', '.join(nomes[:-1])} e {nomes[-1]}" if len(nomes) > 1 else nomes[0]
+
+
 #: O NÚMERO POR EXTENSO, para a tela nunca discordar da lista. As frases da aba
-#: dizem "os cinco ajustes"; escrever a palavra à mão em três lugares é como a
+#: dizem "os seis ajustes"; escrever a palavra à mão em três lugares é como a
 #: contagem de `NAO_PINTAVEIS` divergiu no primeiro dia. Sai daqui, de
 #: `len(SECOES)`, e muda sozinha quando a lista mudar.
 _EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis"}
@@ -105,10 +139,12 @@ QUANTAS_SECOES = _EXTENSO[len(SECOES)]
 #
 # O `mic` ENTRA ACESO NUM SÓ, e é de propósito: uma coluna nova apagada nas
 # quatro linhas leria como "esta coluna nunca acende", que é o oposto da decisão
-# nº20. Aceso em um, apagado em três, é a mesma pedagogia dos outros quatro.
+# nº20. Aceso em um, apagado em três, é a mesma pedagogia dos outros quatro — e
+# o `sensores`, que chegou em 05/09, entra pela mesma regra, no P2 para não
+# empilhar as duas colunas novas na mesma linha.
 GUARDA = {
     "p1": {"leds", "triggers", "rumble", "mic"},
-    "p2": {"leds", "rumble"},
+    "p2": {"leds", "rumble", "sensores"},
     "p3": {"leds"},
     "p4": set(),
 }
@@ -385,10 +421,26 @@ CSS = CSS_GLIFO + """
      silêncio. Para os NOVE gestos desta aba que ESCREVEM NO DISCO DELA,
      silêncio no sucesso é o botão que responde calado.
 
-     O ESPAÇO É RESERVADO, e `visibility` em vez de `display`: uma tira que
-     nasce e some empurraria a lista de 33 perfis para cima e para baixo a cada
-     clique. É a mesma escolha que a linha laranja tracejada da aba Jogar já
-     fez — *"o espaço dela é reservado, para a tela não pular"*.
+     O ESPAÇO ERA RESERVADO SEMPRE, E ELA VIU — 05/09/2026: *"a aba dez tem um
+     espaço vertical bizarro desnecessário no título"*. A tira mora entre o
+     `.quadro-topo` e o `.quadro-corpo`, e reservada com `height:30px` +
+     `margin-top:7px` ela punha **37px de banda morta logo abaixo do título
+     "Perfis"** — medido no Chrome nas dez páginas publicadas, e a aba 10 era a
+     ÚNICA das dez com vão entre topo e corpo (as outras nove: 0px). O custo
+     estava sendo pago em toda a vida da tela para poupar um pulo que acontece
+     nove vezes por sessão, e nas outras nove abas o recado do piloto
+     (`.hef-recado`) já não paga nada: ele nasce quando há notícia.
+
+     A CAIXA COLAPSA VAZIA E ABRE CHEIA. `visibility` continua no lugar de
+     `display` — quem some é a ALTURA, não o elemento —, e a razão é o alvo
+     `classe` do piloto: ele acha a tira por `querySelectorAll` e alterna `on`,
+     e um `display:none` faria o `-webkit-line-clamp` recalcular do zero a cada
+     clique. Vazia ela mede **zero**; acesa ela volta aos MESMOS 30px de duas
+     linhas mais os 7px de folga — a frase longa chega igual à de antes.
+
+     O QUE ISSO DEVOLVE, e está declarado: o pulo de 37px na primeira notícia do
+     gesto. É o preço que ela escolheu ao chamar a banda de bizarra, e ele é
+     pago por clique, não por segundo de tela aberta.
 
      VERDE porque é desfecho BOM: a recusa já tem cor e lugar próprios (a tarja
      do piloto). Dois canais, duas cores, nenhuma dúvida sobre qual é qual.
@@ -402,24 +454,24 @@ CSS = CSS_GLIFO + """
      duas passam de 280; a linha de 1.180px a 11px comporta ~200. O que sumia
      era exatamente o *"sem ela, o jogo tende a não enxergar controle nenhum"*.
 
-     AS DUAS LINHAS SÃO RESERVADAS, e é a mesma escolha de antes levada a sério:
-     `visibility` continua no lugar de `display`, e a altura continua FIXA. Uma
-     tira que crescesse só quando a frase é longa devolveria o pulo de 15px a
-     cada clique de frase longa — que é a quarta opção que o PO recusou.
+     AS DUAS LINHAS CONTINUAM FIXAS — o que mudou em 05/09 foi só o repouso.
+     Uma tira que crescesse com o tamanho da frase daria um pulo DIFERENTE a
+     cada clique, que é a quarta opção que o PO recusou; a altura de ACESA
+     continua uma só, 30px, e a frase longa para na segunda linha como antes.
 
      `-webkit-line-clamp` E NÃO `text-overflow`: a reticência de `text-overflow`
      é de UMA linha só. A janela é um `WebKit2.WebView` e o Chrome da bancada é
      a mesma família, então o prefixo `-webkit-` é o que os dois leem — a mesma
      razão do `::-webkit-slider-thumb` da Prioridade, logo acima.
 
-     O CUSTO SAI DA LISTA, e está declarado: 15px a mais, ~meia linha da tabela
-     de perfis. Nada pula, porque o espaço já era reservado. */
-  .desfecho{padding:0 14px;margin-top:7px;height:30px;line-height:15px;
+     A ALTURA E A FOLGA MORAM NA REGRA `.on`, e não na de repouso: é o que faz a
+     banda vazia medir zero sem tirar um pixel da tira quando há recado. */
+  .desfecho{padding:0 14px;margin-top:0;height:0;line-height:15px;
             font-size:11px;color:var(--green);
             display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
             overflow:hidden;
             visibility:hidden}
-  .desfecho.on{visibility:visible}
+  .desfecho.on{visibility:visible;margin-top:7px;height:30px}
 
   /* ---------- O CADEADO E O PONTO DE ALERTA — decisão [01] do PO ----------
      *"Cadeado no campo, frase no hover."* Sete dos nove perfis de fábrica casam
@@ -1082,7 +1134,7 @@ MIOLO = f'''
                 <table class="tab miuda">
                   <thead><tr>
                     <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle</th>
-                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os {QUANTAS_SECOES} ajustes que o perfil sabe guardar por controle — luz, gatilhos, vibração, alto-falante e microfone.">Ajuste próprio</th>
+                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os {QUANTAS_SECOES} ajustes que o perfil sabe guardar por controle — {_lista_das_secoes()}.">Ajuste próprio</th>
                     <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
@@ -1139,13 +1191,13 @@ LEGENDA = f'''<div class="nota">
       resto: <span class="marca">"cada controle guarda a sua configuração aqui dentro, pelo
       ID da peça"</span> era uma promessa que só existia na dica do <b>Perfil ativo</b>. Agora
       ela está desenhada, e são <b>{len(MESA)} configurações dentro do mesmo perfil</b>.</li>
-    <li><b>Os {QUANTAS_SECOES} ajustes da linha não são escolha minha.</b> Quatro são os campos de
-      <code>ControllerOverrides</code> (<code>profiles/schema.py:961</code>) — luz, gatilhos,
-      vibração e alto-falante. O quinto é o <b>microfone</b>, e ele entrou por decisão dela
-      em 03/09: é o <code>Virtual</code> que faz o mic soar igual no cabo e no rádio, então
-      ele é o ajuste que faz o <b>canal daquele controle</b> funcionar. Enquanto o campo não
-      existir no esquema, a coluna do microfone fica apagada em todo perfil real — a tela
-      está pronta para o dado, e não o inventa. Modo, mouse e teclado continuam sendo do
+    <li><b>Os {QUANTAS_SECOES} ajustes da linha não são escolha minha.</b> São os campos de
+      <code>ControllerOverrides</code> — {_lista_das_secoes()} —, nem um a mais.
+      O <b>microfone</b> entrou por decisão dela em 03/09 e os <b>sensores</b> em 04/09,
+      quando o giroscópio e o acelerômetro passaram a desligar de verdade por peça
+      (<code>manager.apply_controller_sensores</code>). A lista da tela sai da mesma
+      ordem do esquema: um campo novo lá aparece aqui, em vez de ficar guardado no
+      disco e invisível na tabela. Modo, mouse e teclado continuam sendo do
       perfil inteiro, e a classe escreve o motivo de cada um.</li>
     <li><b>Apagado não é falta, é herança.</b> Campo vazio quer dizer "sem opinião": aquele
       controle usa a seção global do perfil. O <b>P4</b> está assim de propósito —
@@ -1363,21 +1415,39 @@ def _conferir(html: str) -> None:
            "a coluna do microfone sumiu da linha `Ajuste próprio` (decisão nº20)")
     exigir(f"São os {QUANTAS_SECOES} ajustes" in html,
            f"a dica do cabeçalho não diz mais `{QUANTAS_SECOES}` ajustes por controle")
+    # E A DICA NOMEIA AS SEIS, uma a uma — 05/09/2026. O número já saía de
+    # `len(SECOES)` e a LISTA DE NOMES continuava digitada: quando o `sensores`
+    # chegou ao esquema, a frase seguiu dizendo "luz, gatilhos, vibração,
+    # alto-falante e microfone" sem que nada reprovasse. Cobrar nome a nome é o
+    # que impede a próxima seção de entrar calada.
+    sem_nome = [campo for campo, _ in SECOES if campo not in NOME_DA_SECAO]
+    exigir(not sem_nome,
+           f"a(s) seção(ões) {sem_nome} não têm nome em `NOME_DA_SECAO` — a dica "
+           f"do cabeçalho não saberia como chamá-la na tela")
+    fora_da_dica = [NOME_DA_SECAO[campo] for campo, _ in SECOES
+                    if NOME_DA_SECAO[campo] not in html]
+    exigir(not fora_da_dica,
+           f"a dica do cabeçalho não nomeia {fora_da_dica} — a coluna existe na "
+           f"tabela e a frase que a explica não a menciona")
 
-    # A TIRA DO DESFECHO — 03/09/2026. As três coisas que a fazem funcionar, e
+    # A TIRA DO DESFECHO — 03/09/2026. As duas coisas que a fazem funcionar, e
     # cada uma some sem sintoma se ninguém a cobrar: os DOIS endereços (o
-    # `classe` acende, o `<span>` escreve), e o espaço RESERVADO. Sem o
-    # `visibility` a tira viraria `display:none` no primeiro conserto de CSS e a
-    # lista de 33 perfis pularia a cada clique.
+    # `classe` acende, o `<span>` escreve).
     exigir(html.count('data-hef="perfis.desfecho"') == 2,
            "a tira do desfecho perdeu um dos dois endereços — sem o `classe` "
            "ela fica acesa com um travessão; sem o `<span>` ela nunca escreve")
     exigir('class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe"' in html,
            "a tira do desfecho perdeu o alvo `classe` — ela acenderia sempre")
-    exigir("visibility:hidden" in html and "display:none" not in
-           html.split(".desfecho{")[-1].split("}")[0],
-           "a tira do desfecho deixou de reservar o espaço — a lista volta a "
-           "pular a cada clique")
+    # A RÉGUA SE INVERTEU — 05/09/2026. Ela exigia `height:30px` na regra de
+    # REPOUSO ("a tira do desfecho deixou de reservar o espaço"), e era ela que
+    # guardava os 37px de banda morta que ela chamou de bizarros. Uma régua que
+    # cobra o que saiu não se apaga: passa a guardar a REMOÇÃO. Agora ela cobra
+    # que a tira em repouso não tenha altura nem folga, e que as duas voltem na
+    # `.on` — a medição em pixels está em
+    # `tests/unit/test_a_aba10_nao_reserva_banda_morta_no_titulo.py`.
+    exigir("visibility:hidden" in html,
+           "a tira do desfecho perdeu o `visibility:hidden` — ela apareceria "
+           "vazia em toda tela sem recado")
 
     # A SEGUNDA LINHA DA TIRA — decisão [05] do PO, 04/09/2026. As três metades,
     # e cada uma some sem sintoma: a ALTURA (uma linha volta a cortar), o
@@ -1386,11 +1456,19 @@ def _conferir(html: str) -> None:
     # duas — com ele a frase continua numa linha só dentro de uma caixa de duas.
     regra = re.search(r"\.desfecho\{[^}]*\}", html)
     exigir(regra is not None, "a regra da tira do desfecho sumiu do CSS")
-    if regra:
+    acesa = re.search(r"\.desfecho\.on\{[^}]*\}", html)
+    exigir(acesa is not None, "a regra `.desfecho.on` sumiu do CSS")
+    if regra and acesa:
         corpo = regra.group(0)
-        exigir("height:30px" in corpo,
+        exigir("height:0" in corpo and "margin-top:0" in corpo,
+               "a tira do desfecho voltou a reservar espaço em REPOUSO — são "
+               "37px de banda morta debaixo do título, e ela os chamou de "
+               "bizarros em 05/09")
+        exigir("height:30px" in acesa.group(0),
                "a tira do desfecho voltou a UMA linha — o fim da frase, que é "
                "a metade que avisa, some com reticências")
+        exigir("margin-top:7px" in acesa.group(0),
+               "a tira acesa perdeu a folga de 7px que a separa do título")
         exigir("-webkit-line-clamp:2" in corpo,
                "a tira perdeu o `-webkit-line-clamp:2` — a frase longa vaza "
                "para fora da caixa em vez de parar na segunda linha")
