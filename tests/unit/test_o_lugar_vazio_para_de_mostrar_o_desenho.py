@@ -546,7 +546,23 @@ def test_os_quatro_lugares_ficam_no_travessao_e_marcados(pacotes_mod, pagina):
     assert sorted(carga["vazios"]) == sorted(LUGARES), (
         f"{pagina}: os quatro lugares tinham de estar na lista de vazios")
     for pref in LUGARES:
-        valores = set(carga["colunas"][pref].values())
+        campos = dict(carga["colunas"][pref])
+        # A IDENTIDADE DO LUGAR É A ÚNICA EXCEÇÃO, e ela NÃO afrouxa esta
+        # régua — aperta. Até 05/09/2026 esta linha cobrava "tudo travessão",
+        # e a foto da aba 05 com um controle na bancada mostrou o custo: o P2,
+        # que tem endereço, dizia `—`, enquanto o P3 e o P4, que são desenho
+        # puro, diziam `P3 • Desconectado`. Três lugares igualmente vazios, um
+        # calado. O travessão continua sendo a resposta para tudo o que NÃO se
+        # sabe; a identidade do lugar se sabe, e agora é cobrada por igualdade
+        # exata em vez de apenas "não é travessão".
+        identidade = campos.pop(pacotes_mod.IDENTIDADE_DO_LUGAR, None)
+        if identidade is not None:
+            esperado = (f"P{pref[1:]} {pacotes_mod.PONTO_DO_ROTULO} "
+                        f"{pacotes_mod.SEM_NINGUEM_AQUI}")
+            assert identidade == esperado, (
+                f"{pagina}/{pref}: a identidade do lugar vazio diz "
+                f"{identidade!r} e devia dizer {esperado!r}")
+        valores = set(campos.values())
         assert valores == {pacotes_mod.TRAVESSAO}, (
             f"{pagina}/{pref}: sobrou valor que não é travessão: {valores}")
     assert carga["colunas"]["p1"], (
