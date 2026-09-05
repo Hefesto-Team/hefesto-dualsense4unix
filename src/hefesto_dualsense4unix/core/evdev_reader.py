@@ -899,6 +899,24 @@ class _EvdevReconnectLoop:
         self._reopen_flag = threading.Event()
         self._wake_lock = threading.Lock()
         self._wake_r, self._wake_w = self._novo_wake_pipe()
+        # FEAT-DSX-GAMEPAD-FLAVOR-01: quando True, o loop faz EVIOCGRAB no
+        # device — quem graba vira leitor EXCLUSIVO do nó, e quem mais o abrir
+        # deixa de receber evento. Aplicado/removido por `set_grab`.
+        #
+        # MORA NA BASE DESDE A SENSOR-DE-VERDADE-01 (04/09/2026), e a razão é
+        # medida: o interruptor de giroscópio precisa do mesmo EVIOCGRAB, mas
+        # no nó "Motion Sensors" (`MotionSensorReader`), que é OUTRA subclasse.
+        # Duas grafias do mesmo grab divergiriam na primeira correção — e este
+        # aqui já carrega duas cicatrizes (o EBUSY duplo e o "pending" da
+        # reconexão) que ninguém quer reescrever de memória.
+        self._grab: bool = False
+        # BUG-COOP-GRAB-SILENT-FAIL-01: estado observável do grab. "off" (não
+        # pedido), "pending" (pedido, device ainda não aberto), "held" (ativo),
+        # "failed" (EVIOCGRAB recusado — ex.: EBUSY, outro leitor já graba).
+        # Falha de grab NÃO pode ser silenciosa: com gamepad virtual ligado,
+        # físico sem grab = input DOBRADO no jogo; e num nó de movimento,
+        # grab que falhou = o sensor que ela desligou continuando a chegar.
+        self._grab_state: str = "off"
 
     @staticmethod
     def _novo_wake_pipe() -> tuple[int, int]:
@@ -950,8 +968,90 @@ class _EvdevReconnectLoop:
     def _reset_on_disconnect(self) -> None:  # pragma: no cover - abstract
         raise NotImplementedError
 
+    @property
+    def grab_state(self) -> str:
+        """Estado observável do EVIOCGRAB: off | pending | held | failed."""
+        return self._grab_state
+
+    def set_grab(self, grab: bool) -> bool:
+        """Liga/desliga o EVIOCGRAB neste nó (thread-safe-ish).
+
+        Registra a intenção em `self._grab` (reaplicada a cada (re)conexão pelo
+        loop) e tenta aplicar imediatamente no device aberto. Retorna True se o
+        estado desejado foi APLICADO agora (ou é pending com device fechado —
+        o loop aplica ao abrir); False se o EVIOCGRAB falhou (`grab_state` vira
+        "failed" e o chamador NÃO deve assumir exclusividade do device).
+        """
+        self._grab = grab
+        dev = self._active_dev
+        if dev is None:
+            self._grab_state = "pending" if grab else "off"
+            return True
+        # BUG-GRAB-DOUBLE-EBUSY-01: re-grabar um fd que ESTE reader já graba
+        # levanta EBUSY (errno 16) no kernel — e o `except` abaixo marcava
+        # `grab_state="failed"` MESMO com o device fisicamente exclusivo. Era o
+        # card "grab falhou — input pode dobrar no jogo" mentindo depois de uma
+        # troca de máscara/flavor (que re-chama `set_grab(True)` sem soltar antes,
+        # `gamepad.py`: stop(release_grab=False) → re-grab) ou do upgrade
+        # uinput→uhid. `grab_state == "held"` já significa "este fd é exclusivo":
+        # nada a (re)fazer. Idempotente nos dois sentidos — ungrab de um device
+        # que este reader NÃO graba ("off"/"pending"/"failed") também é no-op (o
+        # `ungrab()` de um fd solto levantaria EINVAL espúrio). Um EBUSY EXTERNO
+        # real (outro leitor exclusivo) nunca chega a "held" primeiro → continua
+        # virando "failed" e o card segue honesto quando há duplicação de verdade.
+        if grab and self._grab_state == "held":
+            return True
+        if not grab and self._grab_state != "held":
+            self._grab_state = "off"
+            return True
+        try:
+            if grab:
+                dev.grab()
+                self._grab_state = "held"
+            else:
+                dev.ungrab()
+                self._grab_state = "off"
+            return True
+        except Exception as exc:
+            if grab:
+                self._grab_state = "failed"
+                logger.warning(
+                    "evdev_grab_failed",
+                    path=str(self._device_path),
+                    err=str(exc),
+                    hint="outro leitor exclusivo? físico ficaria DOBRADO no jogo",
+                )
+                return False
+            # ungrab falhou (device já fechado/sumiu): estado efetivo é solto.
+            self._grab_state = "off"
+            return True
+
     def _reapply_grab(self, dev: Any) -> None:
-        """Hook de (re)aplicação de grab ao abrir o device. No-op na base."""
+        """Reaplica o grab pedido ao (re)abrir o device, com estado observável."""
+        if not self._grab:
+            return
+        try:
+            dev.grab()
+            self._grab_state = "held"
+        except Exception as exc:
+            self._grab_state = "failed"
+            logger.warning(
+                "evdev_grab_failed",
+                path=str(self._device_path),
+                err=str(exc),
+                hint="grab falhou ao reabrir o device; o controle pode dobrar input",
+            )
+
+    def _grab_volta_a_pendente(self) -> None:
+        """Grab pedido volta a "pending" quando o device cai.
+
+        BUG-COOP-GRAB-SILENT-FAIL-01: sem isto, um reader que perdeu o nó
+        continuaria anunciando "held" sobre um fd morto — e quem lê o estado
+        (o card, e desde a SENSOR-DE-VERDADE-01 a resposta do `sensor.set`)
+        diria "exclusivo" sobre um nó que voltou a ser de todo mundo.
+        """
+        if self._grab:
+            self._grab_state = "pending"
 
     def _o_kernel_discorda(
         self, dev: Any, ecodes: Any
@@ -1271,17 +1371,9 @@ class EvdevReader(_EvdevReconnectLoop):
         self._dpad_y = 0
         self._pressed: set[str] = set()
         self._active_dev: Any = None
-        # FEAT-DSX-GAMEPAD-FLAVOR-01: quando True, o loop faz EVIOCGRAB no
-        # device — o daemon vira leitor exclusivo do controle real e os jogos
-        # deixam de ver o controle cru (evitando input dobrado ao lado do
-        # gamepad virtual). Aplicado/removido por `set_grab`.
-        self._grab: bool = False
-        # BUG-COOP-GRAB-SILENT-FAIL-01: estado observável do grab. "off" (não
-        # pedido), "pending" (pedido, device ainda não aberto), "held" (ativo),
-        # "failed" (EVIOCGRAB recusado — ex.: EBUSY, outro leitor já graba).
-        # Falha de grab NÃO pode ser silenciosa: com gamepad virtual ligado,
-        # físico sem grab = input DOBRADO no jogo.
-        self._grab_state: str = "off"
+        # `_grab`/`_grab_state` nascem no `super().__init__()` — a máquina de
+        # EVIOCGRAB subiu para `_EvdevReconnectLoop` na SENSOR-DE-VERDADE-01,
+        # porque o nó "Motion Sensors" precisa do MESMO grab (ver a base).
         # LUGAR-À-MESA-01/E2 — a forma dos eixos DESTE aparelho, lida do
         # `absinfo` no open (`_on_device_opened`). Vazio = faixa desconhecida,
         # e aí o `_handle_abs` cai no `& 0xFF` histórico: o DualSense continua
@@ -1310,64 +1402,6 @@ class EvdevReader(_EvdevReconnectLoop):
         if current is not None and current == self._device_path:
             return  # o node aberto já é o do alvo — nada a fazer
         self.request_reopen(reason="retarget")
-
-    @property
-    def grab_state(self) -> str:
-        """Estado observável do EVIOCGRAB: off | pending | held | failed."""
-        return self._grab_state
-
-    def set_grab(self, grab: bool) -> bool:
-        """Liga/desliga o EVIOCGRAB no controle físico (thread-safe-ish).
-
-        Registra a intenção em `self._grab` (reaplicada a cada (re)conexão pelo
-        loop) e tenta aplicar imediatamente no device aberto. Retorna True se o
-        estado desejado foi APLICADO agora (ou é pending com device fechado —
-        o loop aplica ao abrir); False se o EVIOCGRAB falhou (`grab_state` vira
-        "failed" e o chamador NÃO deve assumir exclusividade do device).
-        """
-        self._grab = grab
-        dev = self._active_dev
-        if dev is None:
-            self._grab_state = "pending" if grab else "off"
-            return True
-        # BUG-GRAB-DOUBLE-EBUSY-01: re-grabar um fd que ESTE reader já graba
-        # levanta EBUSY (errno 16) no kernel — e o `except` abaixo marcava
-        # `grab_state="failed"` MESMO com o device fisicamente exclusivo. Era o
-        # card "grab falhou — input pode dobrar no jogo" mentindo depois de uma
-        # troca de máscara/flavor (que re-chama `set_grab(True)` sem soltar antes,
-        # `gamepad.py`: stop(release_grab=False) → re-grab) ou do upgrade
-        # uinput→uhid. `grab_state == "held"` já significa "este fd é exclusivo":
-        # nada a (re)fazer. Idempotente nos dois sentidos — ungrab de um device
-        # que este reader NÃO graba ("off"/"pending"/"failed") também é no-op (o
-        # `ungrab()` de um fd solto levantaria EINVAL espúrio). Um EBUSY EXTERNO
-        # real (outro leitor exclusivo) nunca chega a "held" primeiro → continua
-        # virando "failed" e o card segue honesto quando há duplicação de verdade.
-        if grab and self._grab_state == "held":
-            return True
-        if not grab and self._grab_state != "held":
-            self._grab_state = "off"
-            return True
-        try:
-            if grab:
-                dev.grab()
-                self._grab_state = "held"
-            else:
-                dev.ungrab()
-                self._grab_state = "off"
-            return True
-        except Exception as exc:
-            if grab:
-                self._grab_state = "failed"
-                logger.warning(
-                    "evdev_grab_failed",
-                    path=str(self._device_path),
-                    err=str(exc),
-                    hint="outro leitor exclusivo? físico ficaria DOBRADO no jogo",
-                )
-                return False
-            # ungrab falhou (device já fechado/sumiu): estado efetivo é solto.
-            self._grab_state = "off"
-            return True
 
     def snapshot(self) -> EvdevSnapshot:
         with self._lock:
@@ -1573,22 +1607,6 @@ class EvdevReader(_EvdevReconnectLoop):
                 divergencia[campo] = (int(publicado), do_kernel)
         return divergencia
 
-    def _reapply_grab(self, dev: Any) -> None:
-        """Reaplica o grab pedido ao (re)abrir o device, com estado observável."""
-        if not self._grab:
-            return
-        try:
-            dev.grab()
-            self._grab_state = "held"
-        except Exception as exc:
-            self._grab_state = "failed"
-            logger.warning(
-                "evdev_grab_failed",
-                path=str(self._device_path),
-                err=str(exc),
-                hint="grab falhou ao reabrir o device; o controle pode dobrar input",
-            )
-
     def _log_prefix(self) -> str:
         return "evdev"
 
@@ -1613,10 +1631,7 @@ class EvdevReader(_EvdevReconnectLoop):
             self._eixos = {}
             self._sintetizar_l2 = False
             self._sintetizar_r2 = False
-        # Grab pedido volta a "pending" — será reaplicado (com verificação)
-        # quando o loop reabrir o device (BUG-COOP-GRAB-SILENT-FAIL-01).
-        if self._grab:
-            self._grab_state = "pending"
+        self._grab_volta_a_pendente()
 
     # Alias retrocompatível para testes legados (HOTFIX-3).
     _reset_buttons_on_disconnect = _reset_on_disconnect
@@ -2240,6 +2255,13 @@ class MotionSensorReader(_EvdevReconnectLoop):
             self._accel = {"x": 0.0, "y": 0.0, "z": 0.0}
             self._resolucoes = {}
             self._resolucoes_accel = {}
+        # SENSOR-DE-VERDADE-01: o grab do nó de movimento é o que esconde o
+        # giro de quem lê evdev. Perdido o nó, ele não está mais "held" — e
+        # dizer que está faria a resposta do `sensor.set` afirmar exclusividade
+        # sobre um nó que voltou a ser de todo mundo. O loop o reaplica ao
+        # reabrir (`_reapply_grab`), que é o que faz o interruptor sobreviver
+        # ao replug — e a máscara, que derruba e recria o vpad.
+        self._grab_volta_a_pendente()
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
         if event.type != ecodes.EV_ABS:
