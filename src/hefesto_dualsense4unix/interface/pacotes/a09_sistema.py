@@ -899,7 +899,7 @@ def _rotulo_da_fita() -> str:
         return ""
 
 
-def _um_chip(c: dict[str, Any]) -> str:
+def _um_chip(c: dict[str, Any], escolhido: str = "") -> str:
     """Um chip da fita, com o que se LEU daquele controle — e nada mais.
 
     A COR SÓ APARECE SE ALGUÉM A LEU. Sem leitura o chip perde a classe
@@ -910,17 +910,21 @@ def _um_chip(c: dict[str, Any]) -> str:
 
     E O QUE SAI NÃO É `Não sei` NEM `—`: os dois são a AUSÊNCIA de leitura
     escrita como se fosse um nome. O chip termina no transporte.
+
+    `escolhido` É O `pref` DE QUEM ACENDE, e o padrão `""` não acende ninguém —
+    que é o certo enquanto o `Todos` está na fita, porque quem acende é ele.
     """
     nome = str(c.get("nome") or "")
     cor = str(c.get("cor") or "")
     via = html.escape(str(c.get("via") or ""))
     jogador = html.escape(str(c.get("jogador") or ""))
     ponto = ' <span class="pt">•</span> '
+    aceso = " on" if escolhido and str(c.get("pref") or "") == escolhido else ""
     if not cor:
-        return (f'<span class="chip" data-campo="{CAMPO_DO_CHIP}"'
+        return (f'<span class="chip{aceso}" data-campo="{CAMPO_DO_CHIP}"'
                 f' title="{html.escape(SEM_COR_LIDA)}">'
                 f"P{jogador}{ponto}{via}</span>")
-    return (f'<span class="chip plastico" data-campo="{CAMPO_DO_CHIP}"'
+    return (f'<span class="chip plastico{aceso}" data-campo="{CAMPO_DO_CHIP}"'
             f' style="--plastico:{html.escape(_cor_da_zona(cor))}"'
             f' title="{html.escape(nome)} — a borda é a cor do plástico">'
             f"P{jogador}{ponto}{html.escape(nome)}{ponto}{via}</span>")
@@ -934,15 +938,25 @@ def _html_da_fita(mesa: list[dict[str, Any]]) -> str:
     `const t = vazio ? '—' : String(v)`), e isso apagaria a tira inteira entre
     uma reconexão e outra.
 
-    O CHIP `Todos` FICA E NÃO GANHA ENDEREÇO: ele não é aparelho nenhum, não traz
-    cor nem nome de plástico. Nesta aba a fita é INERTE — o `title` do desenho já
-    diz que aqui os cards são leitura —, então `Todos` continua sendo o escolhido.
+    O CHIP `Todos` NÃO GANHA ENDEREÇO: ele não é aparelho nenhum, não traz cor
+    nem nome de plástico. Nesta aba a fita é INERTE — o `title` do desenho já diz
+    que aqui os cards são leitura —, então `Todos` é o escolhido **quando ele
+    existe**.
+
+    E ELE SÓ EXISTE COM MAIS DE UM CONTROLE — decisão dela, 04/09/2026, e a régua
+    é `monta.escolha_da_fita`, que é dela nas três abas que escrevem este chip.
+    Com um controle na mesa, `Todos` e o chip dele escolhem o mesmo conjunto: o
+    botão sai, e quem acende passa a ser o único que sobrou. O `"todos"` daqui é
+    LITERAL e continua sendo, o que faz o botão reaparecer aceso sozinho quando o
+    segundo controle volta.
     """
     if not mesa:
         return ""
-    partes = [f"<span>{html.escape(_rotulo_da_fita())}</span>",
-              '<span class="chip on">Todos</span>']
-    partes += [_um_chip(c) for c in mesa]
+    mostra_todos, escolhido = _monta().escolha_da_fita("todos", mesa)
+    partes = [f"<span>{html.escape(_rotulo_da_fita())}</span>"]
+    if mostra_todos:
+        partes.append('<span class="chip on">Todos</span>')
+    partes += [_um_chip(c, "" if mostra_todos else escolhido) for c in mesa]
     return "\n      ".join(partes)
 
 
