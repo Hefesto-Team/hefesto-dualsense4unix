@@ -636,6 +636,62 @@ def escolha_da_fita(ativo: str,
 # Iluminação e Vibração *nada ajusta por controle*; o mesmo vale para
 # Navegação, Lançadores, Sistema e Perfis. Sobram as três em que o chip escolhe
 # de verdade.
+# ---------------------------------------------------------------------------
+# O QUE A FITA TEM ALÉM DOS CHIPS — 05/09/2026
+# ---------------------------------------------------------------------------
+# A CASCA DA FITA ESTAVA DIGITADA DUAS VEZES, e a segunda o piloto não conhecia:
+# `aba06.py` trocava o `title` no arquivo gerado e injetava o `data-campo` por
+# regex; o piloto — que troca o bloco INTEIRO a cada tique — emitia a casca
+# genérica de `monta.fita()` e LEVAVA OS DOIS EMBORA no primeiro tique.
+#
+# O QUE ISSO CUSTAVA, medido no DOM vivo em 05/09/2026:
+#
+#   * a 06 perdia o `title` que ela mesma escreveu — *"Não se aplica: mouse,
+#     teclado e gestos saem de um controle só…"* — e passava a exibir o genérico
+#     de leitura, que diz menos e é menos verdadeiro;
+#   * as abas 06 e 09 perdiam `data-campo="fita-chips"`, e com ele o endereço
+#     por onde `a06_navegacao.chips_da_fita` e `a09_sistema._html_da_fita`
+#     escrevem: os DOIS estavam mortos desde o primeiro tique, e régua nenhuma
+#     os cobrava.
+#
+# É a mesma cura que `ABAS_QUE_ESCOLHEM` deu ao `inerte` no mesmo dia: UM dono,
+# consultado pelo gerador do arquivo E pelo piloto da tela viva.
+TITULOS_DA_FITA: dict[str, str] = {
+    #: O `Player 1` NÃO É O JOGADOR DA MESA, e sim o que a decisão dela nomeia:
+    #: mouse, teclado e gestos saem de UM controle só, e o produto elege o de
+    #: menor número. A frase é a que o arquivo publicado já trazia desde 03/09.
+    "06-navegacao.html": (
+        "Não se aplica: mouse, teclado e gestos saem de um controle só — "
+        "o do Player 1 — e o que eles fazem é do perfil."
+    ),
+}
+
+#: O ENDEREÇO QUE O ARQUIVO PUBLICADO TRAZ nas abas 06 e 09.
+CAMPO_DA_FITA = "fita-chips"
+
+
+def casca_da_fita(pagina: str) -> str | None:
+    """O `title` PRÓPRIO daquela página, ou `None` para as nove comuns.
+
+    O ENDEREÇO NÃO ENTRA AQUI, E A RAZÃO FOI MEDIDA — 05/09/2026. A primeira
+    versão desta função também devolvia `data-campo="fita-chips"`, para que a
+    troca do bloco parasse de levá-lo embora. O resultado, com o daemon vivo:
+    **80 pinturas em 80 tiques** na aba 06 e 43 em 43 na 09, contra 2 em 80
+    antes — a fita trocando dez vezes por segundo com a mesa parada.
+
+    A CAUSA É QUE O ENDEREÇO TEM UM SEGUNDO DONO: `a06_navegacao.chips_da_fita`
+    e `a09_sistema._html_da_fita` escrevem `fita-chips` pelo laço de campos,
+    com chips DIFERENTES dos que `monta.fita()` emite. Revivê-lo põe os dois a
+    escrever o mesmo elemento, e cada um desfaz o outro no tique seguinte.
+
+    ENTÃO O ENDEREÇO FICA MORTO, como está desde 03/09 — e agora está medido e
+    escrito, em vez de descoberto de novo pela próxima pessoa. Ressuscitá-lo é
+    trabalho de APAGAR os dois escritores de pacote, que hoje não alcançam a
+    tela; e isso é dono de outra frente.
+    """
+    return TITULOS_DA_FITA.get(pagina)
+
+
 ABAS_QUE_ESCOLHEM: frozenset[str] = frozenset({
     "01-jogar", "02-controles", "08-conexoes"})
 

@@ -1338,10 +1338,17 @@ def _fita(mesa: list[dict[str, Any]], pagina: str) -> str:
         # `SystemExit` NÃO é `Exception` — herda de `BaseException`, e um
         # `except Exception` passa ao lado. O `except` abaixo cobre os dois.
         return ""
+    # O TÍTULO É DA PÁGINA, E TEM DONO — 05/09/2026. Sem esta linha a troca do
+    # bloco inteiro levava embora o `title` PRÓPRIO da 06 — *"Não se aplica:
+    # mouse, teclado e gestos saem de um controle só…"* — e punha no lugar o
+    # genérico de leitura, que diz menos e é menos verdadeiro. É a mesma cura
+    # que `ABAS_QUE_ESCOLHEM` deu ao `inerte` no mesmo dia: um dono só,
+    # consultado pelo gerador do arquivo E por aqui.
+    titulo = monta.casca_da_fita(pagina)
     try:
         return monta.fita(ativo=_pref_escolhido(mesa),
                           inerte=not _a_fita_desta_pagina_escolhe(pagina),
-                          mesa=mesa)
+                          mesa=mesa, titulo=titulo)
     except (Exception, SystemExit):
         return ""
 

@@ -926,7 +926,8 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     lido do aparelho. Os dois dizem a mesma coisa; um deles diz sempre.
 
     SEM `--plastico`, e o desenho não muda: nesta aba a fita nasce `inerte`
-    (`fita_viva=False`), e `.fita.inerte .chip.plastico` já sobrepõe a borda com
+    (fora de `monta.ABAS_QUE_ESCOLHEM`), e `.fita.inerte .chip.plastico` já
+    sobrepõe a borda com
     `var(--border-sutil)`. O hex do plástico ali nunca pintou um pixel — era só
     identidade congelada esperando alguém acreditar nela.
     """
@@ -937,7 +938,7 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     # na mesa, o botão que a 01 já não oferece. Ver a nota do bloco em `monta.py`.
     #
     # O `"todos"` É LITERAL AQUI PORQUE ELE É A ESCOLHA DESTA ABA: a fita nasce
-    # `inerte` (`fita_viva=False`) e não há gesto que a mova. É por ele ser
+    # `inerte` (fora de `monta.ABAS_QUE_ESCOLHEM`) e não há gesto que a mova. É por
     # CONSTANTE que a volta funciona sozinha — com o segundo controle de novo na
     # mesa, este mesmo `"todos"` reacende o `Todos`.
     mostra_todos, escolhido = monta.escolha_da_fita("todos", mesa)

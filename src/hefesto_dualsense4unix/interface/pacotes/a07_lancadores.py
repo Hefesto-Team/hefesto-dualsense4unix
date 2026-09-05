@@ -941,7 +941,7 @@ def _chip(controle: dict[str, Any]) -> str:
     pior — o nome do controle do desenho.
 
     O QUE NÃO ENTRA, E É DECISÃO DESTA ABA: o `--plastico` e o `title` do chip.
-    A fita daqui nasce ESMAECIDA (`fita_viva=False`, decisão dela de 28/08:
+    A fita daqui nasce ESMAECIDA (fora de `monta.ABAS_QUE_ESCOLHEM`, decisão dela de 28/08:
     nada nesta aba ajusta por controle), e `topo.html:207` apaga a borda de
     plástico justamente aí — *"a borda de 2px na cor do plástico é a marca da
     peça VIVA — some com a fita"*. Escrever uma cor que a folha de estilo
@@ -956,9 +956,14 @@ def _chip(controle: dict[str, Any]) -> str:
     if lido:
         partes.append(_texto(nome))
     partes.append(_texto(controle.get("via") or ""))
-    return ('<span class="chip plastico">'
+    # `<label>` E NÃO `<span>` — 05/09/2026. As outras nove abas emitem
+    # `LABEL` nos chips da fita (medido no DOM vivo), e a 07 era o único desvio
+    # de forma que sobrou. Ela é aba de LEITURA e não perde clique nenhum por
+    # isso; o que se perde é a forma ser a mesma nas dez, que é o que faz uma
+    # régua de fita valer para todas.
+    return ('<label class="chip plastico">'
             + ' <span class="pt">•</span> '.join(partes)
-            + "</span>")
+            + "</label>")
 
 
 def _texto(x: object) -> str:
@@ -1003,7 +1008,7 @@ def fita_html(mesa: list[dict[str, Any]]) -> str:
     tela dela.
     """
     return ('<span>Selecionar:</span>'
-            '<span class="chip on">Todos</span>'
+            '<label class="chip on">Todos</label>'
             + "".join(_chip(c) for c in mesa))
 
 
@@ -1076,7 +1081,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     O gerador já tinha medido isto e escrito no próprio arquivo: nenhuma função
     de `prontuario_dos_jogos` recebe controle, MAC, device ou transporte — os
     cinco impedimentos e as duas curas são fatos do JOGO EM DISCO. É por isso
-    que a fita desta aba nasce esmaecida (`fita_viva=False`) e por isso este
+    que a fita desta aba nasce esmaecida (fora de `monta.ABAS_QUE_ESCOLHEM`) e por isso este
     pacote não devolve `colunas`: não há nada a dizer por controle.
 
     NÃO DEPENDER DE CONTROLE NÃO É PODER MENTIR SOBRE ELE — 03/09/2026. A fita
