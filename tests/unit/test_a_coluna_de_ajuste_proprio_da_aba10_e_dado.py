@@ -170,11 +170,14 @@ def test_o_produto_acende_a_celula_do_controle_certo() -> None:
         "escrito lá — o alvo `classe` existe no piloto desde 03/09/2026.")
 
     largura = len(a10_perfis.SECOES_DA_COLUNA)
-    assert len(emitido) == len(MESA) * largura, (
-        f"a emissão tem {len(emitido)} valores para {len(MESA)} controles x "
-        f"{largura} seções. O bootstrap distribui a lista pela ordem do "
-        f"documento: um bloco a menos casa a célula de um controle com a do "
-        f"vizinho.")
+    # A CONTA É DA TABELA, e não da mesa — 05/09/2026, ver
+    # `a10_perfis._com_os_lugares_vazios`. O bootstrap distribui a lista pela
+    # ordem do documento: um bloco a menos casa a célula de um controle com a
+    # do vizinho, e um bloco a menos que a TABELA deixa o lugar vazio sem quem
+    # acenda a marca que esconde os glifos do mockup.
+    assert len(emitido) == a10_perfis.LUGARES_DA_TABELA * largura, (
+        f"a emissão tem {len(emitido)} valores para uma tabela de "
+        f"{a10_perfis.LUGARES_DA_TABELA} linhas x {largura} seções.")
 
     # UMA LINHA POR CONTROLE, na ordem da mesa.
     linhas = [emitido[i * largura:(i + 1) * largura] for i in range(len(MESA))]

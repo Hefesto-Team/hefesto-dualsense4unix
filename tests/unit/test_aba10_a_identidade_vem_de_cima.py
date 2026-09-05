@@ -158,8 +158,12 @@ def test_o_pacote_manda_a_cor_do_plastico_de_cada_controle(disco: list[Any]) -> 
     assert BARRA in fora, (
         "o pacote da 10 não manda a cor do plástico: a barra fica com a do "
         "mockup para sempre, e dar endereço sem escritor é maquiagem")
+    # A LISTA TEM AS QUATRO LINHAS DA TABELA desde 05/09/2026 (ver
+    # `_com_os_lugares_vazios`); as duas de baixo não têm peça, logo não têm
+    # cor — `""` devolve a barra ao `transparent` da classe, que é o lugar
+    # vazio não afirmando cor nenhuma.
     assert fora[BARRA] == [monta.cor_da_zona("white"),
-                           monta.cor_da_zona("galactic-purple")], (
+                           monta.cor_da_zona("galactic-purple"), "", ""], (
         "a cor da barra não é a do mapa. Ela tem de sair de "
         "`cor_da_zona()` — o mesmo `<style>` de onde a fita tira a do chip")
 

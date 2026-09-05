@@ -661,14 +661,28 @@
   [data-controle][data-conectado="nao"]:not(.vazia) textarea,
   [data-controle][data-conectado="nao"]:not(.vazia) [contenteditable]{
     display:none !important}
-  /* E O QUE SOBRA FICA APAGADO — o rótulo, o desenho e os números que o
-     travessão do pacote já escreveu. Sem isto o nome do plástico continuaria
-     colorido em cima de uma coluna sem aparelho. */
+  /* E O QUE SOBRA FICA APAGADO — o rótulo e os números que o travessão do
+     pacote já escreveu. Sem isto o nome do plástico continuaria colorido em
+     cima de uma coluna sem aparelho. */
   [data-controle][data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
-  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg .peca,
-  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg .corpo,
-  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg .miolo *{
-    fill:var(--linha) !important}
+
+  /* O DESENHO DO CONTROLE SOME — 05/09/2026, e a palavra é dela: *"os svgs não
+     deveriam aparecer prós demais controles desconectados"*.
+
+     A VERSÃO ANTERIOR DESTA REGRA PINTAVA o SVG de `var(--linha)` em vez de o
+     tirar. Era menos do que ela pediu e pior do que parecia: um controle
+     cinza-chumbo continua sendo um CONTROLE desenhado, e a coluna vazia
+     passava a mostrar um aparelho apagado ao lado de três travessões — a tela
+     desenhando o que não está aqui. Sumir é a resposta honesta, e é a mesma
+     que a S-04 já dava aos botões um parágrafo acima.
+
+     A ALTURA DA FAIXA NÃO CAI JUNTO, e é por isso que a regra é `visibility` e
+     não `display`: as colunas dividem a mesma linha de grade, e um `display:
+     none` faria a faixa do desenho encolher para a altura do travessão — as
+     quatro colunas desalinhariam e a do controle conectado mudaria de tamanho
+     conforme a mesa. `visibility:hidden` tira a tinta e guarda o lugar. */
+  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg{
+    visibility:hidden !important}
 
   /* ---- S-03 · O BOTÃO QUE VAI RECUSAR JÁ NASCE CINZA (D-03) ----
      A CARA É A DO `.seg button:disabled`, letra por letra. O que muda é o
@@ -856,13 +870,39 @@
      escolhida nas posições pares — metade das linhas sem marca. */
   .tab tr.ativo td{color:var(--green);font-weight:600}
   .tab tr.ativo td:first-child{box-shadow:inset 3px 0 0 var(--green)}
-  .tab tbody tr[aria-selected="true"] td{background:var(--sel-bg);color:var(--fg);
-          font-weight:600}
+  /* O REALCE DA ESCOLHIDA NÃO PODE SER A COR DO `:hover` — 05/09/2026, e a
+     queixa é dela: *"caso eu clicasse em outro perfil dos disponíveis ele não
+     tinha nada selecionado em termo visual pra divergir dos demais e do
+     ativo"*.
+
+     MEDIDO: o dado estava CERTO. O produto escreve `aria-selected="true"` na
+     linha clicada e `false` nas outras — conferido chamando `selecionar` e
+     lendo o `<tbody>` que o pacote emite. O que estava errado era a COR: a
+     linha escolhida e a linha sob o mouse usavam as duas `var(--sel-bg)`, a
+     mesma `rgba(189,147,249,.16)`. Ela passa o mouse pela lista e toda linha
+     acende igual à escolhida; a marca existia e não marcava nada.
+
+     OS TRÊS ESTADOS PASSAM A SER TRÊS COISAS DIFERENTES:
+
+       passando o mouse   um véu BRANCO fraco — "estou por cima", nada mais
+       escolhida          roxo FORTE, negrito, e a barra roxa de 3px
+       ativa              verde no texto e barra verde (a cor não muda aqui)
+
+     O roxo da escolhida dobrou (.16 -> .30). Ele não é gosto: com o `:hover`
+     por cima ele ainda precisa ler como "esta é OUTRA coisa", e .16 sobre um
+     véu branco de .06 é indistinguível a olho nu. */
+  .tab tbody tr[aria-selected="true"] td{background:rgba(189,147,249,.30);
+          color:var(--fg);font-weight:600}
   .tab tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 0 var(--purple)}
   .tab tbody tr.ativo[aria-selected="true"] td{color:var(--green)}
   .tab tbody tr.ativo[aria-selected="true"] td:first-child{
           box-shadow:inset 3px 0 0 var(--green),inset 6px 0 0 var(--purple)}
-  .tab tbody tr:hover:not(.ativo):not([aria-selected="true"]) td{background:var(--sel-bg)}
+  .tab tbody tr:hover:not(.ativo):not([aria-selected="true"]) td{
+          background:rgba(255,255,255,.06)}
+  /* E a linha ATIVA também responde ao mouse, sem virar a escolhida: ela não
+     entrava em regra de `:hover` nenhuma e ficava morta sob o cursor. */
+  .tab tbody tr.ativo:hover:not([aria-selected="true"]) td{
+          background:rgba(255,255,255,.06)}
   /* `Pri.` VIROU `Priorização` — 31/08/2026, pedido dela. Os 46px do valor
      antigo JÁ NÃO ERAM VERDADE: `table-layout` é `auto`, então `width` é
      sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa  # (noqa-acento) id
@@ -1203,6 +1243,11 @@
      só o token — e não o CONTRASTE contra o fundo de CADA aba — que o lugar
      vazio da Jogar saiu mais aceso que o controle na mesa, em 31/08. */
   .tab.miuda tr.fora .gd-nome{color:var(--comment)}
+  /* O GLIFO SOME NO LUGAR SEM CONTROLE — 05/09/2026, palavra dela.
+     `visibility` e não `display`: a fileira guarda a altura da linha, e um
+     `display:none` faria as quatro linhas da tabela mudarem de altura conforme
+     a mesa — a tabela inteira pulando quando um controle entra ou sai. */
+  .tab.miuda tr.fora .gr{visibility:hidden}
 
 </style>
 </head>
@@ -1570,7 +1615,7 @@
                     <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
-                  <tr data-hef-uniq="p1">
+                  <tr data-hef-uniq="p1" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:#ae335a"></span>
@@ -1638,7 +1683,7 @@
 </svg></span></span></td>
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:01</td>
                   </tr>
-                  <tr data-hef-uniq="p2">
+                  <tr data-hef-uniq="p2" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:#7eb8d4"></span>
@@ -1706,7 +1751,7 @@
 </svg></span></span></td>
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:02</td>
                   </tr>
-                  <tr data-hef-uniq="p3" class="fora"
+                  <tr data-hef-uniq="p3" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora" class="fora"
                       title="Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: quando o P3 voltar, ele encontra o que você deixou.">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
@@ -1775,7 +1820,7 @@
 </svg></span></span></td>
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:03</td>
                   </tr>
-                  <tr data-hef-uniq="p4" class="fora"
+                  <tr data-hef-uniq="p4" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora" class="fora"
                       title="Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: quando o P4 voltar, ele encontra o que você deixou.">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"

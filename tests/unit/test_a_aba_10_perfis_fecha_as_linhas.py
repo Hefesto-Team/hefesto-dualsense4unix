@@ -277,13 +277,29 @@ def test_a_lista_emitida_tem_um_bloco_por_controle_da_mesa() -> None:
     mesa"*). Ela morre aqui, e com número: `_linhas_da_guarda` itera a MESA, e
     um bloco a mais empurraria os valores para a linha seguinte.
     """
+    # **O TAMANHO PASSOU A SER O DA TABELA, E NÃO O DA MESA — 05/09/2026.** A
+    # hipótese que esta régua matou continua morta, e com número: um bloco a
+    # MAIS que a tabela empurraria os valores para a linha seguinte. O que
+    # mudou é o alvo da conta. O pacote emite as QUATRO linhas por decisão dela
+    # (*"os svgs não deveriam aparecer prós demais controles desconectados"*):
+    # o `forEach` do bootstrap escreve `''` no que sobra, e `''` APAGA uma
+    # classe sem nunca ACENDÊ-LA — o lugar vazio não tinha como ligar o `fora`
+    # que esconde os glifos. A régua fica MAIS estrita: o número não depende
+    # mais de quantos controles estão na mesa, então uma mesa que encolha não
+    # pode mais encolher a lista sem reprovar.
+    largura = len(a10_perfis.SECOES_DA_COLUNA)
+    esperado = a10_perfis.LUGARES_DA_TABELA * largura
     for quantos in (1, 2):
         fora = _emitido(_perfil({MESA[0]["uniq"]: ["leds"]}), mesa=MESA[:quantos])
-        esperado = quantos * len(a10_perfis.SECOES_DA_COLUNA)
         assert len(fora["guarda.secao"]) == esperado, (
             f"com {quantos} controle(s) na mesa a lista tem "
-            f"{len(fora['guarda.secao'])} valores, e a tabela espera blocos de "
-            f"{len(a10_perfis.SECOES_DA_COLUNA)} — {esperado}")
+            f"{len(fora['guarda.secao'])} valores, e a tabela tem "
+            f"{a10_perfis.LUGARES_DA_TABELA} linhas de {largura} — {esperado}")
+        # E OS BLOCOS QUE SOBRAM SÃO VAZIOS, não repetição do vizinho.
+        for linha in range(quantos, a10_perfis.LUGARES_DA_TABELA):
+            bloco = fora["guarda.secao"][linha * largura:(linha + 1) * largura]
+            assert bloco == [""] * largura, (
+                f"a linha {linha + 1} não tem controle e veio com {bloco!r}")
 
 
 # ---------------------------------------------------------------------------

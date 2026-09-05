@@ -294,13 +294,39 @@ CSS = CSS_GLIFO + """
      escolhida nas posições pares — metade das linhas sem marca. */
   .tab tr.ativo td{color:var(--green);font-weight:600}
   .tab tr.ativo td:first-child{box-shadow:inset 3px 0 0 var(--green)}
-  .tab tbody tr[aria-selected="true"] td{background:var(--sel-bg);color:var(--fg);
-          font-weight:600}
+  /* O REALCE DA ESCOLHIDA NÃO PODE SER A COR DO `:hover` — 05/09/2026, e a
+     queixa é dela: *"caso eu clicasse em outro perfil dos disponíveis ele não
+     tinha nada selecionado em termo visual pra divergir dos demais e do
+     ativo"*.
+
+     MEDIDO: o dado estava CERTO. O produto escreve `aria-selected="true"` na
+     linha clicada e `false` nas outras — conferido chamando `selecionar` e
+     lendo o `<tbody>` que o pacote emite. O que estava errado era a COR: a
+     linha escolhida e a linha sob o mouse usavam as duas `var(--sel-bg)`, a
+     mesma `rgba(189,147,249,.16)`. Ela passa o mouse pela lista e toda linha
+     acende igual à escolhida; a marca existia e não marcava nada.
+
+     OS TRÊS ESTADOS PASSAM A SER TRÊS COISAS DIFERENTES:
+
+       passando o mouse   um véu BRANCO fraco — "estou por cima", nada mais
+       escolhida          roxo FORTE, negrito, e a barra roxa de 3px
+       ativa              verde no texto e barra verde (a cor não muda aqui)
+
+     O roxo da escolhida dobrou (.16 -> .30). Ele não é gosto: com o `:hover`
+     por cima ele ainda precisa ler como "esta é OUTRA coisa", e .16 sobre um
+     véu branco de .06 é indistinguível a olho nu. */
+  .tab tbody tr[aria-selected="true"] td{background:rgba(189,147,249,.30);
+          color:var(--fg);font-weight:600}
   .tab tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 0 var(--purple)}
   .tab tbody tr.ativo[aria-selected="true"] td{color:var(--green)}
   .tab tbody tr.ativo[aria-selected="true"] td:first-child{
           box-shadow:inset 3px 0 0 var(--green),inset 6px 0 0 var(--purple)}
-  .tab tbody tr:hover:not(.ativo):not([aria-selected="true"]) td{background:var(--sel-bg)}
+  .tab tbody tr:hover:not(.ativo):not([aria-selected="true"]) td{
+          background:rgba(255,255,255,.06)}
+  /* E a linha ATIVA também responde ao mouse, sem virar a escolhida: ela não
+     entrava em regra de `:hover` nenhuma e ficava morta sob o cursor. */
+  .tab tbody tr.ativo:hover:not([aria-selected="true"]) td{
+          background:rgba(255,255,255,.06)}
   /* `Pri.` VIROU `Priorização` — 31/08/2026, pedido dela. Os 46px do valor
      antigo JÁ NÃO ERAM VERDADE: `table-layout` é `auto`, então `width` é
      sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa  # (noqa-acento) id
@@ -641,6 +667,11 @@ CSS = CSS_GLIFO + """
      só o token — e não o CONTRASTE contra o fundo de CADA aba — que o lugar
      vazio da Jogar saiu mais aceso que o controle na mesa, em 31/08. */
   .tab.miuda tr.fora .gd-nome{color:var(--comment)}
+  /* O GLIFO SOME NO LUGAR SEM CONTROLE — 05/09/2026, palavra dela.
+     `visibility` e não `display`: a fileira guarda a altura da linha, e um
+     `display:none` faria as quatro linhas da tabela mudarem de altura conforme
+     a mesa — a tabela inteira pulando quando um controle entra ou sai. */
+  .tab.miuda tr.fora .gr{visibility:hidden}
 """
 
 # O CADEADO, EM DOIS TRAÇOS — decisão [01] do PO, 04/09/2026. Ver o bloco
@@ -908,7 +939,21 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
             f'\n                      title="Nenhum controle neste lugar. O perfil '
             f"guarda o que está aqui pelo ID da peça: quando o P{c['jogador']} "
             f'voltar, ele encontra o que você deixou."')
-    return f'''                  <tr data-hef-uniq="{endereco}"{'' if na_mesa else ' class="fora"'}{dica}>
+    # A CLASSE `fora` PASSA A SER PINTÁVEL — 05/09/2026, palavra dela: *"os svgs
+    # não deveriam aparecer prós demais controles desconectados"*.
+    #
+    # ATÉ AQUI ELA ERA SÓ DO DESENHO. O piloto não repintava a classe da `<tr>`,
+    # então uma linha que o MOCKUP desenhou como conectada continuava sem `fora`
+    # com a mesa vazia — e a fileira de glifos daquele lugar ficava na tela,
+    # apagada mas DESENHADA, ao lado de um nome que já dizia `—`. O produto
+    # mostrando um controle que não está aqui.
+    #
+    # O ENDEREÇO É PRÓPRIO (`guarda.vazio`) E O ALVO É `classe`, com
+    # `data-hef-classe="fora"` — o pintor liga UMA classe por elemento, e é esta.
+    # Quem manda o valor é `a10_perfis`, que agora emite as QUATRO linhas em vez
+    # de só as da mesa: sem as quatro, o `forEach` do bootstrap escreveria `''`
+    # no que sobra e a linha vazia voltaria a não ser marcada.
+    return f'''                  <tr data-hef-uniq="{endereco}" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora"{'' if na_mesa else ' class="fora"'}{dica}>
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:{plastico}"></span>

@@ -119,7 +119,14 @@ from typing import Any
 # insere no import do pacote.
 from hefesto_dualsense4unix.app.actions import perfis_web as _tela
 
-from . import Contexto, perfil, registrar
+from . import (
+    PONTO_DO_ROTULO,
+    SEM_NINGUEM_AQUI,
+    TODOS_OS_LUGARES,
+    Contexto,
+    perfil,
+    registrar,
+)
 
 #: CORRIGIDO EM 01/09/2026. Estava escrito que a lista "vem de `profiles.*`, não
 #: do state_full" — e daí eu concluí que não tinha dono. `profile.list` é um
@@ -1198,6 +1205,36 @@ def _rotulo_do_remover(alvo: str) -> str:
     return "Remover"
 
 
+#: QUANTOS LUGARES A TABELA DE AJUSTE PRÓPRIO TEM. Não é digitado aqui: é a
+#: mesma constante que a mesa das dez abas usa, e o desenho da `aba10` emite uma
+#: linha por lugar dela.
+LUGARES_DA_TABELA = len(TODOS_OS_LUGARES)
+
+
+def _com_os_lugares_vazios(da_mesa: list, para_o_vazio) -> list:
+    """A lista da mesa completada até os quatro lugares do desenho.
+
+    NASCEU EM 05/09/2026, da palavra dela — *"os svgs não deveriam aparecer prós
+    demais controles desconectados"*. Antes disto o pacote mandava só as linhas
+    da mesa e o `forEach` do bootstrap escrevia `''` no que sobrava. `''` serve
+    para APAGAR (uma classe, uma cor, um texto) e nunca para ACENDER — e o
+    lugar vazio precisa acender uma classe (`fora`) e escrever um rótulo
+    (`P3 • Desconectado`). Sem as quatro, os dois voltam a ser do desenho, que
+    é quem não sabe quantos controles estão na mesa.
+
+    ``para_o_vazio`` recebe o NÚMERO do lugar (1..4) e devolve o valor daquela
+    linha — uma função, e não um valor fixo, porque o rótulo do lugar vazio traz
+    o próprio número.
+
+    Sobra de mesa não é aparada: uma mesa maior que o desenho é outro defeito, e
+    escondê-lo aqui faria esta função mentir sobre o tamanho da tabela.
+    """
+    completa = list(da_mesa)
+    for n in range(len(completa) + 1, LUGARES_DA_TABELA + 1):
+        completa.append(para_o_vazio(n))
+    return completa
+
+
 @registrar("10-perfis.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `app/actions/perfis_web.pacote_da_aba` — a camada do PRODUTO.
@@ -1378,13 +1415,35 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # pelo travessão. Nesta casa `—` quer dizer *"não sei"*; o que a linha
         # tem a dizer é *"não há controle aqui"*, que são coisas diferentes.
         #
-        # NÃO CUREI, e a razão é que o conserto é ESCOLHA, não digitação: ou o
-        # pacote passa a mandar o rótulo do lugar vazio (e aí quem o escreve
-        # deixa de ser o desenho), ou o piloto ganha um jeito de NÃO escrever num
-        # endereço cujo valor é vazio — que é território das dez abas. Está no
-        # relatório da frente da consistência.
-        fora["guarda.nome"] = [g.get("nome", "") for g in guarda]
-        fora["guarda.id"] = [g.get("id", "") for g in guarda]
+        # **ELA ESCOLHEU — 05/09/2026:** *"os svgs não deveriam aparecer prós
+        # demais controles desconectados"*. A escolha que faltava era esta, e
+        # ela decide as duas metades de uma vez: o pacote passa a mandar as
+        # QUATRO linhas, e quem escreve o rótulo do lugar vazio deixa de ser o
+        # desenho.
+        #
+        # O QUE MUDA, linha por linha:
+        #
+        #   `guarda.nome`     o lugar sem controle diz `P3 • Desconectado` — o
+        #                     rótulo que ela pediu em 31/08 e que o travessão
+        #                     do `escrever()` vinha apagando;
+        #   `guarda.vazio`    endereço NOVO, alvo `classe`: liga o `fora` na
+        #                     `<tr>`, e o CSS da `aba10` esconde os glifos dali;
+        #   `guarda.id`       continua vazio -> `—`, que é a verdade: sem peça
+        #                     no lugar, não há ID a mostrar;
+        #   `guarda.plastico` continua vazio: cor nenhuma, como já era.
+        #
+        # POR QUE AS QUATRO E NÃO SÓ AS DA MESA: o `forEach` do bootstrap
+        # distribui a lista pela ordem do documento e escreve `''` no que sobra.
+        # `''` apaga uma classe — nunca a LIGA. Mandar só as linhas da mesa
+        # deixaria o `fora` sem quem o acendesse, e os glifos voltariam.
+        nomes_da_mesa = [g.get("nome", "") for g in guarda]
+        fora["guarda.nome"] = _com_os_lugares_vazios(
+            nomes_da_mesa,
+            lambda n: f"P{n} {PONTO_DO_ROTULO} {SEM_NINGUEM_AQUI}")
+        fora["guarda.vazio"] = _com_os_lugares_vazios(
+            ["" for _ in guarda], lambda _n: "sim")
+        fora["guarda.id"] = _com_os_lugares_vazios(
+            [g.get("id", "") for g in guarda], lambda _n: "")
         # A COR DO PLÁSTICO DA LINHA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA. É a
         # barra de 3px que diz de quem é a linha, e ela era o `--plastico` do
         # DESENHO cravado no `<tr>`: enquanto o nome ao lado já vinha do
@@ -1394,7 +1453,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # desenho deixa as barras que sobram com `''` — que APAGA a cor de
         # linha e devolve a barra ao `transparent` da classe. É o lugar vazio
         # não mostrando cor nenhuma, em vez de guardar a do mockup.
-        fora["guarda.plastico"] = [g.get("plastico", "") for g in guarda]
+        fora["guarda.plastico"] = _com_os_lugares_vazios(
+            [g.get("plastico", "") for g in guarda], lambda _n: "")
         # OS DOIS ABAIXO CONTINUAM SENDO MONTADOS, e o `pop` do fim é quem os
         # retira. Apagar as duas linhas daria o mesmo resultado hoje e deixaria
         # `NAO_PINTAVEIS` sem mordida: uma lista que não segura nada fica verde
@@ -1434,10 +1494,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # quatro linhas. O `forEach` escreve `''` no que sobra, o alvo `classe`
         # lê isso como apagado, e a linha vazia deixa de exibir o que o MOCKUP
         # guardava. É o mesmo tratamento que `guarda.nome` e `guarda.id` já dão.
-        fora["guarda.secao"] = [
-            "sim" if (g.get("secoes") or {}).get(secao) else ""
+        por_linha = [
+            ["sim" if (g.get("secoes") or {}).get(secao) else ""
+             for secao in SECOES_DA_COLUNA]
             for g in guarda
-            for secao in SECOES_DA_COLUNA
+        ]
+        fora["guarda.secao"] = [
+            valor
+            for bloco in _com_os_lugares_vazios(
+                por_linha, lambda _n: ["" for _ in SECOES_DA_COLUNA])
+            for valor in bloco
         ]
         fora["guarda.linhas"] = str(len(guarda))
 
