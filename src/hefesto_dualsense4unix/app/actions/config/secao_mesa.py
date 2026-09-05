@@ -1854,8 +1854,16 @@ _GABINETE_DELA = "Você disse que a sua traseira tem {numero}."
 
 #: O botão que abre a cerimônia de calibração — a janela que a leva 1 entregou
 #: inteira e que até 26/08/2026 não tinha porta nenhuma.
-#: PROVISÓRIO — decisão dela.
-_BOTAO_CALIBRAR = "Ensinar as minhas entradas"
+#:
+#: O NOME É DELA E ESPERAVA DESDE 28/08/2026 — a outra metade da
+#: `D-MAPEAR-ENTRADAS-E-NAO-PORTAS`, cumprida em 05/09. Ela pediu "Mapear
+#: Portas" e "Mapear Porta a Porta"; vista a colisão com a `D-A-PALAVRA-ENTRADA`
+#: (que diz que esta aba fala **entrada**, nunca **porta**, para não colidir com
+#: porta de rede), ela escolheu manter "entrada": *"Ensinar as minhas entradas"*
+#: vira **Mapear Entrada a Entrada**. O par `_BOTAO_DESENHAR` já tinha sido
+#: cumprido na ordem de 05/09 sobre a palavra "mesa"; este ficou porque não
+#: dizia a palavra.
+_BOTAO_CALIBRAR = "Mapear Entrada a Entrada"
 
 #: A dica do botão. Diz o que a cerimônia faz e o que ela custa, porque a fase
 #: em pé manda a pessoa para trás do gabinete e isso não pode ser surpresa.

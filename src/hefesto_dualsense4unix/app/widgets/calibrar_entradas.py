@@ -172,8 +172,13 @@ FACE_QUE_E_PERTO = FACE_FRENTE
 #: onde ``FaceDeclarada.alto`` pode vir, e pela mesma razão.
 FACE_QUE_E_ALTO = FACE_MESA
 
-#: PROVISÓRIO — decisão dela: texto novo, e a prova de tela não fechou.
-TITULO_DA_JANELA = "Calibrar as entradas"
+#: O TÍTULO É O DO BOTÃO QUE ABRE ESTA JANELA, e essa é a regra: uma tela que
+#: se chama diferente do botão manda a pessoa procurar o que não existe.
+#: `D-MAPEAR-ENTRADAS-E-NAO-PORTAS` (28/08/2026), cumprida em 05/09 — o
+#: gerador da aba 08 vinha REMENDANDO esta frase na tela desde então, com um
+#: `assert` que dizia *"no dia em que o produto corrigir, a troca deixa de
+#: casar e a geração PARA"*. Este é o dia; a remenda saiu junto.
+TITULO_DA_JANELA = "Mapear Entrada a Entrada"
 PERGUNTA_SENTADA = "Onde fica esta entrada?"
 PERGUNTA_DO_HUB = "Onde fica o hub?"
 SEM_SAIR_DA_CADEIRA = "sem sair da cadeira"

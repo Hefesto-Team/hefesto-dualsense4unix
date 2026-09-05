@@ -2488,29 +2488,24 @@ def veredito(n, esticada=False):
 LACUNAS = ["LACUNA_POSICAO", "LACUNA_VELOCIDADE", "LACUNA_ESPECIE"]
 
 # ---------------------------------------------------------------------------
-# UMA COLISÃO DE NOME QUE A POP-UP DESCOBRIU, E O QUE ELA CUSTA NO PRODUTO.
+# A COLISÃO DE NOME QUE A POP-UP DESCOBRIU — CURADA NO PRODUTO EM 05/09/2026.
 #
-# A confissão da velocidade manda a pessoa a uma tela pelo nome: *"enquanto você
-# não passar por «Calibrar as entradas», eu trato todas como pretas"*. Esse é o
-# `TITULO_DA_JANELA` da outra janela — e o botão que a abre chama-se, desde
-# 28/08, **{MAPEAR_UMA_A_UMA}** (`D-MAPEAR-ENTRADAS-E-NAO-PORTAS`). Deixar o
-# nome velho aqui mandaria ela procurar um botão que não existe nesta aba.
+# A confissão da velocidade mandava a pessoa a uma tela pelo nome VELHO:
+# *"enquanto você não passar por «Calibrar as entradas», eu trato todas como
+# pretas"* — e o botão que a abre chamava-se, desde 28/08,
+# **Mapear Entrada a Entrada** (`D-MAPEAR-ENTRADAS-E-NAO-PORTAS`). A tela
+# mostrava o nome certo REMENDANDO a frase do produto aqui, com um `assert`
+# que parava a geração no dia em que o produto corrigisse.
 #
-# A tela mostra o nome CERTO; quem tem de mudar é o produto, e em TRÊS lugares
-# (`mapa_da_mesa.CONFISSAO`, `calibrar_entradas.TITULO_DA_JANELA` e o
-# `mapa_da_mesa.TITULO_DA_JANELA`, que diz "A minha mesa" onde o botão diz
-# "{MAPEAR_ENTRADAS}"). O `assert` abaixo é o portão: no dia em que o produto
-# corrigir, a troca deixa de casar e a geração PARA — em vez de a tela passar a
-# corrigir em silêncio uma frase que já está certa.
+# ESTE É O DIA, e os três lugares que o `assert` nomeava foram corrigidos:
+# `calibrar_entradas.TITULO_DA_JANELA`, `mapa_da_mesa.CONFISSAO
+# [LACUNA_VELOCIDADE]` e `secao_mesa._BOTAO_CALIBRAR`. A remenda sai junto —
+# uma tela que corrige uma frase JÁ CERTA é uma segunda verdade esperando para
+# divergir.
+#
+# `mapa_da_mesa.TITULO_DA_JANELA` já dizia "Mapear Entradas" e não entrava
+# nesta troca.
 # ---------------------------------------------------------------------------
-NOME_VELHO_DA_CALIBRACAO = "Calibrar as entradas"
-_alvo = MAPA["CONFISSAO"]["LACUNA_VELOCIDADE"]
-if NOME_VELHO_DA_CALIBRACAO not in _alvo:
-    raise SystemExit(
-        f"ERRO: a confissão da velocidade não diz mais “{NOME_VELHO_DA_CALIBRACAO}”. "
-        f"Se o produto já a chama de “{MAPEAR_UMA_A_UMA}”, apague esta troca.")
-MAPA["CONFISSAO"]["LACUNA_VELOCIDADE"] = _alvo.replace(
-    NOME_VELHO_DA_CALIBRACAO, MAPEAR_UMA_A_UMA)
 
 # ---------------------------------------------------------------------------
 # A CONFISSÃO SAIU DO CORPO E VIROU DICA — decisão dela, 29/08/2026.
@@ -3320,7 +3315,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>Os dois botões abrem agora, e o que abre não é tela nova.</b> <b>{MAPEAR_ENTRADAS}</b> é a janela <code>mapa_da_mesa.py</code> e <b>{MAPEAR_UMA_A_UMA}</b> é a <code>calibrar_entradas.py</code>, as duas já rodando. <b>Todo texto delas sai do produto, lido por AST</b> — a mesma disciplina dos sete números do rádio. O que o AST não alcança (o veredito de cada entrada, os dois relógios, as três dicas de botão) tem portão: a geração <b>para</b> se a frase deixar de existir no fonte.</li>
     <li><b>A cena é a SUA mesa, e é a ordem de serviço desta aba sendo cumprida.</b> O aparelho na mão é o adaptador <b>“{ADAPTADORES[0]["nome"]}”</b>, que o exame manda tirar da <b>Entrada 3</b> — e com ele escolhido cada quadrado publica o juízo <i>para ele</i>. Os cinco estados da tela são os cinco que a janela sabe produzir: <b>ocupada</b>, <b>indisponível</b>, <b>serve</b>, <b>vale evitar</b> e <b>melhor lugar</b>. Os três do modo ideal (<i>chega</i>, <i>sai</i>, <i>fica</i>) <b>não entram</b>: vêm do plano, e esta janela não calcula plano nenhum.</li>
     <li><b>Nenhum plug é azul, e a própria tela diz por quê.</b> A velocidade vem dos nós declarados, e quem os escreve é a OUTRA janela — logo toda entrada desenhada aqui sai <code>usb=2</code>. Pintar azul contradiria a confissão três blocos abaixo. <b>Mas repare a tensão</b>: o exame desta aba afirma que a Entrada 3 é <b>USB 3.0</b> e a 9 é <b>2.0</b>. As duas telas são honestas cada uma no seu canto, e o produto ainda não junta o que já sabe.</li>
-    <li><b>Um nome não batia, e a tela corrigiu: a confissão mandava você a “Calibrar as entradas”.</b> Esse é o título da outra janela no código; o botão desta aba chama-se <b>{MAPEAR_UMA_A_UMA}</b> desde 28/08. A frase da tela já diz o nome certo — <b>quem falta corrigir é o produto</b>, e hoje em <b>dois</b> lugares: a confissão e o título da janela de calibrar. <b>O terceiro fechou em 05/09</b>: o <code>TITULO_DA_JANELA</code> do desenho dizia <i>“A minha mesa”</i> e agora diz <b>{MAPEAR_ENTRADAS}</b>, junto com o botão que o abre — a ordem dela de tirar a palavra “mesa” da tela cumpriu a <code>D-MAPEAR-ENTRADAS-E-NAO-PORTAS</code> pela metade que dizia a palavra.</li>
+    <li><b>Um nome não batia, e agora bate — no produto.</b> A confissão da velocidade mandava você a “Calibrar as entradas”, que era o título da outra janela no código; o botão desta aba chama-se <b>{MAPEAR_UMA_A_UMA}</b> desde 28/08. Até 05/09 a tela CORRIGIA a frase do produto ao gerar; agora os três lugares dizem o mesmo nome (<code>calibrar_entradas.TITULO_DA_JANELA</code>, <code>mapa_da_mesa.CONFISSAO</code> e <code>secao_mesa._BOTAO_CALIBRAR</code>) e a remenda saiu. <b>Uma tela que corrige uma frase já certa é uma segunda verdade esperando para divergir.</b></li>
     <li><b>As duas perguntas da sala chegaram, e vieram inteiras</b> — pergunta, dica e as três opções, literais de onde moravam. A da altura está respondida e a da visada não, de propósito: <b>sem resposta não é “Não sei”</b>, e a tela precisa mostrar os dois. <b>O preço, escrito:</b> elas gravam sob <code>mesa</code> e o desenho grava sob <code>mapa</code> — chaves com disciplinas diferentes (substituição num, fusão no outro). É trabalho de código, não de desenho, e a sprint que as implementar tem de saber disto.</li>
     <li><b>A cerimônia são TRÊS telas, ligadas pelos próprios botões dela</b>: a pergunta sentada, o fim da parte sem levantar, e a fase em pé. Custa só HTML e não mente sobre transição nenhuma — a webcam é o único aparelho sem lugar, então responder <i>aquela</i> pergunta leva mesmo ao fim.</li>
     <li><b>A frase do jogo aberto está amarrada ao FOCO, e ela é ESPECIFICAÇÃO.</b> A tela diz <i>“enquanto esta janela estiver na frente”</i>, e não “enquanto estiver aberta”, porque é no foco que a janela toma o controle. <b>Hoje o produto não faz isso</b>: a peneira está escrita e não tem quem a chame — é lápide viva do portão da casa. A frase depende da <code>ONDA-CONEXOES-10</code>. Por isso também <b>nenhum glifo de X/O/D-pad</b> acompanha: hoje o botão não anda na janela <i>e</i> chega ao jogo.</li>
