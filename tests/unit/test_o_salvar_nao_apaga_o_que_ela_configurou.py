@@ -201,3 +201,106 @@ def test_os_dois_viajam_com_nome_novo(perfil_configurado: str) -> None:
     saiu = _round_trip("um-nome-que-nao-existia", perfil_configurado)
     assert saiu.button_actions == {"circle": "KEY_ESC"}
     assert saiu.teclado_emulado is True
+
+
+# --------------------------------------------------------------------------
+# 3. o ciclo inteiro dela — o que o rodapé passou a LER do vivo
+# --------------------------------------------------------------------------
+#: O QUE O DAEMON PUBLICA POR PEÇA, medido no `daemon.state_full` da bancada em
+#: 05/09/2026 com um DualSense na mesa. As chaves estão escritas aqui com o
+#: nome exato que ele usa — `mic_mudo` e não `muted`, `volume_captura` e não
+#: `volume` —, e a régua morre se algum mudar, que é o ponto: um nome que o
+#: daemon renomeia sem avisar faz o rodapé voltar a ler `None` calado.
+VIVO_DA_PECA: dict[str, Any] = {
+    "speaker": {"volume": 102, "muted": False},
+    "audio": {"mic_mudo": True, "volume_captura": 44},
+    "sensores": {"giroscopio_ligado": False, "acelerometro_ligado": True},
+}
+
+#: O QUE ELE PUBLICA UMA VEZ PARA A MÁQUINA TODA (decisão D3, 05/09/2026).
+VIVO_DA_MESA: dict[str, Any] = {
+    "rumble_policy": "max",
+    "rumble_passthrough": False,
+    "mouse_emulation": {"enabled": True, "speed": 11, "scroll_speed": 4},
+}
+
+
+def _ctx_do_ciclo() -> _Ctx:
+    controle = _controle_aceso()
+    controle.update(VIVO_DA_PECA)
+    return _Ctx([controle], state=dict(VIVO_DA_MESA))
+
+
+@pytest.mark.parametrize(("campo", "esperado"), [
+    ("speaker.volume", 102),
+    ("speaker.muted", False),
+    ("mic.muted", True),
+    ("mic.volume", 44),
+    ("sensores.giroscopio", False),
+])
+def test_o_que_o_daemon_publica_por_peca_chega_ao_disco(
+        perfil_configurado: str, campo: str, esperado: Any) -> None:
+    """As três seções que o rodapé não lia — alto-falante, microfone, sensores.
+
+    Medido em 05/09/2026: o daemon publicava as três por peça e o Salvar
+    reemitia o DISCO. Ela mexia no volume do microfone do P2, salvava, e o
+    número voltava ao de ontem sem uma palavra.
+    """
+    draft = rodape._draft_do_ativo(perfil_configurado, _ctx_do_ciclo())
+    secao, chave = campo.split(".")
+    override = draft.controller_override(UNIQ)
+    cfg = getattr(override, secao, None)
+    assert cfg is not None, f"o rodapé não montou a seção `{secao}` desta peça"
+    assert getattr(cfg, chave) == esperado, (
+        f"`{campo}` não chegou ao rascunho — o Salvar levaria o disco de ontem")
+
+
+def test_o_sensor_ligado_nao_vira_opiniao(perfil_configurado: str) -> None:
+    """Ligado é o DEFAULT, e default não se grava como escolha.
+
+    ``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` (25/08/2026): o sensor nasce ligado em
+    todo jogo. Gravar `True` porque ele está ligado AGORA faria todo perfil
+    salvo IMPOR os sensores a todo jogo — o contrário do que ela pediu.
+    Desligado nunca é default, então só pode ter vindo de um ato dela.
+    """
+    draft = rodape._draft_do_ativo(perfil_configurado, _ctx_do_ciclo())
+    sens = draft.controller_override(UNIQ).sensores
+    assert sens.giroscopio is False, "o desligado dela não foi guardado"
+    assert sens.acelerometro is None, (
+        "o acelerômetro LIGADO virou opinião explícita — todo perfil passaria "
+        "a impor o sensor a todo jogo")
+
+
+@pytest.mark.parametrize(("caminho", "esperado"), [
+    ("rumble.policy", "max"),
+    ("rumble.passthrough", False),
+    ("mouse.speed", 11),
+    ("mouse.scroll_speed", 4),
+    ("mouse.enabled", True),
+])
+def test_o_que_e_da_mesa_inteira_tambem_chega(
+        perfil_configurado: str, caminho: str, esperado: Any) -> None:
+    """Os globais que o daemon publica e o rodapé reemitia do disco.
+
+    São globais por MEDIÇÃO (decisão D3): o `Daemon` tem UM `_mouse_device`,
+    alimentado por um `read_state()` por tique, e o input vem sempre do
+    controle primário.
+    """
+    draft = rodape._draft_do_ativo(perfil_configurado, _ctx_do_ciclo())
+    secao, chave = caminho.split(".")
+    assert getattr(getattr(draft, secao), chave) == esperado
+
+
+def test_a_velocidade_do_mouse_sobrevive_ao_to_profile(
+        perfil_configurado: str) -> None:
+    """O `dirty` não é ornamento — sem ele a seção `mouse` some no Salvar.
+
+    ``to_profile`` só emite `mouse` com `dirty` ou `in_profile`. O rodapé lia
+    o vivo e não marcava; a velocidade que ela acabou de mexer na aba 06 saía
+    do Salvar como se nunca tivesse existido.
+    """
+    draft = rodape._draft_do_ativo(perfil_configurado, _ctx_do_ciclo())
+    salvo = draft.to_profile(perfil_configurado)
+    assert salvo.mouse is not None, "a seção `mouse` não foi persistida"
+    assert salvo.mouse.speed == 11
+    assert salvo.mouse.scroll_speed == 4

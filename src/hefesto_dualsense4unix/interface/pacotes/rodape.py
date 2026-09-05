@@ -143,6 +143,120 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
             # senão salvar a escolha dela a apagaria no próximo Aplicar.
             auto_player_colors=False,
         ))
+        draft = _o_som_daquela_peca(draft, c, uniq)
+        draft = _os_sensores_daquela_peca(draft, c, uniq)
+    return _o_que_e_da_mesa_inteira(draft, ctx)
+
+
+def _o_som_daquela_peca(draft: Any, c: dict[str, Any], uniq: str) -> Any:
+    """O alto-falante e o microfone DAQUELE controle, do vivo para o rascunho.
+
+    O daemon publica os dois por peça — ``c["speaker"]`` com ``volume``/
+    ``muted`` e ``c["audio"]`` com ``mic_mudo``/``volume_captura``. Até
+    05/09/2026 ninguém lia nenhum dos dois aqui, e o Salvar reemitia o disco:
+    ela mexia no volume do microfone do P2, salvava, e o número voltava ao de
+    ontem sem uma palavra.
+
+    OS DOIS ESCRITORES LIMPAM SOZINHOS quando o valor iguala o global — é a
+    regra COR-04, e é ela que impede o perfil de encher de override que só
+    repete o que já valia. Por isso não há um `if` de igualdade aqui: quem sabe
+    comparar é o `DraftConfig`, e uma segunda cópia dessa regra é como duas
+    telas passam a discordar.
+    """
+    from hefesto_dualsense4unix.app.draft_config import MicDraft, SpeakerDraft
+
+    som = c.get("speaker")
+    if isinstance(som, dict) and som.get("volume") is not None:
+        draft = draft.with_controller_speaker(uniq, SpeakerDraft(
+            volume=int(som["volume"]),
+            muted=bool(som.get("muted", False)),
+            # A ROTA NÃO É PUBLICADA POR PEÇA, e inventar `None` aqui apagaria
+            # a que estiver no disco. Herdar a efetiva é o que preserva.
+            rota=draft.effective_speaker_for(uniq).rota,
+        ))
+
+    audio = c.get("audio")
+    if isinstance(audio, dict):
+        mudo = audio.get("mic_mudo")
+        captura = audio.get("volume_captura")
+        if mudo is not None or captura is not None:
+            draft = draft.with_controller_mic(uniq, MicDraft(
+                muted=None if mudo is None else bool(mudo),
+                volume=None if captura is None else int(captura),
+            ))
+    return draft
+
+
+def _os_sensores_daquela_peca(draft: Any, c: dict[str, Any], uniq: str) -> Any:
+    """Giroscópio e acelerômetro DAQUELE controle — e só quando DESLIGADOS.
+
+    **A ASSIMETRIA É O PONTO, e ela vem de duas decisões dela.**
+    ``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` (25/08/2026) diz que o sensor nasce
+    ligado em todo jogo, e o esquema escreve isso como *sem opinião* — campo
+    ``None``. Gravar `True` porque o sensor está ligado AGORA transformaria
+    "não pedi nada" em "pedi ligado", e todo perfil salvo passaria a impor os
+    sensores a todo jogo — exatamente o contrário do que ela pediu.
+
+    Desligado é diferente: **nunca é o default**, então só pode ter vindo de
+    um ato dela. Esse, sim, o perfil guarda. É a decisão D1 de 05/09 aplicada
+    a um caso em que o produto não tem flag `dirty` para consultar: o próprio
+    valor carrega o carimbo.
+    """
+    sens = c.get("sensores")
+    if not isinstance(sens, dict):
+        return draft
+    giro = sens.get("giroscopio_ligado")
+    acel = sens.get("acelerometro_ligado")
+    return draft.with_controller_sensores(
+        uniq,
+        giroscopio=False if giro is False else None,
+        acelerometro=False if acel is False else None,
+    )
+
+
+def _o_que_e_da_mesa_inteira(draft: Any, ctx: Contexto) -> Any:
+    """O que o daemon publica UMA vez para a máquina toda.
+
+    SÃO GLOBAIS POR MEDIÇÃO, não por preguiça — decisão D3 de 05/09/2026: o
+    `Daemon` tem UM `_mouse_device` e UM `_keyboard_device`, alimentados por um
+    `read_state()` por tique, e o input vem sempre do controle PRIMÁRIO.
+    Guardar por controle antes de o caminho de entrada existir é o que a régua
+    `test_perfil_por_controle_o_campo_espera_o_caminho.py` proíbe: *campo que
+    grava e ninguém lê faz a tela prometer*.
+
+    O `dirty=True` do mouse não é ornamento: `to_profile` só emite a seção
+    `mouse` com `dirty` ou `in_profile`, e sem ele a velocidade que ela acabou
+    de mexer na aba 06 sai do Salvar como se nunca tivesse existido.
+    """
+    from hefesto_dualsense4unix.app.draft_config import MouseDraft
+
+    estado = getattr(ctx, "state", None)
+    if not isinstance(estado, dict):
+        return draft
+
+    politica = estado.get("rumble_policy")
+    passthrough = estado.get("rumble_passthrough")
+    mult = estado.get("rumble_policy_custom_mult")
+    mudancas: dict[str, Any] = {}
+    if politica is not None:
+        mudancas["policy"] = str(politica)
+    if passthrough is not None:
+        mudancas["passthrough"] = bool(passthrough)
+    if mult is not None:
+        mudancas["custom_mult"] = float(mult)
+    if mudancas:
+        draft = draft.model_copy(
+            update={"rumble": draft.rumble.model_copy(update=mudancas)})
+
+    rato = estado.get("mouse_emulation")
+    if isinstance(rato, dict) and rato.get("speed") is not None:
+        draft = draft.model_copy(update={"mouse": MouseDraft(
+            enabled=bool(rato.get("enabled", False)),
+            speed=int(rato["speed"]),
+            scroll_speed=int(rato.get("scroll_speed", 1)),
+            dirty=True,
+            in_profile=draft.mouse.in_profile,
+        )})
     return draft
 
 
