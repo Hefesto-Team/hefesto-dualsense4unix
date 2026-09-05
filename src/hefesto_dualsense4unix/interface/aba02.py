@@ -2465,21 +2465,30 @@ def fita_clicavel(doc, mesa=None):
     # rádios para um chip — o gerador PARARIA com `1 chips para 2 rádios`, que é
     # o piloto da Controles morrendo no dia em que ela desliga o segundo
     # controle. A régua é a mesma dos três emissores: `monta.cabe_o_todos`.
+    # O `<label>` JÁ VEM DE CIMA — 05/09/2026. Esta função trocava `<span>` por
+    # `<label>` e era a ÚNICA a fazê-lo: o `hefesto_vivo` repinta a fita inteira
+    # a cada tique com a saída crua de `monta.fita()`, e os três `<label>` desta
+    # página viravam três `<span>` no primeiro tique — medido no DOM vivo, 1,6 s
+    # depois de abrir. A bancada clicava; o produto, não.
+    #
+    # O QUE SOBRA AQUI é o que só esta aba sabe: o `for=` (os rádios são dela),
+    # o `on` que sai para o `:checked` acender, os dois endereços do nome e do
+    # transporte, e os dois `title` que falam dos cards.
     da_mesa = CONECTADOS if mesa is None else mesa
     ids = (["c-todos"] if cabe_o_todos(da_mesa) else []) + [f'c-{c["pref"]}' for c in da_mesa]
     linhas = doc.split("\n")
     achados = 0
     for k, linha in enumerate(linhas):
         s = linha.strip()
-        if not s.startswith('<span class="chip'):
+        if not s.startswith('<label class="chip'):
             continue
         if achados >= len(ids):
             raise SystemExit("ERRO na fita: mais chips do que controles na mesa")
-        if not s.endswith("</span>"):
+        if not s.endswith("</label>"):
             raise SystemExit(f"ERRO na fita: o chip {achados} não fecha na mesma linha")
         rid = ids[achados]
         achados += 1
-        m = re.match(r'<span class="chip([^"]*)"([^>]*)>(.*)</span>$', s)
+        m = re.match(r'<label class="chip([^"]*)"([^>]*)>(.*)</label>$', s)
         if not m:
             raise SystemExit(f"ERRO na fita: o chip {rid} mudou de forma —\n  {s[:120]}")
         classe = m.group(1).replace(" on", "")
@@ -3044,7 +3053,7 @@ if __name__ == "__main__":
     # ANTES DE ESCREVER, e não depois: um gerador que grava e só então reclama
     # já deixou a tela errada no disco para quem abrir o arquivo.
     a_legenda_nao_promete_o_que_a_tela_nao_tem(LEGENDA, MIOLO)
-    n = monta("02-controles", "Controles", MIOLO, CSS, fita_viva=True, legenda=LEGENDA)
+    n = monta("02-controles", "Controles", MIOLO, CSS, legenda=LEGENDA)
     # A SAÍDA É A BANCADA (`mockup/`) — 31/08/2026, quando o fluxo inverteu.
     # Este caminho não dizia "layout": era `parent.parent`, e por isso o censo
     # por texto não o achou. Quem o achou foi a régua da fita logo abaixo, que

@@ -77,6 +77,7 @@ from gi.repository import GLib, Gtk  # noqa: E402
 # acusava de dívida as camadas que ela já chama.
 from hefesto_dualsense4unix.interface import (  # noqa: E402
     mesa_viva,
+    monta,
     onde,
     pacotes,
     regua_do_mockup,
@@ -833,6 +834,15 @@ BOOTSTRAP = r"""
   };
   window.__hef.pintar = function(p){
     let n = 0;
+    // O ALVO QUE A FITA ESCOLHEU. Ele NÃO conta como pintura — não há pixel
+    // aqui —, e por isso `n` não sobe: um contador que subisse a cada tique
+    // faria toda aba parecer inquieta, e a quietude é o que este número mede.
+    //
+    // ELE É REESCRITO EM TODO TIQUE de propósito: `window.__hef` morre com o
+    // documento, e sem isto a escolha dela sobreviveria no Python e sumiria da
+    // página na primeira troca de aba — o alvo voltaria a ser vazio sem que
+    // nada na tela mudasse.
+    if('alvo' in p){ window.__hef.alvoPadrao = p.alvo || ''; }
     // A FITA SE TROCA INTEIRA, e não campo a campo: o número de chips muda com
     // a mesa, e não há endereço para um chip que ainda não existe.
     if(p.fita){
@@ -1158,12 +1168,140 @@ def _com_dono(ctx: pacotes.Contexto) -> list[str]:
     return prefs
 
 
-def _fita(mesa: list[dict[str, Any]]) -> str:
+#: A ESCOLHA DA FITA — quem ela apontou no `Selecionar:`.
+#:
+#: `""` é *ninguém escolheu ainda*, e nele a fita segue derivando do primeiro da
+#: mesa, como sempre fez. `"todos"` é o chip `Todos`. Qualquer outro valor é um
+#: `uniq` NORMALIZADO.
+#:
+#: O ENDEREÇO É O `uniq`, E NÃO O `pref`, e a razão é a lei de identidade desta
+#: casa: `pref` é POSIÇÃO (`mesa_viva.mesa_do_estado` reenumera de 1 a cada
+#: tique). Guardada por posição, a escolha do controle do rádio passaria para o
+#: do cabo no instante em que o primeiro saísse da mesa — o mesmo defeito que
+#: fez o recado de recusa aparecer no cartão do vizinho em 02/09/2026.
+#:
+#: ELE É MÓDULO, E NÃO CAMPO DO PILOTO, porque quem escreve nele é uma função de
+#: gesto — `(ctx, o, ipc)`, sem acesso ao piloto — e quem lê é `_fita`. Um
+#: processo tem uma janela; dois pilotos no mesmo processo nunca existiram.
+class _EscolhaDaFita:
+    """O único estado que o chip muda. Nada de perfil, nada de daemon."""
+
+    def __init__(self) -> None:
+        self.uniq = ""
+
+
+ESCOLHA_DA_FITA = _EscolhaDaFita()
+
+
+def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
+                      _ipc: Any) -> dict[str, Any]:
+    """O clique no chip do `Selecionar:` — ele só ESCOLHE, e é todo o contrato.
+
+    O QUE ELE NÃO FAZ, e está escrito porque é o risco desta cura: não troca de
+    perfil, não fala com o daemon e não grava no disco dela. O `_ipc` chega e
+    não é usado de propósito — a assinatura é a das dez abas.
+
+    O `("*", …)` É O MESMO CORINGA DO RODAPÉ: a fita mora no `topo.html`, o
+    esqueleto das dez, e registrá-la por página seria a mesma linha dez vezes.
+
+    ELE RECUSA DIZENDO quando o `pref` clicado não está na mesa — um chip de um
+    controle que saiu entre o desenho e o clique. Escolher calado o primeiro que
+    sobrou é como a tela passa a mostrar um aparelho e a mexer noutro.
+
+    E ELE MANDA A PRÓPRIA FRASE. Todo gesto que volta sem levantar deposita um
+    recado na tela — decisão dela, D-01: *"No próprio cartão, como a recusa."*
+    Sem esta frase valeria a `FRASE_DE_SUCESSO` (*"Pronto."*), que sobre uma
+    ESCOLHA não diz nada; com ela, a tarja de rodapé nomeia quem a aba passou a
+    mirar. O cartão fica de fora de propósito: ver `_endereco_do_chip`.
+    """
+    pref = str(o.get("pref") or "").strip()
+    if pref == "todos":
+        if not monta.cabe_o_todos(ctx.mesa):
+            raise ValueError(
+                "o chip `Todos` não se escolhe com um controle só na mesa: "
+                "ele É a escolha.")
+        ESCOLHA_DA_FITA.uniq = "todos"
+        return {"recado": f"Esta aba passa a mirar os {len(ctx.mesa)} controles."}
+    for c in ctx.mesa:
+        if str(c.get("pref") or "") == pref:
+            ESCOLHA_DA_FITA.uniq = norm_mac(str(c.get("uniq") or "")) or ""
+            return {"recado": f"Esta aba passa a mirar o {pref.upper()}."}
+    raise ValueError(
+        f"o chip {pref!r} não está na mesa de agora — o controle saiu entre o "
+        f"desenho da fita e o clique.")
+
+
+# O REGISTRO É GUARDADO, e o `if` não é zelo: ESTE ARQUIVO É IMPORTÁVEL POR DOIS
+# NOMES. O piloto põe a própria pasta no `sys.path` (a herança de quando ele
+# vivia em `layout/_ferramentas/`), então `import hefesto_vivo` e
+# `from hefesto_dualsense4unix.interface import hefesto_vivo` produzem DOIS
+# módulos do mesmo arquivo — e as duas grafias estão em uso na suíte de hoje.
+# Sem a guarda, a segunda importação chamaria `@gesto` de novo e o despachante
+# mataria o processo com *"o gesto já tem dono"*, que é a proteção dele contra
+# dois donos de verdade fazendo o trabalho de um acidente de `sys.path`.
+if ("*", monta.GESTO_DA_FITA) not in pacotes.GESTOS:
+    pacotes.gesto("*", monta.GESTO_DA_FITA)(_escolher_na_fita)
+
+
+def _a_fita_desta_pagina_escolhe(pagina: str) -> bool:
+    """`monta.a_fita_escolhe`, sem derrubar a janela numa página que não é aba.
+
+    A guarda do dono é do GERADOR: lá, um nome de página errado tem de PARAR a
+    geração em vez de gravar dez fitas esmaecidas em silêncio. Aqui ela cobraria
+    de quem não protege — `paginas/` tem três páginas que não são abas (o mapa
+    do controle, o das portas e a calibração), e a janela pode pousar nelas. Sem
+    fita para escolher, a resposta honesta é *não escolhe*; matar o processo
+    seria trocar uma tela errada por nenhuma tela.
+    """
+    try:
+        return monta.a_fita_escolhe(pagina)
+    except SystemExit:
+        return False
+
+
+def _pref_escolhido(mesa: list[dict[str, Any]]) -> str:
+    """Que `pref` a fita acende AGORA, traduzido da escolha dela.
+
+    A ESCOLHA NÃO É APAGADA quando o controle sai da mesa, e é de propósito:
+    esta função só decide o que DESENHAR. É a mesma lição de
+    `monta.escolha_da_fita` — gravar a queda no lugar da escolha é a marca de
+    mão única que já custou caro nesta casa (QUEBRA-CARTAO-QUE-NAO-REABRE-01):
+    a escolha cairia na desconexão e nunca mais voltaria quando o controle
+    reaparecesse.
+    """
+    if not mesa:
+        return "todos"
+    se = ESCOLHA_DA_FITA.uniq
+    if se == "todos":
+        return "todos"
+    if se:
+        for c in mesa:
+            if norm_mac(str(c.get("uniq") or "")) == se:
+                return str(c["pref"])
+    # NINGUÉM ESCOLHEU AINDA (ou o escolhido não está aqui): o primeiro da mesa,
+    # que é o que esta fita sempre mostrou.
+    return str(mesa[0]["pref"])
+
+
+def _fita(mesa: list[dict[str, Any]], pagina: str) -> str:
     """A fita de chips com a mesa VIVA, pelo mesmo gerador do desenho.
 
     `monta.fita()` é o dono dela nas dez páginas. Passar `mesa` é obrigatório:
     sem o argumento ele cai nos `CONECTADOS` do mockup, que são derivados no
     IMPORT e nunca recalculados — trocar `monta.MESA` de fora não alcança.
+
+    O `inerte` TAMBÉM É OBRIGATÓRIO, e sem ele esta função MENTIA em sete abas.
+    Ela chamava `monta.fita(ativo=…, mesa=mesa)` e o padrão do parâmetro é
+    `False`: como o piloto troca o bloco INTEIRO a cada tique, as abas em que a
+    fita é LEITURA nasciam esmaecidas (do arquivo publicado) e no primeiro tique
+    ficavam ACESAS, com o `title` de quem escolhe — *"O que você mudar nesta aba
+    vai para o controle escolhido aqui."* — sobre uma aba onde nada vai.
+
+    MEDIDO EM 05/09/2026, com o daemon dela no ar e um controle na mesa: as DEZ
+    abas terminaram `class="fita"` e com aquele `title`, inclusive as sete cujo
+    arquivo publicado traz `class="fita inerte"`. Quem responde agora é
+    `monta.a_fita_escolhe()`, o mesmo dono que `monta()` consulta ao
+    gravar o arquivo — a resposta deixou de ser digitada duas vezes.
     """
     # A VERSÃO DESTA GUARDA É DA FRENTE DA ABA 05, e ela venceu a minha na
     # integração de 03/09/2026. As duas achavam o mesmo defeito; a diferença é
@@ -1201,9 +1339,9 @@ def _fita(mesa: list[dict[str, Any]]) -> str:
         # `except Exception` passa ao lado. O `except` abaixo cobre os dois.
         return ""
     try:
-        from hefesto_dualsense4unix.interface import monta
-
-        return monta.fita(ativo=(mesa[0]["pref"] if mesa else "todos"), mesa=mesa)
+        return monta.fita(ativo=_pref_escolhido(mesa),
+                          inerte=not _a_fita_desta_pagina_escolhe(pagina),
+                          mesa=mesa)
     except (Exception, SystemExit):
         return ""
 
@@ -2353,7 +2491,26 @@ class Piloto:
         # defeito nesta casa — *uma frase que nomeia um controle fora da mesa* —
         # e a foto da aba Perfis o mostrou de novo em 01/09/2026, já com o topo
         # e a tabela corretos ao lado.
-        carga["fita"] = _fita(ctx.mesa)
+        carga["fita"] = _fita(ctx.mesa, self.pagina)
+
+        # O ALVO QUE A FITA ESCOLHEU, e é o que faz o chip valer alguma coisa.
+        #
+        # O OUVINTE JÁ TINHA O ENCAIXE, e ele estava vazio no produto de
+        # propósito (`window.__hef.alvoPadrao`, o `controle:` do clique): *"o
+        # botão que não diz em qual aparelho age — quem decide é ela, com a tela
+        # dizendo"*. A fita É a tela dizendo; enquanto ela não deixava escolher,
+        # não havia o que pôr aqui.
+        #
+        # SÓ NAS ABAS QUE ESCOLHEM, e `""` nas outras sete: emprestar um alvo
+        # numa aba cuja fita é leitura seria dizer, por baixo, o contrário do
+        # que a fita esmaecida diz por cima.
+        #
+        # `Todos` TAMBÉM É `""`, e é a resposta honesta: um gesto que precisa de
+        # UM aparelho e recebe "todos" tem de recusar dizendo, como já recusa
+        # hoje. Escolher um dos dois aqui seria o produto decidindo por ela.
+        alvo = (_pref_escolhido(ctx.mesa)
+                if _a_fita_desta_pagina_escolhe(self.pagina) else "")
+        carga["alvo"] = "" if alvo == "todos" else alvo
 
         # OS LUGARES VAZIOS RECEBEM TRAVESSÃO, e sem isto a tela MENTE. O HTML
         # publicado nasce com quatro colunas — a mesa do desenho, dois
@@ -2863,14 +3020,22 @@ class Piloto:
         return self._proximo_da_fila()
 
     def _sem_eco_da_pagina(self) -> set[str]:
-        """Os gestos daquela aba cujo efeito o daemon não publica."""
+        """Os gestos daquela aba cujo efeito o daemon não publica.
+
+        O CHIP DA FITA ENTRA NAS DEZ, e não é isenção de conveniência: ele
+        ESCOLHE quem a aba mira e, por contrato, não fala com o daemon. Sem esta
+        linha a prova botão a botão o classificaria como *"disse aplicado e nada
+        mudou"* — a mesma frase com que ela nomeia dezesseis botões mortos —
+        sobre o único gesto desta casa que promete não mexer no aparelho.
+        """
         import importlib
 
+        sem_eco = {monta.GESTO_DA_FITA}
         for arq in sorted((AQUI / "pacotes").glob("a[0-9][0-9]_*.py")):
             mod = importlib.import_module(f"pacotes.{arq.stem}")
             if getattr(mod, "PAGINA", "") == self.pagina:
-                return set(getattr(mod, "SEM_ECO", ()))
-        return set()
+                return sem_eco | set(getattr(mod, "SEM_ECO", ()))
+        return sem_eco
 
     def _ir(self, pagina: str) -> bool:
         """Abre uma aba. `False` para o GLib — ver `_proximo_da_fila`."""

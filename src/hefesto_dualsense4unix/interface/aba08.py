@@ -3350,7 +3350,7 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>Zero JavaScript.</b> O mockup inteiro não tem uma linha de script, e o cruzamento do mapa do controle já é feito só com <code>:has()</code>. Aqui a peça é um grupo de <code>&lt;input type=radio&gt;</code> escondido: cada linha fechada é um <code>&lt;label&gt;</code> que marca o seu. Por ser rádio, <b>marcar um desmarca os outros</b> — que é, ao pé da letra, “clicar num abre e fecha os outros”.</li>
     <li><b>Clicar numa linha muda a fita, de verdade.</b> As {len(ESTADOS)} regras que repintam os chips são geradas da <code>MESA</code> e casam <b>pela posição</b> do chip, não pelo texto dele — o texto do chip já mudou uma vez e matou a fita viva em silêncio.</li>
-    <li><b>“Todos abre os {len(MESA)}” existe, e o gesto está no lugar possível.</b> O chip “Todos” é um <code>&lt;span&gt;</code> do esqueleto (<code>monta.fita()</code>), e um <code>&lt;span&gt;</code> não vira alvo de clique sem tocar o <code>monta.py</code> — que esta aba não toca. Então o gesto mora na própria linha <b>aberta</b>: clicar nela volta para “Todos”, com os {len(MESA)} abertos, e o <code>title</code> diz isso. Para o chip da fita clicar de verdade, o <code>monta.fita()</code> precisa emitir <code>&lt;label&gt;</code> em vez de <code>&lt;span&gt;</code> — é uma linha lá, e vale para as dez abas.</li>
+    <li><b>“Todos abre os {len(MESA)}” existe, e o chip da fita passou a clicar.</b> Ele era um <code>&lt;span&gt;</code> do esqueleto e virou <code>&lt;label&gt;</code> com endereço em 05/09/2026 (<code>monta.fita()</code>), nas três abas que escolhem controle — clicar nele muda o alvo desta aba. O gesto da própria linha <b>aberta</b> continua: clicar nela volta para “Todos”, com os {len(MESA)} abertos, e o <code>title</code> diz isso.</li>
     <li><b>No estado “Todos” a seta de abrir virou a palavra <code>só este</code>.</b> As {len(MESA)} linhas mostravam <b>▾</b> com a dica <i>“Abre este controle”</i> — {len(MESA)} setas de abrir sobre {len(MESA)} linhas já abertas, e a dica mentia duas vezes: a linha estava aberta, e o que o clique faz ali é <b>fechar as outras</b>. A dica do corpo da linha também mudou, e agora é a mesma nos dois estados — <i>“deixa só este controle aberto, os outros fecham”</i> é verdade tanto na linha fechada quanto nas {len(MESA)} abertas. <b>Foi preciso</b>: <code>title</code> não muda com CSS, então uma frase que só vale num estado mente no outro. A coluna da seta ficou com <b>largura fixa</b> pela mesma razão que as colunas do resumo: se ela mudasse de tamanho ao clicar, os {len(MESA)} percentuais de bateria andariam de lado juntos.</li>
   </ul>
 
@@ -3389,7 +3389,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>Os quatro botões viraram UMA fileira, e ela custou zero.</b> Você escreveu a ordem com todas as letras — <i>“Examinar de novo. / Já Movi - Reexaminar. / Ignorar / Ver Ordens ignoradas.”</i> — e com um par em cada coluna essa ordem não existe: a leitura de uma grade de duas colunas é esquerda→direita, e “Ignorar” (que estava à direita) teria de vir antes de “{VER_IGNORADAS}” (que estava à esquerda). <b>Medido:</b> o quadro tinha 204&nbsp;px e continua com {Q_EXAME}; a fileira nasce no mesmo y=575; os quatro botões passaram de 265,5 para <b>272&nbsp;px cada</b>, todos iguais, e a borda direita não andou um pixel.</li>
     <li><b>“Ver as ordens caladas” virou “{VER_IGNORADAS}”, e o motivo é o PAR.</b> O botão irmão chama-se <b>Ignorar</b>: quem o aperta procura depois as ordens <i>ignoradas</i>. “Caladas” era a única palavra da dupla sem par na tela. <b>Uma diferença para a sua frase:</b> você escreveu “Ver Ordens ignoradas” e a tela diz “Ver <u>as</u> ordens ignoradas” — o artigo é o que já estava lá, e só a última palavra mudou. Se você quiser a sua frase ao pé da letra, é <b>uma</b> palavra a menos.</li>
     <li><b>A seção continua chamando-se “Desempenho”, e a escolha é minha — derrube-a numa frase.</b> Ela perdeu o dropdown para a <b>{ABA_DO_TETO_GLOBAL}</b> e sobrou só a régua. Foi proposto renomeá-la para <b>“Rádio em uso”</b>, e a proposta cai numa medição de duas palavras: o subtítulo é frase <i>sua</i> (“o rádio de cada adaptador, em fatias”), então o rótulo ficaria <b>“Rádio em uso • O rádio de cada adaptador, em turnos”</b> — “rádio” duas vezes em oito palavras. Trocar o subtítulo para desfazer a repetição seria mexer na sua frase. E “Desempenho” não fica órfão: com o perfil noutra aba e com outro nome, sobra <b>um sentido só</b> para a palavra nesta tela — quanto do tempo do rádio está em uso.</li>
-    <li><b>O gesto de voltar para “Todos” está na própria linha aberta</b>, e não no chip da fita. O chip vira clicável com uma linha no <code>monta.fita()</code> — e aí ele passa a valer para as dez abas de uma vez.</li>
+    <li><b>O gesto de voltar para “Todos” está na própria linha aberta</b>, e o chip da fita também volta: ele clica desde 05/09/2026, e o mesmo endereço vale nas três abas que escolhem controle.</li>
     <li><b>“Adaptadores Bluetooth” continua sendo título novo na tela.</b> Ele existe para a coluna da esquerda ser irmã da direita. É palavra nova, e a palavra é sua.</li>
     <li><b>O resumo da linha fechada virou grade</b>: máscara, microfone e bateria repartem a linha em <code>126fr 272fr 76fr</code> — as três larguras <i>naturais</i> medidas, e não três números escolhidos. Assim as colunas caem no mesmo x nas {len(MESA)} linhas sozinhas, os percentuais terminam juntos, e o vão de 350&nbsp;px que sobrava entre o nome e um resumo encostado à direita desapareceu. É o mesmo remédio das quatro barras de bateria da aba Controles.</li>
     <li><b>Dois controles do mesmo plástico continuam com a borda idêntica</b> — e agora também com dois blocos idênticos na régua do rádio. O número do jogador dentro do bloco atenua, mas não resolve.</li>
@@ -3402,7 +3402,7 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
-n = monta("08-conexoes", "Conexões", MIOLO, CSS, fita_viva=True, legenda=LEGENDA)
+n = monta("08-conexoes", "Conexões", MIOLO, CSS, legenda=LEGENDA)
 
 # ---------------------------------------------------------------------------
 # AS QUATRO TELAS ENTRAM IRMÃS DA `.janela`, fora do miolo.
@@ -3449,7 +3449,10 @@ x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
 #
 # A CONTAGEM FICA, e é ela que morde: um chip a mais ou a menos que a mesa
 # continua derrubando o gerador.
-_CHIP = '<span class="chip plastico'
+# `<label>` DESDE 05/09/2026 — `monta.fita()` emite o chip como controle,
+# não como texto, para que ele possa clicar nas abas que escolhem (esta é
+# uma delas). A contagem continua sendo a régua da forma.
+_CHIP = '<label class="chip plastico'
 _quantos = x.count(_CHIP)
 if _quantos != len(CONECTADOS):
     raise SystemExit(

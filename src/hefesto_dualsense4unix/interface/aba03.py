@@ -1497,7 +1497,7 @@ def _conferir(doc):
 
 
 n = monta("03-gatilhos", "Gatilhos", MIOLO, CSS + CSS_DA_CENA,
-          fita_viva=False, legenda=LEGENDA)
+          legenda=LEGENDA)
 _conferir(onde.pagina("03-gatilhos.html").read_text())
 print(f"03-gatilhos: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
       f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "

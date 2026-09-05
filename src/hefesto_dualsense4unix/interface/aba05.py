@@ -599,7 +599,7 @@ CSS = """
   .vib > .rotulos > *::before{left:0;right:-16px}
   .vib > div > *:first-child::before{display:none}
   /* NÃO HÁ COLUNA DESTACADA, e é decisão dela de 28/08: os quatro ficam lado a
-     lado, sempre visíveis, e a fita do topo fica ESMAECIDA (`fita_viva=False`).
+     lado, sempre visíveis, e a fita do topo fica ESMAECIDA (fora de `monta.ABAS_QUE_ESCOLHEM`).
      Aqui havia um `.ctrl.escolhido` — fundo `--sel-bg` e rótulo em negrito na
      coluna do P1 — com o `title` "A fita do topo aponta para este controle".
      Com a fita inerte e presa em "Todos", esse destaque passou a AFIRMAR NA
@@ -1785,7 +1785,7 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
-# `fita_viva=False` — decisão dela, 28/08/2026: em Gatilhos, Iluminação e
+# Fora de `monta.ABAS_QUE_ESCOLHEM` — decisão dela, 28/08/2026: em Gatilhos, Iluminação e
 # Vibração os quatro ficam lado a lado, sempre visíveis, e a fita fica
 # esmaecida. Ela não é o alvo destas três abas porque não há alvo: cada coluna
 # se ajusta no seu lugar.
@@ -2073,7 +2073,7 @@ def _conferir(doc):
 # nos dois arranjos, que é o que mantém o lugar vazio cinza.
 n = monta("05-vibracao", "Vibração", MIOLO,
           CSS + CSS_DAS_MEDIDAS + FOLHA_DOS_28,
-          fita_viva=False, legenda=LEGENDA)
+          legenda=LEGENDA)
 _conferir(onde.pagina("05-vibracao.html").read_text())
 print(f"05-vibracao: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
       f"+ {len(MESA) - len(CONECTADOS)} lugar(es) vazio(s) · motores do mapa: "

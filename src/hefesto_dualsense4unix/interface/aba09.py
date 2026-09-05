@@ -1684,7 +1684,7 @@ if "Não muda nada" in _ATRS:
         "Uma dica que nega o trabalho caro é a tela afirmando o contrário do "
         "que o produto faz.")
 
-n = monta("09-sistema", "Sistema", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
+n = monta("09-sistema", "Sistema", MIOLO, CSS, legenda=LEGENDA)
 
 # ---------------------------------------------------------------------------
 # O ENDEREÇO DA FITA, POSTO NA SAÍDA — 03/09/2026, a lei dela:

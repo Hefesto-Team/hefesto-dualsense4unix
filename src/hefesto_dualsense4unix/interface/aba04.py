@@ -11,7 +11,7 @@ from pacotes import a04_iluminacao as _pacote04
 # ---------------------------------------------------------------------------
 # AS TRÊS MUDANÇAS DE 28/08/2026, e a que arrastou o resto.
 #
-# 1. `fita_viva=False`. Decisão dela: em Gatilhos, Iluminação e Vibração os
+# 1. Fora de `monta.ABAS_QUE_ESCOLHEM`. Decisão dela: em Gatilhos, Iluminação e Vibração os
 #    quatro ficam lado a lado, sempre visíveis, e a fita do topo fica ESMAECIDA.
 #
 #    ELA ARRASTOU A ABA INTEIRA, e é por isso que aqui há mais que um parâmetro
@@ -1419,7 +1419,7 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
-# `fita_viva=False` — decisão dela, 28/08/2026: em Gatilhos, Iluminação e
+# Fora de `monta.ABAS_QUE_ESCOLHEM` — decisão dela, 28/08/2026: em Gatilhos, Iluminação e
 # Vibração os quatro ficam lado a lado, sempre visíveis, e a fita fica
 # esmaecida. Ela não é o alvo desta aba porque não há alvo: cada coluna se
 # ajusta no seu lugar.
@@ -1688,7 +1688,7 @@ CSS_DAS_MEDIDAS = f"""
 """
 
 n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS,
-          fita_viva=False, legenda=LEGENDA)
+          legenda=LEGENDA)
 _conferir(onde.pagina("04-iluminacao.html").read_text())
 print(f"04-iluminacao: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
       f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
