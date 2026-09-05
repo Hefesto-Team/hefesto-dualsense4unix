@@ -131,6 +131,7 @@ from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.core.ds_output_report import BT_INPUT_CRC_SEED, bt_crc32
+from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -291,6 +292,44 @@ _BACKOFF_MAX_S = 5.0
 #: (uma EMA "congelada" de um fluxo morto mentiria 250 Hz para sempre).
 _HZ_EMA_ALPHA = 0.25
 _HZ_STALE_S = 1.0
+
+
+#: Raiz do sysfs onde cada nó `hidraw` declara de quem é (`HID_UNIQ`).
+_RAIZ_HIDRAW = "/sys/class/hidraw"
+
+
+def uniq_do_hidraw(path: str) -> str | None:
+    """O endereço de rádio da peça dona deste `/dev/hidrawN`; `None` sem ele.
+
+    SENSOR-DE-VERDADE-01. O `PhysicalReportReader` recebe um CAMINHO, e o
+    interruptor de sensor é por PEÇA — sem esta tradução o filtro não teria
+    como saber de quem é a janela que está copiando, e a alternativa (levar o
+    `uniq` por parâmetro) atravessaria `gamepad.py` e `coop.py`, dois arquivos
+    de outra posse, para carregar um dado que o sysfs já tem.
+
+    Lê o `HID_UNIQ` do uevent do device pai, que é a mesma chave que a janela
+    usa por controle (`integrations/usb_pai`). `None` em qualquer erro: o
+    sysfs some debaixo da mão em hotplug, e "não sei de quem é" tem de
+    resultar em NÃO FILTRAR — desligar o sensor do controle errado é pior do
+    que não desligar.
+    """
+    nome = os.path.basename(str(path or "").rstrip("/"))
+    if not nome.startswith("hidraw"):
+        return None
+    try:
+        with open(
+            os.path.join(_RAIZ_HIDRAW, nome, "device", "uevent"),
+            encoding="utf-8",
+            errors="replace",
+        ) as arquivo:
+            texto = arquivo.read()
+    except OSError:
+        return None
+    for linha in texto.splitlines():
+        if linha.startswith("HID_UNIQ="):
+            valor = linha[len("HID_UNIQ=") :].strip().lower()
+            return valor or None
+    return None
 
 
 def _open_por_caminho(path: str) -> int:
@@ -635,6 +674,9 @@ class PhysicalReportReader:
         # (reader drenando fd alheio = input congelado + gyro-lixo).
         self._fd: int | None = None
         self._fd_lock = threading.Lock()
+        #: SENSOR-DE-VERDADE-01: de quem é a janela que este reader copia.
+        #: Preenchido no open; `None` = não sei, e aí o filtro não age.
+        self._uniq_aberto: str | None = None
         # Self-pipe de wake + flag de reopen (GYRO-FD-01). O par é recriado
         # no `start()` se um `stop()` anterior o fechou. O lock cobre a
         # corrida `_wake()` vs `_close_wake_pipe()`: escrever num número já
@@ -845,6 +887,12 @@ class PhysicalReportReader:
             with self._fd_lock:
                 self._fd = fd
             backoff = _BACKOFF_START_S
+            # SENSOR-DE-VERDADE-01: de QUAL peça é esta janela. Resolvido no
+            # open (uma vez por conexão) e não por janela: a ~250 Hz, ler o
+            # sysfs por report seria a tempestade de syscalls que o
+            # `_motores_do_perfil_ativo` já pagou uma vez. Sem `uniq` o filtro
+            # não age — nunca desliga o sensor "do controle errado".
+            self._uniq_aberto = uniq_do_hidraw(path)
             logger.info("motion_reader_started", path=path)
             with contextlib.suppress(Exception):
                 self._vpad.set_motion_streaming(True)
@@ -1180,8 +1228,15 @@ class PhysicalReportReader:
         )
         self._last_emit_at = now
         self._last_window = window
+        # SENSOR-DE-VERDADE-01 — O BRAÇO DO REPORT, e é a última coisa que
+        # acontece com a janela antes de ela virar dado do jogo. Fica DEPOIS do
+        # `_last_window` de propósito: o cache do reader guarda o que o FÍSICO
+        # mandou (é ele que decide "mudou?" e alimenta a telemetria), e o
+        # filtro é sobre o que SAI. Guardar a janela já filtrada faria um
+        # sensor desligado congelar o dedup — todas as janelas ficariam iguais
+        # e o touchpad, que viaja na mesma fatia, pararia junto.
         try:
-            self._vpad.forward_motion(window)
+            self._vpad.forward_motion(REGISTRO.filtrar(self._uniq_aberto, window))
             self._windows_emitted += 1
         except Exception as exc:
             logger.warning("motion_reader_forward_failed", err=str(exc))
@@ -1204,4 +1259,5 @@ __all__ = [
     "extract_jack_status",
     "extract_motion_window",
     "extract_touchpad_click",
+    "uniq_do_hidraw",
 ]

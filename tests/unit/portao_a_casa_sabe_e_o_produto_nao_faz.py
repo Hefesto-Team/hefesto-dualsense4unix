@@ -887,13 +887,34 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "em `interface/paginas/`. O docstring da função diz o mecanismo, e a "
         "régua `tests/unit/test_o_botao_cinza_diz_a_razao.py` a exercita."
     ),
-    "interface/monta.py::ressalva": (
-        "Auxiliar do gerador do mockup (a peça S-02 da D-02, 04/09/2026), que "
-        "quem chama são os dez `interface/abaNN.py` — BANCADA, e por isso fora da "
-        "conta pela poda de `promessas_sem_caminho`. Mesma classificação e mesma "
-        "razão de `interface/monta.py::monta`. A régua "
-        "`tests/unit/test_a_linha_de_ressalva_so_nasce_quando_ha.py` a exercita."
+    # SENSOR-DE-VERDADE-01 (04/09/2026, ONDA1-D3).
+    "core/virtual_motion.py::sensores_vivos_na_janela": (
+        "SENSOR-DE-VERDADE-01, 04/09/2026. Régua do ENSAIO de bancada, não "
+        "promessa ao produto: ela lê uma janela "
+        "de motion e diz que sensor ainda carrega dado. Quem a chama é "
+        "`scripts/ensaios/o_jogo_para_de_ver_o_giro.py` — instrumento, e por "
+        "isso fora da conta. O produto não precisa dela: quem decide o que sai "
+        "é `janela_com_sensores`, fiada no `_emit` do `PhysicalReportReader`. O "
+        "docstring dela diz o limite (zero num quadro é indício, não prova) e "
+        "`tests/unit/test_o_sensor_desliga_de_verdade.py` a exercita."
     ),
+    # `interface/monta.py::ressalva` SAIU DAQUI EM 04/09/2026, e não porque a
+    # cura chegou — o registro que ela carregava continua verdadeiro: aquela
+    # função é auxiliar do gerador do mockup, chamada pelos dez
+    # `interface/abaNN.py`, que são BANCADA. Quem a tirou foi uma COLISÃO DE
+    # NOME com a SENSOR-DE-VERDADE-01: o `sensor.set` passou a devolver uma
+    # chave `"ressalva"` no corpo (`daemon/ipc_handlers.py`, e a ponte a lê em
+    # `app/ipc_bridge.frase_do_interruptor_de_sensor`), e a régua conta
+    # literal de texto como referência PLANA de propósito — "não dá para
+    # resolver sem inferir tipo, então assuma alcançado". Com o literal em
+    # módulo alcançado, `promessas_sem_caminho` deixou de listar o símbolo, e
+    # a lápide virou lápide de defunto vivo, que é o que
+    # `test_nenhuma_lapide_sobreviveu_a_propria_cura` reprova.
+    #
+    # A NOTA FICA porque o fato não mudou: se um dia aquele literal sumir, o
+    # símbolo volta à lista de não classificados e a entrada tem de voltar com
+    # a razão acima — `tests/unit/test_a_linha_de_ressalva_so_nasce_quando_ha.py`
+    # continua sendo a régua que o exercita.
     # ── AS CAMADAS DE TELA DA INTERFACE NOVA, 01/09/2026 ──────────────
     # Elas entraram quando a boca passou a ser o `hefesto_vivo.py`, o
     # piloto das DEZ abas: o fecho de import alcançou seis módulos que
@@ -1029,6 +1050,28 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # Mesma forma da de cima e pela mesma razão: a frente da vibração é dona do
     # daemon e da ponte; a metade de TELA é da aba 05, que está no `nao_toca:`
     # desta sprint. Fiar daqui seria a R1 ao contrário.
+    # ONDA1-D3 / O SENSOR (04/09/2026) — O INTERRUPTOR ESPERA A ABA 02.
+    # Mesma forma da de cima e pela mesma razão: esta frente é dona do daemon,
+    # do perfil e da ponte; a metade de TELA é da aba 02, que está no
+    # `nao_toca:` da sprint. Fiar daqui seria a R1 ao contrário.
+    "app/ipc_bridge.py::frase_do_interruptor_de_sensor": (
+        "SENSOR-DE-VERDADE-01 (04/09/2026): a linha de ressalva do interruptor de "
+        "giroscópio/acelerômetro — a frase que diz QUAL metade do interruptor pegou. Ela "
+        "existe porque a medição de 04/09 achou um caminho em que o daemon não escreve "
+        "byte nenhum: em Modo Nativo o jogo lê o movimento pelo `hidraw` do controle "
+        "FÍSICO (SDL 2.30 abrindo `/dev/hidraw4`, `tem_giro=true`, 192 amostras em 2 s), e "
+        "o kernel entrega o report direto. O caminho se perde no gesto `sensor` de "
+        "`interface/pacotes/a02_controles.py:1861`, que hoje RECUSA dizendo em vez de "
+        "chamar o método. FECHA quando aquele gesto chamar "
+        "`p.sensor_set_detalhado(giroscopio=..., uniq=...)` e passar o corpo por esta "
+        "função, pintando o botão com "
+        "`state_full[\"controllers\"][i][\"sensores\"][\"giroscopio_ligado\"]` — chave "
+        "NOVA do payload, irmã de `inputs`. A `PONTE` do pacote "
+        "(`a02_controles.py:2735`) precisa ganhar `sensor_set_detalhado` e "
+        "`frase_do_interruptor_de_sensor` junto. A metade do daemon está medida em "
+        "`docs/process/agentes/2026-09-04/ONDA1-D3.md`."
+    ),
+
     "app/ipc_bridge.py::rumble_motores_set": (
         "VIBRACAO-POR-MOTOR-01 (04/09/2026): a barra de cada motor, que MULTIPLICA o degrau "
         "da coluna — `efetivo(motor) = degrau x barra(motor)`, decisão dela, fora das três "

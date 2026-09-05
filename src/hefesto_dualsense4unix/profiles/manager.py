@@ -851,6 +851,75 @@ class ProfileManager:
         # MIC-QUINTO-AJUSTE-01 (03/09/2026): e DEPOIS do global, a peça que
         # discorda dele — o mesmo par que o alto-falante já formava.
         self.apply_controller_mics(profile, origin=origin, relatorio=resultado)
+        # SENSOR-DE-VERDADE-01 (04/09/2026): giroscópio e acelerômetro por
+        # peça. Sem par global: o sensor NÃO tem seção no `Profile`, e não
+        # tem de propósito — ligar/desligar o giro "de todo mundo" não é gesto
+        # que a tela dela ofereça, e um global aqui seria um interruptor sem
+        # botão que uma troca de perfil acionaria pelas costas.
+        self.apply_controller_sensores(profile, origin=origin, relatorio=resultado)
+        return resultado
+
+    def apply_controller_sensores(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+    ) -> dict[str, str]:
+        """Aplica o giroscópio/acelerômetro das UNIDADES que têm opinião.
+
+        SENSOR-DE-VERDADE-01, decisão dela: *"ele tem que funcionar de verdade.
+        ambos independente do modo e da mascara."*
+        <!-- noqa-acento: citação literal dela -->
+
+        **É o degrau que faz o interruptor sobreviver ao replug e à troca de
+        perfil** — sem ele, ela desligaria o giro, o controle cairia, voltaria
+        e o giro voltaria junto, calado.
+
+        NÃO TEM APPLIER INJETÁVEL, e é a diferença deliberada em relação ao
+        alto-falante e ao microfone: aqueles escrevem no APARELHO (bytes de
+        volume, mudo de firmware) e por isso precisam de uma costura que os
+        testes possam substituir. Este escreve num registro em memória do
+        próprio processo (``core/virtual_motion.REGISTRO``), que é quem o
+        caminho quente do report consulta a ~250 Hz. Injetar um dublê aqui
+        substituiria justamente a coisa que se quer provar.
+
+        SÓ QUEM TEM OPINIÃO, e o resto é silêncio: ``sensores`` ausente não
+        chama nada, e campo ``None`` dentro dele não mexe naquele sensor. Um
+        perfil que não pediu nada não pode desligar o giro dela por omissão —
+        é a mesma regra do alto-falante, e vale mais aqui, porque o efeito de
+        desligar por engano é uma mira que não obedece dentro do jogo.
+
+        Relatório: ``sensores:<uniq>`` → ``"giro=on accel=off"``, uma chave por
+        unidade, no mesmo formato-por-peça do ``mic:<uniq>``.
+        """
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        controllers = getattr(profile, "controllers", None)
+        if not controllers:
+            return resultado
+        for uniq, cfg in controllers.items():
+            secao = getattr(cfg, "sensores", None)
+            if secao is None:
+                continue
+            estado = REGISTRO.definir(
+                str(uniq),
+                giroscopio=getattr(secao, "giroscopio", None),
+                acelerometro=getattr(secao, "acelerometro", None),
+            )
+            resultado[f"sensores:{uniq}"] = (
+                f"giro={'on' if estado.giroscopio else 'off'} "
+                f"accel={'on' if estado.acelerometro else 'off'}"
+            )
+            logger.info(
+                "profile_sensores_por_peca",
+                profile=getattr(profile, "name", None),
+                uniq=str(uniq),
+                origin=origin,
+                giroscopio=estado.giroscopio,
+                acelerometro=estado.acelerometro,
+            )
         return resultado
 
     def apply_controller_speakers(
