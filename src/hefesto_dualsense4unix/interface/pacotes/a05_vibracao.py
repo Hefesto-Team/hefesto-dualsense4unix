@@ -710,20 +710,23 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # e APAGA — que é a resposta certa para "ninguém mediu tremor nenhum".
         for lado, treme in (col.get("treme") or {}).items():
             plano[f"treme-{lado}"] = "1" if treme else ""
-        # A LINHA DE ESTADO DESTA COLUNA — D-14, decisão dela de 04/09/2026:
-        # *"Uma linha de estado por coluna"*, com os três estados que ela
-        # nomeou. Era o buraco da queixa *"testei os motores e o jogo não vibra
-        # mais"*: com `rumble_passthrough=False` a janela estável grita e esta
-        # aba ficava MUDA.
+        # O CAMPO `trava` SAIU EM 05/09/2026, com a faixa "Estado" da grade —
+        # decisão dela: *"pq temos uma linha de estado se o estado em vibração
+        # sempre vai ser o jogo mandando os input pro controle e a gnt
+        # aumentando eles ou diminuindo? remove ela não faz sentido"*.
         #
-        # AS QUATRO COLUNAS DIZEM O MESMO, e é honesto: a trava é UMA para a
-        # mesa (`app/telas/vibracao.SEM_FONTE["trava:por-controle"]`, e o
-        # `rumble_active_uniq` do daemon **não é publicado** no `state_full`).
-        # Repetir o fato em cada coluna foi a decisão dela; inventar aqui uma
-        # trava por peça que o produto não tem seria pior.
-        plano["trava"] = _sem_o_que_dizer(
-            _tela.html_da_trava(_tela.estado_da_trava(ctx.state),
-                                saida=_tela.SOLTAR_A_TRAVA))
+        # E A MEDIÇÃO DÁ RAZÃO A ELA PELO CAMINHO QUE ELA USA: os dois estados
+        # "travada" precisam de `rumble_active` armado, e os DOIS gestos desta
+        # aba terminam em `rumble_passthrough(True)` — :func:`testar` (passos 3
+        # e 4) e :func:`parar` —, que o solta. Quem arma e deixa armado é a
+        # janela GTK ou `hef test rumble`. Nesta tela a faixa dizia sempre "o
+        # jogo controla a vibração", menos pelo meio segundo do "Testar".
+        #
+        # O CAMPO SAI COM O ENDEREÇO: emitir `trava` para uma página que não
+        # tem `data-campo="trava"` é escrita em lugar nenhum, calada — o
+        # defeito que esta casa persegue. As cinco peças da trava em
+        # `app/telas/vibracao.py` saíram no mesmo dia, porque esta aba era a
+        # única chamadora delas; a lápide está lá.
         colunas[uniq] = plano
     # A LINHA DO ESTADO — 02/09/2026, e ela é a única coisa que esta aba diz
     # sobre a MESA. Vai por `blocos` e não por campo: o NÚMERO de linhas muda com
@@ -775,30 +778,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     }
 
 
-def _sem_o_que_dizer(html: str) -> str:
-    """O HTML de uma ressalva, ou o marcador de *"não há o que dizer"*.
-
-    **A STRING VAZIA NÃO SERVE, e o motivo é medido:** o `escrever()` do piloto
-    troca vazio por travessão ANTES de escolher o alvo (`hefesto_vivo.py`), e no
-    alvo `html` isso põe um `—` dentro da linha. Um travessão numa linha de
-    estado afirma *"não sei se está travada"*, onde a resposta honesta é não
-    dizer nada.
-
-    O MARCADOR TEM DONO, e é a peça da ONDA0-F: `monta.NADA_A_DIZER` é
-    `<i class="nada"></i>`, e a folha das dez tem `.ressalva:has(.nada)
-    {display:none}` — a linha some, em vez de ocupar o lugar com um traço.
-    Escrever a tag aqui seria a segunda cópia de um contrato de CSS que não é
-    desta camada.
-
-    O `import` É LOCAL como em :func:`_plastico_do_item`, e pela mesma razão: o
-    `monta` é da bancada de desenho, e um `import` de topo faria toda carga
-    deste pacote depender dele.
-    """
-    if html:
-        return html
-    import monta
-
-    return str(monta.NADA_A_DIZER)
+# `_sem_o_que_dizer` SAIU EM 05/09/2026, com a faixa "Estado" — era a única
+# chamadora. O contrato que ela guardava continua vivo onde ainda há linha que
+# pode não ter o que dizer: `monta.NADA_A_DIZER` e o `.ressalva:has(.nada)
+# {display:none}` da folha das dez, e o mesmo par em `a04_iluminacao` e
+# `a06_navegacao`. O que morreu aqui foi a cópia sem chamador, não a regra.
 
 
 def _sem_marcacao(texto: str) -> str:
