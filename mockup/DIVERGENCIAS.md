@@ -36,30 +36,6 @@ seção daqui**: a aba deixou de estar em trabalho.
      separa cada aba do produto vai ser o desenho NOVO da Onda 2, que é o que
      precisa do olho dela. -->
 
-## 01-jogar.html
-- **04/09/2026** — a folha das dez peças (D-02 e D-03) entrou pelo `monta.py`.
-  **Até publicar, o produto continua exatamente como ela o vê hoje:** nenhum
-  elemento desta aba usa as peças, então as regras novas não casam com nada e
-  a página publicada desenha o mesmo pixel que a bancada.
-- **04/09/2026 · ONDA2-01** — **DUAS mudanças, e uma delas move pixel.**
-  1. **O CADEADO voltou para a aba** (decisão [03]: *"Volta para a Jogar,
-     embaixo de Modo"*) — pedido nomeado dela, de 23/07/2026, que saiu do
-     desenho por escolha minha. É **uma linha de 16 px** no rodapé do quadro
-     Modo, fora das duas seções do interruptor. Medido nas duas fotos
-     (`olhar.py`, Chrome, 1920×1080): a `.janela` continua em **1180×777**,
-     `passa_da_dobra: 0` e sem rolagem lateral — a linha coube na folga que a
-     foto de 04/09 já mostrava embaixo do último quadro. **O rótulo e a dica
-     são os do `Gtk.CheckButton` da janela antiga**, palavra por palavra: não
-     há texto novo de tela nesta mudança.
-  2. **O "Player N" esmaece enquanto o jogo não recebeu o controle** (decisão
-     [02]). **ZERO pixel:** só `color` e `font-weight` mudam, e a cena que ela
-     aprovou tem os dois controles já recebidos pelo jogo — nenhum dos dois
-     cartões nasce esmaecido, e o gerador reprova quem os fizer nascer assim.
-     A palavra fica: a **D-04** dela é *"Player N, como está hoje"*.
-
-  **O QUE ELA PRECISA OLHAR ANTES DE PUBLICAR:** a linha do cadeado — é a única
-  coisa desta leva que ocupa espaço na tela dela.
-
 ## 02-controles.html
 - **04/09/2026** — a folha das dez peças (D-02 e D-03) entrou pelo `monta.py`.
   **Até publicar, o produto continua exatamente como ela o vê hoje:** nenhum
