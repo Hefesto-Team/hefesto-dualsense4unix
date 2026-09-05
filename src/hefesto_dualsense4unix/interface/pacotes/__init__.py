@@ -407,6 +407,13 @@ TRAVESSAO = "—"
 #:   `data-hef-alvo="fundo"` (medido) —, e é exatamente por isso que ele
 #:   precisava entrar antes de o desenho ganhar o primeiro.
 #:
+#: `altura` — o GÊMEO VERTICAL DA `largura`, e entrou com ele em 05/09/2026,
+#:   pelo defeito idêntico e medido no mesmo dia: `el.style.height = "—%"` o
+#:   CSSOM recusa, as catorze barrinhas de cada onda sonora da aba 02 ficam na
+#:   altura do desenho, e `--prova-de-mockup` acusou as 56 como ENDEREÇO MORTO
+#:   no lugar vazio. Um alvo de estilo que o travessão não atende nasce com esta
+#:   dívida; o alvo nasceu e a dívida foi paga junto.
+#:
 #: `valor` FICA, e é de propósito: num `<select>` o piloto só escreve o que o
 #: campo oferece, então o travessão é no-op onde não há opção `—` e acerta onde
 #: houver. Nada quebra, e nada precisa ser lembrado no dia em que o desenho
@@ -415,7 +422,7 @@ TRAVESSAO = "—"
 #: `cor` FICA pela razão inversa e igualmente medida: o ramo dele ESCREVE e
 #: depois COMPARA (`el.style.color = t; return el.style.color === antes ? 0 : 1`),
 #: então um travessão recusado devolve 0 e o contador não mente.
-ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE = {"largura", "html", "fundo"}
+ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE = {"largura", "altura", "html", "fundo"}
 
 _LUGAR_NO_HTML = re.compile(r'data-controle="(p\d+)"')
 

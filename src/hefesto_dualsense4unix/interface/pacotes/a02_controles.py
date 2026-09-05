@@ -1171,6 +1171,162 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
     return _CAMADA_1
 
 
+# ---------------------------------------------------------------------------
+# AS ONDAS SONORAS — o que ENTRA e o que SAI, medido
+# ---------------------------------------------------------------------------
+# Pedido dela, 05/09/2026: *"ondas sonoras do auto falante e do microfone devem
+# ser reais na aba controle. sobre o audio que entra e o que sai"*.
+#
+# QUEM MEDE É `integrations/ondas_de_som.py`, e ele tem relógio próprio pela
+# mesma razão da `_camada_1` logo acima: a leitura é de SISTEMA, não de quadro.
+# A diferença é que ali a thread refaz um `pactl` a cada dois segundos e aqui um
+# fluxo fica ABERTO entregando 100 bytes por segundo — o custo no tique é copiar
+# catorze inteiros.
+#
+# ESTE ARQUIVO NÃO ESCOLHE NÓ NENHUM. Os dois endereços já têm dono, e nenhum
+# custa uma leitura nova:
+#
+#   entra -> `entry["audio"]["canal_fonte"]`, publicado pelo daemon;
+#   sai   -> `_CAMADA_1[uniq].sink_do_controle` + `.monitor`, que a camada 1
+#            desta mesma aba já renova a cada dois segundos.
+
+#: Os dois lados, com o prefixo que o gerador usa nos `data-campo`.
+LADO_MIC = "mic"
+LADO_ALTO = "alto"
+
+
+def no_do_microfone(entry: Any) -> str:
+    """A source do microfone deste controle, ou ``""`` quando não há.
+
+    `""` é a resposta CERTA para o controle no rádio: a ponte BT publica o mic
+    como Opus tunelado em HID e o PipeWire não tem nó nenhum para ele até a
+    ponte subir. Inventar um nome faria o medidor abrir `parec` numa fonte de
+    outra pessoa.
+
+    **O `audio` VEM PRIMEIRO, e a ordem foi medida.** O daemon publica
+    `canal_fonte` em TRÊS posições no mesmo controle — `audio`, `speaker` e
+    `inputs.speaker` (conferido no `state_full` da mesa dela em 05/09/2026) —, e
+    `audio` é a casa dele: é o bloco do MICROFONE, que é de quem esta fonte é.
+    As outras duas ficam como recuo, pela mesma razão que `_bloco_do_speaker`
+    aceita duas: *"quem publica é o daemon, e o widget não pode quebrar por
+    causa de onde o dado mora"*.
+    """
+    if isinstance(entry, dict):
+        bloco = entry.get("audio")
+        if isinstance(bloco, dict):
+            fonte = bloco.get("canal_fonte")
+            if isinstance(fonte, str) and fonte:
+                return fonte
+    recuo = _bloco_do_speaker(entry) or {}
+    fonte = recuo.get("canal_fonte")
+    return str(fonte) if isinstance(fonte, str) and fonte else ""
+
+
+def no_do_alto_falante(uniq: str) -> str:
+    """O ``.monitor`` do sink deste controle, ou ``""`` quando não se sabe.
+
+    **O MONITOR É O ÚNICO LUGAR ONDE "O QUE SAI" EXISTE.** Um sink não tem
+    nível; o monitor dele é uma source que entrega exatamente o que o servidor
+    mandou para o aparelho. Medido em 05/09/2026: abrir o monitor do sink do
+    DualSense dela **não** tira o sink do `IDLE` — não custa isócrono nem
+    bateria.
+
+    Sai `""` nos primeiros ~2 s de aba (o cache da camada 1 ainda vazio) e numa
+    máquina sem `pactl`. Os dois são "não sei", e a tela mostra sem leitura.
+    """
+    lida = _CAMADA_1.get(uniq)
+    sink = str(getattr(lida, "sink_do_controle", "") or "") if lida else ""
+    return f"{sink}.monitor" if sink else ""
+
+
+def _seguir_as_ondas(alvos: dict[str, str]) -> None:
+    """Diz ao medidor quais nós seguir neste tique. Nunca levanta.
+
+    Uma falha aqui não pode derrubar a pintura da aba: sem medidor as barras
+    ficam sem leitura, que é o estado honesto.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations import ondas_de_som
+
+        ondas_de_som.o_de_sempre().seguir(alvos)
+    except Exception:  # pragma: no cover - defensivo
+        return
+
+
+def alturas_do_no(no: str) -> tuple[int, ...] | None:
+    """As catorze alturas daquele nó, ou ``None`` — *não sei*. Nunca levanta."""
+    if not no:
+        return None
+    try:
+        from hefesto_dualsense4unix.integrations import ondas_de_som
+
+        return ondas_de_som.o_de_sempre().alturas(no)
+    except Exception:  # pragma: no cover - defensivo
+        return None
+
+
+def campos_da_onda(lado: str, alturas: tuple[int, ...] | None,
+                   *, mudo: bool = False) -> dict[str, Any]:
+    """Os quinze campos de um medidor: catorze alturas e o selo da leitura.
+
+    O selo (`{lado}-onda-lida`) vale `"sim"` ou o contrário, e o gerador casa
+    o contrário com `data-hef-quando` — a classe `sem-leitura` acende nele.
+    Os dois são VALORES de atributo, na mesma língua sem acento em que o
+    piloto já escreve o `data-conectado`.
+
+    **COM `alturas=None` AS CATORZE SAEM NO PISO, E NÃO VAZIAS.** A primeira
+    versão emitia `""`, e a régua do mockup pegou o defeito no mesmo dia: o
+    `escrever` leva o vazio a `style.height = '—%'`, **CSS inválido que o CSSOM
+    descarta calado** — a altura do DESENHO fica no atributo. A folha ainda
+    achatava o pixel pelo selo, mas o arquivo continuava dizendo `95%`, e
+    `--prova-de-mockup` acusou as 56 barrinhas como ENDEREÇO MORTO. É
+    exatamente o defeito que a barra de bateria do lugar vazio custou a esta aba
+    em 03/09, repetido por mim.
+
+    O piso não afirma silêncio: quem diz "não medi" é o selo, e a folha pinta
+    essas barras de CINZA. O que o número faz é garantir que a onda do desenho
+    saia do atributo — nenhum pixel do arquivo sobrevive à primeira pintura.
+
+    `mudo` ACHATA A ONDA SEM APAGAR A LEITURA, e ele existe por um desacordo
+    real entre dois lugares: o `.monitor` do sink mede o que o SERVIDOR mandou
+    ao aparelho, e o mudo do alto-falante é um byte de FIRMWARE aplicado depois
+    disso. Com o alto-falante mudo o monitor continua entregando a onda do jogo
+    — e desenhá-la seria a tela dizendo que sai som de um alto-falante calado.
+    O piso continua sendo uma afirmação medida ("nada sai"), e por isso o selo
+    permanece `"sim"`: nós SABEMOS, e o que sabemos é que está silencioso.
+    """
+    if mudo and alturas is not None:
+        alturas = tuple([_piso_da_onda()] * len(alturas))
+    piso = _piso_da_onda()
+    fora: dict[str, Any] = {
+        f"{lado}-onda-lida": "sim" if alturas else "nao"}  # (noqa-acento) valor
+    for i in range(ondas_barras()):
+        fora[f"{lado}-onda-{i}"] = (
+            alturas[i] if alturas and i < len(alturas) else piso
+        )
+    return fora
+
+
+def _piso_da_onda() -> int:
+    """A altura de uma barra em silêncio. O dono do número é `ondas_de_som`."""
+    try:
+        from hefesto_dualsense4unix.integrations import ondas_de_som
+
+        return int(ondas_de_som.PISO_PCT)
+    except Exception:  # pragma: no cover - defensivo
+        return 16
+
+
+def ondas_barras() -> int:
+    """Quantas barrinhas um medidor tem. O dono do número é `ondas_de_som`."""
+    try:
+        from hefesto_dualsense4unix.integrations import ondas_de_som
+
+        return int(ondas_de_som.BARRAS)
+    except Exception:  # pragma: no cover - defensivo
+        return 14
+
+
 def aceso_da_rota(uniq: str, entry: Any) -> str:
     """Qual botão de rota a tela pode ACENDER, lendo as DUAS camadas.
 
@@ -1537,6 +1693,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # junta AQUI, e não dentro de `cards`, porque o destino é a folha da PÁGINA:
     # `left`/`top` não são campo de um elemento, são regra de um seletor.
     posicoes: dict[str, dict[str, tuple[float, float] | None]] = {}
+    # OS NÓS DAS ONDAS, uma vez por tique e para a mesa inteira — ver o bloco
+    # `AS ONDAS SONORAS`. Passa-se a lista COMPLETA: o medidor fecha o que saiu
+    # dela no mesmo instante, e é isso que faz o controle desligado parar de
+    # segurar um `parec`. Vem DEPOIS do `_camada_1` porque é dele que sai o sink
+    # do alto-falante.
+    nos_das_ondas: dict[str, str] = {}
+    for c in ctx.conectados:
+        uniq = str(c.get("uniq") or "")
+        if not uniq:
+            continue
+        for no in (no_do_microfone(c), no_do_alto_falante(uniq)):
+            if no:
+                nos_das_ondas[no] = uniq
+    _seguir_as_ondas(nos_das_ondas)
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         # `inputs` TEM TRÊS ESTADOS, E O PRODUTO SÓ ENXERGAVA DOIS. O `or {}`
@@ -1862,6 +2032,21 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # que separa "zero" de "não sei".
                 "alto-barra": (
                     percentual_do_volume(sp_lido[0]) if sp_lido is not None else 0
+                ),
+                # AS DUAS ONDAS SONORAS — o pedido dela de 05/09/2026, e as
+                # catorze barrinhas de cada uma deixam de ser desenho. Ver o
+                # bloco `AS ONDAS SONORAS` para os dois endereços e o custo.
+                #
+                # O MICROFONE NÃO PRECISA DO `mudo=`: com o mic calado no
+                # firmware a source entrega zeros de verdade — medido em
+                # 05/09/2026 na mesa dela, 146 amostras seguidas em `0.000000`
+                # com `mic_mudo: true`. A física responde, e o produto não
+                # precisa inferir.
+                **campos_da_onda(LADO_MIC, alturas_do_no(no_do_microfone(c))),
+                **campos_da_onda(
+                    LADO_ALTO,
+                    alturas_do_no(no_do_alto_falante(uniq)),
+                    mudo=bool(sp_lido is not None and sp_lido[1] is True),
                 ),
                 # OS DOIS INTERRUPTORES DE SENSOR — 04/09/2026, e eles acendem
                 # pelo que o daemon diz, não pelo que o gerador desenhou.

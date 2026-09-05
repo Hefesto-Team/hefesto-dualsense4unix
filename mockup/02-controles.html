@@ -925,6 +925,14 @@
      desenho tem. O lugar vazio passa a usá-lo, em vez de ganhar cor própria. */
   .ctl[data-conectado="nao"] .bat .cheio,
   .ctl[data-conectado="nao"] .vol .cheio{width:0 !important}
+  /* E A ONDA SONORA ENTROU NESTA MESMA REGRA — 05/09/2026. Pelo motivo exato
+     que o parágrafo acima descreve: `altura` é o gêmeo vertical de `largura` e
+     está na mesma lista `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`, então o molde do
+     lugar vazio NÃO escreve nas catorze barrinhas — o `style="height:95%"` do
+     desenho ficaria no atributo. Um assento sem controle mostrando a onda cheia
+     é a mesma mentira que os 64% de bateria que esta regra nasceu para matar. */
+  .ctl[data-conectado="nao"] .onda i{
+    height:16% !important;background:var(--border-forte);opacity:.35}
   .ctl[data-conectado="nao"] .vol .cheio::after{display:none}
   .ctl[data-conectado="nao"] .barra-luz{color:var(--panel) !important}
   .ctl[data-conectado="nao"] .sensores-peca .sw{
@@ -1315,6 +1323,21 @@
   .onda{height:22px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
   .onda.mudo i{background:var(--border-forte);opacity:.5}
+  /* SEM LEITURA — e esta regra é a que impede a tela de mentir.
+     05/09/2026, com as ondas ligadas ao PipeWire.
+
+     "Não sei" tem de ser VISÍVEL e tem de ser DIFERENTE de "medi e há
+     silêncio". O silêncio medido é a linha baixa e ciana que o desenho já
+     define (o piso de 16%); a ausência de leitura é uma linha baixa e CINZA.
+     Um controle no rádio não publica canal de áudio nenhum: sem esta regra ele
+     mostraria a onda cheia do desenho, afirmando um som que ninguém mediu.
+
+     O `!important` NÃO É ÊNFASE, é o único jeito: as catorze alturas moram num
+     `style=` inline, e sem ele a folha perde para o atributo. É a mesma cura
+     que o `data-conectado="nao"` desta aba já usa na barra de bateria, pela
+     mesma razão — e ela nasceu de a tela ter mostrado 64% de bateria num lugar
+     onde não havia controle. */
+  .onda.sem-leitura i{height:16% !important;background:var(--border-forte);opacity:.35}
   /* O SELO DO MICROFONE NASCE APAGADO E **ACENDE** — 03/09/2026, e a inversão
      é o que torna a cor honesta nos TRÊS estados.
 
@@ -2058,7 +2081,7 @@
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
             </div>
-            <span class="onda"><i style="height:22%"></i><i style="height:48%"></i><i style="height:72%"></i><i style="height:95%"></i><i style="height:64%"></i><i style="height:38%"></i><i style="height:52%"></i><i style="height:80%"></i><i style="height:44%"></i><i style="height:26%"></i><i style="height:58%"></i><i style="height:88%"></i><i style="height:40%"></i><i style="height:20%"></i></span>
+            <span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:48%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:72%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:95%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:64%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:52%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:80%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:44%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:58%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:88%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:40%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:20%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">80</span>
@@ -2099,7 +2122,7 @@
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.
               </span></span>
             </div>
-            <span class="onda"><i style="height:100%"></i><i style="height:88%"></i><i style="height:64%"></i><i style="height:92%"></i><i style="height:76%"></i><i style="height:54%"></i><i style="height:82%"></i><i style="height:96%"></i><i style="height:70%"></i><i style="height:48%"></i><i style="height:86%"></i><i style="height:60%"></i><i style="height:74%"></i><i style="height:90%"></i></span>
+            <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:100%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:88%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:92%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:82%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:96%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:86%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:90%"></i></span>
             <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O DualSense não devolve este número — o primeiro arrasto é o que faz o Hefesto passar a saber qual ele é, e é ele que destrava o ♪."></span>
@@ -2469,7 +2492,7 @@
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
             </div>
-            <span class="onda mudo"><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i><i style="height:16%"></i></span>
+            <span class="onda mudo" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">0</span>
@@ -2510,7 +2533,7 @@
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.
               </span></span>
             </div>
-            <span class="onda"><i style="height:70%"></i><i style="height:52%"></i><i style="height:66%"></i><i style="height:44%"></i><i style="height:72%"></i><i style="height:58%"></i><i style="height:48%"></i><i style="height:64%"></i><i style="height:54%"></i><i style="height:70%"></i><i style="height:46%"></i><i style="height:60%"></i><i style="height:50%"></i><i style="height:68%"></i></span>
+            <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:72%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:68%"></i></span>
             <div class="vol" data-campo="alto-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:70%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="70" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O DualSense não devolve este número — o primeiro arrasto é o que faz o Hefesto passar a saber qual ele é, e é ele que destrava o ♪."></span>

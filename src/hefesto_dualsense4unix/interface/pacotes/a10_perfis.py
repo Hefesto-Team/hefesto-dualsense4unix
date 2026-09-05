@@ -141,7 +141,7 @@ SEM_DONO: dict[str, str] = {}
 #: lista do ESQUEMA … quatro campos"* e o `mic` estava fora dela. Estava errado
 #: por seis minutos de diferença entre duas worktrees: `3f757b77` (02:50) pôs o
 #: campo no esquema e `7e64c2e3` (02:56) desenhou a coluna afirmando que ele
-#: *"ainda não existe"*. As cinco de cá e as cinco de lá são hoje a mesma lista.
+#: *"ainda não existe"*. As duas listas voltaram a ser a mesma — hoje são seis.
 #:
 #: E ELA NÃO PODE SAIR DO GERADOR. `interface/aba10.py` é um script: ele insere
 #: o próprio diretório no `sys.path` e importa `monta`, que LÊ O REPOSITÓRIO no
@@ -150,8 +150,16 @@ SEM_DONO: dict[str, str] = {}
 #: as duas divirjam é
 #: `tests/unit/test_a_coluna_de_ajuste_proprio_da_aba10_e_dado.py`, que compara
 #: esta lista com a `SECOES` do gerador, nome a nome e na ordem.
+#:
+#: **A SEXTA ENTROU EM 05/09/2026, e ela é a queixa dela** — *"a aba 10 tá com o
+#: mesmo problema de antes. nada mudou."* O `sensores` chegou a
+#: `ControllerOverrides` em 04/09 (`8f9589ba`) e esta lista ficou nos cinco por
+#: um dia. O sintoma não era coluna trocada: era coluna AUSENTE. Medido com o
+#: disco dela, `_secoes_do_controle` devolvia seis chaves, esta lista lia cinco,
+#: e o `sensores` de um controle ficava guardado no JSON sem uma célula que o
+#: mostrasse — enquanto a dica da linha, que sai do ESQUEMA, já contava seis.
 SECOES_DA_COLUNA: tuple[str, ...] = (
-    "leds", "triggers", "rumble", "speaker", "mic")
+    "leds", "triggers", "rumble", "speaker", "mic", "sensores")
 
 #: AS COLUNAS QUE A TELA JÁ MOSTRA E O ESQUEMA AINDA NÃO GUARDA.
 #:
@@ -579,12 +587,18 @@ SEM_ENDERECO = {
 #: ela não publicar, os quatro valores continuam saindo e caindo no vazio na
 #: página que o produto renderiza; o que ela vê hoje não muda.
 #:
-#: **PAGA — 05/09/2026.** Ela publicou. O que a lista guardava era a espera do
-#: ato dela, e o ato aconteceu: os quatro endereços estão na página que o
-#: produto renderiza. A lista fica VAZIA, e não some, porque ela é o lugar
-#: onde a próxima dívida desta espécie se declara — e porque as duas réguas
-#: que a cobram nos dois sentidos continuam valendo: entrada aqui exige
-#: endereço FALTANDO no publicado, e endereço faltando exige entrada aqui.
+#: **PAGA — 05/09/2026, e a régua foi quem cobrou.** Os quatro endereços (o
+#: cadeado do "Funciona em" e o ponto de alerta do "Nome do Jogo", decisões [01]
+#: e [02] do PO) chegaram a `interface/paginas/` na publicação de 05/09, e esta
+#: lista ficou para trás — com
+#: `test_o_que_espera_publicacao_sai_da_lista_quando_ela_publicar` VERMELHO no
+#: `dev`. É exatamente o que ela nasceu para fazer: uma declaração que
+#: envelheceu é a régua se desligando sem ninguém decidir isso.
+#:
+#: A LISTA FICA VAZIA E NÃO SOME: ela é o lugar onde a próxima dívida desta
+#: espécie se declara, e as duas réguas que a cobram nos DOIS sentidos continuam
+#: valendo — entrada aqui exige endereço FALTANDO no publicado, e endereço
+#: faltando exige entrada aqui.
 ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
 
 

@@ -602,41 +602,59 @@ def test_o_campo_nunca_volta_vazio_da_correcao(
 def test_a_tira_do_desfecho_tem_duas_linhas_reservadas() -> None:
     """A metade que AVISA mora no fim da frase, e é a que a linha única comia.
 
-    MORDIDA: volte `.desfecho` a `height:15px` com `white-space:nowrap` no
+    **A RÉGUA SE INVERTEU EM 05/09/2026, e a última asserção era o defeito.**
+    Ela exigia ``height:30px`` e ``visibility:hidden`` na MESMA regra, dizendo
+    *"a tira deixou de RESERVAR o espaço"* — e o espaço reservado em repouso são
+    **37px de banda morta debaixo do título "Perfis"**, que ela viu e chamou de
+    *"espaço vertical bizarro desnecessário"*. As duas linhas continuam
+    cobradas; o que mudou de regra é ONDE elas valem: a altura mora na ``.on``,
+    e a de repouso tem de colapsar. A medição em pixels está em
+    ``test_a_aba10_nao_reserva_banda_morta_no_titulo.py``.
+
+    MORDIDA: devolva `height:30px;margin-top:7px` à regra `.desfecho{…}` do
     `aba10.CSS`, regere, e esta régua reprova.
     """
-    regra = re.search(r"\.desfecho\{[^}]*\}", _pagina(publicado=False))
+    html = _pagina(publicado=False)
+    regra = re.search(r"\.desfecho\{[^}]*\}", html)
     assert regra is not None, "a regra da tira do desfecho sumiu do CSS"
     corpo = regra.group(0)
-    assert "height:30px" in corpo, f"a tira voltou a uma linha: {corpo}"
+    acesa = re.search(r"\.desfecho\.on\{[^}]*\}", html)
+    assert acesa is not None, "a regra `.desfecho.on` sumiu do CSS"
+    assert "height:30px" in acesa.group(0), (
+        f"a tira acesa voltou a uma linha: {acesa.group(0)}")
     assert "-webkit-line-clamp:2" in corpo, (
         f"sem o `line-clamp` a frase longa vaza para fora da caixa: {corpo}")
     assert "white-space:nowrap" not in corpo, (
         f"o `nowrap` voltou, e com ele a frase continua numa linha só: {corpo}")
-    assert "visibility:hidden" in corpo and "display:none" not in corpo, (
-        f"a tira deixou de RESERVAR o espaço — a lista volta a pular: {corpo}")
+    assert "visibility:hidden" in corpo, (
+        f"a tira vazia deixou de se esconder — ela apareceria como uma faixa em "
+        f"branco em toda tela sem recado: {corpo}")
+    assert "height:0" in corpo and "margin-top:0" in corpo, (
+        f"a tira VAZIA voltou a reservar espaço: {corpo}")
 
 
 def test_a_altura_reservada_e_a_conta_das_linhas_que_a_tira_mostra() -> None:
-    """``height`` = ``line-height`` vezes ``line-clamp``, e as três moram na mesma regra.
+    """``height`` = ``line-height`` vezes ``line-clamp`` — na regra que ABRE a tira.
 
     É a metade que some sem sintoma: `-webkit-line-clamp:2` com `height:15px`
     reticencia na segunda linha e depois a ESCONDE com o `overflow` — a tela
     volta a cortar o aviso, e o CSS jura que não. Um `height:45px` faria o
-    contrário: 15px de espaço morto sobre a lista de perfis, permanentes.
+    contrário: 15px de espaço morto sobre a lista de perfis a cada recado.
 
-    NÃO SE DIGITA O 30: os três números são lidos da regra e a conta é feita.
-
-    MORDIDA: ponha `height:15px` (ou `-webkit-line-clamp:3`) e ela reprova com
-    a aritmética.
+    NÃO SE DIGITA O 30: os três números são lidos das regras e a conta é feita.
+    O ``height`` mudou de casa em 05/09 (ver a régua acima); os outros dois
+    continuam na regra de repouso, que é onde a caixa se define.
     """
-    regra = re.search(r"\.desfecho\{[^}]*\}", _pagina(publicado=False))
-    assert regra is not None
-    corpo = regra.group(0)
-    numero = {chave: int(re.search(rf"{chave}:(\d+)", corpo).group(1))  # type: ignore[union-attr]
-              for chave in ("height", "line-height", "-webkit-line-clamp")}
+    html = _pagina(publicado=False)
+    repouso = re.search(r"\.desfecho\{[^}]*\}", html)
+    acesa = re.search(r"\.desfecho\.on\{[^}]*\}", html)
+    assert repouso is not None and acesa is not None
+    numero = {chave: int(re.search(rf"{chave}:(\d+)", repouso.group(0)).group(1))  # type: ignore[union-attr]
+              for chave in ("line-height", "-webkit-line-clamp")}
+    numero["height"] = int(
+        re.search(r"height:(\d+)px", acesa.group(0)).group(1))  # type: ignore[union-attr]
     assert numero["height"] == numero["line-height"] * numero["-webkit-line-clamp"], (
-        f"a tira reserva {numero['height']}px para "
+        f"a tira acesa reserva {numero['height']}px para "
         f"{numero['-webkit-line-clamp']} linha(s) de {numero['line-height']}px "
         f"— ou ela corta o aviso, ou sobra espaço morto sobre a lista")
 

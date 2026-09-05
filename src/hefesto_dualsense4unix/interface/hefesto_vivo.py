@@ -278,6 +278,26 @@ BOOTSTRAP = r"""
       if(el.style.width !== t + '%'){ el.style.width = t + '%'; return 1; }
       return 0;
     }
+    // O ALVO `altura` — O DÉCIMO PRIMEIRO, e ele é o gêmeo vertical do
+    // `largura`. Nasceu em 05/09/2026 para as ONDAS SONORAS da aba 02: as
+    // barrinhas do microfone e do alto-falante crescem em `height`, e dos dez
+    // alvos que havia nenhum escrevia essa propriedade.
+    //
+    // POR QUE NÃO O `html` NO CONTÊINER, que era a alternativa e não custava
+    // motor nenhum: a régua do mockup lê o alvo `html` **pelo texto visível**
+    // (`regua_do_mockup._Leitor`, ramo `alvo in ("fundo", "html")`), e o texto
+    // de catorze `<i>` vazios é vazio nos DOIS lados — desenho e produto. As
+    // 56 barrinhas ficariam INDECIDÍVEIS para sempre, que é justamente o balde
+    // que esta casa passou 02/09 tentando esvaziar. Com `altura` a régua lê
+    // `style.height` e decide, exatamente como já decide as barras horizontais.
+    //
+    // E o `innerHTML` recriaria 56 nós a dez vezes por segundo; este alvo
+    // escreve estilo e devolve 0 quando nada mudou, que é o que mantém o
+    // contador de pinturas honesto.
+    if(alvo === 'altura'){
+      if(el.style.height !== t + '%'){ el.style.height = t + '%'; return 1; }
+      return 0;
+    }
     if(alvo === 'fundo'){
       if(el.style.background !== t){ el.style.background = t; return 1; }
       return 0;
@@ -300,6 +320,31 @@ BOOTSTRAP = r"""
                                               function(o){ return o.value === t || o.text === t; });
         if(!tem) return 0;
       }
+      // E UM <input type=range> SÓ ACEITA NÚMERO, com um desfecho PIOR que o do
+      // `<select>` acima: ele não devolve vazio, ele SANEIA. Escrever o
+      // travessão de um valor vazio faz o navegador trocar o `value` pelo meio
+      // da escala, o polegar SALTA para um número que ninguém pediu, e como
+      // `el.value` nunca volta igual ao que se escreveu o contador soma uma
+      // pintura NOVA a cada tique, para sempre — que é o contador com que esta
+      // casa prova que um endereço existe.
+      //
+      // MEDIDO NESTE MOTOR em 05/09/2026, na barra da Navegação (1..12):
+      //
+      //     sem esta guarda   pintar({"vel-cursor": null})  →  value "7", +1
+      //                       de novo, no tique seguinte    →  value "7", +1 …
+      //     com esta guarda                                 →  value "6",  0
+      //
+      // O CASO NÃO É HIPOTÉTICO: `a06_navegacao` emite as duas velocidades como
+      // `rato.get("speed")`, e sem o bloco `mouse_emulation` no estado isso é
+      // `None`. É o mesmo chão do `<select>` do teto da vibração, medido em
+      // 01/09/2026, e a cura é aqui pela mesma razão: uma aba não pode ter de
+      // lembrar-se dela — as três barras da Vibração ganham a mesma rede.
+      //
+      // ZERO É NÚMERO, e por isso a guarda é `isFinite` sobre `Number(t)` e não
+      // um teste de vazio — um trilho cujo piso é 0 (as barras de motor da aba
+      // Vibração) tem de aceitar o zero que o produto mandou.
+      if(el.tagName === 'INPUT' && String(el.type).toLowerCase() === 'range'
+         && !isFinite(Number(t))) return 0;
       if(el.value !== t){ el.value = t; return 1; }
       return 0;
     }
@@ -1250,6 +1295,10 @@ LER_CAMPOS = r"""
     const alvo = el.dataset.hefAlvo || 'texto';
     let v;
     if(alvo === 'largura'){ v = el.style.width; }
+    // O gêmeo vertical, na MESMA língua: `style.height` volta com a unidade
+    // que o CSSOM acrescenta (`64%`), e `_declarado_neste_elemento` põe o `%`
+    // do lado do pacote pelo mesmo ramo que já serve o `largura`.
+    else if(alvo === 'altura'){ v = el.style.height; }
     else if(alvo === 'valor'){ v = ('value' in el) ? String(el.value ?? '') : ''; }
     else if(alvo === 'cor'){ v = el.style.color; }
     else if(alvo === 'atributo'){
@@ -2909,6 +2958,11 @@ def main() -> None:
                         "eles chegam ao daemon de verdade")
     p.add_argument("--sem-cor", action="store_true",
                    help="MORDIDA: sem o leitor de cor do plástico")
+    p.add_argument("--sem-ondas", action="store_true",
+                   help="MORDIDA: arranca o medidor de áudio das ondas sonoras "
+                        "da aba 02. As catorze barrinhas de cada medidor têm de "
+                        "ACHATAR e ficar cinza — se continuarem desenhando a "
+                        "onda do arquivo, elas nunca foram dado")
     p.add_argument("--prova-de-mockup", action="store_true",
                    help="passa pelas dez abas e diz, campo a campo, o que é DADO "
                         "e o que ainda é o DESENHO cravado no arquivo")
@@ -2937,6 +2991,15 @@ def main() -> None:
         print("[prova-de-mockup] ligando `--oculta`: esta régua abre dez abas e "
               "ela tem UMA tela.")
         args.oculta = True
+
+    # AS ONDAS SONORAS SÓ MEDEM AQUI, e a trava é deliberada. O medidor de
+    # `integrations/ondas_de_som.py` nasce DESLIGADO porque a suíte chama
+    # `a02_controles.pacote()` centenas de vezes, e um fluxo de captura aberto a
+    # cada chamada seguraria o microfone DELA aberto durante a suíte inteira.
+    # O piloto é o produto; é ele quem autoriza.
+    from hefesto_dualsense4unix.integrations import ondas_de_som
+
+    ondas_de_som.ligar(not args.sem_ondas)
 
     piloto = Piloto(args)
     if args.prova_de_mockup:

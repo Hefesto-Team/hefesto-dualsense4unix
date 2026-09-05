@@ -302,6 +302,14 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      desenho tem. O lugar vazio passa a usá-lo, em vez de ganhar cor própria. */
   .ctl[data-conectado="nao"] .bat .cheio,
   .ctl[data-conectado="nao"] .vol .cheio{width:0 !important}
+  /* E A ONDA SONORA ENTROU NESTA MESMA REGRA — 05/09/2026. Pelo motivo exato
+     que o parágrafo acima descreve: `altura` é o gêmeo vertical de `largura` e
+     está na mesma lista `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`, então o molde do
+     lugar vazio NÃO escreve nas catorze barrinhas — o `style="height:95%"` do
+     desenho ficaria no atributo. Um assento sem controle mostrando a onda cheia
+     é a mesma mentira que os 64% de bateria que esta regra nasceu para matar. */
+  .ctl[data-conectado="nao"] .onda i{
+    height:16% !important;background:var(--border-forte);opacity:.35}
   .ctl[data-conectado="nao"] .vol .cheio::after{display:none}
   .ctl[data-conectado="nao"] .barra-luz{color:var(--panel) !important}
   .ctl[data-conectado="nao"] .sensores-peca .sw{
@@ -692,6 +700,21 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .onda{height:22px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
   .onda.mudo i{background:var(--border-forte);opacity:.5}
+  /* SEM LEITURA — e esta regra é a que impede a tela de mentir.
+     05/09/2026, com as ondas ligadas ao PipeWire.
+
+     "Não sei" tem de ser VISÍVEL e tem de ser DIFERENTE de "medi e há
+     silêncio". O silêncio medido é a linha baixa e ciana que o desenho já
+     define (o piso de 16%); a ausência de leitura é uma linha baixa e CINZA.
+     Um controle no rádio não publica canal de áudio nenhum: sem esta regra ele
+     mostraria a onda cheia do desenho, afirmando um som que ninguém mediu.
+
+     O `!important` NÃO É ÊNFASE, é o único jeito: as catorze alturas moram num
+     `style=` inline, e sem ele a folha perde para o atributo. É a mesma cura
+     que o `data-conectado="nao"` desta aba já usa na barra de bateria, pela
+     mesma razão — e ela nasceu de a tela ter mostrado 64% de bateria num lugar
+     onde não havia controle. */
+  .onda.sem-leitura i{height:16% !important;background:var(--border-forte);opacity:.35}
   /* O SELO DO MICROFONE NASCE APAGADO E **ACENDE** — 03/09/2026, e a inversão
      é o que torna a cor honesta nos TRÊS estados.
 
@@ -1036,12 +1059,45 @@ def grade(apertados):
                 f'{glifo(n, ativo=False, tam=38)}</span>')
     return "\n".join(um(n) for n, _ in GL16)
 
-def onda(vals, mudo=False):
+def onda(vals, mudo=False, lado=""):
     """O medidor de nível. Piso de 16%: com o microfone mudo os valores caem a 4-6%
     e as barras somem — o bloco lia como quebrado ao lado do card cheio. Silêncio
-    é uma linha baixa e visível, não a ausência do desenho."""
-    return ('<span class="onda' + (' mudo' if mudo else '') + '">'
-            + "".join(f'<i style="height:{max(v, 16)}%"></i>' for v in vals) + '</span>')
+    é uma linha baixa e visível, não a ausência do desenho.
+
+    **AS BARRAS GANHARAM ENDEREÇO — 05/09/2026**, e é o pedido dela: *"ondas
+    sonoras do auto falante e do microfone devem ser reais na aba controle.
+    sobre o audio que entra e o que sai"*. Cada `<i>` é um `data-campo`
+    próprio (`{lado}-onda-0` … `-13`) com o alvo `altura`, o gêmeo vertical do
+    `largura`; quem os enche é `a02_controles`, com o pico que
+    `integrations/ondas_de_som.py` lê do PipeWire a 25 Hz.
+
+    UM ENDEREÇO POR BARRA, e não uma lista num endereço só: o piloto distribui
+    uma lista pelos elementos de mesmo `data-campo` **apenas** no bloco da mesa
+    (`hefesto_vivo.py`, laço de `p.mesa`) — no laço `p.colunas`, que é o dos
+    campos POR CONTROLE, um valor que seja `object` é pulado. É a mesma forma
+    que a aba Gatilhos já usa nas suas barras (`aj-pct-{sigla}-{i}`).
+
+    O CONTÊINER GANHOU O SEU, e ele é o que impede a tela de mentir: com o alvo
+    `classe` e `data-hef-quando="nao"`, a classe `sem-leitura` acende quando não
+    há medição. Sem ele o "não sei" cairia no travessão, e `style.height = '—%'`
+    é CSS inválido — o CSSOM **descarta calado** e a altura do DESENHO fica na
+    tela. É exatamente o defeito que a barra de bateria do lugar vazio custou a
+    esta aba em 03/09.
+
+    `lado` vazio mantém o desenho sem endereço nenhum, para quem só quer a peça.
+    """
+    if not lado:
+        return ('<span class="onda' + (' mudo' if mudo else '') + '">'
+                + "".join(f'<i style="height:{max(v, 16)}%"></i>' for v in vals)
+                + '</span>')
+    barras = "".join(
+        f'<i data-campo="{lado}-onda-{i}" data-hef-alvo="altura"'
+        f' style="height:{max(v, 16)}%"></i>'
+        for i, v in enumerate(vals))
+    return ('<span class="onda' + (' mudo' if mudo else '') + '"'
+            f' data-campo="{lado}-onda-lida" data-hef-alvo="classe"'
+            ' data-hef-classe="sem-leitura" data-hef-quando="nao">'
+            + barras + '</span>')
 
 # O `pos` SAIU DAQUI — 04/09/2026. Ele agora é `a02_controles.pos_do_analogico`,
 # importado no topo: a conta que põe o polegar na tela passou a ter UM dono, e o
@@ -1774,7 +1830,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
             </div>
-            {onda(mic_v, mic_mudo)}
+            {onda(mic_v, mic_mudo, "mic")}
             {linha_de_volume("mic-porque")}
               <span class="trilho"><span class="cheio" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
               <span class="n">{mic_vol}</span>
@@ -1815,7 +1871,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.
               </span></span>
             </div>
-            {onda(alto_v)}
+            {onda(alto_v, lado="alto")}
             {linha_de_volume("alto-porque", "" if alto_pode else DICA_ALTO_SEM_POSSE)}
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:{alto_v[0]}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{alto_v[0]}" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_ALTO}" title="{DICA_VOL_ALTO}"></span>
