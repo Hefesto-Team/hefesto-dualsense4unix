@@ -82,6 +82,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ControllerMicOverride,
     ControllerOverrides,
     ControllerRumbleOverride,
+    ControllerSensoresOverride,
     LedsConfig,
     MatchAny,
     Profile,
@@ -131,6 +132,14 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
         funcao="apply_controller_mics",
         chega_em="apply_mic(uniq=...) → set_microphone_mute(uniq=...)",
     ),
+    "sensores": ConsumidorPorUnidade(
+        funcao="apply_controller_sensores",
+        chega_em=(
+            "REGISTRO.definir(uniq) → a janela de motion daquela peça sai do "
+            "vpad com os 6 bytes do sensor zerados, e o nó evdev dela fica "
+            "grabado"
+        ),
+    ),
 }
 
 
@@ -174,11 +183,12 @@ def test_a_regua_sabe_recusar() -> None:
     Sem isto, um erro nas duas funções puras faria o teste acima passar em
     silêncio para sempre — o formato *régua que se confere contra ela mesma*.
     """
-    sintetico = {"leds", "sensors"}
-    assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["sensors"]
+    sintetico = {"leds", "touchpad"}
+    assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["touchpad"]
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
         "mic",
         "rumble",
+        "sensores",
         "speaker",
         "triggers",
     ]
@@ -288,12 +298,41 @@ def _prova_mic(uniq: str) -> object:
     return alvos == [uniq] or None
 
 
+def _prova_sensores(uniq: str) -> object:
+    from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+
+    REGISTRO.limpar()
+    try:
+        gerente = ProfileManager(
+            controller=object(),  # type: ignore[arg-type]
+            store=_StoreSemTrava(),  # type: ignore[arg-type]
+        )
+        perfil = Profile(
+            name="uma_peca_so",
+            match=MatchAny(),
+            controllers={
+                uniq: ControllerOverrides(
+                    sensores=ControllerSensoresOverride(giroscopio=False)
+                )
+            },
+        )
+        gerente.apply_controller_sensores(perfil)
+        # O ENDEREÇO É O TESTE: o giro DESTA peça caiu e o da vizinha não.
+        return (
+            REGISTRO.estado(uniq).giroscopio is False
+            and REGISTRO.estado("aa:bb:cc:00:00:ff").giroscopio is True
+        ) or None
+    finally:
+        REGISTRO.limpar()
+
+
 _PROVAS = {
     "leds": _prova_leds,
     "triggers": _prova_triggers,
     "rumble": _prova_rumble,
     "speaker": _prova_speaker,
     "mic": _prova_mic,
+    "sensores": _prova_sensores,
 }
 
 
@@ -510,41 +549,57 @@ def test_o_interruptor_do_botao_de_mic_continua_um_por_maquina() -> None:
         ControllerMicOverride.model_validate({"button_toggles_system": True})
 
 
-def test_os_sensores_nao_tem_por_onde_ser_desligados() -> None:
-    """O hub publica por ``uniq`` e só LÊ; o IPC não tem método de sensor.
+def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
+    """O sensor SAIU da fila em 04/09/2026 — e esta régua virou de lado.
 
-    O giroscópio e o acelerômetro têm caminho de LEITURA por peça — e leitura
-    não é aplicação. Um campo ``sensors`` no perfil hoje seria a tela
-    prometendo um botão que não desliga nada, em transporte nenhum.
+    **ELA DIZIA O CONTRÁRIO ATÉ ONTEM**, e a mudança é a entrega: o teste se
+    chamava ``test_os_sensores_nao_tem_por_onde_ser_desligados`` e afirmava
+    que o ``SensorHub`` *"só LÊ"* e que nenhum método do IPC casava
+    ``sensor``. A própria docstring dele dizia *"VERMELHO AQUI É BOA NOTÍCIA:
+    o interruptor nasceu"*. Nasceu — SENSOR-DE-VERDADE-01, decisão dela:
+    *"ele tem que funcionar de verdade. ambos independente do modo e da
+    mascara."* <!-- noqa-acento: citação literal dela -->
 
-    VERMELHO AQUI É BOA NOTÍCIA: o interruptor nasceu (``sensors.set`` no IPC
-    ou um método de escrita no hub). Traga ``ProfileSensorsConfig`` para o
-    ``Profile`` e para ``ControllerOverrides`` — é a ONDA-CONTROLES-07.
+    O que ela cobra agora são as TRÊS metades do ato, porque foi assim que a
+    medição de 04/09 mostrou que o caminho se divide:
 
-    ``entradas`` entrou na lista em 04/09/2026 (STATUS-04) e NÃO é o
-    interruptor: é o gêmeo de ``leitura`` — LÊ analógicos, gatilhos e botões
-    de um ``uniq`` por um ``EvdevReader`` passivo, sem ``set_grab``, para o
-    segundo card deixar de ficar mudo fora do co-op. Quem acrescentar o
-    PRÓXIMO nome aqui tem de fazer a mesma pergunta: **este método LÊ ou
-    APLICA?** Se aplica, a lista não cresce — cresce o ``Profile``.
+    1. o método existe no IPC e se chama ``sensor.set``;
+    2. o hub sabe DIZER se o nó de movimento ficou exclusivo — sem isso a
+       resposta afirmaria alcance que ninguém conferiu;
+    3. a resposta carrega ``alcance`` e ``ressalva``, que é onde o limite do
+       Modo Nativo aparece em vez de virar "aplicado" sobre um giro vivo.
+
+    MORDIDA: tire a linha ``"sensor.set"`` do ``ipc_server`` e o item 1
+    reprova; tire o ``grab_do_movimento`` do hub e o item 2 reprova.
     """
     publicos = {
         nome
         for nome, _ in inspect.getmembers(sensor_hub_module.SensorHub, inspect.isfunction)
         if not nome.startswith("_")
     }
-    assert publicos == {"entradas", "leitura", "reconciliar", "stop_all"}, (
-        f"o SensorHub ganhou método público novo: {sorted(publicos)}"
-    )
+    assert publicos == {
+        "entradas",
+        "grab_do_movimento",
+        "leitura",
+        "reconciliar",
+        "stop_all",
+    }, f"o SensorHub mudou de superfície pública: {sorted(publicos)}"
 
-    from hefesto_dualsense4unix.daemon import ipc_server
+    from hefesto_dualsense4unix.daemon import ipc_handlers, ipc_server
 
     fonte_ipc = Path(inspect.getsourcefile(ipc_server) or "").read_text(encoding="utf-8")
     metodos = set(re.findall(r'"([a-z_]+\.[a-z_]+)":\s*self\._handle', fonte_ipc))
-    de_sensor = sorted(
-        m for m in metodos if re.search(r"sensor|gyro|giro|motion|accel", m)
+    assert "sensor.set" in metodos, (
+        "o interruptor de sensor sumiu do IPC — sem ele o campo `sensores` do "
+        "perfil vira a tela prometendo um botão que não desliga nada"
     )
-    assert not de_sensor, f"o IPC ganhou método de sensor: {de_sensor}"
+
+    corpo = inspect.getsource(ipc_handlers.IpcHandlersMixin._handle_sensor_set)
+    for chave in ("alcance", "ressalva", "giroscopio", "acelerometro"):
+        assert f'"{chave}"' in corpo, (
+            f"a resposta do sensor.set deixou de trazer {chave!r} — e é por "
+            "ela que a tela sabe QUAL metade do interruptor pegou"
+        )
 
 
 def test_a_entrada_continua_de_um_controle_so() -> None:

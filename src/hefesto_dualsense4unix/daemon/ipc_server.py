@@ -37,6 +37,12 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
                              firmware_pedido, firmware_motivo, ativo, motivo}
                          `status` só é "ok" com as DUAS metades feitas
     mic.led.set          {aceso: bool|null, uniq?} -> {status, aceso}
+    sensor.set           {uniq?, giroscopio?: bool, acelerometro?: bool}
+                         -> {status, uniq, perfil, gravado, giroscopio,
+                             acelerometro, alcance: {report, evdev}, ressalva}
+                         `alcance` diz QUAL metade pegou: em Modo Nativo o jogo
+                         lê o movimento pelo hidraw do FÍSICO e o daemon não
+                         escreve ali — a `ressalva` carrega esse limite
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
 
@@ -123,6 +129,13 @@ class IpcServer(IpcHandlersMixin):
             "rumble.policy_set": self._handle_rumble_policy_set,
             "rumble.policy_custom": self._handle_rumble_policy_custom,
             "rumble.motores.set": self._handle_rumble_motores_set,
+            # SENSOR-DE-VERDADE-01 (04/09/2026): o giroscópio e o acelerômetro
+            # daquela peça, cada um por si, em Nativo e em Virtual, com ou sem
+            # máscara — decisão dela, contra a minha recomendação de virar
+            # leitura. O método diz na resposta QUAL metade do interruptor
+            # pegou, porque a medição achou um caminho (o hidraw do físico, em
+            # Nativo) em que o daemon não escreve byte nenhum.
+            "sensor.set": self._handle_sensor_set,
             "daemon.status": self._handle_daemon_status,
             "daemon.state_full": self._handle_daemon_state_full,
             "daemon.pause": self._handle_daemon_pause,

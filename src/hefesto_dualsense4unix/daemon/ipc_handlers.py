@@ -3770,6 +3770,39 @@ class IpcHandlersMixin:
             leitura = hub.leitura(uniq)
         if isinstance(leitura, dict):
             inputs.update(leitura)
+        # SENSOR-DE-VERDADE-01: o INTERRUPTOR, ao lado do VALOR. São coisas
+        # diferentes e a tela precisa das duas: a moldura continua mostrando o
+        # giro (o Hefesto ainda LÊ — quem deixa de ler é o jogo), e o botão
+        # pinta daqui. Sem esta chave o botão teria de adivinhar o próprio
+        # estado pelo valor, e um controle parado na mesa desenharia
+        # "desligado" com o sensor ligado.
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+
+            estado = REGISTRO.estado(uniq)
+            entry["sensores"] = {
+                "giroscopio_ligado": estado.giroscopio,
+                "acelerometro_ligado": estado.acelerometro,
+                # Qual metade do interruptor pegou NESTA peça, para a recusa da
+                # tela poder ser específica em vez de genérica.
+                "grab_do_movimento": self._grab_do_movimento(hub, uniq),
+            }
+
+    @staticmethod
+    def _grab_do_movimento(hub: Any, uniq: str) -> str:
+        """`off|pending|held|failed|sem_reader` do nó de movimento de `uniq`.
+
+        Via `getattr` porque o hub é dublado em régua (`_HandlerFalso` e
+        amigos): um hub sem o método é "não sei", nunca uma exceção que
+        derrube o `state_full` inteiro por causa de um selo.
+        """
+        perguntar = getattr(hub, "grab_do_movimento", None)
+        if not callable(perguntar):
+            return "desconhecido"
+        try:
+            return str(perguntar(uniq))
+        except Exception:
+            return "desconhecido"
 
     def _garantir_sensor_hub(self) -> Any:
         """O `SensorHub` desta sessão, criado no primeiro uso (S2/STATUS-04)."""
@@ -5186,6 +5219,187 @@ class IpcHandlersMixin:
             "gravado": True,
             "forte_pct": efetivos[0],
             "fraco_pct": efetivos[1],
+        }
+
+    async def _handle_sensor_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`sensor.set` — desliga giroscópio e acelerômetro DE VERDADE.
+
+        Params: ``{uniq?: str, giroscopio?: bool, acelerometro?: bool}``.
+        `uniq` omitido = o primário; campo omitido = **não mexe naquele
+        sensor**. Decisão dela, 04/09/2026, depois de eu recomendar virar
+        leitura:
+
+            *"ele tem que funcionar de verdade. ambos independente do modo e
+            da mascara."* <!-- noqa-acento: citação literal dela -->
+
+        O ATO INTEIRO SÃO TRÊS ESCRITAS, e a ordem é o contrato:
+
+        1. **o registro vivo** (`core/virtual_motion.REGISTRO`) — é ele que o
+           caminho do report consulta a ~250 Hz, e é o que faz a escolha valer
+           AGORA. Primeiro porque é o único que o jogo sente;
+        2. **o perfil** (`ControllerOverrides.sensores`) — é o que faz a
+           escolha sobreviver ao replug e à troca de perfil;
+        3. **o `EVIOCGRAB`** no nó "Motion Sensors", pelo `SensorHub` — o
+           braço que alcança quem lê evdev direto.
+
+        A RESPOSTA DIZ QUAL METADE PEGOU, e essa é a entrega tanto quanto o
+        interruptor. A medição de 04/09/2026 (SDL 2.30 headless, um DualSense
+        no cabo) achou o que nenhuma versão do plano previa:
+
+        * o SDL **não lê o nó "Motion Sensors"** — ele não o enumera sequer
+          como joystick. Quem o lê é `evtest` e emulador com backend evdev;
+        * o SDL lê o giro pelo **`hidraw`**: em Virtual, do vpad, cujos bytes
+          este daemon escreve; em **Nativo**, do FÍSICO — e ali o daemon não
+          está no caminho, porque o kernel entrega o report direto ao jogo.
+
+        Logo, em Nativo o alcance é PARCIAL, e a resposta o diz com todas as
+        letras em vez de responder "aplicado" sobre um giro que continua
+        chegando — que é exatamente o verde falso que esta sprint existe para
+        não cometer.
+        """
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+        from hefesto_dualsense4unix.profiles.schema import (
+            ControllerOverrides,
+            ControllerSensoresOverride,
+        )
+
+        pedidos: dict[str, bool] = {}
+        for campo in ("giroscopio", "acelerometro"):
+            if campo not in params:
+                continue
+            valor = params.get(campo)
+            if not isinstance(valor, bool):
+                raise ValueError(
+                    f"sensor.set: '{campo}' precisa ser boolean — true liga o "
+                    "sensor para o jogo, false o desliga"
+                )
+            pedidos[campo] = valor
+        if not pedidos:
+            raise ValueError(
+                "sensor.set exige ao menos um de 'giroscopio' ou "
+                "'acelerometro' — campo omitido NÃO mexe naquele sensor"
+            )
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("sensor.set: 'uniq' precisa ser string ou omitido")
+
+        alvo = uniq or self._uniq_do_primario()
+        if not alvo:
+            return {
+                "status": "sem_controle",
+                "uniq": None,
+                "motivo": (
+                    "não há controle na mesa para desligar sensor — o "
+                    "interruptor é POR PEÇA, e cair no primeiro da lista é o "
+                    "que faria a mesa cheia desligar sempre o mesmo giro"
+                ),
+            }
+        chave = self._chave_de_peca_que_grava(alvo)
+        if not chave:
+            return {
+                "status": "sem_endereco",
+                "uniq": alvo,
+                "motivo": (
+                    f"{alvo!r} não é um endereço de rádio de uma peça de "
+                    "plástico — sem MAC não há como mirar um sensor, e "
+                    "desligar sob uma chave que o report nunca casa faria a "
+                    "escolha sumir calada"
+                ),
+            }
+
+        # (1) O REGISTRO VIVO, e ele vem primeiro: é o único que o jogo sente.
+        estado = REGISTRO.definir(
+            chave,
+            giroscopio=pedidos.get("giroscopio"),
+            acelerometro=pedidos.get("acelerometro"),
+        )
+
+        # (2) O PERFIL. Sem perfil ativo o interruptor ainda VALE (o registro
+        # já mudou) — só não sobrevive ao replug, e a resposta diz isso. Recusar
+        # o ato inteiro por falta de perfil seria trocar meio interruptor por
+        # nenhum.
+        nome = getattr(self.store, "active_profile", None)
+        gravado = False
+        if isinstance(nome, str) and nome:
+            from hefesto_dualsense4unix.profiles.loader import (
+                load_profile,
+                save_profile,
+            )
+
+            perfil = load_profile(nome)
+            atuais = dict(perfil.controllers or {})
+            dele = atuais.get(chave) or ControllerOverrides()
+            antes = dele.sensores
+            campos = dict(antes.model_dump(exclude_unset=True)) if antes else {}
+            for campo, valor in pedidos.items():
+                if valor:
+                    campos.pop(campo, None)  # ligado = sem opinião: a chave sai
+                else:
+                    campos[campo] = False
+            novo = ControllerSensoresOverride.model_validate(campos) if campos else None
+            antes_campos = dict(antes.model_dump(exclude_unset=True)) if antes else None
+            depois_campos = dict(campos) if campos else None
+            # NADA MUDOU = NÃO REGRAVA. Um `save_profile` troca a data do
+            # arquivo e faz o daemon reaplicar o perfil; no meio de uma partida
+            # isso não é de graça. Mesma decisão de `rumble.motores.set`.
+            if antes_campos != depois_campos:
+                atuais[chave] = dele.model_copy(update={"sensores": novo})
+                save_profile(perfil.model_copy(update={"controllers": atuais}))
+                gravado = True
+
+        # (3) O BRAÇO EVDEV. O hub reconcilia sozinho a cada volta de 1 s, mas
+        # esperar essa volta faria a resposta descrever um grab que ainda não
+        # existe — e a resposta é o instrumento de quem vai medir.
+        hub = self._garantir_sensor_hub()
+        with contextlib.suppress(Exception):
+            hub.reconciliar()
+        grab = self._grab_do_movimento(hub, chave)
+
+        nativo = bool(
+            self.daemon is not None and getattr(self.daemon, "is_native_mode", bool)()
+        )
+        alcance = {
+            # O que o jogo recebe do VPAD: os bytes são nossos, então aqui o
+            # desligamento é completo — e não existe em Nativo, onde não há vpad.
+            "report": "nao_se_aplica" if nativo else "aplicado",
+            # O que quem lê o nó evdev recebe.
+            "evdev": grab,
+        }
+        ressalva: str | None = None
+        if nativo and not estado.tudo_ligado:
+            ressalva = (
+                "Modo Nativo: o jogo lê o movimento pelo hidraw do controle "
+                "FÍSICO, e nesse caminho o daemon não escreve byte nenhum — o "
+                "kernel entrega o report direto. O sensor fica escondido de "
+                "quem lê o nó evdev, e continua chegando a quem lê pelo hidraw "
+                "(o SDL lê por ali). Para desligar de verdade, o Modo Virtual."
+            )
+        elif not estado.tudo_ligado and grab not in ("held", "pending"):
+            ressalva = (
+                f"o nó de movimento não ficou exclusivo (grab={grab}): o jogo "
+                "não recebe mais o sensor pelo vpad, mas quem ler o nó evdev "
+                "do controle físico ainda o vê"
+            )
+
+        logger.info(
+            "sensor_set",
+            uniq=chave,
+            perfil=nome,
+            gravado=gravado,
+            giroscopio=estado.giroscopio,
+            acelerometro=estado.acelerometro,
+            grab=grab,
+            nativo=nativo,
+        )
+        return {
+            "status": "ok",
+            "uniq": alvo,
+            "perfil": nome if isinstance(nome, str) else None,
+            "gravado": gravado,
+            "giroscopio": estado.giroscopio,
+            "acelerometro": estado.acelerometro,
+            "alcance": alcance,
+            "ressalva": ressalva,
         }
 
     @staticmethod
