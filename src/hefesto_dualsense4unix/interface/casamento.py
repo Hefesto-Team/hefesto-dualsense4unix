@@ -29,7 +29,9 @@ import re
 import sys
 
 AQUI = pathlib.Path(__file__).resolve().parent
-RAIZ = AQUI.parents[1]
+# A RAIZ É `parents[2]` — ver a nota em `hefesto_vivo.py`, medida em
+# 04/09/2026: com `[1]` o `RAIZ / "src"` virava `src/src`, que não existe.
+RAIZ = AQUI.parents[2]
 for _p in (str(AQUI), str(RAIZ / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)

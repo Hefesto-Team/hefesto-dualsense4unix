@@ -65,7 +65,9 @@ sys.path.insert(0, str(AQUI))
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito arquivos
 # desta casa cravavam o caminho absoluto da árvore DELA, e por isso rodar uma
 # CÓPIA reescrevia o mockup dela.
-RAIZ = AQUI.parents[1]
+# A RAIZ É `parents[2]` — ver a nota em `hefesto_vivo.py`, medida em
+# 04/09/2026: com `[1]` o `RAIZ / "src"` virava `src/src`, que não existe.
+RAIZ = AQUI.parents[2]
 PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
 TITULO_ESPERADO = "Hefesto — aba SISTEMA"
 

@@ -446,6 +446,8 @@ class JanelaDaAba:
         self._ao_sair_da_aba = ao_sair_da_aba
         self._ao_falhar = ao_falhar
         self._ao_morrer_a_pagina = ao_morrer_a_pagina
+        #: O motivo da morte da carga, ou ``None``. Ver :meth:`_morrer`.
+        self.morreu: str | None = None
         self.oculta = oculta
         #: A guarda vale só na PRIMEIRA carga. Depois disso, sair da aba pausa.
         self.primeira_carga = True
@@ -659,6 +661,13 @@ class JanelaDaAba:
             print(f"[fora da aba] {titulo} — o mockup estático; a pintura pausou.")
 
     def _morrer(self, motivo: str) -> None:
+        # O MOTIVO FICA GUARDADO, e é o que faltava para uma régua não mentir.
+        # MEDIDO EM 04/09/2026: `hefesto_vivo --prova-de-mockup` imprimia
+        # `ERRO DE CARGA` e saía **rc=0 sem medir nada** — verde sobre o vazio,
+        # que é a família de defeito que esta casa persegue acima de todas.
+        # Quem constrói a janela decide o que fazer com isto; a janela só
+        # garante que a informação exista.
+        self.morreu = motivo
         if self._ao_falhar is not None:
             self._ao_falhar(motivo)
             return
