@@ -1314,12 +1314,14 @@ BOTOES_CINZAS = ("retomar", "reiniciar", "ver-plugins")
 #: É COBRADA NOS DOIS SENTIDOS por `test_a_aba_09_sistema_fecha_as_linhas`: no
 #: dia em que a página publicada ganhar os endereços, a régua REPROVA pedindo
 #: que a declaração saia daqui. Declaração que envelhece calada vira paisagem.
-ESPERA_A_PUBLICACAO: dict[str, str] = {
-    f"{nome}{SUFIXO_DA_RAZAO}": "a razão do botão cinza (decisão [02] do PO). O "
-                                "`data-campo` está em `mockup/09-sistema.html` e "
-                                "chega ao produto no `--publicar 09`."
-    for nome in BOTOES_CINZAS
-}
+#:
+#: **PAGA — 05/09/2026.** Ela publicou. O que a lista guardava era a espera do
+#: ato dela, e o ato aconteceu: as três razões do botão cinza estão na página que o
+#: produto renderiza. A lista fica VAZIA, e não some, porque ela é o lugar
+#: onde a próxima dívida desta espécie se declara — e porque as duas réguas
+#: que a cobram nos dois sentidos continuam valendo: entrada aqui exige
+#: endereço FALTANDO no publicado, e endereço faltando exige entrada aqui.
+ESPERA_A_PUBLICACAO: dict[str, str] = {}
 
 
 def razoes_do_cinza(ctx: Contexto) -> dict[str, str]:

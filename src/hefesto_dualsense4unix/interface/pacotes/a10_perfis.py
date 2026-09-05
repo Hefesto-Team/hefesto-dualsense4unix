@@ -578,12 +578,14 @@ SEM_ENDERECO = {
 #: `--publicar-enderecos` o recusa dizendo — que é exatamente o certo. Enquanto
 #: ela não publicar, os quatro valores continuam saindo e caindo no vazio na
 #: página que o produto renderiza; o que ela vê hoje não muda.
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {
-    "editor.ambiente.travado": "o cadeado do seletor travado nasceu na bancada",
-    "editor.ambiente.recado": "a frase do cadeado, no hover",
-    "editor.jogo.exige": "o ponto de alerta da exigência escondida",
-    "editor.jogo.exigencia": "a frase do ponto de alerta, no hover",
-}
+#:
+#: **PAGA — 05/09/2026.** Ela publicou. O que a lista guardava era a espera do
+#: ato dela, e o ato aconteceu: os quatro endereços estão na página que o
+#: produto renderiza. A lista fica VAZIA, e não some, porque ela é o lugar
+#: onde a próxima dívida desta espécie se declara — e porque as duas réguas
+#: que a cobram nos dois sentidos continuam valendo: entrada aqui exige
+#: endereço FALTANDO no publicado, e endereço faltando exige entrada aqui.
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
 
 
 #: O FIM DA FRASE DA EXIGÊNCIA ESCONDIDA, REESCRITO PARA ESTA TELA — decisão
