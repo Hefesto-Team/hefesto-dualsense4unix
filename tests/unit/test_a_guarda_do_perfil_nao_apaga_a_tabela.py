@@ -277,9 +277,24 @@ def test_a_tabela_da_guarda_nomeia_os_controles_da_mesa() -> None:
     """`guarda.nome` saía `["", ""]`: o `perfis_web` pede `rotulo` e a
     `mesa_do_estado` não devolve nenhum. É a cura de `_mesa_com_rotulo`."""
     fora = _emitidos()
+    # AS QUATRO LINHAS SEMPRE — 05/09/2026, palavra dela: *"os svgs não deveriam
+    # aparecer prós demais controles desconectados"*. O pacote passou a emitir a
+    # tabela INTEIRA, e não só os controles da mesa, porque o `forEach` do
+    # bootstrap escreve `''` no que sobra: `''` APAGA uma classe e nunca a
+    # ACENDE, então o lugar vazio não tinha como ligar o `fora` que esconde os
+    # glifos, nem como receber o rótulo `P3 • Desconectado` que ela pediu em
+    # 31/08. Esta régua cobrava o tamanho da MESA; passa a cobrar o tamanho da
+    # TABELA, com o conteúdo dos dois primeiros intacto.
     assert fora["guarda.nome"] == ["P1 • Cosmic Red • BT",
-                                   "P2 • Starlight Blue • USB"]
-    assert len(fora["guarda.id"]) == 2
+                                   "P2 • Starlight Blue • USB",
+                                   "P3 • Desconectado",
+                                   "P4 • Desconectado"]
+    assert len(fora["guarda.id"]) == 4
+    assert fora["guarda.id"][2:] == ["", ""], (
+        "o lugar sem controle ganhou um ID — sem peça ali, não há o que mostrar")
+    assert fora["guarda.vazio"] == ["", "", "sim", "sim"], (
+        "a marca do lugar vazio não acende nos dois últimos: os glifos do "
+        "mockup voltam à tela de um lugar sem controle")
     # E O CABEÇALHO CONTA OS DOIS: só o primeiro tem ajuste próprio.
     assert fora["perfis.com-ajuste"] == (
         "1 de 2 controles com ajuste próprio neste perfil")

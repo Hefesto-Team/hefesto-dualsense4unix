@@ -249,7 +249,11 @@ def test_a_emissao_e_o_estado_de_cada_secao_e_nao_o_nome_dela(
     quantas = len(a10_perfis.SECOES_DA_COLUNA)
     onde_acende = a10_perfis.SECOES_DA_COLUNA.index("rumble")
     esperado = ["sim" if i == onde_acende else "" for i in range(quantas)]
-    esperado += [""] * quantas
+    # AS LINHAS QUE SOBRAM DA TABELA SÃO VAZIAS — a `_emitidos` põe DOIS
+    # controles na mesa e a tabela tem quatro lugares (05/09/2026: o pacote
+    # emite os quatro para o lugar vazio poder acender a marca que esconde os
+    # glifos do mockup).
+    esperado += [""] * quantas * (a10_perfis.LUGARES_DA_TABELA - 1)
     assert fora["guarda.secao"] == esperado, (
         f"a coluna não conta o que o perfil guarda: {fora['guarda.secao']!r} "
         f"em vez de {esperado!r}")
@@ -300,7 +304,9 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
     for posicao, secao in enumerate(perfis_web.SECOES_POR_CONTROLE):
         fora = _emitidos(**{secao: menor_corpo[secao]})
         esperado = ["sim" if i == posicao else "" for i in range(quantas)]
-        esperado += [""] * quantas
+        # As três linhas que sobram da tabela vêm vazias — ver a nota no teste
+        # acima, 05/09/2026.
+        esperado += [""] * quantas * (a10_perfis.LUGARES_DA_TABELA - 1)
         assert fora["guarda.secao"] == esperado, (
             f"com só `{secao}` guardado, a coluna acendeu "
             f"{fora['guarda.secao']!r} em vez de {esperado!r}")

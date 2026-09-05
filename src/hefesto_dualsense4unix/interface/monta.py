@@ -1017,14 +1017,28 @@ CSS_FOLHA = """
   [data-controle][data-conectado="nao"]:not(.vazia) textarea,
   [data-controle][data-conectado="nao"]:not(.vazia) [contenteditable]{
     display:none !important}
-  /* E O QUE SOBRA FICA APAGADO — o rótulo, o desenho e os números que o
-     travessão do pacote já escreveu. Sem isto o nome do plástico continuaria
-     colorido em cima de uma coluna sem aparelho. */
+  /* E O QUE SOBRA FICA APAGADO — o rótulo e os números que o travessão do
+     pacote já escreveu. Sem isto o nome do plástico continuaria colorido em
+     cima de uma coluna sem aparelho. */
   [data-controle][data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
-  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg .peca,
-  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg .corpo,
-  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg .miolo *{
-    fill:var(--linha) !important}
+
+  /* O DESENHO DO CONTROLE SOME — 05/09/2026, e a palavra é dela: *"os svgs não
+     deveriam aparecer prós demais controles desconectados"*.
+
+     A VERSÃO ANTERIOR DESTA REGRA PINTAVA o SVG de `var(--linha)` em vez de o
+     tirar. Era menos do que ela pediu e pior do que parecia: um controle
+     cinza-chumbo continua sendo um CONTROLE desenhado, e a coluna vazia
+     passava a mostrar um aparelho apagado ao lado de três travessões — a tela
+     desenhando o que não está aqui. Sumir é a resposta honesta, e é a mesma
+     que a S-04 já dava aos botões um parágrafo acima.
+
+     A ALTURA DA FAIXA NÃO CAI JUNTO, e é por isso que a regra é `visibility` e
+     não `display`: as colunas dividem a mesma linha de grade, e um `display:
+     none` faria a faixa do desenho encolher para a altura do travessão — as
+     quatro colunas desalinhariam e a do controle conectado mudaria de tamanho
+     conforme a mesa. `visibility:hidden` tira a tinta e guarda o lugar. */
+  [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg{
+    visibility:hidden !important}
 
   /* ---- S-03 · O BOTÃO QUE VAI RECUSAR JÁ NASCE CINZA (D-03) ----
      A CARA É A DO `.seg button:disabled`, letra por letra. O que muda é o

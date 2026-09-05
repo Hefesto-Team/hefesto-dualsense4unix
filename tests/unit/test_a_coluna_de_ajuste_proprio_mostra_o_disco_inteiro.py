@@ -284,3 +284,86 @@ def test_o_cabecalho_e_a_dica_da_linha_contam_o_mesmo_numero() -> None:
         f"não diz `{esperado}` — a linha ao lado já conta o número do esquema "
         f"(`{quantas} de {quantas} ajustes só deste controle`), e as duas frases "
         f"ficam na mesma tela discordando.")
+
+
+# ---------------------------------------------------------------------------
+# 4. O LUGAR SEM CONTROLE NÃO DESENHA CONTROLE — 05/09/2026, palavra dela
+# ---------------------------------------------------------------------------
+def test_a_linha_sem_controle_nao_mostra_glifo_nenhum(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """*"os svgs não deveriam aparecer prós demais controles desconectados"*.
+
+    A QUEIXA É DELA, E O QUE ELA VIU ESTAVA MEDIDO DESDE 03/09 no próprio
+    pacote: com a mesa em dois controles, *"a fileira de OITO glifos de 'Ajuste
+    próprio' sai IDÊNTICA à das duas linhas de cima"*. O lugar vazio mostrava um
+    controle desenhado — apagado, mas desenhado — ao lado de um nome que já
+    dizia que ali não há ninguém.
+
+    ESTA RÉGUA MEDE A TELA, e não o CSS. Uma que procurasse a regra
+    `.tab.miuda tr.fora .gr{visibility:hidden}` no arquivo estaria DIGITANDO o
+    que devia LER — o defeito que esta casa nomeou onze vezes numa leva só —, e
+    ficaria verde com a regra presente e sem efeito (um seletor que não casa, um
+    `!important` do vizinho, a classe que o produto não acende).
+
+    O CAMINHO É O DO PRODUTO INTEIRO: `pacote()` monta as listas com UM controle
+    na mesa, o `BOOTSTRAP` de verdade as distribui, o alvo `classe` acende o
+    `fora` na `<tr>` — e a pergunta é feita ao navegador:
+    `getComputedStyle(glifo).visibility`.
+
+    A MORDIDA: apague a regra do `aba10.py`, regere e publique. As três linhas
+    sem controle voltam a `visible` e esta régua reprova nomeando a linha.
+    """
+    from playwright.sync_api import sync_playwright
+
+    fora = _emitidos(monkeypatch, str(MESA[0]["uniq"]), leds={})
+    carga = {"mesa": {chave: fora[chave] for chave in
+                      ("guarda.secao", "guarda.vazio", "guarda.nome")}}
+
+    pagina = onde.pagina("10-perfis.html", publicado=True)
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(
+            executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = navegador.new_page(viewport={"width": 1180, "height": 900})
+            pg.goto(pagina.as_uri())
+            pg.evaluate(
+                "window.webkit = {messageHandlers: {hefesto: "
+                "{postMessage: function(){}}}};")
+            pg.evaluate(_bootstrap())
+            pg.evaluate("(p) => window.__hef.pintar(p)", carga)
+            visto = pg.evaluate("""() => {
+              const ls = [...document.querySelectorAll('.tab.miuda tbody tr')];
+              return ls.map(tr => ({
+                nome: (tr.querySelector('[data-hef="guarda.nome"]')||{}).textContent,
+                fora: tr.classList.contains('fora'),
+                glifos: [...tr.querySelectorAll('.gr')].map(
+                    g => getComputedStyle(g).visibility),
+              }));
+            }""")
+        finally:
+            navegador.close()
+
+    assert len(visto) == a10_perfis.LUGARES_DA_TABELA, (
+        f"a tabela tem {len(visto)} linhas e a régua espera "
+        f"{a10_perfis.LUGARES_DA_TABELA} — a medição perdeu o objeto")
+
+    # A MESA DESTA RÉGUA TEM DOIS: as duas primeiras linhas têm controle.
+    for n, linha in enumerate(visto[:len(MESA)], start=1):
+        assert not linha["fora"], (
+            f"a linha {n} TEM controle e foi marcada como vazia")
+        assert set(linha["glifos"]) == {"visible"}, (
+            f"a linha {n} tem controle e os glifos dela sumiram: "
+            f"{linha['glifos']}")
+
+    for n, linha in enumerate(visto[len(MESA):], start=len(MESA) + 1):
+        assert linha["fora"], (
+            f"a linha {n} não tem controle e o produto não a marcou — sem a "
+            f"marca o CSS não tem em que se pendurar. Nome na tela: "
+            f"{linha['nome']!r}")
+        assert linha["glifos"], (
+            f"a linha {n} não tem glifo nenhum no desenho — a régua mediria o "
+            "vazio e ficaria verde por ausência de dado")
+        assert set(linha["glifos"]) == {"hidden"}, (
+            f"a linha {n} não tem controle e ainda desenha os glifos: "
+            f"{linha['glifos']}. É a tela mostrando um aparelho que não está "
+            f"aqui — a queixa dela de 05/09.")
