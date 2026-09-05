@@ -186,8 +186,9 @@ def test_os_oito_degraus_saem_do_produto(regua, vereditos):
     acende quem casa, o que faz os oito virarem `PRODUTO`.
     """
     degraus = _por_chave(vereditos, "degrau")
-    assert len(degraus) == 8, (
-        f"são quatro degraus em duas colunas vivas, e a régua achou "
+    from hefesto_dualsense4unix.interface import aba05
+    assert len(degraus) == len(aba05.FORCA) * 2, (
+        f"são {len(aba05.FORCA)} degraus em duas colunas vivas, e a régua achou "
         f"{len(degraus)} — o endereço `degrau` sumiu do desenho")
     presos = [(v.campo.dono, v.campo.quando, v.classe) for v in degraus
               if v.classe != regua.PRODUTO]
@@ -219,9 +220,9 @@ def test_o_degrau_aceso_e_o_da_mesa_e_nao_o_do_mockup(regua, cravados,
     assert declarados[("p1", "degrau")] == "", (
         f"a coluna do P1 declarou {declarados[('p1', 'degrau')]!r} sem ter "
         f"ajuste próprio — o degrau herdado é o da linha de mesa")
-    assert declarados[("", "degrau-mesa")] == POLITICA, (
-        "a linha de mesa não declara o degrau geral — era ela que a decisão "
-        "[05] existe para pôr na tela")
+    # A LINHA DE MESA SAIU EM 05/09/2026, e com ela o `degrau-mesa`. O que esta
+    # régua ainda mede é o que importava: a coluna sem ajuste próprio declara
+    # vazio e não acende degrau nenhum.
 
     vivos, _ = _a_tela_depois_da_pintura(regua, cravados, declarados)
     acesos = {(c.dono, c.quando) for c, v in zip(cravados, vivos, strict=True)
@@ -230,11 +231,9 @@ def test_o_degrau_aceso_e_o_da_mesa_e_nao_o_do_mockup(regua, cravados,
         f"depois do tique os acesos das colunas são {sorted(acesos)} — nenhuma "
         f"das duas tem ajuste próprio, e acender um degrau ali seria a coluna "
         f"afirmando uma escolha dela que não existe no disco")
-    da_mesa = {c.quando for c, v in zip(cravados, vivos, strict=True)
-               if c.chave == "degrau-mesa" and v}
-    assert da_mesa == {POLITICA}, (
-        f"a linha de mesa acendeu {sorted(da_mesa)} — ela é o único lugar da "
-        f"tela que mostra o degrau que o produto está usando")
+    assert not [c for c in cravados if c.chave == "degrau-mesa"], (
+        "o `degrau-mesa` voltou ao desenho — a linha que ele pintava saiu em "
+        "05/09/2026 por decisão dela")
 
 
 # --------------------------------------------------------------------------

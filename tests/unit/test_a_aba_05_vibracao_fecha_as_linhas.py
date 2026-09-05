@@ -432,53 +432,72 @@ def test_a_linha_da_trava_e_a_do_produto(a05, bancada: str) -> None:
 
 
 # --------------------------------------------------------------------------
-# 5. A LINHA DE MESA — decisão [05]
+# 5. A LINHA DE MESA SAIU — decisão dela, 05/09/2026
 # --------------------------------------------------------------------------
-def test_a_linha_de_mesa_manda_a_politica_global() -> None:
-    """Um clique na linha de mesa vai pela porta GLOBAL, e SEM mirar antes.
+def test_a_linha_de_mesa_nao_existe_mais() -> None:
+    """A linha de mesa e o gesto dela saíram da aba — e não voltam calados.
 
-    `rumble.policy_set` não aceita `uniq`, e o produto sabe disso por escrito.
-    Um `controller.target.set` aqui seria mira sobre um método que ignora alvo —
-    a tela prometendo um endereço que o produto não tem.
+    **DECISÃO DELA, 05/09/2026, verbatim:** *"não é pra ter mesa em nada da
+    interface. (…) segue os três modos sempre. clicou em perfil de energia
+    econômico na aba sistema todos vão pra vibração manual. o resto é
+    desnecessário e só polui e deixa difícil entender"*.
 
-    MORDIDA: em `a05_vibracao.forca_da_mesa`, chame `_mirar(ctx, o, p)` antes —
-    este caso reprova pela lista de chamadas.
+    ELA TEM RAZÃO MEDIDA, e é por isso que esta régua guarda a remoção em vez de
+    a lamentar: a economia de bateria JÁ tem dono — o Perfil de Bateria da aba
+    09 grava `orcamento.teto`, e `core.rumble._effective_mult` aplica
+    `min(modo escolhido, teto)`, nunca produto (`_sob_o_teto`). O perfil
+    econômico já limitava todo mundo no nível Economia. O `Auto` era um SEGUNDO
+    dono do mesmo trabalho, numa aba diferente, com outra conta.
+
+    E OS 33 PERFIS DELA NUNCA O USARAM: medido em 05/09/2026, a política global
+    é `None` nos 33 e nenhum controle tem `policy: auto`.
+
+    MORDIDA: devolva o `@gesto("05-vibracao.html", "forca-mesa")` a
+    `a05_vibracao`, ou o bloco `.vib-mesa` a `aba05.MIOLO`, e este caso reprova.
     """
-    p = PonteFiel()
-    _gesto("forca-mesa")(_ctx(), {"forca": "economia"}, p)
-    assert [c[0] for c in p.chamadas] == ["rumble_policy_set_checked"], (
-        f"o gesto chamou {[c[0] for c in p.chamadas]}")
-    assert p.chamadas[0][1] == ("economia",)
+    import pacotes
+
+    assert (PAGINA, "forca-mesa") not in pacotes.GESTOS, (
+        "o gesto `forca-mesa` voltou. Ele saiu com a linha de mesa em "
+        "05/09/2026, e a razão não caducou.")
 
 
-def test_a_linha_de_mesa_recusa_o_clique_sem_degrau() -> None:
-    """Sem degrau não há o que mandar, e a recusa fala com quem clicou."""
-    p = PonteFiel()
-    with pytest.raises(RuntimeError):
-        _gesto("forca-mesa")(_ctx(), {}, p)
-    assert not p.chamadas
+def test_o_desenho_nao_tem_linha_de_mesa_nem_o_auto(bancada: str) -> None:
+    """Nem o bloco, nem o endereço, nem o quarto botão.
 
-
-def test_o_desenho_tem_a_linha_de_mesa_com_os_quatro(bancada: str) -> None:
-    """Os quatro degraus do ajuste geral, fora das colunas.
-
-    O `auto` só existe aqui: o esquema o RECUSA por unidade, e até 04/09 uma
-    coluna o desenhava como se fosse escolha dela naquele controle.
-
-    MORDIDA: em `aba05.MIOLO`, apague o bloco `.vib-mesa` e regere — a régua 15
-    do próprio gerador reprova antes desta.
+    OS TRÊS ENDEREÇOS, e não só o primeiro: apagar o `<div>` e deixar o
+    `data-campo="degrau-mesa"` vivo noutro canto seria campo emitido para
+    endereço que a página não tem — escrita em lugar nenhum, calada. É o defeito
+    que esta casa persegue, e uma régua que só olhasse a classe não o veria.
     """
-    assert 'class="vib-mesa"' in bancada, "a linha de MESA sumiu da aba"
-    for chave in _tela.degraus_da_forca():
-        assert f'data-papel="forca-mesa" data-forca="{chave}"' in bancada, (
-            f"a linha de mesa não tem o degrau {chave!r}")
-    assert bancada.count('data-campo="degrau-mesa"') == len(
-        _tela.degraus_da_forca())
-    # E ELA NÃO ESTÁ DENTRO DE COLUNA NENHUMA: o pintor pinta a coluna por
-    # dentro e a mesa no documento inteiro; um degrau geral dentro de uma coluna
-    # acenderia por engano a cada tique.
-    depois = bancada.split('class="vib-mesa"', 1)[1]
-    assert 'data-controle="p' not in depois.split("</div>")[0]
+    for morto in ('class="vib-mesa"', 'data-campo="degrau-mesa"',
+                  'data-papel="forca-mesa"'):
+        assert morto not in bancada, (
+            f"{morto!r} voltou ao desenho da aba 05 — a linha de mesa saiu em "
+            f"05/09/2026 por decisão dela")
+    assert 'data-forca="auto"' not in bancada, (
+        "o botão `Auto` voltou à aba da vibração. Ele nunca pôs peça nenhuma em "
+        "Auto — o esquema o recusa por unidade, e o clique significava `limpa o "
+        "meu ajuste e segue o global`. O rótulo dizia uma coisa e o ato era "
+        "outra; um botão a menos é uma mentira a menos.")
+
+
+def test_a_coluna_oferece_os_tres_modos(bancada: str) -> None:
+    """TRÊS botões por coluna, e os três são os de `RUMBLE_POLICY_MULT`.
+
+    A régua LÊ a tabela do produto em vez de digitar os três nomes: no dia em
+    que o daemon acrescentar um degrau, ela cobra o botão em vez de dar verde
+    sobre uma tela desatualizada.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+    from hefesto_dualsense4unix.interface import aba05
+
+    assert {c for _, c in aba05.FORCA} == set(RUMBLE_POLICY_MULT), (
+        f"os degraus da aba são {sorted(c for _, c in aba05.FORCA)} e o produto "
+        f"tem {sorted(RUMBLE_POLICY_MULT)}")
+    for chave in RUMBLE_POLICY_MULT:
+        assert f'data-forca="{chave}"' in bancada, (
+            f"o degrau {chave!r} não está no desenho")
 
 
 def test_a_coluna_sem_ajuste_proprio_nao_acende_degrau() -> None:
@@ -499,8 +518,14 @@ def test_a_coluna_sem_ajuste_proprio_nao_acende_degrau() -> None:
     col = next(iter(carga["colunas"].values()))
     assert col["degrau"] == "", (
         f"a coluna acendeu {col['degrau']!r} sem ter ajuste próprio")
-    assert carga["mesa"]["degrau-mesa"] == "balanceado", (
-        "a linha de mesa não mostra o degrau que o produto está usando")
+    # A MESA NÃO EMITE MAIS CAMPO NENHUM — 05/09/2026. Ela emitiu
+    # `degrau-mesa` entre 04/09 e 05/09, enquanto a linha existiu na tela; com
+    # ela fora, um campo emitido para endereço que a página não tem seria
+    # escrita em lugar nenhum. O que esta régua ainda cobra é o que importava
+    # desde sempre: a coluna sem ajuste próprio NÃO acende degrau.
+    assert carga["mesa"] == {}, (
+        f"a mesa desta aba voltou a emitir {sorted(carga['mesa'])} — a linha "
+        f"que esses campos pintavam saiu em 05/09/2026")
 
 
 # --------------------------------------------------------------------------
@@ -522,12 +547,12 @@ def test_a_nota_do_testar_e_linha_de_tela(bancada: str) -> None:
         "a nota do Testar não é linha de tela")
     assert bancada.count(aba05.DICA_DOS_VALORES_QUE_PASSAM) == 1, (
         "a nota do Testar aparece duas vezes na mesma tela — o `?` e a linha")
-    # E A OUTRA FICA NO `?`, que é a outra metade da decisão [02].
-    assert aba05.DICA_DA_ESPERA_DO_AUTO in bancada, (
-        "a explicação dos 5 s do Auto sumiu — ela fica no `?`, não na tela")
-    assert f'class="vib-nota">{aba05.DICA_DA_ESPERA_DO_AUTO}' not in bancada, (
-        "a dos 5 s do Auto subiu para a tela, e a decisão [02] diz que só a "
-        "nota do Testar sobe")
+    # A OUTRA METADE DA DECISÃO [02] ERA A DICA DOS 5 s DO AUTO, no `?`. Ela
+    # saiu com o Auto em 05/09/2026: dica que explica um botão que não existe é
+    # texto ensinando algo que a tela não faz.
+    assert "Espera 5 segundos" not in bancada, (
+        "a dica dos 5 s do Auto voltou ao desenho — o botão que ela explicava "
+        "saiu em 05/09/2026")
 
 
 # --------------------------------------------------------------------------

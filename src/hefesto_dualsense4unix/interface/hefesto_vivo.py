@@ -1406,7 +1406,6 @@ PERIGOSOS = {
     #                           ao vivo — a régua de clique arrastaria a barra
     #                           da mesa inteira para provar que sabe clicar
     ("05-vibracao.html", "motor"),
-    ("05-vibracao.html", "forca-mesa"),
     # E O DA ABA 07, que não grava em disco e mesmo assim entra: ele SUBSTITUI
     # a área de transferência dela, e a `--prova-gesto` clica todo `data-gesto`.
     # O que ela tinha copiado sumiria para a régua provar que sabe clicar.

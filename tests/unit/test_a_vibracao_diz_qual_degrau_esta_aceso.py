@@ -57,6 +57,7 @@ sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 from hefesto_dualsense4unix.app.telas import vibracao as _tela
+from hefesto_dualsense4unix.interface import aba05 as _aba05
 from hefesto_dualsense4unix.interface import regua_do_mockup as _regua
 
 PAGINA = "05-vibracao.html"
@@ -122,27 +123,23 @@ def test_cada_degrau_diz_quem_ele_e(bancada) -> None:
     importado — importar `aba05` REESCREVE a bancada dela como efeito de um
     `import`, e uma régua não mexe no que mede.
     """
-    for chave in _tela.degraus_da_forca():
+    for _rot, chave in _aba05.FORCA:
         alvo = (f'data-campo="degrau" data-hef-alvo="classe" '
                 f'data-hef-quando="{chave}"')
         assert alvo in bancada, f"o degrau {chave!r} não tem endereço de classe"
 
-    # E A LINHA DE MESA CONTA JUNTO — 04/09/2026, decisão [05] dela. Os quatro
-    # degraus do ajuste GERAL vivem fora das colunas (`.vib-mesa`), e é lá que o
-    # `auto` passou a morar: o esquema o RECUSA por peça. Uma régua que só
-    # contasse as colunas passaria a acusar quatro endereços a mais.
     quandos = re.findall(r'data-hef-quando="([^"]+)"', bancada)
     colunas_vivas = bancada.count('<div class="ctrl" data-controle=')
-    linhas_de_mesa = bancada.count('class="vib-mesa"')
-    assert linhas_de_mesa == 1, (
-        f"a linha de MESA não é uma só ({linhas_de_mesa}) — ela é a decisão "
-        f"[05] dela, e duas dariam dois degraus gerais na mesma tela")
-    esperado = len(_tela.degraus_da_forca()) * (colunas_vivas + linhas_de_mesa)
+    # A LINHA DE MESA SAIU EM 05/09/2026 — decisão dela. Os degraus vivem só
+    # dentro das colunas agora, e a conta é `degraus x colunas vivas`.
+    assert 'class="vib-mesa"' not in bancada, (
+        "a linha de mesa voltou ao desenho da aba 05")
+    esperado = len(_aba05.FORCA) * colunas_vivas
     assert len(quandos) == esperado, (
-        f"são {len(_tela.degraus_da_forca())} degraus em {colunas_vivas} "
-        f"colunas conectadas mais a linha de mesa = {esperado}, e achei "
+        f"são {len(_aba05.FORCA)} degraus em {colunas_vivas} "
+        f"colunas conectadas = {esperado}, e achei "
         f"{len(quandos)}")
-    assert set(quandos) == set(_tela.degraus_da_forca()), (
+    assert set(quandos) == {c for _, c in _aba05.FORCA}, (
         f"os degraus endereçados não são os do produto: {sorted(set(quandos))}")
 
 
@@ -190,9 +187,9 @@ def test_o_pacote_emite_o_degrau_que_o_produto_calculou(pacote) -> None:
         assert col["degrau"] == "", (
             f"a coluna {uniq} acendeu {col.get('degrau')!r} sem ter ajuste "
             f"próprio — o degrau herdado é o da linha de mesa")
-    assert pacote["mesa"]["degrau-mesa"] == "balanceado", (
-        f"a linha de mesa emitiu {pacote['mesa'].get('degrau-mesa')!r}")
-    assert set(_tela.degraus_da_forca()) >= {"balanceado"}, (
+    assert pacote["mesa"] == {}, (
+        f"a mesa desta aba voltou a emitir {sorted(pacote['mesa'])}")
+    assert {c for _, c in _aba05.FORCA} >= {"balanceado"}, (
         "o degrau emitido tem de ser uma das chaves do produto")
 
 
@@ -206,11 +203,11 @@ def test_o_degrau_emitido_e_sempre_um_dos_quatro() -> None:
     """
     import pacotes
 
-    conhecidos = set(_tela.degraus_da_forca())
+    conhecidos = {c for _, c in _aba05.FORCA}
     for policy in sorted(conhecidos):
         pac = pacotes.pacote_da_pagina(PAGINA, _ctx(policy))
-        assert pac["mesa"]["degrau-mesa"] in conhecidos, (
-            f"a linha de mesa emitiu {pac['mesa']['degrau-mesa']!r} para a "
+        assert pac["mesa"] == {}, (
+            f"a mesa emitiu {sorted(pac['mesa'])!r} para a "
             f"política {policy!r}")
         # `""` É RESPOSTA VÁLIDA NA COLUNA desde 04/09/2026 — quer dizer
         # "herdado", e os quatro apagam. O que continua proibido é um token
@@ -250,9 +247,11 @@ def test_a_regua_ve_os_oito_degraus_com_alvo_classe(bancada) -> None:
     página que não existe — é a cegueira que o `--prova-de-mockup` reprova.
     """
     degraus = _campos(bancada, "degrau")
-    assert len(degraus) == 8, f"a régua achou {len(degraus)} degraus, e são 8"
+    assert len(degraus) == len(_aba05.FORCA) * 2, (
+        f"a régua achou {len(degraus)} degraus, e são "
+        f"{len(_aba05.FORCA) * 2}")
     assert {c.alvo for c in degraus} == {"classe"}
-    assert {c.quando for c in degraus} == {"economia", "balanceado", "max", "auto"}
+    assert {c.quando for c in degraus} == {c for _, c in _aba05.FORCA}
     # O CRAVADO de um alvo `classe` é o `quando` de quem tem a classe `on`, e
     # `''` para as irmãs.
     #
@@ -264,12 +263,11 @@ def test_a_regua_ve_os_oito_degraus_com_alvo_classe(bancada) -> None:
     assert acesos == ["max"], (
         f"o desenho crava {acesos} — a cena tem UMA coluna com ajuste próprio "
         f"e UMA herdando, e é o que a decisão [05] existe para ensinar")
-    # E O DEGRAU DA MESA É OUTRO ENDEREÇO, com o `auto` aceso — o degrau que
-    # NÃO pode ser override de peça, no único lugar onde ele cabe.
-    da_mesa = _campos(bancada, "degrau-mesa")
-    assert len(da_mesa) == 4, f"a régua achou {len(da_mesa)} degraus de mesa"
-    assert sorted(c.quando for c in da_mesa if c.valor) == ["auto"], (
-        "a linha de mesa não acende o degrau da cena")
+    # E NÃO HÁ MAIS DEGRAU DE MESA: o endereço `degrau-mesa` saiu do desenho em
+    # 05/09/2026, com a linha que ele pintava. Esta régua guarda a remoção — um
+    # `degrau-mesa` de volta no desenho seria endereço sem campo que o alimente.
+    assert not _campos(bancada, "degrau-mesa"), (
+        "o `degrau-mesa` voltou ao desenho da aba 05")
 
 
 def test_o_degrau_deixa_de_ser_desenho_quando_o_pacote_o_declara(bancada, pacote) -> None:

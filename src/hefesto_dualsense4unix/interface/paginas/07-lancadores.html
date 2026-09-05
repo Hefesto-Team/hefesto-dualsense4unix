@@ -620,6 +620,56 @@
      competir com o texto. Medido em 27/08/2026. */
   .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
 
+  /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
+
+  /* ---- S-03 · O BOTÃO QUE VAI RECUSAR JÁ NASCE CINZA (D-03) ----
+     A CARA É A DO `.seg button:disabled`, letra por letra. O que muda é o
+     mecanismo: ali o botão está `disabled` de verdade e não recebe clique;
+     aqui a classe é só tinta, e o botão continua respondendo — que é o que o
+     PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
+     tem rato na mão. */
+  .btn.apagado,.seg button.apagado{
+    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .btn.apagado:hover,.seg button.apagado:hover{
+    border-color:var(--border-sutil);color:var(--texto-mudo)}
+
+  /* O `?` DA RAZÃO. Ele é o `.ajuda` que a página já tem — a mesma bolinha,
+     a mesma `.dica` — com a classe `porque` dizendo que o texto dela vem do
+     PRODUTO, e não do desenho. A distinção é da aba 08, onde a frase congelada
+     já mentiu ("está no cabo" com o controle no rádio).
+
+     TRÊS JEITOS DE ELE SUMIR, e os três existem porque as abas emitem de três
+     jeitos: colado ao botão (o botão não está cinza -> não há o que explicar),
+     com a dica VAZIA de nascença, e com o marcador `.nada` que o pacote manda
+     quando não há o que dizer. O marcador é preciso porque `escrever()` troca
+     valor vazio por travessão — sem ele, "nada a dizer" vira um `—` solto. */
+  .btn:not(.apagado) + .ajuda.porque,
+  .seg button:not(.apagado) + .ajuda.porque{display:none}
+  .ajuda.porque:has(.dica:empty){display:none}
+  .ajuda.porque:has(.nada){display:none}
+  /* ELE COLA NO BOTÃO DELE, e as duas linhas saíram da foto de 04/09: dentro
+     de `.acoes` (vão de 8px) o `?` ficava a 8px dos DOIS vizinhos e lia como
+     se explicasse o botão seguinte; e o `.ajuda` tem 17px de altura fixa num
+     flex que estica, então ele subia para o topo do botão, acima do texto que
+     explica. */
+  .ajuda.porque{align-self:center;margin-left:-4px}
+
+  /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
+     No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
+     cobrando a altura da fonte, que é o preço que a regra dela de 30/08
+     (*"texto na interface é zero"*) não aceita pagar.
+
+     A peça é o `:empty{display:none}` que a `05-vibracao` e a `06-navegacao`
+     já tinham cada uma na sua folha, promovido a peça das dez — com o
+     `:has(.nada)` junto, porque as duas metades são a mesma peça: `:empty`
+     cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
+     piloto pinta a cada tique com "não há o que dizer". Faltando uma das
+     duas, a linha volta a aparecer num dos dois caminhos, calada. */
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
+  .ressalva:empty{display:none}
+  .ressalva:has(.nada){display:none}
+
+
   /* ---------- Lançadores ---------- */
   .lancadores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .lanc{border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:11px 13px}
@@ -729,6 +779,28 @@
      34px por jogo empurraria a lista para fora do cartão. */
   .lanc-fora .btn.mini{height:24px;font-size:10.5px;padding:0 9px;flex:0 0 auto}
   .lanc-vazio{font-size:11px;color:var(--comment)}
+  /* A LINHA DE INICIALIZAÇÃO À MOSTRA — 04/09/2026, decisão `07[01]` do PO.
+     Ela NASCE AUSENTE: `desenho_dos_lancadores.linha_do_wrapper_html` devolve
+     string vazia sempre que não há jogo com a linha intocável, e o bloco não
+     ocupa um pixel — a mesma regra do carimbo e da lista de jogos.
+     `word-break:break-all` E NÃO `pre`: são 143 caracteres sem um espaço onde
+     caiba a quebra, e um `<pre>` empurraria barra de rolagem lateral para
+     dentro de um cartão de meia largura. Aqui ela ocupa três linhas e o cartão
+     continua no lugar.
+     AS CORES SÃO AS DO ESQUELETO, e foram CONFERIDAS antes de escritas:
+     `--elevated`, `--border-sutil` e `--texto-suave` existem no `:root` do
+     `topo.html` (`:14`, `:15`, `:33`). O `--elevated` é o tom que sobe UM
+     degrau sobre o `--app-bg` do cartão — é o que separa o bloco do corpo sem
+     acrescentar cor nova à paleta.
+     `user-select` NÃO É DECLARADO AQUI, e a razão foi medida: o `topo.html`
+     não desliga a seleção em lugar nenhum (`grep user-select` devolve ZERO),
+     então o padrão do WebKit já deixa o Ctrl+C funcionar — que é a SEGUNDA
+     saída desta decisão. Declarar o que já vale seria regra que ninguém
+     consegue provar. */
+  .linha-do-wrapper{margin-top:7px;padding:6px 8px;border-radius:6px;
+    background:var(--elevated);border:1px solid var(--border-sutil)}
+  .linha-do-wrapper code{font-family:'JetBrains Mono',monospace;font-size:10px;
+    line-height:1.5;color:var(--texto-suave);word-break:break-all}
 
 </style>
 </head>

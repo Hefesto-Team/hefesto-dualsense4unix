@@ -190,8 +190,10 @@ def test_o_degrau_cai_nos_quatro_botoes_pelo_alvo_classe(arvore, emitidos):
     _, chaves = emitidos
     assert "degrau" in chaves, "o pacote parou de emitir `degrau`"
     botoes = [n for n in _achar(arvore, "degrau") if n["tag"] == "button"]
-    assert len(botoes) == 8, (
-        f"são quatro degraus em duas colunas vivas, e achei {len(botoes)}")
+    from hefesto_dualsense4unix.interface import aba05
+    assert len(botoes) == len(aba05.FORCA) * 2, (
+        f"são {len(aba05.FORCA)} degraus em duas colunas vivas, e achei "
+        f"{len(botoes)}")
     for n in botoes:
         assert n["attrs"].get("data-hef-alvo") == "classe", n["attrs"]
         assert n["attrs"].get("data-hef-quando"), (
@@ -361,14 +363,14 @@ def test_a_mesa_desta_aba_so_emite_o_degrau_geral(emitidos):
     import onde
 
     pacote, _ = emitidos
-    assert set(pacote["mesa"]) == {"degrau-mesa"}, (
+    assert set(pacote["mesa"]) == set(), (
         f"a mesa emite {sorted(pacote['mesa'])} — e a página só tem endereço "
         f"para o degrau geral")
     bancada = onde.pagina(PAGINA).read_text(encoding="utf-8")
-    assert 'data-campo="degrau-mesa"' in bancada, (
-        "o `degrau-mesa` não tem onde cair no desenho — campo sem endereço é "
+    assert 'data-campo="degrau-mesa"' not in bancada, (
+        "o `degrau-mesa` voltou ao desenho — campo sem endereço é "
         "pintura que não acontece, e ela é silenciosa dos dois lados")
-    assert pacote["mesa"]["degrau-mesa"], (
+    assert not pacote["mesa"], (
         "o degrau da mesa saiu vazio com o daemon dizendo a política")
 
 
@@ -422,7 +424,7 @@ def test_o_que_falta_esta_declarado(emitidos):
     # de esconder a dívida debaixo do tapete.
     col = next(iter(pacote["colunas"].values()))
     assert "mult-teto" in col, "o `Máx` voltou a ser texto cravado no desenho"
-    assert pacote["mesa"].get("degrau-mesa") == "balanceado", (
+    assert pacote["mesa"].get("degrau-mesa") is None, (
         "a linha de mesa não pinta o degrau geral — e era ela que a "
         "`forca:auto-da-mesa` esperava")
     for lado in ("e", "d"):

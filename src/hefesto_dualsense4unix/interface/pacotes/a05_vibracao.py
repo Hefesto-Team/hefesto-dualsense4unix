@@ -88,12 +88,16 @@ SEM_DONO: dict[str, str] = {
 # dia (`rumble.motores.set`, campo omitido não mexe naquela barra). O desenho é
 # `aba05._barra_de_motor`, e o gesto é :func:`motor`, aqui embaixo.
 #
-# **A `forca:auto-da-mesa` FECHOU — 04/09/2026, decisão [05] dela:** *"uma linha
-# de MESA embaixo da grade"*. Ela dizia que não existia mais, nesta tela,
-# caminho para mudar o degrau da mesa inteira, e que o desenho disso era decisão
-# dela — *"um chip na fita? um botão de mesa?"*. Ela escolheu o botão de mesa, e
-# ele é o gesto :func:`forca_da_mesa`. O que a linha diz sobre `auto` por peça
-# continua valendo e continua escrito onde vale: no gesto :func:`forca`.
+# **A `forca:auto-da-mesa` FECHOU DUAS VEZES, e a segunda é a que vale.** Em
+# 04/09/2026 ela virou a linha de mesa, com o botão que ela escolheu. Em
+# 05/09/2026 a linha SAIU inteira, e o `Auto` com ela: *"não é pra ter mesa em
+# nada da interface (…) segue os três modos sempre. clicou em perfil de energia
+# econômico na aba sistema todos vão pra vibração manual. o resto é
+# desnecessário e só polui e deixa difícil entender"*. A economia de bateria já
+# tinha dono — o Perfil de Bateria da aba 09 —, e `_effective_mult` aplica
+# `min(modo, teto)`. Eram dois donos do mesmo trabalho. Ver `aba05.FORCA`.
+# O que a linha diz sobre `auto` por peça continua valendo e continua escrito
+# onde vale: no gesto :func:`forca`.
 #
 # Mantê-las na lista depois de pintadas seria dívida fantasma — a próxima pessoa
 # esperaria por uma cura que já chegou.
@@ -757,18 +761,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # só. Ele é a LINHA DE MESA (`aba05`, `.vib-mesa`): os quatro degraus do
         # ajuste geral, fora das colunas.
         #
-        # **FATO SUBSTITUÍDO**, e esta linha dizia *"a mesa não emite campo
-        # nenhum, e é o que a página comporta: `rumble_policy` não tem
-        # `data-campo`"*. Era verdade e deixou de ser no dia em que a página
-        # ganhou os quatro botões da mesa — e a razão de então continua sendo a
-        # razão de agora, virada do avesso: o degrau aceso é uma CLASSE, e é
-        # justamente o alvo `classe` que este campo alimenta.
-        #
-        # O NOME É `degrau-mesa`, NUNCA `degrau`: o pintor pinta a coluna por
-        # dentro (`achar(raiz, k)`) e a mesa no documento inteiro
-        # (`achar(document, k)`). O mesmo nome nos dois acenderia degrau DENTRO
-        # das colunas a cada tique — o defeito da régua 6 do `aba05._conferir`.
-        "mesa": {"degrau-mesa": str(ctx.state.get("rumble_policy") or "")},
+        # A MESA NÃO EMITE CAMPO NENHUM — de novo, e desta vez para ficar.
+        # Ela emitiu `degrau-mesa` entre 04/09 e 05/09/2026, enquanto a linha de
+        # mesa existiu na tela. Decisão dela em 05/09: *"não é pra ter mesa em
+        # nada da interface (…) segue os três modos sempre"*. Sem a linha, não há
+        # o que pintar fora das colunas, e um campo emitido para endereço que a
+        # página não tem é escrita em lugar nenhum, calada.
+        "mesa": {},
         "blocos": {"#vib-estado": estado},
         "sem_dono": dict(SEM_DONO),
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()),
@@ -1038,11 +1037,12 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
 #: janela estável ganhar força por unidade, ela desce um andar e as duas telas
 #: a leem do mesmo lugar.
 FRASE_DA_MESA_EM_AUTO = (
-    "Guardei esta força no perfil, mas ela NÃO chega ao motor enquanto a força "
-    "da mesa estiver em Auto: o Auto muda com a bateria a cada instante, e uma "
-    "força por controle contra um número que se move faria este controle "
-    "vibrar de um jeito imprevisível. Tire a mesa do Auto e o que você acabou "
-    "de escolher passa a valer."
+    "Guardei esta força no perfil, mas ela NÃO chega ao motor enquanto a "
+    "vibração geral estiver no modo Auto: o Auto muda com a bateria a cada "
+    "instante, e uma força por controle contra um número que se move faria "
+    "este controle vibrar de um jeito imprevisível. O Auto não se escolhe mais "
+    "aqui — se ele está ligado, veio de um perfil antigo ou da janela do "
+    "Hefesto, e é lá que sai."
 )
 
 #: A FRASE DO CASO EM QUE A TELA VAI MOSTRAR OUTRA COISA — 04/09/2026.
@@ -1494,49 +1494,6 @@ def motor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 or "o Hefesto não aceitou gravar esta barra, e não disse por quê"))
 
 
-@gesto("05-vibracao.html", "forca-mesa")
-def forca_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O degrau da MESA — o caminho que 03/09 tirou desta tela, de volta.
-
-    **DECISÃO [05] DELA, 04/09/2026:** *"uma linha de MESA embaixo da grade"*.
-    Ela devolve o que a decisão anterior custou: quando a força virou POR
-    CONTROLE, o clique do degrau numa coluna deixou de mexer na mesa, e o `Auto`
-    — que o esquema **recusa por peça** — perdeu o único lugar onde podia ser
-    escolhido. `SEM_DONO["forca:auto-da-mesa"]` dizia isso e dizia que o desenho
-    era dela; ela escolheu o botão de mesa.
-
-    A PORTA É A GLOBAL, e é a única que existe: `rumble.policy_set` **não aceita
-    `uniq`** (`daemon/ipc_handlers.py:4953`), e o produto sabe disso por escrito
-    — *"não há IPC de política por unidade, e inventar um seria mecanismo novo"*
-    (`rumble_actions.py:911`). É a MESMA ponte da janela estável
-    (`rumble_policy_set_checked`), que é a única desde 26/08/2026.
-
-    A CHECADA, e não a crua: a recusa do daemon vem com MOTIVO, e ele é a frase
-    que sobe ao cartão. Anunciar "aplicado" sobre uma recusa é o NATIVO-RUMBLE-01
-    na terceira porta.
-
-    **ELE NÃO GRAVA NO PERFIL DELA** — e a diferença com :func:`forca` é o ponto
-    inteiro desta tela ter duas linhas: este muda o degrau que o daemon está
-    usando AGORA para quem não tem ajuste próprio; aquele grava, no perfil, o
-    ajuste de UMA peça. O recado do clique fica com o piloto (D-01): a tela
-    responde no cartão da mesa, e o degrau aceso muda no tique seguinte.
-
-    O RECADO NÃO SAI DAQUI e o silêncio é o certo: o degrau da linha de mesa
-    acende no tique seguinte, e as colunas que herdam mudam junto — o efeito é
-    visível na própria tela. Uma frase por clique bem sucedido é ruído crônico,
-    e é a mesma disciplina do :func:`_aplicar_a_forca`.
-    """
-    degrau = str(o.get("forca") or "")
-    if not degrau:
-        raise RuntimeError(
-            "este clique não disse qual degrau — tente de novo em cima de um "
-            "dos quatro botões da linha 'Força da mesa'.")
-    ok, motivo = _resposta(p.rumble_policy_set_checked(degrau))
-    if not ok:
-        raise RuntimeError(
-            motivo or "o Hefesto não está rodando — ligue na aba Sistema")
-
-
 @gesto("05-vibracao.html", "testar")
 def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Testar": AQUELE controle treme meio segundo e a mão volta para o jogo.
@@ -1636,11 +1593,10 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: dela de construir por controle, vista do lado da ponte.
 #: **DOIS ENTRARAM EM 04/09/2026**, e os dois com decisão dela por trás:
 #: `rumble_motores_set` (a barra de cada motor, :func:`motor`) e
-#: `rumble_policy_set_checked` — que VOLTOU. Ele saiu em 03/09, quando a força
-#: passou a ir pelo perfil; agora ele é a porta da LINHA DE MESA
-#: (:func:`forca_da_mesa`), que é global por natureza. Os dois caminhos convivem
-#: porque são duas coisas: um grava o ajuste de UMA peça, o outro muda o degrau
-#: de quem não tem ajuste próprio.
+#: `rumble_policy_set_checked` — que voltou em 04/09 como porta da linha de mesa
+#: e ficou SEM CHAMADOR nesta aba em 05/09, quando a linha saiu. Ele continua na
+#: `PONTE` porque a janela GTK o usa e porque tirá-lo daqui não tiraria um método
+#: do produto — só esconderia da régua que esta aba não o chama mais.
 PONTE = {"chamar", "profile_switch", "rumble_set_checked",
          "rumble_stop", "rumble_stop_checked", "rumble_passthrough",
          "rumble_motores_set", "rumble_policy_set_checked"}
@@ -1683,13 +1639,6 @@ PROVAS = [
      "chama": [("chamar", ["controller.target.set"], {"index": 0}),
                ("rumble_stop_checked", [], {}),
                ("rumble_passthrough", [True], {})]},
-    # A LINHA DE MESA — UMA chamada, e ela é a global: `rumble.policy_set` não
-    # aceita `uniq`, e é por isso que este gesto NÃO mira antes. Um
-    # `controller.target.set` aqui seria mira sobre um método que ignora alvo —
-    # a tela prometendo um endereço que o produto não tem.
-    {"pagina": PAGINA, "gesto": "forca-mesa",  # (noqa-acento) chave do contrato
-     "clique": {"forca": "economia"},
-     "chama": [("rumble_policy_set_checked", ["economia"], {})]},
 ]
 
 #: OS DOIS QUE O DAEMON ACEITA E NÃO PUBLICA, e a razão é do assunto: "Testar"
@@ -1735,9 +1684,6 @@ PROVAS = [
 #: prova este gesto é a leitura de volta em :func:`_barras_dos_motores`, e a
 #: régua do aparelho pode alcançá-lo no dia em que souber comparar mapas.
 #:
-#: `forca-mesa` FICA DE FORA TAMBÉM, e este tem eco DIRETO: `rumble_policy` é
-#: publicado no `state_full` e muda no mesmo instante. Não há razão para calar a
-#: régua sobre ele — mas há uma para NÃO deixá-la clicá-lo, e é outra lista:
-#: ele muda o degrau de vibração de TODOS os controles dela. Ver a linha que
-#: falta em `hefesto_vivo.PERIGOSOS`, relatada na entrega desta frente.
+#: `forca-mesa` ESTEVE NESTA CONVERSA e não está mais: o gesto saiu em
+#: 05/09/2026 com a linha de mesa.
 SEM_ECO = ("testar", "parar", "forca", "intensidade", "motor")
