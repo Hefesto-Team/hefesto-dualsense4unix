@@ -1236,10 +1236,26 @@
      da mesa dela. Caber os 22 exige encolher a tabela que ela aprovou, e o
      `.miolo` (16px 3px 18px 18px) é do `topo.html`, comum às dez abas: é
      DECISÃO DELA, não pixel. As saídas estão em `mockup/DIVERGENCIAS.md`. */
-  .vib-estado{margin:4px 4px 0;display:flex;flex-direction:column;gap:6px}
+  /* OS DEZ PIXELS QUE FALTAVAM — VIBRAÇÃO-CABE-01 FECHA EM 05/09/2026.
+     A régua media o alerta terminando 41 px abaixo do fundo do miolo; a saída
+     da faixa "Estado" devolveu 31, e estes dez são os últimos. Eles saem do
+     ESPAÇAMENTO DESTE RODAPÉ, e de mais lugar nenhum:
+
+       margin-top   4 -> 0    o rodapé já vem depois da grade, com a folga dela
+       gap          6 -> 2    entre a ressalva e o alerta
+       line-height  1,5 -> 1,4 nas duas linhas do `.est`
+
+     O QUE **NÃO** PAGOU A CONTA, e as duas exclusões são regra desta casa: a
+     FRASE (texto de tela é decisão dela — o dono é
+     `rumble_actions.texto_do_alcance_da_intensidade`, e encurtá-la por pixel
+     seria eu decidindo o que ela lê) e a TABELA que ela aprovou, junto com o
+     `.miolo` do `topo.html`, que é comum às dez abas.
+
+     Medido depois: o alerta termina em 733 px e o fundo do miolo é 733. */
+  .vib-estado{margin:0 4px 0;display:flex;flex-direction:column;gap:2px}
   .vib-estado:empty{display:none}
   .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
-                   font-size:12px;line-height:1.5}
+                   font-size:12px;line-height:1.4}
   .vib-estado .est .sinal{flex:0 0 auto;font-size:9px;line-height:1.9}
   /* O MARCADOR DO `diz` NÃO É MAIS VERDE — 03/09/2026, e é defeito de
      significado, não de gosto.
