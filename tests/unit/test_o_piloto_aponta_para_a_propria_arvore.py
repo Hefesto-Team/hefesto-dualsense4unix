@@ -97,7 +97,7 @@ def test_a_regua_do_mockup_nao_sai_verde_sobre_o_vazio() -> None:
     # `--abre 99` não existe: o `_ir` confere o disco e mata a janela. É o
     # caminho mais barato até uma página morta — sem daemon, sem perfil, sem
     # tocar em nada dela.
-    fim = subprocess.run(  # noqa: S603
+    fim = subprocess.run(
         [sys.executable, str(piloto), "--oculta", "--abre", "99", "--segundos", "3"],
         capture_output=True, text=True, env=ambiente, timeout=180, check=False,
     )
