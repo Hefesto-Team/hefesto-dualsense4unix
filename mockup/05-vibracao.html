@@ -783,6 +783,65 @@
      os glifos L/R/PS e os traços dos botões, e só aparecem em desenho GRANDE.
      Medido na Iluminação no mesmo dia: copiar a regra da aba Jogar não bastava,
      porque lá o desenho tem 62px e aqui tem 124. */
+  /* ---------- A COLUNA QUE PERDEU O DONO AO VIVO — 05/09/2026 ----------
+     QUEIXA DELA: *"temos que entender se só tem um controle conectado só
+     aparece config daquele. aba cinco tá errada."*
+
+     E ESTAVA. Medido na tela viva com UM controle ligado: a segunda coluna
+     mostrava `—` no Modelo e, logo abaixo, os TRÊS degraus, os três trilhos e
+     os dois interruptores de motor — um deles ACESO em laranja. Controles
+     vivos, clicáveis, para um aparelho que não está aqui. É o mesmo defeito
+     que `_coluna_vazia` nomeia — *"testar a vibração de um lugar vazio não é
+     um botão fraco: é um botão que mente"* — só que num lugar onde o DESENHO
+     não podia prevê-lo: o mockup assa duas colunas ligadas, e quem descobre
+     que só há uma é o produto, ao vivo.
+
+     O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA. O pacote calcula `vazios`
+     (`pacotes/__init__.py`: os lugares para os quais a aba não emitiu coluna) e
+     o piloto marca cada um com `data-conectado="nao"` e a classe `off` (passo
+     1b do `_pintar`). O travessão dos CAMPOS já chegava — `dict.fromkeys(chaves,
+     TRAVESSAO)`. O que não chegava era o sumiço dos WIDGETS, porque um botão
+     não é campo de texto e nenhum `—` o apaga.
+
+     A CURA É CSS, e por isso vale para a coluna que esvazia DEPOIS de a aba
+     estar aberta — sem regerar nada, no tique seguinte. Os filhos saem e o
+     `::after` põe o travessão no lugar deles, que é a MESMA língua das colunas
+     que nascem vazias.
+
+     `:not(.vazia)` NÃO É DETALHE: o piloto marca `data-conectado="nao"` também
+     nas duas que já nascem vazias, e essas já trazem o `<span class="nada">`
+     por dentro. Sem a exclusão, o `> *` esconderia o próprio travessão delas e
+     a coluna ficaria em branco — a régua trocada por outra pior. */
+  .vib .ctrl[data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .seg > *,
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .motor > *,
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .acoes-col > *{display:none}
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .seg::after,
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .motor::after,
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .acoes-col::after{
+    /* O TRAVESSÃO É O CARACTERE, NÃO O ESCAPE — medido em 05/09/2026.
+       Escrito `content:"\2014"`, o CSS lê `` como o escape (que são
+       até seis dígitos hex) e sobra o `4` como texto: a tela mostrava um
+       quadradinho seguido de "4". O escape só funciona com um espaço a
+       separá-lo do que vem depois, e um espaço num `content` é um espaço
+       na tela. O caractere literal não tem essa armadilha, é o MESMO que
+       `VAZIO` usa nas colunas que nascem vazias, e o arquivo é UTF-8. */
+    /* `grid-column:1/-1` NÃO É ENFEITE — medido em 05/09/2026. O `.seg` é
+       grade de duas colunas e o `.motor` de quatro (36px · 1fr · 36px ·
+       26px); sem atravessar, o `::after` vira item da PRIMEIRA célula e o
+       travessão nasce encostado à esquerda, a 36px da borda, enquanto o
+       das colunas que já nascem vazias fica no meio. Duas caras para o
+       mesmo estado na mesma tela é o que esta regra existe para evitar. */
+    content:"—";color:var(--linha);display:flex;align-items:center;
+    justify-content:center;grid-column:1/-1;width:100%;height:100%}
+  /* A MOLDURA E O NOME acompanham, pelas mesmas regras das que nascem vazias —
+     senão o desenho do controle fica colorido em cima de uma coluna apagada. */
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .moldura{border-color:var(--border-forte)}
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .ds-svg .peca,
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .ds-svg .corpo,
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .ds-svg .miolo *{fill:var(--linha) !important}
+  .vib .ctrl[data-conectado="nao"]:not(.vazia) .rot-ctrl{color:var(--linha)}
+
   .vib .ctrl.vazia{border-color:var(--border-forte)}
   /* O TRAVESSÃO PREENCHE A CÉLULA, e isto é a régua de alinhamento falando.
      A coluna vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas —

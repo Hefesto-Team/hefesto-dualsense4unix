@@ -2,7 +2,7 @@
 """A ABA CONEXÕES PARA DE AFIRMAR O QUE NÃO MEDIU — `MIGRA-08-01`, 03/09/2026.
 
 Quatro coisas na tela dela eram o DESENHO apresentado como diagnóstico da
-máquina dela. Fotografadas no produto vivo, com dois controles na mesa:
+máquina dela. Fotografadas no produto vivo, com dois controles ligados:
 
     o que a tela dizia                          o que a máquina diz
     ------------------------------------------  ---------------------------
@@ -20,7 +20,7 @@ A CURA É PONTE, e o inventário é este — quatro donos que já existiam e que
 produto não chamava:
 
     `secao_exame.reexaminar` / `app.py:1180`   o exame COMPLETO ao ENTRAR na aba
-    `gui.aba_conexoes.texto_da_contagem`       "2 na mesa • 1 no cabo • 1 no rádio"
+    `gui.aba_conexoes.texto_da_contagem`       "2 controles • 1 no cabo • 1 no rádio"
     `gui.aba_conexoes.Controle.texto_da_bateria`  o `%` e o travessão
     `secao_mesa._linha_declarada:671`          pré-selecionar o que ela gravou
     `secao_exame._desenhar_o_que_fazer`        as ordens vêm antes das conferências
@@ -386,7 +386,7 @@ def test_a_contagem_da_gestao_e_do_dono_com_o_separador_do_desenho() -> None:
         {"connected": True, "uniq": "aa:bb:cc:00:00:03", "transport": "bt",
          "player": 3, "battery_pct": 10}]}
     frase = tela.texto_da_contagem(tela.controles_do_estado(estado))
-    assert frase == "3 na mesa • 1 no cabo • 2 no rádio", (
+    assert frase == "3 controles • 1 no cabo • 2 no rádio", (
         f"o dono mudou a frase da contagem: {frase!r}")
 
     saiu = p.html_da_conta(frase)
@@ -438,7 +438,7 @@ def test_o_pacote_liga_os_cinco_enderecos() -> None:
         assert endereco in saiu, (
             f"o `pacote()` não emite `{endereco}` — o desenho tem o endereço e "
             "ninguém escreve nele")
-    assert saiu["conta-gestao"].startswith("2 na mesa"), (
+    assert saiu["conta-gestao"].startswith("2 controles"), (
         f"a contagem da seção não conta a mesa deste contexto: "
         f"{saiu['conta-gestao']!r}")
 

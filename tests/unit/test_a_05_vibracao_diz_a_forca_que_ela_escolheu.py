@@ -306,30 +306,33 @@ def test_a_mesa_parada_nao_acende_punho_nenhum() -> None:
 
 
 # --------------------------------------------------------------------------
-# 3. as três frases que a janela estável tem
+# 3. as frases que a janela estável tem — DUAS desde 05/09/2026
 # --------------------------------------------------------------------------
 #: ONDE CADA FRASE MORA NO GLADE. A régua as lê do MESMO lugar que o gerador,
 #: de propósito: se alguém mudar a frase na janela estável e não regerar a aba,
 #: as duas telas divergem — e é essa divergência que esta régua pega.
 NO_GLADE = {
-    "o teto da mesa (os quatro tooltips de degrau)":
+    "o teto do orçamento (os tooltips de degrau)":
         r'id="rumble_policy_economia".*?tooltip-text[^>]*>[^<]*?'
-        r'(A mesa pode ter um teto[^<]*?)</property>',
-    "os 5 segundos do Modo Auto":
-        r'id="rumble_policy_auto_label".*?\n\s*(Espera 5 segundos[^<]*?)</property>',
+        r'(O Perfil de Bateria pode impor um teto[^<]*?)</property>',
     "a nota do card Testar motores":
         r'id="rumble_info".*?<property name="label"[^>]*>&lt;i&gt;'
         r'(.*?)&lt;/i&gt;</property>',
 }
 
 
-def test_as_tres_frases_da_janela_estavel_estao_na_aba(bancada) -> None:
-    """A aba nova diz as três coisas que a estável ensina, com as MESMAS palavras.
+def test_as_frases_da_janela_estavel_estao_na_aba(bancada) -> None:
+    """A aba nova diz o que a estável ensina, com as MESMAS palavras.
 
     Não é preciosismo de texto: cada uma responde a uma pergunta que a aba nova
-    deixava sem resposta — que o teto da mesa existe ANTES de ele morder, que o
-    Auto espera 5 segundos (o que explica um número mudando sozinho), e que o
-    "Testar" passa pelo degrau antes de chegar ao controle.
+    deixava sem resposta — que o teto do orçamento existe ANTES de ele morder, e
+    que o "Testar" passa pelo degrau antes de chegar ao controle.
+
+    **ERAM TRÊS ATÉ 05/09/2026.** A terceira era *"Espera 5 segundos antes de
+    trocar de faixa"*, e ela explicava o Modo Auto — que saiu desta tela por
+    decisão dela (*"segue os três modos sempre"*, ver `aba05.FORCA`). A frase
+    continua no glade porque a janela GTK continua a oferecer o Auto; o que
+    mudou é que esta aba não tem mais o botão que ela explicava.
     """
     glade = (RAIZ / "src/hefesto_dualsense4unix/gui/main.glade").read_text()
     for nome, padrao in NO_GLADE.items():
@@ -338,6 +341,25 @@ def test_as_tres_frases_da_janela_estavel_estao_na_aba(bancada) -> None:
         frase = html.unescape(achado.group(1)).strip()
         assert frase in bancada, (
             f"a aba perdeu {nome}: {frase!r}. Regere com `python3 aba05.py`")
+
+
+def test_a_frase_do_auto_nao_volta_a_aba(bancada) -> None:
+    """E a que saiu tem de FICAR fora — dica sem botão é texto órfão.
+
+    MORDIDA: devolva `DICA_DA_ESPERA_DO_AUTO` ao `?` da Força em `aba05.py` e
+    regere; este caso reprova.
+    """
+    glade = (RAIZ / "src/hefesto_dualsense4unix/gui/main.glade").read_text()
+    achado = re.search(
+        r'id="rumble_policy_auto_label".*?\n\s*(Espera 5 segundos[^<]*?)</property>',
+        glade, re.S)
+    assert achado, (
+        "a frase dos 5 s saiu do GLADE — ela tem de continuar lá, porque a "
+        "janela GTK continua a oferecer o Modo Auto")
+    frase = html.unescape(achado.group(1)).strip()
+    assert frase not in bancada, (
+        "a dica dos 5 s do Auto voltou à aba 05, e o botão que ela explica saiu "
+        "em 05/09/2026 por decisão dela")
 
 
 # --------------------------------------------------------------------------

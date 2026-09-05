@@ -76,16 +76,19 @@ _TAMANHO_DE_PARAGRAFO = 60
 #: Os parágrafos que FICAM na página, e o motivo de cada um. Todos são ESTADO —
 #: mudam com a máquina, com a mesa ou com a resposta do daemon.
 PARAGRAFOS_QUE_FICAM: dict[str, str] = {
-    "Nenhum controle na mesa agora.": (
+    "Nenhum controle ligado agora.": (
         "seção VAZIA: só existe quando não há controle nenhum, logo é o próprio "
-        "estado da mesa. `secao_controles`."
+        "estado dos controles. `secao_controles`. A frase dizia `na mesa` até "
+        "05/09/2026, quando ela mandou tirar a palavra da interface."
     ),
     "Não sei quem está no rádio": (
         "estado do daemon: só aparece quando ele não respondeu. `secao_orcamento`."
     ),
     "Você ainda não desenhou a sua mesa.": (
         "estado da declaração dela: some no instante em que o mapa é desenhado. "
-        "`secao_mesa`."
+        "`secao_mesa`. A palavra `mesa` FICA aqui: esta é a mesa FÍSICA — a "
+        "escrivaninha e as entradas USB —, e não o jargão dos controles "
+        "ligados que saiu em 05/09/2026."
     ),
 }
 
