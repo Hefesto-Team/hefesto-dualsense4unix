@@ -149,9 +149,22 @@ def descrever_deteccao_de_janela(state: object) -> str:
         )
     vendo = bool(state.get("window_detect_seeing"))
     if vendo:
+        # A FRASE DIZ "AGORA", ENTÃO SÓ A CLASSE DE AGORA PODE ENTRAR NELA —
+        # 05/09/2026. Aqui havia um recuo para `window_detect_last_class`
+        # quando a atual vinha vazia ou `unknown`, e o docstring acima já
+        # avisava, na linha de cima, que esse campo é STICKY: ele guarda a
+        # última classe vista e nunca se apaga.
+        #
+        # O RESULTADO MEDIDO, no retrato de 05/09 às 05:11: o cartão dizia
+        # *"funcionando (na frente agora: pragmata.exe)"* com o jogo FECHADO
+        # havia horas — nenhum processo de Steam, Proton ou Wine vivo na
+        # máquina. É a mesma família do que ela pegou em 03/09, quando o
+        # `doctor` contava eventos de 24 dias atrás no presente.
+        #
+        # Sem classe de agora a frase fica sem o parêntese, e continua
+        # verdadeira: a detecção FUNCIONA, e a janela da frente é uma que o
+        # backend não sabe classificar.
         classe = state.get("window_detect_current_class")
-        if not isinstance(classe, str) or not classe or classe == "unknown":
-            classe = state.get("window_detect_last_class")
         onde = (
             f" (na frente agora: {_escapar_markup(classe)})"
             if isinstance(classe, str) and classe and classe != "unknown"
