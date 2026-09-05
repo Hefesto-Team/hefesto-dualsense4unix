@@ -247,11 +247,17 @@ def test_o_auto_limpa_o_override_e_nunca_o_grava(
         rumble={"policy": "balanceado"},
         controllers={CHAVE: {"rumble": {"policy": "economia"}}})
 
-    with pytest.raises(RuntimeError) as recusa:
-        clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "auto"},
-                         PonteDeMentira())
-    assert TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL.strip(" —") in str(recusa.value), (
-        f"o Auto voltou a limpar o override em silêncio: {recusa.value}")
+    # E O CANAL MUDOU EM 04/09/2026 — decisão [04] dela (D-01): a frase volta
+    # como RECADO DE SUCESSO (`{"recado": …}`) e não como recusa. A gravação
+    # aconteceu; uma tarja laranja de 30 s sobre um clique que deu certo ensina
+    # que o botão falha.
+    volta = clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "auto"},
+                             PonteDeMentira())
+    assert isinstance(volta, dict), (
+        f"o gesto não devolveu recado nenhum ({volta!r}) — o Auto voltou a "
+        f"limpar o override em silêncio")
+    assert TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL.strip(" —") in str(volta.get("recado")), (
+        f"o Auto voltou a limpar o override em silêncio: {volta!r}")
 
     assert len(gravados) == 1, "o Auto não gravou — a coluna ficaria em Economia"
     dele = (gravados[0].controllers or {}).get(CHAVE)
@@ -492,7 +498,14 @@ def test_o_desenho_tem_a_barra_arrastavel_com_o_teto_do_esquema() -> None:
     from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 
     pagina = (RAIZ / "mockup/05-vibracao.html").read_text(encoding="utf-8")
-    barras = re.findall(r'<input class="trilho arrasta"[^>]*>', pagina)
+    # SÓ AS DA "PERSONALIZADO" — 04/09/2026. A aba passou a ter TRÊS barras
+    # arrastáveis por coluna: esta e as DUAS de motor, que têm teto e passo
+    # diferentes de propósito (`MOTOR_PCT_MAX` = 100 contra os 200 daqui, porque
+    # a barra do motor é o SEGUNDO fator e quem amplifica é o degrau). Uma régua
+    # que continuasse contando todo `<input>` cobraria `max="200"` da barra de
+    # motor — e passar dela daria à mesma peça duas portas para o mesmo estouro.
+    barras = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', pagina)
+              if 'data-papel="intensidade"' in t]
     assert barras, (
         "a barra 'Personalizado' voltou a ser um `<div>` — o ouvinte manda "
         "`valor: alvo.value ?? ''`, e um `<div>` não tem `value`")

@@ -41,13 +41,24 @@ pelo `TouchpadReader` do cursor, e um segundo acumulador que ninguém drena
 viraria salto de cursor. Aqui só se OBSERVA (`touch_state()`), nunca se
 drena (`consume_motion()` continua sendo exclusividade do poll loop).
 
-**NENHUM reader daqui faz `set_grab`, e o do gamepad é onde isso deixa de ser
-detalhe.** Um `EVIOCGRAB` no node do controle tornaria o daemon leitor
+**O reader do GAMEPAD nunca faz `set_grab`, e é onde isso deixa de ser
+detalhe.** Um `EVIOCGRAB` no node do CONTROLE tornaria o daemon leitor
 exclusivo e o JOGO pararia de ver o controle — seria trocar um card mudo por
 um controle morto. Observar um node que ninguém grabou não disputa nada: o
 evdev entrega o mesmo evento a todos os fds abertos, e isto não é hidraw
 (a armadilha nº 3 desta casa, o instrumento que briga com o produto, mora na
 outra camada).
+
+**O reader de MOTION é a exceção, e ela nasceu deliberada em 04/09/2026**
+(SENSOR-DE-VERDADE-01, decisão dela: *"ele tem que funcionar de verdade.
+ambos independente do modo e da mascara"*). <!-- noqa-acento: citação literal dela -->
+O node "Motion Sensors" é SEPARADO do node do controle: grabá-lo esconde o
+giro e o acelerômetro de quem lê evdev **sem tocar um único botão** — os
+gatilhos, os analógicos e o d-pad continuam chegando ao jogo pelo outro node.
+É o oposto do caso acima, e é por isso que a mesma máquina de grab serve aos
+dois com sinais trocados. Só grabamos quando ELA desligou um sensor; sem
+pedido dela, este hub continua sendo um observador que não disputa nada
+(:meth:`SensorHub._reconciliar_grabs`).
 
 **Quem grabou o node é que fica com os eventos, e por isso o `ipc_handlers`
 NÃO pede `entradas()` de um controle que o co-op já segura.** MEDIDO no
@@ -304,6 +315,7 @@ class SensorHub:
         thread.
         """
         agora = self._relogio()
+        desligados = self._sensores_desligados()
         with self._lock:
             vivos_sensores = self._podar(self._demanda, agora)
             self._demanda = {
@@ -314,7 +326,18 @@ class SensorHub:
                 u: t for u, t in self._demanda_entradas.items() if u in vivos_entradas
             }
             desejados: dict[str, set[str]] = {
-                "motion": vivos_sensores,
+                # SENSOR-DE-VERDADE-01 — A LINHA QUE FAZ O INTERRUPTOR DURAR.
+                # Quem tem sensor desligado entra na lista dos motion MESMO sem
+                # ninguém pedir leitura: é o reader do nó "Motion Sensors" que
+                # segura o EVIOCGRAB, e sem esta união o TTL de 5 s derrubaria
+                # o reader — e com ele o grab — CINCO SEGUNDOS depois de ela
+                # fechar a janela. O interruptor se desligaria sozinho, calado,
+                # e a próxima tela ainda diria "desligado".
+                #
+                # Só o `motion`: o touchpad não tem interruptor e manter um
+                # reader dele de graça seria uma thread por controle, o dia
+                # inteiro, pelo nada.
+                "motion": vivos_sensores | desligados,
                 "touchpad": vivos_sensores,
                 "gamepad": vivos_entradas,
             }
@@ -349,6 +372,107 @@ class SensorHub:
         novos = faltando - sem_node
         if novos:
             self._abrir_readers(novos)
+        self._reconciliar_grabs(desligados)
+
+    # -- O BRAÇO EVDEV do interruptor de sensor (SENSOR-DE-VERDADE-01) -----
+
+    def _sensores_desligados(self) -> set[str]:
+        """Os `uniq` (na grafia da DESCOBERTA) com algum sensor desligado.
+
+        Duas grafias da mesma peça convivem nesta casa: o `uniq` do evdev vem
+        com dois-pontos (`aa:bb:cc:00:00:01`) e a chave do perfil vem sem
+        (`aabbcc000001`). O registro indexa pela forma normalizada; este hub
+        precisa da forma que os DESCOBRIDORES usam, senão pediria reader para
+        um endereço que `/dev/input` não conhece — e o interruptor daquela peça
+        nunca abriria nó nenhum.
+
+        A DESCOBERTA SÓ É PAGA quando há sensor desligado de peça sem reader —
+        o caso raro. No caso normal (dicionário vazio) o custo é um `if`, e
+        essa é a regra 1 deste módulo: a enumeração de `/dev/input` custa
+        10-40 ms e não pode entrar no ritmo de 1 s por precaução.
+
+        Import tardio pela mesma razão de todos os outros daqui.
+        """
+        from hefesto_dualsense4unix.core.virtual_motion import (
+            REGISTRO,
+            chave_de_sensor,
+        )
+
+        alvos = set(REGISTRO.desligados())
+        if not alvos:
+            return set()
+        with self._lock:
+            conhecidos = set(self._motion) | set(self._demanda)
+        achados = {u for u in conhecidos if chave_de_sensor(u) in alvos}
+        faltando = alvos - {chave_de_sensor(u) for u in achados}
+        if faltando:
+            for uniq in self._chamar_descobridor(self._descobrir_motion):
+                if chave_de_sensor(uniq) in faltando:
+                    achados.add(uniq)
+        return achados
+
+    def _reconciliar_grabs(self, desligados: set[str]) -> None:
+        """O nó "Motion Sensors" fica GRABADO enquanto houver sensor desligado.
+
+        **É a metade que a medição de 04/09/2026 obrigou a existir**, e ela
+        alcança o que o filtro do report não alcança: o consumidor que lê o nó
+        evdev direto (`evtest`, emulador com backend evdev). O SDL não lê esse
+        nó — mede-se em `core/virtual_motion`, no cabeçalho —, então nenhum dos
+        dois braços sozinho é o interruptor: são os dois.
+
+        POR QUE O NÓ INTEIRO, e não um sensor por vez: giroscópio e
+        acelerômetro viajam no MESMO nó (`ABS_RX/RY/RZ` e `ABS_X/Y/Z`,
+        `hid-playstation.c`), e o EVIOCGRAB é do descritor de arquivo, não do
+        eixo. Desligar UM esconde os dois de quem lê evdev — e é por isso que a
+        resposta do `sensor.set` DIZ isso, em vez de deixar a tela prometer
+        precisão que o kernel não oferece. O braço do report, esse sim, separa
+        os dois byte a byte.
+
+        O grab não some quando a GUI fecha: quem mantém o reader vivo é a
+        união lá em cima. E não some no replug nem na troca de máscara: o
+        `_reapply_grab` do loop o reaplica ao reabrir o nó.
+        """
+        with self._lock:
+            readers = dict(self._motion)
+        for uniq, reader in readers.items():
+            querido = uniq in desligados
+            aplicar = getattr(reader, "set_grab", None)
+            if not callable(aplicar):
+                continue  # dublê de teste sem grab: nada a fazer, e sem erro
+            estado = getattr(reader, "grab_state", "off")
+            if querido and estado == "held":
+                continue
+            if not querido and estado in ("off", "failed"):
+                continue
+            with contextlib.suppress(Exception):
+                aplicar(querido)
+
+    def grab_do_movimento(self, uniq: str) -> str:
+        """Estado do EVIOCGRAB no nó de movimento de `uniq`.
+
+        `off | pending | held | failed`, e `sem_reader` quando não há nó aberto
+        para aquela peça. Quem chama é o `sensor.set`, para dizer na resposta
+        **qual metade do interruptor pegou** — a lição de 04/09/2026: quando o
+        instrumento e o aparelho discordam, o aparelho ganha, e a única forma
+        de saber é PERGUNTAR ao aparelho em vez de afirmar pelo desenho.
+
+        Aceita as DUAS grafias do endereço (com e sem dois-pontos): quem
+        pergunta é o handler do IPC, que já converteu para a chave do perfil,
+        e o card, que tem a do evdev. Casar só uma delas devolveria
+        `sem_reader` sobre um nó grabado — o instrumento mentindo de novo.
+        """
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        alvo = chave_de_sensor(uniq)
+        with self._lock:
+            reader = next(
+                (r for u, r in self._motion.items() if chave_de_sensor(u) == alvo),
+                None,
+            )
+        if reader is None:
+            return "sem_reader"
+        estado = getattr(reader, "grab_state", None)
+        return str(estado) if isinstance(estado, str) else "off"
 
     def _podar(self, registro: dict[str, float], agora: float) -> set[str]:
         """Quem, neste registro de demanda, ainda está dentro do TTL."""

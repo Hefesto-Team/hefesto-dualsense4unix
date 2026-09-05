@@ -1059,6 +1059,56 @@ class ControllerMicOverride(BaseModel):
         return data
 
 
+class ControllerSensoresOverride(BaseModel):
+    """Giroscópio e acelerômetro DESTA peça — ligados ou desligados.
+
+    SENSOR-DE-VERDADE-01 (04/09/2026). Decisão dela, depois de eu recomendar a
+    saída barata (virar leitura, um selo "no ar / parado", zero linha nova):
+
+        *"ele tem que funcionar de verdade. ambos independente do modo e da
+        mascara."* <!-- noqa-acento: citação literal dela -->
+
+    **DOIS campos e não um**, porque ela disse *"ambos"* e cada um por si —
+    e porque o caminho do report sabe separá-los: giroscópio e acelerômetro
+    viajam na mesma janela de 25 bytes, em faixas distintas
+    (``core/virtual_motion.FAIXA_GIROSCOPIO`` / ``FAIXA_ACELEROMETRO``), e
+    zerar meia faixa desliga um sem tocar no outro.
+
+    ``None`` = sem opinião, e sem opinião é LIGADO — ``D-AUDIO-E-GIRO-NASCEM-
+    LIGADOS`` (25/08/2026) diz que giroscópio nasce ligado em todo jogo. Um
+    perfil que não pediu nada não pode desligar o sensor dela por omissão.
+
+    POR QUE O CAMPO PODE EXISTIR AGORA, e não podia até ontem
+    ---------------------------------------------------------
+    Porque o caminho por unidade nasceu ANTES do campo, que é a ordem que esta
+    classe cobra de si mesma: ``sensor.set`` no IPC, o registro por ``uniq``
+    (``core/virtual_motion.REGISTRO``), o filtro na janela que o vpad entrega
+    ao jogo e o ``EVIOCGRAB`` no nó "Motion Sensors" pelo ``SensorHub``. Quem
+    lê este campo por peça é ``manager.apply_controller_sensores``.
+
+    O QUE O CAMPO **NÃO** ALCANÇA, e está escrito porque medir é o trabalho
+    ------------------------------------------------------------------------
+    Em **Modo Nativo** o jogo lê o giro pelo ``hidraw`` do controle FÍSICO
+    (medido em 04/09/2026 com SDL 2.30: ``tem_giro=true``, 192 amostras
+    distintas em 2 s, com o SDL abrindo ``/dev/hidraw4``), e ali o daemon não
+    está no caminho — o kernel entrega o report direto. Não há byte a zerar, e
+    o DualSense não tem comando de firmware que desligue a IMU
+    (``docs/data/mapa-controles.csv``, ``movimento.imu.ligar`` =
+    ``existe=nao-tem``). O que sobra em Nativo é o braço evdev, que alcança
+    quem lê o nó — e a resposta do ``sensor.set`` diz isso em vez de mentir
+    "aplicado".
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: ``False`` desliga o giroscópio desta peça. ``None`` = sem opinião (ligado).
+    giroscopio: bool | None = None
+
+    #: ``False`` desliga o acelerômetro desta peça. Independente do irmão acima
+    #: de propósito — é o *"ambos"* dela, cada um por si.
+    acelerometro: bool | None = None
+
+
 class ControllerOverrides(BaseModel):
     """Overrides POR CONTROLE dentro do perfil (PERFIL-02, 2026-07-16).
 
@@ -1140,17 +1190,21 @@ class ControllerOverrides(BaseModel):
        verdadeira e o motivo dela morreu: o gesto do microfone deixou de passar
        por ali. **O item mais caro da lista virou o mais barato.**
 
-    2. ``giroscopio`` e ``acelerometro`` — a ``ProfileSensorsConfig`` que a
-       ONDA-CONTROLES-07 deve. O ``daemon/sensor_hub.py`` publica os dois POR
-       ``uniq``, mas só LÊ: os métodos públicos dele são ``leitura``,
-       ``reconciliar`` e ``stop_all``, e nenhum método do IPC do daemon casa
-       ``sensor``/``gyro``/``motion``/``accel``. **Não existe no produto nada
-       que desligue um sensor** — nem por peça, nem para todo mundo. O que
-       falta é o interruptor inteiro: ``sensors.set`` no IPC e a meia-janela
-       neutra do ``uhid_gamepad`` (o giroscópio e o acelerômetro viajam na
-       MESMA janela, em faixas de bytes distintas, e zerar meia faixa desliga
-       um sem tocar no outro). Enquanto ele não existir, um campo aqui seria a
-       tela prometendo um botão que não desliga nada.
+    2. ``giroscopio`` e ``acelerometro`` — **SAÍRAM DA FILA EM 04/09/2026**
+       (SENSOR-DE-VERDADE-01). O campo é ``sensores``, e ele entrou porque o
+       caminho por unidade nasceu primeiro: ``sensor.set`` no IPC, o registro
+       por ``uniq`` (``core/virtual_motion.REGISTRO``), a meia-janela zerada no
+       que o vpad entrega ao jogo e o ``EVIOCGRAB`` no nó "Motion Sensors"
+       pelo ``SensorHub``. Quem o lê por peça é
+       ``manager.apply_controller_sensores``.
+
+       **FATO SUBSTITUÍDO:** esta entrada dizia *"não existe no produto nada
+       que desligue um sensor"* e que o hub *"só LÊ"*. Passou a existir, e o
+       hub ganhou o braço do grab. O que a medição de 04/09 acrescentou, e
+       nenhuma versão desta fila previa, é que **o nó evdev não é por onde o
+       SDL lê o giro** — ele lê pelo ``hidraw`` — e que em Modo Nativo o
+       daemon não está nesse caminho. O limite está escrito em
+       ``ControllerSensoresOverride`` e sai na resposta do método.
 
     3. ``mode``, e ele é o único da fila com DOIS eixos. O ``mode`` é da SESSÃO
        (decisão dela, 10/08/2026): existe um só, e o daemon não pode estar em
@@ -1205,16 +1259,17 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO CINCO, e a tela oferece nove. O que falta, e o CAMINHO que cada um
+    # SÃO SEIS, e a tela oferece nove. O que falta, e o CAMINHO que cada um
     # espera antes de poder entrar, está na fila da docstring acima — ordenada
-    # por custo, dos sensores (o interruptor inteiro) à entrada por unidade (o
-    # pipeline). O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
-    # cuja escada carrega o `uniq` em todo degrau.
+    # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
+    # cuja escada carrega o `uniq` em todo degrau; o `sensores` entrou em
+    # 04/09/2026, quando o interruptor que ele prometia passou a existir.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
     speaker: ProfileSpeakerConfig | None = None
     mic: ControllerMicOverride | None = None
+    sensores: ControllerSensoresOverride | None = None
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
@@ -1690,6 +1745,7 @@ __all__ = [
     "ControllerMicOverride",
     "ControllerOverrides",
     "ControllerRumbleOverride",
+    "ControllerSensoresOverride",
     "LedsConfig",
     "Match",
     "MatchAny",

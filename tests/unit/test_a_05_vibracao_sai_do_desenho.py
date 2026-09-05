@@ -198,25 +198,43 @@ def test_os_oito_degraus_saem_do_produto(regua, vereditos):
 
 def test_o_degrau_aceso_e_o_da_mesa_e_nao_o_do_mockup(regua, cravados,
                                                       declarados):
-    """A cena do mockup acende `max` no P1; o daemon diz `balanceado`.
+    """A cena do mockup acende `max` no P1; o daemon diz que ele HERDA.
 
     É esta divergência que prova que a tela SAIU do desenho — se a régua fosse
     alimentada com o mesmo degrau que o mockup cravou, os oito ficariam iguais e
     o verde não diria nada.
+
+    **E O QUE O DAEMON DIZ MUDOU EM 04/09/2026 — decisão [05] dela.** Nenhum
+    dos dois controles desta cena tem override no perfil, então os dois HERDAM:
+    o campo da coluna sai VAZIO e os quatro botões apagam. Quem acende é a
+    LINHA DE MESA, e é ela que diz o degrau que o produto está usando. A
+    divergência com o desenho ficou MAIOR, não menor: o mockup crava um aceso
+    onde a tela viva não acende nenhum.
     """
     cena = {(c.dono, c.quando) for c in cravados
             if c.chave == "degrau" and c.valor}
     assert ("p1", "max") in cena, (
         "a cena do mockup deixou de acender `max` no P1 — a razão desta régua "
         "mudou, e ela virou vácuo")
-    assert declarados[("p1", "degrau")] == POLITICA
+    assert declarados[("p1", "degrau")] == "", (
+        f"a coluna do P1 declarou {declarados[('p1', 'degrau')]!r} sem ter "
+        f"ajuste próprio — o degrau herdado é o da linha de mesa")
+    assert declarados[("", "degrau-mesa")] == POLITICA, (
+        "a linha de mesa não declara o degrau geral — era ela que a decisão "
+        "[05] existe para pôr na tela")
 
     vivos, _ = _a_tela_depois_da_pintura(regua, cravados, declarados)
     acesos = {(c.dono, c.quando) for c, v in zip(cravados, vivos, strict=True)
               if c.chave == "degrau" and v}
-    assert acesos == {("p1", POLITICA), ("p2", POLITICA)}, (
-        f"depois do tique os acesos são {sorted(acesos)} — cada coluna acende "
-        "UM degrau, e é o da mesa")
+    assert not acesos, (
+        f"depois do tique os acesos das colunas são {sorted(acesos)} — nenhuma "
+        f"das duas tem ajuste próprio, e acender um degrau ali seria a coluna "
+        f"afirmando uma escolha dela que não existe no disco")
+    da_mesa = {c.quando for c, v in zip(cravados, vivos, strict=True)
+               if c.chave == "degrau-mesa" and v}
+    assert da_mesa == {POLITICA}, (
+        f"a linha de mesa acendeu {sorted(da_mesa)} — ela é o único lugar da "
+        f"tela que mostra o degrau que o produto está usando")
 
 
 # --------------------------------------------------------------------------
