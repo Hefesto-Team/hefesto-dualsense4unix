@@ -845,7 +845,7 @@ ACHADOS = [
           "<b>O que eu vi:</b> <b>Mortal Kombat 1</b> e <b>Elden Ring</b> estavam com o Steam Input ligado. O exame "
           "desligou nos dois, sem senha e sem fechar a Steam."
           "<br><br><b>Por que importa:</b> a Steam faz um espelho Xbox de <b>cada</b> controle que enxerga, inclusive "
-          f"dos gamepads virtuais do Hefesto. Com {N} controles na mesa isso são {N} espelhos, e o jogo passaria a ver "
+          f"dos gamepads virtuais do Hefesto. Com {N} controles ligados isso são {N} espelhos, e o jogo passaria a ver "
           f"<b>{2 * N}</b> onde você tem {N}. Alguns jogos escolhem o errado."
           "<br><br><b>O que fazer:</b> nada. Para refazer, é <b>Refazer os consertos automáticos</b>, ao lado."),
     saude("OK", "✓", f"Áudio dos {N} controles roteado",
@@ -945,10 +945,10 @@ _LINHAS_DA_DICA = "".join(
     for p in ORC["PERFIS"])
 
 D_BATERIA = ('<span class="ajuda">?<span class="dica">'
-             'O que fica ligado na mesa inteira, e quanto isso custa de bateria. As abas '
+             'O que fica ligado em todos os controles, e quanto isso custa de bateria. As abas '
              'continuam mandando no que fazem — nenhum ajuste seu é apagado.<br><br>'
              + _LINHAS_DA_DICA +
-             '<br>É o perfil da <b>mesa</b>: vale para os '
+             '<br>É o perfil <b>geral</b>: vale para os '
              f'{N} controles. Cada um pode sobrepô-lo na linha dele.'
              '</span></span>')
 
@@ -1066,8 +1066,8 @@ MIOLO = f'''
                  do `<select>` que saiu, então a conta do portão dos dois blocos não
                  muda de valor — só de forma. -->
             <div class="seg bat-perfis" data-id="{_id("bateria-perfil")}">{_botoes_bateria()}</div>
-{est("O que ele impõe", impoe(PERFIL_DA_MESA), "info", "◆", dica="O que este perfil limita hoje, na mesa inteira. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela.", ident=_id("bateria-impoe"))}
-{est("Vale para", f"Os {N} controles", "info", "◆", dica="É o teto da MESA. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo.", ident=_id("bateria-vale-para"))}
+{est("O que ele impõe", impoe(PERFIL_DA_MESA), "info", "◆", dica="O que este perfil limita hoje, em todos os controles. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela.", ident=_id("bateria-impoe"))}
+{est("Vale para", f"Os {N} controles", "info", "◆", dica="É o teto geral. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo.", ident=_id("bateria-vale-para"))}
 {est("O teto alcança", _frase(ALCANCA), "info", "◆", dica="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela.")}
 {est("Ainda sem teto", _frase(PENDENTES), "info", "◆", inteiro=_frase(PENDENTES, curto=False), dica="O perfil ainda não tem por onde limitar estes. Cada um entra quando ganhar ponto de aplicação no daemon, e some daqui sozinho.")}
             <!-- O VÃO DE 58px, E POR QUE ELE ERA O DEFEITO — 31/08/2026.

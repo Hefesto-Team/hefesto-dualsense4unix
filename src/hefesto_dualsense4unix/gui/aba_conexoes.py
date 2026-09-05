@@ -300,10 +300,15 @@ def controles_do_estado(
 
 
 def texto_da_contagem(controles: Sequence[Controle]) -> str:
-    """``4 na mesa • 2 no cabo • 2 no rádio`` — o canto do quadro 1."""
+    """``4 controles • 2 no cabo • 2 no rádio`` — o canto do quadro 1.
+
+    A PALAVRA "mesa" SAIU EM 05/09/2026, ordem dela: *"não é pra ter mesa em
+    nada da interface"*. O número já dizia o que ela precisava; a palavra só
+    acrescentava um jargão desta casa à tela de quem joga.
+    """
     radio = sum(1 for c in controles if c.pelo_radio)
     cabo = len(controles) - radio
-    return f"{len(controles)} na mesa • {cabo} no cabo • {radio} no rádio"
+    return f"{len(controles)} controles • {cabo} no cabo • {radio} no rádio"
 
 
 def mascara_da_maquina(estado: Mapping[str, Any]) -> str:

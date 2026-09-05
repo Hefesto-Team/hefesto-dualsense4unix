@@ -1081,7 +1081,7 @@ MIOLO = f'''
               <div class="guarda">
                 <table class="tab miuda">
                   <thead><tr>
-                    <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada um da mesa, quais ajustes ele tem só para si e quais usa do perfil.">Controle</th>
+                    <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle</th>
                     <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os {QUANTAS_SECOES} ajustes que o perfil sabe guardar por controle — luz, gatilhos, vibração, alto-falante e microfone.">Ajuste próprio</th>
                     <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
                   </tr></thead>

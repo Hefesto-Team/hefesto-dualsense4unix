@@ -1750,7 +1750,7 @@
 
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_economia">
-                                <property name="tooltip-text" translatable="yes">30% do que o jogo pede: vibração fraca em todos os jogos, poupa bateria e faz menos barulho. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
+                                <property name="tooltip-text" translatable="yes">30% do que o jogo pede: vibração fraca em todos os jogos, poupa bateria e faz menos barulho. O Perfil de Bateria pode impor um teto: esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Economia</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_economia"/>
@@ -1758,7 +1758,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_balanceado">
-                                <property name="tooltip-text" translatable="yes">100%: vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
+                                <property name="tooltip-text" translatable="yes">100%: vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão. O Perfil de Bateria pode impor um teto: esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Balanceado</property>
                                 <property name="active">True</property>
                                 <signal name="toggled" handler="on_rumble_policy_balanceado"/>
@@ -1766,7 +1766,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_max">
-                                <property name="tooltip-text" translatable="yes">150%: aumenta pela metade a vibração que o jogo pede. Só as cenas mais fortes batem no limite do controle e ficam parecidas entre si. Gasta bateria bem mais depressa. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
+                                <property name="tooltip-text" translatable="yes">150%: aumenta pela metade a vibração que o jogo pede. Só as cenas mais fortes batem no limite do controle e ficam parecidas entre si. Gasta bateria bem mais depressa. O Perfil de Bateria pode impor um teto: esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Máximo</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_max"/>
@@ -1774,7 +1774,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_auto">
-                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle principal — e a força escolhida vale para todos os controles da mesa. Nunca aumenta a vibração além do que o jogo pediu: ele existe para poupar bateria. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
+                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle principal — e a força escolhida vale para todos os controles ligados. Nunca aumenta a vibração além do que o jogo pediu: ele existe para poupar bateria. O Perfil de Bateria pode impor um teto: esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Auto</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_auto"/>
@@ -1880,7 +1880,7 @@
                                  este texto dizia. "Debounce" também saiu: é
                                  jargão, e ela nunca vê jargão. A escada viva está
                                  em `core.rumble._effective_mult`. -->
-                            <property name="label" translatable="yes">Modo Auto: ajusta a força sozinho, conforme a bateria do controle principal — e a força escolhida vale para todos os controles da mesa.
+                            <property name="label" translatable="yes">Modo Auto: ajusta a força sozinho, conforme a bateria do controle principal — e a força escolhida vale para todos os controles ligados.
 Bateria acima de 50%: 100%, o que o jogo pediu.  Entre 20% e 50%: 70%.  Abaixo de 20%: 30%.
 O Auto nunca passa de 100%: ele existe para poupar bateria, não para aumentar a vibração.
 Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property>

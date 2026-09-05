@@ -178,8 +178,8 @@ def _linha_do_mais(quantos: int) -> tuple[str, str]:
 #: afastarem. Quem cuidar de `jogar_vivo.py` fecha isto com uma linha: importar
 #: esta constante em vez de repetir a frase.
 MESA_VAZIA = (
-    "Nenhum controle na mesa agora. Conecte um pelo cabo ou pelo "
-    "rádio — a mesa aparece sozinha, sem recarregar esta tela."
+    "Nenhum controle ligado agora. Conecte um pelo cabo ou pelo "
+    "rádio — ele aparece sozinho, sem recarregar esta tela."
 )
 
 #: QUANTOS LUGARES A PÁGINA TEM. O dono é o desenho (`monta.MESA`), e o número

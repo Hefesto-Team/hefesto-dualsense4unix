@@ -1162,7 +1162,7 @@ MIOLO = f'''
              `title` nos quatro botões desde hoje). -->
         <span class="ajuda">?<span class="dica">
           A <b>barra de luz</b> é a faixa que acende dos dois lados do touchpad, e é a
-          identidade do controle na mesa: você olha e sabe de quem é.<br><br>
+          identidade de cada controle: você olha e sabe de quem é.<br><br>
           O plástico é físico e pode se repetir; a <b>luz</b> é o que nunca se repete.
         </span></span>
         <!-- O INTERRUPTOR DO AUTOMÁTICO — D-13, decisão dela de 04/09/2026:
@@ -1250,7 +1250,7 @@ MIOLO = f'''
             <div>
               <div class="sec-rot">Jogador
                 <span class="ajuda">?<span class="dica">
-                  O player é quem este controle é na mesa: o número do cabeçalho, o dos cards
+                  O player é quem este controle é: o número do cabeçalho, o dos cards
                   da aba <b>Controles</b>, e o das cinco luzinhas brancas acima do
                   touchpad.<br><br>
                   <b>Isto não escolhe o que você está vendo</b> — os {len(MESA)} estão na tela. Isto
@@ -1267,7 +1267,7 @@ MIOLO = f'''
                   Dar a este controle um número que já é de outro faz <b>os dois trocarem de
                   lugar</b>: quem tem aquele número hoje fica com o deste. Nunca fica um
                   número repetido, nunca fica um controle sem número — por isso a fileira
-                  oferece os números que existem na mesa, e não os oito.<br><br>
+                  oferece os números que já estão em uso, e não os oito.<br><br>
                   Um jogo em co-op pode mandar o seu próprio número por cima — e aí quem
                   manda nas luzinhas é o jogo, não esta escolha.
                 </span></span>
@@ -1545,7 +1545,7 @@ def _conferir(doc):
     #    selecionada precisa ter uma borda."* Ele já existia no CSS e casava
     #    ZERO botões, porque a comparação era entre duas escalas.
     exigir(corpo.count('class="tom on"') == len(monta_.CONECTADOS),
-           "a cor escolhida não está marcada em todos os controles da mesa")
+           "a cor escolhida não está marcada em todos os controles ligados")
 
     # 7. A GUIA E O LIGHTBAR ACENDEM A MESMA TINTA — *"e precisa refletir no
     #    lightbar."* A régua compara o que o gerador escreveu nos dois lugares,

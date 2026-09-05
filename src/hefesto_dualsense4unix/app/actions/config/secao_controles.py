@@ -116,7 +116,7 @@ _ESPACAMENTO = 10
 #: MÉDIO. Enquanto a medição não acontece, o estado vazio precisa ser
 #: *"não estou vendo nada e sei por quê"* — que é entrega, não falha.
 FRASE_SEM_CONTROLE = (
-    "Nenhum controle na mesa agora. Conecte um pelo cabo ou pelo rádio e entre "
+    "Nenhum controle ligado agora. Conecte um pelo cabo ou pelo rádio e entre "
     "nesta aba de novo. Um controle ligado em modo D-input pode não aparecer "
     "aqui — esse caso ainda não foi medido nesta casa."
 )
