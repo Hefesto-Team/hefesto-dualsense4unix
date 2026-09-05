@@ -64,7 +64,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:1891`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:1969`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE CONTINUA VALENDO, e é o que separa os dois erros: **só o `RuntimeError`
@@ -99,7 +99,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:1891`) leva à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:1969`) leva à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -817,7 +817,7 @@ def _apagar_os_lugares_sem_dono(
     aqui.
 
     O `!important` NÃO É ZELO: a `--luz` chega como `style="--luz:#ff0000"` no
-    próprio elemento (`monta.py:1165`), e estilo de linha vence qualquer regra
+    próprio elemento (`monta.py:1306`), e estilo de linha vence qualquer regra
     de folha que não o traga.
     """
     if not identidade:
@@ -1530,7 +1530,7 @@ def _recusa_do_mouse(resposta: Any) -> str:
     `_call_checked_detalhado`, que é o único que entrega o corpo"*, e por isso
     um `{"status": "failed", "bloqueio": "sem_device"}` voltava como sucesso e a
     tela dela ficava sem uma palavra. A ponte entrega o corpo desde 01/09:
-    `ponte.resultado` (`interface/pacotes/ponte.py:181`) devolve o `result` do
+    `ponte.resultado` (`interface/pacotes/ponte.py:193`) devolve o `result` do
     daemon e levanta quando ninguém responde. Era um caminho que já existia e
     esta aba não chamava.
 
@@ -1698,9 +1698,10 @@ def _velocidade(p: Any, o: dict[str, Any], campo: str,
     cliente — o interruptor "Status do Modo", que tem UM gesto e por isso
     depende dela para o segundo clique ser *desfaça*.
 
-    A FAIXA NÃO É DIGITADA AQUI: quem chama passa as constantes de
-    `integrations/uinput_mouse.py:78-79`, o mesmo módulo de onde `set_speed`
-    (`:279`) tira a sua. A barra já nasce com esses `min`/`max`
+    A FAIXA NÃO É DIGITADA AQUI: quem chama passa as constantes
+    `MOUSE_SPEED_MIN`/`MOUSE_SPEED_MAX`
+    (`integrations/uinput_mouse.py:78-79`), o mesmo módulo de onde
+    `set_speed` (`:279`) tira a sua. A barra já nasce com esses `min`/`max`
     (`aba06.trilho`), então aparar aqui é a rede para o dia em que alguém
     publicar a página sem regerar o desenho — não é a segunda verdade que esta
     casa persegue. O daemon continua aparando por último.

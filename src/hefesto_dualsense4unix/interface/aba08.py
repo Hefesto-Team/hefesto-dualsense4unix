@@ -858,7 +858,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      falta card. E só nasce no dia em que sobra — sem sobra, o produto não
      emite o elemento e a coluna fica exatamente como estava.
 
-     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:732` já
+     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:800` já
      define `.gls .mais` para o "+N" do glossário das dez páginas. Um `.mais`
      solto aqui é o vizinho de nome igual que esta aba já pagou três vezes
      (`peca`, `tira`, `mesa`) — nome de classe se confere ANTES de escrever. */
@@ -3439,7 +3439,7 @@ x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
 # bloco escrevia o `data-campo` aqui porque `monta.py` é das DEZ abas e dez
 # agentes editando a mesma linha seria conflito garantido; ficou escrito que *"o
 # lugar definitivo é `monta.fita()`, e quem integrar as dez pode promovê-lo lá e
-# apagar este bloco"*. Promovido ele foi (`monta.py:536`) — e o `apagar` não.
+# apagar este bloco"*. Promovido ele foi (`monta.py:714`) — e o `apagar` não.
 #
 # O PREÇO ERA SILENCIOSO E SÓ APARECIA A QUEM RODASSE O GERADOR: com o atributo
 # nos dois lugares, cada chip saía com `data-campo="fita-chip"` DUPLICADO. O

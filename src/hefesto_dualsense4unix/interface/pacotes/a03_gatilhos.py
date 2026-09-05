@@ -295,8 +295,8 @@ def _lugares_que_o_desenho_da_por_vazios() -> frozenset[str]:
     POR QUE O PACOTE PRECISA SABER DISSO, e é o defeito D4, medido em
     02/09/2026: os quatro `<select>` das colunas P3 e P4 são **endereço morto**.
     O piloto preenche todo lugar que a mesa não tem com `dict.fromkeys(chaves,
-    "—")` (`hefesto_vivo.py:1006-1016`), e `escrever()` **recusa** escrever um
-    valor que o `<select>` não oferece (`hefesto_vivo.py:145-151`) — a recusa é
+    "—")` (`pacotes/__init__.py:323`), e `escrever()` **recusa** escrever um
+    valor que o `<select>` não oferece (`hefesto_vivo.py:348-352`) — a recusa é
     CERTA, porque escrever qualquer outra coisa deixaria o campo em branco
     somando +1 por tique para sempre. O desfecho é que o travessão nunca pousa e
     a coluna vazia continua mostrando o que o gerador escreveu.
@@ -1451,7 +1451,7 @@ def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
 # Ela dizia `any(not c.get("cor") for c in mesa)` e outra frente a retirou no
 # mesmo 03/09 exatamente por mentir: pelo rádio a cor NUNCA chega, então a fita
 # ficava eternamente no desenho. Hoje `_fita` só devolve `""` com a MESA VAZIA
-# (`hefesto_vivo.py:1105`); quem trata a cor ausente é o `monta.fita`, que
+# (`hefesto_vivo.py:1161`); quem trata a cor ausente é o `monta.fita`, que
 # emite o chip sem `--plastico`. Esta aba continua não dependendo disso: ela lê
 # a MESA, controle a controle, e cala sobre quem não disse a cor em vez de
 # calar sobre todos.

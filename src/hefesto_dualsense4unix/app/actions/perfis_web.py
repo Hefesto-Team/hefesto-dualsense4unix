@@ -101,7 +101,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "que impede o editor de ser repintado por cima de trabalho não salvo.",
     "ativar": "profiles_actions.on_profile_activate:3202 — grava fato em disco "
     "(session.json e active_profile.txt), os dois manual-only desde o PERFIL-03.",
-    "novo": "profiles_actions.on_profile_new:3016 → _aplicar_nascimento_com_jogo:3088.",
+    "novo": "profiles_actions.on_profile_new:3025 → _aplicar_nascimento_com_jogo:3097.",
     "remover": "profiles_actions.on_profile_remove:3162 — PERGUNTA ANTES, e a "
     "caixa é GTK. Ela continua GTK até ela dizer o contrário: caixa em HTML é "
     "desenho novo, e desenho novo é dela.",
@@ -139,7 +139,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     # `window_detect_last_class`, `window_detect_current_class`,
     # `window_detect_useful_age_sec`, `window_detect_seeing` e
     # `window_detect_reason`. E o produto já lê uma delas: o
-    # `profiles_actions._aplicar_nascimento_com_jogo:3088` usa
+    # `profiles_actions._aplicar_nascimento_com_jogo:3097` usa
     # `window_detect_last_class` desde o PERFIL-NASCE-CERTO-01.
     #
     # O que continua verdadeiro é a outra metade: o TÍTULO não é publicado. Para

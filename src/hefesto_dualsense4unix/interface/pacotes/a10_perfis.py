@@ -254,7 +254,7 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:
 #: POR QUE ELE PRECISOU EXISTIR, e é defeito de PARIDADE, não de desenho: na
 #: janela GTK **todo** gesto desta aba termina num `_toast_profile`
-#: (`profiles_actions.py:4579`) — "Perfil removido: X", "Lista recarregada",
+#: (`profiles_actions.py:4588`) — "Perfil removido: X", "Lista recarregada",
 #: `mensagem_do_salvar`, `mensagem_de_ativacao`. Aqui só a RECUSA falava:
 #: `RuntimeError` vira tarja (`hefesto_vivo._recusou_dizendo`) e o SUCESSO era
 #: SILÊNCIO — o piloto anota `("aplicou", "")` e não escreve uma letra na tela.
@@ -1150,14 +1150,14 @@ def _rotulo_do_remover(alvo: str) -> str:
 
     A dica no desenho diz *"Apaga do disco. Pergunta antes."* — e esta janela
     não tem diálogo. O `on_profile_remove` da janela estável abre um
-    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3167`), que é
+    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3171`), que é
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
     thread** (`hefesto_vivo.py:1849`) e GTK só aceita diálogo no laço principal.
 
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:1891`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:1969`): todo `RuntimeError` de gesto
     vira TARJA na tela — no cartão do controle quando a página tem um, e no
     `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
     `SEGUNDOS_DO_RECADO = 30.0`.
@@ -1566,7 +1566,7 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ELE NÃO FALA COM O DAEMON, e é o único desta aba que não fala — de
     propósito. Escolher uma linha não muda nada no aparelho; muda o ALVO dos
     botões ao lado, que é o que a janela estável faz no
-    `on_profile_selection_changed` (`profiles_actions.py:2984`). Ligar isto ao
+    `on_profile_selection_changed` (`profiles_actions.py:2993`). Ligar isto ao
     `profile.switch` faria passar o mouse pela lista trocar o perfil que está
     valendo — o oposto da coluna ter um botão "Ativar".
 
@@ -1607,7 +1607,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     1. **A LINHA NÃO ERA CLICÁVEL.** O gesto lê o texto da linha, mas nenhum
        elemento da lista tinha endereço — o ouvinte do piloto casa
-       `[data-gesto],[data-hef-gesto],…` (`hefesto_vivo.py:190`) e a `<tr>` só
+       `[data-gesto],[data-hef-gesto],…` (`hefesto_vivo.py:1000`) e a `<tr>` só
        trazia `data-hef-perfil`. Quem clicava num perfil não mandava nada; quem
        clicava no BOTÃO mandava `texto="Ativar"`, e o gesto pedia ao daemon um
        perfil chamado "Ativar". Agora a célula do nome marca `selecionar`, e o
@@ -2393,7 +2393,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     resultado no tique seguinte.
 
     O PRODUTO JÁ FAZ ISSO, e não é invenção desta tela: o
-    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3128`) chama
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3097`) chama
     `_select_radio("steam_game")` **e** preenche o campo, no mesmo gesto.
 
     QUAL DAS DUAS ELE ESCOLHE: `normalize_appid` decide — só dígitos (ou um
@@ -2540,7 +2540,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     arquivo nasce e a lista o mostra no tique seguinte, já aberto no editor.
 
     A REGRA DO JOGO EM FOCO É A MESMA DO PRODUTO, e a guarda também: o
-    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3088`) só age quando há
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3097`) só age quando há
     **appid da Steam**, e devolve `False` calado no resto. É o que este gesto
     faz — com jogo da Steam em foco nasce mirando aquele jogo, sem ele nasce
     catch-all, "que é o certo para um perfil de desktop" (palavras de lá).
@@ -2548,7 +2548,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     **A PRIORIDADE DEIXOU DE NASCER EM ZERO** — 03/09/2026,
     PERFIL-NASCE-CERTO-01. Aqui estava escrito que a conta *"mora num mixin GTK
     que depende de widget"*. **Não depende.** O corpo de
-    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:4172`) lê UM
+    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:4181`) lê UM
     atributo — `self._profiles_cache`, a lista de perfis — e mais nada: sem
     `Gtk`, sem `self._get`, sem widget. O que faltava era alguém lhe entregar a
     lista, e esta aba já a tem na mão.
@@ -2766,7 +2766,7 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     feito"*. A premissa está certa e a conclusão não segue — a janela estável
     tem o MESMO botão, sobre uma lista que ela também mantém em cache
     (`on_profile_reload` → `_reload_profiles_store` + toast "Lista recarregada",
-    `profiles_actions.py:3319`). O trabalho que ele faz não é a leitura: é
+    `profiles_actions.py:3328`). O trabalho que ele faz não é a leitura: é
     **dizer que leu**. Um botão cuja promessa é tranquilizar não fica mudo
     porque o produto já estava certo.
 
