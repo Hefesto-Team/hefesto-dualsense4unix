@@ -136,9 +136,12 @@ TITULO = "Está tudo certo?"
 #: E5 da leva: a janela passa a ter DUAS telas de saúde, e cada uma declara o
 #: seu escopo. Sem esta linha, a pessoa tem de adivinhar por que há dois
 #: diagnósticos e qual deles responde à pergunta dela.
+#: A PALAVRA "mesa" SAIU DA TELA em 05/09/2026, ordem dela. A frase já dizia o
+#: que "a mesa" era — os dois-pontos logo à frente listam portas, energia e
+#: rádio —, então a palavra não carregava nada que a lista não carregue.
 ESCOPO = (
-    "Este exame olha a mesa: portas, energia e rádio. O estado do Hefesto e "
-    "do som fica na aba Sistema."
+    "Este exame olha o que está ligado: portas, energia e rádio. O estado do "
+    "Hefesto e do som fica na aba Sistema."
 )
 
 #: **A `ESCOPO` foi ANEXADA aqui em 26/08/2026 (LEX-2, item 1).** Ela era um

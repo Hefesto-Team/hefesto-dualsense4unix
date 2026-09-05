@@ -625,7 +625,66 @@ _VOLTAR_NO_PRODUTO = """\
               color:var(--texto-suave);font-size:12px">← Voltar</a>
 """
 
-#: A lista inteira das divergências justificadas. Uma só, em 31/08/2026.
+#: A PALAVRA "mesa" SAIU DA TELA — 05/09/2026, ordem dela, e esta é a segunda
+#: razão pela qual as duas casas não podem ser iguais.
+#:
+#: Ela mandou, em duas partes: *"não é pra ter mesa em nada da interface"* e,
+#: corrigindo a primeira leva, *"muda o termo pra objeto e sinônimos nesses
+#: casos"*. A cópia do produto é TELA — ela a abre pelo link da aba Conexões —,
+#: logo a palavra tinha de sair de lá.
+#:
+#: A ORIGEM CONGELADA NÃO PODE RECEBER A TROCA, e o motivo é medido, não de
+#: gosto: ela é a **especificação executável do motor**. O
+#: `tests/fixtures/motor_do_arranjo_do_mockup.js` EXTRAI o `<script>` dela e
+#: roda 120 cenários em `node`; o JSON de ouro que sai daí é a prova de
+#: equivalência do porte em Python, e
+#: `test_o_ouro_ainda_e_o_que_o_mockup_diz_hoje` reprova se o ouro se afastar
+#: dela. Reescrever o texto ali reescreveria o ouro — e apagaria o registro de
+#: como o motor falava em 24/08/2026, que é o que aquela pasta datada é.
+#:
+#: A DUAS FRASES DO MOTOR (as de "altura da mesa") divergem TAMBÉM no Python, e
+#: lá a divergência tem a sua própria declaração, com a sua própria mordida:
+#: `DIVERGENCIA_DA_PALAVRA_MESA`, em
+#: `tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`.
+#:
+#: **Nenhuma destas pode mudar mais do que a palavra** — o
+#: `test_nenhuma_troca_de_palavra_mudou_a_frase` logo abaixo é quem exige isso,
+#: e é o que impede esta lista de virar a porta dos fundos da igualdade.
+_A_PALAVRA_QUE_SAIU: tuple[tuple[str, str], ...] = (
+    ("— o mapa da sua mesa", "— o mapa dos seus objetos"),
+    ("se a mesa cheia funciona com tudo ligado.",
+     "se todos os controles funcionam com tudo ligado."),
+    ('porque: "entrada direta, mas na altura da mesa"',
+     'porque: "entrada direta, mas na altura da escrivaninha"'),
+    ("Bom quando desmontar a mesa custa caro.",
+     "Bom quando desmontar o arranjo custa caro."),
+    ('out.push("os dongles ficam na altura da mesa, não no alto do rack")',
+     'out.push("os dongles ficam na altura da escrivaninha, não no alto do rack")'),
+    ('">Como está a minha mesa</button>', '">Como está o meu arranjo</button>'),
+    (">Reexaminar a mesa</button>", ">Reexaminar o arranjo</button>"),
+    ("pode não caber na sua mesa — escolha o que cabe.",
+     "pode não caber na sua escrivaninha — escolha o que cabe."),
+    ("</span> e a sua mesa fica no melhor arranjo que este hardware permite.",
+     "</span> e o seu arranjo fica no melhor que este hardware permite."),
+    ('">Ver como a mesa estava ', '">Ver como o arranjo estava '),
+    ('"Esta mesa está no melhor arranjo que eu conheço."',
+     '"Este arranjo é o melhor que eu conheço."'),
+    ('"Esta é a mesa de agora — "', '"Este é o arranjo de agora — "'),
+    (">Controles na mesa:</span>", ">Controles ligados:</span>"),
+    ("Uma caixinha por controle <b>que está na mesa</b> —",
+     "Uma caixinha por controle <b>que está ligado</b> —"),
+)
+
+_PORQUE_A_PALAVRA_SAIU = (
+    "05/09/2026 — a palavra “mesa” saiu da tela por ordem dela (*\"muda o termo "
+    "pra objeto e sinônimos nesses casos\"*). A cópia do produto é tela; a "
+    "origem congelada é a especificação executável de onde o `fumaca.js` "
+    "extrai o motor para produzir o ouro de 120 cenários, e reescrevê-la "
+    "reescreveria a prova de equivalência do porte."
+)
+
+#: A lista inteira das divergências justificadas: o botão de voltar (31/08/2026)
+#: e as catorze trocas de palavra (05/09/2026).
 _DIVERGENCIAS_DECLARADAS = (
     _Divergencia(
         na_origem=_VOLTAR_NA_ORIGEM,
@@ -637,6 +696,10 @@ _DIVERGENCIAS_DECLARADAS = (
             "produto e NÃO existe na pasta da sprint (só `fumaca.js`, `LEIA.md` "
             "e o mockup). Levá-lo para a origem congelada criaria link quebrado."
         ),
+    ),
+    *(
+        _Divergencia(na_origem=antes, no_produto=depois, porque=_PORQUE_A_PALAVRA_SAIU)
+        for antes, depois in _A_PALAVRA_QUE_SAIU
     ),
 )
 
@@ -780,3 +843,46 @@ def test_a_regua_da_igualdade_sabe_recusar() -> None:
 
     # e nem apagar o que ele não conhece: sem a divergência, nada muda
     assert _descontar_o_declarado(origem) == origem
+
+
+def test_nenhuma_troca_de_palavra_e_porta_dos_fundos() -> None:
+    """Cada par de `_A_PALAVRA_QUE_SAIU` tira a palavra, e nada além disso passa.
+
+    Esta é a régua da régua. `_DIVERGENCIAS_DECLARADAS` é a única liberdade que
+    a igualdade byte a byte tem, e uma lista de perdões que ninguém confere é a
+    porta dos fundos: bastaria declarar `("<html", "<XXX")` para qualquer
+    divergência atravessar calada.
+
+    AS TRÊS EXIGÊNCIAS, e a primeira versão desta régua PROMETIA UMA QUARTA QUE
+    É FALSA. Ela exigia que o resto da frase ficasse idêntico, e não fica: o
+    português concorda com o substantivo, então *"o mapa da sua mesa"* vira *"o
+    mapa dos seus objetos"* — artigo e possessivo mudam junto, obrigados. Uma
+    régua que exige o impossível ou é apagada ou é afrouxada, e as duas saídas
+    são piores do que exigir o que é verdade:
+
+    1. o lado da origem DIZ a palavra e o do produto NÃO — é disso que a lista
+       trata, e um par que não fale de "mesa" não tem o que fazer aqui;
+    2. cada par é curto. É o que impede o perdão de engolir estrutura: um par
+       de duas linhas troca uma frase, um par de duzentas esconde um `<div>`;
+    3. cada par DISPARA nos dois arquivos. Perdão que não é usado é perdão
+       morto — a frase já mudou de outro jeito, e a entrada tem de sair.
+    """
+    for antes, depois in _A_PALAVRA_QUE_SAIU:
+        assert "mesa" in antes, f"par que não é sobre a palavra: {antes!r}"
+        assert "mesa" not in depois, f"o par manteve a palavra: {depois!r}"
+        assert len(antes) <= 90 and len(depois) <= 90, (
+            "par longo demais para ser uma troca de palavra — um perdão desse "
+            f"tamanho esconde estrutura:\n  origem:  {antes!r}\n  produto: {depois!r}"
+        )
+
+    raiz = _FONTE_DO_MOTOR.parents[3]
+    origem, produto = (raiz / c for c in _CASAS_VERSIONADAS)
+    if not (origem.exists() and produto.exists()):  # pragma: no cover
+        return
+    texto_origem = origem.read_text(encoding="utf-8")
+    texto_produto = produto.read_text(encoding="utf-8")
+    for antes, depois in _A_PALAVRA_QUE_SAIU:
+        assert antes in texto_origem, (
+            f"a origem congelada já não diz {antes!r} — perdão morto, APAGUE o par")
+        assert depois in texto_produto, (
+            f"a cópia do produto já não diz {depois!r} — perdão morto, APAGUE o par")

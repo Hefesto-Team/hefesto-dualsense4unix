@@ -1017,8 +1017,11 @@ DICA_NOVA_ENTRADA = (
     "nenhuma — os números são do GABINETE, e dois buracos diferentes não podem "
     "levar o mesmo."
 )
+#: A PALAVRA "mesa" SAIU DA TELA em 05/09/2026, ordem dela. Aqui ela dizia ONDE
+#: o hub entra, e o lugar certo não é o móvel: é o MAPA — o que este botão
+#: acrescenta é uma linha no desenho, não um objeto na sala.
 DICA_NOVO_HUB = (
-    "Acrescenta um hub ou uma extensão à mesa e pergunta em que entrada ele "
+    "Acrescenta um hub ou uma extensão ao mapa e pergunta em que entrada ele "
     "está ligado. Cabo passivo não tem descritor USB: nenhuma leitura do "
     "sistema o enxerga, e por isso quem o declara é você."
 )

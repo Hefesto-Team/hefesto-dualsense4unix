@@ -191,15 +191,75 @@ def test_a_face_da_frente_nasce_com_perto_e_as_outras_nao() -> None:
 
 
 def test_as_quatro_palavras_sao_as_que_ela_carimbou() -> None:
-    """Verbatim do carimbo dela de 25/08/2026, às ~03h55, vendo o mockup."""
+    """Verbatim do carimbo dela de 25/08/2026, às ~03h55, vendo o mockup.
+
+    A QUARTA MUDOU EM 05/09/2026, E A RÉGUA NÃO AFROUXOU — ela INVERTEU. Antes
+    ela guardava a palavra que ela tinha carimbado; agora guarda a que ela
+    mandou tirar: *"muda o termo pra objeto e sinônimos nesses casos"*. As três
+    primeiras continuam verbatim, porque nada nelas mudou.
+
+    Quem tem as duas datas é quem manda, e a mais nova vence: as duas são
+    decisão dela sobre o mesmo texto.
+    """
     from hefesto_dualsense4unix.app.widgets.calibrar_entradas import FACES
 
     assert FACES == (
         "Frente do gabinete",
         "Atrás do gabinete",
         "Num hub ou extensão",
-        "Em cima da mesa",
+        "Na escrivaninha",
     )
+
+
+def test_nenhuma_face_e_mais_longa_do_que_a_maior_que_ela_aprovou() -> None:
+    """Nenhum rótulo de face passa de "Num hub ou extensão", a maior das quatro.
+
+    POR QUE ESTA RÉGUA EXISTE, e ela custou uma foto para aparecer: os quatro
+    botões dividem a largura em partes iguais (`grid-auto-columns:1fr`), então
+    um rótulo maior que a célula **quebra em duas linhas dentro do botão** — a
+    queixa dela de 31/08/2026, *"botões em duas linhas. deveria ser uma."*, de
+    volta por dentro. Em 05/09 "Em cima da escrivaninha" (23 caracteres) fez
+    exatamente isso, e a medição de geometria que eu tinha escrito deu VERDE:
+    ela comparava a posição e a altura dos QUATRO botões, que continuam iguais
+    porque a fileira inteira cresce junto. Quem viu a quebra foi o olho na
+    imagem.
+
+    A RÉGUA É EM CARACTERES, E NÃO EM PIXELS, DE PROPÓSITO: a largura em pixel
+    depende da fonte que carregou, e é por isso que a foto DELA mostrou duas
+    linhas onde o Chrome headless mostrava uma (`aba08.py`, a nota da
+    `.ce-botoes`). Contar caractere não depende de fonte nenhuma, e o teto —
+    o maior rótulo que ela já aprovou — é a única referência que não inventa
+    número.
+    """
+    from hefesto_dualsense4unix.app.widgets import calibrar_entradas
+
+    teto = len(calibrar_entradas.FACE_HUB)
+    assert teto == 19, "a maior das quatro mudou de tamanho — reveja este teto"
+    for face in calibrar_entradas.FACES:
+        assert len(face) <= teto, (
+            f"o rótulo {face!r} tem {len(face)} caracteres e o teto é {teto} "
+            f"(o de {calibrar_entradas.FACE_HUB!r}). Acima disso ele quebra em "
+            "duas linhas dentro do botão, que é o defeito que ela reportou em "
+            "31/08/2026 — escolha um sinônimo mais curto."
+        )
+
+
+def test_nenhuma_face_diz_mesa() -> None:
+    """A palavra saiu da tela em 05/09/2026, ordem dela.
+
+    ESTA É A METADE QUE MORDE, e ela é mais larga que o `==` acima de
+    propósito: o teste anterior guarda as quatro palavras de HOJE, e passaria
+    verde se alguém acrescentasse uma quinta face dizendo "mesa". Aqui a regra
+    é sobre a palavra, não sobre a lista — vale para a face que ainda não
+    existe.
+    """
+    from hefesto_dualsense4unix.app.widgets import calibrar_entradas
+
+    for face in calibrar_entradas.FACES:
+        assert "mesa" not in face.lower(), (
+            f"a face {face!r} diz a palavra que ela mandou tirar da tela em "
+            "05/09/2026 — o termo é 'objeto' ou o sinônimo que couber"
+        )
 
 
 def test_o_mapa_declarado_passa_no_schema() -> None:

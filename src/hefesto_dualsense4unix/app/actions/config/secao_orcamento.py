@@ -85,9 +85,12 @@ TITULO = "Desempenho"
 
 #: A dica do título. Ela mudou com a `D-PERFIL-DE-DESEMPENHO`: não é mais "um
 #: teto", é um perfil que decide o que fica ligado.
+#: A PALAVRA "mesa" SAIU DA TELA em 05/09/2026, ordem dela. Aqui ela era o
+#: sentido 1 — o CONJUNTO de controles ligados —, e a troca é a mesma que a leva
+#: daquele dia já tinha feito nas outras frases: "todos os controles ligados".
 DICA: str | None = (
-    "O que fica ligado na mesa inteira, e quanto do rádio isso ocupa. As abas "
-    "continuam mandando no que fazem — nenhum ajuste seu é apagado."
+    "O que fica ligado em todos os controles, e quanto do rádio isso ocupa. As "
+    "abas continuam mandando no que fazem — nenhum ajuste seu é apagado."
 )
 
 def _lista(itens: list[str]) -> str:
@@ -256,8 +259,11 @@ DICAS: dict[str, str] = {
         "giroscópio e touchpad."
     ),
     PERFIL_BATERIA_LONGA: _dica_da_bateria_longa(),
+    # A PALAVRA "mesa" SAIU DA TELA em 05/09/2026, ordem dela. "teto de mesa"
+    # era o teto que vale para TODOS os controles — o sentido 1 —, e a leva de
+    # 05/09 já tinha trocado a mesma ideia por "o teto geral" em `aba_sistema`.
     PERFIL_EU_ESCOLHO: (
-        "Nenhum teto de mesa: os ajustes de cada aba mandam, um por um."
+        "Nenhum teto geral: os ajustes de cada aba mandam, um por um."
     ),
 }
 

@@ -132,10 +132,31 @@ logger = get_logger(__name__)
 #: As quatro respostas da pergunta "onde fica?", **verbatim** do carimbo dela de
 #: 25/08/2026 às ~03h55. Não levam selo de provisório porque ela as viu e
 #: aprovou uma a uma; mudá-las é decisão dela, não desta frente.
+#:
+#: A QUARTA MUDOU EM 05/09/2026, E QUEM MUDOU FOI ELA — a decisão nova vence a
+#: de 25/08 porque é da mesma dona e é posterior: *"muda o termo pra objeto e
+#: sinônimos nesses casos"*, sobre a palavra "mesa" na interface inteira. Aqui o
+#: sentido é o MÓVEL onde o aparelho se apoia, não o conjunto de controles, e
+#: por isso o termo é o sinônimo: "escrivaninha". O nome de código `FACE_MESA`
+#: NÃO muda — é chave de máquina, e renomeá-la é outra frente.
+#:
+#: E O ROTULO É "Na escrivaninha", NÃO "Em cima da escrivaninha", POR MEDIÇÃO:
+#: os quatro botões dividem a largura em partes iguais
+#: (`grid-auto-columns:1fr`, 146 px cada nesta janela), e o texto tem 144 px de
+#: folga. "Em cima da escrivaninha" QUEBROU EM DUAS LINHAS dentro do botão — a
+#: queixa dela de 31/08, *"botões em duas linhas. deveria ser uma."*, de volta
+#: pela porta dos fundos. "Na escrivaninha" tem os mesmos 15 caracteres de "Em
+#: cima da mesa", então a fileira fica como ela a viu.
+#:
+#: A FOTO É QUE PEGOU ISTO, e não o número: a medição de geometria comparava a
+#: posição e a altura dos QUATRO botões (iguais nos dois casos, porque o botão
+#: cresce para baixo junto com os vizinhos) e dizia "cabe". Quem viu a quebra
+#: foi o olho na imagem. Régua de layout que não mede o texto DENTRO da caixa
+#: mede a caixa, não a palavra.
 FACE_FRENTE = "Frente do gabinete"
 FACE_ATRAS = "Atrás do gabinete"
 FACE_HUB = "Num hub ou extensão"
-FACE_MESA = "Em cima da mesa"
+FACE_MESA = "Na escrivaninha"
 
 #: A ordem em que os quatro botões aparecem — a ordem do mockup que ela viu.
 FACES = (FACE_FRENTE, FACE_ATRAS, FACE_HUB, FACE_MESA)

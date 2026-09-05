@@ -80,7 +80,14 @@ logger = get_logger(__name__)
 
 #: O título da janela e a frase que explica o gesto de dois tempos.
 #: PROVISÓRIO — decisão dela: texto novo, e a prova de tela não fechou.
-TITULO_DA_JANELA = "A minha mesa"
+#:
+#: O TÍTULO ERA "A minha mesa" ATÉ 05/09/2026, e divergia do botão que abre esta
+#: janela (`secao_mesa._BOTAO_DESENHAR`). A `D-MAPEAR-ENTRADAS-E-NAO-PORTAS`
+#: (28/08) já mandava os dois para **Mapear Entradas**; a ordem dela de 05/09
+#: sobre a palavra "mesa" foi o que a cumpriu. O nome do módulo e a classe
+#: continuam `mapa_da_mesa` / `MapaDaMesa`: são chave de máquina, e renomeá-las
+#: é outra frente.
+TITULO_DA_JANELA = "Mapear Entradas"
 EXPLICACAO = (
     "Clique no aparelho, depois na entrada em que ele está. O Hefesto passa a "
     "chamar cada aparelho pelo número que você escreveu no gabinete."

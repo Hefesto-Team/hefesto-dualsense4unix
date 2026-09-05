@@ -181,6 +181,31 @@ JARGAO_BANIDO: dict[str, str] = {
     # na tela reprova.
     "devpath": "diga a entrada USB: 'Entrada 4 do hub'",
     "vid:pid": "o código do fabricante não é palavra de tela — põe na dica",
+    # ORDEM DELA, 05/09/2026, e ela veio em duas partes porque a primeira foi
+    # cumprida pela metade. Primeiro: *"não é pra ter mesa em nada da
+    # interface"*. A leva daquele dia separou dois sentidos e tirou só um — o
+    # jargão desta casa, "mesa" = o conjunto de controles ligados — e deixou o
+    # outro de pé, "mesa" = a escrivaninha dela, por achar que ali a palavra era
+    # a coisa. Então ela corrigiu: *"muda o termo pra objeto e sinônimos nesses
+    # casos"*.
+    #
+    # ENTRA SEM DÍVIDA NENHUMA, e é a medição que autoriza: no dia em que esta
+    # linha foi escrita, as DUAS últimas frases de tela do `app/` que diziam a
+    # palavra saíram no MESMO commit — `secao_mesa.py:711` ("Reexaminar a mesa"
+    # -> "Reexaminar as conexões") e `secao_orcamento.DICA` ("na mesa inteira"
+    # -> "em todos os controles"). É exatamente o que a nota do
+    # `_A_PALAVRA_QUE_ESPERA_A_LEX_6` logo abaixo manda fazer: colar a linha no
+    # commit que troca a última frase, nunca antes.
+    #
+    # O QUE ELA NÃO ALCANÇA, e por isso há uma segunda régua: este portão lê o
+    # `.glade` e o `app/**/*.py` por AST. O texto da interface nova nasce em
+    # `interface/abaNN.py` e, pior, em `<script>` que escreve no DOM em tempo de
+    # execução — três origens que nenhuma leitura de fonte junta. Quem mede
+    # aquele lado é `tests/unit/test_a_palavra_mesa_nao_volta_para_a_tela.py`,
+    # que RODA as páginas e lê o DOM. Duas réguas independentes é regra desta
+    # casa, e aqui elas nem se sobrepõem: cada uma alcança o que a outra não vê.
+    "mesa": "o termo é 'objeto' ou o sinônimo que couber: escrivaninha, arranjo, "
+            "'os controles ligados'",
 }
 
 #: A TERCEIRA ENTRADA DESTA LISTA AINDA NÃO ESTÁ AQUI, E A AUSÊNCIA É MEDIDA.
