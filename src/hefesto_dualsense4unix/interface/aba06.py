@@ -27,6 +27,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 )
 from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA, CONECTADOS,
                    cor_da_zona, player_slot_color, DS)
+from monta import ressalva as _ressalva  # noqa: E402
 
 # O DESENHO E O PRODUTO ESCREVEM A IDENTIDADE PELA MESMA FUNÇÃO — 03/09/2026,
 # IDENTIDADE-VEM-DE-CIMA. É o mesmo arranjo de `aba04.py` com
@@ -34,6 +35,7 @@ from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA,
 # ele que roda a cada tique, e o gerador o chama para desenhar a bancada. Duas
 # escritas do mesmo rótulo é como o desenho e o produto divergem calados.
 from pacotes.a06_navegacao import (  # noqa: E402
+    ENDERECO_DA_RESSALVA,
     chips_da_fita,
     rotulo_de_quem_navega,
 )
@@ -2152,6 +2154,28 @@ MIOLO = f'''
 {chr(10).join(at_linha(*x) for x in ATIVACAO_DIR)}
             </div>
           </div>
+          <!-- ---------- A RESSALVA DA D3: o ajuste é de todos ----------
+               05/09/2026, decisão D3 de `2026-09-05-AS-TRES-DECISOES-DO-PERFIL`:
+               `mouse`, `key_bindings`, `button_actions`, `teclado_emulado` e
+               `suppress_desktop_emulation` ficam GLOBAIS enquanto o caminho de
+               ENTRADA por unidade não existir — o `Daemon` tem UM
+               `_mouse_device` e UM `_keyboard_device`, e o input vem sempre do
+               primário. A decisão pede a tela junto: *"onde a aba oferece um
+               destes cinco, a linha de ressalva diz que o ajuste vale para a
+               mesa inteira, não só para o controle selecionado."*
+
+               A PEÇA É A DAS DEZ (`monta.ressalva`, D-02), e ela NASCE VAZIA:
+               quem decide se há o que ressalvar é o pacote, ao vivo, contando
+               os CONECTADOS — com um controle ligado não há promessa quebrada.
+               Uma frase cravada aqui a afirmaria também na tela de quem tem um
+               controle só, que é a ressalva mentindo pelo desenho.
+
+               DENTRO DA `.moldura` E DEPOIS DA GRADE, e não na tira de
+               `.estados` logo abaixo: aquelas cinco linhas falam do que está
+               ACONTECENDO agora (o portão, o bloqueio, o custo); esta fala do
+               ALCANCE das sete linhas acima dela, e é delas que ela precisa
+               estar perto. -->
+          {_ressalva(ENDERECO_DA_RESSALVA)}
         </div>
 {ESTADOS}
 
@@ -2605,6 +2629,18 @@ def _conferir(doc):
     exigir('class="passo"' not in painel,
            "voltou um `−`/`+` ao painel das opções de ativação — ela mandou "
            "barra, e um par de botões ao lado dela é a meia-cura")
+    # 6. A RESSALVA DA D3 — 05/09/2026. Ela tem de estar NO PAINEL (é o alcance
+    #    das sete linhas dele que ela ressalva) e tem de nascer VAZIA: a frase
+    #    quem escreve é o pacote, contando os controles ligados. Uma ressalva
+    #    cravada no desenho é a que já mentiu na aba 08.
+    exigir(f'class="ressalva" data-campo="{ENDERECO_DA_RESSALVA}"' in painel,
+           "a linha de ressalva da D3 saiu do painel das opções de ativação — "
+           "sem ela a aba promete por-controle e entrega global, que é o mesmo "
+           "defeito por outro caminho")
+    exigir(f'data-campo="{ENDERECO_DA_RESSALVA}" data-hef-alvo="html">'
+           '<i class="nada"></i></div>' in painel,
+           "a ressalva da D3 nasceu com frase no desenho — quem decide se há o "
+           "que ressalvar é o pacote, ao vivo, e com UM controle ligado não há")
 
     if falhas:
         raise SystemExit("ERRO em 06-navegacao — decisão dela desfeita:\n  "

@@ -1522,6 +1522,26 @@ PERIGOSOS = {
     # ela está trabalhando — é o mesmo motivo de toda janela desta casa nascer
     # com `--oculta`.
     ("06-navegacao.html", "modo"),
+    # E AS DUAS BARRAS E A LISTA DO TECLADO, em 05/09/2026 NO MESMO COMMIT em
+    # que aprenderam a escrever — que é a regra desta lista, e a sexta vez que
+    # ela é cobrada. Os três passaram a gravar no perfil ATIVO no clique
+    # (decisão D2: *"persistência no clique em toda parte"*), porque o Salvar
+    # do rodapé não alcançava o `teclado_emulado` e nada alcançava quem fechasse
+    # a janela sem clicar:
+    #
+    #   06-navegacao·vel-cursor   grava `mouse.speed` no perfil dela — a régua
+    #   06-navegacao·vel-rolagem  arrastaria a barra para o valor que estivesse
+    #                             na tela e o número ficaria no disco
+    #   06-navegacao·teclado      grava `teclado_emulado`, e desligá-lo tira
+    #                             junto o teclado na tela do L3/R3 e as três
+    #                             regiões do touchpad — para sempre, não só
+    #                             durante a prova
+    #
+    # O `modo` logo acima já estava aqui pelo CURSOR; agora ele também grava, e
+    # a razão de estar na lista passou a ser dupla.
+    ("06-navegacao.html", "vel-cursor"),
+    ("06-navegacao.html", "vel-rolagem"),
+    ("06-navegacao.html", "teclado"),
     # E A MESMA COISA PELA OUTRA PORTA, achada em 03/09/2026 pelo juiz da leva:
     # o chip "Navegação" da aba Jogar chama `mouse.emulation.restore` (o
     # terceiro dos três IPCs de `a01_jogar.modo_navegacao`), que LIGA o mouse

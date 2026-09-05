@@ -498,6 +498,59 @@ def _o_custo_de_desligar_o_teclado(tecla: dict[str, Any]) -> str:
             "</span>")
 
 
+#: O ENDEREÇO DA RESSALVA DA D3 — 05/09/2026, e ela nasceu de uma promessa que
+#: esta aba fazia sem poder cumprir.
+#:
+#: A DECISÃO É D3 DO `2026-09-05-AS-TRES-DECISOES-DO-PERFIL`: `mouse`,
+#: `key_bindings`, `button_actions`, `teclado_emulado` e
+#: `suppress_desktop_emulation` ficam **globais por enquanto**, e a razão é
+#: medida, não preguiça — o `Daemon` tem UM `_mouse_device` e UM
+#: `_keyboard_device`, alimentados por um `read_state()` por tique, e o input vem
+#: sempre do controle PRIMÁRIO. Guardar por controle antes de o caminho de
+#: ENTRADA existir é o que a régua
+#: `test_perfil_por_controle_o_campo_espera_o_caminho.py` proíbe.
+#:
+#: A DECISÃO PEDE A TELA JUNTO, com estas palavras: *"onde a aba oferece um
+#: destes cinco, a linha de ressalva diz que o ajuste vale para a mesa inteira,
+#: não só para o controle selecionado. Sem isso a tela promete por-controle e
+#: entrega global — que é o mesmo defeito por outro caminho."*
+#:
+#: O `title` DA FITA NÃO BASTAVA, e é o que faz esta linha existir. Ele diz
+#: *"Não se aplica: mouse, teclado e gestos saem de um controle só"* desde
+#: 30/08 — mas é TOOLTIP: só aparece para quem passa o ponteiro, e some quando
+#: ele sai. É a mesma medição que a Onda 2 fez para o `teclado-custo`: *"a dica
+#: `?` já dizia o custo ANTES do ato e some com o ponteiro; a pergunta chega
+#: dias depois, e nesse dia esta linha ainda está aqui."* E ele diz outra coisa:
+#: de onde o comando SAI (o primário), não para onde o ajuste VAI (todos).
+ENDERECO_DA_RESSALVA = "ativacao-ressalva"
+
+#: A FRASE, e a palavra "mesa" está fora dela por ordem dela de 05/09 — *"não é
+#: pra ter mesa em nada da interface"*. O que sobra é o que ela lê sem traduzir:
+#: os três nomes que a tela mostra logo acima, e para quem o ajuste vale.
+RESSALVA_DOS_GLOBAIS = (
+    "O cursor, a rolagem e o teclado são um só para o computador inteiro: "
+    "mudar aqui vale para <b>todos os controles ligados</b>, e não só para o "
+    "que está escolhido em cima.")
+
+
+def _a_ressalva_dos_globais(ctx: Contexto) -> str:
+    """A linha da D3 — e só quando há mais de um controle a ressalvar (D-02).
+
+    *"Linha fixa só quando HÁ ressalva."* Com UM controle ligado não há
+    promessa quebrada: o ajuste global É o ajuste daquele controle, e a frase
+    ocuparia uma linha da tela para dizer uma verdade sem consequência. Com
+    DOIS, a fileira de cartões em cima passa a oferecer uma escolha que estas
+    sete linhas não honram — e é aí que a ressalva tem o que ressalvar.
+
+    O NÚMERO SAI DE `conectados`, NUNCA DA MESA DO DESENHO: a mesa tem quatro
+    lugares sempre, dois deles vazios no mockup, e contá-la faria a frase nascer
+    numa tela com um controle só. *"Toda frase que promete alcance conta os
+    CONECTADOS"* — a regra é do `Contexto`, e o defeito de nomear um controle
+    que não está apareceu quatro vezes em 31/08.
+    """
+    return RESSALVA_DOS_GLOBAIS if len(ctx.conectados) > 1 else NADA_A_DIZER
+
+
 #: A RAZÃO DO PORTÃO DE MODO — UMA frase, e ela serve aos DOIS caminhos: a linha
 #: permanente da tira de estados (antes do clique) e o `RuntimeError` do gesto
 #: `modo` (depois dele, quando alguém clica assim mesmo).
@@ -1379,6 +1432,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     mesa["modo-portao"] = _a_razao_do_portao(st)
     mesa["teclado-custo"] = _o_custo_de_desligar_o_teclado(tecla)
     mesa["aviso-da-tabela"] = _aviso_da_tabela(p)
+    # A RESSALVA DA D3 — 05/09/2026. Emitida em TODO tique, como as outras: a
+    # chave ausente deixaria a frase na tela depois de o segundo controle sair,
+    # e a linha passaria a ressalvar uma escolha que não existe mais.
+    mesa[ENDERECO_DA_RESSALVA] = _a_ressalva_dos_globais(ctx)
     # AS VINTE E UMA LINHAS DE *O QUE CADA BOTÃO FAZ*, do perfil dela — e elas
     # não existiam aqui até 02/09/2026. O botão "Guardar" LIA essas linhas
     # (`data-hef-forma`) e nada as ESCREVIA, então a tela mostrava para sempre o
@@ -1490,6 +1547,142 @@ def _rato(ctx: Contexto) -> dict[str, Any]:
     acima já fazia.
     """
     return ctx.state.get("mouse_emulation") or {}
+
+
+# ---------------------------------------------------------------------------
+# O QUE ESTA ABA GUARDA NO PERFIL, E POR QUE NO CLIQUE
+#
+# DECISÃO D2, 05/09/2026 (`2026-09-05-AS-TRES-DECISOES-DO-PERFIL`):
+# **persistência no clique em toda parte, com o rodapé como rede de segurança.**
+# O requisito dela é durabilidade — *"salvar se lembra disso quando eu for jogar
+# o jogo e no dia seguinte e por diante"* —, não o gesto de salvar; e só a
+# gravação no clique sobrevive a fechar a janela sem clicar em nada.
+#
+# O QUE JÁ FUNCIONAVA, MEDIDO ANTES DE ESCREVER UMA LINHA (05/09/2026, em `HOME`
+# de mentira, ciclo inteiro: disco → ela mexe na aba → Salvar → relê o disco):
+#
+#     mouse.speed         11 → 11   SOBREVIVE   (rodapé, commit ed91c687)
+#     mouse.scroll_speed   4 →  4   SOBREVIVE
+#     mouse.enabled     True → True SOBREVIVE
+#     teclado_emulado  False → True PERDIDO
+#
+# **O `mouse` já ia ao perfil pelo Salvar e não se duplica aqui** — o que este
+# bloco acrescenta às três linhas do rato é o caminho do CLIQUE, que é o que
+# faltava. O `teclado_emulado` não tinha caminho NENHUM: `to_profile` o emite
+# por passthrough do que veio do disco (`draft_config.py:856`), então desligar o
+# teclado e clicar Salvar devolvia o valor VELHO.
+#
+# E O PRODUTO JÁ DIZIA DE QUEM ERA O TRABALHO. O comentário do passthrough, em
+# `draft_config.py`, está escrito assim: *"POR QUE PASSTHROUGH E NÃO CAMPO
+# EDITÁVEL: quem os escreve hoje é a aba 06, direto no disco, no clique."* Era
+# uma afirmação sobre um escritor que não existia; agora existe.
+#
+# DISCO, E SÓ — NUNCA `perfil.gravar_e_reaplicar`. O preço está medido em 03/09
+# no `a03_gatilhos._gravar_so_o_gatilho` e repetido em 04/09 no trilho de brilho
+# da aba 04: aquele caminho termina em `profile_switch`, que manda o daemon
+# reaplicar o perfil INTEIRO — e a barra de luz que ela DESLIGOU acende de novo,
+# sem nada na tela dizer que ia acontecer. Aqui seria pior ainda: o gesto é uma
+# BARRA, e arrastá-la desfaria, a cada passo, o que ela mexeu nas outras abas e
+# ainda não salvou. O aparelho já recebeu a mudança pelo `mouse.emulation.set`
+# logo acima; o que falta é durabilidade, e durabilidade é disco.
+# ---------------------------------------------------------------------------
+
+#: OS CAMPOS QUE ESTES GESTOS GRAVAM, e o nome de cada um dentro de
+#: `ProfileMouseConfig`. O prefixo existe para o helper distinguir, numa
+#: assinatura só, o que é do rato do que é do teclado.
+_DO_RATO: dict[str, str] = {
+    "mouse_enabled": "enabled",
+    "mouse_speed": "speed",
+    "mouse_scroll": "scroll_speed",
+}
+
+
+def _secao_do_mouse(prof: Any, ctx: Contexto, campos: dict[str, Any]) -> Any:
+    """A seção `mouse` do perfil com o que este clique mudou — ou `None`.
+
+    `None` quer dizer **não há o que gravar**, e ele tem dois donos: o perfil
+    que já diz exatamente isto (gravar de novo seria escrever o mesmo arquivo a
+    cada passagem do arraste), e o daemon que ainda não falou.
+
+    A SEÇÃO NASCE COM O QUE ESTÁ VALENDO quando o perfil não a tinha, e é a
+    mesma escolha do rodapé (`rodape._o_que_e_da_mesa_inteira`): `enabled` é
+    campo OBRIGATÓRIO do `ProfileMouseConfig`, então uma seção que nasce por um
+    arraste de velocidade precisa dizer alguma coisa sobre o liga/desliga — e a
+    única coisa verdadeira que existe é o estado vivo. Inventar `False` faria o
+    perfil, na próxima ativação, DESLIGAR uma emulação que estava ligada.
+
+    SEM O BLOCO DO DAEMON A SEÇÃO NÃO NASCE. Um perfil sem `mouse` mais um
+    daemon mudo não têm de onde tirar o `enabled`, e um valor chutado aqui vale
+    para todo jogo que casar com este perfil, para sempre.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ProfileMouseConfig
+
+    atual = getattr(prof, "mouse", None)
+    if atual is not None:
+        base = {"enabled": atual.enabled, "speed": atual.speed,
+                "scroll_speed": atual.scroll_speed}
+    else:
+        vivo = _rato(ctx)
+        if vivo.get("speed") is None:
+            return None
+        base = {"enabled": bool(vivo.get("enabled")),
+                "speed": int(vivo["speed"]),
+                "scroll_speed": int(vivo.get("scroll_speed") or SCROLL_SPEED_MIN)}
+    novo = {**base, **campos}
+    if atual is not None and novo == base:
+        return None
+    return ProfileMouseConfig(**novo)
+
+
+def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
+    """Grava no perfil ATIVO o que ESTE clique mudou. Disco, e nada mais.
+
+    Aceita `teclado_emulado=` e os três do rato (`mouse_enabled`, `mouse_speed`,
+    `mouse_scroll`) — ver `_DO_RATO`.
+
+    :return: `""` quando gravou, e também quando não havia o que gravar (o
+        disco já dizia isso). A frase do que NÃO deu quando não há perfil ativo
+        ou quando o arquivo não abre.
+
+    POR QUE UMA FRASE E NÃO UM `RuntimeError`: o aparelho JÁ mudou quando esta
+    função é chamada — a chamada ao daemon vem antes, e ela deu certo. Levantar
+    aqui pintaria o cartão laranja da RECUSA sobre um gesto que fez metade do
+    que prometeu, e ela leria *"não deu"* sobre um cursor que acabou de ficar
+    mais rápido. Quem chama devolve a frase pelo canal de AVISO
+    (`{"recado": …}`), que deposita no mesmo cartão com tom de sucesso.
+
+    O ARRASTE CHEGA DUAS VEZES E GRAVA UMA. O ouvinte do piloto escuta `change`
+    **e** `click`, e soltar o polegar de um `<input type=range>` dispara os dois
+    com o MESMO valor. A segunda passagem encontra o disco já igual, `_secao_do_mouse`
+    devolve `None` e nada é escrito — o guarda é a IGUALDADE, e não um relógio.
+    É mais forte que o `_so_abriu_o_seletor` da aba 04, porque também cobre o
+    caso de ela arrastar a barra e voltar ao valor de origem.
+    """
+    nome = str((ctx.state or {}).get("active_profile") or "").strip()
+    if not nome:
+        return ("mudei agora, e não guardei para amanhã: não há perfil ativo. "
+                "Escolha um na aba Perfis e o Hefesto passa a lembrar disto.")
+    loader = perfil._com_o_src()
+    try:
+        prof = loader.load_profile(nome)
+    except Exception:
+        return (f"mudei agora, e não guardei para amanhã: não consegui abrir o "
+                f"perfil “{nome}” para gravar.")
+
+    mudanca: dict[str, Any] = {}
+    if "teclado_emulado" in campos:
+        quer = bool(campos["teclado_emulado"])
+        if getattr(prof, "teclado_emulado", None) is not quer:
+            mudanca["teclado_emulado"] = quer
+    do_rato = {_DO_RATO[k]: v for k, v in campos.items() if k in _DO_RATO}
+    if do_rato:
+        secao = _secao_do_mouse(prof, ctx, do_rato)
+        if secao is not None:
+            mudanca["mouse"] = secao
+    if not mudanca:
+        return ""
+    loader.save_profile(prof.model_copy(update=mudanca), origem="interface-nova")
+    return ""
 
 
 def _numero_da_barra(o: dict[str, Any], oque: str) -> int:
@@ -1679,7 +1872,7 @@ def _largar_a_reserva(chave: str,
 
 
 def _velocidade(p: Any, o: dict[str, Any], campo: str,
-                minimo: int, maximo: int, oque: str) -> None:
+                minimo: int, maximo: int, oque: str) -> int:
     """O corpo comum das duas barras de velocidade. `mouse.emulation.set`.
 
     SEM `enabled` DE PROPÓSITO, e é a rota que o produto criou para isto: o
@@ -1713,9 +1906,15 @@ def _velocidade(p: Any, o: dict[str, Any], campo: str,
     reconfigura o mesmo device —, então a segunda passagem não muda nada.
     Filtrar por evento aqui seria escrever, neste arquivo, uma regra sobre o
     ouvinte que mora em outro.
+
+    :return: o número que FOI ao daemon, já aparado. Quem chama o leva ao
+        perfil (D2) — e o valor tem de ser este, nunca o do `ctx`: o `ctx` é o
+        estado do tique ANTERIOR, e gravar dali guardaria a velocidade velha no
+        disco enquanto a nova roda no aparelho.
     """
     alvo = max(minimo, min(maximo, _numero_da_barra(o, oque)))
     _mandar(p, origin=MANUAL, **{campo: alvo})
+    return alvo
 
 
 def _mandar(p: Any, **params: Any) -> None:
@@ -1737,7 +1936,7 @@ def _mandar(p: Any, **params: Any) -> None:
 
 
 @gesto("06-navegacao.html", "modo")
-def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Status do Modo": o interruptor que liga mouse E teclado.
 
     POR QUE OS DOIS, e não só o mouse: este interruptor é o que ela pediu em
@@ -1771,6 +1970,13 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     aba **Jogar**. Reusá-la mandaria ela a uma aba que não está lá. Reusar o
     módulo também não dá: `mouse_actions.py` importa GTK no topo, e os pacotes
     são puros de propósito.
+
+    OS DOIS LADOS VÃO AO PERFIL JUNTOS — 05/09/2026, decisão D2. Este
+    interruptor mexe em `mouse.enabled` **e** em `teclado_emulado`, e gravar só
+    o primeiro deixaria o perfil dizendo *mouse desligado, teclado ligado* — um
+    estado que este botão não sabe produzir e que a próxima ativação imporia.
+    A gravação vem DEPOIS das duas chamadas: se o teclado recusar, o gesto já
+    levantou, e o disco não guarda um meio-passo.
     """
     if not ctx.state:
         raise RuntimeError(
@@ -1824,6 +2030,8 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "o mouse mudou e o teclado não — o Hefesto não respondeu") from erro
     if isinstance(resposta, dict) and resposta.get("status") == "failed":
         raise RuntimeError(f"o mouse mudou e o teclado não: {_recusa_do_teclado(resposta)}")
+    recado = _guardar_no_perfil(ctx, mouse_enabled=novo, teclado_emulado=novo)
+    return {"recado": recado} if recado else None
 
 
 #: O QUE CADA OPÇÃO DA LISTA MANDA FAZER. A chave é a palavra que DISTINGUE uma
@@ -1852,7 +2060,7 @@ _ESCOLHA: dict[str, bool | None] = _ESCOLHA_DELA
 
 
 @gesto("06-navegacao.html", "teclado")
-def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A lista "Função do teclado". `keyboard.emulation.set`.
 
     O VALOR VEM EM `valor`, E ISSO É O QUE MUDOU DESDE A PRIMEIRA LEVA: o
@@ -1930,6 +2138,15 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     E DIZ POR QUE NÃO DEU, desde o mesmo dia: a chamada passou a ser
     `p.resultado`, que traz o corpo — o `p.chamar` devolvia `True` para um
     `{"status": "failed"}` e a lista voltava sozinha sem uma palavra.
+
+    E ELE PASSOU A LEMBRAR — 05/09/2026, e este era o buraco INTEIRO desta aba.
+    `keyboard.emulation.set` grava na flag GLOBAL da sessão
+    (`utils/session.py:372`), nunca no perfil; e `DraftConfig.to_profile` emite
+    `teclado_emulado` por PASSTHROUGH do que veio do disco. Medido no ciclo
+    completo em `HOME` de mentira: com o perfil dizendo `True` e ela escolhendo
+    a opção `TECLADO_DESATIVADO`, o Salvar do rodapé devolvia **`True`** — o
+    valor velho, por cima da escolha dela, sem uma palavra. Ver
+    `_guardar_no_perfil`.
     """
     escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
     palavras = {x.strip(".,;:—-").lower() for x in escolhido.split()}
@@ -1960,10 +2177,12 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if isinstance(resposta, dict) and resposta.get("status") == "failed":
         raise RuntimeError(
             f"o teclado ficou como estava: {_recusa_do_teclado(resposta)}")
+    recado = _guardar_no_perfil(ctx, teclado_emulado=ligar)
+    return {"recado": recado} if recado else None
 
 
 @gesto("06-navegacao.html", "vel-cursor")
-def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra da Velocidade de cursor, arrastada. `mouse_emulation.speed`.
 
     DECISÃO DELA, 05/09/2026: *"velocidade do cursor e da rolagem coloca um
@@ -1983,13 +2202,20 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     analógico esquerdo **e** o cursor do touchpad — `emit_touchpad_move` escala
     por `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
     (`integrations/uinput_mouse.py:500`).
+
+    E ELE PASSOU A DURAR ALÉM DA JANELA — 05/09/2026, decisão D2. Até aqui o
+    número ia ao daemon e ao `session.json`, e o perfil só o recebia se ela
+    clicasse "Salvar" no rodapé: fechar a janela depois de arrastar a barra
+    perdia a escolha, calada. Ver `_guardar_no_perfil`.
     """
-    _velocidade(p, o, "speed", MOUSE_SPEED_MIN, MOUSE_SPEED_MAX,
-                "a velocidade do cursor")
+    alvo = _velocidade(p, o, "speed", MOUSE_SPEED_MIN, MOUSE_SPEED_MAX,
+                       "a velocidade do cursor")
+    recado = _guardar_no_perfil(ctx, mouse_speed=alvo)
+    return {"recado": recado} if recado else None
 
 
 @gesto("06-navegacao.html", "vel-rolagem")
-def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra da Velocidade da rolagem, arrastada. `scroll_speed`.
 
     Mesma rota speed-only do vizinho, e o mesmo motivo — ver :func:`_velocidade`.
@@ -2006,9 +2232,14 @@ def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     que a dica da tela dizia *"De 1 a 10"* nas duas linhas *"e nas duas está
     errada"*. Caducou: `aba06.D_VEL` e `aba06.D_ROL` LEEM a faixa do dono, e a
     página publicada diz "De 1 a 12" no cursor e "De 1 a 5" na rolagem.
+
+    ELE TAMBÉM DURA ALÉM DA JANELA desde 05/09/2026 — mesma decisão D2 do
+    vizinho, mesmo caminho (`_guardar_no_perfil`).
     """
-    _velocidade(p, o, "scroll_speed", SCROLL_SPEED_MIN, SCROLL_SPEED_MAX,
-                "a velocidade da rolagem")
+    alvo = _velocidade(p, o, "scroll_speed", SCROLL_SPEED_MIN, SCROLL_SPEED_MAX,
+                       "a velocidade da rolagem")
+    recado = _guardar_no_perfil(ctx, mouse_scroll=alvo)
+    return {"recado": recado} if recado else None
 
 
 @gesto("06-navegacao.html", "linha-de-botao")
