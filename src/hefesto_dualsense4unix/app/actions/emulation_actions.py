@@ -175,11 +175,17 @@ LARGURA_MAXIMA_DO_ROTULO_DE_GAMEPADS = 52
 #: correção pela metade deixa duas versões vivas, que é o defeito que a regra
 #: da casa sobre fato errado existe para matar. Sem artigo na frente de
 #: propósito, para casar tanto com "A vibração…" quanto com "…a vibração…".
-RESSALVA_DE_TRANSPORTE: dict[str, str] = {
-    "vibracao.rumble.passthrough@dualsense": (
-        "vibração ainda não foi conferida no aparelho — nem no cabo, nem no rádio"
-    ),
-}
+#: VAZIO desde 05/09/2026, e o vazio é o desfecho, não o esquecimento. A única
+#: entrada daqui era a vibração, e ela ganhou lastro nos dois transportes: a
+#: prova morava no repositório desde sempre
+#: (`integrations/uinput_gamepad.py:130` — *"a vibração funciona, provado com
+#: SDL2 e validado em gameplay"*) e o mapa é que não a registrava. ELA fechou:
+#: *"hj as máscaras funcionam super legal em tudo"*.
+#:
+#: A REGRA QUE ISSO DEIXA: a ressalva sai JUNTO com a dívida. Enquanto a célula
+#: do mapa disser `medido` dos dois lados, uma entrada aqui volta a ser fato
+#: errado na tela — e a régua deste arquivo reprova nas duas direções.
+RESSALVA_DE_TRANSPORTE: dict[str, str] = {}
 
 #: Que célula do mapa cada texto desta aba afirma. O portão exige as DUAS
 #: direções: uma célula declarada sem lastro obriga a ressalva no texto; e um
