@@ -236,11 +236,11 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         em `hefesto_vivo.PERIGOSOS` para a `--prova-gesto` não abrir a Steam na
         tela dela.
 
-    OS CINCO QUE FICAM, com a razão no `SEM_DONO` do próprio pacote:
-      * `barra:motor` — o dono do gesto ESTÁ escrito
-        (`app/telas/vibracao.DONOS_DOS_GESTOS`); o que falta é o NÚMERO: a
-        linha é um `<div>`, e um `<div>` não tem `value`. Trocar a barra por um
-        controle arrastável é decisão DELA;
+    **DE CINCO PARA TRÊS — 05/09/2026.** `barra:motor` e
+    `forca:auto-da-mesa` saíram CURADOS; a razão de cada um está no dict
+    abaixo e, por extenso, no `SEM_DONO` de `a05_vibracao`.
+
+    OS TRÊS QUE FICAM, com a razão no `SEM_DONO` do próprio pacote:
       * `lado:ligado` — os oito interruptores de punho são desenho, e o produto
         concorda por escrito em `app/telas/vibracao.SEM_FONTE`: não há campo no
         esquema, nem método de IPC, nem chave no `state_full`;
@@ -293,8 +293,30 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         # no TEMPO (`a05_vibracao._ressalva_da_mesa`, linha no `#vib-estado`
         # enquanto a mesa estiver em `Auto` com alguma peça a perder). A prova
         # está em `test_a05_a_vibracao_aplica_e_fala.py`.
-        "05-vibracao.html": ["barra:motor", "forca:auto-da-mesa",
-                             "lado:ligado"],
+        # **DE CINCO PARA TRÊS — 05/09/2026, e a régua ENVELHECEU DE NOVO:**
+        # os dois que saíram de `05-vibracao.html` saíram porque foram
+        # CURADOS, e a cura de cada um está escrita no `SEM_DONO` do pacote,
+        # que é o que esta régua exige de quem tira um da lista.
+        #
+        #   `barra:motor`         fechou em 04/09 pelas DUAS metades no mesmo
+        #                         dia: a decisão dela (*"os slcers do botão
+        #                         esquerdo e direito (forte e fraco) se
+        #                         multiplicam"*) fez a barra ser POLÍTICA e não
+        #                         comando — `efetivo(motor) = degrau x
+        #                         barra(motor)` —, e o método que grava um
+        #                         motor sem o outro nasceu junto
+        #                         (`rumble.motores.set`). Desenho em
+        #                         `aba05._barra_de_motor`, gesto em
+        #                         `a05_vibracao.motor`.
+        #
+        #   `forca:auto-da-mesa`  fechou DUAS vezes, e a segunda é a que vale:
+        #                         em 05/09 a linha de mesa SAIU inteira, e o
+        #                         `Auto` com ela, por decisão dela — *"não é
+        #                         pra ter mesa em nada da interface (…) segue
+        #                         os três modos sempre"*. Um órfão sobre um
+        #                         botão que não existe mais não é dívida: é
+        #                         fantasma.
+        "05-vibracao.html": ["lado:ligado"],
         "07-lancadores.html": ["criar-perfil", "heroic"],
         "09-sistema.html": ["plugins"],
     }, (

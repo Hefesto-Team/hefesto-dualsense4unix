@@ -54,8 +54,22 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
     "Salvar" que só lesse o disco gravaria o verde — **perdendo a mudança
     dela**, calado.
 
-    O QUE O DAEMON PUBLICA VENCE O DISCO: cor da barra, política de vibração,
-    passthrough, velocidade do mouse, mudo do microfone, volume do alto-falante.
+    O QUE O DAEMON PUBLICA VENCE O DISCO — **HOJE, UMA COISA SÓ: a cor da
+    barra.** Estas linhas prometiam seis (cor, política de vibração,
+    passthrough, velocidade do mouse, mudo do microfone, volume do
+    alto-falante) e o laço abaixo chama um método só, `with_controller_leds`.
+    Medido em 05/09/2026: as outras cinco vinham todas do DISCO, e cinco das
+    seis frases eram falsas. **Fato errado se substitui** — a frase agora
+    descreve o que o código faz, e o que falta virou fila com endereço, não
+    promessa em docstring.
+
+    A FILA, para quem for fechar: `speaker`, `audio.mic_mudo` e `sensores`
+    por controle, e `rumble_policy`/`passthrough` e `mouse_emulation`
+    globais, o daemon PUBLICA — só ninguém lê aqui. Antes disso, o
+    `DraftConfig` precisa de `with_controller_mic` e
+    `with_controller_sensores`, que são as duas únicas das seis seções do
+    esquema que ele ainda não sabe escrever.
+
     O QUE ELE NÃO PUBLICA fica do perfil — e o caso é os GATILHOS: o DualSense
     não devolve o modo em que está (é comando de ida), como o
     `a03_gatilhos.py` mede pela outra ponta.
@@ -102,16 +116,29 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
         # A COR VIVA VIRA OVERRIDE DAQUELE CONTROLE, e não a cor global: cada
         # controle tem a sua, e é assim que o perfil já guarda (o
         # `ControllerOverrides.leds` do schema existe desde antes desta aba).
+        # O BRILHO E AS LÂMPADAS SÃO DAQUELE CONTROLE, NÃO DO GLOBAL — e esta
+        # linha nasceu de perda de dado medida em 05/09/2026: com a aba 04
+        # tendo gravado brilho 0,25 e as lâmpadas 1 e 2 do P1 no disco, um
+        # "Salvar" do rodapé regravava 1,0 e as cinco apagadas, porque este
+        # bloco lia `draft.leds.*` — a seção GLOBAL — para montar o override
+        # DELE. Só a cor vinha do controle certo; os outros dois campos vinham
+        # do vizinho errado e atropelavam o que a aba tinha acabado de gravar.
+        #
+        # O leitor certo já existia e é público: `effective_leds_for(uniq)`
+        # faz o merge POR CAMPO guiado pelo `model_fields_set` — override
+        # presente vence, campo não escrito herda o global. É exatamente o que
+        # este ponto precisa, e o rodapé simplesmente não o chamava.
+        efetivo = draft.effective_leds_for(uniq)
         draft = draft.with_controller_leds(uniq, LedsDraft(
             # AS FORMAS SÃO FIXAS NO SCHEMA — três canais de cor e cinco
             # lâmpadas —, e o `LedsDraft` as declara assim. Um `tuple(...)`
             # genérico ou uma `list` perdem esse tamanho, e o produto passa a
             # aceitar quatro cores sem ninguém ver.
             lightbar_rgb=(int(rgb[0]), int(rgb[1]), int(rgb[2])),
-            lightbar_brightness=draft.leds.lightbar_brightness,
-            player_leds=(draft.leds.player_leds[0], draft.leds.player_leds[1],
-                         draft.leds.player_leds[2], draft.leds.player_leds[3],
-                         draft.leds.player_leds[4]),
+            lightbar_brightness=efetivo.lightbar_brightness,
+            player_leds=(efetivo.player_leds[0], efetivo.player_leds[1],
+                         efetivo.player_leds[2], efetivo.player_leds[3],
+                         efetivo.player_leds[4]),
             # SE ELA ESCOLHEU UMA COR, a automática não pode voltar por cima —
             # senão salvar a escolha dela a apagaria no próximo Aplicar.
             auto_player_colors=False,

@@ -1606,7 +1606,18 @@ METODOS = {"controller.target.set"}
 
 #: O QUE ESTA ABA DECLARA À RÉGUA — o piso e as provas moram AQUI, não no teste.
 PAGINA = "05-vibracao.html"
-PISO_DA_ABA = 6
+#: **O PISO CAIU DE 6 PARA 5 EM 05/09/2026, E A QUEDA É DECLARADA.** A régua
+#: diz que o piso SÓ SOBE, e ela está certa: uma queda silenciosa não aparece
+#: na tela — o clique simplesmente deixa de fazer alguma coisa. Esta não é
+#: silenciosa, e não é gesto que parou de funcionar: é gesto que **deixou de
+#: existir por decisão dela**. O `forca-mesa` era o único dono da linha de
+#: mesa, e a palavra foi *"não é pra ter mesa em nada da interface (…) segue os
+#: três modos sempre"*. A linha saiu inteira — CSS, HTML e a régua 15 do
+#: desenho — e o gesto saiu com ela. Restam CINCO donos nesta aba.
+#:
+#: Se este número cair de novo sem um parágrafo como este ao lado, a queda é
+#: defeito, não decisão.
+PISO_DA_ABA = 5
 #: `forca`, `intensidade` E `motor` NÃO TÊM LINHA AQUI — e a razão é a mesma
 #: que tirou o `teto-da-vibracao` das provas da aba Conexões: esta régua passa
 #: um dublê de ponte e cobra QUAL função dela foi chamada, e os dois gestos
