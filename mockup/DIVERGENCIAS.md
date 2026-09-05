@@ -130,6 +130,31 @@ seção daqui**: a aba deixou de estar em trabalho.
   **Até publicar, o produto continua exatamente como ela o vê hoje** — e aqui
   isso está fotografado: a foto desta aba sai byte a byte igual à de antes da
   mudança (`olhar.py`, Chrome, 1920x1080).
+- **04/09/2026 · ONDA2-09** — as TRÊS decisões do PO, e **um pixel só muda**.
+  1. **O botão "Atualizar" virou "Reaplicar ajustes"** (decisão [01]). Ele fazia
+     dois trabalhos com um nome só, e a dica NEGAVA o caro: dizia *"Não muda
+     nada"* sobre um clique que manda o serviço reaplicar a configuração e
+     reescrever os arquivos de ambiente da Steam. A dica passou a dizer os dois,
+     na ordem em que acontecem. **É a ÚNICA mudança visível desta leva**, e está
+     medida: comparando as duas fotos do `olhar.py` (Chrome, 1920×1080), a caixa
+     que difere é **104×10 px em (796, 339)** — a palavra dentro do botão, e
+     nada mais. `.janela` continua em 1180×777, `passa_da_dobra: 0`.
+  2. **"Retomar", "Reiniciar o serviço" e "Ver os plugins carregados" ganharam a
+     peça do botão cinza** (decisão [02], a D-03 dela). **ZERO pixel na cena que
+     ela aprovou:** nessa cena os três TÊM trabalho a fazer, logo nenhum nasce
+     `apagado` e a folha comum esconde os três `?`
+     (`.btn:not(.apagado) + .ajuda.porque{display:none}`). O que muda só aparece
+     na tela viva, e é lá que foi medido: com razão o botão fica cinza, ganha
+     `aria-disabled="true"` e encolhe de 184 para 171px para o `?` caber **na
+     mesma linha** — a faixa mede os mesmos 156px nos dois estados, e o miolo não
+     rola.
+  3. **O botão passou a dizer "Reaplicando…" enquanto trabalha** (decisão [03]),
+     por um `data-hef-em-voo` — **atributo, zero pixel**. Medido no WebKit do
+     produto: durante o gesto o rótulo é "Reaplicando…" e, no pouso, volta a
+     "Reaplicar ajustes".
+
+  **O QUE ELA PRECISA OLHAR ANTES DE PUBLICAR:** só o nome do botão. As outras
+  duas metades são invisíveis na cena do desenho.
 
 ## 10-perfis.html
 - **04/09/2026** — a folha das dez peças (D-02 e D-03) entrou pelo `monta.py`.

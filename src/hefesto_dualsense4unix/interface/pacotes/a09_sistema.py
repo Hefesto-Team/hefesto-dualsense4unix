@@ -1062,8 +1062,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # inteira emudece — que é exatamente o instante em que ela precisa ler
         # "Ativar o serviço" no botão. Deixar este ramo sem os rótulos faria a
         # saída de emergência existir só enquanto ela não é necessária.
+        # E AS RAZÕES DO CINZA SAEM DAQUI TAMBÉM — 04/09/2026, e o defeito foi
+        # MEDIDO neste ramo, não imaginado: com o serviço parado a camada
+        # levanta, este `return` responde, e os três botões ficavam com a cara
+        # que o DESENHO tem — clicáveis — exatamente no instante em que
+        # `travas()` tem motivo para os três. A tela apagava a metade que
+        # explica no minuto em que ela é a única coisa que importa.
+        #
+        # É o mesmo argumento do `blocos:` acima, escrito uma linha antes, e a
+        # lição é a de sempre: **o caminho de erro é um caminho, e ele tem de
+        # dizer o mesmo que o de sucesso.**
         return {"sem_dono": {"tela": {"sem_dono": True, "oque": str(erro)}},
                 "blocos": blocos_dos_botoes(_de_pe(ctx)),
+                **razoes_do_cinza(ctx),
                 "cobertura": {"pintados": 0, "sem_dono": 1}}
 
     fora: dict[str, object] = {}
@@ -1123,6 +1134,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     tira = _html_da_fita(ctx.mesa)
     if tira:
         fora[CAMPO_DA_FITA] = tira
+    # AS RAZÕES DO CINZA (decisão [02] do PO, 04/09/2026) — e elas entram
+    # SEMPRE, inclusive vazias. Ver `razoes_do_cinza`: emitir só quando há razão
+    # deixaria os três botões apagados para sempre depois do primeiro estado
+    # ruim, e a tela passaria a dizer "não dá" sobre um clique que dá.
+    #
+    # É `fora[...]` E NÃO UM SEGUNDO CANAL: o `data-campo` do botão e o da dica
+    # são o mesmo, e o `achar()` do piloto visita os dois com este valor no
+    # mesmo tique — não há caminho no código em que o cinza e a razão discordem.
+    fora.update(razoes_do_cinza(ctx))
     # OS RÓTULOS DOS CINCO DESTRUTIVOS — quem REPÕE é o tique. Ver o bloco do
     # consentimento em dois cliques: sem esta linha um "Confirma?" ficaria na
     # tela para sempre depois de ela armar um botão e sair, e o "Ativar o
@@ -1253,9 +1273,98 @@ def _html_da_contagem(texto: Any) -> str:
 # ---------------------------------------------------------------------------
 from . import gesto  # noqa: E402
 
+#: O SUFIXO DO ENDEREÇO DA RAZÃO, e ele tem GÊMEO em `interface/aba09.py`
+#: (`SUFIXO_DA_RAZAO`): o gerador escreve o `data-campo` na página, este arquivo
+#: escreve NELE. `test_a_aba_09_sistema_fecha_as_linhas` compara os dois pares e
+#: reprova na divergência — escritos duas vezes sem régua, eles se afastam no dia
+#: em que alguém mudar um, e foi assim que a fita viva morreu calada em 27/08.
+SUFIXO_DA_RAZAO = "-razao"
 
-def _trava(ctx: Contexto, nome: str) -> str | None:
+#: OS TRÊS BOTÕES QUE FICAM CINZAS — decisão [02] do PO, 04/09/2026:
+#: **"Apagado e ainda assim responde."**
+#:
+#: São exatamente os três que `aba_sistema.travas()` alcança E que esta aba
+#: obedece. O quarto e o quinto que a camada tranca ficam de fora, e não por
+#: esquecimento: `desligar` e `ver-detalhes` estão em
+#: :data:`TRAVA_QUE_NAO_VALE_AQUI`, com a medição de cada um. Pintar de cinza um
+#: botão que este arquivo deixa clicar seria a tela dizendo o contrário do que o
+#: produto faz — que é o defeito que a peça inteira existe para matar.
+BOTOES_CINZAS = ("retomar", "reiniciar", "ver-plugins")
+
+#: O QUE JÁ EXISTE NO DESENHO E AINDA NÃO NO PRODUTO — a QUARTA espécie desta
+#: página, e ela é de RELÓGIO, não de mecanismo. 04/09/2026.
+#:
+#: :data:`SEM_DONO` é *"o produto não tem quem atenda"*;
+#: :data:`NAO_CHEGA_NA_TELA` é *"o produto atende e falta o caminho até o
+#: pixel"*; :data:`SEM_ALVO_NA_PAGINA` é *"o piloto não sabe escrever isto
+#: aqui"*. **Estes três são outra coisa: a página TEM o endereço, o piloto SABE
+#: escrevê-lo, e o que falta é a PUBLICAÇÃO — que é ato dela.**
+#:
+#: O pacote e o desenho mudam juntos e chegam ao produto em tempos diferentes.
+#: No intervalo a chave cai no vazio SEM ESTRAGO — o `achar()` do piloto devolve
+#: zero elementos e a pintura não conta nada. Emitir mesmo assim é o certo: no
+#: dia em que ela publicar, os três botões acendem sem uma linha nova de Python.
+#: **Deixar de emitir seria a metade que alguém esquece de ligar.**
+#:
+#: `--publicar-enderecos` NÃO ALCANÇA ESTES, e está medido: a decisão [01] do PO
+#: troca o RÓTULO do botão do `daemon.reload`, logo o desenho mudou um pixel e
+#: aquele atalho recusa — corretamente, porque rótulo é decisão dela. Os três
+#: entram junto com a aba, pelo `--publicar 09`.
+#:
+#: É COBRADA NOS DOIS SENTIDOS por `test_a_aba_09_sistema_fecha_as_linhas`: no
+#: dia em que a página publicada ganhar os endereços, a régua REPROVA pedindo
+#: que a declaração saia daqui. Declaração que envelhece calada vira paisagem.
+ESPERA_A_PUBLICACAO: dict[str, str] = {
+    f"{nome}{SUFIXO_DA_RAZAO}": "a razão do botão cinza (decisão [02] do PO). O "
+                                "`data-campo` está em `mockup/09-sistema.html` e "
+                                "chega ao produto no `--publicar 09`."
+    for nome in BOTOES_CINZAS
+}
+
+
+def razoes_do_cinza(ctx: Contexto) -> dict[str, str]:
+    """A razão de cada botão cinza AGORA — vazia quando ele tem o que fazer.
+
+    **A CHAVE VAI EM TODO TIQUE, inclusive vazia**, e é isso que faz o botão
+    DESACENDER. Emitir só quando há razão deixaria o cinza na tela para sempre
+    depois do primeiro estado ruim: a pausa acaba, o `Retomar` volta a ter
+    trabalho, e o desenho continuaria apagado. É a mesma lei da linha de
+    ressalva (D-02), e o valor vazio é uma RESPOSTA — *"não há razão"* — não a
+    ausência de uma.
+
+    **VAZIO E NÃO `monta.NADA_A_DIZER`, e a diferença é de mecanismo.** O
+    marcador serve à `ressalva`, que só tem o alvo `html`. Aqui o MESMO campo
+    alimenta dois alvos, e o do botão é `classe`: o `ligado()` do piloto acende
+    a classe para qualquer texto que não seja vazio, travessão, `0`, `false`,
+    `off`, `none`, `null` e as duas grafias de «não» — e o marcador
+    `<i class="nada"></i>` **não está nessa lista**. Mandá-lo acenderia
+    `apagado` para sempre, que é o contrário do que a peça faz. Quem esconde o
+    `?` quando não há razão é a folha comum, pela regra
+    `.btn:not(.apagado) + .ajuda.porque{display:none}`.
+
+    **UMA LEITURA SÓ PARA OS TRÊS.** `_trava()` sozinho monta um `Leitura` por
+    chamada; aqui a conta da camada roda UMA vez por tique e os três a
+    consultam. O `retomar` continua passando por `_trava()` para herdar a
+    exceção da pausa ilegível, que é dele e não da camada.
+    """
+    try:
+        travas = _tela.travas(_leitura(ctx))
+    except Exception:
+        # UMA TRAVA QUE LEVANTA NÃO PINTA BOTÃO NENHUM DE CINZA. Sem leitura não
+        # há razão para apagar, e apagar sem razão é a tela dizendo "não dá" sem
+        # saber se dá — o mesmo julgamento que `_trava()` já faz no clique.
+        travas = {}
+    return {f"{nome}{SUFIXO_DA_RAZAO}": (_trava(ctx, nome, travas) or "")
+            for nome in BOTOES_CINZAS}
+
+
+def _trava(ctx: Contexto, nome: str,
+           travas: dict[str, str] | None = None) -> str | None:
     """O motivo pelo qual aquele gesto estaria CINZA agora, ou `None`.
+
+    `travas` É A CONTA JÁ FEITA, e existe para o TIQUE: :func:`razoes_do_cinza`
+    pergunta à camada uma vez e passa o resultado aos três, em vez de montar
+    três `Leitura` por volta. Sem ela, o comportamento é o de sempre.
 
     A CONTA É DA CAMADA DO PRODUTO — `aba_sistema.travas(leitura)` — e ela já
     estava escrita, medida e ligada até a penúltima camada quando esta frente
@@ -1282,6 +1391,8 @@ def _trava(ctx: Contexto, nome: str) -> str | None:
         # um estado que ninguém leu, e o preço do contrário é zero: um
         # `daemon.resume` num daemon não pausado é no-op.
         return None
+    if travas is not None:
+        return travas.get(nome)
     try:
         return _tela.travas(_leitura(ctx)).get(nome)
     except Exception:
@@ -1654,9 +1765,34 @@ DESTRUTIVOS = ("desligar", "restaurar-de-fabrica", "refazer-consertos",
 #: mostrar o achado · tirar), e dois cliques cobrem dois. O que falta a ele é
 #: DESENHO, e desenho é dela.
 SEM_MOTOR: dict[str, str] = {
-    "restaurar-de-fabrica": "o ato mora em `footer_actions.on_restore_default:1477` "
-                            "— ele lê `self._get('main_window')`, grava pelo funil "
-                            "e manda TODAS as abas da janela velha se repintarem.",
+    # FATO CORRIGIDO EM 04/09/2026, e a correção MUDA a natureza da dívida.
+    #
+    # Esta linha dizia que o ato *"mora em `footer_actions.on_restore_default`,
+    # que lê `self._get('main_window')`"* — e isso descreve o HANDLER, não o
+    # ato. Medido lendo o fonte: o miolo dele são TRÊS passos que já têm dono
+    # fora da janela, e são os mesmos três que `pacotes/perfil.gravar_e_reaplicar`
+    # usa: o localizador do preset `meu_perfil.json` do
+    # `footer_actions` (função de MÓDULO, sem `self`),
+    # `Profile.model_validate` do JSON, e `loader.save_profile` +
+    # `p.profile_switch` + `p.chamar("launch_env.refresh")`. O que é da janela é
+    # o diálogo (que a D-03 já substituiu por dois cliques) e o refresh das abas
+    # velhas (que esta interface não tem).
+    #
+    # **O QUE SEGURA O BOTÃO NÃO É MAIS O MOTOR: é a rede de segurança.** Um
+    # gesto que chame `save_profile` precisa da linha
+    # `("09-sistema.html", "restaurar-de-fabrica")` em `hefesto_vivo.PERIGOSOS`
+    # NO MESMO COMMIT — sem ela, a prova botão a botão desta casa restaura o
+    # `meu_perfil` DELA para provar que sabe clicar
+    # (`test_todo_gesto_que_grava_esta_protegido` reprova, e com razão).
+    # `hefesto_vivo.py` está no `nao_toca` desta frente; a linha está RELATADA
+    # em `docs/process/agentes/2026-09-04/ONDA2-09.md`.
+    "restaurar-de-fabrica": "o CAMINHO existe e está medido (asset + "
+                            "`save_profile` + `profile_switch` + "
+                            "`launch_env.refresh`, os três tempos do "
+                            "`perfil.gravar_e_reaplicar`); o que falta é a linha "
+                            "em `hefesto_vivo.PERIGOSOS`, e esse arquivo é de "
+                            "outra posse. Sem ela a régua de clique restaura o "
+                            "perfil dela para provar que sabe clicar.",
     "refazer-consertos": "o ato mora dentro do `_worker` de "
                          "`daemon_actions.on_storm_fix_safe:1218`, junto com o "
                          "toast de cada etapa — não há função de produto que rode "
