@@ -1306,24 +1306,6 @@ def frase_do_interruptor_de_sensor(corpo: Any) -> str | None:
     return str(ressalva) if ressalva else None
 
 
-def sensor_set(
-    *,
-    giroscopio: bool | None = None,
-    acelerometro: bool | None = None,
-    uniq: str | None = None,
-) -> bool:
-    """``sensor.set`` estreitado a ``bool`` — só para quem não vai ler a frase.
-
-    ``True`` = o daemon aceitou. **Não** significa "o jogo parou de ver": para
-    isso é o ``alcance`` de :func:`sensor_set_detalhado`, e é por isso que esta
-    função existe estreita e documentada em vez de ser a porta principal.
-    """
-    corpo = sensor_set_detalhado(
-        giroscopio=giroscopio, acelerometro=acelerometro, uniq=uniq
-    )
-    return isinstance(corpo, dict) and corpo.get("status") == "ok"
-
-
 def frase_do_ato_do_microfone(corpo: Any) -> str | None:
     """A frase que vai para o CARTÃO daquele controle — ``None`` se deu certo.
 
@@ -1568,7 +1550,6 @@ __all__ = [
     "rumble_set",
     "rumble_stop",
     "run_in_thread",
-    "sensor_set",
     "sensor_set_detalhado",
     "speaker_set",
     "speaker_set_detalhado",

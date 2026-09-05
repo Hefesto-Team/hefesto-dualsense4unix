@@ -1350,7 +1350,7 @@ def _conferir(doc):
 
     # 5. OS BOTÕES TÊM ENDEREÇO — 01/09/2026. Sem `data-gesto` o clique não
     #    atravessa a ponte, e o piloto nem consegue RECUSAR dizendo o nome: o
-    #    ouvinte dele (`hefesto_vivo.py:190`) só enxerga quem está marcado.
+    #    ouvinte dele (`hefesto_vivo.py:1000`) só enxerga quem está marcado.
     for _g in ("modo", "pronto", "guardar", "reenviar"):
         exigir(f'data-gesto="{_g}"' in corpo,
                f"o endereço do gesto {_g!r} sumiu do desenho — o clique some calado")

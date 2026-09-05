@@ -441,7 +441,7 @@ CSS = CSS_GLIFO + """
 
   /* ---------- A TIRA DO DESFECHO — o toast que esta janela não tinha ----------
      PARIDADE COM A JANELA ESTÁVEL, 03/09/2026. Lá, TODO gesto desta aba termina
-     num `_toast_profile` no rodapé (`profiles_actions.py:4579`): "Perfil
+     num `_toast_profile` no rodapé (`profiles_actions.py:4588`): "Perfil
      removido: X", "Lista recarregada", `mensagem_de_ativacao`. Aqui só a
      RECUSA falava — `RuntimeError` vira tarja no piloto — e o SUCESSO era
      silêncio. Para os NOVE gestos desta aba que ESCREVEM NO DISCO DELA,
@@ -977,7 +977,7 @@ def linha_do_perfil(nome, prioridade, quando, ativo, dica="", escolhido=False):
     ao ligar os botões. A razão é medida, e são duas:
 
     1. **O ouvinte do piloto não enxerga a linha.** Ele casa
-       `[data-gesto],[data-hef-gesto],[data-papel],…` (`hefesto_vivo.py:190`), e
+       `[data-gesto],[data-hef-gesto],[data-papel],…` (`hefesto_vivo.py:1000`), e
        a `<tr>` só tinha `data-hef-perfil`, que não está na lista. Clicar num
        perfil não mandava nada a lugar nenhum.
     2. **O nome VIVO só existe na célula.** O clique leva
