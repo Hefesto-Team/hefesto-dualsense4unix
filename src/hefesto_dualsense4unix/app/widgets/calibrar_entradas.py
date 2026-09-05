@@ -170,7 +170,20 @@ FACE_QUE_E_PERTO = FACE_FRENTE
 
 #: A face que fica acima da linha das cabeças — o hub em cima do rack. É de
 #: onde ``FaceDeclarada.alto`` pode vir, e pela mesma razão.
-FACE_QUE_E_ALTO = FACE_MESA
+#:
+#: **APONTAVA PARA `FACE_MESA` ATÉ 05/09/2026, e o comentário acima já dizia
+#: "hub".** O código e a frase discordavam desde que a janela nasceu
+#: (`c05a2f10`, 26/08), e o produto tem a definição escrita em dois lugares
+#: independentes: `maquina.FaceDeclarada` diz que `alto` é *"se ela está acima
+#: da linha das cabeças"*, e `arranjo_da_mesa` contrapõe as duas com todas as
+#: letras — *"os dongles ficam na altura da escrivaninha, **não** no alto do
+#: rack"* (`:1085`), com `no_alto = sum(… if e.onde == "hub")` (`:1083`).
+#:
+#: O QUE ISSO CUSTAVA, e é perda de dado dela: quem respondesse *"Na
+#: escrivaninha"* ganhava `alto=True` e quem respondesse *"Num hub ou
+#: extensão"* ganhava `alto=False` — o conselho do arranjo saía INVERTIDO,
+#: dizendo que os dongles estão no alto quando estão na mesa.
+FACE_QUE_E_ALTO = FACE_HUB
 
 #: O TÍTULO É O DO BOTÃO QUE ABRE ESTA JANELA, e essa é a regra: uma tela que
 #: se chama diferente do botão manda a pessoa procurar o que não existe.
