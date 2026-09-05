@@ -749,13 +749,24 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# ENGASGO-VULKAN-01 — "Tirar o que faz engasgar"
+# ENGASGO-VULKAN-01 — "Tirar a sobreposição Vulkan"
 # ---------------------------------------------------------------------------
 #
-# O NOME, e por que não é "camada Vulkan": ninguém que joga procura por "camada
-# Vulkan implícita". Ela procura pelo que SENTE, e a palavra é dela — *"o
-# Sackboy engasga"*. É o molde do "A luz não acende"
-# (`app/actions/config/secao_controles.py`): o rótulo é a queixa, não o remédio.
+# O NOME MUDOU EM 05/09/2026, E QUEM O MUDOU FOI ELA: *"o procurar sobreposição
+# de novo deveria ser Corrigir Sobreposição do Vulkan, não?"*. Até aqui o rótulo
+# era "Tirar o que faz engasgar", e a razão escrita era esta — *ninguém que joga
+# procura por "camada Vulkan implícita"; ela procura pelo que SENTE, e a palavra
+# é dela: "o Sackboy engasga"*, no molde do "A luz não acende"
+# (`app/actions/config/secao_controles.py`).
+#
+# A PREMISSA CAIU PELA BOCA DA DONA DA PALAVRA. Ela procurou por Vulkan, com
+# todas as letras — então a palavra entra, e entra com K, que é como a Khronos a
+# escreve (e é como o registro do prefixo a escreve: `Software\Khronos\Vulkan\
+# ImplicitLayers`). O que NÃO entrou foi o verbo dela, e essa é a única parte do
+# pedido que a medição desqualifica: "corrigir" promete cura de engasgo, e o A/B
+# de 23/08 derrubou a hipótese (números logo abaixo). "Tirar" é o que o botão
+# faz e o teto do que ele pode prometer.
+#
 # O verbo na frente vem do vizinho de fileira — "Consertar problemas
 # conhecidos", "Copiar opções para os jogos", "Fixar a versão que funciona" —,
 # que é a gramática do bloco Avançado onde o botão mora. (Os dois vizinhos
@@ -2066,14 +2077,20 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def _toast_emulation(self, msg: str) -> None:
         self._status_toast("emulation", msg)
 
-    # -- ENGASGO-VULKAN-01 — "Tirar o que faz engasgar" --------------------
+    # -- ENGASGO-VULKAN-01 — "Tirar a sobreposição Vulkan" -----------------
 
     def _toast_camadas(self, msg: str) -> None:
         """Rodapé das camadas. Contexto próprio para não brigar com os outros."""
         self._status_toast("camadas_vulkan", msg)
 
     def on_camadas_engasgo(self, _btn: object) -> None:
-        """Botão "Tirar o que faz engasgar" (bloco Avançado, aba Sistema).
+        """Botão "Tirar a sobreposição Vulkan" (bloco Avançado, aba Sistema).
+
+        O CLIQUE NÃO TIRA NADA — ele OLHA. Este handler dispara o censo e abre o
+        relatório; quem tira é ela, no botão "Tirar" do diálogo, e quem devolve é
+        ela no "Devolver". Está escrito aqui porque o rótulo diz o verbo do fim
+        do caminho, e a próxima pessoa a ler só este método concluiria que o
+        rótulo mente.
 
         Consulta ANTES de perguntar: o censo lê o `system.reg` de cada prefixo
         (5,5 MB no maior desta máquina, ~1 s no total) e travaria a janela se

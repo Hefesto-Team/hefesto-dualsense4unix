@@ -494,15 +494,21 @@ Por último, o bloco **Avançado — só se você quiser controlar cada passo**,
 os cinco botões que fazem cada pedaço à mão: **Aplicar correções** (não pede
 senha e nunca fecha a Steam), **Copiar opções para os jogos**, **Aplicar aos
 jogos da Steam**, **Travar Proton validado** — estes dois pedem a Steam fechada
-e fazem cópia de segurança antes — e **Tirar o que faz engasgar**.
+e fazem cópia de segurança antes — e **Tirar a sobreposição Vulkan**.
 
-### Tirar o que faz engasgar
+### Tirar a sobreposição Vulkan
 
-Para o jogo que mantém a contagem de quadros e mesmo assim **picota**, uma
-engasgada mais ou menos por segundo. Alguns jogos instalam, por dentro deles, uma
-sobreposição que entra na frente de cada quadro desenhado — o caso medido aqui é
-o overlay do **Epic Online Services**, que vem junto de jogos que usam os
-serviços da Epic mesmo comprados na Steam.
+Alguns jogos instalam, por dentro deles, uma sobreposição **Vulkan** que entra na
+frente de cada quadro desenhado — o caso medido aqui é o overlay do **Epic
+Online Services**, que vem junto de jogos que usam os serviços da Epic mesmo
+comprados na Steam.
+
+**O botão não promete tirar o engasgo, e não pode.** Ele nasceu do jogo que
+mantinha a contagem de quadros e mesmo assim **picotava**, uma engasgada mais ou
+menos por segundo — mas o A/B de 23/08/2026 derrubou a hipótese: com a
+sobreposição desligada a degradação mediu **pior**. O que ele promete é o que
+ele faz: mostrar o que está pendurado por dentro dos seus jogos, e tirar se você
+quiser.
 
 O botão **mostra antes de mexer**: abre a lista de quais jogos têm o quê, com o
 estado de cada um — ligada, já desligada, ou pendurada mas com o arquivo fora do

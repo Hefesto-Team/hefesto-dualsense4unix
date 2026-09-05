@@ -3036,14 +3036,31 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                                "Travar Proton validado": mesma natureza (mexe no
                                que a Steam guarda por jogo), mesma gramática
                                (verbo na frente) e mesmo alcance (todos os
-                               jogos). O rótulo é a QUEIXA dela — "o Sackboy
-                               engasga" — e não "camada Vulkan", que é jargão
-                               que ninguém procura. Molde do "A luz não acende".
-                               O clique abre o relatório antes de agir, e é de
-                               lá que se devolve. -->
+                               jogos). Molde do "A luz não acende". O clique
+                               abre o relatório antes de agir, e é de lá que se
+                               devolve.
+
+                               O RÓTULO MUDOU EM 05/09/2026, E QUEM O MUDOU FOI
+                               ELA: *"o procurar sobreposição de novo deveria
+                               ser Corrigir Sobreposição do Vulkan, não?"*. Até
+                               aqui o rótulo era a QUEIXA — "Tirar o que faz
+                               engasgar", do "o Sackboy engasga" — e "camada
+                               Vulkan" estava banido como jargão que ninguém
+                               procura. Ela procura: pediu a palavra com todas
+                               as letras, e a palavra é da Khronos, logo Vulkan
+                               com K.
+
+                               O VERBO DELA NÃO ENTROU, e é a única parte do
+                               pedido que a medição desqualifica: "corrigir"
+                               promete cura de engasgo, e o A/B de 23/08
+                               DERRUBOU essa hipótese — com a camada desligada a
+                               degradação mediu PIOR (p99 +4,19 ms/min contra
+                               +2,35; 121 picos/min contra 51, em
+                               `integrations/camadas_vulkan.py`). "Tirar" é o
+                               que este botão faz e o que ele pode prometer. -->
                           <object class="GtkButton" id="btn_camadas_engasgo">
-                            <property name="label" translatable="yes">Tirar o que faz engasgar</property>
-                            <property name="tooltip-text" translatable="yes">Alguns jogos instalam uma sobreposição que entra na frente de cada quadro desenhado — o jogo mantém a média de quadros e mesmo assim picota, uma engasgada por segundo. Eu mostro o que achou em cada jogo antes de mexer, guardo cópia do arquivo, e o mesmo lugar devolve. A sobreposição da Steam e os medidores ficam.</property>
+                            <property name="label" translatable="yes">Tirar a sobreposição Vulkan</property>
+                            <property name="tooltip-text" translatable="yes">Alguns jogos instalam uma sobreposição Vulkan por dentro, que entra na frente de cada quadro desenhado. Eu mostro o que achei em cada jogo antes de mexer, guardo cópia do arquivo, e o mesmo lugar devolve. Já medimos tirar no jogo que engasgava e o engasgo continuou — então não prometo que resolve. A sobreposição da Steam e os medidores ficam.</property>
                             <signal name="clicked" handler="on_camadas_engasgo"/>
                           </object>
                         </child>

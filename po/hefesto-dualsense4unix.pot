@@ -1588,16 +1588,16 @@ msgid ""
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:2934
-msgid "Tirar o que faz engasgar"
+msgid "Tirar a sobreposição Vulkan"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:2935
 msgid ""
-"Alguns jogos instalam uma sobreposição que entra na frente de cada quadro "
-"desenhado — o jogo mantém a média de quadros e mesmo assim picota, uma "
-"engasgada por segundo. Eu mostro o que achou em cada jogo antes de mexer, "
-"guardo cópia do arquivo, e o mesmo lugar devolve. A sobreposição da Steam e "
-"os medidores ficam."
+"Alguns jogos instalam uma sobreposição Vulkan por dentro, que entra na frente "
+"de cada quadro desenhado. Eu mostro o que achei em cada jogo antes de mexer, "
+"guardo cópia do arquivo, e o mesmo lugar devolve. Já medimos tirar no jogo "
+"que engasgava e o engasgo continuou — então não prometo que resolve. A "
+"sobreposição da Steam e os medidores ficam."
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:2946

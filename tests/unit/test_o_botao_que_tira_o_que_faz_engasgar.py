@@ -1,4 +1,4 @@
-"""ENGASGO-VULKAN-01 (lado GUI) — o botão "Tirar o que faz engasgar".
+"""ENGASGO-VULKAN-01 (lado GUI) — o botão "Tirar a sobreposição Vulkan".
 
 O botão fica na fileira Avançado da aba Sistema, ao lado do "Travar Proton
 validado": mesma natureza (mexe no que a Steam guarda por jogo) e mesmo alcance
@@ -19,6 +19,7 @@ com o gi real presente, nada é stubado.
 """
 from __future__ import annotations
 
+import re
 import sys
 
 from tests.conftest import exigir_gi_real
@@ -32,6 +33,12 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 GLADE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
+
+#: O NOME DO BOTÃO, ESCRITO UMA VEZ SÓ NESTE ARQUIVO. Ele é a palavra dela de
+#: 05/09/2026 — *"o procurar sobreposição de novo deveria ser Corrigir
+#: Sobreposição do Vulkan, não?"* — com o verbo trocado pelo que a medição
+#: sustenta (ver `test_o_rotulo_nao_promete_cura_de_engasgo`).
+ROTULO = "Tirar a sobreposição Vulkan"
 
 
 def _install_gi_stubs() -> None:
@@ -121,10 +128,14 @@ def test_o_botao_existe_com_rotulo_dica_e_handler() -> None:
     props = {
         p.get("name"): (p.text or "") for p in botao.findall("property")
     }
-    assert props.get("label") == "Tirar o que faz engasgar"
+    assert props.get("label") == ROTULO
     dica = props.get("tooltip-text", "")
     assert len(dica) > 60, "a dica tem de explicar o preço, não repetir o rótulo"
     assert "devolve" in dica.lower(), "a dica precisa dizer que dá para voltar"
+    assert "não prometo que resolve" in dica.lower(), (
+        "a dica perdeu a ressalva do A/B de 23/08 — sem ela o botão que agora "
+        "diz 'Vulkan' passa a prometer a cura que a medição derrubou"
+    )
     sinais = [s.get("handler") for s in botao.findall("signal")]
     assert sinais == ["on_camadas_engasgo"]
 
@@ -158,12 +169,72 @@ def test_o_handler_esta_no_mapa_da_janela() -> None:
 
 
 def test_o_nome_do_botao_nao_traz_jargao() -> None:
-    """"Camada Vulkan" é jargão: quem joga procura pelo que sente."""
+    """O que continua banido da tela — e o que saiu da lista em 05/09/2026.
+
+    A LISTA PERDEU A PALAVRA "VULKAN", E QUEM A TIROU FOI ELA: *"o procurar
+    sobreposição de novo deveria ser Corrigir Sobreposição do Vulkan, não?"*. A
+    régua nasceu dizendo que *"camada Vulkan" é jargão porque quem joga procura
+    pelo que sente* — e a premissa caiu pela boca da dona da palavra, que
+    procurou por ela. Os outros quatro termos ficam: nenhum deles é palavra que
+    alguém digite procurando o botão.
+    """
     botao = _botoes_do_glade()["btn_camadas_engasgo"]
     props = {p.get("name"): (p.text or "") for p in botao.findall("property")}
     tela = (props.get("label", "") + " " + props.get("tooltip-text", "")).lower()
-    for jargao in ("vulkan", "camada implícita", "dword", "system.reg", "prefixo wine"):
+    for jargao in ("camada implícita", "dword", "system.reg", "prefixo wine"):
         assert jargao not in tela, f"o jargão {jargao!r} vazou para a tela"
+
+
+def test_o_rotulo_nao_promete_cura_de_engasgo() -> None:
+    """O verbo dela era "corrigir", e é o único pedaço do pedido que não entrou.
+
+    O A/B de 23/08 mediu a camada DESLIGADA pior que a ligada (p99 +4,19 ms/min
+    contra +2,35; 121 picos/min contra 51, em `integrations/camadas_vulkan.py`),
+    e o módulo escreve com todas as letras que *não pode prometer cura de
+    engasgo*. Um rótulo com verbo de conserto desmentiria o próprio motor —
+    então esta régua guarda a AUSÊNCIA dele, que é o que a decisão deixou.
+    """
+    props = {
+        p.get("name"): (p.text or "")
+        for p in _botoes_do_glade()["btn_camadas_engasgo"].findall("property")
+    }
+    rotulo = props.get("label", "").lower()
+    for verbo in ("corrig", "consert", "resolv", "cura", "arrum"):
+        assert verbo not in rotulo, (
+            f"o rótulo voltou a prometer conserto ({verbo!r}) — o botão TIRA a "
+            "sobreposição, e tirar não curou o engasgo quando foi medido"
+        )
+
+
+def test_a_janela_gtk_e_a_pagina_dizem_o_mesmo_rotulo() -> None:
+    """Um botão, um nome. Dois nomes para o mesmo ato é paridade nascendo torta.
+
+    O mesmo botão desenha em dois produtos — o `main.glade` da janela GTK e a
+    página que o `WebView` renderiza —, e até 05/09/2026 eles diziam coisas
+    diferentes ("Tirar o que faz engasgar" contra "Procurar sobreposição de
+    novo"). Esta régua LÊ os dois; ela não digita o rótulo duas vezes.
+    """
+    props = {
+        p.get("name"): (p.text or "")
+        for p in _botoes_do_glade()["btn_camadas_engasgo"].findall("property")
+    }
+    from hefesto_dualsense4unix.interface import onde
+
+    # O caminho do publicado tem DONO (`interface/onde.PUBLICADO`); digitá-lo
+    # aqui seria o segundo dono da mesma pasta.
+    pagina = onde.pagina("09-sistema.html", publicado=True).read_text(
+        encoding="utf-8"
+    )
+    achado = re.search(
+        r'data-gesto="procurar-camadas"[^>]*>([^<]+)</button>', pagina
+    )
+    assert achado is not None, (
+        "o botão `procurar-camadas` sumiu da página publicada"
+    )
+    assert achado.group(1).strip() == props.get("label"), (
+        "a janela GTK e a página publicada nomeiam o mesmo botão de formas "
+        f"diferentes: {props.get('label')!r} contra {achado.group(1).strip()!r}"
+    )
 
 
 # ---------------------------------------------------------------------------
