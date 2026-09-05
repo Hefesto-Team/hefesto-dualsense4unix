@@ -135,7 +135,9 @@ sys.path.insert(0, str(AQUI))
 #: E é a mesma cicatriz que a regra da casa "A ÁRVORE DELA FICA EM `dev`" existe
 #: para proteger, pelo outro lado: lá o perigo é o agente ESCREVER na mesa dela;
 #: aqui era o agente LER dela sem saber.
-RAIZ = AQUI.parents[1]
+# A RAIZ É `parents[2]` — ver a nota em `hefesto_vivo.py`, medida em
+# 04/09/2026: com `[1]` o `RAIZ / "src"` virava `src/src`, que não existe.
+RAIZ = AQUI.parents[2]
 
 import mesa_viva  # noqa: E402
 import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)

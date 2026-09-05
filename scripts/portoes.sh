@@ -130,6 +130,7 @@ completo|a-tela-dela|pytest|tests/unit/test_a_tela_dela_nao_recebe_janela_de_tes
 completo|o-instrumento-e-a-tela|pytest|tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py
 completo|a-frase-banida|pytest|tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py
 completo|src-desta-arvore|pytest|tests/unit/test_a_suite_mede_esta_arvore.py
+completo|o-piloto-e-a-arvore|pytest|tests/unit/test_o_piloto_aponta_para_a_propria_arvore.py
 rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
 # 03/09/2026, a lei dela: *"cada pessoa tem um dualsense diferente (…) nada
