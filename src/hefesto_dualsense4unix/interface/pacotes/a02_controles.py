@@ -2305,6 +2305,7 @@ from hefesto_dualsense4unix.core.ds_output_report import (  # noqa: E402
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 
 from . import gesto  # noqa: E402
+from . import perfil as _perfil  # noqa: E402
 
 
 def _corpo(r: Any) -> dict[str, Any] | None:
@@ -2399,6 +2400,247 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
     """
     lido = speaker_do_entry(dele)
     return {"volume": lido[0]} if lido is not None else {}
+
+
+# ---------------------------------------------------------------------------
+# O SOM DESTE CONTROLE VAI PARA O PERFIL — 05/09/2026
+# ---------------------------------------------------------------------------
+# PEDIDO DELA, e ele é sobre AMANHÃ: *"aplicar aplica todas as configs naquele
+# perfil e salvar se lembra disso quando eu for jogar o jogo e no dia seguinte e
+# por diante. pra cada perfil e dentro dele cada config pra cada comtrole"*.
+#
+# O QUE FALTAVA, medido nesta árvore com o ciclo inteiro (perfil no disco → os
+# cinco gestos de som desta aba → reler o arquivo): os cinco chegavam ao
+# aparelho e o perfil ficava com `controllers: None`. Ela mexia no volume do
+# microfone do P2, e no dia seguinte o número era o de ontem.
+#
+# É PERSISTÊNCIA NO CLIQUE, e é a decisão D2 de 05/09
+# (`docs/process/2026-09-05-AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas.md`):
+# o requisito dela é DURABILIDADE, não o gesto de salvar — e só a escrita no
+# clique sobrevive a fechar a janela sem clicar em nada. O rodapé continua
+# valendo como rede de segurança.
+#
+# QUEM DECIDE O QUE VIRA OVERRIDE NÃO É ESTE ARQUIVO, e a regra é a COR-04 que
+# `with_controller_leds` escreveu primeiro: valor igual ao global NÃO vira
+# override — `with_controller_mic` e `with_controller_speaker` já a aplicam
+# sozinhos, e um `if` de igualdade aqui seria a segunda cópia dela.
+
+#: O QUE ESTE ARQUIVO **NÃO** GRAVA, e a razão é do daemon, não da tela.
+#:
+#: `mic.button_toggles_system` é UM por MÁQUINA: quem o lê é
+#: `hotkey.mic_button_loop`, em `daemon.config.mic_button_toggles_system`, sem
+#: consultar `uniq` nenhum (`daemon/subsystems/hotkey.py:1004`). O esquema o
+#: RECUSA por peça (`ControllerMicOverride._o_que_ainda_nao_tem_caminho_por_peca`)
+#: — e a régua da casa é `test_perfil_por_controle_o_campo_espera_o_caminho.py`,
+#: nos dois sentidos. Guardá-lo por controle faria quatro controles gravarem
+#: quatro opiniões sobre um interruptor só.
+#:
+#: Os SENSORES também não entram por aqui: `with_controller_sensores` existe e o
+#: gesto `sensor` é o dono deles, mas ele é de outra frente (a que liga o
+#: giroscópio ao perfil). Uma escrita aqui seria um segundo dono do mesmo campo.
+_NAO_GRAVA_POR_PECA = ("button_toggles_system",)
+
+#: A ESCOLHA CHEGOU AO APARELHO E NÃO TEM ONDE MORAR. As frases abaixo dizem,
+#: nesta ordem, O QUE PEGOU e o que não vai sobreviver ao dia seguinte — e é
+#: isso que as separa de uma recusa: aqui o gesto FUNCIONOU.
+#:
+#: Elas sobem como `RuntimeError` porque esse é o canal que deposita frase no
+#: cartão daquele controle (`Piloto._recusou_dizendo`, 30 s).
+#:
+#: **E "NÃO HÁ PERFIL ATIVO" NÃO ESTÁ ENTRE ELAS — a razão é a regra dela,
+#: 02/09/2026: *"é aviso, não estado"*.** A primeira versão desta cura
+#: levantava também nesse caso, e OITO réguas já escritas desta aba reprovaram
+#: (`test_a_aba_02_controles_fecha_as_linhas.py` e
+#: `test_a02_som_e_sensor_falam_quando_recusam.py`) — todas modelando um mundo
+#: com daemon e controle e sem perfil, e todas medindo que o gesto que dá certo
+#: NÃO levanta. Elas estavam certas: "não há perfil ativo" é ESTADO PARADO, e
+#: ele já está na tela — o chip `Perfil ativo` do cabeçalho o mostra o tempo
+#: todo. Repeti-lo como recado de 30 s a cada clique de som é estado disfarçado
+#: de aviso, e o preço é o oposto do pretendido: quem recebe a mesma frase em
+#: todo clique para de ler os recados.
+#:
+#: O que sobra de aviso é EVENTO, e não estado: havia perfil, ela mexeu, e a
+#: escrita falhou NAQUELE clique.
+_PERFIL_E_ESTADO_NAO_E_AVISO = "Perfil ativo"
+
+#: A ABERTURA DA FRASE QUE A BORDA COMPLETA — e ela é uma só de propósito.
+#:
+#: QUEM DIZ SE A CHAVE SERVE É O ESQUEMA, e não este arquivo:
+#: `Profile._validate_controllers_keys` exige doze dígitos hex e recusa o
+#: `path:…`, o OUI degenerado `00:00:00` e o broadcast, cada um com a razão
+#: escrita. Repetir a regra aqui seria a TERCEIRA cópia dela (a segunda é
+#: `ipc_handlers._chave_de_peca_que_grava`), e a cópia é o que envelhece no dia
+#: em que a primeira mudar.
+#:
+#: **E `norm_mac` sozinho NÃO SERVE PARA GRAVAR — medido em 04/09/2026:**
+#: `norm_mac("path:/dev/hidraw3")` devolve `"adeda3"`, uma chave que parece boa
+#: e que aparelho nenhum reivindica. Esta régua pegou o buraco na primeira
+#: execução, com o `if not chave` que eu tinha escrito aqui deixando passar.
+SOM_SEM_ENDERECO = (
+    "o ajuste chegou ao controle agora, mas o perfil recusou guardá-lo só "
+    "para esta peça: "
+)
+
+SOM_SEM_VOLUME_PARA_GUARDAR = (
+    "a rota deste alto-falante foi escrita no controle, mas o perfil ainda "
+    "não sabe o volume dele — e o Hefesto não guarda alto-falante sem volume, "
+    "porque uma seção sem número manda ZERO ao firmware e tranca o "
+    "alto-falante. Arraste o volume deste alto-falante uma vez e a rota passa "
+    "a ser lembrada junto."
+)
+
+
+def _lembrar_do_som(
+    ctx: Contexto,
+    uniq: str,
+    *,
+    mic: dict[str, Any] | None = None,
+    speaker: dict[str, Any] | None = None,
+) -> None:
+    """Grava no PERFIL ATIVO o som que ficou de pé NESTE controle.
+
+    ESCRITOR ÚNICO DO SOM POR PEÇA nesta aba, e ser um só é a regra da casa:
+    a classe de defeito que ela persegue é *"três escritores do perfil sem
+    dono"*. Os cinco gestos de som desta aba chamam ESTA função, e nenhum
+    monta `controllers[...]` à mão.
+
+    **QUEM CHAMA É O CALLBACK DE SUCESSO, nunca o gesto em si** — a mesma
+    disciplina de `registrar_alto_falante_no_rascunho`: o perfil descreve o que
+    FICOU DE PÉ, não a intenção. Um pedido recusado pelo daemon que fosse ao
+    disco seria a tela decidindo por ela: o número no arquivo passaria a
+    contradizer o aparelho, e a ativação seguinte reimporia o que nunca pegou.
+
+    `mic` e `speaker` são os campos que ESTE gesto fez ficar de pé, e só eles:
+    `{"muted": True}`, `{"volume": 42}`, `{"rota": 2}`. Campo ausente é campo
+    não tocado, e o que já estava no perfil sobrevive — é a mesma regra do
+    `rota` do `SpeakerDraft` (*"mexer no volume não pode apagar o mudo que ela
+    acabou de escolher, nem o contrário"*).
+
+    **A BASE É O EFETIVO, e não um `MicDraft`/`SpeakerDraft` nu.** Medido: os
+    dois escritores do produto substituem a SEÇÃO inteira, então mandar só o
+    campo mexido apagaria o irmão dele — um clique no mudo derrubaria o volume
+    próprio que ela tinha escolhido. `effective_mic_for`/`effective_speaker_for`
+    devolvem o que vale hoje para esta peça (override, ou o global herdado), e
+    é sobre isso que o campo novo entra.
+
+    **A LEITURA VIVA SÓ PREENCHE O QUE O PERFIL NÃO SABE**, e a ordem foi
+    MEDIDA nesta árvore, em 05/09/2026. `ProfileSpeakerConfig` exige `volume`
+    (uma seção sem número manda ZERO e tranca o alto-falante — SOM-02,
+    armadilha 1), então o clique no mudo ou na rota precisa de um volume vindo
+    de algum lugar. A primeira versão desta função tirava esse número do tique
+    do daemon, e a medição mostrou o estrago: com o perfil em 62 e o tique
+    ainda em 100, o clique na rota devolvia o disco a 100 e a escolha dela
+    sumia sem uma palavra — a mesma família do *"o Salvar destruía o que o
+    produto gravou"* que esta leva fecha. O tique é bom para SABER quando o
+    perfil não sabe; nunca para corrigir o que ela escolheu.
+
+    NADA MUDOU = NADA GRAVA, e não é economia: regravar um perfil idêntico
+    troca a data do arquivo por nada. É a mesma guarda do `_gravar_a_forca` da
+    aba Vibração, e é ela que torna inócuo o clique DOBRADO do deslizante.
+
+    **ELE GRAVA E NÃO MANDA REAPLICAR, e a diferença com a aba Vibração é
+    MEDIDA — não é descuido.** Lá, `perfil.gravar_e_reaplicar` é obrigatório: a
+    força por peça só chega ao motor PELA ativação do perfil, então gravar sem
+    reaplicar deixaria a tela dizendo uma coisa e o aparelho fazendo outra —
+    que é exatamente a razão escrita naquele dono. **Aqui o aparelho JÁ está no
+    valor**: o gesto acabou de mandá-lo por `mic.canal.set`/`speaker.set` e o
+    daemon confirmou. O perfil é o REGISTRO do que já está de pé.
+
+    E o disco não fica para trás: `ProfileManager.activate` faz
+    `load_profile(name)` a CADA ativação (`profiles/manager.py:297`) — não há
+    cópia do `Profile` em memória atravessando ativações, então a próxima
+    (hotplug, troca de jogo, boot) lê o que esta função escreveu.
+
+    O que se evita com isso é caro para ela: um `profile.switch` reaplica o
+    perfil INTEIRO — luz, gatilhos, vibração — a cada clique no mudo, no meio
+    de uma partida, para reafirmar um byte que já estava escrito.
+
+    O `launch_env.refresh` do mesmo dono também fica de fora, e pelo mesmo
+    critério: o que ele rematerializa é a antecipação de MODO/emulação por
+    `appid` (`ipc_handlers._handle_launch_env_refresh`), e nenhum dos cinco
+    campos daqui — `mic.muted`, `mic.volume`, `speaker.volume/.muted/.rota` —
+    entra nessa conta. Um dia em que este arquivo passar a gravar `mode`,
+    `match` ou emulação, ele volta.
+
+    O CAMINHO DE DISCO É O DA ABA PERFIS até o penúltimo passo: `load_profile`
+    → `DraftConfig.from_profile` → os escritores por peça → `to_profile(nome,
+    priority=…)` → `loader.save_profile`. A `priority` vai junto porque
+    `to_profile` a recebe de fora; sem ela o perfil dela perderia a ordem de
+    casamento (`BUG-FOOTER-SAVE-DROPS-SECTIONS-01`, nomeado no próprio
+    `to_profile`).
+    """
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+    if not mic and not speaker:
+        return
+    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "").strip()
+    if not nome:
+        # SEM PERFIL ATIVO NÃO HÁ ONDE GUARDAR, e a saída é CALADA de propósito
+        # — ver `_PERFIL_E_ESTADO_NAO_E_AVISO`. Na máquina dela o daemon SEMPRE
+        # publica um `active_profile` (medido no `state_full` vivo:
+        # `'meu_perfil'`); este ramo é o do daemon parado ou do estado ainda não
+        # lido, e nos dois o chip do cabeçalho já diz.
+        return
+    # A GRAFIA É A DO PERFIL, e o dono dela é `norm_mac` — o MESMO que
+    # `Profile._validate_controllers_keys` usa ao carregar. Montar a grafia à
+    # mão criaria uma SEGUNDA chave para o mesmo aparelho, e a borda do esquema
+    # rejeita o perfil INTEIRO com "chaves duplicadas após normalização": a
+    # escolha dela sumiria, e o arquivo junto.
+    #
+    # `norm_mac` NORMALIZA, mas não JULGA — quem julga é a borda, no `to_profile`
+    # lá embaixo. Ver `SOM_SEM_ENDERECO`.
+    chave = norm_mac(str(uniq or "").strip()) or ""
+
+    loader = _perfil._com_o_src()
+    try:
+        prof = loader.load_profile(nome)
+    except Exception as erro:
+        raise RuntimeError(
+            f"o ajuste chegou ao controle, mas não consegui ler o perfil "
+            f"{nome!r} para guardá-lo: {erro}") from erro
+
+    draft = DraftConfig.from_profile(prof)
+    novo = draft
+    adiante: Any = None
+    try:
+        if mic:
+            novo = novo.with_controller_mic(
+                chave, novo.effective_mic_for(chave).model_copy(update=mic))
+        if speaker:
+            base = novo.effective_speaker_for(chave)
+            if base.volume is None:
+                # A LEITURA VIVA SÓ PREENCHE O QUE O PERFIL NÃO SABE, e essa
+                # ordem foi MEDIDA — a primeira versão desta função preferia o
+                # vivo, e a medição mostrou o estrago: com o perfil em 62 e o
+                # tique do daemon ainda em 100, o clique na rota devolvia o
+                # volume a 100 e a escolha dela sumia do disco sem uma palavra.
+                # É a mesma família do "o Salvar destruía o que o produto
+                # gravou" que esta leva fecha.
+                lido = speaker_do_entry(ctx.por_uniq(uniq))
+                if lido is not None:
+                    vivo: dict[str, Any] = {"volume": lido[0]}
+                    if lido[1] is not None:
+                        vivo["muted"] = lido[1]
+                    base = base.model_copy(update=vivo)
+            alvo = base.model_copy(update=speaker)
+            if alvo.volume is None:
+                raise RuntimeError(SOM_SEM_VOLUME_PARA_GUARDAR)
+            novo = novo.with_controller_speaker(chave, alvo)
+        if novo.source_controllers == draft.source_controllers:
+            return
+        # A BORDA JULGA A CHAVE AQUI, e é por isso que o `to_profile` mora
+        # DENTRO do `try`: é ele que monta o `Profile` e dispara
+        # `_validate_controllers_keys`. Fora do `try`, o `path:/dev/hidraw3`
+        # subia como traço cru de pydantic — medido pela régua desta cura.
+        adiante = novo.to_profile(nome, priority=prof.priority)
+    except RuntimeError:
+        raise
+    except Exception as erro:
+        raise RuntimeError(f"{SOM_SEM_ENDERECO}{erro}") from erro
+
+    # SÓ O DISCO — ver a docstring. O aparelho já está no valor, e a próxima
+    # ativação relê o arquivo.
+    loader.save_profile(adiante, origem="interface-nova")
 
 
 @gesto("02-controles.html", "mudo")
@@ -2504,6 +2746,15 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         frase = frase_do_ato_do_microfone(corpo)
         if frase:
             raise RuntimeError(frase)
+        # O PERFIL LEMBRA — e só agora, depois das DUAS metades. A frase acima
+        # é a que separa *"o canal foi eleito e o firmware ficou represado"* de
+        # *"o firmware obedeceu e não há canal"*: gravar antes dela poria no
+        # disco um mudo que o plástico não tem.
+        #
+        # `not agora` É O QUE FICOU DE PÉ, e a inversão vale a linha: `agora` é
+        # *"está mudo"*, e o ato acima LIGA o microfone exatamente quando ele
+        # está mudo — logo depois dele o mudo é o oposto do que era.
+        _lembrar_do_som(ctx, uniq, mic={"muted": not agora})
         return
 
     if qual == "alto-falante":
@@ -2545,12 +2796,17 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # alto-falante em zero e o próprio mudo não o solta. O desenho já apaga
         # o botão nesse estado (`alto_pode` do `aba02.py`); esta linha é a
         # segunda trava, para o clique que chegar mesmo assim.
-        if not p.speaker_set(muted=not bool(lido and lido[1]), uniq=uniq,
+        pedido_mudo = not bool(lido and lido[1])
+        if not p.speaker_set(muted=pedido_mudo, uniq=uniq,
                              **_volume_conhecido(dele)):
             raise RuntimeError(
                 "o daemon não confirmou o mudo do alto-falante. Se o volume "
                 "deste controle ainda é desconhecido, ele recusa de propósito: "
                 "calar antes de saber o volume tranca o alto-falante em zero")
+        # O PERFIL LEMBRA. O volume não vai nesta chamada porque ele não mudou:
+        # quem o preenche é o `_lembrar_do_som`, com a leitura viva — a mesma
+        # que a linha acima acabou de reafirmar ao daemon.
+        _lembrar_do_som(ctx, uniq, speaker={"muted": pedido_mudo})
         return
 
     raise ValueError(f"mudo: não sei calar {qual!r} — a página manda 'microfone' "
@@ -2633,14 +2889,18 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if qual == "pc" and not desfecho.ok:
         raise RuntimeError(desfecho.motivo)
 
-    if not p.speaker_set(rota=ROTA_DO_CANAL[
-                             CANAL_TODO_O_PC if qual == "pc"
-                             else CANAL_SONS_DO_JOGO],
-                         uniq=uniq,
+    byte_da_rota = ROTA_DO_CANAL[
+        CANAL_TODO_O_PC if qual == "pc" else CANAL_SONS_DO_JOGO]
+    if not p.speaker_set(rota=byte_da_rota, uniq=uniq,
                          **_volume_conhecido(ctx.por_uniq(uniq))):
         raise RuntimeError(
             "o daemon não confirmou a rota do alto-falante — ou o Hefesto está "
             "parado, ou este controle saiu da mesa")
+    # O PERFIL LEMBRA A ROTA — e ela é a CAMADA 2, o byte do firmware. A camada
+    # 1 (a saída padrão do PipeWire) é um fato GLOBAL do sistema e não cabe num
+    # perfil por controle: quem a guarda é a memória do próprio
+    # `audio_saida.RotaDeSaida`, que sabe o caminho de volta.
+    _lembrar_do_som(ctx, uniq, speaker={"rota": byte_da_rota})
 
 
 #: O QUE O 🎙 E O ♪ ACEITAM DE VOLUME. O mic é 0-100 por contrato do daemon
@@ -2849,13 +3109,25 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         confissao = frase_do_alvo_do_mic(alvo_honrado(corpo))
         if confissao:
             raise RuntimeError(confissao)
+        # O PERFIL LEMBRA — e SÓ DEPOIS da confissão. O `alvo_honrado` é o que
+        # separa *"o ganho deste controle mudou"* de *"o daemon atendeu pela
+        # rota global e quem mudou foi o microfone do vizinho"*: gravar antes
+        # dela poria no `controllers[este]` um número que este controle nunca
+        # teve. A escala é 0-100, a da FONTE de captura — a mesma do
+        # `ProfileMicConfig.volume`, e NÃO a 0-255 do alto-falante.
+        _lembrar_do_som(ctx, uniq, mic={"volume": pedido})
         return
 
     if qual == "alto-falante":
-        if not p.speaker_set(volume=volume_do_percentual(pedido), uniq=uniq):
+        registrador = volume_do_percentual(pedido)
+        if not p.speaker_set(volume=registrador, uniq=uniq):
             raise RuntimeError(
                 "o daemon não confirmou o volume do alto-falante — ou o Hefesto "
                 "está parado, ou este controle saiu da mesa")
+        # O PERFIL LEMBRA O NÚMERO DO PROTOCOLO, e não o da tela: quem guarda
+        # 0-255 é `ProfileSpeakerConfig.volume`, e é o mesmo número que acabou
+        # de chegar ao aparelho. Converter de novo aqui seria a segunda escala.
+        _lembrar_do_som(ctx, uniq, speaker={"volume": registrador})
         return
 
     raise ValueError(f"volume: não sei ajustar {qual!r} — a página manda "
