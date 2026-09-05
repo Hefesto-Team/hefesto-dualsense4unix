@@ -878,8 +878,19 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     identidade congelada esperando alguém acreditar nela.
     """
     monta = _monta()
-    chips = [f"<span>{monta.ROTULO_DA_FITA}</span>",
-             '<span class="chip on">Todos</span>']
+    # O `Todos` E QUEM ACENDE SAEM DE `monta.escolha_da_fita`, e não de um `if`
+    # daqui. Esta aba é a segunda de TRÊS que escrevem o chip `Todos` — a régua
+    # dele mora num lugar só, senão a 06 continuaria oferecendo, com um controle
+    # na mesa, o botão que a 01 já não oferece. Ver a nota do bloco em `monta.py`.
+    #
+    # O `"todos"` É LITERAL AQUI PORQUE ELE É A ESCOLHA DESTA ABA: a fita nasce
+    # `inerte` (`fita_viva=False`) e não há gesto que a mova. É por ele ser
+    # CONSTANTE que a volta funciona sozinha — com o segundo controle de novo na
+    # mesa, este mesmo `"todos"` reacende o `Todos`.
+    mostra_todos, escolhido = monta.escolha_da_fita("todos", mesa)
+    chips = [f"<span>{monta.ROTULO_DA_FITA}</span>"]
+    if mostra_todos:
+        chips.append('<span class="chip on">Todos</span>')
     for lugar in mesa:
         nome = str(lugar.get("nome") or "")
         if nome == NOME_SEM_LEITURA:
@@ -887,7 +898,11 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
         partes = [f'P{lugar["jogador"]}' if lugar.get("jogador") else "",
                   nome, str(lugar.get("via") or "")]
         rotulo = monta.SEPARADOR.join(p for p in partes if p)
-        chips.append('<span class="chip plastico"'
+        # SEM O `Todos`, ALGUÉM TEM DE ACENDER. Com um controle na mesa ele é o
+        # escolhido — uma fita com um chip e nenhum aceso diria "escolha" sobre
+        # a única coisa que não se pode deixar de escolher.
+        aceso = " on" if str(lugar.get("pref") or "") == escolhido else ""
+        chips.append(f'<span class="chip plastico{aceso}"'
                      ' title="a borda é a cor do plástico">'
                      f"{rotulo}</span>")
     return "".join(chips)

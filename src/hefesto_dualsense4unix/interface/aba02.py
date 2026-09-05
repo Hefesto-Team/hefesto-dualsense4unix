@@ -1,7 +1,8 @@
 import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import mesa_viva
 import onde
-from monta import (monta, glifo, rotulo, CSS_GLIFO, CSS_LUZINHAS, MESA, CONECTADOS,
+from monta import (monta, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
+                   MESA, CONECTADOS,
                    NADA_A_DIZER, SEPARADOR, cor_da_zona, luzinhas, player_slot_color,
                    ressalva as monta_ressalva, tom_da_casa)
 
@@ -2457,7 +2458,15 @@ def fita_clicavel(doc, mesa=None):
     # Trocar `aba02.MESA` de fora NÃO alcança aqui: `CONECTADOS` é derivado de
     # `MESA` no IMPORT e nunca recalculado — a mesma armadilha que fazia a fita
     # do produto mostrar dois controles do mockup com UM no cabo (01/09/2026).
-    ids = ["c-todos"] + [f'c-{c["pref"]}' for c in (CONECTADOS if mesa is None else mesa)]
+    #
+    # O `c-todos` SÓ ENTRA SE O CHIP ENTROU — decisão dela, 04/09/2026, e aqui
+    # ela não é estética: este casamento é POSICIONAL. Com um controle na mesa,
+    # `monta.fita()` deixa de emitir o `Todos` e esta lista continuaria com dois
+    # rádios para um chip — o gerador PARARIA com `1 chips para 2 rádios`, que é
+    # o piloto da Controles morrendo no dia em que ela desliga o segundo
+    # controle. A régua é a mesma dos três emissores: `monta.cabe_o_todos`.
+    da_mesa = CONECTADOS if mesa is None else mesa
+    ids = (["c-todos"] if cabe_o_todos(da_mesa) else []) + [f'c-{c["pref"]}' for c in da_mesa]
     linhas = doc.split("\n")
     achados = 0
     for k, linha in enumerate(linhas):

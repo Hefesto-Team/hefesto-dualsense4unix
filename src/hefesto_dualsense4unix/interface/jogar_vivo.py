@@ -940,10 +940,23 @@ class Janela:
             return
 
     def _indice_na_fita(self) -> int:
-        """A posição do alvo entre os chips — o "Todos" é o zero."""
+        """A posição do alvo entre os chips — o "Todos", quando existe, é o zero.
+
+        E ELE NEM SEMPRE EXISTE — decisão dela, 04/09/2026: com um controle só na
+        mesa, `monta.fita()` não emite o `Todos`, e o primeiro chip passa a ser o
+        do controle. Contar sempre a partir de 1 acenderia `chips[1]` numa fita
+        de um chip — ninguém aceso, e a régua desta bancada dizendo "clicou".
+        Quem responde se o chip existe é `monta.cabe_o_todos`, o mesmo dos três
+        emissores.
+        """
+        controles = self.chaves[0] if self.chaves else ()
+        # `cabe_o_todos` só conta, e as chaves são uma por controle da mesa.
+        comeco = 1 if monta.cabe_o_todos(controles) else 0
         if self.alvo is None:
+            # SEM ALVO É "Todos", e sem o chip `Todos` é o único que sobrou —
+            # que está no zero nos dois casos.
             return 0
-        for i, c in enumerate(self.chaves[0] if self.chaves else (), start=1):
+        for i, c in enumerate(controles, start=comeco):
             if c[0] == self.alvo:
                 return i
         return 0

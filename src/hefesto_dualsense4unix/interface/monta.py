@@ -7,6 +7,7 @@ o piloto abre no WebView, então gerar uma aba **já trocava o produto** sem
 passar pelo olho dela.
 """
 import csv, html, pathlib, re, sys
+from collections.abc import Sequence
 from typing import Any
 
 import onde
@@ -550,6 +551,65 @@ VAO_DO_GLIFO = 10
 ROTULO_DA_FITA = "Selecionar:"
 
 
+# ---------------------------------------------------------------------------
+# O "Todos" SÓ EXISTE QUANDO HÁ ESCOLHA — decisão dela, 04/09/2026:
+#
+#     "só faz sentido aparecer o todos, no selecionar se tiver mais de um
+#      controle conectado. faz isso também"
+#
+# Com UM controle na mesa, `Todos` e o chip dele escolhem EXATAMENTE o mesmo
+# conjunto: o botão não oferece escolha nenhuma, e ainda divide a atenção com o
+# único chip que oferece.
+#
+# POR QUE A REGRA VIRA FUNÇÃO, e não um `if` dentro de `fita()`: o chip `Todos`
+# é escrito em TRÊS lugares vivos — este `fita()`, o `a06_navegacao.chips_da_fita`
+# e o `a09_sistema._html_da_fita` — e LIDO por posição em mais dois
+# (`aba02.fita_clicavel`, que casa chip com rádio na ordem, e
+# `jogar_vivo._indice_na_fita`, para quem o `Todos` é o zero). Curar só o
+# primeiro deixaria a 06 e a 09 oferecendo o botão que a 01 já não oferece, e
+# faria o `fita_clicavel` parar com `1 chips para 2 rádios` no dia em que ela
+# desligasse o segundo controle. Cinco leitores, uma regra.
+# ---------------------------------------------------------------------------
+def cabe_o_todos(mesa: Sequence[Any] | None = None) -> bool:
+    """Se o chip `Todos` entra na fita: só com MAIS DE UM controle na mesa.
+
+    `None` cai nos `CONECTADOS` do desenho, que é o mesmo padrão de `fita()`.
+
+    O TIPO É `Sequence`, E NÃO `list[dict]`, porque a regra é sobre a CONTAGEM e
+    só sobre ela. Quem pergunta nem sempre tem itens de mesa à mão — o
+    `jogar_vivo._indice_na_fita` tem as CHAVES de remontagem, uma por controle —
+    e obrigá-lo a forjar dicionários vazios só para caber na anotação seria a
+    régua mentindo sobre o que precisa.
+    """
+    return len(CONECTADOS if mesa is None else mesa) > 1
+
+
+def escolha_da_fita(ativo: str,
+                    mesa: list[dict[str, Any]] | None = None) -> tuple[bool, str]:
+    """Se o `Todos` entra, e QUEM fica marcado. Devolve `(mostra, ativo)`.
+
+    A FITA NUNCA FICA SEM NINGUÉM ESCOLHIDO, e é a metade que custa. Some o
+    segundo controle com o `Todos` marcado e, sem esta função, a fita ficaria
+    com um chip só e nenhum aceso — uma tela dizendo *escolha* sobre a única
+    coisa que não se pode deixar de escolher. Com um controle na mesa ele **é**
+    a escolha, e o chip dele acende.
+
+    ELA NÃO GUARDA NADA, e é isso que faz a VOLTA funcionar. Quem chama continua
+    com o `ativo` que tinha (`"todos"`); esta função só decide o que DESENHAR
+    agora. Quando o segundo controle volta, o mesmo `"todos"` entra aqui de novo
+    e o `Todos` reacende — sem que ninguém tenha de lembrar o que era antes.
+    Gravar a queda no lugar do `ativo` seria a marca de mão única que já custou
+    caro nesta casa (QUEBRA-CARTAO-QUE-NAO-REABRE-01): o `Todos` cairia para
+    `p1` na desconexão e nunca mais voltaria.
+    """
+    lista = CONECTADOS if mesa is None else mesa
+    if cabe_o_todos(lista):
+        return True, ativo
+    if lista:
+        return False, str(lista[0]["pref"])
+    return False, ativo
+
+
 def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
          mesa: list[dict[str, Any]] | None = None) -> str:
     """Os chips da fita, um por controle da mesa, gerados.
@@ -612,8 +672,16 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     # fora. Um controle desconectado não se escolhe: pôr o chip dele aqui seria
     # oferecer um destino que não existe, e é o oposto do que ela pediu na lista
     # ("ele só fica ativo se surgir controle naquela área").
-    chips = [f'<span class="chip{" on" if ativo == "todos" else ""}">Todos</span>']
-    for c in (CONECTADOS if mesa is None else mesa):
+    lista = CONECTADOS if mesa is None else mesa
+    # O `Todos` E QUEM ACENDE SAEM DA MESMA FUNÇÃO — ver `escolha_da_fita`. Com
+    # um controle só na mesa o chip dele passa a ser o escolhido, porque ali não
+    # há segundo conjunto a escolher; o `ativo` de quem chamou fica intacto, e é
+    # por isso que o `Todos` reacende quando o segundo controle volta.
+    mostra_todos, ativo = escolha_da_fita(ativo, lista)
+    chips: list[str] = []
+    if mostra_todos:
+        chips.append(f'<span class="chip{" on" if ativo == "todos" else ""}">Todos</span>')
+    for c in lista:
         on = " on" if ativo == c["pref"] else ""
         # A VERSÃO DESTA FITA É DA FRENTE DO RÁDIO, e ela venceu a minha na
         # integração de 03/09/2026 por três coisas que a minha não tinha: o

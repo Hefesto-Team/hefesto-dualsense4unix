@@ -256,17 +256,25 @@ def test_o_chip_nao_diz_o_transporte_duas_vezes() -> None:
 
 
 def test_a_mesa_vazia_nao_inventa_chip() -> None:
-    """Zero controles, zero chips — sobra o "Todos".
+    """Zero controles, zero chips — e nem o "Todos" sobra.
 
     Com a mesa vazia o topo dizia `0 controles` e a MESMA tela mostrava
     `P1 • Cosmic Red • USB`. Fotografado em 02/09/2026.
+
+    A ÚLTIMA LINHA VIROU DO AVESSO EM 04/09/2026, e não foi afrouxamento: ela
+    exigia `"Todos" in html`, e a decisão dela desse dia — *"só faz sentido
+    aparecer o todos, no selecionar se tiver mais de um controle conectado"* —
+    tirou o chip de onde não há escolha. Zero controles não é *mais de um*, e um
+    `Todos` sobre mesa vazia ofereceria escolher entre nada. A garantia que este
+    teste dá continua a mesma, e agora vale para os três chips: **a fita não
+    inventa chip nenhum**.
 
     MORDIDA: faça o laço cair em `CONECTADOS` quando a mesa viva for vazia
     (o `mesa or CONECTADOS` que parece inofensivo) e este teste reprova.
     """
     html = monta.fita(ativo="todos", mesa=[])
     assert "Cosmic Red" not in html and "P1" not in html, html
-    assert "Todos" in html
+    assert "Todos" not in html, html
 
 
 # ---------------------------------------------------------------------------
