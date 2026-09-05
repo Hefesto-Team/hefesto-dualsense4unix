@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho para
 # sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
 
-ensaio:  2026-09-05 06:43
+ensaio:  2026-09-05 18:06
 abas:    16
 modo:    padrão
 fixture: nenhum — os dublês nascem fixos no próprio script (padrão de dois controles)
@@ -19,7 +19,7 @@ b7016b2cc75aab92ba658e195bd815ebd73ef375b21324bb33c733af70c57b02  perfis-jogo-da
 cdded7497f0a96227ec9cbb9f3b9da1629bea017f3c2f968cf6d2bac9684a48f  readme_cabecalho_alvo_inativo.png
 e8175c3ab51e2b2fbe4ffcb80014381e297f3895871581528b9c6eeb2b5fb1e1  readme_configuracoes.png
 c348cf6e98e7849166e76092d4f20d3082afa359f676ca25c72f811adb82ff99  readme_configuracoes_inteira.png
-6d264cdcc37fea514a7a84d35461411a441902d82cca9cd8d337dfe2409d217c  readme_emulacao.png
+df92bfd34e43839746362ef143e28686c913127e7cb620adada6aa6967607a94  readme_emulacao.png
 b012924afb3abbf093c62d3a2d3e97ebc13ba1906aec92cd5338daab01c7ece9  readme_gatilhos.png
 f58f792a2cf6fa63c95ba5800241f48ad7ea3b761fae3e2f4e6de58abc7dd252  readme_inicio.png
 133486cfab7b99613c8c67b4e7076511123fb370b2dd8ef61a3bd2113956a16b  readme_lightbar.png

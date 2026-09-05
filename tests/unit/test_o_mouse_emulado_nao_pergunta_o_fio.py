@@ -37,11 +37,30 @@ os defender.
 
 O QUE ELE NÃO PROVA, dito na cara
 ----------------------------------
-Nada aqui põe o dedo no aparelho. O lado RÁDIO das duas linhas continua
+Nada aqui põe o dedo no aparelho. Esta régua lê CÓDIGO e lê o MAPA; quem põe o
+dedo no controle é ela, na bancada.
+
+O LADO DO RÁDIO FOI MEDIDO — 05/09/2026
+---------------------------------------
+Até 05/09 este bloco dizia: *"o lado RÁDIO das duas linhas continua
 `desconhecido` no mapa, e por um motivo medido: às 16h de 03/09/2026 havia UM só
 DualSense na mesa e ele estava no CABO (`/sys/bus/hid/devices` listava apenas
-`0003:054C:0CE6`, e `0003` é `BUS_USB`). Sem nó de rádio não há o que ler, e
-escrever `sim` por analogia é o que este mapa existe para impedir.
+`0003:054C:0CE6`, e `0003` é `BUS_USB`). Sem nó de rádio não há o que ler."*
+
+**A razão caducou, e ela mesma a derrubou**, com estas palavras:
+
+    "hj as máscaras funcionam super legal em tudo o lance do R2 analógico e
+     cursor tão medidos já viu"
+
+Medido com ela na bancada, nos DOIS transportes. E o código já dizia o mesmo
+pela outra ponta: `core/mouse_emulation.py` recebe o eixo já normalizado pelo
+daemon e escreve no uinput — não há uma linha que pergunte o barramento, que é
+justamente o que o teste `test_o_caminho_do_mouse_nao_le_transporte` prova aqui.
+
+Então as células passaram de `desconhecido`/`incerto` para `sim`/`medido`, e
+esta régua acompanhou. **Ela não foi afrouxada — foi invertida**: continua
+reprovando qualquer mudança silenciosa das seis células, só que agora o que ela
+protege é a medição, não a ignorância que a antecedeu.
 """
 
 from __future__ import annotations
@@ -324,17 +343,19 @@ def test_o_gatilho_e_o_analogico_nao_passam_pelo_touchpad() -> None:
 #: `id` -> (coluna, valor) que esta frente escreveu em 03/09/2026. Apagar
 #: qualquer uma reabre uma pergunta que já foi respondida.
 CELULAS_ESPERADAS: dict[str, dict[str, str]] = {
+    # As seis células abaixo mudaram em 05/09/2026, medidas por ela nos dois
+    # transportes — ver o bloco O LADO DO RÁDIO FOI MEDIDO, no topo.
     "entrada.emulacao_mouse.gatilhos@dualsense": {
         "cabo_aciona": "sim",
-        "cabo_de_onde_sei": "inferido-do-codigo",
-        "radio_aciona": "desconhecido",
-        "radio_de_onde_sei": "incerto",
+        "cabo_de_onde_sei": "medido",
+        "radio_aciona": "sim",
+        "radio_de_onde_sei": "medido",
     },
     "entrada.emulacao_mouse.analogico@dualsense": {
         "cabo_aciona": "sim",
-        "cabo_de_onde_sei": "inferido-do-codigo",
-        "radio_aciona": "desconhecido",
-        "radio_de_onde_sei": "incerto",
+        "cabo_de_onde_sei": "medido",
+        "radio_aciona": "sim",
+        "radio_de_onde_sei": "medido",
     },
     "combinacao.dois_no_radio.crc@dualsense": {
         "cabo_aciona": "não",
