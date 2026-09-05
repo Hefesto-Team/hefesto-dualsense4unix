@@ -46,6 +46,20 @@ from typing import Any
 #: como a inversão entra: aqui é um só.
 LADO_PARA_MOTOR: dict[str, str] = {"e": "strong", "d": "weak"}
 
+#: O MOTOR → O CAMPO DA BARRA DELE, no esquema e no IPC (VIBRACAO-POR-MOTOR-01).
+#:
+#: ``strong`` é o motor **forte** (o pesado, o da ESQUERDA) e ``weak`` é o
+#: **fraco** (o pequeno, o da direita) — e a inversão é a armadilha deste
+#: assunto, porque ``weak`` fica à direita. O esquema já diz isso por escrito
+#: (``ControllerRumbleOverride.motor_forte_pct``: *"a barra do motor FORTE
+#: (strong)"*), e ``rumble.motores.set`` recebe ``forte_pct``/``fraco_pct``.
+#:
+#: **ELE EXISTE PARA NÃO SER DIGITADO NA ABA.** Composto com
+#: :data:`LADO_PARA_MOTOR`, o lado da tela (``e``/``d``) chega ao nome do campo
+#: sem que a interface precise saber que o motor da direita é o "fraco" — e sem
+#: que a tradução exista em dois arquivos, que é como ela se inverte calada.
+MOTOR_PARA_BARRA: dict[str, str] = {"strong": "forte_pct", "weak": "fraco_pct"}
+
 #: O degrau que NÃO tem multiplicador MEDIDO, e por quê.
 #:
 #: Ele escala pela BATERIA em ``core.rumble._effective_mult`` (>50% → 1,0 ·
@@ -465,6 +479,111 @@ def textos_do_estado(
     if onde:
         linhas.append((INFO, onde))
     return linhas
+
+
+#: OS TRÊS ESTADOS DA VIBRAÇÃO, com as palavras DELA — D-14, 04/09/2026.
+#:
+#: *"O jogo controla"* / *"travada em silêncio"* / *"travada em fraca=X,
+#: forte=Y"*. São as três que ela nomeou, e por isso são as três chaves aqui:
+#: um estado a mais seria vocabulário novo de tela, que não é meu.
+#:
+#: **ELES SÃO FATO, NUNCA INSTRUÇÃO**, e é o que separa esta função da linha da
+#: janela estável (``rumble_actions._pintar_a_linha_do_teto``): lá a frase acaba
+#: em *"clique 'Deixar o jogo controlar a vibração'"*, um botão que a aba nova
+#: NÃO TEM. Quem manda clicar é a tela, que sabe quais botões desenhou; quem
+#: sabe o que está acontecendo é este módulo. Somar os dois aqui faria a linha
+#: mandar a usuária a um botão inexistente — que é a decisão ``07`` [02] do PO,
+#: no mesmo dia, sobre a aba Lançadores.
+TRAVA_JOGO_CONTROLA = "o jogo controla a vibração"
+TRAVA_EM_SILENCIO = "travada em silêncio"
+
+
+def estado_da_trava(state: dict[str, Any]) -> tuple[str, str] | None:
+    """``(tom, fato)`` do estado da vibração, ou ``None`` quando não se sabe.
+
+    **A LINHA QUE A ABA NOVA NÃO TINHA, e é a queixa dela.** Com
+    ``rumble_passthrough=False`` e ``rumble_active=[160, 220]`` a janela estável
+    grita *"travada em fraca=160, forte=220"* e a aba nova ficava MUDA — que é
+    exatamente o estado de *"testei os motores e o jogo não vibra mais"*.
+    Decisão dela (D-14, 04/09/2026): **uma linha de estado por coluna**, com os
+    três estados que ela nomeou.
+
+    AS DUAS CHAVES SÃO AS DO DAEMON, e o par é o mesmo que a janela estável lê
+    (``ipc_handlers.py:3431-3435``): ``rumble_passthrough`` é ``rumble_active is
+    None`` — *"o jogo controla"* — e ``rumble_active`` é o par FIXADO, que faz
+    ``apply_game_rumble`` descartar o FF de todo jogo na primeira linha.
+
+    ``None`` QUANDO NÃO HÁ RESPOSTA — daemon fora do ar, ou um ``state`` sem as
+    duas chaves. A tela apaga a linha em vez de escrever um travessão: um ``—``
+    num estado de vibração afirmaria *"não sei se está travada"* onde a resposta
+    honesta é não dizer nada. É a mesma disciplina de :func:`textos_do_estado`.
+
+    **O TOM NÃO INVENTA COR:** ``DIZ`` para o estado normal e ``ALERTA`` para os
+    dois travados — os mesmos dois tons que a janela estável usa nesta linha
+    (``#50fa7b`` e ``#ffb86c``), com o nome viajando em vez do hexadecimal.
+
+    **A ORDEM DO PAR É ``fraca``, ``forte``**, e não é escolha: ``rumble_active``
+    é ``(weak, strong)`` do começo ao fim do produto, e a frase da janela estável
+    escreve ``fraca={active[0]}, forte={active[1]}``. Trocá-los aqui produziria
+    uma tela que diz o contrário da outra sobre o mesmo aparelho.
+    """
+    passthrough = state.get("rumble_passthrough")
+    ativo = state.get("rumble_active")
+    if passthrough is True:
+        return (DIZ, TRAVA_JOGO_CONTROLA)
+    if isinstance(ativo, (list, tuple)) and len(ativo) == 2:
+        fraca, forte = _inteiro(ativo[0]), _inteiro(ativo[1])
+        if fraca is None or forte is None:
+            return None
+        if (fraca, forte) == (0, 0):
+            return (ALERTA, TRAVA_EM_SILENCIO)
+        return (ALERTA, f"travada em fraca={fraca}, forte={forte}")
+    return None
+
+
+#: COMO SE SOLTA A TRAVA **NESTA** TELA, e é a metade que não pode vir da
+#: janela estável: lá a frase manda clicar em *"Deixar o jogo controlar a
+#: vibração"*, e a aba nova **não tem esse botão** — o par Testar/Parar dela faz
+#: os dois passos num só (``a05_vibracao.parar`` chama ``rumble_stop_checked`` e
+#: ``rumble_passthrough(True)``, e é o que :data:`DONOS_DOS_GESTOS` já registra).
+#:
+#: Uma frase que manda a um botão inexistente é a decisão ``07`` [02] do PO no
+#: mesmo dia — *"a frase para de nomear lugar"* —, e aqui o lugar existe: é o
+#: botão da própria coluna.
+SOLTAR_A_TRAVA = "clique Parar nesta coluna para devolver ao jogo"
+
+
+def html_da_trava(estado: tuple[str, str] | None, *, saida: str = "") -> str:
+    """A linha de estado de UMA coluna, em HTML. ``None`` → string vazia.
+
+    **UM SÓ EMISSOR PARA OS DOIS LADOS**, exatamente como :func:`html_do_estado`
+    — o desenho da bancada (``interface/aba05.py``) e a tela viva
+    (``pacotes/a05_vibracao.py``) montam esta linha do MESMO lugar. Dois
+    emissores divergem no primeiro ajuste de classe, e aí o produto deixa de
+    parecer o desenho.
+
+    A STRING VAZIA É O PONTO: a peça que a recebe é a ``monta.ressalva``, com
+    ``.ressalva:empty{display:none}`` — *"não sei se está travada"* some da tela
+    em vez de virar travessão.
+
+    ``saida`` é a INSTRUÇÃO da tela que chama, e só entra no estado travado:
+    dizer como soltar quando nada está travado seria oferecer conserto para o
+    que não quebrou. Ver :data:`SOLTAR_A_TRAVA`.
+
+    O escape segue a mesma disciplina medida de :func:`html_do_estado`: ``quote``
+    ligado no ATRIBUTO (o tom, que vira ``class``) e desligado no CONTEÚDO — um
+    ``&quot;`` no ``innerHTML`` faz o guarda do pintor repintar a cada tique,
+    para sempre.
+    """
+    if estado is None:
+        return ""
+    import html as _html
+
+    tom, fato = estado
+    frase = f"{fato} — {saida}." if (saida and tom == ALERTA) else fato
+    return (f'<span class="est {_html.escape(tom)}">'
+            f'<span class="sinal">{"▲" if tom == ALERTA else "●"}</span>'
+            f"<span>{_html.escape(frase, quote=False)}</span></span>")
 
 
 def html_do_estado(linhas: list[tuple[str, str]]) -> str:

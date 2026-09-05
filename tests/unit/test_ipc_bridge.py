@@ -436,21 +436,12 @@ _SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
         "Irmão exato do `led_set`, pela mesma edição (BG-01) e com a mesma "
         "lápide. Cai no mesmo commit que ele, quando cair."
     ),
-    #: A DE 04/09/2026 É DÍVIDA COM DATA E DONO, no molde exato das duas acima:
-    #: a ONDA1-D2 entregou o MOTOR da barra por motor, e quem atravessa é a
-    #: frente da aba 05 — `interface/pacotes/a05_vibracao.py` e
-    #: `interface/aba05.py`, que estão no `nao_toca:` desta sprint. Fiar a rota
-    #: daqui seria a frente do motor editando arquivo de outra frente.
-    #: QUANDO A ABA 05 FECHAR, ESTA LINHA SAI — e a régua volta a cobrá-la
-    #: sozinha, que é o desenho dela.
-    "rumble_motores_set": (
-        "VIBRACAO-POR-MOTOR-01 (04/09/2026): a barra de cada motor, que "
-        "MULTIPLICA o degrau da coluna (decisão dela). Atravessa quando o gesto "
-        "`barra-motor` de `interface/pacotes/a05_vibracao.py` nascer — hoje as "
-        "duas barras do card são `<span class=\"trilho\">` sem arrasto, e o "
-        "`SEM_DONO[\"barra:motor\"]` registra que faltavam DUAS metades: a "
-        "palavra dela (que veio) e o desenho (que é da ONDA 2)."
-    ),
+    # A LÁPIDE DE `rumble_motores_set` SAIU EM 04/09/2026, no mesmo dia em que
+    # nasceu — **e é o desenho funcionando**. Ela dizia, com todas as letras,
+    # "QUANDO A ABA 05 FECHAR, ESTA LINHA SAI": a ONDA1-D2 entregou o motor sem
+    # chamador porque a metade de tela era de outra frente, e a ONDA2-05 fiou a
+    # rota (`interface/pacotes/ponte.rumble_motores_set` e o gesto `motor` de
+    # `a05_vibracao`). A régua volta a cobrar esta função sozinha.
 }
 
 

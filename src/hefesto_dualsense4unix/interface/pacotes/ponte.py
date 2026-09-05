@@ -75,6 +75,13 @@ rumble_stop_checked = _b.rumble_stop_checked
 rumble_passthrough = _b.rumble_passthrough
 rumble_policy_set_checked = _b.rumble_policy_set_checked
 rumble_policy_custom = _b.rumble_policy_custom
+#: A BARRA DE CADA MOTOR, no perfil e por peça (VIBRACAO-POR-MOTOR-01). Ela
+#: nasceu na ONDA1-D2 em 04/09/2026 **sem chamador**, e a razão estava escrita:
+#: *"quem atravessa é a aba 05, que está no `nao_toca:` desta sprint"*. Esta
+#: linha é a travessia, e ela fecha as duas dívidas que a D2 declarou nos
+#: portões (`test_ipc_bridge._SEM_TRAVESSIA_DECLARADA` e
+#: `portao_a_casa_sabe_e_o_produto_nao_faz._SEM_CAMINHO_HOJE`).
+rumble_motores_set = _b.rumble_motores_set
 
 mic_set = _b.mic_set
 mic_set_detalhado = _b.mic_set_detalhado

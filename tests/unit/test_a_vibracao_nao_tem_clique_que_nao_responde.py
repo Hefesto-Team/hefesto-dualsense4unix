@@ -77,10 +77,20 @@ from hefesto_dualsense4unix.interface import regua_do_mockup as _regua
 
 PAGINA = "05-vibracao.html"
 
-#: OS QUATRO NOMES QUE ERAM CLIQUE MORTO, e continuam sendo ENDEREÇO. A lista é
-#: o que impede a cura de virar uma remoção: se um deles sumir do desenho, a
-#: régua do mockup perde um campo e ninguém percebe.
-ENDERECOS_QUE_SO_PINTAM = ("desenho", "identidade", "motor", "lado")
+#: OS NOMES QUE ERAM CLIQUE MORTO, e continuam sendo ENDEREÇO. A lista é o que
+#: impede a cura de virar uma remoção: se um deles sumir do desenho, a régua do
+#: mockup perde um campo e ninguém percebe.
+#:
+#: **ERAM QUATRO E HOJE SÃO TRÊS — 04/09/2026, e `motor` saiu pela porta certa:
+#: ele GANHOU GESTO.** A decisão dela sobre a barra por motor (*"os slcers do
+#: botão esquerdo e direito se multiplicam"*) fez a linha virar AJUSTE, e o
+#: `data-papel="motor"` voltou ao desenho — desta vez no `<input type=range>`,
+#: com `a05_vibracao.motor` para atender. Não é a régua perdendo um campo: os
+#: dois endereços que a linha usa agora (`barra-e`/`barra-d`, mais o
+#: `motor-<lado>-pedido` do `title`) são contados no lugar dele, e
+#: `test_nenhum_papel_desta_aba_fica_sem_gesto` continua exigindo que todo
+#: `data-papel` tenha dono.
+ENDERECOS_QUE_SO_PINTAM = ("desenho", "identidade", "lado")
 
 
 @pytest.fixture(scope="module")

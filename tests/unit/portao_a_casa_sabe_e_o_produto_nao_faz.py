@@ -1025,23 +1025,14 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # lápides de volta ao pó no mesmo dia. **É o desenho funcionando**: uma
     # dívida que se anuncia com endereço é uma dívida que alguém paga.
 
-    # ONDA1-D2 / A VIBRAÇÃO (04/09/2026) — A BARRA POR MOTOR ESPERA A ABA 05.
-    # Mesma forma da de cima e pela mesma razão: a frente da vibração é dona do
-    # daemon e da ponte; a metade de TELA é da aba 05, que está no `nao_toca:`
-    # desta sprint. Fiar daqui seria a R1 ao contrário.
-    "app/ipc_bridge.py::rumble_motores_set": (
-        "VIBRACAO-POR-MOTOR-01 (04/09/2026): a barra de cada motor, que MULTIPLICA o degrau "
-        "da coluna — `efetivo(motor) = degrau x barra(motor)`, decisão dela, fora das três "
-        "opções que eu ofereci. O caminho se perde nas DUAS barras do card da aba 05, que "
-        "hoje são `<span class=\"trilho\">` sem arrasto: `interface/aba05._coluna` ainda "
-        "não chama `_barra(..., arrasta=True, papel=\"motor\")`, e por isso não há gesto "
-        "`barra-motor` em `interface/pacotes/a05_vibracao.py` para chamar esta ponte. O "
-        "`SEM_DONO[\"barra:motor\"]` de lá registra que faltavam DUAS metades — a palavra "
-        "dela, que veio em 04/09, e o desenho, que é da ONDA 2. FECHA quando aquele gesto "
-        "nascer e chamar `p.rumble_motores_set(forte_pct=..., fraco_pct=..., uniq=...)`, "
-        "pintando a volta com `state_full[\"rumble_motores\"]`. A metade do daemon está "
-        "medida em `docs/process/agentes/2026-09-04/ONDA1-D2-A-VIBRACAO-01-D2.md`."
-    ),
+    # A LÁPIDE DE `rumble_motores_set` SAIU EM 04/09/2026, no mesmo dia em que
+    # nasceu, e ela dizia exatamente quando: "FECHA quando aquele gesto nascer e
+    # chamar `p.rumble_motores_set(forte_pct=..., fraco_pct=..., uniq=...)`,
+    # pintando a volta com `state_full["rumble_motores"]`". A ONDA2-05 fez as
+    # duas coisas — o gesto `motor` de `a05_vibracao` e a leitura de volta em
+    # `_barras_dos_motores` —, e o portão volta a cobrar esta função sozinho.
+    # **Uma dívida que se anuncia com endereço é uma dívida que alguém paga.**
+
     # LUZ-DO-MIC-01, 03/09/2026 — NOVE PROMESSAS QUE TÊM CAMINHO E O PORTÃO
     # NÃO VÊ. As duas peças de leitura do microfone são importadas pelo laço
     # da luz com `importlib`, e o portão varre chamadas estáticas. A dívida
