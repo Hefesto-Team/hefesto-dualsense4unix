@@ -99,7 +99,7 @@ def _lock_path(path: Path) -> Path:
 SEED_MARKER_NAME = ".seeded_presets"
 
 # --- PERFIL-PADRAO-PERSONALIZADO-01 (05/09/2026) ---------------------------
-# Decisão dela, literal: *"Meu_perfil como perfil default nao deveria existir.
+# Decisão dela, literal: *"Meu_perfil como perfil default nao deveria existir.  noqa-acento
 # Deixa ou Meu Perfil ou Personalizado. acho esse melhor."*
 #
 # O nome `meu_perfil` era um SLUG aparecendo cru na lista da aba Perfis — ela

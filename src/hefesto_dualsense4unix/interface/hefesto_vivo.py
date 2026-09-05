@@ -3255,8 +3255,8 @@ def main() -> None:
 
     piloto = Piloto(args)
 
-    def _quando_a_pagina_estiver_de_pe(acao: Callable[[], Any]) -> None:
-        """Agenda ``acao`` para o instante em que a PÁGINA confirmar — não o relógio.
+    def _quando_a_pagina_estiver_de_pe(tarefa: Callable[[], Any]) -> None:
+        """Agenda ``tarefa`` para o instante em que a PÁGINA confirmar — não o relógio.
 
         MEDIDO EM 04/09/2026: com um `timeout_add` fixo, quem navegava antes de
         a carga inicial confirmar recebia a confirmação com o título VAZIO —
@@ -3281,7 +3281,7 @@ def main() -> None:
                 return False  # a janela já morreu; o rc de `main` acusa
             if not piloto.tela.na_aba:
                 return True   # ainda não confirmou: volta no próximo tique
-            acao()
+            tarefa()
             return False
 
         GLib.timeout_add(120, _tique)

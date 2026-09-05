@@ -107,6 +107,7 @@ que escreve tem de avisar o daemon depois (`profile.switch` para reaplicar,
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from typing import Any
 
 # O IMPORT É DE MÓDULO, e não de dentro da função — 01/09/2026. O
@@ -1219,7 +1220,9 @@ def _rotulo_do_remover(alvo: str) -> str:
 LUGARES_DA_TABELA = len(TODOS_OS_LUGARES)
 
 
-def _com_os_lugares_vazios(da_mesa: list, para_o_vazio) -> list:
+def _com_os_lugares_vazios(
+    da_mesa: list[Any], para_o_vazio: Callable[[int], Any]
+) -> list[Any]:
     """A lista da mesa completada até os quatro lugares do desenho.
 
     NASCEU EM 05/09/2026, da palavra dela — *"os svgs não deveriam aparecer prós

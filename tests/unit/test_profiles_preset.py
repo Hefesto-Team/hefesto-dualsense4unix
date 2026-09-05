@@ -221,7 +221,7 @@ class TestPresetPersonalizado:
     def test_nome_nao_e_slug(self) -> None:
         """PERFIL-PADRAO-PERSONALIZADO-01: o asset traz NOME DE GENTE.
 
-        Decisão dela, 05/09/2026: *"Meu_perfil como perfil default nao deveria
+        Decisão dela, 05/09/2026: *"Meu_perfil como perfil default nao deveria  noqa-acento
         existir. Deixa ou Meu Perfil ou Personalizado. acho esse melhor."* O
         `Profile.name` é o que a aba Perfis MOSTRA — o asset gravava o slug
         `meu_perfil` ali, e era isso que ela lia na lista.
