@@ -73,6 +73,23 @@ ESCREVEM = {
     # ensinar um gesto a escrever por uma porta NOVA acrescenta o nome aqui no
     # mesmo commit — inclusive quando a porta é de outro subsistema.
     "renomear_o_dongle",       # grava o alias do adaptador no BlueZ
+    # E AS DUAS DA VIBRAÇÃO — a TERCEIRA vez no mesmo dia que esta lista chega
+    # atrasada, e a frente que as trouxe nomeou a repetição: *"é a mesma
+    # cegueira do `autoswitch_lock_set`"*. Três vezes é padrão, não azar: ver
+    # a sprint `ONDA3-GESTO-DECLARA-01`, que tira a lista da lembrança de quem
+    # escreve o gesto e a põe no próprio decorador.
+    "rumble_motores_set",      # grava a barra de cada motor no perfil dela
+    "rumble_policy_set_checked",  # muda o degrau de vibração de TODOS, ao vivo
+    # E A QUARTA VEZ NO MESMO DIA, agora com uma porta que não é disco nem
+    # aparelho: a ÁREA DE TRANSFERÊNCIA dela. O botão «Copiar a linha» da aba
+    # 07 não grava byte nenhum em lugar nenhum — e mesmo assim a régua de
+    # clique, ao acioná-lo, JOGA FORA o que ela tinha copiado.
+    #
+    # Isto alarga a definição desta lista, e de propósito: `ESCREVEM` não é
+    # "grava no disco", é **"muda algo dela que ela não mandou mudar"**. A
+    # quarta repetição é o que autoriza a generalização; as três primeiras
+    # ainda podiam passar por azar.
+    "set_text",                # `Gtk.Clipboard.set_text` — a área dela
 }
 
 #: E O QUE CHEGA LÁ POR IPC, pelo nome do método. `p.chamar("machine.declare")`

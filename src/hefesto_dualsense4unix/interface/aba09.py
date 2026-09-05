@@ -4,7 +4,14 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from monta import MESA, CONECTADOS, glifo, monta, CSS_GLIFO  # noqa: E402
+from monta import (  # noqa: E402
+    MESA,
+    CONECTADOS,
+    botao_cinza,
+    glifo,
+    monta,
+    CSS_GLIFO,
+)
 
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
 # arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
@@ -196,6 +203,32 @@ def _gesto(nome):
         raise SystemExit(f"ERRO: '{nome}' não está em aba_sistema.GESTOS. "
                          "Um gesto sem dono declarado é um botão que mente.")
     return nome
+
+
+#: O SUFIXO DA RAZÃO DE UM BOTÃO CINZA — decisão [02] do PO, 04/09/2026.
+#:
+#: O endereço da razão DERIVA DO GESTO, e não de um nome novo: quem fica cinza
+#: é o botão, e o botão É o gesto. `_gesto()` já cobra que ele tenha dono
+#: declarado no produto, então nenhuma razão pode nascer apontando para um
+#: clique que ninguém atende.
+#:
+#: POR QUE NÃO UMA ENTRADA EM `aba_sistema.ENDERECOS`: aquele dicionário é o
+#: contrato dos VALORES que a camada do produto produz — cada linha dele nomeia
+#: a fonte do dado (`state_full["paused"]`, `storm_report:755`). A razão do
+#: cinza não é um valor novo do produto: é a MESMA `aba_sistema.travas()` que a
+#: aba já consulta desde 03/09, endereçada. É a mesma derivação que o `-g` do
+#: glifo faz desde 03/09, e ela vale pelo mesmo motivo — a base tem dono, e o
+#: sufixo diz qual metade daquele dono está sendo escrita.
+#:
+#: `gui/aba_sistema.py` está FORA da posse desta frente, e por isso a derivação
+#: fica aqui e é RELATADA. Se um dia `ENDERECOS` ganhar as três linhas, este
+#: helper passa a validá-las contra ele sem mudar um `data-campo`.
+SUFIXO_DA_RAZAO = "-razao"
+
+
+def _razao(nome):
+    """O `data-campo` onde a razão do cinza daquele gesto é escrita."""
+    return f"{_gesto(nome)}{SUFIXO_DA_RAZAO}"
 MULT = _constantes(R / "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py",
                    {"RUMBLE_POLICY_MULT"})["RUMBLE_POLICY_MULT"]
 #: A ÚNICA chave de disco que impõe teto. `balanceado`, `max`, `auto` e o
@@ -354,6 +387,27 @@ CSS = """
      antes eram três larguras (138,2 / 141,3 / 80,7) numa fileira que deixava
      157,8px de sobra. */
   .col-acao .btn{width:100%;justify-content:center;padding:0 8px}
+
+  /* A CAIXA DO BOTÃO QUE PODE FICAR CINZA (D-03, decisão [02] do PO).
+     Ela é de ALTURA, não de enfeite: `.col-acao` e `.lista` são colunas de
+     flex, e um `?` solto viraria UMA FILEIRA a mais no instante em que o
+     piloto o mostrasse — as duas colunas irmãs desta faixa deixariam de acabar
+     no mesmo `y`, que é o vão de 58px que ela apontou em 31/08. Aqui ele fica
+     na LINHA do botão: com razão o botão encolhe ~13px de largura; sem razão a
+     folha comum esconde o `?` e o botão ocupa a linha inteira. A altura é a
+     mesma nos dois estados, e é isso que o portão dos dois blocos exige. */
+  .acao{display:flex;align-items:center}
+  /* `.col-acao`/`.lista` NO SELETOR, e não `.acao > .btn` solto: as duas
+     colunas declaram `width:100%` no `.btn` DEPOIS deste bloco, e a mesma
+     especificidade faria a última regra vencer. O `flex:1` é o que deixa o
+     botão encolher os 13px do `?` em vez de estourar a coluna. */
+  .col-acao .acao > .btn,.lista .acao > .btn{flex:1;min-width:0;width:auto}
+  /* A DICA ABRE PARA A ESQUERDA NA COLUNA DA DIREITA. Medido: a coluna de
+     ações da faixa do serviço acaba em x=932 e a `.dica` tem 330px a partir de
+     `left:22px` — 932+22+330 = 1284 numa janela de 1180. É a mesma cura que o
+     `saude()` já carrega em linha (`left:auto;right:22px`), aqui em regra
+     porque a peça das dez não escreve `style`. */
+  .col-acao .ajuda.porque .dica{left:auto;right:22px}
 
   /* a linha de estado: glifo E cor mudam juntos — quem não distingue verde de
      laranja continua lendo o estado pelo símbolo. Antes "ok" e "aviso" usavam o MESMO ●. */
@@ -650,16 +704,67 @@ def saude(selo, g, txt, dica, glifos=()):
             </div>'''
 
 
-def item(rotulo, diz, cls="btn", gesto=""):
+def item(rotulo, diz, cls="btn", gesto="", em_voo=""):
     """O que antes era texto ao lado do botão vira TOOLTIP dele. Pedido dela em
     27/08: 'todos os valores ao lado dos botões são valores que aparecem se
     deixarmos o mouse sobre o botão'.
 
     O `gesto` é o NOME DO QUE O BOTÃO FAZ, não do que ele parece: `desligar`, e
     não `btn-vermelho`. É por ele que o clique chega ao Python.
+
+    `em_voo` É O RÓTULO DA ESPERA — decisão [03] do PO, 04/09/2026: *"o botão
+    diz que está trabalhando"*. Quem publica o atributo é quem responde por
+    caber: a ONDA0-P mediu que o texto TRANSBORDA num botão de ícone de 20px, e
+    por isso ele só entra onde há coluna para ele. Sem o atributo o botão ganha
+    só a classe `hef-em-voo` da folha — sinal sem palavra inventada.
     """
     g = f' data-gesto="{gesto}"' if gesto else ""
-    return f'''            <button class="{cls}" title="{diz}"{g}>{rotulo}</button>'''
+    v = f' data-hef-em-voo="{em_voo}"' if em_voo else ""
+    return f'''            <button class="{cls}" title="{diz}"{g}{v}>{rotulo}</button>'''
+
+
+# ---------------------------------------------------------------------------
+# O BOTÃO QUE JÁ NASCE CINZA QUANDO NÃO HÁ O QUE FAZER — decisão [02] do PO,
+# 04/09/2026: **"Apagado e ainda assim responde."**
+#
+# A PEÇA É A DAS DEZ (`monta.botao_cinza`, da ONDA0-F) e nada dela se
+# reescreve aqui: o botão leva `data-hef-alvo="classe"` acendendo `apagado`, o
+# `data-hef-atributo="aria-disabled"` derivado da MESMA classe, e o `?` com a
+# `.dica` no MESMO `data-campo`. **Um campo só alimenta os dois** — com dois
+# seria possível pintar um botão cinza sem razão, ou uma razão sem botão cinza.
+#
+# O QUE ESTA ABA ACRESCENTA É UMA CAIXA, E ELA É DE ALTURA. `.col-acao` e
+# `.lista` são colunas de flex: solto, o `?` vira UMA FILEIRA a mais assim que
+# o piloto o mostrar, e as duas colunas irmãs desta faixa deixam de acabar no
+# mesmo `y` — que é exatamente o vão de 58px que ela apontou em 31/08. Dentro
+# da `.acao` ele fica na LINHA do botão: a largura do botão encolhe 13px quando
+# há razão, e a altura não muda em nenhum dos dois estados.
+#
+# E UMA FRASE DA TELA PAROU DE PROMETER SEM MUDAR UMA LETRA: o `title` do
+# "Retomar" diz *"Só acende com a pausa ativa"* desde que a aba nasceu, e era
+# uma PROMESSA — o botão acendia sempre, e o clique sem pausa virava um
+# `daemon.resume` num daemon que não estava pausado. Com a peça, a mesma frase
+# passa a DESCREVER o que se vê. Nenhum texto novo de tela nesta metade.
+#
+# NENHUM PIXEL MUDA NA CENA QUE ELA APROVOU, e isso é medida, não promessa: na
+# cena do desenho os três botões TÊM trabalho a fazer (o serviço está de pé e a
+# pausa está ativa), logo nenhum nasce `apagado`, e a regra
+# `.btn:not(.apagado) + .ajuda.porque{display:none}` da folha comum esconde os
+# três `?`. O que muda de verdade só aparece na tela viva.
+# ---------------------------------------------------------------------------
+def item_cinza(rotulo, diz, gesto, cls=""):
+    """Um botão da coluna de ações que sabe ficar cinza, com a razão no `?`.
+
+    A RAZÃO NÃO SE DIGITA AQUI, e é o ponto: o desenho nasce SEM ela
+    (`razao=""`), porque quem a conhece é `aba_sistema.travas()`, no produto, e
+    ela muda a cada tique. Um texto de razão cravado no gerador seria a frase
+    congelada que já mentiu na aba 08 — *"está no cabo"* com o controle no
+    rádio.
+    """
+    return ('            <div class="acao">'
+            + botao_cinza(rotulo, _razao(gesto), tom=cls,
+                          extra=f'data-gesto="{_gesto(gesto)}" title="{diz}"')
+            + "</div>")
 
 
 #: Os três botões do Perfil de Bateria. NENHUM nome e NENHUMA dica digitados:
@@ -865,6 +970,42 @@ D_AVANCADO = ('<span class="ajuda">?<span class="dica">'
               'relatar um problema.'
               '</span></span>')
 
+# ---------------------------------------------------------------------------
+# O BOTÃO QUE MENTIA O NOME — decisões [01] e [03] do PO, 04/09/2026.
+#
+# ELE FAZIA DOIS TRABALHOS COM UM NOME SÓ, e a dica NEGAVA o caro: dizia
+# *"Relê tudo o que esta aba mostra. Não muda nada."* — e a segunda frase era
+# falsa. O clique manda o IPC `daemon.reload`, que faz o serviço reaplicar a
+# configuração e rematerializar os arquivos de ambiente que a Steam usa para
+# lançar jogo (`daemon/ipc_handlers.py:4823-4832`).
+#
+# A METADE BARATA JÁ ACONTECE SOZINHA: a releitura da aba custa 4 ms e o
+# `LENTO_S = 2.0` do pacote a refaz a cada dois segundos, sem ninguém clicar.
+# Nomear o botão pela metade que só ele faz é a única forma que para de mentir
+# **sem gastar linha de tela** — 17 letras contra as 19 de "Reiniciar o
+# serviço", na mesma coluna de 184px.
+#
+# E ELE FICAVA NOVE SEGUNDOS E MEIO CALADO (medido no daemon dela em 01/09):
+# o gesto corre em thread para a janela não congelar, e até 04/09 NENHUMA das
+# dez abas tinha estado "em voo" — o clique sumia e o segundo clique parecia o
+# primeiro. O `data-hef-em-voo` é o rótulo da espera, e o piloto o põe no lugar
+# exato do clique e devolve o original nos três desfechos.
+#
+# A PALAVRA NÃO É INVENÇÃO DE FORMA: `Reaplicando…` é o gerúndio do rótulo, na
+# mesma gramática que a janela antiga já usa nos recibos dela
+# (*"Reiniciando o Hefesto…"*, `daemon_actions.py:2293`).
+ROTULO_REAPLICAR = "Reaplicar ajustes"
+EM_VOO_REAPLICAR = "Reaplicando…"
+#: A DICA DIZ OS DOIS TRABALHOS, na ordem em que eles acontecem. **Nenhum
+#: número aqui**: os 9,5 s foram medidos no daemon DELA, e uma tela que crava
+#: um tempo de máquina alheia é a mesma espécie de afirmação que esta casa
+#: derruba desde 28/08 (a dica que dizia 60% sobre um teto de 30%). "Alguns
+#: segundos" é o que a medição sustenta em qualquer máquina.
+DICA_REAPLICAR = ("Manda o serviço reaplicar a configuração e reescrever os "
+                  "arquivos de ambiente que a Steam usa para lançar os jogos; "
+                  "no fim, relê o que esta aba mostra. Leva alguns segundos, e "
+                  "o botão avisa enquanto trabalha.")
+
 MIOLO = f'''
     <div class="quadro">
       <div class="quadro-topo">
@@ -896,9 +1037,9 @@ MIOLO = f'''
             </div>
             <div class="risco"></div>
             <div class="col-acao">
-{item("Retomar", "Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.", "btn verde", gesto=_gesto("retomar"))}
-{item("Reiniciar o serviço", "Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.", gesto=_gesto("reiniciar"))}
-{item("Atualizar", "Relê tudo o que esta aba mostra. Não muda nada.", gesto=_gesto("atualizar"))}
+{item_cinza("Retomar", "Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.", "retomar", cls="verde")}
+{item_cinza("Reiniciar o serviço", "Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.", "reiniciar")}
+{item(ROTULO_REAPLICAR, DICA_REAPLICAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_REAPLICAR)}
 {item("Parar o serviço", f"O Hefesto deixa de rodar e os {N} viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde.", "btn vermelho", gesto=_gesto("desligar"))}
             </div>
           </div>
@@ -990,7 +1131,7 @@ MIOLO = f'''
         <div class="avancado">
           <div class="lista">
 {item("Restaurar de fábrica", "Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos continuam onde estão.", "btn vermelho", gesto=_gesto("restaurar-de-fabrica"))}
-{item("Ver os plugins carregados", "Lista os plugins do daemon e relê. Hoje só o terminal alcança isso.", gesto=_gesto("ver-plugins"))}
+{item_cinza("Ver os plugins carregados", "Lista os plugins do daemon e relê. Hoje só o terminal alcança isso.", "ver-plugins")}
 {item("Ver detalhes", "Joga as últimas 80 linhas do registro técnico no painel ao lado.", gesto=_gesto("ver-detalhes"))}
           </div>
           <div class="risco"></div>
@@ -1240,7 +1381,18 @@ H_ACAO = _token(_TOPO, "--h-acao")                     # botão de ação
 
 _N_BAT = _conta(MIOLO, '<div class="bat">', "<!-- ---------- SAÚDE", 'class="est')
 _N_EST = _conta(MIOLO, '<div class="col-est">', '<div class="risco">', 'class="est')
-_N_BTN = _conta(MIOLO, '<div class="col-acao">', "</div>", "<button")
+# O FIM DO TRECHO É `<div class="risco">`, E NÃO `</div>` — 04/09/2026.
+#
+# Era `</div>` e funcionou enquanto os quatro botões eram irmãos diretos da
+# coluna. Com o botão cinza da decisão [02], três deles passaram a morar numa
+# `.acao` (o `?` tem de ficar na LINHA do botão, senão vira fileira e reabre o
+# vão de 58px) — e o primeiro `</div>` passou a ser o fecho do PRIMEIRO
+# invólucro. A régua contaria **um** botão onde há quatro, e a conta das duas
+# alturas daria 34px contra 154: reprovaria a cura em vez do defeito.
+#
+# `<div class="risco">` é o marco que a régua irmã (`_N_EST`) já usa, e ele é o
+# fecho do bloco inteiro — não de um invólucro que alguém acrescente amanhã.
+_N_BTN = _conta(MIOLO, '<div class="col-acao">', '<div class="risco">', "<button")
 
 #: A fileira de escolha mede `--h-escolha`; cada linha do bloco mede uma linha
 #: de estado. O irmão é o mais alto entre a coluna de estados e a de botões.
@@ -1296,8 +1448,12 @@ _ROTULOS = {
         r'data-id="hefesto-estado"[^>]*>.*?<span class="rot">([^<]*)</span>',
         MIOLO, re.S).group(1),
 }
-for _i, _b in enumerate(re.findall(
-        r">([^<>]*)</button>", _entre(MIOLO, '<div class="col-acao">', "</div>"))):
+#: O MESMO MARCO DO `_N_BTN`, e pela mesma razão: com o botão cinza os três
+#: primeiros moram numa `.acao`, e o primeiro `</div>` deixou de ser o fecho da
+#: coluna. Lendo até ali, esta régua olharia UM rótulo de quatro — e uma régua
+#: que lê um quarto do que promete é a que dá verde sobre o resto.
+_ACOES_DO_SERVICO = _entre(MIOLO, '<div class="col-acao">', '<div class="risco">')
+for _i, _b in enumerate(re.findall(r">([^<>]*)</button>", _ACOES_DO_SERVICO)):
     _ROTULOS[f"o botão {_i + 1}"] = _b
 
 if not _ROTULOS.get("o botão 1"):
@@ -1429,6 +1585,104 @@ if "var(--rot-campo)" in _R_ROT.group(0):
                      "toda linha `ok` também é verde — 'Trocar de perfil ao abrir o "
                      "jogo' e 'Ligado' voltam a sair da mesma cor. O verde é de "
                      "ESTADO (o glifo e o valor), não de nome.")
+
+# 7. OS TRÊS BOTÕES CINZAS TÊM A PEÇA INTEIRA — decisão [02], 04/09/2026.
+#
+#    A régua LÊ o HTML montado e casa as duas metades pelo `data-campo`: o
+#    botão (alvo `classe`, classe `apagado`, `aria-disabled` junto) e a `.dica`
+#    do `?` (alvo `html`). **Meia peça é pior que peça nenhuma** — botão que
+#    fica cinza sem dizer por quê, ou razão escrita num `?` que nunca aparece.
+#
+#    E O CAMPO DERIVA DO GESTO: sem isto, um `data-campo` digitado à mão
+#    endereçaria uma razão que o pacote nunca escreve, e o botão nasceria
+#    congelado no desenho — que é o defeito que a peça existe para matar.
+_CINZAS = ("retomar", "reiniciar", "ver-plugins")
+for _g in _CINZAS:
+    _campo = f"{_g}{SUFIXO_DA_RAZAO}"
+    _btn = re.search(
+        r'<button class="[^"]*"[^>]*data-campo="' + re.escape(_campo) + r'"[^>]*>',
+        MIOLO)
+    if not _btn:
+        raise SystemExit(
+            f"ERRO: o botão de {_g!r} perdeu o endereço `{_campo}`. Sem ele o "
+            "piloto não tem onde acender o cinza nem onde escrever a razão, e "
+            "o botão volta a ter cara de clicável quando não há o que fazer — "
+            'que foi o achado de 31/08 ("o travado tinha cara de clicável").')
+    for _exigido in ('data-hef-alvo="classe"', 'data-hef-classe="apagado"',
+                     'data-hef-atributo="aria-disabled"',
+                     f'data-gesto="{_g}"'):
+        if _exigido not in _btn.group(0):
+            raise SystemExit(
+                f"ERRO: o botão de {_g!r} perdeu `{_exigido}`. A peça da D-03 é "
+                "inteira: a classe é o que a folha pinta, o `aria-disabled` é o "
+                "que um leitor de tela anuncia, e o `data-gesto` é o que faz o "
+                "clique CHEGAR — apagado e ainda assim responde.")
+    _dica = re.search(
+        r'<span class="dica" data-campo="' + re.escape(_campo)
+        + r'" data-hef-alvo="html">', MIOLO)
+    if not _dica:
+        raise SystemExit(
+            f"ERRO: o `?` de {_g!r} não recebe `{_campo}` pelo alvo `html`. Um "
+            "campo só alimenta o botão e a dica; com dois, dá para pintar um "
+            "botão cinza sem razão — ou uma razão sem botão cinza.")
+
+# 8. O `?` DA RAZÃO NÃO PODE VIRAR FILEIRA. `.col-acao` e `.lista` são colunas
+#    de flex: um `?` solto ali ganha uma linha só sua no instante em que o
+#    piloto o mostra, e as duas colunas irmãs desta faixa deixam de acabar no
+#    mesmo `y` — o vão que ela apontou em 31/08. Dentro da `.acao` ele fica na
+#    linha do botão, e a altura é a mesma nos dois estados.
+#
+#    A RÉGUA CONTA, e não procura: se um `?` novo nascer fora do invólucro, a
+#    conta deixa de casar e ela acusa. Contar é o que pega o caso que ninguém
+#    lembrou de escrever.
+_PORQUES = MIOLO.count('class="ajuda porque"')
+_PORQUES_NA_CAIXA = sum(
+    _bloco.count('class="ajuda porque"')
+    for _bloco in re.findall(r'<div class="acao">.*?</div>\s*</div>', MIOLO, re.S))
+if len(_CINZAS) != _PORQUES or _PORQUES_NA_CAIXA != _PORQUES:
+    raise SystemExit(
+        f"ERRO: esta página tem {_PORQUES} `?` de razão e {_PORQUES_NA_CAIXA} "
+        f"deles dentro de uma `.acao` (esperados {len(_CINZAS)} nos dois). Um "
+        "`?` fora do invólucro vira FILEIRA numa coluna de flex, e as duas "
+        "colunas irmãs desta faixa param de acabar no mesmo y — que é o vão de "
+        "58px que ela apontou em 31/08.")
+
+# 9. O BOTÃO DO `daemon.reload` NÃO SE CHAMA MAIS PELA METADE BARATA, e a dica
+#    não NEGA a cara — decisões [01] e [03], 04/09/2026.
+#
+#    A régua lê o botão do gesto `atualizar` no HTML montado: o rótulo, o
+#    `title` e o rótulo da espera. **A frase proibida é literal**, e é a que
+#    estava lá: *"Não muda nada."* sobre um clique que manda o serviço reaplicar
+#    a configuração e reescrever os arquivos de ambiente da Steam.
+_RELOAD = re.search(r'<button class="btn"([^>]*)>([^<]*)</button>', "".join(
+    linha for linha in _ACOES_DO_SERVICO.splitlines()
+    if 'data-gesto="atualizar"' in linha))
+if not _RELOAD:
+    raise SystemExit("ERRO: o botão do `atualizar` sumiu da coluna do serviço — "
+                     "a régua das decisões [01] e [03] ficou cega, e seletor "
+                     "que casa ZERO é erro, não silêncio.")
+_ATRS, _ROT_RELOAD = _RELOAD.group(1), _RELOAD.group(2)
+if _ROT_RELOAD != ROTULO_REAPLICAR:
+    raise SystemExit(
+        f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} e o PO decidiu "
+        f"{ROTULO_REAPLICAR!r} (decisão [01], 04/09/2026). Ele faz DOIS "
+        "trabalhos, e a metade barata — reler a aba — já acontece sozinha a "
+        "cada 2 s (`a09_sistema.LENTO_S`). Nomeá-lo pela metade que a aba já "
+        "faz sem ninguém clicar é o nome mentindo.")
+if f'data-hef-em-voo="{EM_VOO_REAPLICAR}"' not in _ATRS:
+    raise SystemExit(
+        f"ERRO: o botão {ROTULO_REAPLICAR!r} perdeu o `data-hef-em-voo`. Sem "
+        "ele o clique some por nove segundos e meio sem uma letra na tela, e o "
+        "segundo clique parece o primeiro — é a decisão [03], e ela pede que a "
+        "tela fale DURANTE a espera, no lugar exato do clique.")
+if "Não muda nada" in _ATRS:
+    raise SystemExit(
+        "ERRO: a dica do botão do `daemon.reload` voltou a dizer 'Não muda "
+        "nada'. É FALSO e está medido: o clique manda o IPC `daemon.reload`, "
+        "que faz o serviço reaplicar a configuração e rematerializar os "
+        "arquivos de ambiente da Steam (`daemon/ipc_handlers.py:4823-4832`). "
+        "Uma dica que nega o trabalho caro é a tela afirmando o contrário do "
+        "que o produto faz.")
 
 n = monta("09-sistema", "Sistema", MIOLO, CSS, fita_viva=False, legenda=LEGENDA)
 

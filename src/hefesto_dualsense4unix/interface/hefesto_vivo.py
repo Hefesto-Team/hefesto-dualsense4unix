@@ -1386,6 +1386,17 @@ PERIGOSOS = {
     ("08-conexoes.html", "nova-face"),
     ("08-conexoes.html", "tirar-daqui"),
     ("08-conexoes.html", "vizinho-o-que-e"),
+    # E OS DOIS DA VIBRAÇÃO, da mesma leva. O segundo é o mais caro da lista:
+    #   05-vibracao·motor       grava a barra daquele motor no perfil dela
+    #   05-vibracao·forca-mesa  muda o degrau de vibração de TODOS os controles,
+    #                           ao vivo — a régua de clique arrastaria a barra
+    #                           da mesa inteira para provar que sabe clicar
+    ("05-vibracao.html", "motor"),
+    ("05-vibracao.html", "forca-mesa"),
+    # E O DA ABA 07, que não grava em disco e mesmo assim entra: ele SUBSTITUI
+    # a área de transferência dela, e a `--prova-gesto` clica todo `data-gesto`.
+    # O que ela tinha copiado sumiria para a régua provar que sabe clicar.
+    ("07-lancadores.html", "copiar-a-linha"),
     # OS CAMPOS DO EDITOR GRAVAM NO DISCO DELA, e o `editor.nome` RENOMEIA o
     # perfil escolhido. Uma régua que os clicasse com o valor que estivesse na
     # tela renomearia um perfil dela para provar que sabe digitar — e o `nome` é
