@@ -1380,11 +1380,17 @@ _METODO_DO_GESTO = {
 #: provar que sabe clicar.
 #:
 #: Para incluí-los, `--incluir-perigosos` — e aí é escolha de quem roda.
-#: A chave é `(página, gesto)`, e a qualificação NÃO é preciosismo: `modo` na
-#: Navegação liga a emulação de mouse e MEXE NO CURSOR DELA — na tela dela,
-#: enquanto ela trabalha. O mesmo `modo` nos Gatilhos escolhe um efeito e é
-#: inócuo. Uma lista por nome cru trataria os dois igual, e a escolha seria
-#: entre não provar o seguro ou estragar o trabalho dela.
+#: A chave é `(página, gesto)`, e a qualificação NÃO é preciosismo: `detectar`
+#: nos Perfis grava no perfil DELA, e o mesmo `detectar` na Lançadores só
+#: procura o jogo e não escreve nada. Uma lista por nome cru trataria os dois
+#: igual, e a escolha seria entre não provar o seguro ou estragar o trabalho
+#: dela.
+#:
+#: FATO SUBSTITUÍDO — 05/09/2026. Este parágrafo usava `modo` na Navegação
+#: contra `modo` nos Gatilhos, chamando o segundo de *"inócuo"*. Deixou de ser:
+#: pela decisão D2 o `modo` dos Gatilhos grava no perfil a cada clique, e está
+#: isento aqui embaixo. Guardar a frase velha ao lado da lista que a desmente
+#: obrigaria a próxima pessoa a escolher entre duas afirmações.
 PERIGOSOS = {
     ("09-sistema.html", "desligar"), ("09-sistema.html", "reiniciar"),
     # `restaurar-de-fabrica` NÃO EXISTE MAIS — o gesto desta página chama-se
@@ -1558,6 +1564,25 @@ PERIGOSOS = {
     # o que ela pediu dele. O que não é legítimo é uma RÉGUA escrever no perfil
     # dela para provar que sabe clicar; é a mesma razão do `salvar` acima.
     ("03-gatilhos.html", "guardar"),
+    # E OS TRÊS IRMÃOS DELE — 05/09/2026, no MESMO COMMIT que os ensinou a
+    # gravar, que é a regra que esta lista pede e que já ficou para trás quatro
+    # vezes. A decisão D2 (`docs/process/2026-09-05-AS-TRES-DECISOES-DO-PERFIL-
+    # medidas-e-decididas.md`) pôs a persistência NO CLIQUE: escolher um modo,
+    # um efeito pronto ou arrastar uma barra agora grava
+    # `controllers[uniq].triggers` no perfil ATIVO, com backup novo em
+    # `.historico/`.
+    #
+    # O QUE A RÉGUA FARIA SEM ESTAS TRÊS LINHAS: `_alvos_a_clicar` aciona os
+    # dois `<select>` e as barras com o valor que estiver na tela — e o gesto
+    # copiaria por cima do gatilho que ela escolheu, no perfil dela. Pior que o
+    # `salvar`, que ao menos regrava o que já estava lá.
+    #
+    # `reenviar` FICA DE FORA de propósito: ele passa `guardar=False` e não
+    # escreve byte nenhum (medido em `test_reenviar_nao_grava`). Protegê-lo
+    # custaria cobertura sem comprar nada.
+    ("03-gatilhos.html", "modo"),
+    ("03-gatilhos.html", "pronto"),
+    ("03-gatilhos.html", "ajuste"),
     # E O TRILHO DE BRILHO PASSOU A GRAVAR — 03/09/2026, decisão dela:
     # perguntada se mexer no brilho grava o perfil na hora ou espera o "Salvar
     # Perfil", ela respondeu *"Grava na hora"*. O gesto entra aqui na MESMA

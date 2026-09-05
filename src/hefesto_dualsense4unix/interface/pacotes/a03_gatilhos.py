@@ -2372,7 +2372,8 @@ def _params_da_curva(modo_: str, curva: list[int]) -> list[int]:
 
 
 def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
-             uniq: str, ctx: Contexto | None = None) -> tuple[bool, str, str]:
+             uniq: str, ctx: Contexto | None = None,
+             guardar: bool = True) -> tuple[bool, str, str]:
     """Manda o efeito ao daemon pela porta CERTA, e a certa depende do modo.
 
     "DESLIGADO" É `trigger.reset`, E NÃO `trigger.set` COM `Off` — a R-19. O
@@ -2401,6 +2402,34 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     SUCESSO daquele envio, e ela sai daqui porque é aqui que o CORPO do daemon
     existe: montá-la nos quatro chamadores seria o quarto que esquece, que é o
     mesmo argumento pelo qual o rascunho já mora nesta função.
+
+    E ELE PASSOU A GRAVAR NO PERFIL — 05/09/2026, a **decisão D2**
+    (`docs/process/2026-09-05-AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas.md`):
+    *"persistência no clique em toda parte, com o rodapé como rede de
+    segurança"*. Ela pediu, com estas palavras: *"ao pular e sair configurando
+    de aba em aba o perfil vai se lembrando de cada config de cada aba pra cada
+    controle … e salvar se lembra disso quando eu for jogar o jogo e no dia
+    seguinte"*.
+
+    **O QUE FALTAVA, MEDIDO:** `controllers[uniq].triggers` não persistia por
+    clique nenhum. O `_RASCUNHO` guardava o gatilho aplicado NESTA SESSÃO e o
+    rodapé não o alcançava — `pacotes/rodape.py` não importa este módulo. Clicar
+    `Rígido` no L2 e depois "Salvar Perfil" gravava o gatilho DE ONTEM, porque o
+    rodapé monta o rascunho a partir do PERFIL NO DISCO. É o mesmo defeito que
+    o `reenviar` já nomeia pela outra ponta.
+
+    **O RASCUNHO CONTINUA, e não é redundância:** ele é a memória entre o clique
+    e o tique seguinte (500 ms), e é ele que impede a coluna de voltar ao valor
+    velho enquanto o disco não chega. O disco é a memória do dia seguinte.
+
+    **A GUARDA É A MESMA DO RASCUNHO** — `ok and _chegou_ao_aparelho(corpo)`.
+    Gravar no perfil um efeito que o aparelho recusou seria a tela prometendo
+    amanhã o que não fez hoje.
+
+    ``guardar=False`` é para quem REENVIA o que já está na tela — ver
+    :func:`reenviar`, cuja docstring declara *"ELE NÃO GRAVA NADA NO DISCO
+    DELA"*. O sinalizador existe para que o contrato dele continue verdadeiro
+    sem que o ESCRITOR se multiplique: a gravação segue morando só aqui.
     """
     if modo_ == "Off":
         ok, motivo, corpo = _desfecho(p.trigger_reset_detalhado(lado, uniq=uniq))
@@ -2411,8 +2440,58 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     if ok and _chegou_ao_aparelho(corpo):
         _lembrar_o_aplicado(str((ctx.state if ctx else {}).get("active_profile") or ""),
                             uniq, lado, {"mode": modo_, "params": params})
+        if guardar:
+            _guardar_no_perfil(ctx, p, uniq, lado, {"mode": modo_, "params": params})
     ok, motivo = _conferir_o_desfecho(lado, modo_, ok, motivo, corpo, ctx, uniq)
     return ok, motivo, _recibo(lado, modo_, corpo, ctx, uniq)
+
+
+def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
+                       cfg: dict[str, Any]) -> None:
+    """Grava no perfil ATIVO o gatilho que acabou de chegar ao aparelho.
+
+    **SÓ O LADO QUE ELA TOCOU.** :func:`_com_os_gatilhos` recebe um dicionário
+    de um item só, e o esquema faz o resto: `model_fields_set` decide o que é
+    opinião do controle e o que herda a seção global do perfil
+    (`profiles/manager._controllers_to_specs` lê os dois lados separados). Se
+    este caminho escrevesse os DOIS, clicar `Rígido` no L2 gravaria um `Off`
+    explícito no R2 e silenciaria o gatilho direito que o perfil dava a todo
+    mundo — um efeito dela apagado por um clique no outro lado.
+
+    **NÃO ABRIU O PERFIL, NÃO GRAVA — E NÃO LEVANTA.** São dois casos e a
+    resposta é a mesma: não há `active_profile` (o `guardar` já explica esse na
+    frase dele), ou o nome que o daemon publica não existe para ESTE leitor. O
+    segundo não é hipótese: as réguas desta aba rodam com `active_profile` de
+    mentira, e na máquina dela o daemon pode nomear um perfil que a pasta lida
+    aqui não tem (apagado, renomeado, outra pasta). Nos dois, o gatilho FOI
+    para o aparelho e o `_RASCUNHO` o segura na tela — levantar diria "não deu"
+    sobre um efeito que ela está sentindo na mão.
+
+    **MAS A GRAVAÇÃO QUE FALHA FALA.** Perfil aberto e escrita recusada é a
+    promessa de amanhã que não se cumpre — o defeito exato que a decisão D2 veio
+    matar. A frase diz as duas metades: o aparelho recebeu, o perfil não
+    guardou. Sem isso, ela descobriria a perda no dia seguinte, longe do clique.
+
+    O CAMINHO DE DISCO É O DO `guardar` — :func:`_gravar_so_o_gatilho`, e não
+    `perfil.gravar_e_reaplicar`. A razão está medida lá: reaplicar o perfil
+    inteiro acende de volta a barra de luz que ela desligou noutra aba.
+    """
+    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "").strip()
+    if not nome:
+        return
+    try:
+        prof = perfil._com_o_src().load_profile(nome)
+    except Exception:
+        return
+    try:
+        novo = _com_os_gatilhos(prof, uniq, {disco: cfg})
+        if novo is not None:
+            _gravar_so_o_gatilho(novo, p)
+    except Exception as erro:
+        raise RuntimeError(
+            f"o efeito FOI para o aparelho, mas não consegui guardá-lo no "
+            f"perfil {nome!r}: {erro}. Ele vale até a próxima troca de perfil — "
+            f"no dia seguinte o gatilho volta a ser o de antes.") from erro
 
 
 #: OS DOIS CAMPOS EM QUE O DAEMON DIZ ONDE A ESCRITA FOI PARAR. O vocabulário é
@@ -2880,6 +2959,15 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     na tela. Reenviar o que já está lá é idempotente — nenhum valor novo, nenhum
     byte a mais do que o `modo` e o `pronto` já mandam a cada clique dela.
 
+    **E CONTINUA NÃO GRAVANDO DEPOIS DA D2** — 05/09/2026, quando `modo`,
+    `pronto` e `ajuste` passaram a persistir no clique. Este passa
+    ``guardar=False``, e a razão é de PRODUTO, não de economia: a coluna pode
+    estar mostrando o gatilho da seção GLOBAL do perfil, sem override nenhum
+    daquele controle. Persistir aqui criaria uma opinião por-controle que ela
+    nunca deu — e a partir dali mudar o global deixaria de alcançar este
+    aparelho. Reenviar é dizer *"manda de novo o que está aí"*, não *"esta é a
+    minha escolha para este controle"*.
+
     **UM LADO QUE RECUSA NÃO CALA O OUTRO.** Os dois gatilhos são independentes,
     e parar no primeiro deixaria a coluna pela metade sem dizer. Aqui os dois
     vão, e o desfecho de cada um entra na frase: se algum recusou, a frase
@@ -2903,7 +2991,8 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             continue
         params = _ajustes_da_coluna(forma, sigla, modo_)
         try:
-            ok, motivo, recibo = _aplicar(p, disco, modo_, params, uniq, ctx)
+            ok, motivo, recibo = _aplicar(p, disco, modo_, params, uniq, ctx,
+                                          guardar=False)
         except RuntimeError as erro:
             # O `_conferir_o_desfecho` LEVANTA quando o byte não saiu, e a
             # frase dele já nomeia o lado. Deixá-la subir aqui mataria o outro
@@ -3159,6 +3248,20 @@ def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
     A CHAVE DO OVERRIDE É O `uniq` NORMALIZADO, e é o que o esquema espera
     (`_validate_controllers_keys`). Escrever `d4:2f:…` onde o disco guarda
     `d42f…` criaria um segundo dono para o mesmo controle.
+
+    LADO NÃO TOCADO NÃO VIRA OPINIÃO — 05/09/2026, e é o que faz a persistência
+    no clique caber aqui. Antes desta linha, um `dos_lados` com uma metade só
+    densificava a outra: sem override anterior ela virava um `Off` EXPLÍCITO, e
+    `profiles/manager._controllers_to_specs` lê exatamente `model_fields_set`
+    para decidir o que herda a seção global do perfil. Ou seja: clicar `Rígido`
+    no L2 gravava um `Off` no R2 e silenciava, só naquele controle, o gatilho
+    direito que o perfil dava a todos.
+
+    Agora o lado ausente do pedido só entra se o override JÁ o tinha escrito —
+    a metade que ela nunca tocou continua herdando o global, que é o contrato do
+    esquema (*"`None` = sem opinião"*). O mesmo vale para o `guardar` quando a
+    coluna traz `—` num dos lados: `—` é *"não há controle neste lugar"*, não
+    uma escolha de desligar.
     """
     from hefesto_dualsense4unix.profiles.schema import (
         ControllerOverrides,
@@ -3170,13 +3273,21 @@ def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
     atuais = dict(prof.controllers or {})
     dele = atuais.get(chave) or ControllerOverrides()
     antes = dele.triggers
-    novos = TriggersConfig(
-        left=TriggerConfig(**dos_lados["left"]) if "left" in dos_lados
-        else (antes.left if antes else TriggerConfig(mode="Off")),
-        right=TriggerConfig(**dos_lados["right"]) if "right" in dos_lados
-        else (antes.right if antes else TriggerConfig(mode="Off")),
-    )
-    if antes is not None and antes == novos:
+    ja_escritos = antes.model_fields_set if antes is not None else set()
+    lados: dict[str, Any] = {}
+    for lado in ("left", "right"):
+        if lado in dos_lados:
+            lados[lado] = TriggerConfig(**dos_lados[lado])
+        elif lado in ja_escritos:
+            lados[lado] = getattr(antes, lado)
+    novos = TriggersConfig(**lados)
+    # A IGUALDADE DO PYDANTIC NÃO OLHA O `model_fields_set`, e aqui ele é
+    # significado: um `right` implícito e um `right=Off` explícito comparam
+    # IGUAIS e mandam coisas diferentes ao aparelho. Sem a segunda metade desta
+    # conta, densificar (ou desdensificar) um lado seria uma mudança que o
+    # "nada mudou, nada grava" jogaria fora em silêncio.
+    if (antes is not None and antes == novos
+            and antes.model_fields_set == novos.model_fields_set):
         return None
     atuais[chave] = dele.model_copy(update={"triggers": novos})
     return prof.model_copy(update={"controllers": atuais})
