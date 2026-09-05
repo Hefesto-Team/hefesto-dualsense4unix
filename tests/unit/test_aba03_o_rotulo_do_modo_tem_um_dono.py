@@ -61,6 +61,40 @@ _SELECT = re.compile(
     re.S)
 
 
+#: A CENA DO PERFIL, e ela é DADO — não um símbolo trocado.
+_PERFIL_DA_CENA: dict = {}
+
+
+@pytest.fixture(autouse=True)
+def _o_perfil_de_mentira_nao_vaza():
+    """O dublê de `perfil.ativo` VOLTA — sem isto ele envenenava a suíte.
+
+    **MEDIDO EM 05/09/2026, por bisseção, e este foi o SEGUNDO arquivo.** Um
+    teste daqui fazia ``perfil.ativo = lambda _nome: {...}`` — atribuição CRUA,
+    sem desfazer. O dublê ficava no módulo `pacotes.perfil` para toda a suíte, e
+    devolve `triggers` sem parâmetros e `controllers` vazio.
+
+    O ESTRAGO APARECIA LONGE: rodando sozinho este arquivo passa; rodado antes
+    do `test_o_casamento_das_dez`, a aba 03 casava 15 endereços em vez de 19 e a
+    régua acusava uma REGRESSÃO QUE NÃO EXISTIA. O `PISO` daquele arquivo prevê
+    a forma do defeito por escrito — *"sem perfil, o pacote da Gatilhos emite
+    `Desligado` nos dois lados e o piso cairia por falta de DADO, não por
+    regressão"* — e mesmo assim ele custou uma bisseção para achar, DUAS VEZES.
+
+    A LIÇÃO É A DO DUBLÊ DO CO-OP, de 04/09, e ela se repetiu: trocar um símbolo
+    de módulo por atribuição em vez de `monkeypatch` mede o produto inteiro
+    contra a mentira de um arquivo de teste. `autouse` porque a troca não vinha
+    de fixture nenhuma — vinha do corpo de um teste.
+    """
+    from pacotes import perfil
+
+    original = perfil.ativo
+    perfil.ativo = lambda _nome: dict(_PERFIL_DA_CENA)  # type: ignore[assignment]
+    yield
+    perfil.ativo = original
+    _PERFIL_DA_CENA.clear()
+
+
 @pytest.fixture
 def a03():
     import pacotes  # noqa: F401  (registra os dez)
@@ -236,13 +270,16 @@ def test_a_lista_de_modo_e_emitida_para_os_oito_campos(a03):
     A MORDIDA: apague as duas linhas de `select.modo` em `_blocos_da_coluna`.
     Medido: **1 teste reprova**, dizendo quais dos oito seletores sumiram.
     """
-    from pacotes import Contexto, perfil
+    from pacotes import Contexto
 
-    perfil.ativo = lambda _nome: {  # type: ignore[assignment]
+    # O DUBLÊ VEM DA FIXTURE `_o_perfil_de_mentira_nao_vaza`, e não daqui — ver
+    # a razão inteira lá embaixo. Este teste só escreve a CENA.
+    _PERFIL_DA_CENA.clear()
+    _PERFIL_DA_CENA.update({
         "triggers": {"left": {"mode": "Off", "params": []},
                      "right": {"mode": "Off", "params": []}},
         "controllers": {},
-    }
+    })
     ctx = Contexto(state={"active_profile": "régua"}, mesa=MESA,
                    conectados=[FALSO], estados={})
     blocos = a03.pacote(ctx)["blocos"]
@@ -360,3 +397,28 @@ def test_o_title_de_cada_modo_continua_sendo_o_desta_tela(a03, presets):
     sem_dica = [p.name for p in presets
                 if not re.search(rf'value="{p.name}"[^>]*\stitle="[^"]+"', html)]
     assert not sem_dica, f"modos que perderam a dica desta tela: {sem_dica}"
+
+
+def test_nenhum_teste_deste_arquivo_troca_simbolo_de_modulo() -> None:
+    """Nada aqui reatribui `perfil.ativo` — quem o troca é a fixture, que desfaz.
+
+    ELA LÊ O TEXTO DO ARQUIVO de propósito, e é a única forma que morde: um
+    teste que rode e devolva o símbolo passaria por qualquer verificação em
+    tempo de execução, e o defeito não é *"o símbolo está trocado agora"* — é
+    *"alguém o troca sem devolver"*. O que se guarda aqui é a FORMA.
+
+    MORDIDA: devolva um `perfil.ativo = lambda ...` a qualquer teste e este caso
+    reprova nomeando a linha.
+    """
+    fonte = pathlib.Path(__file__).read_text(encoding="utf-8")
+    linhas = [
+        f"{n}: {ln.strip()}"
+        for n, ln in enumerate(fonte.splitlines(), start=1)
+        if re.search(r"^\s*perfil\.ativo\s*=", ln)
+        and "original" not in ln  # a devolução da fixture
+    ]
+    # A fixture troca DUAS vezes (instala e devolve); qualquer outra é vazamento.
+    assert len(linhas) <= 1, (
+        "há atribuição crua a `perfil.ativo` fora da fixture que a desfaz:\n"
+        + "\n".join(linhas)
+        + "\n\nFoi assim que este arquivo envenenou a suíte até 05/09/2026.")

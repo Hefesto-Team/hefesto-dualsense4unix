@@ -58,6 +58,43 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
 APLICOU = {"status": "ok", "aplicado_em": [UNIQ], "guardado_em": []}
 
 
+#: A CENA DO PERFIL, e ela é DADO — não um símbolo trocado. `_ctx()` escreve
+#: aqui e o dublê da fixture lê daqui; assim a troca de `perfil.ativo` acontece
+#: UMA vez por teste, na fixture que a desfaz, em vez de a cada chamada de
+#: `_ctx()`, num lugar que não desfazia nada.
+_PERFIL_DA_CENA: dict = {}
+
+
+@pytest.fixture(autouse=True)
+def _o_perfil_de_mentira_nao_vaza():
+    """O dublê de `perfil.ativo` VOLTA — e sem isto ele envenenava a suíte.
+
+    **MEDIDO EM 05/09/2026, por bisseção.** `_ctx()` fazia
+    ``perfil.ativo = lambda _nome: {...}`` — atribuição CRUA, sem desfazer. O
+    dublê ficava no módulo `pacotes.perfil` para todo teste que rodasse depois,
+    e ele devolve `triggers` sem parâmetros e `controllers` vazio.
+
+    O ESTRAGO ERA INVISÍVEL AQUI E APARECIA LÁ: rodando sozinho, este arquivo
+    passa; rodado antes do `test_o_casamento_das_dez`, a aba 03 casava 15
+    endereços em vez de 19 e a régua acusava uma REGRESSÃO QUE NÃO EXISTIA. O
+    próprio `PISO` daquele arquivo prevê a forma do defeito por escrito — *"sem
+    perfil, o pacote da Gatilhos emite `Desligado` nos dois lados e o piso
+    cairia por falta de DADO, não por regressão"*.
+
+    É A MESMA FAMÍLIA DO DUBLÊ DO CO-OP, curada em 04/09: um teste que troca um
+    símbolo de módulo por atribuição em vez de `monkeypatch` deixa o produto
+    inteiro medido contra a mentira dele. `autouse` porque a troca não acontece
+    numa fixture — acontece dentro de `_ctx()`, que qualquer teste chama.
+    """
+    from pacotes import perfil
+
+    original = perfil.ativo
+    perfil.ativo = lambda _nome: dict(_PERFIL_DA_CENA)  # type: ignore[assignment]
+    yield
+    perfil.ativo = original
+    _PERFIL_DA_CENA.clear()
+
+
 @pytest.fixture
 def a03():
     """O pacote, com o rascunho LIMPO — ele é estado de módulo.
@@ -99,13 +136,14 @@ def _ctx(perfil_ativo: str = "régua", modo_no_disco: str = "Off"):
     ordem entre rascunho e perfil, não o leitor de perfis — que tem régua
     própria.
     """
-    from pacotes import Contexto, perfil
+    from pacotes import Contexto
 
-    perfil.ativo = lambda _nome: {  # type: ignore[assignment]
+    _PERFIL_DA_CENA.clear()
+    _PERFIL_DA_CENA.update({
         "triggers": {"left": {"mode": modo_no_disco, "params": []},
                      "right": {"mode": modo_no_disco, "params": []}},
         "controllers": {},
-    }
+    })
     return Contexto(state={"active_profile": perfil_ativo}, mesa=MESA,
                     conectados=[FALSO], estados={})
 
@@ -470,3 +508,32 @@ def test_a_ponte_sem_corpo_continua_calada(a03):
     ctx = _ctx(modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("modo", {"lado": "e", "valor": "Rigid"}, _Muda())
+
+
+# ---------------------------------------------------------------------------
+# A RÉGUA DA PRÓPRIA RÉGUA — 05/09/2026
+# ---------------------------------------------------------------------------
+def test_o_ctx_nao_troca_simbolo_de_modulo() -> None:
+    """`_ctx()` escreve a CENA e não troca `perfil.ativo` — é o que cura o vazamento.
+
+    MORDIDA: devolva o `perfil.ativo = lambda ...` para dentro de `_ctx()` e
+    este caso reprova na hora.
+
+    POR QUE ELE MEDE A IDENTIDADE E NÃO O `__module__`: dentro deste arquivo o
+    dublê ESTÁ instalado de propósito, pela fixture que o desfaz. A pergunta
+    não é *"quem é `perfil.ativo` agora"* — é *"`_ctx()` o mudou?"*. Uma régua
+    que perguntasse a origem daria vermelho sobre o dublê legítimo e ensinaria
+    a próxima pessoa a desligá-la.
+    """
+    from pacotes import perfil
+
+    antes = perfil.ativo
+    _ctx(modo_no_disco="Rigid")
+    assert perfil.ativo is antes, (
+        "`_ctx()` trocou `perfil.ativo` por atribuição crua. Foi assim que este "
+        "arquivo envenenou a suíte até 05/09/2026: o dublê ficava no módulo e o "
+        "casamento da aba 03 caía de 19 para 15 endereços no arquivo seguinte, "
+        "acusando uma regressão que não existia.")
+    assert perfil.ativo("qualquer")["triggers"]["left"]["mode"] == "Rigid", (
+        "a cena escrita por `_ctx()` não chega ao dublê — a troca virou pura e "
+        "o caminho do dado se perdeu junto")
