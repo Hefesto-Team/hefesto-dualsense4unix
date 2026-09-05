@@ -254,3 +254,20 @@ seção daqui**: a aba deixou de estar em trabalho.
   **Até publicar, o produto continua exatamente como ela o vê hoje:** nenhum
   elemento desta aba usa as peças, então as regras novas não casam com nada e
   a página publicada desenha o mesmo pixel que a bancada.
+- **04/09/2026 · ONDA2-10** — as três decisões de desenho do PO. **Enquanto ela
+  não publicar, a página do produto continua a de hoje**, e o pacote emite os
+  quatro endereços novos no vazio (declarados em
+  `a10_perfis.ESPERANDO_A_PUBLICACAO`).
+  - **[01] o cadeado e o ponto de alerta.** O "Funciona em" ganha um cadeado
+    laranja à direita e o "Nome do Jogo" um ponto laranja; os dois nascem
+    ESCONDIDOS e o produto os acende. A frase inteira aparece ao parar o rato em
+    cima. Junto, o "Funciona em" ganha a opção `—` (desabilitada) para o perfil
+    cuja regra a tela não sabe mostrar: sem ela o campo ficava com o **"Jogo"
+    do mockup** ao lado de um cadeado dizendo "não sei mostrar".
+  - **[03] a frase da Prioridade.** O `title` do campo passa a ser a frase que
+    ela aprovou em 02/09 — *"Quando dois perfis servem ao mesmo tempo, o de
+    número maior entra."* — seguida da explicação do Universal em zero.
+  - **[05] a tira do desfecho ganhou a segunda linha.** 15px a mais,
+    permanentes, tirados da altura da lista de perfis (≈meia linha). Nada pula:
+    o espaço já era reservado. A janela continua com 777px de altura, medida no
+    Chrome a 1920x1080 antes e depois.
