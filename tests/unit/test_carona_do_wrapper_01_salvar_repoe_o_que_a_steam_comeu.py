@@ -728,3 +728,250 @@ def test_os_cinco_gestos_chamam_a_carona() -> None:
             f"{relativo}: {achadas} chamada(s) a pegar_carona_no_gesto, "
             f"esperadas {quantas} — um gesto do pedido dela ficou sem carona"
         )
+
+
+#: OS GESTOS DA INTERFACE NOVA QUE TÊM DE PEGAR A CARONA — 06/09/2026, ONDA5-07-02.
+#:
+#: A régua acima mede o mundo de ontem: ela conta só nos quatro arquivos da
+#: janela GTK, e `interface/pacotes/` não estava no dicionário. Ela ficou VERDE
+#: enquanto o produto novo perdia quatro quintos do comportamento que ela
+#: guarda — dos quatro gestos da interface nova que aplicam ou gravam perfil,
+#: **um** pegava carona.
+#:
+#: A CONTAGEM É POR GESTO, E NÃO POR ARQUIVO, e a diferença é o que a mordida
+#: entrega: um `texto.count(...)` diria *"rodape.py: 2, esperadas 3"* e deixaria
+#: quem lê procurando QUAL dos três perdeu o fio. Este anda a árvore de sintaxe
+#: e nomeia a função.
+GESTOS_DA_INTERFACE_NOVA = {
+    # O rodapé é das DEZ abas: o "fora da guia de perfis" do pedido dela.
+    "interface/pacotes/rodape.py": {
+        "aplicar",  # o botão verde: manda o perfil aos controles
+        "salvar",  # grava o perfil ativo no disco dela
+        "importar",  # um perfil novo entra na pasta e passa a valer
+    },
+    # E o "dentro da guia", que já pegava desde 03/09.
+    "interface/pacotes/a10_perfis.py": {"ativar"},
+}
+
+# O QUE FALTA, MEDIDO E COM ENDEREÇO — 06/09/2026, e não está aqui em cima
+# porque portão vermelho de propósito é portão que ninguém lê.
+#
+# O censo dos treze gestos da aba Perfis (`ast`, contra `save_profile`,
+# `delete_profile`, `restaurar_do_historico`, `profile_switch` e o funil
+# `_gravar`) devolveu NOVE que gravam o perfil INTEIRO e não pegam carona:
+#
+#     voltar-a-de-ontem   restaurar_do_historico + switch + launch_env.refresh
+#                         — é o «Restaurar Padrão» da janela velha, que PEGA
+#                           carona pelo `profile_writer`
+#     editor.nome · editor.prioridade · editor.ambiente · editor.estilo ·
+#     editor.jogo · detectar · novo · duplicar
+#                         — os OITO que passam pelo funil `a10_perfis._gravar`
+#                           (o `detectar` entra: ele grava o jogo achado no
+#                           perfil, pelo mesmo funil)
+#
+# A cura são DUAS linhas em `a10_perfis.py`, que é posse de outra frente. Fica
+# relatado em `docs/process/agentes/2026-09-06/ONDA5-07-02.md`.
+#
+# E os que ficam de fora com razão: `remover` (apagar um perfil não põe perfil
+# nenhum em vigor — a janela velha também não o cobre), `selecionar` e
+# `recarregar` (não escrevem nada).
+
+#: QUEM NÃO PEGA, E TEM DE CONTINUAR NÃO PEGANDO. Declarar o de fora é o que
+#: separa dívida de esquecimento — e trava a razão medida: o «Exportar» COPIA um
+#: arquivo para fora (`origem.read_bytes()`) e não toca o perfil ativo. Não há
+#: nada a repor, e uma varredura do `localconfig.vdf` a cada exportação seria
+#: custo sem cura.
+GESTOS_SEM_CARONA = {"interface/pacotes/rodape.py": {"exportar"}}
+
+
+def _funcoes_que_pegam_carona(caminho: Path) -> set[str]:
+    """As funções de módulo que chamam a carona, lidas da árvore de sintaxe.
+
+    Casa por SUFIXO do atributo (`perfil.com_a_carona` e o `_com_a_carona`
+    privado que a `a10_perfis` ainda tem) porque as duas formas são a mesma
+    chamada: a segunda é a cópia que espera a delegação de uma linha, e o dia
+    em que ela virar delegação esta régua não muda.
+    """
+    import ast
+
+    arvore = ast.parse(caminho.read_text(encoding="utf-8"))
+    achadas: set[str] = set()
+    for no in arvore.body:
+        if not isinstance(no, ast.FunctionDef):
+            continue
+        for dentro in ast.walk(no):
+            if not isinstance(dentro, ast.Call):
+                continue
+            alvo = dentro.func
+            nome = alvo.attr if isinstance(alvo, ast.Attribute) else (
+                alvo.id if isinstance(alvo, ast.Name) else "")
+            if nome.endswith("com_a_carona"):
+                achadas.add(no.name)
+    return achadas
+
+
+def test_a_interface_nova_tambem_pega_a_carona() -> None:
+    """`07-Q1`, decisão dela: *"Deve aplicar automaticamente como era no gtk"*.
+
+    A janela GTK sai nesta leva; o MOTOR (`app/actions/carona_do_wrapper.py`)
+    fica. Este portão é o que impede o motor de ficar sem chamador do lado novo
+    — que é exatamente o defeito de 16/08 que o arquivo inteiro existe para
+    guardar, repetido um andar acima.
+
+    MORDIDA: arranque o `perfil.com_a_carona()` do fim de `rodape.salvar` e a
+    primeira asserção reprova NOMEANDO o gesto — "salvar".
+    """
+    raiz = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
+    for relativo, esperados in GESTOS_DA_INTERFACE_NOVA.items():
+        achadas = _funcoes_que_pegam_carona(raiz / relativo)
+        faltando = esperados - achadas
+        assert not faltando, (
+            f"{relativo}: {sorted(faltando)} não pega(m) a carona — "
+            "um gesto que aplica ou grava perfil ficou sem repor o atalho "
+            "de inicialização que a Steam come"
+        )
+    for relativo, proibidos in GESTOS_SEM_CARONA.items():
+        achadas = _funcoes_que_pegam_carona(raiz / relativo)
+        intrusos = proibidos & achadas
+        assert not intrusos, (
+            f"{relativo}: {sorted(intrusos)} pega(m) a carona sem precisar — "
+            "o de fora é declarado no docstring do módulo, com a razão"
+        )
+
+
+# ---------------------------------------------------------------------------
+# O RODAPÉ DA INTERFACE NOVA — o ATO, não a linha (ONDA5-07-02, 06/09/2026)
+# ---------------------------------------------------------------------------
+#
+# O portão acima lê o fonte; estes três medem o `localconfig.vdf` de mentira
+# depois do gesto. A lição de 03/09 é a razão de existirem os dois: *ler a
+# linha não é medir o ato*.
+
+
+def _ctx_do_rodape() -> Any:
+    """Um `Contexto` com o perfil ativo e a mesa vazia.
+
+    MESA VAZIA DE PROPÓSITO: o que se mede aqui é a carona, e a lista de
+    conectados só alimenta o `_draft_do_ativo`, que tem régua própria. Um
+    controle de mentira aqui misturaria dois assuntos num teste só.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    return Contexto(state={"active_profile": "Pragmata"})
+
+
+def test_o_salvar_do_rodape_repoe_o_atalho_de_inicializacao(
+    biblioteca: Path, steam_fechada: None, disco: Path
+) -> None:
+    """«Salvar Perfil» do rodapé — FORA da guia de perfis, na interface NOVA.
+
+    Até 06/09 este gesto gravava o perfil dela e deixava o jogo sem enxergar o
+    controle: o perfil entrava, o atalho de inicialização continuava comido.
+
+    MORDIDA: arranque o `return _recado(perfil.com_a_carona())` do fim de
+    `rodape.salvar` e a primeira asserção reprova — o Pragmata continua com a
+    linha que comeu o atalho.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import rodape
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+
+    save_profile(_perfil())
+    assert not _tem_wrapper(biblioteca, PRAGMATA)
+
+    resposta = rodape.salvar(_ctx_do_rodape(), {}, MagicMock())
+
+    assert _tem_wrapper(biblioteca, PRAGMATA)
+    # E a NOTÍCIA chega ao cartão pelo canal do piloto, sem palavra do rodapé.
+    assert resposta is not None and PRAGMATA in resposta["recado"]
+    # O gesto dela continua fazendo o que fazia: a carona é efeito colateral.
+    assert (disco / "pragmata.json").exists()
+
+
+def test_o_aplicar_verde_do_rodape_repoe_o_atalho(
+    biblioteca: Path, steam_fechada: None, disco: Path
+) -> None:
+    """O botão verde «Aplicar» da interface nova — o irmão do `on_apply_draft`."""
+    from hefesto_dualsense4unix.interface.pacotes import rodape
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+
+    save_profile(_perfil())
+    ponte = MagicMock()
+
+    resposta = rodape.aplicar(_ctx_do_rodape(), {}, ponte)
+
+    assert _tem_wrapper(biblioteca, PRAGMATA)
+    assert resposta is not None and PRAGMATA in resposta["recado"]
+    # A carona NUNCA substitui o gesto: o perfil foi mesmo aos controles.
+    assert ponte.apply_draft_detalhado.call_count == 1
+
+
+def test_sem_nada_a_repor_o_rodape_nao_fala(
+    biblioteca: Path, steam_fechada: None, disco: Path
+) -> None:
+    """O SILÊNCIO É O CASO COMUM, e é decisão dela (`03-Q4`).
+
+    Com a biblioteca inteira já com o atalho, a carona não tem notícia — e o
+    gesto volta a `None`. Quem responde é a piscada verde de ~1,5 s no campo,
+    **sem palavra nova na tela**. Um `{"recado": ""}` aqui faria o piloto
+    depositar um recado vazio no cartão a cada Salvar.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import rodape
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+
+    biblioteca.write_text(
+        _vdf({PRAGMATA: slo.WRAPPER_LAUNCH, SACKBOY: slo.WRAPPER_LAUNCH}),
+        encoding="utf-8",
+    )
+    save_profile(_perfil())
+
+    assert rodape.salvar(_ctx_do_rodape(), {}, MagicMock()) is None
+
+
+def test_a_carona_sozinha_nao_deixa_separador_orfao(
+    biblioteca: Path, steam_fechada: None
+) -> None:
+    """`com_a_carona()` sem frase base devolve a notícia SOZINHA.
+
+    A função nasceu na aba Perfis, onde SEMPRE há uma frase de desfecho a que
+    se grudar (*"Perfil ativado: X · …"*). O rodapé não tem nenhuma, e a forma
+    de lá — `f"{frase} · {resultado.frase}"` — poria um `" · "` órfão na frente
+    do recado, na tela dela.
+
+    MORDIDA: troque o fecho de `perfil.com_a_carona` pelo da aba
+    (`return f"{frase} · {resultado.frase}"`) e a segunda asserção reprova.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import perfil as pacote_perfil
+
+    sozinha = pacote_perfil.com_a_carona()
+    assert sozinha.startswith("Reposta"), sozinha
+    assert " · " not in sozinha.split(":")[0]
+
+    # E com frase base ela continua GRUDANDO, que é o contrato da aba Perfis.
+    biblioteca.write_text(
+        _vdf({PRAGMATA: LINHA_PRAGMATA, SACKBOY: slo.WRAPPER_LAUNCH}),
+        encoding="utf-8",
+    )
+    junta = pacote_perfil.com_a_carona("Perfil ativado: Pragmata")
+    assert junta.startswith("Perfil ativado: Pragmata · Reposta"), junta
+
+
+def test_a_carona_do_rodape_nunca_derruba_o_gesto_dela(
+    biblioteca: Path, steam_fechada: None, disco: Path, monkeypatch: Any
+) -> None:
+    """Uma exceção na carona não pode virar tarja de recusa sobre um Salvar OK.
+
+    É o mesmo contrato de `test_a_carona_nunca_derruba_o_gesto_dela`, um andar
+    acima: lá o mixin engole, aqui é `perfil.com_a_carona`.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import rodape
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+
+    save_profile(_perfil())
+
+    def _explode(**_kw: Any) -> Any:
+        raise RuntimeError("a Steam mudou o formato do arquivo")
+
+    monkeypatch.setattr(carona, "passada", _explode)
+
+    assert rodape.salvar(_ctx_do_rodape(), {}, MagicMock()) is None
+    assert (disco / "pragmata.json").exists()

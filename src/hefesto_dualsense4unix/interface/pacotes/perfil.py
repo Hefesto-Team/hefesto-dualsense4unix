@@ -27,9 +27,13 @@ DualSense **não devolve** o modo em que está (é comando de ida, e o
 `docs/data/mapa-controles.csv` diz o mesmo pela outra ponta). Logo o perfil é a
 melhor fonte que existe, e mostrar `Rigid` é mais verdadeiro que mostrar `—`.
 
-QUEM LÊ NÃO ESCREVE. As funções de leitura são puras; a `gravar_e_reaplicar()`
-no fim do arquivo é a ÚNICA que escreve, e ela nasceu em 01/09/2026 porque duas
-abas passaram a precisar dos mesmos três tempos — ver o docstring dela.
+QUEM LÊ NÃO ESCREVE. As funções de leitura são puras; **duas** funções no fim do
+arquivo escrevem, e as duas moram aqui pela MESMA razão — mais de uma aba
+precisou delas, e a segunda cópia é a que esquece um dos tempos:
+
+* `gravar_e_reaplicar()` (01/09/2026) — disco, reaplicar, `launch_env.refresh`;
+* `com_a_carona()` (06/09/2026) — o atalho de inicialização que a Steam comeu,
+  reposto de carona no gesto que ela já dá. Ver o docstring de cada uma.
 """
 from __future__ import annotations
 
@@ -197,6 +201,26 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     (`session.json` + `active_profile.txt`, pelo mesmo caminho que o daemon usa
     no boot). Perguntar a ele é o que faz o realce e o reaplicar responderem
     sobre o MESMO perfil.
+
+    ELA NÃO CHAMA A CARONA, E A RAZÃO É MEDIDA — 06/09/2026, ONDA5-07-02
+    -------------------------------------------------------------------
+    Parece o lugar óbvio: na janela estável o funil equivalente
+    (`app/actions/profile_writer.py`) carrega UMA chamada de carona que cobre
+    três botões. Aqui não serve, e o que muda é a FREQUÊNCIA. Medido: esta
+    função tem SEIS chamadores em cinco abas (04, 05, 06, 08 e 10), e a
+    interface nova é de AÇÃO IMEDIATA — clicar num tom, num degrau de vibração
+    ou num atalho de botão já grava. Pendurar a carona aqui seria uma varredura
+    do `localconfig.vdf` **por clique**, que é exatamente a opção (b) que o dono
+    da carona pesou e recusou (`app/actions/carona_do_wrapper.py`, "O QUE A
+    CARONA REPARA"): *"'sempre' faria uma varredura de disco e duas escritas a
+    cada clique"*.
+
+    ONDE ELA ENTRA, então: no gesto de PERFIL — «Ativar» (já pega), os três do
+    rodapé (`rodape.py`, 06/09) e o funil `a10_perfis._gravar`, que é o único
+    chamador cujos OITO gestos são o perfil inteiro (renomear, prioridade,
+    ambiente, estilo, jogo, detectar, novo, duplicar) e não um campo. Esse é o
+    que falta, com o `voltar-a-de-ontem` ao lado, e é posse da a10 — está
+    relatado em `docs/process/agentes/2026-09-06/ONDA5-07-02.md`.
     """
     loader = _com_o_src()
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
@@ -211,3 +235,77 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     # A ANTECIPAÇÃO DE LANÇAMENTO relê o que os jogos vão receber. Sem ela, o
     # perfil novo só chega ao jogo no próximo start do daemon.
     p.chamar("launch_env.refresh")
+
+
+def com_a_carona(frase: str = "") -> str:
+    """Repõe o atalho de inicialização que a Steam comeu, e junta a notícia à frase.
+
+    CARONA-DO-WRAPPER-01 (16/08/2026), e **o desenho é dela**: *"nem precisa ter
+    um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar ou salvar
+    o perfil seja dentro ou fora da guia de perfis."*
+
+    O QUE ELA CURA: a Steam guarda UMA linha de `LaunchOptions` por jogo, e
+    qualquer coisa escrita nela substitui a chamada do `hefesto-launch` em
+    silêncio. Sem o atalho, o `launch_env` que o daemon materializa nunca é
+    lido — o jogo é instruído a ignorar o vpad que nós criamos para ele. Nas
+    palavras dela: *"parou de ser reconhecido no jogo, mas o perfil segue ativo
+    no controle com tudo funcionando"*.
+
+    POR QUE AQUI, E NÃO NO PACOTE DE UMA ABA — 06/09/2026, ONDA5-07-02
+    ------------------------------------------------------------------
+    Ela nasceu em `a10_perfis._com_a_carona`, e o «Ativar» daquela aba era o
+    ÚNICO gesto da interface nova que a pegava. O rodapé é das DEZ abas e tem
+    três gestos que gravam ou aplicam perfil — `aplicar`, `salvar` e
+    `importar` —, e nenhum a pegava. Um pacote de aba importando outro é o
+    oposto do território exclusivo; uma segunda cópia é a que esquece um dos
+    cuidados abaixo. Este módulo já é o compartilhado do assunto: gravar e
+    aplicar perfil.
+
+    POR QUE A FUNÇÃO DE MÓDULO E NÃO O `pegar_carona_no_gesto`: aquele é método
+    do `CaronaDoWrapperMixin` e despacha uma thread própria para devolver no
+    laço do GTK (`despachar` → `GLib.idle_add`). **O gesto já está em thread**
+    (`hefesto_vivo._gesto`, `trabalhar()`), que é exatamente onde `passada()`
+    declara ter de rodar — *"Só em thread worker: lê disco e o `/proc`"*. Chamar
+    `passada()` daqui é o mesmo trabalho sem a segunda troca de thread.
+
+    `ligada()` É O PORTÃO E NÃO UM `if` MEU: ele é o mesmo que a janela estável
+    consulta, e é o que desliga a carona na suíte (a `conftest.py` põe
+    `HEFESTO_CARONA_WRAPPER=0`). Uma régua desta casa não vai ao `/proc` dela,
+    e não reescreve a biblioteca da máquina em que roda.
+
+    NUNCA LEVANTA. Ela é efeito colateral de um gesto que já deu certo: uma
+    exceção aqui transformaria uma gravação bem-sucedida em tarja de recusa.
+
+    O SILÊNCIO É O CASO COMUM, DE PROPÓSITO. `frase` vazia de volta quer dizer
+    *não diga nada*: sem nada a repor, `ResultadoDaCarona.frase` é vazia
+    (`carona_do_wrapper.py:402`) e quem chamou volta a devolver `None` — o "deu
+    certo" é a piscada verde de ~1,5 s (decisão dela, `03-Q4`), **sem palavra
+    nova na tela**. A carona só fala quando tem notícia.
+
+    OS DOIS REGISTROS DE CHAMADA, e os dois são legítimos:
+
+    * `com_a_carona(frase)` — quem já tem uma frase de desfecho (o «Ativar» da
+      aba Perfis) recebe a notícia GRUDADA nela, com o `·` no meio;
+    * `com_a_carona()` — quem não tem (os três gestos do rodapé) recebe a
+      notícia sozinha, **sem o separador órfão** que um `f"{''} · …"` deixaria.
+
+    O QUE NÃO VEIO JUNTO, e fica escrito para não sumir: a **vigia**. A janela
+    estável arma um tique de 45 s (`_carona_armar_vigia`) que repergunta "a
+    Steam já fechou?" até o reparo caber, e a memória do episódio
+    (`_carona_ja_avisado`), que impede o mesmo aviso a cada gesto. As duas
+    dependem do `GLib.timeout_add` da janela e são território do piloto — não
+    deste pacote. Enquanto elas não vierem, um reparo adiado é REDITO a cada
+    gesto dela; é ruído conhecido, com endereço, e não defeito novo.
+    """
+    from hefesto_dualsense4unix.app.actions import carona_do_wrapper as carona
+
+    if not carona.ligada():
+        return frase
+    try:
+        resultado = carona.passada(completa=True)
+    except Exception:
+        # Nem o log: um pacote de aba não tem logger, e o gesto já deu certo.
+        return frase
+    if not resultado.frase:
+        return frase
+    return f"{frase} · {resultado.frase}" if frase else resultado.frase
