@@ -1088,7 +1088,7 @@
   /* O LUGAR VAZIO NÃO SE CLICA — 02/09/2026, e a régua é a foto.
      Fotografada a aba com a mesa dela (dois controles), as colunas P3 e P4
      diziam `Desconectado` no cabeçalho e traziam os dois `<select>` e o
-     "Guardar esse efeito" ABERTOS. Escolher `Rígido` num lugar onde não há
+     "Guardar" e "Em todos" ABERTOS. Escolher `Rígido` num lugar onde não há
      aparelho é um clique que só pode terminar em recusa — e um botão que
      convida para uma recusa é pior que um botão que não existe.
 
@@ -1110,7 +1110,7 @@
      (dois controles), as colunas P3 e P4 saíam **byte a byte iguais** às duas
      que funcionam. Medido nos pixels da foto do produto:
 
-         o texto de "Guardar esse efeito"   P1 e P2  rgb(186,145,246)
+         o texto do botão de guardar       P1 e P2  rgb(186,145,246)
                                             P3 e P4  rgb(186,145,246)
          a borda da caixa "Modo"            P1       rgb(189,147,249)
                                             P3 e P4  rgb(189,147,249)
@@ -1589,7 +1589,10 @@
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
-            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
+                    title="Guarda esse efeito: o L2 e o R2 desta coluna vão para o perfil, só deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
+            <button class="btn roxo" data-gesto="em-todos" data-hef-forma="@controle"
+                    title="Põe o L2 e o R2 desta coluna em todos os controles ligados e guarda o efeito no perfil como o de todo mundo — um controle que você ligar depois já nasce com ele. Some o ajuste próprio que cada controle tinha nesses dois gatilhos.">Em todos</button>
           </div>
         </div>
         <div class="ctrl" data-controle="p2"
@@ -1727,7 +1730,10 @@
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
-            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
+                    title="Guarda esse efeito: o L2 e o R2 desta coluna vão para o perfil, só deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
+            <button class="btn roxo" data-gesto="em-todos" data-hef-forma="@controle"
+                    title="Põe o L2 e o R2 desta coluna em todos os controles ligados e guarda o efeito no perfil como o de todo mundo — um controle que você ligar depois já nasce com ele. Some o ajuste próprio que cada controle tinha nesses dois gatilhos.">Em todos</button>
           </div>
         </div>
         <div class="ctrl" data-controle="p3"
@@ -1842,7 +1848,10 @@
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
-            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
+                    title="Guarda esse efeito: o L2 e o R2 desta coluna vão para o perfil, só deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
+            <button class="btn roxo" data-gesto="em-todos" data-hef-forma="@controle"
+                    title="Põe o L2 e o R2 desta coluna em todos os controles ligados e guarda o efeito no perfil como o de todo mundo — um controle que você ligar depois já nasce com ele. Some o ajuste próprio que cada controle tinha nesses dois gatilhos.">Em todos</button>
           </div>
         </div>
         <div class="ctrl" data-controle="p4"
@@ -1957,7 +1966,10 @@
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
-            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
+                    title="Guarda esse efeito: o L2 e o R2 desta coluna vão para o perfil, só deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
+            <button class="btn roxo" data-gesto="em-todos" data-hef-forma="@controle"
+                    title="Põe o L2 e o R2 desta coluna em todos os controles ligados e guarda o efeito no perfil como o de todo mundo — um controle que você ligar depois já nasce com ele. Some o ajuste próprio que cada controle tinha nesses dois gatilhos.">Em todos</button>
           </div>
         </div>
         </div>
@@ -2037,7 +2049,7 @@
     <li><b>O recibo saiu do pé do quadro e virou a própria coluna.</b> Ele existia para dizer
         <span class="marca">em QUAL controle escreveu</span>; com uma coluna por controle, a
         pergunta já não se faz.</li>
-    <li><b>"Guardar esse efeito" é um por controle</b>, e não um só no pé do quadro — um botão
+    <li><b>O "Guardar" é um por controle</b>, e não um só no pé do quadro — um botão
         único não diria qual dos 4 pares ele guarda, que é exatamente a ambiguidade que
         o recibo foi criado para matar.</li>
   </ul>
@@ -2109,10 +2121,25 @@
         número.</li>
   </ul>
 
+  <h2>O que entrou em 06/09, e é a única coisa desta aba que espera a sua palavra</h2>
+  <ul>
+    <li><b>"Em todos" — o efeito desta coluna vale para os 4, e o próximo controle
+        já nasce com ele.</b> Até agora tudo o que esta tela gravava era <i>daquele</i>
+        controle: dois controles com o mesmo efeito viravam dois ajustes separados no perfil,
+        e um terceiro, ligado depois, não pegava nenhum dos dois. Este botão escreve o efeito
+        como o de <span class="marca">todo mundo</span> e tira o ajuste próprio que cada
+        controle tinha nesses dois gatilhos — é o que a janela antiga fazia com o alvo em
+        "Todos".</li>
+    <li><b>O "Guardar esse efeito" ficou só "Guardar"</b> — os três não cabiam na faixa: com o
+        texto longo o campo do nome caía para 16px, que é um campo que não se digita. A frase
+        inteira foi para o <code>?</code> do botão, e o encurtamento é o mesmo que você pediu no
+        "Voltar ao automático" em 31/08.</li>
+  </ul>
+
   <h2>O que NÃO mudou</h2>
   <ul>
     <li>Os <b>19 modos</b> e seus textos, o <b>efeito pronto</b> com "Meus efeitos" na mesma lista,
-        as <b>barras de ajuste</b>, o <b>título "Seleção de Gatilho"</b> e o "Guardar esse efeito"
+        as <b>barras de ajuste</b>, o <b>título "Seleção de Gatilho"</b> e o botão de guardar
         um por coluna.</li>
     <li><b>Os glifos são os do mapa</b> — <code>assets/glyphs/l2.svg</code> e <code>r2.svg</code>,
         a 36px, que é o piso medido para a palavra dentro deles chegar aos 10px de tipo desta casa.</li>
