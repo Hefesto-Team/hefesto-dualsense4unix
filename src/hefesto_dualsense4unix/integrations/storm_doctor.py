@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import warnings
 from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
@@ -50,17 +51,52 @@ PREFIXO_DA_CURA = "O que fazer: "
 #: compara a frase com os rótulos vivos — e é por isso que ele existe.
 _ROTULOS_EM_CACHE: dict[str, str] = {}
 
+#: OS RÓTULOS QUE SAÍRAM DA RESERVA — `{id do widget: o rótulo que saiu}`.
+#:
+#: **O SILÊNCIO ACABOU AQUI — 06/09/2026, sprint GTK-2.** A reserva do
+#: :func:`rotulo_do_botao` continua sendo reserva (uma frase que some é pior que
+#: uma frase com um nome velho), mas ela era CALADA e ficava no
+#: :data:`_ROTULOS_EM_CACHE` para o resto do processo: sem o glade ao alcance o
+#: produto publicava o nome de reserva para sempre e nada acusava. Um valor de
+#: reserva que vira permanente sem nada acusando é o defeito, não a reserva —
+#: e ele deixa de ser hipotético no dia em que a `GTK-3` apagar o
+#: XML da janela GTK (`D-0609-GTK-LEVA-INTEIRA`).
+#:
+#: Quem lê isto: :func:`rotulos_de_reserva` (para quem chama por código) e
+#: `tests/unit/test_os_leitores_do_glade_tem_dono.py`, que reprova nomeando o
+#: id do botão que ficou sem dono. O aviso de runtime é um
+#: :func:`warnings.warn`, uma vez por id.
+_ROTULOS_DE_RESERVA: dict[str, str] = {}
+
+
+def rotulos_de_reserva() -> dict[str, str]:
+    """`{id do widget: rótulo}` de todo rótulo que a FONTE não soube dar.
+
+    Vazio é o estado saudável: quer dizer que todo rótulo que o produto cita
+    foi lido de onde ele vive. Uma entrada aqui é uma frase de tela mandando
+    clicar num botão cujo nome ninguém conferiu — ver :data:`_ROTULOS_DE_RESERVA`.
+    """
+    return dict(_ROTULOS_DE_RESERVA)
+
 
 def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
     """O rótulo VIVO de um botão do `main.glade`, pelo id dele.
 
     `se_faltar` é o que sai quando o glade não está ao alcance (empacotamento
     parcial, teste sem recurso). Uma frase que some é pior que uma frase com um
-    nome velho, então isto nunca levanta.
+    nome velho, então isto nunca levanta — **mas não é mais calado**: o id vai
+    para :data:`_ROTULOS_DE_RESERVA` e sai um `warnings.warn` na primeira vez.
     """
     if widget_id in _ROTULOS_EM_CACHE:
         return _ROTULOS_EM_CACHE[widget_id]
     alvo = se_faltar
+    # A BANDEIRA É O INSTRUMENTO, e comparar as duas strings NÃO seria: hoje o
+    # rótulo do `btn_storm_fix_safe` no glade é palavra por palavra o
+    # `se_faltar` desta casa ("Consertar problemas conhecidos"), então
+    # `alvo == se_faltar` acusaria reserva sobre uma LEITURA que deu certo.
+    # Régua que responde sobre outra coisa que não o produto é o defeito que
+    # esta casa achou seis vezes em três dias.
+    lido_da_fonte = False
     try:
         import re as _re
         from pathlib import Path as _Path
@@ -81,8 +117,22 @@ def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
         )
         if achado:
             alvo = achado.group(1)
+            lido_da_fonte = True
     except (OSError, IndexError):
         pass
+    if not lido_da_fonte:
+        # A FONTE NÃO RESPONDEU. Três caminhos chegam aqui e os três valem o
+        # mesmo aviso: o arquivo não existe (`OSError`), o id não está nele
+        # (`IndexError` no split) ou o bloco não tem `label`. Registrar antes
+        # de cachear é o que impede o `se_faltar` de virar permanente calado.
+        _ROTULOS_DE_RESERVA[widget_id] = se_faltar
+        warnings.warn(
+            f"storm_doctor: o rótulo do botão {widget_id!r} não foi lido de "
+            f"lugar nenhum e saiu da RESERVA ({se_faltar!r}). A frase de tela "
+            "continua de pé, mas ela manda clicar num nome que ninguém "
+            "conferiu — dê um dono ao rótulo (D-0609-GTK-LEVA-INTEIRA).",
+            stacklevel=2,
+        )
     _ROTULOS_EM_CACHE[widget_id] = alvo
     return alvo
 
@@ -776,9 +826,17 @@ def storm_report(
     ``controles_no_cabo`` (MESA-CHEIA-11/E3) é o denominador do check de áudio;
     quem tem o `state_full` à mão o calcula com a função de mesmo nome. ``None``
     = sem daemon, e aí o check volta a responder só presente/ausente.
+
+    **A LINHA DA RESERVA — 06/09/2026, GTK-2.** Se algum dos checks acima citou
+    um botão cujo nome saiu da RESERVA (:func:`rotulos_de_reserva`), o laudo
+    diz isso em vez de calar: as linhas acima estão mandando clicar num nome que
+    o produto não conseguiu conferir. Ela é CONDICIONAL e hoje nunca aparece —
+    e é assim que se pretende. Ela nasce no dia em que o XML da janela sair
+    sem que ninguém tenha dado dono ao rótulo, e some no dia em que o dono
+    aparecer.
     """
     home = home or Path.home()
-    return [
+    achados = [
         check_snd_quirk(snd_quirk_text, snd_conf_path),
         check_snd_audio_healthy(cards_text, controles_no_cabo=controles_no_cabo),
         check_quirk(quirks_text),
@@ -786,6 +844,17 @@ def storm_report(
         check_wireplumber(dropin_dir),
         check_authorized_rule(rules_dir),
     ]
+    reserva = rotulos_de_reserva()
+    if reserva:
+        nomes = ", ".join(f"'{r}'" for r in sorted(set(reserva.values())))
+        achados.append((
+            INFO,
+            f"o nome de botão que este exame cita ({nomes}) não pôde ser "
+            "conferido no produto — o exame continua valendo, o NOME é que "
+            f"pode estar velho. {PREFIXO_DA_CURA}nada agora; quem cuida do "
+            "produto tem de dar um dono a esse rótulo.",
+        ))
+    return achados
 
 
 def _safe_read(path: Path) -> str:
@@ -809,6 +878,8 @@ __all__ = [
     "find_localconfig_vdfs",
     "formato_desta_instalacao",
     "gesto_de_atualizar",
+    "rotulo_do_botao",
+    "rotulos_de_reserva",
     "steam_input_allowlist",
     "steam_input_fora_da_allowlist",
     "steam_input_on_fora_da_allowlist",
