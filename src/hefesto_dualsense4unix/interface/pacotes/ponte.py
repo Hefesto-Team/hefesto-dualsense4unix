@@ -239,3 +239,33 @@ def salvar_arquivo(titulo: str, sugestao: str = "", **_: Any) -> str | None:
     raise RuntimeError(
         f"salvar_arquivo({titulo!r}) foi chamado fora da janela. Só o piloto "
         f"pode abrir o seletor do sistema — ele substitui esta função ao subir.")
+
+
+def dentro_da_janela() -> bool:
+    """A janela do produto está de pé NESTE processo? (função pura)
+
+    **NÃO É ADIVINHAÇÃO, E MUITO MENOS "estou sob teste?"** — é a leitura de um
+    fato que já existia: quem sobe a janela SUBSTITUI os dois pontos de extensão
+    acima (`interface/hefesto_vivo.py:2096`), e mais ninguém o faz. Enquanto
+    `escolher_arquivo` for a função declarada aqui, não há janela: quem está
+    chamando um gesto é uma régua, um script ou um driver de medição.
+
+    **POR QUE ISSO PRECISOU EXISTIR — 06/09/2026, e o defeito era meu.** O som
+    de confirmação da aba 02 (A-CONFISSAO-NO-BOTAO-01) chama o tocador do
+    sistema. Medido na bancada: com o `pactl` DUBLADO de uma régua vizinha, o
+    sink do DualSense casa pela regra do um-para-um, o motor o encontra "na
+    lista viva" e segue para o `paplay` — que **não** está dublado. A suíte
+    tocava som no alto-falante do controle DELA, e ela está trabalhando.
+
+    A guarda-mãe do `audio_saida` não alcança este caso de propósito: ela
+    confere o sink contra a lista viva, e numa régua a lista viva é de mentira.
+    Quem sabe que ninguém clicou é esta camada.
+
+    **É O MESMO DESENHO QUE O MEDIDOR DE ONDAS JÁ USA**, e pela mesma razão
+    escrita lá: *"a suíte chama `a02_controles.pacote()` centenas de vezes, e um
+    fluxo de captura aberto a cada chamada seguraria o microfone DELA aberto
+    durante a suíte inteira. O piloto é o produto; é ele quem autoriza."* A
+    diferença é que ali o piloto acende a chave com uma linha própria, e aqui o
+    fato já estava disponível sem tocar no piloto.
+    """
+    return getattr(escolher_arquivo, "__module__", __name__) != __name__
