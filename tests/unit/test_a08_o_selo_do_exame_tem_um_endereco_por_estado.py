@@ -234,11 +234,22 @@ def test_o_html_que_o_produto_nao_pintou_continua_acusado() -> None:
 # (a) O DESENHO — e ele é o que alcança a tela dela
 # ---------------------------------------------------------------------------
 def test_o_desenho_tem_um_interruptor_por_estado() -> None:
-    """Toda linha do exame sabe mostrar os QUATRO estados, e um só de cada vez."""
+    """Toda linha do exame sabe mostrar os QUATRO estados, e um só de cada vez.
+
+    **O SELETOR ACHA A LINHA PELA CLASSE, e não pelo `data-campo` — 06/09/2026,
+    `ONDA5-08-01`.** Ele digitava `<div class="exame" data-campo="exame">`, e no
+    dia em que a 08-Q5 trocou aquele endereço por `exame-calada` (para a linha
+    calada acender a classe `apagada`) a régua devolveu **zero linha** e
+    reprovou a melhora em vez do defeito. É a forma que esta casa já pagou onze
+    vezes em 26/08: *a régua digitava o que devia LER*.
+
+    `class="exame"` é o que a folha de estilo escova e o que não muda com o
+    endereço; o `data-campo` é justamente o que esta sprint move. Um seletor que
+    casa zero continua sendo ERRO aqui embaixo — silêncio, não.
+    """
     p = _pacote()
     html = BANCADA.read_text(encoding="utf-8")
-    linhas = re.findall(r'<div class="exame" data-campo="exame">.*?</div>',
-                        html, re.S)
+    linhas = re.findall(r'<div class="exame"[^>]*>.*?</div>', html, re.S)
     assert linhas, "a bancada da 08 não tem uma linha de exame"
 
     for i, linha in enumerate(linhas):

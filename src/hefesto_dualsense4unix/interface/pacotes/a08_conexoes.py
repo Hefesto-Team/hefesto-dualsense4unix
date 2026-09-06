@@ -112,7 +112,49 @@ _QUANDO_O_EXAME: float | None = None
 #: Sai do disco e é atualizado NA HORA pelo `ignorar`: sem isso a linha voltaria
 #: no tique seguinte, e um botão que grava e não cala é o defeito que este
 #: pacote mediu em 01/09 como razão para NÃO ligá-lo.
+#:
+#: **O ARRANJO VAZIO É O DESFAZER, e não um estado inválido** — 06/09/2026,
+#: `ONDA5-08-01`. `machine.declare` não tem verbo de remoção: a fusão do daemon
+#: desce nos dicionários aninhados e só a AUSÊNCIA de uma chave preserva o que
+#: havia (`utils/maquina.py`, `fundir_declaracao`), então mandar o dicionário
+#: menos uma chave NÃO apaga a chave. O que apaga o EFEITO é gravar
+#: `arranjo=""`: `ordens_da_mesa.ordens_novas` compara o arranjo guardado com o
+#: de agora, e um vazio guardado não casa com arranjo nenhum — a ordem volta a
+#: falar. A propriedade que o `ignorar` descrevia como DEFEITO até 05/09 (*"uma
+#: dispensa gravada com `arranjo=\"\"` passaria no esquema e nunca casaria"*) é
+#: o mecanismo do desfazer.
 _DISPENSADAS: dict[str, str] = {}
+
+#: O QUE ACONTECE COM UMA ORDEM QUE ELA MANDOU IGNORAR — a MEDIÇÃO, não a
+#: promessa. **O DONO MUDOU DE ARQUIVO EM 06/09/2026**, e a razão é de direção:
+#: a frase deixou de ser só desenho e passou a ser PINTADA (o `title` do ⊘ é
+#: `data-campo="ignorar-dica"`), e o gerador pode importar o pacote — o pacote
+#: não pode importar o gerador, que escreve a bancada ao ser importado. Quem
+#: pinta é dono; `aba08.ORDEM_IGNORADA_VOLTA` passou a ler daqui.
+#:
+#: **FATO ERRADO, SUBSTITUÍDO** (a nota de 04/09 continua valendo): a quinta
+#: linha do Check-up dizia *"elas voltam em **Ver as ordens ignoradas**"*, e o
+#: botão saiu da tela em 31/08 — a frase mandava ela procurar um botão que não
+#: existe.
+ORDEM_IGNORADA_VOLTA = "volta sozinha se o arranjo dos cabos mudar"
+
+#: OS DOIS VERBOS DO ⊘ — decisão **08-Q5** dela, 05/09/2026: *"A recomendação
+#: calada continua no lugar dela, em cinza, e o mesmo botão desfaz."*
+#:
+#: **O `title` DO DESENHO PASSA A SER SÓ O DE PARTIDA.** Até 05/09 ele era
+#: cravado no gerador e mentia por construção: dizia *"A recomendação sai desta
+#: lista"*, e a decisão dela põe a linha de volta na lista. Pior, ele dizia a
+#: mesma coisa depois do clique — um botão que muda de sentido com uma dica que
+#: não muda é a cicatriz da trava da luz, medida em 04/09.
+#:
+#: **A LISTA VAI EM TODO TIQUE, inclusive com a linha falando** — é a mesma
+#: regra do botão cinza da ONDA0-F: a chave que só aparece quando há o que
+#: dizer deixa na tela a tinta do tique anterior.
+DICA_DO_IGNORAR = ("Ignora ESTE conselho enquanto os cabos estiverem assim. "
+                   f"A recomendação fica em cinza nesta lista e {ORDEM_IGNORADA_VOLTA}.")
+
+#: O SEGUNDO VERBO, palavra dela na 08-Q5: *"o mesmo botão desfaz"*.
+DICA_DO_DESFAZER = "Traz esta recomendação de volta para a lista."
 
 #: O EXAME DE ENTRADA JÁ FOI PEDIDO NESTA SESSÃO? — 03/09/2026, `MIGRA-08-01`.
 #: Ele é UMA VEZ SÓ e não se re-arma: o que o rearmaria é o botão **Examinar
@@ -669,23 +711,67 @@ def _pedir_o_exame_de_entrada() -> None:
                      daemon=True).start()
 
 
+def _calada(item: Any) -> bool:
+    """Esta linha é uma ordem que ela mandou calar, **neste arranjo**?
+
+    A COMPARAÇÃO EXIGE ARRANJO, e a guarda não é enfeite — 06/09/2026,
+    `ONDA5-08-01`. `Ordem.arranjo` tem `""` por padrão
+    (`integrations/ordens_da_mesa.py`), e o desfazer desta sprint GRAVA `""` na
+    chave. Sem o `and arranjo`, uma ordem viva sem assinatura casaria com o
+    vazio guardado e nasceria calada — a tela apagando um achado que ninguém
+    dispensou. É a borda que o `ignorar` já descrevia por escrito desde 04/09,
+    virada do avesso: o que lá era defeito é aqui o mecanismo, e por isso
+    precisa da guarda ao lado.
+
+    **A MESMA GUARDA FALTA EM `integrations/ordens_da_mesa.py`**, em
+    `ordens_novas` e `ordens_caladas`, que comparam sem exigir arranjo. Aquele
+    arquivo tem outro dono e a janela estável também o lê: está RELATADO, não
+    consertado.
+    """
+    return _ordem_calada(getattr(item, "ordem", None))
+
+
+def _ordem_calada(ordem: Any) -> bool:
+    """A mesma pergunta, feita sobre a ORDEM — é o que o gesto `ignorar` tem na mão.
+
+    UMA COMPARAÇÃO SÓ PARA OS DOIS LADOS. O ⊘ precisa saber se está calando ou
+    desfazendo, e a tira precisa saber se pinta em cinza; escrever a comparação
+    duas vezes é como o botão passa a desfazer o que a tela mostra como falando
+    no dia em que uma das duas mudar.
+    """
+    if ordem is None:
+        return False
+    arranjo = str(getattr(ordem, "arranjo", "") or "")
+    return bool(arranjo) and _DISPENSADAS.get(str(ordem.chave)) == arranjo
+
+
 def _itens_da_tela() -> list[Any]:
     """As linhas do Check-up: as três do tique mais o que o exame completo trouxe.
 
-    O QUE ELA DISPENSOU NÃO VOLTA, e é a metade do gesto `ignorar` que o disco
-    sozinho não entrega: `ordens_da_mesa.ordens_novas` compara o arranjo
-    guardado com o de AGORA, e é essa comparação que faz a dispensa valer para o
-    fato e não para a palavra. Sem este filtro, o ⊘ gravaria a decisão dela e a
-    linha reapareceria no tique seguinte — *"botão que grava e não cala"*, que
-    foi exatamente a razão medida em 01/09 para não ligar o ⊘ ainda.
+    **A ORDEM CALADA FICA NA TIRA — 08-Q5, 06/09/2026.** Até 05/09 esta função
+    DESCARTAVA o que ela tinha dispensado, e a linha sumia da tela: uma porta de
+    mão única sobre um clique dela, sem caminho de volta em lugar nenhum desta
+    aba. A decisão dela é o contrário — *"A recomendação calada continua no
+    lugar dela, em cinza, e o mesmo botão desfaz"* —, e quem diz qual linha está
+    calada é :func:`_calada`, lido pela tela em `data-campo="exame-calada"`.
+
+    O QUE NÃO MUDA, e são as duas metades que o filtro segurava sozinho:
+
+    * **a aba Jogar não recebe a calada** — quem filtra é :func:`_exame`, que é
+      o contrato daquela aba. Sem aquele passo, calar um alarme aqui o deixaria
+      aceso na coluna **Atenção** de lá;
+    * **o veredito do topo continua contando só os falantes**
+      (:func:`_veredito_do_exame`), senão uma ordem dispensada prenderia o topo
+      em laranja para sempre e o ⊘ voltaria a ser botão morto.
+
+    A ORDENAÇÃO DE BAIXO NÃO MUDA: `sorted` é estável e as ordens continuam
+    vindo antes das conferências, calada ou não. Mandar a calada para o fim
+    seria a mesma tela que esconde, com outro nome.
     """
     conferidas = _conferencias()
     vistas = {getattr(i, "chave", "") for i in conferidas}
     for item in _EXTRAS:
         if getattr(item, "chave", "") in vistas:
-            continue
-        ordem = getattr(item, "ordem", None)
-        if ordem is not None and _DISPENSADAS.get(ordem.chave) == ordem.arranjo:
             continue
         conferidas.append(item)
     # AS ORDENS VÊM ANTES, E A REGRA É DO PRODUTO — 03/09/2026, `MIGRA-08-01`.
@@ -703,10 +789,10 @@ def _itens_da_tela() -> list[Any]:
     # tira fica com cinco CERTO — a tela dizendo "está tudo bem" com dois
     # achados abertos escondidos no fim da lista.
     #
-    # O `+N` CONTINUA FALTANDO, e é o mesmo buraco que `gui.aba_conexoes.
-    # sobraram` mede na janela estável: o desenho não tem onde dizer "e mais 2".
-    # O que esta ordenação garante é que o que sobra seja sempre o mais barato
-    # de perder.
+    # O `+N` EXISTE DESDE 06/09/2026 (`exame-mais`, decisão 08-Q7): o que não
+    # cabe nos cinco blocos passa a ser DITO. Esta ordenação continua sendo o
+    # que garante que o que sobra seja sempre o mais barato de perder — e as
+    # duas juntas são o que separa uma tela que não mostra de uma que ESCONDE.
     #
     # `sorted` É ESTÁVEL, então dentro de cada grupo a ordem de chegada fica —
     # as conferências continuam saindo na ordem em que `_conferencias` as roda,
@@ -1253,6 +1339,44 @@ def _card_da_ordem(ordem: Any) -> str:
 #: a zona dela cresce; aqui a seção divide altura com as outras duas do quadro.
 _TETO_DE_CURAS = 4
 
+#: OS OUTROS DOIS TETOS DO DESENHO — decisão **08-Q7**, 06/09/2026. Eles moram
+#: aqui, ao lado do primeiro, porque o `+N` é conta do PRODUTO e o número é do
+#: DESENHO: a coluna do exame tem CINCO blocos e a fileira dos vizinhos QUATRO.
+#:
+#: **LIDOS DE UM LUGAR SÓ, nunca digitados nos dois arquivos.** O `aba08.py`
+#: importa este pacote (`_pacote08`) e emite os blocos por estes mesmos números;
+#: um teto digitado no gerador e outro no pacote divergiria no dia em que a
+#: coluna crescesse, e o `+N` passaria a contar o que cabe em vez do que sobra.
+TETO_DO_EXAME = 5
+TETO_DE_VIZINHOS = 4
+
+
+def _monta() -> Any:
+    """O módulo `interface/monta.py`, importável de dentro do pacote.
+
+    ELE PRECISA DE UM APELIDO, e não é capricho: `monta.py` faz `import onde`
+    CRU — nasceu como script de gerador, e naquele contexto a pasta `interface/`
+    é o `sys.path[0]`. Importado como módulo de pacote ele levanta
+    `ModuleNotFoundError: No module named 'onde'`, medido em 03/09/2026.
+
+    O APELIDO É EM `sys.modules`, NUNCA UM `sys.path.insert`, pela razão que
+    `a09_sistema._monta` escreve: pôr a pasta `interface/` no caminho de busca
+    deixaria `casamento`, `mapa`, `regua`, `ver` e mais vinte nomes curtos
+    visíveis como módulos de topo para todo o processo.
+
+    **É A SEGUNDA CÓPIA DESTE HELPER, e ela é declarada** — a primeira é
+    `a09_sistema._monta`. Promovê-lo a `pacotes/__init__.py` é mudança em
+    arquivo de outra posse (`ONDA4-S10` está nele nesta leva); fica RELATADO.
+    """
+    import sys
+
+    from hefesto_dualsense4unix.interface import onde as _onde
+
+    sys.modules.setdefault("onde", _onde)
+    from hefesto_dualsense4unix.interface import monta
+
+    return monta
+
 
 def _card_da_cura(item: Any) -> str:
     """O card de uma conferência que tem CURA e não tem ordem — decisão [03].
@@ -1345,6 +1469,39 @@ def _sobraram(quantos: int, cabem: int, um: str, muitos: str) -> str:
         n=n, coisa=(um if n == 1 else muitos),
         coube=("coube" if n == 1 else "couberam"))
     return f'<div class="mais">{_e(frase)}</div>'
+
+
+def _o_que_nao_coube(itens: list[Any], vizinhos: list[Any]) -> dict[str, str]:
+    """Os DOIS `+N` que faltavam nesta aba — decisão **08-Q7** dela, 06/09/2026.
+
+    *"Quando sobra, a lista ganha uma última linha curta: '+1 recomendação não
+    coube aqui' — e só no dia em que sobra."* A trava que ela leu: *"hoje a sua
+    bancada já perde uma recomendação em silêncio"* — o exame desta máquina
+    devolve SETE itens e a coluna tem CINCO blocos.
+
+    **CADA UM CONTA A PRÓPRIA LISTA, e as duas chegam juntas por isso:** o
+    `+N` do exame conta os itens da tira e o dos vizinhos conta os rádios. É a
+    régua do erro que esta aba já cometeu — `gui.aba_conexoes.sobraram` está
+    citado em quatro lugares desta árvore como se fosse o dono desta frase, e
+    ele devolve um `int` sobre o ACORDEÃO. Perguntar no lugar errado produz
+    não-achado convincente.
+
+    **O `monta.NADA_A_DIZER` NO LUGAR DO VAZIO, e ele é obrigatório:** o
+    `escrever()` do piloto troca valor vazio por `—` ANTES de olhar o alvo, e um
+    `""` daqui poria um travessão solto sob a quinta linha do exame TODO DIA.
+    `.ressalva:has(.nada){display:none}` é a peça que faz a linha só existir no
+    dia em que sobra — é para isso que ela existe.
+
+    **AS DUAS CHAVES VÃO EM TODO TIQUE**, inclusive quando cabe tudo: omiti-las
+    deixaria na tela o `+N` do tique anterior depois de ela desligar um rádio.
+    """
+    nada = _monta().NADA_A_DIZER
+    return {
+        "exame-mais": _sobraram(len(itens), TETO_DO_EXAME,
+                                "achado", "achados") or nada,
+        "vizinho-mais": _sobraram(len(vizinhos), TETO_DE_VIZINHOS,
+                                  "rádio vizinho", "rádios vizinhos") or nada,
+    }
 
 
 def _html_da_ordem(vivos: list[Any] | None = None) -> str:
@@ -1503,6 +1660,15 @@ def _linha(item: Any) -> dict[str, Any]:
         # fica em `_ORDENS_NA_TELA`, que é quem o `ignorar` consulta.
         "ordem": "" if ordem is None else str(ordem.chave),
         "arranjo": "" if ordem is None else str(ordem.arranjo),
+        # A LINHA ESTÁ CALADA? — 08-Q5, 06/09/2026. `"sim"` é o valor que o
+        # `data-hef-quando` do desenho espera; o VAZIO é o outro estado, e ele
+        # tem de ser emitido também: a chave que só aparece quando há o que
+        # dizer deixa na tela a tinta do tique anterior, e a linha que voltou
+        # ficaria cinza para sempre.
+        "calada": "sim" if _calada(item) else "",
+        # O `title` DO ⊘, e ele muda de VERBO com o estado — porque o botão
+        # muda de sentido. Ver :data:`DICA_DO_IGNORAR` e :data:`DICA_DO_DESFAZER`.
+        "dica-do-ignorar": DICA_DO_DESFAZER if _calada(item) else DICA_DO_IGNORAR,
     }
 
 
@@ -1526,8 +1692,22 @@ def _exame() -> list[dict[str, Any]]:
     o erro, e o sintoma foi a AUSÊNCIA de dado — que se lê como "não havia
     achado nenhum". Renomear uma função privada de um pacote pode apagar meia
     tela de outro.
+
+    **A CALADA NÃO ATRAVESSA ESTE CONTRATO — 06/09/2026, `ONDA5-08-01`.** Desde
+    a 08-Q5 a ordem dispensada FICA na tira desta aba, em cinza; a filtragem
+    mudou de lugar e passou a ser daqui. Sem este filtro, calar um alarme na
+    Conexões o deixaria aceso na coluna **Atenção** da Jogar — a mesma
+    contradição de duas telas que o `_do_exame` de lá existe para não ter, e um
+    alarme que ela já respondeu.
+
+    **É AQUI E NÃO EM `_itens_da_tela` PORQUE A CURA COBRE TODOS OS CHAMADORES**
+    sem tocar em arquivo de outra posse: a pintura desta aba não passa por esta
+    função (o :func:`pacote` chama `_itens_da_tela()` direto), então a 08
+    continua vendo tudo e a 01 continua vendo só o que fala. É a regra que esta
+    casa pagou duas vezes em 05/09 — cobrir um chamador deixa a próxima pessoa
+    remedindo o mesmo defeito.
     """
-    return [_linha(i) for i in _itens_da_tela()]
+    return [_linha(i) for i in _itens_da_tela() if not _calada(i)]
 
 
 def _adaptadores(conectados: Any, state: Any = None) -> dict[str, Any]:
@@ -2825,15 +3005,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # tira mudar entre a pintura e o clique, o clique age sobre o que ela
     # estava vendo, que é o único alvo defensável.
     _ORDENS_NA_TELA = tuple(getattr(i, "ordem", None) for i in vivos)
-    # O QUE SOBRA NÃO É CLICÁVEL, E NÃO É MENTIRA: o desenho tem CINCO linhas de
-    # exame e QUATRO blocos de vizinho. Se a mesa dela render mais — três ordens
-    # de serviço abertas, sete rádios espetados —, a pintura escreve nos lugares
-    # que existem e o resto não aparece. Nenhum clique age sobre o alvo errado
-    # (o `data-v` só vai até 4 e o `_slot` confere a faixa), mas a tela ESCONDE.
-    # É o mesmo buraco que `gui/aba_conexoes.sobraram` mede na janela estável, e
-    # ali quem chama tem de dizê-lo. Aqui não há onde dizer ainda: nem o exame
-    # nem os vizinhos têm um "+N" no desenho dela. Fica escrito para quem
-    # desenhar o próximo.
+    # O QUE SOBRA NÃO É CLICÁVEL, MAS PASSOU A SER DITO — 06/09/2026, decisão
+    # 08-Q7 dela: *"Quando sobra, a lista ganha uma última linha curta"*. O
+    # desenho tem CINCO linhas de exame (`TETO_DO_EXAME`) e QUATRO blocos de
+    # vizinho (`TETO_DE_VIZINHOS`); se a mesa dela render mais, a pintura
+    # escreve nos lugares que existem e os endereços `exame-mais` e
+    # `vizinho-mais` dizem quantos não couberam. Nenhum clique age sobre o alvo
+    # errado (o `data-v` só vai até o teto e o `_slot` confere a faixa).
+    #
+    # **A DÍVIDA QUE ISTO FECHA ESTAVA ESCRITA AQUI**, e o comentário que a
+    # descrevia — *"Aqui não há onde dizer ainda"* — foi substituído em vez de
+    # guardado ao lado: o Hefesto não descreve a limitação, ele constrói o
+    # mecanismo que a remove (10-Q6).
 
     adap = _adaptadores(ctx.conectados, ctx.state)
     declaracao = _declaracao()
@@ -3137,6 +3320,21 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # da `interface/paginas/08-conexoes.html` o trazem, e a `08-conexoes`
         # saiu da `mockup/DIVERGENCIAS.md`. A dica desta aba é PINTADA hoje.
         "achado-explica": [i["dica"] for i in itens],
+        # A LINHA CALADA, E O VERBO DO ⊘ — decisão 08-Q5 dela, 06/09/2026.
+        #
+        # SÃO DUAS LISTAS E NÃO UMA porque são dois alvos em dois elementos: o
+        # `<div class="exame">` acende a classe `apagada` pelo alvo `classe`
+        # (`data-hef-quando="sim"`), e o `<button class="ignora">` recebe o
+        # `title` pelo alvo `atributo`. Um elemento tem UM `data-campo`, e a
+        # cor da linha e a dica do botão são dois dados diferentes.
+        #
+        # AS DUAS VÃO EM TODO TIQUE, inclusive vazias — a mesma regra do botão
+        # cinza da ONDA0-F. Emitir `calada` só quando for `"sim"` deixaria a
+        # linha que VOLTOU com a tinta do tique anterior, cinza para sempre.
+        "exame-calada": [i["calada"] for i in itens],
+        "ignorar-dica": [i["dica-do-ignorar"] for i in itens],
+        # OS DOIS `+N` — decisão 08-Q7. Ver :func:`_o_que_nao_coube`.
+        **_o_que_nao_coube(itens, vizinho_nome),
         # O CARIMBO do topo do Check-up — publicado no mesmo dia e pela mesma
         # decisão, e também já pintado.
         "examinado": _carimbo_do_exame(),
@@ -4054,19 +4252,42 @@ def _correr_o_exame_completo() -> None:
 
 @gesto("08-conexoes.html", "ignorar")
 def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"⊘": cala ESTA ordem de serviço enquanto os cabos estiverem assim.
+    """"⊘": cala ESTA ordem de serviço — e o MESMO botão a traz de volta.
+
+    **É UM INTERRUPTOR DESDE 06/09/2026, decisão 08-Q5 dela:** *"A recomendação
+    calada continua no lugar dela, em cinza, e o mesmo botão desfaz."* A trava
+    que ela leu era esta: *"Hoje não há caminho de volta nenhum"* — medido com
+    `grep` sobre as 4.400 linhas deste pacote, o único escritor de
+    `ordens_dispensadas` era este gesto, e ele só sabia calar.
+
+    | estado da linha | grava | memória |
+    | --- | --- | --- |
+    | falando | `{"quando": hoje, "arranjo": ordem.arranjo}` | `_DISPENSADAS[chave] = arranjo` |
+    | calada | `{"quando": "", "arranjo": ""}` | `_DISPENSADAS[chave] = ""` |
+
+    **DESFAZER É ESCREVER `arranjo=""`, e não remover a chave**: `machine.declare`
+    não tem verbo de remoção (ver a nota de :data:`_DISPENSADAS`). O esquema
+    aceita os dois vazios — `OrdemDispensada._so_a_data` só cobra a forma do que
+    NÃO é vazio —, e um arranjo vazio guardado não casa com arranjo nenhum, logo
+    a ordem volta a falar. O contorno é honesto: a marca fica no registro, e a
+    REGRA é quem decide se ela cala.
+
+    **O "DEU CERTO" DESTE CLIQUE É A PRÓPRIA LINHA MUDANDO DE COR**, e por isso
+    ele não pede o pisca-verde de 1,5 s da 03-Q4: aquele existe para o gesto
+    cuja resposta não se vê. Aqui a resposta É a tela.
+
+    ---
 
     TEM DONO: `MesaDeclarada.ordens_dispensadas[chave] = {quando, arranjo}`
-    (`utils/maquina.py:280`), o mesmo que `secao_exame._gravar_a_dispensa:995`
-    escreve.
+    (`utils/maquina.py`), o mesmo que `secao_exame._gravar_a_dispensa` escreve.
 
     **A CHAVE DA DISPENSA É O ARRANJO, NÃO A RECOMENDAÇÃO** — e é o que impede
-    que este botão vire "grava e não cala". `ordens_da_mesa.ordens_novas:850`
-    compara o arranjo GUARDADO com o de agora; uma dispensa gravada com
-    `arranjo=""` passaria no esquema e nunca casaria, e a linha voltaria no
-    tique seguinte. Foi essa medição que manteve o ⊘ sem dono na primeira leva,
-    e o que mudou não foi o esquema: é que agora existe `Item.ordem` na tela,
-    porque o **Examinar Portas** traz o catálogo.
+    que este botão vire "grava e não cala". `ordens_da_mesa.ordens_novas`
+    compara o arranjo GUARDADO com o de agora, e é isso que faz a dispensa valer
+    para o FATO e não para a palavra: mudou o cabo, a ordem volta sozinha. Foi
+    essa medição que manteve o ⊘ sem dono na primeira leva, e o que mudou não
+    foi o esquema: é que agora existe `Item.ordem` na tela, porque o **Examinar
+    Portas** traz o catálogo.
 
     UMA CONFERÊNCIA NÃO SE DISPENSA. As linhas `energia_do_radio`,
     `pareamentos`, `suporte_ao_controle`… respondem *"está certo?"*; só uma
@@ -4077,9 +4298,14 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     a mais sobre a rotina dela num arquivo que ela cola em relato de defeito —
     `OrdemDispensada._so_a_data` reprova qualquer outra forma.
 
-    E A LINHA CALA NA HORA: a dispensa entra em `_DISPENSADAS` antes de o
+    E A LINHA MUDA NA HORA: a decisão entra em `_DISPENSADAS` antes de o
     próximo tique montar a tira. Esperar o disco significaria a linha piscando
-    de volta meio segundo depois do clique dela.
+    meio segundo depois do clique dela.
+
+    **A ORDEM DAS DUAS ESCRITAS NÃO SE INVERTE.** `_declarar` LEVANTA quando o
+    daemon recusa, e a memória só muda depois. Inverter poria a tela num estado
+    que o disco não tem — a linha cinza voltaria sozinha no tique seguinte, sem
+    uma palavra, que é a definição de perder trabalho dela em silêncio.
     """
     from datetime import date
 
@@ -4091,10 +4317,15 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "ela responde \"está certo?\" e não há o que dispensar. Só as "
             "linhas 'Mudança recomendada' se calam, e elas aparecem depois de "
             "\"Examinar Portas\".")
+    chave, arranjo = str(ordem.chave), str(ordem.arranjo)
+    # O ESTADO SE PERGUNTA AO MESMO DONO QUE A TELA PERGUNTA — ver
+    # :func:`_ordem_calada`.
+    desfazendo = _ordem_calada(ordem)
+    quando = "" if desfazendo else date.today().isoformat()
+    guardar = "" if desfazendo else arranjo
     _declarar(p, {"ordens_dispensadas": {
-        str(ordem.chave): {"quando": date.today().isoformat(),
-                           "arranjo": str(ordem.arranjo)}}})
-    _DISPENSADAS[str(ordem.chave)] = str(ordem.arranjo)
+        chave: {"quando": quando, "arranjo": guardar}}})
+    _DISPENSADAS[chave] = guardar
     _reler_a_declaracao()
 
 

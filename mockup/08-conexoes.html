@@ -1004,6 +1004,29 @@
   .exame .txt{flex:0 1 auto;min-width:0}
   .exame .ignora{margin-left:auto}
 
+  /* ---- A ORDEM CALADA FICA NA LISTA, EM CINZA — 08-Q5 dela, 06/09/2026 ----
+     *"A recomendação calada continua no lugar dela, em cinza, e o mesmo botão
+     desfaz."* Antes desta regra o produto SUMIA com a linha, e não havia
+     caminho de volta em lugar nenhum desta aba.
+
+     NADA DE `display:none`, E É O PONTO INTEIRO: a linha continua ocupando a
+     fatia dela. Uma linha que some é uma tela que ESCONDE, e é o que a decisão
+     dela desfaz.
+
+     O ACHADO ESMAECE, O CAMINHO DE VOLTA NÃO. A opacidade cai no selo, no texto
+     e no `?` — as três metades que dizem o que a linha achou —, e o ⊘ fica
+     legível: ele é o único jeito de desfazer, e apagá-lo junto seria esconder a
+     porta de saída atrás da própria decisão. É a mesma família do `.apagado` do
+     botão cinza (D-03): cor esmaecida, e o clique continua respondendo.
+
+     A CLASSE VEM DO PRODUTO, pelo alvo `classe` do piloto — ver `exame()`. No
+     mockup ela não aparece: nenhuma linha do desenho nasce calada, porque uma
+     cena de bancada não tem decisão dela dentro. */
+  .exame.apagada .selo,
+  .exame.apagada .txt,
+  .exame.apagada .ajuda{opacity:.42}
+  .exame.apagada .ignora{color:var(--texto-suave);border-color:var(--texto-suave)}
+
   /* ---- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026 ----
      *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
 
@@ -1111,6 +1134,17 @@
      (`peca`, `tira`, `mesa`) — nome de classe se confere ANTES de escrever. */
   .col-ordem .mais{margin-top:8px;font-size:11px;color:var(--texto-mudo);
                    font-style:italic}
+  /* OS OUTROS DOIS `+N` VIAJAM DENTRO DE UMA `.ressalva` — 06/09/2026, 08-Q7.
+     A peça que sabe SUMIR quando não há o que dizer é a linha de ressalva
+     (`monta.ressalva`, com `:empty` e `:has(.nada)`), e o que o produto escreve
+     dentro dela é o mesmo `_sobraram` da coluna da ordem, que devolve um bloco
+     `.mais`. A cor e o tamanho já vêm da `.ressalva` do esqueleto; o que
+     falta é o itálico, para as TRÊS listas dizerem o mesmo fato do mesmo jeito.
+
+     ESCOPADO NA `.ressalva`, e não solto: `monta.py` já define `.gls .mais`
+     para o "+N" do glossário das dez páginas, e um `.mais` sem escopo aqui é o
+     vizinho de nome igual que esta aba já pagou três vezes. */
+  .ressalva .mais{font-style:italic}
 
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
@@ -2254,41 +2288,58 @@
 
           <div class="lado-e">
             <div class="col-exame">
-          <div class="exame" data-campo="exame">
+          <div class="exame" data-campo="exame-calada" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="sim">
             <i class="est est-ok on" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
             <span class="txt" data-campo="achado">As entradas dão energia para o 1 controle no cabo</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma parece defeito do controle.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="0" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="0" data-campo="ignorar-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação fica em cinza nesta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
-          <div class="exame" data-campo="exame">
+          <div class="exame" data-campo="exame-calada" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="sim">
             <i class="est est-ok" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn on" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo warn" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">AJUSTAR</span></span>
             <span class="txt" data-campo="achado">Dois rádios da bancada estão em entradas vizinhas</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na <b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de serviço ao lado, e o <b>?</b> dela diz por que isso importa.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="1" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="1" data-campo="ignorar-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação fica em cinza nesta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
-          <div class="exame" data-campo="exame">
+          <div class="exame" data-campo="exame-calada" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="sim">
             <i class="est est-ok on" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
             <span class="txt" data-campo="achado">O controle no cabo tem uma entrada só para ele</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das entradas onde estão o Player 1.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="2" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="2" data-campo="ignorar-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação fica em cinza nesta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
-          <div class="exame" data-campo="exame">
+          <div class="exame" data-campo="exame-calada" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="sim">
             <i class="est est-ok" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info on" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo info" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">NOTA</span></span>
             <span class="txt" data-campo="achado">4 rádios vizinhos ativos na faixa de 2,4 GHz</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> 4 fontes de rádio perto. 2 você já nomeou; 2 continuam por nomear, na tabela de <b>Rádio e adaptadores</b>.<br><br><b>Por que importa:</b> 1 dos seus 2 controles falam nessa mesma faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe o que dá para desligar e o que não dá.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="3" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="3" data-campo="ignorar-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação fica em cinza nesta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
-          <div class="exame" data-campo="exame">
+          <div class="exame" data-campo="exame-calada" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="sim">
             <i class="est est-ok on" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
             <span class="txt" data-campo="achado">Nenhuma outra ordem de serviço pendente</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html"><b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou ignorar não contam aqui — cada uma volta sozinha se o arranjo dos cabos mudar.</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="4" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="4" data-campo="ignorar-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação fica em cinza nesta lista e volta sozinha se o arranjo dos cabos mudar.">⊘</button>
           </div>
+          <!-- O `+N` DO EXAME — decisão 08-Q7 dela, 06/09/2026: *"Quando
+               sobra, a lista ganha uma última linha curta: '+1 recomendação
+               não coube aqui' — e só no dia em que sobra."*
+
+               A COLUNA TEM CINCO BLOCOS (`a08_conexoes.TETO_DO_EXAME`) e o
+               exame desta bancada devolve SETE itens: duas ordens e cinco
+               conferências. Sem esta linha as duas que sobram somem, e a
+               ordenação de `_itens_da_tela` — que já garante que o que
+               sobra seja o mais barato de perder — continuava sendo um
+               consolo, não uma resposta.
+
+               A PEÇA É A `monta.ressalva`, que já sabe NÃO OCUPAR NADA em
+               repouso (`.ressalva:has(.nada){display:none}`). O produto
+               manda `monta.NADA_A_DIZER` quando cabe tudo — mandar `""`
+               poria um travessão aqui todo dia, porque o `escrever()` do
+                   piloto troca vazio por `—` antes de olhar o alvo. -->
+          <div class="ressalva" data-campo="exame-mais" data-hef-alvo="html"><i class="nada"></i></div>
             </div>
           </div>
 
@@ -3131,6 +3182,19 @@
               <div class="viz"><span class="qual" data-campo="vizinho-nome" title="2.4G Wireless Rcvr">2.4G Wireless Rcvr</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e" data-v="2" data-campo="vizinho-tipo" data-hef-alvo="valor"><option selected data-campo="vizinho-pergunta">— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select><i class="vaviso" data-campo="vizinho-onde-dica" data-hef-alvo="classe"></i><span class="onde" data-campo="vizinho-onde">—</span></div>
               <div class="viz"><span class="qual" data-campo="vizinho-nome" title="Unknown 0e8d:0608">Unknown 0e8d:0608</span><select class="pronto pergunta" title="O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá para desligar e o que não dá. “Outro” abre um campo para você escrever." data-gesto="vizinho-o-que-e" data-v="3" data-campo="vizinho-tipo" data-hef-alvo="valor"><option selected data-campo="vizinho-pergunta">— O que é? —</option><option>Wi-Fi</option><option>Teclado</option><option>Mouse</option><option>Webcam</option><option>Caixa de som</option><option>Outro</option><option>Não sei</option></select><i class="vaviso" data-campo="vizinho-onde-dica" data-hef-alvo="classe"></i><span class="onde" data-campo="vizinho-onde">—</span></div>
             </div>
+            <!-- O `+N` DOS VIZINHOS — a mesma decisão 08-Q7, a outra lista.
+                 A fileira tem QUATRO blocos (`a08_conexoes.TETO_DE_VIZINHOS`) e
+                 nesta bancada há quatro rádios: hoje ele não sobra, e por isso
+                 não ocupa um pixel. No dia em que ela espetar o quinto, o rádio
+                 que não coubesse sumiria calado — e é a lista em que isso custa
+                 mais, porque um rádio por nomear é justamente o que a linha do
+                 Check-up manda nomear.
+
+                 CADA `+N` CONTA A PRÓPRIA LISTA. É a régua do erro que esta aba
+                 já cometeu: `gui.aba_conexoes.sobraram` foi tomado por dono
+                 desta frase em quatro lugares da árvore, e ele conta o
+                 ACORDEÃO. -->
+            <div class="ressalva" data-campo="vizinho-mais" data-hef-alvo="html"><i class="nada"></i></div>
             <div class="acoes empurra">
               <a class="btn" href="#mapear-entrada-a-entrada" title="Um toque por aparelho e o Hefesto aprende em que entrada cada um está.">Mapear Entrada a Entrada</a>
             </div>
