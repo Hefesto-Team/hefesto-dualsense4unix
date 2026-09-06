@@ -83,22 +83,64 @@ try:
 except regua_de_tela.MockupAusente as _erro:
     pytest.skip(f"RÉGUA-DE-TELA-01: {_erro}", allow_module_level=True)
 
-#: O piloto e o gerador da aba moram ao lado do mockup, e são usados como
-#: BIBLIOTECA. Reusar é a regra desta casa: copiar o `_pacote_do_card` para cá
-#: criaria uma segunda verdade sobre o que a tela recebe, e a régua deixaria de
-#: sentir quem quebrasse o original.
-FERRAMENTAS = PAGINA.parent / "_ferramentas"
+#: O piloto e o gerador da aba são usados como BIBLIOTECA. Reusar é a regra
+#: desta casa: copiar o `_pacote_do_card` para cá criaria uma segunda verdade
+#: sobre o que a tela recebe, e a régua deixaria de sentir quem quebrasse o
+#: original.
+#:
+#: **ESTA RÉGUA ESTAVA MORTA E CALADA — medido em 06/09/2026.** A linha dizia
+#: `PAGINA.parent / "_ferramentas"`, que era certo enquanto os geradores moravam
+#: em `layout/_ferramentas/`. A pasta foi aposentada em 31/08 e eles passaram a
+#: morar em `src/hefesto_dualsense4unix/interface/`; a pasta velha deixou de
+#: existir, o `sys.path.insert` apontou para o nada, o import falhou e o teste
+#: virou `skip`. Um `skip` não aparece em vermelho nenhum: a régua da aba 02
+#: atravessou uma semana de mudanças de tela sem medir uma linha, e quem a viu
+#: no sumário leu "1 skipped" como ambiente sem WebKit.
+#:
+#: A PASTA SE DERIVA DA PÁGINA, e não se soletra: o `achar_a_aba` pode devolver
+#: a cópia de OUTRA árvore (é ele quem decide, pela mais nova), e as ferramentas
+#: têm de ser as daquela mesma árvore — medir o HTML de uma e o gerador de outra
+#: é a armadilha do `PYTHONPATH` que o `CLAUDE.md` descreve. A página mora em
+#: `<árvore>/mockup/` ou em `<árvore>/src/…/interface/paginas/`; nos dois casos
+#: a raiz é o primeiro ancestral que tem `src/hefesto_dualsense4unix/interface`.
+def _ferramentas_da_pagina(pagina: pathlib.Path) -> pathlib.Path:
+    for base in pagina.parents:
+        alvo = base / "src" / "hefesto_dualsense4unix" / "interface"
+        if alvo.is_dir():
+            return alvo
+    return pagina.parent
+
+
+FERRAMENTAS = _ferramentas_da_pagina(PAGINA)
 sys.path.insert(0, str(FERRAMENTAS))
+#: AUSÊNCIA É SKIP; DEFEITO É VERMELHO — e a diferença é a régua inteira.
+#:
+#: Este bloco pegava `Exception` e virava tudo em `skip`. Medido em 06/09/2026,
+#: na mordida: com o `KeyError: 'cabo'` VIVO no gerador da aba — a chave de
+#: `TAXA_DO_GIRO` indexada com a palavra da tela —, esta régua não reprovava.
+#: Ela dizia `1 skipped`, e quem lesse o sumário entenderia "ambiente sem
+#: WebKit". O defeito que a régua existe para pegar era exatamente o que a
+#: desligava.
+#:
+#: `ImportError` é ambiente (o pacote não está aqui) e continua sendo skip.
+#: Qualquer outra exceção é o CÓDIGO desta casa quebrando ao ser importado, e
+#: isso é vermelho — a mensagem diz o tipo e o arquivo, para não virar charada.
 try:
     mesa_viva = importlib.import_module("mesa_viva")
     aba02 = importlib.import_module("aba02")
     controles_vivos = importlib.import_module("controles_vivos")
-except Exception as _erro:  # pragma: no cover — árvore sem o piloto
+except ImportError as _erro:  # pragma: no cover — árvore sem o piloto
     pytest.skip(
         f"RÉGUA-DE-TELA-01: o piloto da aba não importou de {FERRAMENTAS} "
         f"({type(_erro).__name__}: {_erro})",
         allow_module_level=True,
     )
+except Exception as _erro:  # o gerador quebrou — isto NÃO é ambiente
+    raise AssertionError(
+        f"RÉGUA-DE-TELA-01: o gerador da aba 02 quebrou ao ser importado de "
+        f"{FERRAMENTAS} — {type(_erro).__name__}: {_erro}. Isto não é ambiente "
+        "sem WebKit: é código desta casa, e vira vermelho de propósito."
+    ) from _erro
 
 #: A faixa sintética da casa (`scripts/check_faixa_sintetica.py`). Nenhum
 #: endereço real entra em arquivo versionado, e a mesa deste teste é inventada.
