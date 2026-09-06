@@ -2228,10 +2228,26 @@ def _conferir(doc):
 # que decide de fato continua sendo a especificidade — `.vib .ctrl.vazia
 # .ds-svg rect` (0,5,1) ganha de `svg[data-colorway] .z-casca :is(…)` (0,2,2)
 # nos dois arranjos, que é o que mantém o lugar vazio cinza.
-n = monta("05-vibracao", "Vibração", MIOLO,
-          CSS + CSS_DAS_MEDIDAS + FOLHA_DOS_28,
-          legenda=LEGENDA)
-_conferir(onde.pagina("05-vibracao.html").read_text())
-print(f"05-vibracao: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
-      f"+ {len(MESA) - len(CONECTADOS)} lugar(es) vazio(s) · motores do mapa: "
-      f'{ESQ["id"]} / {DIR["id"]}')
+
+# A ESCRITA MORA DEBAIXO DO `__main__`, e isto é cura de defeito MEDIDO em
+# 06/09/2026: `import aba05` REESCREVIA a bancada dela como efeito de um
+# import. Bastava o pytest COLETAR
+# `tests/unit/test_a_vibracao_diz_qual_degrau_esta_aceso.py` — que importa
+# `aba05` no topo — para `mockup/05-vibracao.html` mudar no disco, com a
+# contagem VIVA de controles dentro: `1 USB · 1 BT` virou `0 USB · 0 BT`
+# porque os controles não estavam ligados naquele instante. A régua do desenho
+# aprovado passava a reprovar por causa do que estava na tomada.
+#
+# A ironia estava escrita: o próprio teste avisa, na docstring, que *"importar
+# `aba05` REESCREVE a bancada dela como efeito de um `import`, e uma régua não
+# mexe no que mede"* — e importava assim mesmo. A `aba01` e a `aba02` já tinham
+# esta guarda desde que `jogar_vivo.py` e `controles_vivos.py` passaram a
+# importá-las; as outras oito não.
+if __name__ == "__main__":
+    n = monta("05-vibracao", "Vibração", MIOLO,
+              CSS + CSS_DAS_MEDIDAS + FOLHA_DOS_28,
+              legenda=LEGENDA)
+    _conferir(onde.pagina("05-vibracao.html").read_text())
+    print(f"05-vibracao: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
+          f"+ {len(MESA) - len(CONECTADOS)} lugar(es) vazio(s) · motores do mapa: "
+          f'{ESQ["id"]} / {DIR["id"]}')

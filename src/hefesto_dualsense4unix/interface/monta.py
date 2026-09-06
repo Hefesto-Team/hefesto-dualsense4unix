@@ -279,15 +279,31 @@ MASCARAS = ("DualSense", "Xbox 360", "Nintendo Pro")
 #:
 #: A ORDEM É A DA MESA, e o desconectado vai para o fim: quem está lá em cima é
 #: quem está jogando.
+# A CHAVE `transporte` É A CRUA, e ela precisou existir aqui — 06/09/2026.
+# A costura da ONDA B mudou a contagem do topo para somar `transporte`
+# (`"usb"`/`"bt"`), que é a chave que `mesa_viva.mesa_do_estado` publica, e
+# ESTA tabela só tinha `via`. Efeito medido: toda página regerada saía com
+# `0 USB · 0 BT` no cabeçalho — a contagem somava uma chave que a mesa do
+# DESENHO não tinha. Não apareceu na hora porque ninguém rodou um gerador
+# entre a costura e o fecho.
+#
+# A `via` FICA COMO ESTÁ nesta tabela, e é decisão: seis geradores a escrevem
+# DIRETO na tela (`aba04.py:1174`, `aba06.py:1452`, `aba03.py:882`…), e trocá-la
+# pela palavra da tela aqui mudaria o desenho aprovado sem sprint que responda
+# por isso. É trabalho da `A-PALAVRA-MESA-SAI-01`.
 MESA = [
     {"pref": "p1", "jogador": 1, "cor": "cosmic-red",     "nome": "Cosmic Red",
-     "via": "USB", "alvo": True,  "mascara": "DualSense",    "conectado": True},
+     "via": "USB", "transporte": "usb",
+     "alvo": True,  "mascara": "DualSense",    "conectado": True},
     {"pref": "p2", "jogador": 2, "cor": "starlight-blue", "nome": "Starlight Blue",
-     "via": "BT",  "alvo": False, "mascara": "Xbox 360",     "conectado": True},
+     "via": "BT",  "transporte": "bt",
+     "alvo": False, "mascara": "Xbox 360",     "conectado": True},
     {"pref": "p3", "jogador": 3, "cor": "galactic-purple", "nome": "Galactic Purple",
-     "via": "BT",  "alvo": False, "mascara": "DualSense",    "conectado": False},
+     "via": "BT",  "transporte": "bt",
+     "alvo": False, "mascara": "DualSense",    "conectado": False},
     {"pref": "p4", "jogador": 4, "cor": "white",          "nome": "White",
-     "via": "USB", "alvo": False, "mascara": "Nintendo Pro", "conectado": False},
+     "via": "USB", "transporte": "usb",
+     "alvo": False, "mascara": "Nintendo Pro", "conectado": False},
 ]
 
 #: Os que estão de fato na mesa. Quem conta controle conta ESTES — o cabeçalho, a
