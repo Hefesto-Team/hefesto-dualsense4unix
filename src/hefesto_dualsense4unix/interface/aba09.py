@@ -1674,8 +1674,8 @@ _ATRS, _ROT_RELOAD = _RELOAD.group(1), _RELOAD.group(2)
 #    constante que o montou: os dois lados mudam JUNTOS, e trocar o valor da
 #    constante para "Reaplicar ajustes" deixava o gerador VERDE, escrevendo o
 #    rótulo revogado na bancada. Régua que passa com a cura arrancada não mede
-#    nada — e esta media a si mesma. O literal é o único lado que não se move
-#    quando alguém move o outro.
+#    nada — e esta apontava para si mesma. O literal é o único lado que não
+#    se move quando alguém move o outro.
 _PALAVRA_DELA_09Q1 = "Atualizar"
 if ROTULO_ATUALIZAR != _PALAVRA_DELA_09Q1 or _ROT_RELOAD != _PALAVRA_DELA_09Q1:
     raise SystemExit(
