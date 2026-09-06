@@ -89,6 +89,22 @@ rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py
 # julga se um código recria — ele impede o LAUDO de envelhecer: endereço morto,
 # cura descosturada, SO-GTK que já migrou, e a dívida declarada, que só desce.
 rapido|donos-de-comportamento|py|scripts/check_donos_de_comportamento.py
+# NADA NOVO APONTA PARA A JANELA — 06/09/2026, sprint GTK-1. Decisão dela
+# (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no gtk e
+# não apontar nada mais pra lá mas pro html"*. A janela GTK sai em três sprints
+# (GTK-1 inventário, GTK-2 os leitores do glade, GTK-3 a remoção); enquanto ela
+# sai, a lista de quem ainda aponta para lá SÓ DIMINUI — senão a GTK-3 persegue
+# um alvo que cresce.
+# O inventário é `docs/data/o-que-ainda-aponta-para-a-janela.csv`: 255 pares
+# (arquivo, alvo) e 522 citações, cada uma com veredito. O portão tem DUAS
+# metades: citação nova reprova nomeando arquivo e linha; linha nova no CSV sem
+# veredito reprova. Ele NÃO é um `grep`: a natureza de cada citação sai do
+# `tokenize`, porque 111 das 255 são PROSA e um grep as contaria como dependência.
+# CAMADA `completo`, e o número é a razão: 3,7 s medidos em 06/09/2026, contra
+# ~5 s da camada rápida INTEIRA. Ele lê 1.694 arquivos. O `bash scripts/portoes.sh`
+# sem argumento — que é o que esta casa manda rodar antes de fechar leva — o
+# alcança; o `--rapido`, que roda a cada salvamento, não paga por ele.
+completo|nada-aponta-para-a-janela|py|scripts/check_nada_aponta_para_a_janela.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
 # O IRMÃO DO DE CIMA, PARA O SERIAL — 03/09/2026, e o pedido é dela: *"sim, faz
