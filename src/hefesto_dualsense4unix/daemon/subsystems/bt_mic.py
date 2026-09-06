@@ -34,15 +34,23 @@ proteção?"* — foi medida em 03/09/2026, com o controle do cabo na mesa::
     600  alsa_input...DualSense_Wireless_Controller-00.iec958-stereo  SUSPENDED
 
 O canal do cabo **existe e está SUSPENDED**: publicado, e sem capturar nada
-enquanto ninguém o abre. Ele não paga privacidade nem banda por existir. A
-ponte do rádio **não sabe fazer isso**: `PonteMicBluetooth.iniciar()` manda o
-`0x32` de LIGAR incondicionalmente, e daí o controle transmite áudio o tempo
-todo, ouvido ou não.
+enquanto ninguém o abre. Ele não paga privacidade nem banda por existir.
+
+**A ponte do rádio NÃO SABIA FAZER ISSO — e passou a saber em 06/09/2026**
+(ONDA5-MIC-VIRTUAL-02). Aqui estava escrito, no presente, que
+`PonteMicBluetooth.iniciar()` manda o `0x32` de LIGAR incondicionalmente e o
+controle transmite áudio o tempo todo, ouvido ou não. Era verdade e deixou de
+ser: o pedido agora SEGUE o estado da source — `RUNNING` (tem app gravando)
+liga, qualquer outro desliga —, que é a mesma coisa que o cabo faz de graça.
+Medido na máquina dela no mesmo dia: sem ouvinte `SUSPENDED`, com um `parec`
+gravando `RUNNING`, e `IDLE` depois que ele sai (`integrations/
+dualsense_bt_audio.ESTADO_COM_OUVINTE`).
 
 **Logo a trava protegia a coisa certa pela alavanca errada** — ela negava o
 CANAL para evitar a CAPTURA, e o cabo prova que os dois são separáveis. É
 exatamente a distinção que a sprint faz: *"perder o padrão não é perder o
-canal"*.
+canal"*. **Hoje a distinção é do PRODUTO, e não só do argumento:** o canal do
+rádio pode existir sem capturar, como o do cabo.
 
 **Então a trava NÃO SAI: ela vira automática, e o critério explícito é o do
 cabo — PROCURA.** A ponte sobe para o controle cujo canal alguém está tentando
