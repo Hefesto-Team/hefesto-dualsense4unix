@@ -1,10 +1,21 @@
-"""Testes dos perfis preset em assets/profiles_default/.
+"""Testes dos perfis preset de fábrica — as duas casas em que eles moram.
 
 Valida que cada JSON é aceito pelo schema pydantic e que os params de
-trigger são reconhecidos por build_from_name. Cobre os 9 arquivos que a
-fábrica embarca depois da poda de 26/08/2026 e da renomeação de 05/09/2026:
+trigger são reconhecidos por build_from_name. Cobre os 9 arquivos de fábrica
+depois da poda de 26/08/2026, da renomeação de 05/09/2026 e da mudança de casa
+de 06/09/2026:
   acao.json, aventura.json, corrida.json, esportes.json, fallback.json,
   fps.json, navegacao.json, personalizado.json, point_and_click.json.
+
+ONDE ELES MORAM DESDE 06/09/2026 (PERFIS-SAO-PERFIS-01)
+--------------------------------------------------------
+Só o `personalizado.json` ficou em `assets/profiles_default/`, que é o que a
+semeadura copia. Os outros oito foram para `assets/estilos_de_jogo/` por
+decisão dela — *"ação, aventura, corrida. Isso não é perfil, isso é estilo de
+jogo"* —, e de lá **não são semeados**: somem da lista dela, os arquivos ficam.
+
+O CONTEÚDO NÃO MUDOU UMA CHAVE, e é por isso que este arquivo continua medindo
+os nove: mudou o endereço. Quem responde por ele é `preset_path`, logo abaixo.
 
 O `meu_perfil.json` VIROU `personalizado.json` em 05/09/2026, por decisão dela:
 *"Meu_perfil como perfil default não deveria existir. Deixa ou Meu Perfil ou
@@ -35,7 +46,42 @@ import pytest
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.profiles.schema import Profile
 
-ASSETS_DIR = Path(__file__).parent.parent.parent / "assets" / "profiles_default"
+#: PERFIS-SAO-PERFIS-01 (06/09/2026): o dado de fábrica passou a morar em DUAS
+#: casas. `assets/profiles_default/` é o que a semeadura copia — e ficou só com
+#: o `personalizado.json`; `assets/estilos_de_jogo/` guarda os oito gêneros, que
+#: por decisão dela **não são perfil** e não são mais semeados.
+#:
+#: Os arquivos são os MESMOS: o conteúdo que este arquivo mede não mudou uma
+#: chave. Por isso a busca é por nome nas duas casas, e não uma cópia da lista
+#: de quem mora onde — uma lista dessas seria a régua digitando o que devia LER.
+_RAIZ = Path(__file__).parent.parent.parent
+FABRICA_DIR = _RAIZ / "assets" / "profiles_default"
+ESTILOS_DIR = _RAIZ / "assets" / "estilos_de_jogo"
+CASAS_DE_FABRICA = (FABRICA_DIR, ESTILOS_DIR)
+
+
+def preset_path(nome: str) -> Path:
+    """O arquivo de fábrica de `nome`, na casa em que ele estiver hoje.
+
+    Devolve o caminho na semeadura quando não existe em nenhuma das duas — é
+    ele que a mensagem de erro do chamador mostra, e "faltou na fábrica" é a
+    leitura certa de um preset que sumiu das duas.
+    """
+    for casa in CASAS_DE_FABRICA:
+        candidato = casa / f"{nome}.json"
+        if candidato.exists():
+            return candidato
+    return FABRICA_DIR / f"{nome}.json"
+
+
+def preset_em_alguma_casa(nome: str) -> bool:
+    """True se `nome` está em QUALQUER das duas casas de fábrica.
+
+    A poda de 26/08 tem de valer para as duas: devolver `coop_local.json` ao
+    `estilos_de_jogo/` o traria de volta pela porta nova.
+    """
+    return any((casa / f"{nome}.json").exists() for casa in CASAS_DE_FABRICA)
+
 
 EXPECTED_PRESETS = {
     "acao": {  # slug do arquivo acao.json (noqa-acento)
@@ -128,7 +174,7 @@ def preset_name(request: pytest.FixtureRequest) -> str:
 
 
 def _load_preset(name: str) -> Profile:
-    path = ASSETS_DIR / f"{name}.json"
+    path = preset_path(name)
     assert path.exists(), f"Arquivo ausente: {path}"
     raw = json.loads(path.read_text(encoding="utf-8"))
     return Profile.model_validate(raw)
@@ -376,7 +422,7 @@ class TestPresetPointAndClick:
         target = tmp_path / "profiles"
         target.mkdir()
         for fname in ("point_and_click.json", "navegacao.json", "fallback.json"):
-            shutil.copy(ASSETS_DIR / fname, target / fname)
+            shutil.copy(preset_path(fname.removesuffix(".json")), target / fname)
         monkeypatch.setattr(
             loader_module, "profiles_dir", lambda ensure=False: target
         )
@@ -406,7 +452,7 @@ class TestPresetPointAndClick:
         target = tmp_path / "profiles"
         target.mkdir()
         shutil.copy(
-            ASSETS_DIR / "point_and_click.json", target / "point_and_click.json"
+            preset_path("point_and_click"), target / "point_and_click.json"
         )
         monkeypatch.setattr(
             loader_module, "profiles_dir", lambda ensure=False: target
@@ -461,12 +507,14 @@ class TestPresetPointAndClick:
 
 class TestArquivosNaoExistem:
     def test_shooter_deletado(self) -> None:
-        path = ASSETS_DIR / "shooter.json"
-        assert not path.exists(), "shooter.json deve ter sido deletado"
+        assert not preset_em_alguma_casa("shooter"), (
+            "shooter.json deve ter sido deletado — das DUAS casas de fábrica"
+        )
 
     def test_driving_deletado(self) -> None:
-        path = ASSETS_DIR / "driving.json"
-        assert not path.exists(), "driving.json deve ter sido deletado"
+        assert not preset_em_alguma_casa("driving"), (
+            "driving.json deve ter sido deletado — das DUAS casas de fábrica"
+        )
 
     def test_todos_novos_existem(self) -> None:
         # Lista contém nomes literais de arquivos JSON (acao.json, navegacao.json).
@@ -475,8 +523,9 @@ class TestArquivosNaoExistem:
             "acao", "corrida", "esportes",  # slugs de arquivo (noqa-acento)
         ]
         for nome in nomes:
-            path = ASSETS_DIR / f"{nome}.json"
-            assert path.exists(), f"{nome}.json deve existir"
+            assert preset_em_alguma_casa(nome), (
+                f"{nome}.json sumiu das duas casas de fábrica"
+            )
 
 
 class TestOsPodadosNaoVoltam:
@@ -495,8 +544,7 @@ class TestOsPodadosNaoVoltam:
         "nome", ["bow", "coop_local", "sackboy_nativo"]
     )
     def test_o_preset_podado_nao_esta_na_fabrica(self, nome: str) -> None:
-        path = ASSETS_DIR / f"{nome}.json"
-        assert not path.exists(), (
+        assert not preset_em_alguma_casa(nome), (
             f"{nome}.json voltou à fábrica. Ele foi podado em 26/08/2026 a "
             "pedido dela — *\"em termos de perfis de jogo vamos manter os que "
             "temos ativos apenas\"* —, e nenhum dos três estava ativo no "
@@ -504,15 +552,29 @@ class TestOsPodadosNaoVoltam:
             "que ela já tinha mandado para o histórico."
         )
 
-    def test_a_fabrica_embarca_nove(self) -> None:
+    def test_a_fabrica_embarca_nove_em_duas_casas(self) -> None:
         """Guarda do instrumento: régua que não acha nada passa sempre.
 
-        Se o diretório sumir ou o glob mudar de forma, o teste acima fica
+        Se um diretório sumir ou o glob mudar de forma, o teste acima fica
         verde por AUSÊNCIA de dado — e é exatamente o modo de falha que esta
         casa chama de "a régua confunde a palavra com o ato".
+
+        A conta continua NOVE, em DUAS casas desde 06/09/2026. A separação é o
+        ponto inteiro da PERFIS-SAO-PERFIS-01: o que está em `profiles_default/`
+        é SEMEADO, e ela pediu que os gêneros parassem de ser. Um deles de volta
+        aqui é a decisão dela desfeita em silêncio.
         """
-        presets = sorted(p.name for p in ASSETS_DIR.glob("*.json"))
-        assert presets == [
+        semeados = sorted(p.name for p in FABRICA_DIR.glob("*.json"))
+        assert semeados == [
+            # O `meu_perfil.json` ESTAVA AQUI e virou este, em 05/09/2026, por
+            # decisão dela: *"Meu_perfil como perfil default não deveria
+            # existir. Deixa ou Meu Perfil ou Personalizado. acho esse
+            # melhor."* Foi renomeação, não poda.
+            "personalizado.json",
+        ], f"a semeadura mudou de tamanho sem passar por aqui: {semeados}"
+
+        estilos = sorted(p.name for p in ESTILOS_DIR.glob("*.json"))
+        assert estilos == [
             "acao.json",  # (noqa-acento) nome literal de arquivo
             "aventura.json",
             "corrida.json",
@@ -520,10 +582,5 @@ class TestOsPodadosNaoVoltam:
             "fallback.json",
             "fps.json",
             "navegacao.json",  # (noqa-acento) nome literal de arquivo
-            # O `meu_perfil.json` ESTAVA AQUI e virou este, em 05/09/2026, por
-            # decisão dela: *"Meu_perfil como perfil default não deveria
-            # existir. Deixa ou Meu Perfil ou Personalizado. acho esse
-            # melhor."* A conta continua NOVE — foi renomeação, não poda.
-            "personalizado.json",
             "point_and_click.json",
-        ], f"a fábrica mudou de tamanho sem passar por aqui: {presets}"
+        ], f"os Estilos de Jogo mudaram de tamanho sem passar por aqui: {estilos}"

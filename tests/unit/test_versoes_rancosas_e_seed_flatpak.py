@@ -513,7 +513,26 @@ def test_flatpak_e_appimage_gui_semeiam_o_mesmo_conjunto() -> None:
     assert 'profiles_default/"*.json' in gui or "profiles_default/*.json" in gui
     presets = sorted(p.name for p in (REPO / "assets/profiles_default").glob("*.json"))
     assert presets, "assets/profiles_default está vazio"
-    assert "fallback.json" in presets
+    # O canário ERA o `fallback.json`, e ele mudou de casa em 06/09/2026
+    # (PERFIS-SAO-PERFIS-01): os oito gêneros saíram da semeadura, e o que
+    # sobrou para semear é o slot dela.
+    assert "personalizado.json" in presets
+
+    # E a casa nova viaja nos dois pelo mesmo par de linhas. Sem ela dentro do
+    # pacote, a migração que tira os gêneros da lista não tem com o que
+    # comparar, recua por segurança, e as oito linhas ficam na aba Perfis de
+    # quem instalou por Flatpak ou AppImage.
+    assert "estilos_de_jogo" in gui, (
+        "o build_appimage_gui.sh não leva assets/estilos_de_jogo/ — a migração "
+        "dos gêneros fica sem o asset de referência dentro do AppImage"
+    )
+    comandos = _comandos_do_modulo_hefesto()
+    assert any("assets/estilos_de_jogo/*.json" in c for c in comandos), (
+        "o manifesto Flatpak não leva assets/estilos_de_jogo/ — mesmo defeito, "
+        "do outro lado da paridade"
+    )
+    estilos = sorted(p.name for p in (REPO / "assets/estilos_de_jogo").glob("*.json"))
+    assert "fallback.json" in estilos, estilos
 
 
 def test_manifesto_flatpak_continua_instalando_os_glyphs() -> None:
