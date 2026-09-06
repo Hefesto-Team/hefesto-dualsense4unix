@@ -12,6 +12,16 @@ DEIXOU A TELA PARA TRÁS" SÃO A MESMA COMPARAÇÃO
 último — o portão só sabe comparar os dois, e a mensagem de erro é honesta
 sobre o que mudou (ver `_explica_afirma_nao_aciona` e companhia).
 
+VARRE AS DUAS RAÍZES DE TELA — `app/` E `interface/`
+-------------------------------------------------------
+Desde 06/09/2026. Até então a régua conhecia só `app/`, e a tela nova mora em
+`interface/`: das 170 frases de transporte que o `--censo-de-transporte` conta
+hoje, **123 estavam fora do alcance** — contra 47 dentro. Pela régua mais
+grossa da sprint (todo literal com mais de 25 caracteres, docstring incluída),
+a proporção é a mesma: 231 em `interface/` contra 163 em `app/`.
+`RAIZES_DE_TELA` é o dono desse alcance, e ele tem piso — encolher a tupla
+reprova.
+
 LÊ AS `Fala` POR AST, NUNCA IMPORTANDO O PACOTE `app/`
 ---------------------------------------------------------
 `app/**.py` importa GTK e companhia — um runner sem essas dependências
@@ -50,9 +60,33 @@ from types import ModuleType
 RAIZ = Path(__file__).resolve().parent.parent
 APP_RELATIVO = "src/hefesto_dualsense4unix/app"
 APP = RAIZ / APP_RELATIVO
+INTERFACE_RELATIVO = "src/hefesto_dualsense4unix/interface"
 FALA_DO_MAPA_RELATIVO = f"{APP_RELATIVO}/fala_do_mapa.py"
 FATOS_DO_MAPA_RELATIVO = f"{APP_RELATIVO}/fatos_do_mapa.py"
 MAPA_RELATIVO = "docs/data/mapa-controles.csv"
+
+#: AS RAÍZES DE TELA — as DUAS, e a segunda entrou em 06/09/2026.
+#:
+#: Até esta data a régua varria só `app/`, e era a única raiz que ela conhecia.
+#: `app/` continua sendo tela em parte, então nada foi trocado: `interface/`
+#: foi ACRESCENTADA. Trocar uma pela outra devolveria o mesmo defeito virado
+#: para o outro lado.
+#:
+#: O QUE ISSO DEIXAVA PASSAR, medido em 06/09/2026 com `--censo-de-transporte`:
+#: 169 literais de transporte em `app/` (vistos) contra **227 em `interface/`**
+#: (invisíveis). **A maior parte do texto de transporte da casa estava fora do
+#: alcance da régua que existe para ele** — e não foi decisão: a régua é de
+#: 24/08 e a tela nova nasceu depois, então ela mediu o mundo em que a única
+#: tela era `app/`.
+#:
+#: A pergunta que desenterrou isto é dela, em 06/09/2026: *"olharam o mapa dos
+#: controles e o csv que alimenta o specs.html?"* — e, na sequência: *"se
+#: coisas assim aconteceram antes não so nessas duas sprints. entao tem coisa
+#: errada."*  <!-- noqa-acento: citação literal dela -->
+#:
+#: Encolher esta tupla é perder alcance em silêncio, e por isso ela tem piso:
+#: `PISO_DA_REGUA["raizes"]`.
+RAIZES_DE_TELA: tuple[str, ...] = (APP_RELATIVO, INTERFACE_RELATIVO)
 
 #: Z6-08 — onde `NUMEROS_MEDIDOS_NO_MAPA` mora hoje. Lido por AST, como tudo
 #: neste portão: `integrations/radio_da_mesa.py` puxa `structlog` por
@@ -251,6 +285,21 @@ def descobre_falas(app_dir: Path, raiz: Path) -> list[FalaEncontrada]:
             if _e_chamada_de(no, "Fala"):
                 assert isinstance(no, ast.Call)
                 encontradas.append(_le_fala(no, caminho, raiz))
+    return encontradas
+
+
+def descobre_falas_da_tela(raiz: Path) -> list[FalaEncontrada]:
+    """`descobre_falas` em TODA raiz de tela — é o que o `main()` usa.
+
+    `descobre_falas(app_dir, raiz)` continua recebendo UMA pasta de propósito:
+    `scripts/gerar-mapa.py` e `scripts/gerar-painel.py` a chamam assim, e uma
+    troca de assinatura os quebraria em silêncio (os dois carregam este arquivo
+    por `spec_from_file_location`, então nenhum portão de import os pegaria).
+    Quem quiser as duas raízes chama esta.
+    """
+    encontradas: list[FalaEncontrada] = []
+    for relativo in RAIZES_DE_TELA:
+        encontradas.extend(descobre_falas(raiz / relativo, raiz))
     return encontradas
 
 
@@ -615,9 +664,10 @@ def valida_numeros(
 #: "isto funciona?".
 ABAS_COM_FALA_DECLARADA: frozenset[str] = frozenset()
 
-#: Quais arquivos de `app/` desenham cada aba promovida, relativos a
-#: `src/hefesto_dualsense4unix/app/`. Só é preciso declarar a aba que foi
-#: promovida: aba livre não precisa de linha aqui.
+#: Quais arquivos desenham cada aba promovida, relativos a uma raiz de tela
+#: (`RAIZES_DE_TELA` — `app/` ou `interface/`, procuradas nessa ordem por
+#: `_caminho_da_aba`). Só é preciso declarar a aba que foi promovida: aba livre
+#: não precisa de linha aqui.
 #:
 #: É mapa escrito à mão, e isso é uma escolha: o produto identifica aba pelo
 #: **id do Glade** (`app/app.py::_REFRESH_POR_ABA`, chaves `tab_home_box` e
@@ -745,7 +795,7 @@ def frases_de_um_arquivo(caminho: Path, raiz: Path) -> list[FraseDeTransporte]:
 
 
 def descobre_frases_de_transporte(app_dir: Path, raiz: Path) -> list[FraseDeTransporte]:
-    """O censo inteiro de `app/**.py` — o que `--censo-de-transporte` imprime."""
+    """O censo de UMA raiz de tela. Para as duas, `descobre_frases_da_tela`."""
     achadas: list[FraseDeTransporte] = []
     for caminho in sorted(app_dir.rglob("*.py")):
         if "__pycache__" in caminho.parts:
@@ -754,6 +804,32 @@ def descobre_frases_de_transporte(app_dir: Path, raiz: Path) -> list[FraseDeTran
             continue  # o registro declara TIPOS, não frase de tela
         achadas.extend(frases_de_um_arquivo(caminho, raiz))
     return achadas
+
+
+def descobre_frases_da_tela(raiz: Path) -> list[FraseDeTransporte]:
+    """O censo inteiro — TODA raiz de tela, que é o que `--censo-de-transporte`
+    imprime desde 06/09/2026. Antes disso ele imprimia só `app/`, e publicava
+    como "o censo" um número que deixava de fora a maior parte da tela.
+    """
+    achadas: list[FraseDeTransporte] = []
+    for relativo in RAIZES_DE_TELA:
+        achadas.extend(descobre_frases_de_transporte(raiz / relativo, raiz))
+    return achadas
+
+
+def _caminho_da_aba(raiz: Path, relativo: str) -> Path | None:
+    """O arquivo de uma aba promovida, procurado em TODA raiz de tela.
+
+    `ARQUIVOS_DA_ABA` guarda o caminho relativo à raiz de tela, sem dizer qual
+    — a aba Início pode morar em `app/` hoje e em `interface/` amanhã, e o
+    portão não pode virar vermelho por causa de uma mudança de casa que não
+    mudou uma palavra da tela. Achar em NENHUMA das duas continua reprovando.
+    """
+    for base in RAIZES_DE_TELA:
+        caminho = raiz / base / relativo
+        if caminho.is_file():
+            return caminho
+    return None
 
 
 def valida_abas_promovidas(raiz: Path) -> list[str]:
@@ -772,12 +848,13 @@ def valida_abas_promovidas(raiz: Path) -> list[str]:
             )
             continue
         for relativo in arquivos:
-            caminho = raiz / APP_RELATIVO / relativo
-            if not caminho.is_file():
+            caminho = _caminho_da_aba(raiz, relativo)
+            if caminho is None:
                 problemas.append(
                     f"ARQUIVOS_DA_ABA[{aba!r}] cita {relativo!r}, que não existe "
-                    f"em {APP_RELATIVO}/ — o arquivo foi renomeado ou apagado, e "
-                    "a aba ficou sem cobertura sem ninguém notar"
+                    f"em nenhuma raiz de tela ({', '.join(RAIZES_DE_TELA)}) — o "
+                    "arquivo foi renomeado ou apagado, e a aba ficou sem "
+                    "cobertura sem ninguém notar"
                 )
                 continue
             for frase in frases_de_um_arquivo(caminho, raiz):
@@ -812,6 +889,102 @@ def valida_abas_promovidas(raiz: Path) -> list[str]:
             problemas.append(
                 f"FRASES_SEM_FALA[{texto[:60]!r}] está sem razão escrita."
             )
+    return problemas
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# O PISO — o "quase não mediu" para de ser só aviso
+# ─────────────────────────────────────────────────────────────────────────
+#
+# 06/09/2026. Até aqui o `main()` terminava com `rc=0` imprimindo *"A RÉGUA
+# QUASE NÃO MEDIU: 1 `Fala` declarada(s), … contra as 308 célula(s)"*. É a
+# forma que a casa nomeou em 04/09/2026: **o instrumento sabe do próprio risco
+# e AVISA em vez de RESOLVER — aviso no cabeçalho de um comando que termina
+# verde ninguém lê.**
+#
+# O que o piso resolve, e é só isto: o conjunto que a régua mede **não pode
+# encolher**. Hoje ele vale exatamente o que está declarado, então o `rc`
+# continua 0 — o verde de hoje é o piso, não uma promessa. Amanhã, apagar a
+# única `Fala` do produto, tirar um número medido, despromover uma aba ou
+# encurtar `RAIZES_DE_TELA` reprova, nomeando o piso e o achado.
+#
+# O QUE O PISO NÃO É: veto de frase de tela. Palavra dela, 06/09/2026, sobre o
+# mapa: *"Esse mapa é funcional e real. tá desatualizado no sentido de não ter
+# sido medido. foi e tudo funciona."* Uma célula atrasada é medição que ninguém
+# escreveu de volta, não aparelho que não funciona — e uma régua que reprovasse
+# a tela por causa disso transformaria mapa atrasado em freio. Esta régua
+# INFORMA, conta e cobra declaração; ela não reprova frase por causa de célula
+# atrasada.  <!-- noqa-acento: citação literal dela -->
+#
+# **NUNCA baixe este piso para ficar verde.** Se ele reprovou, descubra o que
+# encolheu — é a mesma regra escrita em `test_o_mapa_nunca_encolhe.py`.
+
+#: O piso, MEDIDO em 06/09/2026 nesta árvore (não digitado): `--all` contava
+#: `1 Fala declarada(s), 3 número(s) de tela e 0 aba(s) promovida(s)`, com as
+#: duas raízes de `RAIZES_DE_TELA`. `abas` nasce em 0 porque promover uma aba
+#: hoje exigiria editar arquivos de outras frentes — e um piso de zero ainda
+#: vale, porque é ele que faz a PRIMEIRA promoção virar irreversível.
+#:
+#: O conjunto SÓ CRESCE, e crescer PASSA: quem promover uma aba não precisa
+#: tocar aqui. Régua que reprova quem melhora é o defeito que onze réguas
+#: desta casa já tiveram, todas pela mesma forma — digitavam o que deviam ler.
+#:
+#: A catraca deste número é literal DO ARQUIVO DE TESTE
+#: (`tests/unit/test_a_fala_de_tela_alcanca_a_interface_nova.py`), nunca lido
+#: daqui: um teto lido da própria fonte passa sempre.
+PISO_DA_REGUA: dict[str, int] = {"raizes": 2, "falas": 1, "numeros": 3, "abas": 0}
+
+#: O que cada chave de `PISO_DA_REGUA` mede, para a mensagem de erro dizer ao
+#: leitor o que encolheu sem ele precisar abrir este arquivo.
+_O_QUE_O_PISO_MEDE: dict[str, str] = {
+    "raizes": "raiz(es) de tela varrida(s) (`RAIZES_DE_TELA`)",
+    "falas": "`Fala` declarada(s) na tela",
+    "numeros": "número(s) medido(s) que a tela mostra (`NUMEROS_MEDIDOS_NO_MAPA`)",
+    "abas": "aba(s) promovida(s) (`ABAS_COM_FALA_DECLARADA`)",
+}
+
+
+def e_a_arvore_do_produto(raiz: Path) -> tuple[bool, str]:
+    """`(é o produto?, por que não)` — o piso vale para o produto, e só.
+
+    As árvores de mentira da suíte montam três arquivos num `tmp_path` para
+    exercer UMA regra; cobrar delas o piso do produto seria cobrar de um
+    instrumento de teste o tamanho da casa inteira. A pergunta tem de ser
+    respondida por coisa que exista no disco, nunca por um caminho gravado —
+    a árvore do produto viaja (`git worktree`), e uma régua presa a
+    `/mnt/…/hefesto-dualsense4unix` mediria a árvore de outra pessoa.
+
+    E ela NUNCA se desliga calada: quando devolve `False`, o `main()` imprime
+    a razão. Um portão que se desliga por omissão é a forma silenciosa de
+    portão nenhum (a mesma razão escrita em `anonymity-check.yml:67-70`).
+    """
+    if not (raiz / MAPA_RELATIVO).is_file():
+        return False, f"não há {MAPA_RELATIVO} nesta árvore"
+    faltando = [relativo for relativo in RAIZES_DE_TELA if not (raiz / relativo).is_dir()]
+    if faltando:
+        return False, "não há a(s) raiz(es) de tela " + ", ".join(faltando)
+    return True, ""
+
+
+def valida_piso_da_regua(medido: dict[str, int], piso: dict[str, int]) -> list[str]:
+    """O conjunto medido hoje contra o piso. Pura de propósito.
+
+    É o miolo do veredito, e o teste a exerce com números sintéticos — sem
+    isso ela poderia estar acertando por ter a resposta escrita, e não por
+    comparar (é o molde de `tem_lastro_nos_dois`, em
+    `test_a_aba_emulacao_nao_promete_transporte_sem_lastro.py`).
+    """
+    problemas: list[str] = []
+    for nome in sorted(piso):
+        agora = medido.get(nome, 0)
+        if agora >= piso[nome]:
+            continue
+        problemas.append(
+            f"{nome}: a régua mede {agora} e o piso é {piso[nome]} — "
+            f"{_O_QUE_O_PISO_MEDE.get(nome, nome)}. A régua ENCOLHEU: alguém "
+            "apagou, renomeou ou despromoveu o que ela enxergava. NÃO baixe o "
+            "piso para ficar verde — descubra o que encolheu"
+        )
     return problemas
 
 
@@ -851,17 +1024,24 @@ def main(argv: list[str] | None = None) -> int:
     causa_de_fora = frozenset(fala_do_mapa.CAUSA_DE_FORA)
     fatos = dict(fatos_do_mapa.FATOS)
 
-    falas = descobre_falas(raiz / APP_RELATIVO, raiz)
+    falas = descobre_falas_da_tela(raiz)
 
     if args.fila:
         imprime_fila(monta_fila(falas))
         return 0
 
     if args.censo_de_transporte:
-        frases = descobre_frases_de_transporte(raiz / APP_RELATIVO, raiz)
+        frases = descobre_frases_da_tela(raiz)
         arquivos = len({f.arquivo for f in frases})
         for frase in frases:
             print(f"{frase.origem}: {frase.texto}")
+        print("")
+        for relativo in RAIZES_DE_TELA:
+            desta = [f for f in frases if f.arquivo.startswith(f"{relativo}/")]
+            print(
+                f"  {relativo}: {len(desta)} frase(s) em "
+                f"{len({f.arquivo for f in desta})} arquivo(s)."
+            )
         print(f"\n{len(frases)} frase(s) de transporte em {arquivos} arquivo(s).")
         return 0
 
@@ -872,6 +1052,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     problemas.extend(valida_abas_promovidas(raiz))
     vencidos = prazos_vencidos(falas, hoje)
+
+    medido = {
+        "raizes": len(RAIZES_DE_TELA),
+        "falas": len(falas),
+        "numeros": len(numeros),
+        "abas": len(ABAS_COM_FALA_DECLARADA),
+    }
+    e_o_produto, por_que_nao = e_a_arvore_do_produto(raiz)
+    encolheu = valida_piso_da_regua(medido, PISO_DA_REGUA) if e_o_produto else []
 
     if vencidos:
         rotulo = "FALHA" if args.exigir_prazo else "AVISO"
@@ -888,11 +1077,25 @@ def main(argv: list[str] | None = None) -> int:
             )
         print("")
 
+    if encolheu:
+        print(f"FALHA: a régua ENCOLHEU em {len(encolheu)} ponto(s):")
+        for problema in encolheu:
+            print(f"  {problema}")
+        print("")
+
     if problemas:
         print(f"FALHA: {len(problemas)} desacordo(s) entre a tela e o mapa:")
         for problema in problemas:
             print(f"  {problema}")
+
+    if encolheu or problemas:
         return 1
+
+    if not e_o_produto:
+        print(
+            f"PISO NÃO APLICADO: {por_que_nao} — esta árvore não é o produto, "
+            "e o piso de `PISO_DA_REGUA` só vale para ele."
+        )
 
     # O TAMANHO DO CONJUNTO MEDIDO VAI NA FRASE DE SUCESSO — 26/08/2026
     # (LEVA-4-E). Até aqui esta linha dizia só `OK: 1 Fala declarada(s)`, e
@@ -903,20 +1106,27 @@ def main(argv: list[str] | None = None) -> int:
     # padrão que a casa nomeou em 25/08. `rc` continua 0 de propósito: o
     # tamanho do conjunto é decisão de produto (quantas abas foram promovidas),
     # e portão não reprova ninguém por uma fila que ele não enche.
+    #
+    # O QUE MUDOU EM 06/09/2026: o tamanho de hoje virou PISO. Não encher a
+    # fila continua verde; ESVAZIÁ-LA, não. A frase abaixo diz o piso junto do
+    # tamanho, para quem lê o verde saber contra o que ele está sendo medido.
+    piso = ", ".join(f"{nome}≥{valor}" for nome, valor in sorted(PISO_DA_REGUA.items()))
     tamanho = (
         f"{len(falas)} `Fala` declarada(s), {len(numeros)} número(s) de tela e "
         f"{len(ABAS_COM_FALA_DECLARADA)} aba(s) promovida(s), contra as "
-        f"{len(fatos)} célula(s) de {FATOS_DO_MAPA_RELATIVO}"
+        f"{len(fatos)} célula(s) de {FATOS_DO_MAPA_RELATIVO}, varrendo "
+        f"{len(RAIZES_DE_TELA)} raiz(es) de tela ({', '.join(RAIZES_DE_TELA)})"
     )
     if len(falas) <= 1:
         print(
             f"A RÉGUA QUASE NÃO MEDIU: {tamanho}. Um conjunto deste tamanho "
             "não distingue uma tela em acordo com o mapa de uma tela que "
             "simplesmente não declara nada — promova mais abas em "
-            "`ABAS_COM_FALA_DECLARADA` e o verde daqui passa a valer."
+            f"`ABAS_COM_FALA_DECLARADA` e o verde daqui passa a valer. É O "
+            f"PISO ({piso}): abaixo dele, `rc=1`."
         )
         return 0
-    print(f"OK: {tamanho}, todas de acordo.")
+    print(f"OK: {tamanho}, todas de acordo. Piso: {piso}.")
     return 0
 
 
