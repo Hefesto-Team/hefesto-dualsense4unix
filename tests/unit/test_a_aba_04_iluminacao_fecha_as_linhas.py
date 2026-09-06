@@ -707,8 +707,21 @@ def test_o_brilho_guardado_diz_uma_frase_curta_e_nao_recusa(pac, a04):
     cortar (*"a versão longa repete com palavras o que a tira tracejada já diz
     com desenho"*).
 
+    A QUARTA ASSERÇÃO FOI INVERTIDA EM 05/09/2026, e a razão é decisão dela na
+    04-Q4:
+
+        *"1, mas com o botão realmente fazendo o que se pressupõe a fazer"*
+
+    Ela dizia `p.chamadas == []` — *sem cor conhecida, o gesto NÃO escreve no
+    aparelho*. Era o defeito, não o contrato: o trilho gravava 60% no disco e a
+    barra continuava no brilho de antes, e o produto ficava com a promessa
+    escrita e nada aceso. Agora o gesto escreve a cor de agora no brilho
+    escolhido, e a ressalva sobre a disputa continua vindo na frase — que é o
+    que ela pediu: o disco E o aparelho, com o aviso.
+
     A MORDIDA: devolva o `raise RuntimeError(...)` e a primeira asserção
-    reprova; devolva a frase longa e a terceira.
+    reprova; devolva a frase longa e a terceira; tire o `_escrever_a_cor` do
+    ramo sem cor pedida e a quarta.
     """
     caminho = _semear()
     disputado = dict(P1, lightbar_disputada=True)
@@ -727,8 +740,11 @@ def test_o_brilho_guardado_diz_uma_frase_curta_e_nao_recusa(pac, a04):
         f"a frase saiu e o disco não recebeu: {guardado}")
     assert "reacender" not in frase and len(frase) <= 110, (
         f"a frase não encolheu ({len(frase)} caracteres): {frase!r}")
-    assert p.chamadas == [], (
-        f"sem cor a reescalar o gesto ainda escreveu no aparelho: {p.nomes()}")
+    assert p.nomes() == ["led_set_detalhado"], (
+        f"o brilho escolhido não chegou ao aparelho: {p.nomes()}")
+    _, _, argumentos = p.chamadas[0]
+    assert argumentos.get("brightness") == pytest.approx(0.6), (
+        f"chegou ao aparelho com outro brilho: {argumentos}")
 
 
 def test_a_frase_curta_carrega_a_causa_do_motor(pac, a04):

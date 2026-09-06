@@ -197,13 +197,21 @@ JARGAO_BANIDO: dict[str, str] = {
     # `_A_PALAVRA_QUE_ESPERA_A_LEX_6` logo abaixo manda fazer: colar a linha no
     # commit que troca a última frase, nunca antes.
     #
-    # O QUE ELA NÃO ALCANÇA, e por isso há uma segunda régua: este portão lê o
+    # O QUE ELE NÃO ALCANÇA, e por isso há uma segunda régua: este portão lê o
     # `.glade` e o `app/**/*.py` por AST. O texto da interface nova nasce em
     # `interface/abaNN.py` e, pior, em `<script>` que escreve no DOM em tempo de
     # execução — três origens que nenhuma leitura de fonte junta. Quem mede
-    # aquele lado é `tests/unit/test_a_palavra_mesa_nao_volta_para_a_tela.py`,
-    # que RODA as páginas e lê o DOM. Duas réguas independentes é regra desta
-    # casa, e aqui elas nem se sobrepõem: cada uma alcança o que a outra não vê.
+    # aquele lado é `tests/unit/test_a_palavra_de_tela_da_interface_nova.py`,
+    # que RODA as dez páginas e lê o DOM. Duas réguas independentes é regra
+    # desta casa, e aqui elas nem se sobrepõem: cada uma alcança o que a outra
+    # não vê.
+    #
+    # E A LISTA É UMA SÓ — 05/09/2026. Até este dia aquela régua vigiava UMA
+    # palavra e este portão vigiava ONZE, sobre a janela que vai morrer: as 40
+    # mil palavras de tela das dez abas novas tinham um décimo primeiro da
+    # vigilância que o `.glade` tinha. Agora a régua IMPORTA o `JARGAO_BANIDO`
+    # daqui. Termo novo nesta lista passa a valer nas duas telas no mesmo
+    # commit — que é a razão de ela ser importada e não copiada.
     "mesa": "o termo é 'objeto' ou o sinônimo que couber: escrivaninha, arranjo, "
             "'os controles ligados'",
 }

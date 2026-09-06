@@ -41,7 +41,7 @@ GLIFO_DE_AJUDA = "?"
 _JA_LIGADOS: weakref.WeakSet[Any] = weakref.WeakSet()
 
 #: Margens internas do conteúdo de uma seção, em pixels. Cópia do molde da aba
-#: Início (`home_actions.py:1501-1505`) — não são valores novos.
+#: Início (`home_actions.py:2085-2088`) — não são valores novos.
 MARGEM_VERTICAL = 10
 MARGEM_HORIZONTAL = 12
 #: Espaçamento entre filhos diretos do conteúdo de uma seção.

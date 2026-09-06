@@ -1,10 +1,23 @@
 #!/usr/bin/env python3
-"""Retrata as ONZE abas da janela, com o card do controle vivo dentro.
+"""Retrata as ONZE abas da JANELA GTK, com o card do controle vivo dentro.
 
-É o script que a documentação e quem for trabalhar na interface usam —
-pessoa ou assistente. Uma execução, nenhum
-clique, nenhuma janela na frente: ele monta a interface numa janela offscreen
-do tamanho da tela maximizada dela e salva um PNG por aba.
+ELE NÃO É O RETRATISTA DO PRODUTO DE HOJE — 05/09/2026
+-------------------------------------------------------
+
+A janela GTK tem onze abas; o que abre é a interface HTML, com DEZ páginas.
+Quem as fotografa é `src/hefesto_dualsense4unix/interface/olhar.py --todas
+--publicado --doc`, que grava as `docs/usage/assets/aba-NN-*.png` do README e
+do `AS-DEZ-ABAS`. Este arquivo continua sendo o retratista da JANELA, e as
+`readme_*.png` que ele produz continuam servindo ao `docs/usage/interface.md`
+enquanto a janela viver.
+
+A separação é de dependência, não de gosto: este importa GTK na primeira linha,
+e o outro precisa só do Chrome — juntar os dois obrigaria toda máquina que
+fotografa HTML a ter PyGObject.
+
+Uma execução, nenhum clique, nenhuma janela na frente: ele monta a interface
+numa janela offscreen do tamanho da tela maximizada dela e salva um PNG por
+aba.
 
     scripts/gui-captura/retratar_abas.py                 # atualiza as imagens
                                                          # da documentação

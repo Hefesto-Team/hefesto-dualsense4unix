@@ -515,7 +515,7 @@ class FooterActionsMixin(ProfileWriterMixin):
             estado = _run_call("daemon.state_full", None, timeout=STATE_IPC_TIMEOUT_S)
             if isinstance(estado, dict):
                 sinal = estado.get("game_signal")
-                # MESMO critério da aba Início (`home_actions.py:1337-1341`) —
+                # MESMO critério da aba Início (`home_actions.py:770-773`) —
                 # duas leituras do mesmo fato não podem discordar.
                 self._jogo_aberto = (
                     isinstance(sinal, dict) and sinal.get("authority") == "game"
