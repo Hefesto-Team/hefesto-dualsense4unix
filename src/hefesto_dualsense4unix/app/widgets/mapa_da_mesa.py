@@ -130,10 +130,37 @@ DICA_EXTENSAO = (
 #: PROVISÓRIO — decisão dela.
 ROTULO_EMBUTIDO = "Dentro da máquina"
 
-#: A frase que diz que este desenho espera o "Aplicar", como o resto da aba.
+#: AS DUAS FRASES DO RODAPÉ DO MAPA, e são DUAS porque são dois comportamentos.
+#:
+#: O desenho do mapa tem duas telas: esta janela GTK, que junta as mudanças e
+#: só as faz valer no "Aplicar" da barra de baixo, e a janelinha da interface
+#: nova, onde **cada clique já gravou** — decisão dela de 01/09/2026, executada
+#: pelos seis gestos de `interface/pacotes/a08_conexoes._gravar_o_mapa`.
+#:
+#: **UNIFICÁ-LAS PORIA A MENTIRA NUMA DAS DUAS.** Não é uma frase com duas
+#: grafias: é uma frase por comportamento, e a decisão de 01/09 é o que as
+#: reparte. Quem mudar o comportamento de uma das telas troca a frase DELA, e
+#: só dela.
+#:
+#: **AS DUAS SÃO TEXTO DE TELA E MORAM AQUI, no dono** — 06/09/2026,
+#: `ONDA5-08-02`. A segunda foi digitada em `interface/aba08.py` entre 04/09 e
+#: hoje, e a dívida estava declarada no próprio arquivo: régua nenhuma desta
+#: casa compara HTML com Python, então uma frase digitada no gerador vira a
+#: segunda versão dela no dia em que o produto a corrigir. O gerador as lê por
+#: AST (`aba08._constantes`), que **derruba a geração da tela** quando um nome
+#: some daqui.
 #: PROVISÓRIO — decisão dela.
 ESPERA_O_APLICAR = (
     "O desenho vale quando você clicar em Aplicar, na barra de baixo da janela."
+)
+
+#: A irmã dela, para a tela que grava no clique. Decisão [08] do PO, 04/09/2026
+#: — *"Trocar pela verdade"*: a frase de antes mandava apertar um "Aplicar" que
+#: nesta aba faz OUTRA coisa (*"Vale agora: envia a configuração aos controles
+#: na hora. NÃO grava"*), sobre um desenho que o clique dela já gravou.
+#: PROVISÓRIO — decisão dela.
+GRAVA_NO_CLIQUE = (
+    "Cada mudança aqui já foi gravada, no clique. Não há nada a aplicar depois."
 )
 
 #: As letras que uma entrada por extensão pode receber, na ordem. Vinte e seis
