@@ -489,3 +489,394 @@ def test_o_aviso_do_nativo_continua_fora_por_decisao_dela() -> None:
         "desta aba em 31/08 — 'qualquer coisa fora isso tá incorreta' — e "
         "ensaio nenhum desta casa mede quantos jogos derrubam o controle. "
         "Se a decisão mudou, ela muda com o olho DELA, não por baixo do gerador")
+
+
+# ---------------------------------------------------------------------------
+# JOGAR-O-QUE-FALTA-01 — as quatro linhas de 06/09/2026
+# ---------------------------------------------------------------------------
+def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
+    """Passo 3 — dois controles, um primário; troque e o marcador muda de cartão.
+
+    Linha 18 do CSV: *"`is_primary` não é lido em `interface/pacotes/`; a classe
+    `.cartao.alvo` existe mas responde a outra pergunta (o alvo de edição da
+    fita)"*. A régua mede as DUAS metades: o marcador anda **e** o alvo não vai
+    junto.
+
+    **POR QUE O ALVO ENTRA NESTA RÉGUA:** se alguém reusar `.cartao.alvo` para o
+    primário, o defeito só aparece no dia em que ela editar a fita com um
+    controle que não é o primário — tarde, e na tela dela. Aqui aparece agora: o
+    pacote não emite `alvo` nenhum, e quem o escreve é o piloto.
+
+    A MORDIDA: troque `_e_o_primario` por `return "1"` e as duas primeiras
+    afirmações reprovam (os dois cartões acendem); troque por `return ""` e a
+    terceira reprova.
+    """
+    c1 = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1,
+          "is_primary": True, "transport": "usb"}
+    c2 = {"uniq": P2, "connected": True, "player_slot": 2, "player": 2,
+          "is_primary": False, "transport": "bt"}
+
+    assert aba._e_o_primario(c1) == "1", "o primário não foi marcado"
+    assert aba._e_o_primario(c2) == "", "um cartão que não é o primário acendeu"
+
+    # O PRIMÁRIO ANDA: a MESMA mesa, com o `is_primary` do outro lado.
+    assert aba._e_o_primario({**c1, "is_primary": False}) == ""
+    assert aba._e_o_primario({**c2, "is_primary": True}) == "1"
+
+    # E O PACOTE NÃO EMITE `alvo`: quem escolhe o alvo de edição da fita é o
+    # piloto (`hefesto_vivo`, `carga["alvo"]`), e um pacote que o emitisse aqui
+    # seria o segundo dono de uma escolha DELA.
+    fora = aba.pacote(_ctx([c1, c2]))
+    for uniq, campos in (fora["cartoes"] or {}).items():
+        assert "alvo" not in campos, (
+            f"o cartão {uniq} passou a emitir `alvo` — o alvo de edição da fita "
+            "é escolha dela, escrita pelo piloto, e não fato do serviço")
+
+
+def test_so_o_true_literal_acende_o_marcador() -> None:
+    """Chave ausente não é "não é o primário" — é *não sei*, e não se afirma.
+
+    Mesma disciplina do `_cadeado` e do `wrapper_used`: um daemon antigo (sem a
+    chave) ou um payload de outro tipo não podem acender uma palavra sobre um
+    controle.
+
+    A MORDIDA: troque `is True` por um `bool(...)` e as três últimas reprovam.
+    """
+    assert aba._e_o_primario({}) == "", "sem a chave, o cartão afirmou"
+    assert aba._e_o_primario({"is_primary": None}) == ""
+    assert aba._e_o_primario({"is_primary": 1}) == "", "um `1` inteiro acendeu"
+    assert aba._e_o_primario({"is_primary": "sim"}) == ""
+
+
+def test_a_palavra_do_primario_e_a_que_ela_ja_leu() -> None:
+    """A palavra do marcador é a da janela antiga — a régua LÊ, não digita.
+
+    O dono é `home_actions._format_controller_subtitle`, que monta a linha
+    secundária do card e acrescenta exatamente a palavra quando `is_primary`.
+
+    A MORDIDA: mude uma letra de `MARCA_DO_PRIMARIO` e esta régua reprova.
+    """
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/home_actions.py"
+             ).read_text()
+    assert f'parts.append("{aba.MARCA_DO_PRIMARIO}")' in fonte, (
+        f"a palavra {aba.MARCA_DO_PRIMARIO!r} não é a que a janela antiga põe na "
+        f"linha secundária do card. Texto de tela novo é decisão DELA, e este "
+        f"devia ser texto que ela já leu")
+
+
+def test_a_marca_da_degradacao_tem_as_duas_condicoes() -> None:
+    """Passo 4 — backend degradado **E** motivo. Uma só acende alarme sobre nada.
+
+    Linha 32 do CSV: *"o `backend` não é lido pelo pacote da 01;
+    `pacotes.degradacao_de` existe e não é chamada por esta aba"*.
+
+    **O DONO DECIDE, e a régua prova que esta aba PERGUNTA a ele.** A máscara
+    Xbox é `uinput` POR DESENHO (motivo `None`) e não é degradação nenhuma;
+    controle sem gamepad virtual próprio idem. Reescrever essas duas condições
+    aqui seria a segunda lista de motivos desta casa.
+
+    A MORDIDA: com o motivo vazio o campo tem de vir `""` — e o alvo `atributo`
+    do piloto REMOVE o `title`, que é o que apaga a marca.
+    """
+    base = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1,
+            "transport": "usb"}
+    degradado = {**base, "vpad_backend": "uinput",
+                 "vpad_motivo": "uhid_indisponivel"}
+
+    fora = aba.pacote(_ctx([degradado]))
+    marca = (fora["cartoes"] or {})[P1]["degradou-cartao"]
+    assert marca, "a marca não acendeu com backend degradado E motivo"
+
+    # DUAS CONDIÇÕES, E CADA UMA SOZINHA É SILÊNCIO.
+    so_backend = {**base, "vpad_backend": "uinput"}
+    assert aba.pacote(_ctx([so_backend]))["cartoes"][P1]["degradou-cartao"] == "", (
+        "a marca acendeu com o backend `uinput` e SEM motivo — é a máscara Xbox "
+        "por desenho, e alarme sem medição é o que ela baniu em 31/08")
+    so_motivo = {**base, "vpad_motivo": "uhid_indisponivel"}
+    assert aba.pacote(_ctx([so_motivo]))["cartoes"][P1]["degradou-cartao"] == "", (
+        "a marca acendeu sem o backend degradado")
+
+    # E A FRASE É INTEIRA DO DONO — não uma segunda tradução do motivo.
+    from hefesto_dualsense4unix.app.widgets.controller_card import texto_degradacao
+
+    assert marca == texto_degradacao(degradado), (
+        "a frase da marca se afastou da do dono (`controller_card."
+        "texto_degradacao`) — duas traduções do mesmo motivo é o defeito que "
+        "o `_do_exame` já custou a esta aba")
+
+
+def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
+    """Passo 5 — com o estado vazio a coluna DIZ, e nada mais é afirmado.
+
+    Linha 38 do CSV, e é o passo que mais vale: *"o tique imprime `[daemon mudo]`
+    no stderr e retorna sem pintar nada — a tela fica com os últimos valores"*.
+
+    **A OMISSÃO ERA A MENTIRA, e ela tinha número:** medido antes desta cura, com
+    o estado vazio, a coluna emitia ``atencao-conta = "nenhum aviso"`` e seis
+    linhas em branco. *"Nenhum aviso"* é uma AFIRMAÇÃO — quer dizer "perguntei e
+    não há nada".
+
+    A MORDIDA: troque `_aviso_do_servico_calado` por `return None` e esta régua
+    reprova nas duas primeiras afirmações.
+    """
+    fora = aba.pacote(Contexto(state={}, mesa=[], conectados=[], estados={}))
+
+    assert aba.SELO_DO_SERVICO in fora["aviso-selo"], (
+        "a coluna Atenção ficou calada com o serviço calado — e a conta ao lado "
+        "diz 'nenhum aviso', que é a tela afirmando sobre um estado que ninguém "
+        "leu")
+    i = list(fora["aviso-selo"]).index(aba.SELO_DO_SERVICO)
+    assert fora["aviso-texto"][i] == aba.SERVICO_CALADO
+    assert fora["atencao-conta"] != _painel_do_produto().texto_da_conta(0), (
+        "a conta continuou dizendo 'nenhum aviso' com a linha do serviço acesa")
+
+    # E NADA MAIS É AFIRMADO: as outras respostas da aba continuam mudas.
+    assert fora["hef-posicao"] == "", "o interruptor acendeu sem estado"
+    assert fora["modo-aceso"] == "", "um chip da fileira acendeu sem estado"
+    assert fora["cadeado"] == "", "o cadeado afirmou uma escolha dela"
+    assert fora["mesa-frase"] == "", (
+        "a frase da mesa vazia apareceu — 'nenhum controle na mesa' sobre um "
+        "tique sem resposta é a tela afirmando o que não leu")
+    assert not fora["cartoes"], "um cartão foi afirmado sem estado"
+
+
+def test_com_o_servico_vivo_a_linha_do_servico_nao_existe() -> None:
+    """E ela SOME sozinha quando o serviço volta — sem clique nenhum.
+
+    É a outra metade da promessa que a própria frase faz (*"ela volta sozinha
+    quando o serviço responder"*). Uma linha que ficasse acesa com o daemon vivo
+    seria pior que o silêncio que ela veio curar.
+
+    A MORDIDA: troque a guarda por `return {...}` incondicional e esta régua
+    reprova.
+    """
+    c1 = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1,
+          "is_primary": True, "transport": "usb"}
+    fora = aba.pacote(_ctx([c1]))
+    assert aba.SELO_DO_SERVICO not in fora["aviso-selo"], (
+        "a linha do serviço calado continuou na coluna com o daemon vivo")
+
+
+def test_o_selo_do_servico_abre_a_escada_da_gravidade() -> None:
+    """Com o serviço calado, TODA outra linha descreveria o que ninguém leu.
+
+    O critério da escada é *o que invalida o quê*, e está escrito na tupla. A
+    ``PAUSA`` já vinha primeiro por isso; o serviço calado é um degrau acima —
+    com ele, nem a pausa se sabe.
+
+    A MORDIDA: tire ``SERVIÇO`` de `ORDEM_DA_GRAVIDADE` e ele cai para DEPOIS de
+    tudo (`posto.get(..., fim)`), onde a coluna cheia o esconde atrás do ``+N``.
+    """
+    assert aba.ORDEM_DA_GRAVIDADE[0] == aba.SELO_DO_SERVICO, (
+        "o selo do serviço saiu da frente da escada")
+    selos, _ = aba._coluna_de_avisos([
+        {"selo": "PERFIL", "texto": "a"}, {"selo": "PAUSA", "texto": "b"},
+        {"selo": aba.SELO_DO_SERVICO, "texto": "c"},
+    ])
+    assert selos[0] == aba.SELO_DO_SERVICO, f"a coluna ordenou {selos!r}"
+
+
+def test_a_frase_do_servico_e_a_que_ela_ja_leu() -> None:
+    """A primeira frase é a da janela GTK, palavra por palavra — a régua LÊ.
+
+    `home_actions._render_home` escreve ``set_text("O Hefesto está desligado.")``
+    no ramo `offline`, e o `validar-palavra-de-tela` já a declara como a
+    tradução de "daemon offline".
+
+    A MORDIDA: mude uma letra de `SERVICO_DESLIGADO` e esta régua reprova.
+    """
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/home_actions.py"
+             ).read_text()
+    assert f'set_text("{aba.SERVICO_DESLIGADO}")' in fonte, (
+        f"{aba.SERVICO_DESLIGADO!r} não é a frase que a janela antiga escreve "
+        f"com o daemon fora do ar — texto de tela novo é decisão DELA")
+    assert aba.SERVICO_CALADO.startswith(aba.SERVICO_DESLIGADO), (
+        "a frase da coluna deixou de começar pela frase do dono")
+
+
+def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
+    """As palavras proibidas do glossário não entram em texto de tela.
+
+    `uinput`, `hidraw`, `vpad`, `evdev`, `MAC`, `uniq` e "mesa" são proibidos, e
+    a régua olha as frases que ESTA aba escreve. A da ponte entra aqui porque é
+    a que a sprint manda medir: *"três dublês, três pontes, três frases; nenhuma
+    com palavra proibida"*.
+
+    **A MARCA DA DEGRADAÇÃO É A EXCEÇÃO DECLARADA, e não um esquecimento:** ela
+    não é texto de tela em linha — é `title`, a DICA, que é onde o glossário põe
+    a explicação (§3), e a frase inteira é do dono na janela GTK. A mesma
+    escolha do cartão da aba 02, que a publica desde 04/09.
+
+    A MORDIDA: escreva `uinput` em `SERVICO_CALADO` e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.app.actions import home_actions
+
+    #: AS PALAVRAS DE MÁQUINA — as quatro que a sprint nomeia, mais o `uniq`.
+    de_maquina = ("uinput", "hidraw", "vpad", "evdev", "uniq")
+    #: AS FRASES DESTA POSSE.
+    minhas = [aba.SERVICO_CALADO, aba.SERVICO_DESLIGADO, aba.PRIMARIO_DICA,
+              aba.MARCA_DO_PRIMARIO]
+    #: AS CINCO PONTES, uma por dublê — as duas primeiras chegam à coluna
+    #: Atenção (má notícia), as três últimas não, e as cinco passam por aqui.
+    #: O MARKUP FICA, e não é descuido: quem o tira é `gui.aba_sistema.sem_markup`,
+    #: e a janela GTK está sendo aposentada (D-0609-GTK-LEVA-INTEIRA) — uma
+    #: citação nova para ela reprova no portão `nada-aponta-para-a-janela`. Para
+    #: esta medida o markup não atrapalha: `<span foreground="#50fa7b">` não tem
+    #: palavra de máquina nenhuma, e o que se procura é a palavra DENTRO da
+    #: frase. Quem tira o markup de verdade, no produto, é `_aviso_da_ponte`.
+    da_ponte = [
+        home_actions.texto_da_ponte(cena)
+        for cena in (
+            {"connected": True, "native_mode": False,
+             "gamepad_emulation": {"enabled": False, "flavor": "dualsense"}},
+            {"connected": True, "native_mode": False, "controllers": [],
+             "gamepad_emulation": {"enabled": True, "flavor": "dualsense"}},
+            {"connected": True, "native_mode": False,
+             "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
+             "controllers": [{"uniq": P1, "connected": True, "player_slot": 1}]},
+            {"connected": True, "native_mode": True,
+             "gamepad_emulation": {"enabled": False, "flavor": "dualsense"},
+             "controllers": [{"uniq": P1, "connected": True, "player_slot": 1}]},
+            None,
+        )
+    ]
+    assert len(set(da_ponte)) == 5, (
+        f"as cinco pontes deixaram de ser cinco frases distintas: {da_ponte!r}")
+
+    for frase in minhas + da_ponte:
+        baixa = f" {frase.lower()} "
+        for palavra in de_maquina:
+            assert palavra not in baixa, (
+                f"a palavra {palavra!r} chegou a texto de tela: {frase!r}. O "
+                f"glossário (`docs/A-LINGUA-DESTA-CASA`) a proíbe")
+
+    # A PALAVRA "mesa" É MEDIDA SÓ NAS FRASES DESTA POSSE, e a razão é um ACHADO
+    # que esta régua fez e não pode curar — está no relato desta sprint:
+    #
+    #     home_actions.py:1342  "…não há nenhum controle na mesa para alimentá-lo"
+    #     home_actions.py:1697  f"{total} controles na mesa: …"
+    #
+    # A primeira é a ponte *"de pé, e vazia"*, e ela CHEGA à coluna Atenção
+    # desta aba desde 04/09 — logo a palavra banida está na tela dela hoje. Quem
+    # tira a palavra é a `A-PALAVRA-MESA-SAI-01`, e ela **não alcança**:
+    # `src/hefesto_dualsense4unix/app/` está no `nao_toca` daquele frontmatter, e
+    # ela roda DEPOIS desta. Medir aqui as frases de outra posse deixaria esta
+    # régua vermelha por um defeito que ela não pode fechar — e régua vermelha
+    # por dívida alheia é a que alguém desliga.
+    for frase in minhas:
+        assert " mesa " not in f" {frase.lower()} ", (
+            f'a palavra "mesa" entrou numa frase desta aba: {frase!r}. Decisão '
+            f"dela, 06/09: o termo sai da tela e entra o simples")
+
+
+def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
+    """Passo 1 — a máscara clicada na 01 é o que a aba 10 lê. UM dono, duas telas.
+
+    Linha 5 do CSV: *"nada. `_ESCOLHA`/`_ROTULO` são dicionários de módulo lidos
+    só dentro do próprio arquivo"*, e a consequência: *"ela escolhe 'Xbox' na 01,
+    clica em 'Salvar Perfil' na 10, e o perfil grava a máscara que estava no
+    disco — a escolha dela não entra."*
+
+    **A LEITURA DE VOLTA É PELO CAMINHO DA ABA 10**, e é o que faz esta régua
+    valer: `perfis_web._pacote_do_editor` é o que o quadro «Modo» daquela aba
+    mostra (PERFIL-MODO-01). Ler o `.json` direto provaria só que alguém gravou
+    um arquivo; ler por aqui prova que **a outra tela vê**.
+
+    A MORDIDA: arranque a chamada de `_gravar_o_modo_do_chip` do gesto
+    `modo_xbox` e esta régua reprova dizendo que a aba 10 continua sem modo.
+    """
+    from hefesto_dualsense4unix.app.actions import perfis_web
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    monkeypatch.setattr("hefesto_dualsense4unix.utils.xdg_paths.profiles_dir",
+                        lambda: tmp_path)
+    monkeypatch.setattr(loader, "_profiles_dir", lambda: tmp_path, raising=False)
+    nome = "Régua do Modo"
+    loader.save_profile(Profile(name=nome, match=MatchAny(), priority=40),
+                        origem="régua")
+
+    ctx = _ctx([], active_profile=nome)
+    assert perfis_web._pacote_do_editor(loader.load_profile(nome))["modo"] == (
+        perfis_web.MODO_SEM_OPINIAO), "o perfil da régua já nasceu com modo"
+
+    class _Ponte:
+        def chamar(self, *a: Any, **kw: Any) -> bool:
+            return True
+
+    aba.modo_xbox(ctx, {"texto": "Xbox"}, _Ponte())
+
+    lido = perfis_web._pacote_do_editor(loader.load_profile(nome))["modo"]
+    assert lido == "gamepad", (
+        f"a aba 10 continua vendo {lido!r} depois de o chip Xbox ser clicado na "
+        f"01 — a escolha dela não atravessou as duas telas")
+    modo = loader.load_profile(nome).mode
+    assert modo is not None and modo.gamepad_flavor == "xbox", (
+        f"a máscara não entrou na seção `mode`: {modo!r}")
+
+
+def test_a_escrita_no_perfil_nunca_levanta(monkeypatch) -> None:
+    """Ela é efeito colateral de um gesto que já foi ao daemon — e não pode falhar.
+
+    Uma exceção aqui transformaria uma troca de modo bem-sucedida em tarja de
+    recusa. É a mesma política de `perfil.com_a_carona`.
+
+    A MORDIDA: tire o `try` de `perfil.gravar_o_modo_no_ativo` e esta régua
+    reprova com o `OSError` do dublê.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
+
+    def _explode(*_a: Any, **_kw: Any) -> Any:
+        raise OSError("o disco recusou")
+
+    monkeypatch.setattr(_perfil, "nome_do_ativo", lambda *_a: "Qualquer")
+    monkeypatch.setattr(_perfil, "_com_o_src", _explode)
+    assert _perfil.gravar_o_modo_no_ativo({}, "gamepad", "xbox") == "", (
+        "a gravação levantou — o gesto viraria tarja de recusa sobre um modo "
+        "que o daemon já aplicou")
+
+
+def test_sem_perfil_ativo_nao_se_inventa_um(monkeypatch) -> None:
+    """Sem perfil valendo, não há onde gravar — e não se cria um.
+
+    A MORDIDA: faça `gravar_o_modo_no_ativo` cair num nome padrão e esta régua
+    reprova.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
+
+    monkeypatch.setattr(_perfil, "nome_do_ativo", lambda *_a: "")
+    assert _perfil.gravar_o_modo_no_ativo({}, "gamepad", "xbox") == ""
+
+
+def test_a_secao_do_modo_e_a_regra_do_dono() -> None:
+    """"none" REMOVE a seção, e a máscara não é inventada fora do modo jogo.
+
+    A regra é a de `profiles_actions._mode_section_from_editor`, e a cicatriz é
+    ESCOLHA-DELA-VENCE-01/E1: havia um ``or "xbox"`` no Salvar da janela
+    estável, e bastava salvar um perfil para ele passar a EXIGIR Xbox.
+
+    A MORDIDA: troque o `elif flavor:` por um `campos["gamepad_flavor"] = flavor`
+    incondicional e a terceira afirmação reprova.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
+    from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
+
+    assert _perfil.secao_do_modo(None, "none") is None
+    antes = ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")
+    assert _perfil.secao_do_modo(antes, "none") is None
+
+    # FORA DO MODO JOGO A MÁSCARA É ZERADA — "JSON limpo, sem sobras".
+    fora = _perfil.secao_do_modo(antes, "native")
+    assert fora is not None and fora.gamepad_flavor is None
+
+    # E DENTRO DELE, SEM ESCOLHA, O DISCO É PRESERVADO.
+    fica = _perfil.secao_do_modo(antes, "gamepad")
+    assert fica is not None and fica.gamepad_flavor == "xbox", (
+        "a máscara do disco foi apagada por um clique que não a escolheu — é a "
+        "cicatriz do `or \"xbox\"` pelo avesso")
+
+
+def _painel_do_produto() -> Any:
+    from hefesto_dualsense4unix.app.actions.jogar import painel
+
+    return painel

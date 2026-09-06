@@ -91,6 +91,13 @@ ESCREVEM = {
     "_gravar",                 # o helper das abas que grava a seção
     "_gravar_a_forca",         # idem, na Vibração
     "_gravar_so_o_gatilho",    # grava o perfil dela SEM reaplicá-lo
+    # A SEÇÃO `mode` DO PERFIL ATIVO, escrita de FORA da aba Perfis —
+    # JOGAR-O-QUE-FALTA-01, 06/09/2026. O interruptor e os chips da aba Jogar
+    # passaram a levar a escolha dela para o `.json`, pelo dono compartilhado
+    # (`interface/pacotes/perfil.gravar_o_modo_no_ativo`). Sem este nome aqui, a
+    # régua de clique trocaria o que ATIVAR o perfil dela liga — quatro botões,
+    # numa aba que ela deixa aberta — para provar que sabe clicar.
+    "gravar_o_modo_no_ativo",
     "salvar_perfil",
     "machine_declare",         # grava `MesaDeclarada` no `maquina.json`
     "set_mask",                # grava a máscara daquele aparelho
@@ -191,7 +198,10 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
     ("01-jogar.html", "modo-navegacao"):
         "liga o mouse emulado pela preferência persistida (`mouse.emulation."
         "restore`); o perigo é o CURSOR andando na tela dela, e cursor não é "
-        "chamada de função",
+        "chamada de função. Desde 06/09/2026 ele também GRAVA (a seção `mode` "
+        "do perfil ativo, por `gravar_o_modo_no_ativo`) — a árvore acharia essa "
+        "porta, e a declaração continua por frase porque o cursor é o perigo "
+        "MAIOR e o único que só a frase alcança",
     ("07-lancadores.html", "abrir-lancador"):
         "`reopen_steam` abre a janela da Steam DESANEXADA: ela não nasce oculta "
         "e não some quando a prova termina. Decisão 17 dela, 03/09/2026 — o "

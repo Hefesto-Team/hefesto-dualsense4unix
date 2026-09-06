@@ -21,6 +21,58 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
+## 01-jogar.html
+
+- **06/09/2026** — **DOIS ENDEREÇOS NOVOS DENTRO DE CADA CARTÃO**, os dois
+  invisíveis na página parada e acesos só pelo produto:
+
+  1. **o marcador «primário»** (`marcador-principal`, alvo `classe`) — a palavra
+     que a janela GTK põe na linha secundária do card
+     (`home_actions._format_controller_subtitle`) e que esta tela nunca teve.
+     Era a linha 18 do CSV da paridade, e o SINAL daquela linha **é este
+     endereço**. Ele **não** reusa a classe `.cartao.alvo`, que já existe e
+     responde a outra pergunta (o alvo de edição da fita): os dois podem ser
+     aparelhos diferentes, e reusar a classe faria os dois significados
+     brigarem no mesmo pixel;
+  2. **a marca da emulação degradada** (`degradou-cartao`, alvo `atributo`) — o
+     `*` laranja com o motivo no ponteiro do mouse, a MESMA gramática do cartão
+     da aba 02 (decisão dela de 04/09: *"uma marca na palavra e o motivo no
+     hover"*). Era a linha 32 do CSV, e a frase inteira vem do dono
+     (`controller_card.texto_degradacao`, por `pacotes.degradacao_de`).
+
+  **Por que não publiquei:** publicar é ato dela, e aqui nasce uma PALAVRA nova
+  na tela — «primário» —, que é o caso exato da `PROVA-DE-TELA-01`. A palavra é
+  a que ela já lê na janela antiga, e há régua que reprova se as duas se
+  afastarem; ainda assim, quem confere que ela chegou certa é ela, olhando.
+
+  **Os dois NASCEM APAGADOS no desenho, de propósito:** quem decide o primário é
+  o serviço, e um cartão que nascesse marcado afirmaria um fato que o desenho
+  não tem como saber. O mesmo vale para a marca da degradação — um `title`
+  cravado acenderia alarme sobre um controle que ninguém mediu. Logo **a cena
+  que ela aprovou não muda um pixel**: as duas regras de CSS só acendem sob
+  classe e sob `[title]`, e nenhuma das duas está no arquivo parado.
+
+  **O que ela vê HOJE, até publicar:** a aba Jogar de ontem, com os cartões
+  dizendo só `{modelo} · {cabo|rádio}`. Os dois endereços saem do pacote a cada
+  tique e caem no vazio na página publicada — nada regride enquanto ela espera.
+  **Medido no WebKit**, com o mesmo dublê nos dois lados
+  (`scripts/ensaios/a_jogar_diz_quem_e_o_primario.py`):
+
+  | | marcador «primário» | marca da degradação |
+  | --- | --- | --- |
+  | **bancada** | acende no cartão do primário, e ANDA quando ele troca | acende com motivo, some sem ele |
+  | **publicado** | **não existe** | **não existe** |
+
+  **E o que NÃO espera publicação:** a linha do **serviço calado** na coluna
+  Atenção (o Passo 5 desta sprint). Ela usa os endereços `aviso-selo` e
+  `aviso-texto`, que a página publicada já tem — medido no mesmo ensaio, ela
+  acende nos dois lados.
+
+  **O que fecha:** `scripts/check_o_desenho_aprovado.py --publicar 01`, depois
+  do olho dela.
+
+---
+
 ## 10-perfis.html
 
 - **06/09/2026** — **UMA FILEIRA NOVA no editor: o quadro «Modo»**, com os
