@@ -73,6 +73,32 @@ seção daqui**: a aba deixou de estar em trabalho.
   **O que fecha:** o `--publicar 02` da próxima vez que ela aprovar a aba. Nada
   espera por isto — nenhuma sprint depende desta linha.
 
+---
+
+## 05-vibracao.html
+
+- **06/09/2026** — **A NOTA DO TESTAR VOLTOU PARA O `?`** (`ONDA5-05-01`, a
+  05-Q2 dela: *"As duas na dica."*). A frase *"Os valores acima ainda passam
+  pela intensidade escolhida ali em cima…"* deixou de ser a linha cinza em
+  itálico embaixo da grade e voltou para dentro do `?` do **Testar agora**, ao
+  lado das duas orações do par. Saíram junto a `.vib-nota` do miolo e a regra
+  de CSS que só ela usava.
+
+  **E a dica passou a abrir para a DIREITA, o que é conserto de defeito
+  medido:** ela carregava `left:auto;right:22px` — o arranjo das dicas do lado
+  direito da página —, e neste `?`, que mora na primeira coluna da grade, isso
+  punha **224 dos 330 px da caixa fora da janela**. Medido nos dois motores, a
+  1920x1080: Chrome (`interface/olhar.py`) e WebKit (o piloto). Com o padrão da
+  casa a caixa vai de x=505 a x=835 dentro de uma janela de 370 a 1550 —
+  **sangria zero**.
+
+  **O que ela vê HOJE, até publicar:** a aba Vibração de ontem — a linha cinza
+  ainda embaixo da grade, e o `?` do Testar agora ainda cortado pela borda
+  esquerda da janela. **O corte é do produto publicado, não desta mudança**:
+  medido em `interface/paginas/05-vibracao.html`, a mesma sangria de 224 px já
+  existia com as duas orações.
+
+  **O que fecha:** o `--publicar 05` depois do OK dela na aba inteira.
 ## 09-sistema.html
 
 - **06/09/2026** — **UMA LINHA, e os dois pixels que ela mudam são PALAVRA
