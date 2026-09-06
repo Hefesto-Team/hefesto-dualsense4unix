@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde  # noqa: E402
 from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, cor_da_zona,  # noqa: E402
-                   glifo, monta, player_slot_color, svg)
+                   glifo, monta, player_slot_color, ressalva as monta_ressalva, svg)
 
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
 # arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
@@ -757,6 +757,29 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .exame .txt{flex:0 1 auto;min-width:0}
   .exame .ignora{margin-left:auto}
 
+  /* ---- A ORDEM CALADA FICA NA LISTA, EM CINZA — 08-Q5 dela, 06/09/2026 ----
+     *"A recomendação calada continua no lugar dela, em cinza, e o mesmo botão
+     desfaz."* Antes desta regra o produto SUMIA com a linha, e não havia
+     caminho de volta em lugar nenhum desta aba.
+
+     NADA DE `display:none`, E É O PONTO INTEIRO: a linha continua ocupando a
+     fatia dela. Uma linha que some é uma tela que ESCONDE, e é o que a decisão
+     dela desfaz.
+
+     O ACHADO ESMAECE, O CAMINHO DE VOLTA NÃO. A opacidade cai no selo, no texto
+     e no `?` — as três metades que dizem o que a linha achou —, e o ⊘ fica
+     legível: ele é o único jeito de desfazer, e apagá-lo junto seria esconder a
+     porta de saída atrás da própria decisão. É a mesma família do `.apagado` do
+     botão cinza (D-03): cor esmaecida, e o clique continua respondendo.
+
+     A CLASSE VEM DO PRODUTO, pelo alvo `classe` do piloto — ver `exame()`. No
+     mockup ela não aparece: nenhuma linha do desenho nasce calada, porque uma
+     cena de bancada não tem decisão dela dentro. */
+  .exame.apagada .selo,
+  .exame.apagada .txt,
+  .exame.apagada .ajuda{opacity:.42}
+  .exame.apagada .ignora{color:var(--texto-suave);border-color:var(--texto-suave)}
+
   /* ---- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026 ----
      *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
 
@@ -864,6 +887,17 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      (`peca`, `tira`, `mesa`) — nome de classe se confere ANTES de escrever. */
   .col-ordem .mais{margin-top:8px;font-size:11px;color:var(--texto-mudo);
                    font-style:italic}
+  /* OS OUTROS DOIS `+N` VIAJAM DENTRO DE UMA `.ressalva` — 06/09/2026, 08-Q7.
+     A peça que sabe SUMIR quando não há o que dizer é a linha de ressalva
+     (`monta.ressalva`, com `:empty` e `:has(.nada)`), e o que o produto escreve
+     dentro dela é o mesmo `_sobraram` da coluna da ordem, que devolve um bloco
+     `.mais`. A cor e o tamanho já vêm da `.ressalva` do esqueleto; o que
+     falta é o itálico, para as TRÊS listas dizerem o mesmo fato do mesmo jeito.
+
+     ESCOPADO NA `.ressalva`, e não solto: `monta.py` já define `.gls .mais`
+     para o "+N" do glossário das dez páginas, e um `.mais` sem escopo aqui é o
+     vizinho de nome igual que esta aba já pagou três vezes. */
+  .ressalva .mais{font-style:italic}
 
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
@@ -1497,22 +1531,16 @@ VER_IGNORADAS = "Ver as ordens ignoradas"
 #: O QUE ACONTECE COM UMA ORDEM QUE ELA MANDOU IGNORAR — a MEDIÇÃO, não a
 #: promessa. 04/09/2026, decisão [05] do PO.
 #:
-#: **FATO ERRADO, SUBSTITUÍDO.** A quinta linha do Check-up dizia *"elas voltam
-#: em <b>Ver as ordens ignoradas</b>"*, e **o botão saiu da tela em 31/08** —
-#: decisão dela, no mesmo turno em que o `Ignorar` virou glifo. A frase mandava
-#: ela procurar um botão que não existe. Isto não é decisão medida a preservar:
-#: é uma frase que a medição derrubou, e ela sai de TODOS os lugares em que fala
-#: do presente.
+#: **O DONO MUDOU DE ARQUIVO EM 06/09/2026, `ONDA5-08-01`.** A frase deixou de
+#: ser só desenho: o `title` do ⊘ passou a ser PINTADO pelo produto
+#: (`data-campo="ignorar-dica"`), e quem pinta é dono. Ela mora em
+#: `pacotes/a08_conexoes.ORDEM_IGNORADA_VOLTA` e é lida daqui — o pacote não
+#: pode importar este gerador, que escreve a bancada ao ser importado.
 #:
-#: O QUE A FRASE NOVA AFIRMA ESTÁ MEDIDO, em `a08_conexoes._itens_da_tela` e em
-#: `ordens_da_mesa.ordens_novas`: a dispensa é gravada com o ARRANJO, e a linha
-#: volta sozinha quando o arranjo muda. Nenhuma palavra aqui promete um lugar.
-#:
-#: **A DECISÃO [05] PEDE MAIS DO QUE ISTO** — *"a linha fica na lista, apagada,
-#: e o mesmo ⊘ desfaz"* —, e essa metade precisa de um endereço que a página
-#: publicada não tem. Ela está declarada no relatório desta frente como o que
-#: sobra; a frase, enquanto isso, diz o que o produto FAZ.
-ORDEM_IGNORADA_VOLTA = "volta sozinha se o arranjo dos cabos mudar"
+#: **A DECISÃO [05] ESTÁ INTEIRA NA TELA DESDE 06/09.** A metade que faltava —
+#: *"a linha fica na lista, apagada, e o mesmo ⊘ desfaz"* — é a 08-Q5 dela, e o
+#: endereço que faltava (`exame-calada`, alvo `classe`) nasceu nesta sprint.
+ORDEM_IGNORADA_VOLTA = _pacote08.ORDEM_IGNORADA_VOLTA
 
 #: O RODAPÉ DA JANELINHA DO MAPA — decisão [08] do PO, 04/09/2026:
 #: **"Trocar pela verdade."**
@@ -1692,6 +1720,28 @@ def exame(estado, txt, dica, linha=0):
     e as classes cravadas da pílula FICAM: o mockup é HTML estático, ninguém o
     pinta quando ela o abre no navegador, e uma linha que o produto não
     preencheu tem de continuar parecendo o que parecia.
+
+    A LINHA CALADA FICA NA LISTA, EM CINZA — **08-Q5 dela, 06/09/2026**:
+    *"A recomendação calada continua no lugar dela, em cinza, e o mesmo botão
+    desfaz."* O `<div class="exame">` trocou `data-campo="exame"` pelo
+    `exame-calada`, com o alvo `classe` acendendo `apagada` quando o pacote
+    emitir `"sim"`. **A troca é segura porque aquele endereço nunca chegou à
+    tela:** o pacote emite `"exame": itens`, uma lista de DICIONÁRIOS, e o
+    `normalizar` a descarta antes do JS com a razão escrita — *"ela é estrutura,
+    e escrever `[object Object]` numa caixa é pior que nada"*. A chave `"exame"`
+    do pacote NÃO sai: ela tem leitor em `interface/conexoes_vivas.py`.
+
+    **NADA DE `display:none`.** A linha ocupa a fatia dela — é o que a decisão
+    dela diz com todas as letras, e é a diferença entre uma tela que APAGA e uma
+    que ESCONDE.
+
+    O ⊘ TROCA DE VERBO, e por isso o `title` deixou de ser cravado: ele é
+    `data-campo="ignorar-dica"` com o alvo `atributo` sobre `title`
+    (`hefesto_vivo.ATRIBUTO_A_MAIS`). O que fica no arquivo é só o de PARTIDA
+    (`a08_conexoes.DICA_DO_IGNORAR`); depois do primeiro tique quem escreve é o
+    produto, com dois verbos — *"Ignora ESTE conselho…"* e *"Traz esta
+    recomendação de volta…"*. **Um botão que muda de sentido com uma dica que
+    não muda é a cicatriz da trava da luz, medida em 04/09.**
     """
     classe, palavra = _aba_conexoes.SELO_DO_ESTADO[estado]
     # UM INTERRUPTOR POR ESTADO, menos o `problema` — ele é a própria pílula.
@@ -1703,12 +1753,12 @@ def exame(estado, txt, dica, linha=0):
         f'data-hef-alvo="classe" data-hef-quando="{e}"></i>'
         for e, endereco in _pacote08.ENDERECO_DO_ESTADO.items()
         if endereco != "selo-estado")
-    return f'''          <div class="exame" data-campo="exame">
+    return f'''          <div class="exame" data-campo="exame-calada" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="sim">
             {interruptores}
             <span class="selo {classe}" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">{palavra}</span></span>
             <span class="txt" data-campo="achado">{txt}</span>
             <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html">{dica}</span></span>
-            <button class="ignora" data-gesto="ignorar" data-v="{linha}" title="Ignora ESTE conselho enquanto os cabos estiverem assim. A recomendação sai desta lista e {ORDEM_IGNORADA_VOLTA}.">⊘</button>
+            <button class="ignora" data-gesto="ignorar" data-v="{linha}" data-campo="ignorar-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{_pacote08.DICA_DO_IGNORAR}">⊘</button>
           </div>'''
 
 
@@ -3101,6 +3151,23 @@ MIOLO = f'''
 {exame("certo", "Nenhuma outra ordem de serviço pendente",
        "<b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou "
        f"ignorar não contam aqui — cada uma {ORDEM_IGNORADA_VOLTA}.", linha=4)}
+          <!-- O `+N` DO EXAME — decisão 08-Q7 dela, 06/09/2026: *"Quando
+               sobra, a lista ganha uma última linha curta: '+1 recomendação
+               não coube aqui' — e só no dia em que sobra."*
+
+               A COLUNA TEM CINCO BLOCOS (`a08_conexoes.TETO_DO_EXAME`) e o
+               exame desta bancada devolve SETE itens: duas ordens e cinco
+               conferências. Sem esta linha as duas que sobram somem, e a
+               ordenação de `_itens_da_tela` — que já garante que o que
+               sobra seja o mais barato de perder — continuava sendo um
+               consolo, não uma resposta.
+
+               A PEÇA É A `monta.ressalva`, que já sabe NÃO OCUPAR NADA em
+               repouso (`.ressalva:has(.nada){{display:none}}`). O produto
+               manda `monta.NADA_A_DIZER` quando cabe tudo — mandar `""`
+               poria um travessão aqui todo dia, porque o `escrever()` do
+                   piloto troca vazio por `—` antes de olhar o alvo. -->
+          {monta_ressalva("exame-mais")}
             </div>
           </div>
 
@@ -3260,6 +3327,19 @@ MIOLO = f'''
             <div class="vizinhos">
 {chr(10).join(viz_bloco(*v, linha=i) for i, v in enumerate(RADIOS_VIZINHOS))}
             </div>
+            <!-- O `+N` DOS VIZINHOS — a mesma decisão 08-Q7, a outra lista.
+                 A fileira tem QUATRO blocos (`a08_conexoes.TETO_DE_VIZINHOS`) e
+                 nesta bancada há quatro rádios: hoje ele não sobra, e por isso
+                 não ocupa um pixel. No dia em que ela espetar o quinto, o rádio
+                 que não coubesse sumiria calado — e é a lista em que isso custa
+                 mais, porque um rádio por nomear é justamente o que a linha do
+                 Check-up manda nomear.
+
+                 CADA `+N` CONTA A PRÓPRIA LISTA. É a régua do erro que esta aba
+                 já cometeu: `gui.aba_conexoes.sobraram` foi tomado por dono
+                 desta frase em quatro lugares da árvore, e ele conta o
+                 ACORDEÃO. -->
+            {monta_ressalva("vizinho-mais")}
             <div class="acoes empurra">
               <a class="btn" href="#mapear-entrada-a-entrada" title="Um toque por aparelho e o Hefesto aprende em que entrada cada um está.">{MAPEAR_UMA_A_UMA}</a>
             </div>
@@ -3486,6 +3566,22 @@ _exigir(all(t == "radio" for t, _ in _ABRE),
 _exigir(len({n for _, n in _ABRE}) == 1 and _ABRE[0][1],
         "os rádios das seções não dividem o mesmo `name` — sem isso o navegador "
         "não tem como fechar a outra")
+
+# 1b. OS DOIS TETOS SÃO DO PACOTE, E O DESENHO TEM DE OBEDECÊ-LOS — 06/09/2026,
+#     08-Q7. O `+N` conta `quantos - cabem`, e o `cabem` sai de
+#     `a08_conexoes.TETO_DO_EXAME` / `TETO_DE_VIZINHOS`. Se o desenho ganhar um
+#     sexto bloco de exame e o teto ficar em cinco, a linha passa a dizer que
+#     sobrou o que na verdade coube — o `+N` mentindo pelo lado que ninguém
+#     confere. A régua LÊ o HTML gerado; ela não recontabiliza a lista que o
+#     produziu.
+_LINHAS_DO_EXAME = _HTML.count('data-campo="exame-calada"')
+_exigir(_LINHAS_DO_EXAME == _pacote08.TETO_DO_EXAME,
+        f"o desenho tem {_LINHAS_DO_EXAME} linhas de exame e o `+N` conta sobre "
+        f"{_pacote08.TETO_DO_EXAME} — os dois números têm de sair do mesmo "
+        "lugar, senão a linha diz que sobrou o que coube")
+_exigir(len(RADIOS_VIZINHOS) == _pacote08.TETO_DE_VIZINHOS,
+        f"a fileira tem {len(RADIOS_VIZINHOS)} blocos de vizinho e o `+N` conta "
+        f"sobre {_pacote08.TETO_DE_VIZINHOS}")
 
 # 2. O RESPIRO DO RÓTULO QUE EXPANDE. O `.quadro-topo` do esqueleto é
 #    `padding:11px 14px 0`: sem esta regra sobra 1px embaixo do texto.
