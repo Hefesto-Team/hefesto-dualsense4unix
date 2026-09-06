@@ -578,11 +578,39 @@ def texto_native_bt_fragil(numeros: Sequence[int]) -> str:
 
 
 # GUI-05 item 3 (honestidade do dedup): texto do banner "jogo sem wrapper".
-# Discreto e pro leigo — diz a consequência (duplicar) e o caminho (aba
-# Sistema), sem jargão de env/vdf.
+# Discreto e pro leigo — diz a consequência (duplicar) e o que o PRODUTO faz,
+# sem jargão de env/vdf.
+#
+# ELA MANDAVA COPIAR, E O BOTÃO NÃO EXISTE — decisão dela, 05/09/2026 (`07-Q2`):
+# *"O produto aplica ela"*. A frase terminava em *"Copie as opções na aba
+# Sistema."*, e a aba Sistema da interface nova tem doze botões e nenhum copia
+# coisa alguma (`grep -c Copiar interface/paginas/09-sistema.html` = 0). O
+# Hefesto não explica a própria falha: ele a conserta. Ela recusou as TRÊS
+# opções que lhe foram oferecidas (só o fato · apontar o Consertar · duas
+# frases) e respondeu com uma quarta, que é a única que age.
+#
+# A PROMESSA É MEDIDA, E POR ISSO TRAZ A CONDIÇÃO — 06/09/2026, ONDA5-07-03.
+# Quem repõe é a carona (`carona_do_wrapper.passada`), e ela NÃO tem relógio
+# próprio: pega carona nos gestos de perfil, nas duas janelas — a estável por
+# `profile_writer.pegar_carona_no_gesto(GESTO_SALVAR)`, a nova por
+# `interface/pacotes/perfil.com_a_carona`, que o rodapé das dez abas chama no
+# Aplicar, no Salvar Perfil e no Importar (ONDA5-07-02). Com a Steam aberta o
+# reparo é adiado (`sentinela_do_wrapper._como_reparar`), e por isso a condição
+# está ESCRITA. Uma promessa sem ela — *"reponho assim que a Steam fechar"* —
+# dependeria de uma vigia que a interface nova só arma por clique dela na aba
+# Lançadores (`a07_lancadores._VigiaDaSteam`: *"ELA SÓ NASCE DE UM CLIQUE
+# DELA"*); prometer isso aqui seria prometer o que ninguém cumpre.
+#
+# "ATALHO DE INICIALIZAÇÃO" É A PALAVRA DA TELA e `hefesto-launch` é a da casa
+# (`docs/A-LINGUA-DESTA-CASA`, §2). E os dois botões que a frase nomeia — os
+# rótulos "Aplicar" e "Salvar Perfil" — estão no rodapé, que é das DEZ abas da
+# interface nova: em qualquer aba onde este aviso acenda, os dois estão à
+# vista. É o que mantém UMA frase com UM dono certa em toda tela que a mostre,
+# e é o contrário da frase velha, que mandava a um botão inexistente.
 WRAPPER_MISSING_TEXT = (
-    "O jogo está rodando sem o hefesto-launch — controles podem duplicar. "
-    "Copie as opções na aba Sistema."
+    "O jogo está rodando sem o atalho de inicialização — controles podem "
+    "duplicar. Reponho o atalho no próximo Aplicar ou Salvar Perfil, com a "
+    "Steam fechada."
 )
 
 
@@ -637,6 +665,19 @@ def ela_ja_respondeu_sobre(appid: str) -> bool:
     Best-effort de propósito: qualquer falha de disco devolve ``False`` — na
     dúvida, o aviso aparece. Esconder um aviso por causa de um erro de leitura
     é pior que mostrá-lo duas vezes.
+
+    ELA TOCA O DISCO, E O CUSTO ESTÁ MEDIDO — 06/09/2026, ONDA5-07-03. Duas
+    leituras de arquivo por chamada, e quem chama é a pintura da aba Jogar, dez
+    vezes por segundo (`jogar/painel.AVISOS_DA_TELA`). A
+    `a07_lancadores.calados` avisa, por escrito, que reler duas listas a cada
+    tique é *"disco na thread da janela"* — e o número diz que este caminho não
+    o sente: **0,050 ms por tique** com os dois arquivos existindo e povoados,
+    contra 2,85 ms de mediana do tique inteiro. Duas razões, e as duas são de
+    desenho: `aviso_do_wrapper` só chega aqui quando há **jogo aberto sem o
+    atalho** (o caso raro), e sem appid a função devolve na primeira linha, sem
+    abrir nada. Trocar isto por uma vigia em segundo plano custaria uma thread e
+    um TTL para poupar 0,05 ms — e deixaria a Início e a Status, que não têm
+    tique, dependendo de um relógio da janela.
     """
     if not appid:
         return False
@@ -670,6 +711,17 @@ def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
     *"há jogo sem wrapper agora?"*. Esta função responde a pergunta que as telas
     de fato fazem — *"há algo a dizer a ela sobre isso?"* — e é ela que as
     telas chamam.
+
+    O SILÊNCIO MORA AQUI, E NÃO NO PACOTE DA ABA — ONDA5-07-03, 06/09/2026. A
+    sprint desenhava a cura como um parâmetro nomeado em
+    `jogar/painel.avisos_do_estado`, com a aba Jogar entregando a lista lida
+    pela vigia da aba Lançadores. **O caminho que ficou é melhor por uma razão
+    medida:** com a conta dentro da função dona, a BANCADA
+    (`interface/jogar_vivo.py`, que chama `avisos_do_estado` em dois pontos)
+    mede exatamente o que o produto mostra, sem ninguém ter de lembrar de
+    passar a lista. Um dublê mais frouxo que a função real já envenenou outro
+    arquivo por ordem de teste, em 04/09; um parâmetro que a bancada esquece de
+    passar seria a mesma família de defeito.
     """
     texto = wrapper_banner_text(state)
     if texto is None:
