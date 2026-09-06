@@ -884,6 +884,31 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "interface/pacotes/a06_navegacao.py::manager.py:614",
     "interface/pacotes/a06_navegacao.py::profiles/manager.py:570",
     "profiles/schema.py::daemon/subsystems/hotkey.py:1004",
+    # ONDA3-MOTOR-01 (06/09/2026) — AS SEIS QUE A CURA DO `— Nada —` E DA
+    # HERANÇA DE `key_bindings` DESLOCOU. O deslocamento é de **+22 linhas** em
+    # `profiles/manager.py` e em `integrations/uinput_mouse.py`, medido linha a
+    # linha com `git show HEAD:<arquivo> | sed -n`, e as seis moram em arquivo
+    # que a sprint declara em `nao_toca:` ou que é de outra posse. A âncora de
+    # cada uma CONTINUA EXISTINDO — só o número mudou.
+    #
+    # O NÚMERO CERTO JÁ ESTÁ MEDIDO — quem for dono do arquivo troca e apaga a
+    # linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
+    #   rumble_actions.py:417  `profiles/manager.py:1556-1567` -> `:1578-1589`
+    #   aba06.py:1714          `uinput_mouse.py:486`  -> `:508` (`emit_touchpad_move`)
+    #   a06_navegacao.py:2205  `uinput_mouse.py:500`  -> `:508` (`emit_touchpad_move`)
+    #   a06_navegacao.py:2224  `uinput_mouse.py:466`  -> `:488` (`_emit_scroll`)
+    #   a06_navegacao.py:2766  `uinput_mouse.py:446`  -> `:468`
+    #   a08_conexoes.py:3868   `profiles/manager.py:2106` -> `:2128`
+    #
+    # As DUAS que a mesma cura deslocou dentro da minha posse não estão aqui
+    # porque foram corrigidas no lugar (`core/acoes_de_botao.py`, as citações de
+    # `profiles/manager.py:1856`->`:1878` e `uinput_mouse.py:355`->`:377`).
+    "app/actions/rumble_actions.py::profiles/manager.py:1556-1567",
+    "interface/aba06.py::integrations/uinput_mouse.py:486",
+    "interface/pacotes/a06_navegacao.py::integrations/uinput_mouse.py:466",
+    "interface/pacotes/a06_navegacao.py::integrations/uinput_mouse.py:500",
+    "interface/pacotes/a06_navegacao.py::uinput_mouse.py:446",
+    "interface/pacotes/a08_conexoes.py::profiles/manager.py:2106",
     "profiles/loader.py::schema.py:52",
     "utils/repo_files.py::cli/cmd_doctor.py:23",
     "utils/repo_files.py::emulation_actions.py:1200",

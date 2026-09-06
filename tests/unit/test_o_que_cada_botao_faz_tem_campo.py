@@ -212,7 +212,17 @@ def test_o_perfil_empurra_ao_ativar() -> None:
         def __init__(self) -> None:
             self.recebeu: dict[str, str] | None = None
 
-        def set_button_actions(self, do_mouse: dict[str, str] | None) -> None:
+        # A ASSINATURA ESPELHA A REAL — 06/09/2026, ONDA3-MOTOR-01. O
+        # `set_button_actions` ganhou a sacola dos botões CALADOS (sem ela, seis
+        # linhas em "— Nada —" voltavam ao de fábrica), e um dublê mais estreito
+        # que a função real transformaria a chamada nova em `TypeError` — que o
+        # `apply_button_actions` engole e relata como "falhou". O verde seria
+        # sobre nada.
+        def set_button_actions(
+            self,
+            do_mouse: dict[str, str] | None,
+            calados: frozenset[str] | None = None,
+        ) -> None:
             self.recebeu = do_mouse
 
     dispositivo = DeviceDeMentira()
