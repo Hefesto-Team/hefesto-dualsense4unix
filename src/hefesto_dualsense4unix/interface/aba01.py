@@ -79,7 +79,9 @@ from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
     CADEADO_DICA,
     CADEADO_ROTULO,
     ESPERA_DICA,
+    MARCA_DO_PRIMARIO,
     MESA_VAZIA,
+    PRIMARIO_DICA,
     RESSALVA_DA_MASCARA,
     mascaras_montaveis,
 )
@@ -768,6 +770,37 @@ CSS = """
      `cursor:not-allowed` é o que diz isso antes do clique, e o `title` do
      gerador é a razão. Nenhuma das duas coisas move um pixel. */
   .cartao .chip.inerte{opacity:.42;cursor:not-allowed}
+  /* ---------- O MARCADOR "primário" — 06/09/2026, JOGAR-O-QUE-FALTA-01 ----------
+     Linha 18 do CSV da paridade: a GTK põe a palavra na linha secundária do
+     card (`home_actions._format_controller_subtitle`) e esta tela não tinha
+     onde.
+
+     ELE NÃO É A CLASSE `.cartao.alvo`, e a sprint avisa por quê: aquela existe
+     e responde a OUTRA pergunta — qual controle os ajustes das outras abas vão
+     tocar. Os dois podem ser aparelhos DIFERENTES (o primário é fato do
+     serviço, o alvo é escolha dela), e reusar a classe faria os dois
+     significados brigarem no mesmo pixel. A regra abaixo é de um seletor
+     próprio, e não toca em `.alvo`.
+
+     A PALAVRA FICA NO ARQUIVO e o produto só decide se ela aparece — mesma
+     gramática do `jogador-espera` acima: o `data-hef-alvo="classe"` é BOOLEANO,
+     e o travessão que o piloto escreve num valor vazio conta como desligado.
+     Uma palavra que viesse do produto sumiria da página parada, e o desenho
+     dela deixaria de mostrar o que ela aprovou. */
+  .cartao .e-primario{display:none;color:var(--texto-mudo);cursor:help}
+  .cartao .e-primario.ha{display:inline}
+  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA — a mesma da aba 02 ----------
+     Decisão dela, 04/09/2026: *"uma marca na palavra e o motivo no hover"*. O
+     bloco é o gêmeo de `aba02.py`, e a cópia é do ESTILO, não do dado: o texto
+     inteiro vem de `pacotes.degradacao_de`, que delega ao dono da regra na GTK.
+
+     UM CAMPO SÓ FAZ AS DUAS COISAS, e é por isso que o alvo é `atributo`: sem
+     motivo o piloto REMOVE o `title` e esta regra apaga a marca junto. Com uma
+     classe para a marca e um segundo campo para o motivo, daria para pintar
+     marca sem explicação — ruído com cara de dado. */
+  .cartao .degradou{display:none;margin-left:1px;font-size:9px;line-height:1;
+                    color:var(--orange);cursor:help;vertical-align:2px}
+  .cartao .degradou[title]{display:inline-block}
   /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
      "muda tudo ao clicar" é queixa dela, e a legenda desta aba promete que o
      espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
@@ -1051,7 +1084,7 @@ def cartao(c, bateria=None):
                 <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:{monta.cor_da_zona(c["cor"])}"></i>
                 <div class="peca-topo">
                 {_desenho(c)}
-                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="{ESPERA_DICA}"><span data-campo="jogador">Player {c["jogador"]}</span></b><br><span data-campo="identidade">{c["nome"]} <span class="pt">•</span> {c["via"]}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%</span></span></span>
+                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="{ESPERA_DICA}"><span data-campo="jogador">Player {c["jogador"]}</span></b><br><span data-campo="identidade">{c["nome"]} <span class="pt">•</span> {c["via"]}</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="{PRIMARIO_DICA}"> <span class="pt">•</span> {MARCA_DO_PRIMARIO}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%</span></span></span>
                 </div>
                 <div class="mascara">
 {_chips_de_mascara(c["mascara"])}
@@ -1951,6 +1984,52 @@ def _conferir(doc):
         exigir(entre.count("</div>") >= 2,
                "o cadeado está aninhado dentro da seção `so-desligado` — a "
                "ordem no arquivo está certa e o aninhamento, não")
+
+    # 12. O MARCADOR "primário" — JOGAR-O-QUE-FALTA-01, Passo 3 (06/09/2026),
+    #     linha 18 do CSV. O SINAL daquela linha é este endereço, e ele é
+    #     EXCLUSIVO dela: nenhuma outra frente pode acendê-lo.
+    principais = corpo.count('data-campo="marcador-principal" '
+                             'data-hef-alvo="classe" data-hef-classe="ha"')
+    exigir(principais == len(monta.CONECTADOS),
+           f"esperava {len(monta.CONECTADOS)} marcadores de primário endereçados "
+           f"(`marcador-principal` com alvo `classe`), achei {principais}")
+    #     A PALAVRA É A DA JANELA ANTIGA e a dica está do lado. Sem a dica, um
+    #     rótulo de uma palavra numa linha secundária não diz o que ele decide.
+    exigir(MARCA_DO_PRIMARIO in corpo, "a palavra do marcador sumiu da tela")
+    exigir(PRIMARIO_DICA in corpo, "o marcador ficou sem a razão na dica")
+    #     E NENHUM NASCE ACESO. A cena que ela aprovou não escolheu primário
+    #     nenhum, e acender um no desenho afirmaria um fato do serviço que o
+    #     desenho não tem como saber — a mesma disciplina do `jogador-espera`,
+    #     que também nasce apagado.
+    exigir('class="e-primario ha"' not in corpo
+           and 'data-hef-classe="ha" class=' not in corpo,
+           "um cartão nasce marcado como primário — quem decide isso é o "
+           "serviço, e o desenho estaria afirmando por ele")
+    #     E O ALVO DE EDIÇÃO DA FITA NÃO SE MOVEU: `.cartao.alvo` é outra
+    #     pergunta (qual controle os ajustes das outras abas tocam), e ela
+    #     continua sendo escrita pelo piloto. Se o marcador tivesse reusado
+    #     aquela classe, a conta abaixo mudaria — é ela que prende os dois
+    #     significados em pixels diferentes.
+    exigir(corpo.count('class="cartao alvo"')
+           == sum(1 for c in MESA if c.get("alvo")),
+           "o número de cartões com a classe `alvo` mudou — o marcador do "
+           "primário não pode andar junto com o alvo de edição da fita")
+
+    # 13. A MARCA DA EMULAÇÃO DEGRADADA — Passo 4, linha 32 do CSV, e a
+    #     gramática é a do cartão da 02: UM campo com alvo `atributo`, que põe o
+    #     `title` quando há motivo e o remove quando não há.
+    degradou = corpo.count('data-campo="degradou-cartao" '
+                           'data-hef-alvo="atributo" data-hef-atributo="title"')
+    exigir(degradou == len(monta.CONECTADOS),
+           f"esperava {len(monta.CONECTADOS)} marcas de emulação degradada "
+           f"endereçadas, achei {degradou}")
+    #     E NENHUMA NASCE COM `title`: a marca só existe quando há motivo, e um
+    #     `title` cravado no desenho acenderia um alarme sobre um controle que
+    #     ninguém mediu — alarme sem medição é o que ela baniu em 31/08.
+    for pedaco in corpo.split('class="degradou"')[1:]:
+        exigir("title=" not in pedaco.split(">", 1)[0],
+               "a marca de degradação nasce com o motivo cravado — ela acenderia "
+               "no desenho sobre um controle que ninguém mediu")
 
     if falhas:
         raise SystemExit("ERRO em 01-jogar — decisão dela desfeita:\n  "

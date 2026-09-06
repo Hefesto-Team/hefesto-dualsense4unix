@@ -375,3 +375,130 @@ def com_a_carona(frase: str = "") -> str:
     if not resultado.frase:
         return frase
     return f"{frase} · {resultado.frase}" if frase else resultado.frase
+
+
+# ---------------------------------------------------------------------------
+# A SEÇÃO `mode` DO PERFIL — o que ATIVAR este perfil liga
+# ---------------------------------------------------------------------------
+#: O ÚNICO ESCRITOR DA SEÇÃO `mode` FORA DO EDITOR DA ABA 10 — JOGAR-O-QUE-FALTA-01,
+#: Passo 1 (06/09/2026). Era a linha 5 do CSV da paridade, e o veredito do lado
+#: HTML era: *"nada. `_ESCOLHA`/`_ROTULO` são dicionários de módulo lidos só
+#: dentro do próprio arquivo"*. A consequência estava escrita lá: *"ela escolhe
+#: 'Xbox' na 01, clica em 'Salvar Perfil' na 10, e o perfil grava a máscara que
+#: estava no disco — a escolha dela não entra."*
+#:
+#: **POR QUE AQUI, e não no pacote da aba 01:** a seção tem UM dono e DUAS telas
+#: — o quadro «Modo» da aba Perfis (`a10_perfis.editor_modo`, PERFIL-MODO-01) e
+#: o interruptor/fileira da aba Jogar. Escrever a regra dentro de `a01_jogar`
+#: faria a terceira cópia dela nesta casa, e a sprint diz por que isso é o
+#: perigo desta entrega: *"se você criar um segundo caminho de gravação, o que
+#: ela escolher numa aba some quando ela mexer na outra"*. Este módulo já é o
+#: compartilhado do assunto — é onde `gravar_e_reaplicar` e `com_a_carona`
+#: pousaram pelo mesmo motivo, e pela mesma medição (ONDA5-07-02).
+#:
+#: **O QUE ELE NÃO FAZ, e é o contrário do gesto da aba 10:** ele não recusa
+#: dizendo. O `editor_modo` levanta quando o valor já é o mesmo, porque lá o
+#: clique É o ato; aqui a gravação é EFEITO COLATERAL de outro ato que já deu
+#: certo (a troca de modo, que já foi ao daemon). Uma recusa aqui viraria tarja
+#: laranja sobre um modo que mudou — e é a mesma disciplina que `com_a_carona`
+#: declara duas funções acima: *"uma exceção aqui transformaria uma gravação
+#: bem-sucedida em tarja de recusa"*.
+
+
+def secao_do_modo(atual: Any, kind: str, flavor: str | None = None) -> Any:
+    """O `ProfileModeConfig` que o perfil passa a ter, ou ``None`` para remover.
+
+    A REGRA NÃO É MINHA e não se digita duas vezes — ela é a de
+    `profiles_actions._mode_section_from_editor`, que é o dono na janela GTK, e
+    a mesma que `a10_perfis.editor_modo` aplica na aba Perfis:
+
+    * ``"none"`` → ``None``: *"a seção é REMOVIDA do perfil salvo"*. Um perfil
+      sem `mode` não mexe no modo do sistema quando entra;
+    * ``gamepad_flavor`` só vale com ``kind == "gamepad"``; nos outros grava
+      ``None`` — *"JSON limpo, sem sobras"*, a mesma poda de
+      `manager.alinhar_o_modo_com_a_ponte`.
+
+    **A MÁSCARA NUNCA É INVENTADA, e é a cicatriz de ESCOLHA-DELA-VENCE-01/E1:**
+    havia um ``or "xbox"`` no Salvar da janela estável, e bastava salvar um
+    perfil para ele passar a EXIGIR Xbox. Com ``flavor=None`` e ``kind
+    == "gamepad"`` o que estava no disco é PRESERVADO — quem não escolheu
+    máscara não passa a exigir uma.
+
+    O `ProfileModeConfig` É RECONSTRUÍDO e não `model_copy`ado, pelo motivo
+    escrito em `profiles/manager.py:1854`: `model_copy` do pydantic v2 não
+    revalida, e um `kind` fora da faixa viraria um arquivo que o próximo `load`
+    recusa — o perfil dela deixando de abrir por causa de um clique.
+    """
+    from hefesto_dualsense4unix.app.actions.perfis_web import MODO_SEM_OPINIAO
+    from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
+
+    if kind == MODO_SEM_OPINIAO:
+        return None
+    campos: dict[str, Any] = {} if atual is None else dict(atual.model_dump())
+    campos["kind"] = kind
+    if kind != "gamepad":
+        campos["gamepad_flavor"] = None
+    elif flavor:
+        campos["gamepad_flavor"] = flavor
+    return ProfileModeConfig(**campos)
+
+
+def gravar_o_modo_no_ativo(state: Any, kind: str,
+                           flavor: str | None = None) -> str:
+    """Grava a escolha de modo/máscara na seção `mode` do perfil que está VALENDO.
+
+    Devolve o NOME do perfil escrito, ou ``""`` quando não houve escrita — sem
+    perfil ativo, com o valor já igual ao do disco, ou com o disco recusando.
+    O nome é o que a régua mede; nenhum chamador o mostra na tela.
+
+    **QUEM ESTÁ VALENDO SE PERGUNTA AO DONO** (:func:`nome_do_ativo`), nunca a
+    ``state["active_profile"]`` cru: com o daemon respondendo ``active_profile:
+    null`` — o estado da máquina dela, descrito em
+    `profiles_actions.perfil_que_esta_valendo` — o campo cru volta vazio e a
+    escolha dela cairia num perfil nenhum. Três chamadores já caíram nessa.
+
+    **NADA MUDOU, NADA SE GRAVA.** É o que separa esta função de uma escrita por
+    tique: o interruptor da aba Jogar é idempotente (clicar "Ligado" com o
+    daemon já em `gamepad` não muda campo nenhum), e reescrever o `.json` dela a
+    cada clique repetido encheria o histórico de versões idênticas — o mesmo
+    cuidado que o `editor_modo` toma ao recusar o valor repetido.
+
+    **NUNCA LEVANTA.** Ela é efeito colateral de um gesto que já foi ao daemon:
+    um `.json` ilegível, uma pasta sem permissão ou um esquema novo não podem
+    transformar uma troca de modo bem-sucedida em tarja de recusa. É a mesma
+    política de `com_a_carona`, e pela mesma razão.
+
+    **ELA NÃO REAPLICA O PERFIL, e isso é escolha medida.**
+    :func:`gravar_e_reaplicar` manda `profile.switch` + `launch_env.refresh`, o
+    que faria a troca de UM chip reenviar o perfil INTEIRO ao daemon — gatilho,
+    luz, vibração e atalhos — logo depois de o modo já ter sido aplicado pelo
+    plano de IPC do próprio gesto. O que esta função grava é o que ATIVAR o
+    perfil vai ligar da próxima vez; o agora já está aplicado.
+    """
+    nome = nome_do_ativo(state)
+    if not nome:
+        return ""
+    try:
+        loader = _com_o_src()
+        prof = loader.load_profile(nome)
+        antes = getattr(prof, "mode", None)
+        depois = secao_do_modo(antes, kind, flavor)
+        if _mesma_secao(antes, depois):
+            return ""
+        prof.mode = depois
+        loader.save_profile(prof, origem="interface-nova")
+    except Exception:
+        return ""
+    return str(getattr(prof, "name", "") or nome)
+
+
+def _mesma_secao(a: Any, b: Any) -> bool:
+    """As duas seções dizem a mesma coisa? ``None`` de um lado só já é diferente.
+
+    Comparada por `model_dump`, e não por `==` de objeto: o pydantic compara
+    campo a campo, mas o `None` (perfil sem opinião) não tem `model_dump` — e
+    um `try` em volta de cada leitura seria mais linha que esta função.
+    """
+    if a is None or b is None:
+        return a is None and b is None
+    return bool(a.model_dump() == b.model_dump())

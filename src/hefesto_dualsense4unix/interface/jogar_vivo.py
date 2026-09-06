@@ -102,6 +102,32 @@ import aba01  # noqa: E402  isort:skip
 #: corrigidas em 05/09 e duas ficaram para trás; a outra é `perfis_vivos.py:78`,
 #: com o mesmo defeito e fora desta posse.
 PAGINA = onde.PUBLICADO / "01-jogar.html"
+
+#: A BANCADA — o desenho de HOJE, que é o que os geradores escrevem
+#: (`onde.BANCADA`). Ela existe por `--bancada`, e não por padrão: o padrão
+#: continua sendo o PUBLICADO, que é o que ela abre.
+#:
+#: **POR QUE ELE PRECISOU EXISTIR — 06/09/2026, JOGAR-O-QUE-FALTA-01.** Publicar
+#: é ato dela, e uma sprint que acrescenta endereço ao desenho fica, até o OK, com
+#: a bancada à frente do produto. Sem esta bandeira não há como CLICAR e
+#: FOTOGRAFAR o que se acabou de construir: o piloto e esta bancada abrem o
+#: publicado, e a régua daria verde sobre a página de ontem — que é a armadilha
+#: que o `COMO-OLHAR-A-TELA` chama de *"régua que pergunta no lugar errado"*.
+#: A frente da `PERFIL-MODO-01` pagou esse preço em 06/09 escrevendo um ensaio
+#: próprio (`scripts/ensaios/o_quadro_do_modo_grava_pelo_webkit.py`) para medir
+#: exatamente isto.
+#:
+#: **ELE NÃO PUBLICA NADA.** É só de onde o `WebKit2.WebView` lê; a direção
+#: `mockup/` → `interface/paginas/` continua sendo do
+#: `scripts/check_o_desenho_aprovado.py --publicar NN`, e continua sendo dela.
+BANCADA = onde.BANCADA / "01-jogar.html"
+
+
+def pagina_de(args: Any) -> pathlib.Path:
+    """De onde esta bancada lê a página: o publicado, ou o desenho de hoje."""
+    return BANCADA if getattr(args, "bancada", False) else PAGINA
+
+
 TITULO_ESPERADO = "Hefesto — aba JOGAR"
 
 #: O tique rápido: o mesmo período da janela de hoje
@@ -591,7 +617,7 @@ class Janela:
         self._t0 = 0.0
 
         self.tela = JanelaDaAba(
-            arquivo=PAGINA,
+            arquivo=pagina_de(args),
             titulo_esperado=TITULO_ESPERADO,
             ao_carregar=self._instalar,
             ao_receber=self._gesto,
@@ -1054,10 +1080,15 @@ def main() -> int:
     p.add_argument("--prova-gesto", action="store_true",
                    help="dispara cliques sintéticos e prova o eco")
     p.add_argument("--duble", help="JSON com um state_full — em vez do daemon")
+    p.add_argument("--bancada", action="store_true",
+                   help="lê o desenho de HOJE (`mockup/01-jogar.html`) em vez da "
+                        "página publicada — para clicar e fotografar o que ainda "
+                        "espera o OK dela. NÃO publica nada.")
     args = p.parse_args()
 
-    if not PAGINA.exists():
-        print(f"ERRO: a página desta aba não está em {PAGINA}", file=sys.stderr)
+    alvo = pagina_de(args)
+    if not alvo.exists():
+        print(f"ERRO: a página desta aba não está em {alvo}", file=sys.stderr)
         return 2
 
     j = Janela(args)

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import Contexto, jogador_de, registrar
+from . import Contexto, degradacao_de, jogador_de, registrar
 
 #: OS ENDEREÇOS DA PÁGINA que esta aba promete pintar — os que valem para a tela
 #: inteira. Eles existem como TUPLA, e não soltos no `return`, porque o
@@ -96,8 +96,35 @@ DA_PAGINA: tuple[str, ...] = (
 #: este é a CLASSE. Um elemento carrega um endereço só, e `escrever()` num
 #: elemento com filho apagaria os filhos — é a armadilha medida do piloto da
 #: Controles. O de fora acende a classe, a folha do de dentro esmaece.
+#:
+#: `marcador-principal` É O "primário" DO MOTOR — JOGAR-O-QUE-FALTA-01, Passo 3
+#: (06/09/2026), e era a linha 18 do CSV. O SINAL daquela linha **é este
+#: endereço**, escolhido pela `ONDA4-S10` em 06/09 justamente porque o anterior
+#: era o nome de uma função de outra feature e disparou duas vezes sobre
+#: trabalho legítimo. O nome é slug e slug não leva acento — a PALAVRA que a
+#: tela mostra é `MARCA_DO_PRIMARIO`, e ela vem do dono.
+#:
+#: **ELE NÃO É A CLASSE `.cartao.alvo`, e a sprint avisa por quê:** aquela já
+#: existe e responde a OUTRA pergunta — o alvo de edição da fita —, e reusá-la
+#: faria os dois significados brigarem no mesmo pixel. O defeito só apareceria
+#: quando ela editasse a fita com um controle que não é o primário, que é tarde.
+#:
+#: `degradou-cartao` É A MARCA DA EMULAÇÃO DEGRADADA — Passo 4, linha 32 do CSV,
+#: e a gramática é a do cartão da **02** (decisão dela de 04/09: *"uma marca na
+#: palavra e o motivo no hover"*): UM campo com alvo `atributo`, que põe o
+#: `title` quando há motivo e o REMOVE quando não há — a folha apaga a marca por
+#: `[title]`. Com a marca numa classe e o motivo noutro campo daria para pintar
+#: marca sem explicação, que é ruído com cara de dado.
+#:
+#: **A CONTA É POR CONTROLE E JÁ HAVIA UMA POR PÁGINA.** `painel.AVISOS_DA_TELA`
+#: traz `vpad_degradation_text`, que lê `gamepad_emulation.backend` da MÁQUINA e
+#: já chega à coluna Atenção desde 03/09 — medido nesta árvore. O que faltava é
+#: o outro lado: `vpad_backend` + `vpad_motivo` **daquele aparelho**, que é o
+#: que `pacotes.degradacao_de` responde e que a varredura de 02/09 registrou
+#: como *"`vpad_motivo` — GTK 1, HTML 0, SÓ A GTK LÊ"*.
 POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "jogador-espera",
-                               "bateria", "identidade", "mascara-cartao")
+                               "bateria", "identidade", "mascara-cartao",
+                               "marcador-principal", "degradou-cartao")
 
 #: QUANTOS `aviso-item` A COLUNA TEM. **Este é o dono do número**, e o gerador o
 #: lê daqui (`aba01.py` importa esta constante) — a direção é essa e não a
@@ -155,7 +182,13 @@ AVISOS_NA_COLUNA = 3
 #: e o errado para um selo nomeado neste arquivo: com a coluna mostrando três
 #: de cada vez (:data:`AVISOS_NA_COLUNA`), um selo fora da escada é um selo que
 #: a máquina cheia esconde atrás do ``+N``.
+#: ``SERVIÇO`` ABRE A ESCADA — JOGAR-O-QUE-FALTA-01, Passo 5 (06/09/2026), e o
+#: critério é o mesmo que já põe a ``PAUSA`` na frente: *o que invalida o quê*.
+#: Com o serviço calado nem a PAUSA se sabe — ninguém respondeu se o produto
+#: está parado ou correndo —, então toda outra linha desta coluna descreveria um
+#: estado que a tela não leu.
 ORDEM_DA_GRAVIDADE: tuple[str, ...] = (
+    "SERVIÇO",
     "PAUSA", "ERRO", "GAMEPAD", "PONTE", "JOGO", "CONTROLE", "RÁDIO", "PERFIL",
 )
 
@@ -176,6 +209,41 @@ SELO_DA_PONTE = "PONTE"
 #: (`docs/A-LINGUA-DESTA-CASA`, §1) — o que cai no meio da partida é o
 #: controle, e é isso que o selo diz.
 SELO_DA_CURA = "CONTROLE"
+
+#: O SELO DO SERVIÇO CALADO — Passo 5, e a palavra é a do glossário
+#: (`docs/A-LINGUA-DESTA-CASA`, §1): na tela o `daemon` chama-se **serviço**.
+SELO_DO_SERVICO = "SERVIÇO"
+
+#: A FRASE DO SERVIÇO DESLIGADO — **é a da janela GTK, palavra por palavra**.
+#: `home_actions._render_home` escreve ``self._home_session_label.set_text("O
+#: Hefesto está desligado.")`` no ramo `offline`, e o `validar-palavra-de-tela`
+#: já a declara como a tradução de "daemon offline" (`JARGAO_BANIDO`).
+#:
+#: POR QUE LITERAL AQUI, e não uma leitura: o dono dela é um `set_text` dentro de
+#: um método de janela — lê-la em execução exigiria montar a GTK dentro do
+#: pacote das dez abas, que é o que `_painel()` existe para evitar. **A
+#: DIVERGÊNCIA MORRE PELA RÉGUA:** `test_a_aba_01_jogar_fecha_as_linhas` lê o
+#: fonte da GTK e reprova no dia em que as duas se afastarem. É a mesma escolha
+#: que a `MESA_VAZIA` e o `CADEADO_ROTULO` já fizeram, e pelo mesmo motivo.
+SERVICO_DESLIGADO = "O Hefesto está desligado."
+
+#: A SEGUNDA METADE, e ela é a que o Passo 5 comprou: **a tela dizendo que parou
+#: de afirmar**. Só a primeira frase seria a notícia sem a consequência — e a
+#: consequência é o que separa *"o serviço caiu"* de *"a tela quebrou"*.
+#:
+#: ELA NÃO NOMEIA BOTÃO NENHUM, de propósito: a janela GTK troca o rótulo para
+#: "Ligar o Hefesto" (`home_actions._BTN_LABEL_OFFLINE`) e a interface nova não
+#: tem esse botão com esse nome — mandar procurá-lo é a frase que o glossário
+#: proíbe (*"qualquer frase que mande a pessoa procurar um botão ou uma janela
+#: que não existe"*). O que ela promete é o que o produto de fato faz: o tique
+#: continua correndo e a tela volta sozinha quando o serviço responder.
+#:
+#: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01).
+SERVICO_CALADO = (
+    f"{SERVICO_DESLIGADO} Esta tela parou de ler o serviço: o modo, os "
+    "controles e a carga não estão sendo afirmados. Ela volta sozinha quando o "
+    "serviço responder."
+)
 
 #: A LINHA DO ``+N`` — o que a coluna diz quando não coube tudo.
 #:
@@ -298,6 +366,62 @@ def _cadeado(state: dict[str, Any]) -> str:
     marcam a caixa.
     """
     return "sim" if state.get("autoswitch_locked") is True else ""
+
+
+#: A PALAVRA DO MARCADOR — **é a da janela GTK**, e não uma escolha minha:
+#: `home_actions._format_controller_subtitle` monta a linha secundária do card e
+#: acrescenta exatamente ``"primário"`` quando ``is_primary``. O CSV nomeia esta
+#: dívida pela palavra dela (*"o marcador 'primário' no card do controle
+#: principal"*).
+#:
+#: POR QUE LITERAL, e não uma leitura: o dono a monta DENTRO de uma lista de
+#: partes, colada por ``"  ·  "`` — importar aquela função para arrancar um
+#: pedaço da frase seria mais frágil que a régua. **A DIVERGÊNCIA MORRE PELA
+#: RÉGUA:** `test_a_aba_01_jogar_fecha_as_linhas` lê o fonte da GTK e reprova no
+#: dia em que a palavra mudar de lá. Mesma escolha do `CADEADO_ROTULO`.
+MARCA_DO_PRIMARIO = "primário"
+
+#: A DICA DO MARCADOR. Ela é `title`, logo CRAVADA no desenho (o piloto não tem
+#: alvo de pintura para atributo de texto), e o que a torna honesta é não
+#: afirmar nada sobre um controle em particular: ela explica o ESTADO, igual
+#: para os quatro cartões, e quem diz de quem é o estado é a classe.
+#:
+#: A FRASE NÃO É NOVA NO ASSUNTO: quem é o primário é quem navega o PC
+#: (`a06_navegacao`, cabeçalho: *"O QUE TEM DONO: quem é o PRIMÁRIO
+#: (`is_primary`) — e é ele quem navega o PC"*), e é dele que o daemon publica a
+#: leitura de botões (`a02_controles`: *"o daemon só publica `inputs` para o
+#: `is_primary`"*). As duas coisas são medidas, e é isso que a dica diz.
+#:
+#: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01).
+PRIMARIO_DICA = (
+    "É este controle que o Hefesto ouve para navegar o computador, e é dele "
+    "que ele lê os botões. Quem é o primário quem decide é o serviço."
+)
+
+
+def _e_o_primario(c: dict[str, Any]) -> str:
+    """``"1"`` no cartão do primário, ``""`` nos outros — na língua do `classe`.
+
+    **Passo 3 da JOGAR-O-QUE-FALTA-01 (06/09/2026)**, linha 18 do CSV: *"`is_primary`
+    não é lido em `interface/pacotes/`"*. Medido na mesa dela em 02/09, e está
+    escrito no `pacotes/__init__.py`::
+
+        uniq …0003 · bt  · player 1    · player_slot 1 · is_primary TRUE
+        uniq …00d8 · usb · player None · player_slot 2 · is_primary false
+
+    **SÓ O `True` LITERAL ACENDE.** É a mesma disciplina do `_cadeado` e do
+    `wrapper_used`: chave ausente (daemon antigo, ou um controle que o co-op
+    ainda não classificou) não é "não é o primário" — é *não sei* —, e a
+    resposta a *não sei* nesta casa é não mostrar nada. `bool` é o único tipo
+    que passa; um ``1`` inteiro vindo de payload malformado não acende.
+
+    **ELE NÃO É O ALVO DE EDIÇÃO DA FITA.** A classe `.cartao.alvo` já existe e
+    responde a outra pergunta — qual controle os ajustes das outras abas vão
+    tocar —, e ela é escrita pelo piloto (`hefesto_vivo`, `carga["alvo"]`), não
+    por este pacote. Os dois podem ser controles DIFERENTES, e é por isso que
+    são dois endereços: o primário é fato do daemon, o alvo é escolha dela.
+    """
+    return "1" if c.get("is_primary") is True else ""
 
 
 def _jogador_esperando(c: dict[str, Any]) -> str:
@@ -442,6 +566,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # `POR_CARTAO`. Ela é a decisão dela de 03/09: *"É uma máscara por
             # controle."*
             "mascara-cartao": _mascara_do_cartao(casa, da_sessao),
+            # QUEM É O PRIMÁRIO — Passo 3. `"1"`/`""` na língua do alvo `classe`
+            # booleano, a mesma do `jogador-espera` logo acima: a PALAVRA está
+            # no arquivo e o produto só decide se ela aparece. Ver
+            # `_e_o_primario`.
+            "marcador-principal": _e_o_primario(c),
+            # A MARCA DA EMULAÇÃO DEGRADADA — Passo 4. O texto é INTEIRO do dono
+            # (`controller_card.texto_degradacao`, por `pacotes.degradacao_de`),
+            # e ele já sabe as duas condições que separam "degradou" de "é
+            # uinput por desenho". Reescrevê-las aqui seria a segunda lista de
+            # motivos desta casa.
+            "degradou-cartao": degradacao_de(c),
         }
 
     # A COLUNA ATENÇÃO — as fontes do PRODUTO, não uma segunda leitura. Ver
@@ -634,6 +769,11 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
 
     O QUE ENTRA, e em que ordem:
 
+    0. **o serviço calado** (:func:`_aviso_do_servico_calado`) — a única fonte
+       desta coluna que responde sobre a AUSÊNCIA de estado, e a única que fala
+       quando todas as outras calam. Ela vem primeiro na lista e primeira na
+       escada (:data:`ORDEM_DA_GRAVIDADE`), pelo mesmo critério: com o serviço
+       calado, toda outra linha descreveria um estado que a tela não leu;
     1. **as seis de `painel.AVISOS_DA_TELA`** — pausa, vpad degradado, rádio
        frágil, jogo sem wrapper, o cadeado da troca automática e o detector
        cego. São funções puras de `home_actions`, e `painel.avisos_do_estado` já
@@ -655,12 +795,12 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
        único que esta coluna já mostrava. Os ``certo`` ficam de fora: a coluna
        chama-se Atenção.
 
-    **FATO SUBSTITUÍDO — 06/09/2026.** Estas linhas diziam *"as oito fontes"* e
-    enumeravam TRÊS itens: o número foi escrito em 03/09 e a ponte entrou em
-    04/09 sem ninguém somar. Contadas hoje, uma a uma, são **dez** (as seis
-    puras mais quatro canais), e a décima é a desta sprint. Um número que
-    envelhece a cada fonte nova é convite a esta mesma correção daqui a uma
-    semana — por isso o que fica escrito é a LISTA, que se conta sozinha.
+    **FATO SUBSTITUÍDO — 06/09/2026, DUAS VEZES NO MESMO DIA.** Estas linhas
+    diziam *"as oito fontes"* e enumeravam TRÊS itens; corrigidas para **dez**
+    pela manhã, envelheceram de novo à tarde, quando o serviço calado virou a
+    décima-primeira. **É a terceira vez que o número desta docstring erra**, e a
+    lição não muda: o que fica escrito é a LISTA, que se conta sozinha. Se você
+    veio acrescentar uma fonte, acrescente um item — não um número.
 
     O SELO DO OPT-OUT É ``GAMEPAD``, e não uma palavra nova: é o mesmo que
     `AVISOS_DA_TELA` dá ao vpad degradado, e os dois falam do mesmo assunto — o
@@ -668,7 +808,13 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     tela num arquivo que não é o dono de nenhuma.
     """
     painel = _painel()
-    fora: list[dict[str, str]] = list(painel.avisos_do_estado(ctx.state))
+    # O SERVIÇO CALADO VEM ANTES DE TUDO, e é a única fonte desta coluna que
+    # RESPONDE SOBRE A AUSÊNCIA de estado — ver `_aviso_do_servico_calado`. As
+    # outras perguntam ao `state`; sem ele, todas calam, e o silêncio delas
+    # era a tela dizendo "nenhum aviso" sobre um estado que ninguém leu.
+    calado = _aviso_do_servico_calado(ctx)
+    fora: list[dict[str, str]] = [calado] if calado else []
+    fora += list(painel.avisos_do_estado(ctx.state))
 
     try:
         from hefesto_dualsense4unix.app.actions import home_actions
@@ -693,7 +839,7 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     # A CURA DO TRAVAMENTO DO USB — sob `try` PRÓPRIO, que é a política deste
     # arquivo: uma fonte que levanta não derruba a coluna, ela vira selo
     # ``ERRO``. Esta lê DOIS ARQUIVOS DO SISTEMA por chamada — se um `/sys`
-    # remontado ou um `/etc` sem permissão levantar, as outras nove continuam
+    # remontado ou um `/etc` sem permissão levantar, as outras continuam
     # valendo.
     #
     # FATO SUBSTITUÍDO — 06/09/2026, ONDA5-07-03. Estas linhas diziam que esta
@@ -720,6 +866,54 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
                      "texto": f"o exame da mesa não respondeu ({type(erro).__name__}).",
                      "fonte": "a08_conexoes._exame"})
     return fora
+
+
+def _aviso_do_servico_calado(ctx: Contexto) -> dict[str, str] | None:
+    """A linha *"O Hefesto está desligado"* — e ``None`` quando o serviço falou.
+
+    **JOGAR-O-QUE-FALTA-01, Passo 5 (06/09/2026)**, e é a linha 38 do CSV da
+    paridade — o passo que a sprint chama de *"o que mais vale"*. O veredito de
+    lá, medido: *"o tique imprime `[daemon mudo] …` no stderr do processo e
+    retorna sem pintar nada — a tela fica com os últimos valores"*, e a leitura:
+    *"quem clica não lê terminal"*.
+
+    **A OMISSÃO ERA A MENTIRA, e ela tinha número.** Medido nesta árvore, com o
+    pacote recebendo um estado vazio: a coluna Atenção emitia
+    ``atencao-conta = "nenhum aviso"`` e seis linhas em branco. *"Nenhum aviso"*
+    é uma AFIRMAÇÃO — quer dizer "perguntei e não há nada" —, e o que havia era
+    ninguém para perguntar. É a mesma forma do defeito que `_estado_da_tela` já
+    fecha do outro lado (o interruptor aceso sobre um estado que ninguém leu).
+
+    **AS DUAS METADES SÃO UMA SÓ, e a sprint diz por quê:** *"só dizer, deixando
+    os números velhos na tela, ainda é mentira; só apagar, sem dizer, parece
+    defeito"*. A metade de APAGAR já existe e não é desta aba —
+    `pacotes.pacote_da_pagina` acrescenta o molde e
+    `pacotes.apagar_os_lugares_sem_dono` escreve travessão nos quatro lugares,
+    medido nesta árvore com o estado vazio. O que faltava era a metade de DIZER,
+    e é esta função.
+
+    **O ESTADO VAZIO É O SINAL, e ele é o mesmo que a aba inteira já usa.**
+    `_estado_da_tela`, `_frase_da_mesa`, `_ressalva_da_mascara` e `_pendencia`
+    abrem todas com ``if not state``, e a razão está escrita em `_estado_da_tela`:
+    ``mode_of_state({})`` devolve **desktop**, então quem não guardar esta porta
+    afirma um modo sobre um tique sem resposta. Aqui a mesma porta é lida ao
+    contrário — é ela que dá a notícia.
+
+    **A VOLTA É SOZINHA e não se promete de graça:** o tique do piloto continua
+    correndo (`hefesto_vivo.TIQUE_MS`, 100 ms) e o primeiro estado que voltar
+    apaga esta linha pelo caminho normal da coluna. É o que a frase diz, e é o
+    que o produto faz — nenhuma das duas metades é aspiração.
+
+    **O QUE ESTA FUNÇÃO NÃO ALCANÇA, e está relatado:** hoje o piloto **não
+    chama o pacote** quando `mesa_viva.estado_do_daemon()` levanta
+    (`hefesto_vivo._tique`: imprime `[daemon mudo]` e `return True`), então esta
+    linha só acende no dublê e no dia em que o piloto passar o estado vazio
+    adiante. `interface/hefesto_vivo.py` é posse da `ONDA5-P-01` e `nao_toca`
+    desta sprint — a metade de lá é uma linha, e ela está no relato.
+    """
+    return (None if getattr(ctx, "state", None)
+            else {"selo": SELO_DO_SERVICO, "texto": SERVICO_CALADO,
+                  "fonte": "home_actions._render_home (ramo offline)"})
 
 
 def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
@@ -1185,6 +1379,62 @@ def _lembrar(campo: str, valor: str, rotulo: str) -> None:
     _ROTULO[campo] = rotulo or _rotulo_de(campo, valor)
 
 
+#: O MODO QUE ELA CLICA AQUI ENTRA NO PERFIL ATIVO — JOGAR-O-QUE-FALTA-01,
+#: Passo 1 (06/09/2026), e era a linha 5 do CSV da paridade. O veredito de lá
+#: nomeava o que faltava com todas as letras: *"nada. `_ESCOLHA`/`_ROTULO` são
+#: dicionários de módulo lidos só dentro do próprio arquivo"*, e a consequência
+#: medida: *"ela escolhe 'Xbox' na 01, clica em 'Salvar Perfil' na 10, e o
+#: perfil grava a máscara que estava no disco — a escolha dela não entra."*
+#:
+#: **UM DONO, DUAS TELAS.** O escritor é `pacotes.perfil.gravar_o_modo_no_ativo`,
+#: o mesmo módulo compartilhado de `gravar_e_reaplicar` e `com_a_carona` — e a
+#: regra da seção (o `"none"` que REMOVE, a máscara zerada fora do modo jogo, o
+#: `ProfileModeConfig` reconstruído em vez de `model_copy`ado) mora em
+#: `perfil.secao_do_modo`, não aqui. A sprint nomeia o perigo desta entrega:
+#: *"se você criar um segundo caminho de gravação, o que ela escolher numa aba
+#: some quando ela mexer na outra"*.
+#:
+#: **A DIFERENÇA ENTRE ESTA GRAVAÇÃO E A DA ABA 10** é o tempo, não o lugar: lá
+#: o clique escolhe *o que ativar o perfil vai ligar*; aqui ele TROCA o modo
+#: agora, e a gravação é o que faz a escolha sobreviver à próxima ativação.
+#: Por isso ela vem DEPOIS de `_aplicar` e nunca levanta.
+def _gravar_o_modo(ctx: Contexto, kind: str, flavor: str | None = None) -> str:
+    """Leva o modo clicado à seção `mode` do perfil ativo. Nunca levanta.
+
+    O NOME DE VOLTA É PARA A RÉGUA, não para a tela: ele diz qual perfil recebeu
+    a escolha (``""`` quando não houve escrita), e é o que a mordida do Passo 1
+    mede — clicar na 01 e ler o valor pela aba 10.
+
+    O `kind` NÃO É FILTRADO AQUI. Quem recusa um valor fora da faixa é o
+    `ProfileModeConfig` do esquema, dentro do `try` do dono — filtrar aqui seria
+    a segunda cópia de uma lista que o pydantic já tem, e ela envelheceria no
+    dia em que um quinto modo nascesse.
+    """
+    from . import perfil as _perfil
+
+    return _perfil.gravar_o_modo_no_ativo(getattr(ctx, "state", None),
+                                          kind, flavor)
+
+
+def _gravar_o_modo_do_chip(ctx: Contexto, chave: str) -> str:
+    """O mesmo, para um chip da fileira — e o EIXO sai de `painel`, não de um `if`.
+
+    É a mesma leitura de `_lembrar_do_chip`, e ela não se repete por acaso: um
+    chip com ``modo`` **é** um modo do produto (a Navegação); os outros são
+    MÁSCARAS do mesmo modo ``gamepad`` (`_plano_do_chip`). Escrever aqui um
+    ``if chave == "xbox"`` seria a terceira cópia dessa tradução nesta aba.
+    """
+    chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == chave), None)
+    if chip is None:
+        return ""
+    if chip.modo:
+        return _gravar_o_modo(ctx, str(chip.modo))
+    ponte = chip.ponte
+    if ponte is None or not ponte.mascara:
+        return ""
+    return _gravar_o_modo(ctx, "gamepad", str(ponte.mascara))
+
+
 def _rotulo_de(campo: str, valor: str) -> str:
     """A palavra aprovada por ela para aquela chave, sem passar pela tela.
 
@@ -1450,7 +1700,7 @@ ACHADO_DO_TIMEOUT = (
 )
 
 
-@gesto("01-jogar.html", "hefesto")
+@gesto("01-jogar.html", "hefesto", grava="gravar_o_modo_no_ativo")
 def hefesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O INTERRUPTOR: Ligado (`gamepad`) ou Desligado (`native`).
 
@@ -1525,6 +1775,10 @@ def _hefesto_o_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # escritor, e anotar uma pendência que não chegou a sair prometeria uma
     # mudança que ninguém pediu ao daemon.
     _lembrar("modo", chave, str(o.get("texto") or ""))
+    # E A ESCOLHA ENTRA NO PERFIL ATIVO — Passo 1. Pela mesma razão de ordem:
+    # gravar antes de o plano sair prometeria, no disco dela, um modo que o
+    # daemon recusou. Ver `_gravar_o_modo`.
+    _gravar_o_modo(ctx, chave)
 
 
 def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
@@ -1578,7 +1832,7 @@ def _lembrar_do_chip(chave: str, o: dict[str, Any]) -> None:
         _lembrar("mascara", str(ponte.mascara), rotulo)
 
 
-@gesto("01-jogar.html", "modo-dualsense")
+@gesto("01-jogar.html", "modo-dualsense", grava="gravar_o_modo_no_ativo")
 def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Sony DualSense": o jogo desenha os botões do PlayStation.
 
@@ -1595,9 +1849,10 @@ def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     _aplicar(p, _plano_do_chip("dualsense"))
     _lembrar_do_chip("dualsense", o)
+    _gravar_o_modo_do_chip(ctx, "dualsense")
 
 
-@gesto("01-jogar.html", "modo-xbox")
+@gesto("01-jogar.html", "modo-xbox", grava="gravar_o_modo_no_ativo")
 def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Xbox": o formato que todo jogo entende — o SEGUNDO que o Hefesto tenta.
 
@@ -1613,6 +1868,7 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     _aplicar(p, _plano_do_chip("xbox"))
     _lembrar_do_chip("xbox", o)
+    _gravar_o_modo_do_chip(ctx, "xbox")
 
 
 @gesto("01-jogar.html", "mascara", grava="gamepad.mask.set")
@@ -1720,6 +1976,7 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     _aplicar(p, _plano_do_chip("navegacao"))
     _lembrar_do_chip("navegacao", o)
+    _gravar_o_modo_do_chip(ctx, "navegacao")
 
 
 @gesto("01-jogar.html", "cadeado", grava="autoswitch_lock_set")
