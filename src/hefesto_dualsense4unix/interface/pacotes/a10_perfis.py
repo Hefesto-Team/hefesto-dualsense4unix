@@ -1744,7 +1744,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _dizer(_com_a_carona(frase))
 
 
-@gesto("10-perfis.html", "voltar-a-de-ontem")
+@gesto("10-perfis.html", "voltar-a-de-ontem", grava="restaurar_do_historico")
 def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """Desfazer a última gravação do perfil aberto. `profiles/loader.py`.
 
@@ -2097,7 +2097,7 @@ def _so_mudou(o: dict[str, Any]) -> bool:
     return str(o.get("evento") or "") in ("", "change")
 
 
-@gesto("10-perfis.html", "editor.nome")
+@gesto("10-perfis.html", "editor.nome", grava="_gravar")
 def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Renomear o perfil aberto no editor. `save_profile` + `delete_profile`.
 
@@ -2178,7 +2178,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     return _dizer(mensagem_do_salvar(novo, renomeado_de=prof.name))
 
 
-@gesto("10-perfis.html", "editor.prioridade")
+@gesto("10-perfis.html", "editor.prioridade", grava="_gravar")
 def editor_prioridade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Prioridade": o número que decide quem vence quando dois perfis servem.
 
@@ -2255,7 +2255,7 @@ def editor_prioridade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     return resposta
 
 
-@gesto("10-perfis.html", "editor.ambiente")
+@gesto("10-perfis.html", "editor.ambiente", grava="_gravar")
 def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Funciona em": trocar a REGRA que faz o perfil entrar. `from_simple_choice`.
 
@@ -2422,7 +2422,7 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     return prof.model_copy(update=mudanca), pintados
 
 
-@gesto("10-perfis.html", "editor.estilo")
+@gesto("10-perfis.html", "editor.estilo", grava="_gravar")
 def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Estilo de Jogo": escolher um APLICA a receita inteira no perfil.
 
@@ -2508,7 +2508,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
         f"“{estilo.rotulo}” aplicado em “{prof.name}”: gatilho, vibração {luz}.")
 
 
-@gesto("10-perfis.html", "editor.jogo")
+@gesto("10-perfis.html", "editor.jogo", grava="_gravar")
 def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Nome do Jogo": o programa (ou o número da Steam) que faz o perfil entrar.
 
@@ -2601,7 +2601,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
                   **{"editor.jogo": simple_extra(prof.match) or texto})
 
 
-@gesto("10-perfis.html", "detectar")
+@gesto("10-perfis.html", "detectar", grava="_gravar")
 def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Detectar": pegar o jogo em foco e montar a regra com ele.
 
@@ -2695,7 +2695,7 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
                   **{"editor.jogo": simple_extra(prof.match) or classe})
 
 
-@gesto("10-perfis.html", "novo")
+@gesto("10-perfis.html", "novo", grava="_gravar")
 def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Novo": um perfil em branco no disco, já com a regra do jogo em foco.
 
@@ -2765,7 +2765,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
                   f"que valem sempre")
 
 
-@gesto("10-perfis.html", "duplicar")
+@gesto("10-perfis.html", "duplicar", grava="_gravar")
 def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Duplicar": o perfil inteiro numa cópia, e o editor abre nela.
 
@@ -2826,7 +2826,7 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _dizer(f"Cópia criada: {copia}")
 
 
-@gesto("10-perfis.html", "remover")
+@gesto("10-perfis.html", "remover", grava="delete_profile")
 def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Remover": apagar o perfil do disco. PERGUNTA ANTES, no rótulo do botão.
 

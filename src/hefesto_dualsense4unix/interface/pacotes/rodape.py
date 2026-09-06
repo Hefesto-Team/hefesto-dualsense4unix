@@ -356,7 +356,7 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return _recado(perfil.com_a_carona())
 
 
-@gesto("*", "salvar")
+@gesto("*", "salvar", grava="save_profile")
 def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Grava o que está valendo no perfil ATIVO, no disco dela.
 

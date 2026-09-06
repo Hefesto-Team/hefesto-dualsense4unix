@@ -2299,7 +2299,7 @@ def _mandar(p: Any, **params: Any) -> None:
         raise RuntimeError(recusa)
 
 
-@gesto("06-navegacao.html", "modo")
+@gesto("06-navegacao.html", "modo", grava="save_profile")
 def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Status do Modo": o interruptor que liga mouse E teclado.
 
@@ -2423,7 +2423,7 @@ _ESCOLHA_DELA: dict[str, bool | None] = {
 _ESCOLHA: dict[str, bool | None] = _ESCOLHA_DELA
 
 
-@gesto("06-navegacao.html", "teclado")
+@gesto("06-navegacao.html", "teclado", grava="save_profile")
 def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A lista "Função do teclado". `keyboard.emulation.set`.
 
@@ -2545,7 +2545,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recado} if recado else None
 
 
-@gesto("06-navegacao.html", "vel-cursor")
+@gesto("06-navegacao.html", "vel-cursor", grava="save_profile")
 def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra da Velocidade de cursor, arrastada. `mouse_emulation.speed`.
 
@@ -2578,7 +2578,7 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     return {"recado": recado} if recado else None
 
 
-@gesto("06-navegacao.html", "vel-rolagem")
+@gesto("06-navegacao.html", "vel-rolagem", grava="save_profile")
 def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra da Velocidade da rolagem, arrastada. `scroll_speed`.
 
@@ -2791,7 +2791,7 @@ def _de_fabrica_vira_none(atalhos: dict[str, list[str]]) -> dict[str, list[str]]
     return None if atalhos == de_fabrica else atalhos
 
 
-@gesto("06-navegacao.html", "guardar-teclas")
+@gesto("06-navegacao.html", "guardar-teclas", grava="gravar_e_reaplicar")
 def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Guardar" da tela *Teclas do teclado*. `Profile.key_bindings`.
 
@@ -2898,7 +2898,7 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
         perfil.ativo((ctx.state or {}).get("active_profile")))}
 
 
-@gesto("06-navegacao.html", "padrao-da-tecla")
+@gesto("06-navegacao.html", "padrao-da-tecla", grava="gravar_e_reaplicar")
 def padrao_da_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Voltar ao padrão" de **UMA** linha — o Passo 2 da sprint.
 
@@ -3053,7 +3053,7 @@ def _perfil_ativo_ou_recusa(ctx: Contexto) -> str:
     return nome
 
 
-@gesto("06-navegacao.html", "guardar-definicoes")
+@gesto("06-navegacao.html", "guardar-definicoes", grava="gravar_e_reaplicar")
 def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Guardar" das 21 linhas de *o que cada botão faz*. `Profile.button_actions`.
 
@@ -3273,7 +3273,7 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(" ".join(recados))
 
 
-@gesto("06-navegacao.html", "padrao-definicoes")
+@gesto("06-navegacao.html", "padrao-definicoes", grava="gravar_e_reaplicar")
 def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
                       p: Any) -> dict[str, Any] | None:
     """"Voltar ao padrão" das 21 linhas de *o que cada botão faz*.

@@ -2622,7 +2622,7 @@ def _com_o_brilho_gravado(prof: Any, uniq: str, pct: int) -> Any:
     return prof.model_copy(update={"controllers": atuais})
 
 
-@gesto("04-iluminacao.html", "brilho")
+@gesto("04-iluminacao.html", "brilho", grava="save_profile")
 def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Ela arrastou o trilho. O brilho vai AO APARELHO e AO DISCO, na hora.
 
@@ -2843,7 +2843,7 @@ _RECADO_DO_AUTOMATICO_VOLTOU = (
     "dele.")
 
 
-@gesto("04-iluminacao.html", "auto-cores")
+@gesto("04-iluminacao.html", "auto-cores", grava="gravar_e_reaplicar")
 def auto_cores(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O interruptor do "Cores automáticas por controle" — e ele MUDA o perfil.
 
@@ -3363,7 +3363,7 @@ def devolver_o_desenho_ao_automatico(ctx: Contexto, p: Any, uniq: str) -> None:
     perfil.gravar_e_reaplicar(prof, ctx, p)
 
 
-@gesto("04-iluminacao.html", GESTO_DA_LAMPADA)
+@gesto("04-iluminacao.html", GESTO_DA_LAMPADA, grava="save_profile")
 def luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Uma das cinco luzes de jogador acende ou apaga — **sem tocar no número**.
 
@@ -3396,7 +3396,7 @@ def luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _escrever_o_desenho(ctx, p, uniq, tuple(bits))
 
 
-@gesto("04-iluminacao.html", GESTO_DO_DESENHO_DE)
+@gesto("04-iluminacao.html", GESTO_DO_DESENHO_DE, grava="save_profile")
 def desenho_de(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """As seis teclas de desenho: os quatro números, "todas" e "nenhuma".
 
@@ -3485,7 +3485,7 @@ _RECADO_DO_AUTOMATICO_DE_TODOS = (
     "saíram do perfil, e cada controle volta a acender a cor do número dele.")
 
 
-@gesto("04-iluminacao.html", GESTO_DO_AUTOMATICO_DE_TODOS)
+@gesto("04-iluminacao.html", GESTO_DO_AUTOMATICO_DE_TODOS, grava="gravar_e_reaplicar")
 def automatico_de_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Todos no automático" — o único desfazer de uma vez que ela tem.
 

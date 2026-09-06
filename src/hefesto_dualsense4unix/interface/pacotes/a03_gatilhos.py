@@ -2854,7 +2854,7 @@ def _conferir_o_desfecho(lado: str, modo_: str, ok: bool, motivo: str,
     raise RuntimeError(frase)
 
 
-@gesto("03-gatilhos.html", "modo")
+@gesto("03-gatilhos.html", "modo", grava="_gravar_so_o_gatilho")
 def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Escolher um modo APLICA o efeito naquele gatilho, naquele controle.
 
@@ -2904,7 +2904,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recibo}
 
 
-@gesto("03-gatilhos.html", "pronto")
+@gesto("03-gatilhos.html", "pronto", grava="_gravar_so_o_gatilho")
 def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Escolher um efeito pronto põe aquela CURVA no gatilho, na hora.
 
@@ -2983,7 +2983,7 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recibo}
 
 
-@gesto("03-gatilhos.html", "ajuste")
+@gesto("03-gatilhos.html", "ajuste", grava="_gravar_so_o_gatilho")
 def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Arrastar uma barra muda AQUELE parâmetro e reaplica o efeito na hora.
 
@@ -3167,7 +3167,7 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return None
 
 
-@gesto("03-gatilhos.html", "guardar")
+@gesto("03-gatilhos.html", "guardar", grava="_gravar_so_o_gatilho")
 def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Guardar esse efeito": a coluna vai para o PERFIL — e, com nome, para ELA.
 

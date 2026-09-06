@@ -4272,7 +4272,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     return prof.model_copy(update={"controllers": atuais})
 
 
-@gesto("08-conexoes.html", "teto-da-vibracao")
+@gesto("08-conexoes.html", "teto-da-vibracao", grava="gravar_e_reaplicar")
 def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Teto da vibração: Segue o global / Sem teto / 30% da força" — POR CONTROLE.
 
@@ -4419,7 +4419,7 @@ def _gravar_o_apelido(endereco: str, nome: str) -> Any:
     return renomear_o_dongle(endereco, nome, dongles=_dongles())
 
 
-@gesto("08-conexoes.html", GESTO_DO_APELIDO)
+@gesto("08-conexoes.html", GESTO_DO_APELIDO, grava="renomear_o_dongle")
 def renomear_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O nome que ELA deu ao adaptador, gravado no BlueZ.
 
@@ -4471,7 +4471,7 @@ def renomear_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _dongles(recarregar=True)
 
 
-@gesto("08-conexoes.html", "vizinho-o-que-e")
+@gesto("08-conexoes.html", "vizinho-o-que-e", grava="machine_declare")
 def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"— O que é? —": ela responde o que é aquele rádio vizinho.
 
@@ -4620,7 +4620,7 @@ def _correr_o_exame_completo() -> None:
     _QUANDO_O_EXAME = time.monotonic()
 
 
-@gesto("08-conexoes.html", "ignorar")
+@gesto("08-conexoes.html", "ignorar", grava="machine_declare")
 def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"⊘": cala ESTA ordem de serviço — e o MESMO botão a traz de volta.
 
@@ -4769,7 +4769,7 @@ def escolher_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _logica_do_mapa().escolher(caminho)
 
 
-@gesto("08-conexoes.html", "escolher-entrada")
+@gesto("08-conexoes.html", "escolher-entrada", grava="machine_declare")
 def escolher_entrada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Segundo tempo: põe nesta entrada o aparelho que está na mão.
 
@@ -4796,7 +4796,7 @@ def escolher_entrada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _gravar_o_mapa(p)
 
 
-@gesto("08-conexoes.html", "tirar-daqui")
+@gesto("08-conexoes.html", "tirar-daqui", grava="machine_declare")
 def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Esvazia a entrada. Ela CONTINUA no desenho — só fica sem aparelho.
 
@@ -4812,7 +4812,7 @@ def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _gravar_o_mapa(p)
 
 
-@gesto("08-conexoes.html", "nova-entrada")
+@gesto("08-conexoes.html", "nova-entrada", grava="machine_declare")
 def nova_entrada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Acrescenta a esta face o menor número que ainda não existe em face nenhuma.
 
@@ -4828,7 +4828,7 @@ def nova_entrada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _gravar_o_mapa(p)
 
 
-@gesto("08-conexoes.html", "nova-extensao")
+@gesto("08-conexoes.html", "nova-extensao", grava="machine_declare")
 def nova_extensao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Cria a entrada-filha desta: a `10` vira `10a`, depois `10b`. Não há neta.
 
@@ -4847,7 +4847,7 @@ def nova_extensao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _gravar_o_mapa(p)
 
 
-@gesto("08-conexoes.html", "nova-face")
+@gesto("08-conexoes.html", "nova-face", grava="machine_declare")
 def nova_face(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Cria uma face com o nome que ela escreveu. Sem nome, não cria.
 
