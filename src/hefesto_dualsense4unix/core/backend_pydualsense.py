@@ -2550,17 +2550,17 @@ class PyDualSenseController(IController):
         hotplug-out (`_close_handles`) e o `disconnect()` do `reconnect()`. Os
         dois são a mesma coisa vista de longe — o controle dela piscou.
 
-        RESERVA-DO-POSTO-01 §5 — **por que INFO e não debug.** O nível padrão do
-        produto é INFO (`utils/logging_config.py`), e a retomada
-        (`primario_retomou_o_posto`) sempre foi `info`. Com a reserva e a
-        caducidade em `debug`, o journal de uma instalação normal só guardava o
-        caso BEM-SUCEDIDO: perguntar a ele com que frequência o posto se perde
-        seria contar apenas as amostras que confirmam a resposta desejada. Os
-        três eventos carregam a MESMA chave de correlação (`key`), que é o que
-        permite casar reserva → caducou/retomou no mesmo journal.
+        RESERVA-DO-POSTO-01 — **por que INFO, e por que com `transporte`.** O
+        nível padrão é INFO (`utils/logging_config.py`): com a reserva e a
+        caducidade em `debug`, o journal dela guardava só o desfecho BOM — e
+        medir o prazo assim é contar as amostras que o confirmam (a régua
+        inteira está em `test_reserva_do_posto_01_os_eventos_falam.py`). E o
+        `transporte` separa duas populações que o caderno não distinguiria
+        depois: no cabo o primário quase não cai. É o ÚLTIMO detectado para
+        ele — aqui o handle já morreu, e o que se pergunta é onde ele ESTAVA.
         """
         self._primario_deposto = (key, self._relogio())
-        logger.info("primario_deposto_reservado", key=key)
+        logger.info("primario_deposto_reservado", key=key, transporte=self._transport)
 
     def _posto_reservado_de_volta(self) -> str | None:
         """A key do primário deposto, se ele VOLTOU dentro da janela. Senão None.
