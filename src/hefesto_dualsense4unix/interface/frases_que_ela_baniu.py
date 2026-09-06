@@ -27,6 +27,22 @@ coluna Atenção pode dizer **o estado medido** — *o Modo Nativo está ligado,
 Ponte com o jogo está desligada* — porque isso o produto mede e sabe. O que ela
 não pode é PROFETIZAR consequência que ninguém mediu. A decisão dela de 31/08
 vence a minha recomendação de 04/09, como venceu nas outras sete.
+
+A TERCEIRA GUARDA — 06/09/2026, ONDA5-01-02, e ela lê o **FONTE**:
+
+As duas guardas de 04/09 param a frase na SAÍDA — o HTML já gerado e o valor a
+caminho do WebView. Nenhuma delas olha de onde a frase VEM, e por isso *"Alguns
+jogos derrubam o controle no meio da partida"* sobreviveu uma semana em
+`app/actions/home_actions.py` com as duas verdes: nada as fazia olhar para lá.
+Pior — uma régua desta casa **exigia que ela ficasse**, como lápide de si
+mesma. Agora `tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py`
+(`test_nenhuma_banida_vive_no_fonte`) varre `app/actions/` e `interface/` pelos
+literais e pelos comentários, com duas isenções declaradas: este módulo, que é
+o dono da lista, e os comentários de `aba01.py`, onde a lápide de 31/08 mora.
+
+**Três réguas independentes é o desenho desta casa** — o mesmo dos dois portões
+de endereço de rádio, e pela mesma razão: cada uma tem um ponto cego que só a
+outra alcança.
 """
 
 from __future__ import annotations
@@ -34,10 +50,28 @@ from __future__ import annotations
 #: Trechos proibidos em qualquer texto que chegue à tela. A comparação é por
 #: SUBSTRING e sem normalizar: são trechos literais que já estiveram no
 #: produto, e uma reescrita que os evite por acaso já não é a frase banida.
+#:
+#: **O TERCEIRO TRECHO ESTAVA CEGO PARA O PRODUTO — corrigido em 06/09/2026,
+#: ONDA5-01-02.** Ele era ``"duros como no PS5"``, a forma que o gerador da
+#: interface nova cita; a janela antiga escrevia *"os gatilhos ficam duros de
+#: apertar, como no PS5"*, e ``"duros como no PS5" in`` essa frase é ``False``.
+#: A lista nasceu medida contra o texto do gerador, não contra o do produto, e
+#: **um terço da proibição foi decorativo desde o primeiro dia**.
+#:
+#: ``"gatilhos ficam duros"`` casa com as DUAS escritas, e é o trecho mais
+#: curto que casa sem pegar frase inocente. **A sprint propunha
+#: ``"como no PS5"`` e a medição o RECUSOU**: esse trecho aparece em
+#: ``app/actions/config/secao_controles.py``, na `DICA_MIC_NO_RADIO` —
+#: *"Traz o microfone deste controle pelo rádio, como no PS5"* —, que é frase
+#: medida e viva. Ele reprovaria a guarda de fonte sobre ela e, pior, o funil
+#: de execução a recusaria a caminho do WebView: a régua contra o alarme sem
+#: medição viraria o alarme sem medição. Medido em 06/09/2026 com
+#: ``grep -rn "gatilhos ficam duros" src/``: duas ocorrências, as duas a frase
+#: banida; ``grep -rn "como no PS5" src/``: quatro, uma delas inocente.
 FRASES_BANIDAS: tuple[str, ...] = (
     "derrubam o controle",
     "resultado é ZERO",
-    "duros como no PS5",
+    "gatilhos ficam duros",
 )
 
 
