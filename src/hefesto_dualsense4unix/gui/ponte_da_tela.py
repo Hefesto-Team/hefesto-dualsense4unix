@@ -145,10 +145,35 @@ AS_QUATRO_ARMADILHAS: tuple[str, ...] = (
 #: ``data-hef-em-voo`` é quem responde por caber**; num botão de ícone a
 #: resposta certa é NÃO publicar e deixar o sinal da classe falar. A decisão
 #: dela (`09` [03]) é sobre o "Atualizar", que tem 184 px de coluna.
+#: E A PISCADA DO "DEU CERTO" MORA AQUI PELA MESMA RAZÃO — 05/09/2026, decisão
+#: dela na `03-Q4`: *"O campo que você acabou de mexer ganha uma borda verde por
+#: cerca de um segundo e meio e volta ao normal sozinho; nada muda de lugar e
+#: nenhuma palavra nova entra na tela."*
+#:
+#: `outline` E NÃO BORDA MAIS GROSSA, e é metade da decisão: `outline` não ocupa
+#: espaço na caixa, então o vizinho não anda. Uma `border-width` maior empurraria
+#: a linha inteira, e "nada muda de lugar" é o que ela pediu junto com a cor.
+#:
+#: O `!important` pela MESMA razão medida do `cursor` acima: as dez páginas
+#: declaram `border-color` nos campos — `.mudo-i.on` pede `var(--red)`
+#: (`paginas/02-controles.html:1420`) e `select.modo` pede `var(--purple)`
+#: (`paginas/03-gatilhos.html:1050`) —, e folha de usuário perde para o autor em
+#: declaração normal. Sem ele o campo pisca nos elementos SEM cor declarada e
+#: fica mudo justamente nos que têm.
+#:
+#: E A RÉGUA NÃO ALCANÇA ESTE PONTO, declarado em vez de esquecido:
+#: `test_o_sucesso_calado_pisca_e_nao_fala` clica um `.mudo-i` APAGADO, que não
+#: declara cor — arrancar o `!important` deixa aquela régua verde. Quem quiser
+#: fechar o buraco mede um dos dois seletores acima.
+#:
+#: A COR TEM DONO e não se digita uma segunda: `--green:#50fa7b`
+#: (`interface/topo.html:34`), com o mesmo fallback que o canal de sucesso já usa.
 FOLHA_DA_CASA = (
     ".nota{display:none !important}"
     "select{appearance:none;-webkit-appearance:none}"
     ".hef-em-voo{opacity:.6 !important;cursor:progress !important}"
+    ".hef-deu-certo{border-color:var(--green,#50fa7b) !important;"
+    "outline:1px solid var(--green,#50fa7b) !important}"
 )
 
 #: QUANTO O PILOTO ESPERA ANTES DE RECARREGAR a página cujo processo web morreu.
