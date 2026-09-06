@@ -1664,6 +1664,18 @@ def audit_profiles() -> list[tuple[str, str]]:
 #: um binário anterior a qualquer uma delas tem ``extra="forbid"`` no `Profile`
 #: e rejeitaria TODOS os perfis no downgrade, não só os que usam a seção.
 #: ``controllers`` tem tratamento próprio logo abaixo (mapa vazio também sai).
+#:
+#: NÃO É MAIS CONSULTADA — QUEM-E-QUEM-02 (06/09/2026). Ela fica como REGISTRO
+#: DATADO de por que a regra existe: cada linha abaixo é uma sprint que
+#: ESQUECEU de vir aqui e foi pega por acidente, por um teste vizinho. Três
+#: vezes em cinco semanas (``teclado_emulado`` em 24/08, ``button_actions`` em
+#: 01/09, e o próprio comentário de ``button_actions`` diz "a terceira vez que
+#: ela não foi lembrada"). Com cinco seções em fila — microfone, giroscópio,
+#: acelerômetro, máscara, touchpad — seria cinco vezes o mesmo acidente.
+#: Quem omite hoje é ``_payload_do_perfil``, DERIVANDO a regra do valor: toda
+#: seção de topo que vale ``None`` sai do arquivo, sem lista nenhuma a lembrar.
+#: **Não se apaga decisão medida** — mas também não se consulta uma lista que
+#: virou registro: acrescentar nome aqui não muda mais um byte do disco.
 _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
     "speaker",
     "mouse",
@@ -1685,6 +1697,64 @@ _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
     # rejeitaria TODOS os perfis dela num downgrade, não só os que usam o campo.
     "button_actions",
 )
+
+
+#: QUEM-E-QUEM-02 (06/09/2026) — A OUTRA METADE, e ela é a que não tem cura.
+#:
+#: Campo de topo cujo valor NUNCA é ``None`` é gravado em TODO save, por
+#: construção. A omissão do ``None`` não o alcança, e por isso ele **é**
+#: incompatível com um binário anterior a ele: um `Profile` com
+#: ``extra="forbid"`` que não conhece a chave recusa o perfil INTEIRO.
+#:
+#: Esta sprint não cura isso — não dá para curar, é o preço de nascer denso.
+#: O que ela faz é obrigar a DECLARAR: todo campo de topo do `Profile` tem de
+#: estar OU coberto pela omissão do ``None`` (ou seja: aceitar ``None``) OU
+#: nomeado aqui, com o motivo e a decisão dela ao lado. Esquecer deixa de ser
+#: silêncio e passa a ser vermelho, em
+#: ``tests/unit/test_quem_e_quem_02_o_campo_novo_nao_quebra_o_perfil_de_ontem.py``.
+#:
+#: Os oito de hoje são o NÚCLEO do formato v1 — estão no arquivo desde que o
+#: perfil existe, e nenhum binário que esta casa já entregou os desconhece.
+#: A entrada nova aqui é que é evento: ela quebra o downgrade de propósito, e
+#: quem a escrever tem de dizer por quê.
+_SECOES_DE_TOPO_QUE_NASCEM_DENSAS: tuple[str, ...] = (
+    # O núcleo do formato v1 — sempre no arquivo, desde sempre.
+    "name",
+    "version",
+    "match",
+    "priority",
+    "triggers",
+    "leds",
+    "rumble",
+    # PERFIL-DE-DESEMPENHO: booleano com default `False`, gravado em todo save
+    # desde que nasceu. Não é seção; é bandeira, e a ausência dela no arquivo
+    # significaria "não sei", que não é resposta que o aplicador saiba usar.
+    "suppress_desktop_emulation",
+    # A PRÓXIMA A ENTRAR AQUI provavelmente é `sensors`, da ONDA-CONTROLES-07,
+    # que a especifica com `gyro: bool = True` no TOPO por decisão dela
+    # (`D-AUDIO-E-GIRO-NASCEM-LIGADOS`). Ela vai reprovar nesta régua até ser
+    # declarada — e isso é a régua funcionando, não um conflito. Cuidado com a
+    # simetria falsa: o default denso vale no TOPO e NÃO na entrada por
+    # controle, onde ele produz a chave fantasma que a janela não consegue
+    # apagar (medido: `app/draft_config.py::_override_vazio` decide por
+    # `is None`, e com default denso nenhuma entrada é vazia nunca).
+)
+
+
+def _secoes_de_topo_omitidas_quando_none(payload: dict[str, object]) -> tuple[str, ...]:
+    """As chaves de topo que saem do arquivo — DERIVADAS, não listadas.
+
+    QUEM-E-QUEM-02 (06/09/2026). A regra é a mesma de sempre — "sem opinião" é
+    a AUSÊNCIA da chave, nunca um ``null`` — e o que muda é quem a lembra:
+    antes, uma tupla escrita à mão (``_SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE``,
+    logo acima), que TRÊS sprints esqueceram; agora, o próprio valor.
+
+    ``is None`` e NÃO falsy, e isso não é detalhe: ``key_bindings: {}`` é a
+    ordem "teclado silencioso" (o perfil desliga todos os bindings) e tem de
+    sobreviver ao save — omiti-la faria o perfil herdar os defaults e as teclas
+    voltarem a sair sozinhas, que é o oposto do que ela pediu.
+    """
+    return tuple(nome for nome, valor in payload.items() if valor is None)
 
 
 # ---------------------------------------------------------------------------
@@ -1862,11 +1932,15 @@ def _payload_do_perfil(profile: Profile) -> dict[str, object]:
     """
     payload: dict[str, object] = profile.model_dump(mode="json")
     # SOM-02/E4: seção ausente é seção AUSENTE no arquivo (ver `save_profile`).
-    # `is None` e não falsy: `key_bindings: {}` é a ordem "teclado silencioso"
-    # e tem de sobreviver ao save.
-    for secao in _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE:
-        if payload.get(secao) is None:
-            payload.pop(secao, None)
+    # QUEM-E-QUEM-02: a lista deixou de ser escrita à mão — quem decide é o
+    # VALOR, e `is None` continua não sendo falsy (`key_bindings: {}` fica).
+    # Byte-idêntico ao que a tupla gravava: medido campo a campo, porque as
+    # seções de topo que podem valer `None` são exatamente as sete dela mais
+    # `controllers` (regra própria, logo abaixo) e `ponte` (serializador
+    # próprio em `schema.py::_sem_ponte_a_chave_nem_aparece`, que já a removeu
+    # antes de chegar aqui — este laço não a alcança nem precisa).
+    for secao in _secoes_de_topo_omitidas_quando_none(payload):
+        payload.pop(secao, None)
     if not payload.get("controllers"):
         payload.pop("controllers", None)
     else:
