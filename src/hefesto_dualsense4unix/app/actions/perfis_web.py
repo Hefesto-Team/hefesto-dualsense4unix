@@ -39,12 +39,13 @@ Controles.
 **Não decide o que é dela decidir.** Três perguntas da onda PERFIS continuam
 abertas e aparecem aqui como ESTADO HONESTO, nunca como escolha silenciosa:
 
-1. **cinco ou seis ambientes** — ``profiles_actions._APLICA_A_ITEMS`` tem SETE
-   presets e o desenho tem CINCO opções. Os três que sobram
-   (``browser``/``terminal``/``editor``) NÃO viram "Todos": eles caem no estado
-   :data:`AMBIENTE_QUE_A_TELA_NAO_MOSTRA`, com a regra do disco intacta. Abrir
-   dizendo "Todos" é o defeito R-12 pelo avesso, e o estrago dele já aconteceu
-   nesta casa (``profiles/loader.py:1229-1237``);
+1. **quantos ambientes** — ``profiles_actions._APLICA_A_ITEMS`` tem OITO
+   presets e o desenho tem SEIS opções (a sexta, ``janela``, nasceu em 06/09
+   com a ONDA5-10-01). Os três que sobram (``browser``/``terminal``/``editor``)
+   NÃO viram "Todos": estão DECLARADOS em :data:`FORA_DO_DESENHO` e caem no
+   estado :data:`AMBIENTE_QUE_A_TELA_NAO_MOSTRA`, com a regra do disco intacta.
+   Abrir dizendo "Todos" é o defeito R-12 pelo avesso, e o estrago dele já
+   aconteceu nesta casa (``profiles/loader.py:1229-1237``);
 **AS DUAS PERGUNTAS QUE ERAM 2 E 3 FECHARAM — 03/09/2026, e as duas por decisão
 dela.** Ficam escritas porque a forma delas é a que se repete:
 
@@ -185,12 +186,23 @@ SEM_DONO = (
 #: em vez de guardar. O motor (`profiles/estilos_de_jogo.py`) nasceu por decisão
 #: dela e `a10_perfis.editor_estilo` o liga. Deixá-lo aqui faria a tela mostrar
 #: travado um campo que grava — a mentira ao contrário, e igualmente cara.
-GESTOS_SEM_MOTOR: dict[str, str] = {
-    "detectar": "o daemon lê a janela em foco, mas o IPC não publica o título "
-    "nem a classe — sem isso não há o que detectar. (ONDA-PERFIS-03)",
-    "voltar-a-de-ontem": "cada gravação já guarda a anterior, e só a linha de "
-    "comando sabe restaurar. Falta a tela. (ONDA-PERFIS-05)",
-}
+#:
+#: **E OS DOIS QUE SOBRAVAM SAÍRAM — 06/09/2026, ONDA5-10-01.** Pelo mesmo
+#: teste do `editor.estilo`, e os dois motivos já eram FATO ERRADO no disco:
+#:
+#: * `detectar` dizia *"o IPC não publica o título nem a classe"*. **A classe é
+#:   publicada** — medido em 01/09 contra o `state_full`, e a substituição já
+#:   estava escrita a sessenta linhas daqui, em `DONOS_DOS_GESTOS["detectar"]`.
+#:   Ficaram as duas versões vivas, que é o defeito que a regra da casa existe
+#:   para matar. O gesto tem motor (`a10_perfis.detectar:2467`) desde 01/09;
+#: * `voltar-a-de-ontem` dizia *"só a linha de comando sabe restaurar. Falta a
+#:   tela."* — e a tela nasceu em 03/09 (`a10_perfis.voltar_a_de_ontem:1689`).
+#:   Era também a QUARTA boca que mandava ela para o terminal.
+#:
+#: **A LISTA FICA VAZIA E NÃO SOME**, pelo mesmo motivo do
+#: `a10_perfis.ESPERANDO_A_PUBLICACAO`: ela é o lugar onde o próximo gesto sem
+#: motor se declara, e o contrato `travados` do pacote continua existindo.
+GESTOS_SEM_MOTOR: dict[str, str] = {}
 
 #: A frase do "Estilo de Jogo" — e ela deixou de ser a de um campo travado.
 #:
@@ -208,18 +220,42 @@ ESTILO_APLICA_E_SAI = (
     "campo volta ao travessão e você continua ajustando o que quiser nas abas."
 )
 
-#: O rótulo do seletor "Funciona em" para cada preset do produto — e ele tem
-#: CINCO entradas porque o desenho aprovado tem cinco opções.
+#: O rótulo do seletor "Funciona em" para cada forma que o produto sabe
+#: escrever.
 #:
-#: ``profiles_actions._APLICA_A_ITEMS:130`` tem SETE. Os três que faltam aqui —
-#: ``browser``, ``terminal``, ``editor`` — não estão esquecidos: estão do lado
-#: de fora do desenho, e mapeá-los para "Todos" é o que esta rota RECUSA fazer
-#: (ver :func:`_ambiente_do_perfil`).
+#: **A QUINTA ENTRADA É A SEXTA FORMA** — ``janela``, ONDA5-10-01 (06/09/2026).
+#: Ela nasceu porque o botão "Detectar" prometia no ``title`` *"funciona com
+#: jogo de qualquer lugar"* e RECUSAVA todo jogo de fora da Steam, mandando a
+#: pessoa para a linha de comando. O detector entrega uma ``wm_class``; agora o
+#: produto sabe guardá-la (``simple_match.from_simple_choice("janela", …)``) e a
+#: tela sabe MOSTRÁ-LA — que é a ordem certa: gravar uma forma que o seletor não
+#: conhece empurraria o perfil para fora da tela.
+#:
+#: O que fica de fora está DECLARADO em :data:`FORA_DO_DESENHO`, e há régua
+#: cobrando os dois sentidos
+#: (``test_toda_forma_que_o_produto_escreve_tem_rotulo_nas_duas_telas``).
 AMBIENTE_DO_PRESET: dict[str, str] = {
     "any": "Todos",
     "steam": "Steam",
     "game": "Jogo",
     "steam_game": "Jogo da Steam",
+    "janela": "Jogo (pela janela)",
+}
+
+#: AS FORMAS QUE O PRODUTO ESCREVE E O DESENHO NÃO OFERECE — declaradas, com a
+#: razão de cada uma. **Declarar é a diferença entre dívida e esquecimento**: a
+#: régua nova varre toda chave que ``from_simple_choice`` sabe escrever e exige
+#: rótulo em :data:`AMBIENTE_DO_PRESET` **ou** uma linha aqui.
+#:
+#: As três são a contradição de DUAS decisões dela do MESMO dia
+#: (``docs/data/decisoes-dela.csv:55`` fecha o seletor em cinco; ``:84`` diz
+#: cinco mais "Programas"), sem lápide dizendo qual caducou. Mapeá-las para
+#: "Todos" é o defeito R-12 pelo avesso, e por isso elas caem no estado honesto
+#: de :data:`AMBIENTE_QUE_A_TELA_NAO_MOSTRA`, com a regra do disco intacta.
+FORA_DO_DESENHO: dict[str, str] = {
+    "browser": "o preset “Navegador” existe no produto e não no desenho dela",
+    "terminal": "o preset “Terminal” existe no produto e não no desenho dela",
+    "editor": "o preset “Editor” existe no produto e não no desenho dela",
 }
 
 #: A frase do terceiro estado do seletor — o perfil cuja regra a tela não sabe
@@ -230,10 +266,18 @@ AMBIENTE_DO_PRESET: dict[str, str] = {
 #: página; sem esta válvula, sete dos nove perfis de fábrica abririam dizendo
 #: "Todos" — MEDIDO em ``assets/profiles_default/``: cinco casam por
 #: ``window_title_regex`` e dois por lista de ``window_class``.
+#:
+#: **A FRASE PARA NO FATO — 06/09/2026, ONDA5-10-01, decisão 10-Q2.** Ela
+#: terminava em *"Para editá-la, use `hefesto-dualsense4unix profile` na linha
+#: de comando."*, e a palavra dela sobre isso foi **"Isso é erro do produto."**
+#: A opção que ela marcou (*"Só o aviso, sem conserto"*) diz que esta tela não
+#: ganha editor avançado; a palavra dela diz que mandar alguém para o terminal
+#: não é o acabamento honesto de uma limitação — é a limitação com um bilhete em
+#: cima. O que fica é o fato mais o parêntese que :func:`_como_e_a_regra` monta:
+#: *"casa por título de janela e 9 nome(s) de programa"*.
 AMBIENTE_QUE_A_TELA_NAO_MOSTRA = (
     "Este perfil casa por uma regra que esta tela não sabe mostrar — o seletor "
-    "fica travado para que salvar não a rebaixe. Para editá-la, use "
-    "`hefesto-dualsense4unix profile` na linha de comando."
+    "fica travado para que salvar não a rebaixe."
 )
 
 #: O texto no lugar da lista quando não há perfil nenhum no disco. Zero perfis é
@@ -326,14 +370,17 @@ def _ambiente_do_perfil(profile: Any) -> tuple[str | None, str]:
 
     As duas portas para o ``None``:
 
-    1. o preset é ``browser``/``terminal``/``editor`` — existe no produto
-       (``_APLICA_A_ITEMS`` tem sete) e não existe no desenho (cinco). É a
-       contradição de DUAS decisões dela do MESMO dia
-       (``docs/data/decisoes-dela.csv:55`` fecha em cinco; ``:84`` diz cinco
-       mais "Programas"), e nenhuma lápide explica qual caducou;
+    1. o preset está em :data:`FORA_DO_DESENHO` — ``browser``/``terminal``/
+       ``editor``, que existem no produto e não no desenho dela;
     2. ``detect_simple_preset`` devolveu ``None`` — regra por título de janela,
        por lista de classes, ou ``MatchManual``. Sete dos nove perfis de fábrica
        estão aqui, MEDIDO.
+
+    **A SEXTA FORMA TIROU UM CASO DAQUI — 06/09/2026.** Uma classe de janela SÓ
+    (o que o "Detectar" produz fora da Steam) caía na porta 2 e passou a ter
+    rótulo próprio, "Jogo (pela janela)". Os SETE perfis de fábrica continuam
+    travados e isso está medido: cinco casam por título mais lista de programas,
+    e os dois de classe têm dez e duas classes — nenhum tem UMA.
     """
     match = getattr(profile, "match", None)
     preset = detect_simple_preset(match) if match is not None else None
@@ -349,9 +396,11 @@ def _como_e_a_regra(match: Any, preset: str | None) -> str:
     preset. O conteúdo (o regex, as classes) fica de fora de propósito — ele é
     dado dela, e esta frase vai para um ``title``, não para uma célula.
     """
-    if preset in ("browser", "terminal", "editor"):
-        rotulos = {"browser": "Navegador", "terminal": "Terminal", "editor": "Editor"}
-        return f"o preset “{rotulos[preset]}” existe no produto e não no desenho"
+    if preset in FORA_DO_DESENHO:
+        # A RAZÃO TEM UM DONO SÓ — 06/09/2026. Ela era digitada aqui e a lista
+        # das três vivia no `_ambiente_do_perfil`: duas escritas do mesmo fato,
+        # e a régua nova cobra a lista, não a frase.
+        return FORA_DO_DESENHO[str(preset)]
     if isinstance(match, MatchCriteria):
         partes = []
         if match.window_title_regex:

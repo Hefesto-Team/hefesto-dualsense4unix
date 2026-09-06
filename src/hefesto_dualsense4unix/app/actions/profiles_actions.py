@@ -79,10 +79,22 @@ logger = get_logger(__name__)
 # autoswitch reconhece como regra de jogo (R-01, `perfil_e_regra_de_jogo` exige
 # `window_class` com a `steam_app_<id>` em foco) e a única chave do `.env` por
 # appid do launch_env.
-_RADIO_IDS = ("any", "steam", "browser", "terminal", "editor", "game", "steam_game")
+#
+# ONDA5-10-01 (06/09/2026): "janela" é a SEXTA forma — uma `wm_class` só, que é
+# o que o detector de janela entrega para jogo de FORA da Steam. Ela entra aqui
+# porque `_select_radio` cai em "any" para todo id que não esteja nesta tupla:
+# um perfil de janela abriria mostrando "Qualquer", que é o rebaixamento que o
+# R-12 existe para impedir.
+_RADIO_IDS = ("any", "steam", "browser", "terminal", "editor", "game",
+              "steam_game", "janela")
 
 #: R-12: ids do seletor que exigem o campo livre preenchido.
-_IDS_COM_CAMPO_LIVRE = ("game", "steam_game")
+#:
+#: "janela" entrou em 06/09/2026 com a sexta forma, e não é zelo: sem ele
+#: `_populate_editor` cai no ramo do `else` e escreve `""` no campo livre — o
+#: perfil TEM classe no disco e a tela abriria vazia sobre ela, que é o defeito
+#: que o R-12 já cobrou uma vez do `steam_game`.
+_IDS_COM_CAMPO_LIVRE = ("game", "steam_game", "janela")
 
 #: Teto da escala de prioridade, com dono em `profiles/schema.py` — é lá que se
 #: muda, e é lá que está a história do número (PERFIL-NASCE-CERTO-01, entrega
@@ -121,12 +133,26 @@ _CAMPO_LIVRE_DICAS: dict[str, tuple[str, str]] = {
         "(store.steampowered.com/app/…), ou escreva o número direto. Com o "
         "jogo aberto, o campo é preenchido sozinho.",
     ),
+    # ONDA5-10-01 (06/09/2026): a sexta forma pede um TERCEIRO significado para
+    # o mesmo campo — a classe da janela do jogo. Sem esta linha o campo herda
+    # o placeholder da escolha anterior, que pede outra coisa.
+    "janela": (
+        "ex.: GrimFandango",
+        "A classe da janela do jogo — o que o detector de janela do Hefesto "
+        "vê. Com o jogo em foco, o botão Detectar preenche sozinho. Use esta "
+        "opção para jogo que não é da Steam.",
+    ),
 }
 
 # FEAT-DSX-COMBO-TO-SEGMENTED-01: itens do seletor "Aplica a:" (id, rótulo curto).
 # Antes vinham do `<items>` do GtkComboBoxText no Glade; agora alimentam o
 # SegmentedSelector no código. Rótulos curtos para caber na aba; o contexto
 # completo fica no tooltip do seletor.
+#
+# ONDA5-10-01 (06/09/2026): a OITAVA linha é a sexta forma, "janela". O rótulo é
+# o MESMO da interface nova (`perfis_web.AMBIENTE_DO_PRESET["janela"]`) de
+# propósito: duas telas que chamam a mesma regra por nomes diferentes obrigam
+# quem lê a decidir se são a mesma coisa.
 _APLICA_A_ITEMS: list[tuple[str, str]] = [
     ("any", "Qualquer"),
     ("steam", "Steam"),
@@ -135,6 +161,7 @@ _APLICA_A_ITEMS: list[tuple[str, str]] = [
     ("editor", "Editor"),
     ("game", "Jogo"),
     ("steam_game", "Jogo da Steam"),
+    ("janela", "Jogo (pela janela)"),
 ]
 
 # FEAT-PROFILE-MODE-GUI-01: itens da seção "Modo" do editor (id, rótulo curto).
