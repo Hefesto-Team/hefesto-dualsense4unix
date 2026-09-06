@@ -813,7 +813,11 @@ BOOTSTRAP = r"""
       const cartao = onde
         ? document.querySelector('[data-controle="' + onde + '"],[data-uniq="' + onde + '"]')
         : null;
-      const pai = cartao || document.body;
+      // O TERCEIRO LUGAR — A FAIXA QUE A PÁGINA DECLARA. 05-Q4 dela,
+      // 06/09/2026. O endereço é da PÁGINA (`data-hef-recados`), e o tom viaja
+      // nele porque só o SUCESSO muda de lugar: a recusa continua no cartão.
+      const faixa = document.querySelector('[data-hef-recados~="' + tom + '"]');
+      const pai = faixa || cartao || document.body;
       let el = document.querySelector('.hef-recado[data-hef-recado="' + chave + '"]');
       // A PINTURA TROCA BLOCOS INTEIROS — a fita, a tabela de perfis, o mapa do
       // gabinete. Um recado que perdeu o pai é recriado no pai de agora, com o
@@ -849,7 +853,7 @@ BOOTSTRAP = r"""
         // documento, o layout aguenta, e tirar do fluxo criaria sobreposição
         // onde não havia problema.
         var foraDoFluxo = false;
-        if(cartao){
+        if(!faixa && cartao){
           var disp = getComputedStyle(pai).display;
           foraDoFluxo = disp === 'grid' || disp === 'inline-grid'
                      || disp === 'flex' || disp === 'inline-flex';
@@ -857,8 +861,10 @@ BOOTSTRAP = r"""
             pai.style.position = 'relative';
           }
         }
-        el.dataset.hefLugar = cartao ? (foraDoFluxo ? 'grade' : 'fluxo') : 'tarja';
-        if(cartao){ pai.insertBefore(el, pai.firstChild); } else { pai.appendChild(el); }
+        el.dataset.hefLugar = faixa ? 'faixa'
+          : (cartao ? (foraDoFluxo ? 'grade' : 'fluxo') : 'tarja');
+        if(!faixa && cartao){ pai.insertBefore(el, pai.firstChild); }
+        else { pai.appendChild(el); }
         n += 1;
       }
       // O ESTILO SE REFAZ QUANDO O TOM MUDA, e não só quando o nó nasce: no
@@ -867,9 +873,18 @@ BOOTSTRAP = r"""
       // e ficaria laranja dizendo que deu certo.
       if(el.dataset.hefTom !== tom){
         const lugar = el.dataset.hefLugar || 'tarja';
-        el.style.cssText = ESTILO_DO_RECADO
-          + (lugar === 'grade' ? ESTILO_NA_GRADE : (lugar === 'tarja' ? ESTILO_DA_TARJA : ''))
-          + (tom === 'sucesso' ? COR_DO_SUCESSO : '');
+        if(lugar === 'faixa'){
+          // NA FAIXA QUEM PINTA É A PÁGINA: ela já tem o desenho da linha de
+          // estado, e o `data-hef-recado-classe` diz com que classes o recado
+          // se veste. Uma caixa com borda do piloto ao lado das linhas da
+          // faixa seriam dois desenhos para a mesma linha.
+          el.className = 'hef-recado ' + (faixa.dataset.hefRecadoClasse || '');
+          el.style.cssText = 'pointer-events:none;';
+        } else {
+          el.style.cssText = ESTILO_DO_RECADO
+            + (lugar === 'grade' ? ESTILO_NA_GRADE : (lugar === 'tarja' ? ESTILO_DA_TARJA : ''))
+            + (tom === 'sucesso' ? COR_DO_SUCESSO : '');
+        }
         el.dataset.hefTom = tom;
         n += 1;
       }
