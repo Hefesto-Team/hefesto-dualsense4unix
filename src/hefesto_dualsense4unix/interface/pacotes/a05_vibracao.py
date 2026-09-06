@@ -242,9 +242,21 @@ def _perfil_ativo(ctx: Contexto) -> dict[str, Any]:
     em `Auto` (:func:`_ressalva_da_mesa`) precisa do bloco `rumble` do MESMO
     arquivo, e duas funções abrindo o mesmo JSON no mesmo tique seriam duas
     leituras de disco por tique para responder o que uma já tinha na mão.
+
+    O NOME SE PERGUNTA AO DONO — costura da ONDA D, 06/09/2026, e é a metade
+    que a `PERFIL-MODO-01` não alcançou. Aqui estava::
+
+        nome = ctx.state.get("active_profile") or ""
+        return _perfil.ativo(nome) if nome else {}
+
+    O `if nome else {}` DECIDIA ANTES DO DONO: com o daemon respondendo
+    ``active_profile: null`` — o estado da máquina dela — a guarda saía com `{}`
+    sem nunca chamar `perfil.ativo`, então a cura que ensinou o dono a olhar
+    também o marcador em disco não chegava a esta aba. `nome_do_ativo` resolve as
+    duas pernas (o daemon primeiro, o disco depois) e devolve `""` só quando
+    ninguém está valendo — e `perfil.ativo("")` já responde `{}` por si.
     """
-    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "")
-    return _perfil.ativo(nome) if nome else {}
+    return _perfil.ativo(_perfil.nome_do_ativo(getattr(ctx, "state", None)))
 
 
 def _ressalva_da_mesa(perfil: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
