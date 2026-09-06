@@ -58,34 +58,24 @@ def _rotulo_do_botao_de_consertar() -> str:
     return _html.unescape(achado.group(1)).strip()
 
 
-#: O RÓTULO DA JANELA QUE ESTÁ SAINDO, e o defeito VIVO que ele guarda.
+#: O DEFEITO QUE ESTAVA AQUI FECHOU — 06/09/2026, na costura da ONDA D.
 #:
-#: `app/actions/emulation_actions.py:1406` digita *"Consertar problemas
-#: conhecidos"* — o rótulo do `gui/main.glade`. Na aba Sistema que ela usa esse
-#: botão se chama **"Refazer os consertos automáticos"**
-#: (`interface/paginas/09-sistema.html`), então a mensagem do microfone manda
-#: clicar num botão que não está na tela.
+#: `emulation_actions` DIGITAVA o rótulo do botão da janela que está saindo, e a
+#: mensagem do microfone mandava clicar num botão que não está na tela dela. A
+#: `GTK-2` mediu a mesma classe no `storm_doctor` e a costura o curou (a página
+#: publicada virou a fonte nº 1 de `rotulo_do_botao`); esta linha ficou para
+#: trás por não passar por lá — era o TERCEIRO escritor do mesmo rótulo.
 #:
-#: É o defeito que a `GTK-2` mediu no `storm_doctor` (§3.2 do relatório dela),
-#: com um terceiro escritor que nenhuma régua via: a costura de 06/09 curou o
-#: `storm_doctor` (a página virou a fonte nº 1 de `rotulo_do_botao`) e **esta
-#: linha ficou para trás**, porque ela não passa por `rotulo_do_botao`.
+#: A cura não foi trocar a palavra: foi PERGUNTAR. `emulation_actions` chama
+#: `storm_doctor.rotulo_do_botao("btn_storm_fix_safe", …)`, e por isso a frase
+#: segue certa no dia em que o glade sair (GTK-3, volta 2).
 #:
-#: A cura é de UMA linha e mora em `app/actions/`, que é `nao_toca` da `GTK-3`.
-#: Enquanto ela não vier, o caso abaixo é `xfail(strict=True)`: no dia em que
-#: alguém trocar a frase, ele passa, o `strict` reprova o xpass e obriga a
-#: apagar esta marca. Instrumento que se limpa sozinho.
-_A_FRASE_AINDA_NOMEIA_O_BOTAO_DA_JANELA = (
-    "Consertar problemas conhecidos"
-    in (
-        __import__("pathlib").Path(__file__).resolve().parents[2]
-        / "src"
-        / "hefesto_dualsense4unix"
-        / "app"
-        / "actions"
-        / "emulation_actions.py"
-    ).read_text(encoding="utf-8")
-)
+#: A MARCA `xfail(strict=True)` QUE GUARDAVA ISTO SAIU JUNTO, e ela deixou uma
+#: lição: a condição dela procurava a frase velha NO FONTE do arquivo curado —
+#: então um comentário que explicasse a cura citando a frase manteria a marca
+#: ligada sobre trabalho feito. Pela sexta vez nesta casa, um comentário quase
+#: virou o defeito que descreve.
+
 
 def _install_gi_stubs() -> None:
     # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
@@ -192,18 +182,6 @@ def _wire(obj, monkeypatch):
     return toasts, ran
 
 
-@pytest.mark.xfail(
-    _A_FRASE_AINDA_NOMEIA_O_BOTAO_DA_JANELA,
-    reason=(
-        "DEFEITO VIVO, medido em 06/09/2026 (GTK-3, primeira volta): "
-        "`app/actions/emulation_actions.py:1406` manda clicar em “Consertar "
-        "problemas conhecidos”, que é o rótulo do `gui/main.glade`. Na aba "
-        "Sistema que ela usa o botão se chama “Refazer os consertos "
-        "automáticos”. A cura é uma linha, e `app/actions/` é `nao_toca` da "
-        "GTK-3 — o diff está no relatório. Curou? Apague esta marca."
-    ),
-    strict=True,
-)
 def test_mic_on_avisa_quando_quirk_ausente(monkeypatch: pytest.MonkeyPatch) -> None:
     obj = Mixin()
     _toasts, ran = _wire(obj, monkeypatch)
