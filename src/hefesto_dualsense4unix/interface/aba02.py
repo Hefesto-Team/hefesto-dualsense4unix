@@ -766,7 +766,24 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .mudo-i{width:22px;height:22px;flex:0 0 22px;border-radius:5px;cursor:pointer;
           border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
           font-size:10px;line-height:20px;text-align:center;padding:0;font-family:inherit}
-  .mudo-i.on{border-color:var(--red);color:var(--red);background:rgba(255,85,85,.1)}
+  /* AS DUAS CORES DO ♪ NÃO MORAM AQUI, e a razão é que elas PERGUNTAM A PALAVRA
+     ao dono: os seletores casam o que `mesa_viva.selo_do_mic` devolve, e um
+     seletor com a palavra digitada à mão para de casar CALADO no dia em que o
+     dono mudar de palavra. Elas estão no bloco de CSS interpolado do fim deste
+     arquivo, que é onde `SELO_ATIVO`/`SELO_MUDO` já existem.
+
+     E O ENDEREÇO DESTE COMENTÁRIO É PROSA DE PROPÓSITO — 06/09/2026: citar
+     aqui, letra por letra, a abertura daquele bloco fecharia ESTA string, e a
+     casa já pagou por isso uma vez (o aviso de 05/09 sobre o `BOOTSTRAP`, que
+     virou o defeito que descrevia, na mesma noite).
+
+     `.mudo-i.on` SAIU DAQUI — 06/09/2026, com os dois últimos escritores. Ela
+     pintava `--red` no ♪ mudo (a cor da FALHA nesta casa, sobre um alto-falante
+     calado por escolha dela) e no 🎙 do segundo card, onde a classe era do
+     GERADOR e não do aparelho — a cor congelada que a decisão 02-Q9 mandou
+     tirar. Com `alto_on` e `mic_on` fora, ela perdeu o último escritor, e é a
+     regra que este arquivo já aplicou quando o `.solta` saiu: *"CSS de elemento
+     que ninguém mais escreve é promessa esperando alguém tropeçar nela"*. */
   /* SEM POSSE, SEM GESTO. `speaker.set {muted}` é RECUSADO pelo daemon enquanto
      o volume do controle for desconhecido (`ipc_handlers.py`). Um botão que a
      tela oferece e o produto recusa é a mentira que esta aba existe para não
@@ -790,8 +807,9 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      dívida que a `05-vibracao` e a `06-navegacao` já têm com o `:empty`.
 
      QUEM CARREGA O ENDEREÇO É A LINHA, e não o botão — a razão está em
-     `linha_de_volume`: o ♪ já gasta o seu único par alvo/campo para ACENDER
-     quando o alto-falante está mudo, e um elemento aceita um alvo só. */
+     `linha_de_volume`: o ♪ já gasta o seu único par alvo/campo para dizer em
+     QUAL dos dois estados o alto-falante está (02-Q9), e um elemento aceita um
+     alvo só. */
   .vol[data-porque] .mudo-i{border-color:var(--border-sutil);
                             color:var(--texto-mudo);cursor:not-allowed}
   .vol[data-porque] .mudo-i:hover{border-color:var(--border-sutil);
@@ -1396,6 +1414,19 @@ def resumo_fechado(mic_mudo):
 SELO_ATIVO = mesa_viva.selo_do_mic(False, True)
 SELO_MUDO = mesa_viva.selo_do_mic(True, True)
 
+#: O ATRIBUTO QUE O ♪ VESTE, e ele tem UM dono porque aparece em TRÊS lugares
+#: deste arquivo — o `data-hef-atributo` do botão, o `data-som` do desenho e os
+#: dois seletores de CSS. Escrevê-lo à mão nos três é como uma folha para de
+#: casar calada: o botão passaria a pintar um atributo que regra nenhuma lê, e
+#: o ♪ ficaria para sempre na cor que o gerador escreveu.
+#:
+#: ELE PASSA A GUARDA DO PILOTO (`hefesto_vivo.atributo_escrevivel`): entra todo
+#: `data-*` que não seja `data-hef*` nem vocabulário de endereço. E ele NÃO está
+#: na lista de invisíveis do `check_o_desenho_aprovado.py`, o que está certo e é
+#: de propósito — um atributo de que o CSS pinta **é** desenho, e o portão tem
+#: de cobrar a passagem pela bancada.
+ATRIBUTO_DO_SOM = "data-som"
+
 #: O MICROFONE DESENHADO, e não um emoji: o portão `glifos` reprova
 #: `Emoji_Presentation` e o U+FE0F, e um emoji de 9px dentro de uma pílula
 #: monoespaçada herda o tamanho da fonte de emoji do sistema em vez do `9px`
@@ -1456,10 +1487,28 @@ def selo_do_microfone(mic_mudo, *, estilo=""):
 # desenhada. O preço é REAL e continua de pé — o que muda é dizer para onde ele
 # manda de verdade. (`DICA_MIC_LIBERAR` saiu junto: era o terceiro lugar deste
 # arquivo a descrever o botão.)
+#
+# E ACONTECEU DE NOVO, QUATRO DIAS DEPOIS — 06/09/2026, decisão 02-Q6. A dica
+# gêmea mandava a pessoa procurar uma JANELA ausente: ela terminava em *"a volta
+# é pela janela do aplicativo"*, e essa janela não tem lançador desde 01/09, por
+# decisão dela (*"a versão antiga não segue disponivel"* — `pyproject.toml`).  # noqa-acento: citação literal dela
+# O botão "Soltar" continua no código (`app/widgets/controller_card.py`) e nada
+# o abre. A língua desta casa proíbe em texto de tela *"qualquer frase que mande
+# a pessoa procurar um botão ou uma janela que não existe"*, e a frase "janela do
+# aplicativo" está na lista por nome.
+#
+# PARA ONDE ELA PASSA A APONTAR, e a saída foi MEDIDA antes de escrita: o
+# `mic release` (`cli/cmd_mic._ACOES_FIRMWARE`, `mic.set {muted: null}`) devolve
+# o registrador ao kernel e faz o botão do plástico voltar a valer. É o único
+# caminho que existe fora desta tela, e ele existe.
+#
+# "REINICIANDO O HEFESTO" FICA: continua verdade, e é a saída de quem não quer
+# digitar nada.
 DICA_MIC_MUDO = ("Calar no firmware do controle — apaga a luz vermelha do plástico. "
                  "A partir daqui quem manda no mudo é o Hefesto, e o botão do "
-                 "controle para de valer. Esta tela não devolve o comando: a volta é "
-                 "pela janela do aplicativo ou reiniciando o Hefesto.")
+                 "controle para de valer. Esta tela não devolve o comando: quem "
+                 "devolve é hefesto-dualsense4unix mic release, ou reiniciar o "
+                 "Hefesto.")
 # **A DICA DO ♪ DIZ O PREÇO — decisão dela, 04/09/2026 [06].** A pergunta era se
 # o alto-falante ganharia um "Devolver", e a resposta é a mesma que ela deu ao
 # gêmeo em 31/08 (o "Liberar" do microfone): *"o botão do Controle sempre
@@ -1472,10 +1521,27 @@ DICA_MIC_MUDO = ("Calar no firmware do controle — apaga a luz vermelha do plá
 # não há caminho de volta por esta tela. É menor que o do microfone porque nada
 # aqui tira o comando das mãos de quem está com o controle: não há botão de
 # alto-falante no plástico.
+#
+# A OPÇÃO QUE EU OFERECI A ELA ESTAVA MEIO ERRADA, e é o achado de 06/09/2026.
+# Ela escolheu *"Fica fora, com aviso"* (02-Q6) lendo que o aviso apontaria para
+# a janela do aplicativo completo — e essa janela não abre mais. **A decisão
+# dela fica de pé sem uma vírgula**: nenhum botão novo nasce neste card. O que
+# muda é para ONDE o aviso aponta, e agora ele aponta para um caminho que
+# existe.
+#
+# ERA BECO SEM SAÍDA, E A DEVOLUÇÃO EXISTE — medida em dois lugares:
+# `speaker.set {release: true}` no IPC (`daemon/ipc_handlers._speaker_release`)
+# e `speaker release` na porta de `cli/app.py`. O que ela devolve é o CONTROLE,
+# **não o valor** — o firmware fica com o último número que mandamos, porque
+# ninguém pode ler qual era o de antes. Isso vai DITO, porque é a diferença que
+# a própria porta escreve (`cli/cmd_speaker.py`) e é o que separa "largar" de
+# "desfazer".
 DICA_ALTO_MUDO = ("Manda zero ao alto-falante do controle, sem perder o volume "
                   "guardado. A partir da primeira escrita quem guarda o volume "
-                  "deste alto-falante é o Hefesto — o controle não o devolve, e "
-                  "esta tela não tem como largá-lo de volta.")
+                  "deste alto-falante é o Hefesto — o controle não o devolve. "
+                  "Quem larga é hefesto-dualsense4unix speaker release: ele "
+                  "devolve o controle, não o valor — o alto-falante fica com o "
+                  "último volume que o Hefesto mandou.")
 
 
 # ---------------------------------------------------------------------------
@@ -1508,8 +1574,8 @@ def linha_de_volume(campo, razao=""):
     """A abertura da `<div class="vol">` do bloco, com o endereço da recusa.
 
     **O CINZA NÃO NASCE NO BOTÃO, E A RAZÃO É O MECANISMO.** O ♪ já usa o seu
-    único par alvo/campo para ACENDER quando o alto-falante está mudo
-    (`alto-mudo`, decisão [09]), e um elemento aceita UM alvo — não há como o
+    único par alvo/campo para dizer em QUAL dos dois estados o alto-falante está
+    (`alto-mudo`, decisão [09] e 02-Q9), e um elemento aceita UM alvo — não há como o
     mesmo botão receber também a classe `apagado`. Então quem recebe o endereço
     é a LINHA: o alvo `atributo` põe `data-porque` nela quando há razão e o
     REMOVE quando não há (o ramo `vazio || t === '—'` do piloto), e o CSS
@@ -1646,15 +1712,31 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
     # mão nos dois lugares era como a cor congelou. O `mic_selo`/`mic_off` que
     # viviam aqui saíram junto — a palavra agora vem de `mesa_viva.selo_do_mic`.
     selo_do_mic = selo_do_microfone(mic_mudo, estilo=' style="margin-left:5px"')
-    mic_on   = " on"  if mic_mudo else ""
+    # O `mic_on` SAIU — 06/09/2026. Ele acendia o 🎙 de vermelho pela classe que
+    # ESTE arquivo escrevia, e o 🎙 não tem `data-campo`: o piloto nunca o
+    # visita, então a cor que o gerador punha uma vez valia para sempre. Na tela
+    # viva dela, o microfone do segundo card ficava aceso independentemente do
+    # aparelho — a mesma forma que este arquivo já nomeia no selo (*"escrevê-los
+    # à mão nos dois lugares era como a cor congelou"*).
+    #
+    # E A CURA É TIRAR A MENTIRA, NÃO ACRESCENTAR UM SINAL: quem diz o estado do
+    # microfone é o `selo_do_mic` ao lado, que é vivo e composto das quatro
+    # faces. Uma borda viva no 🎙 seria um SEGUNDO sinal para o mesmo fato, que
+    # é o que a decisão [04] desta aba recusou em 04/09 (*"não faça o pingo no
+    # cabeçalho"*).
     # OS TRÊS ESTADOS DE SOM QUE ENTRARAM POR ARGUMENTO TÊM DEFAULT, e o default
     # é o que a mesa dela responde HOJE, medido no `state_full` dos dois
-    # controles: `speaker.muted: false` (o ♪ apagado), `volume: 101/102`
+    # controles: `speaker.muted: false` (o ♪ em ATIVO), `volume: 101/102`
     # presentes (o ♪ pode ser clicado) e `mic_mudo_desejado: null` (a posse do
     # mudo é do kernel, logo não há o que Liberar). Assim a cena FIXA do mockup
     # — a que `--sem-ponte` mostra — não muda de forma nesta leva, e quem pinta
     # o valor de verdade é a ponte viva.
-    alto_on = " on" if alto_mudo else ""
+    #
+    # A PALAVRA DA CENA VEM DO DONO, e não de um literal: `SELO_ATIVO`/
+    # `SELO_MUDO` saem de `mesa_viva.selo_do_mic`, o mesmo que o pacote chama a
+    # cada tique. É o que faz o `data-som` estático do desenho e o `data-som`
+    # que o produto escreve serem a MESMA palavra — e o CSS casar nos dois.
+    alto_som = SELO_MUDO if alto_mudo else SELO_ATIVO
     # A PALAVRA É A DO PRODUTO, e o dono é `sensor_widgets.texto_toques` — o
     # mesmo que a GTK chama na mesma conta (`controller_card.py:5079`,
     # `texto_toques(1 if tocando else 0)`). Ela era `COM_TOQUE`/`SEM_TOQUE`,
@@ -1835,7 +1917,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
             {linha_de_volume("mic-porque")}
               <span class="trilho"><span class="cheio" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
               <span class="n">{mic_vol}</span>
-              <button class="mudo-i{mic_on}" data-gesto="mudo" data-mudo="microfone" title="{DICA_MIC_MUDO}">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="{DICA_MIC_MUDO}">🎙</button>
               {ponto_de_interrogacao("mic-porque")}
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -1877,7 +1959,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:{alto_v[0]}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{alto_v[0]}" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_ALTO}" title="{DICA_VOL_ALTO}"></span>
               <span class="n" data-campo="alto-num">{alto_v[0]}</span>
-              <button class="mudo-i{alto_on}" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="{SELO_MUDO}" title="{DICA_ALTO_MUDO}">♪</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DO_SOM}" {ATRIBUTO_DO_SOM}="{alto_som}" title="{DICA_ALTO_MUDO}">♪</button>
               {ponto_de_interrogacao("alto-porque", "" if alto_pode else DICA_ALTO_SEM_POSSE)}
             </div>
             <div class="rota">
@@ -2226,6 +2308,37 @@ CSS += f"""
      como a única licença para nomear um termo que o desenho não escreve. */
   .nota li.foi{{color:var(--texto-mudo);border-left:2px solid var(--border-forte);
     padding-left:9px;list-style:none;margin-left:-16px}}
+  /* ---------- O ♪ EM DUAS CORES — decisão dela, 02-Q9 ----------
+     Ela marcou *"O botão de som acende"* e digitou por cima *"Com cor
+     diferente"*; na segunda volta fechou o que isso quer dizer:
+     **borda VERDE se ligado, ÂMBAR se desligado**.
+
+     SÃO DOIS ESTADOS PINTADOS, e o que havia era um e meio: MUDO pintava
+     `--red` e ATIVO ficava com a mesma cara de "não sei". O `--red` é a cor da
+     FALHA nesta casa, e um alto-falante calado por escolha dela não é falha; o
+     âmbar é a palavra que esta janela já usa para o meio-termo — é a razão
+     escrita do `--orange` da marca de degradação, no bloco `.degradou`.
+
+     O TERCEIRO ESTADO NÃO SE DESENHA: sem `data-som` o botão fica com o
+     `.mudo-i` de base, que é o cinza de "ninguém leu o alto-falante deste
+     controle". O piloto REMOVE o atributo no `—` (o ramo `vazio || t === '—'`
+     do alvo `atributo`), então o neutro é o que sobra sozinho.
+
+     NENHUMA COR NOVA: `--green` e `--orange` já estão na folha desta página, e
+     a palavra dos seletores vem de `mesa_viva.selo_do_mic` pelo
+     `SELO_ATIVO`/`SELO_MUDO` — nunca digitada aqui. O `rgba` do fundo é o
+     mesmo `--orange` a 10 %, e é a forma que esta página já usa duas vezes
+     (a tarja de recusa a 7 %, o `.gb.on` com o `--pink` a 55 %): `var()` não
+     entra em `rgba()`, e um segundo token só para o fundo seria uma cor a mais
+     na folha para dizer a mesma coisa.
+
+     O CINZA DA RAZÃO CONTINUA VENCENDO, e por ESPECIFICIDADE e não por ordem:
+     `.vol[data-porque] .mudo-i` é (0,3,0) contra os (0,2,0) destas duas. Um
+     botão que o produto vai recusar não pode aparecer verde — conferido na
+     foto, não na conta. */
+  .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_ATIVO}"]{{border-color:var(--green);color:var(--green)}}
+  .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_MUDO}"]{{border-color:var(--orange);color:var(--orange);
+    background:rgba(255,184,108,.1)}}
 """
 
 MIOLO = f'''
@@ -2911,19 +3024,39 @@ def _conferir(doc):
         exigir(corpo.count(f'data-volume="{qual}"') == len(CONECTADOS),
                f"o deslizante de {qual} não está nos {len(CONECTADOS)} cards")
 
-    # 2g. O ♪ ACENDE POR LEITURA — decisão [09], resolvida em 04/09/2026. O
+    # 2g. O ♪ PINTA POR LEITURA — decisão [09] (04/09) e 02-Q9 (06/09). O
     #     `alto-estado` era escrito a cada tique dentro de um `<span hidden>`;
-    #     o vão saiu do desenho e quem mostra o mudo é o botão que o causa.
+    #     o vão saiu do desenho e quem mostra o estado é o botão que o causa —
+    #     e desde 02-Q9 ele mostra os DOIS estados, não só o mudo.
     exigir("alto-estado" not in corpo,
            "o `alto-estado` voltou ao desenho — ele era um valor vivo num vão "
            "invisível, e é o ♪ que mostra o mudo agora")
     alvos_do_mudo = re.findall(r'<[^>]*data-campo="alto-mudo"[^>]*>', corpo)
     exigir(len(alvos_do_mudo) == len(CONECTADOS),
-           "o ♪ perdeu o endereço `alto-mudo` — ele volta a acender pela "
-           "classe que o gerador escreveu, nunca pelo que o aparelho diz")
-    exigir(all('data-hef-alvo="classe"' in t for t in alvos_do_mudo),
-           "o `alto-mudo` perdeu o alvo `classe`: a pintura escreveria a "
-           "palavra MUDO dentro do botão, no lugar do glifo ♪")
+           "o ♪ perdeu o endereço `alto-mudo` — ele volta a pintar pelo que o "
+           "gerador escreveu, nunca pelo que o aparelho diz")
+    # A GUARDA TROCOU DE ALVO E NÃO AFROUXOU — 06/09/2026, decisão 02-Q9. Ela
+    # exigia `data-hef-alvo="classe"`, e o estrago que impede é o MESMO por
+    # qualquer caminho: sem um alvo que mexa em atributo ou classe, o
+    # `escrever()` cai no ramo de texto e a palavra `ATIVO` aparece dentro do
+    # botão, no lugar do glifo ♪. Por isso são DUAS asserções e não uma: um
+    # `exigir` só sobre o alvo deixaria a porta aberta pelo lado novo, com o
+    # `data-hef-atributo` esquecido e o piloto escrevendo num atributo de nome
+    # vazio — que a guarda do próprio piloto recusa CALADA.
+    exigir(all('data-hef-alvo="atributo"' in t for t in alvos_do_mudo),
+           "o `alto-mudo` perdeu o alvo `atributo`: a pintura escreveria a "
+           "palavra ATIVO dentro do botão, no lugar do glifo ♪")
+    exigir(all(f'data-hef-atributo="{ATRIBUTO_DO_SOM}"' in t for t in alvos_do_mudo),
+           f"o `alto-mudo` perdeu o `data-hef-atributo={ATRIBUTO_DO_SOM}`: o "
+           f"piloto recusa o nome vazio e NÃO PINTA, calado — o ♪ ficaria "
+           f"congelado na cor que o gerador escreveu")
+    # E A PALAVRA DO DESENHO TEM DE SER UMA DAS DUAS QUE O DONO DEVOLVE, senão
+    # o CSS não casa e a cor não sai do neutro em card nenhum.
+    exigir(all(re.search(rf'\s{re.escape(ATRIBUTO_DO_SOM)}="(?:{SELO_ATIVO}'
+                         rf'|{SELO_MUDO})"', t) for t in alvos_do_mudo),
+           f"o `{ATRIBUTO_DO_SOM}` do desenho não é `{SELO_ATIVO}` nem "
+           f"`{SELO_MUDO}` — a palavra deixou de vir de "
+           f"`mesa_viva.selo_do_mic` e o CSS parou de casar, sem barulho")
 
     # 3. O "· 100 % · Acordado" saiu do rótulo do alto-falante.
     exigir("Acordado" not in corpo, "o estado do alto-falante voltou ao rótulo")
