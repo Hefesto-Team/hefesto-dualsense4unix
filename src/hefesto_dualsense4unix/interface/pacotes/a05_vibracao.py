@@ -883,14 +883,60 @@ def _minha_vez() -> int:
     return _VEZ[0]
 
 
+#: A FRASE DO CONTROLE QUE CAIU ENTRE O CLIQUE E AGORA — e ela tem UM dono
+#: desde 05/09/2026, porque tem DOIS lugares de onde subir: :func:`_uniq` (o
+#: caminho DELA, pelo piloto) e :func:`_indice` (a guarda contra o broadcast,
+#: para qualquer outro chamador). Duas cópias de um texto de tela divergem na
+#: primeira edição, e esta casa já pagou por isso.
+#:
+#: ELA NÃO CITA ENDEREÇO DE RÁDIO, e é contrato: os dois portões de anonimato
+#: desta casa existem para que um MAC não saia numa frase de tela — e a frase
+#: que ela substituiu (`o controle d4:2f:… não está na mesa agora`) o citava.
+FRASE_DO_CONTROLE_QUE_SAIU = (
+    "este controle saiu da mesa entre o clique e agora. Sem o lugar dele na "
+    "lista do Hefesto não há como mirar só nele — e mandar assim faria a mesa "
+    "inteira tremer. Espere ele voltar e clique de novo.")
+
+
 def _uniq(o: dict[str, Any]) -> str:
     """O `uniq` do controle onde ela clicou. Vazio = clique solto, e recusa.
 
     `""` NÃO vira "todos": sem alvo o `rumble.set` faz BROADCAST, e um "Testar"
     sem dono sacudiria a mesa inteira. O desenho promete o contrário — *"Testar
     faz aquele controle tremer meio segundo"*.
+
+    **ELE PASSOU A SABER A DIFERENÇA ENTRE DOIS FATOS — 05/09/2026, e a decisão
+    é dela na `05-Q6`:** *"Parece erro. Não deveria ocorrer ajuste de gambiarra
+    sobre falha de produto nosso"*. Até aqui ele devolvia `""` para os dois, e
+    quem chamava escrevia a frase de UM — a do clique solto. O outro fato é o
+    controle que caiu, e a tela acusava o clique DELA por ele.
+
+    O CAMINHO MEDIDO, e ele tem quatro degraus: o ouvinte manda `controle` = o
+    assento (`p1`..`p4`), lido do `dataset.controle` da coluna
+    (`hefesto_vivo.py`); o despachante traduz assento em `uniq` contra
+    `self._mesa_de_agora`; essa mesa é `ctx.mesa`, montada **só com quem está
+    conectado** (`mesa_viva.mesa_do_estado` → `app/mesa.py`, que filtra
+    `connected`); logo, para um controle que caiu, a tradução não acha nada e o
+    gesto chega com o assento e **sem** `uniq`. **O clique DISSE em qual
+    controle** — a coluna existe na tela, e ela clicou dentro dela.
+
+    A CURA MORA AQUI, e não dentro de um gesto, porque são QUATRO os
+    chamadores: :func:`_mirar` (que serve `testar` e `parar`), :func:`forca`,
+    :func:`intensidade` e :func:`motor`. Uma cura escrita dentro de um gesto
+    deixa a próxima pessoa remedindo o mesmo defeito nos outros três — foi o que
+    esta casa pagou duas vezes em 05/09.
+
+    O CLIQUE SOLTO CONTINUA COM A FRASE DE SEMPRE: sem `controle` não há coluna,
+    e é a frase de quem chama que ensina o que fazer ("clique o botão dentro da
+    coluna…"). Ela varia por gesto de propósito — a do `forca` fala em degrau, a
+    do `motor` fala em barra —, e por isso continua com eles.
     """
-    return str(o.get("uniq") or "")
+    uniq = str(o.get("uniq") or "")
+    if uniq:
+        return uniq
+    if str(o.get("controle") or ""):
+        raise RuntimeError(FRASE_DO_CONTROLE_QUE_SAIU)
+    return ""
 
 
 def _indice(ctx: Contexto, uniq: str) -> int:
@@ -912,15 +958,31 @@ def _indice(ctx: Contexto, uniq: str) -> int:
     desta aba.** Ela era `ValueError`, e o contrato do piloto é explícito:
     `RuntimeError` leva a frase ao CARTÃO dela e `ValueError` fica no `stderr`
     de quem lançou a janela (`hefesto_vivo._recusou_dizendo` — *"quem clica na
-    janela não lê o terminal de quem a lançou"*). Este caminho é o do "Testar"
-    e do "Parar" clicados numa coluna cujo controle acabou de cair: para ela, o
-    botão não fazia nada e não explicava nada — que é a queixa *"vibração nem
-    funciona"* na forma mais barata de produzir.
+    janela não lê o terminal de quem a lançou"*). **Esta metade vale inteira.**
+
+    **A OUTRA METADE CADUCOU EM 05/09/2026, MEDIDA.** Este parágrafo dizia que
+    este era *"o caminho do 'Testar' e do 'Parar' clicados numa coluna cujo
+    controle acabou de cair"*, e não é — nem nunca foi, pelo caminho dela. A
+    prova é de duas linhas: `_indice` só roda depois de o `uniq` não ser vazio
+    (:func:`_mirar`), um `uniq` não vazio veio de `ctx.mesa`, e `ctx.mesa` está
+    **contida** em `ctx.conectados` (o piloto filtra `connected` com padrão
+    `True`; `app/mesa.py` filtra `connected` sem padrão). Então
+    :meth:`Contexto.por_uniq` sempre acha, e este `raise` **não dispara pelo
+    clique dela**. A cura de 04/09 foi entregue no ramo errado; o caminho dela é
+    o de :func:`_uniq`, que hoje sabe a diferença.
+
+    **E O `raise` FICA.** Ele é a guarda contra o broadcast para qualquer
+    chamador que não seja o piloto — um `uniq` fora da mesa devolvendo posição
+    faria a mira cair no controle ERRADO, e mirar um lugar vazio deixaria o alvo
+    ANTERIOR de pé: o tremor sairia na coluna errada, calado. Inalcançável pelo
+    piloto não é o mesmo que enfeite.
 
     E A FRASE FALA COM QUEM ESTÁ COM O CONTROLE NA MÃO, não com quem programa:
     o `ValueError` de antes dizia `o controle d4:2f:… não está na mesa agora`,
     com o endereço de rádio no meio — e é justamente o que os dois portões de
-    anonimato desta casa existem para não deixar sair.
+    anonimato desta casa existem para não deixar sair. Ela é a mesma de
+    :func:`_uniq` porque é o mesmo fato, e mora em
+    :data:`FRASE_DO_CONTROLE_QUE_SAIU`.
     """
     i = ctx.por_uniq(uniq).get("index")
     if isinstance(i, int) and not isinstance(i, bool):
@@ -928,10 +990,7 @@ def _indice(ctx: Contexto, uniq: str) -> int:
     for pos, c in enumerate(ctx.conectados):
         if str(c.get("uniq") or "") == uniq:
             return pos
-    raise RuntimeError(
-        "este controle saiu da mesa entre o clique e agora. Sem o lugar dele na "
-        "lista do Hefesto não há como mirar só nele — e mandar assim faria a "
-        "mesa inteira tremer. Espere ele voltar e clique de novo.")
+    raise RuntimeError(FRASE_DO_CONTROLE_QUE_SAIU)
 
 
 def _resposta(r: Any) -> tuple[bool, str | None]:
@@ -986,6 +1045,13 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     **AS DUAS RECUSAS SÃO `RuntimeError` — 04/09/2026.** A primeira era
     `ValueError`, e ia para o `stderr` de quem lançou a janela; ver
     :func:`_indice`, que caiu pelo mesmo motivo no mesmo dia.
+
+    **E A PRIMEIRA DELAS DEIXOU DE ACUSAR O CLIQUE DELA — 05/09/2026.** A frase
+    *"o clique não disse em qual controle"* cobre um fato só: o clique que veio
+    SEM coluna. O outro — a coluna cujo controle caiu entre o clique e agora —
+    chegava aqui com o mesmo `""` e levava a mesma frase, e o clique tinha dito
+    em qual controle. Quem separa os dois é :func:`_uniq`, que recusa antes com
+    :data:`FRASE_DO_CONTROLE_QUE_SAIU`; esta função só vê o clique solto.
     """
     uniq = _uniq(o)
     if not uniq:
@@ -1178,6 +1244,42 @@ def _nome_do_degrau(chave: str) -> str:
     return ROTULOS_DO_ORCAMENTO.get(chave) or "o degrau da mesa"
 
 
+def _degraus_que_a_tela_oferece() -> str:
+    """Os botões de força que EXISTEM, escritos como ela os lê: "A, B ou C".
+
+    **ELA NASCEU DE UMA FRASE QUE MEDIA O MUNDO DE ONTEM — 05/09/2026.** A
+    recusa do :func:`forca` mandava tentar *"em cima de um dos quatro botões
+    (Economia, Balanceado, Máximo ou Auto)"*, e desde 05/09 são **três**: o
+    `Auto` saiu da tela pela palavra dela, e `aba05.FORCA` tem os outros três. A
+    tela mandava ela procurar um botão que não está lá — a mesma família de
+    defeito que esta sprint inteira persegue.
+
+    QUANTOS SÃO NÃO SE DIGITA, e por isso a frase não conta: um numeral aqui
+    volta a envelhecer no dia seguinte, e foi exatamente assim que "quatro"
+    sobreviveu à saída do quarto botão.
+
+    QUAIS SÃO TAMBÉM NÃO SE DIGITAM. O conjunto é `RUMBLE_POLICY_MULT`
+    (`daemon/subsystems/rumble.py`) — o produto —, e o gerador do desenho
+    reprova a si mesmo se os botões da tela divergirem dele
+    (`aba05.py`, o `SystemExit` logo abaixo de `FORCA`). Os nomes saem de
+    :func:`_nome_do_degrau`, que os pede a `rumble_actions.ROTULOS_DO_ORCAMENTO`
+    — a mesma cópia pública que a janela estável usa nos toasts desta aba.
+
+    **NÃO SE IMPORTA O `aba05` PARA ISTO**, pela razão medida em
+    :func:`_nome_do_degrau`: o gerador roda `_conferir()` no corpo do módulo, e
+    importá-lo aqui faria toda carga do pacote ler o desenho da bancada e, num
+    desenho em trabalho, levantar `SystemExit` no meio da aba.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+        RUMBLE_POLICY_MULT,
+    )
+
+    nomes = [_nome_do_degrau(chave) for chave in RUMBLE_POLICY_MULT]
+    if len(nomes) < 2:
+        return "".join(nomes)
+    return f"{', '.join(nomes[:-1])} ou {nomes[-1]}"
+
+
 def _como_a_tela_le(mapa: Any) -> dict[str, Any]:
     """O mapa `controllers` do rascunho na forma CRUA que a pintura lê.
 
@@ -1337,7 +1439,7 @@ def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     if not degrau:
         raise RuntimeError(
             "este clique não disse qual degrau — tente de novo em cima de um "
-            "dos quatro botões (Economia, Balanceado, Máximo ou Auto).")
+            f"dos botões ({_degraus_que_a_tela_oferece()}).")
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
@@ -1562,7 +1664,13 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _mirar(ctx, o, p)
     ok, motivo = _resposta(p.rumble_stop_checked())
     if not ok:
-        raise RuntimeError("o Hefesto não está rodando — ligue na aba Sistema")
+        # O `motivo` É A RECUSA DO DAEMON JÁ TRADUZIDA EM FRASE DE TELA, e é
+        # para isso que a `_checked` existe (:func:`_resposta`). Até 05/09/2026
+        # ele era lido e jogado fora aqui, e a tela afirmava uma causa que
+        # ninguém mediu — "o Hefesto não está rodando" sobre um daemon vivo que
+        # recusou por outra coisa. A irmã 41 linhas acima (:func:`testar`) já
+        # fazia o certo, com o mesmo `or`: o palpite é o RECURSO, não a resposta.
+        raise RuntimeError(motivo or "o Hefesto não está rodando — ligue na aba Sistema")
     p.rumble_passthrough(True)
     if motivo:
         raise RuntimeError(motivo)
