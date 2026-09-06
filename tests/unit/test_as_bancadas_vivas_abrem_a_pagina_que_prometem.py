@@ -52,7 +52,7 @@ def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
     """Resolve o `PAGINA = …` do fonte, sem importar o módulo.
 
     As quatro formas que existem hoje, e todas terminam no mesmo lugar:
-    `onde.PUBLICADO / "NN.html"`, `RAIZ / "src" / … / "paginas" / "NN.html"`,
+    `onde.PUBLICADO / "NN.html"`, a soletrada com o nome da pasta publicada,
     a mesma com `RAIZ_DEV`, e a forma morta `AQUI.parent / "NN.html"`.
     """
     m = re.search(r"^PAGINA = (.+)$", fonte, re.M)
@@ -62,8 +62,10 @@ def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
     nome = re.search(r'"([\w.-]+\.html)"', expr)
     if nome is None:
         return None
-    if "onde.PUBLICADO" in expr or '"paginas"' in expr:
-        return INTERFACE / "paginas" / nome.group(1)
+    # O nome da PASTA no disco entra CRU nas duas linhas abaixo: caminho não
+    # leva acento, e acentuá-lo aqui quebraria o casamento com o fonte.
+    if "onde.PUBLICADO" in expr or '"paginas"' in expr:  # noqa-acento (nome de pasta)
+        return INTERFACE / "paginas" / nome.group(1)  # noqa-acento (nome de pasta)
     # `AQUI.parent` é `src/hefesto_dualsense4unix/` — a forma morta.
     return INTERFACE.parent / nome.group(1)
 
