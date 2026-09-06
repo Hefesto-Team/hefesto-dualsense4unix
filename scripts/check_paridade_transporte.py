@@ -698,8 +698,28 @@ DOMINIO_POR_SUFIXO = {
     #: `decisao-tomada` e `so-ela-decide` são causa NOSSA: um portão que aceita
     #: `AFIRMA_NAO_ACIONA` para qualquer uma delas licencia a tela a culpar o
     #: aparelho pelo que é nosso.
+    #: `nao-medido` NASCEU EM 06/09/2026, e nasceu de um erro de leitura do
+    #: coordenador: ele leu `radio_aciona = não` em `audio.alto_falante` como
+    #: *"o aparelho não faz"* e MANDOU UM AGENTE PARAR. A célula tinha
+    #: `radio_por_que_nao_aciona = divida` na coluna ao lado — o mapa estava
+    #: dizendo a coisa certa e ninguém leu as duas colunas juntas.
+    #:
+    #: Palavra dela no mesmo dia: *"Esse mapa é funcional e real. tá
+    #: desatualizado no sentido de não ter sido medido. foi e tudo funciona."*
+    #: `divida` e `nao-medido` NÃO são a mesma coisa, e a diferença é quem faz o
+    #: próximo passo: `divida` é *sabemos como, não construímos*; `nao-medido` é
+    #: *ninguém olhou para o aparelho* — e uma célula assim não autoriza
+    #: ninguém a afirmar que não funciona.
     "por_que_nao_aciona": frozenset(
-        {"", "nada-a-acionar", "decisao-tomada", "so-ela-decide", "divida", "o-aparelho-recusa"}
+        {
+            "",
+            "nada-a-acionar",
+            "decisao-tomada",
+            "so-ela-decide",
+            "divida",
+            "o-aparelho-recusa",
+            "nao-medido",
+        }
     ),
 }
 DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
@@ -1709,13 +1729,23 @@ def censo(
             # CSV que não fala desta coluna.
             por_que_nao_aciona = (linha.get(f"{lado}_por_que_nao_aciona") or "").strip()
 
-            # Regra 16 (Z6-05, 24/08/2026): `aciona = não` MEDIDO sem causa
-            # nomeada é a mesma família de "sem-mordida" aplicada à CAUSA em
-            # vez de à REDE — a régua sabe o veredito e cala sobre o motivo.
+            # Regra 16 (Z6-05, 24/08/2026): `aciona = não` sem causa nomeada é
+            # a mesma família de "sem-mordida" aplicada à CAUSA em vez de à
+            # REDE — a régua sabe o veredito e cala sobre o motivo.
+            #
+            # ELA VALIA SÓ PARA O `medido` ATÉ 06/09/2026, e era essa metade que
+            # faltava: um `não` de célula NÃO medida era o mais ambíguo de
+            # todos — podia querer dizer *"o aparelho recusa"* ou *"ninguém
+            # olhou"*, e nada obrigava a dizer qual. Foi lendo um desses que o
+            # coordenador mandou um agente PARAR um passo que funciona.
+            #
+            # Agora TODO `não` diz por quê, e para o caso de ninguém ter olhado
+            # existe a palavra que o diz: `nao-medido`. O `de_onde_sei` continua
+            # respondendo OUTRA pergunta — *como se soube* —, e é por isso que
+            # ele saiu da condição em vez de ganhar um segundo valor.
             if (
                 "por_que_nao_aciona" in pares
                 and aciona == ACIONA_NAO
-                and de_onde_sei == DE_ONDE_SEI_FORTE
                 and not por_que_nao_aciona
             ):
                 achados.append(
@@ -1725,10 +1755,12 @@ def censo(
                         numero,
                         ident,
                         lado,
-                        f"`{lado}_aciona = {ACIONA_NAO}` com `{lado}_de_onde_sei = "
-                        f"{DE_ONDE_SEI_FORTE}` e `{lado}_por_que_nao_aciona` está "
-                        "vazia: a régua sabe que não aciona e não sabe de quem é "
-                        "a culpa. Preencha com uma das causas do domínio "
+                        f"`{lado}_aciona = {ACIONA_NAO}` e "
+                        f"`{lado}_por_que_nao_aciona` está vazia: a régua sabe "
+                        "que não aciona e não sabe de quem é a culpa — nem se "
+                        "alguém chegou a olhar. Se ninguém mediu, a palavra é "
+                        "`nao-medido`, e ela NÃO autoriza dizer que o aparelho "
+                        "não faz. Preencha com uma das causas do domínio "
                         f"({sorted(DOMINIO_POR_SUFIXO['por_que_nao_aciona'] - {''})})",
                     )
                 )
