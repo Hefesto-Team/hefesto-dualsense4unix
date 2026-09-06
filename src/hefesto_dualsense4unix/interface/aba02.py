@@ -53,6 +53,12 @@ from pacotes.a02_controles import texto_do_xy as _texto_do_xy
 # viva diriam coisas diferentes na primeira edição de uma das duas.
 from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
                                    DICA_DA_LUZ as DE_QUEM_E_A_LUZ)
+# O SUFIXO DO CANAL, pela mesma lei: `sufixo_do_canal` é quem o produto chama a
+# cada tique, e a cena do desenho tem de dizer a MESMA coisa. Digitar
+# `· acordado` aqui seria a segunda gramática do mesmo fato — e ela divergiria
+# em silêncio no dia em que o dono (`audio_saida.estado_do_canal`) trocasse de
+# palavra, porque um texto que não casa não dá erro nenhum.
+from pacotes.a02_controles import sufixo_do_canal as _sufixo_do_canal
 # A GEOMETRIA DO PONTINHO TAMBÉM É DO PACOTE, e pela mesma razão do
 # `ROTULO_DO_CLIQUE`: a folha que o produto escreve a cada tique
 # (`a02_controles.folha_das_posicoes`) e a folha que este gerador escreve uma
@@ -918,6 +924,71 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      atributo, e não há caminho em que o `?` apareça sem o botão estar apagado. */
   .vol:not([data-porque]) .ajuda.porque{display:none}
 
+  /* ---------- OS SELOS DO SOM (linhas 89 e 90 da paridade) ----------
+     OS DOIS MORAM NO RÓTULO DA MOLDURA, e a razão é a MESMA medida na GTK: o
+     rótulo é o único lugar deste bloco que custa ZERO altura. Um rótulo NOVO
+     custava 19px, e 19px estouram o orçamento do card (`ALTURA_DO_CARD`) —
+     medido lá em 16/08/2026, na `SOM-ACORDADO-01`, e a conta não mudou de lado.
+
+     O SUFIXO É LEITURA DE RELANCE e vale para os dois estados; o SELO é o
+     ALARME, e por isso existe só no estado ruim. Um selo dizendo "acordado" em
+     toda sessão normal gastaria pixel para não informar nada.
+
+     A COR DO SELO É A `--orange`, e não a `--red`: as duas palavras que ele
+     pode dizer descrevem estados do SISTEMA que explicam um silêncio, não
+     falhas do produto. `--red` nesta casa é a cor da falha, e ela já saiu do ♪
+     em 06/09 justamente por dizer "quebrou" sobre uma escolha dela.
+
+     E AS PALAVRAS NÃO SE ESCREVEM AQUI, nem para explicar: a folha vai INTEIRA
+     para dentro da página, e um comentário que as citasse punha o alarme no
+     desenho parado — a régua que cobra "o selo nasce apagado" leria o próprio
+     comentário e daria vermelho sobre nada. É a cicatriz de 05/09, quando um
+     aviso citou o padrão que descrevia e virou o defeito, na mesma noite.
+
+     OS TRÊS JEITOS DE SUMIR são os mesmos do `?` da folha das dez: o marcador
+     `.nada` que o pacote manda em TODO tique, a dica vazia, e o `:empty`. O
+     marcador é preciso porque `escrever()` troca valor vazio por travessão —
+     sem ele, "não há canal a descrever" vira um `—` solto no rótulo. */
+  .rot .canal{font-weight:400;color:var(--texto-mudo);margin-left:2px}
+  .rot .selo-som{font-size:9.5px;font-family:'JetBrains Mono',monospace;
+    padding:1px 6px;border-radius:3px;background:var(--orange);
+    color:var(--app-bg);font-weight:600;vertical-align:1px;line-height:1.5;
+    margin-left:3px}
+  .rot .canal:has(.nada),.rot .selo-som:has(.nada){display:none}
+  .rot .canal:empty,.rot .selo-som:empty{display:none}
+
+  /* ---------- A GUARDA SEM ENDEREÇO (linha 57 da paridade) ----------
+     SEM MAC, TODO COMANDO DE SOM DESTE CARD CAI NO CONTROLE PRIMÁRIO — outro
+     controle, com o título deste na frente. Foi o estrago medido em 04/08/2026,
+     e a GTK impede ANTES do clique enquanto esta tela só recusava DEPOIS.
+
+     O CINZA E A RAZÃO VÊM DO MESMO CAMPO: o alvo `atributo` põe o `title` na
+     MOLDURA quando não há endereço e o REMOVE quando ele aparece, e a folha
+     apaga as peças por `[title]`. É a forma do `.degradou[title]` desta mesma
+     aba, e ela é o que impede um bloco apagado sem explicação — que seria um
+     defeito do mesmo tamanho do que a guarda cura: ela leria "o produto
+     quebrou".
+
+     **O SELETOR É PRESO AO `data-bloco`, e isso não é zelo:** a moldura do LED
+     do jogador tem um `title` FIXO no desenho, e um `.moldura[title]` solto
+     apagaria aquele bloco em todo card, para sempre.
+
+     A LEITURA FICA LIGADA: `opacity` só nas linhas que MANDAM (o volume, o
+     mudo, a rota, o modo do mic). A onda, os rótulos e o selo do microfone
+     contam o que o daemon publicou sobre ESTE controle e continuam verdadeiros
+     sem endereço nenhum. E é `opacity`, não `display`: apagar tiraria a altura
+     e o card mudaria de tamanho conforme a mesa. */
+  .moldura[data-bloco="microfone"][title] .vol,
+  .moldura[data-bloco="microfone"][title] .rota,
+  .moldura[data-bloco="alto-falante"][title] .vol,
+  .moldura[data-bloco="alto-falante"][title] .rota{opacity:.45}
+  .moldura[data-bloco="microfone"][title] .mudo-i,
+  .moldura[data-bloco="microfone"][title] .puxa-vol,
+  .moldura[data-bloco="microfone"][title] .rota button,
+  .moldura[data-bloco="alto-falante"][title] .mudo-i,
+  .moldura[data-bloco="alto-falante"][title] .puxa-vol,
+  .moldura[data-bloco="alto-falante"][title] .rota button{cursor:not-allowed}
+
   /* ---------- A MARCA DA EMULAÇÃO DEGRADADA (decisão [07]) ----------
      Decisão dela, 04/09/2026: *"uma marca na palavra e o motivo no hover"*.
 
@@ -1429,7 +1500,16 @@ def identidade(c, *, bat, carga=None, meio=""):
         "nome": f'<span data-campo="peca">{c["nome"]}</span>',
         "via": f'<span data-campo="via">{via_na_tela}</span>',
     }
-    return f'''          <span class="card-nome"><span class="so-fechado">P{c["jogador"]}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}</span>
+    # QUAL GAMEPAD VIRTUAL ESTE CONTROLE ALIMENTA — linha 45 da paridade, e o
+    # `title` é o mesmo desenho da GTK: a dica pende do NOME do card, aparece
+    # sob o cursor e custa zero pixel. Uma linha nova aqui empurraria os quatro
+    # cards da mesa dela, e o cabeçalho desta aba é o mais cheio da tela.
+    #
+    # ELE NASCE SEM `title` DE PROPÓSITO: quem monta o par físico↔virtual é o
+    # serviço, e um par cravado no desenho afirmaria uma alocação que o mockup
+    # não tem como saber. O produto o escreve no primeiro tique; sem par, o
+    # alvo `atributo` remove o `title` e nada aparece.
+    return f'''          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P{c["jogador"]}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}</span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão dela,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -1841,6 +1921,45 @@ def linha_de_volume(campo, razao=""):
             f' data-hef-atributo="data-porque"{porque}>')
 
 
+# ---------------------------------------------------------------------------
+# O SUFIXO DO CANAL — linha 90 da paridade, e ele é DOIS elementos
+# ---------------------------------------------------------------------------
+# A FORMA É A DO `giro-no-jogo` desta mesma aba: o de FORA veste o `title` (o
+# porquê inteiro), o de DENTRO recebe o texto curto. Um elemento aceita UM alvo,
+# e aqui há duas coisas a escrever sobre o mesmo fato — o estado e a razão.
+#
+# **DOIS `data-campo` DIFERENTES PARA O MESMO FATO, e é de propósito**, ao
+# contrário do `giro-no-jogo`: o estado (`alto-canal`) e o porquê
+# (`alto-canal-porque`) são frases distintas com donos distintos —
+# `sufixo_do_canal` e `dica_do_canal` —, e a segunda cresce com a REGRA do
+# WirePlumber, que a primeira não conhece. O que não pode divergir é a
+# EXISTÊNCIA delas, e não pode: as duas nascem do mesmo `sono`, e a régua desta
+# sprint cobra que as duas apaguem juntas.
+#
+# A CENA DO DESENHO É O CASO NORMAL: no cabo o sink existe e o drop-in 54 o
+# mantém acordado, então `· acordado` é o que ela vê na maioria das sessões.
+# **No rádio não entra sufixo nenhum** — o DualSense não publica placa ALSA por
+# rádio (medido em 15/08/2026: a placa segue o transporte), e escrever
+# "acordado" a partir de ausência prometeria que o som sai inteiro num controle
+# que não tem por onde tocá-lo. Um desenho em que o controle do rádio dissesse
+# "acordado" ensinaria de volta exatamente essa mentira.
+#
+# O SELO É OUTRA COISA E NASCE APAGADO: ele é o ALARME (`Saída muda` /
+# `Canal dormindo`), e um alarme cravado no desenho acenderia sobre um controle
+# que ninguém mediu. O produto o acende no primeiro tique em que houver o quê.
+def sufixo_do_canal(c):
+    """O sufixo `· acordado` do rótulo da moldura, na cena aprovada.
+
+    A PALAVRA VEM DO PRODUTO (`a02_controles.sufixo_do_canal`), não daqui — ver
+    o bloco acima. O que este arquivo decide é a CENA: qual controle aparece
+    com canal lido no desenho parado.
+    """
+    sono = "acordado" if c.get("transporte") == "usb" else ""
+    return ('<span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo"'
+            ' data-hef-atributo="title"><span data-campo="alto-canal"'
+            f' data-hef-alvo="html">{_sufixo_do_canal(sono) or NADA_A_DIZER}</span></span>')
+
+
 def ponto_de_interrogacao(campo, razao=""):
     """O `?` da razão — a mesma marcação da peça das dez, com o mesmo `.nada`.
 
@@ -2118,7 +2237,8 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
         </div>
 
         <div>
-          <div class="moldura" data-bloco="microfone">
+          <div class="moldura" data-bloco="microfone"
+               data-campo="som-sem-endereco" data-hef-alvo="atributo" data-hef-atributo="title">
             <!-- O "LIBERAR" SAIU — 30/08/2026, e o argumento é dela, não meu:
                  *"o botão do Controle sempre controla a interface, por isso não faz
                  sentido o liberar ali"*.
@@ -2195,8 +2315,11 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               </span>
 
           </div>
-          <div class="moldura" style="margin-top:9px" data-bloco="alto-falante">
+          <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
+               data-campo="som-sem-endereco" data-hef-alvo="atributo" data-hef-atributo="title">
             <div class="rot">Alto-falante
+              {sufixo_do_canal(c)}
+              <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html">{NADA_A_DIZER}</span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
                 <b>Todo o som do PC</b> manda tudo, inclusive notificação.

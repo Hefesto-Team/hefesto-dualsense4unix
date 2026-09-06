@@ -80,6 +80,12 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     mascara_viva,
     palavra_do_transporte,
 )
+from hefesto_dualsense4unix.app.fala_do_mapa import (
+    AFIRMA_NADA,
+    Fala,
+    frase_de_exibicao,
+)
+from hefesto_dualsense4unix.app.fatos_do_mapa import FATOS
 from hefesto_dualsense4unix.app.ipc_bridge import (
     alvo_honrado,
     frase_do_ato_do_microfone,
@@ -89,12 +95,21 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     ALL_BUTTONS,
     CANAL_SONS_DO_JOGO,
     CANAL_TODO_O_PC,
+    DICA_AUDIO_SEM_ENDERECO,
+    DICA_CANAL_ACORDADO,
+    DICA_CANAL_DORMINDO,
+    DICA_CANAL_E_PADRAO,
+    DICA_CANAL_SEM_A_REGRA,
     L2_R2_THRESHOLD,
     ROTA_DO_CANAL,
+    TEXTO_AUDIO_SEM_ENDERECO,
+    TEXTO_SELO_CANAL_DORMINDO,
+    TEXTO_SELO_SAIDA_MUDA,
     _markup_xy,
     acao_mic,
     acao_speaker_mudo,
     accel_do_inputs,
+    dica_do_titulo,
     frase_do_alvo_do_mic,
     gyro_do_inputs,
     rotulo_lightbar,
@@ -102,6 +117,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     speaker_do_entry,
     texto_motion,
     touchpad_do_inputs,
+    uniq_do_entry,
 )
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     ESCALA_ACCEL_G,
@@ -1133,6 +1149,76 @@ def _ler_a_camada_1(entradas: tuple[tuple[str, int | None], ...],
     return lido
 
 
+# ---------------------------------------------------------------------------
+# A TERCEIRA LEITURA DA MESMA VOLTA — o SONO do canal (linha 90 da paridade)
+# ---------------------------------------------------------------------------
+# O DONO NA JANELA GTK é o método do card que recebe o estado do canal de FORA
+# (`controller_card`, o par `estado` + `regra_instalada`), e ele NÃO vai ao
+# sistema por conta própria: quem lê o PipeWire lá é a `status_actions`, uma vez
+# por ciclo, para todos os cards. Aqui a disciplina é a mesma e o lugar já existia — o
+# `renovar` da `_camada_1`, que já paga um `pactl` a cada dois segundos. Uma
+# thread nova para a mesma família de pergunta seria o segundo leitor de
+# PipeWire desta aba, que é a classe de defeito que a `_camada_1` inteira existe
+# para não cometer.
+#
+# SÃO DOIS FATOS, e a diferença é a metade que importa (SOM-ACORDADO-01): o
+# ESTADO diz se o nó está acordado AGORA; a REGRA (o drop-in 54 do WirePlumber)
+# diz se ele está acordado POR PADRÃO. Um nó pode estar acordado por acaso —
+# alguém acabou de tocar algo — com a cura fora do lugar, e chamar isso de "é o
+# padrão" seria a tela dando por curado o que só está momentaneamente de pé.
+
+#: `{uniq: acordado|dormindo}` — o que a última volta disse, por controle. `""`
+#: e a chave AUSENTE são a mesma coisa: **não sei**. É o caso do rádio, em que o
+#: DualSense não publica placa ALSA nenhuma (medido em 15/08/2026 — a placa
+#: segue o transporte), e o do controle desligado no cabo.
+_SONO: dict[str, str] = {}
+
+#: O drop-in 54 está no lugar? `None` = ninguém perguntou ainda, e `None` é o
+#: que faz a dica não afirmar nem um nem outro.
+_REGRA_DO_SONO: list[bool | None] = [None]
+
+
+def _ler_o_sono(lido: dict[str, Any]) -> dict[str, str]:
+    """`{uniq: acordado|dormindo}` de quem tem sink. BLOQUEANTE — roda `pactl`.
+
+    UM `pactl` PARA A MESA INTEIRA, e não um por controle: a lista curta traz
+    todos os sinks de uma vez, e quem separa "este sink é de um DualSense" já
+    tem dono (`audio_saida`, por `mic_monitor.sinks_dualsense`). O que se
+    pergunta aqui é o ESTADO de um sink que a camada 1 já resolveu.
+
+    QUEM DECIDE A PALAVRA É `audio_saida.estado_do_canal` — o dono do parser da
+    coluna e da tradução `RUNNING`/`IDLE`/`SUSPENDED`. Reescrever a leitura aqui
+    seria o segundo vocabulário para o mesmo fato, na mesma tela.
+
+    SEM SINK NÃO ENTRA CHAVE. Um `""` gravado para o controle do rádio seria
+    indistinguível de "li e não reconheci"; a ausência é o "não sei" honesto.
+    """
+    if not lido:
+        return {}
+    try:
+        saida = audio_saida.rodar_leitura(["pactl", "list", "sinks", "short"])
+    except Exception:
+        # UMA LEITURA QUE FALHA NÃO INVENTA ESTADO: o cache fica vazio e a tela
+        # cala, que é a mesma regra do `_ler_a_camada_1` logo acima.
+        return {}
+    fora: dict[str, str] = {}
+    for uniq, rota in lido.items():
+        sink = getattr(rota, "sink_do_controle", "")
+        if sink:
+            fora[uniq] = audio_saida.estado_do_canal(saida, sink)
+    return fora
+
+
+def sono_do_canal(uniq: str) -> str:
+    """`"acordado"`, `"dormindo"` ou `""` para UM controle — do cache."""
+    return _SONO.get(uniq, "") if uniq else ""
+
+
+def regra_do_sono() -> bool | None:
+    """O drop-in 54 está instalado? `None` enquanto ninguém tiver perguntado."""
+    return _REGRA_DO_SONO[0]
+
+
 def _camada_1(entradas: tuple[tuple[str, int | None], ...],
               na_mesa: tuple[str, ...]) -> dict[str, Any]:
     """O cache da camada 1, renovado em THREAD a cada :data:`CAMADA_1_S`.
@@ -1176,8 +1262,20 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
     def renovar() -> None:
         try:
             novo = _ler_a_camada_1(entradas, na_mesa)
+            # O SONO VEM NA MESMA VOLTA, e depois da camada 1 porque é dela que
+            # sai o sink de cada controle. A regra do WirePlumber é um `isfile`
+            # e mora aqui pela mesma razão que o resto: o pintor roda a 10 Hz, e
+            # quatro `stat` por tique é trabalho de disco por nada.
+            sono = _ler_o_sono(novo)
+            try:
+                regra = audio_saida.regra_nunca_dorme_instalada()
+            except Exception:
+                regra = None
             _CAMADA_1.clear()
             _CAMADA_1.update(novo)
+            _SONO.clear()
+            _SONO.update(sono)
+            _REGRA_DO_SONO[0] = regra
         finally:
             _CAMADA_1_EM_VOO[0] = False
 
@@ -1548,12 +1646,194 @@ def porques_do_som(entry: Any) -> dict[str, str]:
     diz isso é o `title` do botão, e ele mora no gerador, ao lado do rótulo que
     explica.
     """
+    # SEM ENDEREÇO, A RAZÃO É OUTRA, E ELA VEM PRIMEIRO — linha 57 da paridade.
+    # `uniq_do_entry` é o dono da regra de identidade na GTK (`""` e `"   "`
+    # valem `None` de propósito: um endereço em branco viaja no IPC como "sem
+    # alvo" e o daemon cai no PRIMÁRIO). Perguntar aqui, e não escrever um
+    # `entry.get("uniq")` novo, é o que impede a terceira cópia da mesma regra.
+    #
+    # POR QUE ELA GANHA DA RAZÃO DA POSSE: sem endereço, o deslizante que a
+    # frase da posse manda arrastar aplicaria no controle errado. Dizer "arraste
+    # o volume ao lado" nesse estado é mandar alguém fazer o estrago.
+    if uniq_do_entry(entry) is None:
+        return {"mic-porque": DICA_AUDIO_SEM_ENDERECO,
+                "alto-porque": DICA_AUDIO_SEM_ENDERECO}
     do_mic = acao_mic(entry)
     do_alto = acao_speaker_mudo(entry)
     return {
         "mic-porque": "" if do_mic.sensivel else str(do_mic.dica),
         "alto-porque": "" if do_alto.sensivel else DICA_ALTO_SEM_POSSE,
     }
+
+
+# ---------------------------------------------------------------------------
+# OS TRÊS SELOS DO SOM — linhas 57, 89 e 90 da paridade, e o QUARTO
+# ---------------------------------------------------------------------------
+# Todos LIDOS de estado que já existe, e nenhum reescreve a regra do dono:
+#
+#   `selo_do_som`         a prioridade de `_aplicar_selo_do_som` na GTK
+#   `sufixo_do_canal`     o sufixo de `_titulo_do_speaker`
+#   `dica_do_canal`       as frases de `_frases_do_canal`
+#   `ressalva_do_transporte`  o QUARTO, e ele lê o MAPA, não a cabeça de quem
+#                             escreve (a T6 da STATUS-DIZ-O-QUE-VE-01)
+
+
+def selo_do_som(saida_muda: bool | None, sono: str) -> str:
+    """O selo do bloco: a camada 1 primeiro, o canal depois, nada por fim.
+
+    A PRIORIDADE NÃO É ARBITRÁRIA, e é a mesma da GTK: ganha o fato que explica
+    o silêncio ANTES do outro. **Uma saída muda cala o som venha o canal de onde
+    vier; um canal dormindo só come o começo.** Dizer as duas coisas na mesma
+    linha seria trocar um alarme por dois avisos.
+
+    SÓ `True` ACENDE O PRIMEIRO. `False` (a saída está aberta) e `None` (não
+    sabemos) mostram a mesma coisa — nada —, porque um selo "saída viva" seria
+    ruído em cima do que a barra já diz.
+
+    E O SELO SÓ EXISTE NO ESTADO RUIM, ao contrário do sufixo: um selo dizendo
+    "acordado" em toda sessão normal gastaria pixel para não informar nada.
+    """
+    if saida_muda is True:
+        return TEXTO_SELO_SAIDA_MUDA
+    if sono == audio_saida.CANAL_DORMINDO:
+        return TEXTO_SELO_CANAL_DORMINDO
+    return ""
+
+
+def sufixo_do_canal(sono: str) -> str:
+    """`"· acordado"`, `"· dormindo"` ou `""` — o sufixo do rótulo da moldura.
+
+    A PALAVRA NÃO SE DIGITA: ela é a que `audio_saida.estado_do_canal` devolveu,
+    e é a mesma que a moldura da GTK escreve. O separador é o `·` que o rótulo
+    do card já usa entre nome e valor.
+
+    `""` É "NÃO SEI", E NÃO "ACORDADO". Sem placa de som — o caso do rádio — a
+    tela não tem o que afirmar, e escrever "acordado" a partir de ausência seria
+    prometer que o som sai inteiro num controle que não tem por onde tocá-lo.
+    """
+    return f"· {sono}" if sono else ""
+
+
+def dica_do_canal(sono: str, regra: bool | None) -> str:
+    """O porquê do canal: o estado, e se ele é o PADRÃO. `""` sem leitura.
+
+    A frase do padrão é condicionada à regra estar instalada, e a condição é a
+    metade que importa — ver o bloco `A TERCEIRA LEITURA DA MESMA VOLTA`.
+    `None` não afirma nem um nem outro: ninguém perguntou ainda.
+
+    A QUEBRA É `<br><br>` E NÃO `\\n\\n` porque o destino é `innerHTML` — o alvo
+    `html` do piloto. A GTK usa `\\n\\n` no `set_tooltip_text`, que é outro
+    meio; a frase é a mesma, e as duas vêm do mesmo dono.
+    """
+    if not sono:
+        return ""
+    frases = [DICA_CANAL_DORMINDO if sono == audio_saida.CANAL_DORMINDO
+              else DICA_CANAL_ACORDADO]
+    if regra is True:
+        frases.append(DICA_CANAL_E_PADRAO)
+    elif regra is False:
+        frases.append(DICA_CANAL_SEM_A_REGRA)
+    return "<br><br>".join(frases)
+
+
+# ---------------------------------------------------------------------------
+# O QUARTO SELO — a SEGUNDA pergunta da guarda do som: o TRANSPORTE
+# ---------------------------------------------------------------------------
+# É a T6 da STATUS-DIZ-O-QUE-VE-01, viva desde 25/08 e nunca executada. A guarda
+# do bloco de som perguntava UMA coisa (há endereço?) e o bloco tem DUAS: o
+# alto-falante deste controle **sai por este transporte**?
+#
+# A RESPOSTA VEM DO MAPA, NUNCA DA CABEÇA DE QUEM ESCREVE. A célula
+# `audio.alto_falante@dualsense` diz, no lado do rádio, `aciona=não` com causa
+# `divida` — e `divida` é NOSSA. Com ela, a única `Fala` legal é `AFIRMA_NADA`
+# com `porque=` (`app/fala_do_mapa.CAUSA_DE_FORA` admite só `nada-a-acionar` e
+# `o-aparelho-recusa`), e a frase honesta é **"o Hefesto ainda não faz"**, nunca
+# "o controle não faz". O portão `validar-fala-de-tela.py` recusa a segunda.
+#
+# E OS GESTOS NÃO APAGAM. `audio.alto_falante.rota@dualsense` é `aciona=sim` nos
+# dois lados, e o mudo do microfone é `parcial` — apagar quatro gestos por uma
+# dívida NOSSA é empurrá-la para a mão dela. O que a tela faz é DIZER.
+#
+# QUANDO A CÉLULA VIRAR, O SELO MUDA SOZINHO: `ressalva_do_transporte` LÊ
+# `FATOS`, e a régua desta sprint troca a célula num dublê e vê a frase sumir.
+# É o fluxo inteiro da PAREAMENTO-01 — a medição nova chega sozinha na tela.
+
+#: O `id` do mapa de que este selo fala. `chave@controle`, nunca a chave só.
+CHAVE_DO_ALTO_FALANTE = "audio.alto_falante@dualsense"
+
+#: A frase, e ela é uma `Fala`: declara de que célula fala, de que lado, e o que
+#: afirma. `AFIRMA_NADA` porque a causa é nossa; o `porque=` é o que impede a
+#: tela de ficar muda sem dizer de quem é a dívida.
+RESSALVA_DO_ALTO_NO_RADIO = Fala(
+    # O `id` VAI LITERAL, e não pela constante logo acima: o portão
+    # `validar-fala-de-tela.py` lê esta declaração por AST, sem importar o
+    # módulo, e um NOME em vez de um literal ele recusa — com razão, porque
+    # aí a chave passaria a depender de código que ele não executa.
+    chave="audio.alto_falante@dualsense",
+    lado="radio",
+    aba="Controles",
+    texto="Pelo rádio o Hefesto ainda não faz o som sair neste alto-falante.",
+    afirma=AFIRMA_NADA,
+    porque=(
+        "a célula do mapa diz `radio_aciona=não` com causa `divida` — a dívida é "
+        "NOSSA, não do aparelho: o alto-falante existe e ela já o ouviu (rota 3 "
+        "medida com a orelha dela em 02/08/2026). O que falta é o Hefesto montar "
+        "o caminho por rádio, e é a SOM-QUE-SAI-01 que o fecha"
+    ),
+)
+
+
+def lado_do_mapa(transporte: object) -> str:
+    """`"cabo"`, `"radio"` ou `""` — o lado do MAPA para este transporte.
+
+    QUEM CLASSIFICA É O DONO (`home_actions.palavra_do_transporte`), e o que se
+    faz aqui é só tirar o acento: a tela diz **rádio** e a coluna do mapa se
+    chama `radio`. Um segundo dicionário `{"bt": "radio", "usb": "cabo"}` aqui
+    seria a sétima gramática da mesma janela — e divergiria no dia em que o
+    daemon publicasse um transporte novo.
+
+    `""` é "não sei por onde", e com ele não se afirma nada sobre transporte.
+    """
+    palavra = palavra_do_transporte(transporte)
+    if palavra == "cabo":
+        return "cabo"
+    if palavra == "rádio":
+        return "radio"
+    return ""
+
+
+def ressalva_do_transporte(transporte: object,
+                           fatos: dict[str, Any] | None = None) -> str:
+    """A ressalva do bloco do alto-falante, LIDA da célula do mapa.
+
+    `fatos` existe para a régua trocar a célula e ver a frase trocar — é o ponto
+    de injeção, e sem ele este selo seria uma frase digitada com cara de leitura.
+
+    TRÊS CAMINHOS PARA O SILÊNCIO, e os três são o certo:
+
+    * o transporte não se sabe (`""`) — não há lado a consultar;
+    * a célula daquele lado diz `aciona=sim` — a dívida fechou, e a frase some
+      **sem ninguém tocar em código**;
+    * o `id` sumiu do mapa — a tela cala em vez de afirmar sobre uma célula que
+      não existe mais.
+    """
+    lado = lado_do_mapa(transporte)
+    if not lado:
+        return ""
+    tabela = FATOS if fatos is None else fatos
+    entrada = tabela.get(CHAVE_DO_ALTO_FALANTE)
+    if not isinstance(entrada, dict):
+        return ""
+    celula = entrada.get(lado)
+    if not isinstance(celula, dict) or celula.get("aciona") == "sim":
+        return ""
+    # SÓ O LADO DO RÁDIO TEM FRASE HOJE, e a assimetria é a do mapa: no cabo a
+    # célula diz `parcial` e o som SAI — a `A-CONFISSAO-NO-BOTAO-01` mediu o
+    # sink e o `paplay` ali. Declarar uma segunda `Fala` para o cabo seria a
+    # tela ressalvando o que ela mesma acabou de provar que funciona.
+    if lado != RESSALVA_DO_ALTO_NO_RADIO.lado:
+        return ""
+    return frase_de_exibicao(RESSALVA_DO_ALTO_NO_RADIO)
 
 
 #: A DECLARAÇÃO DELA, do `maquina.json`, lida UMA VEZ e renovada pelo gesto que
@@ -2285,7 +2565,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # E A CHAVE VAI EM TODO TIQUE, que é a instrução da folha com
                 # todas as letras: omiti-la deixaria a frase velha na tela para
                 # sempre — o defeito oposto, e pior.
-                "alto-ressalva": recado_da_rota(uniq) or NADA_A_DIZER,
+                #
+                # **ELA PASSOU A TER DOIS INFORMANTES — 06/09/2026, o QUARTO
+                # selo.** O desacordo das duas camadas vem primeiro porque é um
+                # fato de AGORA, que ela pode desfazer trocando a saída do
+                # sistema; a ressalva do transporte é uma dívida NOSSA, que
+                # nenhum clique dela resolve. Dizer as duas na mesma linha
+                # trocaria o alarme por dois avisos — a mesma regra do
+                # `selo_do_som`.
+                "alto-ressalva": (recado_da_rota(uniq)
+                                  or ressalva_do_transporte(c.get("transport"))
+                                  or NADA_A_DIZER),
                 "mic-modo-aceso": modo_do_mic(norm_mac(uniq) or ""),
                 # A DEGRADAÇÃO DA MÁSCARA — decisão [07], 04/09/2026: *"uma
                 # marca na palavra e o motivo no hover"*.
@@ -2353,6 +2643,45 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # deixa de descobrir a recusa DEPOIS do clique — que é a
                 # queixa inteira da D-03.
                 **porques_do_som(c),
+                # A METADE VISÍVEL DA GUARDA SEM ENDEREÇO — linha 57. Os dois
+                # `?` acima já dizem POR QUÊ; o que falta é o que a GTK faz
+                # ANTES do clique: apagar as peças que MANDAM som. Um campo só,
+                # nos DOIS blocos (o `achar()` do piloto visita os dois com o
+                # mesmo valor), e o alvo `atributo` REMOVE o atributo quando o
+                # endereço aparece — a volta acontece sozinha, sem a guarda ter
+                # de lembrar quem ela apagou.
+                #
+                # ELE NÃO REUSA `alto-porque`, e a diferença é medida: aquele
+                # campo também acende no estado SEM POSSE, e ali o deslizante é
+                # justamente o que ela tem de arrastar para destravar o ♪.
+                # Apagá-lo naquele estado seria trancar a única saída.
+                #
+                # A LEITURA FICA LIGADA DE PROPÓSITO — a barra, o medidor de
+                # ondas e os rótulos contam o que o daemon publicou sobre ESTE
+                # controle, e continuam verdadeiros sem endereço nenhum. Quem
+                # mente sem endereço é o COMANDO.
+                "som-sem-endereco": (
+                    "" if uniq_do_entry(c) is not None else TEXTO_AUDIO_SEM_ENDERECO
+                ),
+                # QUAL GAMEPAD VIRTUAL ESTE CONTROLE ALIMENTA — linha 45, e a
+                # frase inteira é do dono (`dica_do_titulo`), inclusive o "ainda
+                # não alimenta gamepad virtual nenhum" e o nome REAL do vpad
+                # quando ele diverge do número da fila.
+                #
+                # É DICA E NÃO LINHA, pela mesma razão que na GTK: o endereço é
+                # diagnóstico, não vocabulário de interface, e o cabeçalho do
+                # card não tem largura sobrando. `None` (sem endereço, daemon
+                # velho sem a lista, controle fora da mesa) vira `""`, e o alvo
+                # `atributo` some com o `title` em vez de inventar um par.
+                "card-vpad": dica_do_titulo(c, getattr(ctx, "state", None) or {}) or "",
+                # O SELO, O SUFIXO E O PORQUÊ DO CANAL — linhas 89 e 90. Os três
+                # saem do mesmo par de fatos (`saida_muda` da camada 1 e o sono
+                # do sink), e os três são LEITURA: nenhum deles oferece botão.
+                "alto-selo": (selo_do_som(saida_muda_do_entry(c), sono_do_canal(uniq))
+                              or NADA_A_DIZER),
+                "alto-canal": sufixo_do_canal(sono_do_canal(uniq)) or NADA_A_DIZER,
+                "alto-canal-porque": (dica_do_canal(sono_do_canal(uniq), regra_do_sono())
+                                      or NADA_A_DIZER),
             }),
         }
     # OS VALORES QUE VALEM PARA A PÁGINA INTEIRA, e não por card. Os três nasceram
