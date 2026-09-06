@@ -36,7 +36,14 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
 # no mesmo `data-campo`. Nenhuma das duas se digita aqui.
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.app.widgets.controller_card import texto_motion
-from pacotes.a02_controles import ROTULO_DO_CLIQUE, meias_da_barra as _meias_da_barra
+# A PALAVRA DO ESTADO DE CARGA É DO PACOTE — BATERIA-ICONE-01, 06/09/2026, e
+# pela mesma lei do cabeçalho: quem a escreve na tela viva é o produto, a cada
+# tique. O desenho a pergunta para desenhar o MESMO texto no `title` e para
+# montar as regras de folha que casam com ele — se o gerador digitasse as
+# palavras, a folha pararia de casar com o produto na primeira troca de língua,
+# e o ícone sumiria CALADO (a regra do CSS deixaria de casar, sem erro nenhum).
+from pacotes.a02_controles import ROTULO_DO_CLIQUE, carga_na_tela
+from pacotes.a02_controles import meias_da_barra as _meias_da_barra
 from pacotes.a02_controles import texto_do_xy as _texto_do_xy
 # AS DUAS FRASES DE TELA QUE O PRODUTO PINTA — e por isso o dono delas é o
 # PACOTE, pela lei do cabeçalho deste arquivo. `DICA_DA_LUZ` vai para o `title`
@@ -385,6 +392,26 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .bat .trilho{flex:1;height:6px;border-radius:3px;background:var(--border-forte);position:relative}
   .bat .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .bat .n{font-family:'JetBrains Mono',monospace;color:var(--fg);flex:0 0 42px;text-align:right}
+  /* O ÍCONE DO ESTADO DE CARGA — BATERIA-ICONE-01, 06/09/2026. Ver
+     `selo_da_carga` para as duas metades da decisão dela.
+
+     O VÃO É FIXO E EXISTE SEMPRE (`flex:0 0 13px`), com ou sem ícone: o `.bat`
+     tem base fixa (`var(--larg-bateria)`) e o trilho é o `flex:1` que absorve o
+     resto, então um ícone que só às vezes ocupasse deixaria as barras de
+     bateria com larguras DIFERENTES entre as linhas — que é exatamente o
+     defeito que ela mandou curar em 27/08, quando 31% desenhava mais que 64%.
+     Assim as quatro continuam comparáveis, com ou sem carga a anunciar.
+
+     AS TRÊS FORMAS FICAM NO HTML E DUAS SE ESCONDEM. Sem `data-carga` — que é
+     o que o piloto escreve quando não há estado — nenhuma regra casa e o vão
+     fica vazio: o silêncio é a resposta certa para `descarregando`, onde o
+     número ao lado já diz tudo. */
+  .bat .carga{flex:0 0 13px;height:13px;display:flex;align-items:center;
+              justify-content:center}
+  .bat .carga-i{display:flex;align-items:center;justify-content:center;
+                width:13px;height:13px}
+  .bat .carga-i svg{display:none}
+  .ctl[data-conectado="nao"] .bat .carga-i svg{display:none !important}
   /* A LINHA DE IDENTIDADE É UMA SÓ, E AGORA É UM ELEMENTO SÓ. `.faixa` é a
      linha do card aberto E a tira do fechado: o que muda entre as duas é a
      CAIXA, nunca o conteúdo. Card e tira não podem discordar sobre quem é o
@@ -1314,7 +1341,7 @@ def sensores_da_peca(c):
           </span>'''
 
 
-def identidade(c, *, bat, meio=""):
+def identidade(c, *, bat, carga=None, meio=""):
     """A LINHA DE IDENTIDADE, e ela é UMA SÓ.
 
     Sai daqui a linha das quatro caixas — a do controle aberto e a dos fechados,
@@ -1484,7 +1511,7 @@ def identidade(c, *, bat, meio=""):
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
               data-hef-alvo="largura" style="width:{bat}%"></span></span>
-            <span class="n" data-campo="bateria">{bat}%</span></span>'''
+            <span class="n" data-campo="bateria">{bat}%</span>{selo_da_carga(carga)}</span>'''
 
 
 def resumo_fechado(mic_mudo):
@@ -1569,6 +1596,91 @@ ATRIBUTO_DO_SOM = "data-som"
 #: que o selo pede. O SVG usa `currentColor`, então ele acompanha as duas cores
 #: do selo sem uma segunda declaração — e sem um hex de plástico digitado, que
 #: `check_cores_do_dualsense` reprova nos geradores.
+# ---------------------------------------------------------------------------
+# O ÍCONE DO ESTADO DE CARGA — BATERIA-ICONE-01, 06/09/2026.
+#
+# **DECISÃO DELA, verbatim:** ver `FRASE_DELA`, logo abaixo — a grafia é dela
+# e não se corrige. A palavra e as duas metades da decisão estão em
+# `pacotes/a02_controles`, no bloco `O ESTADO DE CARGA AO LADO DO PERCENTUAL`;
+# aqui está só o DESENHO — as três formas e a folha que escolhe qual aparece.
+#
+# TRÊS FORMAS PARA QUATRO ESTADOS, e a repetição é de propósito: `fora_de_faixa`
+# e `erro` compartilham o triângulo porque a consequência para quem olha é a
+# mesma (*o número ao lado não vale*), e o que os separa é a palavra do `title`.
+#
+# AS TRÊS FICAM SEMPRE NO HTML e a folha esconde duas — o piloto só escreve
+# ATRIBUTO (`data-carga`), nunca HTML. Trocar a forma pela pintura exigiria um
+# alvo `html`, que a régua do mockup lê pelo TEXTO VISÍVEL e que num `<svg>` é
+# vazio dos dois lados: o endereço passaria a ser INDECIDÍVEL para sempre.
+#: A FRASE DELA, verbatim e com a grafia dela — 06/09/2026. Ela mora numa
+#: constante porque a legenda a MOSTRA e dois comentários a citam: três cópias
+#: de uma citação são três chances de alguém "arrumá-la".
+FRASE_DELA = "icone mas no radio ele pode tá carregando tambem"  # noqa-acento: citação literal dela
+
+_RAIO = ('<svg class="g-raio" viewBox="0 0 24 24" width="11" height="11"'
+         ' aria-hidden="true" focusable="false">'
+         '<path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></svg>')
+_CHEIO = ('<svg class="g-cheio" viewBox="0 0 24 24" width="11" height="11"'
+          ' aria-hidden="true" focusable="false">'
+          '<path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor"'
+          ' stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'
+          '</svg>')
+_ATENCAO = ('<svg class="g-atencao" viewBox="0 0 24 24" width="11" height="11"'
+            ' aria-hidden="true" focusable="false">'
+            '<path d="M12 3 22 20H2z" fill="none" stroke="currentColor"'
+            ' stroke-width="2" stroke-linejoin="round"/>'
+            '<path d="M12 9.5v4.5" fill="none" stroke="currentColor"'
+            ' stroke-width="2" stroke-linecap="round"/>'
+            '<circle cx="12" cy="17" r="1.15" fill="currentColor"/></svg>')
+
+#: QUAL FORMA CADA ESTADO ACENDE. A chave é a palavra do DAEMON
+#: (`backend_pydualsense.ESTADO_DE_CARGA`), não a da tela: assim a folha que sai
+#: daqui casa com o que o produto escreve, porque as duas passam pelo mesmo
+#: `carga_na_tela`. `descarregando` não está na tabela — é a ausência, e é a
+#: decisão dela lida ao pé da letra.
+GLIFO_DA_CARGA = {"carregando": "g-raio", "cheio": "g-cheio",
+                  "fora_de_faixa": "g-atencao", "erro": "g-atencao"}
+
+#: A COR DE CADA FORMA. Verde para o que está acontecendo bem (carregando,
+#: cheio) e laranja para o que pede olho — os mesmos dois tons que os chips de
+#: sensor e o aviso de máscara desta aba já usam.
+_TOM_DA_CARGA = {"g-raio": "var(--green)", "g-cheio": "var(--green)",
+                 "g-atencao": "var(--orange)"}
+
+#: OS TRÊS DESENHOS, na ordem em que entram no HTML de todo card.
+GLIFOS_DA_CARGA = _RAIO + _CHEIO + _ATENCAO
+
+
+def selo_da_carga(estado):
+    """O ícone do estado de carga, com o nome acessível no `title`.
+
+    DOIS ELEMENTOS, UM ENDEREÇO SÓ — a mesma gramática do `giro-no-jogo` e do
+    selo do microfone desta faixa: o `achar()` do piloto visita os dois com o
+    MESMO valor e cada um decide pelo próprio alvo.
+
+    * o de FORA veste o `title` — que é o **nome acessível** do ícone. Sem ele,
+      quem não reconhece o desenho (ou não enxerga) fica sem o dado, e o card
+      volta a ter só o número — que é o estado de ontem;
+    * o de DENTRO veste o `data-carga`, e é ele que a folha lê para escolher a
+      forma. Vazio APAGA os dois (o alvo `atributo` do piloto remove o atributo
+      quando o valor é vazio), e sem `data-carga` a folha esconde as três.
+
+    O VÃO FICA RESERVADO MESMO SEM ÍCONE (`flex:0 0 13px` no `.carga`), e isso é
+    leitura, não capricho: as quatro barras de bateria têm de ter a MESMA
+    largura — decisão dela, medida em 27/08, quando trilhos de 312, 60, 35 e
+    139px faziam 31% desenhar mais que 64%. Um ícone que ora ocupa e ora não
+    devolveria o defeito por outra porta, uma linha de cada vez.
+    """
+    palavra = carga_na_tela(estado)
+    titulo = f' title="{palavra}"' if palavra else ""
+    marca = f' data-carga="{palavra}"' if palavra else ""
+    return (f'<span class="carga" data-campo="bateria-carga"'
+            f' data-hef-alvo="atributo" data-hef-atributo="title"{titulo}'
+            f'><i class="carga-i" data-campo="bateria-carga"'
+            f' data-hef-alvo="atributo" data-hef-atributo="data-carga"{marca}'
+            f'>{GLIFOS_DA_CARGA}</i></span>')
+
+
 MIC_SVG = ('<svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true"'
            ' focusable="false">'
            '<rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/>'
@@ -1822,7 +1934,7 @@ DICA_VOL_ALTO = ("Arraste para escolher o volume do alto-falante deste controle.
 # devolvia `False`.
 
 
-def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
+def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           # `estado_alto` NÃO DESENHA NADA DESDE 04/09/2026 (decisão [09]): o
           # `<span class="mudo" data-campo="alto-estado" hidden>` que o recebia
           # saiu do desenho, e quem mostra o mudo do alto-falante é o próprio ♪,
@@ -1914,7 +2026,7 @@ def bloco(c, *, bat, glifos_on, l2, r2, touch, sticks,
     # estourar. Ver o comentário do bloco, abaixo.
     accel_html = chr(10).join(gx("accel", e, v, cor) for e, v, cor in (accel or []))
     fx = f'''      <label class="faixa" for="{rid}" title="{ABRE_O_CARD}">
-{identidade(c, bat=bat, meio=resumo_fechado(mic_mudo))}
+{identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo))}
       </label>'''
     return f'''    <div class="ctl card" style="--plastico:{plastico}" data-controle="{c.get("uniq") or c["pref"]}">
       <!-- O ACORDEÃO GANHOU O DÉCIMO ALVO — T-07, 04/09/2026. A ONDA0-P
@@ -2204,7 +2316,7 @@ PARADO = [("X", "  +0.0", "left:50%;width:1%;background:var(--border-forte)"),
           ("Z", "  +0.0", "left:50%;width:1%;background:var(--border-forte)")]
 
 ESTADO = {
-  "p1": dict(bat=100, estado_alto="Acordado",
+  "p1": dict(bat=100, carga="cheio", estado_alto="Acordado",
     mic_vol=80, glifos_on={"cross", "dpad_up", "l2"},
     l2=200, r2=40, touch=(62, 44), sticks=(60, 200, 180, 90),
     giro=[("X", "+143.2", "left:50%;width:22%;background:var(--red)"),
@@ -2225,7 +2337,8 @@ ESTADO = {
   # microfone MUDO: com a mesa cheia é o CONTRASTE que ensina a ler o card, e
   # sem um card assim a leitura nova diria "Tocando" nos quatro — inclusive nos
   # dois que estão no (50,50), que é posição de enfeite e não de dedo.
-  "p2": dict(bat=64, estado_alto="Acordado", mic_vol=0, glifos_on=set(), tocando=False,
+  "p2": dict(bat=64, carga="carregando", estado_alto="Acordado", mic_vol=0,
+    glifos_on=set(), tocando=False,
     l2=0, r2=0, touch=(50, 50), sticks=(128, 128, 128, 128),
     giro=PARADO,
     # deitado na mesa: quase toda a gravidade num eixo só
@@ -2237,7 +2350,7 @@ ESTADO = {
     mic_v=[4, 6, 5, 4, 6, 5, 4, 5, 6, 4, 5, 4, 6, 5], mic_modo="desativado", mic_mudo=True,
     alto_v=[70, 52, 66, 44, 72, 58, 48, 64, 54, 70, 46, 60, 50, 68], rota_pc=True),
 
-  "p3": dict(bat=31, estado_alto="Acordado",
+  "p3": dict(bat=31, carga="descarregando", estado_alto="Acordado",
     mic_vol=60, glifos_on={"circle"},
     l2=0, r2=18, touch=(38, 71), sticks=(128, 128, 141, 122),
     giro=[("X", " +11.4", "left:50%;width:3%;background:var(--cyan)"),
@@ -2254,7 +2367,7 @@ ESTADO = {
     mic_v=[18, 30, 22, 41, 28, 19, 35, 24, 30, 20, 38, 26, 22, 31], mic_modo="nativo", mic_mudo=False,
     alto_v=[55, 40, 62, 48, 58, 36, 50, 44, 60, 38, 52, 46, 42, 56], rota_pc=False),
 
-  "p4": dict(bat=88, estado_alto="Acordado",
+  "p4": dict(bat=88, carga="fora_de_faixa", estado_alto="Acordado",
     mic_vol=75, glifos_on={"triangle", "r1"},
     l2=12, r2=255, touch=(50, 50), sticks=(128, 128, 96, 128),
     giro=[("X", "  −8.6", "left:48%;width:2%;background:var(--cyan)"),
@@ -2424,8 +2537,26 @@ CHIP_ACESO = ",\n  ".join(f'body:has(#{r}:checked) .chip[for="{r}"]' for r in _C
 
 # O número vive no Python e desce para o CSS por variável — escrever 240 nos dois
 # lugares é convidá-los a divergir.
+# AS REGRAS DO ÍCONE DE CARGA SAEM DA TABELA, NUNCA DIGITADAS — BATERIA-ICONE-01.
+#
+# O seletor casa com a PALAVRA DE TELA (`[data-carga="Carregando"]`), que é o
+# mesmo valor que o produto escreve no atributo a cada tique. Digitar a palavra
+# aqui seria a segunda cópia dela, e a divergência seria SILENCIOSA: uma regra
+# de CSS que não casa não dá erro nenhum — o ícone simplesmente sumiria da tela
+# viva enquanto continuasse desenhado no mockup. Passando pelo `carga_na_tela`,
+# a folha muda junto com a palavra, no mesmo `python3 aba02.py`.
+#
+# ESTADO SEM PALAVRA NÃO VIRA REGRA: `descarregando` devolve `""` e cai fora do
+# `if`, que é a ausência de ícone escrita como ausência de regra.
+CSS_DA_CARGA = "".join(
+    f'  .bat .carga-i[data-carga="{carga_na_tela(estado)}"] .{classe}'
+    f"{{display:block;color:{_TOM_DA_CARGA[classe]}}}\n"
+    for estado, classe in GLIFO_DA_CARGA.items()
+    if carga_na_tela(estado)
+)
+
 CSS += f"""
-  .faixa{{--larg-bateria:{LARG_BATERIA}px}}
+{CSS_DA_CARGA}  .faixa{{--larg-bateria:{LARG_BATERIA}px}}
   {_aberto()}{{height:auto;flex:1 0 auto;padding-bottom:12px;
     background:linear-gradient(0deg,var(--sel-bg),var(--sel-bg)),var(--panel)}}
   {_aberto(" > .faixa")}{{flex:0 0 var(--h-acao);margin:10px 14px 0;padding:0 11px;
@@ -2598,6 +2729,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>E o preço, dito inteiro:</b> nesse estado o P1 aparece todo, o P2 aparece pela metade (141 px dos 301) e o <b>P3 e o P4 começam com zero pixel à mostra</b>. O que diz que eles estão ali são três coisas, e as três estão na tela: o chip <b>Todos</b> aceso, o <span class="marca">{len(MESA)} controles</span> do cabeçalho e a <b>barra de rolagem</b>, que nasce junto com a rolagem e ocupa 10 px. Foi por isso que a barra precisou de regra própria — a do Chrome é sobreposta e some quando ninguém está rolando, e aí seria o defeito de 27/08 de volta com outra roupa.</li>
     <li><b>2×2 foi medido e é pior.</b> Meio card tem 515 px de largura útil para cinco colunas que pedem 884; viraria três fileiras e cada card passaria a ~545 px de altura — aí só <b>um</b> aparece de cada vez.</li>
     <li><b>O corpo fechado não pode ser <code>display:none</code>, e o motivo é a régua.</b> Ela lê a altura de todo botão e reprova família com alturas divergentes; com <code>display:none</code> os dois botões de rota de cada card fechado medem <b>0</b>, e ela acusa <span class="marca">altura divergente em button.-: 0 / 36</span> — um defeito que só existiria porque o elemento sumiu. Com <code>height:0;overflow:hidden</code> o corpo continua <b>desenhado</b> no tamanho natural e só recortado: a régua segue medindo os <b>{len(MESA)}</b> cards por dentro, não só o que está à mostra. Ela ficou mais severa, não menos.</li>
+    <li><b>O estado de carga virou ícone, e o ícone não pergunta por onde o controle fala.</b> Você decidiu assim: <i>"{FRASE_DELA}"</i>. O <b>P2 está no rádio e aparece carregando</b> — porque o transporte diz por onde o controle <i>conversa</i> e a carga diz por onde entra <i>energia</i>, e um DualSense no rádio pode estar num cabo de energia. <b>Descarregando não ganha ícone</b>: o número ao lado já diz. O vão do ícone fica reservado mesmo vazio, senão as {len(MESA)} barras voltariam a ter larguras diferentes. Passe o mouse: o nome do estado está no ponteiro, para quem não reconhecer o desenho.</li>
     <li><b>As {len(MESA)} barras de bateria têm a mesma largura, e isso é leitura e não capricho.</b> Elas <i>esticavam</i> para ocupar o vão de cada linha, e os trilhos mediram <b>312, 60, 35 e 139 px</b>. O preenchimento é uma porcentagem do trilho: o <b>31%</b> do P3 num trilho de 35 px desenhava uma barra <b>menor</b> que o <b>64%</b> do P2 num de 60 — quatro réguas de tamanhos diferentes que o olho compara e lê errado. Agora são <b>{LARG_BATERIA} px</b> nas {len(MESA)}, e a mais apertada (a do P3) tem 13,7 px de folga.</li>
     <li><b>A conta é um portão.</b> Se um dia entrar mais controle a ponto de o card aberto não caber, o gerador <b>para</b> com o número na mão, em vez de entregar de novo uma tela que esconde controle calada.</li>
     <li><b>Cicatriz: a classe não pode se chamar <code>tira</code>.</b> <code>.tira</code> é a <b>fila de abas</b> do esqueleto (<code>topo.html:109</code>). Com a regra deste arquivo batizada assim, <code>height:34px</code> e <code>text-transform:uppercase</code> caíam na fila de abas lá em cima: o cabeçalho encolheu 8 px e o miolo desta aba mediu <b>550 px contra os 542 de todas as outras nove</b> — e a régua de alinhamento passou <b>verde</b>. A classe se chama <code>.ctl</code>.</li>
@@ -3115,6 +3247,35 @@ def _conferir(doc):
         exigir(corpo.count(f'data-campo="{campo}"') == len(CONECTADOS),
                f"a bateria perdeu o endereço `{campo}` — o número volta a ser "
                f"o do desenho")
+
+    # 2c'. O ESTADO DE CARGA TEM ÍCONE, E O ÍCONE TEM NOME — BATERIA-ICONE-01.
+    #      Decisão dela, 06/09/2026 — ver `FRASE_DELA`. As três guardas cobrem
+    #      as três formas de perder a entrega:
+    #
+    #      · sem o endereço, o ícone volta a ser pintura do mockup;
+    #      · sem os DOIS `data-hef-atributo`, o piloto escreve num atributo de
+    #        nome vazio e a guarda dele recusa CALADA — a tela ficaria com o
+    #        ícone do desenho sobre qualquer carga que o aparelho tivesse;
+    #      · sem o `title` no card do rádio, o ícone perde o nome acessível e
+    #        quem não reconhece o desenho fica sem o dado.
+    exigir(corpo.count('data-campo="bateria-carga"') == 2 * len(CONECTADOS),
+           "o estado de carga perdeu o endereço `bateria-carga` — o ícone "
+           "volta a ser o que este gerador desenhou")
+    for atributo in ("title", "data-carga"):
+        exigir(corpo.count(f'data-hef-atributo="{atributo}"') >= len(CONECTADOS),
+               f"o ícone da carga perdeu o `data-hef-atributo={atributo}`: o "
+               f"piloto recusa a pintura calada e o desenho fica congelado")
+    # E O DESENHO TEM DE MOSTRAR UM CONTROLE NO RÁDIO CARREGANDO, que é a
+    # correção de premissa dela virada cena. Sem isto a página volta a ensinar
+    # que carregar é coisa do cabo.
+    no_radio = [c for c in CONECTADOS if c.get("transporte") == "bt"]
+    exigir(bool(no_radio) and all(
+        ESTADO[c["pref"]].get("carga") == "carregando" for c in no_radio),
+        "nenhum controle no RÁDIO aparece carregando: a cena voltou a ensinar "
+        "que carregar é coisa do cabo, que é a premissa que ela corrigiu")
+    exigir(f'title="{carga_na_tela("carregando")}"' in corpo,
+           "o ícone de carregando ficou sem nome acessível — quem não "
+           "reconhece o desenho fica sem o dado")
 
     # 2d. CADA BARRA COM O SEU ALVO, e a régua deixou de contar por atacado.
     #     Ela era `corpo.count('data-hef-alvo="largura"') == len(CONECTADOS)`,

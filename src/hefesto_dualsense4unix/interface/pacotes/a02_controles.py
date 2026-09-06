@@ -39,9 +39,16 @@ que saíram daqui e voltaram para o motor.
 **E "EMITIA" NÃO É "MOSTRAVA" — a diferença foi medida em 02/09/2026 e a
 primeira redação desta linha errava.** O `alto-estado` é
 `<span class="mudo" data-campo="alto-estado" hidden>` na página publicada
-(`paginas/02-controles.html:1678` e `:2009`), e o `hidden` é LITERAL no gerador
-(`aba02.py:1691`), sem condição; o `escrever` do piloto não toca o atributo
-`hidden` em nenhum dos seus alvos. O "102%" ia para um vão invisível.
+(`paginas/02-controles.html:1678` e `:2009`), e o `hidden` era LITERAL no
+gerador, sem condição; o `escrever` do piloto não toca o atributo `hidden` em
+nenhum dos seus alvos. O "102%" ia para um vão invisível.
+
+**O ENDEREÇO DAQUELA LINHA DO GERADOR MORREU, e o número foi retirado em
+06/09/2026:** o `<span hidden>` saiu do desenho em 04/09 (decisão [09]) e o
+que resta é o comentário que registra a saída (`aba02.py:1939`). O número que
+estava aqui apontava para uma linha em branco desde a primeira edição que
+empurrou o gerador — citação de linha que sobrevive ao código que citava é
+endereço morto, e esta casa mede isso (`citacoes-no-codigo`).
 
 **O QUE ELA VÊ NO BLOCO DO ALTO-FALANTE JÁ TEM ENDEREÇO — 02/09/2026, decisão
 dela (item 16).** Eram o `<span class="n">100</span>` e a `.cheio` de
@@ -1658,6 +1665,99 @@ def texto_da_bateria(pct: int | None) -> str:
         {} if pct is None else {"battery_pct": pct})[1]
 
 
+# ---------------------------------------------------------------------------
+# O ESTADO DE CARGA AO LADO DO PERCENTUAL — BATERIA-ICONE-01, 06/09/2026.
+#
+# DECISÃO DELA, verbatim, e ela é DUAS coisas numa frase:
+#
+#     "icone mas no radio ele pode tá carregando tambem."  # noqa-acento: citação literal dela
+#
+# A primeira é a forma: **ícone, não palavra** — o card já tem o número, e uma
+# palavra ao lado dele custaria largura que a linha fechada não tem.
+#
+# A SEGUNDA É UMA CORREÇÃO DE PREMISSA, e é a razão desta sprint existir. As
+# três opções que lhe foram oferecidas estavam escritas como se CARREGAR fosse
+# coisa do cabo e o rádio fosse sempre descarregar. **Não é**: um DualSense
+# falando por rádio pode estar num cabo de energia — o transporte diz por onde
+# ele CONVERSA, e a carga diz por onde entra ENERGIA. São dois fatos, e o
+# aparelho os publica separados: o transporte sai de `_detect_transport` e a
+# carga sai do nibble alto de `states[53]`, o MESMO byte do percentual, que a
+# `pydualsense` já corrige de offset no rádio (`readInput`, `states =
+# inReport[1:]` quando BT). Nada aqui pode inferir um do outro.
+#
+#: A PALAVRA DE TELA DE CADA ESTADO, e as chaves NÃO se digitam: `carga_na_tela`
+#: as confere contra `backend_pydualsense.ESTADO_DE_CARGA`, que é o dono. Um
+#: sexto estado que o kernel publique e esta tabela não conheça reprova a régua
+#: `test_a_bateria_diz_carregando_no_radio` em vez de sumir calado da tela.
+#:
+#: **`descarregando` NÃO GANHA ÍCONE, e a ausência é a decisão**: o número ao
+#: lado já diz a carga caindo, e um ícone em todo card o tempo todo é ruído
+#: crônico — é a mesma razão pela qual o `giro-no-jogo` desta aba se APAGA sem
+#: frase, em vez de acusar "sem giroscópio" nos quatro.
+#:
+#: **`fora_de_faixa` E `erro` GANHAM, e ganham o MESMO ícone** — o de atenção.
+#: A razão é medida, não simétrica: o `hid-playstation` zera a capacidade nos
+#: dois casos (`0xa`, `0xb`, `0xf` → `capacity = 0`) enquanto a `pydualsense`
+#: continua calculando `nibble*10+5` do mesmo byte. **O percentual que o card
+#: mostra nesses dois estados é um número que o driver já descartou** — calar
+#: ali deixaria a tela afirmando uma carga que ninguém sustenta, que é o defeito
+#: exato que a BATERIA-PARADA-01 curou do outro lado. Dois estados, um ícone,
+#: porque para quem olha o card a consequência é uma só: *não confie no número,
+#: a carga não está acontecendo*. O que os separa é a palavra.
+_NA_TELA_POR_CARGA: dict[str, str] = {
+    "descarregando": "",
+    "carregando": "Carregando",
+    "cheio": "Cheio",
+    "fora_de_faixa": "Fora de faixa",
+    "erro": "Erro de carga",
+}
+
+_ESTADOS_DO_DONO: frozenset[str] | None = None
+
+
+def estados_de_carga() -> frozenset[str]:
+    """As palavras que o DAEMON publica em `battery_state` — lidas do dono.
+
+    `backend_pydualsense.ESTADO_DE_CARGA` é a tradução do nibble alto do byte de
+    bateria, e ela é a lista inteira. Digitá-la aqui seria a segunda cópia da
+    mesma tabela, e a segunda divergiria no dia em que o kernel ganhasse um
+    sexto valor — que é o defeito que esta casa chama de *régua que mede o mundo
+    de ontem*.
+
+    IMPORT TARDIO, e não é gosto: `backend_pydualsense` importa `pydualsense` no
+    topo (dependência dura do projeto, mas cara), e a interface é um processo
+    separado do daemon. Pagar o import na primeira carga da aba, uma vez, é o
+    mesmo arranjo do `texto_da_bateria` logo acima.
+    """
+    global _ESTADOS_DO_DONO
+    if _ESTADOS_DO_DONO is None:
+        from hefesto_dualsense4unix.core.backend_pydualsense import ESTADO_DE_CARGA
+
+        _ESTADOS_DO_DONO = frozenset(ESTADO_DE_CARGA.values())
+    return _ESTADOS_DO_DONO
+
+
+def carga_na_tela(estado: object) -> str:
+    """A palavra do estado de carga, ou `""` quando a tela não diz nada.
+
+    `""` é o que APAGA o ícone: o alvo `atributo` do piloto remove o atributo
+    quando o valor é vazio ou travessão (`hefesto_vivo.py`, ramo `atributo`), e
+    a folha esconde o elemento sem `data-carga`. Três coisas caem no `""`:
+    `descarregando` (decisão), `None` (*ninguém reportou ainda*) e qualquer
+    palavra que não seja do dono.
+
+    **O TRANSPORTE NÃO ENTRA AQUI, e não é esquecimento** — não há parâmetro por
+    onde ele entrasse. É a decisão dela de 06/09 escrita na assinatura: quem
+    quiser acoplar carga a cabo/rádio tem de mudar a forma da função, e a régua
+    `test_a_bateria_diz_carregando_no_radio` reprova quando alguém tenta.
+    """
+    if not isinstance(estado, str):
+        return ""
+    if estado not in estados_de_carga():
+        return ""
+    return _NA_TELA_POR_CARGA.get(estado, "")
+
+
 _ENDERECOS: frozenset[str] | None = None
 
 
@@ -2022,6 +2122,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # o que esta aba alcança é acender e apagar. Ver
                 # `espera_o_pintor` — a posição já está calculada e sem
                 # endereço.
+                # O ESTADO DE CARGA AO LADO DO NÚMERO — BATERIA-ICONE-01,
+                # 06/09/2026. O dado chegou à tela na BATERIA-PARADA-01 (o
+                # `battery_state` viaja no mesmo dicionário do `battery_pct`,
+                # cru do `describe_controllers`) e não tinha onde pousar.
+                #
+                # ELE LÊ `c`, QUE É A ENTRADA DO DAEMON, e não o `transport` que
+                # está DUAS variáveis acima nesta mesma função. A tentação de
+                # cruzar os dois é o defeito que ela nomeou: *"no radio ele pode
+                # tá carregando tambem"*.  # noqa-acento: citação literal dela
+                "bateria-carga": carga_na_tela(c.get("battery_state")),
                 "touch-ponto": toque_ponto,
                 # O `alto-estado` DESCEU PARA CÁ — 04/09/2026, decisão [09]
                 # resolvida. Ele era emitido SEMPRE, para um `<span
